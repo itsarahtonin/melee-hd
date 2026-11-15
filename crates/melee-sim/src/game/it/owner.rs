@@ -258,9 +258,24 @@ pub fn nearest_opponent(
     pos: Vec3,
     gobj: Option<GObjId>,
 ) -> Option<GObjId> {
+    nearest_by_bone(game, data, pos, gobj, None)
+}
+
+/// [`nearest_opponent`], and with `facing_dir` [`nearest_opponent_in_dir`]: the candidates'
+/// camera bones read in the fighters' order, then the nearest taken; under Slippi's rules the
+/// outcome is also taken with the other display-phase placement of each fighter the camera
+/// places ([`crate::game::live::DisplayPhase`]), and a different one noted.
+fn nearest_by_bone(
+    game: &mut Game,
+    data: &Archives,
+    pos: Vec3,
+    gobj: Option<GObjId>,
+    facing_dir: Option<f32>,
+) -> Option<GObjId> {
     let me = gobj.map(|g| (g, fighter(game, g).player_idx, fighter(game, g).team));
-    let mut best = f64::from(f32::MAX);
-    let mut result = None;
+    // Up to six players and their followers.
+    let mut bones = [(GObjId(0), Vec3::default()); 12];
+    let mut n = 0;
     let mut cur = game.world.first_in(P_LINK_FIGHTER);
     while let Some(g) = cur {
         cur = game.world.gobjs[g.0].next;
@@ -273,7 +288,63 @@ pub fn nearest_opponent(
         {
             continue;
         }
-        let v = camera_bone_pos(game, data, g);
+        bones[n] = (g, camera_bone_pos(game, data, g));
+        n += 1;
+    }
+    let bones = &mut bones[..n];
+    let result = nearest_of(pos, bones, facing_dir);
+    if game.rules.slippi {
+        let mut other = false;
+        for (g, v) in bones.iter_mut() {
+            let fp = fighter(game, *g);
+            if !fp.x2220_b7 {
+                continue;
+            }
+            let f = fighter_of(game, *g);
+            let Some(crate::game::state::Obj::JObj(j)) = game.world.gobjs[g.0].obj else {
+                continue;
+            };
+            let root = game.objs.jobjs[j].translate;
+            let pass = game.display_phase.placed(f.0 as usize);
+            if let Some(w) = other_placement(*v, root, fp.cur_pos, pass) {
+                *v = w;
+                other = true;
+            }
+        }
+        if other && nearest_of(pos, bones, facing_dir) != result {
+            let tick = game.scene.unk_8;
+            game.display_phase.note(tick);
+        }
+    }
+    result
+}
+
+/// A camera bone `v` as it would read with the other display-phase placement of its
+/// fighter's root, now at `root`: at the logic's, its position `cur_pos`, when the display
+/// pass placed it (at `pass`, its last placement); at the pass's when the logic did (a doubled
+/// round's second tick). None where both are the same, or the pass hasn't placed it yet.
+fn other_placement(v: Vec3, root: Vec3, cur_pos: Vec3, pass: Option<Vec3>) -> Option<Vec3> {
+    let alt = if root == cur_pos { pass } else { Some(cur_pos) };
+    let a = alt.filter(|&a| a != root)?;
+    let shift = |v: f32, a: f32, r: f32| mem(fp::fadds(reg(v), fp::fsubs(reg(a), reg(r))));
+    Some(Vec3::new(
+        shift(v.x, a.x, root.x),
+        shift(v.y, a.y, root.y),
+        shift(v.z, a.z, root.z),
+    ))
+}
+
+/// The candidate of `bones` (each a fighter and its camera bone) nearest `pos`, the first on
+/// a tie, on the side `facing_dir` looks toward when given.
+fn nearest_of(pos: Vec3, bones: &[(GObjId, Vec3)], facing_dir: Option<f32>) -> Option<GObjId> {
+    let mut best = f64::from(f32::MAX);
+    let mut result = None;
+    for &(g, v) in bones {
+        if let Some(d) = facing_dir
+            && ((d == -1.0 && v.x > pos.x) || (d == 1.0 && v.x < pos.x))
+        {
+            continue;
+        }
         let dx = fp::fsubs(reg(pos.x), reg(v.x));
         let dy = fp::fsubs(reg(pos.y), reg(v.y));
         let dist = fp::fmadds(dx, dx, fp::fmuls(dy, dy));
@@ -324,34 +395,7 @@ pub fn nearest_opponent_in_dir(
     gobj: Option<GObjId>,
     facing_dir: f32,
 ) -> Option<GObjId> {
-    let me = gobj.map(|g| (g, fighter(game, g).player_idx, fighter(game, g).team));
-    let mut best = f64::from(f32::MAX);
-    let mut result = None;
-    let mut cur = game.world.first_in(P_LINK_FIGHTER);
-    while let Some(g) = cur {
-        cur = game.world.gobjs[g.0].next;
-        if me.is_some_and(|(m, slot, _)| m == g || fighter(game, g).player_idx == slot) {
-            continue;
-        }
-        let other = fighter(game, g);
-        if other.is_sleeping
-            || (game.vs_is_teams() && me.is_some_and(|(_, _, team)| other.team == team))
-        {
-            continue;
-        }
-        let v = camera_bone_pos(game, data, g);
-        if (facing_dir == -1.0 && v.x > pos.x) || (facing_dir == 1.0 && v.x < pos.x) {
-            continue;
-        }
-        let dx = fp::fsubs(reg(pos.x), reg(v.x));
-        let dy = fp::fsubs(reg(pos.y), reg(v.y));
-        let dist = fp::fmadds(dx, dx, fp::fmuls(dy, dy));
-        if dist < best {
-            best = dist;
-            result = Some(g);
-        }
-    }
-    result
+    nearest_by_bone(game, data, pos, gobj, Some(facing_dir))
 }
 
 /// The nearest opponent of `gobj` on the side `facing_dir` looks toward and its camera bone's
@@ -384,4 +428,40 @@ pub fn nearest_fighter(
 #[doc(alias = "it_8026B684")]
 pub fn facing_for(game: &mut Game, data: &Archives, pos: Vec3) -> f32 {
     opponents_dir(game, data, pos, None)
+}
+
+#[cfg(test)]
+mod display_phase_tests {
+    use super::*;
+
+    /// A fighter KO'd toward the screen, its root where the display pass placed it, is the
+    /// nearest opponent of an item at the origin; with its root at its position (the logic's
+    /// placement, a doubled round's second tick) the other fighter is: the read is one whose
+    /// outcome the display pass's phase decides. Both ways round, and a facing that skips it.
+    #[test]
+    fn a_read_through_a_placed_joint_goes_either_way() {
+        let (a, b) = (GObjId(1), GObjId(2));
+        let pass = Vec3::new(10.0, 2.0, 0.0);
+        let ko_spot = Vec3::new(100.0, 2.0, 0.0);
+        // The bone 3 above the root.
+        let bone = |root: Vec3| Vec3::new(root.x, root.y + 3.0, 0.0);
+        let other = (b, Vec3::new(30.0, 5.0, 0.0));
+        let at = Vec3::default();
+        // After a display pass: the root at the pass's placement.
+        let mut bones = [(a, bone(pass)), other];
+        assert_eq!(nearest_of(at, &bones, None), Some(a));
+        bones[0].1 = other_placement(bones[0].1, pass, ko_spot, Some(pass)).unwrap();
+        assert_eq!(bones[0].1, bone(ko_spot));
+        assert_eq!(nearest_of(at, &bones, None), Some(b));
+        // A doubled round's second tick: the root at the fighter's position.
+        let mut bones = [(a, bone(ko_spot)), other];
+        assert_eq!(nearest_of(at, &bones, None), Some(b));
+        bones[0].1 = other_placement(bones[0].1, ko_spot, ko_spot, Some(pass)).unwrap();
+        assert_eq!(nearest_of(at, &bones, None), Some(a));
+        // Not yet placed, or placed where it stands: nothing to compare.
+        assert_eq!(other_placement(bone(ko_spot), ko_spot, ko_spot, None), None);
+        assert_eq!(other_placement(bone(pass), pass, pass, Some(pass)), None);
+        // Facing left, the item sees neither.
+        assert_eq!(nearest_of(at, &[(a, bone(pass)), other], Some(-1.0)), None);
+    }
 }

@@ -646,6 +646,9 @@ impl Platform {
 
     /// Saves the match's replay, if one started and is kept.
     fn save_replay(&mut self, r: &melee_sim::game::record::Recorder) {
+        if let Some(note) = r.playback_note() {
+            eprintln!("the match's replay {note}");
+        }
         if let Some((to, true)) = self.slp.take() {
             match to.save(r) {
                 Ok(Some(path)) => eprintln!("saved the replay {}", path.display()),

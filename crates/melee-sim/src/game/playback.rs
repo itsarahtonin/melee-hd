@@ -260,6 +260,12 @@ pub struct Playback {
     /// playback scene before it, whose start sound (0xAD, `lbAudioAx_80024030(1)`) plays outside
     /// it, logs nothing.
     pub match_scene: bool,
+    /// A live match built as playback builds a replay's (the Slippi ruleset's matches,
+    /// `vs_match::Settings::live`): everything playback sets up, but the controllers' polls
+    /// drive the fighters. No frame is read or injected, no seed restored (the seed the frame
+    /// would hold is the one the match has there), and a team player takes a stock back as the
+    /// game's own check says. The frame count and the sound log run as in a replay.
+    pub live: bool,
 }
 
 /// The sounds playback's codes log (`Playback/Core/Sounds`, in the codes' state block at
@@ -440,6 +446,9 @@ impl Game {
     /// The Gecko code at `0x8016D298`.
     pub fn playback_read_frame(&mut self) {
         let p = self.playback_mut();
+        if p.live {
+            return;
+        }
         let index = p.frame_index;
         let a = p
             .answers
@@ -463,7 +472,13 @@ impl Game {
     pub fn playback_terminated(&self) -> bool {
         self.playback
             .as_ref()
-            .is_some_and(|p| p.frame.code() == RESP_TERMINATE)
+            .is_some_and(|p| !p.live && p.frame.code() == RESP_TERMINATE)
+    }
+
+    /// Whether a replay's frames drive the match: playback, not a live match built as
+    /// playback builds one ([`Playback::live`]).
+    pub fn replay_drives(&self) -> bool {
+        self.playback.as_ref().is_some_and(|p| !p.live)
     }
 
     /// Whether a team player out of stocks takes one from a teammate this frame
@@ -486,8 +501,9 @@ impl Game {
     ///
     /// The Gecko code at `0x8016E748`, from its entry at 0x4B0.
     pub fn playback_restore_seed(&mut self) {
-        let f = &self.playback.as_ref().expect("a replay's match").frame;
-        if f.bytes[2] != 0 {
+        let p = self.playback.as_ref().expect("a replay's match");
+        let f = &p.frame;
+        if !p.live && f.bytes[2] != 0 {
             self.objs.rng.seed = f.word(3);
         }
     }
@@ -643,6 +659,29 @@ impl Running<'_> {
         s.substick_x = raw[2] as i8;
         s.substick_y = raw[3] as i8;
         if first {
+            self.playback_settle_first_frame(gobj);
+        }
+    }
+
+    /// A live match's part of playback's input code (`Fighter_procInput+0x3CC`): the
+    /// fighters keep what they read from their controllers, and at the first frame each one
+    /// playback would inject into is settled as playback settles it.
+    pub fn playback_live_inputs(&mut self, gobj: GObjId) {
+        let fp = self.game.fighter(gobj);
+        if fp.is_sub_fighter {
+            let ckind = self.game.player_ckind(i32::from(fp.player_idx));
+            if super::pl::player::mapping(ckind).has_transformation == 0 {
+                return;
+            }
+        }
+        if self
+            .game
+            .playback
+            .as_ref()
+            .expect("a live match")
+            .frame_index
+            == FIRST_FRAME
+        {
             self.playback_settle_first_frame(gobj);
         }
     }

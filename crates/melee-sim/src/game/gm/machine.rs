@@ -98,6 +98,10 @@ pub struct Machine {
     /// The scene about to enter loads a match's files ([`Running::scene_start_data`]), for the
     /// frontend to read first (a session's console): not memory of the original's.
     pub files_wanted: bool,
+    /// The scene's match ran as a live match of the Slippi ruleset (`game::live`), which
+    /// handed its exit back with its results: the scene's own exit doesn't run again. Not
+    /// memory of the original's.
+    pub live_match: bool,
 }
 
 /// What a mode or mode state calls (`GameMode`'s and `GameModeState`'s handlers).
@@ -1300,7 +1304,9 @@ impl Running<'_> {
             GS_MOVIE_OPENING | GS_TITLE | GS_MENU | GS_MOVIE_HOWTO | GS_MOVIE_OMAKE15 => {}
             super::camera_mode::GS_CAMERA_VS => self.camera_check_on_exit(),
             GS_VS | GS_SUDDEN_DEATH | super::training::GS_TRAINING => {
-                self.vs_scene_on_exit(scene_mode, state)
+                if !std::mem::take(&mut self.game.machine.live_match) {
+                    self.vs_scene_on_exit(scene_mode, state);
+                }
             }
             GS_CSS => self.charsel_on_exit(),
             GS_SSS => self.stagesel_on_exit(),

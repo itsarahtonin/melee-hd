@@ -333,6 +333,8 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             {
                 work.data = s.data.clone();
                 work.joiner_files = s.joiner_files.clone();
+                // A live match's menus' session, set aside across its scene (`game::live`).
+                work.aside.clone_from(&s.aside);
             }
             let from = tick - rollback as u64;
             let saved = &ring[(from % len as u64) as usize];

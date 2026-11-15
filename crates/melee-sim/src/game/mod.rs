@@ -23,6 +23,7 @@ pub mod inputs;
 pub mod it;
 pub mod items_audit;
 pub mod leftovers;
+pub mod live;
 pub mod menus_audit;
 pub mod mirror;
 mod mirror_gen;

@@ -24,6 +24,9 @@ pub struct Metadata {
     pub played_on: String,
     /// The unlocks a Vanilla match read (melee-hd's own key, `unlocks`).
     pub unlocks: Option<melee_sim::game::gm::Unlocks>,
+    /// Why the match may not play back exactly (melee-hd's own key, `playbackNote`): the
+    /// display-phase reads of design call 9 (`Recorder::playback_note`).
+    pub playback_note: Option<String>,
 }
 
 impl Metadata {
@@ -37,6 +40,7 @@ impl Metadata {
             characters: core::array::from_fn(|p| r.characters(p).to_vec()),
             played_on: "melee-hd".into(),
             unlocks: r.unlocks().copied(),
+            playback_note: r.playback_note(),
         }
     }
 }
@@ -80,6 +84,10 @@ pub fn slp(raw: &[u8], meta: &Metadata) -> Vec<u8> {
     string(&mut o, &meta.played_on);
     if let Some(u) = &meta.unlocks {
         crate::metadata::write_unlocks(&mut o, u);
+    }
+    if let Some(n) = &meta.playback_note {
+        key(&mut o, "playbackNote");
+        string(&mut o, n);
     }
     o.extend_from_slice(b"}}");
     o
@@ -149,6 +157,7 @@ pub fn setup(r: &Replay) -> Setup {
         frozen_ps: r.is_frozen_ps != 0,
         language,
         unlocks: r.unlocks.is_some(),
+        scene: None,
     }
 }
 
@@ -179,6 +188,7 @@ mod tests {
             characters: [vec![(1, 224)], vec![], vec![(18, 3), (19, 221)], vec![]],
             played_on: "melee-hd".into(),
             unlocks: None,
+            playback_note: None,
         };
         let file = slp(&raw, &meta);
         assert_eq!(crate::replay::raw_events(&file).unwrap(), raw);
@@ -186,6 +196,26 @@ mod tests {
         assert!(tail.starts_with(b"U\x08metadata{U\x07startAtSU\x141970-01-01T00:00:00Z"));
         assert!(tail.ends_with(b"U\x08playedOnSU\x08melee-hd}}"));
         assert_eq!(crate::metadata::unlocks(&file), None);
+    }
+
+    /// A match whose display-phase reads went either way (design call 9) says so in its
+    /// metadata, after `playedOn`; Slippi's parsers skip the key.
+    #[test]
+    fn a_playback_note_goes_in_the_metadata() {
+        let raw = [event::PAYLOAD_SIZES, 4, event::GAME_END, 0, 6];
+        let meta = Metadata {
+            start_at: UNIX_EPOCH,
+            last_frame: 100,
+            characters: [vec![(1, 224)], vec![], vec![], vec![]],
+            played_on: "melee-hd".into(),
+            unlocks: None,
+            playback_note: Some("may not play back exactly".into()),
+        };
+        let file = slp(&raw, &meta);
+        assert_eq!(crate::replay::raw_events(&file).unwrap(), raw);
+        assert!(file.ends_with(
+            b"U\x08playedOnSU\x08melee-hdU\x0cplaybackNoteSU\x19may not play back exactly}}"
+        ));
     }
 
     /// The Slippi ruleset's list as Slippi's playback takes it from a recording: the 16 unlock
@@ -222,6 +252,7 @@ mod tests {
             characters: [vec![(1, 224)], vec![], vec![], vec![]],
             played_on: "melee-hd".into(),
             unlocks: Some(u),
+            playback_note: None,
         };
         let file = slp(&raw, &meta);
         assert_eq!(crate::metadata::unlocks(&file), Some(u));

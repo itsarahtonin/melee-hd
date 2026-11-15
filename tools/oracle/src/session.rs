@@ -704,6 +704,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     let mut heap_log: Option<String> = None;
     let mut image_ticks: Vec<u32> = Vec::new();
     let mut snapshot_ticks: Vec<u32> = Vec::new();
+    let mut slp_dir: Option<PathBuf> = None;
     let mut pos = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
@@ -749,6 +750,9 @@ pub fn session(args: &[&str]) -> ExitCode {
             // original's run ended in a fault (a Melee crash the trace can't hold).
             "--past" => past_end = it.next().and_then(|t| t.parse().ok()).expect("--past N"),
             "--all" => all = true,
+            // Under the Slippi ruleset, each live match's recording written into DIR as
+            // `NAME-N.slp` (`game::live`).
+            "--slp" => slp_dir = Some(it.next().expect("--slp DIR").into()),
             "--heap" => crate::diff::COMPARE_HEAP.with(|c| c.set(true)),
             "--scenes" => scenes = true,
             // Every field a new block differs in left out as a leftover, and the list of
@@ -961,6 +965,10 @@ pub fn session(args: &[&str]) -> ExitCode {
         image_ticks,
         snapshot_ticks,
         card_after: [card_after, card_b_after],
+        slp_dir,
+        name: Path::new(inputs_path)
+            .file_stem()
+            .map_or_else(|| "session".into(), |n| n.to_string_lossy().into_owned()),
     };
     run.play(setup)
 }
@@ -1066,6 +1074,9 @@ struct Run<'a> {
     /// to check the cards melee-hd's run leaves against at the trace's end: the saves it
     /// wrote, byte for byte.
     card_after: [Option<PathBuf>; 2],
+    /// Where each live match's `.slp` goes (`--slp`), and the session's name for them.
+    slp_dir: Option<PathBuf>,
+    name: String,
 }
 
 impl Run<'_> {
@@ -1099,6 +1110,13 @@ impl Run<'_> {
                 // Power-on: the boot runs as far as it's ported, before the first scene's
                 // first tick (trace tick 0).
                 let mut s = Session::new(setup);
+                if self.slp_dir.is_some() {
+                    // A recorder waits for each match, as the player's does: a live match
+                    // takes one of its own (`game::live`).
+                    s.game.recorder = Some(Box::new(melee_sim::game::record::Recorder::new(
+                        melee_sim::game::record::Setup::vanilla(),
+                    )));
+                }
                 if self.mutation == Some(Mutation::NoImage) {
                     s.game.objs.heap.image = Default::default();
                 }
@@ -1221,6 +1239,9 @@ impl Run<'_> {
         // A state taken up at a tick's end has that frame's display pass still to run.
         let mut render_due = self.from.is_some() && s.game.scene.unk_C != 2;
         let mut tick = next;
+        // The tick a live match of the Slippi ruleset started in: the trace's run has no
+        // handoff, so nothing past it compares (docs/slippi-ruleset.md, "Checking it").
+        let mut live_from = None;
         let stop = loop {
             if compared >= self.limit {
                 break None;
@@ -1272,6 +1293,10 @@ impl Run<'_> {
                 }
                 Err(p) => break Some(Stop::Seam(panic_text(&p))),
             };
+            if s.in_live_match() {
+                live_from = Some(t);
+                break None;
+            }
             if self.from.is_none() {
                 files.set_named(&s.game.ft.data.files.archives);
                 files.set_statics(&s.game, &s.data);
@@ -1433,6 +1458,12 @@ impl Run<'_> {
                 }
             }
         }
+        if let (None, Some(t)) = (&stop, live_from) {
+            println!(
+                "{compared} ticks compared, no difference, to the live match that starts in tick {t}"
+            );
+            return self.run_on(&mut s, &mut console, t, render_due);
+        }
         match stop {
             None => {
                 println!("{compared} ticks compared, no difference");
@@ -1458,6 +1489,101 @@ impl Run<'_> {
                 ExitCode::FAILURE
             }
         }
+    }
+}
+
+impl Run<'_> {
+    /// Plays the session on from the live match that starts in tick `t` (uncompared: no
+    /// trace follows the handoff) to the recording's last read and a second past it, as the
+    /// player would: every scene and match with no stop. Each live match's recording goes to
+    /// `--slp`'s folder as it ends.
+    fn run_on(
+        &self,
+        s: &mut Session,
+        console: &mut Console,
+        t: u32,
+        mut render_due: bool,
+    ) -> ExitCode {
+        let mut tick = t;
+        let (mut matches, mut saved) = (1u32, 0u32);
+        // Each live match's stage and players, as it starts.
+        let describe = |s: &Session| {
+            let d = &s.game.vs.start;
+            let players: Vec<String> = (0..4)
+                .filter(|&i| s.game.player_pkind(i) != 3)
+                .map(|i| {
+                    format!(
+                        "port {} character {:#x}{}",
+                        i + 1,
+                        s.game.player_ckind(i),
+                        if s.game.player_pkind(i) == 1 {
+                            " (computer)"
+                        } else {
+                            ""
+                        }
+                    )
+                })
+                .collect();
+            format!("stage {:#x}, {}", d.stkind, players.join(", "))
+        };
+        println!("live match 1: {}", describe(s));
+        let mut live = true;
+        let mut was_saved = false;
+        let end = self.rec.reads.len() + 60;
+        loop {
+            if s.in_live_match() {
+                if !live {
+                    live = true;
+                    matches += 1;
+                    was_saved = false;
+                    println!("live match {matches} from tick {tick}: {}", describe(s));
+                }
+                if let (Some(dir), Some(r)) = (&self.slp_dir, &s.game.recorder)
+                    && r.ended()
+                    && !was_saved
+                {
+                    was_saved = true;
+                    let file = melee_slippi::write::recording(r, std::time::UNIX_EPOCH);
+                    let path = dir.join(format!("{}-{matches}.slp", self.name));
+                    std::fs::write(&path, &file)
+                        .unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+                    saved += 1;
+                    println!(
+                        "live match {matches}'s recording: {} (last frame {:?})",
+                        path.display(),
+                        r.last_frame()
+                    );
+                }
+            } else if live {
+                live = false;
+                println!("live match {matches} handed back before tick {tick}");
+            }
+            if console.next >= end {
+                break;
+            }
+            tick += 1;
+            let stepped = catch_unwind(AssertUnwindSafe(|| {
+                if render_due {
+                    s.render();
+                }
+                s.step_tick(console)
+            }));
+            match stepped {
+                Ok((_, due)) => render_due = due,
+                Err(p) => {
+                    println!(
+                        "past the live match's start, stopped in tick {tick} (read {}): {}",
+                        console.next,
+                        panic_text(&p)
+                    );
+                    return ExitCode::FAILURE;
+                }
+            }
+        }
+        println!(
+            "ran on to tick {tick} past the recording's reads with no stop: {matches} live matches, {saved} recordings written"
+        );
+        ExitCode::SUCCESS
     }
 }
 

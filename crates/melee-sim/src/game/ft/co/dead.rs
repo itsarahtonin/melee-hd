@@ -922,5 +922,9 @@ impl Running<'_> {
         }
         let j = self.root_jobj(gobj);
         crate::hsd::jobj::set_translate(&mut self.game.objs.jobjs, j, pos);
+        if self.game.rules.slippi {
+            let f = self.game.fighter_id(gobj);
+            self.game.display_phase.place(f.0 as usize, pos);
+        }
     }
 }

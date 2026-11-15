@@ -333,3 +333,213 @@ fn a_recording_carries_the_item_settings() {
         }
     });
 }
+
+/// Loads a disc file for a match's start, as the player's `Session::begin` does.
+fn loader(disc: &Disc) -> impl FnMut(&str) -> melee_sim::game::vs_match::DiscFile + '_ {
+    |name: &str| melee_sim::game::vs_match::DiscFile {
+        entrynum: disc
+            .entrynum(name)
+            .unwrap_or_else(|e| panic!("{name}: {e}")),
+        bytes: disc
+            .read_file(name)
+            .unwrap_or_else(|e| panic!("{name}: {e}")),
+    }
+}
+
+/// The game as a live match's playback must hold it, `live` with what only playback's
+/// replay frames or a live match's polls set taken from `play` (the named list of
+/// `docs/slippi-ruleset.md`, "Each match from playback's heap"): playback's bookkeeping of
+/// the replay's frames (`Game::playback`'s last frame read, the device's answers and the
+/// live flag; the frame count and the sound log are compared), the pad library's queue and
+/// statuses with its playback flag (a replay's controllers are at rest and its inputs go
+/// straight to the fighters), the button maps evaluated from those statuses, and the
+/// recorder (presentation output).
+fn as_played_back(
+    live: &melee_sim::game::state::Game,
+    play: &melee_sim::game::state::Game,
+) -> melee_sim::game::state::Game {
+    let mut g = live.clone();
+    if let (Some(l), Some(p)) = (g.playback.as_mut(), play.playback.as_ref()) {
+        l.frame.clone_from(&p.frame);
+        l.answers.clone_from(&p.answers);
+        l.live = p.live;
+    }
+    g.pads.playback = play.pads.playback;
+    g.pads.lib.clone_from(&play.pads.lib);
+    g.pads.master = play.pads.master;
+    g.pads.copy = play.pads.copy;
+    g.pads.game = play.pads.game;
+    g.controller_map.clone_from(&play.controller_map);
+    g.recorder = None;
+    g
+}
+
+/// Plays a live match of the Slippi ruleset (`Settings::live`, built from the game start
+/// `record::live_start` takes from a state as the menus leave it) with scripted controllers,
+/// each poll the pad alarm takes the script's next read; calls `each` after every tick (and its
+/// display pass, when due) and returns the `.slp` it recorded.
+fn play_live(
+    disc: &Disc,
+    settings: &Settings,
+    mut each: impl FnMut(&melee_sim::game::vs_match::Match, bool),
+) -> Vec<u8> {
+    let mut m = melee_sim::game::vs_match::Match::start(settings, &mut loader(disc));
+    let mut read = 0u32;
+    for _ in 0..8000 {
+        let (f, render) = m.step_live_tick(&mut || {
+            read += 1;
+            pads(read - 1, false)
+        });
+        if render {
+            m.render();
+        }
+        each(&m, render);
+        let ended = f.ended;
+        m.recycle(f);
+        if ended {
+            break;
+        }
+    }
+    let r = m.game.recorder.as_ref().expect("the recorder");
+    assert!(r.ended(), "the live match didn't end");
+    melee_slippi::write::recording(r, std::time::UNIX_EPOCH)
+}
+
+/// The Slippi ruleset's live match equals melee-hd's playback of its own `.slp` tick by tick,
+/// the whole state but [`as_played_back`]'s named list: it is built from its game start as
+/// playback builds a replay's (`docs/slippi-ruleset.md`, design call 3), so its recording plays
+/// back as it played. The game start it's built from is the one playback reads from its
+/// recording (`melee_slippi::start`), field for field, and the recording's scene is the
+/// menus' (here VS mode's match, 2.2), not playback's 14.1.
+#[test]
+fn a_live_match_equals_its_playback() {
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+        let s = settings();
+        let mut g = melee_sim::game::state::Game {
+            rules: Rules::slippi_online(),
+            ..Default::default()
+        };
+        g.objs.rng.seed = s.seed;
+        g.machine.routing.curr_mode = 2;
+        g.machine.routing.curr_state_id = 2;
+        let (start, setup) = record::live_start(&g, &s.start);
+        let mut live = Settings::live(&start).expect("the ruleset's codes");
+        live.disc = melee_sim::audio::clock::DiscSpeed::Drive;
+        live.record = Some(setup);
+        let file = play_live(&disc, &live, |_, _| {});
+        let replay = Replay::parse(&file).expect("the recording parses");
+        let back = melee_slippi::start(&replay);
+        assert_eq!(back.info, start.info);
+        assert_eq!(back.seed, start.seed);
+        assert_eq!(back.nametags, start.nametags);
+        assert_eq!(back.codes, start.codes);
+        assert_eq!(back.response, start.response);
+        assert_eq!(back.unlocks, None);
+        let payload = &(replay.events.iter())
+            .find(|e| e.command == event::GAME_START)
+            .expect("a game start")
+            .payload;
+        assert_eq!((payload[0x1A2], payload[0x1A3]), (2, 2), "the menus' scene");
+        let mut again = Settings::from_replay(&back).expect("its settings");
+        again.disc = live.disc;
+        let mut play = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
+        let mut ticks = 0;
+        play_live(&disc, &live, |m, render| {
+            let (f, played) = play.step_replay_tick(&mut melee_slippi::Device(&replay));
+            assert_eq!(render, played, "tick {ticks}'s display pass");
+            if played {
+                play.render();
+            }
+            play.recycle(f);
+            if let Some(d) = as_played_back(&m.game, &play.game).state_diff(&play.game) {
+                panic!("tick {ticks} of the live match differs from its playback at game{d}");
+            }
+            ticks += 1;
+        });
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        assert!(ticks > 3600, "{ticks} ticks");
+    });
+}
+
+/// What of a match's state gameplay is made of, for comparing two runs that may differ in
+/// their timelines: the random seed, and each fighter's position, motion and damage.
+fn gameplay(g: &melee_sim::game::state::Game) -> (u32, Vec<(u32, u32, i32, u32)>) {
+    let fighters = g
+        .fighters
+        .iter()
+        .map(|(_, f)| {
+            (
+                f.cur_pos.x.to_bits(),
+                f.cur_pos.y.to_bits(),
+                f.motion_id,
+                f.dmg.x1830_percent.to_bits(),
+            )
+        })
+        .collect();
+    (g.objs.rng.seed, fighters)
+}
+
+/// Nothing in a match under Slippi 3.19's rules waits on the disc (`docs/slippi-ruleset.md`,
+/// task 4): the Pokémon Stadium benchmark replay's inputs, played under the ruleset's rules at
+/// Slippi's fast disc speed and at a drive's pace, give the same seed and fighters every tick
+/// through the stage's transformations, which 3.19 loads synchronously. Under Vanilla's rules
+/// the transformations load in the background and the two paces part.
+#[test]
+fn a_ruleset_match_ignores_the_disc_pace() {
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../data/bench/fox-marth-ps.slp"
+        );
+        let replay =
+            Replay::parse(&std::fs::read(path).expect("the benchmark replay")).expect("it parses");
+        let parted = |rules: Rules| {
+            let mut runs = [
+                melee_sim::audio::clock::DiscSpeed::Fast,
+                melee_sim::audio::clock::DiscSpeed::Drive,
+            ]
+            .map(|pace| {
+                let s = Settings {
+                    rules: rules.clone(),
+                    disc: pace,
+                    ..Settings::from_replay(&melee_slippi::start(&replay)).unwrap()
+                };
+                melee_sim::game::vs_match::Match::start(&s, &mut loader(&disc))
+            });
+            let mut transformed = false;
+            for tick in 0..5000 {
+                let mut out = Vec::new();
+                for m in &mut runs {
+                    let f = m.step_replay(&mut melee_slippi::Device(&replay));
+                    out.push(f.ended);
+                    m.recycle(f);
+                }
+                // A transformation file registered from its buffer (`kind` 1).
+                transformed |= (runs[0].game.gr.archives.iter())
+                    .any(|a| a.as_ref().is_some_and(|a| a.kind == 1));
+                if gameplay(&runs[0].game) != gameplay(&runs[1].game) {
+                    return Some(tick);
+                }
+                if out.contains(&true) {
+                    break;
+                }
+            }
+            assert!(transformed);
+            None
+        };
+        assert_eq!(
+            parted(Rules::slippi_online()),
+            None,
+            "the ruleset's paces part"
+        );
+        assert!(
+            parted(Rules::default()).is_some(),
+            "Vanilla's paces don't part: the check can't fail"
+        );
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+    });
+}

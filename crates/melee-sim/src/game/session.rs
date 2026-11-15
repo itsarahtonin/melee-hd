@@ -240,6 +240,17 @@ pub struct Session {
     pub card: Option<CardDevice>,
     /// The files read for opponents joining mid-match, which a rollback's replay takes again.
     pub joiner_files: super::vs_match::JoinerFiles,
+    /// While a live match of the Slippi ruleset runs (`game::live`): the menus' session set
+    /// aside, its game and archives, which `game` and `data` (the match's own) give back to
+    /// when the match's scene ends.
+    pub aside: Option<Box<Aside>>,
+}
+
+/// The menus' session set aside across a live match's scene ([`Session::aside`]).
+#[derive(Clone, Debug)]
+pub struct Aside {
+    pub game: Game,
+    pub data: Archives,
 }
 
 /// `DbLevel` before `main` sets it: `DbLKind_NoDebugRom`, as the executable's data holds it.
@@ -475,6 +486,7 @@ impl Session {
             setup,
             card,
             joiner_files: Default::default(),
+            aside: None,
         }
     }
 
@@ -498,6 +510,7 @@ impl Session {
             setup,
             card,
             joiner_files: Default::default(),
+            aside: None,
         }
     }
 
@@ -709,9 +722,20 @@ impl Session {
     /// ([`Session::render`]). When the last tick ended its scene, the modes' loops first run
     /// to the next scene.
     pub fn step_tick(&mut self, console: &mut dyn Console) -> (Frame, bool) {
+        if self.aside.is_some() {
+            if self.game.scene.unk_C == 0 {
+                return self.live_tick(console);
+            }
+            self.hand_back();
+        }
         let card = CardLent::take(&mut self.card);
         if self.game.scene.unk_C != 0 {
             self.enter_next_scene(console);
+        }
+        if self.aside.is_some() {
+            // The scene entered is a live match's: its first tick is the match's.
+            card.give_back(&mut self.card);
+            return self.live_tick(console);
         }
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
         let mut r = Running {
@@ -756,6 +780,16 @@ impl Session {
             .next_scene()
         });
         lent.give_back(&mut self.game.objs.heap);
+        if self.game.machine.files_wanted
+            && super::live::rebuild_refusal(&Running {
+                game: &mut self.game,
+                data: &self.data,
+            })
+            .is_none()
+        {
+            self.hand_off(console);
+            return;
+        }
         if std::mem::take(&mut self.game.machine.files_wanted) {
             let cutscene = Running {
                 game: &mut self.game,
@@ -1106,8 +1140,89 @@ impl Session {
         }
     }
 
+    /// The VS scene about to enter starts a live match of the Slippi ruleset
+    /// (`game::live`): the menus' session goes aside as the scene's entry leaves it, and the
+    /// match, built from the game start its recording will hold as playback builds a
+    /// replay's, becomes the session's game, at the session's disc pace and DSP model,
+    /// recorded when the menus' game has a recorder waiting. Its files are the console's.
+    fn hand_off(&mut self, console: &mut dyn Console) {
+        let r = Running {
+            game: &mut self.game,
+            data: &self.data,
+        };
+        let d = r.scene_start_data().clone();
+        let (start, setup) = super::record::live_start(r.game, &d);
+        // The menus' session reads the match's files as the scene's entry does
+        // (`read_match_files`): the scenes after it load them from there (the results
+        // screen's fighters, Sudden Death's stage).
+        self.read_match_files(&d, console);
+        let mut settings =
+            super::vs_match::Settings::live(&start).expect("the ruleset's code list's rules");
+        settings.disc = self.setup.disc;
+        settings.dsp = self.setup.dsp;
+        settings.record = self.game.recorder.is_some().then_some(setup);
+        let m = super::vs_match::Match::start(&settings, &mut |n| console.file(n));
+        let game = std::mem::replace(&mut self.game, m.game);
+        let data = std::mem::replace(&mut self.data, m.data);
+        self.aside = Some(Box::new(Aside { game, data }));
+    }
+
+    /// One engine tick of the live match, as a console runs it: every poll the match's
+    /// timeline queues takes the controllers' next read ([`super::vs_match::Match::step_live_tick`]).
+    fn live_tick(&mut self, console: &mut dyn Console) -> (Frame, bool) {
+        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let mut r = Running {
+            game: &mut self.game,
+            data: &self.data,
+        };
+        let (t, render) = with_feed(console, |read| {
+            scene::step_session_tick(&mut r, read, false)
+        });
+        lent.give_back(&mut self.game.objs.heap);
+        let out = Frame {
+            events: std::mem::take(&mut self.game.events),
+            pads: t.pads,
+            ended: t.ended,
+            draws: Vec::new(),
+        };
+        (out, render)
+    }
+
+    /// The live match's scene has ended: the menus' session comes back and takes what the
+    /// match leaves (`live::Back`), its VS scene ended.
+    fn hand_back(&mut self) {
+        let aside = self.aside.take().expect("a live match");
+        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let back = Running {
+            game: &mut self.game,
+            data: &self.data,
+        }
+        .live_match_back();
+        lent.give_back(&mut self.game.objs.heap);
+        let Aside { game, data } = *aside;
+        self.game = game;
+        self.data = data;
+        self.game.take_back_live_match(back);
+    }
+
+    /// Whether a live match of the Slippi ruleset is running (`game::live`): the session's
+    /// game and archives are the match's.
+    pub fn in_live_match(&self) -> bool {
+        self.aside.is_some()
+    }
+
     /// The frame's display pass after [`Session::step_tick`]: its draw commands.
     pub fn render(&mut self) -> Vec<crate::hsd::display::Draw> {
+        if self.aside.is_some() {
+            // A live match's, as playback's match renders ([`super::vs_match::Match::render`]).
+            let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+            scene::render_screen(&mut Running {
+                game: &mut self.game,
+                data: &self.data,
+            });
+            lent.give_back(&mut self.game.objs.heap);
+            return std::mem::take(&mut self.game.objs.display.draws);
+        }
         // The pass's wait can take the pad alarm, whose handler probes the card.
         let card = CardLent::take(&mut self.card);
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);

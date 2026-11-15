@@ -52,6 +52,29 @@ fn special_melee_mode(mode: u8) -> bool {
 }
 
 impl Game {
+    /// The characters [`Game::mark_played`] marks for a match that ends: each human player's
+    /// (`gm_CKindToSelKind`), unless the match had no contest or is retried.
+    pub fn characters_played(&self) -> Vec<u8> {
+        let o = self.vs.state.match_result;
+        if o == OUTCOME_NO_CONTEST || o == OUTCOME_RETRY {
+            return Vec::new();
+        }
+        (0..6)
+            .filter(|&i| self.player_pkind(i) == PKIND_HUMAN)
+            .map(|i| selkind(self.player_ckind(i) as u8))
+            .collect()
+    }
+
+    /// The end of `gm_Scene_Vs_OnExit`: in VS mode (and the modes kept with it) and the
+    /// single-player runs, each character in `played` marked played in the save.
+    pub fn mark_played(&mut self, played: &[u8]) {
+        if self.is_1p_run() || special_melee_mode(self.game_mode) || self.game_mode == GM_VS {
+            for &s in played {
+                self.mark_character_played(s);
+            }
+        }
+    }
+
     /// The match's exit data for the scene that ends: VS mode's match or Sudden Death's,
     /// or the attract match's.
     pub fn match_exit_data(&mut self, scene_mode: u8, state: u8) -> &mut MatchExitInfo {
@@ -110,6 +133,17 @@ impl Running<'_> {
     #[doc(alias = "gm_Scene_Vs_OnExit")]
     #[doc(alias = "fn_8017F294")]
     pub fn vs_scene_on_exit(&mut self, scene_mode: u8, state: u8) {
+        let e = self.vs_scene_exit_info();
+        let played = self.game.characters_played();
+        *self.game.match_exit_data(scene_mode, state) = e;
+        self.game.mark_played(&played);
+    }
+
+    /// [`Running::vs_scene_on_exit`]'s results: the first time, the results as they stand
+    /// compiled with the match's teams and outcome, a single-player mode's own and each
+    /// player's bonuses, and the match marked over; then the exit data's run value, timer and
+    /// stage flag.
+    pub fn vs_scene_exit_info(&mut self) -> MatchExitInfo {
         let mut r = self.game.vs.state.x24C.clone();
         if self.game.vs.state.match_over == 0 {
             r.is_teams = self.game.vs.start.is_teams;
@@ -128,24 +162,11 @@ impl Running<'_> {
         } else {
             self.game.vs.start.x18
         };
-        let x4 = self.game.vs.state.timer_seconds;
-        let x8 = u32::from(super::super::gr::ground::b1(self.game));
-        let e = self.game.match_exit_data(scene_mode, state);
-        e.match_end = r;
-        e.x0 = x0;
-        e.x4 = x4;
-        e.x8 = x8;
-        let g = &mut *self.game;
-        if g.is_1p_run() || special_melee_mode(g.game_mode) || g.game_mode == GM_VS {
-            let o = g.vs.state.match_result;
-            if o != OUTCOME_NO_CONTEST && o != OUTCOME_RETRY {
-                for i in 0..6 {
-                    if g.player_pkind(i) == PKIND_HUMAN {
-                        let s = selkind(g.player_ckind(i) as u8);
-                        g.mark_character_played(s);
-                    }
-                }
-            }
+        MatchExitInfo {
+            x0,
+            x4: self.game.vs.state.timer_seconds,
+            x8: u32::from(super::super::gr::ground::b1(self.game)),
+            match_end: r,
         }
     }
 

@@ -136,6 +136,10 @@ pub struct Setup {
     /// held them at the game start): a Vanilla match's, whose save decides them, where Slippi's
     /// playback runs its own unlock codes (milestone 5's call of 2026-10-23).
     pub unlocks: bool,
+    /// The scene, minor then major, for a match not started from the menus' own scene: a live
+    /// match the Slippi ruleset builds as playback builds a replay's (`Playback::live`) records
+    /// the scene the menus started it in; none is the VS mode's match.
+    pub scene: Option<[u8; 2]>,
 }
 
 impl Setup {
@@ -185,6 +189,84 @@ pub fn ruleset_codes() -> Vec<u8> {
 }
 
 const RULESET_CODES: &str = include_str!("slippi-ruleset-3.19.1.txt");
+
+/// The 16 writes at the list's head (two words each), which Slippi's playback leaves out of a
+/// replay's list: it runs its own general codes.
+const RULESET_WRITES: usize = 16 * 8;
+
+/// The code list Slippi's playback applies from a recording of the ruleset's (its device's
+/// `prepareGeckoList`): [`ruleset_codes`] with UCF's pad buffer as `pads` holds it, without
+/// the 16 writes playback denies, and the terminator.
+pub fn ruleset_playback_codes(pads: &super::ucf::Pads) -> Vec<u8> {
+    let mut out = codes_as_they_stand(&ruleset_codes(), pads)[RULESET_WRITES..].to_vec();
+    out.extend_from_slice(&[0xFF, 0, 0, 0, 0, 0, 0, 0]);
+    out
+}
+
+/// A live match of the Slippi ruleset as the VS scene's entry would start it from `d` in `g`
+/// (design call 3 of `docs/slippi-ruleset.md`): the game start the recording codes write there
+/// (`fn_8016E730+0x1C`), as the replay start Slippi's playback builds the match from, and the
+/// recorder's setup for what the match can't read from its own state (the menus' name tags,
+/// saved language and scene). `vs_match::Settings::live` builds the match from it, so it is the
+/// match a playback of its recording builds.
+pub fn live_start(g: &Game, d: &StartMeleeData) -> (super::vs_match::ReplayStart, Setup) {
+    let mut info = export_start(d);
+    info[CALLBACKS].fill(0);
+    let mut nametags = [[0u16; 8]; 4];
+    for (port, tag) in nametags.iter_mut().enumerate() {
+        let p = 0x60 + 0x24 * port;
+        if info[p + 1] != PKIND_HUMAN {
+            continue;
+        }
+        // As the recording codes write it ([`Recorder::game_start`]): Zelda held A as the
+        // match starts is Sheik, a costume past the character's count the first.
+        if info[p] as i8 == CKIND_ZELDA && g.pads.copy[port].button & PAD_A != 0 {
+            info[p] = CKIND_SHEIK as u8;
+        }
+        if info[p + 3] > super::playback::costume_count(info[p]) {
+            info[p + 3] = 0;
+        }
+        if info[p + 10] != NO_NAMETAG {
+            *tag = name_tag_text(g, info[p + 10]);
+        }
+    }
+    let seed = g.objs.rng.seed;
+    let codes = ruleset_playback_codes(&g.ucf);
+    // The device's whole answer, as `prepareGameInfo` queues it from the recording.
+    let mut response = vec![1u8];
+    response.extend_from_slice(&seed.to_be_bytes());
+    response.extend_from_slice(&info);
+    let ucf = u32::from(g.rules.ucf != super::ucf::Ucf::Off);
+    for _ in 0..8 {
+        response.extend_from_slice(&ucf.to_be_bytes());
+    }
+    for tag in nametags {
+        for h in tag {
+            response.extend_from_slice(&h.to_be_bytes());
+        }
+    }
+    // Not PAL; Pokémon Stadium's transformations preload (a 1.3 or later recording); not
+    // frozen; then the display names, online only.
+    response.extend_from_slice(&[0, 1, 0, 0]);
+    response.extend_from_slice(&[0; 4 * 31]);
+    response.extend_from_slice(&(codes.len() as u32).to_be_bytes());
+    let r = &g.machine.routing;
+    let setup = Setup {
+        nametags,
+        language: g.game_data.saved_language(),
+        scene: Some([r.curr_state_id, r.curr_mode]),
+        ..Setup::slippi()
+    };
+    let start = super::vs_match::ReplayStart {
+        info: info.to_vec(),
+        seed,
+        nametags,
+        codes,
+        response,
+        unlocks: None,
+    };
+    (start, setup)
+}
 
 /// UCF's pad buffer code's injection (`game::slippi::UCF_PAD_BUFFER`) and where its data
 /// starts in it: the twelve words after the body's first.
@@ -241,6 +323,10 @@ pub struct Recorder {
     characters: [Vec<(u8, u32)>; 4],
     /// The unlocks the match read, for the metadata, where the setup asks for them.
     unlocks: Option<super::gm::Unlocks>,
+    /// At the game end, how many display-phase reads' outcomes differed and the game tick of
+    /// the first, when some did (`live::DisplayPhase`, design call 9): the match may not play
+    /// back exactly.
+    display_phase: Option<(u32, u32)>,
 }
 
 impl Recorder {
@@ -277,6 +363,17 @@ impl Recorder {
     /// The unlocks the match read, for the metadata: a Vanilla match's ([`Setup::unlocks`]).
     pub fn unlocks(&self) -> Option<&super::gm::Unlocks> {
         self.unlocks.as_ref()
+    }
+
+    /// The note the metadata and the player's log carry when display-phase reads' outcomes
+    /// differed (`live::DisplayPhase`, design call 9 of `docs/slippi-ruleset.md`).
+    pub fn playback_note(&self) -> Option<String> {
+        self.display_phase.map(|(n, first)| {
+            format!(
+                "may not play back exactly: {n} read{} through a fighter the display pass placed could go either way, the first in game tick {first}",
+                if n == 1 { "" } else { "s" }
+            )
+        })
     }
 
     fn game_start(&mut self, g: &Game, d: &StartMeleeData) {
@@ -354,12 +451,12 @@ impl Recorder {
         w.u8(u8::from(s.frozen_ps));
         // The scene controller's current minor and major (`gm_80479D30`).
         let r = &g.machine.routing;
-        w.bytes(&if g.playback.is_some() {
+        w.bytes(&if g.replay_drives() {
             SCENE_PLAYBACK
         } else if from_menus {
             [r.curr_state_id, r.curr_mode]
         } else {
-            SCENE_VS
+            s.scene.unwrap_or(SCENE_VS)
         });
         // Display names, connect codes and Slippi UIDs: online only.
         w.zeros(4 * (31 + 10 + 29));
@@ -563,6 +660,8 @@ impl Recorder {
         if method == 0 || self.game_end_sent {
             return;
         }
+        let d = &g.display_phase;
+        self.display_phase = d.first.map(|first| (d.differing, first));
         // The results as they stand, on a copy (the codes fill the results' global, which the
         // match doesn't read, from the controller's): each player's placement.
         let mut copy = g.clone();

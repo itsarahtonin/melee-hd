@@ -1190,7 +1190,7 @@ impl Running<'_> {
                 continue;
             }
             let port = g.player_port(i);
-            if g.playback.is_some() {
+            if g.replay_drives() {
                 if !g.playback_stock_steal(port as u8) {
                     continue;
                 }

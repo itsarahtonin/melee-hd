@@ -462,6 +462,10 @@ pub struct Game {
     pub playback: Option<super::playback::Playback>,
     /// UCF's pad buffer (with [`Rules::ucf`]).
     pub ucf: super::ucf::Pads,
+    /// Under Slippi's rules, the reads that go through a joint the display pass placed and
+    /// whose outcome its phase decides (design call 9 of `docs/slippi-ruleset.md`,
+    /// `live::DisplayPhase`).
+    pub display_phase: super::live::DisplayPhase,
     /// What the players' codes keep outside the game's structs (with [`Rules::player`]).
     pub player_code_state: super::player_codes::State,
     /// The rumble patterns by kind (`lb_804D63C0`, `LbRb.dat`'s `lbRumbleData`).

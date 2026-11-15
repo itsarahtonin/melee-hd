@@ -47,6 +47,9 @@ pub struct Settings {
     /// A Slippi replay drives the match through Slippi's playback codes
     /// ([`Match::step_replay`]).
     pub playback: bool,
+    /// With `playback`, a live match built as playback builds a replay's, which the
+    /// controllers drive ([`Settings::live`], [`Match::step_live_tick`]).
+    pub live: bool,
     /// The addresses the original gives the match's fighters as it creates them, in creation
     /// order (`ft::Globals::address_seed`), where the frontend knows them: the oracle takes
     /// them from ssbm-rs's trace. Empty, the fighters' addresses are 0.
@@ -226,6 +229,7 @@ impl Settings {
             disc: DiscSpeed::Drive,
             ucf: ucf::Pads::default(),
             playback: false,
+            live: false,
             fighter_addresses: Vec::new(),
             heap: heap.then(crate::hsd::heap::Layout::vanilla_vs),
             playback_heap: None,
@@ -280,6 +284,19 @@ impl Settings {
         Ok(s)
     }
 
+    /// A live match of the Slippi ruleset (design call 3 of `docs/slippi-ruleset.md`): built
+    /// from the game start its recording will hold (`record::live_start`) exactly as
+    /// [`Settings::from_replay`] builds a replay's, so it starts in the state playback gives
+    /// its recording (playback's heap and GObjs, the code list's buffers, the boot from
+    /// Slippi's playback scene), and the controllers' polls drive it
+    /// ([`Match::step_live_tick`]). The disc reads at Slippi's fast speed unless `disc` says
+    /// otherwise (a session's match reads at the session's pace).
+    pub fn live(r: &ReplayStart) -> Result<Settings, CodeError> {
+        let mut s = Settings::from_replay(r)?;
+        s.live = true;
+        Ok(s)
+    }
+
     /// The settings a Slippi replay's game start records: its game info block (the match's
     /// `StartMeleeData` as the game held it, 0x138 bytes) and random seed. A replay doesn't
     /// say how its sound played; this takes the sample-accurate model, as Slippi Dolphin
@@ -304,6 +321,7 @@ impl Settings {
             rules: Rules::default(),
             ucf: ucf::Pads::default(),
             playback: false,
+            live: false,
             dsp: DspModel::Samples,
             disc: DiscSpeed::Fast,
             fighter_addresses: Vec::new(),
@@ -400,9 +418,11 @@ impl Match {
                 start_seed: settings.seed,
                 code_list_heap: settings.playback_heap,
                 frame: playback::Frame::response(&settings.playback_response),
+                live: settings.live,
                 ..Playback::default()
             });
-            game.pads.playback = true;
+            // A live match's pad library is the console's.
+            game.pads.playback = !settings.live;
             // Playback reaches the match's scene from Slippi's playback scene (`game::boot`),
             // which runs one tick, its game clock due, and ends: the scene loop's counts it
             // leaves (`gm_80479D58`, as every trace of ssbm-rs's playback has them at the boot
@@ -731,6 +751,23 @@ impl Match {
         if draws.is_empty() && draws.capacity() < frame.draws.capacity() {
             *draws = frame.draws;
         }
+    }
+
+    /// One engine tick of a live match ([`Settings::live`]) up to the frame's display pass, as
+    /// a console runs it: every poll the pad alarm's timeline queues takes the controllers'
+    /// next read from `reads` (the loop's own, when it finds none queued, too). Whether the
+    /// pass is due, which [`Match::render`] runs.
+    pub fn step_live_tick(&mut self, reads: &mut dyn FnMut() -> PadData) -> (Frame, bool) {
+        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let (t, render) = scene::step_session_tick(&mut self.running(), reads, false);
+        lent.give_back(&mut self.game.objs.heap);
+        let out = Frame {
+            events: std::mem::take(&mut self.game.events),
+            pads: t.pads,
+            ended: t.ended,
+            draws: Vec::new(),
+        };
+        (out, render)
     }
 
     /// [`Match::step`] up to the frame's display pass, where ssbm-rs's state traces sample the

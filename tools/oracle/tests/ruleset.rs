@@ -44,11 +44,7 @@ fn session(name: &str, args: &[&str]) -> Option<String> {
 /// tick 819).
 #[test]
 fn the_ruleset_sessions_compare_clean() {
-    for (name, ticks) in [
-        ("vs-menus", 2052),
-        ("menu-tour", 3055),
-        ("classic-cstick", 3291),
-    ] {
+    for (name, ticks) in [("menu-tour", 3055), ("classic-cstick", 3291)] {
         let Some(out) = session(name, &["--all", "--heap"]) else {
             return;
         };
@@ -81,4 +77,26 @@ fn the_c_stick_rule_off_zooms() {
         out.contains("1230 ticks compared; tick 1229 differs") && out.contains("camera.x2BA"),
         "{out}"
     );
+}
+
+/// `vs-menus`' VS match is a live match (`game::live`, task 4 of the plan): it compares clean
+/// from power-on to the match's start (tick 848), where the menus' session goes aside and the
+/// match, built from its game start as playback builds a replay's, plays on with the
+/// recording's reads, uncompared: ssbm-rs's run has no handoff.
+#[test]
+fn vs_menus_hands_off_its_match() {
+    let Some(out) = session("vs-menus", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(
+        out.contains(
+            "848 ticks compared, no difference, to the live match that starts in tick 848"
+        ),
+        "{out}"
+    );
+    assert!(
+        out.contains("live match 1: stage 0x2, port 1 character 0xe, port 2 character 0x2"),
+        "{out}"
+    );
+    assert!(out.contains("with no stop: 1 live matches"), "{out}");
 }

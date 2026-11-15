@@ -229,8 +229,10 @@ impl Running<'_> {
                 i.triggers[0] = z_press;
             }
         }
-        if self.game.playback.is_some() {
+        if self.game.replay_drives() {
             self.playback_inject(gobj);
+        } else if self.game.playback.is_some() {
+            self.playback_live_inputs(gobj);
         }
         crate::game::record::pre_frame(self.game, gobj);
         let fp = &mut self.game.fighters[f.0];
