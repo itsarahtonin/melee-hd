@@ -374,13 +374,30 @@ fn as_played_back(
     g
 }
 
+/// [`pads`] with port 1's pause, in which it zooms the pause camera all the way in (Y) and
+/// turns it (the stick), so the pause's view leaves port 2 off screen.
+fn paused_pads(read: u32) -> [PadStatus; 4] {
+    let mut p = pads(read, true);
+    if (1501..1560).contains(&read) {
+        p = [PadStatus::default(); 4];
+        if read < 1530 {
+            p[0].button = 0x0800;
+        } else if read < 1550 {
+            p[0].stick_x = 100;
+        }
+    }
+    p
+}
+
 /// Plays a live match of the Slippi ruleset (`Settings::live`, built from the game start
 /// `record::live_start` takes from a state as the menus leave it) with scripted controllers,
-/// each poll the pad alarm takes the script's next read; calls `each` after every tick (and its
-/// display pass, when due) and returns the `.slp` it recorded.
+/// each poll the pad alarm takes the script's next read (with `pause`, [`paused_pads`]); calls
+/// `each` after every tick (and its display pass, when due) and returns the `.slp` it
+/// recorded.
 fn play_live(
     disc: &Disc,
     settings: &Settings,
+    pause: bool,
     mut each: impl FnMut(&melee_sim::game::vs_match::Match, bool),
 ) -> Vec<u8> {
     let mut m = melee_sim::game::vs_match::Match::start(settings, &mut loader(disc));
@@ -388,7 +405,11 @@ fn play_live(
     for _ in 0..8000 {
         let (f, render) = m.step_live_tick(&mut || {
             read += 1;
-            pads(read - 1, false)
+            if pause {
+                paused_pads(read - 1)
+            } else {
+                pads(read - 1, false)
+            }
         });
         if render {
             m.render();
@@ -405,6 +426,24 @@ fn play_live(
     melee_slippi::write::recording(r, std::time::UNIX_EPOCH)
 }
 
+/// [`settings`]' match as a live match of the Slippi ruleset started from VS mode's menus
+/// (scene 2.2), recording itself: the game start it's built from and its settings.
+fn live_settings() -> (melee_sim::game::vs_match::ReplayStart, Settings) {
+    let s = settings();
+    let mut g = melee_sim::game::state::Game {
+        rules: Rules::slippi_online(),
+        ..Default::default()
+    };
+    g.objs.rng.seed = s.seed;
+    g.machine.routing.curr_mode = 2;
+    g.machine.routing.curr_state_id = 2;
+    let (start, setup) = record::live_start(&g, &s.start);
+    let mut live = Settings::live(&start).expect("the ruleset's codes");
+    live.disc = melee_sim::audio::clock::DiscSpeed::Drive;
+    live.record = Some(setup);
+    (start, live)
+}
+
 /// The Slippi ruleset's live match equals melee-hd's playback of its own `.slp` tick by tick,
 /// the whole state but [`as_played_back`]'s named list: it is built from its game start as
 /// playback builds a replay's (`docs/slippi-ruleset.md`, design call 3), so its recording plays
@@ -416,19 +455,8 @@ fn a_live_match_equals_its_playback() {
     crate::on_game_stack(|| {
         let Some(disc) = disc() else { return };
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
-        let s = settings();
-        let mut g = melee_sim::game::state::Game {
-            rules: Rules::slippi_online(),
-            ..Default::default()
-        };
-        g.objs.rng.seed = s.seed;
-        g.machine.routing.curr_mode = 2;
-        g.machine.routing.curr_state_id = 2;
-        let (start, setup) = record::live_start(&g, &s.start);
-        let mut live = Settings::live(&start).expect("the ruleset's codes");
-        live.disc = melee_sim::audio::clock::DiscSpeed::Drive;
-        live.record = Some(setup);
-        let file = play_live(&disc, &live, |_, _| {});
+        let (start, live) = live_settings();
+        let file = play_live(&disc, &live, false, |_, _| {});
         let replay = Replay::parse(&file).expect("the recording parses");
         let back = melee_slippi::start(&replay);
         assert_eq!(back.info, start.info);
@@ -446,7 +474,7 @@ fn a_live_match_equals_its_playback() {
         again.disc = live.disc;
         let mut play = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
         let mut ticks = 0;
-        play_live(&disc, &live, |m, render| {
+        play_live(&disc, &live, false, |m, render| {
             let (f, played) = play.step_replay_tick(&mut melee_slippi::Device(&replay));
             assert_eq!(render, played, "tick {ticks}'s display pass");
             if played {
@@ -460,6 +488,128 @@ fn a_live_match_equals_its_playback() {
         });
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
         assert!(ticks > 3600, "{ticks} ticks");
+    });
+}
+
+/// A paused live match records what Slippi Dolphin's recording codes record of a paused match,
+/// and its playback (which never pauses: its controllers are at rest) records it again but for
+/// two things the pause leaves, as Slippi's own replays of paused matches do
+/// (`docs/slippi-ruleset.md`, "A pause"): from the first frame after the pause, the frame starts'
+/// scene frame count, which counted the paused ticks; and on the frames after the pause until
+/// the camera's ease back brings them into view, the off-screen mark (`x221F_b0`, the post-frame
+/// update's fifth flag byte's 0x80) of the fighters the pause camera's last view left off screen,
+/// set in the live match by the display pass and clear in playback. Nothing else differs.
+#[test]
+fn a_paused_live_match_records_the_pause_as_slippi_does() {
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+        let (_, live) = live_settings();
+        let (mut paused, mut marked) = (0u32, Vec::new());
+        let file = play_live(&disc, &live, true, |m, _| {
+            if m.game.camera.cam.mode == melee_sim::game::camera::PAUSE {
+                paused += 1;
+                // The marks the pause camera's view leaves when the pause ends.
+                marked = (m.game.fighters.iter())
+                    .map(|(_, f)| f.x221F_b0)
+                    .collect::<Vec<_>>();
+            }
+        });
+        assert!(paused > 30, "{paused} paused ticks");
+        assert!(
+            marked.contains(&true),
+            "the pause's view marked no one off screen"
+        );
+        let original = Replay::parse(&file).expect("the recording parses");
+        let mut again = Settings::from_replay(&melee_slippi::start(&original)).expect("settings");
+        again.disc = live.disc;
+        again.record = Some(melee_slippi::write::setup(&original));
+        let mut play = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
+        for _ in 0..8000 {
+            let (f, render) = play.step_replay_tick(&mut melee_slippi::Device(&original));
+            if render {
+                play.render();
+            }
+            play.recycle(f);
+            assert_ne!(
+                play.game.camera.cam.mode,
+                melee_sim::game::camera::PAUSE,
+                "playback paused"
+            );
+            if play.game.recorder.as_ref().is_some_and(|r| r.ended()) {
+                break;
+            }
+        }
+        let r = play.game.recorder.as_ref().expect("the recorder");
+        assert!(r.ended(), "the playback didn't end");
+        let ours = Replay::parse(&melee_slippi::write::recording(r, std::time::UNIX_EPOCH))
+            .expect("the second recording parses");
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        // As `record_and_play_back` compares: the game start but its scene, and the pre-frame
+        // updates without the physical buttons and triggers.
+        let events = |r: &Replay| {
+            (r.events.iter())
+                .filter(|e| e.command != event::GAME_START)
+                .map(|e| {
+                    let mut e = e.clone();
+                    if e.command == event::PRE_FRAME {
+                        e.payload[0x30..0x3A].fill(0);
+                    }
+                    e
+                })
+                .collect::<Vec<_>>()
+        };
+        let (a, b) = (events(&original), events(&ours));
+        assert_eq!(a.len(), b.len(), "the recordings have different lengths");
+        let frame = |p: &[u8]| i32::from_be_bytes(p[0..4].try_into().unwrap());
+        let (mut counts, mut marks) = (Vec::new(), Vec::new());
+        for (x, y) in a.iter().zip(&b) {
+            assert_eq!(x.command, y.command);
+            if x.payload == y.payload {
+                continue;
+            }
+            let (p, q) = (&x.payload, &y.payload);
+            let differ: Vec<usize> = (0..p.len()).filter(|&i| p[i] != q[i]).collect();
+            match x.command {
+                // The scene frame count (payload 8 to 11), the paused ticks ahead.
+                event::FRAME_START if differ.iter().all(|i| (8..12).contains(i)) => {
+                    let count = |p: &[u8]| u32::from_be_bytes(p[8..12].try_into().unwrap());
+                    assert_eq!(count(p), count(q) + paused, "frame {}'s count", frame(p));
+                    counts.push(frame(p));
+                }
+                // The fifth flag byte's off-screen mark: set live, clear in playback.
+                event::POST_FRAME if differ == [0x29] && p[0x29] == q[0x29] | 0x80 => {
+                    assert!(
+                        marked[p[4] as usize],
+                        "port {} wasn't marked in the pause",
+                        p[4]
+                    );
+                    marks.push((frame(p), p[4]));
+                }
+                c => panic!(
+                    "command {c:#04X} on frame {} differs at {differ:x?}: {p:02X?} against {q:02X?}",
+                    frame(p)
+                ),
+            }
+        }
+        // The counts differ from the pause's first frame to the end, and the marks only on
+        // frames after it, in one run from it.
+        let first = *counts.first().expect("no frame start counts the pause");
+        let last = (a.iter().rev())
+            .find(|e| e.command == event::FRAME_START)
+            .map(|e| frame(&e.payload))
+            .expect("a frame start");
+        assert_eq!(counts, (first..=last).collect::<Vec<_>>());
+        assert!(!marks.is_empty(), "no mark left by the pause");
+        assert_eq!(marks[0].0, first, "{marks:?}");
+        let mut frames: Vec<i32> = marks.iter().map(|m| m.0).collect();
+        frames.dedup();
+        // The camera eases back from the pause's view over several frames (nine here).
+        assert!(frames.len() > 1, "{marks:?}");
+        assert_eq!(
+            frames,
+            (first..first + frames.len() as i32).collect::<Vec<_>>()
+        );
     });
 }
 
