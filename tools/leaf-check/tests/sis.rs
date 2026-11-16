@@ -177,6 +177,21 @@ fn create_text_buffer() {
     .run();
 }
 
+/// Whether the encoder (`HSD_SisLib_803A67EC`) takes `s`'s terminator as the second byte of
+/// a pair it passes through, and reads on past it.
+fn reads_past(s: &[u8]) -> bool {
+    let mut i = 0;
+    while i < 0x80 && s[i] != 0 {
+        match s[i] {
+            b' ' | b'"' | b'\'' | b',' | b'-' | b'.' | b':' => i += 1,
+            c if c.is_ascii_alphanumeric() => i += 1,
+            _ if s[i + 1] == 0 => return true,
+            _ => i += 2,
+        }
+    }
+    false
+}
+
 #[test]
 fn encode_strings() {
     // Every printable ASCII character, runs of kerned and unkerned ones, and Shift-JIS pairs.
@@ -185,6 +200,7 @@ fn encode_strings() {
     };
     let marks = [b'.', b':', b',', b'-', b'"', 0x27];
     let mut r = Rand(11);
+    let mut compared = 0;
     for i in 0..3000 {
         let n = r.below(40) as usize;
         let mut s: Vec<u8> = (0..n)
@@ -201,8 +217,12 @@ fn encode_strings() {
             s = (0x20..0x7F).collect();
         }
         s.push(0);
+        // A string ending in a byte the encoder passes as a lead byte has the original read
+        // on past its terminator, where melee-sim stops by name (`sis::encode`).
+        if reads_past(&s) {
+            continue;
+        }
         let at = SCRATCH + 0x1000;
-        // The original reads on past a trailing lead byte; ours reads zeros there.
         for k in 0..0x100 {
             ctx.write_u8(at + k, 0);
         }
@@ -214,7 +234,9 @@ fn encode_strings() {
         let mut out = [0u8; 0x200];
         let m = sis::encode(&mut out, &s);
         assert_eq!((m, &out[..=m]), (n, &theirs[..]), "{s:x?}");
+        compared += 1;
     }
+    assert!(compared > 2000, "only {compared} strings compared");
 }
 
 /// The captured match's name tag text (`un_804D6D78`), which every VS HUD makes.
