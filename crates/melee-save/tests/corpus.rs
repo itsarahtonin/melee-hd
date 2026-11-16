@@ -582,7 +582,14 @@ fn sessions_saves_replayed() {
         } else {
             ""
         };
-        replayed.push(format!("{label} ({saves} saves, banks {banks:?}{snap})"));
+        let mid = if interim.is_some() {
+            ", a banner between"
+        } else {
+            ""
+        };
+        replayed.push(format!(
+            "{label} ({saves} saves, banks {banks:?}{snap}{mid})"
+        ));
     }
     eprintln!("replayed:\n  {}", replayed.join("\n  "));
     eprintln!("skipped:\n  {}", skipped.join("\n  "));
