@@ -5,7 +5,7 @@
 
 use melee_data::archive::Archives;
 
-use super::handles::{FighterId, ItemId};
+use super::handles::{CameraBoxId, FighterId, ItemId};
 use super::mirror::{LayCx, LayOut, Mirror};
 use super::state::{Game, Obj, UserData};
 use crate::hsd::export::{Lay, live_objects};
@@ -427,6 +427,7 @@ pub struct Live {
     pub geometry: bool,
     pub dynamics: bool,
     pub zako: bool,
+    pub camera: bool,
 }
 
 /// The game's objects the scene's heap holds as it ends, laid out before the heap's claims
@@ -445,6 +446,9 @@ pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, live: L
     if live.dynamics {
         dynamics_links(game, data, img);
         wind_sources(game, data, img);
+    }
+    if live.camera {
+        camera_boxes(game, img);
     }
     // The scene's own objects (an earlier scene's slots name blocks of its freed heap).
     let fighters = std::any::type_name::<super::structs::Fighter>();
@@ -606,7 +610,7 @@ fn coll_arrays(game: &Game, data: &Archives, img: &mut Image) {
     if g.lines_addr != 0 {
         let at = g.lines_addr;
         let lines = match game.stage_info.coll_data {
-            None => None,
+            None => Some(DEFAULT_MAP_LINES),
             Some(c) => data.ptr(c.at(8)).and_then(|d| img.data_addr(d)),
         };
         let mut l = Lay::leftover(img, data, at, 1536 * 8);
@@ -616,7 +620,8 @@ fn coll_arrays(game: &Game, data: &Archives, img: &mut Image) {
                     continue;
                 };
                 let a = at + 8 * id as u32;
-                // A stage without collision data's line is the executable's (`mpLib_803BF760`).
+                // A stage without collision data's line is the executable's
+                // (`mpLib_803BF760`'s lines).
                 l.put_word(a, lines.map(|d| d + 0x10 * id as u32));
                 l.put_u32(a + 4, line.flags);
             }
@@ -735,6 +740,54 @@ fn wind_sources(game: &Game, data: &Archives, img: &mut Image) {
         l.u32(
             at + 0x34,
             w.next[i].map_or(0, |n| block + 0x38 * u32::from(n)),
+        );
+    }
+    l.put(img);
+}
+
+/// The camera's boxes (`CmSubject`, 0x6C each, `Camera_Init`'s block), as their block goes
+/// back with its scene's heap: zeroed as it's made, the free list's links, and each box taken
+/// since as melee-sim holds it (`Camera_80029020`, `Camera_80028F5C`); nothing writes the flag
+/// byte's other bits or the byte after it.
+fn camera_boxes(game: &Game, img: &mut Image) {
+    let b = &game.camera.boxes;
+    if b.addr == 0 {
+        return;
+    }
+    let addr = |h: Option<CameraBoxId>| h.map_or(0, |h| b.addr + 0x6C * h.0);
+    let len = 0x6C * b.boxes.len() as u32;
+    let mut l = Lay::new(b.addr, len);
+    l.bytes(0, &vec![0; len as usize]);
+    for (i, s) in b.boxes.iter().enumerate() {
+        let at = 0x6C * i as u32;
+        l.u32(at, addr(s.next));
+        l.u32(at + 4, addr(s.prev));
+        l.u32(at + 8, s.state as u32);
+        l.u8(
+            at + 0xC,
+            u8::from(s.on_ledge) << 7
+                | u8::from(s.force_inactive) << 6
+                | u8::from(s.was_framed) << 5,
+        );
+        l.u16(at + 0xE, s.state_timer as u16);
+        let e = |x: &super::structs::CmSubjectExtents| [x.h.x, x.h.y, x.v.x, x.v.y, x.v.z];
+        l.f32s(
+            at + 0x10,
+            &[
+                s.pos.x,
+                s.pos.y,
+                s.pos.z,
+                s.bone_pos.x,
+                s.bone_pos.y,
+                s.bone_pos.z,
+                s.facing_dir,
+            ],
+        );
+        l.f32s(at + 0x2C, &e(&s.ext));
+        l.f32s(at + 0x40, &e(&s.target_ext));
+        l.f32s(
+            at + 0x54,
+            &[s.x54.x, s.x54.y, s.x54.z, s.x60.x, s.x60.y, s.x60.z],
         );
     }
     l.put(img);
@@ -1743,6 +1796,9 @@ pub fn x2040_list(game: &Game, data: &Archives, img: &mut Image, list: super::ha
 
 /// `mpLib_803BF760`'s joints (`MapJoint`s), where a stage without collision data points.
 const DEFAULT_MAP_JOINTS: u32 = 0x803B_F738;
+
+/// `mpLib_803BF760`'s lines (`MapLine`s, `mpLib_803BF728`), as [`DEFAULT_MAP_JOINTS`].
+const DEFAULT_MAP_LINES: u32 = 0x803B_F728;
 
 /// The stage's collision joints (`CollJoint`, 0x34 each, `groundCollJoint`), as the scene's
 /// heap goes: the list's links, each joint's descriptor in the data, flags, stamp, dirty bit,

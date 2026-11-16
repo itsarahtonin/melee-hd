@@ -1740,14 +1740,14 @@ impl Running<'_> {
                 }
             }
         };
-        if !id.is_set(&mut self.game.objs.stale_reads) {
+        if !id.is_set() {
             add(self.game, g);
             return;
         }
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(o) = cur {
             cur = self.game.world.gobjs[o.0].next;
-            if self.same_ignore_id(o, id) {
+            if self.same_ignore_id(o, id, o == g) {
                 add(self.game, o);
             }
         }
@@ -1768,24 +1768,27 @@ impl Running<'_> {
                 }
             }
         };
-        if !id.is_set(&mut self.game.objs.stale_reads) {
+        if !id.is_set() {
             add(self.game, g);
             return;
         }
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(o) = cur {
             cur = self.game.world.gobjs[o.0].next;
-            if self.same_ignore_id(o, id) {
+            if self.same_ignore_id(o, id, o == g) {
                 add(self.game, o);
             }
         }
     }
 
-    /// Whether item `o` shares the ignore id `id` (stale ids read as stale reads, and match
-    /// nothing known).
-    fn same_ignore_id(&mut self, o: GObjId, id: super::super::it::IgnoreId) -> bool {
-        let theirs = super::super::it::item(self.game, o).xAC4_ignoreItemID;
-        theirs.read(&mut self.game.objs.stale_reads).is_some() && id.0.is_some() && theirs == id
+    /// Whether item `o` shares the ignore id `id` (`itself`: it's the item `id` is from), as
+    /// [`IgnoreId::same`](super::super::it::IgnoreId::same) takes a grapple beam's stack word.
+    #[track_caller]
+    fn same_ignore_id(&mut self, o: GObjId, id: super::super::it::IgnoreId, itself: bool) -> bool {
+        id.same(
+            super::super::it::item(self.game, o).xAC4_ignoreItemID,
+            itself,
+        )
     }
 
     /// The fighter takes item `g`'s box `j` on hurtbox `n`, `ftColl_80077C60`: the damage

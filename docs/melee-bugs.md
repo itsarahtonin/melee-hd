@@ -410,13 +410,13 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Samus: the grapple beam's ignore id from the stack
 
-- **Where:** `it_802B7C18` (the grapple beam's spawn), `crates/melee-sim/src/game/it/kinds/samusgrapple.rs`.
-- **Defect:** it fills a `SpawnItem` on its stack but never its `x40`, which becomes the item's ignore id (`xAC4_ignoreItemID`); in a CPU match it held a code address a call before had saved.
-- **Effect:** none observable: items sharing an id share their hitboxes' victims, and the beam has no hitboxes.
-- **melee-hd:** stale (`it::IgnoreId(None)`; a read counts a stale read).
+- **Where:** `it_802B7C18` (the grapple beam's spawn), `crates/melee-sim/src/game/it/kinds/samusgrapple.rs`; read by `it_8026FCF8` (an item's hitbox joining its group), `it_8026FAC4` and `it_8026FC00` (a fighter remembered as a group's victim), `crates/melee-sim/src/game/it/coll.rs` and `game/ft/attack.rs`.
+- **Defect:** it fills a `SpawnItem` on its stack but never its `x40` (0x6C into its 0x98 frame), which becomes the item's ignore id (`xAC4_ignoreItemID`). The word is what a deeper call left at that depth during the fighter's animation process (`Fighter_procAnim`'s animation walk and the calls after it, before the state's animation callback spawns the beam): `TObjUpdateFunc`'s address, a DObj's or another heap address in every case seen.
+- **Effect:** items sharing a nonzero id share their hitboxes' victims. The other items' ids are 0 or small attack ids (`it_804D6D14`), so a beam's address shares with no other item, and its own boxes share their groups. Two beams out at once could hold the same word (two Samuses grappling in one animation pass) and share victims; a zero word would stop the beam's boxes sharing at all.
+- **melee-hd:** the id stays unknown (`it::IgnoreId(None)`, left out of the comparison) and the hit groups take it as nonzero, the beam's own, and no other item's (`IgnoreId::is_set`, `IgnoreId::same`); two unknown ids met, or one against a known id in main memory's addresses, stop by name. That the word is never zero is unproven: ssbm-rs's scan of every grapple spawn in its recordings (requested 2026-11-15) counts the zeros, and a zero sends this back for review.
 - **Fix:** set `x40`.
-- **Fix impact:** none.
-- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 75); `crates/melee-sim/src/game/it/kinds/samusgrapple.rs:490`.
+- **Fix impact:** none seen: no recording has two beams out at once.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values); [the oracle](oracle.md#the-grapple-beams-ignore-id) (`m6-replay-2/stage3`, tick 9102); `crates/melee-sim/src/game/it/mod.rs` (`IgnoreId`).
 
 ### Samus: the grapple beam reads its owner as an item
 

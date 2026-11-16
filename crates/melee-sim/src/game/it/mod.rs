@@ -200,13 +200,19 @@ impl Globals {
 
 /// An item's ignore id (`Item::xAC4_ignoreItemID`): the items sharing one share their
 /// hitboxes' victims. It comes from the spawn's `x40`, which the grapple beam's spawn
-/// (`it_802B7C18`) never sets, leaving a stack word: that id is stale (None), the comparer
-/// leaves it out, and reading it stops by name, as the stack words aren't modelled.
+/// (`it_802B7C18`) never sets, leaving a stack word: that id is unknown (None), the comparer
+/// leaves it out, and the hit groups take it as the original's words seen there are, a code
+/// or heap address: nonzero, its own, and no other item's (docs/engine.md, "Uninitialized
+/// values"; docs/melee-bugs.md).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct IgnoreId(pub Option<u32>);
 
+/// Main memory's addresses, where the grapple beam's stack word points.
+const MEM1: std::ops::Range<u32> = 0x8000_0000..0x8180_0000;
+
 impl IgnoreId {
-    /// The id; one never set (the grapple beam's stack word) stops.
+    /// The id, where the code passes it on (PK Thunder's, the Fire Flower's, both set); the
+    /// grapple beam's stack word stops.
     #[track_caller]
     pub fn read(self, _stale_reads: &mut u32) -> Option<u32> {
         assert!(
@@ -216,10 +222,35 @@ impl IgnoreId {
         self.0
     }
 
-    /// Whether the item has an id (a stale one stops, [`IgnoreId::read`]).
+    /// Whether the item has an id: the grapple beam's stack word is taken as nonzero, as every
+    /// one seen was (a code or heap address); that it never is zero is unproven.
+    pub fn is_set(self) -> bool {
+        self.0 != Some(0)
+    }
+
+    /// Whether an item with this id shares it with an item with `other`'s (`itself`: the same
+    /// item, whose word is its own). The grapple beam's stack word is no other item's: the
+    /// others' are 0 or small attack ids. Stops by name where that could fail: two unknown
+    /// words (two beams, whose stack words may be the same address), or an unknown word
+    /// against a known id in main memory's addresses.
     #[track_caller]
-    pub fn is_set(self, stale_reads: &mut u32) -> bool {
-        self.read(stale_reads) != Some(0)
+    pub fn same(self, other: IgnoreId, itself: bool) -> bool {
+        if itself {
+            return true;
+        }
+        match (self.0, other.0) {
+            (Some(a), Some(b)) => a == b,
+            (None, None) => panic!(
+                "it_802B7C18: two items' ignore ids are grapple beams' stack words, which may be the same"
+            ),
+            (None, Some(v)) | (Some(v), None) => {
+                assert!(
+                    !MEM1.contains(&v),
+                    "it_802B7C18: a grapple beam's ignore id (a stack word) against an id at {v:#x}, an address"
+                );
+                false
+            }
+        }
     }
 }
 
@@ -305,5 +336,36 @@ pub fn jobj_of(game: &Game, gobj: GObjId) -> Option<JObjId> {
         Some(super::state::Obj::JObj(j)) => Some(j),
         None => None,
         other => panic!("GObj {gobj:?} holds {other:?}, not a joint"),
+    }
+}
+
+#[cfg(test)]
+mod ignore_id_tests {
+    use super::IgnoreId;
+
+    const BEAM: IgnoreId = IgnoreId(None);
+
+    #[test]
+    fn a_beams_stack_word_is_set_its_own_and_no_other_items() {
+        assert!(BEAM.is_set());
+        assert!(!IgnoreId(Some(0)).is_set());
+        assert!(BEAM.same(BEAM, true));
+        for id in [0, 9, 0x7FFF_FFFF, 0x8180_0000] {
+            assert!(!BEAM.same(IgnoreId(Some(id)), false));
+            assert!(!IgnoreId(Some(id)).same(BEAM, false));
+        }
+        assert!(IgnoreId(Some(9)).same(IgnoreId(Some(9)), false));
+    }
+
+    #[test]
+    #[should_panic(expected = "two items' ignore ids are grapple beams' stack words")]
+    fn two_beams_stop() {
+        BEAM.same(BEAM, false);
+    }
+
+    #[test]
+    #[should_panic(expected = "an address")]
+    fn a_known_id_in_main_memory_stops() {
+        IgnoreId(Some(0x80E0_7DC0)).same(BEAM, false);
     }
 }
