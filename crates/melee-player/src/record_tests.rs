@@ -400,7 +400,7 @@ fn play_live(
     settings: &Settings,
     pause: bool,
     at: Option<&melee_sim::game::live::Timeline>,
-    mut each: impl FnMut(&melee_sim::game::vs_match::Match, bool),
+    mut each: impl FnMut(&mut melee_sim::game::vs_match::Match, bool),
 ) -> Vec<u8> {
     let mut m = melee_sim::game::vs_match::Match::start(settings, &mut loader(disc));
     if let Some(at) = at {
@@ -419,7 +419,7 @@ fn play_live(
         if render {
             m.render();
         }
-        each(&m, render);
+        each(&mut m, render);
         let ended = f.ended;
         m.recycle(f);
         if ended {
@@ -450,11 +450,17 @@ fn live_settings() -> (melee_sim::game::vs_match::ReplayStart, Settings) {
 }
 
 /// The Slippi ruleset's live match equals melee-hd's playback of its own `.slp` tick by tick,
-/// the whole state but [`as_played_back`]'s named list: it is built from its game start as
-/// playback builds a replay's (`docs/slippi-ruleset.md`, design call 3), so its recording plays
-/// back as it played. The game start it's built from is the one playback reads from its
-/// recording (`melee_slippi::start`), field for field, and the recording's scene is the
-/// menus' (here VS mode's match, 2.2), not playback's 14.1.
+/// the whole state but [`as_played_back`]'s named list and playback's first frame's settling
+/// (`Fighter_procInput+0x3CC`): it is built from its game start as playback builds a replay's
+/// (`docs/slippi-ruleset.md`, design call 3), and like Slippi Dolphin's live play it doesn't
+/// settle (Sarah, 2026-11-16: "if slippi differs between live play and playback, so too should
+/// we in the same way"). So it equals its playback played without the settling
+/// (`Playback::no_settling`) every tick, and its playback as Slippi's runs it, the settling in,
+/// differs from the first tick (the camera snapped where the live match's eases) with the same
+/// gameplay every tick on this stage (`docs/slippi-bugs.md`, "Playback settles each fighter on
+/// the first frame, which live play doesn't"). The game start it's built from is the one
+/// playback reads from its recording (`melee_slippi::start`), field for field, and the
+/// recording's scene is the menus' (here VS mode's match, 2.2), not playback's 14.1.
 #[test]
 fn a_live_match_equals_its_playback() {
     crate::on_game_stack(|| {
@@ -477,22 +483,45 @@ fn a_live_match_equals_its_playback() {
         assert_eq!((payload[0x1A2], payload[0x1A3]), (2, 2), "the menus' scene");
         let mut again = Settings::from_replay(&back).expect("its settings");
         again.disc = live.disc;
-        let mut play = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
-        let mut ticks = 0;
+        let mut unsettled = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
+        (unsettled.game.playback.as_mut())
+            .expect("a replay's match")
+            .no_settling = true;
+        let mut settled = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
+        let (mut ticks, mut parted) = (0, Vec::new());
         play_live(&disc, &live, false, None, |m, render| {
-            let (f, played) = play.step_replay_tick(&mut melee_slippi::Device(&replay));
-            assert_eq!(render, played, "tick {ticks}'s display pass");
-            if played {
-                play.render();
-            }
-            play.recycle(f);
-            if let Some(d) = as_played_back(&m.game, &play.game).state_diff(&play.game) {
-                panic!("tick {ticks} of the live match differs from its playback at game{d}");
+            for (play, settles) in [(&mut unsettled, false), (&mut settled, true)] {
+                let (f, played) = play.step_replay_tick(&mut melee_slippi::Device(&replay));
+                assert_eq!(render, played, "tick {ticks}'s display pass");
+                if played {
+                    play.render();
+                }
+                play.recycle(f);
+                let mut ours = as_played_back(&m.game, &play.game);
+                (ours.playback.as_mut()).expect("a live match").no_settling = !settles;
+                if !settles {
+                    if let Some(d) = ours.state_diff(&play.game) {
+                        panic!(
+                            "tick {ticks} of the live match differs from its playback without the settling at game{d}"
+                        );
+                    }
+                } else {
+                    if ours.state_diff(&play.game).is_some() {
+                        parted.push(ticks);
+                    }
+                    assert_eq!(
+                        gameplay(&m.game),
+                        gameplay(&play.game),
+                        "tick {ticks} of the live match plays back otherwise"
+                    );
+                }
             }
             ticks += 1;
         });
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
         assert!(ticks > 3600, "{ticks} ticks");
+        // The settling parts playback from the live match at once.
+        assert_eq!(parted.first(), Some(&0), "playback didn't settle");
     });
 }
 

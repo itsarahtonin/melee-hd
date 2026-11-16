@@ -263,9 +263,14 @@ pub struct Playback {
     /// A live match built as playback builds a replay's (the Slippi ruleset's matches,
     /// `vs_match::Settings::live`): everything playback sets up, but the controllers' polls
     /// drive the fighters. No frame is read or injected, no seed restored (the seed the frame
-    /// would hold is the one the match has there), and a team player takes a stock back as the
-    /// game's own check says. The frame count and the sound log run as in a replay.
+    /// would hold is the one the match has there), the first frame settles no fighter (Slippi
+    /// Dolphin's live play doesn't), and a team player takes a stock back as the game's own
+    /// check says. The frame count and the sound log run as in a replay.
     pub live: bool,
+    /// A replay played without the first frame's settling (`Fighter_procInput+0x3CC`), as a
+    /// live match plays: never in melee-hd's playback, which settles as Slippi's does; a test
+    /// sets it to hold a live match equal to its playback but for the settling.
+    pub no_settling: bool,
 }
 
 /// The sounds playback's codes log (`Playback/Core/Sounds`, in the codes' state block at
@@ -641,7 +646,7 @@ impl Running<'_> {
         let (sx, sy, cx, cy, trigger, buttons) = (w(4), w(8), w(0xC), w(0x10), w(0x14), w(0x18));
         let b = |off| frame.char_byte(port, 0, off);
         let raw = [b(0x2C), b(0x2D), b(0x32), b(0x33)];
-        let first = p.frame_index == FIRST_FRAME;
+        let first = p.frame_index == FIRST_FRAME && !p.no_settling;
         let fp = &mut self.game.fighters[f.0];
         fp.input.lstick[0].x = f32::from_bits(sx);
         fp.input.lstick[0].y = f32::from_bits(sy);
@@ -664,31 +669,12 @@ impl Running<'_> {
         }
     }
 
-    /// A live match's part of playback's input code (`Fighter_procInput+0x3CC`): the
-    /// fighters keep what they read from their controllers, and at the first frame each one
-    /// playback would inject into is settled as playback settles it.
-    pub fn playback_live_inputs(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter(gobj);
-        if fp.is_sub_fighter {
-            let ckind = self.game.player_ckind(i32::from(fp.player_idx));
-            if super::pl::player::mapping(ckind).has_transformation == 0 {
-                return;
-            }
-        }
-        if self
-            .game
-            .playback
-            .as_ref()
-            .expect("a live match")
-            .frame_index
-            == FIRST_FRAME
-        {
-            self.playback_settle_first_frame(gobj);
-        }
-    }
-
     /// The first frame's settling of a fighter (`Fighter_procInput+0x3CC`'s tail), which
-    /// would apply a resynced position: the codes never resync a replay played back.
+    /// would apply a resynced position: the codes never resync a replay played back. Only
+    /// playback runs it: Slippi Dolphin's live play (its recording and online codes) has no
+    /// code there, so a live match doesn't settle, and its recording's first frames play back
+    /// from a settled state its match didn't have (docs/slippi-bugs.md, "Playback settles each
+    /// fighter on the first frame, which live play doesn't").
     fn playback_settle_first_frame(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         // `@282`, the float the codes rotate the fighter's first part by.
