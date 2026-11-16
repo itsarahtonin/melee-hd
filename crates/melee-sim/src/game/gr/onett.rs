@@ -700,6 +700,10 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
             let speed = v.car_speed;
             drive(r.game, car_j, speed);
             let x110 = r.game.grounds[g.0].u.onett_car().x110;
+            if x110 == 1 && r.game.rules.slippi {
+                let horn = p.f(r.data, p::HORN_X);
+                note_other_phase(r, car_j, [center, right], horn);
+            }
             let mut check_center = false;
             match x110 {
                 0 => {
@@ -744,6 +748,44 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
         _ => {}
     }
     proc_back_car(r, g, p);
+}
+
+/// Under Slippi's rules, the coming car's view-edge decisions (`x110` 1: the horn past the
+/// right edge, then the centre) taken with the view the other display-pass phase would give
+/// the camera ([`crate::game::live::DisplayPhase::other_view`]); a different outcome noted
+/// (design call 9 of `docs/slippi-ruleset.md`). `span` is the centre and right edge the CObj
+/// gives, `horn` the horn's distance past the edge.
+fn note_other_phase(r: &mut Running, car_j: Option<jobj::JObjId>, span: [f32; 2], horn: f32) {
+    let held = camera::View::of_camera(r.game, r.data);
+    let due = camera::pass_view(r.game);
+    let Some(other) = r.game.display_phase.other_view(held, due) else {
+        return;
+    };
+    let ([_, center, right], _) = other.ground_span(r.game);
+    let x = reg(car_x(r.game, car_j));
+    let street = || {
+        let mut at = r.game.world.first_in(P_LINK_FIGHTER);
+        while let Some(f) = at {
+            if on_street(r, f) {
+                return true;
+            }
+            at = r.game.world.gobjs[f.0].next;
+        }
+        false
+    };
+    if car_outcome(x, span, horn, street) != car_outcome(x, [center, right], horn, street) {
+        let tick = r.game.scene.unk_8;
+        r.game.display_phase.note(tick);
+    }
+}
+
+/// What the coming car at x `x` does with `x110` at 1 through a view whose centre and right
+/// edge are `span`: whether it honks with the scream (past the right edge by `horn`, someone
+/// on the street), and else whether it stops honking for good (past the centre by 100).
+fn car_outcome(x: f64, span: [f32; 2], horn: f32, street: impl Fn() -> bool) -> (bool, bool) {
+    let [center, right] = span;
+    let scream = x <= fp::fadds(reg(right), reg(horn)) && street();
+    (scream, !scream && x <= fp::fadds(100.0, reg(center)))
 }
 
 /// The car from the left's part of [`proc_cars`].
@@ -1005,5 +1047,46 @@ pub fn smoke(r: &mut Running, gobj: GObjId) {
         let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, j, Some(rot));
         let gen_ = grlib::generator_at(r.game, r.data, 0x7530, 30, pos);
         r.game.grounds[g.0].u.onett().smoke = gen_;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The coming car's view-edge outcome through two views: the horn's scream past one
+    /// view's right edge and not the other's, with someone on the street, differs; with nobody
+    /// on the street it doesn't, unless the centre then differs; past the centre in one view
+    /// only, it differs; past both edges, or neither, it doesn't.
+    #[test]
+    fn a_car_decides_by_the_view() {
+        let horn = 100.0;
+        let (near, far) = ([0.0, 300.0], [-100.0, 200.0]);
+        let on = || true;
+        let off = || false;
+        // The car at 350: past the near view's horn edge (400), not the far's (300).
+        assert_ne!(
+            car_outcome(350.0, near, horn, on),
+            car_outcome(350.0, far, horn, on)
+        );
+        assert_eq!(
+            car_outcome(350.0, near, horn, off),
+            car_outcome(350.0, far, horn, off)
+        );
+        // At 50: past the near view's centre (100), not the far's (0).
+        assert_ne!(
+            car_outcome(50.0, near, horn, off),
+            car_outcome(50.0, far, horn, off)
+        );
+        // Screaming either way: where the centre falls doesn't matter.
+        assert_eq!(
+            car_outcome(50.0, near, horn, on),
+            car_outcome(50.0, far, horn, on)
+        );
+        // Past neither.
+        assert_eq!(
+            car_outcome(500.0, near, horn, on),
+            car_outcome(500.0, far, horn, on)
+        );
     }
 }

@@ -38,7 +38,11 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         // The recording codes' processes send the frame over EXI and change nothing: the
         // recorder, when on, reads what they send.
         super::playback::RECORD_FRAME_START_PROC => super::record::frame_start_proc(game.game),
-        super::playback::RECORD_ITEMS_PROC => super::record::items_proc(game.game),
+        super::playback::RECORD_ITEMS_PROC => {
+            // The first process at priority 15: the logic's draws are done (`live::Haze`).
+            game.game.haze_logic_done();
+            super::record::items_proc(game.game)
+        }
         super::gm::vs::PROC => game.vs_proc(),
         super::gm::stamina::PROC => game.game.stamina_proc(),
         crate::lb::bgflash::PROC => game.game.bgflash.proc(),

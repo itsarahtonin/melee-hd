@@ -145,6 +145,14 @@ impl Running<'_> {
         };
         crate::lb::refract::set_camera(&self.game.objs, &mut self.game.refract, c);
         camera::update_cobj(self.game, gobj);
+        // Onett's cars read the view the pass sets (`live::DisplayPhase`, design call 9).
+        if self.game.rules.slippi
+            && self.game.stage_info.grkind == super::gr::GR_KIND_ONETT
+            && let Some(v) = camera::pass_view(self.game)
+        {
+            let tick = self.game.scene.unk_8;
+            self.game.display_phase.pass_view(tick, v);
+        }
         let shadows_debug = self.game.camera.cam.x399_b7;
         self.shadow_render(shadows_debug);
         if !display::camera_begin(&mut self.game.objs, self.data, Some(c)) {

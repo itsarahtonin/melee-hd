@@ -173,12 +173,23 @@ const PLACED: usize = 8;
 /// rounds fall, which Slippi Dolphin's playback decides for itself. Each such read is also
 /// computed with the other placement (the joints shifted by the root's difference), and a
 /// different outcome is counted; the recording's metadata and the player's log say the match
-/// may not play back exactly. Onett's cars, the other such read, aren't ported.
+/// may not play back exactly.
+///
+/// Onett's cars read the game camera's view edges (`camera::ground_span`), which only the
+/// display pass sets in the camera's CObj: a tick after a pass reads the view that pass set,
+/// a doubled round's second tick the one before. On Onett the pass's views are kept
+/// ([`DisplayPhase::pass_view`]), and each car decision through the edges is also taken with
+/// the other phase's view ([`DisplayPhase::other_view`]), a different outcome counted the same
+/// way (`gr::onett::proc_cars`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct DisplayPhase {
     /// The root translation the display pass last gave each fighter it places by the camera,
     /// by fighter slot.
     pub placed: [Option<(u16, crate::vec::Vec3)>; PLACED],
+    /// The views the last two display passes gave the game camera, the last first (on Onett
+    /// only), and the game tick of the last.
+    pub views: [Option<super::camera::View>; 2],
+    pub view_tick: u32,
     /// How many reads' outcomes differ between the two placements.
     pub differing: u32,
     /// The game ticks of the scene (`gm_80479D58.unk_8`) at the first of them.
@@ -208,10 +219,134 @@ impl DisplayPhase {
             .map(|&(_, v)| v)
     }
 
+    /// A display pass in game tick `tick` gave the game camera view `v`; a second pass in the
+    /// same tick (the game paused) replaces the first.
+    pub fn pass_view(&mut self, tick: u32, v: super::camera::View) {
+        if self.views[0].is_none() || self.view_tick != tick {
+            self.views[1] = self.views[0];
+        }
+        self.views[0] = Some(v);
+        self.view_tick = tick;
+    }
+
+    /// The camera view a read in the logic would see with the display pass's other phase, the
+    /// CObj holding `held` and a pass now giving it `due`: where they're the same, a pass ran
+    /// after the last tick, and the other phase is the one that skipped it (the view of the
+    /// pass before); where they differ, none did (this is a doubled round's second tick), and
+    /// the other phase is the one whose pass ran (`due`). None where both are the same, or no
+    /// earlier pass is known.
+    pub fn other_view(
+        &self,
+        held: super::camera::View,
+        due: Option<super::camera::View>,
+    ) -> Option<super::camera::View> {
+        let other = if due == Some(held) {
+            self.views[1]
+        } else {
+            due
+        };
+        other.filter(|&v| v != held)
+    }
+
     /// A read whose outcome differs between the placements, in game tick `tick`.
     pub fn note(&mut self, tick: u32) {
         self.differing = self.differing.saturating_add(1);
         self.first.get_or_insert(tick);
+    }
+}
+
+/// Brinstar Depths' haze off playback's course, under Slippi's rules (`docs/slippi-bugs.md`,
+/// "Playback's inputs never reach the controllers"): A on the second controller steps Kraid's
+/// haze (`gr::kraid::proc_copy`, from the pad library's master status), which a replay's
+/// playback never does, and the animations the haze then plays draw random numbers in the
+/// logic: in its first process (priority 1, the animation's particle keys) and in the step
+/// itself (priority 4), before the fighters' and items' processes at those priorities and
+/// after. Playback puts the recorded seed back only at the frame's start, so a draw the logic
+/// makes after the haze's process in such a tick can come out differently in playback.
+///
+/// From a step until Kraid restarts the haze (`gr::kraid::set_anim`, which starts the same
+/// animation either way; the particles left behind draw at priority 15, after the logic's
+/// draws), each tick in which the seed moves between the frame's start and the haze's step, or
+/// between the step and the particles' priority (the recording codes' item process, the first
+/// there), is counted into the playback note ([`DisplayPhase::note`]): the haze's draws may come
+/// before a draw the gameplay reads. Draws before the frame's start (priority 0 ahead of
+/// playback's seed process) aren't watched: Brinstar Depths makes none there.
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Haze {
+    /// A step put the haze off playback's course, and Kraid hasn't restarted it since.
+    pub off: bool,
+    /// Kraid restarted it this tick: back on course after the tick.
+    pub restarted: bool,
+    /// The random seed at the frame's start, while off.
+    pub start: u32,
+    /// The random seed after the haze's process this tick, while off.
+    pub after: Option<u32>,
+    /// The game tick last counted.
+    pub counted: Option<u32>,
+}
+
+impl Game {
+    /// Playback's seed process, where it restores the recorded seed: the seed the frame starts
+    /// with ([`Haze`]).
+    pub fn haze_frame_start(&mut self) {
+        if self.haze.off {
+            self.haze.start = self.objs.rng.seed;
+        }
+    }
+
+    /// The haze's process starts ([`Haze`]): counts the tick when the seed moved since the
+    /// frame's start while the haze was off course.
+    pub fn haze_process_start(&mut self) {
+        if self.haze.off && self.objs.rng.seed != self.haze.start {
+            self.haze_note();
+        }
+    }
+
+    /// The haze's process is done, `stepped` when it stepped the haze ([`Haze`]).
+    pub fn haze_process_end(&mut self, stepped: bool) {
+        if stepped && self.rules.slippi {
+            self.haze.off = true;
+            self.haze.restarted = false;
+        }
+        if self.haze.off {
+            self.haze.after = Some(self.objs.rng.seed);
+        }
+    }
+
+    /// Kraid restarted the haze on his state's animation ([`Haze`]).
+    pub fn haze_restarted(&mut self) {
+        if self.haze.off {
+            self.haze.restarted = true;
+        }
+    }
+
+    /// The logic's processes are done for the tick, the particles' about to run ([`Haze`]):
+    /// counts the tick when the seed moved since the haze's process; back on course after a
+    /// restart.
+    pub fn haze_logic_done(&mut self) {
+        if !self.haze.off {
+            return;
+        }
+        if self
+            .haze
+            .after
+            .take()
+            .is_some_and(|a| a != self.objs.rng.seed)
+        {
+            self.haze_note();
+        }
+        if self.haze.restarted {
+            self.haze = Haze::default();
+        }
+    }
+
+    /// One tick counted at most once.
+    fn haze_note(&mut self) {
+        let tick = self.scene.unk_8;
+        if self.haze.counted != Some(tick) {
+            self.haze.counted = Some(tick);
+            self.display_phase.note(tick);
+        }
     }
 }
 
@@ -289,5 +424,103 @@ mod tests {
         assert_eq!(hooked, Some(CALLBACK));
         // Vanilla's matches all run in the menus' session.
         assert!(refusal(Ruleset::Vanilla, machine::GM_VS, GS_VS, |_| {}).is_some());
+    }
+
+    fn view(x: f32) -> crate::game::camera::View {
+        crate::game::camera::View {
+            fov: 30.0,
+            interest: crate::vec::Vec3::new(x, 0.0, 0.0),
+            eye: crate::vec::Vec3::new(x, 20.0, 200.0),
+        }
+    }
+
+    /// The view the other display-pass phase reads: after a pass, the one before it; on a
+    /// doubled round's second tick (the CObj behind the transform), the one a pass would set
+    /// now; none where they're the same or no earlier pass is known. A second pass in one tick
+    /// (paused) replaces the first.
+    #[test]
+    fn the_other_phase_sees_the_other_view() {
+        let mut d = DisplayPhase::default();
+        d.pass_view(10, view(1.0));
+        assert_eq!(d.other_view(view(1.0), Some(view(1.0))), None);
+        d.pass_view(11, view(2.0));
+        assert_eq!(d.views, [Some(view(2.0)), Some(view(1.0))]);
+        // A tick after a pass: the CObj is what a pass would set now.
+        assert_eq!(d.other_view(view(2.0), Some(view(2.0))), Some(view(1.0)));
+        // A doubled round's second tick: the CObj lags the transform.
+        assert_eq!(d.other_view(view(2.0), Some(view(3.0))), Some(view(3.0)));
+        // A mode that leaves the CObj alone.
+        assert_eq!(d.other_view(view(2.0), None), None);
+        // The camera standing still.
+        d.pass_view(12, view(2.0));
+        assert_eq!(d.other_view(view(2.0), Some(view(2.0))), None);
+        // Paused: passes with no tick between.
+        d.pass_view(13, view(4.0));
+        d.pass_view(13, view(5.0));
+        assert_eq!(d.views, [Some(view(5.0)), Some(view(2.0))]);
+    }
+
+    /// The haze's tripwire on a constructed game: off course from a step under Slippi's rules,
+    /// a tick counted (once) where the seed moves between the frame's start and the haze's
+    /// process or between the process and the particles' priority, none where it doesn't, and
+    /// back on course after the tick Kraid restarts the haze. Vanilla's steps count nothing.
+    #[test]
+    fn the_haze_off_course_counts_draws_around_it() {
+        let mut g = Box::<Game>::default();
+        g.rules.slippi = true;
+        let tick = |g: &mut Game, t: u32, before: u32, step: bool, during: u32, after: u32| {
+            g.scene.unk_8 = t;
+            g.haze_frame_start();
+            for _ in 0..before {
+                g.objs.rng.draw();
+            }
+            g.haze_process_start();
+            for _ in 0..during {
+                g.objs.rng.draw();
+            }
+            g.haze_process_end(step);
+            for _ in 0..after {
+                g.objs.rng.draw();
+            }
+            g.haze_logic_done();
+        };
+        // On course, draws anywhere count nothing.
+        tick(&mut g, 1, 2, false, 0, 2);
+        assert_eq!(g.display_phase.differing, 0);
+        // The step's own draws, with nothing after them: nothing yet.
+        tick(&mut g, 2, 1, true, 3, 0);
+        assert!(g.haze.off);
+        assert_eq!(g.display_phase.differing, 0);
+        // Off course: a draw before the haze's process, one after, both.
+        tick(&mut g, 3, 1, false, 0, 0);
+        assert_eq!(
+            (g.display_phase.differing, g.display_phase.first),
+            (1, Some(3))
+        );
+        tick(&mut g, 4, 0, false, 0, 1);
+        assert_eq!(g.display_phase.differing, 2);
+        tick(&mut g, 5, 1, false, 0, 1);
+        assert_eq!(g.display_phase.differing, 3);
+        // A tick with no draw around the haze.
+        tick(&mut g, 6, 0, false, 0, 0);
+        assert_eq!(g.display_phase.differing, 3);
+        // Kraid restarts it: the tick still counts, then it's back on course.
+        g.scene.unk_8 = 7;
+        g.haze_frame_start();
+        g.haze_restarted();
+        g.objs.rng.draw();
+        g.haze_process_start();
+        g.haze_process_end(false);
+        g.haze_logic_done();
+        assert_eq!(g.display_phase.differing, 4);
+        assert_eq!(g.haze, Haze::default());
+        tick(&mut g, 8, 1, false, 0, 1);
+        assert_eq!(g.display_phase.differing, 4);
+        // Under Vanilla a step leaves the haze on course.
+        let mut v = Box::<Game>::default();
+        tick(&mut v, 1, 0, true, 1, 0);
+        tick(&mut v, 2, 1, false, 0, 1);
+        assert!(!v.haze.off);
+        assert_eq!(v.display_phase.differing, 0);
     }
 }

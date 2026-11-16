@@ -590,3 +590,98 @@ fn slippi_super_scope_stand_in_matches_the_model() {
         disc = Some(bench.disc);
     }
 }
+
+/// Onett's cars (design call 9, `live::DisplayPhase`): the coming car's two decisions through
+/// the camera's view edges (`grOnett_801E43E0`'s horn past the right edge and its centre) are
+/// also taken with the view of the display pass's other phase, which the tripwire keeps for
+/// the pass before (`views[1]`). The stage's match is played under 3.19's rules with the
+/// display pass three times: as it plays; with that view moved far to the right before each
+/// tick the car reads the edges (an other phase that decides differently, so those ticks are
+/// noted); and with it moved straight up (a view that differs but meets the stage plane at the
+/// same edges, so nothing more is noted). Gameplay, the cars' states included, is the same
+/// every tick in all three: the tripwire only watches.
+#[test]
+fn slippi_onett_cars_note_the_other_phase() {
+    use melee_sim::game::camera::View;
+    use melee_sim::vec::Vec3;
+    let Some(disc) = disc() else { return };
+    let path = melee_local_data::ssbm_rs_local("bench/oracle-m4/stage-onett.slp");
+    let path = std::path::Path::new(&path);
+    if !path.exists() {
+        eprintln!("{}: not here, skipping", path.display());
+        return;
+    }
+    let mut bench = Bench::open_path(disc, path);
+    let coming = |g: &Game| {
+        g.grounds.iter().any(|(_, gr)| {
+            matches!(&gr.u.vars, GroundVars::OnettCar(v) if matches!(v.state_a, 5 | 6) && v.x110 == 1)
+        })
+    };
+    let car = |g: &Game| {
+        g.grounds
+            .iter()
+            .find_map(|(_, gr)| match &gr.u.vars {
+                GroundVars::OnettCar(v) => Some((v.state_a, v.x110, v.curr_car)),
+                _ => None,
+            })
+            .map(|c| (c, g.stage_info.x740))
+    };
+    let runs = on_sim_thread(FpMode::Slippi, || {
+        let rules = Rules::slippi_online();
+        let mut play = |shift: Vec3| {
+            let mut m = bench.start(&rules, true);
+            let mut device = Device(&bench.replay);
+            let (mut ticks, mut reads) = (Vec::new(), 0u32);
+            loop {
+                if coming(&m.game) {
+                    reads += 1;
+                    let d = &mut m.game.display_phase;
+                    if let Some(v) = &mut d.views[1] {
+                        *v = View {
+                            fov: v.fov,
+                            interest: v.interest + shift,
+                            eye: v.eye + shift,
+                        };
+                    }
+                }
+                let (_, ended) = tick(&mut m, &mut device);
+                ticks.push((digest(&m.game), car(&m.game)));
+                if ended {
+                    break;
+                }
+            }
+            (ticks, reads, m.game.display_phase.differing)
+        };
+        [
+            play(Vec3::ZERO),
+            play(Vec3::new(3000.0, 0.0, 0.0)),
+            play(Vec3::new(0.0, 500.0, 0.0)),
+        ]
+    });
+    let [
+        (plain, reads, noted),
+        (right, _, noted_right),
+        (up, _, noted_up),
+    ] = runs;
+    assert!(reads > 0, "no tick read the view's edges");
+    for (name, other) in [("right", &right), ("up", &up)] {
+        assert_eq!(plain.len(), other.len(), "moved {name}: the match's length");
+        if let Some(t) = (0..plain.len()).find(|&t| plain[t] != other[t]) {
+            panic!(
+                "moved {name}: gameplay differs from tick {t}\n{:?}\n{:?}",
+                plain[t], other[t]
+            );
+        }
+    }
+    eprintln!(
+        "{reads} ticks read the edges; noted {noted} as played, {noted_right} moved right, {noted_up} moved up"
+    );
+    assert!(
+        noted_right > noted,
+        "the far view's decisions weren't noted"
+    );
+    assert_eq!(
+        noted_up, noted,
+        "a view meeting the plane at the same edges was noted"
+    );
+}
