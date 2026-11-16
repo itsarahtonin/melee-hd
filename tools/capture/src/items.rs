@@ -381,14 +381,23 @@ pub fn items_from_heap(before: &[u8], after: &[u8]) -> Vec<u32> {
     was.extend(live(before));
     let mut freed = free(after);
     freed.reverse();
+    // A block lies in main memory past the executable, whole: a call a check prepared can
+    // leave the item list's words anything.
+    let size = <Item as Mirror>::SIZE;
+    let block = |b: u32| {
+        b.is_multiple_of(4) && b >= HEAP_START && (b - MEM1) as usize + size as usize <= after.len()
+    };
     let mut out: Vec<u32> = Vec::new();
     for b in live(after).into_iter().chain(freed) {
-        if b != 0 && !was.contains(&b) && !out.contains(&b) {
+        if block(b) && !was.contains(&b) && !out.contains(&b) {
             out.push(b);
         }
     }
     out
 }
+
+/// Where the heap starts (`OSGetArenaLo` at boot): the executable lies below.
+const HEAP_START: u32 = 0x804E_EC00;
 
 /// Items' process link and GObj class (`HSD_GOBJ_CLASS_ITEM`).
 const ITEM_P_LINK: u8 = 9;
