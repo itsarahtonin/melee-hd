@@ -384,10 +384,11 @@ pub fn spawn_straight(
 /// stomp on a stompable item reads). Both callers play the shot's sound (`sfx`) just before:
 /// in Slippi's playback, the code it places in the sound's start (`HSD_AudioSFXStartParam` at
 /// 0x8038D0B0) leaves there the registers it saved, the track (0), the channel (7) and the
-/// sound's sample, as bits. Without it (a session, the player) the start writes none of those
-/// words and they keep what the tick's earlier calls left at that depth (a register an
-/// animation search's arguments spilled, 0 and a back chain), so the last position is stale
-/// (`it::Globals::stale_last_pos`): nothing reads it but the ECB's motion and the debug
+/// sound's sample, as bits. Without it (a session, the player, and a live match of the Slippi
+/// ruleset: Slippi Dolphin's live play has the code only in its online scene) the start writes
+/// none of those words and they keep what the tick's earlier calls left at that depth (a
+/// register an animation search's arguments spilled, 0 and a back chain), so the last position
+/// is stale (`it::Globals::stale_last_pos`): nothing reads it but the ECB's motion and the debug
 /// display's ECBs (docs/engine.md).
 #[doc(alias = "it_802E7654")]
 #[allow(clippy::too_many_arguments)]
@@ -402,7 +403,7 @@ pub fn spawn_aimed(
     sfx: i32,
 ) {
     let at = world_position(&mut r.game.objs, r.data, gun, None);
-    let playback = r.game.playback.is_some();
+    let playback = r.game.replay_drives();
     let pos = if playback {
         let sample = r.game.audio.sfx_sample(r.data, sfx) as u32;
         Vec3::new(0.0, f32::from_bits(7), f32::from_bits(sample))

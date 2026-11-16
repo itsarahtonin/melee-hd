@@ -1415,20 +1415,19 @@ impl Run<'_> {
                 if ours != theirs {
                     diffs.push(format!("sounds playing: ours {ours:?}, theirs {theirs:?}"));
                 }
-                let settling = t < live_from.unwrap_or(t) + 10
-                    || diffs.iter().any(|d| {
-                        (d.starts_with("camera") && !d.starts_with("camera.x2B"))
-                            || d.contains(" cobj")
-                    });
                 let set_up = playback_set_up(&diffs);
+                let chains = chain_joints(&s.game);
                 diffs.retain(|d| {
-                    match live_named(d, settling)
+                    match live_named(d)
                         .or_else(|| {
-                            (set_up.iter().any(|j| d.starts_with(j.as_str())) || never_set_up(d))
-                                .then_some(SET_UP_WHY)
+                            (set_up.iter().any(|j| d.starts_with(j.as_str()))
+                                || never_set_up(d)
+                                || swung_from_set_up(d)
+                                || chains.iter().any(|j| d.starts_with(j.as_str())))
+                            .then_some(SET_UP_WHY)
                         })
-                        .or_else(|| tag_moved(d).then_some(TAGS_WHY))
                         .or_else(|| fresh(d).then_some(FRESH_WHY))
+                        .or_else(|| unset_item_bit(d).then_some(LEFTOVER_WHY))
                     {
                         Some(why) => {
                             let e = named.entry(why).or_insert((0, t));
@@ -1699,8 +1698,8 @@ impl Run<'_> {
 
 /// What a live match of the Slippi ruleset holds as its own, not the console's, where its
 /// comparison with the console's run of the session finds it (`game::live`): built as
-/// playback builds a replay's, the match's heap, files, GObjs and audio are playback's, and its
-/// first frame runs playback's settling. Each entry: the texts a difference contains, and why.
+/// playback builds a replay's, the match's heap, files, GObjs and audio are playback's. Each
+/// entry: the texts a difference contains, and why.
 const LIVE_NAMED: &[(&[&str], &str)] = &[
     (
         &[
@@ -1710,13 +1709,11 @@ const LIVE_NAMED: &[(&[&str], &str)] = &[
             " contents: ",
             " (left): ",
             "dangling (freed at ",
+            ": freed joint: ours ",
         ],
-        "playback's heap layout (addresses, the relocated pointers in the fighters' file buffers, and a reused block's leftovers)",
+        "playback's heap layout (addresses, the relocated pointers in the fighters' file buffers, a reused block's leftovers, and the freed joints the ID table still names)",
     ),
-    (
-        &["flash.x4.", ".desc.unk_54:"],
-        "playback's fresh heap (the console's blocks hold the menus' leftovers in fields nothing reads before writing)",
-    ),
+    (&["flash.x4.", ".desc.unk_54:"], LEFTOVER_WHY),
     (
         &["p_link 7 #"],
         "playback's GObjs (its own process, ahead of the match's)",
@@ -1740,6 +1737,8 @@ const LIVE_NAMED: &[(&[&str], &str)] = &[
             "fighter.x2158:",
             "fighter.x215C:",
             "fighter.x2160:",
+            "item.sfx_unk1:",
+            "item.sfx_unk2:",
             "item.xD6C:",
             "audio: ",
         ],
@@ -1749,41 +1748,30 @@ const LIVE_NAMED: &[(&[&str], &str)] = &[
         &["sounds playing: "],
         "playback's audio, what plays: its boot's start sound (0xAD) where the console's menus' last sound plays on, and the voices that frees and steals",
     ),
-    (
-        &["camera.x2B4:", "camera.x2B8:"],
-        "playback's first frame (`Fighter_procInput+0x3CC`'s settling) runs the camera twice more: the bounds' average width's sum and count, the average the same",
-    ),
 ];
 
-/// What playback's first frame settles (`Fighter_procInput+0x3CC`: the collision positions and
-/// a snapped camera) and what follows from the camera until it eases to where the console's
-/// stands: named only in a tick whose camera or its CObj still differs, or in the match's first
-/// ten.
-const SETTLE: &[&str] = &[
-    "coll_data.",
-    "fighter.x2188.",
-    "camera.transform",
-    "camera cobj copy",
-    "cobj",
-    "lobj ",
-    " jobj",
-    "display active light",
-    "display: active lights",
-    "reflection's texture matrix",
-    "app-SRT ",
-];
-const SETTLE_WHY: &str = "playback's first frame (`Fighter_procInput+0x3CC`): the collision positions settled and the camera snapped, the camera and what it places easing to the console's";
-
-/// Which of [`LIVE_NAMED`]'s (or [`SETTLE`]'s, while `settling`) a difference in a live
-/// match's tick is, if any.
-fn live_named(d: &str, settling: bool) -> Option<&'static str> {
-    if settling && SETTLE.iter().any(|p| d.contains(p)) {
-        return Some(SETTLE_WHY);
-    }
+/// Which of [`LIVE_NAMED`]'s a difference in a live match's tick is, if any.
+fn live_named(d: &str) -> Option<&'static str> {
     LIVE_NAMED
         .iter()
         .find(|(texts, _)| texts.iter().any(|p| d.contains(p)))
         .map(|&(_, why)| why)
+}
+
+const LEFTOVER_WHY: &str = "playback's fresh heap (the console's blocks hold the menus' leftovers in fields nothing reads before writing)";
+
+/// Whether `d` is an item's `xDD0` flags differing only in `0x20` (`b2`), which no item code
+/// sets, clears or reads: the console's block keeps the menus' bit there, playback's fresh heap
+/// zero (`matches-b`'s first match, tick 2642).
+fn unset_item_bit(d: &str) -> bool {
+    let Some((_, rest)) = d.split_once(" item.xDD0_flag: ours [") else {
+        return false;
+    };
+    let Some((ours, theirs)) = rest.split_once("], theirs [") else {
+        return false;
+    };
+    let byte = |t: &str| u8::from_str_radix(t.trim_end_matches(']'), 16).ok();
+    matches!((byte(ours), byte(theirs)), (Some(a), Some(b)) if a ^ b == 0x20)
 }
 
 const FRESH_WHY: &str = "playback's fresh heap: a field of an object the match made, zero where the console's block holds what the menus left there";
@@ -1807,42 +1795,7 @@ fn fresh(d: &str) -> bool {
             .all(|t| matches!(*t, "0" | "00" | "0.0" | "0x0" | "false" | "None"))
 }
 
-const TAGS_WHY: &str = "the players' tags (`fn_802FCC44`), placed on screen from the fighters and the camera: their translation keeps a difference from playback's first frame (none in a scratch run without its settling)";
-
-/// Whether `d` is a HUD model's (`p_link 15`) joint whose SRT or matrix differs only in its
-/// translation's x and y: a player's tag placed on screen.
-fn tag_moved(d: &str) -> bool {
-    if !d.starts_with("p_link 15 #") {
-        return false;
-    }
-    let (at, translation): (&str, &[usize]) = if d.contains(" jobj: SRT: ours [") {
-        (": SRT: ours [", &[7, 8])
-    } else if d.contains(": matrix: ours [") && d.contains(" jobj") {
-        (": matrix: ours [", &[3, 7])
-    } else {
-        return false;
-    };
-    let Some((_, rest)) = d.split_once(at) else {
-        return false;
-    };
-    let Some((ours, theirs)) = rest.split_once("], theirs [") else {
-        return false;
-    };
-    let nums = |t: &str| -> Vec<u32> {
-        t.trim_end_matches(']')
-            .split(", ")
-            .filter_map(|n| n.parse().ok())
-            .collect()
-    };
-    let (o, t) = (nums(ours), nums(theirs));
-    o.len() == t.len()
-        && o.iter()
-            .zip(&t)
-            .enumerate()
-            .all(|(i, (a, b))| a == b || translation.contains(&i))
-}
-
-const SET_UP_WHY: &str = "playback's code at `ftCo_8009DD94+0x2FC`: the fighters' dirty joint matrices set up in the tick, where the console's display pass sets them up after it";
+const SET_UP_WHY: &str = "Slippi's DynamicsFix (`ftCo_8009DD94+0x2FC`), which Slippi Dolphin's live play runs as its playback does and ssbm-rs's ruleset run doesn't: the fighters' dirty joint matrices set up in the tick, where the console's display pass sets them up after it, and the bone chains swung from them";
 
 /// The fighters' joints whose matrices playback's code at `ftCo_8009DD94+0x2FC` set up in the
 /// tick (every dirty matrix of the model): in `diffs`, a fighter's joint whose flags differ
@@ -1874,6 +1827,62 @@ fn playback_set_up(diffs: &[String]) -> Vec<String> {
             && t[2] == o[2] | DIRTY
         {
             out.push(format!("{joint}: "));
+        }
+    }
+    out
+}
+
+/// Whether `d` is a fighter's bone chains' state (`dynamic_bone_sets`): each tick's swing reads
+/// its joints' matrices, which DynamicsFix set up in the tick before and the console's display
+/// pass after it (on Fountain of Dreams in `matches-b`, Mewtwo's tail from its tick 1584; none
+/// in a scratch run without the code).
+fn swung_from_set_up(d: &str) -> bool {
+    d.starts_with("p_link 8 #") && d.contains(" fighter.dynamic_bone_sets[")
+}
+
+/// The fighters' bone chains' joints (each chain's first link and the joints under it), as
+/// the comparison names their poses (`p_link 8 #N jobj/>...: SRT: `): the swing turns them from
+/// matrices DynamicsFix set up in the tick, where the console's display pass set them up after
+/// it (`matches-b`'s Mewtwo's tail, tick 2760).
+fn chain_joints(g: &Game) -> Vec<String> {
+    use melee_sim::game::state::Obj;
+    use melee_sim::hsd::jobj::INSTANCE;
+    let jobjs = &g.objs.jobjs;
+    let mut out = Vec::new();
+    let (mut at, mut i) = (g.world.plink_head[8], 0);
+    while let Some(gobj) = at {
+        at = g.world.gobjs[gobj.0].next;
+        let n = i;
+        i += 1;
+        let Some(Obj::JObj(root)) = g.world.gobjs[gobj.0].obj else {
+            continue;
+        };
+        let Some((_, fp)) = g.fighters.iter().find(|(_, f)| f.gobj == Some(gobj)) else {
+            continue;
+        };
+        let mut chain = Vec::new();
+        for set in fp
+            .dynamic_bone_sets
+            .iter()
+            .take(fp.dynamics_num.max(0) as usize)
+        {
+            let Some(d) = set.dyn_desc.data else { continue };
+            let mut stack: Vec<_> = g.fighter_dynamics[d.0].desc.jobj.into_iter().collect();
+            while let Some(j) = stack.pop() {
+                chain.push(j);
+                stack.extend(jobjs[j].child);
+            }
+        }
+        let mut stack = vec![(Some(root), String::from("jobj"))];
+        while let Some((o, path)) = stack.pop() {
+            let Some(j) = o else { continue };
+            if chain.contains(&j) {
+                out.push(format!("p_link 8 #{n} {path}: SRT: "));
+            }
+            stack.push((jobjs[j].next, format!("{path}>")));
+            if jobjs[j].flags & INSTANCE == 0 {
+                stack.push((jobjs[j].child, format!("{path}/")));
+            }
         }
     }
     out

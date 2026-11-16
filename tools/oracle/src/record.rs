@@ -34,6 +34,7 @@ pub fn record(args: &[&str]) -> ExitCode {
     let mut free_seed = false;
     let mut heap = true;
     let mut all = false;
+    let mut no_settling = false;
     let mut pos = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
@@ -56,12 +57,13 @@ pub fn record(args: &[&str]) -> ExitCode {
             "--free-seed" => free_seed = true,
             "--heap" => heap = it.next().copied() != Some("off"),
             "--all" => all = true,
+            "--no-settling" => no_settling = true,
             _ => pos.push(a),
         }
     }
     let [replay_path, out_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive] [--ticks N] [--known FILE] [--free-seed] [--heap off] [--all]"
+            "usage: melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive] [--ticks N] [--known FILE] [--free-seed] [--heap off] [--all] [--no-settling]"
         );
         return ExitCode::from(2);
     };
@@ -105,6 +107,11 @@ pub fn record(args: &[&str]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+    // Playback without its first frame's settling, as Slippi Dolphin's live play (and a live
+    // match) plays the recording's match.
+    if no_settling && let Some(p) = m.game.playback.as_mut() {
+        p.no_settling = true;
+    }
     let mut device = FreeSeed {
         device: Device(&replay),
         free: free_seed,

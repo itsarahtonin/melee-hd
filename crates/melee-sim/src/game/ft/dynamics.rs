@@ -408,12 +408,14 @@ impl Running<'_> {
             }
         }
         if self.game.playback.is_some() {
-            // Playback's codes set up every dirty matrix of the model here.
+            // Slippi's codes set up every dirty matrix of the model here, in playback and in
+            // Slippi Dolphin's live play alike.
             self.setup_dirty_matrices(Some(root));
         }
     }
 
-    /// Slippi's playback code at `ftCo_8009DD94+0x2FC`: every joint of the model whose matrix
+    /// Slippi's code at `ftCo_8009DD94+0x2FC` (`Common/FastForward/DynamicsFix.asm`, in its
+    /// playback set and its live play's, unconditional): every joint of the model whose matrix
     /// is dirty and not the game's own sets it up, children before siblings.
     fn setup_dirty_matrices(&mut self, j: Option<JObjId>) {
         let Some(j) = j else { return };
