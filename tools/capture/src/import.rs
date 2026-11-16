@@ -160,6 +160,9 @@ pub struct Maps {
     /// following it stops (`Pool`'s index); anything else compares it by the word, as the
     /// original's never-written word compares.
     pub unknown: HashMap<u32, u32>,
+    /// The item pool's next blocks from the heap the import made fresh slots of, in the order
+    /// the pool takes them.
+    pub fresh_items: Vec<u32>,
 }
 
 /// The GObj class of items' links (`GObj_Create(7, ...)` in the string, yo-yo, grapple and
@@ -224,6 +227,9 @@ pub struct Importer<'a> {
     pub(crate) free_items: Vec<u32>,
     pub(crate) fresh_items: Vec<u32>,
     pub(crate) free_tables: Vec<u32>,
+    /// The item pool's blocks a run of the original took from the heap, where a check ran it
+    /// first ([`Importer::with_fresh_items`]).
+    pub(crate) fresh_given: Option<Vec<u32>>,
     /// The effects' and deferred spawns' freed blocks (their allocators' free lists), and the
     /// slots made for those something still points to, released after the import.
     pub(crate) ef_free: Option<(
@@ -260,12 +266,20 @@ impl<'a> Importer<'a> {
             free_items: Vec::new(),
             fresh_items: Vec::new(),
             free_tables: Vec::new(),
+            fresh_given: None,
         }
     }
 
     /// Lets the import look inside the archives `data` maps (texture palette tables).
     pub fn with_archives(mut self, archives: &'a Archives) -> Self {
         self.archives = Some(archives);
+        self
+    }
+
+    /// The item pool's next blocks from the heap, as a run of the original took them
+    /// ([`crate::items::items_from_heap`]), in place of the allocator model's guess.
+    pub fn with_fresh_items(mut self, blocks: Vec<u32>) -> Self {
+        self.fresh_given = Some(blocks);
         self
     }
 

@@ -131,7 +131,17 @@ impl Importer<'_> {
         // whatever the heap held there (zeros in a replay run's fresh heap, an earlier scene's
         // bytes after the menus or in a debug VS run): fresh slots, taken after the free list
         // as the original takes them, but not on it, so a freed item links to none of them.
-        let fresh = fresh_items(&cap.call.mem1, &items);
+        // Where a run of the original says which blocks it took (`with_fresh_items`), those;
+        // else where the allocator model as memory holds it would put them.
+        let fresh = match &self.fresh_given {
+            Some(given) => given
+                .iter()
+                .copied()
+                .filter(|b| !items.contains(b))
+                .collect(),
+            None => fresh_items(&cap.call.mem1, &items),
+        };
+        self.maps.fresh_items = fresh.clone();
         let fresh_from = items.len();
         items.extend(&fresh);
         for &b in &tables {
@@ -329,6 +339,69 @@ impl Importer<'_> {
 /// How many blocks past the item pool's free list [`Importer::item_free_lists`] brings in: as
 /// many new items as one call makes.
 const FRESH_ITEMS: usize = 4;
+
+/// The item pool's blocks a run took from the heap, from main memory before it (`before`) and
+/// after (`after`): the items live or freed after it that were neither before, the live ones
+/// in their process link's order (the order they were made), then the freed ones, the first
+/// freed first. What a check that runs the original first gives the import as the fresh slots
+/// (`Importer::with_fresh_items`), where `fresh_items`' model of the heap misses what else the
+/// run took from it first (a car's joints before the next car's item, `mutecity_cars`).
+pub fn items_from_heap(before: &[u8], after: &[u8]) -> Vec<u32> {
+    let word = |m: &[u8], a: u32| {
+        let i = a.wrapping_sub(MEM1) as usize;
+        m.get(i..i + 4)
+            .map_or(0, |b| u32::from_be_bytes(b.try_into().unwrap()))
+    };
+    let free = |m: &[u8]| {
+        let mut out = Vec::new();
+        let mut b = word(m, sym("item_alloc_data") + 4);
+        while b != 0 && !out.contains(&b) {
+            out.push(b);
+            b = word(m, b);
+        }
+        out
+    };
+    let live = |m: &[u8]| {
+        let mut out = Vec::new();
+        let heads = word(m, sym("HSD_GObjPLinkHead"));
+        let mut g = if heads == 0 {
+            0
+        } else {
+            word(m, heads + 4 * u32::from(ITEM_P_LINK))
+        };
+        while g != 0 && out.len() < 0x1000 {
+            if word(m, g) >> 16 == u32::from(ITEM_CLASS) {
+                out.push(word(m, g + 0x2C));
+            }
+            g = word(m, g + 8);
+        }
+        out
+    };
+    let mut was = free(before);
+    was.extend(live(before));
+    let mut freed = free(after);
+    freed.reverse();
+    // A block lies in main memory past the executable, whole: a call a check prepared can
+    // leave the item list's words anything.
+    let size = <Item as Mirror>::SIZE;
+    let block = |b: u32| {
+        b.is_multiple_of(4) && b >= HEAP_START && (b - MEM1) as usize + size as usize <= after.len()
+    };
+    let mut out: Vec<u32> = Vec::new();
+    for b in live(after).into_iter().chain(freed) {
+        if block(b) && !was.contains(&b) && !out.contains(&b) {
+            out.push(b);
+        }
+    }
+    out
+}
+
+/// Where the heap starts (`OSGetArenaLo` at boot): the executable lies below.
+const HEAP_START: u32 = 0x804E_EC00;
+
+/// Items' process link and GObj class (`HSD_GOBJ_CLASS_ITEM`).
+const ITEM_P_LINK: u8 = 9;
+const ITEM_CLASS: u16 = 6;
 
 /// Where the item pool's next blocks come from once its free list (`free`, as memory holds it)
 /// runs out: `HSD_ObjAllocAddFree`'s, one at a time, from the allocator model as memory holds
