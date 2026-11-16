@@ -458,11 +458,12 @@ pub fn run_variants(
                             let at = match at {
                                 Some(at) => at,
                                 None => {
-                                    let imported =
-                                        catch_unwind(AssertUnwindSafe(|| import(&call, index)))
-                                            .unwrap_or_else(|p| {
-                                                Err(format!("panicked: {}", panic_text(&*p)))
-                                            });
+                                    let imported = catch_unwind(AssertUnwindSafe(|| {
+                                        import(&call, index, None)
+                                    }))
+                                    .unwrap_or_else(|p| {
+                                        Err(format!("panicked: {}", panic_text(&*p)))
+                                    });
                                     if kept.len() == IMPORTS_KEPT {
                                         drop(kept.remove(0));
                                     }
@@ -494,7 +495,7 @@ pub fn run_variants(
                                         catch_unwind(AssertUnwindSafe(|| {
                                             run_imported(
                                                 &ctx,
-                                                &call.call,
+                                                &call,
                                                 imported,
                                                 index,
                                                 variant.ours,
@@ -594,8 +595,8 @@ fn run_one(
 ) -> Outcome {
     let mut cap = Capture::read(path);
     prepare(&mut cap.call, i);
-    match import(&cap, index) {
-        Ok(imported) => run_imported(ctx, &cap.call, imported, index, ours, logged),
+    match import(&cap, index, None) {
+        Ok(imported) => run_imported(ctx, &cap, imported, index, ours, logged),
         Err(why) => Outcome::Failed(why),
     }
 }
@@ -624,13 +625,16 @@ impl Clone for Imported {
 
 /// Imports a (prepared) saved call's state, or says why its import doesn't come back as the
 /// memory it came from.
-fn import(cap: &Capture, index: &DiscIndex) -> Result<Imported, String> {
+fn import(cap: &Capture, index: &DiscIndex, fresh: Option<Vec<u32>>) -> Result<Imported, String> {
     let mut archives = Archives::default();
     let data = DataMap {
         loaded: find_archives_in(index, &cap.call.mem1, &mut archives),
     };
     let bank = melee_capture::audio::find_bank(&cap.call.mem1, &mut archives);
     let mut imp = Importer::new(cap, &data).with_archives(&archives);
+    if let Some(blocks) = fresh {
+        imp = imp.with_fresh_items(blocks);
+    }
     imp.world();
     imp.stage();
     imp.ids();
@@ -680,7 +684,7 @@ pub fn round_trips(paths: &[PathBuf], index: &DiscIndex) -> (usize, Vec<String>)
                 .spawn_scoped(s, || {
                     while let Some(path) = paths.get(next.fetch_add(1, Ordering::Relaxed)) {
                         let imported = std::panic::catch_unwind(|| {
-                            import(&Capture::read(path), index).map(|i| i.maps.unknown.len())
+                            import(&Capture::read(path), index, None).map(|i| i.maps.unknown.len())
                         })
                         .unwrap_or_else(|p| Err(format!("panicked: {}", panic_text(&*p))));
                         match imported {
@@ -799,19 +803,14 @@ impl Drop for Watched {
 /// Runs a (prepared) saved call on both sides, ours from its imported state, and compares.
 fn run_imported(
     ctx: &ssbm_rt::Ctx,
-    call: &Call,
+    cap: &Capture,
     imported: Imported,
     index: &DiscIndex,
     ours: &Ours,
     logged: bool,
 ) -> Outcome {
     use std::panic::{AssertUnwindSafe, catch_unwind};
-    let Imported {
-        data,
-        mut archives,
-        mut game,
-        maps,
-    } = imported;
+    let call = &cap.call;
     let name = ssbm_types::symbols::SYMBOLS
         .iter()
         .find(|s| s.0 == call.addr)
@@ -833,6 +832,25 @@ fn run_imported(
             return Outcome::Skipped(format!("the reference stopped: {why}"));
         }
     };
+    // The item pool's blocks from the heap are the ones the original took: where they aren't
+    // the ones the import guessed (`fresh_items`, which can't see what else the call takes
+    // from the heap first), import again with them, so a new item holds what its block held.
+    let taken = melee_capture::items::items_from_heap(&call.mem1, &after);
+    let imported = if taken.is_empty() || imported.maps.fresh_items.starts_with(&taken) {
+        imported
+    } else {
+        match import(cap, index, Some(taken)) {
+            Ok(i) => i,
+            Err(why) => return Outcome::Failed(why),
+        }
+    };
+    let _ = melee_sim::game::code::stubs::take();
+    let Imported {
+        data,
+        mut archives,
+        mut game,
+        maps,
+    } = imported;
     let (r3, f1) = (ctx.regs.r(3), ctx.regs.f(1));
     let run = catch_unwind(AssertUnwindSafe(|| {
         let mut running = Running {
