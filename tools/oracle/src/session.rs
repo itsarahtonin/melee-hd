@@ -1239,9 +1239,17 @@ impl Run<'_> {
         // A state taken up at a tick's end has that frame's display pass still to run.
         let mut render_due = self.from.is_some() && s.game.scene.unk_C != 2;
         let mut tick = next;
-        // The tick a live match of the Slippi ruleset started in: the trace's run has no
-        // handoff, so nothing past it compares (docs/slippi-ruleset.md, "Checking it").
+        // The tick a live match of the Slippi ruleset started in, and the tick it handed the
+        // menus' session back before: its ticks compare as a live match's ([`live_named`],
+        // [`playing_ours`]); past the handback the menus' session isn't the console's
+        // (docs/slippi-ruleset.md, "Checking it"), and the session runs on uncompared.
         let mut live_from = None;
+        let mut handed_back = None;
+        let mut in_live = false;
+        // Each named difference's count and the last tick it was in.
+        let mut named = std::collections::BTreeMap::<&'static str, (u32, u32)>::new();
+        // Whether the first live match's recording was written, as it ended.
+        let mut first_saved = false;
         let stop = loop {
             if compared >= self.limit {
                 break None;
@@ -1293,12 +1301,35 @@ impl Run<'_> {
                 }
                 Err(p) => break Some(Stop::Seam(panic_text(&p))),
             };
-            if s.in_live_match() {
-                live_from = Some(t);
-                break None;
+            let live = s.in_live_match();
+            if live != in_live {
+                if live {
+                    live_from.get_or_insert(t);
+                } else {
+                    handed_back = Some(t);
+                    break None;
+                }
+                in_live = true;
+                // The live match's own archives, scanned for anew.
+                files = Files::new(Some(&index), Vec::new(), s.live_files.clone());
+                gone = GoneArchives::default();
+            }
+            if in_live && !first_saved {
+                first_saved = self.save_recording(&s, 1);
             }
             if self.from.is_none() {
-                files.set_named(&s.game.ft.data.files.archives);
+                if in_live {
+                    // The match's start's archives, and those its fighters loaded since.
+                    let mut named = s.live_files.clone();
+                    for a in &s.game.ft.data.files.archives {
+                        if !named.contains(a) {
+                            named.push(a.clone());
+                        }
+                    }
+                    files.set_named(&named);
+                } else {
+                    files.set_named(&s.game.ft.data.files.archives);
+                }
                 files.set_statics(&s.game, &s.data);
             }
             let before = files.loaded().to_vec();
@@ -1310,6 +1341,12 @@ impl Run<'_> {
                     "the archives' incremental scan differs from a full scan: {d}"
                 )));
             }
+            // A live match's heap is playback's, not the console's: its layout isn't compared;
+            // the menus' state is the session's set aside, which the match doesn't hold.
+            let heap = crate::diff::COMPARE_HEAP.with(|c| c.get());
+            let menus = crate::diff::COMPARE_MENUS.with(|c| c.get());
+            crate::diff::COMPARE_HEAP.with(|c| c.set(heap && !in_live));
+            crate::diff::COMPARE_MENUS.with(|c| c.set(menus && !in_live));
             // A comparer that meets memory it can't follow stops the run at that tick.
             let compared_tick = catch_unwind(AssertUnwindSafe(|| {
                 compare(
@@ -1333,6 +1370,8 @@ impl Run<'_> {
             if crate::diff::COMPARE_HEAP.with(|c| c.get()) {
                 diffs.extend(class_counts(&s.game));
             }
+            crate::diff::COMPARE_HEAP.with(|c| c.set(heap));
+            crate::diff::COMPARE_MENUS.with(|c| c.set(menus));
             if self.image_ticks.contains(&t) {
                 image_check(t, &s.game, &s.data, &image.mem1);
             }
@@ -1370,6 +1409,37 @@ impl Run<'_> {
                 ));
             }
             diffs.retain(|d| !self.ignore.iter().any(|p| d.contains(p.as_str())));
+            if in_live {
+                // What plays, against the console's.
+                let (ours, theirs) = (playing_ours(&s.game), playing_theirs(&image));
+                if ours != theirs {
+                    diffs.push(format!("sounds playing: ours {ours:?}, theirs {theirs:?}"));
+                }
+                let settling = t < live_from.unwrap_or(t) + 10
+                    || diffs.iter().any(|d| {
+                        (d.starts_with("camera") && !d.starts_with("camera.x2B"))
+                            || d.contains(" cobj")
+                    });
+                let set_up = playback_set_up(&diffs);
+                diffs.retain(|d| {
+                    match live_named(d, settling)
+                        .or_else(|| {
+                            (set_up.iter().any(|j| d.starts_with(j.as_str())) || never_set_up(d))
+                                .then_some(SET_UP_WHY)
+                        })
+                        .or_else(|| tag_moved(d).then_some(TAGS_WHY))
+                        .or_else(|| fresh(d).then_some(FRESH_WHY))
+                    {
+                        Some(why) => {
+                            let e = named.entry(why).or_insert((0, t));
+                            e.0 += 1;
+                            e.1 = t;
+                            false
+                        }
+                        None => true,
+                    }
+                });
+            }
             compared += 1;
             // A new object's leftovers the heap's image doesn't know, where the original's
             // differ: a stop at a layout that isn't ported, unless something else differs.
@@ -1459,11 +1529,38 @@ impl Run<'_> {
             }
         }
         if let (None, Some(t)) = (&stop, live_from) {
-            println!(
-                "{compared} ticks compared, no difference, to the live match that starts in tick {t}"
-            );
-            return self.run_on(&mut s, &mut console, t, render_due);
+            match handed_back {
+                Some(u) => println!(
+                    "{compared} ticks compared, no difference, through the live match that starts in tick {t} to its handback before tick {u}"
+                ),
+                None => println!(
+                    "{compared} ticks compared, no difference, into the live match that starts in tick {t}"
+                ),
+            }
         }
+        for (why, (n, last)) in &named {
+            println!("  named in the live match: {why}: {n} differences, the last in tick {last}");
+        }
+        if live_from.is_none() {
+            return self.report(stop, compared, &at);
+        }
+        // A live match plays on to the recording's end, compared through or not.
+        let code = match stop {
+            None => ExitCode::SUCCESS,
+            stop => self.report(stop, compared, &at),
+        };
+        let ran = self.run_on(
+            &mut s,
+            &mut console,
+            handed_back.unwrap_or(tick),
+            render_due,
+            (handed_back.is_none(), first_saved),
+        );
+        if code == ExitCode::SUCCESS { ran } else { code }
+    }
+
+    /// Prints how the comparison ended: its exit code.
+    fn report(&self, stop: Option<Stop>, compared: u32, at: &str) -> ExitCode {
         match stop {
             None => {
                 println!("{compared} ticks compared, no difference");
@@ -1493,19 +1590,20 @@ impl Run<'_> {
 }
 
 impl Run<'_> {
-    /// Plays the session on from the live match that starts in tick `t` (uncompared: no
-    /// trace follows the handoff) to the recording's last read and a second past it, as the
-    /// player would: every scene and match with no stop. Each live match's recording goes to
-    /// `--slp`'s folder as it ends.
+    /// Plays the session on, uncompared, from tick `t` (in the first live match, or past its
+    /// handback: the menus' session isn't the console's after it) to the recording's last
+    /// read and a second past it, as the player would: every scene and match with no stop.
+    /// Each live match's recording goes to `--slp`'s folder as it ends.
     fn run_on(
         &self,
         s: &mut Session,
         console: &mut Console,
         t: u32,
         mut render_due: bool,
+        (in_live, first_saved): (bool, bool),
     ) -> ExitCode {
         let mut tick = t;
-        let (mut matches, mut saved) = (1u32, 0u32);
+        let (mut matches, mut saved) = (1u32, u32::from(first_saved));
         // Each live match's stage and players, as it starts.
         let describe = |s: &Session| {
             let d = &s.game.vs.start;
@@ -1526,9 +1624,11 @@ impl Run<'_> {
                 .collect();
             format!("stage {:#x}, {}", d.stkind, players.join(", "))
         };
-        println!("live match 1: {}", describe(s));
-        let mut live = true;
-        let mut was_saved = false;
+        if in_live {
+            println!("live match 1: {}", describe(s));
+        }
+        let mut live = in_live;
+        let mut was_saved = first_saved;
         let end = self.rec.reads.len() + 60;
         loop {
             if s.in_live_match() {
@@ -1538,21 +1638,9 @@ impl Run<'_> {
                     was_saved = false;
                     println!("live match {matches} from tick {tick}: {}", describe(s));
                 }
-                if let (Some(dir), Some(r)) = (&self.slp_dir, &s.game.recorder)
-                    && r.ended()
-                    && !was_saved
-                {
+                if !was_saved && self.save_recording(s, matches) {
                     was_saved = true;
-                    let file = melee_slippi::write::recording(r, std::time::UNIX_EPOCH);
-                    let path = dir.join(format!("{}-{matches}.slp", self.name));
-                    std::fs::write(&path, &file)
-                        .unwrap_or_else(|e| panic!("{}: {e}", path.display()));
                     saved += 1;
-                    println!(
-                        "live match {matches}'s recording: {} (last frame {:?})",
-                        path.display(),
-                        r.last_frame()
-                    );
                 }
             } else if live {
                 live = false;
@@ -1585,6 +1673,295 @@ impl Run<'_> {
         );
         ExitCode::SUCCESS
     }
+}
+
+impl Run<'_> {
+    /// Writes live match `n`'s recording into `--slp`'s folder once the match has ended it:
+    /// whether it did.
+    fn save_recording(&self, s: &Session, n: u32) -> bool {
+        let (Some(dir), Some(r)) = (&self.slp_dir, &s.game.recorder) else {
+            return false;
+        };
+        if !r.ended() {
+            return false;
+        }
+        let file = melee_slippi::write::recording(r, std::time::UNIX_EPOCH);
+        let path = dir.join(format!("{}-{n}.slp", self.name));
+        std::fs::write(&path, &file).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+        println!(
+            "live match {n}'s recording: {} (last frame {:?})",
+            path.display(),
+            r.last_frame()
+        );
+        true
+    }
+}
+
+/// What a live match of the Slippi ruleset holds as its own, not the console's, where its
+/// comparison with the console's run of the session finds it (`game::live`): built as
+/// playback builds a replay's, the match's heap, files, GObjs and audio are playback's, and its
+/// first frame runs playback's settling. Each entry: the texts a difference contains, and why.
+const LIVE_NAMED: &[(&[&str], &str)] = &[
+    (
+        &[
+            "fighter: address",
+            "stage archive ",
+            "zako: slots (freed)",
+            " contents: ",
+            " (left): ",
+            "dangling (freed at ",
+        ],
+        "playback's heap layout (addresses, the relocated pointers in the fighters' file buffers, and a reused block's leftovers)",
+    ),
+    (
+        &["flash.x4.", ".desc.unk_54:"],
+        "playback's fresh heap (the console's blocks hold the menus' leftovers in fields nothing reads before writing)",
+    ),
+    (
+        &["p_link 7 #"],
+        "playback's GObjs (its own process, ahead of the match's)",
+    ),
+    (
+        &[
+            "playback: rules",
+            "playback: state",
+            "state_machine: game mode",
+            "gm: unlocks",
+        ],
+        "playback's state and scene: the debug VS mode (14.1) and Slippi's unlocks as masks, which the codes answer the getters with as the console's do",
+    ),
+    (
+        &[
+            "fighter.x2144:",
+            "fighter.x2148:",
+            "fighter.x214C:",
+            "fighter.x2150:",
+            "fighter.x2154:",
+            "fighter.x2158:",
+            "fighter.x215C:",
+            "fighter.x2160:",
+            "item.xD6C:",
+            "audio: ",
+        ],
+        "playback's audio: its sound instances' handles, its voices, banks and heap",
+    ),
+    (
+        &["sounds playing: "],
+        "playback's audio, what plays: its boot's start sound (0xAD) where the console's menus' last sound plays on, and the voices that frees and steals",
+    ),
+    (
+        &["camera.x2B4:", "camera.x2B8:"],
+        "playback's first frame (`Fighter_procInput+0x3CC`'s settling) runs the camera twice more: the bounds' average width's sum and count, the average the same",
+    ),
+];
+
+/// What playback's first frame settles (`Fighter_procInput+0x3CC`: the collision positions and
+/// a snapped camera) and what follows from the camera until it eases to where the console's
+/// stands: named only in a tick whose camera or its CObj still differs, or in the match's first
+/// ten.
+const SETTLE: &[&str] = &[
+    "coll_data.",
+    "fighter.x2188.",
+    "camera.transform",
+    "camera cobj copy",
+    "cobj",
+    "lobj ",
+    " jobj",
+    "display active light",
+    "display: active lights",
+    "reflection's texture matrix",
+    "app-SRT ",
+];
+const SETTLE_WHY: &str = "playback's first frame (`Fighter_procInput+0x3CC`): the collision positions settled and the camera snapped, the camera and what it places easing to the console's";
+
+/// Which of [`LIVE_NAMED`]'s (or [`SETTLE`]'s, while `settling`) a difference in a live
+/// match's tick is, if any.
+fn live_named(d: &str, settling: bool) -> Option<&'static str> {
+    if settling && SETTLE.iter().any(|p| d.contains(p)) {
+        return Some(SETTLE_WHY);
+    }
+    LIVE_NAMED
+        .iter()
+        .find(|(texts, _)| texts.iter().any(|p| d.contains(p)))
+        .map(|&(_, why)| why)
+}
+
+const FRESH_WHY: &str = "playback's fresh heap: a field of an object the match made, zero where the console's block holds what the menus left there";
+
+/// Whether `d` is a field ours holds as zero (a new block of playback's fresh heap) and the
+/// console's run doesn't: `ours` 0, 0.0, false, None or bytes of zero, whole.
+fn fresh(d: &str) -> bool {
+    let Some((_, rest)) = d.split_once(" ours ") else {
+        return false;
+    };
+    let Some((ours, _)) = rest.split_once(", theirs ") else {
+        return false;
+    };
+    let tokens: Vec<&str> = ours
+        .split(['[', ']', '(', ')', ',', ' '])
+        .filter(|t| !t.is_empty())
+        .collect();
+    !tokens.is_empty()
+        && tokens
+            .iter()
+            .all(|t| matches!(*t, "0" | "00" | "0.0" | "0x0" | "false" | "None"))
+}
+
+const TAGS_WHY: &str = "the players' tags (`fn_802FCC44`), placed on screen from the fighters and the camera: their translation keeps a difference from playback's first frame (none in a scratch run without its settling)";
+
+/// Whether `d` is a HUD model's (`p_link 15`) joint whose SRT or matrix differs only in its
+/// translation's x and y: a player's tag placed on screen.
+fn tag_moved(d: &str) -> bool {
+    if !d.starts_with("p_link 15 #") {
+        return false;
+    }
+    let (at, translation): (&str, &[usize]) = if d.contains(" jobj: SRT: ours [") {
+        (": SRT: ours [", &[7, 8])
+    } else if d.contains(": matrix: ours [") && d.contains(" jobj") {
+        (": matrix: ours [", &[3, 7])
+    } else {
+        return false;
+    };
+    let Some((_, rest)) = d.split_once(at) else {
+        return false;
+    };
+    let Some((ours, theirs)) = rest.split_once("], theirs [") else {
+        return false;
+    };
+    let nums = |t: &str| -> Vec<u32> {
+        t.trim_end_matches(']')
+            .split(", ")
+            .filter_map(|n| n.parse().ok())
+            .collect()
+    };
+    let (o, t) = (nums(ours), nums(theirs));
+    o.len() == t.len()
+        && o.iter()
+            .zip(&t)
+            .enumerate()
+            .all(|(i, (a, b))| a == b || translation.contains(&i))
+}
+
+const SET_UP_WHY: &str = "playback's code at `ftCo_8009DD94+0x2FC`: the fighters' dirty joint matrices set up in the tick, where the console's display pass sets them up after it";
+
+/// The fighters' joints whose matrices playback's code at `ftCo_8009DD94+0x2FC` set up in the
+/// tick (every dirty matrix of the model): in `diffs`, a fighter's joint whose flags differ
+/// only in the console's dirty mark (0x40), each as the start of its differences' texts.
+fn playback_set_up(diffs: &[String]) -> Vec<String> {
+    const DIRTY: u32 = 0x40;
+    let mut out = Vec::new();
+    for d in diffs {
+        let Some((joint, rest)) = d.split_once(": ref counts and flags: ours (") else {
+            continue;
+        };
+        if !joint.starts_with("p_link 8 #") || !joint.contains(" jobj") {
+            continue;
+        }
+        let Some((ours, theirs)) = rest.split_once("), theirs (") else {
+            continue;
+        };
+        let nums = |t: &str| -> Vec<u32> {
+            t.trim_end_matches(')')
+                .split(", ")
+                .filter_map(|n| n.parse().ok())
+                .collect()
+        };
+        let (o, t) = (nums(ours), nums(theirs));
+        if o.len() == 3
+            && t.len() == 3
+            && o[..2] == t[..2]
+            && o[2] & DIRTY == 0
+            && t[2] == o[2] | DIRTY
+        {
+            out.push(format!("{joint}: "));
+        }
+    }
+    out
+}
+
+/// Whether `d` is a fighter's joint's matrix: ours the one playback's code set up in the tick,
+/// the console's the one its last display pass set up (or the identity its joint starts with,
+/// never set up). What the joint's pose reaches (the hurtboxes and hitboxes, the bones'
+/// positions) is compared on its own.
+fn never_set_up(d: &str) -> bool {
+    d.starts_with("p_link 8 #") && d.contains(" jobj") && d.contains(": matrix: ours [")
+}
+
+/// The driver's voices on its active list, what each plays (`HSD_SM`: the state bits, the
+/// effect, the sound, the track, priority, volumes, pans, pitches, loops, its command stream's
+/// place in the sound bank and the audio frames until its next command is due), sorted: what
+/// plays, whichever voices and handles play it.
+type Playing = Vec<(u32, u16, u16, u8, u8, [u8; 4], [i16; 2], u16, u32, i32)>;
+
+fn playing_ours(game: &Game) -> Playing {
+    let d = &game.audio.driver;
+    let mut out = Vec::new();
+    let mut at = d.active;
+    while let Some(i) = at {
+        let v = &d.voices[usize::from(i)];
+        out.push((
+            v.flags,
+            v.effect,
+            v.sound,
+            v.track,
+            v.priority,
+            [v.stream_volume, v.volume, v.stream_pan, v.pan],
+            [v.pitch, v.game_pitch],
+            v.loops,
+            v.stream,
+            if v.due == -1 {
+                -1
+            } else {
+                v.due.wrapping_sub(d.frame)
+            },
+        ));
+        at = v.next;
+        assert!(out.len() <= 256, "the driver's active list loops");
+    }
+    out.sort();
+    out
+}
+
+fn playing_theirs(image: &Image) -> Playing {
+    let sms = sym("AXDriver_804C45A0");
+    let base = image.u32(sym("AXDriver_804D7798"));
+    let frame = image.u32(sym("AXDriver_804D778C")) as i32;
+    let b = |a: u32| u8_at(image, a);
+    let h = |a: u32| u16::from_be_bytes([b(a), b(a + 1)]);
+    let mut out = Vec::new();
+    let mut at = image.u32(sym("AXDriver_804D7794"));
+    while at != 0 {
+        let due = image.u32(at + 0x30) as i32;
+        let stream = image.u32(at + 0x2C);
+        out.push((
+            image.u32(at + 8),
+            h(at + 0x14),
+            h(at + 0x16),
+            b(at + 0x18),
+            b(at + 0x19),
+            [b(at + 0x1A), b(at + 0x1B), b(at + 0x1C), b(at + 0x1D)],
+            [h(at + 0x20) as i16, h(at + 0x22) as i16],
+            h(at + 0x2A),
+            if stream == 0 {
+                0
+            } else {
+                stream.wrapping_sub(base)
+            },
+            if due == -1 {
+                -1
+            } else {
+                due.wrapping_sub(frame)
+            },
+        ));
+        at = image.u32(at + 4);
+        assert!(
+            at == 0 || (at - sms).is_multiple_of(0x34),
+            "a driver voice's link"
+        );
+        assert!(out.len() <= 256, "the driver's active list loops");
+    }
+    out.sort();
+    out
 }
 
 /// A card pull's fields, `F[,G]`: out at video field F, back at G (or never).

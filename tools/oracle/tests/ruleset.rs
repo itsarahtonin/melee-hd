@@ -82,8 +82,11 @@ fn the_c_stick_rule_off_zooms() {
 
 /// `vs-menus`' VS match is a live match (`game::live`, task 4 of the plan): it compares clean
 /// from power-on to the match's start (tick 848), where the menus' session goes aside and the
-/// match, built from its game start as playback builds a replay's, plays on with the
-/// recording's reads, uncompared: ssbm-rs's run has no handoff.
+/// match, built from its game start as playback builds a replay's, goes on from the console's
+/// timeline and compares as a live match, to its sixth tick: on Fountain of Dreams a fighter's
+/// height is an ulp off there, from playback's first-frame settling (`Fighter_procInput+0x3CC`,
+/// which a scratch build without it compares past), docs/slippi-ruleset.md, "The scene entry's
+/// stall". The session then plays on with the recording's reads, uncompared.
 #[test]
 fn vs_menus_hands_off_its_match() {
     let Some(out) = session("vs-menus", &["--all", "--heap"]) else {
@@ -91,7 +94,7 @@ fn vs_menus_hands_off_its_match() {
     };
     assert!(
         out.contains(
-            "848 ticks compared, no difference, to the live match that starts in tick 848"
+            "854 ticks compared; tick 853 differs in 71 places, first: p_link 8 #0 fighter.cur_pos: ours [-36.25, 21.079859, 0.0], theirs [-36.25, 21.079857, 0.0]"
         ),
         "{out}"
     );
@@ -114,16 +117,28 @@ fn oracle(args: &[&str]) -> String {
 }
 
 /// Task 4's sessions (docs/oracle.md, "The Slippi ruleset's live matches"), recorded with
-/// ssbm-rs's ruleset runner into `$SSBM_RS_LOCAL/lockstep/m6s-match`, their menus traced to
-/// past the first match's start into `traces/m6s-match`: each compares clean to its first live
-/// match, then runs on through every match, handback, Sudden Death, results screen and
-/// character select to past its last read with no stop.
+/// ssbm-rs's ruleset runner into `$SSBM_RS_LOCAL/lockstep/m6s-match` and traced whole into
+/// `traces/m6s-stall`: each compares clean to its first live match and on through it as a live
+/// match (`matches-a` to its handback; `matches-b`'s, on Fountain of Dreams, to its sixth tick,
+/// as `vs-menus`' above), then runs on through every match, handback, Sudden Death, results
+/// screen and character select to past its last read with no stop.
 #[test]
 fn the_live_match_sessions_run_on() {
-    for (name, start, end, matches) in
-        [("matches-a", 1014, 24194, 5), ("matches-b", 1230, 18933, 5)]
-    {
-        let trace = ssbm_rs_local(&format!("traces/m6s-match/{name}.trc"));
+    for (name, compared, end, matches) in [
+        (
+            "matches-a",
+            "2105 ticks compared, no difference, through the live match that starts in tick 1014 to its handback before tick 2105",
+            24187,
+            5,
+        ),
+        (
+            "matches-b",
+            "1236 ticks compared; tick 1235 differs in 18 places, first: p_link 8 #0 fighter.cur_pos: ours [-41.25, 21.04492, 0.0], theirs [-41.25, 21.044922, 0.0]",
+            18925,
+            5,
+        ),
+    ] {
+        let trace = ssbm_rs_local(&format!("traces/m6s-stall/{name}.trc"));
         let inputs = ssbm_rs_local(&format!("lockstep/m6s-match/{name}.inputs"));
         if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
             eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
@@ -140,13 +155,17 @@ fn the_live_match_sessions_run_on() {
             "--slp",
             dir.to_str().unwrap(),
         ]);
+        // Each recording is the one ssbm-rs played.
+        for n in 1..=matches {
+            let ours = std::fs::read(dir.join(format!("{name}-{n}.slp"))).expect("a recording");
+            let played = ssbm_rs_local(&format!("lockstep/m6s-stall/traced/{name}-{n}.slp"));
+            assert!(
+                ours == std::fs::read(&played).expect("the recording ssbm-rs played"),
+                "{name}-{n}: the live match no longer writes the recording ssbm-rs played"
+            );
+        }
         let _ = std::fs::remove_dir_all(&dir);
-        assert!(
-            out.contains(&format!(
-                "{start} ticks compared, no difference, to the live match that starts in tick {start}"
-            )),
-            "{name}: {out}"
-        );
+        assert!(out.contains(compared), "{name}: {out}");
         assert!(
             out.contains(&format!(
                 "ran on to tick {end} past the recording's reads with no stop: {matches} live matches, {matches} recordings written"
@@ -157,24 +176,26 @@ fn the_live_match_sessions_run_on() {
 }
 
 /// Each live match's recording, as ssbm-rs plays it with Slippi's playback codes and float mode
-/// (`traces/m6s-match/NAME.trc`, its recording in `lockstep/m6s-match/traced`), compares clean
-/// with melee-hd's playback, the allocator model included.
+/// (`traces/m6s-stall/NAME.trc`, its recording in `lockstep/m6s-stall/traced`), compares clean
+/// with melee-hd's playback, the allocator model included, and ssbm-rs's replay check finds
+/// nothing but what a pause leaves (`matches-a-1`'s, below).
 #[test]
 fn the_live_matches_play_back_as_ssbm_rs_does() {
-    for (name, ticks) in [
-        ("matches-a-1", 942),
-        ("matches-a-2", 2734),
-        ("matches-a-3", 1032),
-        ("matches-a-4", 1832),
-        ("matches-a-5", 7428),
-        ("matches-b-1", 1532),
-        ("matches-b-2", 2734),
-        ("matches-b-3", 1531),
-        ("matches-b-4", 1533),
-        ("matches-b-5", 1541),
+    for (name, ticks, diverging) in [
+        ("matches-a-1", 941, 312),
+        ("matches-a-2", 2732, 0),
+        ("matches-a-3", 1030, 0),
+        ("matches-a-4", 1829, 0),
+        ("matches-a-5", 7428, 0),
+        ("matches-b-1", 1531, 0),
+        ("matches-b-2", 2732, 0),
+        ("matches-b-3", 1530, 0),
+        ("matches-b-4", 1531, 0),
+        ("matches-b-5", 1539, 0),
     ] {
-        let trace = ssbm_rs_local(&format!("traces/m6s-match/{name}.trc"));
-        let slp = ssbm_rs_local(&format!("lockstep/m6s-match/traced/{name}.slp"));
+        let trace = ssbm_rs_local(&format!("traces/m6s-stall/{name}.trc"));
+        let slp = ssbm_rs_local(&format!("lockstep/m6s-stall/traced/{name}.slp"));
+        let log = ssbm_rs_local(&format!("traces/m6s-stall/{name}.check.log"));
         if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
             eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
             return;
@@ -185,49 +206,67 @@ fn the_live_matches_play_back_as_ssbm_rs_does() {
             "{name}: {out}"
         );
         assert!(out.contains("no stale reads"), "{name}: {out}");
+        let log = std::fs::read_to_string(&log).expect("the replay check's log");
+        assert!(
+            log.contains(&format!(", {diverging} diverge (0 known)")),
+            "{name}: {log}"
+        );
+    }
+    // The pause's: the scene frame counts from it and a mark after it.
+    let log = std::fs::read_to_string(ssbm_rs_local("traces/m6s-stall/matches-a-1.check.log"));
+    if let Ok(log) = log {
+        assert!(
+            log.contains("1 x post-frame state flags, first on frame 506")
+                && log.contains("311 x frame start scene frame, first on frame 506"),
+            "{log}"
+        );
     }
 }
 
 /// Paused live matches (docs/oracle.md, "The Slippi ruleset's live matches", and
-/// docs/slippi-bugs.md, "A paused match's recording"): each session's live match writes the
-/// recording ssbm-rs played (`lockstep/m6s-pause/traced/NAME-1.slp`, its replay check in
-/// `traces/m6s-pause/NAME-1.check.log`), whose off-screen marks are the original's in ssbm-rs's
-/// trace of the session (`melee-oracle live-check`, to where the two runs' items part), and
-/// whose replay check differs from the recording only in what a pause leaves (the frame starts'
-/// scene frame count and the marks of the frames after a pause); ssbm-rs's playback compares
-/// clean with melee-hd's. `matches-a`'s first match is checked the same way on a longer trace of
-/// its session (`traces/m6s-pause/matches-a-long.trc`, to past its pause).
+/// docs/slippi-bugs.md, "A paused match's recording"): each session compares through its live
+/// match on the console's timeline to its handback, and the match writes the recording ssbm-rs
+/// played (`lockstep/m6s-stall/traced/NAME-1.slp`, its replay check in
+/// `traces/m6s-stall/NAME-1.check.log`), whose off-screen marks are the original's in ssbm-rs's
+/// trace of the session (`melee-oracle live-check`, to the recording's end), and whose replay
+/// check differs from the recording only in what a pause leaves (the frame starts' scene frame
+/// count and the marks of the frames after a pause); ssbm-rs's playback compares clean with
+/// melee-hd's. `matches-a`'s first match is checked the same way on the whole trace of its
+/// session (`traces/m6s-stall/matches-a.trc`).
 #[test]
 fn the_paused_live_matches_record_as_the_console_does() {
-    // (session, live match's check, replay check's divergences, playback's ticks)
+    // (session, its comparison, live match's check, replay check's divergences, playback's
+    // ticks)
     let cases = [
         (
             "pause-fd",
-            "frame -118 is tick 1023; 429 frames checked to the recording's end (858 post-frame updates, 81 marked off screen), 0 differ",
+            "1757 ticks compared, no difference, through the live match that starts in tick 1018 to its handback before tick 1757",
+            "frame -118 is tick 1023; 427 frames checked to the recording's end (854 post-frame updates, 81 marked off screen), 0 differ, 0 past the trace or unplaced, 0 a tick from their scene frame count",
             [
                 "252 diverge (0 known)",
-                "12 x post-frame state flags, first on frame 72",
-                "240 x frame start scene frame, first on frame 72",
+                "12 x post-frame state flags, first on frame 70",
+                "240 x frame start scene frame, first on frame 70",
             ],
-            436,
+            434,
         ),
         (
             "pause-far",
-            "frame -118 is tick 1023; 595 frames checked to frame 478 (tick 1852), where the items part (1190 post-frame updates, 195 marked off screen), 0 differ",
+            "2353 ticks compared, no difference, through the live match that starts in tick 1018 to its handback before tick 2353",
+            "frame -118 is tick 1023; 882 frames checked to the recording's end (1764 post-frame updates, 199 marked off screen), 0 differ, 0 past the trace or unplaced, 0 a tick from their scene frame count",
             [
-                "463 diverge (0 known)",
-                "13 x post-frame state flags, first on frame 467",
-                "450 x frame start scene frame, first on frame 317",
+                "461 diverge (0 known)",
+                "11 x post-frame state flags, first on frame 465",
+                "450 x frame start scene frame, first on frame 315",
             ],
-            891,
+            889,
         ),
     ];
-    for (name, check, diverging, ticks) in cases {
+    for (name, compared, check, diverging, ticks) in cases {
         let trace = ssbm_rs_local(&format!("traces/m6s-pause/{name}.trc"));
         let inputs = ssbm_rs_local(&format!("lockstep/m6s-pause/{name}.inputs"));
-        let played = ssbm_rs_local(&format!("lockstep/m6s-pause/traced/{name}-1.slp"));
-        let played_trace = ssbm_rs_local(&format!("traces/m6s-pause/{name}-1.trc"));
-        let log = ssbm_rs_local(&format!("traces/m6s-pause/{name}-1.check.log"));
+        let played = ssbm_rs_local(&format!("lockstep/m6s-stall/traced/{name}-1.slp"));
+        let played_trace = ssbm_rs_local(&format!("traces/m6s-stall/{name}-1.trc"));
+        let log = ssbm_rs_local(&format!("traces/m6s-stall/{name}-1.check.log"));
         if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
             eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
             return;
@@ -244,12 +283,7 @@ fn the_paused_live_matches_record_as_the_console_does() {
             "--slp",
             dir.to_str().unwrap(),
         ]);
-        assert!(
-            out.contains(
-                "1018 ticks compared, no difference, to the live match that starts in tick 1018"
-            ),
-            "{name}: {out}"
-        );
+        assert!(out.contains(compared), "{name}: {out}");
         let slp = dir.join(format!("{name}-1.slp"));
         let ours = std::fs::read(&slp).expect("the live match's recording");
         let _ = std::fs::remove_dir_all(&dir);
@@ -279,11 +313,11 @@ fn the_paused_live_matches_record_as_the_console_does() {
             "{name}: {out}"
         );
     }
-    let trace = ssbm_rs_local("traces/m6s-pause/matches-a-long.trc");
-    let played = ssbm_rs_local("lockstep/m6s-match/traced/matches-a-1.slp");
+    let trace = ssbm_rs_local("traces/m6s-stall/matches-a.trc");
+    let played = ssbm_rs_local("lockstep/m6s-stall/traced/matches-a-1.slp");
     let out = oracle(&["live-check", &trace, &played]);
     assert!(
-        out.contains("frame -118 is tick 1019; 595 frames checked to frame 478 (tick 1614), where the items part (1190 post-frame updates, 100 marked off screen), 0 differ"),
+        out.contains("frame -118 is tick 1019; 934 frames checked to the recording's end (1868 post-frame updates, 111 marked off screen), 0 differ, 0 past the trace or unplaced, 0 a tick from their scene frame count"),
         "{out}"
     );
 }

@@ -159,6 +159,63 @@ impl Game {
     }
 }
 
+/// Where the console stands between a live match and the menus' session: its timeline and its
+/// pad library, whose queue holds the polls the timeline counted, the statuses the last tick
+/// renewed from it, and the controllers' rumble. The console's VS scene's entry stalls (its
+/// sound banks' loads, `HSD_SynthSFXWaitForLoadCompletion`, 1.4 to 2.8 fields at Slippi's fast
+/// disc speed), the pad alarm polling meanwhile, so the live match takes up the console's
+/// timeline as the scene's loop starts ([`Game::go_on_from`]): its ticks wait for the same
+/// polls and render on the same rounds as the console's, and each takes the same reads; the
+/// menus' session takes up the match's as its scene ends. Only which read becomes which
+/// frame's input follows from it, and the timing: the game start, the frames, their inputs
+/// once read and the seed are the match's own (`docs/slippi-ruleset.md`, "The scene entry's
+/// stall").
+#[derive(Clone, Debug)]
+pub struct Timeline {
+    pub clock: Option<crate::audio::clock::Clock>,
+    pub lib: crate::input::controller::PadLib,
+    pub master: [crate::input::controller::Status; 4],
+    pub copy: [crate::input::controller::Status; 4],
+    pub game: [crate::input::controller::Status; 4],
+    pub rumble: crate::input::rumble::Rumble,
+    pub rumble_ahead: u32,
+}
+
+impl Game {
+    /// Where the console stands in this game ([`Timeline`]).
+    pub fn timeline(&self) -> Timeline {
+        let p = &self.pads;
+        Timeline {
+            clock: self.audio.clock.clone(),
+            lib: p.lib.clone(),
+            master: p.master,
+            copy: p.copy,
+            game: p.game,
+            rumble: p.rumble.clone(),
+            rumble_ahead: p.rumble_ahead,
+        }
+    }
+
+    /// Goes on from where the console stands in `at` ([`Timeline`]): its timeline, keeping this
+    /// game's own disc and ARAM work in flight ([`crate::audio::clock::Clock::take_up`]), its
+    /// pad library's queue and statuses, and the rumble, its scripts read from this game's
+    /// rumble data (the same file).
+    pub fn go_on_from(&mut self, at: &Timeline) {
+        if let (Some(c), Some(theirs)) = (self.audio.clock.as_mut(), at.clock.as_ref()) {
+            c.take_up(theirs);
+        }
+        let p = &mut self.pads;
+        p.lib.clone_from(&at.lib);
+        p.master = at.master;
+        p.copy = at.copy;
+        p.game = at.game;
+        if let Some(d) = self.rumble_data {
+            p.rumble = at.rumble.with_data_in(d.archive);
+            p.rumble_ahead = at.rumble_ahead;
+        }
+    }
+}
+
 /// Fighter slots [`DisplayPhase`] keeps a placement for.
 const PLACED: usize = 8;
 

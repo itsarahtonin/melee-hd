@@ -208,6 +208,23 @@ impl Rumble {
         }
     }
 
+    /// The library with its scripts in loaded data (`LbRb.dat`'s, the only rumble data) read
+    /// from `archive` instead: the same file loaded into another session's archives.
+    pub fn with_data_in(&self, archive: melee_data::archive::ArchiveId) -> Rumble {
+        let mut r = self.clone();
+        for n in &mut r.nodes {
+            for s in [&mut n.stack, &mut n.listp, &mut n.headp]
+                .into_iter()
+                .flatten()
+            {
+                if let Script::Data(d) = s {
+                    d.archive = archive;
+                }
+            }
+        }
+        r
+    }
+
     /// `HSD_PadRumbleOn`: the port coasts (`Motor::Stop`) when no script runs.
     #[doc(alias = "HSD_PadRumbleOn")]
     pub fn on(&mut self, port: u8) {

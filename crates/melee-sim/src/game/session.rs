@@ -244,6 +244,9 @@ pub struct Session {
     /// aside, its game and archives, which `game` and `data` (the match's own) give back to
     /// when the match's scene ends.
     pub aside: Option<Box<Aside>>,
+    /// The live match's own archives by name, as its start loaded them (`vs_match::Match`'s
+    /// `files`), while it runs.
+    pub live_files: Vec<(String, melee_data::archive::ArchiveId)>,
 }
 
 /// The menus' session set aside across a live match's scene ([`Session::aside`]).
@@ -487,6 +490,7 @@ impl Session {
             card,
             joiner_files: Default::default(),
             aside: None,
+            live_files: Vec::new(),
         }
     }
 
@@ -511,6 +515,7 @@ impl Session {
             card,
             joiner_files: Default::default(),
             aside: None,
+            live_files: Vec::new(),
         }
     }
 
@@ -1115,36 +1120,16 @@ impl Session {
     /// stage's, the sound test's) unless the music stream has it already: its first reads come
     /// in the ticks after, behind the disc's latency.
     fn read_song(&mut self, console: &mut dyn Console) {
-        let stem = self.game.audio.lb.stem;
-        let len = stem.iter().position(|&c| c == 0).unwrap_or(stem.len());
-        if len <= 1 {
-            return;
-        }
-        let path = std::str::from_utf8(&stem[1..len]).expect("a music path");
-        let file = console.file(path);
-        if !self
-            .game
-            .audio
-            .devcom
-            .files
-            .iter()
-            .any(|f| f.0 == file.entrynum)
-        {
-            // A song read again after a rollback's restore (`session-sync`) takes the archive
-            // its first read added: the archives are shared, never part of a snapshot.
-            let id = match self.data.find_raw(&file.bytes) {
-                Some(id) => id,
-                None => self.data.add(Archive::raw(&file.bytes)),
-            };
-            self.game.audio.devcom.files.push((file.entrynum, id));
-        }
+        read_song(&mut self.game, &mut self.data, console);
     }
 
     /// The VS scene about to enter starts a live match of the Slippi ruleset
     /// (`game::live`): the menus' session goes aside as the scene's entry leaves it, and the
     /// match, built from the game start its recording will hold as playback builds a
     /// replay's, becomes the session's game, at the session's disc pace and DSP model,
-    /// recorded when the menus' game has a recorder waiting. Its files are the console's.
+    /// recorded when the menus' game has a recorder waiting, and goes on from the console's
+    /// timeline as the scene's loop starts ([`Session::console_entry`]). Its files are the
+    /// console's.
     fn hand_off(&mut self, console: &mut dyn Console) {
         let r = Running {
             game: &mut self.game,
@@ -1156,20 +1141,57 @@ impl Session {
         // (`read_match_files`): the scenes after it load them from there (the results
         // screen's fighters, Sudden Death's stage).
         self.read_match_files(&d, console);
+        let at = self.console_entry(console);
         let mut settings =
             super::vs_match::Settings::live(&start).expect("the ruleset's code list's rules");
         settings.disc = self.setup.disc;
         settings.dsp = self.setup.dsp;
         settings.record = self.game.recorder.is_some().then_some(setup);
-        let m = super::vs_match::Match::start(&settings, &mut |n| console.file(n));
+        let mut m = super::vs_match::Match::start(&settings, &mut |n| console.file(n));
+        m.game.go_on_from(&at);
+        self.live_files = m.files;
         let game = std::mem::replace(&mut self.game, m.game);
         let data = std::mem::replace(&mut self.data, m.data);
         self.aside = Some(Box::new(Aside { game, data }));
     }
 
+    /// Where the console stands as the VS scene's loop starts (`live::Timeline`), its entry's
+    /// stall included: the scene's entry run on a copy of the menus' session as
+    /// [`Session::enter_next_scene`] runs it (the console's own entry, its sound banks' loads
+    /// waited for), the pad alarm's polls meanwhile taking the console's next reads, as the
+    /// console's do, and the scene loop's start. The menus' session and the card stay as they
+    /// were.
+    fn console_entry(&mut self, console: &mut dyn Console) -> super::live::Timeline {
+        let mut probe = self.game.clone();
+        probe.machine.files_wanted = false;
+        crate::lb::save::with_card_copy(|| {
+            let lent = crate::hsd::heap::Lent::take(&mut probe.objs.heap);
+            with_feed(console, |_| {
+                Running {
+                    game: &mut probe,
+                    data: &self.data,
+                }
+                .next_scene()
+            });
+            lent.give_back(&mut probe.objs.heap);
+            read_song(&mut probe, &mut self.data, console);
+            let lent = crate::hsd::heap::Lent::take(&mut probe.objs.heap);
+            let mut r = Running {
+                game: &mut probe,
+                data: &self.data,
+            };
+            with_feed(console, |read| r.take_alarm_reads(read));
+            r.begin_scene_loop();
+            lent.give_back(&mut probe.objs.heap);
+        });
+        probe.timeline()
+    }
+
     /// One engine tick of the live match, as a console runs it: every poll the match's
-    /// timeline queues takes the controllers' next read ([`super::vs_match::Match::step_live_tick`]).
+    /// timeline queues takes the controllers' next read ([`super::vs_match::Match::step_live_tick`]),
+    /// the pad alarm's handler probing the console's card slots.
     fn live_tick(&mut self, console: &mut dyn Console) -> (Frame, bool) {
+        let card = CardLent::take(&mut self.card);
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
         let mut r = Running {
             game: &mut self.game,
@@ -1179,6 +1201,7 @@ impl Session {
             scene::step_session_tick(&mut r, read, false)
         });
         lent.give_back(&mut self.game.objs.heap);
+        card.give_back(&mut self.card);
         let out = Frame {
             events: std::mem::take(&mut self.game.events),
             pads: t.pads,
@@ -1190,6 +1213,8 @@ impl Session {
 
     /// The live match's scene has ended: the menus' session comes back and takes what the
     /// match leaves (`live::Back`), its VS scene ended.
+    /// The menus' session goes on from the console's timeline as the match leaves it
+    /// (`live::Timeline`).
     fn hand_back(&mut self) {
         let aside = self.aside.take().expect("a live match");
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
@@ -1199,10 +1224,13 @@ impl Session {
         }
         .live_match_back();
         lent.give_back(&mut self.game.objs.heap);
+        let at = self.game.timeline();
+        self.live_files.clear();
         let Aside { game, data } = *aside;
         self.game = game;
         self.data = data;
         self.game.take_back_live_match(back);
+        self.game.go_on_from(&at);
     }
 
     /// Whether a live match of the Slippi ruleset is running (`game::live`): the session's
@@ -1214,13 +1242,16 @@ impl Session {
     /// The frame's display pass after [`Session::step_tick`]: its draw commands.
     pub fn render(&mut self) -> Vec<crate::hsd::display::Draw> {
         if self.aside.is_some() {
-            // A live match's, as playback's match renders ([`super::vs_match::Match::render`]).
+            // A live match's, as playback's match renders ([`super::vs_match::Match::render`]);
+            // the pass's wait can take the pad alarm.
+            let card = CardLent::take(&mut self.card);
             let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
             scene::render_screen(&mut Running {
                 game: &mut self.game,
                 data: &self.data,
             });
             lent.give_back(&mut self.game.objs.heap);
+            card.give_back(&mut self.card);
             return std::mem::take(&mut self.game.objs.display.draws);
         }
         // The pass's wait can take the pad alarm, whose handler probes the card.
@@ -1238,6 +1269,26 @@ impl Session {
         lent.give_back(&mut self.game.objs.heap);
         card.give_back(&mut self.card);
         std::mem::take(&mut self.game.objs.display.draws)
+    }
+}
+
+/// [`Session::read_song`] for `game`, its file added to `data`.
+fn read_song(game: &mut Game, data: &mut Archives, console: &mut dyn Console) {
+    let stem = game.audio.lb.stem;
+    let len = stem.iter().position(|&c| c == 0).unwrap_or(stem.len());
+    if len <= 1 {
+        return;
+    }
+    let path = std::str::from_utf8(&stem[1..len]).expect("a music path");
+    let file = console.file(path);
+    if !game.audio.devcom.files.iter().any(|f| f.0 == file.entrynum) {
+        // A song read again after a rollback's restore (`session-sync`) takes the archive
+        // its first read added: the archives are shared, never part of a snapshot.
+        let id = match data.find_raw(&file.bytes) {
+            Some(id) => id,
+            None => data.add(Archive::raw(&file.bytes)),
+        };
+        game.audio.devcom.files.push((file.entrynum, id));
     }
 }
 

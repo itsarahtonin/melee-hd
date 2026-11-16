@@ -1296,6 +1296,58 @@ impl Clock {
         self.placed_frames = true;
     }
 
+    /// Goes on from where the timeline `console` stands, keeping this one's own work in flight
+    /// (`game::live`: a live match of the Slippi ruleset as the console's VS scene's loop
+    /// starts, and the menus' session as the match's scene ends): the console's time and clock
+    /// at power-on, its hardware's events and counts (the retraces, the pad alarm and the polls
+    /// it queued, the audio DMA and the DSP, the frame buffers, the scene loop's round, the
+    /// perf timer), and this timeline's disc read, ARAM transfers and the movie player's and the
+    /// preload heaps' copy alarms, each the same time from now as it was, behind the console's
+    /// events due at the same time.
+    pub fn take_up(&mut self, console: &Clock) {
+        assert!(
+            self.exi_chain.is_empty() && console.exi_chain.is_empty(),
+            "a card transfer in flight"
+        );
+        let own = |k: EventKind| {
+            matches!(
+                k,
+                EventKind::DiscDone
+                    | EventKind::DiscTimeout
+                    | EventKind::MovieAlarm
+                    | EventKind::CopyAlarm
+            )
+        };
+        let mut theirs: Vec<Event> = (console.events.iter())
+            .filter(|e| !own(e.kind))
+            .copied()
+            .collect();
+        theirs.sort_by_key(|e| e.seq);
+        let mut mine: Vec<Event> = (self.events.iter())
+            .filter(|e| own(e.kind))
+            .copied()
+            .collect();
+        mine.sort_by_key(|e| e.seq);
+        let mut c = console.clone();
+        c.events.clear();
+        c.seq = 0;
+        for e in theirs {
+            c.schedule(e.at, e.kind);
+        }
+        c.disc_timeout = None;
+        for e in mine {
+            let seq = c.schedule(e.at.wrapping_sub(self.now).wrapping_add(c.now), e.kind);
+            if self.disc_timeout == Some(e.seq) {
+                c.disc_timeout = Some(seq);
+            }
+        }
+        c.di_pending = self.di_pending;
+        c.aram_pending = self.aram_pending;
+        c.alarm_times = self.alarm_times.take();
+        c.movie_period = self.movie_period;
+        *self = c;
+    }
+
     /// Time passing to `tb` through code the model doesn't cover, its interrupts taken as
     /// their events come due.
     pub fn catch_up(&mut self, tb: u64, f: &mut dyn Frames) {
