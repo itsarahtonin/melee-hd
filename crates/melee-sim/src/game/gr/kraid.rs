@@ -156,17 +156,20 @@ pub fn init_copy(r: &mut Running, gobj: GObjId) {
 /// seven animations.
 #[doc(alias = "grKraid_801FE2D0")]
 pub fn proc_copy(r: &mut Running, gobj: GObjId) {
-    if r.game.pads.master[1].trigger & crate::input::controller::BUTTON_A == 0 {
-        return;
+    // Under Slippi's rules, the tripwire for a step playback won't make (`live::Haze`).
+    r.game.haze_process_start();
+    let stepped = r.game.pads.master[1].trigger & crate::input::controller::BUTTON_A != 0;
+    if stepped {
+        let mut n = r.game.gr.kraid_anim.wrapping_add(1);
+        if n > 6 {
+            n = 0;
+        }
+        r.game.gr.kraid_anim = n;
+        crate::game::code::os_report();
+        let m = map_id(r.game, gobj);
+        anime::start_map(r.game, r.data, gobj, m, n);
     }
-    let mut n = r.game.gr.kraid_anim.wrapping_add(1);
-    if n > 6 {
-        n = 0;
-    }
-    r.game.gr.kraid_anim = n;
-    crate::game::code::os_report();
-    let m = map_id(r.game, gobj);
-    anime::start_map(r.game, r.data, gobj, m, n);
+    r.game.haze_process_end(stepped);
 }
 
 /// The background's setup (map 2), `grKraid_801FE360`: its animation.
@@ -515,6 +518,7 @@ pub fn set_anim(r: &mut Running, gobj: GObjId, anim: i32) {
     let a = i32::from(r.game.grounds[cg.0].u.kraid().x1);
     anime::start_map(r.game, r.data, c, cm, a);
     r.game.grounds[cg.0].u.kraid().x0 = 1;
+    r.game.haze_restarted();
 }
 
 /// Whether a swipe has reached the rock, `grKraid_801FF0E0`: its tick count at 158 (the left

@@ -1285,6 +1285,16 @@ pub fn update(r: &mut Running) {
 /// `Camera_8002AF68`.
 #[doc(alias = "Camera_8002AF68")]
 pub fn aim(game: &mut Game, c: Option<CObjId>, which: Which) {
+    let v = aimed(game, which);
+    let objs = &mut game.objs;
+    cobj::set_fov(&mut objs.cobjs, c, v.fov);
+    let c = c.expect("the camera's CObj");
+    cobj::set_interest(objs, c, v.interest);
+    cobj::set_eye_position(objs, c, v.eye);
+}
+
+/// What [`aim`] gives a CObj along a transform.
+fn aimed(game: &Game, which: Which) -> View {
     let cam = &game.camera.cam;
     let t = match which {
         Which::Main => &cam.transform,
@@ -1299,60 +1309,105 @@ pub fn aim(game: &mut Game, c: Option<CObjId>, which: Which) {
     };
     let (fov, interest, mut eye) = (t.fov, shake(t.interest), shake(t.position));
     let floor = eye_floor(game);
-    let objs = &mut game.objs;
-    cobj::set_fov(&mut objs.cobjs, c, fov);
-    let c = c.expect("the camera's CObj");
-    cobj::set_interest(objs, c, interest);
     if reg(eye.y) < floor {
         eye.y = mem(floor);
     }
-    cobj::set_eye_position(objs, c, eye);
+    View { fov, interest, eye }
 }
 
-/// Sets the camera's CObj up from its mode's transform before it draws, `Camera_8002A4AC`.
+/// A camera's view: its field of view, interest and eye.
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct View {
+    pub fov: f32,
+    pub interest: Vec3,
+    pub eye: Vec3,
+}
+
+impl View {
+    /// The view the game camera's CObj holds now.
+    pub fn of_camera(game: &mut Game, data: &Archives) -> View {
+        let c = camera_cobj(game);
+        View {
+            fov: cobj::fov(&game.objs.cobjs, Some(c)),
+            interest: cobj::interest(&mut game.objs, data, c).expect("the camera's interest"),
+            eye: cobj::eye_position(&mut game.objs, data, c).expect("the camera's eye"),
+        }
+    }
+
+    /// [`ground_span`] through this view, with the game camera's aspect.
+    pub fn ground_span(&self, game: &Game) -> ([f32; 3], bool) {
+        let aspect = cobj::aspect(&game.objs.cobjs, Some(camera_cobj(game)));
+        let fwd = cobj::eye_vector_between(self.eye, self.interest).unwrap_or(cobj::NO_EYE_VECTOR);
+        span_of(self.eye, fwd, self.fov, aspect)
+    }
+}
+
+/// The view a display pass would give the game camera's CObj now ([`update_cobj`]), from its
+/// mode's transform as it stands; none in a mode that leaves the CObj as it is.
+pub fn pass_view(game: &Game) -> Option<View> {
+    let cam = &game.camera.cam;
+    let t = &cam.transform;
+    let d = &game.camera.debug;
+    Some(match cam.mode {
+        STANDARD | FIXED | FREE => aimed(game, Which::Main),
+        PAUSE => {
+            let mut eye = t.position;
+            if reg(eye.y) < eye_floor(game) {
+                eye.y = mem(eye_floor(game));
+            }
+            View {
+                fov: t.fov,
+                interest: t.interest,
+                eye,
+            }
+        }
+        TRAINING_MENU | CLEAR | BOSS_INTRO => View {
+            fov: t.fov,
+            interest: t.interest,
+            eye: t.position,
+        },
+        DEBUG_FOLLOW => View {
+            fov: d.follow_fov,
+            interest: d.follow_eye_pos,
+            eye: d.follow_int_pos,
+        },
+        DEBUG_FREE => View {
+            fov: d.free_fov,
+            interest: d.free_int_pos,
+            eye: d.free_eye_pos,
+        },
+        _ => return None,
+    })
+}
+
+/// Sets the camera's CObj up from its mode's transform before it draws, `Camera_8002A4AC`
+/// ([`pass_view`]).
 #[doc(alias = "Camera_8002A4AC")]
 pub fn update_cobj(game: &mut Game, gobj: GObjId) {
     let Some(Obj::CObj(c)) = game.world.gobjs[gobj.0].obj else {
         panic!("the camera GObj holds no CObj");
     };
     let cam = &game.camera.cam;
-    let (near, far) = (cam.nearz, cam.farz);
-    let t = cam.transform.clone();
-    match cam.mode {
-        STANDARD | FIXED => {
+    let (near, far, mode) = (cam.nearz, cam.farz, cam.mode);
+    let Some(v) = pass_view(game) else {
+        return;
+    };
+    match mode {
+        STANDARD | FIXED | FREE => {
             aim(game, Some(c), Which::Main);
-            aim(game, game.camera.cobj_copy, Which::Copy);
-            cobj::set_near(&mut game.objs.cobjs, Some(c), near);
-            cobj::set_far(&mut game.objs.cobjs, Some(c), far);
-        }
-        FREE => {
-            aim(game, Some(c), Which::Main);
-            cobj::set_near(&mut game.objs.cobjs, Some(c), near);
-            cobj::set_far(&mut game.objs.cobjs, Some(c), far);
-        }
-        PAUSE => {
-            let mut eye = t.position;
-            if reg(eye.y) < eye_floor(game) {
-                eye.y = mem(eye_floor(game));
+            if mode != FREE {
+                aim(game, game.camera.cobj_copy, Which::Copy);
             }
-            set_view(game, c, t.fov, t.interest, eye);
+            cobj::set_near(&mut game.objs.cobjs, Some(c), near);
+            cobj::set_far(&mut game.objs.cobjs, Some(c), far);
         }
-        TRAINING_MENU | CLEAR | BOSS_INTRO => set_view(game, c, t.fov, t.interest, t.position),
-        DEBUG_FOLLOW => {
-            let d = game.camera.debug.clone();
+        PAUSE | TRAINING_MENU | CLEAR | BOSS_INTRO => set_view(game, c, v.fov, v.interest, v.eye),
+        _ => {
             let objs = &mut game.objs;
-            cobj::set_fov(&mut objs.cobjs, Some(c), d.follow_fov);
-            cobj::set_interest(objs, c, d.follow_eye_pos);
-            cobj::set_eye_position(objs, c, d.follow_int_pos);
+            cobj::set_fov(&mut objs.cobjs, Some(c), v.fov);
+            cobj::set_interest(objs, c, v.interest);
+            cobj::set_eye_position(objs, c, v.eye);
         }
-        DEBUG_FREE => {
-            let d = game.camera.debug.clone();
-            let objs = &mut game.objs;
-            cobj::set_fov(&mut objs.cobjs, Some(c), d.free_fov);
-            cobj::set_interest(objs, c, d.free_int_pos);
-            cobj::set_eye_position(objs, c, d.free_eye_pos);
-        }
-        _ => {}
     }
 }
 
@@ -1749,13 +1804,19 @@ pub fn ground_span(game: &mut Game, data: &Archives) -> ([f32; 3], bool) {
     let o = &game.objs.cobjs;
     let fov = cobj::fov(o, Some(c));
     let aspect = cobj::aspect(o, Some(c));
+    let eye = cobj::eye_position(&mut game.objs, data, c).expect("the camera's eye");
+    let fwd = cobj::eye_vector(&mut game.objs, data, Some(c)).unwrap_or(cobj::NO_EYE_VECTOR);
+    let _ = cobj::interest(&mut game.objs, data, c);
+    span_of(eye, fwd, fov, aspect)
+}
+
+/// [`ground_span`] of a view whose eye is at `eye` looking along `fwd` (a unit vector, or
+/// [`cobj::NO_EYE_VECTOR`]), with field of view `fov` and aspect `aspect`.
+pub fn span_of(eye: Vec3, mut fwd: Vec3, fov: f32, aspect: f32) -> ([f32; 3], bool) {
     let half = fp::frsp(fp::fmul(
         0.5,
         fp::fmuls(fp::fmuls(reg(DEG_TO_RAD), reg(fov)), reg(aspect)),
     ));
-    let eye = cobj::eye_position(&mut game.objs, data, c).expect("the camera's eye");
-    let mut fwd = cobj::eye_vector(&mut game.objs, data, Some(c)).unwrap_or(cobj::NO_EYE_VECTOR);
-    let _ = cobj::interest(&mut game.objs, data, c);
     // `8.5070587e37f`: 0x7E7FFFFF, one below 2^126.
     let far = f32::from_bits(0x7E7F_FFFF);
     let abs = |x: f64| fp::frsp(if x < 0.0 { fp::fneg(x) } else { x });
