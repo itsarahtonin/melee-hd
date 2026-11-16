@@ -1998,6 +1998,12 @@ Checked with `--all --heap`, every line as `session-expect.txt` has it: `idle-mo
 
 Checked with `--all --heap`: `m6-targets` 47,425 ticks and `gs-match1` 17,855, no difference, no stale read, and 13 sessions with items and matches as `session-expect.txt` has them (`gb-gk-items`, `un-held`, `un-combo`, `tr-items`, `m6-classic`, `tt-dk-quit`, `as-win`, `rt-held`, `lim-lasers`, `m6-training`, `m6-allstar`, `m6-adventure2`, `mm-100-win`); `session-sync --rollback 7 --shortcut` on `m6-targets` (45,524 ticks in 103 matches) and `gs-match1` (17,767 ticks in 5 matches) clean; the oracle's session tests pass (125, one ignored). Mutations: both undone (the branch's base) stops `m6-targets` in tick 13656 as before; the camera's boxes alone undone stops it in tick 33375.
 
+### The grapple beam's ignore id
+
+`fix/m6-targets-leftover` (2026-11-15, [milestone 6](milestone-6.md)). The same verify found `m6-replay-2/stage3` (`r2-stage3`) stopping in tick 9102: `it_802B7C18: read the grapple beam's ignore id, the stack word its spawn found`. Not a regression: until `45f46ece` (`fix/exact-rest`) the read counted a stale read and took the id as set, and the session passed; that commit made it a stop by name. In the trace the beam's word was `0x80E07DC0`, a DObj, and the read was another item's (id 9) group meeting the beam in `it_8026FCF8`. Sarah's call (option B): the hit groups take the unknown word as nonzero, the beam's own and no other item's, and stop by name on two unknown ids or an unknown one against a known id in main memory's addresses ([Melee's bugs](melee-bugs.md#samus-the-grapple-beams-ignore-id-from-the-stack), [the engine notes](engine.md#uninitialized-values)); ssbm-rs's scan of the word at every grapple spawn checks the never-zero assumption.
+
+Checked: `r2-stage3` 17,804 ticks and `r2-match1c` 24,888 with `--all --heap`, no difference, no stale read; `session-sync --rollback 7 --shortcut` on `r2-stage3` (17,751 ticks in 5 matches) clean; the Samus replay diffs with `--heap` clean (`grapple-samus-bf` 2,025 ticks, `own-samus-fd` 2,021, `oracle-cpu-samus-fd` 11,033, `dk-samus-bf-9da5c633` 11,934). Mutations: in `r2-stage3` the answer reaches nothing (neither the word taken as zero nor taken as equal to the other item's id changes a byte: the beam had no live box in that group), so the treatment and both tripwires are held by unit tests (`it::ignore_id_tests`), which fail with the mixed case answered as equal.
+
 ## Rules
 
 - Floats compare by bit pattern. One ULP is a divergence.
