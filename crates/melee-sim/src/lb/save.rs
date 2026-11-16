@@ -297,6 +297,15 @@ thread_local! {
     static LENT: RefCell<Option<CardDevice>> = const { RefCell::new(None) };
 }
 
+/// Runs `f` with a copy of the lent card device in its place (a probe's run), the device put
+/// back as it was after.
+pub fn with_card_copy<R>(f: impl FnOnce() -> R) -> R {
+    let saved = LENT.with(|l| l.borrow().clone());
+    let r = f();
+    LENT.with(|l| *l.borrow_mut() = saved);
+    r
+}
+
 /// A step's loan of the card device to the thread.
 #[must_use]
 pub struct CardLent(bool);

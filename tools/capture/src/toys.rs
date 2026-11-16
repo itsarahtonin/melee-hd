@@ -89,8 +89,10 @@ impl Comparer<'_> {
                 all,
                 self.u32(sym("_Toy_sbss_804D6EA8")),
             );
-            if game.gm.trophy_data {
-                let datai = game.ft.data.files.archive(game.trophy_data_file());
+            // (A match built as playback builds a replay's only times the data's load.)
+            if game.gm.trophy_data
+                && let Some(datai) = game.ft.data.files.archive_id(game.trophy_data_file())
+            {
                 for (name, sym_name) in [
                     ("_Toy_sbss_804D6EC4", "tyInitModelTbl"),
                     ("_Toy_sbss_804D6EC0", "tyInitModelDTbl"),
@@ -245,8 +247,9 @@ impl Comparer<'_> {
         let theirs: Vec<u32> = (0..43).map(|i| self.u32(d + 4 * i)).collect();
         self.check("_tyDisplay_804A2DE8", "archives", ours, theirs);
         // What the debug views wrote into `TyDatai`.
-        if game.gm.trophy_data {
-            let datai = game.ft.data.files.archive(game.trophy_data_file());
+        if game.gm.trophy_data
+            && let Some(datai) = game.ft.data.files.archive_id(game.trophy_data_file())
+        {
             for &(offset, w) in &game.toys.datai_edits {
                 let d = DataRef {
                     archive: datai,

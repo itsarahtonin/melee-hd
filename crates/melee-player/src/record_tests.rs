@@ -391,16 +391,21 @@ fn paused_pads(read: u32) -> [PadStatus; 4] {
 
 /// Plays a live match of the Slippi ruleset (`Settings::live`, built from the game start
 /// `record::live_start` takes from a state as the menus leave it) with scripted controllers,
-/// each poll the pad alarm takes the script's next read (with `pause`, [`paused_pads`]); calls
-/// `each` after every tick (and its display pass, when due) and returns the `.slp` it
-/// recorded.
+/// each poll the pad alarm takes the script's next read (with `pause`, [`paused_pads`]), going on
+/// from the console's timeline `at` when given (`live::Timeline`, as a session's VS scene's
+/// entry leaves it); calls `each` after every tick (and its display pass, when due) and returns
+/// the `.slp` it recorded.
 fn play_live(
     disc: &Disc,
     settings: &Settings,
     pause: bool,
+    at: Option<&melee_sim::game::live::Timeline>,
     mut each: impl FnMut(&melee_sim::game::vs_match::Match, bool),
 ) -> Vec<u8> {
     let mut m = melee_sim::game::vs_match::Match::start(settings, &mut loader(disc));
+    if let Some(at) = at {
+        m.game.go_on_from(at);
+    }
     let mut read = 0u32;
     for _ in 0..8000 {
         let (f, render) = m.step_live_tick(&mut || {
@@ -456,7 +461,7 @@ fn a_live_match_equals_its_playback() {
         let Some(disc) = disc() else { return };
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
         let (start, live) = live_settings();
-        let file = play_live(&disc, &live, false, |_, _| {});
+        let file = play_live(&disc, &live, false, None, |_, _| {});
         let replay = Replay::parse(&file).expect("the recording parses");
         let back = melee_slippi::start(&replay);
         assert_eq!(back.info, start.info);
@@ -474,7 +479,7 @@ fn a_live_match_equals_its_playback() {
         again.disc = live.disc;
         let mut play = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
         let mut ticks = 0;
-        play_live(&disc, &live, false, |m, render| {
+        play_live(&disc, &live, false, None, |m, render| {
             let (f, played) = play.step_replay_tick(&mut melee_slippi::Device(&replay));
             assert_eq!(render, played, "tick {ticks}'s display pass");
             if played {
@@ -506,7 +511,7 @@ fn a_paused_live_match_records_the_pause_as_slippi_does() {
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
         let (_, live) = live_settings();
         let (mut paused, mut marked) = (0u32, Vec::new());
-        let file = play_live(&disc, &live, true, |m, _| {
+        let file = play_live(&disc, &live, true, None, |m, _| {
             if m.game.camera.cam.mode == melee_sim::game::camera::PAUSE {
                 paused += 1;
                 // The marks the pause camera's view leaves when the pause ends.
@@ -609,6 +614,65 @@ fn a_paused_live_match_records_the_pause_as_slippi_does() {
         assert_eq!(
             frames,
             (first..first + frames.len() as i32).collect::<Vec<_>>()
+        );
+    });
+}
+
+/// A live match goes on from the console's timeline as the VS scene's loop starts
+/// (`live::Timeline`, `docs/slippi-ruleset.md`, "The scene entry's stall"): its ticks take the
+/// console's reads and render on the console's rounds, and its recording plays back with the
+/// same gameplay every tick, though playback's timeline renders on its own rounds. The console's
+/// timeline here is another match's, 500 ticks on, so the doubled rounds fall elsewhere.
+#[test]
+fn a_live_match_on_the_consoles_timeline_plays_back_the_same() {
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+        let (_, live) = live_settings();
+        let mut console = melee_sim::game::vs_match::Match::start(
+            &Settings {
+                record: None,
+                ..live.clone()
+            },
+            &mut loader(&disc),
+        );
+        for _ in 0..500 {
+            let (f, render) = console.step_live_tick(&mut || [PadStatus::default(); 4]);
+            if render {
+                console.render();
+            }
+            console.recycle(f);
+        }
+        let at = console.game.timeline();
+        drop(console);
+        let mut renders = Vec::new();
+        let file = play_live(&disc, &live, false, Some(&at), |_, render| {
+            renders.push(render)
+        });
+        let replay = Replay::parse(&file).expect("the recording parses");
+        let mut again = Settings::from_replay(&melee_slippi::start(&replay)).expect("its settings");
+        again.disc = live.disc;
+        let mut play = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
+        let (mut ticks, mut other_rounds) = (0, 0);
+        play_live(&disc, &live, false, Some(&at), |m, _| {
+            let (f, played) = play.step_replay_tick(&mut melee_slippi::Device(&replay));
+            if played {
+                play.render();
+            }
+            play.recycle(f);
+            other_rounds += usize::from(played != renders[ticks]);
+            assert_eq!(
+                gameplay(&m.game),
+                gameplay(&play.game),
+                "tick {ticks} of the live match plays back otherwise"
+            );
+            ticks += 1;
+        });
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        assert!(ticks > 3600, "{ticks} ticks");
+        assert!(
+            other_rounds > 0,
+            "the doubled rounds fall where playback's do"
         );
     });
 }
