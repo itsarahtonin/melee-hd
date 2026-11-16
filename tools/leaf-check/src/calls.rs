@@ -606,7 +606,7 @@ fn run_one(
 struct Imported {
     data: DataMap,
     archives: Archives,
-    game: melee_sim::game::state::Game,
+    game: Box<melee_sim::game::state::Game>,
     maps: Maps,
 }
 

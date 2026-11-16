@@ -1150,7 +1150,7 @@ impl Session {
         let mut m = super::vs_match::Match::start(&settings, &mut |n| console.file(n));
         m.game.go_on_from(&at);
         self.live_files = m.files;
-        let game = std::mem::replace(&mut self.game, m.game);
+        let game = std::mem::replace(&mut self.game, *m.game);
         let data = std::mem::replace(&mut self.data, m.data);
         self.aside = Some(Box::new(Aside { game, data }));
     }

@@ -519,7 +519,7 @@ fn import(
     data: &DataMap,
     archives: &Archives,
     bank: Option<melee_data::archive::ArchiveId>,
-) -> (melee_sim::game::state::Game, Maps, Vec<String>) {
+) -> (Box<melee_sim::game::state::Game>, Maps, Vec<String>) {
     // With the archives, so a texture's palette animation table is found (the costumes'
     // eyes animate their palettes).
     let mut imp = Importer::new(cap, data).with_archives(archives);

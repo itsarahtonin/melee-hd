@@ -1201,7 +1201,7 @@ impl Run<'_> {
                 // UCF's pad buffer, in its code's words, under the Slippi ruleset.
                 game.ucf =
                     melee_sim::game::ucf::Pads::from_memory(&|a| image.u32(a)).unwrap_or_default();
-                let s = Session::resume(game, imported.data, setup);
+                let s = Session::resume(*game, imported.data, setup);
                 let (back, _) = compare(
                     &image.mem1,
                     &imported.map,

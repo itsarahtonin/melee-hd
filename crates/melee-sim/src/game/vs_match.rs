@@ -374,12 +374,18 @@ pub struct DiscFile {
 /// A running VS match: the game's state and the archives it has loaded.
 #[derive(melee_derive::CloneFrom, Debug)]
 pub struct Match {
-    pub game: Game,
+    /// Boxed: a match moved or copied (a prediction's copy, a test's match) leaves no copy
+    /// of the game in the frames it passes through, where a test thread's 2 MiB stack can't
+    /// hold the few that would gather.
+    pub game: Box<Game>,
     pub data: Archives,
     /// The archives the match's start loaded, by file name (an animation's as
     /// `FILE@OFFSET`), for tools that find them in the original's memory.
     pub files: Vec<(String, ArchiveId)>,
 }
+
+// The game stays boxed: a match is moved and copied on test threads' stacks.
+const _: () = assert!(std::mem::size_of::<Match>() <= 1024);
 
 impl Match {
     /// Starts a match: the boot's pad and frame-clock setup, the VS scene's setup
@@ -399,12 +405,10 @@ impl Match {
         load: &mut dyn FnMut(&str) -> DiscFile,
         boot: &mut dyn FnMut(&mut Game, &mut Archives),
     ) -> Match {
-        let mut game = Game {
-            game_mode: settings.game_mode,
-            rules: settings.rules.clone(),
-            pacing: crate::lb::pacing::Pacing::new(),
-            ..Game::default()
-        };
+        let mut game = Box::<Game>::default();
+        game.game_mode = settings.game_mode;
+        game.rules = settings.rules.clone();
+        game.pacing = crate::lb::pacing::Pacing::new();
         // The stage's code reads the same game mode (`gm_GetCurrentGameMode`).
         game.gr.game_mode = settings.game_mode;
         game.objs.rng.seed = settings.seed;
@@ -674,7 +678,7 @@ impl Match {
 
     /// Takes up a match from a state: one imported from a capture of the original, say, at
     /// the start of an engine tick.
-    pub fn resume(game: Game, data: Archives) -> Match {
+    pub fn resume(game: Box<Game>, data: Archives) -> Match {
         Match {
             game,
             data,

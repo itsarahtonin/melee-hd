@@ -424,7 +424,11 @@ fn stub_call_diffs(maps: &Maps) -> Vec<String> {
 }
 
 /// Imports a capture's whole state.
-pub fn import(cap: &Capture, data: &DataMap, archives: &Archives) -> (Game, Maps, Vec<String>) {
+pub fn import(
+    cap: &Capture,
+    data: &DataMap,
+    archives: &Archives,
+) -> (Box<Game>, Maps, Vec<String>) {
     import_with(cap, data, archives, false)
 }
 
@@ -434,7 +438,7 @@ pub fn import_with(
     data: &DataMap,
     archives: &Archives,
     heap: bool,
-) -> (Game, Maps, Vec<String>) {
+) -> (Box<Game>, Maps, Vec<String>) {
     let mut imp = Importer::new(cap, data).with_archives(archives);
     imp.world();
     imp.stage();
