@@ -135,7 +135,7 @@ fn snapshot(paths: &[String]) {
         imp.world();
         imp.stage();
         imp.ids();
-        let game: Game = imp.game;
+        let game: Game = *imp.game;
         let (copy, allocs, bytes) = counted(|| game.clone());
         let size = std::mem::size_of::<Game>() + bytes;
         let clone_us = median_us(200, || {

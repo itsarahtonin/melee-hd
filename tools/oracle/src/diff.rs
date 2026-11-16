@@ -234,7 +234,7 @@ pub(crate) fn compare(
 
 /// A trace tick's state taken up through `melee-capture`'s importer, as `--from` takes it.
 pub(crate) struct Imported {
-    pub(crate) game: Game,
+    pub(crate) game: Box<Game>,
     pub(crate) data: Archives,
     /// The archives in memory, as the import found them.
     pub(crate) map: DataMap,

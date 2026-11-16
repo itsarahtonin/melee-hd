@@ -1162,7 +1162,7 @@ impl Session {
         settings.dsp = self.setup.dsp;
         settings.record = self.game.recorder.is_some().then_some(setup);
         let m = super::vs_match::Match::start(&settings, &mut |n| console.file(n));
-        let game = std::mem::replace(&mut self.game, m.game);
+        let game = std::mem::replace(&mut self.game, *m.game);
         let data = std::mem::replace(&mut self.data, m.data);
         self.aside = Some(Box::new(Aside { game, data }));
     }

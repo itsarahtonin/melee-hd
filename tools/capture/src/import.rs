@@ -184,7 +184,9 @@ const KIND_YOUNG_LINK: u32 = 20;
 pub struct Importer<'a> {
     pub cap: &'a Capture,
     pub data: &'a DataMap,
-    pub game: Game,
+    /// Boxed: a test thread's stack (2 MiB) can't hold the copies of a `Game` that moving an
+    /// importer and the game it built would leave in its callers' frames.
+    pub game: Box<Game>,
     pub maps: Maps,
     /// Pointers the mirror met that no import handles yet, by handle kind.
     pub unhandled: Vec<String>,
@@ -233,12 +235,15 @@ pub struct Importer<'a> {
     pub(crate) ef_freed: Vec<(bool, u32)>,
 }
 
+// The game stays boxed: importers and what they built are moved on test threads' stacks.
+const _: () = assert!(std::mem::size_of::<Importer<'static>>() <= 16 << 10);
+
 impl<'a> Importer<'a> {
     pub fn new(cap: &'a Capture, data: &'a DataMap) -> Self {
         Importer {
             cap,
             data,
-            game: Game::default(),
+            game: Box::default(),
             maps: Maps::default(),
             unhandled: Vec::new(),
             parts_len: 0,

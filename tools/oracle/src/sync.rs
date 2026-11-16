@@ -164,7 +164,8 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
     // The states before the last `rollback` ticks (a ring, slot `tick % len`), and those ticks'
     // outputs, as the straight run made them.
     let len = rollback + 1;
-    let mut ring: Vec<melee_sim::game::state::Game> = (0..len).map(|_| m.game.clone()).collect();
+    let mut ring: Vec<Box<melee_sim::game::state::Game>> =
+        (0..len).map(|_| m.game.clone()).collect();
     let mut outputs: Vec<Frame> = (0..len).map(|_| Frame::default()).collect();
     let mut work = m.clone();
     let (mut snapshots, mut restores, mut rollbacks) =

@@ -1051,7 +1051,7 @@ impl Session {
         if let Some(snd) = &mut self.sound {
             let (game, data) = match &mut self.run {
                 power::Run::Console(s) => (&mut s.game, &s.data),
-                power::Run::Match(m) => (&mut m.game, &m.data),
+                power::Run::Match(m) => (&mut *m.game, &m.data),
             };
             snd.mix(&mut game.audio, data, long);
         }

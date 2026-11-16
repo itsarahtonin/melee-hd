@@ -166,7 +166,7 @@ fn install(ctx: &Ctx) {
     });
 }
 
-fn import(cap: &Capture, data: &DataMap) -> (Game, Maps) {
+fn import(cap: &Capture, data: &DataMap) -> (Box<Game>, Maps) {
     let mut imp = Importer::new(cap, data);
     imp.world();
     imp.stage();
