@@ -120,11 +120,22 @@ impl Running<'_> {
                     .any(|&(c, _)| c + crate::hsd::heap::HEADER == zako)
             })
             .unwrap_or(false);
+        // The camera's boxes are this scene's when its heap holds their block (`Camera_Init`
+        // runs in the scenes with a camera; the globals keep a past one's).
+        let boxes = game.camera.boxes.addr;
+        let camera_live = boxes != 0
+            && crate::hsd::heap::with(|h| {
+                h.os.allocated
+                    .iter()
+                    .any(|&(c, _)| c + crate::hsd::heap::HEADER == boxes)
+            })
+            .unwrap_or(false);
         crate::hsd::export::with_image(|img| {
             let live = super::export::Live {
                 geometry: geometry_live,
                 dynamics: dynamics_live,
                 zako: zako_live,
+                camera: camera_live,
             };
             super::export::scene_game_objects(game, data, img, live)
         });

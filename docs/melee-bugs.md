@@ -410,13 +410,13 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Samus: the grapple beam's ignore id from the stack
 
-- **Where:** `it_802B7C18` (the grapple beam's spawn), `crates/melee-sim/src/game/it/kinds/samusgrapple.rs`.
-- **Defect:** it fills a `SpawnItem` on its stack but never its `x40`, which becomes the item's ignore id (`xAC4_ignoreItemID`); in a CPU match it held a code address a call before had saved.
-- **Effect:** none observable: items sharing an id share their hitboxes' victims, and the beam has no hitboxes.
-- **melee-hd:** stale (`it::IgnoreId(None)`; a read counts a stale read).
+- **Where:** `it_802B7C18` (the grapple beam's spawn), `crates/melee-sim/src/game/it/kinds/samusgrapple.rs`; read by `it_8026FCF8` (an item's hitbox joining its group), `it_8026FAC4` and `it_8026FC00` (a fighter remembered as a group's victim), `crates/melee-sim/src/game/it/coll.rs` and `game/ft/attack.rs`.
+- **Defect:** it fills a `SpawnItem` on its stack but never its `x40` (0x6C into its 0x98 frame), which becomes the item's ignore id (`xAC4_ignoreItemID`). The word is what a deeper call left at that depth during the fighter's animation process (`Fighter_procAnim`'s animation walk and the calls after it, before the state's animation callback spawns the beam): `TObjUpdateFunc`'s address, a DObj's or another heap address in every case seen.
+- **Effect:** items sharing a nonzero id share their hitboxes' victims. The other items' ids are 0 or small attack ids (`it_804D6D14`), so a beam's address shares with no other item, and its own boxes share their groups. Two beams out at once could hold the same word (two Samuses grappling in one animation pass) and share victims; a zero word would stop the beam's boxes sharing at all.
+- **melee-hd:** the id stays unknown (`it::IgnoreId(None)`, left out of the comparison) and the hit groups take it as nonzero, the beam's own, and no other item's (`IgnoreId::is_set`, `IgnoreId::same`); two unknown ids met, or one against a known id in main memory's addresses, stop by name. That the word is never zero no tripwire can see: ssbm-rs's scan (2026-11-15, the original code, no `--port`, logging the word at `Item_80268B18`'s call) found no zero in 190 spawns in 30 sessions (88 in 23 before any divergence from a replay's recording), and found the word follows the grab that spawned the beam (the saved return address): from `fn_800D9558` always `TObjUpdateFunc`'s address (`0x8035E860`), from `ftCo_AirCatch_Anim` always a live `HSD_DObj` in the heap (its class word `0x80405450`), from `fn_800D9930` a heap pointer; the item's `xAC4` equalled the word every time, no two beams were out at once, and no other item held an address-like id. A code address or a live object's address can't be zero, so the assumption stands on each path's kind of word, not only the count; a zero would still send this back for review ([the engine notes](engine.md#uninitialized-values)).
 - **Fix:** set `x40`.
-- **Fix impact:** none.
-- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 75); `crates/melee-sim/src/game/it/kinds/samusgrapple.rs:490`.
+- **Fix impact:** none seen: no recording has two beams out at once.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values); [the oracle](oracle.md#the-grapple-beams-ignore-id) (`m6-replay-2/stage3`, tick 9102); `crates/melee-sim/src/game/it/mod.rs` (`IgnoreId`).
 
 ### Samus: the grapple beam reads its owner as an item
 
@@ -849,7 +849,7 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Where:** `grKraid_801FE2D0` (the process of Kraid's "copy", map 1: a translucent smoky haze drawn behind him that follows him), `crates/melee-sim/src/game/gr/kraid.rs` (`proc_copy`).
 - **Defect:** a debugging leftover: each time A is pressed on the second controller (the pad library's master status, `HSD_PadMasterStatus[1]`, whoever plays that port), it steps a counter (`grKr_804D6A0C`) through the haze's seven animations, starts that one on the haze and reports it to the debugger (`*** Req Effect Anime`).
 - **Effect:** in play, every new press of A on port 2 swaps the haze to the next animation, which visibly changes the haze behind Kraid, or removes it, while he's up; mashing A cycles through all seven during one of his animations. The haze is hidden while Kraid is down, and each of his state changes restarts it on the animation that state sets, though the counter keeps its place. Rendered on 2026-10-17 (ssbm-rs's GX render of the Brinstar Depths recording with the pads it was made with, against its playback, which never presses): the haze differs from 02:25.39 on. The haze's animations draw random numbers, so the presses shift the random sequence, which changes untracked cosmetic effects (hit sparks, the damage digits' shake) for long stretches; gameplay is unchanged. Under Slippi's playback the inputs reach the fighters, not the master statuses, so a replay never reproduces it: the oracle's Brinstar Depths recording parts from ssbm-rs's playback in the random seed on seven frames ([the oracle](oracle.md)).
-- **melee-hd:** modeled: it reads the master status as the original does.
+- **melee-hd:** modeled: it reads the master status as the original does. Under Slippi's rules a step puts the haze off the course a replay's playback takes, and the ticks whose logic draws around the haze's process are noted in the recording's metadata (`live::Haze`, [Slippi's own defects](slippi-bugs.md#playbacks-inputs-never-reach-the-controllers-brinstar-depths-haze)).
 - **Fix:** drop the button.
 - **Fix impact:** changes the copy's animation and the random sequence wherever port 2 presses A on Brinstar Depths in vanilla play; Slippi replays and online play (whose inputs don't go through the master statuses for this) would match a fixed game better, not worse.
 - **Source:** `crates/melee-sim/src/game/gr/kraid.rs` (`proc_copy`); the decompilation's `grkraid.c`.
@@ -2191,7 +2191,7 @@ The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so abou
 - **Where:** `grOnett_801E43E0` (the car's process) reading the CObj through `Camera_800307D0`, `crates/melee-sim/src/game/gr/onett.rs` (`proc_cars`).
 - **Defect:** the car takes the camera's view edges from the CObj the display pass writes; when a car passes the view's right edge with a fighter on the ground, it draws `HSD_Randi(3)`, honks and sets `stage_info.x740`, which the computer player's car avoidance and the camera read.
 - **Effect:** a doubled round as the edge passes the car moves that by a tick.
-- **melee-hd:** modeled: the car reads the CObj the display pass keeps (`camera::ground_span`).
+- **melee-hd:** modeled: the car reads the CObj the display pass keeps (`camera::ground_span`). Under Slippi's rules each decision through the edges is also taken with the view of the display pass's other phase and a different outcome noted in the recording's metadata (`playbackNote`), the match playing on as the original's (design call 9 of [the Slippi ruleset](slippi-ruleset.md), `live::DisplayPhase`).
 - **Fix:** take the edges from logic state.
 - **Fix impact:** changes Onett's random sequence and car timing.
 - **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes) (line 146).

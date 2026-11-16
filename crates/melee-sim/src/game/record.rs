@@ -370,7 +370,7 @@ impl Recorder {
     pub fn playback_note(&self) -> Option<String> {
         self.display_phase.map(|(n, first)| {
             format!(
-                "may not play back exactly: a homing item's target could differ in playback ({n} time{}, first at tick {first})",
+                "may not play back exactly: a homing item's target, an Onett car's horn or a random number after Brinstar Depths' haze could differ in playback ({n} time{}, first at tick {first})",
                 if n == 1 { "" } else { "s" }
             )
         })
@@ -1156,14 +1156,14 @@ mod tests {
         assert_eq!(
             r.playback_note().as_deref(),
             Some(
-                "may not play back exactly: a homing item's target could differ in playback (1 time, first at tick 640)"
+                "may not play back exactly: a homing item's target, an Onett car's horn or a random number after Brinstar Depths' haze could differ in playback (1 time, first at tick 640)"
             )
         );
         r.display_phase = Some((3, 12));
         assert_eq!(
             r.playback_note().as_deref(),
             Some(
-                "may not play back exactly: a homing item's target could differ in playback (3 times, first at tick 12)"
+                "may not play back exactly: a homing item's target, an Onett car's horn or a random number after Brinstar Depths' haze could differ in playback (3 times, first at tick 12)"
             )
         );
     }

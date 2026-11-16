@@ -516,6 +516,11 @@ pub fn eye_vector(objs: &mut Objects, data: &Archives, c: Option<CObjId>) -> Opt
     o.interest?;
     let eye = eye_position(objs, data, c)?;
     let target = interest(objs, data, c)?;
+    eye_vector_between(eye, target)
+}
+
+/// [`eye_vector`] of an eye at `eye` looking at `target`.
+pub fn eye_vector_between(eye: Vec3, target: Vec3) -> Option<Vec3> {
     normalize_check(target.sdk_sub(eye))
 }
 

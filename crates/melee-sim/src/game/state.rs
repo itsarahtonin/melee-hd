@@ -466,6 +466,8 @@ pub struct Game {
     /// whose outcome its phase decides (design call 9 of `docs/slippi-ruleset.md`,
     /// `live::DisplayPhase`).
     pub display_phase: super::live::DisplayPhase,
+    /// Under Slippi's rules, Brinstar Depths' haze off playback's course (`live::Haze`).
+    pub haze: super::live::Haze,
     /// What the players' codes keep outside the game's structs (with [`Rules::player`]).
     pub player_code_state: super::player_codes::State,
     /// The rumble patterns by kind (`lb_804D63C0`, `LbRb.dat`'s `lbRumbleData`).

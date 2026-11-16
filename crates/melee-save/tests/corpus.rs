@@ -191,8 +191,8 @@ fn every_file_round_trips() {
         paths.len()
     );
     assert!(images > 1000);
-    // Every block of every save the game wrote passes its checksum: the corpus's 1,155 cards
-    // hold 11,759 (a broken checksum or cipher leaves none to re-encode).
+    // Every block of every save the game wrote passes its checksum: the corpus's 1,193 cards
+    // hold 13,355 (a broken checksum or cipher leaves none to re-encode).
     assert!(blocks > 11_000, "{blocks} valid blocks");
 }
 
@@ -411,8 +411,41 @@ fn seqs(img: &FileImage) -> BTreeMap<i32, i32> {
     out
 }
 
-/// The recorded sessions' cards in order: each session started from the card the one before
-/// left. Saving as the game saves, with the next card's data, turns each into the next.
+/// Whether a card's name is a recording's start time (`2026-10-06_12-04-48`), as ssbm-rs's
+/// runner names a session it records without a name.
+fn timed(p: &Path) -> bool {
+    let stem = p.file_stem().unwrap().as_encoded_bytes();
+    stem.len() == 19
+        && stem.iter().enumerate().all(|(i, &c)| match i {
+            4 | 7 | 13 | 16 => c == b'-',
+            10 => c == b'_',
+            _ => c.is_ascii_digit(),
+        })
+}
+
+/// Each recorded session's card as it found it and the card it left. The timed sessions ran
+/// one after another on one card, each from the card the one before left; a named session
+/// (`NAME.card`) ran on a copy of its own card and left `NAME-play.card` or `NAME-in.card`.
+fn session_pairs(cards: &[&PathBuf]) -> Vec<(PathBuf, PathBuf)> {
+    let timed: Vec<&PathBuf> = cards.iter().copied().filter(|p| timed(p)).collect();
+    let mut pairs: Vec<_> = timed
+        .windows(2)
+        .map(|w| (w[0].clone(), w[1].clone()))
+        .collect();
+    for b in cards {
+        let stem = b.file_stem().unwrap().to_string_lossy();
+        let Some(start) = ["-play", "-in"].iter().find_map(|s| stem.strip_suffix(s)) else {
+            continue;
+        };
+        if let Some(a) = cards.iter().find(|a| *a.file_stem().unwrap() == *start) {
+            pairs.push(((*a).clone(), (*b).clone()));
+        }
+    }
+    pairs
+}
+
+/// The recorded sessions' cards: saving as the game saves, with the card after's data, turns
+/// each session's card into the one it left.
 #[test]
 fn sessions_saves_replayed() {
     let Some(paths) = corpus() else { return };
@@ -422,8 +455,7 @@ fn sessions_saves_replayed() {
         .filter(|p| p.extension().is_some_and(|x| x == "card"))
         .collect();
     let (mut replayed, mut skipped) = (Vec::new(), Vec::new());
-    for pair in cards.windows(2) {
-        let (a, b) = (pair[0], pair[1]);
+    for (a, b) in &session_pairs(&cards) {
         let before = Card::from_image(std::fs::read(a).unwrap()).unwrap();
         let after = Card::from_image(std::fs::read(b).unwrap()).unwrap();
         let label = format!("{} -> {}", name(a), name(b));
@@ -482,6 +514,24 @@ fn sessions_saves_replayed() {
                 .chain([e.time()])
                 .collect();
         }
+        // A save writes its file's two copies, and when its header (the banner its unlocks
+        // pick) isn't the card's, rewrites the header and sets the status first: two directory
+        // updates each. The card after holds the last banner only. A session whose unlocks
+        // changed the banner twice, all the characters' and then every trophy's once a trophy
+        // won completed the set (`hr-450`, `tr-combo20`), shows the first change in the
+        // directory's count alone; the last save writes over its bytes, so a banner unlike
+        // both stands in for it on the earlier saves.
+        let header_before = header_of(&img_a);
+        let interim = (header_before != header
+            && snapshot.is_none()
+            && saves > 1
+            && updates == 2 * saves + banks.len() + 4)
+            .then(|| {
+                let mut h = header.clone();
+                h.banner[0] ^= 0xFF;
+                assert!(h != header_before);
+                h
+            });
         let mut card = before.clone();
         let old = newest_data(&img_a);
         for k in 0..saves.max(1) {
@@ -496,7 +546,11 @@ fn sessions_saves_replayed() {
                     data.name_tags[j] = final_data.name_tags[j].clone();
                 }
             }
-            let (r, _) = melee::save(&mut card, &data, &header, &console, &mut clock);
+            let header = match &interim {
+                Some(h) if !last => h,
+                _ => &header,
+            };
+            let (r, _) = melee::save(&mut card, &data, header, &console, &mut clock);
             assert_eq!(r, tasks::lb::READY, "{label}: save {k}");
         }
         if let Some((e, img)) = &snapshot {
@@ -528,11 +582,19 @@ fn sessions_saves_replayed() {
         } else {
             ""
         };
-        replayed.push(format!("{label} ({saves} saves, banks {banks:?}{snap})"));
+        let mid = if interim.is_some() {
+            ", a banner between"
+        } else {
+            ""
+        };
+        replayed.push(format!(
+            "{label} ({saves} saves, banks {banks:?}{snap}{mid})"
+        ));
     }
     eprintln!("replayed:\n  {}", replayed.join("\n  "));
     eprintln!("skipped:\n  {}", skipped.join("\n  "));
-    assert!(replayed.len() >= 8);
+    // The twelve timed sessions and the nineteen named ones of milestone 6.
+    assert!(replayed.len() >= 31, "{} replayed", replayed.len());
 }
 
 /// A card's save goes out as a `.gci` and into a freshly formatted card, where it loads as on

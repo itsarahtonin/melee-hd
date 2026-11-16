@@ -506,6 +506,7 @@ impl Game {
         if !p.live && f.bytes[2] != 0 {
             self.objs.rng.seed = f.word(3);
         }
+        self.haze_frame_start();
     }
 }
 
