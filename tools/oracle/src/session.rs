@@ -1240,8 +1240,8 @@ impl Run<'_> {
         let mut render_due = self.from.is_some() && s.game.scene.unk_C != 2;
         let mut tick = next;
         // The tick a live match of the Slippi ruleset started in, and the tick it handed the
-        // menus' session back before: its ticks compare as a live match's
-        // ([`live_differences`]); past the handback the menus' session isn't the console's
+        // menus' session back before: its ticks compare as a live match's ([`live_named`],
+        // [`playing_ours`]); past the handback the menus' session isn't the console's
         // (docs/slippi-ruleset.md, "Checking it"), and the session runs on uncompared.
         let mut live_from = None;
         let mut handed_back = None;
@@ -1541,22 +1541,22 @@ impl Run<'_> {
         for (why, (n, last)) in &named {
             println!("  named in the live match: {why}: {n} differences, the last in tick {last}");
         }
-        let code = self.report(stop, compared, &at);
-        if let Some(t) = live_from {
-            // A live match plays on to the recording's end, compared or not.
-            let ran = self.run_on(
-                &mut s,
-                &mut console,
-                handed_back.unwrap_or(tick),
-                render_due,
-                (handed_back.is_none(), first_saved),
-            );
-            let _ = t;
-            if code == ExitCode::SUCCESS {
-                return ran;
-            }
+        if live_from.is_none() {
+            return self.report(stop, compared, &at);
         }
-        code
+        // A live match plays on to the recording's end, compared through or not.
+        let code = match stop {
+            None => ExitCode::SUCCESS,
+            stop => self.report(stop, compared, &at),
+        };
+        let ran = self.run_on(
+            &mut s,
+            &mut console,
+            handed_back.unwrap_or(tick),
+            render_due,
+            (handed_back.is_none(), first_saved),
+        );
+        if code == ExitCode::SUCCESS { ran } else { code }
     }
 
     /// Prints how the comparison ended: its exit code.
@@ -1590,10 +1590,10 @@ impl Run<'_> {
 }
 
 impl Run<'_> {
-    /// Plays the session on from the live match that starts in tick `t` (uncompared: no
-    /// trace follows the handoff) to the recording's last read and a second past it, as the
-    /// player would: every scene and match with no stop. Each live match's recording goes to
-    /// `--slp`'s folder as it ends.
+    /// Plays the session on, uncompared, from tick `t` (in the first live match, or past its
+    /// handback: the menus' session isn't the console's after it) to the recording's last
+    /// read and a second past it, as the player would: every scene and match with no stop.
+    /// Each live match's recording goes to `--slp`'s folder as it ends.
     fn run_on(
         &self,
         s: &mut Session,
@@ -1798,7 +1798,7 @@ fn fresh(d: &str) -> bool {
         return false;
     };
     let tokens: Vec<&str> = ours
-        .split(|c: char| matches!(c, '[' | ']' | '(' | ')' | ',' | ' '))
+        .split(['[', ']', '(', ')', ',', ' '])
         .filter(|t| !t.is_empty())
         .collect();
     !tokens.is_empty()
@@ -1954,7 +1954,10 @@ fn playing_theirs(image: &Image) -> Playing {
             },
         ));
         at = image.u32(at + 4);
-        assert!(at == 0 || (at - sms) % 0x34 == 0, "a driver voice's link");
+        assert!(
+            at == 0 || (at - sms).is_multiple_of(0x34),
+            "a driver voice's link"
+        );
         assert!(out.len() <= 256, "the driver's active list loops");
     }
     out.sort();
