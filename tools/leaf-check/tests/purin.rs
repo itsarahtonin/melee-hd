@@ -46,6 +46,7 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::ft::fox::ext as fox_ext;
+use melee_sim::game::ft::purin::special_n::PURIN;
 use melee_sim::game::state::Running;
 use melee_sim::mtx::Mtx34;
 use ssbm_rt::capture::Call;
@@ -176,9 +177,9 @@ fn run_purin(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     let gobj = gobj_arg(maps, call);
     match name_of(a).as_str() {
         "ftPr_Init_8013C360" => g.purin_load_hat(gobj),
-        "ftPr_SpecialS_8013DD54" => g.purin_roll_tick(gobj, r4 != 0),
+        "ftPr_SpecialS_8013DD54" => g.rollout_tick(gobj, r4 != 0),
         "ftPr_SpecialS_8013DA24" => {
-            g.purin_roll_end(gobj, r4 != 0, r5, call.regs.fpr[1].ps0 as f32);
+            g.rollout_end(gobj, &PURIN, r4 != 0, r5, call.regs.fpr[1].ps0 as f32);
         }
         "ftPr_Init_UnkMtxFunc0" => {
             let vmtx = (r5 != 0).then(|| Mtx34 {
