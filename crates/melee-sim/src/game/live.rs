@@ -58,7 +58,6 @@ pub const SUPER_SUDDEN_DEATH: &str = "Super Sudden Death's music follows its gam
 pub const STAMINA: &str = "Stamina Mode's match start is a callback playback clears, and its knockout's slowdown follows its game mode (`gm_80167470`)";
 pub const FIXED_CAMERA: &str =
     "Fixed-Camera Mode's camera is its unpause hook, a callback playback clears";
-pub const SLOW_MO: &str = "Slo-Mo Melee: playback's sound log cuts a slowed game's sound effects (`Playback/Core/Sounds`, docs/engine.md), so its recording would play back without them; the live match itself, which runs no sound code since 2026-11-17, would keep them (refused until Sarah decides, docs/slippi-ruleset.md)";
 pub const SINGLE_PLAYER: &str =
     "a single-player mode's match (design call 7): playback can't set up the mode";
 pub const ATTRACT: &str =
@@ -80,15 +79,17 @@ fn mode_refusal(mode: u8) -> Option<&'static str> {
             Some(Special::SuperSuddenDeath) => Some(SUPER_SUDDEN_DEATH),
             Some(Special::Stamina) => Some(STAMINA),
             Some(Special::FixedCamera) => Some(FIXED_CAMERA),
-            Some(Special::SlowMo) => Some(SLOW_MO),
             // Their entries fill in only start data the match reads (`docs/oracle.md`,
             // "Special Melee"): the players' size, ratios and invisibility, the single
-            // button, the game's speed.
+            // button, the game's speed. A slowed game's recording plays back without most of
+            // its sound effects, which playback's sound log cuts (`docs/engine.md`), as Slippi
+            // Dolphin's own do; the live match keeps them (Sarah, 2026-11-18).
             Some(
                 Special::Invisible
                 | Special::Tiny
                 | Special::Giant
                 | Special::Lightning
+                | Special::SlowMo
                 | Special::SingleButton,
             ) => None,
             None => Some(SINGLE_PLAYER),
@@ -391,8 +392,12 @@ const PLACED: usize = 8;
 /// give is kept at each tick's end ([`Game::display_phase_tick_end`]), and each such read is
 /// also made through the other phase's view ([`DisplayPhase::other_view`]), a different
 /// outcome counted the same way (`gr::onett::proc_cars`, `gr::oldkongo::proc_birds`,
-/// `gr::oldpupupu::proc_flights`). After a pause, every such read is counted
-/// ([`DisplayPhase::paused`]): the pause leaves the camera off the course playback's takes.
+/// `gr::oldpupupu::proc_flights`). Pokémon Stadium's close-up reads the CObj whole (where its
+/// player's camera bone falls on the screen, which decides where the monitor copies from,
+/// `gr::stadium::zoom_origin`): on Stadium the views are kept too, and where it copies from is
+/// also taken through the other phase's view ([`Game::other_phase_screen`]), a different origin
+/// counted. After a pause, every such read is counted ([`DisplayPhase::paused`]): the pause
+/// leaves the camera off the course playback's takes.
 ///
 /// The pause reaches the camera's other readers in the logic too (`docs/engine.md`, "The
 /// camera's readers after a pause"): those that read its transform or its CObj count each
@@ -547,13 +552,14 @@ impl DisplayPhase {
 
 impl Game {
     /// Whether [`DisplayPhase`] keeps the views a display pass would give: under Slippi's
-    /// rules, on the stages whose logic reads the camera's view edges.
+    /// rules, on the stages whose logic reads the camera's view edges, and on Pokémon Stadium,
+    /// whose close-up reads where its player falls on the screen.
     pub fn keeps_display_views(&self) -> bool {
-        use super::gr::{GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU, GR_KIND_ONETT};
+        use super::gr::{GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU, GR_KIND_ONETT, GR_KIND_PSTADIUM};
         self.rules.slippi
             && matches!(
                 self.stage_info.grkind,
-                GR_KIND_ONETT | GR_KIND_OLDKONGO | GR_KIND_OLDPUPUPU
+                GR_KIND_ONETT | GR_KIND_OLDKONGO | GR_KIND_OLDPUPUPU | GR_KIND_PSTADIUM
             )
     }
 
@@ -575,7 +581,8 @@ impl Game {
     }
 
     /// A read in the logic of the game camera's transform or CObj, under Slippi's rules:
-    /// after a pause, which leaves them off playback's course ([`Game::view_read_off_course`]),
+    /// after a pause or in the settling window, which leave them off playback's course
+    /// ([`Game::view_read_off_course`]),
     /// it's counted ([`DisplayPhase::note`]) whatever it decides. Playback's camera isn't
     /// followed (that would take a second run of the camera's update over its own boxes, its
     /// quakes and playback's first frame's settling), so the read can't be made both ways.
@@ -607,15 +614,59 @@ impl Game {
         c.settles_quakes = c.settles_quakes.wrapping_add(1);
     }
 
-    /// Whether a read in the logic through the game camera's view is off playback's course
-    /// ([`DisplayPhase::paused`]): the pause camera eases back to the match's view but leaves
-    /// its state a little off the one playback's camera, which never paused, has (the
-    /// interest's depth, the field of view a few ulps short, the eye and interest some
-    /// hundred-thousandths of a unit off, to the match's end in `melee-player`'s
-    /// `a_paused_live_match_notes_its_view_reads`), so the read's outcome can't be shown to
-    /// match playback's, and it's counted ([`DisplayPhase::note`]) whatever it decides.
+    /// Whether a read in the logic through the game camera's view is off playback's course,
+    /// so that the read's outcome can't be shown to match playback's, and it's counted
+    /// ([`DisplayPhase::note`]) whatever it decides:
+    ///
+    /// - After a pause ([`DisplayPhase::paused`]): the pause camera eases back to the match's
+    ///   view but leaves its state a little off the one playback's camera, which never paused,
+    ///   has (the interest's depth, the field of view a few ulps short, the eye and interest
+    ///   some hundred-thousandths of a unit off, to the match's end in `melee-player`'s
+    ///   `a_paused_live_match_notes_its_view_reads`).
+    /// - In the settling window ([`SETTLING_WINDOW`]): playback's first frame snaps its camera
+    ///   to its targets as it settles each fighter, which live play doesn't, so the live
+    ///   match's camera, easing there, differs from playback's until the two meet.
     pub fn view_read_off_course(&self) -> bool {
-        self.display_phase.paused
+        self.display_phase.paused || self.in_settling_window()
+    }
+
+    /// Whether this match's camera is in the settling window ([`SETTLING_WINDOW`]): under
+    /// Slippi's rules, a match whose playback state doesn't run the first frame's settling (a
+    /// live match, or a replay played without it), before the window's last frame.
+    pub fn in_settling_window(&self) -> bool {
+        self.rules.slippi
+            && self
+                .playback
+                .as_ref()
+                .is_some_and(|p| (p.live || p.no_settling) && p.frame_index < SETTLING_WINDOW)
+    }
+
+    /// Where `pos` falls on the screen (`lb::screen::world_to_screen`) through the game camera's
+    /// CObj `c` holding the view the display pass's other phase would leave it
+    /// ([`DisplayPhase::other_view`]), where that view isn't the one it holds: the CObj takes
+    /// that view for the projection, and it and its eye's and interest's WObjs are put back
+    /// whole after, so nothing of it reaches the state.
+    pub fn other_phase_screen(
+        &mut self,
+        data: &melee_data::archive::Archives,
+        c: crate::hsd::cobj::CObjId,
+        pos: crate::vec::Vec3,
+    ) -> Option<crate::vec::Vec3> {
+        use crate::hsd::cobj;
+        let held = super::camera::View::of_camera(self, data);
+        let other = self.display_phase.other_view(held, self.scene.unk_0)?;
+        let objs = &mut self.objs;
+        let kept = objs.cobjs[c].clone();
+        let wobjs = [kept.eyepos, kept.interest].map(|w| w.map(|w| (w, objs.wobjs[w.0].clone())));
+        cobj::set_fov(&mut objs.cobjs, Some(c), other.fov);
+        cobj::set_interest(objs, c, other.interest);
+        cobj::set_eye_position(objs, c, other.eye);
+        let s = crate::lb::screen::world_to_screen(objs, data, c, pos, false);
+        objs.cobjs[c] = kept;
+        for (w, o) in wobjs.into_iter().flatten() {
+            objs.wobjs[w.0] = o;
+        }
+        s
     }
 
     /// The game camera's ground span (`camera::ground_span`'s left, centre and right) through
@@ -627,6 +678,23 @@ impl Game {
         Some(other.ground_span(self).0)
     }
 }
+
+/// The replay frame (`Playback::frame_index`, -123 the first) before which a live match's
+/// camera is taken for off playback's course ([`Game::view_read_off_course`]). Playback's first
+/// frame settles each fighter with a camera update and snaps both transforms to their targets
+/// (`Camera_8002F3AC`, `docs/slippi-bugs.md`, "Playback settles each fighter on the first frame,
+/// which live play doesn't"); the live match's camera eases there instead, and the two differ
+/// until they meet, bit for bit, as the fighters move the targets. Measured (2026-11-18, the
+/// transforms and the camera boxes' eased extents and timers, settled against unsettled
+/// playback): in each of 167 of Sarah's Slippi 3.19 replays (six tournament stages) and the
+/// oracle's 23 stage matches played under 3.19's rules (every other stage with a moving camera)
+/// the cameras differ from the first frame to a last one, at most frame 266 (Yoshi's Island
+/// 64; 241 among Sarah's), and are equal from then on to the 1,200th or 2,500th frame. The
+/// window runs over twice that. The camera needs the fighters to move to meet playback's, so
+/// a match whose fighters stand still the whole window can still differ after it: that read
+/// isn't counted (`melee-player`'s `a_live_match_equals_its_playback` holds its match's camera
+/// equal to its settled playback's from the window's end).
+pub const SETTLING_WINDOW: i32 = 600;
 
 /// Brinstar Depths' haze off playback's course, under Slippi's rules (`docs/slippi-bugs.md`,
 /// "Playback's inputs never reach the controllers"): A on the second controller steps Kraid's
@@ -771,6 +839,7 @@ mod tests {
             Special::Tiny,
             Special::Giant,
             Special::Lightning,
+            Special::SlowMo,
             Special::SingleButton,
         ] {
             assert_eq!(slippi(m.game_mode(), GS_VS), None, "{m:?}");
@@ -784,7 +853,6 @@ mod tests {
             slippi(Special::FixedCamera.game_mode(), GS_VS),
             Some(FIXED_CAMERA)
         );
-        assert_eq!(slippi(Special::SlowMo.game_mode(), GS_VS), Some(SLOW_MO));
         assert_eq!(slippi(machine::GM_VS, GS_SUDDEN_DEATH), Some(SUDDEN_DEATH));
         assert_eq!(slippi(GM_OPENING_MV, GS_VS), Some(ATTRACT));
         assert_eq!(slippi(GM_CHALLENGER_APPROACH, GS_VS), Some(CHALLENGER));
