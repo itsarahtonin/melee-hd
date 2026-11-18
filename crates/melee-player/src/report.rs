@@ -316,8 +316,15 @@ pub fn reveal(path: &Path) {
             .arg(path.parent().unwrap_or(Path::new(".")))
             .spawn()
     };
-    if let Err(e) = r {
-        eprintln!("couldn't show {}: {e}", path.display());
+    match r {
+        // Waited for, so it doesn't linger as a zombie until the player quits (xdg-open
+        // returns once the file browser has the folder).
+        Ok(mut child) => {
+            std::thread::spawn(move || {
+                let _ = child.wait();
+            });
+        }
+        Err(e) => eprintln!("couldn't show {}: {e}", path.display()),
     }
 }
 

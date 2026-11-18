@@ -83,9 +83,17 @@ pub fn error_box(text: &str) {
         .show();
 }
 
-/// The first launch's word on what melee-hd needs, after `note` if any: true to browse for it,
-/// false to quit.
-fn welcome(note: &str) -> bool {
+/// What the first launch's word came to.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Welcome {
+    Browse,
+    Quit,
+    /// It couldn't be shown (zenity missing on Linux): browse, and quit if that's cancelled.
+    Unshown,
+}
+
+/// The first launch's word on what melee-hd needs, after `note` if any.
+fn welcome(note: &str) -> Welcome {
     const BROWSE: &str = "Browse\u{2026}";
     let result = MessageDialog::new()
         .set_level(MessageLevel::Info)
@@ -103,9 +111,15 @@ fn welcome(note: &str) -> bool {
         .show();
     // On Linux the dialog is zenity's, whose Quit answers Custom: plain Cancel means zenity
     // couldn't run, so go on to the disc picker (the desktop's portal) rather than quit unasked.
-    matches!(result, MessageDialogResult::Ok)
+    if matches!(result, MessageDialogResult::Ok)
         || matches!(&result, MessageDialogResult::Custom(s) if s == BROWSE)
-        || cfg!(target_os = "linux") && matches!(result, MessageDialogResult::Cancel)
+    {
+        Welcome::Browse
+    } else if cfg!(target_os = "linux") && matches!(result, MessageDialogResult::Cancel) {
+        Welcome::Unshown
+    } else {
+        Welcome::Quit
+    }
 }
 
 /// The disc to play when neither `--disc` nor `SSBM_DISC` names one: the one remembered, or
@@ -133,7 +147,8 @@ pub fn disc() -> Option<String> {
         }
     }
     loop {
-        if !welcome(&note) {
+        let welcomed = welcome(&note);
+        if welcomed == Welcome::Quit {
             return None;
         }
         let Some(path) = FileDialog::new()
@@ -145,6 +160,14 @@ pub fn disc() -> Option<String> {
             .add_filter("All files", &["*"])
             .pick_file()
         else {
+            // With no word shown, a cancelled picker is the only way to say quit.
+            if welcomed == Welcome::Unshown {
+                eprintln!(
+                    "melee-hd needs a disc image of Melee: run it with --disc FILE, or install \
+                     zenity for its dialogs"
+                );
+                return None;
+            }
             continue;
         };
         match Disc::open(&path) {
