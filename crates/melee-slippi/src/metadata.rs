@@ -88,15 +88,32 @@ pub fn unlocks(file: &[u8]) -> Option<Unlocks> {
     })
 }
 
+/// What played the match, as the metadata's `playedOn` says (`dolphin` for Slippi Dolphin,
+/// `nintendont` for a console's Slippi, `ssbm-rs`, `melee-hd`), if it says.
+pub fn played_on(file: &[u8]) -> Option<String> {
+    let mut r = Ubjson { data: file, at: 0 };
+    let Value::Object(top) = r.value()? else {
+        return None;
+    };
+    let Value::Object(meta) = field(&top, "metadata")? else {
+        return None;
+    };
+    match field(meta, "playedOn")? {
+        Value::Str(s) => Some(s.clone()),
+        _ => None,
+    }
+}
+
 fn field<'a>(o: &'a [(String, Value)], k: &str) -> Option<&'a Value> {
     o.iter().find(|(n, _)| n == k).map(|(_, v)| v)
 }
 
-/// A UBJSON value, as far as the metadata needs: numbers that fit, booleans and containers;
-/// strings, floats and typed arrays are read past.
+/// A UBJSON value, as far as the metadata needs: numbers that fit, booleans, strings and
+/// containers; floats and typed arrays are read past.
 enum Value {
     Int(i64),
     Bool(bool),
+    Str(String),
     Object(Vec<(String, Value)>),
     Other,
 }
@@ -163,10 +180,7 @@ impl Ubjson<'_> {
                 self.take(1)?;
                 Value::Other
             }
-            b'S' | b'H' => {
-                self.string()?;
-                Value::Other
-            }
+            b'S' | b'H' => Value::Str(self.string()?),
             b'{' => {
                 let mut o = Vec::new();
                 loop {

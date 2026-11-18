@@ -267,7 +267,7 @@ mod tests {
     #[test]
     fn a_debug_level_is_marked_alone() {
         use melee_sim::game::session::Develop;
-        let mut setup = crate::power::setup(Vec::new(), 0, 3);
+        let mut setup = crate::power::setup(Vec::new(), 0, 3, Ruleset::Vanilla);
         setup.card = None;
         let bytes = header(&setup, false);
         assert_eq!(bytes[20], 0x49);
@@ -279,21 +279,26 @@ mod tests {
                 ini: false
             })
         );
-        assert_eq!(crate::power::setup(Vec::new(), 0, 0).develop, None);
+        assert_eq!(
+            crate::power::setup(Vec::new(), 0, 0, Ruleset::Vanilla).develop,
+            None
+        );
     }
 
     /// A session under the Slippi ruleset is marked 0x04 (ssbm-rs's `--ruleset slippi`),
-    /// with no card, and reads back as the ruleset's.
+    /// with no card, and reads back as the ruleset's. The player's console under the ruleset
+    /// has no card and no debug level, whatever the saves folder and the developer setting hold.
     #[test]
     fn the_slippi_ruleset_is_marked() {
-        let mut setup = crate::power::setup(Vec::new(), 0, 0);
-        setup.card = None;
-        setup.ruleset = Ruleset::Slippi;
+        let mut setup = crate::power::setup(vec![0; 16], 0, 4, Ruleset::Slippi);
+        assert_eq!((setup.card.as_ref(), setup.develop), (None, None));
         let bytes = header(&setup, false);
         assert_eq!(bytes[20], 0x05);
         let rec = Recording::parse(&bytes, Path::new("s.inputs")).unwrap();
         assert_eq!(rec.ruleset, Ruleset::Slippi);
         setup.ruleset = Ruleset::Vanilla;
         assert_eq!(header(&setup, false)[20], 0x01);
+        let vanilla = crate::power::setup(vec![0; 16], 0, 4, Ruleset::Vanilla);
+        assert!(vanilla.card.is_some() && vanilla.develop.is_some());
     }
 }

@@ -406,3 +406,74 @@ fn the_paused_live_matches_record_as_the_console_does() {
         "{out}"
     );
 }
+
+/// A session the player recorded under the Slippi ruleset (docs/player.md, "The Slippi ruleset in
+/// the player"): `player-fd`, `melee-hd --power-on --ruleset slippi --bench 3200 --holds` with
+/// `pause-fd`'s script at the player's drive pace (`lockstep/m6s-player`, its `.holds.txt`
+/// beside it), traced by ssbm-rs's ruleset runner from the session file's flag
+/// (`traces/m6s-player`). It compares from power-on through its live match to the handback and
+/// runs on with no stop; the live match writes the replay the player saved
+/// (`lockstep/m6s-player/traced/player-fd-1.slp`), whose marks are the original's, whose replay
+/// check differs only in what its pause leaves, and whose playback by ssbm-rs compares clean
+/// with melee-hd's.
+#[test]
+fn the_players_own_session_compares_clean() {
+    let trace = ssbm_rs_local("traces/m6s-player/player-fd.trc");
+    let inputs = ssbm_rs_local("lockstep/m6s-player/player-fd.inputs");
+    let saved = ssbm_rs_local("lockstep/m6s-player/traced/player-fd-1.slp");
+    if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
+        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("melee-hd-player-fd-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("a scratch folder");
+    let out = oracle(&[
+        "session",
+        &trace,
+        &inputs,
+        "--all",
+        "--heap",
+        "--slp",
+        dir.to_str().unwrap(),
+    ]);
+    assert!(
+        out.contains("disc Drive, DSP Samples") && out.contains("no memory card"),
+        "{out}"
+    );
+    assert!(
+        out.contains("1766 ticks compared, no difference, through the live match that starts in tick 1027 to its handback before tick 1766"),
+        "{out}"
+    );
+    assert!(
+        out.contains(
+            "ran on to tick 3259 past the recording's reads with no stop: 1 live matches, 1 recordings written"
+        ),
+        "{out}"
+    );
+    // The oracle's recording is the player's but for the metadata's start time.
+    let ours = std::fs::read(dir.join("player-fd-1.slp")).expect("the live match's recording");
+    let _ = std::fs::remove_dir_all(&dir);
+    let player = std::fs::read(&saved).expect("the player's replay");
+    let events = |f: &[u8]| melee_slippi::replay::raw_events(f).unwrap().to_vec();
+    assert!(
+        events(&ours) == events(&player),
+        "the live match no longer records what the player saved"
+    );
+    let out = oracle(&["live-check", &trace, &saved]);
+    assert!(
+        out.contains("frame -118 is tick 1032; 427 frames checked to the recording's end (854 post-frame updates, 81 marked off screen), 0 differ, 0 past the trace or unplaced, 0 a tick from their scene frame count"),
+        "{out}"
+    );
+    let log = std::fs::read_to_string(ssbm_rs_local("traces/m6s-player/player-fd-1.check.log"))
+        .expect("the replay check's log");
+    for d in [
+        "252 diverge (0 known)",
+        "12 x post-frame state flags, first on frame 70",
+        "240 x frame start scene frame, first on frame 70",
+    ] {
+        assert!(log.contains(d), "{log}");
+    }
+    let played_trace = ssbm_rs_local("traces/m6s-player/player-fd-1.trc");
+    let out = oracle(&["diff", &played_trace, &saved, "--fp", "slippi", "--heap"]);
+    assert!(out.contains("434 ticks compared, no difference"), "{out}");
+}

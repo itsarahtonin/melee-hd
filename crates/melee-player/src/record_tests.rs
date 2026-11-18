@@ -712,6 +712,69 @@ fn a_live_match_on_the_consoles_timeline_plays_back_the_same() {
     });
 }
 
+/// The player's console under the Slippi ruleset saves each live match's replay and no other
+/// (`Platform::replay`, `docs/slippi-ruleset.md`'s design call 6): ssbm-rs's `matches-a`, played
+/// through the player with Save replays on, runs five live matches and then, after a tie, a
+/// Sudden Death in the menus' session, and leaves five replays, each a VS match from the menus
+/// (scene 2.2) ended, recording the ruleset's code list, which playback reads as the rules the
+/// match ran. Skips without `SSBM_DISC` and `SSBM_RS_LOCAL`.
+#[test]
+fn a_ruleset_session_saves_its_live_matches() {
+    crate::on_game_stack(|| {
+        let Some((disc, path)) = crate::live_tests::ruleset_session("m6s-match/matches-a.inputs")
+        else {
+            eprintln!("skipped: no disc or no ruleset sessions");
+            return;
+        };
+        let dir = std::env::temp_dir().join(format!("melee-hd-ruleset-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let mut args = crate::parse_args_from(Vec::new()).expect("the defaults");
+        args.disc = disc;
+        args.mute = true;
+        args.bench = Some(0);
+        args.replays = Some(dir.display().to_string());
+        args.given.replays = true;
+        let rec = melee_sim::game::inputs::Recording::read(&path).unwrap();
+        let mut s = Session::power_on(&args, None, Some(rec), None).expect("the power-on");
+        let none = [PadStatus::default(); 4];
+        let (mut live, mut sudden_death) = (0, false);
+        let mut was_live = false;
+        while !s.ended {
+            let f = s.tick(none);
+            s.recycle(f);
+            live += usize::from(s.in_live_match() && !was_live);
+            was_live = s.in_live_match();
+            sudden_death |= matches!(s.game().machine.phase,
+                melee_sim::game::gm::machine::Phase::Scene { scene_mode, state, .. }
+                    if melee_sim::game::gm::machine::scene_kind(Some((scene_mode, state)))
+                        == Some(melee_sim::game::gm::machine::GS_SUDDEN_DEATH));
+        }
+        drop(s);
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        assert_eq!(live, 5, "live matches");
+        assert!(sudden_death, "no Sudden Death");
+        let mut saved: Vec<_> = std::fs::read_dir(&dir)
+            .expect("the replays folder")
+            .map(|e| e.expect("an entry").path())
+            .collect();
+        saved.sort();
+        assert_eq!(saved.len(), 5, "{saved:?}");
+        for p in &saved {
+            let r = Replay::parse(&std::fs::read(p).unwrap()).expect("a replay");
+            assert!(r.game_ended, "{}", p.display());
+            let payload = &(r.events.iter())
+                .find(|e| e.command == event::GAME_START)
+                .expect("a game start")
+                .payload;
+            assert_eq!((payload[0x1A2], payload[0x1A3]), (2, 2), "{}", p.display());
+            let s = Settings::from_replay(&melee_slippi::start(&r)).expect("its settings");
+            assert_eq!(s.rules, Rules::slippi_online(), "{}", p.display());
+            assert_eq!(r.unlocks, None);
+        }
+        std::fs::remove_dir_all(&dir).expect("the folder goes");
+    });
+}
+
 /// What of a match's state gameplay is made of, for comparing two runs that may differ in
 /// their timelines: the random seed, and each fighter's position, motion and damage.
 fn gameplay(g: &melee_sim::game::state::Game) -> (u32, Vec<(u32, u32, i32, u32)>) {

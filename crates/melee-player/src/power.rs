@@ -14,7 +14,7 @@ use melee_render::predict::Ahead;
 use melee_sim::audio::clock::{DiscSpeed, TB_HZ};
 use melee_sim::audio::dsp::DspModel;
 use melee_sim::game::session::{self, Session, Setup};
-use melee_sim::game::state::Game;
+use melee_sim::game::state::{Game, Ruleset};
 use melee_sim::game::vs_match::{DiscFile, Frame, Match};
 use melee_sim::input::controller::PadData;
 
@@ -89,6 +89,15 @@ impl Ahead for Run {
                 c.data.clone_from(&r.data);
                 c.setup.clone_from(&r.setup);
                 c.card.clone_from(&r.card);
+                // A live match's tick and display pass are the match's own
+                // (`Session::in_live_match`), so the copy steps as the session does. A predicted
+                // tick never hands off or back ([`step_predicted`]) and so never reads the
+                // menus set aside: they're taken only when the session goes into or out of a
+                // live match, not every tick.
+                if c.in_live_match() != r.in_live_match() {
+                    c.aside.clone_from(&r.aside);
+                }
+                c.live_files.clone_from(&r.live_files);
             }
             (c, r) => {
                 *c = r.clone();
@@ -132,24 +141,26 @@ pub(crate) fn days_since_2000(y: u32, m: u32, d: u32) -> u64 {
 /// clock at power-on, no component cable and the SRAM's stereo setting (ssbm-rs's defaults),
 /// and the developer setting's debug level (0 for retail's): `DbLevel` raised alone, as an
 /// Action Replay code raises it, with no `/develop.ini` (Sarah, 2026-10-29: no debug
-/// unlock-all written to the player's save).
-pub fn setup(card: Vec<u8>, power_on: u64, debug_level: i32) -> Setup {
+/// unlock-all written to the player's save). Under the Slippi ruleset (the panel's Ruleset)
+/// the console has no memory card, as Slippi Dolphin has none, and runs at retail's level: the
+/// developer setting is Vanilla's only, since playback can't rebuild a raised level.
+pub fn setup(card: Vec<u8>, power_on: u64, debug_level: i32, ruleset: Ruleset) -> Setup {
+    let vanilla = ruleset == Ruleset::Vanilla;
     Setup {
         disc: DiscSpeed::Drive,
         dsp: DspModel::Samples,
-        card: Some(card),
+        card: vanilla.then_some(card),
         power_on,
         dtv: false,
         sram_flags: session::SRAM_FLAGS_DEFAULT,
         card_pull: None,
         card_b: None,
         card_b_pull: None,
-        develop: (debug_level != 0).then_some(melee_sim::game::session::Develop {
+        develop: (vanilla && debug_level != 0).then_some(melee_sim::game::session::Develop {
             level: debug_level,
             ini: false,
         }),
-        // The player's Ruleset setting is the Slippi ruleset's task 6.
-        ruleset: melee_sim::game::state::Ruleset::Vanilla,
+        ruleset,
     }
 }
 
@@ -257,13 +268,21 @@ impl session::Console for Live<'_> {
     }
 }
 
-/// Extrapolate's console: the controllers held, and no disc. A predicted tick that would read
-/// a file (a scene's entry, a song started) stops, and the frames draw the real tick.
-struct Held(PadData);
+/// Extrapolate's console: the controllers held, and no disc reads. A predicted tick that would
+/// read a file (a scene's entry, a song started) stops, and the frames draw the real tick. The
+/// song playing, which the session looks up on the disc after every tick of the menus
+/// (`Session::read_song`, which adds it only if the session hasn't it), is named by its entry
+/// number alone: the session has its bytes.
+struct Held<'a> {
+    pads: PadData,
+    /// The disc's directory, for entry numbers, and the files the session has read already.
+    disc: Option<&'a Disc>,
+    read: &'a [i32],
+}
 
-impl session::Console for Held {
+impl session::Console for Held<'_> {
     fn read_pads(&mut self) -> PadData {
-        self.0
+        self.pads
     }
 
     fn unread(&mut self, _: usize) {}
@@ -273,7 +292,16 @@ impl session::Console for Held {
     }
 
     fn file(&mut self, path: &str) -> DiscFile {
-        panic!("the prediction reads {path}")
+        let entrynum = self
+            .disc
+            .and_then(|d| d.entrynum(path.trim_start_matches('/')).ok());
+        match entrynum {
+            Some(entrynum) if self.read.contains(&entrynum) => DiscFile {
+                entrynum,
+                bytes: Vec::new(),
+            },
+            _ => panic!("the prediction reads {path}"),
+        }
     }
 }
 
@@ -290,8 +318,8 @@ pub fn step(s: &mut Session, console: &mut dyn session::Console) -> Frame {
 
 /// Extrapolate's step on the copy: none (no draws) when the tick starts a new scene, whose
 /// files only the real console reads, or takes a Camera Mode snapshot, whose frame is the real
-/// tick's.
-pub fn step_predicted(s: &mut Session, pads: PadData) -> Frame {
+/// tick's. `disc` names the files the copy has read already ([`Held`]).
+pub fn step_predicted(s: &mut Session, pads: PadData, disc: Option<&Disc>) -> Frame {
     let busy = s.game.scene.unk_C != 0 || s.game.camera_mode.snap.image != 0;
     if busy {
         return Frame {
@@ -301,7 +329,15 @@ pub fn step_predicted(s: &mut Session, pads: PadData) -> Frame {
             draws: Vec::new(),
         };
     }
-    step(s, &mut Held(pads))
+    let read: Vec<i32> = s.game.audio.devcom.files.iter().map(|f| f.0).collect();
+    step(
+        s,
+        &mut Held {
+            pads,
+            disc,
+            read: &read,
+        },
+    )
 }
 
 #[cfg(test)]

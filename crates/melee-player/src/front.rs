@@ -1,8 +1,9 @@
 //! The player's front end (milestone 5's task 18, Sarah's call of 2026-10-28): melee-hd boots
 //! straight into Melee, and the window's only screen of its own is the settings panel, which
 //! Escape opens over the game, paused, and closes again. It holds what belongs to this
-//! machine and the player rather than the game: the display, the latency, the save's import,
-//! export and unlock-all, and recording; matches start from the game's own menus. The panel
+//! machine and the player rather than the game: the display, the latency, the ruleset Melee
+//! starts with, the save's import, export and unlock-all, and recording; matches start from the
+//! game's own menus. The panel
 //! is egui on the player's own device and window ([`crate::ui`]).
 //!
 //! The settings are kept in the settings folder's `settings.txt` (`key = value` lines; an
@@ -13,9 +14,16 @@
 //! laid out until the Slippi ruleset can start its matches ([`crate::quick`]); and Recordings,
 //! the replays in a folder, any of them played from start to finish ([`crate::recordings`]).
 
+use melee_sim::game::state::Ruleset;
+
 use crate::jit::Timing;
 use crate::pacing::Mode;
 use crate::present::{Aspect, Present};
+
+/// The ruleset a player's Melee starts with until they pick one (design call 2 of
+/// `docs/slippi-ruleset.md`): Vanilla until the Slippi ruleset's milestone is done, then Slippi.
+/// The one place the default is set.
+pub const DEFAULT_RULESET: Ruleset = Ruleset::Vanilla;
 
 /// The file that keeps the settings.
 pub const FILE: &str = "settings.txt";
@@ -53,6 +61,7 @@ pub struct Given {
     pub record_sessions: bool,
     pub debug_level: bool,
     pub audio_exclusive: bool,
+    pub ruleset: bool,
 }
 
 /// The player's settings.
@@ -90,6 +99,9 @@ pub struct Settings {
     pub audio_exclusive: bool,
     /// The folder the Recordings tab lists (empty: the replays folder).
     pub recordings: String,
+    /// The ruleset Melee's next power-on runs (the Game section's Ruleset): Vanilla, or Slippi's
+    /// with no memory card ([`DEFAULT_RULESET`] until picked).
+    pub ruleset: Ruleset,
 }
 
 /// The developer setting's levels (Sarah, 2026-10-29: Off, Debug ROM and Develop): each
@@ -113,9 +125,35 @@ pub const DEBUG_LEVELS: [(i32, &str, &str); 3] = [
 pub const DEBUG_HELP: &str = "Raises Melee's debug level, as an Action Replay code does. Applies from Melee's next start (Restart Melee\u{2026}), and never to a replay.";
 /// The warning while the debug level isn't Off.
 pub const DEBUG_WARNING: &str = "The debug menu switches your save's language to Japanese as it opens (Melee's own bug), and its entries can change unlocks and records, which Melee saves to your card. Its Yoshiki Test page can erase your save and your Camera Mode snapshots; melee-hd keeps a copy of each in the backups folder. Some debug tools aren't in melee-hd yet and stop the game.";
-/// The "Save replays" setting's help line (Sarah, 2026-10-29).
+/// The "Save replays" setting's help line (Sarah, 2026-10-29), while Melee runs under Vanilla.
 pub const REPLAYS_HELP: &str =
     "Replays of matches started from Melee's menus may not play back exactly in Slippi Dolphin.";
+/// The "Save replays" help line while Melee runs under the Slippi ruleset (proposed 2026-11-17,
+/// awaiting Sarah's word): the matches design call 6 of `docs/slippi-ruleset.md` leaves
+/// unrecorded, named.
+pub const REPLAYS_SLIPPI_HELP: &str = "VS matches' replays play back exactly in Slippi Dolphin. Sudden Death, Super Sudden Death, Stamina, Fixed-Camera and Slo-Mo Melee, a challenger's match, Camera Mode, Training and the single-player modes save none: Slippi Dolphin couldn't play them back.";
+/// The Game section's rulesets (proposed 2026-11-17, awaiting Sarah's word): each, its name and
+/// what it is.
+pub const RULESETS: [(Ruleset, &str, &str); 2] = [
+    (
+        Ruleset::Vanilla,
+        "Vanilla",
+        "Melee as sold, with your save.",
+    ),
+    (
+        Ruleset::Slippi,
+        "Slippi",
+        "Slippi Dolphin's gameplay rules (UCF and its fixes), everything unlocked and no memory card, so nothing is saved.",
+    ),
+];
+/// The Ruleset setting's help line (proposed 2026-11-17, awaiting Sarah's word).
+pub const RULESET_HELP: &str =
+    "Applies from Melee's next start (Restart Melee\u{2026}), and never to a replay.";
+/// The Save section while Melee runs under the Slippi ruleset (proposed 2026-11-17, awaiting
+/// Sarah's word).
+pub const SAVE_SLIPPI: &str = "The Slippi ruleset runs with no memory card: this save is Vanilla's, and stays as it is until Melee runs under Vanilla again.";
+/// The developer setting under the Slippi ruleset (proposed 2026-11-17, awaiting Sarah's word).
+pub const DEBUG_SLIPPI: &str = "Vanilla only: under the Slippi ruleset Melee runs as sold, since Slippi Dolphin can't play back a raised debug level.";
 /// The Audio section's help lines (proposed 2026-11-14, awaiting Sarah's word).
 pub const AUDIO_DEVICE_HELP: &str =
     "The default follows the system's. An unplugged device falls back to it until it's back.";
@@ -135,6 +173,31 @@ fn debug_level(level: i32) -> (i32, &'static str, &'static str) {
         .into_iter()
         .find(|l| l.0 == level)
         .unwrap_or(DEBUG_LEVELS[0])
+}
+
+/// A ruleset's line of [`RULESETS`].
+fn ruleset(r: Ruleset) -> (Ruleset, &'static str, &'static str) {
+    RULESETS
+        .into_iter()
+        .find(|l| l.0 == r)
+        .unwrap_or(RULESETS[0])
+}
+
+/// A ruleset as `settings.txt` and `--ruleset` name it.
+pub fn ruleset_key(r: Ruleset) -> &'static str {
+    match r {
+        Ruleset::Vanilla => "vanilla",
+        Ruleset::Slippi => "slippi",
+    }
+}
+
+/// [`ruleset_key`]'s ruleset.
+pub fn parse_ruleset(v: &str) -> Option<Ruleset> {
+    match v {
+        "vanilla" => Some(Ruleset::Vanilla),
+        "slippi" => Some(Ruleset::Slippi),
+        _ => None,
+    }
 }
 
 impl Default for Settings {
@@ -158,6 +221,7 @@ impl Default for Settings {
             audio_device: String::new(),
             audio_exclusive: false,
             recordings: String::new(),
+            ruleset: DEFAULT_RULESET,
         }
     }
 }
@@ -200,8 +264,9 @@ impl Settings {
             self.audio_device,
             on(self.audio_exclusive),
         ) + &format!(
-            "recordings = {}\nsettings-version = {SETTINGS_VERSION}\n",
-            self.recordings
+            "recordings = {}\nruleset = {}\nsettings-version = {SETTINGS_VERSION}\n",
+            self.recordings,
+            ruleset_key(self.ruleset)
         )
     }
 
@@ -308,6 +373,11 @@ impl Settings {
                     }
                 }
                 "recordings" => self.recordings = v.to_owned(),
+                "ruleset" if !given.ruleset => {
+                    if let Some(r) = parse_ruleset(v) {
+                        self.ruleset = r;
+                    }
+                }
                 _ => {}
             }
         }
@@ -427,11 +497,16 @@ pub struct Panel {
     pub unlocked: Option<bool>,
     /// The disc's path.
     pub disc: String,
+    /// The ruleset Melee runs now (the setting's takes effect at the next start): what the Save
+    /// and Recording sections say.
+    pub running: Ruleset,
 }
 
 impl Panel {
     pub fn new(settings: Settings, disc: String) -> Panel {
+        let running = settings.ruleset;
         let mut p = Panel {
+            running,
             tab: Tab::Settings,
             quick: Default::default(),
             recordings: Default::default(),
@@ -742,8 +817,31 @@ impl Panel {
                 ui.end_row();
             });
         self.show_audio(ui);
+        let s = &mut self.settings;
+        section(ui, "Game");
+        egui::Grid::new("game")
+            .num_columns(2)
+            .spacing([16.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Ruleset");
+                let chosen = &mut s.ruleset;
+                egui::ComboBox::from_id_salt("ruleset")
+                    .selected_text(ruleset(*chosen).1)
+                    .width(220.0)
+                    .show_ui(ui, |ui| {
+                        for (r, name, _) in RULESETS {
+                            ui.selectable_value(chosen, r, name);
+                        }
+                    });
+                ui.end_row();
+                help(ui, ruleset(*chosen).2);
+                help(ui, RULESET_HELP);
+            });
         section(ui, "Save");
         ui.label(&self.save_line);
+        if self.running == Ruleset::Slippi {
+            ui.weak(SAVE_SLIPPI);
+        }
         ui.horizontal_wrapped(|ui| {
             if ui.button("Import a save\u{2026}").clicked() {
                 action = Some(Action::Import);
@@ -773,6 +871,7 @@ impl Panel {
         if self.unlocked == Some(true) {
             ui.weak("Everything is unlocked.");
         }
+        let running = self.running;
         let s = &mut self.settings;
         section(ui, "Recording");
         egui::Grid::new("recording")
@@ -782,7 +881,13 @@ impl Panel {
                 ui.label("");
                 ui.checkbox(&mut s.record, "Save replays");
                 ui.end_row();
-                help(ui, REPLAYS_HELP);
+                help(
+                    ui,
+                    match running {
+                        Ruleset::Vanilla => REPLAYS_HELP,
+                        Ruleset::Slippi => REPLAYS_SLIPPI_HELP,
+                    },
+                );
                 ui.label("Replays folder");
                 ui.add_enabled(
                     s.record,
@@ -805,16 +910,25 @@ impl Panel {
             .spacing([16.0, 8.0])
             .show(ui, |ui| {
                 ui.label("Debug level");
+                // Vanilla's only: the level stays kept for it, and a Slippi start runs at
+                // retail's (`power::setup`).
+                let vanilla = s.ruleset == Ruleset::Vanilla;
                 let level = &mut s.debug_level;
-                egui::ComboBox::from_id_salt("debug-level")
-                    .selected_text(debug_level(*level).1)
-                    .width(220.0)
-                    .show_ui(ui, |ui| {
-                        for (l, name, _) in DEBUG_LEVELS {
-                            ui.selectable_value(level, l, name);
-                        }
-                    });
+                ui.add_enabled_ui(vanilla, |ui| {
+                    egui::ComboBox::from_id_salt("debug-level")
+                        .selected_text(debug_level(if vanilla { *level } else { 0 }).1)
+                        .width(220.0)
+                        .show_ui(ui, |ui| {
+                            for (l, name, _) in DEBUG_LEVELS {
+                                ui.selectable_value(level, l, name);
+                            }
+                        });
+                });
                 ui.end_row();
+                if !vanilla {
+                    help(ui, DEBUG_SLIPPI);
+                    return;
+                }
                 help(ui, debug_level(*level).2);
                 help(ui, DEBUG_HELP);
                 if *level != 0 {
@@ -954,6 +1068,7 @@ mod tests {
             audio_device: "Speakers (USB Audio)".to_owned(),
             audio_exclusive: true,
             recordings: "D:/Slippi".to_owned(),
+            ruleset: Ruleset::Slippi,
         }
     }
 
@@ -1103,6 +1218,36 @@ mod tests {
         let mut s = Settings::default();
         s.restore("debug-level = 2\n", &Given::default());
         assert_eq!(s.debug_level, 0);
+    }
+
+    /// The Ruleset setting is kept, the default ([`DEFAULT_RULESET`]) until one is picked, and the
+    /// command line's wins; nothing else reads as one.
+    #[test]
+    fn the_ruleset_is_kept() {
+        assert_eq!(Settings::default().ruleset, DEFAULT_RULESET);
+        for r in [Ruleset::Vanilla, Ruleset::Slippi] {
+            let s = Settings {
+                ruleset: r,
+                ..Settings::default()
+            };
+            let mut back = Settings::default();
+            back.restore(&s.save(), &Given::default());
+            assert_eq!(back, s);
+            assert_eq!(parse_ruleset(ruleset_key(r)), Some(r));
+        }
+        let mut s = Settings::default();
+        s.restore("ruleset = dolphin\n", &Given::default());
+        assert_eq!(s.ruleset, DEFAULT_RULESET);
+        let given = Given {
+            ruleset: true,
+            ..Given::default()
+        };
+        let mut s = Settings {
+            ruleset: Ruleset::Vanilla,
+            ..Settings::default()
+        };
+        s.restore("ruleset = slippi\n", &given);
+        assert_eq!(s.ruleset, Ruleset::Vanilla);
     }
 
     /// The audio settings come back, and the command line's exclusive mode wins; no device is
