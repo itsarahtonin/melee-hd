@@ -1146,6 +1146,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/hsd/cobj.rs`; `m6-oracle/ending-test`'s tick 1599.
 
+### A pause moves the camera, which the logic reads
+
+- **Where:** the pause camera (`Camera_SetUpPauseCamera`, `Camera_8002CDDC`) and the match's camera after it (`Ground_EnableMatchCamera`, `Camera_8002B3D4`), read from the logic by `grCorneria_801E08CC`, `grMuteCity_801F1A34`, `it_8027BA54`, `itHassam_802CE400`, `it_802CE8D0`, `grStadium_801D32D0`, `fn_8003B044` (through `Camera_80030E10`), `Camera_RequestQuake` and the view edges' readers (`Camera_800307D0`); `crates/melee-sim/src/game/camera.rs` and the readers [the engine notes](engine.md#the-cameras-readers-after-a-pause) list.
+- **Defect:** the pause turns and zooms the game camera, and its end hands the standard camera back the transform the pause left, to ease back from, never the match's camera as it stood; where the pause camera frames as the standard camera (its player off the camera bounds or not framed), each paused tick also counts the quakes down and adds to the camera bounds' width average. The logic reads that state.
+- **Effect:** a pause changes later play: the city part Corneria's Great Fox tests before its random draw and the stage's colors, Mute City's wrecks' smoke, the velocities of enemies and Scizor flung toward the screen, the Unown's swarms' direction, the Stadium close-up's origin, the movement bonuses 0x69 and 0x6C, and whether the looping quake's model is freed and made again, all as had the match not paused, but for the camera. The camera never returns exactly (the interest's depth and the field of view stay a few ulps off to the match's end), so any later read can differ.
+- **melee-hd:** modeled. Under Slippi's rules, whose playback never pauses, each such read after a pause is counted into the recording's `playbackNote`, or made both ways for the width average and the quakes (design call 9 of [the Slippi ruleset](slippi-ruleset.md), `live::DisplayPhase`; [Slippi's defects](slippi-bugs.md#a-paused-matchs-recording)).
+- **Fix:** keep the match's camera through the pause (its transform, quakes and average) and restore it at the pause's end.
+- **Fix impact:** changes play after a pause on those stages and with those items; Slippi's recordings of paused matches would then play back as played.
+- **Source:** [engine notes, the camera's readers after a pause](engine.md#the-cameras-readers-after-a-pause); `melee-player`'s `a_paused_live_match_notes_its_view_reads` (the camera after a pause, Onett).
+
 ## HUD and audio
 
 ### The staff roll's sound cues run out of order
@@ -2161,7 +2171,7 @@ The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so abou
 - **Where:** `grStadium_801D32D0` (the monitor's close-up), reading the game camera's CObj that only `Camera_8002A4AC` in the display pass writes; `crates/melee-sim/src/game/gr/stadium.rs`.
 - **Defect:** the close-up asks whether its player's box stays in the camera's view, which logic sees a tick late (two on a doubled round's second tick); when it leaves, the monitor draws random numbers for its next mode.
 - **Effect:** a doubled round as the box crosses the view's margin moves the mode change by a tick, and the random seed with it.
-- **melee-hd:** modeled against the camera the display pass brought up to date; the Slippi ruleset's PSCameraIndependentMonitor tests fixed bounds (`gr::stadium::zoom_keeps_player`).
+- **melee-hd:** modeled against the camera the display pass brought up to date; the Slippi ruleset's PSCameraIndependentMonitor tests fixed bounds (`gr::stadium::zoom_keeps_player`), but still takes where the close-up copies from (`copy_x`, `copy_y`, what the monitor shows) through the same CObj, so a doubled round moves that by a tick under Slippi's rules too (not watched by the display-phase tripwire; after a pause each such read is counted, [the engine notes](engine.md#the-cameras-readers-after-a-pause)).
 - **Fix:** test fixed bounds in logic.
 - **Fix impact:** changes the random sequence in vanilla play on Pokémon Stadium; Slippi's ruleset already has it.
 - **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes) (line 140).
