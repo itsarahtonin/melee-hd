@@ -95,6 +95,13 @@ fn pool_kind(kind: &str) -> Option<&'static str> {
     })
 }
 
+/// Where a handle's slot stands ([`Comparer::slot_of`]).
+struct SlotOf {
+    free: bool,
+    addr: u32,
+    had: bool,
+}
+
 pub struct Comparer<'a> {
     pub mem: &'a [u8],
     pub data: &'a DataMap,
@@ -1780,28 +1787,33 @@ impl<'a> Comparer<'a> {
 
 impl Comparer<'_> {
     /// For a handle of a kind whose pool carries the allocator model's addresses: the pool,
-    /// whether slot `o` is free, and the address the original gave its object (the last one
-    /// there, 0 where the model doesn't know it).
-    fn slot_of(&self, kind: &str, o: u32) -> Option<(&'static str, bool, u32)> {
-        fn slot<T, const K: u8>(p: &Pool<T, K>, o: u32) -> (bool, u32) {
-            (p.is_free(o), p.addr(o))
+    /// whether slot `o` is free (a scene gone's included), the address the original gave its
+    /// object (the last one there, 0 where the model doesn't know it), and whether the slot
+    /// has ever had the address `theirs` (`melee_sim::hsd::pool::history`, kept outside the
+    /// state).
+    fn slot_of(&self, kind: &str, o: u32, theirs: u32) -> Option<SlotOf> {
+        fn slot<T, const K: u8>(p: &Pool<T, K>, o: u32, theirs: u32) -> SlotOf {
+            SlotOf {
+                free: p.is_free(o),
+                addr: p.addr(o),
+                had: p.had_addr(o, theirs),
+            }
         }
         let g = self.game;
         let pool = pool_kind(kind)?;
-        let (free, addr) = match pool {
-            "JObjId" => slot(&g.objs.jobjs.pool, o),
-            "DObjId" => slot(&g.objs.dobjs.pool, o),
-            "MObjId" => slot(&g.objs.mobjs.pool, o),
-            "TObjId" => slot(&g.objs.tobjs.pool, o),
-            "GeneratorId" => slot(&g.objs.generators.pool, o),
-            "GObjId" => slot(&g.world.gobjs, o),
-            "FighterId" => slot(&g.fighters, o),
-            "ItemId" => slot(&g.items, o),
-            "EffectId" => slot(&g.ef.effects, o),
-            "QueuedId" => slot(&g.ef.queued, o),
+        Some(match pool {
+            "JObjId" => slot(&g.objs.jobjs.pool, o, theirs),
+            "DObjId" => slot(&g.objs.dobjs.pool, o, theirs),
+            "MObjId" => slot(&g.objs.mobjs.pool, o, theirs),
+            "TObjId" => slot(&g.objs.tobjs.pool, o, theirs),
+            "GeneratorId" => slot(&g.objs.generators.pool, o, theirs),
+            "GObjId" => slot(&g.world.gobjs, o, theirs),
+            "FighterId" => slot(&g.fighters, o, theirs),
+            "ItemId" => slot(&g.items, o, theirs),
+            "EffectId" => slot(&g.ef.effects, o, theirs),
+            "QueuedId" => slot(&g.ef.queued, o, theirs),
             _ => unreachable!(),
-        };
-        Some((pool, free, addr))
+        })
     }
 
     /// Whether our object `o` (a handle of `kind`) is one an earlier scene made, whose heap
@@ -1914,19 +1926,28 @@ impl Cx for Comparer<'_> {
         // pairing ended with the free, since the original's heap may have handed the block to
         // a new object by now. So it pairs nothing, and compares by the address the allocator
         // model gave the object, whatever lives there since (docs/oracle.md, "Dangling
-        // pointers"). A slot keeps its address for good (`Pool::alloc_at`, `Pool::retire`), so
-        // the address is the one the original's pointer holds.
-        let slot = ours.and_then(|o| self.slot_of(kind, o));
-        let freed = slot.and_then(|(_, free, addr)| free.then_some(addr));
-        if let Some((_, true, addr)) = slot
-            && addr != 0
+        // pointers"). A class object's slot is reused whatever the address, so the address the
+        // handle named is its slot's last or an earlier one, which the pools' history outside
+        // the state keeps (`melee_sim::hsd::pool::history`).
+        let slot = ours.and_then(|o| self.slot_of(kind, o, theirs));
+        let freed = slot.as_ref().and_then(|s| s.free.then_some(s.addr));
+        if let Some(s) = &slot
+            && s.addr != 0
         {
-            if addr != theirs {
-                self.diffs.push(format!(
-                    "{path}: {kind} ours dangling (freed at {addr:#x}), theirs {theirs:#x}"
-                ));
+            if s.free {
+                if s.addr != theirs && !s.had {
+                    let addr = s.addr;
+                    self.diffs.push(format!(
+                        "{path}: {kind} ours dangling (freed at {addr:#x}), theirs {theirs:#x}"
+                    ));
+                }
+                return;
             }
-            return;
+            // A handle that outlived its object, whose slot a new object at another address has
+            // taken since.
+            if s.addr != theirs && s.had {
+                return;
+            }
         }
         let known = match kind {
             "JObjId" => self.maps.jobjs.get(&theirs).map(|j| j.0),
@@ -1998,9 +2019,10 @@ impl Cx for Comparer<'_> {
         // there: a pointer the original kept to it (the stage select's icons' joints, its
         // `mnStageSel_803F06D0`) is the same word as the pointer to the new object, so it
         // compares by the address.
-        if let (Some(o), Some(k), Some((_, false, addr))) = (ours, known, slot)
+        if let (Some(o), Some(k), Some(s)) = (ours, known, &slot)
+            && !s.free
             && k != o
-            && addr == theirs
+            && s.addr == theirs
             && self.scene_gone(kind, o)
         {
             return;

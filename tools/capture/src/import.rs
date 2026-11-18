@@ -246,6 +246,8 @@ const _: () = assert!(std::mem::size_of::<Importer<'static>>() <= 16 << 10);
 
 impl<'a> Importer<'a> {
     pub fn new(cap: &'a Capture, data: &'a DataMap) -> Self {
+        // A new state: its slots' addresses, for the comparer, start afresh.
+        melee_sim::hsd::pool::keep_history();
         Importer {
             cap,
             data,

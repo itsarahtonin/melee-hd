@@ -71,7 +71,12 @@ pub fn create_hitbox(r: &mut Running, gobj: GObjId) {
     } else {
         jobj_of(r.game, gobj)
     };
-    item_mut(r.game, gobj).x5D4_hitboxes[idx].hit.jobj.set(j);
+    // The joint's address too: the word the item's block keeps for the next item there.
+    let at = j.map_or(0, |j| r.game.objs.jobjs.pool.addr(j.0));
+    item_mut(r.game, gobj).x5D4_hitboxes[idx]
+        .hit
+        .jobj
+        .set_at(j, at);
     let ip = item(r.game, gobj);
     let dmg = fp::fmuls(
         reg(ip.xC3C),
