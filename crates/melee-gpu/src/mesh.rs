@@ -53,11 +53,11 @@ impl Kind {
 #[derive(Clone, Debug, Default)]
 pub struct Mesh {
     /// The vertex descriptor's low word (`VCD_LO`): which matrix indices the vertices carry.
-    vcd: u32,
+    pub(crate) vcd: u32,
     /// Normals a vertex carries: 1, 3 (with binormal and tangent), or 0.
-    normal_count: usize,
+    pub(crate) normal_count: usize,
     /// Texture coordinates kept a vertex: up to the last the format carries.
-    tex_count: usize,
+    pub(crate) tex_count: usize,
     pub positions: Vec<[f32; 3]>,
     /// `normal_count` a vertex.
     pub normals: Vec<[f32; 3]>,
@@ -281,6 +281,23 @@ impl Mesh {
             + self.tex.len() * 8
             + self.matrices.len() * 9
             + self.elements.len() * 4
+    }
+
+    /// What drawing it with `state` meets that the renderer doesn't draw (exactly), and how many
+    /// times, as [`build`] notes it: its last run of lines or points with texture offsets.
+    pub fn note(&self, state: &State) -> Option<(&'static str, u64)> {
+        self.runs.iter().rev().find_map(|(kind, run)| {
+            let n = u64::from(run.end - run.start);
+            match kind {
+                Kind::Lines if bits(state.bp[0x22], 16, 3) != 0 && n > 0 => {
+                    Some(("line texture offsets", n / 2))
+                }
+                Kind::Points if bits(state.bp[0x22], 19, 3) != 0 && n > 0 => {
+                    Some(("point texture offsets", n))
+                }
+                _ => None,
+            }
+        })
     }
 
     /// Leaves in `normals` what drawing it does: its last vertex's normals, if it carries them.
@@ -514,7 +531,7 @@ pub(crate) fn build(
 
 /// A point: a square its size wide, as `crate::point` makes it (its corners' words, from one
 /// vertex's colors and texture coordinates).
-fn point(
+pub(crate) fn point(
     state: &State,
     vp: &Viewport,
     off: (f32, f32),

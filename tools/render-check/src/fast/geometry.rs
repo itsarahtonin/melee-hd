@@ -234,12 +234,19 @@ impl<'a> Recorder<'a> {
     }
 
     /// Records a display list drawn from its mesh, from the display pass's draw `source`: its
-    /// vertices as the mesh transforms them (`Mesh::transform`, as the renderer does), its
-    /// elements in the list's order and GX's.
-    pub fn record_mesh(&self, source: u32, state: &State, mesh: &Mesh) {
+    /// vertices as the GPU's transforms made them (`gpu`, F3), or as the mesh transforms them on
+    /// the CPU (`Mesh::transform`, as F2's renderer does), its elements in the list's order and
+    /// GX's.
+    pub fn record_mesh(&self, source: u32, state: &State, mesh: &Mesh, gpu: Option<&[[f32; 4]]>) {
         let mut normals = self.normals.borrow_mut();
-        let mut clips = vec![[0.0; 4]; mesh.len()];
-        mesh.transform(state, &normals, |i, o| clips[i] = o.clip);
+        let clips = match gpu {
+            Some(c) => c.to_vec(),
+            None => {
+                let mut clips = vec![[0.0; 4]; mesh.len()];
+                mesh.transform(state, &normals, |i, o| clips[i] = o.clip);
+                clips
+            }
+        };
         mesh.leave_normals(&mut normals);
         let mut draws = self.draws.borrow_mut();
         for (kind, run) in &mesh.runs {
@@ -278,8 +285,8 @@ impl melee_render::gpu::Observer for Recorder<'_> {
         Recorder::command(self, bytes);
     }
 
-    fn mesh(&self, state: &State, mesh: &Mesh) {
-        self.record_mesh(self.source(), state, mesh);
+    fn mesh(&self, state: &State, mesh: &Mesh, clips: Option<&[[f32; 4]]>) {
+        self.record_mesh(self.source(), state, mesh, clips);
     }
 }
 

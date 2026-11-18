@@ -18,6 +18,9 @@ mod depth_copy_tests;
 #[cfg(test)]
 mod depth_tests;
 mod encode;
+mod gpu_mesh;
+#[cfg(test)]
+mod gpu_mesh_tests;
 pub mod gpu_time;
 pub mod mesh;
 #[cfg(test)]
@@ -40,6 +43,7 @@ pub use tev::{TevMode, TevStats};
 pub use thread::Threaded;
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use rustc_hash::{FxHashMap, FxHashSet};
 
@@ -147,6 +151,18 @@ struct PipelineKey {
     /// (`early_depth_test(greater_equal)`), so the GPU can drop fragments its depth test would
     /// fail before shading them.
     early_z: bool,
+    vertices: Vertices,
+}
+
+/// What a pipeline's vertices are: the draws' own words (`vs_main`), or a mesh's, which the
+/// transforms on the GPU wrote (`vs_mesh`), drawn with GX's back face culling as the GPU's.
+#[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default)]
+struct Vertices {
+    mesh: bool,
+    /// The faces culled: none (0), the front (1) or the back (2), as the GPU faces them.
+    cull: u8,
+    /// Whether clockwise triangles face the front (a viewport mirrored horizontally).
+    front_cw: bool,
 }
 
 impl PipelineKey {
@@ -156,7 +172,13 @@ impl PipelineKey {
             None => (0, 0, 0, 0),
         };
         [
-            has_blend | sub << 1 | u32::from(self.const_alpha) << 2 | u32::from(self.early_z) << 3,
+            has_blend
+                | sub << 1
+                | u32::from(self.const_alpha) << 2
+                | u32::from(self.early_z) << 3
+                | u32::from(self.vertices.mesh) << 4
+                | u32::from(self.vertices.cull) << 5
+                | u32::from(self.vertices.front_cw) << 7,
             src,
             dst,
             u32::from(self.write_color),
@@ -179,8 +201,22 @@ impl PipelineKey {
             depth_compare: (k[5] < 8).then_some(k[5]),
             depth_write: k[6] != 0,
             early_z: k[0] & 8 != 0,
+            vertices: Vertices {
+                mesh: k[0] & 16 != 0,
+                cull: (k[0] >> 5 & 3) as u8,
+                front_cw: k[0] & 128 != 0,
+            },
         })
     }
+}
+
+/// What a draw call draws: its indices, from the frame's vertices or a mesh's.
+#[derive(Clone, Copy)]
+struct Geometry {
+    first: u32,
+    count: u32,
+    base: i32,
+    vertices: Vertices,
 }
 
 struct Command {
@@ -191,8 +227,12 @@ struct Command {
     textures: [u32; 8],
     /// The vertices' texture coordinates (the draw call's instance).
     texgens: u32,
+    /// Its indices: in the frame's (`Renderer::indices`), or for a mesh's vertices
+    /// (`pipeline.vertices.mesh`) in the meshes' index pool, from the transforms' output
+    /// vertex `base`.
     first: u32,
     count: u32,
+    base: i32,
     scissor: [u32; 4],
 }
 
@@ -523,6 +563,14 @@ pub struct Renderer {
     cache: Option<wgpu::PipelineCache>,
     /// Times each render pass on the GPU, when set ([`Renderer::set_timer`]).
     timer: Option<GpuTimer>,
+    /// The fast renderer's meshes drawn with their vertices transformed on the GPU (F3): on by
+    /// default; off, they're transformed on the CPU as the exact renderer's draws are (F2).
+    pub gpu_transforms: bool,
+    /// The meshes on the GPU and the transforms, made at the first mesh drawn.
+    gpu_meshes: Option<gpu_mesh::GpuMeshes>,
+    mesh_runs: Vec<(mesh::Kind, std::ops::Range<u32>)>,
+    mesh_geometry: Vec<Geometry>,
+    checks: wgpu::ShaderRuntimeChecks,
 }
 
 /// The EFB's targets at a scale and width: what a resize makes again.
@@ -689,11 +737,27 @@ fn make_pipeline(
         layout: Some(layout),
         vertex: wgpu::VertexState {
             module,
-            entry_point: Some("vs_main"),
+            entry_point: Some(if key.vertices.mesh {
+                "vs_mesh"
+            } else {
+                "vs_main"
+            }),
             compilation_options: Default::default(),
             buffers: &[],
         },
-        primitive: wgpu::PrimitiveState::default(),
+        primitive: wgpu::PrimitiveState {
+            front_face: if key.vertices.front_cw {
+                wgpu::FrontFace::Cw
+            } else {
+                wgpu::FrontFace::Ccw
+            },
+            cull_mode: match key.vertices.cull {
+                1 => Some(wgpu::Face::Front),
+                2 => Some(wgpu::Face::Back),
+                _ => None,
+            },
+            ..Default::default()
+        },
         depth_stencil: Some(wgpu::DepthStencilState {
             format: DEPTH_FORMAT,
             depth_write_enabled: Some(key.depth_write),
@@ -1004,6 +1068,11 @@ impl Renderer {
             width,
             cache: None,
             timer: None,
+            gpu_transforms: true,
+            gpu_meshes: None,
+            mesh_runs: Vec::new(),
+            mesh_geometry: Vec::new(),
+            checks,
             unsupported: HashMap::new(),
         };
         // Texture 0: a 1x1 black texture for maps nothing samples.
@@ -1437,6 +1506,7 @@ impl Renderer {
             && last.textures == c.textures
             && last.texgens == c.texgens
             && last.scissor == c.scissor
+            && last.base == c.base
             && last.first + last.count == c.first
         {
             last.count += c.count;
@@ -1557,6 +1627,7 @@ impl Renderer {
             depth_compare: test.then(|| bits(zmode, 1, 3)),
             depth_write: test && bits(zmode, 4, 1) != 0,
             early_z: false,
+            vertices: Vertices::default(),
         }
     }
 
@@ -1628,6 +1699,7 @@ impl Renderer {
             depth_compare: Some(7),
             depth_write: bits(state.bp[0x40], 4, 1) != 0,
             early_z: false,
+            vertices: Vertices::default(),
         };
         let z = state.bp[0x51] & 0xFF_FFFF;
         let [r, g, b, a] = color.to_be_bytes();
@@ -1711,6 +1783,7 @@ impl Renderer {
             textures: [0; 8],
             first,
             count: 6,
+            base: 0,
             scissor: rect,
         });
     }
@@ -1770,6 +1843,9 @@ impl Renderer {
             self.digest = Some(d);
         }
         if self.commands.is_empty() {
+            if let Some(m) = &mut self.gpu_meshes {
+                m.drop_batch();
+            }
             if clear.color.is_some() || clear.depth.is_some() {
                 let mut encoder = self.device.create_command_encoder(&Default::default());
                 drop(self.efb_pass(&mut encoder, clear));
@@ -1790,7 +1866,7 @@ impl Renderer {
         {
             let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("vertices"),
-                size: (vbytes.len() as u64).next_power_of_two(),
+                size: (vbytes.len() as u64).max(16).next_power_of_two(),
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
@@ -1837,7 +1913,7 @@ impl Renderer {
         {
             self.index_buffer = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("indices"),
-                size: (ibytes.len() as u64).next_power_of_two(),
+                size: (ibytes.len() as u64).max(16).next_power_of_two(),
                 usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }));
@@ -1850,11 +1926,14 @@ impl Renderer {
         self.queue.write_buffer(ubuf, 0, &self.uniforms);
         self.tev.collect();
         let mut encoder = self.device.create_command_encoder(&Default::default());
+        // The meshes' vertices transformed first (F3).
+        if let Some(m) = &mut self.gpu_meshes {
+            m.flush(&self.device, &self.queue, &self.vertex_layout, &mut encoder);
+        }
         {
             let mut pass = self.efb_pass(&mut encoder, clear);
-            pass.set_bind_group(2, vgroup, &[]);
-            pass.set_index_buffer(ibuf.slice(..), wgpu::IndexFormat::Uint32);
             // Each state set only when it changes.
+            let mut meshes: Option<bool> = None;
             let mut last: Option<(PipelineKey, u32)> = None;
             let mut uniform = None;
             let mut textures = None;
@@ -1873,6 +1952,24 @@ impl Renderer {
                         tev::UBER
                     }
                 };
+                // A mesh's vertices are the transforms' output, with the meshes' indices.
+                let mesh = c.pipeline.vertices.mesh;
+                if meshes != Some(mesh) {
+                    match self.gpu_meshes.as_ref().filter(|_| mesh) {
+                        Some(m) => {
+                            pass.set_bind_group(2, m.out_group.as_ref(), &[]);
+                            pass.set_index_buffer(
+                                m.index.buffer.slice(..),
+                                wgpu::IndexFormat::Uint32,
+                            );
+                        }
+                        None => {
+                            pass.set_bind_group(2, vgroup, &[]);
+                            pass.set_index_buffer(ibuf.slice(..), wgpu::IndexFormat::Uint32);
+                        }
+                    }
+                    meshes = Some(mesh);
+                }
                 if last != Some((c.pipeline, tev)) {
                     pass.set_pipeline(
                         self.tev
@@ -1896,7 +1993,7 @@ impl Renderer {
                     pass.set_scissor_rect(left, y * s, right - left, h * s);
                     scissor = Some(c.scissor);
                 }
-                pass.draw_indexed(c.first..c.first + c.count, 0, c.texgens..c.texgens + 1);
+                pass.draw_indexed(c.first..c.first + c.count, c.base, c.texgens..c.texgens + 1);
             }
         }
         self.queue.submit([encoder.finish()]);
@@ -2292,6 +2389,8 @@ pub(crate) struct Built {
     indices: Vec<u32>,
     /// Each draw built, or none for one whose scissor leaves nothing to draw.
     pub(crate) draws: Vec<Option<BuiltDraw>>,
+    /// The normals the draws before left, for each mesh drawn on the GPU.
+    pub(crate) normals: Vec<vertex::NormalCache>,
 }
 
 impl Built {
@@ -2299,6 +2398,7 @@ impl Built {
         self.words.clear();
         self.indices.clear();
         self.draws.clear();
+        self.normals.clear();
     }
 }
 
@@ -2602,8 +2702,15 @@ impl Renderer {
     }
 
     /// Draws a mesh (the fast renderer's display list, decoded once) with the state as it
-    /// stands, as the list's draws would be drawn.
-    pub fn draw_mesh(&mut self, state: &State, mesh: &mesh::Mesh, mem: &dyn Memory) {
+    /// stands, as the list's draws would be drawn: its vertices transformed on the GPU
+    /// ([`Renderer::gpu_transforms`]), or here as the exact renderer's are (F2).
+    pub fn draw_mesh(&mut self, state: &State, mesh: &Arc<mesh::Mesh>, mem: &dyn Memory) {
+        if self.gpu_transforms {
+            let normals = self.scratch.normals;
+            mesh.leave_normals(&mut self.scratch.normals);
+            self.draw_gpu_mesh(state, mesh, &normals, mem);
+            return;
+        }
         let t = self.profile.is_some().then(std::time::Instant::now);
         self.draws_this_frame += 1;
         let mut built = std::mem::take(&mut self.built);
@@ -2616,6 +2723,97 @@ impl Renderer {
             self.draw_outs(state, 0x90, &built, d, mem);
         }
         self.built = built;
+    }
+
+    fn gpu_meshes(&mut self) -> &mut gpu_mesh::GpuMeshes {
+        let (device, checks) = (&self.device, self.checks);
+        self.gpu_meshes
+            .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks))
+    }
+
+    /// Draws a mesh with its vertices transformed on the GPU (docs/fast-renderer.md, F3): the
+    /// draw's record and XF state go to the transforms, and its runs are drawn from the mesh's
+    /// indices kept on the GPU, triangles culled by the GPU as GX culls them. `normals` are
+    /// those the draws before left.
+    pub(crate) fn draw_gpu_mesh(
+        &mut self,
+        state: &State,
+        mesh: &Arc<mesh::Mesh>,
+        normals: &vertex::NormalCache,
+        mem: &dyn Memory,
+    ) {
+        let t = self.profile.is_some().then(std::time::Instant::now);
+        self.draws_this_frame += 1;
+        if self.draw_limit.is_some_and(|n| self.draws_this_frame > n) {
+            return;
+        }
+        let vp = Viewport::of(&state.xf);
+        let (scissor, off) = Self::scissor(state, &vp);
+        if scissor[2] == 0 || scissor[3] == 0 || mesh.is_empty() {
+            return;
+        }
+        let cull = gpu_mesh::cull_mode(state);
+        let triangles_only = mesh.runs.iter().all(|r| r.0 == mesh::Kind::Triangles);
+        if cull == 3 && triangles_only {
+            return;
+        }
+        if let Some((what, n)) = mesh.note(state) {
+            *self.unsupported.entry(what).or_default() += n;
+        }
+        if let Some(p) = &mut self.profile {
+            p.vertices += u64::from(mesh.stream_vertices);
+            p.texgens += texgens(state) as u64 * u64::from(mesh.stream_vertices);
+        }
+        // Draw calls queued so far go to the GPU while more come, a pass at a time.
+        if self.flush_at.is_some_and(|n| self.commands.len() >= n) {
+            self.flush();
+        }
+        let tg = texgens(state) as u32;
+        let (device, queue, frame) = (self.device.clone(), self.queue.clone(), self.frame);
+        let mut runs = std::mem::take(&mut self.mesh_runs);
+        let base = self.gpu_meshes().draw(
+            &device, &queue, state, mesh, normals, off, tg, frame, &mut runs,
+        );
+        if let (Some(p), Some(t)) = (&mut self.profile, t) {
+            p.xform += t.elapsed();
+        }
+        // GX's front faces are the GPU's counter-clockwise ones, mirrored with the viewport's
+        // width (the height's sign flips both: `xform::is_backface`).
+        let front_cw = vp.wd < 0.0;
+        let mut geometry = std::mem::take(&mut self.mesh_geometry);
+        geometry.clear();
+        geometry.extend(
+            runs.iter()
+                .filter(|(kind, _)| *kind != mesh::Kind::Triangles || cull != 3)
+                .map(|(kind, r)| Geometry {
+                    first: r.start,
+                    count: r.end - r.start,
+                    base: base as i32,
+                    vertices: Vertices {
+                        mesh: true,
+                        // Lines' and points' quads aren't culled.
+                        cull: if *kind == mesh::Kind::Triangles {
+                            cull as u8
+                        } else {
+                            0
+                        },
+                        front_cw,
+                    },
+                }),
+        );
+        self.mesh_runs = runs;
+        self.push_draw(state, tg, scissor, &geometry, mem);
+        self.mesh_geometry = geometry;
+    }
+
+    /// The mesh's vertices' clip-space positions as the transforms on the GPU make them, drawn
+    /// with the state as it stands and the normals the draws before left: for the comparison
+    /// harness's geometry, read back from the GPU at once.
+    pub fn mesh_clips(&mut self, state: &State, mesh: &Arc<mesh::Mesh>) -> Vec<[f32; 4]> {
+        let (device, queue, frame) = (self.device.clone(), self.queue.clone(), self.frame);
+        let normals = self.scratch.normals;
+        self.gpu_meshes()
+            .clips(&device, &queue, state, mesh, &normals, frame)
     }
 
     /// The rest of a draw, from its built vertices.
@@ -2657,7 +2855,25 @@ impl Renderer {
             .extend_from_slice(&built.words[d.words.clone()]);
         self.indices
             .extend(built.indices[d.indices.clone()].iter().map(|&i| base + i));
+        let geometry = Geometry {
+            first,
+            count,
+            base: 0,
+            vertices: Vertices::default(),
+        };
+        self.push_draw(state, tg as u32, scissor, &[geometry], mem);
+    }
 
+    /// Queues a draw's calls, one for each of its `geometry`'s, with its textures, uniforms and
+    /// pipelines.
+    fn push_draw(
+        &mut self,
+        state: &State,
+        tg: u32,
+        scissor: [u32; 4],
+        geometry: &[Geometry],
+        mem: &dyn Memory,
+    ) {
         let mut ids = [0u32; 8];
         let mut levels = [1u32; 8];
         if bits(state.bp[0x00], 16, 3) != 0 {
@@ -2677,6 +2893,20 @@ impl Renderer {
         if self.opaque {
             key.blend = None;
         }
+        let call = |key: PipelineKey, tev: u32, uniform: u32, g: &Geometry| Command {
+            pipeline: PipelineKey {
+                vertices: g.vertices,
+                ..key
+            },
+            tev,
+            texgens: tg,
+            uniform,
+            textures: ids,
+            first: g.first,
+            count: g.count,
+            base: g.base,
+            scissor,
+        };
         if self.silhouettes {
             key = PipelineKey {
                 blend: Some((1, 1, false)),
@@ -2686,20 +2916,15 @@ impl Renderer {
                 depth_compare: None,
                 depth_write: false,
                 early_z: false,
+                vertices: Vertices::default(),
             };
             let u = Self::uniforms_of(state, levels, [3, 0, 0, 0]);
             let uniform = self.push_uniforms(&u);
-            self.pipeline(key);
-            self.push_command(Command {
-                pipeline: key,
-                tev: tev::UBER,
-                texgens: tg as u32,
-                uniform,
-                textures: ids,
-                first,
-                count,
-                scissor,
-            });
+            for g in geometry {
+                let c = call(key, tev::UBER, uniform, g);
+                self.pipeline(c.pipeline);
+                self.push_command(c);
+            }
             return;
         }
         let blend = state.bp[0x41];
@@ -2728,54 +2953,34 @@ impl Renderer {
                 write_alpha: false,
                 ..key
             };
-            let u = Self::uniforms_of(state, levels, [MODE_DEPTH_ONLY, 0, 0, 0]);
-            let uniform = self.push_uniforms(&u);
-            self.pipeline(depth_key);
-            let tev = self.specialized(state, depth_key, MODE_DEPTH_ONLY);
-            self.push_command(Command {
-                pipeline: depth_key,
-                tev,
-                texgens: tg as u32,
-                uniform,
-                textures: ids,
-                first,
-                count,
-                scissor,
-            });
             let color_key = PipelineKey {
                 depth_compare: Some(2),
                 depth_write: false,
                 ..key
             };
+            let u = Self::uniforms_of(state, levels, [MODE_DEPTH_ONLY, 0, 0, 0]);
+            let depth_uniform = self.push_uniforms(&u);
             let u = Self::uniforms_of(state, levels, [MODE_DRAW, 0, 0, 0]);
-            let uniform = self.push_uniforms(&u);
-            self.pipeline(color_key);
-            let tev = self.specialized(state, color_key, MODE_DRAW);
-            self.push_command(Command {
-                pipeline: color_key,
-                tev,
-                texgens: tg as u32,
-                uniform,
-                textures: ids,
-                first,
-                count,
-                scissor,
-            });
+            let color_uniform = self.push_uniforms(&u);
+            for g in geometry {
+                let c = call(depth_key, 0, depth_uniform, g);
+                self.pipeline(c.pipeline);
+                let tev = self.specialized(state, c.pipeline, MODE_DEPTH_ONLY);
+                self.push_command(Command { tev, ..c });
+                let c = call(color_key, 0, color_uniform, g);
+                self.pipeline(c.pipeline);
+                let tev = self.specialized(state, c.pipeline, MODE_DRAW);
+                self.push_command(Command { tev, ..c });
+            }
         } else {
             let u = Self::uniforms_of(state, levels, [MODE_DRAW, 0, 0, 0]);
             let uniform = self.push_uniforms(&u);
-            self.pipeline(key);
-            let tev = self.specialized(state, key, MODE_DRAW);
-            self.push_command(Command {
-                pipeline: key,
-                tev,
-                texgens: tg as u32,
-                uniform,
-                textures: ids,
-                first,
-                count,
-                scissor,
-            });
+            for g in geometry {
+                let c = call(key, 0, uniform, g);
+                self.pipeline(c.pipeline);
+                let tev = self.specialized(state, c.pipeline, MODE_DRAW);
+                self.push_command(Command { tev, ..c });
+            }
         }
     }
 
@@ -2850,6 +3055,9 @@ impl Renderer {
             self.draws_this_frame = 0;
             self.hashes.clear();
             self.evict();
+            if let Some(m) = &mut self.gpu_meshes {
+                m.end_frame(&self.device, &self.queue, self.frame);
+            }
         } else if let Some(request) = copy::request(state, value)
             && !self.on_cpu.contains(&request.footprint.address)
         {

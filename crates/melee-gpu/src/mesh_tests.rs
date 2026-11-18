@@ -10,23 +10,23 @@ use melee_gx::{Draw, Memory, State, xform};
 use crate::mesh::{self, Mesh};
 use crate::{Built, BuiltDraw, Scratch, build};
 
-struct Rng(u64);
+pub(crate) struct Rng(pub(crate) u64);
 
 impl Rng {
-    fn next(&mut self) -> u32 {
+    pub(crate) fn next(&mut self) -> u32 {
         self.0 ^= self.0 << 13;
         self.0 ^= self.0 >> 7;
         self.0 ^= self.0 << 17;
         (self.0 >> 16) as u32
     }
 
-    fn float(&mut self) -> f32 {
+    pub(crate) fn float(&mut self) -> f32 {
         (self.next() % 2000) as f32 / 500.0 - 2.0
     }
 }
 
 /// Memory of one piece from address 0.
-struct Flat(Vec<u8>);
+pub(crate) struct Flat(pub(crate) Vec<u8>);
 
 impl Memory for Flat {
     fn read(&self, phys: u32, out: &mut [u8]) {
@@ -42,7 +42,7 @@ impl Memory for Flat {
 
 /// A random vertex format 0: matrix indices or not, each attribute absent, direct or indexed,
 /// in any format; arrays in the first 4 KB.
-fn format(r: &mut Rng) -> [u32; 256] {
+pub(crate) fn format(r: &mut Rng) -> [u32; 256] {
     let mut cp = [0u32; 256];
     // Each attribute's kind: positions, normals and the two colors, then the coordinates.
     let lo = r.next() & 0x1_FFFF;
@@ -60,7 +60,7 @@ fn format(r: &mut Rng) -> [u32; 256] {
 }
 
 /// A display list of random primitives in format 0, a few vertices each.
-fn list(r: &mut Rng, cp: &[u32; 256]) -> Vec<u8> {
+pub(crate) fn list(r: &mut Rng, cp: &[u32; 256]) -> Vec<u8> {
     let size = vertex::stream_size(&vertex::layout(cp, 0)) as usize;
     // A few vertices the stream's take, so vertices are shared; small bytes, so indices repeat.
     let pool: Vec<Vec<u8>> = (0..1 + r.next() % 8)
@@ -81,7 +81,7 @@ fn list(r: &mut Rng, cp: &[u32; 256]) -> Vec<u8> {
 }
 
 /// A random transform state with a viewport and scissor that draw.
-fn state(r: &mut Rng, cp: [u32; 256]) -> State {
+pub(crate) fn state(r: &mut Rng, cp: [u32; 256]) -> State {
     let mut s = State::new();
     s.cp = cp;
     for w in s.xf[..0x1000].iter_mut() {

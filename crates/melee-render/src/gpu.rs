@@ -60,8 +60,10 @@ pub trait Observer {
     fn copy(&self, state: &State, value: u32);
     /// Each command of the stream itself (not those of the display lists it calls).
     fn command(&self, _bytes: &[u8]) {}
-    /// A display list drawn from its mesh ([`Gpu::with_meshes`]) in place of its draws.
-    fn mesh(&self, _state: &State, _mesh: &Mesh) {}
+    /// A display list drawn from its mesh ([`Gpu::with_meshes`]) in place of its draws, with
+    /// its vertices' clip-space positions as the GPU's transforms made them, where they ran on
+    /// this thread (F3).
+    fn mesh(&self, _state: &State, _mesh: &Mesh, _clips: Option<&[[f32; 4]]>) {}
 }
 
 impl Memory for Host<'_> {
@@ -125,7 +127,11 @@ impl Memory for Host<'_> {
         let mut r = self.renderer.borrow_mut();
         for mesh in parts.iter() {
             if let Some(o) = self.observer {
-                o.mesh(state, mesh);
+                let clips = match &mut *r {
+                    Backend::Here(r) if r.gpu_transforms => Some(r.mesh_clips(state, mesh)),
+                    _ => None,
+                };
+                o.mesh(state, mesh, clips.as_deref());
             }
             match &mut *r {
                 Backend::Here(r) => r.draw_mesh(state, mesh, self),
@@ -182,11 +188,18 @@ impl Gpu {
         }
     }
 
-    /// The fast renderer's first part (docs/fast-renderer.md, F2): each display list of
-    /// triangles drawn from a mesh decoded once and kept ([`Meshes`]), rather than fetched and
-    /// decoded from the stream every frame. The frames are the same.
+    /// The fast renderer's first parts (docs/fast-renderer.md, F2 and F3): each display list
+    /// drawn from a mesh decoded once and kept ([`Meshes`]), rather than fetched and decoded
+    /// from the stream every frame, its vertices transformed on the GPU unless the renderer's
+    /// `gpu_transforms` is off (F2, whose frames are the exact renderer's).
     pub fn with_meshes(mut self) -> Gpu {
-        self.meshes = Some(RefCell::new(Meshes::default()));
+        // A large list in parts, for the transform threads to share out, unless the GPU
+        // transforms it.
+        let split = match self.renderer.get_mut() {
+            Backend::Here(r) => !r.gpu_transforms,
+            Backend::Threaded(t) => !t.gpu_transforms(),
+        };
+        self.meshes = Some(RefCell::new(Meshes::new(split)));
         self
     }
 

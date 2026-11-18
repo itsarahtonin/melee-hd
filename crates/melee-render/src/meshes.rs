@@ -24,8 +24,9 @@ use crate::mem::Space;
 /// A mesh in parts, drawn one after another ([`Mesh::split`]).
 pub type Parts = Arc<[Arc<Mesh>]>;
 
-/// The vertices a part of a mesh holds, at most about: a large list (Fountain of Dreams'
-/// stars, thousands of points) is shared out among the renderer's threads.
+/// The vertices a part of a mesh holds, at most about, where the CPU transforms them (F2): a
+/// large list (Fountain of Dreams' stars, thousands of points) is shared out among the
+/// renderer's threads.
 const PART: usize = 1024;
 
 /// Frames a mesh nobody draws is kept.
@@ -66,6 +67,8 @@ pub struct Stats {
 pub struct Meshes {
     entries: FxHashMap<Key, Entry>,
     frame: u32,
+    /// Whether a large list is drawn in parts ([`PART`]).
+    split: bool,
     pub stats: Stats,
 }
 
@@ -85,6 +88,14 @@ fn kinds(cp: &[u32; 256]) -> [u32; 12] {
 }
 
 impl Meshes {
+    /// A cache whose large lists are drawn in parts, with `split`.
+    pub fn new(split: bool) -> Meshes {
+        Meshes {
+            split,
+            ..Meshes::default()
+        }
+    }
+
     /// Starts a frame: meshes no frame drew for a while go.
     pub fn begin_frame(&mut self) {
         self.frame = self.frame.wrapping_add(1);
@@ -132,8 +143,9 @@ impl Meshes {
                     // Rewritten: read with the game's rewrite.
                     None => space.read(data, phys, &mut list),
                 }
+                let part = if self.split { PART } else { usize::MAX };
                 let mesh = Mesh::decode(&state.cp, &list, mem)
-                    .map(|m| m.split(PART).into_iter().map(Arc::new).collect::<Parts>());
+                    .map(|m| m.split(part).into_iter().map(Arc::new).collect::<Parts>());
                 self.entries.insert(
                     key,
                     Entry {
