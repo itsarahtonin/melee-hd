@@ -10,9 +10,13 @@ The milestone is done when:
 - The player lifts each of the main menu's gates once nothing its entry reaches can stop, held to the ledger by a test, and offers every mode by the milestone's end.
 - Every function of the milestone's units is ported with a check, replaced or proven dead, in the port ledger.
 
-## Status (2026-11-01, `main` at `8a260a5c`): planned
+## Status (2026-11-17, `main` at `0b835117`): done
 
-Nothing started. The design calls below wait for Sarah.
+- **Verified:** the full verify of `0b835117` is clean. All 329 whole-replay diffs ran in full (every golden was stale, the comparer's coverage having grown) and passed, as did the sessions' diffs, 371 rollback sync tests (4,117,345 ticks), the crate tests, 1,392 leaf checks and 539 frame and audio checks, with CI green on Windows, Linux and macOS. Three kinds of failure were the checks' own, none the game's: session-sync's expected lines still had the match counts from before it counted a scene with fighters as a match (`fix/m6-sync-matches`); every changed line only lost or shortened scenes without fighters, the menus a finished match's fighters used to linger into, and was updated without a rerun (Sarah, 2026-11-17). Five test binaries read the benchmark replays through a path a removed worktree's build had baked into `melee-local-data`; rebuilt, they pass. `melee-bench`'s allocation test counts allocations process-wide, so its newer ruleset tests running beside it added to its count; it passes run one test at a time, as the verify now runs it.
+- **Release:** the Windows build of `0b835117` is melee-hd's first release, `v0.1.0`.
+- **Gates:** every main-menu entry is offered (`menus_audit::GATES` is empty).
+- **Ledger:** all 19,827 functions accounted for: 17,995 ported and checked, 1,007 replaced and 825 dead ([port ledger](port-ledger.md)).
+- **Next:** the Slippi ruleset ([slippi-ruleset.md](slippi-ruleset.md)), then the refactor ([refactor.md](refactor.md)); builds for Linux, then macOS.
 
 ## Scope
 

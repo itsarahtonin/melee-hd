@@ -32,11 +32,11 @@ Like ssbm-rs, it contains no game data: the game's models, textures, sounds and 
 | Player | Melee in a window or fullscreen at any resolution and aspect ratio, widescreen included; frames identical to ssbm-rs's on every checked frame (but for Slippi's replay name plates, which melee-hd doesn't draw), and the audio mix sample-exact with ssbm-rs's on the matches checked. Your save is Melee's own file, which Dolphin uses too, to import and export. Each VS match is saved as a Slippi replay (`.slp`), and each session can be recorded to report a bug ([the player](docs/player.md)) |
 | Speed | The simulation runs a match about 13 to 15 times as fast as headless Dolphin on one core; a snapshot is about 1.45 MB, cloned in about 0.14 ms and restored in about 0.04 ms ([performance](docs/performance.md)) |
 
-Not yet: the Slippi ruleset (Slippi's gameplay codes in live play, [in progress](docs/slippi-ruleset.md)), testing on macOS and Linux, and release builds. [The player](docs/player.md) lists its open issues.
+Not yet: the Slippi ruleset (Slippi's gameplay codes in live play, [in progress](docs/slippi-ruleset.md)), testing on macOS and Linux, and builds for them. [The player](docs/player.md) lists its open issues.
 
 ## Build and play
 
-You need:
+Each [release](https://github.com/itsarahtonin/melee-hd/releases) has a Windows build, `melee-hd.exe`: download it and double-click it. To build it yourself, you need:
 
 - Rust through [rustup](https://rustup.rs); [rust-toolchain.toml](rust-toolchain.toml) pins the toolchain. On Windows, the Visual Studio C++ build tools. The first build fetches ssbm-rs's crates from GitHub, which the checking tools use.
 - Your own disc image of Melee NTSC 1.02 (game ID GALE01, revision 2): ISO, RVZ, CISO or GCZ. Other revisions are refused.
