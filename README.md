@@ -4,7 +4,7 @@ melee-hd is a native Rust rewrite of Super Smash Bros. Melee NTSC 1.02 (GALE01 r
 
 It's a personal project, and the next stage of [ssbm-rs](https://github.com/itsarahtonin/ssbm-rs). ssbm-rs is a faithful port: it keeps the GameCube's memory layout and checks its Rust functions call by call against the original machine code. melee-hd starts over from the [Melee decompilation](https://github.com/doldecomp/melee) and ssbm-rs, rewrites the game into plain Rust data structures, and uses ssbm-rs (at its [`melee-hd-base`](https://github.com/itsarahtonin/ssbm-rs/releases/tag/melee-hd-base) tag) as the reference it is checked against. No ssbm-rs code runs in the player.
 
-melee-hd plays the whole game on Windows, from your own disc: it boots straight into Melee as a console does, with your memory card's save, and every menu and mode works, VS with the whole cast on all 29 stages, items and computer players included, and the single-player modes (Classic, Adventure, All-Star, Event Match, Target Test, the Home-Run Contest, Multi-Man Melee and Training). Esc opens melee-hd's own settings over the game.
+melee-hd plays the whole game on Windows and Linux, from your own disc: it boots straight into Melee as a console does, with your memory card's save, and every menu and mode works, VS with the whole cast on all 29 stages, items and computer players included, and the single-player modes (Classic, Adventure, All-Star, Event Match, Target Test, the Home-Run Contest, Multi-Man Melee and Training). Esc opens melee-hd's own settings over the game.
 
 ## How it differs
 
@@ -32,13 +32,13 @@ Like ssbm-rs, it contains no game data: the game's models, textures, sounds and 
 | Player | Melee in a window or fullscreen at any resolution and aspect ratio, widescreen included; frames identical to ssbm-rs's on every checked frame (but for Slippi's replay name plates, which melee-hd doesn't draw), and the audio mix sample-exact with ssbm-rs's on the matches checked. Your save is Melee's own file, which Dolphin uses too, to import and export. Each VS match is saved as a Slippi replay (`.slp`), and each session can be recorded to report a bug ([the player](docs/player.md)) |
 | Speed | The simulation runs a match about 13 to 15 times as fast as headless Dolphin on one core; a snapshot is about 1.45 MB, cloned in about 0.14 ms and restored in about 0.04 ms ([performance](docs/performance.md)) |
 
-Not yet: the Slippi ruleset (Slippi's gameplay codes in live play, [in progress](docs/slippi-ruleset.md)), testing on macOS and Linux, and builds for them. [The player](docs/player.md) lists its open issues.
+Not yet: the Slippi ruleset (Slippi's gameplay codes in live play, [in progress](docs/slippi-ruleset.md)), and testing and builds on macOS. [The player](docs/player.md) lists its open issues.
 
 ## Build and play
 
-Each [release](https://github.com/itsarahtonin/melee-hd/releases) has a Windows build, `melee-hd.exe`: download it and double-click it. To build it yourself, you need:
+Each [release](https://github.com/itsarahtonin/melee-hd/releases) has a Windows build, `melee-hd.exe`: download it and double-click it. For Linux, download `melee-hd-linux-x86_64.tar.gz`, unpack it and run `melee-hd` in its folder; it needs a 64-bit PC distribution from 2022 or later (Ubuntu 22.04 or newer, or one of its age) with Vulkan graphics drivers, and its dialogs use zenity, which most desktops include. To build it yourself, you need:
 
-- Rust through [rustup](https://rustup.rs); [rust-toolchain.toml](rust-toolchain.toml) pins the toolchain. On Windows, the Visual Studio C++ build tools. The first build fetches ssbm-rs's crates from GitHub, which the checking tools use.
+- Rust through [rustup](https://rustup.rs); [rust-toolchain.toml](rust-toolchain.toml) pins the toolchain. On Windows, the Visual Studio C++ build tools; on Linux, `pkg-config` and the ALSA and udev development files (`libasound2-dev` and `libudev-dev` on Debian and Ubuntu). The first build fetches ssbm-rs's crates from GitHub, which the checking tools use.
 - Your own disc image of Melee NTSC 1.02 (game ID GALE01, revision 2): ISO, RVZ, CISO or GCZ. Other revisions are refused.
 
 ```sh
@@ -47,7 +47,7 @@ cargo run --locked -p dist                  # builds dist/melee-hd.exe; add -- -
 
 Double-click `dist/melee-hd.exe` (or the shortcut) to play. The first time, it asks for your disc image and remembers it. Then it boots straight into Melee, as a console with a memory card in slot A, and matches start from the game's own menus. Escape opens the settings over the game, paused: the display (resolution, antialiasing, aspect ratio, fullscreen, high refresh), the latency (present mode, added delay, tick timing), your save (import, export, unlock everything), recording, a developer's debug level and the disc. Escape again goes back to the game.
 
-melee-hd keeps everything it writes in its settings folder, `%APPDATA%\melee-hd` on Windows: the settings, your save (`saves`), each VS match's replay (`replays`, unless the settings name another folder), the session recordings (`sessions`), F12's bug captures (`captures`) and the log (`logs`); its shader caches go to `%LOCALAPPDATA%\melee-hd`. Nothing is written beside the program, so it runs from anywhere, a read-only folder included. Replays and captures older versions saved beside the program stay there, untouched. On Windows it opens no console window. [The player](docs/player.md#playing-it) has the details.
+melee-hd keeps everything it writes in its settings folder, `%APPDATA%\melee-hd` on Windows and `~/.config/melee-hd` on Linux: the settings, your save (`saves`), each VS match's replay (`replays`, unless the settings name another folder), the session recordings (`sessions`), F12's bug captures (`captures`) and, on Windows, the log (`logs`); its shader caches go to `%LOCALAPPDATA%\melee-hd` (`~/.cache/melee-hd` on Linux). Nothing is written beside the program, so it runs from anywhere, a read-only folder included. Replays and captures older versions saved beside the program stay there, untouched. On Windows it opens no console window. [The player](docs/player.md#playing-it) has the details.
 
 From a terminal, `cargo build --locked --release -p melee-player` builds `target/release/melee-hd` (`melee-hd.exe` on Windows), which prints to the terminal. `--disc path/to/melee.iso` or `SSBM_DISC` names the disc for that run instead of the remembered one. For developers, a VS match or a replay can also be started directly, without the menus:
 
@@ -59,7 +59,7 @@ melee-hd --widescreen --scale 3 --msaa 4   # or --aspect 21:9; F11 or Alt+Enter 
 
 `melee-hd --help` lists the options and the character and stage names.
 
-**Controllers.** GameCube controllers on a Wii U adapter (Nintendo's, or a Mayflash in Wii U mode) take their adapter ports; on Windows the adapter needs the WinUSB driver, which [Zadig](https://zadig.akeo.ie) installs. Standard gamepads and then the keyboard take the first free ports. Keyboard: arrows for the stick, IJKL for the C-stick, X, Z, C and S for A, B, X and Y, D for Z, Q and W for L and R, Enter for Start, left Shift to halve the stick. `--no-adapter` leaves the adapter alone.
+**Controllers.** GameCube controllers on a Wii U adapter (Nintendo's, or a Mayflash in Wii U mode) take their adapter ports; on Windows the adapter needs the WinUSB driver, which [Zadig](https://zadig.akeo.ie) installs. On Linux it needs a udev rule that lets you open it: copy `51-melee-hd-gcadapter.rules` (in the Linux download, and in `crates/melee-player/linux`) into `/etc/udev/rules.d/` (`sudo cp 51-melee-hd-gcadapter.rules /etc/udev/rules.d/`), run `sudo udevadm control --reload-rules`, then unplug the adapter and plug it in again. Standard gamepads and then the keyboard take the first free ports. Keyboard: arrows for the stick, IJKL for the C-stick, X, Z, C and S for A, B, X and Y, D for Z, Q and W for L and R, Enter for Start, left Shift to halve the stick. `--no-adapter` leaves the adapter alone.
 
 ## How it's checked
 
