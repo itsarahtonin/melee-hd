@@ -31,7 +31,7 @@
 //!     a page of the results `compare` and `scaled` recorded with CHECK_RESULTS=RESULTS_DIR:
 //!     OUT_DIR/index.html, and the frames compared at full size in OUT_DIR/img/
 //! melee-render-check fast DISC REPLAY.slp [--renderer exact|f2|fast] [--mutate NAME] [--scale N]
-//!     [--out DIR] FRAME...
+//!     [--threaded] [--out DIR] FRAME...
 //!     the fast renderer's comparison harness: native frames drawn by a renderer under test
 //!     and by the exact renderer, their geometry and images compared within tolerance
 //! melee-render-check bench DISC REPLAY.slp [--renderer exact|f2|fast] [--scale N] [--from A] [--to B]

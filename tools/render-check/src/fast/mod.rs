@@ -14,7 +14,7 @@
 //!
 //! ```text
 //! melee-render-check fast DISC REPLAY [--renderer exact|f2|fast] [--mutate NAME] [--scale N]
-//!     [--out DIR] FRAME...
+//!     [--threaded] [--out DIR] FRAME...
 //! melee-render-check bench DISC REPLAY [--renderer exact|f2|fast] [--scale N] [--from A] [--to B]
 //!     [--one-thread] [--adapter NAME|fallback]
 //! ```
@@ -290,12 +290,13 @@ impl Which {
 }
 
 /// `melee-render-check fast DISC REPLAY [--renderer exact|f2|fast] [--mutate NAME] [--scale N]
-/// [--out DIR] FRAME...`
+/// [--threaded] [--out DIR] FRAME...`
 pub fn cli(args: &[String]) -> ExitCode {
     let (disc, replay) = (&args[1], &args[2]);
     let mut mutation = Mutation::None;
     let mut which = Which::Exact;
     let mut scale = 1;
+    let mut threaded = false;
     let mut out = None;
     let mut at = Vec::new();
     let mut rest = args[3..].iter();
@@ -310,6 +311,7 @@ pub fn cli(args: &[String]) -> ExitCode {
                 });
             }
             "--scale" => scale = rest.next().and_then(|s| s.parse().ok()).expect("--scale N"),
+            "--threaded" => threaded = true,
             "--out" => {
                 let d = std::path::PathBuf::from(rest.next().expect("--out DIR"));
                 std::fs::create_dir_all(&d).expect("making the output directory");
@@ -336,9 +338,9 @@ pub fn cli(args: &[String]) -> ExitCode {
             );
             let r = renderer(&device, &queue, view);
             Box::new(if which == Which::Fast {
-                Exact::fast(r, false)
+                Exact::fast(r, threaded)
             } else {
-                Exact::f2(r, false)
+                Exact::f2(r, threaded)
             })
         }
         Which::Exact => Box::new(Mutated::new(renderer(&device, &queue, view), mutation)),
