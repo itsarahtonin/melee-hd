@@ -975,11 +975,34 @@ pub fn zoom_origin(r: &mut Running, gobj: GObjId) -> bool {
         .expect("ftLib_GetCameraSubject: a fighter without a camera box");
     let bone = r.game.camera.boxes[b].bone_pos;
     // Under Slippi's rules, where the close-up copies from, read through the CObj after a
-    // pause, is counted (design call 9).
+    // pause, is counted, and on a doubled round's other phase it's also taken through the view
+    // that phase would leave the CObj, a different origin counted (design call 9).
     r.game.note_camera_read();
+    let other = if r.game.rules.slippi {
+        r.game.other_phase_screen(r.data, c, bone)
+    } else {
+        None
+    };
     let s = crate::lb::screen::world_to_screen(&mut r.game.objs, r.data, c, bone, false)
         .expect("lbVector_WorldToScreen: a frustum camera");
     let vp = r.game.objs.cobjs[c].viewport;
+    let [copy_x, copy_y, out] = copy_origin(s, vp);
+    if let Some(o) = other
+        && copy_origin(o, vp)[..2] != [copy_x, copy_y]
+    {
+        let tick = r.game.scene.unk_8;
+        r.game.display_phase.note(tick);
+    }
+    let z = screen_mut(r.game, SCREEN_ZOOM);
+    z.copy_x = copy_x;
+    z.copy_y = copy_y;
+    out == 0
+}
+
+/// Where the close-up copies from for its player at screen point `s`, kept on the viewport
+/// `vp`, and whether the player was outside it ([`zoom_origin`]): `copy_x`, `copy_y` and the
+/// out flag as words (1 outside).
+fn copy_origin(s: crate::vec::Vec3, vp: [f32; 4]) -> [u16; 3] {
     let mut out = false;
     let mut x = fp::fsubs(reg(s.x), 62.0);
     let (xmin, xmax, ymin, ymax) = (
@@ -1003,10 +1026,11 @@ pub fn zoom_origin(r: &mut Running, gobj: GObjId) -> bool {
         out = true;
         y = fp::fsubs(ymax, 80.0);
     }
-    let z = screen_mut(r.game, SCREEN_ZOOM);
-    z.copy_x = ((fp::fctiwz(x) >> 1).wrapping_mul(2)) as u16;
-    z.copy_y = ((fp::fctiwz(y) >> 1).wrapping_mul(2)) as u16;
-    !out
+    [
+        ((fp::fctiwz(x) >> 1).wrapping_mul(2)) as u16,
+        ((fp::fctiwz(y) >> 1).wrapping_mul(2)) as u16,
+        u16::from(out),
+    ]
 }
 
 /// Picks the next mode when one ends, `grStadium_801D2A60`: the results every so many modes,

@@ -366,11 +366,12 @@ impl Recorder {
     }
 
     /// The note the metadata and the player's log carry when display-phase reads' outcomes
-    /// differed (`live::DisplayPhase`, design call 9 of `docs/slippi-ruleset.md`).
+    /// differed or were made off playback's course (`live::DisplayPhase`, design call 9 of
+    /// `docs/slippi-ruleset.md`; Sarah's wording of 2026-11-18).
     pub fn playback_note(&self) -> Option<String> {
         self.display_phase.map(|(n, first)| {
             format!(
-                "may not play back exactly: a homing item's target, an Onett car's horn or a random number after Brinstar Depths' haze could differ in playback ({n} time{}, first at tick {first})",
+                "may not play back exactly: {n} time{}, first at tick {first}, the match read something Slippi's playback can show differently (where the camera was, or a random number after Brinstar Depths' haze)",
                 if n == 1 { "" } else { "s" }
             )
         })
@@ -1156,14 +1157,14 @@ mod tests {
         assert_eq!(
             r.playback_note().as_deref(),
             Some(
-                "may not play back exactly: a homing item's target, an Onett car's horn or a random number after Brinstar Depths' haze could differ in playback (1 time, first at tick 640)"
+                "may not play back exactly: 1 time, first at tick 640, the match read something Slippi's playback can show differently (where the camera was, or a random number after Brinstar Depths' haze)"
             )
         );
         r.display_phase = Some((3, 12));
         assert_eq!(
             r.playback_note().as_deref(),
             Some(
-                "may not play back exactly: a homing item's target, an Onett car's horn or a random number after Brinstar Depths' haze could differ in playback (3 times, first at tick 12)"
+                "may not play back exactly: 3 times, first at tick 12, the match read something Slippi's playback can show differently (where the camera was, or a random number after Brinstar Depths' haze)"
             )
         );
     }
