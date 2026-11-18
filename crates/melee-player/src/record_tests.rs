@@ -22,6 +22,11 @@ use crate::predict_tests::disc;
 /// Fox against Marth on Final Destination, a one-minute timed match: the recording ends with
 /// the time's game end.
 fn settings() -> Settings {
+    settings_on("fd")
+}
+
+/// [`settings`] on the stage `key` names.
+fn settings_on(key: &str) -> Settings {
     let player = |key: &str, port: u8| Player {
         character: roster::character(key).expect("ported").kind,
         costume: 0,
@@ -30,7 +35,7 @@ fn settings() -> Settings {
         cpu_level: 0,
         team: port,
     };
-    let stage = roster::stage("fd").expect("ported").kind;
+    let stage = roster::stage(key).expect("ported").kind;
     let mut s = Settings::vs(stage, &[player("fox", 0), player("marth", 1)], 0, 1);
     s.seed = 0x1234_5678;
     s
@@ -434,7 +439,12 @@ fn play_live(
 /// [`settings`]' match as a live match of the Slippi ruleset started from VS mode's menus
 /// (scene 2.2), recording itself: the game start it's built from and its settings.
 fn live_settings() -> (melee_sim::game::vs_match::ReplayStart, Settings) {
-    let s = settings();
+    live_settings_on("fd")
+}
+
+/// [`live_settings`] on the stage `key` names.
+fn live_settings_on(key: &str) -> (melee_sim::game::vs_match::ReplayStart, Settings) {
+    let s = settings_on(key);
     let mut g = melee_sim::game::state::Game {
         rules: Rules::slippi_online(),
         ..Default::default()
@@ -643,6 +653,110 @@ fn a_paused_live_match_records_the_pause_as_slippi_does() {
         assert_eq!(
             frames,
             (first..first + frames.len() as i32).collect::<Vec<_>>()
+        );
+    });
+}
+
+/// A pause on a stage whose logic reads the camera's view (Onett's cars here) takes the camera
+/// off the course its playback's, which never pauses, takes (`live::DisplayPhase::paused`):
+/// from the pause to the match's end the live match's camera is never again the one its
+/// playback (without the first frame's settling) has, frame for frame, only a little off (the
+/// pause camera's interest depth and field of view not eased back exactly), so every read
+/// through the view after it is noted, more than the same match unpaused notes. Gameplay
+/// stays the same in playback here.
+#[test]
+fn a_paused_live_match_notes_its_view_reads() {
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+        let (_, live) = live_settings_on("onett");
+        type Snap = (String, (u32, Vec<(u32, u32, i32, u32)>));
+        let snap = |g: &melee_sim::game::state::Game| -> Snap {
+            let t = &g.camera.cam.transform;
+            (
+                format!("{:?} {:?} {}", t.position, t.interest, t.fov),
+                gameplay(g),
+            )
+        };
+        let frame = |m: &melee_sim::game::vs_match::Match| {
+            m.game.recorder.as_ref().and_then(|r| r.last_frame())
+        };
+        // Frame by frame: the camera and gameplay; the frame the pause took the camera off
+        // course, and the reads noted before it and at the end.
+        let mut ours = std::collections::BTreeMap::new();
+        let (mut off, mut before, mut noted) = (None, 0, 0);
+        let file = play_live(&disc, &live, true, None, |m, _| {
+            let Some(f) = frame(m) else { return };
+            ours.entry(f).or_insert_with(|| snap(&m.game));
+            let d = &m.game.display_phase;
+            if d.paused && off.is_none() {
+                assert_eq!(m.game.camera.cam.mode, melee_sim::game::camera::PAUSE);
+                off = Some(f);
+                before = d.differing;
+            }
+            noted = d.differing;
+        });
+        let paused = Replay::parse(&file).expect("the recording parses");
+        let mut unpaused = 0;
+        play_live(&disc, &live, false, None, |m, _| {
+            assert!(!m.game.display_phase.paused, "unpaused, off course");
+            unpaused = m.game.display_phase.differing;
+        });
+        let off = off.expect("the pause took the camera off course");
+        eprintln!(
+            "off course from frame {off}: {before} reads noted before, {noted} at the end; {unpaused} unpaused"
+        );
+        assert!(
+            noted > before && noted > unpaused,
+            "no more reads noted after the pause"
+        );
+        let mut again = Settings::from_replay(&melee_slippi::start(&paused)).expect("its settings");
+        again.disc = live.disc;
+        let mut play = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
+        (play.game.playback.as_mut())
+            .expect("a replay's match")
+            .no_settling = true;
+        let mut theirs = std::collections::BTreeMap::new();
+        for _ in 0..8000 {
+            let (f, render) = play.step_replay_tick(&mut melee_slippi::Device(&paused));
+            if render {
+                play.render();
+            }
+            let ended = f.ended;
+            play.recycle(f);
+            let i = play.game.playback.as_ref().expect("playback").frame_index;
+            theirs.entry(i).or_insert_with(|| snap(&play.game));
+            if ended {
+                break;
+            }
+        }
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        let (mut compared, mut camera) = (0, Vec::new());
+        for (f, (cam, play)) in &ours {
+            let Some((their_cam, their_play)) = theirs.get(f) else {
+                continue;
+            };
+            compared += 1;
+            assert_eq!(play, their_play, "frame {f}'s gameplay in playback");
+            if cam != their_cam {
+                camera.push(*f);
+            }
+        }
+        let last = *ours.keys().next_back().expect("a frame");
+        assert!(compared > 3000, "{compared} frames compared");
+        // The camera leaves playback's at the pause and never comes back.
+        let first = *camera.first().expect("the camera never left playback's");
+        eprintln!("the camera differs from playback's from frame {first} to {last}");
+        // The frame the pause came in, and the first frame after it.
+        assert_eq!(
+            first,
+            off + 1,
+            "the camera parted at {first}, the pause at {off}"
+        );
+        assert_eq!(
+            camera,
+            (first..=last).collect::<Vec<_>>(),
+            "the camera's course"
         );
     });
 }

@@ -232,22 +232,34 @@ const PLACED: usize = 8;
 /// different outcome is counted; the recording's metadata and the player's log say the match
 /// may not play back exactly.
 ///
-/// Onett's cars read the game camera's view edges (`camera::ground_span`), which only the
-/// display pass sets in the camera's CObj: a tick after a pass reads the view that pass set,
-/// a doubled round's second tick the one before. On Onett the pass's views are kept
-/// ([`DisplayPhase::pass_view`]), and each car decision through the edges is also taken with
-/// the other phase's view ([`DisplayPhase::other_view`]), a different outcome counted the same
-/// way (`gr::onett::proc_cars`).
+/// Three stages' logic reads the game camera's view edges (`camera::ground_span`), which only
+/// the display pass sets in the camera's CObj: Onett's cars (their horn and centre decisions),
+/// Kongo Jungle 64's birds and Dream Land 64's clouds and stars (where their flights start,
+/// a stage object's joint the oracle compares). A tick after a pass reads the view that pass
+/// set, a doubled round's second tick the one before. On those stages the view a pass would
+/// give is kept at each tick's end ([`Game::display_phase_tick_end`]), and each such read is
+/// also made through the other phase's view ([`DisplayPhase::other_view`]), a different
+/// outcome counted the same way (`gr::onett::proc_cars`, `gr::oldkongo::proc_birds`,
+/// `gr::oldpupupu::proc_flights`). After a pause on those stages, every such read is counted
+/// ([`DisplayPhase::paused`]): the pause leaves the camera off the course playback's takes.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct DisplayPhase {
     /// The root translation the display pass last gave each fighter it places by the camera,
     /// by fighter slot.
     pub placed: [Option<(u16, crate::vec::Vec3)>; PLACED],
-    /// The views the last two display passes gave the game camera, the last first (on Onett
-    /// only), and the game tick of the last.
+    /// The views a display pass would give the game camera after each of the last two ticks,
+    /// the last first (on the stages that read them, [`Game::keeps_display_views`]; none in a
+    /// camera mode that leaves the CObj alone), and the engine tick count
+    /// (`gm_80479D58.unk_0`) after the last.
     pub views: [Option<super::camera::View>; 2],
     pub view_tick: u32,
-    /// How many reads' outcomes differ between the two placements.
+    /// The game paused on such a stage: the camera's state has left the course a replay's
+    /// playback takes, which never pauses, for the rest of the match (`docs/slippi-bugs.md`,
+    /// "A paused match's recording"), and each read through its view is counted
+    /// ([`Game::view_read_off_course`]).
+    pub paused: bool,
+    /// How many reads were counted: their outcomes differ between the two placements or
+    /// phases, or they were made off playback's course.
     pub differing: u32,
     /// The game ticks of the scene (`gm_80479D58.unk_8`) at the first of them.
     pub first: Option<u32>,
@@ -276,31 +288,35 @@ impl DisplayPhase {
             .map(|&(_, v)| v)
     }
 
-    /// A display pass in game tick `tick` gave the game camera view `v`; a second pass in the
-    /// same tick (the game paused) replaces the first.
-    pub fn pass_view(&mut self, tick: u32, v: super::camera::View) {
-        if self.views[0].is_none() || self.view_tick != tick {
-            self.views[1] = self.views[0];
-        }
-        self.views[0] = Some(v);
+    /// A tick ended, the engine tick count now `tick`: a display pass now would give the game
+    /// camera `due` (none in a mode that leaves the CObj alone).
+    pub fn tick_end(&mut self, tick: u32, due: Option<super::camera::View>) {
+        self.views = [due, self.views[0]];
         self.view_tick = tick;
     }
 
-    /// The camera view a read in the logic would see with the display pass's other phase, the
-    /// CObj holding `held` and a pass now giving it `due`: where they're the same, a pass ran
-    /// after the last tick, and the other phase is the one that skipped it (the view of the
-    /// pass before); where they differ, none did (this is a doubled round's second tick), and
-    /// the other phase is the one whose pass ran (`due`). None where both are the same, or no
-    /// earlier pass is known.
-    pub fn other_view(
-        &self,
-        held: super::camera::View,
-        due: Option<super::camera::View>,
-    ) -> Option<super::camera::View> {
-        let other = if due == Some(held) {
+    /// The camera view a read in the logic in the tick after engine tick count `now` would see
+    /// with the display pass's other phase, the CObj holding `held`. Where `held` is what a
+    /// pass gave after the last tick (`views[0]`), the other phase is one that skipped that
+    /// pass, a doubled round, its CObj holding what a pass gave after the tick before
+    /// (`views[1]`); where it isn't, no pass ran after the last tick (this is a doubled round's
+    /// second tick), and the other phase is one whose pass did (`views[0]`). (Where the camera
+    /// stood still over the last tick and no pass ran, `held` is both, and so is the other.)
+    /// None where the other is `held`, or not known: the match's first tick, a camera mode
+    /// that leaves the CObj alone.
+    ///
+    /// The views are what a pass would give from the camera's state at each tick's end, not
+    /// at the read: a pause's start or end between them changes the camera's mode before the
+    /// stage's processes run (`gm_DoPauseChecksAndRoutine` in the scene's frame function),
+    /// though the camera's own process (priority 0x12) runs after them.
+    pub fn other_view(&self, held: super::camera::View, now: u32) -> Option<super::camera::View> {
+        if self.view_tick != now {
+            return None;
+        }
+        let other = if self.views[0] == Some(held) {
             self.views[1]
         } else {
-            due
+            self.views[0]
         };
         other.filter(|&v| v != held)
     }
@@ -309,6 +325,51 @@ impl DisplayPhase {
     pub fn note(&mut self, tick: u32) {
         self.differing = self.differing.saturating_add(1);
         self.first.get_or_insert(tick);
+    }
+}
+
+impl Game {
+    /// Whether [`DisplayPhase`] keeps the views a display pass would give: under Slippi's
+    /// rules, on the stages whose logic reads the camera's view edges.
+    pub fn keeps_display_views(&self) -> bool {
+        use super::gr::{GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU, GR_KIND_ONETT};
+        self.rules.slippi
+            && matches!(
+                self.stage_info.grkind,
+                GR_KIND_ONETT | GR_KIND_OLDKONGO | GR_KIND_OLDPUPUPU
+            )
+    }
+
+    /// A tick's end, its tick counts done ([`DisplayPhase::tick_end`]).
+    pub fn display_phase_tick_end(&mut self) {
+        if self.keeps_display_views() {
+            let due = super::camera::pass_view(self);
+            let tick = self.scene.unk_0;
+            self.display_phase.tick_end(tick, due);
+            if self.camera.cam.mode == super::camera::PAUSE {
+                self.display_phase.paused = true;
+            }
+        }
+    }
+
+    /// Whether a read in the logic through the game camera's view is off playback's course
+    /// ([`DisplayPhase::paused`]): the pause camera eases back to the match's view but leaves
+    /// its state a little off the one playback's camera, which never paused, has (the
+    /// interest's depth, the field of view a few ulps short, the eye and interest some
+    /// hundred-thousandths of a unit off, to the match's end in `melee-player`'s
+    /// `a_paused_live_match_notes_its_view_reads`), so the read's outcome can't be shown to
+    /// match playback's, and it's counted ([`DisplayPhase::note`]) whatever it decides.
+    pub fn view_read_off_course(&self) -> bool {
+        self.display_phase.paused
+    }
+
+    /// The game camera's ground span (`camera::ground_span`'s left, centre and right) through
+    /// the view the display pass's other phase would leave it ([`DisplayPhase::other_view`]),
+    /// where that view isn't the one it holds.
+    pub fn other_phase_span(&mut self, data: &melee_data::archive::Archives) -> Option<[f32; 3]> {
+        let held = super::camera::View::of_camera(self, data);
+        let other = self.display_phase.other_view(held, self.scene.unk_0)?;
+        Some(other.ground_span(self).0)
     }
 }
 
@@ -491,30 +552,37 @@ mod tests {
         }
     }
 
-    /// The view the other display-pass phase reads: after a pass, the one before it; on a
-    /// doubled round's second tick (the CObj behind the transform), the one a pass would set
-    /// now; none where they're the same or no earlier pass is known. A second pass in one tick
-    /// (paused) replaces the first.
+    /// The view the other display-pass phase reads: in a tick after a pass, the view a pass
+    /// gave after the tick before; on a doubled round's second tick (the CObj holding the view
+    /// from before the last tick), the one a pass after the last tick would have given; none
+    /// where that's the view held, in the match's first tick, or where the last tick's end
+    /// wasn't kept.
     #[test]
     fn the_other_phase_sees_the_other_view() {
         let mut d = DisplayPhase::default();
-        d.pass_view(10, view(1.0));
-        assert_eq!(d.other_view(view(1.0), Some(view(1.0))), None);
-        d.pass_view(11, view(2.0));
+        // The first tick: no tick's end is known.
+        assert_eq!(d.other_view(view(1.0), 0), None);
+        d.tick_end(1, Some(view(1.0)));
+        assert_eq!(d.other_view(view(1.0), 1), None);
+        d.tick_end(2, Some(view(2.0)));
         assert_eq!(d.views, [Some(view(2.0)), Some(view(1.0))]);
-        // A tick after a pass: the CObj is what a pass would set now.
-        assert_eq!(d.other_view(view(2.0), Some(view(2.0))), Some(view(1.0)));
-        // A doubled round's second tick: the CObj lags the transform.
-        assert_eq!(d.other_view(view(2.0), Some(view(3.0))), Some(view(3.0)));
+        // A tick after a pass: the other phase skipped it.
+        assert_eq!(d.other_view(view(2.0), 2), Some(view(1.0)));
+        // A doubled round's second tick: the other phase's pass ran.
+        assert_eq!(d.other_view(view(1.0), 2), Some(view(2.0)));
+        // A stale end.
+        assert_eq!(d.other_view(view(2.0), 3), None);
+        // The camera standing still: the same either way.
+        d.tick_end(3, Some(view(2.0)));
+        assert_eq!(d.other_view(view(2.0), 3), None);
         // A mode that leaves the CObj alone.
-        assert_eq!(d.other_view(view(2.0), None), None);
-        // The camera standing still.
-        d.pass_view(12, view(2.0));
-        assert_eq!(d.other_view(view(2.0), Some(view(2.0))), None);
-        // Paused: passes with no tick between.
-        d.pass_view(13, view(4.0));
-        d.pass_view(13, view(5.0));
-        assert_eq!(d.views, [Some(view(5.0)), Some(view(2.0))]);
+        d.tick_end(4, None);
+        assert_eq!(d.other_view(view(2.0), 4), None);
+        // A pause's end: the pause camera's last view held, its mode back to the match's
+        // before the stage's processes run, the camera still: nothing differs.
+        d.tick_end(5, Some(view(7.0)));
+        d.tick_end(6, Some(view(7.0)));
+        assert_eq!(d.other_view(view(7.0), 6), None);
     }
 
     /// The haze's tripwire on a constructed game: off course from a step under Slippi's rules,

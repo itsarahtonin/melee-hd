@@ -330,21 +330,21 @@ pub fn proc_flights(r: &mut Running, gobj: GObjId) {
     } else {
         1
     };
-    let ([mut left, _, mut right], _) = super::super::camera::ground_span(r.game, r.data);
-    let n = fp::frsp(f64::from(count));
-    let (step, mut x) = if from == 1 {
-        if reg(right) < 200.0 {
-            right = 200.0;
-        }
-        let step = fp::fneg(10.0);
-        (step, fp::fnmsubs(n, step, fp::fadds(50.0, reg(right))))
-    } else {
-        if reg(left) > fp::fneg(200.0) {
-            left = -200.0;
-        }
-        let step = 10.0;
-        (step, fp::fnmsubs(n, step, fp::fsubs(reg(left), 50.0)))
-    };
+    let ([left, _, right], _) = super::super::camera::ground_span(r.game, r.data);
+    let (step, mut x) = flight_start(from, count, left, right);
+    // Under Slippi's rules, where it would start with the display pass's other phase, or with
+    // playback's camera after a pause (`live::DisplayPhase`, design call 9).
+    if r.game.rules.slippi
+        && (r.game.view_read_off_course()
+            || r.game
+                .other_phase_span(r.data)
+                .is_some_and(|[left, _, right]| {
+                    flight_start(from, count, left, right).1.to_bits() != x.to_bits()
+                }))
+    {
+        let tick = r.game.scene.unk_8;
+        r.game.display_phase.note(tick);
+    }
     let rand = reg(r.game.objs.rng.draw_f32());
     let spread = fp::frsp(f64::from(param(r.game).h(r, 4)));
     let y = fp::fmuls(
@@ -369,6 +369,26 @@ pub fn proc_flights(r: &mut Running, gobj: GObjId) {
     }
     let t = flight_wait(r);
     r.game.grounds[g.0].u.oldpupupu2().xC4 = t;
+}
+
+/// Where a flight of `count` from side `from` (1 the right) starts through a view whose ground
+/// span's edges are `left` and `right`, and the step to each next one: 50 past the edge, or
+/// past 200 from the centre if the edge is nearer, and back by a step for each of them.
+fn flight_start(from: i8, count: i32, mut left: f32, mut right: f32) -> (f64, f64) {
+    let n = fp::frsp(f64::from(count));
+    if from == 1 {
+        if reg(right) < 200.0 {
+            right = 200.0;
+        }
+        let step = fp::fneg(10.0);
+        (step, fp::fnmsubs(n, step, fp::fadds(50.0, reg(right))))
+    } else {
+        if reg(left) > fp::fneg(200.0) {
+            left = -200.0;
+        }
+        let step = 10.0;
+        (step, fp::fnmsubs(n, step, fp::fsubs(reg(left), 50.0)))
+    }
 }
 
 /// The sky's setup (map 3), `grOldPupupu_80211110`: its animation, no shadows, and its

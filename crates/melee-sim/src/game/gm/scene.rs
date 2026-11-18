@@ -399,6 +399,8 @@ pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
     if sc.unk_10.unk_38_0 && g.pacing.due(0) && sc.unk_8 != u32::MAX - 1 {
         sc.unk_8 = sc.unk_8.wrapping_add(1);
     }
+    // What a display pass would give the camera now (`live::DisplayPhase`, design call 9).
+    g.display_phase_tick_end();
     if g.gm.db_level >= super::DB_DEBUG_ROM {
         check_active_threads();
     }

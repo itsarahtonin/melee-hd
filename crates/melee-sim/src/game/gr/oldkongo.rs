@@ -611,11 +611,22 @@ pub fn proc_birds(r: &mut Running, gobj: GObjId) {
         jobj::set_srt(&mut r.game.objs.jobjs, root, |o| o.translate.y = y);
         jobj::set_srt(&mut r.game.objs.jobjs, root, |o| o.translate.z = -200.0);
         let ([left, _, right], _) = super::super::camera::ground_span(r.game, r.data);
-        let (x, part) = if r.game.objs.rng.below(2) != 0 {
-            (if 200.0 < right { right } else { 200.0 }, 3)
-        } else {
-            (if -200.0 > left { left } else { -200.0 }, 1)
-        };
+        let from_right = r.game.objs.rng.below(2) != 0;
+        let x = birds_x(from_right, left, right);
+        let part = if from_right { 3 } else { 1 };
+        // Under Slippi's rules, where they'd start with the display pass's other phase, or
+        // with playback's camera after a pause (`live::DisplayPhase`, design call 9).
+        if r.game.rules.slippi
+            && (r.game.view_read_off_course()
+                || r.game
+                    .other_phase_span(r.data)
+                    .is_some_and(|[left, _, right]| {
+                        birds_x(from_right, left, right).to_bits() != x.to_bits()
+                    }))
+        {
+            let tick = r.game.scene.unk_8;
+            r.game.display_phase.note(tick);
+        }
         jobj::set_srt(&mut r.game.objs.jobjs, root, |o| o.translate.x = x);
         let shown = nth_joint(r.game, gobj, part);
         jobj::clear_flags_all(&mut r.game.objs.jobjs, shown, jobj::HIDDEN);
@@ -623,6 +634,19 @@ pub fn proc_birds(r: &mut Running, gobj: GObjId) {
         jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
         let wait = bird_wait(r);
         r.game.grounds[g.0].u.oldkongo_birds().xC4 = wait;
+    }
+}
+
+/// Where the birds start through a view whose ground span's edges are `left` and `right`:
+/// `from_right`, at the right edge where it lies past 200, else at 200; otherwise at the
+/// left edge where it lies past -200, else at -200.
+fn birds_x(from_right: bool, left: f32, right: f32) -> f32 {
+    if from_right {
+        if 200.0 < right { right } else { 200.0 }
+    } else if -200.0 > left {
+        left
+    } else {
+        -200.0
     }
 }
 
