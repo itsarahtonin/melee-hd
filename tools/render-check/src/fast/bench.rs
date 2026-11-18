@@ -72,8 +72,8 @@ pub fn measure(
     out
 }
 
-/// `melee-render-check bench DISC REPLAY [--scale N] [--from A] [--to B] [--one-thread]
-/// [--adapter NAME|fallback]`
+/// `melee-render-check bench DISC REPLAY [--renderer exact|fast] [--scale N] [--from A] [--to B]
+/// [--one-thread] [--adapter NAME|fallback]`
 pub fn cli(args: &[String]) -> ExitCode {
     let (disc, replay) = (&args[1], &args[2]);
     let (mut scale, mut from, mut to, mut threaded) = (1u32, 600u32, 1800u32, true);

@@ -13,9 +13,10 @@
 //! under test is the exact renderer with a change made on purpose ([`exact::Mutation`]).
 //!
 //! ```text
-//! melee-render-check fast DISC REPLAY [--mutate NAME] [--scale N] [--out DIR] FRAME...
-//! melee-render-check bench DISC REPLAY [--scale N] [--from A] [--to B] [--one-thread]
-//!     [--adapter NAME|fallback]
+//! melee-render-check fast DISC REPLAY [--renderer exact|fast] [--mutate NAME] [--scale N]
+//!     [--out DIR] FRAME...
+//! melee-render-check bench DISC REPLAY [--renderer exact|fast] [--scale N] [--from A] [--to B]
+//!     [--one-thread] [--adapter NAME|fallback]
 //! ```
 
 pub mod bench;
