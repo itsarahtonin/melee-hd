@@ -35,6 +35,7 @@ pub fn record(args: &[&str]) -> ExitCode {
     let mut heap = true;
     let mut all = false;
     let mut no_settling = false;
+    let mut slippi_rules = false;
     let mut pos = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
@@ -58,12 +59,19 @@ pub fn record(args: &[&str]) -> ExitCode {
             "--heap" => heap = it.next().copied() != Some("off"),
             "--all" => all = true,
             "--no-settling" => no_settling = true,
+            "--rules" => {
+                slippi_rules = match it.next().copied() {
+                    Some("slippi") => true,
+                    Some("own") => false,
+                    _ => panic!("--rules slippi|own"),
+                }
+            }
             _ => pos.push(a),
         }
     }
     let [replay_path, out_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive] [--ticks N] [--known FILE] [--free-seed] [--heap off] [--all] [--no-settling]"
+            "usage: melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive] [--ticks N] [--known FILE] [--free-seed] [--heap off] [--all] [--no-settling] [--rules slippi|own]"
         );
         return ExitCode::from(2);
     };
@@ -86,6 +94,11 @@ pub fn record(args: &[&str]) -> ExitCode {
         }
     };
     settings.disc = disc_speed;
+    // The match under Slippi 3.19's rules whatever its replay's codes (its recording then
+    // differs in the code list and what the rules change).
+    if slippi_rules {
+        settings.rules = melee_sim::game::state::Rules::slippi_online();
+    }
     if !heap {
         settings.heap = None;
         settings.playback_heap = None;
@@ -126,6 +139,8 @@ pub fn record(args: &[&str]) -> ExitCode {
     // after it decides the outcome).
     let mut tick = 0u64;
     let mut stopped = None;
+    // The last frame playback's camera was followed apart from this one (design call 9).
+    let mut followed_to = None;
     while tick < limit {
         let rec = m.game.recorder.as_ref().expect("the recorder");
         if rec.ended() || frame(&m) > last {
@@ -136,6 +151,9 @@ pub fn record(args: &[&str]) -> ExitCode {
                 let ended = out.ended;
                 m.recycle(out);
                 tick += 1;
+                if m.game.follows_playback_camera() {
+                    followed_to = Some(frame(&m));
+                }
                 if ended {
                     break;
                 }
@@ -162,6 +180,19 @@ pub fn record(args: &[&str]) -> ExitCode {
     );
     if let Some(why) = &stopped {
         println!("{why}");
+    }
+    if m.game.rules.slippi {
+        // What the playback note would say (design call 9), and how long playback's camera was
+        // followed beside this one (from the first frame without the settling, and a pause).
+        let d = &m.game.display_phase;
+        let followed = followed_to.map_or("never".to_owned(), |f| format!("to frame {f}"));
+        match d.first {
+            Some(first) => println!(
+                "playback note: {} reads, first at tick {first}; playback's camera followed {followed}",
+                d.differing
+            ),
+            None => println!("no playback note; playback's camera followed {followed}"),
+        }
     }
     let ours = Replay::parse(&file).expect("the recording parses");
     let mut ok = stopped.is_none();

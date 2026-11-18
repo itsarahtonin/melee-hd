@@ -974,22 +974,19 @@ pub fn zoom_origin(r: &mut Running, gobj: GObjId) -> bool {
         .x890_cameraBox
         .expect("ftLib_GetCameraSubject: a fighter without a camera box");
     let bone = r.game.camera.boxes[b].bone_pos;
-    // Under Slippi's rules, where the close-up copies from, read through the CObj after a
-    // pause, is counted, and on a doubled round's other phase it's also taken through the view
-    // that phase would leave the CObj, a different origin counted (design call 9).
-    r.game.note_camera_read();
-    let other = if r.game.rules.slippi {
-        r.game.other_phase_screen(r.data, c, bone)
-    } else {
-        None
-    };
+    // Under Slippi's rules, where the close-up copies from is also taken through the views
+    // playback's run can leave the CObj (the other phase's on a doubled round, or playback's
+    // followed camera's at either phase), a different origin counted (design call 9).
+    let theirs = r.game.playback_screens(r.data, c, bone);
     let s = crate::lb::screen::world_to_screen(&mut r.game.objs, r.data, c, bone, false)
         .expect("lbVector_WorldToScreen: a frustum camera");
     let vp = r.game.objs.cobjs[c].viewport;
     let [copy_x, copy_y, out] = copy_origin(s, vp);
-    if let Some(o) = other
-        && copy_origin(o, vp)[..2] != [copy_x, copy_y]
-    {
+    if theirs.is_none_or(|t| {
+        t.into_iter()
+            .flatten()
+            .any(|o| copy_origin(o, vp)[..2] != [copy_x, copy_y])
+    }) {
         let tick = r.game.scene.unk_8;
         r.game.display_phase.note(tick);
     }

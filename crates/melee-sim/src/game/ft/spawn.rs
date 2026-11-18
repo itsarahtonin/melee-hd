@@ -654,12 +654,11 @@ impl Running<'_> {
         cb.target_ext.v.x = xc;
         cb.target_ext.v.y = yc;
         cb.target_ext.v.z = zc;
-        cb.ext.h = cb.target_ext.h.clone();
-        cb.ext.v = cb.target_ext.v;
         cb.pos.x = pos.x;
         cb.pos.y = mem(fp::fadds(reg(pos.y), reg(x0)));
         cb.pos.z = pos.z;
         cb.bone_pos = cb.pos;
+        self.game.camera.boxes.fit_extents(b);
     }
 
     /// Scales the fighter's model to its model scale (`x34_scale.z` across, if set),

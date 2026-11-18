@@ -332,15 +332,14 @@ pub fn proc_flights(r: &mut Running, gobj: GObjId) {
     };
     let ([left, _, right], _) = super::super::camera::ground_span(r.game, r.data);
     let (step, mut x) = flight_start(from, count, left, right);
-    // Under Slippi's rules, where it would start with the display pass's other phase, or with
-    // playback's camera after a pause (`live::DisplayPhase`, design call 9).
+    // Under Slippi's rules, where it would start through the views playback's run can leave
+    // the camera's CObj (`Game::playback_spans`, design call 9).
     if r.game.rules.slippi
-        && (r.game.view_read_off_course()
-            || r.game
-                .other_phase_span(r.data)
-                .is_some_and(|[left, _, right]| {
-                    flight_start(from, count, left, right).1.to_bits() != x.to_bits()
-                }))
+        && r.game.playback_spans(r.data).is_none_or(|spans| {
+            (spans.into_iter().flatten()).any(|[left, _, right]| {
+                flight_start(from, count, left, right).1.to_bits() != x.to_bits()
+            })
+        })
     {
         let tick = r.game.scene.unk_8;
         r.game.display_phase.note(tick);

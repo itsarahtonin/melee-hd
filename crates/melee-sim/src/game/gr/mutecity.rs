@@ -1482,10 +1482,12 @@ pub fn move_cars(r: &mut Running, car_gobj: GObjId, gobj: GObjId) {
             }
         } else {
             let far = reg(pos.z) > reg(5000.0) || reg(pos.z) < reg(-1500.0);
-            // Under Slippi's rules, a read of the camera's eye that decides (the wreck within
-            // the far limits) after a pause is counted (design call 9).
+            // Under Slippi's rules, where the camera's eye decides (the wreck within the far
+            // limits), also decided through playback's followed camera (design call 9).
             if !far {
-                r.game.note_camera_read();
+                let behind = reg(pos.z) > reg(cam.z);
+                r.game
+                    .decide_camera_read(&behind, |_, t| reg(pos.z) > reg(t.position.z));
             }
             if reg(pos.z) > reg(cam.z) || far {
                 if r.game.gr.mutecity.cars[i].generator {

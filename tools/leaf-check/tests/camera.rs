@@ -935,7 +935,7 @@ fn update_zoom() {
 #[test]
 fn quake_offset_and_translation() {
     check("Camera_SetQuakeOffset", |r, a| {
-        camera::set_quake_offset(&mut r.game.camera.cam, a.f(1), a.f(2));
+        camera::set_quake_offset(&mut r.game.camera, a.f(1), a.f(2));
         vec![]
     });
     check("Camera_80030DE4", |r, a| {

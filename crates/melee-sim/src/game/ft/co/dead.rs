@@ -914,7 +914,8 @@ impl Running<'_> {
         let c = super::super::super::camera::cobj_copy_view(self.game, self.data);
         let m = crate::hsd::cobj::inv_viewing_mtx(&mut self.game.objs, self.data, c)
             .expect("the camera's inverse view matrix");
-        let pos = m.transform(self.dead_vec(gobj, DEAD_VIEW_POS));
+        let local = self.dead_vec(gobj, DEAD_VIEW_POS);
+        let pos = m.transform(local);
         // Slippi's FreezeDeadUpFallPhysics (`80080E80`) places only the model, leaving the
         // fighter's position where it was.
         if !self.game.rules.slippi {
@@ -923,8 +924,10 @@ impl Running<'_> {
         let j = self.root_jobj(gobj);
         crate::hsd::jobj::set_translate(&mut self.game.objs.jobjs, j, pos);
         if self.game.rules.slippi {
+            // And where it would place it through playback's followed camera (design call 9).
+            let followed = self.game.followed_placement(self.data, local);
             let f = self.game.fighter_id(gobj);
-            self.game.display_phase.place(f.0 as usize, pos);
+            self.game.display_phase.place(f.0 as usize, pos, followed);
         }
     }
 }

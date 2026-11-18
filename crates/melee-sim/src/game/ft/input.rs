@@ -233,7 +233,7 @@ impl Running<'_> {
         if self.game.replay_drives() {
             self.playback_inject(gobj);
         } else {
-            self.game.playback_camera_settles(gobj);
+            self.playback_camera_settles(gobj);
         }
         crate::game::record::pre_frame(self.game, gobj);
         let fp = &mut self.game.fighters[f.0];

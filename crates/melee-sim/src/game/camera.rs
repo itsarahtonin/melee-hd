@@ -107,12 +107,152 @@ pub struct CameraBoxes {
     pub last: Option<CameraBoxId>,
     /// The array's block in the scene's heap, 0 where the model doesn't know it.
     pub addr: u32,
+    /// What each box holds in playback's camera while it's followed apart from this one, by
+    /// box (under Slippi's rules, [`CameraState::followed`]): empty when it isn't. A box reset
+    /// ([`reset_box`]) is reset here too.
+    pub followed: Vec<Eased>,
+}
+
+/// What a camera update moves of a camera box: the extents it eases toward their targets
+/// (`Camera_800293E0`) and an automatic box's timer and mark (`Camera_8002928C`). The rest
+/// (where it is, its targets, its state) the box's owner writes.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Eased {
+    pub ext: super::structs::CmSubjectExtents,
+    pub state_timer: i16,
+    pub was_framed: bool,
+}
+
+impl Eased {
+    /// What box `b` holds.
+    pub fn of(b: &CmSubject) -> Eased {
+        Eased {
+            ext: b.ext.clone(),
+            state_timer: b.state_timer,
+            was_framed: b.was_framed,
+        }
+    }
+
+    /// Trades places with what box `b` holds.
+    fn swap(&mut self, b: &mut CmSubject) {
+        std::mem::swap(&mut self.ext, &mut b.ext);
+        std::mem::swap(&mut self.state_timer, &mut b.state_timer);
+        std::mem::swap(&mut self.was_framed, &mut b.was_framed);
+    }
+
+    /// Whether box `b` holds the same, bit for bit.
+    fn same(&self, b: &CmSubject) -> bool {
+        use crate::state_eq::StateEq;
+        self.ext.state_diff(&b.ext).is_none()
+            && self.state_timer == b.state_timer
+            && self.was_framed == b.was_framed
+    }
+}
+
+/// What a fighter's camera box is fitted to (`ftCamera_UpdateCameraBox`, `ft::camera`'s
+/// `Running::update_camera_box`) but its camera bone's point: its extents' horizontal targets,
+/// its facing and its position.
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct BoxFit {
+    pub h: [f32; 2],
+    pub facing: f32,
+    pub pos: Vec3,
+}
+
+impl BoxFit {
+    /// What box `b` holds of it.
+    pub fn of(b: &CmSubject) -> BoxFit {
+        BoxFit {
+            h: [b.target_ext.h.x, b.target_ext.h.y],
+            facing: b.facing_dir,
+            pos: b.pos,
+        }
+    }
+
+    /// Fits box `b`, which is then off no ledge.
+    pub fn put(&self, b: &mut CmSubject) {
+        b.target_ext.h.x = self.h[0];
+        b.target_ext.h.y = self.h[1];
+        b.facing_dir = self.facing;
+        b.pos = self.pos;
+        b.on_ledge = false;
+    }
+}
+
+/// What a camera update moves of the game camera itself, but for the quakes and the bounds'
+/// width average (which `live::PlaybackCamera` follows): both transforms, the quake's shake and
+/// the offset it takes (which the quake's model writes, [`set_quake_offset`], and the update
+/// clears), and the 1P zoom's step, zoom and distance. Playback's, followed beside this camera while
+/// the two differ under Slippi's rules ([`CameraState::followed`]).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Course {
+    pub transform: CameraTransformState,
+    pub transform_copy: CameraTransformState,
+    pub translation: super::structs::Vec2,
+    pub quake_offset: super::structs::Vec2,
+    /// The 1P zoom's step timer, zoom and distance (`x2BA`, `x2BC`, `x2C0`).
+    pub zoom_step: i16,
+    pub zoom: f32,
+    pub zoom_distance: f32,
+}
+
+impl Course {
+    /// What camera `c` holds.
+    pub fn of(c: &Camera) -> Course {
+        Course {
+            transform: c.transform.clone(),
+            transform_copy: c.transform_copy.clone(),
+            translation: c.translation.clone(),
+            quake_offset: c.quake_offset.clone(),
+            zoom_step: c.x2BA,
+            zoom: c.x2BC,
+            zoom_distance: c.x2C0,
+        }
+    }
+
+    /// Trades places with what camera `c` holds.
+    fn swap(&mut self, c: &mut Camera) {
+        std::mem::swap(&mut self.transform, &mut c.transform);
+        std::mem::swap(&mut self.transform_copy, &mut c.transform_copy);
+        std::mem::swap(&mut self.translation, &mut c.translation);
+        std::mem::swap(&mut self.quake_offset, &mut c.quake_offset);
+        std::mem::swap(&mut self.zoom_step, &mut c.x2BA);
+        std::mem::swap(&mut self.zoom, &mut c.x2BC);
+        std::mem::swap(&mut self.zoom_distance, &mut c.x2C0);
+    }
+
+    /// Whether camera `c` holds the same, bit for bit.
+    fn same(&self, c: &Camera) -> bool {
+        use crate::state_eq::StateEq;
+        self.transform.state_diff(&c.transform).is_none()
+            && self.transform_copy.state_diff(&c.transform_copy).is_none()
+            && self.translation.state_diff(&c.translation).is_none()
+            && self.quake_offset.state_diff(&c.quake_offset).is_none()
+            && self.zoom_step == c.x2BA
+            && self.zoom.to_bits() == c.x2BC.to_bits()
+            && self.zoom_distance.to_bits() == c.x2C0.to_bits()
+    }
 }
 
 impl Index<CameraBoxId> for CameraBoxes {
     type Output = CmSubject;
     fn index(&self, b: CameraBoxId) -> &CmSubject {
         &self.boxes[b.0 as usize]
+    }
+}
+
+impl CameraBoxes {
+    /// Box `b`'s extents made its targets, as a fighter's box is fitted when it enters
+    /// (`ftCamera_80076064`) and Poké Floats' boxes when they're made: in playback's followed
+    /// camera too ([`CameraBoxes::followed`]), whose boxes the same code fits.
+    pub fn fit_extents(&mut self, b: CameraBoxId) {
+        let x = &mut self[b];
+        x.ext.h = x.target_ext.h.clone();
+        x.ext.v = x.target_ext.v;
+        let ext = x.ext.clone();
+        if let Some(f) = self.followed.get_mut(b.0 as usize) {
+            f.ext = ext;
+        }
     }
 }
 
@@ -134,6 +274,12 @@ pub struct CameraState {
     pub fov: f32,
     /// The debug cameras' state (`cm_80453004`).
     pub debug: CameraDebugMode,
+    /// Under Slippi's rules, playback's camera while it has left this one's course (design
+    /// call 9 of `docs/slippi-ruleset.md`): from playback's first frame, which snaps its camera
+    /// where a live match's eases, and from a pause, which playback never makes, until the two
+    /// meet bit for bit ([`start_following`], [`update`]). Its boxes' part is
+    /// [`CameraBoxes::followed`].
+    pub followed: Option<Course>,
 }
 
 /// The camera's frame for one update (`CameraBounds`, a stack local in the original): the
@@ -418,6 +564,10 @@ pub fn reset_box(boxes: &mut CameraBoxes, b: Option<CameraBoxId>, state: i32) {
     s.target_ext = s.ext.clone();
     s.x54 = Vec3::ZERO;
     s.x60 = Vec3::ZERO;
+    let reset = Eased::of(s);
+    if let Some(f) = boxes.followed.get_mut(b.0 as usize) {
+        *f = reset;
+    }
 }
 
 /// Takes a free camera box and appends it to the framed list, reset with `state`,
@@ -1026,11 +1176,20 @@ pub fn apply_quake(game: &mut Game, b: &Bounds, which: Which) {
     c.quake_offset.y = 0.0;
 }
 
-/// `Camera_SetQuakeOffset`.
+/// `Camera_SetQuakeOffset`: in playback's followed camera too ([`CameraState::followed`]),
+/// whose quake the same model shakes.
 #[doc(alias = "Camera_SetQuakeOffset")]
-pub fn set_quake_offset(c: &mut Camera, x: f64, y: f64) {
-    c.quake_offset.x = mem(x);
-    c.quake_offset.y = mem(y);
+pub fn set_quake_offset(state: &mut CameraState, x: f64, y: f64) {
+    for o in [
+        Some(&mut state.cam.quake_offset),
+        state.followed.as_mut().map(|f| &mut f.quake_offset),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        o.x = mem(x);
+        o.y = mem(y);
+    }
 }
 
 /// Moves this frame's quake requests to last frame's, counts the quakes down, and frees the
@@ -1250,8 +1409,9 @@ fn update_zoom_distance(c: &mut Camera) {
     }
 }
 
-/// Eases both transforms toward their targets and applies the quake.
-fn update_eases(r: &mut Running, b: &Bounds, b_copy: &Bounds) {
+/// Eases both transforms toward their targets and applies the quake; with `ours`, counts the
+/// quakes down ([`standard`]).
+fn update_eases(r: &mut Running, b: &Bounds, b_copy: &Bounds, ours: bool) {
     zoom_on_player(r.game, Which::Main);
     let speed = reg(r.game.stage_info.cam_info.cam_track_smooth);
     let c = &mut r.game.camera.cam;
@@ -1260,7 +1420,9 @@ fn update_eases(r: &mut Running, b: &Bounds, b_copy: &Bounds) {
     ease_eye(&mut c.transform, speed);
     ease_interest(b_copy, &mut c.transform_copy, speed, zoom);
     ease_eye(&mut c.transform_copy, speed);
-    update_quakes(r);
+    if ours {
+        update_quakes(r);
+    }
     apply_quake(r.game, b, Which::Main);
 }
 
@@ -1302,14 +1464,23 @@ fn add_width(avg: &mut f32, sum: &mut f32, count: &mut i16, width: f64) {
 /// quake.
 #[doc(alias = "Camera_8002B3D4")]
 pub fn update_standard(r: &mut Running) {
+    standard(r, true);
+}
+
+/// [`update_standard`]; without `ours`, the update of playback's camera followed beside this
+/// one ([`update`]), which leaves out the quakes' countdown and the width average:
+/// `live::PlaybackCamera` follows them, and they move nothing else the update moves.
+fn standard(r: &mut Running, ours: bool) {
     clear_translation(&mut r.game.camera.cam);
     ease_extents(&mut r.game.camera.boxes, &r.game.stage_info);
     update_zoom(r.game);
     let b = update_transform(r.game, Which::Main);
     let b_copy = update_transform(r.game, Which::Copy);
     update_zoom_distance(&mut r.game.camera.cam);
-    update_eases(r, &b, &b_copy);
-    update_average_width(r.game);
+    update_eases(r, &b, &b_copy, ours);
+    if ours {
+        update_average_width(r.game);
+    }
 }
 
 /// The camera's process (`fn_8002F360`): its mode's update.
@@ -1318,9 +1489,17 @@ pub fn proc(r: &mut Running, _gobj: GObjId) {
     update(r);
 }
 
-/// The current mode's update, through the mode table `cm_803BCB18`.
+/// The current mode's update, through the mode table `cm_803BCB18`. Under Slippi's rules,
+/// while playback's camera is followed apart from this one ([`CameraState::followed`]), it
+/// takes the same update first, but in the pause, which playback never makes; and once the
+/// two hold the same, bit for bit, it's dropped.
 pub fn update(r: &mut Running) {
-    match r.game.camera.cam.mode {
+    let mode = r.game.camera.cam.mode;
+    let follows = r.game.camera.followed.is_some() && mode != PAUSE;
+    if follows {
+        follow(r, mode);
+    }
+    match mode {
         STANDARD => update_standard(r),
         PAUSE => update_pause(r),
         TRAINING_MENU => update_training(r),
@@ -1331,6 +1510,131 @@ pub fn update(r: &mut Running) {
         DEBUG_FOLLOW | DEBUG_FREE => {}
         m => panic!("camera mode {m} reads past the mode table"),
     }
+    if follows && r.game.display_phase.shake.is_none() && meets(&r.game.camera) {
+        stop_following(&mut r.game.camera);
+    }
+}
+
+// Playback's camera, followed (design call 9 of `docs/slippi-ruleset.md`).
+
+/// Starts following playback's camera beside this one, from where this one stands
+/// ([`CameraState::followed`]): playback's first frame snaps it where a live match's eases
+/// (`live`'s `Running::playback_camera_settles`), a pause leaves it where playback, which
+/// never pauses, has it ([`set_up_pause`]).
+pub fn start_following(state: &mut CameraState) {
+    state.followed = Some(Course::of(&state.cam));
+    let b = &mut state.boxes;
+    b.followed.clear();
+    b.followed.extend(b.boxes.iter().map(Eased::of));
+}
+
+/// Stops following playback's camera: it holds what this one holds.
+pub fn stop_following(state: &mut CameraState) {
+    state.followed = None;
+    state.boxes.followed.clear();
+}
+
+/// Trades what the camera and its framed boxes hold with what playback's followed one holds,
+/// `f` its camera's part.
+fn swap_followed(state: &mut CameraState, f: &mut Course) {
+    f.swap(&mut state.cam);
+    let b = &mut state.boxes;
+    let mut cur = b.last;
+    while let Some(i) = cur {
+        let x = &mut b.boxes[i.0 as usize];
+        b.followed[i.0 as usize].swap(x);
+        cur = x.prev;
+    }
+}
+
+/// Runs `f` on playback's followed camera, standing in for this one: what a camera update
+/// moves of it ([`Course`], [`Eased`] for the framed boxes) is playback's, the rest this one's.
+/// Nothing when it isn't followed.
+pub fn with_followed<R>(r: &mut Running, f: impl FnOnce(&mut Running) -> R) -> Option<R> {
+    let mut course = r.game.camera.followed.take()?;
+    swap_followed(&mut r.game.camera, &mut course);
+    let out = f(r);
+    swap_followed(&mut r.game.camera, &mut course);
+    r.game.camera.followed = Some(course);
+    Some(out)
+}
+
+/// Playback's followed camera takes mode `mode`'s update ([`update`]): the standard camera's
+/// and the fixed one's, a match's. Any other mode (a single-player mode's, training's, the
+/// debug cameras', none of which a live match runs) the follower doesn't run: it stops, and
+/// the camera's readers are counted from then on, as playback's camera isn't known
+/// (`live::DisplayPhase::lost`).
+fn follow(r: &mut Running, mode: i32) {
+    match mode {
+        STANDARD => {
+            with_followed(r, |r| standard(r, false));
+        }
+        FIXED => {
+            with_followed(r, |r| fixed(r, false));
+        }
+        _ => lose_followed(r.game),
+    }
+}
+
+/// Playback's camera can't be followed further: it's lost (`live::DisplayPhase::lost`).
+pub fn lose_followed(game: &mut Game) {
+    stop_following(&mut game.camera);
+    game.display_phase.lost = true;
+}
+
+/// Playback's first frame's settling's [`snap`] on its followed camera standing in for this one
+/// ([`with_followed`]; `live`'s `Running::playback_camera_settles`): the mode's update, the
+/// quakes and the width average left to `live::PlaybackCamera`, and both transforms jumped to
+/// their targets.
+pub fn settle_followed(r: &mut Running) {
+    match r.game.camera.cam.mode {
+        STANDARD => standard(r, false),
+        FIXED => fixed(r, false),
+        m => unreachable!("the follower settles in camera mode {m}, which it doesn't follow"),
+    }
+    let c = &mut r.game.camera.cam;
+    jump(&mut c.transform, &mut c.transform_copy);
+}
+
+/// Whether playback's followed camera takes mode `mode`'s update ([`follow`]).
+pub fn follows_mode(mode: i32) -> bool {
+    matches!(mode, STANDARD | FIXED)
+}
+
+/// Whether playback's followed camera holds what this one does, bit for bit: from then on
+/// both take the same updates from the same state.
+fn meets(state: &CameraState) -> bool {
+    let Some(f) = &state.followed else {
+        return false;
+    };
+    if !f.same(&state.cam) {
+        return false;
+    }
+    let b = &state.boxes;
+    let mut cur = b.last;
+    while let Some(i) = cur {
+        let x = &b.boxes[i.0 as usize];
+        if !b.followed[i.0 as usize].same(x) {
+            return false;
+        }
+        cur = x.prev;
+    }
+    true
+}
+
+/// The view a display pass would give the game camera's CObj ([`pass_view`]) from playback's
+/// followed camera, and through `which` transform (the second CObj's for [`Which::Copy`]);
+/// none when it isn't followed.
+pub fn followed_view(game: &mut Game, which: Which) -> Option<View> {
+    let mut f = game.camera.followed.take()?;
+    f.swap(&mut game.camera.cam);
+    let v = match which {
+        Which::Main => pass_view(game),
+        Which::Copy => Some(aimed(game, Which::Copy)),
+    };
+    f.swap(&mut game.camera.cam);
+    game.camera.followed = Some(f);
+    v
 }
 
 // The camera objects.
@@ -2510,6 +2814,8 @@ pub fn set_up_pause(game: &mut Game, mut slot: i8, mut pauser: i8, zoom_preset: 
     if !(0..4).contains(&pauser) && (pauser.wrapping_sub(4) as u8) > 1 {
         pauser = 4;
     }
+    // Under Slippi's rules playback's camera, which never pauses, goes on from here.
+    game.pause_leaves_course();
     let s = &game.stage_info;
     let c = &mut game.camera.cam;
     c.mode = PAUSE;
@@ -2898,6 +3204,11 @@ pub fn set_up_clear(game: &mut Game, slot: i8) {
 /// eye, interest and field of view.
 #[doc(alias = "Camera_8002DDC4")]
 pub fn update_fixed(r: &mut Running) {
+    fixed(r, true);
+}
+
+/// [`update_fixed`]; without `ours`, playback's followed camera's, as [`standard`].
+fn fixed(r: &mut Running, ours: bool) {
     let game = &mut *r.game;
     clear_translation(&mut game.camera.cam);
     let s = &game.stage_info;
@@ -2925,7 +3236,9 @@ pub fn update_fixed(r: &mut Running) {
         z_pos: math::sqrt(mem(sq)),
         ..Bounds::default()
     };
-    update_quakes(r);
+    if ours {
+        update_quakes(r);
+    }
     apply_quake(r.game, &b, Which::Main);
 }
 
@@ -3430,7 +3743,16 @@ pub fn script_hold_eye(c: &mut Camera) {
 pub fn snap(r: &mut Running) {
     update(r);
     let c = &mut r.game.camera.cam;
-    for t in [&mut c.transform, &mut c.transform_copy] {
+    jump(&mut c.transform, &mut c.transform_copy);
+    // Playback's followed camera took the update too, and jumps the same way.
+    if let Some(f) = &mut r.game.camera.followed {
+        jump(&mut f.transform, &mut f.transform_copy);
+    }
+}
+
+/// Both transforms jump to their targets ([`snap`]).
+pub fn jump(main: &mut CameraTransformState, copy: &mut CameraTransformState) {
+    for t in [main, copy] {
         t.position = t.target_position;
         t.interest = t.target_interest;
         t.fov = t.target_fov;
