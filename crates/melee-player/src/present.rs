@@ -652,6 +652,7 @@ pub struct GpuDone {
     send: Option<mpsc::Sender<(u64, wgpu::SubmissionIndex)>>,
     done: mpsc::Receiver<(u64, Instant)>,
     next: u64,
+    thread: Option<std::thread::JoinHandle<()>>,
 }
 
 impl GpuDone {
@@ -659,7 +660,7 @@ impl GpuDone {
         let (send, frames) = mpsc::channel::<(u64, wgpu::SubmissionIndex)>();
         let (tell, done) = mpsc::channel();
         let device = device.clone();
-        std::thread::Builder::new()
+        let thread = std::thread::Builder::new()
             .name("gpu-done".into())
             .spawn(move || {
                 for (id, index) in frames {
@@ -677,6 +678,7 @@ impl GpuDone {
             send: Some(send),
             done,
             next: 0,
+            thread: Some(thread),
         }
     }
 
@@ -697,8 +699,13 @@ impl GpuDone {
 
 impl Drop for GpuDone {
     fn drop(&mut self) {
-        // The thread ends with its channel.
+        // The thread ends with its channel. It's waited for (a second at most, its wait's
+        // timeout) because it holds the device, whose last reference mustn't drop while the
+        // process exits: on Linux NVIDIA's driver crashes there.
         self.send = None;
+        if let Some(t) = self.thread.take() {
+            let _ = t.join();
+        }
     }
 }
 
