@@ -117,7 +117,7 @@ pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 /// `itKabigon_Logic2_Destroyed`: the small quake its drop started stops.
 #[doc(alias = "itKabigon_Logic2_Destroyed")]
 pub fn destroyed(r: &mut Running, _gobj: GObjId) {
-    camera::stop_quake(&mut r.game.camera.cam, QUAKE_SMALL);
+    camera::stop_quake(r.game, QUAKE_SMALL);
 }
 
 /// Forgets a GObj going away, `it_802C9E24` (`it_8026B894`).

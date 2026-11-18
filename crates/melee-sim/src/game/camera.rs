@@ -1037,24 +1037,59 @@ pub fn set_quake_offset(c: &mut Camera, x: f64, y: f64) {
 /// looping quake's model once only others remain, `Camera_UpdateQuakes`.
 #[doc(alias = "Camera_UpdateQuakes")]
 pub fn update_quakes(r: &mut Running) {
+    // Under Slippi's rules, playback's camera's (`live::PlaybackCamera`): the same update but
+    // in the pause, and once more for each settling update of playback's first frame.
+    let follows = r.game.rules.slippi;
+    if follows {
+        let g = &mut *r.game;
+        let p = &mut g.display_phase.playback;
+        p.take(&g.camera.cam);
+        if g.camera.cam.mode != PAUSE {
+            for _ in 0..=p.settles_quakes {
+                if count_quakes_down(&mut p.quake_frames) {
+                    p.quake_model = false;
+                }
+            }
+        }
+        p.settles_quakes = 0;
+    }
     let c = &mut r.game.camera.cam;
     for i in 0..16 {
         c.quakes[1][i] = c.quakes[0][i].clone();
         c.quakes[0][i].kind = QUAKE_NONE;
     }
-    let mut remaining = -1;
-    for i in 0..QUAKE_KINDS {
-        if c.quake_frames_left[i] != 0 {
-            c.quake_frames_left[i] = c.quake_frames_left[i].wrapping_sub(1);
-            remaining = i as i32;
-        }
-    }
-    if remaining != -1
+    if count_quakes_down(&mut c.quake_frames_left)
         && let Some(g) = c.quake_gobj
-        && c.quake_frames_left[QUAKE_LOOP as usize] == 0
     {
         crate::hsd::gobj::free(r, g);
         r.game.camera.cam.quake_gobj = None;
+    }
+    if follows && r.game.camera.cam.mode != PAUSE {
+        note_quake_model(r.game);
+    }
+}
+
+/// Counts the quakes down: whether the looping quake's model goes (its count reaching 0 while
+/// some count ran this update).
+fn count_quakes_down(frames: &mut [i32; QUAKE_KINDS]) -> bool {
+    let mut remaining = -1;
+    for (i, f) in frames.iter_mut().enumerate() {
+        if *f != 0 {
+            *f = f.wrapping_sub(1);
+            remaining = i as i32;
+        }
+    }
+    remaining != -1 && frames[QUAKE_LOOP as usize] == 0
+}
+
+/// Under Slippi's rules, the looping quake's model standing in the match and not in playback
+/// or the other way (a pause whose camera ran the standard update counted the quakes down
+/// where playback didn't): the read that creates or frees it decides otherwise in playback,
+/// counted (`live::PlaybackCamera`, design call 9).
+fn note_quake_model(game: &mut Game) {
+    if game.camera.cam.quake_gobj.is_some() != game.display_phase.playback.quake_model {
+        let tick = game.scene.unk_8;
+        game.display_phase.note(tick);
     }
 }
 
@@ -1233,15 +1268,34 @@ fn update_eases(r: &mut Running, b: &Bounds, b_copy: &Bounds) {
 /// thousand frames.
 fn update_average_width(game: &mut Game) {
     let s = &game.stage_info;
-    let c = &mut game.camera.cam;
-    if c.x2B8 > 1000 {
-        c.x2B4 = c.x2B0;
-        c.x2B8 = 1;
-    }
     let left = cam_left(s);
-    c.x2B4 = mem(fp::fadds(reg(c.x2B4), fp::fsubs(cam_right(s), left)));
-    c.x2B8 = c.x2B8.wrapping_add(1);
-    c.x2B0 = mem(fp::fdivs(reg(c.x2B4), fp::frsp(f64::from(c.x2B8))));
+    let width = fp::fsubs(cam_right(s), left);
+    // Under Slippi's rules, playback's camera's (`live::PlaybackCamera`): the same update but
+    // in the pause, and once more for each settling update of playback's first frame.
+    if game.rules.slippi {
+        let c = &game.camera.cam;
+        let p = &mut game.display_phase.playback;
+        p.take(c);
+        if c.mode != PAUSE {
+            for _ in 0..=p.settles_width {
+                add_width(&mut p.width, &mut p.width_sum, &mut p.width_count, width);
+            }
+        }
+        p.settles_width = 0;
+    }
+    let c = &mut game.camera.cam;
+    add_width(&mut c.x2B0, &mut c.x2B4, &mut c.x2B8, width);
+}
+
+/// One update of the width average `avg`, its sum and count by `width`.
+fn add_width(avg: &mut f32, sum: &mut f32, count: &mut i16, width: f64) {
+    if *count > 1000 {
+        *sum = *avg;
+        *count = 1;
+    }
+    *sum = mem(fp::fadds(reg(*sum), width));
+    *count = count.wrapping_add(1);
+    *avg = mem(fp::fdivs(reg(*sum), fp::frsp(f64::from(*count))));
 }
 
 /// The standard camera's frame, `Camera_8002B3D4`: frame every box, ease toward the framing,
@@ -1449,6 +1503,21 @@ pub fn set_quake_scale(c: &mut Camera, scale: f32) {
 #[doc(alias = "Camera_RequestQuake")]
 pub fn request_quake(r: &mut Running, kind: i32, pos: Option<Vec3>) {
     use super::gr::grlib::quake_model;
+    // Under Slippi's rules, the same request to playback's camera (`live::PlaybackCamera`):
+    // the looping quake's model made where it has none, and the count set.
+    if r.game.rules.slippi {
+        let g = &mut *r.game;
+        let p = &mut g.display_phase.playback;
+        p.take(&g.camera.cam);
+        if kind == QUAKE_LOOP && !p.quake_model {
+            p.quake_model = g.stage_info.quake_model_set.is_some();
+        }
+        if let Ok(k) = usize::try_from(kind)
+            && k < QUAKE_KINDS
+        {
+            p.quake_frames[k] = quake_length(kind);
+        }
+    }
     let length = match kind {
         QUAKE_LOOP => {
             if r.game.camera.cam.quake_gobj.is_none() {
@@ -1479,12 +1548,30 @@ pub fn request_quake(r: &mut Running, kind: i32, pos: Option<Vec3>) {
             q.epicenter = pos.unwrap_or(Vec3::ZERO);
         }
     }
+    if r.game.rules.slippi && kind == QUAKE_LOOP {
+        note_quake_model(r.game);
+    }
 }
 
-/// `Camera_StopQuake`.
+/// How long a quake of `kind` runs: the four quakes' lengths, 0 for another kind (whose count
+/// the original sets from a register it never wrote, [`request_quake`]).
+fn quake_length(kind: i32) -> i32 {
+    match kind {
+        QUAKE_LOOP => 10,
+        2..=4 => 22,
+        _ => 0,
+    }
+}
+
+/// `Camera_StopQuake` (and, under Slippi's rules, playback's camera's, `live::PlaybackCamera`).
 #[doc(alias = "Camera_StopQuake")]
-pub fn stop_quake(c: &mut Camera, kind: i32) {
-    c.quake_frames_left[kind as usize] = 0;
+pub fn stop_quake(game: &mut Game, kind: i32) {
+    if game.rules.slippi {
+        let p = &mut game.display_phase.playback;
+        p.take(&game.camera.cam);
+        p.quake_frames[kind as usize] = 0;
+    }
+    game.camera.cam.quake_frames_left[kind as usize] = 0;
 }
 
 /// The camera's GObj, `Camera_80030A50`.
@@ -3347,5 +3434,96 @@ pub fn snap(r: &mut Running) {
         t.position = t.target_position;
         t.interest = t.target_interest;
         t.fov = t.target_fov;
+    }
+}
+
+#[cfg(test)]
+mod playback_camera_tests {
+    use super::*;
+    use melee_data::archive::Archives;
+
+    /// Under Slippi's rules the width average playback's camera holds (`live::PlaybackCamera`)
+    /// takes every update but the pause's, and one more for each settling update of playback's
+    /// first frame; under Vanilla's nothing follows it.
+    #[test]
+    fn playback_camera_takes_the_width_but_the_pause() {
+        let run = |slippi: bool| {
+            let mut g = Box::<Game>::default();
+            g.rules.slippi = slippi;
+            g.stage_info.cam_info.cam_bounds.left = -170.0;
+            g.stage_info.cam_info.cam_bounds.right = 173.3;
+            let mut live = Vec::new();
+            for (mode, updates, settles) in [(STANDARD, 3, 2), (PAUSE, 5, 0), (STANDARD, 1100, 0)] {
+                g.camera.cam.mode = mode;
+                for i in 0..updates {
+                    g.display_phase.playback.settles_width = if i == 0 { settles } else { 0 };
+                    update_average_width(&mut g);
+                    live.push((g.camera.cam.x2B0, g.camera.cam.x2B4, g.camera.cam.x2B8));
+                }
+            }
+            (live, g.display_phase.playback)
+        };
+        let (live, p) = run(true);
+        // Playback's: the match's without the pause's five, with the settling's two.
+        let (mut avg, mut sum, mut count) = (0.0f32, 0.0f32, 0i16);
+        let width = fp::fsubs(reg(173.3), reg(-170.0));
+        for _ in 0..3 + 2 + 1100 {
+            add_width(&mut avg, &mut sum, &mut count, width);
+        }
+        assert!(p.on);
+        assert_eq!((p.width, p.width_sum, p.width_count), (avg, sum, count));
+        assert_ne!(*live.last().unwrap(), (avg, sum, count));
+        assert_eq!(p.settles_width, 0);
+        // Vanilla's camera is the same, and nothing follows it.
+        let (vanilla, q) = run(false);
+        assert_eq!(vanilla, live);
+        assert_eq!(q, Default::default());
+    }
+
+    /// Under Slippi's rules the quake counters playback's camera holds leave the pause's
+    /// countdown out: a pause whose camera runs the standard update counts the looping quake
+    /// down and frees its model, which playback still has; each update after the pause while
+    /// that lasts is noted, and none once playback's frees it too. A request after the pause
+    /// makes the model in both: nothing differs.
+    #[test]
+    fn playback_camera_keeps_the_quakes_the_pause_counts_down() {
+        let data = Archives::default();
+        let mut g = Box::<Game>::default();
+        g.rules.slippi = true;
+        let model = g.world.create(3, 18, 1);
+        g.camera.cam.quake_gobj = Some(model);
+        g.camera.cam.quake_frames_left[QUAKE_LOOP as usize] = 4;
+        let tick = |g: &mut Game, mode: i32, t: u32| {
+            g.camera.cam.mode = mode;
+            g.scene.unk_8 = t;
+            update_quakes(&mut Running {
+                game: g,
+                data: &data,
+            });
+            (
+                g.camera.cam.quake_gobj.is_some(),
+                g.display_phase.playback.quake_model,
+                g.display_phase.differing,
+            )
+        };
+        // The pause counts 4 down to 0 and frees the model; playback's doesn't move.
+        for t in 0..3 {
+            assert_eq!(tick(&mut g, PAUSE, t), (true, true, 0));
+        }
+        assert_eq!(tick(&mut g, PAUSE, 3), (false, true, 0));
+        // After it: playback's counts 4 down, its model standing for three updates.
+        assert_eq!(tick(&mut g, STANDARD, 4), (false, true, 1));
+        assert_eq!(tick(&mut g, STANDARD, 5), (false, true, 2));
+        assert_eq!(tick(&mut g, STANDARD, 6), (false, true, 3));
+        assert_eq!(tick(&mut g, STANDARD, 7), (false, false, 3));
+        assert_eq!(g.display_phase.first, Some(4));
+        assert_eq!(g.display_phase.playback.quake_frames, [0; QUAKE_KINDS]);
+        // Vanilla's pause frees it the same, and nothing is noted.
+        let mut v = Box::<Game>::default();
+        let model = v.world.create(3, 18, 1);
+        v.camera.cam.quake_gobj = Some(model);
+        v.camera.cam.quake_frames_left[QUAKE_LOOP as usize] = 1;
+        assert_eq!(tick(&mut v, PAUSE, 0), (false, false, 0));
+        assert_eq!(tick(&mut v, STANDARD, 1), (false, false, 0));
     }
 }

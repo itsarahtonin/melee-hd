@@ -566,6 +566,16 @@ impl Game {
             }
         }
     }
+
+    /// Whether playback's input code reaches fighter `gobj` (`stub_800055F8` skips a
+    /// sub-fighter whose character has no transformation).
+    pub fn playback_injects(&self, gobj: GObjId) -> bool {
+        let fp = &self.fighters[self.fighter_id(gobj).0];
+        !fp.is_sub_fighter
+            || super::pl::player::mapping(self.player_ckind(i32::from(fp.player_idx)))
+                .has_transformation
+                != 0
+    }
 }
 
 impl Running<'_> {
@@ -629,15 +639,11 @@ impl Running<'_> {
     ///
     /// The Gecko code at `0x8006B0DC`.
     pub fn playback_inject(&mut self, gobj: GObjId) {
+        if !self.game.playback_injects(gobj) {
+            return;
+        }
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        // `stub_800055F8`: a sub-fighter whose character has no transformation.
-        if fp.is_sub_fighter {
-            let ckind = self.game.player_ckind(i32::from(fp.player_idx));
-            if super::pl::player::mapping(ckind).has_transformation == 0 {
-                return;
-            }
-        }
         let port = usize::from(fp.player_idx);
         let pad_port = usize::from(fp.pad_port);
         let p = self.game.playback.as_ref().expect("a replay's match");
@@ -666,6 +672,8 @@ impl Running<'_> {
         s.substick_y = raw[3] as i8;
         if first {
             self.playback_settle_first_frame(gobj);
+        } else {
+            self.game.playback_camera_settles(gobj);
         }
     }
 

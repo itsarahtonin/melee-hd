@@ -362,6 +362,8 @@ pub fn launch(r: &mut Running, gobj: GObjId, chk: bool) {
 /// original returns no value; its callers ignore what it leaves.)
 #[doc(alias = "it_8027BA54")]
 pub fn toward_camera(r: &mut Running, gobj: GObjId) -> Vec3 {
+    // Under Slippi's rules, after a pause, counted (design call 9).
+    r.game.note_camera_read();
     let mut cam = crate::game::camera::position(&r.game.camera.cam);
     let f = reg(r.game.objs.rng.draw_f32());
     cam.x = mem(fp::frsp(fp::fmadd(10.0, fp::fsub(f, 0.5), reg(cam.x))));

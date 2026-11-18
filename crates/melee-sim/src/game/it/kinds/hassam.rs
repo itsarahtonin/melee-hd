@@ -335,6 +335,8 @@ pub fn fly_off(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 2, change::ANIM_UPDATE);
     effect_hitlag(r.game, gobj);
     bone_motion(r, gobj);
+    // Under Slippi's rules, after a pause, counted (design call 9).
+    r.game.note_camera_read();
     let cam = camera::position(&r.game.camera.cam);
     let mut d = cam - item(r.game, gobj).pos;
     d.normalize();

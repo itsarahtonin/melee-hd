@@ -213,6 +213,8 @@ pub fn start_swarms(r: &mut Running, gobj: GObjId) {
         }
     };
     let speed = attr_f32(r, gobj, 0x14);
+    // Under Slippi's rules, after a pause, counted (design call 9).
+    r.game.note_camera_read();
     let interest = camera::interest(&r.game.camera.cam);
     let v = pokemon::vars(r.game, gobj);
     v.set_i32(SIDE, side);

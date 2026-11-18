@@ -240,8 +240,17 @@ const PLACED: usize = 8;
 /// give is kept at each tick's end ([`Game::display_phase_tick_end`]), and each such read is
 /// also made through the other phase's view ([`DisplayPhase::other_view`]), a different
 /// outcome counted the same way (`gr::onett::proc_cars`, `gr::oldkongo::proc_birds`,
-/// `gr::oldpupupu::proc_flights`). After a pause on those stages, every such read is counted
+/// `gr::oldpupupu::proc_flights`). After a pause, every such read is counted
 /// ([`DisplayPhase::paused`]): the pause leaves the camera off the course playback's takes.
+///
+/// The pause reaches the camera's other readers in the logic too (`docs/engine.md`, "The
+/// camera's readers after a pause"): those that read its transform or its CObj count each
+/// read after a pause ([`Game::note_camera_read`]: Corneria's city part, Mute City's wrecked
+/// cars, the enemies flung toward the screen, Scizor, the Unown, Pokémon Stadium's close-up,
+/// a nearest-opponent read through a fighter the camera places); the width average and the
+/// quake counters, which a pause moves only where its camera runs the standard update, are
+/// followed as playback's camera has them ([`PlaybackCamera`]), and the bonuses' and the
+/// looping quake's reads of them are made both ways.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct DisplayPhase {
     /// The root translation the display pass last gave each fighter it places by the camera,
@@ -253,16 +262,73 @@ pub struct DisplayPhase {
     /// (`gm_80479D58.unk_0`) after the last.
     pub views: [Option<super::camera::View>; 2],
     pub view_tick: u32,
-    /// The game paused on such a stage: the camera's state has left the course a replay's
-    /// playback takes, which never pauses, for the rest of the match (`docs/slippi-bugs.md`,
-    /// "A paused match's recording"), and each read through its view is counted
-    /// ([`Game::view_read_off_course`]).
+    /// The game paused (under Slippi's rules, on any stage): the camera's state has left the
+    /// course a replay's playback takes, which never pauses, for the rest of the match
+    /// (`docs/slippi-bugs.md`, "A paused match's recording"), and each read through its view
+    /// or its transform is counted ([`Game::view_read_off_course`],
+    /// [`Game::note_camera_read`]).
     pub paused: bool,
     /// How many reads were counted: their outcomes differ between the two placements or
     /// phases, or they were made off playback's course.
     pub differing: u32,
     /// The game ticks of the scene (`gm_80479D58.unk_8`) at the first of them.
     pub first: Option<u32>,
+    /// The camera state playback's would hold that the logic reads besides the view.
+    pub playback: PlaybackCamera,
+}
+
+/// What playback's camera holds, under Slippi's rules, of the camera state the logic reads
+/// besides the view: the bounds' width average (`Camera.x2B0`, its sum `x2B4` and count
+/// `x2B8`, read by the bonuses, `pl::tally`) and the quake counters (`quake_frames_left`)
+/// with whether the looping quake's model stands (`quake_gobj`, which `Camera_RequestQuake`
+/// reads and `Camera_UpdateQuakes` frees). Each camera update moves them the same way in any
+/// mode but the pause's, which playback never runs; and playback's first frame settles each
+/// fighter with a camera update of its own (`Camera_8002F3AC`, `docs/slippi-bugs.md`,
+/// "Playback settles each fighter on the first frame, which live play doesn't"), which live
+/// play doesn't run. So they're followed here from the camera's, those updates added and the
+/// paused ones left out, and the reads made both ways.
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct PlaybackCamera {
+    /// Taken from the camera: at its first update, quake request or settling.
+    pub on: bool,
+    /// The width average, its sum and count.
+    pub width: f32,
+    pub width_sum: f32,
+    pub width_count: i16,
+    /// The quake counters, and whether the looping quake's model stands.
+    pub quake_frames: [i32; 5],
+    pub quake_model: bool,
+    /// Playback's settling updates in this tick that the width average and the quake counters
+    /// haven't taken yet (the settling runs in the fighters' input, before the camera's own
+    /// process; cleared at the tick's end, as a mode that doesn't run one leaves it).
+    pub settles_width: u8,
+    pub settles_quakes: u8,
+}
+
+impl PlaybackCamera {
+    /// Takes the camera's state, the first time.
+    pub fn take(&mut self, c: &super::structs::Camera) {
+        if self.on {
+            return;
+        }
+        *self = PlaybackCamera {
+            on: true,
+            width: c.x2B0,
+            width_sum: c.x2B4,
+            width_count: c.x2B8,
+            quake_frames: c.quake_frames_left,
+            quake_model: c.quake_gobj.is_some(),
+            ..*self
+        };
+    }
+
+    /// The width average as `Camera_80030E10` reads it: 10000 before the first update.
+    pub fn average_width(&self) -> f32 {
+        if self.width_count < 1 {
+            return 10000.0;
+        }
+        self.width
+    }
 }
 
 impl DisplayPhase {
@@ -340,16 +406,54 @@ impl Game {
             )
     }
 
-    /// A tick's end, its tick counts done ([`DisplayPhase::tick_end`]).
+    /// A tick's end, its tick counts done ([`DisplayPhase::tick_end`]); under Slippi's rules,
+    /// in the pause camera's mode, the camera off playback's course from now on
+    /// ([`DisplayPhase::paused`]).
     pub fn display_phase_tick_end(&mut self) {
         if self.keeps_display_views() {
             let due = super::camera::pass_view(self);
             let tick = self.scene.unk_0;
             self.display_phase.tick_end(tick, due);
-            if self.camera.cam.mode == super::camera::PAUSE {
-                self.display_phase.paused = true;
-            }
         }
+        if self.rules.slippi && self.camera.cam.mode == super::camera::PAUSE {
+            self.display_phase.paused = true;
+        }
+        let p = &mut self.display_phase.playback;
+        p.settles_width = 0;
+        p.settles_quakes = 0;
+    }
+
+    /// A read in the logic of the game camera's transform or CObj, under Slippi's rules:
+    /// after a pause, which leaves them off playback's course ([`Game::view_read_off_course`]),
+    /// it's counted ([`DisplayPhase::note`]) whatever it decides. Playback's camera isn't
+    /// followed (that would take a second run of the camera's update over its own boxes, its
+    /// quakes and playback's first frame's settling), so the read can't be made both ways.
+    pub fn note_camera_read(&mut self) {
+        if self.rules.slippi && self.view_read_off_course() {
+            let tick = self.scene.unk_8;
+            self.display_phase.note(tick);
+        }
+    }
+
+    /// Fighter `gobj`'s input in a match where playback's first frame's settling doesn't run
+    /// (a live match, or a replay played without it): under Slippi's rules, on that frame,
+    /// the camera update the settling would run for the fighter is added to what
+    /// [`PlaybackCamera`] follows (`playback::playback_inject`, whose fighters it settles).
+    pub fn playback_camera_settles(&mut self, gobj: crate::hsd::gobj::GObjId) {
+        let Some(p) = self.playback.as_ref() else {
+            return;
+        };
+        if !self.rules.slippi
+            || p.frame_index != super::playback::FIRST_FRAME
+            || !(p.live || p.no_settling)
+            || !self.playback_injects(gobj)
+        {
+            return;
+        }
+        let c = &mut self.display_phase.playback;
+        c.take(&self.camera.cam);
+        c.settles_width = c.settles_width.wrapping_add(1);
+        c.settles_quakes = c.settles_quakes.wrapping_add(1);
     }
 
     /// Whether a read in the logic through the game camera's view is off playback's course

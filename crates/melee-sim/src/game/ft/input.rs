@@ -232,6 +232,8 @@ impl Running<'_> {
         // Playback's input code (a live match, as Slippi Dolphin's live play, runs none of it).
         if self.game.replay_drives() {
             self.playback_inject(gobj);
+        } else {
+            self.game.playback_camera_settles(gobj);
         }
         crate::game::record::pre_frame(self.game, gobj);
         let fp = &mut self.game.fighters[f.0];

@@ -1614,9 +1614,12 @@ fn city_part_at(game: &Game, x: f64) -> i32 {
     panic!("grcorneria.c: no city part under x {x} (the original's assertion)")
 }
 
-/// Which city part the camera looks at, `grCorneria_801E08CC`.
+/// Which city part the camera looks at, `grCorneria_801E08CC`. Under Slippi's rules a read
+/// after a pause is counted (`Game::note_camera_read`, design call 9): the camera's interest
+/// is off playback's course then.
 #[doc(alias = "grCorneria_801E08CC")]
-pub fn city_under_camera(game: &Game) -> i32 {
+pub fn city_under_camera(game: &mut Game) -> i32 {
+    game.note_camera_read();
     let cam = super::super::camera::interest(&game.camera.cam);
     city_part_at(game, reg(cam.x))
 }
