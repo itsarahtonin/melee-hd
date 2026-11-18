@@ -19,6 +19,9 @@ mod depth_copy_tests;
 mod depth_tests;
 mod encode;
 pub mod gpu_time;
+pub mod mesh;
+#[cfg(test)]
+mod mesh_tests;
 #[cfg(test)]
 mod scaled_copy_tests;
 pub mod testing;
@@ -1510,7 +1513,17 @@ impl Renderer {
     /// A vertex at `screen` in the EFB (the screen position of `o`, or a line's or point's
     /// corner beside it), back in clip space for the GPU to clip as the GameCube does.
     fn gpu_vertex(o: &Output, screen: [f32; 3], off: (f32, f32), vp: &Viewport) -> GpuVertex {
-        let w = o.clip[3];
+        GpuVertex {
+            pos: Self::gpu_position(o.clip, screen, off, vp),
+            c0: o.color[0],
+            c1: o.color[1],
+            tex: o.tex,
+        }
+    }
+
+    /// [`Renderer::gpu_vertex`]'s position.
+    fn gpu_position(clip: [f32; 4], screen: [f32; 3], off: (f32, f32), vp: &Viewport) -> [f32; 4] {
+        let w = clip[3];
         let (hw, hh) = (EFB_WIDTH as f32 / 2.0, EFB_HEIGHT as f32 / 2.0);
         let x = snap(screen[0] - off.0) / hw - 1.0;
         let y = 1.0 - snap(screen[1] - off.1) / hh;
@@ -1518,14 +1531,9 @@ impl Renderer {
         let (x, y) = if x.is_finite() && y.is_finite() {
             (x * w, y * w)
         } else {
-            (o.clip[0] * vp.wd / hw, -o.clip[1] * vp.ht / hh)
+            (clip[0] * vp.wd / hw, -clip[1] * vp.ht / hh)
         };
-        GpuVertex {
-            pos: [x, y, o.clip[2] + w, w],
-            c0: o.color[0],
-            c1: o.color[1],
-            tex: o.tex,
-        }
+        [x, y, clip[2] + w, w]
     }
 
     /// The pipeline and uniforms' mode for the state's blending and depth.
@@ -2589,6 +2597,23 @@ impl Renderer {
         }
         if let Some(d) = &d {
             self.draw_outs(state, draw.primitive, &built, d, mem);
+        }
+        self.built = built;
+    }
+
+    /// Draws a mesh (the fast renderer's display list, decoded once) with the state as it
+    /// stands, as the list's draws would be drawn.
+    pub fn draw_mesh(&mut self, state: &State, mesh: &mesh::Mesh, mem: &dyn Memory) {
+        let t = self.profile.is_some().then(std::time::Instant::now);
+        self.draws_this_frame += 1;
+        let mut built = std::mem::take(&mut self.built);
+        built.clear();
+        let d = mesh::build(state, mesh, &mut self.scratch, &mut built);
+        if let (Some(p), Some(t)) = (&mut self.profile, t) {
+            p.xform += t.elapsed();
+        }
+        if let Some(d) = &d {
+            self.draw_outs(state, 0x90, &built, d, mem);
         }
         self.built = built;
     }

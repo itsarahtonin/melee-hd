@@ -11,7 +11,7 @@ use std::time::{Duration, Instant};
 use melee_sim::game::state::Cosmetic;
 
 use super::exact::Exact;
-use super::{Adapter, FrameRenderer, device, renderer};
+use super::{Adapter, FrameRenderer, Which, device, renderer};
 use crate::native::{self, View};
 
 /// One frame's times.
@@ -72,12 +72,13 @@ pub fn measure(
     out
 }
 
-/// `melee-render-check bench DISC REPLAY [--scale N] [--from A] [--to B] [--one-thread]
-/// [--adapter NAME|fallback]`
+/// `melee-render-check bench DISC REPLAY [--renderer exact|fast] [--scale N] [--from A] [--to B]
+/// [--one-thread] [--adapter NAME|fallback]`
 pub fn cli(args: &[String]) -> ExitCode {
     let (disc, replay) = (&args[1], &args[2]);
     let (mut scale, mut from, mut to, mut threaded) = (1u32, 600u32, 1800u32, true);
     let mut adapter = Adapter::Default;
+    let mut which = Which::Exact;
     let mut rest = args[3..].iter();
     while let Some(a) = rest.next() {
         let mut num = |what: &str| -> u32 {
@@ -90,6 +91,7 @@ pub fn cli(args: &[String]) -> ExitCode {
             "--from" => from = num("--from"),
             "--to" => to = num("--to"),
             "--one-thread" => threaded = false,
+            "--renderer" => which = Which::parse(rest.next().expect("--renderer NAME")),
             "--adapter" => adapter = Adapter::parse(rest.next().expect("--adapter NAME")),
             other => panic!("bench: unknown argument {other}"),
         }
@@ -103,8 +105,20 @@ pub fn cli(args: &[String]) -> ExitCode {
     };
     let mut r = renderer(&dev, &queue, view);
     r.xfb_readback = false;
-    let mut exact = Exact::new(r, threaded);
+    let mut exact = match which {
+        Which::Exact => Exact::new(r, threaded),
+        Which::Fast => Exact::fast(r, threaded),
+    };
     let times = measure(disc, replay, from, to, &mut exact);
+    if let Some((s, (n, bytes))) = exact.meshes() {
+        println!(
+            "meshes: {n} kept, {:.1} MB; display lists drawn from a kept mesh {}, decoded {}, as the stream has them {}",
+            bytes as f64 / 1e6,
+            s.hits,
+            s.decoded,
+            s.streamed
+        );
+    }
     let n = times.len();
     let (build, submit, cpu, gpu, total) = (
         stats(times.iter().map(|t| t.build).collect()),
