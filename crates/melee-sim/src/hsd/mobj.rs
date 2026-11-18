@@ -255,10 +255,27 @@ fn give_heap<T: Copy + Default, const N: usize>(
     }
 }
 
-/// `melee_derive::CloneFrom`'s copy, field by field, except that a restore first keeps the
-/// heap storage of the compiled TEVs it would drop (slots past the source's, materials the
-/// source hasn't compiled) as spares, and gives a spare's to the lists it would otherwise
-/// allocate (the source's longer than fit inline, where the target's are inline).
+/// Readies a list to be written with `n` items: a spare's heap storage when they won't fit
+/// inline, else its own heap storage kept as a spare.
+fn fit<T: Copy + Default, const N: usize>(
+    list: &mut InlineVec<T, N>,
+    n: usize,
+    spares: &mut Vec<Vec<T>>,
+) {
+    if n > N {
+        give_heap(list, n, spares);
+    } else {
+        keep_heap(list, spares);
+    }
+}
+
+/// `melee_derive::CloneFrom`'s copy, field by field, except that a restore first keeps as
+/// spares the heap storage of the compiled TEVs that won't need it (slots past the source's,
+/// materials the source hasn't compiled or whose lists fit inline), and gives a spare's to the
+/// lists it would otherwise allocate (the source's longer than fit inline, where the target's
+/// are inline). So a list is on the heap only while it holds more than fits inline, and the
+/// rest of the heap storage stays free for the compiles after the restore: storage left in a
+/// slot whose list fits would be out of their reach until that slot was reused.
 impl Clone for MObjs {
     fn clone(&self) -> Self {
         MObjs {
@@ -276,9 +293,12 @@ impl Clone for MObjs {
         let theirs = source.pool.stored();
         let ours = self.pool.stored_mut();
         for (i, m) in ours.iter_mut().enumerate() {
-            let compiled = theirs.get(i).is_some_and(|m| m.tev.is_some());
-            if !compiled && let Some(tev) = &mut m.tev {
+            let Some(tev) = &mut m.tev else { continue };
+            let t = theirs.get(i).and_then(|m| m.tev.as_ref());
+            if t.is_none_or(|t| t.stages.len() <= STAGES_INLINE) {
                 keep_heap(&mut tev.stages, &mut self.spare_stages);
+            }
+            if t.is_none_or(|t| t.cnsts.len() <= CNSTS_INLINE) {
                 keep_heap(&mut tev.cnsts, &mut self.spare_cnsts);
             }
         }
@@ -554,9 +574,13 @@ pub fn compile_tev(objs: &mut Objects, m: Option<MObjId>) {
     }
     let mobjs = &mut objs.mobjs;
     let mut tev = mobjs[m].tev.take().unwrap_or_default();
-    // Stages past what fit inline go to the heap: a spare's storage where there is one.
-    give_heap(&mut tev.stages, num, &mut mobjs.spare_stages);
+    // Lists longer than fit inline go to the heap, a spare's storage where there is one; a list
+    // that fits gives its heap storage up for the next long compile.
+    let cnsts = s.list.num_cnsts();
+    fit(&mut tev.stages, num, &mut mobjs.spare_stages);
+    fit(&mut tev.cnsts, cnsts, &mut mobjs.spare_cnsts);
     s.list.describe(num, &order, &mut tev);
+    debug_assert_eq!(tev.cnsts.len(), cnsts);
     // `TExp2TevDesc` writes no map or coordinates for a stage that samples a texture: its
     // piece keeps what it held there until the first setup.
     let at = mobjs[m].heap.tevdesc;
