@@ -247,6 +247,12 @@ pub struct Session {
     /// The live match's own archives by name, as its start loaded them (`vs_match::Match`'s
     /// `files`), while it runs.
     pub live_files: Vec<(String, melee_data::archive::ArchiveId)>,
+    /// Whether a live match runs the allocator model, laid out as Slippi's playback lays out
+    /// its heap (`Layout::slippi_playback`): the oracle's, which compares the match's addresses
+    /// with the console's run. Off by default, as in the player (design call 8 of
+    /// `docs/slippi-ruleset.md`, [`super::vs_match::Settings::live`]); the menus' session
+    /// always runs the model.
+    pub live_model: bool,
 }
 
 /// The menus' session set aside across a live match's scene ([`Session::aside`]).
@@ -491,6 +497,7 @@ impl Session {
             joiner_files: Default::default(),
             aside: None,
             live_files: Vec::new(),
+            live_model: false,
         }
     }
 
@@ -516,6 +523,7 @@ impl Session {
             joiner_files: Default::default(),
             aside: None,
             live_files: Vec::new(),
+            live_model: false,
         }
     }
 
@@ -1146,6 +1154,9 @@ impl Session {
             super::vs_match::Settings::live(&start).expect("the ruleset's code list's rules");
         settings.disc = self.setup.disc;
         settings.dsp = self.setup.dsp;
+        if self.live_model {
+            settings.heap = Some(crate::hsd::heap::Layout::slippi_playback());
+        }
         settings.record = self.game.recorder.is_some().then_some(setup);
         let mut m = super::vs_match::Match::start(&settings, &mut |n| console.file(n));
         m.game.go_on_from(&at);
