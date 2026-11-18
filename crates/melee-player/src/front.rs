@@ -1,8 +1,9 @@
 //! The player's front end (milestone 5's task 18, Sarah's call of 2026-10-28): melee-hd boots
 //! straight into Melee, and the window's only screen of its own is the settings panel, which
 //! Escape opens over the game, paused, and closes again. It holds what belongs to this
-//! machine and the player rather than the game: the display, the latency, the save's import,
-//! export and unlock-all, and recording; matches start from the game's own menus. The panel
+//! machine and the player rather than the game: the display, the latency, the ruleset Melee
+//! starts with, the save's import, export and unlock-all, and recording; matches start from the
+//! game's own menus. The panel
 //! is egui on the player's own device and window ([`crate::ui`]).
 //!
 //! The settings are kept in the settings folder's `settings.txt` (`key = value` lines; an
