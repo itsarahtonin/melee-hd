@@ -8,7 +8,10 @@
 //! a Slippi replay in Slippi Dolphin's). The match's files are read
 //! from the disc `SSBM_DISC` before the clock starts; the allocator model (`hsd::heap`) gives
 //! the fighters their addresses, as Slippi's playback lays the heap out (`MELEE_BENCH_HEAP=off`
-//! leaves the model off, to time what it costs). Each run is timed
+//! leaves the model off, to time what it costs). Nothing looks at the frames, so the display
+//! pass is the state-only one (`Display::state_only`: every state write, no draws built);
+//! `MELEE_BENCH_DRAWS=on` builds the draws, as the runs did before 2026-11-18 and as the
+//! player does. Each run is timed
 //! from the match's first tick to its last replay frame, and every frame's fighters (action
 //! state, position, facing, percent and stocks), sampled before its display pass, are checked
 //! against the replay's post-frame updates afterwards. It reports the median frames per second
@@ -106,6 +109,11 @@ impl Bench {
     }
 }
 
+/// Whether a headless run's display pass is the state-only one: unless `MELEE_BENCH_DRAWS=on`.
+pub(crate) fn state_only() -> bool {
+    !std::env::var("MELEE_BENCH_DRAWS").is_ok_and(|v| v == "on")
+}
+
 /// The frame a match's playback last counted.
 pub(crate) fn frame(m: &Match) -> i32 {
     m.game
@@ -178,6 +186,7 @@ fn run_once(b: &Bench, files: &mut Files) -> Run {
             };
         }
     };
+    m.game.objs.display.state_only = state_only();
     let mut device = Device(&b.replay);
     // A sample per frame, kept cheap inside the timed loop: compared afterwards.
     let frames = (b.last - FIRST_FRAME + 1) as usize;
@@ -307,7 +316,15 @@ fn version() -> String {
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "unknown commit".into());
-    format!("melee-hd {rev} (optimized, one core, {:?})", bench_fp())
+    let pass = if state_only() {
+        "state-only display pass"
+    } else {
+        "draws built"
+    };
+    format!(
+        "melee-hd {rev} (optimized, one core, {:?}, {pass})",
+        bench_fp()
+    )
 }
 
 pub fn main(args: &[String]) {

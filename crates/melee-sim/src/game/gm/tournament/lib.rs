@@ -873,8 +873,10 @@ impl Running<'_> {
             3 => lines_3(&b, x, y, w, h, r30, &mut q),
             _ => {}
         }
-        let draws = &mut self.game.objs.display.draws;
-        draws.extend(q.into_iter().map(Draw::Quad));
+        let d = &mut self.game.objs.display;
+        if d.drawing() {
+            d.draws.extend(q.into_iter().map(Draw::Quad));
+        }
     }
 
     /// `fn_8018E618`: the bracket's GObjs and camera made anew (every GObj of process links

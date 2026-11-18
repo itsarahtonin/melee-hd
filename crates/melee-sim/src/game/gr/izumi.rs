@@ -293,7 +293,6 @@ pub fn render_stars(r: &mut Running, gobj: GObjId, pass: i32) {
     r.game
         .objs
         .display
-        .draws
         .push(crate::hsd::display::Draw::PointSize(18, 0));
     r.render_stage_object(gobj, pass);
 }
@@ -758,7 +757,7 @@ pub fn render_reflection(r: &mut Running, gobj: GObjId) {
         cobj::set_interest(o, c, at);
     }
     if display::camera_begin(&mut r.game.objs, r.data, Some(c)) {
-        let draws = &mut r.game.objs.display.draws;
+        let draws = &mut r.game.objs.display;
         draws.push(display::Draw::EraseColor([0xFF, 0xFF, 0xFF, 1]));
         draws.push(display::Draw::Erase);
         lobj::delete_current_all(&mut r.game.objs, None);
@@ -774,11 +773,7 @@ pub fn render_reflection(r: &mut Running, gobj: GObjId) {
         r.render_links(gobj, 7);
         display::camera_end(&mut r.game.objs);
     }
-    r.game
-        .objs
-        .display
-        .draws
-        .push(display::Draw::ReflectionCopy);
+    r.game.objs.display.push(display::Draw::ReflectionCopy);
     // The copy's pixels in the image's buffer (docs/engine.md, the GPU's pixels).
     if let Some(rf) = &r.game.gr.izumi.reflection
         && rf.buffer != 0

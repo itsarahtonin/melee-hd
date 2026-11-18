@@ -148,6 +148,6 @@ pub fn set_camera(objs: &Objects, refract: &mut Refract, c: CObjId) {
 #[doc(alias = "lbRefract_80022560")]
 pub fn copy_screen(objs: &mut Objects, refract: &Refract) {
     if refract.users != 0 {
-        objs.display.draws.push(Draw::RefractCopy);
+        objs.display.push(Draw::RefractCopy);
     }
 }

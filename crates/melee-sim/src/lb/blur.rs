@@ -99,7 +99,7 @@ impl Running<'_> {
             panic!("the blur holds no camera");
         };
         display::camera_begin(&mut self.game.objs, self.data, Some(c));
-        self.game.objs.display.draws.push(Draw::Blur {
+        self.game.objs.display.push(Draw::Blur {
             pos: b.pos,
             scale: b.scale,
             alpha: b.base_alpha,

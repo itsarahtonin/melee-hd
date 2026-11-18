@@ -588,7 +588,7 @@ impl Running<'_> {
             other => panic!("a cutscene's camera holds {other:?}"),
         };
         if crate::hsd::display::camera_begin(&mut self.game.objs, self.data, c) {
-            let draws = &mut self.game.objs.display.draws;
+            let draws = &mut self.game.objs.display;
             draws.push(crate::hsd::display::Draw::EraseColor(erase));
             draws.push(crate::hsd::display::Draw::EraseWithDepth);
             self.vi_camera_passes(gobj);

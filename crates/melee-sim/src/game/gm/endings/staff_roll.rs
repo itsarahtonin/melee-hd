@@ -566,7 +566,7 @@ impl Running<'_> {
             .fog
             .expect("the staff roll's fog");
         let [r, g, b, _] = self.game.objs.fogs[fog].color;
-        let draws = &mut self.game.objs.display.draws;
+        let draws = &mut self.game.objs.display;
         draws.push(crate::hsd::display::Draw::EraseColor([r, g, b, 0xFF]));
         draws.push(crate::hsd::display::Draw::Erase);
         self.render_links(gobj, 7);

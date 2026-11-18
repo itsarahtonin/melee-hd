@@ -247,7 +247,6 @@ impl Running<'_> {
         self.game
             .objs
             .display
-            .draws
             .push(crate::hsd::display::Draw::IntroCopy {
                 image: n,
                 x: COPY_X,
@@ -294,7 +293,6 @@ impl Running<'_> {
         self.game
             .objs
             .display
-            .draws
             .push(crate::hsd::display::Draw::DepthQuad {
                 top: 0.0,
                 bottom: 480.0,

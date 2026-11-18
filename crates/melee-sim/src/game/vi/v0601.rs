@@ -67,7 +67,7 @@ impl Running<'_> {
     pub(crate) fn vi_run_camera_layers(&mut self, gobj: GObjId, erase: [u8; 4]) {
         let c = Some(self.vi_cobj(gobj));
         if crate::hsd::display::camera_begin(&mut self.game.objs, self.data, c) {
-            let draws = &mut self.game.objs.display.draws;
+            let draws = &mut self.game.objs.display;
             draws.push(crate::hsd::display::Draw::EraseColor(erase));
             draws.push(crate::hsd::display::Draw::EraseWithDepth);
             for (layer, prios) in [(2, 9), (1, 8), (0, 8)] {

@@ -317,7 +317,6 @@ impl Running<'_> {
             self.game
                 .objs
                 .display
-                .draws
                 .push(crate::hsd::display::Draw::StillPlanes(StillFrame {
                     file,
                     width: s.width,

@@ -378,13 +378,63 @@ pub struct Display {
     pub fighter: Option<FighterMaterial>,
     /// The debug text's drawing as its screens hand it on, reused frame to frame.
     pub devtext: Vec<crate::game::hud::devtext::Draw>,
+    /// The state-only pass (docs/refactor.md, "The state-only display pass"): the pass runs as
+    /// ever, every state write included, but builds no draws and none of their snapshots
+    /// ([`Display::OUTPUT`]), for runs that never look at the frame (headless runs, a
+    /// rollback's re-simulated ticks). Not state: a restore keeps the target's, a clone starts
+    /// it off.
+    #[clone_from(keep)]
+    pub state_only: bool,
+}
+
+impl Display {
+    /// The fields that are the pass's output for the presentation, beside the draws (taken
+    /// after each pass): the snapshots the draws name and the bookkeeping that names them,
+    /// which each screen pass starts afresh ([`start_frame`]) and only the draws read. The
+    /// state-only pass leaves them as [`start_frame`] left them.
+    pub const OUTPUT: &[&str] = &[
+        "draws",
+        "cameras",
+        "light_sets",
+        "shadow_tobjs",
+        "shadows_named",
+        "hilight_named",
+        "toon_named",
+        "fighter_flags_named",
+        "item_flags_named",
+    ];
+
+    /// Whether a path in the game's state (`state_eq::Diff::path`, `.objs.display.cameras[2]...`)
+    /// lies in the pass's output ([`Display::OUTPUT`]).
+    pub fn is_output(path: &str) -> bool {
+        path.strip_prefix(".objs.display.").is_some_and(|rest| {
+            Display::OUTPUT.iter().any(|f| {
+                rest.strip_prefix(f)
+                    .is_some_and(|r| r.is_empty() || r.starts_with(['.', '[', ':']))
+            })
+        })
+    }
+
+    /// Whether the pass builds its draws (not [`Display::state_only`]).
+    #[inline]
+    pub fn drawing(&self) -> bool {
+        !self.state_only
+    }
+
+    /// Appends a draw command, unless the pass is state-only.
+    #[inline]
+    pub fn push(&mut self, d: Draw) {
+        if !self.state_only {
+            self.draws.push(d);
+        }
+    }
 }
 
 /// Starts a render pass, `HSD_StartRender`: offscreen (a shadow's texture) or the screen.
 #[doc(alias = "HSD_StartRender")]
 pub fn set_offscreen(objs: &mut Objects, offscreen: bool) {
     objs.display.offscreen = offscreen;
-    objs.display.draws.push(Draw::Offscreen(offscreen));
+    objs.display.push(Draw::Offscreen(offscreen));
 }
 
 /// The transparency pass a GObj render pass draws, `HSD_GObj_80390EB8` (`HSD_GObj_804085F0`).
@@ -407,6 +457,9 @@ pub fn camera_begin(objs: &mut Objects, data: &Archives, c: Option<CObjId>) -> b
         objs.stale_reads += 1;
     }
     super::cobj::setup_viewing_mtx(objs, data, c);
+    if objs.display.state_only {
+        return true;
+    }
     let o = &objs.cobjs[c];
     let view = CameraView {
         viewport: o.viewport,
@@ -438,6 +491,9 @@ pub fn start_frame(objs: &mut Objects) {
 /// Names the toon texture's image a toon material is about to take ([`Draw::Toon`]), when it
 /// differs from the last named this frame.
 fn name_toon(objs: &mut Objects) {
+    if objs.display.state_only {
+        return;
+    }
     let image = objs.mobjs.toon.and_then(|t| objs.tobjs[t].imagedesc);
     let d = &mut objs.display;
     if d.toon_named != Some(image) {
@@ -449,6 +505,9 @@ fn name_toon(objs: &mut Objects) {
 /// Names the shadow textures a shadowed material is about to take ([`Draw::Shadows`]), when
 /// they differ from the last named this frame.
 fn name_shadows(objs: &mut Objects) {
+    if objs.display.state_only {
+        return;
+    }
     let d = &mut objs.display;
     let current = || objs.tobjs.chain(objs.mobjs.shadows);
     if let Some((start, len)) = d.shadows_named {
@@ -473,7 +532,7 @@ fn name_shadows(objs: &mut Objects) {
 /// The GObj whose render callback draws what follows, for the presentation
 /// ([`Draw::Rendering`]).
 pub fn rendering(objs: &mut Objects, g: Option<super::gobj::GObjId>) {
-    objs.display.draws.push(Draw::Rendering(g));
+    objs.display.push(Draw::Rendering(g));
 }
 
 /// `HSD_CObjEndCurrent`: draws the depth-sorted lists, which Melee never fills.
@@ -482,14 +541,14 @@ pub fn rendering(objs: &mut Objects, g: Option<super::gobj::GObjId>) {
 #[doc(alias = "_HSD_ZListDisp")]
 #[doc(alias = "_HSD_ZListClear")]
 pub fn camera_end(objs: &mut Objects) {
-    objs.display.draws.push(Draw::EndCamera);
+    objs.display.push(Draw::EndCamera);
 }
 
 /// `HSD_StateInvalidate`: HAL's state caches out of date for the parts `mask` names
 /// (`HSD_STATE_*`; -1 for all), for the presentation ([`Draw::Invalidate`]).
 #[doc(alias = "HSD_StateInvalidate")]
 pub fn state_invalidate(objs: &mut Objects, mask: u32) {
-    objs.display.draws.push(Draw::Invalidate(mask));
+    objs.display.push(Draw::Invalidate(mask));
 }
 
 /// `HSD_FogSet`: fog for what follows, or none. Fog needs a current camera.
@@ -498,7 +557,7 @@ pub fn fog_set(objs: &mut Objects, fog: Option<FogId>) {
     if fog.is_some() {
         assert!(objs.cobjs.current.is_some(), "You must specify CObj first.");
     }
-    objs.display.draws.push(Draw::Fog(fog));
+    objs.display.push(Draw::Fog(fog));
 }
 
 /// Draws a joint tree for transparency pass `trsp`, `HSD_JObjDispAll`: an instance joint
@@ -612,9 +671,7 @@ pub fn jobj_disp_dobj(
         "unkown type of billboard."
     );
     if objs.jobjs[j].class == super::heap::Class::FtJObj {
-        objs.display
-            .draws
-            .push(Draw::FighterJoint { jobj: j, vmtx });
+        objs.display.push(Draw::FighterJoint { jobj: j, vmtx });
     }
     for pass in [TRSP_OPA, TRSP_TEXEDGE, TRSP_XLU] {
         if bits & (pass << JOBJ_TRSP_SHIFT) != 0 {
@@ -636,9 +693,7 @@ pub fn jobj_disp_sub(
     jobj::set_current(objs, Some(j));
     if rendermode & RENDER_SHADOW == 0 && objs.jobjs[j].flags & jobj::SPECULAR != 0 {
         lobj_setup_specular_init(objs, j, vmtx);
-        objs.display
-            .draws
-            .push(Draw::SpecularInit { jobj: j, vmtx });
+        objs.display.push(Draw::SpecularInit { jobj: j, vmtx });
     }
     let dtrsp = trsp << DOBJ_TRSP_SHIFT;
     let mut d = match objs.jobjs[j].u {
@@ -700,6 +755,7 @@ fn material_setup(objs: &mut Objects, data: &Archives, m: MObjId) {
         // GX's.
         MObjClass::Hsd | MObjClass::Ground | MObjClass::Item => {
             if objs.mobjs[m].class == MObjClass::Item
+                && objs.display.drawing()
                 && let Some(f) = objs.display.item_flags
                 && objs.display.item_flags_named != Some(f)
             {
@@ -750,7 +806,7 @@ fn fighter_material(objs: &mut Objects, data: &Archives, m: MObjId) {
         .fighter
         .expect("a fighter's material drawn outside its fighter");
     let d = &mut objs.display;
-    if d.fighter_flags_named != Some(fm.flags) {
+    if d.drawing() && d.fighter_flags_named != Some(fm.flags) {
         d.fighter_flags_named = Some(fm.flags);
         d.draws.push(Draw::FighterFlags(fm.flags));
     }
@@ -830,7 +886,7 @@ fn texture_matrix(objs: &mut Objects, data: &Archives, t: TObjId) {
                 lobj::light_vector(objs, data, Some(l))
             });
             let d = &mut objs.display;
-            if d.hilight_named != Some(vector) {
+            if d.drawing() && d.hilight_named != Some(vector) {
                 d.hilight_named = Some(vector);
                 d.draws.push(Draw::Hilight(vector));
             }
@@ -896,7 +952,7 @@ pub fn pobj_disp(
         pobj::SHAPEANIM => shape_anim_buffers(objs, data, p),
         _ => {}
     }
-    objs.display.draws.push(Draw::Shape {
+    objs.display.push(Draw::Shape {
         jobj: j,
         dobj: d,
         pobj: p,
@@ -1049,6 +1105,9 @@ pub fn lobj_setup_init(objs: &mut Objects, data: &Archives, c: CObjId) {
 /// Names the lights [`setup_lights`] just set up for what follows ([`Draw::Lights`]), or
 /// for what follows the next material's render mode ([`Draw::LightsAfterRenderMode`]).
 fn push_light_set(objs: &mut Objects, c: CObjId, after_render_mode: bool) {
+    if objs.display.state_only {
+        return;
+    }
     let l = &objs.lobjs;
     let mut set = LightSet {
         nb_active: l.nb_active,

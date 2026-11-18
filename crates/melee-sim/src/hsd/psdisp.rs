@@ -100,7 +100,7 @@ fn update_app_srt(objs: &mut Objects, s: super::appsrt::AppSrtId, vmtx: &Mtx34, 
         }
         o.frame_num = frame;
         let (view, scale) = (o.view, o.view_scale);
-        objs.display.draws.push(super::display::Draw::AppSrt {
+        objs.display.push(super::display::Draw::AppSrt {
             srt: s,
             view,
             scale,

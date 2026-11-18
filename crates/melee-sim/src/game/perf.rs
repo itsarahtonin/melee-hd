@@ -560,6 +560,9 @@ impl Running<'_> {
             .as_ref()
             .map_or(([0.0; 3], 0), |c| (c.perf_last(), c.frame_renew));
         self.game.perf.stats.update(last);
+        if !self.game.objs.display.drawing() {
+            return;
+        }
         let m = &self.game.audio.movie;
         let d = PerfDraw {
             items: self.game.perf.events.iter().map(|e| e.item).collect(),
@@ -571,7 +574,6 @@ impl Running<'_> {
         self.game
             .objs
             .display
-            .draws
             .push(crate::hsd::display::Draw::Perf(Box::new(d)));
     }
 }

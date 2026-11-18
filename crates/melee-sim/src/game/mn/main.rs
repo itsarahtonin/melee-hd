@@ -1304,7 +1304,7 @@ impl Running<'_> {
             panic!("the erase camera holds no CObj");
         };
         if crate::hsd::display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
-            let draws = &mut self.game.objs.display.draws;
+            let draws = &mut self.game.objs.display;
             draws.push(crate::hsd::display::Draw::EraseColor(rgba));
             draws.push(crate::hsd::display::Draw::EraseWithDepth);
             self.render_links(gobj, 7);

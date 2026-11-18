@@ -311,11 +311,7 @@ impl Running<'_> {
             if !display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
                 continue;
             }
-            self.game
-                .objs
-                .display
-                .draws
-                .push(Draw::MagnifierErase(i as u8));
+            self.game.objs.display.push(Draw::MagnifierErase(i as u8));
             self.game.world.rendering = Some(fg);
             display::rendering(&mut self.game.objs, Some(fg));
             for pass in 0..3 {
@@ -323,11 +319,7 @@ impl Running<'_> {
             }
             self.game.world.rendering = None;
             display::rendering(&mut self.game.objs, None);
-            self.game
-                .objs
-                .display
-                .draws
-                .push(Draw::MagnifierCopy(i as u8));
+            self.game.objs.display.push(Draw::MagnifierCopy(i as u8));
             // The GPU's pixels in the bubble's buffer, which the simulation never reads.
             let (at, size) = self.game.magnify_buffers[i];
             if at != 0 {

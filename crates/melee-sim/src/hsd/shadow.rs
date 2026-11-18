@@ -267,7 +267,7 @@ pub fn end_render(objs: &mut Objects, s: ShadowId, volume: bool) {
     if !img.allocated {
         set_size(objs, s, img.width, img.height);
     }
-    objs.display.draws.push(super::display::Draw::ShadowCopy(s));
+    objs.display.push(super::display::Draw::ShadowCopy(s));
     // The GPU's pixels in the texture's buffer, which the simulation never reads: for the heap's
     // image, a render target (docs/engine.md, "Uninitialized values"). Each byte is known to be
     // nonzero, or zero under the volume, once `HSD_ShadowStartRender` drew (its joints) and the

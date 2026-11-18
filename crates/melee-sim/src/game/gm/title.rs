@@ -421,7 +421,7 @@ impl Running<'_> {
         let rgba = self.data.u32(desc.at(0x10)).to_be_bytes();
         let d = crate::hsd::display::camera_begin(&mut self.game.objs, self.data, Some(c));
         if d {
-            let draws = &mut self.game.objs.display.draws;
+            let draws = &mut self.game.objs.display;
             draws.push(crate::hsd::display::Draw::EraseColor(rgba));
             draws.push(crate::hsd::display::Draw::EraseWithDepth);
             crate::hsd::display::camera_end(&mut self.game.objs);

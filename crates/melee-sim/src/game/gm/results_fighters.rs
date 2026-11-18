@@ -320,7 +320,6 @@ impl Running<'_> {
         self.game
             .objs
             .display
-            .draws
             .push(crate::hsd::display::Draw::ResultsCopy {
                 image: n,
                 x,
@@ -355,7 +354,6 @@ impl Running<'_> {
         self.game
             .objs
             .display
-            .draws
             .push(crate::hsd::display::Draw::EraseColor(c));
     }
 
@@ -403,7 +401,7 @@ impl Running<'_> {
         if k != 0 {
             let columns = s.x0_4 != 0;
             self.results_erase_color(slot);
-            self.game.objs.display.draws.push(Draw::Erase);
+            self.game.objs.display.push(Draw::Erase);
             self.camera_fighters(gobj, 0);
             self.results_copy(second, sx + x, sy + y, false);
             if !columns {
@@ -412,7 +410,7 @@ impl Running<'_> {
             // `HSD_CObjEraseScreen` erases in the erase color still set (HSD's global), which
             // the renderer takes per erase.
             self.results_erase_color(slot);
-            self.game.objs.display.draws.push(Draw::EraseFull);
+            self.game.objs.display.push(Draw::EraseFull);
             self.results_copy(SHARED_IMAGE, 0x10E, 0x7C, true);
             display::camera_end(&mut self.game.objs);
             if !columns {
@@ -428,11 +426,11 @@ impl Running<'_> {
             let s = &self.game.results.fighters.state;
             if done && s.player_flags[slot] == 0 && s.x0_6 != 0 {
                 self.results_erase_color(slot);
-                self.game.objs.display.draws.push(Draw::Erase);
+                self.game.objs.display.push(Draw::Erase);
                 self.camera_fighters(gobj, 0);
                 self.results_copy(second, sx + x, sy + y, false);
                 self.results_erase_color(slot);
-                self.game.objs.display.draws.push(Draw::EraseFull);
+                self.game.objs.display.push(Draw::EraseFull);
                 self.results_copy(SHARED_IMAGE, 0x10E, 0x7C, true);
                 display::camera_end(&mut self.game.objs);
                 self.game.results.fighters.state.player_flags[slot] = 1;
