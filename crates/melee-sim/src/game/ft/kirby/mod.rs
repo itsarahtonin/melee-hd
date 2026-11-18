@@ -646,14 +646,9 @@ pub(crate) mod attr {
     /// `specialn_pc_*`), laid out as `ftPikachuAttributes`' Thunder Jolt.
     pub const PK_JOLT: usize = 0x1C0;
     pub const PC_JOLT: usize = 0x1DC;
-    /// Captain Falcon's and Ganondorf's copies: the stick's range below which the aerial
-    /// punch doesn't angle and its top, the angle at the top, the lunge's speed and its
-    /// slowing.
-    pub const CA_X_RANGE: usize = 0x1F8;
-    pub const CA_Y_RANGE: usize = 0x1FC;
-    pub const CA_ANGLE_DIFF: usize = 0x200;
-    pub const CA_MOMENTUM: usize = 0x204;
-    pub const CA_MOMENTUM_MUL: usize = 0x208;
+    /// Captain Falcon's and Ganondorf's copies: where their attributes start
+    /// (`specialn_ca_*`), laid out as `ftCaptainAttributes`' punch.
+    pub const CA_PUNCH: usize = 0x1F8;
     /// Donkey Kong's copy: the swings to a full punch.
     pub const DK_SWINGS_TO_FULL: usize = 0x190;
     /// Fox's and Falco's copies: the shot's angle and speed, the aerial end's landing lag (none
