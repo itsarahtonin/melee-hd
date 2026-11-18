@@ -340,23 +340,23 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Kirby: Jigglypuff's copy keeps the roll's look when hit
 
-- **Where:** `ftKb_PrSetCallbacks` and `fn_80100E0C` (Rollout's hooks as Kirby rolls it), `crates/melee-sim/src/game/ft/kirby/special_purin.rs` (`kb_pr_roll_cbs`, `kb_pr_roll_hit`).
+- **Where:** `ftKb_PrSetCallbacks` and `fn_80100E0C` (Rollout's hooks as Kirby rolls it), `crates/melee-sim/src/game/ft/kirby/special_purin.rs` (`KIRBY`'s `on_death` and `on_damage`, which the shared Rollout's `ro_roll_cbs` and `rollout_hit` in `crates/melee-sim/src/game/ft/purin/special_n.rs` hook).
 - **Defect:** Jigglypuff's own Rollout hooks its roll's undo to her damage and death (`ftPr_SpecialS_8013D658`: the model's scale back, `TopN` turned back to her facing, the turn the stick asked for taken). Kirby's copy hooks his generic cleanups instead (`ftKb_Init_800EE7B8`, `ftKb_Init_800EE74C`), whose copy cleanup does nothing for Jigglypuff's copy, so nothing undoes the roll's look when he's hit or KO'd mid-roll.
 - **Effect:** hit in the four frames of a squash (the roll's start and each bounce), Kirby keeps the squashed model, and the bones his hurtboxes follow, until a later Rollout or something else sets his scale; `TopN` stays turned side-on and a turn the stick asked for is lost.
 - **melee-hd:** modeled.
 - **Fix:** hook the roll's undo, as Jigglypuff's own does.
 - **Fix impact:** changes Kirby's size after such a hit; breaks replay and Slippi compatibility where it happens.
-- **Source:** `crates/melee-sim/src/game/ft/kirby/special_purin.rs:250`.
+- **Source:** `crates/melee-sim/src/game/ft/kirby/special_purin.rs:101`.
 
 ### Kirby: Jigglypuff's copy's landing dust takes the roll for the slope
 
-- **Where:** `ftKb_PrSpecialAirN_Coll` (Rollout landing from its bounces as Kirby rolls it), `crates/melee-sim/src/game/ft/kirby/special_purin.rs` (`kb_pr_special_air_n_charge_release_coll`).
+- **Where:** `ftKb_PrSpecialAirN_Coll` (Rollout landing from its bounces as Kirby rolls it), `crates/melee-sim/src/game/ft/purin/special_n.rs` (`rollout_air_release_coll`, under `KIRBY`'s `dust_from_roll`).
 - **Defect:** it works out the floor's angle and drops it, then hands the dust effect the roll's way (`mv.pr.specialn.x34`) and roll angle (`x14`) where Jigglypuff's own hands it her facing and the floor's angle.
 - **Effect:** the dust as he lands from a bounce is turned by his roll angle rather than laid along the floor; an effect only.
 - **melee-hd:** modeled.
 - **Fix:** pass his facing and the floor's angle.
 - **Fix impact:** none on gameplay.
-- **Source:** `crates/melee-sim/src/game/ft/kirby/special_purin.rs:1341`.
+- **Source:** `crates/melee-sim/src/game/ft/purin/special_n.rs:1332`.
 
 ### Mewtwo: a Shadow Ball field nothing stores
 

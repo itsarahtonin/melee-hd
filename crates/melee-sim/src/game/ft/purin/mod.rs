@@ -256,19 +256,7 @@ pub(crate) const PART_WAIST_N: i32 = 5;
 impl Running<'_> {
     /// A float of the fighter's `ftPurinAttributes`, `off` bytes in.
     pub(crate) fn purin_attr_f32(&self, f: FighterId, off: usize) -> f32 {
-        f32::from_bits(self.purin_attr_word(f, off))
-    }
-
-    pub(crate) fn purin_attr_i32(&self, f: FighterId, off: usize) -> i32 {
-        self.purin_attr_word(f, off) as i32
-    }
-
-    fn purin_attr_word(&self, f: FighterId, off: usize) -> u32 {
-        let a = self.game.fighters[f.0]
-            .dat_attrs
-            .expect("a fighter without attributes");
-        let b = &self.game.fighter_attrs[a.0];
-        u32::from_be_bytes(b[off..off + 4].try_into().unwrap())
+        self.char_attr_f32(f, off)
     }
 }
 
