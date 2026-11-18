@@ -1,0 +1,7 @@
+# Lets the person at the computer open the Wii U GameCube controller adapter (Nintendo's WUP-028,
+# or a Mayflash in Wii U mode), so melee-hd can read it. Install it once, then unplug the adapter
+# and plug it in again:
+#
+#   sudo cp 51-melee-hd-gcadapter.rules /etc/udev/rules.d/
+#   sudo udevadm control --reload-rules
+SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTRS{idVendor}=="057e", ATTRS{idProduct}=="0337", TAG+="uaccess"

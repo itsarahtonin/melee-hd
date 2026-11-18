@@ -1,7 +1,9 @@
 //! The Wii U GameCube controller adapter (WUP-028, and adapters that copy it, such as
 //! Mayflash's in Wii U mode), read raw over USB as Dolphin's GCAdapter reads it, not through
 //! SDL, which rescales the axes. On Windows it needs the WinUSB driver (Zadig installs it),
-//! which HIDUSBF can overclock to 1000 Hz. A thread keeps the latest report and sends rumble;
+//! which HIDUSBF can overclock to 1000 Hz; on Linux, a udev rule giving the user its device
+//! (`crates/melee-player/linux/51-melee-hd-gcadapter.rules`), and the kernel's HID driver is
+//! detached from it as it's opened. A thread keeps the latest report and sends rumble;
 //! [`Adapter::ports`] turns the report into what `PADRead` would return, with the origin
 //! calibration the console's SI and PAD library do. Ported from ssbm-rs's player.
 
@@ -23,6 +25,15 @@ const REPORT_LEN: usize = 37;
 const START: u8 = 0x13;
 /// Sets the four motors.
 const RUMBLE: u8 = 0x11;
+
+/// What the system needs before the adapter can be read, for the message when it can't.
+const NEEDS: &str = if cfg!(windows) {
+    "on Windows it needs the WinUSB driver (Zadig)"
+} else if cfg!(target_os = "linux") {
+    "on Linux it needs a udev rule that lets you open it (README.md's Controllers)"
+} else {
+    "it may need a driver or permission to open it"
+};
 
 // PADStatus buttons.
 const X: u16 = 0x0400;
@@ -95,9 +106,8 @@ impl Adapter {
                     said.clear();
                 } else {
                     let msg = format!(
-                        "input: found a GameCube adapter but can't read it ({e}); it needs the \
-                         WinUSB driver (Zadig) on Windows, and no other program (Dolphin) can \
-                         have it open"
+                        "input: found a GameCube adapter but can't read it ({e}); {NEEDS}, and \
+                         no other program (Dolphin) can have it open"
                     );
                     if msg != said {
                         eprintln!("{msg}");
@@ -112,8 +122,10 @@ impl Adapter {
     /// Reads reports until the adapter goes away or the player closes.
     fn read(&self, info: &nusb::DeviceInfo) -> Result<Infallible, String> {
         let device = info.open().wait().map_err(|e| e.to_string())?;
+        // On Linux the kernel's HID driver takes the adapter's interface as it's plugged in, so
+        // it's let go of first, as Dolphin does; elsewhere this is a plain claim.
         let intf = device
-            .claim_interface(0)
+            .detach_and_claim_interface(0)
             .wait()
             .map_err(|e| e.to_string())?;
         let mut out = intf
