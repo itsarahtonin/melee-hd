@@ -717,6 +717,57 @@ mod tests {
     const FROM: u64 = 1000;
     const TO: u64 = 4600;
 
+    /// A restore of the materials gives the compiled TEVs too long to hold inline the heap
+    /// storage of those it drops (`MObjs::clone_from`), so it allocates none for them; and a
+    /// snapshot copies the inline ones without allocating.
+    #[test]
+    fn materials_restore_long_tevs_into_spares() {
+        use melee_sim::hsd::mobj::{MObj, MObjs};
+        use melee_sim::hsd::texp::{STAGES_INLINE, TevDesc, TevStage};
+        let tev = |n: u32| {
+            let mut t = TevDesc::default();
+            t.stages.extend((0..n).map(|stage| TevStage {
+                desc: melee_sim::hsd::texp::tev::HsdTevDesc {
+                    stage,
+                    ..Default::default()
+                },
+                tobj: None,
+            }));
+            Some(t)
+        };
+        let long = STAGES_INLINE as u32 + 2;
+        let state = |a: Option<TevDesc>, b: Option<TevDesc>| {
+            let mut m = MObjs::default();
+            m.pool.alloc(MObj {
+                tev: a,
+                ..MObj::default()
+            });
+            m.pool.alloc(MObj {
+                tev: b,
+                ..MObj::default()
+            });
+            m
+        };
+        // A short TEV where the source has a long one, and a long one the source hasn't.
+        let ours = state(tev(2), tev(long));
+        let theirs = state(tev(long), None);
+        // The pool's own storage, which every copy of two slots allocates.
+        let empty = state(None, None);
+        let (_, slots, _) = counted(|| empty.clone());
+        let (copy, n, _) = counted(|| ours.clone());
+        assert_eq!(n, slots + 1, "the long TEV's storage");
+        let mut target = copy;
+        target.spare_stages.reserve_exact(256);
+        let ((), n, _) = counted(|| target.clone_from(&theirs));
+        assert_eq!(n, 0, "a restore's allocations");
+        assert_eq!(target.pool[0].tev, theirs.pool[0].tev);
+        assert_eq!(target.pool[1].tev, None);
+        // A snapshot of short TEVs only allocates the slots' storage.
+        let short = state(tev(2), tev(STAGES_INLINE as u32));
+        let (_, n, _) = counted(|| short.clone());
+        assert_eq!(n, slots);
+    }
+
     /// The "no allocations" target (`docs/performance.md`): each match played to `TO`, its
     /// state at `FROM` restored (a rollback), and every engine tick from there to `TO` played
     /// again, counting allocations: the restore and each tick make none.

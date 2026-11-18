@@ -16,6 +16,7 @@ pub mod audio;
 mod fpu;
 pub mod game;
 pub mod hsd;
+pub mod inline_vec;
 pub mod input;
 pub mod lb;
 pub mod math;

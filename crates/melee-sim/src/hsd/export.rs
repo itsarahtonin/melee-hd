@@ -771,8 +771,9 @@ pub fn pobj(objs: &Objects, img: &mut Image, p: PObjId) {
         for (i, set) in sets.iter().enumerate() {
             let Some(first) = set.first() else { continue };
             // `HSD_SList`: the next set's node, and the chain's first envelope.
-            let next = sets[i + 1..]
+            let next = sets
                 .iter()
+                .skip(i + 1)
                 .find_map(|s| s.first())
                 .map_or(0, |e| e.node);
             let mut l = Lay::new(first.node, 8);

@@ -1860,7 +1860,7 @@ impl Importer<'_> {
                     envs.push(env);
                     list = self.u32(list);
                 }
-                Binding::Envelopes(envs)
+                Binding::Envelopes(envs.into_iter().collect())
             }
             pobj::SHAPEANIM => {
                 let set_flags = self.u16(u);

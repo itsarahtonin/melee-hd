@@ -16,6 +16,7 @@ use super::aobj::{self, AObjId};
 use super::fobj::Value;
 use super::jobj;
 use super::pool::Pool;
+use super::texp::{CNSTS_INLINE, CnstReg, InlineVec, STAGES_INLINE, TevDesc, TevStage};
 use super::tobj::{self, Color, ImageRef, TOBJ_ANIM, TObjId, TObjs};
 use crate::fpu::{copy, mem, reg};
 
@@ -213,30 +214,51 @@ pub struct MObjs {
     /// Room the TEV compiles keep (`hsd::texp_heap`).
     #[clone_from(keep)]
     pub texp_scratch: super::texp_heap::Scratch,
-    /// Compiled TEV storage freed materials left, for later compiles to reuse: no state, so
-    /// a restore keeps the target's and a snapshot starts without.
+    /// Heap storage of compiled TEVs too long to hold inline ([`TevDesc`]) that a restore
+    /// would have dropped, for the restores and compiles that need some: no state, so a
+    /// restore keeps the target's and a snapshot starts without.
     #[clone_from(keep)]
-    pub spare_tev: Vec<super::texp::TevDesc>,
+    pub spare_stages: Vec<Vec<TevStage>>,
+    #[clone_from(keep)]
+    pub spare_cnsts: Vec<Vec<CnstReg>>,
 }
 
-/// How many freed materials' compiled TEV storage an [`MObjs`] keeps at most.
+/// How many spare lists of each kind an [`MObjs`] keeps at most.
 const SPARE_TEVS: usize = 256;
 
-impl MObjs {
-    /// Keeps a compiled TEV's storage for a later compile, up to [`SPARE_TEVS`].
-    fn keep_tev(&mut self, tev: super::texp::TevDesc) {
-        if self.spare_tev.len() < SPARE_TEVS {
-            if self.spare_tev.capacity() == 0 {
-                self.spare_tev.reserve_exact(SPARE_TEVS);
-            }
-            self.spare_tev.push(tev);
+/// Keeps a list's heap storage in `spares`, up to [`SPARE_TEVS`].
+fn keep_heap<T: Copy + Default, const N: usize>(
+    list: &mut InlineVec<T, N>,
+    spares: &mut Vec<Vec<T>>,
+) {
+    if spares.len() < SPARE_TEVS
+        && let Some(v) = list.take_heap()
+    {
+        if spares.capacity() == 0 {
+            spares.reserve_exact(SPARE_TEVS);
         }
+        spares.push(v);
     }
 }
 
-/// `melee_derive::CloneFrom`'s copy, field by field, except that a restore first moves the
-/// compiled TEVs it would drop (slots past the source's, materials the source hasn't
-/// compiled) to the spares and gives the materials it would compile anew a spare's storage.
+/// Gives a list a spare's heap storage when it is to hold `n` items, more than fit inline.
+fn give_heap<T: Copy + Default, const N: usize>(
+    list: &mut InlineVec<T, N>,
+    n: usize,
+    spares: &mut Vec<Vec<T>>,
+) {
+    if n > N
+        && !list.spilled()
+        && let Some(v) = spares.pop()
+    {
+        list.give_heap(v);
+    }
+}
+
+/// `melee_derive::CloneFrom`'s copy, field by field, except that a restore first keeps the
+/// heap storage of the compiled TEVs it would drop (slots past the source's, materials the
+/// source hasn't compiled) as spares, and gives a spare's to the lists it would otherwise
+/// allocate (the source's longer than fit inline, where the target's are inline).
 impl Clone for MObjs {
     fn clone(&self) -> Self {
         MObjs {
@@ -245,21 +267,27 @@ impl Clone for MObjs {
             toon: self.toon,
             shadows: self.shadows,
             texp_scratch: Default::default(),
-            spare_tev: Vec::new(),
+            spare_stages: Vec::new(),
+            spare_cnsts: Vec::new(),
         }
     }
 
     fn clone_from(&mut self, source: &Self) {
         let theirs = source.pool.stored();
-        for i in 0..self.pool.stored().len() {
+        let ours = self.pool.stored_mut();
+        for (i, m) in ours.iter_mut().enumerate() {
             let compiled = theirs.get(i).is_some_and(|m| m.tev.is_some());
-            if !compiled && let Some(tev) = self.pool.stored_mut()[i].tev.take() {
-                self.keep_tev(tev);
+            if !compiled && let Some(tev) = &mut m.tev {
+                keep_heap(&mut tev.stages, &mut self.spare_stages);
+                keep_heap(&mut tev.cnsts, &mut self.spare_cnsts);
             }
         }
-        for (ours, theirs) in self.pool.stored_mut().iter_mut().zip(theirs) {
-            if ours.tev.is_none() && theirs.tev.is_some() {
-                ours.tev = self.spare_tev.pop();
+        for (ours, theirs) in ours.iter_mut().zip(theirs) {
+            let Some(t) = &theirs.tev else { continue };
+            if t.stages.len() > STAGES_INLINE || t.cnsts.len() > CNSTS_INLINE {
+                let o = ours.tev.get_or_insert_with(TevDesc::default);
+                give_heap(&mut o.stages, t.stages.len(), &mut self.spare_stages);
+                give_heap(&mut o.cnsts, t.cnsts.len(), &mut self.spare_cnsts);
             }
         }
         self.pool.clone_from(&source.pool);
@@ -399,11 +427,12 @@ pub fn anim(objs: &mut Objects, data: &Archives, m: Option<MObjId>) {
 pub fn alloc(mobjs: &mut MObjs) -> MObjId {
     let addr = super::heap::class_alloc(super::heap::Class::MObj);
     // The slot to be reused still holds its last material's compiled TEV, unless a scene before
-    // left it: its storage is kept for a later compile.
+    // left it: heap storage it has is kept for a later compile.
     if let Some(slot) = mobjs.pool.reused_at(addr)
-        && let Some(tev) = mobjs.pool.get_mut(slot).and_then(|m| m.tev.take())
+        && let Some(tev) = mobjs.pool.get_mut(slot).and_then(|m| m.tev.as_mut())
     {
-        mobjs.keep_tev(tev);
+        keep_heap(&mut tev.stages, &mut mobjs.spare_stages);
+        keep_heap(&mut tev.cnsts, &mut mobjs.spare_cnsts);
     }
     MObjId(mobjs.pool.alloc_at(addr, MObj::default()))
 }
@@ -524,12 +553,9 @@ pub fn compile_tev(objs: &mut Objects, m: Option<MObjId>) {
         super::texp_heap::finish(objs, m, &s, num);
     }
     let mobjs = &mut objs.mobjs;
-    let mut tev = mobjs[m]
-        .tev
-        .take()
-        .or_else(|| mobjs.spare_tev.pop())
-        .unwrap_or_else(super::texp::TevDesc::with_room);
-    tev.make_room();
+    let mut tev = mobjs[m].tev.take().unwrap_or_default();
+    // Stages past what fit inline go to the heap: a spare's storage where there is one.
+    give_heap(&mut tev.stages, num, &mut mobjs.spare_stages);
     s.list.describe(num, &order, &mut tev);
     // `TExp2TevDesc` writes no map or coordinates for a stage that samples a texture: its
     // piece keeps what it held there until the first setup.
