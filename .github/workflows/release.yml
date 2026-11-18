@@ -1,0 +1,76 @@
+# Builds the player for Linux when a release tag (v*) is pushed and attaches it to the tag's
+# release as melee-hd-linux-x86_64.tar.gz: the program and the GameCube adapter's udev rule. The
+# Windows build (melee-hd.exe) is built and uploaded by hand; this workflow never touches it.
+#
+# It builds on the oldest Ubuntu runner GitHub offers, so the program needs only that glibc
+# (2.35) and runs on most distributions since 2022. It builds as `cargo run -p dist` does (the
+# dist profile, the source paths remapped), so the program names no runner folder.
+#
+# Run by hand (Actions, Release, Run workflow) it only builds and keeps the archive as the run's
+# artifact, without touching any release.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # cpal reads ALSA, gilrs reads udev.
+      - name: Linux packages
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends pkg-config libasound2-dev libudev-dev
+
+      - name: Toolchain
+        run: rustup toolchain install
+
+      # The dist tool stamps the channel and commit and remaps the paths; --out keeps the copy
+      # in the job's folder.
+      - name: Build
+        run: cargo run --locked --release -p dist -- --out "$RUNNER_TEMP/build"
+
+      - name: Package
+        run: |
+          set -eu
+          dir="$RUNNER_TEMP/pkg/melee-hd"
+          mkdir -p "$dir"
+          chmod 755 "$dir"
+          install -m 755 "$RUNNER_TEMP/build/melee-hd" "$dir/melee-hd"
+          install -m 644 crates/melee-player/linux/51-melee-hd-gcadapter.rules "$dir/"
+          install -m 644 LICENSE "$dir/LICENSE"
+          tar -C "$RUNNER_TEMP/pkg" --owner=0 --group=0 -czf "$RUNNER_TEMP/melee-hd-linux-x86_64.tar.gz" melee-hd
+          tar -tvzf "$RUNNER_TEMP/melee-hd-linux-x86_64.tar.gz"
+          # The newest glibc symbol the program needs.
+          objdump -T "$dir/melee-hd" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: melee-hd-linux-x86_64
+          path: ${{ runner.temp }}/melee-hd-linux-x86_64.tar.gz
+
+      # Adds the archive to the tag's release, making a draft release when the tag has none yet;
+      # an archive of the same name already there is replaced, other assets are left alone.
+      - name: Attach to the release
+        if: github.event_name == 'push'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -eu
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" --draft --verify-tag --title "$TAG" --notes ""
+          fi
+          gh release upload "$TAG" "$RUNNER_TEMP/melee-hd-linux-x86_64.tar.gz" --clobber

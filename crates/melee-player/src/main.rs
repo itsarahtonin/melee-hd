@@ -3572,6 +3572,15 @@ fn run(args: Args) -> ExitCode {
         // The player runs on a thread with a deep stack (see `main`), not the process's first.
         #[cfg(windows)]
         winit::platform::windows::EventLoopBuilderExtWindows::with_any_thread(&mut b, true);
+        // X11's and Wayland's are one switch; without it winit refuses any thread but the first.
+        #[cfg(any(
+            target_os = "linux",
+            target_os = "dragonfly",
+            target_os = "freebsd",
+            target_os = "netbsd",
+            target_os = "openbsd"
+        ))]
+        winit::platform::x11::EventLoopBuilderExtX11::with_any_thread(&mut b, true);
         b.build().expect("an event loop")
     };
     let gpu = present::Gpu::new();
