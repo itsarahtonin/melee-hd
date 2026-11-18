@@ -635,13 +635,9 @@ pub(crate) mod attr {
     /// Bowser's copy: his full fuel and flame.
     pub const KP_MAX_FUEL: usize = 0x124;
     pub const KP_FLAME_SCALE: usize = 0x12C;
-    /// Samus's copy: the shot's full charge (`specialn_ss_charge_time`).
+    /// Samus's copy: the shot's full charge (`specialn_ss_charge_time`), the first of her
+    /// attributes' layout from `ftSamusAttributes` x18 on.
     pub const SS_CHARGE_TIME: usize = 0x168;
-    /// The aerial shot's recoil per level, the frames per level, and the helpless fall's
-    /// landing lag after the aerial shot (none if 0).
-    pub const SS_RECOIL: usize = 0x16C;
-    pub const SS_FRAMES_PER_LEVEL: usize = 0x170;
-    pub const SS_FREEFALL: usize = 0x174;
     /// Pikachu's and Pichu's copies: where each one's attributes start (`specialn_pk_*`,
     /// `specialn_pc_*`), laid out as `ftPikachuAttributes`' Thunder Jolt.
     pub const PK_JOLT: usize = 0x1C0;

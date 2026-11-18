@@ -35,6 +35,7 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::ft::fox::ext as fox_ext;
+use melee_sim::game::ft::samus::special_n::SAMUS;
 use melee_sim::game::it::CLASS_ITEM;
 use melee_sim::game::it::kinds::{samusbomb, samuschargeshot, samusgrapple, samusmissile};
 use melee_sim::game::state::Running;
@@ -226,13 +227,15 @@ fn run_samus(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             g.samus_bomb_jump_start(gobj, f64::from(f1()), f2(), f3());
             return Ret::Nothing;
         }
-        "ftSs_SpecialLw_80129158" => return Ret::Int(u32::from(g.samus_shot_lost(Some(gobj)))),
-        "ftSs_SpecialN_801291A8" => {
-            return Ret::Int(u32::from(g.samus_left_charge(Some(gobj))));
+        "ftSs_SpecialLw_80129158" => {
+            return Ret::Int(u32::from(g.samus_shot_lost(Some(gobj), &SAMUS)));
         }
-        "ftSs_SpecialN_801292E4" => return Ret::Int(u32::from(g.samus_shot_appear(gobj))),
+        "ftSs_SpecialN_801291A8" => {
+            return Ret::Int(u32::from(g.samus_left_charge(Some(gobj), &SAMUS)));
+        }
+        "ftSs_SpecialN_801292E4" => return Ret::Int(u32::from(g.samus_shot_appear(gobj, &SAMUS))),
         "ftSs_SpecialS_8012A068" => return Ret::Int(g.samus_missiles(gobj) as u32),
-        "ftSs_SpecialN_801293BC" => g.samus_shot_fire(gobj),
+        "ftSs_SpecialN_801293BC" => g.samus_shot_fire(gobj, &SAMUS),
         // The beam's hooks on its fighter.
         "it_802BAC3C" | "it_802BAC80" | "it_802BACC4" => {
             if g.game.world.gobj(gobj).classifier == CLASS_ITEM {

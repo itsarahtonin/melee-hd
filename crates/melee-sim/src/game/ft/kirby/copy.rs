@@ -206,7 +206,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F19AC")]
     pub fn kb_copy_cleanup(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
-            13 => self.kb_ss_drop_charge(gobj),
+            13 => self.samus_drop_charge(gobj, &super::special_samus::KIRBY),
             1 | 22 => self.kb_fx_remove_blaster(gobj),
             8 => self.kb_ns_let_go(gobj),
             9 => self.kb_pe_cleanup(gobj),
@@ -225,7 +225,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F1A8C")]
     pub fn kb_copy_hit_cleanup(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
-            13 => self.kb_ss_drop_charge(gobj),
+            13 => self.samus_drop_charge(gobj, &super::special_samus::KIRBY),
             1 | 22 => self.kb_fx_remove_blaster(gobj),
             8 => self.kb_ns_let_go(gobj),
             9 => self.kb_pe_cleanup(gobj),

@@ -138,7 +138,7 @@ impl Running<'_> {
     pub fn kb_special_n_enter(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
             4 | 11 | 27..=30 | 32 => self.kb_n_enter(gobj),
-            13 => self.kb_ss_enter(gobj),
+            13 => self.samus_special_n_enter(gobj, &super::special_samus::KIRBY),
             1 | 22 => self.kb_fx_enter(gobj),
             0 | 21 => self.mr_special_n_enter(gobj, &super::special_mario::KIRBY),
             17 => self.lg_special_n_enter(gobj, &super::special_luigi::KIRBY),
@@ -166,7 +166,7 @@ impl Running<'_> {
     pub fn kb_special_air_n_enter(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
             4 | 11 | 27..=30 | 32 => self.kb_n_air_enter(gobj),
-            13 => self.kb_ss_air_enter(gobj),
+            13 => self.samus_special_air_n_enter(gobj, &super::special_samus::KIRBY),
             1 | 22 => self.kb_fx_air_enter(gobj),
             0 | 21 => self.mr_special_air_n_enter(gobj, &super::special_mario::KIRBY),
             17 => self.lg_special_air_n_enter(gobj, &super::special_luigi::KIRBY),

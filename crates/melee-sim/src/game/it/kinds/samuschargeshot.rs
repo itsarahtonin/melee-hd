@@ -11,6 +11,8 @@ use super::super::item::{article, change, change_state, pick_up, spawn_air};
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
+use crate::game::ft::samus::special_n::ChargeShot;
+use crate::game::ft::{kirby, samus};
 use crate::game::handles::CodeRef;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
@@ -24,6 +26,15 @@ use crate::vec::Vec3;
 
 /// `It_Kind_Samus_Charge`.
 pub const KIND: i32 = super::SAMUS_CHARGE;
+
+/// The Charge Shot its maker charges it with, by the shot's kind: Samus's or Kirby's copy's.
+fn maker_shot(kind: i32) -> Option<&'static ChargeShot> {
+    match kind {
+        KIND => Some(&samus::special_n::SAMUS),
+        KIRBY_SAMUS_CHARGE => Some(&kirby::special_samus::KIRBY),
+        _ => None,
+    }
+}
 /// `It_Kind_Kirby_SamusCharge`.
 const KIRBY_SAMUS_CHARGE: i32 = 151;
 
@@ -297,10 +308,8 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
         if let Some(maker) = v.xE00.get()
             && owner == Some(maker)
         {
-            match kind {
-                KIND => r.samus_shot_released(maker),
-                KIRBY_SAMUS_CHARGE => r.kb_ss_shot_released(maker),
-                _ => {}
+            if let Some(p) = maker_shot(kind) {
+                r.samus_shot_released(maker, p);
             }
         }
         item_mut(r.game, gobj)
@@ -362,30 +371,16 @@ pub fn animate_held(r: &mut Running, gobj: GObjId) -> bool {
     let (owner, kind) = (ip.owner, ip.kind);
     let maker = ip.xDD4_itemVar.samus_chargeshot().xE00.get();
     if maker.is_some() && owner == maker {
-        match kind {
-            KIND => {
-                if r.samus_shot_lost(maker) || r.samus_left_charge(maker) {
-                    return true;
-                }
-                let Some((charge, max)) = r.samus_charge_of(maker) else {
-                    return true;
-                };
-                let v = item_mut(r.game, gobj).xDD4_itemVar.samus_chargeshot();
-                v.xDEC.set(charge);
-                v.xDF0.set(max);
+        if let Some(p) = maker_shot(kind) {
+            if r.samus_shot_lost(maker, p) || r.samus_left_charge(maker, p) {
+                return true;
             }
-            KIRBY_SAMUS_CHARGE => {
-                if r.kb_ss_shot_lost(maker) || r.kb_ss_left_charge(maker) {
-                    return true;
-                }
-                let Some((charge, max)) = r.kb_ss_charge_of(maker) else {
-                    return true;
-                };
-                let v = item_mut(r.game, gobj).xDD4_itemVar.samus_chargeshot();
-                v.xDEC.set(charge);
-                v.xDF0.set(max);
-            }
-            _ => {}
+            let Some((charge, max)) = r.samus_charge_of(maker, p) else {
+                return true;
+            };
+            let v = item_mut(r.game, gobj).xDD4_itemVar.samus_chargeshot();
+            v.xDEC.set(charge);
+            v.xDF0.set(max);
         }
     }
     let v = item_mut(r.game, gobj).xDD4_itemVar.samus_chargeshot();
