@@ -394,6 +394,18 @@ pub struct Match {
 // The game stays boxed: a match is moved and copied on test threads' stacks.
 const _: () = assert!(std::mem::size_of::<Match>() <= 1024);
 
+// A ceiling on the game itself, 320.5 KiB today (328,232 bytes): a copy of it still lands in a
+// frame wherever a `Game` is built, unboxed or moved, and test threads have 2 MiB. It grew from
+// 121 KB to 325 KB between 2026-10-09 and 2026-11-05 (the menus and 1P modes; the largest step,
+// the Event Match and staff roll state, 26 KB) and 3 KB in the twelve days since. 352 KiB fits
+// one more step that size, not two.
+const _: () = assert!(
+    std::mem::size_of::<Game>() <= 352 << 10,
+    "Game outgrew its ceiling (docs/engine.md, the object state): box the new part (a large \
+     array or struct behind a Box, as Match boxes the game) or, if it must be inline, raise \
+     the ceiling knowingly after checking the tests on 2 MiB threads still fit"
+);
+
 impl Match {
     /// Starts a match: the boot's pad and frame-clock setup, the VS scene's setup
     /// (`gm_801A4BD4`) and entry (`gm_Scene_Vs_OnEnter`), loading the files the match's own

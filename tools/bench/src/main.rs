@@ -22,7 +22,7 @@
 //! the GPU's time by stage (`player.rs`).
 
 use std::alloc::{GlobalAlloc, Layout, System};
-use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
+use std::cell::Cell;
 use std::time::Instant;
 
 use melee_capture::import::Importer;
@@ -48,30 +48,39 @@ mod sync;
 mod win;
 
 /// Counts allocations and allocated bytes, so a clone's heap size and a tick's allocations can
-/// be measured.
+/// be measured. The counts are per thread: a test counting one thread's work isn't disturbed by
+/// tests running beside it (the simulation runs on one thread, so nothing it does is missed).
 struct Counting;
 
-static ALLOCS: AtomicUsize = AtomicUsize::new(0);
-static BYTES: AtomicUsize = AtomicUsize::new(0);
+thread_local! {
+    // `const`-initialized and without `Drop`, so they are plain thread-local storage: touching
+    // them never allocates (which would recurse into the allocator) or registers a destructor,
+    // and they stay usable while a thread is being torn down.
+    static ALLOCS: Cell<usize> = const { Cell::new(0) };
+    static BYTES: Cell<usize> = const { Cell::new(0) };
+}
+
+/// Counts an allocation of `bytes` on this thread.
+fn count(bytes: usize) {
+    if allocs::inside() {
+        return;
+    }
+    // `try_with`: an allocation can't panic, even if the storage were ever gone.
+    let _ = ALLOCS.try_with(|a| a.set(a.get().wrapping_add(1)));
+    let _ = BYTES.try_with(|b| b.set(b.get().wrapping_add(bytes)));
+    allocs::sample();
+}
 
 unsafe impl GlobalAlloc for Counting {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        if !allocs::inside() {
-            ALLOCS.fetch_add(1, Relaxed);
-            BYTES.fetch_add(layout.size(), Relaxed);
-            allocs::sample();
-        }
+        count(layout.size());
         unsafe { System.alloc(layout) }
     }
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
         unsafe { System.dealloc(ptr, layout) }
     }
     unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
-        if !allocs::inside() {
-            ALLOCS.fetch_add(1, Relaxed);
-            BYTES.fetch_add(new_size.saturating_sub(layout.size()), Relaxed);
-            allocs::sample();
-        }
+        count(new_size.saturating_sub(layout.size()));
         unsafe { System.realloc(ptr, layout, new_size) }
     }
 }
@@ -79,11 +88,15 @@ unsafe impl GlobalAlloc for Counting {
 #[global_allocator]
 static GLOBAL: Counting = Counting;
 
-/// Allocations and bytes `f` makes.
+/// Allocations and bytes `f` makes on this thread.
 fn counted<T>(f: impl FnOnce() -> T) -> (T, usize, usize) {
-    let (a, b) = (ALLOCS.load(Relaxed), BYTES.load(Relaxed));
+    let (a, b) = (ALLOCS.with(Cell::get), BYTES.with(Cell::get));
     let out = f();
-    (out, ALLOCS.load(Relaxed) - a, BYTES.load(Relaxed) - b)
+    (
+        out,
+        ALLOCS.with(Cell::get).wrapping_sub(a),
+        BYTES.with(Cell::get).wrapping_sub(b),
+    )
 }
 
 /// This machine, for the record: processor, cores, memory and Windows version.
