@@ -5,7 +5,7 @@ use super::super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
-    /// The states' empty callbacks.
+    /// The states' empty callbacks, and those of Kirby's copies of the Thunder Jolt.
     #[doc(alias = "ftPk_SpecialN_IASA")]
     #[doc(alias = "ftPk_SpecialAirN_IASA")]
     #[doc(alias = "ftPk_SpecialSStart_IASA")]
@@ -25,9 +25,11 @@ impl Running<'_> {
     #[doc(alias = "ftPk_SpecialAirHiStart1_IASA")]
     #[doc(alias = "ftPk_SpecialHiEnd_IASA")]
     #[doc(alias = "ftPk_SpecialAirHiEnd_IASA")]
+    #[doc(alias = "ftKb_PkSpecialN_IASA")]
+    #[doc(alias = "ftKb_PkSpecialAirN_IASA")]
     pub fn pk_nothing(&mut self, _gobj: GObjId) {}
 
-    /// Ground friction (`ft_80084F3C`).
+    /// Ground friction (`ft_80084F3C`), Kirby's Thunder Jolt's too.
     #[doc(alias = "ftPk_SpecialN_Phys")]
     #[doc(alias = "ftPk_SpecialSHold_Phys")]
     #[doc(alias = "ftPk_SpecialS0_Phys")]
@@ -36,6 +38,7 @@ impl Running<'_> {
     #[doc(alias = "ftPk_SpecialLwLoop0_Phys")]
     #[doc(alias = "ftPk_SpecialLwLoop1_Phys")]
     #[doc(alias = "ftPk_SpecialLwEnd_Phys")]
+    #[doc(alias = "ftKb_PkSpecialN_Phys")]
     pub fn pk_ground_friction(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
     }
@@ -50,8 +53,10 @@ impl Running<'_> {
         self.air_physics_no_drift(gobj);
     }
 
-    /// `ftPk_SpecialAirN_Phys`: air physics (`ft_80084DB0`).
+    /// `ftPk_SpecialAirN_Phys` (Kirby's `ftKb_PkSpecialAirN_Phys`): air physics
+    /// (`ft_80084DB0`).
     #[doc(alias = "ftPk_SpecialAirN_Phys")]
+    #[doc(alias = "ftKb_PkSpecialAirN_Phys")]
     pub fn pk_special_air_n_phys(&mut self, gobj: GObjId) {
         self.air_physics(gobj);
     }

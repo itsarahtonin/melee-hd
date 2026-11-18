@@ -642,20 +642,10 @@ pub(crate) mod attr {
     pub const SS_RECOIL: usize = 0x16C;
     pub const SS_FRAMES_PER_LEVEL: usize = 0x170;
     pub const SS_FREEFALL: usize = 0x174;
-    /// Pikachu's and Pichu's copies: the jolt's offsets on the ground and in the air, the
-    /// aerial throw's landing lag (none if 0), and the jolt's item kind.
-    pub const PK_OFFSET_X: usize = 0x1C0;
-    pub const PK_OFFSET_Y: usize = 0x1C4;
-    pub const PK_AIR_OFFSET_X: usize = 0x1C8;
-    pub const PK_AIR_OFFSET_Y: usize = 0x1CC;
-    pub const PK_AIR_LANDING_LAG: usize = 0x1D0;
-    pub const PK_ITKIND: usize = 0x1D4;
-    pub const PC_OFFSET_X: usize = 0x1DC;
-    pub const PC_OFFSET_Y: usize = 0x1E0;
-    pub const PC_AIR_OFFSET_X: usize = 0x1E4;
-    pub const PC_AIR_OFFSET_Y: usize = 0x1E8;
-    pub const PC_AIR_LANDING_LAG: usize = 0x1EC;
-    pub const PC_ITKIND: usize = 0x1F0;
+    /// Pikachu's and Pichu's copies: where each one's attributes start (`specialn_pk_*`,
+    /// `specialn_pc_*`), laid out as `ftPikachuAttributes`' Thunder Jolt.
+    pub const PK_JOLT: usize = 0x1C0;
+    pub const PC_JOLT: usize = 0x1DC;
     /// Captain Falcon's and Ganondorf's copies: the stick's range below which the aerial
     /// punch doesn't angle and its top, the angle at the top, the lunge's speed and its
     /// slowing.
