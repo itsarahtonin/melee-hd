@@ -477,6 +477,17 @@ pub fn decode(
     }
 }
 
+/// The position and texture matrix indices of a vertex that carries none, from the XF's
+/// matrix index registers (`xf_index`: MATINDEX_A and B).
+pub fn default_indices(xf_index: [u32; 2]) -> (u8, [u8; 8]) {
+    let mut tex_mtx = [0; 8];
+    for (i, m) in tex_mtx.iter_mut().enumerate() {
+        let reg = xf_index[usize::from(i >= 4)];
+        *m = (reg >> (6 * ((i % 4) + usize::from(i < 4))) & 0x3F) as u8;
+    }
+    ((xf_index[0] & 0x3F) as u8, tex_mtx)
+}
+
 /// A vertex format, read once for a draw's vertices ([`decode`]).
 pub struct Decoder {
     lo: u32,
@@ -513,11 +524,7 @@ impl Decoder {
             (bits(c, 14, 1), bits(c, 15, 3), bits(c, 18, 5)),
             (bits(c, 23, 1), bits(c, 24, 3), bits(c, 27, 5)),
         ];
-        let mut tex_mtx = [0; 8];
-        for (i, m) in tex_mtx.iter_mut().enumerate() {
-            let reg = xf_index[usize::from(i >= 4)];
-            *m = (reg >> (6 * ((i % 4) + usize::from(i < 4))) & 0x3F) as u8;
-        }
+        let (pos_mtx, tex_mtx) = default_indices(xf_index);
         Decoder {
             lo,
             hi,
@@ -529,7 +536,7 @@ impl Decoder {
             has_nrm: bits(lo, 11, 2) != 0,
             has_col0: bits(lo, 13, 2) != 0,
             has_col1: bits(lo, 15, 2) != 0,
-            pos_mtx: (xf_index[0] & 0x3F) as u8,
+            pos_mtx,
             tex_mtx,
         }
     }
