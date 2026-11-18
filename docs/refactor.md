@@ -275,6 +275,39 @@ Sizes: S a few days of one agent's work, M a subsystem, L more. Every refactor t
 
 **Start at once** (six agents): 1, 7's audit, 8, 10, and the fast renderer's F1 and F2 below. Then 2, 3 and 4 after 1 (in parallel: they touch different modules); 13 after 1; 5 and 6 after the Slippi ruleset's tasks 5b and 6 merge; 11 after 10; the rename waves between merges, wave 4 after 2. Task 9 only if design call 5 takes it.
 
+### Task 10, the Rollout pilot: done (2026-11-18, `refactor/dedup-rollout` from `aa79a9b8`)
+
+Jigglypuff's Rollout and Kirby's copy of it are one implementation in `ft::purin::special_n`: each shared function takes a `Rollout` (Jigglypuff's `PURIN` beside it, Kirby's `KIRBY` in `ft::kirby::special_purin`) and carries both originals' `#[doc(alias)]`. Kirby's file keeps his 59 addresses, his `Rollout` and his callback table; his init's copy dispatch and leaf-check's two by-name calls (`*_8013DA24`/`*_801010D4`, `*_8013DD54`/`*_8010140C`) pass the descriptor, so no one-line wrappers were needed.
+
+**What differed.** Once the names were normalized (`kb_pr_` to `purin_`, `kb_attr_` to `purin_attr_`), the two files differed only in: the attributes' place (Kirby's `specialn_pr_*` are Jigglypuff's `ftPurinAttributes` offsets plus 0x280, every one of the 38), the `u` word that keeps the model's scale (x4, x8C), the 17 states, five hook addresses (Kirby's death and damage hooks are his generic cleanups, a defect already in [Melee's bugs](melee-bugs.md)), and two branches of Kirby's own: off the ground or landing mid-charge he sets the roll angle before turning `TopN` side-on (`roll_before_top`), and his bounce's landing dust takes the roll's way and angle (`dust_from_roll`, also in Melee's bugs). The squash tables, the ECB, the flags and every operation were the same.
+
+**The numbers.**
+
+| | |
+| --- | --- |
+| Lines | the two files 2,974 to 1,740; with `purin/mod.rs`' attribute reader folded into `char_attr_*` and the callers, 1,244 fewer (639 added, 1,883 removed) |
+| Aliases | the same 18,076 `#[doc(alias)]` attributes before and after (a sorted list diffed); `ledger --check` 19,827 of 19,827, only the CSV's locations moved |
+| Time | about an hour of reading and diffing, 40 minutes of editing, then builds and checks: 5 hours of wall time in all, 4 of them the corpus's oracle runs (16.8 hours of job time, four at a time) |
+| Oracle | every corpus replay and session with Jigglypuff or Kirby (below) compares with no difference; `sync-test --rollback 7` clean on a Jigglypuff replay (`Game_20260524T180613`, 17,460 ticks) and Kirby's (`oracle-kirby-jigglypuff-fd`, 12,483 ticks) |
+| Mutation | the shared `rollout_init` writing -2 for `mv` x4's -1 fails Jigglypuff's `Game_20260524T180613` at tick 3020 and Kirby's `oracle-kirby-jigglypuff-fd` at tick 333, both on `fighter.mv[7]` |
+| Speed (indicative, this PC at about 94% busy with other agents) | `melee-bench native`, three alternating rounds of five runs, median of the 15: `Game_20260524T180613` (`MELEE_BENCH_FP=slippi`) 2,623 frames/s before, 2,625 after; `oracle-kirby-jigglypuff-fd` 3,588 before, 3,539 after (−1.4%, inside the runs' spread of 3,455 to 3,715) |
+
+**The corpus, and how it was found.** The verify's replay diffs (`verify-par.sh`'s job list, 329 replays) by their Slippi Game Start's characters (external ids 4 and 15): 51 have Kirby or Jigglypuff (34 with Kirby: his 22 copy CPU matches, six Slippi replays, two catch and four CPU matches; 18 with Jigglypuff, one of them the Kirby–Jigglypuff copy match). The verify's sessions (535 jobs on 533 traces) by the fighter kinds in their traces' fighter regions: 75 traces, 76 session jobs. The trace scan over-counts (some sessions' fighter regions hold other data at that offset), which only adds sessions to run. Each replay ran as a full diff (`main`'s goldens were stale at tick 1 for these), writing a scratch golden; the build from before the change then checked all 52 of those goldens, so the whole state hashes the same before and after at every tick, not only what the comparer reads.
+
+**What was tricky.**
+
+- Finding what reaches the move. Of the corpus's Jigglypuff replays, the two the mutation was first tried on (`roy-puff-fod`, the CPU `oracle-cpu-puff-fod`) pass with it: the mutated word is never seen there; the replay that does, `Game_20260524T180613` (the ledger's check for `ftPr_SpecialS_8013D658`), is only a sync job in the verify, though its trace is in `v5-mixed`. Its diff was added here; the verify should run it as a diff.
+- Every `Running` method shares one namespace, so the copies had prefixed private helpers (`kb_pr_mvf` beside `mvf`); the shared code keeps one set (`ro_*`).
+- The ledger records each alias's line, so moving aliases rewrites `docs/port-ledger.csv` (123 rows) with no change in status.
+
+**The recipe for the next family.**
+
+1. Diff the pair with the copy's prefixes normalized (`sed` the names), and list each difference by kind: an attribute base (often one offset for all), `u` and `mv` offsets, states, hook addresses, and real branches.
+2. Put a descriptor struct in the original's module with a `const` per user, the shared functions taking `(gobj, &Descriptor)`; give each real branch a named field with its reason, and point any Melee's-bugs entry at it.
+3. Move every alias of both originals onto the shared items; keep each user's own `run` table (the addresses differ) and pass the descriptor from callers that name a function, rather than keeping wrappers. Diff the sorted alias list before and after, and run `ledger --check`.
+4. Find the corpus from the replays' Game Start characters and the sessions' trace fighter kinds, then prove with one mutation in the shared code (a word every use writes) that a replay of each user actually reaches it.
+5. Run the corpus with the new build writing scratch goldens (`--write-golden --golden FILE`), check them with the old build, run the sessions in full, sync-test one replay of each user, and bench before and after in alternating rounds.
+
 ### The fast renderer
 
 Its own crates (melee-render, melee-gpu, melee-player); the `feat/linux-011` branch works in melee-gpu and melee-player now, so F2 onward should start from its merge or keep to new files.
