@@ -197,10 +197,10 @@ fn a_live_match_draws_with_its_own_frame_builder() {
             eprintln!("skipped: no disc or no ruleset sessions");
             return;
         };
-        if melee_gpu::testing::adapter().is_none() {
+        let Some((instance, adapter)) = melee_gpu::testing::instance_and_adapter() else {
             eprintln!("skipped: no hardware GPU");
             return;
-        }
+        };
         let mut args = crate::parse_args_from(Vec::new()).expect("the defaults");
         args.disc = disc;
         args.mute = true;
@@ -208,7 +208,7 @@ fn a_live_match_draws_with_its_own_frame_builder() {
         args.scale = 1;
         args.shot = Some(String::new());
         let mut s = powered_on(&args, &path);
-        let gpu = crate::present::Gpu::new();
+        let gpu = crate::present::Gpu::with_adapter(instance, adapter);
         let mut frames = melee_render::frame::Frames::new();
         frames.space.load_dol(&s.dol);
         let mut player = renderer(&gpu);

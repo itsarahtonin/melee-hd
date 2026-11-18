@@ -16,6 +16,12 @@ use crate::Renderer;
 /// The adapter the player and [`Renderer::new`] pick (the high-performance one), or `None`,
 /// noted on stderr, when there is none or it is a software adapter: the test skips.
 pub fn adapter() -> Option<wgpu::Adapter> {
+    instance_and_adapter().map(|(_, adapter)| adapter)
+}
+
+/// [`adapter`] with the instance it came from, for a test that keeps both (the player's
+/// `present::Gpu`), or `None` (skip).
+pub fn instance_and_adapter() -> Option<(wgpu::Instance, wgpu::Adapter)> {
     let instance =
         wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
     let adapter = match pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
@@ -33,7 +39,7 @@ pub fn adapter() -> Option<wgpu::Adapter> {
         eprintln!("skipped: {} is a software adapter", info.name);
         return None;
     }
-    Some(adapter)
+    Some((instance, adapter))
 }
 
 /// A renderer as [`Renderer::new`] makes it, on [`adapter`]'s adapter, or `None` (skip).

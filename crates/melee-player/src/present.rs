@@ -215,6 +215,12 @@ impl Gpu {
             ..Default::default()
         }))
         .expect("a GPU adapter");
+        Gpu::with_adapter(instance, adapter)
+    }
+
+    /// The player's GPU on `adapter`, which `instance` gave (tests take theirs from
+    /// `melee_gpu::testing`).
+    pub fn with_adapter(instance: wgpu::Instance, adapter: wgpu::Adapter) -> Gpu {
         let timing = std::env::var("MELEE_GPU_TIMING").map_or(true, |v| v != "0" && v != "off");
         let timestamps = if timing {
             wgpu::Features::TIMESTAMP_QUERY
