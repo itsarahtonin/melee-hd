@@ -594,7 +594,7 @@ fn slippi_super_scope_stand_in_matches_the_model() {
 /// Onett's cars (design call 9, `live::DisplayPhase`): the coming car's two decisions through
 /// the camera's view edges (`grOnett_801E43E0`'s horn past the right edge and its centre) are
 /// also taken with the view of the display pass's other phase, which the tripwire keeps for
-/// the pass before (`views[1]`). The stage's match is played under 3.19's rules with the
+/// the tick before (`views[1]`, the other phase's view after a pass). The stage's match is played under 3.19's rules with the
 /// display pass three times: as it plays; with that view moved far to the right before each
 /// tick the car reads the edges (an other phase that decides differently, so those ticks are
 /// noted); and with it moved straight up (a view that differs but meets the stage plane at the
@@ -683,5 +683,208 @@ fn slippi_onett_cars_note_the_other_phase() {
     assert_eq!(
         noted_up, noted,
         "a view meeting the plane at the same edges was noted"
+    );
+}
+
+/// One tick of `m` and its display pass when due, unless `skip` (a doubled round: the tick
+/// after runs with no pass between): whether the pass was due, and whether the match is over.
+fn tick_skipping(m: &mut Match, device: &mut Device, skip: bool) -> (bool, bool) {
+    let (mut f, render) = m.step_replay_tick(device);
+    if render && !skip {
+        f.draws = m.render();
+    }
+    let ended = f.ended
+        || device.0.frames.keys().next_back().is_some_and(|&last| {
+            m.game
+                .playback
+                .as_ref()
+                .is_some_and(|p| p.frame_index >= last)
+        });
+    m.recycle(f);
+    (render, ended)
+}
+
+/// What a stage object of map `map` holds where its flight starts: each one's root joint's x.
+fn objects_x(g: &Game, map: i32) -> Vec<u32> {
+    g.grounds
+        .iter()
+        .filter(|(_, gr)| gr.map_id == map)
+        .filter_map(|(_, gr)| melee_sim::game::gr::ground::jobj_of(g, gr.gobj?))
+        .map(|j| g.objs.jobjs[j].translate.x.to_bits())
+        .collect()
+}
+
+/// How [`doubled_round_notes`] finds the read it doubles a round for.
+enum Find {
+    /// The first read the tripwire notes as the replay plays.
+    Noted,
+    /// The first tick whose outcome changes (a flight setting off), with the camera pulled far
+    /// back two ticks before in both runs, so that its view's edges lie past the stage's
+    /// 200 and move from tick to tick as it eases in.
+    PulledBack,
+}
+
+/// A display-phase read (design call 9, `live::DisplayPhase`) on a real doubled round: the
+/// replay at `path` is played under 3.19's rules as it plays, and again with the display pass
+/// skipped before the read's tick (`find`; that tick a doubled round's second, as Slippi
+/// Dolphin's playback could have it). The doubled round changes what the read decides
+/// (`outcome`) in that tick, and the tripwire notes the read in both runs: each run's other
+/// phase is the other run. Gameplay is the same until that tick, and with `neutral` (a read
+/// that reaches no gameplay) to the match's end. Played a third time with the camera taken for
+/// off playback's course (`DisplayPhase::paused`, as a pause leaves it), more reads are noted,
+/// gameplay the same.
+fn doubled_round_notes(
+    path: &str,
+    what: &str,
+    find: Find,
+    outcome: &(dyn Fn(&Game) -> String + Sync),
+    neutral: bool,
+) {
+    let Some(disc) = disc() else { return };
+    let path = melee_local_data::ssbm_rs_local(path);
+    let path = std::path::Path::new(&path);
+    if !path.exists() {
+        eprintln!("{}: not here, skipping", path.display());
+        return;
+    }
+    let mut bench = Bench::open_path(disc, path);
+    let rules = Rules::slippi_online();
+    on_sim_thread(FpMode::Slippi, || {
+        // Each tick: whether its pass was due, gameplay, the outcome, the count noted. The
+        // pass after tick `skip` is skipped; the camera's eye is pulled back before `pull`;
+        // with `off`, the camera is taken for off playback's course, as after a pause.
+        let mut play = |skip: Option<usize>, pull: Option<usize>, off: bool| {
+            let mut m = bench.start(&rules, true);
+            m.game.display_phase.paused = off;
+            let mut device = Device(&bench.replay);
+            let mut ticks = Vec::new();
+            for t in 0usize.. {
+                if pull == Some(t) {
+                    let p = &mut m.game.camera.cam.transform.position;
+                    p.z *= 20.0;
+                }
+                let (rendered, ended) = tick_skipping(&mut m, &mut device, skip == Some(t));
+                ticks.push((
+                    rendered,
+                    digest(&m.game),
+                    outcome(&m.game),
+                    m.game.display_phase.differing,
+                ));
+                if ended {
+                    break;
+                }
+            }
+            ticks
+        };
+        let noted = |ticks: &[(bool, Digest, String, u32)], t: usize| {
+            ticks[t].3 > if t == 0 { 0 } else { ticks[t - 1].3 }
+        };
+        let plain = play(None, None, false);
+        let total = plain.last().map_or(0, |t| t.3);
+        let (t, pull, plain) = match find {
+            Find::Noted => {
+                let t = (1..plain.len())
+                    .find(|&t| noted(&plain, t) && plain[t - 1].0)
+                    .unwrap_or_else(|| panic!("{what}: no read noted as played"));
+                (t, None, plain)
+            }
+            Find::PulledBack => {
+                let t = (4..plain.len())
+                    .find(|&t| plain[t].2 != plain[t - 1].2 && plain[t - 1].0)
+                    .unwrap_or_else(|| panic!("{what}: nothing set off"));
+                assert!(!noted(&plain, t), "{what}: noted as played");
+                (t, Some(t - 2), play(None, Some(t - 2), false))
+            }
+        };
+        eprintln!(
+            "{what}: {total} reads noted as played in {} ticks; the read in tick {t}",
+            plain.len()
+        );
+        assert!(
+            noted(&plain, t),
+            "{what}: the read in tick {t} wasn't noted"
+        );
+        let doubled = play(Some(t - 1), pull, false);
+        assert!(
+            noted(&doubled, t),
+            "{what}: the doubled round's read in tick {t} wasn't noted"
+        );
+        assert_ne!(
+            plain[t].2, doubled[t].2,
+            "{what}: the doubled round in tick {t} decided the same"
+        );
+        let same = if neutral { plain.len() } else { t };
+        for u in 0..same.min(doubled.len()) {
+            assert_eq!(plain[u].1, doubled[u].1, "{what}: gameplay in tick {u}");
+        }
+        if neutral {
+            assert_eq!(plain.len(), doubled.len(), "{what}: the match's length");
+        }
+        // Off playback's course every read is noted, whatever it decides.
+        let off = play(None, None, true);
+        let reads = off.last().map_or(0, |t| t.3);
+        eprintln!("{what}: {reads} reads noted off playback's course");
+        assert!(
+            reads > total,
+            "{what}: off playback's course, no more reads noted"
+        );
+        for u in 0..plain.len().min(off.len()) {
+            assert_eq!(
+                plain[u].1, off[u].1,
+                "{what}: gameplay off course in tick {u}"
+            );
+        }
+    });
+}
+
+/// Onett's cars (`grOnett_801E43E0`): the one read the stage's benchmark match notes as it
+/// plays, on a real doubled round: the coming car decides otherwise with the view a tick old.
+#[test]
+fn slippi_onett_cars_note_a_doubled_round() {
+    let car = |g: &Game| {
+        let cars = g.grounds.iter().find_map(|(_, gr)| match &gr.u.vars {
+            GroundVars::OnettCar(v) => Some((v.state_a, v.x110, v.curr_car)),
+            _ => None,
+        });
+        format!("{cars:?} {} {:#x}", g.stage_info.x740, g.objs.rng.seed)
+    };
+    doubled_round_notes(
+        "bench/oracle-m4/stage-onett.slp",
+        "Onett's cars",
+        Find::Noted,
+        &car,
+        false,
+    );
+}
+
+/// Kongo Jungle 64's birds (`stageGObj2_GObjProc@802100FC`) start at the camera's view edge
+/// where it lies past 200 from the stage's centre: with the camera pulled back as they set
+/// off, a doubled round moves where they fly, a stage object's joint the oracle compares and
+/// nothing gameplay reads. (As the benchmark match plays, the view's edges lie within 200 at
+/// each of its three flights, and nothing is noted.)
+#[test]
+fn slippi_kongo_jungle_64_birds_note_a_doubled_round() {
+    doubled_round_notes(
+        "bench/oracle-m4/stage-kongo-jungle-64.slp",
+        "Kongo Jungle 64's birds",
+        Find::PulledBack,
+        &|g| format!("{:?}", objects_x(g, 2)),
+        true,
+    );
+}
+
+/// Dream Land 64's clouds and stars (`grOldPupupu_80210D10`) start 50 past the camera's view
+/// edge, or past 200 from the stage's centre where the edge is nearer: with the camera pulled
+/// back as a flight sets off, a doubled round moves where it flies, stage objects' joints the
+/// oracle compares and nothing gameplay reads. (As this ranked replay plays, the view's edges
+/// lie within 200 at each of its three flights, and nothing is noted.)
+#[test]
+fn slippi_dream_land_64_flights_note_a_doubled_round() {
+    doubled_round_notes(
+        "replays/hf/ylink-dd-a6/slp/diamond-diamond-25f1c7b39bb0e353f2147ff8.slp",
+        "Dream Land 64's flights",
+        Find::PulledBack,
+        &|g| format!("{:?}", objects_x(g, 2)),
+        true,
     );
 }

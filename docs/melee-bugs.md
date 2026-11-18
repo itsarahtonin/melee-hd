@@ -2191,10 +2191,30 @@ The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so abou
 - **Where:** `grOnett_801E43E0` (the car's process) reading the CObj through `Camera_800307D0`, `crates/melee-sim/src/game/gr/onett.rs` (`proc_cars`).
 - **Defect:** the car takes the camera's view edges from the CObj the display pass writes; when a car passes the view's right edge with a fighter on the ground, it draws `HSD_Randi(3)`, honks and sets `stage_info.x740`, which the computer player's car avoidance and the camera read.
 - **Effect:** a doubled round as the edge passes the car moves that by a tick.
-- **melee-hd:** modeled: the car reads the CObj the display pass keeps (`camera::ground_span`). Under Slippi's rules each decision through the edges is also taken with the view of the display pass's other phase and a different outcome noted in the recording's metadata (`playbackNote`), the match playing on as the original's (design call 9 of [the Slippi ruleset](slippi-ruleset.md), `live::DisplayPhase`).
+- **melee-hd:** modeled: the car reads the CObj the display pass keeps (`camera::ground_span`). Under Slippi's rules each decision through the edges is also taken with the view of the display pass's other phase and a different outcome noted in the recording's metadata (`playbackNote`), the match playing on as the original's (design call 9 of [the Slippi ruleset](slippi-ruleset.md), `live::DisplayPhase`); after a pause every such decision is noted, as the camera is off playback's course ([Slippi's defects](slippi-bugs.md#a-paused-matchs-recording)).
 - **Fix:** take the edges from logic state.
 - **Fix impact:** changes Onett's random sequence and car timing.
 - **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes) (line 146).
+
+### Kongo Jungle 64's birds start from the render-pass camera
+
+- **Where:** `stageGObj2_GObjProc@802100FC` (the birds' process, groldkongo.c:482) reading the CObj through `Camera_800307D0`, `crates/melee-sim/src/game/gr/oldkongo.rs` (`proc_birds`).
+- **Defect:** the birds' flight starts at the camera's view edge (where it lies past 200 from the stage's centre) taken from the CObj the display pass writes, not from the camera's logic state.
+- **Effect:** a doubled round as the birds set off with the camera far back starts them at the edge of the view a tick older: the background's birds fly a little to one side. Nothing gameplay reads them (the random draws around the read are made whichever view, and only the display pass reads the joint), but a whole-state comparison between peers or with a replay's playback sees the joint differ.
+- **melee-hd:** modeled: the birds read the CObj the display pass keeps (`camera::ground_span`). Under Slippi's rules each start is also made with the view of the display pass's other phase and a different start noted in the recording's metadata (`playbackNote`), the match playing on as the original's (design call 9 of [the Slippi ruleset](slippi-ruleset.md), `live::DisplayPhase`); after a pause every start is noted, as the camera is off playback's course ([Slippi's defects](slippi-bugs.md#a-paused-matchs-recording)).
+- **Fix:** take the edges from logic state (`Camera_800307D0` over the camera's transform).
+- **Fix impact:** none on gameplay; the birds' starting place could change by a tick of camera motion, which only a state comparison sees.
+- **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes).
+
+### Dream Land 64's clouds and stars start from the render-pass camera
+
+- **Where:** `grOldPupupu_80210D10` (the flights' process, groldpupupu.c:388) reading the CObj through `Camera_800307D0`, `crates/melee-sim/src/game/gr/oldpupupu.rs` (`proc_flights`).
+- **Defect:** a flight of one or three clouds or stars starts 50 past the camera's view edge (or past 200 from the stage's centre where the edge is nearer), the edge taken from the CObj the display pass writes.
+- **Effect:** a doubled round as a flight sets off with the camera far back starts it from the edge of the view a tick older, a little to one side. Nothing gameplay reads the flyers (the flight's random draws are made whichever view, and only the display pass reads their joints), but a whole-state comparison between peers or with a replay's playback sees them differ. Dream Land is a tournament stage.
+- **melee-hd:** modeled: the flights read the CObj the display pass keeps (`camera::ground_span`). Under Slippi's rules each start is also made with the view of the display pass's other phase and a different start noted in the recording's metadata (`playbackNote`), the match playing on as the original's (design call 9 of [the Slippi ruleset](slippi-ruleset.md), `live::DisplayPhase`); after a pause every start is noted, as the camera is off playback's course ([Slippi's defects](slippi-bugs.md#a-paused-matchs-recording)).
+- **Fix:** take the edges from logic state.
+- **Fix impact:** none on gameplay; the flights' starting places could change by a tick of camera motion, which only a state comparison sees.
+- **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes).
 
 ### A sprite's palette object keeps bits from its block
 

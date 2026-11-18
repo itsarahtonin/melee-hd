@@ -753,15 +753,18 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
 /// Under Slippi's rules, the coming car's view-edge decisions (`x110` 1: the horn past the
 /// right edge, then the centre) taken with the view the other display-pass phase would give
 /// the camera ([`crate::game::live::DisplayPhase::other_view`]); a different outcome noted
-/// (design call 9 of `docs/slippi-ruleset.md`). `span` is the centre and right edge the CObj
-/// gives, `horn` the horn's distance past the edge.
+/// (design call 9 of `docs/slippi-ruleset.md`); after a pause, which leaves the camera off
+/// playback's course, every such read noted ([`crate::game::state::Game::view_read_off_course`]).
+/// `span` is the centre and right edge the CObj gives, `horn` the horn's distance past the edge.
 fn note_other_phase(r: &mut Running, car_j: Option<jobj::JObjId>, span: [f32; 2], horn: f32) {
-    let held = camera::View::of_camera(r.game, r.data);
-    let due = camera::pass_view(r.game);
-    let Some(other) = r.game.display_phase.other_view(held, due) else {
+    if r.game.view_read_off_course() {
+        let tick = r.game.scene.unk_8;
+        r.game.display_phase.note(tick);
+        return;
+    }
+    let Some([_, center, right]) = r.game.other_phase_span(r.data) else {
         return;
     };
-    let ([_, center, right], _) = other.ground_span(r.game);
     let x = reg(car_x(r.game, car_j));
     let street = || {
         let mut at = r.game.world.first_in(P_LINK_FIGHTER);
