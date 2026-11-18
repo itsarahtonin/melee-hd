@@ -630,7 +630,7 @@ dependencies = [
 
 [[package]]
 name = "dist"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "dlib"
@@ -1329,7 +1329,7 @@ dependencies = [
 
 [[package]]
 name = "leaf-check"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "gekko-fp",
  "melee-capture",
@@ -1349,7 +1349,7 @@ dependencies = [
 
 [[package]]
 name = "leaf-select"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1359,7 +1359,7 @@ dependencies = [
 
 [[package]]
 name = "ledger"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "ssbm-game",
  "ssbm-rt",
@@ -1524,7 +1524,7 @@ dependencies = [
 
 [[package]]
 name = "melee-audio"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "cpal",
  "melee-ax",
@@ -1536,7 +1536,7 @@ dependencies = [
 
 [[package]]
 name = "melee-audio-check"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "melee-audio",
  "melee-capture",
@@ -1550,11 +1550,11 @@ dependencies = [
 
 [[package]]
 name = "melee-ax"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "melee-bench"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "melee-capture",
  "melee-data",
@@ -1567,7 +1567,7 @@ dependencies = [
 
 [[package]]
 name = "melee-capture"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "melee-data",
  "melee-sim",
@@ -1578,7 +1578,7 @@ dependencies = [
 
 [[package]]
 name = "melee-data"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "nod",
  "thiserror 2.0.21",
@@ -1586,7 +1586,7 @@ dependencies = [
 
 [[package]]
 name = "melee-derive"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1595,21 +1595,21 @@ dependencies = [
 
 [[package]]
 name = "melee-disc-scan"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "melee-data",
 ]
 
 [[package]]
 name = "melee-gekko-fp"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "num-bigint",
 ]
 
 [[package]]
 name = "melee-gpu"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "bytemuck",
  "melee-gx",
@@ -1622,11 +1622,11 @@ dependencies = [
 
 [[package]]
 name = "melee-gx"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "melee-input"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "gilrs",
  "melee-sim",
@@ -1635,11 +1635,11 @@ dependencies = [
 
 [[package]]
 name = "melee-local-data"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "melee-oracle"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "melee-capture",
  "melee-data",
@@ -1654,7 +1654,7 @@ dependencies = [
 
 [[package]]
 name = "melee-player"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "crc32fast",
  "egui",
@@ -1682,7 +1682,7 @@ dependencies = [
 
 [[package]]
 name = "melee-render"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "melee-data",
  "melee-gekko-fp",
@@ -1695,7 +1695,7 @@ dependencies = [
 
 [[package]]
 name = "melee-render-check"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "melee-data",
  "melee-gpu",
@@ -1709,14 +1709,14 @@ dependencies = [
 
 [[package]]
 name = "melee-save"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "melee-local-data",
 ]
 
 [[package]]
 name = "melee-sim"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "melee-data",
  "melee-derive",
@@ -1726,7 +1726,7 @@ dependencies = [
 
 [[package]]
 name = "melee-slippi"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "melee-sim",
  "thiserror 2.0.21",
@@ -1734,7 +1734,7 @@ dependencies = [
 
 [[package]]
 name = "melee-vs-run"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "melee-capture",
  "melee-data",
@@ -2436,7 +2436,7 @@ checksum = "2ee67f1008b1ba2321834326597b8e186293b049a023cdef258527550b9935b4"
 
 [[package]]
 name = "path-guard"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "peniko"
