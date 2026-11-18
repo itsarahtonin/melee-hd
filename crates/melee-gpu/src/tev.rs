@@ -301,12 +301,19 @@ struct Queue {
 struct Workers {
     queue: Arc<Queue>,
     made: mpsc::Receiver<Made>,
+    threads: Vec<std::thread::JoinHandle<()>>,
 }
 
 impl Drop for Workers {
+    /// Waits for the threads to end (a pipeline being made is finished first): each holds the
+    /// device, and one left running could drop its last reference while the process exits. On
+    /// Linux NVIDIA's driver then crashed in `vkDestroyDevice`, racing its own exit handlers.
     fn drop(&mut self) {
         self.queue.jobs.lock().unwrap().closed = true;
         self.queue.cond.notify_all();
+        for t in self.threads.drain(..) {
+            let _ = t.join();
+        }
     }
 }
 
@@ -425,6 +432,7 @@ impl Specializer {
         self.workers.get_or_insert_with(|| {
             let queue = Arc::new(Queue::default());
             let (tx, made) = mpsc::channel();
+            let mut threads = Vec::with_capacity(THREADS);
             for i in 0..THREADS {
                 let (queue, tx, maker, modules) = (
                     queue.clone(),
@@ -432,7 +440,7 @@ impl Specializer {
                     maker.clone(),
                     self.modules.clone(),
                 );
-                std::thread::Builder::new()
+                let thread = std::thread::Builder::new()
                     .name(format!("shaders {i}"))
                     .spawn(move || {
                         loop {
@@ -456,8 +464,13 @@ impl Specializer {
                         }
                     })
                     .expect("a shader thread");
+                threads.push(thread);
             }
-            Workers { queue, made }
+            Workers {
+                queue,
+                made,
+                threads,
+            }
         })
     }
 
