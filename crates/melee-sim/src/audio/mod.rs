@@ -133,6 +133,70 @@ impl Audio {
         }
     }
 
+    /// The archives this audio names, numbered in `theirs`, numbered in `ours` instead (each
+    /// found or shared there, [`Archives::share`]): the disc files the device command queue
+    /// reads, the sound banks and the movie's file. Audio handed between two games with their
+    /// own archives (`game::live`) keeps them so.
+    pub fn rehome(&mut self, theirs: &Archives, ours: &mut Archives) {
+        let mut id = |a: &mut melee_data::archive::ArchiveId| *a = ours.share(theirs, *a);
+        for f in &mut self.devcom.files {
+            id(&mut f.1);
+        }
+        if let Some(b) = &mut self.driver.bank {
+            id(b);
+        }
+        for (b, _) in self.driver.freed_banks.iter_mut().flatten() {
+            id(b);
+        }
+        for b in self.lang_banks.iter_mut().flatten() {
+            id(&mut b.archive);
+        }
+        if let Some(f) = &mut self.movie.file {
+            id(f);
+        }
+    }
+
+    /// Goes on as the audio `console` stands, its archives this game's already
+    /// ([`Audio::rehome`]): the console's driver, synth, AX library, sound banks, audio heap,
+    /// device command queue and music stream, game audio library, movie player and save writer,
+    /// and its timeline ([`clock::Clock::take_up`]), with the presentation's mix log it carries.
+    /// The preload cache stays this game's (`lb::dvd`, whose presence the game's code reads as
+    /// a session's: a live match has none, as playback's match doesn't), with its copy alarms
+    /// on the timeline; so no read of the console's may be queued for it (`game::live`).
+    pub fn take_up(&mut self, console: Audio) {
+        let mut a = console;
+        if let Some(cb) = a
+            .devcom
+            .queued_callbacks()
+            .find(|&c| c == devcom::cb::PRELOADED || c == devcom::cb::COMPACT_STEP)
+        {
+            panic!(
+                "the console's preload cache has a read queued ({:#010x}), which the audio handed over can't take with it",
+                cb.0
+            );
+        }
+        match (self.clock.as_mut(), a.clock.as_mut()) {
+            (Some(mine), Some(theirs)) => {
+                mine.take_up(theirs);
+                std::mem::swap(mine, theirs);
+            }
+            (None, Some(theirs)) => theirs
+                .events
+                .retain(|e| e.kind != clock::EventKind::CopyAlarm),
+            _ => {}
+        }
+        a.dvd = self.dvd.take();
+        // The disc files this game named for the queue to read that the console's didn't (a
+        // match's songs, Mushroom Kingdom's fast one among them): the frontend's bytes, not
+        // the console's state.
+        for f in &self.devcom.files {
+            if !a.devcom.files.iter().any(|g| g.0 == f.0) {
+                a.devcom.files.push(*f);
+            }
+        }
+        *self = a;
+    }
+
     /// Runs the timeline up to the next tick's game code, with the audio frames before it.
     pub fn tick_start(&mut self, data: &Archives) {
         self.with_clock(data, |c, f| c.tick_start(f));

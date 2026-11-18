@@ -103,6 +103,7 @@ fn vs_menus_hands_off_its_match() {
         "{out}"
     );
     assert!(out.contains("with no stop: 1 live matches"), "{out}");
+    audio_compares("vs-menus", &out);
 }
 
 /// Where each live match's recording, played by ssbm-rs, lies under `$SSBM_RS_LOCAL`: those the
@@ -177,6 +178,7 @@ fn the_live_match_sessions_run_on() {
         }
         let _ = std::fs::remove_dir_all(&dir);
         assert!(out.contains(compared), "{name}: {out}");
+        audio_compares(name, &out);
         assert!(
             out.contains(&format!(
                 "ran on to tick {end} past the recording's reads with no stop: {matches} live matches, {matches} recordings written"
@@ -323,6 +325,7 @@ fn the_paused_live_matches_record_as_the_console_does() {
             dir.to_str().unwrap(),
         ]);
         assert!(out.contains(compared), "{name}: {out}");
+        audio_compares(name, &out);
         let slp = dir.join(format!("{name}-1.slp"));
         let ours = std::fs::read(&slp).expect("the live match's recording");
         let _ = std::fs::remove_dir_all(&dir);
@@ -359,4 +362,22 @@ fn the_paused_live_matches_record_as_the_console_does() {
         out.contains("frame -118 is tick 1019; 934 frames checked to the recording's end (1868 post-frame updates, 111 marked off screen), 0 differ, 0 past the trace or unplaced, 0 a tick from their scene frame count"),
         "{out}"
     );
+}
+
+/// The live match's audio is the console's, handed over at the handoff with its timeline
+/// (`live::Timeline`, docs/slippi-ruleset.md, "Live play and playback"), so it compares: the
+/// driver's voices and handles, the sounds playing, the banks and the audio heap, and the
+/// handles the fighters and items keep. None of it is named as the live match's own (until
+/// 2026-11-17 playback's audio was, from the match's first tick).
+fn audio_compares(name: &str, out: &str) {
+    for line in out
+        .lines()
+        .filter(|l| l.starts_with("  named in the live match: "))
+    {
+        assert!(
+            !line.contains("audio") && !line.contains("sounds playing"),
+            "{name}: {line}"
+        );
+    }
+    assert!(out.contains("  named in the live match: "), "{name}: {out}");
 }

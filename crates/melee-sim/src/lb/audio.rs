@@ -293,6 +293,7 @@ impl Running<'_> {
     /// (`PreventDuplicateSounds`, at +0xBC), and hand back the handle of a sound the frame
     /// already played instead of playing it again; then the handle it started with
     /// (`AssignSoundInstanceId`, at +0x230) ([`SoundLog`](crate::game::playback::SoundLog)).
+    /// A live match runs no such code ([`Playback::sound_codes`](crate::game::playback::Playback::sound_codes)).
     pub fn sfx_start_param(
         &mut self,
         id: i32,
@@ -301,9 +302,14 @@ impl Running<'_> {
         track: i32,
         channel: i32,
     ) -> SfxStart {
+        // A live match's VS scene entry: the console's handle, its sound playing in the console's
+        // audio the match takes (`game::live`'s `with_entry_sounds`).
+        if let Some(handle) = crate::game::live::entry_sound_handle(id) {
+            return SfxStart::Driver(handle);
+        }
         let frame = self.game.scene.unk_8 as i32;
         let logs = id != SFX_NONE
-            && self.game.playback.as_ref().is_some_and(|p| p.match_scene)
+            && self.game.playback.as_ref().is_some_and(|p| p.sound_codes())
             && self.game.audio.sfx_known(self.data, id);
         if logs
             && let Some(p) = self.game.playback.as_mut()
@@ -321,6 +327,7 @@ impl Running<'_> {
         {
             p.sounds.started(frame, handle);
         }
+        crate::game::live::entry_sound_started(id, handle);
         SfxStart::Driver(handle)
     }
 

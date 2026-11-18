@@ -249,11 +249,17 @@ pub struct Session {
     pub live_files: Vec<(String, melee_data::archive::ArchiveId)>,
 }
 
-/// The menus' session set aside across a live match's scene ([`Session::aside`]).
+/// The menus' session set aside across a live match's scene ([`Session::aside`]): its game
+/// as the VS scene's entry began, and the console's preload cache as the entry left it, with
+/// the timeline then (its copy alarms' times): the cache stays out of the live match's audio
+/// (`Audio::take_up`), and the menus' session takes it back at the handback, the reads the
+/// entry waited for in.
 #[derive(Clone, Debug)]
 pub struct Aside {
     pub game: Game,
     pub data: Archives,
+    pub cache: Option<crate::lb::dvd::Dvd>,
+    pub cache_clock: Option<crate::audio::clock::Clock>,
 }
 
 /// `DbLevel` before `main` sets it: `DbLKind_NoDebugRom`, as the executable's data holds it.
@@ -1128,8 +1134,9 @@ impl Session {
     /// match, built from the game start its recording will hold as playback builds a
     /// replay's, becomes the session's game, at the session's disc pace and DSP model,
     /// recorded when the menus' game has a recorder waiting, and goes on from the console's
-    /// timeline as the scene's loop starts ([`Session::console_entry`]). Its files are the
-    /// console's.
+    /// timeline and audio as the scene's loop starts ([`Session::console_entry`]), the sounds
+    /// its entry starts taking the handles the console's entry gave them
+    /// (`live::with_entry_sounds`). Its files are the console's.
     fn hand_off(&mut self, console: &mut dyn Console) {
         let r = Running {
             game: &mut self.game,
@@ -1141,37 +1148,55 @@ impl Session {
         // (`read_match_files`): the scenes after it load them from there (the results
         // screen's fighters, Sudden Death's stage).
         self.read_match_files(&d, console);
-        let at = self.console_entry(console);
+        let (at, sounds) = self.console_entry(console);
         let mut settings =
             super::vs_match::Settings::live(&start).expect("the ruleset's code list's rules");
         settings.disc = self.setup.disc;
         settings.dsp = self.setup.dsp;
         settings.record = self.game.recorder.is_some().then_some(setup);
-        let mut m = super::vs_match::Match::start(&settings, &mut |n| console.file(n));
-        m.game.go_on_from(&at);
+        let mut m = super::live::with_entry_sounds(sounds, || {
+            super::vs_match::Match::start(&settings, &mut |n| console.file(n))
+        });
+        let (cache, cache_clock) = (at.audio.dvd.clone(), at.audio.clock.clone());
+        m.game.go_on_from(at, &self.data, &mut m.data);
         self.live_files = m.files;
         let game = std::mem::replace(&mut self.game, *m.game);
         let data = std::mem::replace(&mut self.data, m.data);
-        self.aside = Some(Box::new(Aside { game, data }));
+        self.aside = Some(Box::new(Aside {
+            game,
+            data,
+            cache,
+            cache_clock,
+        }));
     }
 
     /// Where the console stands as the VS scene's loop starts (`live::Timeline`), its entry's
     /// stall included: the scene's entry run on a copy of the menus' session as
     /// [`Session::enter_next_scene`] runs it (the console's own entry, its sound banks' loads
     /// waited for), the pad alarm's polls meanwhile taking the console's next reads, as the
-    /// console's do, and the scene loop's start. The menus' session and the card stay as they
-    /// were.
-    fn console_entry(&mut self, console: &mut dyn Console) -> super::live::Timeline {
+    /// console's do, and the scene loop's start; with the audio as the console's has it then,
+    /// and the sounds the scene's entry started with their handles
+    /// (`live::record_entry_sounds`). The menus' session and the card stay as they were, but
+    /// for the audio's mix log (presentation), which goes on in the console's entry and on
+    /// with the audio.
+    fn console_entry(
+        &mut self,
+        console: &mut dyn Console,
+    ) -> (super::live::Timeline, Vec<(i32, i32)>) {
         let mut probe = self.game.clone();
         probe.machine.files_wanted = false;
+        probe.audio.mix = self.game.audio.mix.take();
+        let mut sounds = Vec::new();
         crate::lb::save::with_card_copy(|| {
             let lent = crate::hsd::heap::Lent::take(&mut probe.objs.heap);
-            with_feed(console, |_| {
-                Running {
-                    game: &mut probe,
-                    data: &self.data,
-                }
-                .next_scene()
+            (_, sounds) = super::live::record_entry_sounds(|| {
+                with_feed(console, |_| {
+                    Running {
+                        game: &mut probe,
+                        data: &self.data,
+                    }
+                    .next_scene()
+                })
             });
             lent.give_back(&mut probe.objs.heap);
             read_song(&mut probe, &mut self.data, console);
@@ -1184,7 +1209,7 @@ impl Session {
             r.begin_scene_loop();
             lent.give_back(&mut probe.objs.heap);
         });
-        probe.timeline()
+        (probe.leave_timeline(), sounds)
     }
 
     /// One engine tick of the live match, as a console runs it: every poll the match's
@@ -1213,8 +1238,9 @@ impl Session {
 
     /// The live match's scene has ended: the menus' session comes back and takes what the
     /// match leaves (`live::Back`), its VS scene ended.
-    /// The menus' session goes on from the console's timeline as the match leaves it
-    /// (`live::Timeline`).
+    /// The menus' session goes on from the console's timeline and audio as the match leaves
+    /// them (`live::Timeline`), with the console's preload cache as the scene's entry left it
+    /// ([`Aside`]).
     fn hand_back(&mut self) {
         let aside = self.aside.take().expect("a live match");
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
@@ -1224,13 +1250,21 @@ impl Session {
         }
         .live_match_back();
         lent.give_back(&mut self.game.objs.heap);
-        let at = self.game.timeline();
+        let at = self.game.leave_timeline();
         self.live_files.clear();
-        let Aside { game, data } = *aside;
+        let Aside {
+            game,
+            data,
+            cache,
+            cache_clock,
+        } = *aside;
         self.game = game;
-        self.data = data;
+        // The preload cache as the console's entry left it, its copy alarms timed from then.
+        self.game.audio.dvd = cache;
+        self.game.audio.clock = cache_clock;
+        let theirs = std::mem::replace(&mut self.data, data);
         self.game.take_back_live_match(back);
-        self.game.go_on_from(&at);
+        self.game.go_on_from(at, &theirs, &mut self.data);
     }
 
     /// Whether a live match of the Slippi ruleset is running (`game::live`): the session's
