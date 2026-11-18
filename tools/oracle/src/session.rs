@@ -620,7 +620,7 @@ fn image_objects(game: &Game) -> Vec<(&'static str, u32, u32, u32, bool)> {
     let mut v = Vec::new();
     macro_rules! pool {
         ($name:expr, $pool:expr, $size:expr) => {
-            for slot in 0..$pool.slots().len() as u32 {
+            for slot in $pool.handles() {
                 let a = $pool.addr(slot);
                 if a != 0 {
                     v.push(($name, a, $size, slot, $pool.is_free(slot)));
@@ -644,10 +644,9 @@ fn image_objects(game: &Game) -> Vec<(&'static str, u32, u32, u32, bool)> {
     pool!("Parts", g.fighter_parts, Kind::FighterParts.init().0);
     pool!("DObjList", g.fighter_dobj_lists, 0x80);
     pool!("AnimBuf", g.fighter_anim_bufs, 0x8000);
-    for slot in 0..g.grounds.slots().len() as u32 {
+    for slot in g.grounds.handles() {
         let a = g.grounds.addr(slot);
         if a != 0 {
-            // A retired slot (a scene before's) keeps no contents to name its kind by.
             let ty = g
                 .grounds
                 .get(slot)

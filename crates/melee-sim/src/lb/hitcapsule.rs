@@ -173,11 +173,17 @@ impl Mirror for HitOwner {
 /// (the joint is read only while the box is on, and only the script turns a new item's box on,
 /// docs/engine.md), and a read before then stops, naming the reader. Fighters' hitboxes and
 /// imported ones are always written.
+///
+/// A joint's slot is reused whatever its address (`hsd::pool`), so the word an item's block
+/// keeps is the joint's address as the item wrote it ([`HitJObj::set_at`]), not the slot's.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct HitJObj {
     jobj: Option<JObjId>,
     /// Whether the item has written the joint since it was made.
     written: bool,
+    /// The joint's address as an item wrote it ([`HitJObj::set_at`]), which the item's block
+    /// keeps for a new item there until it writes the joint (0: none known).
+    left_at: u32,
 }
 
 impl Default for HitJObj {
@@ -185,6 +191,7 @@ impl Default for HitJObj {
         HitJObj {
             jobj: None,
             written: true,
+            left_at: 0,
         }
     }
 }
@@ -204,7 +211,24 @@ impl HitJObj {
         *self = HitJObj {
             jobj: j,
             written: true,
+            left_at: 0,
         };
+    }
+
+    /// Writes the joint, live at `addr` (the allocator model's address, 0 where it gives none):
+    /// the word an item's block keeps for the next item made there.
+    pub fn set_at(&mut self, j: Option<JObjId>, addr: u32) {
+        *self = HitJObj {
+            jobj: j,
+            written: true,
+            left_at: addr,
+        };
+    }
+
+    /// The word's address once a new item has it unwritten, if the block's last item left
+    /// one.
+    fn left(self) -> Option<u32> {
+        (!self.written && self.left_at != 0).then_some(self.left_at)
     }
 
     /// Marks the joint unwritten, as a new item finds it, keeping the word its block held.
@@ -225,11 +249,22 @@ impl Mirror for HitJObj {
         HitJObj {
             jobj: cx.import_handle("JObjId", m.u32(at)).map(JObjId),
             written: true,
+            left_at: 0,
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        cx.compare_handle(path, "JObjId", self.jobj.map(|h| h.0), m.u32(at));
+        match self.left() {
+            Some(a) if a != m.u32(at) => {
+                cx.mismatch(
+                    path,
+                    format!("JObjId dangling (freed at {a:#x})"),
+                    format!("{:#x}", m.u32(at)),
+                );
+            }
+            Some(_) => {}
+            None => cx.compare_handle(path, "JObjId", self.jobj.map(|h| h.0), m.u32(at)),
+        }
     }
 }
 
@@ -629,6 +664,9 @@ impl crate::game::mirror::LayOut for HitOwner {
 
 impl crate::game::mirror::LayOut for HitJObj {
     fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
-        l.put_word(at, cx.handle("JObjId", self.jobj.map(|h| h.0)));
+        match self.left() {
+            Some(a) => l.put_u32(at, a),
+            None => l.put_word(at, cx.handle("JObjId", self.jobj.map(|h| h.0))),
+        }
     }
 }

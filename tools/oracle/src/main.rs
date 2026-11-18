@@ -78,6 +78,8 @@ fn main() -> ExitCode {
 }
 
 fn run(args: Vec<String>) -> ExitCode {
+    // The comparer compares a handle that outlived its object by its slot's past addresses.
+    melee_sim::hsd::pool::keep_history();
     match args.iter().map(String::as_str).collect::<Vec<_>>()[..] {
         ["compare", original, ours] => compare_files(original, ours),
         ["trace-check", trace, replay] => trace_check(trace, replay),
