@@ -56,17 +56,22 @@ impl Exact {
     /// The fast renderer as far as it goes (F3): the exact renderer with its shapes' display
     /// lists drawn from meshes decoded once (`Gpu::with_meshes`), their vertices transformed
     /// on the GPU.
-    pub fn fast(renderer: Renderer, threaded: bool) -> Exact {
-        let mut r = Exact::new(renderer, threaded);
-        r.gpu = r.gpu.with_meshes();
-        r
+    pub fn fast(mut renderer: Renderer, threaded: bool) -> Exact {
+        renderer.gpu_transforms = true;
+        Exact::with_meshes(renderer, threaded)
     }
 
     /// F2, the mesh cache alone: the meshes' vertices transformed on the CPU as the exact
     /// renderer's are.
     pub fn f2(mut renderer: Renderer, threaded: bool) -> Exact {
         renderer.gpu_transforms = false;
-        Exact::fast(renderer, threaded)
+        Exact::with_meshes(renderer, threaded)
+    }
+
+    fn with_meshes(renderer: Renderer, threaded: bool) -> Exact {
+        let mut r = Exact::new(renderer, threaded);
+        r.gpu = r.gpu.with_meshes();
+        r
     }
 
     /// The mesh cache's counts and size, for the fast renderer.

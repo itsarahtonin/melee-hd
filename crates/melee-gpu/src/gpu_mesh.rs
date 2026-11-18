@@ -43,6 +43,12 @@ const R_LP_COUNT: usize = 35;
 /// Items (vertices, or lines' and points' quads) a workgroup transforms.
 const GROUP: u32 = 64;
 
+/// A multiple of every vertex's words (6 + 3n for n texture coordinates up to 8).
+const WORDS_LCM: u64 = 7560;
+
+/// Marks an index copy of a draw's own indices (`Batch::copy_cpu`).
+const CPU: u32 = 1 << 31;
+
 /// Frames a mesh no draw used is kept on the GPU (as the mesh cache keeps it).
 const KEPT_FOR: u64 = 600;
 
@@ -211,6 +217,20 @@ impl Batch {
         self.out_words = 0;
         self.copies.clear();
         self.indices = 0;
+    }
+
+    /// Copies a draw's own indices `from` (in the flush's, after the meshes'), naming its
+    /// vertices of `stride` words from where the draws' own words start, into the flush's run:
+    /// where they are there.
+    fn copy_cpu(&mut self, from: Range<u32>, stride: u32) -> Range<u32> {
+        let at = self.indices;
+        let n = from.end - from.start;
+        for k in (0..n).step_by(GROUP as usize) {
+            self.copies
+                .push([from.start + k, at + k, (n - k).min(GROUP) | CPU, stride]);
+        }
+        self.indices += n;
+        at..at + n
     }
 
     /// Copies the pool's indices `from` into the flush's, each plus `base`: where they are there.
@@ -541,59 +561,32 @@ impl GpuMeshes {
     }
 
     /// Runs the flush's transforms in `encoder`, before its draws: their records, XF state and
-    /// work uploaded, the output made large enough.
+    /// work uploaded, the output made large enough. The flush's other draws' words (`words`) and
+    /// indices (`indices`, which name their words) go in the same buffers after the meshes',
+    /// so every draw of the flush is drawn from one vertex buffer (`out_group`) and one index
+    /// buffer (`indices`), with no switching between them: returns where they start, the
+    /// meshes' output words and indices.
     pub(crate) fn flush(
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         vertex_layout: &wgpu::BindGroupLayout,
         encoder: &mut wgpu::CommandEncoder,
-    ) {
-        if self.batch.records.is_empty() {
-            return;
-        }
+        words: &[u32],
+        indices: &[u32],
+    ) -> (u32, u32) {
         let storage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
         let b = &mut self.batch;
-        let n = b.work.len() as u32;
-        b.work.insert(0, [n, 0]);
-        ensure(
-            &mut self.records,
-            device,
-            "mesh records",
-            storage,
-            (b.records.len() * 4) as u64,
-        );
-        ensure(
-            &mut self.xf,
-            device,
-            "mesh xf",
-            storage,
-            (b.xf.len() * 4) as u64,
-        );
-        ensure(
-            &mut self.work,
-            device,
-            "mesh work",
-            storage,
-            (b.work.len() * 8) as u64,
-        );
-        let copies = b.copies.len() as u32;
-        b.copies.insert(0, [copies, 0, 0, 0]);
-        let size = (b.copies.len() * 16) as u64;
-        ensure(&mut self.copies, device, "mesh index copies", storage, size);
-        ensure(
-            &mut self.indices,
-            device,
-            "mesh indices drawn",
-            wgpu::BufferUsages::INDEX | wgpu::BufferUsages::STORAGE,
-            u64::from(b.indices) * 4,
-        );
+        // The other draws' words after the meshes', at a multiple of every vertex's size (6 to 30
+        // words, by its texture coordinates), so their indices can name vertices too.
+        let words_at = b.out_words.next_multiple_of(WORDS_LCM);
+        let mesh_indices = b.indices;
         if ensure(
             &mut self.out,
             device,
             "mesh vertices out",
-            wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
-            b.out_words * 4,
+            storage | wgpu::BufferUsages::COPY_SRC,
+            (words_at + words.len() as u64) * 4,
         ) || self.out_group.is_none()
         {
             self.out_group = Some(device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -605,27 +598,42 @@ impl GpuMeshes {
                 }],
             }));
         }
-        let (records, xf, work, out) = (
-            self.records.as_ref().expect("records"),
-            self.xf.as_ref().expect("xf"),
-            self.work.as_ref().expect("work"),
-            self.out.as_ref().expect("the output"),
-        );
-        queue.write_buffer(records, 0, bytemuck::cast_slice(&b.records));
-        if !b.xf.is_empty() {
-            queue.write_buffer(xf, 0, bytemuck::cast_slice(&b.xf));
-        }
-        queue.write_buffer(work, 0, bytemuck::cast_slice(&b.work));
-        let group = bind_group(
+        ensure(
+            &mut self.indices,
             device,
-            &self.layout,
-            &self.arena.buffer,
-            [records, xf, work, out],
+            "indices drawn",
+            wgpu::BufferUsages::INDEX | storage,
+            (u64::from(mesh_indices) + indices.len() as u64) * 4,
         );
-        let (copy_buffer, indices) = (
-            self.copies.as_ref().expect("copies"),
+        let (out, drawn) = (
+            self.out.as_ref().expect("the output"),
             self.indices.as_ref().expect("indices"),
         );
+        if !words.is_empty() {
+            queue.write_buffer(out, words_at * 4, bytemuck::cast_slice(words));
+        }
+        if !indices.is_empty() {
+            queue.write_buffer(
+                drawn,
+                u64::from(mesh_indices) * 4,
+                bytemuck::cast_slice(indices),
+            );
+        }
+        let place = (words_at as u32, mesh_indices);
+        if b.records.is_empty() && b.copies.is_empty() {
+            return place;
+        }
+        // The other draws' copies name their vertices from where their words start.
+        for c in &mut b.copies {
+            if c[2] & CPU != 0 {
+                c[3] = (words_at / u64::from(c[3])) as u32;
+            }
+        }
+        let copies = b.copies.len() as u32;
+        b.copies.insert(0, [copies, mesh_indices, 0, 0]);
+        let size = (b.copies.len() * 16) as u64;
+        ensure(&mut self.copies, device, "mesh index copies", storage, size);
+        let copy_buffer = self.copies.as_ref().expect("copies");
         queue.write_buffer(copy_buffer, 0, bytemuck::cast_slice(&b.copies));
         let copy_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("mesh indices"),
@@ -633,14 +641,57 @@ impl GpuMeshes {
             entries: &[
                 entry(5, &self.index.buffer),
                 entry(6, copy_buffer),
-                entry(7, indices),
+                entry(7, drawn),
             ],
+        });
+        let n = b.work.len() as u32;
+        let transforms = (n > 0).then(|| {
+            b.work.insert(0, [n, 0]);
+            ensure(
+                &mut self.records,
+                device,
+                "mesh records",
+                storage,
+                (b.records.len() * 4) as u64,
+            );
+            ensure(
+                &mut self.xf,
+                device,
+                "mesh xf",
+                storage,
+                (b.xf.len() * 4) as u64,
+            );
+            ensure(
+                &mut self.work,
+                device,
+                "mesh work",
+                storage,
+                (b.work.len() * 8) as u64,
+            );
+            let (records, xf, work) = (
+                self.records.as_ref().expect("records"),
+                self.xf.as_ref().expect("xf"),
+                self.work.as_ref().expect("work"),
+            );
+            queue.write_buffer(records, 0, bytemuck::cast_slice(&b.records));
+            if !b.xf.is_empty() {
+                queue.write_buffer(xf, 0, bytemuck::cast_slice(&b.xf));
+            }
+            queue.write_buffer(work, 0, bytemuck::cast_slice(&b.work));
+            bind_group(
+                device,
+                &self.layout,
+                &self.arena.buffer,
+                [records, xf, work, out],
+            )
         });
         {
             let mut pass = encoder.begin_compute_pass(&Default::default());
-            pass.set_pipeline(&self.pipeline);
-            pass.set_bind_group(0, &group, &[]);
-            pass.dispatch_workgroups(n.min(65535), n.div_ceil(65535), 1);
+            if let Some(group) = &transforms {
+                pass.set_pipeline(&self.pipeline);
+                pass.set_bind_group(0, group, &[]);
+                pass.dispatch_workgroups(n.min(65535), n.div_ceil(65535), 1);
+            }
             if copies > 0 {
                 pass.set_pipeline(&self.copier);
                 pass.set_bind_group(0, &copy_group, &[]);
@@ -648,6 +699,15 @@ impl GpuMeshes {
             }
         }
         self.batch.clear();
+        place
+    }
+
+    /// Adds a draw of the flush's own (its words and indices built on the CPU, its `indices`
+    /// in the flush's after the meshes', naming its vertices of `stride` words from where the
+    /// draws' words start) to the flush's run of indices: where they are there, so it's drawn
+    /// as the meshes' draws are, and a run of draws with the same state as one.
+    pub(crate) fn draw_cpu(&mut self, indices: Range<u32>, stride: u32) -> Range<u32> {
+        self.batch.copy_cpu(indices, stride)
     }
 
     /// Forgets a flush's draws without running them (one whose draws all drew nothing).
@@ -787,7 +847,7 @@ impl GpuMeshes {
         let start = u64::from(first) * u64::from(6 + 3 * tg) * 4;
         let size = self.batch.out_words * 4 - start;
         let mut encoder = device.create_command_encoder(&Default::default());
-        self.flush(device, queue, vertex_layout, &mut encoder);
+        self.flush(device, queue, vertex_layout, &mut encoder, &[], &[]);
         if size == 0 {
             return Vec::new();
         }

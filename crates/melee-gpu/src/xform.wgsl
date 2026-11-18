@@ -21,8 +21,9 @@
 @group(0) @binding(3) var<storage, read> work: array<vec2<u32>>;
 @group(0) @binding(4) var<storage, read_write> out: array<u32>;
 // The indices' copies (`cs_indices`): the meshes' indices kept on the GPU; the first entry's x
-// is the count, then each workgroup's from, to, count and the draw's first output vertex; the
-// flush's indices.
+// is the count and y where the flush's other draws' own indices start, then each workgroup's
+// from, to, count (its top bit set for a draw's own indices, from those) and the draw's first
+// output vertex; the flush's indices.
 @group(0) @binding(5) var<storage, read> pool: array<u32>;
 @group(0) @binding(6) var<storage, read> copies: array<vec4<u32>>;
 @group(0) @binding(7) var<storage, read_write> drawn: array<u32>;
@@ -686,7 +687,13 @@ fn cs_indices(
         return;
     }
     let c = copies[g + 1u];
-    if li < c.z {
-        drawn[c.y + li] = pool[c.x + li] + c.w;
+    if li < (c.z & 0x7FFFFFFFu) {
+        var v: u32;
+        if (c.z >> 31u) != 0u {
+            v = drawn[copies[0].y + c.x + li];
+        } else {
+            v = pool[c.x + li];
+        }
+        drawn[c.y + li] = v + c.w;
     }
 }

@@ -561,8 +561,10 @@ pub struct Renderer {
     cache: Option<wgpu::PipelineCache>,
     /// Times each render pass on the GPU, when set ([`Renderer::set_timer`]).
     timer: Option<GpuTimer>,
-    /// The fast renderer's meshes drawn with their vertices transformed on the GPU (F3): on by
-    /// default; off, they're transformed on the CPU as the exact renderer's draws are (F2).
+    /// The fast renderer's meshes drawn with their vertices transformed on the GPU (F3), and the
+    /// other draws drawn as theirs are (from the same buffers, culled by the GPU). Off by
+    /// default: the exact renderer's, and F2's, whose meshes are transformed on the CPU as the
+    /// exact renderer's draws are.
     pub gpu_transforms: bool,
     /// The meshes on the GPU and the transforms, made at the first mesh drawn.
     gpu_meshes: Option<gpu_mesh::GpuMeshes>,
@@ -1066,7 +1068,7 @@ impl Renderer {
             width,
             cache: None,
             timer: None,
-            gpu_transforms: true,
+            gpu_transforms: false,
             gpu_meshes: None,
             mesh_runs: Vec::new(),
             mesh_geometry: Vec::new(),
@@ -1854,11 +1856,25 @@ impl Renderer {
             p.indices += self.indices.len() as u64;
             p.calls += self.commands.len() as u64;
         }
+        let mut encoder = self.device.create_command_encoder(&Default::default());
+        // With the fast renderer's meshes, the meshes' vertices transformed first (F3), and every
+        // draw drawn from their buffers: the other draws' words and indices after the meshes'.
+        let place = self.gpu_meshes.as_mut().map(|m| {
+            m.flush(
+                &self.device,
+                &self.queue,
+                &self.vertex_layout,
+                &mut encoder,
+                &self.vertices,
+                &self.indices,
+            )
+        });
         let vbytes: &[u8] = bytemuck::cast_slice(&self.vertices);
-        if self
-            .vertex_buffer
-            .as_ref()
-            .is_none_or(|(b, _)| b.size() < vbytes.len() as u64)
+        if place.is_none()
+            && self
+                .vertex_buffer
+                .as_ref()
+                .is_none_or(|(b, _)| b.size() < vbytes.len() as u64)
         {
             let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("vertices"),
@@ -1902,10 +1918,11 @@ impl Renderer {
             self.uniform_buffer = Some((buffer, group));
         }
         let ibytes: &[u8] = bytemuck::cast_slice(&self.indices);
-        if self
-            .index_buffer
-            .as_ref()
-            .is_none_or(|b| b.size() < ibytes.len() as u64)
+        if place.is_none()
+            && self
+                .index_buffer
+                .as_ref()
+                .is_none_or(|b| b.size() < ibytes.len() as u64)
         {
             self.index_buffer = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("indices"),
@@ -1914,22 +1931,29 @@ impl Renderer {
                 mapped_at_creation: false,
             }));
         }
-        let (vbuf, vgroup) = self.vertex_buffer.as_ref().unwrap();
-        let ibuf = self.index_buffer.as_ref().unwrap();
+        // The vertex and index buffers, and where the draws' own words and indices are in them.
+        let (vgroup, ibuf, (words_at, indices_at)) = match (&self.gpu_meshes, place) {
+            (Some(m), Some(place)) => (
+                m.out_group.as_ref().expect("the meshes' output"),
+                m.indices.as_ref().expect("the indices"),
+                place,
+            ),
+            _ => {
+                let (vbuf, vgroup) = self.vertex_buffer.as_ref().unwrap();
+                let ibuf = self.index_buffer.as_ref().unwrap();
+                self.queue.write_buffer(vbuf, 0, vbytes);
+                self.queue.write_buffer(ibuf, 0, ibytes);
+                (vgroup, ibuf, (0, 0))
+            }
+        };
         let (ubuf, ugroup) = self.uniform_buffer.as_ref().unwrap();
-        self.queue.write_buffer(vbuf, 0, vbytes);
-        self.queue.write_buffer(ibuf, 0, ibytes);
         self.queue.write_buffer(ubuf, 0, &self.uniforms);
         self.tev.collect();
-        let mut encoder = self.device.create_command_encoder(&Default::default());
-        // The meshes' vertices transformed first (F3).
-        if let Some(m) = &mut self.gpu_meshes {
-            m.flush(&self.device, &self.queue, &self.vertex_layout, &mut encoder);
-        }
         {
             let mut pass = self.efb_pass(&mut encoder, clear);
+            pass.set_bind_group(2, vgroup, &[]);
+            pass.set_index_buffer(ibuf.slice(..), wgpu::IndexFormat::Uint32);
             // Each state set only when it changes.
-            let mut meshes: Option<bool> = None;
             let mut last: Option<(PipelineKey, u32)> = None;
             let mut uniform = None;
             let mut textures = None;
@@ -1948,24 +1972,6 @@ impl Renderer {
                         tev::UBER
                     }
                 };
-                // A mesh's vertices are the transforms' output, with the meshes' indices.
-                let mesh = c.pipeline.vertices.mesh;
-                if meshes != Some(mesh) {
-                    match self.gpu_meshes.as_ref().filter(|_| mesh) {
-                        Some(m) => {
-                            pass.set_bind_group(2, m.out_group.as_ref(), &[]);
-                            pass.set_index_buffer(
-                                m.indices.as_ref().expect("the meshes' indices").slice(..),
-                                wgpu::IndexFormat::Uint32,
-                            );
-                        }
-                        None => {
-                            pass.set_bind_group(2, vgroup, &[]);
-                            pass.set_index_buffer(ibuf.slice(..), wgpu::IndexFormat::Uint32);
-                        }
-                    }
-                    meshes = Some(mesh);
-                }
                 if last != Some((c.pipeline, tev)) {
                     pass.set_pipeline(
                         self.tev
@@ -1989,7 +1995,14 @@ impl Renderer {
                     pass.set_scissor_rect(left, y * s, right - left, h * s);
                     scissor = Some(c.scissor);
                 }
-                pass.draw_indexed(c.first..c.first + c.count, 0, c.texgens..c.texgens + 1);
+                // A mesh's indices name the transforms' output vertices; a draw's own, its words
+                // after them.
+                let (first, base) = if c.pipeline.vertices.mesh {
+                    (c.first, 0)
+                } else {
+                    (c.first + indices_at, words_at as i32)
+                };
+                pass.draw_indexed(first..first + c.count, base, c.texgens..c.texgens + 1);
             }
         }
         self.queue.submit([encoder.finish()]);
@@ -2850,15 +2863,47 @@ impl Renderer {
         if count == 0 {
             return;
         }
-        let base = self.vertices.len() as u32;
-        self.vertices
-            .extend_from_slice(&built.words[d.words.clone()]);
-        self.indices
-            .extend(built.indices[d.indices.clone()].iter().map(|&i| base + i));
-        let geometry = Geometry {
-            first,
-            count,
-            vertices: Vertices::default(),
+        let geometry = if self.gpu_transforms {
+            // The fast renderer's: its indices name its vertices and are copied into the
+            // flush's run with the meshes' (F3), so draws with the same state, a mesh's or
+            // not, are drawn as one, the GPU culling triangles as for the meshes.
+            let stride = 6 + 3 * tg as u32;
+            let at = self.vertices.len().next_multiple_of(stride as usize);
+            self.vertices.resize(at, 0);
+            self.vertices
+                .extend_from_slice(&built.words[d.words.clone()]);
+            let base = at as u32;
+            self.indices.extend(
+                built.indices[d.indices.clone()]
+                    .iter()
+                    .map(|&i| (base + i) / stride),
+            );
+            let run = self.gpu_meshes().draw_cpu(first..first + count, stride);
+            let vp_mirrored = vp.wd < 0.0;
+            Geometry {
+                first: run.start,
+                count,
+                vertices: Vertices {
+                    mesh: true,
+                    cull: if primitive < 0xA8 {
+                        gpu_mesh::cull_mode(state) as u8
+                    } else {
+                        0
+                    },
+                    front_cw: vp_mirrored,
+                },
+            }
+        } else {
+            let base = self.vertices.len() as u32;
+            self.vertices
+                .extend_from_slice(&built.words[d.words.clone()]);
+            self.indices
+                .extend(built.indices[d.indices.clone()].iter().map(|&i| base + i));
+            Geometry {
+                first,
+                count,
+                vertices: Vertices::default(),
+            }
         };
         self.push_draw(state, tg as u32, scissor, &[geometry], mem);
     }
