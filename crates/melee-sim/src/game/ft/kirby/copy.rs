@@ -16,7 +16,24 @@ use crate::vec::Vec3;
 /// `HitElement_Cape`.
 const ELEMENT_CAPE: u32 = 10;
 
+/// Where a neutral special shared with Kirby's copy of it finds the kind it runs as: the
+/// fighter's own (Mario's or Dr. Mario's in Mario's code), or the kind Kirby copied (`u`
+/// `HAT_KIND`), which his copies read where the original reads the fighter's.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum KindFrom {
+    Fighter,
+    Copy,
+}
+
 impl Running<'_> {
+    /// The kind a shared special runs as ([`KindFrom`]).
+    pub(crate) fn special_kind(&self, gobj: GObjId, from: KindFrom) -> i32 {
+        let fp = self.game.fighter(gobj);
+        match from {
+            KindFrom::Fighter => fp.kind,
+            KindFrom::Copy => fp.u_i32(u::HAT_KIND),
+        }
+    }
     /// Whether his copy's hat takes his jumps' other states (Captain Falcon's, Sheik's, the
     /// Ice Climbers' and Samus's), `ftKb_SpecialN_800F1CD8` (`fn_800F1CA0`).
     #[doc(alias = "ftKb_SpecialN_800F1CD8")]

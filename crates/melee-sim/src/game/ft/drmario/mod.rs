@@ -136,7 +136,7 @@ impl Running<'_> {
         if fp.cmd_vars[0] == 1 && fp.u.gobj_at(MARIO_X2240).is_none() {
             let top = self.bone_joint(gobj, 0);
             let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, top, None);
-            let color = self.mr_special_n_vitamin_random(gobj);
+            let color = self.mr_special_n_vitamin_random(gobj, &super::mario::special_n::MARIO);
             let facing = self.game.fighter(gobj).facing_dir;
             let pill =
                 drmariopill::appeal_spawn(self, gobj, pos, color, IT_KIND_DRMARIO_VITAMIN, facing);

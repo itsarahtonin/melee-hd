@@ -14,6 +14,7 @@
 
 pub mod attack_dash;
 pub mod copy;
+pub use copy::KindFrom;
 pub mod hat;
 pub mod init;
 pub mod special_captain;
