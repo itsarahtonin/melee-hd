@@ -45,11 +45,11 @@ So the refactor keeps a list, below, of every change Vanilla's exactness blocked
 
 Measured by the survey (2026-11-17, [quirk modelling by ruleset](#quirk-modelling-by-ruleset) has the whole list):
 
-- **The allocator model's addresses and the pools' per-address slots** (a computer player's DI reads its `Fighter*`): snapshots 16 to 31% larger and growing through the match (Sarah's 3.19 replay at tick 10,000: 2.22 MB with the model, 1.78 MB without; the materials' pool alone 501 against 251 KB), and the per-address lookups' 3.5 to 5.8% of match speed carried in from `perf/pool-trim`. The speed difference of the model alone stayed within this run's noise.
+- **The allocator model's addresses** (a computer player's DI reads its `Fighter*`): snapshots 16 to 31% larger and growing through the match (Sarah's 3.19 replay at tick 10,000: 2.22 MB with the model, 1.78 MB without; the materials' pool alone 501 against 251 KB), and the per-address lookups' 3.5 to 5.8% of match speed carried in from `perf/pool-trim`. The speed difference of the model alone stayed within this run's noise. **Since task 7 (2026-11-18) the pools' slots no longer follow the model's addresses** ([below](#task-7-the-pools-slots)): the growth and the lookups are gone, and with the model on a match's snapshot is the model-off one's plus the model's own bytes (the Fox ditto 1.90 MB at tick 15,000 against 1.86 MB off, 2.59 MB before).
 - **The heap's image and the menus' layouts** (`game::leftovers`, `vanilla_vs`, `from_menus`): 138 to 227 KB of a session's snapshot, 40 on/off tests in 28 files and 121 calls into the model in 59 files.
 - **r5 through the computer player's frame** (`cpu_ai::Leftover` and the floor checks): bookkeeping in 7 files that runs in every match.
 
-None yet blocks a refactor task; [task 7](#proposed-tasks) asks whether the slots are needed at all.
+None yet blocks a refactor task; [task 7](#task-7-the-pools-slots) found the slots weren't needed and dropped them.
 
 ## The fast renderer
 
@@ -67,8 +67,8 @@ The draw records are the one seam with the refactor. Changing what the display p
 
 ## Carried in
 
-- **`perf/pool-trim`'s cost** (Sarah, 2026-11-13: "merge it and win the speed back later"): 3.5 to 5.8% of match speed. First question: does anything gameplay sees depend on the class-object pools' addresses (a new object reading its address's leftovers)? If nothing does, go back to freely reused slots, compare pointers to these objects by identity, and add a tripwire. The leak fix (finished scenes' objects freed) stays either way.
-- **The per-address slots** of the exactness round (`fix/exact-alloc`, 2026-11-12), which Sarah questioned as never shown to be needed for gameplay.
+- **`perf/pool-trim`'s cost** (Sarah, 2026-11-13: "merge it and win the speed back later"): 3.5 to 5.8% of match speed. First question: does anything gameplay sees depend on the class-object pools' addresses (a new object reading its address's leftovers)? If nothing does, go back to freely reused slots, compare pointers to these objects by identity, and add a tripwire. The leak fix (finished scenes' objects freed) stays either way. **Done by [task 7](#task-7-the-pools-slots)** (2026-11-18).
+- **The per-address slots** of the exactness round (`fix/exact-alloc`, 2026-11-12), which Sarah questioned as never shown to be needed for gameplay. Dropped by task 7: no gameplay needs them.
 - **Relaxing Vanilla's leftover modelling** ([the Slippi ruleset](slippi-ruleset.md#not-in-this-plan)): measured there; Vanilla's list above decides it.
 - **`vs_speed_scale`** (`game/gm/vs.rs`) is misnamed: `gm_8016AE94`'s value only weights the random-item table (`it::spawn::setup`), 1.1 and 1.2 with 3 and 4 players in VS.
 
@@ -179,7 +179,7 @@ What models the original's memory rather than its rules, who needs it, and its c
 | Modelling | Vanilla | Slippi ruleset | Cost measured |
 | --- | --- | --- | --- |
 | The allocator model's addresses (`hsd::heap`: the OS heap, HSD's pieces, `HSD_ObjAlloc`'s pools) | reached: a computer player's DI reads its `Fighter*` | not reached: NanaDeterminism clears it; the Super Scope's one-shot charge takes a fixed stand-in address (`sscope::ADDRESS_STAND_IN`) | 0.7 to 2.3% of self time (pools and the model together); speed with it off within noise here, 0 to +4% on 2026-11-14; 121 `heap::with` calls in 59 files, 40 on/off tests in 28 |
-| The pools' per-address slots (`Pool::alloc_at`, `retire`, the place lookup) | only through the addresses above; whether a class object's address reaches gameplay is the carried-in question ([task 7](#proposed-tasks)) | not needed (the model is off) | 3.5 to 5.8% of match speed (`perf/pool-trim`); snapshots growing with the match (materials 501 against 251 KB) |
+| The pools' per-address slots (`Pool::alloc_at`, `retire`, the place lookup) | not needed: no gameplay reads a class object's address through its slot ([task 7](#task-7-the-pools-slots)); dropped 2026-11-18 | not needed (the model is off) | was 3.5 to 5.8% of match speed (`perf/pool-trim`) and snapshots growing with the match (materials 501 against 251 KB); gone |
 | The heap's image (`game::leftovers`: Brinstar's timer, Fountain of Dreams' star, Nana's ring, the collision stamp, Rainbow Cruise, the spawner, links, the fan) and the layouts `vanilla_vs`, `from_menus` | reached from the menus | not in a live match (playback's fresh heap); still in the ruleset's menus, which run Vanilla's | 138 to 227 KB of a session's snapshot, about 3 µs of its clone |
 | The stack descriptors' keys (`hsd::id::stack_key`) | only the oracle's comparison: nothing looks them up | the same | 5 sites, no measurable time |
 | r5 through the computer player's frame (`cpu_ai::Leftover`, `check_floor_r5`, `excluded_floor_r5`) | reached (Nana's DI) | not consulted under 3.19 (a stop by name if read); 3.16 replays still need it | still runs in every match: 46 lines in 7 files |
@@ -265,7 +265,7 @@ Sizes: S a few days of one agent's work, M a subsystem, L more. Every refactor t
 | 4 | **The item registry.** An `ItemKind` entry per item (its callbacks and tables), one item-kind type | M | 1 | `game::it` | the same for items; oracle with items on |
 | 5 | **The ruleset interface.** The 14 [hook points](#ruleset-hook-points) as one module of functions over `Rules`; Vanilla, Slippi 3.19, 3.16, 3.14 and the UCF versions as data | M | 1; Slippi tasks 5b and 6 merged | `game::slippi`, `game::ucf`, `game::state`, the 35 files that branch | no `rules.*` test outside the module; oracle and the ruleset's sessions and live matches |
 | 6 | **Vanilla's modelling behind the ruleset.** The allocator model, heap image, layouts and r5 bookkeeping not run under the Slippi ruleset's matches (a tripwire stops any `heap::with` reached there), the Super Scope's stand-in kept | M | 5; Slippi task 5b | `hsd::heap`, `game::leftovers`, `ft::cpu_ai` | under the Slippi ruleset: no model call in a match, snapshots without slots; the live-equals-playback test and the corpus run clean |
-| 7 | **Do the pools need per-address slots?** (carried in) Audit whether any gameplay reads a class object's address (a new object reading its address's leftovers, an ordering of addresses); if none, freely reused slots with the comparer mapping addresses (oracle-side, not state), a tripwire, the leak fix kept ([design call 4](#design-calls)) | S to M | nothing to start; its change after 6 | `hsd::pool`, the comparer | win back `perf/pool-trim`'s 3.5 to 5.8%; Vanilla's match snapshots stop growing (the Fox ditto under 1.6 MB at tick 15,000) |
+| 7 | **Done (2026-11-18, `perf/pool-slots`, [below](#task-7-the-pools-slots)).** **Do the pools need per-address slots?** (carried in) Audit whether any gameplay reads a class object's address (a new object reading its address's leftovers, an ordering of addresses); if none, freely reused slots with the comparer mapping addresses (oracle-side, not state), a tripwire, the leak fix kept ([design call 4](#design-calls)) | S to M | nothing to start; its change after 6 | `hsd::pool`, the comparer | win back `perf/pool-trim`'s 3.5 to 5.8%; Vanilla's match snapshots stop growing (the Fox ditto under 1.6 MB at tick 15,000) |
 | 8 | **Flat materials and shapes.** The compiled TEV and envelope lists stored inline or in one arena per pool, so a clone is copies, not allocations | M | nothing | `hsd::mobj`, `hsd::pobj`, `hsd::texp`, melee-render's readers | snapshot clone time −40% (materials and shapes are 52 to 60% of it today), allocations per snapshot halved; `snapshot-match`, sync-test, oracle |
 | 9 | **The state-only display pass** (if [design call 5](#design-calls) takes it): a flag that skips the draws and their snapshots, used for rollback's re-simulated ticks, headless bots and `melee-bench` | S | nothing | `hsd::display`, `game::render` | state equal every tick with the flag on and off (a test like `cosmetic_tests`); saves 0.6 to 2.7% of a tick plus display as defined |
 | 10 | **The dedup pilot: Rollout.** Jigglypuff's Rollout and Kirby's copy of it as one implementation over the user's attributes, both aliases on it | S | nothing | `ft::purin`, `ft::kirby` | about 1,100 lines fewer; speed unchanged within noise on corpus replays with either; oracle on every Jigglypuff and Kirby replay of the corpus |
@@ -288,6 +288,67 @@ Its own crates (melee-render, melee-gpu, melee-player); the `feat/linux-011` bra
 | F5 | **The whole scene**: HUD, text, particles, copies, shadows, refraction, the magnifier, every `Draw` kind | L | F4 | every frames test's frame within tolerance; the exact renderer still selectable |
 | F6 | **High refresh by matrix blending** on the fast path (the blend's `Capture` reused) | S | F5 | Extrapolate at any refresh rate with the CPU's frame cost below 1 ms |
 | F7 | Records from melee-sim (only if [design call 6](#design-calls) wants them) | M | F5, refactor 1 | oracle identical; the records' bookkeeping only |
+
+## Task 7: the pools' slots
+
+**Done (2026-11-18, `perf/pool-slots`).** [Design call 4](#design-calls) asked whether any gameplay reads a class object's address in a way that needs the exactness round's per-address slots (`fix/exact-alloc`, `perf/pool-trim`). Nothing does: slots are reused freely now, the comparer knows the addresses a reused slot had from a history kept outside the state, and the leak fix stays (a scene's objects go with its heap).
+
+### The audit
+
+Two different things were in question. **A live object's address** is the allocator model's, handed out when the object is made (`heap::class_alloc`), and its slot keeps it whatever the slot policy, so its readers don't depend on slots. **Which slot an object takes** is what the per-address slots modelled. It reaches the game only through a handle kept past its object's free (a dangling pointer) that the game then follows, compares or lays out, through an object reading what its slot's last object left, or through an ordering of slots. The audit read every `Pool::addr` call in `melee-sim` (about 60 outside the heap image's layouts), every dangling handle [the engine notes](engine.md#uninitialized-values) document, and the class allocation itself; the oracle runs below then looked for what reading misses.
+
+| Pool | Reads of a live object's address (the model's, whatever the slot) | Handles kept past the free, and who reads them | Leftovers, order | Verdict |
+| --- | --- | --- | --- | --- |
+| Joints (`JObj`) | Big Blue's Falcon Flyer road search reads two live joints' addresses as floats (`grBigBlue_801E8D64`, `gr::bigblue::flyer_stale_pos`; a stand-in with the model off); Samus's grapple swing takes bit 19 of the links' joint's address as its grabbed-victim-only bit (`it_802B7160`, `samusgrapple::SwingSlot::SavedR31`); stages' spline joints key the ID table by their own address (`grMaterial_801C8B68`, `id::address_key`, never looked up); the ID table's entries for a freed joint (`jobj::DANGLING`) and a stage's freed collision joints (`gr::Globals::freed_coll_jobjs`) take the address at the free; the heap image's layouts | the HUD timer's digits (written before they're read, so compared only), Zebes's bubble (a read counts a stale read), Samus's `parts[0x8B]` tip (a read counts a stale read; her match runs clean with a handle that stops), an item's hitbox joints (`HitJObj`: a read before the item writes them stops; the word its block keeps is an address now, below), the HUD's joints table and the stage select's icons across scenes (retired: following stops) | none: `hsdNew` clears every class object (`memset` at `0x803823A0`), and each port starts from its default; no ordering by address | no reader of the slot |
+| Display objects (`DObj`) | the heap image's layouts, `class_free` | none documented (Kirby's DObj lists are the fighters' `HSD_ObjAlloc` pool) | as above | none |
+| Materials (`MObj`) | layouts, `class_free` | none | as above; a reused slot hands on its compiled TEV's storage, emptied: storage only | none |
+| Textures (`TObj`) | layouts, `class_free` | Kirby's costume textures after the costume goes (written before they're read) | as above; the palette copies' storage, emptied | none |
+| Shapes (`PObj`) | layouts, `class_free` | none | as above | none |
+| Cameras (`CObj`) | the current camera freed (`CObjs::freed_current`, taken at the free, compared); layouts | a GObj's object word naming a camera of a heap made anew since, which the heap image lays out (below) | as above | none |
+| Lights (`LObj`) | the active table at the heap's end (`LObjs::active_left`, taken from the live lights); layouts | none | as above | none |
+| World objects, fog and its adjustments | layouts, `class_free` | none | as above | none |
+
+The pools that stand for the original's `HSD_ObjAlloc` (the scheduler's, the items', the effects', the fighters' and the others) were never in question within a scene: the model's free list and the pool's go back and come out alike, so last in, first out gives each slot one address. Where the two would part (a fighter's animation buffers after a joiner's unload), the pool still takes the slot freed at the model's address (`Pool::reused_at`).
+
+Two places need an address the per-address slots kept and free reuse loses, and both are the heap image's, not gameplay's:
+
+- **A retired slot's address.** The image lays out a scene's GObjs as its heap goes, and one can name an object of a heap made anew before: in `m6s-player/player-fd` (the player's own session) a GObj's object word names a camera retired with an earlier heap (tick 1766). So a retired slot keeps its last address (`Pool`'s `gone`, 4 bytes a slot and nothing else): the oracle's ruleset tests stopped there on a tripwire that asked a retired slot's address, until it did.
+- **An item's hitbox joint words.** A new item's hitbox keeps its block's last item's joint word until its script writes it, and the image lays out the item as it goes. The joint's slot can have been reused at another address by then: `tournament-sessions/bracket64`'s image differed from memory in tick 9115 (a word at `0x80E24DF8`, ours `0x80E16180`, memory `0x80E047C0`). The word now keeps the joint's address as the item wrote it (`HitJObj::set_at`, from `it_802790C0`, `it::anim::create_hitbox`), as the block already kept the item's variables, dynamic bones and hurtboxes by address. A first version took the address as the item went and was wrong in the ruleset's `matches-a` (tick 1843), where the joint's slot had been taken by another joint before the item went (the word laid and compared as that joint's address).
+
+**Under the Slippi ruleset** the model is off in the player's matches, and Samus's swing reads address 0 there without stopping (`rebuilt_slot`'s `SwingSlot::SavedR31` in `crates/melee-sim/src/game/it/kinds/samusgrapple.rs`: bit 19 of the links' joint's address, her `ThrowN` bone's, which Slippi Dolphin has). That is a gap in design call 8's tripwire, not the slots'. It went to the Slippi ruleset's follow-up.
+
+### The change
+
+- **`hsd::pool::Pool`.** Slots are reused last in, first out: a class object's (`Pool::alloc_at`) whatever its address, a model pool's at the model's address where the lists part. There's no address lookup (`by_addr`) and no place table (`cell`): a handle indexes its slot's contents directly, past `base`. A pool made anew (`Pool::retire`) starts its slots past the last scene's (`Pool::base`), each keeping only its last address; following a handle into them stops by name, as before.
+- **The comparer** (`melee_capture::compare`). A handle whose slot has been reused at another address since, or a freed slot's handle naming an earlier occupant, compares by the addresses the slot has had (`Pool::had_addr`). `hsd::pool::history` keeps them on the thread while a tool asks (`keep_history`: `melee-oracle` and the capture importer); the simulation never reads it. That is the class objects' reuse order moved into the comparer, as design call 4 put it. It can't tell a dangling handle from a live one to the slot's new object, so it accepts a handle that names any address its slot has had; the audit shows nothing in the game follows such a handle.
+- **The leak fix stays.** A scene's heap made anew still retires its class objects, `HSD_ObjInit`'s pools and the stage objects' user data.
+- **The tripwire.** Following a retired handle stops by name (`followed a handle to … whose object went with its scene's heap`). A handle into a class slot reused within the scene can't be told from a live one, so it has no tripwire of its own: the audit and the oracle's comparisons are what cover it.
+
+### Checks
+
+**Match speed: about 3 to 15% faster on this machine, indicative only** ([design call 9](#design-calls): the targets are the worker's). `melee-bench native --runs 5`, the base (`aa79a9b8`) and the branch alternating in two rounds, median frames per second, with other agents' work keeping the processor busy throughout (Windows reported it 100% loaded); every run in sync:
+
+| Match | Base, round 1 / 2 | Branch, round 1 / 2 | Change |
+| --- | --- | --- | --- |
+| `fox-fox-fd` (Vanilla, the model on) | 2,829 / 2,723 | 2,973 / 3,141 | +5.1% / +15.4% |
+| `fox-marth-ps` (Vanilla) | 2,488 / 2,569 | 2,736 / 2,672 | +10.0% / +4.0% |
+| Sarah's 3.19 replay `Game_20260129T130802` (`MELEE_BENCH_FP=slippi`, the model on) | 2,797 / 2,967 | 2,878 / 3,122 | +2.9% / +5.2% |
+
+`perf/pool-trim` cost 3.5 to 5.8% on the worker; whether all of it came back is the worker's measurement to make.
+
+**The Fox ditto's snapshot** (`melee-bench snapshot-match --every 5000`) no longer grows: 1.85, 1.90 and 1.90 MB at ticks 5,000, 10,000 and 15,000, against 2.13, 2.33 and 2.59 MB before; 2,508 allocations at 15,000 against 3,928. With the model off it is 1.86 MB, so all that's left of the model is its own 40 KB. The target of 1.6 MB isn't met by the slots alone: the rest is the state grown since `fix/exact-alloc`'s base (1.48 to 1.53 MB then), the materials' and shapes' storage first ([task 8](#proposed-tasks)).
+
+**The oracle.** Every run compared clean, with no stale read:
+
+- Replay diffs: `oracle-cpu-bowser-ps --heap` (11,033 ticks: the HUD timer's freed digit joints), `roy-fox-ys` (11,512: the Shy Guys' hitbox joints), `fox-fox-fd --heap` (15,660), `oracle-cpu-l1-luigi-l5-samus-ys --heap` (11,030: Samus's freed beam tip), `oracle-items-shoot-fd --heap` (7,428) and Sarah's `Game_20260129T130802` (13,851). Golden hashes all change (slots are numbered differently), so these ran in full.
+- `sync-test --rollback 7`: `fox-fox-fd` (15,569 ticks checked), `fox-marth-ps` (13,579) and Sarah's replay (13,773, `--fp slippi`); `melee-oracle`'s `--test sync` (18 tests); `ticks_and_restores_dont_allocate`.
+- Sessions (`melee-oracle --test session`), the ones that cross the most scene changes, retires and heap images: `the_vanilla_runs_from_power_on` (Vanilla's menus to its matches), `a_session_plays_its_match_from_the_selects` and `a_second_match_sets_its_spawner_up_again` (menus, a match and the next), `a_session_match_rolls_back` and `the_approach_match_rolls_back` (`session-sync` over the pools), `training_unloads_its_computer_players` (the fighter pools freed mid-scene, the animation buffers by address), `the_debug_menus_go_back_laid_out`, `a_tournament_match_on_peachs_castle_goes_back_laid_out` and `a_tournament_tie_runs_over_the_stage_selects_preview` (the heap image's layouts against memory), `the_selects_left_by_l_r_and_start` (the stage select's joints across scenes), `matches_from_the_menus_on_three_stages`, `the_attract_match_on_brinstar_reads_a_leftover` and `rainbow_cruises_blocks_hold_the_heaps_leftovers` (leftovers from the image), `the_modes_exits` and `single_player_setups` (many scenes); `a_brick_blocks_item_pops_out_at_random` again on the final build with the tournament one and the Vanilla runs. All of `--test ruleset` (8). The whole session and single-player suites are the merge check's.
+
+**Mutations**, each on a scratch build of the oracle:
+
+- Without the slots' history (`set_addr` recording nothing), `oracle-cpu-bowser-ps` differs in tick 10,680 at `hud time.digits[4]` (ours dangling at `0x810A0640`, theirs `0x810A0820`), the tick and field the exactness round's mutation found: the comparer's mapping is what makes the class objects' dangling handles compare.
+- The scene's end walking every GObj handle from 0, the scenes gone's included, stops `2026-10-10_13-05-00` in tick 150 by name (`followed a handle to … GObj … 0, whose object went with its scene's heap`): the tripwire on a retired handle.
+- A first version without a retired slot's address stopped `m6s-player/player-fd` in tick 1766 by name on the address it asked (the GObj naming a gone camera above), and one without the hitbox joint's address made `bracket64`'s image differ from memory in tick 9115 and then, taking it as the item went, `matches-a` differ in tick 1843: both kept now.
 
 ## Design calls
 
