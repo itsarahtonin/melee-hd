@@ -346,7 +346,7 @@ impl Game {
         for (p, q) in m.player.iter_mut().zip(&l.player) {
             p.state.clone_from(&q.state);
             if let Some(crate::hsd::tobj::ImageRef::Static(_)) = q.idesc.0 {
-                p.idesc = q.idesc.clone();
+                p.idesc = q.idesc;
             }
         }
         // The HUD's values the next match's setup leaves: the off-screen arrows' colors and
