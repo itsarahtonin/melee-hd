@@ -16,6 +16,7 @@ use rustc_hash::FxHashMap;
 
 use melee_gx::{Delta, Draw, Memory, Sink, State, vertex, xform};
 
+use crate::mesh::Mesh;
 use crate::{
     Built, Frame, Renderer, Scratch, bits, build, copy, hash_bytes, sampled_image, texture_maps,
 };
@@ -46,6 +47,12 @@ enum Packet {
         count: u16,
         data: std::ops::Range<usize>,
         fetched: bool,
+        worker: u8,
+    },
+    /// A mesh drawn (the fast renderer's display list, decoded once), built by transform
+    /// thread `worker`.
+    Mesh {
+        mesh: Arc<Mesh>,
         worker: u8,
     },
     Copy(u32),
@@ -357,48 +364,8 @@ impl Sink for Threaded {
 
     fn draw(&mut self, state: &State, draw: &Draw<'_>, mem: &dyn Memory) {
         self.changes(state);
-        for map in texture_maps(state) {
-            let image = sampled_image(state, map);
-            let range = (image.address, image.size());
-            // A copy there that the game has written over since is gone, even within the frame.
-            if let Some(gone) = self.footprints.take_if_overwritten(image.address, mem) {
-                self.batch.packets.push(Packet::Forget(gone));
-            }
-            // Bytes the host holds as they are never change: hashed once, sent when the render
-            // thread doesn't hold them.
-            if let Some(bytes) = mem.view(range.0, range.1 as usize) {
-                let hash = *self
-                    .stable
-                    .entry(range)
-                    .or_insert_with(|| hash_bytes(bytes));
-                if self.held.insert(range, hash) != Some(hash) {
-                    self.batch
-                        .packets
-                        .push(Packet::Memory(range.0, bytes.into(), hash));
-                }
-                continue;
-            }
-            if self.hashes.contains_key(&range) {
-                continue;
-            }
-            let mut bytes = vec![0; range.1 as usize];
-            mem.read(range.0, &mut bytes);
-            let hash = hash_bytes(&bytes);
-            self.hashes.insert(range, hash);
-            if self.held.insert(range, hash) != Some(hash) {
-                self.batch
-                    .packets
-                    .push(Packet::Memory(range.0, bytes.into(), hash));
-            }
-        }
-        // To the transform thread with the fewest vertices so far.
-        let (worker, load) = self
-            .load
-            .iter_mut()
-            .enumerate()
-            .min_by_key(|(_, l)| **l)
-            .expect("a transform thread");
-        *load += u32::from(draw.count) + 8;
+        self.send_textures(state, mem);
+        let worker = self.least_loaded(u32::from(draw.count));
         let start = self.batch.data.len();
         let fetched = draw.fetched || !self.send_arrays(state, draw, mem);
         if fetched && !draw.fetched {
@@ -421,7 +388,7 @@ impl Sink for Threaded {
             count: draw.count,
             data: start..self.batch.data.len(),
             fetched,
-            worker: worker as u8,
+            worker,
         });
         if self.batch.packets.len() >= BATCH {
             self.send();
@@ -515,6 +482,73 @@ impl Sink for Threaded {
     }
 }
 
+impl Threaded {
+    /// Draws a mesh (the fast renderer's display list, decoded once) with the state as it
+    /// stands: built on a transform thread from its decoded vertices, drawn in its turn.
+    pub fn draw_mesh(&mut self, state: &State, mesh: &Arc<Mesh>, mem: &dyn Memory) {
+        self.changes(state);
+        self.send_textures(state, mem);
+        let worker = self.least_loaded(mesh.len() as u32);
+        self.batch.packets.push(Packet::Mesh {
+            mesh: mesh.clone(),
+            worker,
+        });
+        if self.batch.packets.len() >= BATCH {
+            self.send();
+        }
+    }
+
+    /// The transform thread with the fewest vertices so far in this batch, given `vertices`.
+    fn least_loaded(&mut self, vertices: u32) -> u8 {
+        let (worker, load) = self
+            .load
+            .iter_mut()
+            .enumerate()
+            .min_by_key(|(_, l)| **l)
+            .expect("a transform thread");
+        *load += vertices + 8;
+        worker as u8
+    }
+
+    /// Sends the render thread the memory the draw's textures read, where it doesn't hold it.
+    fn send_textures(&mut self, state: &State, mem: &dyn Memory) {
+        for map in texture_maps(state) {
+            let image = sampled_image(state, map);
+            let range = (image.address, image.size());
+            // A copy there that the game has written over since is gone, even within the frame.
+            if let Some(gone) = self.footprints.take_if_overwritten(image.address, mem) {
+                self.batch.packets.push(Packet::Forget(gone));
+            }
+            // Bytes the host holds as they are never change: hashed once, sent when the render
+            // thread doesn't hold them.
+            if let Some(bytes) = mem.view(range.0, range.1 as usize) {
+                let hash = *self
+                    .stable
+                    .entry(range)
+                    .or_insert_with(|| hash_bytes(bytes));
+                if self.held.insert(range, hash) != Some(hash) {
+                    self.batch
+                        .packets
+                        .push(Packet::Memory(range.0, bytes.into(), hash));
+                }
+                continue;
+            }
+            if self.hashes.contains_key(&range) {
+                continue;
+            }
+            let mut bytes = vec![0; range.1 as usize];
+            mem.read(range.0, &mut bytes);
+            let hash = hash_bytes(&bytes);
+            self.hashes.insert(range, hash);
+            if self.held.insert(range, hash) != Some(hash) {
+                self.batch
+                    .packets
+                    .push(Packet::Memory(range.0, bytes.into(), hash));
+            }
+        }
+    }
+}
+
 /// The vertex arrays a transform thread holds, by address, each as far as a draw has reached.
 struct Arrays(FxHashMap<u32, Arc<[u8]>>);
 
@@ -592,6 +626,12 @@ fn work(
                     let d = build(&state, &draw, &mut scratch, &mut built);
                     built.draws.push(d);
                 }
+                Packet::Mesh { mesh, worker } if *worker == k => {
+                    let d = crate::mesh::build(&state, mesh, &mut scratch, &mut built);
+                    built.draws.push(d);
+                }
+                // Only the normals it leaves.
+                Packet::Mesh { mesh, .. } => mesh.leave_normals(&mut scratch.normals),
                 Packet::Draw {
                     vat,
                     count,
@@ -670,6 +710,13 @@ fn run(
                     let d = b.draws[next[w]].as_ref();
                     next[w] += 1;
                     renderer.draw_built(&state, *primitive, b, d, &memory);
+                }
+                Packet::Mesh { worker, .. } => {
+                    let w = usize::from(*worker);
+                    let b = &built[w];
+                    let d = b.draws[next[w]].as_ref();
+                    next[w] += 1;
+                    renderer.draw_built(&state, 0x90, b, d, &memory);
                 }
                 Packet::Forget(gone) => renderer.forget(*gone),
                 Packet::ForgetMemory(start, end) => {

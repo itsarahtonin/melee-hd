@@ -10,8 +10,10 @@ use melee_gpu::{Renderer, Threaded};
 use melee_gx::{Draw, Memory, Produced, Sink, State};
 
 use crate::mem::Space;
+use crate::meshes::Meshes;
 
 pub use melee_gpu::Frame;
+pub use melee_gpu::mesh::{Kind as MeshKind, Mesh};
 
 /// The GPU's side of a frame: the stream's state, the renderer, and the memory it reads.
 pub struct Gpu {
@@ -21,6 +23,9 @@ pub struct Gpu {
     /// How many of the address space's ranges had gone back when the renderer last forgot
     /// theirs ([`Space::reclaims`]).
     reclaims: u64,
+    /// The fast renderer's mesh cache ([`Gpu::with_meshes`]): display lists drawn from meshes
+    /// decoded once.
+    meshes: Option<RefCell<Meshes>>,
 }
 
 /// Where the renderer runs: on the game's thread, or on threads of its own that work on a frame
@@ -46,6 +51,7 @@ struct Host<'a> {
     renderer: &'a RefCell<Backend>,
     /// Something observing each draw (a check's recorder).
     observer: Option<&'a dyn Observer>,
+    meshes: Option<&'a RefCell<Meshes>>,
 }
 
 /// Sees each draw and copy with the GPU's state, as the renderer gets them.
@@ -54,6 +60,8 @@ pub trait Observer {
     fn copy(&self, state: &State, value: u32);
     /// Each command of the stream itself (not those of the display lists it calls).
     fn command(&self, _bytes: &[u8]) {}
+    /// A display list drawn from its mesh ([`Gpu::with_meshes`]) in place of its draws.
+    fn mesh(&self, _state: &State, _mesh: &Mesh) {}
 }
 
 impl Memory for Host<'_> {
@@ -102,6 +110,30 @@ impl Memory for Host<'_> {
             }
         }
     }
+
+    /// With the mesh cache, a display list drawn from its mesh where it has one.
+    fn call(&self, state: &State, phys: u32, size: u32) -> bool {
+        let Some(meshes) = self.meshes else {
+            return false;
+        };
+        let Some(parts) = meshes
+            .borrow_mut()
+            .get(self.space, self.data, state, phys, size, self)
+        else {
+            return false;
+        };
+        let mut r = self.renderer.borrow_mut();
+        for mesh in parts.iter() {
+            if let Some(o) = self.observer {
+                o.mesh(state, mesh);
+            }
+            match &mut *r {
+                Backend::Here(r) => r.draw_mesh(state, mesh, self),
+                Backend::Threaded(t) => t.draw_mesh(state, mesh, self),
+            }
+        }
+        true
+    }
 }
 
 /// Memory for a stream run without drawing: the GPU's state follows it, nothing draws.
@@ -146,7 +178,21 @@ impl Gpu {
             renderer: RefCell::new(Backend::Here(Box::new(renderer))),
             produced: Vec::new(),
             reclaims: 0,
+            meshes: None,
         }
+    }
+
+    /// The fast renderer's first part (docs/fast-renderer.md, F2): each display list of
+    /// triangles drawn from a mesh decoded once and kept ([`Meshes`]), rather than fetched and
+    /// decoded from the stream every frame. The frames are the same.
+    pub fn with_meshes(mut self) -> Gpu {
+        self.meshes = Some(RefCell::new(Meshes::default()));
+        self
+    }
+
+    /// The mesh cache, with [`Gpu::with_meshes`].
+    pub fn meshes(&self) -> Option<std::cell::Ref<'_, Meshes>> {
+        self.meshes.as_ref().map(RefCell::borrow)
     }
 
     /// The renderer on threads of its own (`melee_gpu::Threaded::spawn_synced`): the same
@@ -162,6 +208,7 @@ impl Gpu {
             )))),
             produced: Vec::new(),
             reclaims: 0,
+            meshes: None,
         }
     }
 
@@ -234,11 +281,15 @@ impl Gpu {
         observer: Option<&dyn Observer>,
     ) -> Vec<Frame> {
         self.forget_reclaimed(space);
+        if let Some(m) = &mut self.meshes {
+            m.get_mut().begin_frame();
+        }
         let host = Host {
             space,
             data,
             renderer: &self.renderer,
             observer,
+            meshes: self.meshes.as_ref(),
         };
         self.state.feed(&host, fifo, &mut self.produced, false);
         self.produced.clear();

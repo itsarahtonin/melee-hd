@@ -10,5 +10,6 @@ pub mod gpu;
 pub mod gx;
 pub mod hsd;
 pub mod mem;
+pub mod meshes;
 pub mod mutation;
 pub mod predict;

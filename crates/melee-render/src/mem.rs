@@ -528,11 +528,10 @@ impl Space {
         if hi > u64::from(end) {
             return None;
         }
-        let over = self
-            .overlay
-            .borrow()
-            .iter()
-            .any(|(a, b)| u64::from(*a) < hi && u64::from(*a) + b.len() as u64 > u64::from(phys));
+        let over =
+            self.overlay.borrow().iter().any(|(a, b)| {
+                u64::from(*a) < hi && u64::from(*a) + b.len() as u64 > u64::from(phys)
+            });
         let at = DataRef {
             archive,
             offset: phys - start,

@@ -19,6 +19,7 @@ mod depth_copy_tests;
 mod depth_tests;
 mod encode;
 pub mod gpu_time;
+pub mod mesh;
 #[cfg(test)]
 mod scaled_copy_tests;
 pub mod testing;
@@ -2589,6 +2590,23 @@ impl Renderer {
         }
         if let Some(d) = &d {
             self.draw_outs(state, draw.primitive, &built, d, mem);
+        }
+        self.built = built;
+    }
+
+    /// Draws a mesh (the fast renderer's display list, decoded once) with the state as it
+    /// stands, as the list's draws would be drawn.
+    pub fn draw_mesh(&mut self, state: &State, mesh: &mesh::Mesh, mem: &dyn Memory) {
+        let t = self.profile.is_some().then(std::time::Instant::now);
+        self.draws_this_frame += 1;
+        let mut built = std::mem::take(&mut self.built);
+        built.clear();
+        let d = mesh::build(state, mesh, &mut self.scratch, &mut built);
+        if let (Some(p), Some(t)) = (&mut self.profile, t) {
+            p.xform += t.elapsed();
+        }
+        if let Some(d) = &d {
+            self.draw_outs(state, 0x90, &built, d, mem);
         }
         self.built = built;
     }
