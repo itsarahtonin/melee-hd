@@ -888,3 +888,182 @@ fn slippi_dream_land_64_flights_note_a_doubled_round() {
         true,
     );
 }
+
+/// The camera's readers after a pause (`docs/engine.md`, "The camera's readers after a pause",
+/// design call 9): the replay at `path` played under 3.19's rules as it plays, and with the
+/// camera taken for off playback's course from the start (`DisplayPhase::paused`, as a pause
+/// leaves it). Gameplay is the same every tick in both (the tripwire only watches), and off
+/// course more is noted than as played; with `entering`, each tick in which an
+/// item of that kind enters that state (where it reads the camera) is noted. `prep` runs on
+/// the game before every tick of both runs (`true`), and after its logic, before its display
+/// pass (`false`).
+fn off_course_notes(
+    path: &std::path::Path,
+    what: &str,
+    entering: Option<(i32, i32)>,
+    prep: &(dyn Fn(&mut Game, bool) + Sync),
+) {
+    let Some(disc) = disc() else { return };
+    if !path.exists() {
+        eprintln!("{}: not here, skipping", path.display());
+        return;
+    }
+    let mut bench = Bench::open_path(disc, path);
+    let rules = Rules::slippi_online();
+    on_sim_thread(FpMode::Slippi, || {
+        let mut play = |off: bool| {
+            let mut m = bench.start(&rules, true);
+            m.game.display_phase.paused = off;
+            let mut device = Device(&bench.replay);
+            let (mut ticks, mut entered, mut seen) = (Vec::new(), Vec::new(), Vec::new());
+            for t in 0usize.. {
+                prep(&mut m.game, true);
+                let (mut f, render) = m.step_replay_tick(&mut device);
+                prep(&mut m.game, false);
+                if render {
+                    f.draws = m.render();
+                }
+                let ended = f.ended
+                    || device.0.frames.keys().next_back().is_some_and(|&last| {
+                        (m.game.playback.as_ref()).is_some_and(|p| p.frame_index >= last)
+                    });
+                m.recycle(f);
+                ticks.push((digest(&m.game), m.game.display_phase.differing));
+                if let Some((kind, state)) = entering {
+                    let now: Vec<u32> = (m.game.items.iter())
+                        .filter(|(_, it)| it.kind == kind && it.msid == state)
+                        .map(|(id, _)| id)
+                        .collect();
+                    if now.iter().any(|id| !seen.contains(id)) {
+                        entered.push(t);
+                    }
+                    seen = now;
+                }
+                if ended {
+                    break;
+                }
+            }
+            (ticks, entered)
+        };
+        let (plain, _) = play(false);
+        let (off, entered) = play(true);
+        assert_eq!(plain.len(), off.len(), "{what}: the match's length");
+        for t in 0..plain.len() {
+            assert_eq!(
+                plain[t].0, off[t].0,
+                "{what}: gameplay off course in tick {t}"
+            );
+        }
+        let noted = |ticks: &[(Digest, u32)]| ticks.last().map_or(0, |t| t.1);
+        eprintln!(
+            "{what}: {} ticks, {} reads noted off course, {} as played; entering in ticks {entered:?}",
+            off.len(),
+            noted(&off),
+            noted(&plain)
+        );
+        assert!(
+            noted(&off) > noted(&plain),
+            "{what}: no more noted off course"
+        );
+        if entering.is_some() {
+            assert!(!entered.is_empty(), "{what}: no read in the match");
+            for &t in &entered {
+                let before = if t == 0 { 0 } else { off[t - 1].1 };
+                assert!(
+                    off[t].1 > before,
+                    "{what}: the read in tick {t} wasn't noted"
+                );
+            }
+        }
+    });
+}
+
+/// Corneria's city part under the camera (`grCorneria_801E08CC`, read every tick for the
+/// stage's colors and whether the Great Fox may start sinking), noted off course.
+#[test]
+fn slippi_corneria_city_notes_reads_off_course() {
+    off_course_notes(
+        std::path::Path::new(&melee_local_data::ssbm_rs_local(
+            "bench/oracle-m4/stage-corneria.slp",
+        )),
+        "Corneria's city part",
+        None,
+        &|_, _| {},
+    );
+}
+
+/// Mute City's wrecked cars' smoke (`grMuteCity_801F1A34`, from the camera's eye), noted off
+/// course where the wreck lies within the far limits. No benchmark match wrecks a car, so each
+/// car's damage is set past the wreck's before every tick (in both runs).
+#[test]
+fn slippi_mute_city_wrecks_note_reads_off_course() {
+    off_course_notes(
+        std::path::Path::new(&melee_local_data::ssbm_rs_local(
+            "bench/oracle-m4/stage-mute-city.slp",
+        )),
+        "Mute City's wrecks",
+        None,
+        &|g, _| {
+            for c in &mut g.gr.mutecity.cars {
+                c.x10 = 1000.0;
+            }
+        },
+    );
+}
+
+/// Pokémon Stadium's close-up (`grStadium_801D32D0`, where it copies from through the CObj),
+/// noted off course.
+#[test]
+fn slippi_stadium_close_up_notes_reads_off_course() {
+    off_course_notes(
+        &melee_local_data::bench_replay("fox-marth-ps"),
+        "Pokémon Stadium's close-up",
+        None,
+        &|_, _| {},
+    );
+}
+
+/// A benchmark match with Poké Balls (on Final Destination, where nothing else reads the
+/// camera).
+fn pokeball_match() -> std::path::PathBuf {
+    melee_local_data::ssbm_rs_local("bench/oracle-m4/items-pokeball1-fd.slp").into()
+}
+
+/// The Unown's swarms (`it_802CE8D0`, toward the camera's interest), noted off course as each
+/// Unown starts them (state 1).
+#[test]
+fn slippi_unown_notes_reads_off_course() {
+    off_course_notes(&pokeball_match(), "the Unown", Some((172, 1)), &|_, _| {});
+}
+
+/// Scizor flying off toward the camera (`itHassam_802CE400`, state 2), noted off course. No
+/// benchmark match has a Scizor, so every ball lets one out (the start data's forced Pokémon,
+/// `x28`); and its leap lasts 500 frames (`x1C`), by which it has left the blast zones, so it
+/// flies off only with the leap cut to 20 frames (both runs).
+#[test]
+fn slippi_scizor_notes_reads_off_course() {
+    off_course_notes(&pokeball_match(), "Scizor", Some((171, 2)), &|g, _| {
+        g.vs.start.x28 = 171;
+        let ids: Vec<u32> = g.items.iter().map(|(i, _)| i).collect();
+        for i in ids {
+            let it = &mut g.items[i];
+            if it.kind == 171 && it.msid == 1 && it.xDAC_itcmd_var0 != 0 {
+                it.xD44_lifeTimer = it.xD44_lifeTimer.min(20.0);
+            }
+        }
+    });
+}
+
+/// An enemy flung toward the screen (`it_8027BA54`, here a Goomba entering state 11), noted
+/// off course.
+#[test]
+fn slippi_flung_enemies_note_reads_off_course() {
+    off_course_notes(
+        std::path::Path::new(&melee_local_data::ssbm_rs_local(
+            "bench/oracle-m4-monsters/monsters-goomba-ps.slp",
+        )),
+        "a Goomba flung toward the screen",
+        Some((43, 0xB)),
+        &|_, _| {},
+    );
+}

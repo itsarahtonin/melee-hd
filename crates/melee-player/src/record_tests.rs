@@ -786,6 +786,146 @@ fn a_paused_live_match_notes_its_view_reads() {
     });
 }
 
+/// A pause reaches the camera's other readers in the logic (`docs/engine.md`, "The camera's
+/// readers after a pause"): a paused live match on Corneria (its city part under the camera,
+/// read every tick) notes reads after the pause, and the same match unpaused notes fewer. On
+/// it and on Mute City (whose passing cars run the looping quake), the pause camera here frames
+/// as the standard camera (looking at no one, as `gm_EnablePlayerPauseCamera`'s -1 sets it
+/// up), so each paused tick
+/// also adds to the width average and counts the quakes down; the average, the counters and
+/// the looping quake's model followed as playback's camera holds them (`live::PlaybackCamera`)
+/// equal its playback's (with the first frame's settling, as Slippi's playback runs it) every
+/// frame, and the match's own average doesn't from the pause on. Gameplay stays the same in
+/// playback.
+#[test]
+fn a_paused_live_match_notes_its_camera_reads() {
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+        type Camera = (u32, u32, i16, [i32; 5], bool);
+        let followed = |g: &melee_sim::game::state::Game| -> Camera {
+            let p = &g.display_phase.playback;
+            let model = p.quake_model;
+            (
+                p.width.to_bits(),
+                p.width_sum.to_bits(),
+                p.width_count,
+                p.quake_frames,
+                model,
+            )
+        };
+        let held = |g: &melee_sim::game::state::Game| -> Camera {
+            let c = &g.camera.cam;
+            let model = c.quake_gobj.is_some();
+            (
+                c.x2B0.to_bits(),
+                c.x2B4.to_bits(),
+                c.x2B8,
+                c.quake_frames_left,
+                model,
+            )
+        };
+        let frame = |m: &melee_sim::game::vs_match::Match| {
+            m.game.recorder.as_ref().and_then(|r| r.last_frame())
+        };
+        for key in ["corneria", "mute-city"] {
+            let (_, live) = live_settings_on(key);
+            let mut unpaused = 0;
+            play_live(&disc, &live, false, None, |m, _| {
+                unpaused = m.game.display_phase.differing;
+            });
+            // Frame by frame: what's followed, the match's own, and gameplay.
+            let mut ours = std::collections::BTreeMap::new();
+            let (mut off, mut before, mut noted) = (None, 0, 0);
+            let file = play_live(&disc, &live, true, None, |m, _| {
+                let g = &mut m.game;
+                if g.camera.cam.mode == melee_sim::game::camera::PAUSE {
+                    // The pause camera looking at no one: the standard camera's update.
+                    g.camera.cam.x2C4 = 11;
+                }
+                let Some(f) = frame(m) else { return };
+                let g = &m.game;
+                ours.entry(f)
+                    .or_insert_with(|| (followed(g), held(g), gameplay(g)));
+                let d = &g.display_phase;
+                if d.paused && off.is_none() {
+                    off = Some(f);
+                    before = d.differing;
+                }
+                noted = d.differing;
+            });
+            let off = off.expect("the pause took the camera off course");
+            eprintln!(
+                "{key}: off course from frame {off}: {before} reads noted before, {noted} at the end; {unpaused} unpaused"
+            );
+            // Corneria reads its city part every tick; Mute City's cars read the camera only
+            // when wrecked, which the script never does.
+            if key == "corneria" {
+                assert!(
+                    noted > before && noted > unpaused,
+                    "{key}: no more reads noted after the pause"
+                );
+            }
+            let paused = Replay::parse(&file).expect("the recording parses");
+            let mut again =
+                Settings::from_replay(&melee_slippi::start(&paused)).expect("its settings");
+            again.disc = live.disc;
+            let mut play = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
+            let mut theirs = std::collections::BTreeMap::new();
+            for _ in 0..8000 {
+                let (f, render) = play.step_replay_tick(&mut melee_slippi::Device(&paused));
+                if render {
+                    play.render();
+                }
+                let ended = f.ended;
+                play.recycle(f);
+                let i = play.game.playback.as_ref().expect("playback").frame_index;
+                theirs
+                    .entry(i)
+                    .or_insert_with(|| (held(&play.game), gameplay(&play.game)));
+                if ended {
+                    break;
+                }
+            }
+            let (mut compared, mut apart) = (0, Vec::new());
+            for (f, (follow, own, play)) in &ours {
+                let Some((their_cam, their_play)) = theirs.get(f) else {
+                    continue;
+                };
+                compared += 1;
+                assert_eq!(play, their_play, "{key}: frame {f}'s gameplay in playback");
+                assert_eq!(
+                    follow, their_cam,
+                    "{key}: frame {f}: playback's camera as followed, and as it plays back"
+                );
+                if own.2 != their_cam.2 {
+                    apart.push(*f);
+                }
+            }
+            assert!(compared > 3000, "{key}: {compared} frames compared");
+            // The match's own count is never playback's: the settling's updates put
+            // playback's ahead from the first frame, and the pause's put the match's ahead
+            // from the pause.
+            assert_eq!(
+                apart.len(),
+                compared,
+                "{key}: the match's own width average"
+            );
+            let gap = |f: i32| {
+                let (follow, own, _) = &ours[&f];
+                i32::from(own.2) - i32::from(follow.2)
+            };
+            eprintln!(
+                "{key}: the match's count {} from playback's before the pause, {} after",
+                gap(off - 1),
+                gap(off + 1)
+            );
+            assert!(gap(off + 1) > gap(off - 1), "{key}: the pause's updates");
+        }
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+    });
+}
+
 /// A live match goes on from the console's timeline as the VS scene's loop starts
 /// (`live::Timeline`, `docs/slippi-ruleset.md`, "The scene entry's stall"): its ticks take the
 /// console's reads and render on the console's rounds, and its recording plays back with the

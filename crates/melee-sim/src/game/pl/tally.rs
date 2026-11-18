@@ -38,6 +38,28 @@ fn single(v: u32) -> f64 {
     fp::frsp(f64::from(v))
 }
 
+/// The two bonuses by the camera bounds' width average `width` (`fn_8003B044`): whether the
+/// distance `far` (`xD8C`) reaches its scale of half the width (0x69's test) and whether
+/// `near` (`xD94`) stays within its scale of it (0x6C's).
+fn width_bonuses(
+    far: f64,
+    near: f64,
+    (far_scale, near_scale): (f64, f64),
+    width: f64,
+) -> (bool, bool) {
+    let half = fp::fmuls(0.5, width);
+    (
+        far >= fp::fmuls(far_scale, half),
+        near <= fp::fmuls(near_scale, half),
+    )
+}
+
+/// Whether the bonuses decide otherwise with another width average: 0x69 only once the match
+/// has run long enough for it (`timed`).
+fn width_bonuses_differ(timed: bool, ours: (bool, bool), theirs: (bool, bool)) -> bool {
+    (timed && ours.0 != theirs.0) || ours.1 != theirs.1
+}
+
 /// The bits of a byte of the records (`xDD0`, `xDD1`), `bit0` the top one.
 fn bit(b: u8, n: u8) -> bool {
     b & (0x80 >> n) != 0
@@ -572,18 +594,27 @@ impl Running<'_> {
             }
         }
         let width = reg(super::super::camera::average_width(&self.game.camera.cam));
-        if self.game.vs_frame_count() >= self.plco_u32(0x108) {
-            let half = fp::fmuls(0.5, width);
-            if reg(xd8c) >= fp::fmuls(self.plco_f32(0x104), half) {
-                self.game.set_bonus_flag(player, 0x69);
-            }
+        // The two bonuses by the camera's width average: under Slippi's rules also taken with
+        // playback's (`live::PlaybackCamera`), a different outcome noted (design call 9).
+        let scales = (self.plco_f32(0x104), self.plco_f32(0x114));
+        let (far, near) = width_bonuses(reg(xd8c), reg(xd94), scales, width);
+        let timed = self.game.vs_frame_count() >= self.plco_u32(0x108);
+        if timed && far {
+            self.game.set_bonus_flag(player, 0x69);
         }
         if self.game.vs_frame_count() >= self.plco_u32(0x110) && reg(xd8c) < self.plco_f32(0x10C) {
             self.game.set_bonus_flag(player, 0x6A);
         }
-        let half = fp::fmuls(0.5, width);
-        if reg(xd94) <= fp::fmuls(self.plco_f32(0x114), half) {
+        if near {
             self.game.set_bonus_flag(player, 0x6C);
+        }
+        let p = &self.game.display_phase.playback;
+        if self.game.rules.slippi && p.on {
+            let theirs = width_bonuses(reg(xd8c), reg(xd94), scales, reg(p.average_width()));
+            if width_bonuses_differ(timed, (far, near), theirs) {
+                let tick = self.game.scene.unk_8;
+                self.game.display_phase.note(tick);
+            }
         }
         if bit(dd1, 6) && !bit(dd1, 7) {
             self.game.set_bonus_flag(player, 0x5A);
@@ -958,5 +989,22 @@ mod tests {
         assert_eq!(decision_type(0), DEC_FLAG);
         assert_eq!(decision_type(2), DEC_POINT);
         assert_eq!(decision_type(0x7D), DEC_POINT);
+    }
+
+    /// The width average's bonuses under two averages (the match's and playback's camera's,
+    /// `live::PlaybackCamera`): a distance at the threshold of one average and not the other
+    /// decides otherwise; 0x69's only once timed.
+    #[test]
+    fn the_width_bonuses_differ_by_the_average() {
+        let scales = (0.5, 0.25);
+        // Half of 200 is 100: far 50 reaches 0.5 of it, near 25 stays within 0.25 of it.
+        assert_eq!(width_bonuses(50.0, 25.0, scales, 200.0), (true, true));
+        assert_eq!(width_bonuses(50.0, 25.0, scales, 200.5), (false, true));
+        assert_eq!(width_bonuses(50.0, 25.0, scales, 199.5), (true, false));
+        let (ours, theirs) = ((true, true), (false, true));
+        assert!(width_bonuses_differ(true, ours, theirs));
+        assert!(!width_bonuses_differ(false, ours, theirs));
+        assert!(width_bonuses_differ(false, (true, true), (true, false)));
+        assert!(!width_bonuses_differ(true, ours, ours));
     }
 }

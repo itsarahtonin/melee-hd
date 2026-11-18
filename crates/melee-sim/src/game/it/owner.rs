@@ -294,7 +294,7 @@ fn nearest_by_bone(
     let bones = &mut bones[..n];
     let result = nearest_of(pos, bones, facing_dir);
     if game.rules.slippi {
-        let mut other = false;
+        let (mut other, mut by_camera) = (false, false);
         for (g, v) in bones.iter_mut() {
             let fp = fighter(game, *g);
             if !fp.x2220_b7 {
@@ -305,18 +305,37 @@ fn nearest_by_bone(
                 continue;
             };
             let root = game.objs.jobjs[j].translate;
+            // The pass placed it through the camera's second CObj, off playback's course
+            // after a pause (`DisplayPhase::paused`).
+            by_camera |= placed_by_pass(root, fp.cur_pos);
             let pass = game.display_phase.placed(f.0 as usize);
             if let Some(w) = other_placement(*v, root, fp.cur_pos, pass) {
                 *v = w;
                 other = true;
             }
         }
-        if other && nearest_of(pos, bones, facing_dir) != result {
+        if read_noted(game.view_read_off_course(), by_camera, || {
+            other && nearest_of(pos, bones, facing_dir) != result
+        }) {
             let tick = game.scene.unk_8;
             game.display_phase.note(tick);
         }
     }
     result
+}
+
+/// Whether a fighter KO'd toward the screen, its root at `root` and its position `cur_pos`,
+/// stands where the display pass placed it through the camera's second CObj
+/// (`Camera_800310B8`), not where the logic put it back (a doubled round's second tick).
+fn placed_by_pass(root: Vec3, cur_pos: Vec3) -> bool {
+    root != cur_pos
+}
+
+/// Whether a nearest-opponent read is noted (design call 9): off playback's course (after a
+/// pause, `DisplayPhase::paused`) through a fighter the pass placed by the camera, whatever it
+/// decides; otherwise where the other placement `differs` in its outcome.
+fn read_noted(off_course: bool, by_camera: bool, differs: impl FnOnce() -> bool) -> bool {
+    (off_course && by_camera) || differs()
 }
 
 /// A camera bone `v` as it would read with the other display-phase placement of its
@@ -463,5 +482,21 @@ mod display_phase_tests {
         assert_eq!(other_placement(bone(pass), pass, pass, Some(pass)), None);
         // Facing left, the item sees neither.
         assert_eq!(nearest_of(at, &[(a, bone(pass)), other], Some(-1.0)), None);
+    }
+
+    /// After a pause a read through a fighter the pass placed by the camera is noted whatever
+    /// it decides (its placement is off playback's course); one through a fighter the logic put
+    /// back, or before any pause, only where the other placement decides otherwise.
+    #[test]
+    fn a_read_through_the_camera_after_a_pause_is_noted() {
+        let (pass, ko_spot) = (Vec3::new(10.0, 2.0, 0.0), Vec3::new(100.0, 2.0, 0.0));
+        assert!(placed_by_pass(pass, ko_spot));
+        assert!(!placed_by_pass(ko_spot, ko_spot));
+        let unreached = || -> bool { panic!("the other placement taken") };
+        assert!(read_noted(true, true, unreached));
+        for (off_course, by_camera) in [(true, false), (false, true), (false, false)] {
+            assert!(!read_noted(off_course, by_camera, || false));
+            assert!(read_noted(off_course, by_camera, || true));
+        }
     }
 }

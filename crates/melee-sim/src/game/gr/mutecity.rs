@@ -1480,14 +1480,22 @@ pub fn move_cars(r: &mut Running, car_gobj: GObjId, gobj: GObjId) {
             } else if let Some(item) = r.game.gr.mutecity.cars[i].item.take() {
                 material::destroy_item(r, item);
             }
-        } else if reg(pos.z) > reg(cam.z) || reg(pos.z) > reg(5000.0) || reg(pos.z) < reg(-1500.0) {
-            if r.game.gr.mutecity.cars[i].generator {
-                grlib::kill_joint_generators_and_particles(r.game, r.data, j);
-                r.game.gr.mutecity.cars[i].generator = false;
+        } else {
+            let far = reg(pos.z) > reg(5000.0) || reg(pos.z) < reg(-1500.0);
+            // Under Slippi's rules, a read of the camera's eye that decides (the wreck within
+            // the far limits) after a pause is counted (design call 9).
+            if !far {
+                r.game.note_camera_read();
             }
-        } else if !r.game.gr.mutecity.cars[i].generator {
-            let gen_ = car_generator(r, 0x119, j);
-            r.game.gr.mutecity.cars[i].generator = gen_;
+            if reg(pos.z) > reg(cam.z) || far {
+                if r.game.gr.mutecity.cars[i].generator {
+                    grlib::kill_joint_generators_and_particles(r.game, r.data, j);
+                    r.game.gr.mutecity.cars[i].generator = false;
+                }
+            } else if !r.game.gr.mutecity.cars[i].generator {
+                let gen_ = car_generator(r, 0x119, j);
+                r.game.gr.mutecity.cars[i].generator = gen_;
+            }
         }
         j = j.and_then(|c| r.game.objs.jobjs[c].next);
     }

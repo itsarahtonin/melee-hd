@@ -974,6 +974,9 @@ pub fn zoom_origin(r: &mut Running, gobj: GObjId) -> bool {
         .x890_cameraBox
         .expect("ftLib_GetCameraSubject: a fighter without a camera box");
     let bone = r.game.camera.boxes[b].bone_pos;
+    // Under Slippi's rules, where the close-up copies from, read through the CObj after a
+    // pause, is counted (design call 9).
+    r.game.note_camera_read();
     let s = crate::lb::screen::world_to_screen(&mut r.game.objs, r.data, c, bone, false)
         .expect("lbVector_WorldToScreen: a frustum camera");
     let vp = r.game.objs.cobjs[c].viewport;
