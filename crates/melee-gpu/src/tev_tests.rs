@@ -256,7 +256,6 @@ fn draw(
         texgens: tg as u32,
         first,
         count: vs.len() as u32,
-        base: 0,
         scissor: [0, 0, EFB_WIDTH, EFB_HEIGHT],
     });
     r.flush();

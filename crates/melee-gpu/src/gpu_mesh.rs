@@ -195,6 +195,11 @@ struct Batch {
     last: [Option<(u32, u32)>; 4],
     /// The output's words so far.
     out_words: u64,
+    /// The draws' indices copied from the index pool into the flush's, each workgroup's: from,
+    /// to, how many (at most `GROUP`) and the draw's first output vertex, added to each.
+    copies: Vec<[u32; 4]>,
+    /// The flush's indices so far.
+    indices: u32,
 }
 
 impl Batch {
@@ -204,6 +209,20 @@ impl Batch {
         self.work.clear();
         self.last = [None; 4];
         self.out_words = 0;
+        self.copies.clear();
+        self.indices = 0;
+    }
+
+    /// Copies the pool's indices `from` into the flush's, each plus `base`: where they are there.
+    fn copy(&mut self, from: Range<u32>, base: u32) -> Range<u32> {
+        let at = self.indices;
+        let n = from.end - from.start;
+        for k in (0..n).step_by(GROUP as usize) {
+            self.copies
+                .push([from.start + k, at + k, (n - k).min(GROUP), base]);
+        }
+        self.indices += n;
+        at..at + n
     }
 
     /// Section `k` made of XF memory's `ranges`: where it is in `xf`, sent unless the last one
@@ -302,6 +321,9 @@ impl Batch {
 pub(crate) struct GpuMeshes {
     pipeline: wgpu::ComputePipeline,
     layout: wgpu::BindGroupLayout,
+    /// Copies the draws' indices into the flush's (`cs_indices`).
+    copier: wgpu::ComputePipeline,
+    copier_layout: wgpu::BindGroupLayout,
     arena: Pool,
     /// The elements' indices, which the draws are drawn with.
     pub(crate) index: Pool,
@@ -314,6 +336,9 @@ pub(crate) struct GpuMeshes {
     xf: Option<wgpu::Buffer>,
     work: Option<wgpu::Buffer>,
     out: Option<wgpu::Buffer>,
+    copies: Option<wgpu::Buffer>,
+    /// The flush's indices, which its mesh draws are drawn with.
+    pub(crate) indices: Option<wgpu::Buffer>,
     /// The output, as the draws' vertex shader reads it (group 2).
     pub(crate) out_group: Option<wgpu::BindGroup>,
     /// Meshes uploaded, and words of the XF state sent, since asked (for the profile).
@@ -390,11 +415,31 @@ impl GpuMeshes {
             compilation_options: Default::default(),
             cache: None,
         });
+        let copier_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("mesh indices"),
+            entries: &[storage(true, 5), storage(true, 6), storage(false, 7)],
+        });
+        let copier = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+            label: Some("mesh indices"),
+            layout: Some(
+                &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some("mesh indices"),
+                    bind_group_layouts: &[Some(&copier_layout)],
+                    immediate_size: 0,
+                }),
+            ),
+            module: &module,
+            entry_point: Some("cs_indices"),
+            compilation_options: Default::default(),
+            cache: None,
+        });
         GpuMeshes {
             pipeline,
             layout,
+            copier,
+            copier_layout,
             arena: Pool::new(device, "mesh vertices", wgpu::BufferUsages::STORAGE),
-            index: Pool::new(device, "mesh indices", wgpu::BufferUsages::INDEX),
+            index: Pool::new(device, "mesh indices", wgpu::BufferUsages::STORAGE),
             resident: FxHashMap::default(),
             dead: (0, 0),
             batch: Batch::default(),
@@ -402,6 +447,8 @@ impl GpuMeshes {
             xf: None,
             work: None,
             out: None,
+            copies: None,
+            indices: None,
             out_group: None,
             uploaded: 0,
         }
@@ -459,8 +506,9 @@ impl GpuMeshes {
     }
 
     /// Adds a draw of `mesh` with `state` (the draws before having left `normals`, its scissor's
-    /// offset `off`, `texgens` texture coordinates) to the flush; puts its runs in the index
-    /// pool in `runs`. Its vertices' words come out from the vertex this returns.
+    /// offset `off`, `texgens` texture coordinates) to the flush; puts its runs' indices in the
+    /// flush's (`indices`) in `runs`, the triangles' unless `triangles` is false. They name its
+    /// vertices' words, which come out from the vertex this returns.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn draw(
         &mut self,
@@ -472,18 +520,23 @@ impl GpuMeshes {
         off: (f32, f32),
         texgens: u32,
         frame: u64,
+        triangles: bool,
         runs: &mut Vec<(Kind, Range<u32>)>,
     ) -> u32 {
         let stride = u64::from(6 + 3 * texgens);
         let first = self.batch.out_words.div_ceil(stride);
-        let res = self.resident(device, queue, mesh, frame);
+        self.resident(device, queue, mesh, frame);
+        let res = &self.resident[&(Arc::as_ptr(mesh) as usize)];
+        let batch = &mut self.batch;
         let count = u64::from(res.tri + 4 * res.lp_count);
         runs.clear();
-        runs.extend(res.runs.iter().cloned());
-        let res = &self.resident[&(Arc::as_ptr(mesh) as usize)];
-        self.batch
-            .record(state, res, normals, off, texgens, first as u32, false);
-        self.batch.out_words = (first + count) * stride;
+        for (kind, r) in &res.runs {
+            if triangles || *kind != Kind::Triangles {
+                runs.push((*kind, batch.copy(r.clone(), first as u32)));
+            }
+        }
+        batch.record(state, res, normals, off, texgens, first as u32, false);
+        batch.out_words = (first + count) * stride;
         first as u32
     }
 
@@ -524,6 +577,17 @@ impl GpuMeshes {
             storage,
             (b.work.len() * 8) as u64,
         );
+        let copies = b.copies.len() as u32;
+        b.copies.insert(0, [copies, 0, 0, 0]);
+        let size = (b.copies.len() * 16) as u64;
+        ensure(&mut self.copies, device, "mesh index copies", storage, size);
+        ensure(
+            &mut self.indices,
+            device,
+            "mesh indices drawn",
+            wgpu::BufferUsages::INDEX | wgpu::BufferUsages::STORAGE,
+            u64::from(b.indices) * 4,
+        );
         if ensure(
             &mut self.out,
             device,
@@ -552,12 +616,36 @@ impl GpuMeshes {
             queue.write_buffer(xf, 0, bytemuck::cast_slice(&b.xf));
         }
         queue.write_buffer(work, 0, bytemuck::cast_slice(&b.work));
-        let group = self.bind_group(device, [records, xf, work, out]);
+        let group = bind_group(
+            device,
+            &self.layout,
+            &self.arena.buffer,
+            [records, xf, work, out],
+        );
+        let (copy_buffer, indices) = (
+            self.copies.as_ref().expect("copies"),
+            self.indices.as_ref().expect("indices"),
+        );
+        queue.write_buffer(copy_buffer, 0, bytemuck::cast_slice(&b.copies));
+        let copy_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("mesh indices"),
+            layout: &self.copier_layout,
+            entries: &[
+                entry(5, &self.index.buffer),
+                entry(6, copy_buffer),
+                entry(7, indices),
+            ],
+        });
         {
             let mut pass = encoder.begin_compute_pass(&Default::default());
             pass.set_pipeline(&self.pipeline);
             pass.set_bind_group(0, &group, &[]);
             pass.dispatch_workgroups(n.min(65535), n.div_ceil(65535), 1);
+            if copies > 0 {
+                pass.set_pipeline(&self.copier);
+                pass.set_bind_group(0, &copy_group, &[]);
+                pass.dispatch_workgroups(copies.min(65535), copies.div_ceil(65535), 1);
+            }
         }
         self.batch.clear();
     }
@@ -565,27 +653,6 @@ impl GpuMeshes {
     /// Forgets a flush's draws without running them (one whose draws all drew nothing).
     pub(crate) fn drop_batch(&mut self) {
         self.batch.clear();
-    }
-
-    fn bind_group(&self, device: &wgpu::Device, buffers: [&wgpu::Buffer; 4]) -> wgpu::BindGroup {
-        let [records, xf, work, out] = buffers;
-        fn entry(binding: u32, b: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
-            wgpu::BindGroupEntry {
-                binding,
-                resource: b.as_entire_binding(),
-            }
-        }
-        device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("xform"),
-            layout: &self.layout,
-            entries: &[
-                entry(0, &self.arena.buffer),
-                entry(1, records),
-                entry(2, xf),
-                entry(3, work),
-                entry(4, out),
-            ],
-        })
     }
 
     /// Between frames: meshes no draw used for a while go, and the pools close their gaps once
@@ -663,7 +730,12 @@ impl GpuMeshes {
         queue.write_buffer(&records, 0, bytemuck::cast_slice(&b.records));
         queue.write_buffer(&xf, 0, bytemuck::cast_slice(&b.xf));
         queue.write_buffer(&work, 0, bytemuck::cast_slice(&b.work));
-        let group = self.bind_group(device, [&records, &xf, &work, &out]);
+        let group = bind_group(
+            device,
+            &self.layout,
+            &self.arena.buffer,
+            [&records, &xf, &work, &out],
+        );
         let mut encoder = device.create_command_encoder(&Default::default());
         {
             let mut pass = encoder.begin_compute_pass(&Default::default());
@@ -709,7 +781,9 @@ impl GpuMeshes {
     ) -> Vec<u32> {
         let tg = crate::texgens(state) as u32;
         let mut runs = Vec::new();
-        let first = self.draw(device, queue, state, mesh, normals, off, tg, 0, &mut runs);
+        let first = self.draw(
+            device, queue, state, mesh, normals, off, tg, 0, true, &mut runs,
+        );
         let start = u64::from(first) * u64::from(6 + 3 * tg) * 4;
         let size = self.batch.out_words * 4 - start;
         let mut encoder = device.create_command_encoder(&Default::default());
@@ -739,6 +813,33 @@ impl GpuMeshes {
         let words = bytemuck::cast_slice(&slice.get_mapped_range().expect("mapped")).to_vec();
         read.unmap();
         words
+    }
+}
+
+/// The transforms' bind group: the arena and the flush's buffers.
+fn bind_group(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    arena: &wgpu::Buffer,
+    [records, xf, work, out]: [&wgpu::Buffer; 4],
+) -> wgpu::BindGroup {
+    device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some("xform"),
+        layout,
+        entries: &[
+            entry(0, arena),
+            entry(1, records),
+            entry(2, xf),
+            entry(3, work),
+            entry(4, out),
+        ],
+    })
+}
+
+fn entry(binding: u32, b: &wgpu::Buffer) -> wgpu::BindGroupEntry<'_> {
+    wgpu::BindGroupEntry {
+        binding,
+        resource: b.as_entire_binding(),
     }
 }
 

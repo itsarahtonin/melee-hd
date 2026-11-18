@@ -20,6 +20,12 @@
 // The first entry's x is the count; then each workgroup's record and first item.
 @group(0) @binding(3) var<storage, read> work: array<vec2<u32>>;
 @group(0) @binding(4) var<storage, read_write> out: array<u32>;
+// The indices' copies (`cs_indices`): the meshes' indices kept on the GPU; the first entry's x
+// is the count, then each workgroup's from, to, count and the draw's first output vertex; the
+// flush's indices.
+@group(0) @binding(5) var<storage, read> pool: array<u32>;
+@group(0) @binding(6) var<storage, read> copies: array<vec4<u32>>;
+@group(0) @binding(7) var<storage, read_write> drawn: array<u32>;
 
 // A draw's record (`gpu_mesh::Record`), in words.
 const REC: u32 = 40u;
@@ -665,4 +671,22 @@ fn cs_main(
     write(base + 1u, gpu_position(vp, vb.clip, vec3<f32>(sb.x + ox, sb.y + oy, sb.z)), vb);
     write(base + 2u, gpu_position(vp, va.clip, vec3<f32>(sa.x + ox, sa.y + oy, sa.z)), va);
     write(base + 3u, gpu_position(vp, va.clip, vec3<f32>(sa.x - ox, sa.y - oy, sa.z)), va);
+}
+
+/// Copies the flush's draws' indices from the meshes' kept on the GPU, each plus its draw's first
+/// output vertex, so a run of draws with the same state is drawn as one.
+@compute @workgroup_size(64)
+fn cs_indices(
+    @builtin(workgroup_id) wg: vec3<u32>,
+    @builtin(num_workgroups) groups: vec3<u32>,
+    @builtin(local_invocation_index) li: u32,
+) {
+    let g = wg.y * groups.x + wg.x;
+    if g >= copies[0].x {
+        return;
+    }
+    let c = copies[g + 1u];
+    if li < c.z {
+        drawn[c.y + li] = pool[c.x + li] + c.w;
+    }
 }

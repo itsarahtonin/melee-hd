@@ -215,7 +215,6 @@ impl PipelineKey {
 struct Geometry {
     first: u32,
     count: u32,
-    base: i32,
     vertices: Vertices,
 }
 
@@ -228,11 +227,10 @@ struct Command {
     /// The vertices' texture coordinates (the draw call's instance).
     texgens: u32,
     /// Its indices: in the frame's (`Renderer::indices`), or for a mesh's vertices
-    /// (`pipeline.vertices.mesh`) in the meshes' index pool, from the transforms' output
-    /// vertex `base`.
+    /// (`pipeline.vertices.mesh`) in the flush's mesh indices, which name the transforms'
+    /// output vertices.
     first: u32,
     count: u32,
-    base: i32,
     scissor: [u32; 4],
 }
 
@@ -1506,7 +1504,6 @@ impl Renderer {
             && last.textures == c.textures
             && last.texgens == c.texgens
             && last.scissor == c.scissor
-            && last.base == c.base
             && last.first + last.count == c.first
         {
             last.count += c.count;
@@ -1783,7 +1780,6 @@ impl Renderer {
             textures: [0; 8],
             first,
             count: 6,
-            base: 0,
             scissor: rect,
         });
     }
@@ -1959,7 +1955,7 @@ impl Renderer {
                         Some(m) => {
                             pass.set_bind_group(2, m.out_group.as_ref(), &[]);
                             pass.set_index_buffer(
-                                m.index.buffer.slice(..),
+                                m.indices.as_ref().expect("the meshes' indices").slice(..),
                                 wgpu::IndexFormat::Uint32,
                             );
                         }
@@ -1993,7 +1989,7 @@ impl Renderer {
                     pass.set_scissor_rect(left, y * s, right - left, h * s);
                     scissor = Some(c.scissor);
                 }
-                pass.draw_indexed(c.first..c.first + c.count, c.base, c.texgens..c.texgens + 1);
+                pass.draw_indexed(c.first..c.first + c.count, 0, c.texgens..c.texgens + 1);
             }
         }
         self.queue.submit([encoder.finish()]);
@@ -2771,8 +2767,17 @@ impl Renderer {
         let tg = texgens(state) as u32;
         let (device, queue, frame) = (self.device.clone(), self.queue.clone(), self.frame);
         let mut runs = std::mem::take(&mut self.mesh_runs);
-        let base = self.gpu_meshes().draw(
-            &device, &queue, state, mesh, normals, off, tg, frame, &mut runs,
+        self.gpu_meshes().draw(
+            &device,
+            &queue,
+            state,
+            mesh,
+            normals,
+            off,
+            tg,
+            frame,
+            cull != 3,
+            &mut runs,
         );
         if let (Some(p), Some(t)) = (&mut self.profile, t) {
             p.xform += t.elapsed();
@@ -2782,25 +2787,20 @@ impl Renderer {
         let front_cw = vp.wd < 0.0;
         let mut geometry = std::mem::take(&mut self.mesh_geometry);
         geometry.clear();
-        geometry.extend(
-            runs.iter()
-                .filter(|(kind, _)| *kind != mesh::Kind::Triangles || cull != 3)
-                .map(|(kind, r)| Geometry {
-                    first: r.start,
-                    count: r.end - r.start,
-                    base: base as i32,
-                    vertices: Vertices {
-                        mesh: true,
-                        // Lines' and points' quads aren't culled.
-                        cull: if *kind == mesh::Kind::Triangles {
-                            cull as u8
-                        } else {
-                            0
-                        },
-                        front_cw,
-                    },
-                }),
-        );
+        geometry.extend(runs.iter().map(|(kind, r)| Geometry {
+            first: r.start,
+            count: r.end - r.start,
+            vertices: Vertices {
+                mesh: true,
+                // Lines' and points' quads aren't culled.
+                cull: if *kind == mesh::Kind::Triangles {
+                    cull as u8
+                } else {
+                    0
+                },
+                front_cw,
+            },
+        }));
         self.mesh_runs = runs;
         self.push_draw(state, tg, scissor, &geometry, mem);
         self.mesh_geometry = geometry;
@@ -2858,7 +2858,6 @@ impl Renderer {
         let geometry = Geometry {
             first,
             count,
-            base: 0,
             vertices: Vertices::default(),
         };
         self.push_draw(state, tg as u32, scissor, &[geometry], mem);
@@ -2904,7 +2903,6 @@ impl Renderer {
             textures: ids,
             first: g.first,
             count: g.count,
-            base: g.base,
             scissor,
         };
         if self.silhouettes {
