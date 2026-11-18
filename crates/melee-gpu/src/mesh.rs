@@ -26,7 +26,7 @@ use melee_gx::vertex::{self, Input, NormalCache};
 use melee_gx::xform::{self, Output, Viewport};
 use melee_gx::{Memory, State};
 
-use crate::{BuiltDraw, Renderer, Scratch, bits, line, point, texgens};
+use crate::{BuiltDraw, Renderer, Scratch, bits, line, texgens};
 
 /// What a run of a mesh's elements draws.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -289,10 +289,11 @@ impl Mesh {
     }
 
     /// Vertex `i` as the transform unit takes it, as decoding its bytes with the draw's state
-    /// gives it: `defaults` the matrix indices a vertex that carries none takes, `normals` the
-    /// normals the draws before left.
+    /// gives it, into `v`, which holds the draw's: `defaults` the matrix indices a vertex that
+    /// carries none takes, and the normals the draws before left and zeros past its texture
+    /// coordinates ([`Mesh::transform`]).
     #[inline]
-    fn input(&self, i: usize, defaults: &(u8, [u8; 8]), normals: &NormalCache, v: &mut Input) {
+    fn input(&self, i: usize, defaults: &(u8, [u8; 8]), v: &mut Input) {
         v.pos_mtx = defaults.0;
         v.tex_mtx = defaults.1;
         if let Some(m) = self.matrices.get(i) {
@@ -307,11 +308,9 @@ impl Mesh {
             }
         }
         v.position = self.positions[i];
-        v.normal = *normals;
         let n = self.normal_count;
         v.normal[..n].copy_from_slice(&self.normals[i * n..(i + 1) * n]);
         v.color = self.colors[i];
-        v.tex = [[0.0; 2]; 8];
         let t = self.tex_count;
         v.tex[..t].copy_from_slice(&self.tex[i * t..(i + 1) * t]);
     }
@@ -327,10 +326,23 @@ impl Mesh {
         let xf_index = [state.xf[xform::MATINDEX_A], state.xf[xform::MATINDEX_A + 1]];
         let defaults = vertex::default_indices(xf_index);
         let setup = xform::Setup::new(&state.xf, &state.bp);
-        let mut v = Input::default();
+        let mut v = Input {
+            normal: *normals,
+            ..Input::default()
+        };
+        // The transform writes every output a vertex's words read, and reads back only what it
+        // wrote for the vertex, but for an emboss coordinate made from a later coordinate,
+        // which reads a zero: then each vertex starts from zeros, as the exact renderer's do.
+        let fresh = (0..(state.xf[xform::NUM_TEXGENS] & 0xF).min(8) as usize).any(|n| {
+            let info = state.xf[xform::TEXMTX_INFO + n];
+            bits(info, 4, 3) == 1 && bits(info, 12, 3) as usize >= n
+        });
+        let mut o = Output::default();
         for i in 0..self.len() {
-            self.input(i, &defaults, normals, &mut v);
-            let mut o = Output::default();
+            self.input(i, &defaults, &mut v);
+            if fresh {
+                o = Output::default();
+            }
             setup.transform(&v, &mut o);
             each(i, &o);
         }
@@ -417,7 +429,10 @@ pub(crate) fn build(
     let s = scratch;
     s.outs.clear();
     s.screens.clear();
+    s.clips.clear();
     let triangles = mesh.has_triangles();
+    // Lines' and points' quads are made from their vertices' outputs.
+    let quads = mesh.runs.iter().any(|r| r.0 != Kind::Triangles);
     if triangles {
         built.words.reserve(mesh.len() * words as usize);
     }
@@ -426,16 +441,19 @@ pub(crate) fn build(
         let screen = vp.screen(o.clip);
         if triangles {
             Renderer::gpu_vertex(o, screen, off, &vp).write(tg, &mut built.words);
+            s.clips.push(o.clip);
         }
         if first.is_none() {
             first = Some((*o, screen));
         }
-        s.outs.push(*o);
-        s.screens.push(screen);
+        if quads {
+            s.outs.push(*o);
+            s.screens.push(screen);
+        }
     });
     mesh.leave_normals(&mut s.normals);
     let cull = bits(state.bp[0x00], 14, 2);
-    let (outs, screens) = (&s.outs, &s.screens);
+    let (outs, screens, clips) = (&s.outs, &s.screens, &s.clips);
     let mut note: Option<(&'static str, u64)> = None;
     for (kind, run) in &mesh.runs {
         let els = &mesh.elements[run.start as usize..run.end as usize];
@@ -443,8 +461,7 @@ pub(crate) fn build(
             Kind::Triangles => {
                 for t in els.as_chunks::<3>().0 {
                     let [a, b, c] = t.map(|i| i as usize);
-                    let backface =
-                        xform::is_backface(&state.xf, outs[a].clip, outs[b].clip, outs[c].clip);
+                    let backface = xform::is_backface(&state.xf, clips[a], clips[b], clips[c]);
                     let culled = if backface {
                         cull == 2 || cull == 3
                     } else {
@@ -491,4 +508,40 @@ pub(crate) fn build(
         note,
         first,
     })
+}
+
+/// A point: a square its size wide, as `crate::point` makes it (its corners' words, from one
+/// vertex's colors and texture coordinates).
+fn point(
+    state: &State,
+    vp: &Viewport,
+    off: (f32, f32),
+    o: &Output,
+    s: [f32; 3],
+    start: usize,
+    built: &mut crate::Built,
+) {
+    let r = bits(state.bp[0x22], 8, 8) as f32 / 12.0;
+    let tg = texgens(state);
+    let n = 6 + 3 * tg;
+    let mut w = [0u32; 30];
+    w[4] = u32::from_le_bytes(o.color[0]);
+    w[5] = u32::from_le_bytes(o.color[1]);
+    for (w, t) in w[6..].as_chunks_mut::<3>().0.iter_mut().zip(&o.tex[..tg]) {
+        *w = t.map(f32::to_bits);
+    }
+    let base = (built.words.len() - start) as u32;
+    // Corners (ll, ul, lr, ur), triangles (ll, ul, lr) and (ur, lr, ul).
+    for (x, y) in [(-1.0, -1.0), (-1.0, 1.0), (1.0, -1.0), (1.0, 1.0)] {
+        let at = [s[0] + x * r, s[1] + y * r, s[2]];
+        let p = Renderer::gpu_position(o.clip, at, off, vp);
+        for (w, p) in w.iter_mut().zip(p) {
+            *w = p.to_bits();
+        }
+        built.words.extend_from_slice(&w[..n]);
+    }
+    let words = n as u32;
+    built
+        .indices
+        .extend([0, 1, 2, 3, 2, 1].map(|i| base + words * i));
 }
