@@ -35,6 +35,11 @@ pub struct Frames {
     patched: usize,
     /// Frames built so far.
     pub built: u32,
+    /// Where the last frame's stream starts each of the display pass's draws it drew: its
+    /// offset in the stream and its index in the pass's list, in order (a draw that sends
+    /// nothing shares its offset with the next). The fast renderer's comparison harness
+    /// (`melee-render-check fast`) keys each GX draw by the display draw it came from.
+    pub marks: Vec<(u32, u32)>,
 }
 
 impl Default for Frames {
@@ -71,6 +76,7 @@ impl Frames {
             space: Space::default(),
             patched: usize::MAX,
             built: 0,
+            marks: Vec::new(),
         }
     }
 
@@ -137,10 +143,15 @@ impl Frames {
         ctx.gx.invalidate_vtx_cache();
         ctx.gx.invalidate_tex_all();
         ctx.start_render(false);
+        self.marks.clear();
         let mut i = 0;
         while i < draws.len() {
+            self.marks.push((ctx.gx.fifo.len() as u32, i as u32));
             i += ctx.draw(draws, i);
         }
+        // What the frame sends after its draws (the copy to the XFB) is the list's end.
+        self.marks
+            .push((ctx.gx.fifo.len() as u32, draws.len() as u32));
         if let Some(n) = ctx.hsd.lights_after_render_mode.take() {
             ctx.load_lights(n);
         }

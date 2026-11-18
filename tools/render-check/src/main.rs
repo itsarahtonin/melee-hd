@@ -30,8 +30,15 @@
 //! melee-render-check dashboard RESULTS_DIR OUT_DIR
 //!     a page of the results `compare` and `scaled` recorded with CHECK_RESULTS=RESULTS_DIR:
 //!     OUT_DIR/index.html, and the frames compared at full size in OUT_DIR/img/
+//! melee-render-check fast DISC REPLAY.slp [--mutate NAME] [--scale N] [--out DIR] FRAME...
+//!     the fast renderer's comparison harness: native frames drawn by a renderer under test
+//!     and by the exact renderer, their geometry and images compared within tolerance
+//! melee-render-check bench DISC REPLAY.slp [--scale N] [--from A] [--to B] [--one-thread]
+//!     [--adapter NAME|fallback]
+//!     the renderer's CPU and GPU time a frame over the replay's native frames A to B
 //! ```
 
+mod fast;
 mod native;
 mod results;
 mod snap;
@@ -214,6 +221,8 @@ fn run(args: &[String]) -> ExitCode {
         }
         Some("compare") if args.len() >= 6 => compare(args),
         Some("scaled") if args.len() >= 4 => scaled(args),
+        Some("fast") if args.len() >= 4 => fast::cli(args),
+        Some("bench") if args.len() >= 3 => fast::bench::cli(args),
         Some("reflection") if args.len() >= 4 => reflection(args),
         Some("snap") if args.len() >= 5 => {
             let dir = std::path::PathBuf::from(&args[3]);
