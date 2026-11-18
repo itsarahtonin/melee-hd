@@ -512,6 +512,43 @@ impl Space {
         Some(out)
     }
 
+    /// Where `len` bytes at a physical address are in a loaded archive, if they lie in one
+    /// archive's range, and whether a copy from the EFB lies over any of them.
+    pub fn locate(&self, phys: u32, len: u32) -> Option<(DataRef, bool)> {
+        let phys = phys & 0x03FF_FFFF;
+        if !(ARCHIVE_BASE..DYNAMIC_BASE).contains(&phys) {
+            return None;
+        }
+        let (start, end, archive) = {
+            let ranges = self.ranges.borrow();
+            let i = ranges.archives.partition_point(|a| a.0 <= phys);
+            *ranges.archives.get(i.checked_sub(1)?)?
+        };
+        let hi = u64::from(phys) + u64::from(len);
+        if hi > u64::from(end) {
+            return None;
+        }
+        let over = self
+            .overlay
+            .borrow()
+            .iter()
+            .any(|(a, b)| u64::from(*a) < hi && u64::from(*a) + b.len() as u64 > u64::from(phys));
+        let at = DataRef {
+            archive,
+            offset: phys - start,
+        };
+        Some((at, over))
+    }
+
+    /// How the game rewrote display list `list`, if it did.
+    pub fn patch(&self, list: DataRef) -> Option<Patch> {
+        if !self.patched_archives.contains(&list.archive) {
+            return None;
+        }
+        let i = self.patches.partition_point(|p| p.list < list);
+        self.patches.get(i).filter(|p| p.list == list).copied()
+    }
+
     /// Reads what the GPU reads at a physical address: an archive's bytes (with the game's
     /// rewrites applied) or an image the presentation made; zeros elsewhere.
     pub fn read(&self, data: &Archives, phys: u32, out: &mut [u8]) {
