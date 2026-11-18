@@ -13,6 +13,7 @@
 use melee_gx::vertex::{self, NormalCache};
 use melee_gx::xform::{self, Viewport};
 use melee_gx::{Draw, Memory, State};
+use melee_render::gpu::{Mesh, MeshKind};
 use std::cell::{Cell, RefCell};
 
 /// What a run of vertices draws.
@@ -232,6 +233,31 @@ impl<'a> Recorder<'a> {
         });
     }
 
+    /// Records a display list drawn from its mesh, from the display pass's draw `source`: its
+    /// vertices as the mesh transforms them (`Mesh::transform`, as the renderer does), its
+    /// elements in the list's order and GX's.
+    pub fn record_mesh(&self, source: u32, state: &State, mesh: &Mesh) {
+        let mut normals = self.normals.borrow_mut();
+        let mut clips = vec![[0.0; 4]; mesh.len()];
+        mesh.transform(state, &normals, |i, o| clips[i] = o.clip);
+        mesh.leave_normals(&mut normals);
+        let mut draws = self.draws.borrow_mut();
+        for (kind, run) in &mesh.runs {
+            let els = &mesh.elements[run.start as usize..run.end as usize];
+            draws.push(DrawGeometry {
+                source,
+                kind: match kind {
+                    MeshKind::Triangles => Kind::Triangles,
+                    MeshKind::Lines => Kind::Lines,
+                    MeshKind::Points => Kind::Points,
+                },
+                viewport: Viewport::of(&state.xf),
+                clip: els.iter().map(|&i| clips[i as usize]).collect(),
+                material_color: reads_material_color(state),
+            });
+        }
+    }
+
     pub fn into_geometry(self) -> Geometry {
         let groups = self.marks.iter().map(|&(_, s)| s).collect();
         Geometry {
@@ -250,6 +276,10 @@ impl melee_render::gpu::Observer for Recorder<'_> {
 
     fn command(&self, bytes: &[u8]) {
         Recorder::command(self, bytes);
+    }
+
+    fn mesh(&self, state: &State, mesh: &Mesh) {
+        self.record_mesh(self.source(), state, mesh);
     }
 }
 

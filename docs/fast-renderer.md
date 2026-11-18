@@ -2,14 +2,14 @@
 
 The fast renderer is a track of its own beside the refactor ([the refactor](refactor.md#the-fast-renderer)): a GPU-driven renderer for low-end PCs that becomes the default, with the exact renderer (melee-render's GX stream drawn by melee-gpu, [the player](player.md#rendering)) kept as the reference, the frames tests' oracle and an "accurate" option. It may differ from the exact renderer in vertex float maths, the rasterizer's 1/16 snap, depth precision and later enhancements; not in what's drawn, the order, materials, blending or effects (Sarah, 2026-10-19). Its own work needs no full verify: it is checked against the exact renderer (Sarah, 2026-11-14), by the harness below.
 
-This document is F1: the comparison harness and the measurement setup. F2 onward add the renderer itself.
+This document is F1, the comparison harness and the measurement setup, and [F2](#f2-the-mesh-cache), the renderer's first part: the mesh cache. F3 onward add the rest.
 
 ## The comparison harness
 
 `melee-render-check fast` (`tools/render-check/src/fast/`) draws a frame two ways from the same state, by a renderer under test and by the exact renderer, and compares each draw's transformed positions and the image.
 
 ```sh
-melee-render-check fast DISC REPLAY [--mutate NAME] [--scale N] [--out DIR] FRAME...
+melee-render-check fast DISC REPLAY [--renderer exact|fast] [--mutate NAME] [--scale N] [--out DIR] FRAME...
 ```
 
 FRAME is a native frame (the documented frames' log frame less 3 for a replay; frames named in this document are log frames, as the documented frames name them; `CHECK_FP=slippi` for a Slippi replay, as for `compare`). Each frame is drawn with the eight before it, whose copies it may sample, by both renderers; with `--out`, each compared frame's two images and a heatmap are saved (`frame_N_reference.png`, `frame_N_test.png`, `frame_N_heat.png`). It exits with failure when a frame is out of tolerance, and prints a report per frame:
@@ -51,11 +51,9 @@ How much a block may differ depends on the block: a flat wall doesn't change und
 
 How far vertices may move is the geometry's to check; the image is there for what geometry can't see: materials, blending, effects, copies.
 
-How far vertices may move is the geometry's to check; the image is there for what geometry can't see: materials, blending, effects, copies.
-
 ### Proving it: the exact renderer with a change
 
-Until the fast renderer exists, the renderer under test is the exact renderer with a change made on purpose (`--mutate NAME`, `fast::exact::Mutation`): melee-render's stream run through melee-gx by the harness itself, as `melee_render::gpu::Gpu` does, so it can change what reaches melee-gpu. A change aimed at a draw takes its target from the reference's frame.
+The harness's own stand-in for a renderer under test is the exact renderer with a change made on purpose (`--mutate NAME`, `fast::exact::Mutation`): melee-render's stream run through melee-gx by the harness itself, as `melee_render::gpu::Gpu` does, so it can change what reaches melee-gpu. A change aimed at a draw takes its target from the reference's frame.
 
 | Name | Change | Kind |
 | --- | --- | --- |
@@ -106,17 +104,17 @@ SSBM_DISC=... SSBM_RS_LOCAL=... SLIPPI_REPLAYS=... \
 
 `tests/fast.rs` builds only with the `fast` feature, so the pre-push frames step doesn't run it. Unit tests of the measures (CIEDE2000 against Sharma's published pairs, the tolerances, the primitives' expansion, the matching) run with `cargo test -p melee-render-check`.
 
-When the fast renderer exists, it implements `FrameRenderer` and takes the stand-in's place in `fast::cli` (a `--renderer` choice); the tests then run it over the same frames and expect every one within tolerance.
+The fast renderer implements `FrameRenderer` and is the renderer under test with `--renderer fast` (F2 on, [below](#f2-the-mesh-cache)); `tests/fast.rs` runs it over the same frames (`the_fast_renderer::*`) and expects every one within tolerance.
 
 ## Measuring speed
 
 `melee-render-check bench` (`fast::bench`) draws a replay's frames with one renderer, headless, and measures each frame: the CPU's time building what it draws (the exact renderer's GX stream), submitting it (the stream run, the vertices transformed and the GPU's work submitted: on the renderer's own threads, as the player draws, until the frame's copy to the XFB returns), and the GPU's time finishing it after that. The simulation runs but isn't timed. Frames before `--from` are drawn but not measured (textures, pipelines and specialized shaders made); the frame stays on the GPU, with no readback.
 
 ```sh
-melee-render-check bench DISC REPLAY [--scale N] [--from A] [--to B] [--one-thread] [--adapter NAME|fallback]
+melee-render-check bench DISC REPLAY [--renderer exact|fast] [--scale N] [--from A] [--to B] [--one-thread] [--adapter NAME|fallback]
 ```
 
-It prints mean and percentiles of each, frames a second (one over the mean of the three: each frame waits for the GPU before the next starts, so this is the renderer's alone with CPU and GPU in turn, a floor under the player, which overlaps them), and a table row. "CPU" (build and submit) is the player's "CPU build" (`--perf-report`), the quantity F2 and F3's targets name; the player's own rate in a window is `melee-bench player`'s ([performance](performance.md#rendering-speed)). When the fast renderer exists, it runs through the same `FrameRenderer` and the two compare on the same frames.
+It prints mean and percentiles of each, frames a second (one over the mean of the three: each frame waits for the GPU before the next starts, so this is the renderer's alone with CPU and GPU in turn, a floor under the player, which overlaps them), and a table row. "CPU" (build and submit) is the player's "CPU build" (`--perf-report`), the quantity F2 and F3's targets name; the player's own rate in a window is `melee-bench player`'s ([performance](performance.md#rendering-speed)). `--renderer fast` measures the fast renderer through the same `FrameRenderer`, on the same frames.
 
 **The fixed runs**: the benchmark matches in `data/bench` (in the repository, so every machine has them) and Fountain of Dreams' Slippi replay (`Game_20260129T214216`, `CHECK_FP=slippi`; any Fountain of Dreams replay measures the same way where it isn't), frames 600 to 1800 (1,201 frames, 20 seconds of play), at 1x, 2x, 3x and 5x:
 
@@ -196,3 +194,86 @@ The worker has no integrated GPU; its GPU's frame is far from the limit, so the 
 The MacBook (macOS through Metal, integrated graphics: the low-end GPU of the two), Sarah's call: the same build and fixed runs (`cargo build --locked --release -p melee-render-check`, then the loop above), and `--one-thread` and `MELEE_GPU_WORKERS=1` (macOS has no CPU affinity to set). `melee-bench player` runs the player on a hidden desktop on Windows only; elsewhere the player's own report is `melee-hd --replay R --ticks 1980 --scale N --perf-report FILE`.
 
 Each machine's numbers go in a table here like the one above, with its build, driver and how quiet it was.
+
+## F2: the mesh cache
+
+**What it is.** The fast renderer's first part (`--renderer fast` in `melee-render-check fast` and `bench`; `melee_render::gpu::Gpu::with_meshes` in code): the exact renderer with every display list it calls drawn from a mesh decoded once and kept, rather than fetched and decoded from the GX stream every frame. The player still draws with the exact renderer; switching it waits for F5.
+
+- **Where the records come from** (design call 6): the presentation side. melee-render builds the frame's GX stream as before, which still carries every material, matrix and light (F3 and F4 take those over). melee-gx asks its host about each display list the stream calls (`Memory::call`, a new hook: a host that draws the list itself returns true and the list doesn't run), and the mesh cache (`melee_render::meshes::Meshes`) answers with the list's mesh.
+- **A mesh** (`melee_gpu::mesh::Mesh`): the list's vertices fetched from their arrays and decoded, stream vertices whose attributes are the same bytes sharing one, and its primitives expanded into elements in the list's order and GX's: triangles (quads, strips and fans as melee-gpu expands them), lines (line strips as their segments) and points. A list holding anything else (a state change, another list, a vertex format other than 0, which HSD's shapes never use) is no mesh and runs as the stream has it. What a draw's state decides stays out of the mesh and comes at the draw: the matrix indices a vertex doesn't carry (XF's matrix index registers), the normals and binormals a format without them takes from the draws before, the scissor, and everything the transform unit does. The decoded attributes are plain arrays, one per attribute (positions, normals, colors, texture coordinates, matrix indices), and the elements' vertex numbers: the GPU buffers F3's transforms read. In F2 the transforms stay on the CPU and read the same arrays.
+- **Drawing one** (`mesh::build`): each vertex through the transform unit as the exact renderer's are (`xform::Setup::transform` on the `vertex::Input` its bytes decode to), its words written once and its triangles naming them, back faces culled as melee-gpu culls them, lines and points as melee-gpu's quads. So a mesh draws what its list draws, bit for bit: the frames are the exact renderer's. On the renderer's threads a mesh is one packet (`Packet::Mesh`) built by a transform thread, and a large list is cut into parts of about 1,024 vertices (`Mesh::split`, whole elements in order) so the threads share it out: Fountain of Dreams' stars are lists of thousands of points, about 24,000 of the frame's 58,000 vertices, and with each list one packet the frame took 12 ms against the exact renderer's 8 (three transform threads idle while one built it).
+- **The key** (`meshes::Key`): what the GPU reads to draw the list, named by where it is in the loaded archives rather than by address (`Space::locate`, a new accessor): the list (`PObj::display`) and its length; the game's rewrite of it, if any (refraction's matrix indices, `PObjs::refract_patches`, through `Space::patch`, a new accessor); the vertex descriptor and format 0; and each indexed attribute's array and stride (what `PObj::verts` set). So a rewritten list's key changes with its patch, and neither a shape's handle nor an address is part of a key: a freed shape whose place another takes, two shapes sharing a list with other arrays, and an archive's range of addresses given to another archive (`mem::Space`) all find other keys. Archives are immutable while loaded; the one thing that changes bytes under a key is a copy from the EFB landing in an archive's range (the magnifier's into `IfAll`'s image), so a list, or the arrays as far as its indices reach, with a copy over them draw as the stream has them (`Meshes::clear`). A mesh no frame drew for 600 frames goes.
+
+**Decision: key by what the GPU reads, not by the shape.** The brief named `PObj::verts` and `display`. The vertex descriptions matter only through the vertex descriptor, formats and arrays they set, which the cache reads from the GX state at the call, so the key holds those with the list and the cache needs nothing from the shape: it covers HSD's vertex caches (`prev_vtxdesc`, which skip setting the same descriptions again) and any list the stream calls, and it sits on the GPU's side of the stream, where F3's buffers live.
+
+**Results.** Every display list the frames measured call is drawn from a mesh: Fountain of Dreams keeps 741 meshes (3.0 MB) and draws about 500 lists a frame from them; the bench matches keep 348 to 513 (1.0 to 1.1 MB). What the stream still sends as draws is HSD's flush primitives (8 vertices each, about 170 a frame on Fountain of Dreams) and the immediate ones: sprites, particles, the HUD (about 210 quads a frame there).
+
+**The frames.** `tests/fast.rs`'s `the_fast_renderer::*`, the documented frames of every stage the player offers (the 106 frames of 38 matches: the benchmark and Slippi replays, the 23 other stages' oracle matches, the power-ups matches, Sarah's metal and cloak match and Invisible Melee), each drawn by the fast renderer and by the exact one: every frame identical, geometry and image, on 2026-11-18 (`--test-threads=2`). No frame needed an exception. The exact renderer's own output is unchanged: the documented frames (`tests/documented.rs`, 535 with `--ignored`) pass, 533 in the full run and the other two (`tie4_stock_8741` and `8911`, which failed once there with the machine fully loaded) on their own and as a pair after it.
+
+**Invalidation, proven** (each check made to fail by taking its part out, locally):
+
+- `meshes::tests` (melee-render, with an archive's display list and arrays built in the test): a list rewritten after it was drawn (`a_rewritten_list_is_a_new_mesh`: refraction's patch, each vertex's texture matrix index its position matrix index) fails with the patch out of the key; a range given back and taken by another archive at the same addresses (`a_range_taken_by_another_archive_is_a_new_mesh`) fails with the list and arrays keyed by address; the same list with another shape's arrays (`the_same_list_with_other_arrays_is_a_new_mesh`) fails with the arrays out of the key; a copy from the EFB over an array (`a_copy_over_an_array_draws_from_the_stream`) fails without `Meshes::clear`.
+- A list the game rewrites, in real frames: Sarah's `metal-cloak-rc` match, whose fighters' lists `lbRefract_PObjLoad` rewrites. With the meshes decoded from the archive's bytes, the rewrite ignored, its refracted frames 700 and 1000 (log frames 703 and 1003) fail (a refracting fighter's blocks 44 and 47 ΔE₀₀ apart, 20 and 19 blocks over the limit); 600 and 730, where nothing refracts, pass; with the rewrite all four are identical.
+- `mesh_tests::a_mesh_draws_what_its_list_draws` (melee-gpu): 3,000 random lists (every primitive, random vertex formats, attributes direct and indexed, vertices shared), random transform states and normals left by the draws before: a mesh's elements' words and the normals it leaves are those of the list's draws built one by one (`melee_gpu::build`), whole and split in parts. Made to fail by a strip's odd triangles wound the other way, the matrix index registers ignored, one output kept from vertex to vertex where an emboss coordinate reads a later one, and the carried normals ignored. Writing it found one fault: a list sending no vertices left zeros for the normals where the draws before had left theirs.
+
+**Speed** (2026-11-18, `feat/fast-f2`, the machine of the baselines above; **indicative only**: it was at 100% CPU throughout with other agents' oracle runs, builds and another `melee-render-check`, so runs of one build differed by up to 30%; design call 9: the worker's exclusive runner is what counts). The exact renderer and the fast one run alternately, the fixed runs' frames 600 to 1800 each; milliseconds a frame, means (95th percentile):
+
+| Replay | Scale | Exact: frames/s, CPU (p95) | Fast: frames/s, CPU (p95) | CPU |
+| --- | --- | --- | --- | --- |
+| fox-marth-fd | 1x | 366, 2.60 (3.26) | 416, 2.25 (2.87) | -13% |
+| fox-marth-bf | 1x | 325, 2.93 (3.59) | 447, 2.09 (2.61) | -29% |
+| fox-marth-ps | 1x | 289, 3.30 (4.27) | 354, 2.68 (3.46) | -19% |
+| ics-peach-ps | 1x | 324, 2.93 (3.99) | 346, 2.72 (3.67) | -7% |
+| Fountain of Dreams | 1x | 136, 7.13 (9.27) | 205, 4.67 (6.17) | -35% |
+| fox-marth-fd | 2x | 326, 2.88 (3.75) | 424, 2.19 (2.85) | -24% |
+| fox-marth-bf | 2x | 316, 2.97 (3.90) | 447, 2.05 (2.65) | -31% |
+| fox-marth-ps | 2x | 316, 3.00 (4.09) | 342, 2.75 (3.89) | -8% |
+| ics-peach-ps | 2x | 309, 3.08 (4.62) | 365, 2.57 (4.02) | -17% |
+| Fountain of Dreams | 2x | 146, 6.58 (8.27) | 222, 4.33 (5.76) | -34% |
+| fox-marth-fd | 3x | 348, 2.65 (3.55) | 452, 1.99 (2.47) | -25% |
+| fox-marth-bf | 3x | 351, 2.64 (3.50) | 465, 1.88 (2.34) | -29% |
+| fox-marth-ps | 3x | 319, 2.91 (3.97) | 359, 2.55 (3.31) | -12% |
+| ics-peach-ps | 3x | 299, 3.11 (4.60) | 346, 2.67 (3.75) | -14% |
+| Fountain of Dreams | 3x | 147, 6.47 (8.18) | 221, 4.29 (6.04) | -34% |
+| fox-marth-fd | 5x | 336, 2.47 (3.07) | 384, 2.09 (2.78) | -15% |
+| fox-marth-bf | 5x | 265, 3.14 (5.63) | 384, 1.94 (2.48) | -38% |
+| fox-marth-ps | 5x | 266, 3.33 (5.52) | 300, 2.87 (4.08) | -14% |
+| ics-peach-ps | 5x | 284, 3.04 (4.59) | 298, 2.88 (3.94) | -5% |
+| Fountain of Dreams | 5x | 139, 6.82 (9.44) | 206, 4.50 (6.29) | -34% |
+
+Throttled, at 1x:
+
+| Replay | Setting | Exact: frames/s, CPU (p95) | Fast: frames/s, CPU (p95) | CPU |
+| --- | --- | --- | --- | --- |
+| fox-marth-fd | `--one-thread` | 221, 4.35 (5.32) | 229, 4.21 (5.38) | -3% |
+| fox-marth-fd | `MELEE_GPU_WORKERS=1` | 156, 6.14 (7.69) | 201, 4.82 (6.24) | -21% |
+| fox-marth-ps | `--one-thread` | 155, 6.25 (8.50) | 169, 5.66 (8.13) | -9% |
+| fox-marth-ps | `MELEE_GPU_WORKERS=1` | 150, 6.53 (7.82) | 195, 4.98 (6.35) | -24% |
+| Fountain of Dreams | `--one-thread` | 79, 12.41 (18.55) | 74, 12.94 (17.18) | +4% |
+| Fountain of Dreams | `MELEE_GPU_WORKERS=1` | 63, 15.69 (19.27) | 72, 13.60 (16.77) | -13% |
+
+Fountain of Dreams on one thread is the noisiest row: four earlier alternating pairs the same day came out 10.8, 14.3, 11.7 and 13.2 ms for the fast renderer against 15.7, 15.0, 16.0 and 15.1 for the exact one (on one thread the meshes' building is the same transforms as the exact renderer's draws, less their fetching and decoding, so the cut there is smaller than threaded, where the game and render threads' share of the stream goes too).
+
+The commands, as [above](#measuring-speed) with `--renderer`:
+
+```sh
+for s in 1 2 3 5; do
+  for r in fox-marth-fd fox-marth-bf fox-marth-ps ics-peach-ps; do
+    for which in exact fast; do
+      target/release/melee-render-check bench "$SSBM_DISC" data/bench/$r.slp --scale $s --renderer $which
+    done
+  done
+  for which in exact fast; do
+    CHECK_FP=slippi target/release/melee-render-check bench "$SSBM_DISC" "$SLIPPI_REPLAYS/2026-01/Game_20260129T214216.slp" --scale $s --renderer $which
+  done
+done
+# and --one-thread, MELEE_GPU_WORKERS=1, for fox-marth-fd, fox-marth-ps and Fountain of Dreams
+```
+
+**The target isn't met.** F2's target was Fountain of Dreams' CPU frame from about 4.5 to 5.4 ms to under 2.5. Here it went from 6.5 to 7.1 ms to 4.3 to 4.7 (a third less, at every scale), which on the baselines' 5.2 to 5.4 would be about 3.5; the bench matches gained 5 to 38%. Profiled (samply on a line-table build, Fountain of Dreams at 1x, threaded), what's left on the renderer's threads after F2:
+
+- The transform threads build the meshes from their decoded arrays, nothing fetched or decoded, about 70% busy: the transform unit itself is most of it (`xform::Setup::transform`, lighting: two spot lights and a specular light on most vertices), then the vertices' words. On one thread the meshes' building is 53% of the frame's work and the transform 27%.
+- The render thread is the critical path: each draw's state (textures, uniforms, specialized pipelines: 42% of its time) and wgpu (flushing 35%: encoding the render pass 19%, the vertices' and indices' upload 9%, submitting 10%), with the frame's 3.2 MB of vertex words and 0.8 MB of indices written every frame.
+- The game thread: the stream built (0.8 to 0.9 ms) and run, the cache's lookups (`Meshes::get`, under 3% of the stream's run).
+
+So the rest is F3's and F4's: transforms on the GPU take the transform threads' work and the per-frame vertex upload away (the meshes' arrays uploaded once, a draw's matrices and lights per draw), and materials as records take the render thread's per-draw state off the GX registers. One step that fits either: the meshes' triangles as GPU index buffers made once, with back faces culled by the GPU's pipelines (GX's back face is the clip-space determinant's sign, which the GPU's facing is; a pipeline per cull mode and viewport sign), which takes the indices' upload and the CPU's culling away; F2 keeps melee-gpu's per-frame indices, so its frames stay bit for bit the exact renderer's.

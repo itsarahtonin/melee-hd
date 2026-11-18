@@ -1,7 +1,8 @@
 //! The fast renderer's comparison harness (`melee-render-check fast`, docs/fast-renderer.md)
 //! over the frames tests' matches: the frame of every stage the documented frames check, drawn
-//! by a renderer under test and by the exact renderer and compared. Until the fast renderer
-//! exists, the renderer under test is the exact renderer with a change made on purpose, which
+//! by a renderer under test and by the exact renderer and compared. The fast renderer as far as
+//! it goes (`--renderer fast`, F2's mesh cache) draws every frame within the tolerance; the
+//! exact renderer with a change made on purpose stands in for a renderer under test, which
 //! proves the harness: unchanged, every frame is identical; each wrong frame (a material's
 //! color off, a draw missing, a draw out of order, a joint's matrices off, the depth range's
 //! edge one ulp off) fails with its message; float noise (one ulp in the position matrices, a
@@ -30,8 +31,9 @@ use common::{
 };
 
 /// Runs the harness on the game's log frames `frames` (as the documented frames name them)
-/// with `mutation`; returns whether it passed and what it printed.
-fn fast(game: &Game, frames: &[u32], mutation: &str) -> (bool, String) {
+/// with `args` (the renderer under test: `--mutate NAME`, or `--renderer fast`); returns whether
+/// it passed and what it printed.
+fn fast(game: &Game, frames: &[u32], args: &[&str]) -> (bool, String) {
     let replay = game.replay.path();
     assert!(
         replay.exists(),
@@ -48,7 +50,7 @@ fn fast(game: &Game, frames: &[u32], mutation: &str) -> (bool, String) {
         .arg("fast")
         .arg(std::env::var("SSBM_DISC").expect("SSBM_DISC names the disc"))
         .arg(&replay)
-        .args(["--mutate", mutation])
+        .args(args)
         .args(
             frames
                 .iter()
@@ -83,13 +85,28 @@ fn frames_of(text: &str) -> Vec<String> {
 
 /// Unchanged, the renderer under test draws every frame as the reference does, bit for bit.
 fn identical(game: &Game, frames: &[u32]) {
-    let (ok, text) = fast(game, frames, "none");
+    let (ok, text) = fast(game, frames, &["--mutate", "none"]);
     let each = frames_of(&text);
     assert!(ok && each.len() == frames.len(), "{}: {text}", game.name);
     for f in &each {
         assert!(
             f.contains(": identical\n") && f.contains("x480: identical"),
             "{}: not identical:\n{f}",
+            game.name
+        );
+    }
+}
+
+/// The fast renderer draws every frame within the tolerance; prints each frame's report.
+fn within(game: &Game, frames: &[u32]) {
+    let (ok, text) = fast(game, frames, &["--renderer", "fast"]);
+    let each = frames_of(&text);
+    println!("{text}");
+    assert!(ok && each.len() == frames.len(), "{}: {text}", game.name);
+    for f in &each {
+        assert!(
+            f.contains(": PASS\n"),
+            "{}: out of tolerance:\n{f}",
             game.name
         );
     }
@@ -104,6 +121,19 @@ macro_rules! identical {
                 identical(&$game, &[$($frame),*]);
             }
         )*
+
+        /// The fast renderer (`--renderer fast`) on the same frames, each within tolerance.
+        mod the_fast_renderer {
+            use super::*;
+
+            $(
+                #[test]
+                #[ignore = "needs the disc, ssbm-rs's local data and the Slippi replays"]
+                fn $name() {
+                    within(&$game, &[$($frame),*]);
+                }
+            )*
+        }
     };
 }
 
@@ -182,7 +212,7 @@ const COLOR_SAMPLE: &[(Game, &[u32])] = &[
 /// report.
 fn wrong(sample: &[(Game, &[u32])], mutation: &str, says: &[&str]) {
     for (game, frames) in sample {
-        let (ok, text) = fast(game, frames, mutation);
+        let (ok, text) = fast(game, frames, &["--mutate", mutation]);
         let each = frames_of(&text);
         assert!(
             !ok && each.len() == frames.len(),
@@ -202,7 +232,7 @@ fn wrong(sample: &[(Game, &[u32])], mutation: &str, says: &[&str]) {
 /// Float noise passes every frame of the sample, though the frames aren't identical.
 fn noise(mutation: &str) {
     for (game, frames) in SAMPLE {
-        let (ok, text) = fast(game, frames, mutation);
+        let (ok, text) = fast(game, frames, &["--mutate", mutation]);
         let each = frames_of(&text);
         assert!(
             ok && each.len() == frames.len(),

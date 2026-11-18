@@ -49,11 +49,28 @@ impl Exact {
             loaded: false,
         }
     }
+
+    /// The fast renderer as far as it goes (F2): the exact renderer with its shapes' display
+    /// lists drawn from meshes decoded once (`Gpu::with_meshes`).
+    pub fn fast(renderer: Renderer, threaded: bool) -> Exact {
+        let mut r = Exact::new(renderer, threaded);
+        r.gpu = r.gpu.with_meshes();
+        r
+    }
+
+    /// The mesh cache's counts and size, for the fast renderer.
+    pub fn meshes(&self) -> Option<(melee_render::meshes::Stats, (usize, usize))> {
+        self.gpu.meshes().map(|m| (m.stats, m.size()))
+    }
 }
 
 impl FrameRenderer for Exact {
     fn name(&self) -> String {
-        "exact".to_owned()
+        if self.gpu.meshes().is_some() {
+            "fast (mesh cache)".to_owned()
+        } else {
+            "exact".to_owned()
+        }
     }
 
     fn frame(&mut self, t: &Tick<'_>, draw: bool, geometry: bool) -> Rendered {

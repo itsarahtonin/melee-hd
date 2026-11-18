@@ -13,9 +13,10 @@
 //! under test is the exact renderer with a change made on purpose ([`exact::Mutation`]).
 //!
 //! ```text
-//! melee-render-check fast DISC REPLAY [--mutate NAME] [--scale N] [--out DIR] FRAME...
-//! melee-render-check bench DISC REPLAY [--scale N] [--from A] [--to B] [--one-thread]
-//!     [--adapter NAME|fallback]
+//! melee-render-check fast DISC REPLAY [--renderer exact|fast] [--mutate NAME] [--scale N]
+//!     [--out DIR] FRAME...
+//! melee-render-check bench DISC REPLAY [--renderer exact|fast] [--scale N] [--from A] [--to B]
+//!     [--one-thread] [--adapter NAME|fallback]
 //! ```
 
 pub mod bench;
@@ -267,16 +268,37 @@ pub fn run(
     assert_eq!(seen, at.len(), "{replay}: the match ends before its frames");
 }
 
-/// `melee-render-check fast DISC REPLAY [--mutate NAME] [--scale N] [--out DIR] FRAME...`
+/// The renderers `--renderer` names: the fast renderer as far as it goes, or the exact
+/// renderer (with `--mutate`'s change, for `fast`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Which {
+    Exact,
+    Fast,
+}
+
+impl Which {
+    pub fn parse(s: &str) -> Which {
+        match s {
+            "exact" => Which::Exact,
+            "fast" => Which::Fast,
+            _ => panic!("--renderer {s}: exact or fast"),
+        }
+    }
+}
+
+/// `melee-render-check fast DISC REPLAY [--renderer exact|fast] [--mutate NAME] [--scale N]
+/// [--out DIR] FRAME...`
 pub fn cli(args: &[String]) -> ExitCode {
     let (disc, replay) = (&args[1], &args[2]);
     let mut mutation = Mutation::None;
+    let mut which = Which::Exact;
     let mut scale = 1;
     let mut out = None;
     let mut at = Vec::new();
     let mut rest = args[3..].iter();
     while let Some(a) = rest.next() {
         match a.as_str() {
+            "--renderer" => which = Which::parse(rest.next().expect("--renderer NAME")),
             "--mutate" => {
                 let m = rest.next().expect("--mutate NAME");
                 mutation = Mutation::parse(m).unwrap_or_else(|| {
@@ -302,7 +324,17 @@ pub fn cli(args: &[String]) -> ExitCode {
     let mut reference = Exact::new(renderer(&device, &queue, view), false);
     let mut right = Mutated::new(renderer(&device, &queue, view), Mutation::Spread(true));
     let mut left = Mutated::new(renderer(&device, &queue, view), Mutation::Spread(false));
-    let mut test = Mutated::new(renderer(&device, &queue, view), mutation);
+    let mut test: Box<dyn FrameRenderer> = match which {
+        Which::Fast => {
+            assert_eq!(
+                mutation,
+                Mutation::None,
+                "--mutate changes the exact renderer"
+            );
+            Box::new(Exact::fast(renderer(&device, &queue, view), false))
+        }
+        Which::Exact => Box::new(Mutated::new(renderer(&device, &queue, view), mutation)),
+    };
     println!(
         "{replay}: {} against {} at {scale}x on {adapter}",
         test.name(),
@@ -317,7 +349,7 @@ pub fn cli(args: &[String]) -> ExitCode {
         Renderers {
             reference: &mut reference,
             spreads: vec![&mut right, &mut left],
-            test: &mut test,
+            test: &mut *test,
         },
         out.as_deref(),
         |n, replay_frame, report, draws| {

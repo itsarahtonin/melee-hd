@@ -42,6 +42,12 @@ pub trait Memory {
     }
     fn draw(&self, _state: &State, _draw: &Draw<'_>) {}
     fn copy(&self, _state: &State, _value: u32) {}
+    /// A display list the stream calls, `size` bytes at `phys`, with the state as it stands:
+    /// a host that draws it itself (the fast renderer's meshes) returns true, and the list
+    /// doesn't run. Only for a list of draws, which leaves the state as it was.
+    fn call(&self, _state: &State, _phys: u32, _size: u32) -> bool {
+        false
+    }
 }
 
 /// A draw: its primitive (the opcode's top five bits), vertex format, and vertices, each its
@@ -592,6 +598,13 @@ impl State {
                         break;
                     }
                     let (addr, size) = (be32(&rest[1..]), be32(&rest[5..]));
+                    if !digests && mem.draws() && mem.call(self, addr & 0x03FF_FFFF, size) {
+                        if self.depth == 0 {
+                            mem.command(&rest[..9]);
+                        }
+                        at += 9;
+                        continue;
+                    }
                     // The list where the host holds it, else read out.
                     let read;
                     let list = match mem.view(addr & 0x03FF_FFFF, size as usize) {
