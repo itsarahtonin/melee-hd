@@ -1,10 +1,15 @@
 //! Rollout (`ftpurinspecialn.c`): charged in place, spinning faster, then let go to roll along
 //! the ground or through the air at the charge's speed, turning back with the stick, bouncing
-//! off walls and up off the floor, until the charge runs down; a hit sends her flying up.
+//! off walls and up off the floor, until the charge runs down; a hit sends the roller flying up.
 //!
-//! Her model squashes as the roll starts and on each bounce (`u.x2230` keeps its scale), her
-//! roll angle (`mv` x14) turns her `YRotN` part, and her `TopN` part faces the camera while she
-//! rolls.
+//! The roller's model squashes as the roll starts and on each bounce (a `u` word keeps its
+//! scale), the roll angle (`mv` x14) turns the `YRotN` part, and the `TopN` part faces the
+//! camera while it rolls.
+//!
+//! Kirby's copy of it (`ftkirbyspecialpurin.c`) is the same code over his own states,
+//! attributes and hooks, with two branches of its own; a [`Rollout`] says which, Jigglypuff's
+//! [`PURIN`] or Kirby's (`ft::kirby::special_purin::KIRBY`), and each function here carries
+//! both originals' names.
 
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
@@ -24,22 +29,103 @@ use crate::lb::hitcapsule;
 use crate::math;
 use crate::vec::Vec3;
 
+/// What tells one Rollout from the other: where the user keeps the move's attributes and the
+/// model's scale, its states, its hooks, and Kirby's two branches.
+pub struct Rollout {
+    /// Added to `ftPurinAttributes`' offsets: 0 for Jigglypuff, 0x280 for Kirby's copy
+    /// (`specialn_pr_*` in `ftKb_DatAttrs`).
+    pub(crate) attrs: usize,
+    /// `u` offset of the model's scale the roll keeps (`ftPurin_FighterVars::x4`, Kirby's x8C).
+    pub(crate) scale: usize,
+    pub(crate) ms: States,
+    /// The death and taken-damage hooks while rolling: Jigglypuff's undo the roll's look
+    /// (`ftPr_SpecialS_8013D658`); Kirby's are his generic cleanups, which leave it
+    /// (docs/melee-bugs.md).
+    pub(crate) on_death: u32,
+    pub(crate) on_damage: u32,
+    /// The dealt-damage hook ([`Running::rollout_hit`]), a turn's end's (`x21EC`,
+    /// [`Running::rollout_new_attack`]) and another's turn's (`x21F8`,
+    /// [`Running::rollout_mirror`]).
+    pub(crate) on_hit: u32,
+    pub(crate) on_turned: u32,
+    pub(crate) on_mirror: u32,
+    /// Kirby's: off the ground or landing mid-charge, the roll angle is set before `TopN`
+    /// turns side-on, where Jigglypuff's turns `TopN` first.
+    pub(crate) roll_before_top: bool,
+    /// Kirby's: the dust as the roll lands from a bounce takes the roll's way and angle in
+    /// place of a facing and the floor's angle (docs/melee-bugs.md).
+    pub(crate) dust_from_roll: bool,
+}
+
+/// The move's states, Jigglypuff's names.
+pub(crate) struct States {
+    pub start_r: i32,
+    pub start_l: i32,
+    pub charge: i32,
+    pub full: i32,
+    pub release: i32,
+    pub turn: i32,
+    pub end_r: i32,
+    pub end_l: i32,
+    pub air_start_r: i32,
+    pub air_start_l: i32,
+    pub air_charge: i32,
+    pub air_full: i32,
+    pub air_release: i32,
+    pub air_turn: i32,
+    pub air_end_r: i32,
+    pub air_end_l: i32,
+    pub hit: i32,
+}
+
+/// Jigglypuff's own.
+pub const PURIN: Rollout = Rollout {
+    attrs: 0,
+    scale: u::SCALE,
+    ms: States {
+        start_r: ms::SPECIAL_N_START_R,
+        start_l: ms::SPECIAL_N_START_L,
+        charge: ms::SPECIAL_N_LOOP,
+        full: ms::SPECIAL_N_FULL,
+        release: ms::SPECIAL_N_RELEASE,
+        turn: ms::SPECIAL_N_TURN,
+        end_r: ms::SPECIAL_N_END_R,
+        end_l: ms::SPECIAL_N_END_L,
+        air_start_r: ms::SPECIAL_AIR_N_START_R,
+        air_start_l: ms::SPECIAL_AIR_N_START_L,
+        air_charge: ms::SPECIAL_AIR_N_CHARGE_LOOP,
+        air_full: ms::SPECIAL_AIR_N_CHARGE_FULL,
+        air_release: ms::SPECIAL_AIR_N_CHARGE_RELEASE,
+        air_turn: ms::SPECIAL_AIR_N_START_TURN,
+        air_end_r: ms::SPECIAL_AIR_N_END_R,
+        air_end_l: ms::SPECIAL_AIR_N_END_L,
+        hit: ms::SPECIAL_N_HIT,
+    },
+    on_death: addr::SPECIAL_S_8013D658,
+    on_damage: addr::SPECIAL_S_8013D658,
+    on_hit: addr::SPECIAL_S_8013D764,
+    on_turned: addr::SPECIAL_S_8013D8B0,
+    on_mirror: addr::SPECIAL_N_8014222C,
+    roll_before_top: false,
+    dust_from_roll: false,
+};
+
 /// `M_PI` and `M_PI_2`, doubles as the original spells them.
 const PI: f64 = std::f64::consts::PI;
 const PI_2: f64 = std::f64::consts::FRAC_PI_2;
 /// `MTXDegToRad`'s factor, `0.0174532924f`.
 const DEG_TO_RAD: f64 = 0.017_453_292_384_743_69;
-/// `0.0001f`: the speed she starts a roll with, her way.
+/// `0.0001f`: the speed a roll starts with, the roller's way.
 const NUDGE: f64 = 9.999_999_747_378_752e-5;
-/// `-0.05f`: a turn's slowing, against her ground speed.
+/// `-0.05f`: a turn's slowing, against the ground speed.
 const TURN_SLOW: f64 = -0.050_000_000_745_058_06;
 
-/// `ftPr_Init_803D05C8`, `ftPr_Init_803D05D8`: her height and depth scales over a squash's
-/// four frames.
+/// `ftPr_Init_803D05C8`, `ftPr_Init_803D05D8` (Kirby's `ftKb_Init_803CB710`, `_803CB720`, the
+/// same): the model's height and depth scales over a squash's four frames.
 const SQUASH_Y: [f32; 4] = [0.65, 0.7, 0.8, 1.0];
 const SQUASH_Z: [f32; 4] = [1.1, 1.35, 1.3, 1.2];
 
-/// `ftPr_Init_803D0610`: the ECB she rolls with.
+/// `ftPr_Init_803D0610` (Kirby's `ftKb_Init_803CB758`, the same): the ECB of the roll.
 fn roll_box() -> ftCollisionBox {
     ftCollisionBox {
         top: 8.0,
@@ -69,7 +155,7 @@ mod flags {
 /// `QuakeKind_Medium`.
 const QUAKE_MEDIUM: i32 = 3;
 
-/// `ftPurin_SpecialNVars::x34`: the way she rolls (`x`) and the roll angle she had at the last
+/// `ftPurin_SpecialNVars::x34`: the way the roll goes (`x`) and the roll angle at the last
 /// sound (`y`).
 fn dir(g: &Running, f: FighterId) -> f32 {
     g.game.fighters[f.0].mv_f32(mv::N_DIR)
@@ -92,36 +178,45 @@ impl Running<'_> {
         self.game.fighters[f.0].set_mv_i32(off, v);
     }
 
-    fn pr_f(&self, f: FighterId, off: usize) -> f64 {
-        reg(self.purin_attr_f32(f, off))
+    /// A float of the move's attributes (`ftPurinAttributes`' offset `off`), as a register.
+    fn ro_f(&self, f: FighterId, r: &Rollout, off: usize) -> f64 {
+        reg(self.ro_f32(f, r, off))
     }
 
-    /// The model's scale Rollout keeps (`u.x2230`).
-    fn purin_kept_scale(&self, f: FighterId) -> Vec3 {
+    fn ro_f32(&self, f: FighterId, r: &Rollout, off: usize) -> f32 {
+        self.char_attr_f32(f, r.attrs + off)
+    }
+
+    fn ro_i32(&self, f: FighterId, r: &Rollout, off: usize) -> i32 {
+        self.char_attr_word(f, r.attrs + off) as i32
+    }
+
+    /// The model's scale the roll keeps.
+    fn ro_kept_scale(&self, f: FighterId, r: &Rollout) -> Vec3 {
         let fp = &self.game.fighters[f.0];
-        let w = |i: usize| f32::from_bits(fp.u_i32(u::SCALE + 4 * i) as u32);
+        let w = |i: usize| f32::from_bits(fp.u_i32(r.scale + 4 * i) as u32);
         Vec3::new(w(0), w(1), w(2))
     }
 
-    fn purin_set_root_scale(&mut self, gobj: GObjId, s: Vec3) {
+    fn ro_set_root_scale(&mut self, gobj: GObjId, s: Vec3) {
         let root = self.root_jobj(gobj);
         jobj::set_scale(&mut self.game.objs.jobjs, root, s);
     }
 
     /// `ftPartSetRotY(fp, FtPart_TopN, M_PI_2)`.
-    fn purin_top_side_on(&mut self, f: FighterId) {
+    fn ro_top_side_on(&mut self, f: FighterId) {
         self.game.part_set_rot_y(f, PART_TOP_N, mem(fp::frsp(PI_2)));
     }
 
     /// `ftPartSetRotY(fp, FtPart_TopN, M_PI_2 * facing_dir)`.
-    fn purin_top_facing(&mut self, f: FighterId) {
+    fn ro_top_facing(&mut self, f: FighterId) {
         let facing = reg(self.game.fighters[f.0].facing_dir);
         self.game
             .part_set_rot_y(f, PART_TOP_N, mem(fp::frsp(fp::fmul(PI_2, facing))));
     }
 
     /// The roll angle kept within a turn (`ftPr_NormalizeAndSetRollAngle`'s loops).
-    fn purin_wrap_roll(&mut self, f: FighterId) {
+    fn ro_wrap_roll(&mut self, f: FighterId) {
         let two_pi = fp::fmul(PI, 2.0);
         while self.mvf(f, mv::N_ROLL) < 0.0 {
             let v = fp::frsp(fp::fadd(self.mvf(f, mv::N_ROLL), two_pi));
@@ -134,23 +229,23 @@ impl Running<'_> {
     }
 
     /// `ftPr_NormalizeAndSetRollAngle`: the roll angle wrapped, turning `YRotN`.
-    fn purin_roll(&mut self, f: FighterId) {
-        self.purin_wrap_roll(f);
+    fn ro_roll(&mut self, f: FighterId) {
+        self.ro_wrap_roll(f);
         let a = self.game.fighters[f.0].mv_f32(mv::N_ROLL);
         self.game.part_set_rot_x(f, PART_Y_ROT_N, a);
     }
 
-    /// The callbacks every rolling state sets (`setupPurinCallbacks`).
-    fn purin_roll_cbs(&mut self, f: FighterId) {
+    /// The callbacks every rolling state sets (`setupPurinCallbacks`, `ftKb_PrSetCallbacks`).
+    fn ro_roll_cbs(&mut self, f: FighterId, r: &Rollout) {
         let fp = &mut self.game.fighters[f.0];
-        fp.death2_cb = Some(CodeRef(addr::SPECIAL_S_8013D658));
-        fp.take_dmg_cb = Some(CodeRef(addr::SPECIAL_S_8013D658));
-        fp.deal_dmg_cb = Some(CodeRef(addr::SPECIAL_S_8013D764));
-        fp.x21F8 = Some(CodeRef(addr::SPECIAL_N_8014222C));
+        fp.death2_cb = Some(CodeRef(r.on_death));
+        fp.take_dmg_cb = Some(CodeRef(r.on_damage));
+        fp.deal_dmg_cb = Some(CodeRef(r.on_hit));
+        fp.x21F8 = Some(CodeRef(r.on_mirror));
     }
 
     /// The roll's sound at each turn of the roll (`playRollSFX`).
-    fn purin_roll_sfx(&mut self, f: FighterId) {
+    fn ro_roll_sfx(&mut self, f: FighterId) {
         let id = if self.game.fighters[f.0].ground_or_air == GA_AIR {
             250_067
         } else {
@@ -159,28 +254,28 @@ impl Running<'_> {
         self.fighter_play_track(f, Track::Effect2, id, 127, 64);
     }
 
-    /// The model's squash for its four frames (`scaleAnimStep`), `z` its depth row.
-    fn purin_squash(&mut self, gobj: GObjId, z: &[f32; 4]) {
+    /// The model's squash for its four frames (`scaleAnimStep`).
+    fn ro_squash(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
-        let kept = self.purin_kept_scale(f);
+        let kept = self.ro_kept_scale(f, r);
         let frame = self.mvi(f, mv::N_SCALE_FRAME);
         if (0..4).contains(&frame) {
             let i = frame as usize;
             let s = Vec3::new(
                 kept.x,
                 mem(fp::fmuls(reg(kept.y), reg(SQUASH_Y[i]))),
-                mem(fp::fmuls(reg(kept.z), reg(z[i]))),
+                mem(fp::fmuls(reg(kept.z), reg(SQUASH_Z[i]))),
             );
-            self.purin_set_root_scale(gobj, s);
+            self.ro_set_root_scale(gobj, s);
             self.set_mvi(f, mv::N_SCALE_FRAME, frame.wrapping_add(1));
         } else {
-            self.purin_set_root_scale(gobj, kept);
+            self.ro_set_root_scale(gobj, kept);
         }
     }
 
     /// The hitbox's group flips every few frames out (`hitCapsuleToggle`), so it hits again.
-    fn purin_hit_toggle(&mut self, f: FighterId) {
-        let every = self.purin_attr_i32(f, attr::N_HIT_TOGGLE);
+    fn ro_hit_toggle(&mut self, f: FighterId, r: &Rollout) {
+        let every = self.ro_i32(f, r, attr::N_HIT_TOGGLE);
         let fp = &mut self.game.fighters[f.0];
         let n = fp.mv_i32(mv::N_HIT_TOGGLE).wrapping_add(1);
         fp.set_mv_i32(mv::N_HIT_TOGGLE, n);
@@ -190,14 +285,15 @@ impl Running<'_> {
         }
     }
 
-    /// The roll's end, `ftPr_SpecialS_8013D658` (her death and damage hooks while rolling): the
-    /// model's scale back, `TopN` facing her way, and the way the stick turned her taken.
+    /// The roll's look undone, `ftPr_SpecialS_8013D658` (Jigglypuff's death and damage hooks
+    /// while rolling; Kirby's `ftKb_PrRestoreScale`): the model's scale back, `TopN` facing the
+    /// roller's way, and the way the stick turned it taken.
     #[doc(alias = "ftPr_SpecialS_8013D658")]
-    pub fn purin_roll_restore(&mut self, gobj: GObjId) {
+    pub fn rollout_restore(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
-        let kept = self.purin_kept_scale(f);
-        self.purin_set_root_scale(gobj, kept);
-        self.purin_top_facing(f);
+        let kept = self.ro_kept_scale(f, r);
+        self.ro_set_root_scale(gobj, kept);
+        self.ro_top_facing(f);
         let fp = &mut self.game.fighters[f.0];
         let turned = fp.mv_f32(mv::N_FACING_DIR);
         if reg(turned) != 0.0 {
@@ -206,37 +302,32 @@ impl Running<'_> {
         fp.set_mv_f32(mv::N_FACING_DIR, 0.0);
     }
 
-    /// Her hit landing while rolling, `ftPr_SpecialS_8013D764` (the dealt-damage hook): from
-    /// a roll, a turn or their airborne states, the charge spent and a bounce up and back
-    /// (`ftPr_MS_SpecialNHit`), with a sound.
+    /// A hit landing while rolling, `ftPr_SpecialS_8013D764` and `fn_80100E0C` (the
+    /// dealt-damage hook): from a roll, a turn or their airborne states, the charge spent and
+    /// a bounce up and back (`ftPr_MS_SpecialNHit`), with a sound.
     #[doc(alias = "ftPr_SpecialS_8013D764")]
-    pub fn purin_roll_hit(&mut self, gobj: GObjId) {
+    #[doc(alias = "fn_80100E0C")]
+    pub fn rollout_hit(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
         self.set_mvi(f, mv::N_HIT_TOGGLE, 0);
         let motion = self.game.fighters[f.0].motion_id;
-        if !matches!(
-            motion,
-            ms::SPECIAL_N_RELEASE
-                | ms::SPECIAL_N_TURN
-                | ms::SPECIAL_AIR_N_CHARGE_RELEASE
-                | ms::SPECIAL_AIR_N_START_TURN
-        ) {
+        if ![r.ms.release, r.ms.turn, r.ms.air_release, r.ms.air_turn].contains(&motion) {
             return;
         }
-        let spent = self.purin_attr_i32(f, attr::N_HIT_FRAMES);
+        let spent = self.ro_i32(f, r, attr::N_HIT_FRAMES);
         let n = self.mvi(f, mv::N_FRAMES).wrapping_sub(spent);
         self.set_mvi(f, mv::N_FRAMES, n);
         self.game.fighters[f.0].facing_dir = dir(self, f);
         self.clear_hitboxes(f);
         let frame = self.game.fighters[f.0].cur_anim_frame;
-        self.change_motion_state(gobj, ms::SPECIAL_N_HIT, flags::MID, frame, 0.0, 0.0, None);
+        self.change_motion_state(gobj, r.ms.hit, flags::MID, frame, 0.0, 0.0, None);
         let (vx, vy) = (
-            self.pr_f(f, attr::N_HIT_VEL_X),
-            self.purin_attr_f32(f, attr::N_HIT_VEL_Y),
+            self.ro_f(f, r, attr::N_HIT_VEL_X),
+            self.ro_f32(f, r, attr::N_HIT_VEL_Y),
         );
         let fp = &mut self.game.fighters[f.0];
-        fp.death2_cb = Some(CodeRef(addr::SPECIAL_S_8013D658));
-        fp.take_dmg_cb = Some(CodeRef(addr::SPECIAL_S_8013D658));
+        fp.death2_cb = Some(CodeRef(r.on_death));
+        fp.take_dmg_cb = Some(CodeRef(r.on_damage));
         fp.deal_dmg_cb = None;
         if fp.ground_or_air == GA_GROUND {
             fp.self_vel.x = mem(fp::fmuls(reg(fp.gr_vel), vx));
@@ -251,26 +342,28 @@ impl Running<'_> {
         fp.xE4_ground_accel_1 = 0.0;
         fp.gr_vel = 0.0;
         fp.set_mv_f32(mv::N_FACING_DIR, 0.0);
-        self.purin_top_side_on(f);
+        self.ro_top_side_on(f);
         self.fighter_play_sfx(f, 250_070, 127, 64);
     }
 
-    /// A turn's end, `ftPr_SpecialS_8013D8B0` (`x21EC`): a new attack.
+    /// A turn's end, `ftPr_SpecialS_8013D8B0` and `fn_80100F60` (`x21EC`): a new attack.
     #[doc(alias = "ftPr_SpecialS_8013D8B0")]
-    pub fn purin_roll_new_attack(&mut self, gobj: GObjId) {
+    #[doc(alias = "fn_80100F60")]
+    pub fn rollout_new_attack(&mut self, gobj: GObjId) {
         self.renew_attack_record(gobj);
         self.renew_attack_instance(gobj);
     }
 
-    /// The roll's hitbox, `ftPr_SpecialS_8013D8E4`: off below the speed that hurts, else on
-    /// with damage from her speed.
+    /// The roll's hitbox, `ftPr_SpecialS_8013D8E4` and `ftKb_SpecialNPr_80100F94`: off below the
+    /// speed that hurts, else on with damage from the roller's speed.
     #[doc(alias = "ftPr_SpecialS_8013D8E4")]
-    pub fn purin_roll_hitbox(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_SpecialNPr_80100F94")]
+    pub fn rollout_hitbox(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
         let (min, base, mul) = (
-            self.pr_f(f, attr::N_HIT_MIN_SPEED),
-            self.pr_f(f, attr::N_DAMAGE_BASE),
-            self.pr_f(f, attr::N_DAMAGE_MUL),
+            self.ro_f(f, r, attr::N_HIT_MIN_SPEED),
+            self.ro_f(f, r, attr::N_DAMAGE_BASE),
+            self.ro_f(f, r, attr::N_DAMAGE_MUL),
         );
         let speed = |fp: &super::super::super::structs::Fighter| {
             let v = if fp.ground_or_air == GA_AIR {
@@ -295,24 +388,22 @@ impl Running<'_> {
         }
     }
 
-    /// The roll's end, `ftPr_SpecialS_8013DA24`: her way taken, the hitboxes off, the end
-    /// state on the ground or in the air with her speed cut, and the roll's look undone.
+    /// The roll's end, `ftPr_SpecialS_8013DA24` and `ftKb_SpecialNPr_801010D4`: the roll's way
+    /// taken, the hitboxes off, the end state on the ground or in the air with the speed cut,
+    /// and the roll's look undone.
     #[doc(alias = "ftPr_SpecialS_8013DA24")]
-    pub fn purin_roll_end(&mut self, gobj: GObjId, air: bool, flags: u32, start: f32) {
+    #[doc(alias = "ftKb_SpecialNPr_801010D4")]
+    pub fn rollout_end(&mut self, gobj: GObjId, r: &Rollout, air: bool, flags: u32, start: f32) {
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].facing_dir = dir(self, f);
         self.clear_hitboxes(f);
         let (vx, vy) = (
-            self.pr_f(f, attr::N_END_VEL_X),
-            self.pr_f(f, attr::N_END_VEL_Y),
+            self.ro_f(f, r, attr::N_END_VEL_X),
+            self.ro_f(f, r, attr::N_END_VEL_Y),
         );
         let right = self.game.fighters[f.0].facing_dir == 1.0;
         if !air {
-            let msid = if right {
-                ms::SPECIAL_N_END_R
-            } else {
-                ms::SPECIAL_N_END_L
-            };
+            let msid = if right { r.ms.end_r } else { r.ms.end_l };
             self.change_motion_state(gobj, msid, flags, start, 1.0, 0.0, None);
             let fp = &mut self.game.fighters[f.0];
             fp.gr_vel = mem(fp::fmuls(reg(fp.gr_vel), vx));
@@ -320,9 +411,9 @@ impl Running<'_> {
             fp.self_vel.y = 0.0;
         } else {
             let msid = if right {
-                ms::SPECIAL_AIR_N_END_R
+                r.ms.air_end_r
             } else {
-                ms::SPECIAL_AIR_N_END_L
+                r.ms.air_end_l
             };
             self.change_motion_state(gobj, msid, flags, start, 1.0, 0.0, None);
             let fp = &mut self.game.fighters[f.0];
@@ -331,24 +422,26 @@ impl Running<'_> {
             fp.xE4_ground_accel_1 = 0.0;
             fp.gr_vel = 0.0;
         }
-        self.purin_roll_cbs(f);
-        self.purin_roll_restore(gobj);
+        self.ro_roll_cbs(f, r);
+        self.rollout_restore(gobj, r);
         self.set_mvf(f, mv::N_FACING_DIR, 0.0);
-        self.purin_top_facing(f);
+        self.ro_top_facing(f);
     }
 
-    /// The roll's variables at its start, `ftPr_SpecialS_8013DC64`: the model's scale kept,
-    /// the charge's frames and start, and the hit hooks.
+    /// The roll's variables at its start, `ftPr_SpecialS_8013DC64` and
+    /// `ftKb_SpecialNPr_8010131C`: the model's scale kept, the charge's frames and start, and
+    /// the hit hooks.
     #[doc(alias = "ftPr_SpecialS_8013DC64")]
-    pub fn purin_roll_init(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_SpecialNPr_8010131C")]
+    pub fn rollout_init(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
         let root = self.root_jobj(gobj);
         let s = self.game.objs.jobjs[root].scale;
-        let frames = self.purin_attr_i32(f, attr::N_FRAMES);
-        let charge = fp::fctiwz(self.pr_f(f, attr::N_CHARGE_START));
+        let frames = self.ro_i32(f, r, attr::N_FRAMES);
+        let charge = fp::fctiwz(self.ro_f(f, r, attr::N_CHARGE_START));
         let fp = &mut self.game.fighters[f.0];
         for (i, v) in [s.x, s.y, s.z].into_iter().enumerate() {
-            fp.set_u_i32(u::SCALE + 4 * i, v.to_bits() as i32);
+            fp.set_u_i32(r.scale + 4 * i, v.to_bits() as i32);
         }
         fp.gr_vel = 0.0;
         fp.set_mv_i32(mv::N_FRAMES, frames);
@@ -362,31 +455,32 @@ impl Running<'_> {
         fp.set_mv_i32(mv::N_X28, 0);
         fp.set_mv_i32(mv::N_CHARGE, charge);
         fp.set_mv_i32(mv::N_FULL, 0);
-        fp.deal_dmg_cb = Some(CodeRef(addr::SPECIAL_S_8013D764));
-        fp.x21F8 = Some(CodeRef(addr::SPECIAL_N_8014222C));
+        fp.deal_dmg_cb = Some(CodeRef(r.on_hit));
+        fp.x21F8 = Some(CodeRef(r.on_mirror));
     }
 
-    /// The roll's sound each time the roll angle comes round, `ftPr_SpecialS_8013DD54`
-    /// (`back` for the turns, which roll the other way).
+    /// The roll's sound each time the roll angle comes round, `ftPr_SpecialS_8013DD54` and
+    /// `ftKb_SpecialNPr_8010140C` (`back` for the turns, which roll the other way).
     #[doc(alias = "ftPr_SpecialS_8013DD54")]
-    pub fn purin_roll_tick(&mut self, gobj: GObjId, back: bool) {
+    #[doc(alias = "ftKb_SpecialNPr_8010140C")]
+    pub fn rollout_tick(&mut self, gobj: GObjId, back: bool) {
         let f = self.game.fighter_id(gobj);
-        self.purin_wrap_roll(f);
+        self.ro_wrap_roll(f);
         let (roll, last) = (self.mvf(f, mv::N_ROLL), self.mvf(f, mv::N_LAST_ROLL));
         if last == 0.0 {
-            self.purin_roll_sfx(f);
+            self.ro_roll_sfx(f);
         } else if reg(dir(self, f)) == if back { fp::fneg(1.0) } else { 1.0 } {
             if roll < last {
-                self.purin_roll_sfx(f);
+                self.ro_roll_sfx(f);
             }
         } else if roll > last {
-            self.purin_roll_sfx(f);
+            self.ro_roll_sfx(f);
         }
         let roll = self.game.fighters[f.0].mv_f32(mv::N_ROLL);
         self.set_mvf(f, mv::N_LAST_ROLL, reg(roll));
     }
 
-    fn purin_rollout_start(&mut self, gobj: GObjId, right: i32, left: i32) {
+    fn ro_start(&mut self, gobj: GObjId, r: &Rollout, right: i32, left: i32) {
         let f = self.game.fighter_id(gobj);
         let facing = self.game.fighters[f.0].facing_dir;
         self.set_mvf(f, mv::N_DIR, reg(facing));
@@ -394,29 +488,31 @@ impl Running<'_> {
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.game.fighters[f.0].cmd_vars = [0; 4];
         self.anim_update(gobj);
-        self.purin_roll_init(gobj);
+        self.rollout_init(gobj, r);
     }
 
-    /// `ftPr_SpecialN_Enter`.
+    /// `ftPr_SpecialN_Enter`, `ftKb_SpecialNPr_80101560`.
     #[doc(alias = "ftPr_SpecialN_Enter")]
-    pub fn purin_special_n_enter(&mut self, gobj: GObjId) {
-        self.purin_rollout_start(gobj, ms::SPECIAL_N_START_R, ms::SPECIAL_N_START_L);
+    #[doc(alias = "ftKb_SpecialNPr_80101560")]
+    pub fn rollout_enter(&mut self, gobj: GObjId, r: &Rollout) {
+        self.ro_start(gobj, r, r.ms.start_r, r.ms.start_l);
         let f = self.game.fighter_id(gobj);
-        let x44 = self.purin_attr_f32(f, attr::N_X44);
+        let x44 = self.ro_f32(f, r, attr::N_X44);
         let fp = &mut self.game.fighters[f.0];
         fp.x74_self_accel.y = 0.0;
         fp.self_vel.y = 0.0;
         fp.set_mv_f32(mv::N_X1C, reg(x44));
     }
 
-    /// `ftPr_SpecialAirN_Enter`.
+    /// `ftPr_SpecialAirN_Enter`, `ftKb_SpecialNPr_80101618`.
     #[doc(alias = "ftPr_SpecialAirN_Enter")]
-    pub fn purin_special_air_n_enter(&mut self, gobj: GObjId) {
-        self.purin_rollout_start(gobj, ms::SPECIAL_AIR_N_START_R, ms::SPECIAL_AIR_N_START_L);
+    #[doc(alias = "ftKb_SpecialNPr_80101618")]
+    pub fn rollout_air_enter(&mut self, gobj: GObjId, r: &Rollout) {
+        self.ro_start(gobj, r, r.ms.air_start_r, r.ms.air_start_l);
         let f = self.game.fighter_id(gobj);
         let (g, x54) = (
-            self.purin_attr_f32(f, attr::N_AIR_GRAVITY),
-            self.purin_attr_f32(f, attr::N_X54),
+            self.ro_f32(f, r, attr::N_AIR_GRAVITY),
+            self.ro_f32(f, r, attr::N_X54),
         );
         let fp = &mut self.game.fighters[f.0];
         fp.x74_self_accel.y = g;
@@ -427,19 +523,17 @@ impl Running<'_> {
     /// `ftPr_SpecialAirNStart_Anim`).
     #[doc(alias = "ftPr_SpecialAirNStart_Anim")]
     #[doc(alias = "ftPr_SpecialNStart_Anim")]
-    fn purin_start_anim(&mut self, gobj: GObjId, air: bool) {
+    #[doc(alias = "ftKb_PrSpecialNStart_Anim")]
+    #[doc(alias = "ftKb_PrSpecialAirNStart_Anim")]
+    pub fn rollout_start_anim(&mut self, gobj: GObjId, r: &Rollout, air: bool) {
         let f = self.game.fighter_id(gobj);
         self.set_mvf(f, mv::N_FACING_DIR, 0.0);
         if self.anim_frames_remaining(gobj) {
             return;
         }
-        let msid = if air {
-            ms::SPECIAL_AIR_N_CHARGE_LOOP
-        } else {
-            ms::SPECIAL_N_LOOP
-        };
+        let msid = if air { r.ms.air_charge } else { r.ms.charge };
         self.change_motion_state(gobj, msid, flags::ROLL, 0.0, 0.0, 0.0, None);
-        self.purin_roll_cbs(f);
+        self.ro_roll_cbs(f, r);
         self.game.fighters[f.0].cur_anim_frame = 0.0;
         self.set_anim_rate(gobj, 0.0);
         let fp = &mut self.game.fighters[f.0];
@@ -456,19 +550,24 @@ impl Running<'_> {
     }
 
     /// The charge's frame (`ftPr_SpecialNLoop_Anim`, `ftPr_SpecialNFull_Anim` and their air
-    /// states): the charge grows to its top (where the loop turns full, flashing once), the
-    /// roll spins as fast as the charge.
+    /// states): the charge grows to its top (where the charging state turns full, flashing
+    /// once, if `to_full`), the roll spins as fast as the charge.
     #[doc(alias = "ftPr_SpecialNLoop_Anim")]
     #[doc(alias = "ftPr_SpecialNFull_Anim")]
+    #[doc(alias = "ftPr_SpecialAirNChargeLoop_Anim")]
     #[doc(alias = "ftPr_SpecialAirNChargeFull_Anim")]
-    fn purin_charge_anim(&mut self, gobj: GObjId, full: Option<i32>) {
+    #[doc(alias = "ftKb_PrSpecialNLoop_Anim")]
+    #[doc(alias = "ftKb_PrSpecialNFull_Anim")]
+    #[doc(alias = "ftKb_PrSpecialAirNLoop_Anim")]
+    #[doc(alias = "ftKb_PrSpecialAirNFull_Anim")]
+    pub fn rollout_charge_anim(&mut self, gobj: GObjId, r: &Rollout, air: bool, to_full: bool) {
         let f = self.game.fighter_id(gobj);
-        self.purin_roll_tick(gobj, false);
+        self.rollout_tick(gobj, false);
         self.set_mvf(f, mv::N_FACING_DIR, 0.0);
         let (rate, top, spin) = (
-            self.pr_f(f, attr::N_CHARGE_RATE),
-            self.pr_f(f, attr::N_CHARGE_MAX),
-            self.pr_f(f, attr::N_CHARGE_SPIN),
+            self.ro_f(f, r, attr::N_CHARGE_RATE),
+            self.ro_f(f, r, attr::N_CHARGE_MAX),
+            self.ro_f(f, r, attr::N_CHARGE_SPIN),
         );
         let c = fp::fctiwz(fp::fadds(
             fp::frsp(f64::from(self.mvi(f, mv::N_CHARGE))),
@@ -477,12 +576,13 @@ impl Running<'_> {
         self.set_mvi(f, mv::N_CHARGE, c);
         if fp::frsp(f64::from(c)) >= top {
             self.set_mvi(f, mv::N_CHARGE, fp::fctiwz(top));
-            if let Some(msid) = full {
+            if to_full {
                 if self.mvi(f, mv::N_FULL) == 0 {
                     self.start_color_anim(gobj, 5, 0);
                 }
                 self.set_mvi(f, mv::N_FULL, 1);
                 let frame = self.game.fighters[f.0].cur_anim_frame;
+                let msid = if air { r.ms.air_full } else { r.ms.full };
                 self.change_motion_state(gobj, msid, flags::MID, frame, 0.0, 0.0, None);
             } else {
                 self.set_mvi(f, mv::N_FULL, 1);
@@ -495,8 +595,8 @@ impl Running<'_> {
             self.mvf(f, mv::N_ROLL),
         );
         self.set_mvf(f, mv::N_ROLL, roll);
-        self.purin_roll(f);
-        self.purin_top_side_on(f);
+        self.ro_roll(f);
+        self.ro_top_side_on(f);
     }
 
     /// The roll's frame (`ftPr_SpecialNRelease_Anim`, `ftPr_SpecialAirNChargeRelease_Anim`):
@@ -504,14 +604,19 @@ impl Running<'_> {
     /// run out, it ends as it rolls past upright.
     #[doc(alias = "ftPr_SpecialAirNChargeRelease_Anim")]
     #[doc(alias = "ftPr_SpecialNRelease_Anim")]
-    fn purin_release_anim(&mut self, gobj: GObjId, air: bool) {
+    #[doc(alias = "ftKb_PrSpecialN1_Anim")]
+    #[doc(alias = "ftKb_PrSpecialAirN_Anim")]
+    pub fn rollout_release_anim(&mut self, gobj: GObjId, r: &Rollout, air: bool) {
         let f = self.game.fighter_id(gobj);
-        self.purin_roll_tick(gobj, false);
+        self.rollout_tick(gobj, false);
         self.set_mvf(f, mv::N_FACING_DIR, 0.0);
-        self.purin_squash(gobj, &SQUASH_Z);
-        self.purin_hit_toggle(f);
-        self.purin_roll_hitbox(gobj);
-        let (spin, air_spin) = (self.pr_f(f, attr::N_SPIN), self.pr_f(f, attr::N_AIR_SPIN));
+        self.ro_squash(gobj, r);
+        self.ro_hit_toggle(f, r);
+        self.rollout_hitbox(gobj, r);
+        let (spin, air_spin) = (
+            self.ro_f(f, r, attr::N_SPIN),
+            self.ro_f(f, r, attr::N_AIR_SPIN),
+        );
         let old = self.mvf(f, mv::N_ROLL);
         let charge = fp::frsp(f64::from(self.mvi(f, mv::N_CHARGE)));
         let turn = fp::frsp(fp::fmul(fp::fmul(0.2, spin), reg(dir(self, f))));
@@ -521,20 +626,20 @@ impl Running<'_> {
             fp::fmuls(fp::fmuls(DEG_TO_RAD, charge), turn)
         };
         self.set_mvf(f, mv::N_ROLL, fp::fadds(old, delta));
-        self.purin_roll(f);
+        self.ro_roll(f);
         let n = self.mvi(f, mv::N_FRAMES).wrapping_sub(1);
         self.set_mvi(f, mv::N_FRAMES, n);
         let side_on = |g: &mut Self| {
             if air {
-                // `ftPr_JObjSetRotationY` on `TopN`'s joint.
+                // `ftPr_JObjSetRotationY` (Kirby's `HSD_JObjSetRotationY`) on `TopN`'s joint.
                 let j = g.bone_joint(gobj, PART_TOP_N).expect("TopN's joint");
                 jobj::set_rotation_y(&mut g.game.objs.jobjs, j, mem(fp::frsp(PI_2)));
             } else {
-                g.purin_top_side_on(f);
+                g.ro_top_side_on(f);
             }
         };
         if n > 0 {
-            self.purin_top_side_on(f);
+            self.ro_top_side_on(f);
             return;
         }
         let roll = self.mvf(f, mv::N_ROLL);
@@ -549,7 +654,7 @@ impl Running<'_> {
         };
         if past {
             self.set_mvi(f, mv::N_FRAMES, 0);
-            self.purin_roll_end(gobj, air, flags::ROLL, 0.0);
+            self.rollout_end(gobj, r, air, flags::ROLL, 0.0);
             return;
         }
         side_on(self);
@@ -558,28 +663,29 @@ impl Running<'_> {
     /// A turn's frame on the ground, `ftPr_SpecialNTurn_Anim`: the roll spun back, dust every
     /// few frames; once its frames run out, the turn ends the roll the other way.
     #[doc(alias = "ftPr_SpecialNTurn_Anim")]
-    pub fn purin_special_n_turn_anim(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialNTurn_Anim")]
+    pub fn rollout_turn_anim(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
-        self.purin_roll_tick(gobj, true);
-        self.purin_squash(gobj, &SQUASH_Z);
-        let spin = self.pr_f(f, attr::N_TURN_SPIN);
+        self.rollout_tick(gobj, true);
+        self.ro_squash(gobj, r);
+        let spin = self.ro_f(f, r, attr::N_TURN_SPIN);
         let roll = fp::frsp(fp::fmadd(
             fp::fmul(0.2, spin),
             fp::fneg(reg(dir(self, f))),
             self.mvf(f, mv::N_ROLL),
         ));
         self.set_mvf(f, mv::N_ROLL, roll);
-        self.purin_roll(f);
+        self.ro_roll(f);
         let n = self.mvi(f, mv::N_FRAMES).wrapping_sub(1);
         self.set_mvi(f, mv::N_FRAMES, n);
         if n <= 0 {
             self.set_mvi(f, mv::N_FRAMES, 0);
             let d = dir(self, f);
             self.set_mvf(f, mv::N_DIR, fp::fneg(reg(d)));
-            self.purin_roll_end(gobj, false, flags::ROLL, 0.0);
+            self.rollout_end(gobj, r, false, flags::ROLL, 0.0);
             return;
         }
-        let every = self.purin_attr_i32(f, attr::N_TURN_GFX_EVERY);
+        let every = self.ro_i32(f, r, attr::N_TURN_GFX_EVERY);
         let t = self.mvi(f, mv::N_TURN_FRAMES);
         if t.checked_rem(every).expect("Rollout's dust every 0 frames") == 0 {
             let fp = &self.game.fighters[f.0];
@@ -597,24 +703,26 @@ impl Running<'_> {
         self.game.part_set_rot_y(f, PART_TOP_N, mem(fp::frsp(PI_2)));
     }
 
-    /// The end's frame, `ftPr_SpecialNEnd_Anim` and `ftPr_SpecialAirNEnd_Anim`: the squash;
-    /// at its end the look undone, then waiting, falling or falling helplessly with her
+    /// The end's frame, `ftPr_SpecialNEnd_Anim` and `ftPr_SpecialAirNEnd_Anim`: the squash; at
+    /// its end the look undone, then waiting, falling or falling helplessly with the move's
     /// landing lag.
     #[doc(alias = "ftPr_SpecialAirNEnd_Anim")]
     #[doc(alias = "ftPr_SpecialNEnd_Anim")]
-    fn purin_end_anim(&mut self, gobj: GObjId, air: bool) {
+    #[doc(alias = "ftKb_PrSpecialNEnd_Anim")]
+    #[doc(alias = "ftKb_PrSpecialAirNEndR_Anim")]
+    pub fn rollout_end_anim(&mut self, gobj: GObjId, r: &Rollout, air: bool) {
         let f = self.game.fighter_id(gobj);
         self.set_mvf(f, mv::N_FACING_DIR, 0.0);
-        self.purin_squash(gobj, &SQUASH_Z);
+        self.ro_squash(gobj, r);
         if self.anim_frames_remaining(gobj) {
             return;
         }
-        self.purin_roll_restore(gobj);
+        self.rollout_restore(gobj, r);
         if !air {
             self.enter_wait(gobj);
             return;
         }
-        let lag = self.purin_attr_f32(f, attr::N_LANDING_LAG);
+        let lag = self.ro_f32(f, r, attr::N_LANDING_LAG);
         if reg(lag) == 0.0 {
             self.enter_fall(gobj);
         } else {
@@ -622,12 +730,11 @@ impl Running<'_> {
         }
     }
 
-    /// The roll spun back by the air's spin (`ftPr_SpecialAirNStartTurn_Anim`,
-    /// `ftPr_SpecialNHit_Anim`).
-    fn purin_spin_back(&mut self, f: FighterId) {
+    /// The roll spun back by the air's spin (the air turn's and the hit's frames).
+    fn ro_spin_back(&mut self, f: FighterId, r: &Rollout) {
         let (air_spin, spin) = (
-            self.pr_f(f, attr::N_AIR_SPIN),
-            self.pr_f(f, attr::N_TURN_SPIN),
+            self.ro_f(f, r, attr::N_AIR_SPIN),
+            self.ro_f(f, r, attr::N_TURN_SPIN),
         );
         let roll = fp::fmadds(
             air_spin,
@@ -635,62 +742,65 @@ impl Running<'_> {
             self.mvf(f, mv::N_ROLL),
         );
         self.set_mvf(f, mv::N_ROLL, roll);
-        self.purin_roll(f);
+        self.ro_roll(f);
     }
 
-    /// `ftPr_SpecialAirNStartTurn_Anim`: a turn in the air; once its frames run out, the roll
-    /// ends the other way.
+    /// `ftPr_SpecialAirNStartTurn_Anim` (Kirby's `ftKb_PrSpecialN_Anim`): a turn in the air;
+    /// once its frames run out, the roll ends the other way.
     #[doc(alias = "ftPr_SpecialAirNStartTurn_Anim")]
-    pub fn purin_special_air_n_start_turn_anim(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialN_Anim")]
+    pub fn rollout_air_turn_anim(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
-        self.purin_roll_tick(gobj, true);
-        self.purin_squash(gobj, &SQUASH_Z);
-        self.purin_spin_back(f);
+        self.rollout_tick(gobj, true);
+        self.ro_squash(gobj, r);
+        self.ro_spin_back(f, r);
         let n = self.mvi(f, mv::N_FRAMES).wrapping_sub(1);
         self.set_mvi(f, mv::N_FRAMES, n);
         if n <= 0 {
             self.set_mvi(f, mv::N_FRAMES, 0);
             let d = dir(self, f);
             self.set_mvf(f, mv::N_DIR, fp::fneg(reg(d)));
-            self.purin_roll_end(gobj, false, flags::ROLL, 0.0);
+            self.rollout_end(gobj, r, false, flags::ROLL, 0.0);
             return;
         }
         let t = self.mvi(f, mv::N_TURN_FRAMES);
         self.set_mvi(f, mv::N_TURN_FRAMES, t.wrapping_add(1));
-        self.purin_top_side_on(f);
+        self.ro_top_side_on(f);
     }
 
-    /// `ftPr_SpecialNHit_Anim`: bounced off what she hit, still spinning.
+    /// `ftPr_SpecialNHit_Anim`: bounced off what it hit, still spinning.
     #[doc(alias = "ftPr_SpecialNHit_Anim")]
-    pub fn purin_special_n_hit_anim(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialNHit_Anim")]
+    pub fn rollout_hit_anim(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
-        self.purin_squash(gobj, &SQUASH_Z);
-        self.purin_spin_back(f);
-        self.purin_top_side_on(f);
+        self.ro_squash(gobj, r);
+        self.ro_spin_back(f, r);
+        self.ro_top_side_on(f);
     }
 
     /// B let go mid-charge (`ftPr_SpecialNLoop_IASA` and the full and air states'): the roll
     /// at the charge's speed past its start.
     #[doc(alias = "ftPr_SpecialNLoop_IASA")]
     #[doc(alias = "ftPr_SpecialNFull_IASA")]
+    #[doc(alias = "ftPr_SpecialAirNChargeLoop_IASA")]
     #[doc(alias = "ftPr_SpecialAirNChargeFull_IASA")]
-    fn purin_charge_iasa(&mut self, gobj: GObjId, air: bool) {
+    #[doc(alias = "ftKb_PrSpecialNLoop_IASA")]
+    #[doc(alias = "ftKb_PrSpecialNFull_IASA")]
+    #[doc(alias = "ftKb_PrSpecialAirNLoop_IASA")]
+    #[doc(alias = "ftKb_PrSpecialAirNFull_IASA")]
+    pub fn rollout_charge_iasa(&mut self, gobj: GObjId, r: &Rollout, air: bool) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].input.held_buttons[0] & 0x200 != 0 {
             return;
         }
-        let msid = if air {
-            ms::SPECIAL_AIR_N_CHARGE_RELEASE
-        } else {
-            ms::SPECIAL_N_RELEASE
-        };
+        let msid = if air { r.ms.air_release } else { r.ms.release };
         let frame = self.game.fighters[f.0].cur_anim_frame;
         self.change_motion_state(gobj, msid, flags::RELEASE, frame, 0.0, 0.0, None);
-        self.purin_roll_cbs(f);
+        self.ro_roll_cbs(f, r);
         self.anim_update(gobj);
         let (mul, start) = (
-            self.pr_f(f, attr::N_SPEED_MUL),
-            self.pr_f(f, attr::N_CHARGE_START),
+            self.ro_f(f, r, attr::N_SPEED_MUL),
+            self.ro_f(f, r, attr::N_CHARGE_START),
         );
         let charge = fp::frsp(f64::from(self.mvi(f, mv::N_CHARGE)));
         let v = mem(fp::fmuls(
@@ -703,16 +813,17 @@ impl Running<'_> {
         } else {
             fp.gr_vel = v;
         }
-        self.purin_top_side_on(f);
-        self.purin_roll(f);
+        self.ro_top_side_on(f);
+        self.ro_roll(f);
         self.fighter_play_sfx(f, 250_073, 127, 64);
     }
 
     /// `ftPr_SpecialNRelease_IASA`: the stick pushed back turns the roll.
     #[doc(alias = "ftPr_SpecialNRelease_IASA")]
-    pub fn purin_special_n_release_iasa(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialN1_IASA")]
+    pub fn rollout_release_iasa(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
-        let deadzone = self.pr_f(f, attr::N_TURN_STICK);
+        let deadzone = self.ro_f(f, r, attr::N_TURN_STICK);
         let x = reg(self.game.fighters[f.0].input.lstick[0].x);
         let ax = if x < 0.0 { fp::fneg(x) } else { x };
         if !(ax > deadzone) {
@@ -726,20 +837,24 @@ impl Running<'_> {
         self.set_mvf(f, mv::N_FACING_DIR, way);
         self.set_mvf(f, mv::N_DIR, fp::fneg(way));
         let frame = self.game.fighters[f.0].cur_anim_frame;
-        self.change_motion_state(gobj, ms::SPECIAL_N_TURN, flags::MID, frame, 0.0, 0.0, None);
-        self.purin_roll_cbs(f);
+        self.change_motion_state(gobj, r.ms.turn, flags::MID, frame, 0.0, 0.0, None);
+        self.ro_roll_cbs(f, r);
         let gr = reg(self.game.fighters[f.0].gr_vel);
         self.set_mvf(f, mv::N_TURN_VEL, gr);
         self.set_mvf(f, mv::N_X1C, fp::fmuls(TURN_SLOW, gr));
         self.set_mvi(f, mv::N_TURN_FRAMES, 0);
-        self.purin_roll(f);
+        self.ro_roll(f);
         self.fighter_play_sfx(f, 250_073, 127, 64);
     }
 
     /// `ftPr_SpecialNStart_Phys` (and the charge's): held in place.
     #[doc(alias = "ftPr_SpecialNStart_Phys")]
+    #[doc(alias = "ftPr_SpecialNLoop_Phys")]
     #[doc(alias = "ftPr_SpecialNFull_Phys")]
-    pub fn purin_special_n_start_phys(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialNStart_Phys")]
+    #[doc(alias = "ftKb_PrSpecialNLoop_Phys")]
+    #[doc(alias = "ftKb_PrSpecialNFull_Phys")]
+    pub fn rollout_start_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.xE4_ground_accel_1 = 0.0;
         fp.gr_vel = 0.0;
@@ -752,15 +867,16 @@ impl Running<'_> {
     /// `ftPr_SpecialNRelease_Phys`: the roll's speed from the charge, more downhill and less
     /// uphill, within the two caps; the charge runs down, ending the roll.
     #[doc(alias = "ftPr_SpecialNRelease_Phys")]
-    pub fn purin_special_n_release_phys(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialN1_Phys")]
+    pub fn rollout_release_phys(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
         let (mul, end, slope_mul, cap, cap2, decay) = (
-            self.pr_f(f, attr::N_SPEED_MUL),
-            self.pr_f(f, attr::N_CHARGE_END),
-            self.pr_f(f, attr::N_SLOPE),
-            self.purin_attr_f32(f, attr::N_GROUND_MAX),
-            self.purin_attr_f32(f, attr::N_GROUND_MAX2),
-            self.pr_f(f, attr::N_DECAY),
+            self.ro_f(f, r, attr::N_SPEED_MUL),
+            self.ro_f(f, r, attr::N_CHARGE_END),
+            self.ro_f(f, r, attr::N_SLOPE),
+            self.ro_f32(f, r, attr::N_GROUND_MAX),
+            self.ro_f32(f, r, attr::N_GROUND_MAX2),
+            self.ro_f(f, r, attr::N_DECAY),
         );
         let charge = fp::frsp(f64::from(self.mvi(f, mv::N_CHARGE)));
         let fp = &mut self.game.fighters[f.0];
@@ -798,12 +914,12 @@ impl Running<'_> {
         ));
         self.set_mvi(f, mv::N_CHARGE, c);
         if fp::frsp(f64::from(c)) < end {
-            self.purin_roll_end(gobj, false, flags::ROLL, 0.0);
+            self.rollout_end(gobj, r, false, flags::ROLL, 0.0);
         }
     }
 
-    /// `ftPr_SetFacingDir`: the way the stick turned her taken.
-    fn purin_take_turn(&mut self, f: FighterId) {
+    /// `ftPr_SetFacingDir`: the way the stick turned the roller taken.
+    fn ro_take_turn(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
         let turned = fp.mv_f32(mv::N_FACING_DIR);
         if reg(turned) != 0.0 {
@@ -817,12 +933,13 @@ impl Running<'_> {
     /// `ftPr_SpecialNTurn_Phys`: slowing by the turn's rate on the floor's friction, more on
     /// slopes; once it rolls back fast enough, the roll goes on the new way with a new attack.
     #[doc(alias = "ftPr_SpecialNTurn_Phys")]
-    pub fn purin_special_n_turn_phys(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialNTurn_Phys")]
+    pub fn rollout_turn_phys(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
         let (accel, slope_mul, done) = (
-            self.pr_f(f, attr::N_TURN_ACCEL),
-            self.pr_f(f, attr::N_SLOPE),
-            self.pr_f(f, attr::N_TURN_DONE),
+            self.ro_f(f, r, attr::N_TURN_ACCEL),
+            self.ro_f(f, r, attr::N_SLOPE),
+            self.ro_f(f, r, attr::N_TURN_DONE),
         );
         let grkind = self.game.stage_info.grkind;
         let fp = &mut self.game.fighters[f.0];
@@ -851,41 +968,50 @@ impl Running<'_> {
             } else {
                 flags::TURNED_RIGHT
             };
-            self.game.fighters[f.0].x21EC = Some(CodeRef(addr::SPECIAL_S_8013D8B0));
+            self.game.fighters[f.0].x21EC = Some(CodeRef(r.on_turned));
             let frame = self.game.fighters[f.0].cur_anim_frame;
-            self.change_motion_state(gobj, ms::SPECIAL_N_RELEASE, flags, frame, 0.0, 0.0, None);
-            self.purin_roll_cbs(f);
-            self.purin_take_turn(f);
+            self.change_motion_state(gobj, r.ms.release, flags, frame, 0.0, 0.0, None);
+            self.ro_roll_cbs(f, r);
+            self.ro_take_turn(f);
         }
-        self.purin_top_side_on(f);
-        self.purin_roll(f);
+        self.ro_top_side_on(f);
+        self.ro_roll(f);
     }
 
-    /// `ftPr_SpecialNEnd_Phys`: her ground friction.
+    /// `ftPr_SpecialNEnd_Phys`: the ground's friction.
     #[doc(alias = "ftPr_SpecialNEnd_Phys")]
-    pub fn purin_special_n_end_phys(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialNEnd_Phys")]
+    pub fn rollout_end_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         let friction = reg(fp.co_attrs.ground_friction);
         Self::ground_accel_deaccel(fp, friction);
         self.self_movement_from_ground(gobj);
     }
 
-    /// Falling at the roll's gravity (`ftCommon_Fall` with the attributes' x3C and x40).
+    /// Falling at the roll's gravity (`ftCommon_Fall` with the attributes' x3C and x40): the
+    /// air's start, charge and end (`ftPr_SpecialAirNStart_Phys` and the others).
+    #[doc(alias = "ftPr_SpecialAirNStart_Phys")]
+    #[doc(alias = "ftPr_SpecialAirNChargeLoop_Phys")]
     #[doc(alias = "ftPr_SpecialAirNChargeFull_Phys")]
-    fn purin_roll_fall(&mut self, f: FighterId) {
+    #[doc(alias = "ftPr_SpecialAirNEnd_Phys")]
+    #[doc(alias = "ftKb_PrSpecialAirNStart_Phys")]
+    #[doc(alias = "ftKb_PrSpecialAirNLoop_Phys")]
+    #[doc(alias = "ftKb_PrSpecialAirNFull_Phys")]
+    #[doc(alias = "ftKb_PrSpecialAirNEndR_Phys")]
+    pub fn rollout_fall(&mut self, gobj: GObjId, r: &Rollout) {
+        let f = self.game.fighter_id(gobj);
         let (g, t) = (
-            self.pr_f(f, attr::N_AIR_GRAVITY),
-            self.pr_f(f, attr::N_AIR_TERMINAL),
+            self.ro_f(f, r, attr::N_AIR_GRAVITY),
+            self.ro_f(f, r, attr::N_AIR_TERMINAL),
         );
         Self::fall(&mut self.game.fighters[f.0], g, t);
     }
 
-    /// The air's slowing toward its least speed (`ftPr_SpecialAirNChargeRelease_Phys` and
-    /// `ftPr_SpecialAirNStartTurn_Phys`).
-    fn purin_air_slow(&mut self, f: FighterId) {
+    /// The air's slowing toward its least speed (the air roll's and the air turn's physics).
+    fn ro_air_slow(&mut self, f: FighterId, r: &Rollout) {
         let (decel, min) = (
-            self.pr_f(f, attr::N_AIR_DECEL),
-            self.purin_attr_f32(f, attr::N_AIR_MIN),
+            self.ro_f(f, r, attr::N_AIR_DECEL),
+            self.ro_f32(f, r, attr::N_AIR_MIN),
         );
         let fp = &mut self.game.fighters[f.0];
         let d = if reg(fp.self_vel.x) > 0.0 {
@@ -908,89 +1034,108 @@ impl Running<'_> {
     /// `ftPr_SpecialAirNChargeRelease_Phys`: the roll's speed in the air from the charge,
     /// slowed; the charge runs down, ending the roll.
     #[doc(alias = "ftPr_SpecialAirNChargeRelease_Phys")]
-    pub fn purin_special_air_n_charge_release_phys(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialAirN_Phys")]
+    pub fn rollout_air_release_phys(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
         let (mul, end, decay) = (
-            self.pr_f(f, attr::N_SPEED_MUL),
-            self.pr_f(f, attr::N_CHARGE_END),
-            self.pr_f(f, attr::N_DECAY),
+            self.ro_f(f, r, attr::N_SPEED_MUL),
+            self.ro_f(f, r, attr::N_CHARGE_END),
+            self.ro_f(f, r, attr::N_DECAY),
         );
         let charge = fp::frsp(f64::from(self.mvi(f, mv::N_CHARGE)));
         let d = reg(dir(self, f));
         self.game.fighters[f.0].self_vel.x =
             mem(fp::fmuls(d, fp::fmuls(mul, fp::fsubs(charge, end))));
-        self.purin_air_slow(f);
+        self.ro_air_slow(f, r);
         let v = reg(self.game.fighters[f.0].self_vel.x);
         self.set_mvf(f, mv::N_SPEED, if v < 0.0 { fp::fneg(v) } else { v });
-        self.purin_roll_fall(f);
+        self.rollout_fall(gobj, r);
         let c = fp::fctiwz(fp::fsubs(
             fp::frsp(f64::from(self.mvi(f, mv::N_CHARGE))),
             decay,
         ));
         self.set_mvi(f, mv::N_CHARGE, c);
         if fp::frsp(f64::from(c)) < end {
-            self.purin_roll_end(gobj, true, flags::ROLL, 0.0);
+            self.rollout_end(gobj, r, true, flags::ROLL, 0.0);
         }
     }
 
-    /// `ftPr_SpecialAirNStartTurn_Phys`.
+    /// `ftPr_SpecialAirNStartTurn_Phys` (Kirby's `ftKb_PrSpecialN_Phys`).
     #[doc(alias = "ftPr_SpecialAirNStartTurn_Phys")]
-    pub fn purin_special_air_n_start_turn_phys(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialN_Phys")]
+    pub fn rollout_air_turn_phys(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
-        self.purin_air_slow(f);
-        self.purin_roll_fall(f);
-        self.purin_top_side_on(f);
-        self.purin_roll(f);
+        self.ro_air_slow(f, r);
+        self.rollout_fall(gobj, r);
+        self.ro_top_side_on(f);
+        self.ro_roll(f);
     }
 
     /// `ftPr_SpecialNHit_Phys`: drifting once falling fast enough.
     #[doc(alias = "ftPr_SpecialNHit_Phys")]
-    pub fn purin_special_n_hit_phys(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialNHit_Phys")]
+    pub fn rollout_hit_phys(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
-        let t = self.pr_f(f, attr::N_AIR_TERMINAL);
+        let t = self.ro_f(f, r, attr::N_AIR_TERMINAL);
         if reg(self.game.fighters[f.0].self_vel.y) <= fp::fneg(t) {
             self.air_drift(gobj);
         }
-        self.purin_roll_fall(f);
+        self.rollout_fall(gobj, r);
     }
 
-    /// Off the ground mid-charge (`ftPr_SpecialNLoop_Coll`, `ftPr_SpecialNFull_Coll`).
+    /// The roll angle and `TopN` side-on after a ground and air switch mid-charge, in the
+    /// user's order ([`Rollout::roll_before_top`]).
+    fn ro_switch_look(&mut self, f: FighterId, r: &Rollout) {
+        if r.roll_before_top {
+            self.ro_roll(f);
+            self.ro_top_side_on(f);
+        } else {
+            self.ro_top_side_on(f);
+            self.ro_roll(f);
+        }
+    }
+
+    /// Off the ground mid-charge (`ftPr_SpecialNLoop_Coll`, `ftPr_SpecialNFull_Coll`): the
+    /// air's charge, or its full charge.
     #[doc(alias = "ftPr_SpecialNLoop_Coll")]
     #[doc(alias = "ftPr_SpecialNFull_Coll")]
-    fn purin_charge_coll(&mut self, gobj: GObjId, msid: i32) {
+    #[doc(alias = "ftKb_PrSpecialNLoop_Coll")]
+    #[doc(alias = "ftKb_PrSpecialNFull_Coll")]
+    pub fn rollout_charge_coll(&mut self, gobj: GObjId, r: &Rollout, full: bool) {
         if self.ground_coll_off_ledges(gobj) {
             return;
         }
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);
         let frame = self.game.fighters[f.0].cur_anim_frame;
+        let msid = if full { r.ms.air_full } else { r.ms.air_charge };
         self.change_motion_state(gobj, msid, flags::RELEASE, frame, 0.0, 0.0, None);
-        self.purin_roll_cbs(f);
-        self.purin_top_side_on(f);
-        self.purin_roll(f);
+        self.ro_roll_cbs(f, r);
+        self.ro_switch_look(f, r);
     }
 
     /// `ftPr_SpecialNStart_Coll`: off the ground, the air's start.
     #[doc(alias = "ftPr_SpecialNStart_Coll")]
-    pub fn purin_special_n_start_coll(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialNStart_Coll")]
+    pub fn rollout_start_coll(&mut self, gobj: GObjId, r: &Rollout) {
         if self.ground_coll_off_ledges(gobj) {
             return;
         }
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);
         let msid = if reg(dir(self, f)) == 1.0 {
-            ms::SPECIAL_AIR_N_START_R
+            r.ms.air_start_r
         } else {
-            ms::SPECIAL_AIR_N_START_L
+            r.ms.air_start_l
         };
         let frame = self.game.fighters[f.0].cur_anim_frame;
         self.change_motion_state(gobj, msid, flags::SWITCH, frame, 1.0, 0.0, None);
-        self.purin_roll_cbs(f);
+        self.ro_roll_cbs(f, r);
     }
 
-    /// A wall hit mid-roll (`wallBounceEffect`): dust where her ECB meets the wall, a quake,
-    /// a rumble and a sound.
-    fn purin_wall_bounce(&mut self, gobj: GObjId, way: f64) {
+    /// A wall hit mid-roll (`wallBounceEffect`, `ftKb_PrWallBounceEffect`): dust where the
+    /// ECB meets the wall, a quake, a rumble and a sound.
+    fn ro_wall_bounce(&mut self, gobj: GObjId, way: f64) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
         let mut pos = fp.cur_pos;
@@ -1016,35 +1161,36 @@ impl Running<'_> {
 
     /// Whether the roll met a wall ahead (`env_flags` 0x3F rolling right, 0xFC0 left), with
     /// its bounce.
-    fn purin_roll_wall(&mut self, gobj: GObjId) -> bool {
+    fn ro_roll_wall(&mut self, gobj: GObjId) -> bool {
         let f = self.game.fighter_id(gobj);
         let right = reg(dir(self, f)) == 1.0;
         let env = self.game.fighters[f.0].coll_data.env_flags;
         let hit = env & if right { 0x3F } else { 0xFC0 } != 0;
         if hit {
-            self.purin_wall_bounce(gobj, if right { 1.0 } else { fp::fneg(1.0) });
+            self.ro_wall_bounce(gobj, if right { 1.0 } else { fp::fneg(1.0) });
         }
         hit
     }
 
     /// A wall's slowing of the charge and the roll's speed.
-    fn purin_wall_slow(&mut self, f: FighterId) {
-        let k = self.pr_f(f, attr::N_WALL_BOUNCE);
+    fn ro_wall_slow(&mut self, f: FighterId, r: &Rollout) {
+        let k = self.ro_f(f, r, attr::N_WALL_BOUNCE);
         let c = fp::fctiwz(fp::fmuls(fp::frsp(f64::from(self.mvi(f, mv::N_CHARGE))), k));
         self.set_mvi(f, mv::N_CHARGE, c.max(0));
         let s = self.mvf(f, mv::N_SPEED);
         self.set_mvf(f, mv::N_SPEED, fp::fmuls(s, k));
     }
 
-    /// `ftPr_SpecialNRelease_Coll`: rolling on with her roll's ECB; a wall bounces her back,
-    /// and off the ground she rolls on in the air.
+    /// `ftPr_SpecialNRelease_Coll`: rolling on with the roll's ECB; a wall bounces it back, and
+    /// off the ground it rolls on in the air.
     #[doc(alias = "ftPr_SpecialNRelease_Coll")]
-    pub fn purin_special_n_release_coll(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialN1_Coll")]
+    pub fn rollout_release_coll(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
         let coll = self.ground_coll_box(gobj, &roll_box());
-        if self.purin_roll_wall(gobj) {
-            self.purin_wall_slow(f);
-            let k = self.pr_f(f, attr::N_WALL_BOUNCE);
+        if self.ro_roll_wall(gobj) {
+            self.ro_wall_slow(f, r);
+            let k = self.ro_f(f, r, attr::N_WALL_BOUNCE);
             let fp = &mut self.game.fighters[f.0];
             fp.gr_vel = mem(fp::fmuls(fp::fneg(reg(fp.gr_vel)), k));
             fp.self_vel.x = mem(fp::fmuls(fp::fneg(reg(fp.self_vel.x)), k));
@@ -1054,34 +1200,27 @@ impl Running<'_> {
                 fp::fneg(1.0)
             };
             fp.set_mv_f32(mv::N_DIR, way);
-            self.purin_top_side_on(f);
+            self.ro_top_side_on(f);
         }
         if !coll {
             self.go_airborne(f);
             let frame = self.game.fighters[f.0].cur_anim_frame;
-            self.change_motion_state(
-                gobj,
-                ms::SPECIAL_AIR_N_CHARGE_RELEASE,
-                flags::BOUNCE,
-                frame,
-                0.0,
-                0.0,
-                None,
-            );
-            self.purin_roll_cbs(f);
-            self.purin_roll(f);
-            self.purin_top_side_on(f);
-            let x54 = self.purin_attr_f32(f, attr::N_X54);
+            self.change_motion_state(gobj, r.ms.air_release, flags::BOUNCE, frame, 0.0, 0.0, None);
+            self.ro_roll_cbs(f, r);
+            self.ro_roll(f);
+            self.ro_top_side_on(f);
+            let x54 = self.ro_f32(f, r, attr::N_X54);
             self.set_mvf(f, mv::N_X1C, reg(x54));
         }
     }
 
-    /// `ftPr_SpecialNTurn_Coll`: turning with her roll's ECB (pushed off ledges while fast);
+    /// `ftPr_SpecialNTurn_Coll`: turning with the roll's ECB (pushed off ledges while fast);
     /// off the ground, the air's turn.
     #[doc(alias = "ftPr_SpecialNTurn_Coll")]
-    pub fn purin_special_n_turn_coll(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialNTurn_Coll")]
+    pub fn rollout_turn_coll(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
-        let slow = self.pr_f(f, attr::N_TURN_SLOW);
+        let slow = self.ro_f(f, r, attr::N_TURN_SLOW);
         let v = reg(self.game.fighters[f.0].gr_vel);
         let av = if v < 0.0 { fp::fneg(v) } else { v };
         let coll = if av > slow {
@@ -1092,76 +1231,74 @@ impl Running<'_> {
         if !coll {
             self.go_airborne(f);
             let frame = self.game.fighters[f.0].cur_anim_frame;
-            self.change_motion_state(
-                gobj,
-                ms::SPECIAL_AIR_N_START_TURN,
-                flags::SWITCH,
-                frame,
-                0.0,
-                0.0,
-                None,
-            );
-            self.purin_roll_cbs(f);
+            self.change_motion_state(gobj, r.ms.air_turn, flags::SWITCH, frame, 0.0, 0.0, None);
+            self.ro_roll_cbs(f, r);
         }
     }
 
     /// `ftPr_SpecialNEnd_Coll`: off the ground, the air's end.
     #[doc(alias = "ftPr_SpecialNEnd_Coll")]
-    pub fn purin_special_n_end_coll(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialNEnd_Coll")]
+    pub fn rollout_end_coll(&mut self, gobj: GObjId, r: &Rollout) {
         if self.ground_coll_off_ledges(gobj) {
             return;
         }
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);
         let frame = self.game.fighters[f.0].cur_anim_frame;
-        self.purin_roll_end(gobj, true, flags::SWITCH, frame);
+        self.rollout_end(gobj, r, true, flags::SWITCH, frame);
     }
 
     /// `ftPr_SpecialAirNStart_Coll`: landing, the ground's start.
     #[doc(alias = "ftPr_SpecialAirNStart_Coll")]
-    pub fn purin_special_air_n_start_coll(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialAirNStart_Coll")]
+    pub fn rollout_air_start_coll(&mut self, gobj: GObjId, r: &Rollout) {
         if !self.air_coll_land(gobj) {
             return;
         }
         self.land(gobj);
         let f = self.game.fighter_id(gobj);
         let msid = if reg(dir(self, f)) == 1.0 {
-            ms::SPECIAL_N_START_R
+            r.ms.start_r
         } else {
-            ms::SPECIAL_N_START_L
+            r.ms.start_l
         };
         let frame = self.game.fighters[f.0].cur_anim_frame;
         self.change_motion_state(gobj, msid, flags::SWITCH, frame, 1.0, 0.0, None);
-        self.purin_roll_cbs(f);
+        self.ro_roll_cbs(f, r);
     }
 
-    /// Landing mid-charge (`ftPr_SpecialAirNChargeLoop_Coll`, `..ChargeFull_Coll`).
+    /// Landing mid-charge (`ftPr_SpecialAirNChargeLoop_Coll`, `..ChargeFull_Coll`): the
+    /// ground's charge, or its full charge.
     #[doc(alias = "ftPr_SpecialAirNChargeLoop_Coll")]
     #[doc(alias = "ftPr_SpecialAirNChargeFull_Coll")]
-    fn purin_air_charge_coll(&mut self, gobj: GObjId, msid: i32) {
+    #[doc(alias = "ftKb_PrSpecialAirNLoop_Coll")]
+    #[doc(alias = "ftKb_PrSpecialAirNFull_Coll")]
+    pub fn rollout_air_charge_coll(&mut self, gobj: GObjId, r: &Rollout, full: bool) {
         if !self.air_coll_land(gobj) {
             return;
         }
         self.land(gobj);
         let f = self.game.fighter_id(gobj);
         let frame = self.game.fighters[f.0].cur_anim_frame;
+        let msid = if full { r.ms.full } else { r.ms.charge };
         self.change_motion_state(gobj, msid, flags::RELEASE, frame, 0.0, 0.0, None);
-        self.purin_roll_cbs(f);
-        self.purin_top_side_on(f);
-        self.purin_roll(f);
+        self.ro_roll_cbs(f, r);
+        self.ro_switch_look(f, r);
     }
 
-    /// `ftPr_SpecialAirNChargeRelease_Coll`: rolling through the air with her roll's ECB; a
-    /// wall bounces her back; the floor bounces her up, or once the bounce is low enough she
-    /// rolls on along it (the stick can turn her on a bounce); else a ledge she catches.
+    /// `ftPr_SpecialAirNChargeRelease_Coll`: rolling through the air with the roll's ECB; a
+    /// wall bounces it back; the floor bounces it up, or once the bounce is low enough it
+    /// rolls on along it (the stick can turn it on a bounce); else a ledge it catches.
     #[doc(alias = "ftPr_SpecialAirNChargeRelease_Coll")]
-    pub fn purin_special_air_n_charge_release_coll(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialAirN_Coll")]
+    pub fn rollout_air_release_coll(&mut self, gobj: GObjId, r: &Rollout) {
         let f = self.game.fighter_id(gobj);
         let way = if reg(dir(self, f)) == 1.0 { 1 } else { -1 };
         let coll = self.air_coll_box_ledges(gobj, way, &roll_box());
-        if self.purin_roll_wall(gobj) {
-            self.purin_wall_slow(f);
-            let k = self.pr_f(f, attr::N_WALL_BOUNCE);
+        if self.ro_roll_wall(gobj) {
+            self.ro_wall_slow(f, r);
+            let k = self.ro_f(f, r, attr::N_WALL_BOUNCE);
             let fp = &mut self.game.fighters[f.0];
             fp.self_vel.x = mem(fp::fmuls(fp::fneg(reg(fp.self_vel.x)), k));
             let d = fp.mv_f32(mv::N_DIR);
@@ -1169,10 +1306,10 @@ impl Running<'_> {
         }
         if coll {
             let (bounce, low, x44, deadzone) = (
-                self.pr_f(f, attr::N_BOUNCE),
-                self.pr_f(f, attr::N_BOUNCE_MIN),
-                self.purin_attr_f32(f, attr::N_X44),
-                self.pr_f(f, attr::N_TURN_STICK),
+                self.ro_f(f, r, attr::N_BOUNCE),
+                self.ro_f(f, r, attr::N_BOUNCE_MIN),
+                self.ro_f32(f, r, attr::N_X44),
+                self.ro_f(f, r, attr::N_TURN_STICK),
             );
             let fp = &mut self.game.fighters[f.0];
             let up = fp::fmuls(reg(fp.self_vel.y), bounce);
@@ -1181,34 +1318,34 @@ impl Running<'_> {
             if vy < low {
                 self.land(gobj);
                 let frame = self.game.fighters[f.0].cur_anim_frame;
-                self.change_motion_state(
-                    gobj,
-                    ms::SPECIAL_N_RELEASE,
-                    flags::BOUNCE,
-                    frame,
-                    0.0,
-                    0.0,
-                    None,
-                );
-                self.purin_roll_cbs(f);
+                self.change_motion_state(gobj, r.ms.release, flags::BOUNCE, frame, 0.0, 0.0, None);
+                self.ro_roll_cbs(f, r);
                 let v = mem(fp::fmuls(self.mvf(f, mv::N_SPEED), reg(dir(self, f))));
                 let fp = &mut self.game.fighters[f.0];
                 fp.gr_vel = v;
                 fp.self_vel.x = v;
                 fp.self_vel.z = 0.0;
                 fp.self_vel.y = 0.0;
-                self.purin_roll(f);
-                self.purin_top_side_on(f);
+                self.ro_roll(f);
+                self.ro_top_side_on(f);
                 let fp = &self.game.fighters[f.0];
-                let n = fp.coll_data.floor.normal;
-                let angle = math::atan2(mem(fp::fneg(reg(n.x))), n.y);
-                let (pos, facing) = (fp.cur_pos, fp.facing_dir);
-                spawn(
-                    self,
-                    0x3FF,
-                    Some(gobj),
-                    &[Arg::Vec(pos), Arg::Float(facing), Arg::Float(angle)],
-                );
+                let args = if r.dust_from_roll {
+                    // Kirby's works out the floor's angle and drops it.
+                    [
+                        Arg::Vec(fp.cur_pos),
+                        Arg::Float(fp.mv_f32(mv::N_DIR)),
+                        Arg::Float(fp.mv_f32(mv::N_ROLL)),
+                    ]
+                } else {
+                    let n = fp.coll_data.floor.normal;
+                    let angle = math::atan2(mem(fp::fneg(reg(n.x))), n.y);
+                    [
+                        Arg::Vec(fp.cur_pos),
+                        Arg::Float(fp.facing_dir),
+                        Arg::Float(angle),
+                    ]
+                };
+                spawn(self, 0x3FF, Some(gobj), &args);
                 self.set_mvf(f, mv::N_X1C, reg(x44));
             } else {
                 let x = reg(self.game.fighters[f.0].input.lstick[0].x);
@@ -1220,18 +1357,18 @@ impl Running<'_> {
                     let fp = &mut self.game.fighters[f.0];
                     fp.gr_vel = v;
                     fp.self_vel.x = v;
-                    self.purin_top_side_on(f);
+                    self.ro_top_side_on(f);
                 }
-                self.purin_roll(f);
+                self.ro_roll(f);
             }
             self.set_mvi(f, mv::N_SCALE_FRAME, 0);
             return;
         }
         if self.catch_ledge_check(gobj) {
             // The roll's look undone, then the ledge caught again.
-            let kept = self.purin_kept_scale(f);
-            self.purin_set_root_scale(gobj, kept);
-            self.purin_top_facing(f);
+            let kept = self.ro_kept_scale(f, r);
+            self.ro_set_root_scale(gobj, kept);
+            self.ro_top_facing(f);
             let fp = &mut self.game.fighters[f.0];
             let turned = fp.mv_f32(mv::N_FACING_DIR);
             if reg(turned) != 0.0 {
@@ -1242,25 +1379,19 @@ impl Running<'_> {
         }
     }
 
-    /// `ftPr_SpecialAirNStartTurn_Coll`: landing mid-turn, the ground's turn at her speed.
+    /// `ftPr_SpecialAirNStartTurn_Coll`: landing mid-turn, the ground's turn at the roll's
+    /// speed.
     #[doc(alias = "ftPr_SpecialAirNStartTurn_Coll")]
-    pub fn purin_special_air_n_start_turn_coll(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialN_Coll")]
+    pub fn rollout_air_turn_coll(&mut self, gobj: GObjId, r: &Rollout) {
         if !self.air_coll_box(gobj, &roll_box()) {
             return;
         }
         self.land(gobj);
         let f = self.game.fighter_id(gobj);
         let frame = self.game.fighters[f.0].cur_anim_frame;
-        self.change_motion_state(
-            gobj,
-            ms::SPECIAL_N_TURN,
-            flags::SWITCH,
-            frame,
-            0.0,
-            0.0,
-            None,
-        );
-        self.purin_roll_cbs(f);
+        self.change_motion_state(gobj, r.ms.turn, flags::SWITCH, frame, 0.0, 0.0, None);
+        self.ro_roll_cbs(f, r);
         let fp = &mut self.game.fighters[f.0];
         fp.gr_vel = fp.self_vel.x;
         fp.self_vel.z = 0.0;
@@ -1269,26 +1400,28 @@ impl Running<'_> {
 
     /// `ftPr_SpecialAirNEnd_Coll`: landing, the ground's end.
     #[doc(alias = "ftPr_SpecialAirNEnd_Coll")]
-    pub fn purin_special_air_n_end_coll(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialAirNEndR_Coll")]
+    pub fn rollout_air_end_coll(&mut self, gobj: GObjId, r: &Rollout) {
         if !self.air_coll_land(gobj) {
             return;
         }
         self.land(gobj);
         let f = self.game.fighter_id(gobj);
         let frame = self.game.fighters[f.0].cur_anim_frame;
-        self.purin_roll_end(gobj, false, flags::SWITCH, frame);
+        self.rollout_end(gobj, r, false, flags::SWITCH, frame);
     }
 
-    /// `ftPr_SpecialNHit_Coll`: landing from the hit's bounce, with her landing lag.
+    /// `ftPr_SpecialNHit_Coll`: landing from the hit's bounce, with the move's landing lag.
     #[doc(alias = "ftPr_SpecialNHit_Coll")]
-    pub fn purin_special_n_hit_coll(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftKb_PrSpecialNHit_Coll")]
+    pub fn rollout_hit_coll(&mut self, gobj: GObjId, r: &Rollout) {
         if !self.air_coll_box(gobj, &roll_box()) {
             return;
         }
-        self.purin_roll_restore(gobj);
+        self.rollout_restore(gobj, r);
         self.land(gobj);
         let f = self.game.fighter_id(gobj);
-        let lag = self.purin_attr_f32(f, attr::N_LANDING_LAG);
+        let lag = self.ro_f32(f, r, attr::N_LANDING_LAG);
         if reg(lag) == 0.0 {
             self.enter_wait(gobj);
         } else {
@@ -1296,12 +1429,13 @@ impl Running<'_> {
         }
     }
 
-    /// Turned around mid-roll by another's turn, `ftPr_SpecialN_8014222C` (`x21F8`): `TopN`
-    /// faces her way and the roll's speeds and angles mirror.
+    /// Turned around mid-roll by another's turn, `ftPr_SpecialN_8014222C` and `fn_80105978`
+    /// (`x21F8`): `TopN` faces the roller's way and the roll's speeds and angles mirror.
     #[doc(alias = "ftPr_SpecialN_8014222C")]
-    pub fn purin_roll_mirror(&mut self, gobj: GObjId) {
+    #[doc(alias = "fn_80105978")]
+    pub fn rollout_mirror(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.purin_top_facing(f);
+        self.ro_top_facing(f);
         let fp = &mut self.game.fighters[f.0];
         let neg = |v: f32| mem(fp::fneg(reg(v)));
         fp.self_vel.x = neg(fp.self_vel.x);
@@ -1335,80 +1469,72 @@ const EMPTY: [u32; 8] = [
     addr::SPECIAL_N_HIT_IASA,
 ];
 
-#[doc(alias = "ftPr_SpecialAirNChargeLoop_Anim")]
-#[doc(alias = "ftPr_SpecialAirNChargeLoop_IASA")]
-#[doc(alias = "ftPr_SpecialAirNChargeLoop_Phys")]
 #[doc(alias = "ftPr_SpecialAirNChargeRelease_IASA")]
 #[doc(alias = "ftPr_SpecialAirNEnd_IASA")]
-#[doc(alias = "ftPr_SpecialAirNEnd_Phys")]
 #[doc(alias = "ftPr_SpecialAirNStart_IASA")]
-#[doc(alias = "ftPr_SpecialAirNStart_Phys")]
 #[doc(alias = "ftPr_SpecialNEnd_IASA")]
 #[doc(alias = "ftPr_SpecialNHit_IASA")]
-#[doc(alias = "ftPr_SpecialNLoop_Phys")]
 #[doc(alias = "ftPr_SpecialNStart_IASA")]
 #[doc(alias = "ftPr_SpecialNTurn_IASA")]
 #[doc(alias = "ftPr_SpecialAirNStartTurn_IASA")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
+    let r = &PURIN;
     match a {
-        addr::SPECIAL_S_8013D658 => g.purin_roll_restore(gobj),
-        addr::SPECIAL_S_8013D764 => g.purin_roll_hit(gobj),
-        addr::SPECIAL_S_8013D8B0 => g.purin_roll_new_attack(gobj),
-        addr::SPECIAL_S_8013D8E4 => g.purin_roll_hitbox(gobj),
-        addr::SPECIAL_S_8013DC64 => g.purin_roll_init(gobj),
-        addr::SPECIAL_N_ENTER => g.purin_special_n_enter(gobj),
-        addr::SPECIAL_AIR_N_ENTER => g.purin_special_air_n_enter(gobj),
-        addr::SPECIAL_N_START_ANIM => g.purin_start_anim(gobj, false),
-        addr::SPECIAL_N_LOOP_ANIM => g.purin_charge_anim(gobj, Some(ms::SPECIAL_N_FULL)),
-        addr::SPECIAL_N_FULL_ANIM => g.purin_charge_anim(gobj, None),
-        addr::SPECIAL_N_RELEASE_ANIM => g.purin_release_anim(gobj, false),
-        addr::SPECIAL_N_TURN_ANIM => g.purin_special_n_turn_anim(gobj),
-        addr::SPECIAL_N_END_ANIM => g.purin_end_anim(gobj, false),
-        addr::SPECIAL_AIR_N_START_ANIM => g.purin_start_anim(gobj, true),
-        addr::SPECIAL_AIR_N_CHARGE_LOOP_ANIM => {
-            g.purin_charge_anim(gobj, Some(ms::SPECIAL_AIR_N_CHARGE_FULL))
-        }
-        addr::SPECIAL_AIR_N_CHARGE_FULL_ANIM => g.purin_charge_anim(gobj, None),
-        addr::SPECIAL_AIR_N_CHARGE_RELEASE_ANIM => g.purin_release_anim(gobj, true),
-        addr::SPECIAL_AIR_N_START_TURN_ANIM => g.purin_special_air_n_start_turn_anim(gobj),
-        addr::SPECIAL_AIR_N_END_ANIM => g.purin_end_anim(gobj, true),
-        addr::SPECIAL_N_HIT_ANIM => g.purin_special_n_hit_anim(gobj),
+        addr::SPECIAL_S_8013D658 => g.rollout_restore(gobj, r),
+        addr::SPECIAL_S_8013D764 => g.rollout_hit(gobj, r),
+        addr::SPECIAL_S_8013D8B0 => g.rollout_new_attack(gobj),
+        addr::SPECIAL_S_8013D8E4 => g.rollout_hitbox(gobj, r),
+        addr::SPECIAL_S_8013DC64 => g.rollout_init(gobj, r),
+        addr::SPECIAL_N_ENTER => g.rollout_enter(gobj, r),
+        addr::SPECIAL_AIR_N_ENTER => g.rollout_air_enter(gobj, r),
+        addr::SPECIAL_N_START_ANIM => g.rollout_start_anim(gobj, r, false),
+        addr::SPECIAL_N_LOOP_ANIM => g.rollout_charge_anim(gobj, r, false, true),
+        addr::SPECIAL_N_FULL_ANIM => g.rollout_charge_anim(gobj, r, false, false),
+        addr::SPECIAL_N_RELEASE_ANIM => g.rollout_release_anim(gobj, r, false),
+        addr::SPECIAL_N_TURN_ANIM => g.rollout_turn_anim(gobj, r),
+        addr::SPECIAL_N_END_ANIM => g.rollout_end_anim(gobj, r, false),
+        addr::SPECIAL_AIR_N_START_ANIM => g.rollout_start_anim(gobj, r, true),
+        addr::SPECIAL_AIR_N_CHARGE_LOOP_ANIM => g.rollout_charge_anim(gobj, r, true, true),
+        addr::SPECIAL_AIR_N_CHARGE_FULL_ANIM => g.rollout_charge_anim(gobj, r, true, false),
+        addr::SPECIAL_AIR_N_CHARGE_RELEASE_ANIM => g.rollout_release_anim(gobj, r, true),
+        addr::SPECIAL_AIR_N_START_TURN_ANIM => g.rollout_air_turn_anim(gobj, r),
+        addr::SPECIAL_AIR_N_END_ANIM => g.rollout_end_anim(gobj, r, true),
+        addr::SPECIAL_N_HIT_ANIM => g.rollout_hit_anim(gobj, r),
         a if EMPTY.contains(&a) => {}
-        addr::SPECIAL_N_LOOP_IASA | addr::SPECIAL_N_FULL_IASA => g.purin_charge_iasa(gobj, false),
-        addr::SPECIAL_N_RELEASE_IASA => g.purin_special_n_release_iasa(gobj),
+        addr::SPECIAL_N_LOOP_IASA | addr::SPECIAL_N_FULL_IASA => {
+            g.rollout_charge_iasa(gobj, r, false)
+        }
+        addr::SPECIAL_N_RELEASE_IASA => g.rollout_release_iasa(gobj, r),
         addr::SPECIAL_AIR_N_CHARGE_LOOP_IASA | addr::SPECIAL_AIR_N_CHARGE_FULL_IASA => {
-            g.purin_charge_iasa(gobj, true)
+            g.rollout_charge_iasa(gobj, r, true)
         }
         addr::SPECIAL_N_START_PHYS | addr::SPECIAL_N_LOOP_PHYS | addr::SPECIAL_N_FULL_PHYS => {
-            g.purin_special_n_start_phys(gobj)
+            g.rollout_start_phys(gobj)
         }
-        addr::SPECIAL_N_RELEASE_PHYS => g.purin_special_n_release_phys(gobj),
-        addr::SPECIAL_N_TURN_PHYS => g.purin_special_n_turn_phys(gobj),
-        addr::SPECIAL_N_END_PHYS => g.purin_special_n_end_phys(gobj),
+        addr::SPECIAL_N_RELEASE_PHYS => g.rollout_release_phys(gobj, r),
+        addr::SPECIAL_N_TURN_PHYS => g.rollout_turn_phys(gobj, r),
+        addr::SPECIAL_N_END_PHYS => g.rollout_end_phys(gobj),
         addr::SPECIAL_AIR_N_START_PHYS
         | addr::SPECIAL_AIR_N_CHARGE_LOOP_PHYS
         | addr::SPECIAL_AIR_N_CHARGE_FULL_PHYS
-        | addr::SPECIAL_AIR_N_END_PHYS => {
-            let f = g.game.fighter_id(gobj);
-            g.purin_roll_fall(f);
-        }
-        addr::SPECIAL_AIR_N_CHARGE_RELEASE_PHYS => g.purin_special_air_n_charge_release_phys(gobj),
-        addr::SPECIAL_AIR_N_START_TURN_PHYS => g.purin_special_air_n_start_turn_phys(gobj),
-        addr::SPECIAL_N_HIT_PHYS => g.purin_special_n_hit_phys(gobj),
-        addr::SPECIAL_N_START_COLL => g.purin_special_n_start_coll(gobj),
-        addr::SPECIAL_N_LOOP_COLL => g.purin_charge_coll(gobj, ms::SPECIAL_AIR_N_CHARGE_LOOP),
-        addr::SPECIAL_N_FULL_COLL => g.purin_charge_coll(gobj, ms::SPECIAL_AIR_N_CHARGE_FULL),
-        addr::SPECIAL_N_RELEASE_COLL => g.purin_special_n_release_coll(gobj),
-        addr::SPECIAL_N_TURN_COLL => g.purin_special_n_turn_coll(gobj),
-        addr::SPECIAL_N_END_COLL => g.purin_special_n_end_coll(gobj),
-        addr::SPECIAL_AIR_N_START_COLL => g.purin_special_air_n_start_coll(gobj),
-        addr::SPECIAL_AIR_N_CHARGE_LOOP_COLL => g.purin_air_charge_coll(gobj, ms::SPECIAL_N_LOOP),
-        addr::SPECIAL_AIR_N_CHARGE_FULL_COLL => g.purin_air_charge_coll(gobj, ms::SPECIAL_N_FULL),
-        addr::SPECIAL_AIR_N_CHARGE_RELEASE_COLL => g.purin_special_air_n_charge_release_coll(gobj),
-        addr::SPECIAL_AIR_N_START_TURN_COLL => g.purin_special_air_n_start_turn_coll(gobj),
-        addr::SPECIAL_AIR_N_END_COLL => g.purin_special_air_n_end_coll(gobj),
-        addr::SPECIAL_N_HIT_COLL => g.purin_special_n_hit_coll(gobj),
-        addr::SPECIAL_N_8014222C => g.purin_roll_mirror(gobj),
+        | addr::SPECIAL_AIR_N_END_PHYS => g.rollout_fall(gobj, r),
+        addr::SPECIAL_AIR_N_CHARGE_RELEASE_PHYS => g.rollout_air_release_phys(gobj, r),
+        addr::SPECIAL_AIR_N_START_TURN_PHYS => g.rollout_air_turn_phys(gobj, r),
+        addr::SPECIAL_N_HIT_PHYS => g.rollout_hit_phys(gobj, r),
+        addr::SPECIAL_N_START_COLL => g.rollout_start_coll(gobj, r),
+        addr::SPECIAL_N_LOOP_COLL => g.rollout_charge_coll(gobj, r, false),
+        addr::SPECIAL_N_FULL_COLL => g.rollout_charge_coll(gobj, r, true),
+        addr::SPECIAL_N_RELEASE_COLL => g.rollout_release_coll(gobj, r),
+        addr::SPECIAL_N_TURN_COLL => g.rollout_turn_coll(gobj, r),
+        addr::SPECIAL_N_END_COLL => g.rollout_end_coll(gobj, r),
+        addr::SPECIAL_AIR_N_START_COLL => g.rollout_air_start_coll(gobj, r),
+        addr::SPECIAL_AIR_N_CHARGE_LOOP_COLL => g.rollout_air_charge_coll(gobj, r, false),
+        addr::SPECIAL_AIR_N_CHARGE_FULL_COLL => g.rollout_air_charge_coll(gobj, r, true),
+        addr::SPECIAL_AIR_N_CHARGE_RELEASE_COLL => g.rollout_air_release_coll(gobj, r),
+        addr::SPECIAL_AIR_N_START_TURN_COLL => g.rollout_air_turn_coll(gobj, r),
+        addr::SPECIAL_AIR_N_END_COLL => g.rollout_air_end_coll(gobj, r),
+        addr::SPECIAL_N_HIT_COLL => g.rollout_hit_coll(gobj, r),
+        addr::SPECIAL_N_8014222C => g.rollout_mirror(gobj),
         _ => return false,
     }
     true
