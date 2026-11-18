@@ -35,6 +35,19 @@ pub type Hook = fn(&mut Game, Entry);
 
 thread_local! {
     static HOOK: Cell<Option<Hook>> = const { Cell::new(None) };
+    static NO_DYNAMICS_FIX: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Turns Slippi's DynamicsFix off on this thread (`Game::dynamics_fix`): the oracle's mutation
+/// (`melee-oracle session --mutate no-dynamics-fix`), to see what its comparison finds
+/// without the code.
+pub fn set_dynamics_fix_off(off: bool) {
+    NO_DYNAMICS_FIX.with(|n| n.set(off));
+}
+
+/// Whether [`set_dynamics_fix_off`] turned DynamicsFix off.
+pub(crate) fn dynamics_fix_off() -> bool {
+    NO_DYNAMICS_FIX.with(Cell::get)
 }
 
 /// Runs `hook` at every entry point on this thread from now on (none with `None`).

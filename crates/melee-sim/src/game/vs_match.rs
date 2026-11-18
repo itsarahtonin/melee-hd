@@ -291,9 +291,16 @@ impl Settings {
     /// Slippi's playback scene), and the controllers' polls drive it
     /// ([`Match::step_live_tick`]). The disc reads at Slippi's fast speed unless `disc` says
     /// otherwise (a session's match reads at the session's pace).
+    ///
+    /// The allocator model is off (design call 8 of `docs/slippi-ruleset.md`): under Slippi's
+    /// rules nothing in a match reads a heap address but the Super Scope's one-shot charge,
+    /// which takes its stand-in (`sscope::ADDRESS_STAND_IN`), and a read the rules don't cover
+    /// stops by name. The oracle, which compares the match's addresses with the console's, sets
+    /// `heap` back to playback's layout (`session::Session::live_model`).
     pub fn live(r: &ReplayStart) -> Result<Settings, CodeError> {
         let mut s = Settings::from_replay(r)?;
         s.live = true;
+        s.heap = None;
         Ok(s)
     }
 
@@ -1387,5 +1394,23 @@ mod tests {
         assert_eq!(heap(2, scope), Some(crate::hsd::heap::Layout::vanilla_vs()));
         assert_eq!(heap(2, !scope), None);
         assert_eq!(heap(0xFF, u64::MAX), None);
+    }
+
+    /// The Slippi ruleset's live match runs without the allocator model (design call 8 of
+    /// `docs/slippi-ruleset.md`), where the replay it records plays back with playback's layout.
+    #[test]
+    fn a_live_match_leaves_the_allocator_model_off() {
+        let mut g = crate::game::state::Game {
+            rules: crate::game::state::Rules::slippi_online(),
+            ..Default::default()
+        };
+        g.machine.routing.curr_mode = 2;
+        let start = Settings::vs(32, &[player(2, 0), player(14, 1)], 4, 8).start;
+        let (r, _) = crate::game::record::live_start(&g, &start);
+        assert_eq!(Settings::live(&r).expect("the ruleset's codes").heap, None);
+        assert_eq!(
+            Settings::from_replay(&r).expect("its codes").heap,
+            Some(crate::hsd::heap::Layout::slippi_playback())
+        );
     }
 }

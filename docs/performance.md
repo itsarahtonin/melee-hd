@@ -241,6 +241,29 @@ The simulation is 3 to 6% slower in a match. `melee-bench native`, one run a mat
 
 A pool's lookup goes through the slot's place (`Pool`'s `cell`) once the pool has retired a slot; a pool that never has, as a match's class objects' pools, indexes its contents directly (`Pool::direct`). Experiments, each built and timed against the base the same way: the lookup always through the place cost 5 to 8%; the place's path out of line, 5%; a build that indexed the contents directly with no check (unsound outside a match, but in sync there) was 2% slower than the base, so about 2 to 3 points are the lookup's check and the rest the build's layout (moving the pool's fields so the lookup reads one cache line made it 7% slower, not faster). The session's own speed doesn't move with the place's path (`session-sync --rollback 0` to tick 20,000: 172 to 176 s for both layouts). Not taken further here.
 
+## The allocator model in the Slippi ruleset's matches (2026-11-17)
+
+Under the Slippi ruleset a live match runs without the allocator model ([the Slippi ruleset](slippi-ruleset.md#what-the-ruleset-makes-moot), design call 8). Measured on three of the live matches' own recordings (`$SSBM_RS_LOCAL/lockstep/m6s-stall/traced`: `matches-a-5`, Captain Falcon against Ganondorf on Dream Land to the time's end; `matches-a-4`, the Ice Climbers against a computer Peach on Final Destination; `matches-b-5`, three players with a computer Pichu), played through `vs_match`'s replay path in Slippi's float mode (`MELEE_BENCH_FP=slippi`), the model on as playback lays it out and off (`MELEE_BENCH_HEAP=off`). A live match's state is its playback's but for playback's bookkeeping (`a_live_match_equals_its_playback`), so these are a live match's costs. This machine, with other agents' work running (about half its CPU busy), `melee-bench` from `feat/m6s-moot-2`; every run stayed in sync.
+
+`native`, two alternations of five runs each, median frames per second:
+
+| Match | Model on | Model off |
+| --- | --- | --- |
+| `matches-a-5` (7,324 ticks) | 3,184, 3,249 | 3,115, 3,229 |
+| `matches-a-4` (1,828) | 2,017, 2,352 | 2,085, 2,093 |
+| `matches-b-5` (1,538) | 2,626, 2,896 | 2,728, 2,993 |
+
+The speed change is inside this machine's noise, as on the worker for task 5's first part.
+
+`snapshot-match`:
+
+| Match, ticks | Model on | Model off |
+| --- | --- | --- |
+| `matches-a-5`, 2,000, 4,000, 6,000 | 1.91, 1.94, 1.94 MB (2,529 to 2,579 allocations); clone 221 to 225 µs, restore 59 to 61 µs | 1.82, 1.83, 1.84 MB (2,421 to 2,427); clone 183 to 196 µs, restore 53 to 56 µs |
+| `matches-a-4`, 500, 1,000, 1,500 | 2.07, 2.11, 2.16 MB (2,612 to 2,685); clone 217 to 232 µs, restore 62 to 68 µs | 1.95, 1.95, 1.98 MB (2,423 to 2,468); clone 203 to 210 µs, restore 59 to 60 µs |
+
+The snapshot is 5 to 8% smaller and 6 to 17% faster to clone, and doesn't grow with the match without the model's per-address slots (`matches-a-4`'s allocations fall as its objects come and go). The win is smaller than the Vanilla benchmark matches' (16 to 31%, [the Slippi ruleset](slippi-ruleset.md#what-the-ruleset-makes-moot)): these matches are shorter, and the slots grow with the objects a match has made.
+
 ## Benchmark matches
 
 | Match | Stage | Fighters (costume) | Seed | Frames | Length | Ends |

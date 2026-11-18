@@ -405,6 +405,10 @@ enum Mutation {
     /// single-player modes zooms the camera and does no smash attacks, as Vanilla's. The rules
     /// themselves then differ from the trace's (`--ignore c_stick_1p` passes that over).
     CStick1P,
+    /// Slippi's DynamicsFix turned off (`Game::dynamics_fix`): a match under the ruleset then
+    /// sets up its fighters' matrices as the console's run of ssbm-rs's does, so the comparison
+    /// names none of [`SET_UP_WHY`]'s differences and must find nothing else.
+    NoDynamicsFix,
 }
 
 /// What the boot's ported part left, against memory at trace tick 0: words only the boot
@@ -705,6 +709,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     let mut image_ticks: Vec<u32> = Vec::new();
     let mut snapshot_ticks: Vec<u32> = Vec::new();
     let mut slp_dir: Option<PathBuf> = None;
+    let mut live_model = true;
     let mut pos = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
@@ -753,6 +758,7 @@ pub fn session(args: &[&str]) -> ExitCode {
             // Under the Slippi ruleset, each live match's recording written into DIR as
             // `NAME-N.slp` (`game::live`).
             "--slp" => slp_dir = Some(it.next().expect("--slp DIR").into()),
+            "--no-live-model" => live_model = false,
             "--heap" => crate::diff::COMPARE_HEAP.with(|c| c.set(true)),
             "--scenes" => scenes = true,
             // Every field a new block differs in left out as a leftover, and the list of
@@ -800,6 +806,7 @@ pub fn session(args: &[&str]) -> ExitCode {
                     Some("power-on") => Mutation::PowerOn,
                     Some("no-image") => Mutation::NoImage,
                     Some("c-stick-1p") => Mutation::CStick1P,
+                    Some("no-dynamics-fix") => Mutation::NoDynamicsFix,
                     Some(m) if m.starts_with("render-target=") => Mutation::RenderFill(
                         u8::from_str_radix(&m[14..], 16)
                             .expect("--mutate render-target=XX, in hex"),
@@ -808,7 +815,7 @@ pub fn session(args: &[&str]) -> ExitCode {
                         Mutation::Read(m[5..].parse().expect("--mutate read=N"))
                     }
                     _ => panic!(
-                        "--mutate scene-ticks|seed|power-on|no-image|render-target=XX|read=N|c-stick-1p"
+                        "--mutate scene-ticks|seed|power-on|no-image|render-target=XX|read=N|c-stick-1p|no-dynamics-fix"
                     ),
                 })
             }
@@ -817,7 +824,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     }
     let [trace_path, inputs_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle session TRACE INPUTS [--card FILE] [--card-pull F[,G]] [--card-b FILE] [--card-b-pull F[,G]] [--card-b-after FILE] [--dblevel N] [--hooks LINE] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
+            "usage: melee-oracle session TRACE INPUTS [--slp DIR] [--no-live-model] [--card FILE] [--card-pull F[,G]] [--card-b FILE] [--card-b-pull F[,G]] [--card-b-after FILE] [--dblevel N] [--hooks LINE] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
         );
         eprintln!(
             "                            [--ignore TEXT,...] [--stand-in ADDR[=VALUE]] [--mutate scene-ticks|seed|power-on|read=N]"
@@ -966,6 +973,7 @@ pub fn session(args: &[&str]) -> ExitCode {
         snapshot_ticks,
         card_after: [card_after, card_b_after],
         slp_dir,
+        live_model,
         name: Path::new(inputs_path)
             .file_stem()
             .map_or_else(|| "session".into(), |n| n.to_string_lossy().into_owned()),
@@ -1076,6 +1084,9 @@ struct Run<'a> {
     card_after: [Option<PathBuf>; 2],
     /// Where each live match's `.slp` goes (`--slp`), and the session's name for them.
     slp_dir: Option<PathBuf>,
+    /// Whether a live match runs the allocator model (`Session::live_model`): on, so its
+    /// addresses compare, unless `--no-live-model` runs it as the player does.
+    live_model: bool,
     name: String,
 }
 
@@ -1222,12 +1233,18 @@ impl Run<'_> {
                 (s, files, n + 1, imported.dangling)
             }
         };
+        // A live match runs the allocator model, as playback's heap lays it out, so its
+        // addresses compare with the console's (the player's runs without it).
+        s.live_model = self.live_model;
         match self.mutation {
             Some(Mutation::SceneTicks) => s.game.scene.unk_0 = s.game.scene.unk_0.wrapping_add(1),
             Some(Mutation::Seed) => s.game.objs.rng.seed = s.game.objs.rng.seed.wrapping_add(1),
             Some(Mutation::CStick1P) => s.game.rules.c_stick_1p = false,
             _ => {}
         }
+        melee_sim::game::oracle_hooks::set_dynamics_fix_off(
+            self.mutation == Some(Mutation::NoDynamicsFix),
+        );
         // Power-on leaves the image at tick 0, the first step's.
         let mut held = self.from.is_none();
         let mut compared = 0;
@@ -1248,6 +1265,11 @@ impl Run<'_> {
         let mut in_live = false;
         // Each named difference's count and the last tick it was in.
         let mut named = std::collections::BTreeMap::<&'static str, (u32, u32)>::new();
+        // Under the Slippi ruleset outside a live match (Sudden Death, the single-player modes,
+        // the attract match): DynamicsFix's differences ([`SET_UP_WHY`]) of each kind
+        // ([`SET_UP_KINDS`]), their count and the first and last ticks they were in.
+        let mut kept = [None::<(u32, u32, u32)>; 4];
+        let slippi = s.setup.ruleset == melee_sim::game::state::Ruleset::Slippi;
         // Whether the first live match's recording was written, as it ended.
         let mut first_saved = false;
         let stop = loop {
@@ -1438,6 +1460,28 @@ impl Run<'_> {
                         None => true,
                     }
                 });
+            } else if slippi {
+                // ssbm-rs's ruleset run applies the gameplay codes and the unlock writes, not
+                // DynamicsFix, which Slippi Dolphin runs in every match.
+                let set_up = playback_set_up(&diffs);
+                let chains = chain_joints(&s.game);
+                diffs.retain(|d| {
+                    let kind = if set_up.iter().any(|j| d.starts_with(j.as_str())) {
+                        0
+                    } else if never_set_up(d) {
+                        1
+                    } else if swung_from_set_up(d) {
+                        2
+                    } else if chains.iter().any(|j| d.starts_with(j.as_str())) {
+                        3
+                    } else {
+                        return true;
+                    };
+                    let k = kept[kind].get_or_insert((0, t, t));
+                    k.0 += 1;
+                    k.2 = t;
+                    false
+                });
             }
             compared += 1;
             // A new object's leftovers the heap's image doesn't know, where the original's
@@ -1539,6 +1583,14 @@ impl Run<'_> {
         }
         for (why, (n, last)) in &named {
             println!("  named in the live match: {why}: {n} differences, the last in tick {last}");
+        }
+        if kept.iter().any(Option::is_some) {
+            println!("named outside the live matches: {SET_UP_WHY}:");
+            for (k, what) in kept.iter().zip(SET_UP_KINDS) {
+                if let Some((n, first, last)) = k {
+                    println!("  {what}: {n} differences, from tick {first} to tick {last}");
+                }
+            }
         }
         if live_from.is_none() {
             return self.report(stop, compared, &at);
@@ -1795,7 +1847,16 @@ fn fresh(d: &str) -> bool {
             .all(|t| matches!(*t, "0" | "00" | "0.0" | "0x0" | "false" | "None"))
 }
 
-const SET_UP_WHY: &str = "Slippi's DynamicsFix (`ftCo_8009DD94+0x2FC`), which Slippi Dolphin's live play runs as its playback does and ssbm-rs's ruleset run doesn't: the fighters' dirty joint matrices set up in the tick, where the console's display pass sets them up after it, and the bone chains swung from them";
+const SET_UP_WHY: &str = "Slippi's DynamicsFix (`ftCo_8009DD94+0x2FC`), which Slippi Dolphin runs in every match, its live play as its playback, and ssbm-rs's ruleset run doesn't: the fighters' dirty joint matrices set up in the tick, where the console's display pass sets them up after it, and the bone chains swung from them";
+
+/// The kinds of DynamicsFix's differences, as the session names them outside the live matches:
+/// [`playback_set_up`]'s, [`never_set_up`]'s, [`swung_from_set_up`]'s and [`chain_joints`]'.
+const SET_UP_KINDS: [&str; 4] = [
+    "the joints' dirty marks",
+    "the joints' matrices",
+    "the bone chains' state",
+    "the chains' joints' poses",
+];
 
 /// The fighters' joints whose matrices playback's code at `ftCo_8009DD94+0x2FC` set up in the
 /// tick (every dirty matrix of the model): in `diffs`, a fighter's joint whose flags differ
