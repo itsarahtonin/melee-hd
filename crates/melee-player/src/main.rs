@@ -71,9 +71,12 @@ mod dialogs;
 mod flicker;
 mod front;
 mod gates;
+mod handoff;
 mod holds;
 mod jit;
 mod latency;
+#[cfg(test)]
+mod live_tests;
 #[cfg(test)]
 mod load_tests;
 mod monitor;
@@ -118,7 +121,9 @@ use melee_sim::audio::clock::{DiscSpeed, TB_HZ};
 use melee_sim::game::gm::vs_mode::{GamePrefs, GameRules, Special};
 use melee_sim::game::roster;
 use melee_sim::game::special_audit;
+use melee_sim::game::state::Ruleset;
 use melee_sim::game::vs_match::{DiscFile, Settings};
+use melee_sim::gekko_fp::FpMode;
 use melee_slippi::Replay;
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent, StartCause, WindowEvent};
@@ -258,6 +263,9 @@ struct Args {
     unlock_all: bool,
     /// Writes the console's memory card as the session leaves it here (`--card-after`).
     card_after: Option<String>,
+    /// The ruleset the console's next power-on runs (`--ruleset`, the panel's Ruleset): never
+    /// a recorded session's (its own) or a replay's.
+    ruleset: Ruleset,
 }
 
 /// The command line's usage, with the characters and stages melee-sim has ported.
@@ -274,7 +282,7 @@ fn usage() -> String {
          replays: [--no-record] [--replays DIR] each match is saved to DIR, else to replays in the settings folder\n\
          special melee: [--special MODE] plays by a mode's rules: {}\n\
          developers: [--unfinished-stages] plays a stage or character not offered yet, which can stop mid-match; [--debug-level off|debug-rom|develop] the developer setting's debug level from power-on\n\
-         console: [--power-on] boots Melee from power-on into its menus; [--inputs FILE.inputs] plays a recorded session from power-on (with --bench, headless); [--record-session FILE] [--no-session-record] [--saves DIR] [--holds SCRIPT] (scripted controllers by tick, MONKEY_HOLD's form) [--card-after FILE] (the card as the session leaves it)\n\
+         console: [--power-on] boots Melee from power-on into its menus; [--ruleset vanilla|slippi] the ruleset it runs (Slippi's: no memory card, no debug level); [--inputs FILE.inputs] plays a recorded session from power-on (with --bench, headless); [--record-session FILE] [--no-session-record] [--saves DIR] [--holds SCRIPT] (scripted controllers by tick, MONKEY_HOLD's form) [--card-after FILE] (the card as the session leaves it)\n\
          saves: [--import-save FILE.gci|.raw] [--export-save FILE.gci|.raw] [--unlock-all], each with [--saves DIR], then quit\n\
          with no --p1..--p4, --stage, --replay or --inputs, Melee boots from power-on with the native save; Esc opens the settings\n\
          the disc is --disc's, else SSBM_DISC's, else the one the disc picker asked for and remembered",
@@ -349,6 +357,7 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
         export_save: None,
         unlock_all: false,
         card_after: None,
+        ruleset: front::DEFAULT_RULESET,
     };
     // Whether the command line names a match.
     let mut chosen = false;
@@ -509,6 +518,10 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                 };
                 a.given.debug_level = true;
             }
+            "--ruleset" => {
+                a.ruleset = front::parse_ruleset(&value()?).ok_or("--ruleset vanilla|slippi")?;
+                a.given.ruleset = true;
+            }
             "--no-session-record" => {
                 a.session_record = false;
                 a.given.record_sessions = true;
@@ -587,6 +600,11 @@ struct Session {
     /// The console's platform from power-on: the disc, the saves, the session's recording and
     /// the menus' gates.
     console: Option<Box<Platform>>,
+    /// The floating point it runs in (`gekko_fp`'s mode is the thread's): the session's
+    /// ruleset's (design call 10), a Slippi replay's Slippi Dolphin's, else the console's. Set
+    /// before every tick and prediction, on whichever thread runs them: the power-on and a
+    /// replay's start run on threads of their own.
+    fp: FpMode,
 }
 
 impl Platform {
@@ -598,10 +616,15 @@ impl Platform {
     }
 
     /// The VS matches' Slippi replays: a recorder waits in the game for the next match's start
-    /// (it records nothing before it), and the match's replay is saved at its end.
-    fn replay(&mut self, g: &mut melee_sim::game::state::Game) {
+    /// (it records nothing before it), and the match's replay is saved at its end. Under the
+    /// Slippi ruleset the menus' recorder waits for a live match, which records itself
+    /// (`Session::hand_off`), and a match the session runs in the menus' session instead
+    /// (Sudden Death and the others design call 6 of `docs/slippi-ruleset.md` names) saves none.
+    fn replay(&mut self, s: &mut melee_sim::game::session::Session) {
         use melee_sim::game::gm::machine::{GM_OPENING_MV, GM_TITLE, Phase};
         use melee_sim::game::record::{Recorder, Setup};
+        let unrebuilt = s.setup.ruleset == Ruleset::Slippi && !s.in_live_match();
+        let g = &mut s.game;
         let Some(dir) = &self.replays else {
             if let Some(r) = g.recorder.take() {
                 self.save_replay(&r);
@@ -630,9 +653,15 @@ impl Platform {
                     if single_player {
                         eprintln!("a single-player mode's match isn't saved as a replay");
                     }
+                    let unrebuilt = unrebuilt && !attract && !single_player;
+                    if unrebuilt {
+                        eprintln!(
+                            "this match isn't saved as a replay: under the Slippi ruleset it runs as the console runs it, and Slippi Dolphin couldn't play it back"
+                        );
+                    }
                     self.slp = Some((
                         recording::Recording::new(dir.as_deref()),
-                        !attract && !single_player,
+                        !attract && !single_player && !unrebuilt,
                     ));
                 }
                 if r.ended() {
@@ -686,6 +715,14 @@ impl Platform {
         s: &mut melee_sim::game::session::Session,
         pads: melee_sim::input::controller::PadData,
     ) -> melee_sim::game::vs_match::Frame {
+        // A live match whose scene ended hands back in this tick, its game let go: its replay
+        // is saved first, however it ended.
+        if s.in_live_match()
+            && s.game.scene.unk_C != 0
+            && let Some(r) = s.game.recorder.take()
+        {
+            self.save_replay(&r);
+        }
         let feed = self.feed.take();
         let gated = match &feed {
             Some(_) => pads,
@@ -712,7 +749,7 @@ impl Platform {
         };
         self.feed = feed;
         self.after(next);
-        self.replay(&mut s.game);
+        self.replay(s);
         if let (Some(k), Some(card)) = (&mut self.kept, s.card.as_ref().and_then(|c| c.card())) {
             for name in k.update(card.image()) {
                 eprintln!("saved {name}");
@@ -822,6 +859,8 @@ impl Session {
                 (setup, None, Some((r.reads, 0)))
             }
             None => {
+                // The Slippi ruleset runs with no card: the saves folder stays as it is.
+                let saves = saves.filter(|_| args.ruleset == Ruleset::Vanilla);
                 let (card, kept) = match saves {
                     Some(dir) => {
                         let (card, kept) = saves::Kept::open(dir);
@@ -829,8 +868,18 @@ impl Session {
                     }
                     None => (saves::card_of(&Default::default()).0.into_image(), None),
                 };
+                if args.ruleset == Ruleset::Slippi && args.debug_level != 0 {
+                    eprintln!(
+                        "the debug level is Vanilla's only: under the Slippi ruleset Melee runs as sold"
+                    );
+                }
                 (
-                    power::setup(card, power::power_on_clock(), args.debug_level),
+                    power::setup(
+                        card,
+                        power::power_on_clock(),
+                        args.debug_level,
+                        args.ruleset,
+                    ),
                     kept,
                     None,
                 )
@@ -865,8 +914,11 @@ impl Session {
             rec,
             kept,
             card_after: args.card_after.as_ref().map(std::path::PathBuf::from),
-            replays: (args.record && args.bench.is_none() && args.inputs.is_none())
-                .then(|| args.replays.clone()),
+            // A benchmark's or a played-back session's matches are saved only to a folder the
+            // command line names.
+            replays: (args.record
+                && (args.given.replays || (args.bench.is_none() && args.inputs.is_none())))
+            .then(|| args.replays.clone()),
             slp: None,
             gates: gates::Gates::default(),
         });
@@ -878,6 +930,7 @@ impl Session {
         if let Err(p) = booted {
             return Err(format!("Melee stopped at power-on: {}", panic_text(&p)));
         }
+        let fp = s.setup.ruleset.fp_mode();
         let mut session = Session {
             run: power::Run::Console(Box::new(s)),
             dol,
@@ -887,6 +940,7 @@ impl Session {
             length: None,
             recording: None,
             console: Some(platform),
+            fp,
         };
         if let Some(snd) = &mut session.sound {
             let power::Run::Console(s) = &mut session.run else {
@@ -933,11 +987,14 @@ impl Session {
             Some(path) => {
                 let bytes = std::fs::read(path).map_err(|e| format!("{path}: {e}"))?;
                 let replay = Replay::parse(&bytes).map_err(|e| format!("{path}: {e}"))?;
+                melee_sim::gekko_fp::set_fp_mode(replay_fp(&replay));
                 let s = Settings::from_replay(&melee_slippi::start(&replay))
                     .map_err(|e| format!("{path}: {e}"))?;
                 (s, Some(replay))
             }
             None => {
+                // A developer's match plays Vanilla's rules, in the console's floating point.
+                melee_sim::gekko_fp::set_fp_mode(FpMode::Hardware);
                 let players: Vec<melee_sim::game::vs_match::Player> = (a.players.iter())
                     .enumerate()
                     .filter(|(_, p)| p.0 != 0xFF)
@@ -1015,7 +1072,23 @@ impl Session {
             length: None,
             recording: None,
             console: None,
+            // The mode the match started in.
+            fp: melee_sim::gekko_fp::fp_mode(),
         })
+    }
+
+    /// Whether a live match of the Slippi ruleset runs (`game::live`): its own game and
+    /// archives, drawn by a frame builder and renderer of its own ([`handoff`]).
+    fn in_live_match(&self) -> bool {
+        matches!(&self.run, power::Run::Console(s) if s.in_live_match())
+    }
+
+    /// The ruleset the console runs (none for a match's session).
+    fn ruleset(&self) -> Option<Ruleset> {
+        match &self.run {
+            power::Run::Console(s) => Some(s.setup.ruleset),
+            power::Run::Match(_) => None,
+        }
     }
 
     /// Where Melee's timeline is, when the game has one.
@@ -1029,6 +1102,7 @@ impl Session {
         &mut self,
         pads: [melee_sim::input::pad::PadStatus; 4],
     ) -> melee_sim::game::vs_match::Frame {
+        melee_sim::gekko_fp::set_fp_mode(self.fp);
         let before = self.timeline();
         let tick = engine_tick(self.game());
         let f = match (&mut self.run, &mut self.console) {
@@ -1069,14 +1143,29 @@ impl Session {
         predictor: &mut Predictor<power::Run>,
         pads: [melee_sim::input::pad::PadStatus; 4],
     ) -> Result<Cost, String> {
+        melee_sim::gekko_fp::set_fp_mode(self.fp);
         let replay = self.replay.as_ref();
+        let disc = self.console.as_ref().map(|p| &p.disc);
         predictor.predict(&self.run, |c| match c {
             power::Run::Match(m) => match replay {
                 Some(r) => m.step_replay(&mut melee_slippi::Device(r)),
                 None => m.step(pads),
             },
-            power::Run::Console(s) => power::step_predicted(s, pads),
+            power::Run::Console(s) => power::step_predicted(s, pads, disc),
         })
+    }
+}
+
+/// The floating point a replay plays in: Slippi Dolphin's JIT's for a Slippi replay, the console's
+/// otherwise. A Slippi replay records its code list (Slippi Dolphin's, or the Slippi ruleset's in
+/// melee-hd's recordings, `record::ruleset_codes`); melee-hd's Vanilla recordings record none and
+/// played in the console's, and ssbm-rs's (`playedOn: ssbm-rs`, the benchmark matches in
+/// `data/bench`) were played in the console's though they record Slippi's codes.
+fn replay_fp(replay: &Replay) -> FpMode {
+    if replay.gecko_codes.is_empty() || replay.played_on.as_deref() == Some("ssbm-rs") {
+        FpMode::Hardware
+    } else {
+        FpMode::Slippi
     }
 }
 
@@ -1206,6 +1295,8 @@ struct Aside {
     hold: jit::Hold<melee_sim::game::vs_match::Frame>,
     ticks: u64,
     motors: [bool; 4],
+    /// The menus' frame builder and renderer, while Melee was in a live match.
+    handoff: handoff::Handoff<Option<Gpu>>,
 }
 
 /// The settings panel, when the player boots the console: its settings, and its egui state
@@ -1320,6 +1411,9 @@ struct App {
     /// Camera Mode's frames drawn as the console draws them, for its snapshots
     /// ([`App::give_snapshot`]).
     console_view: Option<ConsoleView>,
+    /// While a live match of the Slippi ruleset runs, which draws with a frame builder and
+    /// renderer of its own: the menus' ([`handoff`]).
+    handoff: handoff::Handoff<Option<Gpu>>,
 }
 
 /// [`App::give_snapshot`], with the console's view in `view` and the GPU `gpu`.
@@ -1533,6 +1627,7 @@ impl App {
         let samples = session.sound.as_ref().map(|s| s.samples().len());
         let length = session.length;
         let tick = engine_tick(session.game());
+        self.follow_live();
         self.give_snapshot(&f.draws);
         let session = self.session.as_mut().expect("a match");
         self.jit.ran(&plan);
@@ -2015,6 +2110,62 @@ impl App {
         ))
     }
 
+    /// Follows the session into and out of a live match of the Slippi ruleset, after a tick:
+    /// the match draws with a frame builder and renderer of its own, made fresh, the menus' set
+    /// aside meanwhile and taken back at the handback, made again or resized for what the
+    /// settings changed meanwhile ([`handoff`]). The paced frames start again from the tick, as
+    /// after a load, and the session's game takes the frames' cosmetic toggles.
+    fn follow_live(&mut self) {
+        let Some(s) = &self.session else { return };
+        let live = s.in_live_match();
+        if live == self.handoff.live() {
+            return;
+        }
+        let shape = handoff::Shape {
+            scale: self.scale,
+            efb_width: self.efb_width,
+            msaa: self.msaa,
+        };
+        let (gpu, aspect, one_thread, dol) = (&self.gpu, self.aspect, self.one_thread, &s.dol);
+        let moved = self
+            .handoff
+            .follow(live, &mut self.frames, &mut self.renderer, shape, || {
+                let mut frames = Frames::new();
+                frames.space.load_dol(dol);
+                frames.hsd.widescreen = aspect.widescreen();
+                let r = pipelines::renderer(gpu, shape.scale, shape.msaa, aspect);
+                (frames, Some(gpu_for(r, one_thread)))
+            });
+        if let handoff::Moved::Back {
+            shape: was,
+            renderer,
+        } = moved
+        {
+            if let Some(g) = renderer {
+                self.specialized = pipelines::save(&g.into_renderer());
+            }
+            if was.msaa != self.msaa {
+                self.drop_renderer();
+                self.renderer = Some(gpu_for(
+                    pipelines::renderer(&self.gpu, self.scale, self.msaa, self.aspect),
+                    self.one_thread,
+                ));
+            } else if (was.scale, was.efb_width) != (self.scale, self.efb_width)
+                && let Some(g) = &mut self.renderer
+            {
+                g.resize_efb(self.scale, self.efb_width);
+            }
+        }
+        self.paced.clear();
+        if let Some(p) = self.pending.take() {
+            self.queue_row(None, p);
+        }
+        let aspect = self.aspect;
+        if let Some(s) = &mut self.session {
+            s.set_aspect(aspect);
+        }
+    }
+
     /// Camera Mode's snapshot (`snap_write::give_frame`): its pixels are what a console's
     /// renderer leaves in the buffer, so they're drawn as the console draws, whatever the
     /// player shows: while a Camera Mode match runs, each tick's frame is drawn again by a
@@ -2150,6 +2301,7 @@ impl App {
             args.debug_level = s.debug_level;
             args.record = s.record;
             args.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
+            args.ruleset = s.ruleset;
         }
         eprintln!("power on");
         // The session's recording is known once the power-on made it.
@@ -2189,6 +2341,7 @@ impl App {
         }
         self.frames = Frames::new();
         self.frames.space.load_dol(&session.dol);
+        self.handoff = handoff::Handoff::default();
         self.session = Some(session);
         let aspect = self.aspect;
         self.set_aspect(aspect);
@@ -2210,6 +2363,7 @@ impl App {
         self.hold = jit::Hold::default();
         self.session = None;
         self.drop_renderer();
+        self.handoff = handoff::Handoff::default();
         self.console_view = None;
         self.last_image = None;
     }
@@ -2353,6 +2507,14 @@ impl App {
         let Some(w) = &mut f.window else { return };
         f.panel.busy = self.booting.is_some();
         f.panel.playing = self.replay.clone();
+        // Melee's ruleset (set aside while a replay plays); while it powers on, the setting's.
+        let melee = match &self.aside {
+            Some(a) => Some(&a.session),
+            None => self.session.as_ref(),
+        };
+        f.panel.running = melee
+            .and_then(Session::ruleset)
+            .unwrap_or(f.panel.settings.ruleset);
         let action = w.redraw(&self.gpu, shown, &mut f.panel, self.last_image.as_ref());
         if f.panel.settings.fullscreen != shown.fullscreen() {
             shown.set_fullscreen(f.panel.settings.fullscreen);
@@ -2515,6 +2677,7 @@ impl App {
             hold: std::mem::take(&mut self.hold),
             ticks: self.ticks,
             motors: self.motors,
+            handoff: std::mem::take(&mut self.handoff),
         }));
         self.motors = [false; 4];
         self.inputs.rumble(self.motors);
@@ -2580,6 +2743,7 @@ impl App {
         self.hold = a.hold;
         self.ticks = a.ticks;
         self.motors = a.motors;
+        self.handoff = a.handoff;
         self.inputs.rumble(self.motors);
         let aspect = self.aspect;
         self.set_aspect(aspect);
@@ -2898,6 +3062,43 @@ fn scale_for(asked: u32, size: (u32, u32), aspect: present::Aspect) -> u32 {
     scale.clamp(1, aspect.max_scale())
 }
 
+/// The benchmark's [`App::follow_live`]: into a live match, a frame builder and renderer of its
+/// own (at the renderer's `shape` now); out of one, the menus' back, resized to `shape`.
+fn bench_follow(
+    handoff: &mut handoff::Handoff<Gpu>,
+    session: &mut Session,
+    frames: &mut Frames,
+    renderer: &mut Gpu,
+    shape: handoff::Shape,
+    gpu: &present::Gpu,
+    args: &Args,
+) {
+    let live = session.in_live_match();
+    if live == handoff.live() {
+        return;
+    }
+    let fresh = || {
+        let mut f = Frames::new();
+        f.space.load_dol(&session.dol);
+        f.hsd.widescreen = args.aspect.widescreen();
+        let mut r = pipelines::renderer(gpu, shape.scale, shape.msaa, args.aspect);
+        r.xfb_readback = args.shot.is_some();
+        (f, gpu_for(r, args.one_thread))
+    };
+    let moved = handoff.follow(live, frames, renderer, shape, fresh);
+    if let handoff::Moved::Back {
+        shape: was,
+        renderer: r,
+    } = moved
+    {
+        pipelines::save(&r.into_renderer());
+        if (was.scale, was.efb_width) != (shape.scale, shape.efb_width) {
+            renderer.resize_efb(shape.scale, shape.efb_width);
+        }
+    }
+    session.set_aspect(args.aspect);
+}
+
 /// Plays `ticks` ticks headless, drawing each frame and presenting it to an offscreen target
 /// of `size`, and reports the time a tick with its frame takes.
 fn bench(args: &Args, ticks: u32) -> ExitCode {
@@ -2918,6 +3119,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     let mut r = pipelines::renderer(&gpu, scale, args.msaa, args.aspect);
     r.xfb_readback = args.shot.is_some();
     let mut renderer = gpu_for(r, args.one_thread);
+    let mut handoff = handoff::Handoff::default();
     let mut console_view = None;
     let mut last = None;
     let mut frames = Frames::new();
@@ -2962,6 +3164,20 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
         let pads = args.holds.as_ref().map_or(rest, |h| h.at(u64::from(tick)));
         let f = session.tick(pads);
         let t1 = Instant::now();
+        let shape = handoff::Shape {
+            scale,
+            efb_width: args.aspect.efb_width(scale),
+            msaa: args.msaa,
+        };
+        bench_follow(
+            &mut handoff,
+            &mut session,
+            &mut frames,
+            &mut renderer,
+            shape,
+            &gpu,
+            args,
+        );
         give_snapshot(&mut console_view, &gpu, &session, &f.draws);
         round += t1 - t0;
         if !f.draws.is_empty() {
@@ -3072,6 +3288,7 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
     let mut r = pipelines::renderer(&gpu, scale, args.msaa, args.aspect);
     r.xfb_readback = args.shot.is_some();
     let mut renderer = gpu_for(r, args.one_thread);
+    let mut handoff = handoff::Handoff::default();
     let mut frames = Frames::new();
     frames.space.load_dol(&session.dol);
     frames.hsd.widescreen = args.aspect.widescreen();
@@ -3096,6 +3313,26 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
         let f = session.tick(pads);
         let t1 = Instant::now();
         sim += t1 - t0;
+        if session.in_live_match() != handoff.live() {
+            let shape = handoff::Shape {
+                scale,
+                efb_width: args.aspect.efb_width(scale),
+                msaa: args.msaa,
+            };
+            bench_follow(
+                &mut handoff,
+                &mut session,
+                &mut frames,
+                &mut renderer,
+                shape,
+                &gpu,
+                args,
+            );
+            // Nothing blends or is predicted across the handoff.
+            before.clear();
+            after.clear();
+            predictor.clear();
+        }
         if !f.draws.is_empty() {
             if extrapolate {
                 match session.predict(&mut predictor, pads) {
@@ -3253,6 +3490,9 @@ fn settings_of(args: &Args) -> front::Settings {
     if g.audio_exclusive {
         s.audio_exclusive = args.audio_exclusive;
     }
+    if g.ruleset {
+        s.ruleset = args.ruleset;
+    }
     s
 }
 
@@ -3272,6 +3512,7 @@ fn with_settings(mut a: Args, s: &front::Settings) -> Args {
     a.session_record = s.record_sessions;
     a.debug_level = s.debug_level;
     a.audio_exclusive = s.audio_exclusive;
+    a.ruleset = s.ruleset;
     a
 }
 
@@ -3408,6 +3649,7 @@ fn run(args: Args) -> ExitCode {
         perf: args.perf_report.as_deref().map(perf::Perf::new),
         specialized: None,
         console_view: None,
+        handoff: handoff::Handoff::default(),
         args,
     };
     if let Some(path) = &app.args.latency_log {

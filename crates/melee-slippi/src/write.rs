@@ -196,6 +196,10 @@ mod tests {
         assert!(tail.starts_with(b"U\x08metadata{U\x07startAtSU\x141970-01-01T00:00:00Z"));
         assert!(tail.ends_with(b"U\x08playedOnSU\x08melee-hd}}"));
         assert_eq!(crate::metadata::unlocks(&file), None);
+        assert_eq!(
+            crate::metadata::played_on(&file).as_deref(),
+            Some("melee-hd")
+        );
     }
 
     /// A match whose display-phase reads went either way (design call 9) says so in its

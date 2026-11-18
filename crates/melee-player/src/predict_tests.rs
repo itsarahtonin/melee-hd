@@ -35,6 +35,8 @@ struct Predictions {
     made: u32,
     exact: u32,
     missed: u32,
+    /// Predictions a console's tick stopped (a disc read).
+    stopped: u32,
 }
 
 /// Plays `ticks` ticks of two copies of a match, `straight` and `predicting`, with the
@@ -78,21 +80,36 @@ fn compare(
             }
         }
         let rendered = !got.draws.is_empty();
-        let ended = got.ended;
+        // The session's end (a console's frame ends only its scene).
+        let ended = predicting.ended;
         straight.recycle(want);
         predicting.recycle(got);
         if ended {
             break;
         }
         if rendered {
-            predicting
-                .predict(&mut predictor, p)
-                .unwrap_or_else(|why| panic!("tick {tick}'s prediction stopped: {why}"));
+            // A played-back session's controllers are its next read, held.
+            let held = (predicting.console.as_ref())
+                .and_then(|c| c.feed.as_ref())
+                .map_or(p, |(reads, next)| reads[(*next).min(reads.len() - 1)]);
+            if let Err(why) = predicting.predict(&mut predictor, held) {
+                // A console's prediction stops where the tick would read the disc (a scene's
+                // song), and the frames draw the real tick (`power::step_predicted`).
+                assert!(
+                    predicting.console.is_some(),
+                    "tick {tick}'s prediction stopped: {why}"
+                );
+                seen.stopped += 1;
+                predictor.forget();
+                continue;
+            }
             seen.made += u32::from(predictor.is_filled());
             let copy = predictor.predicted().expect("the copy");
             assert!(copy.game().audio.mix.is_none(), "the copy logs its mix");
             assert!(
-                predicting.game().audio.mix.is_some(),
+                // A live match builds playback's audio, with no mix log, until the console's audio
+                // is carried into it (feat/m6s-live-audio): the player plays it silent meanwhile.
+                predicting.game().audio.mix.is_some() || predicting.in_live_match(),
                 "the match's mix log is off"
             );
             // Nothing written back.
@@ -170,5 +187,37 @@ fn predicting_with_held_controllers_changes_nothing() {
         // Held controllers predict most ticks exactly and miss where an input changed.
         assert!(seen.missed > 10, "{seen:?}");
         assert!(seen.exact > seen.missed, "{seen:?}");
+    });
+}
+
+/// A session under the Slippi ruleset predicts as it runs, its live match included: the
+/// prediction's copy steps a live match's tick and display pass as the session does (its own
+/// game, not the menus'), and nothing reaches the session; a song playing doesn't stop it.
+/// `pause-fd`'s reads drive both sessions, through its live match's handoff and handback; a
+/// prediction holds the recording's next read.
+/// Skips without `SSBM_DISC` and `SSBM_RS_LOCAL`.
+#[test]
+fn predicting_a_ruleset_session_changes_nothing() {
+    crate::on_game_stack(|| {
+        let Some((disc, path)) = crate::live_tests::pause_fd() else {
+            eprintln!("skipped: no disc or no ruleset sessions");
+            return;
+        };
+        let mut args = crate::parse_args_from(Vec::new()).expect("the defaults");
+        args.disc = disc;
+        args.mute = true;
+        args.bench = Some(0);
+        let none = [PadStatus::default(); 4];
+        let seen = compare(
+            crate::live_tests::powered_on(&args, &path),
+            crate::live_tests::powered_on(&args, &path),
+            3100,
+            |_| none,
+        );
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        // Every tick predicted but a scene's entry's (its files are the real tick's to read),
+        // each the tick that followed it.
+        assert!(seen.made > 3000, "{seen:?}");
+        assert_eq!((seen.stopped, seen.missed), (0, 0), "{seen:?}");
     });
 }

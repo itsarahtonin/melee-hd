@@ -88,6 +88,8 @@ pub struct Replay {
     pub sheik_start: [bool; 4],
     /// The unlocks a melee-hd recording of a Vanilla match carries in its metadata.
     pub unlocks: Option<melee_sim::game::gm::Unlocks>,
+    /// What played the match (the metadata's `playedOn`), if the file says.
+    pub played_on: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -236,6 +238,7 @@ impl Replay {
         }
         replay.events = events;
         replay.unlocks = crate::metadata::unlocks(file);
+        replay.played_on = crate::metadata::played_on(file);
         Ok(replay)
     }
 
