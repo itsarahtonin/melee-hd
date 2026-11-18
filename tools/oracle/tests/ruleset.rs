@@ -178,21 +178,24 @@ fn oracle(args: &[&str]) -> String {
 /// `traces/m6s-stall`: each compares clean to its first live match and on through it as a live
 /// match to its handback (`matches-b`'s on Fountain of Dreams, as `vs-menus`' above), then runs
 /// on through every match, handback, Sudden Death, results screen and character select to past
-/// its last read with no stop.
+/// its last read with no stop, each tick the trace holds ending on a read the trace's can have
+/// taken.
 #[test]
 fn the_live_match_sessions_run_on() {
-    for (name, compared, end, matches) in [
+    for (name, compared, end, matches, reads) in [
         (
             "matches-a",
             "2105 ticks compared, no difference, through the live match that starts in tick 1014 to its handback before tick 2105",
             24187,
             5,
+            22082,
         ),
         (
             "matches-b",
             "2821 ticks compared, no difference, through the live match that starts in tick 1230 to its handback before tick 2821",
             18925,
             5,
+            16104,
         ),
     ] {
         let trace = ssbm_rs_local(&format!("traces/m6s-stall/{name}.trc"));
@@ -212,13 +215,31 @@ fn the_live_match_sessions_run_on() {
             "--slp",
             dir.to_str().unwrap(),
         ]);
-        // Each recording is the one ssbm-rs played.
+        // Each recording is the one ssbm-rs played, but `matches-a-5`'s: since 2026-11-18 the
+        // menus' session takes the results screen's files from the preload cache as the
+        // console's does, and the fifth match starts on the console's seed, so its recording
+        // holds the console's run whole (`live-check`), where the one ssbm-rs played parted
+        // from it at frame 494, where the items part.
         for n in 1..=matches {
             let n = format!("{name}-{n}");
-            let ours = std::fs::read(dir.join(format!("{n}.slp"))).expect("a recording");
+            let slp = dir.join(format!("{n}.slp"));
+            let ours = std::fs::read(&slp).expect("a recording");
             let played = ssbm_rs_local(&format!("lockstep/{}/traced/{n}.slp", traced(&n)));
+            let played = std::fs::read(&played).expect("the recording ssbm-rs played");
+            if n == "matches-a-5" {
+                assert!(
+                    ours != played,
+                    "{n}: the live match writes the seed it parted on"
+                );
+                let out = oracle(&["live-check", &trace, slp.to_str().unwrap()]);
+                assert!(
+                    out.contains("frame -118 is tick 14218; 7318 frames checked to the recording's end (14636 post-frame updates, 0 marked off screen), 0 differ, 0 past the trace or unplaced, 0 a tick from their scene frame count"),
+                    "{n}: {out}"
+                );
+                continue;
+            }
             assert!(
-                ours == std::fs::read(&played).expect("the recording ssbm-rs played"),
+                ours == played,
                 "{n}: the live match no longer writes the recording ssbm-rs played"
             );
         }
@@ -228,6 +249,12 @@ fn the_live_match_sessions_run_on() {
         assert!(
             out.contains(&format!(
                 "ran on to tick {end} past the recording's reads with no stop: {matches} live matches, {matches} recordings written"
+            )),
+            "{name}: {out}"
+        );
+        assert!(
+            out.contains(&format!(
+                "the run on's reads: {reads} of the trace's ticks end on a read the trace's can have taken, 0 on another"
             )),
             "{name}: {out}"
         );
@@ -415,7 +442,12 @@ fn the_paused_live_matches_record_as_the_console_does() {
 /// `pause-fd`'s script at the player's drive pace (`lockstep/m6s-player`, its `.holds.txt`
 /// beside it), traced by ssbm-rs's ruleset runner from the session file's flag
 /// (`traces/m6s-player`). It compares from power-on through its live match to the handback and
-/// runs on with no stop; the live match writes the replay the player saved
+/// runs on with no stop to the trace's last tick, every tick past the handback ending on a read
+/// the trace's can have taken: at the drive's pace the results screen takes its fighters' files
+/// from the preload cache, as the console's does (until 2026-11-18 the menus' session, set aside
+/// before the VS scene's entry chose the cache, read them from the disc, and the handback's tick
+/// took 25 retraces too many, the run on ending in tick 3261); the live match writes the replay
+/// the player saved
 /// (`lockstep/m6s-player/traced/player-fd-1.slp`), whose marks are the original's, whose replay
 /// check differs only in what its pause leaves, and whose playback by ssbm-rs compares clean
 /// with melee-hd's.
@@ -449,7 +481,13 @@ fn the_players_own_session_compares_clean() {
     );
     assert!(
         out.contains(
-            "ran on to tick 3259 past the recording's reads with no stop: 1 live matches, 1 recordings written"
+            "ran on to tick 3285 past the recording's reads with no stop: 1 live matches, 1 recordings written"
+        ),
+        "{out}"
+    );
+    assert!(
+        out.contains(
+            "the run on's reads: 1519 of the trace's ticks end on a read the trace's can have taken, 0 on another"
         ),
         "{out}"
     );

@@ -1644,7 +1644,10 @@ impl Run<'_> {
     /// Plays the session on, uncompared, from tick `t` (in the first live match, or past its
     /// handback: the menus' session isn't the console's after it) to the recording's last
     /// read and a second past it, as the player would: every scene and match with no stop.
-    /// Each live match's recording goes to `--slp`'s folder as it ends.
+    /// Each live match's recording goes to `--slp`'s folder as it ends. Its timing still
+    /// checks: each tick the trace holds ends on a read the trace's tick can have taken
+    /// ([`Plan`]), or the run on says where it parted (a scene's loads at the drive's pace
+    /// that the console's don't make, say).
     fn run_on(
         &self,
         s: &mut Session,
@@ -1681,6 +1684,9 @@ impl Run<'_> {
         let mut live = in_live;
         let mut was_saved = first_saved;
         let end = self.rec.reads.len() + 60;
+        // The ticks the trace holds whose reads agree with it, and those that part, the first.
+        let (mut agree, mut parted) = (0u32, 0u32);
+        let mut first_parted = None;
         loop {
             if s.in_live_match() {
                 if !live {
@@ -1707,6 +1713,20 @@ impl Run<'_> {
                 }
                 s.step_tick(console)
             }));
+            if let Some(can) = self.plan.ends.get(tick as usize) {
+                let took = (console.next as u32).saturating_sub(1);
+                if can.contains(&took) {
+                    agree += 1;
+                } else {
+                    parted += 1;
+                    first_parted.get_or_insert_with(|| {
+                        format!(
+                            "tick {tick} ended on read {took}, the trace's on {}",
+                            self.plan.describe(tick)
+                        )
+                    });
+                }
+            }
             match stepped {
                 Ok((_, due)) => render_due = due,
                 Err(p) => {
@@ -1721,6 +1741,10 @@ impl Run<'_> {
         }
         println!(
             "ran on to tick {tick} past the recording's reads with no stop: {matches} live matches, {saved} recordings written"
+        );
+        println!(
+            "the run on's reads: {agree} of the trace's ticks end on a read the trace's can have taken, {parted} on another{}",
+            first_parted.map_or(String::new(), |f| format!(" (first: {f})"))
         );
         ExitCode::SUCCESS
     }

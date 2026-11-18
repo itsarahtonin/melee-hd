@@ -1189,7 +1189,9 @@ impl Session {
     /// and the sounds the scene's entry started with their handles
     /// (`live::record_entry_sounds`). The menus' session and the card stay as they were, but
     /// for the audio's mix log (presentation), which goes on in the console's entry and on
-    /// with the audio.
+    /// with the audio, and for where its loads take their files: the entry's match takes them
+    /// from the preload cache (`vs_scene_files`, `lbArchive_80017040`), and so do the scenes
+    /// after it, the results screen's fighters among them, as the console's session does.
     fn console_entry(
         &mut self,
         console: &mut dyn Console,
@@ -1220,6 +1222,7 @@ impl Session {
             r.begin_scene_loop();
             lent.give_back(&mut probe.objs.heap);
         });
+        self.game.ft.data.files.from_cache = probe.ft.data.files.from_cache;
         (probe.leave_timeline(), sounds)
     }
 
