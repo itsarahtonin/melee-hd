@@ -491,8 +491,12 @@ fn a_live_match_equals_its_playback() {
             .expect("a game start")
             .payload;
         assert_eq!((payload[0x1A2], payload[0x1A3]), (2, 2), "the menus' scene");
+        // Played back as the player plays its recordings: without the allocator model, which
+        // the live match ran without too (design call 8).
         let mut again = Settings::from_replay(&back).expect("its settings");
         again.disc = live.disc;
+        assert_eq!(live.heap, None, "the live match ran the allocator model");
+        again.heap = None;
         let mut unsettled = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
         (unsettled.game.playback.as_mut())
             .expect("a replay's match")
@@ -577,6 +581,7 @@ fn a_paused_live_match_records_the_pause_as_slippi_does() {
         let original = Replay::parse(&file).expect("the recording parses");
         let mut again = Settings::from_replay(&melee_slippi::start(&original)).expect("settings");
         again.disc = live.disc;
+        again.heap = None;
         again.record = Some(melee_slippi::write::setup(&original));
         let mut play = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
         for _ in 0..8000 {
@@ -705,6 +710,7 @@ fn a_live_match_on_the_consoles_timeline_plays_back_the_same() {
         let replay = Replay::parse(&file).expect("the recording parses");
         let mut again = Settings::from_replay(&melee_slippi::start(&replay)).expect("its settings");
         again.disc = live.disc;
+        again.heap = None;
         let mut play = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
         // The console's driver counts its sounds' handles on (`(vidhigh << 7) | voice`), playback's from
         // its own boot.

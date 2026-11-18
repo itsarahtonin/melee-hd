@@ -42,10 +42,32 @@ fn session(name: &str, args: &[&str]) -> Option<String> {
 /// matches on its gameplay codes (Init Stage Data and Init Player Data zeroing only the
 /// blocks their hooks see: `Ground_GetStageGObj`'s and `Fighter_Create`'s, not
 /// `Ground_801C1A20`'s on Fountain of Dreams, tick 848, nor the Classic intro's demo fighters',
-/// tick 819).
+/// tick 819). Their matches run Slippi's DynamicsFix (`ftCo_8009DD94+0x2FC`), which Slippi
+/// Dolphin runs in every match and ssbm-rs's ruleset run doesn't (docs/slippi-ruleset.md, "What
+/// the ruleset makes moot"): the comparison names its differences, from the Classic intro's demo
+/// fighters (tick 819) and the attract match (tick 2490), whose bone chains it moves (tick 2667).
 #[test]
 fn the_ruleset_sessions_compare_clean() {
-    for (name, ticks) in [("menu-tour", 3055), ("classic-cstick", 3291)] {
+    for (name, ticks, named) in [
+        (
+            "menu-tour",
+            3055,
+            &[
+                "the joints' dirty marks: 203481 differences, from tick 2490 to tick 3054",
+                "the joints' matrices: 865 differences, from tick 2517 to tick 3031",
+                "the bone chains' state: 1101 differences, from tick 2667 to tick 3054",
+                "the chains' joints' poses: 23 differences, from tick 2668 to tick 2814",
+            ][..],
+        ),
+        (
+            "classic-cstick",
+            3291,
+            &[
+                "the joints' dirty marks: 419650 differences, from tick 961 to tick 3290",
+                "the joints' matrices: 16994 differences, from tick 819 to tick 3071",
+            ][..],
+        ),
+    ] {
         let Some(out) = session(name, &["--all", "--heap"]) else {
             return;
         };
@@ -58,6 +80,30 @@ fn the_ruleset_sessions_compare_clean() {
             "{name}: {out}"
         );
         assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("named outside the live matches: Slippi's DynamicsFix"),
+            "{name}: {out}"
+        );
+        for n in named {
+            assert!(out.contains(&format!("  {n}\n")), "{name}: {out}");
+        }
+    }
+}
+
+/// DynamicsFix turned off (`--mutate no-dynamics-fix`): the matches set up their fighters'
+/// matrices as ssbm-rs's ruleset run does, so the sessions compare clean with nothing named,
+/// and DynamicsFix's names hide nothing else.
+#[test]
+fn without_dynamics_fix_nothing_is_named() {
+    for (name, ticks) in [("menu-tour", 3055), ("classic-cstick", 3291)] {
+        let Some(out) = session(name, &["--all", "--heap", "--mutate", "no-dynamics-fix"]) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{ticks} ticks compared, no difference\n")),
+            "{name}: {out}"
+        );
+        assert!(!out.contains("named "), "{name}: {out}");
     }
 }
 
