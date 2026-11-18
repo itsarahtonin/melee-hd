@@ -266,6 +266,11 @@ pub struct Aside {
     pub data: Archives,
     pub cache: Option<crate::lb::dvd::Dvd>,
     pub cache_clock: Option<crate::audio::clock::Clock>,
+    /// What the console's VS scene's entry left that the live match doesn't start with
+    /// (`live::ConsoleAt`), and the counters a match carries on as the live match's entry
+    /// left them (`live::Counters`), for the statics the menus' session takes back
+    /// (`Game::take_match_statics`).
+    pub counters: (super::live::ConsoleAt, super::live::Counters),
 }
 
 /// `DbLevel` before `main` sets it: `DbLKind_NoDebugRom`, as the executable's data holds it.
@@ -1156,7 +1161,7 @@ impl Session {
         // (`read_match_files`): the scenes after it load them from there (the results
         // screen's fighters, Sudden Death's stage).
         self.read_match_files(&d, console);
-        let (at, sounds) = self.console_entry(console);
+        let (at, sounds, console_at) = self.console_entry(console);
         let mut settings =
             super::vs_match::Settings::live(&start).expect("the ruleset's code list's rules");
         settings.disc = self.setup.disc;
@@ -1169,6 +1174,8 @@ impl Session {
             super::vs_match::Match::start(&settings, &mut |n| console.file(n))
         });
         let (cache, cache_clock) = (at.audio.dvd.clone(), at.audio.clock.clone());
+        m.game.take_console_statics(&console_at);
+        let counters = (console_at, super::live::Counters::of(&m.game));
         m.game.go_on_from(at, &self.data, &mut m.data);
         self.live_files = m.files;
         let game = std::mem::replace(&mut self.game, *m.game);
@@ -1178,6 +1185,7 @@ impl Session {
             data,
             cache,
             cache_clock,
+            counters,
         }));
     }
 
@@ -1195,7 +1203,11 @@ impl Session {
     fn console_entry(
         &mut self,
         console: &mut dyn Console,
-    ) -> (super::live::Timeline, Vec<(i32, i32)>) {
+    ) -> (
+        super::live::Timeline,
+        Vec<(i32, i32)>,
+        super::live::ConsoleAt,
+    ) {
         let mut probe = self.game.clone();
         probe.machine.files_wanted = false;
         probe.audio.mix = self.game.audio.mix.take();
@@ -1223,7 +1235,8 @@ impl Session {
             lent.give_back(&mut probe.objs.heap);
         });
         self.game.ft.data.files.from_cache = probe.ft.data.files.from_cache;
-        (probe.leave_timeline(), sounds)
+        let counters = super::live::ConsoleAt::of(&probe);
+        (probe.leave_timeline(), sounds, counters)
     }
 
     /// One engine tick of the live match, as a console runs it: every poll the match's
@@ -1271,8 +1284,12 @@ impl Session {
             data,
             cache,
             cache_clock,
+            counters,
         } = *aside;
-        self.game = game;
+        let live = std::mem::replace(&mut self.game, game);
+        self.game
+            .take_match_statics(&live, (&counters.0, &counters.1));
+        self.game.forget_live_match_heap();
         // The preload cache as the console's entry left it, its copy alarms timed from then.
         self.game.audio.dvd = cache;
         self.game.audio.clock = cache_clock;

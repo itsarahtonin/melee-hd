@@ -162,6 +162,271 @@ impl Game {
     }
 }
 
+/// The counters a match carries on from the scenes before it, which no scene resets: the
+/// collision joints' stamp (`Ground_804D6954`), the collision geometry's update counter
+/// (`mpColl_804D64AC`), the particle generators' last family id (`lbl_804D6368`) and the
+/// particles' display frame with the frame each link was last sorted in (`psFrameNum`,
+/// `HSD_PSDisp_8040C360`). A live match starts them as playback's boot leaves them, the
+/// console's match as the menus left them, so the menus' session takes each back moved on as
+/// far as the match moved it ([`Game::take_match_statics`]).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Counters {
+    pub coll_stamp: i16,
+    pub coll_generation: i32,
+    pub idnum: u16,
+    pub ps_frame: u8,
+    pub ps_sorted: [u8; crate::hsd::particle::LINKS],
+}
+
+impl Counters {
+    /// The counters as `g` holds them.
+    pub fn of(g: &Game) -> Self {
+        Counters {
+            coll_stamp: g.gr.coll_stamp,
+            coll_generation: super::gr::ground::generation(g),
+            idnum: g.objs.generators.idnum,
+            ps_frame: g.objs.psdisp.frame,
+            ps_sorted: g.objs.psdisp.sorted,
+        }
+    }
+}
+
+/// What the console's VS scene's entry leaves that a live match, built as playback builds a
+/// replay's, doesn't start with ([`Session`]'s handoff, `session::Aside`): the [`Counters`];
+/// the VS controller's players (`fn_8016DCC0`'s: a human's Zelda held A is Zelda there, made
+/// Sheik with the `0x08` mark, where the live match's game start holds Sheik); and the game
+/// camera, whose bounds' width average (`Camera.x2B0`, its sum and count) and pause camera's
+/// eye, target and limits (`Camera_Init` leaves them) the console's match takes on from the
+/// matches before it.
+///
+/// [`Session`]: super::session::Session
+#[derive(Clone, Debug)]
+pub struct ConsoleAt {
+    pub counters: Counters,
+    pub vs_fighters: [super::structs::VsSceneFighter; 6],
+    pub camera: super::structs::Camera,
+    /// The statics no scene resets that a match writes only in passing, which the console's
+    /// match takes on from the ones before it ([`Game::take_console_statics`]).
+    pub carried: Carried,
+}
+
+/// Statics no scene resets, which a match writes only in passing and reads only where it has
+/// written them first: the off-screen arrows' colors and slots (`un_802FE260` resets which
+/// are shown, not these; an arrow shows only once `un_802FD928` colors it), efLib's parameter
+/// table's effect ids (`efLib_Init` clears an entry's GObj and alpha; an id is read only for an
+/// effect whose spawn set it), the players' start points (measured by the setups that read
+/// them), the items' copy of the fighters (written each tick before the items read it) and
+/// mpcoll's last wall check (its counts reset per check, its correction read only once a wall
+/// beat it). Nothing in a match reads them before writing, so a live match can take the
+/// console's and stay its playback's in play.
+#[derive(Clone, Debug)]
+pub struct Carried {
+    pub arrows: ([super::structs::_GXColor; 4], [u8; 4]),
+    pub ef_ids: [u16; 8],
+    pub start_points: [crate::vec::Vec3; 4],
+    pub ft_track: super::structs::Item_FtTrack,
+    pub coll: crate::mp::coll::CollStatics,
+}
+
+impl Carried {
+    fn of(g: &Game) -> Self {
+        Carried {
+            arrows: (g.hud.arrows.x14.clone(), g.hud.arrows.x2C),
+            ef_ids: g.ef.params.map(|p| p.gfx_id),
+            start_points: g.gr.start_points,
+            ft_track: g.it.ft_track.clone(),
+            coll: g.coll.clone(),
+        }
+    }
+
+    fn put(&self, g: &mut Game) {
+        (g.hud.arrows.x14, g.hud.arrows.x2C) = (self.arrows.0.clone(), self.arrows.1);
+        for (p, &id) in g.ef.params.iter_mut().zip(&self.ef_ids) {
+            p.gfx_id = id;
+        }
+        g.gr.start_points = self.start_points;
+        g.it.ft_track.clone_from(&self.ft_track);
+        // The pass's floor filter's GObj (none between passes) stays the game's own.
+        let c = &mut g.coll;
+        let (gobj, stale, watchdog) = (c.floor_filter_gobj, c.stale_reads, c.watchdog);
+        c.clone_from(&self.coll);
+        (c.floor_filter_gobj, c.stale_reads, c.watchdog) = (gobj, stale, watchdog);
+    }
+}
+
+impl ConsoleAt {
+    /// Where the console stands in `g`, its VS scene's entry run.
+    pub fn of(g: &Game) -> Self {
+        ConsoleAt {
+            counters: Counters::of(g),
+            vs_fighters: g.vs.state.fighters.clone(),
+            camera: g.camera.cam.clone(),
+            carried: Carried::of(g),
+        }
+    }
+}
+
+impl Game {
+    /// A live match built from its game start goes on with what the console's camera keeps
+    /// from the matches before it (`at.camera`; `Camera_Init` leaves it): the bounds' width
+    /// average, which only the bonuses read (`pl::tally`, the results' camera bonuses), and the
+    /// pause camera's eye, target, player and limits, which only the pause reads (its orbit and
+    /// pan, `Camera_8002BAA8` to `Camera_8002C010`, and the slot it steps from). Slippi
+    /// Dolphin's live play has the console's; playback's own width average, which its camera
+    /// then holds, is what the display-phase tracker follows (`PlaybackCamera`), taken now as
+    /// playback's camera starts it. And the statics no scene resets that a match reads only
+    /// where it wrote them ([`Carried`]).
+    pub fn take_console_statics(&mut self, at: &ConsoleAt) {
+        at.carried.put(self);
+        let c = &mut self.camera.cam;
+        self.display_phase.playback.take(c);
+        let k = &at.camera;
+        (c.x2B0, c.x2B4, c.x2B8) = (k.x2B0, k.x2B4, k.x2B8);
+        (c.x2C4, c.x2C5) = (k.x2C4, k.x2C5);
+        c.x2D0.clone_from(&k.x2D0);
+        (c.x304, c.x305, c.x306, c.x307) = (k.x304, k.x305, k.x306, k.x307);
+        (c.x308, c.x314, c.pause_eye_offset) = (k.x308, k.x314, k.pause_eye_offset);
+        (c.x32C, c.pause_eye_distance, c.pause_up) = (k.x32C, k.pause_eye_distance, k.pause_up);
+    }
+}
+
+/// `x` moved on by `from` to `to` in a counter that runs `lo..=hi` and starts again at `lo`.
+fn moved_on(x: u32, from: u32, to: u32, (lo, hi): (u32, u32)) -> u32 {
+    let n = hi - lo + 1;
+    let steps = (to + n - lo - ((from - lo) % n)) % n;
+    lo + (x - lo + steps) % n
+}
+
+/// `VsSceneFighter.x4`'s mark of a human's Zelda made Sheik by A held (`fn_8016D8AC`).
+const ZELDA_HELD_A: u8 = 0x08;
+
+/// The family ids' range (`hsd_8039D1EC`) and the display frame's (`psDispParticles`).
+const IDNUMS: (u32, u32) = (0x100, 0xFFFF);
+const PS_FRAMES: (u32, u32) = (1, 0xFF);
+
+impl Game {
+    /// The menus' session, taking back a live match's scene, takes the statics the console's
+    /// match leaves for the scenes after it ([`Back`]'s are the scene's exit's): the VS
+    /// controller (`gmvs.c`'s, its rules, timer and results), the live standings
+    /// (`gm_16F1.c`), the crowd, the random items' tables and the fighters' places the items
+    /// keep clear of, the hit check's clank switches, the game camera but its GObjs, the
+    /// stage's default field of view, the magnifier's colors, states and bubbles' images, the
+    /// HUD's arrows' and announcements' values, the background flash's scale, the pauser,
+    /// efLib's count and load kind, the [`Carried`] statics (the live match took the console's
+    /// at the handoff), the stage's music flags, and the [`Counters`], each moved on
+    /// as far as the match moved it from `at` (the live match's as its entry left them) to
+    /// where the console's entry left them (`entry`); the VS controller's players as the
+    /// console's entry made them (`entry`). Handles and pointers into the match's heap and
+    /// files stay the menus': on the console they name freed memory, which nothing reads
+    /// before setting; and the image knows nothing of the main heap, which the console's match
+    /// held (`docs/oracle.md`, "Past a live match's handback").
+    pub fn take_match_statics(&mut self, live: &Game, (entry, at): (&ConsoleAt, &Counters)) {
+        #[cfg(feature = "oracle-hooks")]
+        if super::oracle_hooks::handback_statics_off() {
+            return;
+        }
+        let console = &entry.counters;
+        self.vs.clone_from(&live.vs);
+        // The players as the console's entry made them (Zelda held A), the match's since.
+        for (f, c) in self.vs.state.fighters.iter_mut().zip(&entry.vs_fighters) {
+            f.x0 = c.x0;
+            f.x4[0] = (f.x4[0] & !ZELDA_HELD_A) | (c.x4[0] & ZELDA_HELD_A);
+        }
+        self.gm.ranks.clone_from(&live.gm.ranks);
+        self.crowd = live.crowd;
+        self.it.spawn.clone_from(&live.it.spawn);
+        self.it.clank_boxes = live.it.clank_boxes;
+        let (gobj, quake) = (self.camera.cam.gobj, self.camera.cam.quake_gobj);
+        self.camera.cam.clone_from(&live.camera.cam);
+        (self.camera.cam.gobj, self.camera.cam.quake_gobj) = (gobj, quake);
+        self.camera.fov = live.camera.fov;
+        let (m, l) = (&mut self.magnify, &live.magnify);
+        (m.x4, m.x8, m.xC, m.x10) = (l.x4.clone(), l.x8.clone(), l.xC.clone(), l.x10.clone());
+        m.image_descs.clone_from(&l.image_descs);
+        for (p, q) in m.player.iter_mut().zip(&l.player) {
+            p.state.clone_from(&q.state);
+            if let Some(crate::hsd::tobj::ImageRef::Static(_)) = q.idesc.0 {
+                p.idesc = q.idesc.clone();
+            }
+        }
+        // The HUD's values the next match's setup leaves: the off-screen arrows' colors and
+        // slots (`un_802FE260` resets which are shown), the announcements' callbacks, lines
+        // and marks; their models and GObjs stay the menus'.
+        let (a, b) = (&mut self.hud.arrows, &live.hud.arrows);
+        (a.x24, a.x28, a.x30, a.x31, a.x32) = (b.x24, b.x28, b.x30, b.x31, b.x32);
+        for (e, l) in self
+            .hud
+            .announcements
+            .iter_mut()
+            .zip(&live.hud.announcements)
+        {
+            let (gobj, model) = (e.x0, e.x14);
+            e.clone_from(l);
+            (e.x0, e.x14) = (gobj, model);
+        }
+        self.bgflash.scale = live.bgflash.scale;
+        self.gm.pause.slot = live.gm.pause.slot;
+        self.ef.count = live.ef.count;
+        self.ef.load_kind = live.ef.load_kind;
+        Carried::of(live).put(self);
+        self.stage_info.unk8C.clone_from(&live.stage_info.unk8C);
+        // The counters, moved on by the match.
+        let now = Counters::of(live);
+        self.gr.coll_stamp = console
+            .coll_stamp
+            .wrapping_add(now.coll_stamp.wrapping_sub(at.coll_stamp));
+        let generation = console
+            .coll_generation
+            .wrapping_add(now.coll_generation.wrapping_sub(at.coll_generation));
+        match &mut self.geometry {
+            Some(g) => g.generation = generation,
+            None => self.gr.coll_generation = generation,
+        }
+        let shift = |x: u8, range| {
+            moved_on(
+                u32::from(x),
+                u32::from(at.ps_frame),
+                u32::from(console.ps_frame),
+                range,
+            ) as u8
+        };
+        self.objs.generators.idnum = moved_on(
+            u32::from(now.idnum),
+            u32::from(at.idnum),
+            u32::from(console.idnum),
+            IDNUMS,
+        ) as u16;
+        let d = &mut self.objs.psdisp;
+        d.frame = shift(now.ps_frame, PS_FRAMES);
+        for link in 0..crate::hsd::particle::LINKS {
+            // A link the match sorted: its frame in the console's numbering, and its cached
+            // particle freed with the match's (`Globals::stale`).
+            if now.ps_sorted[link] != at.ps_sorted[link] {
+                d.sorted[link] = shift(now.ps_sorted[link], PS_FRAMES);
+                d.non_edge[link] = None;
+                d.stale[link] = live.objs.psdisp.non_edge[link].is_some();
+            } else {
+                d.sorted[link] = console.ps_sorted[link];
+            }
+        }
+    }
+
+    /// The menus' session, taking back a live match's scene, forgets what its heap's image
+    /// held of the main heap: the console's match held it, laid out and written as melee-hd
+    /// doesn't model (the live match's heap is playback's), so a new object's leftovers there
+    /// are unknown (`hsd::image::LIVE_MATCH`) and read as zero.
+    pub fn forget_live_match_heap(&mut self) {
+        let h = &mut self.objs.heap;
+        if let Some((lo, hi)) = h.os.range() {
+            h.image.write(
+                lo,
+                hi,
+                crate::hsd::image::Src::Unknown(crate::hsd::image::LIVE_MATCH),
+            );
+        }
+    }
+}
+
 /// Where the console stands between a live match and the menus' session: its audio, the
 /// timeline in it, and its pad library, whose queue holds the polls the timeline counted, the
 /// statuses the last tick renewed from it, and the controllers' rumble. The console's VS

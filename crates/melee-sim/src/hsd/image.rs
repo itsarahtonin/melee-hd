@@ -35,6 +35,10 @@ pub const CELL_HEADER: &str = "a heap cell's header";
 pub const HEAP_BLOCK: &str = "a main-heap block";
 /// The owner of a memory piece that names no class or pool.
 pub const PIECE: &str = "a memory piece";
+/// The owner of the main heap's memory past a live match's handback (`game::live`): the
+/// console's match held it, in a layout and with bytes melee-hd doesn't model (the live match's
+/// heap is playback's), so a new object's leftovers there are unknown.
+pub const LIVE_MATCH: &str = "live match's heap block";
 
 /// An object made in a block where the image didn't know some of the bytes its creation
 /// leaves as they were: which, by their owners. A new object reads those as zero; where the

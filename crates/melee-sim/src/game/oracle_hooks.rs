@@ -36,6 +36,19 @@ pub type Hook = fn(&mut Game, Entry);
 thread_local! {
     static HOOK: Cell<Option<Hook>> = const { Cell::new(None) };
     static NO_DYNAMICS_FIX: Cell<bool> = const { Cell::new(false) };
+    static NO_HANDBACK_STATICS: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Leaves out the statics a live match's handback takes back (`Game::take_match_statics`) on
+/// this thread: the oracle's mutation (`melee-oracle session --mutate no-handback-statics`),
+/// to see its comparison past the handback find them.
+pub fn set_handback_statics_off(off: bool) {
+    NO_HANDBACK_STATICS.with(|n| n.set(off));
+}
+
+/// Whether [`set_handback_statics_off`] left them out.
+pub(crate) fn handback_statics_off() -> bool {
+    NO_HANDBACK_STATICS.with(Cell::get)
 }
 
 /// Turns Slippi's DynamicsFix off on this thread (`Game::dynamics_fix`): the oracle's mutation

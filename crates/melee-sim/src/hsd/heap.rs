@@ -115,6 +115,13 @@ impl OsHeap {
     pub fn free_bytes(&self) -> u32 {
         self.free.iter().map(|f| f.1).sum()
     }
+
+    /// The memory the heap covers, its first cell's address to its end: its cells, free and
+    /// allocated, tile it.
+    pub fn range(&self) -> Option<(u32, u32)> {
+        let lo = self.free.iter().chain(&self.allocated).map(|c| c.0).min()?;
+        Some((lo, lo + self.size))
+    }
 }
 
 /// One size class of HAL's memory pieces (`HSD_MemoryEntry`): its pieces' size, how many
