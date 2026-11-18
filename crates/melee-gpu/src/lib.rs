@@ -21,6 +21,8 @@ mod encode;
 pub mod gpu_time;
 pub mod mesh;
 #[cfg(test)]
+mod mesh_tests;
+#[cfg(test)]
 mod scaled_copy_tests;
 pub mod testing;
 mod tev;

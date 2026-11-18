@@ -50,7 +50,7 @@ impl Kind {
 }
 
 /// A display list's draws with their vertices decoded.
-#[derive(Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct Mesh {
     /// The vertex descriptor's low word (`VCD_LO`): which matrix indices the vertices carry.
     vcd: u32,
@@ -72,8 +72,8 @@ pub struct Mesh {
     pub elements: Vec<u32>,
     /// The runs of `elements` each primitive (or several of a kind in a row) makes.
     pub runs: Vec<(Kind, Range<u32>)>,
-    /// The normals the list's last vertex leaves (the first `normal_count`).
-    last_normals: NormalCache,
+    /// The normals the list's last vertex leaves (the first `normal_count`), if it sends any.
+    last_normals: Option<NormalCache>,
     /// The vertices the list sends, before sharing.
     pub stream_vertices: u32,
     /// How far into each indexed attribute's array (position, normal, the two colors, the
@@ -146,7 +146,7 @@ impl Mesh {
                 let mut v = Input::default();
                 decoder.vertex(&fetched, &mut from, &mut normals, &mut v);
                 if k == count - 1 && normal_count > 0 {
-                    mesh.last_normals = normals;
+                    mesh.last_normals = Some(normals);
                 }
                 let n = match shared.get(bytes) {
                     Some(&n) => n,
@@ -285,7 +285,9 @@ impl Mesh {
 
     /// Leaves in `normals` what drawing it does: its last vertex's normals, if it carries them.
     pub fn leave_normals(&self, normals: &mut NormalCache) {
-        normals[..self.normal_count].copy_from_slice(&self.last_normals[..self.normal_count]);
+        if let Some(last) = &self.last_normals {
+            normals[..self.normal_count].copy_from_slice(&last[..self.normal_count]);
+        }
     }
 
     /// Vertex `i` as the transform unit takes it, as decoding its bytes with the draw's state
