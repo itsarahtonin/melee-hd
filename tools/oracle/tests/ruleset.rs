@@ -154,10 +154,13 @@ fn vs_menus_hands_off_its_match() {
 
 /// Where each live match's recording, played by ssbm-rs, lies under `$SSBM_RS_LOCAL`: those the
 /// settling's removal changed (2026-11-16; their entrances only) were traced again into
-/// `m6s-settle`, the rest are `m6s-stall`'s.
+/// `m6s-settle`, `matches-a-5`, which the results screen's files from the preload cache changed
+/// (2026-11-18; it starts on the console's seed), into `m6s-results`, the rest are
+/// `m6s-stall`'s.
 fn traced(name: &str) -> &'static str {
     match name {
         "matches-a-3" | "matches-b-1" | "matches-b-3" | "matches-b-4" => "m6s-settle",
+        "matches-a-5" => "m6s-results",
         _ => "m6s-stall",
     }
 }
@@ -215,32 +218,43 @@ fn the_live_match_sessions_run_on() {
             "--slp",
             dir.to_str().unwrap(),
         ]);
-        // Each recording is the one ssbm-rs played, but `matches-a-5`'s: since 2026-11-18 the
-        // menus' session takes the results screen's files from the preload cache as the
-        // console's does, and the fifth match starts on the console's seed, so its recording
-        // holds the console's run whole (`live-check`), where the one ssbm-rs played parted
-        // from it at frame 494, where the items part.
+        // Each recording is the one ssbm-rs played ([`traced`]), but for the playback note the
+        // two Pokémon Stadium matches' metadata carries since 2026-11-18: where the close-up
+        // copies from is watched on a doubled round's other phase and in the settling window
+        // (design call 9), and the recordings ssbm-rs played were written before.
         for n in 1..=matches {
             let n = format!("{name}-{n}");
             let slp = dir.join(format!("{n}.slp"));
             let ours = std::fs::read(&slp).expect("a recording");
             let played = ssbm_rs_local(&format!("lockstep/{}/traced/{n}.slp", traced(&n)));
             let played = std::fs::read(&played).expect("the recording ssbm-rs played");
-            if n == "matches-a-5" {
+            let note = match n.as_str() {
+                "matches-a-2" => Some((257, 725)),
+                "matches-b-2" => Some((394, 725)),
+                _ => None,
+            };
+            let Some((times, tick)) = note else {
                 assert!(
-                    ours != played,
-                    "{n}: the live match writes the seed it parted on"
-                );
-                let out = oracle(&["live-check", &trace, slp.to_str().unwrap()]);
-                assert!(
-                    out.contains("frame -118 is tick 14218; 7318 frames checked to the recording's end (14636 post-frame updates, 0 marked off screen), 0 differ, 0 past the trace or unplaced, 0 a tick from their scene frame count"),
-                    "{n}: {out}"
+                    ours == played,
+                    "{n}: the live match no longer writes the recording ssbm-rs played"
                 );
                 continue;
-            }
+            };
+            // The metadata's `playbackNote` (UBJSON: its key, then the string), and nothing
+            // else, apart.
+            let text = format!(
+                "may not play back exactly: {times} times, first at tick {tick}, the match read something Slippi's playback can show differently (where the camera was, or a random number after Brinstar Depths' haze)"
+            );
+            let mut entry = b"U\x0cplaybackNoteSU".to_vec();
+            entry.push(u8::try_from(text.len()).expect("a short note"));
+            entry.extend_from_slice(text.as_bytes());
+            let at = (ours.windows(entry.len()))
+                .position(|w| w == entry.as_slice())
+                .unwrap_or_else(|| panic!("{n}: no playback note \"{text}\""));
+            let without = [&ours[..at], &ours[at + entry.len()..]].concat();
             assert!(
-                ours == played,
-                "{n}: the live match no longer writes the recording ssbm-rs played"
+                without == played,
+                "{n}: the live match no longer writes the recording ssbm-rs played, its note aside"
             );
         }
         let _ = std::fs::remove_dir_all(&dir);
@@ -261,8 +275,18 @@ fn the_live_match_sessions_run_on() {
     }
 }
 
+/// Where ssbm-rs's trace of a live match's recording played back lies under
+/// `$SSBM_RS_LOCAL/traces` ([`traced`]'s folder): `matches-a-5`'s in `m6s-followups`, traced
+/// again with its memory (`STATE_TRACE_MEMORY=1`), which `m6s-results`' trace of it doesn't hold.
+fn traced_trace(name: &str) -> &'static str {
+    match name {
+        "matches-a-5" => "m6s-followups",
+        n => traced(n),
+    }
+}
+
 /// Each live match's recording, as ssbm-rs plays it with Slippi's playback codes and float mode
-/// (`traces/DIR/NAME.trc`, its recording in `lockstep/DIR/traced`, [`traced`]), compares clean
+/// (`traces/DIR/NAME.trc`, its recording in `lockstep/DIR/traced`, [`traced_trace`]), compares clean
 /// with melee-hd's playback, the allocator model included, and ssbm-rs's replay check finds
 /// nothing but what a pause leaves (`matches-a-1`'s, below) and what playback's first-frame
 /// settling leaves, which the live match, as Slippi Dolphin's live play, doesn't run
@@ -284,10 +308,10 @@ fn the_live_matches_play_back_as_ssbm_rs_does() {
         ("matches-b-4", 1531, 4),
         ("matches-b-5", 1539, 0),
     ] {
-        let dir = traced(name);
-        let trace = ssbm_rs_local(&format!("traces/{dir}/{name}.trc"));
+        let (dir, at) = (traced(name), traced_trace(name));
+        let trace = ssbm_rs_local(&format!("traces/{at}/{name}.trc"));
         let slp = ssbm_rs_local(&format!("lockstep/{dir}/traced/{name}.slp"));
-        let log = ssbm_rs_local(&format!("traces/{dir}/{name}.check.log"));
+        let log = ssbm_rs_local(&format!("traces/{at}/{name}.check.log"));
         if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
             eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
             return;
@@ -435,6 +459,73 @@ fn the_paused_live_matches_record_as_the_console_does() {
         out.contains("frame -118 is tick 1019; 934 frames checked to the recording's end (1868 post-frame updates, 111 marked off screen), 0 differ, 0 past the trace or unplaced, 0 a tick from their scene frame count"),
         "{out}"
     );
+}
+
+/// A live Slo-Mo Melee match (docs/oracle.md, "Slo-Mo Melee as a live match", 2026-11-18):
+/// `slomo`, recorded with ssbm-rs's ruleset runner into `lockstep/m6s-followups` (VS mode's
+/// Special Melee, Slo-Mo Melee, Fox and Falco on Final Destination, the pause and L, R, A and
+/// Start, the results, the character select) and traced whole into `traces/m6s-followups`,
+/// compares clean from power-on through its live match, at half the game's speed, to the
+/// handback, and runs on to its end. The match writes the recording ssbm-rs played
+/// (`lockstep/m6s-followups/traced/slomo-1.slp`), whose replay check finds nothing (playback's
+/// sound log cuts its sound effects, which the recording doesn't hold) and whose playback
+/// compares clean with melee-hd's.
+#[test]
+fn the_slow_mo_live_match_plays_back_as_ssbm_rs_does() {
+    let trace = ssbm_rs_local("traces/m6s-followups/slomo.trc");
+    let inputs = ssbm_rs_local("lockstep/m6s-followups/slomo.inputs");
+    let played = ssbm_rs_local("lockstep/m6s-followups/traced/slomo-1.slp");
+    let played_trace = ssbm_rs_local("traces/m6s-followups/slomo-1.trc");
+    let log = ssbm_rs_local("traces/m6s-followups/slomo-1.check.log");
+    if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
+        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("melee-hd-slomo-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).expect("a scratch folder");
+    let out = oracle(&[
+        "session",
+        &trace,
+        &inputs,
+        "--all",
+        "--heap",
+        "--slp",
+        dir.to_str().unwrap(),
+    ]);
+    assert!(
+        out.contains(
+            "3309 ticks compared, no difference, through the live match that starts in tick 1619 to its handback before tick 3309"
+        ),
+        "{out}"
+    );
+    audio_compares("slomo", &out);
+    assert!(
+        out.contains(
+            "ran on to tick 4685 past the recording's reads with no stop: 1 live matches, 1 recordings written"
+        ),
+        "{out}"
+    );
+    assert!(
+        out.contains(
+            "the run on's reads: 1376 of the trace's ticks end on a read the trace's can have taken, 0 on another"
+        ),
+        "{out}"
+    );
+    let ours = std::fs::read(dir.join("slomo-1.slp")).expect("the live match's recording");
+    let _ = std::fs::remove_dir_all(&dir);
+    assert!(
+        ours == std::fs::read(&played).expect("the recording ssbm-rs played"),
+        "the live match no longer writes the recording ssbm-rs played"
+    );
+    let log = std::fs::read_to_string(&log).expect("the replay check's log");
+    assert!(
+        log.contains(
+            "5185 events compared through frame Some(690), 0 not reached, 0 diverge (0 known)"
+        ),
+        "{log}"
+    );
+    let out = oracle(&["diff", &played_trace, &played, "--fp", "slippi", "--heap"]);
+    assert!(out.contains("1630 ticks compared, no difference"), "{out}");
 }
 
 /// A session the player recorded under the Slippi ruleset (docs/player.md, "The Slippi ruleset in

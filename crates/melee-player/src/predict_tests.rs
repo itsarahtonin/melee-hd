@@ -37,6 +37,9 @@ struct Predictions {
     missed: u32,
     /// Predictions a console's tick stopped (a disc read).
     stopped: u32,
+    /// Sound samples mixed in a live match's ticks, and how many of them weren't silent.
+    live_samples: usize,
+    live_audible: usize,
 }
 
 /// Plays `ticks` ticks of two copies of a match, `straight` and `predicting`, with the
@@ -68,6 +71,10 @@ fn compare(
             "tick {tick}'s mixed sound differs from the straight run's"
         );
         samples += a.samples().len();
+        if predicting.in_live_match() {
+            seen.live_samples += b.samples().len();
+            seen.live_audible += b.samples().iter().filter(|s| **s != [0, 0]).count();
+        }
         if let Some(d) = predicting.game().state_diff(straight.game()) {
             panic!("the state after tick {tick} differs from the straight run's at game{d}");
         }
@@ -106,10 +113,9 @@ fn compare(
             seen.made += u32::from(predictor.is_filled());
             let copy = predictor.predicted().expect("the copy");
             assert!(copy.game().audio.mix.is_none(), "the copy logs its mix");
+            // A live match too: it plays on the console's audio, its mix log with it.
             assert!(
-                // A live match builds playback's audio, with no mix log, until the console's audio
-                // is carried into it (feat/m6s-live-audio): the player plays it silent meanwhile.
-                predicting.game().audio.mix.is_some() || predicting.in_live_match(),
+                predicting.game().audio.mix.is_some(),
                 "the match's mix log is off"
             );
             // Nothing written back.
@@ -219,5 +225,9 @@ fn predicting_a_ruleset_session_changes_nothing() {
         // each the tick that followed it.
         assert!(seen.made > 3000, "{seen:?}");
         assert_eq!((seen.stopped, seen.missed), (0, 0), "{seen:?}");
+        // The live match plays its sound (the console's audio, carried into it): mixed, and
+        // not silence.
+        assert!(seen.live_samples > 0, "{seen:?}");
+        assert!(seen.live_audible > seen.live_samples / 10, "{seen:?}");
     });
 }

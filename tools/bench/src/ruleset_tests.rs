@@ -444,6 +444,53 @@ fn slippi_cpu_di_reads_neither_register() {
     });
 }
 
+/// Samus's grapple swing from the links' frames without the allocator model (design call 8 of
+/// docs/slippi-ruleset.md): its grabbed-victim-only bit is bit 19 of her `ThrowN` joint's
+/// address (`samusgrapple::SwingSlot::SavedR31`), which only the model gives and which no fixed
+/// address stands in for (the bit depends on where the heap put the joint), so without the
+/// model the read stops by name rather than taking 0. The `grapple` set's `grapple-samus-bf`
+/// (ssbm-rs's `local/bench/oracle-m4-grapple`, skipped without `SSBM_RS_LOCAL`) swings bounced
+/// first at frame 330 (`fn_802B8384`): played under its own rules with the model it goes past
+/// the swing, and without it stops there, by name.
+#[test]
+fn grapple_swing_stops_by_name_without_the_model() {
+    let Some(disc) = disc() else { return };
+    let dir = melee_local_data::ssbm_rs_local("bench/oracle-m4-grapple");
+    let path = std::path::Path::new(&dir).join("grapple-samus-bf.slp");
+    if !path.exists() {
+        eprintln!("{}: not here, skipping", path.display());
+        return;
+    }
+    let mut bench = Bench::open_path(disc, &path);
+    on_sim_thread(FpMode::Hardware, || {
+        let rules = Settings::from_replay(&melee_slippi::start(&bench.replay))
+            .expect("its settings")
+            .rules;
+        let frame = |m: &Match| m.game.playback.as_ref().unwrap().frame_index;
+        let mut on = bench.start(&rules, true);
+        let mut device = Device(&bench.replay);
+        while frame(&on) < 400 {
+            assert!(!tick(&mut on, &mut device).1, "the match ended");
+        }
+        let mut off = bench.start(&rules, false);
+        let mut device = Device(&bench.replay);
+        let (stop, at) = loop {
+            let at = frame(&off);
+            match catch_unwind(AssertUnwindSafe(|| tick(&mut off, &mut device))) {
+                Ok((_, true)) => panic!("grapple-samus-bf played to its end with the model off"),
+                Ok(_) => {}
+                Err(p) => break (p.downcast_ref::<String>().cloned().unwrap_or_default(), at),
+            }
+        };
+        assert!(
+            stop.contains("it_802B7160 from fn_802B8384")
+                && stop.contains("bit 19 of the ThrowN joint's address"),
+            "grapple-samus-bf stopped elsewhere with the model off: {stop}"
+        );
+        assert_eq!(at + 1, 330, "the first bounced swing");
+    });
+}
+
 /// The Super Scope's affordable level without the allocator model, under the Slippi ruleset
 /// (`sscope::ADDRESS_STAND_IN`): with less ammunition than a level 1 shot, a charge past level
 /// 0 takes the scope's GObj address for a level, which a hit while charging spends (over two
@@ -734,15 +781,13 @@ enum Find {
 /// off playback's course (`DisplayPhase::paused`, as a pause leaves it), more reads are noted,
 /// gameplay the same.
 fn doubled_round_notes(
-    path: &str,
+    path: &std::path::Path,
     what: &str,
     find: Find,
     outcome: &(dyn Fn(&Game) -> String + Sync),
     neutral: bool,
 ) {
     let Some(disc) = disc() else { return };
-    let path = melee_local_data::ssbm_rs_local(path);
-    let path = std::path::Path::new(&path);
     if !path.exists() {
         eprintln!("{}: not here, skipping", path.display());
         return;
@@ -849,7 +894,9 @@ fn slippi_onett_cars_note_a_doubled_round() {
         format!("{cars:?} {} {:#x}", g.stage_info.x740, g.objs.rng.seed)
     };
     doubled_round_notes(
-        "bench/oracle-m4/stage-onett.slp",
+        std::path::Path::new(&melee_local_data::ssbm_rs_local(
+            "bench/oracle-m4/stage-onett.slp",
+        )),
         "Onett's cars",
         Find::Noted,
         &car,
@@ -865,7 +912,9 @@ fn slippi_onett_cars_note_a_doubled_round() {
 #[test]
 fn slippi_kongo_jungle_64_birds_note_a_doubled_round() {
     doubled_round_notes(
-        "bench/oracle-m4/stage-kongo-jungle-64.slp",
+        std::path::Path::new(&melee_local_data::ssbm_rs_local(
+            "bench/oracle-m4/stage-kongo-jungle-64.slp",
+        )),
         "Kongo Jungle 64's birds",
         Find::PulledBack,
         &|g| format!("{:?}", objects_x(g, 2)),
@@ -881,10 +930,33 @@ fn slippi_kongo_jungle_64_birds_note_a_doubled_round() {
 #[test]
 fn slippi_dream_land_64_flights_note_a_doubled_round() {
     doubled_round_notes(
-        "replays/hf/ylink-dd-a6/slp/diamond-diamond-25f1c7b39bb0e353f2147ff8.slp",
+        std::path::Path::new(&melee_local_data::ssbm_rs_local(
+            "replays/hf/ylink-dd-a6/slp/diamond-diamond-25f1c7b39bb0e353f2147ff8.slp",
+        )),
         "Dream Land 64's flights",
         Find::PulledBack,
         &|g| format!("{:?}", objects_x(g, 2)),
+        true,
+    );
+}
+
+/// Pokémon Stadium's close-up (`grStadium_801D32D0`): where it copies from is its player's camera
+/// bone on the screen through the game camera's CObj, which the display pass sets, so a
+/// doubled round moves it in a tick the camera moved (docs/melee-bugs.md, "Pokémon Stadium's
+/// monitor tests a render-pass camera": under Slippi's rules only where it copies from, which
+/// players see in the monitor and the oracle compares, nothing gameplay reads). The first read
+/// the benchmark match notes as it plays, on a real doubled round, copies from elsewhere.
+#[test]
+fn slippi_stadium_close_up_notes_a_doubled_round() {
+    use melee_sim::game::gr::stadium::SCREEN_ZOOM;
+    doubled_round_notes(
+        &melee_local_data::bench_replay("fox-marth-ps"),
+        "Pokémon Stadium's close-up",
+        Find::Noted,
+        &|g| {
+            let z = g.gr.stadium.screens[usize::from(SCREEN_ZOOM)].as_ref();
+            format!("{:?}", z.map(|z| (z.copy_x, z.copy_y)))
+        },
         true,
     );
 }

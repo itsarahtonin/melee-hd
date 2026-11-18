@@ -417,7 +417,7 @@ fn play_live(
         m.game.go_on_from(at.clone(), theirs, &mut m.data);
     }
     let mut read = 0u32;
-    for _ in 0..8000 {
+    for _ in 0..10000 {
         let (f, render) = m.step_live_tick(&mut || {
             read += 1;
             if pause {
@@ -449,7 +449,11 @@ fn live_settings() -> (melee_sim::game::vs_match::ReplayStart, Settings) {
 
 /// [`live_settings`] on the stage `key` names.
 fn live_settings_on(key: &str) -> (melee_sim::game::vs_match::ReplayStart, Settings) {
-    let s = settings_on(key);
+    live_settings_from(&settings_on(key))
+}
+
+/// [`live_settings`] for the match `s` starts.
+fn live_settings_from(s: &Settings) -> (melee_sim::game::vs_match::ReplayStart, Settings) {
     let mut g = melee_sim::game::state::Game {
         rules: Rules::slippi_online(),
         ..Default::default()
@@ -485,77 +489,214 @@ fn live_settings_on(key: &str) -> (melee_sim::game::vs_match::ReplayStart, Setti
 fn a_live_match_equals_its_playback() {
     crate::on_game_stack(|| {
         let Some(disc) = disc() else { return };
-        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
         let (start, live) = live_settings();
-        let file = play_live(&disc, &live, false, None, |_, _| {});
-        let replay = Replay::parse(&file).expect("the recording parses");
-        let back = melee_slippi::start(&replay);
-        assert_eq!(back.info, start.info);
-        assert_eq!(back.seed, start.seed);
-        assert_eq!(back.nametags, start.nametags);
-        assert_eq!(back.codes, start.codes);
-        assert_eq!(back.response, start.response);
-        assert_eq!(back.unlocks, None);
-        let payload = &(replay.events.iter())
-            .find(|e| e.command == event::GAME_START)
-            .expect("a game start")
-            .payload;
-        assert_eq!((payload[0x1A2], payload[0x1A3]), (2, 2), "the menus' scene");
-        // Played back as the player plays its recordings: without the allocator model, which
-        // the live match ran without too (design call 8).
-        let mut again = Settings::from_replay(&back).expect("its settings");
-        again.disc = live.disc;
-        assert_eq!(live.heap, None, "the live match ran the allocator model");
-        again.heap = None;
-        let mut unsettled = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
-        (unsettled.game.playback.as_mut())
-            .expect("a replay's match")
-            .no_settling = true;
-        let mut settled = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
-        let (mut ticks, mut parted, mut logged) = (0, Vec::new(), false);
-        play_live(&disc, &live, false, None, |m, render| {
-            // The live match runs no sound code: its sound log stays as it was made.
-            assert_eq!(
-                (m.game.playback.as_ref()).expect("a live match").sounds,
-                melee_sim::game::playback::SoundLog::default(),
-                "tick {ticks} of the live match logged a sound"
-            );
-            for (play, settles) in [(&mut unsettled, false), (&mut settled, true)] {
-                let (f, played) = play.step_replay_tick(&mut melee_slippi::Device(&replay));
-                assert_eq!(render, played, "tick {ticks}'s display pass");
-                if played {
-                    play.render();
+        live_equals_playback(&disc, &start, &live, false);
+    });
+}
+
+/// A live Slo-Mo Melee match equals its playback as [`a_live_match_equals_its_playback`]'s
+/// does, but for what Slippi's playback codes' sound log does to a slowed game's sounds: each
+/// tick whose game clock isn't due ends on the frame before, which the log takes for that frame
+/// played again, and stops every sound the frame started (`playback::SoundLog`,
+/// `docs/engine.md`). The live match runs none of those codes, as Slippi Dolphin's offline
+/// live play doesn't (`Playback::sound_codes`), so its sounds play on; its playback's audio
+/// (the driver's voices, named here with the sound log) cuts them, and only there. Nothing else
+/// differs: the game's speed is in the game start (`StartMeleeData`'s `game_speed`, set by the
+/// mode's entry), which playback rebuilds, so the match is a live match since 2026-11-18
+/// (`live::rebuild_refusal`; Sarah: Slo-Mo Melee saves a `.slp`).
+#[test]
+fn a_slow_mo_live_match_equals_its_playback() {
+    crate::on_game_stack(|| {
+        use melee_sim::game::gm::vs_mode::{GameRules, Special};
+        let Some(disc) = disc() else { return };
+        let base = settings();
+        let players: Vec<Player> = (base.start.players[..2].iter().enumerate())
+            .map(|(i, p)| Player {
+                character: p.ckind as u8,
+                costume: 0,
+                port: i as u8,
+                kind: 0,
+                cpu_level: 0,
+                team: i as u8,
+            })
+            .collect();
+        let mut slowed = Settings::vs_special(
+            base.start.rules.stkind,
+            &players,
+            &GameRules::vs(0, 1),
+            &GamePrefs::items_off(),
+            Some(Special::SlowMo),
+        );
+        slowed.seed = base.seed;
+        assert_eq!(slowed.start.rules.game_speed, 0.5, "Slo-Mo Melee's speed");
+        let (start, live) = live_settings_from(&slowed);
+        live_equals_playback(&disc, &start, &live, true);
+    });
+}
+
+/// [`a_live_match_equals_its_playback`]'s check of the live match `live`, built from `start`;
+/// `slowed` names the audio, whose sounds playback's sound log cuts in a slowed game, and holds
+/// that it did cut some.
+fn live_equals_playback(
+    disc: &Disc,
+    start: &melee_sim::game::vs_match::ReplayStart,
+    live: &Settings,
+    slowed: bool,
+) {
+    melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+    let file = play_live(disc, live, false, None, |_, _| {});
+    let replay = Replay::parse(&file).expect("the recording parses");
+    let back = melee_slippi::start(&replay);
+    assert_eq!(back.info, start.info);
+    assert_eq!(back.seed, start.seed);
+    assert_eq!(back.nametags, start.nametags);
+    assert_eq!(back.codes, start.codes);
+    assert_eq!(back.response, start.response);
+    assert_eq!(back.unlocks, None);
+    let payload = &(replay.events.iter())
+        .find(|e| e.command == event::GAME_START)
+        .expect("a game start")
+        .payload;
+    assert_eq!((payload[0x1A2], payload[0x1A3]), (2, 2), "the menus' scene");
+    // Played back as the player plays its recordings: without the allocator model, which
+    // the live match ran without too (design call 8).
+    let mut again = Settings::from_replay(&back).expect("its settings");
+    again.disc = live.disc;
+    assert_eq!(live.heap, None, "the live match ran the allocator model");
+    again.heap = None;
+    let mut unsettled = melee_sim::game::vs_match::Match::start(&again, &mut loader(disc));
+    (unsettled.game.playback.as_mut())
+        .expect("a replay's match")
+        .no_settling = true;
+    let mut settled = melee_sim::game::vs_match::Match::start(&again, &mut loader(disc));
+    let (mut ticks, mut parted, mut logged, mut cut) = (0, Vec::new(), false, 0);
+    // The last frame whose camera differs from the settled playback's.
+    let mut camera_apart = None;
+    play_live(disc, live, false, None, |m, render| {
+        // The live match runs no sound code: its sound log stays as it was made.
+        assert_eq!(
+            (m.game.playback.as_ref()).expect("a live match").sounds,
+            melee_sim::game::playback::SoundLog::default(),
+            "tick {ticks} of the live match logged a sound"
+        );
+        for (play, settles) in [(&mut unsettled, false), (&mut settled, true)] {
+            let (f, played) = play.step_replay_tick(&mut melee_slippi::Device(&replay));
+            assert_eq!(render, played, "tick {ticks}'s display pass");
+            if played {
+                play.render();
+            }
+            play.recycle(f);
+            let mut ours = as_played_back(&m.game, &play.game);
+            (ours.playback.as_mut()).expect("a live match").no_settling = !settles;
+            if slowed {
+                // The sounds playback's sound log cut.
+                if !settles && ours.audio.state_diff(&play.game.audio).is_some() {
+                    cut += 1;
                 }
-                play.recycle(f);
-                let mut ours = as_played_back(&m.game, &play.game);
-                (ours.playback.as_mut()).expect("a live match").no_settling = !settles;
-                if !settles {
-                    if let Some(d) = ours.state_diff(&play.game) {
-                        panic!(
-                            "tick {ticks} of the live match differs from its playback without the settling at game{d}"
-                        );
-                    }
-                } else {
-                    if ours.state_diff(&play.game).is_some() {
-                        parted.push(ticks);
-                    }
-                    logged |= (play.game.playback.as_ref()).expect("a replay").sounds
-                        != melee_sim::game::playback::SoundLog::default();
-                    assert_eq!(
-                        gameplay(&m.game),
-                        gameplay(&play.game),
-                        "tick {ticks} of the live match plays back otherwise"
+                ours.audio.clone_from(&play.game.audio);
+                // And the handles the fighters and items keep of the sounds they play: with
+                // voices freed otherwise, the driver hands out others.
+                let ids: Vec<u32> = ours.fighters.iter().map(|(i, _)| i).collect();
+                for i in ids {
+                    let (p, f) = (&play.game.fighters[i], &mut ours.fighters[i]);
+                    (f.x2144, f.x2148, f.x214C, f.x2150) = (p.x2144, p.x2148, p.x214C, p.x2150);
+                    (f.x2154, f.x2158, f.x215C, f.x2160) = (p.x2154, p.x2158, p.x215C, p.x2160);
+                }
+                let ids: Vec<u32> = ours.items.iter().map(|(i, _)| i).collect();
+                for i in ids {
+                    let (p, it) = (&play.game.items[i], &mut ours.items[i]);
+                    (it.sfx_unk1, it.sfx_unk2) = (p.sfx_unk1, p.sfx_unk2);
+                }
+                let c = &play.game.crowd;
+                (ours.crowd.cheer_handle, ours.crowd.chant_handle) =
+                    (c.cheer_handle, c.chant_handle);
+            }
+            if !settles {
+                if let Some(d) = ours.state_diff(&play.game) {
+                    panic!(
+                        "tick {ticks} of the live match differs from its playback without the settling at game{d}"
                     );
                 }
+            } else {
+                if ours.state_diff(&play.game).is_some() {
+                    parted.push(ticks);
+                }
+                let view = |g: &melee_sim::game::state::Game| {
+                    let c = &g.camera.cam;
+                    format!("{:?} {:?}", c.transform, c.transform_copy)
+                };
+                if view(&m.game) != view(&play.game) {
+                    camera_apart = (m.game.playback.as_ref()).map(|p| p.frame_index);
+                }
+                logged |= (play.game.playback.as_ref()).expect("a replay").sounds
+                    != melee_sim::game::playback::SoundLog::default();
+                assert_eq!(
+                    gameplay(&m.game),
+                    gameplay(&play.game),
+                    "tick {ticks} of the live match plays back otherwise"
+                );
             }
-            ticks += 1;
+        }
+        ticks += 1;
+    });
+    melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+    assert!(ticks > 3600, "{ticks} ticks");
+    // The settling parts playback from the live match at its first frame (the first tick; a
+    // slowed game's second, its first tick's game clock not due).
+    let first = if slowed { 1 } else { 0 };
+    assert_eq!(parted.first(), Some(&first), "playback didn't settle");
+    // Playback logs its sounds (the names above leave the log out).
+    assert!(logged, "playback logged no sound");
+    // Playback's settled camera and the live match's meet within the settling window
+    // (`live::SETTLING_WINDOW`).
+    let apart = camera_apart.expect("the settling snapped no camera");
+    eprintln!("the camera apart from playback's to frame {apart}");
+    assert!(
+        apart < melee_sim::game::live::SETTLING_WINDOW,
+        "frame {apart}"
+    );
+    // In a slowed game the log cuts sounds the live match plays.
+    assert_eq!(
+        cut > 0,
+        slowed,
+        "{cut} ticks whose audio playback's log changed"
+    );
+    eprintln!("{ticks} ticks, the audio apart in {cut}");
+}
+
+/// The settling window (`live::SETTLING_WINDOW`, `docs/slippi-ruleset.md`'s follow-ups of
+/// 2026-11-18): a live match's camera eases where playback's first frame snaps it, so each read
+/// of the camera before the window's end is counted into the playback note. On Corneria, whose
+/// city part under the camera the Great Fox reads every tick, an unpaused live match counts reads
+/// from its first frames to the window's end and none after it.
+#[test]
+fn a_live_match_counts_camera_reads_in_the_settling_window() {
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+        let (_, live) = live_settings_on("corneria");
+        let window = melee_sim::game::live::SETTLING_WINDOW;
+        let (mut at_end_of_window, mut last, mut first) = (None, 0, None);
+        play_live(&disc, &live, false, None, |m, _| {
+            let d = &m.game.display_phase;
+            assert!(!d.paused, "unpaused, off course");
+            let frame = m.game.playback.as_ref().expect("a live match").frame_index;
+            if frame < window {
+                assert!(m.game.in_settling_window(), "frame {frame}");
+            } else {
+                assert!(!m.game.in_settling_window(), "frame {frame}");
+                at_end_of_window.get_or_insert(d.differing);
+            }
+            first = d.first;
+            last = d.differing;
         });
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
-        assert!(ticks > 3600, "{ticks} ticks");
-        // The settling parts playback from the live match at once.
-        assert_eq!(parted.first(), Some(&0), "playback didn't settle");
-        // Playback logs its sounds (the names above leave the log out).
-        assert!(logged, "playback logged no sound");
+        let at_end = at_end_of_window.expect("the match outlasted the window");
+        eprintln!(
+            "{at_end} reads counted in the window, first at tick {first:?}; {last} at the end"
+        );
+        assert!(at_end > 300, "{at_end} reads counted in the window");
+        assert_eq!(last, at_end, "reads counted after the window");
     });
 }
 

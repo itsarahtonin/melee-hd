@@ -70,6 +70,10 @@ const GRAPPLE_SWING_UNREBUILT: (&str, &str) = (
     "it_802B7160: the swing's grabbed-victim-only bit",
     "the swing copies its hitbox's grabbed-victim-only bit from a byte of its caller's frame that nothing sets; the port models it whenever the frame has just rebuilt the links' joint's matrix (samusgrapple::SwingSlot: PSMTXConcat's save of f14 under the shot, fn_802B805C; HSD_JObjMakeMatrix's save of r31, the joint's address, under the bounced and the hanging beam, fn_802B8384 and fn_802B8524), and stops only where it isn't rebuilt. It always is: the joint is Samus's ThrowN bone, with a parent, no IK role, no constraint and no bound object (a fighter's bones animate from figatrees), and the beam's frame runs in her accessory process (priority 8, Fighter_procAccessory), after Fighter_procMap (priority 6) has set her root joint's translation and so dirtied her whole skeleton; only Fighter_procIK (priority 7) sets matrices up in between, her legs'. The grapple-samus-bf oracle match swings in all three frames",
 );
+const GRAPPLE_SWING_UNMODELED: (&str, &str) = (
+    "it_802B7160 from {}: the swing's grabbed-victim-only bit, bit 19 of the ThrowN joint's address",
+    "the bounced and the hanging beam's swing takes its bit from her ThrowN joint's address (samusgrapple::SwingSlot::SavedR31), which only the allocator model gives, and stops by name without it (SwingSlot::Unmodeled, 2026-11-18): no fixed address stands in for the bit, which depends on where the heap put the joint. Every Vanilla match the player starts from Melee's menus runs in its session, with the model, and never reaches the stop. Without the model are a developer's match from the command line (Settings::vs_special with no computer player, Ice Climber or Super Scope) and the Slippi ruleset's live matches (design call 8 of docs/slippi-ruleset.md), which reach it with A on the ground while the beam's hitbox stage is on; whether a live match should take the address from playback's layout at its construction instead is Sarah's call (the follow-ups' report of 2026-11-18)",
+);
 const HOOKSHOT_LINKS: (&str, &str) = (
     "it_802A2568 with one link",
     "the hookshot's links number its attributes' count times the ground's or the air's share (the fighter's size counts only above 1, with a mushroom), fixed for Link and Young Link in an items-off match: the oracle replays' hookshots make 15 links on the ground and 22 in the air for Link, 10 and 15 for Young Link",
@@ -211,7 +215,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 16,
         items: &[93, 94, 95, 96],
-        unreached: &[GRAPPLE_SWING_UNREBUILT],
+        unreached: &[GRAPPLE_SWING_UNREBUILT, GRAPPLE_SWING_UNMODELED],
         unsure: &[],
         missing: &[],
     },

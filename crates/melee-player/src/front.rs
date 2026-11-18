@@ -128,10 +128,11 @@ pub const DEBUG_WARNING: &str = "The debug menu switches your save's language to
 /// The "Save replays" setting's help line (Sarah, 2026-10-29), while Melee runs under Vanilla.
 pub const REPLAYS_HELP: &str =
     "Replays of matches started from Melee's menus may not play back exactly in Slippi Dolphin.";
-/// The "Save replays" help line while Melee runs under the Slippi ruleset (proposed 2026-11-17,
-/// awaiting Sarah's word): the matches design call 6 of `docs/slippi-ruleset.md` leaves
-/// unrecorded, named.
-pub const REPLAYS_SLIPPI_HELP: &str = "VS matches' replays play back exactly in Slippi Dolphin. Sudden Death, Super Sudden Death, Stamina, Fixed-Camera and Slo-Mo Melee, a challenger's match, Camera Mode, Training and the single-player modes save none: Slippi Dolphin couldn't play them back.";
+/// The "Save replays" help line while Melee runs under the Slippi ruleset (approved 2026-11-18;
+/// Slo-Mo Melee dropped from it as it became a live match, proposed the same day, awaiting
+/// Sarah's word): the matches design call 6 of `docs/slippi-ruleset.md` leaves unrecorded,
+/// named.
+pub const REPLAYS_SLIPPI_HELP: &str = "VS matches' replays play back exactly in Slippi Dolphin. Sudden Death, Super Sudden Death, Stamina and Fixed-Camera Mode, a challenger's match, Camera Mode, Training and the single-player modes save none: Slippi Dolphin couldn't play them back.";
 /// The Game section's rulesets (proposed 2026-11-17, awaiting Sarah's word): each, its name and
 /// what it is.
 pub const RULESETS: [(Ruleset, &str, &str); 2] = [
