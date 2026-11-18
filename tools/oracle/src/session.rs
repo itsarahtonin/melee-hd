@@ -1750,8 +1750,9 @@ impl Run<'_> {
 
 /// What a live match of the Slippi ruleset holds as its own, not the console's, where its
 /// comparison with the console's run of the session finds it (`game::live`): built as
-/// playback builds a replay's, the match's heap, files, GObjs and audio are playback's. Each
-/// entry: the texts a difference contains, and why.
+/// playback builds a replay's, the match's heap, files and GObjs are playback's. Its audio is the
+/// console's, handed over with the timeline (`live::Timeline`), and compares. Each entry: the
+/// texts a difference contains, and why.
 const LIVE_NAMED: &[(&[&str], &str)] = &[
     (
         &[
@@ -1778,27 +1779,6 @@ const LIVE_NAMED: &[(&[&str], &str)] = &[
             "gm: unlocks",
         ],
         "playback's state and scene: the debug VS mode (14.1) and Slippi's unlocks as masks, which the codes answer the getters with as the console's do",
-    ),
-    (
-        &[
-            "fighter.x2144:",
-            "fighter.x2148:",
-            "fighter.x214C:",
-            "fighter.x2150:",
-            "fighter.x2154:",
-            "fighter.x2158:",
-            "fighter.x215C:",
-            "fighter.x2160:",
-            "item.sfx_unk1:",
-            "item.sfx_unk2:",
-            "item.xD6C:",
-            "audio: ",
-        ],
-        "playback's audio: its sound instances' handles, its voices, banks and heap",
-    ),
-    (
-        &["sounds playing: "],
-        "playback's audio, what plays: its boot's start sound (0xAD) where the console's menus' last sound plays on, and the voices that frees and steals",
     ),
 ];
 

@@ -9,6 +9,8 @@
 //! ([`rebuild_refusal`], design call 6): it runs in the menus' session as the console runs it,
 //! under the ruleset's rules, and saves no `.slp`.
 
+use melee_data::archive::Archives;
+
 use super::gm::machine::{self, GS_SUDDEN_DEATH, GS_VS, Phase};
 use super::gm::match_exit::MatchExitInfo;
 use super::gm::vs_mode::Special;
@@ -56,7 +58,7 @@ pub const SUPER_SUDDEN_DEATH: &str = "Super Sudden Death's music follows its gam
 pub const STAMINA: &str = "Stamina Mode's match start is a callback playback clears, and its knockout's slowdown follows its game mode (`gm_80167470`)";
 pub const FIXED_CAMERA: &str =
     "Fixed-Camera Mode's camera is its unpause hook, a callback playback clears";
-pub const SLOW_MO: &str = "playback's sound log cuts a slowed game's sound effects (`Playback/Core/Sounds`, docs/engine.md): built as playback builds it, the match would lose them";
+pub const SLOW_MO: &str = "Slo-Mo Melee: playback's sound log cuts a slowed game's sound effects (`Playback/Core/Sounds`, docs/engine.md), so its recording would play back without them; the live match itself, which runs no sound code since 2026-11-17, would keep them (refused until Sarah decides, docs/slippi-ruleset.md)";
 pub const SINGLE_PLAYER: &str =
     "a single-player mode's match (design call 7): playback can't set up the mode";
 pub const ATTRACT: &str =
@@ -159,20 +161,32 @@ impl Game {
     }
 }
 
-/// Where the console stands between a live match and the menus' session: its timeline and its
-/// pad library, whose queue holds the polls the timeline counted, the statuses the last tick
-/// renewed from it, and the controllers' rumble. The console's VS scene's entry stalls (its
-/// sound banks' loads, `HSD_SynthSFXWaitForLoadCompletion`, 1.4 to 2.8 fields at Slippi's fast
-/// disc speed), the pad alarm polling meanwhile, so the live match takes up the console's
-/// timeline as the scene's loop starts ([`Game::go_on_from`]): its ticks wait for the same
-/// polls and render on the same rounds as the console's, and each takes the same reads; the
-/// menus' session takes up the match's as its scene ends. Only which read becomes which
-/// frame's input follows from it, and the timing: the game start, the frames, their inputs
-/// once read and the seed are the match's own (`docs/slippi-ruleset.md`, "The scene entry's
-/// stall").
+/// Where the console stands between a live match and the menus' session: its audio, the
+/// timeline in it, and its pad library, whose queue holds the polls the timeline counted, the
+/// statuses the last tick renewed from it, and the controllers' rumble. The console's VS
+/// scene's entry stalls (its sound banks' loads, `HSD_SynthSFXWaitForLoadCompletion`, 1.4 to
+/// 2.8 fields at Slippi's fast disc speed), the pad alarm polling meanwhile, so the live match
+/// takes up the console's timeline as the scene's loop starts ([`Game::go_on_from`]): its
+/// ticks wait for the same polls and render on the same rounds as the console's, and each
+/// takes the same reads; the menus' session takes up the match's as its scene ends. Only which
+/// read becomes which frame's input follows from it, and the timing: the game start, the
+/// frames, their inputs once read and the seed are the match's own (`docs/slippi-ruleset.md`,
+/// "The scene entry's stall").
+///
+/// The audio goes with it whole (Sarah, 2026-11-16: "definitely a thing we want"): the
+/// driver's voices and their handles, the synth, the AX library, the sound banks and the audio
+/// heap, the music stream and the device command queue, the game's audio library, the movie
+/// player and the save's writer, all with their work in flight on the timeline
+/// ([`crate::audio::Audio::take_up`]). So the console's last menu sound plays on into the
+/// match and the match's sounds take the voices and handles the console's would, and the
+/// scenes after the match go on from the match's sounds. The preload cache, which the audio
+/// holds for its timeline, stays out of the live match (the game's code reads its presence as a
+/// session's) and goes back to the menus' session as the console's entry left it
+/// (`session::Aside`). Nothing of it is recorded: a `.slp` holds the match's start, inputs and
+/// outcomes, none of its audio.
 #[derive(Clone, Debug)]
 pub struct Timeline {
-    pub clock: Option<crate::audio::clock::Clock>,
+    pub audio: Box<crate::audio::Audio>,
     pub lib: crate::input::controller::PadLib,
     pub master: [crate::input::controller::Status; 4],
     pub copy: [crate::input::controller::Status; 4],
@@ -182,11 +196,12 @@ pub struct Timeline {
 }
 
 impl Game {
-    /// Where the console stands in this game ([`Timeline`]).
+    /// Where the console stands in this game ([`Timeline`]), a copy: the audio's mix log
+    /// (presentation, `Audio::mix`) stays.
     pub fn timeline(&self) -> Timeline {
         let p = &self.pads;
         Timeline {
-            clock: self.audio.clock.clone(),
+            audio: Box::new(self.audio.clone()),
             lib: p.lib.clone(),
             master: p.master,
             copy: p.copy,
@@ -196,14 +211,24 @@ impl Game {
         }
     }
 
-    /// Goes on from where the console stands in `at` ([`Timeline`]): its timeline, keeping this
-    /// game's own disc and ARAM work in flight ([`crate::audio::clock::Clock::take_up`]), its
-    /// pad library's queue and statuses, and the rumble, its scripts read from this game's
-    /// rumble data (the same file).
-    pub fn go_on_from(&mut self, at: &Timeline) {
-        if let (Some(c), Some(theirs)) = (self.audio.clock.as_mut(), at.clock.as_ref()) {
-            c.take_up(theirs);
-        }
+    /// [`Game::timeline`] for a game that goes no further: its audio moved out, the mix log
+    /// with it, so the presentation's mixer goes on with the game that takes it up.
+    pub fn leave_timeline(&mut self) -> Timeline {
+        let mut at = self.timeline();
+        at.audio.mix = self.audio.mix.take();
+        at
+    }
+
+    /// Goes on from where the console stands in `at` ([`Timeline`]), its archives numbered in
+    /// `theirs`: its audio and timeline, their archives found or shared in `ours`
+    /// ([`crate::audio::Audio::rehome`]) and the preload cache kept
+    /// ([`crate::audio::Audio::take_up`]), its pad library's queue and statuses, and the
+    /// rumble, its scripts read from this game's rumble data (the same file). This game's own
+    /// audio goes: a live match's is playback's, the menus' as their scene's entry began.
+    pub fn go_on_from(&mut self, at: Timeline, theirs: &Archives, ours: &mut Archives) {
+        let mut audio = at.audio;
+        audio.rehome(theirs, ours);
+        self.audio.take_up(*audio);
         let p = &mut self.pads;
         p.lib.clone_from(&at.lib);
         p.master = at.master;
@@ -214,6 +239,132 @@ impl Game {
             p.rumble_ahead = at.rumble_ahead;
         }
     }
+}
+
+/// What the sounds the VS scene's entry starts do (`gm_Scene_Vs_OnEnter`, [`in_entry`]: a
+/// stage's at its setup, Big Blue's first cars' engines), on this thread.
+#[derive(Default)]
+enum EntrySounds {
+    /// Start as always.
+    #[default]
+    Off,
+    /// Start as always, each sound and the handle the driver gave it kept: the console's
+    /// entry ([`record_entry_sounds`]).
+    Record(Vec<(i32, i32)>),
+    /// Start nowhere, each taking the handle the console's entry gave the same sound: the live
+    /// match's entry ([`with_entry_sounds`]).
+    Replay(std::collections::VecDeque<(i32, i32)>),
+}
+
+std::thread_local! {
+    static ENTRY_SOUNDS: core::cell::RefCell<EntrySounds> = const {
+        core::cell::RefCell::new(EntrySounds::Off)
+    };
+    static IN_ENTRY: core::cell::Cell<bool> = const { core::cell::Cell::new(false) };
+}
+
+/// Puts the thread's [`EntrySounds`] back to [`EntrySounds::Off`] when dropped (a stop
+/// unwinding through it included), and the entry's mark with it.
+struct EntrySoundsOff;
+
+impl Drop for EntrySoundsOff {
+    fn drop(&mut self) {
+        ENTRY_SOUNDS.with(|e| *e.borrow_mut() = EntrySounds::Off);
+        IN_ENTRY.set(false);
+    }
+}
+
+/// Runs `f` as the VS scene's entry (`gm::vs`'s `vs_on_enter`): the sounds it starts are the
+/// entry's ([`EntrySounds`]).
+pub fn in_entry<R>(f: impl FnOnce() -> R) -> R {
+    let was = IN_ENTRY.replace(true);
+    let r = f();
+    IN_ENTRY.set(was);
+    r
+}
+
+/// Runs `f`, the console's scene change into the VS scene ([`Running::next_scene`] on a copy
+/// of the menus' session), keeping each sound its entry starts and the handle it got, in order.
+pub fn record_entry_sounds<R>(f: impl FnOnce() -> R) -> (R, Vec<(i32, i32)>) {
+    let off = EntrySoundsOff;
+    ENTRY_SOUNDS.with(|e| *e.borrow_mut() = EntrySounds::Record(Vec::new()));
+    let r = f();
+    let kept = ENTRY_SOUNDS.with(|e| std::mem::take(&mut *e.borrow_mut()));
+    drop(off);
+    let EntrySounds::Record(sounds) = kept else {
+        unreachable!("the entry's sounds were being kept")
+    };
+    (r, sounds)
+}
+
+/// Runs `f`, the live match's construction (`vs_match::Match::start`), its VS scene's entry
+/// giving each sound it starts the handle the console's entry gave it (`sounds`, from
+/// [`record_entry_sounds`]), and starting none: the match takes the console's audio as the
+/// entry left it ([`Game::go_on_from`]), those sounds playing in it with those handles, which
+/// the match's stage then holds as the console's does. Stops by name where the two entries'
+/// sounds differ, but for the console's Sheik transformation sound ([`SHEIK_TRANSFORM`]).
+pub fn with_entry_sounds<R>(sounds: Vec<(i32, i32)>, f: impl FnOnce() -> R) -> R {
+    let off = EntrySoundsOff;
+    ENTRY_SOUNDS.with(|e| *e.borrow_mut() = EntrySounds::Replay(sounds.into()));
+    let r = f();
+    let left = ENTRY_SOUNDS.with(|e| std::mem::take(&mut *e.borrow_mut()));
+    drop(off);
+    if let EntrySounds::Replay(left) = left
+        && let Some((id, _)) = left.iter().find(|s| s.0 != SHEIK_TRANSFORM)
+    {
+        panic!(
+            "the live match's VS scene entry didn't start sound {id:#x}, which the console's started ({} not started)",
+            left.len()
+        );
+    }
+    r
+}
+
+/// The handle the VS scene's entry gives sound `id` instead of starting it, in the live match's
+/// entry ([`with_entry_sounds`]).
+pub(crate) fn entry_sound_handle(id: i32) -> Option<i32> {
+    if !IN_ENTRY.get() {
+        return None;
+    }
+    ENTRY_SOUNDS.with(|e| match &mut *e.borrow_mut() {
+        EntrySounds::Replay(q) => {
+            while id != SHEIK_TRANSFORM && q.front().is_some_and(|s| s.0 == SHEIK_TRANSFORM) {
+                q.pop_front();
+            }
+            let Some((theirs, handle)) = q.pop_front() else {
+                panic!(
+                    "the live match's VS scene entry started sound {id:#x}, which the console's didn't"
+                );
+            };
+            assert_eq!(
+                id, theirs,
+                "the live match's VS scene entry started sound {id:#x} where the console's started {theirs:#x}"
+            );
+            Some(handle)
+        }
+        _ => None,
+    })
+}
+
+/// The sound the VS scene's entry plays for a Zelda held A into Sheik (`gm::vs`, the
+/// player's flag `x4 & 8`), its handle kept by no one: the console's entry plays it, and the
+/// live match, whose game start already holds Sheik (`record::live_start`, as the recording
+/// codes write it and playback builds it), plays none. It plays on in the console's audio the
+/// match takes, as in Slippi Dolphin's live play, so the match's entry passes over it
+/// ([`with_entry_sounds`]).
+const SHEIK_TRANSFORM: i32 = 0x41F4E;
+
+/// The VS scene's entry started sound `id` with `handle`, kept in the console's entry
+/// ([`record_entry_sounds`]).
+pub(crate) fn entry_sound_started(id: i32, handle: i32) {
+    if !IN_ENTRY.get() {
+        return;
+    }
+    ENTRY_SOUNDS.with(|e| {
+        if let EntrySounds::Record(v) = &mut *e.borrow_mut() {
+            v.push((id, handle));
+        }
+    });
 }
 
 /// Fighter slots [`DisplayPhase`] keeps a placement for.
@@ -647,5 +798,36 @@ mod tests {
         tick(&mut v, 2, 1, false, 0, 1);
         assert!(!v.haze.off);
         assert_eq!(v.display_phase.differing, 0);
+    }
+
+    /// The sounds the console's VS scene entry starts, kept with their handles, give the live
+    /// match's entry the same handles in the same order, nothing outside the entry taking part
+    /// ([`in_entry`]); the console's Sheik transformation sound is passed over, and any other
+    /// difference stops by name.
+    #[test]
+    fn the_entry_takes_the_consoles_handles() {
+        let entry = |starts: &[(i32, i32)]| {
+            for &(id, handle) in starts {
+                entry_sound_started(id, handle);
+            }
+        };
+        let ((), kept) = record_entry_sounds(|| {
+            entry(&[(1, 0x81)]);
+            in_entry(|| entry(&[(SHEIK_TRANSFORM, 0x102), (7, 0x183)]));
+        });
+        assert_eq!(kept, [(SHEIK_TRANSFORM, 0x102), (7, 0x183)]);
+        let handles = with_entry_sounds(kept.clone(), || {
+            assert_eq!(entry_sound_handle(7), None, "outside the entry");
+            in_entry(|| entry_sound_handle(7))
+        });
+        assert_eq!(handles, Some(0x183));
+        assert_eq!(entry_sound_handle(7), None, "off again");
+        let other = std::panic::catch_unwind(|| {
+            with_entry_sounds(kept.clone(), || in_entry(|| entry_sound_handle(8)))
+        });
+        assert!(other.is_err(), "another sound");
+        let missing = std::panic::catch_unwind(|| with_entry_sounds(kept.clone(), || {}));
+        assert!(missing.is_err(), "a sound the match's entry didn't start");
+        assert_eq!(entry_sound_handle(7), None, "off after a stop");
     }
 }

@@ -265,7 +265,8 @@ pub struct Playback {
     /// drive the fighters. No frame is read or injected, no seed restored (the seed the frame
     /// would hold is the one the match has there), the first frame settles no fighter (Slippi
     /// Dolphin's live play doesn't), and a team player takes a stock back as the game's own
-    /// check says. The frame count and the sound log run as in a replay.
+    /// check says. The frame count runs as in a replay; the sound codes don't
+    /// ([`Playback::sound_codes`]).
     pub live: bool,
     /// A replay played without the first frame's settling (`Fighter_procInput+0x3CC`), as a
     /// live match plays: never in melee-hd's playback, which settles as Slippi's does; a test
@@ -396,6 +397,16 @@ impl SoundLog {
 }
 
 impl Playback {
+    /// Whether playback's sound codes act (`Playback/Core/Sounds`: the log's
+    /// `PreventDuplicateSounds`, `AssignSoundInstanceId` and `HandleFrameSoundLog`): in a
+    /// replay's match scene ([`Playback::match_scene`]), not in a live match. Slippi Dolphin's
+    /// live play has only the netplay set's versions (`Online/Core/Sound`), which act in the
+    /// online match's scene (8.2) alone, never in an offline match (2.2), so a live match plays
+    /// its sounds as the console does (`docs/slippi-ruleset.md`, "Live play and playback").
+    pub fn sound_codes(&self) -> bool {
+        self.match_scene && !self.live
+    }
+
     /// The frame a tick would read next: the first at the scene's first tick, else the one
     /// after the last counted.
     pub fn next_index(game: &Game) -> i32 {

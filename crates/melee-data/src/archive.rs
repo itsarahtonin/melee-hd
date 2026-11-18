@@ -45,6 +45,18 @@ impl Archives {
         &self.list[id.0 as usize]
     }
 
+    /// Archive `id` of `from` among these: the same file added here before (a raw file's
+    /// bytes, [`Archives::find_raw`]), else the archive itself, shared.
+    pub fn share(&mut self, from: &Archives, id: ArchiveId) -> ArchiveId {
+        let a = &from.list[id.0 as usize];
+        let raw = a.relocs.is_empty() && a.header == [0; HEADER];
+        if let Some(found) = raw.then(|| self.find_raw(&a.data)).flatten() {
+            return found;
+        }
+        self.list.push(Arc::clone(a));
+        ArchiveId((self.list.len() - 1) as u16)
+    }
+
     /// The raw file ([`Archive::raw`]) holding exactly `file`, if one was added.
     pub fn find_raw(&self, file: &[u8]) -> Option<ArchiveId> {
         self.list

@@ -355,10 +355,11 @@ fn loader(disc: &Disc) -> impl FnMut(&str) -> melee_sim::game::vs_match::DiscFil
 /// replay frames or a live match's polls set taken from `play` (the named list of
 /// `docs/slippi-ruleset.md`, "Each match from playback's heap"): playback's bookkeeping of
 /// the replay's frames (`Game::playback`'s last frame read, the device's answers and the
-/// live flag; the frame count and the sound log are compared), the pad library's queue and
-/// statuses with its playback flag (a replay's controllers are at rest and its inputs go
-/// straight to the fighters), the button maps evaluated from those statuses, and the
-/// recorder (presentation output).
+/// live flag; the frame count is compared), playback's sound log (its sound codes, which a live
+/// match runs none of, as Slippi Dolphin's offline live play doesn't: `Playback::sound_codes`),
+/// the pad library's queue and statuses with its playback flag (a replay's controllers are at
+/// rest and its inputs go straight to the fighters), the button maps evaluated from those
+/// statuses, and the recorder (presentation output).
 fn as_played_back(
     live: &melee_sim::game::state::Game,
     play: &melee_sim::game::state::Game,
@@ -368,6 +369,7 @@ fn as_played_back(
         l.frame.clone_from(&p.frame);
         l.answers.clone_from(&p.answers);
         l.live = p.live;
+        l.sounds = p.sounds;
     }
     g.pads.playback = play.pads.playback;
     g.pads.lib.clone_from(&play.pads.lib);
@@ -397,19 +399,22 @@ fn paused_pads(read: u32) -> [PadStatus; 4] {
 /// Plays a live match of the Slippi ruleset (`Settings::live`, built from the game start
 /// `record::live_start` takes from a state as the menus leave it) with scripted controllers,
 /// each poll the pad alarm takes the script's next read (with `pause`, [`paused_pads`]), going on
-/// from the console's timeline `at` when given (`live::Timeline`, as a session's VS scene's
-/// entry leaves it); calls `each` after every tick (and its display pass, when due) and returns
-/// the `.slp` it recorded.
+/// from the console's timeline and audio `at` when given, its archives numbered in the second
+/// (`live::Timeline`, as a session's VS scene's entry leaves it); calls `each` after every
+/// tick (and its display pass, when due) and returns the `.slp` it recorded.
 fn play_live(
     disc: &Disc,
     settings: &Settings,
     pause: bool,
-    at: Option<&melee_sim::game::live::Timeline>,
+    at: Option<(
+        &melee_sim::game::live::Timeline,
+        &melee_data::archive::Archives,
+    )>,
     mut each: impl FnMut(&mut melee_sim::game::vs_match::Match, bool),
 ) -> Vec<u8> {
     let mut m = melee_sim::game::vs_match::Match::start(settings, &mut loader(disc));
-    if let Some(at) = at {
-        m.game.go_on_from(at);
+    if let Some((at, theirs)) = at {
+        m.game.go_on_from(at.clone(), theirs, &mut m.data);
     }
     let mut read = 0u32;
     for _ in 0..8000 {
@@ -468,9 +473,14 @@ fn live_settings_on(key: &str) -> (melee_sim::game::vs_match::ReplayStart, Setti
 /// (`Playback::no_settling`) every tick, and its playback as Slippi's runs it, the settling in,
 /// differs from the first tick (the camera snapped where the live match's eases) with the same
 /// gameplay every tick on this stage (`docs/slippi-bugs.md`, "Playback settles each fighter on
-/// the first frame, which live play doesn't"). The game start it's built from is the one
-/// playback reads from its recording (`melee_slippi::start`), field for field, and the
-/// recording's scene is the menus' (here VS mode's match, 2.2), not playback's 14.1.
+/// the first frame, which live play doesn't"). Nor does it run playback's sound codes, which
+/// Slippi Dolphin's offline live play doesn't: its sound log stays empty while playback's logs
+/// (named). With no console to hand it one, its audio here is the one its construction made,
+/// playback's, so the voices and handles compare; a session's live match plays on the console's
+/// audio instead ([`a_live_match_on_the_consoles_timeline_plays_back_the_same`], and
+/// `melee-oracle session`). The game start it's built from is the one playback reads from its
+/// recording (`melee_slippi::start`), field for field, and the recording's scene is the menus'
+/// (here VS mode's match, 2.2), not playback's 14.1.
 #[test]
 fn a_live_match_equals_its_playback() {
     crate::on_game_stack(|| {
@@ -502,8 +512,14 @@ fn a_live_match_equals_its_playback() {
             .expect("a replay's match")
             .no_settling = true;
         let mut settled = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
-        let (mut ticks, mut parted) = (0, Vec::new());
+        let (mut ticks, mut parted, mut logged) = (0, Vec::new(), false);
         play_live(&disc, &live, false, None, |m, render| {
+            // The live match runs no sound code: its sound log stays as it was made.
+            assert_eq!(
+                (m.game.playback.as_ref()).expect("a live match").sounds,
+                melee_sim::game::playback::SoundLog::default(),
+                "tick {ticks} of the live match logged a sound"
+            );
             for (play, settles) in [(&mut unsettled, false), (&mut settled, true)] {
                 let (f, played) = play.step_replay_tick(&mut melee_slippi::Device(&replay));
                 assert_eq!(render, played, "tick {ticks}'s display pass");
@@ -523,6 +539,8 @@ fn a_live_match_equals_its_playback() {
                     if ours.state_diff(&play.game).is_some() {
                         parted.push(ticks);
                     }
+                    logged |= (play.game.playback.as_ref()).expect("a replay").sounds
+                        != melee_sim::game::playback::SoundLog::default();
                     assert_eq!(
                         gameplay(&m.game),
                         gameplay(&play.game),
@@ -536,6 +554,8 @@ fn a_live_match_equals_its_playback() {
         assert!(ticks > 3600, "{ticks} ticks");
         // The settling parts playback from the live match at once.
         assert_eq!(parted.first(), Some(&0), "playback didn't settle");
+        // Playback logs its sounds (the names above leave the log out).
+        assert!(logged, "playback logged no sound");
     });
 }
 
@@ -769,8 +789,11 @@ fn a_paused_live_match_notes_its_view_reads() {
 /// A live match goes on from the console's timeline as the VS scene's loop starts
 /// (`live::Timeline`, `docs/slippi-ruleset.md`, "The scene entry's stall"): its ticks take the
 /// console's reads and render on the console's rounds, and its recording plays back with the
-/// same gameplay every tick, though playback's timeline renders on its own rounds. The console's
-/// timeline here is another match's, 500 ticks on, so the doubled rounds fall elsewhere.
+/// same gameplay every tick, though playback's timeline renders on its own rounds. Its sounds
+/// play on the console's audio, handed over with the timeline (their handles counted on from the
+/// console's driver's), where playback's play on its own: the handles never reach gameplay. The
+/// console's timeline and audio here are another match's, 500 ticks on, so the doubled rounds
+/// fall elsewhere.
 #[test]
 fn a_live_match_on_the_consoles_timeline_plays_back_the_same() {
     crate::on_game_stack(|| {
@@ -792,9 +815,10 @@ fn a_live_match_on_the_consoles_timeline_plays_back_the_same() {
             console.recycle(f);
         }
         let at = console.game.timeline();
+        let theirs = console.data.clone();
         drop(console);
         let mut renders = Vec::new();
-        let file = play_live(&disc, &live, false, Some(&at), |_, render| {
+        let file = play_live(&disc, &live, false, Some((&at, &theirs)), |_, render| {
             renders.push(render)
         });
         let replay = Replay::parse(&file).expect("the recording parses");
@@ -802,8 +826,21 @@ fn a_live_match_on_the_consoles_timeline_plays_back_the_same() {
         again.disc = live.disc;
         again.heap = None;
         let mut play = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
-        let (mut ticks, mut other_rounds) = (0, 0);
-        play_live(&disc, &live, false, Some(&at), |m, _| {
+        // The console's driver counts its sounds' handles on (`(vidhigh << 7) | voice`), playback's from
+        // its own boot.
+        let counted = at.audio.driver.vidhigh;
+        let (mut ticks, mut other_rounds, mut started) = (0, 0, 0);
+        play_live(&disc, &live, false, Some((&at, &theirs)), |m, _| {
+            let ours = m.game.audio.driver.vidhigh;
+            assert!(
+                ours >= counted,
+                "tick {ticks}: the console's audio didn't go on"
+            );
+            assert_ne!(
+                ours, play.game.audio.driver.vidhigh,
+                "tick {ticks}: playback's audio"
+            );
+            started = ours - counted;
             let (f, played) = play.step_replay_tick(&mut melee_slippi::Device(&replay));
             if played {
                 play.render();
@@ -822,6 +859,10 @@ fn a_live_match_on_the_consoles_timeline_plays_back_the_same() {
         assert!(
             other_rounds > 0,
             "the doubled rounds fall where playback's do"
+        );
+        assert!(
+            started > 100,
+            "{started} sounds started on the console's audio"
         );
     });
 }

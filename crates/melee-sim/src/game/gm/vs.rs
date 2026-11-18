@@ -2075,6 +2075,12 @@ impl Running<'_> {
     /// players' codes change the start data at the entry's start and end
     /// (`game::player_codes`).
     pub fn vs_on_enter(&mut self, d: &StartMeleeData, files: MatchArchives) {
+        // Its sounds are the entry's, which a live match takes from the console's
+        // (`game::live`'s `with_entry_sounds`).
+        crate::game::live::in_entry(|| self.vs_on_enter_body(d, files));
+    }
+
+    fn vs_on_enter_body(&mut self, d: &StartMeleeData, files: MatchArchives) {
         let mut d = d.clone();
         let d = &mut d;
         self.player_start_rules(d);

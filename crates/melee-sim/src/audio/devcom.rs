@@ -230,6 +230,14 @@ impl DevCom {
         Some(i as u8)
     }
 
+    /// The callbacks of the commands queued (the one in flight among them), queue by queue.
+    pub fn queued_callbacks(&self) -> impl Iterator<Item = CodeRef> + '_ {
+        self.heads.iter().flat_map(move |&head| {
+            std::iter::successors(head, move |&i| self.nodes[usize::from(i)].next)
+                .filter_map(move |i| self.nodes[usize::from(i)].callback)
+        })
+    }
+
     pub fn file(&self, entrynum: i32) -> ArchiveId {
         self.files
             .iter()

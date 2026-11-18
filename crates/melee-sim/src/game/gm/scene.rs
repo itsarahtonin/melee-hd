@@ -409,9 +409,10 @@ pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
         return true;
     }
     // In a replay, playback's codes close the tick's sound log next (`HandleFrameSoundLog`),
-    // after the point ssbm-rs's traces sample: the next tick's start takes it up.
+    // after the point ssbm-rs's traces sample: the next tick's start takes it up. A live match
+    // runs no sound code (`Playback::sound_codes`).
     let frame = (sc.unk_8 as i32).wrapping_sub(1);
-    if let Some(p) = g.playback.as_mut() {
+    if let Some(p) = g.playback.as_mut().filter(|p| !p.live) {
         p.sounds.closing = Some(frame);
     }
     false
