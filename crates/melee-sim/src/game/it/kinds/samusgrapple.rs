@@ -1085,6 +1085,13 @@ pub enum SwingSlot {
     /// holds the joint's address. The joint is her `ThrowN` bone, so the bit is that address's
     /// bit 19.
     SavedR31(u32),
+    /// [`SwingSlot::SavedR31`]'s frame without the allocator model (the Slippi ruleset's live
+    /// matches and the player's playback of their recordings, design call 8 of
+    /// `docs/slippi-ruleset.md`): the joint's address isn't known, and its bit 19 depends on
+    /// where playback's heap put the joint (which follows from the match's files and the
+    /// objects made before it), so no fixed address in the heap's range stands in for it as
+    /// the Super Scope's does. Reading it stops by name.
+    Unmodeled(&'static str),
     /// Not followed, named by the frame: reading it stops.
     Unknown(&'static str),
 }
@@ -1100,7 +1107,10 @@ fn rebuilt_slot(r: &Running, l: ItemLinkId, frame: &'static str) -> SwingSlot {
                 && r.game.objs.jobjs[j].flags & jobj::JOINT_MASK == 0
                 && r.game.objs.jobjs[j].robj.is_none() =>
         {
-            SwingSlot::SavedR31(r.game.objs.jobjs.pool.addr(j.0))
+            match r.game.objs.jobjs.pool.addr(j.0) {
+                0 => SwingSlot::Unmodeled(frame),
+                a => SwingSlot::SavedR31(a),
+            }
         }
         _ => SwingSlot::Unknown(frame),
     }
@@ -1137,6 +1147,10 @@ fn ground_swing(r: &mut Running, f: GObjId, slot: SwingSlot) {
             SwingSlot::SavedR31(addr) => addr,
             SwingSlot::Unknown(frame) => unported_call(&format!(
                 "it_802B7160: the swing's grabbed-victim-only bit, a stack byte {frame} leaves"
+            )),
+            SwingSlot::Unmodeled(frame) => unported_call(&format!(
+                "it_802B7160 from {}: the swing's grabbed-victim-only bit, bit 19 of the ThrowN joint's address, without the allocator model,",
+                frame.split(" with ").next().unwrap_or(frame)
             )),
         };
         let [a, b, c, d, e] = SWING_HITBOX;
