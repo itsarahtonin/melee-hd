@@ -138,7 +138,7 @@ impl Mesh {
             });
             fetched.clear();
             vertex::fetch(cp, &layout, count as u32, stream, mem, &mut fetched);
-            let size = if count == 0 { 0 } else { fetched.len() / count };
+            let size = fetched.len().checked_div(count).unwrap_or(0);
             numbers.clear();
             let mut from = 0;
             for k in 0..count {
