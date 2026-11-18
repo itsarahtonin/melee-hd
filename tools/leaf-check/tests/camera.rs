@@ -1140,7 +1140,7 @@ fn quakes() {
             f.set_f(1, s);
         },
         |r, a| {
-            camera::stop_quake(&mut r.game.camera.cam, a.r(3) as i32);
+            camera::stop_quake(r.game, a.r(3) as i32);
             camera::set_quake_scale(&mut r.game.camera.cam, f1(a));
             vec![]
         },
