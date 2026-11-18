@@ -11,6 +11,7 @@
 
 use super::mobj::MObjId;
 use super::tobj::TObjId;
+pub use crate::inline_vec::InlineVec;
 
 pub mod dag;
 pub mod gx;
@@ -194,7 +195,7 @@ pub struct TExpList {
 
 /// A compiled stage, `HSD_TExpTevDesc`: the stage's description and the texture whose map
 /// and coordinates [`setup_tev`] reads.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct TevStage {
     pub desc: HsdTevDesc,
     pub tobj: Option<TObjId>,
@@ -209,13 +210,29 @@ pub struct CnstReg {
     pub idx: u8,
 }
 
+/// Fills an [`InlineVec`]'s unused room only: no compile makes it.
+impl Default for CnstReg {
+    fn default() -> Self {
+        CnstReg {
+            val: Cnst::MatAlpha(MObjId(0)),
+            comp: 0,
+            reg: 0,
+            idx: 0,
+        }
+    }
+}
+
 /// A material's compiled TEV: the stages (`mobj->tevdesc`), in the order the original's list
 /// has them (the last stage first), and the constants left in its expression list
 /// (`mobj->texp`), newest first as the list has them.
+///
+/// Both are held in the material itself up to [`STAGES_INLINE`] and [`CNSTS_INLINE`], so a
+/// snapshot copies them with it rather than allocating them (`docs/performance.md`, "Flat
+/// materials and shapes"); a longer list goes to the heap.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct TevDesc {
-    pub stages: Vec<TevStage>,
-    pub cnsts: Vec<CnstReg>,
+    pub stages: InlineVec<TevStage, STAGES_INLINE>,
+    pub cnsts: InlineVec<CnstReg, CNSTS_INLINE>,
 }
 
 /// The most stages a description has (`HSD_Index2TevStage`'s), and the most constants it
@@ -223,24 +240,13 @@ pub struct TevDesc {
 pub const MAX_STAGES: usize = 16;
 pub const MAX_CNSTS: usize = 16;
 
+/// How many stages and constants a material holds inline. The benchmark matches' compiles
+/// make 1 to 6 stages (1, 2 and 4 the most, 5 and 6 in up to 3% of their materials) and keep
+/// 0 to 7 constants.
+pub const STAGES_INLINE: usize = 4;
+pub const CNSTS_INLINE: usize = 8;
+
 impl TevDesc {
-    /// An empty description with room for the most stages and constants, so the compiles
-    /// written over it never grow it.
-    pub fn with_room() -> TevDesc {
-        TevDesc {
-            stages: Vec::with_capacity(MAX_STAGES),
-            cnsts: Vec::with_capacity(MAX_CNSTS),
-        }
-    }
-
-    /// Gives the description that room if it lacks it (a copy holds only what it uses).
-    pub fn make_room(&mut self) {
-        self.stages
-            .reserve(MAX_STAGES.saturating_sub(self.stages.len()));
-        self.cnsts
-            .reserve(MAX_CNSTS.saturating_sub(self.cnsts.len()));
-    }
-
     /// How many stages the description uses.
     pub fn num_stages(&self) -> usize {
         self.stages.len()
@@ -1011,4 +1017,56 @@ pub fn is_through_alpha(t: &Tev) -> bool {
         && t.a_in[1].sel == TE_0
         && t.a_bias == 0
         && t.a_scale == 0
+}
+
+#[cfg(test)]
+mod flat_tests {
+    use super::*;
+    use crate::state_eq::{StateEq, StateHasher};
+
+    fn hash<S: StateEq + ?Sized>(s: &S) -> u64 {
+        let mut h = StateHasher::new();
+        s.state_hash(&mut h);
+        h.finish()
+    }
+
+    /// A compiled TEV hashes as its lists did when they were vectors, inline or not.
+    #[test]
+    fn tev_descs_hash_as_vectors() {
+        for n in [0, 1, 4, 5, 16] {
+            let stages: Vec<TevStage> = (0..n)
+                .map(|i| TevStage {
+                    desc: HsdTevDesc {
+                        stage: i,
+                        color: 3 * i,
+                        ..HsdTevDesc::default()
+                    },
+                    tobj: (i % 2 == 1).then_some(TObjId(i)),
+                })
+                .collect();
+            let cnsts: Vec<CnstReg> = (0..n)
+                .map(|i| CnstReg {
+                    val: Cnst::TObjKonst(TObjId(i)),
+                    comp: 1,
+                    reg: i as u8,
+                    idx: 2,
+                })
+                .collect();
+            let d = TevDesc {
+                stages: stages.iter().copied().collect(),
+                cnsts: cnsts.iter().copied().collect(),
+            };
+            let mut h = StateHasher::new();
+            stages.state_hash(&mut h);
+            cnsts.state_hash(&mut h);
+            assert_eq!(hash(&d), h.finish(), "{n} stages and constants");
+            assert_eq!(hash(&Some(d.clone())), {
+                let mut h = StateHasher::new();
+                h.word(1);
+                stages.state_hash(&mut h);
+                cnsts.state_hash(&mut h);
+                h.finish()
+            });
+        }
+    }
 }

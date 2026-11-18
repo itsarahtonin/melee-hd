@@ -967,7 +967,7 @@ fn find_skeleton(objs: &Objects, j: JObjId) -> Option<JObjId> {
 /// brought up to date, one joint for a full weight, every joint of a blend. The matrices
 /// themselves go to GX; reading a missing envelope matrix fails as the original's null read
 /// would.
-fn setup_envelopes(objs: &mut Objects, data: &Archives, j: JObjId, envs: &[Vec<pobj::Envelope>]) {
+fn setup_envelopes(objs: &mut Objects, data: &Archives, j: JObjId, envs: &pobj::EnvelopeList) {
     // `_HSD_mkEnvelopeModelNodeMtx`.
     let relative = if objs.jobjs[j].flags & jobj::SKELETON_ROOT != 0 {
         false

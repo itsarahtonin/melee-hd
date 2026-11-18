@@ -12,6 +12,8 @@ use super::fobj::Value;
 use super::jobj::{self, JObjId};
 use super::pool::Pool;
 use crate::fpu::copy;
+use crate::inline_vec::InlineVec;
+use crate::state_eq::{Diff, StateEq, StateHasher, nest};
 
 /// A PObj's slot.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, melee_derive::StateEq)]
@@ -188,6 +190,218 @@ pub struct Envelope {
     pub node: u32,
 }
 
+/// A shape's envelopes, one per matrix the display lists index: each a weighted list of joints
+/// (`HSD_SList`s of `HSD_Envelope` chains in the original). Every envelope's joints are held
+/// in one list, so a snapshot copies a shape's envelopes in one allocation rather than one for
+/// each matrix and one for the list of them (`docs/performance.md`, "Flat materials and
+/// shapes"). It reads as a list of slices, and compares and hashes as the `Vec<Vec<Envelope>>`
+/// it stands for.
+#[derive(melee_derive::CloneFrom, Default, PartialEq)]
+pub struct EnvelopeList {
+    /// Every envelope's joints, in order.
+    joints: Vec<Envelope>,
+    /// Where each envelope's joints end in `joints`.
+    ends: InlineVec<u16, ENVELOPES_INLINE>,
+}
+
+/// How many envelopes a shape's list holds inline: the GX position matrices a shape's display
+/// lists can index (the most a benchmark match's shapes have).
+pub const ENVELOPES_INLINE: usize = 10;
+
+impl EnvelopeList {
+    /// How many envelopes.
+    pub fn len(&self) -> usize {
+        self.ends.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.ends.is_empty()
+    }
+
+    /// Envelope `i`'s joints.
+    pub fn get(&self, i: usize) -> Option<&[Envelope]> {
+        let end = usize::from(*self.ends.get(i)?);
+        Some(&self.joints[self.start(i)..end])
+    }
+
+    pub fn first(&self) -> Option<&[Envelope]> {
+        self.get(0)
+    }
+
+    fn start(&self, i: usize) -> usize {
+        if i == 0 {
+            0
+        } else {
+            usize::from(self.ends[i - 1])
+        }
+    }
+
+    /// The envelopes in order, each its joints.
+    pub fn iter(&self) -> Sets<'_> {
+        Sets {
+            list: self,
+            at: 0,
+            end: self.len(),
+        }
+    }
+
+    /// Every envelope's joints, one after another.
+    pub fn joints(&self) -> &[Envelope] {
+        &self.joints
+    }
+
+    pub fn joints_mut(&mut self) -> &mut [Envelope] {
+        &mut self.joints
+    }
+
+    /// Empties the list, keeping its storage.
+    pub fn clear(&mut self) {
+        self.joints.clear();
+        self.ends.clear();
+    }
+
+    /// Room for `n` joints in all without growing.
+    pub fn reserve(&mut self, n: usize) {
+        self.joints.reserve(n.saturating_sub(self.joints.len()));
+    }
+
+    /// The storage's room for joints.
+    pub fn capacity(&self) -> usize {
+        self.joints.capacity()
+    }
+
+    /// Starts another envelope, empty until [`EnvelopeList::push`] gives it joints.
+    pub fn push_envelope(&mut self) {
+        let end = self.joints.len() as u16;
+        self.ends.push(end);
+    }
+
+    /// Adds a joint to the last envelope.
+    pub fn push(&mut self, e: Envelope) {
+        let last = self
+            .ends
+            .len()
+            .checked_sub(1)
+            .expect("a joint before any envelope");
+        self.joints.push(e);
+        self.ends[last] = u16::try_from(self.joints.len())
+            .expect("a shape with more than 65,535 envelope joints");
+    }
+}
+
+impl Index<usize> for EnvelopeList {
+    type Output = [Envelope];
+    fn index(&self, i: usize) -> &[Envelope] {
+        let end = usize::from(self.ends[i]);
+        &self.joints[self.start(i)..end]
+    }
+}
+
+impl IndexMut<usize> for EnvelopeList {
+    fn index_mut(&mut self, i: usize) -> &mut [Envelope] {
+        let (start, end) = (self.start(i), usize::from(self.ends[i]));
+        &mut self.joints[start..end]
+    }
+}
+
+/// [`EnvelopeList::iter`]: each envelope's joints.
+#[derive(Clone)]
+pub struct Sets<'a> {
+    list: &'a EnvelopeList,
+    at: usize,
+    end: usize,
+}
+
+impl<'a> Iterator for Sets<'a> {
+    type Item = &'a [Envelope];
+    fn next(&mut self) -> Option<&'a [Envelope]> {
+        if self.at == self.end {
+            return None;
+        }
+        self.at += 1;
+        Some(&self.list[self.at - 1])
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        (self.end - self.at, Some(self.end - self.at))
+    }
+}
+
+impl DoubleEndedIterator for Sets<'_> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.at == self.end {
+            return None;
+        }
+        self.end -= 1;
+        Some(&self.list[self.end])
+    }
+}
+
+impl ExactSizeIterator for Sets<'_> {}
+
+impl<'a> IntoIterator for &'a EnvelopeList {
+    type Item = &'a [Envelope];
+    type IntoIter = Sets<'a>;
+    fn into_iter(self) -> Sets<'a> {
+        self.iter()
+    }
+}
+
+impl FromIterator<Vec<Envelope>> for EnvelopeList {
+    fn from_iter<I: IntoIterator<Item = Vec<Envelope>>>(iter: I) -> Self {
+        let mut list = EnvelopeList::default();
+        for set in iter {
+            list.push_envelope();
+            for e in set {
+                list.push(e);
+            }
+        }
+        list
+    }
+}
+
+/// As the list of lists: one per envelope.
+impl std::fmt::Debug for EnvelopeList {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_list().entries(self.iter()).finish()
+    }
+}
+
+/// As `Vec<Vec<Envelope>>`'s: the number of envelopes, then each one's length and joints.
+impl StateEq for EnvelopeList {
+    fn state_diff(&self, other: &Self) -> Option<Diff> {
+        for (i, (a, b)) in self.iter().zip(other).enumerate() {
+            if let Some(d) = a.state_diff(b) {
+                return Some(d.index(i));
+            }
+        }
+        (self.len() != other.len())
+            .then(|| Diff::new(format!("length {} != {}", self.len(), other.len())))
+    }
+
+    fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+        for (i, (a, b)) in self.iter().zip(other).enumerate() {
+            let n = out.len();
+            a.state_diffs(b, out);
+            nest(out, n, &format!("[{i}]"));
+        }
+        if self.len() != other.len() {
+            out.push(Diff::new(format!(
+                "length {} != {}",
+                self.len(),
+                other.len()
+            )));
+        }
+    }
+
+    fn state_hash(&self, h: &mut StateHasher) {
+        h.word(self.len() as u64);
+        for set in self {
+            set.state_hash(h);
+        }
+    }
+}
+
 /// `HSD_ShapeSet`: the shapes a morphing shape blends, in the archive, and its blend state.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct ShapeSet {
@@ -214,7 +428,7 @@ pub enum Binding {
     ShapeSet(ShapeSet),
     /// The envelopes, one per matrix the display lists index: each a weighted list of joints
     /// (`HSD_SList`s of `HSD_Envelope` chains in the original).
-    Envelopes(Vec<Vec<Envelope>>),
+    Envelopes(EnvelopeList),
 }
 
 /// `HSD_PObj`.
@@ -249,9 +463,7 @@ pub struct PObjs {
     /// Envelope lists freed shapes leave, emptied, for later shapes' to reuse: no state, so a
     /// restore keeps the target's and a snapshot starts without.
     #[clone_from(keep)]
-    pub spare_lists: Vec<Vec<Vec<Envelope>>>,
-    #[clone_from(keep)]
-    pub spare_sets: Vec<Vec<Envelope>>,
+    pub spare_lists: Vec<EnvelopeList>,
     /// `vertex_buffer` and `normal_buffer`: the blocks of the scene's heap the first shape
     /// animation drawn in a scene takes for its blended vertices and normals (2,000 of each,
     /// `drawShapeAnim`), 0 until then; the heap's amnesia forgets them (`PObjAmnesia`).
@@ -259,47 +471,30 @@ pub struct PObjs {
     pub normal_buffer: u32,
 }
 
-/// Which of `spares` to reuse for `n` items: the smallest that holds them, else the largest.
-fn best_fit<T>(spares: &[Vec<T>], n: usize) -> Option<usize> {
-    let fits = (0..spares.len())
-        .filter(|&i| spares[i].capacity() >= n)
-        .min_by_key(|&i| spares[i].capacity());
-    fits.or_else(|| (0..spares.len()).max_by_key(|&i| spares[i].capacity()))
-}
-
-/// How many spare envelope lists and sets a [`PObjs`] keeps at most.
+/// How many spare envelope lists a [`PObjs`] keeps at most.
 const SPARES: usize = 256;
 
 impl PObjs {
-    /// An emptied envelope list for `n` sets: the smallest spare that holds them, else the
-    /// largest (grown), else a new one.
-    fn take_list(&mut self, n: usize) -> Vec<Vec<Envelope>> {
-        match best_fit(&self.spare_lists, n) {
+    /// An emptied envelope list for `n` joints in all: the smallest spare that holds them,
+    /// else the largest (grown), else a new one.
+    fn take_list(&mut self, n: usize) -> EnvelopeList {
+        let spares = &self.spare_lists;
+        let fits = (0..spares.len())
+            .filter(|&i| spares[i].capacity() >= n)
+            .min_by_key(|&i| spares[i].capacity());
+        let best = fits.or_else(|| (0..spares.len()).max_by_key(|&i| spares[i].capacity()));
+        let mut list = match best {
             Some(i) => self.spare_lists.swap_remove(i),
-            None => Vec::with_capacity(n),
-        }
+            None => EnvelopeList::default(),
+        };
+        list.reserve(n);
+        list
     }
 
-    /// An empty envelope set for `n` envelopes, likewise.
-    fn take_set(&mut self, n: usize) -> Vec<Envelope> {
-        match best_fit(&self.spare_sets, n) {
-            Some(i) => self.spare_sets.swap_remove(i),
-            None => Vec::with_capacity(n),
-        }
-    }
-
-    /// Keeps a freed shape's envelope lists for reuse, up to [`SPARES`] of each.
-    fn give_back(&mut self, mut list: Vec<Vec<Envelope>>) {
-        for mut set in list.drain(..) {
-            if self.spare_sets.len() < SPARES {
-                set.clear();
-                if self.spare_sets.capacity() == 0 {
-                    self.spare_sets.reserve_exact(SPARES);
-                }
-                self.spare_sets.push(set);
-            }
-        }
+    /// Keeps a freed shape's envelope list for reuse, up to [`SPARES`].
+    fn give_back(&mut self, mut list: EnvelopeList) {
         if self.spare_lists.len() < SPARES {
+            list.clear();
             if self.spare_lists.capacity() == 0 {
                 self.spare_lists.reserve_exact(SPARES);
             }
@@ -511,32 +706,30 @@ fn load_shape_set(data: &Archives, d: DataRef) -> ShapeSet {
     }
 }
 
-/// The envelopes' weights, joints unresolved, the static `loadEnvelopeDesc`, in freed shapes'
-/// lists where there are spares.
+/// The envelopes' weights, joints unresolved, the static `loadEnvelopeDesc`, in a freed
+/// shape's list where there are spares.
 #[doc(alias = "loadEnvelopeDesc")]
-fn load_envelopes(pobjs: &mut PObjs, data: &Archives, list: Option<DataRef>) -> Vec<Vec<Envelope>> {
+fn load_envelopes(pobjs: &mut PObjs, data: &Archives, list: Option<DataRef>) -> EnvelopeList {
     let Some(mut slot) = list else {
         return pobjs.take_list(0);
     };
-    let mut sets = 0;
+    let mut joints = 0;
     let mut s = slot;
-    while data.ptr(s).is_some() {
-        sets += 1;
-        s = s.at(4);
-    }
-    let mut out = pobjs.take_list(sets);
-    while let Some(edesc) = data.ptr(slot) {
-        let mut n = 0;
+    while let Some(edesc) = data.ptr(s) {
         let mut e = edesc;
         while data.ptr(e).is_some() {
-            n += 1;
+            joints += 1;
             e = e.at(8);
         }
-        assert!(n != 0, "an envelope with no joints");
-        let mut env = pobjs.take_set(n);
+        s = s.at(4);
+    }
+    let mut out = pobjs.take_list(joints);
+    while let Some(edesc) = data.ptr(slot) {
+        assert!(data.ptr(edesc).is_some(), "an envelope with no joints");
+        out.push_envelope();
         let mut e = edesc;
         while data.ptr(e).is_some() {
-            env.push(Envelope {
+            out.push(Envelope {
                 jobj: None,
                 weight: copy(data.f32(e.at(4))),
                 addr: super::heap::piece_alloc(0xC),
@@ -546,10 +739,10 @@ fn load_envelopes(pobjs: &mut PObjs, data: &Archives, list: Option<DataRef>) -> 
         }
         // `HSD_SListAlloc`: the node that holds the chain, after its envelopes.
         let node = super::heap::obj_alloc(super::heap::Kind::SList);
-        for e in &mut env {
+        let last = out.len() - 1;
+        for e in &mut out[last] {
             e.node = node;
         }
-        out.push(env);
         slot = slot.at(4);
     }
     out
@@ -791,5 +984,77 @@ pub fn anim_all(objs: &mut Objects, data: &Archives, p: Option<PObjId>) {
             aobj::interpret(objs, data, a, Some(&mut up));
         }
         cur = objs.pobjs[p].next;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn hash<S: StateEq + ?Sized>(s: &S) -> u64 {
+        let mut h = StateHasher::new();
+        s.state_hash(&mut h);
+        h.finish()
+    }
+
+    fn env(j: u32, w: f32) -> Envelope {
+        Envelope {
+            jobj: (j != 0).then_some(JObjId(j)),
+            weight: w,
+            addr: 0x8040_0000 + j,
+            node: 0x8050_0000 + j,
+        }
+    }
+
+    /// An envelope list reads, compares and hashes as the list of lists it stands for.
+    #[test]
+    fn envelope_lists_hash_as_lists_of_lists() {
+        let lists: Vec<Vec<Vec<Envelope>>> = vec![
+            vec![],
+            vec![vec![env(1, 1.0)]],
+            vec![vec![env(1, 0.5), env(2, 0.5)], vec![], vec![env(3, 1.0)]],
+            (0..12)
+                .map(|i| (0..3).map(|k| env(i * 3 + k, 0.25)).collect())
+                .collect(),
+        ];
+        for l in &lists {
+            let flat: EnvelopeList = l.iter().cloned().collect();
+            assert_eq!(flat.len(), l.len());
+            for (i, set) in flat.iter().enumerate() {
+                assert_eq!(set, &l[i][..]);
+                assert_eq!(&flat[i], &l[i][..]);
+            }
+            assert_eq!(hash(&flat), hash(l));
+            assert_eq!(format!("{flat:?}"), format!("{l:?}"));
+            assert!(flat.state_diff(&flat.clone()).is_none());
+            let b = Binding::Envelopes(flat.clone());
+            assert!(b.state_diff(&b.clone()).is_none());
+        }
+        let a: EnvelopeList = lists[2].iter().cloned().collect();
+        let mut b = a.clone();
+        b[2][0].weight = 0.75;
+        assert_eq!(
+            a.state_diff(&b).map(|d| d.path()),
+            Some("[2][0].weight".to_owned())
+        );
+        // The same joints split into other envelopes differ.
+        let c: EnvelopeList = vec![
+            vec![env(1, 0.5)],
+            vec![env(2, 0.5)],
+            vec![],
+            vec![env(3, 1.0)],
+        ]
+        .into_iter()
+        .collect();
+        let d: EnvelopeList = vec![
+            vec![env(1, 0.5), env(2, 0.5)],
+            vec![],
+            vec![],
+            vec![env(3, 1.0)],
+        ]
+        .into_iter()
+        .collect();
+        assert!(c.state_diff(&d).is_some());
+        assert_ne!(hash(&c), hash(&d));
     }
 }
