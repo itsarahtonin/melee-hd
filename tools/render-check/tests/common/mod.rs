@@ -60,7 +60,7 @@ pub enum Replay {
 }
 
 impl Replay {
-    fn path(self) -> PathBuf {
+    pub fn path(self) -> PathBuf {
         match self {
             Replay::Bench(name) => melee_local_data::bench_replay(name),
             Replay::Oracle(name) => ssbm_rs_local(&format!("bench/oracle-m4/{name}.slp")).into(),
@@ -260,14 +260,14 @@ impl Replay {
         }
     }
 
-    fn slippi(self) -> bool {
+    pub fn slippi(self) -> bool {
         matches!(self, Replay::Slippi(..) | Replay::Hf(_))
     }
 
     /// How many frames ssbm-rs's log frame N comes after the native frame it draws: a
     /// replay's match starts its frames 3 before ssbm-rs's log does; a session's native frames
     /// count from its first render, the log's from power-on's first copy.
-    fn log_offset(self) -> u32 {
+    pub fn log_offset(self) -> u32 {
         match self {
             Replay::Session(_) => SESSION_LOG_OFFSET,
             _ => 3,

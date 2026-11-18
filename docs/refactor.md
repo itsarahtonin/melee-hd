@@ -282,6 +282,7 @@ Its own crates (melee-render, melee-gpu, melee-player); the `feat/linux-011` bra
 | # | Task | Size | Depends on | Target and check |
 | --- | --- | --- | --- | --- |
 | F1 | **The comparison harness**: the fast renderer's frames against the exact renderer's, geometry within a tolerance and a perceptual image metric, over the frames tests' replays and stages; a low-end measurement setup (the worker's integrated or throttled run, the MacBook) | S | nothing | a check that fails on a deliberately wrong frame; baseline numbers on each test machine |
+| F1 status | Done on `feat/fast-f1` (2026-11-18): [the fast renderer](fast-renderer.md). Found on the way: the shadow cameras erase on the near plane exactly, so one ulp of depth there drops the erase; F3 must put what lies on the depth range's edge exactly there, or clamp depth | | | |
 | F2 | **The mesh cache**: each shape's vertices and display list decoded once into GPU buffers keyed by `PObj::verts` and `display`, a rewritten list's key changing with its patch | M | F1 | the CPU's frame building on Fountain of Dreams from 4.5 ms to under 2.5; frames within F1's tolerance |
 | F3 | **GPU transforms, skinning and lighting** from the joints' world and envelope matrices | M | F2 | CPU build under 1 ms a frame on every stage; frames within tolerance |
 | F4 | **Materials**: shaders specialized per material from the compiled TEV, as `perf/tev-specialize` does per draw | M | F3 | no uber-shader draws after warm-up; frames within tolerance |

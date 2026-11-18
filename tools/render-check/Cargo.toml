@@ -16,6 +16,8 @@ melee-sim.workspace = true
 melee-gx = { path = "../../crates/melee-gx" }
 melee-gpu = { path = "../../crates/melee-gpu" }
 png = "0.18"
+wgpu = "30"
+pollster = "1"
 
 [dev-dependencies]
 melee-local-data = { path = "../local-data" }
@@ -23,9 +25,15 @@ melee-local-data = { path = "../local-data" }
 [features]
 # The opt-in sweep, tests/sweep.rs.
 sweep = []
+# The fast renderer's comparison harness over the frames tests' matches, tests/fast.rs.
+fast = []
 # melee-render's run-time mutations, `MUT=NAME` (docs/player.md, "Checking frames").
 mutation = ["melee-render/mutation"]
 
 [[test]]
 name = "sweep"
 required-features = ["sweep"]
+
+[[test]]
+name = "fast"
+required-features = ["fast"]

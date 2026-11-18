@@ -14,7 +14,7 @@ melee-hd's player presents the simulation: it draws the display pass's commands,
 | `melee-slippi` | Slippi replays (`.slp`), what Slippi's EXI device answers playback's codes from them, and recordings written as `.slp` files |
 | `melee-input` | The keyboard, standard gamepads and the GameCube controller adapter, as the simulation's pad input |
 | `melee-player` | The `melee-hd` binary: a VS match in a window |
-| `tools/render-check` | Compares melee-render's frames with ssbm-rs's renderer's |
+| `tools/render-check` | Compares melee-render's frames with ssbm-rs's renderer's; also the fast renderer's comparison harness and the renderers' benchmark ([the fast renderer](fast-renderer.md)) |
 | `tools/audio-check` | Compares melee-audio's mix of a replay or a recorded session with ssbm-rs's recording of its audio |
 
 `melee-sim` depends on none of them.

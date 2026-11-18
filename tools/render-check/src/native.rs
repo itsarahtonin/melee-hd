@@ -160,7 +160,7 @@ fn drive_session(
 /// frame until it returns false; with `cosmetic`'s toggles, as the player sets them for the
 /// frames it shows. A `.inputs` file is a recorded console session instead
 /// ([`drive_session`]).
-fn drive(
+pub(crate) fn drive(
     disc_path: &str,
     replay_path: &str,
     to: u32,
@@ -340,11 +340,11 @@ impl Drawer {
 /// screens show a copy of the screen from the frame before, which shows the copy from the
 /// frame before that, each smaller, so a frame of its feed needs four (fewer left a few of
 /// the feed's pixels different at frame 9000, `fox_marth_ps_9000`), and eight leave margin.
-const WARM_UP: u32 = 8;
+pub(crate) const WARM_UP: u32 = 8;
 
 /// Whether frame `n` is drawn for a frame `at` wanted: it is `at` or one of the `warm_up`
 /// frames before.
-fn drawn_for(n: u32, at: u32, warm_up: u32) -> bool {
+pub(crate) fn drawn_for(n: u32, at: u32, warm_up: u32) -> bool {
     n <= at && n + warm_up >= at
 }
 
