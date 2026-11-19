@@ -308,6 +308,35 @@ Jigglypuff's Rollout and Kirby's copy of it are one implementation in `ft::purin
 4. Find the corpus from the replays' Game Start characters and the sessions' trace fighter kinds, then prove with one mutation in the shared code (a word every use writes) that a replay of each user actually reaches it.
 5. Run the corpus with the new build writing scratch goldens (`--write-golden --golden FILE`), check them with the old build, run the sessions in full, sync-test one replay of each user, and bench before and after in alternating rounds.
 
+### Task 11, Kirby's other copies: 7 done, 11 left (2026-11-18, `refactor/dedup-kirby` from `909b868c`)
+
+The recipe above, one character at a time, closest copy first: Luigi, Mario (with Dr. Mario), Pikachu (with Pichu), Captain Falcon (with Ganondorf), Donkey Kong, Samus, Zelda. Each original's `special_n.rs` holds the move over a descriptor (`Fireball` twice, `ThunderJolt`, `FalconPunch`, `GiantPunch`, `ChargeShot`, `NayrusLove`) with the character's `const` beside it; Kirby's `ft/kirby/special_<char>.rs` keeps only his addresses, his `KIRBY` and his `run` table. Where the original asks the fighter's kind (Mario or Dr. Mario, Pikachu or Pichu, Captain Falcon or Ganondorf) and Kirby's copy asks his copy's (`u` `HAT_KIND`), the descriptor says which (`ft::kirby::KindFrom`, `Running::special_kind`).
+
+**What differed**, besides the states, the item and effect kinds, the joints and the hooks' addresses, which every pair has:
+
+| Copy | Kirby's attributes | Named branches |
+| --- | --- | --- |
+| Luigi | none read | none |
+| Mario, Dr. Mario | none read; the pill's colours in his `u` x68, x6C | his copy-less kind throws nothing (Mario's own kind never is Kirby's, so the test is shared) |
+| Pikachu, Pichu | a block per copy, Pikachu's layout (x1C0, x1DC) | none (the aerial throw's unset landing lag for another copy, in Melee's bugs, stays a stop) |
+| Captain Falcon, Ganondorf | Captain Falcon's layout at x1F8 | `wind`: Kirby's Warlock Punch blows no wind |
+| Donkey Kong | Donkey Kong's layout 0x164 on; the swings in `u` xBC | `on_any_damage`: his copy sets (and clears) no any-damage hook |
+| Samus | Samus's layout 0x150 on; `u` 0xA4 on | `fire_offset` (his fire's position taken with a zero offset), `effects_off_always` (his charge's effects destroyed unguarded, a new entry in Melee's bugs) |
+| Zelda | Zelda's layout 0x2A4 on, the reflection 0x37C on | `hooks_on_change`: changing between the ground and the air sets the hitlag hooks at once where Zelda's arms the effect's accessory again |
+
+**The numbers.**
+
+| | |
+| --- | --- |
+| Lines (the copy's file and the original's `special_n.rs`) | Luigi 285 to 220 (−65), Mario 407 to 324 (−83), Pikachu 422 to 308 (−114), Captain Falcon 447 to 344 (−103), Donkey Kong 995 to 759 (−236), Samus 932 to 667 (−265), Zelda 440 to 335 (−105); with callers and the attribute constants folded, 960 fewer in all (1,420 added, 2,380 removed in `crates` and `tools`) |
+| Aliases | the same 18,078 `#[doc(alias)]` attributes after every commit (a sorted list diffed); `ledger --check` 19,827 of 19,827 each time, only the CSV's locations moved |
+| Oracle | the base build (`909b868c`) ran the full diff of every verify replay with Kirby or a touched character (external ids 0, 1, 4, 7, 8, 13, 16, 18, 19, 22, 24, 25: 205 replays, and 30 others) and wrote per-tick whole-state goldens; every commit's build then checked the replays with Kirby or its character (52 to 80 each, 450 checks) and the final build all 205: every tick's state hash equal. Kirby's 87 session jobs (the pilot's list): the 52 diffs compare with no difference and 34 of the 35 session-syncs roll back clean; `rec-kirby-throw`'s shortcut stops at tick 508 on the heap's free lists, as it does with the base build (a known difference, not this change's). The trace scan can't tell Mario's kind (0) from zeros, so sessions weren't picked for the other characters: their code is covered by the replays' per-tick hashes. `sync-test --rollback 7` clean on the seven Kirby copy matches (`oracle-kirby-{luigi-bf,mario-fd,pikachu-bf,captain-fd,donkey-bf,zelda-bf}`, 11,565 to 16,272 ticks, and `hf-kirby-samus-fod`, 19,865) |
+| Mutation | one write in each shared function, switched on for one user at a time: both users of every pair fail, Kirby's in his copy match and the original's in its own replay (Luigi `dk-luigi-ys` tick 200 and `oracle-kirby-luigi-bf` 2760; Mario `pc-7452c0d4` (Mario against Bowser) 150 and `kirby-mario-fd` 714; Pikachu `mewtwo-pikachu-fod` 3154 and `kirby-pikachu-bf` 833; Captain Falcon `ganon-captain-fd` 519 and `kirby-captain-fd` 704; Donkey Kong `dk-falco-ys` 3649 and `kirby-donkey-bf` 369; Samus `dk-samus-bf` 97 and `hf-kirby-samus-fod` 8771; Zelda `gnw-zelda-ys` 10875 and `kirby-zelda-bf` 4345), so the corpus reaches every copy |
+| Leaf-check | Kirby, Luigi, Mario, Dr. Mario, Pikachu, Pichu, Captain Falcon, Ganondorf, Donkey Kong, Samus, Zelda: all pass (Luigi's needs `LUIGI_CALLS`: its harness reads a relative path and otherwise checks none) |
+| Speed (indicative, this PC busy with other agents) | `melee-bench native`, three alternating rounds of five runs, median of the 15: `oracle-kirby-mario-fd` 4,776 frames/s before, 4,535 after; `oracle-kirby-zelda-bf` 3,917 before, 4,281 after; the runs spread 3,342 to 5,819, so both differences are noise (`kirby-zelda-bf`'s bench reports "5 of 5 runs differ" before and after alike) |
+
+**Left, and why** (Kirby has 18 copy files besides Rollout's; the survey's 12 are those with 100-token near-copies): Mewtwo, Ness, Peach, Bowser, Marth and Roy, Sheik, Link and Young Link, the Ice Climbers, Mr. Game & Watch, Yoshi, Fox and Falco: not skipped for differing, only not reached in this run (the corpus's base goldens took most of the day on this machine). Bowser's differs in more than settings (the mouth's offset, Giga Bowser's states, two known Melee bugs of his own); Yoshi's, Mr. Game & Watch's and Fox's look furthest from their originals and may not dedup cleanly.
+
 ### The fast renderer
 
 Its own crates (melee-render, melee-gpu, melee-player); the `feat/linux-011` branch works in melee-gpu and melee-player now, so F2 onward should start from its merge or keep to new files.
