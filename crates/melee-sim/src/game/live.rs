@@ -432,9 +432,10 @@ pub struct DisplayPhase {
     /// course a replay's playback takes, which never pauses (`docs/slippi-bugs.md`, "A paused
     /// match's recording"), and playback's has been followed since ([`Game::pause_leaves_course`]).
     pub paused: bool,
-    /// Playback's camera left this one's course where it can't be followed (a pause in a match
-    /// with no playback state, the menus' session's; a camera mode the follower doesn't run):
-    /// every read of the camera in the logic is counted from then on, whatever it decides.
+    /// Playback's camera left this one's course where it isn't followed: a pause in the player
+    /// (`Game::follow_playback_camera` off: Sarah's broad rule of 2026-11-18) or in a match with
+    /// no playback state (the menus' session's), or a camera mode the follower doesn't run.
+    /// Every read of the camera in the logic is counted from then on, whatever it decides.
     pub lost: bool,
     /// How long the shake playback's camera takes isn't known: a quake's model shook the camera
     /// through a pause (the pause doesn't stop the models' process, link 18, so their animation
@@ -650,14 +651,16 @@ impl Game {
     }
 
     /// A pause starts (`camera::set_up_pause`): under Slippi's rules, playback's camera, which
-    /// never pauses, goes on from where the camera stands, followed beside it (a match with
-    /// playback state: a live match, a replay); in the menus' session's matches, which have
-    /// none and record nothing, it's lost ([`DisplayPhase::lost`]).
+    /// never pauses, goes on from where the camera stands, followed beside it where the switch
+    /// is on (`Game::follow_playback_camera`, the oracle's and the tests', in a match with
+    /// playback state: a live match, a replay); otherwise (the player, the menus' session's
+    /// matches, which record nothing) it's lost ([`DisplayPhase::lost`]), and every camera read
+    /// from then on is counted.
     pub fn pause_leaves_course(&mut self) {
         if !self.rules.slippi || self.camera.followed.is_some() || self.display_phase.lost {
             return;
         }
-        if self.playback.is_some() {
+        if self.playback.is_some() && self.follow_playback_camera {
             self.start_following();
         } else {
             self.display_phase.lost = true;
@@ -840,7 +843,7 @@ impl Running<'_> {
         c.take(&g.camera.cam);
         c.settles_width = c.settles_width.wrapping_add(1);
         c.settles_quakes = c.settles_quakes.wrapping_add(1);
-        if g.display_phase.lost {
+        if g.display_phase.lost || !g.follow_playback_camera {
             return;
         }
         if !super::camera::follows_mode(g.camera.cam.mode) {

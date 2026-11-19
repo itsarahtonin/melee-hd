@@ -1310,3 +1310,122 @@ fn measure_following_playbacks_camera() {
         disc = Some(bench.disc);
     }
 }
+
+/// No read of the camera in the settling window decides otherwise in playback's run (design
+/// call 9; Sarah, 2026-11-18, on this evidence: the player runs no second camera there, and its
+/// live match counts nothing in its first frames). Each replay is played as a live match plays
+/// it (`Playback::no_settling`, Slippi 3.19's rules, the allocator model off) with playback's
+/// camera followed (`Game::follow_playback_camera`) from the first frame's settling until it
+/// meets the match's, and each read meanwhile decided both ways: none may be counted, and the
+/// two must meet before frame 600 (or never part: Poké Floats and Icicle Mountain, whose
+/// cameras the stage drives). The replays: the benchmark matches (`data/bench`), the oracle's
+/// stage matches (`$SSBM_RS_LOCAL/bench/oracle-m4/stage-*`) and Sarah's (`$SLIPPI_REPLAYS`,
+/// where set), each played only as far as the window (a match quit in it, as far as it goes); a
+/// replay that doesn't start (another
+/// build's characters or stages) is passed over and counted.
+#[test]
+fn no_settling_window_read_decides_otherwise() {
+    use melee_sim::game::playback::FIRST_FRAME;
+    let Some(disc) = disc() else { return };
+    let mut paths: Vec<std::path::PathBuf> = Vec::new();
+    let mut add = |dir: std::path::PathBuf, prefix: &str| {
+        let mut walk = vec![dir];
+        while let Some(d) = walk.pop() {
+            let Ok(entries) = std::fs::read_dir(&d) else {
+                continue;
+            };
+            for e in entries.flatten() {
+                let p = e.path();
+                let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if p.is_dir() {
+                    walk.push(p);
+                } else if name.ends_with(".slp") && name.starts_with(prefix) {
+                    paths.push(p);
+                }
+            }
+        }
+    };
+    add(melee_local_data::bench_dir(), "");
+    add(
+        melee_local_data::ssbm_rs_local("bench/oracle-m4").into(),
+        "stage-",
+    );
+    if let Some(d) = std::env::var_os("SLIPPI_REPLAYS") {
+        add(d.into(), "");
+    }
+    paths.sort();
+    let rules = Rules::slippi_online();
+    let (mut disc, mut files) = (Some(disc), HashMap::new());
+    let (mut checked, mut unstarted, mut quit, mut failures) = (0, 0, 0, Vec::new());
+    let mut last_met = (FIRST_FRAME, String::new());
+    for path in &paths {
+        let name = path.display().to_string();
+        let Ok(replay) = Replay::parse(&std::fs::read(path).expect("the replay")) else {
+            unstarted += 1;
+            continue;
+        };
+        let mut bench = Bench {
+            replay,
+            disc: disc.take().unwrap(),
+            files: std::mem::take(&mut files),
+        };
+        let out = on_sim_thread(FpMode::Slippi, || {
+            catch_unwind(AssertUnwindSafe(|| {
+                let mut m = bench.start(&rules, false);
+                m.game.playback.as_mut().unwrap().no_settling = true;
+                m.game.follow_playback_camera = true;
+                let mut device = Device(&bench.replay);
+                let mut followed = false;
+                loop {
+                    let (_, ended) = tick(&mut m, &mut device);
+                    let frame = m.game.playback.as_ref().unwrap().frame_index;
+                    let following = m.game.follows_playback_camera();
+                    let d = &m.game.display_phase;
+                    if d.differing > 0 {
+                        return Err(format!(
+                            "{name}: {} reads decided otherwise by frame {frame}, the first at tick {:?}",
+                            d.differing, d.first
+                        ));
+                    }
+                    followed |= following;
+                    if !following && (followed || frame > FIRST_FRAME) {
+                        return Ok(Some(frame));
+                    }
+                    // A match quit in the window: nothing decided otherwise while it lasted.
+                    if ended {
+                        return Ok(None);
+                    }
+                    if frame >= 600 {
+                        return Err(format!(
+                            "{name}: playback's camera still apart at frame {frame}"
+                        ));
+                    }
+                }
+            }))
+        });
+        disc = Some(bench.disc);
+        files = bench.files;
+        match out {
+            Ok(Ok(Some(frame))) => {
+                checked += 1;
+                if frame > last_met.0 {
+                    last_met = (frame, name);
+                }
+            }
+            Ok(Ok(None)) => {
+                checked += 1;
+                quit += 1;
+            }
+            Ok(Err(e)) => failures.push(e),
+            Err(_) => unstarted += 1,
+        }
+    }
+    eprintln!(
+        "{checked} replays' settling windows decided both ways ({quit} quit before the cameras met), {} failed, {unstarted} didn't start; the cameras met by frame {} at the latest ({})",
+        failures.len(),
+        last_met.0,
+        last_met.1
+    );
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+    assert!(checked > 0, "no replay checked");
+}

@@ -1,5 +1,5 @@
 //! `melee-oracle session-sync INPUTS [--card FILE] [--card-pull F[,G]] [--rollback N]
-//! [--ticks N] [--perturb TICK] [--time TICK,...]`: a recorded session played from power-on, every match it
+//! [--ticks N] [--perturb TICK] [--time TICK,...] [--follow-playback-camera]`: a recorded session played from power-on, every match it
 //! reaches rolled back and played again after each tick, as `sync-test` does a replay's
 //! (docs/oracle.md, "Sync test").
 //!
@@ -108,6 +108,9 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
     let mut card_b_path: Option<PathBuf> = None;
     let mut card_b_out: Option<PathBuf> = None;
     let mut card_b_pull: Option<(u64, Option<u64>)> = None;
+    // The live matches follow playback's camera, as the oracle's `session` runs them (the
+    // player's don't: `Game::follow_playback_camera`).
+    let mut follow = false;
     let mut pos = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
@@ -119,6 +122,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
                     .expect("--rollback N")
             }
             "--ticks" => limit = it.next().and_then(|t| t.parse().ok()).expect("--ticks N"),
+            "--follow-playback-camera" => follow = true,
             // The rollback that replays up to tick TICK first flips the lowest bit of the
             // restored state's first fighter's x, which the check must catch.
             "--perturb" => {
@@ -172,7 +176,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
     }
     let [inputs_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle session-sync INPUTS [--card FILE] [--card-out FILE] [--card-pull F[,G]] [--card-b FILE] [--card-b-out FILE] [--card-b-pull F[,G]] [--hooks LINE] [--rollback N] [--ticks N] [--perturb TICK] [--time TICK,...]"
+            "usage: melee-oracle session-sync INPUTS [--card FILE] [--card-out FILE] [--card-pull F[,G]] [--card-b FILE] [--card-b-out FILE] [--card-b-pull F[,G]] [--hooks LINE] [--rollback N] [--ticks N] [--perturb TICK] [--time TICK,...] [--follow-playback-camera]"
         );
         return ExitCode::from(2);
     };
@@ -233,6 +237,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
         mutate: None,
     };
     let mut s = Session::new(setup.clone());
+    s.follow_playback_camera = follow;
     if let Err(p) = catch_unwind(AssertUnwindSafe(|| s.boot(&mut console))) {
         println!("0 ticks checked; stopped in the boot: {}", panic_text(&p));
         return ExitCode::FAILURE;
@@ -249,6 +254,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
     // The session the rollbacks play: the archives are the straight run's, which a match's
     // ticks only read (taken again at each scene's entry).
     let mut work = Session::new(setup);
+    work.follow_playback_camera = follow;
     let mut work_console = Console {
         reads: &rec.reads,
         next: 0,

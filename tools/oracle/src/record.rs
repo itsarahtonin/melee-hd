@@ -104,6 +104,8 @@ pub fn record(args: &[&str]) -> ExitCode {
         settings.playback_heap = None;
     }
     settings.record = Some(melee_slippi::write::setup(&replay));
+    // The oracle decides the camera's reads both ways (design call 9).
+    settings.follow_playback_camera = true;
     let mut load = |name: &str| DiscFile {
         entrynum: disc
             .entrynum(name)

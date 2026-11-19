@@ -1235,6 +1235,7 @@ impl Run<'_> {
         // A live match runs the allocator model, as playback's heap lays it out, so its
         // addresses compare with the console's (the player's runs without it).
         s.live_model = self.live_model;
+        s.follow_playback_camera = true;
         match self.mutation {
             Some(Mutation::SceneTicks) => s.game.scene.unk_0 = s.game.scene.unk_0.wrapping_add(1),
             Some(Mutation::Seed) => s.game.objs.rng.seed = s.game.objs.rng.seed.wrapping_add(1),

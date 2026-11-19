@@ -253,6 +253,9 @@ pub struct Session {
     /// `docs/slippi-ruleset.md`, [`super::vs_match::Settings::live`]); the menus' session
     /// always runs the model.
     pub live_model: bool,
+    /// Whether a live match follows playback's camera beside its own
+    /// (`Game::follow_playback_camera`): the oracle's, off in the player.
+    pub follow_playback_camera: bool,
 }
 
 /// The menus' session set aside across a live match's scene ([`Session::aside`]): its game
@@ -504,6 +507,7 @@ impl Session {
             aside: None,
             live_files: Vec::new(),
             live_model: false,
+            follow_playback_camera: false,
         }
     }
 
@@ -530,6 +534,7 @@ impl Session {
             aside: None,
             live_files: Vec::new(),
             live_model: false,
+            follow_playback_camera: false,
         }
     }
 
@@ -1164,6 +1169,7 @@ impl Session {
         if self.live_model {
             settings.heap = Some(crate::hsd::heap::Layout::slippi_playback());
         }
+        settings.follow_playback_camera = self.follow_playback_camera;
         settings.record = self.game.recorder.is_some().then_some(setup);
         let mut m = super::live::with_entry_sounds(sounds, || {
             super::vs_match::Match::start(&settings, &mut |n| console.file(n))

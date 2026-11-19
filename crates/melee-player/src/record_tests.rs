@@ -465,6 +465,9 @@ fn live_settings_from(s: &Settings) -> (melee_sim::game::vs_match::ReplayStart, 
     let mut live = Settings::live(&start).expect("the ruleset's codes");
     live.disc = melee_sim::audio::clock::DiscSpeed::Drive;
     live.record = Some(setup);
+    // Playback's camera followed, as the oracle runs a live match (the player doesn't:
+    // [`the_players_live_match_counts_camera_reads_after_a_pause_only`]).
+    live.follow_playback_camera = true;
     (start, live)
 }
 
@@ -562,6 +565,7 @@ fn live_equals_playback(
     // the live match ran without too (design call 8).
     let mut again = Settings::from_replay(&back).expect("its settings");
     again.disc = live.disc;
+    again.follow_playback_camera = live.follow_playback_camera;
     assert_eq!(live.heap, None, "the live match ran the allocator model");
     again.heap = None;
     let mut unsettled = melee_sim::game::vs_match::Match::start(&again, &mut loader(disc));
@@ -1144,6 +1148,50 @@ fn a_paused_live_match_follows_playbacks_camera_readers() {
             assert!(gap(off + 1) > gap(off - 1), "{key}: the pause's updates");
         }
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+    });
+}
+
+/// The player's live match runs no second camera (`Game::follow_playback_camera` off; Sarah,
+/// 2026-11-18: the detector only at a negligible cost): on Corneria, whose city part under the
+/// camera the Great Fox reads every tick, an unpaused live match follows nothing and counts
+/// nothing, its first frames included; a paused one counts every read after the pause
+/// (`live::DisplayPhase::lost`, the broad rule) and none before it.
+#[test]
+fn the_players_live_match_counts_camera_reads_after_a_pause_only() {
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+        let (_, mut live) = live_settings_on("corneria");
+        live.follow_playback_camera = false;
+        let mut unpaused = 0;
+        play_live(&disc, &live, false, None, |m, _| {
+            let d = &m.game.display_phase;
+            assert!(!m.game.follows_playback_camera() && !d.lost && !d.paused);
+            unpaused = d.differing;
+        });
+        let (mut ticks, mut off, mut before, mut after, mut first) = (0, None, 0, 0, None);
+        play_live(&disc, &live, true, None, |m, _| {
+            assert!(!m.game.follows_playback_camera(), "a second camera");
+            let d = &m.game.display_phase;
+            if d.lost && off.is_none() {
+                off = Some(m.game.scene.unk_8);
+                before = d.differing;
+            }
+            (after, first) = (d.differing, d.first);
+            ticks += 1;
+        });
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        let off = off.expect("the pause left the camera unfollowed");
+        eprintln!(
+            "unpaused: {unpaused} reads counted; paused at tick {off}: {before} counted before, {after} at the end of {ticks} ticks, first at {first:?}"
+        );
+        assert_eq!(unpaused, 0, "reads counted unpaused");
+        assert_eq!(before, 0, "reads counted before the pause");
+        assert!(after > 1000, "{after} reads counted after the pause");
+        assert!(
+            first >= Some(off),
+            "counted from {first:?}, the pause at {off}"
+        );
     });
 }
 
