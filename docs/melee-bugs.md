@@ -300,23 +300,23 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Kirby: Bowser's copy lands from the aerial breath's start into its loop
 
-- **Where:** `ftKb_KpSpecialAirNStart_Coll`, `crates/melee-sim/src/game/ft/kirby/special_koopa.rs` (`kb_kp_air_coll`, from `run`).
+- **Where:** `ftKb_KpSpecialAirNStart_Coll`, `crates/melee-sim/src/game/ft/koopa/special_n.rs` (`kp_special_air_n_coll`, under Kirby's `KIRBY`'s `air_start_lands_in_loop`).
 - **Defect:** landing during the aerial fire breath's start changes to the grounded breath's loop (`ftKb_MS_KpSpecialN`, Giga Bowser's copy's `GkSpecialN`) with the start's frame, where the other two aerial states land in their own counterparts and Bowser's own aerial start (`ftKp_SpecialAirNStart_Coll`) lands in his grounded start.
 - **Effect:** a Kirby with Bowser's copy who lands during the aerial start goes straight into the grounded breath's loop at the start's frame, skipping the rest of the start.
 - **melee-hd:** modeled. No checked match lands from the aerial start.
 - **Fix:** land in the grounded start (`ftKb_MS_KpSpecialNStart`, `GkSpecialNStart`).
 - **Fix impact:** changes Kirby's Bowser copy's landing; breaks replay and Slippi compatibility.
-- **Source:** `crates/melee-sim/src/game/ft/kirby/special_koopa.rs:401`.
+- **Source:** `crates/melee-sim/src/game/ft/koopa/special_n.rs:469`.
 
 ### Kirby: Giga Bowser's copy refills its breath while breathing
 
-- **Where:** `ftKb_SpecialNKp_800FA7D4` (the breath's refill, each frame from `ftKb_Init_UnkMotionStates3` for Bowser's and Giga Bowser's copies), `crates/melee-sim/src/game/ft/kirby/special_koopa.rs` (`kb_kp_refuel`).
+- **Where:** `ftKb_SpecialNKp_800FA7D4` (the breath's refill, each frame from `ftKb_Init_UnkMotionStates3` for Bowser's and Giga Bowser's copies), `crates/melee-sim/src/game/ft/koopa/special_n.rs` (`kp_refuel`, which leaves out the breath's states without Kirby's `KIRBY`'s `giga_states`).
 - **Defect:** the refill skips only Bowser's copy's breath states (443 to 448); Giga Bowser's copy breathes in states 538 to 543, which it doesn't skip.
 - **Effect:** with Giga Bowser's copy (in the single-player modes, where Kirby can swallow Giga Bowser), the flame's speed and size refill every frame of the breath while the breath spends them, so it weakens more slowly than Bowser's copy's.
 - **melee-hd:** modeled.
 - **Fix:** skip Giga Bowser's copy's breath states too.
 - **Fix impact:** changes Kirby's Giga Bowser copy in the single-player modes; VS replays never have it.
-- **Source:** `crates/melee-sim/src/game/ft/kirby/special_koopa.rs:151`.
+- **Source:** `crates/melee-sim/src/game/ft/koopa/special_n.rs:216`.
 
 ### Kirby: a victim breaking out of Yoshi's copy's egg keeps the shrink's scale
 

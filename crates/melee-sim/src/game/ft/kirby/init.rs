@@ -150,7 +150,7 @@ impl Running<'_> {
             7 => self.kb_sk_enter(gobj),
             24 => self.kb_gw_enter(gobj),
             3 => self.dk_special_n_enter(gobj, &super::special_donkey::KIRBY),
-            5 | 31 => self.kb_kp_enter(gobj),
+            5 | 31 => self.kp_special_n_enter(gobj, &super::special_koopa::KIRBY),
             6 | 20 => self.kb_lk_enter(gobj, false),
             14 => self.kb_ys_enter(gobj),
             10 => self.kb_ic_enter(gobj),
@@ -178,7 +178,7 @@ impl Running<'_> {
             7 => self.kb_sk_air_enter(gobj),
             24 => self.kb_gw_air_enter(gobj),
             3 => self.dk_special_air_n_enter(gobj, &super::special_donkey::KIRBY),
-            5 | 31 => self.kb_kp_air_enter(gobj),
+            5 | 31 => self.kp_special_air_n_enter(gobj, &super::special_koopa::KIRBY),
             6 | 20 => self.kb_lk_enter(gobj, true),
             14 => self.kb_ys_air_enter(gobj),
             10 => self.kb_ic_air_enter(gobj),
@@ -353,7 +353,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_Init_UnkMotionStates3")]
     pub fn kb_unk_motion_states3(&mut self, gobj: GObjId) {
         if matches!(self.game.fighter(gobj).u_i32(u::HAT_KIND), 5 | 31) {
-            self.kb_kp_refuel(gobj);
+            self.kp_refuel(gobj, &super::special_koopa::KIRBY);
         }
     }
 

@@ -77,6 +77,7 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
+use melee_sim::game::ft::kirby::special_koopa::KIRBY as KP_KIRBY;
 use melee_sim::game::ft::kirby::special_mewtwo::KIRBY as MT_KIRBY;
 use melee_sim::game::ft::kirby::special_ness::KIRBY as NS_KIRBY;
 use melee_sim::game::ft::kirby::special_peach::KIRBY as PE_KIRBY;
@@ -520,8 +521,12 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802ADC34" => kirbyhammer::remove(g, gobj),
         "fn_8010A930" => g.enter_capture_kirby_yoshi(gobj, gobj_reg(maps, call, 4, &name)),
         "ftKb_SpecialNYs_8010AC78" => g.enter_kirby_yoshi_egg(gobj, gobj_reg(maps, call, 4, &name)),
-        "ftKb_SpecialNKp_800FA83C" => return Ret::Int(g.kb_kp_max_speed(Some(gobj)) as u32),
-        "ftKb_SpecialNKp_800FA878" => return Ret::Int(g.kb_kp_max_size(Some(gobj)) as u32),
+        "ftKb_SpecialNKp_800FA83C" => {
+            return Ret::Int(g.kp_flame_max_speed(Some(gobj), &KP_KIRBY) as u32);
+        }
+        "ftKb_SpecialNKp_800FA878" => {
+            return Ret::Int(g.kp_flame_max_size(Some(gobj), &KP_KIRBY) as u32);
+        }
         "ftKb_SpecialNLk800FB394" => return Ret::Int(g.kb_lk_bow_index(gobj) as u32),
         "ftKb_SpecialNLk800FB470" => return b(g.kb_lk_bow_released(gobj)),
         "ftKb_SpecialNLk800FB500" => return b(g.kb_lk_nock(gobj)),
