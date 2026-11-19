@@ -1,7 +1,8 @@
 //! The fast renderer's comparison harness (`melee-render-check fast`, docs/fast-renderer.md)
 //! over the frames tests' matches: the frame of every stage the documented frames check, drawn
 //! by a renderer under test and by the exact renderer and compared. The fast renderer as far as
-//! it goes (`--renderer fast`, F2's mesh cache) draws every frame within the tolerance; the
+//! it goes (`--renderer fast`, F3's transforms on the GPU over F2's mesh cache) draws every frame
+//! within the tolerance, and keeps what lies on the depth range's edge on the same side; the
 //! exact renderer with a change made on purpose stands in for a renderer under test, which
 //! proves the harness: unchanged, every frame is identical; each wrong frame (a material's
 //! color off, a draw missing, a draw out of order, a joint's matrices off, the depth range's
@@ -293,6 +294,50 @@ fn an_ulp_at_the_depth_range_s_edge_fails() {
             "on the other side of the depth range's edge",
             "OUT OF TOLERANCE",
         ],
+    );
+}
+
+/// The frames whose shadow cameras erase their textures with a quad exactly on the near plane
+/// (docs/fast-renderer.md, "The depth range's edge"): the tournament stages', where `edge`
+/// fails.
+const EDGE_SAMPLE: &[(Game, &[u32])] = &[
+    (FOX_FOX_FD, &[600, 11000]),
+    (FOX_MARTH_BF, &[6000]),
+    (FOX_MARTH_PS, &[6000]),
+    (SHEIK_FOX_FOD, &[600]),
+    (FOX_SHEIK_YS, &[600]),
+    (FOX_SHEIK_DL, &[600]),
+];
+
+/// Whether the renderer `args` name puts every vertex of the edge sample's frames on the same
+/// side of the depth range's edge as the exact renderer, each frame within tolerance; the
+/// harness's report of the first that doesn't, if any.
+fn keeps_the_edge(args: &[&str]) -> Result<(), String> {
+    for (game, frames) in EDGE_SAMPLE {
+        let (ok, text) = fast(game, frames, args);
+        let each = frames_of(&text);
+        if each.len() != frames.len() {
+            return Err(format!("{}: {text}", game.name));
+        }
+        if !ok || each.iter().any(|f| f.contains("depth range's edge")) {
+            return Err(format!("{} with {args:?}:\n{text}", game.name));
+        }
+    }
+    Ok(())
+}
+
+/// The fast renderer keeps what lies on the depth range's edge exactly there: the shadow
+/// cameras' erases stay on the near plane, and nothing crosses it. The check fails a renderer
+/// that puts them one ulp outside (the exact renderer with `edge`).
+#[test]
+#[ignore = "needs the disc, ssbm-rs's local data and the Slippi replays"]
+fn the_fast_renderer_keeps_the_depth_range_s_edge() {
+    if let Err(e) = keeps_the_edge(&["--renderer", "fast"]) {
+        panic!("the fast renderer crossed the depth range's edge: {e}");
+    }
+    assert!(
+        keeps_the_edge(&["--mutate", "edge"]).is_err(),
+        "the check passed a renderer one ulp off the edge"
     );
 }
 

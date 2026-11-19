@@ -32,11 +32,13 @@ pub struct Exact {
     gpu: Gpu,
     device: wgpu::Device,
     loaded: bool,
+    gpu_transforms: bool,
 }
 
 impl Exact {
     pub fn new(renderer: Renderer, threaded: bool) -> Exact {
         let device = renderer.device().clone();
+        let gpu_transforms = renderer.gpu_transforms;
         let gpu = if threaded {
             Gpu::threaded(renderer)
         } else {
@@ -47,12 +49,26 @@ impl Exact {
             gpu,
             device,
             loaded: false,
+            gpu_transforms,
         }
     }
 
-    /// The fast renderer as far as it goes (F2): the exact renderer with its shapes' display
-    /// lists drawn from meshes decoded once (`Gpu::with_meshes`).
-    pub fn fast(renderer: Renderer, threaded: bool) -> Exact {
+    /// The fast renderer as far as it goes (F3): the exact renderer with its shapes' display
+    /// lists drawn from meshes decoded once (`Gpu::with_meshes`), their vertices transformed
+    /// on the GPU.
+    pub fn fast(mut renderer: Renderer, threaded: bool) -> Exact {
+        renderer.gpu_transforms = true;
+        Exact::with_meshes(renderer, threaded)
+    }
+
+    /// F2, the mesh cache alone: the meshes' vertices transformed on the CPU as the exact
+    /// renderer's are.
+    pub fn f2(mut renderer: Renderer, threaded: bool) -> Exact {
+        renderer.gpu_transforms = false;
+        Exact::with_meshes(renderer, threaded)
+    }
+
+    fn with_meshes(renderer: Renderer, threaded: bool) -> Exact {
         let mut r = Exact::new(renderer, threaded);
         r.gpu = r.gpu.with_meshes();
         r
@@ -66,8 +82,10 @@ impl Exact {
 
 impl FrameRenderer for Exact {
     fn name(&self) -> String {
-        if self.gpu.meshes().is_some() {
-            "fast (mesh cache)".to_owned()
+        if self.gpu.meshes().is_some() && self.gpu_transforms {
+            "fast (GPU transforms)".to_owned()
+        } else if self.gpu.meshes().is_some() {
+            "F2 (mesh cache)".to_owned()
         } else {
             "exact".to_owned()
         }

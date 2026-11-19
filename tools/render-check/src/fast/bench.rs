@@ -72,7 +72,7 @@ pub fn measure(
     out
 }
 
-/// `melee-render-check bench DISC REPLAY [--renderer exact|fast] [--scale N] [--from A] [--to B]
+/// `melee-render-check bench DISC REPLAY [--renderer exact|f2|fast] [--scale N] [--from A] [--to B]
 /// [--one-thread] [--adapter NAME|fallback]`
 pub fn cli(args: &[String]) -> ExitCode {
     let (disc, replay) = (&args[1], &args[2]);
@@ -107,6 +107,7 @@ pub fn cli(args: &[String]) -> ExitCode {
     r.xfb_readback = false;
     let mut exact = match which {
         Which::Exact => Exact::new(r, threaded),
+        Which::F2 => Exact::f2(r, threaded),
         Which::Fast => Exact::fast(r, threaded),
     };
     let times = measure(disc, replay, from, to, &mut exact);

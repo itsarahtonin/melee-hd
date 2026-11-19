@@ -13,9 +13,9 @@
 //! under test is the exact renderer with a change made on purpose ([`exact::Mutation`]).
 //!
 //! ```text
-//! melee-render-check fast DISC REPLAY [--renderer exact|fast] [--mutate NAME] [--scale N]
-//!     [--out DIR] FRAME...
-//! melee-render-check bench DISC REPLAY [--renderer exact|fast] [--scale N] [--from A] [--to B]
+//! melee-render-check fast DISC REPLAY [--renderer exact|f2|fast] [--mutate NAME] [--scale N]
+//!     [--threaded] [--out DIR] FRAME...
+//! melee-render-check bench DISC REPLAY [--renderer exact|f2|fast] [--scale N] [--from A] [--to B]
 //!     [--one-thread] [--adapter NAME|fallback]
 //! ```
 
@@ -273,6 +273,8 @@ pub fn run(
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Which {
     Exact,
+    /// F2: the mesh cache, its vertices transformed on the CPU.
+    F2,
     Fast,
 }
 
@@ -280,19 +282,21 @@ impl Which {
     pub fn parse(s: &str) -> Which {
         match s {
             "exact" => Which::Exact,
+            "f2" => Which::F2,
             "fast" => Which::Fast,
-            _ => panic!("--renderer {s}: exact or fast"),
+            _ => panic!("--renderer {s}: exact, f2 or fast"),
         }
     }
 }
 
-/// `melee-render-check fast DISC REPLAY [--renderer exact|fast] [--mutate NAME] [--scale N]
-/// [--out DIR] FRAME...`
+/// `melee-render-check fast DISC REPLAY [--renderer exact|f2|fast] [--mutate NAME] [--scale N]
+/// [--threaded] [--out DIR] FRAME...`
 pub fn cli(args: &[String]) -> ExitCode {
     let (disc, replay) = (&args[1], &args[2]);
     let mut mutation = Mutation::None;
     let mut which = Which::Exact;
     let mut scale = 1;
+    let mut threaded = false;
     let mut out = None;
     let mut at = Vec::new();
     let mut rest = args[3..].iter();
@@ -307,6 +311,7 @@ pub fn cli(args: &[String]) -> ExitCode {
                 });
             }
             "--scale" => scale = rest.next().and_then(|s| s.parse().ok()).expect("--scale N"),
+            "--threaded" => threaded = true,
             "--out" => {
                 let d = std::path::PathBuf::from(rest.next().expect("--out DIR"));
                 std::fs::create_dir_all(&d).expect("making the output directory");
@@ -325,13 +330,18 @@ pub fn cli(args: &[String]) -> ExitCode {
     let mut right = Mutated::new(renderer(&device, &queue, view), Mutation::Spread(true));
     let mut left = Mutated::new(renderer(&device, &queue, view), Mutation::Spread(false));
     let mut test: Box<dyn FrameRenderer> = match which {
-        Which::Fast => {
+        Which::Fast | Which::F2 => {
             assert_eq!(
                 mutation,
                 Mutation::None,
                 "--mutate changes the exact renderer"
             );
-            Box::new(Exact::fast(renderer(&device, &queue, view), false))
+            let r = renderer(&device, &queue, view);
+            Box::new(if which == Which::Fast {
+                Exact::fast(r, threaded)
+            } else {
+                Exact::f2(r, threaded)
+            })
         }
         Which::Exact => Box::new(Mutated::new(renderer(&device, &queue, view), mutation)),
     };

@@ -65,6 +65,11 @@ struct Varyings {
 
 @vertex
 fn vs_main(@builtin(vertex_index) at: u32, @builtin(instance_index) n: u32) -> Varyings {
+    return vertex_at(at, n);
+}
+
+/// The vertex whose words start at `at`, with `n` texture coordinates.
+fn vertex_at(at: u32, n: u32) -> Varyings {
     var o: Varyings;
     o.pos = bitcast<vec4<f32>>(vec4<u32>(vdata[at], vdata[at + 1u], vdata[at + 2u], vdata[at + 3u]));
     o.c0 = vertex_color(vdata[at + 4u]);
@@ -78,6 +83,13 @@ fn vs_main(@builtin(vertex_index) at: u32, @builtin(instance_index) n: u32) -> V
     o.t6 = vertex_tex(at, 6u, n);
     o.t7 = vertex_tex(at, 7u, n);
     return o;
+}
+
+// A mesh's vertex, as the transforms on the GPU (xform.wgsl) wrote it to `vdata`: each the same
+// words as above, `6 + 3n` of them, and an index names a vertex rather than its first word.
+@vertex
+fn vs_mesh(@builtin(vertex_index) i: u32, @builtin(instance_index) n: u32) -> Varyings {
+    return vertex_at(i * (6u + 3u * n), n);
 }
 
 struct Out {

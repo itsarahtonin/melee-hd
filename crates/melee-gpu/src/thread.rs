@@ -55,6 +55,12 @@ enum Packet {
         mesh: Arc<Mesh>,
         worker: u8,
     },
+    /// A mesh drawn with its vertices transformed on the GPU (F3): transform thread `worker`
+    /// hands on the normals the draws before left.
+    GpuMesh {
+        mesh: Arc<Mesh>,
+        worker: u8,
+    },
     Copy(u32),
     /// Memory copies went to that the game has written over since (copy::Footprints).
     Forget(copy::Gone),
@@ -165,6 +171,9 @@ pub struct Threaded {
     /// The memory under each copy the renderer encodes into memory, as the copy found it, by
     /// which copy it is: its first byte's physical address and the bytes to its last.
     before: VecDeque<(u64, u32, Vec<u8>)>,
+    /// Whether meshes are drawn with their vertices transformed on the GPU
+    /// (`Renderer::gpu_transforms`).
+    gpu_transforms: bool,
 }
 
 /// How many transform threads share the draws out: a quarter of the processor's threads, from
@@ -192,6 +201,7 @@ impl Threaded {
 
     fn spawn_ahead(mut renderer: Renderer, ahead: u64) -> Self {
         renderer.track_copies = false;
+        let gpu_transforms = renderer.gpu_transforms;
         // Both threads number the copies to textures as the renderer does (copy::Gone).
         let copies = renderer.copies_made;
         renderer.flush_at = std::env::var("MELEE_GPU_FLUSH_AT")
@@ -244,6 +254,7 @@ impl Threaded {
             footprints: copy::Footprints::default(),
             copies,
             before: VecDeque::new(),
+            gpu_transforms,
         }
     }
 
@@ -483,16 +494,30 @@ impl Sink for Threaded {
 }
 
 impl Threaded {
+    /// Whether meshes are drawn with their vertices transformed on the GPU.
+    pub fn gpu_transforms(&self) -> bool {
+        self.gpu_transforms
+    }
+
     /// Draws a mesh (the fast renderer's display list, decoded once) with the state as it
-    /// stands: built on a transform thread from its decoded vertices, drawn in its turn.
+    /// stands, in its turn: its vertices transformed on the GPU, or built on a transform thread
+    /// from its decoded vertices (F2).
     pub fn draw_mesh(&mut self, state: &State, mesh: &Arc<Mesh>, mem: &dyn Memory) {
         self.changes(state);
         self.send_textures(state, mem);
-        let worker = self.least_loaded(mesh.len() as u32);
-        self.batch.packets.push(Packet::Mesh {
-            mesh: mesh.clone(),
-            worker,
-        });
+        if self.gpu_transforms {
+            let worker = self.least_loaded(0);
+            self.batch.packets.push(Packet::GpuMesh {
+                mesh: mesh.clone(),
+                worker,
+            });
+        } else {
+            let worker = self.least_loaded(mesh.len() as u32);
+            self.batch.packets.push(Packet::Mesh {
+                mesh: mesh.clone(),
+                worker,
+            });
+        }
         if self.batch.packets.len() >= BATCH {
             self.send();
         }
@@ -632,6 +657,12 @@ fn work(
                 }
                 // Only the normals it leaves.
                 Packet::Mesh { mesh, .. } => mesh.leave_normals(&mut scratch.normals),
+                Packet::GpuMesh { mesh, worker } => {
+                    if *worker == k {
+                        built.normals.push(scratch.normals);
+                    }
+                    mesh.leave_normals(&mut scratch.normals);
+                }
                 Packet::Draw {
                     vat,
                     count,
@@ -687,12 +718,14 @@ fn run(
     let mut memory = Held(HashMap::new());
     let mut built: Vec<Built> = Vec::with_capacity(workers.len());
     let mut next = vec![0usize; workers.len()];
+    let mut next_normals = vec![0usize; workers.len()];
     while let Ok(batch) = rx.recv() {
         built.clear();
         for (results, _) in workers {
             built.push(results.recv().expect("a transform thread stopped"));
         }
         next.fill(0);
+        next_normals.fill(0);
         for packet in &batch.packets {
             match packet {
                 Packet::Changes(c) => c.apply(&batch.delta, &mut state),
@@ -717,6 +750,12 @@ fn run(
                     let d = b.draws[next[w]].as_ref();
                     next[w] += 1;
                     renderer.draw_built(&state, 0x90, b, d, &memory);
+                }
+                Packet::GpuMesh { mesh, worker } => {
+                    let w = usize::from(*worker);
+                    let normals = built[w].normals[next_normals[w]];
+                    next_normals[w] += 1;
+                    renderer.draw_gpu_mesh(&state, mesh, &normals, &memory);
                 }
                 Packet::Forget(gone) => renderer.forget(*gone),
                 Packet::ForgetMemory(start, end) => {

@@ -235,6 +235,7 @@ fn draw(
         depth_compare: Some(7),
         depth_write: true,
         early_z: false,
+        vertices: Default::default(),
     };
     let first = r.indices.len() as u32;
     let tg = (s.bp[0x00] & 0xF).min(8) as usize;
