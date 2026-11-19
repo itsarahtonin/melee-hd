@@ -88,15 +88,33 @@ Done on 2026-11-17 ([below](#what-the-survey-found)).
 
 Surveyed on 2026-11-17 from `main` at `f0fa4c81` (milestone 6 done), release builds with line tables (`CARGO_PROFILE_RELEASE_DEBUG=line-tables-only`), on [this machine](performance.md#machine) (Windows). **The machine wasn't quiet**: other agents' builds and oracle runs shared it (the processor 11% busy before the profiles, 37 to 62% around the timings), so the profiles' shares are what to read, and absolute speeds are low and noisy (the Fox ditto ran 4,373 frames/s alone before the timings and 3,454 to 3,831 during them). The scripts are an agent's scratch files, not in the repository; each is described where its numbers are.
 
+**Measured on the worker (2026-11-19).** The survey's timings and profiles were taken again on [the worker](performance.md#machine), quiet, in its runner's exclusive reservations, at the survey's own commit and at main ([below](#measured-on-the-worker-2026-11-19)). The worker's numbers replace the busy PC's in this section; the busy PC's are kept, marked superseded. The worker's profile changes one conclusion: **the dispatch chains are 8 to 11% of the simulation's self time there, not 18 to 26%**, and the float ops and animation take more of it.
+
 **How the profiles were taken.** samply records through ETW on Windows, which needs administrator rights the agents don't have, so a small sampler stands in: a Python script that suspends the simulation's thread 2,000 times a second, walks its stack with dbghelp (`StackWalk64` over the modules' unwind tables) and resumes it, then symbolizes every address from the PDB (the leaf's source line names inlined code's own file). It slows the run about three times (suspending is costly) but samples the code evenly; 5,500 to 12,300 samples a profile on the simulation's thread, the match's setup and disc reads left out. The tick and display pass timings are a separate, unprofiled scratch build that plays the replay through `Match::step_replay_tick` and `Match::render` and times each with `Instant`.
 
 The matches: `fox-fox-fd`, `fox-marth-ps` and `ics-peach-ps` (Nana runs the computer player's code; it leaves its replay at frame 10,139 as always, so it plays to frame 10,986, 11,223 ticks) under Vanilla (`melee-bench native`: the replay's rules, the console's floating point, the allocator model on); the same three under the Slippi ruleset (`melee-bench corpus --rules slippi --heap off --fp slippi`: `Rules::slippi_online`, Slippi's floating point, the model off, the recorded inputs driving a 3.19 match that leaves the recording early, so `fox-fox-fd` runs 9,066 ticks and `fox-marth-ps` fewer); and a real 3.19 match, Sarah's `Game_20260129T130802` (Fox against Sheik on Dream Land, `MELEE_BENCH_FP=slippi MELEE_BENCH_HEAP=off melee-bench native`), in sync throughout.
 
 ### Where the simulation's time goes
 
-**The display pass is 21 to 26% of a tick plus its display** (unprofiled, `Instant` around each part): Vanilla `fox-fox-fd` 222 µs a tick and 68 µs a pass (23.5%), `fox-marth-ps` 222 and 78 µs (26.0%), `ics-peach-ps` 260 and 75 µs (22.4%); under the Slippi ruleset `fox-fox-fd` 216 and 67 µs (23.6%) and Sarah's replay 189 to 238 and 53 to 65 µs (21.4 to 21.9%).
+**The display pass is 21 to 26% of a tick plus its display** (unprofiled, `Instant` around each part; the worker at `f0fa4c81`, median of three runs): Vanilla `fox-fox-fd` 356 µs a tick and 111 µs a pass (23.7%), `fox-marth-ps` 402 and 138 µs (25.6%), `ics-peach-ps` 514 and 147 µs (22.2%); under the Slippi ruleset `fox-fox-fd` 338 and 103 µs (23.4%), `fox-marth-ps` 355 and 126 µs (26.1%), `ics-peach-ps` 483 and 134 µs (21.6%); Sarah's replay 346 and 98 µs (22.0%). The busy PC (superseded) had the same shares at about 0.6 of the times: Vanilla `fox-fox-fd` 222 and 68 µs (23.5%), `fox-marth-ps` 222 and 78 µs (26.0%), `ics-peach-ps` 260 and 75 µs (22.4%); Slippi `fox-fox-fd` 216 and 67 µs (23.6%), Sarah's replay 189 to 238 and 53 to 65 µs (21.4 to 21.9%).
 
-**Self time by what the hot paths have in common** (each sample's leaf function, bucketed; ticks and display pass apart; share of the match's samples):
+**Self time by what the hot paths have in common** (each sample's leaf function, bucketed by the survey's own patterns; share of the timed loop's samples on the simulation's thread). On the worker, `perf record` at 2 kHz, `f0fa4c81`, 4,400 to 16,300 samples a profile:
+
+| Self time in | Vanilla `fox-fox-fd` | Vanilla `fox-marth-ps` | Vanilla `ics-peach-ps` | Slippi `fox-fox-fd` | Slippi `fox-marth-ps` | Slippi `ics-peach-ps` | Sarah's 3.19 replay |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **Address dispatch chains** (`code::run_proc`, `run_fighter_cb`, `call`, every module's `run`, `run_event`, `*_run`) | **9.5%** | **8.5%** | **9.1%** | **9.9%** | **9.2%** | **8.3%** | **10.8%** |
+| Joint and matrix math (`Mtx34::srt`, `concat`, `make_matrix`, world positions) | 15.2% | 13.9% | 13.5% | 13.2% | 13.2% | 13.4% | 11.8% |
+| Bit-exact float ops and the game's math (`gekko_fp`, `sin`, `cos`, `atan`, range reduction) | 17.7% | 17.9% | 19.9% | 17.5% | 19.1% | 21.3% | 15.0% |
+| Animation interpretation (FObjs, AObjs, splines, texture and shape animation) | 13.8% | 11.1% | 10.8% | 15.6% | 11.8% | 11.0% | 22.2% |
+| The display pass's walk and draws (`hsd::display`, the render callbacks) | 8.4% | 8.8% | 6.9% | 9.0% | 9.1% | 6.9% | 8.2% |
+| Collision (`mp`) | 5.7% | 6.0% | 5.8% | 5.7% | 4.5% | 6.8% | 2.6% |
+| Particles and effects | 1.3% | 2.0% | 1.6% | 1.0% | 1.1% | 1.8% | 0.8% |
+| Pools and the allocator model | 1.7% | 1.8% | 1.5% | 0.7% | 0.7% | 0.5% | 0.8% |
+| Bone dynamics (`swing_chain`) | 0.7% | 0.6% | 0.7% | 0.5% | 0.9% | 0.7% | 0.5% |
+| Archive lookups | 1.0% | 1.0% | 1.0% | 0.9% | 1.0% | 1.1% | 1.3% |
+| Everything else (game logic, audio, system copies) | 25.2% | 28.4% | 29.3% | 25.8% | 29.4% | 28.2% | 26.1% |
+
+Superseded: the busy PC's sampler (below), 5,500 to 12,300 samples a profile:
 
 | Self time in | Vanilla `fox-fox-fd` | Vanilla `fox-marth-ps` | Vanilla `ics-peach-ps` | Slippi `fox-fox-fd` | Slippi `ics-peach-ps` | Sarah's 3.19 replay |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -112,27 +130,65 @@ The matches: `fox-fox-fd`, `fox-marth-ps` and `ics-peach-ps` (Nana runs the comp
 | Archive lookups | 1.2% | 1.4% | 1.1% | 1.2% | 1.3% | 1.2% |
 | Everything else (game logic spread over about 2,000 functions) | 23.8% | 28.4% | 25.8% | 25.6% | 25.6% | 24.8% |
 
-**The headline: a fifth to a quarter of the simulation is finding the function a callback names.** A callback in the state is the original's address (`CodeRef(u32)`, 12,034 uses), and calling one walks a chain: `code::run_fighter_cb` asks 37 modules in turn (`fox::run`, `seak::run`, ... `masterhand::run`, ... and the common action states' `ft::co::dispatch::run` 36th), `code::run_proc` 46, `code::run_event` 41 stages, `code::call` 33, and `it::kinds::run_event` about 160 item kinds joined by `||`. Each link is a `match` on the address (or a binary search), so every common action state's callback, every HUD and stage process, runs dozens of them. The samples' leaf lines confirm it is the chain itself: the hottest in this bucket are the tournament's `tou_run`, Target Test's and Kongo Jungle's `run` and the item chain's links, in a Final Destination match with items off. `hud::run_proc` alone is 8% inclusive of the Fox ditto, much of it the chain. No profile since 2026-10-09 ([performance](performance.md#simulation-speed)) saw this, when far fewer modules were ported; the chains grew with every port, which fits the Fox ditto falling from 6,637 frames/s then to about 4,400 now. A table from address to function (one lookup) should win most of it back: [task 1](#proposed-tasks).
+**The headline: a large share of the simulation is finding the function a callback names.** The busy PC's sampler put it at a fifth to a quarter of the self time; the worker's `perf` puts the chains themselves at 8 to 11%, spread over about 365 functions (`run_proc` 0.7%, the render chain's `run` 0.6%, then `run_fighter_cb`, Target Test's `run`, the item chain, `tou_run`, ...). The sampler suspended the thread to sample it, which may well land unevenly, and the Windows build may lay the chains out worse; the worker's figure is the one to read. It is a lower bound on what the chains cost: [task 1](#proposed-tasks)'s table, measured on the worker, gained 13 to 15% of match speed (reported with task 1), more than the chains' own self time, so they also slow the code around them. A callback in the state is the original's address (`CodeRef(u32)`, 12,034 uses), and calling one walks a chain: `code::run_fighter_cb` asks 37 modules in turn (`fox::run`, `seak::run`, ... `masterhand::run`, ... and the common action states' `ft::co::dispatch::run` 36th), `code::run_proc` 46, `code::run_event` 41 stages, `code::call` 33, and `it::kinds::run_event` about 160 item kinds joined by `||`. Each link is a `match` on the address (or a binary search), so every common action state's callback, every HUD and stage process, runs dozens of them. The samples' leaf lines confirm it is the chain itself: the hottest in this bucket are the tournament's `tou_run`, Target Test's and Kongo Jungle's `run` and the item chain's links, in a Final Destination match with items off. `hud::run_proc` alone is 8% inclusive of the Fox ditto, much of it the chain. No profile since 2026-10-09 ([performance](performance.md#simulation-speed)) saw this, when far fewer modules were ported; the chains grew with every port, which fits the Fox ditto falling from 6,637 frames/s then to about 4,400 now. A table from address to function (one lookup) should win most of it back: [task 1](#proposed-tasks).
 
-The rest is spread thin. The bit-exact float ops are fused and inlined already ([speed work](performance.md#speed-work)); joint matrices, animation and collision are the original's own work. Pools and the allocator model are 0.7 to 2.3% of self time, so the model's own cost is small; what `perf/pool-trim` cost is the lookups' layout ([performance](performance.md#the-exactness-rounds-cost-2026-11-13-the-ubuntu-worker)), which a profile doesn't separate. Bounds checks and copies don't stand out: system copies are 0.8 to 2.1%.
+The rest is spread thin. The bit-exact float ops (14 to 21% on the worker, `ps_madds0` alone 6.7% of the Fox ditto) are fused and inlined already ([speed work](performance.md#speed-work)); joint matrices, animation and collision are the original's own work. Pools and the allocator model are 0.5 to 1.8% of self time on the worker (0.7 to 2.3% on the busy PC), so the model's own cost is small; what `perf/pool-trim` cost is the lookups' layout ([performance](performance.md#the-exactness-rounds-cost-2026-11-13-the-ubuntu-worker)), which a profile doesn't separate. Bounds checks and copies don't stand out: system copies are 0.8 to 2.1%.
 
-**Speed, the allocator model on and off** (`melee-bench native --runs 5`, two alternating rounds, median frames/s; on a busy machine, so the differences are noise): `fox-fox-fd` 3,726 and 3,551 on, 3,454 and 3,489 off; `fox-marth-ps` 3,310 and 2,837 on, 3,177 and 3,251 off; `ganon-captain-fd` 3,664 and 3,388 on, 3,436 and 3,345 off; Sarah's replay (Slippi float) 3,334 and 3,525 on, 3,337 and 3,512 off. Every run in sync. As on 2026-11-14 the model's speed cost is within noise; the targets below should be measured on the worker or a quiet machine.
+**Speed, the allocator model on and off** (the worker at `f0fa4c81`: `melee-bench native --runs 5`, three rounds alternating with main's build, median of the 15 runs and their range, frames/s): `fox-fox-fd` 2,202 (2,119 to 2,218) on, 2,234 (2,159 to 2,256) off; `fox-marth-ps` 1,882 (1,830 to 1,894) on, 1,938 (1,865 to 1,947) off; `ganon-captain-fd` 2,045 (2,008 to 2,085) on, 2,130 (2,045 to 2,135) off; Sarah's replay (Slippi float) 2,281 (2,212 to 2,293) on, 2,265 (2,241 to 2,310) off. Every run in sync. The model costs 0 to 4%, within the runs' spread but for `ganon-captain-fd`. Superseded, the busy PC (two alternating rounds, median frames/s; the differences noise): `fox-fox-fd` 3,726 and 3,551 on, 3,454 and 3,489 off; `fox-marth-ps` 3,310 and 2,837 on, 3,177 and 3,251 off; `ganon-captain-fd` 3,664 and 3,388 on, 3,436 and 3,345 off; Sarah's replay (Slippi float) 3,334 and 3,525 on, 3,337 and 3,512 off. Every run in sync.
+
+### Measured on the worker (2026-11-19)
+
+**How.** [The worker](performance.md#machine) (Intel Core i9-7900X, Ubuntu, the Performance power profile), every measurement in an exclusive reservation of its runner after the quietness check (processor and GPU at most 5% busy, no I/O wait; the processor 0 to 2% busy before and after each round). Release builds with line tables (`CARGO_PROFILE_RELEASE_DEBUG=line-tables-only cargo build --locked --release -p melee-bench`) of three commits: (a) `f0fa4c81`, the survey's; (b) main at `c6e274d5` (batch 3: the Slippi follow-ups, flat materials, the pools' slots, F2), the refactor's new baseline; and `ea441044`, main before batch 3, as an extra column. The tick and display pass timings are a scratch example (`perfsplit`, the survey's timing tool: the match set up as `melee-bench native` sets it up for Vanilla, as `corpus --rules slippi --heap off --fp slippi` does for the Slippi ruleset, `Match::step_replay_tick` and `Match::render` timed apart with `Instant`, to the match's end). The profiles are `perf record -F 2000 -D -1 --control fifo:...` around the same tool, enabled over the timed loop alone (the setup and disc reads left out), self time by symbol on the simulation's thread (`perf report --no-children --sort pid,sym`), bucketed by the survey's own patterns. In each job the commits alternated, one run each, three rounds; across jobs the same build moved by up to 2%.
+
+**Speed** (ticks a second to the match's end, median of three rounds and their range; the tick and the display pass in µs, medians):
+
+| Match | `f0fa4c81` | `c6e274d5` (main) | `ea441044` (other job; `f0fa4c81` there) |
+| --- | --- | --- | --- |
+| Vanilla `fox-fox-fd` | 2,134 (2,127 to 2,137); 356 + 111 | 2,235 (2,213 to 2,253); 342 + 104 | 2,163; 352 + 109 (2,171) |
+| Vanilla `fox-marth-ps` | 1,842 (1,828 to 1,883); 402 + 138 | 1,912 (1,912 to 1,913); 390 + 131 | 1,861; 399 + 137 (1,877) |
+| Vanilla `ics-peach-ps` | 1,509 (1,509 to 1,513); 514 + 147 | 1,563 (1,559 to 1,569); 499 + 139 | 1,526; 509 + 145 (1,529) |
+| Slippi `fox-fox-fd` | 2,256 (2,254 to 2,261); 338 + 103 | 2,351 (2,346 to 2,410); 326 + 97 | 2,328; 328 + 100 (2,340) |
+| Slippi `fox-marth-ps` | 2,072 (2,059 to 2,123); 355 + 126 | 2,150 (2,127 to 2,160); 344 + 119 | 2,112; 350 + 122 (2,165) |
+| Slippi `ics-peach-ps` | 1,616 (1,579 to 1,620); 483 + 134 | 1,625 (1,624 to 1,670); 483 + 130 | 1,615; 485 + 132 (1,599) |
+| Sarah's 3.19 replay | 2,245 (2,237 to 2,255); 346 + 98 | 2,346 (2,344 to 2,349); 334 + 91 | 2,285; 341 + 95 (2,318) |
+
+Main runs 1 to 5% faster than the survey's commit, `ea441044` the same as it. `melee-bench native` (three rounds of five runs, [performance](performance.md#baselines-on-the-worker-2026-11-19)) puts main within −1 to +5% of `f0fa4c81`.
+
+**Main's profile** (`c6e274d5`, the refactor's baseline; shares as above):
+
+| Self time in | Vanilla `fox-fox-fd` | Vanilla `fox-marth-ps` | Vanilla `ics-peach-ps` | Slippi `fox-fox-fd` | Slippi `fox-marth-ps` | Slippi `ics-peach-ps` | Sarah's 3.19 replay |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **Address dispatch chains** | **9.9%** | **9.1%** | **8.9%** | **10.2%** | **9.1%** | **8.7%** | **10.6%** |
+| Joint and matrix math | 14.5% | 13.8% | 13.9% | 13.1% | 13.7% | 13.0% | 11.3% |
+| Bit-exact float ops and the game's math | 17.7% | 19.0% | 21.1% | 18.6% | 20.2% | 21.9% | 16.3% |
+| Animation interpretation | 14.3% | 11.1% | 11.2% | 14.7% | 11.0% | 10.7% | 22.0% |
+| The display pass's walk and draws | 8.5% | 7.9% | 6.6% | 7.8% | 7.7% | 6.3% | 8.0% |
+| Collision | 5.6% | 6.1% | 5.9% | 5.6% | 4.6% | 6.9% | 2.3% |
+| Particles and effects | 1.1% | 1.8% | 1.5% | 1.2% | 1.0% | 1.5% | 0.7% |
+| Pools and the allocator model | 1.0% | 1.3% | 0.9% | 0.6% | 0.5% | 0.4% | 0.7% |
+| Bone dynamics | 0.5% | 0.7% | 0.8% | 0.5% | 0.9% | 0.8% | 0.4% |
+| Archive lookups | 1.0% | 1.0% | 1.1% | 1.0% | 1.0% | 1.1% | 1.3% |
+| Everything else | 25.9% | 28.1% | 28.2% | 26.8% | 30.3% | 28.8% | 26.5% |
+
+`ea441044`'s shares are `f0fa4c81`'s within 0.8 points everywhere.
+
+**The busy PC against the worker.** The busy PC ran the simulation 1.6 to 1.7 times as fast as the quiet worker (the Fox ditto 3,454 to 3,831 frames/s against 2,202; about 2 times alone, 4,373), and its tick and pass times were about 0.6 of the worker's; the shares of a tick and its display pass are the same on both (21 to 26%). Its speeds were noisy (two runs of one build 3,310 and 2,837 frames/s), the worker's within 2 to 5% across 15 runs. The profiles' shares differ: on the worker the dispatch chains take 8 to 11% (busy PC 18 to 26%), the float ops 14 to 21% (11 to 17%), animation 11 to 22% (5 to 12%), joint and matrix math 12 to 15% (11 to 16%), the display pass's walk 7 to 9% (6 to 10%), collision 3 to 7% (2 to 6%), pools 0.5 to 1.8% (0.7 to 2.3%), the rest about the same. The proposed tasks, their order and the design calls are unchanged; task 1's target is the worker's to judge, and it measures the whole cost, which a self-time share understates (above).
 
 ### Snapshots
 
-A match's snapshot is `Game` cloned. By part (scratch tool: each of `Game`'s fields and `hsd::Objects`' pools cloned alone, bytes held and median clone time; the busy machine's times, so compare them with each other):
+A match's snapshot is `Game` cloned. By part (scratch tool: each of `Game`'s fields and `hsd::Objects`' pools cloned alone, bytes held and median clone time, under a counting allocator, so compare the times with each other). The times are the worker's at `f0fa4c81` (2026-11-19); the busy PC's, superseded, in brackets:
 
 | State | Vanilla `fox-fox-fd`, ticks 5,000 / 10,000 / 15,000 | Sarah's replay, model on, 10,000 | Same, model off |
 | --- | --- | --- | --- |
-| Whole snapshot, clone | 1.81 / 2.00 / 2.26 MB, 254 / 270 / 335 µs | 2.22 MB, 303 µs | 1.78 MB, 253 µs |
-| Materials (`objs.mobjs`) | 371 / 477 KB (21 to 24%), 74 / 101 µs | 501 KB, 84 µs | 251 KB, 51 µs |
-| Shapes (`objs.pobjs`) | 190 / 224 KB (11%), 57 / 60 µs | 254 KB, 85 µs | 178 KB, 78 µs |
-| Joints, textures, FObjs, display objects | 166, 140, 84, 55 KB at 10,000; 2 to 7 µs each | 221, 172, 97, 58 KB | 214, 164, 89, 57 KB |
-| Audio (synth, AX voices, driver) | 113 KB, 4 µs | 122 KB | 122 KB |
-| Every scene's and mode's own state carried in a match (tournament 52 KB, debug menu 28, VS Melee 28, 1P 22, endings 17, ...) | 223 KB (11%), 6 µs | | |
-| All of HSD's pools | 1.31 MB, 128 µs | | |
+| Whole snapshot, clone | 1.81 / 2.00 / 2.26 MB, 384 / 416 / 463 µs [254 / 270 / 335] | 2.22 MB, 439 µs [303] | 1.78 MB, 360 µs [253] |
+| Materials (`objs.mobjs`) | 371 / 477 / 656 KB (21 to 29%), 73 / 96 / 134 µs [74 / 101 at 5,000 and 10,000] | 501 KB, 102 µs [84] | 251 KB, 52 µs [51] |
+| Shapes (`objs.pobjs`) | 190 / 224 / 279 KB (11 to 12%), 73 / 75 / 79 µs [57 / 60] | 254 KB, 99 µs [85] | 178 KB, 92 µs [78] |
+| Joints, textures, FObjs, display objects | 166, 140, 84, 55 KB at 10,000; 2 to 12 µs each [2 to 7] | 221, 172, 97, 58 KB | 214, 164, 89, 57 KB |
+| Audio (synth, AX voices, driver) | 113 KB, 6 µs [4] | 122 KB | 122 KB |
+| Every scene's and mode's own state carried in a match (tournament 52 KB, debug menu 28, VS Melee 28, 1P 22, endings 17, ...) | 223 KB (11%), [6 µs] | | |
+| All of HSD's pools | 1.31 MB, 202 µs [128] | | |
 
-**Materials and shapes are half to 60% of a snapshot's clone time** (131 to 169 µs of 250 to 335): each material owns its compiled TEV and each shape its envelope lists as vectors, so a clone allocates and copies each one apart. With the model on the materials' pool also grows by address (501 against 251 KB). The scenes' and modes' state, though 11% of the bytes, copies in 6 µs. Flattening the materials' and shapes' storage is [task 8](#proposed-tasks), done (2026-11-18, `perf/flat-materials`): the compiled TEVs held in the materials and each shape's envelopes in one vector, a match snapshot's clone 41 to 46% faster with 79 to 85% fewer allocations and 6 to 10% more bytes ([performance](performance.md#flat-materials-and-shapes-2026-11-18)).
+**Materials and shapes are 38 to 46% of a snapshot's clone time on the worker** (145 to 212 µs of 360 to 463; on the busy PC, superseded, half to 60%: 131 to 169 µs of 250 to 335): each material owns its compiled TEV and each shape its envelope lists as vectors, so a clone allocates and copies each one apart. With the model on the materials' pool also grows by address (501 against 251 KB). The scenes' and modes' state, though 11% of the bytes, copies in 6 µs. Flattening the materials' and shapes' storage is [task 8](#proposed-tasks), done (2026-11-18, `perf/flat-materials`): the compiled TEVs held in the materials and each shape's envelopes in one vector, a match snapshot's clone 41 to 46% faster with 79 to 85% fewer allocations and 6 to 10% more bytes ([performance](performance.md#flat-materials-and-shapes-2026-11-18)).
 
 ### The state-only display pass
 

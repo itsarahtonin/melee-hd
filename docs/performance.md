@@ -19,7 +19,9 @@ Measured with `tools/bench` (`melee-bench`), release builds, other applications 
 
 AMD Ryzen 7 9800X3D (8 cores), 62 GB RAM, Windows 11 Pro, Rust 1.98.1.
 
-Some comparisons are taken on the Ubuntu worker instead, a smaller machine kept quiet for them: Intel Core i9-7900X (10 cores, 20 threads, 3.3 GHz, 4.5 GHz boost), 14 GB RAM, Ubuntu 26.04.1 LTS (Linux 7.0), Rust 1.98.1. Its numbers compare builds with each other, not with the Windows figures: a snapshot's clone takes it about 2.2 times as long (300 against 136 µs on the Fox ditto before the exactness round) and the simulation runs at about 45% of the Windows speed.
+Some comparisons are taken on the Ubuntu worker instead, a smaller machine kept quiet for them: Intel Core i9-7900X (10 cores, 20 threads, 3.3 GHz, 4.5 GHz boost), 14 GB RAM, NVIDIA GeForce GTX 1080 Ti (11 GB; driver 580.178.04, Vulkan), Ubuntu 26.04.1 LTS (Linux 7.0), Rust 1.98.1. Its numbers compare builds with each other, not with the Windows figures: a snapshot's clone takes it about 2.2 times as long (300 against 136 µs on the Fox ditto before the exactness round) and the simulation runs at about 45 to 50% of the Windows speed (the Fox ditto 2,202 frames/s against 4,373 on this machine alone, 2026-11-17/19).
+
+**Since 2026-11-18 the worker is the reference for speed** (Sarah: every speed number that decides anything runs there; design call 9 of [the refactor](refactor.md#design-calls)). It runs the Performance power profile and `kernel.perf_event_paranoid = 1`, so `perf record` works for its user; neither is to be changed. Measurements run in its runner's exclusive reservations: each waits for earlier jobs, then for the quietness check (the processor and GPU at most 5% busy and no I/O wait over three one-second samples) before it starts; each job's script logs the profile, `perf_event_paranoid`, the load and the GPU's state before and after its rounds. Builds there use `-j 3` at most (14 GB of RAM). The numbers on this machine are indicative only.
 
 ## Snapshots (2026-10-07)
 
@@ -307,6 +309,42 @@ The window is within the machine's noise, well under 1% of a match's ticks; a ma
 | Corneria (`oracle-m4/stage-corneria`) | 4,069; 3,998; 4,183 | 4,018; 4,050; 4,137 |
 
 Within noise both ways.
+
+## Baselines on the worker (2026-11-19)
+
+The speed targets' baselines at main `c6e274d5` (after batch 3), on [the worker](#machine) in exclusive reservations, release (`cargo build --locked --release -p melee-bench`, with `CARGO_PROFILE_RELEASE_DEBUG=line-tables-only`). Every run in sync. The survey's numbers redone are in [the refactor](refactor.md#measured-on-the-worker-2026-11-19).
+
+**Simulation speed.** `melee-bench native --runs 5`, the allocator model on (the default) and off (`MELEE_BENCH_HEAP=off`), three rounds alternating with the survey's commit `f0fa4c81` (three jobs); median frames per second of the 15 runs, their range, and the three rounds' medians:
+
+| Match | `c6e274d5`, model on | `c6e274d5`, model off | `f0fa4c81`, model on | `f0fa4c81`, model off |
+| --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 2,222 (2,210 to 2,274; 2,222, 2,260, 2,216) | 2,226 (2,214 to 2,297) | 2,202 (2,119 to 2,218) | 2,234 (2,159 to 2,256) |
+| `fox-marth-ps` | 1,895 (1,889 to 1,904; 1,898, 1,891, 1,896) | 1,955 (1,903 to 1,969) | 1,882 (1,830 to 1,894) | 1,938 (1,865 to 1,947) |
+| `ganon-captain-fd` | 2,092 (2,076 to 2,128) | 2,106 (2,094 to 2,166) | 2,045 (2,008 to 2,085) | 2,130 (2,045 to 2,135) |
+| Sarah's 3.19 replay (`MELEE_BENCH_FP=slippi`) | 2,310 (2,289 to 2,356; 2,290, 2,339, 2,345) | 2,368 (2,307 to 2,382) | 2,281 (2,212 to 2,293) | 2,265 (2,241 to 2,310) |
+
+A fourth job (three more rounds against task 1's branch, the model on) gave main `fox-fox-fd` 2,193 (2,167 to 2,242), `fox-marth-ps` 1,877 (1,864 to 1,929) and Sarah's replay 2,321 (2,264 to 2,340): the same build moves by 1 to 2% from one job to another, so compare builds within a job. Sarah's replay is `$SLIPPI_REPLAYS/2026-01/Game_20260129T130802.slp` (`--dir` its folder). Dolphin isn't installed on the worker, so the target's ratio to Dolphin waits for a Dolphin run there (dividing by this machine's Dolphin figures would mix two machines).
+
+```sh
+for heap in on off; do  # MELEE_BENCH_HEAP=off for off
+  melee-bench native --runs 5 fox-fox-fd fox-marth-ps ganon-captain-fd
+  MELEE_BENCH_FP=slippi melee-bench native --runs 5 --dir "$SLIPPI_REPLAYS/2026-01" Game_20260129T130802
+done
+```
+
+**Rollback.** `melee-bench snapshot-match --every 2500 MATCH` (Sarah's replay with `MELEE_BENCH_FP=slippi`, and `MELEE_BENCH_HEAP=off` for the model off), one run each:
+
+| Match | Snapshot | Allocations | Clone | Restore | Restore allocations | Restore and 8 ticks | Allocations per tick |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 1.94 to 2.01 MB | 495 to 498 | 241 to 247 µs | 161 to 165 µs | 0 | 3.33 to 4.42 ms | 1 |
+| `fox-marth-bf` | 1.95 to 1.98 MB | 504 to 507 | 227 to 234 µs | 155 to 159 µs | 0 | 2.58 to 4.07 ms | 1 |
+| `fox-marth-fd` | 1.98 to 2.03 MB | 509 to 517 | 227 to 238 µs | 159 to 165 µs | 0 | 3.36 to 3.96 ms | 1 |
+| `fox-marth-ps` | 2.08 to 2.24 MB | 522 to 528 | 242 to 262 µs | 169 to 186 µs | 1 | 3.84 to 4.57 ms | 8 to 11 |
+| `ganon-captain-fd` | 2.01 to 2.02 MB | 520 to 521 | 231 to 237 µs | 160 to 163 µs | 0 | 3.57 to 3.82 ms | 1 |
+| Sarah's replay, model on | 2.16 to 2.23 MB | 614 to 623 | 244 to 268 µs | 164 to 183 µs | 0 | 3.01 to 4.48 ms | 1 |
+| Sarah's replay, model off | 2.11 to 2.17 MB | 587 to 595 | 239 to 247 µs | 161 to 168 µs | 0 | 2.92 to 4.35 ms | 1 |
+
+Against [the targets](#targets): the snapshot (under 2.3 MB) and its clone and restore (under 0.27 and 0.19 ms) are well inside them; restore and 8 ticks is over 4 ms on some states (`fox-marth-ps` at 2,500, 5,000, 7,500 and 12,500, `fox-fox-fd` at 5,000, `fox-marth-bf` at 15,000, Sarah's replay at 7,500, the model on and off), on a machine that runs the simulation at about half this one's speed; Pokémon Stadium's ticks still allocate (its text, as before).
 
 ## Benchmark matches
 
