@@ -52,11 +52,13 @@ pub const INFO: &[u32] = &[
 /// The word of `INFO` where its match data starts (after `match_data`'s `blrl`).
 pub const INFO_DATA: usize = 32;
 
-/// `di.s`.
-#[cfg(any(windows, target_os = "linux"))]
-pub const DI: &[u32] = &[
-    0x2C000000, 0x41820018, 0x3BC00000, 0x3D80800A, 0x618CC744, 0x7D8903A6, 0x4E800420,
+/// `layout.s`.
+pub const LAYOUT: &[u32] = &[
+    0x7C0802A6, 0x90010004, 0x9421FF20, 0xBE8100B0, 0x3D808037, 0x618C5404, 0x7D8903A6, 0x4E800421,
+    0x3C80804D, 0x60847360, 0x80840000, 0x1C63000C, 0x7C841A14, 0x80840004, 0x3C600000, 0x60630000,
+    0x7C641850, 0x2C030040, 0x41800024, 0x80A40008, 0x7C051840, 0x40810018, 0x3863FFE0, 0x3D808037,
+    0x618CF1E4, 0x7D8903A6, 0x4E800421, 0xBA8100B0, 0x800100E4, 0x382100E0, 0x7C0803A6, 0x3C608046,
+    0x38638FD0,
 ];
-/// The word of `DI` whose immediate is patched in (`patch`).
-#[cfg(any(windows, target_os = "linux"))]
-pub const DI_PATCH: usize = 2;
+/// The word of `LAYOUT` whose immediate is patched in (`patch`).
+pub const LAYOUT_PATCH: usize = 14;

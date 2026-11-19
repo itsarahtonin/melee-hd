@@ -798,6 +798,50 @@ mod tests {
         assert_eq!(n, slots);
     }
 
+    /// A match whose codes lay the heap out as playback does (`matches::PLAYBACK_LAYOUT`, the
+    /// layout code) names the address the allocator model gives its first fighter when its
+    /// replay plays back, and ssbm-rs's recording run gave every fighter the model's address
+    /// (its state trace of the match's start, where there is one), so the recording, Dolphin
+    /// and playback give the fighters the same addresses.
+    #[test]
+    fn playback_layouts_are_the_models() {
+        if std::env::var("SSBM_DISC").is_err() {
+            eprintln!("no SSBM_DISC: skipping");
+            return;
+        }
+        let dir =
+            std::env::var_os("BENCH_DIR").map_or_else(melee_local_data::bench_dir, PathBuf::from);
+        for &(name, first) in crate::matches::PLAYBACK_LAYOUT {
+            let d = dir.clone();
+            let modelled: Vec<u32> = on_sim_thread(move || {
+                let mut files = files();
+                let b = Bench::open(&d, name).expect("a benchmark match");
+                let m = b.start(&mut files);
+                m.game.ft.addresses.values().copied().collect()
+            });
+            assert_eq!(
+                modelled.first(),
+                Some(&first),
+                "{name}: the allocator model's first fighter against its codes' layout"
+            );
+            let trace = crate::sync::start_trace_path(&dir, name);
+            match crate::sync::traced_fighters(&trace) {
+                Some(traced) => {
+                    assert_eq!(
+                        traced,
+                        modelled,
+                        "{name}: the recording run's fighters ({}) against the allocator model's",
+                        trace.display()
+                    );
+                }
+                None => eprintln!(
+                    "no start trace of {name} ({}): not compared",
+                    trace.display()
+                ),
+            }
+        }
+    }
+
     /// The "no allocations" target (`docs/performance.md`): each match played to `TO`, its
     /// state at `FROM` restored (a rollback), and every engine tick from there to `TO` played
     /// again, counting allocations: the restore and each tick make none.

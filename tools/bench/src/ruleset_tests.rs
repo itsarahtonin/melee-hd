@@ -375,7 +375,7 @@ fn slippi_opponents_side_ignores_the_display_pass() {
 /// frame's register bookkeeping follows r5 (`cpu_ai::Leftover`). Under 3.19's NanaDeterminism
 /// both are cleared, so the bookkeeping is never consulted (the frame hands on a word that
 /// stops by name if anything reads it) and the model can stay off. `ics-peach-ps` with the
-/// model off stops by name where Nana's DI reads her address (frame 10,137): from the tick
+/// model off stops by name where Nana's DI first reads her address (frame 6,808): from the tick
 /// before, under 3.19's rules the same tick runs and she pushes the stick to (0, 0); under
 /// 3.16's (r30 cleared, r5 followed) it runs too; under Vanilla's it stops by name.
 #[test]
