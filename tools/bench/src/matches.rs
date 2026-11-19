@@ -18,7 +18,7 @@
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
-use crate::gecko_words::{INFO, INFO_DATA, SCENE, SCENE_DATA};
+use crate::gecko_words::{INFO, INFO_DATA, LAYOUT, LAYOUT_PATCH, SCENE, SCENE_DATA};
 use melee_sim::game::gr::StKind;
 
 /// Who plays a player.
@@ -608,13 +608,12 @@ pub const MATCHES: &[Match] = &[
         0x1F0F_0004,
     ),
     // Nana runs CPU code, and the CPU's DI reads a byte of her heap address when her knockback
-    // is zero: in Dolphin, melee-bench pins it to the recording's (its DI patch; see
-    // docs/performance.md).
+    // is zero: its codes lay the heap out as playback does ([`PLAYBACK_LAYOUT`]).
     Match::bench(
         "ics-peach-ps",
         POKEMON_STADIUM,
         &[p(ICE_CLIMBERS, 0), p(PEACH, 0)],
-        0x1F0F_0005,
+        0x1F0F_0015,
     ),
     // For the oracle: no replay pairs Ganondorf with ported characters on a ported stage.
     Match::bench(
@@ -624,6 +623,24 @@ pub const MATCHES: &[Match] = &[
         0x1F0F_0006,
     ),
 ];
+
+/// The benchmark matches with a fighter that runs CPU code (Nana), whose DI with no knockback
+/// reads a byte of her `Fighter`'s address (docs/melee-bugs.md), and the address Slippi's
+/// playback gives the first fighter's block (the allocator model's, `Layout::slippi_playback`
+/// with the replay's code list; the test `playback_layouts_are_the_models` checks it). Their
+/// codes add `layout.s`, which fills the heap up to there before the first fighter is made, so
+/// ssbm-rs's recording run and Dolphin give every fighter the address playback does and the
+/// match goes the same way in each (docs/performance.md, "Ice Climbers").
+pub const PLAYBACK_LAYOUT: &[(&str, u32)] = &[("ics-peach-ps", 0x80EB_5F80)];
+
+/// The address playback gives the first fighter's block in the match `name`, for a match whose
+/// codes lay the heap out as playback does ([`PLAYBACK_LAYOUT`]).
+pub fn playback_layout(name: &str) -> Option<u32> {
+    PLAYBACK_LAYOUT
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map(|&(_, a)| a)
+}
 
 const KIRBY: u8 = 0x04;
 
@@ -3100,9 +3117,27 @@ impl Match {
         s += "*Slippi's recording setup that changes the game: Init Player Data and Init Stage Data\n";
         s += "*(tagged affects-gameplay) and the larger player block (ExtendPlayerBlock).\n";
         s += SLIPPI_GAMEPLAY;
+        let layout = playback_layout(&self.name);
+        if let Some(first) = layout {
+            // The heap's cell holds a 0x20-byte header before the block.
+            let cell = first - 0x20;
+            let mut words = LAYOUT.to_vec();
+            words[LAYOUT_PATCH] = (words[LAYOUT_PATCH] & 0xFFFF_0000) | cell >> 16;
+            words[LAYOUT_PATCH + 1] = (words[LAYOUT_PATCH + 1] & 0xFFFF_0000) | cell & 0xFFFF;
+            s += "$melee-bench layout\n";
+            let _ = writeln!(
+                s,
+                "*The fighters' blocks where Slippi's playback puts them, the first at {first:#010X}:"
+            );
+            s += "*a computer player's DI reads its address (tools/bench/gecko/layout.s).\n";
+            push_c2(&mut s, 0x8006_8EE4, &words);
+        }
         s += "[Gecko_Enabled]\n";
         s += "$melee-bench boot\n";
         s += "$melee-bench gameplay\n";
+        if layout.is_some() {
+            s += "$melee-bench layout\n";
+        }
         s
     }
 }

@@ -19,12 +19,16 @@ pub fn replay_path(dir: &Path, name: &str) -> PathBuf {
 }
 
 /// ssbm-rs's state trace of a benchmark match's start (`make-matches.sh` writes it):
-/// `DIR/NAME.start.trace` when `dir` has it, else `$SSBM_RS_LOCAL/bench/NAME.start.trace`.
-#[cfg_attr(not(any(windows, target_os = "linux")), allow(dead_code))]
+/// `DIR/NAME.start.trace` when `dir` has it, else the one in ssbm-rs's `local/bench`, or in
+/// its `local/bench/ics-layout` for a match recorded with the layout code
+/// ([`crate::matches::PLAYBACK_LAYOUT`]; its older recording's files stay in `local/bench`).
+#[cfg(test)]
 pub fn start_trace_path(dir: &Path, name: &str) -> PathBuf {
     let path = dir.join(format!("{name}.start.trace"));
     if path.exists() {
         path
+    } else if crate::matches::playback_layout(name).is_some() {
+        melee_local_data::ssbm_rs_local(&format!("bench/ics-layout/{name}.start.trace")).into()
     } else {
         melee_local_data::ssbm_rs_local(&format!("bench/{name}.start.trace")).into()
     }
@@ -83,18 +87,12 @@ pub fn post_frames(replay: &Replay) -> BTreeMap<i32, [Option<Fighter>; 8]> {
     out
 }
 
-/// A fighter in an ssbm-rs state trace: its address and whether it's a follower.
-#[cfg(any(windows, target_os = "linux"))]
-pub struct TracedFighter {
-    pub address: u32,
-    pub follower: bool,
-}
-
-/// The fighters of the first tick that has any, in an ssbm-rs state trace (`STATE_TRACE`):
-/// magic, version, then zstd frames of ticks, each a number, a region count and regions (kind,
-/// address, owning GObj, length, bytes; header integers little-endian). Kind 4 is a `Fighter`.
-#[cfg(any(windows, target_os = "linux"))]
-pub fn traced_fighters(path: &Path) -> Option<Vec<TracedFighter>> {
+/// The fighters' addresses in the first tick that has any, in an ssbm-rs state trace
+/// (`STATE_TRACE`): magic, version, then zstd frames of ticks, each a number, a region count and
+/// regions (kind, address, owning GObj, length, bytes; header integers little-endian). Kind 4
+/// is a `Fighter`.
+#[cfg(test)]
+pub fn traced_fighters(path: &Path) -> Option<Vec<u32>> {
     use std::io::Read;
     let file = std::fs::File::open(path).ok()?;
     let mut file = std::io::BufReader::new(file);
@@ -119,14 +117,9 @@ pub fn traced_fighters(path: &Path) -> Option<Vec<TracedFighter>> {
             let address = u32le(&mut z)?;
             let _gobj = u32le(&mut z)?;
             let len = u32le(&mut z)? as usize;
-            let mut bytes = vec![0u8; len];
-            z.read_exact(&mut bytes).ok()?;
-            // is_sub_fighter, fp+0x221F bit 4.
-            if kind[0] == 4 && bytes.len() > 0x221F {
-                out.push(TracedFighter {
-                    address,
-                    follower: bytes[0x221F] & 0x08 != 0,
-                });
+            std::io::copy(&mut (&mut z).take(len as u64), &mut std::io::sink()).ok()?;
+            if kind[0] == 4 {
+                out.push(address);
             }
         }
         if !out.is_empty() {
