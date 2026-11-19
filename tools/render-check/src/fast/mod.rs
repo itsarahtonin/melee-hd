@@ -13,10 +13,10 @@
 //! under test is the exact renderer with a change made on purpose ([`exact::Mutation`]).
 //!
 //! ```text
-//! melee-render-check fast DISC REPLAY [--renderer exact|f2|fast] [--mutate NAME] [--scale N]
+//! melee-render-check fast DISC REPLAY [--renderer exact|f2|f3|fast] [--mutate NAME] [--scale N]
 //!     [--threaded] [--out DIR] FRAME...
-//! melee-render-check bench DISC REPLAY [--renderer exact|f2|fast] [--scale N] [--from A] [--to B]
-//!     [--one-thread] [--adapter NAME|fallback]
+//! melee-render-check bench DISC REPLAY [--renderer exact|f2|f3|fast] [--scale N] [--from A] [--to B]
+//!     [--one-thread] [--adapter NAME|fallback] [--warm-list FILE]
 //! ```
 
 pub mod bench;
@@ -296,7 +296,7 @@ impl Which {
     }
 }
 
-/// `melee-render-check fast DISC REPLAY [--renderer exact|f2|fast] [--mutate NAME] [--scale N]
+/// `melee-render-check fast DISC REPLAY [--renderer exact|f2|f3|fast] [--mutate NAME] [--scale N]
 /// [--threaded] [--out DIR] FRAME...`
 pub fn cli(args: &[String]) -> ExitCode {
     let (disc, replay) = (&args[1], &args[2]);

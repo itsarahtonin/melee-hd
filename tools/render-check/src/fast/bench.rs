@@ -129,7 +129,7 @@ impl Perf {
     }
 }
 
-/// `melee-render-check bench DISC REPLAY [--renderer exact|f2|fast] [--scale N] [--from A] [--to B]
+/// `melee-render-check bench DISC REPLAY [--renderer exact|f2|f3|fast] [--scale N] [--from A] [--to B]
 /// [--one-thread] [--adapter NAME|fallback] [--warm-list FILE]`
 ///
 /// With `--warm-list`, the specialized pipelines FILE lists (from earlier runs) are asked for
