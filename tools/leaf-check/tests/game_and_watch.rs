@@ -40,6 +40,7 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::gamewatch::addr;
+use melee_sim::game::ft::gamewatch::special_n::GAME_WATCH;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
 use melee_sim::game::it::kinds::{
@@ -269,8 +270,8 @@ fn run_gw(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftGw_SpecialS_GetRandomInt" => return Ret::Int(g.gw_judge_roll(gobj) as u32),
         "ftGw_SpecialLw_UpdateAction" => g.gw_special_lw_update_action(gobj, f1),
         "ftGw_SpecialAirLw_UpdateAction" => g.gw_special_air_lw_update_action(gobj, f1),
-        "ftGw_SpecialN_Loop" => g.gw_special_n_loop(gobj, f1),
-        "ftGw_SpecialAirN_Loop" => g.gw_special_air_n_loop(gobj, f1),
+        "ftGw_SpecialN_Loop" => g.gw_special_n_loop(gobj, &GAME_WATCH, false, f1),
+        "ftGw_SpecialAirN_Loop" => g.gw_special_n_loop(gobj, &GAME_WATCH, true, f1),
         "itGamewatchGreenhouse_802C6328" => gamewatchgreenhouse::remove(g, gobj),
         "itGamewatchGreenhouse_802C6374" => gamewatchgreenhouse::hitlag_start(g, gobj),
         "itGamewatchGreenhouse_802C6394" => gamewatchgreenhouse::hitlag_end(g, gobj),
