@@ -23,6 +23,7 @@ use super::data::{KONGO_CALLBACKS, StageCallbacks};
 use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, update_map_coll};
 use super::{anime, grlib, material, setup, zako};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::lb::joint::world_position;
@@ -641,8 +642,7 @@ pub fn events(r: &mut Running, gobj: GObjId) {
     }
     let p = param(r.game);
     let boxes = |r: &Running| {
-        r.game.vs_x6() == 0
-            && super::super::it::spawn::kind_on(r.game, super::super::it::kinds::BOX)
+        r.game.vs_x6() == 0 && super::super::it::spawn::kind_on(r.game, ItKind::Box.id())
     };
     let box_w = if boxes(r) {
         reg(p.f(r.data, BOX_WEIGHT))
@@ -1029,7 +1029,7 @@ pub fn klap_near(r: &Running) -> Option<GObjId> {
     let reach = reg(param(r.game).f(r.data, BARREL_IN));
     let mut cur = r.game.world.first_in(super::super::it::P_LINK_ITEM);
     while let Some(c) = cur {
-        if super::super::it::item(r.game, c).kind == super::super::it::kinds::KLAP {
+        if super::super::it::item(r.game, c).kind == ItKind::Klap {
             let pos = super::super::it::item(r.game, c).pos;
             let d = |a: f32, b: f32| fp::fsubs(reg(a), reg(b));
             let (dx, dy, dz) = (d(at.x, pos.x), d(at.y, pos.y), d(at.z, pos.z));

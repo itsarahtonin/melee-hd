@@ -9,6 +9,7 @@ use super::super::code;
 use super::super::state::{Obj, Running};
 use crate::fpu::{mem, reg};
 use crate::game::handles::FighterId;
+use crate::game::it::ItKind;
 use crate::hsd::display::{self, FighterFlags, FighterMaterial};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -494,7 +495,7 @@ impl Running<'_> {
                 .item_gobj
                 .expect("ftCo_800C2600: a held item's afterimage without an item");
             assert!(
-                super::super::it::lib26b1::kind(self.game, item) == super::super::it::kinds::SWORD,
+                super::super::it::lib26b1::kind(self.game, item) == ItKind::Sword,
                 "ftCo_800C2600: no afterimage item!"
             );
         } else {

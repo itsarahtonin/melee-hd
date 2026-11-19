@@ -82,6 +82,7 @@ use leaf_check::calls::{
     Prepare, Report, Ret, Variant, check_variants, gobj_arg, peek_u32, poke_f32, poke_u32,
     saved_calls,
 };
+use melee_sim::game::it::ItKind;
 
 fn peek_f32(call: &Call, addr: u32) -> f32 {
     f32::from_bits(peek_u32(call, addr))
@@ -129,26 +130,6 @@ const ITEM_GOBJ: u32 = 0x1974;
 const X2164: u32 = 0x2164;
 /// `Item::kind`.
 const ITEM_KIND: u32 = 0x10;
-/// `It_Kind_Capsule`, `_Box`, `_M_Ball`: a thrown item, a container, the Poké Ball.
-const IT_CAPSULE: u32 = 0;
-const IT_BOX: u32 = 1;
-const IT_M_BALL: u32 = 34;
-/// The swung items: `It_Kind_Harisen`, `_LipStick`, `_StarRod`, `_Sword`, `_Bat`, `_Parasol`.
-const IT_HARISEN: u32 = 24;
-const IT_LIPSTICK: u32 = 23;
-const IT_STARROD: u32 = 22;
-const IT_SWORD: u32 = 12;
-const IT_BAT: u32 = 11;
-const IT_PARASOL: u32 = 13;
-/// The enemy items the CPU goes for (`ftCo_800A648C`): `It_Kind_Kuriboh` (a Goomba) and
-/// `_Whitebea`.
-const IT_KURIBOH: u32 = 43;
-const IT_WHITEBEA: u32 = 0xD9;
-/// The items the shield behavior rolls away from or through: `It_Kind_Flipper`,
-/// `_TaruCann` (the barrel cannon), `_DKinoko` (the Poison Mushroom).
-const IT_FLIPPER: u32 = 20;
-const IT_TARU_CANN: u32 = 5;
-const IT_DKINOKO: u32 = 27;
 /// `Item::pos`; its first hitbox (`x5D4`, its state first) and a hitbox's position (`x4C`).
 const ITEM_POS: u32 = 0x4C;
 const ITEM_HITBOX: u32 = 0x5D4;
@@ -595,12 +576,12 @@ fn change_frame(call: &mut Call, change: Change, index: usize) -> bool {
                 return false;
             }
             let swung = [
-                IT_HARISEN,
-                IT_LIPSTICK,
-                IT_STARROD,
-                IT_SWORD,
-                IT_BAT,
-                IT_PARASOL,
+                ItKind::Harisen as u32,
+                ItKind::LipStick as u32,
+                ItKind::StarRod as u32,
+                ItKind::Sword as u32,
+                ItKind::Bat as u32,
+                ItKind::Parasol as u32,
             ];
             let kind = match change {
                 Change::Swung(kind) => kind,
@@ -816,25 +797,25 @@ fn changes() -> Vec<Change> {
         Change::TargetUnderStage { last_hidden: false },
         Change::TargetUnderStage { last_hidden: true },
         Change::Held(None),
-        Change::Held(Some(IT_CAPSULE)),
-        Change::Held(Some(IT_BOX)),
-        Change::Held(Some(IT_M_BALL)),
-        Change::Swung(IT_HARISEN),
-        Change::Swung(IT_LIPSTICK),
-        Change::Swung(IT_STARROD),
-        Change::Swung(IT_SWORD),
-        Change::Swung(IT_BAT),
-        Change::Swung(IT_PARASOL),
+        Change::Held(Some(ItKind::Capsule as u32)),
+        Change::Held(Some(ItKind::Box as u32)),
+        Change::Held(Some(ItKind::MBall as u32)),
+        Change::Swung(ItKind::Harisen as u32),
+        Change::Swung(ItKind::LipStick as u32),
+        Change::Swung(ItKind::StarRod as u32),
+        Change::Swung(ItKind::Sword as u32),
+        Change::Swung(ItKind::Bat as u32),
+        Change::Swung(ItKind::Parasol as u32),
         Change::SwungAround,
-        Change::EnemyItem(IT_KURIBOH, 10.0),
-        Change::EnemyItem(IT_WHITEBEA, 20.0),
+        Change::EnemyItem(ItKind::Kuriboh as u32, 10.0),
+        Change::EnemyItem(ItKind::Whitebea as u32, 20.0),
         Change::Cloaked(2, true),
         Change::Cloaked(1, true),
         Change::Cloaked(2, false),
         Change::MirroredX,
-        Change::ItemThreat(IT_FLIPPER),
-        Change::ItemThreat(IT_TARU_CANN),
-        Change::ItemThreat(IT_DKINOKO),
+        Change::ItemThreat(ItKind::Flipper as u32),
+        Change::ItemThreat(ItKind::TaruCann as u32),
+        Change::ItemThreat(ItKind::DKinoko as u32),
         Change::EnemyMove(KOOPA, KP_BOMB, 0.0, 20.0),
         Change::EnemyMove(KOOPA, ATTACK_HI4, 0.0, -10.0),
         Change::EnemyMove(YOSHI, YS_BOMB, 0.0, 20.0),

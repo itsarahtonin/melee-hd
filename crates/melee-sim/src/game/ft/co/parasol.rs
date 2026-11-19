@@ -12,10 +12,9 @@ use super::super::motion::flags::*;
 use super::super::peach;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
-/// `It_Kind_Parasol`.
-const PARASOL: i32 = 13;
 /// `parasol_open.prev_msid` in `mv`.
 const MV_PREV_MSID: usize = 0x0;
 
@@ -45,7 +44,7 @@ impl Running<'_> {
             return -1;
         };
         let (kind, msid) = (lib26b1::kind(self.game, it), item(self.game, it).msid);
-        if kind == PARASOL {
+        if kind == ItKind::Parasol {
             match msid {
                 7 => return 0,
                 8 => return 1,
@@ -57,7 +56,7 @@ impl Running<'_> {
                 _ => {}
             }
         }
-        if kind == peachparasol::KIND {
+        if kind == ItKind::PeachParasol {
             match msid {
                 1 => return 4,
                 0 | 2 => return 6,
@@ -80,7 +79,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let it = fp.item_gobj.expect("a parasol");
         let speed = reg(fp.frame_speed_mul);
-        if lib26b1::kind(self.game, it) == PARASOL {
+        if lib26b1::kind(self.game, it) == ItKind::Parasol {
             // `parasol_table_2`: the common parasol's state for each step, and
             // `parasol_table_1`'s functions, which go to it (`it_8028B718` to `it_8028B618`).
             let state = [7, 8, 9, 10, 5, 6, 4][step as usize];

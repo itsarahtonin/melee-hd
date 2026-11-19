@@ -12,6 +12,7 @@ use super::{flag, item, item_mut, jobj_of, set_flag};
 use crate::fpu::{mem, reg};
 use crate::game::code;
 use crate::game::ft::common::{GA_AIR, GA_GROUND};
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::_itECB;
 use crate::hsd::gobj::GObjId;
@@ -146,14 +147,11 @@ fn log_damage(game: &mut Game, e: DamageLogEntry) {
 /// apples and the Kyasarin's egg.
 #[doc(alias = "it_8026B6C8")]
 pub(crate) fn is_enemy(game: &Game, gobj: GObjId) -> bool {
-    use super::kinds::{ARWING_LASER, KURIBOH, OCTAROCK_STONE, OLD_KURI};
-    /// `It_Kind_Kyasarin_Egg`, `It_Kind_WhispyApple`.
-    const KYASARIN_EGG: i32 = 236;
-    const WHISPY_APPLE: i32 = 225;
     let kind = item(game, gobj).kind;
-    ((KURIBOH..OCTAROCK_STONE).contains(&kind) || (OLD_KURI..ARWING_LASER).contains(&kind))
-        && kind != KYASARIN_EGG
-        && kind != WHISPY_APPLE
+    ((ItKind::Kuriboh.id()..ItKind::OctarockStone.id()).contains(&kind)
+        || (ItKind::OldKuri.id()..ItKind::ArwingLaser.id()).contains(&kind))
+        && kind != ItKind::KyasarinEgg
+        && kind != ItKind::WhispyApple
 }
 
 /// `ABS` as the original's macro spells it.
@@ -431,7 +429,7 @@ fn fighter_hits_item(r: &mut Running, fg: GObjId, hi: usize, me: GObjId) {
 /// variables' first halfword the code reads as `itPokemon_ItemVars::x0`) when that is 7 and the
 /// hit's sound kind 1 or 2 (a sound of its own, 0x61A87) or 8 with those kinds (none).
 fn random_kind_hit_sound(r: &mut Running, me: GObjId, sfx_kind: i32, sfx_severity: i32) {
-    let pokemon = (item(r.game, me).kind == super::kinds::PKIND_RANDOM)
+    let pokemon = (item(r.game, me).kind == ItKind::PokemonRandom)
         .then(|| item_mut(r.game, me).xDD4_itemVar.yaku().x0.get());
     let kind_1_or_2 = sfx_kind == 1 || sfx_kind == 2;
     match pokemon {

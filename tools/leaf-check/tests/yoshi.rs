@@ -45,6 +45,7 @@ use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
+use melee_sim::game::it::ItKind;
 use melee_sim::game::it::kinds::{yoshiegglay, yoshieggthrow, yoshistar};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -274,12 +275,15 @@ fn run_yoshi(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     // The tongue's functions take an item on Yoshi's tongue (in its state table), the egg
     // lay's an egg an item became.
     if group == ITEM_GROUP {
-        use melee_sim::game::it::{self, kinds};
+        use melee_sim::game::it;
         let ip = it::item(g.game, gobj);
         let ok = if a < EGG_START {
             ip.xBC_itemStateContainer.map(|s| s.0) == Some(0x803F_9480)
         } else {
-            matches!(ip.kind, kinds::YOSHI_EGG_LAY | kinds::KIRBY_YOSHI_EGG_LAY)
+            matches!(
+                ItKind::of(ip.kind),
+                ItKind::YoshiEggLay | ItKind::KirbyYoshiEggLay
+            )
         };
         if !ok {
             panic!("{SKIP}{name} takes an item on his tongue or its egg");

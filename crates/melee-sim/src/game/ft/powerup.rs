@@ -5,6 +5,7 @@ use super::super::it::{self, kinds};
 use super::super::state::Running;
 use super::FighterId;
 use super::attack::victim;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::lb::hitcapsule;
 
@@ -23,8 +24,8 @@ impl Running<'_> {
         if self.game.fighters[me.0].stamina_dead {
             return;
         }
-        match it::item(self.game, g).kind {
-            kinds::STAR => {
+        match ItKind::of(it::item(self.game, g).kind) {
+            ItKind::Star => {
                 let ip = it::item_mut(self.game, g);
                 ip.x5D4_hitboxes[j].hit.state = hitcapsule::DISABLED;
                 ip.xC34_damageDealt = 1;
@@ -33,13 +34,13 @@ impl Running<'_> {
                 self.fighter_play_sfx(me, 0xF9, 0x7F, 0x40);
                 self.start_rumble(me, 0x11, 0);
             }
-            kinds::KINOKO => {
+            ItKind::Kinoko => {
                 let ip = it::item_mut(self.game, g);
                 ip.x5D4_hitboxes[j].hit.state = hitcapsule::DISABLED;
                 self.game.fighters[me.0].x200C += 1;
                 it::item_mut(self.game, g).xC34_damageDealt = 1;
             }
-            kinds::DKINOKO => {
+            ItKind::DKinoko => {
                 let ip = it::item_mut(self.game, g);
                 ip.x5D4_hitboxes[j].hit.state = hitcapsule::DISABLED;
                 self.game.fighters[me.0].x2010 += 1;
@@ -226,7 +227,7 @@ impl Running<'_> {
     pub fn apply_metal_box(&mut self, gobj: GObjId, box_gobj: GObjId) {
         use gekko_fp as fp;
         assert!(
-            it::lib26b1::kind(self.game, box_gobj) == kinds::METALB,
+            it::lib26b1::kind(self.game, box_gobj) == ItKind::MetalB,
             "itGetKind(item_gobj) == It_Kind_MetalB"
         );
         let health = fp::fctiwz(crate::fpu::reg(it::lib26b1::special_x4(

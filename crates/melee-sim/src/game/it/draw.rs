@@ -6,6 +6,7 @@ use super::super::camera;
 use super::super::code;
 use super::super::state::{Obj, Running, UserData};
 use super::{flag, item, item_mut, set_flag};
+use crate::game::it::ItKind;
 use crate::hsd::display;
 use crate::hsd::gobj::GObjId;
 use crate::mtx::Mtx34;
@@ -110,7 +111,7 @@ impl Running<'_> {
         let ip = &mut game.items[i.0];
         let objs = &mut game.objs;
         let mut drew = false;
-        if ip.kind == super::kinds::UNK4 {
+        if ip.kind == ItKind::Unk4 {
             // The coin (`It_Kind_Unk4`): its range while it can be picked up.
             let v = &mut ip.xDD4_itemVar.coin().vars;
             let f = v.x18.get();

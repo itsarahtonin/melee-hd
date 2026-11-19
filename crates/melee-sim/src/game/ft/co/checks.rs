@@ -11,6 +11,7 @@ use super::kind_callbacks as kinds;
 use super::{PAD_A, PAD_B, PAD_DPAD_UP, PAD_L_R, PAD_LR};
 use crate::fpu::{mem, reg};
 use crate::game::gr::GrKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::math;
 
@@ -424,7 +425,7 @@ impl Running<'_> {
     /// (`x294_itPickup`), nearest the box's center. None for a CPU of kind 28.
     #[doc(alias = "ftpickupitem_800942A0")]
     pub fn item_in_reach(&mut self, gobj: GObjId, flags: u32) -> Option<GObjId> {
-        use crate::game::it::{self, kinds, lib26b1};
+        use crate::game::it::{self, lib26b1};
         let fp = self.game.fighter(gobj);
         let p = &fp.x294_itPickup.clone();
         let light = if fp.ground_or_air == super::super::common::GA_GROUND {
@@ -437,12 +438,15 @@ impl Running<'_> {
         }
         // `it_8026B47C`: a healing item's heal; `it_8026B4F0`: what can be taken while holding
         // an item (`It_Kind_Coin`, `_Lucky_Egg`, `_WhispyHealApple` besides the food).
-        const COIN: i32 = 159;
-        const LUCKY_EGG: i32 = 205;
-        const WHISPY_HEAL_APPLE: i32 = 226;
         let heals = |k: i32| {
-            [kinds::HEART, kinds::TOMATO, kinds::FOODS, LUCKY_EGG].contains(&k)
-                || k == WHISPY_HEAL_APPLE
+            [
+                ItKind::Heart.id(),
+                ItKind::Tomato.id(),
+                ItKind::Foods.id(),
+                ItKind::LuckyEgg.id(),
+            ]
+            .contains(&k)
+                || k == ItKind::WhispyHealApple
         };
         let mut min = 30000.0;
         let mut found = None;
@@ -458,7 +462,7 @@ impl Running<'_> {
             }
             let fp = self.game.fighter(gobj);
             let ip = it::item(self.game, g);
-            let takes_held = heals(ip.kind) || ip.kind == COIN;
+            let takes_held = heals(ip.kind) || ip.kind == ItKind::Coin;
             if fp.item_gobj.is_some() && !takes_held {
                 continue;
             }
@@ -504,10 +508,7 @@ impl Running<'_> {
     #[doc(alias = "itGetGrabRangeY")]
     #[doc(alias = "ftpickupitem_80094150")]
     pub fn item_pickup_in_reach(&mut self, gobj: GObjId, item: GObjId) -> bool {
-        use crate::game::it::{self, kinds, lib26b1};
-        const COIN: i32 = 159;
-        const LUCKY_EGG: i32 = 205;
-        const WHISPY_HEAL_APPLE: i32 = 226;
+        use crate::game::it::{self, lib26b1};
         if !it::item::is_grabbable(self.game, item) {
             return false;
         }
@@ -515,8 +516,15 @@ impl Running<'_> {
             return false;
         }
         let k = it::item(self.game, item).kind;
-        let takes_held = [kinds::HEART, kinds::TOMATO, kinds::FOODS, COIN, LUCKY_EGG].contains(&k)
-            || k == WHISPY_HEAL_APPLE;
+        let takes_held = [
+            ItKind::Heart.id(),
+            ItKind::Tomato.id(),
+            ItKind::Foods.id(),
+            ItKind::Coin.id(),
+            ItKind::LuckyEgg.id(),
+        ]
+        .contains(&k)
+            || k == ItKind::WhispyHealApple;
         if self.game.fighter(gobj).item_gobj.is_some() && !takes_held {
             return false;
         }
@@ -546,13 +554,13 @@ impl Running<'_> {
     /// Whether the held item is the hammer, `ftCo_800C5240`.
     #[doc(alias = "ftCo_800C5240")]
     pub fn holding_hammer(&mut self, gobj: GObjId) -> bool {
-        self.holding_item_kind(gobj, IT_KIND_HAMMER)
+        self.holding_item_kind(gobj, ItKind::Hammer.id())
     }
 
     /// Whether the held item is the screw attack, `ft_800D2D0C`.
     #[doc(alias = "ft_800D2D0C")]
     pub fn holding_screw(&mut self, gobj: GObjId) -> bool {
-        self.holding_item_kind(gobj, IT_KIND_SC_BALL)
+        self.holding_item_kind(gobj, ItKind::ScBall.id())
     }
 
     fn holding_item_kind(&mut self, gobj: GObjId, kind: i32) -> bool {
@@ -732,6 +740,3 @@ const ITEM_P_LINK: u8 = 9;
 const IT_8026B30C: u32 = 0x8026_B30C;
 const IT_GET_KIND: u32 = 0x8026_B300;
 const IT_GET_HOLD_KIND: u32 = 0x8026_B320;
-/// `It_Kind_Hammer`, `It_Kind_ScBall`.
-const IT_KIND_HAMMER: i32 = 0x1C;
-const IT_KIND_SC_BALL: i32 = 0x1E;

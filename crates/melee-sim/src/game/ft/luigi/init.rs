@@ -4,10 +4,8 @@
 use super::super::super::code::Val;
 use super::super::super::state::Running;
 use super::{addr, attr, u};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
-
-/// `It_Kind_Luigi_Fire`.
-pub const IT_KIND_LUIGI_FIRE: i32 = 105;
 
 impl Running<'_> {
     /// Luigi's creation, `ftLg_Init_OnLoad`: his attributes, and his fireball registered with
@@ -21,7 +19,7 @@ impl Running<'_> {
             .expect("a fighter without data");
         let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
         let article = self.data.ptr(items.at(0));
-        super::super::super::it::item::set_char_article(self.game, article, IT_KIND_LUIGI_FIRE);
+        super::super::super::it::item::set_char_article(self.game, article, ItKind::LuigiFire.id());
     }
 
     /// Luigi's spawn, `ftLg_Init_OnDeath`: his first model variant, `x2234` cleared.

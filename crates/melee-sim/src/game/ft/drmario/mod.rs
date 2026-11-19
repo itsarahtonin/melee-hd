@@ -8,12 +8,10 @@ use super::super::it::kinds::drmariopill;
 use super::super::state::Running;
 use super::mario::{attr, ms, u};
 use crate::game::ft::vars::{MARIO_CAPE, MARIO_X2240};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 pub use super::mario::KIND_DRMARIO;
-
-/// `It_Kind_DrMario_Vitamin`.
-const IT_KIND_DRMARIO_VITAMIN: i32 = 49;
 
 /// Dr. Mario's functions other code reaches by address.
 pub mod addr {
@@ -49,7 +47,7 @@ impl Running<'_> {
         let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
         let sheet = self.char_attr_word(f, attr::SPECIALS_CAPE_KIND) as i32;
         let pill = self.data.ptr(items.at(4));
-        super::super::it::item::set_char_article(self.game, pill, IT_KIND_DRMARIO_VITAMIN);
+        super::super::it::item::set_char_article(self.game, pill, ItKind::DrMarioVitamin.id());
         let sheet_article = self.data.ptr(items.at(12));
         super::super::it::item::set_char_article(self.game, sheet_article, sheet);
     }
@@ -138,8 +136,14 @@ impl Running<'_> {
             let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, top, None);
             let color = self.mr_special_n_vitamin_random(gobj, &super::mario::special_n::MARIO);
             let facing = self.game.fighter(gobj).facing_dir;
-            let pill =
-                drmariopill::appeal_spawn(self, gobj, pos, color, IT_KIND_DRMARIO_VITAMIN, facing);
+            let pill = drmariopill::appeal_spawn(
+                self,
+                gobj,
+                pos,
+                color,
+                ItKind::DrMarioVitamin.id(),
+                facing,
+            );
             let fp = self.game.fighter_mut(gobj);
             fp.u.set_gobj_at(MARIO_X2240, pill);
             if pill.is_some() {

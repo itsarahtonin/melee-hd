@@ -1,5 +1,6 @@
 //! An item's variables (`Item::xDD4_itemVar`, `union Item_ItemVars`): each kind's code uses
-//! one member of the union, so which member an item holds follows its kind ([`vars_kind`]).
+//! one member of the union, so which member an item holds follows its kind (its registry entry's
+//! `vars`, [`super::registry::vars_kind`]).
 //!
 //! Items come from `HSD_ObjAlloc`, which doesn't clear its blocks, and item creation doesn't
 //! clear the variables either: a new item's variables hold the bytes its block's last item left
@@ -35,29 +36,16 @@ use crate::vec::Vec3;
 /// The union's size.
 pub const SIZE: usize = 0x1F8;
 
-/// The union's members the ported kinds read as types: the variant, its accessor, the
-/// generated struct, and the kinds that use it.
+/// The union's members the ported kinds read as types: the variant, its accessor and the
+/// generated struct. Which kinds use each is their registry entries' `vars`.
 macro_rules! members {
-    ($($variant:ident, $accessor:ident, $ty:ident, [$($kind:ident),+];)*) => {
+    ($($variant:ident, $accessor:ident, $ty:ident;)*) => {
         /// Which member of the union an item uses.
         #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
         pub enum VarsKind {
             /// None the ported code reads as a type.
             Bytes,
             $($variant,)*
-        }
-
-        /// Which member an item of `kind` uses: the Pokémon and their items share one
-        /// ([`super::pokemon::vars`]).
-        pub fn vars_kind(kind: i32) -> VarsKind {
-            use super::kinds;
-            if (kinds::PKIND_START..=kinds::POKEMON_UNK).contains(&kind) {
-                return VarsKind::Pokemon;
-            }
-            $($(if kind == kinds::$kind {
-                return VarsKind::$variant;
-            })+)*
-            VarsKind::Bytes
         }
 
         /// The member of `union Item_ItemVars` an item's code reads as a type.
@@ -139,91 +127,91 @@ macro_rules! members {
 }
 
 members! {
-    FoxBlaster, fox_blaster, itFoxBlaster_ItemVars, [FOX_BLASTER, FALCO_BLASTER, KIRBY_FOX_BLASTER, KIRBY_FALCO_BLASTER];
-    FoxLaser, fox_laser, itFoxLaser_ItemVars, [FOX_LASER, FALCO_LASER, KIRBY_FOX_LASER, KIRBY_FALCO_LASER, L_GUN_RAY];
-    FoxIllusion, fox_illusion, itFoxIllusion_ItemVars, [FOX_ILLUSION, FALCO_PHANTASM];
-    Capsule, capsule, itCapsule_ItemVars, [CAPSULE];
-    Heart, heart, itHeart_ItemVars, [HEART];
-    Tomato, tomato, itTomato_ItemVars, [TOMATO];
-    Box, crate_box, itBox_ItemVars, [BOX];
-    Taru, taru, itTaru_ItemVars, [TARU];
-    TaruCann, taru_cann, itTarucann_ItemVars, [TARU_CANN];
-    StarRodStar, star_rod_star, itStarRodStar_ItemVars, [STARROD_STAR];
-    LipstickSpore, lipstick_spore, itLipstickSpore_ItemVars, [LIPSTICK_SPORE];
-    FFlowerFlame, fflower_flame, itFFlowerFlame_ItemVars, [F_FLOWER_FLAME];
-    Kusudama, kusudama, itKusudama_ItemVars, [KUSUDAMA];
-    BombHei, bombhei, itBombHei_ItemVars, [BOMBHEI];
-    Dosei, dosei, itDosei_ItemVars, [DOSEI];
-    GShell, gshell, itGShell_ItemVars, [G_SHELL];
-    RShell, rshell, itRShell_ItemVars, [R_SHELL];
-    Sword, sword, itSword_ItemVars, [SWORD];
-    SeakNeedleHeld, seak_needle_held, itSeakNeedleHeld_ItemVars, [SEAK_NEEDLE_HELD, KIRBY_SEAK_NEEDLE_HELD];
-    SeakNeedleThrown, seak_needle_thrown, itSeakNeedleThrown_ItemVars, [SEAK_NEEDLE_THROW, KIRBY_SEAK_NEEDLE_THROW];
-    SeakChain, seak_chain, itSeakChain_ItemVars, [SEAK_CHAIN];
-    ZeldaDinFire, zelda_din_fire, itZeldaDinFire_ItemVars, [ZELDA_DIN_FIRE];
-    ZeldaDinFireExplode, zelda_din_fire_explode, itZeldaDinFireExplode_ItemVars, [ZELDA_DIN_FIRE_EXPLODE];
-    PKFlush, pk_flush, itPKFlush_ItemVars, [NESS_PK_FLUSH, KIRBY_NESS_PK_FLUSH];
-    PKFlushExplode, pk_flush_explode, itPKFlushExplode_ItemVars, [NESS_PK_FLUSH_EXPLODE, KIRBY_NESS_PK_FLUSH_EXPLODE];
-    PKThunder, pk_thunder, itPKThunder_ItemVars, [NESS_PK_THUNDER];
-    NessPKThunderTrail, ness_pk_thunder_trail, itNesspkthundertrail_ItemVars, [NESS_PK_THUNDER1, NESS_PK_THUNDER2, NESS_PK_THUNDER3, NESS_PK_THUNDER4];
-    NessBat, ness_bat, itNessbat_ItemVars, [NESS_BAT];
-    NessYoyo, ness_yoyo, itNessYoyo_ItemVars, [NESS_YOYO];
-    SamusBomb, samus_bomb, itSamusBomb_ItemVars, [SAMUS_BOMB];
-    SamusChargeshot, samus_chargeshot, itSamusChargeshot_ItemVars, [SAMUS_CHARGE, KIRBY_SAMUS_CHARGE];
-    SamusMissile, samus_missile, itSamusMissile_ItemVars, [SAMUS_MISSILE];
-    SamusGrapple, samus_grapple, itSamusGrapple_ItemVars, [SAMUS_GBEAM];
-    DrMarioPill, drmario_pill, itDrMarioPill_ItemVars, [DRMARIO_VITAMIN, KIRBY_DRMARIO_VITAMIN];
-    PikachuThunder, pikachu_thunder, itPikachuthunder_ItemVars, [PIKACHU_THUNDER, PICHU_THUNDER];
-    PikachuJoltGround, pikachu_jolt_ground, itPikachutJoltGround_ItemVars, [PIKACHU_TJOLT_GROUND, PICHU_TJOLT_GROUND, KIRBY_PIKACHU_TJOLT_GROUND, KIRBY_PICHU_TJOLT_GROUND];
-    PikachuJoltAir, pikachu_jolt_air, itPikachutJoltAir_ItemVars, [PIKACHU_TJOLT_AIR, PICHU_TJOLT_AIR, KIRBY_PIKACHU_TJOLT_AIR, KIRBY_PICHU_TJOLT_AIR];
-    PeachTurnip, peach_turnip, itPeachTurnip_ItemVars, [PEACH_TURNIP];
-    LinkBomb, link_bomb, itLinkBomb_ItemVars, [LINK_BOMB, CLINK_BOMB];
-    LinkBoomerang, link_boomerang, itLinkBoomerang_ItemVars, [LINK_BOOMERANG, CLINK_BOOMERANG];
-    LinkHookshot, link_hookshot, itLinkHookshot_ItemVars, [LINK_HSHOT, CLINK_HSHOT];
-    LinkArrow, link_arrow, itLinkArrow_ItemVars, [LINK_ARROW, CLINK_ARROW, KIRBY_LINK_ARROW, KIRBY_CLINK_ARROW];
-    LinkBow, link_bow, itLinkBow_ItemVars, [LINK_BOW, CLINK_BOW, KIRBY_LINK_BOW, KIRBY_CLINK_BOW];
-    CLinkMilk, clink_milk, itCLinkMilk_ItemVars, [CLINK_MILK];
-    YoshiEggLay, yoshi_egg_lay, itYoshiEggLay_ItemVars, [YOSHI_EGG_LAY, KIRBY_YOSHI_EGG_LAY];
-    MewtwoShadowball, mewtwo_shadowball, itMewtwoShadowball_ItemVars, [MEWTWO_SHADOWBALL, KIRBY_MEWTWO_SHADOWBALL];
-    MDisable, mdisable, itMDisable_ItemVars, [MEWTWO_DISABLE];
-    KoopaFlame, koopa_flame, itKoopaFlame_ItemVars, [KOOPA_FLAME, KIRBY_KOOPA_FLAME];
-    KirbyCutterBeam, kirby_cutter_beam, itKirbyCutterBeam_ItemVars, [KIRBY_CBEAM];
-    KirbyHammer, kirby_hammer, itKirbyHammer_ItemVars, [KIRBY_HAMMER];
-    Heiho, heiho, HeihoVars, [HEIHO];
-    Tincle, tincle, TincleVars, [TINCLE];
-    WhispyApple, whispy_apple, WhispyAppleVars, [WHISPY_APPLE, WHISPY_HEAL_APPLE];
-    Tools, tools, ToolsVars, [TOOLS];
-    ArwingLaser, arwing_laser, ArwingLaserVars, [ARWING_LASER];
-    GreatFoxLaser, greatfox_laser, GreatFoxLaserVars, [GREATFOX_LASER];
-    Klap, klap, KlapVars, [KLAP];
-    Kyasarin, kyasarin, KyasarinVars, [KYASARIN];
-    KyasarinEgg, kyasarin_egg, KyasarinEggVars, [KYASARIN_EGG];
-    Zako, zako, PokemonVars, [KURIBOH, LEADEAD, OCTAROCK, OTTOSEA, OCTAROCK_STONE, NOKONOKO, PATAPATA, WHITEBEA, LIKELIKE, ZGSHELL, ZRSHELL, MATO];
-    KirbySpitStar, kirby_spit_star, PokemonVars, [KIRBY_UNK2];
-    GameWatch, game_watch, GameWatchVars, [GAME_WATCH_GREENHOUSE, GAME_WATCH_MANHOLE, GAME_WATCH_FIRE, GAME_WATCH_PARACHUTE, GAME_WATCH_TURTLE, GAME_WATCH_BREATH, GAME_WATCH_JUDGE, GAME_WATCH_PANIC, GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF_PAN];
-    GameWatchRescue, game_watch_rescue, GameWatchRescueVars, [GAME_WATCH_RESCUE];
-    ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE, KIRBY_ICE_CLIMBER_ICE];
-    MasterHandLaser, masterhand_laser, itMasterHandLaser_ItemVars, [MASTERHAND_LASER];
-    MasterHandBullet, masterhand_bullet, itMasterHandBullet_ItemVars, [MASTERHAND_BULLET];
-    ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];
-    ClimbersString, climbers_string, itClimbersString_ItemVars, [ICE_CLIMBER_STRING];
-    Egg, egg, itEgg_ItemVars, [EGG, EV_YOSHI_EGG];
-    FFlower, fflower, itFFlower_ItemVars, [F_FLOWER];
-    Freeze, freeze, itFreeze_ItemVars, [FREEZE];
-    LGun, lgun, itLGun_ItemVars, [L_GUN];
-    MBall, mball, itMBall_ItemVars, [M_BALL];
-    ScopeBeam, scope_beam, itScopeBeam_ItemVars, [S_SCOPE_BEAM];
-    Wstar, wstar, itWstar_ItemVars, [WSTAR];
-    Star, star, itStar_ItemVars, [STAR];
-    Kinoko, kinoko, itKinoko_ItemVars, [KINOKO, DKINOKO];
-    Foods, foods, itFoods_ItemVars, [FOODS];
-    MsBomb, msbomb, itMsBomb_ItemVars, [MSBOMB];
-    Flipper, flipper, itFlipper_ItemVars, [FLIPPER];
-    LGunBeam, lgunbeam, itLGunBeam_ItemVars, [L_GUN_BEAM];
-    Coin, coin, CoinVars, [UNK4];
-    TrophyCoin, trophy_coin, itCoin_ItemVars, [COIN];
-    Pokemon, pokemon, PokemonVars, [POKEMON_UNK];
-    Yaku, yaku, YakuVars, [PKIND_RANDOM];
+    FoxBlaster, fox_blaster, itFoxBlaster_ItemVars;
+    FoxLaser, fox_laser, itFoxLaser_ItemVars;
+    FoxIllusion, fox_illusion, itFoxIllusion_ItemVars;
+    Capsule, capsule, itCapsule_ItemVars;
+    Heart, heart, itHeart_ItemVars;
+    Tomato, tomato, itTomato_ItemVars;
+    Box, crate_box, itBox_ItemVars;
+    Taru, taru, itTaru_ItemVars;
+    TaruCann, taru_cann, itTarucann_ItemVars;
+    StarRodStar, star_rod_star, itStarRodStar_ItemVars;
+    LipstickSpore, lipstick_spore, itLipstickSpore_ItemVars;
+    FFlowerFlame, fflower_flame, itFFlowerFlame_ItemVars;
+    Kusudama, kusudama, itKusudama_ItemVars;
+    BombHei, bombhei, itBombHei_ItemVars;
+    Dosei, dosei, itDosei_ItemVars;
+    GShell, gshell, itGShell_ItemVars;
+    RShell, rshell, itRShell_ItemVars;
+    Sword, sword, itSword_ItemVars;
+    SeakNeedleHeld, seak_needle_held, itSeakNeedleHeld_ItemVars;
+    SeakNeedleThrown, seak_needle_thrown, itSeakNeedleThrown_ItemVars;
+    SeakChain, seak_chain, itSeakChain_ItemVars;
+    ZeldaDinFire, zelda_din_fire, itZeldaDinFire_ItemVars;
+    ZeldaDinFireExplode, zelda_din_fire_explode, itZeldaDinFireExplode_ItemVars;
+    PKFlush, pk_flush, itPKFlush_ItemVars;
+    PKFlushExplode, pk_flush_explode, itPKFlushExplode_ItemVars;
+    PKThunder, pk_thunder, itPKThunder_ItemVars;
+    NessPKThunderTrail, ness_pk_thunder_trail, itNesspkthundertrail_ItemVars;
+    NessBat, ness_bat, itNessbat_ItemVars;
+    NessYoyo, ness_yoyo, itNessYoyo_ItemVars;
+    SamusBomb, samus_bomb, itSamusBomb_ItemVars;
+    SamusChargeshot, samus_chargeshot, itSamusChargeshot_ItemVars;
+    SamusMissile, samus_missile, itSamusMissile_ItemVars;
+    SamusGrapple, samus_grapple, itSamusGrapple_ItemVars;
+    DrMarioPill, drmario_pill, itDrMarioPill_ItemVars;
+    PikachuThunder, pikachu_thunder, itPikachuthunder_ItemVars;
+    PikachuJoltGround, pikachu_jolt_ground, itPikachutJoltGround_ItemVars;
+    PikachuJoltAir, pikachu_jolt_air, itPikachutJoltAir_ItemVars;
+    PeachTurnip, peach_turnip, itPeachTurnip_ItemVars;
+    LinkBomb, link_bomb, itLinkBomb_ItemVars;
+    LinkBoomerang, link_boomerang, itLinkBoomerang_ItemVars;
+    LinkHookshot, link_hookshot, itLinkHookshot_ItemVars;
+    LinkArrow, link_arrow, itLinkArrow_ItemVars;
+    LinkBow, link_bow, itLinkBow_ItemVars;
+    CLinkMilk, clink_milk, itCLinkMilk_ItemVars;
+    YoshiEggLay, yoshi_egg_lay, itYoshiEggLay_ItemVars;
+    MewtwoShadowball, mewtwo_shadowball, itMewtwoShadowball_ItemVars;
+    MDisable, mdisable, itMDisable_ItemVars;
+    KoopaFlame, koopa_flame, itKoopaFlame_ItemVars;
+    KirbyCutterBeam, kirby_cutter_beam, itKirbyCutterBeam_ItemVars;
+    KirbyHammer, kirby_hammer, itKirbyHammer_ItemVars;
+    Heiho, heiho, HeihoVars;
+    Tincle, tincle, TincleVars;
+    WhispyApple, whispy_apple, WhispyAppleVars;
+    Tools, tools, ToolsVars;
+    ArwingLaser, arwing_laser, ArwingLaserVars;
+    GreatFoxLaser, greatfox_laser, GreatFoxLaserVars;
+    Klap, klap, KlapVars;
+    Kyasarin, kyasarin, KyasarinVars;
+    KyasarinEgg, kyasarin_egg, KyasarinEggVars;
+    Zako, zako, PokemonVars;
+    KirbySpitStar, kirby_spit_star, PokemonVars;
+    GameWatch, game_watch, GameWatchVars;
+    GameWatchRescue, game_watch_rescue, GameWatchRescueVars;
+    ClimbersIce, climbers_ice, itClimbersIce_ItemVars;
+    MasterHandLaser, masterhand_laser, itMasterHandLaser_ItemVars;
+    MasterHandBullet, masterhand_bullet, itMasterHandBullet_ItemVars;
+    ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars;
+    ClimbersString, climbers_string, itClimbersString_ItemVars;
+    Egg, egg, itEgg_ItemVars;
+    FFlower, fflower, itFFlower_ItemVars;
+    Freeze, freeze, itFreeze_ItemVars;
+    LGun, lgun, itLGun_ItemVars;
+    MBall, mball, itMBall_ItemVars;
+    ScopeBeam, scope_beam, itScopeBeam_ItemVars;
+    Wstar, wstar, itWstar_ItemVars;
+    Star, star, itStar_ItemVars;
+    Kinoko, kinoko, itKinoko_ItemVars;
+    Foods, foods, itFoods_ItemVars;
+    MsBomb, msbomb, itMsBomb_ItemVars;
+    Flipper, flipper, itFlipper_ItemVars;
+    LGunBeam, lgunbeam, itLGunBeam_ItemVars;
+    Coin, coin, CoinVars;
+    TrophyCoin, trophy_coin, itCoin_ItemVars;
+    Pokemon, pokemon, PokemonVars;
+    Yaku, yaku, YakuVars;
 }
 
 /// `union Item_ItemVars`: the member an item's code reads as a type, over the bytes its block

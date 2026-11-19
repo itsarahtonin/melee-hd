@@ -18,6 +18,7 @@ use super::super::pl::trick::AttackRecord;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::lb::collision::hitboxes_touch;
 use crate::lb::hitcapsule::{self, Victim};
@@ -40,10 +41,6 @@ const HURT_ENABLED: i32 = 0;
 
 /// `ftCo_MS_DamageIce`.
 const MS_DAMAGE_ICE: i32 = 325;
-
-/// `It_Kind_BombHei`, and `It_Kind_Unk4`, which hits no fighter.
-const IT_KIND_BOMBHEI: i32 = 6;
-const IT_KIND_UNK4: i32 = 158;
 
 /// `ItCo.dat`'s common item data (`it_804D6D28`): the speed below which an item's hit
 /// pushes away from it rather than along its flight, for the damage result and for its
@@ -1154,7 +1151,7 @@ impl Running<'_> {
         let mut cur = self.game.world.first_in(it::P_LINK_ITEM);
         while let Some(g) = cur {
             cur = self.game.world.gobjs[g.0].next;
-            if it::item(self.game, g).kind != kinds::UNK4 {
+            if it::item(self.game, g).kind != ItKind::Unk4 {
                 continue;
             }
             let owner = it::item(self.game, g).owner;
@@ -1230,7 +1227,7 @@ impl Running<'_> {
         while let Some(g) = cur {
             cur = self.game.world.gobjs[g.0].next;
             let ip = it::item(self.game, g);
-            if ip.kind == IT_KIND_UNK4 {
+            if ip.kind == ItKind::Unk4 {
                 continue;
             }
             let (owner, b5, b6, team) = (
@@ -2836,7 +2833,7 @@ impl Running<'_> {
             u32::from_be_bytes(ip.xD90),
             ip.xDA8_short,
         );
-        if kind == IT_KIND_BOMBHEI {
+        if kind == ItKind::BombHei {
             let spawn = ip.x1C as u16;
             let slot = i32::from(self.game.fighters[me.0].player_idx);
             self.game.count_bombhei_hit(slot, spawn);

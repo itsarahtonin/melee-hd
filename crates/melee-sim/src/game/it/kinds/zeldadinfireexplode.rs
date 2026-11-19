@@ -8,6 +8,7 @@ use super::super::{coll, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
 use crate::game::camera::request_quake;
 use crate::game::ef::{self, Arg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -87,7 +88,7 @@ pub fn spawn(
     size: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::ZELDA_DIN_FIRE_EXPLODE,
+        kind: ItKind::ZeldaDinFireExplode.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition`, on the plane.

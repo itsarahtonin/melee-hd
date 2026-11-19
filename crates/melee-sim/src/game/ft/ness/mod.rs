@@ -21,6 +21,7 @@ pub mod special_s;
 use super::super::code::Val;
 use super::super::handles::FighterId;
 use super::super::state::Running;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 pub(crate) use super::common::GA_AIR;
@@ -30,17 +31,17 @@ pub const KIND_NESS: i32 = 8;
 
 /// The items Ness registers at his creation, by their slot in his data's item list.
 pub(crate) const ITEMS: [(u32, i32); 11] = [
-    (0, super::super::it::kinds::NESS_PK_FIRE),
-    (1, super::super::it::kinds::NESS_PK_FIRE_FLAME),
-    (2, super::super::it::kinds::NESS_PK_FLUSH),
-    (8, super::super::it::kinds::NESS_PK_FLUSH_EXPLODE),
-    (3, super::super::it::kinds::NESS_PK_THUNDER),
-    (4, super::super::it::kinds::NESS_PK_THUNDER1),
-    (5, super::super::it::kinds::NESS_PK_THUNDER2),
-    (6, super::super::it::kinds::NESS_PK_THUNDER3),
-    (7, super::super::it::kinds::NESS_PK_THUNDER4),
-    (9, super::super::it::kinds::NESS_BAT),
-    (10, super::super::it::kinds::NESS_YOYO),
+    (0, ItKind::NessPKFire.id()),
+    (1, ItKind::NessPKFireFlame.id()),
+    (2, ItKind::NessPKFlush.id()),
+    (8, ItKind::NessPKFlushExplode.id()),
+    (3, ItKind::NessPKThunder.id()),
+    (4, ItKind::NessPKThunder1.id()),
+    (5, ItKind::NessPKThunder2.id()),
+    (6, ItKind::NessPKThunder3.id()),
+    (7, ItKind::NessPKThunder4.id()),
+    (9, ItKind::NessBat.id()),
+    (10, ItKind::NessYoyo.id()),
 ];
 
 /// Ness's action states (`ftNs_MS_*`).

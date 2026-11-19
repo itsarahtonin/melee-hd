@@ -8,6 +8,7 @@ use super::super::item::{article, attr_of, change, change_state, common_data, sp
 use super::super::{data, ground, item, item_mut, jobj_of, lib2725, maplib};
 use crate::fpu::{mem, reg};
 use crate::game::ef::SpawnKind;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -37,9 +38,6 @@ mod attr {
     pub const LIFETIME: u32 = 0x4;
     pub const MIN_SPEED: u32 = 0xC;
 }
-
-/// `It_Kind_Luigi_Fire`, whose bounce flash differs from Kirby's copy's.
-const KIND_LUIGI_FIRE: i32 = 105;
 
 /// Runs one of the fireball's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -137,7 +135,7 @@ fn collide(r: &mut Running, gobj: GObjId) -> bool {
     if reg(crate::math::sqrt_accurate(mem(sq))) < reg(min) {
         return true;
     }
-    let id = if item(r.game, gobj).kind == KIND_LUIGI_FIRE {
+    let id = if item(r.game, gobj).kind == ItKind::LuigiFire {
         0x508
     } else {
         0x4B2

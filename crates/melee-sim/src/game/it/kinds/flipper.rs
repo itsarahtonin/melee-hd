@@ -6,6 +6,7 @@ use super::super::ground::{air_stay, air_touches, fall, ground_or_fall, ground_s
 use super::super::item::{article, change, change_state, common_data, is_fighter, spawn_air};
 use super::super::{data, hitbox, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -136,7 +137,7 @@ pub fn spawn(r: &mut Running, jobj: Option<JObjId>) -> Option<GObjId> {
     let j = jobj?;
     let pos = world_position(&mut r.game.objs, r.data, Some(j), None);
     let mut spawn = SpawnItem {
-        kind: super::FLIPPER,
+        kind: ItKind::Flipper.id(),
         prev_pos: pos,
         pos,
         ..Default::default()
@@ -274,7 +275,7 @@ fn spin_from_attacker(r: &mut Running, gobj: GObjId) {
 /// `itFlipper_Repel`.
 #[doc(alias = "itFlipper_Repel")]
 pub fn repel(r: &mut Running, gobj: GObjId, kind: i32, pos: Vec3) {
-    if kind != super::FLIPPER {
+    if kind != ItKind::Flipper {
         return;
     }
     let me = item(r.game, gobj).pos;

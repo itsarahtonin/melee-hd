@@ -4,6 +4,7 @@
 use super::super::item::{animate, change, change_state, destroy, spawn_air};
 use super::super::{item, item_mut, lib26b1};
 use super::gamewatch::{self, GameWatchRescueVars};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -53,7 +54,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     let parent = parent?;
     let mut spawn = SpawnItem {
-        kind: super::GAME_WATCH_RESCUE,
+        kind: ItKind::GameWatchRescue.id(),
         ..Default::default()
     };
     gamewatch::spawn_position(&mut spawn, pos, true);

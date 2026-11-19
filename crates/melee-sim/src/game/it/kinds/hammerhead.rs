@@ -7,13 +7,11 @@ use super::super::ground::{fall, ground_or_fall};
 use super::super::item::{article, attr_of, change, change_state, common_data};
 use super::super::{item, item_mut, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
-
-/// `It_Kind_Hammer_Head`.
-pub const KIND: i32 = 40;
 
 pub const SPAWNED: u32 = 0x8029_9D4C;
 pub const PICKED_UP: u32 = 0x8029_9DD0;
@@ -74,7 +72,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_80299C48")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, dir: Vec3, facing: f32) {
     let mut spawn = SpawnItem {
-        kind: KIND,
+        kind: ItKind::HammerHead.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

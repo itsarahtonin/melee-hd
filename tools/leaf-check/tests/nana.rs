@@ -68,6 +68,7 @@ use leaf_check::calls::{
     saved_calls,
 };
 use melee_sim::game::gr::GrKind;
+use melee_sim::game::it::ItKind;
 use ssbm_rt::capture::Call;
 
 const CALLS: &str = "calls/ics";
@@ -131,9 +132,6 @@ const ITEM_KIND: u32 = 0x10;
 /// `Item::xDC8_word` and its `flags.x15`, which `Item_IsGrabbable` tests.
 const ITEM_FLAGS: u32 = 0xDC8;
 const GRABBABLE: u32 = 0x400;
-const BOBOMB: u32 = 6;
-const EGG: u32 = 3;
-const BEAM_SWORD: u32 = 0xC;
 /// The tumble's behavior; `ftCo_MS_DamageFall`, `ftCo_MS_AttackHi3`, `ftCo_MS_Guard`.
 const TUMBLE: u32 = 15;
 const DAMAGE_FALL: u32 = 38;
@@ -303,7 +301,7 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
             }
             while g != 0 {
                 let ip = peek_u32(call, g + 0x2C);
-                poke_u32(call, ip + ITEM_KIND, BEAM_SWORD);
+                poke_u32(call, ip + ITEM_KIND, ItKind::Sword as u32);
                 let flags = peek_u32(call, ip + ITEM_FLAGS);
                 poke_u32(call, ip + ITEM_FLAGS, flags | GRABBABLE);
                 g = peek_u32(call, g + 0x8);
@@ -378,9 +376,9 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
                 return false;
             }
             let kind = if matches!(change, Change::ThrowBobomb) {
-                BOBOMB
+                ItKind::BombHei as u32
             } else {
-                EGG
+                ItKind::Egg as u32
             };
             poke_u32(call, peek_u32(call, held + 0x2C) + ITEM_KIND, kind);
             poke_u32(call, nana + SCRIPT, 0);

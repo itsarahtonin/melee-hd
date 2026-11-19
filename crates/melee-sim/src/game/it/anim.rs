@@ -8,6 +8,7 @@ use melee_data::archive::{Archives, DataRef};
 use super::{item, item_mut, jobj_of, set_flag};
 use crate::fpu::{mem, reg};
 use crate::game::code;
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{ColorOverlay, Item};
 use crate::hsd::gobj::GObjId;
@@ -401,7 +402,7 @@ pub fn state_script(
     index: i32,
     desc: DataRef,
 ) -> Option<DataRef> {
-    if kind == super::kinds::PKIND_RANDOM
+    if kind == ItKind::PokemonRandom
         && let Some(&(_, s)) = game
             .gr
             .yaku_scripts

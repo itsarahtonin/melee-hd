@@ -9,13 +9,14 @@ use gekko_fp as fp;
 
 use super::super::super::code::{self, Val};
 use super::super::super::ef::{Arg, SpawnKind};
-use super::super::super::it::kinds::{LIPSTICK, STARROD, harisen, lipstick, starrod};
+use super::super::super::it::kinds::{harisen, lipstick, starrod};
 use super::super::super::it::lib26b1;
 use super::super::super::state::Running;
 use super::PAD_A;
 use super::kind_callbacks::{ON_ITEM_DROP, ON_ITEM_PICKUP};
 use crate::fpu::reg;
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::lb::joint::world_position;
 use crate::vec::Vec3;
@@ -222,7 +223,7 @@ impl Running<'_> {
         };
         assert_eq!(
             lib26b1::kind(self.game, it),
-            STARROD,
+            ItKind::StarRod.id(),
             "ftstarrodswing.c:100: itGetKind(fp->item_gobj) == It_Kind_StarRod"
         );
         let offset = starrod::star_offset(self, it);
@@ -257,7 +258,7 @@ impl Running<'_> {
     pub fn lipstick_hand(&mut self, gobj: GObjId) {
         let it = self.game.fighter(gobj).item_gobj;
         assert!(
-            it.is_some_and(|it| lib26b1::kind(self.game, it) == LIPSTICK),
+            it.is_some_and(|it| lib26b1::kind(self.game, it) == ItKind::LipStick),
             "ftlipstickswing.c:99: itGetKind(fp->item_gobj) == It_Kind_LipStick"
         );
         let Some(it) = it else {

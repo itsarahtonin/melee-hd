@@ -5,7 +5,7 @@
 use super::tables::{ItemLogic, ItemState};
 use crate::game::handles::CodeRef;
 
-/// `it_803F1418`: each kind's render function, from kind 0.
+/// `it_803F1418`: each kind's render function, from `ItKind::Capsule`.
 pub static RENDER_COMMON: [CodeRef; 43] = [
     CodeRef(0x8026eecc), // it_8026EECC
     CodeRef(0x8026eecc), // it_8026EECC
@@ -52,9 +52,9 @@ pub static RENDER_COMMON: [CodeRef; 43] = [
     CodeRef(0x8026eecc), // it_8026EECC
 ];
 
-/// `it_803F14C4`, at 0x803f14c4: each kind's logic table, from kind 0.
+/// `it_803F14C4`, at 0x803f14c4: each kind's logic table, from `ItKind::Capsule`.
 pub static LOGIC_COMMON: [ItemLogic; 43] = [
-    // kind 0
+    // ItKind::Capsule
     ItemLogic {
         states: 0x803f5468,
         spawned: Some(CodeRef(0x8027cf00)),
@@ -72,7 +72,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x8027d530)),
         evt_unk: Some(CodeRef(0x8027d650)),
     },
-    // kind 1
+    // ItKind::Box
     ItemLogic {
         states: 0x803f5850,
         spawned: Some(CodeRef(0x802861cc)),
@@ -90,7 +90,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80286ddc)),
         evt_unk: Some(CodeRef(0x80287084)),
     },
-    // kind 2
+    // ItKind::Taru
     ItemLogic {
         states: 0x803f58e0,
         spawned: Some(CodeRef(0x80287458)),
@@ -108,7 +108,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80288958)),
         evt_unk: Some(CodeRef(0x80288c68)),
     },
-    // kind 3
+    // ItKind::Egg
     ItemLogic {
         states: 0x803f5988,
         spawned: Some(CodeRef(0x80288d98)),
@@ -126,7 +126,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80289470)),
         evt_unk: Some(CodeRef(0x802896ac)),
     },
-    // kind 4
+    // ItKind::Kusudama
     ItemLogic {
         states: 0x803f59f8,
         spawned: Some(CodeRef(0x80289784)),
@@ -144,7 +144,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x8028af54)),
         evt_unk: Some(CodeRef(0x8028b06c)),
     },
-    // kind 5
+    // ItKind::TaruCann
     ItemLogic {
         states: 0x803f63c0,
         spawned: Some(CodeRef(0x80296120)),
@@ -162,7 +162,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x802978ac)),
         evt_unk: Some(CodeRef(0x802978bc)),
     },
-    // kind 6
+    // ItKind::BombHei
     ItemLogic {
         states: 0x803f54d8,
         spawned: Some(CodeRef(0x8027d76c)),
@@ -180,7 +180,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x802810c4)),
         evt_unk: Some(CodeRef(0x80281144)),
     },
-    // kind 7
+    // ItKind::Dosei
     ItemLogic {
         states: 0x803f55d0,
         spawned: Some(CodeRef(0x80281164)),
@@ -198,7 +198,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80283a80)),
         evt_unk: Some(CodeRef(0x80283ac4)),
     },
-    // kind 8
+    // ItKind::Heart
     ItemLogic {
         states: 0x803f56c8,
         spawned: Some(CodeRef(0x80283bec)),
@@ -216,7 +216,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x80284194)),
     },
-    // kind 9
+    // ItKind::Tomato
     ItemLogic {
         states: 0x803f5740,
         spawned: Some(CodeRef(0x802842a4)),
@@ -234,7 +234,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x80284624)),
     },
-    // kind 10
+    // ItKind::Star
     ItemLogic {
         states: 0x803f57a0,
         spawned: Some(CodeRef(0x80284644)),
@@ -252,7 +252,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x80284834)),
     },
-    // kind 11
+    // ItKind::Bat
     ItemLogic {
         states: 0x803f57b0,
         spawned: Some(CodeRef(0x80284910)),
@@ -270,7 +270,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80284cf0)),
         evt_unk: Some(CodeRef(0x80284d34)),
     },
-    // kind 12
+    // ItKind::Sword
     ItemLogic {
         states: 0x803f5800,
         spawned: Some(CodeRef(0x80285338)),
@@ -288,7 +288,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80286024)),
         evt_unk: Some(CodeRef(0x80286068)),
     },
-    // kind 13
+    // ItKind::Parasol
     ItemLogic {
         states: 0x803f5ab0,
         spawned: Some(CodeRef(0x8028b0b8)),
@@ -306,7 +306,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x8028b51c)),
         evt_unk: Some(CodeRef(0x8028b8b8)),
     },
-    // kind 14
+    // ItKind::GShell
     ItemLogic {
         states: 0x803f5ba8,
         spawned: Some(CodeRef(0x8028bdac)),
@@ -324,7 +324,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x8028ce1c)),
         evt_unk: Some(CodeRef(0x8028cfc0)),
     },
-    // kind 15
+    // ItKind::RShell
     ItemLogic {
         states: 0x803f5c48,
         spawned: Some(CodeRef(0x8028d59c)),
@@ -342,7 +342,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x8028e624)),
         evt_unk: Some(CodeRef(0x8028e718)),
     },
-    // kind 16
+    // ItKind::LGun
     ItemLogic {
         states: 0x803f5cc8,
         spawned: Some(CodeRef(0x8028e738)),
@@ -360,7 +360,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x8028ea9c)),
         evt_unk: Some(CodeRef(0x8028eb68)),
     },
-    // kind 17
+    // ItKind::Freeze
     ItemLogic {
         states: 0x803f5d28,
         spawned: Some(CodeRef(0x8028ed50)),
@@ -378,7 +378,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x8028f3dc)),
         evt_unk: Some(CodeRef(0x8028f8c4)),
     },
-    // kind 18
+    // ItKind::Foods
     ItemLogic {
         states: 0x803f5db0,
         spawned: Some(CodeRef(0x8028fbe4)),
@@ -396,7 +396,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x8028fe70)),
     },
-    // kind 19
+    // ItKind::MSBomb
     ItemLogic {
         states: 0x803f5e00,
         spawned: Some(CodeRef(0x8028fed4)),
@@ -414,7 +414,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80290850)),
         evt_unk: Some(CodeRef(0x80290918)),
     },
-    // kind 20
+    // ItKind::Flipper
     ItemLogic {
         states: 0x803f5ea8,
         spawned: Some(CodeRef(0x80290a20)),
@@ -432,7 +432,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x802918a0)),
         evt_unk: Some(CodeRef(0x80291bc0)),
     },
-    // kind 21
+    // ItKind::SScope
     ItemLogic {
         states: 0x803f5f40,
         spawned: Some(CodeRef(0x80291c98)),
@@ -450,7 +450,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80292274)),
         evt_unk: Some(CodeRef(0x80292340)),
     },
-    // kind 22
+    // ItKind::StarRod
     ItemLogic {
         states: 0x803f5f90,
         spawned: Some(CodeRef(0x80292360)),
@@ -468,7 +468,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x8029276c)),
         evt_unk: Some(CodeRef(0x802927c8)),
     },
-    // kind 23
+    // ItKind::LipStick
     ItemLogic {
         states: 0x803f6310,
         spawned: Some(CodeRef(0x8029570c)),
@@ -486,7 +486,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80295bcc)),
         evt_unk: Some(CodeRef(0x80295c28)),
     },
-    // kind 24
+    // ItKind::Harisen
     ItemLogic {
         states: 0x803f5ff0,
         spawned: Some(CodeRef(0x8029285c)),
@@ -504,7 +504,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80292ccc)),
         evt_unk: Some(CodeRef(0x80292d28)),
     },
-    // kind 25
+    // ItKind::FFlower
     ItemLogic {
         states: 0x803f6090,
         spawned: Some(CodeRef(0x80292e04)),
@@ -522,7 +522,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x802934d0)),
         evt_unk: Some(CodeRef(0x80293640)),
     },
-    // kind 26
+    // ItKind::Kinoko
     ItemLogic {
         states: 0x803f6110,
         spawned: Some(CodeRef(0x8029367c)),
@@ -540,7 +540,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802939e8)),
     },
-    // kind 27
+    // ItKind::DKinoko
     ItemLogic {
         states: 0x803f6130,
         spawned: Some(CodeRef(0x80293a08)),
@@ -558,7 +558,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x80293d74)),
     },
-    // kind 28
+    // ItKind::Hammer
     ItemLogic {
         states: 0x803f6150,
         spawned: Some(CodeRef(0x80293f58)),
@@ -576,7 +576,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x80294344)),
     },
-    // kind 29
+    // ItKind::WStar
     ItemLogic {
         states: 0x803f61b0,
         spawned: Some(CodeRef(0x8029451c)),
@@ -594,7 +594,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x80294a90)),
     },
-    // kind 30
+    // ItKind::ScBall
     ItemLogic {
         states: 0x803f6220,
         spawned: Some(CodeRef(0x80294ab0)),
@@ -612,7 +612,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80294d7c)),
         evt_unk: Some(CodeRef(0x80294a90)),
     },
-    // kind 31
+    // ItKind::RabbitC
     ItemLogic {
         states: 0x803f6270,
         spawned: Some(CodeRef(0x80295118)),
@@ -630,7 +630,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802953a8)),
     },
-    // kind 32
+    // ItKind::MetalB
     ItemLogic {
         states: 0x803f62c0,
         spawned: Some(CodeRef(0x802953c8)),
@@ -648,7 +648,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802956ec)),
     },
-    // kind 33
+    // ItKind::Spycloak
     ItemLogic {
         states: 0x803f6370,
         spawned: Some(CodeRef(0x80295c48)),
@@ -666,7 +666,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x80295eb4)),
     },
-    // kind 34
+    // ItKind::MBall
     ItemLogic {
         states: 0x803f6488,
         spawned: Some(CodeRef(0x80297904)),
@@ -684,7 +684,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x802980d4)),
         evt_unk: Some(CodeRef(0x80298148)),
     },
-    // kind 35
+    // ItKind::LGunRay
     ItemLogic {
         states: 0x803f64f8,
         spawned: None,
@@ -702,7 +702,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80298644)),
         evt_unk: Some(CodeRef(0x802988c4)),
     },
-    // kind 36
+    // ItKind::StarRodStar
     ItemLogic {
         states: 0x803f6530,
         spawned: None,
@@ -720,7 +720,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80298bf4)),
         evt_unk: Some(CodeRef(0x80298dcc)),
     },
-    // kind 37
+    // ItKind::LipStickSpore
     ItemLogic {
         states: 0x803f6680,
         spawned: None,
@@ -738,7 +738,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x8029a610)),
         evt_unk: Some(CodeRef(0x8029a728)),
     },
-    // kind 38
+    // ItKind::SScopeBeam
     ItemLogic {
         states: 0x803f6568,
         spawned: None,
@@ -756,7 +756,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80299370)),
         evt_unk: Some(CodeRef(0x802993c0)),
     },
-    // kind 39
+    // ItKind::LGunBeam
     ItemLogic {
         states: 0x803f6630,
         spawned: None,
@@ -774,7 +774,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x80299c20)),
         evt_unk: Some(CodeRef(0x80299c28)),
     },
-    // kind 40
+    // ItKind::HammerHead
     ItemLogic {
         states: 0x803f6640,
         spawned: Some(CodeRef(0x80299d4c)),
@@ -792,7 +792,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: Some(CodeRef(0x8029a0c0)),
         evt_unk: Some(CodeRef(0x8029a0f4)),
     },
-    // kind 41
+    // ItKind::FFlowerFlame
     ItemLogic {
         states: 0x803f66c8,
         spawned: Some(CodeRef(0x8029a9fc)),
@@ -810,7 +810,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x8029b0a8)),
     },
-    // kind 42
+    // ItKind::EvYoshiEgg
     ItemLogic {
         states: 0x803f6728,
         spawned: Some(CodeRef(0x8029b1ac)),
@@ -830,7 +830,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
     },
 ];
 
-/// `it_803F2F28`: each kind's render function, from kind 43.
+/// `it_803F2F28`: each kind's render function, from `ItKind::Kuriboh`.
 pub static RENDER_CHAR: [CodeRef; 118] = [
     CodeRef(0x8026eecc), // it_8026EECC
     CodeRef(0x8026eecc), // it_8026EECC
@@ -952,9 +952,9 @@ pub static RENDER_CHAR: [CodeRef; 118] = [
     CodeRef(0x8026eecc), // it_8026EECC
 ];
 
-/// `it_803F3100`, at 0x803f3100: each kind's logic table, from kind 43.
+/// `it_803F3100`, at 0x803f3100: each kind's logic table, from `ItKind::Kuriboh`.
 pub static LOGIC_CHAR: [ItemLogic; 118] = [
-    // kind 43
+    // ItKind::Kuriboh
     ItemLogic {
         states: 0x803f8320,
         spawned: Some(CodeRef(0x802d73f0)),
@@ -972,7 +972,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 44
+    // ItKind::Leadead
     ItemLogic {
         states: 0x803f8eb0,
         spawned: Some(CodeRef(0x802e8bcc)),
@@ -990,7 +990,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 45
+    // ItKind::Octarock
     ItemLogic {
         states: 0x803f8b48,
         spawned: Some(CodeRef(0x802e4a44)),
@@ -1008,7 +1008,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802e5aa4)),
     },
-    // kind 46
+    // ItKind::Ottosea
     ItemLogic {
         states: 0x803f89c8,
         spawned: Some(CodeRef(0x802e2470)),
@@ -1026,7 +1026,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802e3784)),
     },
-    // kind 47
+    // ItKind::OctarockStone
     ItemLogic {
         states: 0x803f8e90,
         spawned: Some(CodeRef(0x802e878c)),
@@ -1044,7 +1044,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802e87e8)),
         evt_unk: Some(CodeRef(0x802e89b0)),
     },
-    // kind 48
+    // ItKind::MarioFire
     ItemLogic {
         states: 0x803f6788,
         spawned: None,
@@ -1062,7 +1062,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x8029ba68)),
         evt_unk: Some(CodeRef(0x8029ba98)),
     },
-    // kind 49
+    // ItKind::DrMarioVitamin
     ItemLogic {
         states: 0x803f75d0,
         spawned: None,
@@ -1080,7 +1080,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802c145c)),
         evt_unk: Some(CodeRef(0x802c1570)),
     },
-    // kind 50
+    // ItKind::KirbyCBeam
     ItemLogic {
         states: 0x803f6798,
         spawned: None,
@@ -1098,7 +1098,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x8029c4ac)),
         evt_unk: Some(CodeRef(0x8029c4b4)),
     },
-    // kind 51
+    // ItKind::KirbyHammer
     ItemLogic {
         states: 0x803f6c98,
         spawned: None,
@@ -1116,7 +1116,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802addb0)),
     },
-    // kind 52
+    // ItKind::Unk1
     ItemLogic {
         states: 0x803f6c88,
         spawned: None,
@@ -1134,7 +1134,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802adbe4)),
     },
-    // kind 53
+    // ItKind::Unk2
     ItemLogic {
         states: 0x803f9470,
         spawned: None,
@@ -1152,7 +1152,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802f2bdc)),
     },
-    // kind 54
+    // ItKind::FoxLaser
     ItemLogic {
         states: 0x803f67d0,
         spawned: None,
@@ -1170,7 +1170,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x8029ccf0)),
         evt_unk: Some(CodeRef(0x8029ccf8)),
     },
-    // kind 55
+    // ItKind::FalcoLaser
     ItemLogic {
         states: 0x803f67d0,
         spawned: None,
@@ -1188,7 +1188,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x8029ccf0)),
         evt_unk: Some(CodeRef(0x8029ccf8)),
     },
-    // kind 56
+    // ItKind::FoxIllusion
     ItemLogic {
         states: 0x803f6818,
         spawned: None,
@@ -1206,7 +1206,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x8029d948)),
     },
-    // kind 57
+    // ItKind::FalcoPhantasm
     ItemLogic {
         states: 0x803f6818,
         spawned: None,
@@ -1224,7 +1224,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x8029d948)),
     },
-    // kind 58
+    // ItKind::LinkBomb
     ItemLogic {
         states: 0x803f6888,
         spawned: None,
@@ -1242,7 +1242,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x8029fd40)),
         evt_unk: Some(CodeRef(0x8029fd84)),
     },
-    // kind 59
+    // ItKind::CLinkBomb
     ItemLogic {
         states: 0x803f6888,
         spawned: None,
@@ -1260,7 +1260,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x8029fd40)),
         evt_unk: Some(CodeRef(0x8029fd84)),
     },
-    // kind 60
+    // ItKind::LinkBoomerang
     ItemLogic {
         states: 0x803f6920,
         spawned: None,
@@ -1278,7 +1278,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802a2288)),
         evt_unk: Some(CodeRef(0x802a23cc)),
     },
-    // kind 61
+    // ItKind::CLinkBoomerang
     ItemLogic {
         states: 0x803f6920,
         spawned: None,
@@ -1296,7 +1296,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802a2288)),
         evt_unk: Some(CodeRef(0x802a23cc)),
     },
-    // kind 62
+    // ItKind::LinkHShot
     ItemLogic {
         states: 0x803f6998,
         spawned: Some(CodeRef(0x802a2418)),
@@ -1314,7 +1314,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802a7d40)),
     },
-    // kind 63
+    // ItKind::CLinkHShot
     ItemLogic {
         states: 0x803f6998,
         spawned: None,
@@ -1332,7 +1332,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802a7d40)),
     },
-    // kind 64
+    // ItKind::LinkArrow
     ItemLogic {
         states: 0x803f6a28,
         spawned: None,
@@ -1350,7 +1350,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802a9b08)),
         evt_unk: Some(CodeRef(0x802aa034)),
     },
-    // kind 65
+    // ItKind::CLinkArrow
     ItemLogic {
         states: 0x803f6a28,
         spawned: None,
@@ -1368,7 +1368,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802a9b08)),
         evt_unk: Some(CodeRef(0x802aa034)),
     },
-    // kind 66
+    // ItKind::NessPKFire
     ItemLogic {
         states: 0x803f6b28,
         spawned: None,
@@ -1386,7 +1386,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802aa354)),
         evt_unk: Some(CodeRef(0x802aa474)),
     },
-    // kind 67
+    // ItKind::NessPKFireFlame
     ItemLogic {
         states: 0x803f6b60,
         spawned: None,
@@ -1404,7 +1404,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802aa7c4)),
     },
-    // kind 68
+    // ItKind::NessPKFlush
     ItemLogic {
         states: 0x803f6b70,
         spawned: None,
@@ -1422,7 +1422,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802ab3d0)),
     },
-    // kind 69
+    // ItKind::NessPKThunder
     ItemLogic {
         states: 0x803f6bc8,
         spawned: None,
@@ -1440,7 +1440,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802ac3f8)),
         evt_unk: Some(CodeRef(0x802ac41c)),
     },
-    // kind 70
+    // ItKind::NessPKThunder1
     ItemLogic {
         states: 0x803f6c08,
         spawned: None,
@@ -1458,7 +1458,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 71
+    // ItKind::NessPKThunder2
     ItemLogic {
         states: 0x803f6c08,
         spawned: None,
@@ -1476,7 +1476,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 72
+    // ItKind::NessPKThunder3
     ItemLogic {
         states: 0x803f6c08,
         spawned: None,
@@ -1494,7 +1494,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 73
+    // ItKind::NessPKThunder4
     ItemLogic {
         states: 0x803f6c08,
         spawned: None,
@@ -1512,7 +1512,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 74
+    // ItKind::FoxBlaster
     ItemLogic {
         states: 0x803f6ca8,
         spawned: None,
@@ -1530,7 +1530,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802af184)),
     },
-    // kind 75
+    // ItKind::FalcoBlaster
     ItemLogic {
         states: 0x803f6ca8,
         spawned: None,
@@ -1548,7 +1548,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802af184)),
     },
-    // kind 76
+    // ItKind::LinkBow
     ItemLogic {
         states: 0x803f6e98,
         spawned: None,
@@ -1566,7 +1566,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802af920)),
     },
-    // kind 77
+    // ItKind::CLinkBow
     ItemLogic {
         states: 0x803f6e98,
         spawned: None,
@@ -1584,7 +1584,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802af920)),
     },
-    // kind 78
+    // ItKind::NessPKFlushExplode
     ItemLogic {
         states: 0x803f6f40,
         spawned: None,
@@ -1602,7 +1602,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802afd64)),
         evt_unk: Some(CodeRef(0x802afd6c)),
     },
-    // kind 79
+    // ItKind::SeakNeedleThrow
     ItemLogic {
         states: 0x803f6f50,
         spawned: None,
@@ -1620,7 +1620,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b16e4)),
         evt_unk: Some(CodeRef(0x802b1890)),
     },
-    // kind 80
+    // ItKind::SeakNeedleHeld
     ItemLogic {
         states: 0x803f70a8,
         spawned: None,
@@ -1638,7 +1638,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802b1c40)),
     },
-    // kind 81
+    // ItKind::PikachuThunder
     ItemLogic {
         states: 0x803f70c8,
         spawned: None,
@@ -1656,7 +1656,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b2510)),
         evt_unk: Some(CodeRef(0x802b2528)),
     },
-    // kind 82
+    // ItKind::PichuThunder
     ItemLogic {
         states: 0x803f70c8,
         spawned: None,
@@ -1674,7 +1674,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b2510)),
         evt_unk: Some(CodeRef(0x802b2528)),
     },
-    // kind 83
+    // ItKind::MarioCape
     ItemLogic {
         states: 0x803f70f8,
         spawned: None,
@@ -1692,7 +1692,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802b2870)),
     },
-    // kind 84
+    // ItKind::DrMarioSheet
     ItemLogic {
         states: 0x803f70f8,
         spawned: None,
@@ -1710,7 +1710,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802b2870)),
     },
-    // kind 85
+    // ItKind::SeakVanish
     ItemLogic {
         states: 0x803f70b8,
         spawned: None,
@@ -1728,7 +1728,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802b1dcc)),
     },
-    // kind 86
+    // ItKind::YoshiEggThrow
     ItemLogic {
         states: 0x803f7118,
         spawned: None,
@@ -1746,7 +1746,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b2e7c)),
         evt_unk: Some(CodeRef(0x802b2fa8)),
     },
-    // kind 87
+    // ItKind::YoshiEggLay
     ItemLogic {
         states: 0x803f94a0,
         spawned: None,
@@ -1764,7 +1764,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802f3374)),
     },
-    // kind 88
+    // ItKind::YoshiStar
     ItemLogic {
         states: 0x803f7158,
         spawned: None,
@@ -1782,7 +1782,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b30e4)),
         evt_unk: Some(CodeRef(0x802b3348)),
     },
-    // kind 89
+    // ItKind::PikachuTJoltGround
     ItemLogic {
         states: 0x803f7190,
         spawned: None,
@@ -1800,7 +1800,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b3d0c)),
         evt_unk: Some(CodeRef(0x802b3edc)),
     },
-    // kind 90
+    // ItKind::PikachuTJoltAir
     ItemLogic {
         states: 0x803f71d8,
         spawned: None,
@@ -1818,7 +1818,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b4a18)),
         evt_unk: Some(CodeRef(0x802b4aa8)),
     },
-    // kind 91
+    // ItKind::PichuTJoltGround
     ItemLogic {
         states: 0x803f7190,
         spawned: None,
@@ -1836,7 +1836,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b3d0c)),
         evt_unk: Some(CodeRef(0x802b3edc)),
     },
-    // kind 92
+    // ItKind::PichuTJoltAir
     ItemLogic {
         states: 0x803f71d8,
         spawned: None,
@@ -1854,7 +1854,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b4a18)),
         evt_unk: Some(CodeRef(0x802b4aa8)),
     },
-    // kind 93
+    // ItKind::SamusBomb
     ItemLogic {
         states: 0x803f7220,
         spawned: None,
@@ -1872,7 +1872,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b5320)),
         evt_unk: Some(CodeRef(0x802b54e4)),
     },
-    // kind 94
+    // ItKind::SamusCharge
     ItemLogic {
         states: 0x803f7288,
         spawned: None,
@@ -1890,7 +1890,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b613c)),
         evt_unk: Some(CodeRef(0x802b62b0)),
     },
-    // kind 95
+    // ItKind::SamusMissile
     ItemLogic {
         states: 0x803f7340,
         spawned: None,
@@ -1908,7 +1908,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b6cd0)),
         evt_unk: Some(CodeRef(0x802b7104)),
     },
-    // kind 96
+    // ItKind::SamusGBeam
     ItemLogic {
         states: 0x803f73a8,
         spawned: Some(CodeRef(0x802b7150)),
@@ -1926,7 +1926,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802baea0)),
     },
-    // kind 97
+    // ItKind::SeakChain
     ItemLogic {
         states: 0x803f7438,
         spawned: None,
@@ -1944,7 +1944,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802bd10c)),
     },
-    // kind 98
+    // ItKind::PeachExplode
     ItemLogic {
         states: 0x803f7488,
         spawned: None,
@@ -1962,7 +1962,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802bd30c)),
     },
-    // kind 99
+    // ItKind::PeachTurnip
     ItemLogic {
         states: 0x803f74a8,
         spawned: None,
@@ -1980,7 +1980,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802bd9c0)),
         evt_unk: Some(CodeRef(0x802bda08)),
     },
-    // kind 100
+    // ItKind::KoopaFlame
     ItemLogic {
         states: 0x803f6c58,
         spawned: None,
@@ -1998,7 +1998,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802ad450)),
         evt_unk: Some(CodeRef(0x802ad458)),
     },
-    // kind 101
+    // ItKind::NessBat
     ItemLogic {
         states: 0x803f6c68,
         spawned: None,
@@ -2016,7 +2016,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802ad9fc)),
     },
-    // kind 102
+    // ItKind::NessYoyo
     ItemLogic {
         states: 0x803f7558,
         spawned: None,
@@ -2034,7 +2034,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c016c)),
     },
-    // kind 103
+    // ItKind::PeachParasol
     ItemLogic {
         states: 0x803f74f8,
         spawned: None,
@@ -2052,7 +2052,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802bddf8)),
     },
-    // kind 104
+    // ItKind::PeachToad
     ItemLogic {
         states: 0x803f7528,
         spawned: None,
@@ -2070,7 +2070,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802be1f4)),
     },
-    // kind 105
+    // ItKind::LuigiFire
     ItemLogic {
         states: 0x803f75c0,
         spawned: None,
@@ -2088,7 +2088,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802c04c0)),
         evt_unk: Some(CodeRef(0x802c04f0)),
     },
-    // kind 106
+    // ItKind::IceClimberIce
     ItemLogic {
         states: 0x803f7668,
         spawned: None,
@@ -2106,7 +2106,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802c1ff8)),
         evt_unk: Some(CodeRef(0x802c210c)),
     },
-    // kind 107
+    // ItKind::IceClimberBlizzard
     ItemLogic {
         states: 0x803f76a8,
         spawned: None,
@@ -2124,7 +2124,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802c2454)),
         evt_unk: Some(CodeRef(0x802c246c)),
     },
-    // kind 108
+    // ItKind::ZeldaDinFire
     ItemLogic {
         states: 0x803f76f8,
         spawned: None,
@@ -2142,7 +2142,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c4560)),
     },
-    // kind 109
+    // ItKind::ZeldaDinFireExplode
     ItemLogic {
         states: 0x803f7740,
         spawned: None,
@@ -2160,7 +2160,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802c49b8)),
         evt_unk: Some(CodeRef(0x802c49c0)),
     },
-    // kind 110
+    // ItKind::MewtwoDisable
     ItemLogic {
         states: 0x803f7750,
         spawned: None,
@@ -2178,7 +2178,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802c4cc0)),
         evt_unk: Some(CodeRef(0x802c4cd8)),
     },
-    // kind 111
+    // ItKind::PeachToadSpore
     ItemLogic {
         states: 0x803f7548,
         spawned: None,
@@ -2196,7 +2196,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802be4d0)),
         evt_unk: Some(CodeRef(0x802be578)),
     },
-    // kind 112
+    // ItKind::MewtwoShadowBall
     ItemLogic {
         states: 0x803f7760,
         spawned: None,
@@ -2214,7 +2214,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802c6138)),
         evt_unk: Some(CodeRef(0x802c61d4)),
     },
-    // kind 113
+    // ItKind::IceClimberGumStrings
     ItemLogic {
         states: 0x803f76b8,
         spawned: None,
@@ -2232,7 +2232,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c3aa4)),
     },
-    // kind 114
+    // ItKind::GameWatchGreenhouse
     ItemLogic {
         states: 0x803f7898,
         spawned: None,
@@ -2250,7 +2250,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c65c4)),
     },
-    // kind 115
+    // ItKind::GameWatchManhole
     ItemLogic {
         states: 0x803f78d8,
         spawned: None,
@@ -2268,7 +2268,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c68d8)),
     },
-    // kind 116
+    // ItKind::GameWatchFire
     ItemLogic {
         states: 0x803f78e8,
         spawned: None,
@@ -2286,7 +2286,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c6c18)),
     },
-    // kind 117
+    // ItKind::GameWatchParachute
     ItemLogic {
         states: 0x803f78f8,
         spawned: None,
@@ -2304,7 +2304,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c6f20)),
     },
-    // kind 118
+    // ItKind::GameWatchTurtle
     ItemLogic {
         states: 0x803f7918,
         spawned: None,
@@ -2322,7 +2322,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c71ec)),
     },
-    // kind 119
+    // ItKind::GameWatchBreath
     ItemLogic {
         states: 0x803f7938,
         spawned: None,
@@ -2340,7 +2340,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c74b8)),
     },
-    // kind 120
+    // ItKind::GameWatchJudge
     ItemLogic {
         states: 0x803f7968,
         spawned: None,
@@ -2358,7 +2358,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c7d40)),
     },
-    // kind 121
+    // ItKind::GameWatchPanic
     ItemLogic {
         states: 0x803f79a0,
         spawned: None,
@@ -2376,7 +2376,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c8018)),
     },
-    // kind 122
+    // ItKind::GameWatchChef
     ItemLogic {
         states: 0x803f79e0,
         spawned: None,
@@ -2394,7 +2394,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802c8940)),
         evt_unk: Some(CodeRef(0x802c8b08)),
     },
-    // kind 123
+    // ItKind::CLinkMilk
     ItemLogic {
         states: 0x803f7a28,
         spawned: None,
@@ -2412,7 +2412,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c8f2c)),
     },
-    // kind 124
+    // ItKind::GameWatchRescue
     ItemLogic {
         states: 0x803f79c0,
         spawned: None,
@@ -2430,7 +2430,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c835c)),
     },
-    // kind 125
+    // ItKind::MasterHandLaser
     ItemLogic {
         states: 0x803f9378,
         spawned: None,
@@ -2448,7 +2448,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802f044c)),
     },
-    // kind 126
+    // ItKind::MasterHandBullet
     ItemLogic {
         states: 0x803f9388,
         spawned: None,
@@ -2466,7 +2466,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802f0f64)),
         evt_unk: Some(CodeRef(0x802f0bc8)),
     },
-    // kind 127
+    // ItKind::CrazyHandLaser
     ItemLogic {
         states: 0x803f9378,
         spawned: None,
@@ -2484,7 +2484,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802f044c)),
     },
-    // kind 128
+    // ItKind::CrazyHandBullet
     ItemLogic {
         states: 0x803f9388,
         spawned: None,
@@ -2502,7 +2502,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802f0bc8)),
     },
-    // kind 129
+    // ItKind::CrazyHandBomb
     ItemLogic {
         states: 0x803f93a8,
         spawned: None,
@@ -2520,7 +2520,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802f1094)),
     },
-    // kind 130
+    // ItKind::KirbyMarioFire
     ItemLogic {
         states: 0x803f6788,
         spawned: None,
@@ -2538,7 +2538,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x8029ba68)),
         evt_unk: Some(CodeRef(0x8029ba98)),
     },
-    // kind 131
+    // ItKind::KirbyDrMarioVitamin
     ItemLogic {
         states: 0x803f75d0,
         spawned: None,
@@ -2556,7 +2556,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802c145c)),
         evt_unk: Some(CodeRef(0x802c1570)),
     },
-    // kind 132
+    // ItKind::KirbyLuigiFire
     ItemLogic {
         states: 0x803f75c0,
         spawned: None,
@@ -2574,7 +2574,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802c04c0)),
         evt_unk: Some(CodeRef(0x802c04f0)),
     },
-    // kind 133
+    // ItKind::KirbyIceClimberIce
     ItemLogic {
         states: 0x803f7668,
         spawned: None,
@@ -2592,7 +2592,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802c1ff8)),
         evt_unk: Some(CodeRef(0x802c210c)),
     },
-    // kind 134
+    // ItKind::KirbyPeachToad
     ItemLogic {
         states: 0x803f7528,
         spawned: None,
@@ -2610,7 +2610,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802be1f4)),
     },
-    // kind 135
+    // ItKind::KirbyPeachToadSpore
     ItemLogic {
         states: 0x803f7548,
         spawned: None,
@@ -2628,7 +2628,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802be578)),
     },
-    // kind 136
+    // ItKind::KirbyFoxLaser
     ItemLogic {
         states: 0x803f67d0,
         spawned: None,
@@ -2646,7 +2646,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x8029ccf0)),
         evt_unk: Some(CodeRef(0x8029ccf8)),
     },
-    // kind 137
+    // ItKind::KirbyFalcoLaser
     ItemLogic {
         states: 0x803f67d0,
         spawned: None,
@@ -2664,7 +2664,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x8029ccf0)),
         evt_unk: Some(CodeRef(0x8029ccf8)),
     },
-    // kind 138
+    // ItKind::KirbyFoxBlaster
     ItemLogic {
         states: 0x803f6ca8,
         spawned: None,
@@ -2682,7 +2682,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802af184)),
     },
-    // kind 139
+    // ItKind::KirbyFalcoBlaster
     ItemLogic {
         states: 0x803f6ca8,
         spawned: None,
@@ -2700,7 +2700,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802af184)),
     },
-    // kind 140
+    // ItKind::KirbyLinkArrow
     ItemLogic {
         states: 0x803f6a28,
         spawned: None,
@@ -2718,7 +2718,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802a9b08)),
         evt_unk: Some(CodeRef(0x802aa034)),
     },
-    // kind 141
+    // ItKind::KirbyCLinkArrow
     ItemLogic {
         states: 0x803f6a28,
         spawned: None,
@@ -2736,7 +2736,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802a9b08)),
         evt_unk: Some(CodeRef(0x802aa034)),
     },
-    // kind 142
+    // ItKind::KirbyLinkBow
     ItemLogic {
         states: 0x803f6e98,
         spawned: None,
@@ -2754,7 +2754,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802af920)),
     },
-    // kind 143
+    // ItKind::KirbyCLinkBow
     ItemLogic {
         states: 0x803f6e98,
         spawned: None,
@@ -2772,7 +2772,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802af920)),
     },
-    // kind 144
+    // ItKind::KirbyMewtwoShadowBall
     ItemLogic {
         states: 0x803f7760,
         spawned: None,
@@ -2790,7 +2790,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802c6138)),
         evt_unk: Some(CodeRef(0x802c61d4)),
     },
-    // kind 145
+    // ItKind::KirbyNessPKFlush
     ItemLogic {
         states: 0x803f6b70,
         spawned: None,
@@ -2808,7 +2808,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802ab3d0)),
     },
-    // kind 146
+    // ItKind::KirbyNessPKFlushExplode
     ItemLogic {
         states: 0x803f6f40,
         spawned: None,
@@ -2826,7 +2826,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802afd64)),
         evt_unk: Some(CodeRef(0x802afd6c)),
     },
-    // kind 147
+    // ItKind::KirbyPikachuTJoltGround
     ItemLogic {
         states: 0x803f7190,
         spawned: None,
@@ -2844,7 +2844,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b3d0c)),
         evt_unk: Some(CodeRef(0x802b3edc)),
     },
-    // kind 148
+    // ItKind::KirbyPikachuTJoltAir
     ItemLogic {
         states: 0x803f71d8,
         spawned: None,
@@ -2862,7 +2862,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b4a18)),
         evt_unk: Some(CodeRef(0x802b4aa8)),
     },
-    // kind 149
+    // ItKind::KirbyPichuTJoltGround
     ItemLogic {
         states: 0x803f7190,
         spawned: None,
@@ -2880,7 +2880,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b3d0c)),
         evt_unk: Some(CodeRef(0x802b3edc)),
     },
-    // kind 150
+    // ItKind::KirbyPichuTJoltAir
     ItemLogic {
         states: 0x803f71d8,
         spawned: None,
@@ -2898,7 +2898,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b4a18)),
         evt_unk: Some(CodeRef(0x802b4aa8)),
     },
-    // kind 151
+    // ItKind::KirbySamusCharge
     ItemLogic {
         states: 0x803f7288,
         spawned: None,
@@ -2916,7 +2916,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b613c)),
         evt_unk: Some(CodeRef(0x802b62b0)),
     },
-    // kind 152
+    // ItKind::KirbySeakNeedleThrow
     ItemLogic {
         states: 0x803f6f50,
         spawned: None,
@@ -2934,7 +2934,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802b16e4)),
         evt_unk: Some(CodeRef(0x802b1890)),
     },
-    // kind 153
+    // ItKind::KirbySeakNeedleHeld
     ItemLogic {
         states: 0x803f70a8,
         spawned: None,
@@ -2952,7 +2952,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802b1c40)),
     },
-    // kind 154
+    // ItKind::KirbyKoopaFlame
     ItemLogic {
         states: 0x803f6c58,
         spawned: None,
@@ -2970,7 +2970,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802ad450)),
         evt_unk: Some(CodeRef(0x802ad458)),
     },
-    // kind 155
+    // ItKind::KirbyGameWatchChef
     ItemLogic {
         states: 0x803f79e0,
         spawned: None,
@@ -2988,7 +2988,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: Some(CodeRef(0x802c8940)),
         evt_unk: Some(CodeRef(0x802c8b08)),
     },
-    // kind 156
+    // ItKind::KirbyGameWatchChefPan
     ItemLogic {
         states: 0x803f7958,
         spawned: None,
@@ -3006,7 +3006,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c7754)),
     },
-    // kind 157
+    // ItKind::KirbyYoshiEggLay
     ItemLogic {
         states: 0x803f94a0,
         spawned: None,
@@ -3024,7 +3024,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802f3374)),
     },
-    // kind 158
+    // ItKind::Unk4
     ItemLogic {
         states: 0x803f8bd8,
         spawned: None,
@@ -3042,7 +3042,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802e6acc)),
     },
-    // kind 159
+    // ItKind::Coin
     ItemLogic {
         states: 0x803f93c8,
         spawned: Some(CodeRef(0x802f14e4)),
@@ -3060,7 +3060,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802f18f0)),
     },
-    // kind 160
+    // ItKind::PokemonRandom
     ItemLogic {
         states: 0x803f8c8c,
         spawned: None,
@@ -3080,7 +3080,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
     },
 ];
 
-/// `it_803F2310`: each kind's render function, from kind 161.
+/// `it_803F2310`: each kind's render function, from `ItKind::Tosakinto`.
 pub static RENDER_POKEMON: [CodeRef; 47] = [
     CodeRef(0x8026eecc), // it_8026EECC
     CodeRef(0x8026eecc), // it_8026EECC
@@ -3131,9 +3131,9 @@ pub static RENDER_POKEMON: [CodeRef; 47] = [
     CodeRef(0x8026eecc), // it_8026EECC
 ];
 
-/// `it_803F23CC`, at 0x803f23cc: each kind's logic table, from kind 161.
+/// `it_803F23CC`, at 0x803f23cc: each kind's logic table, from `ItKind::Tosakinto`.
 pub static LOGIC_POKEMON: [ItemLogic; 47] = [
-    // kind 161
+    // ItKind::Tosakinto
     ItemLogic {
         states: 0x803f7a48,
         spawned: Some(CodeRef(0x802c8f4c)),
@@ -3151,7 +3151,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c8fc4)),
     },
-    // kind 162
+    // ItKind::Chicorita
     ItemLogic {
         states: 0x803f7a98,
         spawned: Some(CodeRef(0x802c9588)),
@@ -3169,7 +3169,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c961c)),
     },
-    // kind 163
+    // ItKind::Kabigon
     ItemLogic {
         states: 0x803f7ad8,
         spawned: Some(CodeRef(0x802c9d40)),
@@ -3187,7 +3187,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802c9e24)),
     },
-    // kind 164
+    // ItKind::Kamex
     ItemLogic {
         states: 0x803f7b08,
         spawned: Some(CodeRef(0x802ca49c)),
@@ -3205,7 +3205,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802ca538)),
     },
-    // kind 165
+    // ItKind::Matadogas
     ItemLogic {
         states: 0x803f7b58,
         spawned: Some(CodeRef(0x802cafd4)),
@@ -3223,7 +3223,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802cb0f8)),
     },
-    // kind 166
+    // ItKind::Lizardon
     ItemLogic {
         states: 0x803f7bc0,
         spawned: Some(CodeRef(0x802cb8ac)),
@@ -3241,7 +3241,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802cb940)),
     },
-    // kind 167
+    // ItKind::Fire
     ItemLogic {
         states: 0x803f7c10,
         spawned: Some(CodeRef(0x802cc6e4)),
@@ -3259,7 +3259,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802cc744)),
     },
-    // kind 168
+    // ItKind::Thunder
     ItemLogic {
         states: 0x803f7c40,
         spawned: Some(CodeRef(0x802ccab4)),
@@ -3277,7 +3277,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802ccb14)),
     },
-    // kind 169
+    // ItKind::Freezer
     ItemLogic {
         states: 0x803f7c70,
         spawned: Some(CodeRef(0x802ccf9c)),
@@ -3295,7 +3295,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802cd000)),
     },
-    // kind 170
+    // ItKind::Sonans
     ItemLogic {
         states: 0x803f7ca0,
         spawned: Some(CodeRef(0x802cd44c)),
@@ -3313,7 +3313,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802cd4dc)),
     },
-    // kind 171
+    // ItKind::Hassam
     ItemLogic {
         states: 0x803f7cf8,
         spawned: Some(CodeRef(0x802cdbe0)),
@@ -3331,7 +3331,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802cdc60)),
     },
-    // kind 172
+    // ItKind::Unknown
     ItemLogic {
         states: 0x803f7d60,
         spawned: Some(CodeRef(0x802ce710)),
@@ -3349,7 +3349,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802ce7d0)),
     },
-    // kind 173
+    // ItKind::Entei
     ItemLogic {
         states: 0x803f7dc8,
         spawned: Some(CodeRef(0x802cf3e0)),
@@ -3367,7 +3367,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802cf450)),
     },
-    // kind 174
+    // ItKind::Raikou
     ItemLogic {
         states: 0x803f7de8,
         spawned: Some(CodeRef(0x802cf814)),
@@ -3385,7 +3385,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802cf884)),
     },
-    // kind 175
+    // ItKind::Suikun
     ItemLogic {
         states: 0x803f7e08,
         spawned: Some(CodeRef(0x802cfc48)),
@@ -3403,7 +3403,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802cfcb8)),
     },
-    // kind 176
+    // ItKind::Kireihana
     ItemLogic {
         states: 0x803f7e28,
         spawned: Some(CodeRef(0x802d007c)),
@@ -3421,7 +3421,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d0118)),
     },
-    // kind 177
+    // ItKind::Marumine
     ItemLogic {
         states: 0x803f7e78,
         spawned: Some(CodeRef(0x802d0a0c)),
@@ -3439,7 +3439,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d0ab0)),
     },
-    // kind 178
+    // ItKind::Lugia
     ItemLogic {
         states: 0x803f7ee8,
         spawned: Some(CodeRef(0x802d1438)),
@@ -3457,7 +3457,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d14d4)),
     },
-    // kind 179
+    // ItKind::Houou
     ItemLogic {
         states: 0x803f7f58,
         spawned: Some(CodeRef(0x802d251c)),
@@ -3475,7 +3475,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d25bc)),
     },
-    // kind 180
+    // ItKind::Metamon
     ItemLogic {
         states: 0x803f7fc8,
         spawned: Some(CodeRef(0x802d3008)),
@@ -3493,7 +3493,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d3070)),
     },
-    // kind 181
+    // ItKind::Pippi
     ItemLogic {
         states: 0x803f7ff8,
         spawned: Some(CodeRef(0x802d3260)),
@@ -3511,7 +3511,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d32dc)),
     },
-    // kind 182
+    // ItKind::Togepy
     ItemLogic {
         states: 0x803f8058,
         spawned: Some(CodeRef(0x802d36b0)),
@@ -3529,7 +3529,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d372c)),
     },
-    // kind 183
+    // ItKind::Mew
     ItemLogic {
         states: 0x803f80c8,
         spawned: Some(CodeRef(0x802d3b18)),
@@ -3547,7 +3547,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d3b6c)),
     },
-    // kind 184
+    // ItKind::Cerebi
     ItemLogic {
         states: 0x803f80f8,
         spawned: Some(CodeRef(0x802d3ef8)),
@@ -3565,7 +3565,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d3f4c)),
     },
-    // kind 185
+    // ItKind::Hitodeman
     ItemLogic {
         states: 0x803f8128,
         spawned: Some(CodeRef(0x802d42c4)),
@@ -3583,7 +3583,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d43b0)),
     },
-    // kind 186
+    // ItKind::Lucky
     ItemLogic {
         states: 0x803f8190,
         spawned: Some(CodeRef(0x802d5050)),
@@ -3601,7 +3601,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d56f0)),
     },
-    // kind 187
+    // ItKind::Porygon2
     ItemLogic {
         states: 0x803f8250,
         spawned: Some(CodeRef(0x802d5abc)),
@@ -3619,7 +3619,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d5cd8)),
     },
-    // kind 188
+    // ItKind::Hinoarashi
     ItemLogic {
         states: 0x803f8270,
         spawned: Some(CodeRef(0x802d5cf8)),
@@ -3637,7 +3637,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d61a8)),
     },
-    // kind 189
+    // ItKind::Maril
     ItemLogic {
         states: 0x803f82b0,
         spawned: Some(CodeRef(0x802d6870)),
@@ -3655,7 +3655,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d6fb0)),
     },
-    // kind 190
+    // ItKind::Fushigibana
     ItemLogic {
         states: 0x803f82f0,
         spawned: Some(CodeRef(0x802d6fd0)),
@@ -3673,7 +3673,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d73d0)),
     },
-    // kind 191
+    // ItKind::ChicoritaLeaf
     ItemLogic {
         states: 0x803f7ac8,
         spawned: Some(CodeRef(0x802c9c20)),
@@ -3691,7 +3691,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: Some(CodeRef(0x802c9c78)),
         evt_unk: Some(CodeRef(0x802c9c80)),
     },
-    // kind 192
+    // ItKind::KamexHydroPump
     ItemLogic {
         states: 0x803f7b48,
         spawned: Some(CodeRef(0x802cacd0)),
@@ -3709,7 +3709,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: Some(CodeRef(0x802cadc0)),
         evt_unk: Some(CodeRef(0x802cadd0)),
     },
-    // kind 193
+    // ItKind::MatadogasGas1
     ItemLogic {
         states: 0x803f7bb0,
         spawned: Some(CodeRef(0x802cb690)),
@@ -3727,7 +3727,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802cb778)),
     },
-    // kind 194
+    // ItKind::MatadogasGas2
     ItemLogic {
         states: 0x803f7bb0,
         spawned: Some(CodeRef(0x802cb704)),
@@ -3745,7 +3745,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802cb778)),
     },
-    // kind 195
+    // ItKind::LizardonFlame1
     ItemLogic {
         states: 0x803f7c00,
         spawned: Some(CodeRef(0x802cc3d4)),
@@ -3763,7 +3763,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: Some(CodeRef(0x802cc5c4)),
         evt_unk: Some(CodeRef(0x802cc584)),
     },
-    // kind 196
+    // ItKind::LizardonFlame2
     ItemLogic {
         states: 0x803f7c00,
         spawned: Some(CodeRef(0x802cc440)),
@@ -3781,7 +3781,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: Some(CodeRef(0x802cc5c4)),
         evt_unk: Some(CodeRef(0x802cc584)),
     },
-    // kind 197
+    // ItKind::LizardonFlame3
     ItemLogic {
         states: 0x803f7c00,
         spawned: Some(CodeRef(0x802cc4ac)),
@@ -3799,7 +3799,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: Some(CodeRef(0x802cc5c4)),
         evt_unk: Some(CodeRef(0x802cc584)),
     },
-    // kind 198
+    // ItKind::LizardonFlame4
     ItemLogic {
         states: 0x803f7c00,
         spawned: Some(CodeRef(0x802cc518)),
@@ -3817,7 +3817,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: Some(CodeRef(0x802cc5c4)),
         evt_unk: Some(CodeRef(0x802cc584)),
     },
-    // kind 199
+    // ItKind::UnknownSwarm
     ItemLogic {
         states: 0x803f7d90,
         spawned: Some(CodeRef(0x802ceec8)),
@@ -3835,7 +3835,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802cf0b4)),
     },
-    // kind 200
+    // ItKind::LugiaAeroblast
     ItemLogic {
         states: 0x803f7f48,
         spawned: Some(CodeRef(0x802d2308)),
@@ -3853,7 +3853,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d23d4)),
     },
-    // kind 201
+    // ItKind::LugiaAeroblast2
     ItemLogic {
         states: 0x803f7f48,
         spawned: Some(CodeRef(0x802d234c)),
@@ -3871,7 +3871,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d23d4)),
     },
-    // kind 202
+    // ItKind::LugiaAeroblast3
     ItemLogic {
         states: 0x803f7f48,
         spawned: Some(CodeRef(0x802d2390)),
@@ -3889,7 +3889,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d23d4)),
     },
-    // kind 203
+    // ItKind::HououSacredFire
     ItemLogic {
         states: 0x803f7fb8,
         spawned: Some(CodeRef(0x802d2e80)),
@@ -3907,7 +3907,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d2ed0)),
     },
-    // kind 204
+    // ItKind::HitodemanStar
     ItemLogic {
         states: 0x803f8180,
         spawned: Some(CodeRef(0x802d4de0)),
@@ -3925,7 +3925,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: Some(CodeRef(0x802d4f50)),
         evt_unk: Some(CodeRef(0x802d4f58)),
     },
-    // kind 205
+    // ItKind::LuckyEgg
     ItemLogic {
         states: 0x803f8200,
         spawned: Some(CodeRef(0x802d57d0)),
@@ -3943,7 +3943,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d5a9c)),
     },
-    // kind 206
+    // ItKind::HinoarashiFlame
     ItemLogic {
         states: 0x803f82a0,
         spawned: None,
@@ -3961,7 +3961,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         hit_shield: Some(CodeRef(0x802d6848)),
         evt_unk: Some(CodeRef(0x802d6850)),
     },
-    // kind 207
+    // ItKind::PokemonUnk
     ItemLogic {
         states: 0x0,
         spawned: None,
@@ -3981,7 +3981,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
     },
 ];
 
-/// `it_803F4CA8`: each kind's render function, from kind 208.
+/// `it_803F4CA8`: each kind's render function, from `ItKind::OldKuri`.
 pub static RENDER_STAGE: [CodeRef; 30] = [
     CodeRef(0x8026eecc), // it_8026EECC
     CodeRef(0x8026eecc), // it_8026EECC
@@ -4015,9 +4015,9 @@ pub static RENDER_STAGE: [CodeRef; 30] = [
     CodeRef(0x0),        // ?
 ];
 
-/// `it_803F4D20`, at 0x803f4d20: each kind's logic table, from kind 208.
+/// `it_803F4D20`, at 0x803f4d20: each kind's logic table, from `ItKind::OldKuri`.
 pub static LOGIC_STAGE: [ItemLogic; 30] = [
-    // kind 208
+    // ItKind::OldKuri
     ItemLogic {
         states: 0x803f8320,
         spawned: Some(CodeRef(0x802d73f0)),
@@ -4035,7 +4035,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d84d8)),
     },
-    // kind 209
+    // ItKind::Mato
     ItemLogic {
         states: 0x803f83e0,
         spawned: Some(CodeRef(0x802d84f8)),
@@ -4053,7 +4053,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 210
+    // ItKind::Heiho
     ItemLogic {
         states: 0x803f83f0,
         spawned: Some(CodeRef(0x802d8688)),
@@ -4071,7 +4071,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802d9a0c)),
     },
-    // kind 211
+    // ItKind::Nokonoko
     ItemLogic {
         states: 0x803f85f0,
         spawned: Some(CodeRef(0x802dc69c)),
@@ -4089,7 +4089,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802dd7d0)),
     },
-    // kind 212
+    // ItKind::Patapata
     ItemLogic {
         states: 0x803f88c0,
         spawned: Some(CodeRef(0x802e05a0)),
@@ -4107,7 +4107,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802e16d8)),
     },
-    // kind 213
+    // ItKind::Likelike
     ItemLogic {
         states: 0x803f8468,
         spawned: Some(CodeRef(0x802d9ba8)),
@@ -4125,7 +4125,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802e16d8)),
     },
-    // kind 214
+    // ItKind::OldLead
     ItemLogic {
         states: 0x0,
         spawned: None,
@@ -4143,7 +4143,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 215
+    // ItKind::OldOcta
     ItemLogic {
         states: 0x0,
         spawned: None,
@@ -4161,7 +4161,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 216
+    // ItKind::OldOtto
     ItemLogic {
         states: 0x803f89c8,
         spawned: Some(CodeRef(0x802e2470)),
@@ -4179,7 +4179,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 217
+    // ItKind::Whitebea
     ItemLogic {
         states: 0x803f8a88,
         spawned: Some(CodeRef(0x802e37bc)),
@@ -4197,7 +4197,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802e4a24)),
     },
-    // kind 218
+    // ItKind::Klap
     ItemLogic {
         states: 0x803f8940,
         spawned: Some(CodeRef(0x802e1820)),
@@ -4215,7 +4215,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802e2450)),
     },
-    // kind 219
+    // ItKind::ZGShell
     ItemLogic {
         states: 0x803f86c8,
         spawned: Some(CodeRef(0x802de040)),
@@ -4233,7 +4233,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: Some(CodeRef(0x802dfd60)),
         evt_unk: Some(CodeRef(0x802dfed4)),
     },
-    // kind 220
+    // ItKind::ZRShell
     ItemLogic {
         states: 0x803f87f0,
         spawned: Some(CodeRef(0x802e02e8)),
@@ -4251,7 +4251,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: Some(CodeRef(0x802e0428)),
         evt_unk: Some(CodeRef(0x802e0468)),
     },
-    // kind 221
+    // ItKind::Tincle
     ItemLogic {
         states: 0x803f9000,
         spawned: Some(CodeRef(0x802eb5c8)),
@@ -4269,7 +4269,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802ec850)),
     },
-    // kind 222
+    // ItKind::Invalid1
     ItemLogic {
         states: 0x0,
         spawned: None,
@@ -4287,7 +4287,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 223
+    // ItKind::Invalid2
     ItemLogic {
         states: 0x0,
         spawned: None,
@@ -4305,7 +4305,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 224
+    // ItKind::Invalid3
     ItemLogic {
         states: 0x0,
         spawned: None,
@@ -4323,7 +4323,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 225
+    // ItKind::WhispyApple
     ItemLogic {
         states: 0x803f91d0,
         spawned: None,
@@ -4341,7 +4341,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: Some(CodeRef(0x802eef30)),
         evt_unk: Some(CodeRef(0x802eef88)),
     },
-    // kind 226
+    // ItKind::WhispyHealApple
     ItemLogic {
         states: 0x803f91d0,
         spawned: None,
@@ -4359,7 +4359,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: Some(CodeRef(0x802eef30)),
         evt_unk: Some(CodeRef(0x802eef88)),
     },
-    // kind 227
+    // ItKind::Invalid4
     ItemLogic {
         states: 0x0,
         spawned: None,
@@ -4377,7 +4377,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 228
+    // ItKind::Invalid5
     ItemLogic {
         states: 0x0,
         spawned: None,
@@ -4395,7 +4395,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 229
+    // ItKind::Invalid6
     ItemLogic {
         states: 0x0,
         spawned: None,
@@ -4413,7 +4413,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 230
+    // ItKind::Tools
     ItemLogic {
         states: 0x803f9260,
         spawned: None,
@@ -4431,7 +4431,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: Some(CodeRef(0x802ef7cc)),
         evt_unk: Some(CodeRef(0x802efa24)),
     },
-    // kind 231
+    // ItKind::Invalid7
     ItemLogic {
         states: 0x0,
         spawned: None,
@@ -4449,7 +4449,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 232
+    // ItKind::Invalid8
     ItemLogic {
         states: 0x0,
         spawned: None,
@@ -4467,7 +4467,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: None,
     },
-    // kind 233
+    // ItKind::Kyasarin
     ItemLogic {
         states: 0x803f90d0,
         spawned: Some(CodeRef(0x802ece90)),
@@ -4485,7 +4485,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802ee1e0)),
     },
-    // kind 234
+    // ItKind::ArwingLaser
     ItemLogic {
         states: 0x803f8de8,
         spawned: None,
@@ -4503,7 +4503,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: Some(CodeRef(0x802e8784)),
         evt_unk: None,
     },
-    // kind 235
+    // ItKind::GreatFoxLaser
     ItemLogic {
         states: 0x803f8fd0,
         spawned: Some(CodeRef(0x802eb1ec)),
@@ -4521,7 +4521,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802eb5a8)),
     },
-    // kind 236
+    // ItKind::KyasarinEgg
     ItemLogic {
         states: 0x803f9328,
         spawned: None,
@@ -4539,7 +4539,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         hit_shield: Some(CodeRef(0x802f0010)),
         evt_unk: Some(CodeRef(0x802f0320)),
     },
-    // kind 237
+    // kind 237, no `ItKind`
     ItemLogic {
         states: 0x0,
         spawned: None,

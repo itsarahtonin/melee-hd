@@ -9,6 +9,7 @@ use super::super::item::{article, change, change_state, debug_owner_bubbles, spa
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -129,7 +130,7 @@ pub fn hit_stage(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802C3BAC")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::ZELDA_DIN_FIRE,
+        kind: ItKind::ZeldaDinFire.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

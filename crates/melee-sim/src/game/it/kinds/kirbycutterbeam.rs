@@ -8,15 +8,13 @@ use super::super::item::{article, change, change_state, spawn_air};
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use super::foxlaser::normalize;
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::math;
 use crate::vec::Vec3;
-
-/// `It_Kind_Kirby_CBeam`.
-pub const KIND: i32 = super::KIRBY_CBEAM;
 
 pub const SPAWN: u32 = 0x8029_BAB8;
 pub const START: u32 = 0x8029_BB90;
@@ -77,7 +75,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_8029BAB8")]
 pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) {
     let mut spawn = SpawnItem {
-        kind: KIND,
+        kind: ItKind::KirbyCBeam.id(),
         ..Default::default()
     };
     spawn.prev_pos = Vec3::new(pos.x, pos.y, 0.0);

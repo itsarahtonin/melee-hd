@@ -13,6 +13,7 @@ use super::colanim::Overlay;
 use super::common::{FIGHTER_P_LINK, GA_AIR};
 use super::sound::Track;
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::{aobj, tobj};
 use crate::lb::command::Script;
@@ -765,8 +766,7 @@ impl Running<'_> {
             self.game.world.gobj(item).user_data,
             Some(crate::game::state::UserData::Item(_))
         );
-        (is_item
-            && crate::game::it::lib26b1::kind(self.game, item) == crate::game::it::kinds::SWORD)
+        (is_item && crate::game::it::lib26b1::kind(self.game, item) == ItKind::Sword)
             .then_some(item)
     }
 

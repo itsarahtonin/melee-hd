@@ -10,6 +10,7 @@ use super::super::super::it::kinds::{masterhandbullet, masterhandlaser};
 use super::super::super::state::Running;
 use super::{addr, attr, ms, mv};
 use crate::fpu::reg;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -87,7 +88,15 @@ impl Running<'_> {
             let j = self.mh_part_joint(gobj, part);
             let v = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
             let facing = self.game.fighters[f.0].facing_dir;
-            let l = masterhandlaser::spawn(self, gobj, v, v, part, masterhandlaser::KIND, facing);
+            let l = masterhandlaser::spawn(
+                self,
+                gobj,
+                v,
+                v,
+                part,
+                ItKind::MasterHandLaser.id(),
+                facing,
+            );
             self.game.fighters[f.0].mv.set_gobj_at(off, l);
         }
         for (off, id) in [mv::X28, mv::X2C, mv::X30].into_iter().zip(SFX_BEAM) {
@@ -254,7 +263,7 @@ impl Running<'_> {
             gobj,
             pos,
             from,
-            masterhandbullet::KIND,
+            ItKind::MasterHandBullet.id(),
             fast,
             facing,
             sx,

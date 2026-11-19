@@ -7,6 +7,7 @@
 
 pub mod vars;
 
+use crate::game::it::ItKind;
 use gekko_fp as fp;
 
 pub use vars::PokemonVars;
@@ -27,19 +28,8 @@ use crate::hsd::jobj::{self, JObjId};
 use crate::quat::Quat;
 use crate::vec::Vec3;
 
-use super::kinds::{PKIND_START, PKIND_TERMINATE};
-
-/// `It_PKind_Marumine`, Electrode, which grows with no gravity.
-const PKIND_MARUMINE: i32 = 0xB1;
-/// `It_PKind_Sonans`, Wobbuffet, the list draw's answer when nothing passes it.
-const PKIND_SONANS: i32 = 0xAA;
-/// `It_PKind_Metamon`, Ditto.
-const PKIND_METAMON: i32 = 0xB4;
-/// `It_PKind_Mew` and `It_PKind_Cerebi`, the rare ones.
-const PKIND_MEW: i32 = 0xB7;
-const PKIND_CEREBI: i32 = 0xB8;
 /// `Pokemon_ID_Metamon` and `Pokemon_ID_Tosakinto` (`PokemonKind`, from Goldeen's 0).
-const POKEMON_ID_METAMON: i32 = PKIND_METAMON - PKIND_START;
+const POKEMON_ID_METAMON: i32 = ItKind::Metamon.id() - ItKind::FIRST_POKEMON.id();
 const POKEMON_ID_TOSAKINTO: i32 = 0;
 
 /// The release's variables (`itPokemonSpawn_ItemVars`), by offset in the union.
@@ -85,7 +75,7 @@ fn ball_attr(r: &Running, ball: GObjId, off: u32) -> DataRef {
 pub fn total_weight(r: &Running, ball: GObjId) -> i32 {
     let p = r.game.it.pokemon.clone();
     let mut total = 1i32;
-    for kind in PKIND_START..PKIND_TERMINATE {
+    for kind in ItKind::FIRST_POKEMON.id()..ItKind::POKEMON_END.id() {
         if p.last_kind != kind && p.previous_kind != kind {
             let w = r.data.u32(ball_attr(r, ball, weight_off(kind))) as i32;
             total = total.wrapping_add(w);
@@ -96,7 +86,7 @@ pub fn total_weight(r: &Running, ball: GObjId) -> i32 {
 
 /// Where a Pokémon's weight is in the ball's attributes (`pokemon_spawn_weights`).
 fn weight_off(kind: i32) -> u32 {
-    0x3C + 4 * (kind - PKIND_START) as u32
+    0x3C + 4 * (kind - ItKind::FIRST_POKEMON.id()) as u32
 }
 
 /// A rare Pokémon, if the draws say so, once a match: Celebi (23) when the card records every
@@ -109,7 +99,7 @@ fn rare(r: &mut Running) -> Option<i32> {
     {
         r.game.it.pokemon.rare_spawned = 1;
         r.record_rare_pokemon(RECORD_CEREBI);
-        return Some(PKIND_CEREBI - PKIND_START);
+        return Some(ItKind::Cerebi.id() - ItKind::FIRST_POKEMON.id());
     }
     if r.game.objs.rng.below(251) == 0
         && r.game.it.pokemon.rare_spawned == 0
@@ -117,7 +107,7 @@ fn rare(r: &mut Running) -> Option<i32> {
     {
         r.game.it.pokemon.rare_spawned = 1;
         r.record_rare_pokemon(RECORD_MEW);
-        return Some(PKIND_MEW - PKIND_START);
+        return Some(ItKind::Mew.id() - ItKind::FIRST_POKEMON.id());
     }
     None
 }
@@ -128,7 +118,7 @@ fn draw_weighted(r: &mut Running, ball: GObjId) -> i32 {
     let total = total_weight(r, ball);
     let roll = r.game.objs.rng.below(total);
     let mut sum = 0i32;
-    for kind in PKIND_START..PKIND_TERMINATE {
+    for kind in ItKind::FIRST_POKEMON.id()..ItKind::POKEMON_END.id() {
         let p = &r.game.it.pokemon;
         let (prev, last) = (p.previous_kind, p.last_kind);
         if last != kind && prev != kind {
@@ -138,7 +128,7 @@ fn draw_weighted(r: &mut Running, ball: GObjId) -> i32 {
                 let p = &mut r.game.it.pokemon;
                 p.previous_kind = last;
                 p.last_kind = kind;
-                return kind - PKIND_START;
+                return kind - ItKind::FIRST_POKEMON.id();
             }
         }
     }
@@ -161,7 +151,7 @@ fn draw_from_list(r: &mut Running, ball: GObjId, list: &[i32]) -> i32 {
     let mut entries = [(0i32, 0i32); 30];
     let (mut n, mut total) = (0usize, 0i32);
     for &kind in list.iter().take(30) {
-        if kind == PKIND_TERMINATE {
+        if kind == ItKind::POKEMON_END {
             break;
         }
         if p.last_kind != kind && p.previous_kind != kind {
@@ -173,7 +163,7 @@ fn draw_from_list(r: &mut Running, ball: GObjId, list: &[i32]) -> i32 {
     }
     let roll = r.game.objs.rng.below(total);
     let mut accum = 0i32;
-    let mut result = PKIND_SONANS;
+    let mut result = ItKind::Sonans.id();
     for &(kind, w) in &entries[..n] {
         accum = accum.wrapping_add(w);
         if roll < accum {
@@ -184,7 +174,7 @@ fn draw_from_list(r: &mut Running, ball: GObjId, list: &[i32]) -> i32 {
     let p = &mut r.game.it.pokemon;
     p.previous_kind = p.last_kind;
     p.last_kind = result;
-    result - PKIND_START
+    result - ItKind::FIRST_POKEMON.id()
 }
 
 /// A random Pokémon for a match, `it_8027A4D4`: a rare one, or one by weight.
@@ -203,7 +193,7 @@ fn choose(r: &mut Running, ball: GObjId) -> i32 {
         if forced == 1 {
             return event_list(r, ball);
         }
-        return forced.wrapping_sub(PKIND_START);
+        return forced.wrapping_sub(ItKind::FIRST_POKEMON.id());
     }
     if crate::game::gm::is_training(r.game) {
         return draw_from_list(r, ball, &COMMON_POKEMON);
@@ -218,7 +208,7 @@ fn choose(r: &mut Running, ball: GObjId) -> i32 {
         kind -= 1;
     }
     if kind == POKEMON_ID_METAMON
-        && (lib26b1::count_kind(r.game, PKIND_METAMON) != 0 || r.game.ft_count() == 4)
+        && (lib26b1::count_kind(r.game, ItKind::Metamon.id()) != 0 || r.game.ft_count() == 4)
     {
         kind = POKEMON_ID_TOSAKINTO;
     }
@@ -232,16 +222,16 @@ fn choose(r: &mut Running, ball: GObjId) -> i32 {
 fn event_list(r: &mut Running, ball: GObjId) -> i32 {
     let ev = r.event();
     let Some(list) = r.event_entry(ev).and_then(|e| e.x4(r)) else {
-        return PKIND_SONANS;
+        return ItKind::Sonans.id();
     };
     if let Some(k) = rare(r) {
         return k;
     }
     // Read as far as `it_8027A780` reads: to the terminator or the 30th.
-    let mut kinds = [PKIND_TERMINATE; 30];
+    let mut kinds = [ItKind::POKEMON_END.id(); 30];
     for (i, k) in kinds.iter_mut().enumerate() {
         *k = r.data.u32(list.at(4 * i as u32)) as i32;
-        if *k == PKIND_TERMINATE {
+        if *k == ItKind::POKEMON_END {
             break;
         }
     }
@@ -269,17 +259,17 @@ pub fn release(r: &mut Running, ball: GObjId) -> bool {
         pos: center,
         x3C_damage: 0,
         facing_dir: facing,
-        kind: kind.wrapping_add(PKIND_START),
+        kind: kind.wrapping_add(ItKind::FIRST_POKEMON.id()),
         x0_parent_gobj: owner,
         x4_parent_gobj2: Some(ball),
         x40: 0,
         ..Default::default()
     };
     spawn.x44_flag[0] |= 0x80;
-    if spawn.kind == PKIND_CEREBI {
+    if spawn.kind == ItKind::Cerebi {
         r.record_rare_pokemon(RECORD_CEREBI);
     }
-    if spawn.kind == PKIND_MEW {
+    if spawn.kind == ItKind::Mew {
         r.record_rare_pokemon(RECORD_MEW);
     }
     let Some(gobj) = spawn_air(r, &mut spawn) else {
@@ -299,14 +289,15 @@ pub fn count_for_owner(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
     let (kind, owner) = (ip.kind, ip.owner);
     assert!(
-        (PKIND_START..PKIND_TERMINATE).contains(&kind),
+        (ItKind::FIRST_POKEMON.id()..ItKind::POKEMON_END.id()).contains(&kind),
         "It_PKind_Start <= itGetKind(igobj) && itGetKind(igobj) < It_PKind_Terminate"
     );
     if !super::item::is_fighter(r.game, owner) {
         return;
     }
     let slot = r.game.fighter(owner.expect("an owner")).player_idx as usize;
-    let n = &mut r.game.players[slot].stale_moves.x848[(kind - PKIND_START) as usize];
+    let n =
+        &mut r.game.players[slot].stale_moves.x848[(kind - ItKind::FIRST_POKEMON.id()) as usize];
     *n = n.wrapping_add(1);
 }
 
@@ -346,7 +337,7 @@ pub fn count_attack(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8027AAA0")]
 pub fn set_release_vars(r: &mut Running, ball: GObjId, gobj: GObjId, kind: i32) {
     let a = |off| r.data.f32(ball_attr(r, ball, off));
-    let (fall, fall_max) = if kind == PKIND_MARUMINE {
+    let (fall, fall_max) = if kind == ItKind::Marumine {
         (0.0, 0.0)
     } else {
         (a(0xC), a(0x10))

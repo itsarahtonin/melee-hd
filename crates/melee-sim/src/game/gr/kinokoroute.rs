@@ -20,6 +20,7 @@ use super::ground::{
 };
 use super::{anime, material, setup, stage, zako};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::lb::joint::world_position;
@@ -491,7 +492,7 @@ pub fn shut(r: &mut Running, gobj: GObjId, on: bool) {
         r.game.geometry_mut().enable_joint(0x3C);
         r.game.geometry_mut().enable_joint(0x33);
         for item in items {
-            if super::super::it::item(r.game, item).kind == super::super::it::kinds::PKIND_RANDOM {
+            if super::super::it::item(r.game, item).kind == ItKind::PokemonRandom {
                 material::item_hurtbox_on(r.game, item);
             }
         }
@@ -503,7 +504,7 @@ pub fn shut(r: &mut Running, gobj: GObjId, on: bool) {
         r.game.geometry_mut().disable_joint(0x3C);
         r.game.geometry_mut().disable_joint(0x33);
         for item in items {
-            if super::super::it::item(r.game, item).kind == super::super::it::kinds::PKIND_RANDOM {
+            if super::super::it::item(r.game, item).kind == ItKind::PokemonRandom {
                 material::item_hurtbox_off(r.game, item);
             }
         }

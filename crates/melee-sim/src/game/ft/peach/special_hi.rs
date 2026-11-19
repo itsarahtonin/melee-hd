@@ -11,13 +11,11 @@ use super::super::common::GA_AIR;
 use super::{addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// `FtPart_109`, the hand she holds the parasol in.
 const PART_HAND: i32 = 109;
-/// `It_Kind_Capsule` (the move's kind before the parasol is out) and `It_Kind_Parasol`.
-const KIND_CAPSULE: i32 = 0;
-const KIND_PARASOL: i32 = 13;
 
 /// `ftCo_MS_FallSpecial` to `ftCo_MS_FallSpecialB`.
 const MS_FALL_SPECIAL: i32 = 35;
@@ -135,9 +133,9 @@ impl Running<'_> {
     #[doc(alias = "ftPe_SpecialHi_8011D424")]
     pub fn peach_parasol_out(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].mv_i32(mv::HI_KIND) == KIND_CAPSULE {
+        if self.game.fighters[f.0].mv_i32(mv::HI_KIND) == ItKind::Capsule {
             let fp = &mut self.game.fighters[f.0];
-            fp.set_mv_i32(mv::HI_KIND, peachparasol::KIND);
+            fp.set_mv_i32(mv::HI_KIND, ItKind::PeachParasol.id());
             if fp.u.gobj_at(u::PARASOL_0).is_none() {
                 let hand = self.bone_joint(gobj, PART_HAND);
                 let pos =
@@ -176,11 +174,11 @@ impl Running<'_> {
         fp.cmd_vars[1] = 0;
         fp.cmd_vars[2] = 0;
         fp.x2210 = [0; 4];
-        fp.set_mv_i32(mv::HI_KIND, KIND_CAPSULE);
+        fp.set_mv_i32(mv::HI_KIND, ItKind::Capsule.id());
         fp.x2222_b2 = true;
         if let Some(item) = fp.item_gobj {
             let kind = lib26b1::kind(self.game, item);
-            if kind == KIND_PARASOL || kind == peachparasol::KIND {
+            if kind == ItKind::Parasol || kind == ItKind::PeachParasol {
                 self.game.fighter_mut(gobj).set_mv_i32(mv::HI_KIND, kind);
                 return;
             }

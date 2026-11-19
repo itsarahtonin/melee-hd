@@ -3,6 +3,7 @@
 use super::super::item::{animate, change, change_state, destroy};
 use super::super::{item, item_mut, lib26b1};
 use super::gamewatch;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -41,7 +42,14 @@ pub fn spawn(
     part: i32,
     facing_dir: f32,
 ) -> Option<GObjId> {
-    gamewatch::spawn_held(r, super::GAME_WATCH_BREATH, parent, pos, part, facing_dir)
+    gamewatch::spawn_held(
+        r,
+        ItKind::GameWatchBreath.id(),
+        parent,
+        pos,
+        part,
+        facing_dir,
+    )
 }
 
 /// Gone, `itGameWatchBreath_Logic76_Destroyed`: its owner forgets it.

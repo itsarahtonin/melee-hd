@@ -76,7 +76,7 @@ pub struct Entries<K: Kind> {
 }
 
 impl<K: Kind> Entries<K> {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self { list: Vec::new() }
     }
 
@@ -222,10 +222,10 @@ impl AllEntries {
         super::fighter_callbacks(&mut e.fighter);
         super::procs(&mut e.proc);
         super::events(&mut e.event);
-        crate::game::it::kinds::run_pred(&mut e.pred);
         super::calls(&mut e.call);
         crate::game::render::run(&mut e.render);
         crate::game::gr::registry::register(&mut e.event, &mut e.proc, &mut e.render);
+        crate::game::it::registry::register(&mut e.proc, &mut e.pred);
         e
     }
 }

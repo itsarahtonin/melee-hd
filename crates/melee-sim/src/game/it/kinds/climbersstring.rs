@@ -22,6 +22,7 @@ use super::super::link::{self, apply_vel, direction, link as lk, link_mut};
 use super::super::{item, item_mut, lib26b1};
 use crate::fpu::{mem, reg};
 use crate::game::handles::{CodeRef, ItemLinkId};
+use crate::game::it::ItKind;
 use crate::game::state::{Obj, Running, UserData};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::{self as gobjs, GObjId};
@@ -264,7 +265,7 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802C27D4")]
 pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::ICE_CLIMBER_STRING,
+        kind: ItKind::IceClimberGumStrings.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition(&spawn, pos, false)`.

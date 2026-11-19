@@ -29,7 +29,8 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::handles::CodeRef;
-use melee_sim::game::it::kinds::{self, trophycoin};
+use melee_sim::game::it::ItKind;
+use melee_sim::game::it::kinds::trophycoin;
 use melee_sim::game::it::{self, CLASS_ITEM, zako};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -84,7 +85,7 @@ fn name_of(addr: u32) -> String {
 /// A coin's callbacks take a coin.
 fn coin_check(g: &Running, gobj: GObjId, name: &str) {
     if g.game.world.gobj(gobj).classifier != CLASS_ITEM
-        || it::lib26b1::kind(g.game, gobj) != kinds::COIN
+        || it::lib26b1::kind(g.game, gobj) != ItKind::Coin
     {
         panic!("{SKIP}{name} takes a 1P coin");
     }

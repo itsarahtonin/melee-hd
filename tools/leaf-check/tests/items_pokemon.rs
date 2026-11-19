@@ -29,6 +29,7 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::gm::Unlocks;
+use melee_sim::game::it::ItKind;
 use melee_sim::game::it::kinds::{
     chicorita, entei, fire, freezer, fushigibana, hassam, hinoarashi, hitodeman, houou, kabigon,
     kamex, kireihana, lizardon, lucky, lugia, maril, marumine, matadogas, mew, pippi, porygon2,
@@ -153,7 +154,7 @@ fn args(call: &mut Call, target: &str, k: usize) {
     if SEARCHES.contains(&target) {
         let ip = peek_u32(call, gobj + 0x2C);
         let firing = in_mem(ip)
-            && peek_u32(call, ip + 0x10) == LUGIA as u32
+            && peek_u32(call, ip + 0x10) == ItKind::Lugia as u32
             && peek_u32(call, ip + 0x24) == 5;
         if !firing {
             call.regs.gpr[3] = 0;
@@ -170,12 +171,12 @@ fn args(call: &mut Call, target: &str, k: usize) {
             call.regs.fpr[1].ps0 = [1.0f64, 2.5][(k / 2) % 2];
         }
         "it_80279CDC" | "it_80279D5C" => call.regs.fpr[1].ps0 = [1.0f64, 0.5, 1.3][k % 3],
-        "it_802CC1CC" => g[4] = lizardon::FLAME1 as u32 + (k % 4) as u32,
+        "it_802CC1CC" => g[4] = ItKind::LizardonFlame1.id() as u32 + (k % 4) as u32,
         "it_802D1E8C" => {
             g[4] = [
-                lugia::AEROBLAST as u32,
-                lugia::AEROBLAST2 as u32,
-                lugia::AEROBLAST3 as u32,
+                ItKind::LugiaAeroblast.id() as u32,
+                ItKind::LugiaAeroblast2.id() as u32,
+                ItKind::LugiaAeroblast3.id() as u32,
             ][k % 3];
             call.regs.fpr[1].ps0 = [8.0f64, 5.5, 3.0][(k / 3) % 3];
         }
@@ -183,8 +184,6 @@ fn args(call: &mut Call, target: &str, k: usize) {
     }
 }
 
-/// `It_PKind_Lugia`, and the functions that run its search for a point to fire at.
-const LUGIA: i32 = 0xB2;
 const SEARCHES: &[&str] = &["it_802D1BBC", "it_802D1E8C", "it_802D208C"];
 
 /// The forgetting callbacks (`EvtUnk`) the decomp names by address.
@@ -349,7 +348,7 @@ fn item_check(g: &Running, gobj: GObjId, a: u32) {
 fn kinds_naming(addr: u32) -> Vec<i32> {
     use melee_sim::game::handles::{CodeRef, ItemStatesRef};
     use melee_sim::game::it::tables;
-    (it::kinds::PKIND_START..=it::kinds::POKEMON_UNK)
+    (ItKind::FIRST_POKEMON.id()..=ItKind::PokemonUnk.id())
         .filter(|&k| {
             let l = tables::logic(tables::logic_ref(k));
             let f = Some(CodeRef(addr));
@@ -413,11 +412,11 @@ fn kind_check(g: &Running, gobj: GObjId, name: &str) {
         "it_8027AB64" | "it_8027AAA0" | "it_8027A364" | "it_8027A4D4"
     );
     let ok = if ball {
-        kind == it::kinds::M_BALL
+        kind == ItKind::MBall
     } else if unit(addr).is_some_and(|u| u >= 2) && !forgets(name) {
         owners(addr).contains(&kind)
     } else {
-        (it::kinds::PKIND_START..=it::kinds::POKEMON_UNK).contains(&kind)
+        (ItKind::FIRST_POKEMON.id()..=ItKind::PokemonUnk.id()).contains(&kind)
     };
     if !ok {
         panic!("{SKIP}{name} doesn't take an item of kind {kind}");

@@ -25,6 +25,7 @@ use super::super::{item, item_mut, jobj_of};
 use crate::fpu::{mem, reg};
 use crate::game::code::unported_call;
 use crate::game::handles::{CodeRef, ItemLinkId};
+use crate::game::it::ItKind;
 use crate::game::state::{Obj, Running, UserData};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::{self as gobjs, GObjId};
@@ -112,7 +113,7 @@ impl Lengths {
 
 /// The hookshots' item kinds, Link's and Young Link's: each has its own article, its
 /// attributes in its character's archive, and its own [`Lengths`] (in this order).
-pub const KINDS: [i32; 2] = [super::LINK_HSHOT, super::CLINK_HSHOT];
+pub const KINDS: [i32; 2] = [ItKind::LinkHShot.id(), ItKind::CLinkHShot.id()];
 
 /// The hookshot of `kind`'s entry in [`Globals::hookshot_lengths`](super::super::Globals::hookshot_lengths).
 pub fn lengths_slot(kind: i32) -> usize {

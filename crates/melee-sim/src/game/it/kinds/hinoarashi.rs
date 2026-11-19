@@ -15,6 +15,7 @@ use super::super::{hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, se
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::it::data;
 use crate::game::it::item::attr_of;
 use crate::game::state::Running;
@@ -35,9 +36,6 @@ pub const ANIM2: u32 = 0x802D_60C8;
 pub const PHYS2: u32 = 0x802D_60D0;
 pub const DMG_RECEIVED: u32 = 0x802D_6100;
 pub const EVT_UNK: u32 = 0x802D_61A8;
-
-/// `It_Kind_Hinoarashi_Flame`.
-pub const FLAME: i32 = super::HINOARASHI_FLAME;
 
 /// Cyndaquil's variables (`itHinoarashi_ItemVars`): its flags (`x60`: `b0` its back's flame
 /// effect lit, `b1` its flames out) and the frames to its next flame sound (`x64`).
@@ -336,7 +334,7 @@ pub fn turn_off_surface(r: &mut Running, gobj: GObjId, coll: i32) {
 pub fn spawn_flame(r: &mut Running, gobj: GObjId, pos: Vec3, attack_id: u32, facing_dir: f32) {
     let owner = item(r.game, gobj).owner;
     let mut spawn = SpawnItem {
-        kind: FLAME,
+        kind: ItKind::HinoarashiFlame.id(),
         prev_pos: Vec3::new(pos.x, pos.y, 0.0),
         pos: lib26b1::ecb_center(r.game, gobj),
         facing_dir,

@@ -16,6 +16,7 @@ use super::super::{data, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -54,9 +55,6 @@ pub const FLAME_FLY: u32 = 0x802C_C5D4;
 pub const FLAME_ANIM: u32 = 0x802C_C650;
 pub const FLAME_PHYS: u32 = 0x802C_C684;
 pub const FLAME_COLL: u32 = 0x802C_C6C4;
-
-/// `It_Kind_Lizardon_Flame1`, the first of its four flames.
-pub const FLAME1: i32 = 0xC3;
 
 /// Its variables past the release's (`itLizardon_ItemVars`): the rounds left (`x60`, -1
 /// until the first), which way it breathes (`x64`, 1 for its back), the frames to its next
@@ -272,7 +270,12 @@ pub fn accessory(r: &mut Running, gobj: GObjId) {
     if left == 0.0 {
         let every = attr_i32(r, gobj, 0x14);
         pokemon::vars(r.game, gobj).set_f32(FLAME_FRAMES, mem(fp::frsp(f64::from(every))));
-        let kind = r.game.objs.rng.below(4).wrapping_add(FLAME1);
+        let kind = r
+            .game
+            .objs
+            .rng
+            .below(4)
+            .wrapping_add(ItKind::LizardonFlame1.id());
         flame(r, gobj, kind);
     }
     let v = pokemon::vars(r.game, gobj);

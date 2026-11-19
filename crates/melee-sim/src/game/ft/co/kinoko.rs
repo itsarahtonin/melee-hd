@@ -9,11 +9,12 @@
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::{self, kinds};
+use super::super::super::it;
 use super::super::super::state::Running;
 use super::super::FighterId;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::{aobj, jobj};
 
@@ -551,7 +552,7 @@ impl Running<'_> {
     /// attributes' entry `idx + 2`.
     #[doc(alias = "it_80293660")]
     pub fn kinoko_scale_anim(&self, idx: i32) -> Option<melee_data::archive::DataRef> {
-        let art = it::item::article_of(self.game, self.data, kinds::KINOKO)
+        let art = it::item::article_of(self.game, self.data, ItKind::Kinoko.id())
             .expect("the Super Mushroom's article");
         let attrs = it::data::Article(art)
             .special(self.data)

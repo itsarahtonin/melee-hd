@@ -7,6 +7,7 @@ use gekko_fp as fp;
 use super::super::item::{article, change, change_state, debug_owner_bubbles, spawn_air};
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -69,7 +70,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_802AA054")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, vel: Vec3, facing_dir: f32, angle: f32) {
     let mut spawn = SpawnItem {
-        kind: super::NESS_PK_FIRE,
+        kind: ItKind::NessPKFire.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

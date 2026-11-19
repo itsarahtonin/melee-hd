@@ -7,13 +7,11 @@ use gekko_fp as fp;
 use super::super::item::{self, change, change_state, spawn_air};
 use super::super::{ground, item_mut, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
-
-/// `It_Kind_Mewtwo_Disable`.
-pub const KIND: i32 = super::MEWTWO_DISABLE;
 
 pub const DESTROY: u32 = 0x802C_49E0;
 pub const DESTROYED: u32 = 0x802C_4A00;
@@ -97,7 +95,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itMewtwoDisable_Logic67_SpawnMewtwoDisable")]
 pub fn spawn(r: &mut Running, fighter: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: KIND,
+        kind: ItKind::MewtwoDisable.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;
