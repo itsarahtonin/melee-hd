@@ -156,7 +156,7 @@ impl Running<'_> {
             10 => self.kb_ic_enter(gobj),
             15 => self.rollout_enter(gobj, &super::special_purin::KIRBY),
             16 => self.mt_special_n_enter(gobj, &super::special_mewtwo::KIRBY),
-            18 | 26 => self.kb_ms_enter(gobj),
+            18 | 26 => self.mars_special_n_enter(gobj, &super::special_mars::KIRBY),
             k => unported_call(&format!("the neutral special of copy kind {k}")),
         }
     }
@@ -184,7 +184,7 @@ impl Running<'_> {
             10 => self.kb_ic_air_enter(gobj),
             15 => self.rollout_air_enter(gobj, &super::special_purin::KIRBY),
             16 => self.mt_special_air_n_enter(gobj, &super::special_mewtwo::KIRBY),
-            18 | 26 => self.kb_ms_air_enter(gobj),
+            18 | 26 => self.mars_special_air_n_enter(gobj, &super::special_mars::KIRBY),
             k => unported_call(&format!("the aerial neutral special of copy kind {k}")),
         }
     }
