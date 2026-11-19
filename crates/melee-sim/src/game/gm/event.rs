@@ -364,9 +364,9 @@ impl Running<'_> {
     ) -> u8 {
         let e = self.event_entry(self.event()).expect("the event's entry");
         let list = e.x4(self).expect("the event's characters");
-        let mut chars = [0u8; 0x21];
+        let mut chars = [0u8; crate::game::ft::CharacterKind::COUNT];
         let mut count = 0;
-        for i in 0..0x21 {
+        for i in 0..crate::game::ft::CharacterKind::COUNT as u32 {
             let c = self.data.u8(list.at(i));
             if c == 0x21 {
                 break;

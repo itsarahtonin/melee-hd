@@ -17,7 +17,7 @@ const SONG_FLAGS: [u8; 0x62] = [
 
 /// `unk_arr_803BC4A0`: each character's two songs, for a stage whose song is the first
 /// player's (`Ground_801C28AC`'s -2).
-const CHARACTER_SONGS: [[u8; 2]; 0x21] = [
+const CHARACTER_SONGS: [[u8; 2]; crate::game::ft::CharacterKind::COUNT] = [
     [0x38, 0x03],
     [0x32, 0x21],
     [0x06, 0x54],

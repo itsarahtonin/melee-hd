@@ -52,7 +52,7 @@ const START: Vec3 = Vec3 {
 const LOW: f32 = 125.0;
 
 /// `gm_803DB2EC`: each character's size in the fall (its trophy's and stand's too).
-const SCALES: [f32; 33] = [
+const SCALES: [f32; crate::game::ft::CharacterKind::COUNT] = [
     0.6, 0.5, 0.75, 0.7, 0.7, 0.4, 0.8, 0.75, 0.9, 0.7, 0.6, 0.6, 0.75, 0.7, 0.65, 0.7, 0.6, 0.7,
     0.8, 0.7, 0.7, 0.7, 1.0, 0.7, 0.4, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
 ];

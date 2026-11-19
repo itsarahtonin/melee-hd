@@ -33,7 +33,7 @@ impl Game {
 }
 
 /// `lbl_803D4FDC`, by character kind: the names the English game shows.
-pub const NAMES_US: [Option<&[u8]>; 33] = [
+pub const NAMES_US: [Option<&[u8]>; CharacterKind::COUNT] = [
     Some(b"\x82b\x81D \x82e\x82\x81\x82\x8c\x82\x83\x82\x8f\x82\x8e"),
     Some(b"\x82c\x82j"),
     Some(b"\x82e\x82\x8f\x82\x98"),
@@ -70,7 +70,7 @@ pub const NAMES_US: [Option<&[u8]>; 33] = [
 ];
 
 /// `lbl_803D4D74`, by character kind: the names the Japanese game shows.
-pub const NAMES_JP: [Option<&[u8]>; 33] = [
+pub const NAMES_JP: [Option<&[u8]>; CharacterKind::COUNT] = [
     Some(b"\x82b\x81D\x83t\x83@\x83\x8b\x83R\x83\x93"),
     Some(b"\x83h\x83\x93\x83L\x81|\x83R\x83\x93\x83O"),
     Some(b"\x83t\x83H\x83b\x83N\x83X"),

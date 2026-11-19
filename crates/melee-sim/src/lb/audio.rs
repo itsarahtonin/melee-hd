@@ -1189,7 +1189,7 @@ const SSM_DROP: [i8; 55] = [
 ];
 
 /// `lbl_803BB3C0`'s banks: each character's (by `CharacterKind`), as a mask of bank slots.
-const CHARACTER_BANKS: [u64; 33] = [
+const CHARACTER_BANKS: [u64; crate::game::ft::CharacterKind::COUNT] = [
     0x40,
     0x100,
     0x800,
@@ -1286,7 +1286,7 @@ fn group_mask(flags: u32) -> u64 {
 
 /// `lbl_803BB3C0`'s first column: each character's own bank slot (55 for none), which
 /// Slippi's playback scene preloads.
-const CHARACTER_SLOT: [u8; 33] = [
+const CHARACTER_SLOT: [u8; crate::game::ft::CharacterKind::COUNT] = [
     0x06, 0x08, 0x0B, 0x1D, 0x0E, 0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x18, 0x0D, 0x19,
     0x1A, 0x1C, 0x1B, 0x1B, 0x0A, 0x07, 0x09, 0x1F, 0x17, 0x1E, 0x20, 0x37, 0x37, 0x0C, 0x20, 0x37,
     0x0D,

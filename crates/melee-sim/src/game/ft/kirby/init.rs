@@ -22,7 +22,7 @@ use crate::vec::Vec3;
 const PART_HAT_BONE: i32 = 6;
 
 /// `ftKb_Init_803CA9D0`: each kind's copy file and its data's symbol, by kind.
-pub const COPY_FILES: [Option<(&str, &str)>; 33] = [
+pub const COPY_FILES: [Option<(&str, &str)>; FighterKind::COUNT] = [
     Some(("PlKbCpMr.dat", "ftDataKirbyCopyMario")),
     Some(("PlKbCpFx.dat", "ftDataKirbyCopyFox")),
     Some(("PlKbCpCa.dat", "ftDataKirbyCopyCaptain")),
@@ -67,7 +67,7 @@ const COSTUMES: [&str; 6] = ["Nr", "Ye", "Bu", "Re", "Gr", "Wh"];
 const COPY_COSTUME_NAMES: [&str; 5] = ["Dk", "Pr", "Mt", "Fc", "Gw"];
 
 /// `ftKb_Init_803CB46C`: each kind's copy effect file (255 for none), by kind.
-pub const COPY_EFFECTS: [u8; 33] = [
+pub const COPY_EFFECTS: [u8; FighterKind::COUNT] = [
     32, 33, 38, 39, 255, 41, 35, 21, 42, 45, 46, 46, 36, 34, 40, 43, 44, 37, 20, 21, 35, 32, 33,
     36, 255, 47, 48, 255, 255, 255, 255, 255, 255,
 ];
