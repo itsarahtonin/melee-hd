@@ -1075,13 +1075,15 @@ impl Running<'_> {
         let stkind = i32::from(e.stkind);
         let grkind = crate::lb::audio::ground_kind(stkind) as i32;
         let us = self.files_us();
-        let archive = super::super::gr::data::stage_file(grkind, us).map(|name| {
-            self.game
-                .ft
-                .data
-                .files
-                .archive(name.trim_start_matches('/'))
-        });
+        let archive = super::super::gr::registry::stage(grkind)
+            .file(us)
+            .map(|name| {
+                self.game
+                    .ft
+                    .data
+                    .files
+                    .archive(name.trim_start_matches('/'))
+            });
         super::super::gr::setup::select(self, stkind, archive);
         let kept = self.take_cached_named("ItCo.usd");
         let it_co = self.game.ft.data.files.archive("ItCo.usd");
@@ -1458,7 +1460,7 @@ impl Running<'_> {
             f.names.push(self.intro_file_name(NORMAL_ARCHIVE));
             let stkind = i32::from(self.game.one_player.adventure_intro.stkind);
             let grkind = crate::lb::audio::ground_kind(stkind) as i32;
-            if let Some(name) = super::super::gr::data::stage_file(grkind, self.files_us()) {
+            if let Some(name) = super::super::gr::registry::stage(grkind).file(self.files_us()) {
                 f.names.push(name.trim_start_matches('/').to_owned());
             }
             f.songs.push(0x2E);

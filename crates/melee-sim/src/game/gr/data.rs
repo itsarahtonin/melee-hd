@@ -1,18 +1,10 @@
 //! The executable's stage tables (`stage_datas` and each stage's `StageData` and
 //! `StageCallbacks`), as Rust tables. Function pointers are the original functions' addresses,
-//! which [`code`](super::super::code) dispatches.
+//! which [`code`](super::super::code) dispatches. The [registry](super::registry) indexes
+//! them by ground kind (`stage_datas`).
 
+use super::GrKind;
 use super::datfiles::GrJoint;
-use super::{
-    GR_KIND_BATTLE, GR_KIND_BIGBLUE, GR_KIND_BIGBLUEROUTE, GR_KIND_CASTLE, GR_KIND_CORNERIA,
-    GR_KIND_FIGURE1, GR_KIND_FIGURE2, GR_KIND_FIGURE3, GR_KIND_FIGUREGET, GR_KIND_FLATZONE,
-    GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_HOMERUN,
-    GR_KIND_ICEMT, GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KINOKOROUTE,
-    GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO,
-    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA,
-    GR_KIND_PUSHON, GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_SHRINEROUTE, GR_KIND_STORY,
-    GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES, GR_KIND_ZEBESROUTE,
-};
 
 /// `StageCallbacks`: one stage object's functions, by map id.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
@@ -38,7 +30,7 @@ impl StageCallbacks {
 /// `StageData`.
 #[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct StageData {
-    pub grkind: i32,
+    pub grkind: GrKind,
     pub callbacks: &'static [StageCallbacks],
     /// The archive (`data1`).
     pub file: Option<&'static str>,
@@ -101,7 +93,7 @@ pub const LAST_JOINTS: [GrJoint; 1] = [GrJoint { x: 0, y: 3, z: 0 }];
 
 /// `grNLa_StageData`.
 pub const LAST: StageData = StageData {
-    grkind: GR_KIND_LAST,
+    grkind: GrKind::Last,
     callbacks: &LAST_CALLBACKS,
     file: Some("/GrNLa.dat"),
     on_init: 0x8021_A740,
@@ -134,7 +126,7 @@ pub const BATTLE_CALLBACKS: [StageCallbacks; 7] = [
 
 /// `grNBa_StageData`.
 pub const BATTLE: StageData = StageData {
-    grkind: GR_KIND_BATTLE,
+    grkind: GrKind::Battle,
     callbacks: &BATTLE_CALLBACKS,
     file: Some("/GrNBa.dat"),
     on_init: 0x8021_9CA4,
@@ -181,7 +173,7 @@ pub const STADIUM_JOINTS: [GrJoint; 6] = [
 /// `grPs_StageData`. Its archive is `"/GrPs"`, which the file system completes with the
 /// language's extension (`.usd` for English).
 pub const STADIUM: StageData = StageData {
-    grkind: GR_KIND_PSTADIUM,
+    grkind: GrKind::PStadium,
     callbacks: &STADIUM_CALLBACKS,
     file: Some("/GrPs.usd"),
     on_init: 0x801D_101C,
@@ -211,7 +203,7 @@ pub const STORY_CALLBACKS: [StageCallbacks; 4] = [
 
 /// `grSt_StageData`.
 pub const STORY: StageData = StageData {
-    grkind: GR_KIND_STORY,
+    grkind: GrKind::Story,
     callbacks: &STORY_CALLBACKS,
     file: Some("/GrSt.dat"),
     on_init: 0x801E_3030,
@@ -247,7 +239,7 @@ pub const OLDPUPUPU_CALLBACKS: [StageCallbacks; 9] = [
 
 /// `grOp_StageData`.
 pub const OLDPUPUPU: StageData = StageData {
-    grkind: GR_KIND_OLDPUPUPU,
+    grkind: GrKind::OldPupupu,
     callbacks: &OLDPUPUPU_CALLBACKS,
     file: Some("/GrOp.dat"),
     on_init: 0x8021_07E0,
@@ -291,7 +283,7 @@ pub const IZUMI_JOINTS: [GrJoint; 3] = [
 
 /// `grIz_StageData`.
 pub const IZUMI: StageData = StageData {
-    grkind: GR_KIND_IZUMI,
+    grkind: GrKind::Izumi,
     callbacks: &IZUMI_CALLBACKS,
     file: Some("/GrIz.dat"),
     on_init: 0x801C_BB88,
@@ -324,7 +316,7 @@ pub const OLDYOSHI_CALLBACKS: [StageCallbacks; 6] = [
 
 /// `grOy_StageData`.
 pub const OLDYOSHI: StageData = StageData {
-    grkind: GR_KIND_OLDYOSHI,
+    grkind: GrKind::OldYoshi,
     callbacks: &OLDYOSHI_CALLBACKS,
     file: Some("/GrOy.dat"),
     on_init: 0x8020_E79C,
@@ -366,7 +358,7 @@ pub const KRAID_JOINTS: [GrJoint; 6] = [
 
 /// `grKr_StageData`.
 pub const KRAID: StageData = StageData {
-    grkind: GR_KIND_KRAID,
+    grkind: GrKind::Kraid,
     callbacks: &KRAID_CALLBACKS,
     file: Some("/GrKr.dat"),
     on_init: 0x801F_DFFC,
@@ -407,7 +399,7 @@ pub const FOURSIDE_JOINTS: [GrJoint; 3] = [
 
 /// `grFs_StageData`.
 pub const FOURSIDE: StageData = StageData {
-    grkind: GR_KIND_FOURSIDE,
+    grkind: GrKind::Fourside,
     callbacks: &FOURSIDE_CALLBACKS,
     file: Some("/GrFs.dat"),
     on_init: 0x801F_2D10,
@@ -456,7 +448,7 @@ pub const GREATBAY_JOINTS: [GrJoint; 6] = [
 
 /// `grGb_StageData`.
 pub const GREATBAY: StageData = StageData {
-    grkind: GR_KIND_GREATBAY,
+    grkind: GrKind::GreatBay,
     callbacks: &GREATBAY_CALLBACKS,
     file: Some("/GrGb.dat"),
     on_init: 0x801F_4240,
@@ -491,7 +483,7 @@ pub const OLDKONGO_JOINTS: [GrJoint; 2] =
 
 /// `grOk_StageData`.
 pub const OLDKONGO: StageData = StageData {
-    grkind: GR_KIND_OLDKONGO,
+    grkind: GrKind::OldKongo,
     callbacks: &OLDKONGO_CALLBACKS,
     file: Some("/GrOk.dat"),
     on_init: 0x8020_F46C,
@@ -520,7 +512,7 @@ pub const SHRINE_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grSh_StageData`.
 pub const SHRINE: StageData = StageData {
-    grkind: GR_KIND_SHRINE,
+    grkind: GrKind::Shrine,
     callbacks: &SHRINE_CALLBACKS,
     file: Some("/GrSh.dat"),
     on_init: 0x8020_1C64,
@@ -548,7 +540,7 @@ pub const YORSTER_CALLBACKS: [StageCallbacks; 2] = [
 
 /// `grYt_StageData`.
 pub const YORSTER: StageData = StageData {
-    grkind: GR_KIND_YORSTER,
+    grkind: GrKind::Yorster,
     callbacks: &YORSTER_CALLBACKS,
     file: Some("/GrYt.dat"),
     on_init: 0x8020_1FA4,
@@ -582,7 +574,7 @@ pub const GARDEN_CALLBACKS: [StageCallbacks; 7] = [
 
 /// `grGd_StageData`.
 pub const GARDEN: StageData = StageData {
-    grkind: GR_KIND_GARDEN,
+    grkind: GrKind::Garden,
     callbacks: &GARDEN_CALLBACKS,
     file: Some("/GrGd.dat"),
     on_init: 0x8020_2B70,
@@ -632,7 +624,7 @@ pub const KONGO_JOINTS: [GrJoint; 6] = [
 
 /// `grKg_StageData`.
 pub const KONGO: StageData = StageData {
-    grkind: GR_KIND_KONGO,
+    grkind: GrKind::Kongo,
     callbacks: &KONGO_CALLBACKS,
     file: Some("/GrKg.dat"),
     on_init: 0x801D_523C,
@@ -667,7 +659,7 @@ pub const GREENS_CALLBACKS: [StageCallbacks; 7] = [
 
 /// `grGr_StageData`.
 pub const GREENS: StageData = StageData {
-    grkind: GR_KIND_GREENS,
+    grkind: GrKind::Greens,
     callbacks: &GREENS_CALLBACKS,
     file: Some("/GrGr.dat"),
     on_init: 0x8021_3464,
@@ -717,7 +709,7 @@ pub const ZEBES_JOINTS: [GrJoint; 5] = [
 
 /// `grZe_StageData`.
 pub const ZEBES: StageData = StageData {
-    grkind: GR_KIND_ZEBES,
+    grkind: GrKind::Zebes,
     callbacks: &ZEBES_CALLBACKS,
     file: Some("/GrZe.dat"),
     on_init: 0x801D_84A4,
@@ -750,7 +742,7 @@ pub const ONETT_CALLBACKS: [StageCallbacks; 6] = [
 
 /// `grOt_StageData`.
 pub const ONETT: StageData = StageData {
-    grkind: GR_KIND_ONETT,
+    grkind: GrKind::Onett,
     callbacks: &ONETT_CALLBACKS,
     // The table's `/GrOt`, which `lbFileGetFullName` completes with the language's extension,
     // `usd` for English.
@@ -795,7 +787,7 @@ pub const PURA_CALLBACKS: [StageCallbacks; 28] = {
 
 /// `grPu_StageData`.
 pub const PURA: StageData = StageData {
-    grkind: GR_KIND_PURA,
+    grkind: GrKind::Pura,
     callbacks: &PURA_CALLBACKS,
     file: Some("/GrPu.dat"),
     on_init: 0x8021_1D00,
@@ -856,7 +848,7 @@ pub const RCRUISE_JOINTS: [GrJoint; 23] = [
 
 /// `grRc_StageData`.
 pub const RCRUISE: StageData = StageData {
-    grkind: GR_KIND_RCRUISE,
+    grkind: GrKind::RCruise,
     callbacks: &RCRUISE_CALLBACKS,
     file: Some("/GrRc.dat"),
     on_init: 0x801F_F168,
@@ -893,7 +885,7 @@ pub const FLATZONE_CALLBACKS: [StageCallbacks; 9] = [
 
 /// `grFz_StageData`.
 pub const FLATZONE: StageData = StageData {
-    grkind: GR_KIND_FLATZONE,
+    grkind: GrKind::Flatzone,
     callbacks: &FLATZONE_CALLBACKS,
     file: Some("/GrFz.dat"),
     on_init: 0x8021_6E78,
@@ -936,7 +928,7 @@ pub const INISHIE1_JOINTS: [GrJoint; 7] = [
 
 /// `grI1_StageData`.
 pub const INISHIE1: StageData = StageData {
-    grkind: GR_KIND_INISHIE1,
+    grkind: GrKind::Inishie1,
     callbacks: &INISHIE1_CALLBACKS,
     file: Some("/GrI1.dat"),
     on_init: 0x801F_A90C,
@@ -997,7 +989,7 @@ pub const INISHIE2_JOINTS: [GrJoint; 14] = [
 
 /// `grI2_StageData`.
 pub const INISHIE2: StageData = StageData {
-    grkind: GR_KIND_INISHIE2,
+    grkind: GrKind::Inishie2,
     callbacks: &INISHIE2_CALLBACKS,
     file: Some("/GrI2.dat"),
     on_init: 0x801F_CBC4,
@@ -1234,7 +1226,7 @@ pub const ICEMT_JOINTS: [GrJoint; 195] = [
 
 /// `grIm_StageData`.
 pub const ICEMT: StageData = StageData {
-    grkind: GR_KIND_ICEMT,
+    grkind: GrKind::Icemt,
     callbacks: &ICEMT_CALLBACKS,
     file: Some("/GrIm.dat"),
     on_init: 0x801F_686C,
@@ -1307,29 +1299,9 @@ pub const CORNERIA_JOINTS: [GrJoint; 8] = [
     GrJoint { x: 7, y: 18, z: 0 },
 ];
 
-/// A stage's file as the game names it (`lbFileGetFullName`): the five stages whose table
-/// gives no extension (Pokémon Stadium's, Onett's, Corneria's, Venom's and the Home-Run
-/// Contest's) take the saved
-/// language's, `.dat` with Japanese saved.
-pub fn stage_file(grkind: i32, saved_us: bool) -> Option<&'static str> {
-    let f = stage_data(grkind).file?;
-    Some(if saved_us {
-        f
-    } else {
-        match f {
-            "/GrPs.usd" => "/GrPs.dat",
-            "/GrOt.usd" => "/GrOt.dat",
-            "/GrCn.usd" => "/GrCn.dat",
-            "/GrVe.usd" => "/GrVe.dat",
-            "/GrHr.usd" => "/GrHr.dat",
-            f => f,
-        }
-    })
-}
-
 /// `grCn_StageData`.
 pub const CORNERIA: StageData = StageData {
-    grkind: GR_KIND_CORNERIA,
+    grkind: GrKind::Corneria,
     callbacks: &CORNERIA_CALLBACKS,
     // The table's `/GrCn`, which `lbFileGetFullName` completes with the language's extension.
     file: Some("/GrCn.usd"),
@@ -1385,7 +1357,7 @@ pub const VENOM_CALLBACKS: [StageCallbacks; 16] = [
 /// `Ground_StageData`, the dummy stage the results screen's fighters stand on: no archive,
 /// no objects, and callbacks that do nothing (`Ground_OnStart`, `Ground_801BFFAC`).
 pub const DUMMY: StageData = StageData {
-    grkind: 0,
+    grkind: GrKind::Dummy,
     callbacks: &[],
     file: None,
     on_init: GROUND_ON_START,
@@ -1415,7 +1387,7 @@ pub const VENOM_JOINTS: [GrJoint; 5] = [
 
 /// `grVe_StageData`.
 pub const VENOM: StageData = StageData {
-    grkind: GR_KIND_VENOM,
+    grkind: GrKind::Venom,
     callbacks: &VENOM_CALLBACKS,
     // The table's `/GrVe`, which `lbFileGetFullName` completes with the language's extension.
     file: Some("/GrVe.usd"),
@@ -1460,7 +1432,7 @@ pub const CASTLE_JOINTS: [GrJoint; 2] =
 
 /// `grCs_StageData`.
 pub const CASTLE: StageData = StageData {
-    grkind: GR_KIND_CASTLE,
+    grkind: GrKind::Castle,
     callbacks: &CASTLE_CALLBACKS,
     file: Some("/GrCs.dat"),
     on_init: 0x801C_D37C,
@@ -1501,7 +1473,7 @@ pub const MUTECITY_JOINTS: [GrJoint; 3] = [
 
 /// `grMc_StageData`.
 pub const MUTECITY: StageData = StageData {
-    grkind: GR_KIND_MUTECITY,
+    grkind: GrKind::MuteCity,
     callbacks: &MUTECITY_CALLBACKS,
     file: Some("/GrMc.dat"),
     on_init: 0x801E_FC6C,
@@ -1678,7 +1650,7 @@ pub const BIGBLUE_JOINTS: [GrJoint; 28] = [
 
 /// `grBb_StageData`.
 pub const BIGBLUE: StageData = StageData {
-    grkind: GR_KIND_BIGBLUE,
+    grkind: GrKind::BigBlue,
     callbacks: &BIGBLUE_CALLBACKS,
     file: Some("/GrBb.dat"),
     on_init: 0x801E_57C0,
@@ -1709,7 +1681,7 @@ pub const KINOKOROUTE_CALLBACKS: [StageCallbacks; 4] = [
 
 /// `grNKr_StageData`.
 pub const KINOKOROUTE: StageData = StageData {
-    grkind: GR_KIND_KINOKOROUTE,
+    grkind: GrKind::KinokoRoute,
     callbacks: &KINOKOROUTE_CALLBACKS,
     file: Some("/GrNKr.dat"),
     on_init: 0x8020_7420,
@@ -1744,7 +1716,7 @@ pub const SHRINEROUTE_CALLBACKS: [StageCallbacks; 7] = [
 
 /// `grSh_Route_StageData`.
 pub const SHRINEROUTE: StageData = StageData {
-    grkind: GR_KIND_SHRINEROUTE,
+    grkind: GrKind::ShrineRoute,
     callbacks: &SHRINEROUTE_CALLBACKS,
     file: Some("/GrNSr.dat"),
     on_init: 0x8020_87BC,
@@ -1784,7 +1756,7 @@ pub const BIGBLUEROUTE_CALLBACKS: [StageCallbacks; 38] = {
 
 /// `grBb_Route_StageData`.
 pub const BIGBLUEROUTE: StageData = StageData {
-    grkind: GR_KIND_BIGBLUEROUTE,
+    grkind: GrKind::BigBlueRoute,
     callbacks: &BIGBLUEROUTE_CALLBACKS,
     file: Some("/GrNBr.dat"),
     on_init: 0x8020_B89C,
@@ -1813,7 +1785,7 @@ pub const PUSHON_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grPushOn_StageData`.
 pub const PUSHON: StageData = StageData {
-    grkind: GR_KIND_PUSHON,
+    grkind: GrKind::Pushon,
     callbacks: &PUSHON_CALLBACKS,
     file: Some("/GrNPo.dat"),
     on_init: 0x8021_82C8,
@@ -1841,7 +1813,7 @@ pub const FIGUREGET_CALLBACKS: [StageCallbacks; 2] = [
 
 /// `grFigureGet_StageData`.
 pub const FIGUREGET: StageData = StageData {
-    grkind: GR_KIND_FIGUREGET,
+    grkind: GrKind::FigureGet,
     callbacks: &FIGUREGET_CALLBACKS,
     file: Some("/GrNFg.dat"),
     on_init: 0x8021_9534,
@@ -1871,7 +1843,7 @@ pub const ZEBESROUTE_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grZe_Route_StageData`.
 pub const ZEBESROUTE: StageData = StageData {
-    grkind: GR_KIND_ZEBESROUTE,
+    grkind: GrKind::ZebesRoute,
     callbacks: &ZEBESROUTE_CALLBACKS,
     file: Some("/GrNZr.dat"),
     on_init: 0x8020_B164,
@@ -1887,7 +1859,7 @@ pub const ZEBESROUTE: StageData = StageData {
 
 /// `grHeal_StageData`, All-Star's rest area.
 pub const HEAL: StageData = StageData {
-    grkind: super::GR_KIND_HEAL,
+    grkind: GrKind::Heal,
     callbacks: &super::heal::CALLBACKS,
     file: Some("/GrHe.dat"),
     on_init: super::heal::ON_INIT,
@@ -1934,7 +1906,7 @@ pub const TEST_JOINTS: [GrJoint; 13] = [
 
 /// `grTe_StageData`, the Test stage, ground kinds 1 and 0x23.
 pub const TEST: StageData = StageData {
-    grkind: super::GR_KIND_TEST,
+    grkind: GrKind::Test,
     callbacks: &TEST_CALLBACKS,
     file: Some("/GrTe.dat"),
     on_init: super::teststage::ON_INIT,
@@ -1964,7 +1936,7 @@ pub const FIGURE1_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grEF1_StageData`, the first event trophy stage.
 pub const FIGURE1: StageData = StageData {
-    grkind: GR_KIND_FIGURE1,
+    grkind: GrKind::Figure1,
     callbacks: &FIGURE1_CALLBACKS,
     file: Some("/GrEF1.dat"),
     on_init: 0x8020_DFE0,
@@ -1994,7 +1966,7 @@ pub const FIGURE2_CALLBACKS: [StageCallbacks; 3] = [
 /// `grEF2_StageData`, the second event trophy stage; its demo setup is grfigure1.c's
 /// `grFigure1_8020E270`.
 pub const FIGURE2: StageData = StageData {
-    grkind: GR_KIND_FIGURE2,
+    grkind: GrKind::Figure2,
     callbacks: &FIGURE2_CALLBACKS,
     file: Some("/GrEF2.dat"),
     on_init: 0x8020_E274,
@@ -2024,7 +1996,7 @@ pub const FIGURE3_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grEF3_StageData`, the third event trophy stage.
 pub const FIGURE3: StageData = StageData {
-    grkind: GR_KIND_FIGURE3,
+    grkind: GrKind::Figure3,
     callbacks: &FIGURE3_CALLBACKS,
     file: Some("/GrEF3.dat"),
     on_init: 0x8020_E508,
@@ -2065,9 +2037,9 @@ pub const HOMERUN_CALLBACKS: [StageCallbacks; 11] = [
 pub const HOMERUN_JOINTS: [GrJoint; 1] = [GrJoint { x: 0, y: 10, z: 0 }];
 
 /// `grHr_StageData`. Its file has no extension: the saved language's
-/// (`lbFileGetFullName`, [`stage_file`]).
+/// (`lbFileGetFullName`, [`Stage::file`](super::Stage::file)).
 pub const HOMERUN: StageData = StageData {
-    grkind: GR_KIND_HOMERUN,
+    grkind: GrKind::Homerun,
     callbacks: &HOMERUN_CALLBACKS,
     file: Some("/GrHr.usd"),
     on_init: 0x8021_C754,
@@ -2080,53 +2052,3 @@ pub const HOMERUN: StageData = StageData {
     flags2: 1,
     joints: &HOMERUN_JOINTS,
 };
-
-/// The stage data for a stage kind (`stage_datas[grkind]`).
-pub fn stage_data(grkind: i32) -> &'static StageData {
-    match grkind {
-        GR_KIND_LAST => &LAST,
-        GR_KIND_BATTLE => &BATTLE,
-        GR_KIND_PSTADIUM => &STADIUM,
-        GR_KIND_STORY => &STORY,
-        GR_KIND_OLDPUPUPU => &OLDPUPUPU,
-        GR_KIND_IZUMI => &IZUMI,
-        GR_KIND_OLDYOSHI => &OLDYOSHI,
-        GR_KIND_KRAID => &KRAID,
-        GR_KIND_FOURSIDE => &FOURSIDE,
-        GR_KIND_GREATBAY => &GREATBAY,
-        GR_KIND_OLDKONGO => &OLDKONGO,
-        GR_KIND_SHRINE => &SHRINE,
-        GR_KIND_YORSTER => &YORSTER,
-        GR_KIND_GARDEN => &GARDEN,
-        GR_KIND_KONGO => &KONGO,
-        GR_KIND_GREENS => &GREENS,
-        GR_KIND_ZEBES => &ZEBES,
-        GR_KIND_ONETT => &ONETT,
-        GR_KIND_PURA => &PURA,
-        GR_KIND_RCRUISE => &RCRUISE,
-        GR_KIND_FLATZONE => &FLATZONE,
-        GR_KIND_INISHIE1 => &INISHIE1,
-        GR_KIND_INISHIE2 => &INISHIE2,
-        GR_KIND_ICEMT => &ICEMT,
-        GR_KIND_CORNERIA => &CORNERIA,
-        GR_KIND_VENOM => &VENOM,
-        GR_KIND_CASTLE => &CASTLE,
-        GR_KIND_MUTECITY => &MUTECITY,
-        GR_KIND_BIGBLUE => &BIGBLUE,
-        GR_KIND_KINOKOROUTE => &KINOKOROUTE,
-        GR_KIND_SHRINEROUTE => &SHRINEROUTE,
-        GR_KIND_BIGBLUEROUTE => &BIGBLUEROUTE,
-        GR_KIND_PUSHON => &PUSHON,
-        GR_KIND_FIGUREGET => &FIGUREGET,
-        GR_KIND_ZEBESROUTE => &ZEBESROUTE,
-        k if super::target::is_target(k) => super::target::stage_data(k),
-        GR_KIND_FIGURE1 => &FIGURE1,
-        GR_KIND_FIGURE2 => &FIGURE2,
-        GR_KIND_FIGURE3 => &FIGURE3,
-        GR_KIND_HOMERUN => &HOMERUN,
-        super::GR_KIND_HEAL => &HEAL,
-        super::GR_KIND_TEST | super::GR_KIND_TEST2 => &TEST,
-        0 => &DUMMY,
-        _ => unimplemented!("stage kind {grkind} isn't ported"),
-    }
-}

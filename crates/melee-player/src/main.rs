@@ -391,7 +391,7 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                 let name = value()?;
                 a.stage = roster::stage(&name)
                     .ok_or(format!("unknown stage {name}"))?
-                    .kind;
+                    .vs_kind();
                 chosen = true;
             }
             "--stocks" => {

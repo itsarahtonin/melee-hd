@@ -241,18 +241,6 @@ pub fn init_blades(r: &mut Running, gobj: GObjId) {
     anime::start_map(r.game, r.data, gobj, map_id, 0);
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x801D_101C => on_init(r),
-        0x801D_10C8 => on_load(r),
-        0x801D_10CC => on_start(r),
-        _ => return false,
-    }
-    true
-}
-
 /// The screens' render callbacks, by address.
 #[melee_callbacks::callbacks(Render)]
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
@@ -1390,7 +1378,7 @@ pub fn tint_display(r: &mut Running, gobj: GObjId, feed: bool) {
 /// Whether the screen is zoomed in on a player, `grStadium_801D4FF8`.
 #[doc(alias = "grStadium_801D4FF8")]
 pub fn zoomed_on(game: &mut Game, slot: i32) -> bool {
-    if game.stage_info.grkind != super::GR_KIND_PSTADIUM {
+    if game.stage_info.grkind != super::GrKind::PStadium {
         return false;
     }
     let Some(g) = map_gobj(game, MAP_DISPLAY) else {

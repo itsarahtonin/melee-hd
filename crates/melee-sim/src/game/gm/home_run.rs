@@ -24,8 +24,6 @@ pub const PROC_COUNTER: u32 = 0x8018_0C60;
 /// `fn_80181598`, the contest's end's process.
 pub const PROC_END: u32 = 0x8018_1598;
 
-/// `St_Kind_Unk84`, the contest's stage.
-const STKIND_HOME_RUN: u16 = 84;
 /// `gm_801734D0`'s none (`0x148`).
 const NO_STAGE: u16 = 0x148;
 
@@ -109,7 +107,7 @@ impl Running<'_> {
         };
         start.rules.clone_from(&vs.rules);
         let r = &mut start.rules;
-        r.stkind = STKIND_HOME_RUN;
+        r.stkind = crate::game::gr::StKind::HomeRun.id();
         r.match_kind = 1;
         r.timer_enabled = true;
         r.x1_0 = true;

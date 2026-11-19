@@ -316,18 +316,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x801F_686C => on_init(r),
-        0x801F_7080 => on_load(r),
-        0x801F_71DC => on_start(r),
-        _ => return false,
-    }
-    true
-}
-
 /// The objects' processes and destroy callbacks that do nothing: the scenery's, the climbs'
 /// destroy callbacks and the background's.
 #[doc(alias = "stageGObj0_GObjProc@801F75E4")]

@@ -30,6 +30,8 @@ mod terrain;
 use std::fmt::Debug;
 
 use gekko_fp as fp;
+
+use crate::game::gr::GrKind;
 use melee_data::archive::{Archives, DataRef};
 
 pub use island::{Island, IslandId, Islands};
@@ -74,9 +76,6 @@ pub const GROUP_CEILING: usize = 1;
 pub const GROUP_RIGHT_WALL: usize = 2;
 pub const GROUP_LEFT_WALL: usize = 3;
 pub const GROUP_DYNAMIC: usize = 4;
-
-/// `Gr_Kind_Pura`, Poké Floats, whose empty lines are kept.
-pub const GR_KIND_PURA: i32 = 17;
 
 /// The original's capacities (`groundCollVtx_count` and friends).
 pub const MAX_VERTICES: usize = 2048;
@@ -461,7 +460,7 @@ impl<K: Kinds> Geometry<K> {
             })
             .collect();
         let read = lines.clone();
-        if grkind != GR_KIND_PURA {
+        if grkind != GrKind::Pura {
             prune_empty_lines(&verts, &mut lines);
         }
         for group in ranges {

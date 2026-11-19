@@ -1279,12 +1279,12 @@ impl Comparer<'_> {
         }
         // A stage's own statics compare on that stage: past its match they name its freed
         // heap, ours as well, and only its code reads them.
-        let on = |k: i32| game.stage_info.grkind == k;
-        if on(gr::GR_KIND_ZEBES) {
+        let on = |k: gr::GrKind| game.stage_info.grkind == k;
+        if on(gr::GrKind::Zebes) {
             self.compare_zebes();
         }
         for (i, g) in game.gr.icemt_fields.iter().enumerate() {
-            if !on(gr::GR_KIND_ICEMT) {
+            if !on(gr::GrKind::Icemt) {
                 break;
             }
             use melee_sim::game::mirror::Cx;
@@ -1296,10 +1296,10 @@ impl Comparer<'_> {
                 theirs,
             );
         }
-        if on(gr::GR_KIND_CORNERIA) {
+        if on(gr::GrKind::Corneria) {
             self.compare_corneria();
         }
-        if on(gr::GR_KIND_HOMERUN) {
+        if on(gr::GrKind::Homerun) {
             let h = &game.gr.homerun;
             self.check(
                 "grHr_804D6AD8",
@@ -1318,7 +1318,7 @@ impl Comparer<'_> {
                 ),
             );
         }
-        if on(gr::GR_KIND_VENOM) {
+        if on(gr::GrKind::Venom) {
             self.compare_venom();
         }
         let castle = &game.gr.castle;
@@ -1326,7 +1326,7 @@ impl Comparer<'_> {
         let w = castle
             .wind
             .map_or(0, |i| pool + gr::vars::WIND_SIZE * u32::from(i));
-        if on(gr::GR_KIND_CASTLE) {
+        if on(gr::GrKind::Castle) {
             self.check(
                 "grCs_804D6974",
                 "castle statics",
@@ -1338,7 +1338,7 @@ impl Comparer<'_> {
                 ),
             );
         }
-        if on(gr::GR_KIND_MUTECITY) {
+        if on(gr::GrKind::MuteCity) {
             self.compare_mutecity();
         }
         for (i, d) in game.gr.bigblue.track_deltas.iter().enumerate() {
@@ -1435,7 +1435,7 @@ impl Comparer<'_> {
             (p != 0).then(|| s.maps.jobjs.get(&p).copied())
         };
         for (i, pl) in kongo.planks.iter().enumerate() {
-            if !on(gr::GR_KIND_KONGO) {
+            if !on(gr::GrKind::Kongo) {
                 break;
             }
             let at = GRKONGO_PLANKS + 0x18 * i as u32;
@@ -1452,7 +1452,7 @@ impl Comparer<'_> {
                 jobj_pair(self, at + 4),
             );
         }
-        if on(gr::GR_KIND_KONGO) {
+        if on(gr::GrKind::Kongo) {
             self.check(
                 "grKg_804D6984",
                 "posts",
@@ -1464,7 +1464,7 @@ impl Comparer<'_> {
             );
         }
         for i in 0..gr::pura::VTX_COUNT {
-            if !on(gr::GR_KIND_PURA) {
+            if !on(gr::GrKind::Pura) {
                 break;
             }
             let ours = game.gr.pura_vtx_jobjs.get(i).copied().flatten();
@@ -2087,10 +2087,10 @@ fn vec3_at(mem: &dyn Fn(u32) -> u32, a: u32) -> Vec3 {
 /// The spawn configurations' addresses the stage objects' variables hold: Brinstar's stage's
 /// (map 6, `xFC`) and island's (map 7, `xEC`).
 fn config_addrs(grkind: i32, u32_at: &dyn Fn(u32) -> u32) -> Vec<u32> {
-    let maps: &[(u32, u32)] = match grkind {
-        melee_sim::game::gr::GR_KIND_ZEBES => &[(6, 0x38), (7, 0x28)],
+    let maps: &[(u32, u32)] = match melee_sim::game::gr::GrKind::from_id(grkind) {
+        Some(melee_sim::game::gr::GrKind::Zebes) => &[(6, 0x38), (7, 0x28)],
         // The Great Fox's two (`grCorneria_GroundVars::xC8`, `xCC`).
-        melee_sim::game::gr::GR_KIND_CORNERIA => &[(3, 4), (3, 8)],
+        Some(melee_sim::game::gr::GrKind::Corneria) => &[(3, 4), (3, 8)],
         _ => return Vec::new(),
     };
     let mut out = Vec::new();
@@ -2193,7 +2193,7 @@ impl Importer<'_> {
             e.x04 = pop;
             e.x04_left = left;
             let g = self.cap.u32(b + 0x20);
-            if i == 19 && self.cap.u32(sym("stage_info") + 0x88) as i32 == gr::GR_KIND_MUTECITY {
+            if i == 19 && self.cap.u32(sym("stage_info") + 0x88) as i32 == gr::GrKind::MuteCity {
                 // Mute City's race order reaches this word (`Globals::order_before`).
                 continue;
             }
@@ -2362,7 +2362,7 @@ impl Comparer<'_> {
                     jo,
                 );
             }
-            if i == 19 && game.stage_info.grkind == gr::GR_KIND_MUTECITY {
+            if i == 19 && game.stage_info.grkind == gr::GrKind::MuteCity {
                 // Mute City's race order reaches this word, compared with its statics.
                 continue;
             }
@@ -2464,7 +2464,7 @@ impl Comparer<'_> {
         let theirs: [i32; 30] =
             std::array::from_fn(|i| self.u32(GRMUTECITY_ORDER + 4 * i as u32) as i32);
         self.check("grMc_8049F440", "order", m.order, theirs);
-        if game.stage_info.grkind == gr::GR_KIND_MUTECITY {
+        if game.stage_info.grkind == gr::GrKind::MuteCity {
             self.check(
                 "grMc_8049F440[-1]",
                 "the word before the order",

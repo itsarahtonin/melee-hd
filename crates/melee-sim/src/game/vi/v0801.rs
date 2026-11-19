@@ -5,6 +5,7 @@
 use melee_data::archive::DataRef;
 
 use super::super::state::Running;
+use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 
@@ -20,9 +21,6 @@ pub const CAMERA_PROC: u32 = 0x8031_EFE4;
 /// joint's descriptor on the stack, an ID table key that only has to be one no other build uses
 /// ([`START_FRAME`](super::super::gr::bigblueroute::START_FRAME)).
 const CARS_FRAME: u32 = super::super::gr::setup::SETUP_FRAME - 0x40;
-
-/// `St_Kind_BigBlueRoute`.
-const ST_KIND_BIG_BLUE_ROUTE: i32 = 73;
 
 /// `un_80400128`: each car's model and the pre-order index of its joint there.
 const CAR_JOINTS: [(u32, i32); 23] = [
@@ -132,7 +130,7 @@ impl Running<'_> {
         self.game.vi.v0801.scene = Some(scene);
         self.vi_camera(scene, CAMERA_RENDER, 8, CAMERA_PROC);
         self.vi0801_models(scene);
-        self.vi_stage(ST_KIND_BIG_BLUE_ROUTE, FRAMES, |_| {});
+        self.vi_stage(StKind::BigBlueRoute, FRAMES, |_| {});
         let erase = self.vi_fog_with(scene, 0xB);
         self.game.vi.v0801.erase = erase;
         self.vi_lights(scene);

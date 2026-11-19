@@ -10,6 +10,7 @@ use super::super::masterhand::u;
 use super::super::masterhand::wait::{set_mv_vec, set_u_vec, u_vec};
 use super::{addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
+use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -53,10 +54,6 @@ const PAD_A: u32 = 0x100;
 const PAD_B: u32 = 0x200;
 const PAD_Y: u32 = 0x800;
 
-/// `Stage_80225194`'s stage kind of Event 50 (the hands' event), where he skips his
-/// entrance.
-const ST_KIND_EVENT_50: i32 = 251;
-
 /// An attack's start: gliding to a point first, or at once.
 enum Start {
     Glide(u32, Vec3),
@@ -69,7 +66,7 @@ impl Running<'_> {
     /// Event 50.
     #[doc(alias = "ftCh_Init_80155FCC")]
     pub fn ch_start(&mut self, gobj: GObjId) {
-        if super::super::super::gr::stage::stkind(self.game) == ST_KIND_EVENT_50 {
+        if super::super::super::gr::stage::stkind(self.game) == StKind::Event50 {
             self.ch_start_in_place(gobj);
         } else {
             self.ch_entry_enter(gobj);

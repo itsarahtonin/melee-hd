@@ -7,6 +7,7 @@ use melee_data::archive::DataRef;
 use super::super::state::Running;
 use super::Loaded;
 use crate::fpu::{mem, reg};
+use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
@@ -19,8 +20,7 @@ const FRAMES: u32 = 0x28 + 0x78;
 pub const CAMERA_RENDER: u32 = 0x8031_DC80;
 pub const CAMERA_PROC: u32 = 0x8031_DD14;
 
-/// `St_Kind_Greens`, `CKind_Kirby`.
-const ST_KIND_GREENS: i32 = 17;
+/// `CKind_Kirby`.
 const CKIND_KIRBY: i32 = 4;
 
 /// `vi0501.c`'s statics.
@@ -46,7 +46,7 @@ impl Running<'_> {
     /// its root's place at its animation's frame 140 times 1/0.7 the stage's old scale.
     #[doc(alias = "un_8031D9F8")]
     fn vi0501_setup(&mut self, ckind: i32, costume: i32, kirby_costume: i32, counts: [u8; 3]) {
-        self.vi_stage(ST_KIND_GREENS, FRAMES, |r| {
+        self.vi_stage(StKind::Greens, FRAMES, |r| {
             r.game.vi.v0501.scale = super::super::gr::ground::scale(r.game);
             super::super::gr::ground::set_scale(r.game, 0.7);
         });

@@ -119,18 +119,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x801F_4240 => on_init(r),
-        0x801F_42D0 => on_load(r),
-        0x801F_42D4 => on_start(r),
-        _ => return false,
-    }
-    true
-}
-
 /// The objects' processes and destroy callbacks that do nothing.
 #[doc(alias = "grGreatBay_801F4438")]
 #[doc(alias = "grGreatBay_801F443C")]
@@ -999,7 +987,7 @@ pub fn follow_vertices(r: &mut Running, gobj: GObjId) {
 /// Whether the turtle is up or on its way, `grGreatBay_801F66A4` (a CPU's question).
 #[doc(alias = "grGreatBay_801F66A4")]
 pub fn turtle_out(game: &mut Game) -> bool {
-    if game.stage_info.grkind != super::GR_KIND_GREATBAY {
+    if game.stage_info.grkind != super::GrKind::GreatBay {
         return false;
     }
     let Some(t) = map_gobj(game, 1) else {

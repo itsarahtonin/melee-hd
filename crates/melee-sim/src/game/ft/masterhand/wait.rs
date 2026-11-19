@@ -8,6 +8,7 @@ use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::{KIND_CRAZY_HAND, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
+use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -46,16 +47,12 @@ const PAD_A: u32 = 0x100;
 const PAD_B: u32 = 0x200;
 const PAD_Y: u32 = 0x800;
 
-/// `Stage_80225194`'s stage kind of Event 50 (the hands' event), where he skips his
-/// entrance.
-const ST_KIND_EVENT_50: i32 = 251;
-
 impl Running<'_> {
     /// His start in a match, `ftMh_MS_341_8014FE10`: the entrance, or waiting where he is in
     /// Event 50.
     #[doc(alias = "ftMh_MS_341_8014FE10")]
     pub fn mh_start(&mut self, gobj: GObjId) {
-        if super::super::super::gr::stage::stkind(self.game) == ST_KIND_EVENT_50 {
+        if super::super::super::gr::stage::stkind(self.game) == StKind::Event50 {
             self.mh_start_in_place(gobj);
         } else {
             self.mh_entry_enter(gobj);

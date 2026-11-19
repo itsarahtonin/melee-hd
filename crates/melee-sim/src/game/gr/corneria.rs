@@ -22,7 +22,7 @@ use super::super::it::kinds::{arwinglaser, greatfoxlaser};
 use super::super::state::{Game, Running};
 use super::data::{CORNERIA_CALLBACKS, StageCallbacks};
 use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, scale, update_map_coll};
-use super::{GR_KIND_CORNERIA, GR_KIND_VENOM, anime, grlib, material, setup, stage, zako};
+use super::{GrKind, anime, grlib, material, setup, stage, zako};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -386,18 +386,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         0x801E_0F6C => proc_talk(r, gobj),
         0x801E_1030 => talk_destroyed(r, gobj),
         0x801E_1060 => proc_map11(r, gobj),
-        _ => return false,
-    }
-    true
-}
-
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x801D_D350 => on_init(r),
-        0x801D_D478 => on_load(r),
-        0x801D_D508 => on_start(r),
         _ => return false,
     }
     true
@@ -2233,6 +2221,16 @@ pub fn splash(r: &mut Running, cb: u32, pos: Vec3) {
     }
 }
 
+/// The stage's render callbacks, by address (the talk window's, which Venom's talk shares).
+#[melee_callbacks::callbacks(Render)]
+pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
+    match cb {
+        WINDOW_RENDER => window_render(r, gobj, pass),
+        _ => return false,
+    }
+    true
+}
+
 /// The talk window's render callback, `smashTaunt_801E24AC`: hidden with its text while the
 /// game is paused for debugging or the camera is free, else drawn as a stage object.
 #[doc(alias = "smashTaunt_801E24AC")]
@@ -2410,8 +2408,8 @@ pub fn proc_line(r: &mut Running, gobj: GObjId) {
 /// playing stops, its window and line with their sound and text.
 #[doc(alias = "grCorneria_801E2A6C")]
 pub fn match_end(r: &mut Running) {
-    match r.game.stage_info.grkind {
-        GR_KIND_CORNERIA => {
+    match r.game.stage_info.ground_kind() {
+        GrKind::Corneria => {
             if map_gobj(r.game, 12).is_none() {
                 return;
             }
@@ -2422,7 +2420,7 @@ pub fn match_end(r: &mut Running) {
             }
             r.close_font(1);
         }
-        GR_KIND_VENOM => super::venom::stop_talk(r, false),
+        GrKind::Venom => super::venom::stop_talk(r, false),
         _ => {}
     }
 }
@@ -2431,8 +2429,8 @@ pub fn match_end(r: &mut Running) {
 /// talk stops, its object too.
 #[doc(alias = "grCorneria_801E2AF4")]
 pub fn taunt_interrupted(r: &mut Running) {
-    match r.game.stage_info.grkind {
-        GR_KIND_CORNERIA => {
+    match r.game.stage_info.ground_kind() {
+        GrKind::Corneria => {
             let Some(t) = map_gobj(r.game, 12) else {
                 return;
             };
@@ -2444,7 +2442,7 @@ pub fn taunt_interrupted(r: &mut Running) {
             }
             r.close_font(1);
         }
-        GR_KIND_VENOM => super::venom::stop_talk(r, true),
+        GrKind::Venom => super::venom::stop_talk(r, true),
         _ => {}
     }
 }
@@ -2452,8 +2450,8 @@ pub fn taunt_interrupted(r: &mut Running) {
 /// Starts a talk for the taunt (`startTalk`): on Corneria one of five from `talk` unless one
 /// plays, on Venom the stage's own.
 fn start_talk(r: &mut Running, talk: i32, venom_talk: i32) -> bool {
-    match r.game.stage_info.grkind {
-        GR_KIND_CORNERIA => {
+    match r.game.stage_info.ground_kind() {
+        GrKind::Corneria => {
             if map_gobj(r.game, 12).is_some() {
                 return false;
             }
@@ -2462,7 +2460,7 @@ fn start_talk(r: &mut Running, talk: i32, venom_talk: i32) -> bool {
             set_talk(r, w, n);
             true
         }
-        GR_KIND_VENOM => super::venom::start_talk(r, venom_talk),
+        GrKind::Venom => super::venom::start_talk(r, venom_talk),
         _ => true,
     }
 }
@@ -2482,9 +2480,9 @@ pub fn falco_talk(r: &mut Running) -> bool {
 /// Whether a talk plays, `grCorneria_801E2D14`: Corneria's map 12, Venom's map 8.
 #[doc(alias = "grCorneria_801E2D14")]
 pub fn talking(game: &Game) -> bool {
-    match game.stage_info.grkind {
-        GR_KIND_CORNERIA => map_gobj(game, 12).is_some(),
-        GR_KIND_VENOM => map_gobj(game, 8).is_some(),
+    match game.stage_info.ground_kind() {
+        GrKind::Corneria => map_gobj(game, 12).is_some(),
+        GrKind::Venom => map_gobj(game, 8).is_some(),
         _ => false,
     }
 }

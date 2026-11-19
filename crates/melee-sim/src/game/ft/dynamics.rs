@@ -17,6 +17,7 @@ use super::super::structs::DynamicsDesc;
 use super::anim::{bone_flag, x594_bit};
 use super::common::GA_AIR;
 use crate::fpu::{copy, mem, reg};
+use crate::game::gr::GrKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId, USE_QUATERNION};
 use crate::lb::dynamics::Collider;
@@ -285,9 +286,6 @@ const KIND_PEACH: i32 = 9;
 const KIND_MEWTWO: i32 = 16;
 const KIND_GKOOPS: i32 = 31;
 
-/// `Gr_Kind_Flatzone`, where fighters are flat.
-const GR_FLATZONE: i32 = 0x1B;
-
 impl Running<'_> {
     /// Wind blown from a point `(x, y)` off a bone, `ftCo_8009E714`: `frames` long (120 when
     /// negative), with its strength, decay and angle step (`lb_800119DC`).
@@ -328,7 +326,7 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         let n = fp.dynamics_num;
         let flat_floor = fp.x2228_b1;
-        let flatzone = n != 0 && self.game.stage_info.grkind == GR_FLATZONE;
+        let flatzone = n != 0 && self.game.stage_info.grkind == GrKind::Flatzone;
         let root = self.root_jobj(gobj);
         let mut scale_x = 0.0;
         if flatzone {

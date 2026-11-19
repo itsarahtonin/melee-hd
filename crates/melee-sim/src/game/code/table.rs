@@ -4,9 +4,9 @@
 //! Each module writes its callbacks where it ports them, as a `match` on the address marked
 //! `#[callbacks(KIND)]` (the `melee-callbacks` crate): the attribute turns each arm into an entry
 //! and each delegation (`x if other::run(g, gobj, x) => {}`) into the other function's entries.
-//! [`Table::build`] walks the roots in `code` once, the first time a callback runs, and keeps
-//! one hash table per kind. An address registered twice for one kind stops the build, naming
-//! both places.
+//! [`Table::build`] walks the roots in `code` and the stage registry's entries once, the first
+//! time a callback runs, and keeps one hash table per kind. An address registered twice for one
+//! kind stops the build, naming both places.
 
 use std::sync::OnceLock;
 
@@ -225,6 +225,7 @@ impl AllEntries {
         crate::game::it::kinds::run_pred(&mut e.pred);
         super::calls(&mut e.call);
         crate::game::render::run(&mut e.render);
+        crate::game::gr::registry::register(&mut e.event, &mut e.proc, &mut e.render);
         e
     }
 }

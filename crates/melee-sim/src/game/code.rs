@@ -30,7 +30,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
 /// The processes' table: every module's, by delegation.
 #[callbacks(Proc)]
 fn procs(game: &mut Running, gobj: GObjId, cb: u32) -> bool {
-    use super::gr::{dynamic_attr, ground, last};
+    use super::gr::{dynamic_attr, ground};
     match cb {
         camera::PROC => camera::proc(game, gobj),
         0x801C_1CD0 => ground::proc_anim(game, gobj),
@@ -116,46 +116,6 @@ fn procs(game: &mut Running, gobj: GObjId, cb: u32) -> bool {
         addr if super::gm::event::run_proc(game, gobj, addr) => {}
         addr if super::hud::run_proc(game, gobj, addr) => {}
         super::sfx::addr::PROC => game.crowd_proc(),
-        addr if last::run(game, gobj, addr) => {}
-        addr if super::gr::battle::run(game, gobj, addr) => {}
-        addr if super::gr::stadium::run(game, gobj, addr) => {}
-        addr if super::gr::story::run(game, gobj, addr) => {}
-        addr if super::gr::oldpupupu::run(game, gobj, addr) => {}
-        addr if super::gr::izumi::run(game, gobj, addr) => {}
-        addr if super::gr::oldyoshi::run(game, gobj, addr) => {}
-        addr if super::gr::kraid::run(game, gobj, addr) => {}
-        addr if super::gr::fourside::run(game, gobj, addr) => {}
-        addr if super::gr::greatbay::run(game, gobj, addr) => {}
-        addr if super::gr::oldkongo::run(game, gobj, addr) => {}
-        addr if super::gr::shrine::run(game, gobj, addr) => {}
-        addr if super::gr::kinokoroute::run(game, gobj, addr) => {}
-        addr if super::gr::shrineroute::run(game, gobj, addr) => {}
-        addr if super::gr::bigblueroute::run(game, gobj, addr) => {}
-        addr if super::gr::pushon::run(game, gobj, addr) => {}
-        addr if super::gr::figureget::run(game, gobj, addr) => {}
-        addr if super::gr::zebesroute::run(game, gobj, addr) => {}
-        addr if super::gr::target::run(game, gobj, addr) => {}
-        addr if super::gr::figure::run(game, gobj, addr) => {}
-        addr if super::gr::teststage::run(game, gobj, addr) => {}
-        addr if super::gr::heal::run(game, gobj, addr) => {}
-        addr if super::gr::homerun::run(game, gobj, addr) => {}
-        addr if super::gr::yorster::run(game, gobj, addr) => {}
-        addr if super::gr::garden::run(game, gobj, addr) => {}
-        addr if super::gr::kongo::run(game, gobj, addr) => {}
-        addr if super::gr::greens::run(game, gobj, addr) => {}
-        addr if super::gr::zebes::run(game, gobj, addr) => {}
-        addr if super::gr::onett::run(game, gobj, addr) => {}
-        addr if super::gr::pura::run(game, gobj, addr) => {}
-        addr if super::gr::rcruise::run(game, gobj, addr) => {}
-        addr if super::gr::flatzone::run(game, gobj, addr) => {}
-        addr if super::gr::inishie1::run(game, gobj, addr) => {}
-        addr if super::gr::inishie2::run(game, gobj, addr) => {}
-        addr if super::gr::icemt::run(game, gobj, addr) => {}
-        addr if super::gr::corneria::run(game, gobj, addr) => {}
-        addr if super::gr::venom::run(game, gobj, addr) => {}
-        addr if super::gr::castle::run(game, gobj, addr) => {}
-        addr if super::gr::mutecity::run(game, gobj, addr) => {}
-        addr if super::gr::bigblue::run(game, gobj, addr) => {}
         crate::game::hud::debug_menu::MENU_PROC => game.menu_proc(gobj),
         0x8006_A1BC => fighter::proc_hitlag(game, gobj),
         0x8006_A360 => fighter::proc_anim(game, gobj),
@@ -219,7 +179,8 @@ pub fn try_proc(game: &mut Running, gobj: GObjId, f: u32) -> bool {
     table().proc.get(f).map(|p| p(game, gobj, f)).is_some()
 }
 
-/// Runs a function without arguments (`Event`: a stage's setup, load and start hooks).
+/// Runs a function without arguments (`Event`: a stage's setup, load and start hooks, by the
+/// registry, and the scenes' frames).
 #[inline]
 pub fn run_event(game: &mut Running, f: u32) {
     match table().event.get(f) {
@@ -231,54 +192,7 @@ pub fn run_event(game: &mut Running, f: u32) {
 /// The functions without arguments' table.
 #[callbacks(Event)]
 fn events(game: &mut Running, f: u32) -> bool {
-    use super::gr::{battle, last};
     match f {
-        // `Ground_OnStart`: the dummy stage's, empty.
-        super::gr::data::GROUND_ON_START => {}
-        0x8021_9CA4 => battle::on_init(game),
-        0x8021_9D54 => battle::on_load(game),
-        0x8021_9D58 => battle::on_start(game),
-        0x8021_A740 => last::on_init(game),
-        0x8021_A7C4 => last::on_load(game),
-        0x8021_A7C8 => last::on_start(game),
-        f if super::gr::stadium::run_event(game, f) => {}
-        f if super::gr::story::run_event(game, f) => {}
-        f if super::gr::oldpupupu::run_event(game, f) => {}
-        f if super::gr::izumi::run_event(game, f) => {}
-        f if super::gr::oldyoshi::run_event(game, f) => {}
-        f if super::gr::kraid::run_event(game, f) => {}
-        f if super::gr::fourside::run_event(game, f) => {}
-        f if super::gr::greatbay::run_event(game, f) => {}
-        f if super::gr::oldkongo::run_event(game, f) => {}
-        f if super::gr::shrine::run_event(game, f) => {}
-        f if super::gr::kinokoroute::run_event(game, f) => {}
-        f if super::gr::shrineroute::run_event(game, f) => {}
-        f if super::gr::bigblueroute::run_event(game, f) => {}
-        f if super::gr::pushon::run_event(game, f) => {}
-        f if super::gr::figureget::run_event(game, f) => {}
-        f if super::gr::zebesroute::run_event(game, f) => {}
-        f if super::gr::target::run_event(game, f) => {}
-        f if super::gr::figure::run_event(game, f) => {}
-        f if super::gr::teststage::run_event(game, f) => {}
-        f if super::gr::heal::run_event(game, f) => {}
-        f if super::gr::homerun::run_event(game, f) => {}
-        f if super::gr::yorster::run_event(game, f) => {}
-        f if super::gr::garden::run_event(game, f) => {}
-        f if super::gr::kongo::run_event(game, f) => {}
-        f if super::gr::greens::run_event(game, f) => {}
-        f if super::gr::zebes::run_event(game, f) => {}
-        f if super::gr::onett::run_event(game, f) => {}
-        f if super::gr::pura::run_event(game, f) => {}
-        f if super::gr::rcruise::run_event(game, f) => {}
-        f if super::gr::flatzone::run_event(game, f) => {}
-        f if super::gr::inishie1::run_event(game, f) => {}
-        f if super::gr::inishie2::run_event(game, f) => {}
-        f if super::gr::icemt::run_event(game, f) => {}
-        f if super::gr::corneria::run_event(game, f) => {}
-        f if super::gr::venom::run_event(game, f) => {}
-        f if super::gr::castle::run_event(game, f) => {}
-        f if super::gr::mutecity::run_event(game, f) => {}
-        f if super::gr::bigblue::run_event(game, f) => {}
         super::gm::vs::ON_FRAME => game.vs_on_frame(),
         f if f == super::gm::training::ON_FRAME.0 => game.training_on_frame(),
         f if f == super::gm::memcard::ON_FRAME.0 => game.memcard_on_frame(),
@@ -308,55 +222,11 @@ fn events(game: &mut Running, f: u32) -> bool {
     true
 }
 
-/// Runs a stage's demo setup (`StageData::on_demo_init`), which takes the demo's number.
+/// Runs a stage's demo setup (`StageData::on_demo_init`), which takes the demo's number: the
+/// registry's entry whose data names the address.
 pub fn run_demo_init(game: &mut Running, f: u32, arg: i32) {
-    use super::gr::{
-        battle, bigblue, castle, corneria, flatzone, fourside, garden, greatbay, greens, inishie1,
-        inishie2, izumi, kongo, kraid, last, mutecity, oldkongo, oldpupupu, oldyoshi, onett, pura,
-        rcruise, shrine, stadium, story, venom, yorster, zebes,
-    };
-    match f {
-        0x8021_A620 => last::on_demo_init(game, arg),
-        0x8021_9C98 => battle::on_demo_init(game.game),
-        0x801D_1018 => stadium::on_demo_init(game),
-        0x801E_302C => story::on_demo_init(game),
-        0x8021_07DC => oldpupupu::on_demo_init(game),
-        0x801C_BB84 => izumi::on_demo_init(game),
-        0x8020_E798 => oldyoshi::on_demo_init(game),
-        0x801F_DFF8 => kraid::on_demo_init(game),
-        0x801F_2D0C => fourside::on_demo_init(game),
-        0x801F_423C => greatbay::on_demo_init(game),
-        0x8020_F468 => oldkongo::on_demo_init(game),
-        0x8020_1C60 => shrine::on_demo_init(game),
-        0x8020_741C => super::gr::kinokoroute::on_demo_init(game),
-        0x8020_87B8 => super::gr::shrineroute::on_demo_init(game),
-        0x8020_B864 => super::gr::bigblueroute::on_demo_init(game),
-        0x8021_82C4 => super::gr::pushon::on_demo_init(game),
-        super::gr::figureget::ON_DEMO_INIT => super::gr::figureget::on_demo_init(game),
-        0x8020_B160 => super::gr::zebesroute::on_demo_init(game),
-        f if super::gr::target::is_demo_init(f) => super::gr::target::on_demo_init(game),
-        f if super::gr::figure::ON_DEMO_INIT.contains(&f) => super::gr::figure::on_demo_init(game),
-        super::gr::teststage::ON_DEMO_INIT => super::gr::teststage::on_demo_init(game),
-        super::gr::heal::ON_DEMO_INIT => super::gr::heal::empty(),
-        0x8021_C750 => super::gr::homerun::on_demo_init(game),
-        0x8020_1FA0 => yorster::on_demo_init(game),
-        0x8020_2B6C => garden::on_demo_init(game),
-        0x801D_5238 => kongo::on_demo_init(game),
-        0x8021_3458 => greens::on_demo_init(game),
-        0x801D_84A0 => zebes::on_demo_init(game),
-        0x801E_3734 => onett::on_demo_init(game),
-        0x8021_1CFC => pura::on_demo_init(game),
-        0x801F_F164 => rcruise::on_demo_init(game),
-        0x8021_6E74 => flatzone::on_demo_init(game),
-        0x801F_A908 => inishie1::on_demo_init(game),
-        0x801F_CBC0 => inishie2::on_demo_init(game),
-        0x801F_6868 => super::gr::icemt::on_demo_init(game),
-        0x801D_D2C0 => corneria::on_demo_init(game),
-        0x8020_3B14 => venom::on_demo_init(game),
-        0x801C_D338 => castle::on_demo_init(game),
-        0x801E_FC68 => mutecity::on_demo_init(game),
-        0x801E_57BC => bigblue::on_demo_init(game),
-        other => unported("demo setup", other),
+    if super::gr::registry::run_demo(game, f, arg).is_none() {
+        unported("demo setup", f)
     }
 }
 

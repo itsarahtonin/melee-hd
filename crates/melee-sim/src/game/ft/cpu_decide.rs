@@ -5,9 +5,7 @@
 
 use gekko_fp as fp;
 
-use super::super::gr::{
-    GR_KIND_GREATBAY, GR_KIND_ONETT, GR_KIND_SHRINE, GR_KIND_ZEBES, ground, stage,
-};
+use super::super::gr::{GrKind, ground, stage};
 use super::super::handles::{FighterId, ItemId};
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
@@ -814,9 +812,9 @@ impl Running<'_> {
     /// below, or ahead by its facing), for 300 frames.
     #[doc(alias = "ftCo_800A1CC4")]
     fn cpu_stage_route(&mut self, f: FighterId) {
-        let routes: &[Route] = match self.game.stage_info.grkind {
-            GR_KIND_GREATBAY => &GREAT_BAY_ROUTES,
-            GR_KIND_SHRINE => &SHRINE_ROUTES,
+        let routes: &[Route] = match self.game.stage_info.ground_kind() {
+            GrKind::GreatBay => &GREAT_BAY_ROUTES,
+            GrKind::Shrine => &SHRINE_ROUTES,
             _ => return,
         };
         let fpp = &self.game.fighters[f.0];
@@ -918,16 +916,15 @@ impl Running<'_> {
             }
         }
         let isl = *geo.islands.get(island);
-        match self.game.stage_info.grkind {
-            // Gr_Kind_Story.
-            10 => geo.island_moving(island),
+        match self.game.stage_info.ground_kind() {
+            GrKind::Story => geo.island_moving(island),
             // `checkZebesIsland`: either end under the acid, or under where it rises to in 90
             // frames at its last step.
-            GR_KIND_ZEBES => {
+            GrKind::Zebes => {
                 self.cpu_under_acid(90, isl.right.y) || self.cpu_under_acid(90, isl.left.y)
             }
             // `checkOnettY`: either end at the street's height while a car is coming.
-            GR_KIND_ONETT => {
+            GrKind::Onett => {
                 let car = |y: f32| reg(y) <= 5.0 && ground::x740(self.game) != 0;
                 car(isl.right.y) || car(isl.left.y)
             }
@@ -939,7 +936,7 @@ impl Running<'_> {
     /// step, `ftCo_800A1F98`; never on another stage.
     #[doc(alias = "ftCo_800A1F98")]
     fn cpu_under_acid(&self, frames: i32, y: f32) -> bool {
-        if self.game.stage_info.grkind != GR_KIND_ZEBES {
+        if self.game.stage_info.grkind != GrKind::Zebes {
             return false;
         }
         let (level, step) = ground::x724_and_step(self.game);
@@ -1172,14 +1169,13 @@ impl Running<'_> {
         if fpp.cpu.xFA_b5 {
             return false;
         }
-        match self.game.stage_info.grkind {
-            // Gr_Kind_Inishie1, Gr_Kind_Fourside.
-            24 => {
+        match self.game.stage_info.ground_kind() {
+            GrKind::Inishie1 => {
                 if fpp.cur_pos.y < 5.0 {
                     return true;
                 }
             }
-            21 if fpp.cur_pos.y < -35.0 => return true,
+            GrKind::Fourside if fpp.cur_pos.y < -35.0 => return true,
             _ => {}
         }
         dir.normalize();

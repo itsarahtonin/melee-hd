@@ -9,6 +9,7 @@ use super::super::super::state::Running;
 use super::ids::ms;
 use super::{PAD_A, PAD_B};
 use crate::fpu::reg;
+use crate::game::gr::GrKind;
 use crate::game::structs::HitCapsule;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -21,10 +22,6 @@ const PHYS: u32 = 0x8009_EC3C;
 const COLL: u32 = 0x8009_EC40;
 /// `ftCo_8009EC44`, which keeps the fighter at the barrel.
 pub const ACCESSORY1: u32 = 0x8009_EC44;
-
-/// `Gr_Kind_Kongo` and `Gr_Kind_OldKongo`, the stages with a barrel.
-const GR_KIND_KONGO: i32 = 4;
-const GR_KIND_OLDKONGO: i32 = 0x1E;
 
 /// Runs one of the barrel state's callbacks and hooks, if `addr` is one.
 #[melee_callbacks::callbacks(Fighter)]
@@ -47,9 +44,9 @@ fn barrel_gobj(g: &Running) -> GObjId {
 /// Asks the stage's barrel to shoot its fighter at once, `Ground_801C4DD0`.
 #[doc(alias = "Ground_801C4DD0")]
 pub fn barrel_release(g: &mut Running) -> bool {
-    match g.game.stage_info.grkind {
-        GR_KIND_KONGO => kongo::barrel_release(g.game, barrel_gobj(g)),
-        GR_KIND_OLDKONGO => oldkongo::barrel_release(g.game, barrel_gobj(g)),
+    match g.game.stage_info.ground_kind() {
+        GrKind::Kongo => kongo::barrel_release(g.game, barrel_gobj(g)),
+        GrKind::OldKongo => oldkongo::barrel_release(g.game, barrel_gobj(g)),
         _ => {}
     }
     true
@@ -58,9 +55,9 @@ pub fn barrel_release(g: &mut Running) -> bool {
 /// Has the stage's barrel let go of its fighter, `Ground_801C4E20`.
 #[doc(alias = "Ground_801C4E20")]
 pub fn barrel_letgo(g: &mut Running) -> bool {
-    match g.game.stage_info.grkind {
-        GR_KIND_KONGO => kongo::barrel_drop(g.game, barrel_gobj(g)),
-        GR_KIND_OLDKONGO => oldkongo::barrel_drop(g.game, barrel_gobj(g)),
+    match g.game.stage_info.ground_kind() {
+        GrKind::Kongo => kongo::barrel_drop(g.game, barrel_gobj(g)),
+        GrKind::OldKongo => oldkongo::barrel_drop(g.game, barrel_gobj(g)),
         _ => {}
     }
     true

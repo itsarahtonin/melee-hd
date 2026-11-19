@@ -570,7 +570,7 @@ pub fn phys_aimed(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj).expect("an Arwing's laser without a model");
     jobj::set_scale(&mut r.game.objs.jobjs, j, scale);
     let stkind = super::super::super::gr::stage::stkind(r.game);
-    if crate::lb::audio::ground_kind(stkind) as i32 == super::super::super::gr::GR_KIND_CORNERIA {
+    if crate::lb::audio::ground_kind(stkind) as i32 == super::super::super::gr::GrKind::Corneria {
         let step = super::super::super::gr::corneria::ship_step(r.game);
         let ip = item_mut(r.game, gobj);
         ip.pos.x = mem(fp::fadds(reg(ip.pos.x), reg(step.x)));

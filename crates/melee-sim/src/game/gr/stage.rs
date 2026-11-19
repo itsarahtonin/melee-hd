@@ -351,16 +351,13 @@ impl super::super::state::Running<'_> {
     }
 }
 
-/// `Gr_Kind_Corneria` and `Gr_Kind_Venom`.
-const GR_KIND_CORNERIA: i32 = 0x0E;
-const GR_KIND_VENOM: i32 = 0x0F;
-use super::GR_KIND_PSTADIUM;
+use super::GrKind;
 
 impl super::super::state::Running<'_> {
     /// Pokémon Stadium's big screen shows `mode` (`grStadium_801D2528` on its display object);
     /// any other stage has none.
     fn stadium_screen(&mut self, mode: i32) {
-        if self.game.stage_info.grkind == GR_KIND_PSTADIUM {
+        if self.game.stage_info.grkind == GrKind::PStadium {
             let g = super::ground::map_gobj(self.game, super::stadium::MAP_DISPLAY)
                 .expect("Pokémon Stadium's display");
             super::stadium::show(self, g, mode, 0);
@@ -371,7 +368,7 @@ impl super::super::state::Running<'_> {
     /// slot type, then the KO's mode.
     #[doc(alias = "grStadium_801D3B4C")]
     pub fn stadium_entrance(&mut self, slot: i32, slot_type: i32) {
-        if self.game.stage_info.grkind == GR_KIND_PSTADIUM {
+        if self.game.stage_info.grkind == GrKind::PStadium {
             let g = super::ground::map_gobj(self.game, super::stadium::MAP_DISPLAY)
                 .expect("Pokémon Stadium's display");
             let gp = super::ground::ground_of(self.game, g);
@@ -411,13 +408,13 @@ impl super::super::state::Running<'_> {
     /// count, or Corneria's and Venom's Arwings; nothing elsewhere.
     #[doc(alias = "Ground_801C1158")]
     pub fn stage_match_end(&mut self) {
-        match self.game.stage_info.grkind {
-            GR_KIND_PSTADIUM => {
+        match self.game.stage_info.ground_kind() {
+            GrKind::PStadium => {
                 let g = super::ground::map_gobj(self.game, super::stadium::MAP_DISPLAY)
                     .expect("Pokémon Stadium's display");
                 super::stadium::text_names_or_count(self, g);
             }
-            GR_KIND_CORNERIA | GR_KIND_VENOM => super::corneria::match_end(self),
+            GrKind::Corneria | GrKind::Venom => super::corneria::match_end(self),
             _ => {}
         }
     }

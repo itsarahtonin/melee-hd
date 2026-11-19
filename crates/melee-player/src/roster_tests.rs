@@ -48,8 +48,8 @@ fn every_roster_stage_plays() {
             }
             p
         };
-        for s in roster::STAGES {
-            let settings = Settings::vs(s.kind, &players, 4, 8);
+        for s in roster::stages() {
+            let settings = Settings::vs(s.vs_kind(), &players, 4, 8);
             let mut session = Session::begin(&disc, &settings, None, false)
                 .unwrap_or_else(|e| panic!("{}: {e}", s.name));
             // Until the match ends (scripted controllers can run a fighter out of stocks) or a
@@ -118,8 +118,8 @@ fn every_offered_stage_plays_with_items() {
         };
         let mut played = 0;
         for s in roster::offered_stages() {
-            let mut settings = Settings::vs_items(s.kind, &players, 4, 8, &prefs);
-            settings.seed = 0x5EED_0000 | u32::from(s.kind);
+            let mut settings = Settings::vs_items(s.vs_kind(), &players, 4, 8, &prefs);
+            settings.seed = 0x5EED_0000 | u32::from(s.vs_kind());
             let mut session = Session::begin(&disc, &settings, None, false)
                 .unwrap_or_else(|e| panic!("{}: {e}", s.name));
             for tick in 0..1800 {
@@ -181,7 +181,7 @@ fn every_offered_special_mode_plays() {
             }
             p
         };
-        let bf = roster::stage("bf").expect("Battlefield").kind;
+        let bf = roster::stage("bf").expect("Battlefield").vs_kind();
         for mode in Special::ALL
             .into_iter()
             .filter(|&m| special_audit::offered(m))
@@ -259,7 +259,7 @@ fn live_slow_mo_keeps_its_sounds() {
             }
             p
         };
-        let fd = roster::stage("fd").expect("Final Destination").kind;
+        let fd = roster::stage("fd").expect("Final Destination").vs_kind();
         let settings = Settings::vs_special(
             fd,
             &players,

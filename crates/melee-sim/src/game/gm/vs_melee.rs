@@ -6,6 +6,7 @@
 use super::super::state::Running;
 use super::super::structs::{StartMeleeData, VsModeData};
 use super::machine::GM_MENU;
+use crate::game::gr::StKind;
 
 /// `CSSData` (`gmVsMelee_CssData`): the select screen's port for one-player modes, the
 /// type, the change the screen asks for, and its copy of the mode's VS data. Its
@@ -382,8 +383,8 @@ impl Running<'_> {
             0 => self.game.vs_melee.sss.unk_stage = 0,
             2 => {
                 let at = i32::from(self.game.vs_melee.sss.vs.ordered_stage_index);
-                for i in 0..ST_KIND_OLD_YOSHI {
-                    let idx = (at + i + 1) % ST_KIND_OLD_YOSHI;
+                for i in 0..i32::from(StKind::OldYoshi.id()) {
+                    let idx = (at + i + 1) % i32::from(StKind::OldYoshi.id());
                     let stkind = super::super::mn::stagesel::STAGES[idx as usize].stkind;
                     if self.stage_unlocked_inline(u16::from(stkind)) {
                         let sss = &mut self.game.vs_melee.sss;
@@ -434,9 +435,6 @@ impl Running<'_> {
         -1
     }
 }
-
-/// `St_Kind_OldYoshi`: the stage select's entries rule 2 goes through in order.
-const ST_KIND_OLD_YOSHI: i32 = 0x1D;
 
 impl Running<'_> {
     /// The announcer calls a character kind's name, `gm_80168C5C` (none for the kinds past

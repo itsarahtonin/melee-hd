@@ -51,18 +51,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x8020_B164 => on_init(r),
-        0x8020_B1D4 => on_load(r),
-        0x8020_B1F4 => on_start(r),
-        _ => return false,
-    }
-    true
-}
-
 /// The objects' processes and destroy callbacks that do nothing: the two models' processes, and
 /// the destroy callbacks (`Ground::x1C_callback`), which only a stage's own destroying of an
 /// object runs (`Ground_801C4A08`), as this stage never does.

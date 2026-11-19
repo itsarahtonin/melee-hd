@@ -171,18 +171,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x801E_FC6C => on_init(r),
-        0x801E_FCDC => on_load(r),
-        0x801E_FCE0 => on_start(r),
-        _ => return false,
-    }
-    true
-}
-
 /// The objects' processes and destroy callbacks that do nothing.
 #[doc(alias = "grMuteCity_801F01B0")]
 #[doc(alias = "grMuteCity_801F040C")]

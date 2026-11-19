@@ -124,7 +124,7 @@ impl QuickMatch {
                     .width(220.0)
                     .show_ui(ui, |ui| {
                         for s in &stages {
-                            ui.selectable_value(stage, s.kind, s.name);
+                            ui.selectable_value(stage, s.vs_kind(), s.name);
                         }
                     });
                 ui.end_row();

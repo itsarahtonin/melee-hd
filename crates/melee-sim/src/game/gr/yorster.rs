@@ -82,19 +82,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x8020_1FA4 => on_init(r),
-        0x8020_1FA0 => on_demo_init(r),
-        0x8020_200C => on_load(r),
-        0x8020_2010 => on_start(r),
-        _ => return false,
-    }
-    true
-}
-
 /// The objects' processes and destroy callbacks that do nothing.
 #[doc(alias = "grYorster_80202158")]
 #[doc(alias = "grYorster_8020215C")]
@@ -262,7 +249,7 @@ impl Landing {
     /// The fighters' entrances and moves, on Yoshi's Island (no other stage reads them).
     pub fn of(game: &Game) -> Landing {
         let mut l = Landing::default();
-        if game.stage_info.grkind != super::GR_KIND_YORSTER {
+        if game.stage_info.grkind != super::GrKind::Yorster {
             return l;
         }
         let mut cur = game.world.first_in(8);

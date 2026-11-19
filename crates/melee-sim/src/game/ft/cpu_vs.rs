@@ -7,7 +7,7 @@
 use gekko_fp as fp;
 
 use super::super::code::unported_call;
-use super::super::gr::{GR_KIND_RCRUISE, greatbay, grlib, ground, stage};
+use super::super::gr::{GrKind, greatbay, grlib, ground, stage};
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
@@ -22,14 +22,6 @@ use crate::vec::Vec3;
 /// each character's distance threshold (`x20`).
 const CPU_DATA: u32 = 0x58;
 const DISTANCES: u32 = 0x20;
-
-/// `Gr_Kind_Castle`, `Gr_Kind_Zebes`.
-const GR_KIND_CASTLE: i32 = 2;
-const GR_KIND_ZEBES: i32 = 8;
-
-/// `Gr_Kind_BigBlue`, `Gr_Kind_Icemt`.
-const GR_KIND_BIGBLUE: i32 = 0x13;
-const GR_KIND_ICEMT: i32 = 0x16;
 
 /// The stack pointer in `ftCo_800B24B8` under the computer player's frame and the decision
 /// by kind, and `ftCo_800AE7AC`'s frame size: where the behavior pick's frame lies, whose
@@ -147,13 +139,13 @@ impl Running<'_> {
         if greatbay::turtle_out(self.game) && reg(pos.x) > -5.0 {
             return Some((2, pos));
         }
-        match self.game.stage_info.grkind {
-            GR_KIND_CASTLE => {
+        match self.game.stage_info.ground_kind() {
+            GrKind::Castle => {
                 if let Some(at) = super::super::gr::castle::bill_position(self.game, self.data) {
                     return Some((1, at));
                 }
             }
-            GR_KIND_ZEBES => {
+            GrKind::Zebes => {
                 let (acid, _) = ground::x724_and_step(self.game);
                 let bottom = reg(stage::blast_bottom(self.game));
                 if reg(acid) > bottom {
@@ -163,16 +155,16 @@ impl Running<'_> {
                     return Some((1, Vec3::new(x, mem(bottom), 0.0)));
                 }
             }
-            GR_KIND_RCRUISE => {
+            GrKind::RCruise => {
                 let mut wind = Vec3::new(0.0, 0.0, 0.0);
                 grlib::item_wind(self.game, &mut wind);
                 if self.cpu_near_moving_edge(pos, wind) {
                     return Some((2, pos));
                 }
             }
-            GR_KIND_ICEMT if self.cpu_near_climb_edge(pos) => return Some((2, pos)),
+            GrKind::Icemt if self.cpu_near_climb_edge(pos) => return Some((2, pos)),
             // The wind it asks for first (`grLib_801C9E60`) goes unused here.
-            GR_KIND_BIGBLUE if self.cpu_near_blast_side(pos) => return Some((2, pos)),
+            GrKind::BigBlue if self.cpu_near_blast_side(pos) => return Some((2, pos)),
             _ => {}
         }
         if !super::super::camera::in_bounds_by(&self.game.stage_info, pos, 0.0) {
@@ -327,8 +319,8 @@ impl Running<'_> {
         if self.game.fighters[f.0].ground_or_air == GA_AIR {
             return;
         }
-        let found = match self.game.stage_info.grkind {
-            GR_KIND_ICEMT => {
+        let found = match self.game.stage_info.ground_kind() {
+            GrKind::Icemt => {
                 let mut wind = Vec3::new(0.0, 0.0, 0.0);
                 grlib::item_wind(self.game, &mut wind);
                 // `bge` to the search below: a NaN searches above.
@@ -339,7 +331,7 @@ impl Running<'_> {
                     self.cpu_island_below(f)
                 }
             }
-            GR_KIND_RCRUISE | GR_KIND_BIGBLUE => {
+            GrKind::RCruise | GrKind::BigBlue => {
                 let left = reg(stage::blast_left(self.game));
                 let cx = fp::fmuls(0.5, fp::fadds(reg(stage::blast_right(self.game)), left));
                 let bottom = reg(stage::blast_bottom(self.game));

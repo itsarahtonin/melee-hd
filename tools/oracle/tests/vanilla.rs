@@ -30,7 +30,7 @@ const TRACE_CPU: &str = "traces/vanilla/menus-cpu-fox-fox-fod.trc";
 
 /// Fountain of Dreams' and Pokémon Stadium's `StKind`s.
 const FOUNTAIN: u16 = 2;
-const STADIUM: u16 = 3;
+const STADIUM: u16 = melee_sim::game::gr::StKind::PStadium.id();
 
 /// Ice Climbers on port 1 and Fox on port 2, human players with the select's defaults.
 fn players() -> [Player; 2] {

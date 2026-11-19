@@ -5,6 +5,7 @@ use melee_data::archive::DataRef;
 
 use super::super::state::{Obj, Running};
 use super::Loaded;
+use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -16,8 +17,7 @@ pub const JOBJ_PROC: u32 = 0x8031_CC68;
 pub const CAMERA_RENDER: u32 = 0x8031_CC8C;
 pub const CAMERA_PROC: u32 = 0x8031_CD20;
 
-/// `St_Kind_Castle`, `CKind_Mario`, `CKind_Luigi`.
-const ST_KIND_CASTLE: i32 = 4;
+/// `CKind_Mario`, `CKind_Luigi`.
 const CKIND_MARIO: i32 = 8;
 const CKIND_LUIGI: i32 = 7;
 
@@ -40,7 +40,7 @@ impl Running<'_> {
     /// Mario and Luigi in their cutscene's motion (pose 9), and the scene's sound banks.
     #[doc(alias = "vi0102_8031CB00")]
     fn vi0102_setup(&mut self, mario_costume: i32, luigi_costume: i32) {
-        self.vi_stage(ST_KIND_CASTLE, FRAMES, |_| {});
+        self.vi_stage(StKind::Castle, FRAMES, |_| {});
         self.fighter_demo_init();
         self.game.init_all_players();
         let archive = self.game.vi.v0102.archive;

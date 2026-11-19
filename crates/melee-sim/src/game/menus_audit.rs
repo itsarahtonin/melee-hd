@@ -303,7 +303,7 @@ mod tests {
     /// players', the characters' own items' and Special Melee's.
     fn held_elsewhere() -> (BTreeSet<String>, BTreeSet<String>) {
         let (mut units, mut modules) = crate::game::fighter_audit::tests::held();
-        for s in crate::game::roster::STAGES {
+        for s in crate::game::roster::stages() {
             if let Some(a) = &s.audit {
                 units.extend(a.units.iter().map(|u| (*u).to_owned()));
                 modules.extend(a.modules.iter().map(|m| (*m).to_owned()));

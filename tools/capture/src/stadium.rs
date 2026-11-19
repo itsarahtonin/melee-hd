@@ -152,7 +152,7 @@ pub(crate) fn import_statics(imp: &mut Importer) {
     let info = sym("stage_info");
     let map2 = imp.cap.u32(info + 0x180 + 8);
     imp.game.gr.stadium.buffer_address =
-        if imp.cap.u32(info + 0x88) as i32 == melee_sim::game::gr::GR_KIND_PSTADIUM && map2 != 0 {
+        if imp.cap.u32(info + 0x88) as i32 == melee_sim::game::gr::GrKind::PStadium && map2 != 0 {
             imp.cap.u32(imp.cap.u32(map2 + 0x2C) + 0xC4 + 8)
         } else {
             melee_sim::game::ft::data::MAIN_MEMORY

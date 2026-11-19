@@ -830,11 +830,11 @@ impl Game {
     /// rules, on the stages whose logic reads the camera's view edges, and on Pokémon Stadium,
     /// whose close-up reads where its player falls on the screen.
     pub fn keeps_display_views(&self) -> bool {
-        use super::gr::{GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU, GR_KIND_ONETT, GR_KIND_PSTADIUM};
+        use super::gr::GrKind;
         self.rules.slippi
             && matches!(
-                self.stage_info.grkind,
-                GR_KIND_ONETT | GR_KIND_OLDKONGO | GR_KIND_OLDPUPUPU | GR_KIND_PSTADIUM
+                self.stage_info.ground_kind(),
+                GrKind::Onett | GrKind::OldKongo | GrKind::OldPupupu | GrKind::PStadium
             )
     }
 

@@ -11,14 +11,11 @@ use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use super::cpu_script::cmd;
 use crate::fpu::{mem, reg};
+use crate::game::gr::GrKind;
 use crate::math;
 
 /// `ftLoadCommonData::x58`: the computer players' data, whose first word is its scripts.
 const CPU_DATA: u32 = 0x58;
-
-/// `Gr_Kind_Shrine` (Hyrule Temple) and `Gr_Kind_Icemt` (Icicle Mountain).
-const GR_KIND_SHRINE: i32 = 7;
-const GR_KIND_ICEMT: i32 = 0x16;
 
 /// `Ft_Kind_Donkey`, `_Kirby`, `_Samus`, `_Mewtwo`.
 const KIND_DONKEY: i32 = 3;
@@ -483,9 +480,9 @@ impl Running<'_> {
             }
             // `ftCo_800A9CB4_inline0`: Gr_Kind_Shrine's gap, Gr_Kind_Fourside.
             let x = self.game.fighters[f.0].cur_pos.x;
-            let dodge = match self.game.stage_info.grkind {
-                7 if x > -150.0 && x < -90.0 => 1,
-                21 => 2,
+            let dodge = match self.game.stage_info.ground_kind() {
+                GrKind::Shrine if x > -150.0 && x < -90.0 => 1,
+                GrKind::Fourside => 2,
                 _ => 0,
             };
             if dodge != 0 {
@@ -507,13 +504,13 @@ impl Running<'_> {
             } else if fpp.x34_scale.y < 1.0 {
                 true
             } else {
-                match self.game.stage_info.grkind {
-                    22 => {
+                match self.game.stage_info.ground_kind() {
+                    GrKind::Icemt => {
                         let mut wind = crate::vec::Vec3::ZERO;
                         crate::game::gr::grlib::item_wind(self.game, &mut wind);
                         wind.y < 0.0
                     }
-                    3 => true,
+                    GrKind::RCruise => true,
                     _ => false,
                 }
             };
@@ -755,7 +752,7 @@ impl Running<'_> {
                 } else {
                     self.cpu_walk_forward(f);
                 }
-            } else if self.game.stage_info.grkind == GR_KIND_ICEMT {
+            } else if self.game.stage_info.grkind == GrKind::Icemt {
                 self.cpu_jump_off_piece(f);
             } else if !self.cpu_facing_destination(f) {
                 if angle < 1.3089969288557768 {
@@ -881,7 +878,7 @@ impl Running<'_> {
                 return;
             }
         }
-        if self.game.stage_info.grkind != GR_KIND_ICEMT && self.cpu_against_wall(f) {
+        if self.game.stage_info.grkind != GrKind::Icemt && self.cpu_against_wall(f) {
             self.cpu_jump_off_piece(f);
             return;
         }
@@ -895,7 +892,7 @@ impl Running<'_> {
     /// on another stage.
     #[doc(alias = "ftCo_800AAF48")]
     fn cpu_shrine_opening(&mut self, f: FighterId) -> bool {
-        if self.game.fighters[f.0].cpu.x60 != 0 || self.game.stage_info.grkind != GR_KIND_SHRINE {
+        if self.game.fighters[f.0].cpu.x60 != 0 || self.game.stage_info.grkind != GrKind::Shrine {
             return false;
         }
         let geo = self.game.geometry.as_mut().expect("no collision geometry");

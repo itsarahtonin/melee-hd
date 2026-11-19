@@ -78,21 +78,9 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        ON_INIT => on_init(r),
-        ON_LOAD => {}
-        ON_START => on_start(r),
-        _ => return false,
-    }
-    true
-}
-
 /// The stage's start, `grHeal_8021EFC0`: the enemy spawner with no table.
 #[doc(alias = "grHeal_8021EFC0")]
-fn on_start(r: &mut Running) {
+pub fn on_start(r: &mut Running) {
     zako::start(r.game, r.data, None);
 }
 

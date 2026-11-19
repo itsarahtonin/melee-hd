@@ -7,6 +7,7 @@ use melee_data::archive::DataRef;
 
 use super::super::state::{Obj, Running};
 use super::Loaded;
+use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 use crate::vec::Vec3;
@@ -21,9 +22,6 @@ pub const JOBJ_PROC: u32 = 0x8031_FAA8;
 pub const CAMERA_RENDER: u32 = 0x8031_FB90;
 pub const CAMERA_PROC: u32 = 0x8031_FC30;
 pub const FOG_PROC: u32 = 0x8031_FCBC;
-
-/// `St_Kind_Last`.
-pub(super) const ST_KIND_LAST: i32 = 0x20;
 
 /// The trophy whose stand placement the stand takes (`Toy_803060BC(0x1E, …)`).
 pub(super) const TROPHY_KOOPA: i32 = 0x1E;
@@ -185,7 +183,7 @@ impl Running<'_> {
             let [n] = super::super::gm::pause::tree_nodes(&r.game.objs.jobjs, Some(j), &[3]);
             r.game.vi.v1201v1.anchor = n;
         });
-        self.vi_stage_demo(ST_KIND_LAST, 0x19, FRAMES, |_| {});
+        self.vi_stage_demo(StKind::Last, 0x19, FRAMES, |_| {});
         let anchor = self.game.vi.v1201v1.anchor;
         self.vi_trophy(trophy, 0.55, anchor, (TROPHY_PROC, 0));
         self.vi_stand(stand, TROPHY_KOOPA, 0.55, anchor, (STAND_PROC, 0));

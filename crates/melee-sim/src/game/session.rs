@@ -911,10 +911,10 @@ impl Session {
         let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind)) as i32;
         let mut names: Vec<&str> = Vec::new();
         let us = self.game.game_data.saved_language() == super::gm::main_lib::LANG_US;
-        if let Some(name) = super::gr::data::stage_file(grkind, us) {
+        if let Some(name) = super::gr::registry::stage(grkind).file(us) {
             names.push(name.trim_start_matches('/'));
         }
-        if grkind == super::gr::GR_KIND_PSTADIUM {
+        if grkind == super::gr::GrKind::PStadium {
             names.extend(super::gr::stadium::FILES);
         }
         for name in names {
@@ -932,7 +932,7 @@ impl Session {
                 .entries
                 .push((name.to_owned(), file.entrynum, file.bytes.len() as u32));
         }
-        if grkind == super::gr::GR_KIND_PSTADIUM {
+        if grkind == super::gr::GrKind::PStadium {
             for (i, name) in super::gr::stadium::FILES.iter().enumerate() {
                 self.game.gr.stadium.files[i] = Some(self.game.ft.data.files.archive(name));
             }
@@ -1119,7 +1119,7 @@ impl Session {
                 }
             }
         }
-        if training && let Some(name) = super::gr::data::stage_file(grkind, us) {
+        if training && let Some(name) = super::gr::registry::stage(grkind).file(us) {
             let archive = self
                 .game
                 .ft

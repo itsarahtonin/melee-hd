@@ -88,7 +88,7 @@ fn main() {
                     }
                 })
                 .collect();
-            jobs.push((s.kind, s.name, players, n as u32));
+            jobs.push((s.vs_kind(), s.name, players, n as u32));
             n += 1;
         }
     }

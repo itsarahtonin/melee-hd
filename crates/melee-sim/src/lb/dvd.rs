@@ -15,6 +15,7 @@ use super::heap::{self, LbHeaps};
 use super::memory::{COPY_PERIOD, CompactStep, LbMemory};
 use crate::audio::Audio;
 use crate::audio::devcom::cb;
+use crate::game::gr::{GrKind, StKind};
 
 /// `PreloadEntry`: a file the cache holds or wants. `state`: 0 free, 1 wanted, 2 reading,
 /// 3 in, 4 in and taken. A load score below 0 marks an entry the current scene doesn't
@@ -99,7 +100,7 @@ pub const SCENE_DEFAULT: SceneCache = SceneCache {
         x1: 0,
         x2: 0,
         x3: 0,
-        stkind: 0x148,
+        stkind: StKind::Unk328.id() as i32,
         entries: [CacheFighter {
             char_id: CHKIND_NONE,
             color: 0,
@@ -219,7 +220,7 @@ pub fn game_cache_files() -> Vec<String> {
         let st = crate::game::gm::opening::stage_select_kind(i);
         let gr = crate::lb::audio::ground_kind(i32::from(st)) as i32;
         for us in [true, false] {
-            if let Some(n) = crate::game::gr::data::stage_file(gr, us) {
+            if let Some(n) = crate::game::gr::registry::stage(gr).file(us) {
                 add(n);
             }
         }
@@ -228,32 +229,29 @@ pub fn game_cache_files() -> Vec<String> {
     for st in 0xCA..=0x111 {
         let gr = crate::lb::audio::ground_kind(st) as i32;
         for us in [true, false] {
-            if let Some(n) = crate::game::gr::data::stage_file(gr, us) {
+            if let Some(n) = crate::game::gr::registry::stage(gr).file(us) {
                 add(n);
             }
         }
     }
     // The Home-Run Contest's stage, which its select's game cache names.
     for us in [true, false] {
-        if let Some(n) = crate::game::gr::data::stage_file(0x43, us) {
+        if let Some(n) = GrKind::Homerun.stage().file(us) {
             add(n);
         }
     }
     // Classic's bonus stages (Snag the Trophies, the race), which its intros' game cache names.
-    for gr in [
-        crate::game::gr::GR_KIND_FIGUREGET,
-        crate::game::gr::GR_KIND_PUSHON,
-    ] {
+    for gr in [GrKind::FigureGet, GrKind::Pushon] {
         for us in [true, false] {
-            if let Some(n) = crate::game::gr::data::stage_file(gr, us) {
+            if let Some(n) = gr.stage().file(us) {
                 add(n);
             }
         }
     }
     // Target Test's stages, which its match's game cache names.
-    for gr in crate::game::gr::GR_KIND_TMARIO..crate::game::gr::GR_KIND_TMARIO + 26 {
+    for gr in GrKind::targets() {
         for us in [true, false] {
-            if let Some(n) = crate::game::gr::data::stage_file(gr, us) {
+            if let Some(n) = gr.stage().file(us) {
                 add(n);
             }
         }
@@ -440,17 +438,17 @@ impl Dvd {
         if gc.mode_kind == crate::game::gm::machine::GM_CAMERA_MODE {
             self.want_camera_mode();
         }
-        if gc.stkind != 0x148 {
+        if gc.stkind != StKind::Unk328 {
             let gr = crate::lb::audio::ground_kind(gc.stkind) as i32;
-            if let Some(n) = crate::game::gr::data::stage_file(gr, saved_us) {
+            if let Some(n) = crate::game::gr::registry::stage(gr).file(saved_us) {
                 self.want_named(4, n, 4, 4, 1, 7, 16, 0);
             }
             let tex = |w, h, f| crate::hsd::heap::tex_buffer_size(w, h, f).next_multiple_of(32);
-            match gr {
-                crate::game::gr::GR_KIND_IZUMI => {
+            match GrKind::from_id(gr) {
+                Some(GrKind::Izumi) => {
                     self.want(0, 2001, 4, 4, tex(80, 60, 4), 0, 7, 16, 0);
                 }
-                crate::game::gr::GR_KIND_PSTADIUM => {
+                Some(GrKind::PStadium) => {
                     self.want(0, 0x7D2, 4, 4, tex(0xFA, 0xA0, 4), 0, 7, 0x10, 0);
                     self.want(0, 0x7D3, 4, 4, tex(0x280, 0x196, 4), 0, 7, 0x10, 0);
                     self.want(0, 0x7D4, 4, 4, tex(0x7C, 0x50, 4), 0, 7, 0x10, 0);

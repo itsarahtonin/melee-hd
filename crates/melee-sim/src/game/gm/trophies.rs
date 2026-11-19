@@ -17,9 +17,10 @@ const ENTRY: u32 = 0x24;
 /// region can't win (`Toy_803049F4`); the low byte is how many the save holds.
 const FLAG_NEW: u16 = 0x8000;
 const FLAG_UNWINNABLE: u16 = 0x4000;
-/// The trophy that unlocks a stage (Brinstar Depths' stage kind) when the save has it.
+/// The trophy that unlocks a stage (Mushroom Kingdom II, [`STAGE_TROPHY_STKIND`]) when the save
+/// has it.
 const STAGE_TROPHY: usize = 0xA5;
-const STAGE_TROPHY_STKIND: u16 = 0x14;
+const STAGE_TROPHY_STKIND: crate::game::gr::StKind = crate::game::gr::StKind::Inishie2;
 
 /// `lbl_803B790C`: each unlockable stage's unlock index, ground kind and the special
 /// message that announces it.
@@ -273,8 +274,8 @@ impl Running<'_> {
             self.toy_mark_class(7, false, false);
         }
         self.trophy_class_notices();
-        if idx == STAGE_TROPHY && !self.stage_unlocked(STAGE_TROPHY_STKIND) {
-            self.unlock_stage(STAGE_TROPHY_STKIND);
+        if idx == STAGE_TROPHY && !self.stage_unlocked(STAGE_TROPHY_STKIND.id()) {
+            self.unlock_stage(STAGE_TROPHY_STKIND.id());
         }
         let t = self.trophy_tables();
         if self.trophy_class(&t, idx) == 1 {
