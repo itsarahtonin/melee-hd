@@ -73,14 +73,20 @@ fn start(d: &Disc, s: &Settings, replay: Option<Replay>) -> Session {
     Session::begin(d, s, replay, false).expect("the match starts")
 }
 
+/// The recorder only reads: a match under the Slippi ruleset's rules (the only ruleset the
+/// player saves replays under), a pause included, plays the same with it on as off.
 #[test]
 fn recording_changes_nothing() {
     crate::on_game_stack(|| {
         let Some(disc) = disc() else { return };
-        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
-        let plain = settings();
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+        let plain = Settings {
+            rules: Rules::slippi_online(),
+            ..settings()
+        };
         let recording = Settings {
-            record: Some(Setup::vanilla()),
+            rules: Rules::slippi_online(),
+            record: Some(Setup::slippi()),
             ..settings()
         };
         let (mut a, mut b) = (start(&disc, &plain, None), start(&disc, &recording, None));
@@ -126,20 +132,21 @@ fn play(session: &mut Session, limit: u32, pads: impl Fn(u32) -> [PadStatus; 4])
     melee_slippi::write::recording(r, std::time::UNIX_EPOCH)
 }
 
-/// Saves `s`'s match's recording through the session's own saving, as the player's are, and
+/// Saves `s`'s match's recording as the player saves its replays (`recording::Recording`), and
 /// plays it back as the player plays a replay, recording it again: the two recordings, and the
 /// settings it played back with. `out` names a variable that keeps a copy of the first, for
 /// Slippi's tools to read.
 fn record_and_play_back(disc: &Disc, s: &Settings, out: &str) -> (Replay, Replay, Settings) {
     // Without a pause: playback doesn't pause, so the frame starts' scene frame counts, which
-    // count paused frames, would differ after one. The session saves its recording to a folder
-    // of its own when it ends, as the player's do.
+    // count paused frames, would differ after one. The recording goes to a folder of its own.
     let dir =
         std::env::temp_dir().join(format!("melee-hd-record-test-{out}-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
+    let to = crate::recording::Recording::new(dir.to_str());
     let mut session = start(disc, s, None);
-    session.recording = Some(crate::recording::Recording::new(dir.to_str()));
     let made = play(&mut session, 6000, |t| pads(t, false));
+    to.save(session.game().recorder.as_ref().expect("the recorder"))
+        .expect("the replay saved");
     drop(session);
     let saved: Vec<_> = std::fs::read_dir(&dir)
         .expect("the replays folder")
@@ -226,7 +233,9 @@ fn record_and_play_back(disc: &Disc, s: &Settings, out: &str) -> (Replay, Replay
 
 /// A Vanilla match's recording plays back, with the unlocks it read, which its metadata
 /// carries: a save with nothing unlocked, not Slippi's everything (`RECORD_TEST_OUT=FILE` keeps
-/// a copy).
+/// a copy). The player saves no Vanilla replays since 2026-11-19, but the recorder still writes
+/// them for the oracle (`record::Setup::vanilla`), and the player still plays the ones it saved
+/// before, with their unlocks: this is the check of both.
 #[test]
 fn a_recording_plays_back() {
     crate::on_game_stack(|| {
@@ -277,12 +286,13 @@ fn a_slippi_recording_plays_back() {
 /// An items-on match's recording carries its item settings where Slippi's game start has them
 /// (the game info block's item frequency and item kinds, which Slippi's spec and parsers read
 /// at 0x10 and 0x28 of the event: `itemSpawnBehavior` and `enabledItems`), as the VS menus set
-/// them; an items-off match's says off (-1).
+/// them; an items-off match's says off (-1). Under the Slippi ruleset, whose matches the player
+/// saves.
 #[test]
 fn a_recording_carries_the_item_settings() {
     crate::on_game_stack(|| {
         let Some(disc) = disc() else { return };
-        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
         let base = settings();
         let stage = base.start.rules.stkind;
         let players = [base.start.players[0].ckind, base.start.players[1].ckind];
@@ -302,7 +312,8 @@ fn a_recording_carries_the_item_settings() {
         ] {
             let s = Settings {
                 seed: base.seed,
-                record: Some(Setup::vanilla()),
+                rules: Rules::slippi_online(),
+                record: Some(Setup::slippi()),
                 ..Settings::vs_items(stage, &players, 0, 1, &prefs)
             };
             let mut session = start(&disc, &s, None);
@@ -1336,6 +1347,72 @@ fn a_ruleset_session_saves_its_live_matches() {
             assert_eq!(r.unlocks, None);
         }
         std::fs::remove_dir_all(&dir).expect("the folder goes");
+    });
+}
+
+/// Plays the recorded session `name` (in ssbm-rs's `lockstep`) through the player's console with
+/// Save replays on and the replays folder given, to its last read: the replays it saved, the
+/// ticks a match's fighters were on stage, and the ticks a recorder was in the game (one
+/// waiting in the menus, or a match's). Melee runs the session's own ruleset.
+fn session_replays(disc: String, path: &std::path::Path, out: &str) -> (Vec<Replay>, u32, u32) {
+    let dir = std::env::temp_dir().join(format!("melee-hd-{out}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let mut args = crate::parse_args_from(Vec::new()).expect("the defaults");
+    args.disc = disc;
+    args.mute = true;
+    args.bench = Some(0);
+    args.record = true;
+    args.replays = Some(dir.display().to_string());
+    args.given.replays = true;
+    let rec = melee_sim::game::inputs::Recording::read(path).unwrap();
+    let mut s = Session::power_on(&args, None, Some(rec), None).expect("the power-on");
+    let none = [PadStatus::default(); 4];
+    let (mut in_match, mut recorded) = (0, 0);
+    while !s.ended {
+        let f = s.tick(none);
+        s.recycle(f);
+        in_match += u32::from(s.game().scene_fighters() > 0);
+        recorded += u32::from(s.game().recorder.is_some());
+    }
+    drop(s);
+    melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+    let saved = match std::fs::read_dir(&dir) {
+        Ok(d) => d
+            .map(|e| Replay::parse(&std::fs::read(e.unwrap().path()).unwrap()).expect("a replay"))
+            .collect(),
+        Err(_) => Vec::new(),
+    };
+    let _ = std::fs::remove_dir_all(&dir);
+    (saved, in_match, recorded)
+}
+
+/// The player saves replays under the Slippi ruleset only (Sarah, 2026-11-19: "Slippi only";
+/// `saves_replays`): with Save replays on and a replays folder given, `menus-ics-fox-fod`, a
+/// Vanilla session from power-on through the menus into a VS match on Fountain of Dreams (from
+/// tick 831), saves none and runs no recorder at all, and `player-fd`, a session the player
+/// recorded under the Slippi ruleset, saves its live match's. Skips without `SSBM_DISC` and
+/// `SSBM_RS_LOCAL`.
+#[test]
+fn only_a_slippi_session_saves_replays() {
+    crate::on_game_stack(|| {
+        let (Some((disc, vanilla)), Some((_, slippi))) = (
+            crate::live_tests::ruleset_session("vanilla-sessions/menus-ics-fox-fod.inputs"),
+            crate::live_tests::ruleset_session("m6s-player/player-fd.inputs"),
+        ) else {
+            eprintln!("skipped: no disc or no sessions");
+            return;
+        };
+        let (saved, in_match, recorded) =
+            session_replays(disc.clone(), &vanilla, "vanilla-replays");
+        assert!(in_match > 300, "the Vanilla match ran {in_match} ticks");
+        assert_eq!(saved.len(), 0, "a Vanilla session saved replays");
+        assert_eq!(recorded, 0, "a recorder ran under Vanilla");
+        let (saved, in_match, recorded) = session_replays(disc, &slippi, "slippi-replays");
+        assert!(in_match > 300, "the Slippi match ran {in_match} ticks");
+        assert_eq!(saved.len(), 1, "the Slippi session's replays");
+        assert!(recorded > in_match, "a recorder ran {recorded} ticks");
+        let s = Settings::from_replay(&melee_slippi::start(&saved[0])).expect("its settings");
+        assert_eq!(s.rules, Rules::slippi_online());
     });
 }
 
