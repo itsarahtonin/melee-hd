@@ -477,10 +477,9 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     if v.x14.get() == 0 {
         if let Some(maker) = v.x2C.get()
             && owner == Some(maker)
+            && let Some(b) = maker_ball(kind)
         {
-            if let Some(b) = maker_ball(kind) {
-                r.mt_n_ball_released(maker, b);
-            }
+            r.mt_n_ball_released(maker, b);
         }
         item_mut(r.game, gobj)
             .xDD4_itemVar
@@ -526,18 +525,19 @@ pub fn animate_held(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     let (owner, kind) = (ip.owner, ip.kind);
     let maker = ip.xDD4_itemVar.mewtwo_shadowball().x2C.get();
-    if maker.is_some() && owner == maker {
-        if let Some(b) = maker_ball(kind) {
-            if r.mt_n_ball_lost(maker, b) || r.mt_n_ball_put_away(maker, b) {
-                return true;
-            }
-            let Some((charge, max)) = r.mt_n_charge_of(maker, b) else {
-                return true;
-            };
-            let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-            v.x18.set(charge);
-            v.x1C.set(max);
+    if maker.is_some()
+        && owner == maker
+        && let Some(b) = maker_ball(kind)
+    {
+        if r.mt_n_ball_lost(maker, b) || r.mt_n_ball_put_away(maker, b) {
+            return true;
         }
+        let Some((charge, max)) = r.mt_n_charge_of(maker, b) else {
+            return true;
+        };
+        let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
+        v.x18.set(charge);
+        v.x1C.set(max);
     }
     let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
     let (charge, max) = (v.x18.get(), v.x1C.get());

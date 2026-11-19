@@ -395,8 +395,8 @@ fn run_link(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftLk_SpecialN_IsActiveAnd2071b6" => return b(g.link_bow_released(gobj, &LINK)),
         "ftLk_SpecialN_ProcessFv10" => g.link_process_arrow(gobj, &LINK),
         "ftLk_SpecialN_ProcessFv14" => g.link_process_bow(gobj, &LINK),
-        "ftLk_SpecialN_Enter" => g.link_special_n_enter(gobj, false),
-        "ftLk_SpecialAirN_Enter" => g.link_special_n_enter(gobj, true),
+        "ftLk_SpecialN_Enter" => g.link_special_n_enter(gobj, &LINK, false),
+        "ftLk_SpecialAirN_Enter" => g.link_special_n_enter(gobj, &LINK, true),
         "it_8029FDBC" => {
             item();
             return b(linkboomerang::is_held(g, gobj));
