@@ -726,7 +726,7 @@ pub fn render_reflection(r: &mut Running, gobj: GObjId) {
     if swap {
         fighters_draw_magnified(r.game);
     }
-    let main = super::super::camera::gobj(&r.game.camera.cam);
+    let main = r.game.camera.gobj();
     if let Some(main) = main {
         super::super::camera::update_cobj(r.game, main);
     }
@@ -752,11 +752,11 @@ pub fn render_reflection(r: &mut Running, gobj: GObjId) {
         draws.push(display::Draw::EraseColor([0xFF, 0xFF, 0xFF, 1]));
         draws.push(display::Draw::Erase);
         lobj::delete_current_all(&mut r.game.objs, None);
-        super::super::camera::set_layer(&mut r.game.camera.cam, 0);
-        super::super::camera::set_pass(&mut r.game.camera.cam, 1);
+        r.game.camera.set_layer(0);
+        r.game.camera.set_pass(1);
         r.game.world.gobj_mut(gobj).gxlink_prios = 0x25;
         r.render_links(gobj, 3);
-        super::super::camera::set_pass(&mut r.game.camera.cam, 0);
+        r.game.camera.set_pass(0);
         r.game.world.gobj_mut(gobj).gxlink_prios = 0x70;
         r.render_links(gobj, 7);
         display::fog_set(&mut r.game.objs, None);

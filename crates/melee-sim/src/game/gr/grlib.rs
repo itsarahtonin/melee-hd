@@ -277,7 +277,9 @@ pub fn quake_proc(r: &mut Running, gobj: GObjId, looping: bool) {
         Some(j),
     );
     let t = r.game.objs.jobjs[j].translate;
-    camera::set_quake_offset(&mut r.game.camera, f64::from(t.x), f64::from(t.y));
+    r.game
+        .camera
+        .set_quake_offset(f64::from(t.x), f64::from(t.y));
     r.game.quake_model_shook();
     if !looping && a.is_none_or(|a| r.game.objs.aobjs[a].flags & aobj::NO_ANIM != 0) {
         crate::hsd::gobj::free(r, gobj);

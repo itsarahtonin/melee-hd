@@ -69,7 +69,7 @@ impl Running<'_> {
             draws.push(crate::hsd::display::Draw::EraseColor(erase));
             draws.push(crate::hsd::display::Draw::EraseWithDepth);
             for (layer, prios) in [(2, 9), (1, 8), (0, 8)] {
-                super::super::camera::set_layer(&mut self.game.camera.cam, layer);
+                self.game.camera.set_layer(layer);
                 self.game.world.gobj_mut(gobj).gxlink_prios = prios;
                 self.render_links(gobj, 7);
             }
@@ -165,8 +165,7 @@ impl Running<'_> {
         self.game.vi.v0601.scene = Some(scene);
         self.vi_camera(scene, CAMERA_RENDER, 2, CAMERA_PROC);
         self.vi_stage(StKind::Corneria, FRAMES, |_| {});
-        let k = &self.game.camera.cam.background_color;
-        self.game.vi.v0601.erase = [k.r, k.g, k.b];
+        self.game.vi.v0601.erase = self.game.camera.background_color();
         self.vi0601_models(scene);
         self.vi_lights(scene);
         self.game.init_all_players();

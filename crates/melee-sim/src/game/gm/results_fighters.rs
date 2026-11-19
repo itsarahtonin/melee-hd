@@ -222,7 +222,7 @@ impl Running<'_> {
     #[doc(alias = "it_8027870C")]
     pub fn results_fighters_setup(&mut self, costumes: [u8; 4]) {
         self.bg_flash_create(6);
-        super::super::camera::init(&mut self.game.camera, 8);
+        self.game.camera.init(8);
         self.game.alloc_dynamics(self.data);
         self.game.coll.reset();
         super::super::gr::setup::prepare(self.game);

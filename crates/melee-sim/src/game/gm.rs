@@ -665,5 +665,5 @@ pub fn call(
 /// `gm_80165290`: the camera fixed (`Camera_SetModeToFixed`), whoever unpaused.
 #[doc(alias = "gm_80165290")]
 pub fn fixed_camera(r: &mut super::state::Running) {
-    super::camera::set_fixed(&mut r.game.camera.cam);
+    r.game.camera.set_fixed();
 }

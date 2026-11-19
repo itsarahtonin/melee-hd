@@ -219,9 +219,9 @@ pub fn start_street(r: &mut Running, gobj: GObjId) {
             .geometry_mut()
             .set_ledge_callback(joint, user, Some(CodeRef(AWNING_LANDED)));
     }
-    let b = camera::alloc_box(&mut r.game.camera.boxes, camera::ACTIVE);
+    let b = r.game.camera.alloc_box(camera::ACTIVE);
     r.game.grounds[g.0].u.onett().subject = Some(b);
-    let cam = &mut r.game.camera.boxes[b];
+    let cam = r.game.camera.subject_mut(b);
     cam.target_ext.h.x = -40.0;
     cam.target_ext.h.y = 40.0;
     cam.target_ext.v.x = 20.0;
@@ -290,7 +290,7 @@ pub fn proc_street(r: &mut Running, gobj: GObjId) {
         } else {
             camera::INACTIVE
         };
-        r.game.camera.boxes[b].state = state;
+        r.game.camera.subject_mut(b).state = state;
     }
     let level = r.game.gr.wind_level;
     r.game.gr.wind_level = crate::lb::wind::tick(&mut r.game.gr.winds, level);

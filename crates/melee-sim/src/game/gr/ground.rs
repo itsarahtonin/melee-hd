@@ -762,7 +762,7 @@ pub fn fog_gobj(game: &Game) -> Option<GObjId> {
 #[doc(alias = "Ground_ApplyStageBackgroundColor")]
 pub fn apply_background_color(game: &mut Game) {
     let (r, g, b) = fog_rgb(game).unwrap_or((0, 0, 0));
-    super::super::camera::set_background_color(&mut game.camera.cam, r, g, b);
+    game.camera.set_background_color(r, g, b);
 }
 
 /// The camera's vertical tilt, `Ground_801C20D0`.

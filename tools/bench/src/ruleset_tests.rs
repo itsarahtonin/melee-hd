@@ -288,7 +288,7 @@ fn slippi_stadium_monitor_ignores_the_display_pass() {
         "fox-marth-ps",
         "the game camera",
         &|g, junk| {
-            let Some(cam) = melee_sim::game::camera::gobj(&g.camera.cam) else {
+            let Some(cam) = g.camera.gobj() else {
                 return;
             };
             let Some(Obj::CObj(c)) = g.world.gobj(cam).obj else {
@@ -810,12 +810,12 @@ fn displace_playback_camera(g: &mut Game, shift: Vec3) {
     if !g.follows_playback_camera() {
         g.start_following();
     }
-    let mut c = Course::of(&g.camera.cam);
+    let mut c = Course::of(g.camera.raw_parts().cam);
     for t in [&mut c.transform, &mut c.transform_copy] {
         t.interest = t.interest + shift;
         t.position = t.position + shift;
     }
-    g.camera.followed = Some(c);
+    *g.camera.raw_parts_mut().followed = Some(c);
 }
 
 /// One tick of `m` and its display pass when due, unless `skip` (a doubled round: the tick
@@ -892,7 +892,7 @@ fn doubled_round_notes(
                     displace_playback_camera(&mut m.game, shift);
                 }
                 if pull == Some(t) {
-                    let p = &mut m.game.camera.cam.transform.position;
+                    let p = &mut m.game.camera.raw_parts_mut().cam.transform.position;
                     p.z *= 20.0;
                 }
                 let (rendered, ended) = tick_skipping(&mut m, &mut device, skip == Some(t));
@@ -1307,7 +1307,13 @@ fn measure_following_playbacks_camera() {
                     let (_, ended) = tick(&mut m, &mut device);
                     times.push(at.elapsed());
                     if to_the_end && t == 0 {
-                        let f = m.game.camera.followed.as_mut().expect("followed");
+                        let f = m
+                            .game
+                            .camera
+                            .raw_parts_mut()
+                            .followed
+                            .as_mut()
+                            .expect("followed");
                         f.transform.interest.z += 1.0;
                     }
                     if m.game.follows_playback_camera() {

@@ -1446,7 +1446,7 @@ impl Running<'_> {
                 self.load_fighter_all_costumes(i32::from(k));
             }
         }
-        super::super::camera::set_quake_scale(&mut self.game.camera.cam, 0.2);
+        self.game.camera.set_quake_scale(0.2);
     }
 
     /// `ftLib_LoadFighterAllCostumes`: a kind's data, its effects' file, each of its

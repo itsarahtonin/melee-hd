@@ -383,7 +383,7 @@ impl Running<'_> {
             archive: ta,
             offset: off,
         });
-        super::super::camera::init(&mut self.game.camera, 0xC);
+        self.game.camera.init(0xC);
         self.game.alloc_dynamics(self.data);
         self.game.coll.reset();
         super::super::gr::setup::prepare(self.game);
@@ -1410,7 +1410,6 @@ impl Running<'_> {
     /// and 3, links 4 to 6, fog off, and link 7.
     #[doc(alias = "Camera_800304E0")]
     pub fn intro_normal_stage_render(&mut self, gobj: GObjId) {
-        use super::super::camera;
         use crate::hsd::display::{self, Draw};
         let Some(Obj::CObj(c)) = self.game.world.gobj(gobj).obj else {
             panic!("the intro's camera holds no CObj");
@@ -1419,20 +1418,30 @@ impl Running<'_> {
             return;
         }
         // `HSD_SetEraseColor`: the game camera's background color, its alpha 1.
-        let bg = &self.game.camera.cam.background_color;
-        let color = [bg.r, bg.g, bg.b, 1];
+        let [r, g, b] = self.game.camera.background_color();
+        let color = [r, g, b, 1];
         let draws = &mut self.game.objs.display;
         draws.push(Draw::EraseColor(color));
         draws.push(Draw::Erase);
         self.stage_fog_update(c);
         crate::hsd::lobj::delete_current_all(&mut self.game.objs, None);
-        let prio8 = |r: &Self| if r.game.camera.cam.x398_b2 { 0 } else { 8 };
-        let prio1 = if self.game.camera.cam.x398_b4 { 0 } else { 1 };
-        camera::set_layer(&mut self.game.camera.cam, 2);
+        let prio8 = |r: &Self| {
+            if r.game.camera.hidden_layers()[2] {
+                0
+            } else {
+                8
+            }
+        };
+        let prio1 = if self.game.camera.hidden_layers()[4] {
+            0
+        } else {
+            1
+        };
+        self.game.camera.set_layer(2);
         self.game.world.gobj_mut(gobj).gxlink_prios = prio1 | prio8(self);
         self.render_links(gobj, 7);
         for layer in [1, 0] {
-            camera::set_layer(&mut self.game.camera.cam, layer);
+            self.game.camera.set_layer(layer);
             self.game.world.gobj_mut(gobj).gxlink_prios = prio8(self);
             self.render_links(gobj, 7);
         }

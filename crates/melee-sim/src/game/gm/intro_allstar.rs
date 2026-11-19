@@ -148,7 +148,7 @@ impl Running<'_> {
     /// stage's setups (the stage set up before the items' data), the effects'.
     #[doc(alias = "fn_80187714")]
     fn intro_allstar_setups(&mut self) {
-        super::super::camera::init(&mut self.game.camera, 6);
+        self.game.camera.init(6);
         self.game.alloc_dynamics(self.data);
         self.game.coll.reset();
         super::super::gr::setup::prepare(self.game);

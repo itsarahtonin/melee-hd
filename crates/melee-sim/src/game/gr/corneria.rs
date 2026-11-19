@@ -1616,7 +1616,7 @@ fn city_part_under(game: &Game, x: f64) -> Option<i32> {
 /// part counted (`Game::decide_camera_read`, design call 9).
 #[doc(alias = "grCorneria_801E08CC")]
 pub fn city_under_camera(game: &mut Game) -> i32 {
-    let cam = super::super::camera::interest(&game.camera.cam);
+    let cam = game.camera.interest();
     let part = city_part_at(game, reg(cam.x));
     game.decide_camera_read(&Some(part), |g, t| city_part_under(g, reg(t.interest.x)));
     part
@@ -1674,8 +1674,8 @@ const TRIGGER_R: u32 = 0x20;
 /// controller (the master status) steps the talk number and starts that talk, if none plays.
 #[doc(alias = "grCorneria_801E0E40")]
 pub fn debug_talk(r: &mut Running) {
-    let cam = &r.game.camera.cam;
-    if !super::super::camera::is_debug_free(cam) && !super::super::camera::is_debug_follow(cam) {
+    let cam = &r.game.camera;
+    if !cam.is_debug_free() && !cam.is_debug_follow() {
         return;
     }
     let trigger = r.game.pads.master[1].trigger;
@@ -2248,10 +2248,7 @@ pub fn window_render(r: &mut Running, gobj: GObjId, pass: i32) {
             None => r.game.sis.poke(t.0 + crate::hsd::sis::TEXT_HIDDEN, h),
         }
     };
-    if r.game.db_pause_flag(1)
-        || r.game.db_pause_flag(2)
-        || super::super::camera::is_free(&r.game.camera.cam)
-    {
+    if r.game.db_pause_flag(1) || r.game.db_pause_flag(2) || r.game.camera.is_free() {
         set_hidden(r, 1);
         return;
     }

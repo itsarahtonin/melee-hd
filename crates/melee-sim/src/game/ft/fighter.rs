@@ -258,7 +258,7 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         }
     }
     // Off-screen damage.
-    if !g.game.fighters[f.0].is_sub_fighter && g.game.camera.cam.x2BC == 1.0 {
+    if !g.game.fighters[f.0].is_sub_fighter && g.game.camera.zoom() == 1.0 {
         let c = g.common();
         let (limit, frames, damage) = (c.i32(0x7B0), c.i32(0x7AC), c.i32(0x7B4));
         let fp = &g.game.fighters[f.0];

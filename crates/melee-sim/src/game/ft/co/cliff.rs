@@ -32,7 +32,7 @@ impl Running<'_> {
             let fp = self.game.fighter_mut(gobj);
             fp.coll_data = cd;
             let b = fp.x890_cameraBox.expect("a fighter without a camera box");
-            self.game.camera.boxes[b].on_ledge = true;
+            self.game.camera.subject_mut(b).on_ledge = true;
         }
     }
 

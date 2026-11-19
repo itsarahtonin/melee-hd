@@ -509,12 +509,12 @@ pub fn proc_maze(r: &mut Running, gobj: GObjId) {
             Some(_) => target = player_pos,
             None => target = stage::cam_center(r.game),
         }
-        super::super::camera::set_hold_off_plane(&mut r.game.camera.cam, true);
+        r.game.camera.set_hold_off_plane(true);
     } else {
         let pid = i32::from(r.game.grounds[g.0].u.shrineroute().point);
         target = point_of(r.game, r.data, pid);
         target.y = mem(fp::fadds(reg(target.y), 30.0));
-        super::super::camera::set_hold_off_plane(&mut r.game.camera.cam, false);
+        r.game.camera.set_hold_off_plane(false);
     }
     let timer = r.game.grounds[g.0].u.shrineroute().cam_timer;
     if timer == 0 {

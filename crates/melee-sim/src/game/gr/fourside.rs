@@ -468,7 +468,7 @@ pub fn proc_ufo(r: &mut Running, gobj: GObjId) {
                         r.game.geometry_mut().settle_vertices(UFO_JOINT);
                         jobj::clear_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
                         r.game.geometry_mut().enable_joint(UFO_JOINT);
-                        let b = camera::alloc_box(&mut r.game.camera.boxes, camera::ACTIVE);
+                        let b = r.game.camera.alloc_box(camera::ACTIVE);
                         let v = r.game.grounds[g.0].u.fourside_ufo();
                         v.xC = Some(b);
                         v.x3 = 0;
@@ -490,10 +490,7 @@ pub fn proc_ufo(r: &mut Running, gobj: GObjId) {
                 r.game.grounds[g.0].u.fourside_ufo().x4 = stay;
                 anime::start_map(r.game, r.data, gobj, m, i32::from(prev) * 4 + 1);
                 let b = r.game.grounds[g.0].u.fourside_ufo().xC;
-                camera::free_box(
-                    &mut r.game.camera.boxes,
-                    b.expect("the UFO's camera subject"),
-                );
+                r.game.camera.free_box(b.expect("the UFO's camera subject"));
                 let v = r.game.grounds[g.0].u.fourside_ufo();
                 v.xC = None;
                 v.x0 = 2;
@@ -561,7 +558,7 @@ pub fn frame_ufo(r: &mut Running, gobj: GObjId) {
     if v.x3 == 0 {
         v.x3 = 1;
     }
-    let cam = &mut r.game.camera.boxes[b];
+    let cam = r.game.camera.subject_mut(b);
     cam.pos = pos;
     cam.bone_pos = pos;
     cam.target_ext.h.x = -50.0;

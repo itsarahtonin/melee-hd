@@ -15,7 +15,6 @@ use super::{
     jobj_of, lib26b1, lib2725, set_flag, tables,
 };
 use crate::fpu::{mem, reg};
-use crate::game::camera;
 use crate::game::ft::dynamics::BoneSlot;
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj::{self, JObjId};
@@ -703,12 +702,12 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
     // `foobar3`: the camera follows some items.
     let cam = super::item(r.game, gobj).xDCD_flag.x0.b01;
     if cam != 0 {
-        let b = camera::alloc_box(&mut r.game.camera.boxes, if cam == 1 { 0 } else { 2 });
+        let b = r.game.camera.alloc_box(if cam == 1 { 0 } else { 2 });
         item_mut(r.game, gobj).x520_cameraBox = Some(b);
         {
             let c = common_data(r.game);
             let d = r.data;
-            let cb = &mut r.game.camera.boxes.boxes[b.0 as usize];
+            let cb = r.game.camera.subject_mut(b);
             cb.target_ext.h.x = c.f32(d, common::X14C);
             cb.target_ext.h.y = c.f32(d, common::X150);
             cb.target_ext.v.x = c.f32(d, common::X154);
@@ -1309,7 +1308,7 @@ pub fn proc_accessory(r: &mut Running, gobj: GObjId) {
         && let Some(b) = ip.x520_cameraBox
     {
         let pos = ip.pos;
-        let cb = &mut r.game.camera.boxes.boxes[b.0 as usize];
+        let cb = r.game.camera.subject_mut(b);
         cb.pos = pos;
         cb.bone_pos = pos;
     }
@@ -1798,7 +1797,7 @@ pub fn remove_camera_box(game: &mut Game, gobj: GObjId) {
     {
         ip.x520_cameraBox = None;
         ip.xDCD_flag.x0.b01 = 0;
-        camera::free_box(&mut game.camera.boxes, b);
+        game.camera.free_box(b);
     }
 }
 

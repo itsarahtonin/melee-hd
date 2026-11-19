@@ -767,15 +767,15 @@ impl Running<'_> {
                 _ => (true, false, false, false, false, false, false, false),
             };
             self.db_fighter_shadows(step.0);
-            let c = &mut self.game.camera.cam;
-            camera::set_shadows(c, step.1);
-            camera::set_draw_collisions(c, step.2);
-            camera::set_draw_zones(c, step.3);
+            let c = &mut self.game.camera;
+            c.set_shadows(step.1);
+            c.set_draw_collisions(step.2);
+            c.set_draw_zones(step.3);
             self.db_ground_flag(step.4);
-            let c = &mut self.game.camera.cam;
-            camera::set_x39a_b0(c, step.5);
-            camera::set_x39a_b1(c, step.6);
-            camera::set_draw_special_points(c, step.7);
+            let c = &mut self.game.camera;
+            c.set_x39a_b0(step.5);
+            c.set_x39a_b1(step.6);
+            c.set_draw_special_points(step.7);
             if !(1..=6).contains(&self.game.db.stage_visuals) {
                 self.game.db.stage_visuals = 0;
             }
@@ -784,9 +784,9 @@ impl Running<'_> {
             match self.game.db.misc_effects {
                 0 | 1 => {
                     super::gr::ground::apply_background_color(self.game);
-                    camera::set_stage_visible(&mut self.game.camera.cam, 1);
+                    self.game.camera.set_stage_visible(1);
                 }
-                _ => camera::set_stage_visible(&mut self.game.camera.cam, 0),
+                _ => self.game.camera.set_stage_visible(0),
             }
         }
     }
@@ -826,9 +826,9 @@ impl Running<'_> {
         if !super::gm::is_training(self.game)
             && self.game.game_mode != super::gm::camera_mode::GM_CAMERA_MODE
         {
-            let c = &self.game.camera.cam;
-            if !camera::is_debug_free(c)
-                && !camera::is_debug_follow(c)
+            let c = &self.game.camera;
+            if !c.is_debug_free()
+                && !c.is_debug_follow()
                 && (abs(cx) > threshold || abs(cy) > threshold)
             {
                 self.db_camera_screen();
@@ -837,24 +837,22 @@ impl Running<'_> {
                 self.db_camera_screen();
                 let mods = u32::from(BUTTON_Y | BUTTON_X | TRIGGER_L | TRIGGER_R);
                 if down & mods == 0 {
-                    if camera::is_debug_free(&self.game.camera.cam) {
+                    if self.game.camera.is_debug_free() {
                         camera::debug_follow(self.game, self.data, port);
-                    } else if camera::is_debug_follow(&self.game.camera.cam) {
-                        camera::leave_debug(&mut self.game.camera);
+                    } else if self.game.camera.is_debug_follow() {
+                        self.game.camera.leave_debug();
                     } else {
                         camera::debug_free(self.game, self.data);
                     }
                 }
             }
         }
-        if camera::is_debug_follow(&self.game.camera.cam) {
+        if self.game.camera.is_debug_follow() {
             self.db_follow_camera_input(port);
-        } else if camera::is_debug_free(&self.game.camera.cam) {
+        } else if self.game.camera.is_debug_free() {
             self.db_free_camera_input(port);
         }
-        if camera::is_debug_free(&self.game.camera.cam)
-            && self.game.db.stage_visuals.wrapping_sub(3) <= 1
-        {
+        if self.game.camera.is_debug_free() && self.game.db.stage_visuals.wrapping_sub(3) <= 1 {
             if pressed & u32::from(BUTTON_B) != 0 {
                 self.game.db.camera_shown = u8::from(self.game.db.camera_shown == 0);
             }
@@ -864,8 +862,8 @@ impl Running<'_> {
         self.db_update_camera_info();
         if self.game.db_combo(port, BUTTON_X, BUTTON_DOWN) {
             match self.game.db.misc_effects {
-                2 => camera::set_background_color(&mut self.game.camera.cam, 0xFF, 0xFF, 0xFF),
-                3 => camera::set_background_color(&mut self.game.camera.cam, 0, 0, 0),
+                2 => self.game.camera.set_background_color(0xFF, 0xFF, 0xFF),
+                3 => self.game.camera.set_background_color(0, 0, 0),
                 _ => {}
             }
         }
@@ -878,7 +876,7 @@ impl Running<'_> {
         let Some(t) = self.game.db.camera_text else {
             return;
         };
-        let gobj = camera::gobj(&self.game.camera.cam);
+        let gobj = self.game.camera.gobj();
         if gobj.is_none() || self.game.db.camera_shown == 0 {
             let s = &mut self.game.hud.devtext.pool[usize::from(t)];
             s.hide_background();
@@ -948,7 +946,7 @@ impl Running<'_> {
     fn db_follow_camera_input(&mut self, port: i32) {
         let (cx, cy, buttons) = self.db_camera_stick(port);
         let b = camera::debug_followed(self.game);
-        let at = self.game.camera.boxes[b].bone_pos;
+        let at = self.game.camera.subject(b).bone_pos;
         if buttons & u32::from(BUTTON_LEFT) != 0 {
             self.db_follow_dolly(at, cy);
         } else if buttons & u32::from(BUTTON_RIGHT) != 0 {
@@ -969,10 +967,10 @@ impl Running<'_> {
             self.db_free_pan(fp::fneg(cx), fp::fneg(cy));
         } else if cx != 0.0 || cy != 0.0 {
             // `fn_80227B64`.
-            let d = &self.game.camera.debug;
+            let d = self.game.camera.debug_cameras();
             let (eye, int) = (d.free_eye_pos, d.free_int_pos);
             let eye = self.db_orbit(int, eye, cx, cy);
-            self.game.camera.debug.free_eye_pos = eye;
+            self.game.camera.debug_cameras_mut().free_eye_pos = eye;
         }
         self.game.db.camera_timer = 60;
     }
@@ -1029,7 +1027,7 @@ impl Running<'_> {
     /// The followed camera's eye and interest from its offsets around `at` (the struct's
     /// names swapped, as `Camera_8002FEEC` sets them).
     fn db_follow_place(&mut self, at: Vec3) {
-        let d = &mut self.game.camera.debug;
+        let d = self.game.camera.debug_cameras_mut();
         d.follow_eye_pos = d.follow_int_offset + at;
         d.follow_int_pos = d.follow_eye_offset + at;
     }
@@ -1038,10 +1036,10 @@ impl Running<'_> {
     /// offset, then placed.
     #[doc(alias = "fn_80227BA8")]
     fn db_follow_orbit(&mut self, at: Vec3, cx: f64, cy: f64) {
-        let d = &self.game.camera.debug;
+        let d = self.game.camera.debug_cameras();
         let (eye, int) = (d.follow_eye_offset, d.follow_int_offset);
         let eye = self.db_orbit(int, eye, cx, cy);
-        self.game.camera.debug.follow_eye_offset = eye;
+        self.game.camera.debug_cameras_mut().follow_eye_offset = eye;
         self.db_follow_place(at);
     }
 
@@ -1058,7 +1056,7 @@ impl Running<'_> {
     fn db_follow_dolly(&mut self, at: Vec3, cy: f64) {
         if cy != 0.0 {
             let v = self.db_dolly(cy);
-            let d = &mut self.game.camera.debug;
+            let d = self.game.camera.debug_cameras_mut();
             d.follow_eye_offset = d.follow_int_offset.sdk_sub(v);
         }
         self.db_follow_place(at);
@@ -1069,7 +1067,7 @@ impl Running<'_> {
     fn db_free_dolly(&mut self, cy: f64) {
         if cy != 0.0 {
             let v = self.db_dolly(cy);
-            let d = &mut self.game.camera.debug;
+            let d = self.game.camera.debug_cameras_mut();
             d.free_eye_pos = d.free_int_pos.sdk_sub(v);
         }
     }
@@ -1106,7 +1104,7 @@ impl Running<'_> {
     #[doc(alias = "fn_80228124")]
     fn db_follow_pan(&mut self, at: Vec3, x: f64, y: f64) {
         let (left, up) = self.db_pan_moves(x, y);
-        let d = &mut self.game.camera.debug;
+        let d = self.game.camera.debug_cameras_mut();
         for v in [left, up].into_iter().flatten() {
             d.follow_int_offset = d.follow_int_offset.sdk_add(v);
             d.follow_eye_offset = d.follow_eye_offset.sdk_add(v);
@@ -1121,7 +1119,7 @@ impl Running<'_> {
             return;
         }
         let (left, up) = self.db_pan_moves(x, y);
-        let d = &mut self.game.camera.debug;
+        let d = self.game.camera.debug_cameras_mut();
         for v in [left, up].into_iter().flatten() {
             d.free_int_pos = d.free_int_pos.sdk_add(v);
             d.free_eye_pos = d.free_eye_pos.sdk_add(v);

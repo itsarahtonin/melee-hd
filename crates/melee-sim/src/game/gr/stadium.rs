@@ -311,11 +311,11 @@ pub fn on_start(r: &mut Running) {
 #[doc(alias = "fn_801D11E4")]
 pub fn start_display(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    let b = camera::alloc_box(&mut r.game.camera.boxes, camera::ACTIVE);
+    let b = r.game.camera.alloc_box(camera::ACTIVE);
     r.game.grounds[g.0].u.stadium_display().subject = Some(b);
     let s = reg(scale(r.game));
     let m = |v: f64| mem(fp::fmuls(v, s));
-    let o = &mut r.game.camera.boxes[b];
+    let o = r.game.camera.subject_mut(b);
     o.state = camera::INACTIVE;
     o.pos.x = 0.0;
     o.pos.y = m(30.0);
@@ -699,13 +699,13 @@ fn set_mode(r: &mut Running, gobj: GObjId, mode: i32, timer: i32) {
     let inactive = |r: &mut Running| {
         let v = r.game.grounds[g.0].u.stadium_display();
         if let Some(b) = v.subject {
-            r.game.camera.boxes[b].state = camera::INACTIVE;
+            r.game.camera.subject_mut(b).state = camera::INACTIVE;
         }
     };
     let active = |r: &mut Running| {
         let v = r.game.grounds[g.0].u.stadium_display();
         if let Some(b) = v.subject {
-            r.game.camera.boxes[b].state = camera::ACTIVE;
+            r.game.camera.subject_mut(b).state = camera::ACTIVE;
         }
     };
     let quiet = |r: &mut Running, shown: i16| {
@@ -947,7 +947,7 @@ pub const MONITOR_BOUNDS: [u32; 4] = [0xC2F0_0000, 0x42F0_0000, 0x42A0_0000, 0xC
 #[doc(alias = "grStadium_801D32D0")]
 pub fn zoom_origin(r: &mut Running, gobj: GObjId) -> bool {
     let g = ground_of(r.game, gobj);
-    let Some(cam) = camera::gobj(&r.game.camera.cam) else {
+    let Some(cam) = r.game.camera.gobj() else {
         return false;
     };
     let Some(Obj::CObj(c)) = r.game.world.gobj(cam).obj else {
@@ -964,7 +964,7 @@ pub fn zoom_origin(r: &mut Running, gobj: GObjId) -> bool {
     let b = r.game.fighters[fid.0]
         .x890_cameraBox
         .expect("ftLib_GetCameraSubject: a fighter without a camera box");
-    let bone = r.game.camera.boxes[b].bone_pos;
+    let bone = r.game.camera.subject(b).bone_pos;
     // Under Slippi's rules, where the close-up copies from is also taken through the views
     // playback's run can leave the CObj (the other phase's on a doubled round, or playback's
     // followed camera's at either phase), a different origin counted (design call 9).
@@ -1756,7 +1756,7 @@ pub fn cycle(r: &mut Running, gobj: GObjId) {
         if let Some(d) = map_gobj(r.game, MAP_DISPLAY) {
             let dg = ground_of(r.game, d);
             if let Some(b) = r.game.grounds[dg.0].u.stadium_display().subject {
-                r.game.camera.boxes[b].state = camera::ACTIVE;
+                r.game.camera.subject_mut(b).state = camera::ACTIVE;
             }
         }
         return;

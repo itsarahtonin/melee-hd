@@ -104,10 +104,10 @@ impl Running<'_> {
     #[doc(alias = "ftCamera_UpdateCameraBox")]
     pub fn update_camera_box(&mut self, gobj: GObjId) {
         let (b, fit) = self.camera_box_fit(gobj);
-        fit.put(&mut self.game.camera.boxes[b]);
+        fit.put(self.game.camera.subject_mut(b));
         let f = self.game.fighter_id(gobj);
         let bone_pos = self.camera_bone_pos(f);
-        self.game.camera.boxes[b].bone_pos = bone_pos;
+        self.game.camera.subject_mut(b).bone_pos = bone_pos;
     }
 
     /// The fighter's camera box and what [`Running::update_camera_box`] fits it to but its
@@ -146,7 +146,7 @@ impl Running<'_> {
             .x890_cameraBox
             .expect("a fighter without a camera box");
         let bone_pos = self.camera_bone_pos(f);
-        self.game.camera.boxes[b].bone_pos = bone_pos;
+        self.game.camera.subject_mut(b).bone_pos = bone_pos;
     }
 
     /// Where the character's camera bone puts the camera's target, `ftLib_GetCameraBonePos`:

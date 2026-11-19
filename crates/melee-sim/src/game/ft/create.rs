@@ -4,7 +4,6 @@
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
-use super::super::camera;
 use super::super::code::{self, unported_call};
 use super::super::handles::{AttrsId, CodeRef, FighterId};
 use super::super::state::{Game, OBJ_JOBJ, Running, UserData};
@@ -257,7 +256,7 @@ impl Running<'_> {
             }
         }
         self.init_hurt_capsules(f);
-        let cam_box = camera::alloc_box(&mut self.game.camera.boxes, 0);
+        let cam_box = self.game.camera.alloc_box(0);
         self.game.fighters[f.0].x890_cameraBox = Some(cam_box);
         let root = self.root_jobj(gobj);
         self.create_shadow(f, root);
@@ -610,6 +609,6 @@ impl Running<'_> {
         let b = fp.x890_cameraBox.expect("a fighter without a camera box");
         fp.is_sleeping = true;
         fp.x221F_b1 = true;
-        self.game.camera.boxes[b].state = super::super::camera::INACTIVE;
+        self.game.camera.subject_mut(b).state = super::super::camera::INACTIVE;
     }
 }

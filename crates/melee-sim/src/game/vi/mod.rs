@@ -484,7 +484,7 @@ impl Running<'_> {
         before_setup: impl FnOnce(&mut Self),
     ) {
         let stkind = i32::from(stkind.id());
-        super::camera::init(&mut self.game.camera, 6);
+        self.game.camera.init(6);
         self.game.alloc_dynamics(self.data);
         self.game.coll.reset();
         super::gr::setup::prepare(self.game);
@@ -575,7 +575,7 @@ impl Running<'_> {
     #[doc(alias = "vi_8031CA04")]
     fn vi_camera_passes(&mut self, gobj: GObjId) {
         for (layer, prios) in [(2, 9), (1, 8), (0, 8)] {
-            super::camera::set_layer(&mut self.game.camera.cam, layer);
+            self.game.camera.set_layer(layer);
             self.game.world.gobj_mut(gobj).gxlink_prios = prios;
             self.render_links(gobj, 7);
         }
