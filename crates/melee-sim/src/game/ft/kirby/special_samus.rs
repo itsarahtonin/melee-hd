@@ -5,10 +5,10 @@
 //! his generic cleanups as hooks, and two branches of his own ([`KIRBY`]); the charge's
 //! variables are laid out as Samus's (`mv.kb.specialhi`). Only his copy's addresses are here.
 
-use super::super::super::it::kinds as k;
 use super::super::super::state::Running;
 use super::super::samus::special_n::{ChargeShot, States};
 use super::{attr, ms};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -66,7 +66,7 @@ pub const KIRBY: ChargeShot = ChargeShot {
         y: 0.0,
         z: 0.0,
     }),
-    shot_kind: k::KIRBY_SAMUS_CHARGE,
+    shot_kind: ItKind::KirbySamusCharge.id(),
     flash: 0x4A4,
     full_glow: 0x36,
     on_death: super::addr::DEATH3,

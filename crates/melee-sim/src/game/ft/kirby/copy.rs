@@ -10,6 +10,7 @@ use super::super::super::it::kinds::kirbycopystar;
 use super::super::super::state::Running;
 use super::{KIND_KIRBY, addr, attr, ms, u};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -104,42 +105,56 @@ impl Running<'_> {
     /// `KirbyHatStruct`'s entries from `+0xC`).
     #[doc(alias = "ftKb_SpecialN_800F16D0")]
     pub fn kb_register_copy_items(&mut self, kind: i32) {
-        use super::super::super::it::kinds as k;
         // The copy data's entries and their item kinds, by copied kind.
         let items: &[(u32, i32)] = match kind {
-            0 => &[(0, k::KIRBY_MARIO_FIRE)],
-            17 => &[(0, k::KIRBY_LUIGI_FIRE)],
-            10 => &[(0, k::KIRBY_ICE_CLIMBER_ICE)],
-            9 => &[(0, k::KIRBY_PEACH_TOAD), (1, k::KIRBY_PEACH_TOAD_SPORE)],
-            1 => &[(0, k::KIRBY_FOX_LASER), (1, k::KIRBY_FOX_BLASTER)],
-            22 => &[(3, k::KIRBY_FALCO_LASER), (4, k::KIRBY_FALCO_BLASTER)],
-            6 => &[(0, k::KIRBY_LINK_ARROW), (1, k::KIRBY_LINK_BOW)],
-            20 => &[(0, k::KIRBY_CLINK_ARROW), (1, k::KIRBY_CLINK_BOW)],
-            16 => &[(3, k::KIRBY_MEWTWO_SHADOWBALL)],
+            0 => &[(0, ItKind::KirbyMarioFire.id())],
+            17 => &[(0, ItKind::KirbyLuigiFire.id())],
+            10 => &[(0, ItKind::KirbyIceClimberIce.id())],
+            9 => &[
+                (0, ItKind::KirbyPeachToad.id()),
+                (1, ItKind::KirbyPeachToadSpore.id()),
+            ],
+            1 => &[
+                (0, ItKind::KirbyFoxLaser.id()),
+                (1, ItKind::KirbyFoxBlaster.id()),
+            ],
+            22 => &[
+                (3, ItKind::KirbyFalcoLaser.id()),
+                (4, ItKind::KirbyFalcoBlaster.id()),
+            ],
+            6 => &[
+                (0, ItKind::KirbyLinkArrow.id()),
+                (1, ItKind::KirbyLinkBow.id()),
+            ],
+            20 => &[
+                (0, ItKind::KirbyCLinkArrow.id()),
+                (1, ItKind::KirbyCLinkBow.id()),
+            ],
+            16 => &[(3, ItKind::KirbyMewtwoShadowBall.id())],
             8 => &[
-                (0, k::KIRBY_NESS_PK_FLUSH),
-                (1, k::KIRBY_NESS_PK_FLUSH_EXPLODE),
+                (0, ItKind::KirbyNessPKFlush.id()),
+                (1, ItKind::KirbyNessPKFlushExplode.id()),
             ],
             12 => &[
-                (0, k::KIRBY_PIKACHU_TJOLT_GROUND),
-                (1, k::KIRBY_PIKACHU_TJOLT_AIR),
+                (0, ItKind::KirbyPikachuTJoltGround.id()),
+                (1, ItKind::KirbyPikachuTJoltAir.id()),
             ],
             23 => &[
-                (0, k::KIRBY_PICHU_TJOLT_GROUND),
-                (1, k::KIRBY_PICHU_TJOLT_AIR),
+                (0, ItKind::KirbyPichuTJoltGround.id()),
+                (1, ItKind::KirbyPichuTJoltAir.id()),
             ],
-            13 => &[(0, k::KIRBY_SAMUS_CHARGE)],
-            5 | 31 => &[(0, k::KIRBY_KOOPA_FLAME)],
+            13 => &[(0, ItKind::KirbySamusCharge.id())],
+            5 | 31 => &[(0, ItKind::KirbyKoopaFlame.id())],
             7 => &[
-                (0, k::KIRBY_SEAK_NEEDLE_THROW),
-                (1, k::KIRBY_SEAK_NEEDLE_HELD),
+                (0, ItKind::KirbySeakNeedleThrow.id()),
+                (1, ItKind::KirbySeakNeedleHeld.id()),
             ],
-            21 => &[(0, k::KIRBY_DRMARIO_VITAMIN)],
+            21 => &[(0, ItKind::KirbyDrMarioVitamin.id())],
             24 => &[
-                (5, k::KIRBY_GAME_WATCH_CHEF),
-                (6, k::KIRBY_GAME_WATCH_CHEF_PAN),
+                (5, ItKind::KirbyGameWatchChef.id()),
+                (6, ItKind::KirbyGameWatchChefPan.id()),
             ],
-            14 => &[(5, k::KIRBY_YOSHI_EGG_LAY)],
+            14 => &[(5, ItKind::KirbyYoshiEggLay.id())],
             _ => &[],
         };
         if items.is_empty() {

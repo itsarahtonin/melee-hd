@@ -13,6 +13,7 @@ use super::super::motion::flags::*;
 use super::{addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -97,7 +98,7 @@ impl Running<'_> {
         let hand = self.bone_joint(gobj, PART_TOAD);
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, hand, None);
         let facing = self.game.fighters[f.0].facing_dir;
-        let toad = peachtoad::spawn(self, gobj, pos, PART_TOAD, peachtoad::KIND, facing);
+        let toad = peachtoad::spawn(self, gobj, pos, PART_TOAD, ItKind::PeachToad.id(), facing);
         let fp = &mut self.game.fighters[f.0];
         fp.u.set_gobj_at(u::TOAD, toad);
         fp.x1984_heldItemSpec = toad;
@@ -119,7 +120,7 @@ impl Running<'_> {
         pos.y = mem(fp::fadds(reg(pos.y), 2.5));
         pos.z = 0.0;
         let facing = self.game.fighter(gobj).facing_dir;
-        peachtoadspore::spawn(self, gobj, pos, peachtoadspore::KIND, facing);
+        peachtoadspore::spawn(self, gobj, pos, ItKind::PeachToadSpore.id(), facing);
         self.game.fighter_mut(gobj).accessory4_cb = None;
     }
 

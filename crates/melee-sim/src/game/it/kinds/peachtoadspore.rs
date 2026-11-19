@@ -14,9 +14,6 @@ use crate::hsd::gobj::GObjId;
 use crate::math;
 use crate::vec::Vec3;
 
-/// `It_Kind_Peach_ToadSpore`, for the code `refactor/dedup-kirby-2` rewrites until it merges.
-pub const KIND: i32 = super::super::ItKind::PeachToadSpore.id();
-
 pub const ANIM: u32 = 0x802B_E408;
 pub const PHYS: u32 = 0x802B_E458;
 pub const DMG_DEALT: u32 = 0x802B_E488;

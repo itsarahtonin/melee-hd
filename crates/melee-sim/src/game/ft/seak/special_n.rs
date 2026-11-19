@@ -8,8 +8,9 @@ use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::{seakneedleheld, seakneedlethrown};
 use super::super::super::state::Running;
-use super::{GA_GROUND, IT_NEEDLE_HELD, IT_NEEDLE_THROW, PAD_B, PAD_LR, addr, attr, ms, mv};
+use super::{GA_GROUND, PAD_B, PAD_LR, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// What the neutral special keeps between the ground and the air (`mf` in the original).
@@ -68,7 +69,8 @@ impl Running<'_> {
                 pos.y = mem(fp::fmadds(reg(fp.x34_scale.y), reg(y), reg(pos.y)));
                 pos.z = 0.0;
                 let facing = fp.facing_dir;
-                let item = seakneedlethrown::spawn(self, gobj, pos, IT_NEEDLE_THROW, facing);
+                let item =
+                    seakneedlethrown::spawn(self, gobj, pos, ItKind::SeakNeedleThrow.id(), facing);
                 if item.is_some() {
                     seakneedlethrown::launch(self, item, Some(gobj), 1);
                 }
@@ -131,7 +133,14 @@ impl Running<'_> {
         if !self.anim_frames_remaining(gobj) {
             let fp = self.game.fighter(gobj);
             let (pos, facing) = (fp.cur_pos, fp.facing_dir);
-            let n = seakneedleheld::spawn(self, gobj, pos, NEEDLE_PART, IT_NEEDLE_HELD, facing);
+            let n = seakneedleheld::spawn(
+                self,
+                gobj,
+                pos,
+                NEEDLE_PART,
+                ItKind::SeakNeedleHeld.id(),
+                facing,
+            );
             self.set_seak_needles(gobj, n);
             self.change_motion_state(gobj, loop_msid, 0, 0.0, 1.0, 0.0, None);
             self.seak_set_damage_cb(gobj);
@@ -414,7 +423,7 @@ impl Running<'_> {
         pos.y = mem(fp::fmadds(scale, y, reg(pos.y)));
         pos.z = 0.0;
         let facing = self.game.fighters[f.0].facing_dir;
-        let item = seakneedlethrown::spawn(self, gobj, pos, IT_NEEDLE_THROW, facing);
+        let item = seakneedlethrown::spawn(self, gobj, pos, ItKind::SeakNeedleThrow.id(), facing);
         if item.is_some() {
             seakneedlethrown::launch(self, item, Some(gobj), 0);
         }

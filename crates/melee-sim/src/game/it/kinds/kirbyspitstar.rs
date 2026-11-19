@@ -15,9 +15,6 @@ use crate::hsd::gobj::GObjId;
 use crate::math;
 use crate::vec::Vec3;
 
-/// `It_Kind_Unk2`, for the code `refactor/dedup-kirby-2` rewrites until it merges.
-pub const KIND: i32 = ItKind::Unk2.id();
-
 pub const ANIM: u32 = 0x802F_2AB0;
 pub const PHYS: u32 = 0x802F_2AE8;
 pub const COLL: u32 = 0x802F_2BA8;

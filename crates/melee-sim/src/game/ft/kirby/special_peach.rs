@@ -6,12 +6,13 @@
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{self as k, peachtoad, peachtoadspore};
+use super::super::super::it::kinds::{peachtoad, peachtoadspore};
 use super::super::super::state::Running;
 use super::super::co::guard::set_shield_hit;
 use super::super::common::GA_GROUND;
 use super::{addr as kb, ms};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -89,7 +90,14 @@ impl Running<'_> {
         let hand = self.bone_joint(gobj, PART_R3RD_NA);
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, hand, None);
         let facing = self.game.fighters[f.0].facing_dir;
-        let toad = peachtoad::spawn(self, gobj, pos, PART_R3RD_NA, k::KIRBY_PEACH_TOAD, facing);
+        let toad = peachtoad::spawn(
+            self,
+            gobj,
+            pos,
+            PART_R3RD_NA,
+            ItKind::KirbyPeachToad.id(),
+            facing,
+        );
         let fp = &mut self.game.fighters[f.0];
         fp.u.set_gobj_at(TOAD, toad);
         if toad.is_some() {
@@ -110,7 +118,7 @@ impl Running<'_> {
         pos.y = mem(fp::fadds(reg(pos.y), 2.5));
         pos.z = 0.0;
         let facing = self.game.fighter(gobj).facing_dir;
-        peachtoadspore::spawn(self, gobj, pos, k::KIRBY_PEACH_TOAD_SPORE, facing);
+        peachtoadspore::spawn(self, gobj, pos, ItKind::KirbyPeachToadSpore.id(), facing);
         self.game.fighter_mut(gobj).accessory4_cb = None;
     }
 

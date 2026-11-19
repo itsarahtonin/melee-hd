@@ -4,10 +4,8 @@
 use super::super::super::code::Val;
 use super::super::super::state::Running;
 use super::addr;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
-
-/// `It_Kind_Falco_Phantasm`.
-const IT_KIND_FALCO_PHANTASM: i32 = 57;
 
 impl Running<'_> {
     /// Falco's creation, `ftFc_Init_OnLoad`: he can wall jump, has Fox's attribute layout
@@ -32,7 +30,7 @@ impl Running<'_> {
                 1,
                 self.fox_attr_i32(f, super::super::fox::attr::BLASTER_GUN_ITKIND),
             ),
-            (3, IT_KIND_FALCO_PHANTASM),
+            (3, ItKind::FalcoPhantasm.id()),
         ];
         for (i, kind) in kinds {
             let article = self.data.ptr(items.at(4 * i));

@@ -14,6 +14,7 @@ use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -24,11 +25,6 @@ use crate::mp::coll::{
     CEILING_HUG, CEILING_PUSH, FLOOR_HUG, FLOOR_PUSH, LEFT_WALL_MASK, RIGHT_WALL_MASK,
 };
 use crate::vec::Vec3;
-
-/// `It_Kind_Mewtwo_ShadowBall`.
-pub const KIND: i32 = super::MEWTWO_SHADOWBALL;
-/// `It_Kind_Kirby_MewtwoShadowBall`.
-const KIRBY_SHADOWBALL: i32 = 144;
 
 pub const WOBBLE: u32 = 0x802C_4D10;
 pub const HIT_STAGE: u32 = 0x802C_4F50;
@@ -466,9 +462,9 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
         if let Some(maker) = v.x2C.get()
             && owner == Some(maker)
         {
-            match kind {
-                KIND => r.mt_n_ball_released(maker),
-                KIRBY_SHADOWBALL => r.kb_mt_ball_released(maker),
+            match ItKind::of(kind) {
+                ItKind::MewtwoShadowBall => r.mt_n_ball_released(maker),
+                ItKind::KirbyMewtwoShadowBall => r.kb_mt_ball_released(maker),
                 _ => {}
             }
         }
@@ -517,8 +513,8 @@ pub fn animate_held(r: &mut Running, gobj: GObjId) -> bool {
     let (owner, kind) = (ip.owner, ip.kind);
     let maker = ip.xDD4_itemVar.mewtwo_shadowball().x2C.get();
     if maker.is_some() && owner == maker {
-        match kind {
-            KIND => {
+        match ItKind::of(kind) {
+            ItKind::MewtwoShadowBall => {
                 if r.mt_n_ball_lost(maker) || r.mt_n_ball_put_away(maker) {
                     return true;
                 }
@@ -529,7 +525,7 @@ pub fn animate_held(r: &mut Running, gobj: GObjId) -> bool {
                 v.x18.set(charge);
                 v.x1C.set(max);
             }
-            KIRBY_SHADOWBALL => {
+            ItKind::KirbyMewtwoShadowBall => {
                 if r.kb_mt_ball_lost(maker) || r.kb_mt_ball_put_away(maker) {
                     return true;
                 }

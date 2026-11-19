@@ -7,12 +7,13 @@
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{self as k, gamewatchchef, kirbygamewatchchefpan as pan};
+use super::super::super::it::kinds::{gamewatchchef, kirbygamewatchchefpan as pan};
 use super::super::super::state::Running;
 use super::super::super::structs::_GXColor;
 use super::super::gamewatch::{mv, part};
 use super::{addr as kb, ms};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -99,7 +100,14 @@ impl Running<'_> {
             fp.set_u_i32(BEFORE, last);
             fp.set_u_i32(LAST, sausage);
             let facing = fp.facing_dir;
-            gamewatchchef::spawn(self, gobj, pos, k::KIRBY_GAME_WATCH_CHEF, sausage, facing);
+            gamewatchchef::spawn(
+                self,
+                gobj,
+                pos,
+                ItKind::KirbyGameWatchChef.id(),
+                sausage,
+                facing,
+            );
         }
         self.game.fighter_mut(gobj).accessory4_cb = None;
     }

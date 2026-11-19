@@ -12,6 +12,7 @@ use super::super::create_model::Creator;
 use super::super::parts::{bone_from_joint, set_bone_bit, set_bone_xd};
 use super::{addr, attr, u};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 
@@ -62,7 +63,7 @@ impl Running<'_> {
         }
         if clink {
             let article = self.data.ptr(items.at(20));
-            let kind = super::super::super::it::kinds::CLINK_MILK;
+            let kind = ItKind::CLinkMilk.id();
             super::super::super::it::item::set_char_article(self.game, article, kind);
         }
         let joint = self.data.ptr(items.at(24)).expect("ftData::x48_items[6]");

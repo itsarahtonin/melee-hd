@@ -5,11 +5,12 @@
 //! flash let go of leaves his damage hooks in place.
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{self as k, nesspkflash};
+use super::super::super::it::kinds::nesspkflash;
 use super::super::super::state::Running;
 use super::super::ness::mv;
 use super::{addr as kb, ms};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use gekko_fp as fp;
 
@@ -144,7 +145,7 @@ impl Running<'_> {
             let fp = self.game.fighter(gobj);
             pos.y = mem(fp::fmadds(3.0, reg(fp.x34_scale.y), reg(pos.y)));
             let facing = fp.facing_dir;
-            let flash = nesspkflash::spawn(self, gobj, pos, k::KIRBY_NESS_PK_FLUSH, facing);
+            let flash = nesspkflash::spawn(self, gobj, pos, ItKind::KirbyNessPKFlush.id(), facing);
             let fp = self.game.fighter_mut(gobj);
             fp.u.set_gobj_at(FLASH, flash);
             if flash.is_some() {

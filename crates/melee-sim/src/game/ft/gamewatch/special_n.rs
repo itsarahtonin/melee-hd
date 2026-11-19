@@ -4,11 +4,12 @@
 
 use gekko_fp as fp;
 
-use super::super::super::it::kinds::{self, gamewatchchef as chef};
+use super::super::super::it::kinds::gamewatchchef as chef;
 use super::super::super::state::Running;
 use super::super::motion::flags::*;
 use super::{addr, attr, ms, mv, part, u};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -59,7 +60,7 @@ impl Running<'_> {
             fp.set_u_i32(u::CHEF_VAR2, last);
             fp.set_u_i32(u::CHEF_VAR1, sausage);
             let facing = fp.facing_dir;
-            chef::spawn(self, gobj, pos, kinds::GAME_WATCH_CHEF, sausage, facing);
+            chef::spawn(self, gobj, pos, ItKind::GameWatchChef.id(), sausage, facing);
         }
         self.gw_set_accessory(gobj, None);
     }

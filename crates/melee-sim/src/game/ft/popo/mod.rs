@@ -24,11 +24,6 @@ use crate::hsd::gobj::GObjId;
 pub const KIND_POPO: i32 = 10;
 pub const KIND_NANA: i32 = 11;
 
-/// The Ice Climbers' items: `It_Kind_IceClimber_Ice`, `_Blizzard` and `_GumStrings`.
-pub const IT_KIND_ICE: i32 = 106;
-pub const IT_KIND_BLIZZARD: i32 = 107;
-pub const IT_KIND_GUM_STRINGS: i32 = 113;
-
 /// Offsets into `ftIceClimberAttributes`.
 pub mod attr {
     /// Popo's `Fighter::x40`.

@@ -7,12 +7,13 @@ use gekko_fp as fp;
 
 use super::super::super::camera;
 use super::super::super::code::Val;
-use super::super::super::it::kinds::{KOOPA_FLAME, koopaflame};
+use super::super::super::it::kinds::koopaflame;
 use super::super::super::state::Running;
 use super::super::common::GA_GROUND;
 use super::super::motion::flags::SKIP_RUMBLE;
 use super::{KIND_KOOPA, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// `ftCommon_GroundAirColl_MF`: what the switches between the ground and the air keep.
@@ -82,7 +83,17 @@ impl Running<'_> {
         let (facing, id) = (fp.facing_dir, fp.mv_i32(mv::N_ATTACK_ID) as u32);
         let speed = fp::fctiwz(reg(fp.u_f32(u::FLAME_SPEED)));
         let size = fp::fctiwz(reg(fp.u_f32(u::FLAME_SIZE)));
-        koopaflame::spawn(self, gobj, v, facing, id, dir, speed, size, KOOPA_FLAME);
+        koopaflame::spawn(
+            self,
+            gobj,
+            v,
+            facing,
+            id,
+            dir,
+            speed,
+            size,
+            ItKind::KoopaFlame.id(),
+        );
         if self.game.fighters[f.0].mv_i32(mv::N_X14) == 0 {
             let id = super::super::super::it::item::next_attack_id(self.game);
             self.game.fighters[f.0].set_mv_i32(mv::N_ATTACK_ID, id as i32);

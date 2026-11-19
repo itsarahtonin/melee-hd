@@ -4,8 +4,8 @@
 
 use super::super::item::{animate, change_state, destroy, logic, play_sfx, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
-use super::{FALCO_BLASTER, FOX_BLASTER, KIRBY_FALCO_BLASTER, KIRBY_FOX_BLASTER};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{Item, SpawnItem};
 use crate::hsd::gobj::GObjId;
@@ -124,9 +124,9 @@ pub fn clear_from_owner(game: &mut Game, owner: GObjId) {
 
 /// Plays the Fox or Falco version of a sound (`itFoxBlaster_PlaySFX`).
 pub fn play_kind_sfx(r: &mut Running, gobj: GObjId, fox: i32, falco: i32) {
-    match item(r.game, gobj).kind {
-        FOX_BLASTER | KIRBY_FOX_BLASTER => play_sfx(r, gobj, fox, 0x7F, 0x40),
-        FALCO_BLASTER | KIRBY_FALCO_BLASTER => play_sfx(r, gobj, falco, 0x7F, 0x40),
+    match ItKind::of(item(r.game, gobj).kind) {
+        ItKind::FoxBlaster | ItKind::KirbyFoxBlaster => play_sfx(r, gobj, fox, 0x7F, 0x40),
+        ItKind::FalcoBlaster | ItKind::KirbyFalcoBlaster => play_sfx(r, gobj, falco, 0x7F, 0x40),
         _ => {}
     }
 }
@@ -179,9 +179,9 @@ pub fn on_shot(r: &mut Running, gobj: GObjId) {
     let pos = r.game.ft_pos(o);
     // The muzzle and grip, and the flash: Fox's and Falco's own, or Kirby's copies'
     // (`ftKb_SpecialNFx_800FDC00`, `ftKb_SpecialNFx_800FDC70`).
-    let kirby = match kind {
-        FOX_BLASTER | FALCO_BLASTER => false,
-        KIRBY_FOX_BLASTER | KIRBY_FALCO_BLASTER => true,
+    let kirby = match ItKind::of(kind) {
+        ItKind::FoxBlaster | ItKind::FalcoBlaster => false,
+        ItKind::KirbyFoxBlaster | ItKind::KirbyFalcoBlaster => true,
         _ => return shift_history(r, gobj),
     };
     let muzzle = if kirby {
@@ -481,9 +481,9 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
             .fox_blaster()
             .owner
             .get();
-        let action = match item(r.game, gobj).kind {
-            FOX_BLASTER | FALCO_BLASTER => blaster_action(r.game, owner),
-            KIRBY_FOX_BLASTER | KIRBY_FALCO_BLASTER => r.kb_fx_blaster_action(owner),
+        let action = match ItKind::of(item(r.game, gobj).kind) {
+            ItKind::FoxBlaster | ItKind::FalcoBlaster => blaster_action(r.game, owner),
+            ItKind::KirbyFoxBlaster | ItKind::KirbyFalcoBlaster => r.kb_fx_blaster_action(owner),
             _ => 9,
         };
         change_state(r, gobj, STATE_FOR_ACTION[action as usize], flags);
@@ -498,13 +498,13 @@ pub fn release(r: &mut Running, gobj: GObjId) {
     let owner = ip.owner;
     let vowner = ip.xDD4_itemVar.fox_blaster().owner.get();
     if owner == vowner {
-        match item(r.game, gobj).kind {
-            FOX_BLASTER | FALCO_BLASTER => {
+        match ItKind::of(item(r.game, gobj).kind) {
+            ItKind::FoxBlaster | ItKind::FalcoBlaster => {
                 if let Some(o) = vowner {
                     clear_from_owner(r.game, o);
                 }
             }
-            KIRBY_FOX_BLASTER | KIRBY_FALCO_BLASTER => r.kb_fx_forget_blaster(vowner),
+            ItKind::KirbyFoxBlaster | ItKind::KirbyFalcoBlaster => r.kb_fx_forget_blaster(vowner),
             _ => {}
         }
     }
@@ -526,9 +526,9 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
             .fox_blaster()
             .owner
             .get();
-        let action = match kind {
-            FOX_BLASTER | FALCO_BLASTER => blaster_action(r.game, owner),
-            KIRBY_FOX_BLASTER | KIRBY_FALCO_BLASTER => r.kb_fx_blaster_action(owner),
+        let action = match ItKind::of(kind) {
+            ItKind::FoxBlaster | ItKind::FalcoBlaster => blaster_action(r.game, owner),
+            ItKind::KirbyFoxBlaster | ItKind::KirbyFalcoBlaster => r.kb_fx_blaster_action(owner),
             _ => 9,
         };
         if msid != action {
@@ -545,9 +545,11 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
         clear(r, gobj);
         return false;
     };
-    let (action, removed) = match kind {
-        FOX_BLASTER | FALCO_BLASTER => (blaster_action(r.game, owner), blaster_removed(r.game, o)),
-        KIRBY_FOX_BLASTER | KIRBY_FALCO_BLASTER => {
+    let (action, removed) = match ItKind::of(kind) {
+        ItKind::FoxBlaster | ItKind::FalcoBlaster => {
+            (blaster_action(r.game, owner), blaster_removed(r.game, o))
+        }
+        ItKind::KirbyFoxBlaster | ItKind::KirbyFalcoBlaster => {
             (r.kb_fx_blaster_action(owner), r.kb_fx_no_blaster(owner))
         }
         _ => (9, true),
@@ -555,9 +557,11 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
     if action == 9 || removed {
         clear(r, gobj);
     } else {
-        let not_needed = match kind {
-            FOX_BLASTER | FALCO_BLASTER => blaster_not_needed(r.game, owner),
-            KIRBY_FOX_BLASTER | KIRBY_FALCO_BLASTER => r.kb_fx_blaster_not_needed(owner),
+        let not_needed = match ItKind::of(kind) {
+            ItKind::FoxBlaster | ItKind::FalcoBlaster => blaster_not_needed(r.game, owner),
+            ItKind::KirbyFoxBlaster | ItKind::KirbyFalcoBlaster => {
+                r.kb_fx_blaster_not_needed(owner)
+            }
             _ => true,
         };
         if not_needed {

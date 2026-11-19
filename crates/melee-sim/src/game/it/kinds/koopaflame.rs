@@ -6,9 +6,9 @@ use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, debug_owner_bubbles, spawn_air};
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
-use super::{KIRBY_KOOPA_FLAME, KOOPA_FLAME};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -156,8 +156,8 @@ pub fn spawn(
     let v = ip.xDD4_itemVar.koopa_flame();
     v.x0_pos.set(pos);
     v.x34_base_scale.set(0.0);
-    match kind {
-        KOOPA_FLAME => {
+    match ItKind::of(kind) {
+        ItKind::KoopaFlame => {
             let full_speed = r.kp_flame_max_speed(owner);
             let full_size = r.kp_flame_max_size(owner);
             let v = item_mut(r.game, gobj).xDD4_itemVar.koopa_flame();
@@ -170,7 +170,7 @@ pub fn spawn(
                 fp::frsp(f64::from(full_size)),
             )));
         }
-        KIRBY_KOOPA_FLAME => {
+        ItKind::KirbyKoopaFlame => {
             let full_speed = r.kb_kp_max_speed(owner);
             let full_size = r.kb_kp_max_size(owner);
             let v = item_mut(r.game, gobj).xDD4_itemVar.koopa_flame();
@@ -275,11 +275,11 @@ fn animate_0(r: &mut Running, gobj: GObjId) -> bool {
     if v.x44_spawned.get() == 0 {
         v.x44_spawned.set(1);
         let gfx = v.x48_gfx.get();
-        match kind {
-            KOOPA_FLAME => {
+        match ItKind::of(kind) {
+            ItKind::KoopaFlame => {
                 ef::spawn(r, 0x4DB_i32.wrapping_add(gfx), Some(gobj), &[Arg::JObj(j)]);
             }
-            KIRBY_KOOPA_FLAME => {
+            ItKind::KirbyKoopaFlame => {
                 ef::spawn(r, 0x4A5_i32.wrapping_add(gfx), Some(gobj), &[Arg::JObj(j)]);
             }
             _ => {}

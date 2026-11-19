@@ -3,7 +3,8 @@
 
 use super::super::super::code::Val;
 use super::super::super::state::Running;
-use super::{IT_KIND_BLIZZARD, IT_KIND_GUM_STRINGS, IT_KIND_ICE, addr, attr, var};
+use super::{addr, attr, var};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
@@ -19,9 +20,13 @@ impl Running<'_> {
             .ft_data
             .expect("a fighter without data");
         let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
-        for (i, kind) in [IT_KIND_ICE, IT_KIND_BLIZZARD, IT_KIND_GUM_STRINGS]
-            .into_iter()
-            .enumerate()
+        for (i, kind) in [
+            ItKind::IceClimberIce.id(),
+            ItKind::IceClimberBlizzard.id(),
+            ItKind::IceClimberGumStrings.id(),
+        ]
+        .into_iter()
+        .enumerate()
         {
             let article = self.data.ptr(items.at(4 * i as u32));
             super::super::super::it::item::set_char_article(self.game, article, kind);

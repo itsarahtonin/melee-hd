@@ -5,11 +5,12 @@
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{ICE_CLIMBER_ICE, climbersice};
+use super::super::super::it::kinds::climbersice;
 use super::super::super::state::Running;
 use super::super::sound::Track;
 use super::{KIND_POPO, addr, var};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// `ftPp_MS_SpecialN`, `ftPp_MS_SpecialAirN`.
@@ -115,7 +116,7 @@ impl Running<'_> {
                 pos.x = mem(fp::fmadds(reg(dx), reg(fp.facing_dir), reg(pos.x)));
                 pos.y = mem(fp::fadds(reg(pos.y), fp::fadds(reg(dy), reg(x2250))));
                 let facing = fp.facing_dir;
-                let ice = climbersice::spawn(self, gobj, pos, ICE_CLIMBER_ICE, facing);
+                let ice = climbersice::spawn(self, gobj, pos, ItKind::IceClimberIce.id(), facing);
                 self.game.fighter_mut(gobj).u.set_gobj_at(var::ITEM, ice);
                 self.fighter_play_sfx(f, SFX_FORM, 127, 64);
                 if ice.is_some() {

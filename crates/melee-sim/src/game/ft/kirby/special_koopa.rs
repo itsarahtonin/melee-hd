@@ -7,11 +7,12 @@ use gekko_fp as fp;
 
 use super::super::super::camera;
 use super::super::super::code::Val;
-use super::super::super::it::kinds::{KIRBY_KOOPA_FLAME, koopaflame};
+use super::super::super::it::kinds::koopaflame;
 use super::super::super::state::Running;
 use super::super::koopa::mv;
 use super::{attr, ms, u};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -123,7 +124,7 @@ impl Running<'_> {
             dir,
             speed,
             size,
-            KIRBY_KOOPA_FLAME,
+            ItKind::KirbyKoopaFlame.id(),
         );
         if self.game.fighters[f.0].mv_i32(mv::N_X14) == 0 {
             let id = super::super::super::it::item::next_attack_id(self.game);

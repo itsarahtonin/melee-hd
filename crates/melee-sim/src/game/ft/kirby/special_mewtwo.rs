@@ -6,13 +6,14 @@
 use gekko_fp as fp;
 
 use super::super::super::ef;
-use super::super::super::it::kinds::{self as k, mewtwoshadowball as ball};
+use super::super::super::it::kinds::mewtwoshadowball as ball;
 use super::super::super::state::Running;
 use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::motion::flags::*;
 use super::super::sound::Track;
 use super::{attr, ms};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -358,7 +359,7 @@ impl Running<'_> {
             gobj,
             pos,
             BONE_R_HAND_N,
-            k::KIRBY_MEWTWO_SHADOWBALL,
+            ItKind::KirbyMewtwoShadowBall.id(),
             facing,
         );
         self.game.fighter_mut(gobj).u.set_gobj_at(BALL, b);

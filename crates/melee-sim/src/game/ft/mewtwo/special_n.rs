@@ -15,6 +15,7 @@ use super::init::COLANIM_CHARGED;
 use super::{KIND_MEWTWO, PART_L_HAND_NB, PART_R_SHOULDER_N, PART_TOP_N, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::math;
 use crate::vec::Vec3;
@@ -294,7 +295,14 @@ impl Running<'_> {
         }
         let pos = self.mt_n_ball_pos(gobj);
         let facing = self.game.fighter(gobj).facing_dir;
-        let b = ball::spawn_held(self, gobj, pos, PART_R_SHOULDER_N, ball::KIND, facing);
+        let b = ball::spawn_held(
+            self,
+            gobj,
+            pos,
+            PART_R_SHOULDER_N,
+            ItKind::MewtwoShadowBall.id(),
+            facing,
+        );
         self.game.fighter_mut(gobj).u.set_gobj_at(u::HELD_BALL, b);
         if b.is_some() {
             self.mt_n_set_damage_cbs(gobj);
@@ -594,7 +602,15 @@ impl Running<'_> {
             mem(fp::fsubs(reg(from.x), reg(to.x))),
         );
         let facing = self.game.fighters[f.0].facing_dir;
-        ball::spawn_fired(self, gobj, from, ball::KIND, cycles, angle, facing);
+        ball::spawn_fired(
+            self,
+            gobj,
+            from,
+            ItKind::MewtwoShadowBall.id(),
+            cycles,
+            angle,
+            facing,
+        );
         self.fighter_play_sfx(f, SFX_FIRE, 127, 64);
     }
 }

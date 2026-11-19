@@ -13,6 +13,7 @@ use super::super::item::{
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{Arg, SpawnKind};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -203,7 +204,7 @@ pub fn spawn(
     v.x0.set(owner);
     v.x8_b0.set(false);
     v.x4.set(scale);
-    let id = if kind == super::ICE_CLIMBER_ICE {
+    let id = if kind == ItKind::IceClimberIce.id() {
         0x4E9
     } else {
         0x4AE
@@ -252,7 +253,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let kind = ip.kind;
     if let Some(owner) = ip.xDD4_itemVar.climbers_ice().x0.get() {
-        if kind == super::ICE_CLIMBER_ICE {
+        if kind == ItKind::IceClimberIce.id() {
             r.popo_forget_item(owner, gobj);
         } else {
             r.kb_ic_forget(owner, gobj);
@@ -269,7 +270,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 /// way.
 fn effect(r: &mut Running, gobj: GObjId, ice: i32, kirby: i32) {
     let ip = item(r.game, gobj);
-    let id = if ip.kind == super::ICE_CLIMBER_ICE {
+    let id = if ip.kind == ItKind::IceClimberIce.id() {
         ice
     } else {
         kirby

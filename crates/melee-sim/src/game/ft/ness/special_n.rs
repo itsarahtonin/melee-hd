@@ -4,11 +4,12 @@
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{self, nesspkflash};
+use super::super::super::it::kinds::nesspkflash;
 use super::super::super::state::Running;
 use super::super::motion::flags::*;
 use super::{PART_L2ND_NA, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// What PK Flash's states keep between the ground and the air (`FTNESS_SPECIALN_COLL_FLAG`).
@@ -69,7 +70,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         pos.y = mem(fp::fmadds(3.0, reg(fp.x34_scale.y), reg(pos.y)));
         let facing = fp.facing_dir;
-        let flash = nesspkflash::spawn(self, gobj, pos, kinds::NESS_PK_FLUSH, facing);
+        let flash = nesspkflash::spawn(self, gobj, pos, ItKind::NessPKFlush.id(), facing);
         let fp = self.game.fighter_mut(gobj);
         fp.u.set_gobj_at(u::PKFLASH, flash);
         if flash.is_some() {

@@ -7,12 +7,13 @@ use gekko_fp as fp;
 
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{self as k, seakneedleheld, seakneedlethrown};
+use super::super::super::it::kinds::{seakneedleheld, seakneedlethrown};
 use super::super::super::state::Running;
 use super::super::common::GA_GROUND;
 use super::super::seak::mv;
 use super::{addr as kb, ms, u};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// The copy's function addresses.
@@ -117,8 +118,13 @@ impl Running<'_> {
                 pos.y = mem(fp::fmadds(reg(fp.x34_scale.y), reg(y), reg(pos.y)));
                 pos.z = 0.0;
                 let facing = fp.facing_dir;
-                let item =
-                    seakneedlethrown::spawn(self, gobj, pos, k::KIRBY_SEAK_NEEDLE_THROW, facing);
+                let item = seakneedlethrown::spawn(
+                    self,
+                    gobj,
+                    pos,
+                    ItKind::KirbySeakNeedleThrow.id(),
+                    facing,
+                );
                 if item.is_some() {
                     seakneedlethrown::launch(self, item, Some(gobj), 1);
                 }
@@ -180,7 +186,7 @@ impl Running<'_> {
             gobj,
             pos,
             NEEDLE_PART,
-            k::KIRBY_SEAK_NEEDLE_HELD,
+            ItKind::KirbySeakNeedleHeld.id(),
             facing,
         );
         self.game.fighter_mut(gobj).u.set_gobj_at(HELD, n);
@@ -402,7 +408,8 @@ impl Running<'_> {
         pos.y = mem(fp::fmadds(scale, y, reg(pos.y)));
         pos.z = 0.0;
         let facing = self.game.fighters[f.0].facing_dir;
-        let item = seakneedlethrown::spawn(self, gobj, pos, k::KIRBY_SEAK_NEEDLE_THROW, facing);
+        let item =
+            seakneedlethrown::spawn(self, gobj, pos, ItKind::KirbySeakNeedleThrow.id(), facing);
         if item.is_some() {
             seakneedlethrown::launch(self, item, Some(gobj), 0);
         }

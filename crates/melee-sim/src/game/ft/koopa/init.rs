@@ -2,9 +2,9 @@
 //! breath's refill each frame, and the item and knockback hooks.
 
 use super::super::super::code::Val;
-use super::super::super::it::kinds::KOOPA_FLAME;
 use super::super::super::state::Running;
 use super::{addr, attr, u};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
@@ -41,7 +41,11 @@ impl Running<'_> {
         let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
         self.push_attrs(f, attr::SIZE);
         let article = self.data.ptr(items.at(0));
-        super::super::super::it::item::set_char_article(self.game, article, KOOPA_FLAME);
+        super::super::super::it::item::set_char_article(
+            self.game,
+            article,
+            ItKind::KoopaFlame.id(),
+        );
         self.game.fighters[f.0].x2226_b1 = true;
     }
 
