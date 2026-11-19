@@ -475,8 +475,13 @@ impl Renderer {
                 [levels[0], levels[1], levels[2], levels[3]],
                 [levels[4], levels[5], levels[6], levels[7]],
             ];
-            u.mode = [r.passes[k].mode, 0, 0, 0];
-            *slot = self.push_uniforms(&u);
+            // The shader's pixel coordinates are in scaled pixels (as `push_uniforms` sets them).
+            u.mode = [r.passes[k].mode, 0, 0, self.scale | (self.width << 4)];
+            // New in the flush: `made` holds what any of its uniforms are made of.
+            let at = self.uniforms.len();
+            self.uniforms.extend_from_slice(bytemuck::bytes_of(&u));
+            self.uniforms.resize(at + crate::UNIFORM_STRIDE, 0);
+            *slot = at as u32;
             self.materials.uniforms.insert(made, *slot);
         }
         self.materials.last_uniforms = Some((at, data, levels, out));
