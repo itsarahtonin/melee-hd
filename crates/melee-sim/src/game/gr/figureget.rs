@@ -25,10 +25,6 @@ const P_LINK_FIGHTER: u8 = 8;
 
 /// `grFigureGet_80219B10`, the stand's collision joint's callback (`mpJointSetCb1`).
 pub const COIN_TOUCHED: u32 = 0x8021_9B10;
-/// `grFigureGet_OnTouchLine`, the stage's line-touch dynamics.
-pub const ON_TOUCH_LINE: u32 = 0x8021_9C88;
-/// `grFigureGet_OnCheckShadowRender`, the stage's shadow check.
-pub const CHECK_SHADOW_RENDER: u32 = 0x8021_9C90;
 /// `grFigureGet_OnDemoInit`.
 pub const ON_DEMO_INIT: u32 = 0x8021_9530;
 

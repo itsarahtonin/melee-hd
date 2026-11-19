@@ -151,16 +151,6 @@ pub fn run(t: &mut code::Entries<code::kind::Proc>) {
     }
 }
 
-/// Whether `f` is a target stage's line-touch dynamics.
-pub fn is_on_touch_line(f: u32) -> bool {
-    TARGETS.iter().any(|t| t.data.on_touch_line == f)
-}
-
-/// Whether `f` is a target stage's shadow check.
-pub fn is_check_shadow_render(f: u32) -> bool {
-    TARGETS.iter().any(|t| t.data.on_check_shadow_render == f)
-}
-
 /// The template's setup (`Ground_InitTargetStage`, inlined in each stage's `OnInit`): the
 /// parameters for the stages that read them, the stage's `unk8C` flags (b4 off, b5 on), maps 0,
 /// 1 and 2 in that order, the camera limits and blast zones measured, the targets and the

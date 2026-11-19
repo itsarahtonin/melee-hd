@@ -20,14 +20,6 @@ use crate::hsd::gobj::GObjId;
 const CALLBACKS: [&[StageCallbacks; 3]; 3] =
     [&FIGURE1_CALLBACKS, &FIGURE2_CALLBACKS, &FIGURE3_CALLBACKS];
 
-/// The stages' line-touch dynamics (`grFigure1_OnTouchLine`, `grFigure2_8020E4F4`,
-/// `grFigure3_8020E788`), which answer none.
-pub const ON_TOUCH_LINE: [u32; 3] = [0x8020_E260, 0x8020_E4F4, 0x8020_E788];
-
-/// The stages' shadow checks (`grFigure1_OnCheckShadowRender`, `grFigure2_8020E4FC`,
-/// `grFigure3_8020E790`), which draw every shadow.
-pub const CHECK_SHADOW_RENDER: [u32; 3] = [0x8020_E268, 0x8020_E4FC, 0x8020_E790];
-
 /// The stages' demo setups (`grFigure1_OnDemoInit`, `grFigure1_8020E270`, grfigure2.c's, and
 /// `grFigure3_8020E504`), which do nothing.
 pub const ON_DEMO_INIT: [u32; 3] = [0x8020_DFDC, 0x8020_E270, 0x8020_E504];

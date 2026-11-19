@@ -33,127 +33,16 @@ impl Running<'_> {
     #[doc(alias = "grLast_OnCheckShadowRender")]
     #[doc(alias = "grBattle_OnCheckShadowRender")]
     fn stage_receives_shadow(&mut self, g: GObjId, j: JObjId) -> bool {
-        match self.game.stage_info.on_check_shadow_render {
-            // grLast's and grBattle's: every joint takes the shadows.
-            Some(f) if f.0 == 0x8021_C748 || f.0 == 0x8021_A618 => true,
-            Some(f) if f.0 == 0x801F_F15C => super::kraid::check_shadow_render(),
-            Some(f) if f.0 == 0x801F_6814 => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::greatbay::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x801F_41E8 => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::fourside::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x8020_2B64 => super::yorster::check_shadow_render(),
-            Some(f) if f.0 == 0x801E_5768 => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::onett::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x8021_6E6C => super::greens::check_shadow_render(),
-            Some(f) if f.0 == 0x801D_CCC0 => super::zebes::check_shadow_render(),
-            Some(f) if f.0 == 0x8021_30C8 => super::pura::check_shadow_render(),
-            Some(f) if f.0 == 0x8020_1C58 => super::rcruise::check_shadow_render(),
-            Some(f) if f.0 == 0x8021_82BC => super::flatzone::check_shadow_render(),
-            Some(f) if f.0 == 0x801F_CBB8 => super::inishie1::check_shadow_render(),
-            Some(f) if f.0 == 0x801F_DFF0 => super::inishie2::check_shadow_render(),
-            Some(f) if f.0 == 0x801F_A900 => super::icemt::check_shadow_render(),
-            Some(f) if f.0 == super::pushon::CHECK_SHADOW_RENDER => {
-                super::pushon::check_shadow_render()
-            }
-            Some(f) if f.0 == super::figureget::CHECK_SHADOW_RENDER => {
-                super::figureget::check_shadow_render()
-            }
-            Some(f) if f.0 == 0x801E_2EEC => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::corneria::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x8020_6D7C => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::venom::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x801D_0B0C => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::castle::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x801E_FC14 => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::bigblue::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x801F_2C10 => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::mutecity::check_shadow_render(self.game, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x801D_50C0 => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::stadium::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x801C_D280 => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::izumi::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x8021_1CA8 => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::oldpupupu::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x8020_F40C => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::oldyoshi::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x8021_0788 => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::oldkongo::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x8020_875C => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::kinokoroute::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == super::shrineroute::CHECK_SHADOW_RENDER => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::shrineroute::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x8020_DF80 => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::bigblueroute::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x8020_B85C => super::zebesroute::check_shadow_render(),
-            Some(f) if super::target::is_check_shadow_render(f.0) => {
-                super::target::check_shadow_render()
-            }
-
-            Some(f) if super::figure::CHECK_SHADOW_RENDER.contains(&f.0) => {
-                super::figure::check_shadow_render()
-            }
-            Some(f) if f.0 == super::teststage::CHECK_SHADOW_RENDER => {
-                super::teststage::check_shadow_render()
-            }
-            Some(f) if f.0 == super::heal::CHECK_SHADOW_RENDER => {
-                super::heal::check_shadow_render()
-            }
-
-            Some(f) if f.0 == 0x8021_EEBC => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::homerun::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x8020_1F4C => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::shrine::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x801D_844C => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::kongo::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x8020_35D0 => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::garden::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) if f.0 == 0x801E_36D8 => {
-                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
-                super::story::check_shadow_render(self.game, self.data, pos, Some(j))
-            }
-            Some(f) => code::unported_call(&format!("on_check_shadow_render {:#010x}", f.0)),
-            None => panic!("stage_info.on_check_shadow_render is null"),
-        }
+        let Some(f) = self.game.stage_info.on_check_shadow_render else {
+            panic!("stage_info.on_check_shadow_render is null")
+        };
+        let check = super::registry::by_address(self.game.stage_info.grkind, f.0, |d| {
+            d.on_check_shadow_render
+        })
+        .and_then(|s| s.shadow)
+        .unwrap_or_else(|| code::unported_call(&format!("on_check_shadow_render {:#010x}", f.0)));
+        let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+        check(self, pos, j)
     }
 
     /// Updates which fighters' shadows a frame turns on, `lbShadow_8000EEE0` on each fighter.
