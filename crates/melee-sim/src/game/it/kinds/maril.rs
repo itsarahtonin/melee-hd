@@ -56,6 +56,7 @@ const TURN_FRAMES: usize = 0x70;
 const FLAME_DIR: usize = 0x6C;
 
 /// Runs one of Marill's (or the flame's) predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         FLAME_ANIM => flame_anim(r, gobj),
@@ -75,6 +76,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of Marill's (or the flame's) events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         FLAME_PHYS => flame_phys(r, gobj),

@@ -46,6 +46,7 @@ fn param(game: &Game) -> Param {
 }
 
 /// A stage object's process or callback, by address: Brinstar Depths'.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801F_E1E4 | 0x801F_E1E8 | 0x801F_E35C | 0x801F_E3AC | 0x801F_E3B0 | 0x801F_E6D4
@@ -64,6 +65,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x801F_DFFC => on_init(r),

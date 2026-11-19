@@ -84,6 +84,7 @@ const FLOOR_MASK: i32 = 0x18000;
 const WALLS_CEILING_MASK: i32 = 0xFFF;
 
 /// Runs one of the chain's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM => animate(r, gobj),
@@ -92,6 +93,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the chain's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         HITLAG_START => hitlag_start(r, gobj),

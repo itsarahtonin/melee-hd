@@ -1019,19 +1019,31 @@ impl crate::game::state::Game {
 }
 
 /// The game modes' functions the match calls by address for Camera Mode.
+#[melee_callbacks::callbacks(Call)]
 pub fn call(
     r: &mut Running,
     f: u32,
     _args: &[super::super::code::Val],
 ) -> Option<super::super::code::Val> {
     use super::super::code::Val;
-    match f {
-        PAUSE_CAMERA => super::super::gm::pause_camera(r),
-        GET_PAUSER => return Some(Val::Int(r.game.camera_pauser())),
-        MATCH_START => r.camera_match_start(),
-        FRAME_START => r.camera_frame_start(),
-        FRAME_END => r.camera_frame_end(),
+    Some(match f {
+        PAUSE_CAMERA => {
+            super::super::gm::pause_camera(r);
+            Val::None
+        }
+        GET_PAUSER => Val::Int(r.game.camera_pauser()),
+        MATCH_START => {
+            r.camera_match_start();
+            Val::None
+        }
+        FRAME_START => {
+            r.camera_frame_start();
+            Val::None
+        }
+        FRAME_END => {
+            r.camera_frame_end();
+            Val::None
+        }
         _ => return None,
-    }
-    Some(Val::None)
+    })
 }

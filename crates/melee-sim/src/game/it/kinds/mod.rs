@@ -188,6 +188,7 @@ pub fn falling_phys(r: &mut Running, gobj: GObjId) {
 }
 
 /// Runs a kind's callback of the event kind (`HSD_GObjEvent`), if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     foxlaser::run_event(r, gobj, addr)
         || kirbycutterbeam::run_event(r, gobj, addr)
@@ -357,6 +358,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// Runs a kind's predicate callback (`HSD_GObjPredicate`), if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     foxlaser::run_pred(r, gobj, addr)
         .or_else(|| kirbycutterbeam::run_pred(r, gobj, addr))

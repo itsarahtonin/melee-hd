@@ -170,6 +170,7 @@ impl Running<'_> {
 #[doc(alias = "ftSs_SpecialS_IASA")]
 #[doc(alias = "ftSs_SpecialAirSSmash_IASA")]
 #[doc(alias = "ftSs_SpecialAirS_IASA")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_S_8012A074 => g.samus_missile_launch(gobj),

@@ -209,6 +209,7 @@ impl Running<'_> {
     }
 
     /// Runs the list's processes.
+    #[melee_callbacks::callbacks(Proc)]
     pub fn hyaku_proc(&mut self, gobj: GObjId, f: u32) -> bool {
         match f {
             INPUT => self.hyaku_input(gobj),

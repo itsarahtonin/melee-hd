@@ -758,6 +758,7 @@ impl Running<'_> {
     }
 
     /// Runs one of the sound test's processes.
+    #[melee_callbacks::callbacks(Proc)]
     pub fn sound_test_proc(&mut self, gobj: GObjId, f: u32) -> bool {
         match f {
             INPUT => self.sound_test_input(gobj),

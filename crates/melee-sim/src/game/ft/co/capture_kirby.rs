@@ -683,6 +683,7 @@ pub fn run_grabbed(g: &mut Running, victim: GObjId, kirby: GObjId, cb: u32) -> b
 }
 
 /// Runs one of the victim's state callbacks, if `addr` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::CAPTURE_ANIM

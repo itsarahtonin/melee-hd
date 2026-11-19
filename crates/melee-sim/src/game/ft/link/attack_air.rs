@@ -120,6 +120,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ATTACK_AIR_LW_ON_HIT => g.link_attack_air_lw_on_hit(gobj),

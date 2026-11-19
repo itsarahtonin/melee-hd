@@ -161,6 +161,7 @@ fn param(game: &Game) -> Param {
 }
 
 /// A stage object's process or callback, by address: Princess Peach's Castle's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801C_D608 | 0x801C_D60C | 0x801C_DF50 | 0x801C_E7E4 | 0x801C_E8E4 | 0x801C_EAC8
@@ -189,6 +190,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x801C_D37C => on_init(r),
@@ -200,6 +202,7 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 }
 
 /// The stage's render callbacks, by address.
+#[melee_callbacks::callbacks(Render)]
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
     match cb {
         RENDER_STAGE => render_stage(r, gobj, pass),

@@ -677,6 +677,7 @@ pub(crate) fn desc_fields(data: &Archives, d: DataRef) -> (f32, [Option<DataRef>
 
 /// efLib's and efAsync's functions other code reaches through [`code::call`]
 /// (super::super::code::call), by address: `None` for any other.
+#[melee_callbacks::callbacks(Call)]
 pub fn call(r: &mut Running, f: u32, args: &[super::code::Val]) -> Option<super::code::Val> {
     use super::code::Val;
     let gobj = |i: usize| args[i].gobj();

@@ -831,6 +831,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::S_8011097C => g.seak_special_s_nothing(gobj),
@@ -877,6 +878,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 
 /// The queries the chain and the needles ask of Sheik, and the side special's functions that
 /// take more than the GObj.
+#[melee_callbacks::callbacks(Call)]
 pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj();
     Some(match f {

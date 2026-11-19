@@ -1463,6 +1463,7 @@ impl Running<'_> {
     }
 
     /// The bracket's processes.
+    #[melee_callbacks::callbacks(Proc)]
     pub(crate) fn tou_bracket_run(&mut self, gobj: GObjId, addr: u32) -> bool {
         match addr {
             PROC_BG => self.br_bg_proc(gobj),
@@ -1489,6 +1490,7 @@ impl Running<'_> {
     }
 
     /// The tournament's processes.
+    #[melee_callbacks::callbacks(Proc)]
     pub fn tou_run(&mut self, gobj: GObjId, addr: u32) -> bool {
         self.tou_setup_run(gobj, addr)
             || self.tou_bracket_run(gobj, addr)

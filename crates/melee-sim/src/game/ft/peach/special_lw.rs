@@ -26,6 +26,7 @@ const COLL_MF: u32 = SKIP_MAT_ANIM
     | SKIP_MODEL_FLAGS
     | UNK_27;
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPAWN_VEG => g.peach_spawn_veg(gobj),

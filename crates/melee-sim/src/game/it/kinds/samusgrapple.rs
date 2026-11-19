@@ -172,6 +172,7 @@ const PAD_A: u32 = 0x100;
 const PAD_Z: u32 = 0x40;
 
 /// Runs one of the beam's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),
@@ -1829,7 +1830,7 @@ pub fn ft_frame(r: &mut Running, f: GObjId) {
         .unk_10
         .get()
     {
-        run_event(r, beam, cb.0);
+        crate::game::code::run_proc(r, beam, cb);
     }
 }
 

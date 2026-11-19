@@ -35,6 +35,7 @@ pub const HIT_SHIELD: u32 = 0x8028_4CF0;
 pub const SHIELD_BOUNCED: u32 = 0x8028_4D14;
 
 /// Runs one of the bat's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 | ANIM3 | ANIM2 | ANIM4 | COLL2 => still(r, gobj),
@@ -50,6 +51,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the bat's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),

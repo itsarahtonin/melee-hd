@@ -159,6 +159,7 @@ impl Running<'_> {
 }
 
 /// Runs one of the pickup states' callbacks, if `addr` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         ANIM => g.co_item_get_anim(gobj),

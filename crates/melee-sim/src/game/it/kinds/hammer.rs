@@ -37,6 +37,7 @@ pub const PHYS5: u32 = 0x8029_430C;
 pub const COLL5: u32 = 0x8029_4310;
 
 /// Runs one of the hammer's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 | ANIM4 | ANIM5 => still(r, gobj),
@@ -50,6 +51,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the hammer's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         HITLAG => hitlag(r, gobj),

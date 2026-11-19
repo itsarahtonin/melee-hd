@@ -35,6 +35,7 @@ pub const REFLECTED: u32 = 0x8029_A0C8;
 pub const DMG_RECEIVED: u32 = 0x8029_A0EC;
 
 /// Runs one of the head's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM1 | DMG_DEALT | CLANKED | HIT_SHIELD | DMG_RECEIVED => no(r, gobj),
@@ -47,6 +48,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the head's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),

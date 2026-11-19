@@ -210,6 +210,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ATTACK11_ITEM_GREENHOUSE_SETUP => g.gw_greenhouse_setup(gobj),

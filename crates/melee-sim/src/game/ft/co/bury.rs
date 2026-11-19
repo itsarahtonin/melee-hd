@@ -321,6 +321,7 @@ impl Running<'_> {
 }
 
 /// Runs a buried state's callback, if `cb` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
     match cb {
         0x800C_0F34 => g.co_bury_anim(gobj),
@@ -338,6 +339,7 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
 }
 
 /// The buried states' functions other code calls by address: the bury effect's follow.
+#[melee_callbacks::callbacks(Call)]
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     match f {
         0x800C_0FCC => {

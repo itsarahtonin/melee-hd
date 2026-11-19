@@ -585,6 +585,7 @@ pub fn pause_camera(r: &mut super::state::Running) {
 }
 
 /// The game modes' functions the match calls by address: the rules' hooks.
+#[melee_callbacks::callbacks(Call)]
 pub fn call(
     r: &mut super::state::Running,
     f: u32,
@@ -632,7 +633,7 @@ pub fn call(
             r.adventure_bowser_end(args[0].int() as u8);
             Some(super::code::Val::None)
         }
-        f if event::is_join_callback(f) => {
+        f if event::JOIN_CALLBACK_ADDRS.contains(&f) => {
             event::run_join_callback(r, f, args[0].int(), args[1].int());
             Some(super::code::Val::None)
         }

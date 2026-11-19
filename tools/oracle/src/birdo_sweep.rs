@@ -340,7 +340,11 @@ pub fn birdo_sweep(args: &[&str]) -> ExitCode {
                                     game: &mut s.game,
                                     data: &s.data,
                                 };
-                                gi::run_proc(&mut r, gobj, proc);
+                                melee_sim::game::code::run_proc(
+                                    &mut r,
+                                    gobj,
+                                    melee_sim::game::handles::CodeRef(proc),
+                                );
                             }
                             lent.give_back(&mut s.game.objs.heap);
                         }

@@ -1539,6 +1539,7 @@ fn digit_tobj(objs: &crate::hsd::Objects, j: JObjId) -> Option<crate::hsd::tobj:
 }
 
 /// Runs an intro's process, if `f` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_proc(r: &mut Running, gobj: GObjId, f: u32) -> bool {
     match f {
         EASY_MODEL_PROC => r.intro_easy_model_proc(gobj),
@@ -1562,6 +1563,7 @@ pub fn run_proc(r: &mut Running, gobj: GObjId, f: u32) -> bool {
 }
 
 /// Runs an intro's frame function, if `f` is one.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_frame(r: &mut Running, f: u32) -> bool {
     match f {
         f if f == EASY_ON_FRAME.0 => r.intro_easy_on_frame(),
@@ -1572,6 +1574,7 @@ pub fn run_frame(r: &mut Running, f: u32) -> bool {
 }
 
 /// Runs an intro's render callback, if `cb` is one.
+#[melee_callbacks::callbacks(Render)]
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
     match cb {
         EASY_CAMERA_RENDER => r.intro_easy_camera_render(gobj),

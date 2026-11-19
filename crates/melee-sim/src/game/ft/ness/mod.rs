@@ -416,6 +416,7 @@ impl Running<'_> {
 
 /// Runs one of Ness's callbacks a fighter holds (`void (*)(HSD_GObj*)`: action states'
 /// callbacks, hooks), if `addr` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     if a == addr::JUMP_AERIAL_PHYS_CB {
         g.ness_jump_aerial_phys_cb(gobj);
@@ -433,6 +434,7 @@ pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 
 /// Ness's functions other code calls by address (`code::call`): the item hooks, the yo-yo's
 /// stage check and every callback [`run`] takes.
+#[melee_callbacks::callbacks(Call)]
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     if let Some(v) = init::call(r, f, args) {
         return Some(v);
@@ -445,8 +447,5 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
             args[3].float(),
         )));
     }
-    match args.first() {
-        Some(&Val::GObj(Some(g))) if args.len() == 1 && run(r, g, f) => Some(Val::None),
-        _ => None,
-    }
+    None
 }

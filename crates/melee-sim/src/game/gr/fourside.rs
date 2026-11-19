@@ -86,6 +86,7 @@ fn param(game: &Game) -> Param {
 }
 
 /// A stage object's process or callback, by address: Fourside's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801F_2EF0 | 0x801F_2EF4 | 0x801F_2F2C | 0x801F_2F30 | 0x801F_309C | 0x801F_314C
@@ -106,6 +107,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x801F_2D10 => on_init(r),
@@ -117,6 +119,7 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 }
 
 /// The stage's render callbacks, by address.
+#[melee_callbacks::callbacks(Render)]
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
     match cb {
         RENDER_CITY => render_city(r, gobj, pass),

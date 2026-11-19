@@ -537,6 +537,7 @@ impl Running<'_> {
 }
 
 /// Runs one of the egg lay's victim's callbacks, if `addr` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         // ftCo_CaptureYoshi_Anim, _IASA, _Phys, _Coll.

@@ -112,6 +112,7 @@ impl Running<'_> {
 }
 
 /// Runs one of Giga Bowser's callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `a` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::UNK_MOTION_STATES3 => g.gk_unk_motion_states3(gobj),
@@ -125,15 +126,13 @@ pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 }
 
 /// Giga Bowser's functions other code calls by address (`code::call`).
+#[melee_callbacks::callbacks(Call)]
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj().expect("a null fighter");
     match f {
         addr::ON_ITEM_PICKUP => r.gk_on_item_pickup(gobj(0), args[1].int() != 0),
         addr::ON_ITEM_DROP => r.gk_on_item_drop(gobj(0), args[1].int() != 0),
-        _ => match args.first() {
-            Some(&Val::GObj(Some(g))) if args.len() == 1 && run(r, g, f) => {}
-            _ => return None,
-        },
+        _ => return None,
     }
     Some(Val::None)
 }

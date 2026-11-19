@@ -94,6 +94,7 @@ fn param(game: &Game) -> Param {
 }
 
 /// A stage object's process or callback, by address: Great Bay's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801F_4438 | 0x801F_443C | 0x801F_44A8 | 0x801F_44AC | 0x801F_4518 | 0x801F_451C
@@ -119,6 +120,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x801F_4240 => on_init(r),

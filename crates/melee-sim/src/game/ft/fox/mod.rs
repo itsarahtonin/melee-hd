@@ -296,6 +296,7 @@ pub(crate) fn facing_dir_int(facing: f32) -> i32 {
 
 /// Runs one of Fox's callbacks a fighter holds (`void (*)(HSD_GObj*)`: action states'
 /// callbacks, accessories, damage and hitlag hooks), if `addr` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
     init::run(g, gobj, addr)
         || appeal::run(g, gobj, addr)
@@ -307,6 +308,7 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// Fox's functions other code calls by address (`code::call`): the specials' entries, the
 /// item hooks, the queries the items ask of Fox, and every callback [`run`] takes.
+#[melee_callbacks::callbacks(Call)]
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     if let Some(v) = init::call(r, f, args)
         .or_else(|| appeal::call(r, f, args))
@@ -315,8 +317,5 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     {
         return Some(v);
     }
-    match args.first() {
-        Some(&Val::GObj(Some(g))) if args.len() == 1 && run(r, g, f) => Some(Val::None),
-        _ => None,
-    }
+    None
 }

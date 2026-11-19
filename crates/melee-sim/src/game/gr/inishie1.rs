@@ -152,6 +152,7 @@ fn param(game: &Game) -> Param {
 }
 
 /// A stage object's process or callback, by address: Mushroom Kingdom's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801F_AAD4 | 0x801F_AAD8 | 0x801F_ABB0 | 0x801F_ABFC | 0x801F_AC00 | 0x801F_AD80 => {
@@ -169,6 +170,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x801F_A90C => on_init(r),

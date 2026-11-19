@@ -65,6 +65,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::GRAB_UNK1_8015B174 => g.ch_entry_enter(gobj),

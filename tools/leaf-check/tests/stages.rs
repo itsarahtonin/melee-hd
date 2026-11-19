@@ -1462,11 +1462,11 @@ fn greatbay_unreached_callbacks() {
 /// An item's callback by its address.
 fn item_cb(r: &mut Running, maps: &Maps, call: &Call) -> Ret {
     let g = gobj_arg(maps, call);
-    if let Some(v) = melee_sim::game::it::kinds::run_pred(r, g, call.addr) {
+    if let Some(v) = melee_sim::game::code::try_pred(r, g, call.addr) {
         return Ret::Int(u32::from(v));
     }
     assert!(
-        melee_sim::game::it::kinds::run_event(r, g, call.addr),
+        melee_sim::game::code::try_proc(r, g, call.addr),
         "{:#x} isn't an item callback",
         call.addr
     );

@@ -268,11 +268,11 @@ fn run_zelda(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
                 run_fighter_cb(g, gobj, CodeRef(call.addr));
                 return Ret::Nothing;
             }
-            if let Some(v) = melee_sim::game::it::kinds::run_pred(g, gobj, call.addr) {
+            if let Some(v) = melee_sim::game::code::try_pred(g, gobj, call.addr) {
                 return b(v);
             }
             assert!(
-                melee_sim::game::it::kinds::run_event(g, gobj, call.addr),
+                melee_sim::game::code::try_proc(g, gobj, call.addr),
                 "{name} isn't an item callback the port knows"
             );
             Ret::Nothing

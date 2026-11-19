@@ -56,6 +56,7 @@ const MAP_MAZE: i32 = 4;
 const FIRST_SYMBOL: i32 = 0xBD;
 
 /// A stage object's process or callback, by address: the maze's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8020_89E0 | 0x8020_89E4 | 0x8020_8A30 | 0x8020_8A34 | 0x8020_9AEC | 0x8020_A100
@@ -75,6 +76,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x8020_87BC => on_init(r),

@@ -79,35 +79,27 @@ const ROAR_FRAMES: usize = 0x60;
 const QUAKE_LARGE: i32 = 4;
 
 /// Runs one of Entei's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
-    run_pred_of(&ENTEI, r, gobj, addr)
-}
-
-/// Runs one of Entei's events, if `addr` is one.
-pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
-    run_event_of(&ENTEI, r, gobj, addr)
-}
-
-/// Runs one of a beast's predicates, if `addr` is one.
-pub fn run_pred_of(b: &Beast, r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        a if a == b.anim0 => anim0_of(b, r, gobj),
-        a if a == b.coll0 => coll0_of(b, r, gobj),
-        a if a == b.anim1 => anim1_of(r, gobj),
-        a if a == b.coll1 => coll1_of(b, r, gobj),
+        a if a == ENTEI.anim0 => anim0_of(&ENTEI, r, gobj),
+        a if a == ENTEI.coll0 => coll0_of(&ENTEI, r, gobj),
+        a if a == ENTEI.anim1 => anim1_of(r, gobj),
+        a if a == ENTEI.coll1 => coll1_of(&ENTEI, r, gobj),
         _ => return None,
     })
 }
 
-/// Runs one of a beast's events, if `addr` is one.
-pub fn run_event_of(b: &Beast, r: &mut Running, gobj: GObjId, addr: u32) -> bool {
+/// Runs one of Entei's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
+pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        a if a == b.spawned => spawned_of(r, gobj),
-        a if a == b.landed_nothing => {}
-        a if a == b.out_landed => out_landed_of(b, r, gobj),
-        a if a == b.phys0 => phys0_of(r, gobj),
-        a if a == b.accessory => fire_when_told_of(b, r, gobj),
-        a if a == b.phys1 => phys1_of(r, gobj),
+        a if a == ENTEI.spawned => spawned_of(r, gobj),
+        a if a == ENTEI.landed_nothing => {}
+        a if a == ENTEI.out_landed => out_landed_of(&ENTEI, r, gobj),
+        a if a == ENTEI.phys0 => phys0_of(r, gobj),
+        a if a == ENTEI.accessory => fire_when_told_of(&ENTEI, r, gobj),
+        a if a == ENTEI.phys1 => phys1_of(r, gobj),
         _ => return false,
     }
     true

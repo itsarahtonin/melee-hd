@@ -881,6 +881,7 @@ fn set_mv_vec(fp: &mut crate::game::structs::Fighter, off: usize, v: Vec3) {
 #[doc(alias = "ftNs_SpecialAirHiStart_IASA")]
 #[doc(alias = "ftNs_SpecialAirHiHold_IASA")]
 #[doc(alias = "ftNs_SpecialAirHiEnd_IASA")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_HI_START_ENTER => g.ness_special_hi_start_enter(gobj),
@@ -894,8 +895,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_HI_END_ANIM => g.ness_special_air_hi_end_anim(gobj),
         addr::SPECIAL_AIR_HI_ANIM => g.ness_special_air_hi_anim(gobj),
         addr::SPECIAL_AIR_HI_REBOUND_ANIM => g.ness_special_air_hi_rebound_anim(gobj),
-        addr::SPECIAL_HI_START_IASA..=addr::SPECIAL_AIR_HI_REBOUND_IASA
-            if (a - addr::SPECIAL_HI_START_IASA).is_multiple_of(4) => {}
+        addr::SPECIAL_HI_START_IASA..=addr::SPECIAL_AIR_HI_REBOUND_IASA if a.is_multiple_of(4) => {}
         addr::SPECIAL_HI_START_PHYS => g.ness_special_hi_start_phys(gobj),
         addr::SPECIAL_HI_HOLD_PHYS | addr::SPECIAL_HI_END_PHYS => g.ground_friction(gobj),
         addr::SPECIAL_HI_PHYS => g.ness_special_hi_phys(gobj),

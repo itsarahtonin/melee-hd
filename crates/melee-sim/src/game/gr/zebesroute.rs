@@ -39,6 +39,7 @@ const UPPER_POINT_POS: Vec3 = Vec3::new(-5.0, 980.0, 5.0);
 const LOWER_POINT_POS: Vec3 = Vec3::new(0.0, 215.0, -50.0);
 
 /// A stage object's process or callback, by address: the escape's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8020_B37C | 0x8020_B380 | 0x8020_B3B8 | 0x8020_B3BC | 0x8020_B4D4 => empty(r, gobj),
@@ -51,6 +52,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x8020_B164 => on_init(r),

@@ -1465,17 +1465,31 @@ impl Running<'_> {
     #[doc(alias = "fn_80253DE8")]
     #[doc(alias = "fn_80253E1C")]
     #[doc(alias = "fn_80253E5C")]
+    #[melee_callbacks::callbacks(Render)]
     pub fn album_render(&mut self, gobj: GObjId, cb: u32, pass: i32) -> bool {
-        let a = self.album();
-        let shown = match cb {
-            RENDER_MAIN => a.state >= 4,
-            RENDER_SLOTS => a.state == 2,
-            RENDER_CURSOR => a.state == 6 || (10..=11).contains(&a.state),
-            RENDER_DIALOG => a.dlg_active == 1,
+        match cb {
+            RENDER_MAIN => {
+                if self.album().state >= 4 {
+                    self.render_jobj(gobj, pass);
+                }
+            }
+            RENDER_SLOTS => {
+                if self.album().state == 2 {
+                    self.render_jobj(gobj, pass);
+                }
+            }
+            RENDER_CURSOR => {
+                let a = self.album();
+                if a.state == 6 || (10..=11).contains(&a.state) {
+                    self.render_jobj(gobj, pass);
+                }
+            }
+            RENDER_DIALOG => {
+                if self.album().dlg_active == 1 {
+                    self.render_jobj(gobj, pass);
+                }
+            }
             _ => return false,
-        };
-        if shown {
-            self.render_jobj(gobj, pass);
         }
         true
     }

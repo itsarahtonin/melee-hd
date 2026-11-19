@@ -46,6 +46,7 @@ pub const SHIELD_BOUNCED: u32 = 0x8027_D614;
 pub const LAND_CHECK: u32 = 0x8027_CF30;
 
 /// Runs one of the capsule's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 | ANIM4 | ANIM2 | ANIM6 => idle_anim(r, gobj),
@@ -63,6 +64,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the capsule's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),

@@ -71,6 +71,7 @@ const STAR_LEFT: i32 = 0x273A;
 const QUARTER_TURN: f32 = std::f32::consts::FRAC_PI_2;
 
 /// Runs one of Staryu's or its star's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 => anim0(r, gobj),
@@ -91,6 +92,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of Staryu's or its star's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),

@@ -475,6 +475,7 @@ impl Running<'_> {
 #[doc(alias = "ftCo_AirCatch_IASA")]
 #[doc(alias = "ftCo_AirCatchHit_Anim")]
 #[doc(alias = "ftCo_AirCatchHit_IASA")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         ROLL_ANIM => g.samus_roll_anim(gobj),

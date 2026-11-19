@@ -13,6 +13,7 @@ publish.workspace = true
 # leaf-checks' reference among them, keep the upstream crate.
 gekko-fp = { package = "melee-gekko-fp", path = "../gekko-fp" }
 melee-data.workspace = true
+melee-callbacks = { path = "../melee-callbacks" }
 melee-derive = { path = "../melee-derive" }
 # The native save's card layers (`lb::save`).
 melee-save = { path = "../melee-save" }

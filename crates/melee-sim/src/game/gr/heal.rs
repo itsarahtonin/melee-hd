@@ -64,6 +64,7 @@ const CHKIND_NONE: i32 = 33;
 const HEART_KIND: i32 = 8;
 
 /// A stage object's process or callback, by address: the rest area's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8021_F0D8 => init_platform(r, gobj),
@@ -78,6 +79,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         ON_INIT => on_init(r),

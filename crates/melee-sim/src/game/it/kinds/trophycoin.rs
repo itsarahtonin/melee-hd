@@ -54,6 +54,7 @@ pub const COLL5: u32 = 0x802F_1FE0;
 const UNK_0X1: u32 = 1;
 
 /// Runs one of the coin's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 | ANIM1 | ANIM2 | ANIM3 | ANIM4 | ANIM5 => still(r, gobj),
@@ -67,6 +68,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the coin's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),

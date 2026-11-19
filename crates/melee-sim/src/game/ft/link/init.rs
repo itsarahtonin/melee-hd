@@ -397,6 +397,7 @@ fn hang(jobjs: &mut jobj::JObjs, how: u8, root: Option<jobj::JObjId>, new: jobj:
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::REMOVE_BOOMERANG_CB => g.link_remove_boomerang_cb(gobj),
@@ -412,6 +413,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     true
 }
 
+#[melee_callbacks::callbacks(Call)]
 pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj().expect("a null fighter");
     Some(match f {

@@ -1566,6 +1566,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "melee-callbacks"
+version = "0.1.1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
+
+[[package]]
 name = "melee-capture"
 version = "0.1.1"
 dependencies = [
@@ -1720,6 +1729,7 @@ dependencies = [
 name = "melee-sim"
 version = "0.1.1"
 dependencies = [
+ "melee-callbacks",
  "melee-data",
  "melee-derive",
  "melee-gekko-fp",

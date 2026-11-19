@@ -84,6 +84,7 @@ const QUAKE_SMALL: i32 = 2;
 const ANIM_UPDATE: u32 = super::super::item::change::ANIM_UPDATE;
 
 /// Runs one of the Paratroopa's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM1 => answers_false(r, gobj),
@@ -105,6 +106,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the Paratroopa's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),

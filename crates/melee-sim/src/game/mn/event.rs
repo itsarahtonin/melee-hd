@@ -551,6 +551,7 @@ impl Running<'_> {
     }
 
     /// Runs the Event list's process.
+    #[melee_callbacks::callbacks(Proc)]
     pub fn event_list_proc(&mut self, gobj: GObjId, f: u32) -> bool {
         match f {
             INPUT => self.event_list_input(gobj),

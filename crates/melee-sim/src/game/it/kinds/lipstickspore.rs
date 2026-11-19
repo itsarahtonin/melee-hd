@@ -31,6 +31,7 @@ pub const REFLECTED: u32 = 0x8029_A620;
 pub const SHIELD_BOUNCED: u32 = 0x8029_A704;
 
 /// Runs one of the spores' predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 | ANIM1 => anim(r, gobj),
@@ -44,6 +45,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the spores' events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PHYS0 => phys0(r, gobj),

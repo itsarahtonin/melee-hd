@@ -209,6 +209,7 @@ impl Running<'_> {
 #[doc(alias = "ftPp_SpecialAirLw_Coll")]
 #[doc(alias = "ftPp_SpecialAirLw_IASA")]
 #[doc(alias = "ftPp_SpecialAirLw_Phys")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::PP_SPECIAL_LW_ENTER => g.popo_special_lw_enter(gobj),

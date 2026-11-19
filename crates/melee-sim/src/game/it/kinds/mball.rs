@@ -54,6 +54,7 @@ pub const HIT_SHIELD: u32 = 0x8029_80D4;
 pub const SHIELD_BOUNCED: u32 = 0x8029_8114;
 
 /// Runs one of the Poké Ball's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 | ANIM1 | ANIM2 | ANIM4 => still(r, gobj),
@@ -72,6 +73,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the Poké Ball's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DESTROYED => destroyed(r, gobj),

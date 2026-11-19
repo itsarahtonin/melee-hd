@@ -665,6 +665,7 @@ pub fn enter_first_state(r: &mut Running, gobj: GObjId) {
 }
 
 /// Runs an item callback the Pokémon set, if `addr` is one: their effects' hitlag hooks.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         code::EF_PAUSE_ALL => crate::game::ef::pause_all(r.game, Some(gobj)),

@@ -394,10 +394,10 @@ fn run_callback(g: &mut Running, gobj: GObjId, a: u32) -> Ret {
     if g.game.world.gobj(gobj).classifier != CLASS_ITEM {
         panic!("{SKIP}{} takes an item, not its parent", name_of(a));
     }
-    if let Some(v) = melee_sim::game::it::kinds::run_pred(g, gobj, a) {
+    if let Some(v) = melee_sim::game::code::try_pred(g, gobj, a) {
         return Ret::Int(u32::from(v));
     }
-    if melee_sim::game::it::kinds::run_event(g, gobj, a) {
+    if melee_sim::game::code::try_proc(g, gobj, a) {
         return Ret::Nothing;
     }
     panic!("{SKIP}{} takes more than its GObj", name_of(a));

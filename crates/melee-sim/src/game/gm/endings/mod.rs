@@ -186,6 +186,7 @@ impl Running<'_> {
 }
 
 /// Runs one of the endings' processes, if `f` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_proc(r: &mut Running, gobj: crate::hsd::gobj::GObjId, f: u32) -> bool {
     use toy_fall::*;
     match f {
@@ -213,7 +214,8 @@ pub fn run_proc(r: &mut Running, gobj: crate::hsd::gobj::GObjId, f: u32) -> bool
 }
 
 /// Runs one of the endings' render callbacks, if `cb` is one.
-pub fn run_render(r: &mut Running, gobj: crate::hsd::gobj::GObjId, cb: u32) -> bool {
+#[melee_callbacks::callbacks(Render)]
+pub fn run_render(r: &mut Running, gobj: crate::hsd::gobj::GObjId, cb: u32, _pass: i32) -> bool {
     use toy_fall::*;
     match cb {
         RENDER_FRAME => r.toy_fall_frame_render(gobj),
@@ -228,6 +230,7 @@ pub fn run_render(r: &mut Running, gobj: crate::hsd::gobj::GObjId, cb: u32) -> b
 }
 
 /// Runs one of the endings' scenes' frame functions, if `f` is one.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_frame(r: &mut Running, f: u32) -> bool {
     match f {
         f if f == toy_fall::ON_FRAME.0 => r.toy_fall_on_frame(),

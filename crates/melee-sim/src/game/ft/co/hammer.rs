@@ -78,6 +78,7 @@ pub mod addr {
 #[doc(alias = "ftCo_HammerJump_Phys")]
 #[doc(alias = "ftCo_HammerJump_IASA")]
 #[doc(alias = "ftCo_HammerWalk_Phys")]
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, cb: u32) -> bool {
     use addr::*;
     match cb {

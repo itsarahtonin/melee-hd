@@ -430,7 +430,7 @@ impl Running<'_> {
     /// One of his functions by address that takes his GObj, stopping by name where it isn't
     /// ported.
     pub(crate) fn mh_dispatch(&mut self, gobj: GObjId, a: u32) {
-        if !super::run(self, gobj, a) {
+        if !super::super::super::code::try_fighter_cb(self, gobj, a) {
             super::super::super::code::unported_call(&format!("Master Hand's function {a:#010x}"));
         }
     }
@@ -465,6 +465,7 @@ pub(crate) fn set_mv_vec(fp: &mut super::super::super::structs::Fighter, off: us
     fp.set_mv_f32(off + 8, reg(v.z));
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::MS_341_8014FE10 => g.mh_start(gobj),

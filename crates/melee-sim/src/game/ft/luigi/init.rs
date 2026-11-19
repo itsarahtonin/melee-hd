@@ -41,6 +41,7 @@ impl Running<'_> {
 
 /// Luigi's hooks and states by address; his item hiding is Fox's (`ftLg_Init_OnItemInvisible`).
 #[doc(alias = "ftLg_Init_OnItemInvisible")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ON_ITEM_INVISIBLE => g.fox_on_item_invisible(gobj),
@@ -55,6 +56,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 
 #[doc(alias = "ftLg_Init_OnItemDrop")]
 #[doc(alias = "ftLg_Init_OnItemPickup")]
+#[melee_callbacks::callbacks(Call)]
 pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj().expect("a null fighter");
     Some(match f {

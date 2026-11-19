@@ -57,6 +57,7 @@ fn randi_or_zero(r: &mut Running, n: i32) -> i32 {
 }
 
 /// A stage object's process or callback, by address: Jungle Japes'.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8020_2D94 | 0x8020_2D98 | 0x8020_2E68 | 0x8020_2F3C | 0x8020_2F40 | 0x8020_2F9C
@@ -78,6 +79,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x8020_2B70 => on_init(r),

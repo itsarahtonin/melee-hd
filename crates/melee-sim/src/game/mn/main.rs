@@ -1841,6 +1841,7 @@ impl Running<'_> {
     }
 
     /// Runs a list's think.
+    #[melee_callbacks::callbacks(Proc)]
     pub fn run_think(&mut self, gobj: GObjId, f: u32) -> bool {
         match f {
             THINK_MAIN => self.think_main(gobj),

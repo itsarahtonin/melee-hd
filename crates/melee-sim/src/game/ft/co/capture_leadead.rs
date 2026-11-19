@@ -163,6 +163,7 @@ impl Running<'_> {
 }
 
 /// Runs one of the ReDead hold's callbacks, if `addr` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         ANIM => g.co_capture_leadead_anim(gobj),

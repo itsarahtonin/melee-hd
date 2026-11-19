@@ -356,6 +356,7 @@ const S4_STATES: [(i32, i32); 3] = [
 ];
 const S4_PAIRS: [(i32, i32); 3] = S4_STATES;
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_S_ENTER => g.mars_special_s_enter(gobj),

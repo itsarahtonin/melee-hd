@@ -116,6 +116,7 @@ impl Running<'_> {
 #[doc(alias = "ftNs_AttackLw4Release_Anim")]
 #[doc(alias = "ftNs_AttackLw4Release_IASA")]
 #[doc(alias = "ftNs_AttackLw4Release_Coll")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ATTACK_LW4_ENTER => g.ness_attack_lw4_enter(gobj),

@@ -280,6 +280,7 @@ impl Running<'_> {
 
 /// Runs one of Samus's callbacks a fighter holds (`void (*)(HSD_GObj*)`: action states'
 /// callbacks, hooks), if `addr` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     init::run(g, gobj, a)
         || special_n::run(g, gobj, a)
@@ -291,12 +292,10 @@ pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 
 /// Samus's functions other code calls by address (`code::call`): the item hooks and every
 /// callback [`run`] takes.
+#[melee_callbacks::callbacks(Call)]
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     if let Some(v) = init::call(r, f, args) {
         return Some(v);
     }
-    match args.first() {
-        Some(&Val::GObj(Some(g))) if args.len() == 1 && run(r, g, f) => Some(Val::None),
-        _ => None,
-    }
+    None
 }

@@ -42,6 +42,7 @@ const ANIM_FRAMES: [i32; 8] = [20, 16, 45, 2, 20, 30, 40, 16];
 const STATE_ANIMS: [i32; 11] = [-1, 4, 0, -1, 1, 2, 3, 4, 5, 6, 7];
 
 /// Runs one of the parasol's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 | ANIM3 | ANIM10 => still(r, gobj),
@@ -57,6 +58,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the parasol's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),

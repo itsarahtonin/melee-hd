@@ -58,6 +58,7 @@ pub const SHIELD_BOUNCED: u32 = 0x8028_CF2C;
 pub const JUMPED_ON: u32 = 0x8028_CF68;
 
 /// Runs one of the shell's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 | ANIM2 | ANIM9 => still(r, gobj),
@@ -82,6 +83,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the shell's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         TRAIL => trail(r, gobj),

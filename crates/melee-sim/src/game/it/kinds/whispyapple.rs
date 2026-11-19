@@ -54,6 +54,7 @@ pub const SHIELD_BOUNCED: u32 = 0x802E_EF68;
 const BOUNCE_SFX: [i32; 3] = [0x68FB4, 0x68FB5, 0x68FB6];
 
 /// Runs one of the apples' predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 => anim0(r, gobj),
@@ -73,6 +74,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the apples' events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PHYS0 => phys0(r, gobj),

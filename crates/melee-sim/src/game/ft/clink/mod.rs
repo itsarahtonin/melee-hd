@@ -157,6 +157,7 @@ impl Running<'_> {
 
 /// Runs one of Young Link's callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr` is
 /// one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ON_ITEM_INVISIBLE => g.link_on_item_invisible(gobj),
@@ -180,6 +181,7 @@ pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 
 /// Young Link's functions other code calls by address (`code::call`): the item hooks and every
 /// callback [`run`] takes.
+#[melee_callbacks::callbacks(Call)]
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj().expect("a null fighter");
     match f {
@@ -201,9 +203,6 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
         }
         addr::MILK_DONE => Some(Val::Int(i32::from(r.clink_milk_done(gobj(0))))),
         addr::APPEAL_CMD_VAR1 => Some(Val::Int(r.clink_appeal_cmd_var1(gobj(0)) as i32)),
-        _ => match args.first() {
-            Some(&Val::GObj(Some(g))) if args.len() == 1 && run(r, g, f) => Some(Val::None),
-            _ => None,
-        },
+        _ => None,
     }
 }

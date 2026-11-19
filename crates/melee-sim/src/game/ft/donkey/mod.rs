@@ -220,6 +220,7 @@ impl Running<'_> {
 
 /// Runs one of Donkey Kong's callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr` is
 /// one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
     heavy::run(g, gobj, addr)
         || init::run(g, gobj, addr)
@@ -230,12 +231,10 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// Donkey Kong's functions other code calls by address (`code::call`).
+#[melee_callbacks::callbacks(Call)]
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     if let Some(v) = init::call(r, f, args) {
         return Some(v);
     }
-    match args.first() {
-        Some(&Val::GObj(Some(g))) if args.len() == 1 && run(r, g, f) => Some(Val::None),
-        _ => None,
-    }
+    None
 }

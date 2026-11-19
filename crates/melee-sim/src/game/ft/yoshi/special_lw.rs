@@ -170,6 +170,7 @@ impl Running<'_> {
 }
 
 #[doc(alias = "ftYs_SpecialLwLanding_Phys")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::LW_STARS => g.ys_lw_stars(gobj),

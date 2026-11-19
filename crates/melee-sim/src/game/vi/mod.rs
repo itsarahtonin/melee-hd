@@ -715,6 +715,7 @@ impl Running<'_> {
 }
 
 /// Runs a cutscene's process or frame function, if `f` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_proc(r: &mut Running, gobj: GObjId, f: u32) -> bool {
     match f {
         v0102::JOBJ_PROC => r.vi_anim_proc(gobj),
@@ -748,6 +749,7 @@ pub fn run_proc(r: &mut Running, gobj: GObjId, f: u32) -> bool {
 }
 
 /// Runs a cutscene's frame function, if `f` is one.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_frame(r: &mut Running, f: u32) -> bool {
     match f {
         0x8031_D000 | 0x8031_D9C4 | 0x8031_E0F0 | 0x8031_E6CC | 0x8031_ED50 | 0x8031_F274
@@ -759,6 +761,7 @@ pub fn run_frame(r: &mut Running, f: u32) -> bool {
 }
 
 /// Runs a cutscene's render callback, if `cb` is one.
+#[melee_callbacks::callbacks(Render)]
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, _pass: i32) -> bool {
     match cb {
         v0102::CAMERA_RENDER => r.vi0102_camera_render(gobj),

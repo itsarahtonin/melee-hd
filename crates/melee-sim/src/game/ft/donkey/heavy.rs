@@ -77,6 +77,7 @@ pub mod addr {
 }
 
 /// Runs one of the heavy states' callbacks, if `a` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::WAIT0_IASA => g.dk_heavy_wait0_iasa(gobj),

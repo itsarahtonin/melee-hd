@@ -593,6 +593,7 @@ impl Running<'_> {
     }
 
     /// The process and render callbacks the screen gives its GObjs.
+    #[melee_callbacks::callbacks(Proc)]
     pub fn results_run(&mut self, gobj: GObjId, addr: u32) -> bool {
         match addr {
             MODEL_PROC => self.results_model_proc(gobj),

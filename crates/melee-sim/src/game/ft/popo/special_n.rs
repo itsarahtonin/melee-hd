@@ -190,6 +190,7 @@ impl Running<'_> {
 #[doc(alias = "ftPp_SpecialN_Phys")]
 #[doc(alias = "ftPp_SpecialAirN_IASA")]
 #[doc(alias = "ftPp_SpecialN_IASA")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::PP_SPECIAL_N_ENTER => g.popo_special_n_enter(gobj),

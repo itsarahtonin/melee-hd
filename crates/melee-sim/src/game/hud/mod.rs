@@ -155,6 +155,7 @@ impl Default for Hud {
 }
 
 /// Runs a HUD GObj's process, if `proc` is one; whether it was.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_proc(r: &mut super::state::Running, gobj: GObjId, proc: u32) -> bool {
     match proc {
         status::PROC_DAMAGE => r.damage_proc(gobj),

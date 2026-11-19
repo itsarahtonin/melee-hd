@@ -526,10 +526,10 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
 
 /// The item callbacks that take only their GObj, through the items' dispatch.
 fn run_item(g: &mut Running, gobj: GObjId, a: u32, name: &str) -> Ret {
-    if let Some(v) = it::kinds::run_pred(g, gobj, a) {
+    if let Some(v) = melee_sim::game::code::try_pred(g, gobj, a) {
         return Ret::Int(u32::from(v));
     }
-    if it::kinds::run_event(g, gobj, a) {
+    if melee_sim::game::code::try_proc(g, gobj, a) {
         return Ret::Nothing;
     }
     panic!("{SKIP}{name} takes more than its GObj");
