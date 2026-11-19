@@ -10,8 +10,9 @@ use super::super::super::state::Running;
 use super::super::KIRBY_COSTUME_KINDS;
 use super::super::data::MAIN_MEMORY;
 use super::super::fox::ext;
-use super::{ITEMS, KIND_KIRBY, addr, attr, u};
+use super::{ITEMS, addr, attr, u};
 use crate::fpu::reg;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::mtx::Mtx34;
@@ -121,12 +122,12 @@ impl Running<'_> {
         fp.u.set_gobj_at(u::HAT_ITEM, None);
         fp.set_u_i32(u::HAT_X4, n);
         fp.u.set_jobj_at(u::HAT_JOBJ, None);
-        fp.set_u_i32(u::HAT_KIND, KIND_KIRBY);
+        fp.set_u_i32(u::HAT_KIND, FighterKind::Kirby.id());
         fp.u.set_dobj_list_at(u::HAT_DOBJS, None);
         fp.set_u_i32(u::BUMP_TIMER, 0);
         fp.set_u_i32(u::X64, 0);
         let slot = i32::from(fp.player_idx);
-        if self.game.player_flags_bit1(slot) && self.game.player_unk4d(slot) != KIND_KIRBY {
+        if self.game.player_flags_bit1(slot) && self.game.player_unk4d(slot) != FighterKind::Kirby {
             let kind = self.game.player_unk4d(slot);
             self.kb_copy(gobj, kind, false);
         }
@@ -227,7 +228,7 @@ impl Running<'_> {
     /// effects. Nothing for Kirby himself or no kind.
     #[doc(alias = "ftKb_SpecialN_800EED50")]
     pub fn kb_load_copy(&mut self, kind: i32, costume: i32) {
-        if kind == -1 || kind == KIND_KIRBY {
+        if kind == -1 || kind == FighterKind::Kirby {
             return;
         }
         let k = kind as usize;
@@ -363,7 +364,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F1D24")]
     pub fn kb_bump_timer(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if fp.kind != KIND_KIRBY {
+        if fp.kind != FighterKind::Kirby {
             return;
         }
         let t = fp.u_i32(u::BUMP_TIMER);
@@ -407,7 +408,7 @@ impl Running<'_> {
     /// Kirby's effect where he bounces off a wall, ceiling or floor, `ftKb_SpecialN_800F1F1C`.
     #[doc(alias = "ftKb_SpecialN_800F1F1C")]
     pub fn kirby_bump_effect(&mut self, gobj: GObjId, pos: Vec3) {
-        if self.game.fighter(gobj).kind == KIND_KIRBY {
+        if self.game.fighter(gobj).kind == FighterKind::Kirby {
             self.kb_bump_effect_at(gobj, pos);
         }
     }

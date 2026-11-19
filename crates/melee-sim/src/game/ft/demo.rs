@@ -14,18 +14,13 @@ use super::super::structs::Fighter;
 use super::create::AllocInfo;
 use super::data::kind_tables;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 use gekko_fp as fp;
 
 /// `FtPart_RThumbNb`: the joint a pose's item is held at.
 const PART_R_THUMB_NB: i32 = 49;
-
-/// `Ft_Kind_Mario`, `Ft_Kind_Kirby`, `Ft_Kind_Luigi`, `Ft_Kind_GKoopa`.
-const KIND_MARIO: i32 = 0;
-const KIND_KIRBY: i32 = 4;
-const KIND_LUIGI: i32 = 0x11;
-const KIND_GKOOPA: i32 = 0x1F;
 
 /// The cutscene states' physics callbacks (`ftCo_800C7158`, `ftCo_800C7200`, `ftCo_800C737C`,
 /// `ftCo_800C7414`, `ftCo_800C74AC`), each `ft_8008521C`.
@@ -471,21 +466,21 @@ impl Running<'_> {
             8 => self.demo_cutscene_wait(gobj),
             9 | 10 => {
                 let kind = self.game.fighter(gobj).kind;
-                if kind == KIND_MARIO || kind == KIND_LUIGI {
+                if kind == FighterKind::Mario || kind == FighterKind::Luigi {
                     self.demo_cutscene_state(gobj, if pose == 9 { 14 } else { 15 });
                 } else {
                     self.demo_cutscene_wait(gobj);
                 }
             }
             11..=14 => {
-                if self.game.fighter(gobj).kind == KIND_KIRBY {
+                if self.game.fighter(gobj).kind == FighterKind::Kirby {
                     self.demo_cutscene_state(gobj, pose + 3);
                 } else {
                     self.demo_cutscene_wait(gobj);
                 }
             }
             15 => {
-                if self.game.fighter(gobj).kind == KIND_GKOOPA {
+                if self.game.fighter(gobj).kind == FighterKind::GKoopa {
                     self.demo_cutscene_state(gobj, 0xE);
                 } else {
                     self.demo_cutscene_wait(gobj);

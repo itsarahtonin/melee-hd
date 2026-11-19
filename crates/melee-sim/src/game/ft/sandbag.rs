@@ -6,12 +6,10 @@ use gekko_fp as fp;
 
 use super::super::state::Running;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 use crate::hsd::{jobj, robj};
-
-/// `FTKIND_SANDBAG`.
-pub const KIND_SANDBAG: i32 = 32;
 
 /// `ftSandbagAttributes`: the knockback's x and y deceleration.
 pub(crate) const ATTRS_SIZE: usize = 8;
@@ -128,7 +126,7 @@ impl Running<'_> {
     pub fn sb_kb_deaccel(&self, gobj: GObjId) -> (f32, f32) {
         let f = self.game.fighter_id(gobj);
         assert!(
-            self.game.fighters[f.0].kind == KIND_SANDBAG,
+            self.game.fighters[f.0].kind == FighterKind::Sandbag,
             "the original's assertion failed: fp->kind == Ft_Kind_Sandbag"
         );
         let a = self.game.fighters[f.0]

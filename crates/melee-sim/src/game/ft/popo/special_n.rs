@@ -14,8 +14,9 @@ use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::{ICE_CLIMBER_ICE, climbersice};
 use super::super::super::state::Running;
 use super::super::sound::Track;
-use super::{KIND_POPO, addr, var};
+use super::{addr, var};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 
 /// What tells one Ice Shot from the other.
@@ -203,7 +204,7 @@ impl Running<'_> {
                 };
                 climbersice::throw(self, ice);
                 self.game.fighter_mut(gobj).cmd_vars[0] = 0;
-                let voice = if self.game.fighters[f.0].kind == KIND_POPO {
+                let voice = if self.game.fighters[f.0].kind == FighterKind::Popo {
                     p.voices[0]
                 } else {
                     p.voices[1]

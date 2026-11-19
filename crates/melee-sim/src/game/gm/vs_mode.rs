@@ -7,12 +7,11 @@ use gekko_fp as fp;
 
 use crate::fpu::{mem, reg};
 use crate::game::code::unported_call;
+use crate::game::ft::CharacterKind;
 use crate::game::handles::CodeRef;
 use crate::game::pl::player::{PKIND_HUMAN, PKIND_NONE};
 use crate::game::structs::{PlayerInitData, StartMeleeData, StartMeleeRules};
 
-/// `ChKind_None`.
-pub const CHKIND_NONE: i8 = 0x21;
 /// `GM_NAMETAG_COUNT`: no name tag.
 pub const NO_NAMETAG: u8 = 120;
 
@@ -150,7 +149,7 @@ pub(crate) const HANDICAP_RATIOS: [(f32, f32); 9] = [
 #[doc(alias = "gm_SetupPlayerDefaults")]
 pub fn player_defaults() -> PlayerInitData {
     PlayerInitData {
-        ckind: CHKIND_NONE,
+        ckind: CharacterKind::NONE as i8,
         slot_type: PKIND_NONE as u8,
         spawn_pos: -1,
         handicap: 9,

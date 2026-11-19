@@ -17,6 +17,7 @@ use crate::hsd::gobj::GObjId;
 use melee_data::archive::DataRef;
 
 use super::results_scene::PKIND_NA;
+use crate::game::ft::CharacterKind;
 
 pub const GM_10MAN: u8 = 0x21;
 pub const GM_100MAN: u8 = 0x22;
@@ -33,11 +34,6 @@ pub const ON_MATCH_START: u32 = 0x8018_2174;
 pub const PROC: u32 = 0x8018_1E18;
 /// `fn_80182B5C`, the match's end's records (`fn_8016C7F0` calls it).
 pub const ON_MATCH_END: u32 = 0x8018_2B5C;
-
-/// `CKind_Falco`, `CKind_Boy` and `CKind_Girl`.
-const CKIND_FALCO: u8 = 0x14;
-const CKIND_BOY: u8 = 0x1B;
-const CKIND_GIRL: u8 = 0x1C;
 
 /// `GmVsMode_Multiman`, the six modes' entry of the game data's VS modes.
 const VS_MODE: usize = 12;
@@ -293,9 +289,9 @@ impl Running<'_> {
         );
         self.setup_vs_preload_cache();
         let gc = &mut self.dvd_mut().cache.scene.game_cache;
-        gc.entries[1].char_id = i32::from(CKIND_BOY);
+        gc.entries[1].char_id = i32::from(CharacterKind::Boy as u8);
         gc.entries[1].color = 0;
-        gc.entries[2].char_id = i32::from(CKIND_GIRL);
+        gc.entries[2].char_id = i32::from(CharacterKind::Girl as u8);
         gc.entries[2].color = 0;
         gc.stkind = i32::from(STKIND);
         self.preload_refresh();
@@ -575,9 +571,23 @@ impl Running<'_> {
         self.special_unlocks(0x20);
         // `gm_80173460`: Falco while he's locked.
         self.game.sync_unlocks();
-        if won && mode == GM_100MAN && !self.game.gm.unlocks.ckind_unlocked(CKIND_FALCO) {
+        if won
+            && mode == GM_100MAN
+            && !self
+                .game
+                .gm
+                .unlocks
+                .ckind_unlocked(CharacterKind::Falco as u8)
+        {
             let slot = self.game.multi_man.slot;
-            self.init_challenger(p.ckind as u8, p.color, slot, p.nametag, CKIND_FALCO, mode);
+            self.init_challenger(
+                p.ckind as u8,
+                p.color,
+                slot,
+                p.nametag,
+                CharacterKind::Falco as u8,
+                mode,
+            );
             self.change_game_mode_after_scene(super::machine::GM_CHALLENGER_APPROACH);
             return true;
         }
@@ -729,7 +739,7 @@ impl Running<'_> {
         mm.x4 = 0;
         mm.x8 = 0;
         let mut p = super::vs_mode::player_defaults();
-        p.ckind = CKIND_BOY as i8;
+        p.ckind = CharacterKind::Boy as i8;
         p.slot_type = 1;
         p.stocks = 1;
         p.xD_b4 = true;

@@ -44,10 +44,8 @@ pub mod special_zelda;
 use super::super::code::Val;
 use super::super::handles::FighterId;
 use super::super::state::Running;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
-
-/// `FTKIND_KIRBY`.
-pub const KIND_KIRBY: i32 = 4;
 
 /// `It_Kind_Kirby_CBeam`, `_Hammer`, `It_Kind_Unk1` and `_Unk2`: his articles in his
 /// `ftData`'s order.
@@ -689,8 +687,8 @@ impl Running<'_> {
     /// A word of Kirby's loaded attributes (`gFtDataList[Ft_Kind_Kirby]->ext_attr`), which
     /// his victims' states read.
     pub(crate) fn kb_ext_attr_word(&self, off: usize) -> u32 {
-        let d =
-            self.game.ft.data.data_list[KIND_KIRBY as usize].expect("Kirby's ftData isn't loaded");
+        let d = self.game.ft.data.data_list[FighterKind::Kirby as usize]
+            .expect("Kirby's ftData isn't loaded");
         let ext = self.data.ptr(d.at(4)).expect("ftData::ext_attr");
         self.data.u32(ext.at(off as u32))
     }

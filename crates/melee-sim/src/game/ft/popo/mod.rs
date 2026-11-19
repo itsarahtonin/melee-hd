@@ -20,10 +20,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `Ft_Kind_Popo` and `Ft_Kind_Nana`.
-pub const KIND_POPO: i32 = 10;
-pub const KIND_NANA: i32 = 11;
-
 /// The Ice Climbers' items: `It_Kind_IceClimber_Ice`, `_Blizzard` and `_GumStrings`.
 pub const IT_KIND_ICE: i32 = 106;
 pub const IT_KIND_BLIZZARD: i32 = 107;

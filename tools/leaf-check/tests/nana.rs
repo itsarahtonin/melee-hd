@@ -67,6 +67,7 @@ use leaf_check::calls::{
     Prepare, Report, Ret, Variant, check_variants, gobj_arg, peek_u32, poke_f32, poke_u32,
     saved_calls,
 };
+use melee_sim::game::ft::FighterKind;
 use melee_sim::game::gr::GrKind;
 use ssbm_rt::capture::Call;
 
@@ -103,8 +104,6 @@ const BEHAVIOR: u32 = CPU + 0x18;
 const FRAMES: u32 = CPU + 0x7C;
 const SCRIPT: u32 = CPU + 0x44C;
 const SCRIPT_WAIT: u32 = CPU + 0x450;
-/// `Ft_Kind_Nana`, the DI behavior, `ftCo_MS_CliffWait`.
-const KIND_NANA: u32 = 11;
 const DI: u32 = 18;
 const CLIFF_WAIT: u32 = 253;
 /// `Fighter::cur_pos`, `Fighter::pos_delta`.
@@ -193,7 +192,7 @@ fn enemies(call: &Call, nana: u32) -> Vec<u32> {
 /// Nana's `Fighter` in a saved frame, if it's hers and Popo is there.
 fn nana_and_popo(call: &Call) -> Option<(u32, u32)> {
     let nana = peek_u32(call, call.regs.gpr[3] + 0x2C);
-    if peek_u32(call, nana + KIND) != KIND_NANA {
+    if peek_u32(call, nana + KIND) != FighterKind::Nana as u32 {
         return None;
     }
     Some((nana, popo(call, nana)?))
@@ -484,7 +483,9 @@ fn nana_tumble_and_shields() {
 fn zero_knockback(call: &mut Call, hanging: bool) -> bool {
     let nana = peek_u32(call, call.regs.gpr[3] + 0x2C);
     let hitstun = peek_u32(call, nana + X221A) >> 24 & 0x10 != 0;
-    if peek_u32(call, nana + KIND) != KIND_NANA || peek_u32(call, nana + BEHAVIOR) != DI || !hitstun
+    if peek_u32(call, nana + KIND) != FighterKind::Nana as u32
+        || peek_u32(call, nana + BEHAVIOR) != DI
+        || !hitstun
     {
         return false;
     }

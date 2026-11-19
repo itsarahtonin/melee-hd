@@ -10,9 +10,8 @@ use super::records::any_human;
 use super::results_scene::{PKIND_HUMAN, PKIND_NA, canceled};
 use super::results_tie::{TieFrame, TieStack};
 use super::unlocks::ChallengerData;
+use crate::game::ft::CharacterKind;
 
-/// `ChKind_None`, `GM_NAMETAG_COUNT`.
-const CHKIND_NONE: u8 = 0x21;
 const NO_NAMETAG: u8 = 0x78;
 
 /// `gmVsMode_State_Css`, `gmVsMode_State_Approach`, `gmVsMode_State_Prize`.
@@ -46,10 +45,6 @@ const KO_TROPHIES: [(u32, i32); 7] = [
     (0x064, 0x56),
     (0x3E8, 0x54),
 ];
-
-/// `CKind_Mewtwo`, `CKind_Mars` (Marth).
-const CKIND_MEWTWO: u8 = 0x0A;
-const CKIND_MARS: u8 = 0x09;
 
 /// `lbTime_8000AF74`: a byte counter moved by `b`, held within 0 and 255.
 #[doc(alias = "lbTime_8000AF74")]
@@ -316,7 +311,7 @@ impl Running<'_> {
                 best = Some((n, idx));
             }
         }
-        best.map_or(CHKIND_NONE, |(_, idx)| {
+        best.map_or(CharacterKind::NONE, |(_, idx)| {
             super::super::gm::ckind_by_unlock_index(idx)
         })
     }
@@ -327,10 +322,16 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015ED98")]
     fn challenger_by_time(&self) -> u8 {
         let t = self.game.game_data.thing.save_data.unk_8.x4;
-        if !self.game.gm.unlocks.ckind_unlocked(CKIND_MEWTWO) && t >= 0x11940 {
-            return CKIND_MEWTWO;
+        if !self
+            .game
+            .gm
+            .unlocks
+            .ckind_unlocked(CharacterKind::Mewtwo as u8)
+            && t >= 0x11940
+        {
+            return CharacterKind::Mewtwo as u8;
         }
-        CHKIND_NONE
+        CharacterKind::NONE
     }
 
     /// `gm_80172E74`: Marth, once 14 of the characters that are never locked have played VS
@@ -345,10 +346,16 @@ impl Running<'_> {
                     && mask & (1 << i) != 0
             })
             .count();
-        if count >= 0xE && !self.game.gm.unlocks.ckind_unlocked(CKIND_MARS) {
-            return CKIND_MARS;
+        if count >= 0xE
+            && !self
+                .game
+                .gm
+                .unlocks
+                .ckind_unlocked(CharacterKind::Mars as u8)
+        {
+            return CharacterKind::Mars as u8;
         }
-        CHKIND_NONE
+        CharacterKind::NONE
     }
 
     /// `gm_80172F00(played)`: the stage the 1P matches played have earned (`0x148` none).
@@ -456,13 +463,13 @@ impl Running<'_> {
                 let (ck, color, tag) = (p.ckind as u8, p.x3_u[0] >> 2, p.x4);
                 let played = self.game.game_data.thing.save_data.unk_8.x0;
                 let mut cpu = self.challenger_by_matches(played);
-                if cpu == CHKIND_NONE {
+                if cpu == CharacterKind::NONE {
                     cpu = self.challenger_by_time();
                 }
-                if cpu == CHKIND_NONE {
+                if cpu == CharacterKind::NONE {
                     cpu = self.challenger_by_characters();
                 }
-                if cpu != CHKIND_NONE {
+                if cpu != CharacterKind::NONE {
                     self.init_challenger(ck, color, idx as u8, tag, cpu, 0);
                     self.set_next_game_mode_state_id(VS_STATE_APPROACH);
                     challenger = true;
@@ -476,7 +483,7 @@ impl Running<'_> {
                 self.special_unlocks(1);
                 self.trophy_unlocks();
                 if !challenger && self.notice_waits() {
-                    self.init_challenger(CHKIND_NONE, 0, idx as u8, NO_NAMETAG, cpu, 0);
+                    self.init_challenger(CharacterKind::NONE, 0, idx as u8, NO_NAMETAG, cpu, 0);
                     self.set_next_game_mode_state_id(VS_STATE_PRIZE);
                     challenger = true;
                 }

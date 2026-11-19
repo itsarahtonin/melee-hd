@@ -20,6 +20,7 @@ use gekko_fp as fp;
 
 use super::state::Running;
 use crate::fpu::reg;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 
 /// Which version of UCF a match runs.
@@ -216,7 +217,6 @@ impl Running<'_> {
     /// Popo, the code also turns Nana's CPU stick.
     #[allow(clippy::neg_cmp_op_on_partial_ord)]
     fn ucf08_dashback(&mut self, gobj: GObjId) {
-        const KIND_POPO: i32 = 0x0A;
         let t = reg(self.common().f32(0x3C));
         let fp = self.game.fighter(gobj);
         // NaN takes the code's unordered compares: on past the stick, out at the frame.
@@ -232,7 +232,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(0, 1);
         fp.set_mv_i32(0x18, 1);
-        if kind != KIND_POPO {
+        if kind != FighterKind::Popo {
             return;
         }
         if let Some(other) = self.game.player_entity_at(slot, 1) {

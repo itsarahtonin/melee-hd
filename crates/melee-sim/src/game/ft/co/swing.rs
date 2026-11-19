@@ -14,6 +14,7 @@ use super::super::super::it::lib26b1;
 use super::super::super::state::Running;
 use super::PAD_A;
 use crate::fpu::reg;
+use crate::game::ft::FighterKind;
 use crate::game::handles::CodeRef;
 use crate::hsd::gobj::GObjId;
 use crate::lb::joint::world_position;
@@ -94,9 +95,6 @@ const SWING_STATES: [[i32; 5]; 6] = [
     [140, 141, 142, -1, 143],
 ];
 
-/// `Ft_Kind_Captain`, the one fighter with a second smash swing.
-const KIND_CAPTAIN: i32 = 2;
-
 /// `ftCommonData`'s dash swing friction factor.
 const CD_X420: u32 = 0x420;
 
@@ -129,7 +127,7 @@ impl Running<'_> {
         // `get_anim_id`.
         let msid = if swing != 3 {
             SWING_STATES[ty as usize][swing as usize]
-        } else if fp.kind == KIND_CAPTAIN {
+        } else if fp.kind == FighterKind::Captain {
             ty.wrapping_add(341)
         } else {
             panic!("ftswing.c:97: don't have swing42 motion!!!");

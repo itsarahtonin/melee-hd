@@ -21,6 +21,7 @@ use gekko_fp as fp;
 use super::super::item::{article, change, change_state, destroy, pick_up, play_sfx1, spawn_air};
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725, maplib, release};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{SpawnItem, itLinkBoomerang_ItemVars};
 use crate::hsd::gobj::GObjId;
@@ -84,8 +85,6 @@ const DEG_TO_RAD: f32 = 0.017_453_292;
 /// The whoosh, Link's and Young Link's.
 const SFX_WHOOSH: i32 = 0x2715B;
 const SFX_WHOOSH_CLINK: i32 = 0x111CB;
-/// `Ft_Kind_Link`.
-const KIND_LINK: i32 = 6;
 
 /// Runs one of the boomerang's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -455,7 +454,7 @@ fn follow_trails(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802A0C34")]
 fn fly(r: &mut Running, gobj: GObjId) -> bool {
     if vars(r.game, gobj).xF8C.get() <= 0.0 {
-        let sfx = if vars(r.game, gobj).xDEC.get() == KIND_LINK {
+        let sfx = if vars(r.game, gobj).xDEC.get() == FighterKind::Link {
             SFX_WHOOSH
         } else {
             SFX_WHOOSH_CLINK

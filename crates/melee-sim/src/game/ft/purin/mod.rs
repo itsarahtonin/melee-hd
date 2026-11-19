@@ -21,9 +21,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `FTKIND_PURIN`.
-pub const KIND_PURIN: i32 = 15;
-
 /// Jigglypuff's action states (`ftPr_MS_*`).
 pub mod ms {
     pub const SPECIAL_N_START_R: i32 = 346;

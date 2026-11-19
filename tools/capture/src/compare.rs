@@ -24,6 +24,7 @@ use crate::import::{FIGHTER_ATTRS_SIZE, Maps, VS_CONTROLLER, sym, try_box_index}
 /// stops there, as at an unported function, rather than report the bytes as a difference.
 pub const UNLAID: &str = "unlaid: ";
 use crate::{DataMap, FT_ANIM_FILES, FT_KINDS, MEM1};
+use melee_sim::game::ft::FighterKind;
 
 /// The archives an earlier scan found that the latest doesn't (their scene's heap went with
 /// them, and their bytes since changed), where they were last: what the original's pointers
@@ -765,10 +766,10 @@ impl<'a> Comparer<'a> {
     /// The fighter data's globals, as [`crate::import::Importer`] imports them.
     fn fighter_data_globals(&mut self) {
         use crate::import::*;
-        use melee_sim::game::ft::data::{KIND_COUNT, kind_tables};
+        use melee_sim::game::ft::data::kind_tables;
         let game = self.game;
         let ft = &game.ft;
-        for kind in 0..KIND_COUNT as u32 {
+        for kind in 0..FighterKind::COUNT as u32 {
             let k = kind as usize;
             let d = self.u32(FT_DATA_LIST + 4 * kind);
             self.compare_data(&format!("ft data {kind}"), ft.data.data_list[k], d);

@@ -22,9 +22,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `Ft_Kind_Seak`.
-pub const KIND_SEAK: i32 = 7;
-
 /// Sheik's action states (`ftSk_MS_*`).
 pub mod ms {
     pub const SPECIAL_N_START: i32 = 341;

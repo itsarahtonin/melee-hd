@@ -9,6 +9,7 @@ use melee_data::archive::ArchiveId;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::state::{Obj, Running};
+use crate::game::ft::CharacterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::sobj::{self, GxTexObj, OBJ_SOBJ, SObjId};
 
@@ -420,19 +421,6 @@ impl Running<'_> {
     }
 }
 
-/// `ChKind_None`, and the characters a mode's clear unlocks.
-const CHKIND_NONE: u8 = 0x21;
-const CKIND_GAMEWATCH: u8 = 3;
-const CKIND_LUIGI: u8 = 7;
-const CKIND_MARS: u8 = 9;
-const CKIND_PURIN: u8 = 0xF;
-const CKIND_ZELDA: u8 = 0x12;
-const CKIND_SEAK: u8 = 0x13;
-const CKIND_CLINK: u8 = 0x15;
-const CKIND_DRMARIO: u8 = 0x16;
-const CKIND_EMBLEM: u8 = 0x17;
-const CKIND_MARIO: u8 = 8;
-
 /// The game over modes' run (`fn_8017DEC8`): 0 Adventure's, 1 Classic's, 2 All-Star's.
 fn run_data<'a>(r: &'a Running, n: u8) -> Option<&'a super::super::one_player::Unk1PData> {
     let o = &r.game.one_player;
@@ -456,33 +444,37 @@ impl Running<'_> {
         let run = *run_data(self, n).expect("a single-player run");
         let locked = |r: &Self, ck: u8| !r.game.gm.unlocks.ckind_unlocked(ck);
         if run.xc[1] == 0 {
-            if run.player.ckind as u8 == CKIND_MARS && locked(self, CKIND_EMBLEM) {
-                return CKIND_EMBLEM;
+            if run.player.ckind as u8 == CharacterKind::Mars
+                && locked(self, CharacterKind::Emblem as u8)
+            {
+                return CharacterKind::Emblem as u8;
             }
-            if run.player.ckind as u8 == CKIND_MARIO && locked(self, CKIND_DRMARIO) {
-                return CKIND_DRMARIO;
+            if run.player.ckind as u8 == CharacterKind::Mario
+                && locked(self, CharacterKind::DrMario as u8)
+            {
+                return CharacterKind::DrMario as u8;
             }
         }
         let r = &self.game.game_data.thing.save_data.unk_8;
         let count = (0..0x19)
             .filter(|&i| (r.x10 | r.x14 | r.x18) & (1 << i) != 0)
             .count();
-        if count >= 10 && locked(self, CKIND_CLINK) {
-            return CKIND_CLINK;
+        if count >= 10 && locked(self, CharacterKind::Clink as u8) {
+            return CharacterKind::Clink as u8;
         }
-        if self.all_cleared_one_mode() && locked(self, CKIND_GAMEWATCH) {
-            return CKIND_GAMEWATCH;
+        if self.all_cleared_one_mode() && locked(self, CharacterKind::GameWatch as u8) {
+            return CharacterKind::GameWatch as u8;
         }
         if n == 0 {
             let a = &self.game.one_player.adventure;
-            if locked(self, CKIND_LUIGI) && a.x74[0] != 0 && a.x74[1] != 0 {
-                return CKIND_LUIGI;
+            if locked(self, CharacterKind::Luigi as u8) && a.x74[0] != 0 && a.x74[1] != 0 {
+                return CharacterKind::Luigi as u8;
             }
         }
-        if locked(self, CKIND_PURIN) {
-            return CKIND_PURIN;
+        if locked(self, CharacterKind::Purin as u8) {
+            return CharacterKind::Purin as u8;
         }
-        CHKIND_NONE
+        CharacterKind::NONE
     }
 
     /// `gm_80173224`: the character a clear of run `n` unlocks (with `clear`), else Marth's
@@ -492,9 +484,9 @@ impl Running<'_> {
         let ckind = if clear {
             self.clear_challenger(n)
         } else {
-            CHKIND_NONE
+            CharacterKind::NONE
         };
-        if ckind == CHKIND_NONE {
+        if ckind == CharacterKind::NONE {
             self.challenger_by_characters()
         } else {
             ckind
@@ -514,11 +506,11 @@ impl Running<'_> {
             r.give_record_trophy(t);
         };
         give(self, ckind);
-        if ckind == CKIND_ZELDA {
-            give(self, CKIND_SEAK);
+        if ckind == CharacterKind::Zelda {
+            give(self, CharacterKind::Seak as u8);
         }
-        if ckind == CKIND_SEAK {
-            give(self, CKIND_ZELDA);
+        if ckind == CharacterKind::Seak {
+            give(self, CharacterKind::Zelda as u8);
         }
     }
 
@@ -583,13 +575,13 @@ impl Running<'_> {
         let next = self.game.endings.gover_exit[0];
         let g = self.game.endings.gover;
         let ckind = self.clear_unlock(g.slot(), true);
-        if g.ckind() == CKIND_GAMEWATCH && !self.stage_unlocked(0x1B) {
+        if g.ckind() == CharacterKind::GameWatch && !self.stage_unlocked(0x1B) {
             self.unlock_stage(0x1B);
         }
         self.clear_trophies(g.slot(), true);
         self.trophy_unlocks();
         self.special_unlocks(0x40);
-        if ckind == CHKIND_NONE {
+        if ckind == CharacterKind::NONE {
             if !self.challenger_check(1, g.color()) {
                 self.set_pending_game_mode(next);
             }

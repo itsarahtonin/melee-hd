@@ -12,6 +12,7 @@ use super::super::motion::flags::*;
 use super::super::peach;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 
 /// `It_Kind_Parasol`.
@@ -148,7 +149,7 @@ impl Running<'_> {
     /// (`ftCo_ItemParasolGetFallMotionId`).
     fn parasol_motion(&self, gobj: GObjId, pe: i32, co: i32) -> i32 {
         let fp = self.game.fighter(gobj);
-        if fp.kind == peach::KIND_PEACH && fp.u.gobj_at(peach::u::PARASOL_0).is_some() {
+        if fp.kind == FighterKind::Peach && fp.u.gobj_at(peach::u::PARASOL_0).is_some() {
             pe
         } else {
             co

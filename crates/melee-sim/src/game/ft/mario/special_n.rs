@@ -11,9 +11,10 @@ use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::{drmariopill, mariofireball};
 use super::super::super::state::Running;
-use super::super::kirby::{KIND_KIRBY, KindFrom};
+use super::super::kirby::KindFrom;
 use super::init::IT_KIND_MARIO_FIRE;
-use super::{KIND_MARIO, addr, ms, part, u};
+use super::{addr, ms, part, u};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 
 /// What tells one Fireball from another: whose kind picks the fireball or the pill, the
@@ -85,7 +86,7 @@ impl Running<'_> {
     /// The state of `pair` (ground, air) for the kind the user runs the move as: Mario's, or
     /// Dr. Mario's for any other.
     fn mr_special_n_state(&self, gobj: GObjId, f: &Fireball, air: bool) -> i32 {
-        let (ground, aerial) = if self.special_kind(gobj, f.kind) != KIND_MARIO {
+        let (ground, aerial) = if self.special_kind(gobj, f.kind) != FighterKind::Mario {
             f.doctor
         } else {
             f.mario
@@ -214,14 +215,14 @@ impl Running<'_> {
     pub fn mr_special_n_item_fire_spawn(&mut self, gobj: GObjId, f: &Fireball) {
         let kind = self.special_kind(gobj, f.kind);
         let fp = self.game.fighter_mut(gobj);
-        if kind == KIND_KIRBY || !fp.throw_flag(0) {
+        if kind == FighterKind::Kirby || !fp.throw_flag(0) {
             return;
         }
         fp.set_throw_flag(0, false);
         let hand = self.part_joint(gobj, f.hand);
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, hand, None);
         let facing = self.game.fighter(gobj).facing_dir;
-        if kind == KIND_MARIO {
+        if kind == FighterKind::Mario {
             mariofireball::spawn(self, gobj, pos, f.fire_kind, facing);
             let hand = self.part_joint(gobj, f.hand);
             let facing = self.game.fighter(gobj).facing_dir;

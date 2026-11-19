@@ -5,12 +5,10 @@
 use super::super::handles::CodeRef;
 use super::super::state::Running;
 use super::one_player::{CLASSIC_STAGES, Opponent, Unk1PData, matchup};
+use crate::game::ft::CharacterKind;
 
 /// `ChKind_None`, `CKind_Zelda`, `CKind_Seak`, `CKind_Kirby`.
 const NONE: i8 = 0x21;
-const CKIND_ZELDA: i8 = 0x12;
-const CKIND_SEAK: u8 = 0x13;
-const CKIND_KIRBY: i8 = 4;
 
 /// An entry of `lbl_803D85F0` (`AllstarStageEntry`, 0x1A bytes): the item frequency, the
 /// opponents' attack and defense ratios in percent, three opponents' level, costume and
@@ -832,8 +830,8 @@ impl Running<'_> {
         }
         sd[d::ENEMIES] = enemies;
         let ckind = run.player.ckind;
-        sd[d::ALLY_KINDS] = if ckind == CKIND_ZELDA && run.xc[6] != 0 {
-            CKIND_SEAK
+        sd[d::ALLY_KINDS] = if ckind == CharacterKind::Zelda && run.xc[6] != 0 {
+            CharacterKind::Seak as u8
         } else {
             ckind as u8
         };
@@ -899,7 +897,7 @@ impl Running<'_> {
         for c in chars {
             if c != NONE {
                 mask |= character_banks(i32::from(c));
-                if c == CKIND_KIRBY {
+                if c == CharacterKind::Kirby {
                     mask |= (2 << 32) | 0x4000;
                 }
             }

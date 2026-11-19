@@ -17,8 +17,9 @@ use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::motion::flags::*;
 use super::super::sound::Track;
 use super::init::COLANIM_CHARGED;
-use super::{KIND_MEWTWO, PART_L_HAND_NB, PART_R_SHOULDER_N, PART_TOP_N, addr, attr, ms, mv, u};
+use super::{PART_L_HAND_NB, PART_R_SHOULDER_N, PART_TOP_N, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::handles::CodeRef;
 use crate::hsd::gobj::GObjId;
 use crate::math;
@@ -720,7 +721,9 @@ impl Running<'_> {
     #[doc(alias = "ftMt_SpecialN_Shoot")]
     pub fn mt_n_shoot(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].kind != KIND_MEWTWO || self.game.fighters[f.0].cmd_vars[3] != 1 {
+        if self.game.fighters[f.0].kind != FighterKind::Mewtwo
+            || self.game.fighters[f.0].cmd_vars[3] != 1
+        {
             return;
         }
         self.game.fighters[f.0].cmd_vars[3] = 0;

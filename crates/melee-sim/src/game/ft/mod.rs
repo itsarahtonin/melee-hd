@@ -170,14 +170,14 @@ pub const KIRBY_COSTUME_KINDS: [usize; 5] = [3, 15, 16, 22, 24];
 /// own costume's colors, six models and material animations (`ftKb_Init_803C9FC8`).
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct KirbyCostumes {
-    pub copies: [Option<DataRef>; data::KIND_COUNT],
+    pub copies: [Option<DataRef>; FighterKind::COUNT],
     pub models: [[(Option<DataRef>, Option<DataRef>); 6]; 5],
 }
 
 impl Default for KirbyCostumes {
     fn default() -> Self {
         KirbyCostumes {
-            copies: [None; data::KIND_COUNT],
+            copies: [None; FighterKind::COUNT],
             models: [[(None, None); 6]; 5],
         }
     }
@@ -187,7 +187,7 @@ impl KirbyCostumes {
     /// `ftKb_Init_800EE528`.
     #[doc(alias = "ftKb_Init_800EE528")]
     pub fn reset(&mut self) {
-        self.copies = [None; data::KIND_COUNT];
+        self.copies = [None; FighterKind::COUNT];
         self.models.fill([(None, None); 6]);
     }
 }

@@ -172,6 +172,7 @@ const ITEM_LINK_CLASS: u16 = 7;
 /// The first index a dangling camera box gets (see [`Maps::dangling_boxes`]).
 pub const DANGLING_BOX: u32 = 0x1000_0000;
 
+use melee_sim::game::ft::FighterKind;
 /// The first handle an unknown word gets (see [`Maps::unknown`]).
 pub use melee_sim::hsd::pool::UNKNOWN;
 
@@ -179,10 +180,6 @@ pub use melee_sim::hsd::pool::UNKNOWN;
 const HEAP: u32 = 0x804E_EC00;
 /// `MAX_FT_PARTS`: the entries a fighter's parts table has room for.
 const MAX_PARTS: u32 = 140;
-/// The fighters whose items put a model past their bones (`FighterKind`).
-const KIND_LINK: u32 = 6;
-const KIND_SAMUS: u32 = 13;
-const KIND_YOUNG_LINK: u32 = 20;
 
 pub struct Importer<'a> {
     pub cap: &'a Capture,
@@ -660,7 +657,7 @@ impl<'a> Importer<'a> {
     /// lights and materials, and Kirby's and Jigglypuff's tables; the files loaded, by name,
     /// as what the frontend would have handed over.
     fn fighter_data_globals(&mut self) {
-        use melee_sim::game::ft::data::{KIND_COUNT, kind_tables};
+        use melee_sim::game::ft::data::kind_tables;
         let ft = &mut self.game.ft;
         ft.data.files.archives = self
             .data
@@ -669,7 +666,7 @@ impl<'a> Importer<'a> {
             .filter(|l| l.file != 0)
             .map(|l| (l.name.clone(), l.id))
             .collect();
-        for kind in 0..KIND_COUNT as u32 {
+        for kind in 0..FighterKind::COUNT as u32 {
             let d = self.u32(FT_DATA_LIST + 4 * kind);
             self.game.ft.data.data_list[kind as usize] = self.data(d);
             let list = self.u32(COSTUME_LISTS + 8 * kind);
@@ -1107,7 +1104,10 @@ impl Importer<'_> {
         // first beam or hookshot the last entry holds the block's bytes too (after the menus,
         // an earlier scene's), which the spawn keeps but for the model.
         let last = a + (MAX_PARTS - 1) * FighterBone::SIZE;
-        if matches!(self.parts_kind, KIND_LINK | KIND_SAMUS | KIND_YOUNG_LINK) {
+        if matches!(
+            FighterKind::from_id(self.parts_kind as i32),
+            Some(FighterKind::Link | FighterKind::Samus | FighterKind::Clink)
+        ) {
             bones.resize(MAX_PARTS as usize - 1, FighterBone::default());
             let stale = !self.is_jobj(self.u32(last));
             self.freed = stale;

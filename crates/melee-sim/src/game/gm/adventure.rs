@@ -3,13 +3,11 @@
 
 use super::super::handles::CodeRef;
 use super::super::state::Running;
+use crate::game::ft::CharacterKind;
+use crate::game::ft::FighterKind;
 
 /// `ChKind_None`, `CKind_Kirby`, `CKind_Mario`, `CKind_Luigi`.
 const NONE: u8 = 0x21;
-const CKIND_KIRBY: u8 = 4;
-const CKIND_MARIO: u8 = 8;
-const CKIND_LUIGI: u8 = 7;
-const CKIND_FALCO: u8 = 0x14;
 
 /// An entry of `gm_803DE650` (`gm_803DE650_t`, 0x10 bytes): its state's id, the stage's
 /// flags, its time, `x4` (a stage start's flag), the stage kind, `x8` and `x9`, and up to
@@ -110,9 +108,7 @@ pub fn kirby_hat_characters(game: &super::super::state::Game) -> Vec<u8> {
 
 /// How many of a character's fighters Kirby's hats load: Zelda's and Sheik's two.
 pub fn hat_fighters(ckind: u8) -> i32 {
-    const CKIND_ZELDA: u8 = 0x12;
-    const CKIND_SEAK: u8 = 0x13;
-    if ckind == CKIND_ZELDA || ckind == CKIND_SEAK {
+    if ckind == CharacterKind::Zelda || ckind == CharacterKind::Seak {
         2
     } else {
         1
@@ -162,7 +158,7 @@ impl Running<'_> {
         for c in entry.chars {
             if c != NONE {
                 mask |= character_banks(i32::from(c));
-                if c == CKIND_KIRBY {
+                if c == CharacterKind::Kirby {
                     mask |= (2 << 32) | 0x4000;
                 }
             }
@@ -959,9 +955,6 @@ const FT_NANA: i8 = 0xB;
 const FT_BOY: i8 = 0x1D;
 const FT_GIRL: i8 = 0x1E;
 const FT_NONE: i8 = 0x21;
-/// `CKind_Pichu`, `CKind_Purin`.
-const CKIND_PICHU: u8 = 0x18;
-const CKIND_PURIN: u8 = 0xF;
 
 /// The match's states before `id` (`gm_8017E48C`; the table's ids rise).
 #[doc(alias = "gm_8017E48C")]
@@ -979,10 +972,10 @@ pub fn match_start_kinds(game: &super::super::state::Game, stkind: u16) -> [i8; 
         0x44 => k[0] = FT_KIRBY,
         0x48 => {
             k[0] = FT_PIKACHU;
-            if game.gm.unlocks.ckind_unlocked(CKIND_PICHU) {
+            if game.gm.unlocks.ckind_unlocked(CharacterKind::Pichu as u8) {
                 k[1] = FT_PICHU;
             }
-            if game.gm.unlocks.ckind_unlocked(CKIND_PURIN) {
+            if game.gm.unlocks.ckind_unlocked(CharacterKind::Purin as u8) {
                 k[2] = FT_PURIN;
             }
         }
@@ -1099,7 +1092,11 @@ impl Running<'_> {
         super::one_player::enemy_color_table(
             p.ckind,
             p.color,
-            &[CKIND_MARIO as i8, CKIND_LUIGI as i8, NONE as i8],
+            &[
+                CharacterKind::Mario as i8,
+                CharacterKind::Luigi as i8,
+                NONE as i8,
+            ],
             &mut colors,
         );
         let d = &mut self.game.one_player.adventure_cutscene;
@@ -1112,12 +1109,10 @@ impl Running<'_> {
     /// data.
     #[doc(alias = "gm_801B4430")]
     pub fn adventure_enter_cutscene(&mut self) {
-        const CKIND_ZELDA: u8 = 0x12;
-        const CKIND_SEAK: u8 = 0x13;
         let run = &self.game.one_player.adventure.base;
         let ckind = run.player.ckind as u8;
-        let kind = if ckind == CKIND_ZELDA && run.xc[6] != 0 {
-            CKIND_SEAK
+        let kind = if ckind == CharacterKind::Zelda && run.xc[6] != 0 {
+            CharacterKind::Seak as u8
         } else {
             ckind
         };
@@ -1252,9 +1247,17 @@ impl Running<'_> {
     pub fn adventure_enter_star_fox(&mut self) {
         let id = self.game.machine.routing.curr_state_id;
         let first = stage_entry(id).expect("an Adventure state's stage").chars[0];
-        let falco =
-            self.game.gm.unlocks.ckind_unlocked(CKIND_FALCO) && self.game.objs.rng.below(100) <= 33;
-        self.game.one_player.adventure.x7c = if falco { CKIND_FALCO } else { first };
+        let falco = self
+            .game
+            .gm
+            .unlocks
+            .ckind_unlocked(CharacterKind::Falco as u8)
+            && self.game.objs.rng.below(100) <= 33;
+        self.game.one_player.adventure.x7c = if falco {
+            CharacterKind::Falco as u8
+        } else {
+            first
+        };
     }
 
     /// Fox's and Falco's match, `gm_801B4DAC`: the stage's match (`gm_801B4064`), with Falco
@@ -1262,17 +1265,17 @@ impl Running<'_> {
     #[doc(alias = "gm_801B4DAC")]
     pub fn adventure_enter_fox_falco(&mut self) {
         self.adventure_enter_vs();
-        if self.game.one_player.adventure.x7c == CKIND_FALCO {
+        if self.game.one_player.adventure.x7c == CharacterKind::Falco {
             let p = self.game.one_player.adventure.base.player;
             let mut colors = [self.game.one_player.match_start.players[1].color, 0, 0];
             super::one_player::enemy_color_table(
                 p.ckind,
                 p.color,
-                &[CKIND_FALCO as i8, NONE as i8, NONE as i8],
+                &[CharacterKind::Falco as i8, NONE as i8, NONE as i8],
                 &mut colors,
             );
             let s = &mut self.game.one_player.match_start.players[1];
-            s.ckind = CKIND_FALCO as _;
+            s.ckind = CharacterKind::Falco as _;
             s.color = colors[0];
         }
     }
@@ -1292,9 +1295,14 @@ impl Running<'_> {
     #[doc(alias = "gm_801B4EB8")]
     pub fn adventure_enter_metal(&mut self) {
         self.adventure_enter_vs();
-        if !self.game.gm.unlocks.ckind_unlocked(CKIND_LUIGI) {
+        if !self
+            .game
+            .gm
+            .unlocks
+            .ckind_unlocked(CharacterKind::Luigi as u8)
+        {
             for p in &mut self.game.one_player.match_start.players[1..4] {
-                if p.ckind == CKIND_LUIGI as i8 {
+                if p.ckind == CharacterKind::Luigi as i8 {
                     p.slot_type = crate::game::pl::player::PKIND_NONE as u8;
                 }
             }
@@ -1390,7 +1398,7 @@ impl Running<'_> {
         if self.previous_scene_index() == LUIGI_CUTSCENE {
             let color = self.game.one_player.adventure_cutscene[3];
             let p = &mut self.game.one_player.match_start.players[1];
-            p.ckind = CKIND_LUIGI as _;
+            p.ckind = CharacterKind::Luigi as _;
             p.color = color;
             self.game.one_player.adventure.x74[0] = 1;
         }
@@ -1438,7 +1446,7 @@ impl Running<'_> {
         let stkind = self.game.vs.start.stkind;
         if stkind == 0x44 {
             let p = self.game.one_player.adventure.base.player;
-            let costume = u8::from(p.ckind as u8 == CKIND_KIRBY && p.color == 0);
+            let costume = u8::from(p.ckind as u8 == CharacterKind::Kirby && p.color == 0);
             self.load_kirby_hats(costume);
         }
         for k in match_start_kinds(self.game, stkind) {
@@ -1468,7 +1476,7 @@ impl Running<'_> {
             }
         }
         self.put_anim_file(kind);
-        if kind == super::super::ft::kirby::KIND_KIRBY {
+        if kind == FighterKind::Kirby {
             self.kirby_data_setup();
         }
     }

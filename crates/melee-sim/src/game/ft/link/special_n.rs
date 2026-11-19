@@ -13,8 +13,9 @@ use gekko_fp as fp;
 use super::super::super::it::kinds::{linkarrow, linkbow};
 use super::super::super::state::Running;
 use super::super::kirby::copy::KindFrom;
-use super::{KIND_CLINK, KIND_LINK, addr, attr, ms, u};
+use super::{addr, attr, ms, u};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::handles::CodeRef;
 use crate::hsd::gobj::GObjId;
 use crate::math;
@@ -23,7 +24,7 @@ use crate::vec::Vec3;
 /// What tells one bow from the other.
 pub struct Bow {
     /// Where the archer's kind comes from (the fighter's, or Kirby's copy's): Young Link's
-    /// (`KIND_CLINK`) takes the second of each pair below, any other the first.
+    /// (`FighterKind::Clink`) takes the second of each pair below, any other the first.
     pub(crate) kind: KindFrom,
     /// Added to Link's states (`ms::SPECIAL_N_START` on): 0 for Link and Young Link alike;
     /// Kirby's Link copy's `LK_SPECIAL_N_START` on, his Young Link copy's
@@ -99,7 +100,7 @@ const SPREAD: f32 = 5.0 * 0.017_453_292;
 impl Running<'_> {
     /// Which of the pairs the archer takes: 1 for Young Link's, 0 for any other.
     fn link_n_which(&self, gobj: GObjId, p: &Bow) -> usize {
-        usize::from(self.special_kind(gobj, p.kind) == KIND_CLINK)
+        usize::from(self.special_kind(gobj, p.kind) == FighterKind::Clink)
     }
 
     /// The bow's state `s` (Link's numbers) for the archer.
@@ -109,9 +110,9 @@ impl Running<'_> {
 
     /// The archer's first bow state, for Link's or Young Link's kind only.
     fn link_n_first(&self, gobj: GObjId, p: &Bow) -> Option<i32> {
-        match self.special_kind(gobj, p.kind) {
-            KIND_LINK => Some(ms::SPECIAL_N_START + p.states[0]),
-            KIND_CLINK => Some(ms::SPECIAL_N_START + p.states[1]),
+        match FighterKind::from_id(self.special_kind(gobj, p.kind)) {
+            Some(FighterKind::Link) => Some(ms::SPECIAL_N_START + p.states[0]),
+            Some(FighterKind::Clink) => Some(ms::SPECIAL_N_START + p.states[1]),
             _ => None,
         }
     }

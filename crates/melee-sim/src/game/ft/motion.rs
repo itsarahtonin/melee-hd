@@ -15,14 +15,9 @@ use super::anim::x594_bit;
 use super::common::GA_GROUND;
 use super::{MotionState, motion_table};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, USE_QUATERNION};
-
-/// `FighterKind`s the state change treats apart.
-const KIND_PEACH: i32 = 9;
-pub(super) const KIND_NANA: i32 = 11;
-const KIND_POPO: i32 = 10;
-const KIND_LUIGI: i32 = 17;
 
 /// The state change's flags (`MotionFlags`), each keeping one effect of the last state.
 pub mod flags {
@@ -93,12 +88,12 @@ impl Running<'_> {
             .x24
             .expect("a fighter without animations")
             .at(ANIM_ENTRY_SIZE * anim as u32);
-        if fp.kind == KIND_NANA
+        if fp.kind == FighterKind::Nana
             && self.game.player_pkind(i32::from(fp.player_idx)) != PKIND_DEMO
             && self.anim_aram(fp, own) == 0
         {
-            let popo =
-                self.game.ft.data.data_list[KIND_POPO as usize].expect("Popo's data isn't loaded");
+            let popo = self.game.ft.data.data_list[FighterKind::Popo as usize]
+                .expect("Popo's data isn't loaded");
             return self
                 .data
                 .ptr(popo.at(0xC))
@@ -111,9 +106,9 @@ impl Running<'_> {
     /// The kind whose animation table `entry` is in: the fighter's, or Popo's for an entry
     /// Nana took from his ([`Running::anim_entry`]).
     pub(super) fn anim_entry_kind(&self, kind: i32, entry: DataRef) -> i32 {
-        let popo = self.game.ft.data.data_list[KIND_POPO as usize].map(|d| d.archive);
-        if kind == KIND_NANA && popo == Some(entry.archive) {
-            KIND_POPO
+        let popo = self.game.ft.data.data_list[FighterKind::Popo as usize].map(|d| d.archive);
+        if kind == FighterKind::Nana && popo == Some(entry.archive) {
+            FighterKind::Popo.id()
         } else {
             kind
         }
@@ -143,7 +138,7 @@ impl Running<'_> {
     pub(super) fn anim_share_source(&self, f: FighterId) -> Option<FighterId> {
         let fp = &self.game.fighters[f.0];
         let slot = i32::from(fp.player_idx);
-        if fp.kind == KIND_NANA && self.game.player_pkind(slot) != PKIND_DEMO {
+        if fp.kind == FighterKind::Nana && self.game.player_pkind(slot) != PKIND_DEMO {
             return self
                 .game
                 .player_entity_at(slot, 0)
@@ -494,7 +489,7 @@ impl Running<'_> {
             self.game.fighters[f.0].x2074.x2088 = before;
         }
         let fp = &self.game.fighters[f.0];
-        if fp.kind == KIND_LUIGI && val[3] == 113 {
+        if fp.kind == FighterKind::Luigi && val[3] == 113 {
             val = 0x0024_0063u32.to_be_bytes();
         }
         // Throwing an adventure enemy counts as its own move.
@@ -776,7 +771,7 @@ impl Running<'_> {
         }
         if self.game.fighters[f.0].ground_or_air == GA_GROUND {
             let fp = &mut self.game.fighters[f.0];
-            if fp.kind == KIND_PEACH {
+            if fp.kind == FighterKind::Peach {
                 fp.u[..4].copy_from_slice(&1u32.to_be_bytes());
             }
             fp.x2221_b5 = false;

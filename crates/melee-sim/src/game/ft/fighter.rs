@@ -10,6 +10,7 @@ use super::super::state::Running;
 use super::anim::x594_bit;
 use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::math::{self, sqrt_reg};
@@ -322,10 +323,10 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         }
     }
     // `ftData_UnkMotionStates3`: Kirby's, Bowser's (his flame's refill) and Giga Bowser's.
-    match fp.kind {
-        super::koopa::KIND_KOOPA => g.kp_unk_motion_states3(gobj),
-        super::kirby::KIND_KIRBY => g.kb_unk_motion_states3(gobj),
-        super::koopa::KIND_GKOOPA => g.gk_unk_motion_states3(gobj),
+    match fp.fighter_kind() {
+        FighterKind::Koopa => g.kp_unk_motion_states3(gobj),
+        FighterKind::Kirby => g.kb_unk_motion_states3(gobj),
+        FighterKind::GKoopa => g.gk_unk_motion_states3(gobj),
         _ => {}
     }
     let fp = &mut g.game.fighters[f.0];

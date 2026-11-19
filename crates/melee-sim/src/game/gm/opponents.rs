@@ -5,8 +5,9 @@
 
 use super::super::code::{self, Val};
 use super::super::handles::CodeRef;
-use super::super::pl::player::{CKIND_KIRBY, PKIND_CPU, PKIND_NONE};
+use super::super::pl::player::{PKIND_CPU, PKIND_NONE};
 use super::super::state::{Game, Running};
+use crate::game::ft::CharacterKind;
 
 /// The lists' length (`x20`, `xA2` and `x124`, 0x82 bytes each).
 pub const LIST_LEN: usize = 0x82;
@@ -711,7 +712,7 @@ impl Running<'_> {
         self.game.set_player_defense_ratio(slot, o.defense_ratio);
         self.game
             .set_player_more_flags_bit5(slot, u8::from(o.total > 1));
-        if self.game.player_ckind(slot) == CKIND_KIRBY && o.copy_mode != 0 {
+        if self.game.player_ckind(slot) == CharacterKind::Kirby && o.copy_mode != 0 {
             self.game.set_player_unk4d(slot, at(&o.copies, i));
             self.game.set_player_flags_ae_bit1(slot, 1);
         }

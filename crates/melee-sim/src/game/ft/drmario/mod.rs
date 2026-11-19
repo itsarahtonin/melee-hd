@@ -10,8 +10,6 @@ use super::mario::{attr, ms, u};
 use crate::game::ft::vars::{MARIO_CAPE, MARIO_X2240};
 use crate::hsd::gobj::GObjId;
 
-pub use super::mario::KIND_DRMARIO;
-
 /// `It_Kind_DrMario_Vitamin`.
 const IT_KIND_DRMARIO_VITAMIN: i32 = 49;
 

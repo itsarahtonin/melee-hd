@@ -49,6 +49,7 @@
 
 use super::state::{Game, Running, UserData};
 use super::structs::{PlayerInitData, StartMeleeData, StartMeleeRules};
+use crate::game::ft::CharacterKind;
 use crate::hsd::gobj::GObjId;
 
 /// The version the recording writes, `CURRENT_VERSION` (major, minor, build, unused).
@@ -97,9 +98,6 @@ const CALLBACKS: core::ops::Range<usize> = 0x40..0x5C;
 const PKIND_HUMAN: u8 = 0;
 /// No nametag.
 const NO_NAMETAG: u8 = 0x78;
-/// `CharacterKind`s of Zelda and Sheik.
-const CKIND_ZELDA: i8 = 0x12;
-const CKIND_SHEIK: i8 = 0x13;
 /// The A button in a pad status.
 const PAD_A: u32 = 0x100;
 /// The link the codes' GObjs are made on, and their processes' priorities.
@@ -220,8 +218,8 @@ pub fn live_start(g: &Game, d: &StartMeleeData) -> (super::vs_match::ReplayStart
         }
         // As the recording codes write it ([`Recorder::game_start`]): Zelda held A as the
         // match starts is Sheik, a costume past the character's count the first.
-        if info[p] as i8 == CKIND_ZELDA && g.pads.copy[port].button & PAD_A != 0 {
-            info[p] = CKIND_SHEIK as u8;
+        if info[p] as i8 == CharacterKind::Zelda && g.pads.copy[port].button & PAD_A != 0 {
+            info[p] = CharacterKind::Seak as u8;
         }
         if info[p + 3] > super::playback::costume_count(info[p]) {
             info[p + 3] = 0;
@@ -420,8 +418,8 @@ impl Recorder {
                 continue;
             }
             // Zelda holding A as the match starts is Sheik.
-            if info[p] as i8 == CKIND_ZELDA && g.pads.copy[port].button & PAD_A != 0 {
-                info[p] = CKIND_SHEIK as u8;
+            if info[p] as i8 == CharacterKind::Zelda && g.pads.copy[port].button & PAD_A != 0 {
+                info[p] = CharacterKind::Seak as u8;
             }
             // A costume past the character's count is the first (`ble`: the count itself
             // stays).

@@ -18,6 +18,7 @@ use super::registry;
 use super::{GrKind, StKind};
 use super::{StartHook, dynamic_attr, material};
 use crate::fpu::{copy, mem, reg};
+use crate::game::ft::CharacterKind;
 use crate::hsd::cobj::CObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -1688,10 +1689,6 @@ pub fn item_frequencies(game: &mut Game, data: &Archives, stkind: i32) {
     );
 }
 
-/// `CKind_Mars` and `CKind_CLink`, whose unlocking lets two stages play their alternate songs.
-const CKIND_MARS: u8 = 0x09;
-const CKIND_CLINK: u8 = 0x15;
-
 /// `BGM_Undefined`.
 const BGM_UNDEFINED: i32 = -1;
 
@@ -1754,11 +1751,11 @@ pub fn music(game: &mut Game, data: &Archives, stkind: i32, mut flags: u32) -> (
                 8 => Some(false),
                 2 => Some(roll(game, true)),
                 3 => {
-                    let unlocked = game.gm.unlocks.ckind_unlocked(CKIND_MARS);
+                    let unlocked = game.gm.unlocks.ckind_unlocked(CharacterKind::Mars as u8);
                     Some(roll(game, unlocked))
                 }
                 4 => {
-                    let unlocked = game.gm.unlocks.ckind_unlocked(CKIND_CLINK);
+                    let unlocked = game.gm.unlocks.ckind_unlocked(CharacterKind::Clink as u8);
                     Some(roll(game, unlocked))
                 }
                 5 => {

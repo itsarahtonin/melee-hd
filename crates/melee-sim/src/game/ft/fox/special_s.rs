@@ -7,8 +7,9 @@ use super::super::super::code::Val;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::motion::flags::SKIP_RUMBLE;
-use super::{GA_AIR, KIND_FOX, PAD_B, addr, attr, facing_dir_int, ms, mv};
+use super::{GA_AIR, PAD_B, addr, attr, facing_dir_int, ms, mv};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -223,7 +224,7 @@ impl Running<'_> {
         }
         self.game.fighters[f.0].cmd_vars[2] = 0;
         let fp = &self.game.fighters[f.0];
-        let kind = if fp.kind == KIND_FOX {
+        let kind = if fp.kind == FighterKind::Fox {
             IT_KIND_FOX_ILLUSION
         } else {
             IT_KIND_FALCO_PHANTASM

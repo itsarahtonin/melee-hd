@@ -2,10 +2,8 @@
 //! executable, the English table spelling them in full-width letters.
 
 use super::super::state::Game;
-
-/// `CKind_Zelda` and `CKind_Seak`.
-const CKIND_ZELDA: u8 = 0x12;
-const CKIND_SEAK: u8 = 0x13;
+use crate::game::ft::CharacterKind;
+use crate::game::ft::FighterKind;
 
 impl Game {
     /// The name of the character a slot plays, as the saved language shows it, or none for
@@ -16,11 +14,11 @@ impl Game {
             return None;
         }
         let mut ckind = self.player_ckind(slot) as u8;
-        if ckind == CKIND_ZELDA || ckind == CKIND_SEAK {
-            ckind = if self.player_fighter_kind(slot) == super::super::ft::seak::KIND_SEAK {
-                CKIND_SEAK
+        if ckind == CharacterKind::Zelda || ckind == CharacterKind::Seak {
+            ckind = if self.player_fighter_kind(slot) == FighterKind::Seak {
+                CharacterKind::Seak as u8
             } else {
-                CKIND_ZELDA
+                CharacterKind::Zelda as u8
             };
         }
         let table = if self.gm.unlocks.is_us() {

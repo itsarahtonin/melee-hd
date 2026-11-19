@@ -12,8 +12,9 @@ use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::co::guard::set_shield_hit;
 use super::super::motion::flags::*;
-use super::{GA_GROUND, KIND_EMBLEM, KIND_MARS, PART_R_SHOULDER_N, addr, attr, ms, mv};
+use super::{GA_GROUND, PART_R_SHOULDER_N, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::lb::hitcapsule;
 use crate::vec::Vec3;
@@ -177,7 +178,7 @@ impl Running<'_> {
     fn mars_special_lw_hit(&mut self, gobj: GObjId, air: bool) {
         let f = self.game.fighter_id(gobj);
         let n = self.game.fighters[f.0].mv_i32(mv::LW_X0);
-        if n > 0 && self.game.ft_kind(gobj) == KIND_EMBLEM {
+        if n > 0 && self.game.ft_kind(gobj) == FighterKind::Emblem {
             for i in 0..4 {
                 if self.game.fighters[f.0].x914[i].state == hitcapsule::ENABLED {
                     let n = self.game.fighters[f.0].mv_i32(mv::LW_X0);
@@ -257,9 +258,9 @@ impl Running<'_> {
         };
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         if !self.game.fighters[f.0].x2219_b0 {
-            let id = match self.game.ft_kind(gobj) {
-                KIND_MARS => Some(1265),
-                KIND_EMBLEM => Some(1296),
+            let id = match FighterKind::from_id(self.game.ft_kind(gobj)) {
+                Some(FighterKind::Mars) => Some(1265),
+                Some(FighterKind::Emblem) => Some(1296),
                 _ => None,
             };
             if let Some(id) = id {

@@ -11,27 +11,10 @@ use super::ids::ms;
 use super::kind_callbacks::KindCallbacks;
 use super::{PAD_A, PAD_B, PAD_DPAD_UP, PAD_L_R, PAD_LR};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
 use crate::hsd::gobj::GObjId;
 use crate::math;
-
-/// `Ft_Kind_*` the checks single out.
-pub(super) const KIND_FOX: i32 = 1;
-pub(super) const KIND_LINK: i32 = 6;
-pub(super) const KIND_NESS: i32 = 8;
-pub(super) const KIND_PEACH: i32 = 9;
-pub(super) const KIND_SAMUS: i32 = 13;
-pub(super) const KIND_YOSHI: i32 = 14;
-pub(super) const KIND_MEWTWO: i32 = 16;
-pub(super) const KIND_CLINK: i32 = 20;
-pub(super) const KIND_PIKACHU: i32 = 12;
-pub(super) const KIND_PICHU: i32 = 23;
-pub(super) const KIND_GAME_WATCH: i32 = 24;
-pub(super) const KIND_KIRBY: i32 = 4;
-const KIND_ZELDA: i32 = 19;
-/// `Ft_Kind_DrMario` and `Ft_Kind_Ganon`.
-const KIND_DRMARIO: i32 = 21;
-const KIND_GANON: i32 = 25;
 
 /// The absolute value as the original's `ABS` computes it on a register.
 pub(super) fn abs(v: f64) -> f64 {
@@ -238,11 +221,13 @@ impl Running<'_> {
     fn grab_input(&mut self, gobj: GObjId, msid: i32) -> bool {
         let fp = self.game.fighter(gobj);
         // `fn_800D8E94`: Link's hookshot out.
-        if (fp.kind == KIND_LINK || fp.kind == KIND_CLINK) && fp.u.gobj_at(0xC).is_some() {
+        if (fp.kind == FighterKind::Link || fp.kind == FighterKind::Clink)
+            && fp.u.gobj_at(0xC).is_some()
+        {
             return false;
         }
         // `fn_800D952C`: Samus's grapple out.
-        if fp.kind == KIND_SAMUS && fp.u.gobj_at(0x10).is_some() {
+        if fp.kind == FighterKind::Samus && fp.u.gobj_at(0x10).is_some() {
             return false;
         }
         if fp.input.held_buttons[0] & PAD_LR != 0 && fp.input.pressed_buttons & PAD_A != 0 {
@@ -269,10 +254,10 @@ impl Running<'_> {
     /// through to the default's.
     #[doc(alias = "ftCo_800DEA28")]
     fn enter_appeal(&mut self, gobj: GObjId) {
-        match self.game.fighter(gobj).kind {
-            KIND_CLINK => self.clink_appeal_enter(gobj),
-            KIND_DRMARIO => self.dr_appeal_enter(gobj),
-            KIND_GANON => {
+        match self.game.fighter(gobj).fighter_kind() {
+            FighterKind::Clink => self.clink_appeal_enter(gobj),
+            FighterKind::DrMario => self.dr_appeal_enter(gobj),
+            FighterKind::Ganon => {
                 let j = self.bone_joint(gobj, 0);
                 let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
                 crate::lb::wind::blast(
@@ -325,13 +310,13 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800DEBD0")]
     pub fn enter_appeal_s(&mut self, gobj: GObjId) {
         if self.game.gm.db_level >= crate::game::gm::DB_DEBUG_ROM {
-            match self.game.fighter(gobj).kind {
-                KIND_PEACH => self.peach_appeal_swap(gobj),
-                KIND_ZELDA => self.zelda_appeal_swap(gobj),
+            match self.game.fighter(gobj).fighter_kind() {
+                FighterKind::Peach => self.peach_appeal_swap(gobj),
+                FighterKind::Zelda => self.zelda_appeal_swap(gobj),
                 _ => {}
             }
         }
-        if self.game.fighter(gobj).kind == KIND_KIRBY {
+        if self.game.fighter(gobj).kind == FighterKind::Kirby {
             self.kb_lose_copy(gobj, true);
         }
         self.enter_facing_state(gobj, ms::APPEAL_SR, ms::APPEAL_SL);

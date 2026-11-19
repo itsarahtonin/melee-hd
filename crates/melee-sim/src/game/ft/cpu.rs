@@ -8,6 +8,7 @@ use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::Running;
 use super::super::structs::Vec2;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
 use crate::vec::Vec3;
 
@@ -60,7 +61,7 @@ impl Running<'_> {
     pub fn init_cpu(&mut self, f: FighterId, kind: i32, level: i32, x14: i32) {
         let fp = &mut self.game.fighters[f.0];
         let c = &mut fp.cpu;
-        if fp.kind == KIND_NANA {
+        if fp.kind == FighterKind::Nana {
             c.xF9_b2 = true;
             c.kind = 6;
             c.x3C = 15.0;
@@ -160,7 +161,7 @@ impl Running<'_> {
         c.x444 = SelfRef(Some(5 * INPUT_SIZE));
         c.x448 = SelfRef(Some(0));
         // Nana's recorded inputs start where Popo stands, facing his way.
-        let (pos, facing) = if fp.kind == KIND_NANA {
+        let (pos, facing) = if fp.kind == FighterKind::Nana {
             let popo = self
                 .cpu_partner(f)
                 .expect("Nana's computer state without Popo (ftCo_800A589C)");
@@ -280,5 +281,3 @@ impl Running<'_> {
         }
     }
 }
-
-const KIND_NANA: i32 = 11;

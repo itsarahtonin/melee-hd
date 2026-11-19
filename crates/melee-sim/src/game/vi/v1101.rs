@@ -6,6 +6,7 @@ use melee_data::archive::DataRef;
 
 use super::super::state::Running;
 use super::Loaded;
+use crate::game::ft::CharacterKind;
 use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -18,10 +19,6 @@ const FRAMES: u32 = 0x28 + 0x48;
 pub const JOBJ_PROC: u32 = 0x8031_F548;
 pub const CAMERA_RENDER: u32 = 0x8031_F56C;
 pub const CAMERA_PROC: u32 = 0x8031_F600;
-
-/// `CKind_Mario`, `CKind_Luigi`.
-const CKIND_MARIO: i32 = 8;
-const CKIND_LUIGI: i32 = 7;
 
 /// `un_80400200.spawns`: where every player starts (the first), and the start points Mario
 /// and Luigi walk from (the second and third).
@@ -52,7 +49,10 @@ pub struct Vi1101 {
 impl Running<'_> {
     /// Whether Luigi is unlocked, which brings him into the scene.
     fn vi1101_luigi(&self) -> bool {
-        self.game.gm.unlocks.ckind_unlocked(CKIND_LUIGI as u8)
+        self.game
+            .gm
+            .unlocks
+            .ckind_unlocked(CharacterKind::Luigi as u8)
     }
 
     /// The cutscene's stage and players, `un_8031F294`: Battlefield set up for a demo, the
@@ -68,9 +68,9 @@ impl Running<'_> {
         self.vi_player(0, ckind, costume, v.waits, 3, 1.0, Some(SPAWNS[0]));
         self.player_create_demo(0, 8);
         super::super::gr::grlib::measure_start_points(self.game, self.data);
-        let mut walkers = vec![(1, CKIND_MARIO)];
+        let mut walkers = vec![(1, CharacterKind::Mario.id())];
         if self.vi1101_luigi() {
-            walkers.push((2, CKIND_LUIGI));
+            walkers.push((2, CharacterKind::Luigi.id()));
         }
         for (slot, ck) in walkers {
             self.vi_player(slot, ck, 0, v.archive, 5, 0.0, Some(SPAWNS[0]));

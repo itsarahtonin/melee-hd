@@ -22,9 +22,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `FTKIND_PEACH`.
-pub const KIND_PEACH: i32 = 9;
-
 /// `ftCo_MS_None`.
 pub(crate) const MS_NONE: i32 = -1;
 

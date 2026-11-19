@@ -21,10 +21,6 @@ use super::super::code::Val;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `Ft_Kind_Mario` and `Ft_Kind_DrMario`.
-pub const KIND_MARIO: i32 = 0;
-pub const KIND_DRMARIO: i32 = 21;
-
 /// Mario's action states (`ftMr_MS_*`).
 pub mod ms {
     pub const APPEAL_SR: i32 = 341;

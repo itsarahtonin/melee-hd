@@ -19,6 +19,7 @@ use std::collections::HashMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use melee_data::disc::Disc;
+use melee_sim::game::ft::FighterKind;
 use melee_sim::game::gr::vars::GroundVars;
 use melee_sim::game::state::{Game, Obj, Rules};
 use melee_sim::game::structs::S32Vec2;
@@ -380,7 +381,6 @@ fn slippi_opponents_side_ignores_the_display_pass() {
 /// 3.16's (r30 cleared, r5 followed) it runs too; under Vanilla's it stops by name.
 #[test]
 fn slippi_cpu_di_reads_neither_register() {
-    use melee_sim::game::ft::popo::KIND_NANA;
     use melee_sim::game::slippi::CodeSet;
     let Some(disc) = disc() else { return };
     let mut bench = Bench::open(disc, "ics-peach-ps");
@@ -420,7 +420,7 @@ fn slippi_cpu_di_reads_neither_register() {
                 m.game
                     .fighters
                     .iter()
-                    .find(|(_, f)| f.kind == KIND_NANA)
+                    .find(|(_, f)| f.kind == FighterKind::Nana)
                     .map(|(_, f)| (f.cpu.lstick.x, f.cpu.lstick.y))
                     .expect("Nana")
             })

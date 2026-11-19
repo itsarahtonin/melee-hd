@@ -13,14 +13,9 @@ use super::super::code::run_fighter_cb;
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::lb::joint::world_position;
-
-/// The characters with sword attributes: Link, Marth, Young Link and Roy.
-const KIND_LINK: i32 = 6;
-const KIND_MARS: i32 = 18;
-const KIND_CLINK: i32 = 20;
-const KIND_EMBLEM: i32 = 26;
 
 /// `ftCo_MS_Squat` and the state after it (crouching), which shortens hitlag.
 const MS_SQUAT: u32 = 39;
@@ -92,9 +87,9 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         if g.game.fighters[f.0].no_kb {
             // A hand takes no reaction: its kind's hook (Master Hand's is empty), then
             // `ftCo_8008E9D0`; the original asserts on any other kind.
-            match g.game.fighters[f.0].kind {
-                super::masterhand::KIND_MASTER_HAND => g.mh_nop(gobj),
-                super::masterhand::KIND_CRAZY_HAND => g.ch_hit_nop(gobj),
+            match g.game.fighters[f.0].fighter_kind() {
+                FighterKind::MasterHand => g.mh_nop(gobj),
+                FighterKind::CrazyHand => g.ch_hit_nop(gobj),
                 _ => panic!("the original's assertion failed: ellegal flag fp->no_reaction_always"),
             }
             g.damage_no_reaction(gobj);
@@ -166,9 +161,9 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         }
     } else if reg(fp.AbsorbAttr.x1A40_absorbHitDirection) != 0.0 {
         // `ftData_OnAbsorb`: Ness's and Mr. Game & Watch's.
-        match fp.kind {
-            super::ness::KIND_NESS => g.ness_on_absorb(gobj),
-            super::gamewatch::KIND_GAME_WATCH => g.gw_on_absorb(gobj),
+        match fp.fighter_kind() {
+            FighterKind::Ness => g.ness_on_absorb(gobj),
+            FighterKind::GameWatch => g.gw_on_absorb(gobj),
             _ => {}
         }
     } else if fp.unk_gobj.is_some()
@@ -374,10 +369,10 @@ impl Running<'_> {
         } else {
             // The sword's attributes in the character's (Link's and Young Link's at x64,
             // Marth's and Roy's at x78); any other character's are whatever the stack held.
-            let base = match fp.kind {
-                KIND_LINK | KIND_CLINK => 0x64,
-                KIND_MARS | KIND_EMBLEM => 0x78,
-                k => panic!("ftCo_800C2FD8: character {k} has no sword attributes to read"),
+            let base = match fp.fighter_kind() {
+                FighterKind::Link | FighterKind::Clink => 0x64,
+                FighterKind::Mars | FighterKind::Emblem => 0x78,
+                k => panic!("ftCo_800C2FD8: character {k:?} has no sword attributes to read"),
             };
             let attrs =
                 &self.game.fighter_attrs[fp.dat_attrs.expect("a fighter without attributes").0];

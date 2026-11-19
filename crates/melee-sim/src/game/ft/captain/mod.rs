@@ -17,11 +17,8 @@ pub mod special_s;
 use super::super::code::Val;
 use super::super::handles::FighterId;
 use super::super::state::Running;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
-
-/// `Ft_Kind_Captain` and `Ft_Kind_Ganon`.
-pub const KIND_CAPTAIN: i32 = 2;
-pub const KIND_GANON: i32 = 25;
 
 /// Captain Falcon's action states (`ftCa_MS_*`).
 pub mod ms {
@@ -240,9 +237,9 @@ impl Running<'_> {
     /// The effect a move spawns for Captain Falcon or Ganondorf: `ca` or `gn`, by the
     /// fighter's kind (`ftLib_GetKind`), or none for another kind.
     pub(crate) fn ca_effect_id(&self, gobj: GObjId, ca: i32, gn: i32) -> Option<i32> {
-        match self.game.fighter(gobj).kind {
-            KIND_CAPTAIN => Some(ca),
-            KIND_GANON => Some(gn),
+        match self.game.fighter(gobj).fighter_kind() {
+            FighterKind::Captain => Some(ca),
+            FighterKind::Ganon => Some(gn),
             _ => None,
         }
     }

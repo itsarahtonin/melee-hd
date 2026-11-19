@@ -21,9 +21,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `FTKIND_SAMUS`.
-pub const KIND_SAMUS: i32 = 13;
-
 /// Samus's action states (`ftSs_MS_*`).
 pub mod ms {
     /// The jump her own bomb's blast gives her (named for the down special's slot).

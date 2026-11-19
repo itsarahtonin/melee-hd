@@ -15,6 +15,7 @@ use super::heap::{self, LbHeaps};
 use super::memory::{COPY_PERIOD, CompactStep, LbMemory};
 use crate::audio::Audio;
 use crate::audio::devcom::cb;
+use crate::game::ft::CharacterKind;
 use crate::game::gr::{GrKind, StKind};
 
 /// `PreloadEntry`: a file the cache holds or wants. `state`: 0 free, 1 wanted, 2 reading,
@@ -90,8 +91,6 @@ pub struct SceneCache {
     pub mode_scene_changes: i32,
 }
 
-/// `ChKind_None`.
-const CHKIND_NONE: i32 = 0x21;
 /// `preload_cache_scene`: nothing kept, no game cache (stage 0x148, every character none).
 pub const SCENE_DEFAULT: SceneCache = SceneCache {
     is_heap_persistent: [false; 2],
@@ -102,7 +101,7 @@ pub const SCENE_DEFAULT: SceneCache = SceneCache {
         x3: 0,
         stkind: StKind::Unk328.id() as i32,
         entries: [CacheFighter {
-            char_id: CHKIND_NONE,
+            char_id: CharacterKind::NONE as i32,
             color: 0,
             x5: 1,
         }; 8],

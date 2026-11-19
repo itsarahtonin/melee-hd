@@ -15,8 +15,9 @@ use gekko_fp as fp;
 use super::super::super::ef::{Arg, spawn};
 use super::super::super::state::Running;
 use super::super::kirby::KindFrom;
-use super::{KIND_CAPTAIN, KIND_GANON, addr, attr, ms, part};
+use super::{addr, attr, ms, part};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 
 /// What tells one punch from another: whose kind picks Captain Falcon's or Ganondorf's, the
@@ -57,7 +58,7 @@ impl Running<'_> {
     /// The state of the punch for the kind the user runs it as: Captain Falcon's, or
     /// Ganondorf's for any other.
     fn ca_special_n_state(&self, gobj: GObjId, p: &FalconPunch, air: bool) -> i32 {
-        let (ground, aerial) = if self.special_kind(gobj, p.kind) != KIND_CAPTAIN {
+        let (ground, aerial) = if self.special_kind(gobj, p.kind) != FighterKind::Captain {
             p.ganon
         } else {
             p.captain
@@ -99,7 +100,7 @@ impl Running<'_> {
         }
         let fp = self.game.fighter(gobj);
         let frame = fp::fctiwz(reg(fp.cur_anim_frame));
-        if fp.kind != KIND_GANON || frame & 1 == 0 {
+        if fp.kind != FighterKind::Ganon || frame & 1 == 0 {
             return;
         }
         let pos = fp.cur_pos;
@@ -199,14 +200,14 @@ impl Running<'_> {
             return;
         }
         let kind = self.special_kind(gobj, p.kind);
-        let bone = if kind == KIND_GANON {
+        let bone = if kind == FighterKind::Ganon {
             p.fist.1
         } else {
             p.fist.0
         };
-        let id = match kind {
-            KIND_CAPTAIN => Some(p.flame.0),
-            KIND_GANON => Some(p.flame.1),
+        let id = match FighterKind::from_id(kind) {
+            Some(FighterKind::Captain) => Some(p.flame.0),
+            Some(FighterKind::Ganon) => Some(p.flame.1),
             _ => None,
         };
         if let Some(id) = id {

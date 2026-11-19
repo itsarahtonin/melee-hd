@@ -10,7 +10,8 @@
 
 use super::super::super::state::Running;
 use super::super::crazyhand::ms as ch_ms;
-use super::{KIND_CRAZY_HAND, addr, ms};
+use super::{addr, ms};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
@@ -30,7 +31,7 @@ impl Running<'_> {
             }
             _ => ch_ms::THROW,
         };
-        let ch = self.boss_gobj(KIND_CRAZY_HAND);
+        let ch = self.boss_gobj(FighterKind::CrazyHand.id());
         if !self.boss_ch_beaten() {
             let ch = ch.expect("ftCh_Init_8015A2B0 and its kin read a null Crazy Hand");
             self.ch_tag_enter(ch, ch_msid);

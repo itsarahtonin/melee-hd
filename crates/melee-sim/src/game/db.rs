@@ -14,6 +14,7 @@ use super::camera;
 use super::hud::devtext::DevText;
 use super::state::{Game, Running};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::cobj;
 use crate::hsd::gobj::GObjId;
 use crate::input::pad::{
@@ -31,10 +32,6 @@ const DEVELOP: i32 = 4;
 const P_LINK_FIGHTER: u8 = 8;
 const P_LINK_ITEM: u8 = 9;
 const P_LINK_GROUND: u8 = 5;
-
-/// `Ft_Kind_MasterH`, `Ft_Kind_CrezyH`.
-const KIND_MASTER_HAND: i32 = 0x1B;
-const KIND_CRAZY_HAND: i32 = 0x1C;
 
 /// `It_Kind_M_Ball`, `It_Kind_L_Gun_Ray` (`It_Common_End`), `It_Kind_Kuriboh`,
 /// `It_Kind_Octarock_Stone`, `It_Kind_Unk4` (a coin), `It_Kind_Old_Kuri`,
@@ -344,8 +341,8 @@ impl Running<'_> {
         if self.game.gm.db_level < DEBUG_ROM {
             return;
         }
-        let ports = if self.game.hand_present(KIND_MASTER_HAND)
-            || self.game.hand_present(KIND_CRAZY_HAND)
+        let ports = if self.game.hand_present(FighterKind::MasterHand.id())
+            || self.game.hand_present(FighterKind::CrazyHand.id())
         {
             2
         } else {

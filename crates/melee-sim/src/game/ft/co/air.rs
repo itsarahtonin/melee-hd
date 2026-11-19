@@ -6,20 +6,12 @@ use gekko_fp as fp;
 use super::super::super::code::{self, Val};
 use super::super::super::state::Running;
 use super::super::coll::PLATFORM_FILTER;
-use super::checks::{KIND_CLINK, KIND_GAME_WATCH, KIND_KIRBY, KIND_LINK, KIND_MEWTWO, abs};
+use super::checks::abs;
 use super::ids::ms;
 use super::{PAD_A, PAD_LR};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
-
-/// `Ft_Kind_*` whose landings reset their own variables.
-const KIND_MARIO: i32 = 0;
-const KIND_DR_MARIO: i32 = 21;
-const KIND_PEACH: i32 = 9;
-const KIND_MARS: i32 = 18;
-const KIND_EMBLEM: i32 = 26;
-const KIND_POPO: i32 = 10;
-const KIND_NANA: i32 = 11;
 
 /// `ftCommon_MotionVars_landing`.
 const LANDING_ALLOW_INTERRUPT: usize = 0x0;
@@ -111,9 +103,9 @@ impl Running<'_> {
             return true;
         }
         // `decideFighter`.
-        match self.game.fighter(gobj).kind {
-            KIND_LINK | KIND_CLINK => self.link_attack_air_enter(gobj),
-            KIND_GAME_WATCH => self.gw_attack_air_decide(gobj),
+        match self.game.fighter(gobj).fighter_kind() {
+            FighterKind::Link | FighterKind::Clink => self.link_attack_air_enter(gobj),
+            FighterKind::GameWatch => self.gw_attack_air_decide(gobj),
             _ => self.enter_attack_air_from_stick(gobj),
         }
         true
@@ -334,26 +326,26 @@ impl Running<'_> {
         self.change_motion_state(gobj, msid, flags, anim_start, rate, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(LANDING_ALLOW_INTERRUPT, allow_interrupt);
-        match fp.kind {
-            KIND_MARIO | KIND_DR_MARIO => {
+        match fp.fighter_kind() {
+            FighterKind::Mario | FighterKind::DrMario => {
                 fp.set_u_i32(0x8, 0);
                 fp.set_u_i32(0xC, 0);
             }
-            KIND_PEACH => {
+            FighterKind::Peach => {
                 fp.set_u_i32(0x14, 0);
                 if allow_interrupt == 1 {
                     self.peach_parasol_put_away(gobj);
                 }
             }
-            KIND_MARS | KIND_EMBLEM => fp.set_u_i32(0x0, 0),
-            KIND_GAME_WATCH => fp.set_u_i32(0x8, 0),
-            KIND_POPO | KIND_NANA => fp.set_u_i32(0x20, 0),
-            KIND_KIRBY => {
+            FighterKind::Mars | FighterKind::Emblem => fp.set_u_i32(0x0, 0),
+            FighterKind::GameWatch => fp.set_u_i32(0x8, 0),
+            FighterKind::Popo | FighterKind::Nana => fp.set_u_i32(0x20, 0),
+            FighterKind::Kirby => {
                 fp.set_u_i32(0xCC, 0);
                 fp.set_u_i32(0xC4, 0);
                 fp.set_u_i32(0x64, 0);
             }
-            KIND_MEWTWO => fp.set_u_i32(0x10, 0),
+            FighterKind::Mewtwo => fp.set_u_i32(0x10, 0),
             _ => {}
         }
     }

@@ -14,6 +14,7 @@ use super::super::super::state::Running;
 use super::super::FighterId;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::{aobj, jobj};
 
@@ -491,7 +492,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800D2890")]
     pub fn set_kinoko_fall(&mut self, gobj: GObjId, prev: i32) {
         let fp = self.game.fighter_mut(gobj);
-        let fall = if fp.kind == super::super::peach::KIND_PEACH && prev == 0x172 {
+        let fall = if fp.kind == FighterKind::Peach && prev == 0x172 {
             addr::FALL_SPECIAL_ENTER
         } else {
             match prev {

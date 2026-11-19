@@ -12,6 +12,7 @@ use super::data::StageCallbacks;
 use super::ground::{ground_of, jobj_of, map_gobj, nth_joint};
 use super::vars::MapVars;
 use super::{anime, setup, zako};
+use crate::game::ft::CharacterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, HIDDEN};
 
@@ -59,8 +60,6 @@ const FRAME_CHARACTERS: [i32; 26] = [
 /// `grHeal_804D49D8`: the hearts' joints.
 const HEART_JOINTS: [i32; 3] = [7, 8, 9];
 
-/// `ChKind_None` in `x76`, and the hearts' item kind.
-const CHKIND_NONE: i32 = 33;
 const HEART_KIND: i32 = 8;
 
 /// A stage object's process or callback, by address: the rest area's.
@@ -244,7 +243,7 @@ pub fn init_stand(r: &mut Running, gobj: GObjId) {
     }
     let met = MET_JOINTS.map(|d| nth_joint(r.game, gobj, d));
     for (k, &ckind) in a.x76.iter().enumerate() {
-        if i32::from(ckind) != CHKIND_NONE {
+        if i32::from(ckind) != i32::from(CharacterKind::NONE) {
             place_trophy(r, 2, trophy_frame(i32::from(ckind)), met[k], false);
         }
     }

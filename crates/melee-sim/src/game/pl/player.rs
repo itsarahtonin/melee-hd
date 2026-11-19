@@ -10,6 +10,7 @@ use super::super::code::{self, Val};
 use super::super::ft::create::AllocInfo;
 use super::super::state::{Game, Running};
 use super::super::structs::{_StaticPlayer, StaleMoveTable, pl_x5EC_t, plActionStats};
+use crate::game::ft::CharacterKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -18,12 +19,6 @@ pub const PKIND_HUMAN: i32 = 0;
 pub const PKIND_CPU: i32 = 1;
 pub const PKIND_DEMO: i32 = 2;
 pub const PKIND_NONE: i32 = 3;
-
-/// `CKind_Mario`, the character a reset slot holds.
-pub const CKIND_MARIO: i32 = 8;
-
-/// `CKind_Kirby`.
-pub const CKIND_KIRBY: i32 = 4;
 
 /// A character's fighters (`ftMapping`): its fighter kind, its second fighter's (the Ice
 /// Climbers' Nana, Zelda's Sheik and Sheik's Zelda), and whether the second is a
@@ -843,7 +838,7 @@ impl Game {
     pub fn reset_player(&mut self, slot: i32) {
         let p = self.player_mut(slot);
         p.player_state = 0;
-        p.ckind = CKIND_MARIO;
+        p.ckind = CharacterKind::Mario.id();
         let (t0, t1) = (p.entity_index(0), p.entity_index(1));
         for i in [t0, t1, 2, 3] {
             p.set_pose(i, Vec3::new(0.0, 0.0, 0.0));

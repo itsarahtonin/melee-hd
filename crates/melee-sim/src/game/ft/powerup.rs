@@ -5,6 +5,7 @@ use super::super::it::{self, kinds};
 use super::super::state::Running;
 use super::FighterId;
 use super::attack::victim;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::lb::hitcapsule;
 
@@ -360,7 +361,7 @@ impl Running<'_> {
     #[doc(alias = "ftPk_Init_UnkMotionStates1")]
     pub(super) fn worn_item_on(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if (fp.x197C.is_none() || fp.x1980.is_none()) && fp.kind == super::pikachu::KIND_PIKACHU {
+        if (fp.x197C.is_none() || fp.x1980.is_none()) && fp.kind == FighterKind::Pikachu {
             let f = self.game.fighter_id(gobj);
             self.game.set_part_vis(gobj, 1, -1);
             self.set_model_variant(f, 1, 0);
@@ -374,7 +375,7 @@ impl Running<'_> {
     #[doc(alias = "ftPk_Init_UnkMotionStates2")]
     pub fn worn_item_off(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if (fp.x197C.is_none() || fp.x1980.is_none()) && fp.kind == super::pikachu::KIND_PIKACHU {
+        if (fp.x197C.is_none() || fp.x1980.is_none()) && fp.kind == FighterKind::Pikachu {
             let f = self.game.fighter_id(gobj);
             self.game.set_part_vis(gobj, 1, 0);
             self.set_model_variant(f, 1, 0);

@@ -15,6 +15,7 @@ use super::super::gamewatch::part;
 use super::super::gamewatch::special_n::{Chef, KEEP_FLAGS};
 use super::super::motion::flags::SKIP_MODEL;
 use super::{addr as kb, ms};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 
 /// The copy's function addresses.
@@ -54,8 +55,6 @@ pub const KIRBY: Chef = Chef {
 
 /// `u` offset of the pan (`xDC`).
 const PAN: usize = 0xDC;
-/// The copy's kind, whose data holds its colors (`hat_dynamics[4]`, `x1C`).
-const KIND_GAME_WATCH: usize = 24;
 
 impl Running<'_> {
     /// A color of his copy of Mr. Game & Watch, the word `off` bytes into the copy's last
@@ -64,7 +63,8 @@ impl Running<'_> {
     #[doc(alias = "ftKb_Init_800EEB00")]
     #[doc(alias = "ftKb_Init_800EEB1C")]
     pub fn kb_gw_color(&self, off: u32) -> _GXColor {
-        let copy = self.game.ft.kirby.copies[KIND_GAME_WATCH].expect("a copy without its data");
+        let copy = self.game.ft.kirby.copies[FighterKind::GameWatch.index()]
+            .expect("a copy without its data");
         let colors = self
             .data
             .ptr(copy.at(0x1C))

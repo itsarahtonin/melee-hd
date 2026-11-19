@@ -18,9 +18,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `Ft_Kind_Zelda`.
-pub const KIND_ZELDA: i32 = 19;
-
 /// Zelda's action states (`ftZd_MS_*`).
 pub mod ms {
     pub const SPECIAL_N: i32 = 341;

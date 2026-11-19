@@ -12,7 +12,7 @@ use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::samusgrapple;
 use super::super::super::state::Running;
 use super::super::common::{GA_AIR, GA_GROUND};
-use super::{KIND_SAMUS, PART_THROW_N, attr, ms, u};
+use super::{PART_THROW_N, attr, ms, u};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -47,6 +47,7 @@ use super::super::co::ids::ms::{
     CLIFF_JUMP_QUICK1 as CO_CLIFF_JUMP_QUICK1, CLIFF_JUMP_QUICK2 as CO_CLIFF_JUMP_QUICK2,
     CLIFF_JUMP_SLOW2 as CO_CLIFF_JUMP_SLOW2,
 };
+use crate::game::ft::FighterKind;
 /// The grapple beam's hooks on the fighter.
 const HOOKS: [u32; 3] = [
     samusgrapple::FT_FRAME,
@@ -131,7 +132,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800D9930")]
     pub fn samus_catch_tether(&mut self, gobj: GObjId, dash: bool) -> bool {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].kind != KIND_SAMUS {
+        if self.game.fighters[f.0].kind != FighterKind::Samus {
             return false;
         }
         let (spawn_at, attach, retract, end, sparks) = if dash {
@@ -197,7 +198,7 @@ impl Running<'_> {
     /// ground before the beam comes out passes none, which `it_802B7B84` ignores.
     #[doc(alias = "fn_800D9C64")]
     pub fn samus_catch_off_ground(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).kind == KIND_SAMUS
+        if self.game.fighter(gobj).kind == FighterKind::Samus
             && let Some(beam) = self.game.fighter(gobj).u.gobj_at(u::GRAPPLE)
         {
             samusgrapple::put_away(self, beam);
@@ -227,8 +228,8 @@ impl Running<'_> {
         }
         fp.set_mv_f32(MV_FRAME, 0.0);
         fp.x74_self_accel = Vec3::new(0.0, 0.0, 0.0);
-        match fp.kind {
-            KIND_SAMUS => {
+        match fp.fighter_kind() {
+            FighterKind::Samus => {
                 self.change_motion_state(gobj, ms::AIR_CATCH, 0, 0.0, 1.0, 0.0, None);
             }
             _ => {
@@ -243,8 +244,8 @@ impl Running<'_> {
     /// within the air's, 20 frames, and airborne from the ground.
     #[doc(alias = "ftCo_800C3CC0")]
     pub fn enter_air_catch_hit(&mut self, gobj: GObjId) {
-        match self.game.fighter(gobj).kind {
-            KIND_SAMUS => {
+        match self.game.fighter(gobj).fighter_kind() {
+            FighterKind::Samus => {
                 self.change_motion_state(
                     gobj,
                     ms::AIR_CATCH_HIT,
@@ -346,7 +347,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_AirCatch_Anim")]
     pub fn co_air_catch_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].kind != KIND_SAMUS {
+        if self.game.fighters[f.0].kind != FighterKind::Samus {
             if self.link_air_catch_tether(gobj) {
                 return;
             }

@@ -23,10 +23,6 @@ use super::super::handles::{CodeRef, FighterId};
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `Ft_Kind_Fox` and `Ft_Kind_Falco`.
-pub const KIND_FOX: i32 = 1;
-pub const KIND_FALCO: i32 = 22;
-
 /// Where `ftFox_FighterVars::x222C_blasterGObj` is in `Fighter::u`.
 pub const BLASTER: usize = super::vars::FOX_BLASTER;
 

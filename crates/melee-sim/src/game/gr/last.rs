@@ -16,6 +16,7 @@ use super::data::{LAST_CALLBACKS, StageCallbacks};
 use super::ground::{self, ParamColor, ground_of, jobj_of, map_gobj, nth_joint, set_param_color};
 use super::{grlib, material, setup};
 use crate::fpu::{copy, mem, reg};
+use crate::game::ft::CharacterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
@@ -228,10 +229,6 @@ pub fn proc_main(r: &mut Running, gobj: GObjId) {
     ground::quake_list_tick(r.game);
 }
 
-/// `CKind_MasterH` and `CKind_CrezyH`.
-const CKIND_MASTER_HAND: i32 = 26;
-const CKIND_CRAZY_HAND: i32 = 30;
-
 /// The hands' health, `gm_8016ECE8`: each hand's HP left over its stamina, averaged (0 with
 /// no hand).
 #[doc(alias = "gm_8016ECE8")]
@@ -240,7 +237,7 @@ pub fn boss_health(game: &crate::game::state::Game) -> f64 {
     let mut count = 0;
     for i in 0..6 {
         let kind = game.player_ckind(i);
-        if kind == CKIND_MASTER_HAND || kind == CKIND_CRAZY_HAND {
+        if kind == CharacterKind::MasterHand || kind == CharacterKind::CrazyHand {
             let stamina = fp::frsp(f64::from(game.player_stamina(i)));
             let left = fp::frsp(f64::from(game.player_remaining_hp(i)));
             sum = fp::fadds(sum, fp::fdivs(left, stamina));

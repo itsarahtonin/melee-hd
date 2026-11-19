@@ -10,14 +10,10 @@ use melee_sim::vec::Vec3;
 use super::draw::Ctx;
 use super::state::STATE_ALL;
 use crate::gx::enums::*;
+use melee_sim::game::ft::FighterKind;
 
 /// The angle between the strip's in-between positions, at most (`AFTERIMAGE_ANGLE_STEP`).
 const ANGLE_STEP: f32 = 0.087_266_46;
-
-const KIND_LINK: i32 = 6;
-const KIND_CLINK: i32 = 20;
-const KIND_MARS: i32 = 18;
-const KIND_EMBLEM: i32 = 26;
 
 /// A float as a register holds it after `lfs`.
 fn reg(x: f32) -> f64 {
@@ -113,10 +109,10 @@ impl Ctx<'_> {
                 .collect::<Vec<u8>>();
             &held
         } else {
-            let base = match fp.kind {
-                KIND_LINK | KIND_CLINK => 0x64,
-                KIND_MARS | KIND_EMBLEM => 0x78,
-                k => panic!("ftCo_800C2600: character {k} has no sword attributes"),
+            let base = match fp.fighter_kind() {
+                FighterKind::Link | FighterKind::Clink => 0x64,
+                FighterKind::Mars | FighterKind::Emblem => 0x78,
+                k => panic!("ftCo_800C2600: character {k:?} has no sword attributes"),
             };
             let attrs = &game.fighter_attrs[fp.dat_attrs.expect("a fighter without attributes").0];
             &attrs[base..base + 0x14]

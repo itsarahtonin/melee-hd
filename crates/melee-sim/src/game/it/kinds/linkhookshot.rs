@@ -24,6 +24,7 @@ use super::super::link::{self, link as lk, link_mut};
 use super::super::{item, item_mut, jobj_of};
 use crate::fpu::{mem, reg};
 use crate::game::code::unported_call;
+use crate::game::ft::FighterKind;
 use crate::game::handles::{CodeRef, ItemLinkId};
 use crate::game::state::{Obj, Running, UserData};
 use crate::game::structs::SpawnItem;
@@ -155,8 +156,6 @@ const LK_PULL_LAG: usize = 0xB4;
 /// The links' landing clinks, Young Link's and Link's.
 const SFX_CLINK_CLINK: i32 = 0x111BF;
 const SFX_CLINK: i32 = 0x2714F;
-/// `Ft_Kind_CLink`.
-const KIND_CLINK: i32 = 20;
 
 /// The hookshot's attributes (`itLinkHookshotAttributes`), the derived values read from the
 /// state where its spawn wrote them.
@@ -787,7 +786,7 @@ fn link_coll(r: &mut Running, l: ItemLinkId, width: f32, clink: Option<i32>) -> 
         && !was_on_floor
         && !lk(r.game, l).x2C_b2
     {
-        let sfx = if kind == KIND_CLINK {
+        let sfx = if kind == FighterKind::Clink {
             SFX_CLINK_CLINK
         } else {
             SFX_CLINK

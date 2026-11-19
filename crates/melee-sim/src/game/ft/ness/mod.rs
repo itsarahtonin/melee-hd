@@ -25,9 +25,6 @@ use crate::hsd::gobj::GObjId;
 
 pub(crate) use super::common::GA_AIR;
 
-/// `FTKIND_NESS`.
-pub const KIND_NESS: i32 = 8;
-
 /// The items Ness registers at his creation, by their slot in his data's item list.
 pub(crate) const ITEMS: [(u32, i32); 11] = [
     (0, super::super::it::kinds::NESS_PK_FIRE),

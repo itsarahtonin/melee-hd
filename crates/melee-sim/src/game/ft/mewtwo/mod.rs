@@ -20,9 +20,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `FTKIND_MEWTWO`.
-pub const KIND_MEWTWO: i32 = 16;
-
 /// `It_Kind_Mewtwo_Disable` and `_ShadowBall`, his articles in his `ftData`'s order.
 pub const ITEMS: [i32; 2] = [110, 112];
 

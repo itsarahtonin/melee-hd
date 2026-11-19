@@ -18,8 +18,9 @@ use super::super::super::state::Running;
 use super::super::common::GA_GROUND;
 use super::super::kirby::copy::KindFrom;
 use super::super::motion::flags::SKIP_RUMBLE;
-use super::{KIND_GKOOPA, KIND_KOOPA, addr, attr, ms, mv, u};
+use super::{addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -137,7 +138,7 @@ impl Running<'_> {
 
     /// The breath's state `s` (Bowser's numbers) for the breather.
     fn kp_n_state(&self, gobj: GObjId, p: &FireBreath, s: i32) -> i32 {
-        let giga = if self.special_kind(gobj, p.kind) == KIND_GKOOPA {
+        let giga = if self.special_kind(gobj, p.kind) == FighterKind::GKoopa {
             p.giga_states
         } else {
             0
@@ -187,7 +188,7 @@ impl Running<'_> {
             let x18 = reg(self.kp_n_attr_f32(gobj, p, attr::X18));
             let size = reg(self.game.fighters[f.0].u_f32(p.u + u::FLAME_SIZE));
             let ratio = fp::fdivs(fp::fsubs(size, x1c), fp::fsubs(x18, x1c));
-            let koopa = !p.sfx_by_kind || self.game.fighters[f.0].kind == KIND_KOOPA;
+            let koopa = !p.sfx_by_kind || self.game.fighters[f.0].kind == FighterKind::Koopa;
             let sfx = if ratio < f64::from(0.3333_f32) {
                 if koopa { 0x24A2B } else { 0x1D4F3 }
             } else if ratio < f64::from(0.6666_f32) {
