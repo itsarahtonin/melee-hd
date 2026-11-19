@@ -223,15 +223,15 @@ impl Running<'_> {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
             13 => self.samus_drop_charge(gobj, &super::special_samus::KIRBY),
             1 | 22 => self.kb_fx_remove_blaster(gobj),
-            8 => self.kb_ns_let_go(gobj),
-            9 => self.kb_pe_cleanup(gobj),
-            7 => self.kb_sk_drop(gobj),
+            8 => self.ness_pkflash_set_null(gobj, &super::special_ness::KIRBY),
+            9 => self.peach_toad_on_death2(gobj, &super::special_peach::KIRBY),
+            7 => self.seak_drop_needles(gobj, &super::special_seak::KIRBY),
             24 => self.kb_gw_cleanup(gobj),
             3 => self.dk_special_n_destroy_effects_plus(gobj, &super::special_donkey::KIRBY),
             6 | 20 => self.kb_lk_cleanup(gobj),
             14 => self.kb_ys_cleanup(gobj),
-            10 => self.kb_ic_remove_ice(gobj),
-            16 => self.kb_mt_cleanup(gobj),
+            10 => self.popo_remove_ice(gobj, &super::special_iceclimber::KIRBY),
+            16 => self.mt_n_lose_ball(gobj, &super::special_mewtwo::KIRBY),
             _ => {}
         }
     }
@@ -242,15 +242,15 @@ impl Running<'_> {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
             13 => self.samus_drop_charge(gobj, &super::special_samus::KIRBY),
             1 | 22 => self.kb_fx_remove_blaster(gobj),
-            8 => self.kb_ns_let_go(gobj),
-            9 => self.kb_pe_cleanup(gobj),
-            7 => self.kb_sk_drop(gobj),
+            8 => self.ness_pkflash_set_null(gobj, &super::special_ness::KIRBY),
+            9 => self.peach_toad_on_death2(gobj, &super::special_peach::KIRBY),
+            7 => self.seak_drop_needles(gobj, &super::special_seak::KIRBY),
             24 => self.kb_gw_cleanup(gobj),
             3 => self.dk_special_n_destroy_effects_plus(gobj, &super::special_donkey::KIRBY),
             6 | 20 => self.kb_lk_cleanup(gobj),
             14 => self.kb_ys_cleanup(gobj),
-            10 => self.kb_ic_remove_ice(gobj),
-            16 => self.kb_mt_drop_ball(gobj),
+            10 => self.popo_remove_ice(gobj, &super::special_iceclimber::KIRBY),
+            16 => self.mt_n_drop_ball(gobj, &super::special_mewtwo::KIRBY),
             _ => {}
         }
     }

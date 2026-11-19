@@ -9,7 +9,6 @@ use super::super::item::{change, change_state, play_sfx, spawn_air};
 use super::super::pokemon::{self, attr_f32, attr_i32, effect_hitlag};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
-use crate::game::camera;
 use crate::game::gr::stage;
 use crate::game::it::ItKind;
 use crate::game::it::item::article;
@@ -213,7 +212,7 @@ pub fn start_swarms(r: &mut Running, gobj: GObjId) {
         }
     };
     let speed = attr_f32(r, gobj, 0x14);
-    let interest = camera::interest(&r.game.camera.cam);
+    let interest = r.game.camera.interest();
     let v = pokemon::vars(r.game, gobj);
     v.set_i32(SIDE, side);
     v.set_f32(EDGE, x);

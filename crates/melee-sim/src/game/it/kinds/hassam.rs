@@ -11,7 +11,6 @@ use super::super::pokemon::{
 };
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
-use crate::game::camera;
 use crate::game::it::data;
 use crate::game::it::item::attr_of;
 use crate::game::state::Running;
@@ -337,7 +336,7 @@ pub fn fly_off(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 2, change::ANIM_UPDATE);
     effect_hitlag(r.game, gobj);
     bone_motion(r, gobj);
-    let cam = camera::position(&r.game.camera.cam);
+    let cam = r.game.camera.position();
     let at = item(r.game, gobj).pos;
     let speed = reg(attr_f32(r, gobj, 4));
     let toward = |cam: Vec3| {

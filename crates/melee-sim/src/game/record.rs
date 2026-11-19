@@ -144,7 +144,8 @@ pub struct Setup {
 
 impl Setup {
     /// A match of melee-hd's Vanilla ruleset: no codes, no nametags and English unless the
-    /// menus started it, and the unlocks in the metadata.
+    /// menus started it, and the unlocks in the metadata. The oracle's recordings take it; the
+    /// player saves no Vanilla replays since 2026-11-19 (Sarah: "Slippi only").
     pub fn vanilla() -> Setup {
         Setup {
             language: 1,

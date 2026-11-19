@@ -661,12 +661,9 @@ pub(crate) mod attr {
     pub const FC_GUN_ITKIND: usize = 0x264;
     /// Mewtwo's copy: the ball's full charge.
     pub const MT_CHARGE_TIME: usize = 0x384;
-    /// The Ice Climbers' copy: the aerial shot's hop, its landing lag, and the ice's offset
-    /// from his top joint.
+    /// The Ice Climbers' copy: the aerial shot's hop (then its landing lag and the ice's
+    /// offset from his top joint, in the Ice Climbers' layout).
     pub const PP_AIR_HOP: usize = 0x39C;
-    pub const PP_LANDING_LAG: usize = 0x3A0;
-    pub const PP_ICE_X: usize = 0x3A4;
-    pub const PP_ICE_Y: usize = 0x3A8;
 }
 
 impl Running<'_> {

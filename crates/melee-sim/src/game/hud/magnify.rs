@@ -261,7 +261,7 @@ impl Running<'_> {
     fn magnifier_visible(&self) -> bool {
         self.game.vs.state.hud_enabled != 0
             && !self.game.is_hud_hidden()
-            && !super::super::camera::is_boss_intro(&self.game.camera.cam)
+            && !self.game.camera.is_boss_intro()
     }
 
     /// The magnifier camera's render callback, `ifMagnify_802FBBDC`: no player starts off
@@ -299,7 +299,7 @@ impl Running<'_> {
                 continue;
             }
             let b = self.game.fighter(fg).x890_cameraBox.expect("a camera box");
-            let b = &self.game.camera.boxes[b];
+            let b = self.game.camera.subject(b);
             let (ext, bone) = (b.target_ext.v.z, b.bone_pos);
             let scale = fp::fdivs(reg(ext), 8.0);
             let s = |v: f32| mem(fp::fmuls(reg(v), scale));

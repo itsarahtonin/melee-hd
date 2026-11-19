@@ -364,7 +364,7 @@ pub fn launch(r: &mut Running, gobj: GObjId, chk: bool) {
 /// original returns no value; its callers ignore what it leaves.)
 #[doc(alias = "it_8027BA54")]
 pub fn toward_camera(r: &mut Running, gobj: GObjId) -> Vec3 {
-    let cam = crate::game::camera::position(&r.game.camera.cam);
+    let cam = r.game.camera.position();
     let (f, g) = (
         reg(r.game.objs.rng.draw_f32()),
         reg(r.game.objs.rng.draw_f32()),

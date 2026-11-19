@@ -34,6 +34,7 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
+use melee_sim::game::ft::mewtwo::special_n::MEWTWO;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
 use melee_sim::game::it::kinds::{mewtwodisable, mewtwoshadowball};
@@ -212,8 +213,10 @@ fn run_mewtwo(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftCo_800C4550" => g.enter_damage_bind(gobj),
         "ftMt_JumpAerial_Enter" => g.peach_jump_aerial_enter(gobj),
         "ftCo_ThrowF_Anim" => g.co_throw_f_anim(gobj),
-        "ftMt_SpecialN_CheckShadowBallRemove" => return b(g.mt_n_ball_lost(Some(gobj))),
-        "ftMt_SpecialN_CheckShadowBallCancel" => return b(g.mt_n_ball_put_away(Some(gobj))),
+        "ftMt_SpecialN_CheckShadowBallRemove" => return b(g.mt_n_ball_lost(Some(gobj), &MEWTWO)),
+        "ftMt_SpecialN_CheckShadowBallCancel" => {
+            return b(g.mt_n_ball_put_away(Some(gobj), &MEWTWO));
+        }
         "it_802C4D10" => mewtwoshadowball::wobble(g, gobj),
         "it_802C4F50" => return b(mewtwoshadowball::hit_stage(g, gobj)),
         "it_802C573C" => mewtwoshadowball::remove(g, gobj),

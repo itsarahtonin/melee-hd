@@ -913,7 +913,7 @@ fn fog_desc(game: &Game, data: &Archives) -> Option<DataRef> {
 #[doc(alias = "Ground_801C1E94")]
 pub fn create_fog(game: &mut Game, data: &Archives) {
     let Some(desc) = fog_desc(game, data) else {
-        crate::game::camera::set_background_color(&mut game.camera.cam, 0, 0, 0);
+        game.camera.set_background_color(0, 0, 0);
         return;
     };
     let gobj = game.world.create(0xA, 0xB, 0);
@@ -926,7 +926,7 @@ pub fn create_fog(game: &mut Game, data: &Archives) {
     o.start = mem(fp::fmuls(reg(o.start), s));
     o.end = mem(fp::fmuls(reg(o.end), s));
     let [r, g, b, _] = o.color;
-    crate::game::camera::set_background_color(&mut game.camera.cam, r, g, b);
+    game.camera.set_background_color(r, g, b);
     game.stage_info.x12C = Some(gobj);
 }
 

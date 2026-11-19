@@ -440,10 +440,7 @@ pub fn init_background(r: &mut Running, gobj: GObjId) {
 /// (`grDisplay_801C5DB0`) unless the debug pause or the free camera is on.
 #[doc(alias = "fn_801EFB9C")]
 pub fn render_background(r: &mut Running, gobj: GObjId, pass: i32) {
-    if r.game.db_pause_flag(1)
-        || r.game.db_pause_flag(2)
-        || crate::game::camera::is_free(&r.game.camera.cam)
-    {
+    if r.game.db_pause_flag(1) || r.game.db_pause_flag(2) || r.game.camera.is_free() {
         return;
     }
     r.render_stage_object(gobj, pass);

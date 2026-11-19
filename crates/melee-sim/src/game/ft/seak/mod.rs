@@ -208,17 +208,9 @@ impl Running<'_> {
         self.game.fighter(gobj).u_i32(u::NEEDLE_COUNT)
     }
 
-    fn set_seak_needle_count(&mut self, gobj: GObjId, n: i32) {
-        self.game.fighter_mut(gobj).set_u_i32(u::NEEDLE_COUNT, n);
-    }
-
     /// The held needles' item (`u.sk.x4`).
     pub fn seak_needles(&self, gobj: GObjId) -> Option<GObjId> {
         self.game.fighter(gobj).u.gobj_at(u::NEEDLES)
-    }
-
-    fn set_seak_needles(&mut self, gobj: GObjId, g: Option<GObjId>) {
-        self.game.fighter_mut(gobj).u.set_gobj_at(u::NEEDLES, g);
     }
 
     /// The chain (`u.sk.x8`).

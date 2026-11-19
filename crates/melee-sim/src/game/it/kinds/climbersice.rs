@@ -204,7 +204,7 @@ pub fn spawn(
     v.x0.set(owner);
     v.x8_b0.set(false);
     v.x4.set(scale);
-    let id = if kind == ItKind::IceClimberIce.id() {
+    let id = if kind == ItKind::IceClimberIce {
         0x4E9
     } else {
         0x4AE
@@ -253,10 +253,14 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let kind = ip.kind;
     if let Some(owner) = ip.xDD4_itemVar.climbers_ice().x0.get() {
-        if kind == ItKind::IceClimberIce.id() {
-            r.popo_forget_item(owner, gobj);
+        if kind == ItKind::IceClimberIce {
+            r.popo_forget_item(owner, &crate::game::ft::popo::special_n::POPO, gobj);
         } else {
-            r.kb_ic_forget(owner, gobj);
+            r.popo_forget_item(
+                owner,
+                &crate::game::ft::kirby::special_iceclimber::KIRBY,
+                gobj,
+            );
         }
     }
     item_mut(r.game, gobj)
@@ -270,7 +274,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 /// way.
 fn effect(r: &mut Running, gobj: GObjId, ice: i32, kirby: i32) {
     let ip = item(r.game, gobj);
-    let id = if ip.kind == ItKind::IceClimberIce.id() {
+    let id = if ip.kind == ItKind::IceClimberIce {
         ice
     } else {
         kirby

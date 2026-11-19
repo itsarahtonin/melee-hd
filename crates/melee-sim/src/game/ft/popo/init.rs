@@ -130,7 +130,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         if let Some(item) = self.ic_item(gobj) {
             super::super::super::it::kinds::climbersice::remove(self, item);
-            self.popo_forget_item(gobj, item);
+            self.popo_forget_item(gobj, &super::special_n::POPO, item);
         }
         // `ftPp_SpecialHi_80122898`: the Blizzard's effects.
         if self.game.fighters[f.0].u[var::X2230] & 0x80 != 0 {

@@ -20,6 +20,8 @@ use gekko_fp as fp;
 use super::super::item::{article, change, change_state, destroy, pick_up, play_sfx, spawn_air};
 use super::super::{coll, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, release};
 use crate::fpu::{mem, reg};
+use crate::game::ft::kirby::special_link::KIRBY as LK_KIRBY;
+use crate::game::ft::link::special_n::LINK;
 use crate::game::handles::RawPtr;
 use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
@@ -372,9 +374,9 @@ fn destroyed(r: &mut Running, gobj: GObjId) {
         && item(r.game, gobj).owner == Some(o)
     {
         if is_kirbys(r, gobj) {
-            r.kb_lk_unset_arrow(o);
+            r.link_unset_arrow(o, &LK_KIRBY);
         } else {
-            r.link_unset_arrow(o);
+            r.link_unset_arrow(o, &LINK);
         }
     }
     remove_trails(r, gobj);
@@ -405,9 +407,9 @@ fn anim0(r: &mut Running, gobj: GObjId) -> bool {
         return true;
     };
     let released = if is_kirbys(r, gobj) {
-        r.kb_lk_bow_released(o)
+        r.link_bow_released(o, &LK_KIRBY)
     } else {
-        r.link_bow_released(o)
+        r.link_bow_released(o, &LINK)
     };
     if item(r.game, gobj).owner == Some(o) && released {
         vars(r.game, gobj).xE0.set(None);

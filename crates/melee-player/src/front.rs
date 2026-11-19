@@ -125,9 +125,10 @@ pub const DEBUG_LEVELS: [(i32, &str, &str); 3] = [
 pub const DEBUG_HELP: &str = "Raises Melee's debug level, as an Action Replay code does. Applies from Melee's next start (Restart Melee\u{2026}), and never to a replay.";
 /// The warning while the debug level isn't Off.
 pub const DEBUG_WARNING: &str = "The debug menu switches your save's language to Japanese as it opens (Melee's own bug), and its entries can change unlocks and records, which Melee saves to your card. Its Yoshiki Test page can erase your save and your Camera Mode snapshots; melee-hd keeps a copy of each in the backups folder. Some debug tools aren't in melee-hd yet and stop the game.";
-/// The "Save replays" setting's help line (Sarah, 2026-10-29), while Melee runs under Vanilla.
-pub const REPLAYS_HELP: &str =
-    "Replays of matches started from Melee's menus may not play back exactly in Slippi Dolphin.";
+/// The "Save replays" help line while Melee runs under Vanilla, whose box is off and greyed:
+/// only the Slippi ruleset saves replays (Sarah, 2026-11-19: "Slippi only"; this line proposed
+/// 2026-11-19, awaiting her word).
+pub const REPLAYS_VANILLA: &str = "Slippi ruleset only: Slippi Dolphin can't play Vanilla's matches back exactly. Record sessions, below, keeps every session exactly.";
 /// The "Save replays" help line while Melee runs under the Slippi ruleset (approved 2026-11-18;
 /// Slo-Mo Melee dropped from it as it became a live match, proposed the same day, awaiting
 /// Sarah's word): the matches design call 6 of `docs/slippi-ruleset.md` leaves unrecorded,
@@ -872,7 +873,9 @@ impl Panel {
         if self.unlocked == Some(true) {
             ui.weak("Everything is unlocked.");
         }
-        let running = self.running;
+        // Replays are saved under the Slippi ruleset only: under Vanilla the box shows off and
+        // greyed, and the setting stays kept for the Slippi ruleset.
+        let saves = crate::saves_replays(self.running);
         let s = &mut self.settings;
         section(ui, "Recording");
         egui::Grid::new("recording")
@@ -880,18 +883,23 @@ impl Panel {
             .spacing([16.0, 8.0])
             .show(ui, |ui| {
                 ui.label("");
-                ui.checkbox(&mut s.record, "Save replays");
+                if saves {
+                    ui.checkbox(&mut s.record, "Save replays");
+                } else {
+                    ui.add_enabled(false, egui::Checkbox::new(&mut false, "Save replays"));
+                }
                 ui.end_row();
                 help(
                     ui,
-                    match running {
-                        Ruleset::Vanilla => REPLAYS_HELP,
-                        Ruleset::Slippi => REPLAYS_SLIPPI_HELP,
+                    if saves {
+                        REPLAYS_SLIPPI_HELP
+                    } else {
+                        REPLAYS_VANILLA
                     },
                 );
                 ui.label("Replays folder");
                 ui.add_enabled(
-                    s.record,
+                    saves && s.record,
                     egui::TextEdit::singleline(&mut s.replays)
                         .hint_text("replays in the settings folder")
                         .desired_width(220.0),
@@ -1249,6 +1257,24 @@ mod tests {
         };
         s.restore("ruleset = slippi\n", &given);
         assert_eq!(s.ruleset, Ruleset::Vanilla);
+    }
+
+    /// Only the Slippi ruleset saves replays, and a `settings.txt` with `record = on` under
+    /// Vanilla stays as it was: Save replays stays on, kept for the Slippi ruleset, and is
+    /// written back unchanged.
+    #[test]
+    fn save_replays_is_kept_under_vanilla() {
+        assert!(!crate::saves_replays(Ruleset::Vanilla));
+        assert!(crate::saves_replays(Ruleset::Slippi));
+        let file = "ruleset = vanilla\nrecord = on\nreplays = D:/replays\n";
+        let mut s = Settings::default();
+        s.restore(file, &Given::default());
+        assert_eq!((s.ruleset, s.record), (Ruleset::Vanilla, true));
+        assert_eq!(s.replays, "D:/replays");
+        let mut back = Settings::default();
+        back.restore(&s.save(), &Given::default());
+        assert_eq!(back, s);
+        assert!(s.save().contains("\nrecord = on\n"), "{}", s.save());
     }
 
     /// The audio settings come back, and the command line's exclusive mode wins; no device is

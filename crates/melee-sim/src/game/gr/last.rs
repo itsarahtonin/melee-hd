@@ -589,7 +589,7 @@ pub fn blend_step(game: &mut Game, gobj: GObjId) {
     // The color's alpha is whatever the stack held: the low byte of a stack or heap address
     // another function saved there, or 0 (`docs/engine.md`). Only the fog takes it.
     ground::set_fog_rgb(game, c.0, c.1, c.2);
-    camera::set_background_color(&mut game.camera.cam, c.0, c.1, c.2);
+    game.camera.set_background_color(c.0, c.1, c.2);
 }
 
 /// The scene colors for the dark scenes, `grLast_8021C640`.
@@ -770,8 +770,8 @@ pub fn on_init(r: &mut Running) {
     }
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
-    camera::set_near(&mut r.game.camera.cam, 1.0);
-    camera::set_far(&mut r.game.camera.cam, 30000.0);
+    r.game.camera.set_near(1.0);
+    r.game.camera.set_far(30000.0);
 }
 
 /// Final Destination's demo setup, `grLast_OnDemoInit`: for demo 26, the background's

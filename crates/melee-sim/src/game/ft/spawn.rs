@@ -640,7 +640,7 @@ impl Running<'_> {
         let (xc, yc, zc) = (v(0xC), v(0x10), v(0x14));
         let zoom = reg(self.game.stage_info.cam_info.cam_fixed_zoom);
         let (facing, pos) = (fp.facing_dir, fp.cur_pos);
-        let cb = &mut self.game.camera.boxes[b];
+        let cb = self.game.camera.subject_mut(b);
         cb.state = 0;
         if facing == 1.0 {
             cb.target_ext.h.x = z0;
@@ -658,7 +658,7 @@ impl Running<'_> {
         cb.pos.y = mem(fp::fadds(reg(pos.y), reg(x0)));
         cb.pos.z = pos.z;
         cb.bone_pos = cb.pos;
-        self.game.camera.boxes.fit_extents(b);
+        self.game.camera.fit_extents(b);
     }
 
     /// Scales the fighter's model to its model scale (`x34_scale.z` across, if set),

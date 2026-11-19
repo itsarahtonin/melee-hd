@@ -27,7 +27,7 @@ impl Running<'_> {
     /// callbacks): the flame's refill.
     #[doc(alias = "ftKp_Init_UnkMotionStates3")]
     pub fn kp_unk_motion_states3(&mut self, gobj: GObjId) {
-        self.kp_refuel(gobj);
+        self.kp_refuel(gobj, &super::special_n::KOOPA);
     }
 
     /// Bowser's creation, `ftKp_Init_OnLoad`: his attributes, his flame registered, and

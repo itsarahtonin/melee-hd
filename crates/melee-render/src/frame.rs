@@ -544,12 +544,12 @@ impl Ctx<'_> {
 
     /// The erase color of the camera drawing: the game camera's background color.
     fn erase_color(&self) -> Color {
-        let cam = &self.game.camera.cam;
-        if cam.x398_b5 {
+        let cam = &self.game.camera;
+        if cam.hidden_layers()[5] {
             Color::new(0, 0, 0, 0xFF)
         } else {
-            let c = &cam.background_color;
-            Color::new(c.r, c.g, c.b, 0xFF)
+            let [r, g, b] = cam.background_color();
+            Color::new(r, g, b, 0xFF)
         }
     }
 

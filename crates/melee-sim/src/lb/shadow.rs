@@ -141,7 +141,7 @@ impl Running<'_> {
             };
             let intensity = self.game.gr.param.as_ref().map_or(128, |p| i32::from(p.x4)) as u8;
             self.game.objs.shadows[s.0].intensity = intensity;
-            let b = &self.game.camera.boxes[cm];
+            let b = self.game.camera.subject(cm);
             let (bone, ext) = (b.bone_pos, b.target_ext.v.z);
             let eye = bone.sdk_add(light_pos);
             let interest = bone.sdk_add(light_dir);

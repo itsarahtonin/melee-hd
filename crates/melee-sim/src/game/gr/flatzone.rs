@@ -196,8 +196,8 @@ pub fn on_init(r: &mut Running) {
     next_platforms(r, true);
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
-    super::super::camera::set_near(&mut r.game.camera.cam, 1.0);
-    super::super::camera::set_far(&mut r.game.camera.cam, 1000.0);
+    r.game.camera.set_near(1.0);
+    r.game.camera.set_far(1000.0);
     let bottom = fp::fsubs(reg(super::stage::blast_bottom(r.game)), 50.0);
     super::ground::set_blast_bottom(r.game, mem(bottom));
 }

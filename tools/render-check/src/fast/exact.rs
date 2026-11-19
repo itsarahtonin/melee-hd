@@ -33,12 +33,14 @@ pub struct Exact {
     device: wgpu::Device,
     loaded: bool,
     gpu_transforms: bool,
+    material_records: bool,
 }
 
 impl Exact {
     pub fn new(renderer: Renderer, threaded: bool) -> Exact {
         let device = renderer.device().clone();
         let gpu_transforms = renderer.gpu_transforms;
+        let material_records = renderer.material_records;
         let gpu = if threaded {
             Gpu::threaded(renderer)
         } else {
@@ -50,14 +52,24 @@ impl Exact {
             device,
             loaded: false,
             gpu_transforms,
+            material_records,
         }
     }
 
-    /// The fast renderer as far as it goes (F3): the exact renderer with its shapes' display
+    /// The fast renderer as far as it goes (F4): the exact renderer with its shapes' display
     /// lists drawn from meshes decoded once (`Gpu::with_meshes`), their vertices transformed
-    /// on the GPU.
+    /// on the GPU, and each draw's state from its material's record.
     pub fn fast(mut renderer: Renderer, threaded: bool) -> Exact {
         renderer.gpu_transforms = true;
+        renderer.material_records = true;
+        Exact::with_meshes(renderer, threaded)
+    }
+
+    /// F3: F2's meshes with their vertices transformed on the GPU, each draw's state built
+    /// from the registers.
+    pub fn f3(mut renderer: Renderer, threaded: bool) -> Exact {
+        renderer.gpu_transforms = true;
+        renderer.material_records = false;
         Exact::with_meshes(renderer, threaded)
     }
 
@@ -78,12 +90,19 @@ impl Exact {
     pub fn meshes(&self) -> Option<(melee_render::meshes::Stats, (usize, usize))> {
         self.gpu.meshes().map(|m| (m.stats, m.size()))
     }
+
+    /// The renderer, its threads stopped.
+    pub fn into_renderer(self) -> Renderer {
+        self.gpu.into_renderer()
+    }
 }
 
 impl FrameRenderer for Exact {
     fn name(&self) -> String {
-        if self.gpu.meshes().is_some() && self.gpu_transforms {
-            "fast (GPU transforms)".to_owned()
+        if self.gpu.meshes().is_some() && self.gpu_transforms && self.material_records {
+            "fast (F4: materials as records)".to_owned()
+        } else if self.gpu.meshes().is_some() && self.gpu_transforms {
+            "F3 (GPU transforms)".to_owned()
         } else if self.gpu.meshes().is_some() {
             "F2 (mesh cache)".to_owned()
         } else {
@@ -124,6 +143,10 @@ impl FrameRenderer for Exact {
 
     fn wait_idle(&self) {
         let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+    }
+
+    fn warm(&mut self) {
+        self.gpu.finish_specialized();
     }
 }
 

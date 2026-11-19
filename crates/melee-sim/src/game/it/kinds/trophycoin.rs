@@ -456,11 +456,11 @@ impl Running<'_> {
                 .trophy_coin()
                 .x14
                 .get();
-            let zoom = reg(crate::game::camera::zoom(&self.game.camera.cam));
+            let zoom = reg(self.game.camera.zoom());
             (self.game.db_pause_flag(1) || zoom < x48)
                 && !crate::game::gr::figureget::done(self.game, stand)
         } else {
-            let zoom = reg(crate::game::camera::zoom(&self.game.camera.cam));
+            let zoom = reg(self.game.camera.zoom());
             (self.game.db_pause_flag(1) && crate::game::gr::ground::flags(self.game, 0x330) == 0)
                 || zoom < x48
         };

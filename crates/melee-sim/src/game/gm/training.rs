@@ -707,7 +707,7 @@ impl Running<'_> {
     fn training_camera_on(&mut self, slot: i32, port: i32) {
         let k = self.game.player_pkind(slot);
         if (k == 0 || k == 1) && self.game.player_entity(slot).is_some() {
-            crate::game::camera::set_up_training(&mut self.game.camera.cam, slot as i8, port as i8);
+            self.game.camera.set_up_training(slot as i8, port as i8);
         }
     }
 

@@ -2,7 +2,6 @@
 //! fighter's shake, and an item with outline models draws them around itself in the camera's
 //! first pass. The flags the drawing leaves (`xDCF`) are state its material setup reads.
 
-use super::super::camera;
 use super::super::code;
 use super::super::state::{Obj, Running, UserData};
 use super::{flag, item, item_mut, set_flag};
@@ -181,7 +180,7 @@ impl Running<'_> {
             }
         }
         let outlined = flag(item(self.game, gobj).xDCF_flag, 3);
-        match camera::pass(&self.game.camera.cam) {
+        match self.game.camera.pass() {
             1 if outlined => {
                 // `it_8026EECC_inline_1`, `_inline_2` and `_inline_3`: the outline's two
                 // passes around the model's.

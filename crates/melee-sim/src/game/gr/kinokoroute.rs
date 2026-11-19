@@ -364,7 +364,7 @@ pub fn proc_route(r: &mut Running, gobj: GObjId) {
                 }
             }
             cam_target = fighter_pos;
-            super::super::camera::set_hold_off_plane(&mut r.game.camera.cam, true);
+            r.game.camera.set_hold_off_plane(true);
         }
         super::ground::watch_points(r.game, None, 30.0, 10000.0);
         if r.game.grounds[g.0].u.kinokoroute2().phase < 2 {
@@ -396,7 +396,7 @@ pub fn proc_route(r: &mut Running, gobj: GObjId) {
         fighter_pos = point_of(r.game, r.data, spawn_idx.into());
         fighter_pos.y = mem(fp::fadds(reg(fighter_pos.y), 30.0));
         cam_target = fighter_pos;
-        super::super::camera::set_hold_off_plane(&mut r.game.camera.cam, false);
+        r.game.camera.set_hold_off_plane(false);
         r.game.stage_info.x6DC = 0;
         let reb0 = point_joint(r.game, 4);
         let eve = point_joint(r.game, 0xBD);

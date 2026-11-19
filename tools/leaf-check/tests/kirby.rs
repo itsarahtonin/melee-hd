@@ -77,8 +77,15 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
+use melee_sim::game::ft::kirby::special_iceclimber::KIRBY as IC_KIRBY;
+use melee_sim::game::ft::kirby::special_koopa::KIRBY as KP_KIRBY;
+use melee_sim::game::ft::kirby::special_link::KIRBY as LK_KIRBY;
+use melee_sim::game::ft::kirby::special_mewtwo::KIRBY as MT_KIRBY;
+use melee_sim::game::ft::kirby::special_ness::KIRBY as NS_KIRBY;
+use melee_sim::game::ft::kirby::special_peach::KIRBY as PE_KIRBY;
 use melee_sim::game::ft::kirby::special_purin::KIRBY;
 use melee_sim::game::ft::kirby::special_samus::KIRBY as SS_KIRBY;
+use melee_sim::game::ft::kirby::special_seak::KIRBY as SK_KIRBY;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
 use melee_sim::game::it::ItKind;
@@ -503,10 +510,12 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftKb_SpecialNFx_800FDD14" => return b(g.kb_fx_no_blaster(Some(gobj))),
         "ftKb_SpecialNFx_800FDD4C" => return Ret::Int(g.kb_fx_blaster_action(Some(gobj)) as u32),
         "ftKb_SpecialNFx_800FDDF4" => return b(g.kb_fx_blaster_not_needed(Some(gobj))),
-        "ftKb_SpecialNNs_800FEC78" => return b(g.kb_ns_holding(gobj)),
-        "ftKb_SpecialNSk_80105FF0" => return b(g.kb_sk_lets_go(Some(gobj))),
-        "ftKb_SpecialNSk_80106020" => return Ret::Int(g.kb_sk_count(Some(gobj)) as u32),
-        "ftKb_SpecialNPe_8010C4AC" => return b(g.kb_pe_done(gobj)),
+        "ftKb_SpecialNNs_800FEC78" => return b(g.ness_special_n_holding(gobj, &NS_KIRBY)),
+        "ftKb_SpecialNSk_80105FF0" => return b(g.seak_lets_go(Some(gobj), &SK_KIRBY)),
+        "ftKb_SpecialNSk_80106020" => {
+            return Ret::Int(g.seak_held_count(Some(gobj), &SK_KIRBY) as u32);
+        }
+        "ftKb_SpecialNPe_8010C4AC" => return b(g.peach_toad_done(gobj, &PE_KIRBY)),
         "ftKb_SpecialNGw_8010D160" => return b(g.kb_gw_done(gobj)),
         "it_802BDF40" => peachtoad::remove(g, gobj),
         "it_802C760C" => kirbygamewatchchefpan::remove(g, gobj),
@@ -517,15 +526,21 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802ADC34" => kirbyhammer::remove(g, gobj),
         "fn_8010A930" => g.enter_capture_kirby_yoshi(gobj, gobj_reg(maps, call, 4, &name)),
         "ftKb_SpecialNYs_8010AC78" => g.enter_kirby_yoshi_egg(gobj, gobj_reg(maps, call, 4, &name)),
-        "ftKb_SpecialNKp_800FA83C" => return Ret::Int(g.kb_kp_max_speed(Some(gobj)) as u32),
-        "ftKb_SpecialNKp_800FA878" => return Ret::Int(g.kb_kp_max_size(Some(gobj)) as u32),
-        "ftKb_SpecialNLk800FB394" => return Ret::Int(g.kb_lk_bow_index(gobj) as u32),
-        "ftKb_SpecialNLk800FB470" => return b(g.kb_lk_bow_released(gobj)),
-        "ftKb_SpecialNLk800FB500" => return b(g.kb_lk_nock(gobj)),
-        "ftKb_SpecialNLk800FB5F4" => return b(g.kb_lk_bow_out(gobj)),
-        "ftKb_SpecialNIc_80108CE8" => g.kb_ic_forget(gobj, gobj_reg(maps, call, 4, &name)),
-        "ftKb_SpecialNMt_80106F9C" => return b(g.kb_mt_ball_lost(Some(gobj))),
-        "ftKb_SpecialNMt_80106FEC" => return b(g.kb_mt_ball_put_away(Some(gobj))),
+        "ftKb_SpecialNKp_800FA83C" => {
+            return Ret::Int(g.kp_flame_max_speed(Some(gobj), &KP_KIRBY) as u32);
+        }
+        "ftKb_SpecialNKp_800FA878" => {
+            return Ret::Int(g.kp_flame_max_size(Some(gobj), &KP_KIRBY) as u32);
+        }
+        "ftKb_SpecialNLk800FB394" => return Ret::Int(g.link_bow_index(gobj, &LK_KIRBY) as u32),
+        "ftKb_SpecialNLk800FB470" => return b(g.link_bow_released(gobj, &LK_KIRBY)),
+        "ftKb_SpecialNLk800FB500" => return b(g.link_nock(gobj, &LK_KIRBY)),
+        "ftKb_SpecialNLk800FB5F4" => return b(g.link_bow_out(gobj, &LK_KIRBY)),
+        "ftKb_SpecialNIc_80108CE8" => {
+            g.popo_forget_item(gobj, &IC_KIRBY, gobj_reg(maps, call, 4, &name))
+        }
+        "ftKb_SpecialNMt_80106F9C" => return b(g.mt_n_ball_lost(Some(gobj), &MT_KIRBY)),
+        "ftKb_SpecialNMt_80106FEC" => return b(g.mt_n_ball_put_away(Some(gobj), &MT_KIRBY)),
         "ftKb_SpecialNPr_801010D4" => g.rollout_end(gobj, &KIRBY, r4 != 0, r5, f1),
         "ftKb_SpecialNYs_80109238" => return Ret::Int(g.kb_ys_tongue_bone(gobj) as u32),
         "ftKb_SpecialNPr_8010140C" => g.rollout_tick(gobj, r4 != 0),

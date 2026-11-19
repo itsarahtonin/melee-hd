@@ -8,6 +8,8 @@ use super::super::item::{article, change, change_state, debug_owner_bubbles, spa
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
+use crate::game::ft::kirby::special_koopa::KIRBY as KP_KIRBY;
+use crate::game::ft::koopa::special_n::KOOPA;
 use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
@@ -158,8 +160,8 @@ pub fn spawn(
     v.x34_base_scale.set(0.0);
     match ItKind::of(kind) {
         ItKind::KoopaFlame => {
-            let full_speed = r.kp_flame_max_speed(owner);
-            let full_size = r.kp_flame_max_size(owner);
+            let full_speed = r.kp_flame_max_speed(owner, &KOOPA);
+            let full_size = r.kp_flame_max_size(owner, &KOOPA);
             let v = item_mut(r.game, gobj).xDD4_itemVar.koopa_flame();
             v.x38_base_speed.set(mem(fp::fdivs(
                 fp::frsp(f64::from(base_speed)),
@@ -171,8 +173,8 @@ pub fn spawn(
             )));
         }
         ItKind::KirbyKoopaFlame => {
-            let full_speed = r.kb_kp_max_speed(owner);
-            let full_size = r.kb_kp_max_size(owner);
+            let full_speed = r.kp_flame_max_speed(owner, &KP_KIRBY);
+            let full_size = r.kp_flame_max_size(owner, &KP_KIRBY);
             let v = item_mut(r.game, gobj).xDD4_itemVar.koopa_flame();
             v.x38_base_speed.set(mem(fp::fdivs(
                 fp::frsp(f64::from(base_speed)),

@@ -122,7 +122,7 @@ impl Running<'_> {
             .unwrap_or(false);
         // The camera's boxes are this scene's when its heap holds their block (`Camera_Init`
         // runs in the scenes with a camera; the globals keep a past one's).
-        let boxes = game.camera.boxes.addr;
+        let boxes = game.camera.raw_parts().boxes.addr;
         let camera_live = boxes != 0
             && crate::hsd::heap::with(|h| {
                 h.os.allocated

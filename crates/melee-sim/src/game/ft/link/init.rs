@@ -231,8 +231,8 @@ impl Running<'_> {
     pub fn link_damage_cleanup(&mut self, gobj: GObjId) {
         self.link_remove_boomerang1(gobj);
         self.link_hookshot_put_away(gobj);
-        self.link_process_arrow(gobj);
-        self.link_process_bow(gobj);
+        self.link_process_arrow(gobj, &super::special_n::LINK);
+        self.link_process_bow(gobj, &super::special_n::LINK);
         self.clink_remove_milk(gobj);
     }
 

@@ -9,6 +9,12 @@
 //! desktop nobody sees, with its own user directory (`DIR/dolphin-user`), no memory cards and no
 //! controller devices but the movie's. A job object ends Dolphin with the harness.
 //!
+//! On Linux (`linux.rs`) `DOLPHIN` names the folder of a `dolphin-emu-nogui` build, which runs on
+//! its headless platform (no window) with the same settings; the kernel ends it with the harness
+//! (`PR_SET_PDEATHSIG`), and the harness, its parent, reads its memory through `/proc`. Mainline's
+//! nogui front end ignores `-m`: the build needs `tools/bench/dolphin-nogui-movie.patch`, which
+//! starts the movie as the Qt front end does.
+//!
 //! The match: the Gecko codes `melee-bench codes` writes boot the game into it (`DIR/MATCH.ini`,
 //! as the game's settings), and a DTM movie plays the replay's controllers. A movie holds one
 //! entry per controller poll, and Dolphin polls twice a field while the game's ticks keep their
@@ -28,10 +34,33 @@ use std::time::{Duration, Instant};
 
 use ssbm_slippi::replay::{Replay, event};
 
+#[cfg(target_os = "linux")]
+use crate::linux::{Hidden, Process, raise_thread_priority};
 use crate::machine;
 use crate::matches;
 use crate::sync::{FIRST_FRAME, Fighter, post_frames, replay_last_frame, same};
-use crate::win::{Hidden, Process};
+#[cfg(windows)]
+use crate::win::{Hidden, Process, raise_thread_priority};
+
+/// Dolphin's executable in the `DOLPHIN` folder.
+#[cfg(windows)]
+const EXE: &str = "Dolphin.exe";
+#[cfg(target_os = "linux")]
+const EXE: &str = "dolphin-emu-nogui";
+
+/// The arguments that differ by platform: batch mode on Windows (Dolphin's own window stays
+/// shut), the headless platform for Linux's `dolphin-emu-nogui` (which has no batch mode).
+#[cfg(windows)]
+const PLATFORM_ARGS: &[&str] = &["-b"];
+#[cfg(target_os = "linux")]
+const PLATFORM_ARGS: &[&str] = &["-p", "headless"];
+
+const USAGE: &str = "melee-bench dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]
+
+Plays the benchmark matches in mainline Dolphin (the folder DOLPHIN names) on the disc SSBM_DISC
+and reports its speed, the median of N runs (default 5). DIR (or BENCH_DIR) holds the matches'
+codes, the calibrations (--calibrate writes them) and Dolphin's user directory. See
+docs/performance.md, \"Dolphin\".";
 
 /// The scene controller: major scene, minor scene at +3, frames at +0x28.
 const SCENE: u32 = 0x8047_9D30;
@@ -62,6 +91,10 @@ pub fn main(args: &[String]) {
             "--dir" => dir = it.next().cloned(),
             "--runs" => runs = it.next().and_then(|n| n.parse().ok()).expect("--runs N"),
             "--calibrate" => calibrate = true,
+            "--help" | "-h" => {
+                println!("{USAGE}");
+                return;
+            }
             _ => names.push(a.clone()),
         }
     }
@@ -73,7 +106,7 @@ pub fn main(args: &[String]) {
             .collect();
     }
     let env = Env::new(dir);
-    crate::win::raise_thread_priority();
+    raise_thread_priority();
     if calibrate {
         for name in &names {
             let cal = env.calibrate(name);
@@ -265,7 +298,7 @@ impl Env {
     }
 
     fn dolphin_version(&self) -> String {
-        let exe = self.dolphin.join("Dolphin.exe");
+        let exe = self.dolphin.join(EXE);
         let size = std::fs::metadata(&exe).map(|m| m.len()).unwrap_or(0);
         format!(
             "Dolphin: {} ({} bytes), JIT64, one CPU thread, Null video, no audio output, unlimited speed",
@@ -319,59 +352,50 @@ impl Env {
                 codes.display()
             )
         });
-        let ini = match self.cpu_stick_byte(name) {
-            Some(byte) => with_di_patch(&ini, byte),
-            None => ini,
-        };
-        std::fs::write(settings.join("GALE01.ini"), ini).unwrap();
-    }
-
-    /// For a match where a fighter runs CPU code (Nana), the byte the CPU's DI took as its stick
-    /// when the match was recorded: the low byte of that fighter's address in ssbm-rs, from the
-    /// start of its state trace (`crate::sync::start_trace_path`, which `make-matches.sh` writes). None
-    /// for a match without one.
-    fn cpu_stick_byte(&self, name: &str) -> Option<u8> {
+        // A fighter running CPU code (Nana) reads a byte of its address in its DI with no
+        // knockback: the match is the recording's only where the codes lay the heap out as the
+        // recording did (`matches::PLAYBACK_LAYOUT`, the layout code).
         let has_follower = self
             .replay(name)
             .frames
             .values()
             .any(|f| f.followers.iter().any(Option::is_some));
-        if !has_follower {
-            return None;
-        }
-        let path = crate::sync::start_trace_path(&self.dir, name);
-        let address = follower_address(&path).unwrap_or_else(|| {
-            panic!(
-                "{name} has a fighter running CPU code: its DI patch needs ssbm-rs's state trace \
-                 of the match's start, {} (make-matches.sh writes it)",
-                path.display()
-            )
-        });
-        Some(address as u8)
+        assert!(
+            !has_follower || ini.contains("$melee-bench layout"),
+            "{name} has a fighter running CPU code, but its codes ({}) don't lay the heap out as \
+             playback does (matches::PLAYBACK_LAYOUT): write them again with `melee-bench codes`",
+            codes.display()
+        );
+        std::fs::write(settings.join("GALE01.ini"), ini).unwrap();
     }
 
-    fn command_line(&self, dtm: &Path, speed: f64) -> String {
+    fn command_args(&self, dtm: &Path, speed: f64) -> Vec<String> {
+        let mut args = vec!["-u".to_owned(), self.user.display().to_string()];
+        args.extend(PLATFORM_ARGS.iter().map(|&a| a.to_owned()));
+        args.extend(["-v".into(), "Null".into()]);
+        if std::env::var_os("MELEE_BENCH_NO_MOVIE").is_none() {
+            args.extend(["-m".into(), dtm.display().to_string()]);
+        }
+        let settings = [
+            "Dolphin.Core.CPUThread=False".to_owned(),
+            format!("Dolphin.Core.EmulationSpeed={speed}"),
+            "Dolphin.Core.GFXBackend=Null".into(),
+            "Dolphin.DSP.Backend=No Audio Output".into(),
+            "Dolphin.Interface.UsePanicHandlers=False".into(),
+            "Dolphin.Interface.ConfirmStop=False".into(),
+            "Dolphin.Core.EnableCheats=True".into(),
+        ];
         // MELEE_BENCH_CONFIG=SYSTEM.SECTION.KEY=VALUE[;...] adds settings, for experiments.
-        let extra: String = std::env::var("MELEE_BENCH_CONFIG")
-            .unwrap_or_default()
+        let extra = std::env::var("MELEE_BENCH_CONFIG").unwrap_or_default();
+        let extra = extra
             .split(';')
             .filter(|s| !s.is_empty())
-            .map(|s| format!("-C \"{s}\" "))
-            .collect();
-        let movie = if std::env::var_os("MELEE_BENCH_NO_MOVIE").is_some() {
-            String::new()
-        } else {
-            format!("-m \"{}\" ", dtm.display())
-        };
-        format!(
-            "-u \"{}\" -b -v Null {movie}\
-             -C Dolphin.Core.CPUThread=False -C Dolphin.Core.EmulationSpeed={speed} \
-             -C Dolphin.Core.GFXBackend=Null -C \"Dolphin.DSP.Backend=No Audio Output\" \
-             -C Dolphin.Interface.UsePanicHandlers=False -C Dolphin.Interface.ConfirmStop=False \
-             -C Dolphin.Core.EnableCheats=True {extra}-e \"{}\"",
-            self.user.display(),
-            self.disc
-        )
+            .map(str::to_owned);
+        for s in settings.into_iter().chain(extra) {
+            args.extend(["-C".into(), s]);
+        }
+        args.extend(["-e".into(), self.disc.clone()]);
+        args
     }
 
     fn calibration_path(&self, name: &str) -> PathBuf {
@@ -533,17 +557,18 @@ impl Env {
         } else {
             replay_last_frame(replay)
         };
-        let exe = self.dolphin.join("Dolphin.exe");
+        let exe = self.dolphin.join(EXE);
+        let speed = if polls.is_some() {
+            CALIBRATION_SPEED
+        } else {
+            0.0
+        };
+        let args = self.command_args(dtm, speed);
+        #[cfg(windows)]
+        let args = windows_command_line(&args);
         let dolphin = Hidden::spawn(
             &exe.to_string_lossy(),
-            &self.command_line(
-                dtm,
-                if polls.is_some() {
-                    CALIBRATION_SPEED
-                } else {
-                    0.0
-                },
-            ),
+            &args,
             &self.dolphin.to_string_lossy(),
         )
         .unwrap_or_else(|e| panic!("starting {}: {e}", exe.display()));
@@ -859,37 +884,21 @@ impl Env {
     }
 }
 
-/// The match's Gecko codes with the DI patch (`tools/bench/gecko/di.s`), a benchmark-only
-/// code: on the path where `ftCo_800AC5A0` takes a stick it never set, it gives the CPU the
-/// byte it took when the match was recorded, which came from the fighter's heap address.
-fn with_di_patch(ini: &str, byte: u8) -> String {
-    use crate::gecko_words::{DI, DI_PATCH};
-    let mut words = DI.to_vec();
-    words[DI_PATCH] = (words[DI_PATCH] & 0xFFFF_0000) | u32::from(byte);
-    if words.len().is_multiple_of(2) {
-        words.push(0x6000_0000);
-    }
-    words.push(0);
-    let mut code = String::from("$melee-bench DI patch\n");
-    code +=
-        &format!("*Benchmark only: the CPU's unset DI stick is {byte:#04X}, as when recorded.\n");
-    code += &format!("C20AC6D0 {:08X}\n", words.len() / 2);
-    for pair in words.chunks(2) {
-        code += &format!("{:08X} {:08X}\n", pair[0], pair[1]);
-    }
-    let (gecko, enabled) = ini.split_once("[Gecko_Enabled]").expect("[Gecko_Enabled]");
-    format!(
-        "{gecko}{code}[Gecko_Enabled]{}\n$melee-bench DI patch\n",
-        enabled.trim_end()
-    )
-}
-
-/// The address of the first follower (Nana) in an ssbm-rs state trace.
-fn follower_address(path: &Path) -> Option<u32> {
-    crate::sync::traced_fighters(path)?
-        .into_iter()
-        .find(|f| f.follower)
-        .map(|f| f.address)
+/// A Windows command line of `args`, each with a space in quotes (none ends in a backslash or
+/// holds a quote).
+#[cfg(windows)]
+fn windows_command_line(args: &[String]) -> String {
+    let quoted: Vec<String> = args
+        .iter()
+        .map(|a| {
+            if a.is_empty() || a.contains(' ') {
+                format!("\"{a}\"")
+            } else {
+                a.clone()
+            }
+        })
+        .collect();
+    quoted.join(" ")
 }
 
 /// Calibration plays at twice the console's speed, not unlimited: the game then idles between
@@ -1187,4 +1196,25 @@ fn pad_bytes(p: &Pad) -> [u8; 8] {
         p.cstick[0],
         p.cstick[1],
     ]
+}
+
+#[cfg(all(test, windows))]
+mod tests {
+    use super::*;
+
+    /// The arguments make the command line the harness gave Dolphin on Windows before, with only
+    /// the paths without spaces now unquoted.
+    #[test]
+    fn the_windows_command_line_holds_the_same_arguments() {
+        let env = Env {
+            dir: PathBuf::from(r"C:\bench"),
+            dolphin: PathBuf::from(r"C:\Dolphin-x64"),
+            disc: r"C:\GCN games\Melee.iso".into(),
+            user: PathBuf::from(r"C:\bench\dolphin-user"),
+        };
+        assert_eq!(
+            windows_command_line(&env.command_args(Path::new(r"C:\bench\m.dtm"), 2.0)),
+            r#"-u C:\bench\dolphin-user -b -v Null -m C:\bench\m.dtm -C Dolphin.Core.CPUThread=False -C Dolphin.Core.EmulationSpeed=2 -C Dolphin.Core.GFXBackend=Null -C "Dolphin.DSP.Backend=No Audio Output" -C Dolphin.Interface.UsePanicHandlers=False -C Dolphin.Interface.ConfirmStop=False -C Dolphin.Core.EnableCheats=True -e "C:\GCN games\Melee.iso""#
+        );
+    }
 }

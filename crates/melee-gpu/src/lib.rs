@@ -22,6 +22,9 @@ mod gpu_mesh;
 #[cfg(test)]
 mod gpu_mesh_tests;
 pub mod gpu_time;
+mod material;
+#[cfg(test)]
+mod material_tests;
 pub mod mesh;
 #[cfg(test)]
 mod mesh_tests;
@@ -359,6 +362,15 @@ struct Profile {
     calls: u64,
     texgens: u64,
     frames: u32,
+    /// Each draw's state (`push_draw`, or its material's record): textures, uniforms,
+    /// pipelines, calls queued.
+    state: std::time::Duration,
+    /// Every flush, wherever it's made (`flush` above is the frame's last, at the copy to the
+    /// XFB).
+    flush_all: std::time::Duration,
+    flushes: u64,
+    /// The state set between calls: pipelines, uniforms, textures, scissors.
+    changes: [u64; 4],
 }
 
 impl Profile {
@@ -382,6 +394,16 @@ impl Profile {
             self.words / n,
             self.indices / n,
             self.calls / n
+        );
+        eprintln!(
+            "render per frame: draws' state {:.3} ms, flushes {:.3} ms ({:.1} of them); set between calls: {:.0} pipelines, {:.0} uniforms, {:.0} textures, {:.0} scissors",
+            ms(self.state),
+            ms(self.flush_all),
+            self.flushes as f64 / n as f64,
+            self.changes[0] as f64 / n as f64,
+            self.changes[1] as f64 / n as f64,
+            self.changes[2] as f64 / n as f64,
+            self.changes[3] as f64 / n as f64,
         );
         *self = Profile::default();
     }
@@ -571,6 +593,11 @@ pub struct Renderer {
     mesh_runs: Vec<(mesh::Kind, std::ops::Range<u32>)>,
     mesh_geometry: Vec<Geometry>,
     checks: wgpu::ShaderRuntimeChecks,
+    /// The fast renderer's materials as records (F4): each draw's state found by what its
+    /// pixels read, its uniforms kept in a pool (`material`). Off by default: the exact
+    /// renderer's, and F2's and F3's, whose draws build their state from the registers.
+    pub material_records: bool,
+    materials: material::Materials,
 }
 
 /// The EFB's targets at a scale and width: what a resize makes again.
@@ -1073,6 +1100,8 @@ impl Renderer {
             mesh_runs: Vec::new(),
             mesh_geometry: Vec::new(),
             checks,
+            material_records: false,
+            materials: material::Materials::default(),
             unsupported: HashMap::new(),
         };
         // Texture 0: a 1x1 black texture for maps nothing samples.
@@ -1161,6 +1190,25 @@ impl Renderer {
     /// What the specialized shaders have done.
     pub fn specialized_stats(&self) -> TevStats {
         self.tev.stats()
+    }
+
+    /// Holds `hash` as the hash of the memory at `range` that the game thread sent.
+    pub(crate) fn hold(&mut self, range: (u32, u32), hash: u64) {
+        if self.held_hashes.insert(range, hash) != Some(hash) {
+            let start = range.0 & PHYS_MASK;
+            self.materials.forget(start, start + range.1);
+        }
+    }
+
+    /// Waits for every specialized pipeline asked for to be made, and counts the draw calls
+    /// with and without them from here: the end of a warm-up.
+    pub fn finish_specialized(&mut self) {
+        self.tev.finish();
+    }
+
+    /// How draws get their specialized shaders from now on.
+    pub fn set_tev_mode(&mut self, mode: TevMode) {
+        self.tev.mode = mode;
     }
 
     pub fn device(&self) -> &wgpu::Device {
@@ -1313,14 +1361,21 @@ impl Renderer {
     /// The texture texture map `map` samples, made if new.
     fn texture(&mut self, state: &State, map: usize, mem: &dyn Memory) -> (u32, u32) {
         let t = self.profile.is_some().then(std::time::Instant::now);
-        let r = self.texture_uncached(state, map, mem);
+        let (id, levels, _) = self.texture_resolved(state, map, mem);
         if let (Some(p), Some(t)) = (&mut self.profile, t) {
             p.texture += t.elapsed();
         }
-        r
+        (id, levels)
     }
 
-    fn texture_uncached(&mut self, state: &State, map: usize, mem: &dyn Memory) -> (u32, u32) {
+    /// [`Renderer::texture`]'s texture and levels, and whether its bytes were hashed for this
+    /// frame alone (memory neither the host holds as it is nor the game thread sent).
+    pub(crate) fn texture_resolved(
+        &mut self,
+        state: &State,
+        map: usize,
+        mem: &dyn Memory,
+    ) -> (u32, u32, bool) {
         let image = sampled_image(state, map);
         let tlut_reg = state.bp[texture::reg(texture::SETTLUT, map)];
         let tlut_offset = ((tlut_reg & 0x3FF) << 9) as usize;
@@ -1344,7 +1399,7 @@ impl Renderer {
                 };
                 if let Some(Some(entry)) = self.textures.get_mut(id as usize) {
                     entry.last_used = self.frame;
-                    return (id, levels);
+                    return (id, levels, false);
                 }
             }
             // Sampled some other way: from now on, its bytes as the encoder would have
@@ -1357,6 +1412,7 @@ impl Renderer {
         let stable = mem
             .view(image.address, size as usize)
             .filter(|_| !self.copied_over(image.address, size));
+        let mut per_frame = false;
         let mut hash = match stable {
             Some(bytes) => *self
                 .stable_hashes
@@ -1365,7 +1421,10 @@ impl Renderer {
             // The hash the game thread sent with the bytes, unless a copy lies over them.
             None => match self.held_hashes.get(&(image.address, size)) {
                 Some(&h) if !self.copied_over(image.address, size) => h,
-                _ => self.hash_memory(mem, image.address, size),
+                _ => {
+                    per_frame = true;
+                    self.hash_memory(mem, image.address, size)
+                }
             },
         };
         let tlut = state.tmem.get(tlut_offset..).unwrap_or(&[]);
@@ -1388,7 +1447,7 @@ impl Renderer {
             && let Some(Some(entry)) = self.textures.get_mut(id as usize)
         {
             entry.last_used = self.frame;
-            return (id, entry.levels);
+            return (id, entry.levels, per_frame);
         }
         let read;
         let data = match stable {
@@ -1409,7 +1468,7 @@ impl Renderer {
         );
         let id = self.add_texture(image.width, image.height, &levels);
         self.texture_ids.insert(key, id);
-        (id, image.levels)
+        (id, image.levels, per_frame)
     }
 
     fn bind_group(&mut self, ids: [u32; 8]) {
@@ -1835,6 +1894,14 @@ impl Renderer {
     /// EFB (copies, readbacks) flushes first, so a clear with nothing drawn after it still
     /// happens, in a pass of its own.
     fn flush(&mut self) {
+        let t = self.profile.is_some().then(std::time::Instant::now);
+        self.flush_untimed();
+        if let (Some(p), Some(t)) = (&mut self.profile, t) {
+            p.flush_all += t.elapsed();
+        }
+    }
+
+    fn flush_untimed(&mut self) {
         let clear = std::mem::take(&mut self.pending_clear);
         if let Some(mut d) = self.digest.take() {
             d.flush(clear, self);
@@ -1899,7 +1966,7 @@ impl Renderer {
         {
             let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("uniforms"),
-                size: (self.uniforms.len() as u64).next_power_of_two(),
+                size: (self.uniforms.len().max(UNIFORM_STRIDE) as u64).next_power_of_two(),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
@@ -1949,6 +2016,7 @@ impl Renderer {
         let (ubuf, ugroup) = self.uniform_buffer.as_ref().unwrap();
         self.queue.write_buffer(ubuf, 0, &self.uniforms);
         self.tev.collect();
+        let mut changes = [0u64; 4];
         {
             let mut pass = self.efb_pass(&mut encoder, clear);
             pass.set_bind_group(2, vgroup, &[]);
@@ -1979,14 +2047,17 @@ impl Renderer {
                             .unwrap_or(&self.pipelines[&c.pipeline]),
                     );
                     last = Some((c.pipeline, tev));
+                    changes[0] += 1;
                 }
                 if uniform != Some(c.uniform) {
                     pass.set_bind_group(0, ugroup, &[c.uniform]);
                     uniform = Some(c.uniform);
+                    changes[1] += 1;
                 }
                 if textures != Some(c.textures) {
                     pass.set_bind_group(1, &self.bind_groups[&c.textures], &[]);
                     textures = Some(c.textures);
+                    changes[2] += 1;
                 }
                 if scissor != Some(c.scissor) {
                     let [x, y, w, h] = c.scissor;
@@ -1994,6 +2065,7 @@ impl Renderer {
                     let (left, right) = (self.px_x(x), self.px_x(x + w));
                     pass.set_scissor_rect(left, y * s, right - left, h * s);
                     scissor = Some(c.scissor);
+                    changes[3] += 1;
                 }
                 // A mesh's indices name the transforms' output vertices; a draw's own, its words
                 // after them.
@@ -2005,11 +2077,18 @@ impl Renderer {
                 pass.draw_indexed(first..first + c.count, base, c.texgens..c.texgens + 1);
             }
         }
+        if let Some(p) = &mut self.profile {
+            for (n, c) in p.changes.iter_mut().zip(changes) {
+                *n += c;
+            }
+            p.flushes += 1;
+        }
         self.queue.submit([encoder.finish()]);
         self.vertices.clear();
         self.indices.clear();
         self.uniforms.clear();
         self.uniform_offsets.clear();
+        self.materials.new_flush();
         self.commands.clear();
     }
 
@@ -2168,6 +2247,8 @@ impl Renderer {
         }
         // What earlier copies read back left in memory there is gone.
         let f = r.footprint;
+        let (start, end) = f.span();
+        self.materials.forget(start & PHYS_MASK, end & PHYS_MASK);
         let before = self.copies.len();
         for row in 0..f.rows {
             let at = (f.address + row * f.stride) & PHYS_MASK;
@@ -2201,6 +2282,8 @@ impl Renderer {
         };
         // Its later copies go to memory too, rather than back and forth.
         self.on_cpu.insert(address);
+        let (start, end) = c.footprint.span();
+        self.materials.forget(start & PHYS_MASK, end & PHYS_MASK);
         let Some(Some(entry)) = self.textures.get(c.id as usize) else {
             return;
         };
@@ -2229,6 +2312,7 @@ impl Renderer {
     /// footprint shows it.
     pub(crate) fn forget(&mut self, gone: copy::Gone) {
         let (start, end) = (gone.start, gone.end);
+        self.materials.forget(start & PHYS_MASK, end & PHYS_MASK);
         self.gpu_copies.retain(|&a, c| !gone.takes(a, c.copy));
         self.on_cpu.retain(|a| !(start..end).contains(a));
         let (start, end) = (start & PHYS_MASK, end & PHYS_MASK);
@@ -2321,6 +2405,7 @@ impl Renderer {
         self.on_cpu.clear();
         self.footprints = copy::Footprints::default();
         self.hashes.clear();
+        self.materials.clear();
     }
 
     /// Drops textures unused for a while.
@@ -2343,6 +2428,7 @@ impl Renderer {
                 .retain(|_, id| textures[*id as usize].is_some());
             self.bind_groups
                 .retain(|ids, _| ids.iter().all(|&id| textures[id as usize].is_some()));
+            self.materials_forget_dropped();
         }
     }
 }
@@ -2815,7 +2901,7 @@ impl Renderer {
             },
         }));
         self.mesh_runs = runs;
-        self.push_draw(state, tg, scissor, &geometry, mem);
+        self.push_state(state, tg, scissor, &geometry, mem);
         self.mesh_geometry = geometry;
     }
 
@@ -2905,7 +2991,28 @@ impl Renderer {
                 vertices: Vertices::default(),
             }
         };
-        self.push_draw(state, tg as u32, scissor, &[geometry], mem);
+        self.push_state(state, tg as u32, scissor, &[geometry], mem);
+    }
+
+    /// Queues a draw's calls with its state: from its material's record (F4), or built from
+    /// the registers (`push_draw`; also for the debugging modes that change every draw's).
+    fn push_state(
+        &mut self,
+        state: &State,
+        tg: u32,
+        scissor: [u32; 4],
+        geometry: &[Geometry],
+        mem: &dyn Memory,
+    ) {
+        let t = self.profile.is_some().then(std::time::Instant::now);
+        if self.material_records && !self.silhouettes && !self.opaque {
+            self.push_material_draw(state, tg, scissor, geometry, mem);
+        } else {
+            self.push_draw(state, tg, scissor, geometry, mem);
+        }
+        if let (Some(p), Some(t)) = (&mut self.profile, t) {
+            p.state += t.elapsed();
+        }
     }
 
     /// Queues a draw's calls, one for each of its `geometry`'s, with its textures, uniforms and
@@ -3086,6 +3193,13 @@ impl Renderer {
                 p.readback += t2 - t1;
                 p.xfb += t2.elapsed();
                 p.report();
+                if p.frames == 0 && self.material_records {
+                    let s = std::mem::take(&mut self.materials.stats);
+                    eprintln!(
+                        "materials over those frames: draws with the last draw's {}, found {}, made {}; textures kept {}, resolved {}",
+                        s.same, s.found, s.made, s.textures_kept, s.textures_resolved
+                    );
+                }
             }
             match &mut self.on_frame {
                 Some(f) => f(frame),
@@ -3101,6 +3215,7 @@ impl Renderer {
             if let Some(m) = &mut self.gpu_meshes {
                 m.end_frame(&self.device, &self.queue, self.frame);
             }
+            self.materials.end_frame(self.frame);
         } else if let Some(request) = copy::request(state, value)
             && !self.on_cpu.contains(&request.footprint.address)
         {
@@ -3121,6 +3236,8 @@ impl Renderer {
             match encode::encode(state, value, &efb) {
                 Some(e) => {
                     let end = e.address + e.rows.len() as u32 * e.stride;
+                    self.materials
+                        .forget(e.address & PHYS_MASK, end & PHYS_MASK);
                     self.gpu_copies
                         .retain(|&a, _| !(e.address..end).contains(&a));
                     for (i, row) in e.rows.into_iter().enumerate() {

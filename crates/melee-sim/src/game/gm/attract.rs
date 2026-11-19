@@ -117,23 +117,20 @@ impl Running<'_> {
     /// The camera turned to slot `slot`'s fighter: a 60 degree field of view, 30 units off,
     /// a random yaw (-35 to 35 degrees) and pitch (0 to 15).
     fn attract_look_at(&mut self, slot: i32) {
-        camera::script_fov(&mut self.game.camera.cam, 60.0);
+        self.game.camera.script_fov(60.0);
         camera::script_look_at_player(self, slot);
         let g = &mut *self.game;
-        camera::script_orbit_distance(&mut g.camera.cam, 30.0);
+        g.camera.script_orbit_distance(30.0);
         let yaw = g.objs.rng.below(0x47) - 0x23;
-        camera::script_orbit_yaw(
-            &mut g.camera.cam,
-            crate::fpu::mem(gekko_fp::fmuls(crate::fpu::reg(DEG), f64::from(yaw as f32))),
-        );
+        g.camera.script_orbit_yaw(crate::fpu::mem(gekko_fp::fmuls(
+            crate::fpu::reg(DEG),
+            f64::from(yaw as f32),
+        )));
         let pitch = g.objs.rng.below(0x10);
-        camera::script_orbit_pitch(
-            &mut g.camera.cam,
-            crate::fpu::mem(gekko_fp::fmuls(
-                crate::fpu::reg(DEG),
-                f64::from(pitch as f32),
-            )),
-        );
+        g.camera.script_orbit_pitch(crate::fpu::mem(gekko_fp::fmuls(
+            crate::fpu::reg(DEG),
+            f64::from(pitch as f32),
+        )));
     }
 
     /// Whether slot `slot`'s fighter is within the camera's bounds (`Player_800368F8`,
@@ -150,7 +147,7 @@ impl Running<'_> {
         let b = self.game.fighters[f.0]
             .x890_cameraBox
             .expect("a fighter without a camera box");
-        camera::in_bounds(&self.game.stage_info, self.game.camera.boxes[b].pos)
+        camera::in_bounds(&self.game.stage_info, self.game.camera.subject(b).pos)
     }
 
     /// `fn_80182F40`, the attract match's process: Start or A ends the match for the title;
@@ -214,7 +211,7 @@ impl Running<'_> {
                 }
             }
             2 if ticks == 0x370 || !self.attract_in_bounds(second) => {
-                camera::set_standard(&mut self.game.camera.cam);
+                self.game.camera.set_standard();
                 for i in 0..4 {
                     self.set_player_cpu_level(i, 9);
                     self.game.set_player_more_flags_bit4(i, 0);

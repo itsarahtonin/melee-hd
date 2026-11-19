@@ -33,9 +33,11 @@ use melee_sim::game::state::Game;
 
 mod allocs;
 mod corpus;
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "linux"))]
 mod dolphin;
 mod gecko_words;
+#[cfg(target_os = "linux")]
+mod linux;
 mod matches;
 mod native;
 #[cfg(windows)]
@@ -254,7 +256,7 @@ fn run(args: Vec<String>) -> std::process::ExitCode {
         Some("snapshot") => snapshot(&args[1..]),
         Some("codes") if args.len() == 2 => codes(&args[1]),
         Some("oracle-codes") if args.len() == 2 => write_codes(&args[1], matches::ORACLE_MATCHES),
-        #[cfg(windows)]
+        #[cfg(any(windows, target_os = "linux"))]
         Some("dolphin") => dolphin::main(&args[1..]),
         Some("native") => native::main(&args[1..]),
         Some("corpus") => corpus::main(&args[1..]),

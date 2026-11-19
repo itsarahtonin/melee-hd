@@ -30,12 +30,12 @@
 //! melee-render-check dashboard RESULTS_DIR OUT_DIR
 //!     a page of the results `compare` and `scaled` recorded with CHECK_RESULTS=RESULTS_DIR:
 //!     OUT_DIR/index.html, and the frames compared at full size in OUT_DIR/img/
-//! melee-render-check fast DISC REPLAY.slp [--renderer exact|f2|fast] [--mutate NAME] [--scale N]
+//! melee-render-check fast DISC REPLAY.slp [--renderer exact|f2|f3|fast] [--mutate NAME] [--scale N]
 //!     [--threaded] [--out DIR] FRAME...
 //!     the fast renderer's comparison harness: native frames drawn by a renderer under test
 //!     and by the exact renderer, their geometry and images compared within tolerance
-//! melee-render-check bench DISC REPLAY.slp [--renderer exact|f2|fast] [--scale N] [--from A] [--to B]
-//!     [--one-thread] [--adapter NAME|fallback]
+//! melee-render-check bench DISC REPLAY.slp [--renderer exact|f2|f3|fast] [--scale N] [--from A] [--to B]
+//!     [--one-thread] [--adapter NAME|fallback] [--warm-list FILE]
 //!     the renderer's CPU and GPU time a frame over the replay's native frames A to B
 //! ```
 

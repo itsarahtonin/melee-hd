@@ -672,7 +672,7 @@ impl Running<'_> {
             } else {
                 let roll = self.game.objs.rng.below(100) + 1;
                 let star_chance = self.common().i32(0x520);
-                let free = super::super::camera::is_free(&self.game.camera.cam);
+                let free = self.game.camera.is_free();
                 match (!free && star_chance >= roll, ice) {
                     (true, true) => self.enter_dead_up_fall_ice(gobj),
                     (true, false) => self.enter_dead_up_fall(gobj),

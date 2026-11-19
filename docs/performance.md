@@ -15,6 +15,8 @@ Measured with `tools/bench` (`melee-bench`), release builds, other applications 
 | Ticks | no allocations (counting-allocator test); lock-free scaling over cores |
 | Player | p99 simulation and rendering < 8 ms at 1440p |
 
+**Which machine (Sarah, 2026-11-19).** The targets in milliseconds are met on [the worker](#machine), the slower reference (a 2017 processor running the simulation at about half this machine's speed), since the aim is a game that runs on low-end PCs; the ratios (to Dolphin, a branch against its base) hold on any machine but are taken there too. The worker's numbers, 2026-11-19: the snapshot, its clone and restore are well inside their targets; restore and 8 ticks, 4.07 to 4.57 ms on the worst states at `c6e274d5`, is 2.1 to 3.9 ms at main `160ae506` (after task 1's callback table) on every state but one, Fox–Marth on Pokémon Stadium at tick 12,500, which is at the line (3.96 to 4.09 ms, one run of three over; [below](#baselines-on-the-worker-2026-11-19)); the player's p99 is to be measured there in the fast renderer's F5 round.
+
 ## Machine
 
 AMD Ryzen 7 9800X3D (8 cores), 62 GB RAM, Windows 11 Pro, Rust 1.98.1.
@@ -118,7 +120,7 @@ After the speed work below (2026-10-09, melee-hd `86dc9ab`, the same machine, qu
 
 Speed work is parked here until more of the game is ported, since new content changes the profile; profile-guided optimization (an estimated 10 to 15%) is the next step when it resumes.
 
-**After milestone 5 (2026-11-01, melee-hd `a8615a75`, which only made `melee-bench` run its commands on a 512 MB stack: they overflowed the main thread's as they started).** This is the same machine, with no builds, agents or verify running; the CPU was 7 to 11% busy before each step. Each figure is the median of 5 runs, every run in sync. Dolphin was measured again the same day on the same build and calibrations, with `ganon-captain-fd` newly calibrated. `ics-peach-ps` leaves its replay at frame 10,139 natively, as always (the heap layout, [Dolphin](#dolphin)), so it gives no melee-hd figure:
+**After milestone 5 (2026-11-01, melee-hd `a8615a75`, which only made `melee-bench` run its commands on a 512 MB stack: they overflowed the main thread's as they started).** This is the same machine, with no builds, agents or verify running; the CPU was 7 to 11% busy before each step. Each figure is the median of 5 runs, every run in sync. Dolphin was measured again the same day on the same build and calibrations, with `ganon-captain-fd` newly calibrated. `ics-peach-ps` (its recording before 2026-11-19, [below](#ice-climbers-and-the-heap-layout)) left its replay at frame 10,139 natively, as it always did, so it gives no melee-hd figure:
 
 | match | melee-hd release, median frames/s (runs) | melee-hd `dist` | Dolphin | release ratio | `dist` ratio |
 | --- | --- | --- | --- | --- | --- |
@@ -323,7 +325,7 @@ The speed targets' baselines at main `c6e274d5` (after batch 3), on [the worker]
 | `ganon-captain-fd` | 2,092 (2,076 to 2,128) | 2,106 (2,094 to 2,166) | 2,045 (2,008 to 2,085) | 2,130 (2,045 to 2,135) |
 | Sarah's 3.19 replay (`MELEE_BENCH_FP=slippi`) | 2,310 (2,289 to 2,356; 2,290, 2,339, 2,345) | 2,368 (2,307 to 2,382) | 2,281 (2,212 to 2,293) | 2,265 (2,241 to 2,310) |
 
-A fourth job (three more rounds against task 1's branch, the model on) gave main `fox-fox-fd` 2,193 (2,167 to 2,242), `fox-marth-ps` 1,877 (1,864 to 1,929) and Sarah's replay 2,321 (2,264 to 2,340): the same build moves by 1 to 2% from one job to another, so compare builds within a job. Sarah's replay is `$SLIPPI_REPLAYS/2026-01/Game_20260129T130802.slp` (`--dir` its folder). Dolphin isn't installed on the worker, so the target's ratio to Dolphin waits for a Dolphin run there (dividing by this machine's Dolphin figures would mix two machines).
+A fourth job (three more rounds against task 1's branch, the model on) gave main `fox-fox-fd` 2,193 (2,167 to 2,242), `fox-marth-ps` 1,877 (1,864 to 1,929) and Sarah's replay 2,321 (2,264 to 2,340): the same build moves by 1 to 2% from one job to another, so compare builds within a job. Sarah's replay is `$SLIPPI_REPLAYS/2026-01/Game_20260129T130802.slp` (`--dir` its folder). Dolphin's figures on the worker, and the target's ratio, are in [Dolphin on the worker](#dolphin-on-the-worker-2026-11-19).
 
 ```sh
 for heap in on off; do  # MELEE_BENCH_HEAP=off for off
@@ -346,6 +348,25 @@ done
 
 Against [the targets](#targets): the snapshot (under 2.3 MB) and its clone and restore (under 0.27 and 0.19 ms) are well inside them; restore and 8 ticks is over 4 ms on some states (`fox-marth-ps` at 2,500, 5,000, 7,500 and 12,500, `fox-fox-fd` at 5,000, `fox-marth-bf` at 15,000, Sarah's replay at 7,500, the model on and off), on a machine that runs the simulation at about half this one's speed; Pokémon Stadium's ticks still allocate (its text, as before).
 
+**Rollback at main `160ae506` (2026-11-19, after the callback table).** The same command on [the worker](#machine) in one exclusive reservation, three rounds, so every state is measured three times. One build, `perf/worker-dolphin` `8d87876e`, whose simulation is main `160ae506`'s (and `4770a3ca`'s), release with line tables as above. The ranges over the rounds and states:
+
+| Match | Snapshot | Allocations | Clone | Restore | Restore allocations | Restore and 8 ticks (the worst state) | Allocations per tick |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 1.95 to 2.02 MB | 495 to 498 | 215 to 237 µs | 147 to 164 µs | 0 | 2.73 to 3.86 ms (5,000: 3.74 to 3.86) | 1 |
+| `fox-marth-bf` | 1.95 to 1.98 MB | 504 to 507 | 215 to 242 µs | 148 to 163 µs | 0 | 2.06 to 3.59 ms (10,000: up to 3.59) | 1 |
+| `fox-marth-fd` | 1.98 to 2.03 MB | 509 to 517 | 217 to 239 µs | 149 to 164 µs | 0 | 2.73 to 3.39 ms (15,000: up to 3.39) | 1 |
+| `fox-marth-ps` | 2.08 to 2.24 MB | 522 to 528 | 232 to 263 µs | 161 to 187 µs | 1 | 3.22 to 4.09 ms (12,500: 3.97, 4.09, 3.96; 5,000: 3.78, 3.94, 3.81) | 8 to 11 |
+| `ganon-captain-fd` | 2.01 to 2.02 MB | 520 to 521 | 223 to 238 µs | 153 to 164 µs | 0 | 3.00 to 3.35 ms | 1 |
+| Sarah's replay, model on | 2.16 to 2.23 MB | 614 to 623 | 241 to 267 µs | 165 to 182 µs | 0 | 2.46 to 3.84 ms (7,500: up to 3.84) | 1 |
+| Sarah's replay, model off | 2.11 to 2.17 MB | 587 to 595 | 237 to 261 µs | 161 to 178 µs | 0 | 2.49 to 3.85 ms (7,500: up to 3.85) | 1 |
+
+**Restore and 8 ticks is not yet under 4 ms on every state.** Every state is under it but one: `fox-marth-ps` at tick 12,500 ran 3.97, 4.09 and 3.96 ms (one run of three over, the median 0.03 ms under), and its tick 5,000 is next at 3.78 to 3.94 ms. Every other state is at most 3.86 ms. At `c6e274d5` eight states were over (above). Pokémon Stadium's ticks still allocate. The processor was 0% busy before and after each round.
+
+```sh
+melee-bench snapshot-match --every 2500 MATCH   # each of the five matches, three rounds
+MELEE_BENCH_FP=slippi [MELEE_BENCH_HEAP=off] melee-bench snapshot-match --every 2500 --dir "$SLIPPI_REPLAYS/2026-01" Game_20260129T130802
+```
+
 ## Benchmark matches
 
 | Match | Stage | Fighters (costume) | Seed | Frames | Length | Ends |
@@ -354,10 +375,10 @@ Against [the targets](#targets): the snapshot (under 2.3 MB) and its clone and r
 | `fox-marth-bf` | Battlefield | Fox vs Marth | `1F0F0002` | 15,110 | 4:12 | Marth out of stocks, Fox on 3 |
 | `fox-marth-fd` | Final Destination | Fox vs Marth | `1F0F0003` | 15,241 | 4:14 | Fox out of stocks, Marth on 1 |
 | `fox-marth-ps` | Pokémon Stadium | Fox vs Marth | `1F0F0004` | 13,585 | 3:46 | Fox out of stocks, Marth on 1 |
-| `ics-peach-ps` | Pokémon Stadium | Ice Climbers vs Peach | `1F0F0005` | 12,655 | 3:31 | Ice Climbers out of stocks, Peach on 1 |
+| `ics-peach-ps` | Pokémon Stadium | Ice Climbers vs Peach | `1F0F0015` | 13,659 | 3:48 | Ice Climbers out of stocks, Peach on 1 |
 | `ganon-captain-fd` | Final Destination | Ganondorf vs Captain Falcon | `1F0F0006` | 12,067 | 3:21 | Ganondorf out of stocks, Captain Falcon on 1 |
 
-Each is a VS match (4 stocks, 8 minutes, items off, pausing off; settings as a Slippi Dolphin VS match records them) with both players human, and the controllers both played. The Fox–Fox match was the first measured, when only Fox was ported. Frames count from the first (`-123`) to the last. The replays are in the repository, `data/bench/NAME.slp` (inputs the CPU AI played, no game data); `make-matches.sh` writes them with the Gecko codes (`NAME.ini`, below), ssbm-rs's start traces (`NAME.start.trace`) and the logs of making and checking them into its folder (ssbm-rs's `local/bench`, `$SSBM_RS_LOCAL/bench`, where `melee-bench native` finds the start traces).
+Each is a VS match (4 stocks, 8 minutes, items off, pausing off; settings as a Slippi Dolphin VS match records them) with both players human, and the controllers both played. `ics-peach-ps` was recorded again on 2026-11-19, in the heap layout playback gives ([Ice Climbers and the heap layout](#ice-climbers-and-the-heap-layout)); every `ics-peach-ps` figure dated before then is the old recording's, a different match. The Fox–Fox match was the first measured, when only Fox was ported. Frames count from the first (`-123`) to the last. The replays are in the repository, `data/bench/NAME.slp` (inputs the CPU AI played, no game data); `make-matches.sh` writes them with the Gecko codes (`NAME.ini`, below), ssbm-rs's start traces (`NAME.start.trace`) and the logs of making and checking them into its folder (ssbm-rs's `local/bench`, `$SSBM_RS_LOCAL/bench`, where `melee-bench native` finds the start traces).
 
 **How they're made.** None of the author's replays is a Fox–Marth or Ice Climbers–Peach singles match, and a CPU match can't simply be replayed as a human one: a CPU's stick reads v/127 where a controller's reads r/80 after Melee's clamp, so its inputs mostly aren't a controller's, and the CPU AI draws from the game's random seed, so without it every later random number moves. So the game's level-9 CPU AI plays both fighters *through their controllers*: in ssbm-rs, around `Fighter_procCpu` each human player counts as a CPU, the AI decides, the random seed is put back as it was, and what the AI asked for (sticks scaled to a controller's range, triggers to its) becomes that controller's next poll. The fighters do only what the controllers say, and the match is the CPUs' closed-loop play. Before "GO" the controllers stay centred.
 
@@ -367,10 +388,10 @@ The floating point is the console's (ssbm-rs's `Hardware` mode, which mainline D
 
 **Checks.** Each match is played again two ways, and both must find no difference from the recording in any compared field of any frame:
 
-- ssbm-rs's replay check: the match played back through Slippi's playback codes (a different boot path, the recorded inputs injected per frame), with `--fp hardware` (`NAME.check.log`).
+- ssbm-rs's replay check: the match played back through Slippi's playback codes (a different boot path, the recorded inputs injected per frame), with `--fp hardware` and Show Player Names off (`SLIPPI_PLAYER_NAMES=0`, the heap layout the allocator model and the oracle's traces have; `NAME.check.log`).
 - The recorded controllers alone (`BENCH_PADS`), without the AI (`NAME.pads.log`). This is what Dolphin and melee-hd get.
 
-All six pass both: 95,826, 91,239, 92,122, 82,093, 101,048 and 72,403 events compared, 0 divergences. `ganon-captain-fd` is there for the oracle (no replay paired Ganondorf with ported characters on a ported stage when it was made), not for the speed target.
+All six pass both: 95,826, 91,239, 92,122, 82,093, 111,829 and 72,403 events compared, 0 divergences (the five others' checks ran with the names on, before 2026-11-19; nothing in them reads a heap address). `ganon-captain-fd` is there for the oracle (no replay paired Ganondorf with ported characters on a ported stage when it was made), not for the speed target.
 
 **Regenerating them.** Build ssbm-rs's runner from its main branch (`3f9ac3a` and later; `cargo build --locked --release -p ssbm-run`; its `tools/run/src/bench.rs` has `BENCH_CODES`, `BENCH_AI`, `BENCH_PADS` and `BENCH_SLP`), then:
 
@@ -378,9 +399,26 @@ All six pass both: 95,826, 91,239, 92,122, 82,093, 101,048 and 72,403 events com
 SSBM_RUN=.../ssbm-run.exe SSBM_DISC=... JOBS=3 bash tools/bench/make-matches.sh "$SSBM_RS_LOCAL/bench"
 ```
 
-For each match that writes the codes, records it (`BENCH_CODES=NAME.ini BENCH_AI=0,1 BENCH_SLP=NAME.slp ssbm-run --fields 31000`), runs both checks, and saves ssbm-rs's state trace of the match's first frames (`NAME.start.trace`, with `--port sysdolphin/baselib/perf`) for the fighters' heap addresses. It is deterministic: rerunning it after ssbm-rs's runtime fix ab3cd01 made byte-identical replays. Each run takes ssbm-rs 10 to 15 minutes on one core.
+For each match it writes the codes, records it (`BENCH_CODES=NAME.ini BENCH_AI=0,1 BENCH_SLP=NAME.slp ssbm-run --fields 31000`), runs both checks, and saves ssbm-rs's state trace of the match's first frames (`NAME.start.trace`, with `--port sysdolphin/baselib/perf`) for the fighters' heap addresses. It is deterministic: rerunning it after ssbm-rs's runtime fix ab3cd01 made byte-identical replays. Each run takes ssbm-rs 10 to 15 minutes on one core.
 
 **Other matches.** The same generator (`tools/bench/src/matches.rs`) also sets a match's rules (stock or time, with a time limit), its item frequency and switch, two to four players and computer players of any CPU kind and level, on any VS stage. Milestone 4's oracle sets are made with it (`melee-bench oracle-sets`, `make-oracle.sh`; see [the oracle](oracle.md#oracle-sets)); the benchmark matches' codes are unchanged.
+
+### Ice Climbers and the heap layout
+
+**Why the layout matters.** Nana is the only fighter in these matches that runs computer player code (the controllers play the others), and the computer player's DI with no knockback (`ftCo_800AC5A0`) takes its stick from registers it never set: the Y stick is the low byte of `r30`, her `Fighter`'s address ([Melee's bugs](melee-bugs.md#a-computer-players-di-with-no-knockback-reads-two-registers-it-never-set)). So an Ice Climbers match goes the same way only where the fighters have the same addresses, and "same match and start" includes the heap's layout. melee-hd plays a replay in the layout Slippi's playback gives (the allocator model, `Layout::slippi_playback` with the replay's code list), as ssbm-rs's playback with Show Player Names off does, which the oracle's traces use.
+
+**The old recording (before 2026-11-19; seed `1F0F0005`, 12,655 frames).** ssbm-rs recorded it under its recording boot (Slippi's bootloader with the recording codes only, whose code list carves a smaller heap from the arena, and whose codes hold fewer blocks), which put every fighter `0x2720` bytes below playback's (Nana at `0x80F62420` against `0x80F64B40`: a stick byte of `0x20` against `0x40`), and Dolphin's run of the boot codes alone put them a further `0x1DC0` below (`0x80F60660`, `0x60`). At frame 10,137 Peach back-throws Nana with no knockback, so melee-hd (in the layout of ssbm-rs's playback with the names off) left the recording at frame 10,139 (Nana's release), and Dolphin did too until a benchmark-only DI patch (`di.s`, removed) pinned that byte to the recording's. Every `ics-peach-ps` figure dated before 2026-11-19 is that match's; its files stay in `$SSBM_RS_LOCAL/bench/ics-peach-ps.*` (with its `.dolphin` calibration) and in git's history.
+
+**The layout code.** A match listed in `matches::PLAYBACK_LAYOUT` (only `ics-peach-ps`) gets one more code (`tools/bench/gecko/layout.s`, injected at `0x80068EE4` in `Fighter_Create`, just before it allocates the fighter's block): if the heap's first free cell starts below the cell playback's first fighter takes (its address there, `0x80EB5F80`, less the cell's `0x20`-byte header), it allocates the difference once, so the first fighter lands where playback puts it, and so does everything the heap gives out after it (the fighters are made in the same order with the same allocations in every setup). Later fighters find the cell past it and allocate nothing. The code is part of the match's codes, so ssbm-rs's recording run and Dolphin both apply it (by the gaps above, the first fills `0x2720` bytes and the second `0x44E0`), and nothing else differs: Dolphin needs no patch of its own. Playback doesn't have it and doesn't need it. `melee-bench dolphin` refuses a match with a fighter running computer player code whose codes lack it. `melee-bench`'s `playback_layouts_are_the_models` checks the address against the allocator model playing the replay, and the recording run's start trace (`NAME.start.trace`) against the model: Popo, Nana and Peach at `0x80EB5F80`, `0x80F64B40` and `0x81002F40` in both. It fails with the address changed by `0x20`, and with the old recording's start trace beside the new replay.
+
+The code places the fighters where it says in Dolphin too: the old recording, played with the layout code aimed at its own recording's addresses (`0x80EB3860`) and no DI patch, stays in sync to its end, final stocks and percents equal; aimed at playback's, it leaves the replay at frame 10,139, as before.
+
+**The new recording (2026-11-19, seed `1F0F0015`).** Recorded with the layout code by `make-matches.sh` (ssbm-rs's `target/dev/release/ssbm-run.exe`, built 2026-11-06; the files in `$SSBM_RS_LOCAL/bench/ics-layout/`, the replay copied to `data/bench`), and recorded again byte for byte. Nana's DI with no knockback is reached: first at frame 6,808 (`melee-bench native` with the model off stops there by name, and so does `slippi_cpu_di_reads_neither_register`, which reads that frame now), and the match turns on it: with the layout code aimed at the old recording's addresses instead, Dolphin leaves the replay at frame 6,844. The same codes with seed `1F0F0005` made a match that, from frame 5,079 on, differs from the old one (the controllers the AI played, port 1's stick first) and never reached Nana's DI with no knockback, so that seed was left. Checks:
+
+- ssbm-rs's replay check with Show Player Names off and the controllers alone: 111,829 events each through frame 13,535, no divergence. With the names on (Slippi Dolphin's playback default, which ssbm-rs's runner uses unless `SLIPPI_PLAYER_NAMES=0`) the heap is laid out otherwise and the check leaves the recording at Nana's DI, frame 6,808 (5,786 divergences); `make-matches.sh` now runs the check with the names off. The old recording's check had passed with the names on, whose layout happened to give Nana the recording's byte.
+- `melee-bench native`: in sync to its last frame with the allocator model on, every one of 13,659 frames; with it off it stops at frame 6,808 by name.
+- The oracle: ssbm-rs's state trace of the replay's playback (`ssbm-run-rf --replay --fp hardware --port all`, names off, memory every tick; `$SSBM_RS_LOCAL/traces/bench-ics/ics-peach-ps.trc`, 688 MB, 410 s): `melee-oracle diff --fp hardware --heap` compares all 13,735 ticks with no difference and no stale read, the fighters' addresses the model's. `melee-oracle sync-test --rollback 7 --fp hardware`: 13,653 ticks checked, no difference.
+- `melee-bench dolphin`, without the DI patch: calibrated in two runs on this machine and on the worker, every run in sync with final stocks and percents equal (below).
 
 ## Dolphin
 
@@ -394,6 +432,8 @@ For each match that writes the codes, records it (`BENCH_CODES=NAME.ini BENCH_AI
 
 Run it as `SSBM_DISC=... DOLPHIN=... melee-bench dolphin --dir "$SSBM_RS_LOCAL/bench" --calibrate` once (a few minutes per match), then `melee-bench dolphin --dir ...` for the median of 5. A Dolphin build or configuration change needs a new calibration.
 
+**On Linux** (`tools/bench/src/linux.rs`) `DOLPHIN` names the folder of a `dolphin-emu-nogui` build, run on its headless platform (`-p headless`, no window; nogui has no batch mode) with the same settings and movie. In place of the hidden desktop and job object, the kernel kills Dolphin when the harness's thread that started it ends, however the harness ends (`prctl(PR_SET_PDEATHSIG, SIGKILL)` before Dolphin runs), and the harness reads MEM1 as Dolphin's parent: the readable shared mapping of at least 24 MB that starts with the game's ID, from `/proc/PID/maps`, read through `/proc/PID/mem` (which a parent may do where ptrace's scope is 1). Mainline's nogui front end parses `-m` but never plays the movie (only the Qt front end calls `Movie::PlayInput`), so the game got no inputs and every calibration run left the replay at frame 0; `tools/bench/dolphin-nogui-movie.patch` adds the Qt front end's call before boot and touches nothing else.
+
 ### Provisional results (2026-10-07)
 
 **Provisional, not the baseline:** measured while eight other agents were building and testing on the machine, with every core busy (Windows reported 100% CPU), so the numbers are low and swing by a factor of two or more between runs of the same match. The official numbers wait for a quiet machine. Two runs per match, Dolphin 2609-31 (master, portable), the machine above.
@@ -406,11 +446,46 @@ Run it as `SSBM_DISC=... DOLPHIN=... melee-bench dolphin --dir "$SSBM_RS_LOCAL/b
 | `fox-marth-ps` | 161, 47 (24, 18 earlier, at the busiest) | yes |
 | `ics-peach-ps` | 106 without the DI patch; 61, 64 with it | without the patch no (from frame 10,139, heap layout; see below); with it yes, every frame and the final stocks and percents |
 
-**Ice Climbers–Peach leaves the replay because the game reads an uninitialized register, whose value is a heap address.** Nana is the only fighter in these replays that runs CPU code (the controllers play the others). At frame 10,137 Peach is back-throwing her, her knockback velocity is still zero, and the CPU's DI routine `ftCo_800AC5A0` (marked `@bug` in the decomp) takes its stick values from registers it never set in that case: the Y stick gets the low byte of `r30`, which its caller `ftCo_800B2790` set to the fighter pointer. Nana's `Fighter` is at `0x80F62420` in ssbm-rs and at `0x80F60660` in Dolphin, so `cpu.lstick.y` becomes `0x20` in one and `0x60` in the other. The throw releases her at frame 10,139 with different DI (velocity (-1.96, 1.76) against (-1.78, 1.93)), she lands at frame 10,160 in Dolphin (DownBoundU, a missed tech, which draws 6 more random numbers) and keeps falling in ssbm-rs. Up to that point every fighter struct, `stage_info`, the player blocks, Nana's input ring and every random-number call (caller and seed, logged in Dolphin by a diagnostic Gecko code) are the same on both sides, and the scene loop rendered once per tick on both. With a probe code that gives that uninitialized stick ssbm-rs's byte (`0x20`), Dolphin plays the whole match in sync, final stocks and percents included. Dolphin's interpreter (CPU core 0) plays the match exactly as its JIT does, frame for frame, so it isn't a JIT difference; and neither side had a disc read in flight or more than one tick per render near those frames.
+**Ice Climbers–Peach (the old recording).** Without the DI patch it left the replay at frame 10,139: at frame 10,137 Nana's DI with no knockback took the low byte of her address as its stick, `0x20` in ssbm-rs's recording and `0x60` in Dolphin, whose fighters were `0x1DC0` bytes lower (the recording boot's heap against the boot codes alone; [Ice Climbers and the heap layout](#ice-climbers-and-the-heap-layout)). Up to there every fighter struct, `stage_info`, the player blocks, Nana's input ring and every random-number call were the same on both sides; Dolphin's interpreter played it as its JIT did, and neither side had a disc read in flight or more than one tick per render near those frames. The DI patch (`di.s`, at `0x800AC6D0`, Dolphin only) set that byte to the recording's on that path alone, and with it Dolphin played the match in sync. The layout code replaced it on 2026-11-19.
 
-All three fighters' structs are `0x1DC0` bytes lower in Dolphin: the heap layout differs, because ssbm-rs records the match with Slippi's bootloader (which carves a heap for its code list out of the arena) and recording codes (which allocate buffers), and Dolphin runs only the boot codes. Neither side is wrong: ssbm-rs ran the original machine code here. It means the start of a match that runs CPU code includes the fighters' addresses: "same match and start" for Ice Climbers (and any CPU player) needs the same heap layout, and melee-hd has to take the uninitialized byte from the address the oracle had (ssbm-rs's state trace records each fighter's address). Fox–Marth and Fox–Fox run no CPU code during the match, so they are unaffected.
+### Dolphin on the worker (2026-11-19)
 
-**The DI patch (benchmark only).** So Ice Climbers–Peach is the same match in Dolphin, the harness adds one Gecko code to that match's Dolphin run (`tools/bench/gecko/di.s`, injected at `0x800AC6D0`): on the nearly-zero-knockback path only, it sets `r30` to the byte the recording read there, the low byte of Nana's `Fighter` address in ssbm-rs, read from ssbm-rs's state trace of the match's start (`NAME.start.trace`, which `make-matches.sh` writes; it is `0x20` here). It is added for any match whose replay has a follower, and never to ssbm-rs's codes. It makes the game read the value it read when the match was recorded; it adds two instructions to a path taken a few times a match and does no other work, so it changes nothing measurable about Dolphin's speed. With it, Dolphin plays the match in sync (both runs above).
+So the speed target's ratio is taken on one machine, [the worker](#machine) (Sarah, 2026-11-19: "Yes, install it").
+
+**The build.** The same mainline revision as the Windows figures. The harness there ran `C:\Projects\dolphin-dev\Dolphin-x64\Dolphin.exe` (22,729,728 bytes, as the harness's logs name it; from `dolphin-master-2609-31-x64.7z`), whose strings name `Dolphin 2609-31`, branch `master`, revision `a475aba718746e7656e2e6b6e047dc98a4d05879` (`git describe`: `2609-31-ga475aba718`; 2026-10-02, "Merge pull request #14857"). On the worker it is cloned from `https://github.com/dolphin-emu/dolphin.git` at that revision into `~/Projects/melee-work/dolphin/src`, with its submodules but the Windows- and Android-only ones (`Qt`, `FFmpeg-bin`, `wil`, `libadrenotools`) and the nogui movie patch above, and built into `~/Projects/melee-work/dolphin/build` (`Binaries/dolphin-emu-nogui`, which reports `2609-31-dirty` for the patch) in a shared runner job under melee-hd's build lock, in about ten minutes:
+
+```sh
+cmake -S src -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DENABLE_QT=OFF -DENABLE_NOGUI=ON -DENABLE_TESTS=OFF \
+  -DENABLE_AUTOUPDATE=OFF -DENABLE_ANALYTICS=OFF -DENABLE_EVDEV=OFF -DUSE_DISCORD_PRESENCE=OFF
+cmake --build build -j 3
+cp -r src/Data/Sys build/Binaries/Sys   # nogui has no post-build step that puts Sys beside it
+```
+
+No packages were installed: the worker's own (GCC 15.2, CMake 4.2, Ninja, and the X11, ALSA, PulseAudio, udev, systemd, curl, zstd, lz4, xxhash, zlib, SDL3, Vulkan, EGL and GL development files already there) and Dolphin's bundled externals cover the nogui build. Frame dumping (FFmpeg), Bluetooth passthrough, libusb and evdev are left out; the runs use none of them. Two differences from the Windows build remain: the compiler (GCC against the buildbot's MSVC) and the front end (nogui's headless platform against Qt in batch mode). The emulation is the same code.
+
+**Calibration.** `melee-bench dolphin --dir ~/Projects/melee-work/dolphin/bench --calibrate` (the codes written there by `melee-bench codes`, byte-identical to the Windows ones) in a shared job. Every match took two runs, and every calibration is byte-identical to its Windows one: the emulated timing is the same on both machines. The folder keeps the calibrations, Dolphin's user directory and the movies for later measurements. `ics-peach-ps`'s new recording (2026-11-19) was calibrated the same way, without the DI patch: two runs, byte-identical to its Windows calibration; the old recording's codes and calibration are kept in the folder's `old-ics-peach-ps/`.
+
+**Results.** The worker, quiet, one exclusive reservation per match: `melee-bench dolphin --runs 5 MATCH` and `melee-bench native --runs 5 MATCH`, the order alternating from one match to the next; median frames/s and the runs. melee-hd is `perf/worker-dolphin` `8d87876e`, whose simulation is main `160ae506`'s (its code equals `4770a3ca`'s), release with line tables as [above](#baselines-on-the-worker-2026-11-19), the allocator model on, the state-only display pass. Every Dolphin run was in sync with its final stocks and percents equal, and so was every melee-hd run but the old `ics-peach-ps`'s. The processor was 0% busy before and after each half.
+
+| Match | Dolphin, median frames/s (runs) | melee-hd native (runs) | Ratio |
+| --- | --- | --- | --- |
+| `fox-marth-bf` | 267 (270, 267, 267, 270, 267) | 2,583 (2,580, 2,583, 2,570, 2,589, 2,594) | 9.7× |
+| `fox-marth-fd` | 278 (278, 277, 280, 278, 278) | 2,471 (2,471, 2,466, 2,453, 2,477, 2,473) | 8.9× |
+| `fox-marth-ps` | 232 (232, 231, 232, 230, 232) | 2,220 (2,212, 2,223, 2,212, 2,221, 2,220) | 9.6× |
+| `ics-peach-ps`, new recording (below) | 228 (228, 228, 227, 230, 228) | 1,718 (1,725, 1,704, 1,711, 1,718, 1,720) | 7.5× |
+| `ics-peach-ps`, old recording (Dolphin with the DI patch) | 229 (229, 229, 229, 231, 229) | no result: out of sync from frame 10,139 (the match ends at frame 10,986) | none |
+| `fox-fox-fd` | 285 (281, 287, 283, 285, 285) | 2,699 (2,699, 2,699, 2,696, 2,678, 2,699) | 9.5× |
+| `ganon-captain-fd` | 270 (270, 272, 270, 268, 270) | 2,479 (2,479, 2,478, 2,465, 2,491, 2,487) | 9.2× |
+
+```sh
+export DOLPHIN=~/Projects/melee-work/dolphin/build/Binaries SSBM_DISC=...
+melee-bench dolphin --dir ~/Projects/melee-work/dolphin/bench --runs 5 MATCH
+melee-bench native --runs 5 MATCH
+```
+
+**The new `ics-peach-ps` (2026-11-19).** Recorded in playback's heap layout ([Ice Climbers and the heap layout](#ice-climbers-and-the-heap-layout)), so Dolphin runs it without the DI patch and melee-hd plays it to its end. One exclusive reservation, Dolphin first, then `melee-bench native`, from `perf/bench-ics` (`5e685e86`, main `160ae506` with batch 6, and the layout code; release with line tables); every run in sync, Dolphin's final stocks and percents equal; the processor 0% busy before and after each half. The same build in a second exclusive reservation ran `fox-marth-ps` at 2,164 frames/s (2,153 to 2,168), 2.5% under the table's `8d87876e`, and `ics-peach-ps` at 1,682 (1,674 to 1,686, 7.4×), so on main `160ae506`'s simulation it would be about 7.6 to 7.7×. Dolphin plays the new match about as fast as it did the old (228 against 229 frames/s).
+
+**Against the target: 7.5 to 9.7×, under half of 20×.** On the target's matches melee-hd needs 2.1 to 2.3 times main's speed for 20× (`fox-marth-fd` 5,560 frames/s, `fox-marth-ps` 4,640, `fox-marth-bf` 5,340) and 3.1 to 3.4 times for 30×; Ice Climbers–Peach, the slowest, needs 2.65 times (4,560 frames/s) for 20× and 4.0 times (6,840) for 30×, its three fighters and Nana's computer player costing melee-hd about a quarter more a frame than Fox–Marth on the same stage while Dolphin's frame costs about the same. The worker's ratios are lower than this machine's (12.7 to 14.0× on 2026-11-01): the worker runs Dolphin at 69 to 74% of this machine's speed (`fox-fox-fd` 285 against 388 frames/s) but melee-hd at about half, so a ratio taken on one machine doesn't carry to the other. Each side's runs spread by under 2.5%.
 
 ## Rendering speed
 

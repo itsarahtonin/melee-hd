@@ -8,7 +8,6 @@
 
 use gekko_fp as fp;
 
-use super::camera;
 use super::gr::{ground, stage};
 use super::state::Running;
 use crate::fpu::{mem, reg};
@@ -100,17 +99,17 @@ impl Running<'_> {
     /// The end of the game camera's pass (`Camera_80030788`'s debug drawings): with the stage
     /// shown, its collisions, its zones and its special points as the camera's flags ask.
     pub fn stage_debug_drawings(&mut self) {
-        let cam = &self.game.camera.cam;
-        if !camera::stage_visible(cam) {
+        let cam = &self.game.camera;
+        if !cam.stage_visible() {
             return;
         }
-        if camera::draw_collisions(cam) {
+        if cam.draw_collisions() {
             self.map_collisions();
         }
-        if self.game.camera.cam.x399_b4 {
+        if self.game.camera.draw_zones() {
             self.map_zones();
         }
-        if camera::draw_special_points(&self.game.camera.cam) {
+        if self.game.camera.draw_special_points() {
             self.map_special_points();
         }
     }
@@ -330,13 +329,13 @@ impl Running<'_> {
         let c = self.game.objs.cobjs.current.expect("the game camera");
         crate::hsd::display::lobj_setup_init(&mut self.game.objs, self.data, c);
         push(self, MapDraw::Setup { hsd: false });
-        if camera::x39a_b0(&self.game.camera.cam) {
+        if self.game.camera.x39a_b0() {
             for (kind, color) in TERRAIN_PALETTE {
                 self.map_matching_lines(kind, 0xFF, color);
             }
             // `mp_Terrain_Basic`.
             self.map_matching_lines(0, 0xFF, [0x80, 0x80, 0x80, 0xFF]);
-        } else if camera::x39a_b1(&self.game.camera.cam) {
+        } else if self.game.camera.x39a_b1() {
             use crate::mp::{LINE_LEDGE, LINE_PLATFORM};
             self.map_matching_lines(LINE_LEDGE, LINE_LEDGE, [0xFF, 0x40, 0x40, 0xFF]);
             self.map_matching_lines(LINE_PLATFORM, LINE_PLATFORM, [0x40, 0x40, 0xFF, 0xFF]);
@@ -397,16 +396,15 @@ impl Running<'_> {
                 func: 3,
             },
         );
-        let mut cur = self.game.camera.boxes.last;
-        while let Some(b) = cur {
-            let framed = camera::is_framed(&self.game.stage_info, &mut self.game.camera.boxes[b]);
-            let s = &self.game.camera.boxes[b];
-            if framed {
-                let (l, r) = (adds(s.pos.x, s.ext.h.x), adds(s.pos.x, s.ext.h.y));
-                let (bt, t) = (adds(s.pos.y, s.ext.v.x), adds(s.pos.y, s.ext.v.y));
-                prims(self, Prim::LineStrip, 5, rect(l, r, bt, t));
-            }
-            cur = self.game.camera.boxes[b].prev;
+        let mut framed = Vec::new();
+        let g = &mut *self.game;
+        g.camera.for_each_framed(&g.stage_info, |s| {
+            let (l, r) = (adds(s.pos.x, s.ext.h.x), adds(s.pos.x, s.ext.h.y));
+            let (bt, t) = (adds(s.pos.y, s.ext.v.x), adds(s.pos.y, s.ext.v.y));
+            framed.push(rect(l, r, bt, t));
+        });
+        for r in framed {
+            prims(self, Prim::LineStrip, 5, r);
         }
         push(self, MapDraw::Invalidate);
     }

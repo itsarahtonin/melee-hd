@@ -328,14 +328,14 @@ impl Running<'_> {
             None => fp::frsp(-1.0),
         };
         v.z = mem(fp::fadds(reg(v.z), dz));
-        camera::script_eye_at(&mut self.game.camera.cam, v);
-        camera::script_transition(&mut self.game.camera.cam, 10);
+        self.game.camera.script_eye_at(v);
+        self.game.camera.script_transition(10);
     }
 
     /// The match's camera again, `ftBossLib_8015CC14`.
     #[doc(alias = "ftBossLib_8015CC14")]
     pub fn boss_camera_standard(&mut self) {
-        camera::set_standard(&mut self.game.camera.cam);
+        self.game.camera.set_standard();
     }
 
     /// A hand's entrance camera script, a step a frame (`mv.x0`, waits in `mv.x8`), its
@@ -359,61 +359,61 @@ impl Running<'_> {
                 let enemy = self.boss_nearest(gobj, pos);
                 let slot = enemy.map_or(0, |g| i32::from(self.game.fighter(g).player_idx));
                 camera::script_look_at_player(self, slot);
-                let c = &mut self.game.camera.cam;
-                camera::script_orbit_distance(c, 40.0);
-                camera::script_fov(c, 45.0);
-                camera::script_orbit_yaw(c, pi(-PI));
+                let c = &mut self.game.camera;
+                c.script_orbit_distance(40.0);
+                c.script_fov(45.0);
+                c.script_orbit_yaw(pi(-PI));
                 camera::script_jump(self);
-                let c = &mut self.game.camera.cam;
-                camera::script_orbit_yaw(c, 0.0);
-                camera::script_transition(c, 120);
+                let c = &mut self.game.camera;
+                c.script_orbit_yaw(0.0);
+                c.script_transition(120);
                 set(self, 1);
             }
             1 => {
-                if camera::script_done(&self.game.camera.cam) {
+                if self.game.camera.script_done() {
                     camera::script_look_at_callback(self, CodeRef(waist_cb));
-                    let c = &mut self.game.camera.cam;
-                    camera::script_orbit_distance(c, 120.0);
-                    camera::script_transition(c, 20);
+                    let c = &mut self.game.camera;
+                    c.script_orbit_distance(120.0);
+                    c.script_transition(20);
                     set(self, 2);
                 }
             }
             2 => {
-                let c = &mut self.game.camera.cam;
-                if camera::script_done(c) {
-                    camera::script_orbit_yaw(c, pi(PI / 2.0));
-                    camera::script_transition(c, 60);
+                let c = &mut self.game.camera;
+                if c.script_done() {
+                    c.script_orbit_yaw(pi(PI / 2.0));
+                    c.script_transition(60);
                     set(self, 3);
                 }
             }
             3 => {
-                if camera::script_done(&self.game.camera.cam) {
-                    let c = &mut self.game.camera.cam;
-                    camera::script_orbit_distance(c, 90.0);
-                    camera::script_orbit_yaw(c, pi(-PI / 9.0));
-                    camera::script_orbit_pitch(c, pi(-PI / 12.0));
+                if self.game.camera.script_done() {
+                    let c = &mut self.game.camera;
+                    c.script_orbit_distance(90.0);
+                    c.script_orbit_yaw(pi(-PI / 9.0));
+                    c.script_orbit_pitch(pi(-PI / 12.0));
                     camera::script_jump(self);
                     set(self, 4);
                 }
             }
             4 => {
-                camera::script_hold_eye(&mut self.game.camera.cam);
+                self.game.camera.script_hold_eye();
                 self.game.fighters[f.0].set_mv_i32(hand_mv::X8, 120);
                 set(self, 5);
             }
             5 => {
                 if wait_done(self) {
-                    let c = &mut self.game.camera.cam;
-                    camera::script_orbit_yaw(c, pi(-PI / 9.0));
+                    let c = &mut self.game.camera;
+                    c.script_orbit_yaw(pi(-PI / 9.0));
                     camera::script_jump(self);
-                    camera::script_orbit_distance(&mut self.game.camera.cam, 120.0);
+                    self.game.camera.script_orbit_distance(120.0);
                     self.game.fighters[f.0].set_mv_i32(hand_mv::X8, 30);
                     set(self, 6);
                 }
             }
             6 => {
                 if wait_done(self) {
-                    camera::script_orbit_yaw(&mut self.game.camera.cam, pi(PI / 9.0));
+                    self.game.camera.script_orbit_yaw(pi(PI / 9.0));
                     camera::script_jump(self);
                     self.game.fighters[f.0].set_mv_i32(hand_mv::X8, 30);
                     set(self, 7);
@@ -421,21 +421,21 @@ impl Running<'_> {
             }
             7 => {
                 if wait_done(self) {
-                    let c = &mut self.game.camera.cam;
-                    camera::script_orbit_distance(c, 180.0);
-                    camera::script_orbit_yaw(c, pi(-PI / 2.0));
-                    camera::script_orbit_pitch(c, pi(-PI / 9.0));
+                    let c = &mut self.game.camera;
+                    c.script_orbit_distance(180.0);
+                    c.script_orbit_yaw(pi(-PI / 2.0));
+                    c.script_orbit_pitch(pi(-PI / 9.0));
                     camera::script_jump(self);
                     self.game.fighters[f.0].set_mv_i32(hand_mv::X8, 50);
                     set(self, 8);
                 }
             }
             8 => {
-                camera::script_hold_eye(&mut self.game.camera.cam);
+                self.game.camera.script_hold_eye();
                 set(self, 9);
             }
             9 if wait_done(self) => {
-                camera::set_standard(&mut self.game.camera.cam);
+                self.game.camera.set_standard();
                 set(self, 10);
             }
             _ => {}

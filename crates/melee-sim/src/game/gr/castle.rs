@@ -648,8 +648,8 @@ fn new_subject(r: &mut Running, at: u32) -> crate::game::handles::CameraBoxId {
     let p = param(r.game);
     let ext = [0, 4, 8, 0xC].map(|o| p.f(r.data, at + o));
     // Camera_80029044(2): framed only inside the camera bounds.
-    let b = camera::alloc_box(&mut r.game.camera.boxes, camera::AUTO);
-    let s = &mut r.game.camera.boxes[b];
+    let b = r.game.camera.alloc_box(camera::AUTO);
+    let s = r.game.camera.subject_mut(b);
     s.target_ext.h.x = ext[0];
     s.target_ext.h.y = ext[1];
     s.target_ext.v.x = ext[2];
@@ -662,7 +662,7 @@ fn follow(r: &mut Running, gobj: GObjId, subject: Option<crate::game::handles::C
     let Some(b) = subject else { return };
     let j = nth_joint(r.game, gobj, 0);
     let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, j, None);
-    let s = &mut r.game.camera.boxes[b];
+    let s = r.game.camera.subject_mut(b);
     s.pos = pos;
     s.bone_pos = pos;
 }
@@ -799,7 +799,7 @@ pub fn proc_bill(r: &mut Running, gobj: GObjId) {
     let wait = i32::from(p.h(r.data, 0xC)).wrapping_add(rand) as i16;
     r.game.grounds[sg.0].u.castle().bill_wait = wait;
     if let Some(b) = r.game.grounds[g.0].u.castle_bill().subject {
-        camera::free_box(&mut r.game.camera.boxes, b);
+        r.game.camera.free_box(b);
         r.game.grounds[g.0].u.castle_bill().subject = None;
     }
     setup::destroy(r, Some(gobj));
@@ -876,7 +876,7 @@ pub fn proc_blast(r: &mut Running, gobj: GObjId) {
     }
     r.game.grounds[g.0].u.castle_blast().item = None;
     if let Some(b) = r.game.grounds[g.0].u.castle_blast().subject {
-        camera::free_box(&mut r.game.camera.boxes, b);
+        r.game.camera.free_box(b);
         r.game.grounds[g.0].u.castle_blast().subject = None;
     }
     setup::destroy(r, Some(gobj));

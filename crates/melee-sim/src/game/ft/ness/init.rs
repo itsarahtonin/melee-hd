@@ -51,7 +51,7 @@ impl Running<'_> {
     #[doc(alias = "ftNs_Init_OnDamage")]
     pub fn ness_on_damage(&mut self, gobj: GObjId) {
         self.ness_yoyo_item_despawn(gobj);
-        self.ness_pkflash_set_null(gobj);
+        self.ness_pkflash_set_null(gobj, &super::special_n::NESS);
         self.ness_special_hi_take_damage(gobj);
         self.ness_bat_remove(gobj);
     }
