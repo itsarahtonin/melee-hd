@@ -1204,9 +1204,11 @@ fn slippi_flung_enemies_note_reads_off_course() {
 /// What following playback's camera costs (`camera::CameraState::followed`, design call 9;
 /// `docs/performance.md`): `fox-marth-ps` and Corneria's oracle match played under 3.19's rules
 /// as a live match plays (`Playback::no_settling`, so playback's camera is followed from the first
-/// frame until it meets this one), and again with the follower stopped after every tick, five
-/// alternations each. Prints the ticks followed, their time in both, the match's, and a snapshot
-/// taken while following and in the same tick unfollowed: its size and clone time.
+/// frame until it meets this one), again with the follower stopped after every tick, and again
+/// with it followed to the match's end (its interest's depth moved by 1 on the first tick, which
+/// no update eases back, as a pause leaves it), five alternations each. Prints the ticks
+/// followed, their time in the first two, the match's in all three, and a snapshot taken while
+/// following and in the same tick unfollowed: its size and clone time.
 #[test]
 #[ignore = "a measurement: run alone on a quiet machine"]
 fn measure_following_playbacks_camera() {
@@ -1228,7 +1230,7 @@ fn measure_following_playbacks_camera() {
         on_sim_thread(FpMode::Slippi, || {
             // Each tick's time, how many ticks it followed, and a snapshot at tick `SNAP`.
             const SNAP: usize = 30;
-            let mut run = |follow: bool| {
+            let mut run = |follow: bool, to_the_end: bool| {
                 let mut m = bench.start(&rules, false);
                 m.game.playback.as_mut().unwrap().no_settling = true;
                 let mut device = Device(&bench.replay);
@@ -1237,6 +1239,10 @@ fn measure_following_playbacks_camera() {
                     let at = Instant::now();
                     let (_, ended) = tick(&mut m, &mut device);
                     times.push(at.elapsed());
+                    if to_the_end && t == 0 {
+                        let f = m.game.camera.followed.as_mut().expect("followed");
+                        f.transform.interest.z += 1.0;
+                    }
                     if m.game.follows_playback_camera() {
                         followed += 1;
                         if !follow {
@@ -1252,10 +1258,11 @@ fn measure_following_playbacks_camera() {
                 }
                 (times, followed, snap.expect("the snapshot's tick"))
             };
-            let (mut with, mut without) = (Vec::new(), Vec::new());
+            let (mut with, mut without, mut all) = (Vec::new(), Vec::new(), Vec::new());
             for _ in 0..5 {
-                with.push(run(true));
-                without.push(run(false));
+                with.push(run(true, false));
+                without.push(run(false, false));
+                all.push(run(true, true));
             }
             let followed = with[0].1;
             let sum = |t: &[Duration]| t.iter().sum::<Duration>();
@@ -1276,6 +1283,12 @@ fn measure_following_playbacks_camera() {
                 "{name}: {ticks} ticks, playback's camera followed for {followed}; those ticks {w_with:?} following, {w_without:?} not ({:.2} us a tick more); the match {m_with:?} following, {m_without:?} not; the window's extra {:.3}% of the match",
                 (w_with.as_secs_f64() - w_without.as_secs_f64()) * 1e6 / followed as f64,
                 (w_with.as_secs_f64() - w_without.as_secs_f64()) * 100.0 / m_without.as_secs_f64(),
+            );
+            let m_all = whole(&all);
+            eprintln!(
+                "{name}: followed to the end ({} ticks): the match {m_all:?}, {:.2}% more than not following",
+                all[0].1,
+                (m_all.as_secs_f64() / m_without.as_secs_f64() - 1.0) * 100.0
             );
             for (what, g) in [("following", &with[0].2), ("not", &without[0].2)] {
                 let (_, allocs, bytes) = crate::counted(|| g.clone());

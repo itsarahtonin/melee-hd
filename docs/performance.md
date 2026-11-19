@@ -288,6 +288,17 @@ A session's snapshot (`session-sync --rollback 0 --time` on the Adventure sessio
 
 **Checks.** The goldens on disk were written before the base (`aa79a9b8`'s own state differs from them from tick 1), so the base's and the branch's states were compared by hash instead: two scratch oracles built from each (the goldens' coverage kept), each printing the state's hash after every tick of the golden check rather than stopping, gave the same hash every tick on 327 of the verify list's 329 replay diffs (3.5 million ticks; the other two's goldens predate their re-recorded replays and neither ran). `sync-test --rollback 7` passes on the six benchmark replays; `classic`, `stage-ps` and `menus-ics-fox-fod` compare clean from power-on with `--all --heap` and `session-sync --rollback 7 --shortcut` on `classic`, `stage-ps` and `rules-match` as `session-expect.txt` has them; the frames tests pass (`melee-render-check` 535, `melee-audio-check` 4). Unit tests check that both lists compare and hash as the vectors they replace and that a restore gives long lists spare storage (`materials_restore_long_tevs_into_spares`); each fails with its piece broken.
 
+## Following playback's camera (2026-11-18)
+
+Under the Slippi ruleset a live match follows playback's camera beside its own from the first frame until the two meet, and from a pause to the match's end or until they meet ([the engine notes](engine.md#the-cameras-readers-after-a-pause), "Playback's camera, followed"): one more camera update a tick (without the quakes and the width average), the framed boxes' eased fields swapped in and out, a bit-for-bit comparison, and on the stages that keep the display pass's views one more view at each tick's end. Measured with melee-bench's ignored `measure_following_playbacks_camera` (`feat/m6s-settling-both-ways`, this PC with other agents and a merge check running, 85 to 97% CPU load; five alternations each, the medians): the benchmark replay played as a live match plays it (`Playback::no_settling`, Slippi 3.19's rules, the allocator model off), against the same with the follower stopped after every tick, and with it kept to the match's end as a pause keeps it.
+
+| Match | Ticks | Followed | Those ticks, following / not | The window's extra, of the match | Followed to the end |
+| --- | --- | --- | --- | --- | --- |
+| `fox-marth-ps` | 4,549 | 337 | 127.0 / 122.8 ms; 118.5 / 122.0 ms | +0.26%; -0.21% | +1.25% |
+| Corneria (`oracle-m4/stage-corneria`) | 14,524 | 290 | 95.9 / 89.5 ms; 93.8 / 88.9 ms | +0.11%; +0.09% | -0.87% |
+
+The cost is within the machine's noise: well under 1% of a match's ticks for the settling window, and about 1% at most for a match followed to its end after a pause. The snapshot while following is 1,680 bytes larger (1,931,316 against 1,929,636 bytes at `fox-marth-ps`'s tick 30, 2,122,552 against 2,120,872 on Corneria; the 70 boxes' followed extents and timers), one allocation more (472 against 471, 568 against 567), its clone within noise (113.5 / 113.4 µs, 123.1 / 118.3 µs; 140.4 / 129.0 µs, 137.8 / 137.6 µs). Unfollowed, nothing is added (an empty vector and a `None`). `session-sync --rollback 7` holds through the follower: `pause-fd` (its live match's window and pause) 1,357 ticks in 2 matches, `matches-a` 18,505 ticks in 11 matches, no difference.
+
 ## Benchmark matches
 
 | Match | Stage | Fighters (costume) | Seed | Frames | Length | Ends |
