@@ -127,6 +127,8 @@ for s in 1 2 3 5; do
 done
 ```
 
+`data/bench/ics-peach-ps.slp` was recorded again on 2026-11-19, a different match ([performance](performance.md#ice-climbers-and-the-heap-layout)): every `ics-peach-ps` figure here dated before then is the old recording's. To compare with those, run the old replay, `$SSBM_RS_LOCAL/bench/ics-peach-ps.slp`, in its place; it renders frames 600 to 1800 as before (it leaves its recording only at frame 10,139).
+
 **Low-end runs**, the CPU throttled (the low-end target is the CPU's frame building: the GPU's frame is 1.1 to 1.5 ms even at 5x):
 
 - the renderer on the game's thread alone: `--one-thread`;
