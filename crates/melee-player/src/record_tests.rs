@@ -1468,6 +1468,7 @@ fn a_live_match_on_the_consoles_counters_plays_back_the_same() {
         let replay = Replay::parse(&file).expect("the recording parses");
         let mut again = Settings::from_replay(&melee_slippi::start(&replay)).expect("its settings");
         again.disc = live.disc;
+        again.follow_playback_camera = live.follow_playback_camera;
         again.heap = None;
         let mut p = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
         (p.game.playback.as_mut()).expect("a replay").no_settling = true;
