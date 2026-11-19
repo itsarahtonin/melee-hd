@@ -231,7 +231,8 @@ struct Args {
     /// Plays a stage or character the command line doesn't offer (`--unfinished-stages`, for
     /// developers): one whose audit isn't done or found code a match can reach unported.
     unfinished_stages: bool,
-    /// Saves each match of the player's own as a Slippi replay (`--no-record` turns it off).
+    /// Saves each match of the player's own under the Slippi ruleset as a Slippi replay
+    /// (`--no-record` turns it off); under Vanilla none is saved ([`saves_replays`]).
     record: bool,
     /// Where the replays go: the settings folder's replays folder unless given.
     replays: Option<String>,
@@ -281,7 +282,7 @@ fn usage() -> String {
          frames: [--high-refresh on|off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
          debug: [--flicker-scan] captures a presented frame that drops out for one frame\n\
          perf: [--perf-report FILE] [--refresh HZ] [--seed N]\n\
-         replays: [--no-record] [--replays DIR] each match is saved to DIR, else to replays in the settings folder\n\
+         replays: [--no-record] [--replays DIR] each match under the Slippi ruleset is saved to DIR, else to replays in the settings folder; Vanilla saves none\n\
          special melee: [--special MODE] plays by a mode's rules: {}\n\
          developers: [--unfinished-stages] plays a stage or character not offered yet, which can stop mid-match; [--debug-level off|debug-rom|develop] the developer setting's debug level from power-on\n\
          console: [--power-on] boots Melee from power-on into its menus; [--ruleset vanilla|slippi] the ruleset it runs (Slippi's: no memory card, no debug level); [--inputs FILE.inputs] plays a recorded session from power-on (with --bench, headless); [--record-session FILE] [--no-session-record] [--saves DIR] [--holds SCRIPT] (scripted controllers by tick, MONKEY_HOLD's form) [--card-after FILE] (the card as the session leaves it)\n\
@@ -597,8 +598,6 @@ struct Session {
     /// How much of Melee's time the last tick ran (its timeline's, when it has one): a tick
     /// that loads a scene runs the load's whole length ([`jit::Scheduler::took`]).
     length: Option<Duration>,
-    /// Where the match's recording goes when the session ends, when it's recorded.
-    recording: Option<recording::Recording>,
     /// The console's platform from power-on: the disc, the saves, the session's recording and
     /// the menus' gates.
     console: Option<Box<Platform>>,
@@ -617,31 +616,33 @@ impl Platform {
         }
     }
 
-    /// The VS matches' Slippi replays: a recorder waits in the game for the next match's start
-    /// (it records nothing before it), and the match's replay is saved at its end. Under the
-    /// Slippi ruleset the menus' recorder waits for a live match, which records itself
-    /// (`Session::hand_off`), and a match the session runs in the menus' session instead
-    /// (Sudden Death and the others design call 6 of `docs/slippi-ruleset.md` names) saves none.
+    /// The VS matches' Slippi replays, under the Slippi ruleset only ([`saves_replays`]): a
+    /// recorder waits in the menus' game for the next match's start (it records nothing before
+    /// it), which tells the handoff to record a live match (`Session::hand_off`), and the
+    /// match's replay is saved at its end. A match the session runs in the menus' session
+    /// instead (Sudden Death and the others design call 6 of `docs/slippi-ruleset.md` names)
+    /// saves none. Under Vanilla no recorder waits: the session's recording is its exact record.
     fn replay(&mut self, s: &mut melee_sim::game::session::Session) {
         use melee_sim::game::gm::machine::{GM_OPENING_MV, GM_TITLE, Phase};
         use melee_sim::game::record::{Recorder, Setup};
-        let unrebuilt = s.setup.ruleset == Ruleset::Slippi && !s.in_live_match();
+        let unrebuilt = !s.in_live_match();
+        let saves = saves_replays(s.setup.ruleset);
         let g = &mut s.game;
-        let Some(dir) = &self.replays else {
+        let Some(dir) = self.replays.as_ref().filter(|_| saves) else {
             if let Some(r) = g.recorder.take() {
                 self.save_replay(&r);
             }
             return;
         };
         match &g.recorder {
-            None => g.recorder = Some(Box::new(Recorder::new(Setup::vanilla()))),
+            None => g.recorder = Some(Box::new(Recorder::new(Setup::slippi()))),
             Some(r) => {
                 if self.slp.is_none() && r.last_frame().is_some() && g.vs.start.match_kind == 3 {
                     // A Bonus match's placements at its end take its bonuses' tally
                     // (`fn_8016588C`), which the recorder, only reading, can't run: it isn't
                     // recorded (a fresh recorder waits for the next match's start).
                     eprintln!("a Bonus match isn't saved as a replay");
-                    g.recorder = Some(Box::new(Recorder::new(Setup::vanilla())));
+                    g.recorder = Some(Box::new(Recorder::new(Setup::slippi())));
                     return;
                 }
                 if self.slp.is_none() && r.last_frame().is_some() {
@@ -669,7 +670,7 @@ impl Platform {
                 if r.ended() {
                     let r = g.recorder.take().expect("the recorder");
                     self.save_replay(&r);
-                    g.recorder = Some(Box::new(Recorder::new(Setup::vanilla())));
+                    g.recorder = Some(Box::new(Recorder::new(Setup::slippi())));
                 }
             }
         }
@@ -799,14 +800,6 @@ impl Drop for Session {
                 Ok(()) => eprintln!("the card after the session: {}", path.display()),
                 Err(e) => eprintln!("{}: {e}", path.display()),
             }
-        }
-        let (Some(to), Some(r)) = (&self.recording, &self.game().recorder) else {
-            return;
-        };
-        match to.save(r) {
-            Ok(Some(path)) => eprintln!("saved the replay {}", path.display()),
-            Ok(None) => {}
-            Err(e) => eprintln!("the replay couldn't be saved: {e}"),
         }
     }
 }
@@ -940,7 +933,6 @@ impl Session {
             ended: false,
             sound,
             length: None,
-            recording: None,
             console: Some(platform),
             fp,
         };
@@ -1023,18 +1015,14 @@ impl Session {
                 (s, None)
             }
         };
-        // A match of the player's own is recorded (a benchmark's isn't), as melee-hd's Vanilla
-        // ruleset plays it.
-        let record = a.record && replay.is_none() && a.bench.is_none();
+        // A developer's match plays Vanilla's rules, so it saves no replay ([`saves_replays`]).
         // The replay's match too reads at the player's pace, as ssbm-rs's window plays one.
         let settings = Settings {
             disc: a.disc_speed,
-            record: record.then(melee_sim::game::record::Setup::vanilla),
             ..settings
         };
         let mut s = Session::begin(&disc, &settings, replay, a.bench.is_none() && !a.mute)?;
         s.set_aspect(a.aspect);
-        s.recording = record.then(|| recording::Recording::new(a.replays.as_deref()));
         Ok(s)
     }
 
@@ -1072,7 +1060,6 @@ impl Session {
             ended: false,
             sound,
             length: None,
-            recording: None,
             console: None,
             // The mode the match started in.
             fp: melee_sim::gekko_fp::fp_mode(),
@@ -1160,15 +1147,24 @@ impl Session {
 
 /// The floating point a replay plays in: Slippi Dolphin's JIT's for a Slippi replay, the console's
 /// otherwise. A Slippi replay records its code list (Slippi Dolphin's, or the Slippi ruleset's in
-/// melee-hd's recordings, `record::ruleset_codes`); melee-hd's Vanilla recordings record none and
-/// played in the console's, and ssbm-rs's (`playedOn: ssbm-rs`, the benchmark matches in
-/// `data/bench`) were played in the console's though they record Slippi's codes.
+/// melee-hd's recordings, `record::ruleset_codes`); a Vanilla recording of melee-hd's (the
+/// oracle's, or one the player saved before 2026-11-19) records none and played in the
+/// console's, and ssbm-rs's (`playedOn: ssbm-rs`, the benchmark matches in `data/bench`) were
+/// played in the console's though they record Slippi's codes.
 fn replay_fp(replay: &Replay) -> FpMode {
     if replay.gecko_codes.is_empty() || replay.played_on.as_deref() == Some("ssbm-rs") {
         FpMode::Hardware
     } else {
         FpMode::Slippi
     }
+}
+
+/// Whether a session under `ruleset` saves its matches as Slippi replays (Sarah, 2026-11-19:
+/// "Slippi only"): under the Slippi ruleset they play back exactly in melee-hd and Slippi
+/// Dolphin; under Vanilla none is saved, and the session's recording (`session_rec`) is its
+/// exact record. The panel's Save replays box follows it ([`front::Panel`]).
+pub(crate) fn saves_replays(ruleset: Ruleset) -> bool {
+    ruleset == Ruleset::Slippi
 }
 
 /// Melee's time from `before` to `after` on its timeline.
