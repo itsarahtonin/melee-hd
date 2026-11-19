@@ -1,7 +1,8 @@
 //! The fast renderer's comparison harness (`melee-render-check fast`, docs/fast-renderer.md)
 //! over the frames tests' matches: the frame of every stage the documented frames check, drawn
 //! by a renderer under test and by the exact renderer and compared. The fast renderer as far as
-//! it goes (`--renderer fast`, F2's mesh cache) draws every frame within the tolerance; the
+//! it goes (`--renderer fast`, F3's transforms on the GPU over F2's mesh cache) draws every frame
+//! within the tolerance, and keeps what lies on the depth range's edge on the same side; the
 //! exact renderer with a change made on purpose stands in for a renderer under test, which
 //! proves the harness: unchanged, every frame is identical; each wrong frame (a material's
 //! color off, a draw missing, a draw out of order, a joint's matrices off, the depth range's
