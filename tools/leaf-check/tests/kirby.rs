@@ -83,6 +83,7 @@ use melee_sim::game::ft::kirby::special_ness::KIRBY as NS_KIRBY;
 use melee_sim::game::ft::kirby::special_peach::KIRBY as PE_KIRBY;
 use melee_sim::game::ft::kirby::special_purin::KIRBY;
 use melee_sim::game::ft::kirby::special_samus::KIRBY as SS_KIRBY;
+use melee_sim::game::ft::kirby::special_seak::KIRBY as SK_KIRBY;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
 use melee_sim::game::it::kinds::{
@@ -508,8 +509,10 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftKb_SpecialNFx_800FDD4C" => return Ret::Int(g.kb_fx_blaster_action(Some(gobj)) as u32),
         "ftKb_SpecialNFx_800FDDF4" => return b(g.kb_fx_blaster_not_needed(Some(gobj))),
         "ftKb_SpecialNNs_800FEC78" => return b(g.ness_special_n_holding(gobj, &NS_KIRBY)),
-        "ftKb_SpecialNSk_80105FF0" => return b(g.kb_sk_lets_go(Some(gobj))),
-        "ftKb_SpecialNSk_80106020" => return Ret::Int(g.kb_sk_count(Some(gobj)) as u32),
+        "ftKb_SpecialNSk_80105FF0" => return b(g.seak_lets_go(Some(gobj), &SK_KIRBY)),
+        "ftKb_SpecialNSk_80106020" => {
+            return Ret::Int(g.seak_held_count(Some(gobj), &SK_KIRBY) as u32);
+        }
         "ftKb_SpecialNPe_8010C4AC" => return b(g.peach_toad_done(gobj, &PE_KIRBY)),
         "ftKb_SpecialNGw_8010D160" => return b(g.kb_gw_done(gobj)),
         "it_802BDF40" => peachtoad::remove(g, gobj),

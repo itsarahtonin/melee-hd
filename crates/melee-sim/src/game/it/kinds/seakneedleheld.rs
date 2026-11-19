@@ -6,6 +6,8 @@ use gekko_fp as fp;
 use super::super::item::{change, change_state, pick_up, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1};
 use crate::fpu::mem;
+use crate::game::ft::kirby::special_seak::KIRBY as SK_KIRBY;
+use crate::game::ft::seak::special_n::SEAK;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -60,8 +62,8 @@ pub fn show_needles(r: &mut Running, gobj: GObjId) {
         return;
     }
     let count = match item(r.game, gobj).kind {
-        super::SEAK_NEEDLE_HELD => r.seak_held_count(Some(owner)),
-        super::KIRBY_SEAK_NEEDLE_HELD => r.kb_sk_count(Some(owner)),
+        super::SEAK_NEEDLE_HELD => r.seak_held_count(Some(owner), &SEAK),
+        super::KIRBY_SEAK_NEEDLE_HELD => r.seak_held_count(Some(owner), &SK_KIRBY),
         k => panic!("it_802B18B0 with kind {k}: the original reads a count it never set"),
     };
     let root = jobj_of(r.game, gobj);
@@ -135,8 +137,8 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
         return false;
     }
     let let_go = match item(r.game, gobj).kind {
-        super::SEAK_NEEDLE_HELD => r.seak_lets_go(Some(owner)),
-        super::KIRBY_SEAK_NEEDLE_HELD => r.kb_sk_lets_go(Some(owner)),
+        super::SEAK_NEEDLE_HELD => r.seak_lets_go(Some(owner), &SEAK),
+        super::KIRBY_SEAK_NEEDLE_HELD => r.seak_lets_go(Some(owner), &SK_KIRBY),
         _ => false,
     };
     if let_go {

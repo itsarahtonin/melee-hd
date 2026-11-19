@@ -13,7 +13,7 @@ impl Running<'_> {
     /// loose and the chain goes.
     #[doc(alias = "ftSk_Init_80110198")]
     pub fn seak_damage_cb(&mut self, gobj: GObjId) {
-        self.seak_drop_needles(gobj);
+        self.seak_drop_needles(gobj, &super::special_n::SEAK);
         self.seak_check_and_destroy_chain(gobj);
     }
 
