@@ -195,6 +195,52 @@ The MacBook (macOS through Metal, integrated graphics: the low-end GPU of the tw
 
 Each machine's numbers go in a table here like the one above, with its build, driver and how quiet it was.
 
+**Measured on the worker (2026-11-19).** `feat/fast-f3` at `e596be85` (F2 and F3; F3 is `--renderer fast`), release with line tables; the NVIDIA GeForce GTX 1080 Ti through Vulkan (driver 580.178.04), the default adapter (`GX_ADAPTER=1`: "NVIDIA GeForce GTX 1080 Ti (Vulkan, NVIDIA)"). Each round ran in an exclusive reservation of the worker's runner after its quietness check (processor and GPU idle; 0 to 2% busy between scales). The fixed runs, frames 600 to 1800, in two rounds (the renderers' order exact, F2, F3 in the first and F3, F2, exact in the second); the Ice Climbers' match on Pokémon Stadium at 1x and 2x twice more. Each cell gives every round: frames a second; the CPU's frame (build and submit, the mean) in ms, and its 95th percentile in brackets. "F3 against F2" compares the rounds' mean CPU frames; "GPU after" is F3's mean wait for the GPU after the submit:
+
+| Replay | Scale | Exact: frames/s; CPU ms (p95) | F2 | F3 | F3 against F2 | GPU after, F3 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fox-marth-fd` | 1x | 275/277; 3.40 / 3.43 (4.73/4.66) | 433/422; 2.22 / 2.29 (2.64/2.81) | 464/469; 2.04 / 2.01 (2.53/2.42) | -10% | 0.11 |
+| `fox-marth-bf` | 1x | 271/293; 3.47 / 3.26 (4.68/3.85) | 421/423; 2.28 / 2.27 (2.67/2.74) | 435/440; 2.18 / 2.15 (2.48/2.40) | -5% | 0.12 |
+| `fox-marth-ps` | 1x | 252/246; 3.83 / 3.92 (5.13/5.17) | 317/327; 3.02 / 2.93 (4.10/3.89) | 308/319; 2.97 / 2.91 (4.03/3.87) | -1% | 0.25 |
+| `ics-peach-ps` | 1x | 262/268/268/266; 3.62 / 3.55 / 3.56 / 3.60 (4.88/4.79/4.88/4.88) | 333/348/323/334; 2.86 / 2.74 / 2.92 / 2.82 (4.11/3.87/4.09/3.94) | 323/334/314/336; 2.92 / 2.79 / 2.93 / 2.77 (4.16/4.08/4.40/3.68) | +1% | 0.21 |
+| Fountain of Dreams | 1x | 110/108; 8.47 / 8.57 (10.20/10.25) | 172/169; 5.48 / 5.55 (7.21/7.07) | 248/237; 3.82 / 4.01 (4.67/5.04) | -29% | 0.21 |
+| `fox-marth-fd` | 2x | 239/284; 3.28 / 3.19 (4.41/4.41) | 380/377; 2.28 / 2.30 (3.31/3.21) | 383/400; 2.22 / 2.08 (2.96/2.48) | -6% | 0.41 |
+| `fox-marth-bf` | 2x | 273/222; 3.40 / 3.53 (4.55/4.79) | 383/387; 2.33 / 2.30 (3.06/2.92) | 350/388; 2.47 / 2.26 (3.65/2.61) | +2% | 0.35 |
+| `fox-marth-ps` | 2x | 245/258; 3.87 / 3.66 (5.26/5.05) | 305/309; 3.07 / 3.00 (4.16/4.18) | 312/300; 2.95 / 3.08 (4.15/4.31) | -1% | 0.25 |
+| `ics-peach-ps` | 2x | 269/267/259/250; 3.51 / 3.47 / 3.55 / 3.71 (4.92/4.76/5.01/5.10) | 322/322/315/310; 2.84 / 2.79 / 2.85 / 2.93 (4.17/4.14/4.17/4.27) | 298/315/306/304; 3.03 / 2.92 / 2.97 / 2.96 (4.45/4.26/4.31/4.27) | +4% | 0.30 |
+| Fountain of Dreams | 2x | 114/136; 7.87 / 7.17 (9.36/8.41) | 166/209; 5.13 / 4.61 (6.58/5.82) | 251/250; 3.80 / 3.78 (4.66/4.29) | -22% | 0.20 |
+| `fox-marth-fd` | 3x | 242/230; 3.27 / 3.26 (4.57/4.46) | 304/310; 2.42 / 2.35 (3.48/3.38) | 330/335; 2.13 / 2.10 (3.00/2.75) | -11% | 0.90 |
+| `fox-marth-bf` | 3x | 229/242; 3.36 / 3.41 (4.30/4.62) | 310/320; 2.42 / 2.37 (3.58/3.18) | 320/329; 2.26 / 2.25 (2.70/2.61) | -6% | 0.82 |
+| `fox-marth-ps` | 3x | 235/235; 3.71 / 3.73 (5.07/5.13) | 272/280; 3.07 / 2.92 (4.32/4.13) | 278/276; 2.93 / 2.95 (4.17/3.88) | -2% | 0.67 |
+| `ics-peach-ps` | 3x | 229/236; 3.84 / 3.73 (5.32/5.22) | 280/284; 2.94 / 2.84 (4.35/4.15) | 268/266; 3.04 / 3.02 (4.40/4.49) | +5% | 0.71 |
+| Fountain of Dreams | 3x | 127/128; 7.47 / 7.25 (9.70/8.74) | 196/190; 4.72 / 4.78 (6.08/6.29) | 225/241; 4.10 / 3.79 (5.45/4.38) | -17% | 0.35 |
+| `fox-marth-fd` | 5x | 183/187; 3.31 / 3.18 (4.49/4.01) | 213/216; 2.52 / 2.46 (3.74/3.69) | 220/220; 2.23 / 2.24 (3.58/3.55) | -10% | 2.30 |
+| `fox-marth-bf` | 5x | 180/187; 3.52 / 3.29 (4.75/4.15) | 219/218; 2.50 / 2.52 (3.66/3.81) | 220/224; 2.37 / 2.26 (3.26/2.75) | -8% | 2.19 |
+| `fox-marth-ps` | 5x | 162/164; 3.87 / 3.76 (5.74/5.56) | 170/170; 3.14 / 3.12 (4.51/4.34) | 166/168; 3.16 / 3.02 (4.75/4.33) | -1% | 2.91 |
+| `ics-peach-ps` | 5x | 163/165; 3.57 / 3.42 (5.23/4.66) | 163/165; 3.16 / 2.97 (4.76/4.27) | 159/160; 3.13 / 2.99 (4.77/4.32) | -0% | 3.20 |
+| Fountain of Dreams | 5x | 118/120; 7.30 / 7.24 (9.41/8.66) | 160/165; 4.96 / 4.73 (6.66/6.04) | 180/181; 3.88 / 3.78 (5.16/4.68) | -21% | 1.70 |
+
+The low-end runs, one round (the commands above with `--renderer`; two cores with `taskset -c 0,1`):
+
+| Replay | Setting | Exact: frames/s; CPU ms (p95) | F2 | F3 | F3 against F2 | GPU after, F3 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fox-marth-fd` | `--one-thread` | 119; 7.08 (7.74) | 204; 4.37 (4.92) | 421; 2.17 (2.55) | -50% | 0.20 |
+| `fox-marth-ps` | `--one-thread` | 90; 9.13 (10.16) | 145; 5.94 (6.73) | 265; 3.41 (4.32) | -43% | 0.36 |
+| `ics-peach-ps` | `--one-thread` | 119; 8.35 (9.07) | 152; 5.76 (6.69) | 271; 3.39 (3.99) | -41% | 0.29 |
+| Fountain of Dreams | `--one-thread` | 48; 17.74 (18.89) | 71; 11.54 (12.40) | 186; 4.45 (5.47) | -61% | 0.91 |
+| `fox-marth-fd` | `MELEE_GPU_WORKERS=1` | 125; 6.77 (7.77) | 216; 4.21 (5.01) | 475; 2.00 (2.42) | -52% | 0.11 |
+| `fox-marth-ps` | `MELEE_GPU_WORKERS=1` | 121; 7.57 (8.38) | 191; 4.87 (5.67) | 334; 2.83 (3.76) | -42% | 0.16 |
+| `ics-peach-ps` | `MELEE_GPU_WORKERS=1` | 141; 7.02 (7.67) | 201; 4.58 (5.71) | 342; 2.76 (3.77) | -40% | 0.17 |
+| Fountain of Dreams | `MELEE_GPU_WORKERS=1` | 62; 15.02 (16.92) | 92; 9.56 (11.07) | 245; 3.87 (5.10) | -60% | 0.22 |
+| `fox-marth-fd` | `MELEE_GPU_WORKERS=1`, two cores | 126; 6.73 (7.53) | 216; 4.24 (4.87) | 415; 2.30 (2.68) | -46% | 0.11 |
+| `fox-marth-ps` | `MELEE_GPU_WORKERS=1`, two cores | 113; 7.97 (9.03) | 174; 5.20 (6.28) | 276; 3.37 (4.20) | -35% | 0.25 |
+| `ics-peach-ps` | `MELEE_GPU_WORKERS=1`, two cores | 121; 7.64 (8.57) | 174; 5.25 (6.36) | 265; 3.36 (4.40) | -36% | 0.41 |
+| Fountain of Dreams | `MELEE_GPU_WORKERS=1`, two cores | 60; 15.43 (16.96) | 92; 9.56 (10.59) | 211; 4.42 (5.26) | -54% | 0.32 |
+
+**What the worker says.** Threaded, F3's CPU frame is 2.0 to 3.2 ms on the benchmark matches and 3.8 to 4.1 on Fountain of Dreams: F2 cut the exact renderer's by 21 to 35%, and F3 takes Fountain of Dreams a further 17 to 29% below F2, Final Destination 6 to 11% below and Battlefield −8 to +2%; on Pokémon Stadium F3 and F2 are within the rounds' spread (Fox against Marth 1 to 2% below). With few threads F3 halves F2's frame or better (Fountain of Dreams on one thread 11.5 to 4.5 ms, with one transform thread 9.6 to 3.9). The 1 ms target isn't met on any stage; the worker's CPU is the low-end case here, its GPU's work after the submit 0.1 to 0.9 ms up to 3x (2.2 to 3.3 ms on the benchmark matches at 5x, where Pokémon Stadium's frame is as much the GPU's as the CPU's: F3's GPU wait 2.9 to 3.3 ms there against the exact renderer's 2.3 to 2.6).
+
+**The Ice Climbers on Pokémon Stadium.** On the busy PC F3 was 7 to 18% slower than F2 threaded. On the worker it is 1% slower at 1x (four rounds each: F3 2.77 to 2.93 ms, F2 2.74 to 2.92), 4% at 2x, 5% at 3x and level at 5x: a small cost, not the busy PC's. A profile of the measured frames (`perf record -e task-clock -F 2000`, the frames 600 to 1800 alone, threaded at 1x; seconds on the CPU of the 4.5 s the frames took) shows the agent's guess in the direction it named, at a small size: the render thread ran 2.33 s under F2 and 2.46 s under F3 (1.9 and 2.05 ms a frame; under F3 its profile has the new work, `draw_gpu_mesh` and the meshes' pool flush, `GpuMeshes::flush`), each transform thread 1.05 s under F2 and 0.34 s under F3, and the game thread 3.05 and 3.1 s. Neither the render thread (about 52% busy) nor the game thread (67%) is saturated: the frame is their work in turn. So F3 adds about 0.1 ms a frame to the render thread, which is the critical path while the transform threads idle; giving the meshes' records to the transform threads, as the F3 work proposed (they build each mesh draw's record and hand it over, as they hand over the normals), would win back about that.
+
 ## F2: the mesh cache
 
 **What it is.** The fast renderer's first part (`--renderer fast` in `melee-render-check fast` and `bench`; `melee_render::gpu::Gpu::with_meshes` in code): the exact renderer with every display list it calls drawn from a mesh decoded once and kept, rather than fetched and decoded from the GX stream every frame. The player still draws with the exact renderer; switching it waits for F5.
