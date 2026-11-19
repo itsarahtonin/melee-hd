@@ -215,7 +215,7 @@ impl Running<'_> {
             3 => self.dk_special_n_destroy_effects_plus(gobj, &super::special_donkey::KIRBY),
             6 | 20 => self.kb_lk_cleanup(gobj),
             14 => self.kb_ys_cleanup(gobj),
-            10 => self.kb_ic_remove_ice(gobj),
+            10 => self.popo_remove_ice(gobj, &super::special_iceclimber::KIRBY),
             16 => self.mt_n_lose_ball(gobj, &super::special_mewtwo::KIRBY),
             _ => {}
         }
@@ -234,7 +234,7 @@ impl Running<'_> {
             3 => self.dk_special_n_destroy_effects_plus(gobj, &super::special_donkey::KIRBY),
             6 | 20 => self.kb_lk_cleanup(gobj),
             14 => self.kb_ys_cleanup(gobj),
-            10 => self.kb_ic_remove_ice(gobj),
+            10 => self.popo_remove_ice(gobj, &super::special_iceclimber::KIRBY),
             16 => self.mt_n_drop_ball(gobj, &super::special_mewtwo::KIRBY),
             _ => {}
         }

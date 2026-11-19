@@ -77,6 +77,7 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
+use melee_sim::game::ft::kirby::special_iceclimber::KIRBY as IC_KIRBY;
 use melee_sim::game::ft::kirby::special_koopa::KIRBY as KP_KIRBY;
 use melee_sim::game::ft::kirby::special_link::KIRBY as LK_KIRBY;
 use melee_sim::game::ft::kirby::special_mewtwo::KIRBY as MT_KIRBY;
@@ -535,7 +536,9 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftKb_SpecialNLk800FB470" => return b(g.link_bow_released(gobj, &LK_KIRBY)),
         "ftKb_SpecialNLk800FB500" => return b(g.link_nock(gobj, &LK_KIRBY)),
         "ftKb_SpecialNLk800FB5F4" => return b(g.link_bow_out(gobj, &LK_KIRBY)),
-        "ftKb_SpecialNIc_80108CE8" => g.kb_ic_forget(gobj, gobj_reg(maps, call, 4, &name)),
+        "ftKb_SpecialNIc_80108CE8" => {
+            g.popo_forget_item(gobj, &IC_KIRBY, gobj_reg(maps, call, 4, &name))
+        }
         "ftKb_SpecialNMt_80106F9C" => return b(g.mt_n_ball_lost(Some(gobj), &MT_KIRBY)),
         "ftKb_SpecialNMt_80106FEC" => return b(g.mt_n_ball_put_away(Some(gobj), &MT_KIRBY)),
         "ftKb_SpecialNPr_801010D4" => g.rollout_end(gobj, &KIRBY, r4 != 0, r5, f1),
