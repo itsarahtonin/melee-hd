@@ -15,6 +15,8 @@ Measured with `tools/bench` (`melee-bench`), release builds, other applications 
 | Ticks | no allocations (counting-allocator test); lock-free scaling over cores |
 | Player | p99 simulation and rendering < 8 ms at 1440p |
 
+**Which machine (Sarah, 2026-11-19).** The targets in milliseconds are met on [the worker](#machine), the slower reference (a 2017 processor running the simulation at about half this machine's speed), since the aim is a game that runs on low-end PCs; the ratios (to Dolphin, a branch against its base) hold on any machine but are taken there too. The worker's numbers, 2026-11-19: the snapshot, its clone and restore are well inside their targets; restore and 8 ticks was 4.07 to 4.57 ms on the worst states at `c6e274d5`, before task 1's callback table made ticks 13 to 15% faster, and is to be measured again at main; the player's p99 is to be measured there in the fast renderer's F5 round.
+
 ## Machine
 
 AMD Ryzen 7 9800X3D (8 cores), 62 GB RAM, Windows 11 Pro, Rust 1.98.1.
