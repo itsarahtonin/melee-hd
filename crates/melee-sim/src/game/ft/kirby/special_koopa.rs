@@ -383,6 +383,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use addr::*;
     match a {
@@ -411,6 +412,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     true
 }
 
+#[melee_callbacks::callbacks(Call)]
 pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     Some(match f {
         addr::MAX_SPEED => Val::Int(r.kb_kp_max_speed(args[0].gobj())),

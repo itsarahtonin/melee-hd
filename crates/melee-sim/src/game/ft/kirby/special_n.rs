@@ -1166,6 +1166,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_EatJump1_Coll")]
     #[doc(alias = "ftKb_EatJump2_Coll")]
     #[doc(alias = "ftKb_EatLanding_Coll")]
+    #[melee_callbacks::callbacks(Fighter)]
     pub fn kb_n_coll(&mut self, gobj: GObjId, a: u32) -> bool {
         match a {
             addr::SPECIAL_N_COLL => self.ground_coll_fall_off_then(gobj, |g, x| g.kb_n_to_air(x)),
@@ -1243,6 +1244,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::N_SKIP_FLOOR => g.kb_skip_floor(gobj),

@@ -116,6 +116,7 @@ pub const KIRBY: Rollout = Rollout {
 #[doc(alias = "ftKb_PrSpecialN_IASA")]
 #[doc(alias = "ftKb_PrSpecialAirNEndR_IASA")]
 #[doc(alias = "ftKb_PrSpecialNHit_IASA")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     let r = &KIRBY;
     match a {

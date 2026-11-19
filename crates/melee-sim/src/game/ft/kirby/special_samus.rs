@@ -87,6 +87,7 @@ pub const KIRBY: ChargeShot = ChargeShot {
 #[doc(alias = "ftKb_SsSpecialN_Phys")]
 #[doc(alias = "ftKb_SsSpecialAirNStart_Phys")]
 #[doc(alias = "ftKb_SsSpecialAirN_Phys")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     let p = &KIRBY;
     match a {

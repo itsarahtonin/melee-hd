@@ -372,8 +372,6 @@ pub const EF_RESUME_ALL: u32 = 0x8005_BAC4;
 pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
     match table().fighter.get(cb.0) {
         Some(f) => f(g, gobj, cb.0),
-        // Kirby's callbacks, until his modules join the table (`refactor/dedup-kirby`).
-        None if super::ft::kirby::run(g, gobj, cb.0) => {}
         None => unported("fighter callback", cb.0),
     }
 }
@@ -401,6 +399,7 @@ fn fighter_callbacks(g: &mut Running, gobj: GObjId, cb: u32) -> bool {
         addr if super::ft::gkoopa::run(g, gobj, addr) => {}
         addr if super::ft::zako::run(g, gobj, addr) => {}
         addr if super::ft::gamewatch::run(g, gobj, addr) => {}
+        addr if super::ft::kirby::run(g, gobj, addr) => {}
         super::it::kinds::samusgrapple::FT_DEATH => {
             super::it::kinds::samusgrapple::ft_death(g, gobj)
         }
@@ -607,10 +606,6 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
     if let Some(c) = t.call.get(f) {
         return c(r, f, args);
     }
-    // Kirby's, until his modules join the table (`refactor/dedup-kirby`).
-    if let Some(v) = super::ft::kirby::call(r, f, args) {
-        return v;
-    }
     // A fighter's callback called by address with its GObj.
     if let [Val::GObj(Some(g))] = *args
         && let Some(cb) = t.fighter.get(f)
@@ -641,6 +636,7 @@ fn calls(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
         .or_else(|| super::ft::gkoopa::call(r, f, args))
         .or_else(|| super::ft::zako::call(r, f, args))
         .or_else(|| super::ft::gamewatch::call(r, f, args))
+        .or_else(|| super::ft::kirby::call(r, f, args))
         .or_else(|| super::ft::ness::call(r, f, args))
         .or_else(|| super::ft::falco::call(r, f, args))
         .or_else(|| super::ft::captain::call(r, f, args))

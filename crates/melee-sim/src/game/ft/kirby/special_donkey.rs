@@ -83,6 +83,7 @@ pub const KIRBY: GiantPunch = GiantPunch {
     on_any_damage: None,
 };
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use addr::*;
     let p = &KIRBY;

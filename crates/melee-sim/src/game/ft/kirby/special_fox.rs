@@ -460,6 +460,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ON_CHANGE_ACTION => g.kb_fx_on_change_action(gobj),

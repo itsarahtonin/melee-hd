@@ -42,6 +42,7 @@ pub const KIRBY: Fireball = Fireball {
     vitamin_prev: 0x6C,
 };
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     let f = &KIRBY;
     match a {

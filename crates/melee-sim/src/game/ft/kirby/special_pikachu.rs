@@ -32,6 +32,7 @@ pub const KIRBY: ThunderJolt = ThunderJolt {
     attrs: (attr::PK_JOLT, attr::PC_JOLT),
 };
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     let t = &KIRBY;
     match a {
