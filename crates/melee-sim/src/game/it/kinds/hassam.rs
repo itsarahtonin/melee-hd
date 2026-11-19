@@ -335,17 +335,23 @@ pub fn fly_off(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 2, change::ANIM_UPDATE);
     effect_hitlag(r.game, gobj);
     bone_motion(r, gobj);
-    // Under Slippi's rules, after a pause, counted (design call 9).
-    r.game.note_camera_read();
     let cam = camera::position(&r.game.camera.cam);
-    let mut d = cam - item(r.game, gobj).pos;
-    d.normalize();
+    let at = item(r.game, gobj).pos;
     let speed = reg(attr_f32(r, gobj, 4));
-    let d = Vec3::new(
-        mem(fp::fmuls(reg(d.x), speed)),
-        mem(fp::fmuls(reg(d.y), speed)),
-        mem(fp::fmuls(reg(d.z), speed)),
-    );
+    let toward = |cam: Vec3| {
+        let mut d = cam - at;
+        d.normalize();
+        Vec3::new(
+            mem(fp::fmuls(reg(d.x), speed)),
+            mem(fp::fmuls(reg(d.y), speed)),
+            mem(fp::fmuls(reg(d.z), speed)),
+        )
+    };
+    let d = toward(cam);
+    // Under Slippi's rules, also through playback's followed camera (design call 9).
+    let bits = |v: Vec3| [v.x, v.y, v.z].map(f32::to_bits);
+    r.game
+        .decide_camera_read(&bits(d), |_, t| bits(toward(t.position)));
     pokemon::vars(r.game, gobj).set_vec(VEL, d);
     let ip = item_mut(r.game, gobj);
     ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);

@@ -24,6 +24,7 @@ use melee_sim::game::state::{Game, Obj, Rules};
 use melee_sim::game::structs::S32Vec2;
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
 use melee_sim::gekko_fp::{FpMode, set_fp_mode};
+use melee_sim::vec::Vec3;
 use melee_slippi::{Device, Replay};
 
 /// The simulation recurses as the original does (joint trees): it runs on a deep stack.
@@ -798,6 +799,25 @@ fn slippi_onett_cars_note_the_other_phase() {
     );
 }
 
+/// Playback's camera, pulled far back: its view's edges lie far past the stage's.
+const PULLED_BACK: Vec3 = Vec3::new(0.0, 0.0, 5000.0);
+
+/// Playback's followed camera (`camera::CameraState::followed`) made the camera's moved by
+/// `shift` (both transforms' eye and interest), its boxes the camera's: the camera's readers are
+/// then decided through a camera elsewhere (design call 9).
+fn displace_playback_camera(g: &mut Game, shift: Vec3) {
+    use melee_sim::game::camera::Course;
+    if !g.follows_playback_camera() {
+        g.start_following();
+    }
+    let mut c = Course::of(&g.camera.cam);
+    for t in [&mut c.transform, &mut c.transform_copy] {
+        t.interest = t.interest + shift;
+        t.position = t.position + shift;
+    }
+    g.camera.followed = Some(c);
+}
+
 /// One tick of `m` and its display pass when due, unless `skip` (a doubled round: the tick
 /// after runs with no pass between): whether the pass was due, and whether the match is over.
 fn tick_skipping(m: &mut Match, device: &mut Device, skip: bool) -> (bool, bool) {
@@ -842,9 +862,9 @@ enum Find {
 /// Dolphin's playback could have it). The doubled round changes what the read decides
 /// (`outcome`) in that tick, and the tripwire notes the read in both runs: each run's other
 /// phase is the other run. Gameplay is the same until that tick, and with `neutral` (a read
-/// that reaches no gameplay) to the match's end. Played a third time with the camera taken for
-/// off playback's course (`DisplayPhase::paused`, as a pause leaves it), more reads are noted,
-/// gameplay the same.
+/// that reaches no gameplay) to the match's end. Played again with playback's followed camera
+/// pulled far back (as a pause or the first frame's settling leaves it apart, but far), more reads
+/// are noted, gameplay the same; and with it followed where the camera is, no more than as played.
 fn doubled_round_notes(
     path: &std::path::Path,
     what: &str,
@@ -862,13 +882,15 @@ fn doubled_round_notes(
     on_sim_thread(FpMode::Slippi, || {
         // Each tick: whether its pass was due, gameplay, the outcome, the count noted. The
         // pass after tick `skip` is skipped; the camera's eye is pulled back before `pull`;
-        // with `off`, the camera is taken for off playback's course, as after a pause.
-        let mut play = |skip: Option<usize>, pull: Option<usize>, off: bool| {
+        // with `off`, playback's camera is followed moved by it before every tick.
+        let mut play = |skip: Option<usize>, pull: Option<usize>, off: Option<Vec3>| {
             let mut m = bench.start(&rules, true);
-            m.game.display_phase.paused = off;
             let mut device = Device(&bench.replay);
             let mut ticks = Vec::new();
             for t in 0usize.. {
+                if let Some(shift) = off {
+                    displace_playback_camera(&mut m.game, shift);
+                }
                 if pull == Some(t) {
                     let p = &mut m.game.camera.cam.transform.position;
                     p.z *= 20.0;
@@ -889,7 +911,7 @@ fn doubled_round_notes(
         let noted = |ticks: &[(bool, Digest, String, u32)], t: usize| {
             ticks[t].3 > if t == 0 { 0 } else { ticks[t - 1].3 }
         };
-        let plain = play(None, None, false);
+        let plain = play(None, None, None);
         let total = plain.last().map_or(0, |t| t.3);
         let (t, pull, plain) = match find {
             Find::Noted => {
@@ -903,7 +925,7 @@ fn doubled_round_notes(
                     .find(|&t| plain[t].2 != plain[t - 1].2 && plain[t - 1].0)
                     .unwrap_or_else(|| panic!("{what}: nothing set off"));
                 assert!(!noted(&plain, t), "{what}: noted as played");
-                (t, Some(t - 2), play(None, Some(t - 2), false))
+                (t, Some(t - 2), play(None, Some(t - 2), None))
             }
         };
         eprintln!(
@@ -914,7 +936,7 @@ fn doubled_round_notes(
             noted(&plain, t),
             "{what}: the read in tick {t} wasn't noted"
         );
-        let doubled = play(Some(t - 1), pull, false);
+        let doubled = play(Some(t - 1), pull, None);
         assert!(
             noted(&doubled, t),
             "{what}: the doubled round's read in tick {t} wasn't noted"
@@ -930,19 +952,30 @@ fn doubled_round_notes(
         if neutral {
             assert_eq!(plain.len(), doubled.len(), "{what}: the match's length");
         }
-        // Off playback's course every read is noted, whatever it decides.
-        let off = play(None, None, true);
-        let reads = off.last().map_or(0, |t| t.3);
-        eprintln!("{what}: {reads} reads noted off playback's course");
+        // Playback's camera followed far back decides otherwise, followed where the camera is
+        // the same.
+        let off = play(None, None, Some(PULLED_BACK));
+        let on = play(None, None, Some(Vec3::ZERO));
+        let (reads, same) = (off.last().map_or(0, |t| t.3), on.last().map_or(0, |t| t.3));
+        eprintln!(
+            "{what}: {reads} reads noted with playback's camera far back, {same} with it here"
+        );
         assert!(
             reads > total,
-            "{what}: off playback's course, no more reads noted"
+            "{what}: with playback's camera far back, no more reads noted"
         );
-        for u in 0..plain.len().min(off.len()) {
-            assert_eq!(
-                plain[u].1, off[u].1,
-                "{what}: gameplay off course in tick {u}"
-            );
+        assert_eq!(
+            same, total,
+            "{what}: playback's camera here, more reads noted"
+        );
+        for run in [&off, &on] {
+            assert_eq!(run.len(), plain.len(), "{what}: the match's length");
+            for u in 0..plain.len() {
+                assert_eq!(
+                    plain[u].1, run[u].1,
+                    "{what}: gameplay with playback's camera followed, tick {u}"
+                );
+            }
         }
     });
 }
@@ -1026,17 +1059,18 @@ fn slippi_stadium_close_up_notes_a_doubled_round() {
     );
 }
 
-/// The camera's readers after a pause (`docs/engine.md`, "The camera's readers after a pause",
-/// design call 9): the replay at `path` played under 3.19's rules as it plays, and with the
-/// camera taken for off playback's course from the start (`DisplayPhase::paused`, as a pause
-/// leaves it). Gameplay is the same every tick in both (the tripwire only watches), and off
-/// course more is noted than as played; with `entering`, each tick in which an
-/// item of that kind enters that state (where it reads the camera) is noted. `prep` runs on
-/// the game before every tick of both runs (`true`), and after its logic, before its display
-/// pass (`false`).
+/// The camera's readers while playback's camera is followed apart from the live match's
+/// (`docs/engine.md`, "The camera's readers after a pause", design call 9): the replay at `path`
+/// played under 3.19's rules as it plays, with playback's camera followed moved by `shift` (its
+/// eye and interest) before every tick, and followed where the camera is. Gameplay is the same
+/// every tick in all three (the tripwire only watches); moved, more is noted than as played, and
+/// with `entering`, each tick in which an item of that kind enters that state (where it reads the
+/// camera) is noted; where the camera is, nothing more is noted. `prep` runs on the game before
+/// every tick of every run (`true`), and after its logic, before its display pass (`false`).
 fn off_course_notes(
     path: &std::path::Path,
     what: &str,
+    shift: Vec3,
     entering: Option<(i32, i32)>,
     prep: &(dyn Fn(&mut Game, bool) + Sync),
 ) {
@@ -1048,13 +1082,15 @@ fn off_course_notes(
     let mut bench = Bench::open_path(disc, path);
     let rules = Rules::slippi_online();
     on_sim_thread(FpMode::Slippi, || {
-        let mut play = |off: bool| {
+        let mut play = |off: Option<Vec3>| {
             let mut m = bench.start(&rules, true);
-            m.game.display_phase.paused = off;
             let mut device = Device(&bench.replay);
             let (mut ticks, mut entered, mut seen) = (Vec::new(), Vec::new(), Vec::new());
             for t in 0usize.. {
                 prep(&mut m.game, true);
+                if let Some(shift) = off {
+                    displace_playback_camera(&mut m.game, shift);
+                }
                 let (mut f, render) = m.step_replay_tick(&mut device);
                 prep(&mut m.game, false);
                 if render {
@@ -1082,25 +1118,34 @@ fn off_course_notes(
             }
             (ticks, entered)
         };
-        let (plain, _) = play(false);
-        let (off, entered) = play(true);
-        assert_eq!(plain.len(), off.len(), "{what}: the match's length");
-        for t in 0..plain.len() {
-            assert_eq!(
-                plain[t].0, off[t].0,
-                "{what}: gameplay off course in tick {t}"
-            );
+        let (plain, _) = play(None);
+        let (off, entered) = play(Some(shift));
+        let (on, _) = play(Some(Vec3::ZERO));
+        for run in [&off, &on] {
+            assert_eq!(plain.len(), run.len(), "{what}: the match's length");
+            for t in 0..plain.len() {
+                assert_eq!(
+                    plain[t].0, run[t].0,
+                    "{what}: gameplay with playback's camera followed, tick {t}"
+                );
+            }
         }
         let noted = |ticks: &[(Digest, u32)]| ticks.last().map_or(0, |t| t.1);
         eprintln!(
-            "{what}: {} ticks, {} reads noted off course, {} as played; entering in ticks {entered:?}",
+            "{what}: {} ticks, {} reads noted with playback's camera moved, {} with it here, {} as played; entering in ticks {entered:?}",
             off.len(),
             noted(&off),
+            noted(&on),
             noted(&plain)
         );
         assert!(
             noted(&off) > noted(&plain),
-            "{what}: no more noted off course"
+            "{what}: no more noted with playback's camera moved"
+        );
+        assert_eq!(
+            noted(&on),
+            noted(&plain),
+            "{what}: more noted with playback's camera here"
         );
         if entering.is_some() {
             assert!(!entered.is_empty(), "{what}: no read in the match");
@@ -1124,6 +1169,7 @@ fn slippi_corneria_city_notes_reads_off_course() {
             "bench/oracle-m4/stage-corneria.slp",
         )),
         "Corneria's city part",
+        Vec3::new(1000.0, 0.0, 0.0),
         None,
         &|_, _| {},
     );
@@ -1139,6 +1185,7 @@ fn slippi_mute_city_wrecks_note_reads_off_course() {
             "bench/oracle-m4/stage-mute-city.slp",
         )),
         "Mute City's wrecks",
+        Vec3::new(0.0, 0.0, -10000.0),
         None,
         &|g, _| {
             for c in &mut g.gr.mutecity.cars {
@@ -1155,6 +1202,7 @@ fn slippi_stadium_close_up_notes_reads_off_course() {
     off_course_notes(
         &melee_local_data::bench_replay("fox-marth-ps"),
         "Pokémon Stadium's close-up",
+        PULLED_BACK,
         None,
         &|_, _| {},
     );
@@ -1170,7 +1218,13 @@ fn pokeball_match() -> std::path::PathBuf {
 /// Unown starts them (state 1).
 #[test]
 fn slippi_unown_notes_reads_off_course() {
-    off_course_notes(&pokeball_match(), "the Unown", Some((172, 1)), &|_, _| {});
+    off_course_notes(
+        &pokeball_match(),
+        "the Unown",
+        Vec3::new(0.0, 1000.0, 0.0),
+        Some((172, 1)),
+        &|_, _| {},
+    );
 }
 
 /// Scizor flying off toward the camera (`itHassam_802CE400`, state 2), noted off course. No
@@ -1179,16 +1233,22 @@ fn slippi_unown_notes_reads_off_course() {
 /// flies off only with the leap cut to 20 frames (both runs).
 #[test]
 fn slippi_scizor_notes_reads_off_course() {
-    off_course_notes(&pokeball_match(), "Scizor", Some((171, 2)), &|g, _| {
-        g.vs.start.x28 = 171;
-        let ids: Vec<u32> = g.items.iter().map(|(i, _)| i).collect();
-        for i in ids {
-            let it = &mut g.items[i];
-            if it.kind == 171 && it.msid == 1 && it.xDAC_itcmd_var0 != 0 {
-                it.xD44_lifeTimer = it.xD44_lifeTimer.min(20.0);
+    off_course_notes(
+        &pokeball_match(),
+        "Scizor",
+        Vec3::new(1000.0, 0.0, 0.0),
+        Some((171, 2)),
+        &|g, _| {
+            g.vs.start.x28 = 171;
+            let ids: Vec<u32> = g.items.iter().map(|(i, _)| i).collect();
+            for i in ids {
+                let it = &mut g.items[i];
+                if it.kind == 171 && it.msid == 1 && it.xDAC_itcmd_var0 != 0 {
+                    it.xD44_lifeTimer = it.xD44_lifeTimer.min(20.0);
+                }
             }
-        }
-    });
+        },
+    );
 }
 
 /// An enemy flung toward the screen (`it_8027BA54`, here a Goomba entering state 11), noted
@@ -1200,7 +1260,237 @@ fn slippi_flung_enemies_note_reads_off_course() {
             "bench/oracle-m4-monsters/monsters-goomba-ps.slp",
         )),
         "a Goomba flung toward the screen",
+        Vec3::new(1000.0, 0.0, 0.0),
         Some((43, 0xB)),
         &|_, _| {},
     );
+}
+
+/// What following playback's camera costs (`camera::CameraState::followed`, design call 9;
+/// `docs/performance.md`): `fox-marth-ps` and Corneria's oracle match played under 3.19's rules
+/// as a live match plays (`Playback::no_settling`) with playback's camera followed from the first
+/// frame until it meets this one (`Game::follow_playback_camera`, the oracle's), again as the
+/// player plays it (the switch off: no second camera), and again with it followed to the
+/// match's end (its interest's depth moved by 1 on the first tick, which
+/// no update eases back, as a pause leaves it), five alternations each. Prints the ticks
+/// followed, their time in the first two, the match's in all three, and a snapshot taken while
+/// following and in the same tick unfollowed: its size and clone time.
+#[test]
+#[ignore = "a measurement: run alone on a quiet machine"]
+fn measure_following_playbacks_camera() {
+    use std::time::{Duration, Instant};
+    let Some(disc) = disc() else { return };
+    let rules = Rules::slippi_online();
+    let mut disc = Some(disc);
+    for (name, path) in [
+        (
+            "fox-marth-ps",
+            melee_local_data::bench_replay("fox-marth-ps"),
+        ),
+        (
+            "stage-corneria",
+            melee_local_data::ssbm_rs_local("bench/oracle-m4/stage-corneria.slp").into(),
+        ),
+    ] {
+        let mut bench = Bench::open_path(disc.take().unwrap(), &path);
+        on_sim_thread(FpMode::Slippi, || {
+            // Each tick's time, how many ticks it followed, and a snapshot at tick `SNAP`.
+            const SNAP: usize = 30;
+            let mut run = |follow: bool, to_the_end: bool| {
+                let mut m = bench.start(&rules, false);
+                m.game.playback.as_mut().unwrap().no_settling = true;
+                m.game.follow_playback_camera = follow;
+                let mut device = Device(&bench.replay);
+                let (mut times, mut followed, mut snap) = (Vec::new(), 0, None);
+                for t in 0usize.. {
+                    let at = Instant::now();
+                    let (_, ended) = tick(&mut m, &mut device);
+                    times.push(at.elapsed());
+                    if to_the_end && t == 0 {
+                        let f = m.game.camera.followed.as_mut().expect("followed");
+                        f.transform.interest.z += 1.0;
+                    }
+                    if m.game.follows_playback_camera() {
+                        followed += 1;
+                    }
+                    if t == SNAP {
+                        snap = Some(m.game.clone());
+                    }
+                    if ended {
+                        break;
+                    }
+                }
+                (times, followed, snap.expect("the snapshot's tick"))
+            };
+            let (mut with, mut without, mut all) = (Vec::new(), Vec::new(), Vec::new());
+            for _ in 0..5 {
+                with.push(run(true, false));
+                without.push(run(false, false));
+                all.push(run(true, true));
+            }
+            let followed = with[0].1;
+            assert_eq!(without[0].1, 0, "the switch off followed");
+            let sum = |t: &[Duration]| t.iter().sum::<Duration>();
+            let median = |mut v: Vec<Duration>| {
+                v.sort();
+                v[v.len() / 2]
+            };
+            let window = |runs: &[(Vec<Duration>, usize, Box<Game>)]| {
+                median(runs.iter().map(|r| sum(&r.0[..followed])).collect())
+            };
+            let whole = |runs: &[(Vec<Duration>, usize, Box<Game>)]| {
+                median(runs.iter().map(|r| sum(&r.0)).collect())
+            };
+            let ticks = with[0].0.len();
+            let (w_with, w_without) = (window(&with), window(&without));
+            let (m_with, m_without) = (whole(&with), whole(&without));
+            eprintln!(
+                "{name}: {ticks} ticks, playback's camera followed for {followed}; those ticks {w_with:?} following, {w_without:?} with the switch off ({:.2} us a tick more); the match {m_with:?} following, {m_without:?} with the switch off; the window's extra {:.3}% of the match",
+                (w_with.as_secs_f64() - w_without.as_secs_f64()) * 1e6 / followed as f64,
+                (w_with.as_secs_f64() - w_without.as_secs_f64()) * 100.0 / m_without.as_secs_f64(),
+            );
+            let m_all = whole(&all);
+            eprintln!(
+                "{name}: followed to the end ({} ticks): the match {m_all:?}, {:.2}% more than with the switch off",
+                all[0].1,
+                (m_all.as_secs_f64() / m_without.as_secs_f64() - 1.0) * 100.0
+            );
+            for (what, g) in [("following", &with[0].2), ("the switch off", &without[0].2)] {
+                let (_, allocs, bytes) = crate::counted(|| g.clone());
+                let size = std::mem::size_of::<Game>() + bytes;
+                let mut clones = (0..200)
+                    .map(|_| {
+                        let at = Instant::now();
+                        std::hint::black_box(g.clone());
+                        at.elapsed()
+                    })
+                    .collect::<Vec<_>>();
+                clones.sort();
+                eprintln!(
+                    "{name}: tick {SNAP}'s snapshot {what}: {size} bytes, {allocs} allocations, clone {:?}",
+                    clones[100]
+                );
+            }
+        });
+        disc = Some(bench.disc);
+    }
+}
+
+/// No read of the camera in the settling window decides otherwise in playback's run (design
+/// call 9; Sarah, 2026-11-18, on this evidence: the player runs no second camera there, and its
+/// live match counts nothing in its first frames). Each replay is played as a live match plays
+/// it (`Playback::no_settling`, Slippi 3.19's rules, the allocator model off) with playback's
+/// camera followed (`Game::follow_playback_camera`) from the first frame's settling until it
+/// meets the match's, and each read meanwhile decided both ways: none may be counted, and the
+/// two must meet before frame 600 (or never part: Poké Floats and Icicle Mountain, whose
+/// cameras the stage drives). The replays: the benchmark matches (`data/bench`), the oracle's
+/// stage matches (`$SSBM_RS_LOCAL/bench/oracle-m4/stage-*`) and Sarah's (`$SLIPPI_REPLAYS`,
+/// where set), each played only as far as the window (a match quit in it, as far as it goes); a
+/// replay that doesn't start (another
+/// build's characters or stages) is passed over and counted.
+#[test]
+fn no_settling_window_read_decides_otherwise() {
+    use melee_sim::game::playback::FIRST_FRAME;
+    let Some(disc) = disc() else { return };
+    let mut paths: Vec<std::path::PathBuf> = Vec::new();
+    let mut add = |dir: std::path::PathBuf, prefix: &str| {
+        let mut walk = vec![dir];
+        while let Some(d) = walk.pop() {
+            let Ok(entries) = std::fs::read_dir(&d) else {
+                continue;
+            };
+            for e in entries.flatten() {
+                let p = e.path();
+                let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if p.is_dir() {
+                    walk.push(p);
+                } else if name.ends_with(".slp") && name.starts_with(prefix) {
+                    paths.push(p);
+                }
+            }
+        }
+    };
+    add(melee_local_data::bench_dir(), "");
+    add(
+        melee_local_data::ssbm_rs_local("bench/oracle-m4").into(),
+        "stage-",
+    );
+    if let Some(d) = std::env::var_os("SLIPPI_REPLAYS") {
+        add(d.into(), "");
+    }
+    paths.sort();
+    let rules = Rules::slippi_online();
+    let (mut disc, mut files) = (Some(disc), HashMap::new());
+    let (mut checked, mut unstarted, mut quit, mut failures) = (0, 0, 0, Vec::new());
+    let mut last_met = (FIRST_FRAME, String::new());
+    for path in &paths {
+        let name = path.display().to_string();
+        let Ok(replay) = Replay::parse(&std::fs::read(path).expect("the replay")) else {
+            unstarted += 1;
+            continue;
+        };
+        let mut bench = Bench {
+            replay,
+            disc: disc.take().unwrap(),
+            files: std::mem::take(&mut files),
+        };
+        let out = on_sim_thread(FpMode::Slippi, || {
+            catch_unwind(AssertUnwindSafe(|| {
+                let mut m = bench.start(&rules, false);
+                m.game.playback.as_mut().unwrap().no_settling = true;
+                m.game.follow_playback_camera = true;
+                let mut device = Device(&bench.replay);
+                let mut followed = false;
+                loop {
+                    let (_, ended) = tick(&mut m, &mut device);
+                    let frame = m.game.playback.as_ref().unwrap().frame_index;
+                    let following = m.game.follows_playback_camera();
+                    let d = &m.game.display_phase;
+                    if d.differing > 0 {
+                        return Err(format!(
+                            "{name}: {} reads decided otherwise by frame {frame}, the first at tick {:?}",
+                            d.differing, d.first
+                        ));
+                    }
+                    followed |= following;
+                    if !following && (followed || frame > FIRST_FRAME) {
+                        return Ok(Some(frame));
+                    }
+                    // A match quit in the window: nothing decided otherwise while it lasted.
+                    if ended {
+                        return Ok(None);
+                    }
+                    if frame >= 600 {
+                        return Err(format!(
+                            "{name}: playback's camera still apart at frame {frame}"
+                        ));
+                    }
+                }
+            }))
+        });
+        disc = Some(bench.disc);
+        files = bench.files;
+        match out {
+            Ok(Ok(Some(frame))) => {
+                checked += 1;
+                if frame > last_met.0 {
+                    last_met = (frame, name);
+                }
+            }
+            Ok(Ok(None)) => {
+                checked += 1;
+                quit += 1;
+            }
+            Ok(Err(e)) => failures.push(e),
+            Err(_) => unstarted += 1,
+        }
+    }
+    eprintln!(
+        "{checked} replays' settling windows decided both ways ({quit} quit before the cameras met), {} failed, {unstarted} didn't start; the cameras met by frame {} at the latest ({})",
+        failures.len(),
+        last_met.0,
+        last_met.1
+    );
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+    assert!(checked > 0, "no replay checked");
 }

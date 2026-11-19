@@ -465,6 +465,9 @@ fn live_settings_from(s: &Settings) -> (melee_sim::game::vs_match::ReplayStart, 
     let mut live = Settings::live(&start).expect("the ruleset's codes");
     live.disc = melee_sim::audio::clock::DiscSpeed::Drive;
     live.record = Some(setup);
+    // Playback's camera followed, as the oracle runs a live match (the player doesn't:
+    // [`the_players_live_match_counts_camera_reads_after_a_pause_only`]).
+    live.follow_playback_camera = true;
     (start, live)
 }
 
@@ -562,6 +565,7 @@ fn live_equals_playback(
     // the live match ran without too (design call 8).
     let mut again = Settings::from_replay(&back).expect("its settings");
     again.disc = live.disc;
+    again.follow_playback_camera = live.follow_playback_camera;
     assert_eq!(live.heap, None, "the live match ran the allocator model");
     again.heap = None;
     let mut unsettled = melee_sim::game::vs_match::Match::start(&again, &mut loader(disc));
@@ -570,8 +574,9 @@ fn live_equals_playback(
         .no_settling = true;
     let mut settled = melee_sim::game::vs_match::Match::start(&again, &mut loader(disc));
     let (mut ticks, mut parted, mut logged, mut cut) = (0, Vec::new(), false, 0);
-    // The last frame whose camera differs from the settled playback's.
-    let mut camera_apart = None;
+    // The last frame whose camera differs from the settled playback's, and the last the live
+    // match followed playback's camera.
+    let (mut camera_apart, mut followed_to, mut followed_from) = (None, None, None);
     play_live(disc, live, false, None, |m, render| {
         // The live match runs no sound code: its sound log stays as it was made.
         assert_eq!(
@@ -625,8 +630,24 @@ fn live_equals_playback(
                     let c = &g.camera.cam;
                     format!("{:?} {:?}", c.transform, c.transform_copy)
                 };
+                let frame = (m.game.playback.as_ref()).map(|p| p.frame_index);
                 if view(&m.game) != view(&play.game) {
-                    camera_apart = (m.game.playback.as_ref()).map(|p| p.frame_index);
+                    camera_apart = frame;
+                }
+                // Playback's camera as the live match follows it (its own once they've met)
+                // is the settled playback's, every tick.
+                assert_eq!(
+                    camera_course(&m.game, true),
+                    camera_course(&play.game, false),
+                    "tick {ticks}: playback's camera as followed, and as it plays back"
+                );
+                if m.game.follows_playback_camera() {
+                    assert!(
+                        followed_to.is_none_or(|f| frame == Some(f + 1) || frame == Some(f)),
+                        "tick {ticks}: followed again after the cameras met"
+                    );
+                    followed_to = frame;
+                    followed_from.get_or_insert(ticks);
                 }
                 logged |= (play.game.playback.as_ref()).expect("a replay").sounds
                     != melee_sim::game::playback::SoundLog::default();
@@ -647,13 +668,19 @@ fn live_equals_playback(
     assert_eq!(parted.first(), Some(&first), "playback didn't settle");
     // Playback logs its sounds (the names above leave the log out).
     assert!(logged, "playback logged no sound");
-    // Playback's settled camera and the live match's meet within the settling window
-    // (`live::SETTLING_WINDOW`).
+    // Playback's settled camera is followed from the first tick until it meets the live
+    // match's, and then dropped.
     let apart = camera_apart.expect("the settling snapped no camera");
-    eprintln!("the camera apart from playback's to frame {apart}");
+    let followed_to = followed_to.expect("playback's camera wasn't followed");
+    eprintln!("the camera apart from playback's to frame {apart}, followed to frame {followed_to}");
+    assert_eq!(
+        followed_from,
+        Some(first),
+        "playback's camera not followed from the tick it settles"
+    );
     assert!(
-        apart < melee_sim::game::live::SETTLING_WINDOW,
-        "frame {apart}"
+        apart <= followed_to,
+        "apart at {apart}, followed to {followed_to}"
     );
     // In a slowed game the log cuts sounds the live match plays.
     assert_eq!(
@@ -664,39 +691,78 @@ fn live_equals_playback(
     eprintln!("{ticks} ticks, the audio apart in {cut}");
 }
 
-/// The settling window (`live::SETTLING_WINDOW`, `docs/slippi-ruleset.md`'s follow-ups of
-/// 2026-11-18): a live match's camera eases where playback's first frame snaps it, so each read
-/// of the camera before the window's end is counted into the playback note. On Corneria, whose
-/// city part under the camera the Great Fox reads every tick, an unpaused live match counts reads
-/// from its first frames to the window's end and none after it.
+/// What a camera update moves of the game camera and its framed boxes (`camera::Course`,
+/// `camera::Eased`) as `g` holds it; with `followed`, playback's followed camera's while `g`
+/// follows one (`camera::CameraState::followed`).
+fn camera_course(g: &melee_sim::game::state::Game, followed: bool) -> String {
+    camera_course_shaken(g, followed, true)
+}
+
+/// [`camera_course`], without the quake's shake and offset unless `shake`
+/// (`live::DisplayPhase::shake`).
+fn camera_course_shaken(g: &melee_sim::game::state::Game, followed: bool, shake: bool) -> String {
+    use melee_sim::game::camera::{Course, Eased};
+    let c = &g.camera;
+    let theirs = c.followed.as_ref().filter(|_| followed);
+    let mut course = theirs.cloned().unwrap_or_else(|| Course::of(&c.cam));
+    if !shake {
+        course.translation = Default::default();
+        course.quake_offset = Default::default();
+    }
+    let mut boxes = Vec::new();
+    let mut cur = c.boxes.last;
+    while let Some(b) = cur {
+        let x = &c.boxes.boxes[b.0 as usize];
+        boxes.push(match theirs {
+            Some(_) => c.boxes.followed[b.0 as usize].clone(),
+            None => Eased::of(x),
+        });
+        cur = x.prev;
+    }
+    format!("{course:?} {boxes:?}")
+}
+
+/// Playback's camera followed beside a live match's (`camera::CameraState::followed`, design
+/// call 9; Sarah, 2026-11-18: "prefer to compute if it isn't a big cost"): playback's first
+/// frame snaps its camera where a live match's eases, so from the first tick playback's camera is
+/// followed, and dropped once the two meet. On Corneria, whose city part under the camera the
+/// Great Fox reads every tick, each read meanwhile is also made through playback's camera and
+/// counted only where the part differs; after the cameras meet, nothing is counted.
 #[test]
-fn a_live_match_counts_camera_reads_in_the_settling_window() {
+fn a_live_match_follows_playbacks_camera_until_they_meet() {
     crate::on_game_stack(|| {
         let Some(disc) = disc() else { return };
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
         let (_, live) = live_settings_on("corneria");
-        let window = melee_sim::game::live::SETTLING_WINDOW;
-        let (mut at_end_of_window, mut last, mut first) = (None, 0, None);
+        let (mut ticks, mut met, mut at_met, mut last) = (0u32, None, 0, 0);
         play_live(&disc, &live, false, None, |m, _| {
             let d = &m.game.display_phase;
-            assert!(!d.paused, "unpaused, off course");
+            assert!(!d.paused && !d.lost, "unpaused, off course");
             let frame = m.game.playback.as_ref().expect("a live match").frame_index;
-            if frame < window {
-                assert!(m.game.in_settling_window(), "frame {frame}");
-            } else {
-                assert!(!m.game.in_settling_window(), "frame {frame}");
-                at_end_of_window.get_or_insert(d.differing);
+            let following = m.game.follows_playback_camera();
+            if ticks == 0 {
+                assert!(
+                    following,
+                    "playback's camera not followed from the first tick"
+                );
             }
-            first = d.first;
+            match (following, met) {
+                (false, None) => {
+                    met = Some(frame);
+                    at_met = d.differing;
+                }
+                (true, Some(f)) => panic!("frame {frame}: followed again after meeting at {f}"),
+                _ => {}
+            }
             last = d.differing;
+            ticks += 1;
         });
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
-        let at_end = at_end_of_window.expect("the match outlasted the window");
+        let met = met.expect("the cameras never met");
         eprintln!(
-            "{at_end} reads counted in the window, first at tick {first:?}; {last} at the end"
+            "{ticks} ticks; the cameras met at frame {met}, {at_met} reads counted by then, {last} at the end"
         );
-        assert!(at_end > 300, "{at_end} reads counted in the window");
-        assert_eq!(last, at_end, "reads counted after the window");
+        assert_eq!(last, at_met, "reads counted after the cameras met");
     });
 }
 
@@ -827,20 +893,23 @@ fn a_paused_live_match_records_the_pause_as_slippi_does() {
 /// off the course its playback's, which never pauses, takes (`live::DisplayPhase::paused`):
 /// from the pause to the match's end the live match's camera is never again the one its
 /// playback (without the first frame's settling) has, frame for frame, only a little off (the
-/// pause camera's interest depth and field of view not eased back exactly), so every read
-/// through the view after it is noted, more than the same match unpaused notes. Gameplay
-/// stays the same in playback here.
+/// pause camera's interest depth and field of view not eased back exactly). From the pause on,
+/// playback's camera is followed beside the live match's (`camera::CameraState::followed`),
+/// and is its playback's every frame to the end, so each read through the view after it is
+/// decided through playback's camera too, a different outcome noted. Gameplay stays the same in
+/// playback here.
 #[test]
-fn a_paused_live_match_notes_its_view_reads() {
+fn a_paused_live_match_follows_playbacks_camera() {
     crate::on_game_stack(|| {
         let Some(disc) = disc() else { return };
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
         let (_, live) = live_settings_on("onett");
-        type Snap = (String, (u32, Vec<(u32, u32, i32, u32)>));
+        type Snap = (String, String, (u32, Vec<(u32, u32, i32, u32)>));
         let snap = |g: &melee_sim::game::state::Game| -> Snap {
             let t = &g.camera.cam.transform;
             (
                 format!("{:?} {:?} {}", t.position, t.interest, t.fov),
+                camera_course(g, true),
                 gameplay(g),
             )
         };
@@ -872,10 +941,6 @@ fn a_paused_live_match_notes_its_view_reads() {
         eprintln!(
             "off course from frame {off}: {before} reads noted before, {noted} at the end; {unpaused} unpaused"
         );
-        assert!(
-            noted > before && noted > unpaused,
-            "no more reads noted after the pause"
-        );
         let mut again = Settings::from_replay(&melee_slippi::start(&paused)).expect("its settings");
         again.disc = live.disc;
         let mut play = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
@@ -898,14 +963,23 @@ fn a_paused_live_match_notes_its_view_reads() {
         }
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
         let (mut compared, mut camera) = (0, Vec::new());
-        for (f, (cam, play)) in &ours {
-            let Some((their_cam, their_play)) = theirs.get(f) else {
+        for (f, (cam, followed, play)) in &ours {
+            let Some((their_cam, their_course, their_play)) = theirs.get(f) else {
                 continue;
             };
             compared += 1;
             assert_eq!(play, their_play, "frame {f}'s gameplay in playback");
             if cam != their_cam {
                 camera.push(*f);
+            }
+            // From the pause on, playback's camera as the live match follows it is its
+            // playback's (this one without the first frame's settling, which has stopped
+            // following its own by then and never pauses).
+            if *f > off {
+                assert_eq!(
+                    followed, their_course,
+                    "frame {f}: playback's camera as followed"
+                );
             }
         }
         let last = *ours.keys().next_back().expect("a frame");
@@ -928,9 +1002,11 @@ fn a_paused_live_match_notes_its_view_reads() {
 }
 
 /// A pause reaches the camera's other readers in the logic (`docs/engine.md`, "The camera's
-/// readers after a pause"): a paused live match on Corneria (its city part under the camera,
-/// read every tick) notes reads after the pause, and the same match unpaused notes fewer. On
-/// it and on Mute City (whose passing cars run the looping quake), the pause camera here frames
+/// readers after a pause"): playback's camera, which never pauses, is followed beside the live
+/// match's from the pause on (and from the first frame's settling until the two meet), and is
+/// its playback's (with the settling, as Slippi's playback runs it) every frame, so each read of
+/// the camera (Corneria's city part under it, every tick) is also made through it. On Corneria
+/// and on Mute City (whose passing cars run the looping quake), the pause camera here frames
 /// as the standard camera (looking at no one, as `gm_EnablePlayerPauseCamera`'s -1 sets it
 /// up), so each paused tick
 /// also adds to the width average and counts the quakes down; the average, the counters and
@@ -939,7 +1015,7 @@ fn a_paused_live_match_notes_its_view_reads() {
 /// frame, and the match's own average doesn't from the pause on. Gameplay stays the same in
 /// playback.
 #[test]
-fn a_paused_live_match_notes_its_camera_reads() {
+fn a_paused_live_match_follows_playbacks_camera_readers() {
     crate::on_game_stack(|| {
         let Some(disc) = disc() else { return };
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
@@ -986,8 +1062,11 @@ fn a_paused_live_match_notes_its_camera_reads() {
                 }
                 let Some(f) = frame(m) else { return };
                 let g = &m.game;
-                ours.entry(f)
-                    .or_insert_with(|| (followed(g), held(g), gameplay(g)));
+                ours.entry(f).or_insert_with(|| {
+                    let shake = g.display_phase.shake.is_none();
+                    let course = camera_course_shaken(g, true, shake);
+                    (followed(g), held(g), gameplay(g), (course, shake))
+                });
                 let d = &g.display_phase;
                 if d.paused && off.is_none() {
                     off = Some(f);
@@ -999,14 +1078,6 @@ fn a_paused_live_match_notes_its_camera_reads() {
             eprintln!(
                 "{key}: off course from frame {off}: {before} reads noted before, {noted} at the end; {unpaused} unpaused"
             );
-            // Corneria reads its city part every tick; Mute City's cars read the camera only
-            // when wrecked, which the script never does.
-            if key == "corneria" {
-                assert!(
-                    noted > before && noted > unpaused,
-                    "{key}: no more reads noted after the pause"
-                );
-            }
             let paused = Replay::parse(&file).expect("the recording parses");
             let mut again =
                 Settings::from_replay(&melee_slippi::start(&paused)).expect("its settings");
@@ -1021,20 +1092,32 @@ fn a_paused_live_match_notes_its_camera_reads() {
                 let ended = f.ended;
                 play.recycle(f);
                 let i = play.game.playback.as_ref().expect("playback").frame_index;
-                theirs
-                    .entry(i)
-                    .or_insert_with(|| (held(&play.game), gameplay(&play.game)));
+                theirs.entry(i).or_insert_with(|| {
+                    let g = &play.game;
+                    let course = |shake| camera_course_shaken(g, false, shake);
+                    (held(g), gameplay(g), [course(false), course(true)])
+                });
                 if ended {
                     break;
                 }
             }
             let (mut compared, mut apart) = (0, Vec::new());
-            for (f, (follow, own, play)) in &ours {
-                let Some((their_cam, their_play)) = theirs.get(f) else {
+            let mut unshaken = 0;
+            for (f, (follow, own, play, (course, shake))) in &ours {
+                let Some((their_cam, their_play, their_course)) = theirs.get(f) else {
                     continue;
                 };
                 compared += 1;
                 assert_eq!(play, their_play, "{key}: frame {f}'s gameplay in playback");
+                // The camera playback's runs, as the live match follows it (its own where it
+                // follows none): from the first frame's settling and from the pause; its shake
+                // where a quake's model shook through the pause isn't known.
+                unshaken += usize::from(!shake);
+                assert_eq!(
+                    course,
+                    &their_course[usize::from(*shake)],
+                    "{key}: frame {f}: playback's camera as followed, and as it plays back"
+                );
                 assert_eq!(
                     follow, their_cam,
                     "{key}: frame {f}: playback's camera as followed, and as it plays back"
@@ -1044,6 +1127,7 @@ fn a_paused_live_match_notes_its_camera_reads() {
                 }
             }
             assert!(compared > 3000, "{key}: {compared} frames compared");
+            eprintln!("{key}: playback's shake not known in {unshaken} frames");
             // The match's own count is never playback's: the settling's updates put
             // playback's ahead from the first frame, and the pause's put the match's ahead
             // from the pause.
@@ -1053,7 +1137,7 @@ fn a_paused_live_match_notes_its_camera_reads() {
                 "{key}: the match's own width average"
             );
             let gap = |f: i32| {
-                let (follow, own, _) = &ours[&f];
+                let (follow, own, _, _) = &ours[&f];
                 i32::from(own.2) - i32::from(follow.2)
             };
             eprintln!(
@@ -1064,6 +1148,50 @@ fn a_paused_live_match_notes_its_camera_reads() {
             assert!(gap(off + 1) > gap(off - 1), "{key}: the pause's updates");
         }
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+    });
+}
+
+/// The player's live match runs no second camera (`Game::follow_playback_camera` off; Sarah,
+/// 2026-11-18: the detector only at a negligible cost): on Corneria, whose city part under the
+/// camera the Great Fox reads every tick, an unpaused live match follows nothing and counts
+/// nothing, its first frames included; a paused one counts every read after the pause
+/// (`live::DisplayPhase::lost`, the broad rule) and none before it.
+#[test]
+fn the_players_live_match_counts_camera_reads_after_a_pause_only() {
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+        let (_, mut live) = live_settings_on("corneria");
+        live.follow_playback_camera = false;
+        let mut unpaused = 0;
+        play_live(&disc, &live, false, None, |m, _| {
+            let d = &m.game.display_phase;
+            assert!(!m.game.follows_playback_camera() && !d.lost && !d.paused);
+            unpaused = d.differing;
+        });
+        let (mut ticks, mut off, mut before, mut after, mut first) = (0, None, 0, 0, None);
+        play_live(&disc, &live, true, None, |m, _| {
+            assert!(!m.game.follows_playback_camera(), "a second camera");
+            let d = &m.game.display_phase;
+            if d.lost && off.is_none() {
+                off = Some(m.game.scene.unk_8);
+                before = d.differing;
+            }
+            (after, first) = (d.differing, d.first);
+            ticks += 1;
+        });
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        let off = off.expect("the pause left the camera unfollowed");
+        eprintln!(
+            "unpaused: {unpaused} reads counted; paused at tick {off}: {before} counted before, {after} at the end of {ticks} ticks, first at {first:?}"
+        );
+        assert_eq!(unpaused, 0, "reads counted unpaused");
+        assert_eq!(before, 0, "reads counted before the pause");
+        assert!(after > 1000, "{after} reads counted after the pause");
+        assert!(
+            first >= Some(off),
+            "counted from {first:?}, the pause at {off}"
+        );
     });
 }
 

@@ -362,21 +362,30 @@ pub fn launch(r: &mut Running, gobj: GObjId, chk: bool) {
 /// original returns no value; its callers ignore what it leaves.)
 #[doc(alias = "it_8027BA54")]
 pub fn toward_camera(r: &mut Running, gobj: GObjId) -> Vec3 {
-    // Under Slippi's rules, after a pause, counted (design call 9).
-    r.game.note_camera_read();
-    let mut cam = crate::game::camera::position(&r.game.camera.cam);
-    let f = reg(r.game.objs.rng.draw_f32());
-    cam.x = mem(fp::frsp(fp::fmadd(10.0, fp::fsub(f, 0.5), reg(cam.x))));
-    let f = reg(r.game.objs.rng.draw_f32());
-    cam.y = mem(fp::fmadds(reg(30.0), f, reg(cam.y)));
-    let mut d = cam - item(r.game, gobj).pos;
-    d.normalize();
-    let ten = reg(10.0);
-    Vec3::new(
-        mem(fp::fmuls(reg(d.x), ten)),
-        mem(fp::fmuls(reg(d.y), ten)),
-        mem(fp::fmuls(reg(d.z), ten)),
-    )
+    let cam = crate::game::camera::position(&r.game.camera.cam);
+    let (f, g) = (
+        reg(r.game.objs.rng.draw_f32()),
+        reg(r.game.objs.rng.draw_f32()),
+    );
+    let at = item(r.game, gobj).pos;
+    let toward = |mut cam: Vec3| {
+        cam.x = mem(fp::frsp(fp::fmadd(10.0, fp::fsub(f, 0.5), reg(cam.x))));
+        cam.y = mem(fp::fmadds(reg(30.0), g, reg(cam.y)));
+        let mut d = cam - at;
+        d.normalize();
+        let ten = reg(10.0);
+        Vec3::new(
+            mem(fp::fmuls(reg(d.x), ten)),
+            mem(fp::fmuls(reg(d.y), ten)),
+            mem(fp::fmuls(reg(d.z), ten)),
+        )
+    };
+    let v = toward(cam);
+    // Under Slippi's rules, also through playback's followed camera (design call 9).
+    let bits = |v: Vec3| [v.x, v.y, v.z].map(f32::to_bits);
+    r.game
+        .decide_camera_read(&bits(v), |_, t| bits(toward(t.position)));
+    v
 }
 
 /// Rotates `v` about x, then y, then z by `angles`, with the game's sine and cosine,

@@ -751,18 +751,15 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
 }
 
 /// Under Slippi's rules, the coming car's view-edge decisions (`x110` 1: the horn past the
-/// right edge, then the centre) taken with the view the other display-pass phase would give
-/// the camera ([`crate::game::live::DisplayPhase::other_view`]); a different outcome noted
-/// (design call 9 of `docs/slippi-ruleset.md`); after a pause, which leaves the camera off
-/// playback's course, every such read noted ([`crate::game::state::Game::view_read_off_course`]).
-/// `span` is the centre and right edge the CObj gives, `horn` the horn's distance past the edge.
+/// right edge, then the centre) also taken with the views playback's run can leave the
+/// camera's CObj ([`crate::game::state::Game::playback_spans`]: the other display-pass phase's,
+/// or playback's followed camera's at either phase); a different outcome noted (design call 9
+/// of `docs/slippi-ruleset.md`), and every such read where playback's camera is lost. `span` is
+/// the centre and right edge the CObj gives, `horn` the horn's distance past the edge.
 fn note_other_phase(r: &mut Running, car_j: Option<jobj::JObjId>, span: [f32; 2], horn: f32) {
-    if r.game.view_read_off_course() {
+    let Some(spans) = r.game.playback_spans(r.data) else {
         let tick = r.game.scene.unk_8;
         r.game.display_phase.note(tick);
-        return;
-    }
-    let Some([_, center, right]) = r.game.other_phase_span(r.data) else {
         return;
     };
     let x = reg(car_x(r.game, car_j));
@@ -776,7 +773,10 @@ fn note_other_phase(r: &mut Running, car_j: Option<jobj::JObjId>, span: [f32; 2]
         }
         false
     };
-    if car_outcome(x, span, horn, street) != car_outcome(x, [center, right], horn, street) {
+    let ours = car_outcome(x, span, horn, street);
+    if (spans.into_iter().flatten())
+        .any(|[_, center, right]| car_outcome(x, [center, right], horn, street) != ours)
+    {
         let tick = r.game.scene.unk_8;
         r.game.display_phase.note(tick);
     }

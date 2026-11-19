@@ -4,12 +4,14 @@
 
 use gekko_fp as fp;
 
+use super::super::camera::BoxFit;
 use super::super::code::run_fighter_cb;
-use super::super::handles::FighterId;
+use super::super::handles::{CameraBoxId, FighterId};
 use super::super::state::Running;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::lb::joint::world_position;
+use crate::vec::Vec3;
 
 /// `SmashState_Charging` and the state after it that still shakes.
 const SMASH_CHARGING: i32 = 2;
@@ -101,6 +103,16 @@ impl Running<'_> {
     /// extent, and its camera bone's point (`ftLib_GetCameraBonePos`).
     #[doc(alias = "ftCamera_UpdateCameraBox")]
     pub fn update_camera_box(&mut self, gobj: GObjId) {
+        let (b, fit) = self.camera_box_fit(gobj);
+        fit.put(&mut self.game.camera.boxes[b]);
+        let f = self.game.fighter_id(gobj);
+        let bone_pos = self.camera_bone_pos(f);
+        self.game.camera.boxes[b].bone_pos = bone_pos;
+    }
+
+    /// The fighter's camera box and what [`Running::update_camera_box`] fits it to but its
+    /// camera bone's point, which reads the joints: its extents, facing and position.
+    pub fn camera_box_fit(&self, gobj: GObjId) -> (CameraBoxId, BoxFit) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
         let b = fp.x890_cameraBox.expect("a fighter without a camera box");
@@ -111,22 +123,19 @@ impl Running<'_> {
         let (x0, y0, z0) = (v(0), v(4), v(8));
         let zoom = reg(self.game.stage_info.cam_info.cam_fixed_zoom);
         let (facing, pos) = (fp.facing_dir, fp.cur_pos);
-        let cb = &mut self.game.camera.boxes[b];
-        if reg(facing) == 1.0 {
-            cb.target_ext.h.x = z0;
-            cb.target_ext.h.y = mem(fp::fmuls(reg(y0), zoom));
-            cb.facing_dir = 1.0;
+        let (h, facing) = if reg(facing) == 1.0 {
+            ([z0, mem(fp::fmuls(reg(y0), zoom))], 1.0)
         } else {
-            cb.target_ext.h.x = mem(fp::fmuls(fp::fneg(reg(y0)), zoom));
-            cb.target_ext.h.y = mem(fp::fneg(reg(z0)));
-            cb.facing_dir = -1.0;
-        }
-        cb.pos.x = pos.x;
-        cb.pos.y = mem(fp::fadds(reg(pos.y), reg(x0)));
-        cb.pos.z = pos.z;
-        cb.on_ledge = false;
-        let bone_pos = self.camera_bone_pos(f);
-        self.game.camera.boxes[b].bone_pos = bone_pos;
+            (
+                [
+                    mem(fp::fmuls(fp::fneg(reg(y0)), zoom)),
+                    mem(fp::fneg(reg(z0))),
+                ],
+                -1.0,
+            )
+        };
+        let pos = Vec3::new(pos.x, mem(fp::fadds(reg(pos.y), reg(x0))), pos.z);
+        (b, BoxFit { h, facing, pos })
     }
 
     /// Only the camera box's bone point follows the fighter, `ftCamera_800762F4`.

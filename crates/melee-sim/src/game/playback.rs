@@ -684,7 +684,7 @@ impl Running<'_> {
         if first {
             self.playback_settle_first_frame(gobj);
         } else {
-            self.game.playback_camera_settles(gobj);
+            self.playback_camera_settles(gobj);
         }
     }
 

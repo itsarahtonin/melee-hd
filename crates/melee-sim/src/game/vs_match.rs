@@ -87,6 +87,9 @@ pub struct Settings {
     /// Records the match as a Slippi replay (`game::record`), with what the recording reads
     /// from outside the match: presentation output, which changes nothing the match does.
     pub record: Option<super::record::Setup>,
+    /// Under Slippi's rules, follow playback's camera beside the match's where it leaves it
+    /// (`Game::follow_playback_camera`): the oracle's and the tests', never the player's.
+    pub follow_playback_camera: bool,
 }
 
 /// What Slippi's playback hands the game at a replay's start (the Slippi EXI device's answer
@@ -246,6 +249,7 @@ impl Settings {
             boot_audio: true,
             stadium_buffer: super::ft::data::MAIN_MEMORY,
             record: None,
+            follow_playback_camera: false,
         }
     }
 
@@ -365,6 +369,7 @@ impl Settings {
             boot_audio: true,
             stadium_buffer: super::ft::data::MAIN_MEMORY,
             record: None,
+            follow_playback_camera: false,
         }
     }
 }
@@ -453,6 +458,7 @@ impl Match {
         let mut game = Box::<Game>::default();
         game.game_mode = settings.game_mode;
         game.rules = settings.rules.clone();
+        game.follow_playback_camera = settings.follow_playback_camera;
         game.pacing = crate::lb::pacing::Pacing::new();
         // The stage's code reads the same game mode (`gm_GetCurrentGameMode`).
         game.gr.game_mode = settings.game_mode;

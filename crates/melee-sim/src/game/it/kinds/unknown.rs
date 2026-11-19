@@ -213,19 +213,27 @@ pub fn start_swarms(r: &mut Running, gobj: GObjId) {
         }
     };
     let speed = attr_f32(r, gobj, 0x14);
-    // Under Slippi's rules, after a pause, counted (design call 9).
-    r.game.note_camera_read();
     let interest = camera::interest(&r.game.camera.cam);
     let v = pokemon::vars(r.game, gobj);
     v.set_i32(SIDE, side);
     v.set_f32(EDGE, x);
     v.set_f32(EDGE + 4, y);
     v.set_f32(EDGE + 8, 0.0);
-    let dir = interest - v.vec(EDGE);
+    let edge = v.vec(EDGE);
     v.set_vec(SWARM_VEL, Vec3::new(speed, 0.0, 0.0));
-    let mut vel = v.vec(SWARM_VEL);
-    vel.rotate(Axis::Z, crate::math::atan2(dir.y, dir.x));
-    v.set_vec(SWARM_VEL, vel);
+    let start = v.vec(SWARM_VEL);
+    let toward = |interest: Vec3| {
+        let dir = interest - edge;
+        let mut vel = start;
+        vel.rotate(Axis::Z, crate::math::atan2(dir.y, dir.x));
+        vel
+    };
+    let vel = toward(interest);
+    pokemon::vars(r.game, gobj).set_vec(SWARM_VEL, vel);
+    // Under Slippi's rules, also through playback's followed camera (design call 9).
+    let bits = |v: Vec3| [v.x, v.y, v.z].map(f32::to_bits);
+    r.game
+        .decide_camera_read(&bits(vel), |_, t| bits(toward(t.interest)));
     lib2725::face_motion(r.game, gobj);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     let sfx = if r.game.objs.rng.below(2) != 0 {

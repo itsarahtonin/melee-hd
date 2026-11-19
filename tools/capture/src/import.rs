@@ -936,6 +936,7 @@ impl Importer<'_> {
             first: id(self, "cm_804D6460"),
             last: id(self, "cm_804D6468"),
             addr: base,
+            followed: Vec::new(),
         };
         let cam = Camera::import(&mem, sym("game_camera"), self);
         let copy = self.u32(sym("cm_804D6464"));

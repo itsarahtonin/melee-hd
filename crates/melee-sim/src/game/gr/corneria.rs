@@ -1600,6 +1600,13 @@ pub fn demo_city(r: &mut Running) {
 /// Which city part a place's x is over, by the parts' widths from their places: 8, 9 or 4.
 /// The original asserts when none is, which hangs it.
 fn city_part_at(game: &Game, x: f64) -> i32 {
+    city_part_under(game, x).unwrap_or_else(|| {
+        panic!("grcorneria.c: no city part under x {x} (the original's assertion)")
+    })
+}
+
+/// [`city_part_at`], none where no part is.
+fn city_part_under(game: &Game, x: f64) -> Option<i32> {
     let s = reg(scale(game));
     for (map, width) in [(8, CITY_WIDTH), (9, CITY_WIDTH), (4, CITY_WIDTH_LAST)] {
         if let Some(gobj) = map_gobj(game, map) {
@@ -1607,21 +1614,22 @@ fn city_part_at(game: &Game, x: f64) -> i32 {
             let px = reg(game.objs.jobjs[j].translate.x);
             let w = fp::fmuls(reg(width), s);
             if x > fp::fnmsubs(w, 0.5, px) && x < fp::fmadds(w, 0.5, px) {
-                return map;
+                return Some(map);
             }
         }
     }
-    panic!("grcorneria.c: no city part under x {x} (the original's assertion)")
+    None
 }
 
-/// Which city part the camera looks at, `grCorneria_801E08CC`. Under Slippi's rules a read
-/// after a pause is counted (`Game::note_camera_read`, design call 9): the camera's interest
-/// is off playback's course then.
+/// Which city part the camera looks at, `grCorneria_801E08CC`. Under Slippi's rules, while
+/// playback's camera is followed apart from this one, also the part it looks at, a different
+/// part counted (`Game::decide_camera_read`, design call 9).
 #[doc(alias = "grCorneria_801E08CC")]
 pub fn city_under_camera(game: &mut Game) -> i32 {
-    game.note_camera_read();
     let cam = super::super::camera::interest(&game.camera.cam);
-    city_part_at(game, reg(cam.x))
+    let part = city_part_at(game, reg(cam.x));
+    game.decide_camera_read(&Some(part), |g, t| city_part_under(g, reg(t.interest.x)));
+    part
 }
 
 /// Which city part an x is over, `grCorneria_801E0A74`.

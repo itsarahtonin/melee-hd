@@ -438,8 +438,7 @@ pub fn init_subjects(r: &mut Running, gobj: GObjId) {
         s.target_ext.v.y = -30.0;
         s.target_ext.h.x = -30.0;
         s.target_ext.h.y = 30.0;
-        s.ext.h = s.target_ext.h.clone();
-        s.ext.v = s.target_ext.v;
+        r.game.camera.boxes.fit_extents(b);
         i += 1;
         node = r.game.objs.jobjs[n].next;
     }

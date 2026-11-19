@@ -634,34 +634,60 @@ const PLACED: usize = 8;
 /// player's camera bone falls on the screen, which decides where the monitor copies from,
 /// `gr::stadium::zoom_origin`): on Stadium the views are kept too, and where it copies from is
 /// also taken through the other phase's view ([`Game::other_phase_screen`]), a different origin
-/// counted. After a pause, every such read is counted ([`DisplayPhase::paused`]): the pause
-/// leaves the camera off the course playback's takes.
+/// counted.
 ///
-/// The pause reaches the camera's other readers in the logic too (`docs/engine.md`, "The
-/// camera's readers after a pause"): those that read its transform or its CObj count each
-/// read after a pause ([`Game::note_camera_read`]: Corneria's city part, Mute City's wrecked
-/// cars, the enemies flung toward the screen, Scizor, the Unown, Pokémon Stadium's close-up,
-/// a nearest-opponent read through a fighter the camera places); the width average and the
-/// quake counters, which a pause moves only where its camera runs the standard update, are
-/// followed as playback's camera has them ([`PlaybackCamera`]), and the bonuses' and the
-/// looping quake's reads of them are made both ways.
+/// Playback's camera can leave the live match's course: its first frame snaps it where the live
+/// match's eases (`docs/slippi-bugs.md`, "Playback settles each fighter on the first frame,
+/// which live play doesn't"), and it never pauses, where a pause turns the live match's away
+/// and eases it back never quite to the same (`docs/slippi-bugs.md`, "A paused match's
+/// recording"). Where the switch is on (`Game::follow_playback_camera`: the oracle and the
+/// tests; never the player, which counts nothing from the settling and, after a pause, every
+/// read, [`DisplayPhase::lost`]), from either, playback's camera is followed beside the live
+/// match's (`camera::CameraState::followed`: the same updates, but the pause's, and the first
+/// frame's settling, [`Running::playback_camera_settles`]) until the two meet bit for bit, and
+/// every read of the camera in the logic meanwhile is also made through it, a different outcome
+/// counted (`docs/engine.md`, "The camera's readers after a pause"): the transform's readers
+/// ([`Game::decide_camera_read`]: Corneria's city part, Mute City's wrecked cars, the enemies
+/// flung toward the screen, Scizor, the Unown), the CObj's (through the views a display pass
+/// would give playback's camera at each of its phases, [`Game::playback_views`]: Pokémon
+/// Stadium's close-up, the view edges) and a nearest-opponent read through a fighter the
+/// camera places (the pass's placement through playback's camera, [`DisplayPhase::place`]).
+/// The width average and the quake counters are followed by [`PlaybackCamera`], and the
+/// bonuses' and the looping quake's reads of them made both ways.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct DisplayPhase {
     /// The root translation the display pass last gave each fighter it places by the camera,
-    /// by fighter slot.
-    pub placed: [Option<(u16, crate::vec::Vec3)>; PLACED],
+    /// by fighter slot, and the one it would give through playback's followed camera.
+    pub placed: [Option<(u16, crate::vec::Vec3, Option<crate::vec::Vec3>)>; PLACED],
     /// The views a display pass would give the game camera after each of the last two ticks,
     /// the last first (on the stages that read them, [`Game::keeps_display_views`]; none in a
     /// camera mode that leaves the CObj alone), and the engine tick count
     /// (`gm_80479D58.unk_0`) after the last.
     pub views: [Option<super::camera::View>; 2],
     pub view_tick: u32,
-    /// The game paused (under Slippi's rules, on any stage): the camera's state has left the
-    /// course a replay's playback takes, which never pauses, for the rest of the match
-    /// (`docs/slippi-bugs.md`, "A paused match's recording"), and each read through its view
-    /// or its transform is counted ([`Game::view_read_off_course`],
-    /// [`Game::note_camera_read`]).
+    /// The same of playback's followed camera, after each of the last two ticks it took (the
+    /// pause's left out).
+    pub followed_views: [Option<super::camera::View>; 2],
+    /// The game paused (under Slippi's rules, on any stage): the camera's state left the
+    /// course a replay's playback takes, which never pauses (`docs/slippi-bugs.md`, "A paused
+    /// match's recording"), and playback's has been followed since ([`Game::pause_leaves_course`]).
     pub paused: bool,
+    /// Playback's camera left this one's course where it isn't followed: a pause in the player
+    /// (`Game::follow_playback_camera` off: Sarah's broad rule of 2026-11-18) or in a match with
+    /// no playback state (the menus' session's), or a camera mode the follower doesn't run.
+    /// Every read of the camera in the logic is counted from then on, whatever it decides.
+    pub lost: bool,
+    /// How long the shake playback's camera takes isn't known: a quake's model shook the camera
+    /// through a pause (the pause doesn't stop the models' process, link 18, so their animation
+    /// runs on ahead of playback's), counted in paused ticks it shook. Kept while a model shakes
+    /// the live match's camera or playback's looping one stands ([`PlaybackCamera`]), then
+    /// counted down a tick at a time: playback's models run on that much longer at most. While
+    /// it's kept, a read through playback's views or placement is counted whatever it decides,
+    /// and playback's camera is followed even where it meets this one. The transform's readers
+    /// take no shake. (A slowed game's skipped ticks, which run no model, count down too early.)
+    pub shake: Option<u32>,
+    /// A quake's model shook the camera in this tick, while playback's camera is followed.
+    pub shook: bool,
     /// How many reads were counted: their outcomes differ between the two placements or
     /// phases, or they were made off playback's course.
     pub differing: u32,
@@ -697,6 +723,10 @@ pub struct PlaybackCamera {
     /// process; cleared at the tick's end, as a mode that doesn't run one leaves it).
     pub settles_width: u8,
     pub settles_quakes: u8,
+    /// The camera boxes playback's first frame's settling has fitted so far in this tick, by
+    /// box, and what to (`camera::BoxFit`; cleared at the tick's end): each settling's camera
+    /// update sees the fighters settled before it fitted, the others as the tick found them.
+    pub settled: [Option<(u16, super::camera::BoxFit)>; PLACED],
 }
 
 impl PlaybackCamera {
@@ -726,26 +756,33 @@ impl PlaybackCamera {
 }
 
 impl DisplayPhase {
-    /// The display pass placed fighter `slot`'s root at `root`.
-    pub fn place(&mut self, slot: usize, root: crate::vec::Vec3) {
+    /// The display pass placed fighter `slot`'s root at `root`, and would at `followed`
+    /// through playback's followed camera.
+    pub fn place(
+        &mut self,
+        slot: usize,
+        root: crate::vec::Vec3,
+        followed: Option<crate::vec::Vec3>,
+    ) {
         let slot = slot as u16;
         let at = self
             .placed
             .iter()
-            .position(|p| p.is_some_and(|(s, _)| s == slot))
+            .position(|p| p.is_some_and(|(s, _, _)| s == slot))
             .or_else(|| self.placed.iter().position(Option::is_none));
         if let Some(i) = at {
-            self.placed[i] = Some((slot, root));
+            self.placed[i] = Some((slot, root, followed));
         }
     }
 
-    /// The pass's last placement of fighter `slot`'s root.
-    pub fn placed(&self, slot: usize) -> Option<crate::vec::Vec3> {
+    /// The pass's last placement of fighter `slot`'s root, and through playback's followed
+    /// camera.
+    pub fn placed(&self, slot: usize) -> Option<(crate::vec::Vec3, Option<crate::vec::Vec3>)> {
         self.placed
             .iter()
             .flatten()
-            .find(|(s, _)| usize::from(*s) == slot)
-            .map(|&(_, v)| v)
+            .find(|(s, _, _)| usize::from(*s) == slot)
+            .map(|&(_, v, f)| (v, f))
     }
 
     /// A tick ended, the engine tick count now `tick`: a display pass now would give the game
@@ -801,104 +838,173 @@ impl Game {
             )
     }
 
-    /// A tick's end, its tick counts done ([`DisplayPhase::tick_end`]); under Slippi's rules,
-    /// in the pause camera's mode, the camera off playback's course from now on
-    /// ([`DisplayPhase::paused`]).
+    /// A tick's end, its tick counts done ([`DisplayPhase::tick_end`], and the views of
+    /// playback's followed camera, which leaves the pause out); under Slippi's rules, in the
+    /// pause camera's mode, [`DisplayPhase::paused`].
     pub fn display_phase_tick_end(&mut self) {
+        let paused = self.camera.cam.mode == super::camera::PAUSE;
         if self.keeps_display_views() {
             let due = super::camera::pass_view(self);
             let tick = self.scene.unk_0;
             self.display_phase.tick_end(tick, due);
+            if self.camera.followed.is_none() {
+                self.display_phase.followed_views = [None; 2];
+            } else if !paused {
+                let due = super::camera::followed_view(self, super::camera::Which::Main);
+                let d = &mut self.display_phase;
+                d.followed_views = [due, d.followed_views[0]];
+            }
         }
-        if self.rules.slippi && self.camera.cam.mode == super::camera::PAUSE {
+        if self.rules.slippi && paused {
             self.display_phase.paused = true;
         }
+        let playback_model = self.display_phase.playback.quake_model;
+        let d = &mut self.display_phase;
+        let shook = std::mem::take(&mut d.shook);
+        d.shake = match (d.shake, paused) {
+            (None, true) if shook => Some(1),
+            (Some(n), true) if shook => Some(n.saturating_add(1)),
+            // Live's models gone and playback's looping one too: playback's run on for at most
+            // as many ticks as they shook through pauses.
+            (Some(n), false) if !shook && !playback_model => n.checked_sub(1).filter(|&n| n > 0),
+            (s, _) => s,
+        };
         let p = &mut self.display_phase.playback;
         p.settles_width = 0;
         p.settles_quakes = 0;
+        p.settled = Default::default();
     }
 
-    /// A read in the logic of the game camera's transform or CObj, under Slippi's rules:
-    /// after a pause or in the settling window, which leave them off playback's course
-    /// ([`Game::view_read_off_course`]),
-    /// it's counted ([`DisplayPhase::note`]) whatever it decides. Playback's camera isn't
-    /// followed (that would take a second run of the camera's update over its own boxes, its
-    /// quakes and playback's first frame's settling), so the read can't be made both ways.
-    pub fn note_camera_read(&mut self) {
-        if self.rules.slippi && self.view_read_off_course() {
+    /// A quake's model shook the camera (`gr::grlib::quake_proc`): under Slippi's rules, in the
+    /// pause, which doesn't stop the models' process, its animation goes on where playback's,
+    /// which never pauses, doesn't ([`DisplayPhase::shake`]).
+    pub fn quake_model_shook(&mut self) {
+        if self.rules.slippi && self.camera.followed.is_some() {
+            self.display_phase.shook = true;
+        }
+    }
+
+    /// Whether the shake playback's followed camera takes is known: no quake's model shook on
+    /// through a pause, or those that did and playback's are done ([`DisplayPhase::shake`]).
+    fn shake_known(&self) -> bool {
+        self.display_phase.shake.is_none()
+    }
+
+    /// A pause starts (`camera::set_up_pause`): under Slippi's rules, playback's camera, which
+    /// never pauses, goes on from where the camera stands, followed beside it where the switch
+    /// is on (`Game::follow_playback_camera`, the oracle's and the tests', in a match with
+    /// playback state: a live match, a replay); otherwise (the player, the menus' session's
+    /// matches, which record nothing) it's lost ([`DisplayPhase::lost`]), and every camera read
+    /// from then on is counted.
+    pub fn pause_leaves_course(&mut self) {
+        if !self.rules.slippi || self.camera.followed.is_some() || self.display_phase.lost {
+            return;
+        }
+        if self.playback.is_some() && self.follow_playback_camera {
+            self.start_following();
+        } else {
+            self.display_phase.lost = true;
+        }
+    }
+
+    /// Starts following playback's camera from where the camera stands
+    /// (`camera::start_following`), its kept views the camera's.
+    pub fn start_following(&mut self) {
+        super::camera::start_following(&mut self.camera);
+        let d = &mut self.display_phase;
+        d.followed_views = d.views;
+    }
+
+    /// Whether playback's camera is followed apart from this one
+    /// (`camera::CameraState::followed`).
+    pub fn follows_playback_camera(&self) -> bool {
+        self.camera.followed.is_some()
+    }
+
+    /// A read in the logic of the game camera's transform (its interest or its eye) that
+    /// decided `ours`: under Slippi's rules, while playback's camera is followed apart from this
+    /// one, the read is also made through it (`theirs`, given its transform), and a different
+    /// outcome is counted ([`DisplayPhase::note`]); where playback's camera is lost
+    /// ([`DisplayPhase::lost`]), the read is counted whatever it decides.
+    pub fn decide_camera_read<T: PartialEq>(
+        &mut self,
+        ours: &T,
+        theirs: impl FnOnce(&Game, &super::structs::CameraTransformState) -> T,
+    ) {
+        if !self.rules.slippi {
+            return;
+        }
+        let g: &Game = self;
+        let differs = g.display_phase.lost
+            || (g.camera.followed.as_ref()).is_some_and(|f| theirs(g, &f.transform) != *ours);
+        if differs {
             let tick = self.scene.unk_8;
             self.display_phase.note(tick);
         }
     }
 
-    /// Fighter `gobj`'s input in a match where playback's first frame's settling doesn't run
-    /// (a live match, or a replay played without it): under Slippi's rules, on that frame,
-    /// the camera update the settling would run for the fighter is added to what
-    /// [`PlaybackCamera`] follows (`playback::playback_inject`, whose fighters it settles).
-    pub fn playback_camera_settles(&mut self, gobj: crate::hsd::gobj::GObjId) {
-        let Some(p) = self.playback.as_ref() else {
-            return;
-        };
-        if !self.rules.slippi
-            || p.frame_index != super::playback::FIRST_FRAME
-            || !(p.live || p.no_settling)
-            || !self.playback_injects(gobj)
-        {
-            return;
+    /// The views a read in the logic through the game camera's CObj could see in playback's run
+    /// of the match where it sees the one the CObj holds here, beside that one (design call 9):
+    /// while playback's camera is followed apart from this one, the views a pass would give it
+    /// at either phase ([`DisplayPhase::followed_views`]); otherwise this camera's at the other
+    /// phase ([`DisplayPhase::other_view`]). None under Slippi's rules where playback's camera is
+    /// lost ([`DisplayPhase::lost`]) or its shake isn't known ([`DisplayPhase::shake`]): the read
+    /// is counted whatever it decides. Nothing under
+    /// Vanilla's, or where the last tick's end wasn't kept.
+    pub fn playback_views(
+        &mut self,
+        data: &melee_data::archive::Archives,
+    ) -> Option<[Option<super::camera::View>; 2]> {
+        if !self.rules.slippi {
+            return Some([None; 2]);
         }
-        let c = &mut self.display_phase.playback;
-        c.take(&self.camera.cam);
-        c.settles_width = c.settles_width.wrapping_add(1);
-        c.settles_quakes = c.settles_quakes.wrapping_add(1);
-    }
-
-    /// Whether a read in the logic through the game camera's view is off playback's course,
-    /// so that the read's outcome can't be shown to match playback's, and it's counted
-    /// ([`DisplayPhase::note`]) whatever it decides:
-    ///
-    /// - After a pause ([`DisplayPhase::paused`]): the pause camera eases back to the match's
-    ///   view but leaves its state a little off the one playback's camera, which never paused,
-    ///   has (the interest's depth, the field of view a few ulps short, the eye and interest
-    ///   some hundred-thousandths of a unit off, to the match's end in `melee-player`'s
-    ///   `a_paused_live_match_notes_its_view_reads`).
-    /// - In the settling window ([`SETTLING_WINDOW`]): playback's first frame snaps its camera
-    ///   to its targets as it settles each fighter, which live play doesn't, so the live
-    ///   match's camera, easing there, differs from playback's until the two meet.
-    pub fn view_read_off_course(&self) -> bool {
-        self.display_phase.paused || self.in_settling_window()
-    }
-
-    /// Whether this match's camera is in the settling window ([`SETTLING_WINDOW`]): under
-    /// Slippi's rules, a match whose playback state doesn't run the first frame's settling (a
-    /// live match, or a replay played without it), before the window's last frame.
-    pub fn in_settling_window(&self) -> bool {
-        self.rules.slippi
-            && self
-                .playback
-                .as_ref()
-                .is_some_and(|p| (p.live || p.no_settling) && p.frame_index < SETTLING_WINDOW)
+        let following = self.camera.followed.is_some();
+        if self.display_phase.lost || (following && !self.shake_known()) {
+            return None;
+        }
+        let held = super::camera::View::of_camera(self, data);
+        let now = self.scene.unk_0;
+        let d = &self.display_phase;
+        if d.view_tick != now {
+            return Some([None; 2]);
+        }
+        Some(if following {
+            d.followed_views.map(|v| v.filter(|&v| v != held))
+        } else {
+            [d.other_view(held, now), None]
+        })
     }
 
     /// Where `pos` falls on the screen (`lb::screen::world_to_screen`) through the game camera's
-    /// CObj `c` holding the view the display pass's other phase would leave it
-    /// ([`DisplayPhase::other_view`]), where that view isn't the one it holds: the CObj takes
-    /// that view for the projection, and it and its eye's and interest's WObjs are put back
-    /// whole after, so nothing of it reaches the state.
-    pub fn other_phase_screen(
+    /// CObj `c` holding each of [`Game::playback_views`]: the CObj takes that view for the
+    /// projection, and it and its eye's and interest's WObjs are put back whole after, so
+    /// nothing of it reaches the state. None where playback's camera is lost.
+    pub fn playback_screens(
         &mut self,
         data: &melee_data::archive::Archives,
         c: crate::hsd::cobj::CObjId,
         pos: crate::vec::Vec3,
+    ) -> Option<[Option<crate::vec::Vec3>; 2]> {
+        let views = self.playback_views(data)?;
+        Some(views.map(|v| v.and_then(|v| self.screen_through(data, c, v, pos))))
+    }
+
+    /// Where `pos` falls on the screen through CObj `c` holding `view`, the CObj and its
+    /// WObjs put back whole after.
+    fn screen_through(
+        &mut self,
+        data: &melee_data::archive::Archives,
+        c: crate::hsd::cobj::CObjId,
+        view: super::camera::View,
+        pos: crate::vec::Vec3,
     ) -> Option<crate::vec::Vec3> {
         use crate::hsd::cobj;
-        let held = super::camera::View::of_camera(self, data);
-        let other = self.display_phase.other_view(held, self.scene.unk_0)?;
         let objs = &mut self.objs;
         let kept = objs.cobjs[c].clone();
         let wobjs = [kept.eyepos, kept.interest].map(|w| w.map(|w| (w, objs.wobjs[w.0].clone())));
-        cobj::set_fov(&mut objs.cobjs, Some(c), other.fov);
-        cobj::set_interest(objs, c, other.interest);
-        cobj::set_eye_position(objs, c, other.eye);
+        cobj::set_fov(&mut objs.cobjs, Some(c), view.fov);
+        cobj::set_interest(objs, c, view.interest);
+        cobj::set_eye_position(objs, c, view.eye);
         let s = crate::lb::screen::world_to_screen(objs, data, c, pos, false);
         objs.cobjs[c] = kept;
         for (w, o) in wobjs.into_iter().flatten() {
@@ -908,31 +1014,114 @@ impl Game {
     }
 
     /// The game camera's ground span (`camera::ground_span`'s left, centre and right) through
-    /// the view the display pass's other phase would leave it ([`DisplayPhase::other_view`]),
-    /// where that view isn't the one it holds.
-    pub fn other_phase_span(&mut self, data: &melee_data::archive::Archives) -> Option<[f32; 3]> {
-        let held = super::camera::View::of_camera(self, data);
-        let other = self.display_phase.other_view(held, self.scene.unk_0)?;
-        Some(other.ground_span(self).0)
+    /// each of [`Game::playback_views`]. None where playback's camera is lost.
+    pub fn playback_spans(
+        &mut self,
+        data: &melee_data::archive::Archives,
+    ) -> Option<[Option<[f32; 3]>; 2]> {
+        let views = self.playback_views(data)?;
+        Some(views.map(|v| v.map(|v| v.ground_span(self).0)))
+    }
+
+    /// Where the display pass would place a fighter's root through playback's followed camera:
+    /// `local` (the fighter's point in the view, `ft::co::dead`'s `place_by_camera`) through the
+    /// inverse view matrix of the camera's second CObj (`Camera_800310B8`) holding the view a
+    /// pass would give it from playback's camera, the CObj and its WObjs put back whole after.
+    /// None while it isn't followed, or its shake isn't known ([`DisplayPhase::shake`]).
+    pub fn followed_placement(
+        &mut self,
+        data: &melee_data::archive::Archives,
+        local: crate::vec::Vec3,
+    ) -> Option<crate::vec::Vec3> {
+        use crate::hsd::cobj;
+        if !self.shake_known() {
+            return None;
+        }
+        let view = super::camera::followed_view(self, super::camera::Which::Copy)?;
+        let c = self.camera.cobj_copy?;
+        let objs = &mut self.objs;
+        let kept = objs.cobjs[c].clone();
+        let wobjs = [kept.eyepos, kept.interest].map(|w| w.map(|w| (w, objs.wobjs[w.0].clone())));
+        cobj::set_fov(&mut objs.cobjs, Some(c), view.fov);
+        cobj::set_interest(objs, c, view.interest);
+        cobj::set_eye_position(objs, c, view.eye);
+        cobj::set_mtx_dirty(&mut objs.cobjs, c);
+        cobj::setup_viewing_mtx(objs, data, c);
+        let m = cobj::inv_viewing_mtx(objs, data, c);
+        objs.cobjs[c] = kept;
+        for (w, o) in wobjs.into_iter().flatten() {
+            objs.wobjs[w.0] = o;
+        }
+        m.map(|m| m.transform(local))
     }
 }
 
-/// The replay frame (`Playback::frame_index`, -123 the first) before which a live match's
-/// camera is taken for off playback's course ([`Game::view_read_off_course`]). Playback's first
-/// frame settles each fighter with a camera update and snaps both transforms to their targets
-/// (`Camera_8002F3AC`, `docs/slippi-bugs.md`, "Playback settles each fighter on the first frame,
-/// which live play doesn't"); the live match's camera eases there instead, and the two differ
-/// until they meet, bit for bit, as the fighters move the targets. Measured (2026-11-18, the
-/// transforms and the camera boxes' eased extents and timers, settled against unsettled
-/// playback): in each of 167 of Sarah's Slippi 3.19 replays (six tournament stages) and the
-/// oracle's 23 stage matches played under 3.19's rules (every other stage with a moving camera)
-/// the cameras differ from the first frame to a last one, at most frame 266 (Yoshi's Island
-/// 64; 241 among Sarah's), and are equal from then on to the 1,200th or 2,500th frame. The
-/// window runs over twice that. The camera needs the fighters to move to meet playback's, so
-/// a match whose fighters stand still the whole window can still differ after it: that read
-/// isn't counted (`melee-player`'s `a_live_match_equals_its_playback` holds its match's camera
-/// equal to its settled playback's from the window's end).
-pub const SETTLING_WINDOW: i32 = 600;
+impl Running<'_> {
+    /// Fighter `gobj`'s input in a match where playback's first frame's settling doesn't run
+    /// (a live match, or a replay played without it): under Slippi's rules, on that frame,
+    /// what the settling does to playback's camera is done to the camera followed for it
+    /// (`docs/slippi-bugs.md`, "Playback settles each fighter on the first frame, which live
+    /// play doesn't"; `playback::playback_inject`, whose fighters it settles). The first
+    /// settled starts following playback's camera from this one; each fits the fighter's camera
+    /// box as `ftCamera_UpdateCameraBox` does and makes its extents' horizontal targets its
+    /// extents, and runs the camera's update with the boxes the settling has fitted so far and
+    /// jumps both transforms to their targets (`Camera_8002F3AC`). The width average and the
+    /// quake counters take that update in [`PlaybackCamera`].
+    pub fn playback_camera_settles(&mut self, gobj: crate::hsd::gobj::GObjId) {
+        let g = &mut *self.game;
+        let Some(p) = g.playback.as_ref() else {
+            return;
+        };
+        if !g.rules.slippi
+            || p.frame_index != super::playback::FIRST_FRAME
+            || !(p.live || p.no_settling)
+            || !g.playback_injects(gobj)
+        {
+            return;
+        }
+        let c = &mut g.display_phase.playback;
+        c.take(&g.camera.cam);
+        c.settles_width = c.settles_width.wrapping_add(1);
+        c.settles_quakes = c.settles_quakes.wrapping_add(1);
+        if g.display_phase.lost || !g.follow_playback_camera {
+            return;
+        }
+        if !super::camera::follows_mode(g.camera.cam.mode) {
+            super::camera::lose_followed(g);
+            return;
+        }
+        if g.camera.followed.is_none() {
+            g.start_following();
+        }
+        let (b, fit) = self.camera_box_fit(gobj);
+        let settled = &mut self.game.display_phase.playback.settled;
+        let slot = (settled.iter())
+            .position(|s| s.is_none_or(|(s, _)| u32::from(s) == b.0))
+            .expect("more fighters settled than kept");
+        settled[slot] = Some((b.0 as u16, fit));
+        let settled = *settled;
+        super::camera::with_followed(self, |r| {
+            let boxes = &mut r.game.camera.boxes;
+            // The boxes as the settling has fitted them, their own kept to put back.
+            let mut kept = [None; PLACED];
+            for (k, s) in kept.iter_mut().zip(settled.iter().flatten()) {
+                let x = &mut boxes.boxes[usize::from(s.0)];
+                *k = Some((s.0, super::camera::BoxFit::of(x), x.on_ledge));
+                s.1.put(x);
+            }
+            let x = &mut boxes[b];
+            x.ext.h.x = x.target_ext.h.x;
+            x.ext.h.y = x.target_ext.h.y;
+            super::camera::settle_followed(r);
+            let boxes = &mut r.game.camera.boxes;
+            for (i, fit, ledge) in kept.into_iter().flatten() {
+                let x = &mut boxes.boxes[usize::from(i)];
+                fit.put(x);
+                x.on_ledge = ledge;
+            }
+        });
+    }
+}
 
 /// Brinstar Depths' haze off playback's course, under Slippi's rules (`docs/slippi-bugs.md`,
 /// "Playback's inputs never reach the controllers"): A on the second controller steps Kraid's
@@ -1144,6 +1333,34 @@ mod tests {
         d.tick_end(5, Some(view(7.0)));
         d.tick_end(6, Some(view(7.0)));
         assert_eq!(d.other_view(view(7.0), 6), None);
+    }
+
+    /// A read of the camera's transform (design call 9): under Slippi's rules, while playback's
+    /// camera is followed, counted where it decides otherwise through playback's transform and
+    /// not where it decides the same; with none followed, not counted; where playback's camera
+    /// is lost, counted whatever it decides. Vanilla's reads count nothing.
+    #[test]
+    fn a_camera_read_is_counted_where_playbacks_camera_decides_otherwise() {
+        let mut g = Box::<Game>::default();
+        g.rules.slippi = true;
+        let part = |_: &Game, t: &crate::game::structs::CameraTransformState| t.interest.x > 0.0;
+        g.decide_camera_read(&true, part);
+        assert_eq!(g.display_phase.differing, 0, "none followed");
+        crate::game::camera::start_following(&mut g.camera);
+        g.camera.followed.as_mut().unwrap().transform.interest.x = 5.0;
+        g.decide_camera_read(&true, part);
+        assert_eq!(g.display_phase.differing, 0, "the same outcome");
+        g.decide_camera_read(&false, part);
+        assert_eq!(g.display_phase.differing, 1, "another outcome");
+        crate::game::camera::stop_following(&mut g.camera);
+        g.display_phase.lost = true;
+        g.decide_camera_read(&true, part);
+        assert_eq!(g.display_phase.differing, 2, "lost");
+        let mut v = Box::<Game>::default();
+        crate::game::camera::start_following(&mut v.camera);
+        v.display_phase.lost = true;
+        v.decide_camera_read(&false, part);
+        assert_eq!(v.display_phase.differing, 0, "Vanilla");
     }
 
     /// The haze's tripwire on a constructed game: off course from a step under Slippi's rules,

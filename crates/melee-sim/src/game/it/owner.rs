@@ -291,37 +291,86 @@ fn nearest_by_bone(
         bones[n] = (g, camera_bone_pos(game, data, g));
         n += 1;
     }
-    let bones = &mut bones[..n];
-    let result = nearest_of(pos, bones, facing_dir);
+    let result = nearest_of(pos, &bones[..n], facing_dir);
     if game.rules.slippi {
-        let (mut other, mut by_camera) = (false, false);
-        for (g, v) in bones.iter_mut() {
-            let fp = fighter(game, *g);
+        // The bones with each fighter the camera places at the other display-phase placement;
+        // while playback's camera is followed apart from this one, at the logic's placement and
+        // at the pass's through playback's camera instead (`DisplayPhase::place`).
+        let following = game.follows_playback_camera();
+        let (mut other, mut logic, mut theirs) = (bones, bones, Some(bones));
+        let (mut moved, mut by_camera) = (false, false);
+        for i in 0..n {
+            let (g, v) = bones[i];
+            let fp = fighter(game, g);
             if !fp.x2220_b7 {
                 continue;
             }
-            let f = fighter_of(game, *g);
+            let f = fighter_of(game, g);
             let Some(crate::game::state::Obj::JObj(j)) = game.world.gobjs[g.0].obj else {
                 continue;
             };
             let root = game.objs.jobjs[j].translate;
-            // The pass placed it through the camera's second CObj, off playback's course
-            // after a pause (`DisplayPhase::paused`).
+            // The pass placed it through the camera's second CObj.
             by_camera |= placed_by_pass(root, fp.cur_pos);
-            let pass = game.display_phase.placed(f.0 as usize);
-            if let Some(w) = other_placement(*v, root, fp.cur_pos, pass) {
-                *v = w;
-                other = true;
+            let placed = game.display_phase.placed(f.0 as usize);
+            if following {
+                moved = true;
+                logic[i].1 = shifted(v, fp.cur_pos, root);
+                match (placed.and_then(|p| p.1), &mut theirs) {
+                    (Some(at), Some(t)) => t[i].1 = shifted(v, at, root),
+                    // Not placed through playback's camera yet: its outcome isn't known.
+                    _ => theirs = None,
+                }
+            } else if let Some(w) = other_placement(v, root, fp.cur_pos, placed.map(|p| p.0)) {
+                other[i].1 = w;
+                moved = true;
             }
         }
-        if read_noted(game.view_read_off_course(), by_camera, || {
-            other && nearest_of(pos, bones, facing_dir) != result
+        let lost = game.display_phase.lost;
+        if read_noted(lost, by_camera, || {
+            moved
+                && if following {
+                    followed_differs(
+                        pos,
+                        facing_dir,
+                        result,
+                        &logic[..n],
+                        theirs.as_ref().map(|t| &t[..n]),
+                    )
+                } else {
+                    nearest_of(pos, &other[..n], facing_dir) != result
+                }
         }) {
             let tick = game.scene.unk_8;
             game.display_phase.note(tick);
         }
     }
     result
+}
+
+/// Whether a nearest-opponent read that found `result` decides otherwise in playback's run while
+/// playback's camera is followed apart from this one: at either display phase, each fighter the
+/// camera places at the logic's placement (`logic`) or at the pass's through playback's camera
+/// (`theirs`, none where one isn't known, which counts as otherwise).
+fn followed_differs(
+    pos: Vec3,
+    facing_dir: Option<f32>,
+    result: Option<GObjId>,
+    logic: &[(GObjId, Vec3)],
+    theirs: Option<&[(GObjId, Vec3)]>,
+) -> bool {
+    nearest_of(pos, logic, facing_dir) != result
+        || theirs.is_none_or(|t| nearest_of(pos, t, facing_dir) != result)
+}
+
+/// Camera bone `v` of a fighter whose root is at `root`, with the root at `at` instead.
+fn shifted(v: Vec3, at: Vec3, root: Vec3) -> Vec3 {
+    let shift = |v: f32, a: f32, r: f32| mem(fp::fadds(reg(v), fp::fsubs(reg(a), reg(r))));
+    Vec3::new(
+        shift(v.x, at.x, root.x),
+        shift(v.y, at.y, root.y),
+        shift(v.z, at.z, root.z),
+    )
 }
 
 /// Whether a fighter KO'd toward the screen, its root at `root` and its position `cur_pos`,
@@ -331,11 +380,11 @@ fn placed_by_pass(root: Vec3, cur_pos: Vec3) -> bool {
     root != cur_pos
 }
 
-/// Whether a nearest-opponent read is noted (design call 9): off playback's course (after a
-/// pause, `DisplayPhase::paused`) through a fighter the pass placed by the camera, whatever it
-/// decides; otherwise where the other placement `differs` in its outcome.
-fn read_noted(off_course: bool, by_camera: bool, differs: impl FnOnce() -> bool) -> bool {
-    (off_course && by_camera) || differs()
+/// Whether a nearest-opponent read is noted (design call 9): where playback's camera is lost
+/// (`DisplayPhase::lost`), through a fighter the pass placed by the camera, whatever it
+/// decides; otherwise where the other placements (`differs`) decide otherwise.
+fn read_noted(lost: bool, by_camera: bool, differs: impl FnOnce() -> bool) -> bool {
+    (lost && by_camera) || differs()
 }
 
 /// A camera bone `v` as it would read with the other display-phase placement of its
@@ -345,12 +394,7 @@ fn read_noted(off_course: bool, by_camera: bool, differs: impl FnOnce() -> bool)
 fn other_placement(v: Vec3, root: Vec3, cur_pos: Vec3, pass: Option<Vec3>) -> Option<Vec3> {
     let alt = if root == cur_pos { pass } else { Some(cur_pos) };
     let a = alt.filter(|&a| a != root)?;
-    let shift = |v: f32, a: f32, r: f32| mem(fp::fadds(reg(v), fp::fsubs(reg(a), reg(r))));
-    Some(Vec3::new(
-        shift(v.x, a.x, root.x),
-        shift(v.y, a.y, root.y),
-        shift(v.z, a.z, root.z),
-    ))
+    Some(shifted(v, a, root))
 }
 
 /// The candidate of `bones` (each a fighter and its camera bone) nearest `pos`, the first on
@@ -484,11 +528,32 @@ mod display_phase_tests {
         assert_eq!(nearest_of(at, &[(a, bone(pass)), other], Some(-1.0)), None);
     }
 
-    /// After a pause a read through a fighter the pass placed by the camera is noted whatever
-    /// it decides (its placement is off playback's course); one through a fighter the logic put
-    /// back, or before any pause, only where the other placement decides otherwise.
+    /// While playback's camera is followed apart from this one, a read through a fighter the
+    /// camera places is noted where it decides otherwise with the fighter at the logic's
+    /// placement or at the pass's through playback's camera, or where that one isn't known; not
+    /// where both decide the same.
     #[test]
-    fn a_read_through_the_camera_after_a_pause_is_noted() {
+    fn a_read_through_playbacks_followed_camera_is_decided_both_ways() {
+        let (a, b) = (GObjId(1), GObjId(2));
+        let at = Vec3::default();
+        let other = (b, Vec3::new(30.0, 5.0, 0.0));
+        // Ours: the KO'd fighter nearest, its root where the pass placed it.
+        let ours = [(a, Vec3::new(10.0, 5.0, 0.0)), other];
+        let result = nearest_of(at, &ours, None);
+        assert_eq!(result, Some(a));
+        let near = [(a, Vec3::new(12.0, 5.0, 0.0)), other];
+        let far = [(a, Vec3::new(100.0, 5.0, 0.0)), other];
+        assert!(!followed_differs(at, None, result, &near, Some(&near)));
+        assert!(followed_differs(at, None, result, &far, Some(&near)));
+        assert!(followed_differs(at, None, result, &near, Some(&far)));
+        assert!(followed_differs(at, None, result, &near, None));
+    }
+
+    /// Where playback's camera is lost a read through a fighter the pass placed by the camera
+    /// is noted whatever it decides; one through a fighter the logic put back, or on course,
+    /// only where the other placement decides otherwise.
+    #[test]
+    fn a_read_through_the_camera_lost_is_noted() {
         let (pass, ko_spot) = (Vec3::new(10.0, 2.0, 0.0), Vec3::new(100.0, 2.0, 0.0));
         assert!(placed_by_pass(pass, ko_spot));
         assert!(!placed_by_pass(ko_spot, ko_spot));

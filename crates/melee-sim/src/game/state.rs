@@ -468,6 +468,13 @@ pub struct Game {
     pub display_phase: super::live::DisplayPhase,
     /// Under Slippi's rules, Brinstar Depths' haze off playback's course (`live::Haze`).
     pub haze: super::live::Haze,
+    /// Under Slippi's rules, whether playback's camera is followed beside this one where it
+    /// leaves it (`camera::CameraState::followed`, design call 9): the oracle's and the tests'
+    /// switch, to decide the camera's reads both ways. Off in the player (Sarah, 2026-11-18:
+    /// the detector only at a negligible cost), whose live match runs no second camera: the
+    /// first frame's settling counts nothing, and after a pause every camera read is counted
+    /// ([`super::live::DisplayPhase::lost`]).
+    pub follow_playback_camera: bool,
     /// What the players' codes keep outside the game's structs (with [`Rules::player`]).
     pub player_code_state: super::player_codes::State,
     /// The rumble patterns by kind (`lb_804D63C0`, `LbRb.dat`'s `lbRumbleData`).
