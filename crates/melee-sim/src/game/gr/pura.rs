@@ -254,7 +254,7 @@ pub fn proc_stage(r: &mut Running, gobj: GObjId) {
 fn set_sky(game: &mut Game, c: [u8; 4]) {
     let [r, g, b, a] = c;
     super::ground::set_fog_color(game, _GXColor { r, g, b, a });
-    camera::set_background_color(&mut game.camera.cam, r, g, b);
+    game.camera.set_background_color(r, g, b);
 }
 
 /// A color other than `from` (`xC6`), drawn until it differs.
@@ -412,13 +412,13 @@ pub fn init_subjects(r: &mut Running, gobj: GObjId) {
     while i < SUBJECTS
         && let Some(n) = node
     {
-        let b = camera::alloc_box(&mut r.game.camera.boxes, camera::ACTIVE);
+        let b = r.game.camera.alloc_box(camera::ACTIVE);
         let v = r.game.grounds[g.0].u.pura_stage();
         v.x128[i] = Some(b);
         v.xC4[i] = Some(n);
         let pos = world_position(&mut r.game.objs, r.data, Some(n), None);
         let hidden = jobj::get_flags(&r.game.objs.jobjs, Some(n)) & jobj::HIDDEN != 0;
-        let s = &mut r.game.camera.boxes[b];
+        let s = r.game.camera.subject_mut(b);
         s.pos = pos;
         s.state = if hidden {
             camera::INACTIVE
@@ -429,7 +429,7 @@ pub fn init_subjects(r: &mut Running, gobj: GObjId) {
         s.target_ext.v.y = -30.0;
         s.target_ext.h.x = -30.0;
         s.target_ext.h.y = 30.0;
-        r.game.camera.boxes.fit_extents(b);
+        r.game.camera.fit_extents(b);
         i += 1;
         node = r.game.objs.jobjs[n].next;
     }
@@ -447,7 +447,7 @@ pub fn update_subjects(r: &mut Running, gobj: GObjId) {
         };
         let pos = world_position(&mut r.game.objs, r.data, Some(j), None);
         let hidden = jobj::get_flags(&r.game.objs.jobjs, Some(j)) & jobj::HIDDEN != 0;
-        let s = &mut r.game.camera.boxes[b];
+        let s = r.game.camera.subject_mut(b);
         s.pos = pos;
         s.state = if hidden {
             camera::INACTIVE

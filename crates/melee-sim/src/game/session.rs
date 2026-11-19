@@ -495,7 +495,7 @@ impl Session {
         // (`selected_stage`, Fountain of Dreams) and the camera's default field of view
         // (`cm_803BCCA0`'s, 38 degrees).
         game.gr.stkind = 2;
-        game.camera.fov = 38.0;
+        game.camera.set_default_fov(38.0);
         game.audio.disc = setup.disc;
         game.audio.dsp = setup.dsp;
         // The heap's memory as the scenes leave it, for a match's leftovers.

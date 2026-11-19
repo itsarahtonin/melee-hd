@@ -942,12 +942,12 @@ impl Importer<'_> {
         let copy = self.u32(sym("cm_804D6464"));
         let cobj_copy = (copy != 0).then(|| self.cobj(copy));
         let debug = CameraDebugMode::import(&mem, sym("cm_80453004"), self);
-        let c = &mut self.game.camera;
-        c.cam = cam;
-        c.boxes = boxes;
-        c.cobj_copy = cobj_copy;
-        c.fov = f32::from_bits(cap.u32(sym("cm_803BCCA0") + 0x40));
-        c.debug = debug;
+        let c = self.game.camera.raw_parts_mut();
+        *c.cam = cam;
+        *c.boxes = boxes;
+        *c.cobj_copy = cobj_copy;
+        *c.fov = f32::from_bits(cap.u32(sym("cm_803BCCA0") + 0x40));
+        *c.debug = debug;
     }
 
     /// A fighter, through its generated mirror (and the byte a player's code keeps in it).

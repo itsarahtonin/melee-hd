@@ -100,7 +100,7 @@ impl Running<'_> {
         // `ftCommon_8007E2F4`.
         fp.x1A6A = 0x1FF;
         let b = fp.x890_cameraBox.expect("a fighter without a camera box");
-        let cb = &mut self.game.camera.boxes[b];
+        let cb = self.game.camera.subject_mut(b);
         (cb.target_ext.h.x, cb.target_ext.h.y) = h;
         (cb.target_ext.v.x, cb.target_ext.v.y, cb.target_ext.v.z) = v;
         // `ftCommon_8007EFC0`.

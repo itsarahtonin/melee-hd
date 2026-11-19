@@ -167,7 +167,7 @@ impl Game {
             .fighter(gobj)
             .x890_cameraBox
             .expect("a fighter without a camera box");
-        self.camera.boxes[b].target_ext.v.z
+        self.camera.subject(b).target_ext.v.z
     }
 
     #[doc(alias = "ftLib_GetKind")]

@@ -434,7 +434,7 @@ pub fn camera_blends(game: &Game, c: CObjId, v: &CameraView) -> bool {
 /// camera keeps naming its GObj after a scene change frees it (the original keeps the dangling
 /// pointer), and the attract match's first tick after the title's movie is drawn with it so.
 pub fn game_camera(game: &Game) -> Option<CObjId> {
-    let g = game.camera.cam.gobj?;
+    let g = game.camera.gobj()?;
     match game.world.gobjs.get(g.0)?.obj {
         Some(Obj::CObj(c)) => Some(c),
         _ => None,

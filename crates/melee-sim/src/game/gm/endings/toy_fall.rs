@@ -407,7 +407,7 @@ impl Running<'_> {
     // discarded.
     #[doc(alias = "gm_GetCurrentSceneEnterData")]
     fn toy_fall_fighter(&mut self) {
-        super::super::super::camera::init(&mut self.game.camera, 6);
+        self.game.camera.init(6);
         self.game.alloc_dynamics(self.data);
         self.game.coll.reset();
         super::super::super::gr::setup::prepare(self.game);

@@ -376,7 +376,7 @@ pub fn proc_field(r: &mut Running, gobj: GObjId) {
     // `ftLib_GetCameraSubject`: the fighter's camera box, made inactive.
     let inactive = |game: &mut Game, f: GObjId| {
         if let Some(b) = game.fighter(f).x890_cameraBox {
-            let s = &mut game.camera.boxes[b];
+            let s = game.camera.subject_mut(b);
             s.state = super::super::camera::INACTIVE;
             s.force_inactive = true;
         }
@@ -399,7 +399,7 @@ pub fn proc_field(r: &mut Running, gobj: GObjId) {
         r.game.grounds[g.0].u.homerun().text = Some(t);
         place_text(r, t, label);
     }
-    let interest = super::super::camera::interest(&r.game.camera.cam);
+    let interest = r.game.camera.interest();
     let s = |r: &Running| fp::fmuls(reg(STRETCH), reg(scale(r.game)));
     let mut x0 = fp::fctiwz(fp::fsubs(
         fp::fdivs(fp::fsubs(reg(interest.x), reg(REACH)), s(r)),
@@ -717,7 +717,7 @@ impl Running<'_> {
         let Some(Obj::CObj(target)) = self.game.world.gobj(gobj).obj else {
             panic!("the labels' camera GObj holds no CObj");
         };
-        if let Some(main) = super::super::camera::gobj(&self.game.camera.cam)
+        if let Some(main) = self.game.camera.gobj()
             && let Some(Obj::CObj(m)) = self.game.world.gobj(main).obj
         {
             let (data, objs) = (self.data, &mut self.game.objs);

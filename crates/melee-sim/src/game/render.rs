@@ -108,17 +108,16 @@ impl Running<'_> {
     /// links the same way).
     #[doc(alias = "Camera_800313E0")]
     pub fn camera_fighters(&mut self, gobj: GObjId, prios: u64) {
-        use super::camera;
-        let cam = &self.game.camera.cam;
+        let hidden = self.game.camera.hidden_layers();
         let bit = |hidden: bool, v: u64| if hidden { 0 } else { v };
-        let b0 = bit(cam.x398_b0, 0x20);
-        let b1 = bit(cam.x398_b1, 0x40);
-        let b4 = bit(cam.x398_b4, 0x10);
-        camera::set_pass(&mut self.game.camera.cam, 1);
+        let b0 = bit(hidden[0], 0x20);
+        let b1 = bit(hidden[1], 0x40);
+        let b4 = bit(hidden[4], 0x10);
+        self.game.camera.set_pass(1);
         self.camera_pass(gobj, prios | b0 | b1, 3);
-        camera::set_pass(&mut self.game.camera.cam, 0);
+        self.game.camera.set_pass(0);
         self.camera_pass(gobj, b1 | b4 | b0, 3);
-        camera::set_pass(&mut self.game.camera.cam, 0);
+        self.game.camera.set_pass(0);
         self.camera_pass(gobj, prios | b4 | b0 | b1, 4);
     }
 
@@ -145,7 +144,7 @@ impl Running<'_> {
         };
         crate::lb::refract::set_camera(&self.game.objs, &mut self.game.refract, c);
         camera::update_cobj(self.game, gobj);
-        let shadows_debug = self.game.camera.cam.x399_b7;
+        let shadows_debug = self.game.camera.shadows();
         self.shadow_render(shadows_debug);
         if !display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
             return;
@@ -153,34 +152,34 @@ impl Running<'_> {
         self.game.objs.display.push(display::Draw::Erase);
         self.stage_fog_update(c);
         crate::hsd::lobj::delete_current_all(&mut self.game.objs, None);
-        let cam = &self.game.camera.cam;
+        let hidden = self.game.camera.hidden_layers();
         let bit = |hidden: bool, v: u64| if hidden { 0 } else { v };
-        let prio1 = bit(cam.x398_b4, 1);
-        let prio8 = bit(cam.x398_b2, 8);
-        let prio80 = bit(cam.x398_b3, 0x80);
-        let b0 = bit(cam.x398_b0, 0x20);
-        let b1 = bit(cam.x398_b1, 0x40);
-        let b4 = bit(cam.x398_b4, 0x10);
-        camera::set_layer(&mut self.game.camera.cam, 2);
+        let prio1 = bit(hidden[4], 1);
+        let prio8 = bit(hidden[2], 8);
+        let prio80 = bit(hidden[3], 0x80);
+        let b0 = bit(hidden[0], 0x20);
+        let b1 = bit(hidden[1], 0x40);
+        let b4 = bit(hidden[4], 0x10);
+        self.game.camera.set_layer(2);
         self.camera_pass(gobj, prio1 | prio8, 7);
-        camera::set_layer(&mut self.game.camera.cam, 1);
+        self.game.camera.set_layer(1);
         self.camera_pass(gobj, prio8, 7);
-        camera::set_layer(&mut self.game.camera.cam, 0);
+        self.game.camera.set_layer(0);
         self.camera_pass(gobj, prio8, 3);
         crate::lb::refract::copy_screen(&mut self.game.objs, &self.game.refract);
         // `Camera_800311EC`.
-        camera::set_pass(&mut self.game.camera.cam, 1);
+        self.game.camera.set_pass(1);
         self.camera_pass(gobj, prio1 | b0 | b1, 3);
-        camera::set_pass(&mut self.game.camera.cam, 0);
+        self.game.camera.set_pass(0);
         self.camera_pass(gobj, b1 | b4 | b0, 3);
-        camera::set_pass(&mut self.game.camera.cam, 0);
+        self.game.camera.set_pass(0);
         self.camera_pass(gobj, prio1 | prio8, 4);
         // `Camera_80031328`.
-        camera::set_pass(&mut self.game.camera.cam, 0);
+        self.game.camera.set_pass(0);
         self.camera_pass(gobj, prio1 | b4 | b0 | b1, 4);
         display::fog_set(&mut self.game.objs, None);
         self.camera_pass(gobj, prio80, 7);
-        camera::set_layer(&mut self.game.camera.cam, 3);
+        self.game.camera.set_layer(3);
         self.camera_pass(gobj, prio8, 7);
         self.stage_debug_drawings();
         display::camera_end(&mut self.game.objs);
@@ -370,7 +369,7 @@ impl Running<'_> {
     /// draws collisions or the stage keeps its fog off (`Ground_801C1E00`).
     #[doc(alias = "Ground_801C1E2C")]
     pub fn render_stage_fog(&mut self, gobj: GObjId) {
-        if super::camera::draw_collisions(&self.game.camera.cam) || !self.game.stage_info.unk8C.b2 {
+        if self.game.camera.draw_collisions() || !self.game.stage_info.unk8C.b2 {
             return;
         }
         if let Some(Obj::Fog(f)) = self.game.world.gobj(gobj).obj {

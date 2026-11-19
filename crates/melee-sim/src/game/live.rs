@@ -229,7 +229,7 @@ impl Counters {
 #[derive(Clone, Debug)]
 pub struct ConsoleAt {
     pub vs_fighters: [super::structs::VsSceneFighter; 6],
-    pub camera: super::structs::Camera,
+    pub camera: super::camera::Carried,
     /// The statics no scene resets that a match writes only in passing, which the console's
     /// match takes on from the ones before it ([`Game::take_console_statics`]).
     pub carried: Carried,
@@ -284,7 +284,7 @@ impl ConsoleAt {
     pub fn of(g: &Game) -> Self {
         ConsoleAt {
             vs_fighters: g.vs.state.fighters.clone(),
-            camera: g.camera.cam.clone(),
+            camera: g.camera.carried(),
             carried: Carried::of(g),
         }
     }
@@ -302,15 +302,8 @@ impl Game {
     /// where it wrote them ([`Carried`]).
     pub fn take_console_statics(&mut self, at: &ConsoleAt) {
         at.carried.put(self);
-        let c = &mut self.camera.cam;
-        self.display_phase.playback.take(c);
-        let k = &at.camera;
-        (c.x2B0, c.x2B4, c.x2B8) = (k.x2B0, k.x2B4, k.x2B8);
-        (c.x2C4, c.x2C5) = (k.x2C4, k.x2C5);
-        c.x2D0.clone_from(&k.x2D0);
-        (c.x304, c.x305, c.x306, c.x307) = (k.x304, k.x305, k.x306, k.x307);
-        (c.x308, c.x314, c.pause_eye_offset) = (k.x308, k.x314, k.pause_eye_offset);
-        (c.x32C, c.pause_eye_distance, c.pause_up) = (k.x32C, k.pause_eye_distance, k.pause_up);
+        self.display_phase.playback.take(&self.camera);
+        self.camera.take_carried(&at.camera);
     }
 }
 
@@ -347,10 +340,7 @@ impl Game {
         self.crowd = live.crowd;
         self.it.spawn.clone_from(&live.it.spawn);
         self.it.clank_boxes = live.it.clank_boxes;
-        let (gobj, quake) = (self.camera.cam.gobj, self.camera.cam.quake_gobj);
-        self.camera.cam.clone_from(&live.camera.cam);
-        (self.camera.cam.gobj, self.camera.cam.quake_gobj) = (gobj, quake);
-        self.camera.fov = live.camera.fov;
+        self.camera.take_match(&live.camera);
         let (m, l) = (&mut self.magnify, &live.magnify);
         (m.x4, m.x8, m.xC, m.x10) = (l.x4.clone(), l.x8.clone(), l.xC.clone(), l.x10.clone());
         m.image_descs.clone_from(&l.image_descs);
@@ -731,17 +721,18 @@ pub struct PlaybackCamera {
 
 impl PlaybackCamera {
     /// Takes the camera's state, the first time.
-    pub fn take(&mut self, c: &super::structs::Camera) {
+    pub fn take(&mut self, c: &super::camera::CameraState) {
         if self.on {
             return;
         }
+        let (width, width_sum, width_count) = c.width_average();
         *self = PlaybackCamera {
             on: true,
-            width: c.x2B0,
-            width_sum: c.x2B4,
-            width_count: c.x2B8,
-            quake_frames: c.quake_frames_left,
-            quake_model: c.quake_gobj.is_some(),
+            width,
+            width_sum,
+            width_count,
+            quake_frames: c.quake_frames(),
+            quake_model: c.quake_model().is_some(),
             ..*self
         };
     }
@@ -842,12 +833,12 @@ impl Game {
     /// playback's followed camera, which leaves the pause out); under Slippi's rules, in the
     /// pause camera's mode, [`DisplayPhase::paused`].
     pub fn display_phase_tick_end(&mut self) {
-        let paused = self.camera.cam.mode == super::camera::PAUSE;
+        let paused = self.camera.mode() == super::camera::PAUSE;
         if self.keeps_display_views() {
             let due = super::camera::pass_view(self);
             let tick = self.scene.unk_0;
             self.display_phase.tick_end(tick, due);
-            if self.camera.followed.is_none() {
+            if !self.camera.is_following() {
                 self.display_phase.followed_views = [None; 2];
             } else if !paused {
                 let due = super::camera::followed_view(self, super::camera::Which::Main);
@@ -879,7 +870,7 @@ impl Game {
     /// pause, which doesn't stop the models' process, its animation goes on where playback's,
     /// which never pauses, doesn't ([`DisplayPhase::shake`]).
     pub fn quake_model_shook(&mut self) {
-        if self.rules.slippi && self.camera.followed.is_some() {
+        if self.rules.slippi && self.camera.is_following() {
             self.display_phase.shook = true;
         }
     }
@@ -897,7 +888,7 @@ impl Game {
     /// matches, which record nothing) it's lost ([`DisplayPhase::lost`]), and every camera read
     /// from then on is counted.
     pub fn pause_leaves_course(&mut self) {
-        if !self.rules.slippi || self.camera.followed.is_some() || self.display_phase.lost {
+        if !self.rules.slippi || self.camera.is_following() || self.display_phase.lost {
             return;
         }
         if self.playback.is_some() && self.follow_playback_camera {
@@ -910,7 +901,7 @@ impl Game {
     /// Starts following playback's camera from where the camera stands
     /// (`camera::start_following`), its kept views the camera's.
     pub fn start_following(&mut self) {
-        super::camera::start_following(&mut self.camera);
+        self.camera.start_following();
         let d = &mut self.display_phase;
         d.followed_views = d.views;
     }
@@ -918,7 +909,7 @@ impl Game {
     /// Whether playback's camera is followed apart from this one
     /// (`camera::CameraState::followed`).
     pub fn follows_playback_camera(&self) -> bool {
-        self.camera.followed.is_some()
+        self.camera.is_following()
     }
 
     /// A read in the logic of the game camera's transform (its interest or its eye) that
@@ -936,7 +927,9 @@ impl Game {
         }
         let g: &Game = self;
         let differs = g.display_phase.lost
-            || (g.camera.followed.as_ref()).is_some_and(|f| theirs(g, &f.transform) != *ours);
+            || g.camera
+                .followed_transform()
+                .is_some_and(|t| theirs(g, t) != *ours);
         if differs {
             let tick = self.scene.unk_8;
             self.display_phase.note(tick);
@@ -958,7 +951,7 @@ impl Game {
         if !self.rules.slippi {
             return Some([None; 2]);
         }
-        let following = self.camera.followed.is_some();
+        let following = self.camera.is_following();
         if self.display_phase.lost || (following && !self.shake_known()) {
             return None;
         }
@@ -1038,7 +1031,7 @@ impl Game {
             return None;
         }
         let view = super::camera::followed_view(self, super::camera::Which::Copy)?;
-        let c = self.camera.cobj_copy?;
+        let c = self.camera.cobj_copy()?;
         let objs = &mut self.objs;
         let kept = objs.cobjs[c].clone();
         let wobjs = [kept.eyepos, kept.interest].map(|w| w.map(|w| (w, objs.wobjs[w.0].clone())));
@@ -1080,17 +1073,17 @@ impl Running<'_> {
             return;
         }
         let c = &mut g.display_phase.playback;
-        c.take(&g.camera.cam);
+        c.take(&g.camera);
         c.settles_width = c.settles_width.wrapping_add(1);
         c.settles_quakes = c.settles_quakes.wrapping_add(1);
         if g.display_phase.lost || !g.follow_playback_camera {
             return;
         }
-        if !super::camera::follows_mode(g.camera.cam.mode) {
+        if !super::camera::follows_mode(g.camera.mode()) {
             super::camera::lose_followed(g);
             return;
         }
-        if g.camera.followed.is_none() {
+        if !g.camera.is_following() {
             g.start_following();
         }
         let (b, fit) = self.camera_box_fit(gobj);
@@ -1100,26 +1093,7 @@ impl Running<'_> {
             .expect("more fighters settled than kept");
         settled[slot] = Some((b.0 as u16, fit));
         let settled = *settled;
-        super::camera::with_followed(self, |r| {
-            let boxes = &mut r.game.camera.boxes;
-            // The boxes as the settling has fitted them, their own kept to put back.
-            let mut kept = [None; PLACED];
-            for (k, s) in kept.iter_mut().zip(settled.iter().flatten()) {
-                let x = &mut boxes.boxes[usize::from(s.0)];
-                *k = Some((s.0, super::camera::BoxFit::of(x), x.on_ledge));
-                s.1.put(x);
-            }
-            let x = &mut boxes[b];
-            x.ext.h.x = x.target_ext.h.x;
-            x.ext.h.y = x.target_ext.h.y;
-            super::camera::settle_followed(r);
-            let boxes = &mut r.game.camera.boxes;
-            for (i, fit, ledge) in kept.into_iter().flatten() {
-                let x = &mut boxes.boxes[usize::from(i)];
-                fit.put(x);
-                x.on_ledge = ledge;
-            }
-        });
+        super::camera::settle_followed_boxes(self, &settled, b);
     }
 }
 
@@ -1346,18 +1320,19 @@ mod tests {
         let part = |_: &Game, t: &crate::game::structs::CameraTransformState| t.interest.x > 0.0;
         g.decide_camera_read(&true, part);
         assert_eq!(g.display_phase.differing, 0, "none followed");
-        crate::game::camera::start_following(&mut g.camera);
-        g.camera.followed.as_mut().unwrap().transform.interest.x = 5.0;
+        g.camera.start_following();
+        let f = g.camera.raw_parts_mut().followed.as_mut().unwrap();
+        f.transform.interest.x = 5.0;
         g.decide_camera_read(&true, part);
         assert_eq!(g.display_phase.differing, 0, "the same outcome");
         g.decide_camera_read(&false, part);
         assert_eq!(g.display_phase.differing, 1, "another outcome");
-        crate::game::camera::stop_following(&mut g.camera);
+        g.camera.stop_following();
         g.display_phase.lost = true;
         g.decide_camera_read(&true, part);
         assert_eq!(g.display_phase.differing, 2, "lost");
         let mut v = Box::<Game>::default();
-        crate::game::camera::start_following(&mut v.camera);
+        v.camera.start_following();
         v.display_phase.lost = true;
         v.decide_camera_read(&false, part);
         assert_eq!(v.display_phase.differing, 0, "Vanilla");

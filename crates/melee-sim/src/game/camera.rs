@@ -266,21 +266,21 @@ impl IndexMut<CameraBoxId> for CameraBoxes {
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct CameraState {
     /// `game_camera`.
-    pub cam: Camera,
-    pub boxes: CameraBoxes,
+    cam: Camera,
+    boxes: CameraBoxes,
     /// The CObj `transform_copy` drives (`cm_804D6464`), which nothing draws with.
-    pub cobj_copy: Option<CObjId>,
+    cobj_copy: Option<CObjId>,
     /// The default field of view (`cm_803BCCA0.x40`).
-    pub fov: f32,
+    fov: f32,
     /// The debug cameras' state (`cm_80453004`).
-    pub debug: CameraDebugMode,
+    debug: CameraDebugMode,
     /// Under Slippi's rules, where `Game::follow_playback_camera` is on (the oracle's and the
     /// tests', never the player's), playback's camera while it has left this one's course (design
     /// call 9 of `docs/slippi-ruleset.md`): from playback's first frame, which snaps its camera
     /// where a live match's eases, and from a pause, which playback never makes, until the two
     /// meet bit for bit ([`start_following`], [`update`]). Its boxes' part is
     /// [`CameraBoxes::followed`].
-    pub followed: Option<Course>,
+    followed: Option<Course>,
 }
 
 /// The camera's frame for one update (`CameraBounds`, a stack local in the original): the
@@ -310,6 +310,199 @@ impl CameraState {
             Which::Main => &mut self.cam.transform,
             Which::Copy => &mut self.cam.transform_copy,
         }
+    }
+
+    /// The camera's mode (`CameraType`: [`STANDARD`], [`PAUSE`] and the others).
+    pub fn mode(&self) -> i32 {
+        self.cam.mode
+    }
+
+    /// Which of the display pass's render layers the camera hides (`x398_b0` to `x398_b5`;
+    /// [`CameraState::show_all_layers`] shows them all again).
+    pub fn hidden_layers(&self) -> [bool; 6] {
+        let c = &self.cam;
+        [
+            c.x398_b0, c.x398_b1, c.x398_b2, c.x398_b3, c.x398_b4, c.x398_b5,
+        ]
+    }
+
+    /// Whether the display pass draws the stage's zones (`x399_b4`, which
+    /// [`CameraState::set_draw_zones`] sets).
+    pub fn draw_zones(&self) -> bool {
+        self.cam.x399_b4
+    }
+
+    /// The default field of view (`cm_803BCCA0.x40`), which [`CameraState::set_default_fov`]
+    /// sets.
+    pub fn default_fov(&self) -> f32 {
+        self.fov
+    }
+
+    /// The camera's second CObj (`cm_804D6464`), which `transform_copy` drives and nothing
+    /// draws with.
+    pub fn cobj_copy(&self) -> Option<CObjId> {
+        self.cobj_copy
+    }
+
+    /// The looping quake's model (`quake_gobj`), while it stands.
+    pub fn quake_model(&self) -> Option<GObjId> {
+        self.cam.quake_gobj
+    }
+
+    /// The bounds' width average, its sum and count (`x2B0`, `x2B4`, `x2B8`), which
+    /// [`CameraState::average_width`] reads.
+    pub fn width_average(&self) -> (f32, f32, i16) {
+        (self.cam.x2B0, self.cam.x2B4, self.cam.x2B8)
+    }
+
+    /// The quakes' frames left, by kind (`quake_frames_left`).
+    pub fn quake_frames(&self) -> [i32; QUAKE_KINDS] {
+        self.cam.quake_frames_left
+    }
+
+    /// Camera box `b`, the subject its owner (a fighter, an item, a stage object) keeps
+    /// ([`CameraState::alloc_box`]).
+    pub fn subject(&self, b: CameraBoxId) -> &CmSubject {
+        &self.boxes[b]
+    }
+
+    /// Camera box `b` to write, by its owner: where it is (`pos`, `bone_pos`), its target
+    /// extents, facing, state and ledge and inactive flags. Its eased extents, timer, framed
+    /// mark and links are the camera's ([`CameraState::fit_extents`] and the update).
+    pub fn subject_mut(&mut self, b: CameraBoxId) -> &mut CmSubject {
+        &mut self.boxes[b]
+    }
+
+    /// Box `b`'s extents made its targets ([`CameraBoxes::fit_extents`]), in playback's
+    /// followed camera too.
+    pub fn fit_extents(&mut self, b: CameraBoxId) {
+        self.boxes.fit_extents(b);
+    }
+
+    /// Box `b`'s horizontal extents made its targets, as playback's first frame's settling does
+    /// (`Fighter_procInput+0x3CC`), in this camera alone.
+    pub fn fit_horizontal_extents(&mut self, b: CameraBoxId) {
+        let x = &mut self.boxes[b];
+        x.ext.h.x = x.target_ext.h.x;
+        x.ext.h.y = x.target_ext.h.y;
+    }
+
+    /// The boxes in use, newest first, each checked as `Camera_8002928C` checks it
+    /// ([`is_framed`], which counts an automatic box's timer down), `f` given the framed ones:
+    /// the debug drawing of the framed boxes (`mpLib_DrawZones`).
+    pub fn for_each_framed(&mut self, s: &StageInfo, mut f: impl FnMut(&CmSubject)) {
+        let mut cur = self.boxes.last;
+        while let Some(b) = cur {
+            let x = &mut self.boxes[b];
+            if is_framed(s, x) {
+                f(x);
+            }
+            cur = x.prev;
+        }
+    }
+
+    /// The debug cameras' state (`cm_80453004`), which the develop tools' camera input
+    /// (`db`, `dbcamera.c`) moves and [`debug_follow`] and [`debug_free`] set up.
+    pub fn debug_cameras(&self) -> &CameraDebugMode {
+        &self.debug
+    }
+
+    /// The debug cameras' state to move, by the develop tools ([`CameraState::debug_cameras`]).
+    pub fn debug_cameras_mut(&mut self) -> &mut CameraDebugMode {
+        &mut self.debug
+    }
+
+    /// Whether playback's camera is followed apart from this one ([`CameraState::followed`]).
+    pub fn is_following(&self) -> bool {
+        self.followed.is_some()
+    }
+
+    /// Playback's followed camera's transform, while it's followed apart from this one.
+    pub fn followed_transform(&self) -> Option<&CameraTransformState> {
+        self.followed.as_ref().map(|f| &f.transform)
+    }
+
+    /// The camera's state laid open whole, for what reads the state as the original's memory
+    /// or compares it with ssbm-rs's: the oracle's comparer, leaf-check, the heap's image
+    /// (`export`, `disc`). Game code reaches the camera through its functions and methods
+    /// instead; `the_camera_is_reached_through_its_module` holds that.
+    pub fn raw_parts(&self) -> Parts<'_> {
+        Parts {
+            cam: &self.cam,
+            boxes: &self.boxes,
+            cobj_copy: self.cobj_copy,
+            fov: self.fov,
+            debug: &self.debug,
+            followed: self.followed.as_ref(),
+        }
+    }
+
+    /// The camera's state laid open to write, for the oracle's importer and the checks that
+    /// set it up or move it ([`CameraState::raw_parts`]).
+    pub fn raw_parts_mut(&mut self) -> PartsMut<'_> {
+        PartsMut {
+            cam: &mut self.cam,
+            boxes: &mut self.boxes,
+            cobj_copy: &mut self.cobj_copy,
+            fov: &mut self.fov,
+            debug: &mut self.debug,
+            followed: &mut self.followed,
+        }
+    }
+}
+
+/// [`CameraState::raw_parts`].
+pub struct Parts<'a> {
+    pub cam: &'a Camera,
+    pub boxes: &'a CameraBoxes,
+    pub cobj_copy: Option<CObjId>,
+    pub fov: f32,
+    pub debug: &'a CameraDebugMode,
+    pub followed: Option<&'a Course>,
+}
+
+/// [`CameraState::raw_parts_mut`].
+pub struct PartsMut<'a> {
+    pub cam: &'a mut Camera,
+    pub boxes: &'a mut CameraBoxes,
+    pub cobj_copy: &'a mut Option<CObjId>,
+    pub fov: &'a mut f32,
+    pub debug: &'a mut CameraDebugMode,
+    pub followed: &'a mut Option<Course>,
+}
+
+/// What the console's game camera carries from the matches before into a live match's
+/// (`live::ConsoleAt`; `Camera_Init` leaves it), taken at the VS scene's entry.
+#[derive(Clone, Debug)]
+pub struct Carried(Camera);
+
+impl CameraState {
+    /// What the camera carries now ([`Carried`]).
+    pub fn carried(&self) -> Carried {
+        Carried(self.cam.clone())
+    }
+
+    /// A live match built from its game start takes what the console's camera carried
+    /// (`live`'s `Game::take_console_statics`): the bounds' width average, its sum and count,
+    /// and the pause camera's eye, target, player and limits.
+    pub fn take_carried(&mut self, at: &Carried) {
+        let (c, k) = (&mut self.cam, &at.0);
+        (c.x2B0, c.x2B4, c.x2B8) = (k.x2B0, k.x2B4, k.x2B8);
+        (c.x2C4, c.x2C5) = (k.x2C4, k.x2C5);
+        c.x2D0.clone_from(&k.x2D0);
+        (c.x304, c.x305, c.x306, c.x307) = (k.x304, k.x305, k.x306, k.x307);
+        (c.x308, c.x314, c.pause_eye_offset) = (k.x308, k.x314, k.pause_eye_offset);
+        (c.x32C, c.pause_eye_distance, c.pause_up) = (k.x32C, k.pause_eye_distance, k.pause_up);
+    }
+
+    /// The menus' session, taking back a live match's scene, takes its game camera but its
+    /// GObjs (the camera's and the looping quake's model, which stay the menus') and its
+    /// default field of view (`live`'s `Game::take_match_statics`).
+    pub fn take_match(&mut self, live: &CameraState) {
+        let (gobj, quake) = (self.cam.gobj, self.cam.quake_gobj);
+        self.cam.clone_from(&live.cam);
+        (self.cam.gobj, self.cam.quake_gobj) = (gobj, quake);
+        self.fov = live.fov;
     }
 }
 
@@ -422,71 +615,73 @@ fn eye_floor(game: &Game) -> f64 {
 
 // Setup and the camera boxes.
 
-/// Resets the camera and allocates `n` camera boxes, all free, `Camera_Init`.
-#[doc(alias = "Camera_Init")]
-pub fn init(state: &mut CameraState, n: i32) {
-    let c = &mut state.cam;
-    c.transform.interest = DESC_INTEREST;
-    c.transform.target_interest = DESC_INTEREST;
-    c.transform.position = DESC_EYE;
-    c.transform.target_position = DESC_EYE;
-    c.transform.target_fov = copy(DESC_FOV);
-    c.transform.fov = copy(DESC_FOV);
-    c.transform_copy.interest = DESC_INTEREST;
-    c.transform_copy.target_interest = DESC_INTEREST;
-    c.transform_copy.position = DESC_EYE;
-    c.transform_copy.target_position = DESC_EYE;
-    c.transform_copy.target_fov = copy(DESC_FOV);
-    c.transform_copy.fov = copy(DESC_FOV);
-    c.background_color.b = 0;
-    c.background_color.g = 0;
-    c.background_color.r = 0;
-    c.nearz = 0.1;
-    c.farz = 16384.0;
-    c.mode = STANDARD;
-    // memzero from quake_frames_left up to x2B0.
-    c.quake_frames_left = [0; QUAKE_KINDS];
-    c.quake_gobj = None;
-    c.quake_offset = Default::default();
-    c.quake_scale = 0.0;
-    c.quakes = Default::default();
-    c.quake_scale = 1.0;
-    c.x2BC = 1.0;
-    c.x2C0 = -1.0;
-    c.x398_b0 = false;
-    c.x398_b1 = false;
-    c.x398_b2 = false;
-    c.x398_b3 = false;
-    c.x398_b4 = false;
-    c.x398_b5 = false;
-    c.x399_b0_b1 = 0;
-    c.x399_b2 = false;
-    state.debug.last_mode = c.mode;
-    c.x399_b3 = false;
-    c.x399_b4 = false;
-    c.x399_b5 = false;
-    c.x399_b6 = false;
-    c.x380 = [0; 24];
-    c.x399_b7 = false;
-    c.x39A_b0 = false;
-    c.x39A_b1 = false;
-    c.x39A_b2 = false;
-    c.gobj = None;
-    let n = n.max(0) as u32;
-    // The boxes' array, a block of the scene's heap.
-    let addr = crate::hsd::heap::mem_alloc(n * 0x6C);
-    let b = &mut state.boxes;
-    b.addr = addr;
-    b.boxes = vec![CmSubject::default(); n as usize];
-    for i in 0..n.saturating_sub(1) {
-        b.boxes[i as usize].prev = Some(CameraBoxId(i + 1));
+impl CameraState {
+    /// Resets the camera and allocates `n` camera boxes, all free, `Camera_Init`.
+    #[doc(alias = "Camera_Init")]
+    pub fn init(&mut self, n: i32) {
+        let c = &mut self.cam;
+        c.transform.interest = DESC_INTEREST;
+        c.transform.target_interest = DESC_INTEREST;
+        c.transform.position = DESC_EYE;
+        c.transform.target_position = DESC_EYE;
+        c.transform.target_fov = copy(DESC_FOV);
+        c.transform.fov = copy(DESC_FOV);
+        c.transform_copy.interest = DESC_INTEREST;
+        c.transform_copy.target_interest = DESC_INTEREST;
+        c.transform_copy.position = DESC_EYE;
+        c.transform_copy.target_position = DESC_EYE;
+        c.transform_copy.target_fov = copy(DESC_FOV);
+        c.transform_copy.fov = copy(DESC_FOV);
+        c.background_color.b = 0;
+        c.background_color.g = 0;
+        c.background_color.r = 0;
+        c.nearz = 0.1;
+        c.farz = 16384.0;
+        c.mode = STANDARD;
+        // memzero from quake_frames_left up to x2B0.
+        c.quake_frames_left = [0; QUAKE_KINDS];
+        c.quake_gobj = None;
+        c.quake_offset = Default::default();
+        c.quake_scale = 0.0;
+        c.quakes = Default::default();
+        c.quake_scale = 1.0;
+        c.x2BC = 1.0;
+        c.x2C0 = -1.0;
+        c.x398_b0 = false;
+        c.x398_b1 = false;
+        c.x398_b2 = false;
+        c.x398_b3 = false;
+        c.x398_b4 = false;
+        c.x398_b5 = false;
+        c.x399_b0_b1 = 0;
+        c.x399_b2 = false;
+        self.debug.last_mode = c.mode;
+        c.x399_b3 = false;
+        c.x399_b4 = false;
+        c.x399_b5 = false;
+        c.x399_b6 = false;
+        c.x380 = [0; 24];
+        c.x399_b7 = false;
+        c.x39A_b0 = false;
+        c.x39A_b1 = false;
+        c.x39A_b2 = false;
+        c.gobj = None;
+        let n = n.max(0) as u32;
+        // The boxes' array, a block of the scene's heap.
+        let addr = crate::hsd::heap::mem_alloc(n * 0x6C);
+        let b = &mut self.boxes;
+        b.addr = addr;
+        b.boxes = vec![CmSubject::default(); n as usize];
+        for i in 0..n.saturating_sub(1) {
+            b.boxes[i as usize].prev = Some(CameraBoxId(i + 1));
+        }
+        if let Some(last) = b.boxes.last_mut() {
+            last.prev = None;
+        }
+        b.free = (n > 0).then_some(CameraBoxId(0));
+        b.first = None;
+        b.last = None;
     }
-    if let Some(last) = b.boxes.last_mut() {
-        last.prev = None;
-    }
-    b.free = (n > 0).then_some(CameraBoxId(0));
-    b.first = None;
-    b.last = None;
 }
 
 /// The camera's render callback (`fn_800301D0`), which the display pass runs.
@@ -544,73 +739,78 @@ pub fn create(game: &mut Game) {
     game.world.setup_proc(g, CodeRef(PROC), 0x12);
 }
 
-/// Puts a camera box back to its starting state with `state`, `Camera_80028F5C`.
-#[doc(alias = "Camera_80028F5C")]
-pub fn reset_box(boxes: &mut CameraBoxes, b: Option<CameraBoxId>, state: i32) {
-    let Some(b) = b else { return };
-    let s = &mut boxes[b];
-    s.state = state;
-    s.pos = Vec3::ZERO;
-    s.bone_pos = s.pos;
-    s.facing_dir = 0.0;
-    s.on_ledge = false;
-    s.force_inactive = false;
-    s.was_framed = false;
-    s.state_timer = 0;
-    s.ext.h.x = -1.0;
-    s.ext.h.y = 1.0;
-    s.ext.v.x = 1.0;
-    s.ext.v.y = -1.0;
-    s.ext.v.z = 1.0;
-    s.target_ext = s.ext.clone();
-    s.x54 = Vec3::ZERO;
-    s.x60 = Vec3::ZERO;
-    let reset = Eased::of(s);
-    if let Some(f) = boxes.followed.get_mut(b.0 as usize) {
-        *f = reset;
-    }
-}
-
-/// Takes a free camera box and appends it to the framed list, reset with `state`,
-/// `Camera_80029044` (`Camera_80029020` with `ACTIVE`). With none free the original reports
-/// it and hangs.
-#[doc(alias = "Camera_80029044")]
-#[doc(alias = "Camera_80029020")]
-pub fn alloc_box(boxes: &mut CameraBoxes, state: i32) -> CameraBoxId {
-    let Some(b) = boxes.free else {
-        panic!("couldn't get CmSubject struct.");
-    };
-    boxes.free = boxes[b].prev;
-    boxes[b].next = None;
-    match boxes.first {
-        Some(_) => {
-            let last = boxes
-                .last
-                .expect("a framed list with a first box has a last");
-            boxes[last].next = Some(b);
+impl CameraState {
+    /// Puts a camera box back to its starting state with `state`, `Camera_80028F5C`.
+    #[doc(alias = "Camera_80028F5C")]
+    pub fn reset_box(&mut self, b: Option<CameraBoxId>, state: i32) {
+        let boxes = &mut self.boxes;
+        let Some(b) = b else { return };
+        let s = &mut boxes[b];
+        s.state = state;
+        s.pos = Vec3::ZERO;
+        s.bone_pos = s.pos;
+        s.facing_dir = 0.0;
+        s.on_ledge = false;
+        s.force_inactive = false;
+        s.was_framed = false;
+        s.state_timer = 0;
+        s.ext.h.x = -1.0;
+        s.ext.h.y = 1.0;
+        s.ext.v.x = 1.0;
+        s.ext.v.y = -1.0;
+        s.ext.v.z = 1.0;
+        s.target_ext = s.ext.clone();
+        s.x54 = Vec3::ZERO;
+        s.x60 = Vec3::ZERO;
+        let reset = Eased::of(s);
+        if let Some(f) = boxes.followed.get_mut(b.0 as usize) {
+            *f = reset;
         }
-        None => boxes.first = Some(b),
     }
-    boxes[b].prev = boxes.last;
-    boxes.last = Some(b);
-    reset_box(boxes, Some(b), state);
-    b
-}
 
-/// Unlinks a camera box and frees it, `Camera_800290D4`.
-#[doc(alias = "Camera_800290D4")]
-pub fn free_box(boxes: &mut CameraBoxes, b: CameraBoxId) {
-    let (next, prev) = (boxes[b].next, boxes[b].prev);
-    match next {
-        Some(n) => boxes[n].prev = prev,
-        None => boxes.last = prev,
+    /// Takes a free camera box and appends it to the framed list, reset with `state`,
+    /// `Camera_80029044` (`Camera_80029020` with `ACTIVE`). With none free the original reports
+    /// it and hangs.
+    #[doc(alias = "Camera_80029044")]
+    #[doc(alias = "Camera_80029020")]
+    pub fn alloc_box(&mut self, state: i32) -> CameraBoxId {
+        let boxes = &mut self.boxes;
+        let Some(b) = boxes.free else {
+            panic!("couldn't get CmSubject struct.");
+        };
+        boxes.free = boxes[b].prev;
+        boxes[b].next = None;
+        match boxes.first {
+            Some(_) => {
+                let last = boxes
+                    .last
+                    .expect("a framed list with a first box has a last");
+                boxes[last].next = Some(b);
+            }
+            None => boxes.first = Some(b),
+        }
+        boxes[b].prev = boxes.last;
+        boxes.last = Some(b);
+        self.reset_box(Some(b), state);
+        b
     }
-    match prev {
-        Some(p) => boxes[p].next = next,
-        None => boxes.first = next,
+
+    /// Unlinks a camera box and frees it, `Camera_800290D4`.
+    #[doc(alias = "Camera_800290D4")]
+    pub fn free_box(&mut self, b: CameraBoxId) {
+        let boxes = &mut self.boxes;
+        let (next, prev) = (boxes[b].next, boxes[b].prev);
+        match next {
+            Some(n) => boxes[n].prev = prev,
+            None => boxes.last = prev,
+        }
+        match prev {
+            Some(p) => boxes[p].next = next,
+            None => boxes.first = next,
+        }
+        boxes[b].prev = boxes.free;
+        boxes.free = Some(b);
     }
-    boxes[b].prev = boxes.free;
-    boxes.free = Some(b);
 }
 
 // Framing.
@@ -1124,6 +1324,31 @@ pub fn keep_in_bounds(s: &StageInfo, t: &mut CameraTransformState, blast_zones: 
     t.target_interest = t.target_interest + c;
 }
 
+/// Whether a point is within the camera bounds, `Camera_80031154`.
+#[doc(alias = "Camera_80031154")]
+pub fn in_bounds(s: &StageInfo, pos: Vec3) -> bool {
+    outside_bounds(s, pos, 0) == 0
+}
+
+/// Whether a point is within the camera bounds grown by `margin` (truncated to an integer),
+/// `Camera_8003118C`.
+#[doc(alias = "Camera_8003118C")]
+pub fn in_bounds_by(s: &StageInfo, pos: Vec3, margin: f32) -> bool {
+    outside_bounds(s, pos, fp::fctiwz(reg(margin))) == 0
+}
+
+/// The stage's camera bounds as top, bottom, left, right, `Camera_SetBounds`: the pause
+/// camera's `x2D0.callback`, which hands it a `Vec4` (x, y, z, w).
+#[doc(alias = "Camera_SetBounds")]
+pub fn stage_bounds(s: &StageInfo) -> [f32; 4] {
+    let mut v = [0.0; 4];
+    v[2] = mem(cam_left(s));
+    v[3] = mem(cam_right(s));
+    v[0] = mem(cam_top(s));
+    v[1] = mem(cam_bottom(s));
+    v
+}
+
 // The quake.
 
 /// Shakes the camera by the quake model's offset, scaled to the view at the framed depth,
@@ -1177,19 +1402,21 @@ pub fn apply_quake(game: &mut Game, b: &Bounds, which: Which) {
     c.quake_offset.y = 0.0;
 }
 
-/// `Camera_SetQuakeOffset`: in playback's followed camera too ([`CameraState::followed`]),
-/// whose quake the same model shakes.
-#[doc(alias = "Camera_SetQuakeOffset")]
-pub fn set_quake_offset(state: &mut CameraState, x: f64, y: f64) {
-    for o in [
-        Some(&mut state.cam.quake_offset),
-        state.followed.as_mut().map(|f| &mut f.quake_offset),
-    ]
-    .into_iter()
-    .flatten()
-    {
-        o.x = mem(x);
-        o.y = mem(y);
+impl CameraState {
+    /// `Camera_SetQuakeOffset`: in playback's followed camera too ([`CameraState::followed`]),
+    /// whose quake the same model shakes.
+    #[doc(alias = "Camera_SetQuakeOffset")]
+    pub fn set_quake_offset(&mut self, x: f64, y: f64) {
+        for o in [
+            Some(&mut self.cam.quake_offset),
+            self.followed.as_mut().map(|f| &mut f.quake_offset),
+        ]
+        .into_iter()
+        .flatten()
+        {
+            o.x = mem(x);
+            o.y = mem(y);
+        }
     }
 }
 
@@ -1203,7 +1430,7 @@ pub fn update_quakes(r: &mut Running) {
     if follows {
         let g = &mut *r.game;
         let p = &mut g.display_phase.playback;
-        p.take(&g.camera.cam);
+        p.take(&g.camera);
         if g.camera.cam.mode != PAUSE {
             for _ in 0..=p.settles_quakes {
                 if count_quakes_down(&mut p.quake_frames) {
@@ -1265,6 +1492,88 @@ pub fn set_translation(c: &mut Camera, x: f64, y: f64) {
 pub fn clear_translation(c: &mut Camera) {
     c.translation.y = 0.0;
     c.translation.x = 0.0;
+}
+
+/// Starts a quake of `kind` (with its model) and logs the request with its epicenter,
+/// `Camera_RequestQuake`. The log fills every free slot, as the original's missing `break`
+/// does.
+///
+/// For a kind other than the four quakes the original never sets the length and stores what
+/// its second argument's register holds: 0 for a null epicenter, else the epicenter's address,
+/// which plain data can't give. That is counted as a stale read (`docs/engine.md`) and stored
+/// as 0. No caller passes such a kind.
+#[doc(alias = "Camera_RequestQuake")]
+pub fn request_quake(r: &mut Running, kind: i32, pos: Option<Vec3>) {
+    use super::gr::grlib::quake_model;
+    // Under Slippi's rules, the same request to playback's camera (`live::PlaybackCamera`):
+    // the looping quake's model made where it has none, and the count set.
+    if r.game.rules.slippi {
+        let g = &mut *r.game;
+        let p = &mut g.display_phase.playback;
+        p.take(&g.camera);
+        if kind == QUAKE_LOOP && !p.quake_model {
+            p.quake_model = g.stage_info.quake_model_set.is_some();
+        }
+        if let Ok(k) = usize::try_from(kind)
+            && k < QUAKE_KINDS
+        {
+            p.quake_frames[k] = quake_length(kind);
+        }
+    }
+    let length = match kind {
+        QUAKE_LOOP => {
+            if r.game.camera.cam.quake_gobj.is_none() {
+                r.game.camera.cam.quake_gobj = quake_model(r, kind);
+            }
+            10
+        }
+        2..=4 => {
+            let _ = quake_model(r, kind);
+            22
+        }
+        _ => {
+            if pos.is_some() {
+                r.game.objs.stale_reads += 1;
+            }
+            0
+        }
+    };
+    let c = &mut r.game.camera.cam;
+    assert!(
+        (0..QUAKE_KINDS as i32).contains(&kind),
+        "quake kind {kind} writes past the quake counters"
+    );
+    c.quake_frames_left[kind as usize] = length;
+    for q in &mut c.quakes[0] {
+        if q.kind == QUAKE_NONE {
+            q.kind = kind;
+            q.epicenter = pos.unwrap_or(Vec3::ZERO);
+        }
+    }
+    if r.game.rules.slippi && kind == QUAKE_LOOP {
+        note_quake_model(r.game);
+    }
+}
+
+/// How long a quake of `kind` runs: the four quakes' lengths, 0 for another kind (whose count
+/// the original sets from a register it never wrote, [`request_quake`]).
+fn quake_length(kind: i32) -> i32 {
+    match kind {
+        QUAKE_LOOP => 10,
+        2..=4 => 22,
+        _ => 0,
+    }
+}
+
+/// `Camera_StopQuake` (and, under Slippi's rules, playback's camera's, `live::PlaybackCamera`).
+#[doc(alias = "Camera_StopQuake")]
+pub fn stop_quake(game: &mut Game, kind: i32) {
+    if game.rules.slippi {
+        let p = &mut game.display_phase.playback;
+        p.take(&game.camera);
+        p.quake_frames[kind as usize] = 0;
+    }
+    game.camera.cam.quake_frames_left[kind as usize] = 0;
 }
 
 // The standard camera.
@@ -1436,10 +1745,10 @@ fn update_average_width(game: &mut Game) {
     // Under Slippi's rules, playback's camera's (`live::PlaybackCamera`): the same update but
     // in the pause, and once more for each settling update of playback's first frame.
     if game.rules.slippi {
-        let c = &game.camera.cam;
+        let c = &game.camera;
         let p = &mut game.display_phase.playback;
         p.take(c);
-        if c.mode != PAUSE {
+        if c.cam.mode != PAUSE {
             for _ in 0..=p.settles_width {
                 add_width(&mut p.width, &mut p.width_sum, &mut p.width_count, width);
             }
@@ -1512,27 +1821,29 @@ pub fn update(r: &mut Running) {
         m => panic!("camera mode {m} reads past the mode table"),
     }
     if follows && r.game.display_phase.shake.is_none() && meets(&r.game.camera) {
-        stop_following(&mut r.game.camera);
+        r.game.camera.stop_following();
     }
 }
 
 // Playback's camera, followed (design call 9 of `docs/slippi-ruleset.md`).
 
-/// Starts following playback's camera beside this one, from where this one stands
-/// ([`CameraState::followed`]): playback's first frame snaps it where a live match's eases
-/// (`live`'s `Running::playback_camera_settles`), a pause leaves it where playback, which
-/// never pauses, has it ([`set_up_pause`]).
-pub fn start_following(state: &mut CameraState) {
-    state.followed = Some(Course::of(&state.cam));
-    let b = &mut state.boxes;
-    b.followed.clear();
-    b.followed.extend(b.boxes.iter().map(Eased::of));
-}
+impl CameraState {
+    /// Starts following playback's camera beside this one, from where this one stands
+    /// ([`CameraState::followed`]): playback's first frame snaps it where a live match's eases
+    /// (`live`'s `Running::playback_camera_settles`), a pause leaves it where playback, which
+    /// never pauses, has it ([`set_up_pause`]).
+    pub fn start_following(&mut self) {
+        self.followed = Some(Course::of(&self.cam));
+        let b = &mut self.boxes;
+        b.followed.clear();
+        b.followed.extend(b.boxes.iter().map(Eased::of));
+    }
 
-/// Stops following playback's camera: it holds what this one holds.
-pub fn stop_following(state: &mut CameraState) {
-    state.followed = None;
-    state.boxes.followed.clear();
+    /// Stops following playback's camera: it holds what this one holds.
+    pub fn stop_following(&mut self) {
+        self.followed = None;
+        self.boxes.followed.clear();
+    }
 }
 
 /// Trades what the camera and its framed boxes hold with what playback's followed one holds,
@@ -1579,7 +1890,7 @@ fn follow(r: &mut Running, mode: i32) {
 
 /// Playback's camera can't be followed further: it's lost (`live::DisplayPhase::lost`).
 pub fn lose_followed(game: &mut Game) {
-    stop_following(&mut game.camera);
+    game.camera.stop_following();
     game.display_phase.lost = true;
 }
 
@@ -1587,7 +1898,7 @@ pub fn lose_followed(game: &mut Game) {
 /// ([`with_followed`]; `live`'s `Running::playback_camera_settles`): the mode's update, the
 /// quakes and the width average left to `live::PlaybackCamera`, and both transforms jumped to
 /// their targets.
-pub fn settle_followed(r: &mut Running) {
+fn settle_followed(r: &mut Running) {
     match r.game.camera.cam.mode {
         STANDARD => standard(r, false),
         FIXED => fixed(r, false),
@@ -1595,6 +1906,38 @@ pub fn settle_followed(r: &mut Running) {
     }
     let c = &mut r.game.camera.cam;
     jump(&mut c.transform, &mut c.transform_copy);
+}
+
+/// Playback's first frame's settling of fighter box `b` on its followed camera
+/// (`live`'s `Running::playback_camera_settles`): the boxes the settling has fitted so far in
+/// this tick (`settled`, by box, and what to) fitted so, `b`'s horizontal extents made its
+/// targets, [`settle_followed`], and the settled boxes' own fits and ledge flags put back.
+/// Nothing when playback's camera isn't followed.
+pub fn settle_followed_boxes<const N: usize>(
+    r: &mut Running,
+    settled: &[Option<(u16, BoxFit)>; N],
+    b: CameraBoxId,
+) {
+    with_followed(r, |r| {
+        let boxes = &mut r.game.camera.boxes;
+        // The boxes as the settling has fitted them, their own kept to put back.
+        let mut kept = [None; N];
+        for (k, s) in kept.iter_mut().zip(settled.iter().flatten()) {
+            let x = &mut boxes.boxes[usize::from(s.0)];
+            *k = Some((s.0, BoxFit::of(x), x.on_ledge));
+            s.1.put(x);
+        }
+        let x = &mut boxes[b];
+        x.ext.h.x = x.target_ext.h.x;
+        x.ext.h.y = x.target_ext.h.y;
+        settle_followed(r);
+        let boxes = &mut r.game.camera.boxes;
+        for (i, fit, ledge) in kept.into_iter().flatten() {
+            let x = &mut boxes.boxes[usize::from(i)];
+            fit.put(x);
+            x.on_ledge = ledge;
+        }
+    });
 }
 
 /// Whether playback's followed camera takes mode `mode`'s update ([`follow`]).
@@ -1782,337 +2125,233 @@ fn set_view(game: &mut Game, c: CObjId, fov: f32, interest: Vec3, eye: Vec3) {
 
 // Getters and setters other systems call.
 
-/// The average width of the camera bounds, or 10000 before the first frame, `Camera_80030E10`.
-#[doc(alias = "Camera_80030E10")]
-pub fn average_width(c: &Camera) -> f32 {
-    if c.x2B8 < 1 {
-        return 10000.0;
-    }
-    c.x2B0
-}
-
-/// `Camera_SetQuakeScale`.
-#[doc(alias = "Camera_SetQuakeScale")]
-pub fn set_quake_scale(c: &mut Camera, scale: f32) {
-    c.quake_scale = copy(scale);
-}
-
-/// Starts a quake of `kind` (with its model) and logs the request with its epicenter,
-/// `Camera_RequestQuake`. The log fills every free slot, as the original's missing `break`
-/// does.
-///
-/// For a kind other than the four quakes the original never sets the length and stores what
-/// its second argument's register holds: 0 for a null epicenter, else the epicenter's address,
-/// which plain data can't give. That is counted as a stale read (`docs/engine.md`) and stored
-/// as 0. No caller passes such a kind.
-#[doc(alias = "Camera_RequestQuake")]
-pub fn request_quake(r: &mut Running, kind: i32, pos: Option<Vec3>) {
-    use super::gr::grlib::quake_model;
-    // Under Slippi's rules, the same request to playback's camera (`live::PlaybackCamera`):
-    // the looping quake's model made where it has none, and the count set.
-    if r.game.rules.slippi {
-        let g = &mut *r.game;
-        let p = &mut g.display_phase.playback;
-        p.take(&g.camera.cam);
-        if kind == QUAKE_LOOP && !p.quake_model {
-            p.quake_model = g.stage_info.quake_model_set.is_some();
+impl CameraState {
+    /// The average width of the camera bounds, or 10000 before the first frame, `Camera_80030E10`.
+    #[doc(alias = "Camera_80030E10")]
+    pub fn average_width(&self) -> f32 {
+        if self.cam.x2B8 < 1 {
+            return 10000.0;
         }
-        if let Ok(k) = usize::try_from(kind)
-            && k < QUAKE_KINDS
-        {
-            p.quake_frames[k] = quake_length(kind);
-        }
+        self.cam.x2B0
     }
-    let length = match kind {
-        QUAKE_LOOP => {
-            if r.game.camera.cam.quake_gobj.is_none() {
-                r.game.camera.cam.quake_gobj = quake_model(r, kind);
-            }
-            10
-        }
-        2..=4 => {
-            let _ = quake_model(r, kind);
-            22
-        }
-        _ => {
-            if pos.is_some() {
-                r.game.objs.stale_reads += 1;
-            }
-            0
-        }
-    };
-    let c = &mut r.game.camera.cam;
-    assert!(
-        (0..QUAKE_KINDS as i32).contains(&kind),
-        "quake kind {kind} writes past the quake counters"
-    );
-    c.quake_frames_left[kind as usize] = length;
-    for q in &mut c.quakes[0] {
-        if q.kind == QUAKE_NONE {
-            q.kind = kind;
-            q.epicenter = pos.unwrap_or(Vec3::ZERO);
-        }
+
+    /// `Camera_SetQuakeScale`.
+    #[doc(alias = "Camera_SetQuakeScale")]
+    pub fn set_quake_scale(&mut self, scale: f32) {
+        self.cam.quake_scale = copy(scale);
     }
-    if r.game.rules.slippi && kind == QUAKE_LOOP {
-        note_quake_model(r.game);
+
+    /// The camera's GObj, `Camera_80030A50`.
+    #[doc(alias = "Camera_80030A50")]
+    pub fn gobj(&self) -> Option<GObjId> {
+        self.cam.gobj
     }
-}
 
-/// How long a quake of `kind` runs: the four quakes' lengths, 0 for another kind (whose count
-/// the original sets from a register it never wrote, [`request_quake`]).
-fn quake_length(kind: i32) -> i32 {
-    match kind {
-        QUAKE_LOOP => 10,
-        2..=4 => 22,
-        _ => 0,
+    /// `Camera_GetTransformPosition`.
+    #[doc(alias = "Camera_GetTransformPosition")]
+    pub fn position(&self) -> Vec3 {
+        self.cam.transform.position
     }
-}
 
-/// `Camera_StopQuake` (and, under Slippi's rules, playback's camera's, `live::PlaybackCamera`).
-#[doc(alias = "Camera_StopQuake")]
-pub fn stop_quake(game: &mut Game, kind: i32) {
-    if game.rules.slippi {
-        let p = &mut game.display_phase.playback;
-        p.take(&game.camera.cam);
-        p.quake_frames[kind as usize] = 0;
+    /// `Camera_GetTransformInterest`.
+    #[doc(alias = "Camera_GetTransformInterest")]
+    pub fn interest(&self) -> Vec3 {
+        self.cam.transform.interest
     }
-    game.camera.cam.quake_frames_left[kind as usize] = 0;
-}
 
-/// The camera's GObj, `Camera_80030A50`.
-#[doc(alias = "Camera_80030A50")]
-pub fn gobj(c: &Camera) -> Option<GObjId> {
-    c.gobj
-}
+    /// `Camera_SetBackgroundColor`; alpha is left as it is.
+    #[doc(alias = "Camera_SetBackgroundColor")]
+    pub fn set_background_color(&mut self, r: u8, g: u8, b: u8) {
+        self.cam.background_color.r = r;
+        self.cam.background_color.g = g;
+        self.cam.background_color.b = b;
+    }
 
-/// `Camera_GetTransformPosition`.
-#[doc(alias = "Camera_GetTransformPosition")]
-pub fn position(c: &Camera) -> Vec3 {
-    c.transform.position
-}
+    /// `Camera_GetBackgroundColor`: red, green and blue (the original leaves alpha unset).
+    #[doc(alias = "Camera_GetBackgroundColor")]
+    pub fn background_color(&self) -> [u8; 3] {
+        let k = &self.cam.background_color;
+        [k.r, k.g, k.b]
+    }
 
-/// `Camera_GetTransformInterest`.
-#[doc(alias = "Camera_GetTransformInterest")]
-pub fn interest(c: &Camera) -> Vec3 {
-    c.transform.interest
-}
+    /// The default field of view, `Camera_80030730`.
+    #[doc(alias = "Camera_80030730")]
+    pub fn set_default_fov(&mut self, fov: f32) {
+        self.fov = copy(fov);
+    }
 
-/// `Camera_SetBackgroundColor`; alpha is left as it is.
-#[doc(alias = "Camera_SetBackgroundColor")]
-pub fn set_background_color(c: &mut Camera, r: u8, g: u8, b: u8) {
-    c.background_color.r = r;
-    c.background_color.g = g;
-    c.background_color.b = b;
-}
+    /// `Camera_800311CC`.
+    #[doc(alias = "Camera_800311CC")]
+    pub fn set_far(&mut self, far: f32) {
+        self.cam.farz = copy(far);
+    }
 
-/// `Camera_GetBackgroundColor`: red, green and blue (the original leaves alpha unset).
-#[doc(alias = "Camera_GetBackgroundColor")]
-pub fn background_color(c: &Camera) -> [u8; 3] {
-    let k = &c.background_color;
-    [k.r, k.g, k.b]
-}
+    /// `Camera_800311DC`.
+    #[doc(alias = "Camera_800311DC")]
+    pub fn set_near(&mut self, near: f32) {
+        self.cam.nearz = copy(near);
+    }
 
-/// The default field of view, `Camera_80030730`.
-#[doc(alias = "Camera_80030730")]
-pub fn set_default_fov(state: &mut CameraState, fov: f32) {
-    state.fov = copy(fov);
-}
+    /// The 1P camera's zoom, `Camera_80031144`.
+    #[doc(alias = "Camera_80031144")]
+    pub fn zoom(&self) -> f32 {
+        self.cam.x2BC
+    }
 
-/// `Camera_800311CC`.
-#[doc(alias = "Camera_800311CC")]
-pub fn set_far(c: &mut Camera, far: f32) {
-    c.farz = copy(far);
-}
+    /// `Camera_SetModeToStandard`.
+    #[doc(alias = "Camera_SetModeToStandard")]
+    pub fn set_standard(&mut self) {
+        self.cam.mode = STANDARD;
+    }
 
-/// `Camera_800311DC`.
-#[doc(alias = "Camera_800311DC")]
-pub fn set_near(c: &mut Camera, near: f32) {
-    c.nearz = copy(near);
-}
+    /// `Camera_SetModeToFixed`.
+    #[doc(alias = "Camera_SetModeToFixed")]
+    pub fn set_fixed(&mut self) {
+        self.cam.mode = FIXED;
+    }
 
-/// The 1P camera's zoom, `Camera_80031144`.
-#[doc(alias = "Camera_80031144")]
-pub fn zoom(c: &Camera) -> f32 {
-    c.x2BC
-}
+    /// Back to the mode before the debug cameras, `Camera_800300F0`.
+    #[doc(alias = "Camera_800300F0")]
+    pub fn leave_debug(&mut self) {
+        self.cam.mode = self.debug.last_mode;
+    }
 
-/// Whether a point is within the camera bounds, `Camera_80031154`.
-#[doc(alias = "Camera_80031154")]
-pub fn in_bounds(s: &StageInfo, pos: Vec3) -> bool {
-    outside_bounds(s, pos, 0) == 0
-}
+    /// `Camera_8003010C`.
+    #[doc(alias = "Camera_8003010C")]
+    pub fn is_free(&self) -> bool {
+        self.cam.mode == FREE
+    }
 
-/// Whether a point is within the camera bounds grown by `margin` (truncated to an integer),
-/// `Camera_8003118C`.
-#[doc(alias = "Camera_8003118C")]
-pub fn in_bounds_by(s: &StageInfo, pos: Vec3, margin: f32) -> bool {
-    outside_bounds(s, pos, fp::fctiwz(reg(margin))) == 0
-}
+    /// `Camera_80030130`.
+    #[doc(alias = "Camera_80030130")]
+    pub fn is_boss_intro(&self) -> bool {
+        self.cam.mode == BOSS_INTRO
+    }
 
-/// The stage's camera bounds as top, bottom, left, right, `Camera_SetBounds`: the pause
-/// camera's `x2D0.callback`, which hands it a `Vec4` (x, y, z, w).
-#[doc(alias = "Camera_SetBounds")]
-pub fn stage_bounds(s: &StageInfo) -> [f32; 4] {
-    let mut v = [0.0; 4];
-    v[2] = mem(cam_left(s));
-    v[3] = mem(cam_right(s));
-    v[0] = mem(cam_top(s));
-    v[1] = mem(cam_bottom(s));
-    v
-}
+    /// `Camera_80030154`.
+    #[doc(alias = "Camera_80030154")]
+    pub fn is_debug_follow(&self) -> bool {
+        self.cam.mode == DEBUG_FOLLOW
+    }
 
-/// `Camera_SetModeToStandard`.
-#[doc(alias = "Camera_SetModeToStandard")]
-pub fn set_standard(c: &mut Camera) {
-    c.mode = STANDARD;
-}
+    /// `Camera_80030178`.
+    #[doc(alias = "Camera_80030178")]
+    pub fn is_debug_free(&self) -> bool {
+        self.cam.mode == DEBUG_FREE
+    }
 
-/// `Camera_SetModeToFixed`.
-#[doc(alias = "Camera_SetModeToFixed")]
-pub fn set_fixed(c: &mut Camera) {
-    c.mode = FIXED;
-}
+    /// The flags other systems keep in the camera: what the display pass draws (stage, collision
+    /// lines, zones, special points), shadows, and whether the camera holds its aim while the
+    /// first player leaves the stage plane.
+    #[doc(alias = "Camera_80030A60")]
+    pub fn set_draw_collisions(&mut self, on: bool) {
+        self.cam.x399_b3 = on;
+    }
 
-/// Back to the mode before the debug cameras, `Camera_800300F0`.
-#[doc(alias = "Camera_800300F0")]
-pub fn leave_debug(state: &mut CameraState) {
-    state.cam.mode = state.debug.last_mode;
-}
+    #[doc(alias = "Camera_80030A78")]
+    pub fn draw_collisions(&self) -> bool {
+        self.cam.x399_b3
+    }
 
-/// `Camera_8003010C`.
-#[doc(alias = "Camera_8003010C")]
-pub fn is_free(c: &Camera) -> bool {
-    c.mode == FREE
-}
+    #[doc(alias = "Camera_80030A8C")]
+    pub fn set_draw_zones(&mut self, on: bool) {
+        self.cam.x399_b4 = on;
+    }
 
-/// `Camera_80030130`.
-#[doc(alias = "Camera_80030130")]
-pub fn is_boss_intro(c: &Camera) -> bool {
-    c.mode == BOSS_INTRO
-}
+    /// `Camera_SetStageVisible`: the flag holds whether the stage is hidden.
+    #[doc(alias = "Camera_SetStageVisible")]
+    pub fn set_stage_visible(&mut self, visible: i32) {
+        self.cam.x399_b5 = 0 == visible;
+    }
 
-/// `Camera_80030154`.
-#[doc(alias = "Camera_80030154")]
-pub fn is_debug_follow(c: &Camera) -> bool {
-    c.mode == DEBUG_FOLLOW
-}
+    #[doc(alias = "Camera_80030AC4")]
+    pub fn stage_visible(&self) -> bool {
+        !self.cam.x399_b5
+    }
 
-/// `Camera_80030178`.
-#[doc(alias = "Camera_80030178")]
-pub fn is_debug_free(c: &Camera) -> bool {
-    c.mode == DEBUG_FREE
-}
+    #[doc(alias = "Camera_80030AE0")]
+    pub fn set_hold_off_plane(&mut self, on: bool) {
+        self.cam.x399_b2 = on;
+    }
 
-/// The flags other systems keep in the camera: what the display pass draws (stage, collision
-/// lines, zones, special points), shadows, and whether the camera holds its aim while the
-/// first player leaves the stage plane.
-#[doc(alias = "Camera_80030A60")]
-pub fn set_draw_collisions(c: &mut Camera, on: bool) {
-    c.x399_b3 = on;
-}
+    #[doc(alias = "Camera_80030AF8")]
+    pub fn hold_off_plane(&self) -> bool {
+        self.cam.x399_b2
+    }
 
-#[doc(alias = "Camera_80030A78")]
-pub fn draw_collisions(c: &Camera) -> bool {
-    c.x399_b3
-}
+    #[doc(alias = "Camera_80030B0C")]
+    pub fn set_shadows(&mut self, on: bool) {
+        self.cam.x399_b7 = on;
+    }
 
-#[doc(alias = "Camera_80030A8C")]
-pub fn set_draw_zones(c: &mut Camera, on: bool) {
-    c.x399_b4 = on;
-}
+    #[doc(alias = "Camera_80030B24")]
+    pub fn shadows(&self) -> bool {
+        self.cam.x399_b7
+    }
 
-/// `Camera_SetStageVisible`: the flag holds whether the stage is hidden.
-#[doc(alias = "Camera_SetStageVisible")]
-pub fn set_stage_visible(c: &mut Camera, visible: i32) {
-    c.x399_b5 = 0 == visible;
-}
+    #[doc(alias = "Camera_80030B38")]
+    pub fn set_x39a_b0(&mut self, on: bool) {
+        self.cam.x39A_b0 = on;
+    }
 
-#[doc(alias = "Camera_80030AC4")]
-pub fn stage_visible(c: &Camera) -> bool {
-    !c.x399_b5
-}
+    #[doc(alias = "Camera_80030B50")]
+    pub fn x39a_b0(&self) -> bool {
+        self.cam.x39A_b0
+    }
 
-#[doc(alias = "Camera_80030AE0")]
-pub fn set_hold_off_plane(c: &mut Camera, on: bool) {
-    c.x399_b2 = on;
-}
+    #[doc(alias = "Camera_80030B64")]
+    pub fn set_x39a_b1(&mut self, on: bool) {
+        self.cam.x39A_b1 = on;
+    }
 
-#[doc(alias = "Camera_80030AF8")]
-pub fn hold_off_plane(c: &Camera) -> bool {
-    c.x399_b2
-}
+    #[doc(alias = "Camera_80030B7C")]
+    pub fn x39a_b1(&self) -> bool {
+        self.cam.x39A_b1
+    }
 
-#[doc(alias = "Camera_80030B0C")]
-pub fn set_shadows(c: &mut Camera, on: bool) {
-    c.x399_b7 = on;
-}
+    #[doc(alias = "Camera_80030B90")]
+    pub fn set_draw_special_points(&mut self, on: bool) {
+        self.cam.x39A_b2 = on;
+    }
 
-#[doc(alias = "Camera_80030B24")]
-pub fn shadows(c: &Camera) -> bool {
-    c.x399_b7
-}
+    #[doc(alias = "Camera_80030BA8")]
+    pub fn draw_special_points(&self) -> bool {
+        self.cam.x39A_b2
+    }
 
-#[doc(alias = "Camera_80030B38")]
-pub fn set_x39a_b0(c: &mut Camera, on: bool) {
-    c.x39A_b0 = on;
-}
+    /// The display pass's current pass (`x398_b6_b7`, `Camera_80031060`/`Camera_80031074`) and
+    /// render layer (`x399_b0_b1`, `Camera_8003108C`/`Camera_800310A0`).
+    #[doc(alias = "Camera_80031060")]
+    pub fn pass(&self) -> u8 {
+        self.cam.x398_b6_b7
+    }
 
-#[doc(alias = "Camera_80030B50")]
-pub fn x39a_b0(c: &Camera) -> bool {
-    c.x39A_b0
-}
+    #[doc(alias = "Camera_80031074")]
+    pub fn set_pass(&mut self, pass: u8) {
+        self.cam.x398_b6_b7 = pass & 3;
+    }
 
-#[doc(alias = "Camera_80030B64")]
-pub fn set_x39a_b1(c: &mut Camera, on: bool) {
-    c.x39A_b1 = on;
-}
+    #[doc(alias = "Camera_8003108C")]
+    pub fn layer(&self) -> u8 {
+        self.cam.x399_b0_b1
+    }
 
-#[doc(alias = "Camera_80030B7C")]
-pub fn x39a_b1(c: &Camera) -> bool {
-    c.x39A_b1
-}
+    #[doc(alias = "Camera_800310A0")]
+    pub fn set_layer(&mut self, layer: u8) {
+        self.cam.x399_b0_b1 = layer & 3;
+    }
 
-#[doc(alias = "Camera_80030B90")]
-pub fn set_draw_special_points(c: &mut Camera, on: bool) {
-    c.x39A_b2 = on;
-}
-
-#[doc(alias = "Camera_80030BA8")]
-pub fn draw_special_points(c: &Camera) -> bool {
-    c.x39A_b2
-}
-
-/// The display pass's current pass (`x398_b6_b7`, `Camera_80031060`/`Camera_80031074`) and
-/// render layer (`x399_b0_b1`, `Camera_8003108C`/`Camera_800310A0`).
-#[doc(alias = "Camera_80031060")]
-pub fn pass(c: &Camera) -> u8 {
-    c.x398_b6_b7
-}
-
-#[doc(alias = "Camera_80031074")]
-pub fn set_pass(c: &mut Camera, pass: u8) {
-    c.x398_b6_b7 = pass & 3;
-}
-
-#[doc(alias = "Camera_8003108C")]
-pub fn layer(c: &Camera) -> u8 {
-    c.x399_b0_b1
-}
-
-#[doc(alias = "Camera_800310A0")]
-pub fn set_layer(c: &mut Camera, layer: u8) {
-    c.x399_b0_b1 = layer & 3;
-}
-
-/// Shows every render layer again, `Camera_800310E8`.
-#[doc(alias = "Camera_800310E8")]
-pub fn show_all_layers(c: &mut Camera) {
-    c.x398_b0 = false;
-    c.x398_b1 = false;
-    c.x398_b2 = false;
-    c.x398_b3 = false;
-    c.x398_b4 = false;
-    c.x398_b5 = false;
+    /// Shows every render layer again, `Camera_800310E8`.
+    #[doc(alias = "Camera_800310E8")]
+    pub fn show_all_layers(&mut self) {
+        let c = &mut self.cam;
+        c.x398_b0 = false;
+        c.x398_b1 = false;
+        c.x398_b2 = false;
+        c.x398_b3 = false;
+        c.x398_b4 = false;
+        c.x398_b5 = false;
+    }
 }
 
 /// The second CObj with its view matrix rebuilt, `Camera_800310B8`.
@@ -3139,14 +3378,17 @@ pub fn update_clear(r: &mut Running) {
     orbit_eye(c, d);
 }
 
-/// Switches to the training menu camera on `slot` for controller `port`, `Camera_8002F784`.
-#[doc(alias = "Camera_8002F784")]
-pub fn set_up_training(c: &mut Camera, slot: i8, port: i8) {
-    c.mode = TRAINING_MENU;
-    c.x2C4 = slot;
-    c.x2C5 = port;
-    c.pitch_offset = 0.0;
-    c.yaw_offset = 0.0;
+impl CameraState {
+    /// Switches to the training menu camera on `slot` for controller `port`, `Camera_8002F784`.
+    #[doc(alias = "Camera_8002F784")]
+    pub fn set_up_training(&mut self, slot: i8, port: i8) {
+        let c = &mut self.cam;
+        c.mode = TRAINING_MENU;
+        c.x2C4 = slot;
+        c.x2C5 = port;
+        c.pitch_offset = 0.0;
+        c.yaw_offset = 0.0;
+    }
 }
 
 /// Switches to the stage clear camera on `slot`, swinging to a random side of the player
@@ -3623,34 +3865,40 @@ pub fn script_look_at_callback(r: &mut Running, cb: CodeRef) {
     script_interest(r);
 }
 
-/// The cutscene eye goes to a point, `Camera_8002EA64`.
-#[doc(alias = "Camera_8002EA64")]
-pub fn script_eye_at(c: &mut Camera, pos: Vec3) {
-    enter_script(c);
-    c.x341_b3_b4 = 1;
-    set_union_vec(&mut c.x35C, pos);
-    script_eye(c);
-}
+impl CameraState {
+    /// The cutscene eye goes to a point, `Camera_8002EA64`.
+    #[doc(alias = "Camera_8002EA64")]
+    pub fn script_eye_at(&mut self, pos: Vec3) {
+        let c = &mut self.cam;
+        enter_script(c);
+        c.x341_b3_b4 = 1;
+        set_union_vec(&mut c.x35C, pos);
+        script_eye(c);
+    }
 
-/// The orbiting cutscene eye's pitch, `Camera_8002EB5C`.
-#[doc(alias = "Camera_8002EB5C")]
-pub fn script_orbit_pitch(c: &mut Camera, pitch: f32) {
-    let v = copy(pitch);
-    script_orbit_with(c, 0x40, |c| c.x35C[4..8].copy_from_slice(&v.to_be_bytes()));
-}
+    /// The orbiting cutscene eye's pitch, `Camera_8002EB5C`.
+    #[doc(alias = "Camera_8002EB5C")]
+    pub fn script_orbit_pitch(&mut self, pitch: f32) {
+        let c = &mut self.cam;
+        let v = copy(pitch);
+        script_orbit_with(c, 0x40, |c| c.x35C[4..8].copy_from_slice(&v.to_be_bytes()));
+    }
 
-/// The orbiting cutscene eye's yaw, `Camera_8002EC7C`.
-#[doc(alias = "Camera_8002EC7C")]
-pub fn script_orbit_yaw(c: &mut Camera, yaw: f32) {
-    let v = copy(yaw);
-    script_orbit_with(c, 0x20, |c| c.x35C[8..12].copy_from_slice(&v.to_be_bytes()));
-}
+    /// The orbiting cutscene eye's yaw, `Camera_8002EC7C`.
+    #[doc(alias = "Camera_8002EC7C")]
+    pub fn script_orbit_yaw(&mut self, yaw: f32) {
+        let c = &mut self.cam;
+        let v = copy(yaw);
+        script_orbit_with(c, 0x20, |c| c.x35C[8..12].copy_from_slice(&v.to_be_bytes()));
+    }
 
-/// The orbiting cutscene eye's distance (whole units), `Camera_8002ED9C`.
-#[doc(alias = "Camera_8002ED9C")]
-pub fn script_orbit_distance(c: &mut Camera, distance: f32) {
-    let d = fp::fctiwz(reg(distance)) as i16;
-    script_orbit_with(c, 0x80, |c| c.x35C[2..4].copy_from_slice(&d.to_be_bytes()));
+    /// The orbiting cutscene eye's distance (whole units), `Camera_8002ED9C`.
+    #[doc(alias = "Camera_8002ED9C")]
+    pub fn script_orbit_distance(&mut self, distance: f32) {
+        let c = &mut self.cam;
+        let d = fp::fctiwz(reg(distance)) as i16;
+        script_orbit_with(c, 0x80, |c| c.x35C[2..4].copy_from_slice(&d.to_be_bytes()));
+    }
 }
 
 /// Enters the orbit as the orbit setters do (clearing the other two parts when it starts),
@@ -3666,11 +3914,14 @@ fn script_orbit_with(c: &mut Camera, bit: u8, store: impl FnOnce(&mut Camera)) {
     script_eye(c);
 }
 
-/// The cutscene's target field of view, `Camera_8002EEC8`.
-#[doc(alias = "Camera_8002EEC8")]
-pub fn script_fov(c: &mut Camera, fov: f32) {
-    enter_script(c);
-    c.transform.target_fov = copy(fov);
+impl CameraState {
+    /// The cutscene's target field of view, `Camera_8002EEC8`.
+    #[doc(alias = "Camera_8002EEC8")]
+    pub fn script_fov(&mut self, fov: f32) {
+        let c = &mut self.cam;
+        enter_script(c);
+        c.transform.target_fov = copy(fov);
+    }
 }
 
 /// Jumps the cutscene camera to its targets at once, `Camera_8002EF14`.
@@ -3693,49 +3944,52 @@ pub fn script_jump(r: &mut Running) {
     c.transform.fov = copy(c.transform.target_fov);
 }
 
-/// Starts a transition over `frames` frames from where the camera is, `Camera_8002F0E4`.
-#[doc(alias = "Camera_8002F0E4")]
-pub fn script_transition(c: &mut Camera, frames: i32) {
-    enter_script(c);
-    c.x341_b5_b6 = 1;
-    c.x378 = 0i32.to_be_bytes();
-    c.x37C = frames.to_be_bytes();
-    if c.x341_b1_b2 <= 3 {
-        c.x350 = c.transform.interest;
-    }
-    match c.x341_b3_b4 {
-        0 | 1 | 3 => {
-            let p = c.transform.position;
-            set_union_vec(&mut c.x368, p);
+impl CameraState {
+    /// Starts a transition over `frames` frames from where the camera is, `Camera_8002F0E4`.
+    #[doc(alias = "Camera_8002F0E4")]
+    pub fn script_transition(&mut self, frames: i32) {
+        let c = &mut self.cam;
+        enter_script(c);
+        c.x341_b5_b6 = 1;
+        c.x378 = 0i32.to_be_bytes();
+        c.x37C = frames.to_be_bytes();
+        if c.x341_b1_b2 <= 3 {
+            c.x350 = c.transform.interest;
         }
-        2 => {
-            let d = c.transform.position - c.transform.interest;
-            let (x, y, z) = (reg(d.x), reg(d.y), reg(d.z));
-            let xz = math::sqrt(mem(fp::fadds(fp::fmuls(x, x), fp::fmuls(z, z))));
-            let pitch = math::atan2(d.y, xz);
-            let yaw = math::atan2(d.x, d.z);
-            let len = fp::fadds(fp::fmuls(z, z), fp::fadds(fp::fmuls(x, x), fp::fmuls(y, y)));
-            let dist = fp::fctiwz(reg(math::sqrt(mem(len)))) as i16;
-            c.x368[0..2].copy_from_slice(&dist.to_be_bytes());
-            c.x368[4..8].copy_from_slice(&pitch.to_be_bytes());
-            c.x368[8..12].copy_from_slice(&yaw.to_be_bytes());
+        match c.x341_b3_b4 {
+            0 | 1 | 3 => {
+                let p = c.transform.position;
+                set_union_vec(&mut c.x368, p);
+            }
+            2 => {
+                let d = c.transform.position - c.transform.interest;
+                let (x, y, z) = (reg(d.x), reg(d.y), reg(d.z));
+                let xz = math::sqrt(mem(fp::fadds(fp::fmuls(x, x), fp::fmuls(z, z))));
+                let pitch = math::atan2(d.y, xz);
+                let yaw = math::atan2(d.x, d.z);
+                let len = fp::fadds(fp::fmuls(z, z), fp::fadds(fp::fmuls(x, x), fp::fmuls(y, y)));
+                let dist = fp::fctiwz(reg(math::sqrt(mem(len)))) as i16;
+                c.x368[0..2].copy_from_slice(&dist.to_be_bytes());
+                c.x368[4..8].copy_from_slice(&pitch.to_be_bytes());
+                c.x368[8..12].copy_from_slice(&yaw.to_be_bytes());
+            }
+            _ => {}
         }
-        _ => {}
+        c.x374 = copy(c.transform.fov);
     }
-    c.x374 = copy(c.transform.fov);
-}
 
-/// Whether the cutscene camera reached its targets, `Camera_8002F260`.
-#[doc(alias = "Camera_8002F260")]
-pub fn script_done(c: &Camera) -> bool {
-    c.x341_b7
-}
+    /// Whether the cutscene camera reached its targets, `Camera_8002F260`.
+    #[doc(alias = "Camera_8002F260")]
+    pub fn script_done(&self) -> bool {
+        self.cam.x341_b7
+    }
 
-/// The cutscene eye stays where it is, `Camera_8002F274`.
-#[doc(alias = "Camera_8002F274")]
-pub fn script_hold_eye(c: &mut Camera) {
-    let p = c.transform.position;
-    script_eye_at(c, p);
+    /// The cutscene eye stays where it is, `Camera_8002F274`.
+    #[doc(alias = "Camera_8002F274")]
+    pub fn script_hold_eye(&mut self) {
+        let p = self.cam.transform.position;
+        self.script_eye_at(p);
+    }
 }
 
 /// Runs the camera's process once and jumps both transforms to its targets,
@@ -3848,5 +4102,71 @@ mod playback_camera_tests {
         v.camera.cam.quake_frames_left[QUAKE_LOOP as usize] = 1;
         assert_eq!(tick(&mut v, PAUSE, 0), (false, false, 0));
         assert_eq!(tick(&mut v, STANDARD, 1), (false, false, 0));
+    }
+}
+
+#[cfg(test)]
+mod boundary_tests {
+    /// The files outside this module that may lay the camera's state open
+    /// ([`super::CameraState::raw_parts`]): the heap's image of the camera's boxes and the
+    /// disc's check of whose heap holds them. The oracle's tools and test code may too.
+    const RAW_PARTS_READERS: [&str; 2] =
+        ["melee-sim/src/game/export.rs", "melee-sim/src/game/disc.rs"];
+
+    /// Every `.rs` file under `dir`.
+    fn sources(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        for e in std::fs::read_dir(dir).unwrap().flatten() {
+            let p = e.path();
+            if p.is_dir() {
+                sources(&p, out);
+            } else if p.extension().is_some_and(|x| x == "rs") {
+                out.push(p);
+            }
+        }
+    }
+
+    /// The camera's state is reached through its module (`docs/refactor.md`, task 13): its
+    /// fields are private, so only the raw parts lay it open, and no game, presentation or
+    /// player code outside the camera reads them but the heap's image ([`RAW_PARTS_READERS`]).
+    /// Test modules (from a file's first `#[cfg(test)]`, and `*tests.rs` files) may, as the
+    /// oracle's tools do.
+    #[test]
+    fn the_camera_is_reached_through_its_module() {
+        let crates = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
+        let mut files = Vec::new();
+        for c in ["melee-sim", "melee-render", "melee-player"] {
+            sources(&crates.join(c).join("src"), &mut files);
+        }
+        assert!(
+            files.len() > 400,
+            "the crates' sources: {} files",
+            files.len()
+        );
+        let mut found = Vec::new();
+        for p in files {
+            let rel = p
+                .strip_prefix(&crates)
+                .unwrap()
+                .to_string_lossy()
+                .replace('\\', "/");
+            if rel == "melee-sim/src/game/camera.rs"
+                || rel.ends_with("tests.rs")
+                || RAW_PARTS_READERS.contains(&rel.as_str())
+            {
+                continue;
+            }
+            let text = std::fs::read_to_string(&p).unwrap();
+            let code = text.split("\n#[cfg(test)]").next().unwrap();
+            for (i, l) in code.lines().enumerate() {
+                if l.contains("raw_parts") && !l.trim_start().starts_with("//") {
+                    found.push(format!("{rel}:{}: {}", i + 1, l.trim()));
+                }
+            }
+        }
+        assert!(
+            found.is_empty(),
+            "the camera's raw parts read outside it:\n{}",
+            found.join("\n")
+        );
     }
 }

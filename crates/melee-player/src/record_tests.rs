@@ -638,7 +638,7 @@ fn live_equals_playback(
                     parted.push(ticks);
                 }
                 let view = |g: &melee_sim::game::state::Game| {
-                    let c = &g.camera.cam;
+                    let c = g.camera.raw_parts().cam;
                     format!("{:?} {:?}", c.transform, c.transform_copy)
                 };
                 let frame = (m.game.playback.as_ref()).map(|p| p.frame_index);
@@ -713,9 +713,9 @@ fn camera_course(g: &melee_sim::game::state::Game, followed: bool) -> String {
 /// (`live::DisplayPhase::shake`).
 fn camera_course_shaken(g: &melee_sim::game::state::Game, followed: bool, shake: bool) -> String {
     use melee_sim::game::camera::{Course, Eased};
-    let c = &g.camera;
-    let theirs = c.followed.as_ref().filter(|_| followed);
-    let mut course = theirs.cloned().unwrap_or_else(|| Course::of(&c.cam));
+    let c = g.camera.raw_parts();
+    let theirs = c.followed.filter(|_| followed);
+    let mut course = theirs.cloned().unwrap_or_else(|| Course::of(c.cam));
     if !shake {
         course.translation = Default::default();
         course.quake_offset = Default::default();
@@ -793,7 +793,7 @@ fn a_paused_live_match_records_the_pause_as_slippi_does() {
         let (_, live) = live_settings();
         let (mut paused, mut marked) = (0u32, Vec::new());
         let file = play_live(&disc, &live, true, None, |m, _| {
-            if m.game.camera.cam.mode == melee_sim::game::camera::PAUSE {
+            if m.game.camera.mode() == melee_sim::game::camera::PAUSE {
                 paused += 1;
                 // The marks the pause camera's view leaves when the pause ends.
                 marked = (m.game.fighters.iter())
@@ -819,7 +819,7 @@ fn a_paused_live_match_records_the_pause_as_slippi_does() {
             }
             play.recycle(f);
             assert_ne!(
-                play.game.camera.cam.mode,
+                play.game.camera.mode(),
                 melee_sim::game::camera::PAUSE,
                 "playback paused"
             );
@@ -917,7 +917,7 @@ fn a_paused_live_match_follows_playbacks_camera() {
         let (_, live) = live_settings_on("onett");
         type Snap = (String, String, (u32, Vec<(u32, u32, i32, u32)>));
         let snap = |g: &melee_sim::game::state::Game| -> Snap {
-            let t = &g.camera.cam.transform;
+            let t = &g.camera.raw_parts().cam.transform;
             (
                 format!("{:?} {:?} {}", t.position, t.interest, t.fov),
                 camera_course(g, true),
@@ -936,7 +936,7 @@ fn a_paused_live_match_follows_playbacks_camera() {
             ours.entry(f).or_insert_with(|| snap(&m.game));
             let d = &m.game.display_phase;
             if d.paused && off.is_none() {
-                assert_eq!(m.game.camera.cam.mode, melee_sim::game::camera::PAUSE);
+                assert_eq!(m.game.camera.mode(), melee_sim::game::camera::PAUSE);
                 off = Some(f);
                 before = d.differing;
             }
@@ -1043,7 +1043,7 @@ fn a_paused_live_match_follows_playbacks_camera_readers() {
             )
         };
         let held = |g: &melee_sim::game::state::Game| -> Camera {
-            let c = &g.camera.cam;
+            let c = g.camera.raw_parts().cam;
             let model = c.quake_gobj.is_some();
             (
                 c.x2B0.to_bits(),
@@ -1067,9 +1067,9 @@ fn a_paused_live_match_follows_playbacks_camera_readers() {
             let (mut off, mut before, mut noted) = (None, 0, 0);
             let file = play_live(&disc, &live, true, None, |m, _| {
                 let g = &mut m.game;
-                if g.camera.cam.mode == melee_sim::game::camera::PAUSE {
+                if g.camera.mode() == melee_sim::game::camera::PAUSE {
                     // The pause camera looking at no one: the standard camera's update.
-                    g.camera.cam.x2C4 = 11;
+                    g.camera.raw_parts_mut().cam.x2C4 = 11;
                 }
                 let Some(f) = frame(m) else { return };
                 let g = &m.game;

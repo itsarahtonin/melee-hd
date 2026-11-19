@@ -188,7 +188,7 @@ pub fn on_init(r: &mut Running) {
     }
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
-    super::super::camera::set_hold_off_plane(&mut r.game.camera.cam, true);
+    r.game.camera.set_hold_off_plane(true);
     let desc = sign_model(r);
     r.create_route_hazard(desc.expect("un_802FD708: a model"));
     r.game.hide_hazard();
@@ -339,7 +339,7 @@ pub fn proc_track(r: &mut Running, gobj: GObjId) {
                     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = y);
                 }
             }
-            super::super::camera::set_hold_off_plane(&mut r.game.camera.cam, true);
+            r.game.camera.set_hold_off_plane(true);
         }
         let zone = r.game.grounds[g.0].u.bigblueroute().zone;
         let idx = i32::from(zone) + 5;

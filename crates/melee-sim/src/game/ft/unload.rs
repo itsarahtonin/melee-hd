@@ -56,7 +56,7 @@ impl Running<'_> {
         self.game.fighters[f.0].x60C = head;
         super::super::it::evt_unk::fighter_unloaded(self, gobj);
         if let Some(b) = self.game.fighters[f.0].x890_cameraBox {
-            super::super::camera::free_box(&mut self.game.camera.boxes, b);
+            self.game.camera.free_box(b);
         }
         self.unload_dynamic_bones(f);
         self.forget_grabber(gobj, f);

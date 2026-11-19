@@ -230,12 +230,12 @@ impl Running<'_> {
         let lift = mem(fp::fmuls(reg(self.data.f32(cam)), reg(fp.x34_scale.y)));
         let (x, y) = (fp.mv_f32(TARGET), fp.mv_f32(TARGET + 4));
         let b = fp.x890_cameraBox.expect("a fighter without a camera box");
-        let cb = &mut self.game.camera.boxes[b];
+        let cb = self.game.camera.subject_mut(b);
         cb.pos.x = x;
         cb.pos.y = mem(fp::fadds(reg(y), reg(lift)));
         cb.pos.z = 0.0;
         let bone = self.camera_bone_pos(f);
-        self.game.camera.boxes[b].bone_pos = bone;
+        self.game.camera.subject_mut(b).bone_pos = bone;
     }
 
     /// Waiting on the platform, `ftCo_800D5600`, for `ftCommonData` x5D4 frames.

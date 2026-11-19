@@ -895,11 +895,11 @@ impl Running<'_> {
             .as_ref()
             .expect("stage_info.param is null")
             .x4C_fixed_cam;
-        let c = &mut self.game.camera.cam;
+        let c = &mut self.game.camera;
         if fixed != 0 {
-            super::super::camera::set_fixed(c);
+            c.set_fixed();
         } else {
-            super::super::camera::set_standard(c);
+            c.set_standard();
         }
     }
 
@@ -1334,7 +1334,7 @@ impl Running<'_> {
         if sub != 1 {
             self.show_damage_display(slot);
             if self.game.vs.state.fighters[slot as usize].xC & 0x8000 != 0 {
-                super::super::camera::show_all_layers(&mut self.game.camera.cam);
+                self.game.camera.show_all_layers();
             }
         }
     }
@@ -1852,7 +1852,7 @@ impl Game {
             s.unk_B = r.x7;
         }
         s.x24C.sd_penalty = r.sd_penalty;
-        super::super::camera::set_quake_scale(&mut self.camera.cam, r.x2C);
+        self.camera.set_quake_scale(r.x2C);
         let s = &mut self.vs.state;
         if self.vs.start.timer_enabled {
             if self.vs.start.timer_counts_up {
@@ -1974,7 +1974,7 @@ impl Running<'_> {
         self.game.set_pre_gobj_proc(DB_RUN_EVERY_FRAME);
         self.game.set_clock_mask(1);
         self.game.set_game_speed(d.rules.game_speed);
-        super::super::camera::init(&mut self.game.camera, 70);
+        self.game.camera.init(70);
         super::super::camera::create(self.game);
         self.game.init_vs(d);
         // The scene's files load where the original loads them, timed on the audio timeline.
@@ -2007,7 +2007,7 @@ impl Running<'_> {
         let grkind = self.game.stage_info.grkind;
         super::super::gr::setup::setup(self, grkind);
         let tilt = self.game.stage_info.cam_info.cam_vertical_tilt;
-        super::super::camera::set_default_fov(&mut self.game.camera, tilt);
+        self.game.camera.set_default_fov(tilt);
         self.place_players(f26);
         super::super::gr::setup::on_load(self, grkind);
         self.enable_match_camera();
@@ -2130,7 +2130,7 @@ mod c_stick_rule_tests {
         for p in &mut g.players[3..] {
             p.pkind = crate::game::pl::player::PKIND_NONE;
         }
-        let c = &mut g.camera.cam;
+        let c = g.camera.raw_parts_mut().cam;
         c.x2C0 = 1.0;
         c.x2BC = 1.0;
         c.quake_offset.x = 1.5;
@@ -2143,7 +2143,7 @@ mod c_stick_rule_tests {
 
     fn zoom(mut g: Box<Game>) -> f32 {
         camera::update_zoom(&mut g);
-        g.camera.cam.x2BC
+        g.camera.zoom()
     }
 
     fn quake(mut g: Box<Game>) -> [f32; 2] {
@@ -2152,7 +2152,7 @@ mod c_stick_rule_tests {
             ..Default::default()
         };
         camera::apply_quake(&mut g, &b, Which::Main);
-        let t = g.camera.cam.translation;
+        let t = &g.camera.raw_parts().cam.translation;
         [t.x, t.y]
     }
 

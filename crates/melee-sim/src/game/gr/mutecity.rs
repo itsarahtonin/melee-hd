@@ -1282,7 +1282,7 @@ pub fn move_cars(r: &mut Running, car_gobj: GObjId, gobj: GObjId) {
     };
     let mid = fp::fmuls(reg(0.5), fp::fadds(reg(xd4), reg(xd8)));
     let mid_next = fp::fadds(1.0, mid);
-    let cam = crate::game::camera::position(&r.game.camera.cam);
+    let cam = r.game.camera.position();
     let mut j = car_root.and_then(|c| r.game.objs.jobjs[c].child);
     {
         let v = r.game.grounds[cg.0].u.mute_city_cars();
