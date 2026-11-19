@@ -359,6 +359,9 @@ pub(crate) struct GpuMeshes {
     copies: Option<wgpu::Buffer>,
     /// The flush's indices, which its mesh draws are drawn with.
     pub(crate) indices: Option<wgpu::Buffer>,
+    /// The transforms' and the index copies' bind groups, with the buffers they bind.
+    group: Option<([wgpu::Buffer; 5], wgpu::BindGroup)>,
+    copy_group: Option<([wgpu::Buffer; 3], wgpu::BindGroup)>,
     /// The output, as the draws' vertex shader reads it (group 2).
     pub(crate) out_group: Option<wgpu::BindGroup>,
     /// Meshes uploaded, and words of the XF state sent, since asked (for the profile).
@@ -470,6 +473,8 @@ impl GpuMeshes {
             copies: None,
             indices: None,
             out_group: None,
+            group: None,
+            copy_group: None,
             uploaded: 0,
         }
     }
@@ -635,17 +640,26 @@ impl GpuMeshes {
         ensure(&mut self.copies, device, "mesh index copies", storage, size);
         let copy_buffer = self.copies.as_ref().expect("copies");
         queue.write_buffer(copy_buffer, 0, bytemuck::cast_slice(&b.copies));
-        let copy_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("mesh indices"),
-            layout: &self.copier_layout,
-            entries: &[
-                entry(5, &self.index.buffer),
-                entry(6, copy_buffer),
-                entry(7, drawn),
-            ],
-        });
+        // The bind groups are made again only when a buffer is.
+        let buffers = [&self.index.buffer, copy_buffer, drawn];
+        if self
+            .copy_group
+            .as_ref()
+            .is_none_or(|(b, _)| b.iter().ne(buffers))
+        {
+            let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("mesh indices"),
+                layout: &self.copier_layout,
+                entries: &[
+                    entry(5, buffers[0]),
+                    entry(6, buffers[1]),
+                    entry(7, buffers[2]),
+                ],
+            });
+            self.copy_group = Some((buffers.map(Clone::clone), group));
+        }
         let n = b.work.len() as u32;
-        let transforms = (n > 0).then(|| {
+        if n > 0 {
             b.work.insert(0, [n, 0]);
             ensure(
                 &mut self.records,
@@ -678,23 +692,26 @@ impl GpuMeshes {
                 queue.write_buffer(xf, 0, bytemuck::cast_slice(&b.xf));
             }
             queue.write_buffer(work, 0, bytemuck::cast_slice(&b.work));
-            bind_group(
-                device,
-                &self.layout,
-                &self.arena.buffer,
-                [records, xf, work, out],
-            )
-        });
+            let buffers = [&self.arena.buffer, records, xf, work, out];
+            if self
+                .group
+                .as_ref()
+                .is_none_or(|(b, _)| b.iter().ne(buffers))
+            {
+                let group = bind_group(device, &self.layout, buffers[0], [records, xf, work, out]);
+                self.group = Some((buffers.map(Clone::clone), group));
+            }
+        }
         {
             let mut pass = encoder.begin_compute_pass(&Default::default());
-            if let Some(group) = &transforms {
+            if n > 0 {
                 pass.set_pipeline(&self.pipeline);
-                pass.set_bind_group(0, group, &[]);
+                pass.set_bind_group(0, self.group.as_ref().map(|g| &g.1), &[]);
                 pass.dispatch_workgroups(n.min(65535), n.div_ceil(65535), 1);
             }
             if copies > 0 {
                 pass.set_pipeline(&self.copier);
-                pass.set_bind_group(0, &copy_group, &[]);
+                pass.set_bind_group(0, self.copy_group.as_ref().map(|g| &g.1), &[]);
                 pass.dispatch_workgroups(copies.min(65535), copies.div_ceil(65535), 1);
             }
         }
