@@ -12,17 +12,17 @@ use crate::{
     Renderer, TevMode, tev,
 };
 
-struct Rng(u64);
+pub(crate) struct Rng(pub(crate) u64);
 
 impl Rng {
-    fn next(&mut self) -> u32 {
+    pub(crate) fn next(&mut self) -> u32 {
         self.0 ^= self.0 << 13;
         self.0 ^= self.0 >> 7;
         self.0 ^= self.0 << 17;
         (self.0 >> 16) as u32
     }
 
-    fn below(&mut self, n: u32) -> u32 {
+    pub(crate) fn below(&mut self, n: u32) -> u32 {
         self.next() % n
     }
 
@@ -31,7 +31,7 @@ impl Rng {
     }
 }
 
-fn renderer() -> Option<Renderer> {
+pub(crate) fn renderer() -> Option<Renderer> {
     let adapter = crate::testing::adapter()?;
     let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
         required_features: wgpu::Features::DUAL_SOURCE_BLENDING,
@@ -72,7 +72,7 @@ fn textures(r: &mut Renderer, rng: &mut Rng) -> ([u32; 8], [u32; 8]) {
 }
 
 /// A random configuration, with random data in the registers beside it.
-fn state(rng: &mut Rng) -> State {
+pub(crate) fn state(rng: &mut Rng) -> State {
     let mut s = State::new();
     let ntex = 1 + rng.below(8);
     let nstages = rng.below(8);
@@ -139,7 +139,7 @@ fn state(rng: &mut Rng) -> State {
 }
 
 /// A quad over part of the EFB with random colors, depths and texture coordinates.
-fn quad(rng: &mut Rng) -> [GpuVertex; 6] {
+pub(crate) fn quad(rng: &mut Rng) -> [GpuVertex; 6] {
     let scale = 2f32.powi(rng.below(12) as i32 - 3);
     let perspective = rng.below(2) == 0;
     let corner = |rng: &mut Rng, x: f32, y: f32| {
@@ -171,7 +171,7 @@ fn quad(rng: &mut Rng) -> [GpuVertex; 6] {
 }
 
 /// The EFB's depth as stored, read back.
-fn read_depth(r: &Renderer) -> Vec<u8> {
+pub(crate) fn read_depth(r: &Renderer) -> Vec<u8> {
     let (width, height) = (EFB_WIDTH, EFB_HEIGHT);
     let row = width * 4;
     let buffer = r.device.create_buffer(&wgpu::BufferDescriptor {

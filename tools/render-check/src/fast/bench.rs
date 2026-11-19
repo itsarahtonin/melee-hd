@@ -14,6 +14,25 @@ use super::exact::Exact;
 use super::{Adapter, FrameRenderer, Which, device, renderer};
 use crate::native::{self, View};
 
+/// The specialized pipelines a warm list holds (as the player saves them: a mark, then entries
+/// of a fixed number of words), none if it isn't there or isn't one.
+fn read_warm_list(path: &std::path::Path) -> Vec<Vec<u32>> {
+    let (n, mark) = melee_gpu::Renderer::specialized_key_format();
+    let Ok(bytes) = std::fs::read(path) else {
+        return Vec::new();
+    };
+    let w: Vec<u32> = bytes
+        .as_chunks::<4>()
+        .0
+        .iter()
+        .map(|c| u32::from_le_bytes(*c))
+        .collect();
+    match w.split_first() {
+        Some((&m, rest)) if m == mark => rest.chunks_exact(n).map(<[u32]>::to_vec).collect(),
+        _ => Vec::new(),
+    }
+}
+
 /// One frame's times.
 #[derive(Clone, Copy, Default)]
 pub struct Times {
@@ -55,11 +74,17 @@ pub fn measure(
     r: &mut dyn FrameRenderer,
 ) -> Vec<Times> {
     let mut out = Vec::with_capacity((to - from) as usize);
+    let mut perf = Perf::from_env();
     native::drive(disc, replay, to, Cosmetic::default(), |t| {
         let s = r.frame(t, true, false);
         let start = Instant::now();
         r.wait_idle();
         let gpu = start.elapsed();
+        // The warm-up ends with every specialized shader it asked for made.
+        if t.n + 1 == from {
+            r.warm();
+            perf.send("enable");
+        }
         if t.n >= from {
             out.push(Times {
                 build: s.build,
@@ -69,16 +94,53 @@ pub fn measure(
         }
         t.n < to
     });
+    perf.send("disable");
     out
 }
 
-/// `melee-render-check bench DISC REPLAY [--renderer exact|f2|fast] [--scale N] [--from A] [--to B]
-/// [--one-thread] [--adapter NAME|fallback]`
+/// A profiler's control: `perf record -D -1 --control fifo:CTL,ACK` with `PERF_CTL_FIFO` and
+/// `PERF_ACK_FIFO` naming the two, so a profile holds the measured frames alone.
+struct Perf(Option<(std::fs::File, Option<std::fs::File>)>);
+
+impl Perf {
+    fn from_env() -> Perf {
+        let open = |var: &str, write: bool| {
+            std::env::var_os(var).and_then(|p| {
+                std::fs::OpenOptions::new()
+                    .read(!write)
+                    .write(write)
+                    .open(p)
+                    .ok()
+            })
+        };
+        Perf(open("PERF_CTL_FIFO", true).map(|ctl| (ctl, open("PERF_ACK_FIFO", false))))
+    }
+
+    fn send(&mut self, command: &str) {
+        use std::io::{Read, Write};
+        if let Some((ctl, ack)) = &mut self.0 {
+            let _ = writeln!(ctl, "{command}");
+            let _ = ctl.flush();
+            if let Some(ack) = ack {
+                let mut b = [0u8; 5];
+                let _ = ack.read(&mut b);
+            }
+        }
+    }
+}
+
+/// `melee-render-check bench DISC REPLAY [--renderer exact|f2|f3|fast] [--scale N] [--from A] [--to B]
+/// [--one-thread] [--adapter NAME|fallback] [--warm-list FILE]`
+///
+/// With `--warm-list`, the specialized pipelines FILE lists (from earlier runs) are asked for
+/// before the first frame, as the player asks for those it saved, and every one the run asked
+/// for is added to it after.
 pub fn cli(args: &[String]) -> ExitCode {
     let (disc, replay) = (&args[1], &args[2]);
     let (mut scale, mut from, mut to, mut threaded) = (1u32, 600u32, 1800u32, true);
     let mut adapter = Adapter::Default;
     let mut which = Which::Exact;
+    let mut warm_list = None;
     let mut rest = args[3..].iter();
     while let Some(a) = rest.next() {
         let mut num = |what: &str| -> u32 {
@@ -93,6 +155,11 @@ pub fn cli(args: &[String]) -> ExitCode {
             "--one-thread" => threaded = false,
             "--renderer" => which = Which::parse(rest.next().expect("--renderer NAME")),
             "--adapter" => adapter = Adapter::parse(rest.next().expect("--adapter NAME")),
+            "--warm-list" => {
+                warm_list = Some(std::path::PathBuf::from(
+                    rest.next().expect("--warm-list FILE"),
+                ));
+            }
             other => panic!("bench: unknown argument {other}"),
         }
     }
@@ -105,9 +172,12 @@ pub fn cli(args: &[String]) -> ExitCode {
     };
     let mut r = renderer(&dev, &queue, view);
     r.xfb_readback = false;
+    let listed = warm_list.as_deref().map_or_else(Vec::new, read_warm_list);
+    r.warm_specialized(&listed);
     let mut exact = match which {
         Which::Exact => Exact::new(r, threaded),
         Which::F2 => Exact::f2(r, threaded),
+        Which::F3 => Exact::f3(r, threaded),
         Which::Fast => Exact::fast(r, threaded),
     };
     let times = measure(disc, replay, from, to, &mut exact);
@@ -151,6 +221,25 @@ pub fn cli(args: &[String]) -> ExitCode {
     line("frame", total);
     let fps = if total.0 > 0.0 { 1000.0 / total.0 } else { 0.0 };
     println!("frames/s: {fps:.1}");
+    let name = exact.name();
+    let renderer = exact.into_renderer();
+    let tev = renderer.specialized_stats();
+    if let Some(path) = &warm_list {
+        let mut keys = listed;
+        keys.extend(renderer.specialized_keys());
+        keys.sort_unstable();
+        keys.dedup();
+        let (_, mark) = melee_gpu::Renderer::specialized_key_format();
+        let bytes: Vec<u8> = std::iter::once(mark)
+            .chain(keys.into_iter().flatten())
+            .flat_map(u32::to_le_bytes)
+            .collect();
+        std::fs::write(path, bytes).expect("writing the warm list");
+    }
+    println!(
+        "{name}, the measured frames' draw calls: {} with their specialized shaders, {} with the uber shader while theirs was made",
+        tev.specialized_calls, tev.uber_calls
+    );
     println!(
         "| {name_of} | {scale}x | {fps:.0} | {:.2} ({:.2}) | {:.2} | {:.2} | {:.2} |",
         cpu.0, cpu.2, build.0, submit.0, gpu.0

@@ -241,6 +241,16 @@ impl Gpu {
         }
     }
 
+    /// Waits for what was sent to be drawn and every specialized pipeline asked for to be made,
+    /// and counts the draw calls with and without them afresh: a warm-up's end
+    /// (`melee_gpu::Renderer::finish_specialized`).
+    pub fn finish_specialized(&mut self) {
+        match self.renderer.get_mut() {
+            Backend::Here(r) => r.finish_specialized(),
+            Backend::Threaded(t) => t.finish_specialized(),
+        }
+    }
+
     /// The renderer on this thread, to set or read directly; none while it runs on its own.
     pub fn renderer(&self) -> Option<std::cell::RefMut<'_, Renderer>> {
         std::cell::RefMut::filter_map(self.renderer.borrow_mut(), |b| match b {
