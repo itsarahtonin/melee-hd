@@ -963,6 +963,14 @@ impl TExpList {
             }));
     }
 
+    /// How many constants [`TExpList::describe`] keeps: those still in use.
+    pub fn num_cnsts(&self) -> usize {
+        self.nodes
+            .iter()
+            .filter(|n| matches!(n, Node::Cnst(c) if c.ref_ != 0))
+            .count()
+    }
+
     /// `HSD_TExpCompile`'s simplifying, scheduling and register assignment, both passes: how
     /// many stages the expression `root` makes and their order. The constants' uses are
     /// final afterwards. `dag` is room for the graph, which a caller may keep.

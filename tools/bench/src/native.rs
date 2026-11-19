@@ -718,8 +718,8 @@ mod tests {
     const TO: u64 = 4600;
 
     /// A restore of the materials gives the compiled TEVs too long to hold inline the heap
-    /// storage of those it drops (`MObjs::clone_from`), so it allocates none for them; and a
-    /// snapshot copies the inline ones without allocating.
+    /// storage of those it drops or that fit inline (`MObjs::clone_from`), so it allocates none
+    /// for them; and a snapshot copies the inline ones without allocating.
     #[test]
     fn materials_restore_long_tevs_into_spares() {
         use melee_sim::hsd::mobj::{MObj, MObjs};
@@ -762,6 +762,19 @@ mod tests {
         assert_eq!(n, 0, "a restore's allocations");
         assert_eq!(target.pool[0].tev, theirs.pool[0].tev);
         assert_eq!(target.pool[1].tev, None);
+        // A long TEV where the source's fits inline gives its storage up to the spares, where
+        // a later long list (here another slot's, restored) finds it.
+        let mut target = state(tev(long), None);
+        target.spare_stages.reserve_exact(256);
+        let short_both = state(tev(2), tev(2));
+        let long_second = state(tev(2), tev(long));
+        let ((), n, _) = counted(|| target.clone_from(&short_both));
+        assert_eq!(n, 0, "a restore's allocations");
+        assert!(!target.pool[0].tev.as_ref().unwrap().stages.spilled());
+        assert_eq!(target.spare_stages.len(), 1);
+        let ((), n, _) = counted(|| target.clone_from(&long_second));
+        assert_eq!(n, 0, "the next restore's allocations");
+        assert_eq!(target.pool[1].tev, long_second.pool[1].tev);
         // A snapshot of short TEVs only allocates the slots' storage.
         let short = state(tev(2), tev(STAGES_INLINE as u32));
         let (_, n, _) = counted(|| short.clone());
