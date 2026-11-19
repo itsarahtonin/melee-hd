@@ -79,6 +79,7 @@ use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::kirby::special_mewtwo::KIRBY as MT_KIRBY;
 use melee_sim::game::ft::kirby::special_ness::KIRBY as NS_KIRBY;
+use melee_sim::game::ft::kirby::special_peach::KIRBY as PE_KIRBY;
 use melee_sim::game::ft::kirby::special_purin::KIRBY;
 use melee_sim::game::ft::kirby::special_samus::KIRBY as SS_KIRBY;
 use melee_sim::game::handles::CodeRef;
@@ -508,7 +509,7 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftKb_SpecialNNs_800FEC78" => return b(g.ness_special_n_holding(gobj, &NS_KIRBY)),
         "ftKb_SpecialNSk_80105FF0" => return b(g.kb_sk_lets_go(Some(gobj))),
         "ftKb_SpecialNSk_80106020" => return Ret::Int(g.kb_sk_count(Some(gobj)) as u32),
-        "ftKb_SpecialNPe_8010C4AC" => return b(g.kb_pe_done(gobj)),
+        "ftKb_SpecialNPe_8010C4AC" => return b(g.peach_toad_done(gobj, &PE_KIRBY)),
         "ftKb_SpecialNGw_8010D160" => return b(g.kb_gw_done(gobj)),
         "it_802BDF40" => peachtoad::remove(g, gobj),
         "it_802C760C" => kirbygamewatchchefpan::remove(g, gobj),

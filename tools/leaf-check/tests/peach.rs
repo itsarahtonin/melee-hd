@@ -40,6 +40,7 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
+use melee_sim::game::ft::peach::special_n::PEACH;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
 use melee_sim::game::it::kinds::{
@@ -352,7 +353,7 @@ fn run_peach(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             item(g);
             peachturnip::evt_unk(g, gobj, other());
         }
-        "ftPe_SpecialN_IsActive" => return b(g.peach_toad_done(gobj)),
+        "ftPe_SpecialN_IsActive" => return b(g.peach_toad_done(gobj, &PEACH)),
         "it_802BDF40" => {
             item(g);
             peachtoad::remove(g, gobj);
