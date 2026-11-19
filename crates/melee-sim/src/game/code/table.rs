@@ -226,6 +226,7 @@ impl AllEntries {
         super::calls(&mut e.call);
         crate::game::render::run(&mut e.render);
         crate::game::gr::registry::register(&mut e.event, &mut e.proc, &mut e.render);
+        crate::game::ft::registry::register(&mut e.fighter, &mut e.call);
         e
     }
 }

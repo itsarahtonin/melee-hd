@@ -71,6 +71,7 @@ pub mod pikachu;
 pub mod popo;
 pub mod powerup;
 pub mod purin;
+pub mod registry;
 pub mod resolve;
 pub mod samus;
 pub mod sandbag;
@@ -84,6 +85,8 @@ pub mod vars;
 pub mod yoshi;
 pub mod zako;
 pub mod zelda;
+
+pub use registry::{Character, CharacterKind, FighterKind};
 
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 

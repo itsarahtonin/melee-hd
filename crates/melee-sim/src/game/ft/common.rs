@@ -41,7 +41,9 @@ impl Running<'_> {
         if let Some(second) = fp.x1978 {
             self.item_pickup_stat(slot, sub, second);
         } else if let Some(item) = fp.item_gobj {
-            let hook = super::co::kind_callbacks::ON_ITEM_PICKUP_EXT[kind as usize];
+            let hook = crate::game::ft::registry::character(kind)
+                .callbacks
+                .on_item_pickup_ext;
             if hook != 0 {
                 crate::game::code::call(
                     self,
@@ -72,7 +74,9 @@ impl Running<'_> {
         }
         let fp = self.game.fighter(gobj);
         let (kind, slot, sub) = (fp.kind, i32::from(fp.player_idx), fp.is_sub_fighter);
-        let hook = super::co::kind_callbacks::ON_ITEM_DROP_EXT[kind as usize];
+        let hook = crate::game::ft::registry::character(kind)
+            .callbacks
+            .on_item_drop_ext;
         if hook != 0 {
             crate::game::code::call(
                 self,

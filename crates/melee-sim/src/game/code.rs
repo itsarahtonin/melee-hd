@@ -246,30 +246,11 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
     }
 }
 
-/// The fighter callbacks' table.
+/// The fighter callbacks' table: the common code's (each character's module's are its registry
+/// entry's, `ft::registry::register`).
 #[callbacks(Fighter)]
 fn fighter_callbacks(g: &mut Running, gobj: GObjId, cb: u32) -> bool {
     match cb {
-        addr if super::ft::fox::run(g, gobj, addr) => {}
-        addr if super::ft::seak::run(g, gobj, addr) => {}
-        addr if super::ft::mars::run(g, gobj, addr) => {}
-        addr if super::ft::zelda::run(g, gobj, addr) => {}
-        addr if super::ft::ness::run(g, gobj, addr) => {}
-        addr if super::ft::purin::run(g, gobj, addr) => {}
-        addr if super::ft::samus::run(g, gobj, addr) => {}
-        addr if super::ft::peach::run(g, gobj, addr) => {}
-        addr if super::ft::link::run(g, gobj, addr) => {}
-        addr if super::ft::clink::run(g, gobj, addr) => {}
-        addr if super::ft::yoshi::run(g, gobj, addr) => {}
-        addr if super::ft::mewtwo::run(g, gobj, addr) => {}
-        addr if super::ft::masterhand::run(g, gobj, addr) => {}
-        addr if super::ft::sandbag::run(g, gobj, addr) => {}
-        addr if super::ft::crazyhand::run(g, gobj, addr) => {}
-        addr if super::ft::koopa::run(g, gobj, addr) => {}
-        addr if super::ft::gkoopa::run(g, gobj, addr) => {}
-        addr if super::ft::zako::run(g, gobj, addr) => {}
-        addr if super::ft::gamewatch::run(g, gobj, addr) => {}
-        addr if super::ft::kirby::run(g, gobj, addr) => {}
         super::it::kinds::samusgrapple::FT_DEATH => {
             super::it::kinds::samusgrapple::ft_death(g, gobj)
         }
@@ -288,21 +269,11 @@ fn fighter_callbacks(g: &mut Running, gobj: GObjId, cb: u32) -> bool {
         super::it::kinds::linkhookshot::FT_LINE_UP => {
             super::it::kinds::linkhookshot::ft_line_up(g, gobj)
         }
-        addr if super::ft::falco::run(g, gobj, addr) => {}
-        addr if super::ft::captain::run(g, gobj, addr) => {}
-        addr if super::ft::luigi::run(g, gobj, addr) => {}
-        addr if super::ft::mario::run(g, gobj, addr) => {}
-        addr if super::ft::drmario::run(g, gobj, addr) => {}
-        addr if super::ft::pikachu::run(g, gobj, addr) => {}
-        addr if super::ft::donkey::run(g, gobj, addr) => {}
         addr if super::ft::co::cargo::run(g, gobj, addr) => {}
         addr if super::ft::co::hammer::run(g, gobj, addr) => {}
         addr if super::ft::co::kinoko::run(g, gobj, addr) => {}
         addr if super::ft::co::warpstar::run(g, gobj, addr) => {}
         addr if super::ft::co::bury::run(g, gobj, addr) => {}
-        addr if super::ft::pichu::run(g, gobj, addr) => {}
-        addr if super::ft::emblem::run(g, gobj, addr) => {}
-        addr if super::ft::popo::run(g, gobj, addr) => {}
         addr if super::ft::co::dispatch::run(g, gobj, addr) => {}
         addr if super::ft::co::yoshi_egg::run(g, gobj, addr) => {}
         addr if super::ft::co::capture_mewtwo::run(g, gobj, addr) => {}
@@ -486,39 +457,13 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
     unported("function", f)
 }
 
-/// The functions called by address' table.
+/// The functions called by address' table (each character's module's are its registry
+/// entry's).
 #[callbacks(Call)]
 fn calls(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     super::ef::call(r, f, args)
         .or_else(|| super::gm::call(r, f, args))
-        .or_else(|| super::ft::fox::call(r, f, args))
-        .or_else(|| super::ft::seak::call(r, f, args))
-        .or_else(|| super::ft::mars::call(r, f, args))
-        .or_else(|| super::ft::zelda::call(r, f, args))
-        .or_else(|| super::ft::purin::call(r, f, args))
-        .or_else(|| super::ft::samus::call(r, f, args))
-        .or_else(|| super::ft::peach::call(r, f, args))
-        .or_else(|| super::ft::link::call(r, f, args))
-        .or_else(|| super::ft::clink::call(r, f, args))
-        .or_else(|| super::ft::yoshi::call(r, f, args))
-        .or_else(|| super::ft::mewtwo::call(r, f, args))
-        .or_else(|| super::ft::koopa::call(r, f, args))
-        .or_else(|| super::ft::gkoopa::call(r, f, args))
-        .or_else(|| super::ft::zako::call(r, f, args))
-        .or_else(|| super::ft::gamewatch::call(r, f, args))
-        .or_else(|| super::ft::kirby::call(r, f, args))
-        .or_else(|| super::ft::ness::call(r, f, args))
-        .or_else(|| super::ft::falco::call(r, f, args))
-        .or_else(|| super::ft::captain::call(r, f, args))
-        .or_else(|| super::ft::luigi::call(r, f, args))
-        .or_else(|| super::ft::mario::call(r, f, args))
-        .or_else(|| super::ft::drmario::call(r, f, args))
-        .or_else(|| super::ft::pikachu::call(r, f, args))
-        .or_else(|| super::ft::donkey::call(r, f, args))
         .or_else(|| super::ft::co::bury::call(r, f, args))
-        .or_else(|| super::ft::pichu::call(r, f, args))
-        .or_else(|| super::ft::emblem::call(r, f, args))
-        .or_else(|| super::ft::popo::call(r, f, args))
         .or_else(|| super::sfx::call(r, f, args))
         .or_else(|| held_item_call(r, f, args))
 }

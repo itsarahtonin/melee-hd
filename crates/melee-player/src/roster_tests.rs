@@ -22,7 +22,7 @@ fn every_roster_stage_plays() {
         let disc = Disc::open(&path).expect("the disc");
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
         let player = |key: &str, port: u8| Player {
-            character: roster::character(key).expect("ported").kind,
+            character: roster::character(key).expect("ported").vs_kind(),
             costume: 0,
             port,
             kind: 0,
@@ -88,7 +88,7 @@ fn every_offered_stage_plays_with_items() {
         let disc = Disc::open(&path).expect("the disc");
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
         let player = |key: &str, port: u8| Player {
-            character: roster::character(key).expect("ported").kind,
+            character: roster::character(key).expect("ported").vs_kind(),
             costume: 0,
             port,
             kind: 0,
@@ -156,7 +156,7 @@ fn every_offered_special_mode_plays() {
         let disc = Disc::open(&path).expect("the disc");
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
         let player = |key: &str, port: u8| Player {
-            character: roster::character(key).expect("ported").kind,
+            character: roster::character(key).expect("ported").vs_kind(),
             costume: 0,
             port,
             kind: 0,
@@ -237,7 +237,7 @@ fn live_slow_mo_keeps_its_sounds() {
         let disc = Disc::open(&path).expect("the disc");
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
         let player = |key: &str, port: u8| Player {
-            character: roster::character(key).expect("ported").kind,
+            character: roster::character(key).expect("ported").vs_kind(),
             costume: 0,
             port,
             kind: 0,

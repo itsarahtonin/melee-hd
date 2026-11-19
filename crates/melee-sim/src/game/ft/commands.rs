@@ -632,7 +632,9 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         if fp.item_gobj.is_some() && fp.x221E_b3 != v {
             if v {
-                let cb = super::co::kind_callbacks::ON_ITEM_VISIBLE[fp.kind as usize];
+                let cb = crate::game::ft::registry::character(fp.kind)
+                    .callbacks
+                    .on_item_visible;
                 if cb != 0 {
                     super::super::code::run_fighter_cb(
                         self,
@@ -655,7 +657,9 @@ impl Running<'_> {
         if fp.item_gobj.is_none() {
             return;
         }
-        let cb = super::co::kind_callbacks::ON_ITEM_INVISIBLE[fp.kind as usize];
+        let cb = crate::game::ft::registry::character(fp.kind)
+            .callbacks
+            .on_item_invisible;
         if cb != 0 {
             super::super::code::run_fighter_cb(self, gobj, crate::game::handles::CodeRef(cb));
         }

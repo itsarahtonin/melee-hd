@@ -14,7 +14,7 @@ use crate::hsd::{jobj, robj};
 pub const KIND_SANDBAG: i32 = 32;
 
 /// `ftSandbagAttributes`: the knockback's x and y deceleration.
-const ATTRS_SIZE: usize = 8;
+pub(crate) const ATTRS_SIZE: usize = 8;
 
 /// `ftSb_MS_WaitReverse`.
 const MS_WAIT_REVERSE: i32 = 0x155;

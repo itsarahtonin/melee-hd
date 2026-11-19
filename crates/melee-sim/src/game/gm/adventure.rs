@@ -1294,7 +1294,7 @@ impl Running<'_> {
         self.adventure_enter_vs();
         if !self.game.gm.unlocks.ckind_unlocked(CKIND_LUIGI) {
             for p in &mut self.game.one_player.match_start.players[1..4] {
-                if p.ckind == CKIND_LUIGI as _ {
+                if p.ckind == CKIND_LUIGI as i8 {
                     p.slot_type = crate::game::pl::player::PKIND_NONE as u8;
                 }
             }

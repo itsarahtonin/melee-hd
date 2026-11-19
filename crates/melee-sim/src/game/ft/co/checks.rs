@@ -6,8 +6,9 @@ use gekko_fp as fp;
 
 use super::super::super::code::{self, Val};
 use super::super::super::state::Running;
+use super::super::registry;
 use super::ids::ms;
-use super::kind_callbacks as kinds;
+use super::kind_callbacks::KindCallbacks;
 use super::{PAD_A, PAD_B, PAD_DPAD_UP, PAD_L_R, PAD_LR};
 use crate::fpu::{mem, reg};
 use crate::game::gr::GrKind;
@@ -44,9 +45,10 @@ impl Running<'_> {
         code::call(self, addr, &[Val::GObj(Some(gobj))]);
     }
 
-    /// The entry a per-character table gives the fighter's kind, 0 for none.
-    fn kind_entry(&self, gobj: GObjId, table: &[u32; 33]) -> u32 {
-        table[self.game.fighter(gobj).kind as usize]
+    /// The entry of the fighter's kind's callbacks (its registry entry's) that `entry` picks, 0
+    /// for none.
+    fn kind_entry(&self, gobj: GObjId, entry: fn(&KindCallbacks) -> u32) -> u32 {
+        entry(registry::character(self.game.fighter(gobj).kind).callbacks)
     }
 
     /// Faces the way the stick points, `ftCommon_UpdateFacing`.
@@ -86,7 +88,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_SpecialS_CheckInput")]
     #[doc(alias = "doEnter@800965DC")]
     pub fn special_s_check(&mut self, gobj: GObjId) -> bool {
-        let entry = self.kind_entry(gobj, &kinds::SPECIAL_S);
+        let entry = self.kind_entry(gobj, |c| c.special_s);
         if entry == 0 || self.game.fighter(gobj).x688 != 0 {
             return false;
         }
@@ -122,11 +124,11 @@ impl Running<'_> {
         }
         let (x, y) = (reg(fp.input.lstick[0].x), reg(fp.input.lstick[0].y));
         let entry = if y >= up {
-            self.kind_entry(gobj, &kinds::SPECIAL_AIR_HI)
+            self.kind_entry(gobj, |c| c.special_air_hi)
         } else if y <= fp::fneg(up) {
-            self.kind_entry(gobj, &kinds::SPECIAL_AIR_LW)
+            self.kind_entry(gobj, |c| c.special_air_lw)
         } else if abs(x) >= side {
-            let entry = self.kind_entry(gobj, &kinds::SPECIAL_AIR_S);
+            let entry = self.kind_entry(gobj, |c| c.special_air_s);
             if entry == 0 {
                 return false;
             }
@@ -135,7 +137,7 @@ impl Running<'_> {
             }
             entry
         } else {
-            let entry = self.kind_entry(gobj, &kinds::SPECIAL_AIR_N);
+            let entry = self.kind_entry(gobj, |c| c.special_air_n);
             if entry == 0 {
                 return false;
             }
@@ -159,7 +161,12 @@ impl Running<'_> {
     /// The character's special from a table, when its input came this frame (its counter at
     /// 0): neutral (`ftCo_800D6824`, `x689`), down (`ftCo_800D68C0`, `x687`), up
     /// (`ftCo_Attack100_CheckInput`, `x686`).
-    fn special_check(&mut self, gobj: GObjId, table: &[u32; 33], counter: u8) -> bool {
+    fn special_check(
+        &mut self,
+        gobj: GObjId,
+        table: fn(&KindCallbacks) -> u32,
+        counter: u8,
+    ) -> bool {
         let entry = self.kind_entry(gobj, table);
         if entry == 0 || counter != 0 {
             return false;
@@ -172,21 +179,21 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800D6824")]
     pub fn special_n_check(&mut self, gobj: GObjId) -> bool {
         let c = self.game.fighter(gobj).x689;
-        self.special_check(gobj, &kinds::SPECIAL_N, c)
+        self.special_check(gobj, |c| c.special_n, c)
     }
 
     /// `ftCo_800D68C0`: a down special.
     #[doc(alias = "ftCo_800D68C0")]
     pub fn special_lw_check(&mut self, gobj: GObjId) -> bool {
         let c = self.game.fighter(gobj).x687;
-        self.special_check(gobj, &kinds::SPECIAL_LW, c)
+        self.special_check(gobj, |c| c.special_lw, c)
     }
 
     /// `ftCo_Attack100_CheckInput`: an up special.
     #[doc(alias = "ftCo_Attack100_CheckInput")]
     pub fn special_hi_check(&mut self, gobj: GObjId) -> bool {
         let c = self.game.fighter(gobj).x686;
-        self.special_check(gobj, &kinds::SPECIAL_HI, c)
+        self.special_check(gobj, |c| c.special_hi, c)
     }
 
     /// Whether the held item can be thrown with A now, `ftCo_80094E54`: A pressed with a

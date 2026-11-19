@@ -486,8 +486,8 @@ pub(crate) mod tests {
         let ledger = by_addr();
         let names = ledger_names();
         let evt = evt_unks();
-        for r in crate::game::roster::CHARACTERS {
-            let n = CHARACTERS.iter().filter(|c| c.kind == r.kind).count();
+        for r in crate::game::roster::characters() {
+            let n = CHARACTERS.iter().filter(|c| c.kind == r.vs_kind()).count();
             assert_eq!(n, 1, "{} has {n} entries in the fighter audit", r.name);
         }
         for c in CHARACTERS {

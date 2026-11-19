@@ -8,16 +8,16 @@ use crate::hsd::gobj::GObjId;
 
 /// `ftFox_DatAttrs` and `MarsAttributes`: how many bytes of a character's attributes its
 /// callbacks copy.
-const FOX_ATTRS_SIZE: usize = 0xD4;
-const MARS_ATTRS_SIZE: usize = 0x98;
+pub(crate) const FOX_ATTRS_SIZE: usize = 0xD4;
+pub(crate) const MARS_ATTRS_SIZE: usize = 0x98;
 /// `ftSeakAttributes`.
-const SEAK_ATTRS_SIZE: usize = 0x74;
+pub(crate) const SEAK_ATTRS_SIZE: usize = 0x74;
 
 /// `ftCaptain_DatAttrs`.
-const CAPTAIN_ATTRS_SIZE: usize = 0x8C;
+pub(crate) const CAPTAIN_ATTRS_SIZE: usize = 0x8C;
 
 /// `ftZelda_DatAttrs`.
-const ZELDA_ATTRS_SIZE: usize = 0xA8;
+pub(crate) const ZELDA_ATTRS_SIZE: usize = 0xA8;
 
 /// Zelda's items: `It_Kind_Zelda_DinFire` and `_DinFire_Explode`.
 const ZELDA_ITEMS: [i32; 2] = [108, 109];

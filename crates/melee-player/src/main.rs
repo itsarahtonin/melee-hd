@@ -380,7 +380,7 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                 let name = value()?;
                 let c = roster::character(&name)
                     .ok_or(format!("unknown character {name}"))?
-                    .kind;
+                    .vs_kind();
                 chosen = true;
                 if a.players.len() <= port {
                     a.players.resize(port + 1, (0xFF, 0));
