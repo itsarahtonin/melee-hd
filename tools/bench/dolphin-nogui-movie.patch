@@ -1,0 +1,33 @@
+dolphin-emu-nogui (Dolphin 2609-31, a475aba7) parses -m/--movie but never plays the movie: only
+the Qt front end calls Movie::PlayInput. This starts the movie before boot as the Qt front end's
+MainWindow does (DolphinQt/MainWindow.cpp), so melee-bench's harness can drive the nogui build on
+Linux. The emulation itself is untouched. Apply in Dolphin's checkout with `git apply`.
+
+--- a/Source/Core/DolphinNoGUI/MainNoGUI.cpp
++++ b/Source/Core/DolphinNoGUI/MainNoGUI.cpp
+@@ -21,6 +21,7 @@
+ #include "Core/Core.h"
+ #include "Core/DolphinAnalytics.h"
+ #include "Core/Host.h"
++#include "Core/Movie.h"
+ #include "Core/System.h"
+
+ #include "UICommon/CommandLineParse.h"
+@@ -272,6 +273,17 @@
+   UICommon::Init();
+   UICommon::InitControllers(wsi);
+
++  if (boot && options.is_set("movie"))
++  {
++    std::optional<std::string> savestate_path;
++    if (Core::System::GetInstance().GetMovie().PlayInput(
++            static_cast<const char*>(options.get("movie")), &savestate_path))
++    {
++      boot->boot_session_data.SetSavestateData(std::move(savestate_path),
++                                               DeleteSavestateAfterBoot::No);
++    }
++  }
++
+   Common::ScopeGuard ui_common_guard([] {
+     UICommon::ShutdownControllers();
+     UICommon::Shutdown();
