@@ -78,6 +78,7 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::kirby::special_koopa::KIRBY as KP_KIRBY;
+use melee_sim::game::ft::kirby::special_link::KIRBY as LK_KIRBY;
 use melee_sim::game::ft::kirby::special_mewtwo::KIRBY as MT_KIRBY;
 use melee_sim::game::ft::kirby::special_ness::KIRBY as NS_KIRBY;
 use melee_sim::game::ft::kirby::special_peach::KIRBY as PE_KIRBY;
@@ -530,10 +531,10 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftKb_SpecialNKp_800FA878" => {
             return Ret::Int(g.kp_flame_max_size(Some(gobj), &KP_KIRBY) as u32);
         }
-        "ftKb_SpecialNLk800FB394" => return Ret::Int(g.kb_lk_bow_index(gobj) as u32),
-        "ftKb_SpecialNLk800FB470" => return b(g.kb_lk_bow_released(gobj)),
-        "ftKb_SpecialNLk800FB500" => return b(g.kb_lk_nock(gobj)),
-        "ftKb_SpecialNLk800FB5F4" => return b(g.kb_lk_bow_out(gobj)),
+        "ftKb_SpecialNLk800FB394" => return Ret::Int(g.link_bow_index(gobj, &LK_KIRBY) as u32),
+        "ftKb_SpecialNLk800FB470" => return b(g.link_bow_released(gobj, &LK_KIRBY)),
+        "ftKb_SpecialNLk800FB500" => return b(g.link_nock(gobj, &LK_KIRBY)),
+        "ftKb_SpecialNLk800FB5F4" => return b(g.link_bow_out(gobj, &LK_KIRBY)),
         "ftKb_SpecialNIc_80108CE8" => g.kb_ic_forget(gobj, gobj_reg(maps, call, 4, &name)),
         "ftKb_SpecialNMt_80106F9C" => return b(g.mt_n_ball_lost(Some(gobj), &MT_KIRBY)),
         "ftKb_SpecialNMt_80106FEC" => return b(g.mt_n_ball_put_away(Some(gobj), &MT_KIRBY)),

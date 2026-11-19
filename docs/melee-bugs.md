@@ -358,6 +358,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none on gameplay.
 - **Source:** `crates/melee-sim/src/game/ft/purin/special_n.rs:1332`.
 
+### Kirby: Link's and Young Link's copies draw the bow from a table of zeros
+
+- **Where:** `ftKb_LkSpecialNStart_Anim`, `ftKb_LkSpecialNLoop_Anim` and their aerial ones (the draw's frame), reading `ftKb_Init_803B7548`; `crates/melee-sim/src/game/ft/link/special_n.rs` (`link_draw`, under Kirby's `KIRBY`'s `draw_from_zeros`).
+- **Defect:** Link's own draw takes the bow's angle and the string's place from his thumbs and his root joint each frame. Kirby's copy takes its three points from a static table whose entries are all zeros, where his bones' positions belong.
+- **Effect:** while Kirby draws the bow, the bow's angle (`mv` x8) is `atan2(0, 0)`, the string's place (`mv` xC, x10) is zero, and the nocked arrow's position is set to the stage's origin every frame of the draw (the arrow is attached to his bone, which places it again when it's drawn). The loosed arrow is aimed from his bones, so its flight is unaffected.
+- **melee-hd:** modeled.
+- **Fix:** take the points from his bones 39 and 44 and his root, as Link's does from his.
+- **Fix impact:** changes the drawn bow's angle and the nocked arrow's position in Kirby's Link and Young Link copies.
+- **Source:** `crates/melee-sim/src/game/ft/link/special_n.rs:294`.
+
 ### Kirby: Samus's copy destroys his effects whether or not the charge's are out
 
 - **Where:** `ftKb_SpecialNSs_800FCD04`, `ftKb_SpecialNSs_800FCD60` and the copy's other ends of the charge (Kirby's inline of `ftSamus_destroyAllEF`), `crates/melee-sim/src/game/ft/samus/special_n.rs` (`samus_charge_effects_off`, under Kirby's `KIRBY`'s `effects_off_always`).

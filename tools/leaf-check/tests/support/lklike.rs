@@ -25,6 +25,7 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
+use melee_sim::game::ft::link::special_n::LINK;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
 use melee_sim::game::it::kinds::{
@@ -388,12 +389,12 @@ fn run_link(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftLk_SpecialS_Enter" => g.link_special_s_enter(gobj, false),
         "ftLk_SpecialAirS_Enter" => g.link_special_s_enter(gobj, true),
         "ftLk_SpecialS2_Enter" => g.link_special_s2_enter(gobj),
-        "ftLk_SpecialN_GetIndex" => return Ret::Int(g.link_bow_index(gobj) as u32),
-        "ftLk_SpecialN_UnsetArrow" => g.link_unset_arrow(gobj),
-        "ftLk_SpecialN_UnsetFv14" => g.link_unset_bow(gobj),
-        "ftLk_SpecialN_IsActiveAnd2071b6" => return b(g.link_bow_released(gobj)),
-        "ftLk_SpecialN_ProcessFv10" => g.link_process_arrow(gobj),
-        "ftLk_SpecialN_ProcessFv14" => g.link_process_bow(gobj),
+        "ftLk_SpecialN_GetIndex" => return Ret::Int(g.link_bow_index(gobj, &LINK) as u32),
+        "ftLk_SpecialN_UnsetArrow" => g.link_unset_arrow(gobj, &LINK),
+        "ftLk_SpecialN_UnsetFv14" => g.link_unset_bow(gobj, &LINK),
+        "ftLk_SpecialN_IsActiveAnd2071b6" => return b(g.link_bow_released(gobj, &LINK)),
+        "ftLk_SpecialN_ProcessFv10" => g.link_process_arrow(gobj, &LINK),
+        "ftLk_SpecialN_ProcessFv14" => g.link_process_bow(gobj, &LINK),
         "ftLk_SpecialN_Enter" => g.link_special_n_enter(gobj, false),
         "ftLk_SpecialAirN_Enter" => g.link_special_n_enter(gobj, true),
         "it_8029FDBC" => {

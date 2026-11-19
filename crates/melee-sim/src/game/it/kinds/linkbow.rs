@@ -7,6 +7,8 @@
 use super::super::item::{animate, change, change_state, destroy, pick_up, seek_anim, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1};
 use crate::fpu::mem;
+use crate::game::ft::kirby::special_link::KIRBY as LK_KIRBY;
+use crate::game::ft::link::special_n::LINK;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{SpawnItem, itLinkBow_ItemVars};
 use crate::hsd::gobj::GObjId;
@@ -108,9 +110,9 @@ pub fn spawn(
 fn destroyed(r: &mut Running, gobj: GObjId) {
     if let Some(o) = item(r.game, gobj).owner {
         if is_kirbys(r, gobj) {
-            r.kb_lk_unset_bow(o);
+            r.link_unset_bow(o, &LK_KIRBY);
         } else {
-            r.link_unset_bow(o);
+            r.link_unset_bow(o, &LINK);
         }
     }
 }
@@ -137,9 +139,9 @@ fn owner_index(r: &mut Running, gobj: GObjId) -> Option<i32> {
         return None;
     }
     Some(if is_kirbys(r, gobj) {
-        r.kb_lk_bow_index(owner)
+        r.link_bow_index(owner, &LK_KIRBY)
     } else {
-        r.link_bow_index(owner)
+        r.link_bow_index(owner, &LINK)
     })
 }
 
@@ -204,9 +206,9 @@ fn anim(r: &mut Running, gobj: GObjId) -> bool {
         return true;
     }
     if is_kirbys(r, gobj) {
-        r.kb_lk_bow_released(owner)
+        r.link_bow_released(owner, &LK_KIRBY)
     } else {
-        r.link_bow_released(owner)
+        r.link_bow_released(owner, &LINK)
     }
 }
 
