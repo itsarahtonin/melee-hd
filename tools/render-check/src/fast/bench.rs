@@ -60,6 +60,10 @@ pub fn measure(
         let start = Instant::now();
         r.wait_idle();
         let gpu = start.elapsed();
+        // The warm-up ends with every specialized shader it asked for made.
+        if t.n + 1 == from {
+            r.warm();
+        }
         if t.n >= from {
             out.push(Times {
                 build: s.build,
@@ -108,6 +112,7 @@ pub fn cli(args: &[String]) -> ExitCode {
     let mut exact = match which {
         Which::Exact => Exact::new(r, threaded),
         Which::F2 => Exact::f2(r, threaded),
+        Which::F3 => Exact::f3(r, threaded),
         Which::Fast => Exact::fast(r, threaded),
     };
     let times = measure(disc, replay, from, to, &mut exact);
@@ -151,6 +156,12 @@ pub fn cli(args: &[String]) -> ExitCode {
     line("frame", total);
     let fps = if total.0 > 0.0 { 1000.0 / total.0 } else { 0.0 };
     println!("frames/s: {fps:.1}");
+    let name = exact.name();
+    let tev = exact.into_renderer().specialized_stats();
+    println!(
+        "{name}, the measured frames' draw calls: {} with their specialized shaders, {} with the uber shader while theirs was made",
+        tev.specialized_calls, tev.uber_calls
+    );
     println!(
         "| {name_of} | {scale}x | {fps:.0} | {:.2} ({:.2}) | {:.2} | {:.2} | {:.2} |",
         cpu.0, cpu.2, build.0, submit.0, gpu.0

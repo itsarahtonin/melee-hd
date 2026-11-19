@@ -71,6 +71,8 @@ enum Packet {
     /// The copy formats also handed back to the host from now on
     /// (`Renderer::copies_to_memory`).
     CopiesToMemory(Vec<u32>),
+    /// The end of a warm-up (`Renderer::finish_specialized`), signalled when done.
+    FinishSpecialized(mpsc::Sender<()>),
 }
 
 /// A batch of packets, its draws' vertices and the state's changes, which every thread reads.
@@ -494,6 +496,15 @@ impl Sink for Threaded {
 }
 
 impl Threaded {
+    /// Waits for the render thread to draw what was sent and for every specialized pipeline
+    /// asked for to be made (`Renderer::finish_specialized`): the end of a warm-up.
+    pub fn finish_specialized(&mut self) {
+        let (tx, rx) = mpsc::channel();
+        self.batch.packets.push(Packet::FinishSpecialized(tx));
+        self.send();
+        let _ = rx.recv();
+    }
+
     /// Whether meshes are drawn with their vertices transformed on the GPU.
     pub fn gpu_transforms(&self) -> bool {
         self.gpu_transforms
@@ -732,7 +743,7 @@ fn run(
                 Packet::Memory(at, bytes, hash) => {
                     let key = (*at, bytes.len() as u32);
                     memory.0.insert(key, bytes.clone());
-                    renderer.held_hashes.insert(key, *hash);
+                    renderer.hold(key, *hash);
                 }
                 Packet::Array(..) => {}
                 Packet::Draw {
@@ -770,6 +781,10 @@ fn run(
                     renderer.clear_efb(&state);
                 }
                 Packet::CopiesToMemory(formats) => renderer.copies_to_memory.clone_from(formats),
+                Packet::FinishSpecialized(done) => {
+                    renderer.finish_specialized();
+                    let _ = done.send(());
+                }
                 Packet::Copy(value) => {
                     renderer.copy(&state, *value, &memory);
                     if bits(*value, 14, 1) != 0 {

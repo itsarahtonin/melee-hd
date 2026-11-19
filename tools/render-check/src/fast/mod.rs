@@ -63,6 +63,9 @@ pub trait FrameRenderer {
     /// Sees the reference's geometry of the frame it draws next: a stand-in with a change made
     /// on purpose picks its target there.
     fn aim(&mut self, _reference: &Geometry, _draws: &[DisplayDraw]) {}
+
+    /// Ends a warm-up: waits until every specialized pipeline asked for is made.
+    fn warm(&mut self) {}
 }
 
 /// Which GPU adapter to draw with.
@@ -275,6 +278,9 @@ pub enum Which {
     Exact,
     /// F2: the mesh cache, its vertices transformed on the CPU.
     F2,
+    /// F3: F2's meshes transformed on the GPU, each draw's state built from the registers.
+    F3,
+    /// The fast renderer as far as it goes: F4, F3 with materials as records.
     Fast,
 }
 
@@ -283,8 +289,9 @@ impl Which {
         match s {
             "exact" => Which::Exact,
             "f2" => Which::F2,
-            "fast" => Which::Fast,
-            _ => panic!("--renderer {s}: exact, f2 or fast"),
+            "f3" => Which::F3,
+            "fast" | "f4" => Which::Fast,
+            _ => panic!("--renderer {s}: exact, f2, f3 or fast (f4)"),
         }
     }
 }
@@ -330,17 +337,22 @@ pub fn cli(args: &[String]) -> ExitCode {
     let mut right = Mutated::new(renderer(&device, &queue, view), Mutation::Spread(true));
     let mut left = Mutated::new(renderer(&device, &queue, view), Mutation::Spread(false));
     let mut test: Box<dyn FrameRenderer> = match which {
-        Which::Fast | Which::F2 => {
+        Which::Fast | Which::F3 | Which::F2 => {
             assert_eq!(
                 mutation,
                 Mutation::None,
                 "--mutate changes the exact renderer"
             );
-            let r = renderer(&device, &queue, view);
-            Box::new(if which == Which::Fast {
-                Exact::fast(r, threaded)
-            } else {
-                Exact::f2(r, threaded)
+            let mut r = renderer(&device, &queue, view);
+            Box::new(match which {
+                // F4 draws as it does after its warm-up: every draw with its specialized
+                // shader, made as the draw first needs it.
+                Which::Fast => {
+                    r.set_tev_mode(melee_gpu::TevMode::Sync);
+                    Exact::fast(r, threaded)
+                }
+                Which::F3 => Exact::f3(r, threaded),
+                _ => Exact::f2(r, threaded),
             })
         }
         Which::Exact => Box::new(Mutated::new(renderer(&device, &queue, view), mutation)),

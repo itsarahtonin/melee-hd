@@ -527,6 +527,21 @@ impl Specializer {
         }
     }
 
+    /// Waits for every pipeline asked for to be made, then counts the draw calls afresh: the
+    /// end of a warm-up, after which no draw waits for its specialized shader unless its
+    /// configuration is new.
+    pub(crate) fn finish(&mut self) {
+        while self.pipelines.values().any(Option::is_none) {
+            let Some(w) = &self.workers else { break };
+            match w.made.recv() {
+                Ok(m) => self.note(m),
+                Err(_) => break,
+            }
+        }
+        self.stats.specialized_calls = 0;
+        self.stats.uber_calls = 0;
+    }
+
     /// The pipeline for a draw's specialized shader, once made.
     pub(crate) fn pipeline(&self, key: PipelineKey, id: u32) -> Option<&wgpu::RenderPipeline> {
         if id == UBER {
