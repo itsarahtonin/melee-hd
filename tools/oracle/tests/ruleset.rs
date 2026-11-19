@@ -705,3 +705,42 @@ fn past_the_handback_the_statics_compare() {
         assert!(out.contains(d), "{d}: {out}");
     }
 }
+
+/// Every live match takes the console's counters no scene resets before its scene's entry
+/// (`live::Counters`, `vs_match::Settings::counters`), as Slippi Dolphin's live play carries them
+/// on where its playback starts them fresh (docs/slippi-bugs.md, "Playback starts the counters
+/// no scene resets fresh"). Left as playback's boot starts them (`--mutate fresh-counters`),
+/// `matches-a`' second live match parts from the console's run in its first tick, 3604: the
+/// collision update counter and the copies the fighters' collisions keep of it, the joints' stamp,
+/// and the particles' family ids and display frames.
+#[test]
+fn a_later_live_match_takes_the_consoles_counters() {
+    let trace = ssbm_rs_local("traces/m6s-stall/matches-a.trc");
+    let rec = ssbm_rs_local("lockstep/m6s-match/matches-a.inputs");
+    if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
+        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = oracle(&[
+        "session",
+        &trace,
+        &rec,
+        "--all",
+        "--heap",
+        "--after-handback",
+        "--mutate",
+        "fresh-counters",
+    ]);
+    assert!(
+        out.contains("3605 ticks compared; tick 3604 differs in 7 places"),
+        "{out}"
+    );
+    for d in [
+        "mpColl_804D64AC: update counter",
+        "Ground_804D6954: stamp",
+        "fighter.coll_data.x38",
+        "particles: display sorting",
+    ] {
+        assert!(out.contains(d), "{d}: {out}");
+    }
+}

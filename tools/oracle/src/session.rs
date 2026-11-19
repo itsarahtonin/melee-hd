@@ -413,6 +413,9 @@ enum Mutation {
     /// the menus' session keeps its own from before the match, which the comparison past the
     /// handback (`--after-handback`) must find.
     NoHandbackStatics,
+    /// A live match's counters left as playback's boot starts them (`live::Counters`), where it
+    /// takes the console's: its comparison with the console's run must find them.
+    FreshCounters,
 }
 
 /// What the boot's ported part left, against memory at trace tick 0: words only the boot
@@ -819,6 +822,7 @@ pub fn session(args: &[&str]) -> ExitCode {
                     Some("c-stick-1p") => Mutation::CStick1P,
                     Some("no-dynamics-fix") => Mutation::NoDynamicsFix,
                     Some("no-handback-statics") => Mutation::NoHandbackStatics,
+                    Some("fresh-counters") => Mutation::FreshCounters,
                     Some(m) if m.starts_with("render-target=") => Mutation::RenderFill(
                         u8::from_str_radix(&m[14..], 16)
                             .expect("--mutate render-target=XX, in hex"),
@@ -827,7 +831,7 @@ pub fn session(args: &[&str]) -> ExitCode {
                         Mutation::Read(m[5..].parse().expect("--mutate read=N"))
                     }
                     _ => panic!(
-                        "--mutate scene-ticks|seed|power-on|no-image|render-target=XX|read=N|c-stick-1p|no-dynamics-fix|no-handback-statics"
+                        "--mutate scene-ticks|seed|power-on|no-image|render-target=XX|read=N|c-stick-1p|no-dynamics-fix|no-handback-statics|fresh-counters"
                     ),
                 })
             }
@@ -1262,6 +1266,9 @@ impl Run<'_> {
         );
         melee_sim::game::oracle_hooks::set_handback_statics_off(
             self.mutation == Some(Mutation::NoHandbackStatics),
+        );
+        melee_sim::game::oracle_hooks::set_fresh_counters(
+            self.mutation == Some(Mutation::FreshCounters),
         );
         // Power-on leaves the image at tick 0, the first step's.
         let mut held = self.from.is_none();
@@ -1941,8 +1948,9 @@ const PAST_SIS: &str =
 const PAST_PLAYBACK_HEAP: &str = "in a later live match, an item's flag bits no item code sets, clears or reads (`xDD1`'s low six), which the console's block keeps from an earlier match's item and playback's fresh heap holds as zero";
 /// In a live match: a human's Zelda held A, Sheik in the game start (`record::live_start`).
 const PAST_PLAYBACK_START: &str = "in a live match, the VS controller's character and mark of a human's Zelda held A, which the console's entry makes Sheik (`fn_8016D8AC`: Zelda, marked `0x08`) and the game start, as Slippi's recording codes write it, holds as Sheik; the menus' session takes the console's back (`live::ConsoleAt`)";
-/// In a live match past the first handback: what playback's boot starts afresh.
-const PAST_PLAYBACK_COUNTERS: &str = "in a later live match, the counters and caches a match carries on from the ones before it, which Slippi's playback starts from its boot (the collision update counter and the copies objects keep, the joints' stamp, the particles' family ids and display frame, the fighters' animation buffers' last files), as the live match does";
+/// In a live match past the first handback: the fighters' animation buffers' pool, which
+/// playback's heap starts fresh.
+const PAST_PLAYBACK_CACHES: &str = "in a later live match, the fighters' animation buffers' sizes and last files (`fighter_x59C_alloc_data`'s pool, which a session carries from scene to scene), which the console's keeps from the matches before and playback's boot starts empty: where an animation loads, an address nothing in a match plays from";
 
 /// What a difference past a live match's handback is, if [`After::Compare`] names it (`live`:
 /// in a later live match, where [`LIVE_NAMED`] has named what the first's comparison names).
@@ -1994,25 +2002,11 @@ fn past_named(d: &str, live: bool) -> Option<&'static str> {
         return Some(PAST_PLAYBACK_START);
     }
     if live
-        && (starts(&[
-            "Ground_804D6954: stamp: ",
-            "mpColl_804D64AC: update counter: ",
-            "particles: ",
-            "generator ",
-            "link ",
-            "app-SRT ",
-            "ft: anim file ",
-            "geometry joint ",
-        ]) || [
-            ".coll_data.x38: ",
-            "_itemColl.x38: ",
-            " fighter.x5A4: ",
-            " fighter.x5A8: ",
-        ]
-        .iter()
-        .any(|p| d.contains(p)))
+        && (d.starts_with("ft: anim file ")
+            || d.contains(" fighter.x5A4: ")
+            || d.contains(" fighter.x5A8: "))
     {
-        return Some(PAST_PLAYBACK_COUNTERS);
+        return Some(PAST_PLAYBACK_CACHES);
     }
     None
 }
