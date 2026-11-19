@@ -14,6 +14,7 @@
 
 pub mod attack_dash;
 pub mod copy;
+pub use copy::KindFrom;
 pub mod hat;
 pub mod init;
 pub mod special_captain;
@@ -634,35 +635,16 @@ pub(crate) mod attr {
     /// Bowser's copy: his full fuel and flame.
     pub const KP_MAX_FUEL: usize = 0x124;
     pub const KP_FLAME_SCALE: usize = 0x12C;
-    /// Samus's copy: the shot's full charge (`specialn_ss_charge_time`).
+    /// Samus's copy: the shot's full charge (`specialn_ss_charge_time`), the first of her
+    /// attributes' layout from `ftSamusAttributes` x18 on.
     pub const SS_CHARGE_TIME: usize = 0x168;
-    /// The aerial shot's recoil per level, the frames per level, and the helpless fall's
-    /// landing lag after the aerial shot (none if 0).
-    pub const SS_RECOIL: usize = 0x16C;
-    pub const SS_FRAMES_PER_LEVEL: usize = 0x170;
-    pub const SS_FREEFALL: usize = 0x174;
-    /// Pikachu's and Pichu's copies: the jolt's offsets on the ground and in the air, the
-    /// aerial throw's landing lag (none if 0), and the jolt's item kind.
-    pub const PK_OFFSET_X: usize = 0x1C0;
-    pub const PK_OFFSET_Y: usize = 0x1C4;
-    pub const PK_AIR_OFFSET_X: usize = 0x1C8;
-    pub const PK_AIR_OFFSET_Y: usize = 0x1CC;
-    pub const PK_AIR_LANDING_LAG: usize = 0x1D0;
-    pub const PK_ITKIND: usize = 0x1D4;
-    pub const PC_OFFSET_X: usize = 0x1DC;
-    pub const PC_OFFSET_Y: usize = 0x1E0;
-    pub const PC_AIR_OFFSET_X: usize = 0x1E4;
-    pub const PC_AIR_OFFSET_Y: usize = 0x1E8;
-    pub const PC_AIR_LANDING_LAG: usize = 0x1EC;
-    pub const PC_ITKIND: usize = 0x1F0;
-    /// Captain Falcon's and Ganondorf's copies: the stick's range below which the aerial
-    /// punch doesn't angle and its top, the angle at the top, the lunge's speed and its
-    /// slowing.
-    pub const CA_X_RANGE: usize = 0x1F8;
-    pub const CA_Y_RANGE: usize = 0x1FC;
-    pub const CA_ANGLE_DIFF: usize = 0x200;
-    pub const CA_MOMENTUM: usize = 0x204;
-    pub const CA_MOMENTUM_MUL: usize = 0x208;
+    /// Pikachu's and Pichu's copies: where each one's attributes start (`specialn_pk_*`,
+    /// `specialn_pc_*`), laid out as `ftPikachuAttributes`' Thunder Jolt.
+    pub const PK_JOLT: usize = 0x1C0;
+    pub const PC_JOLT: usize = 0x1DC;
+    /// Captain Falcon's and Ganondorf's copies: where their attributes start
+    /// (`specialn_ca_*`), laid out as `ftCaptainAttributes`' punch.
+    pub const CA_PUNCH: usize = 0x1F8;
     /// Donkey Kong's copy: the swings to a full punch.
     pub const DK_SWINGS_TO_FULL: usize = 0x190;
     /// Fox's and Falco's copies: the shot's angle and speed, the aerial end's landing lag (none

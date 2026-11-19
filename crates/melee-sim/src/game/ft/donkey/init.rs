@@ -111,7 +111,7 @@ impl Running<'_> {
     /// the effects gone.
     #[doc(alias = "ftDk_Init_8010D774")]
     pub fn dk_on_damage(&mut self, gobj: GObjId) {
-        self.dk_special_n_destroy_effects_plus(gobj);
+        self.dk_special_n_destroy_effects_plus(gobj, &super::special_n::DONKEY);
         self.dk_special_hi_destroy_effects(gobj);
     }
 

@@ -85,7 +85,7 @@ impl Running<'_> {
     /// gone, the Screw Attack's effects, and the grapple beam put away (`ftCo_800D9C98`).
     #[doc(alias = "ftSs_Init_80128428")]
     pub fn samus_damage_cleanup(&mut self, gobj: GObjId) {
-        self.samus_drop_charge(gobj);
+        self.samus_drop_charge(gobj, &super::special_n::SAMUS);
         self.samus_screw_effects_off(gobj);
         self.samus_grapple_put_away(gobj);
     }

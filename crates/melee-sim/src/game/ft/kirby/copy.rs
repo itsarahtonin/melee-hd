@@ -16,7 +16,24 @@ use crate::vec::Vec3;
 /// `HitElement_Cape`.
 const ELEMENT_CAPE: u32 = 10;
 
+/// Where a neutral special shared with Kirby's copy of it finds the kind it runs as: the
+/// fighter's own (Mario's or Dr. Mario's in Mario's code), or the kind Kirby copied (`u`
+/// `HAT_KIND`), which his copies read where the original reads the fighter's.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum KindFrom {
+    Fighter,
+    Copy,
+}
+
 impl Running<'_> {
+    /// The kind a shared special runs as ([`KindFrom`]).
+    pub(crate) fn special_kind(&self, gobj: GObjId, from: KindFrom) -> i32 {
+        let fp = self.game.fighter(gobj);
+        match from {
+            KindFrom::Fighter => fp.kind,
+            KindFrom::Copy => fp.u_i32(u::HAT_KIND),
+        }
+    }
     /// Whether his copy's hat takes his jumps' other states (Captain Falcon's, Sheik's, the
     /// Ice Climbers' and Samus's), `ftKb_SpecialN_800F1CD8` (`fn_800F1CA0`).
     #[doc(alias = "ftKb_SpecialN_800F1CD8")]
@@ -189,13 +206,13 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F19AC")]
     pub fn kb_copy_cleanup(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
-            13 => self.kb_ss_drop_charge(gobj),
+            13 => self.samus_drop_charge(gobj, &super::special_samus::KIRBY),
             1 | 22 => self.kb_fx_remove_blaster(gobj),
             8 => self.kb_ns_let_go(gobj),
             9 => self.kb_pe_cleanup(gobj),
             7 => self.kb_sk_drop(gobj),
             24 => self.kb_gw_cleanup(gobj),
-            3 => self.kb_dk_cleanup(gobj),
+            3 => self.dk_special_n_destroy_effects_plus(gobj, &super::special_donkey::KIRBY),
             6 | 20 => self.kb_lk_cleanup(gobj),
             14 => self.kb_ys_cleanup(gobj),
             10 => self.kb_ic_remove_ice(gobj),
@@ -208,13 +225,13 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F1A8C")]
     pub fn kb_copy_hit_cleanup(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
-            13 => self.kb_ss_drop_charge(gobj),
+            13 => self.samus_drop_charge(gobj, &super::special_samus::KIRBY),
             1 | 22 => self.kb_fx_remove_blaster(gobj),
             8 => self.kb_ns_let_go(gobj),
             9 => self.kb_pe_cleanup(gobj),
             7 => self.kb_sk_drop(gobj),
             24 => self.kb_gw_cleanup(gobj),
-            3 => self.kb_dk_cleanup(gobj),
+            3 => self.dk_special_n_destroy_effects_plus(gobj, &super::special_donkey::KIRBY),
             6 | 20 => self.kb_lk_cleanup(gobj),
             14 => self.kb_ys_cleanup(gobj),
             10 => self.kb_ic_remove_ice(gobj),

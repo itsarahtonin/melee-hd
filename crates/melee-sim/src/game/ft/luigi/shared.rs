@@ -23,8 +23,10 @@ impl Running<'_> {
     #[doc(alias = "ftLg_SpecialAirLw_IASA")]
     pub fn lg_nothing(&mut self, _gobj: GObjId) {}
 
-    /// Ground friction (`ft_80084F3C`), which the aerial misfire runs too.
+    /// Ground friction (`ft_80084F3C`), which the aerial misfire runs too, as does Kirby's copy
+    /// of the Fireball.
     #[doc(alias = "ftLg_SpecialN_Phys")]
+    #[doc(alias = "ftKb_LgSpecialN_Phys")]
     #[doc(alias = "ftLg_SpecialSHold_Phys")]
     #[doc(alias = "ftLg_SpecialS_Phys")]
     #[doc(alias = "ftLg_SpecialSMisfire_Phys")]
@@ -40,8 +42,10 @@ impl Running<'_> {
         self.air_physics_no_drift(gobj);
     }
 
-    /// `ftLg_SpecialAirN_Phys`: air physics (`ft_80084DB0`).
+    /// `ftLg_SpecialAirN_Phys` (Kirby's `ftKb_LgSpecialAirN_Phys`): air physics
+    /// (`ft_80084DB0`).
     #[doc(alias = "ftLg_SpecialAirN_Phys")]
+    #[doc(alias = "ftKb_LgSpecialAirN_Phys")]
     pub fn lg_special_air_n_phys(&mut self, gobj: GObjId) {
         self.air_physics(gobj);
     }
