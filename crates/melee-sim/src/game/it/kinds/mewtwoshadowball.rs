@@ -13,6 +13,8 @@ use super::super::item::{article, change, change_state, pick_up, play_sfx, play_
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
+use crate::game::ft::kirby;
+use crate::game::ft::mewtwo::special_n::{self, ShadowBall};
 use crate::game::handles::CodeRef;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
@@ -454,6 +456,16 @@ pub fn fire(r: &mut Running, gobj: GObjId, pos: Vec3, angle: f32, charge: f32, m
     jobj::set_scale(&mut r.game.objs.jobjs, child, Vec3::new(1.0, 1.0, 1.0));
 }
 
+/// Whose Shadow Ball a ball of `kind` is: Mewtwo's or Kirby's copy's (the original's queries
+/// of its maker are picked by the ball's kind).
+fn maker_ball(kind: i32) -> Option<&'static ShadowBall> {
+    match kind {
+        KIND => Some(&special_n::MEWTWO),
+        KIRBY_SHADOWBALL => Some(&kirby::special_mewtwo::KIRBY),
+        _ => None,
+    }
+}
+
 /// The ball's end, `it_2725_Logic101_Destroyed`: its effects gone; unfired, its maker lets
 /// it go (`ftMt_SpecialN_SetNULL`) if he still owns it; then no owner.
 #[doc(alias = "it_2725_Logic101_Destroyed")]
@@ -465,12 +477,9 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     if v.x14.get() == 0 {
         if let Some(maker) = v.x2C.get()
             && owner == Some(maker)
+            && let Some(b) = maker_ball(kind)
         {
-            match kind {
-                KIND => r.mt_n_ball_released(maker),
-                KIRBY_SHADOWBALL => r.kb_mt_ball_released(maker),
-                _ => {}
-            }
+            r.mt_n_ball_released(maker, b);
         }
         item_mut(r.game, gobj)
             .xDD4_itemVar
@@ -516,32 +525,19 @@ pub fn animate_held(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     let (owner, kind) = (ip.owner, ip.kind);
     let maker = ip.xDD4_itemVar.mewtwo_shadowball().x2C.get();
-    if maker.is_some() && owner == maker {
-        match kind {
-            KIND => {
-                if r.mt_n_ball_lost(maker) || r.mt_n_ball_put_away(maker) {
-                    return true;
-                }
-                let Some((charge, max)) = r.mt_n_charge_of(maker) else {
-                    return true;
-                };
-                let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-                v.x18.set(charge);
-                v.x1C.set(max);
-            }
-            KIRBY_SHADOWBALL => {
-                if r.kb_mt_ball_lost(maker) || r.kb_mt_ball_put_away(maker) {
-                    return true;
-                }
-                let Some((charge, max)) = r.kb_mt_charge_of(maker) else {
-                    return true;
-                };
-                let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-                v.x18.set(charge);
-                v.x1C.set(max);
-            }
-            _ => {}
+    if maker.is_some()
+        && owner == maker
+        && let Some(b) = maker_ball(kind)
+    {
+        if r.mt_n_ball_lost(maker, b) || r.mt_n_ball_put_away(maker, b) {
+            return true;
         }
+        let Some((charge, max)) = r.mt_n_charge_of(maker, b) else {
+            return true;
+        };
+        let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
+        v.x18.set(charge);
+        v.x1C.set(max);
     }
     let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
     let (charge, max) = (v.x18.get(), v.x1C.get());

@@ -253,9 +253,13 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let kind = ip.kind;
     if let Some(owner) = ip.xDD4_itemVar.climbers_ice().x0.get() {
         if kind == super::ICE_CLIMBER_ICE {
-            r.popo_forget_item(owner, gobj);
+            r.popo_forget_item(owner, &crate::game::ft::popo::special_n::POPO, gobj);
         } else {
-            r.kb_ic_forget(owner, gobj);
+            r.popo_forget_item(
+                owner,
+                &crate::game::ft::kirby::special_iceclimber::KIRBY,
+                gobj,
+            );
         }
     }
     item_mut(r.game, gobj)

@@ -144,19 +144,19 @@ impl Running<'_> {
             17 => self.lg_special_n_enter(gobj, &super::special_luigi::KIRBY),
             2 | 25 => self.ca_special_n_enter(gobj, &super::special_captain::KIRBY),
             12 | 23 => self.pk_special_n_enter(gobj, &super::special_pikachu::KIRBY),
-            8 => self.kb_ns_enter(gobj),
-            9 => self.kb_pe_enter(gobj),
+            8 => self.ness_special_n_start_enter(gobj, &super::special_ness::KIRBY),
+            9 => self.peach_special_n_enter(gobj, &super::special_peach::KIRBY),
             19 => self.zelda_special_n_enter(gobj, &super::special_zelda::KIRBY),
-            7 => self.kb_sk_enter(gobj),
-            24 => self.kb_gw_enter(gobj),
+            7 => self.seak_special_n_enter(gobj, &super::special_seak::KIRBY),
+            24 => self.gw_special_n_enter(gobj, &super::special_gamewatch::KIRBY, false),
             3 => self.dk_special_n_enter(gobj, &super::special_donkey::KIRBY),
-            5 | 31 => self.kb_kp_enter(gobj),
-            6 | 20 => self.kb_lk_enter(gobj, false),
+            5 | 31 => self.kp_special_n_enter(gobj, &super::special_koopa::KIRBY),
+            6 | 20 => self.link_special_n_enter(gobj, &super::special_link::KIRBY, false),
             14 => self.kb_ys_enter(gobj),
-            10 => self.kb_ic_enter(gobj),
+            10 => self.popo_special_n_enter(gobj, &super::special_iceclimber::KIRBY),
             15 => self.rollout_enter(gobj, &super::special_purin::KIRBY),
-            16 => self.kb_mt_enter(gobj),
-            18 | 26 => self.kb_ms_enter(gobj),
+            16 => self.mt_special_n_enter(gobj, &super::special_mewtwo::KIRBY),
+            18 | 26 => self.mars_special_n_enter(gobj, &super::special_mars::KIRBY),
             k => unported_call(&format!("the neutral special of copy kind {k}")),
         }
     }
@@ -172,19 +172,19 @@ impl Running<'_> {
             17 => self.lg_special_air_n_enter(gobj, &super::special_luigi::KIRBY),
             2 | 25 => self.ca_special_air_n_enter(gobj, &super::special_captain::KIRBY),
             12 | 23 => self.pk_special_air_n_enter(gobj, &super::special_pikachu::KIRBY),
-            8 => self.kb_ns_air_enter(gobj),
-            9 => self.kb_pe_air_enter(gobj),
+            8 => self.ness_special_air_n_start_enter(gobj, &super::special_ness::KIRBY),
+            9 => self.peach_special_air_n_enter(gobj, &super::special_peach::KIRBY),
             19 => self.zelda_special_air_n_enter(gobj, &super::special_zelda::KIRBY),
-            7 => self.kb_sk_air_enter(gobj),
-            24 => self.kb_gw_air_enter(gobj),
+            7 => self.seak_special_air_n_enter(gobj, &super::special_seak::KIRBY),
+            24 => self.gw_special_n_enter(gobj, &super::special_gamewatch::KIRBY, true),
             3 => self.dk_special_air_n_enter(gobj, &super::special_donkey::KIRBY),
-            5 | 31 => self.kb_kp_air_enter(gobj),
-            6 | 20 => self.kb_lk_enter(gobj, true),
+            5 | 31 => self.kp_special_air_n_enter(gobj, &super::special_koopa::KIRBY),
+            6 | 20 => self.link_special_n_enter(gobj, &super::special_link::KIRBY, true),
             14 => self.kb_ys_air_enter(gobj),
-            10 => self.kb_ic_air_enter(gobj),
+            10 => self.popo_special_air_n_enter(gobj, &super::special_iceclimber::KIRBY),
             15 => self.rollout_air_enter(gobj, &super::special_purin::KIRBY),
-            16 => self.kb_mt_air_enter(gobj),
-            18 | 26 => self.kb_ms_air_enter(gobj),
+            16 => self.mt_special_air_n_enter(gobj, &super::special_mewtwo::KIRBY),
+            18 | 26 => self.mars_special_air_n_enter(gobj, &super::special_mars::KIRBY),
             k => unported_call(&format!("the aerial neutral special of copy kind {k}")),
         }
     }
@@ -353,7 +353,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_Init_UnkMotionStates3")]
     pub fn kb_unk_motion_states3(&mut self, gobj: GObjId) {
         if matches!(self.game.fighter(gobj).u_i32(u::HAT_KIND), 5 | 31) {
-            self.kb_kp_refuel(gobj);
+            self.kp_refuel(gobj, &super::special_koopa::KIRBY);
         }
     }
 

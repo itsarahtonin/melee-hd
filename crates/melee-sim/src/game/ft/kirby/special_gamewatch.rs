@@ -1,20 +1,21 @@
 //! Mr. Game & Watch's copy (`ftkirbyspecialgamewatch.c`): Chef as Kirby flips it, a pan of
 //! his own in hand (`it::kinds::kirbygamewatchchefpan`, kept in `u` as `xDC`) and each flip
-//! throwing a sausage (the copy's own kind), one of five but the last two (`u` `xD4`, `xD8`).
-//! Mr. Game & Watch's own (`ft::gamewatch::special_n`) with his states, attributes and `mv`;
-//! the items take their colors from the copy's data (`ftKb_Init_800EEB00`, `_800EEB1C`).
-
-use gekko_fp as fp;
+//! throwing a sausage. Mr. Game & Watch's own code
+//! ([`ft::gamewatch::special_n`](super::super::gamewatch::special_n)) over his states, the
+//! attributes 0x3CC bytes on in his, the last two sausages in his `u` (`xD4`, `xD8`), the
+//! copy's sausage kind and his callbacks ([`KIRBY`]); the pan, which Mr. Game & Watch's has
+//! no item for, is his own and here. The items take their colors from the copy's data
+//! (`ftKb_Init_800EEB00`, `_800EEB1C`).
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{self as k, gamewatchchef, kirbygamewatchchefpan as pan};
+use super::super::super::it::kinds::{self as k, kirbygamewatchchefpan as pan};
 use super::super::super::state::Running;
 use super::super::super::structs::_GXColor;
-use super::super::gamewatch::{mv, part};
+use super::super::gamewatch::part;
+use super::super::gamewatch::special_n::{Chef, KEEP_FLAGS};
+use super::super::motion::flags::SKIP_MODEL;
 use super::{addr as kb, ms};
-use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
-use crate::vec::Vec3;
 
 /// The copy's function addresses.
 pub(super) mod addr {
@@ -38,20 +39,23 @@ pub(super) mod addr {
     pub const TO_GROUND: u32 = 0x8010_D5F0;
 }
 
-/// `u` offsets: the last sausage and the one before (`xD4`, `xD8`), and the pan (`xDC`).
-const LAST: usize = 0xD4;
-const BEFORE: usize = 0xD8;
+/// Kirby's Chef: his states, the attributes and `u` words at his offsets, the copy's sausage
+/// kind, his own callbacks (the pan first), and his model not kept through the changes
+/// (`ftKb_MF_GwSpecialN_Coll`).
+pub const KIRBY: Chef = Chef {
+    states: [ms::GW_SPECIAL_N, ms::GW_SPECIAL_AIR_N],
+    attrs: 0x3CC,
+    u: 0xC0,
+    sausage_kind: k::KIRBY_GAME_WATCH_CHEF,
+    sausage_cb: addr::SAUSAGE,
+    start_cb: addr::PAN,
+    keep: KEEP_FLAGS & !SKIP_MODEL,
+};
+
+/// `u` offset of the pan (`xDC`).
 const PAN: usize = 0xDC;
-/// `ftKb_DatAttrs`' Mr. Game & Watch entries: the frame a flip loops back to, and the most
-/// sausages a use throws.
-const GW_LOOP_FRAME: usize = 0x3E4;
-const GW_MAX: usize = 0x3E8;
 /// The copy's kind, whose data holds its colors (`hat_dynamics[4]`, `x1C`).
 const KIND_GAME_WATCH: usize = 24;
-/// `ftKb_MF_GwSpecialN_Coll`, also what a loop keeps.
-const KEEP: u32 = 0x0C4C_508C;
-/// `HSD_PAD_B`.
-const PAD_B: u32 = 0x200;
 
 impl Running<'_> {
     /// A color of his copy of Mr. Game & Watch, the word `off` bytes into the copy's last
@@ -67,41 +71,6 @@ impl Running<'_> {
             .expect("the copy's colors (hat_dynamics[4])");
         let [r, g, b, a] = self.data.u32(colors.at(off)).to_be_bytes();
         _GXColor { r, g, b, a }
-    }
-
-    /// Whether he has thrown fewer sausages than the attributes allow.
-    fn kb_gw_more(&self, gobj: GObjId) -> bool {
-        let f = self.game.fighter_id(gobj);
-        let n = self.game.fighters[f.0].mv_i32(mv::N_SAUSAGES);
-        fp::frsp(f64::from(n)) < reg(self.kb_attr_f32(f, GW_MAX))
-    }
-
-    /// A sausage at the script's mark, `fn_8010CE5C`: one of the five but the last two at
-    /// random, from his thumb.
-    #[doc(alias = "fn_8010CE5C")]
-    pub fn kb_gw_sausage(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).cmd_vars[0] == 0 {
-            return;
-        }
-        self.game.fighter_mut(gobj).cmd_vars[0] = 0;
-        if self.kb_gw_more(gobj) {
-            let fp = self.game.fighter_mut(gobj);
-            let n = fp.mv_i32(mv::N_SAUSAGES);
-            fp.set_mv_i32(mv::N_SAUSAGES, n.wrapping_add(1));
-            let bone = self.bone_index(self.game.fighter(gobj), part::L_THUMB_NB);
-            let pos = self.gw_part_pos(gobj, bone, Some(Vec3::new(2.5, 6.5, 0.0)));
-            let fp = self.game.fighter(gobj);
-            let (last, before) = (fp.u_i32(LAST), fp.u_i32(BEFORE));
-            let choices: Vec<i32> = (0..5).filter(|&i| i != last && i != before).collect();
-            let pick = self.game.objs.rng.below(choices.len() as i32);
-            let sausage = choices[pick as usize];
-            let fp = self.game.fighter_mut(gobj);
-            fp.set_u_i32(BEFORE, last);
-            fp.set_u_i32(LAST, sausage);
-            let facing = fp.facing_dir;
-            gamewatchchef::spawn(self, gobj, pos, k::KIRBY_GAME_WATCH_CHEF, sausage, facing);
-        }
-        self.game.fighter_mut(gobj).accessory4_cb = None;
     }
 
     /// The pan in hand at the move's start, `fn_8010CFB0`: with his damage hooks while he
@@ -162,157 +131,30 @@ impl Running<'_> {
         let msid = self.game.fighter(gobj).motion_id;
         !(ms::GW_SPECIAL_N..=ms::GW_SPECIAL_AIR_N).contains(&msid)
     }
-
-    /// Chef on the ground or in the air (`ftKb_SpecialNGw_8010D188`, `_8010D204`): no vertical
-    /// speed, the script's variables cleared, and the pan next.
-    fn kb_gw_start(&mut self, gobj: GObjId, msid: i32) {
-        self.game.fighter_mut(gobj).self_vel.y = 0.0;
-        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
-        self.anim_update(gobj);
-        let fp = self.game.fighter_mut(gobj);
-        fp.cmd_vars[0] = 0;
-        fp.cmd_vars[1] = 0;
-        fp.cmd_vars[2] = 0;
-        fp.set_mv_i32(mv::N_LOOP_DISABLE, 0);
-        fp.set_mv_i32(mv::N_SAUSAGES, 0);
-        fp.accessory4_cb = Some(CodeRef(addr::PAN));
-    }
-
-    /// Chef on the ground, `ftKb_SpecialNGw_8010D188`.
-    #[doc(alias = "ftKb_SpecialNGw_8010D188")]
-    pub fn kb_gw_enter(&mut self, gobj: GObjId) {
-        self.kb_gw_start(gobj, ms::GW_SPECIAL_N);
-    }
-
-    /// In the air, `ftKb_SpecialNGw_8010D204`.
-    #[doc(alias = "ftKb_SpecialNGw_8010D204")]
-    pub fn kb_gw_air_enter(&mut self, gobj: GObjId) {
-        self.kb_gw_start(gobj, ms::GW_SPECIAL_AIR_N);
-    }
-
-    /// Chef from the attributes' frame again (`ftKb_SpecialNGw_8010D660`, `_8010D6D0`).
-    #[doc(alias = "ftKb_SpecialNGw_8010D660")]
-    #[doc(alias = "ftKb_SpecialNGw_8010D6D0")]
-    fn kb_gw_loop(&mut self, gobj: GObjId, air: bool) {
-        let f = self.game.fighter_id(gobj);
-        let frame = self.kb_attr_f32(f, GW_LOOP_FRAME);
-        let msid = if air {
-            ms::GW_SPECIAL_AIR_N
-        } else {
-            ms::GW_SPECIAL_N
-        };
-        let start = mem(fp::fsubs(reg(frame), 1.0));
-        self.change_motion_state(gobj, msid, KEEP, start, 1.0, 0.0, None);
-        self.anim_update(gobj);
-        let fp = self.game.fighter_mut(gobj);
-        fp.cmd_vars[1] = 0;
-        fp.cmd_vars[2] = 0;
-        fp.set_mv_i32(mv::N_LOOP_DISABLE, 0);
-        fp.accessory4_cb = Some(CodeRef(addr::SAUSAGE));
-    }
-
-    /// The flip (`ftKb_GwSpecialN_Anim`, `ftKb_GwSpecialAirN_Anim`, testing in each one's
-    /// order): at the script's mark, the loop with B still held and sausages left; waiting
-    /// or a fall once its frames run out.
-    #[doc(alias = "ftKb_GwSpecialN_Anim")]
-    #[doc(alias = "ftKb_GwSpecialAirN_Anim")]
-    fn kb_gw_anim(&mut self, gobj: GObjId, air: bool) {
-        let fp = self.game.fighter_mut(gobj);
-        if fp.cmd_vars[2] != 0 {
-            fp.cmd_vars[2] = 0;
-            let held = fp.mv_i32(mv::N_LOOP_DISABLE) == 0;
-            if held && self.kb_gw_more(gobj) {
-                self.kb_gw_loop(gobj, air);
-            }
-        }
-        if !self.anim_frames_remaining(gobj) {
-            if air {
-                self.enter_fall(gobj);
-            } else {
-                self.enter_wait(gobj);
-            }
-        }
-    }
-
-    /// The flip's interrupts (`ftKb_GwSpecialN_IASA`, `ftKb_GwSpecialAirN_IASA`): B let go of
-    /// ends the loop at the mark; B pressed again after the script allows it loops now.
-    #[doc(alias = "ftKb_GwSpecialN_IASA")]
-    #[doc(alias = "ftKb_GwSpecialAirN_IASA")]
-    fn kb_gw_iasa(&mut self, gobj: GObjId, air: bool) {
-        let fp = self.game.fighter_mut(gobj);
-        if fp.input.held_buttons[0] & PAD_B == 0 {
-            fp.set_mv_i32(mv::N_LOOP_DISABLE, 1);
-        }
-        let fp = self.game.fighter(gobj);
-        if fp.cmd_vars[1] != 0 && fp.input.pressed_buttons & PAD_B != 0 && self.kb_gw_more(gobj) {
-            self.kb_gw_loop(gobj, air);
-        }
-    }
-
-    /// `ftKb_GwSpecialN_Phys`: friction.
-    #[doc(alias = "ftKb_GwSpecialN_Phys")]
-    fn kb_gw_phys(&mut self, gobj: GObjId) {
-        self.ground_friction(gobj);
-    }
-
-    /// `ftKb_GwSpecialAirN_Phys`: the air's physics without drift.
-    #[doc(alias = "ftKb_GwSpecialAirN_Phys")]
-    fn kb_gw_air_phys(&mut self, gobj: GObjId) {
-        self.air_physics_no_drift(gobj);
-    }
-
-    /// `ftKb_GwSpecialN_Coll`: off an edge, into the air.
-    #[doc(alias = "ftKb_GwSpecialN_Coll")]
-    fn kb_gw_coll(&mut self, gobj: GObjId) {
-        if !self.ground_coll_slide(gobj) {
-            self.kb_gw_to_air(gobj);
-        }
-    }
-
-    /// `ftKb_GwSpecialAirN_Coll`: landing, onto the ground.
-    #[doc(alias = "ftKb_GwSpecialAirN_Coll")]
-    fn kb_gw_air_coll(&mut self, gobj: GObjId) {
-        if self.air_coll_land(gobj) {
-            self.kb_gw_to_ground(gobj);
-        }
-    }
-
-    /// Off an edge, `ftKb_SpecialNGw_8010D580`: the aerial flip from the same frame.
-    #[doc(alias = "ftKb_SpecialNGw_8010D580")]
-    pub fn kb_gw_to_air(&mut self, gobj: GObjId) {
-        self.fox_ground_to_air(gobj, ms::GW_SPECIAL_AIR_N, KEEP);
-        self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::SAUSAGE));
-    }
-
-    /// Landing, `ftKb_SpecialNGw_8010D5F0`: the grounded flip from the same frame.
-    #[doc(alias = "ftKb_SpecialNGw_8010D5F0")]
-    pub fn kb_gw_to_ground(&mut self, gobj: GObjId) {
-        self.fox_air_to_ground(gobj, ms::GW_SPECIAL_N, KEEP);
-        self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::SAUSAGE));
-    }
 }
 
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
+    let p = &KIRBY;
     match a {
-        addr::SAUSAGE => g.kb_gw_sausage(gobj),
+        addr::SAUSAGE => g.gw_create_sausage(gobj, p),
         addr::PAN => g.kb_gw_pan(gobj),
         addr::PAN_GONE => g.kb_gw_pan_gone(gobj),
         addr::CLEANUP => g.kb_gw_cleanup(gobj),
         addr::ON_ENTER_HITLAG => g.kb_gw_enter_hitlag(gobj),
         addr::ON_EXIT_HITLAG => g.kb_gw_exit_hitlag(gobj),
-        addr::ENTER => g.kb_gw_enter(gobj),
-        addr::AIR_ENTER => g.kb_gw_air_enter(gobj),
-        addr::N_ANIM => g.kb_gw_anim(gobj, false),
-        addr::AIR_N_ANIM => g.kb_gw_anim(gobj, true),
-        addr::N_IASA => g.kb_gw_iasa(gobj, false),
-        addr::AIR_N_IASA => g.kb_gw_iasa(gobj, true),
-        addr::N_PHYS => g.kb_gw_phys(gobj),
-        addr::AIR_N_PHYS => g.kb_gw_air_phys(gobj),
-        addr::N_COLL => g.kb_gw_coll(gobj),
-        addr::AIR_N_COLL => g.kb_gw_air_coll(gobj),
-        addr::TO_AIR => g.kb_gw_to_air(gobj),
-        addr::TO_GROUND => g.kb_gw_to_ground(gobj),
+        addr::ENTER => g.gw_special_n_enter(gobj, p, false),
+        addr::AIR_ENTER => g.gw_special_n_enter(gobj, p, true),
+        addr::N_ANIM => g.gw_special_n_anim(gobj, p, false),
+        addr::AIR_N_ANIM => g.gw_special_n_anim(gobj, p, true),
+        addr::N_IASA => g.gw_special_n_iasa(gobj, p, false),
+        addr::AIR_N_IASA => g.gw_special_n_iasa(gobj, p, true),
+        addr::N_PHYS => g.gw_special_n_phys(gobj),
+        addr::AIR_N_PHYS => g.gw_special_air_n_phys(gobj),
+        addr::N_COLL => g.gw_special_n_coll(gobj, p),
+        addr::AIR_N_COLL => g.gw_special_air_n_coll(gobj, p),
+        addr::TO_AIR => g.gw_special_n_to_air(gobj, p),
+        addr::TO_GROUND => g.gw_special_air_n_to_ground(gobj, p),
         _ => return false,
     }
     true
