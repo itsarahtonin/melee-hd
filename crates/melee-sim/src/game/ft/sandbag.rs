@@ -170,6 +170,7 @@ pub fn kb_deaccel(kb: f32, dec: f32) -> f32 {
 }
 
 /// Runs one of Sandbag's callbacks, if `a` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         // `ftSb_Init_OnKnockbackEnter`, `_OnKnockbackExit`, `ftSb_WaitReverse_Anim` and

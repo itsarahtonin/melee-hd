@@ -94,6 +94,7 @@ pub mod addr {
 const SCALE_JOINT_DESC: u32 = 0x803C_6FF0;
 
 /// Runs one of the mushrooms' callbacks, if `cb` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, cb: u32) -> bool {
     use addr::*;
     match cb {
@@ -174,7 +175,7 @@ impl Running<'_> {
             addr::FALL_AERIAL_ENTER => self.enter_fall_aerial(gobj),
             addr::FALL_SPECIAL_ENTER => self.enter_fall_special_basic(gobj),
             other => {
-                assert!(run(self, gobj, other), "a mushroom callback {other:#010x}");
+                crate::game::code::run_fighter_cb(self, gobj, crate::game::handles::CodeRef(other))
             }
         }
     }

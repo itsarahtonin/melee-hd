@@ -253,6 +253,7 @@ pub fn reach(r: &mut Running, gobj: GObjId, owner: GObjId) {
     }
 }
 
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM_0 => anim(r, gobj),
@@ -261,6 +262,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     })
 }
 
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PHYS_0 => {}

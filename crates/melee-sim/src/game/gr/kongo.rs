@@ -161,6 +161,7 @@ pub struct Globals {
 }
 
 /// A stage object's process or callback, by address: Kongo Jungle's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801D_55D4 | 0x801D_5FA4 | 0x801D_5FDC | 0x801D_5FE0 | 0x801D_6030 | 0x801D_6034
@@ -184,6 +185,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x801D_523C => on_init(r),

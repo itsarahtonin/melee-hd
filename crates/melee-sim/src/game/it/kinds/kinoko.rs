@@ -32,6 +32,7 @@ pub const D_COLL1: u32 = 0x8029_3CF0;
 pub const D_DMG_DEALT: u32 = 0x8029_3D6C;
 
 /// Runs one of the mushrooms' predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 | ANIM1 | D_ANIM0 | D_ANIM1 => still(r, gobj),
@@ -44,6 +45,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the mushrooms' events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED | D_SPAWNED => spawned(r, gobj),

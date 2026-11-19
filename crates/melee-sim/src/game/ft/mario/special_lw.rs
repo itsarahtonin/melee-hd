@@ -77,6 +77,7 @@ impl Running<'_> {
     pub fn mr_special_lw_iasa(&mut self, _gobj: GObjId) {}
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_LW_UPDATE_ROT => g.mr_special_lw_update_rot(gobj),

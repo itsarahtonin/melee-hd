@@ -1032,6 +1032,7 @@ impl Running<'_> {
     }
 
     /// Runs the rules' and names' screens' processes.
+    #[melee_callbacks::callbacks(Proc)]
     pub fn run_rules_proc(&mut self, gobj: GObjId, f: u32) -> bool {
         match f {
             THINK => self.rules_think(gobj),

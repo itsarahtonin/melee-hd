@@ -16,6 +16,7 @@ pub const COLL0: u32 = 0x8028_4734;
 pub const DMG_DEALT: u32 = 0x8028_482C;
 
 /// Runs one of the Starman's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 => still(r, gobj),
@@ -27,6 +28,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 
 /// Runs one of the Starman's events, if `addr` is one.
 #[doc(alias = "itStar_UnkMotion0_Phys")]
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),

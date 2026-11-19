@@ -44,6 +44,7 @@ const PAD_X: u32 = 0x400;
 const PAD_Y: u32 = 0x800;
 
 /// A stage object's process or callback, by address.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8020_7130 | 0x8020_73D0 => init_model(r, gobj),
@@ -57,6 +58,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         ON_INIT => on_init(r),

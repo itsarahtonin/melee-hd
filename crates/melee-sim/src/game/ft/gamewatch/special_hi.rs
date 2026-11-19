@@ -203,6 +203,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_HI_ITEM_RESCUE_SETUP => g.gw_rescue_setup(gobj),

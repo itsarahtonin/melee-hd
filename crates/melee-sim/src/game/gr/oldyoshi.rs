@@ -52,6 +52,7 @@ fn param(game: &Game) -> Param {
 }
 
 /// A stage object's process or callback, by address: Yoshi's Island N64's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8020_E970 | 0x8020_E974 | 0x8020_E9E8 | 0x8020_E9EC | 0x8020_EA88 | 0x8020_EAF4
@@ -71,6 +72,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x8020_E79C => on_init(r),

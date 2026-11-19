@@ -39,15 +39,31 @@ pub const RAIKOU: Beast = Beast {
 };
 
 /// Runs one of Raikou's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
-    entei::run_pred_of(&RAIKOU, r, gobj, addr)
+    Some(match addr {
+        a if a == RAIKOU.anim0 => entei::anim0_of(&RAIKOU, r, gobj),
+        a if a == RAIKOU.coll0 => entei::coll0_of(&RAIKOU, r, gobj),
+        a if a == RAIKOU.anim1 => entei::anim1_of(r, gobj),
+        a if a == RAIKOU.coll1 => entei::coll1_of(&RAIKOU, r, gobj),
+        _ => return None,
+    })
 }
 
 /// Runs one of Raikou's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
-    entei::run_event_of(&RAIKOU, r, gobj, addr)
+    match addr {
+        a if a == RAIKOU.spawned => entei::spawned_of(r, gobj),
+        a if a == RAIKOU.landed_nothing => {}
+        a if a == RAIKOU.out_landed => entei::out_landed_of(&RAIKOU, r, gobj),
+        a if a == RAIKOU.phys0 => entei::phys0_of(r, gobj),
+        a if a == RAIKOU.accessory => entei::fire_when_told_of(&RAIKOU, r, gobj),
+        a if a == RAIKOU.phys1 => entei::phys1_of(r, gobj),
+        _ => return false,
+    }
+    true
 }
-
 /// Raikou out of the ball, `it_802CF814`: facing its owner's nearest opponent, its script's
 /// flags clear, at its first size, into the air out of the ball.
 #[doc(alias = "it_802CF814")]

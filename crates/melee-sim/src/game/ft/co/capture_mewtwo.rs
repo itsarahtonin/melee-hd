@@ -80,6 +80,7 @@ impl Running<'_> {
 }
 
 /// Runs one of the victim's callbacks, if `addr` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x800B_D17C..=0x800B_D198 if addr.is_multiple_of(4) => g.co_thrown_mewtwo_nothing(gobj),

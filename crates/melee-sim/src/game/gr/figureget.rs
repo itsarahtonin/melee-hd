@@ -33,6 +33,7 @@ pub const CHECK_SHADOW_RENDER: u32 = 0x8021_9C90;
 pub const ON_DEMO_INIT: u32 = 0x8021_9530;
 
 /// A stage object's process or callback, by address: Snag the Trophies'.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8021_96E8 | 0x8021_96EC | 0x8021_9B0C => empty(r, gobj),
@@ -45,6 +46,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x8021_9534 => on_init(r),

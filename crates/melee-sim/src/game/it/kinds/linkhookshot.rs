@@ -204,6 +204,7 @@ impl Attrs {
 }
 
 /// Runs one of the hookshot's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => set_frame(r, gobj, None),
@@ -232,6 +233,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// Runs one of the hookshot's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     match addr {
         ANIM => Some(anim(r, gobj)),
@@ -1165,7 +1167,7 @@ pub fn ft_frame(r: &mut Running, owner: GObjId) {
         return;
     };
     if let Some(CodeRef(f)) = vars(r, hs).x10.get() {
-        run_event(r, hs, f);
+        crate::game::code::run_proc(r, hs, CodeRef(f));
     }
 }
 

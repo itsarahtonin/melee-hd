@@ -138,18 +138,18 @@ impl Running<'_> {
     pub fn kb_special_n_enter(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
             4 | 11 | 27..=30 | 32 => self.kb_n_enter(gobj),
-            13 => self.kb_ss_enter(gobj),
+            13 => self.samus_special_n_enter(gobj, &super::special_samus::KIRBY),
             1 | 22 => self.kb_fx_enter(gobj),
-            0 | 21 => self.kb_mr_enter(gobj),
-            17 => self.kb_lg_enter(gobj),
-            2 | 25 => self.kb_ca_enter(gobj),
-            12 | 23 => self.kb_pk_enter(gobj),
+            0 | 21 => self.mr_special_n_enter(gobj, &super::special_mario::KIRBY),
+            17 => self.lg_special_n_enter(gobj, &super::special_luigi::KIRBY),
+            2 | 25 => self.ca_special_n_enter(gobj, &super::special_captain::KIRBY),
+            12 | 23 => self.pk_special_n_enter(gobj, &super::special_pikachu::KIRBY),
             8 => self.kb_ns_enter(gobj),
             9 => self.kb_pe_enter(gobj),
-            19 => self.kb_zd_enter(gobj),
+            19 => self.zelda_special_n_enter(gobj, &super::special_zelda::KIRBY),
             7 => self.kb_sk_enter(gobj),
             24 => self.kb_gw_enter(gobj),
-            3 => self.kb_dk_enter(gobj),
+            3 => self.dk_special_n_enter(gobj, &super::special_donkey::KIRBY),
             5 | 31 => self.kb_kp_enter(gobj),
             6 | 20 => self.kb_lk_enter(gobj, false),
             14 => self.kb_ys_enter(gobj),
@@ -166,18 +166,18 @@ impl Running<'_> {
     pub fn kb_special_air_n_enter(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
             4 | 11 | 27..=30 | 32 => self.kb_n_air_enter(gobj),
-            13 => self.kb_ss_air_enter(gobj),
+            13 => self.samus_special_air_n_enter(gobj, &super::special_samus::KIRBY),
             1 | 22 => self.kb_fx_air_enter(gobj),
-            0 | 21 => self.kb_mr_air_enter(gobj),
-            17 => self.kb_lg_air_enter(gobj),
-            2 | 25 => self.kb_ca_air_enter(gobj),
-            12 | 23 => self.kb_pk_air_enter(gobj),
+            0 | 21 => self.mr_special_air_n_enter(gobj, &super::special_mario::KIRBY),
+            17 => self.lg_special_air_n_enter(gobj, &super::special_luigi::KIRBY),
+            2 | 25 => self.ca_special_air_n_enter(gobj, &super::special_captain::KIRBY),
+            12 | 23 => self.pk_special_air_n_enter(gobj, &super::special_pikachu::KIRBY),
             8 => self.kb_ns_air_enter(gobj),
             9 => self.kb_pe_air_enter(gobj),
-            19 => self.kb_zd_air_enter(gobj),
+            19 => self.zelda_special_air_n_enter(gobj, &super::special_zelda::KIRBY),
             7 => self.kb_sk_air_enter(gobj),
             24 => self.kb_gw_air_enter(gobj),
-            3 => self.kb_dk_air_enter(gobj),
+            3 => self.dk_special_air_n_enter(gobj, &super::special_donkey::KIRBY),
             5 | 31 => self.kb_kp_air_enter(gobj),
             6 | 20 => self.kb_lk_enter(gobj, true),
             14 => self.kb_ys_air_enter(gobj),
@@ -475,6 +475,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ON_ITEM_INVISIBLE => g.kb_on_item_invisible(gobj),
@@ -536,6 +537,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     true
 }
 
+#[melee_callbacks::callbacks(Call)]
 pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj().expect("a null fighter");
     Some(match f {

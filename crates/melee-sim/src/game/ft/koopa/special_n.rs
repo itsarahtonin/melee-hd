@@ -369,6 +369,7 @@ impl Running<'_> {
 /// `ftKp_MF_SpecialN_Coll`: the loops' switches also keep the rumble.
 const N_LOOP_COLL: u32 = GROUND_AIR_COLL | SKIP_RUMBLE;
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::N_FLAME => g.kp_flame(gobj),
@@ -412,6 +413,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     true
 }
 
+#[melee_callbacks::callbacks(Call)]
 pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     Some(match f {
         addr::N_MAX_SPEED => Val::Int(r.kp_flame_max_speed(args[0].gobj())),

@@ -50,6 +50,7 @@ const TURN_COLL: u32 = 0x8009_749C;
 const MF_UNK24: u32 = 0x0100_0000;
 
 /// Runs one of the lift states' callbacks, if `addr` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         WAIT_ANIM => g.co_lift_wait_anim(gobj),

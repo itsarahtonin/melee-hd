@@ -29,6 +29,7 @@ const STATES: [i32; 7] = [0, 1, 2, 3, 4, 5, 6];
 const OTHER: [i32; 7] = [3, 4, 5, 0, 1, 2, 6];
 
 /// Runs one of the bow's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM => anim(r, gobj),
@@ -39,6 +40,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the bow's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DESTROYED => destroyed(r, gobj),

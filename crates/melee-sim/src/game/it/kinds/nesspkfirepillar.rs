@@ -35,6 +35,7 @@ const ITEM_FALL_SPEED_MAX: u32 = 0x14;
 const ITEM_SCALE: u32 = 0x60;
 
 /// Runs one of the pillar's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM => animate(r, gobj),
@@ -45,6 +46,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the pillar's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PHYS => physics(r, gobj),

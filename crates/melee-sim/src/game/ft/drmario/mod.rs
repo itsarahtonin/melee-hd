@@ -136,7 +136,7 @@ impl Running<'_> {
         if fp.cmd_vars[0] == 1 && fp.u.gobj_at(MARIO_X2240).is_none() {
             let top = self.bone_joint(gobj, 0);
             let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, top, None);
-            let color = self.mr_special_n_vitamin_random(gobj);
+            let color = self.mr_special_n_vitamin_random(gobj, &super::mario::special_n::MARIO);
             let facing = self.game.fighter(gobj).facing_dir;
             let pill =
                 drmariopill::appeal_spawn(self, gobj, pos, color, IT_KIND_DRMARIO_VITAMIN, facing);
@@ -188,6 +188,7 @@ impl Running<'_> {
 
 /// Runs one of Dr. Mario's callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr` is one.
 #[doc(alias = "ftDr_Init_OnItemInvisible")]
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ON_TAKE_DAMAGE => g.dr_on_take_damage(gobj),
@@ -212,6 +213,7 @@ pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 /// Dr. Mario's functions other code calls by address (`code::call`).
 #[doc(alias = "ftDr_Init_OnItemDrop")]
 #[doc(alias = "ftDr_Init_OnItemPickup")]
+#[melee_callbacks::callbacks(Call)]
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj().expect("a null fighter");
     match f {
@@ -223,9 +225,6 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
             r.fox_on_item_drop(gobj(0), args[1].int() != 0);
             Some(Val::None)
         }
-        _ => match args.first() {
-            Some(&Val::GObj(Some(g))) if args.len() == 1 && run(r, g, f) => Some(Val::None),
-            _ => None,
-        },
+        _ => None,
     }
 }

@@ -21,6 +21,7 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x8027_C8B0;
 
 /// Runs the enemies' common events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DESTROYED => destroyed(r, gobj),

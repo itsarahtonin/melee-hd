@@ -39,6 +39,7 @@ pub const PROC_DYNAMICS: u32 = 0x8026_A788;
 const ON_USER_DATA_REMOVE: u32 = 0x8026_AE10;
 
 /// Runs an item process, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_proc(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PROC_HITLAG => proc_hitlag(r, gobj),

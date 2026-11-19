@@ -261,7 +261,7 @@ Sizes: S a few days of one agent's work, M a subsystem, L more. Every refactor t
 
 | # | Task | Size | Depends on | Shared code it touches | Target and check |
 | --- | --- | --- | --- | --- | --- |
-| 1 | **One callback table.** A table from the original's address to the Rust function for every callback kind (fighter callbacks, GObj processes, stage events, item events and predicates, `code::call`), built once (a sorted array or a perfect hash generated with the ports), in place of the chains; `CodeRef` stays the address, so the state and the oracle don't change. Each module's `run` becomes its table entries | M | nothing | `game::code`, every module's `run`/`call`/`run_event` (mechanical) | dispatch below 3% of self time (from 17 to 26%); match speed +15% or more on `fox-fox-fd`, `fox-marth-ps` and Sarah's 3.19 replay; oracle and corpus unchanged |
+| 1 | **Done (2026-11-18, `perf/callback-table`, [below](#task-1-the-callback-table)).** **One callback table.** A table from the original's address to the Rust function for every callback kind (fighter callbacks, GObj processes, stage events, item events and predicates, `code::call`), built once (a sorted array or a perfect hash generated with the ports), in place of the chains; `CodeRef` stays the address, so the state and the oracle don't change. Each module's `run` becomes its table entries | M | nothing | `game::code`, every module's `run`/`call`/`run_event` (mechanical) | dispatch below 3% of self time (from 17 to 26%); match speed +15% or more on `fox-fox-fd`, `fox-marth-ps` and Sarah's 3.19 replay; oracle and corpus unchanged |
 | 2 | **The character registry.** A `Character` entry per fighter kind (task 1's callbacks, `kind_tables`' files, `kind_callbacks`, the attributes' size, the sound slot, names, roster line) and one fighter-kind type in place of the 162 `KIND_*` constants ([design call 2](#design-calls)) | M | 1 | `game::ft`, `game::roster`, `lb::audio`, the generators in `tools/tables` | adding a character's port touches its own module and one entry; no `KIND_*` constant outside the registry; oracle |
 | 3 | **The stage registry.** A `Stage` entry per stage kind (setup, load, start and demo hooks, data, audit) and one stage-kind type for the 70 constants | M | 1 | `game::gr`, `game::code`, `game::roster` | the same for stages; oracle and sessions |
 | 4 | **The item registry.** An `ItemKind` entry per item (its callbacks and tables), one item-kind type | M | 1 | `game::it` | the same for items; oracle with items on |
@@ -277,6 +277,59 @@ Sizes: S a few days of one agent's work, M a subsystem, L more. Every refactor t
 | 13 | **A boundary pilot.** One subsystem (the camera: `game::camera`, 3,351 lines, read by fighters, stages, the HUD and the pass) behind its own state and functions rather than `Running`'s methods, measured for what crossed the line | M | 1 | `game::camera` and its callers | the camera's state reached only through its module; oracle; a written rule for the next subsystems |
 
 **Start at once** (six agents): 1, 7's audit, 8, 10, and the fast renderer's F1 and F2 below. Then 2, 3 and 4 after 1 (in parallel: they touch different modules); 13 after 1; 5 and 6 after the Slippi ruleset's tasks 5b and 6 merge; 11 after 10; the rename waves between merges, wave 4 after 2. Task 9 only if design call 5 takes it.
+
+### Task 1, the callback table
+
+**Done (2026-11-18, `perf/callback-table` from `53429b6c`).** Every callback the state holds as an address (`CodeRef`) runs through one table from the address to its port: fighter callbacks, GObj processes (the stages', items' events, the HUD's, the scenes'), functions without arguments (stages' hooks, scenes' frames), item predicates, render callbacks and `code::call`. `CodeRef` is still the address, so the state, the oracle's comparisons and saved states are unchanged.
+
+**How.** Each module's dispatch function keeps the `match` on the address its port wrote, marked `#[melee_callbacks::callbacks(KIND)]` (`Fighter`, `Proc`, `Event`, `Pred`, `Call`, `Render`). The attribute (`crates/melee-callbacks`, a proc-macro crate of its own so the oracle's coverage hash, which covers `melee-derive`, doesn't change) turns the function into one that adds an entry per arm: the arm's body as a function of the callback's parameters. A delegation arm (`a if fox::run(g, gobj, a) => {}`, or a body `init::run(..) || special_n::run(..)`, `a(..).or_else(|| b(..))`) adds the other function's entries. `game::code::table` walks the roots in `game::code` once, on the first dispatch, into one open-addressing hash table per kind (at most half full; a multiply and one or two probes). The conversion was mechanical: a script read rustc's diagnostics for each delegation called with the table's builder and marked the function it named, round by round, 718 functions in all, the roots in `game::code` included; the attribute refuses, at compile time, any arm that tests more than the address. Hand edits where the shapes differed: the target stages' role tables and hooks (a registration written out in `gr::target`), the legendary beasts' shared dispatch (each beast's own match now), the crowds' join callbacks (a constant list), the All-Star intro's frame and render, the album's renders, Camera Mode's calls, the characters' `call` fallbacks to their `run` (one generic fallback in `code::call` now: a fighter callback called with its GObj alone), and five direct callers of a module's `run` (Kirby's mushroom, the hands' dispatch, the hookshot's and grapple's frame hooks), which now go through the table.
+
+**Order.** The chains ran the first module that knew an address. The table refuses an address registered twice by name with both places (`the_callback_table_builds`), and the build found 53: the common states' arms inlined in `code::run_fighter_cb` that `ft::co::dispatch` (earlier in the chain) shadowed, gone, and two of `dispatch`'s that earlier modules shadowed (`0x800CEE00`, Link's forward smash's interrupt; `0x800E8864`, Fox's down special's physics), gone from `dispatch`. No call is also a fighter callback except efLib's pause and resume, which the chain's first link took as the table does (`no_call_is_also_a_fighter_callback`).
+
+**Kirby** is converted last, in a commit of its own (`sim: Put Kirby's callbacks in the table`) on top of a merge of `refactor/dedup-kirby`'s first round (seven copies sharing their originals' specials), so the two land together; until that commit his chain ran after the table. A later round of the dedup marks its new dispatch functions the same way: the build names each delegation that needs the attribute.
+
+**Dispatch's share of self time: 23.7 to 29.7% before, 0.9 to 1.4% after** (the survey's sampler and buckets, below; the fn-pointer shims and the lookups counted as dispatch, an entry's own body as the callback's work). The survey's 17 to 26% counted the old chains' inlined callee bodies as dispatch too, which is why the speed-up is smaller than removing a quarter of self time would give.
+
+| Profile (sampler, 2 kHz, `melee-bench native --runs 1`) | Base: the survey's dispatch bucket | Branch: the same bucket | Branch: with the shims and lookups |
+| --- | --- | --- | --- |
+| `fox-fox-fd` | 25.7% | 0.2% | 1.35% |
+| `fox-marth-ps` | 23.7% | 0.0% | 1.38% |
+| Sarah's `Game_20260129T130802` (`MELEE_BENCH_FP=slippi MELEE_BENCH_HEAP=off`) | 29.7% | 0.1% | 0.88% |
+
+**Match speed: about +8 to +13%, indicative only** ([design call 9](#design-calls): the worker's exclusive runner decides, and the +15% target stands until it has measured). Median frames/s, base and branch alternating in rounds of five runs, on this PC; every run in sync. First, 15 runs each in three rounds with other agents' builds and oracle runs keeping the PC busy (the branch before the dedup merge and Kirby's commit):
+
+| Match | Base | Branch | Change | Runs' spread, base / branch |
+| --- | --- | --- | --- | --- |
+| `fox-fox-fd` (Vanilla) | 2,921 | 3,254 | +11.4% | 2,809–3,021 / 3,111–3,435 |
+| `fox-marth-ps` (Vanilla) | 2,511 | 2,702 | +7.6% | 2,428–2,604 / 2,624–3,228 |
+| Sarah's `Game_20260129T130802` (`MELEE_BENCH_FP=slippi`, the model on) | 2,882 | 3,249 | +12.7% | 2,742–3,066 / 3,174–3,338 |
+
+Then 10 runs each in two rounds with the PC quieter (63% load), the final branch (with `refactor/dedup-kirby`'s merge):
+
+| Match | Base | Branch | Change | Runs' spread, base / branch |
+| --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 4,729 | 5,176 | +9.5% | 4,467–4,964 / 5,071–5,382 |
+| `fox-marth-ps` | 3,929 | 4,324 | +10.0% | 3,874–4,130 / 4,165–4,469 |
+| Sarah's replay | 4,780 | 5,303 | +10.9% | 4,573–4,925 / 5,214–5,488 |
+
+The commands, to rerun on the worker (`SSBM_DISC` and `SSBM_RS_LOCAL` set; the base built at `53429b6c`, the branch at its tip, both `cargo build --locked --release -p melee-bench`):
+
+```sh
+melee-bench native --runs 5 fox-fox-fd fox-marth-ps
+# Sarah's replay copied into DIR as sarah-130802.slp
+MELEE_BENCH_FP=slippi melee-bench native --dir DIR --runs 5 sarah-130802
+```
+
+Profiles: the same two builds with `CARGO_PROFILE_RELEASE_DEBUG=line-tables-only`, `python -I sampler.py OUT.json 2000 -- melee-bench native --runs 1 MATCH` (Sarah's with `MELEE_BENCH_FP=slippi MELEE_BENCH_HEAP=off`), bucketed by the survey's `cats.py`.
+
+**Checks.**
+
+- **The whole state, tick by tick.** Two scratch oracles, the base's (`53429b6c`) and the branch's, each patched to write the state's hash after every tick of a golden check rather than compare it (the golden's staleness ignored, so it only sets how many ticks run), gave the same hash every tick on all 329 of the verify list's replay diffs, 3,534,697 ticks, with no stop (the branch before Kirby's commit, his chain on the compatibility path). The final branch (the dedup merge and Kirby's commit on top) against the same base dumps: the same, all 329, 3,534,697 ticks.
+- **Mutation:** `ftCo_Wait_Anim`'s and `ftCo_Wait_IASA`'s entries swapped in `ft::co::dispatch` (each address run by the other's port) makes `fox-fox-fd`'s hashes differ from the base's in tick 124, its first, and the full diff names the fighters' joints there (`p_link 8 #1 jobj/ aobj: ours None, theirs 0x80eeac40`). An address added twice fails `the_callback_table_builds`, naming both places (how the 53 shadowed ones were found).
+- `sync-test --rollback 7 --fp hardware`: the six bench replays (`fox-fox-fd` 15,569 ticks checked, `fox-marth-fd` 15,235, `fox-marth-bf` 15,104, `fox-marth-ps` 13,579, `ganon-captain-fd` 12,061, `ics-peach-ps` 11,217) and Sarah's replay with `--fp slippi` (13,773), no difference.
+- `melee-oracle --test ruleset`: all 9 pass. `--test session`, 31 named: `the_vanilla_runs_from_power_on`, `a_session_plays_its_match_from_the_selects`, `a_second_match_sets_its_spawner_up_again`, `a_session_match_rolls_back`, `the_approach_match_rolls_back`, `training_unloads_its_computer_players`, `the_debug_menus_go_back_laid_out`, `a_tournament_match_on_peachs_castle_goes_back_laid_out`, `a_tournament_tie_runs_over_the_stage_selects_preview`, `the_selects_left_by_l_r_and_start`, `matches_from_the_menus_on_three_stages`, `the_attract_match_on_brinstar_reads_a_leftover`, `rainbow_cruises_blocks_hold_the_heaps_leftovers`, `the_modes_exits`, `single_player_setups`, `a_brick_blocks_item_pops_out_at_random`, `the_trophy_lottery_draws_and_saves`, `the_trophy_gallery_toured`, `the_album_browsed`, `camera_mode_takes_and_saves_a_snapshot`, `target_test_cleared`, `the_home_run_contest`, `multi_man_melee`, `all_star`, `single_player_intros`, `the_debug_endings`, `master_hand_in_debug_vs`, `crazy_hand_in_debug_vs`, `giga_bowser_in_debug_vs`, `adventure_game_over`, `the_debug_cutscenes`: all pass (the whole suite and single-player's are the merge check's).
+- The ledger's `--check` (19,827 of 19,827; only `docs/port-ledger.csv`'s line numbers moved, an attribute line above each dispatch function), melee-sim's unit tests, `fmt` and `clippy -D warnings`.
+- `ticks_and_restores_dont_allocate` fails, `fox-marth-bf: tick 1029 made 1 allocations`, on the base `53429b6c` as on the branch: not this change's.
 
 ### Task 10, the Rollout pilot: done (2026-11-18, `refactor/dedup-rollout` from `aa79a9b8`)
 
@@ -310,6 +363,35 @@ Jigglypuff's Rollout and Kirby's copy of it are one implementation in `ft::purin
 3. Move every alias of both originals onto the shared items; keep each user's own `run` table (the addresses differ) and pass the descriptor from callers that name a function, rather than keeping wrappers. Diff the sorted alias list before and after, and run `ledger --check`.
 4. Find the corpus from the replays' Game Start characters and the sessions' trace fighter kinds, then prove with one mutation in the shared code (a word every use writes) that a replay of each user actually reaches it.
 5. Run the corpus with the new build writing scratch goldens (`--write-golden --golden FILE`), check them with the old build, run the sessions in full, sync-test one replay of each user, and bench before and after in alternating rounds.
+
+### Task 11, Kirby's other copies: 7 done, 11 left (2026-11-18, `refactor/dedup-kirby` from `909b868c`)
+
+The recipe above, one character at a time, closest copy first: Luigi, Mario (with Dr. Mario), Pikachu (with Pichu), Captain Falcon (with Ganondorf), Donkey Kong, Samus, Zelda. Each original's `special_n.rs` holds the move over a descriptor (`Fireball` twice, `ThunderJolt`, `FalconPunch`, `GiantPunch`, `ChargeShot`, `NayrusLove`) with the character's `const` beside it; Kirby's `ft/kirby/special_<char>.rs` keeps only his addresses, his `KIRBY` and his `run` table. Where the original asks the fighter's kind (Mario or Dr. Mario, Pikachu or Pichu, Captain Falcon or Ganondorf) and Kirby's copy asks his copy's (`u` `HAT_KIND`), the descriptor says which (`ft::kirby::KindFrom`, `Running::special_kind`).
+
+**What differed**, besides the states, the item and effect kinds, the joints and the hooks' addresses, which every pair has:
+
+| Copy | Kirby's attributes | Named branches |
+| --- | --- | --- |
+| Luigi | none read | none |
+| Mario, Dr. Mario | none read; the pill's colours in his `u` x68, x6C | his copy-less kind throws nothing (Mario's own kind never is Kirby's, so the test is shared) |
+| Pikachu, Pichu | a block per copy, Pikachu's layout (x1C0, x1DC) | none (the aerial throw's unset landing lag for another copy, in Melee's bugs, stays a stop) |
+| Captain Falcon, Ganondorf | Captain Falcon's layout at x1F8 | `wind`: Kirby's Warlock Punch blows no wind |
+| Donkey Kong | Donkey Kong's layout 0x164 on; the swings in `u` xBC | `on_any_damage`: his copy sets (and clears) no any-damage hook |
+| Samus | Samus's layout 0x150 on; `u` 0xA4 on | `fire_offset` (his fire's position taken with a zero offset), `effects_off_always` (his charge's effects destroyed unguarded, a new entry in Melee's bugs) |
+| Zelda | Zelda's layout 0x2A4 on, the reflection 0x37C on | `hooks_on_change`: changing between the ground and the air sets the hitlag hooks at once where Zelda's arms the effect's accessory again |
+
+**The numbers.**
+
+| | |
+| --- | --- |
+| Lines (the copy's file and the original's `special_n.rs`) | Luigi 285 to 220 (−65), Mario 407 to 324 (−83), Pikachu 422 to 308 (−114), Captain Falcon 447 to 344 (−103), Donkey Kong 995 to 759 (−236), Samus 932 to 667 (−265), Zelda 440 to 335 (−105); with callers and the attribute constants folded, 960 fewer in all (1,420 added, 2,380 removed in `crates` and `tools`) |
+| Aliases | the same 18,078 `#[doc(alias)]` attributes after every commit (a sorted list diffed); `ledger --check` 19,827 of 19,827 each time, only the CSV's locations moved |
+| Oracle | the base build (`909b868c`) ran the full diff of every verify replay with Kirby or a touched character (external ids 0, 1, 4, 7, 8, 13, 16, 18, 19, 22, 24, 25: 205 replays, and 30 others) and wrote per-tick whole-state goldens; every commit's build then checked the replays with Kirby or its character (52 to 80 each, 450 checks) and the final build all 205: every tick's state hash equal. Kirby's 87 session jobs (the pilot's list): the 52 diffs compare with no difference and 34 of the 35 session-syncs roll back clean; `rec-kirby-throw`'s shortcut stops at tick 508 on the heap's free lists, as it does with the base build (a known difference, not this change's). The trace scan can't tell Mario's kind (0) from zeros, so sessions weren't picked for the other characters: their code is covered by the replays' per-tick hashes. `sync-test --rollback 7` clean on the seven Kirby copy matches (`oracle-kirby-{luigi-bf,mario-fd,pikachu-bf,captain-fd,donkey-bf,zelda-bf}`, 11,565 to 16,272 ticks, and `hf-kirby-samus-fod`, 19,865) |
+| Mutation | one write in each shared function, switched on for one user at a time: both users of every pair fail, Kirby's in his copy match and the original's in its own replay (Luigi `dk-luigi-ys` tick 200 and `oracle-kirby-luigi-bf` 2760; Mario `pc-7452c0d4` (Mario against Bowser) 150 and `kirby-mario-fd` 714; Pikachu `mewtwo-pikachu-fod` 3154 and `kirby-pikachu-bf` 833; Captain Falcon `ganon-captain-fd` 519 and `kirby-captain-fd` 704; Donkey Kong `dk-falco-ys` 3649 and `kirby-donkey-bf` 369; Samus `dk-samus-bf` 97 and `hf-kirby-samus-fod` 8771; Zelda `gnw-zelda-ys` 10875 and `kirby-zelda-bf` 4345), so the corpus reaches every copy |
+| Leaf-check | Kirby, Luigi, Mario, Dr. Mario, Pikachu, Pichu, Captain Falcon, Ganondorf, Donkey Kong, Samus, Zelda: all pass (Luigi's needs `LUIGI_CALLS`: its harness reads a relative path and otherwise checks none) |
+| Speed (indicative, this PC busy with other agents) | `melee-bench native`, three alternating rounds of five runs, median of the 15: `oracle-kirby-mario-fd` 4,776 frames/s before, 4,535 after; `oracle-kirby-zelda-bf` 3,917 before, 4,281 after; the runs spread 3,342 to 5,819, so both differences are noise (`kirby-zelda-bf`'s bench reports "5 of 5 runs differ" before and after alike) |
+
+**Left, and why** (Kirby has 18 copy files besides Rollout's; the survey's 12 are those with 100-token near-copies): Mewtwo, Ness, Peach, Bowser, Marth and Roy, Sheik, Link and Young Link, the Ice Climbers, Mr. Game & Watch, Yoshi, Fox and Falco: not skipped for differing, only not reached in this run (the corpus's base goldens took most of the day on this machine). Bowser's differs in more than settings (the mouth's offset, Giga Bowser's states, two known Melee bugs of his own); Yoshi's, Mr. Game & Watch's and Fox's look furthest from their originals and may not dedup cleanly.
 
 ### The fast renderer
 

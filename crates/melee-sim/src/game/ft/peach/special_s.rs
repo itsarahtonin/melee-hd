@@ -42,6 +42,7 @@ const START_MF: u32 = KEEP_COL_ANIM_HIT_STATUS
     | UNK_27;
 const END_MF: u32 = SKIP_COL_ANIM | UPDATE_CMD;
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use super::addr::*;
     match a {

@@ -565,6 +565,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::HI_FN_80112ED8 => g.seak_special_hi_vanish(gobj),

@@ -439,6 +439,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ATTACK_AIR_N_ITEM_PARACHUTE_SETUP => g.gw_parachute_setup(gobj),

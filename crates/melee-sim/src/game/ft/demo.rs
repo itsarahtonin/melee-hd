@@ -528,7 +528,7 @@ impl Running<'_> {
             0x15 if msid == super::co::ids::ms::SLEEP => {
                 let fp = &self.game.fighters[f.0];
                 let part = self.bone_index(fp, PART_R_THUMB_NB);
-                let color = self.mr_special_n_vitamin_random(gobj);
+                let color = self.mr_special_n_vitamin_random(gobj, &super::mario::special_n::MARIO);
                 let facing = self.game.fighters[f.0].facing_dir;
                 let pill = super::super::it::kinds::drmariopill::spawn_demo(
                     self,
@@ -633,7 +633,8 @@ impl Running<'_> {
             (2, 0x15) => {
                 let f = self.game.fighter_id(gobj);
                 for (msid, held) in [(1, false), (0, true)] {
-                    let color = self.mr_special_n_vitamin_random(gobj);
+                    let color =
+                        self.mr_special_n_vitamin_random(gobj, &super::mario::special_n::MARIO);
                     let fp = &self.game.fighters[f.0];
                     let facing = fp.facing_dir;
                     let pill = super::super::it::kinds::drmariopill::spawn_demo(

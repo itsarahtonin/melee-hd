@@ -89,6 +89,7 @@ impl Running<'_> {
 
 /// Runs one of the Wire Frames' callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `a` is
 /// one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::BOY_ON_ITEM_INVISIBLE | addr::GIRL_ON_ITEM_INVISIBLE => {
@@ -101,6 +102,7 @@ pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 }
 
 /// The Wire Frames' functions other code calls by address (`code::call`).
+#[melee_callbacks::callbacks(Call)]
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj().expect("a null fighter");
     match f {
@@ -110,10 +112,7 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
         addr::BOY_ON_ITEM_DROP | addr::GIRL_ON_ITEM_DROP => {
             r.zako_on_item_drop(gobj(0), args[1].int() != 0)
         }
-        _ => match args.first() {
-            Some(&Val::GObj(Some(g))) if args.len() == 1 && run(r, g, f) => {}
-            _ => return None,
-        },
+        _ => return None,
     }
     Some(Val::None)
 }

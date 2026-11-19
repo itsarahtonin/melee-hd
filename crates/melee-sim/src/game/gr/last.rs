@@ -93,6 +93,7 @@ fn sway() -> Sway {
 }
 
 /// A stage object's process or callback, by address: Final Destination's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         // The objects' processes and destroy callbacks that do nothing.

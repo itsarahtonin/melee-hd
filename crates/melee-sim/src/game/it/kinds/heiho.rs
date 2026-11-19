@@ -51,6 +51,7 @@ const AOBJ_NO_ANIM: u32 = aobj::NO_ANIM;
 const PI: f32 = std::f32::consts::PI;
 
 /// Runs one of the Shy Guy's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 | ANIM2 | ANIM3 => still(r, gobj),
@@ -66,6 +67,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the Shy Guy's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),

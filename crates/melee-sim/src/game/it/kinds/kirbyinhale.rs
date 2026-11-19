@@ -45,6 +45,7 @@ mod off {
 }
 
 /// Runs one of the inhaled item's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(_r: &mut Running, _gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         PULL_ANIM => pull_anim(),
@@ -56,6 +57,7 @@ pub fn run_pred(_r: &mut Running, _gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the inhaled item's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PULL_PHYS => pull_phys(),

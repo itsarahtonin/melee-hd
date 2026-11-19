@@ -200,6 +200,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use super::addr;
     match a {
@@ -214,6 +215,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     true
 }
 
+#[melee_callbacks::callbacks(Call)]
 pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     use super::addr;
     let gobj = |i: usize| args[i].gobj().expect("a null fighter");

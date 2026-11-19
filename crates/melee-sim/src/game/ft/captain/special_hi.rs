@@ -379,6 +379,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::HI_ON_CHANGE => g.ca_special_hi_on_change(gobj),

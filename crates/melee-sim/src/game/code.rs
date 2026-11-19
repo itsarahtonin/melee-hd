@@ -1,10 +1,15 @@
 //! Dispatch of the original's function pointers. A [`CodeRef`] is the original function's
 //! address; each table here maps the addresses a kind of pointer can hold to their ports.
 
+mod table;
+
+pub use table::{Entries, Table, kind, table};
+
 use super::camera;
 use super::ft::fighter;
 use super::handles::CodeRef;
 use super::state::Running;
+use melee_callbacks::callbacks;
 use melee_data::archive::Archives;
 
 use crate::hsd::Objects;
@@ -14,9 +19,19 @@ use crate::hsd::particle::{Callback, GeneratorHook, ParticleId, UserData, UserFu
 
 /// Runs a GObj process (`HSD_GObjEvent`), or a callback of the same shape (a stage object's
 /// setup and callbacks).
+#[inline]
 pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
+    match table().proc.get(proc.0) {
+        Some(f) => f(game, gobj, proc.0),
+        None => unported("process", proc.0),
+    }
+}
+
+/// The processes' table: every module's, by delegation.
+#[callbacks(Proc)]
+fn procs(game: &mut Running, gobj: GObjId, cb: u32) -> bool {
     use super::gr::{dynamic_attr, ground, last};
-    match proc.0 {
+    match cb {
         camera::PROC => camera::proc(game, gobj),
         0x801C_1CD0 => ground::proc_anim(game, gobj),
         0x801C_1D38 => ground::proc_callback(game, gobj),
@@ -163,28 +178,59 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::ef::UPDATE_PROC => super::ef::update(game, gobj),
         super::ef::PARTICLES_PROC_MAIN => super::ef::particles_proc_main(game),
         super::ef::PARTICLES_PROC_AUX => super::ef::particles_proc_aux(game),
-        other => unported("process", other),
+        _ => return false,
     }
+    true
 }
 
 /// Runs a GObj's render callback (`GObj_RenderFunc`) for a render pass.
+#[inline]
 pub fn run_render(game: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) {
-    if !super::render::run(game, gobj, cb, pass) {
-        unported("render callback", cb.0)
+    match table().render.get(cb.0) {
+        Some(f) => f(game, gobj, cb.0, pass),
+        None => unported("render callback", cb.0),
     }
 }
 
 /// Runs a callback that answers a question about its GObj (`HSD_GObjPredicate`: an item's
 /// state callbacks, which say whether to destroy it).
+#[inline]
 pub fn run_pred(game: &mut Running, gobj: GObjId, f: CodeRef) -> bool {
-    match super::it::kinds::run_pred(game, gobj, f.0) {
-        Some(b) => b,
+    match table().pred.get(f.0) {
+        Some(p) => p(game, gobj, f.0),
         None => unported("predicate", f.0),
     }
 }
 
+/// Runs the fighter callback at `f` if the table has one, saying whether it did (for checks
+/// that try each kind).
+pub fn try_fighter_cb(game: &mut Running, gobj: GObjId, f: u32) -> bool {
+    table().fighter.get(f).map(|c| c(game, gobj, f)).is_some()
+}
+
+/// Runs the item predicate at `f` if the table has one (for checks that try each kind).
+pub fn try_pred(game: &mut Running, gobj: GObjId, f: u32) -> Option<bool> {
+    table().pred.get(f).map(|p| p(game, gobj, f))
+}
+
+/// Runs the process at `f` if the table has one, saying whether it did (for checks that try
+/// each kind).
+pub fn try_proc(game: &mut Running, gobj: GObjId, f: u32) -> bool {
+    table().proc.get(f).map(|p| p(game, gobj, f)).is_some()
+}
+
 /// Runs a function without arguments (`Event`: a stage's setup, load and start hooks).
+#[inline]
 pub fn run_event(game: &mut Running, f: u32) {
+    match table().event.get(f) {
+        Some(e) => e(game, f),
+        None => unported("function", f),
+    }
+}
+
+/// The functions without arguments' table.
+#[callbacks(Event)]
+fn events(game: &mut Running, f: u32) -> bool {
     use super::gr::{battle, last};
     match f {
         // `Ground_OnStart`: the dummy stage's, empty.
@@ -257,8 +303,9 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if f == super::gm::tournament::BRACKET_ON_FRAME.0 => game.tou_bracket_on_frame(),
         f if f == super::gm::tournament::ALT_ON_FRAME.0 => game.tou_alt_on_frame(),
         super::gm::vs::DB_RUN_EVERY_FRAME => game.db_run_every_frame(),
-        other => unported("function", other),
+        _ => return false,
     }
+    true
 }
 
 /// Runs a stage's demo setup (`StageData::on_demo_init`), which takes the demo's number.
@@ -321,8 +368,18 @@ pub const EF_RESUME_ALL: u32 = 0x8005_BAC4;
 /// Runs a callback a fighter holds that takes its GObj (`void (*)(HSD_GObj*)`): an action
 /// state's animation, input, physics, collision and camera callbacks, accessories, hitlag
 /// hooks and the character's own.
+#[inline]
 pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
-    match cb.0 {
+    match table().fighter.get(cb.0) {
+        Some(f) => f(g, gobj, cb.0),
+        None => unported("fighter callback", cb.0),
+    }
+}
+
+/// The fighter callbacks' table.
+#[callbacks(Fighter)]
+fn fighter_callbacks(g: &mut Running, gobj: GObjId, cb: u32) -> bool {
+    match cb {
         addr if super::ft::fox::run(g, gobj, addr) => {}
         addr if super::ft::seak::run(g, gobj, addr) => {}
         addr if super::ft::mars::run(g, gobj, addr) => {}
@@ -388,40 +445,8 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::co::lift::run(g, gobj, addr) => {}
         addr if super::ft::co::barrel::run(g, gobj, addr) => {}
         addr if super::ft::co::barrel_wait::run(g, gobj, addr) => {}
-        // Animation.
-        0x8008_A494 => g.co_wait_anim(gobj),
-        0x8008_B8D4 | 0x8008_BA98 | 0x8008_C520 | 0x8009_99D8 => g.co_ground_move_anim(gobj),
-        0x800B_FE6C => g.co_sleep_anim(gobj),
-        0x8008_D010 => g.co_attack_air_anim(gobj),
-        0x8008_D78C | 0x800D_5D3C => g.co_landing_anim(gobj),
-        0x8008_F7F0 => g.co_damage_anim(gobj),
-        0x8008_FD98 => g.co_damage_fly_anim(gobj),
-        0x8009_9BD0 => g.co_escape_air_anim(gobj),
-        0x8009_A8D8 => g.co_cliff_wait_anim(gobj),
-        0x800C_9970 => g.co_turn_anim(gobj),
-        0x800C_AC9C => g.co_run_brake_anim(gobj),
-        0x800C_B2F8 | 0x800D_2DD0 => g.co_jump_anim(gobj),
-        0x800C_B528 => g.co_knee_bend_anim(gobj),
-        0x800C_C388 => g.co_jump_aerial_anim(gobj),
-        0x800C_CA00 => g.co_fall_anim(gobj),
-        // Physics.
-        0x8008_A644 => g.co_wait_phys(gobj),
-        0x800D_5F18 | 0x8008_D7B0 | 0x800C_B6AC | 0x8008_B940 | 0x8008_BB04 | 0x8008_BF84
-        | 0x8008_CD28 | 0x800C_9BEC | 0x800E_8864 => g.co_ground_phys(gobj),
-        0x800C_CD58 | 0x8009_093C | 0x8008_D5B4 | 0x800C_C634 => g.co_air_phys(gobj),
-        0x8008_ADF0 | 0x8008_C7F0 => g.co_attack_ground_phys(gobj),
-        0x8008_B600 => g.co_attack_dash_phys(gobj),
-        0x8009_2870 | 0x8009_2B70 => g.co_guard_phys(gobj),
-        0x8009_9CEC => g.co_escape_air_phys(gobj),
-        0x800D_A3D0 => g.co_catch_wait_phys(gobj),
-        0x800D_DA60 | 0x800D_DB90 | 0x800D_DD04 => g.co_throw_phys(gobj),
-        0x800D_E790 => g.co_no_phys(gobj),
-        0x800C_B474 => g.co_jump_phys(gobj),
-        0x8008_FB18 => g.co_damage_phys(gobj),
-        0x8008_FF84 => g.co_damage_fly_phys(gobj),
-        // Collision.
-        0x8008_A678 | 0x800D_5F38 => g.ground_coll_teeter(gobj),
-        0x8008_AE10 | 0x8008_B638 | 0x8008_CD48 => g.ground_coll(gobj),
+        // A jump's animation (the other common states' are `ft::co::dispatch`'s).
+        0x800D_2DD0 => g.co_jump_anim(gobj),
         // Camera.
         0x8007_61C8 => g.update_camera_box(gobj),
         // Hitlag.
@@ -498,8 +523,9 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         EF_PAUSE_ALL => super::ef::pause_all(g.game, Some(gobj)),
         // efLib_ResumeAll, a state's hook for hitlag's end.
         EF_RESUME_ALL => super::ef::resume_all(g.game, Some(gobj)),
-        other => unported("fighter callback", other),
+        _ => return false,
     }
+    true
 }
 
 /// Runs a HUD callback (`IfStatusCb`: an announcement's start or end) by address.
@@ -576,113 +602,60 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         stubs::log(f, args);
         return v;
     }
-    if let Some(v) = super::ef::call(r, f, args) {
-        return v;
+    let t = table();
+    if let Some(c) = t.call.get(f) {
+        return c(r, f, args);
     }
-    if let Some(v) = super::gm::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::fox::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::seak::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::mars::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::zelda::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::purin::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::samus::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::peach::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::link::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::clink::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::yoshi::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::mewtwo::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::masterhand::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::crazyhand::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::koopa::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::gkoopa::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::zako::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::gamewatch::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::kirby::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::ness::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::falco::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::captain::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::luigi::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::mario::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::drmario::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::pikachu::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::donkey::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::co::bury::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::pichu::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::emblem::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::ft::popo::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = super::sfx::call(r, f, args) {
-        return v;
-    }
-    if let Some(v) = held_item_call(r, f, args) {
-        return v;
+    // A fighter's callback called by address with its GObj.
+    if let [Val::GObj(Some(g))] = *args
+        && let Some(cb) = t.fighter.get(f)
+    {
+        cb(r, g, f);
+        return Val::None;
     }
     unported("function", f)
 }
 
+/// The functions called by address' table.
+#[callbacks(Call)]
+fn calls(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
+    super::ef::call(r, f, args)
+        .or_else(|| super::gm::call(r, f, args))
+        .or_else(|| super::ft::fox::call(r, f, args))
+        .or_else(|| super::ft::seak::call(r, f, args))
+        .or_else(|| super::ft::mars::call(r, f, args))
+        .or_else(|| super::ft::zelda::call(r, f, args))
+        .or_else(|| super::ft::purin::call(r, f, args))
+        .or_else(|| super::ft::samus::call(r, f, args))
+        .or_else(|| super::ft::peach::call(r, f, args))
+        .or_else(|| super::ft::link::call(r, f, args))
+        .or_else(|| super::ft::clink::call(r, f, args))
+        .or_else(|| super::ft::yoshi::call(r, f, args))
+        .or_else(|| super::ft::mewtwo::call(r, f, args))
+        .or_else(|| super::ft::koopa::call(r, f, args))
+        .or_else(|| super::ft::gkoopa::call(r, f, args))
+        .or_else(|| super::ft::zako::call(r, f, args))
+        .or_else(|| super::ft::gamewatch::call(r, f, args))
+        .or_else(|| super::ft::kirby::call(r, f, args))
+        .or_else(|| super::ft::ness::call(r, f, args))
+        .or_else(|| super::ft::falco::call(r, f, args))
+        .or_else(|| super::ft::captain::call(r, f, args))
+        .or_else(|| super::ft::luigi::call(r, f, args))
+        .or_else(|| super::ft::mario::call(r, f, args))
+        .or_else(|| super::ft::drmario::call(r, f, args))
+        .or_else(|| super::ft::pikachu::call(r, f, args))
+        .or_else(|| super::ft::donkey::call(r, f, args))
+        .or_else(|| super::ft::co::bury::call(r, f, args))
+        .or_else(|| super::ft::pichu::call(r, f, args))
+        .or_else(|| super::ft::emblem::call(r, f, args))
+        .or_else(|| super::ft::popo::call(r, f, args))
+        .or_else(|| super::sfx::call(r, f, args))
+        .or_else(|| held_item_call(r, f, args))
+}
+
 /// The held item's accessors and the hands' hold poses, which the characters' item hooks and
 /// the common states reach by address.
+#[callbacks(Call)]
 fn held_item_call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     use super::it::lib26b1;
     let gobj = |i: usize| args[i].gobj().expect("a null GObj");

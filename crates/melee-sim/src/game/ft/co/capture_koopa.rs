@@ -291,6 +291,7 @@ pub fn run_grabbed(g: &mut Running, victim: GObjId, koopa: GObjId, cb: u32) -> b
 }
 
 /// Runs one of the victim's state callbacks, if `addr` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         0x800B_CA54 => g.co_capture_damage_koopa_anim(gobj, false),

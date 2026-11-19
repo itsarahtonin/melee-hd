@@ -33,6 +33,7 @@ pub const CHECK_SHADOW_RENDER: [u32; 3] = [0x8020_E268, 0x8020_E4FC, 0x8020_E790
 pub const ON_DEMO_INIT: [u32; 3] = [0x8020_DFDC, 0x8020_E270, 0x8020_E504];
 
 /// A stage object's process or callback, by address: the trophy stages'.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8020_E19C | 0x8020_E1A0 | 0x8020_E1FC | 0x8020_E258 | 0x8020_E25C => empty(r, gobj),
@@ -48,6 +49,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stages' hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x8020_DFE0 => on_init(r, 0),

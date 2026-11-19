@@ -83,6 +83,7 @@ impl Running<'_> {
 }
 
 /// Runs one of Roy's callbacks a fighter holds, if `addr` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ON_ITEM_INVISIBLE => g.fe_on_item_invisible(gobj),
@@ -96,6 +97,7 @@ pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 }
 
 /// Roy's functions other code calls by address (`code::call`).
+#[melee_callbacks::callbacks(Call)]
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj().expect("a null fighter");
     match f {
@@ -107,9 +109,6 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
             r.fe_on_item_drop(gobj(0), args[1].int() != 0);
             Some(Val::None)
         }
-        _ => match args.first() {
-            Some(&Val::GObj(Some(g))) if args.len() == 1 && run(r, g, f) => Some(Val::None),
-            _ => None,
-        },
+        _ => None,
     }
 }

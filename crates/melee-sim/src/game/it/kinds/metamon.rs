@@ -27,6 +27,7 @@ pub const COLL2: u32 = 0x802D_3238;
 const CRY: i32 = 0x2728;
 
 /// Runs one of Ditto's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 => anim0(r, gobj),
@@ -40,6 +41,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of Ditto's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),
@@ -156,7 +158,11 @@ mod tests {
             game: &mut game,
             data: &data,
         };
-        assert!(run_event(&mut r, GObjId(0), LANDED_NOTHING));
+        crate::game::code::run_proc(
+            &mut r,
+            GObjId(0),
+            crate::game::handles::CodeRef(LANDED_NOTHING),
+        );
         use crate::state_eq::StateEq;
         assert!(
             game.state_diff(&before).is_none(),

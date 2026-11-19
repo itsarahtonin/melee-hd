@@ -26,6 +26,7 @@ const SPAWNMANY_RARITY: u32 = 8;
 const VPOS: u32 = 0xC;
 
 /// A stage object's process or callback, by address: Yoshi's Story's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801E_322C | 0x801E_3230 | 0x801E_336C | 0x801E_3414 => empty(r, gobj),
@@ -40,6 +41,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x801E_3030 => on_init(r),

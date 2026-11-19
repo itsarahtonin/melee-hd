@@ -42,6 +42,7 @@ pub const HIT_SHIELD: u32 = 0x802E_8784;
 const PROBES: [[f32; 2]; 4] = [[0.0, 200.0], [0.0, -200.0], [-200.0, 0.0], [200.0, 0.0]];
 
 /// Runs one of the laser's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM2 => anim_ride(r, gobj),
@@ -58,6 +59,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the laser's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PHYS2 => phys_straight(r, gobj),

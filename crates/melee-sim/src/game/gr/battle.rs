@@ -23,6 +23,7 @@ const TRANSITIONING: i32 = 1;
 const DONE: i32 = 2;
 
 /// A stage object's process or callback, by address: Battlefield's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8021_A114 | 0x8021_A118 | 0x8021_A198 | 0x8021_A204 | 0x8021_A208 | 0x8021_A26C

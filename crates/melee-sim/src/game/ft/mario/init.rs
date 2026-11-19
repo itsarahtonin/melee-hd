@@ -79,6 +79,7 @@ impl Running<'_> {
 }
 
 #[doc(alias = "ftMr_Init_OnItemInvisible")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ON_TAKE_DAMAGE => g.mr_on_take_damage(gobj),
@@ -94,6 +95,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 
 #[doc(alias = "ftMr_Init_OnItemDrop")]
 #[doc(alias = "ftMr_Init_OnItemPickup")]
+#[melee_callbacks::callbacks(Call)]
 pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj().expect("a null fighter");
     Some(match f {

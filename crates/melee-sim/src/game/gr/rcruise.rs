@@ -123,6 +123,7 @@ fn param(game: &Game) -> Param {
 }
 
 /// A stage object's process or callback, by address: Rainbow Cruise's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801F_F3E8 | 0x801F_F3EC | 0x801F_F43C | 0x801F_F440 | 0x801F_F738 | 0x801F_F79C
@@ -145,6 +146,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x801F_F168 => on_init(r),
@@ -156,6 +158,7 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 }
 
 /// The stage's render callbacks, by address.
+#[melee_callbacks::callbacks(Render)]
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
     match cb {
         RENDER_COURSE => render_course(r, gobj, pass),

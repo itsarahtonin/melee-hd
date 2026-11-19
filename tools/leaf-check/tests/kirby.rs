@@ -78,6 +78,7 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::kirby::special_purin::KIRBY;
+use melee_sim::game::ft::kirby::special_samus::KIRBY as SS_KIRBY;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
 use melee_sim::game::it::kinds::{
@@ -497,8 +498,8 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftKb_SpecialN_800F5B3C" => return float(g.kb_pull_shrink(gobj)),
         "ftKb_SpecialN_800F5B4C" => return float(g.kb_pull_range(gobj)),
         "ftKb_SpecialN_800F5D04" => g.kb_lose_copy(gobj, r4 != 0),
-        "ftKb_SpecialNSs_800FCC6C" => return b(g.kb_ss_shot_lost(Some(gobj))),
-        "ftKb_SpecialNSs_800FCCBC" => return b(g.kb_ss_left_charge(Some(gobj))),
+        "ftKb_SpecialNSs_800FCC6C" => return b(g.samus_shot_lost(Some(gobj), &SS_KIRBY)),
+        "ftKb_SpecialNSs_800FCCBC" => return b(g.samus_left_charge(Some(gobj), &SS_KIRBY)),
         "ftKb_SpecialNFx_800FDD14" => return b(g.kb_fx_no_blaster(Some(gobj))),
         "ftKb_SpecialNFx_800FDD4C" => return Ret::Int(g.kb_fx_blaster_action(Some(gobj)) as u32),
         "ftKb_SpecialNFx_800FDDF4" => return b(g.kb_fx_blaster_not_needed(Some(gobj))),
@@ -539,10 +540,10 @@ fn run_callback(g: &mut Running, gobj: GObjId, a: u32) -> Ret {
         run_fighter_cb(g, gobj, CodeRef(a));
         return Ret::Nothing;
     }
-    if let Some(v) = melee_sim::game::it::kinds::run_pred(g, gobj, a) {
+    if let Some(v) = melee_sim::game::code::try_pred(g, gobj, a) {
         return Ret::Int(u32::from(v));
     }
-    if melee_sim::game::it::kinds::run_event(g, gobj, a) {
+    if melee_sim::game::code::try_proc(g, gobj, a) {
         return Ret::Nothing;
     }
     panic!("{SKIP}{} takes more than its GObj", name_of(a));

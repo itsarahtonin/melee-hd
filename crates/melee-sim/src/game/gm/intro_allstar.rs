@@ -364,6 +364,7 @@ impl Running<'_> {
 }
 
 /// Runs the intro's process, if `f` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_proc(r: &mut Running, gobj: GObjId, f: u32) -> bool {
     match f {
         MODEL_PROC => r.intro_allstar_model_proc(gobj),
@@ -374,19 +375,21 @@ pub fn run_proc(r: &mut Running, gobj: GObjId, f: u32) -> bool {
 }
 
 /// Runs the intro's frame function, if `f` is one.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_frame(r: &mut Running, f: u32) -> bool {
-    if f != ON_FRAME.0 {
-        return false;
+    match f {
+        f if f == ON_FRAME.0 => r.intro_allstar_on_frame(),
+        _ => return false,
     }
-    r.intro_allstar_on_frame();
     true
 }
 
 /// Runs the intro's render callback, if `cb` is one.
-pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32) -> bool {
-    if cb != CAMERA_RENDER {
-        return false;
+#[melee_callbacks::callbacks(Render)]
+pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, _pass: i32) -> bool {
+    match cb {
+        CAMERA_RENDER => r.intro_allstar_camera_render(gobj),
+        _ => return false,
     }
-    r.intro_allstar_camera_render(gobj);
     true
 }

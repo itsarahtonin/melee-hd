@@ -358,6 +358,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none on gameplay.
 - **Source:** `crates/melee-sim/src/game/ft/purin/special_n.rs:1332`.
 
+### Kirby: Samus's copy destroys his effects whether or not the charge's are out
+
+- **Where:** `ftKb_SpecialNSs_800FCD04`, `ftKb_SpecialNSs_800FCD60` and the copy's other ends of the charge (Kirby's inline of `ftSamus_destroyAllEF`), `crates/melee-sim/src/game/ft/samus/special_n.rs` (`samus_charge_effects_off`, under Kirby's `KIRBY`'s `effects_off_always`).
+- **Defect:** Samus's own cleanup calls `efLib_DestroyAll` only when her charge's effects flag (`u` x8) says some are out. Kirby's copy calls it unconditionally (then clears his flag, `u` xAC), so every end of the charge, the shot fired or let go, also destroys whatever other effects are attached to him.
+- **Effect:** an effect of his own still running as the charge ends (one a hit or a move attached to him) disappears early; effects only, as far as the corpus shows.
+- **melee-hd:** modeled.
+- **Fix:** check the flag as Samus's does.
+- **Fix impact:** none on gameplay found; changes effects shown.
+- **Source:** `crates/melee-sim/src/game/ft/samus/special_n.rs:105`.
+
 ### Mewtwo: a Shadow Ball field nothing stores
 
 - **Where:** Shadow Ball's code reading `ftMewtwo_FighterVars::x2238_shadowBallGObj`.
@@ -2304,7 +2314,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A leaving list's process in another state | `fn_8022AF10`, `game/mn/main.rs` (`list_leave_proc`) | Leaves its animation loop pointer unset for a state other than the two it's set up for; only those two hand a list to it | `crates/melee-sim/src/game/mn/main.rs` (`list_leave_proc`) |
 | An idle list without a description | `fn_8022AFEC`, `game/mn/main.rs` (`list_proc`) | Writes the description's `hidden` byte through a null pointer (address 0x4D) when an idle list has no description; every list the menu makes has its strings | `crates/melee-sim/src/game/mn/main.rs` (`list_proc`) |
 | A fixed handicap of 0 | `gm_80167BC8`, `game/gm/vs_mode.rs` (`apply_menu_rules`) | Reads the handicap table one entry before its start (`handicap - 1` as an unsigned index); the menus set handicaps 1 to 9 | `crates/melee-sim/src/game/gm/vs_mode.rs` (`apply_menu_rules`) |
-| Kirby's aerial Thunder Jolt for another copy | `ftKb_PkSpecialAirN_Anim`, `game/ft/kirby/special_pikachu.rs` | Takes the landing lag from `f31`, which its caller left, for a copy other than Pikachu's or Pichu's; only those two copies enter the state (ssbm-rs transliterates the function from its machine code for it) | `crates/melee-sim/src/game/ft/kirby/special_pikachu.rs:161` |
+| Kirby's aerial Thunder Jolt for another copy | `ftKb_PkSpecialAirN_Anim`, `game/ft/pikachu/special_n.rs` (`pk_special_air_n_anim` with Kirby's `KindFrom::Copy`) | Takes the landing lag from `f31`, which its caller left, for a copy other than Pikachu's or Pichu's; only those two copies enter the state (ssbm-rs transliterates the function from its machine code for it) | `crates/melee-sim/src/game/ft/pikachu/special_n.rs:162` |
 | Held needles of another kind | `it_802B18B0`, `game/it/kinds/seakneedleheld.rs` | Shows as many needles as a count it never set for a kind other than Sheik's and Kirby's copy's; only those two make them | `crates/melee-sim/src/game/it/kinds/seakneedleheld.rs:63` |
 | Sheik's chain with no link out | `it_802BC080`, `game/it/kinds/seakchain.rs` | Stores a register its caller set (`env_flags`) when its loop doesn't run | `crates/melee-sim/src/game/it/kinds/seakchain.rs:796` |
 | A floor probe that misses | `ftCo_800DC920`, `game/ft/co/grab.rs` | Leaves the offset a stack word it then compares | `crates/melee-sim/src/game/ft/co/grab.rs:503` |

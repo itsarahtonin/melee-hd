@@ -192,7 +192,7 @@ fn run_purin(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             g.purin_draw_hat(gobj, vmtx, r4 as i32);
         }
         _ => {
-            if melee_sim::game::ft::purin::run(g, gobj, a) {
+            if melee_sim::game::code::try_fighter_cb(g, gobj, a) {
                 return Ret::Nothing;
             }
             panic!("{SKIP}{} takes more than its GObj", name_of(a));

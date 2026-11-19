@@ -24,6 +24,7 @@
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
+use super::super::code;
 use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Running};
 use super::data::{StageCallbacks, StageData};
@@ -140,43 +141,41 @@ fn target(game: &Game) -> &'static Target {
     &TARGETS[(k - GR_KIND_TMARIO) as usize]
 }
 
-/// A stage object's process or callback, by address: the target stages'.
-pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
-    if addr == MARIO_HOOK {
-        mario_hook(r, gobj);
-        return true;
+/// The target stages' objects' processes and callbacks in the callback table: one entry for
+/// each address [`ROLES`] lists, by its role (written by hand, the roles being a table).
+pub fn run(t: &mut code::Entries<code::kind::Proc>) {
+    let site = concat!(file!(), ":", line!());
+    t.add(MARIO_HOOK, |r, gobj, _| mario_hook(r, gobj), site);
+    for &(a, role) in ROLES.iter() {
+        let f: <code::kind::Proc as code::kind::Kind>::Fn = match role {
+            Role::StartAnim => |r, gobj, _| init_model(r, gobj),
+            Role::CollAnim => |r, gobj, _| init_coll(r, gobj),
+            Role::MarioFloor => |r, gobj, _| init_mario_floor(r, gobj),
+            Role::IceFloor => |r, gobj, _| init_ice_floor(r, gobj),
+            Role::Empty => |r, gobj, _| empty(r, gobj),
+            Role::UpdateColl => |r, gobj, _| proc_coll(r, gobj),
+            Role::WindColl => |r, gobj, _| proc_wind_coll(r, gobj),
+            Role::PurinJoints => |r, gobj, _| proc_purin(r, gobj),
+        };
+        t.add(a, f, site);
     }
-    let Ok(i) = ROLES.binary_search_by_key(&addr, |e| e.0) else {
-        return false;
-    };
-    match ROLES[i].1 {
-        Role::StartAnim => init_model(r, gobj),
-        Role::CollAnim => init_coll(r, gobj),
-        Role::MarioFloor => init_mario_floor(r, gobj),
-        Role::IceFloor => init_ice_floor(r, gobj),
-        Role::Empty => empty(r, gobj),
-        Role::UpdateColl => proc_coll(r, gobj),
-        Role::WindColl => proc_wind_coll(r, gobj),
-        Role::PurinJoints => proc_purin(r, gobj),
-    }
-    true
 }
 
-/// The stages' hooks without arguments, by address.
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    for (i, t) in TARGETS.iter().enumerate() {
-        if f == t.data.on_init {
-            on_init(r, i);
-        } else if f == t.data.on_load {
-            on_load(r);
-        } else if f == t.data.on_start {
-            on_start(r);
-        } else {
-            continue;
-        }
-        return true;
+/// The target stages' hooks without arguments in the callback table, each stage's three.
+pub fn run_event(t: &mut code::Entries<code::kind::Event>) {
+    let site = concat!(file!(), ":", line!());
+    for tg in TARGETS.iter() {
+        t.add(
+            tg.data.on_init,
+            |r, f| {
+                let i = TARGETS.iter().position(|t| t.data.on_init == f).unwrap();
+                on_init(r, i)
+            },
+            site,
+        );
+        t.add(tg.data.on_load, |r, _| on_load(r), site);
+        t.add(tg.data.on_start, |r, _| on_start(r), site);
     }
-    false
 }
 
 /// Whether `f` is a target stage's demo setup.

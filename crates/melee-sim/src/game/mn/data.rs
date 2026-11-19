@@ -61,6 +61,7 @@ pub fn digit_count(n: i32) -> i32 {
 
 impl Running<'_> {
     /// Runs a Data screen's process.
+    #[melee_callbacks::callbacks(Proc)]
     pub fn data_menus_proc(&mut self, gobj: GObjId, f: u32) -> bool {
         use super::{
             count, diagram as dg, diagram2 as d2, diagram3 as d3, info, info_bonus as bonus,

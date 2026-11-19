@@ -20,6 +20,7 @@ use crate::vec::Vec3;
 const START_HOOK: u32 = 0x8020_1E98;
 
 /// A stage object's process or callback, by address: Hyrule Temple's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8020_1E3C | 0x8020_1E40 | 0x8020_1E90 | 0x8020_1E94 | 0x8020_1E98 | 0x8020_1F40 => {
@@ -35,6 +36,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x8020_1C64 => on_init(r),

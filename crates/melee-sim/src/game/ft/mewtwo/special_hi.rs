@@ -556,6 +556,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::HI_CREATE_GFX => g.mt_hi_start_gfx_once(gobj),

@@ -42,6 +42,7 @@ pub const SHIELD_BOUNCED: u32 = 0x8028_6048;
 pub const BAT_RENDER: u32 = 0x8028_4E10;
 
 /// Runs one of the sword's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM0 | ANIM3 | ANIM4 => ease(r, gobj),
@@ -59,6 +60,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the sword's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),

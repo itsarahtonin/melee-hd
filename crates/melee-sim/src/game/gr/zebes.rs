@@ -272,6 +272,7 @@ const FOG_TABLE: [[f32; 4]; 3] = [
 ];
 
 /// A stage object's process or callback, by address: Brinstar's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801D_90FC | 0x801D_93D8 | 0x801D_94EC | 0x801D_9754 | 0x801D_9F2C | 0x801D_A0C0 => {
@@ -297,6 +298,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x801D_84A4 => on_init(r),

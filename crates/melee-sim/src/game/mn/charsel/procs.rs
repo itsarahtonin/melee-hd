@@ -13,6 +13,7 @@ const NAME_CANCEL: &[u8] =
 
 impl Running<'_> {
     /// Runs one of the screen's processes.
+    #[melee_callbacks::callbacks(Proc)]
     pub fn charsel_run(&mut self, gobj: GObjId, f: u32) -> bool {
         match f {
             CURSOR_THINK => self.charsel_cursor_think(gobj),

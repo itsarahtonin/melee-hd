@@ -98,6 +98,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ITEM_TORCH_SETUP => g.gw_torch_setup(gobj),

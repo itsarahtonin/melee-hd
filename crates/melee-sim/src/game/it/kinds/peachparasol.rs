@@ -22,6 +22,7 @@ pub const EVT_UNK: u32 = 0x802B_DDF8;
 pub const KIND: i32 = 103;
 
 /// Runs one of the parasol's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         MOTION2_ANIM => animated(r, gobj),
@@ -30,6 +31,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the parasol's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DESTROYED => destroyed(r, gobj),

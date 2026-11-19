@@ -43,6 +43,7 @@ fn param(game: &Game) -> Param {
 }
 
 /// A stage object's process or callback, by address: Fountain of Dreams'.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801C_BE08 | 0x801C_BE0C | 0x801C_BE5C | 0x801C_BE60 | 0x801C_C338 | 0x801C_CA10
@@ -61,6 +62,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x801C_BB88 => on_init(r),
@@ -245,6 +247,7 @@ pub const RENDER_REFLECTION: u32 = 0x801C_CEA0;
 pub const RENDER_STARS: u32 = 0x801C_CB90;
 
 /// The stage's render callbacks, by address.
+#[melee_callbacks::callbacks(Render)]
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
     match cb {
         RENDER_FOUNTAIN => render_fountain(r, gobj, pass),

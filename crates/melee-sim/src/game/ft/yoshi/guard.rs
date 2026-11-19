@@ -400,6 +400,7 @@ impl Running<'_> {
 #[doc(alias = "ftYs_GuardOff_Phys")]
 #[doc(alias = "ftYs_GuardHold_Coll")]
 #[doc(alias = "ftYs_GuardHold_Phys")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::GUARD_ON_0_ANIM => g.ys_guard_on_0_anim(gobj),

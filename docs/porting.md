@@ -35,6 +35,15 @@ melee-hd's target is identical gameplay and identical presentation (what players
 - Every alias needs a check: a leaf-check test that calls `fns::OriginalName`, or a line in `ledger/checks.txt` naming the system-level check that covers it. Functions replaced by a native subsystem go in `ledger/replaced.txt`, provably dead ones in `ledger/dead.txt`, each with its reason. `cargo run --release -p ledger -- --check` must pass.
 - A character or stage that can play a whole match gets its line in `melee_sim::game::roster` (its `CharacterKind` or `StKind`, its name and command-line names), which the player's command line, `--help` and launcher list. A stage is offered only once its audit finds nothing a match on it reaches unported ([the player](player.md#stages-the-player-offers)).
 
+## Callbacks
+
+A function pointer the original keeps in its state (an action state's callbacks, a GObj process, a stage's hooks, an item's events and predicates, a render callback, a function `code::call` reaches) stays the original's address in melee-hd's state (`CodeRef`), so the oracle compares it and a snapshot holds it as a number. One table maps each address to its port (`game::code::table`), built once on the first dispatch, a hash lookup per callback.
+
+- **Adding a port's callbacks:** write them where the port is, as arms of its module's dispatch function, a `match` on the address marked `#[melee_callbacks::callbacks(KIND)]` (`Fighter`, `Proc`, `Event`, `Pred`, `Call`, `Render`): `addr::SPECIAL_N_ANIM => g.fox_special_n_anim(gobj),`. The attribute turns each arm into a table entry. A module's dispatch function is reached from the roots in `game::code` through a delegation arm in its parent's (`a if fox::run(g, gobj, a) => {}`, or a body `init::run(g, gobj, a) || special_n::run(g, gobj, a)`); a new module adds one such line to its parent.
+- **What an arm may test:** only the address: literals and constants joined by `|`, word ranges (`lo..=hi`), `x if LIST.contains(&x)`, `x if x == E`, and a leading `if addr == X { ..; return true; }`. Anything that depends on the state is a compile error; branch inside the arm's body instead. `crates/melee-callbacks` documents the shapes it reads.
+- **An address in two places** stops the table's build by name with both places (`the_callback_table_builds`); there is no first-match order between modules any more.
+- **Calling one by address** from game code: `code::run_fighter_cb`, `run_proc`, `run_event`, `run_pred`, `run_render` or `call`; a check that tries each kind uses `code::try_fighter_cb`, `try_proc`, `try_pred`. A fighter callback called through `code::call` with its GObj alone runs as the callback.
+
 ## State
 
 - Simulation state is plain data: structs, fixed arrays, `Vec`s that only grow, and `Copy` handles. No `Box<dyn …>`, closures, `Rc` or references inside state, so a snapshot is a clone and a restore is `clone_from` without allocating.

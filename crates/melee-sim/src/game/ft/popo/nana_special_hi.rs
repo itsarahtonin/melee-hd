@@ -319,6 +319,7 @@ impl Running<'_> {
     fn nana_special_hi_nothing(&mut self, _gobj: GObjId) {}
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use addr::*;
     match a {

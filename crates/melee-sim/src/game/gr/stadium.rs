@@ -176,6 +176,7 @@ fn randi_between(game: &mut Game, a: i32, b: i32) -> i32 {
 }
 
 /// A stage object's process or callback, by address: Pokémon Stadium's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801D_13C4 | 0x801D_156C | 0x801D_1E18 | 0x801D_1E1C => empty(r, gobj),
@@ -241,6 +242,7 @@ pub fn init_blades(r: &mut Running, gobj: GObjId) {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x801D_101C => on_init(r),
@@ -252,6 +254,7 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 }
 
 /// The screens' render callbacks, by address.
+#[melee_callbacks::callbacks(Render)]
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
     match cb {
         0x801D_5074 => render_display(r, gobj, pass),

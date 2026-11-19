@@ -836,6 +836,7 @@ impl Running<'_> {
     }
 
     /// The match-up screen's processes.
+    #[melee_callbacks::callbacks(Proc)]
     pub(crate) fn tou_alt_run(&mut self, gobj: GObjId, addr: u32) -> bool {
         match addr {
             PROC_BG => self.alt_bg_proc(gobj),

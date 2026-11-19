@@ -250,17 +250,17 @@ fn run_ness(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         return Ret::Nothing;
     }
     if fighter_unit(unit(a)) {
-        if melee_sim::game::ft::ness::run(g, gobj, a) {
+        if melee_sim::game::code::try_fighter_cb(g, gobj, a) {
             return Ret::Nothing;
         }
     } else {
         if g.game.world.gobj(gobj).classifier != melee_sim::game::it::CLASS_ITEM {
             panic!("{SKIP}{} takes its parent, not an item", name_of(a));
         }
-        if let Some(v) = melee_sim::game::it::kinds::run_pred(g, gobj, a) {
+        if let Some(v) = melee_sim::game::code::try_pred(g, gobj, a) {
             return Ret::Int(u32::from(v));
         }
-        if melee_sim::game::it::kinds::run_event(g, gobj, a) {
+        if melee_sim::game::code::try_proc(g, gobj, a) {
             return Ret::Nothing;
         }
     }

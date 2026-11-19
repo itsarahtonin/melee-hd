@@ -736,6 +736,7 @@ impl Running<'_> {
 }
 
 /// Runs a cargo or shouldered state's callback, if `cb` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
     match cb {
         // Nothing: ftCo_CargoWait_Anim, ftCo_CargoJump_Anim, ftCo_CargoFall_Anim,

@@ -128,6 +128,7 @@ fn rem(a: i32, b: i32) -> i32 {
 }
 
 /// A stage object's process or callback, by address: Flat Zone's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8021_7064 | 0x8021_7068 | 0x8021_73D0 | 0x8021_7438 | 0x8021_743C | 0x8021_7644
@@ -155,6 +156,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x8021_6E78 => on_init(r),

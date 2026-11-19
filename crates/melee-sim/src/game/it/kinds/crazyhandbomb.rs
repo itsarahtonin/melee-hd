@@ -144,6 +144,7 @@ pub fn burst(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).on_accessory = Some(CodeRef(ACCESSORY_1));
 }
 
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM_0 | COLL_1 => false,
@@ -163,6 +164,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     })
 }
 
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PHYS_0 => phys_0(r, gobj),

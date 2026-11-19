@@ -16,6 +16,7 @@ pub const EVT_UNK: u32 = 0x802B_D30C;
 pub const KIND: i32 = 98;
 
 /// Runs one of the explosion's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         DMG_DEALT => dmg_dealt(r, gobj),
@@ -25,6 +26,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the explosion's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(_r: &mut Running, _gobj: GObjId, _addr: u32) -> bool {
     false
 }

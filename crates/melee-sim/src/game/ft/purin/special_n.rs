@@ -1477,6 +1477,7 @@ const EMPTY: [u32; 8] = [
 #[doc(alias = "ftPr_SpecialNStart_IASA")]
 #[doc(alias = "ftPr_SpecialNTurn_IASA")]
 #[doc(alias = "ftPr_SpecialAirNStartTurn_IASA")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     let r = &PURIN;
     match a {

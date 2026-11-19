@@ -543,7 +543,7 @@ fn vec_words(v: Vec3) -> Vec<u32> {
     vec![v.x.to_bits(), v.y.to_bits(), v.z.to_bits()]
 }
 
-use melee_sim::game::it::kinds::{self, capsule};
+use melee_sim::game::it::kinds::capsule;
 use melee_sim::game::it::kinds::{foxblaster, foxlaser};
 use melee_sim::game::it::owner as it_owner;
 use melee_sim::game::it::spawn;
@@ -2355,7 +2355,7 @@ thread_local! {
 /// Runs the callback the captured call passed (`PASSED`), as the kinds' dispatch has it.
 fn passed_cb(r: &mut Running, g: GObjId) {
     let a = PASSED.with(|p| p.get());
-    if !melee_sim::game::it::kinds::run_event(r, g, a) {
+    if !melee_sim::game::code::try_proc(r, g, a) {
         melee_sim::game::code::unported_call(&format!("item callback {a:#010x}"));
     }
 }
@@ -2601,14 +2601,14 @@ fn capsule_explodes() {
 fn capsule_states() {
     leaf_check::shard_test!();
     check_pred("itCapsule_UnkMotion0_Anim", |r, g| {
-        kinds::run_pred(r, g, capsule::ANIM0).unwrap()
+        melee_sim::game::code::try_pred(r, g, capsule::ANIM0).unwrap()
     });
     check_proc("itCapsule_UnkMotion0_Phys", |r, g| {
-        assert!(kinds::run_event(r, g, capsule::PHYS0));
+        assert!(melee_sim::game::code::try_proc(r, g, capsule::PHYS0));
     });
     check_pred("itCapsule_UnkMotion0_Coll", capsule::coll0);
     check_pred("itCapsule_UnkMotion4_Anim", |r, g| {
-        kinds::run_pred(r, g, capsule::ANIM4).unwrap()
+        melee_sim::game::code::try_pred(r, g, capsule::ANIM4).unwrap()
     });
     check_proc("itCapsule_UnkMotion4_Phys", capsule::phys4);
     check_pred("itCapsule_UnkMotion4_Coll", capsule::coll4);
@@ -2954,7 +2954,7 @@ thread_local! {
 /// Runs the second callback the captured call passed.
 fn passed_cb2(r: &mut Running, g: GObjId) {
     let a = PASSED2.with(|p| p.get());
-    if !kinds::run_event(r, g, a) {
+    if !melee_sim::game::code::try_proc(r, g, a) {
         melee_sim::game::code::unported_call(&format!("item callback {a:#010x}"));
     }
 }

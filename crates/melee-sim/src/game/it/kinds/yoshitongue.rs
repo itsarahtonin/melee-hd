@@ -29,6 +29,7 @@ fn tip(r: &Running, yoshi: GObjId) -> i32 {
 }
 
 /// Runs one of the caught item's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(_r: &mut Running, _gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM | KB_ANIM => anim(),
@@ -38,6 +39,7 @@ pub fn run_pred(_r: &mut Running, _gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the caught item's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(_r: &mut Running, _gobj: GObjId, addr: u32) -> bool {
     match addr {
         PHYS | KB_PHYS => phys(),

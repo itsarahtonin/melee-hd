@@ -441,12 +441,13 @@ impl Running<'_> {
     /// One of his functions by address that takes his GObj, stopping by name where it isn't
     /// ported.
     pub(crate) fn ch_dispatch(&mut self, gobj: GObjId, a: u32) {
-        if !super::run(self, gobj, a) {
+        if !super::super::super::code::try_fighter_cb(self, gobj, a) {
             super::super::super::code::unported_call(&format!("Crazy Hand's function {a:#010x}"));
         }
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::INIT_80155FCC => g.ch_start(gobj),

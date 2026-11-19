@@ -61,6 +61,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::REMOVE_GFX_CB => g.ca_remove_gfx_cb(gobj),
@@ -75,6 +76,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 
 #[doc(alias = "ftCa_Init_OnItemDrop")]
 #[doc(alias = "ftCa_Init_OnItemPickup")]
+#[melee_callbacks::callbacks(Call)]
 pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj().expect("a null fighter");
     Some(match f {

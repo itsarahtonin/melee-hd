@@ -154,6 +154,7 @@ pub struct Globals {
 }
 
 /// A stage object's process or callback, by address: Green Greens'.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8021_38B4 | 0x8021_38B8 | 0x8021_3908 | 0x8021_390C | 0x8021_3944 | 0x8021_3948
@@ -174,6 +175,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x8021_3464 => on_init(r),

@@ -499,6 +499,7 @@ impl Running<'_> {
 }
 
 /// The contest's processes and hook, by address.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_proc(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PROC_NO_CONTEST => r.homerun_no_contest_proc(gobj),

@@ -129,6 +129,7 @@ fn anim(r: &mut Running, gobj: GObjId) -> bool {
     reg(t) < 0.0
 }
 
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM => anim(r, gobj),
@@ -147,10 +148,13 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 /// physics, the accessory and the landing.
 const EMPTY: [u32; 3] = [PHYS, ACCESSORY, LANDED];
 
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
-    let _ = r;
-    let _ = gobj;
-    EMPTY.contains(&addr)
+    match addr {
+        a if EMPTY.contains(&a) => {}
+        _ => return false,
+    }
+    true
 }
 
 #[cfg(test)]

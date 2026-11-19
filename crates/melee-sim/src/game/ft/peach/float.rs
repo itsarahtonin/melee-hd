@@ -279,6 +279,7 @@ fn tick_float_time(fp: &mut crate::game::structs::Fighter) {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::FLOAT_ANIM => g.peach_float_anim(gobj),

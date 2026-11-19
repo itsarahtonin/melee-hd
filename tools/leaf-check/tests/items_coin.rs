@@ -164,10 +164,10 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             it::evt_unk::run(g, gobj, other, CodeRef(a));
         }
         _ => {
-            if let Some(v) = kinds::run_pred(g, gobj, a) {
+            if let Some(v) = melee_sim::game::code::try_pred(g, gobj, a) {
                 return Ret::Int(u32::from(v));
             }
-            if !kinds::run_event(g, gobj, a) {
+            if !melee_sim::game::code::try_proc(g, gobj, a) {
                 panic!("{SKIP}{name} takes more than its GObj");
             }
         }

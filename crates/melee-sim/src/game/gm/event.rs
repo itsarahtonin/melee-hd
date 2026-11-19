@@ -1932,9 +1932,15 @@ const JOIN_CALLBACKS: [(u8, u32); 5] = [
 ];
 
 /// Whether `f` is a crowd's callback for each joiner.
-pub fn is_join_callback(f: u32) -> bool {
-    JOIN_CALLBACKS.iter().any(|&(_, a)| a == f)
-}
+pub const JOIN_CALLBACK_ADDRS: [u32; JOIN_CALLBACKS.len()] = {
+    let mut a = [0; JOIN_CALLBACKS.len()];
+    let mut i = 0;
+    while i < a.len() {
+        a[i] = JOIN_CALLBACKS[i].1;
+        i += 1;
+    }
+    a
+};
 
 /// Runs a crowd's callback `f` for a joiner in `slot` with `left` still to join: its
 /// computer kind the crowd's (`evbonus->x16`); Event 24's last joiner twice the size.
@@ -1954,6 +1960,7 @@ pub fn run_join_callback(r: &mut Running, f: u32, slot: i32, left: i32) {
 }
 
 /// Runs an event's process.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_proc(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PROC_SHEIKS => r.event_sheiks_proc(gobj),

@@ -72,6 +72,7 @@ const TARGET: usize = 0x8C;
 const ANGLE: usize = 0xA4;
 
 /// Runs one of Lugia's (or its Aeroblasts') predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM1 => anim1(r, gobj),
@@ -89,6 +90,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of Lugia's (or its Aeroblasts') events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),

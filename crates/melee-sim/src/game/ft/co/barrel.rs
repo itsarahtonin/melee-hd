@@ -36,6 +36,7 @@ pub const ACCESSORY1: u32 = 0x800C_9264;
 pub const LAUNCHED: u32 = 0x800C_9290;
 
 /// Runs one of the barrel states' callbacks, if `addr` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DEATH2 | TAKE_DMG => g.barrel_fire(gobj),

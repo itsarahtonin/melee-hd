@@ -439,6 +439,7 @@ impl Running<'_> {
 #[doc(alias = "ftKb_YsSpecialNCapture2_1_Coll")]
 #[doc(alias = "ftKb_YsSpecialAirN2_1_Coll")]
 #[doc(alias = "ftKb_YsSpecialAirN2_0_Coll")]
+#[melee_callbacks::callbacks(Fighter)]
 fn coll(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use addr::*;
     match a {
@@ -473,6 +474,7 @@ fn coll(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     true
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use addr::*;
     match a {

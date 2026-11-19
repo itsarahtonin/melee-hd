@@ -1259,6 +1259,7 @@ impl Running<'_> {
     }
 
     /// Runs the names' screens' processes.
+    #[melee_callbacks::callbacks(Proc)]
     pub fn run_names_proc(&mut self, gobj: GObjId, f: u32) -> bool {
         match f {
             THINK => self.names_think(gobj),

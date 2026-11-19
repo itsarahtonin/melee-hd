@@ -19,6 +19,7 @@ pub const PICKED_UP: u32 = 0x802A_DD88;
 pub const EVT_UNK: u32 = 0x802A_DDB0;
 
 /// Runs one of the hammer's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DESTROYED => destroyed(r, gobj),

@@ -16,6 +16,7 @@ pub const PHYS: u32 = 0x802A_DB80;
 pub const COLL: u32 = 0x802A_DBB0;
 
 /// Runs one of the star's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM => anim(r, gobj),
@@ -25,6 +26,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the star's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PHYS => phys(r, gobj),

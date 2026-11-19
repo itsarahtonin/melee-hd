@@ -130,6 +130,7 @@ impl Game {
 }
 
 /// The mode's functions the match calls by address: its match start.
+#[melee_callbacks::callbacks(Call)]
 pub fn call(r: &mut Running, f: u32, _args: &[Val]) -> Option<Val> {
     match f {
         ON_MATCH_START => {

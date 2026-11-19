@@ -24,7 +24,6 @@ pub mod sweep;
 pub mod tag;
 pub mod wait;
 
-use super::super::code::Val;
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
@@ -502,6 +501,7 @@ impl Running<'_> {
 
 /// Runs one of Master Hand's callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr`
 /// is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
     common::run(g, gobj, addr)
         || init::run(g, gobj, addr)
@@ -524,12 +524,4 @@ pub fn run_with(g: &mut Running, gobj: GObjId, addr: u32, cb: u32) -> bool {
         _ => return false,
     }
     true
-}
-
-/// Master Hand's functions other code calls by address (`code::call`).
-pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
-    match args.first() {
-        Some(&Val::GObj(Some(g))) if args.len() == 1 && run(r, g, f) => Some(Val::None),
-        _ => None,
-    }
 }

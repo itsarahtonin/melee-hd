@@ -34,6 +34,7 @@ const LIFETIME: u32 = 0;
 const FADE_LIFETIME: u32 = 4;
 
 /// Runs one of the afterimage's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         MOTION0_ANIM | MOTION1_ANIM => follow(r, gobj),
@@ -49,6 +50,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the afterimage's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         MOTION0_PHYS | MOTION1_PHYS => follow_trail(r, gobj),

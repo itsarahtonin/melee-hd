@@ -1312,6 +1312,7 @@ fn abs(v: f64) -> f64 {
     if v < 0.0 { fp::fneg(v) } else { v }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::S_8012EB48 => g.ys_s_switch(gobj),

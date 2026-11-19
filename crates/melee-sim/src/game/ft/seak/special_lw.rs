@@ -205,6 +205,7 @@ impl Running<'_> {
     }
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::LW_FN_80114034 => g.seak_special_lw_start_gfx(gobj),

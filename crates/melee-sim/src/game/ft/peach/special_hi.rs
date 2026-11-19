@@ -28,6 +28,7 @@ const MS_LANDING_FALL_SPECIAL: i32 = 43;
 const MS_CO_PARASOL_OPEN: i32 = 144;
 const MS_CO_PARASOL_FALL_SPECIAL: i32 = 146;
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use super::addr::*;
     match a {

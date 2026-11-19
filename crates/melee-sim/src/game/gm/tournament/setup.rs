@@ -2244,6 +2244,7 @@ impl Running<'_> {
     }
 
     /// The setup's processes.
+    #[melee_callbacks::callbacks(Proc)]
     pub(crate) fn tou_setup_run(&mut self, gobj: GObjId, addr: u32) -> bool {
         match addr {
             PROC_BG => self.tou_bg_proc(gobj),

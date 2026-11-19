@@ -46,6 +46,7 @@ const COLL_MF: u32 = KEEP_COL_ANIM_HIT_STATUS
     | UNK_27;
 const _: () = assert!(COLL_MF == 0x0C4C_508C);
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use super::addr::*;
     match a {

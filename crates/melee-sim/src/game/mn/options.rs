@@ -290,6 +290,7 @@ impl Running<'_> {
     }
 
     /// Runs an Options screen's process.
+    #[melee_callbacks::callbacks(Proc)]
     pub fn options_proc(&mut self, gobj: GObjId, f: u32) -> bool {
         use super::{datadel as dd, deflicker as df, language as la, sound as so, vibration as vi};
         match f {

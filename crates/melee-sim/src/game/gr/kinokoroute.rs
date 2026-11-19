@@ -38,6 +38,7 @@ pub const ARENA_EVENT: u32 = 0x8020_8480;
 const MAP_ROUTE: i32 = 3;
 
 /// A stage object's process or callback, by address: the route's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8020_7A94 | 0x8020_7AD4 | 0x8020_7AD8 | 0x8020_7B28 | 0x8020_7B2C | 0x8020_8368 => {
@@ -56,6 +57,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x8020_7420 => on_init(r),

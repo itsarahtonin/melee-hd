@@ -117,6 +117,7 @@ pub const VTX_COUNT: usize = 0x2A;
 const SUBJECTS: usize = 25;
 
 /// A stage object's process or callback, by address: Poké Floats'.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8021_1F24 | 0x8021_1F28 | 0x8021_1F60 | 0x8021_1F64 | 0x8021_2020 | 0x8021_228C
@@ -135,6 +136,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x8021_1D00 => on_init(r),
@@ -146,6 +148,7 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 }
 
 /// The stage's render callbacks, by address.
+#[melee_callbacks::callbacks(Render)]
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
     match cb {
         RENDER_FLOAT => render_float(r, gobj, pass),

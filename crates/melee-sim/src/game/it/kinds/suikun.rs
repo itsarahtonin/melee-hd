@@ -39,15 +39,31 @@ pub const SUIKUN: Beast = Beast {
 };
 
 /// Runs one of Suicune's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
-    entei::run_pred_of(&SUIKUN, r, gobj, addr)
+    Some(match addr {
+        a if a == SUIKUN.anim0 => entei::anim0_of(&SUIKUN, r, gobj),
+        a if a == SUIKUN.coll0 => entei::coll0_of(&SUIKUN, r, gobj),
+        a if a == SUIKUN.anim1 => entei::anim1_of(r, gobj),
+        a if a == SUIKUN.coll1 => entei::coll1_of(&SUIKUN, r, gobj),
+        _ => return None,
+    })
 }
 
 /// Runs one of Suicune's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
-    entei::run_event_of(&SUIKUN, r, gobj, addr)
+    match addr {
+        a if a == SUIKUN.spawned => entei::spawned_of(r, gobj),
+        a if a == SUIKUN.landed_nothing => {}
+        a if a == SUIKUN.out_landed => entei::out_landed_of(&SUIKUN, r, gobj),
+        a if a == SUIKUN.phys0 => entei::phys0_of(r, gobj),
+        a if a == SUIKUN.accessory => entei::fire_when_told_of(&SUIKUN, r, gobj),
+        a if a == SUIKUN.phys1 => entei::phys1_of(r, gobj),
+        _ => return false,
+    }
+    true
 }
-
 /// Suicune out of the ball, `itSuikun_Logic14_Spawned`: facing its owner's nearest opponent, its script's
 /// flags clear, at its first size, into the air out of the ball.
 #[doc(alias = "itSuikun_Logic14_Spawned")]

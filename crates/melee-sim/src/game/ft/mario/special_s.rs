@@ -282,6 +282,7 @@ impl Running<'_> {
     pub fn mr_special_s_iasa(&mut self, _gobj: GObjId) {}
 }
 
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_S_CREATE_CAPE => g.mr_special_s_create_cape(gobj),
@@ -305,6 +306,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     true
 }
 
+#[melee_callbacks::callbacks(Call)]
 pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     match f {
         addr::SPECIAL_S_CHECK_ITEM_CAPE_REMOVE => {

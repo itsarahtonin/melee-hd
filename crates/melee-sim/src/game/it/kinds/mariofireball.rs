@@ -49,6 +49,7 @@ const KIND_MARIO_FIRE: i32 = 48;
 const BOUNCE_SFX: i32 = 0x2BF39;
 
 /// Runs one of the fireball's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM => lib2725::tick_lifetime(r.game, gobj),
@@ -61,6 +62,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the fireball's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PHYS => physics(r, gobj),

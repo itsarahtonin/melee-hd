@@ -87,6 +87,7 @@ const P_LINK_FIGHTER: u8 = 8;
 const MS_DEAD: std::ops::RangeInclusive<i32> = 0..=10;
 
 /// The crowd's entry points game code reaches through [`super::code::call`].
+#[melee_callbacks::callbacks(Call)]
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let int = |i: usize| args[i].int();
     let float = |i: usize| args[i].float();

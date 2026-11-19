@@ -28,6 +28,7 @@ pub const EVT_UNK: u32 = 0x802A_D9FC;
 const HIDDEN: u32 = 1 << 4;
 
 /// Runs one of the bat's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM_0 => animate_0(r, gobj),
@@ -38,6 +39,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the bat's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PICKED_UP => picked_up(r, gobj),

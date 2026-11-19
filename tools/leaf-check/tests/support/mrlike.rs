@@ -20,6 +20,7 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
+use melee_sim::game::ft::mario::special_n::MARIO;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -154,7 +155,9 @@ fn gobj_in(maps: &Maps, call: &Call, r: usize) -> GObjId {
 fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     let gobj = gobj_arg(maps, call);
     match name_of(call.addr).as_str() {
-        "ftMr_SpecialN_VitaminRandom" => Ret::Int(g.mr_special_n_vitamin_random(gobj) as u32),
+        "ftMr_SpecialN_VitaminRandom" => {
+            Ret::Int(g.mr_special_n_vitamin_random(gobj, &MARIO) as u32)
+        }
         "ftMr_SpecialS_CheckItemCapeRemove" => {
             Ret::Int(u32::from(g.mr_special_s_check_item_cape_remove(gobj)))
         }

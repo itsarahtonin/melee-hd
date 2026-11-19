@@ -19,6 +19,7 @@ const EMPTY: &[u32] = &[PASSIVE_CEIL_IASA];
 #[doc(alias = "ftCo_DamageSongRv_IASA")]
 #[doc(alias = "ftCo_DownReflect_IASA")]
 #[doc(alias = "ftCo_PassiveCeil_IASA")]
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
     match cb {
         // The swings (`ftCo_SwordSwing_*` and the other items') and their hooks.
@@ -427,14 +428,14 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
             g.co_ground_move_anim(gobj);
         }
         // ftCo_AttackS3_IASA, ftCo_AttackHi3_IASA, ftCo_AttackHi4_IASA, ftCo_AttackLw4_IASA, ftCo_AttackS42_IASA
-        0x8008_B910 | 0x8008_BAD4 | 0x8008_CAD4 | 0x8008_CCF8 | 0x800C_EE00 => {
+        0x8008_B910 | 0x8008_BAD4 | 0x8008_CAD4 | 0x8008_CCF8 => {
             g.co_attack_iasa(gobj);
         }
-        // ftCo_AttackS3_Phys, ftCo_AttackHi3_Phys, ftCo_AttackLw3_Phys, ftCo_AttackHi4_Phys, ftCo_AttackLw4_Phys, ftCo_LandingAir_Phys, ftCo_GuardOff_Phys, ftCo_DownBound_Phys, ftCo_DownWait_Phys, ftCo_DownStand_Phys, ftCo_DownAttack_Phys, ftCo_Passive_Phys, ftCo_EscapeN_Phys, ftCo_DownSpot_Phys, ftCo_Turn_Phys, ftCo_KneeBend_Phys, ftCo_Landing_Phys, ftCo_Squat_Phys, ftCo_SquatRv_Phys, ftFx_SpecialLwStart_Phys
+        // ftCo_AttackS3_Phys, ftCo_AttackHi3_Phys, ftCo_AttackLw3_Phys, ftCo_AttackHi4_Phys, ftCo_AttackLw4_Phys, ftCo_LandingAir_Phys, ftCo_GuardOff_Phys, ftCo_DownBound_Phys, ftCo_DownWait_Phys, ftCo_DownStand_Phys, ftCo_DownAttack_Phys, ftCo_Passive_Phys, ftCo_EscapeN_Phys, ftCo_DownSpot_Phys, ftCo_Turn_Phys, ftCo_KneeBend_Phys, ftCo_Landing_Phys, ftCo_Squat_Phys, ftCo_SquatRv_Phys
         0x8008_B940 | 0x8008_BB04 | 0x8008_BF84 | 0x8008_CB04 | 0x8008_CD28 | 0x8008_D7B0
         | 0x8009_2E10 | 0x8009_7E20 | 0x8009_807C | 0x8009_81D4 | 0x8009_85F4 | 0x8009_88E8
         | 0x8009_9A18 | 0x800C_8C44 | 0x800C_9BEC | 0x800C_B6AC | 0x800D_5F18 | 0x800D_623C
-        | 0x800D_6784 | 0x800E_8864 => {
+        | 0x800D_6784 => {
             g.co_ground_phys(gobj);
         }
         // ftCo_AttackLw3_Anim

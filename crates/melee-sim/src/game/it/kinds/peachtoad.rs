@@ -22,6 +22,7 @@ pub const EVT_UNK: u32 = 0x802B_E1F4;
 pub const KIND: i32 = 104;
 
 /// Runs one of Toad's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         MOTION0_ANIM => standing(r, gobj),
@@ -31,6 +32,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of Toad's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DESTROYED => destroyed(r, gobj),

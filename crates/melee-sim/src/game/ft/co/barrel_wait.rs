@@ -27,6 +27,7 @@ const GR_KIND_KONGO: i32 = 4;
 const GR_KIND_OLDKONGO: i32 = 0x1E;
 
 /// Runs one of the barrel state's callbacks and hooks, if `addr` is one.
+#[melee_callbacks::callbacks(Fighter)]
 pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DEATH2 => barrel_drop(g),

@@ -185,6 +185,7 @@ impl Running<'_> {
 
 #[doc(alias = "ftLk_SpecialAirHi_IASA")]
 #[doc(alias = "ftLk_SpecialHi_IASA")]
+#[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_HI_ON_ACCESSORY4 => g.link_special_hi_trail(gobj),

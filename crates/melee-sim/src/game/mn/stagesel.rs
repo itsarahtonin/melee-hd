@@ -642,6 +642,7 @@ impl Running<'_> {
     }
 
     /// Runs one of the screen's processes.
+    #[melee_callbacks::callbacks(Proc)]
     pub fn stagesel_run(&mut self, gobj: GObjId, f: u32) -> bool {
         match f {
             NAME_PROC => self.sss_name_proc(gobj),

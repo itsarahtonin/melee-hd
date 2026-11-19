@@ -209,6 +209,7 @@ pub struct Globals {
 }
 
 /// A stage object's process or callback, by address: Big Blue's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801E_5B18 | 0x801E_5B1C | 0x801E_611C | 0x801E_6120 | 0x801E_61FC | 0x801E_6290
@@ -237,6 +238,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x801E_57C0 => on_init(r),
@@ -248,6 +250,7 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 }
 
 /// The stage's render callbacks, by address.
+#[melee_callbacks::callbacks(Render)]
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
     match cb {
         RENDER_BACKGROUND => render_background(r, gobj, pass),

@@ -89,6 +89,7 @@ const WHISPY_TURN: [i32; 2] = [2, 3];
 const LEAVES_BLOW: [i32; 2] = [1, 0];
 
 /// A stage object's process or callback, by address: Dream Land's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x8021_09D0 | 0x8021_09D4 | 0x8021_0B00 | 0x8021_0B50 | 0x8021_0B54 | 0x8021_0BE0
@@ -114,6 +115,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x8021_07E0 => on_init(r),

@@ -138,6 +138,7 @@ fn vars(game: &mut Game, gobj: GObjId) -> &mut KlapVars {
 }
 
 /// Runs one of the Klap Trap's predicates, if `addr` is one.
+#[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM1 | ANIM2 | ANIM3 | ANIM4 | COLL2 | COLL3 | COLL4 => answers_false(r, gobj),
@@ -165,6 +166,7 @@ pub fn answers_false(_r: &mut Running, _gobj: GObjId) -> bool {
 pub fn phys3(_r: &mut Running, _gobj: GObjId) {}
 
 /// Runs one of the Klap Trap's events, if `addr` is one.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),

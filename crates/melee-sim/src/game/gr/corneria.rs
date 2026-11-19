@@ -354,6 +354,7 @@ fn g(game: &mut Game) -> &mut Globals {
 }
 
 /// A stage object's process or callback, by address: Corneria's.
+#[melee_callbacks::callbacks(Proc)]
 pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         0x801D_D654 | 0x801D_D658 | 0x801D_DAC0 | 0x801D_E4BC | 0x801D_E8E0 | 0x801D_F8CC
@@ -391,6 +392,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 /// The stage's hooks without arguments, by address.
+#[melee_callbacks::callbacks(Event)]
 pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         0x801D_D350 => on_init(r),
