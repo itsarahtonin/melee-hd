@@ -352,7 +352,17 @@ Sizes: S a few days of one agent's work, M a subsystem, L more. Every refactor t
 | `fox-marth-ps` | 23.7% | 0.0% | 1.38% |
 | Sarah's `Game_20260129T130802` (`MELEE_BENCH_FP=slippi MELEE_BENCH_HEAP=off`) | 29.7% | 0.1% | 0.88% |
 
-**Match speed: about +8 to +13%, indicative only** ([design call 9](#design-calls): the worker's exclusive runner decides, and the +15% target stands until it has measured). Median frames/s, base and branch alternating in rounds of five runs, on this PC; every run in sync. First, 15 runs each in three rounds with other agents' builds and oracle runs keeping the PC busy (the branch before the dedup merge and Kirby's commit):
+**Match speed on the worker: +12.7 to +14.9%, just short of the +15% target** ([design call 9](#design-calls): these are the deciding numbers). `perf/callback-table` `18354866` against main `c6e274d5`, both `cargo build --locked --release -p melee-bench` with `CARGO_PROFILE_RELEASE_DEBUG=line-tables-only`, on [the worker](performance.md#machine) in one exclusive reservation: `melee-bench native --runs 5` in three rounds alternating base and branch, median frames/s of the 15 runs each, every run in sync:
+
+| Match | Main | Branch | Change |
+| --- | --- | --- | --- |
+| `fox-fox-fd` | 2,193 (2,167–2,242) | 2,519 (2,497–2,572) | **+14.9%** (rounds +15.0, +15.0, +14.4%) |
+| `fox-marth-ps` | 1,877 (1,864–1,929) | 2,115 (2,100–2,155) | **+12.7%** |
+| Sarah's `Game_20260129T130802` (`MELEE_BENCH_FP=slippi`, the model on) | 2,321 (2,264–2,340) | 2,657 (2,640–2,677) | **+14.5%** |
+
+The branch's `fox-fox-fd` profile there (`perf record -F 2000`, the survey's buckets) puts the dispatch bucket at 0.0% and the table's call shims at 0.7%: the self-time target is met. The worker's own survey puts the old chains at 8 to 11% of self time ([above](#measured-on-the-worker-2026-11-19)), so the gain is larger than their self time: the chains also slowed the code around them. The busy PC's numbers below are kept as indicative.
+
+**On this PC, before the worker measured: about +8 to +13%, indicative only** (superseded by the worker's above). Median frames/s, base and branch alternating in rounds of five runs, on this PC; every run in sync. First, 15 runs each in three rounds with other agents' builds and oracle runs keeping the PC busy (the branch before the dedup merge and Kirby's commit):
 
 | Match | Base | Branch | Change | Runs' spread, base / branch |
 | --- | --- | --- | --- | --- |
