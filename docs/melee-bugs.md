@@ -368,6 +368,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none on gameplay found; changes effects shown.
 - **Source:** `crates/melee-sim/src/game/ft/samus/special_n.rs:105`.
 
+### Kirby: Mewtwo's copy destroys his effects whether or not the charge's are out
+
+- **Where:** `ftKb_SpecialNMt_80107040`, `ftKb_SpecialNMt_8010709C` and the copy's other ends of the charge (Kirby's inline of `ftMewtwo_SpecialN_ClearGObj`), `crates/melee-sim/src/game/ft/mewtwo/special_n.rs` (`mt_n_effects_off`, under Kirby's `KIRBY`'s `effects_off_always`).
+- **Defect:** Mewtwo's own cleanup calls `efLib_DestroyAll` only when his charge's effects field (`u` xC, `x2238_shadowBallGObj`) is set, which nothing ever does (the entry below), so his never destroys anything there. Kirby's copy calls it unconditionally (then clears his field, `u` xA0), so the ball let go of, fired, put away or lost also destroys whatever other effects are attached to him. The same defect as Samus's copy's, above.
+- **Effect:** an effect of his own still running as the ball goes (one a hit or a move attached to him) disappears early; effects only, as far as the corpus shows.
+- **melee-hd:** modeled.
+- **Fix:** check the field as Mewtwo's does.
+- **Fix impact:** none on gameplay found; changes effects shown.
+- **Source:** `crates/melee-sim/src/game/ft/mewtwo/special_n.rs:143`.
+
 ### Mewtwo: a Shadow Ball field nothing stores
 
 - **Where:** Shadow Ball's code reading `ftMewtwo_FighterVars::x2238_shadowBallGObj`.
@@ -400,13 +410,13 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Mewtwo: a fully charged Shadow Ball's sound never plays
 
-- **Where:** `ftMt_SpecialN_ReleaseShadowBall` and Kirby's copy's `ftKb_SpecialNMt_801071FC`, `crates/melee-sim/src/game/ft/mewtwo/special_n.rs` (`mt_n_release`) and `crates/melee-sim/src/game/ft/kirby/special_mewtwo.rs` (`kb_mt_release`).
+- **Where:** `ftMt_SpecialN_ReleaseShadowBall` and Kirby's copy's `ftKb_SpecialNMt_801071FC`, both `crates/melee-sim/src/game/ft/mewtwo/special_n.rs` (`mt_n_release`, under Mewtwo's `MEWTWO` and Kirby's `KIRBY` alike).
 - **Defect:** both empty the charge before testing it against a full charge to pick the shot's sound, so the test compares 0 with the full charge.
 - **Effect:** a fully charged ball plays the ordinary shot's sound (`0x30DB3`), never its own (`0x30DB6`).
 - **melee-hd:** modeled.
 - **Fix:** test the charge before emptying it.
 - **Fix impact:** changes a sound only.
-- **Source:** `crates/melee-sim/src/game/ft/kirby/special_mewtwo.rs:267` and `crates/melee-sim/src/game/ft/mewtwo/special_n.rs:188`.
+- **Source:** `crates/melee-sim/src/game/ft/mewtwo/special_n.rs:288`.
 
 ### Samus: the grapple swing's victim bit from the stack
 

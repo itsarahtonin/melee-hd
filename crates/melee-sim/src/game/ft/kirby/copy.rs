@@ -216,7 +216,7 @@ impl Running<'_> {
             6 | 20 => self.kb_lk_cleanup(gobj),
             14 => self.kb_ys_cleanup(gobj),
             10 => self.kb_ic_remove_ice(gobj),
-            16 => self.kb_mt_cleanup(gobj),
+            16 => self.mt_n_lose_ball(gobj, &super::special_mewtwo::KIRBY),
             _ => {}
         }
     }
@@ -235,7 +235,7 @@ impl Running<'_> {
             6 | 20 => self.kb_lk_cleanup(gobj),
             14 => self.kb_ys_cleanup(gobj),
             10 => self.kb_ic_remove_ice(gobj),
-            16 => self.kb_mt_drop_ball(gobj),
+            16 => self.mt_n_drop_ball(gobj, &super::special_mewtwo::KIRBY),
             _ => {}
         }
     }

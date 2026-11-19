@@ -77,6 +77,7 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
+use melee_sim::game::ft::kirby::special_mewtwo::KIRBY as MT_KIRBY;
 use melee_sim::game::ft::kirby::special_purin::KIRBY;
 use melee_sim::game::ft::kirby::special_samus::KIRBY as SS_KIRBY;
 use melee_sim::game::handles::CodeRef;
@@ -524,8 +525,8 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftKb_SpecialNLk800FB500" => return b(g.kb_lk_nock(gobj)),
         "ftKb_SpecialNLk800FB5F4" => return b(g.kb_lk_bow_out(gobj)),
         "ftKb_SpecialNIc_80108CE8" => g.kb_ic_forget(gobj, gobj_reg(maps, call, 4, &name)),
-        "ftKb_SpecialNMt_80106F9C" => return b(g.kb_mt_ball_lost(Some(gobj))),
-        "ftKb_SpecialNMt_80106FEC" => return b(g.kb_mt_ball_put_away(Some(gobj))),
+        "ftKb_SpecialNMt_80106F9C" => return b(g.mt_n_ball_lost(Some(gobj), &MT_KIRBY)),
+        "ftKb_SpecialNMt_80106FEC" => return b(g.mt_n_ball_put_away(Some(gobj), &MT_KIRBY)),
         "ftKb_SpecialNPr_801010D4" => g.rollout_end(gobj, &KIRBY, r4 != 0, r5, f1),
         "ftKb_SpecialNYs_80109238" => return Ret::Int(g.kb_ys_tongue_bone(gobj) as u32),
         "ftKb_SpecialNPr_8010140C" => g.rollout_tick(gobj, r4 != 0),
