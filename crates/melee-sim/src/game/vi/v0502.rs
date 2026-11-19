@@ -6,6 +6,7 @@ use melee_data::archive::DataRef;
 
 use super::super::state::Running;
 use super::Loaded;
+use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
@@ -18,8 +19,7 @@ pub const JOBJ_PROC: u32 = 0x8031_E304;
 pub const CAMERA_RENDER: u32 = 0x8031_E328;
 pub const CAMERA_PROC: u32 = 0x8031_E3BC;
 
-/// `St_Kind_Greens`, `CKind_Kirby`.
-const ST_KIND_GREENS: i32 = 17;
+/// `CKind_Kirby`.
 const CKIND_KIRBY: i32 = 4;
 
 /// `un_804000D0.initial_pos`: where the character stands.
@@ -52,7 +52,7 @@ impl Running<'_> {
     /// 120.
     #[doc(alias = "vi0502_8031E124")]
     fn vi0502_setup(&mut self, ckind: i32, costume: i32, kirby_costume: i32) {
-        self.vi_stage(ST_KIND_GREENS, FRAMES, |r| {
+        self.vi_stage(StKind::Greens, FRAMES, |r| {
             super::super::gr::ground::set_scale(r.game, 0.7);
         });
         self.fighter_demo_init();

@@ -5,10 +5,11 @@
 
 use melee_data::archive::DataRef;
 
+use super::super::gr::StKind;
 use super::super::handles::CodeRef;
 use super::super::state::{Obj, Running};
 use super::Loaded;
-use super::v1201v1::{ST_KIND_LAST, TROPHY_KOOPA};
+use super::v1201v1::TROPHY_KOOPA;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -64,7 +65,7 @@ impl Running<'_> {
     /// 26, the character waiting (pose 8), set to face the camera.
     #[doc(alias = "un_80320508")]
     fn vi1201v2_setup(&mut self, ckind: i32, costume: i32) {
-        self.vi_stage_demo(ST_KIND_LAST, 0x1A, FRAMES, |_| {});
+        self.vi_stage_demo(StKind::Last, 0x1A, FRAMES, |_| {});
         self.fighter_demo_init();
         self.game.init_all_players();
         let waits = self.game.vi.v1201v2.waits;

@@ -35,7 +35,7 @@ fn settings_on(key: &str) -> Settings {
         cpu_level: 0,
         team: port,
     };
-    let stage = roster::stage(key).expect("ported").kind;
+    let stage = roster::stage(key).expect("ported").vs_kind();
     let mut s = Settings::vs(stage, &[player("fox", 0), player("marth", 1)], 0, 1);
     s.seed = 0x1234_5678;
     s

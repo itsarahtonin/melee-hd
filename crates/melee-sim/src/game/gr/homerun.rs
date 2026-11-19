@@ -89,13 +89,11 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x8021_C754 => on_init(r),
-        0x8021_C7FC => on_load(r),
-        0x8021_C800 => on_start(r),
+/// The stage's render callbacks, by address: the labels' camera's.
+#[melee_callbacks::callbacks(Render)]
+pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, _pass: i32) -> bool {
+    match cb {
+        TEXT_CAMERA_RENDER => r.homerun_text_camera_render(gobj),
         _ => return false,
     }
     true

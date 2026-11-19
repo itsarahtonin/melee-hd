@@ -168,7 +168,7 @@ fn predicting_with_held_controllers_changes_nothing() {
             team: port,
         };
         let players = [player("fox", 0), player("marth", 1)];
-        let stage = roster::stage("fd").expect("ported").kind;
+        let stage = roster::stage("fd").expect("ported").vs_kind();
         let start = |d: &Disc| {
             let settings = Settings::vs(stage, &players, 4, 8);
             Session::begin(d, &settings, None, false).expect("the match starts")

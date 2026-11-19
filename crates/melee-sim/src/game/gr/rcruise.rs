@@ -145,18 +145,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x801F_F168 => on_init(r),
-        0x801F_F298 => on_load(r),
-        0x801F_F29C => on_start(r),
-        _ => return false,
-    }
-    true
-}
-
 /// The stage's render callbacks, by address.
 #[melee_callbacks::callbacks(Render)]
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
@@ -1214,7 +1202,7 @@ pub fn wind(game: &Game) -> Vec3 {
 /// line of joint 27 or 28 to 43.
 #[doc(alias = "grRCruise_80201988")]
 pub fn plank_line(game: &Game, line_id: i32) -> bool {
-    if game.stage_info.grkind != super::GR_KIND_RCRUISE || line_id == -1 {
+    if game.stage_info.grkind != super::GrKind::RCruise || line_id == -1 {
         return false;
     }
     let joint = (game.geometry.as_ref())

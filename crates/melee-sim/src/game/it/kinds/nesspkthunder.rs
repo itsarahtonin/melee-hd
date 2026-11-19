@@ -56,9 +56,6 @@ mod attr {
 /// `MTXDegToRad`'s factor, a float.
 const DEG_TO_RAD: f32 = 0.017_453_292;
 
-/// The stage kind whose camera ignores the ball (Home-Run Contest's, `Stage_80225194` 0x54).
-const STKIND_NO_CAMERA: i32 = 0x54;
-
 /// Runs one of the ball's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
@@ -187,7 +184,7 @@ pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Opti
     v.xF08.set(None);
     start(r, ball);
     item_mut(r.game, ball).xDCC_flag.b3 = false;
-    if crate::game::gr::stage::stkind(r.game) == STKIND_NO_CAMERA {
+    if crate::game::gr::stage::stkind(r.game) == crate::game::gr::StKind::HomeRun {
         super::super::item::remove_camera_box(r.game, ball);
     }
     Some(ball)

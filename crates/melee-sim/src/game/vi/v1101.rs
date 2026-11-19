@@ -6,6 +6,7 @@ use melee_data::archive::DataRef;
 
 use super::super::state::Running;
 use super::Loaded;
+use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
@@ -18,8 +19,7 @@ pub const JOBJ_PROC: u32 = 0x8031_F548;
 pub const CAMERA_RENDER: u32 = 0x8031_F56C;
 pub const CAMERA_PROC: u32 = 0x8031_F600;
 
-/// `St_Kind_Battle`, `CKind_Mario`, `CKind_Luigi`.
-const ST_KIND_BATTLE: i32 = 0x1F;
+/// `CKind_Mario`, `CKind_Luigi`.
 const CKIND_MARIO: i32 = 8;
 const CKIND_LUIGI: i32 = 7;
 
@@ -61,7 +61,7 @@ impl Running<'_> {
     /// scene's sound banks.
     #[doc(alias = "un_8031F294")]
     fn vi1101_setup(&mut self, ckind: i32, costume: i32) {
-        self.vi_stage(ST_KIND_BATTLE, FRAMES, |_| {});
+        self.vi_stage(StKind::Battle, FRAMES, |_| {});
         self.fighter_demo_init();
         self.game.init_all_players();
         let v = self.game.vi.v1101;

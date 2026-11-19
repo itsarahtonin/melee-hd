@@ -57,18 +57,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        ON_INIT => on_init(r),
-        ON_LOAD => on_load(r),
-        ON_START => on_start(r),
-        _ => return false,
-    }
-    true
-}
-
 /// The processes of maps 0 and 1 (`grTest_80207164`, `grTest_80207404`), which do nothing.
 #[doc(alias = "grTest_80207164")]
 #[doc(alias = "grTest_80207404")]

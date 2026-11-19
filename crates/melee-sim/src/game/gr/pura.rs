@@ -135,18 +135,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x8021_1D00 => on_init(r),
-        0x8021_1DD8 => on_load(r),
-        0x8021_1DDC => on_start(r),
-        _ => return false,
-    }
-    true
-}
-
 /// The stage's render callbacks, by address.
 #[melee_callbacks::callbacks(Render)]
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {

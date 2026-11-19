@@ -67,6 +67,7 @@ use leaf_check::calls::{
     Prepare, Report, Ret, Variant, check_variants, gobj_arg, peek_u32, poke_f32, poke_u32,
     saved_calls,
 };
+use melee_sim::game::gr::GrKind;
 use ssbm_rt::capture::Call;
 
 const CALLS: &str = "calls/ics";
@@ -138,13 +139,9 @@ const TUMBLE: u32 = 15;
 const DAMAGE_FALL: u32 = 38;
 const ATTACK_HI3: u32 = 56;
 const GUARD: u32 = 179;
-/// `Fighter::ground_or_air` (1 in the air); `stage_info.grkind` and Hyrule Temple's
-/// (`Gr_Kind_Shrine`); the walk's behavior.
+/// `Fighter::ground_or_air` (1 in the air); `stage_info.grkind`; the walk's behavior.
 const GROUND_OR_AIR: u32 = 0xE0;
 const GRKIND: u32 = 0x88;
-const GR_KIND_SHRINE: u32 = 7;
-/// `Gr_Kind_RCruise`, whose wind carries a destination over no floor.
-const GR_KIND_RCRUISE: u32 = 3;
 const WALK: u32 = 1;
 /// Hyrule Temple's floor in the temple, its roof above (two of its computer players' route
 /// points, `ftCo_803C6594`), and places on the floor under the roof.
@@ -328,7 +325,7 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
         }
         Change::ShrineAbove => {
             let stage = leaf_check::sym("stage_info");
-            if peek_u32(call, stage + GRKIND) != GR_KIND_SHRINE
+            if peek_u32(call, stage + GRKIND) != GrKind::Shrine as u32
                 || peek_u32(call, nana + GROUND_OR_AIR) != 0
             {
                 return false;
@@ -359,7 +356,7 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
         }
         Change::WindDrift => {
             let stage = leaf_check::sym("stage_info");
-            if peek_u32(call, stage + GRKIND) != GR_KIND_RCRUISE
+            if peek_u32(call, stage + GRKIND) != GrKind::RCruise as u32
                 || peek_u32(call, nana + GROUND_OR_AIR) != 0
             {
                 return false;

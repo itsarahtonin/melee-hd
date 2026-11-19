@@ -20,6 +20,7 @@ pub mod v1202;
 
 use melee_data::archive::{ArchiveId, DataRef};
 
+use super::gr::StKind;
 use super::handles::CodeRef;
 use super::render::{FOG_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
 use super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
@@ -470,25 +471,26 @@ impl Running<'_> {
     /// (`Stage_8022524C`), then its demo setup (`Stage_8022532C`). `frames` is what the
     /// scene's entry and the function under it that calls `Stage_8022524C` take of the stack
     /// ([`stage_frames`]).
-    fn vi_stage(&mut self, stkind: i32, frames: u32, before_setup: impl FnOnce(&mut Self)) {
+    fn vi_stage(&mut self, stkind: StKind, frames: u32, before_setup: impl FnOnce(&mut Self)) {
         self.vi_stage_demo(stkind, 0, frames, before_setup);
     }
 
     /// [`Running::vi_stage`] with the demo setup's argument.
     fn vi_stage_demo(
         &mut self,
-        stkind: i32,
+        stkind: StKind,
         demo: i32,
         frames: u32,
         before_setup: impl FnOnce(&mut Self),
     ) {
+        let stkind = i32::from(stkind.id());
         super::camera::init(&mut self.game.camera, 6);
         self.game.alloc_dynamics(self.data);
         self.game.coll.reset();
         super::gr::setup::prepare(self.game);
         let grkind = crate::lb::audio::ground_kind(stkind) as i32;
         let us = self.files_us();
-        let archive = super::gr::data::stage_file(grkind, us).map(|name| {
+        let archive = super::gr::registry::stage(grkind).file(us).map(|name| {
             self.game
                 .ft
                 .data
@@ -864,7 +866,7 @@ impl Running<'_> {
         let us = self.files_us();
         let stage = |f: &mut SceneFiles, stkind: i32| {
             let grkind = crate::lb::audio::ground_kind(stkind) as i32;
-            if let Some(name) = super::gr::data::stage_file(grkind, us) {
+            if let Some(name) = super::gr::registry::stage(grkind).file(us) {
                 f.names.push(name.trim_start_matches('/').to_owned());
             }
         };

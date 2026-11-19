@@ -542,18 +542,19 @@ impl Match {
             // `Stage_802251E8`'s stage archive.
             stage: {
                 let grkind = crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind));
-                super::gr::data::stage_data(grkind as i32)
+                super::gr::registry::stage(grkind as i32)
+                    .data
                     .file
                     .map(|name| data.add(archive(name)))
             },
         };
         // Pokémon Stadium's transformation files, which it loads during the match: disc data
         // the frontend loads with the match's archives, as the fighters' files are.
-        let stadium_files: Vec<(&str, ArchiveId)> = if super::gr::data::stage_data(
+        let stadium_files: Vec<(&str, ArchiveId)> = if super::gr::registry::stage(
             crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind)) as i32,
         )
-        .grkind
-            == super::gr::GR_KIND_PSTADIUM
+        .kind
+            == super::gr::GrKind::PStadium
         {
             super::gr::stadium::FILES
                 .iter()
@@ -610,9 +611,10 @@ impl Match {
         .map(|(n, id)| (n.to_owned(), id))
         .collect();
         let grkind = crate::lb::audio::ground_kind(i32::from(settings.start.rules.stkind));
-        if let (Some(name), Some(id)) =
-            (super::gr::data::stage_data(grkind as i32).file, files.stage)
-        {
+        if let (Some(name), Some(id)) = (
+            super::gr::registry::stage(grkind as i32).data.file,
+            files.stage,
+        ) {
             // The stage table's paths start at the disc's root.
             names.push((name.trim_start_matches('/').to_owned(), id));
         }
@@ -708,8 +710,8 @@ impl Match {
         // start.
         if m.game.audio.clock.is_some()
             && matches!(
-                m.game.stage_info.grkind,
-                super::gr::GR_KIND_INISHIE1 | super::gr::GR_KIND_INISHIE2
+                m.game.stage_info.ground_kind(),
+                super::gr::GrKind::Inishie1 | super::gr::GrKind::Inishie2
             )
             && let Some(fast) = super::gr::inishie1::fast_song(m.game.stage_info.x98)
         {
@@ -909,13 +911,13 @@ pub fn preloaded_files(start: &StartMeleeData, saved_us: bool) -> (Vec<String>, 
         }
     };
     let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind)) as i32;
-    if let Some(name) = super::gr::data::stage_file(grkind, saved_us) {
+    if let Some(name) = super::gr::registry::stage(grkind).file(saved_us) {
         add(name);
     }
     // `grIzumi_801CD2D4` and `grStadium_801D511C`.
-    let buffers = match grkind {
-        super::gr::GR_KIND_IZUMI => vec![2001],
-        super::gr::GR_KIND_PSTADIUM => vec![0x7D2, 0x7D3, 0x7D4, 0x7D5],
+    let buffers = match super::gr::GrKind::from_id(grkind) {
+        Some(super::gr::GrKind::Izumi) => vec![2001],
+        Some(super::gr::GrKind::PStadium) => vec![0x7D2, 0x7D3, 0x7D4, 0x7D5],
         _ => Vec::new(),
     };
     for p in &start.players {

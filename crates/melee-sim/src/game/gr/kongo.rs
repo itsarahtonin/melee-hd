@@ -184,18 +184,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x801D_523C => on_init(r),
-        0x801D_52F8 => on_load(r),
-        0x801D_52FC => on_start(r),
-        _ => return false,
-    }
-    true
-}
-
 /// The objects' processes and destroy callbacks that do nothing.
 #[doc(alias = "grKongo_801D55D4")]
 #[doc(alias = "grKongo_801D5FA4")]

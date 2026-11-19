@@ -11,9 +11,11 @@ use super::super::state::{
     Game, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running, USER_DATA_GROUND, UserData,
 };
 use super::super::structs::{Ground, GroundParam};
-use super::data::{StageCallbacks, stage_data};
+use super::data::StageCallbacks;
 use super::datfiles::{self, GrJoint, MapHead};
 use super::ground::{self, ground_of, jobj_of, nth_joint, scale};
+use super::registry;
+use super::{GrKind, StKind};
 use super::{StartHook, dynamic_attr, material};
 use crate::fpu::{copy, mem, reg};
 use crate::hsd::cobj::CObjId;
@@ -195,14 +197,14 @@ pub fn measure_cam_bounds(game: &mut Game, data: &Archives) {
             };
             (l, r, bo, t, c.x, c.y)
         }
-        None => match game.stage_info.grkind {
-            2 => (-170.0, 170.0, -100.0, 120.0, 0.0, 180.0),
-            14 => (-470.0, 470.0, -60.0, 120.0, 0.0, 300.0),
-            26 => (-470.0, 470.0, -60.0, 180.0, 0.0, 130.0),
-            25 => (-200.0, 200.0, -60.0, 200.0, 0.0, 130.0),
-            3 => (-200.0, 200.0, -160.0, 150.0, 0.0, 0.0),
-            11 => (-170.0, 170.0, -60.0, 180.0, 0.0, 0.0),
-            18 => (-170.0, 170.0, 10.0, 180.0, 0.0, 0.0),
+        None => match game.stage_info.ground_kind() {
+            GrKind::Castle => (-170.0, 170.0, -100.0, 120.0, 0.0, 180.0),
+            GrKind::Corneria => (-470.0, 470.0, -60.0, 120.0, 0.0, 300.0),
+            GrKind::Unk26 => (-470.0, 470.0, -60.0, 180.0, 0.0, 130.0),
+            GrKind::Inishie2 => (-200.0, 200.0, -60.0, 200.0, 0.0, 130.0),
+            GrKind::RCruise => (-200.0, 200.0, -160.0, 150.0, 0.0, 0.0),
+            GrKind::Yorster => (-170.0, 170.0, -60.0, 180.0, 0.0, 0.0),
+            GrKind::MuteCity => (-170.0, 170.0, 10.0, 180.0, 0.0, 0.0),
             _ => (-170.0, 170.0, -60.0, 120.0, 0.0, 0.0),
         },
     };
@@ -243,14 +245,14 @@ pub fn measure_blast_zones(game: &mut Game, data: &Archives) {
             };
             (l, r, t, bo)
         }
-        None => match game.stage_info.grkind {
-            2 => (-250.0, 250.0, 180.0, -150.0),
-            14 => (-550.0, 550.0, 200.0, -100.0),
-            26 => (-600.0, 600.0, 200.0, -100.0),
-            7 => (-550.0, 550.0, 200.0, -150.0),
-            25 => (-300.0, 300.0, 300.0, -160.0),
-            3 => (-300.0, 300.0, 270.0, -240.0),
-            11 => (-300.0, 300.0, 210.0, -240.0),
+        None => match game.stage_info.ground_kind() {
+            GrKind::Castle => (-250.0, 250.0, 180.0, -150.0),
+            GrKind::Corneria => (-550.0, 550.0, 200.0, -100.0),
+            GrKind::Unk26 => (-600.0, 600.0, 200.0, -100.0),
+            GrKind::Shrine => (-550.0, 550.0, 200.0, -150.0),
+            GrKind::Inishie2 => (-300.0, 300.0, 300.0, -160.0),
+            GrKind::RCruise => (-300.0, 300.0, 270.0, -240.0),
+            GrKind::Yorster => (-300.0, 300.0, 210.0, -240.0),
             _ => (-250.0, 250.0, 200.0, -100.0),
         },
     };
@@ -290,7 +292,10 @@ fn map_coll_joints(
         }
         None => (None, 0),
     };
-    (from_archive, stage_data(game.stage_info.grkind).joints)
+    (
+        from_archive,
+        registry::stage(game.stage_info.grkind).data.joints,
+    )
 }
 
 /// The collision joint bound to part `part` of map `map_id`, `Ground_801C32D4`: the last of
@@ -317,7 +322,7 @@ pub fn coll_joint_id_in(
         }
         None => (None, 0),
     };
-    let ((list, n), own) = (from_archive, stage_data(grkind).joints);
+    let ((list, n), own) = (from_archive, registry::stage(grkind).data.joints);
     let mut result = -1;
     for j in own {
         if i32::from(j.y) == map_id && i32::from(j.z) == part {
@@ -698,7 +703,7 @@ pub fn stage_gobj(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
         fill_points(game, data, map_id, model, joint);
         let sj = scale_joint(game, scale(game), frame);
         jobj::add_next(&mut game.objs.jobjs, model, Some(sj));
-        let cb = &stage_data(game.stage_info.grkind).callbacks[map_id as usize];
+        let cb = &registry::stage(game.stage_info.grkind).data.callbacks[map_id as usize];
         if cb.flags & StageCallbacks::CAMERA != 0
             && let Some(desc) = entry.camera(data)
         {
@@ -895,7 +900,7 @@ pub fn create_from_callbacks(
 /// `foo` in `Ground_801C1E94`).
 fn fog_desc(game: &Game, data: &Archives) -> Option<DataRef> {
     let main = datfiles::main_head(game);
-    let callbacks = stage_data(game.stage_info.grkind).callbacks;
+    let callbacks = registry::stage(game.stage_info.grkind).data.callbacks;
     let n = main.count(data);
     (0..n)
         .find(|&i| callbacks[i as usize].flags & StageCallbacks::FOG != 0)
@@ -950,7 +955,7 @@ pub fn light_anim_loops(game: &Game, data: &Archives, anim: Option<DataRef>) -> 
 /// defaults (`Ground_803E06C8`).
 fn light_list(game: &Game, data: &Archives) -> Option<Vec<(DataRef, u16)>> {
     let main = datfiles::main_head(game);
-    let callbacks = stage_data(game.stage_info.grkind).callbacks;
+    let callbacks = registry::stage(game.stage_info.grkind).data.callbacks;
     let n = main.count(data);
     for i in 0..n {
         if callbacks[i as usize].flags & StageCallbacks::LIGHTS != 0 {
@@ -1330,7 +1335,7 @@ fn setup_inner(r: &mut Running, grkind: i32) {
     create_collision_gobj(game);
     create_fog(game, data);
     create_lights(game, data);
-    super::super::code::run_event(r, stage_data(grkind).on_init);
+    (registry::stage(grkind).setup)(r);
     r.game.player_camera();
 }
 
@@ -1338,14 +1343,14 @@ fn setup_inner(r: &mut Running, grkind: i32) {
 #[doc(alias = "Ground_OnLoad")]
 #[doc(alias = "Stage_80225298")]
 pub fn on_load(r: &mut Running, grkind: i32) {
-    super::super::code::run_event(r, stage_data(grkind).on_load);
+    (registry::stage(grkind).load)(r);
 }
 
 /// Starts the match on the stage, `Ground_801C0FB8`: the stage's start hook, the queued start
 /// hooks (each process called with its object, then freed), and the watcher's GObj.
 #[doc(alias = "Ground_801C0FB8")]
 pub fn start(r: &mut Running, grkind: i32) {
-    super::super::code::run_event(r, stage_data(grkind).on_start);
+    (registry::stage(grkind).start)(r);
     let mut cur = r.game.stage_info.x6A4;
     while let Some(h) = cur {
         let hook = r.game.gr.start_hooks[h.0].clone();
@@ -1446,9 +1451,6 @@ fn forget_points(
     }
 }
 
-/// `St_Kind_Heal`, whose stage archive (none) comes from the preload.
-const ST_KIND_HEAL: i32 = 0x55;
-
 /// Picks the match's stage and loads it, `Stage_802251E8`: the stage kind's ground kind.
 #[doc(alias = "Stage_802251E8")]
 pub fn select(r: &mut Running, stkind: i32, archive: Option<ArchiveId>) {
@@ -1465,17 +1467,19 @@ pub fn select(r: &mut Running, stkind: i32, archive: Option<ArchiveId>) {
 pub fn load(r: &mut Running, grkind: i32, stkind: i32, archive: Option<ArchiveId>) {
     reset(r.game);
     r.game.stage_info.grkind = grkind;
-    let stage = stage_data(grkind);
+    let stage = registry::stage(grkind);
     let us = r.files_us();
     load_dat(
         r,
-        super::data::stage_file(grkind, us).map(|f| (f, archive.expect("the stage's archive"))),
-        stkind != ST_KIND_HEAL,
+        stage
+            .file(us)
+            .map(|f| (f, archive.expect("the stage's archive"))),
+        stkind != StKind::Heal,
     );
     item_frequencies(r.game, r.data, stkind);
     let code = |a: u32| (a != 0).then_some(CodeRef(a));
-    r.game.stage_info.on_touch_line = code(stage.on_touch_line);
-    r.game.stage_info.on_check_shadow_render = code(stage.on_check_shadow_render);
+    r.game.stage_info.on_touch_line = code(stage.data.on_touch_line);
+    r.game.stage_info.on_check_shadow_render = code(stage.data.on_check_shadow_render);
     // `Ground_801C5878`: `tyDisplay_8031C2CC`, then in a single-player mode the trophy its
     // display shows (`tyDisplay_8031C2EC`, loaded by `tyDisplay_8031C454`), else none.
     r.stage_trophies();

@@ -44,6 +44,7 @@ pub mod onett;
 pub mod pura;
 pub mod pushon;
 pub mod rcruise;
+pub mod registry;
 pub mod setup;
 pub mod shrine;
 pub mod shrineroute;
@@ -59,6 +60,7 @@ pub mod zako;
 pub mod zebes;
 pub mod zebesroute;
 
+pub use registry::{GrKind, StKind, Stage, vars_kind};
 pub use vars::{
     BattleBgVars, Garden2Vars, GardenVars, GroundUnion, GroundVars, KongoBarrelVars, KongoLogVars,
     KongoPathVars, KongoPlatformVars, KongoVars, Kraid2Vars, KraidVars, LastVars, MapVars,
@@ -74,89 +76,6 @@ use super::structs::GroundParam;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 use crate::hsd::pool::Pool;
-
-/// `Gr_Kind_PStadium`, Pokémon Stadium.
-pub const GR_KIND_PSTADIUM: i32 = 16;
-/// `Gr_Kind_Kraid`, Brinstar Depths.
-pub const GR_KIND_KRAID: i32 = 9;
-/// `Gr_Kind_Castle`, Princess Peach's Castle.
-pub const GR_KIND_CASTLE: i32 = 2;
-/// `Gr_Kind_RCruise`, Rainbow Cruise.
-pub const GR_KIND_RCRUISE: i32 = 3;
-/// `Gr_Kind_Pura`, Poké Floats.
-pub const GR_KIND_PURA: i32 = 17;
-/// `Gr_Kind_Flatzone`, Flat Zone.
-pub const GR_KIND_FLATZONE: i32 = 27;
-/// `Gr_Kind_Fourside`, Fourside.
-pub const GR_KIND_FOURSIDE: i32 = 21;
-/// `Gr_Kind_GreatBay`, Great Bay.
-pub const GR_KIND_GREATBAY: i32 = 6;
-/// `Gr_Kind_Greens`, Green Greens.
-pub const GR_KIND_GREENS: i32 = 13;
-/// `Gr_Kind_Zebes`, Brinstar.
-pub const GR_KIND_ZEBES: i32 = 8;
-/// `Gr_Kind_Onett`, Onett.
-pub const GR_KIND_ONETT: i32 = 20;
-/// `Gr_Kind_Story`, Yoshi's Story.
-pub const GR_KIND_STORY: i32 = 10;
-/// `Gr_Kind_Izumi`, Fountain of Dreams.
-pub const GR_KIND_IZUMI: i32 = 12;
-/// `Gr_Kind_Kongo`, Kongo Jungle.
-pub const GR_KIND_KONGO: i32 = 4;
-/// `Gr_Kind_Garden`, Jungle Japes.
-pub const GR_KIND_GARDEN: i32 = 5;
-/// `Gr_Kind_Yorster`, Yoshi's Island.
-pub const GR_KIND_YORSTER: i32 = 11;
-/// `Gr_Kind_Shrine`, Hyrule Temple.
-pub const GR_KIND_SHRINE: i32 = 7;
-/// `Gr_Kind_OldPupupu`, Dream Land (N64).
-pub const GR_KIND_OLDPUPUPU: i32 = 28;
-/// `Gr_Kind_OldYoshi`, Yoshi's Island (N64).
-pub const GR_KIND_OLDYOSHI: i32 = 29;
-/// `Gr_Kind_OldKongo`, Kongo Jungle (N64).
-pub const GR_KIND_OLDKONGO: i32 = 30;
-/// `Gr_Kind_Inishie1`, Mushroom Kingdom.
-pub const GR_KIND_INISHIE1: i32 = 24;
-/// `Gr_Kind_Inishie2`, Mushroom Kingdom II.
-pub const GR_KIND_INISHIE2: i32 = 25;
-/// `Gr_Kind_Corneria`, Corneria.
-pub const GR_KIND_CORNERIA: i32 = 14;
-/// `Gr_Kind_Venom`, Venom.
-pub const GR_KIND_VENOM: i32 = 15;
-/// `Gr_Kind_MuteCity`, Mute City.
-pub const GR_KIND_MUTECITY: i32 = 18;
-/// `Gr_Kind_BigBlue`, Big Blue.
-pub const GR_KIND_BIGBLUE: i32 = 19;
-/// `Gr_Kind_KinokoRoute`, Mushroom Kingdom's adventure route.
-pub const GR_KIND_KINOKOROUTE: i32 = 31;
-/// `Gr_Kind_ShrineRoute`, the Underground Maze.
-pub const GR_KIND_SHRINEROUTE: i32 = 32;
-/// `Gr_Kind_BigBlueRoute`, the F-Zero race.
-pub const GR_KIND_BIGBLUEROUTE: i32 = 34;
-/// `Gr_Kind_ZebesRoute`, Brinstar's escape.
-pub const GR_KIND_ZEBESROUTE: i32 = 33;
-/// `Gr_Kind_Test`, the Test stage, and the ground kind 0x23 `stage_datas` gives it too.
-pub const GR_KIND_TEST: i32 = 1;
-pub const GR_KIND_TEST2: i32 = 0x23;
-/// `Gr_Kind_TMario`, the first of the 26 target stages (Target Test's, `gr::target`).
-pub const GR_KIND_TMARIO: i32 = 40;
-/// `Gr_Kind_Figure1` to `Gr_Kind_Figure3`, the events' trophy stages.
-pub const GR_KIND_FIGURE1: i32 = 68;
-pub const GR_KIND_FIGURE2: i32 = 69;
-pub const GR_KIND_FIGURE3: i32 = 70;
-/// `Gr_Kind_Homerun`, the Home-Run Contest's stage.
-pub const GR_KIND_HEAL: i32 = 0x42;
-pub const GR_KIND_HOMERUN: i32 = 0x43;
-/// `Gr_Kind_Battle`, Battlefield.
-pub const GR_KIND_BATTLE: i32 = 36;
-/// `Gr_Kind_Pushon`, the race (Classic's Race to the Finish).
-pub const GR_KIND_PUSHON: i32 = 39;
-/// `Gr_Kind_FigureGet`, Snag the Trophies (Classic's bonus stage).
-pub const GR_KIND_FIGUREGET: i32 = 38;
-/// `Gr_Kind_Icemt`, Icicle Mountain.
-pub const GR_KIND_ICEMT: i32 = 22;
-/// `Gr_Kind_Last`, Final Destination.
-pub const GR_KIND_LAST: i32 = 37;
 
 /// The collision geometry's view of the game: joints follow stage joints, and stage objects
 /// register callbacks with themselves as the data.
@@ -452,128 +371,6 @@ impl FtDevices {
         self.device2_type = kind;
         self.device2_cb = Some(cb);
         self.x6570 = self.x6570.wrapping_add(1);
-    }
-}
-
-/// Which member of [`GroundVars`] an object of the stage uses.
-pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
-    match (grkind, map_id) {
-        (GR_KIND_LAST, 3) => VarsKind::Map,
-        (GR_KIND_LAST, 7) => VarsKind::Last,
-        (GR_KIND_BATTLE, 3) => VarsKind::BattleBg,
-        (GR_KIND_PSTADIUM, 1) => VarsKind::StadiumDisplay,
-        (GR_KIND_PSTADIUM, 2) => VarsKind::Stadium,
-        (GR_KIND_PSTADIUM, 3..=5) => VarsKind::StadiumBits,
-        (GR_KIND_PSTADIUM, 6 | 9) => VarsKind::StadiumPiece,
-        (GR_KIND_IZUMI, 2) => VarsKind::Izumi2,
-        (GR_KIND_IZUMI, 3) => VarsKind::Izumi,
-        (GR_KIND_IZUMI, 4) => VarsKind::Izumi3,
-        (GR_KIND_OLDPUPUPU, 1 | 7) => VarsKind::OldPupupu,
-        (GR_KIND_OLDPUPUPU, 8) => VarsKind::OldPupupu2,
-        (GR_KIND_STORY, 2) => VarsKind::StoryRandall,
-        (GR_KIND_STORY, 3) => VarsKind::StoryShyGuys,
-        (GR_KIND_OLDYOSHI, 2) => VarsKind::OldYoshiCloud,
-        (GR_KIND_OLDYOSHI, 3) => VarsKind::OldYoshiGuest,
-        (GR_KIND_KRAID, 1 | 3) => VarsKind::Kraid,
-        (GR_KIND_KRAID, 4) => VarsKind::Kraid2,
-        (GR_KIND_FLATZONE, 2) => VarsKind::Flatzone,
-        (GR_KIND_FLATZONE, 3) => VarsKind::FlatzoneOil,
-        (GR_KIND_FLATZONE, 4 | 6) => VarsKind::FlatzoneEvent,
-        (GR_KIND_FLATZONE, 5) => VarsKind::FlatzonePlatforms,
-        (GR_KIND_FLATZONE, 8) => VarsKind::FlatzoneTools,
-        (GR_KIND_FOURSIDE, 1) => VarsKind::FoursideCrane,
-        (GR_KIND_FOURSIDE, 3) => VarsKind::Fourside2,
-        (GR_KIND_FOURSIDE, 5) => VarsKind::FoursideUfo,
-        (GR_KIND_FOURSIDE, 6) => VarsKind::Fourside,
-        (GR_KIND_GREATBAY, 1) => VarsKind::GreatBay,
-        (GR_KIND_GREATBAY, 2) => VarsKind::GreatBay3,
-        (GR_KIND_GREATBAY, 9) => VarsKind::GreatBay2,
-        (GR_KIND_GREATBAY, 10) => VarsKind::GreatBay4,
-        (GR_KIND_OLDKONGO, 1) => VarsKind::OldKongo,
-        (GR_KIND_OLDKONGO, 2) => VarsKind::OldKongoBirds,
-        (GR_KIND_YORSTER, 1) => VarsKind::Yorster,
-        (GR_KIND_GARDEN, 1) => VarsKind::Garden,
-        (GR_KIND_GARDEN, 3) => VarsKind::Garden2,
-        (GR_KIND_KONGO, 10) => VarsKind::Kongo,
-        (GR_KIND_KONGO, 5) => VarsKind::KongoBarrel,
-        (GR_KIND_KONGO, 1 | 2) => VarsKind::KongoPlatform,
-        (GR_KIND_KONGO, 7..=9) => VarsKind::KongoLog,
-        (GR_KIND_KONGO, 11) => VarsKind::KongoPath,
-        (GR_KIND_GREENS, 5) => VarsKind::Greens2,
-        (GR_KIND_GREENS, 6) => VarsKind::Greens,
-        (GR_KIND_ZEBES, 1) => VarsKind::ZebesBack,
-        (GR_KIND_ZEBES, 3) => VarsKind::ZebesBubble,
-        (GR_KIND_ZEBES, 4) => VarsKind::ZebesCreature,
-        (GR_KIND_ZEBES, 6) => VarsKind::ZebesStage,
-        (GR_KIND_ZEBES, 7) => VarsKind::ZebesIsland,
-        (GR_KIND_ZEBES, 8) => VarsKind::ZebesLava,
-        (GR_KIND_ONETT, 3) => VarsKind::OnettCar,
-        (GR_KIND_ONETT, 4) => VarsKind::OnettBuilding,
-        (GR_KIND_ONETT, 5) => VarsKind::Onett,
-        (GR_KIND_PURA, 1) => VarsKind::Pura,
-        (GR_KIND_PURA, 2 | 3 | 5..=26) => VarsKind::PuraFloat,
-        (GR_KIND_PURA, 4) => VarsKind::PuraStage,
-        (GR_KIND_RCRUISE, 1) => VarsKind::RCruise,
-        (GR_KIND_RCRUISE, 3) => VarsKind::Scroll,
-        (GR_KIND_RCRUISE, 4) => VarsKind::RCruiseBlocks,
-        (GR_KIND_RCRUISE, 6) => VarsKind::RCruiseFlag,
-        (GR_KIND_INISHIE1, 2) => VarsKind::Inishie1Hatena,
-        (GR_KIND_INISHIE1, 3) => VarsKind::Inishie1,
-        (GR_KIND_INISHIE2, 1) => VarsKind::Inishie2Pidgit,
-        (GR_KIND_INISHIE2, 2) => VarsKind::Inishie2,
-        (GR_KIND_INISHIE2, 3 | 4) => VarsKind::Inishie2Log,
-        (GR_KIND_INISHIE2, 15) => VarsKind::Inishie2Birdo,
-        (GR_KIND_ICEMT, 1..=6) => VarsKind::IceMtField(map_id as u8),
-        (GR_KIND_ICEMT, 8) => VarsKind::IceMtBg,
-        (GR_KIND_ICEMT, 9) => VarsKind::IceMtScroll,
-        (GR_KIND_ICEMT, 10) => VarsKind::IceMtClimb,
-        (GR_KIND_CORNERIA, 3) => VarsKind::Corneria,
-        (GR_KIND_CORNERIA, 4 | 9) => VarsKind::CorneriaCity,
-        (GR_KIND_CORNERIA, 8) => VarsKind::CorneriaCity8,
-        (GR_KIND_CORNERIA, 1) => VarsKind::ArwingPath,
-        (GR_KIND_CORNERIA, 2 | 10) => VarsKind::Arwing,
-        (GR_KIND_CORNERIA, 13..=18) => VarsKind::ArwingColl,
-        (GR_KIND_CORNERIA, 12) => VarsKind::StarFoxTalk,
-        (GR_KIND_CORNERIA, 5) => VarsKind::SmashTaunt,
-        (GR_KIND_VENOM, 1) => VarsKind::SmashTaunt,
-        (GR_KIND_VENOM, 2) => VarsKind::ArwingPath,
-        (GR_KIND_VENOM, 3 | 6) => VarsKind::Arwing,
-        (GR_KIND_VENOM, 5) => VarsKind::VenomPlatform,
-        (GR_KIND_VENOM, 7) => VarsKind::VenomShip,
-        (GR_KIND_VENOM, 8) => VarsKind::StarFoxTalk,
-        (GR_KIND_VENOM, 10..=15) => VarsKind::ArwingColl,
-        (GR_KIND_CASTLE, 1) => VarsKind::CastleBlast,
-        (GR_KIND_CASTLE, 2) => VarsKind::CastleBlaster,
-        (GR_KIND_CASTLE, 3) => VarsKind::Castle,
-        (GR_KIND_CASTLE, 5 | 7 | 17) => VarsKind::CastleBlocks,
-        (GR_KIND_CASTLE, 6) => VarsKind::CastleLifts,
-        (GR_KIND_CASTLE, 8..=16) => VarsKind::CastleBill,
-        (GR_KIND_CASTLE, 18..=20) => VarsKind::CastleSwitch,
-        (GR_KIND_MUTECITY, 30) => VarsKind::MuteCity,
-        (GR_KIND_MUTECITY, 29) => VarsKind::MuteCity2,
-        (GR_KIND_MUTECITY, 2) => VarsKind::MuteCityCars,
-        (GR_KIND_KINOKOROUTE, 0) => VarsKind::KinokoRoute,
-        (GR_KIND_KINOKOROUTE, 3) => VarsKind::KinokoRoute2,
-        (GR_KIND_SHRINEROUTE, 4) => VarsKind::ShrineRoute,
-        (GR_KIND_SHRINEROUTE, 5) => VarsKind::ShrineRoute3,
-        // The maze's lights' variables have the race's lights' layout.
-        (GR_KIND_SHRINEROUTE, 6) => VarsKind::PushOn,
-        (GR_KIND_BIGBLUEROUTE, 31) => VarsKind::BigBlueRoute,
-        (GR_KIND_BIGBLUEROUTE, 4) => VarsKind::BigBlueRouteCars,
-        (GR_KIND_PUSHON, 1) => VarsKind::Map,
-        (GR_KIND_PUSHON, 2) => VarsKind::PushOn,
-        (GR_KIND_FIGUREGET, 1) => VarsKind::FigureGet,
-        (GR_KIND_ZEBESROUTE, 1) => VarsKind::ZebesBack,
-        (GR_KIND_HEAL, 1) => VarsKind::Map,
-        (GR_KIND_HOMERUN, 10) => VarsKind::HomeRun,
-        (GR_KIND_HOMERUN, 1 | 4 | 6 | 8) => VarsKind::HomeRunPart,
-        (GR_KIND_HOMERUN, 2 | 5 | 7 | 9) => VarsKind::HomeRunLabel,
-        (GR_KIND_BIGBLUE, 32) => VarsKind::BigBlueManager,
-        (GR_KIND_BIGBLUE, 33) => VarsKind::BigBlueCars,
-        (GR_KIND_BIGBLUE, 34) => VarsKind::BigBlueRoad,
-        (GR_KIND_BIGBLUE, 35) => VarsKind::BigBlueFlyer,
-        (GR_KIND_BIGBLUE, 36) => VarsKind::BigBlueRelay,
-        _ => VarsKind::Bytes,
     }
 }
 

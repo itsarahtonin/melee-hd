@@ -10,6 +10,7 @@ use super::ids::ms;
 use super::kind_callbacks as kinds;
 use super::{PAD_A, PAD_B, PAD_DPAD_UP, PAD_L_R, PAD_LR};
 use crate::fpu::{mem, reg};
+use crate::game::gr::GrKind;
 use crate::hsd::gobj::GObjId;
 use crate::math;
 
@@ -30,10 +31,6 @@ const KIND_ZELDA: i32 = 19;
 /// `Ft_Kind_DrMario` and `Ft_Kind_Ganon`.
 const KIND_DRMARIO: i32 = 21;
 const KIND_GANON: i32 = 25;
-
-/// `Gr_Kind_Corneria`, `Gr_Kind_Venom`.
-const GR_KIND_CORNERIA: i32 = 0x0E;
-const GR_KIND_VENOM: i32 = 0x0F;
 
 /// The absolute value as the original's `ABS` computes it on a register.
 pub(super) fn abs(v: f64) -> f64 {
@@ -385,7 +382,7 @@ impl Running<'_> {
     #[doc(alias = "grCorneria_801E2CE8")]
     pub fn corneria_taunt_stage(&self) -> bool {
         let gr = self.game.stage_info.grkind;
-        gr == GR_KIND_CORNERIA || gr == GR_KIND_VENOM
+        gr == GrKind::Corneria || gr == GrKind::Venom
     }
 
     /// Stopping a walk, `ft_8008A244`: the stick turned back or let go.

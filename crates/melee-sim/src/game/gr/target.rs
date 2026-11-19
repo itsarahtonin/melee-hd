@@ -29,7 +29,7 @@ use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Running};
 use super::data::{StageCallbacks, StageData};
 use super::ground::{ground_of, jobj_of};
-use super::{GR_KIND_TMARIO, anime, material, setup, zako};
+use super::{GrKind, anime, material, setup, zako};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -125,20 +125,10 @@ enum Role {
     PurinJoints,
 }
 
-/// Whether `grkind` is a target stage's.
-pub fn is_target(grkind: i32) -> bool {
-    (GR_KIND_TMARIO..GR_KIND_TMARIO + 26).contains(&grkind)
-}
-
-/// The stage data of the target stage `grkind`.
-pub fn stage_data(grkind: i32) -> &'static StageData {
-    &TARGETS[(grkind - GR_KIND_TMARIO) as usize].data
-}
-
 fn target(game: &Game) -> &'static Target {
     let k = game.stage_info.grkind;
-    assert!(is_target(k), "a target stage's function on stage kind {k}");
-    &TARGETS[(k - GR_KIND_TMARIO) as usize]
+    let i = super::GrKind::from_id(k).and_then(super::GrKind::target_index);
+    &TARGETS[i.unwrap_or_else(|| panic!("a target stage's function on stage kind {k}"))]
 }
 
 /// The target stages' objects' processes and callbacks in the callback table: one entry for
@@ -159,28 +149,6 @@ pub fn run(t: &mut code::Entries<code::kind::Proc>) {
         };
         t.add(a, f, site);
     }
-}
-
-/// The target stages' hooks without arguments in the callback table, each stage's three.
-pub fn run_event(t: &mut code::Entries<code::kind::Event>) {
-    let site = concat!(file!(), ":", line!());
-    for tg in TARGETS.iter() {
-        t.add(
-            tg.data.on_init,
-            |r, f| {
-                let i = TARGETS.iter().position(|t| t.data.on_init == f).unwrap();
-                on_init(r, i)
-            },
-            site,
-        );
-        t.add(tg.data.on_load, |r, _| on_load(r), site);
-        t.add(tg.data.on_start, |r, _| on_start(r), site);
-    }
-}
-
-/// Whether `f` is a target stage's demo setup.
-pub fn is_demo_init(f: u32) -> bool {
-    TARGETS.iter().any(|t| t.data.on_demo_init == f)
 }
 
 /// Whether `f` is a target stage's line-touch dynamics.
@@ -782,7 +750,7 @@ const TMARIO_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTMr_StageData`.
 const TMARIO: StageData = StageData {
-    grkind: GR_KIND_TMARIO,
+    grkind: GrKind::TMario,
     callbacks: &TMARIO_CALLBACKS,
     file: Some("/GrTMr.dat"),
     on_init: 0x8021f844,
@@ -797,7 +765,7 @@ const TMARIO: StageData = StageData {
 };
 
 /// grTMr's create function, `grTMario_8021F8E4`.
-const TMARIO_TARGET: Target = Target {
+pub const TMARIO_TARGET: Target = Target {
     data: TMARIO,
     create: 0x8021f8e4,
     yakumono: None,
@@ -819,7 +787,7 @@ const TCAPTAIN_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTCa_StageData`.
 const TCAPTAIN: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 1,
+    grkind: GrKind::TCaptain,
     callbacks: &TCAPTAIN_CALLBACKS,
     file: Some("/GrTCa.dat"),
     on_init: 0x8021fc64,
@@ -834,7 +802,7 @@ const TCAPTAIN: StageData = StageData {
 };
 
 /// grTCa's create function, `grTCaptain_8021FD04`.
-const TCAPTAIN_TARGET: Target = Target {
+pub const TCAPTAIN_TARGET: Target = Target {
     data: TCAPTAIN,
     create: 0x8021fd04,
     yakumono: None,
@@ -856,7 +824,7 @@ const TCLINK_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTCLink_StageData`.
 const TCLINK: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 2,
+    grkind: GrKind::TClink,
     callbacks: &TCLINK_CALLBACKS,
     file: Some("/GrTCl.dat"),
     on_init: 0x8021ff48,
@@ -871,7 +839,7 @@ const TCLINK: StageData = StageData {
 };
 
 /// grTCLink's create function, `grTCLink_8021FFE8`.
-const TCLINK_TARGET: Target = Target {
+pub const TCLINK_TARGET: Target = Target {
     data: TCLINK,
     create: 0x8021ffe8,
     yakumono: None,
@@ -893,7 +861,7 @@ const TDONKEY_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTDk_StageData`.
 const TDONKEY: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 3,
+    grkind: GrKind::TDonkey,
     callbacks: &TDONKEY_CALLBACKS,
     file: Some("/GrTDk.dat"),
     on_init: 0x8022022c,
@@ -908,7 +876,7 @@ const TDONKEY: StageData = StageData {
 };
 
 /// grTDk's create function, `grTDonkey_802202CC`.
-const TDONKEY_TARGET: Target = Target {
+pub const TDONKEY_TARGET: Target = Target {
     data: TDONKEY,
     create: 0x802202cc,
     yakumono: None,
@@ -930,7 +898,7 @@ const TDRMARIO_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTDr_StageData`.
 const TDRMARIO: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 4,
+    grkind: GrKind::TDrmario,
     callbacks: &TDRMARIO_CALLBACKS,
     file: Some("/GrTDr.dat"),
     on_init: 0x80220510,
@@ -945,7 +913,7 @@ const TDRMARIO: StageData = StageData {
 };
 
 /// grTDr's create function, `grtDrMario_802205B0`.
-const TDRMARIO_TARGET: Target = Target {
+pub const TDRMARIO_TARGET: Target = Target {
     data: TDRMARIO,
     create: 0x802205b0,
     yakumono: None,
@@ -967,7 +935,7 @@ const TFALCO_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTFc_StageData`.
 const TFALCO: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 5,
+    grkind: GrKind::TFalco,
     callbacks: &TFALCO_CALLBACKS,
     file: Some("/GrTFc.dat"),
     on_init: 0x802207f4,
@@ -982,7 +950,7 @@ const TFALCO: StageData = StageData {
 };
 
 /// grTFc's create function, `setupStageCallbacks`.
-const TFALCO_TARGET: Target = Target {
+pub const TFALCO_TARGET: Target = Target {
     data: TFALCO,
     create: 0x8022089c,
     yakumono: Some(0),
@@ -1004,7 +972,7 @@ const TFOX_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTFx_StageData`.
 const TFOX: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 6,
+    grkind: GrKind::TFox,
     callbacks: &TFOX_CALLBACKS,
     file: Some("/GrTFx.dat"),
     on_init: 0x80220b84,
@@ -1019,7 +987,7 @@ const TFOX: StageData = StageData {
 };
 
 /// grTFx's create function, `grTFox_80220C2C`.
-const TFOX_TARGET: Target = Target {
+pub const TFOX_TARGET: Target = Target {
     data: TFOX,
     create: 0x80220c2c,
     yakumono: Some(1),
@@ -1041,7 +1009,7 @@ const TICECLIMBER_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTIc_StageData`.
 const TICECLIMBER: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 7,
+    grkind: GrKind::TIceclimber,
     callbacks: &TICECLIMBER_CALLBACKS,
     file: Some("/GrTIc.dat"),
     on_init: 0x80220f14,
@@ -1056,7 +1024,7 @@ const TICECLIMBER: StageData = StageData {
 };
 
 /// grTIc's create function, `setupStageCallbacks`.
-const TICECLIMBER_TARGET: Target = Target {
+pub const TICECLIMBER_TARGET: Target = Target {
     data: TICECLIMBER,
     create: 0x80220fb4,
     yakumono: None,
@@ -1078,7 +1046,7 @@ const TKIRBY_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTKb_StageData`.
 const TKIRBY: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 8,
+    grkind: GrKind::TKirby,
     callbacks: &TKIRBY_CALLBACKS,
     file: Some("/GrTKb.dat"),
     on_init: 0x80221368,
@@ -1093,7 +1061,7 @@ const TKIRBY: StageData = StageData {
 };
 
 /// grTKb's create function, `grTKirby_80221408`.
-const TKIRBY_TARGET: Target = Target {
+pub const TKIRBY_TARGET: Target = Target {
     data: TKIRBY,
     create: 0x80221408,
     yakumono: None,
@@ -1115,7 +1083,7 @@ const TKOOPA_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTKp_StageData`.
 const TKOOPA: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 9,
+    grkind: GrKind::TKoopa,
     callbacks: &TKOOPA_CALLBACKS,
     file: Some("/GrTKp.dat"),
     on_init: 0x8022164c,
@@ -1130,7 +1098,7 @@ const TKOOPA: StageData = StageData {
 };
 
 /// grTKp's create function, `grTKoopa_802216EC`.
-const TKOOPA_TARGET: Target = Target {
+pub const TKOOPA_TARGET: Target = Target {
     data: TKOOPA,
     create: 0x802216ec,
     yakumono: None,
@@ -1152,7 +1120,7 @@ const TLINK_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTLk_StageData`.
 const TLINK: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 10,
+    grkind: GrKind::TLink,
     callbacks: &TLINK_CALLBACKS,
     file: Some("/GrTLk.dat"),
     on_init: 0x80221930,
@@ -1167,7 +1135,7 @@ const TLINK: StageData = StageData {
 };
 
 /// grTLk's create function, `grTLink_802219D0`.
-const TLINK_TARGET: Target = Target {
+pub const TLINK_TARGET: Target = Target {
     data: TLINK,
     create: 0x802219d0,
     yakumono: None,
@@ -1189,7 +1157,7 @@ const TLUIGI_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTLg_StageData`.
 const TLUIGI: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 11,
+    grkind: GrKind::TLuigi,
     callbacks: &TLUIGI_CALLBACKS,
     file: Some("/GrTLg.dat"),
     on_init: 0x80221c14,
@@ -1204,7 +1172,7 @@ const TLUIGI: StageData = StageData {
 };
 
 /// grTLg's create function, `grTLuigi_80221CB4`.
-const TLUIGI_TARGET: Target = Target {
+pub const TLUIGI_TARGET: Target = Target {
     data: TLUIGI,
     create: 0x80221cb4,
     yakumono: None,
@@ -1226,7 +1194,7 @@ const TMARS_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTMs_StageData`.
 const TMARS: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 12,
+    grkind: GrKind::TMars,
     callbacks: &TMARS_CALLBACKS,
     file: Some("/GrTMs.dat"),
     on_init: 0x80221ef8,
@@ -1241,7 +1209,7 @@ const TMARS: StageData = StageData {
 };
 
 /// grTMs's create function, `setupStageCallbacks`.
-const TMARS_TARGET: Target = Target {
+pub const TMARS_TARGET: Target = Target {
     data: TMARS,
     create: 0x80221f98,
     yakumono: None,
@@ -1263,7 +1231,7 @@ const TMEWTWO_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTMewtwo_StageData`.
 const TMEWTWO: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 13,
+    grkind: GrKind::TMewtwo,
     callbacks: &TMEWTWO_CALLBACKS,
     file: Some("/GrTMt.dat"),
     on_init: 0x802221dc,
@@ -1278,7 +1246,7 @@ const TMEWTWO: StageData = StageData {
 };
 
 /// grTMewtwo's create function, `grTMewtwo_80222284`.
-const TMEWTWO_TARGET: Target = Target {
+pub const TMEWTWO_TARGET: Target = Target {
     data: TMEWTWO,
     create: 0x80222284,
     yakumono: Some(2),
@@ -1300,7 +1268,7 @@ const TNESS_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTNs_StageData`.
 const TNESS: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 14,
+    grkind: GrKind::TNess,
     callbacks: &TNESS_CALLBACKS,
     file: Some("/GrTNs.dat"),
     on_init: 0x802225d4,
@@ -1315,7 +1283,7 @@ const TNESS: StageData = StageData {
 };
 
 /// grTNs's create function, `grTNess_80222674`.
-const TNESS_TARGET: Target = Target {
+pub const TNESS_TARGET: Target = Target {
     data: TNESS,
     create: 0x80222674,
     yakumono: None,
@@ -1337,7 +1305,7 @@ const TPEACH_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTPe_StageData`.
 const TPEACH: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 15,
+    grkind: GrKind::TPeach,
     callbacks: &TPEACH_CALLBACKS,
     file: Some("/GrTPe.dat"),
     on_init: 0x802228b8,
@@ -1352,7 +1320,7 @@ const TPEACH: StageData = StageData {
 };
 
 /// grTPe's create function, `grTPeach_80222958`.
-const TPEACH_TARGET: Target = Target {
+pub const TPEACH_TARGET: Target = Target {
     data: TPEACH,
     create: 0x80222958,
     yakumono: None,
@@ -1374,7 +1342,7 @@ const TPICHU_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTPc_StageData`.
 const TPICHU: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 16,
+    grkind: GrKind::TPichu,
     callbacks: &TPICHU_CALLBACKS,
     file: Some("/GrTPc.dat"),
     on_init: 0x80222b9c,
@@ -1389,7 +1357,7 @@ const TPICHU: StageData = StageData {
 };
 
 /// grTPc's create function, `grTPichu_80222C3C`.
-const TPICHU_TARGET: Target = Target {
+pub const TPICHU_TARGET: Target = Target {
     data: TPICHU,
     create: 0x80222c3c,
     yakumono: None,
@@ -1411,7 +1379,7 @@ const TPIKACHU_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTPk_StageData`.
 const TPIKACHU: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 17,
+    grkind: GrKind::TPikachu,
     callbacks: &TPIKACHU_CALLBACKS,
     file: Some("/GrTPk.dat"),
     on_init: 0x80222e80,
@@ -1426,7 +1394,7 @@ const TPIKACHU: StageData = StageData {
 };
 
 /// grTPk's create function, `grTPikachu_80222F20`.
-const TPIKACHU_TARGET: Target = Target {
+pub const TPIKACHU_TARGET: Target = Target {
     data: TPIKACHU,
     create: 0x80222f20,
     yakumono: None,
@@ -1448,7 +1416,7 @@ const TPURIN_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTPr_StageData`.
 const TPURIN: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 18,
+    grkind: GrKind::TPurin,
     callbacks: &TPURIN_CALLBACKS,
     file: Some("/GrTPr.dat"),
     on_init: 0x80223164,
@@ -1463,7 +1431,7 @@ const TPURIN: StageData = StageData {
 };
 
 /// grTPr's create function, `grTPurin_8022320C`.
-const TPURIN_TARGET: Target = Target {
+pub const TPURIN_TARGET: Target = Target {
     data: TPURIN,
     create: 0x8022320c,
     yakumono: Some(3),
@@ -1485,7 +1453,7 @@ const TSAMUS_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTSs_StageData`.
 const TSAMUS: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 19,
+    grkind: GrKind::TSamus,
     callbacks: &TSAMUS_CALLBACKS,
     file: Some("/GrTSs.dat"),
     on_init: 0x80223584,
@@ -1500,7 +1468,7 @@ const TSAMUS: StageData = StageData {
 };
 
 /// grTSs's create function, `grTSamus_80223624`.
-const TSAMUS_TARGET: Target = Target {
+pub const TSAMUS_TARGET: Target = Target {
     data: TSAMUS,
     create: 0x80223624,
     yakumono: None,
@@ -1522,7 +1490,7 @@ const TSEAK_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTSk_StageData`.
 const TSEAK: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 20,
+    grkind: GrKind::TSeak,
     callbacks: &TSEAK_CALLBACKS,
     file: Some("/GrTSk.dat"),
     on_init: 0x80223868,
@@ -1537,7 +1505,7 @@ const TSEAK: StageData = StageData {
 };
 
 /// grTSk's create function, `grTSeak_80223908`.
-const TSEAK_TARGET: Target = Target {
+pub const TSEAK_TARGET: Target = Target {
     data: TSEAK,
     create: 0x80223908,
     yakumono: None,
@@ -1559,7 +1527,7 @@ const TYOSHI_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTYs_StageData`.
 const TYOSHI: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 21,
+    grkind: GrKind::TYoshi,
     callbacks: &TYOSHI_CALLBACKS,
     file: Some("/GrTYs.dat"),
     on_init: 0x80223b4c,
@@ -1574,7 +1542,7 @@ const TYOSHI: StageData = StageData {
 };
 
 /// grTYs's create function, `grTYoshi_80223BEC`.
-const TYOSHI_TARGET: Target = Target {
+pub const TYOSHI_TARGET: Target = Target {
     data: TYOSHI,
     create: 0x80223bec,
     yakumono: None,
@@ -1596,7 +1564,7 @@ const TZELDA_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTZd_StageData`.
 const TZELDA: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 22,
+    grkind: GrKind::TZelda,
     callbacks: &TZELDA_CALLBACKS,
     file: Some("/GrTZd.dat"),
     on_init: 0x80223e30,
@@ -1611,7 +1579,7 @@ const TZELDA: StageData = StageData {
 };
 
 /// grTZd's create function, `grTZelda_80223ED0`.
-const TZELDA_TARGET: Target = Target {
+pub const TZELDA_TARGET: Target = Target {
     data: TZELDA,
     create: 0x80223ed0,
     yakumono: None,
@@ -1633,7 +1601,7 @@ const TGAMEWATCH_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTGw_StageData`.
 const TGAMEWATCH: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 23,
+    grkind: GrKind::TGamewatch,
     callbacks: &TGAMEWATCH_CALLBACKS,
     file: Some("/GrTGw.dat"),
     on_init: 0x80224114,
@@ -1648,7 +1616,7 @@ const TGAMEWATCH: StageData = StageData {
 };
 
 /// grTGw's create function, `grTGameWatch_802241B4`.
-const TGAMEWATCH_TARGET: Target = Target {
+pub const TGAMEWATCH_TARGET: Target = Target {
     data: TGAMEWATCH,
     create: 0x802241b4,
     yakumono: None,
@@ -1670,7 +1638,7 @@ const TEMBLEM_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTFe_StageData`.
 const TEMBLEM: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 24,
+    grkind: GrKind::TEmblem,
     callbacks: &TEMBLEM_CALLBACKS,
     file: Some("/GrTFe.dat"),
     on_init: 0x802243f8,
@@ -1685,7 +1653,7 @@ const TEMBLEM: StageData = StageData {
 };
 
 /// grTFe's create function, `grTRoy_80224498`.
-const TEMBLEM_TARGET: Target = Target {
+pub const TEMBLEM_TARGET: Target = Target {
     data: TEMBLEM,
     create: 0x80224498,
     yakumono: None,
@@ -1707,7 +1675,7 @@ const TGANON_CALLBACKS: [StageCallbacks; 3] = [
 
 /// `grTGn_StageData`.
 const TGANON: StageData = StageData {
-    grkind: GR_KIND_TMARIO + 25,
+    grkind: GrKind::TGanon,
     callbacks: &TGANON_CALLBACKS,
     file: Some("/GrTGn.dat"),
     on_init: 0x802246dc,
@@ -1722,7 +1690,7 @@ const TGANON: StageData = StageData {
 };
 
 /// grTGn's create function, `grTGanon_80224784`.
-const TGANON_TARGET: Target = Target {
+pub const TGANON_TARGET: Target = Target {
     data: TGANON,
     create: 0x80224784,
     yakumono: Some(4),

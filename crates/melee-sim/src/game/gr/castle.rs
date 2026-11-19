@@ -189,18 +189,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x801C_D37C => on_init(r),
-        0x801C_D4A0 => on_load(r),
-        0x801C_D4A4 => on_start(r),
-        _ => return false,
-    }
-    true
-}
-
 /// The stage's render callbacks, by address.
 #[melee_callbacks::callbacks(Render)]
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
@@ -561,7 +549,7 @@ pub fn proc_lifts(r: &mut Running, gobj: GObjId) {
 /// Peach's Castle only.
 #[doc(alias = "grCastle_801CDF54")]
 pub fn bill_position(game: &mut Game, data: &Archives) -> Option<Vec3> {
-    if game.stage_info.grkind != super::GR_KIND_CASTLE {
+    if game.stage_info.grkind != super::GrKind::Castle {
         return None;
     }
     for i in 0..9 {

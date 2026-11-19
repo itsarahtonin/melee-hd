@@ -1,8 +1,11 @@
 //! The characters and stages a match can be started with: those whose code is ported. A new
-//! character's or stage's port adds its line here, and the frontends (the player's command
-//! line, its `--help` and its launcher) list what this lists; a stage only once its audit
-//! finds nothing a match on it reaches unported (`Stage::audit`, docs/player.md). Presentation
-//! data only: nothing in the simulation reads it.
+//! character's port adds its line here, a stage's its roster fields in its entry of the stage
+//! registry ([`gr::registry`](super::gr::registry): `vs`, `keys`, `audit`), and the frontends
+//! (the player's command line, its `--help` and its launcher) list what this lists; a stage
+//! only once its audit finds nothing a match on it reaches unported (`Stage::audit`,
+//! docs/player.md). Presentation data only: nothing in the simulation reads it.
+
+pub use super::gr::Stage;
 
 /// A character a match can have, by its `CharacterKind` (the game's external ID, as
 /// [`Player::character`](super::vs_match::Player::character) takes it).
@@ -12,19 +15,6 @@ pub struct Character {
     pub name: &'static str,
     /// The names the command line takes, the first the usual one.
     pub keys: &'static [&'static str],
-}
-
-/// A stage a match can be on, by its `StKind` (the game's external ID, as
-/// [`Settings::vs`](super::vs_match::Settings::vs) takes it).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Stage {
-    pub kind: u16,
-    pub name: &'static str,
-    /// The names the command line takes, the first the usual one.
-    pub keys: &'static [&'static str],
-    /// What a match on the stage can reach that no port covers, once someone has looked: none
-    /// until then, and the stage isn't offered.
-    pub audit: Option<Audit>,
 }
 
 /// A stage's audit: the code a match on it can reach beyond the shared code, and what of it
@@ -232,382 +222,6 @@ pub const CHARACTERS: &[Character] = &[
     },
 ];
 
-/// The ported stages, by name. A stage plays its oracle match once its line is here; the
-/// launcher and the command line offer it only once its audit says nothing a match on it can
-/// reach stops (`audit`, docs/player.md's "Stages"). A new stage's line starts with `audit:
-/// None`.
-pub const STAGES: &[Stage] = &[
-    Stage {
-        kind: 31,
-        name: "Battlefield",
-        keys: &["bf", "battlefield"],
-        audit: Some(Audit {
-            units: &["melee/gr/grbattle"],
-            modules: &["gr/battle"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 24,
-        name: "Big Blue",
-        keys: &["bb", "big-blue"],
-        audit: Some(Audit {
-            units: &["melee/gr/grbigblue", "melee/gr/grfzerocar"],
-            modules: &["gr/bigblue", "gr/fzerocar"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 6,
-        name: "Brinstar",
-        keys: &["br", "brinstar"],
-        audit: Some(Audit {
-            units: &["melee/gr/grzebes", "melee/it/kinds/ityaku"],
-            modules: &["gr/zebes", "it/kinds/yaku"],
-            unreached: &[YAKU_UNANCHORED],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 15,
-        name: "Brinstar Depths",
-        keys: &["bd", "brinstar-depths"],
-        audit: Some(Audit {
-            units: &["melee/gr/grkraid"],
-            modules: &["gr/kraid"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 7,
-        name: "Corneria",
-        keys: &["cn", "corneria"],
-        audit: Some(Audit {
-            units: &[
-                "melee/gr/grcorneria",
-                "melee/it/kinds/itarwinglaser",
-                "melee/it/kinds/itgreatfoxlaser",
-                "melee/it/kinds/ityaku",
-            ],
-            modules: &[
-                "gr/corneria",
-                "it/kinds/arwinglaser",
-                "it/kinds/greatfoxlaser",
-                "it/kinds/yaku",
-            ],
-            unreached: &[YAKU_UNANCHORED],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 28,
-        name: "Dream Land",
-        keys: &["dl", "dream-land"],
-        audit: Some(Audit {
-            units: &["melee/gr/groldpupupu"],
-            modules: &["gr/oldpupupu"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 32,
-        name: "Final Destination",
-        keys: &["fd", "final-destination"],
-        audit: Some(Audit {
-            units: &["melee/gr/grlast"],
-            modules: &["gr/last"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 27,
-        name: "Flat Zone",
-        keys: &["fz", "flat-zone"],
-        audit: Some(Audit {
-            units: &["melee/gr/grflatzone", "melee/it/kinds/ittools"],
-            modules: &["gr/flatzone", "it/kinds/tools"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 2,
-        name: "Fountain of Dreams",
-        keys: &["fod", "fountain-of-dreams"],
-        audit: Some(Audit {
-            units: &["melee/gr/grizumi"],
-            modules: &["gr/izumi"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 18,
-        name: "Fourside",
-        keys: &["fs", "fourside"],
-        audit: Some(Audit {
-            units: &["melee/gr/grfourside"],
-            modules: &["gr/fourside"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 13,
-        name: "Great Bay",
-        keys: &["gb", "great-bay"],
-        audit: Some(Audit {
-            units: &["melee/gr/grgreatbay", "melee/it/kinds/ittincle"],
-            modules: &["gr/greatbay", "it/kinds/tincle"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 17,
-        name: "Green Greens",
-        keys: &["gg", "green-greens"],
-        audit: Some(Audit {
-            units: &[
-                "melee/gr/grgreens",
-                "melee/it/kinds/itwhispyapple",
-                "melee/it/kinds/ityaku",
-            ],
-            modules: &["gr/greens", "it/kinds/whispyapple", "it/kinds/yaku"],
-            unreached: &[YAKU_UNANCHORED],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 14,
-        name: "Hyrule Temple",
-        keys: &["ht", "hyrule-temple"],
-        audit: Some(Audit {
-            units: &["melee/gr/grshrine"],
-            modules: &["gr/shrine"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 25,
-        name: "Icicle Mountain",
-        keys: &["im", "icicle-mountain"],
-        audit: Some(Audit {
-            units: &["melee/gr/gricemt", "melee/it/kinds/ityaku"],
-            modules: &["gr/icemt", "it/kinds/yaku"],
-            unreached: &[YAKU_UNANCHORED],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 12,
-        name: "Jungle Japes",
-        keys: &["jj", "jungle-japes"],
-        audit: Some(Audit {
-            units: &["melee/gr/grgarden", "melee/it/kinds/ityaku"],
-            modules: &["gr/garden", "it/kinds/yaku"],
-            unreached: &[YAKU_UNANCHORED],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 5,
-        name: "Kongo Jungle",
-        keys: &["kj", "kongo-jungle"],
-        audit: Some(Audit {
-            units: &[
-                "melee/gr/grkongo",
-                "melee/it/kinds/itklap",
-                "melee/ft/kinds/ftCommon/ftCo_BarrelWait",
-            ],
-            modules: &["gr/kongo", "it/kinds/klap"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 30,
-        name: "Kongo Jungle N64",
-        keys: &["kj64", "kongo-jungle-64"],
-        audit: Some(Audit {
-            units: &[
-                "melee/gr/groldkongo",
-                "melee/ft/kinds/ftCommon/ftCo_BarrelWait",
-            ],
-            modules: &["gr/oldkongo"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 19,
-        name: "Mushroom Kingdom",
-        keys: &["mk", "mushroom-kingdom"],
-        audit: Some(Audit {
-            units: &["melee/gr/grinishie1", "melee/it/kinds/ityaku"],
-            modules: &["gr/inishie1", "it/kinds/yaku"],
-            unreached: &[
-                YAKU_UNANCHORED,
-                (
-                    "grinishie1.c:496",
-                    "a block's ceiling callback on a joint not among the blocks': only the blocks' collision joints get it (the original hangs)",
-                ),
-                (
-                    "grinishie1.c:541",
-                    "a block whose joint the stage's model lacks: the stage's archive has every one (the original hangs)",
-                ),
-            ],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 20,
-        name: "Mushroom Kingdom II",
-        keys: &["mk2", "mushroom-kingdom-2"],
-        audit: Some(Audit {
-            units: &[
-                "melee/gr/grinishie2",
-                "melee/it/kinds/itkyasarin",
-                "melee/it/kinds/itkyasarinegg",
-            ],
-            modules: &["gr/inishie2", "it/kinds/kyasarin", "it/kinds/kyasarinegg"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 10,
-        name: "Mute City",
-        keys: &["mc", "mute-city"],
-        audit: Some(Audit {
-            units: &[
-                "melee/gr/grmutecity",
-                "melee/gr/grfzerocar",
-                "melee/it/kinds/ityaku",
-            ],
-            modules: &["gr/mutecity", "gr/fzerocar", "it/kinds/yaku"],
-            unreached: &[YAKU_UNANCHORED],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 9,
-        name: "Onett",
-        keys: &["on", "onett"],
-        audit: Some(Audit {
-            units: &["melee/gr/gronett", "melee/it/kinds/ityaku"],
-            modules: &["gr/onett", "it/kinds/yaku"],
-            unreached: &[YAKU_UNANCHORED],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 23,
-        name: "Poké Floats",
-        keys: &["pf", "poke-floats"],
-        audit: Some(Audit {
-            units: &["melee/gr/grpura"],
-            modules: &["gr/pura"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 3,
-        name: "Pokémon Stadium",
-        keys: &["ps", "pokemon-stadium"],
-        audit: Some(Audit {
-            units: &["melee/gr/grpstadium"],
-            modules: &["gr/stadium"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 4,
-        name: "Princess Peach's Castle",
-        keys: &["pc", "peachs-castle"],
-        audit: Some(Audit {
-            units: &["melee/gr/grcastle", "melee/it/kinds/ityaku"],
-            modules: &["gr/castle", "it/kinds/yaku"],
-            unreached: &[
-                YAKU_UNANCHORED,
-                (
-                    "lb_800117F4",
-                    "the flags' chains drawn as lines, which only the debug camera's flag on a stage object turns on (dbcamera.c)",
-                ),
-            ],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 11,
-        name: "Rainbow Cruise",
-        keys: &["rc", "rainbow-cruise"],
-        audit: Some(Audit {
-            units: &["melee/gr/grrcruise"],
-            modules: &["gr/rcruise"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 22,
-        name: "Venom",
-        keys: &["ve", "venom"],
-        audit: Some(Audit {
-            units: &["melee/gr/grvenom", "melee/it/kinds/itarwinglaser"],
-            modules: &["gr/venom", "it/kinds/arwinglaser"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 16,
-        name: "Yoshi's Island",
-        keys: &["yi", "yoshis-island"],
-        audit: Some(Audit {
-            units: &["melee/gr/gryorster", "melee/it/kinds/ityaku"],
-            modules: &["gr/yorster", "it/kinds/yaku"],
-            unreached: &[YAKU_UNANCHORED],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 29,
-        name: "Yoshi's Island N64",
-        keys: &["yi64", "yoshis-island-64"],
-        audit: Some(Audit {
-            units: &["melee/gr/groldyoshi"],
-            modules: &["gr/oldyoshi"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-    Stage {
-        kind: 8,
-        name: "Yoshi's Story",
-        keys: &["ys", "yoshis-story"],
-        audit: Some(Audit {
-            units: &["melee/gr/grstory", "melee/it/kinds/itheiho"],
-            modules: &["gr/story", "it/kinds/heiho"],
-            unreached: &[],
-            missing: &[],
-        }),
-    },
-];
-
-const YAKU_UNANCHORED: (&str, &str) = (
-    "it_2E6A_UnkMotion19_Phys",
-    "a stage item on neither a joint nor a point, which no stage makes (the original hangs)",
-);
-
 /// A ported character by one of its command-line names.
 pub fn character(key: &str) -> Option<&'static Character> {
     CHARACTERS.iter().find(|c| c.keys.contains(&key))
@@ -618,19 +232,28 @@ pub fn character_by_kind(kind: u8) -> Option<&'static Character> {
     CHARACTERS.iter().find(|c| c.kind == kind)
 }
 
-/// A ported stage by one of its command-line names.
-pub fn stage(key: &str) -> Option<&'static Stage> {
-    STAGES.iter().find(|s| s.keys.contains(&key))
+/// The roster's stages, by name: the registry's stages a VS match can start on (`vs`).
+pub fn stages() -> impl Iterator<Item = &'static Stage> {
+    let mut v: Vec<&'static Stage> = super::gr::registry::ported()
+        .filter(|s| s.vs.is_some())
+        .collect();
+    v.sort_by_key(|s| s.name);
+    v.into_iter()
 }
 
-/// A ported stage by its `StKind`.
+/// A roster stage by one of its command-line names.
+pub fn stage(key: &str) -> Option<&'static Stage> {
+    stages().find(|s| s.keys.contains(&key))
+}
+
+/// A roster stage by its `StKind`.
 pub fn stage_by_kind(kind: u16) -> Option<&'static Stage> {
-    STAGES.iter().find(|s| s.kind == kind)
+    stages().find(|s| s.vs.is_some_and(|k| k.id() == kind))
 }
 
 /// The stages the launcher and the command line offer ([`Stage::offered`]).
 pub fn offered_stages() -> impl Iterator<Item = &'static Stage> {
-    STAGES.iter().filter(|s| s.offered())
+    stages().filter(|s| s.offered())
 }
 
 impl Character {
@@ -678,8 +301,8 @@ pub(crate) mod tests {
             .iter()
             .flat_map(|c| c.keys.iter().copied())
             .collect();
-        let stages: Vec<&str> = STAGES.iter().flat_map(|s| s.keys.iter().copied()).collect();
-        for list in [&keys, &stages] {
+        let stage_keys: Vec<&str> = stages().flat_map(|s| s.keys.iter().copied()).collect();
+        for list in [&keys, &stage_keys] {
             for (i, k) in list.iter().enumerate() {
                 assert!(!list[..i].contains(k), "{k} names two entries");
             }
@@ -688,19 +311,15 @@ pub(crate) mod tests {
             assert!(CHARACTERS[..i].iter().all(|d| d.kind != c.kind), "{c:?}");
             assert!(character(c.keys[0]) == Some(c));
         }
-        for (i, s) in STAGES.iter().enumerate() {
-            assert!(STAGES[..i].iter().all(|t| t.kind != s.kind), "{s:?}");
-            assert!(stage(s.keys[0]) == Some(s));
+        let all: Vec<_> = stages().collect();
+        for (i, s) in all.iter().enumerate() {
+            assert!(all[..i].iter().all(|t| t.vs != s.vs), "{s:?}");
+            assert!(stage(s.keys[0]) == Some(*s));
+            assert!(stage_by_kind(s.vs_kind()) == Some(*s));
         }
-    }
-
-    /// Each listed stage's ground kind has its stage data ported.
-    #[test]
-    fn listed_stages_are_ported() {
-        for s in STAGES {
-            let grkind = crate::lb::audio::ground_kind(i32::from(s.kind)) as i32;
-            let found = std::panic::catch_unwind(|| super::super::gr::data::stage_data(grkind));
-            assert!(found.is_ok(), "{} (StKind {}) isn't ported", s.name, s.kind);
+        // Only roster stages have command-line names.
+        for s in super::super::gr::registry::ported() {
+            assert_eq!(s.vs.is_some(), !s.keys.is_empty(), "{}", s.name);
         }
     }
 
@@ -717,6 +336,7 @@ pub(crate) mod tests {
         "gr/ground",
         "gr/material",
         "gr/mod",
+        "gr/registry",
         "gr/setup",
         "gr/stage",
         "gr/vars",
@@ -818,7 +438,7 @@ pub(crate) mod tests {
     fn audited_stages_reach_nothing_unported() {
         let ledger = ledger();
         let every_stop: Vec<String> = game_modules().iter().flat_map(|m| stops(m)).collect();
-        for s in STAGES {
+        for s in stages() {
             let Some(a) = &s.audit else { continue };
             assert!(
                 a.units.iter().any(|u| u.starts_with("melee/gr/gr")),
@@ -924,10 +544,8 @@ pub(crate) mod tests {
             assert!(s.missing_with(&[]).is_empty(), "{}", s.name);
         }
         let unaudited = Stage {
-            kind: 0,
-            name: "",
-            keys: &[],
             audit: None,
+            ..*stage("ht").unwrap()
         };
         assert!(!unaudited.offered() && !unaudited.missing_with(&[]).is_empty());
         let ht = stage("ht").unwrap();
@@ -935,9 +553,6 @@ pub(crate) mod tests {
         // The Ice Climbers (14) play every offered stage.
         assert!(ht.missing_with(&[2, 14]).is_empty());
         let one = Stage {
-            kind: 0,
-            name: "",
-            keys: &[],
             audit: Some(Audit {
                 units: &[],
                 modules: &[],
@@ -948,6 +563,7 @@ pub(crate) mod tests {
                     with: Some(14),
                 }],
             }),
+            ..*stage("ht").unwrap()
         };
         assert!(one.offered() && one.missing_with(&[2, 9]).is_empty());
         assert_eq!(one.missing_with(&[2, 14]), ["a gap (with Ice Climbers)"]);

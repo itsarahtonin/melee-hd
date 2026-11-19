@@ -6,6 +6,7 @@ use melee_data::archive::DataRef;
 
 use super::super::state::{Obj, Running};
 use crate::fpu::{mem, reg};
+use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
@@ -19,9 +20,6 @@ pub const JOBJ_PROC: u32 = 0x8031_E6EC;
 pub const CAMERA_RENDER: u32 = 0x8031_E710;
 pub const ARWING_PROC: u32 = 0x8031_E800;
 pub const CAMERA_PROC: u32 = 0x8031_EB38;
-
-/// `St_Kind_Corneria`.
-const ST_KIND_CORNERIA: i32 = 7;
 
 /// `vi0601.c`'s statics.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
@@ -166,7 +164,7 @@ impl Running<'_> {
         );
         self.game.vi.v0601.scene = Some(scene);
         self.vi_camera(scene, CAMERA_RENDER, 2, CAMERA_PROC);
-        self.vi_stage(ST_KIND_CORNERIA, FRAMES, |_| {});
+        self.vi_stage(StKind::Corneria, FRAMES, |_| {});
         let k = &self.game.camera.cam.background_color;
         self.game.vi.v0601.erase = [k.r, k.g, k.b];
         self.vi0601_models(scene);

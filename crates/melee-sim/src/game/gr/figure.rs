@@ -16,7 +16,7 @@ use super::ground::{ground_of, jobj_of, update_map_coll};
 use super::{anime, setup, zako};
 use crate::hsd::gobj::GObjId;
 
-/// The three stages' objects' functions, by `grkind - GR_KIND_FIGURE1`.
+/// The three stages' objects' functions, by `grkind - GrKind::Figure1`.
 const CALLBACKS: [&[StageCallbacks; 3]; 3] =
     [&FIGURE1_CALLBACKS, &FIGURE2_CALLBACKS, &FIGURE3_CALLBACKS];
 
@@ -43,20 +43,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         0x8020_E1A4 | 0x8020_E438 | 0x8020_E6CC => init_coll(r, gobj),
         0x8020_E1D8 | 0x8020_E46C | 0x8020_E700 => proc_coll(r, gobj),
         0x8020_E200 | 0x8020_E494 | 0x8020_E728 => init_coll_and_model(r, gobj),
-        _ => return false,
-    }
-    true
-}
-
-/// The stages' hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x8020_DFE0 => on_init(r, 0),
-        0x8020_E274 => on_init(r, 1),
-        0x8020_E508 => on_init(r, 2),
-        0x8020_E050 | 0x8020_E2E4 | 0x8020_E578 => on_load(r),
-        0x8020_E054 | 0x8020_E2E8 | 0x8020_E57C => on_start(r),
         _ => return false,
     }
     true

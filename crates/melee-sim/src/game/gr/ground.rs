@@ -7,8 +7,8 @@ use melee_data::archive::{Archives, DataRef};
 use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Obj, Running, UserData};
 use super::super::structs::_GXColor;
-use super::data::stage_data;
 use super::datfiles::{self, GrJoint};
+use super::registry;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -333,7 +333,7 @@ fn coll_joints(
     data: &Archives,
     map_id: i32,
 ) -> (&'static [GrJoint], Option<DataRef>, u32) {
-    let own = stage_data(game.stage_info.grkind).joints;
+    let own = registry::stage(game.stage_info.grkind).data.joints;
     match datfiles::archive_for(game, data, map_id) {
         Some(head) => {
             let (list, n) = head.entry(data, map_id).coll_joints(data);
@@ -636,7 +636,7 @@ pub fn param_color(game: &Game, which: ParamColor) -> _GXColor {
 /// Runs the stage's demo setup, `Ground_DemoInit`.
 #[doc(alias = "Ground_DemoInit")]
 pub fn demo_init(r: &mut Running, grkind: i32, arg: i32) {
-    let f = stage_data(grkind).on_demo_init;
+    let f = registry::stage(grkind).data.on_demo_init;
     super::super::code::run_demo_init(r, f, arg);
 }
 
@@ -1166,7 +1166,7 @@ pub fn b1(game: &Game) -> bool {
 /// A stage kind's `flags2`, `Ground_801C5AD0`.
 #[doc(alias = "Ground_801C5AD0")]
 pub fn flags2(grkind: i32) -> u32 {
-    stage_data(grkind).flags2
+    registry::stage(grkind).data.flags2
 }
 
 /// Euler angles from three axes, any not under 30000 in size (NaN too) zeroed,

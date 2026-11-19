@@ -45,18 +45,6 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// The stage's hooks without arguments, by address.
-#[melee_callbacks::callbacks(Event)]
-pub fn run_event(r: &mut Running, f: u32) -> bool {
-    match f {
-        0x8021_9534 => on_init(r),
-        0x8021_959C => on_load(r),
-        0x8021_95A0 => on_start(r),
-        _ => return false,
-    }
-    true
-}
-
 /// The backdrop's process and the objects' destroy callbacks (dead, `ledger/dead.txt`), which
 /// do nothing.
 #[doc(alias = "grFigureGet_802196E8")]

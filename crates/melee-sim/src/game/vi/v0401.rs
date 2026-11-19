@@ -8,6 +8,7 @@ use melee_data::archive::DataRef;
 use super::super::render::CAMERA_CALLBACK;
 use super::super::state::Running;
 use super::Loaded;
+use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 
@@ -21,9 +22,6 @@ pub const JOBJ_PROC: u32 = 0x8031_D18C;
 pub const CAMERA_RENDER: u32 = 0x8031_D1B0;
 pub const CAMERA_PROC: u32 = 0x8031_D23C;
 pub const ON_FRAME: u32 = 0x8031_D698;
-
-/// `St_Kind_Zebes`.
-const ST_KIND_ZEBES: i32 = 6;
 
 /// `vi0401.c`'s statics.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
@@ -47,7 +45,7 @@ impl Running<'_> {
     /// reverb's send.
     #[doc(alias = "un_8031D030")]
     fn vi0401_setup(&mut self, ckind: i32, costume: i32) {
-        self.vi_stage(ST_KIND_ZEBES, FRAMES, |_| {});
+        self.vi_stage(StKind::Zebes, FRAMES, |_| {});
         self.fighter_demo_init();
         self.game.init_all_players();
         let waits = self.game.vi.v0401.waits;

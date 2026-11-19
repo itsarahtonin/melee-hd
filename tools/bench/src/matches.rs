@@ -19,6 +19,7 @@ use std::borrow::Cow;
 use std::fmt::Write as _;
 
 use crate::gecko_words::{INFO, INFO_DATA, SCENE, SCENE_DATA};
+use melee_sim::game::gr::StKind;
 
 /// Who plays a player.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -307,40 +308,42 @@ pub const ROY: u8 = 0x17;
 pub const PICHU: u8 = 0x18;
 pub const GANONDORF: u8 = 0x19;
 
-pub const FOUNTAIN_OF_DREAMS: u16 = 0x02;
-pub const POKEMON_STADIUM: u16 = 0x03;
-pub const PEACHS_CASTLE: u16 = 0x04;
-pub const KONGO_JUNGLE: u16 = 0x05;
-pub const BRINSTAR: u16 = 0x06;
-pub const CORNERIA: u16 = 0x07;
-pub const YOSHIS_STORY: u16 = 0x08;
-pub const ONETT: u16 = 0x09;
-pub const MUTE_CITY: u16 = 0x0A;
-pub const RAINBOW_CRUISE: u16 = 0x0B;
-pub const JUNGLE_JAPES: u16 = 0x0C;
-pub const GREAT_BAY: u16 = 0x0D;
-pub const HYRULE_TEMPLE: u16 = 0x0E;
-pub const BRINSTAR_DEPTHS: u16 = 0x0F;
-pub const YOSHIS_ISLAND: u16 = 0x10;
-pub const GREEN_GREENS: u16 = 0x11;
-pub const FOURSIDE: u16 = 0x12;
-pub const MUSHROOM_KINGDOM: u16 = 0x13;
-pub const MUSHROOM_KINGDOM_2: u16 = 0x14;
-pub const VENOM: u16 = 0x16;
-pub const POKE_FLOATS: u16 = 0x17;
-pub const BIG_BLUE: u16 = 0x18;
-pub const ICICLE_MOUNTAIN: u16 = 0x19;
-pub const FLAT_ZONE: u16 = 0x1B;
-pub const DREAM_LAND: u16 = 0x1C;
-pub const YOSHIS_ISLAND_64: u16 = 0x1D;
-pub const KONGO_JUNGLE_64: u16 = 0x1E;
-pub const BATTLEFIELD: u16 = 0x1F;
-pub const FINAL_DESTINATION: u16 = 0x20;
+pub const FOUNTAIN_OF_DREAMS: u16 = StKind::Izumi.id();
+pub const POKEMON_STADIUM: u16 = StKind::PStadium.id();
+pub const PEACHS_CASTLE: u16 = StKind::Castle.id();
+pub const KONGO_JUNGLE: u16 = StKind::Kongo.id();
+pub const BRINSTAR: u16 = StKind::Zebes.id();
+pub const CORNERIA: u16 = StKind::Corneria.id();
+pub const YOSHIS_STORY: u16 = StKind::Story.id();
+pub const ONETT: u16 = StKind::Onett.id();
+pub const MUTE_CITY: u16 = StKind::MuteCity.id();
+pub const RAINBOW_CRUISE: u16 = StKind::RCruise.id();
+pub const JUNGLE_JAPES: u16 = StKind::Garden.id();
+pub const GREAT_BAY: u16 = StKind::GreatBay.id();
+pub const HYRULE_TEMPLE: u16 = StKind::Shrine.id();
+pub const BRINSTAR_DEPTHS: u16 = StKind::Kraid.id();
+pub const YOSHIS_ISLAND: u16 = StKind::Yorster.id();
+pub const GREEN_GREENS: u16 = StKind::Greens.id();
+pub const FOURSIDE: u16 = StKind::Fourside.id();
+pub const MUSHROOM_KINGDOM: u16 = StKind::Inishie1.id();
+pub const MUSHROOM_KINGDOM_2: u16 = StKind::Inishie2.id();
+pub const VENOM: u16 = StKind::Venom.id();
+pub const POKE_FLOATS: u16 = StKind::Pura.id();
+pub const BIG_BLUE: u16 = StKind::BigBlue.id();
+pub const ICICLE_MOUNTAIN: u16 = StKind::Icemt.id();
+pub const FLAT_ZONE: u16 = StKind::Flatzone.id();
+pub const DREAM_LAND: u16 = StKind::OldPupupu.id();
+pub const YOSHIS_ISLAND_64: u16 = StKind::OldYoshi.id();
+pub const KONGO_JUNGLE_64: u16 = StKind::OldKongo.id();
+pub const BATTLEFIELD: u16 = StKind::Battle.id();
+pub const FINAL_DESTINATION: u16 = StKind::Last.id();
 
 /// Whether `stage` is one of the 29 VS stages (not the test stage, Akaneia or Icicle
 /// Mountain's top).
 pub fn is_vs_stage(stage: u16) -> bool {
-    (FOUNTAIN_OF_DREAMS..=FINAL_DESTINATION).contains(&stage) && !matches!(stage, 0x15 | 0x1A)
+    (FOUNTAIN_OF_DREAMS..=FINAL_DESTINATION).contains(&stage)
+        && stage != StKind::Akaneia
+        && stage != StKind::Icetop
 }
 
 /// The VS computer kind.

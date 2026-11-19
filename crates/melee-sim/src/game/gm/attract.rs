@@ -283,7 +283,8 @@ impl Running<'_> {
         // Named for the saved language (`lbFileGetFullName` of a name with no extension).
         let us = self.files_us();
         let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind));
-        let stage = crate::game::gr::data::stage_file(grkind as i32, us)
+        let stage = crate::game::gr::registry::stage(grkind as i32)
+            .file(us)
             .map(|name| archive(self, name.trim_start_matches('/')));
         let files = super::vs::MatchArchives {
             lb_rf: archive(self, "LbRf.dat"),

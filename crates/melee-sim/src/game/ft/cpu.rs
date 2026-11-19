@@ -8,6 +8,7 @@ use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::Running;
 use super::super::structs::Vec2;
 use crate::fpu::{mem, reg};
+use crate::game::gr::GrKind;
 use crate::vec::Vec3;
 
 /// A pointer a computer player's state keeps into itself (`CpuFighter`): the field at
@@ -235,12 +236,12 @@ impl Running<'_> {
                 .expect("no collision geometry")
                 .joint_from_line(line)
         };
-        match self.game.stage_info.grkind {
+        match self.game.stage_info.ground_kind() {
             // Gr_Kind_BigBlue
-            GR_BIG_BLUE => (33..=65).contains(&joint()) && joint() != 34,
-            GR_INISHIE1 => (joint().wrapping_sub(20) as u32) <= 1,
-            GR_CORNERIA => matches!(joint(), 0 | 1 | 2 | 5 | 6 | 7),
-            GR_VENOM => (joint().wrapping_sub(3) as u32) <= 1,
+            GrKind::BigBlue => (33..=65).contains(&joint()) && joint() != 34,
+            GrKind::Inishie1 => (joint().wrapping_sub(20) as u32) <= 1,
+            GrKind::Corneria => matches!(joint(), 0 | 1 | 2 | 5 | 6 | 7),
+            GrKind::Venom => (joint().wrapping_sub(3) as u32) <= 1,
             _ => false,
         }
     }
@@ -249,8 +250,8 @@ impl Running<'_> {
     /// that have one.
     pub(super) fn excluded_floor_asks_stage(&self) -> bool {
         matches!(
-            self.game.stage_info.grkind,
-            GR_BIG_BLUE | GR_INISHIE1 | GR_CORNERIA | GR_VENOM
+            self.game.stage_info.ground_kind(),
+            GrKind::BigBlue | GrKind::Inishie1 | GrKind::Corneria | GrKind::Venom
         )
     }
 
@@ -263,16 +264,16 @@ impl Running<'_> {
     /// floor's joint is 0, 1, 2 or 5. The address is unfollowed without the allocator model.
     pub(super) fn excluded_floor_r5(&self, line: i32) -> super::cpu_ai::Leftover {
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
-        match self.game.stage_info.grkind {
-            GR_BIG_BLUE => {
+        match self.game.stage_info.ground_kind() {
+            GrKind::BigBlue => {
                 let joint = geo.joint_from_line(line);
                 super::cpu_ai::Leftover::Word(u32::from(joint == 33 || (35..=41).contains(&joint)))
             }
-            GR_CORNERIA => super::cpu_ai::Leftover::Word(u32::from(matches!(
+            GrKind::Corneria => super::cpu_ai::Leftover::Word(u32::from(matches!(
                 geo.joint_from_line(line),
                 0 | 1 | 2 | 5
             ))),
-            GR_INISHIE1 | GR_VENOM if geo.joints_addr != 0 => {
+            GrKind::Inishie1 | GrKind::Venom if geo.joints_addr != 0 => {
                 super::cpu_ai::Leftover::Word(geo.joints_addr)
             }
             _ => super::cpu_ai::Leftover::Unknown("ftCo_800A1B38 (a stage's excluded floors)"),
@@ -281,9 +282,3 @@ impl Running<'_> {
 }
 
 const KIND_NANA: i32 = 11;
-
-/// `Gr_Kind_BigBlue`, `Gr_Kind_Inishie1`, `Gr_Kind_Corneria`, `Gr_Kind_Venom`.
-const GR_BIG_BLUE: i32 = 19;
-const GR_INISHIE1: i32 = 24;
-const GR_CORNERIA: i32 = 14;
-const GR_VENOM: i32 = 15;

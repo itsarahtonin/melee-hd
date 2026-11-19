@@ -9186,7 +9186,7 @@ fn starfox_lasers() {
         let target = vec_arg(call, 5);
         let scale = call.regs.fpr[1].ps0 as f32;
         // The shot's sound, which its caller played just before (Corneria's or Venom's).
-        let sfx = if r.game.stage_info.grkind == melee_sim::game::gr::GR_KIND_VENOM {
+        let sfx = if r.game.stage_info.grkind == melee_sim::game::gr::GrKind::Venom {
             0x6B6C9
         } else {
             0x55734
