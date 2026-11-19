@@ -37,6 +37,19 @@ thread_local! {
     static HOOK: Cell<Option<Hook>> = const { Cell::new(None) };
     static NO_DYNAMICS_FIX: Cell<bool> = const { Cell::new(false) };
     static NO_HANDBACK_STATICS: Cell<bool> = const { Cell::new(false) };
+    static FRESH_COUNTERS: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Leaves a live match's counters as playback's boot starts them (`live::Counters`) on this
+/// thread, where it takes the console's: the oracle's mutation (`melee-oracle session --mutate
+/// fresh-counters`), to see its comparison find them.
+pub fn set_fresh_counters(on: bool) {
+    FRESH_COUNTERS.with(|n| n.set(on));
+}
+
+/// Whether [`set_fresh_counters`] left them fresh.
+pub(crate) fn fresh_counters() -> bool {
+    FRESH_COUNTERS.with(Cell::get)
 }
 
 /// Leaves out the statics a live match's handback takes back (`Game::take_match_statics`) on

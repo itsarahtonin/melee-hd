@@ -267,10 +267,9 @@ pub struct Aside {
     pub cache: Option<crate::lb::dvd::Dvd>,
     pub cache_clock: Option<crate::audio::clock::Clock>,
     /// What the console's VS scene's entry left that the live match doesn't start with
-    /// (`live::ConsoleAt`), and the counters a match carries on as the live match's entry
-    /// left them (`live::Counters`), for the statics the menus' session takes back
+    /// (`live::ConsoleAt`), for the statics the menus' session takes back
     /// (`Game::take_match_statics`).
-    pub counters: (super::live::ConsoleAt, super::live::Counters),
+    pub console: super::live::ConsoleAt,
 }
 
 /// `DbLevel` before `main` sets it: `DbLKind_NoDebugRom`, as the executable's data holds it.
@@ -1161,6 +1160,9 @@ impl Session {
         // (`read_match_files`): the scenes after it load them from there (the results
         // screen's fighters, Sudden Death's stage).
         self.read_match_files(&d, console);
+        // The counters no scene resets, as the menus leave them (`live::Counters`): the
+        // match takes them before its scene's entry, as Slippi Dolphin's live play has them.
+        let counters = super::live::Counters::of(&self.game);
         let (at, sounds, console_at) = self.console_entry(console);
         let mut settings =
             super::vs_match::Settings::live(&start).expect("the ruleset's code list's rules");
@@ -1170,12 +1172,16 @@ impl Session {
             settings.heap = Some(crate::hsd::heap::Layout::slippi_playback());
         }
         settings.record = self.game.recorder.is_some().then_some(setup);
+        #[cfg(feature = "oracle-hooks")]
+        let fresh = super::oracle_hooks::fresh_counters();
+        #[cfg(not(feature = "oracle-hooks"))]
+        let fresh = false;
+        settings.counters = (!fresh).then_some(counters);
         let mut m = super::live::with_entry_sounds(sounds, || {
             super::vs_match::Match::start(&settings, &mut |n| console.file(n))
         });
         let (cache, cache_clock) = (at.audio.dvd.clone(), at.audio.clock.clone());
         m.game.take_console_statics(&console_at);
-        let counters = (console_at, super::live::Counters::of(&m.game));
         m.game.go_on_from(at, &self.data, &mut m.data);
         self.live_files = m.files;
         let game = std::mem::replace(&mut self.game, *m.game);
@@ -1185,7 +1191,7 @@ impl Session {
             data,
             cache,
             cache_clock,
-            counters,
+            console: console_at,
         }));
     }
 
@@ -1284,11 +1290,10 @@ impl Session {
             data,
             cache,
             cache_clock,
-            counters,
+            console,
         } = *aside;
         let live = std::mem::replace(&mut self.game, game);
-        self.game
-            .take_match_statics(&live, (&counters.0, &counters.1));
+        self.game.take_match_statics(&live, &console);
         self.game.forget_live_match_heap();
         // The preload cache as the console's entry left it, its copy alarms timed from then.
         self.game.audio.dvd = cache;

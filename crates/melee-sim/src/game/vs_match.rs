@@ -50,6 +50,11 @@ pub struct Settings {
     /// With `playback`, a live match built as playback builds a replay's, which the
     /// controllers drive ([`Settings::live`], [`Match::step_live_tick`]).
     pub live: bool,
+    /// With `live`, the counters no scene resets as the console's menus leave them
+    /// (`live::Counters`), which the match takes before its scene's entry, as Slippi Dolphin's
+    /// live play carries them on; none starts them from playback's boot, as Slippi's playback
+    /// does.
+    pub counters: Option<super::live::Counters>,
     /// The addresses the original gives the match's fighters as it creates them, in creation
     /// order (`ft::Globals::address_seed`), where the frontend knows them: the oracle takes
     /// them from ssbm-rs's trace. Empty, the fighters' addresses are 0.
@@ -232,6 +237,7 @@ impl Settings {
             ucf: ucf::Pads::default(),
             playback: false,
             live: false,
+            counters: None,
             fighter_addresses: Vec::new(),
             heap: heap.then(crate::hsd::heap::Layout::vanilla_vs),
             playback_heap: None,
@@ -348,6 +354,7 @@ impl Settings {
             ucf: ucf::Pads::default(),
             playback: false,
             live: false,
+            counters: None,
             dsp: DspModel::Samples,
             disc: DiscSpeed::Fast,
             fighter_addresses: Vec::new(),
@@ -627,6 +634,9 @@ impl Match {
             archive: rumble,
             offset,
         });
+        if let Some(c) = &settings.counters {
+            c.put(&mut m.game);
+        }
         let lent = crate::hsd::heap::Lent::take(&mut m.game.objs.heap);
         let mut r = m.running();
         // The boot's last scene ends (its tick's end is where the boot state was taken), then
