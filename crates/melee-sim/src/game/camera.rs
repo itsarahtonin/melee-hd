@@ -274,7 +274,8 @@ pub struct CameraState {
     pub fov: f32,
     /// The debug cameras' state (`cm_80453004`).
     pub debug: CameraDebugMode,
-    /// Under Slippi's rules, playback's camera while it has left this one's course (design
+    /// Under Slippi's rules, where `Game::follow_playback_camera` is on (the oracle's and the
+    /// tests', never the player's), playback's camera while it has left this one's course (design
     /// call 9 of `docs/slippi-ruleset.md`): from playback's first frame, which snaps its camera
     /// where a live match's eases, and from a pause, which playback never makes, until the two
     /// meet bit for bit ([`start_following`], [`update`]). Its boxes' part is

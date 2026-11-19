@@ -1203,9 +1203,10 @@ fn slippi_flung_enemies_note_reads_off_course() {
 
 /// What following playback's camera costs (`camera::CameraState::followed`, design call 9;
 /// `docs/performance.md`): `fox-marth-ps` and Corneria's oracle match played under 3.19's rules
-/// as a live match plays (`Playback::no_settling`, so playback's camera is followed from the first
-/// frame until it meets this one), again with the follower stopped after every tick, and again
-/// with it followed to the match's end (its interest's depth moved by 1 on the first tick, which
+/// as a live match plays (`Playback::no_settling`) with playback's camera followed from the first
+/// frame until it meets this one (`Game::follow_playback_camera`, the oracle's), again as the
+/// player plays it (the switch off: no second camera), and again with it followed to the
+/// match's end (its interest's depth moved by 1 on the first tick, which
 /// no update eases back, as a pause leaves it), five alternations each. Prints the ticks
 /// followed, their time in the first two, the match's in all three, and a snapshot taken while
 /// following and in the same tick unfollowed: its size and clone time.
@@ -1233,6 +1234,7 @@ fn measure_following_playbacks_camera() {
             let mut run = |follow: bool, to_the_end: bool| {
                 let mut m = bench.start(&rules, false);
                 m.game.playback.as_mut().unwrap().no_settling = true;
+                m.game.follow_playback_camera = follow;
                 let mut device = Device(&bench.replay);
                 let (mut times, mut followed, mut snap) = (Vec::new(), 0, None);
                 for t in 0usize.. {
@@ -1245,9 +1247,6 @@ fn measure_following_playbacks_camera() {
                     }
                     if m.game.follows_playback_camera() {
                         followed += 1;
-                        if !follow {
-                            melee_sim::game::camera::stop_following(&mut m.game.camera);
-                        }
                     }
                     if t == SNAP {
                         snap = Some(m.game.clone());
@@ -1265,6 +1264,7 @@ fn measure_following_playbacks_camera() {
                 all.push(run(true, true));
             }
             let followed = with[0].1;
+            assert_eq!(without[0].1, 0, "the switch off followed");
             let sum = |t: &[Duration]| t.iter().sum::<Duration>();
             let median = |mut v: Vec<Duration>| {
                 v.sort();
@@ -1280,17 +1280,17 @@ fn measure_following_playbacks_camera() {
             let (w_with, w_without) = (window(&with), window(&without));
             let (m_with, m_without) = (whole(&with), whole(&without));
             eprintln!(
-                "{name}: {ticks} ticks, playback's camera followed for {followed}; those ticks {w_with:?} following, {w_without:?} not ({:.2} us a tick more); the match {m_with:?} following, {m_without:?} not; the window's extra {:.3}% of the match",
+                "{name}: {ticks} ticks, playback's camera followed for {followed}; those ticks {w_with:?} following, {w_without:?} with the switch off ({:.2} us a tick more); the match {m_with:?} following, {m_without:?} with the switch off; the window's extra {:.3}% of the match",
                 (w_with.as_secs_f64() - w_without.as_secs_f64()) * 1e6 / followed as f64,
                 (w_with.as_secs_f64() - w_without.as_secs_f64()) * 100.0 / m_without.as_secs_f64(),
             );
             let m_all = whole(&all);
             eprintln!(
-                "{name}: followed to the end ({} ticks): the match {m_all:?}, {:.2}% more than not following",
+                "{name}: followed to the end ({} ticks): the match {m_all:?}, {:.2}% more than with the switch off",
                 all[0].1,
                 (m_all.as_secs_f64() / m_without.as_secs_f64() - 1.0) * 100.0
             );
-            for (what, g) in [("following", &with[0].2), ("not", &without[0].2)] {
+            for (what, g) in [("following", &with[0].2), ("the switch off", &without[0].2)] {
                 let (_, allocs, bytes) = crate::counted(|| g.clone());
                 let size = std::mem::size_of::<Game>() + bytes;
                 let mut clones = (0..200)

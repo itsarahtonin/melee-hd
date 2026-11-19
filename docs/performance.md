@@ -290,14 +290,23 @@ A session's snapshot (`session-sync --rollback 0 --time` on the Adventure sessio
 
 ## Following playback's camera (2026-11-18)
 
-Under the Slippi ruleset a live match follows playback's camera beside its own from the first frame until the two meet, and from a pause to the match's end or until they meet ([the engine notes](engine.md#the-cameras-readers-after-a-pause), "Playback's camera, followed"): one more camera update a tick (without the quakes and the width average), the framed boxes' eased fields swapped in and out, a bit-for-bit comparison, and on the stages that keep the display pass's views one more view at each tick's end. Measured with melee-bench's ignored `measure_following_playbacks_camera` (`feat/m6s-settling-both-ways`, this PC with other agents and a merge check running, 85 to 97% CPU load; five alternations each, the medians): the benchmark replay played as a live match plays it (`Playback::no_settling`, Slippi 3.19's rules, the allocator model off), against the same with the follower stopped after every tick, and with it kept to the match's end as a pause keeps it.
+Under the Slippi ruleset the oracle and the tests follow playback's camera beside a live match's from the first frame until the two meet, and from a pause to the match's end or until they meet ([the engine notes](engine.md#the-cameras-readers-after-a-pause), "Playback's camera, followed"): one more camera update a tick (without the quakes and the width average), the framed boxes' eased fields swapped in and out, a bit-for-bit comparison, and on the stages that keep the display pass's views one more view at each tick's end. The player doesn't (`Game::follow_playback_camera` off; Sarah: "yeah do it that way"), since that cost, about 1% for a match followed to its end, isn't negligible. Measured with melee-bench's ignored `measure_following_playbacks_camera` (`feat/m6s-settling-both-ways`, this PC with other agents and a merge check running, 60 to 97% CPU load; five alternations each, the medians): the benchmark replay played as a live match plays it (`Playback::no_settling`, Slippi 3.19's rules, the allocator model off) with the switch on, with it off (the player's), and with playback's camera kept followed to the match's end as a pause keeps it. Three runs, the last with the switch off as the player's:
 
 | Match | Ticks | Followed | Those ticks, following / not | The window's extra, of the match | Followed to the end |
 | --- | --- | --- | --- | --- | --- |
-| `fox-marth-ps` | 4,549 | 337 | 127.0 / 122.8 ms; 118.5 / 122.0 ms | +0.26%; -0.21% | +1.25% |
-| Corneria (`oracle-m4/stage-corneria`) | 14,524 | 290 | 95.9 / 89.5 ms; 93.8 / 88.9 ms | +0.11%; +0.09% | -0.87% |
+| `fox-marth-ps` | 4,549 | 337 | 127.0 / 122.8 ms; 118.5 / 122.0 ms; 90.4 / 89.4 ms | +0.26%; -0.21%; +0.09% | +1.25%; +2.64% |
+| Corneria (`oracle-m4/stage-corneria`) | 14,524 | 290 | 95.9 / 89.5 ms; 93.8 / 88.9 ms; 70.6 / 67.1 ms | +0.11%; +0.09%; +0.08% | -0.87%; +1.29% |
 
-The cost is within the machine's noise: well under 1% of a match's ticks for the settling window, and about 1% at most for a match followed to its end after a pause. The snapshot while following is 1,680 bytes larger (1,931,316 against 1,929,636 bytes at `fox-marth-ps`'s tick 30, 2,122,552 against 2,120,872 on Corneria; the 70 boxes' followed extents and timers), one allocation more (472 against 471, 568 against 567), its clone within noise (113.5 / 113.4 µs, 123.1 / 118.3 µs; 140.4 / 129.0 µs, 137.8 / 137.6 µs). Unfollowed, nothing is added (an empty vector and a `None`). `session-sync --rollback 7` holds through the follower: `pause-fd` (its live match's window and pause) 1,357 ticks in 2 matches, `matches-a` 18,505 ticks in 11 matches, no difference.
+The window is within the machine's noise, well under 1% of a match's ticks; a match followed to its end costs about 1 to 3%. The snapshot while following is 1,680 bytes larger (1,931,316 against 1,929,636 bytes at `fox-marth-ps`'s tick 30, 2,122,552 against 2,120,872 on Corneria; the 70 boxes' followed extents and timers), one allocation more (472 against 471, 568 against 567), its clone within noise. With the switch off nothing is added (an empty vector and a `None`). `session-sync --rollback 7` holds through the follower (`--follow-playback-camera`): `pause-fd` (its live match's window and pause) 1,357 ticks in 2 matches, `matches-a` 18,505 ticks in 11 matches, no difference.
+
+**The player's path against `main`** (`c6e274d5`; indicative, this PC under load, the worker to confirm): `melee-bench native --runs 5`, the two builds alternated three times, median frames per second. These replays are Vanilla's, so the camera's update runs its new shape (the follower's flag checks) without a follower:
+
+| Match | `main` | `feat/m6s-settling-both-ways` |
+| --- | --- | --- |
+| `fox-marth-ps` | 3,822; 3,922; 4,101 | 3,842; 4,028; 4,072 |
+| Corneria (`oracle-m4/stage-corneria`) | 4,069; 3,998; 4,183 | 4,018; 4,050; 4,137 |
+
+Within noise both ways.
 
 ## Benchmark matches
 

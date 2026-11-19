@@ -402,10 +402,12 @@ const PLACED: usize = 8;
 /// match's eases (`docs/slippi-bugs.md`, "Playback settles each fighter on the first frame,
 /// which live play doesn't"), and it never pauses, where a pause turns the live match's away
 /// and eases it back never quite to the same (`docs/slippi-bugs.md`, "A paused match's
-/// recording"). From either, playback's camera is followed beside the live match's
-/// (`camera::CameraState::followed`: the same updates, but the pause's, and the first frame's
-/// settling, [`Running::playback_camera_settles`]) until the two meet bit for bit, and every
-/// read of the camera in the logic meanwhile is also made through it, a different outcome
+/// recording"). Where the switch is on (`Game::follow_playback_camera`: the oracle and the
+/// tests; never the player, which counts nothing from the settling and, after a pause, every
+/// read, [`DisplayPhase::lost`]), from either, playback's camera is followed beside the live
+/// match's (`camera::CameraState::followed`: the same updates, but the pause's, and the first
+/// frame's settling, [`Running::playback_camera_settles`]) until the two meet bit for bit, and
+/// every read of the camera in the logic meanwhile is also made through it, a different outcome
 /// counted (`docs/engine.md`, "The camera's readers after a pause"): the transform's readers
 /// ([`Game::decide_camera_read`]: Corneria's city part, Mute City's wrecked cars, the enemies
 /// flung toward the screen, Scizor, the Unown), the CObj's (through the views a display pass
