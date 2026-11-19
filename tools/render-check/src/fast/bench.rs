@@ -74,6 +74,7 @@ pub fn measure(
     r: &mut dyn FrameRenderer,
 ) -> Vec<Times> {
     let mut out = Vec::with_capacity((to - from) as usize);
+    let mut perf = Perf::from_env();
     native::drive(disc, replay, to, Cosmetic::default(), |t| {
         let s = r.frame(t, true, false);
         let start = Instant::now();
@@ -82,6 +83,7 @@ pub fn measure(
         // The warm-up ends with every specialized shader it asked for made.
         if t.n + 1 == from {
             r.warm();
+            perf.send("enable");
         }
         if t.n >= from {
             out.push(Times {
@@ -92,7 +94,39 @@ pub fn measure(
         }
         t.n < to
     });
+    perf.send("disable");
     out
+}
+
+/// A profiler's control: `perf record -D -1 --control fifo:CTL,ACK` with `PERF_CTL_FIFO` and
+/// `PERF_ACK_FIFO` naming the two, so a profile holds the measured frames alone.
+struct Perf(Option<(std::fs::File, Option<std::fs::File>)>);
+
+impl Perf {
+    fn from_env() -> Perf {
+        let open = |var: &str, write: bool| {
+            std::env::var_os(var).and_then(|p| {
+                std::fs::OpenOptions::new()
+                    .read(!write)
+                    .write(write)
+                    .open(p)
+                    .ok()
+            })
+        };
+        Perf(open("PERF_CTL_FIFO", true).map(|ctl| (ctl, open("PERF_ACK_FIFO", false))))
+    }
+
+    fn send(&mut self, command: &str) {
+        use std::io::{Read, Write};
+        if let Some((ctl, ack)) = &mut self.0 {
+            let _ = writeln!(ctl, "{command}");
+            let _ = ctl.flush();
+            if let Some(ack) = ack {
+                let mut b = [0u8; 5];
+                let _ = ack.read(&mut b);
+            }
+        }
+    }
 }
 
 /// `melee-render-check bench DISC REPLAY [--renderer exact|f2|fast] [--scale N] [--from A] [--to B]
