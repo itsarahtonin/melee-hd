@@ -1291,3 +1291,163 @@ fn a_ruleset_match_ignores_the_disc_pace() {
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
     });
 }
+
+/// A live match takes the console's counters no scene resets at the handoff (`live::Counters`:
+/// the collision joints' stamp, the collision update counter, the particles' family ids, display
+/// frame and links' sort frames), as Slippi Dolphin's live play carries them on, where melee-hd's
+/// playback of its `.slp`, as Slippi's, starts them from its boot (Sarah, 2026-11-18: "standing
+/// rule is match slippi behavior even when it is a defect"; `docs/slippi-bugs.md`, "Playback
+/// starts the counters no scene resets fresh"). Here the console's are another match's, 500
+/// ticks on. The live match then equals its playback (without the settling) every tick but in
+/// playback's own counters and what they decide alone: the copies each fighter's, item's and
+/// link's collision keeps of the update counter (`coll_data.x38`), the joints' stamps, and each
+/// generator's, particle's and app-SRT's family id and each app-SRT's frame. Gameplay is the same
+/// every tick.
+#[test]
+fn a_live_match_on_the_consoles_counters_plays_back_the_same() {
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+        let (_, live) = live_settings();
+        let mut console = melee_sim::game::vs_match::Match::start(
+            &Settings {
+                record: None,
+                ..live.clone()
+            },
+            &mut loader(&disc),
+        );
+        let mut read = 0u32;
+        for _ in 0..500 {
+            let (f, render) = console.step_live_tick(&mut || {
+                read += 1;
+                pads(read - 1, false)
+            });
+            if render {
+                console.render();
+            }
+            console.recycle(f);
+        }
+        let counters = melee_sim::game::live::Counters::of(&console.game);
+        drop(console);
+        let fresh = melee_sim::game::live::Counters::of(
+            &melee_sim::game::vs_match::Match::start(&live, &mut loader(&disc)).game,
+        );
+        assert_ne!(
+            fresh.coll_generation, counters.coll_generation,
+            "the same counters"
+        );
+        let file = play_live_on(&disc, &live, &counters, |_| {});
+        let replay = Replay::parse(&file).expect("the recording parses");
+        let mut again = Settings::from_replay(&melee_slippi::start(&replay)).expect("its settings");
+        again.disc = live.disc;
+        again.heap = None;
+        let mut p = melee_sim::game::vs_match::Match::start(&again, &mut loader(&disc));
+        (p.game.playback.as_mut()).expect("a replay").no_settling = true;
+        let (mut ticks, mut apart) = (0, 0);
+        play_live_on(&disc, &live, &counters, |m| {
+            let (f, played) = p.step_replay_tick(&mut melee_slippi::Device(&replay));
+            if played {
+                p.render();
+            }
+            p.recycle(f);
+            assert_eq!(
+                gameplay(&m.game),
+                gameplay(&p.game),
+                "tick {ticks} of the live match plays back otherwise"
+            );
+            let mut ours = as_played_back(&m.game, &p.game);
+            (ours.playback.as_mut()).expect("a live match").no_settling = true;
+            if ours.state_diff(&p.game).is_some() {
+                apart += 1;
+            }
+            playback_counters(&mut ours, &p.game);
+            if let Some(d) = ours.state_diff(&p.game) {
+                panic!(
+                    "tick {ticks} of the live match differs from its playback but in the counters at game{d}"
+                );
+            }
+            ticks += 1;
+        });
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        assert!(ticks > 3600, "{ticks} ticks");
+        assert_eq!(apart, ticks, "the counters met playback's");
+    });
+}
+
+/// `g` with playback's counters (`live::Counters`) and what they decide, as `play` holds them:
+/// the update counter and the copies of it each fighter's, item's and link's collision keeps,
+/// the joints' stamp and each joint's, the family ids, the particles' display frames and the
+/// frame each app-SRT last set its matrix up in.
+fn playback_counters(g: &mut melee_sim::game::state::Game, play: &melee_sim::game::state::Game) {
+    g.gr.coll_stamp = play.gr.coll_stamp;
+    g.gr.coll_generation = play.gr.coll_generation;
+    if let (Some(a), Some(b)) = (g.geometry.as_mut(), play.geometry.as_ref()) {
+        a.generation = b.generation;
+        for (j, k) in a.joints.iter_mut().zip(&b.joints) {
+            j.stamp = k.stamp;
+        }
+    }
+    // Every slot, a freed one's too (its object's last values).
+    macro_rules! each_slot {
+        ($ours:expr, $theirs:expr, |$a:ident, $b:ident| $body:expr) => {
+            for i in 0..$ours.len() {
+                if let (Some($a), Some($b)) = ($ours.get_mut(i), $theirs.get(i)) {
+                    $body;
+                }
+            }
+        };
+    }
+    each_slot!(g.fighters, play.fighters, |a, b| a.coll_data.x38 =
+        b.coll_data.x38);
+    each_slot!(g.items, play.items, |a, b| a.x378_itemColl.x38 =
+        b.x378_itemColl.x38);
+    each_slot!(g.it.links, play.it.links, |a, b| a.coll_data.x38 =
+        b.coll_data.x38);
+    let o = &mut g.objs;
+    o.generators.idnum = play.objs.generators.idnum;
+    o.psdisp.clone_from(&play.objs.psdisp);
+    each_slot!(o.generators.pool, play.objs.generators.pool, |a, b| a
+        .idnum =
+        b.idnum);
+    each_slot!(o.particles.pool, play.objs.particles.pool, |a, b| a.idnum =
+        b.idnum);
+    each_slot!(o.app_srts.pool, play.objs.app_srts.pool, |a, b| (
+        a.idnum,
+        a.frame_num
+    ) =
+        (b.idnum, b.frame_num));
+}
+
+/// [`play_live`] with the console's counters taken before the match's scene's entry
+/// (`Settings::counters`).
+fn play_live_on(
+    disc: &Disc,
+    settings: &Settings,
+    counters: &melee_sim::game::live::Counters,
+    mut each: impl FnMut(&mut melee_sim::game::vs_match::Match),
+) -> Vec<u8> {
+    let settings = Settings {
+        counters: Some(counters.clone()),
+        ..settings.clone()
+    };
+    let mut m = melee_sim::game::vs_match::Match::start(&settings, &mut loader(disc));
+    let mut read = 0u32;
+    for _ in 0..10000 {
+        let (f, render) = m.step_live_tick(&mut || {
+            read += 1;
+            pads(read - 1, false)
+        });
+        if render {
+            m.render();
+        }
+        each(&mut m);
+        let ended = f.ended;
+        m.recycle(f);
+        if ended {
+            break;
+        }
+    }
+    let r = m.game.recorder.as_ref().expect("the recorder");
+    assert!(r.ended(), "the live match didn't end");
+    melee_slippi::write::recording(r, std::time::UNIX_EPOCH)
+}

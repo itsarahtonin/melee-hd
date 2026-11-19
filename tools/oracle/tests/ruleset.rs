@@ -627,3 +627,120 @@ fn audio_compares(name: &str, out: &str) {
     }
     assert!(out.contains("  named in the live match: "), "{name}: {out}");
 }
+
+/// Past a live match's handback the comparison goes on (`--after-handback`, docs/oracle.md,
+/// "Past a live match's handback"): the menus' session takes back the statics the console's
+/// match leaves (`Game::take_match_statics`) and forgets what its image held of the main heap
+/// (`Game::forget_live_match_heap`), so through the results screens, the selects, Sudden Death
+/// and the later live matches every difference is one the comparison names (the match's
+/// pointers into its freed heap and files, the console's match's bytes there, the HUD's
+/// statics, a later live match's counters playback starts afresh, ...) to each trace's end.
+#[test]
+fn past_the_handback_only_the_named_differ() {
+    for (name, traces, inputs, handback, past, end, matches) in [
+        ("pause-fd", "m6s-pause", "m6s-pause", 1757, 134, 1890, 1),
+        ("pause-far", "m6s-pause", "m6s-pause", 2353, 238, 2590, 1),
+        ("player-fd", "m6s-player", "m6s-player", 1766, 1520, 3285, 1),
+        (
+            "slomo",
+            "m6s-followups",
+            "m6s-followups",
+            3309,
+            1377,
+            4685,
+            1,
+        ),
+        ("matches-a", "m6s-stall", "m6s-match", 2105, 22083, 24187, 5),
+        ("matches-b", "m6s-stall", "m6s-match", 2821, 16105, 18925, 5),
+    ] {
+        let trace = ssbm_rs_local(&format!("traces/{traces}/{name}.trc"));
+        let rec = ssbm_rs_local(&format!("lockstep/{inputs}/{name}.inputs"));
+        if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
+            eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+            return;
+        }
+        let out = oracle(&[
+            "session",
+            &trace,
+            &rec,
+            "--all",
+            "--heap",
+            "--after-handback",
+        ]);
+        assert!(
+            out.contains(&format!(
+                "to its handback before tick {handback}; past it {past} ticks compared to tick {end}, no difference but the named, {matches} live matches in all"
+            )),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// Without the statics the handback takes back (`--mutate no-handback-statics`), the menus'
+/// session holds its own from before the match, and the comparison past the handback stops on
+/// them in its first tick: `pause-fd`'s VS controller, live standings and crowd among them.
+#[test]
+fn past_the_handback_the_statics_compare() {
+    let trace = ssbm_rs_local("traces/m6s-pause/pause-fd.trc");
+    let rec = ssbm_rs_local("lockstep/m6s-pause/pause-fd.inputs");
+    if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
+        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = oracle(&[
+        "session",
+        &trace,
+        &rec,
+        "--all",
+        "--heap",
+        "--after-handback",
+        "--mutate",
+        "no-handback-statics",
+    ]);
+    assert!(
+        out.contains("1758 ticks compared; tick 1757 differs in "),
+        "{out}"
+    );
+    for d in ["gm_16F1: ranks", "audio: crowdsfx", "vs.start.stkind"] {
+        assert!(out.contains(d), "{d}: {out}");
+    }
+}
+
+/// Every live match takes the console's counters no scene resets before its scene's entry
+/// (`live::Counters`, `vs_match::Settings::counters`), as Slippi Dolphin's live play carries them
+/// on where its playback starts them fresh (docs/slippi-bugs.md, "Playback starts the counters
+/// no scene resets fresh"). Left as playback's boot starts them (`--mutate fresh-counters`),
+/// `matches-a`' second live match parts from the console's run in its first tick, 3604: the
+/// collision update counter and the copies the fighters' collisions keep of it, the joints' stamp,
+/// and the particles' family ids and display frames.
+#[test]
+fn a_later_live_match_takes_the_consoles_counters() {
+    let trace = ssbm_rs_local("traces/m6s-stall/matches-a.trc");
+    let rec = ssbm_rs_local("lockstep/m6s-match/matches-a.inputs");
+    if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
+        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = oracle(&[
+        "session",
+        &trace,
+        &rec,
+        "--all",
+        "--heap",
+        "--after-handback",
+        "--mutate",
+        "fresh-counters",
+    ]);
+    assert!(
+        out.contains("3605 ticks compared; tick 3604 differs in 7 places"),
+        "{out}"
+    );
+    for d in [
+        "mpColl_804D64AC: update counter",
+        "Ground_804D6954: stamp",
+        "fighter.coll_data.x38",
+        "particles: display sorting",
+    ] {
+        assert!(out.contains(d), "{d}: {out}");
+    }
+}

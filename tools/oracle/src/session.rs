@@ -409,6 +409,13 @@ enum Mutation {
     /// sets up its fighters' matrices as the console's run of ssbm-rs's does, so the comparison
     /// names none of [`SET_UP_WHY`]'s differences and must find nothing else.
     NoDynamicsFix,
+    /// The statics a live match's handback takes back left out (`Game::take_match_statics`):
+    /// the menus' session keeps its own from before the match, which the comparison past the
+    /// handback (`--after-handback`) must find.
+    NoHandbackStatics,
+    /// A live match's counters left as playback's boot starts them (`live::Counters`), where it
+    /// takes the console's: its comparison with the console's run must find them.
+    FreshCounters,
 }
 
 /// What the boot's ported part left, against memory at trace tick 0: words only the boot
@@ -709,6 +716,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     let mut snapshot_ticks: Vec<u32> = Vec::new();
     let mut slp_dir: Option<PathBuf> = None;
     let mut live_model = true;
+    let mut after_handback = After::No;
     let mut pos = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
@@ -758,6 +766,12 @@ pub fn session(args: &[&str]) -> ExitCode {
             // `NAME-N.slp` (`game::live`).
             "--slp" => slp_dir = Some(it.next().expect("--slp DIR").into()),
             "--no-live-model" => live_model = false,
+            // Past a live match's handback, compared on to the trace's end: what the console's
+            // match leaves that the menus' session can't hold named ([`past_named`]), anything
+            // else a stop; or (`--after-handback-survey`) every difference surveyed by field,
+            // with its count and first and last ticks, none a stop.
+            "--after-handback" => after_handback = After::Compare,
+            "--after-handback-survey" => after_handback = After::Survey,
             "--heap" => crate::diff::COMPARE_HEAP.with(|c| c.set(true)),
             "--scenes" => scenes = true,
             // Every field a new block differs in left out as a leftover, and the list of
@@ -806,6 +820,8 @@ pub fn session(args: &[&str]) -> ExitCode {
                     Some("no-image") => Mutation::NoImage,
                     Some("c-stick-1p") => Mutation::CStick1P,
                     Some("no-dynamics-fix") => Mutation::NoDynamicsFix,
+                    Some("no-handback-statics") => Mutation::NoHandbackStatics,
+                    Some("fresh-counters") => Mutation::FreshCounters,
                     Some(m) if m.starts_with("render-target=") => Mutation::RenderFill(
                         u8::from_str_radix(&m[14..], 16)
                             .expect("--mutate render-target=XX, in hex"),
@@ -814,7 +830,7 @@ pub fn session(args: &[&str]) -> ExitCode {
                         Mutation::Read(m[5..].parse().expect("--mutate read=N"))
                     }
                     _ => panic!(
-                        "--mutate scene-ticks|seed|power-on|no-image|render-target=XX|read=N|c-stick-1p|no-dynamics-fix"
+                        "--mutate scene-ticks|seed|power-on|no-image|render-target=XX|read=N|c-stick-1p|no-dynamics-fix|no-handback-statics|fresh-counters"
                     ),
                 })
             }
@@ -823,7 +839,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     }
     let [trace_path, inputs_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle session TRACE INPUTS [--slp DIR] [--no-live-model] [--card FILE] [--card-pull F[,G]] [--card-b FILE] [--card-b-pull F[,G]] [--card-b-after FILE] [--dblevel N] [--hooks LINE] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
+            "usage: melee-oracle session TRACE INPUTS [--slp DIR] [--no-live-model] [--after-handback | --after-handback-survey] [--card FILE] [--card-pull F[,G]] [--card-b FILE] [--card-b-pull F[,G]] [--card-b-after FILE] [--dblevel N] [--hooks LINE] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
         );
         eprintln!(
             "                            [--ignore TEXT,...] [--stand-in ADDR[=VALUE]] [--mutate scene-ticks|seed|power-on|read=N]"
@@ -973,6 +989,7 @@ pub fn session(args: &[&str]) -> ExitCode {
         card_after: [card_after, card_b_after],
         slp_dir,
         live_model,
+        after_handback,
         name: Path::new(inputs_path)
             .file_stem()
             .map_or_else(|| "session".into(), |n| n.to_string_lossy().into_owned()),
@@ -1086,6 +1103,8 @@ struct Run<'a> {
     /// Whether a live match runs the allocator model (`Session::live_model`): on, so its
     /// addresses compare, unless `--no-live-model` runs it as the player does.
     live_model: bool,
+    /// Whether the comparison goes on past the first live match's handback, and how.
+    after_handback: After,
     name: String,
 }
 
@@ -1244,6 +1263,12 @@ impl Run<'_> {
         melee_sim::game::oracle_hooks::set_dynamics_fix_off(
             self.mutation == Some(Mutation::NoDynamicsFix),
         );
+        melee_sim::game::oracle_hooks::set_handback_statics_off(
+            self.mutation == Some(Mutation::NoHandbackStatics),
+        );
+        melee_sim::game::oracle_hooks::set_fresh_counters(
+            self.mutation == Some(Mutation::FreshCounters),
+        );
         // Power-on leaves the image at tick 0, the first step's.
         let mut held = self.from.is_none();
         let mut compared = 0;
@@ -1269,8 +1294,17 @@ impl Run<'_> {
         // ([`SET_UP_KINDS`]), their count and the first and last ticks they were in.
         let mut kept = [None::<(u32, u32, u32)>; 4];
         let slippi = s.setup.ruleset == melee_sim::game::state::Ruleset::Slippi;
-        // Whether the first live match's recording was written, as it ended.
+        // Whether the first live match's recording was written, as it ended; the live matches
+        // so far, and whether the latest's recording was written.
         let mut first_saved = false;
+        let (mut live_n, mut live_saved) = (0u32, false);
+        // `--after-handback`: past the first handback, each field that differs, its count and
+        // the first and last ticks it differed in, and its first difference.
+        let mut survey = std::collections::BTreeMap::<String, (u32, u32, u32, String)>::new();
+        let mut surveyed = 0u32;
+        // `--after-handback`: each named difference past the handback, its count and its first
+        // and last ticks.
+        let mut past = std::collections::BTreeMap::<&'static str, (u32, u32, u32)>::new();
         let stop = loop {
             if compared >= self.limit {
                 break None;
@@ -1326,17 +1360,28 @@ impl Run<'_> {
             if live != in_live {
                 if live {
                     live_from.get_or_insert(t);
+                    live_n += 1;
+                    live_saved = false;
+                    // The live match's own archives, scanned for anew.
+                    files = Files::new(Some(&index), Vec::new(), s.live_files.clone());
                 } else {
-                    handed_back = Some(t);
-                    break None;
+                    handed_back.get_or_insert(t);
+                    if self.after_handback == After::No {
+                        break None;
+                    }
+                    // The menus' session's archives, scanned for anew.
+                    files = Files::new(
+                        Some(&index),
+                        Vec::new(),
+                        s.game.ft.data.files.archives.clone(),
+                    );
                 }
-                in_live = true;
-                // The live match's own archives, scanned for anew.
-                files = Files::new(Some(&index), Vec::new(), s.live_files.clone());
+                in_live = live;
                 gone = GoneArchives::default();
             }
-            if in_live && !first_saved {
-                first_saved = self.save_recording(&s, 1);
+            if in_live && !live_saved {
+                live_saved = self.save_recording(&s, live_n);
+                first_saved |= live_saved && live_n == 1;
             }
             if self.from.is_none() {
                 if in_live {
@@ -1483,6 +1528,29 @@ impl Run<'_> {
                 });
             }
             compared += 1;
+            if handed_back.is_some() && self.after_handback == After::Compare {
+                surveyed += 1;
+                diffs.retain(|d| match past_named(d, in_live) {
+                    Some(why) => {
+                        let e = past.entry(why).or_insert((0, t, t));
+                        e.0 += 1;
+                        e.2 = t;
+                        false
+                    }
+                    None => true,
+                });
+            }
+            if handed_back.is_some() && self.after_handback == After::Survey {
+                surveyed += 1;
+                for d in diffs {
+                    let key = survey_key(&d);
+                    let e = survey.entry(key).or_insert((0, t, t, d));
+                    e.0 += 1;
+                    e.2 = t;
+                }
+                next = t + 1;
+                continue;
+            }
             // A new object's leftovers the heap's image doesn't know, where the original's
             // differ: a stop at a layout that isn't ported, unless something else differs.
             let (unlaid, others): (Vec<String>, Vec<String>) = diffs
@@ -1570,7 +1638,39 @@ impl Run<'_> {
                 }
             }
         }
-        if let (None, Some(t)) = (&stop, live_from) {
+        if self.after_handback == After::Compare
+            && let (Some(t), Some(u)) = (live_from, handed_back)
+        {
+            let what = if stop.is_none() {
+                "no difference but the named"
+            } else {
+                "the last with a difference"
+            };
+            println!(
+                "{} ticks compared, no difference, through the live match that starts in tick {t} to its handback before tick {u}; past it {surveyed} ticks compared to tick {tick}, {what}, {live_n} live matches in all",
+                compared - surveyed
+            );
+            for (why, (n, first, last)) in &past {
+                println!(
+                    "  named past the handback: {why}: {n} differences, from tick {first} to tick {last}"
+                );
+            }
+        } else if self.after_handback == After::Survey
+            && let (None, Some(t), Some(u)) = (&stop, live_from, handed_back)
+        {
+            println!(
+                "{} ticks compared, no difference, through the live match that starts in tick {t} to its handback before tick {u}; past it {surveyed} ticks compared to tick {tick}, {} live matches in all, {} fields differing:",
+                compared - surveyed,
+                live_n,
+                survey.len()
+            );
+            for (key, (n, first, last, d)) in &survey {
+                let d: String = d.chars().take(1500).collect();
+                println!(
+                    "  past the handback: {key}: {n} ticks, from tick {first} to tick {last}; first: {d}"
+                );
+            }
+        } else if let (None, Some(t)) = (&stop, live_from) {
             match handed_back {
                 Some(u) => println!(
                     "{compared} ticks compared, no difference, through the live match that starts in tick {t} to its handback before tick {u}"
@@ -1590,6 +1690,12 @@ impl Run<'_> {
                     println!("  {what}: {n} differences, from tick {first} to tick {last}");
                 }
             }
+        }
+        if self.after_handback != After::No && handed_back.is_some() {
+            return match stop {
+                None => ExitCode::SUCCESS,
+                stop => self.report(stop, compared, &at),
+            };
         }
         if live_from.is_none() {
             return self.report(stop, compared, &at);
@@ -1786,6 +1892,9 @@ const LIVE_NAMED: &[(&[&str], &str)] = &[
             " (left): ",
             "dangling (freed at ",
             ": freed joint: ours ",
+            // Pokémon Stadium's transformation buffer: the preload cache's block on the
+            // console, playback's on ours.
+            " ground.u.stadium.xC8: ",
         ],
         "playback's heap layout (addresses, the relocated pointers in the fighters' file buffers, a reused block's leftovers, and the freed joints the ID table still names)",
     ),
@@ -1804,6 +1913,165 @@ const LIVE_NAMED: &[(&[&str], &str)] = &[
         "playback's state and scene: the debug VS mode (14.1) and Slippi's unlocks as masks, which the codes answer the getters with as the console's do",
     ),
 ];
+
+/// How the comparison goes on past a live match's handback.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum After {
+    /// It stops there: the session plays on uncompared (the default).
+    No,
+    /// It compares on, naming what [`past_named`] names, stopping at anything else.
+    Compare,
+    /// It surveys every difference by field, none a stop.
+    Survey,
+}
+
+/// The live match's heap past its handback: the console's match held the main heap, laid out
+/// and written as melee-hd doesn't model (the live match's heap is playback's), so the menus'
+/// image knows none of it (`hsd::image::LIVE_MATCH`), and a new object's leftovers there are
+/// unknown, which the comparison leaves out where ours are still zero and names where the
+/// console's aren't (`Comparer::unlaid_view`).
+const PAST_HEAP: &str = "the console's match's bytes in the main heap, which melee-hd's image doesn't hold (its live match's heap is playback's): leftovers of objects made over them";
+/// Pointers into the match's heap and files, which the scene's end freed on the console too.
+const PAST_DANGLING: &str = "the match's pointers into its freed heap and files (GObjs, joints, file data, the magnifier's model and first image, the pause screen's model, the background flash's, refraction's table and textures, the player library's common data, the stage's quake models and parameters, the items' tables, a costume's animation, the enemy spawner's slots, the camera's second CObj): no scene reads them before the next match sets them";
+/// The HUD's statics, which only the match's own HUD processes read.
+const PAST_HUD: &str = "the match's HUD statics, which only its HUD's GObjs (freed with the match) read, and each match's HUD setup writes before reading (an announcement's fields by `announce` before its process runs)";
+/// The display pass's state from the match's last frame.
+const PAST_DISPLAY: &str = "the display pass's lights and render target from the match's last frame, which the next pass sets before drawing";
+/// The allocator's class and pool statics the match set up.
+const PAST_HEAP_STATICS: &str = "the allocator's class and pool statics the match set up (their sizes, counts and limits), which a scene's first use of a class or pool sets again (`hsdInitClassInfo`, `HSD_ObjAllocInit`)";
+/// A text's two fields nothing reads.
+const PAST_SIS: &str =
+    "a text's `x88` and `x9F`, which `HSD_SisLib_803A6368` doesn't write and nothing reads";
+/// In a live match past the first handback: an item block's bits no code names, which the
+/// console's block keeps from an earlier match's item.
+const PAST_PLAYBACK_HEAP: &str = "in a later live match, an item's flag bits no item code sets, clears or reads (`xDD1`'s low six), which the console's block keeps from an earlier match's item and playback's fresh heap holds as zero";
+/// In a live match: a human's Zelda held A, Sheik in the game start (`record::live_start`).
+const PAST_PLAYBACK_START: &str = "in a live match, the VS controller's character and mark of a human's Zelda held A, which the console's entry makes Sheik (`fn_8016D8AC`: Zelda, marked `0x08`) and the game start, as Slippi's recording codes write it, holds as Sheik; the menus' session takes the console's back (`live::ConsoleAt`)";
+/// In a live match past the first handback: the fighters' animation buffers' pool, which
+/// playback's heap starts fresh.
+const PAST_PLAYBACK_CACHES: &str = "in a later live match, the fighters' animation buffers' sizes and last files (`fighter_x59C_alloc_data`'s pool, which a session carries from scene to scene), which the console's keeps from the matches before and playback's boot starts empty: where an animation loads, an address nothing in a match plays from";
+
+/// What a difference past a live match's handback is, if [`After::Compare`] names it (`live`:
+/// in a later live match, where [`LIVE_NAMED`] has named what the first's comparison names).
+fn past_named(d: &str, live: bool) -> Option<&'static str> {
+    if d.starts_with(melee_capture::compare::UNLAID)
+        && d.contains(melee_sim::hsd::image::LIVE_MATCH)
+    {
+        return Some(PAST_HEAP);
+    }
+    if d.starts_with("hud ") {
+        return Some(PAST_HUD);
+    }
+    if (d.contains(": GObjId ours ") || d.contains(": JObjId ours ") || d.contains(": data ours "))
+        && d.contains(", theirs 0x")
+    {
+        return Some(PAST_DANGLING);
+    }
+    let starts = |ps: &[&str]| ps.iter().any(|p| d.starts_with(p));
+    if starts(&[
+        "camera cobj copy: ",
+        "magnify.player[0].idesc: ",
+        "pl_804D6470: ",
+        "refract: chains: ",
+        "refract: table: ",
+        "zako: slots: ",
+        "zako: cursor and flags: ",
+    ]) {
+        return Some(PAST_DANGLING);
+    }
+    if starts(&[
+        "display active light ",
+        "display: active lights",
+        "display: render pass",
+    ]) {
+        return Some(PAST_DISPLAY);
+    }
+    if starts(&["heap class ", "heap pool "]) {
+        return Some(PAST_HEAP_STATICS);
+    }
+    if d.starts_with("sis text ") && sis_unread_only(d) {
+        return Some(PAST_SIS);
+    }
+    if live && item_unnamed_bits(d) {
+        return Some(PAST_PLAYBACK_HEAP);
+    }
+    if live
+        && (d.starts_with("vs.state.fighters[") && (d.contains("].x0: ") || d.contains("].x4: ")))
+    {
+        return Some(PAST_PLAYBACK_START);
+    }
+    if live
+        && (d.starts_with("ft: anim file ")
+            || d.contains(" fighter.x5A4: ")
+            || d.contains(" fighter.x5A8: "))
+    {
+        return Some(PAST_PLAYBACK_CACHES);
+    }
+    None
+}
+
+/// Whether `d` is an item's `xDD1` flags differing only in the six bits no item code names
+/// (`0x3F`; the top two are `xDD1_flag`'s 0 and 1): the console's block keeps an earlier
+/// item's bits there, playback's fresh heap zero.
+fn item_unnamed_bits(d: &str) -> bool {
+    let Some((_, rest)) = d.split_once(" item.xDD1_flag: ours [") else {
+        return false;
+    };
+    let Some((ours, theirs)) = rest.split_once("], theirs [") else {
+        return false;
+    };
+    let byte = |t: &str| u8::from_str_radix(t.trim_end_matches(']'), 16).ok();
+    matches!((byte(ours), byte(theirs)), (Some(a), Some(b)) if (a ^ b) & 0xC0 == 0)
+}
+
+/// Whether a text's difference (`sis text N @A: fields: ours "...", theirs "..."`) is in its
+/// `x88` and its last field, `x9F`, alone.
+fn sis_unread_only(d: &str) -> bool {
+    let Some((_, rest)) = d.split_once(": fields: ours \"") else {
+        return false;
+    };
+    let Some((ours, theirs)) = rest.split_once("\", theirs \"") else {
+        return false;
+    };
+    let (a, b): (Vec<&str>, Vec<&str>) = (
+        ours.split(' ').collect(),
+        theirs.trim_end_matches('"').split(' ').collect(),
+    );
+    let Some(x88) = a.iter().position(|t| *t == "x88") else {
+        return false;
+    };
+    a.len() == b.len()
+        && a.iter()
+            .zip(&b)
+            .enumerate()
+            .all(|(i, (x, y))| x == y || i == x88 + 1 || i + 1 == a.len())
+}
+
+/// The field a difference is in, for `--after-handback`'s survey: its text before the values
+/// (`: ours `), or its first 100 characters, with full addresses (`0x8…`) left out.
+fn survey_key(d: &str) -> String {
+    let head = match d.split_once(": ours ") {
+        Some((h, _)) => h.to_owned(),
+        None => d.chars().take(100).collect(),
+    };
+    let mut out = String::with_capacity(head.len());
+    let mut rest = head.as_str();
+    while let Some(i) = rest.find("0x8") {
+        out.push_str(&rest[..i]);
+        let tail = &rest[i + 2..];
+        let n = tail
+            .find(|c: char| !c.is_ascii_hexdigit())
+            .unwrap_or(tail.len());
+        out.push_str(if n == 8 {
+            "0x8…"
+        } else {
+            &rest[i..i + 2 + n]
+        });
+        rest = &tail[n..];
+    }
+    out.push_str(rest);
+    out
+}
 
 /// Which of [`LIVE_NAMED`]'s a difference in a live match's tick is, if any.
 fn live_named(d: &str) -> Option<&'static str> {

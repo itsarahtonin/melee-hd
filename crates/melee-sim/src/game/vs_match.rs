@@ -50,6 +50,11 @@ pub struct Settings {
     /// With `playback`, a live match built as playback builds a replay's, which the
     /// controllers drive ([`Settings::live`], [`Match::step_live_tick`]).
     pub live: bool,
+    /// With `live`, the counters no scene resets as the console's menus leave them
+    /// (`live::Counters`), which the match takes before its scene's entry, as Slippi Dolphin's
+    /// live play carries them on; none starts them from playback's boot, as Slippi's playback
+    /// does.
+    pub counters: Option<super::live::Counters>,
     /// The addresses the original gives the match's fighters as it creates them, in creation
     /// order (`ft::Globals::address_seed`), where the frontend knows them: the oracle takes
     /// them from ssbm-rs's trace. Empty, the fighters' addresses are 0.
@@ -113,6 +118,8 @@ const CKIND_ICE_CLIMBERS: u8 = 14;
 /// `Gm_PKind`'s computer player.
 const PKIND_CPU: u8 = 1;
 const CKIND_MARTH: i8 = 9;
+/// Samus's fighter kind (`FTKIND_SAMUS`).
+const FTKIND_SAMUS: i32 = 0x0D;
 
 /// Whether the rules' item switch can spawn a Super Scope: items on (`it_8026D018`) with its
 /// kind in the switch's mask, which the spawner, the containers and the Party Ball all follow.
@@ -230,6 +237,7 @@ impl Settings {
             ucf: ucf::Pads::default(),
             playback: false,
             live: false,
+            counters: None,
             fighter_addresses: Vec::new(),
             heap: heap.then(crate::hsd::heap::Layout::vanilla_vs),
             playback_heap: None,
@@ -294,14 +302,31 @@ impl Settings {
     ///
     /// The allocator model is off (design call 8 of `docs/slippi-ruleset.md`): under Slippi's
     /// rules nothing in a match reads a heap address but the Super Scope's one-shot charge,
-    /// which takes its stand-in (`sscope::ADDRESS_STAND_IN`), and a read the rules don't cover
-    /// stops by name. The oracle, which compares the match's addresses with the console's, sets
-    /// `heap` back to playback's layout (`session::Session::live_model`).
+    /// which takes its stand-in (`sscope::ADDRESS_STAND_IN`), Samus's grapple swing, and a read
+    /// the rules don't cover, which stops by name. A match with Samus in it runs with the
+    /// model, laid out as playback's heap ([`Settings::live_needs_model`]); the oracle, which
+    /// compares the match's addresses with the console's, sets `heap` back to playback's
+    /// layout in every live match (`session::Session::live_model`).
     pub fn live(r: &ReplayStart) -> Result<Settings, CodeError> {
         let mut s = Settings::from_replay(r)?;
         s.live = true;
-        s.heap = None;
+        if !Settings::live_needs_model(&s.start) {
+            s.heap = None;
+        }
         Ok(s)
+    }
+
+    /// Whether a live match from start data `d` runs with the allocator model (Sarah,
+    /// 2026-11-18: "Yes, model on"): when any of its players, human or computer, is Samus.
+    /// Her grapple beam's swing takes its grabbed-victim-only bit from her `ThrowN` joint's
+    /// address (`samusgrapple::SwingSlot::SavedR31`), which only the model gives, laid out as
+    /// playback's heap is, as Slippi Dolphin's playback and live play have it; without the
+    /// model the read stops by name (`SwingSlot::Unmodeled`).
+    pub fn live_needs_model(d: &StartMeleeData) -> bool {
+        d.players.iter().any(|p| {
+            p.slot_type != 3
+                && super::pl::player::ckind_ftkind(i32::from(p.ckind), 0) == FTKIND_SAMUS
+        })
     }
 
     /// The settings a Slippi replay's game start records: its game info block (the match's
@@ -329,6 +354,7 @@ impl Settings {
             ucf: ucf::Pads::default(),
             playback: false,
             live: false,
+            counters: None,
             dsp: DspModel::Samples,
             disc: DiscSpeed::Fast,
             fighter_addresses: Vec::new(),
@@ -608,6 +634,9 @@ impl Match {
             archive: rumble,
             offset,
         });
+        if let Some(c) = &settings.counters {
+            c.put(&mut m.game);
+        }
         let lent = crate::hsd::heap::Lent::take(&mut m.game.objs.heap);
         let mut r = m.running();
         // The boot's last scene ends (its tick's end is where the boot state was taken), then
@@ -1409,7 +1438,34 @@ mod tests {
     }
 
     /// The Slippi ruleset's live match runs without the allocator model (design call 8 of
-    /// `docs/slippi-ruleset.md`), where the replay it records plays back with playback's layout.
+    /// `docs/slippi-ruleset.md`), where the replay it records plays back with playback's layout,
+    /// but with Samus in it, human or computer, on any port, with it, laid out as playback's
+    /// heap (Sarah, 2026-11-18: "Yes, model on"): her grapple swing reads her `ThrowN` joint's
+    /// address.
+    #[test]
+    fn a_live_match_with_samus_runs_the_allocator_model() {
+        let mut g = crate::game::state::Game {
+            rules: crate::game::state::Rules::slippi_online(),
+            ..Default::default()
+        };
+        g.machine.routing.curr_mode = 2;
+        // Character kind 16 is Samus; 2 Fox, 14 the Ice Climbers.
+        for (players, on) in [
+            ([player(16, 0), player(2, 1)], true),
+            ([player(2, 0), player(16, 1)], true),
+            ([player(2, 0), player(14, 1)], false),
+        ] {
+            let mut start = Settings::vs(32, &players, 4, 8).start;
+            let (r, _) = crate::game::record::live_start(&g, &start);
+            let want = on.then(crate::hsd::heap::Layout::slippi_playback);
+            assert_eq!(Settings::live(&r).expect("the ruleset's codes").heap, want);
+            // A computer Samus too.
+            start.players[1].slot_type = 1;
+            let (r, _) = crate::game::record::live_start(&g, &start);
+            assert_eq!(Settings::live(&r).expect("the ruleset's codes").heap, want);
+        }
+    }
+
     #[test]
     fn a_live_match_leaves_the_allocator_model_off() {
         let mut g = crate::game::state::Game {

@@ -1069,7 +1069,7 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Where:** `Ground_UpdateMapColl` (`Ground_804D6954`, the update counter), `crates/melee-sim/src/game/gr/ground.rs`.
 - **Defect:** the stage's collision load leaves each joint's stamp (`CollJoint::xC`) unwritten, and the update skips a joint whose stamp already equals the counter it just raised.
 - **Effect:** a leftover equal to the counter skips that joint's collision update once; not recorded in play.
-- **melee-hd:** modeled: a session from power-on takes the stamps from the heap's image (`mp`'s load, `game::leftovers::bytes`), a replay at 0, as a fresh heap.
+- **melee-hd:** modeled: a session from power-on takes the stamps from the heap's image (`mp`'s load, `game::leftovers::bytes`), a replay at 0, as a fresh heap. Under the Slippi ruleset, past a live match's handback the main heap holds the console's match's bytes, which melee-hd doesn't model (the live match's heap is playback's): the image forgets them and a stamp there reads as zero, so a stage set up after a live match can part from the console's in a joint whose leftover stamp equals the counter (about one in 65,536 per joint). Accepted as documented, no tripwire (Sarah, 2026-11-18: "just document and skip i think. very rare and probably imperceptible anyway"). The counter itself carries on from match to match as the console's does, live matches included (`live::Counters`); Slippi's playback starts it fresh ([Slippi's defects](slippi-bugs.md#playback-starts-the-counters-no-scene-resets-fresh)).
 - **Fix:** clear the stamps at the load.
 - **Fix impact:** none unless a leftover matched.
 - **Source:** [engine notes, a session's heap leftovers](engine.md#uninitialized-values).

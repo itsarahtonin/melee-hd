@@ -491,6 +491,71 @@ fn grapple_swing_stops_by_name_without_the_model() {
     });
 }
 
+/// A live match with Samus in it runs with the allocator model (Sarah, 2026-11-18: "Yes, model
+/// on"; `Settings::live_needs_model`), laid out as playback's heap, so her grapple swing reads
+/// her `ThrowN` joint's address (`samusgrapple::SwingSlot::SavedR31`) as Slippi Dolphin has it
+/// instead of stopping by name. `grapple-samus-bf`'s game start, as a live match's settings,
+/// keeps playback's layout, the one its playback runs with (`Settings::from_replay`, which the
+/// oracle's `diff --heap` compares with ssbm-rs's trace, the joint's address included); played
+/// with those settings' model it goes past its first bounced swing (frame 330), the joint's
+/// address nonzero, and equals the playback's state there and at frame 400.
+#[test]
+fn a_live_match_with_samus_reads_her_swing_from_the_model() {
+    use melee_sim::state_eq::StateEq;
+    let Some(disc) = disc() else { return };
+    let dir = melee_local_data::ssbm_rs_local("bench/oracle-m4-grapple");
+    let path = std::path::Path::new(&dir).join("grapple-samus-bf.slp");
+    if !path.exists() {
+        eprintln!("{}: not here, skipping", path.display());
+        return;
+    }
+    let mut bench = Bench::open_path(disc, &path);
+    on_sim_thread(FpMode::Hardware, || {
+        let start = melee_slippi::start(&bench.replay);
+        let live = Settings::live(&start).expect("its settings");
+        let played = Settings::from_replay(&start).expect("its settings");
+        assert!(
+            live.heap.is_some(),
+            "a live match with Samus runs without the model"
+        );
+        assert_eq!(live.heap, played.heap, "not playback's layout");
+        let frame = |m: &Match| m.game.playback.as_ref().unwrap().frame_index;
+        let mut ours = bench.start(&played.rules, live.heap.is_some());
+        let mut theirs = bench.start(&played.rules, true);
+        let (mut a, mut b) = (Device(&bench.replay), Device(&bench.replay));
+        while frame(&ours) < 400 {
+            let at = frame(&ours);
+            let stepped = catch_unwind(AssertUnwindSafe(|| tick(&mut ours, &mut a)));
+            assert!(
+                stepped.is_ok(),
+                "the live match's settings stop at frame {}",
+                at + 1
+            );
+            tick(&mut theirs, &mut b);
+            if at + 1 == 330 {
+                let addr = ours
+                    .game
+                    .it
+                    .links
+                    .iter()
+                    .filter_map(|(_, l)| l.jobj)
+                    .map(|j| ours.game.objs.jobjs.pool.addr(j.0))
+                    .next()
+                    .expect("the beam's links");
+                assert_ne!(addr, 0, "the ThrowN joint without an address");
+            }
+            if matches!(at + 1, 330 | 400)
+                && let Some(d) = ours.game.state_diff(&theirs.game)
+            {
+                panic!(
+                    "frame {}: the live settings' run differs from playback's: {d}",
+                    at + 1
+                );
+            }
+        }
+    });
+}
+
 /// The Super Scope's affordable level without the allocator model, under the Slippi ruleset
 /// (`sscope::ADDRESS_STAND_IN`): with less ammunition than a level 1 shot, a charge past level
 /// 0 takes the scope's GObj address for a level, which a hit while charging spends (over two
