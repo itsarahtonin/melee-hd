@@ -971,7 +971,7 @@ impl Running<'_> {
             _ => panic!("the list's texts' camera has no CObj"),
         };
         if crate::hsd::display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
-            let d = &mut self.game.objs.display.draws;
+            let d = &mut self.game.objs.display;
             d.push(crate::hsd::display::Draw::EraseColor([0, 0, 0, 0xFF]));
             d.push(crate::hsd::display::Draw::Erase);
             self.render_links(gobj, 7);

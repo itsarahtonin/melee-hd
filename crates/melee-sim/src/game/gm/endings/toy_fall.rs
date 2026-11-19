@@ -210,7 +210,6 @@ impl Running<'_> {
         self.game
             .objs
             .display
-            .draws
             .push(crate::hsd::display::Draw::ToyFallCopy {
                 image: n,
                 x: COPY_X,

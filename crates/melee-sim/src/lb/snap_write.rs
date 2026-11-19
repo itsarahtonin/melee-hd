@@ -209,7 +209,6 @@ impl Running<'_> {
         self.game
             .objs
             .display
-            .draws
             .push(crate::hsd::display::Draw::SnapCopy);
         let data = self.data;
         let unknown = frame_copied(at, || {

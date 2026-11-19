@@ -583,7 +583,6 @@ impl Running<'_> {
         self.game
             .objs
             .display
-            .draws
             .push(crate::hsd::display::Draw::BlurCopy);
         let buffer = self.clear().buffer;
         if buffer != 0 {

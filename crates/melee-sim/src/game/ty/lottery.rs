@@ -258,7 +258,7 @@ impl Running<'_> {
             _ => panic!("the lottery's camera has no CObj"),
         };
         if crate::hsd::display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
-            let d = &mut self.game.objs.display.draws;
+            let d = &mut self.game.objs.display;
             d.push(crate::hsd::display::Draw::EraseColor([
                 0x19, 0x19, 0x33, 0xFF,
             ]));

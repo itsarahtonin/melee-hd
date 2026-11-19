@@ -1118,7 +1118,7 @@ impl Running<'_> {
         if crate::hsd::display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
             let (_, rgba, erases) = LIGHTS[self.game.toys.gallery.light as usize];
             if erases && self.game.toys.gallery.debug_l == 0 {
-                let d = &mut self.game.objs.display.draws;
+                let d = &mut self.game.objs.display;
                 d.push(crate::hsd::display::Draw::EraseColor(rgba));
                 d.push(crate::hsd::display::Draw::Erase);
             }
@@ -1177,7 +1177,6 @@ impl Running<'_> {
         self.game
             .objs
             .display
-            .draws
             .push(crate::hsd::display::Draw::Axes(pts));
     }
 

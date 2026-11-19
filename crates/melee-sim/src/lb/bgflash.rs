@@ -409,7 +409,7 @@ impl Running<'_> {
             .expect("hsd_80391A04: no camera");
         cobj::viewing_mtx_copy(&mut self.game.objs, self.data, c);
         let g = &mut *self.game;
-        let draws = &mut g.objs.display.draws;
+        let draws = &mut g.objs.display;
         g.bgflash.quads(&mut |q| draws.push(Draw::Quad(q)));
     }
 }

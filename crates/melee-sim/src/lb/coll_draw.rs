@@ -113,7 +113,9 @@ pub enum DebugDraw {
 
 /// Appends a debug drawing.
 pub fn push(objs: &mut Objects, d: DebugDraw) {
-    objs.display.draws.push(Draw::Debug(Box::new(d)));
+    if objs.display.drawing() {
+        objs.display.draws.push(Draw::Debug(Box::new(d)));
+    }
 }
 
 /// The pass a colour draws in: the opaque pass (0) for an opaque colour, else the

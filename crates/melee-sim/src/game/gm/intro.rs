@@ -1392,14 +1392,14 @@ impl Running<'_> {
     #[doc(alias = "fn_80187C9C")]
     pub fn intro_normal_model_render(&mut self, gobj: GObjId, pass: i32) {
         use crate::hsd::display::Draw;
-        self.game.objs.display.draws.push(Draw::ZModeDirect {
+        self.game.objs.display.push(Draw::ZModeDirect {
             compare: false,
             // `GX_NEVER`.
             func: 0,
             update: false,
         });
         self.render_jobj(gobj, pass);
-        self.game.objs.display.draws.push(Draw::Invalidate(0x40));
+        self.game.objs.display.push(Draw::Invalidate(0x40));
     }
 
     /// `Camera_800304E0`, the stage's camera's render callback: through the camera, the
@@ -1419,7 +1419,7 @@ impl Running<'_> {
         // `HSD_SetEraseColor`: the game camera's background color, its alpha 1.
         let bg = &self.game.camera.cam.background_color;
         let color = [bg.r, bg.g, bg.b, 1];
-        let draws = &mut self.game.objs.display.draws;
+        let draws = &mut self.game.objs.display;
         draws.push(Draw::EraseColor(color));
         draws.push(Draw::Erase);
         self.stage_fog_update(c);

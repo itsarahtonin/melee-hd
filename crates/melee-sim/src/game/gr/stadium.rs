@@ -1250,14 +1250,14 @@ pub fn render_text_camera(r: &mut Running, gobj: GObjId) {
         panic!("the text camera holds no camera");
     };
     if display::camera_begin(&mut r.game.objs, r.data, Some(c)) {
-        let draws = &mut r.game.objs.display.draws;
+        let draws = &mut r.game.objs.display;
         draws.push(display::Draw::EraseColor([0, 0, 0, 1]));
         draws.push(display::Draw::Erase);
         display::fog_set(&mut r.game.objs, None);
         r.render_links(gobj, 7);
         display::camera_end(&mut r.game.objs);
     }
-    r.game.objs.display.draws.push(display::Draw::ScreenCopy {
+    r.game.objs.display.push(display::Draw::ScreenCopy {
         screen: SCREEN_TEXT,
         x: 0,
         y: 0,
@@ -1276,7 +1276,7 @@ pub fn render_feed(r: &mut Running, _gobj: GObjId) {
         return;
     }
     s.flag = true;
-    r.game.objs.display.draws.push(display::Draw::ScreenCopy {
+    r.game.objs.display.push(display::Draw::ScreenCopy {
         screen: SCREEN_FEED,
         x: 0,
         y: 36,
@@ -1296,7 +1296,7 @@ pub fn render_zoom(r: &mut Running, _gobj: GObjId) {
     }
     s.flag = true;
     let (x, y) = (s.copy_x, s.copy_y);
-    r.game.objs.display.draws.push(display::Draw::ScreenCopy {
+    r.game.objs.display.push(display::Draw::ScreenCopy {
         screen: SCREEN_ZOOM,
         x,
         y,

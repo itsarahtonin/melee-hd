@@ -150,7 +150,7 @@ impl Running<'_> {
         if !display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
             return;
         }
-        self.game.objs.display.draws.push(display::Draw::Erase);
+        self.game.objs.display.push(display::Draw::Erase);
         self.stage_fog_update(c);
         crate::hsd::lobj::delete_current_all(&mut self.game.objs, None);
         let cam = &self.game.camera.cam;
@@ -291,12 +291,12 @@ impl Running<'_> {
                     display::camera_begin(&mut self.game.objs, self.data, Some(c));
                 }
                 Text::NoFog => display::fog_set(&mut self.game.objs, None),
-                other => self
-                    .game
-                    .objs
-                    .display
-                    .draws
-                    .push(display::Draw::Text(Box::new(other))),
+                other => {
+                    let d = &mut self.game.objs.display;
+                    if d.drawing() {
+                        d.draws.push(display::Draw::Text(Box::new(other)));
+                    }
+                }
             }
         }
         self.game.objs.display.devtext = drawn;
@@ -330,12 +330,16 @@ impl Running<'_> {
             Some(super::gm::results_scene::STATS_TEXT_RENDER) => self.results_stats_text_render(),
             Some(cb) => code::unported_call(&format!("the text render callback {cb:#010x}")),
         }
+        // The layout writes the text's state (its typing, its line's width and height), so a
+        // state-only pass runs it too and drops the quads.
         let d = self.game.sis.layout_text(self.data, t);
-        self.game
-            .objs
-            .display
-            .draws
-            .push(display::Draw::SisText(Box::new(d)));
+        if self.game.objs.display.drawing() {
+            self.game
+                .objs
+                .display
+                .draws
+                .push(display::Draw::SisText(Box::new(d)));
+        }
     }
 
     /// A light GObj's render callback (`HSD_GObj_LObjCallback`; the stage's
@@ -385,7 +389,6 @@ impl Running<'_> {
             self.game
                 .objs
                 .display
-                .draws
                 .push(display::Draw::Particles { link, first });
         }
     }

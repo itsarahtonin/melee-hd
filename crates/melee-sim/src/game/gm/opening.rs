@@ -319,7 +319,6 @@ impl Running<'_> {
             self.game
                 .objs
                 .display
-                .draws
                 .push(crate::hsd::display::Draw::MoviePlanes(planes));
             self.render_sobjs(gobj);
         }
@@ -342,7 +341,6 @@ impl Running<'_> {
             self.game
                 .objs
                 .display
-                .draws
                 .push(crate::hsd::display::Draw::SObj(s));
             cur = self.game.objs.sobjs[s.0].next;
         }
@@ -358,7 +356,6 @@ impl Running<'_> {
             self.game
                 .objs
                 .display
-                .draws
                 .push(crate::hsd::display::Draw::SpriteSetup);
             self.render_links(gobj, 1);
             crate::hsd::display::camera_end(&mut self.game.objs);
@@ -366,7 +363,6 @@ impl Running<'_> {
         self.game
             .objs
             .display
-            .draws
             .push(crate::hsd::display::Draw::SpriteEnd);
     }
 

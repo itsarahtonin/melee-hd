@@ -1,5 +1,5 @@
 //! `melee-oracle sync-test REPLAY.slp [--rollback N] [--fp hardware|slippi] [--ticks N]
-//! [--draw-offscreen-fighters]`: plays a replay and, after every tick, rolls back and plays again, as rollback netplay does,
+//! [--draw-offscreen-fighters] [--state-only]`: plays a replay and, after every tick, rolls back and plays again, as rollback netplay does,
 //! failing on the first difference (docs/oracle.md, "Sync test").
 //!
 //! The match plays straight from the replay's settings, as `melee-bench native` plays it (its
@@ -12,6 +12,11 @@
 //! N = 1 (the default) every tick is played twice from the same state; Slippi's rollback
 //! window is 7 or 8 ticks. `--draw-offscreen-fighters` turns on that cosmetic toggle, as the
 //! player does in widescreen (`Cosmetic`, which the snapshots carry with the rest).
+//! `--state-only` replays each rollback's ticks but its last with the state-only display pass
+//! (`Display::state_only`), as a rollback's re-simulated ticks can: their output must be the
+//! straight run's but for the draws, of which they build none, and the state after the last
+//! the straight run's, all of it when the last tick's pass ran (it builds its draws and their
+//! snapshots afresh), else all but the pass's output (`Display::OUTPUT`).
 //!
 //! Anything the simulation reads that the snapshot leaves out shows up as a difference: the
 //! second run reads what the first left there. The archives (`Match::data`) are loaded data
@@ -27,6 +32,7 @@ use melee_sim::audio::clock::DiscSpeed;
 use melee_sim::game::playback::FIRST_FRAME;
 use melee_sim::game::vs_match::{DiscFile, Frame, Match, Settings};
 use melee_sim::gekko_fp::{FpMode, set_fp_mode};
+use melee_sim::hsd::display::Display;
 use melee_sim::state_eq::StateEq;
 use melee_slippi::{Device, Replay};
 
@@ -45,13 +51,46 @@ fn frame(m: &Match) -> i32 {
         .map_or(FIRST_FRAME - 1, |p| p.frame_index)
 }
 
-/// One tick and, when the round is over, its frame's display pass: the tick's output.
-fn step(m: &mut Match, device: &mut Device) -> Frame {
+/// One tick and, when the round is over, its frame's display pass: the tick's output, and
+/// whether the pass ran.
+fn step(m: &mut Match, device: &mut Device) -> (Frame, bool) {
     let (mut f, render) = m.step_replay_tick(device);
     if render {
         f.draws = m.render();
     }
-    f
+    (f, render)
+}
+
+/// Where a state-only tick's output differs from the straight run's: in anything but the
+/// draws, which it builds none of.
+fn state_only_output_diff(out: &Frame, want: &Frame) -> Option<String> {
+    if !out.draws.is_empty() {
+        return Some(format!(
+            ".draws: {} built in a state-only pass",
+            out.draws.len()
+        ));
+    }
+    if let Some(d) = out.events.state_diff(&want.events) {
+        return Some(format!(".events{d}"));
+    }
+    if let Some(d) = out.pads.state_diff(&want.pads) {
+        return Some(format!(".pads{d}"));
+    }
+    (out.ended != want.ended).then(|| format!(".ended: {} != {}", out.ended, want.ended))
+}
+
+/// The first difference between the states outside the display pass's output
+/// (`Display::OUTPUT`), which a state-only pass leaves as each screen pass starts it.
+fn state_diff_outside_output(
+    a: &melee_sim::game::state::Game,
+    b: &melee_sim::game::state::Game,
+) -> Option<String> {
+    let mut diffs = Vec::new();
+    a.state_diffs(b, &mut diffs);
+    diffs
+        .iter()
+        .find(|d| !Display::is_output(&d.path()))
+        .map(|d| d.to_string())
 }
 
 /// Times, in microseconds, summarized.
@@ -88,6 +127,7 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
     let mut fp_mode = FpMode::Slippi;
     let mut disc_speed = DiscSpeed::Fast;
     let mut draw_offscreen_fighters = false;
+    let mut state_only = false;
     let mut pos = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
@@ -121,12 +161,13 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
                     .expect("--disc-speed fast|drive")
             }
             "--draw-offscreen-fighters" => draw_offscreen_fighters = true,
+            "--state-only" => state_only = true,
             _ => pos.push(a),
         }
     }
     let [replay_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle sync-test REPLAY.slp [--rollback N] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|drive] [--draw-offscreen-fighters]"
+            "usage: melee-oracle sync-test REPLAY.slp [--rollback N] [--ticks N] [--fp hardware|slippi] [--disc-speed fast|drive] [--draw-offscreen-fighters] [--state-only]"
         );
         return ExitCode::from(2);
     };
@@ -189,7 +230,7 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
         ring[slot].clone_from(&m.game);
         snapshots.push(t.elapsed());
         let t = Instant::now();
-        let stepped = catch_unwind(AssertUnwindSafe(|| step(&mut m, &mut device)));
+        let stepped = catch_unwind(AssertUnwindSafe(|| step(&mut m, &mut device).0));
         straight += t.elapsed();
         let out = match stepped {
             Ok(f) => f,
@@ -215,11 +256,21 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
                 let x = &mut work.game.fighters[0].cur_pos.x;
                 *x = f32::from_bits(x.to_bits() ^ 1);
             }
+            // Whether the last tick played again ran its display pass.
+            let mut last_rendered = false;
             let replayed = catch_unwind(AssertUnwindSafe(|| {
                 for k in from..tick {
-                    let out = step(&mut work, &mut device);
+                    let quiet = state_only && k + 1 < tick;
+                    work.game.objs.display.state_only = quiet;
+                    let (out, rendered) = step(&mut work, &mut device);
+                    last_rendered = rendered;
                     let want = &outputs[(k % len as u64) as usize];
-                    if let Some(d) = out.state_diff(want) {
+                    let differs = if quiet {
+                        state_only_output_diff(&out, want)
+                    } else {
+                        out.state_diff(want).map(|d| d.to_string())
+                    };
+                    if let Some(d) = differs {
                         return Some(format!(
                             "tick {k}'s output played again differs from the straight run's at frame{d}"
                         ));
@@ -241,7 +292,11 @@ pub fn sync_test(args: &[&str]) -> ExitCode {
                 break Some(why);
             }
             let t = Instant::now();
-            let differs = work.game.state_diff(&m.game);
+            let differs = if state_only && rollback > 1 && !last_rendered {
+                state_diff_outside_output(&work.game, &m.game)
+            } else {
+                work.game.state_diff(&m.game).map(|d| d.to_string())
+            };
             comparing += t.elapsed();
             if let Some(d) = differs {
                 break Some(format!(

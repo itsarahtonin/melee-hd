@@ -325,7 +325,7 @@ impl Running<'_> {
             panic!("the movies' camera holds no CObj");
         };
         if crate::hsd::display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
-            let draws = &mut self.game.objs.display.draws;
+            let draws = &mut self.game.objs.display;
             draws.push(crate::hsd::display::Draw::EraseColor([0, 0, 0, 0xFF]));
             draws.push(crate::hsd::display::Draw::Erase);
             crate::hsd::display::camera_end(&mut self.game.objs);

@@ -1331,7 +1331,6 @@ impl Running<'_> {
         self.game
             .objs
             .display
-            .draws
             .push(crate::hsd::display::Draw::Scissor {
                 x: 0,
                 y: u32::from(top),

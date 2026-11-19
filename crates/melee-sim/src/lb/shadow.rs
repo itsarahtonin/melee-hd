@@ -179,7 +179,7 @@ impl Running<'_> {
             let mut hooks = crate::game::code::ParticleHooks;
             shadow::start_render(&mut self.game.objs, self.data, &mut hooks, s);
             if draw_volume {
-                self.game.objs.display.draws.push(Draw::ShadowVolume(s));
+                self.game.objs.display.push(Draw::ShadowVolume(s));
             }
             shadow::end_render(&mut self.game.objs, s, draw_volume);
         }

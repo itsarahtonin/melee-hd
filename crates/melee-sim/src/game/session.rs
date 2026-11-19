@@ -1170,6 +1170,7 @@ impl Session {
         });
         let (cache, cache_clock) = (at.audio.dvd.clone(), at.audio.clock.clone());
         m.game.go_on_from(at, &self.data, &mut m.data);
+        m.game.objs.display.state_only = self.game.objs.display.state_only;
         self.live_files = m.files;
         let game = std::mem::replace(&mut self.game, *m.game);
         let data = std::mem::replace(&mut self.data, m.data);

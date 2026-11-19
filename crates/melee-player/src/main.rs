@@ -104,6 +104,8 @@ mod saves;
 mod session_rec;
 mod settings;
 mod sound;
+#[cfg(test)]
+mod state_only_tests;
 mod timing;
 mod ui;
 

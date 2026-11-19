@@ -475,7 +475,7 @@ impl Running<'_> {
     #[doc(alias = "lbRefract_800225D4")]
     fn end_refraction(&mut self, f: FighterId) {
         if self.game.fighters[f.0].x2226_b5 {
-            self.game.objs.display.draws.push(display::Draw::RefractEnd);
+            self.game.objs.display.push(display::Draw::RefractEnd);
         }
     }
 
@@ -505,11 +505,7 @@ impl Running<'_> {
                 k => panic!("ftCo_800C2600: character {k} has no sword attributes to read"),
             }
         }
-        self.game
-            .objs
-            .display
-            .draws
-            .push(display::Draw::Afterimage(f));
+        self.game.objs.display.push(display::Draw::Afterimage(f));
     }
 
     /// A fighter drawn into the magnifier, `ftDrawCommon_80080C28`: with its light, its

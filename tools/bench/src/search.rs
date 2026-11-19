@@ -205,6 +205,8 @@ fn play(
             };
         }
     };
+    // Headless: nothing looks at the frames.
+    sim.game.objs.display.state_only = crate::native::state_only();
     let mut stopped = None;
     let mut seen = vec![None; watch.len()];
     loop {
