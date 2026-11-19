@@ -104,7 +104,7 @@ impl Running<'_> {
     #[doc(alias = "ftPe_Init_OnDeath2")]
     pub fn peach_on_death2(&mut self, gobj: GObjId) {
         self.peach_parasol_put_away(gobj);
-        self.peach_toad_on_death2(gobj);
+        self.peach_toad_on_death2(gobj, &super::special_n::PEACH);
         self.peach_drop_veg(gobj);
     }
 

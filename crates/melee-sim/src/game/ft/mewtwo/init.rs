@@ -52,7 +52,7 @@ impl Running<'_> {
     #[doc(alias = "ftMt_Init_OnDeath2")]
     pub fn mt_on_death2(&mut self, gobj: GObjId) {
         self.mt_remove_disable(gobj);
-        self.mt_n_lose_ball(gobj);
+        self.mt_n_lose_ball(gobj, &super::special_n::MEWTWO);
     }
 
     /// His Disable and ball gone when hit, `ftMt_Init_OnTakeDamage` (the charge kept if full,
@@ -60,7 +60,7 @@ impl Running<'_> {
     #[doc(alias = "ftMt_Init_OnTakeDamage")]
     pub fn mt_on_take_damage(&mut self, gobj: GObjId) {
         self.mt_remove_disable(gobj);
-        self.mt_n_drop_ball(gobj);
+        self.mt_n_drop_ball(gobj, &super::special_n::MEWTWO);
     }
 
     /// The full charge's glow (the color animations' hook), `ftMt_Init_UnkMotionStates4`.

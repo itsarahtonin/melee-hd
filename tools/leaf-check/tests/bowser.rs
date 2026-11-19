@@ -36,6 +36,7 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
+use melee_sim::game::ft::koopa::special_n::KOOPA;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
 use melee_sim::game::it::kinds::koopaflame;
@@ -228,8 +229,12 @@ fn run_bowser(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftKp_SpecialS_80132E00" => return float(g.kp_s_struggle_rate(Some(gobj))),
         "ftKp_SpecialS_80132E10" => return float(g.kp_s_shake(Some(gobj))),
         "ftKp_SpecialS_80132E20" => return float(g.kp_s_shake_max(Some(gobj))),
-        "ftKp_SpecialLw_80134DE0" => return Ret::Int(g.kp_flame_max_speed(Some(gobj)) as u32),
-        "ftKp_SpecialLw_80134E1C" => return Ret::Int(g.kp_flame_max_size(Some(gobj)) as u32),
+        "ftKp_SpecialLw_80134DE0" => {
+            return Ret::Int(g.kp_flame_max_speed(Some(gobj), &KOOPA) as u32);
+        }
+        "ftKp_SpecialLw_80134E1C" => {
+            return Ret::Int(g.kp_flame_max_size(Some(gobj), &KOOPA) as u32);
+        }
         "itKoopaFlame_Update_Direction" => koopaflame::update_direction(g, gobj, r4 as i32),
         "itKoopaFlame_Update_Angle" => koopaflame::update_angle(g, gobj, r4 as i32),
         "itKoopaFlame_Setup" => koopaflame::setup(g, gobj, gobj_reg(maps, call, 4, &name)),

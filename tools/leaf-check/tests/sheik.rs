@@ -55,6 +55,7 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::fox::ext as fox_ext;
+use melee_sim::game::ft::seak::special_n::SEAK;
 use melee_sim::game::handles::{CodeRef, FighterId};
 use melee_sim::game::it::kinds::{seakchain, seakneedleheld, seakneedlethrown, seakvanish};
 use melee_sim::game::state::Running;
@@ -245,8 +246,10 @@ fn run_sheik(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftSk_SpecialS_80110F64" => Ret::Float(leaf_check::fp::lfs(
             g.seak_stick_y(gobj_arg(maps, call)).to_bits(),
         )),
-        "ftSk_SpecialS_80111F70" => b(g.seak_lets_go(gobj_in(maps, call, 3))),
-        "ftSk_SpecialS_80111FA0" => Ret::Int(g.seak_held_count(gobj_in(maps, call, 3)) as u32),
+        "ftSk_SpecialS_80111F70" => b(g.seak_lets_go(gobj_in(maps, call, 3), &SEAK)),
+        "ftSk_SpecialS_80111FA0" => {
+            Ret::Int(g.seak_held_count(gobj_in(maps, call, 3), &SEAK) as u32)
+        }
         "ftSk_SpecialS_CheckInitChain" => {
             b(g.seak_special_s_check_init_chain(gobj_arg(maps, call)))
         }

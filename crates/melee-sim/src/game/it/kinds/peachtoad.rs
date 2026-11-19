@@ -6,6 +6,8 @@ use super::super::item::{animate, change, change_state, debug_owner_bubbles, des
 use super::super::{item, jobj_of, lib26b1, lib2725};
 use crate::fpu::reg;
 use crate::game::code::ParticleHooks;
+use crate::game::ft::kirby::special_peach::KIRBY as PE_KIRBY;
+use crate::game::ft::peach::special_n::PEACH;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -79,9 +81,9 @@ fn owner_forgets(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
     if let Some(owner) = ip.owner {
         if ip.kind == KIND {
-            r.peach_toad_gone(owner);
+            r.peach_toad_gone(owner, &PEACH);
         } else {
-            r.kb_pe_toad_gone(owner);
+            r.peach_toad_gone(owner, &PE_KIRBY);
         }
     }
 }
@@ -90,8 +92,8 @@ fn owner_forgets(r: &mut Running, gobj: GObjId) {
 fn owner_done(r: &Running, gobj: GObjId) -> bool {
     let ip = item(r.game, gobj);
     match ip.owner {
-        Some(owner) if ip.kind == KIND => r.peach_toad_done(owner),
-        Some(owner) => r.kb_pe_done(owner),
+        Some(owner) if ip.kind == KIND => r.peach_toad_done(owner, &PEACH),
+        Some(owner) => r.peach_toad_done(owner, &PE_KIRBY),
         None => true,
     }
 }

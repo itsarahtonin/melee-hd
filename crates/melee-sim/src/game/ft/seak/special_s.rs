@@ -884,8 +884,8 @@ pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     Some(match f {
         addr::S_80110F58 => Val::Float(reg(r.seak_stick_x(gobj(0).expect("a null fighter")))),
         addr::S_80110F64 => Val::Float(reg(r.seak_stick_y(gobj(0).expect("a null fighter")))),
-        addr::S_80111F70 => Val::Int(i32::from(r.seak_lets_go(gobj(0)))),
-        addr::S_80111FA0 => Val::Int(r.seak_held_count(gobj(0))),
+        addr::S_80111F70 => Val::Int(i32::from(r.seak_lets_go(gobj(0), &super::special_n::SEAK))),
+        addr::S_80111FA0 => Val::Int(r.seak_held_count(gobj(0), &super::special_n::SEAK)),
         addr::S_CHECK_INIT_CHAIN => Val::Int(i32::from(
             r.seak_special_s_check_init_chain(gobj(0).expect("a null fighter")),
         )),

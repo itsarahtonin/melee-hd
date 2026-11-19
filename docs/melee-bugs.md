@@ -300,23 +300,23 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Kirby: Bowser's copy lands from the aerial breath's start into its loop
 
-- **Where:** `ftKb_KpSpecialAirNStart_Coll`, `crates/melee-sim/src/game/ft/kirby/special_koopa.rs` (`kb_kp_air_coll`, from `run`).
+- **Where:** `ftKb_KpSpecialAirNStart_Coll`, `crates/melee-sim/src/game/ft/koopa/special_n.rs` (`kp_special_air_n_coll`, under Kirby's `KIRBY`'s `air_start_lands_in_loop`).
 - **Defect:** landing during the aerial fire breath's start changes to the grounded breath's loop (`ftKb_MS_KpSpecialN`, Giga Bowser's copy's `GkSpecialN`) with the start's frame, where the other two aerial states land in their own counterparts and Bowser's own aerial start (`ftKp_SpecialAirNStart_Coll`) lands in his grounded start.
 - **Effect:** a Kirby with Bowser's copy who lands during the aerial start goes straight into the grounded breath's loop at the start's frame, skipping the rest of the start.
 - **melee-hd:** modeled. No checked match lands from the aerial start.
 - **Fix:** land in the grounded start (`ftKb_MS_KpSpecialNStart`, `GkSpecialNStart`).
 - **Fix impact:** changes Kirby's Bowser copy's landing; breaks replay and Slippi compatibility.
-- **Source:** `crates/melee-sim/src/game/ft/kirby/special_koopa.rs:401`.
+- **Source:** `crates/melee-sim/src/game/ft/koopa/special_n.rs:469`.
 
 ### Kirby: Giga Bowser's copy refills its breath while breathing
 
-- **Where:** `ftKb_SpecialNKp_800FA7D4` (the breath's refill, each frame from `ftKb_Init_UnkMotionStates3` for Bowser's and Giga Bowser's copies), `crates/melee-sim/src/game/ft/kirby/special_koopa.rs` (`kb_kp_refuel`).
+- **Where:** `ftKb_SpecialNKp_800FA7D4` (the breath's refill, each frame from `ftKb_Init_UnkMotionStates3` for Bowser's and Giga Bowser's copies), `crates/melee-sim/src/game/ft/koopa/special_n.rs` (`kp_refuel`, which leaves out the breath's states without Kirby's `KIRBY`'s `giga_states`).
 - **Defect:** the refill skips only Bowser's copy's breath states (443 to 448); Giga Bowser's copy breathes in states 538 to 543, which it doesn't skip.
 - **Effect:** with Giga Bowser's copy (in the single-player modes, where Kirby can swallow Giga Bowser), the flame's speed and size refill every frame of the breath while the breath spends them, so it weakens more slowly than Bowser's copy's.
 - **melee-hd:** modeled.
 - **Fix:** skip Giga Bowser's copy's breath states too.
 - **Fix impact:** changes Kirby's Giga Bowser copy in the single-player modes; VS replays never have it.
-- **Source:** `crates/melee-sim/src/game/ft/kirby/special_koopa.rs:151`.
+- **Source:** `crates/melee-sim/src/game/ft/koopa/special_n.rs:216`.
 
 ### Kirby: a victim breaking out of Yoshi's copy's egg keeps the shrink's scale
 
@@ -358,6 +358,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none on gameplay.
 - **Source:** `crates/melee-sim/src/game/ft/purin/special_n.rs:1332`.
 
+### Kirby: Link's and Young Link's copies draw the bow from a table of zeros
+
+- **Where:** `ftKb_LkSpecialNStart_Anim`, `ftKb_LkSpecialNLoop_Anim` and their aerial ones (the draw's frame), reading `ftKb_Init_803B7548`; `crates/melee-sim/src/game/ft/link/special_n.rs` (`link_draw`, under Kirby's `KIRBY`'s `draw_from_zeros`).
+- **Defect:** Link's own draw takes the bow's angle and the string's place from his thumbs and his root joint each frame. Kirby's copy takes its three points from a static table whose entries are all zeros, where his bones' positions belong.
+- **Effect:** while Kirby draws the bow, the bow's angle (`mv` x8) is `atan2(0, 0)`, the string's place (`mv` xC, x10) is zero, and the nocked arrow's position (`it_802A8398`'s `pos`) is set to the stage's origin every frame of the draw; what that does to the arrow held on his bone hasn't been looked at. The loosed arrow is aimed from his bones, so its flight is unaffected.
+- **melee-hd:** modeled.
+- **Fix:** take the points from his bones 39 and 44 and his root, as Link's does from his.
+- **Fix impact:** changes the drawn bow's angle and the nocked arrow's position in Kirby's Link and Young Link copies.
+- **Source:** `crates/melee-sim/src/game/ft/link/special_n.rs:294`.
+
 ### Kirby: Samus's copy destroys his effects whether or not the charge's are out
 
 - **Where:** `ftKb_SpecialNSs_800FCD04`, `ftKb_SpecialNSs_800FCD60` and the copy's other ends of the charge (Kirby's inline of `ftSamus_destroyAllEF`), `crates/melee-sim/src/game/ft/samus/special_n.rs` (`samus_charge_effects_off`, under Kirby's `KIRBY`'s `effects_off_always`).
@@ -367,6 +377,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** check the flag as Samus's does.
 - **Fix impact:** none on gameplay found; changes effects shown.
 - **Source:** `crates/melee-sim/src/game/ft/samus/special_n.rs:105`.
+
+### Kirby: Mewtwo's copy destroys his effects whether or not the charge's are out
+
+- **Where:** `ftKb_SpecialNMt_80107040`, `ftKb_SpecialNMt_8010709C` and the copy's other ends of the charge (Kirby's inline of `ftMewtwo_SpecialN_ClearGObj`), `crates/melee-sim/src/game/ft/mewtwo/special_n.rs` (`mt_n_effects_off`, under Kirby's `KIRBY`'s `effects_off_always`).
+- **Defect:** Mewtwo's own cleanup calls `efLib_DestroyAll` only when his charge's effects field (`u` xC, `x2238_shadowBallGObj`) is set, which nothing ever does (the entry below), so his never destroys anything there. Kirby's copy calls it unconditionally (then clears his field, `u` xA0), so the ball let go of, fired, put away or lost also destroys whatever other effects are attached to him. The same defect as Samus's copy's, above.
+- **Effect:** an effect of his own still running as the ball goes (one a hit or a move attached to him) disappears early; effects only, as far as the corpus shows.
+- **melee-hd:** modeled.
+- **Fix:** check the field as Mewtwo's does.
+- **Fix impact:** none on gameplay found; changes effects shown.
+- **Source:** `crates/melee-sim/src/game/ft/mewtwo/special_n.rs:143`.
 
 ### Mewtwo: a Shadow Ball field nothing stores
 
@@ -400,13 +420,13 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Mewtwo: a fully charged Shadow Ball's sound never plays
 
-- **Where:** `ftMt_SpecialN_ReleaseShadowBall` and Kirby's copy's `ftKb_SpecialNMt_801071FC`, `crates/melee-sim/src/game/ft/mewtwo/special_n.rs` (`mt_n_release`) and `crates/melee-sim/src/game/ft/kirby/special_mewtwo.rs` (`kb_mt_release`).
+- **Where:** `ftMt_SpecialN_ReleaseShadowBall` and Kirby's copy's `ftKb_SpecialNMt_801071FC`, both `crates/melee-sim/src/game/ft/mewtwo/special_n.rs` (`mt_n_release`, under Mewtwo's `MEWTWO` and Kirby's `KIRBY` alike).
 - **Defect:** both empty the charge before testing it against a full charge to pick the shot's sound, so the test compares 0 with the full charge.
 - **Effect:** a fully charged ball plays the ordinary shot's sound (`0x30DB3`), never its own (`0x30DB6`).
 - **melee-hd:** modeled.
 - **Fix:** test the charge before emptying it.
 - **Fix impact:** changes a sound only.
-- **Source:** `crates/melee-sim/src/game/ft/kirby/special_mewtwo.rs:267` and `crates/melee-sim/src/game/ft/mewtwo/special_n.rs:188`.
+- **Source:** `crates/melee-sim/src/game/ft/mewtwo/special_n.rs:288`.
 
 ### Samus: the grapple swing's victim bit from the stack
 
