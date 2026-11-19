@@ -370,9 +370,9 @@ impl Gen<'_> {
             && matches!(bin.op, BinOp::Eq(_))
         {
             let (l, r) = (&bin.left, &bin.right);
-            let other = if l.to_token_stream().to_string() == b.to_string() {
+            let other = if *b == flat(l) {
                 r
-            } else if r.to_token_stream().to_string() == b.to_string() {
+            } else if *b == flat(r) {
                 l
             } else {
                 return err(guard, "an equality that doesn't test the address");
