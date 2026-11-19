@@ -13,6 +13,8 @@ use super::super::item::{
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
 use crate::game::code::unported_call;
+use crate::game::ft::kirby::special_ness::KIRBY as NS_KIRBY;
+use crate::game::ft::ness::special_n::NESS;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -192,8 +194,8 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     if let Some(ness) = field {
         if owner == Some(ness) {
             match kind {
-                super::NESS_PK_FLUSH => r.ness_special_n_set_null(ness),
-                super::KIRBY_NESS_PK_FLUSH => r.kb_ns_forget(ness),
+                super::NESS_PK_FLUSH => r.ness_special_n_set_null(ness, &NESS),
+                super::KIRBY_NESS_PK_FLUSH => r.ness_special_n_set_null(ness, &NS_KIRBY),
                 _ => {}
             }
         }
@@ -246,8 +248,8 @@ pub fn start(r: &mut Running, gobj: GObjId) {
 /// Whether the flash's owner (`xDE0`) still charges it.
 fn owner_holding(r: &mut Running, gobj: GObjId, owner: GObjId) -> bool {
     match item(r.game, gobj).kind {
-        super::NESS_PK_FLUSH => r.ness_special_n_holding(owner),
-        super::KIRBY_NESS_PK_FLUSH => r.kb_ns_holding(owner),
+        super::NESS_PK_FLUSH => r.ness_special_n_holding(owner, &NESS),
+        super::KIRBY_NESS_PK_FLUSH => r.ness_special_n_holding(owner, &NS_KIRBY),
         // The original reads a register it never set.
         _ => unported_call("itNesspkflash_UnkMotion0_Anim on another kind"),
     }

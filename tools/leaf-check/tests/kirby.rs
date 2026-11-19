@@ -78,6 +78,7 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::kirby::special_mewtwo::KIRBY as MT_KIRBY;
+use melee_sim::game::ft::kirby::special_ness::KIRBY as NS_KIRBY;
 use melee_sim::game::ft::kirby::special_purin::KIRBY;
 use melee_sim::game::ft::kirby::special_samus::KIRBY as SS_KIRBY;
 use melee_sim::game::handles::CodeRef;
@@ -504,7 +505,7 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftKb_SpecialNFx_800FDD14" => return b(g.kb_fx_no_blaster(Some(gobj))),
         "ftKb_SpecialNFx_800FDD4C" => return Ret::Int(g.kb_fx_blaster_action(Some(gobj)) as u32),
         "ftKb_SpecialNFx_800FDDF4" => return b(g.kb_fx_blaster_not_needed(Some(gobj))),
-        "ftKb_SpecialNNs_800FEC78" => return b(g.kb_ns_holding(gobj)),
+        "ftKb_SpecialNNs_800FEC78" => return b(g.ness_special_n_holding(gobj, &NS_KIRBY)),
         "ftKb_SpecialNSk_80105FF0" => return b(g.kb_sk_lets_go(Some(gobj))),
         "ftKb_SpecialNSk_80106020" => return Ret::Int(g.kb_sk_count(Some(gobj)) as u32),
         "ftKb_SpecialNPe_8010C4AC" => return b(g.kb_pe_done(gobj)),

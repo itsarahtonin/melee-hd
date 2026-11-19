@@ -208,7 +208,7 @@ impl Running<'_> {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
             13 => self.samus_drop_charge(gobj, &super::special_samus::KIRBY),
             1 | 22 => self.kb_fx_remove_blaster(gobj),
-            8 => self.kb_ns_let_go(gobj),
+            8 => self.ness_pkflash_set_null(gobj, &super::special_ness::KIRBY),
             9 => self.kb_pe_cleanup(gobj),
             7 => self.kb_sk_drop(gobj),
             24 => self.kb_gw_cleanup(gobj),
@@ -227,7 +227,7 @@ impl Running<'_> {
         match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
             13 => self.samus_drop_charge(gobj, &super::special_samus::KIRBY),
             1 | 22 => self.kb_fx_remove_blaster(gobj),
-            8 => self.kb_ns_let_go(gobj),
+            8 => self.ness_pkflash_set_null(gobj, &super::special_ness::KIRBY),
             9 => self.kb_pe_cleanup(gobj),
             7 => self.kb_sk_drop(gobj),
             24 => self.kb_gw_cleanup(gobj),
