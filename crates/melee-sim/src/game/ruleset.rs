@@ -26,22 +26,22 @@ use super::ucf::Ucf;
 pub struct Rules {
     /// The online determinism fixes (`Common` and `Online/Core`), as [`Rules::codes`]'s
     /// version ships them ([`Fixes`]).
-    pub slippi: bool,
+    slippi: bool,
     /// Which UCF (`game::ucf`, [`UcfCodes`]).
-    pub ucf: Ucf,
+    ucf: Ucf,
     /// Neutral spawn points.
-    pub neutral_spawn: bool,
+    neutral_spawn: bool,
     /// Wobbling prevention.
-    pub prevent_wobbling: bool,
+    prevent_wobbling: bool,
     /// Off-screen damage from the stage's camera limits.
-    pub offscreen_limits: bool,
+    offscreen_limits: bool,
     /// The Ice Climbers' freeze glitch fix.
-    pub freeze_glitch_fix: bool,
+    freeze_glitch_fix: bool,
     /// Which version of Slippi's codes the rules come from, where versions differ.
-    pub codes: CodeSet,
+    codes: CodeSet,
     /// The codes players add to their own setups that the match runs
     /// (`game::player_codes`).
-    pub player: PlayerCodes,
+    player: PlayerCodes,
     /// The C-stick in the single-player modes works as in VS, smash attacks and no camera
     /// zoom: the Slippi ruleset's own rule (Sarah, 2026-11-14), narrower than Slippi's
     /// C-Stick in Single Player (`0416B480 60000000`, which makes every caller of the
@@ -51,7 +51,7 @@ pub struct Rules {
     /// makes them: `Fighter_procInput`'s two (a computer player's C-stick and a human's) and
     /// `Camera_8002B0E0`'s (the zoom). Not one of the 27 gameplay codes a `.slp` carries; it
     /// does nothing outside the single-player modes.
-    pub c_stick_1p: bool,
+    c_stick_1p: bool,
 }
 
 /// What a code list turns on, as `game::slippi` decodes it: the rules before the version's
