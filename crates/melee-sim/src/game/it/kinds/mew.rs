@@ -13,7 +13,8 @@ use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 
 pub const SPAWNED: u32 = 0x802D_3B18;
-pub const EVT_UNK: u32 = 0x802D_3B6C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_3B6C;
 pub const OUT_LANDED: u32 = 0x802D_3B8C;
 pub const ANIM1: u32 = 0x802D_3C50;
 pub const PHYS1: u32 = 0x802D_3C90;

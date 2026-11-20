@@ -18,7 +18,8 @@ pub const PICKED_UP: u32 = 0x802C_8C74;
 pub const ANIM: u32 = 0x802C_8CDC;
 pub const PHYS: u32 = 0x802C_8F20;
 pub const COLL: u32 = 0x802C_8F24;
-pub const EVT_UNK: u32 = 0x802C_8F2C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_8F2C;
 
 /// `JOBJ_HIDDEN`.
 const HIDDEN: u32 = 1 << 4;

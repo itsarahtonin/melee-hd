@@ -13,7 +13,8 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802C_7E64;
 pub const PICKED_UP: u32 = 0x802C_7F20;
 pub const ANIM: u32 = 0x802C_7FAC;
-pub const EVT_UNK: u32 = 0x802C_8018;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_8018;
 
 /// Runs one of the oil's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

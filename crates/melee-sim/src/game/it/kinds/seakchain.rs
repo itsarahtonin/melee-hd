@@ -44,7 +44,8 @@ pub const TO_SWING: u32 = 0x802B_CED4;
 pub const TO_BOUNCED: u32 = 0x802B_CF2C;
 pub const TO_RETRACT: u32 = 0x802B_CF84;
 pub const THROW: u32 = 0x802B_CFC4;
-pub const EVT_UNK: u32 = 0x802B_D10C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_D10C;
 
 /// `itSeakChain_Attrs` offsets.
 mod attr {

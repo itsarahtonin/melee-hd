@@ -11,7 +11,8 @@ use crate::vec::Vec3;
 
 pub const DMG_DEALT: u32 = 0x802B_D240;
 pub const MOTION1_ANIM: u32 = 0x802B_D2EC;
-pub const EVT_UNK: u32 = 0x802B_D30C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_D30C;
 
 /// Runs one of the explosion's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

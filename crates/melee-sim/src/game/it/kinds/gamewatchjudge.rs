@@ -13,7 +13,8 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802C_7A54;
 pub const PICKED_UP: u32 = 0x802C_7B10;
 pub const ANIM: u32 = 0x802C_7B54;
-pub const EVT_UNK: u32 = 0x802C_7D40;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_7D40;
 
 /// Runs one of the hammer's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

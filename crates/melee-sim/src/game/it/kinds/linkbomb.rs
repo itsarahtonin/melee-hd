@@ -57,7 +57,8 @@ pub const COLL_6: u32 = 0x8029_FCEC;
 pub const REFLECTED: u32 = 0x8029_FD20;
 pub const HIT_SHIELD: u32 = 0x8029_FD40;
 pub const SHIELD_BOUNCED: u32 = 0x8029_FD64;
-pub const EVT_UNK: u32 = 0x8029_FD84;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x8029_FD84;
 
 /// `itLinkBombAttributes` offsets.
 mod attr {

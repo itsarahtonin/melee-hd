@@ -27,7 +27,8 @@ pub const ABSORBED: u32 = 0x8029_BFC4;
 pub const REFLECTED: u32 = 0x8029_BFCC;
 pub const SHIELD_BOUNCED: u32 = 0x8029_C208;
 pub const HIT_SHIELD: u32 = 0x8029_C4AC;
-pub const EVT_UNK: u32 = 0x8029_C4B4;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x8029_C4B4;
 
 /// `itKirbyCutterBeamAttributes`: its speed, its life and its slowing.
 mod attr {

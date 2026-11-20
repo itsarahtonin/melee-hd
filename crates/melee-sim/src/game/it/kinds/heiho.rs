@@ -26,7 +26,8 @@ use crate::game::it::ItKind;
 
 pub const SPAWNED: u32 = 0x802D_8688;
 pub const DMG_RECEIVED: u32 = 0x802D_8EC8;
-pub const EVT_UNK: u32 = 0x802D_9A0C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_9A0C;
 pub const ANIM0: u32 = 0x802D_88CC;
 pub const PHYS0: u32 = 0x802D_88D4;
 pub const COLL0: u32 = 0x802D_8910;

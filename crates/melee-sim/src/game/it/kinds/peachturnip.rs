@@ -30,7 +30,8 @@ pub const CLANKED: u32 = 0x802B_D978;
 pub const REFLECTED: u32 = 0x802B_D99C;
 pub const HIT_SHIELD: u32 = 0x802B_D9C0;
 pub const SHIELD_BOUNCED: u32 = 0x802B_D9E4;
-pub const EVT_UNK: u32 = 0x802B_DA08;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_DA08;
 
 /// Runs one of the vegetable's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

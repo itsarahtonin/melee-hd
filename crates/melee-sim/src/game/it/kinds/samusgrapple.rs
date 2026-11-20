@@ -84,7 +84,8 @@ pub const TO_HANG: u32 = 0x802B_ABB8;
 pub const FT_DEATH: u32 = 0x802B_AC3C;
 pub const FT_FRAME: u32 = 0x802B_AC80;
 pub const FT_LINE_UP: u32 = 0x802B_ACC4;
-pub const EVT_UNK: u32 = 0x802B_AEA0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_AEA0;
 
 /// `itSamusGrappleAttributes` offsets.
 mod attr {

@@ -27,7 +27,8 @@ pub const CLANKED: u32 = 0x802C_4CB8;
 pub const HIT_SHIELD: u32 = 0x802C_4CC0;
 pub const ABSORBED: u32 = 0x802C_4CC8;
 pub const SHIELD_BOUNCED: u32 = 0x802C_4CD0;
-pub const EVT_UNK: u32 = 0x802C_4CD8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_4CD8;
 
 /// `itMDisableAttributes`: its life and speed.
 mod attr {

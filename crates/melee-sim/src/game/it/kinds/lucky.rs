@@ -38,7 +38,8 @@ pub const ANIM0: u32 = 0x802D_55DC;
 pub const PHYS0: u32 = 0x802D_5600;
 pub const COLL0: u32 = 0x802D_5620;
 pub const DMG_RECEIVED: u32 = 0x802D_5648;
-pub const EVT_UNK: u32 = 0x802D_56F0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_56F0;
 pub const EGG_SPAWNED: u32 = 0x802D_57D0;
 pub const EGG_LANDED: u32 = 0x802D_582C;
 pub const EGG_ANIM0: u32 = 0x802D_5884;
@@ -56,7 +57,8 @@ pub const EGG_ENTERED_AIR: u32 = 0x802D_5A04;
 pub const EGG_ANIM4: u32 = 0x802D_5A2C;
 pub const EGG_PHYS4: u32 = 0x802D_5A64;
 pub const EGG_COLL4: u32 = 0x802D_5A68;
-pub const EGG_EVT_UNK: u32 = 0x802D_5A9C;
+#[doc(alias("EGG_EVT_UNK"))]
+pub const EGG_FORGET: u32 = 0x802D_5A9C;
 
 /// Its variables past the release's (`itLucky_ItemVars`): the state it's in or goes to next
 /// (`x60`: 2 starting to lay, 3 laying, 4 done), the eggs left to lay (`x64`), and whether

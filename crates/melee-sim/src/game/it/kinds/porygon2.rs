@@ -18,7 +18,8 @@ pub const LEAVE: u32 = 0x802D_5C00;
 pub const ANIM1: u32 = 0x802D_5C60;
 pub const PHYS1: u32 = 0x802D_5CB0;
 pub const COLL1: u32 = 0x802D_5CD0;
-pub const EVT_UNK: u32 = 0x802D_5CD8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_5CD8;
 
 /// Runs one of Porygon2's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

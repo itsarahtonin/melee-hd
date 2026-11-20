@@ -23,7 +23,8 @@ use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802C_A49C;
 pub const LANDED_NOTHING: u32 = 0x802C_A534;
-pub const EVT_UNK: u32 = 0x802C_A538;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_A538;
 pub const ANIM0: u32 = 0x802C_A5D8;
 pub const PHYS0: u32 = 0x802C_A618;
 pub const COLL0: u32 = 0x802C_A654;
@@ -40,7 +41,8 @@ pub const COLL3: u32 = 0x802C_AAE8;
 pub const WATER_SPAWNED: u32 = 0x802C_ACD0;
 pub const WATER_HIT_SHIELD: u32 = 0x802C_ADC0;
 pub const WATER_DMG_DEALT: u32 = 0x802C_ADC8;
-pub const WATER_EVT_UNK: u32 = 0x802C_ADD0;
+#[doc(alias("WATER_EVT_UNK"))]
+pub const WATER_FORGET: u32 = 0x802C_ADD0;
 pub const WATER_ANIM: u32 = 0x802C_AE60;
 pub const WATER_PHYS: u32 = 0x802C_AE94;
 pub const WATER_COLL: u32 = 0x802C_AFB4;

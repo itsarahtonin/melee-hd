@@ -34,7 +34,8 @@ pub const STOMPED: u32 = 0x802D_C83C;
 pub const PICKED_UP: u32 = 0x802D_D4F4;
 pub const DROPPED: u32 = 0x802D_D59C;
 pub const THROWN: u32 = 0x802D_D67C;
-pub const EVT_UNK: u32 = 0x802D_D7D0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_D7D0;
 pub const ANIM1: u32 = 0x802D_C910;
 pub const PHYS1: u32 = 0x802D_C918;
 pub const COLL1: u32 = 0x802D_C954;

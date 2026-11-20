@@ -25,7 +25,8 @@ pub const SIT_PHYS: u32 = 0x802F_3260;
 pub const SIT_COLL: u32 = 0x802F_3264;
 pub const BREAK_ANIM: u32 = 0x802F_32F8;
 pub const DMG_RECEIVED: u32 = 0x802F_3330;
-pub const EVT_UNK: u32 = 0x802F_3374;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802F_3374;
 
 /// What the egg lay hands the egg (`itYoshiEggLay_DatAttrs`): where it's laid and how fast,
 /// its facing, its lifetime, its damage behavior (`x24`, the item's `xC98`) and how much each

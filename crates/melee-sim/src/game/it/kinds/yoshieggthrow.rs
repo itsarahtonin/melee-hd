@@ -26,7 +26,8 @@ pub const CLANKED: u32 = 0x802B_2D50;
 pub const REFLECTED: u32 = 0x802B_2E5C;
 pub const HIT_SHIELD: u32 = 0x802B_2E7C;
 pub const SHIELD_BOUNCED: u32 = 0x802B_2F88;
-pub const EVT_UNK: u32 = 0x802B_2FA8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_2FA8;
 
 /// `itYoshiEggThrowAttributes`: the flight's lifetime and the broken shell's.
 mod attr {

@@ -17,7 +17,8 @@ pub const HITLAG_END: u32 = 0x802B_DC18;
 pub const PICKED_UP: u32 = 0x802B_DC74;
 pub const MOTION2_ANIM: u32 = 0x802B_DCC0;
 pub const ACCESSORY: u32 = 0x802B_DD3C;
-pub const EVT_UNK: u32 = 0x802B_DDF8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_DDF8;
 
 /// Runs one of the parasol's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

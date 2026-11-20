@@ -13,7 +13,8 @@ pub const DESTROYED: u32 = 0x802C_62F8;
 pub const PICKED_UP: u32 = 0x802C_63B4;
 pub const MOTION3_ANIM: u32 = 0x802C_64D0;
 pub const MOTION2_ANIM: u32 = 0x802C_653C;
-pub const EVT_UNK: u32 = 0x802C_65C4;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_65C4;
 
 /// Runs one of the sprayer's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

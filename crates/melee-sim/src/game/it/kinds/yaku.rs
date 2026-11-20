@@ -28,7 +28,8 @@ pub const DMG_DEALT: u32 = 0x802E_6F7C;
 pub const DMG_RECEIVED: u32 = 0x802E_6FC0;
 /// `it_802E7054`, the touch callback (`Item::touched`).
 pub const TOUCHED: u32 = 0x802E_7054;
-pub const EVT_UNK: u32 = 0x802E_709C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802E_709C;
 
 /// `it_803F8C08`, the attributes the spawn gives the kind (an `ItemAttr`, big-endian as the
 /// executable holds it): hold kind 1, `x0_78` 6, `x1_5` set, its collision box 2 each way, its

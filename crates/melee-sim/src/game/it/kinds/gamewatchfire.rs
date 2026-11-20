@@ -12,7 +12,8 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802C_69FC;
 pub const PICKED_UP: u32 = 0x802C_6AB8;
 pub const ANIM: u32 = 0x802C_6B20;
-pub const EVT_UNK: u32 = 0x802C_6C18;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_6C18;
 
 /// Runs one of the torch's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

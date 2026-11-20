@@ -24,7 +24,8 @@ use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802C_B8AC;
 pub const LANDED_NOTHING: u32 = 0x802C_B93C;
-pub const EVT_UNK: u32 = 0x802C_B940;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_B940;
 pub const LANDED: u32 = 0x802C_B960;
 pub const STAND: u32 = 0x802C_B994;
 pub const ANIM1: u32 = 0x802C_B9E0;
@@ -47,7 +48,8 @@ pub const FLAME1_SPAWNED: u32 = 0x802C_C3D4;
 pub const FLAME2_SPAWNED: u32 = 0x802C_C440;
 pub const FLAME3_SPAWNED: u32 = 0x802C_C4AC;
 pub const FLAME4_SPAWNED: u32 = 0x802C_C518;
-pub const FLAME_EVT_UNK: u32 = 0x802C_C584;
+#[doc(alias("FLAME_EVT_UNK"))]
+pub const FLAME_FORGET: u32 = 0x802C_C584;
 pub const FLAME_REFLECTED: u32 = 0x802C_C5A4;
 pub const FLAME_HIT_SHIELD: u32 = 0x802C_C5C4;
 pub const FLAME_ABSORBED: u32 = 0x802C_C5CC;

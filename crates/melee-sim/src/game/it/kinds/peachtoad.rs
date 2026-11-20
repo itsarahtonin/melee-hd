@@ -19,7 +19,8 @@ pub const DESTROYED: u32 = 0x802B_DEFC;
 pub const PICKED_UP: u32 = 0x802B_DFE0;
 pub const MOTION0_ANIM: u32 = 0x802B_E02C;
 pub const MOTION1_ANIM: u32 = 0x802B_E168;
-pub const EVT_UNK: u32 = 0x802B_E1F4;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_E1F4;
 
 /// Runs one of Toad's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

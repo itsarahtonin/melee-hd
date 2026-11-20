@@ -25,7 +25,8 @@ pub const REFLECTED: u32 = 0x802B_314C;
 pub const ANIM: u32 = 0x802B_3294;
 pub const PHYS: u32 = 0x802B_32C8;
 pub const COLL: u32 = 0x802B_3324;
-pub const EVT_UNK: u32 = 0x802B_3348;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_3348;
 
 /// `StarAttrs`: the speed it starts with and its acceleration, both along its facing.
 mod attr {

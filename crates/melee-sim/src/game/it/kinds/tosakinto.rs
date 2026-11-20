@@ -17,7 +17,8 @@ use crate::lb::sound_obj::SoundParams;
 use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802C_8F4C;
-pub const EVT_UNK: u32 = 0x802C_8FC4;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_8FC4;
 pub const LANDED: u32 = 0x802C_8FE4;
 pub const FLOP: u32 = 0x802C_90E8;
 pub const ANIM2: u32 = 0x802C_9190;

@@ -28,7 +28,8 @@ pub const CLANKED: u32 = 0x802A_D384;
 pub const ABSORBED: u32 = 0x802A_D38C;
 pub const SHIELD_BOUNCED: u32 = 0x802A_D3B0;
 pub const HIT_SHIELD: u32 = 0x802A_D450;
-pub const EVT_UNK: u32 = 0x802A_D458;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_D458;
 
 /// `itKoopaFlame_Attributes`: its life, its hitbox's, its speed's and angle's ranges.
 mod attr {

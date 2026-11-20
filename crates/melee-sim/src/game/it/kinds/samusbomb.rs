@@ -52,7 +52,8 @@ pub const EXPLODE: u32 = 0x802B_53CC;
 #[doc(alias = "itSamusbomb_UnkMotion3_Anim")]
 pub const ANIM_3: u32 = 0x802B_5458;
 pub const BLAST: u32 = 0x802B_5478;
-pub const EVT_UNK: u32 = 0x802B_54E4;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_54E4;
 
 /// `itSamusBombAttributes`.
 mod attr {

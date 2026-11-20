@@ -14,7 +14,8 @@ pub const DESTROYED: u32 = 0x802A_DC04;
 pub const REMOVE: u32 = 0x802A_DC34;
 pub const SPAWN: u32 = 0x802A_DC54;
 pub const PICKED_UP: u32 = 0x802A_DD88;
-pub const EVT_UNK: u32 = 0x802A_DDB0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_DDB0;
 
 /// Runs one of the hammer's events, if `addr` is one.
 #[melee_callbacks::callbacks(Proc)]

@@ -21,7 +21,8 @@ pub const PICKED_UP: u32 = 0x802B_1AAC;
 pub const ANIM: u32 = 0x802B_1AD4;
 pub const PHYS: u32 = 0x802B_1C34;
 pub const COLL: u32 = 0x802B_1C38;
-pub const EVT_UNK: u32 = 0x802B_1C40;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_1C40;
 
 /// Runs one of the needles' predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

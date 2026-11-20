@@ -28,7 +28,8 @@ pub const FLAME_CLANKED: u32 = 0x802D_6830;
 pub const FLAME_ABSORBED: u32 = 0x802D_6838;
 pub const FLAME_SHIELD_BOUNCED: u32 = 0x802D_6840;
 pub const FLAME_HIT_SHIELD: u32 = 0x802D_6848;
-pub const FLAME_EVT_UNK: u32 = 0x802D_6850;
+#[doc(alias("FLAME_EVT_UNK"))]
+pub const FLAME_FORGET: u32 = 0x802D_6850;
 pub const SPAWNED: u32 = 0x802D_6870;
 pub const ANIM0: u32 = 0x802D_6978;
 pub const PHYS0: u32 = 0x802D_699C;
@@ -42,7 +43,8 @@ pub const COLL2: u32 = 0x802D_6E6C;
 pub const ANIM3: u32 = 0x802D_6E98;
 pub const PHYS3: u32 = 0x802D_6ED0;
 pub const DMG_RECEIVED: u32 = 0x802D_6F00;
-pub const EVT_UNK: u32 = 0x802D_6FB0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_6FB0;
 
 /// Its variables past the release's (`itMaril_ItemVars`): the flag byte whose top bit says
 /// it's turning round (`x60.x0_s.x0`), its walking speed (`x64`), `x68`, and the turn's step

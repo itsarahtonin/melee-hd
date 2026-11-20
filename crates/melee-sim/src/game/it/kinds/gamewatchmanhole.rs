@@ -13,7 +13,8 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802C_66E8;
 pub const PICKED_UP: u32 = 0x802C_67A4;
 pub const ANIM: u32 = 0x802C_6808;
-pub const EVT_UNK: u32 = 0x802C_68D8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_68D8;
 
 /// Runs one of the manhole's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

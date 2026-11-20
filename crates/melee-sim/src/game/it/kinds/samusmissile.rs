@@ -40,7 +40,8 @@ pub const BURST_HOMING: u32 = 0x802B_701C;
 #[doc(alias = "itSamusmissile_UnkMotion3_Anim")]
 pub const ANIM_BURST: u32 = 0x802B_7080;
 pub const BURST_SUPER: u32 = 0x802B_70A0;
-pub const EVT_UNK: u32 = 0x802B_7104;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_7104;
 
 /// `itSamusMissileAttributes`.
 mod attr {

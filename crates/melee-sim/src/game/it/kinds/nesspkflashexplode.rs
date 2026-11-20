@@ -30,7 +30,8 @@ pub const ABSORBED: u32 = 0x802A_FD54;
 pub const SHIELD_BOUNCED: u32 = 0x802A_FD5C;
 #[doc(alias = "itNessPKFlashExplode_Logic103_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802A_FD64;
-pub const EVT_UNK: u32 = 0x802A_FD6C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_FD6C;
 
 /// `itFlashExplAttributes`: the flash's size it scales by, the first and the grown scale, and
 /// the damage's base and growth.

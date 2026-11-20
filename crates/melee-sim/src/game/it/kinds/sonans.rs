@@ -15,7 +15,8 @@ use crate::hsd::jobj;
 
 pub const SPAWNED: u32 = 0x802C_D44C;
 pub const LANDED: u32 = 0x802C_D4D8;
-pub const EVT_UNK: u32 = 0x802C_D4DC;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_D4DC;
 pub const SWING: u32 = 0x802C_D4FC;
 pub const DMG_DEALT: u32 = 0x802C_D7B8;
 pub const DMG_RECEIVED: u32 = 0x802C_D7D4;

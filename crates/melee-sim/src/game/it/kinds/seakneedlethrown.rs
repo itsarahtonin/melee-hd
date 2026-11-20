@@ -40,7 +40,8 @@ pub const DMG_RECEIVED: u32 = 0x802B_10E4;
 pub const REFLECTED: u32 = 0x802B_1294;
 pub const SHIELD_BOUNCED: u32 = 0x802B_14DC;
 pub const HIT_SHIELD: u32 = 0x802B_16E4;
-pub const EVT_UNK: u32 = 0x802B_1890;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_1890;
 
 /// `itSeakNeedleThrownAttributes` offsets: the flight's lifetime, the lifetime once stuck or
 /// bouncing, and the speed.

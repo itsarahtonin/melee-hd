@@ -22,7 +22,8 @@ pub const HIT_SHIELD: u32 = 0x802B_E4D0;
 pub const ABSORBED: u32 = 0x802B_E4F4;
 pub const SHIELD_BOUNCED: u32 = 0x802B_E518;
 pub const REFLECTED: u32 = 0x802B_E538;
-pub const EVT_UNK: u32 = 0x802B_E578;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_E578;
 
 /// The spores' effect.
 const GFX_SPORE: i32 = 0x4D3;

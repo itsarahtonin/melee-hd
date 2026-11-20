@@ -25,7 +25,8 @@ pub const HIT_SHIELD: u32 = 0x802C_8940;
 pub const ABSORBED: u32 = 0x802C_899C;
 pub const SHIELD_BOUNCED: u32 = 0x802C_8A08;
 pub const REFLECTED: u32 = 0x802C_8A28;
-pub const EVT_UNK: u32 = 0x802C_8B08;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_8B08;
 
 /// `itGamewatchchefAttributes`: the wall's bounce (`x4`), the lifetime thrown (`x8`) and
 /// stopped (`xC`), then an entry of five floats per sausage from `x10`: its speed ahead and

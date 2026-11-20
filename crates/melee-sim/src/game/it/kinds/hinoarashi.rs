@@ -35,7 +35,8 @@ pub const COLL1: u32 = 0x802D_60A4;
 pub const ANIM2: u32 = 0x802D_60C8;
 pub const PHYS2: u32 = 0x802D_60D0;
 pub const DMG_RECEIVED: u32 = 0x802D_6100;
-pub const EVT_UNK: u32 = 0x802D_61A8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_61A8;
 
 /// Cyndaquil's variables (`itHinoarashi_ItemVars`): its flags (`x60`: `b0` its back's flame
 /// effect lit, `b1` its flames out) and the frames to its next flame sound (`x64`).

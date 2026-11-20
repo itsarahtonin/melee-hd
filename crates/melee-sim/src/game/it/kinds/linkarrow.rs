@@ -54,7 +54,8 @@ pub const DMG_DEALT: u32 = 0x802A_9A80;
 pub const HIT_SHIELD: u32 = 0x802A_9B08;
 pub const CLANKED: u32 = 0x802A_9CE0;
 pub const REFLECTED: u32 = 0x802A_9D4C;
-pub const EVT_UNK: u32 = 0x802A_A034;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_A034;
 
 /// `itLinkArrowAttributes` offsets.
 mod attr {

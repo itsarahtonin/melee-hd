@@ -13,7 +13,8 @@ use crate::vec::Vec3;
 pub const ANIM: u32 = 0x802C_8240;
 pub const PHYS: u32 = 0x802C_8350;
 pub const COLL: u32 = 0x802C_8354;
-pub const EVT_UNK: u32 = 0x802C_835C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_835C;
 
 /// Runs one of the trampoline's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

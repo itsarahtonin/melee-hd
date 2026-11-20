@@ -37,7 +37,8 @@ pub const COLL1: u32 = 0x802F_185C;
 pub const PICKED_UP: u32 = 0x802F_1888;
 pub const ANIM2: u32 = 0x802F_18E4;
 pub const PHYS2: u32 = 0x802F_18EC;
-pub const EVT_UNK: u32 = 0x802F_18F0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802F_18F0;
 pub const DMG_RECEIVED: u32 = 0x802F_1910;
 pub const ANIM3: u32 = 0x802F_1C68;
 pub const PHYS3: u32 = 0x802F_1C70;

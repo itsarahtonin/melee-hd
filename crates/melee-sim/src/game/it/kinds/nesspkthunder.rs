@@ -42,7 +42,8 @@ pub const ABSORBED: u32 = 0x802A_C338;
 pub const SHIELD_BOUNCED: u32 = 0x802A_C35C;
 #[doc(alias = "it_802AC3F8")]
 pub const HIT_SHIELD: u32 = 0x802A_C3F8;
-pub const EVT_UNK: u32 = 0x802A_C41C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_C41C;
 
 /// `itPKThunderAttributes`: the lifetime, the speed, the first angle (degrees), the stick's
 /// threshold and the turn (degrees a frame).

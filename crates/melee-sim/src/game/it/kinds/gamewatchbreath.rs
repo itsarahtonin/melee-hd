@@ -11,7 +11,8 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802C_7310;
 pub const PICKED_UP: u32 = 0x802C_73CC;
 pub const ANIM: u32 = 0x802C_744C;
-pub const EVT_UNK: u32 = 0x802C_74B8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_74B8;
 
 /// Runs one of the Sparky's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

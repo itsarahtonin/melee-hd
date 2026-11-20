@@ -51,7 +51,8 @@ pub const REFLECTED: u32 = 0x802A_B2AC;
 pub const CLANKED: u32 = 0x802A_B3C0;
 // `itNesspkflash_Logic102_Absorbed`: dead, no script of the kind opens a hitbox (ledger/dead.txt).
 pub const ABSORBED: u32 = 0x802A_B3C8;
-pub const EVT_UNK: u32 = 0x802A_B3D0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_B3D0;
 
 /// `itFlashAttributes`.
 mod attr {

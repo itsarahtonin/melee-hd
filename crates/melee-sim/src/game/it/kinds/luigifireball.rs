@@ -30,7 +30,8 @@ pub const HIT_SHIELD: u32 = 0x802C_04C0;
 pub const ABSORBED: u32 = 0x802C_04C8;
 #[doc(alias = "itLuigiFireball_Logic89_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x802C_04D0;
-pub const EVT_UNK: u32 = 0x802C_04F0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_04F0;
 
 /// `itUnkAttributes`: the speed, the lifetime and the slowest speed a bounce keeps it.
 mod attr {

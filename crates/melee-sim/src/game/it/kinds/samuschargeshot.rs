@@ -61,7 +61,8 @@ pub const REFLECTED: u32 = 0x802B_5FF0;
 #[doc(alias = "itSamusChargeshot_Logic108_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802B_613C;
 pub const SHIELD_BOUNCED: u32 = 0x802B_6144;
-pub const EVT_UNK: u32 = 0x802B_62B0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_62B0;
 
 /// `itSamusChargeShot_Attributes`.
 mod attr {

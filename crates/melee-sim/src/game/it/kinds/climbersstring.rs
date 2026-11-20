@@ -37,7 +37,8 @@ pub const PAY_OUT: u32 = 0x802C_28DC;
 pub const FALL: u32 = 0x802C_29E8;
 pub const REEL: u32 = 0x802C_2AF4;
 pub const PICKED_UP: u32 = 0x802C_37BC;
-pub const EVT_UNK: u32 = 0x802C_3AA4;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_3AA4;
 
 /// `itClimbersStringAttributes` offsets.
 mod attr {

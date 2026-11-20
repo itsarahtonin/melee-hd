@@ -11,7 +11,8 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802C_6D3C;
 pub const PICKED_UP: u32 = 0x802C_6DF8;
 pub const ANIM: u32 = 0x802C_6E8C;
-pub const EVT_UNK: u32 = 0x802C_6F20;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_6F20;
 
 /// Runs one of the parachute's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

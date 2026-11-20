@@ -29,7 +29,8 @@ const UNK_0X1: u32 = 1;
 pub const SPAWNED: u32 = 0x802E_B5C8;
 pub const DMG_RECEIVED: u32 = 0x802E_B684;
 pub const DMG_DEALT: u32 = 0x802E_B6A8;
-pub const EVT_UNK: u32 = 0x802E_C850;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802E_C850;
 pub const ANIM0: u32 = 0x802E_B808;
 pub const PHYS0: u32 = 0x802E_B810;
 pub const COLL0: u32 = 0x802E_B84C;

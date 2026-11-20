@@ -24,7 +24,8 @@ pub const COLL: u32 = 0x802A_F848;
 pub const ANIM_6: u32 = 0x802A_F90C;
 pub const PHYS_6: u32 = 0x802A_F914;
 pub const COLL_6: u32 = 0x802A_F918;
-pub const EVT_UNK: u32 = 0x802A_F920;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_F920;
 
 /// The states for each of his bow states (`it_803F6F08`), and the state of the same draw on
 /// the other footing, which keeps its frame (`it_803F6F24`).

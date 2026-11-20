@@ -20,7 +20,8 @@ use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802D_42C4;
 pub const LANDED_NOTHING: u32 = 0x802D_43AC;
-pub const EVT_UNK: u32 = 0x802D_43B0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_43B0;
 pub const ANIM0: u32 = 0x802D_4564;
 pub const PHYS0: u32 = 0x802D_472C;
 pub const COLL0: u32 = 0x802D_48A8;
@@ -37,7 +38,8 @@ pub const STAR_SHIELD_BOUNCED: u32 = 0x802D_4F08;
 pub const STAR_REFLECTED: u32 = 0x802D_4F28;
 pub const STAR_ABSORBED: u32 = 0x802D_4F48;
 pub const STAR_HIT_SHIELD: u32 = 0x802D_4F50;
-pub const STAR_EVT_UNK: u32 = 0x802D_4F58;
+#[doc(alias("STAR_EVT_UNK"))]
+pub const STAR_FORGET: u32 = 0x802D_4F58;
 pub const STAR_ANIM: u32 = 0x802D_4FFC;
 pub const STAR_PHYS: u32 = 0x802D_5044;
 pub const STAR_COLL: u32 = 0x802D_5048;

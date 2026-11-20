@@ -22,7 +22,8 @@ use crate::vec::Vec3;
 pub const SPAWNED: u32 = 0x802C_9D40;
 pub const LANDED_NOTHING: u32 = 0x802C_9DFC;
 pub const DESTROYED: u32 = 0x802C_9E00;
-pub const EVT_UNK: u32 = 0x802C_9E24;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_9E24;
 pub const OUT_LANDED: u32 = 0x802C_9E44;
 pub const ANIM0: u32 = 0x802C_9EF0;
 pub const PHYS0: u32 = 0x802C_9F74;

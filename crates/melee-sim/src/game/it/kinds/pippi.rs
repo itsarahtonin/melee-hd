@@ -11,7 +11,8 @@ use crate::hsd::gobj::GObjId;
 
 pub const SPAWNED: u32 = 0x802D_3260;
 pub const LANDED: u32 = 0x802D_32D8;
-pub const EVT_UNK: u32 = 0x802D_32DC;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_32DC;
 pub const ANIM1: u32 = 0x802D_32FC;
 pub const PHYS1: u32 = 0x802D_3370;
 pub const COLL1: u32 = 0x802D_33AC;

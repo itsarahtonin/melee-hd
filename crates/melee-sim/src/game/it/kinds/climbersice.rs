@@ -54,7 +54,8 @@ pub const HIT_SHIELD: u32 = 0x802C_1FF8;
 pub const ABSORBED: u32 = 0x802C_20E4;
 #[doc(alias = "itClimbersIce_Logic90_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x802C_20EC;
-pub const EVT_UNK: u32 = 0x802C_210C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_210C;
 
 /// `itClimbersIceAttributes` offsets.
 mod attr {

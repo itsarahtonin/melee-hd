@@ -11,7 +11,8 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802C_7044;
 pub const PICKED_UP: u32 = 0x802C_7100;
 pub const ANIM: u32 = 0x802C_7180;
-pub const EVT_UNK: u32 = 0x802C_71EC;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_71EC;
 
 /// Runs one of the turtle's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

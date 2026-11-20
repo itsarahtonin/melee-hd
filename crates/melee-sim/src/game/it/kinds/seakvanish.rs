@@ -13,7 +13,8 @@ pub const SPAWN: u32 = 0x802B_1C60;
 pub const DMG_DEALT: u32 = 0x802B_1D38;
 pub const INIT: u32 = 0x802B_1D40;
 pub const ANIM: u32 = 0x802B_1DAC;
-pub const EVT_UNK: u32 = 0x802B_1DCC;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_1DCC;
 
 /// Runs one of the flash's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
