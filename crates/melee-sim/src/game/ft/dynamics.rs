@@ -516,23 +516,6 @@ impl Running<'_> {
 }
 
 impl Game {
-    /// Whether Slippi's DynamicsFix runs (`ftCo_8009DD94+0x2FC`,
-    /// [`Running::setup_dirty_matrices`]): a `Common` code of both of Slippi Dolphin's code
-    /// sets, unconditional, so in every match Slippi Dolphin runs, its playback's and its live
-    /// play's alike, though no `.slp` lists it. So in playback, and under the Slippi ruleset in
-    /// every match, live or kept in the menus' session (Sudden Death, the single-player modes,
-    /// the attract match); never under Vanilla (Sarah, 2026-11-16: "if slippi differs between
-    /// live play and playback, so too should we in the same way"). The oracle can turn it off
-    /// (`oracle_hooks::set_dynamics_fix_off`), to see what else its comparison finds.
-    pub fn dynamics_fix(&self) -> bool {
-        #[cfg(feature = "oracle-hooks")]
-        if super::super::oracle_hooks::dynamics_fix_off() {
-            return false;
-        }
-        self.playback.is_some() || self.ruleset == super::super::state::Ruleset::Slippi
-    }
-
-    /// Takes the first free dynamics link (`cur_data`), or none when they're all in use.
     fn pop_dynamics_link(&mut self) -> Option<DynamicsId> {
         let link = self.ft.dynamics_free?;
         self.ft.dynamics_free = self.fighter_dynamics[link.0].next;

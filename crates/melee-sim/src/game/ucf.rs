@@ -172,7 +172,7 @@ impl Running<'_> {
     ///
     /// The Gecko code at `0x800C9A44`; the caller has flipped the facing already.
     pub fn ucf_dashback(&mut self, gobj: GObjId) {
-        match self.game.rules.ucf {
+        match self.game.rules.ucf_dashback() {
             Ucf::Off => {}
             Ucf::V0_8 => self.ucf08_dashback(gobj),
             Ucf::V0_84 => self.ucf084_dashback(gobj),
@@ -281,7 +281,7 @@ impl Running<'_> {
     ///
     /// The Gecko code at `0x800908F4`.
     pub fn ucf_tumble(&self, gobj: GObjId, t: f64) -> bool {
-        match self.game.rules.ucf {
+        match self.game.rules.ucf_tumble() {
             Ucf::Off => unreachable!("UCF's tumble without UCF"),
             Ucf::V0_8 => self.ucf08_tumble(gobj, t),
             Ucf::V0_84 => self.ucf084_tumble(gobj, t),

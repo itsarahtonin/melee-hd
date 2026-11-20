@@ -134,77 +134,7 @@ pub const OBJ_FOG: u8 = 4;
 /// The user data kind of stage objects.
 pub const USER_DATA_GROUND: u8 = 3;
 
-/// Gameplay toggles (`docs/architecture.md`, rulesets): the Slippi ruleset's codes, each rule
-/// on or off ([`Rules::from_codes`] reads them from a replay; `game::slippi` lists them).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
-pub struct Rules {
-    /// The online determinism fixes (`Common` and `Online/Core`): among those the ported code
-    /// reaches, the stage objects' user data is zeroed when allocated (`Ground_GetStageGObj`),
-    /// and Final Destination's background cycle keeps the random seed it draws from to itself
-    /// (`grLast_8021AAB0`).
-    pub slippi: bool,
-    /// Which UCF (`game::ucf`).
-    pub ucf: super::ucf::Ucf,
-    /// Neutral spawn points.
-    pub neutral_spawn: bool,
-    /// Wobbling prevention.
-    pub prevent_wobbling: bool,
-    /// Off-screen damage from the stage's camera limits.
-    pub offscreen_limits: bool,
-    /// The Ice Climbers' freeze glitch fix.
-    pub freeze_glitch_fix: bool,
-    /// Which version of Slippi's codes the rules come from, where versions differ.
-    pub codes: super::slippi::CodeSet,
-    /// The codes players add to their own setups that the match runs
-    /// (`game::player_codes`).
-    pub player: super::player_codes::PlayerCodes,
-    /// The C-stick in the single-player modes works as in VS, smash attacks and no camera
-    /// zoom: the Slippi ruleset's own rule (Sarah, 2026-11-14), narrower than Slippi's
-    /// C-Stick in Single Player (`0416B480 60000000`, which makes every caller of the
-    /// out-of-line `gm_IsCurrently1PMode_inline` answer 0, the quake, the item table's
-    /// weight and the bonuses' progress too). Three calls of it answer 0, as the Gecko code
-    /// `0406AE04 38600000`, `0406AE9C 38600000`, `0402B0F8 38600000` (`li r3, 0` for each)
-    /// makes them: `Fighter_procInput`'s two (a computer player's C-stick and a human's) and
-    /// `Camera_8002B0E0`'s (the zoom). Not one of the 27 gameplay codes a `.slp` carries; it
-    /// does nothing outside the single-player modes.
-    pub c_stick_1p: bool,
-}
-
-/// Which ruleset a session runs from power-on (`docs/slippi-ruleset.md`): Vanilla, NTSC 1.02
-/// as the console runs it, or Slippi's, which runs Slippi Dolphin's playback set's general
-/// codes (the unlocks and the special and trophy messages off,
-/// [`super::gm::UNLOCK_CODES`]), Skip Memcard Prompt, the 27 gameplay codes and the C-stick's
-/// smash attacks in the single-player modes ([`Rules::c_stick_1p`]) from power-on, in Slippi Dolphin's floating point, with no memory card.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
-pub enum Ruleset {
-    #[default]
-    Vanilla,
-    Slippi,
-}
-
-impl Ruleset {
-    /// The floating point the session runs in: Slippi Dolphin's JIT's under the Slippi
-    /// ruleset (menus included, design call 10), the console's under Vanilla.
-    pub fn fp_mode(self) -> gekko_fp::FpMode {
-        match self {
-            Ruleset::Vanilla => gekko_fp::FpMode::Hardware,
-            Ruleset::Slippi => gekko_fp::FpMode::Slippi,
-        }
-    }
-
-    /// The gameplay rules every match of the session runs, in every scene, as Slippi Dolphin
-    /// runs its codes: none under Vanilla; under Slippi, 3.19's gameplay codes with UCF 0.84,
-    /// and the C-stick's smash attacks in the single-player modes.
-    pub fn rules(self) -> Rules {
-        match self {
-            Ruleset::Vanilla => Rules::default(),
-            Ruleset::Slippi => Rules {
-                c_stick_1p: true,
-                ..Rules::slippi_online()
-            },
-        }
-    }
-}
+pub use super::ruleset::{Rules, Ruleset};
 
 /// Cosmetic toggles (`docs/architecture.md`, simulation and presentation), as Slippi's
 /// optional codes are: each changes what the display pass draws, and with it state only the
@@ -475,7 +405,7 @@ pub struct Game {
     /// first frame's settling counts nothing, and after a pause every camera read is counted
     /// ([`super::live::DisplayPhase::lost`]).
     pub follow_playback_camera: bool,
-    /// What the players' codes keep outside the game's structs (with [`Rules::player`]).
+    /// What the players' codes keep outside the game's structs (with [`Rules`]' players' codes).
     pub player_code_state: super::player_codes::State,
     /// The rumble patterns by kind (`lb_804D63C0`, `LbRb.dat`'s `lbRumbleData`).
     pub rumble_data: Option<melee_data::archive::DataRef>,
