@@ -3561,33 +3561,51 @@ fn hammer_head() {
 #[test]
 fn green_shell() {
     leaf_check::shard_test!();
-    use melee_sim::game::it::kinds::gshell as s;
+    use melee_sim::game::it::kinds::{gshell as s, shell as sh};
     kind_direct(&[
         ("itGShell_Logic14_Spawned", Cb::Event(s::spawned)),
-        ("itGshell_UnkMotion0_Anim", Cb::Pred(s::still)),
-        ("itGshell_UnkMotion0_Phys", Cb::Event(s::idle)),
-        ("itGshell_UnkMotion0_Coll", Cb::Pred(s::coll0)),
+        ("itGshell_UnkMotion0_Anim", Cb::Pred(sh::still)),
+        ("itGshell_UnkMotion0_Phys", Cb::Event(sh::idle)),
+        (
+            "itGshell_UnkMotion0_Coll",
+            Cb::Pred(|r, g| sh::coll0(r, g, &s::GREEN)),
+        ),
         ("itGshell_UnkMotion1_Anim", Cb::Pred(s::anim1)),
-        ("itGshell_UnkMotion1_Phys", Cb::Event(s::phys_fall)),
-        ("itGshell_UnkMotion1_Coll", Cb::Pred(s::coll1)),
-        ("itGShell_Logic14_PickedUp", Cb::Event(s::picked_up)),
-        ("itGshell_UnkMotion2_Anim", Cb::Pred(s::still)),
-        ("itGshell_UnkMotion2_Phys", Cb::Event(s::idle)),
+        ("itGshell_UnkMotion1_Phys", Cb::Event(sh::phys_fall)),
+        (
+            "itGshell_UnkMotion1_Coll",
+            Cb::Pred(|r, g| sh::coll1(r, g, &s::GREEN)),
+        ),
+        (
+            "itGShell_Logic14_PickedUp",
+            Cb::Event(|r, g| sh::picked_up(r, g, &s::GREEN)),
+        ),
+        ("itGshell_UnkMotion2_Anim", Cb::Pred(sh::still)),
+        ("itGshell_UnkMotion2_Phys", Cb::Event(sh::idle)),
         ("itGshell_UnkMotion3_Anim", Cb::Pred(s::anim3)),
-        ("itGshell_UnkMotion3_Phys", Cb::Event(s::phys_fall)),
-        ("itGshell_UnkMotion3_Coll", Cb::Pred(s::coll3)),
+        ("itGshell_UnkMotion3_Phys", Cb::Event(sh::phys_fall)),
+        (
+            "itGshell_UnkMotion3_Coll",
+            Cb::Pred(|r, g| sh::coll3(r, g, &s::GREEN)),
+        ),
         ("itGshell_UnkMotion6_Anim", Cb::Pred(s::anim6)),
         ("itGshell_UnkMotion6_Phys", Cb::Event(s::phys6)),
         ("itGshell_UnkMotion6_Coll", Cb::Pred(s::coll6)),
         ("itGshell_UnkMotion8_Anim", Cb::Pred(s::anim8)),
-        ("itGshell_UnkMotion8_Phys", Cb::Event(s::phys_fall)),
-        ("itGshell_UnkMotion8_Coll", Cb::Pred(s::coll3)),
+        ("itGshell_UnkMotion8_Phys", Cb::Event(sh::phys_fall)),
+        (
+            "itGshell_UnkMotion8_Coll",
+            Cb::Pred(|r, g| sh::coll3(r, g, &s::GREEN)),
+        ),
         ("itGShell_Logic14_DmgDealt", Cb::Pred(s::dmg_dealt)),
         ("itGShell_Logic14_DmgReceived", Cb::Pred(s::dmg_received)),
-        ("itGShell_Logic14_Reflected", Cb::Pred(s::reflected)),
+        (
+            "itGShell_Logic14_Reflected",
+            Cb::Pred(|r, g| sh::reflected(r, g, &s::GREEN)),
+        ),
         ("itGShell_Logic14_Clanked", Cb::Pred(s::clanked)),
         ("itGShell_Logic14_HitShield", Cb::Pred(s::hit_shield)),
-        ("it_8028B8D8", Cb::Event(s::trail)),
+        ("it_8028B8D8", Cb::Event(|r, g| sh::trail(r, g, &s::GREEN))),
         ("it_8028B988", Cb::Event(s::count_owner_grace)),
         ("it_8028BA2C", Cb::Event(s::landed)),
         ("it_8028BAD8", Cb::Event(s::knocked)),
@@ -3610,21 +3628,36 @@ fn green_shell() {
             source,
             14,
             &[
-                ("itGShell_Logic14_Thrown", Cb::Event(s::thrown)),
-                ("itGShell_Logic14_Dropped", Cb::Event(s::dropped)),
+                (
+                    "itGShell_Logic14_Thrown",
+                    Cb::Event(|r, g| sh::thrown(r, g, &s::GREEN)),
+                ),
+                (
+                    "itGShell_Logic14_Dropped",
+                    Cb::Event(|r, g| sh::dropped(r, g, &s::GREEN)),
+                ),
                 ("itGshell_UnkMotion4_Anim", Cb::Pred(s::anim3)),
-                ("itGshell_UnkMotion4_Phys", Cb::Event(s::phys_fall)),
-                ("itGshell_UnkMotion4_Coll", Cb::Pred(s::coll3)),
-                ("itGShell_Logic14_EnteredAir", Cb::Event(s::entered_air)),
-                ("itGshell_UnkMotion9_Anim", Cb::Pred(s::still)),
-                ("itGshell_UnkMotion9_Phys", Cb::Event(s::idle)),
-                ("itGshell_UnkMotion9_Coll", Cb::Pred(s::coll9)),
+                ("itGshell_UnkMotion4_Phys", Cb::Event(sh::phys_fall)),
+                (
+                    "itGshell_UnkMotion4_Coll",
+                    Cb::Pred(|r, g| sh::coll3(r, g, &s::GREEN)),
+                ),
+                (
+                    "itGShell_Logic14_EnteredAir",
+                    Cb::Event(|r, g| sh::entered_air(r, g, &s::GREEN)),
+                ),
+                ("itGshell_UnkMotion9_Anim", Cb::Pred(sh::still)),
+                ("itGshell_UnkMotion9_Phys", Cb::Event(sh::idle)),
+                (
+                    "itGshell_UnkMotion9_Coll",
+                    Cb::Pred(|r, g| sh::skid_coll(r, g, &s::GREEN)),
+                ),
                 ("itGShell_Logic14_DmgReceived", Cb::Pred(s::dmg_received)),
                 ("itGShell_Logic14_Clanked", Cb::Pred(s::clanked)),
                 ("itGShell_Logic14_HitShield", Cb::Pred(s::hit_shield)),
                 (
                     "itGShell_Logic14_ShieldBounced",
-                    Cb::Pred(s::shield_bounced),
+                    Cb::Pred(sh::shield_bounced),
                 ),
                 ("it_8028CF68", Cb::Pred(s::jumped_on)),
                 ("it_8028BC2C", Cb::Event(s::stomped)),
@@ -3637,7 +3670,7 @@ fn green_shell() {
         "itGShell_Logic14_EvtUnk",
         &pass_owner,
         &|r, a| {
-            s::forget(r, a.gobj(0), a.opt_gobj(1));
+            sh::forget(r, a.gobj(0), a.opt_gobj(1));
             Ret::None
         },
     );
@@ -3646,22 +3679,28 @@ fn green_shell() {
 #[test]
 fn red_shell() {
     leaf_check::shard_test!();
-    use melee_sim::game::it::kinds::rshell as s;
+    use melee_sim::game::it::kinds::{rshell as s, shell as sh};
     kind_direct(&[
         ("it_3F14_Logic15_Spawned", Cb::Event(s::spawned)),
-        ("itRshell_UnkMotion0_Anim", Cb::Pred(s::still)),
-        ("itRshell_UnkMotion0_Phys", Cb::Event(s::idle)),
-        ("itRshell_UnkMotion0_Coll", Cb::Pred(s::coll0)),
-        ("itRshell_UnkMotion1_Anim", Cb::Pred(s::still)),
-        ("itRshell_UnkMotion1_Phys", Cb::Event(s::phys_fall)),
-        ("itRshell_UnkMotion1_Coll", Cb::Pred(s::coll1)),
+        ("itRshell_UnkMotion0_Anim", Cb::Pred(sh::still)),
+        ("itRshell_UnkMotion0_Phys", Cb::Event(sh::idle)),
+        (
+            "itRshell_UnkMotion0_Coll",
+            Cb::Pred(|r, g| sh::coll0(r, g, &s::RED)),
+        ),
+        ("itRshell_UnkMotion1_Anim", Cb::Pred(sh::still)),
+        ("itRshell_UnkMotion1_Phys", Cb::Event(sh::phys_fall)),
+        (
+            "itRshell_UnkMotion1_Coll",
+            Cb::Pred(|r, g| sh::coll1(r, g, &s::RED)),
+        ),
         ("itRshell_UnkMotion5_Anim", Cb::Pred(s::anim5)),
         ("itRshell_UnkMotion5_Phys", Cb::Event(s::phys5)),
         ("itRshell_UnkMotion5_Coll", Cb::Pred(s::coll5)),
         ("it_3F14_Logic15_DmgDealt", Cb::Pred(s::dmg_dealt)),
         ("it_3F14_Logic15_DmgReceived", Cb::Pred(s::dmg_received)),
         ("it_3F14_Logic15_HitShield", Cb::Pred(s::hit_shield)),
-        ("it_8028CFE0", Cb::Event(s::trail)),
+        ("it_8028CFE0", Cb::Event(|r, g| sh::trail(r, g, &s::RED))),
         ("it_8028D090", Cb::Event(s::landed)),
         ("it_8028D100", Cb::Event(s::knocked)),
         ("it_8028D26C", Cb::Event(s::stomped)),
@@ -3692,32 +3731,59 @@ fn red_shell() {
             source,
             15,
             &[
-                ("itRShell_Logic15_PickedUp", Cb::Event(s::picked_up)),
-                ("itRshell_UnkMotion2_Anim", Cb::Pred(s::still)),
-                ("itRshell_UnkMotion2_Phys", Cb::Event(s::idle)),
-                ("it_3F14_Logic15_Thrown", Cb::Event(s::thrown)),
+                (
+                    "itRShell_Logic15_PickedUp",
+                    Cb::Event(|r, g| sh::picked_up(r, g, &s::RED)),
+                ),
+                ("itRshell_UnkMotion2_Anim", Cb::Pred(sh::still)),
+                ("itRshell_UnkMotion2_Phys", Cb::Event(sh::idle)),
+                (
+                    "it_3F14_Logic15_Thrown",
+                    Cb::Event(|r, g| sh::thrown(r, g, &s::RED)),
+                ),
                 ("itRshell_UnkMotion3_Anim", Cb::Pred(s::anim3)),
-                ("itRshell_UnkMotion3_Phys", Cb::Event(s::phys_fall)),
-                ("itRshell_UnkMotion3_Coll", Cb::Pred(s::coll3)),
-                ("it_3F14_Logic15_Dropped", Cb::Event(s::dropped)),
+                ("itRshell_UnkMotion3_Phys", Cb::Event(sh::phys_fall)),
+                (
+                    "itRshell_UnkMotion3_Coll",
+                    Cb::Pred(|r, g| sh::coll3(r, g, &s::RED)),
+                ),
+                (
+                    "it_3F14_Logic15_Dropped",
+                    Cb::Event(|r, g| sh::dropped(r, g, &s::RED)),
+                ),
                 ("itRshell_UnkMotion4_Anim", Cb::Pred(s::anim3)),
-                ("itRshell_UnkMotion4_Phys", Cb::Event(s::phys_fall)),
-                ("itRshell_UnkMotion4_Coll", Cb::Pred(s::coll3)),
+                ("itRshell_UnkMotion4_Phys", Cb::Event(sh::phys_fall)),
+                (
+                    "itRshell_UnkMotion4_Coll",
+                    Cb::Pred(|r, g| sh::coll3(r, g, &s::RED)),
+                ),
                 ("itRshell_UnkMotion6_Anim", Cb::Pred(s::anim6)),
-                ("itRshell_UnkMotion6_Phys", Cb::Event(s::phys_fall)),
-                ("itRshell_UnkMotion6_Coll", Cb::Pred(s::coll3)),
-                ("it_3F14_Logic15_EnteredAir", Cb::Event(s::entered_air)),
-                ("itRshell_UnkMotion7_Anim", Cb::Pred(s::still)),
-                ("itRshell_UnkMotion7_Phys", Cb::Event(s::idle)),
-                ("itRshell_UnkMotion7_Coll", Cb::Pred(s::coll7)),
+                ("itRshell_UnkMotion6_Phys", Cb::Event(sh::phys_fall)),
+                (
+                    "itRshell_UnkMotion6_Coll",
+                    Cb::Pred(|r, g| sh::coll3(r, g, &s::RED)),
+                ),
+                (
+                    "it_3F14_Logic15_EnteredAir",
+                    Cb::Event(|r, g| sh::entered_air(r, g, &s::RED)),
+                ),
+                ("itRshell_UnkMotion7_Anim", Cb::Pred(sh::still)),
+                ("itRshell_UnkMotion7_Phys", Cb::Event(sh::idle)),
+                (
+                    "itRshell_UnkMotion7_Coll",
+                    Cb::Pred(|r, g| sh::skid_coll(r, g, &s::RED)),
+                ),
                 ("it_3F14_Logic15_DmgDealt", Cb::Pred(s::dmg_dealt)),
                 ("it_3F14_Logic15_DmgReceived", Cb::Pred(s::dmg_received)),
-                ("itRShell_Logic15_Reflected", Cb::Pred(s::reflected)),
+                (
+                    "itRShell_Logic15_Reflected",
+                    Cb::Pred(|r, g| sh::reflected(r, g, &s::RED)),
+                ),
                 ("itRShell_Logic15_Clanked", Cb::Pred(s::clanked)),
                 ("it_3F14_Logic15_HitShield", Cb::Pred(s::hit_shield)),
                 (
                     "itRShell_Logic15_ShieldBounced",
-                    Cb::Pred(s::shield_bounced),
+                    Cb::Pred(sh::shield_bounced),
                 ),
                 ("it_8028E6C0", Cb::Pred(s::jumped_on)),
                 ("it_8028D3B8", Cb::Event(s::bounced)),
@@ -3744,7 +3810,7 @@ fn red_shell() {
         "itRShell_Logic15_EvtUnk",
         &pass_owner,
         &|r, a| {
-            s::forget(r, a.gobj(0), a.opt_gobj(1));
+            sh::forget(r, a.gobj(0), a.opt_gobj(1));
             Ret::None
         },
     );
@@ -3882,7 +3948,7 @@ fn bob_omb() {
 #[test]
 fn shell_paths() {
     leaf_check::shard_test!();
-    use melee_sim::game::it::kinds::{gshell as g, rshell as s};
+    use melee_sim::game::it::kinds::{gshell as g, rshell as s, shell};
     // The trail's countdown between puffs.
     for (source, target, kind, off) in [
         ("itGshell_UnkMotion6_Anim", "it_8028B8D8", 14, 0x8),
@@ -3894,12 +3960,12 @@ fn shell_paths() {
         };
         let ours: &Ours = if kind == 14 {
             &|r, a| {
-                g::trail(r, a.gobj(0));
+                shell::trail(r, a.gobj(0), &g::GREEN);
                 Ret::None
             }
         } else {
             &|r, a| {
-                s::trail(r, a.gobj(0));
+                shell::trail(r, a.gobj(0), &s::RED);
                 Ret::None
             }
         };

@@ -136,6 +136,7 @@ pub mod seakchain;
 pub mod seakneedleheld;
 pub mod seakneedlethrown;
 pub mod seakvanish;
+pub mod shell;
 pub mod sonans;
 pub mod spycloak;
 pub mod sscope;
