@@ -660,6 +660,43 @@ The same recipe over the 11 copies left, one commit each, closest first: Mewtwo,
 | Leaf-check | Kirby, Mewtwo, Ness, Peach, Bowser, Marth, Roy, Sheik, Link, Young Link, the Ice Climbers (`nana`), Mr. Game & Watch: all pass |
 | Speed (indicative, this PC) | `melee-bench native --runs 5`, three alternating rounds of the base (`4770a3ca`) and final builds, median of the 15: `oracle-kirby-mewtwo-bf` 3,833 frames/s before, 3,855 after (+0.6%); `oracle-kirby-marth-fd` 3,540 before, 3,530 after (−0.3%); within the runs' spread (3,689 to 4,265 and 3,326 to 3,718): no change. The command, for the worker: `melee-bench native --dir DIR --runs 5 kirby-mewtwo-bf kirby-marth-fd`, the two replays copied from `local/bench/oracle-kirby3/` |
 
+### Task 11, the hookshot and the grapple beam: done (2026-11-20, `refactor/dedup-grapple` from `510e5139`)
+
+Link's and Young Link's hookshot and Samus's grapple beam are one tether in two parts, each carrying both originals' `#[doc(alias)]`:
+
+- **The item** (`it::kinds::tether`, `itlinkhookshot.c` and `itsamusgrapple.c`): its nine states (folded, shot, bouncing back, falling, drawn in, drawn in after a catch, latched, pulling, hanging), the spawn and put-away, the transitions, the fighter's three hooks, the scale (`it_802A2428`) and the forget (`evt_unk`), over a `Tether` per item (`linkhookshot::HOOKSHOT`, `samusgrapple::GRAPPLE`): its variables' shared fields, its fighter's word, states and hand, its attributes' offsets, its links' functions and its named branches. Each item's file keeps its addresses, its `run` tables, its attributes and lengths, its links (`make_links`) and their physics.
+- **The grabs** (`ft::samus::tether`, `ftCo_0D8E.c`, `ftCo_0D95.c`, `ftCo_AirCatch.c`): the grab's and dash grab's tether frames (`Running::catch_tether`: `fn_800D8EC8`, `fn_800D9228`, `fn_800D9558`, `fn_800D9930`), the air grab's (both parts of `ftCo_AirCatch_Anim`), the put-away off the ground (`fn_800D949C`, `fn_800D9C64`) and on a hit's start, over a `TetherGrab` per character (`link::catch::LINK`, `CLINK`, `samus::tether::SAMUS`): its frames, item kind, reach and hand, the beam's sparks, the hookshot's sounds. `ft::co::catch` calls the shared functions.
+
+**What differed**, besides the addresses, states (Link's air grab is `0x168`, Samus's `0x165`), attributes' offsets and hands (his thumb by its part, her `ThrowN` by its bone index), each a setting:
+
+| Setting | Hookshot | Grapple beam |
+| --- | --- | --- |
+| The hand's point (`ahead`) | 6 units along the hand's joint (`it_804D6D48`) | the joint's position |
+| `sequence`, `on_spawn`, `on_hang` | none | the button sequence: its spawn's ground or air beam (`x16`), Z lengthening the hang |
+| `animate`, `after_links` | none | every model animates after each line-up; the beam's own animations |
+| `bounces_off_surfaces` | goes on past floors and ceilings | bounces off them too (the floor's normal) |
+| `air_retract_doubles` | no | drawn in twice as fast off the ground |
+| `line_up_held`, `lines_up_on_hang` | its own line-up while latched, pulling and hanging (`it_802A7384`); lines up as it starts to hang | the usual one; none as it starts to hang |
+| `hang_frames`, `landing_lag` | his attributes' copy `xB8`, `xB4` | the character's own `xD0`; her copy's `xCC` |
+| `stale_ignore_id` | no | the spawn's `x40` is a stack word ([Melee's bugs](melee-bugs.md#samus-the-grapple-beams-ignore-id-from-the-stack)) |
+| The grabs' `reach`, `sparks`, `sfx` | 8, none, Link's or Young Link's | 2, 6 on the grab and 4 on the dash grab, none |
+
+**Left as each item's own, and why.** The links' physics (the lead, the bounce back, the fall from the hand, the reel, the pay-out, the climb, the hold, the follow, and their sag and chase helpers) differ at nearly every step: the hookshot's links fall at a constant gravity, meet the stage through their own collision (`it_802A40D0`: an island's edge, a nudge off walls, the landing clink) and keep within one length of each other, the distance's sum fused (the file's inline copies of `it_802A3C98`); the beam's swing at random (an RNG draw per link), keep between two lengths, call `it_802A3C98` unfused, and its lead and bounce take the button sequence's swing hitbox and homing. The return codes and the last link's placement differ too. Sharing their walks would put a branch on nearly every line, so the shared states call them through the `Tether`. `make_links` stays each item's (the lengths' layout, two alternating link models against three animated ones, the collision's sizes), as do the two `Lengths` (seven words against nine) and the hookshot's spinning part (`itLinkhookshot_UnkMotion8_Anim`).
+
+**The numbers.**
+
+| | |
+| --- | --- |
+| Lines | the two items' files, `ft/link/catch.rs` and `ft/samus/tether.rs`, 4,211 to 3,938 with the new `it/kinds/tether.rs` (908 lines, half of them the descriptor's and the states' docs); 292 fewer in `crates` and `tools` (1,495 added, 1,787 removed) |
+| Aliases | the same 18,078 `#[doc(alias)]` attributes after each commit (a sorted list diffed); `ledger --check` 19,827 of 19,827 each time, only the CSV's locations moved |
+| Oracle | the base build (`510e5139`) ran the full diff of every verify replay with Link, Young Link or Samus (72 of the 330 by their Game Start's characters: 732,664 ticks, no difference) and wrote per-tick whole-state goldens (the Kirby rounds' were stale: the comparer's coverage changed since); each commit's build then checked all 72: every tick's state hash equal |
+| Reach | a probe build (env-gated, never committed) over the 72, replays reaching each part for Link, Young Link and Samus: the grab's shot 14, 10 and 19; the air grab's 6, 4 and 7; the latch 6, 3 and 6; the hang 5, 3 and 1; the pull 6, 3 and 6; the fall 11, 6 and 16; the draw-in after a catch 12, 9 and 15; the bounce back only Samus's (2: the hookshot never bounced off a wall in the corpus) |
+| Mutation | one write in the shared code switched on for one fighter kind at a time fails that character's replay: the grab's shot (`tether::shoot`) Link `items-pokeball6-ps` tick 344, Young Link `stage-brinstar` 1513, Samus `items-pokeball4-fd` 2096; the air grab's shot Link `ics-link-bf-2a40237f-rf` 5034, Young Link `ylink-fox-dl` 2353, Samus `own-samus-fd` 494; the latch (`tether::latched`) Link 8167, Young Link 2357, Samus `dk-samus-bf-9da5c633` 3982; the draw-in after a catch Link 349, Young Link `stage-rainbow-cruise` 14923, Samus 2100 |
+| Sessions | 20 of the verify's 222 session jobs the trace scan tags with the three (the trace scan over-counts; picked for the tether: the hookshot's air-grab and down-air sessions, the grab sessions, the ditto, the unlocks and events with Young Link, Classic and All-Star, the long recordings), on the final build, 15 on the worker and 5 here (their data isn't on the worker): the 15 session diffs (`hookshot-air-grab`, `link-dair`, `allstar-clear`, `2026-10-06_12-04-48`, `un-grab`, `tr-ditto`, `tr-cpu`, `tie-tie4-stock`, `rr-match4b`, `m6u-adv-ylink`, `unlock-ylink`, `ev34`, `ev-b`, `ev20`, `m6u-tr-combo10`; 3,660 to 55,022 ticks) compare with no difference; the session-syncs `rec-link-dair`, `un-grab`, `m6u-adv-ylink` and `ev34` roll back clean, and `hookshot-air-grab`'s shortcut stops at tick 3518 on the heap's classes, as the verify's `session-expect.txt` expects |
+| Sync | `sync-test --rollback 7`, no difference: Link `ics-link-bf-2a40237f-rf` (14,199 ticks), Young Link `ylink-fox-dl` (10,969), Samus `own-samus-fd` (1,918) and `dk-samus-bf-9da5c633` (11,849) |
+| Leaf-check | `link`, `young_link`, `samus`, `samus_swing`, `ftcommon`, `common_stops`: all pass |
+| Speed (indicative, this PC with other agents' oracle runs on it) | `melee-bench native --runs 5`, three alternating rounds of the base (`510e5139`) and final builds, median of the 15: `grapple-samus-bf` 4,199 frames/s before, 4,189 after (runs 4,017–4,594 and 4,083–4,609); `cpu-l1-puff-l5-link-fod` 2,089 before, 2,065 after (2,047–2,139 and 2,026–2,100; its runs differ from the replay before and after alike). Within the spread. For the worker: `melee-bench native --dir DIR --runs 5 grapple-samus-bf cpu-l1-puff-l5-link-fod`, the two copied from `local/bench/oracle-m4-grapple/` and `local/bench/oracle-m4/` |
+
 ### The fast renderer
 
 Its own crates (melee-render, melee-gpu, melee-player); the `feat/linux-011` branch works in melee-gpu and melee-player now, so F2 onward should start from its merge or keep to new files.
