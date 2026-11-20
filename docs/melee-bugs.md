@@ -498,6 +498,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** sound only, but sound handles are state; not recorded further.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 80).
 
+### Sheik: Vanish explodes early when the wind-up changes between the ground and the air
+
+- **Where:** `ftSk_SpecialHi_80113324` and `ftSk_SpecialHi_80113390` (the wind-up leaving and landing on the ground), `crates/melee-sim/src/game/ft/zelda/special_hi.rs` (`teleport_start_to_air`, `teleport_start_to_ground`, which set `Teleport::start_cb`; Sheik's is her explosion, `fn_80112ED8`, under `SHEIK`).
+- **Defect:** Sheik's code is a copy of Zelda's Farore's Wind, whose wind-up changes set the wind-up's effect again as the accessory; Sheik's set her explosion there instead, which her wind-up's own start doesn't set (her travel's start does, `SHEIK.vanish_at_travel`).
+- **Effect:** when the wind-up lands or leaves the ground, the explosion goes off at once (the flash item `it::kinds::seakvanish`, its effect and sound) if no effect of the state's is out (`x2219_b0`), then again when the travel starts: two flashes. Reached in `roy-sheik-fd` (the aerial wind-up landing on its frame 23, then the travel's explosion on frame 36), `bowser-sheik-ys-63ee0a54` and `Game_20260129T133446` (the grounded wind-up leaving the ground on its frames 6 and 3), found by a probe in the scratch mutation build.
+- **melee-hd:** modeled.
+- **Fix:** set no accessory on the wind-up's changes (or the wind-up's own, if it had one).
+- **Fix impact:** changes gameplay (one flash fewer where it happens, so its hits); breaks replay and Slippi compatibility.
+- **Source:** `crates/melee-sim/src/game/ft/zelda/special_hi.rs` (`teleport_start_to_air`); refactor task 11's teleports ([refactor](refactor.md#task-11-the-teleports)).
+
 ### Zelda: Din's Fire's explosion keeps its x speed
 
 - **Where:** `itZeldadinfireexplode_UnkMotion0_Phys`, `crates/melee-sim/src/game/it/kinds/zeldadinfireexplode.rs`.
