@@ -9,6 +9,7 @@ use super::super::item::{article, change, change_state, debug_owner_bubbles, spa
 use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -16,9 +17,6 @@ use crate::hsd::jobj::{self, JObjId};
 use crate::math;
 use crate::mtx::Axis;
 use crate::vec::Vec3;
-
-/// `It_Kind_Samus_Missile`.
-pub const KIND: i32 = super::SAMUS_MISSILE;
 
 pub const SPAWN: u32 = 0x802B_62D0;
 pub const LIFE: u32 = 0x802B_63F8;
@@ -127,7 +125,7 @@ fn grandchild(r: &Running, gobj: GObjId) -> JObjId {
 #[doc(alias = "it_802B62D0")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, smash: bool, facing_dir: f32) {
     let mut spawn = SpawnItem {
-        kind: KIND,
+        kind: ItKind::SamusMissile.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

@@ -11,6 +11,8 @@ use super::super::handles::{FighterId, ItemId};
 use super::super::state::Running;
 use super::common::GA_AIR;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::lb::{collision, hitcapsule};
 use crate::math;
 use crate::vec::Vec3;
@@ -47,31 +49,6 @@ const P_LINK_ITEM: u8 = 9;
 /// `HitElement_Catch`, `HitElement_Inert`.
 const ELEMENT_CATCH: u32 = 8;
 const ELEMENT_INERT: u32 = 11;
-
-/// `Ft_Kind_Koopa`, `_GKoops`.
-const KIND_KOOPA: i32 = 5;
-const KIND_GKOOPS: i32 = 31;
-
-/// `Ft_Kind_Mario`, `_Fox`, `_Captain`, `_Kirby`, `_Peach`, `_Pikachu`, `_Mewtwo`, `_Luigi`,
-/// `_Falco`, `_Pichu`, `_Ganon`.
-const KIND_MARIO: i32 = 0;
-const KIND_FOX: i32 = 1;
-const KIND_CAPTAIN: i32 = 2;
-const KIND_KIRBY: i32 = 4;
-const KIND_PEACH: i32 = 9;
-const KIND_PIKACHU: i32 = 12;
-const KIND_MEWTWO: i32 = 16;
-const KIND_LUIGI: i32 = 17;
-const KIND_FALCO: i32 = 22;
-const KIND_PICHU: i32 = 23;
-const KIND_GANON: i32 = 25;
-
-/// `Ft_Kind_Ness`, `_Yoshi`, `_Samus`, `_Donkey`, `_Zelda`.
-const KIND_NESS: i32 = 8;
-const KIND_YOSHI: i32 = 14;
-const KIND_SAMUS: i32 = 13;
-const KIND_DONKEY: i32 = 3;
-const KIND_ZELDA: i32 = 19;
 
 /// Commands the attack checks rule out (`CpuFighter::xCC_array`) or pick from
 /// (`xA8_array`).
@@ -142,7 +119,6 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800B9A04")]
     #[doc(alias = "ftCo_800A5A28")]
     fn cpu_held_item_attack(&mut self, f: FighterId, it: ItemId, angle: f64, dist: f64) -> bool {
-        use super::super::it::kinds as k;
         if self.cpu_item_heals(it) || self.cpu_item_attacking(f) {
             return false;
         }
@@ -169,7 +145,7 @@ impl Running<'_> {
                 && angle > -0.087_266_461_923_718_45
                 && dist > 30.0
             {
-                if kind == k::STARROD { 0xF } else { 2 }
+                if kind == ItKind::StarRod { 0xF } else { 2 }
             } else {
                 0x2A
             };
@@ -177,22 +153,25 @@ impl Running<'_> {
             return true;
         }
         // `ftCo_800A5A5C`: a container.
-        if matches!(kind, k::BOX | k::TARU | k::KUSUDAMA | k::TARU_CANN) {
+        if matches!(
+            ItKind::of(kind),
+            ItKind::Box | ItKind::Taru | ItKind::Kusudama | ItKind::TaruCann
+        ) {
             self.game.fighters[f.0].cpu.xA4 = 2;
             return true;
         }
         // `ftCo_800A5A28`: an item thrown at the target.
         if matches!(
-            kind,
-            k::CAPSULE
-                | k::BOMBHEI
-                | k::DOSEI
-                | k::G_SHELL
-                | k::R_SHELL
-                | k::FREEZE
-                | k::MSBOMB
-                | k::FLIPPER
-                | k::M_BALL
+            ItKind::of(kind),
+            ItKind::Capsule
+                | ItKind::BombHei
+                | ItKind::Dosei
+                | ItKind::GShell
+                | ItKind::RShell
+                | ItKind::Freeze
+                | ItKind::MSBomb
+                | ItKind::Flipper
+                | ItKind::MBall
         ) {
             let a = if angle > 1.308_996_928_855_776_8 {
                 0xD
@@ -202,7 +181,7 @@ impl Running<'_> {
                 return false;
             } else if angle < 0.261_799_385_771_155_36 && angle > -0.261_799_385_771_155_36 {
                 0xF
-            } else if kind == k::M_BALL {
+            } else if kind == ItKind::MBall {
                 0xE
             } else {
                 return false;
@@ -224,10 +203,14 @@ impl Running<'_> {
     /// Sword or parasol.
     #[doc(alias = "ftCo_800A59E4")]
     pub(super) fn cpu_item_swung(&self, it: ItemId) -> bool {
-        use super::super::it::kinds as k;
         matches!(
-            self.game.items[it.0].kind,
-            k::HARISEN | k::STARROD | k::LIPSTICK | k::BAT | k::SWORD | k::PARASOL
+            ItKind::of(self.game.items[it.0].kind),
+            ItKind::Harisen
+                | ItKind::StarRod
+                | ItKind::LipStick
+                | ItKind::Bat
+                | ItKind::Sword
+                | ItKind::Parasol
         )
     }
 
@@ -272,10 +255,10 @@ impl Running<'_> {
             return false;
         }
         let fpp = &self.game.fighters[f.0];
-        let picked = match fpp.kind {
-            KIND_NESS => self.cpu_ness_ranged(f, angle, dist),
-            KIND_YOSHI => self.cpu_yoshi_ranged(f, angle, dist),
-            KIND_SAMUS => {
+        let picked = match fpp.fighter_kind() {
+            FighterKind::Ness => self.cpu_ness_ranged(f, angle, dist),
+            FighterKind::Yoshi => self.cpu_yoshi_ranged(f, angle, dist),
+            FighterKind::Samus => {
                 if fpp.ground_or_air == super::common::GA_GROUND {
                     false
                 } else if angle < -0.785_398_157_313_466_1 {
@@ -474,18 +457,18 @@ impl Running<'_> {
         let ground = fpp.ground_or_air == super::common::GA_GROUND;
         let off_stage = !fpp.cpu.xFA_b5;
         // Each rule: the command it rules out and the reach it tests.
-        match fpp.kind {
-            KIND_MARIO => {
+        match fpp.fighter_kind() {
+            FighterKind::Mario => {
                 if self.cpu_special_blocked(f, 22.0) {
                     self.cpu_rule_out(f, 0x1F);
                 }
             }
-            KIND_FOX | KIND_FALCO => {
+            FighterKind::Fox | FighterKind::Falco => {
                 if self.cpu_special_blocked(f, 62.0) {
                     self.cpu_rule_out(f, 0x1B);
                 }
             }
-            KIND_CAPTAIN | KIND_GANON => {
+            FighterKind::Captain | FighterKind::Ganon => {
                 if self.cpu_special_blocked(f, 102.0) {
                     self.cpu_rule_out(f, 0x26);
                 }
@@ -495,15 +478,15 @@ impl Running<'_> {
                     self.cpu_rule_out(f, 0x38);
                 }
             }
-            KIND_PIKACHU | KIND_PICHU => {
+            FighterKind::Pikachu | FighterKind::Pichu => {
                 if self.cpu_special_blocked(f, 57.0) {
                     self.cpu_rule_out(f, 0x1B);
                 }
             }
-            KIND_KOOPA | KIND_GKOOPS | KIND_YOSHI => {
-                let reach = match fpp.kind {
-                    KIND_KOOPA => 27.0,
-                    KIND_GKOOPS => 53.0,
+            FighterKind::Koopa | FighterKind::GKoopa | FighterKind::Yoshi => {
+                let reach = match fpp.fighter_kind() {
+                    FighterKind::Koopa => 27.0,
+                    FighterKind::GKoopa => 53.0,
                     _ => 16.0,
                 };
                 if ground {
@@ -514,20 +497,27 @@ impl Running<'_> {
                     self.cpu_rule_out(f, 0x26);
                 }
             }
-            KIND_LUIGI | KIND_PEACH => {
-                let reach = if fpp.kind == KIND_LUIGI { 60.0 } else { 32.0 };
+            FighterKind::Luigi | FighterKind::Peach => {
+                let reach = if fpp.kind == FighterKind::Luigi {
+                    60.0
+                } else {
+                    32.0
+                };
                 if self.cpu_special_blocked(f, reach) {
                     self.cpu_rule_out(f, 0x26);
                 }
             }
-            KIND_KIRBY => {
+            FighterKind::Kirby => {
                 if !ground && off_stage {
                     self.cpu_rule_out(f, 0x26);
                 }
                 let fpp = &self.game.fighters[f.0];
                 // His copy's kind (`u.kb.hat.kind`): Donkey Kong, Samus or Mewtwo charge.
                 let copy = fpp.u_i32(super::kirby::u::HAT_KIND);
-                if matches!(copy, KIND_DONKEY | KIND_SAMUS | KIND_MEWTWO) {
+                if matches!(
+                    FighterKind::from_id(copy),
+                    Some(FighterKind::Donkey | FighterKind::Samus | FighterKind::Mewtwo)
+                ) {
                     self.cpu_rule_out(f, 0x11);
                 } else {
                     let (scale, t) = (fpp.x34_scale.y, fpp.cpu.x44);
@@ -656,14 +646,15 @@ impl Running<'_> {
             if let Some(g) = self.game.fighters[f.0].item_gobj
                 && self.cpu_item_swung(super::super::it::item_of(self.game, g))
             {
-                use super::super::it::kinds as k;
-                let slot = match self.game.items[super::super::it::item_of(self.game, g).0].kind {
-                    k::HARISEN => Some(0),
-                    k::LIPSTICK => Some(1),
-                    k::STARROD => Some(2),
-                    k::SWORD => Some(3),
-                    k::BAT => Some(4),
-                    k::PARASOL => Some(5),
+                let slot = match ItKind::of(
+                    self.game.items[super::super::it::item_of(self.game, g).0].kind,
+                ) {
+                    ItKind::Harisen => Some(0),
+                    ItKind::LipStick => Some(1),
+                    ItKind::StarRod => Some(2),
+                    ItKind::Sword => Some(3),
+                    ItKind::Bat => Some(4),
+                    ItKind::Parasol => Some(5),
                     _ => None,
                 };
                 let reach = slot.map_or(0.0, |i| {
@@ -1123,10 +1114,10 @@ impl Running<'_> {
         // Donkey Kong's, Kirby's and Peach's first own states aren't attacks: the carry and
         // its throws (`ftDk_MS_ThrowAirFLw`), the air jumps and dash attack in the air
         // (`ftKb_MS_AttackDashAir`), the float (`ftPe_MS_FloatFallB`).
-        match fpp.kind {
-            KIND_DONKEY => ms > 368,
-            KIND_KIRBY => ms > super::kirby::ms::ATTACK_DASH_AIR,
-            KIND_PEACH => ms > super::peach::ms::FLOAT_FALL_B,
+        match fpp.fighter_kind() {
+            FighterKind::Donkey => ms > 368,
+            FighterKind::Kirby => ms > super::kirby::ms::ATTACK_DASH_AIR,
+            FighterKind::Peach => ms > super::peach::ms::FLOAT_FALL_B,
             _ => ms >= 341,
         }
     }
@@ -1214,8 +1205,8 @@ impl Running<'_> {
     fn cpu_follow_up(&mut self, f: FighterId, ranged: bool) -> bool {
         let fpp = &self.game.fighters[f.0];
         let ms = fpp.motion_id;
-        let counted = match fpp.kind {
-            KIND_NESS => {
+        let counted = match fpp.fighter_kind() {
+            FighterKind::Ness => {
                 use super::ness::ms;
                 let m = fpp.motion_id;
                 if (ms::SPECIAL_N_START..=ms::SPECIAL_N_END).contains(&m) {
@@ -1228,7 +1219,7 @@ impl Running<'_> {
                     return false;
                 }
             }
-            KIND_YOSHI => {
+            FighterKind::Yoshi => {
                 // `ftYs_MS_SpecialAirSStart_0` to `_SpecialAirSEnd`.
                 if !(0x164..=0x167).contains(&ms) {
                     return false;
@@ -1236,7 +1227,7 @@ impl Running<'_> {
                 self.cpu_steer_egg_roll(f);
                 true
             }
-            KIND_ZELDA => {
+            FighterKind::Zelda => {
                 // `ftZd_MS_SpecialSLoop` to `_SpecialAirSEnd`; Din's Fire isn't counted.
                 if !(0x158..=0x15C).contains(&ms) {
                     return false;
@@ -1244,8 +1235,8 @@ impl Running<'_> {
                 self.cpu_steer_din_fire(f);
                 return true;
             }
-            KIND_SAMUS | KIND_DONKEY if !ranged => {
-                let charging = if fpp.kind == KIND_SAMUS {
+            FighterKind::Samus | FighterKind::Donkey if !ranged => {
+                let charging = if fpp.kind == FighterKind::Samus {
                     ms == super::samus::ms::SPECIAL_N_HOLD
                 } else {
                     ms == super::donkey::ms::SPECIAL_N_LOOP
@@ -1486,7 +1477,7 @@ impl Running<'_> {
         c.xF8_b12 = 0;
         c.xF0 = None;
         c.xF4 = None;
-        if self.cpu_untargetable(f) || self.game.fighters[f.0].kind == KIND_GKOOPS {
+        if self.cpu_untargetable(f) || self.game.fighters[f.0].kind == FighterKind::GKoopa {
             return 0;
         }
         let fpp = &self.game.fighters[f.0];
@@ -1588,8 +1579,8 @@ impl Running<'_> {
             let above = mem(fp::frsp(fp::fadd(5.0, reg(mp.y))));
             g.cpu_floor(op.x, op.y, mp.x, above).is_none() && within(g)
         };
-        match other.kind {
-            KIND_GKOOPS | KIND_KOOPA => {
+        match other.fighter_kind() {
+            FighterKind::GKoopa | FighterKind::Koopa => {
                 use super::koopa::ms as kp;
                 if ms == kp::SPECIAL_LW || ms == kp::SPECIAL_AIR_LW {
                     bomb(self)
@@ -1599,11 +1590,11 @@ impl Running<'_> {
                     false
                 }
             }
-            KIND_YOSHI => {
+            FighterKind::Yoshi => {
                 use super::yoshi::ms as ys;
                 (ms == ys::SPECIAL_LW || ms == ys::SPECIAL_AIR_LW) && bomb(self)
             }
-            KIND_SAMUS => {
+            FighterKind::Samus => {
                 ms == super::samus::ms::SPECIAL_HI && op.y < mp.y && self.cpu_distance(f, o) < 30.0
             }
             _ => false,
@@ -1631,7 +1622,13 @@ impl Running<'_> {
         }
         // `It_Kind_Star`, `It_Kind_Unk4`, and `ftCo_800A5980` on the item read as a fighter.
         let kind = self.game.items[it.0].kind;
-        if kind == 10 || kind == 158 || (43..47).contains(&kind) || matches!(kind, 211..=213 | 217)
+        if kind == ItKind::Star
+            || kind == ItKind::Unk4
+            || (ItKind::Kuriboh.id()..ItKind::OctarockStone.id()).contains(&kind)
+            || matches!(
+                ItKind::from_id(kind),
+                Some(ItKind::Nokonoko | ItKind::Patapata | ItKind::Likelike | ItKind::Whitebea)
+            )
         {
             return 0;
         }
@@ -1649,7 +1646,7 @@ impl Running<'_> {
             1
         };
         let fpp = &self.game.fighters[f.0];
-        if fpp.kind == KIND_NESS && level > 3 && count >= 21 {
+        if fpp.kind == FighterKind::Ness && level > 3 && count >= 21 {
             unported_call("ftCo_800BB220 for Ness spanning 21 frames or more");
         }
         let n = fp::frsp(f64::from(count));
@@ -1728,12 +1725,11 @@ impl Running<'_> {
             }
         } else if threat == 2 {
             let item = fpp.cpu.xF4.expect("an item threat without its item");
-            use super::super::it::kinds as k;
             let ip = &self.game.items[item.0];
             let side = fp::fsubs(reg(fpp.cur_pos.x), reg(ip.pos.x)) > 0.0;
-            match ip.kind {
+            match ItKind::of(ip.kind) {
                 // `inline0`: shield by an island's end, else roll away from it.
-                k::FLIPPER | k::TARU_CANN => {
+                ItKind::Flipper | ItKind::TaruCann => {
                     if self.cpu_near_island_end(f, 1.0) {
                         self.cpu_hold_shield(f);
                     } else if side {
@@ -1743,7 +1739,7 @@ impl Running<'_> {
                     }
                 }
                 // `inline1`: roll through a Poison Mushroom.
-                k::DKINOKO => {
+                ItKind::DKinoko => {
                     if side {
                         self.cpu_roll_left(f);
                     } else {

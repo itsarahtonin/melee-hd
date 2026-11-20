@@ -14,9 +14,7 @@ use super::super::state::{Game, Running};
 use super::AnimFile;
 use super::anim_buf::{AnimBuf, Fill};
 use super::kind_tables::KINDS;
-
-/// How many fighter kinds there are (`Ft_Kind_Max`).
-pub const KIND_COUNT: usize = 33;
+use crate::game::ft::FighterKind;
 
 /// The size of a fighter's attribute block (`fighter_dat_attrs_alloc_data`).
 pub const FIGHTER_ATTRS_SIZE: usize = 0x424;
@@ -193,20 +191,20 @@ pub struct DataGlobals {
     /// The files the frontend has loaded (an input, never compared as state).
     pub files: LoadedFiles,
     /// Each kind's `ftData`, once loaded (`gFtDataList`).
-    pub data_list: [Option<DataRef>; KIND_COUNT],
+    pub data_list: [Option<DataRef>; FighterKind::COUNT],
     /// Each kind's costumes' models (`CostumeListsForeachCharacter[kind].costume_list`).
-    pub costumes: [[Costume; MAX_COSTUMES]; KIND_COUNT],
+    pub costumes: [[Costume; MAX_COSTUMES]; FighterKind::COUNT],
     /// Each kind's demo animations' address (`ftData_UnkIntPairs[kind].data`), which the
     /// fighters' first setup clears.
-    pub demo_anims: [u32; KIND_COUNT],
+    pub demo_anims: [u32; FighterKind::COUNT],
     /// Each kind's results file and its demo animations' symbol's offset there, as the
     /// results screen last set them (`ftDemo_SetArchiveData`).
-    pub demo_files: [Option<(ArchiveId, u32)>; KIND_COUNT],
+    pub demo_files: [Option<(ArchiveId, u32)>; FighterKind::COUNT],
     /// What the original writes into each kind's demo animations' entries
     /// (`ftData::x14[i].x14`, `ftData_80085B98`): where each animation is in main memory.
-    pub demo_x14: [[u32; 18]; KIND_COUNT],
+    pub demo_x14: [[u32; 18]; FighterKind::COUNT],
     /// Each kind's reference count (`ft_8045996C`).
-    pub ref_counts: [i32; KIND_COUNT],
+    pub ref_counts: [i32; FighterKind::COUNT],
     pub slot_words: [Ft8045993C; 6],
 }
 
@@ -214,12 +212,12 @@ impl Default for DataGlobals {
     fn default() -> Self {
         DataGlobals {
             files: LoadedFiles::default(),
-            data_list: [None; KIND_COUNT],
-            costumes: [[Costume::default(); MAX_COSTUMES]; KIND_COUNT],
-            demo_anims: [0; KIND_COUNT],
-            demo_files: [None; KIND_COUNT],
-            demo_x14: [[0; 18]; KIND_COUNT],
-            ref_counts: [0; KIND_COUNT],
+            data_list: [None; FighterKind::COUNT],
+            costumes: [[Costume::default(); MAX_COSTUMES]; FighterKind::COUNT],
+            demo_anims: [0; FighterKind::COUNT],
+            demo_files: [None; FighterKind::COUNT],
+            demo_x14: [[0; 18]; FighterKind::COUNT],
+            ref_counts: [0; FighterKind::COUNT],
             slot_words: [Ft8045993C::default(); 6],
         }
     }
@@ -231,7 +229,7 @@ impl DataGlobals {
     /// (`ftData::x14[i].x14`) are the file's own zeros again, so a demo fighter's animation
     /// whose place this scene didn't write loads none.
     pub fn file_read(&mut self, archive: ArchiveId) {
-        for (kind, t) in KINDS.iter().enumerate().take(KIND_COUNT) {
+        for (kind, t) in KINDS.iter().enumerate().take(FighterKind::COUNT) {
             if t.dat_file
                 .is_some_and(|f| self.files.archive_id(f) == Some(archive))
             {
@@ -275,9 +273,9 @@ impl Game {
     /// Forgets every kind's data and costumes and the player slots' words, `ft_800852B0`.
     #[doc(alias = "ft_800852B0")]
     pub fn reset_fighter_data(&mut self) {
-        self.ft.anim_files.resize(KIND_COUNT, None);
+        self.ft.anim_files.resize(FighterKind::COUNT, None);
         let d = &mut self.ft.data;
-        for (kind, tables) in KINDS.iter().enumerate().take(KIND_COUNT) {
+        for (kind, tables) in KINDS.iter().enumerate().take(FighterKind::COUNT) {
             d.data_list[kind] = None;
             for c in 0..usize::from(tables.costume_count) {
                 d.costumes[kind][c].joint = None;
@@ -295,7 +293,7 @@ impl Game {
     /// Clears every kind's reference count, `ft_8008549C`.
     #[doc(alias = "ft_8008549C")]
     pub fn reset_fighter_ref_counts(&mut self) {
-        self.ft.data.ref_counts = [0; KIND_COUNT];
+        self.ft.data.ref_counts = [0; FighterKind::COUNT];
     }
 
     /// Finds a kind's `ftData` in its data file unless it has, `ftData_8008572C`.
@@ -588,7 +586,7 @@ impl Game {
     #[doc(alias = "ftData_80085A14")]
     pub fn load_anim_file(&mut self, kind: i32) -> Option<(&'static str, u32)> {
         let k = kind as usize;
-        self.ft.anim_files.resize(KIND_COUNT, None);
+        self.ft.anim_files.resize(FighterKind::COUNT, None);
         if self.ft.anim_files[k].is_some() {
             return None;
         }

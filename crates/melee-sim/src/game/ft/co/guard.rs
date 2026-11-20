@@ -10,17 +10,15 @@ use super::super::super::state::Running;
 use super::super::common::GA_GROUND;
 use super::super::motion::flags::{KEEP_GFX, SKIP_ANIM};
 use super::super::parts::TRANS_N;
-use super::checks::{KIND_YOSHI, abs};
+use super::checks::abs;
 use super::ids::ms;
 use super::{PAD_A, PAD_L_R, PAD_LR};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::math::{self, sqrt_reg};
 use crate::vec::Vec3;
-
-/// `Ft_Kind_Mars`.
-const KIND_MARS: i32 = 18;
 
 /// `ftCommon_MotionVars_guard` (`x20` is also `itemthrow`'s).
 const GUARD_X0: usize = 0x0;
@@ -137,7 +135,7 @@ impl Running<'_> {
     /// grow with a lighter press.
     fn shield_size(&self, gobj: GObjId) -> f64 {
         let fp = self.game.fighter(gobj);
-        if fp.kind == KIND_YOSHI {
+        if fp.kind == FighterKind::Yoshi {
             return reg(fp.co_attrs.initial_shield_size);
         }
         let c = self.common();
@@ -255,7 +253,7 @@ impl Running<'_> {
         self.scale_shield(gobj);
         // `inlineD0`.
         let fp = self.game.fighter(gobj);
-        if fp.kind != KIND_YOSHI {
+        if fp.kind != FighterKind::Yoshi {
             let alpha = reg(self.common().f32(0x2F4));
             let more = fp::fctiwz(fp::fmuls(
                 reg(fp.lightshield_amount),
@@ -310,9 +308,9 @@ impl Running<'_> {
     /// away).
     #[doc(alias = "ftCo_800923B4")]
     pub fn enter_guard_on(&mut self, gobj: GObjId) {
-        match self.game.fighter(gobj).kind {
-            KIND_YOSHI => self.ys_enter_guard_on(gobj),
-            KIND_MARS => {
+        match self.game.fighter(gobj).fighter_kind() {
+            FighterKind::Yoshi => self.ys_enter_guard_on(gobj),
+            FighterKind::Mars => {
                 self.enter_guard_on_common(gobj);
                 self.mars_sheathe(gobj);
             }
@@ -474,7 +472,7 @@ impl Running<'_> {
     /// Holding the shield, `ftCo_800928CC` (Yoshi has his own).
     #[doc(alias = "ftCo_800928CC")]
     pub fn enter_guard(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).kind == KIND_YOSHI {
+        if self.game.fighter(gobj).kind == FighterKind::Yoshi {
             self.ys_enter_guard(gobj);
         } else {
             self.enter_guard_common(gobj);
@@ -507,7 +505,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let (slot, health) = (i32::from(fp.player_idx), fp.shield_health);
         self.record_shield_drop(slot, health);
-        if self.game.fighter(gobj).kind == KIND_YOSHI {
+        if self.game.fighter(gobj).kind == FighterKind::Yoshi {
             self.ys_enter_guard_off(gobj);
         } else {
             self.enter_guard_off_common(gobj);
@@ -559,7 +557,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80092E50")]
     pub fn on_shield_hit(&mut self, gobj: GObjId) {
         let cape = self.game.fighter(gobj).x19B0 == 10;
-        if self.game.fighter(gobj).kind == KIND_YOSHI {
+        if self.game.fighter(gobj).kind == FighterKind::Yoshi {
             self.ys_on_shield_hit(gobj, cape);
         } else {
             self.enter_guard_set_off(gobj, cape);
@@ -787,7 +785,7 @@ impl Running<'_> {
     /// A powershield out of the raised shield, `ftCo_80093850` (Yoshi has his own).
     #[doc(alias = "ftCo_80093850")]
     pub fn enter_guard_reflect_late(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).kind == KIND_YOSHI {
+        if self.game.fighter(gobj).kind == FighterKind::Yoshi {
             self.ys_enter_guard_reflect_late(gobj);
         } else {
             self.enter_guard_reflect_late_common(gobj);
@@ -825,9 +823,9 @@ impl Running<'_> {
     /// sword away).
     #[doc(alias = "ftCo_800939B4")]
     pub fn enter_guard_reflect(&mut self, gobj: GObjId) {
-        match self.game.fighter(gobj).kind {
-            KIND_YOSHI => self.ys_enter_guard_reflect(gobj),
-            KIND_MARS => {
+        match self.game.fighter(gobj).fighter_kind() {
+            FighterKind::Yoshi => self.ys_enter_guard_reflect(gobj),
+            FighterKind::Mars => {
                 self.enter_guard_reflect_common(gobj);
                 self.mars_sheathe(gobj);
             }

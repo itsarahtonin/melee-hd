@@ -19,7 +19,9 @@ use std::collections::HashMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use melee_data::disc::Disc;
+use melee_sim::game::ft::FighterKind;
 use melee_sim::game::gr::vars::GroundVars;
+use melee_sim::game::it::ItKind;
 use melee_sim::game::state::{Game, Obj, Rules};
 use melee_sim::game::structs::S32Vec2;
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
@@ -380,7 +382,6 @@ fn slippi_opponents_side_ignores_the_display_pass() {
 /// 3.16's (r30 cleared, r5 followed) it runs too; under Vanilla's it stops by name.
 #[test]
 fn slippi_cpu_di_reads_neither_register() {
-    use melee_sim::game::ft::popo::KIND_NANA;
     use melee_sim::game::slippi::CodeSet;
     let Some(disc) = disc() else { return };
     let mut bench = Bench::open(disc, "ics-peach-ps");
@@ -420,7 +421,7 @@ fn slippi_cpu_di_reads_neither_register() {
                 m.game
                     .fighters
                     .iter()
-                    .find(|(_, f)| f.kind == KIND_NANA)
+                    .find(|(_, f)| f.kind == FighterKind::Nana)
                     .map(|(_, f)| (f.cpu.lstick.x, f.cpu.lstick.y))
                     .expect("Nana")
             })
@@ -576,7 +577,7 @@ fn a_live_match_with_samus_reads_her_swing_from_the_model() {
 /// `sscope-click-fd`.
 #[test]
 fn slippi_super_scope_stand_in_matches_the_model() {
-    use melee_sim::game::it::kinds::{S_SCOPE, sscope::ADDRESS_STAND_IN};
+    use melee_sim::game::it::kinds::sscope::ADDRESS_STAND_IN;
     use melee_sim::state_eq::StateEq;
     use melee_slippi::replay::event::POST_FRAME;
     let Some(disc) = disc() else { return };
@@ -615,7 +616,7 @@ fn slippi_super_scope_stand_in_matches_the_model() {
                     panic!("{name}: tick {t}'s events differ without the allocator model: {d}");
                 }
                 for (i, it) in on.game.items.iter() {
-                    if it.kind != S_SCOPE {
+                    if it.kind != ItKind::SScope {
                         continue;
                     }
                     let addr = it.entity.map_or(0, |g| on.game.world.gobjs.addr(g.0)) as i32;

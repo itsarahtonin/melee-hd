@@ -9,8 +9,9 @@ use gekko_fp as fp;
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::linkhookshot;
 use super::super::super::state::Running;
-use super::{KIND_CLINK, KIND_LINK, u};
+use super::u;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
@@ -47,7 +48,7 @@ impl Running<'_> {
     pub fn link_catch_tether(&mut self, gobj: GObjId, dash: bool) -> bool {
         let f = self.game.fighter_id(gobj);
         let kind = self.game.fighters[f.0].kind;
-        if kind != KIND_LINK && kind != KIND_CLINK {
+        if kind != FighterKind::Link && kind != FighterKind::Clink {
             return false;
         }
         let [out, shoot, draw_in, end] = if dash { DASH } else { GRAB };
@@ -56,7 +57,7 @@ impl Running<'_> {
         let frame = mem(fp::frsp(fp::fadd(reg(fp_.mv_f32(MV_FRAME)), 1.0)));
         fp_.set_mv_f32(MV_FRAME, reg(frame));
         let frame = reg(frame);
-        let clink = usize::from(kind != KIND_CLINK);
+        let clink = usize::from(kind != FighterKind::Clink);
         if frame == at(self, out) {
             let thumb = self.part_joint(gobj, PART_R_THUMB_NB);
             let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, thumb, None);
@@ -111,7 +112,7 @@ impl Running<'_> {
         let frame = mem(fp::frsp(fp::fadd(reg(fp_.mv_f32(MV_FRAME)), 1.0)));
         fp_.set_mv_f32(MV_FRAME, reg(frame));
         let frame = reg(frame);
-        let clink = usize::from(kind != KIND_CLINK);
+        let clink = usize::from(kind != FighterKind::Clink);
         if frame == at(self, out) {
             let thumb = self.part_joint(gobj, PART_R_THUMB_NB);
             let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, thumb, None);
@@ -177,7 +178,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800D949C")]
     pub fn link_catch_off_ground(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
-        if (kind == KIND_LINK || kind == KIND_CLINK)
+        if (kind == FighterKind::Link || kind == FighterKind::Clink)
             && let Some(hs) = self.game.fighter(gobj).u.gobj_at(u::HOOKSHOT)
         {
             linkhookshot::put_away(self, hs);

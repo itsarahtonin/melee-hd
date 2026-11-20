@@ -28,6 +28,7 @@ use crate::fpu::{mem, reg};
 use crate::game::code::unported_call;
 use crate::game::ef::{self, Arg};
 use crate::game::handles::{CodeRef, ItemLinkId};
+use crate::game::it::ItKind;
 use crate::game::state::{Obj, Running, UserData};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::{self as gobjs, GObjId};
@@ -512,7 +513,7 @@ pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Opti
         return None;
     }
     let mut spawn = SpawnItem {
-        kind: super::SAMUS_GBEAM,
+        kind: ItKind::SamusGBeam.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition(&spawn, pos, false)`.

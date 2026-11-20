@@ -8,9 +8,10 @@ use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::climbersblizzard;
 use super::super::super::state::Running;
 use super::super::sound::Track;
-use super::{KIND_POPO, addr, var};
+use super::{addr, var};
 use crate::fpu::{mem, reg};
 use crate::game::ef::Arg;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::math;
 
@@ -190,7 +191,7 @@ impl Running<'_> {
                 fp.u[var::X2230] |= 0x80;
                 self.popo_set_remove_hooks(gobj);
                 self.game.fighters[f.0].cmd_vars[0] = 0;
-                let i = usize::from(self.game.fighters[f.0].kind != KIND_POPO);
+                let i = usize::from(self.game.fighters[f.0].kind != FighterKind::Popo);
                 self.fighter_play_track(f, Track::Voice, VOICE[i], 127, 64);
                 self.fighter_play_track(f, Track::Effect2, SFX[i], 127, 64);
             }

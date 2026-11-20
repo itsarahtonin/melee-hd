@@ -16,6 +16,7 @@ use crate::hsd::gobj::GObjId;
 use super::super::phys::{
     SPEED_AWAY_FROM_FACING as FACE_BACK, SPEED_TOWARD_FACING as FACE_FORWARD,
 };
+use crate::game::ft::FighterKind;
 
 /// `enterAirStart`, `enterStart`, `enterAirEnd` and `enterEnd`.
 const ENTER_AIR_START: u32 = 0x8011_C7B0;
@@ -26,9 +27,6 @@ const ENTER_END: u32 = 0x8011_CC18;
 const LEFT_WALL: u32 = 0x3F;
 const RIGHT_WALL: u32 = 0xFC0;
 const CEILING: u32 = 0x6000;
-/// `Ft_Kind_Mars`, `Ft_Kind_Emblem`.
-const KIND_MARS: i32 = 18;
-const KIND_EMBLEM: i32 = 26;
 
 /// The flags the move keeps changing between the ground and the air (`start_mf`, `end_mf`).
 const START_MF: u32 = KEEP_COL_ANIM_HIT_STATUS
@@ -137,13 +135,13 @@ impl Running<'_> {
         if fp.x221C_b5 {
             let other = fp.unk_gobj.expect("a hit by no one");
             let ofp = self.game.fighter(other);
-            match ofp.kind {
-                KIND_MARS | KIND_EMBLEM => {
+            match ofp.fighter_kind() {
+                FighterKind::Mars | FighterKind::Emblem => {
                     if ofp.motion_id != 369 && ofp.motion_id != 371 {
                         return;
                     }
                 }
-                super::KIND_PEACH => {
+                FighterKind::Peach => {
                     if ofp.motion_id != ms::SPECIAL_N && ofp.motion_id != ms::SPECIAL_AIR_N {
                         return;
                     }

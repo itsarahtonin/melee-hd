@@ -12,6 +12,7 @@ use super::super::handles::CodeRef;
 use super::super::state::{OBJ_CAMERA, Obj, Running};
 use super::endings::toy_fall::{FMT_COLOR, FMT_DEPTH, Frame};
 use crate::fpu::{mem, reg};
+use crate::game::ft::CharacterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::sobj::{self, OBJ_SOBJ};
 use crate::vec::Vec3;
@@ -71,7 +72,6 @@ const NANA_OFFSET: Vec3 = Vec3 {
     y: 4.0,
     z: -5.0,
 };
-const CKIND_POPONANA: u8 = 0xE;
 
 /// `lbl_804735E8` and `lbl_804D65F0`: the splash's state.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
@@ -202,7 +202,7 @@ impl Running<'_> {
             let [x, y] = OFFSET[usize::from(kind)];
             let mut pos = Vec3::new(x, y, 0.0);
             g.set_player_pos(slot, pos);
-            if kind == CKIND_POPONANA {
+            if kind == CharacterKind::IceClimbers {
                 pos.x = mem(fp::fadds(reg(pos.x), reg(NANA_OFFSET.x)));
                 pos.y = mem(fp::fadds(reg(pos.y), reg(NANA_OFFSET.y)));
                 pos.z = mem(fp::fadds(reg(pos.z), reg(NANA_OFFSET.z)));

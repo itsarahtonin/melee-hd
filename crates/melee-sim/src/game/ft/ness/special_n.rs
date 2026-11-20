@@ -10,11 +10,12 @@
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{self, nesspkflash};
+use super::super::super::it::kinds::nesspkflash;
 use super::super::super::state::Running;
 use super::super::motion::flags::*;
 use super::{PART_L2ND_NA, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// What tells one PK Flash from the other.
@@ -44,7 +45,7 @@ pub const NESS: PkFlash = PkFlash {
     attrs: 0,
     u: 0,
     bone: PART_L2ND_NA,
-    flash_kind: kinds::NESS_PK_FLUSH,
+    flash_kind: ItKind::NessPKFlush.id(),
     on_death: addr::ON_DAMAGE,
     on_damage: addr::ON_DAMAGE,
     clears_hooks: true,

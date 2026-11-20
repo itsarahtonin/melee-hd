@@ -2,26 +2,18 @@
 //! reaches, `ftpickupitem_8009447C`, and the caught item's statistic, `pl_8003E854`).
 
 use super::super::super::ef::{self, SpawnKind};
-use super::super::super::it::kinds::{
-    FOODS, HAMMER, HEART, METALB, RABBITC, SPYCLOAK, TOMATO, WSTAR,
-};
 use super::super::super::it::{item, lib26b1, release};
 use super::super::super::state::{Running, UserData};
 use crate::fpu::reg;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
-/// `It_Kind_WStar`, which the fighter rides from its top joint.
-const IT_KIND_WSTAR: i32 = 0x1D;
 /// The catch's sparkle.
 const GFX_CATCH: i32 = 0x422;
 /// The bonus a caught item counts (`pl_80038824`'s 0x9A), and Mr. Saturn's (0xB6).
 const BONUS_CATCH: usize = 0x9A;
 const BONUS_DOSEI: usize = 0xB6;
-const IT_KIND_DOSEI: i32 = 7;
-const IT_KIND_BOMBHEI: i32 = 6;
-/// `It_Kind_Coin`, a use-on-pickup kind past the common items' constants.
-const IT_KIND_COIN: i32 = 159;
 /// `ftCommonData` x7CC: the Cloaking Device's frames.
 const CLOAK_FRAMES: u32 = 0x7CC;
 
@@ -45,7 +37,7 @@ impl Running<'_> {
             self.data
                 .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x10)),
         );
-        let part = if lib26b1::kind(self.game, held) == IT_KIND_WSTAR {
+        let part = if lib26b1::kind(self.game, held) == ItKind::WStar {
             0
         } else {
             hand
@@ -80,17 +72,17 @@ impl Running<'_> {
         if lib26b1::use_kind(self.game, self.data, it) != 5 {
             return false;
         }
-        match lib26b1::kind(self.game, it) {
-            WSTAR => {
+        match ItKind::of(lib26b1::kind(self.game, it)) {
+            ItKind::WStar => {
                 self.enter_warp_star(gobj);
                 true
             }
-            HAMMER => {
+            ItKind::Hammer => {
                 self.take_hammer(gobj);
                 true
             }
             k => {
-                self.use_picked_up(gobj, it, k);
+                self.use_picked_up(gobj, it, k.id());
                 false
             }
         }
@@ -104,10 +96,10 @@ impl Running<'_> {
         if lib26b1::use_kind(self.game, self.data, it) != 5 {
             return;
         }
-        match lib26b1::kind(self.game, it) {
-            WSTAR => release::drop(self, it, Vec3::new(0.0, 0.0, 0.0), 1.0),
-            HAMMER => self.start_hammer_timers(gobj),
-            k => self.use_picked_up(gobj, it, k),
+        match ItKind::of(lib26b1::kind(self.game, it)) {
+            ItKind::WStar => release::drop(self, it, Vec3::new(0.0, 0.0, 0.0), 1.0),
+            ItKind::Hammer => self.start_hammer_timers(gobj),
+            k => self.use_picked_up(gobj, it, k.id()),
         }
     }
 
@@ -115,21 +107,23 @@ impl Running<'_> {
     /// healing apple heals and is gone, the Bunny Hood goes on, the Metal Box and the Cloaking
     /// Device take effect and go, and a coin goes.
     fn use_picked_up(&mut self, gobj: GObjId, it: GObjId, kind: i32) {
-        match kind {
-            HEART | TOMATO | FOODS | lib26b1::LUCKY_EGG | lib26b1::WHISPY_HEAL_APPLE => {
-                self.heal_with(gobj, it)
-            }
-            RABBITC => self.put_on_hood(gobj, it),
-            METALB => {
+        match ItKind::of(kind) {
+            ItKind::Heart
+            | ItKind::Tomato
+            | ItKind::Foods
+            | ItKind::LuckyEgg
+            | ItKind::WhispyHealApple => self.heal_with(gobj, it),
+            ItKind::RabbitC => self.put_on_hood(gobj, it),
+            ItKind::MetalB => {
                 self.apply_metal_box(gobj, it);
                 item::destroy(self, it);
             }
-            SPYCLOAK => {
+            ItKind::Spycloak => {
                 let frames = self.common().i32(CLOAK_FRAMES);
                 self.start_cloak(gobj, frames, true);
                 item::destroy(self, it);
             }
-            IT_KIND_COIN => item::destroy(self, it),
+            ItKind::Coin => item::destroy(self, it),
             _ => {}
         }
     }
@@ -168,7 +162,7 @@ impl Running<'_> {
         let owner = ip.owner;
         if me != owner && ip.xDC8_word.flags.x14 {
             self.count_bonus(slot, BONUS_CATCH);
-            if lib26b1::kind(self.game, it) == IT_KIND_DOSEI {
+            if lib26b1::kind(self.game, it) == ItKind::Dosei {
                 self.set_point(slot, BONUS_DOSEI, 1);
             }
             let is_fighter = owner.is_some_and(|o| {
@@ -184,7 +178,7 @@ impl Running<'_> {
                 self.game.players[slot as usize].set_ext_u32(0xD6C, thrower);
             }
         }
-        if lib26b1::kind(self.game, it) == IT_KIND_BOMBHEI
+        if lib26b1::kind(self.game, it) == ItKind::BombHei
             && reg(lib26b1::fuse_left(self.game, it)) <= reg(self.bonus_param_f32(0x180))
         {
             let spawn = lib26b1::spawn_number(self.game, it) as u16;

@@ -19,11 +19,11 @@ use gekko_fp as fp;
 
 use super::super::item::{article, change, change_state, destroy, pick_up, play_sfx, spawn_air};
 use super::super::{coll, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, release};
-use super::{CLINK_ARROW, KIRBY_CLINK_ARROW, KIRBY_LINK_ARROW};
 use crate::fpu::{mem, reg};
 use crate::game::ft::kirby::special_link::KIRBY as LK_KIRBY;
 use crate::game::ft::link::special_n::LINK;
 use crate::game::handles::RawPtr;
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{SpawnItem, itLinkArrow_ItemVars};
 use crate::hsd::gobj::GObjId;
@@ -122,8 +122,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// whose owner's queries are his.
 fn is_kirbys(r: &Running, gobj: GObjId) -> bool {
     matches!(
-        item(r.game, gobj).kind,
-        KIRBY_LINK_ARROW | KIRBY_CLINK_ARROW
+        ItKind::of(item(r.game, gobj).kind),
+        ItKind::KirbyLinkArrow | ItKind::KirbyCLinkArrow
     )
 }
 
@@ -587,7 +587,10 @@ fn stick(r: &mut Running, gobj: GObjId) {
     let z = vars(r.game, gobj).x94.get();
     jobj::set_rotation_z(&mut r.game.objs.jobjs, j, z);
     remove_trails(r, gobj);
-    if matches!(item(r.game, gobj).kind, CLINK_ARROW | KIRBY_CLINK_ARROW) {
+    if matches!(
+        ItKind::of(item(r.game, gobj).kind),
+        ItKind::CLinkArrow | ItKind::KirbyCLinkArrow
+    ) {
         play_sfx(r, gobj, SFX_STICK_CLINK, 0x7F, 0x40);
         let at = Vec3::new(0.0, 0.0, 5.0);
         crate::game::ef::spawn(

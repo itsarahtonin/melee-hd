@@ -3,10 +3,10 @@
 //! ([`ft::luigi::special_n`](super::super::luigi::special_n)) over his states, his hand, the
 //! copy's own item kind and its flash ([`KIRBY`]); only his copy's addresses are here.
 
-use super::super::super::it::kinds as k;
 use super::super::super::state::Running;
 use super::super::luigi::special_n::Fireball;
 use super::ms;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// The copy's function addresses.
@@ -31,7 +31,7 @@ pub const KIRBY: Fireball = Fireball {
     air: ms::LG_SPECIAL_AIR_N,
     throw: addr::THROW,
     hand: 21,
-    item_kind: k::KIRBY_LUIGI_FIRE,
+    item_kind: ItKind::KirbyLuigiFire.id(),
     flash: 0x4B1,
 };
 

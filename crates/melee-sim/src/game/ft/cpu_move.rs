@@ -11,17 +11,12 @@ use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use super::cpu_script::cmd;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
 use crate::math;
 
 /// `ftLoadCommonData::x58`: the computer players' data, whose first word is its scripts.
 const CPU_DATA: u32 = 0x58;
-
-/// `Ft_Kind_Donkey`, `_Kirby`, `_Samus`, `_Mewtwo`.
-const KIND_DONKEY: i32 = 3;
-const KIND_KIRBY: i32 = 4;
-const KIND_SAMUS: i32 = 13;
-const KIND_MEWTWO: i32 = 16;
 
 /// `LINE_FLAG_PLATFORM`: a floor a fighter can drop through.
 pub(super) const LINE_FLAG_PLATFORM: u32 = 1 << 8;
@@ -174,7 +169,7 @@ impl Running<'_> {
             self.cpu_cmd(f, cmd::DONE);
             return;
         }
-        if fpp.kind != super::popo::KIND_NANA {
+        if fpp.kind != FighterKind::Nana {
             let wait = match fpp.cpu.level {
                 0 => Some(45),
                 1 | 2 => Some(30),
@@ -1433,8 +1428,8 @@ impl Running<'_> {
     fn cpu_charge(&mut self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
         let ms = fpp.motion_id;
-        match fpp.kind {
-            KIND_DONKEY => {
+        match fpp.fighter_kind() {
+            FighterKind::Donkey => {
                 if ms != super::donkey::ms::SPECIAL_N_LOOP
                     && fpp.u_i32(super::donkey::U_SWINGS) == 0
                 {
@@ -1443,7 +1438,7 @@ impl Running<'_> {
                 }
                 false
             }
-            KIND_SAMUS => {
+            FighterKind::Samus => {
                 if ms != super::samus::ms::SPECIAL_N_HOLD && fpp.u_i32(super::samus::u::CHARGE) == 0
                 {
                     self.cpu_start_charging(f);
@@ -1451,7 +1446,7 @@ impl Running<'_> {
                 }
                 false
             }
-            KIND_MEWTWO => {
+            FighterKind::Mewtwo => {
                 use super::mewtwo::ms as mt;
                 let charge = fpp.u_i32(super::mewtwo::u::CHARGE);
                 let full = self.mt_attr_f32(f, super::mewtwo::attr::N_CHARGE_CYCLES);
@@ -1469,24 +1464,24 @@ impl Running<'_> {
                     false
                 }
             }
-            KIND_KIRBY => {
+            FighterKind::Kirby => {
                 use super::kirby::{ms as kb, u};
-                match fpp.u_i32(u::HAT_KIND) {
-                    KIND_DONKEY => {
+                match FighterKind::from_id(fpp.u_i32(u::HAT_KIND)) {
+                    Some(FighterKind::Donkey) => {
                         if ms != kb::DK_SPECIAL_N_LOOP && fpp.u_i32(u::DK_SWINGS) == 0 {
                             self.cpu_start_charging(f);
                             return true;
                         }
                         false
                     }
-                    KIND_SAMUS => {
+                    Some(FighterKind::Samus) => {
                         if ms != kb::SS_SPECIAL_N_HOLD && fpp.u_i32(u::SS_CHARGE) == 0 {
                             self.cpu_start_charging(f);
                             return true;
                         }
                         false
                     }
-                    KIND_MEWTWO => {
+                    Some(FighterKind::Mewtwo) => {
                         let charge = fpp.u_i32(u::MT_CHARGE);
                         let full = self.kb_attr_f32(f, super::kirby::attr::MT_CHARGE_TIME);
                         if mem(fp::frsp(f64::from(charge))) == full {
@@ -1613,7 +1608,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800AA320")]
     fn cpu_walk_speed(&self, f: FighterId) -> (i32, i32) {
         let fpp = &self.game.fighters[f.0];
-        if fpp.kind == super::popo::KIND_NANA {
+        if fpp.kind == FighterKind::Nana {
             return (64, 127);
         }
         match fpp.cpu.level {

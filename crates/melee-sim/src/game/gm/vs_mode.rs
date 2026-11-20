@@ -7,12 +7,12 @@ use gekko_fp as fp;
 
 use crate::fpu::{mem, reg};
 use crate::game::code::unported_call;
+use crate::game::ft::CharacterKind;
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::pl::player::{PKIND_HUMAN, PKIND_NONE};
 use crate::game::structs::{PlayerInitData, StartMeleeData, StartMeleeRules};
 
-/// `ChKind_None`.
-pub const CHKIND_NONE: i8 = 0x21;
 /// `GM_NAMETAG_COUNT`: no name tag.
 pub const NO_NAMETAG: u8 = 120;
 
@@ -123,14 +123,44 @@ impl GamePrefs {
 }
 
 /// The item switch's entry that has no item kind.
-pub const NO_ITEM_KIND: u8 = 0x23;
+pub const NO_ITEM_KIND: u8 = ItKind::COMMON_END as u8;
 
-/// The item kind of each of the item switch's entries (`lbl_803B7844`); `0x23` has no kind.
+/// The item kind of each of the item switch's entries (`lbl_803B7844`); [`NO_ITEM_KIND`] has none.
 /// The kinds it doesn't list (the capsule, box, barrel and egg) stay as the rules' defaults
 /// set them, on.
 pub const ITEM_SWITCH_KINDS: [u8; 32] = [
-    0x06, 0x0B, 0x07, 0x19, 0x14, 0x12, 0x11, 0x0E, 0x1C, 0x18, 0x08, 0x1A, 0x04, 0x10, 0x17, 0x22,
-    0x20, 0x13, 0x09, 0x21, 0x0D, 0x0F, 0x1F, 0x16, 0x15, 0x1E, 0x0A, 0x0C, 0x23, 0x05, 0x1D, 0x1B,
+    ItKind::BombHei as u8,
+    ItKind::Bat as u8,
+    ItKind::Dosei as u8,
+    ItKind::FFlower as u8,
+    ItKind::Flipper as u8,
+    ItKind::Foods as u8,
+    ItKind::Freeze as u8,
+    ItKind::GShell as u8,
+    ItKind::Hammer as u8,
+    ItKind::Harisen as u8,
+    ItKind::Heart as u8,
+    ItKind::Kinoko as u8,
+    ItKind::Kusudama as u8,
+    ItKind::LGun as u8,
+    ItKind::LipStick as u8,
+    ItKind::MBall as u8,
+    ItKind::MetalB as u8,
+    ItKind::MSBomb as u8,
+    ItKind::Tomato as u8,
+    ItKind::Spycloak as u8,
+    ItKind::Parasol as u8,
+    ItKind::RShell as u8,
+    ItKind::RabbitC as u8,
+    ItKind::StarRod as u8,
+    ItKind::SScope as u8,
+    ItKind::ScBall as u8,
+    ItKind::Star as u8,
+    ItKind::Sword as u8,
+    NO_ITEM_KIND,
+    ItKind::TaruCann as u8,
+    ItKind::WStar as u8,
+    ItKind::DKinoko as u8,
 ];
 
 /// Each handicap's attack and defense ratios (`lbl_803B7930`), handicap 1 first.
@@ -150,7 +180,7 @@ pub(crate) const HANDICAP_RATIOS: [(f32, f32); 9] = [
 #[doc(alias = "gm_SetupPlayerDefaults")]
 pub fn player_defaults() -> PlayerInitData {
     PlayerInitData {
-        ckind: CHKIND_NONE,
+        ckind: CharacterKind::NONE as i8,
         slot_type: PKIND_NONE as u8,
         spawn_pos: -1,
         handicap: 9,

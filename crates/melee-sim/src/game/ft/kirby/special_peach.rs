@@ -6,11 +6,11 @@
 //! Toad and spore kinds, his generic cleanups as hooks and his own callbacks, and two branches
 //! of his own ([`KIRBY`]). Only his copy's addresses are here.
 
-use super::super::super::it::kinds as k;
 use super::super::super::state::Running;
 use super::super::peach::ms as pe;
 use super::super::peach::special_n::Toad;
 use super::ms;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// The copy's function addresses.
@@ -55,8 +55,8 @@ pub const KIRBY: Toad = Toad {
     bubble_attrs: 0x340,
     u: 0xB8,
     bone: 44,
-    toad_kind: k::KIRBY_PEACH_TOAD,
-    spore_kind: k::KIRBY_PEACH_TOAD_SPORE,
+    toad_kind: ItKind::KirbyPeachToad.id(),
+    spore_kind: ItKind::KirbyPeachToadSpore.id(),
     on_death: super::addr::DEATH3,
     on_damage: super::addr::DEATH1,
     on_accessory4: addr::ON_ACCESSORY4,

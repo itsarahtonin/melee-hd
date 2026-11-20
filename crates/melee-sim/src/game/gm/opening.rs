@@ -10,6 +10,7 @@
 use super::super::handles::CodeRef;
 use super::super::state::{OBJ_CAMERA, Obj, Running};
 use super::machine::{GM_MENU, GM_TITLE};
+use crate::game::ft::CharacterKind;
 use crate::hsd::cobj;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::sobj::{self, OBJ_SOBJ};
@@ -385,13 +386,13 @@ impl Running<'_> {
     pub fn setup_title_demo(&mut self) {
         let mut pool = [0i32; 29];
         let mut count = 0;
-        for c in 0..CKIND_PLAYABLE {
+        for c in 0..CharacterKind::PLAYABLE {
             if self.game.gm.unlocks.ckind_unlocked(c as u8) {
                 pool[count] = c as i32;
                 count += 1;
             }
         }
-        pool[count] = CKIND_PLAYABLE as i32;
+        pool[count] = CharacterKind::PLAYABLE as i32;
         let usage = |r: &Self, c: i32| char_usage(&r.game.game_data, c as usize);
         for i in 0..count {
             for j in i + 1..count {
@@ -407,8 +408,8 @@ impl Running<'_> {
                 for p in 0..c {
                     let prev = i32::from(self.game.boot_mode.demo.ckinds[p]);
                     if j == prev
-                        || (j == CKIND_ZELDA && prev == CKIND_SEAK)
-                        || (j == CKIND_SEAK && prev == CKIND_ZELDA)
+                        || (j == CharacterKind::Zelda && prev == CharacterKind::Seak)
+                        || (j == CharacterKind::Seak && prev == CharacterKind::Zelda)
                     {
                         dup = true;
                     }
@@ -488,11 +489,6 @@ impl Running<'_> {
         a.lb_start_bank_loads(self.data);
     }
 }
-
-/// `CKind_Playable_Count`, `CKind_Zelda`, `CKind_Seak`.
-const CKIND_PLAYABLE: usize = 0x1A;
-const CKIND_ZELDA: i32 = 0x12;
-const CKIND_SEAK: i32 = 0x13;
 
 /// `lbl_803B7808`: the stage kind of each stage select entry.
 const STAGE_SELECT_KINDS: [u16; 30] = [

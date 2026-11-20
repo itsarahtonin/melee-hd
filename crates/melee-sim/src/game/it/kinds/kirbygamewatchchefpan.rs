@@ -4,6 +4,7 @@
 use super::super::item::{animate, change, change_state, destroy};
 use super::super::{item, lib26b1};
 use super::gamewatch;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -44,7 +45,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     gamewatch::spawn_held(
         r,
-        super::KIRBY_GAME_WATCH_CHEF_PAN,
+        ItKind::KirbyGameWatchChefPan.id(),
         parent,
         pos,
         part,

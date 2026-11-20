@@ -53,7 +53,7 @@ const VALUE_COLOR: [u8; 4] = [0xFF, 0xC8, 0x00, 0xFF];
 
 /// `lbl_803B767C` and `lbl_803B75F8`: each character's name's width scale in the English and
 /// the Japanese game, as bit patterns.
-const NAME_SCALE_US: [u32; 33] = [
+const NAME_SCALE_US: [u32; crate::game::ft::CharacterKind::COUNT] = [
     0x3F4C_CCCD,
     0x3F80_0000,
     0x3F80_0000,
@@ -88,7 +88,7 @@ const NAME_SCALE_US: [u32; 33] = [
     0x3F80_0000,
     0,
 ];
-const NAME_SCALE_JP: [u32; 33] = [
+const NAME_SCALE_JP: [u32; crate::game::ft::CharacterKind::COUNT] = [
     0x3F73_3333,
     0x3F4C_CCCD,
     0x3F80_0000,

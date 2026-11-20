@@ -8,6 +8,8 @@ use melee_data::archive::DataRef;
 
 use super::super::item::{pick_up, spawn_air};
 use super::super::{Var, item, item_mut, set_flag};
+use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::state::Running;
 use crate::game::structs::{_GXColor, SpawnItem};
@@ -213,7 +215,7 @@ pub(super) fn colors(r: &mut Running, gobj: GObjId, fighter: GObjId, attr: Optio
         ip.xBC4 = s;
     }
     super::super::lib2725::scale_by_owner(r, gobj);
-    if item(r.game, gobj).kind == super::GAME_WATCH_RESCUE {
+    if item(r.game, gobj).kind == ItKind::GameWatchRescue {
         item_mut(r.game, gobj)
             .xDD4_itemVar
             .game_watch_rescue()
@@ -228,7 +230,7 @@ pub(super) fn colors(r: &mut Running, gobj: GObjId, fighter: GObjId, attr: Optio
 /// (`ftKb_Init_800EEB00`).
 #[doc(alias = "ftLib_GetGameWatchColor")]
 fn game_watch_color(r: &Running, fighter: GObjId) -> _GXColor {
-    if r.game.ft_kind(fighter) == crate::game::ft::gamewatch::KIND_GAME_WATCH {
+    if r.game.ft_kind(fighter) == FighterKind::GameWatch {
         r.gw_color(fighter)
     } else {
         r.kb_gw_color(4)
@@ -238,7 +240,7 @@ fn game_watch_color(r: &Running, fighter: GObjId) -> _GXColor {
 /// `ftLib_GetGameWatchOutlineColor`: his, or Kirby's copy's (`ftKb_Init_800EEB1C`).
 #[doc(alias = "ftLib_GetGameWatchOutlineColor")]
 fn game_watch_outline(r: &Running, fighter: GObjId) -> _GXColor {
-    if r.game.ft_kind(fighter) == crate::game::ft::gamewatch::KIND_GAME_WATCH {
+    if r.game.ft_kind(fighter) == FighterKind::GameWatch {
         r.gw_outline_color(fighter)
     } else {
         r.kb_gw_color(8)
@@ -282,7 +284,7 @@ pub fn outline_lists(
     r: &mut Running,
     gobj: GObjId,
 ) -> ((u16, Option<DataRef>), (u16, Option<DataRef>)) {
-    let attr = if item(r.game, gobj).kind == super::GAME_WATCH_RESCUE {
+    let attr = if item(r.game, gobj).kind == ItKind::GameWatchRescue {
         item_mut(r.game, gobj)
             .xDD4_itemVar
             .game_watch_rescue()

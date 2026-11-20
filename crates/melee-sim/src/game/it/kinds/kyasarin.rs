@@ -24,6 +24,7 @@ use crate::hsd::jobj::{self, JObjId};
 use crate::vec::Vec3;
 
 use super::super::Var;
+use crate::game::it::ItKind;
 
 pub const SPAWNED: u32 = 0x802E_CE90;
 pub const DESTROYED: u32 = 0x802E_CCDC;
@@ -281,7 +282,7 @@ pub fn position(game: &Game, gobj: GObjId) -> Vec3 {
 /// half round facing right), her damage none, walking in; or none.
 #[doc(alias = "it_802ECD3C")]
 pub fn spawn(r: &mut Running, platform: GObjId, pos: Vec3, facing: f32) -> Option<GObjId> {
-    let gobj = zako::spawn(r, super::KYASARIN, Some(pos), None, None, true)?;
+    let gobj = zako::spawn(r, ItKind::Kyasarin.id(), Some(pos), None, None, true)?;
     let v = vars(r.game, gobj);
     v.x20.set(Some(platform));
     v.x38.set(0);

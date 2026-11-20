@@ -21,6 +21,7 @@
 use melee_data::archive::DataRef;
 
 use crate::game::ft::vars::Handle;
+use crate::game::it::ItKind;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -325,13 +326,13 @@ impl PokemonVars {
 /// The words a Pokémon of `kind` keeps handles in, with their handle type (`"GObjId"`,
 /// `"JObjId"`, or `"Data"`), for the importer.
 pub fn handle_words(kind: i32) -> &'static [(usize, &'static str)] {
-    use crate::game::it::kinds::{self, hitodeman};
-    match kind {
-        hitodeman::KIND => hitodeman::HANDLES,
+    use crate::game::it::kinds::hitodeman;
+    match ItKind::of(kind) {
+        ItKind::Hitodeman => hitodeman::HANDLES,
         // The enemies' common joint, the fighter a ReDead holds, and Topi's Freezie.
-        kinds::LEADEAD => &[(0, "JObjId"), (0x38, "GObjId")],
-        kinds::OTTOSEA => &[(0, "JObjId"), (0x20, "GObjId")],
-        kinds::KURIBOH..=kinds::OCTAROCK_STONE => &[(0, "JObjId")],
+        ItKind::Leadead => &[(0, "JObjId"), (0x38, "GObjId")],
+        ItKind::Ottosea => &[(0, "JObjId"), (0x20, "GObjId")],
+        ItKind::Kuriboh | ItKind::Octarock | ItKind::OctarockStone => &[(0, "JObjId")],
         _ => &[],
     }
 }

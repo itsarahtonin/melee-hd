@@ -21,10 +21,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `Ft_Kind_Mars` and `Ft_Kind_Emblem` (Roy).
-pub const KIND_MARS: i32 = 18;
-pub const KIND_EMBLEM: i32 = 26;
-
 /// Marth's action states (`ftMs_MS_*`).
 pub mod ms {
     pub const SPECIAL_N_START: i32 = 341;

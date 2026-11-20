@@ -7,6 +7,7 @@ use super::super::item::{article, change, change_state, play_sfx};
 use super::super::{drop, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, set_flag};
 use super::falling_phys;
 use crate::game::ef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -93,7 +94,7 @@ pub fn lay(
     let parent = parent?;
     let owner = item(r.game, parent).owner;
     let mut spawn = SpawnItem {
-        kind: super::EGG,
+        kind: ItKind::Egg.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition(&spawn, pos, true)`.

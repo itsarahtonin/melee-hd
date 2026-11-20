@@ -7,6 +7,7 @@ use melee_data::archive::DataRef;
 use super::super::state::Running;
 use super::Loaded;
 use crate::fpu::{mem, reg};
+use crate::game::ft::CharacterKind;
 use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -19,9 +20,6 @@ const FRAMES: u32 = 0x28 + 0x78;
 /// `vi_8031DC80`, `fn_8031DD14`.
 pub const CAMERA_RENDER: u32 = 0x8031_DC80;
 pub const CAMERA_PROC: u32 = 0x8031_DD14;
-
-/// `CKind_Kirby`.
-const CKIND_KIRBY: i32 = 4;
 
 /// `vi0501.c`'s statics.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
@@ -60,14 +58,14 @@ impl Running<'_> {
             let count = counts[i - 1];
             let slot = i as i32;
             self.player_set_demo_archive_idx(
-                CKIND_KIRBY,
+                CharacterKind::Kirby.id(),
                 v.archive.archive.expect("Vi0501.dat"),
                 v.archive.file,
                 6,
             );
             self.player_80031da8(i32::from(count), kirby_costume);
             self.game.set_player_flags_bit1(slot);
-            self.game.set_player_ckind(slot, CKIND_KIRBY);
+            self.game.set_player_ckind(slot, CharacterKind::Kirby.id());
             self.game.set_player_costume(slot, kirby_costume);
             self.game.set_player_port(slot, 0);
             self.game

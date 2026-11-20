@@ -28,9 +28,6 @@ use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
-/// `FTKIND_GAMEWATCH`.
-pub const KIND_GAME_WATCH: i32 = 24;
-
 /// His items, in his `ftData`'s order: `It_Kind_GameWatch_Greenhouse`, `_Manhole`, `_Fire`,
 /// `_Parachute`, `_Turtle`, `_Breath`, `_Judge`, `_Panic`, `_Chef` and `_Rescue`.
 pub const ITEMS: [i32; 10] = [114, 115, 116, 117, 118, 119, 120, 121, 122, 124];

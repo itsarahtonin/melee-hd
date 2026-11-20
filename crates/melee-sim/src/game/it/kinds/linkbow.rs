@@ -9,6 +9,7 @@ use super::super::{item, item_mut, jobj_of, lib26b1};
 use crate::fpu::mem;
 use crate::game::ft::kirby::special_link::KIRBY as LK_KIRBY;
 use crate::game::ft::link::special_n::LINK;
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{SpawnItem, itLinkBow_ItemVars};
 use crate::hsd::gobj::GObjId;
@@ -121,8 +122,8 @@ fn destroyed(r: &mut Running, gobj: GObjId) {
 /// owner's queries are his.
 fn is_kirbys(r: &Running, gobj: GObjId) -> bool {
     matches!(
-        item(r.game, gobj).kind,
-        super::KIRBY_LINK_BOW | super::KIRBY_CLINK_BOW
+        ItKind::of(item(r.game, gobj).kind),
+        ItKind::KirbyLinkBow | ItKind::KirbyCLinkBow
     )
 }
 

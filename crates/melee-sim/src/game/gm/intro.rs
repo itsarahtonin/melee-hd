@@ -14,6 +14,7 @@ use super::super::render::{CAMERA_CALLBACK, FOG_CALLBACK, JOBJ_CALLBACK, LOBJ_CA
 use super::super::state::{Game, OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
 use super::super::vi::Loaded;
 use crate::fpu::{mem, reg};
+use crate::game::ft::CharacterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::TextId;
@@ -54,9 +55,6 @@ pub const NORMAL_MODEL_RENDER: u32 = 0x8018_7C9C;
 
 /// `ChKind_None`, `CKind_GKoops`, `CKind_Koopa`, `CKind_MasterHand`.
 const NONE: u8 = 0x21;
-const CKIND_GKOOPS: u8 = 0x1D;
-const CKIND_KOOPA: u8 = 5;
-const CKIND_MASTERH: u8 = 0x1A;
 
 /// `lbl_803B7C58`: the screen's archive by the bonus stages' game type (none, Target Test,
 /// the race, Snag the Trophies).
@@ -339,7 +337,7 @@ impl Running<'_> {
         self.game.ft.data.files.from_cache = true;
         let e = self.intro_easy_enter();
         let s = &mut self.game.intros.easy;
-        if e[0x10] == CKIND_MASTERH || e[0x11] == CKIND_MASTERH {
+        if e[0x10] == CharacterKind::MasterHand || e[0x11] == CharacterKind::MasterHand {
             s.done = 1;
             return;
         }
@@ -652,8 +650,8 @@ impl Running<'_> {
         }
         for i in 0..usize::from(d.enemies) {
             let s = &mut self.game.intros.easy.data;
-            if s.enemy_kinds[i] == CKIND_GKOOPS {
-                s.enemy_kinds[i] = CKIND_KOOPA;
+            if s.enemy_kinds[i] == CharacterKind::GKoopa {
+                s.enemy_kinds[i] = CharacterKind::Koopa as u8;
             }
             let c = s.enemy_kinds[i];
             if c != NONE {
@@ -1478,7 +1476,9 @@ impl Running<'_> {
         let e = self.intro_easy_enter();
         let mut d = EasyData::default();
         d.copy_enter(&e);
-        if d.enemy_kinds[0] == CKIND_MASTERH || d.enemy_kinds[1] == CKIND_MASTERH {
+        if d.enemy_kinds[0] == CharacterKind::MasterHand
+            || d.enemy_kinds[1] == CharacterKind::MasterHand
+        {
             return Some(f);
         }
         let archive = self.intro_file_name(GAME_TYPE_ARCHIVES[d.game_type as usize]);
@@ -1521,8 +1521,8 @@ impl Running<'_> {
             return Some(f);
         }
         for i in 0..usize::from(d.enemies) {
-            let c = if d.enemy_kinds[i] == CKIND_GKOOPS {
-                CKIND_KOOPA
+            let c = if d.enemy_kinds[i] == CharacterKind::GKoopa {
+                CharacterKind::Koopa as u8
             } else {
                 d.enemy_kinds[i]
             };

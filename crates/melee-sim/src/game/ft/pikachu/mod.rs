@@ -18,10 +18,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `Ft_Kind_Pikachu` and `Ft_Kind_Pichu`.
-pub const KIND_PIKACHU: i32 = 12;
-pub const KIND_PICHU: i32 = 23;
-
 /// Pikachu's action states (`ftPk_MS_*`), Pichu's too.
 pub mod ms {
     pub const SPECIAL_N: i32 = 341;

@@ -8,11 +8,12 @@
 use super::super::super::state::Running;
 use super::super::mars::ms as mars;
 use super::super::mars::special_n::ShieldBreaker;
-use super::super::mars::{KIND_EMBLEM, KIND_MARS};
+
 use super::super::motion::flags::KEEP_ACCESSORY;
 use super::copy::KindFrom;
 use super::{ms, u};
 use crate::fpu::mem;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
@@ -85,10 +86,10 @@ impl Running<'_> {
     /// The sword in his hand at the draw (`setupStartAccessory`): the copy's own (its
     /// `hat_dynamics[0]`), at his model's scale, on his right hand.
     pub(crate) fn kb_ms_sword(&mut self, gobj: GObjId) {
-        let kind = if self.game.fighter(gobj).u_i32(u::HAT_KIND) == KIND_MARS {
-            KIND_MARS
+        let kind = if self.game.fighter(gobj).u_i32(u::HAT_KIND) == FighterKind::Mars {
+            FighterKind::Mars.id()
         } else {
-            KIND_EMBLEM
+            FighterKind::Emblem.id()
         };
         let copy = self.game.ft.kirby.copies[kind as usize].expect("a copy without its data");
         let sword = self.data.ptr(copy.at(0xC)).expect("the copy's sword");

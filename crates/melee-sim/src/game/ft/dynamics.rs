@@ -17,6 +17,7 @@ use super::super::structs::DynamicsDesc;
 use super::anim::{bone_flag, x594_bit};
 use super::common::GA_AIR;
 use crate::fpu::{copy, mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId, USE_QUATERNION};
@@ -24,11 +25,6 @@ use crate::lb::dynamics::Collider;
 use crate::lb::joint::world_position;
 use crate::quat::Quat;
 use crate::vec::Vec3;
-
-const KIND_KIRBY: i32 = 4;
-const KIND_PURIN: i32 = 15;
-const KIND_MARS: i32 = 18;
-const KIND_EMBLEM: i32 = 26;
 
 /// What a dynamic bone chain's bone id slot holds (`BoneDynamicsDesc::bone_id`): a bone id,
 /// 0x100 while its physics is off, or the figatree an animation's blend slot gives it.
@@ -216,9 +212,9 @@ impl Running<'_> {
     /// `ftCo_8009E140`.
     #[doc(alias = "ftCo_8009E140")]
     pub fn set_dynamics(&mut self, f: FighterId, on: bool) {
-        match self.game.fighters[f.0].kind {
-            KIND_KIRBY => {}
-            KIND_PURIN => self.set_bone_dynamics(f, 0, on, BoneSlot::Id(0)),
+        match self.game.fighters[f.0].fighter_kind() {
+            FighterKind::Kirby => {}
+            FighterKind::Purin => self.set_bone_dynamics(f, 0, on, BoneSlot::Id(0)),
             _ => {
                 for i in 0..self.game.fighters[f.0].dynamics_num {
                     self.set_bone_dynamics(f, i as usize, on, BoneSlot::Id(0));
@@ -241,7 +237,9 @@ impl Running<'_> {
             return;
         }
         // Marth's and Roy's capes follow the wind while a box's blows.
-        if matches!(fp.kind, KIND_MARS | KIND_EMBLEM) && self.game.wind_level() > 0 {
+        if matches!(fp.fighter_kind(), FighterKind::Mars | FighterKind::Emblem)
+            && self.game.wind_level() > 0
+        {
             self.set_dynamics(f, true);
             return;
         }
@@ -280,11 +278,6 @@ impl Running<'_> {
         p
     }
 }
-
-const KIND_KOOPA: i32 = 5;
-const KIND_PEACH: i32 = 9;
-const KIND_MEWTWO: i32 = 16;
-const KIND_GKOOPS: i32 = 31;
 
 impl Running<'_> {
     /// Wind blown from a point `(x, y)` off a bone, `ftCo_8009E714`: `frames` long (120 when
@@ -341,10 +334,12 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         // Only at exactly normal size (a NaN size takes the original's other branch).
         let ground = if reg(fp.x34_scale.y) == 1.0 {
-            if fp.kind == KIND_MEWTWO && (0xDF..=0xE8).contains(&fp.motion_id) {
+            if fp.kind == FighterKind::Mewtwo && (0xDF..=0xE8).contains(&fp.motion_id) {
                 true
             } else {
-                !(fp.ground_or_air == GA_AIR || fp.kind == KIND_KOOPA || fp.kind == KIND_GKOOPS)
+                !(fp.ground_or_air == GA_AIR
+                    || fp.kind == FighterKind::Koopa
+                    || fp.kind == FighterKind::GKoopa)
             }
         } else {
             false
@@ -373,12 +368,16 @@ impl Running<'_> {
         let kind = fp.kind;
         let last = (n - 1).max(0);
         // Each set and the wind its first link takes: Peach's all but the last 3, Mewtwo's 8.
-        let sets = if kind == KIND_PEACH { last + 1 } else { n };
+        let sets = if kind == FighterKind::Peach {
+            last + 1
+        } else {
+            n
+        };
         for i in 0..sets.max(0) {
-            let first_wind = match kind {
-                KIND_PEACH if i < last => 3,
-                KIND_PEACH => 0,
-                KIND_MEWTWO => 8,
+            let first_wind = match FighterKind::from_id(kind) {
+                Some(FighterKind::Peach) if i < last => 3,
+                Some(FighterKind::Peach) => 0,
+                Some(FighterKind::Mewtwo) => 8,
                 _ => 0,
             };
             let set = &self.game.fighters[f.0].dynamic_bone_sets[i as usize];
@@ -441,7 +440,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_8009E614")]
     fn capes_in_wind(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
-        if !matches!(fp.kind, KIND_MARS | KIND_EMBLEM) || fp.x2227_b6 {
+        if !matches!(fp.fighter_kind(), FighterKind::Mars | FighterKind::Emblem) || fp.x2227_b6 {
             return;
         }
         match self.game.wind_level() {

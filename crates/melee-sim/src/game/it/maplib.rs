@@ -7,12 +7,12 @@ use melee_data::archive::Archives;
 use super::data::common;
 use super::flag;
 use super::item::{attr_of, common_data};
-use super::kinds::*;
 use super::{item, item_mut};
 use crate::fpu::{mem, reg};
 use crate::game::code;
 use crate::game::ft::coll::ObjCollHooks;
 use crate::game::gr::StageColl;
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{_itECB, CollData, Item, SpawnItem};
 use crate::hsd::gobj::GObjId;
@@ -99,19 +99,19 @@ pub fn enter_air(ip: &mut Item) {
 
 /// The collision kind a new item's collision data gets (`x34_flags.b1234`), by its kind.
 pub fn coll_kind(kind: i32) -> Option<u8> {
-    Some(if kind < L_GUN_RAY {
+    Some(if kind < ItKind::LGunRay {
         2
-    } else if kind < KURIBOH {
+    } else if kind < ItKind::Kuriboh {
         4
-    } else if kind < OCTAROCK_STONE {
+    } else if kind < ItKind::OctarockStone {
         3
-    } else if kind < MARIO_FIRE {
+    } else if kind < ItKind::MarioFire {
         4
-    } else if kind < PKIND_TERMINATE {
+    } else if kind < ItKind::POKEMON_END {
         5
-    } else if kind < OLD_KURI {
+    } else if kind < ItKind::OldKuri {
         4
-    } else if kind < ARWING_LASER {
+    } else if kind < ItKind::ArwingLaser {
         3
     } else if kind < 238 {
         4

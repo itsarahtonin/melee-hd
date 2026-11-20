@@ -7,6 +7,7 @@ use super::super::item::{change, change_state};
 use super::super::{item_mut, jobj_of, zako};
 use super::zgshell::{off, set, settle};
 use crate::fpu::mem;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -19,7 +20,7 @@ use crate::vec::Vec3;
 pub fn spawn(r: &mut Running, kind: i32, pos: Vec3, facing: i32) -> Option<GObjId> {
     let gobj = zako::spawn(
         r,
-        super::ZRSHELL,
+        ItKind::ZRShell.id(),
         Some(pos),
         None,
         Some(Vec3::new(0.0, 0.0, 0.0)),

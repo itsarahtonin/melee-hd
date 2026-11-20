@@ -21,6 +21,7 @@ use crate::fpu::{mem, reg};
 use crate::game::camera;
 use crate::game::gm;
 use crate::game::gr::stage;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 
@@ -230,7 +231,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::bytes(r.game, gobj).set_gobj(off::FREEZIE, None);
     let makes = if r.game.vs_item_freq() == -1 {
         0
-    } else if super::super::spawn::kind_on(r.game, super::FREEZE) && {
+    } else if super::super::spawn::kind_on(r.game, ItKind::Freeze.id()) && {
         let odds = i32::from(r.data.u8(attr(r, gobj, 0x28)) as i8);
         r.game.objs.rng.below(odds) == 0
     } {

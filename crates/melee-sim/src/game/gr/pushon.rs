@@ -32,10 +32,6 @@ pub const SPIKES_DEVICE: u32 = 0x8021_92A4;
 pub const GOAL_TOUCHED: u32 = 0x8021_90A0;
 /// `fn_80218678`, the course's check of a goal point.
 pub const GOAL_CHECK: u32 = 0x8021_8678;
-/// `grPushOn_80219458`, the stage's line-touch dynamics.
-pub const ON_TOUCH_LINE: u32 = 0x8021_9458;
-/// `grPushOn_80219528`, the stage's shadow check.
-pub const CHECK_SHADOW_RENDER: u32 = 0x8021_9528;
 
 /// The course's map id.
 const MAP_COURSE: i32 = 1;

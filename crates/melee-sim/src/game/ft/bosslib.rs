@@ -11,8 +11,9 @@ use super::super::camera;
 use super::super::handles::CodeRef;
 use super::super::it::owner::P_LINK_FIGHTER;
 use super::super::state::Running;
-use super::masterhand::{KIND_CRAZY_HAND, KIND_MASTER_HAND, attr, mv as hand_mv};
+use super::masterhand::{attr, mv as hand_mv};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -201,47 +202,47 @@ impl Running<'_> {
     /// Whether Master Hand is making his entrance, `ftBossLib_IsMasterHandEntry`.
     #[doc(alias = "ftBossLib_IsMasterHandEntry")]
     pub fn boss_mh_entering(&self) -> bool {
-        self.boss_motion_id(KIND_MASTER_HAND) == MH_MS_ENTRY
+        self.boss_motion_id(FighterKind::MasterHand.id()) == MH_MS_ENTRY
     }
 
     /// Whether Crazy Hand is in his state 0x183, `ftBossLib_8015C2A8`.
     #[doc(alias = "ftBossLib_8015C2A8")]
     pub fn boss_ch_in_183(&self) -> bool {
-        self.boss_motion_id(KIND_CRAZY_HAND) == CH_MS_183
+        self.boss_motion_id(FighterKind::CrazyHand.id()) == CH_MS_183
     }
 
     /// Whether Master Hand is beaten (`ftMh_MS_Damage`, `Damage2`), `ftBossLib_8015C2E0`.
     #[doc(alias = "ftBossLib_8015C2E0")]
     pub fn boss_mh_beaten(&self) -> bool {
-        let ms = self.boss_motion_id(KIND_MASTER_HAND);
+        let ms = self.boss_motion_id(FighterKind::MasterHand.id());
         ms == MH_MS_DAMAGE || ms == MH_MS_DAMAGE2
     }
 
     /// Whether Crazy Hand is beaten, `ftBossLib_8015C31C`.
     #[doc(alias = "ftBossLib_8015C31C")]
     pub fn boss_ch_beaten(&self) -> bool {
-        let ms = self.boss_motion_id(KIND_CRAZY_HAND);
+        let ms = self.boss_motion_id(FighterKind::CrazyHand.id());
         ms == CH_MS_181 || ms == CH_MS_182
     }
 
     /// Whether Master Hand is out (sleeping), `ftBossLib_8015C358`.
     #[doc(alias = "ftBossLib_8015C358")]
     pub fn boss_mh_sleeping(&self) -> bool {
-        self.boss_gobj(KIND_MASTER_HAND)
+        self.boss_gobj(FighterKind::MasterHand.id())
             .is_some_and(|g| self.game.fighter(g).is_sleeping)
     }
 
     /// Whether Crazy Hand is out, `ftBossLib_8015C3A0`.
     #[doc(alias = "ftBossLib_8015C3A0")]
     pub fn boss_ch_sleeping(&self) -> bool {
-        self.boss_gobj(KIND_CRAZY_HAND)
+        self.boss_gobj(FighterKind::CrazyHand.id())
             .is_some_and(|g| self.game.fighter(g).is_sleeping)
     }
 
     /// Crazy Hand's next attack (`u.mh.x2250`, 0 with no Crazy Hand), `ftBossLib_8015C4C4`.
     #[doc(alias = "ftBossLib_8015C4C4")]
     pub fn boss_ch_next(&self) -> i32 {
-        match self.boss_gobj(KIND_CRAZY_HAND) {
+        match self.boss_gobj(FighterKind::CrazyHand.id()) {
             Some(g) => self
                 .game
                 .fighter(g)
@@ -254,7 +255,7 @@ impl Running<'_> {
     /// Hand), `ftBossLib_8015C530`.
     #[doc(alias = "ftBossLib_8015C530")]
     pub fn boss_level_word(&self, level: i32) -> i32 {
-        let Some(g) = self.boss_gobj(KIND_MASTER_HAND) else {
+        let Some(g) = self.boss_gobj(FighterKind::MasterHand.id()) else {
             return 0;
         };
         let f = self.game.fighter_id(g);
@@ -278,7 +279,7 @@ impl Running<'_> {
     /// Master Hand's attributes (`ftData::ext_attr`), if he's there, `ftBossLib_8015C6BC`.
     #[doc(alias = "ftBossLib_8015C6BC")]
     pub fn boss_mh_attrs(&self) -> Option<super::super::handles::FighterId> {
-        self.boss_gobj(KIND_MASTER_HAND)
+        self.boss_gobj(FighterKind::MasterHand.id())
             .map(|g| self.game.fighter_id(g))
     }
 
@@ -303,7 +304,7 @@ impl Running<'_> {
     pub fn boss_set_rate(&mut self, rate: i32) {
         let v = mem(fp::frsp(f64::from(rate)));
         self.player_80036790(0, v);
-        for kind in [KIND_MASTER_HAND, KIND_CRAZY_HAND] {
+        for kind in [FighterKind::MasterHand.id(), FighterKind::CrazyHand.id()] {
             if let Some(g) = self.boss_gobj(kind) {
                 self.game.ft_80086a4c(g, v);
             }

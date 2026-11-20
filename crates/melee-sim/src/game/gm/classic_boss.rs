@@ -2,17 +2,17 @@
 //! runs Master Hand's entry, Crazy Hand's arrival and the hands' defeat (`fn_8017C1A4`), and
 //! Crazy Hand's slot (`fn_8017C0C8`); the arrival's condition (`fn_8017EDDC`, `gm_17EB.c`).
 
-use super::super::ft::masterhand::KIND_CRAZY_HAND;
 use super::super::handles::CodeRef;
 use super::super::state::Running;
 use super::GM_CLASSIC;
+use crate::game::ft::CharacterKind;
+use crate::game::ft::FighterKind;
 
 /// `fn_8017C1A4`, the controller's process.
 pub const PROC: u32 = 0x8017_C1A4;
 
 /// `Gm_PKind_Cpu`, `CKind_CrezyH`.
 const PKIND_CPU: u8 = 1;
-pub(crate) const CKIND_CREZYH: i8 = 0x1E;
 /// Master Hand's and Crazy Hand's slots, and the player's.
 const SLOT_PLAYER: i32 = 0;
 const SLOT_CRAZY: i32 = 1;
@@ -54,7 +54,7 @@ impl Running<'_> {
         let hp = self.boss_level_word(level);
         self.game.one_player.boss.hp = hp;
         self.game.set_player_stamina(SLOT_MASTER, hp);
-        self.load_fighter_costume(KIND_CRAZY_HAND, 0);
+        self.load_fighter_costume(FighterKind::CrazyHand.id(), 0);
     }
 
     /// Crazy Hand joins in slot 1, `fn_8017C0C8`: a computer player with Master Hand's
@@ -70,7 +70,7 @@ impl Running<'_> {
         p.attack_ratio = self.game.player_attack_ratio(SLOT_MASTER);
         p.defense_ratio = self.game.player_unk50(SLOT_MASTER);
         p.color = 0;
-        p.ckind = CKIND_CREZYH;
+        p.ckind = CharacterKind::CrazyHand as i8;
         p.team = 4;
         p.xC_b7 = true;
         p.hp = self.game.one_player.boss.hp as u16;

@@ -7,11 +7,10 @@ use super::super::super::state::Running;
 use super::checks::abs;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 
-/// `Ft_Kind_Kirby`.
-const KIND_KIRBY: i32 = 4;
 /// `ftCommon_MotionVars_jumpaerial`: the turn's frames left.
 const JUMP_AERIAL_TURN: usize = 0x0;
 
@@ -51,7 +50,7 @@ impl Running<'_> {
     /// have one).
     #[doc(alias = "ftCo_800D7268")]
     pub fn multi_jump_set(&mut self, gobj: GObjId) -> i32 {
-        if self.game.fighter(gobj).kind == KIND_KIRBY {
+        if self.game.fighter(gobj).kind == FighterKind::Kirby {
             return i32::from(self.kb_copy_has_hat_jumps(gobj));
         }
         0

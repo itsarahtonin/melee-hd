@@ -4,11 +4,8 @@
 
 use super::super::super::state::Running;
 use super::super::common::GA_AIR;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
-
-/// `Ft_Kind_MasterH` and `Ft_Kind_CrezyH`.
-const KIND_MASTER_HAND: i32 = 0x1B;
-const KIND_CRAZY_HAND: i32 = 0x1C;
 
 impl Running<'_> {
     /// After damage, a stamina fighter (`x2225_b7`) with no HP left and not healing is out,
@@ -35,8 +32,8 @@ impl Running<'_> {
     #[doc(alias = "fn_800C8E74")]
     fn stamina_ko(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
-        if kind == KIND_MASTER_HAND || kind == KIND_CRAZY_HAND {
-            if kind == KIND_MASTER_HAND {
+        if kind == FighterKind::MasterHand || kind == FighterKind::CrazyHand {
+            if kind == FighterKind::MasterHand {
                 self.mh_beaten(gobj);
             } else {
                 self.ch_beaten(gobj);

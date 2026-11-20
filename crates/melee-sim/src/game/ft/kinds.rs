@@ -4,29 +4,27 @@
 
 use super::super::handles::{AttrsId, FighterId};
 use super::super::state::Running;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// `ftFox_DatAttrs` and `MarsAttributes`: how many bytes of a character's attributes its
 /// callbacks copy.
-const FOX_ATTRS_SIZE: usize = 0xD4;
-const MARS_ATTRS_SIZE: usize = 0x98;
+pub(crate) const FOX_ATTRS_SIZE: usize = 0xD4;
+pub(crate) const MARS_ATTRS_SIZE: usize = 0x98;
 /// `ftSeakAttributes`.
-const SEAK_ATTRS_SIZE: usize = 0x74;
+pub(crate) const SEAK_ATTRS_SIZE: usize = 0x74;
 
 /// `ftCaptain_DatAttrs`.
-const CAPTAIN_ATTRS_SIZE: usize = 0x8C;
+pub(crate) const CAPTAIN_ATTRS_SIZE: usize = 0x8C;
 
 /// `ftZelda_DatAttrs`.
-const ZELDA_ATTRS_SIZE: usize = 0xA8;
+pub(crate) const ZELDA_ATTRS_SIZE: usize = 0xA8;
 
 /// Zelda's items: `It_Kind_Zelda_DinFire` and `_DinFire_Explode`.
 const ZELDA_ITEMS: [i32; 2] = [108, 109];
 
 /// Sheik's items: `It_Kind_Seak_NeedleThrow`, `_NeedleHeld`, `_Vanish` and `_Chain`.
 const SEAK_ITEMS: [i32; 4] = [79, 80, 85, 97];
-
-/// `It_Kind_Fox_Illusion`.
-const IT_KIND_FOX_ILLUSION: i32 = 56;
 
 impl<'a> Running<'a> {
     /// The character's attributes (`ftData::ext_attr`), `size` bytes of them.
@@ -109,7 +107,7 @@ impl<'a> Running<'a> {
         let kinds = [
             self.attr_i32(f, 0x1C),
             self.attr_i32(f, 0x20),
-            IT_KIND_FOX_ILLUSION,
+            ItKind::FoxIllusion.id(),
         ];
         for (i, kind) in kinds.into_iter().enumerate() {
             let article = self.data.ptr(items.at(4 * i as u32));

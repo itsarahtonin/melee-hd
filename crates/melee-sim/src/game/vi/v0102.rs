@@ -5,6 +5,7 @@ use melee_data::archive::DataRef;
 
 use super::super::state::{Obj, Running};
 use super::Loaded;
+use crate::game::ft::CharacterKind;
 use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -16,10 +17,6 @@ const FRAMES: u32 = 0x28 + 0x18;
 pub const JOBJ_PROC: u32 = 0x8031_CC68;
 pub const CAMERA_RENDER: u32 = 0x8031_CC8C;
 pub const CAMERA_PROC: u32 = 0x8031_CD20;
-
-/// `CKind_Mario`, `CKind_Luigi`.
-const CKIND_MARIO: i32 = 8;
-const CKIND_LUIGI: i32 = 7;
 
 /// The fog's GObj class here (`GObj_Create(0xA, 3, 0)`).
 const CLASS_FOG: u16 = 0xA;
@@ -45,8 +42,8 @@ impl Running<'_> {
         self.game.init_all_players();
         let archive = self.game.vi.v0102.archive;
         for (slot, ckind, costume) in [
-            (0, CKIND_MARIO, mario_costume),
-            (1, CKIND_LUIGI, luigi_costume),
+            (0, CharacterKind::Mario.id(), mario_costume),
+            (1, CharacterKind::Luigi.id(), luigi_costume),
         ] {
             self.vi_player(slot, ckind, costume, archive, 4, 1.0, Some(Vec3::ZERO));
             self.player_create_demo(slot, 9);

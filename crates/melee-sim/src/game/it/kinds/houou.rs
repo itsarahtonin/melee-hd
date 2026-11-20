@@ -15,6 +15,7 @@ use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725, set_flag};
 use crate::fpu::{mem, reg};
 use crate::game::gr::stage;
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -47,9 +48,6 @@ pub const FIRE_EVT_UNK: u32 = 0x802D_2ED0;
 pub const FIRE_ANIM: u32 = 0x802D_2F3C;
 pub const FIRE_PHYS: u32 = 0x802D_2F70;
 pub const FIRE_COLL: u32 = 0x802D_2FE8;
-
-/// `It_Kind_Houou_SacredFire`.
-pub const SACRED_FIRE: i32 = 0xCB;
 
 /// Its variables past the release's (`itHouou_ItemVars`): the frames it comes towards the
 /// camera (`timer`; the Sacred Fire keeps its stage line there), where it came out
@@ -351,7 +349,7 @@ pub fn sacred_fire(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
     let (facing, owner) = (ip.facing_dir, ip.owner);
     let mut spawn = SpawnItem {
-        kind: SACRED_FIRE,
+        kind: ItKind::HououSacredFire.id(),
         ..Default::default()
     };
     spawn.prev_pos = hit.pos;

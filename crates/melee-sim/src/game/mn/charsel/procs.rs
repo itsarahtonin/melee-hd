@@ -3,6 +3,7 @@
 
 use super::setup::counts_kos;
 use super::*;
+use crate::game::ft::CharacterKind;
 
 /// `mnCharSel_804DC560`, `804DC564`: a name list's white and the gray of names taken.
 const WHITE: [u8; 3] = [255, 255, 255];
@@ -241,7 +242,7 @@ impl Running<'_> {
     pub(super) fn charsel_coin_back(&mut self, door: u8) -> i32 {
         let player = self.door_player(door);
         let ckind = self.css().vs.start.players[player].ckind;
-        if ckind >= CKIND_PLAYABLE {
+        if ckind >= (CharacterKind::PLAYABLE as i8) {
             return 1;
         }
         let d = usize::from(door);
@@ -907,7 +908,7 @@ impl Running<'_> {
                     e.char_id = i32::from(ckind);
                     e.color = color;
                 } else {
-                    e.char_id = i32::from(CHKIND_NONE);
+                    e.char_id = i32::from(CharacterKind::NONE);
                 }
             }
             self.preload_refresh();
@@ -926,7 +927,7 @@ impl Running<'_> {
                     e.char_id = i32::from(ckind);
                     e.color = color;
                 } else {
-                    e.char_id = i32::from(CHKIND_NONE);
+                    e.char_id = i32::from(CharacterKind::NONE);
                 }
             }
             self.preload_refresh();

@@ -61,17 +61,8 @@ fn stubs() -> Vec<Stub> {
     // The crowd's landing reaction: no reaction, so the knockback it would clear stays.
     v.push((leaf_check::sym("un_803224DC"), StubRet::Int(0)));
     // Every character's specials' entries.
-    for table in [
-        &kinds::SPECIAL_N,
-        &kinds::SPECIAL_S,
-        &kinds::SPECIAL_HI,
-        &kinds::SPECIAL_LW,
-        &kinds::SPECIAL_AIR_N,
-        &kinds::SPECIAL_AIR_S,
-        &kinds::SPECIAL_AIR_HI,
-        &kinds::SPECIAL_AIR_LW,
-    ] {
-        for &a in table.iter() {
+    for i in 0..8 {
+        for a in kinds::KINDS.iter().map(|c| c.specials()[i]) {
             if a != 0 && !v.iter().any(|s| s.0 == a) {
                 v.push((a, StubRet::Nothing));
             }

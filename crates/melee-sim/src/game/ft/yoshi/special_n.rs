@@ -7,11 +7,12 @@ use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{self as it_kinds, yoshiegglay, yoshitongue};
+use super::super::super::it::kinds::{yoshiegglay, yoshitongue};
 use super::super::super::state::Running;
 use super::super::parts::TRANS_N2;
 use super::{addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -336,7 +337,7 @@ impl Running<'_> {
             let j = self.bone_joint(gobj, tip);
             let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
             let laid = yoshiegglay::Laid {
-                kind: it_kinds::YOSHI_EGG_LAY,
+                kind: ItKind::YoshiEggLay.id(),
                 pos,
                 vel: self.ys_n_item_vel(gobj),
                 facing_dir: self.ys_n_facing(gobj),

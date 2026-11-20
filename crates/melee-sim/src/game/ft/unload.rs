@@ -17,7 +17,7 @@ use crate::lb::hitcapsule::HitOwner;
 use crate::vec::Vec3;
 
 const P_LINK_FIGHTER: u8 = 8;
-/// `FTKIND_PURIN`, the one kind with a user data remover (`ftData_OnUserDataRemove`).
+/// `FighterKind::Purin`, the one kind with a user data remover (`ftData_OnUserDataRemove`).
 const PURIN: i32 = 15;
 
 impl Running<'_> {

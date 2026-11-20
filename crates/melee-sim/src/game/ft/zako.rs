@@ -8,7 +8,7 @@ use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
 /// `_ftZakoboyAttributes` and the female's attributes (an `int`).
-const ATTRS_SIZE: usize = 0x4;
+pub(crate) const ATTRS_SIZE: usize = 0x4;
 
 /// The Wire Frames' functions, by address.
 pub mod addr {

@@ -34,6 +34,7 @@ use crate::hsd::sis::TextId;
 use crate::vec::Vec3;
 use gekko_fp as fp;
 
+use crate::game::ft::CharacterKind;
 pub use cursor::CURSOR_THINK;
 
 /// The scene's entry, frame and exit (`mnCharSel_Scene_OnEnter`, `_OnFrame`, `_OnExit`).
@@ -68,9 +69,6 @@ pub const TRAINING_MODE: u8 = 0x17;
 
 /// The icons past the last: a door with no character (`sel_icon` 0x19).
 pub const NO_ICON: u8 = 0x19;
-/// `ChKind_None`, `CKind_Playable_Count`.
-const CHKIND_NONE: i8 = 0x21;
-const CKIND_PLAYABLE: i8 = 0x1A;
 /// `Gm_PKind_Human`, `Gm_PKind_Cpu`, `Gm_PKind_NA`.
 const PKIND_HUMAN: u8 = 0;
 const PKIND_CPU: u8 = 1;
@@ -1362,7 +1360,7 @@ impl Running<'_> {
         self.css_stop(Some(j), ALL_MASK);
         let port1 = self.game.charsel.port1 as usize;
         let ck = self.css().vs.start.players[port1].ckind;
-        if ck >= CKIND_PLAYABLE || !self.game.gm.unlocks.ckind_unlocked(ck as u8) {
+        if ck >= (CharacterKind::PLAYABLE as i8) || !self.game.gm.unlocks.ckind_unlocked(ck as u8) {
             let i = loop {
                 let i = self.game.objs.rng.below(0x19) as usize;
                 if self.game.charsel.icons[i].state != 0 {
@@ -1452,7 +1450,7 @@ impl Running<'_> {
             }
             if found >= 25 {
                 let p = &mut self.css_start().players[player];
-                p.ckind = CKIND_PLAYABLE;
+                p.ckind = CharacterKind::PLAYABLE as i8;
                 if p.slot_type == PKIND_CPU {
                     p.slot_type = PKIND_NONE;
                 }

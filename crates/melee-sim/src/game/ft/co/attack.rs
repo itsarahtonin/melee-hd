@@ -6,15 +6,13 @@ use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::checks::{KIND_CLINK, KIND_PIKACHU, KIND_SAMUS, abs};
-use super::checks::{KIND_GAME_WATCH, KIND_KIRBY, KIND_LINK, KIND_NESS, KIND_PEACH, KIND_PICHU};
+use super::checks::abs;
+
 use super::ids::ms;
 use super::{PAD_A, PAD_LR};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
-
-/// `Ft_Kind_Mars`.
-const KIND_MARS: i32 = 18;
 
 /// `ftCommon_MotionVars_attack1`, `attackdash`, `attacklw3`.
 const ATTACK_X0: usize = 0x0;
@@ -108,7 +106,7 @@ impl Running<'_> {
     /// `decideAttack11`: Game & Watch's own jab.
     #[doc(alias = "decideAttack11")]
     fn decide_attack11(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).kind == KIND_GAME_WATCH {
+        if self.game.fighter(gobj).kind == FighterKind::GameWatch {
             self.gw_attack11_enter(gobj);
             return;
         }
@@ -125,7 +123,7 @@ impl Running<'_> {
         fp.allow_interrupt = false;
         fp.x2218_b1 = false;
         // `getMotionFlags`: Pikachu's and Pichu's jab counts each hit.
-        let flags = if fp.kind == KIND_PIKACHU || fp.kind == KIND_PICHU {
+        let flags = if fp.kind == FighterKind::Pikachu || fp.kind == FighterKind::Pichu {
             fp.x21EC = Some(ON_PK_PC_21EC);
             super::super::motion::flags::SKIP_ATTACK_COUNT
         } else {
@@ -145,7 +143,7 @@ impl Running<'_> {
     #[doc(alias = "doAttack12")]
     fn do_attack12(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
-        if kind == KIND_PIKACHU || kind == KIND_PICHU {
+        if kind == FighterKind::Pikachu || kind == FighterKind::Pichu {
             self.decide_attack11(gobj);
             return;
         }
@@ -166,7 +164,7 @@ impl Running<'_> {
     /// `doAttack13`: Marth and Roy jab again from the first.
     #[doc(alias = "doAttack13")]
     fn do_attack13(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).kind == KIND_MARS {
+        if self.game.fighter(gobj).kind == FighterKind::Mars {
             self.decide_attack11(gobj);
             return;
         }
@@ -218,7 +216,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800D6AC4")]
     #[doc(alias = "fn_800D6B8C")]
     pub fn enter_attack100(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).kind == KIND_GAME_WATCH {
+        if self.game.fighter(gobj).kind == FighterKind::GameWatch {
             self.gw_attack100_start_enter(gobj);
             return;
         }
@@ -541,7 +539,7 @@ impl Running<'_> {
     #[doc(alias = "decideFighter@8008BC34")]
     #[doc(alias = "doEnter@8008BC70")]
     fn decide_attack_lw3(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).kind == KIND_GAME_WATCH {
+        if self.game.fighter(gobj).kind == FighterKind::GameWatch {
             self.gw_attack_lw3_enter(gobj);
             return;
         }
@@ -703,11 +701,11 @@ impl Running<'_> {
     fn decide_attack_s4(&mut self, gobj: GObjId, dir: f32, angle: f64) {
         let fp = self.game.fighter_mut(gobj);
         fp.facing_dir = dir;
-        match fp.kind {
-            KIND_NESS => self.ness_attack_s4_enter(gobj),
-            KIND_PEACH => self.peach_attack_s4_enter(gobj),
-            KIND_GAME_WATCH => self.gw_attack_s4_enter(gobj),
-            KIND_PIKACHU | KIND_PICHU => {
+        match fp.fighter_kind() {
+            FighterKind::Ness => self.ness_attack_s4_enter(gobj),
+            FighterKind::Peach => self.peach_attack_s4_enter(gobj),
+            FighterKind::GameWatch => self.gw_attack_s4_enter(gobj),
+            FighterKind::Pikachu | FighterKind::Pichu => {
                 self.enter_attack_s4(gobj, angle);
                 // `Fighter_SetEffectHitlagCallbacks`.
                 let fp = self.game.fighter_mut(gobj);
@@ -777,7 +775,7 @@ impl Running<'_> {
     pub fn smash_combo_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
         if fp.cmd_vars[0] != 0 && fp.input.pressed_buttons & PAD_A != 0 {
-            if fp.kind == KIND_LINK || fp.kind == KIND_CLINK {
+            if fp.kind == FighterKind::Link || fp.kind == FighterKind::Clink {
                 self.link_attack_s42_enter(gobj);
                 return true;
             }
@@ -823,7 +821,7 @@ impl Running<'_> {
             self.enter_item_throw(gobj, ms::LIGHT_THROW_HI4);
             return;
         }
-        if self.game.fighter(gobj).kind == KIND_NESS {
+        if self.game.fighter(gobj).kind == FighterKind::Ness {
             self.ness_attack_hi4_enter(gobj);
             return;
         }
@@ -849,7 +847,7 @@ impl Running<'_> {
             self.enter_item_throw(gobj, ms::LIGHT_THROW_LW4);
             return true;
         }
-        if self.game.fighter(gobj).kind == KIND_NESS {
+        if self.game.fighter(gobj).kind == FighterKind::Ness {
             self.ness_attack_lw4_enter(gobj);
             return true;
         }
@@ -878,7 +876,7 @@ impl Running<'_> {
                 return true;
             }
         }
-        if self.game.fighter(gobj).kind == KIND_KIRBY {
+        if self.game.fighter(gobj).kind == FighterKind::Kirby {
             self.kb_attack_dash_enter(gobj);
             return true;
         }
@@ -916,10 +914,12 @@ impl Running<'_> {
         }
         let fp = self.game.fighter(gobj);
         let shoulder = fp.input.held_buttons[0] & PAD_LR != 0;
-        if (fp.kind == KIND_LINK || fp.kind == KIND_CLINK) && fp.u.gobj_at(0xC).is_some() {
+        if (fp.kind == FighterKind::Link || fp.kind == FighterKind::Clink)
+            && fp.u.gobj_at(0xC).is_some()
+        {
             return false;
         }
-        if fp.kind == KIND_SAMUS && fp.u.gobj_at(0x10).is_some() {
+        if fp.kind == FighterKind::Samus && fp.u.gobj_at(0x10).is_some() {
             return false;
         }
         let window = fp.mv_i32(ATTACK_X0);

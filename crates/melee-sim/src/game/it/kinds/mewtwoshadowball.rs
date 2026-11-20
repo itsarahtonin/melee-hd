@@ -16,6 +16,7 @@ use crate::game::ef::{self, Arg};
 use crate::game::ft::kirby;
 use crate::game::ft::mewtwo::special_n::{self, ShadowBall};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -26,11 +27,6 @@ use crate::mp::coll::{
     CEILING_HUG, CEILING_PUSH, FLOOR_HUG, FLOOR_PUSH, LEFT_WALL_MASK, RIGHT_WALL_MASK,
 };
 use crate::vec::Vec3;
-
-/// `It_Kind_Mewtwo_ShadowBall`.
-pub const KIND: i32 = super::MEWTWO_SHADOWBALL;
-/// `It_Kind_Kirby_MewtwoShadowBall`.
-const KIRBY_SHADOWBALL: i32 = 144;
 
 pub const WOBBLE: u32 = 0x802C_4D10;
 pub const HIT_STAGE: u32 = 0x802C_4F50;
@@ -459,9 +455,9 @@ pub fn fire(r: &mut Running, gobj: GObjId, pos: Vec3, angle: f32, charge: f32, m
 /// Whose Shadow Ball a ball of `kind` is: Mewtwo's or Kirby's copy's (the original's queries
 /// of its maker are picked by the ball's kind).
 fn maker_ball(kind: i32) -> Option<&'static ShadowBall> {
-    match kind {
-        KIND => Some(&special_n::MEWTWO),
-        KIRBY_SHADOWBALL => Some(&kirby::special_mewtwo::KIRBY),
+    match ItKind::of(kind) {
+        ItKind::MewtwoShadowBall => Some(&special_n::MEWTWO),
+        ItKind::KirbyMewtwoShadowBall => Some(&kirby::special_mewtwo::KIRBY),
         _ => None,
     }
 }

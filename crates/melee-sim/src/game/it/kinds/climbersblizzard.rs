@@ -7,6 +7,7 @@ use gekko_fp as fp;
 use super::super::item::{attr_of, change, change_state, debug_owner_bubbles, spawn_air};
 use super::super::{data, ground, item, item_mut, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -94,7 +95,7 @@ fn tick_lifetime(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itClimbersBlizzard_Spawn")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::ICE_CLIMBER_BLIZZARD,
+        kind: ItKind::IceClimberBlizzard.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;

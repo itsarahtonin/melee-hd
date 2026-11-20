@@ -9,8 +9,8 @@ use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::luigifireball;
 use super::super::super::state::Running;
-use super::init::IT_KIND_LUIGI_FIRE;
 use super::{addr, ms, part};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// What tells one Fireball from the other: the user's states, the throw's hook, the hand the
@@ -33,7 +33,7 @@ pub const LUIGI: Fireball = Fireball {
     air: ms::SPECIAL_AIR_N,
     throw: addr::SPECIAL_N_FIRE_SPAWN,
     hand: part::L_1ST_NB,
-    item_kind: IT_KIND_LUIGI_FIRE,
+    item_kind: ItKind::LuigiFire.id(),
     flash: 0x507,
 };
 

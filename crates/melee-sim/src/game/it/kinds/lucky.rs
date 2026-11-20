@@ -14,6 +14,7 @@ use super::super::pokemon::{self, attr_f32, attr_i32, effect_hitlag};
 use super::super::{hitbox, item, item_mut, lib26b1, lib2725, maplib, spawn};
 use super::drmariopill::set_pose;
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -56,9 +57,6 @@ pub const EGG_ANIM4: u32 = 0x802D_5A2C;
 pub const EGG_PHYS4: u32 = 0x802D_5A64;
 pub const EGG_COLL4: u32 = 0x802D_5A68;
 pub const EGG_EVT_UNK: u32 = 0x802D_5A9C;
-
-/// `It_Kind_Lucky_Egg`.
-pub const LUCKY_EGG: i32 = 0xCD;
 
 /// Its variables past the release's (`itLucky_ItemVars`): the state it's in or goes to next
 /// (`x60`: 2 starting to lay, 3 laying, 4 done), the eggs left to lay (`x64`), and whether
@@ -340,7 +338,7 @@ pub fn spawn_egg(
     let parent = parent?;
     let owner = item(r.game, parent).owner;
     let mut spawn = SpawnItem {
-        kind: LUCKY_EGG,
+        kind: ItKind::LuckyEgg.id(),
         ..Default::default()
     };
     spawn.prev_pos = Vec3::new(pos.x, pos.y, 0.0);

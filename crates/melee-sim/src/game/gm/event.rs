@@ -6,6 +6,7 @@ use melee_data::archive::DataRef;
 
 use super::super::state::Running;
 use super::opponents::NONE;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::{self, GObjId};
 
 /// `GM_EVENT`.
@@ -363,9 +364,9 @@ impl Running<'_> {
     ) -> u8 {
         let e = self.event_entry(self.event()).expect("the event's entry");
         let list = e.x4(self).expect("the event's characters");
-        let mut chars = [0u8; 0x21];
+        let mut chars = [0u8; crate::game::ft::CharacterKind::COUNT];
         let mut count = 0;
-        for i in 0..0x21 {
+        for i in 0..crate::game::ft::CharacterKind::COUNT as u32 {
             let c = self.data.u8(list.at(i));
             if c == 0x21 {
                 break;
@@ -1164,7 +1165,7 @@ impl Running<'_> {
         }
         self.put_anim_file(kind);
         // `ftData_800857E0`: Kirby's copies' setup (`ftData_UnkMotionStates5`, Kirby's only).
-        if kind == super::super::ft::kirby::KIND_KIRBY {
+        if kind == FighterKind::Kirby {
             self.player_80031dc8();
         }
     }
@@ -1477,7 +1478,7 @@ impl Running<'_> {
             if self.game.player_stocks(i) <= 0
                 && let Some(g) = self.game.player_entity(i)
             {
-                if self.game.ft_kind(g) == FT_KIND_SEAK {
+                if self.game.ft_kind(g) == FighterKind::Seak {
                     count += 1;
                 } else {
                     self.game.set_player_stocks(i, 1);
@@ -1584,7 +1585,7 @@ impl Running<'_> {
         let (min, wait) = (self.data.u32(x4) as i32, self.data.u32(x4.at(4)) as i32);
         let secs = self.game.vs_timer_seconds() as i32;
         let frames = i32::from(self.game.vs_timer_frames());
-        let sheik = self.game.player_fighter_kind(0) == FT_KIND_SEAK;
+        let sheik = self.game.player_fighter_kind(0) == FighterKind::Seak;
         let fc = self.game.vs_frame_count() as i32;
         let ev = &mut self.game.game_data.vs.unk_530;
         ev.xB_2 = true;
@@ -1917,9 +1918,6 @@ impl Running<'_> {
         self.game.set_game_speed(0.5);
     }
 }
-
-/// `Ft_Kind_Seak`.
-const FT_KIND_SEAK: i32 = 7;
 
 /// The crowds' callbacks for each joiner (`gm_803DF94C`'s `x4`) by the event's place:
 /// Events 16, 22, 24, 28 and 45's.

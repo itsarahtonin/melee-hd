@@ -6,6 +6,7 @@ use gekko_fp as fp;
 use super::super::item::{article, attr_of, change, change_state, spawn_air};
 use super::super::{data, ground, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -66,7 +67,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_802B2FC8")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::YOSHI_STAR,
+        kind: ItKind::YoshiStar.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;

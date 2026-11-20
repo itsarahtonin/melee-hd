@@ -7,6 +7,7 @@ use super::super::state::{Game, Running};
 use super::super::structs::MatchEnd;
 use super::decisions::{COUNT, decision_kind};
 use super::machine::{GM_OPENING_MV, GM_VS};
+use crate::game::ft::CharacterKind;
 
 /// `OUTCOME_NO_CONTEST`, `OUTCOME_RETRY`.
 pub const OUTCOME_NO_CONTEST: u8 = 7;
@@ -14,9 +15,6 @@ pub const OUTCOME_RETRY: u8 = 8;
 /// `Gm_PKind_Human`, `Gm_PKind_NA`.
 const PKIND_HUMAN: i32 = 0;
 const PKIND_NA: u8 = 3;
-/// `CKind_CrezyH` (a character kind: Crazy Hand's fighter kind, `Ft_Kind_CrezyH`, is 0x1C,
-/// and Master Hand's 0x1B), the computer Crazy Hand whose match Classic's results mark.
-const CKIND_CREZYH: i32 = super::classic_boss::CKIND_CREZYH as i32;
 
 /// `MatchExitInfo` (`EndMeleeData`): a match scene's exit data, what the mode's states read
 /// once it ends: the single-player run's value or the rules' `x18`, the timer's seconds,
@@ -363,7 +361,7 @@ impl Running<'_> {
         }
         for i in 0..6 {
             if self.game.player_pkind(i) == super::super::pl::player::PKIND_CPU
-                && self.game.player_ckind(i) == CKIND_CREZYH
+                && self.game.player_ckind(i) == CharacterKind::CrazyHand
             {
                 r._x448[0] |= 0x01;
                 return;

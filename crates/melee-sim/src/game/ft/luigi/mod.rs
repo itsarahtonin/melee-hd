@@ -18,9 +18,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `Ft_Kind_Luigi`.
-pub const KIND_LUIGI: i32 = 17;
-
 /// Luigi's action states (`ftLg_MS_*`).
 pub mod ms {
     pub const SPECIAL_N: i32 = 341;

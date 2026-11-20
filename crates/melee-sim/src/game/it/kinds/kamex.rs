@@ -13,6 +13,7 @@ use super::super::pokemon::{self, attr_f32, attr_i32, effect_hitlag};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -43,9 +44,6 @@ pub const WATER_EVT_UNK: u32 = 0x802C_ADD0;
 pub const WATER_ANIM: u32 = 0x802C_AE60;
 pub const WATER_PHYS: u32 = 0x802C_AE94;
 pub const WATER_COLL: u32 = 0x802C_AFB4;
-
-/// `It_Kind_Kamex_HydroPump`.
-pub const KAMEX_HYDRO_PUMP: i32 = 0xC0;
 
 /// Its variables past the release's (`itPokemon_ItemVars`): the shots left (`timer`, -1 until
 /// the first), which cannon fires next (`x64`), the push back's speed (`x68`) and its slowing
@@ -291,7 +289,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId) {
         mem(fp::fmadds(reg(side), facing, reg(prev.z)))
     };
     let mut spawn = SpawnItem {
-        kind: KAMEX_HYDRO_PUMP,
+        kind: ItKind::KamexHydroPump.id(),
         ..Default::default()
     };
     spawn.prev_pos = prev;

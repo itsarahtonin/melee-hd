@@ -9,13 +9,14 @@ use gekko_fp as fp;
 
 use super::super::super::code::{self, Val};
 use super::super::super::ef::{Arg, SpawnKind};
-use super::super::super::it::kinds::{LIPSTICK, STARROD, harisen, lipstick, starrod};
+use super::super::super::it::kinds::{harisen, lipstick, starrod};
 use super::super::super::it::lib26b1;
 use super::super::super::state::Running;
 use super::PAD_A;
-use super::kind_callbacks::{ON_ITEM_DROP, ON_ITEM_PICKUP};
 use crate::fpu::reg;
+use crate::game::ft::FighterKind;
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::lb::joint::world_position;
 use crate::vec::Vec3;
@@ -95,9 +96,6 @@ const SWING_STATES: [[i32; 5]; 6] = [
     [140, 141, 142, -1, 143],
 ];
 
-/// `Ft_Kind_Captain`, the one fighter with a second smash swing.
-const KIND_CAPTAIN: i32 = 2;
-
 /// `ftCommonData`'s dash swing friction factor.
 const CD_X420: u32 = 0x420;
 
@@ -130,7 +128,7 @@ impl Running<'_> {
         // `get_anim_id`.
         let msid = if swing != 3 {
             SWING_STATES[ty as usize][swing as usize]
-        } else if fp.kind == KIND_CAPTAIN {
+        } else if fp.kind == FighterKind::Captain {
             ty.wrapping_add(341)
         } else {
             panic!("ftswing.c:97: don't have swing42 motion!!!");
@@ -222,7 +220,7 @@ impl Running<'_> {
         };
         assert_eq!(
             lib26b1::kind(self.game, it),
-            STARROD,
+            ItKind::StarRod.id(),
             "ftstarrodswing.c:100: itGetKind(fp->item_gobj) == It_Kind_StarRod"
         );
         let offset = starrod::star_offset(self, it);
@@ -257,7 +255,7 @@ impl Running<'_> {
     pub fn lipstick_hand(&mut self, gobj: GObjId) {
         let it = self.game.fighter(gobj).item_gobj;
         assert!(
-            it.is_some_and(|it| lib26b1::kind(self.game, it) == LIPSTICK),
+            it.is_some_and(|it| lib26b1::kind(self.game, it) == ItKind::LipStick),
             "ftlipstickswing.c:99: itGetKind(fp->item_gobj) == It_Kind_LipStick"
         );
         let Some(it) = it else {
@@ -401,7 +399,9 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007E79C")]
     pub fn item_drop_hook(&mut self, gobj: GObjId, flag: bool) {
         let kind = self.game.fighter(gobj).kind;
-        let hook = ON_ITEM_DROP[kind as usize];
+        let hook = crate::game::ft::registry::character(kind)
+            .callbacks
+            .on_item_drop;
         if hook != 0 {
             code::call(
                 self,
@@ -416,7 +416,9 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007E7E4")]
     pub fn item_pickup_hook(&mut self, gobj: GObjId, flag: bool) {
         let kind = self.game.fighter(gobj).kind;
-        let hook = ON_ITEM_PICKUP[kind as usize];
+        let hook = crate::game::ft::registry::character(kind)
+            .callbacks
+            .on_item_pickup;
         if hook != 0 {
             code::call(
                 self,

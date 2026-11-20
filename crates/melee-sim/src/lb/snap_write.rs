@@ -14,6 +14,7 @@ use std::cell::RefCell;
 use melee_data::archive::DataRef;
 
 use super::save::{CardList, result};
+use crate::game::ft::FighterKind;
 use crate::game::state::Running;
 use crate::hsd::heap;
 use crate::hsd::image::Src;
@@ -280,12 +281,11 @@ impl Running<'_> {
 
     /// `ft_GetFtKindMask`: a bit for each fighter kind out, Master Hand's and past left out.
     fn fighter_kinds(&self) -> i32 {
-        const FT_KIND_MASTER_HAND: i32 = 0x1B;
         let mut mask = 0u32;
         let mut cur = self.game.world.first_in(8);
         while let Some(g) = cur {
             let k = self.game.fighter(g).kind;
-            if k < FT_KIND_MASTER_HAND {
+            if k < FighterKind::MasterHand.id() {
                 mask |= 1 << k;
             }
             cur = self.game.world.gobjs[g.0].next;

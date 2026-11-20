@@ -23,6 +23,7 @@ use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, update_map_coll};
 use super::vars::Inishie1Block;
 use super::{CollUser, anime, grlib, material, setup, zako};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::dobj;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -391,7 +392,7 @@ pub fn init_blocks(r: &mut Running, gobj: GObjId) {
         blocks(r.game, g)[i].item_gobj = item;
     }
     if r.game.vs_item_freq() != -1 && r.game.vs_x6() == 0 {
-        let any = (super::super::it::kinds::CAPSULE..super::super::it::kinds::L_GUN_RAY)
+        let any = (ItKind::Capsule.id()..ItKind::LGunRay.id())
             .any(|k| super::super::it::spawn::kind_on(r.game, k));
         if any {
             let first = r.game.objs.rng.below(BLOCK_COUNT as i32);

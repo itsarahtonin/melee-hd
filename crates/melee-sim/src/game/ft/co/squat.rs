@@ -6,9 +6,10 @@ use gekko_fp as fp;
 
 use super::super::super::state::Running;
 use super::PAD_LR;
-use super::checks::{KIND_CLINK, KIND_LINK};
+
 use super::ids::{ms, sm};
 use crate::fpu::reg;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::mp::LINE_PLATFORM;
 
@@ -121,9 +122,9 @@ impl Running<'_> {
             let x5f0 = self.common().u32(0x5F0);
             self.game.fighter_mut(gobj).x209A = x5f0 as u16;
         }
-        match self.game.fighter(gobj).kind {
-            KIND_LINK => self.link_shield_absorb(gobj),
-            KIND_CLINK => self.clink_shield_absorb(gobj),
+        match self.game.fighter(gobj).fighter_kind() {
+            FighterKind::Link => self.link_shield_absorb(gobj),
+            FighterKind::Clink => self.clink_shield_absorb(gobj),
             _ => {}
         }
     }

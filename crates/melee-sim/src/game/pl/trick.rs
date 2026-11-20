@@ -8,6 +8,7 @@ use super::super::state::Running;
 use super::super::structs::{ft_800898B4_t, plAttackStats};
 use super::bonus::Flag;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 
 /// Where an attack's record (`ft_800898B4_t`) lives: a fighter's (`Fighter::x2074`) or an
@@ -25,10 +26,6 @@ const MS_ATTACK_S4_LW_S: i32 = 0x3D;
 const MS_ATTACK_S3_LW_S: i32 = 0x36;
 const MS_ATTACK_S3_S: i32 = 0x35;
 const MS_X11_B2: i32 = 253;
-/// `FighterKind`s `ft_80089914` treats apart.
-const KIND_FOX: i32 = 1;
-const KIND_FALCO: i32 = 22;
-const KIND_MEWTWO: i32 = 16;
 
 /// A record's flag byte as bits, `b0` the top one.
 fn flag_bits(b: u8) -> [bool; 8] {
@@ -566,10 +563,10 @@ impl Running<'_> {
         }
         let kind = self.game.fighter(gobj).kind;
         let low = (msid - MS_ATTACK_S3_LW_S) as u32 <= 2;
-        if (kind == KIND_FOX || kind == KIND_FALCO) && low {
+        if (kind == FighterKind::Fox || kind == FighterKind::Falco) && low {
             return false;
         }
-        if kind == KIND_MEWTWO && msid == MS_ATTACK_S3_S {
+        if kind == FighterKind::Mewtwo && msid == MS_ATTACK_S3_S {
             return false;
         }
         true

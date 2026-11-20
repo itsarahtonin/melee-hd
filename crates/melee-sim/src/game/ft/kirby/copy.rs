@@ -8,8 +8,10 @@ use super::super::super::code::unported_call;
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::kirbycopystar;
 use super::super::super::state::Running;
-use super::{KIND_KIRBY, addr, attr, ms, u};
+use super::{addr, attr, ms, u};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -104,42 +106,56 @@ impl Running<'_> {
     /// `KirbyHatStruct`'s entries from `+0xC`).
     #[doc(alias = "ftKb_SpecialN_800F16D0")]
     pub fn kb_register_copy_items(&mut self, kind: i32) {
-        use super::super::super::it::kinds as k;
         // The copy data's entries and their item kinds, by copied kind.
         let items: &[(u32, i32)] = match kind {
-            0 => &[(0, k::KIRBY_MARIO_FIRE)],
-            17 => &[(0, k::KIRBY_LUIGI_FIRE)],
-            10 => &[(0, k::KIRBY_ICE_CLIMBER_ICE)],
-            9 => &[(0, k::KIRBY_PEACH_TOAD), (1, k::KIRBY_PEACH_TOAD_SPORE)],
-            1 => &[(0, k::KIRBY_FOX_LASER), (1, k::KIRBY_FOX_BLASTER)],
-            22 => &[(3, k::KIRBY_FALCO_LASER), (4, k::KIRBY_FALCO_BLASTER)],
-            6 => &[(0, k::KIRBY_LINK_ARROW), (1, k::KIRBY_LINK_BOW)],
-            20 => &[(0, k::KIRBY_CLINK_ARROW), (1, k::KIRBY_CLINK_BOW)],
-            16 => &[(3, k::KIRBY_MEWTWO_SHADOWBALL)],
+            0 => &[(0, ItKind::KirbyMarioFire.id())],
+            17 => &[(0, ItKind::KirbyLuigiFire.id())],
+            10 => &[(0, ItKind::KirbyIceClimberIce.id())],
+            9 => &[
+                (0, ItKind::KirbyPeachToad.id()),
+                (1, ItKind::KirbyPeachToadSpore.id()),
+            ],
+            1 => &[
+                (0, ItKind::KirbyFoxLaser.id()),
+                (1, ItKind::KirbyFoxBlaster.id()),
+            ],
+            22 => &[
+                (3, ItKind::KirbyFalcoLaser.id()),
+                (4, ItKind::KirbyFalcoBlaster.id()),
+            ],
+            6 => &[
+                (0, ItKind::KirbyLinkArrow.id()),
+                (1, ItKind::KirbyLinkBow.id()),
+            ],
+            20 => &[
+                (0, ItKind::KirbyCLinkArrow.id()),
+                (1, ItKind::KirbyCLinkBow.id()),
+            ],
+            16 => &[(3, ItKind::KirbyMewtwoShadowBall.id())],
             8 => &[
-                (0, k::KIRBY_NESS_PK_FLUSH),
-                (1, k::KIRBY_NESS_PK_FLUSH_EXPLODE),
+                (0, ItKind::KirbyNessPKFlush.id()),
+                (1, ItKind::KirbyNessPKFlushExplode.id()),
             ],
             12 => &[
-                (0, k::KIRBY_PIKACHU_TJOLT_GROUND),
-                (1, k::KIRBY_PIKACHU_TJOLT_AIR),
+                (0, ItKind::KirbyPikachuTJoltGround.id()),
+                (1, ItKind::KirbyPikachuTJoltAir.id()),
             ],
             23 => &[
-                (0, k::KIRBY_PICHU_TJOLT_GROUND),
-                (1, k::KIRBY_PICHU_TJOLT_AIR),
+                (0, ItKind::KirbyPichuTJoltGround.id()),
+                (1, ItKind::KirbyPichuTJoltAir.id()),
             ],
-            13 => &[(0, k::KIRBY_SAMUS_CHARGE)],
-            5 | 31 => &[(0, k::KIRBY_KOOPA_FLAME)],
+            13 => &[(0, ItKind::KirbySamusCharge.id())],
+            5 | 31 => &[(0, ItKind::KirbyKoopaFlame.id())],
             7 => &[
-                (0, k::KIRBY_SEAK_NEEDLE_THROW),
-                (1, k::KIRBY_SEAK_NEEDLE_HELD),
+                (0, ItKind::KirbySeakNeedleThrow.id()),
+                (1, ItKind::KirbySeakNeedleHeld.id()),
             ],
-            21 => &[(0, k::KIRBY_DRMARIO_VITAMIN)],
+            21 => &[(0, ItKind::KirbyDrMarioVitamin.id())],
             24 => &[
-                (5, k::KIRBY_GAME_WATCH_CHEF),
-                (6, k::KIRBY_GAME_WATCH_CHEF_PAN),
+                (5, ItKind::KirbyGameWatchChef.id()),
+                (6, ItKind::KirbyGameWatchChefPan.id()),
             ],
-            14 => &[(5, k::KIRBY_YOSHI_EGG_LAY)],
+            14 => &[(5, ItKind::KirbyYoshiEggLay.id())],
             _ => &[],
         };
         if items.is_empty() {
@@ -148,11 +164,7 @@ impl Running<'_> {
         // Giga Bowser has no copy file, so his copy's data is null and the original reads
         // through it here, a fault on a console (docs/melee-bugs.md, design call 7).
         let Some(copy) = self.game.ft.kirby.copies[kind as usize] else {
-            assert_eq!(
-                kind,
-                super::super::koopa::KIND_GKOOPA,
-                "a copy without its data"
-            );
+            assert_eq!(kind, FighterKind::GKoopa.id(), "a copy without its data");
             panic!(
                 "Melee crashes: Kirby's copy of Giga Bowser has no copy data, and ftKb_SpecialN_800F16D0 reads its flame's article at address 0x18"
             );
@@ -263,8 +275,8 @@ impl Running<'_> {
     pub fn kb_release_item(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if let Some(it) = fp.target_item_gobj
-            && fp.kind == KIND_KIRBY
-            && fp.u_i32(u::HAT_KIND) == KIND_KIRBY
+            && fp.kind == FighterKind::Kirby
+            && fp.u_i32(u::HAT_KIND) == FighterKind::Kirby
         {
             let capturing = matches!(
                 fp.motion_id,
@@ -285,7 +297,7 @@ impl Running<'_> {
         self.kb_reset_copy_vars(gobj);
         let kind = self.game.fighter(gobj).u_i32(u::HAT_KIND);
         self.kb_remove_hat(gobj, kind);
-        if kind != KIND_KIRBY && star {
+        if kind != FighterKind::Kirby && star {
             let f = self.game.fighter_id(gobj);
             let fp = &self.game.fighters[f.0];
             let (x, y, facing) = (fp.cur_pos.x, fp.cur_pos.y, fp.facing_dir);
@@ -299,7 +311,7 @@ impl Running<'_> {
         }
         self.game
             .fighter_mut(gobj)
-            .set_u_i32(u::HAT_KIND, KIND_KIRBY);
+            .set_u_i32(u::HAT_KIND, FighterKind::Kirby.id());
     }
 
     /// Whether a hit knocks his copy out, `ftKb_SpecialN_800F5BA4` (a damage's, unless he
@@ -309,8 +321,8 @@ impl Running<'_> {
     pub fn kb_maybe_lose_copy(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        if fp.kind != KIND_KIRBY
-            || fp.u_i32(u::HAT_KIND) == KIND_KIRBY
+        if fp.kind != FighterKind::Kirby
+            || fp.u_i32(u::HAT_KIND) == FighterKind::Kirby
             || fp.u[u::HAT_FLAGS] & 0x80 != 0
             || fp.victim_gobj.is_some()
             || fp.dmg.x1860_element == ELEMENT_CAPE
@@ -329,8 +341,8 @@ impl Running<'_> {
     pub fn kb_maybe_lose_copy_no_knockback(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        if fp.kind != KIND_KIRBY
-            || fp.u_i32(u::HAT_KIND) == KIND_KIRBY
+        if fp.kind != FighterKind::Kirby
+            || fp.u_i32(u::HAT_KIND) == FighterKind::Kirby
             || fp.u[u::HAT_FLAGS] & 0x80 != 0
             || fp.victim_gobj.is_some()
         {

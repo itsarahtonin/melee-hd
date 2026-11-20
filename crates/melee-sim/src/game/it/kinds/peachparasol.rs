@@ -5,6 +5,7 @@
 use super::super::item::{animate, change, change_state, debug_owner_bubbles, destroy, spawn_air};
 use super::super::{item, item_mut, lib26b1};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -17,9 +18,6 @@ pub const PICKED_UP: u32 = 0x802B_DC74;
 pub const MOTION2_ANIM: u32 = 0x802B_DCC0;
 pub const ACCESSORY: u32 = 0x802B_DD3C;
 pub const EVT_UNK: u32 = 0x802B_DDF8;
-
-/// `It_Kind_Peach_Parasol`.
-pub const KIND: i32 = 103;
 
 /// Runs one of the parasol's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -66,7 +64,7 @@ pub fn spawn(
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: KIND,
+        kind: ItKind::PeachParasol.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition`, keeping its depth.

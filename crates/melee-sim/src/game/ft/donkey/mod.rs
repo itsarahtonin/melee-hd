@@ -21,9 +21,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `Ft_Kind_Donkey`.
-pub const KIND_DONKEY: i32 = 3;
-
 /// Donkey Kong's action states (`ftDk_MS_*`).
 pub mod ms {
     pub const SPECIAL_N_START: i32 = 369;

@@ -93,7 +93,11 @@ impl QuickMatch {
                             .show_ui(ui, |ui| {
                                 ui.selectable_value(&mut port.character, None, "None");
                                 for c in &characters {
-                                    ui.selectable_value(&mut port.character, Some(c.kind), c.name);
+                                    ui.selectable_value(
+                                        &mut port.character,
+                                        Some(c.vs_kind()),
+                                        c.name,
+                                    );
                                 }
                             });
                         ui.add_enabled_ui(port.character.is_some(), |ui| {

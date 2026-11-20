@@ -28,6 +28,9 @@ use super::{
     rcruise, shrine, shrineroute, stadium, story, target, teststage, venom, yorster, zebes,
     zebesroute,
 };
+use crate::hsd::jobj::JObjId;
+use crate::vec::Vec3;
+use melee_data::archive::DataRef;
 
 /// A ground kind (`GrKind`): which stage's code and archive run, the index of the
 /// executable's `stage_datas` and of this registry ([`STAGES`]). The game's own numbers.
@@ -450,6 +453,12 @@ pub struct Stage {
     pub procs: Option<fn(&mut Entries<kind::Proc>)>,
     /// Its module's `#[callbacks(Render)]` dispatch, for the stages that draw their own.
     pub renders: Option<fn(&mut Entries<kind::Render>)>,
+    /// The port of `data.on_check_shadow_render`: whether a joint of the stage takes a
+    /// fighter's shadow, the fighter at a position (`gr::display`); none for the dummy stage.
+    pub shadow: Option<fn(&mut Running<'_>, Vec3, JObjId) -> bool>,
+    /// The port of `data.on_touch_line`: the hit a collision line gives a fighter touching it
+    /// (its `DynamicsDesc`), if any (`ft::attack`'s line hazards); none for the dummy stage.
+    pub touch_line: Option<fn(&mut Running<'_>, i32) -> Option<DataRef>>,
     /// Which member of `GroundVars` an object of the stage uses, by its map id.
     pub vars: fn(i32) -> VarsKind,
     /// The stage kind a VS match on it starts with, for a stage the roster lists: the player's
@@ -531,6 +540,16 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
     }
 }
 
+/// The stage whose data names the address `f` in `field`: the loaded stage (`grkind`)
+/// when its data does, else the first that does (the state holds the original's address,
+/// which only the loaded stage's setup writes).
+pub fn by_address(grkind: i32, f: u32, field: fn(&StageData) -> u32) -> Option<&'static Stage> {
+    match GrKind::from_id(grkind).and_then(|k| STAGES[k as usize].as_ref()) {
+        Some(s) if field(s.data) == f => Some(s),
+        _ => ported().find(|s| field(s.data) == f),
+    }
+}
+
 /// Runs a stage's demo setup by its address (`StageData::on_demo_init`), with the demo's
 /// number; `None` if no stage's data names the address.
 pub fn run_demo(r: &mut Running, f: u32, arg: i32) -> Option<()> {
@@ -606,6 +625,8 @@ macro_rules! target {
             demo: Some(|r, _| target::on_demo_init(r)),
             procs: Some(target::run),
             renders: None,
+            shadow: Some(|_, _, _| target::check_shadow_render()),
+            touch_line: Some(|r, line| target::line_hazard(r.game, r.data, line)),
             vars: bytes,
             vs: None,
             keys: &[],
@@ -627,6 +648,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: None,
         procs: None,
         renders: None,
+        shadow: None,
+        touch_line: None,
         vars: bytes,
         vs: None,
         keys: &[],
@@ -642,6 +665,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| teststage::on_demo_init(r)),
         procs: Some(teststage::run),
         renders: None,
+        shadow: Some(|_, _, _| teststage::check_shadow_render()),
+        touch_line: Some(|_, line| teststage::on_touch_line(line)),
         vars: bytes,
         vs: None,
         keys: &[],
@@ -657,6 +682,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| castle::on_demo_init(r)),
         procs: Some(castle::run),
         renders: Some(castle::run_render),
+        shadow: Some(|r, pos, j| castle::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 => VarsKind::CastleBlast,
             2 => VarsKind::CastleBlaster,
@@ -692,6 +719,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| rcruise::on_demo_init(r)),
         procs: Some(rcruise::run),
         renders: Some(rcruise::run_render),
+        shadow: Some(|_, _, _| rcruise::check_shadow_render()),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 => VarsKind::RCruise,
             3 => VarsKind::Scroll,
@@ -718,6 +747,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| kongo::on_demo_init(r)),
         procs: Some(kongo::run),
         renders: None,
+        shadow: Some(|r, pos, j| kongo::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             10 => VarsKind::Kongo,
             5 => VarsKind::KongoBarrel,
@@ -749,6 +780,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| garden::on_demo_init(r)),
         procs: Some(garden::run),
         renders: None,
+        shadow: Some(|r, pos, j| garden::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 => VarsKind::Garden,
             3 => VarsKind::Garden2,
@@ -773,6 +806,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| greatbay::on_demo_init(r)),
         procs: Some(greatbay::run),
         renders: None,
+        shadow: Some(|r, pos, j| greatbay::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 => VarsKind::GreatBay,
             2 => VarsKind::GreatBay3,
@@ -799,6 +834,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| shrine::on_demo_init(r)),
         procs: Some(shrine::run),
         renders: None,
+        shadow: Some(|r, pos, j| shrine::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: bytes,
         vs: Some(StKind::Shrine),
         keys: &["ht", "hyrule-temple"],
@@ -819,6 +856,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| zebes::on_demo_init(r)),
         procs: Some(zebes::run),
         renders: None,
+        shadow: Some(|_, _, _| zebes::check_shadow_render()),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 => VarsKind::ZebesBack,
             3 => VarsKind::ZebesBubble,
@@ -847,6 +886,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| kraid::on_demo_init(r)),
         procs: Some(kraid::run),
         renders: None,
+        shadow: Some(|_, _, _| kraid::check_shadow_render()),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 | 3 => VarsKind::Kraid,
             4 => VarsKind::Kraid2,
@@ -871,6 +912,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| story::on_demo_init(r)),
         procs: Some(story::run),
         renders: None,
+        shadow: Some(|r, pos, j| story::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             2 => VarsKind::StoryRandall,
             3 => VarsKind::StoryShyGuys,
@@ -895,6 +938,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| yorster::on_demo_init(r)),
         procs: Some(yorster::run),
         renders: None,
+        shadow: Some(|_, _, _| yorster::check_shadow_render()),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 => VarsKind::Yorster,
             _ => VarsKind::Bytes,
@@ -918,6 +963,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| izumi::on_demo_init(r)),
         procs: Some(izumi::run),
         renders: Some(izumi::run_render),
+        shadow: Some(|r, pos, j| izumi::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             2 => VarsKind::Izumi2,
             3 => VarsKind::Izumi,
@@ -943,6 +990,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| greens::on_demo_init(r)),
         procs: Some(greens::run),
         renders: None,
+        shadow: Some(|_, _, _| greens::check_shadow_render()),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             5 => VarsKind::Greens2,
             6 => VarsKind::Greens,
@@ -971,6 +1020,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| corneria::on_demo_init(r)),
         procs: Some(corneria::run),
         renders: Some(corneria::run_render),
+        shadow: Some(|r, pos, j| corneria::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             3 => VarsKind::Corneria,
             4 | 9 => VarsKind::CorneriaCity,
@@ -1011,6 +1062,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| venom::on_demo_init(r)),
         procs: Some(venom::run),
         renders: None,
+        shadow: Some(|r, pos, j| venom::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 => VarsKind::SmashTaunt,
             2 => VarsKind::ArwingPath,
@@ -1040,6 +1093,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| stadium::on_demo_init(r)),
         procs: Some(stadium::run),
         renders: Some(stadium::run_render),
+        shadow: Some(|r, pos, j| stadium::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 => VarsKind::StadiumDisplay,
             2 => VarsKind::Stadium,
@@ -1066,6 +1121,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| pura::on_demo_init(r)),
         procs: Some(pura::run),
         renders: Some(pura::run_render),
+        shadow: Some(|_, _, _| pura::check_shadow_render()),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 => VarsKind::Pura,
             2 | 3 | 5..=26 => VarsKind::PuraFloat,
@@ -1091,6 +1148,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| mutecity::on_demo_init(r)),
         procs: Some(mutecity::run),
         renders: None,
+        shadow: Some(|r, pos, j| mutecity::check_shadow_render(r.game, pos, Some(j))),
+        touch_line: Some(|r, line| mutecity::line_hazard(r.game, r.data, line)),
         vars: |map_id| match map_id {
             30 => VarsKind::MuteCity,
             29 => VarsKind::MuteCity2,
@@ -1120,6 +1179,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| bigblue::on_demo_init(r)),
         procs: Some(bigblue::run),
         renders: Some(bigblue::run_render),
+        shadow: Some(|r, pos, j| bigblue::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             32 => VarsKind::BigBlueManager,
             33 => VarsKind::BigBlueCars,
@@ -1147,6 +1208,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| onett::on_demo_init(r)),
         procs: Some(onett::run),
         renders: None,
+        shadow: Some(|r, pos, j| onett::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             3 => VarsKind::OnettCar,
             4 => VarsKind::OnettBuilding,
@@ -1172,6 +1235,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| fourside::on_demo_init(r)),
         procs: Some(fourside::run),
         renders: Some(fourside::run_render),
+        shadow: Some(|r, pos, j| fourside::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 => VarsKind::FoursideCrane,
             3 => VarsKind::Fourside2,
@@ -1198,6 +1263,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| icemt::on_demo_init(r)),
         procs: Some(icemt::run),
         renders: None,
+        shadow: Some(|_, _, _| icemt::check_shadow_render()),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1..=6 => VarsKind::IceMtField(map_id as u8),
             8 => VarsKind::IceMtBg,
@@ -1226,6 +1293,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| inishie1::on_demo_init(r)),
         procs: Some(inishie1::run),
         renders: None,
+        shadow: Some(|_, _, _| inishie1::check_shadow_render()),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             2 => VarsKind::Inishie1Hatena,
             3 => VarsKind::Inishie1,
@@ -1260,6 +1329,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| inishie2::on_demo_init(r)),
         procs: Some(inishie2::run),
         renders: None,
+        shadow: Some(|_, _, _| inishie2::check_shadow_render()),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 => VarsKind::Inishie2Pidgit,
             2 => VarsKind::Inishie2,
@@ -1292,6 +1363,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| flatzone::on_demo_init(r)),
         procs: Some(flatzone::run),
         renders: None,
+        shadow: Some(|_, _, _| flatzone::check_shadow_render()),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             2 => VarsKind::Flatzone,
             3 => VarsKind::FlatzoneOil,
@@ -1319,6 +1392,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| oldpupupu::on_demo_init(r)),
         procs: Some(oldpupupu::run),
         renders: None,
+        shadow: Some(|r, pos, j| oldpupupu::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 | 7 => VarsKind::OldPupupu,
             8 => VarsKind::OldPupupu2,
@@ -1343,6 +1418,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| oldyoshi::on_demo_init(r)),
         procs: Some(oldyoshi::run),
         renders: None,
+        shadow: Some(|r, pos, j| oldyoshi::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             2 => VarsKind::OldYoshiCloud,
             3 => VarsKind::OldYoshiGuest,
@@ -1367,6 +1444,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| oldkongo::on_demo_init(r)),
         procs: Some(oldkongo::run),
         renders: None,
+        shadow: Some(|r, pos, j| oldkongo::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 => VarsKind::OldKongo,
             2 => VarsKind::OldKongoBirds,
@@ -1394,6 +1473,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| kinokoroute::on_demo_init(r)),
         procs: Some(kinokoroute::run),
         renders: None,
+        shadow: Some(|r, pos, j| kinokoroute::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, line| kinokoroute::on_touch_line(line)),
         vars: |map_id| match map_id {
             0 => VarsKind::KinokoRoute,
             3 => VarsKind::KinokoRoute2,
@@ -1413,6 +1494,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| shrineroute::on_demo_init(r)),
         procs: Some(shrineroute::run),
         renders: None,
+        shadow: Some(|r, pos, j| shrineroute::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, line| shrineroute::on_touch_line(line)),
         vars: |map_id| match map_id {
             4 => VarsKind::ShrineRoute,
             5 => VarsKind::ShrineRoute3,
@@ -1434,6 +1517,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| zebesroute::on_demo_init(r)),
         procs: Some(zebesroute::run),
         renders: None,
+        shadow: Some(|_, _, _| zebesroute::check_shadow_render()),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             1 => VarsKind::ZebesBack,
             _ => VarsKind::Bytes,
@@ -1452,6 +1537,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| bigblueroute::on_demo_init(r)),
         procs: Some(bigblueroute::run),
         renders: None,
+        shadow: Some(|r, pos, j| bigblueroute::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, line| bigblueroute::on_touch_line(line)),
         vars: |map_id| match map_id {
             31 => VarsKind::BigBlueRoute,
             4 => VarsKind::BigBlueRouteCars,
@@ -1471,6 +1558,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| teststage::on_demo_init(r)),
         procs: Some(teststage::run),
         renders: None,
+        shadow: Some(|_, _, _| teststage::check_shadow_render()),
+        touch_line: Some(|_, line| teststage::on_touch_line(line)),
         vars: bytes,
         vs: None,
         keys: &[],
@@ -1486,6 +1575,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| battle::on_demo_init(r.game)),
         procs: Some(battle::run),
         renders: None,
+        shadow: Some(|_, _, _| true),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             3 => VarsKind::BattleBg,
             _ => VarsKind::Bytes,
@@ -1509,6 +1600,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(last::on_demo_init),
         procs: Some(last::run),
         renders: None,
+        shadow: Some(|_, _, _| true),
+        touch_line: Some(|_, _| None),
         vars: |map_id| match map_id {
             3 => VarsKind::Map,
             7 => VarsKind::Last,
@@ -1533,6 +1626,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| figureget::on_demo_init(r)),
         procs: Some(figureget::run),
         renders: None,
+        shadow: Some(|_, _, _| figureget::check_shadow_render()),
+        touch_line: Some(|_, line| figureget::on_touch_line(line)),
         vars: |map_id| match map_id {
             1 => VarsKind::FigureGet,
             _ => VarsKind::Bytes,
@@ -1551,6 +1646,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| pushon::on_demo_init(r)),
         procs: Some(pushon::run),
         renders: None,
+        shadow: Some(|_, _, _| pushon::check_shadow_render()),
+        touch_line: Some(|r, line| pushon::line_hazard(r.game, r.data, line)),
         vars: |map_id| match map_id {
             1 => VarsKind::Map,
             2 => VarsKind::PushOn,
@@ -1686,6 +1783,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|_, _| heal::empty()),
         procs: Some(heal::run),
         renders: None,
+        shadow: Some(|_, _, _| heal::check_shadow_render()),
+        touch_line: Some(|_, line| heal::on_touch_line(line)),
         vars: |map_id| match map_id {
             1 => VarsKind::Map,
             _ => VarsKind::Bytes,
@@ -1704,6 +1803,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| homerun::on_demo_init(r)),
         procs: Some(homerun::run),
         renders: Some(homerun::run_render),
+        shadow: Some(|r, pos, j| homerun::check_shadow_render(r.game, r.data, pos, Some(j))),
+        touch_line: Some(|_, line| homerun::on_touch_line(line)),
         vars: |map_id| match map_id {
             10 => VarsKind::HomeRun,
             1 | 4 | 6 | 8 => VarsKind::HomeRunPart,
@@ -1724,6 +1825,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| figure::on_demo_init(r)),
         procs: Some(figure::run),
         renders: None,
+        shadow: Some(|_, _, _| figure::check_shadow_render()),
+        touch_line: Some(|_, line| figure::on_touch_line(line)),
         vars: bytes,
         vs: None,
         keys: &[],
@@ -1739,6 +1842,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| figure::on_demo_init(r)),
         procs: Some(figure::run),
         renders: None,
+        shadow: Some(|_, _, _| figure::check_shadow_render()),
+        touch_line: Some(|_, line| figure::on_touch_line(line)),
         vars: bytes,
         vs: None,
         keys: &[],
@@ -1754,6 +1859,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         demo: Some(|r, _| figure::on_demo_init(r)),
         procs: Some(figure::run),
         renders: None,
+        shadow: Some(|_, _, _| figure::check_shadow_render()),
+        touch_line: Some(|_, line| figure::on_touch_line(line)),
         vars: bytes,
         vs: None,
         keys: &[],
@@ -1802,6 +1909,26 @@ mod tests {
             }
         }
         assert_eq!(seen.len(), 29);
+    }
+
+    /// Each stage but the dummy has its shadow check and line-touch ports, and each stage's
+    /// addresses find their own entry.
+    #[test]
+    fn shadow_checks_and_line_hazards_are_wired() {
+        for s in ported() {
+            let dummy = s.kind == GrKind::Dummy;
+            assert_eq!(s.shadow.is_none(), dummy, "{}", s.name);
+            assert_eq!(s.touch_line.is_none(), dummy, "{}", s.name);
+            if !dummy {
+                let d = s.data;
+                let by = |f, field| by_address(s.kind.id(), f, field).map(|t| t.data.grkind);
+                assert_eq!(
+                    by(d.on_check_shadow_render, |d| d.on_check_shadow_render),
+                    Some(d.grkind)
+                );
+                assert_eq!(by(d.on_touch_line, |d| d.on_touch_line), Some(d.grkind));
+            }
+        }
     }
 
     /// Each stage's hook addresses are in the callback table (leaf-check calls them by address).

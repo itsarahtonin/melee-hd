@@ -13,6 +13,7 @@ use super::data::{STORY_CALLBACKS, StageCallbacks};
 use super::ground::{ground_of, jobj_of, nth_joint, update_map_coll};
 use super::{anime, grlib, material, setup, zako};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -151,7 +152,7 @@ pub fn proc_shyguys(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "grStory_801E3418")]
 pub fn shyguys_tick(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    if crate::game::it::lib26b1::count_kind(r.game, crate::game::it::kinds::HEIHO) != 0 {
+    if crate::game::it::lib26b1::count_kind(r.game, ItKind::Heiho.id()) != 0 {
         return;
     }
     let v = r.game.grounds[g.0].u.story_shyguys();

@@ -5,6 +5,7 @@ use super::super::ground::{air, fall, ground_or_fall, ground_skid};
 use super::super::item::{article, change, change_state};
 use super::super::{item, item_mut, lib26b1, lib2725};
 use super::falling_phys;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 
@@ -105,7 +106,8 @@ pub fn fire(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3, facing: f32) {
 /// (`itLGun_ItemVars::timer`, their first word, which is its ammunition).
 #[doc(alias = "it_8026C1D4")]
 pub fn shots_bonus(game: &crate::game::state::Game, data: &melee_data::archive::Archives) -> u32 {
-    let a = super::super::item::article_of(game, data, super::L_GUN).expect("no Ray Gun article");
+    let a =
+        super::super::item::article_of(game, data, ItKind::LGun.id()).expect("no Ray Gun article");
     let attrs = super::super::data::Article(a)
         .special(data)
         .expect("a Ray Gun without attributes");

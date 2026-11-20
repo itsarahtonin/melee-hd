@@ -6,6 +6,7 @@ use super::super::super::it::kinds::linkbomb;
 use super::super::super::it::lib26b1;
 use super::super::super::state::Running;
 use super::{addr, attr, ms};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// `ftCo_MS_LightThrowF4` and `ftCo_MS_LightThrowAirF4`: a held item's throws the special
@@ -33,7 +34,7 @@ impl Running<'_> {
         };
         if let Some(item) = self.game.fighter(gobj).item_gobj {
             let kind = lib26b1::kind(self.game, item);
-            if (kind.wrapping_sub(linkbomb::KIND) as u32) <= 1 {
+            if (kind.wrapping_sub(ItKind::LinkBomb.id()) as u32) <= 1 {
                 self.enter_item_throw(gobj, throw);
             }
             return;

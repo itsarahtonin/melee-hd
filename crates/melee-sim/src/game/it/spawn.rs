@@ -7,9 +7,9 @@ use melee_data::archive::Archives;
 
 use super::data::common;
 use super::item::common_data;
-use super::kinds::{KURIBOH, M_BALL};
 use super::{P_LINK_ITEM, item};
 use crate::fpu::reg;
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -48,11 +48,6 @@ pub struct Tables {
     pub no_containers: PickTable,
     pub monsters: PickTable,
 }
-
-/// `It_Kind_L_Gun_Ray`: the kinds below it are the ones that appear on their own.
-const RANDOM_KINDS: i32 = 35;
-/// `It_Kind_BombHei`: the first kind that isn't a container.
-const FIRST_NON_CONTAINER: i32 = 6;
 
 /// The item GObj of kind `kind` latest in the list, `it_80272828`.
 #[doc(alias = "it_80272828")]
@@ -121,7 +116,7 @@ pub fn pick(game: &mut Game, table: &PickTable) -> i32 {
 /// have them), `it_8026C704`.
 #[doc(alias = "it_8026C704")]
 pub fn poke_balls_full(game: &Game) -> bool {
-    game.it.counts.x1C >= game.it.counts.x20 || !kind_on(game, M_BALL)
+    game.it.counts.x1C >= game.it.counts.x20 || !kind_on(game, ItKind::MBall.id())
 }
 
 /// Draws a kind from a table, `it_8026C75C`; -1 for none. While no more Poké Balls may
@@ -137,7 +132,7 @@ pub fn pick_kind(game: &mut Game, which: fn(&mut Game) -> &mut PickTable) -> i32
     if full {
         let last = usize::from(t.size).wrapping_sub(1);
         let kinds = t.kinds.as_deref().expect("a table without kinds");
-        if i32::from(kinds[last]) == M_BALL {
+        if i32::from(kinds[last]) == ItKind::MBall {
             if (i32::from(t.size) - 1) < 1 {
                 return -1;
             }
@@ -153,7 +148,7 @@ pub fn pick_kind(game: &mut Game, which: fn(&mut Game) -> &mut PickTable) -> i32
             let t = which(game);
             t.total = total;
             t.size = t.size.wrapping_add(1);
-            if kind == M_BALL { -1 } else { kind }
+            if kind == ItKind::MBall { -1 } else { kind }
         }
         None => kind,
     }
@@ -216,7 +211,7 @@ fn reset_timer(game: &mut Game, data: &Archives) {
 pub fn total(counts: &[i32; 35], mask: u64, first: i32, weight: f32) -> u16 {
     let mut mask = mask;
     let mut sum = 0i32;
-    for i in first..RANDOM_KINDS {
+    for i in first..ItKind::COMMON_END.id() {
         if mask & 1 != 0 {
             sum = sum.wrapping_add(weighted(weight, counts[i as usize]));
         }
@@ -241,7 +236,7 @@ fn weighted(weight: f32, count: i32) -> i32 {
 pub fn build(table: &mut PickTable, counts: &[i32; 35], mask: u64, first: i32, weight: f32) {
     let on = |mask: u64| {
         let mut mask = mask;
-        (first..RANDOM_KINDS).filter(move |&i| {
+        (first..ItKind::COMMON_END.id()).filter(move |&i| {
             let on = mask & 1 != 0 && counts[i as usize] != 0;
             mask >>= 1;
             on
@@ -314,7 +309,7 @@ pub fn build_monsters(game: &mut Game, data: &Archives) {
         weights.push(cumulative as u16);
         cumulative = cumulative.wrapping_add(x as u32);
     }
-    let kinds: Vec<u8> = (0..4).map(|i| KURIBOH as u8 + i).collect();
+    let kinds: Vec<u8> = (0..4).map(|i| ItKind::Kuriboh.id() as u8 + i).collect();
     if let Some(at) = arrays {
         lay_arrays(at, &kinds, &weights);
     }
@@ -357,15 +352,15 @@ pub fn setup(r: &mut Running) {
         return;
     }
     build(&mut game.it.spawn.spawner.table, &counts, mask, 0, weight);
-    let mask = mask >> FIRST_NON_CONTAINER;
-    let t = total(&counts, mask, FIRST_NON_CONTAINER, weight);
+    let mask = mask >> ItKind::BombHei.id();
+    let t = total(&counts, mask, ItKind::BombHei.id(), weight);
     game.it.spawn.no_containers.total = t;
     if t != 0 {
         build(
             &mut game.it.spawn.no_containers,
             &counts,
             mask,
-            FIRST_NON_CONTAINER,
+            ItKind::BombHei.id(),
             weight,
         );
     }
@@ -412,7 +407,9 @@ pub fn kind_on(game: &Game, kind: i32) -> bool {
 /// Whether any healing item is on, `it_8026D3CC`.
 #[doc(alias = "it_8026D3CC")]
 pub fn healing_on(game: &Game) -> bool {
-    kind_on(game, 8) | kind_on(game, 9) | kind_on(game, 18)
+    kind_on(game, ItKind::Heart.id())
+        | kind_on(game, ItKind::Tomato.id())
+        | kind_on(game, ItKind::Foods.id())
 }
 
 /// A random spot on the stage where an item can stand, `it_8026CB3C`.

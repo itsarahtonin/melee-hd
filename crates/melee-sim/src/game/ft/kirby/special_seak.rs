@@ -6,11 +6,11 @@
 //! his own ([`KIRBY`]); the needles' variables are laid out as Sheik's (`mv.kb.specialhi`).
 //! Only his copy's addresses are here.
 
-use super::super::super::it::kinds as k;
 use super::super::super::state::Running;
 use super::super::seak::ms as sk;
 use super::super::seak::special_n::Needles;
 use super::ms;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// The copy's function addresses.
@@ -61,8 +61,8 @@ pub const KIRBY: Needles = Needles {
     attrs: 0x290,
     u: 0xB4,
     needle_part: 39,
-    held_kind: k::KIRBY_SEAK_NEEDLE_HELD,
-    thrown_kind: k::KIRBY_SEAK_NEEDLE_THROW,
+    held_kind: ItKind::KirbySeakNeedleHeld.id(),
+    thrown_kind: ItKind::KirbySeakNeedleThrow.id(),
     full_glow: 87,
     on_death: super::addr::DEATH3,
     on_damage: super::addr::DEATH1,

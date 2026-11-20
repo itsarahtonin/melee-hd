@@ -44,6 +44,7 @@ use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::gr;
 use melee_sim::game::handles::CodeRef;
+use melee_sim::game::it::ItKind;
 use melee_sim::game::it::kinds::{bombhei, crate_box, foods, heiho, msbomb};
 use melee_sim::game::it::{self, CLASS_ITEM};
 use melee_sim::game::state::Running;
@@ -124,14 +125,13 @@ const TAKES_MORE: &[&str] = &[
 
 /// The item kind a kind's own function takes (its variables are that kind's), if it's one.
 fn kind_of(name: &str) -> Option<i32> {
-    use melee_sim::game::it::kinds::{BOMBHEI, BOX, FLIPPER, FOODS, HEIHO};
     Some(match name {
-        "it_8028F8E4" | "it_8028F968" | "it_8028F9B8" | "it_8028F9D8" => FOODS,
-        "it_802D8688" | "it_802D8EC8" | "it_802D96B0" | "it_802D9714" => HEIHO,
-        "it_80280B60" | "it_8027D730" => BOMBHEI,
+        "it_8028F8E4" | "it_8028F968" | "it_8028F9B8" | "it_8028F9D8" => ItKind::Foods.id(),
+        "it_802D8688" | "it_802D8EC8" | "it_802D96B0" | "it_802D9714" => ItKind::Heiho.id(),
+        "it_80280B60" | "it_8027D730" => ItKind::BombHei.id(),
         "it_8028FE90" | "itMSBomb_Logic19_Reflected" => 19,
-        "itFlipper_Reflected" | "itFlipper_ShieldBounced" => FLIPPER,
-        "itBox_Logic1_Destroyed" => BOX,
+        "itFlipper_Reflected" | "itFlipper_ShieldBounced" => ItKind::Flipper.id(),
+        "itBox_Logic1_Destroyed" => ItKind::Box.id(),
         _ => return None,
     })
 }

@@ -14,9 +14,6 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
 
-/// `It_Kind_CrazyHand_Bomb`.
-pub const KIND: i32 = 129;
-
 #[doc(alias = "itCrazyhandbomb_UnkMotion0_Anim")]
 pub const ANIM_0: u32 = 0x802F_1168;
 #[doc(alias = "itCrazyhandbomb_UnkMotion0_Phys")]

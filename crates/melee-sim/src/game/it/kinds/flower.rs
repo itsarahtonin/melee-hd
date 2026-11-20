@@ -13,6 +13,7 @@ use crate::vec::Vec3;
 use gekko_fp as fp;
 
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 
 pub const SPAWNED: u32 = 0x8029_A9FC;
 pub const LANDED: u32 = 0x8029_AA1C;
@@ -75,7 +76,7 @@ fn vars(game: &mut Game, gobj: GObjId) -> &mut itFFlowerFlame_ItemVars {
 #[doc(alias = "it_8029A748")]
 pub fn grow(r: &mut Running, owner: GObjId, pos: Vec3, part: i32, facing: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::F_FLOWER_FLAME,
+        kind: ItKind::FFlowerFlame.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

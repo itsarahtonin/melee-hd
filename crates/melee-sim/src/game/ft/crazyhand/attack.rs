@@ -11,6 +11,7 @@ use super::super::super::it::kinds::{crazyhandbomb, masterhandlaser};
 use super::super::super::state::Running;
 use super::{addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -383,7 +384,7 @@ impl Running<'_> {
         }
         // Master Hand's kind: without a Master Hand in the match nothing registered its
         // article, and the item's creation reads it through null (docs/melee-bugs.md).
-        let kind = masterhandlaser::KIND;
+        let kind = ItKind::MasterHandLaser.id();
         if super::super::super::it::item::article_of(self.game, self.data, kind).is_none() {
             panic!(
                 "Melee crashes: Crazy Hand's poke makes Master Hand's laser (item kind {kind}), whose article no Master Hand registered, and Item_80267AA8 reads it at address 0x10"
@@ -453,7 +454,7 @@ impl Running<'_> {
             to.x = mem(fp::fadds(reg(to.x), reg(self.ch_da_f32(f, ox))));
             to.y = mem(fp::fadds(reg(to.y), reg(self.ch_da_f32(f, oy))));
             let facing = self.game.fighters[f.0].facing_dir;
-            crazyhandbomb::spawn(self, gobj, to, from, crazyhandbomb::KIND, facing);
+            crazyhandbomb::spawn(self, gobj, to, from, ItKind::CrazyHandBomb.id(), facing);
             self.game.fighters[f.0].cmd_vars[i] = 0;
             self.fighter_play_sfx(f, SFX_BOMB, 0x7F, 0x40);
         }

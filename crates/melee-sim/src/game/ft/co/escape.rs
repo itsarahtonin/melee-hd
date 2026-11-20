@@ -2,9 +2,10 @@
 
 use super::super::super::state::Running;
 use super::PAD_LR;
-use super::checks::{KIND_SAMUS, KIND_YOSHI, abs};
+use super::checks::abs;
 use super::ids::ms;
 use crate::fpu::reg;
+use crate::game::ft::FighterKind;
 use crate::game::ucf::Ucf;
 use crate::hsd::gobj::GObjId;
 use gekko_fp as fp;
@@ -61,9 +62,9 @@ impl Running<'_> {
     /// A roll, `ftCo_800992A8`: Samus's and Yoshi's have their own parts.
     #[doc(alias = "ftCo_800992A8")]
     pub fn enter_escape(&mut self, gobj: GObjId, msid: i32, item_window: i32) {
-        match self.game.fighter(gobj).kind {
-            KIND_SAMUS => self.samus_enter_roll(gobj, msid, item_window),
-            KIND_YOSHI => self.ys_enter_roll(gobj, msid, item_window),
+        match self.game.fighter(gobj).fighter_kind() {
+            FighterKind::Samus => self.samus_enter_roll(gobj, msid, item_window),
+            FighterKind::Yoshi => self.ys_enter_roll(gobj, msid, item_window),
             _ => self.enter_escape_common(gobj, msid, item_window),
         }
         let f = self.game.fighter_id(gobj);
@@ -152,7 +153,7 @@ impl Running<'_> {
         if drop {
             return false;
         }
-        if self.game.fighter(gobj).kind == KIND_YOSHI {
+        if self.game.fighter(gobj).kind == FighterKind::Yoshi {
             self.ys_enter_escape_n(gobj);
         } else {
             self.enter_escape_n_common(gobj);

@@ -18,6 +18,7 @@ use super::data::{CASTLE_CALLBACKS, StageCallbacks};
 use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, update_map_coll};
 use super::{CollUser, anime, grlib, material, setup, zako};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::quat::Quat;
@@ -1236,7 +1237,7 @@ pub fn block_hit(r: &mut Running, g: GroundId, i: usize) {
 pub fn block_touched(r: &mut Running, g: GroundId, toucher: Option<GObjId>, i: usize) {
     let by = toucher.expect("grcastle.c: a toucher");
     if super::super::it::item::is_fighter(r.game, Some(by))
-        || super::super::it::lib26b1::kind(r.game, by) != super::super::it::kinds::PKIND_RANDOM
+        || super::super::it::lib26b1::kind(r.game, by) != ItKind::StageHurtbox
     {
         knock(r, g, i);
     }

@@ -33,6 +33,7 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
+use melee_sim::game::it::ItKind;
 use melee_sim::game::it::kinds::{coin, fflower, flipper, foods, lgun, lgunbeam, lgunray, msbomb};
 use melee_sim::game::it::{self, CLASS_ITEM};
 use melee_sim::game::state::Running;
@@ -430,7 +431,7 @@ fn coin_check(g: &Running, gobj: GObjId, a: u32) {
         && a != 0x802E_5F00
         && a != 0x802E_5F8C
         && a != 0x802E_6658
-        && it::item(g.game, gobj).kind != melee_sim::game::it::kinds::UNK4
+        && it::item(g.game, gobj).kind != ItKind::Unk4
     {
         panic!("{SKIP}{} takes a coin", name_of(a));
     }

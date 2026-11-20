@@ -6,31 +6,16 @@ use gekko_fp as fp;
 
 use super::super::super::code::{self, Val};
 use super::super::super::state::Running;
+use super::super::registry;
 use super::ids::ms;
-use super::kind_callbacks as kinds;
+use super::kind_callbacks::KindCallbacks;
 use super::{PAD_A, PAD_B, PAD_DPAD_UP, PAD_L_R, PAD_LR};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::math;
-
-/// `Ft_Kind_*` the checks single out.
-pub(super) const KIND_FOX: i32 = 1;
-pub(super) const KIND_LINK: i32 = 6;
-pub(super) const KIND_NESS: i32 = 8;
-pub(super) const KIND_PEACH: i32 = 9;
-pub(super) const KIND_SAMUS: i32 = 13;
-pub(super) const KIND_YOSHI: i32 = 14;
-pub(super) const KIND_MEWTWO: i32 = 16;
-pub(super) const KIND_CLINK: i32 = 20;
-pub(super) const KIND_PIKACHU: i32 = 12;
-pub(super) const KIND_PICHU: i32 = 23;
-pub(super) const KIND_GAME_WATCH: i32 = 24;
-pub(super) const KIND_KIRBY: i32 = 4;
-const KIND_ZELDA: i32 = 19;
-/// `Ft_Kind_DrMario` and `Ft_Kind_Ganon`.
-const KIND_DRMARIO: i32 = 21;
-const KIND_GANON: i32 = 25;
 
 /// The absolute value as the original's `ABS` computes it on a register.
 pub(super) fn abs(v: f64) -> f64 {
@@ -44,9 +29,10 @@ impl Running<'_> {
         code::call(self, addr, &[Val::GObj(Some(gobj))]);
     }
 
-    /// The entry a per-character table gives the fighter's kind, 0 for none.
-    fn kind_entry(&self, gobj: GObjId, table: &[u32; 33]) -> u32 {
-        table[self.game.fighter(gobj).kind as usize]
+    /// The entry of the fighter's kind's callbacks (its registry entry's) that `entry` picks, 0
+    /// for none.
+    fn kind_entry(&self, gobj: GObjId, entry: fn(&KindCallbacks) -> u32) -> u32 {
+        entry(registry::character(self.game.fighter(gobj).kind).callbacks)
     }
 
     /// Faces the way the stick points, `ftCommon_UpdateFacing`.
@@ -86,7 +72,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_SpecialS_CheckInput")]
     #[doc(alias = "doEnter@800965DC")]
     pub fn special_s_check(&mut self, gobj: GObjId) -> bool {
-        let entry = self.kind_entry(gobj, &kinds::SPECIAL_S);
+        let entry = self.kind_entry(gobj, |c| c.special_s);
         if entry == 0 || self.game.fighter(gobj).x688 != 0 {
             return false;
         }
@@ -122,11 +108,11 @@ impl Running<'_> {
         }
         let (x, y) = (reg(fp.input.lstick[0].x), reg(fp.input.lstick[0].y));
         let entry = if y >= up {
-            self.kind_entry(gobj, &kinds::SPECIAL_AIR_HI)
+            self.kind_entry(gobj, |c| c.special_air_hi)
         } else if y <= fp::fneg(up) {
-            self.kind_entry(gobj, &kinds::SPECIAL_AIR_LW)
+            self.kind_entry(gobj, |c| c.special_air_lw)
         } else if abs(x) >= side {
-            let entry = self.kind_entry(gobj, &kinds::SPECIAL_AIR_S);
+            let entry = self.kind_entry(gobj, |c| c.special_air_s);
             if entry == 0 {
                 return false;
             }
@@ -135,7 +121,7 @@ impl Running<'_> {
             }
             entry
         } else {
-            let entry = self.kind_entry(gobj, &kinds::SPECIAL_AIR_N);
+            let entry = self.kind_entry(gobj, |c| c.special_air_n);
             if entry == 0 {
                 return false;
             }
@@ -159,7 +145,12 @@ impl Running<'_> {
     /// The character's special from a table, when its input came this frame (its counter at
     /// 0): neutral (`ftCo_800D6824`, `x689`), down (`ftCo_800D68C0`, `x687`), up
     /// (`ftCo_Attack100_CheckInput`, `x686`).
-    fn special_check(&mut self, gobj: GObjId, table: &[u32; 33], counter: u8) -> bool {
+    fn special_check(
+        &mut self,
+        gobj: GObjId,
+        table: fn(&KindCallbacks) -> u32,
+        counter: u8,
+    ) -> bool {
         let entry = self.kind_entry(gobj, table);
         if entry == 0 || counter != 0 {
             return false;
@@ -172,21 +163,21 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800D6824")]
     pub fn special_n_check(&mut self, gobj: GObjId) -> bool {
         let c = self.game.fighter(gobj).x689;
-        self.special_check(gobj, &kinds::SPECIAL_N, c)
+        self.special_check(gobj, |c| c.special_n, c)
     }
 
     /// `ftCo_800D68C0`: a down special.
     #[doc(alias = "ftCo_800D68C0")]
     pub fn special_lw_check(&mut self, gobj: GObjId) -> bool {
         let c = self.game.fighter(gobj).x687;
-        self.special_check(gobj, &kinds::SPECIAL_LW, c)
+        self.special_check(gobj, |c| c.special_lw, c)
     }
 
     /// `ftCo_Attack100_CheckInput`: an up special.
     #[doc(alias = "ftCo_Attack100_CheckInput")]
     pub fn special_hi_check(&mut self, gobj: GObjId) -> bool {
         let c = self.game.fighter(gobj).x686;
-        self.special_check(gobj, &kinds::SPECIAL_HI, c)
+        self.special_check(gobj, |c| c.special_hi, c)
     }
 
     /// Whether the held item can be thrown with A now, `ftCo_80094E54`: A pressed with a
@@ -231,11 +222,13 @@ impl Running<'_> {
     fn grab_input(&mut self, gobj: GObjId, msid: i32) -> bool {
         let fp = self.game.fighter(gobj);
         // `fn_800D8E94`: Link's hookshot out.
-        if (fp.kind == KIND_LINK || fp.kind == KIND_CLINK) && fp.u.gobj_at(0xC).is_some() {
+        if (fp.kind == FighterKind::Link || fp.kind == FighterKind::Clink)
+            && fp.u.gobj_at(0xC).is_some()
+        {
             return false;
         }
         // `fn_800D952C`: Samus's grapple out.
-        if fp.kind == KIND_SAMUS && fp.u.gobj_at(0x10).is_some() {
+        if fp.kind == FighterKind::Samus && fp.u.gobj_at(0x10).is_some() {
             return false;
         }
         if fp.input.held_buttons[0] & PAD_LR != 0 && fp.input.pressed_buttons & PAD_A != 0 {
@@ -262,10 +255,10 @@ impl Running<'_> {
     /// through to the default's.
     #[doc(alias = "ftCo_800DEA28")]
     fn enter_appeal(&mut self, gobj: GObjId) {
-        match self.game.fighter(gobj).kind {
-            KIND_CLINK => self.clink_appeal_enter(gobj),
-            KIND_DRMARIO => self.dr_appeal_enter(gobj),
-            KIND_GANON => {
+        match self.game.fighter(gobj).fighter_kind() {
+            FighterKind::Clink => self.clink_appeal_enter(gobj),
+            FighterKind::DrMario => self.dr_appeal_enter(gobj),
+            FighterKind::Ganon => {
                 let j = self.bone_joint(gobj, 0);
                 let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
                 crate::lb::wind::blast(
@@ -318,13 +311,13 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800DEBD0")]
     pub fn enter_appeal_s(&mut self, gobj: GObjId) {
         if self.game.gm.db_level >= crate::game::gm::DB_DEBUG_ROM {
-            match self.game.fighter(gobj).kind {
-                KIND_PEACH => self.peach_appeal_swap(gobj),
-                KIND_ZELDA => self.zelda_appeal_swap(gobj),
+            match self.game.fighter(gobj).fighter_kind() {
+                FighterKind::Peach => self.peach_appeal_swap(gobj),
+                FighterKind::Zelda => self.zelda_appeal_swap(gobj),
                 _ => {}
             }
         }
-        if self.game.fighter(gobj).kind == KIND_KIRBY {
+        if self.game.fighter(gobj).kind == FighterKind::Kirby {
             self.kb_lose_copy(gobj, true);
         }
         self.enter_facing_state(gobj, ms::APPEAL_SR, ms::APPEAL_SL);
@@ -424,7 +417,7 @@ impl Running<'_> {
     /// (`x294_itPickup`), nearest the box's center. None for a CPU of kind 28.
     #[doc(alias = "ftpickupitem_800942A0")]
     pub fn item_in_reach(&mut self, gobj: GObjId, flags: u32) -> Option<GObjId> {
-        use crate::game::it::{self, kinds, lib26b1};
+        use crate::game::it::{self, lib26b1};
         let fp = self.game.fighter(gobj);
         let p = &fp.x294_itPickup.clone();
         let light = if fp.ground_or_air == super::super::common::GA_GROUND {
@@ -437,12 +430,15 @@ impl Running<'_> {
         }
         // `it_8026B47C`: a healing item's heal; `it_8026B4F0`: what can be taken while holding
         // an item (`It_Kind_Coin`, `_Lucky_Egg`, `_WhispyHealApple` besides the food).
-        const COIN: i32 = 159;
-        const LUCKY_EGG: i32 = 205;
-        const WHISPY_HEAL_APPLE: i32 = 226;
         let heals = |k: i32| {
-            [kinds::HEART, kinds::TOMATO, kinds::FOODS, LUCKY_EGG].contains(&k)
-                || k == WHISPY_HEAL_APPLE
+            [
+                ItKind::Heart.id(),
+                ItKind::Tomato.id(),
+                ItKind::Foods.id(),
+                ItKind::LuckyEgg.id(),
+            ]
+            .contains(&k)
+                || k == ItKind::WhispyHealApple
         };
         let mut min = 30000.0;
         let mut found = None;
@@ -458,7 +454,7 @@ impl Running<'_> {
             }
             let fp = self.game.fighter(gobj);
             let ip = it::item(self.game, g);
-            let takes_held = heals(ip.kind) || ip.kind == COIN;
+            let takes_held = heals(ip.kind) || ip.kind == ItKind::Coin;
             if fp.item_gobj.is_some() && !takes_held {
                 continue;
             }
@@ -504,10 +500,7 @@ impl Running<'_> {
     #[doc(alias = "itGetGrabRangeY")]
     #[doc(alias = "ftpickupitem_80094150")]
     pub fn item_pickup_in_reach(&mut self, gobj: GObjId, item: GObjId) -> bool {
-        use crate::game::it::{self, kinds, lib26b1};
-        const COIN: i32 = 159;
-        const LUCKY_EGG: i32 = 205;
-        const WHISPY_HEAL_APPLE: i32 = 226;
+        use crate::game::it::{self, lib26b1};
         if !it::item::is_grabbable(self.game, item) {
             return false;
         }
@@ -515,8 +508,15 @@ impl Running<'_> {
             return false;
         }
         let k = it::item(self.game, item).kind;
-        let takes_held = [kinds::HEART, kinds::TOMATO, kinds::FOODS, COIN, LUCKY_EGG].contains(&k)
-            || k == WHISPY_HEAL_APPLE;
+        let takes_held = [
+            ItKind::Heart.id(),
+            ItKind::Tomato.id(),
+            ItKind::Foods.id(),
+            ItKind::Coin.id(),
+            ItKind::LuckyEgg.id(),
+        ]
+        .contains(&k)
+            || k == ItKind::WhispyHealApple;
         if self.game.fighter(gobj).item_gobj.is_some() && !takes_held {
             return false;
         }
@@ -546,13 +546,13 @@ impl Running<'_> {
     /// Whether the held item is the hammer, `ftCo_800C5240`.
     #[doc(alias = "ftCo_800C5240")]
     pub fn holding_hammer(&mut self, gobj: GObjId) -> bool {
-        self.holding_item_kind(gobj, IT_KIND_HAMMER)
+        self.holding_item_kind(gobj, ItKind::Hammer.id())
     }
 
     /// Whether the held item is the screw attack, `ft_800D2D0C`.
     #[doc(alias = "ft_800D2D0C")]
     pub fn holding_screw(&mut self, gobj: GObjId) -> bool {
-        self.holding_item_kind(gobj, IT_KIND_SC_BALL)
+        self.holding_item_kind(gobj, ItKind::ScBall.id())
     }
 
     fn holding_item_kind(&mut self, gobj: GObjId, kind: i32) -> bool {
@@ -732,6 +732,3 @@ const ITEM_P_LINK: u8 = 9;
 const IT_8026B30C: u32 = 0x8026_B30C;
 const IT_GET_KIND: u32 = 0x8026_B300;
 const IT_GET_HOLD_KIND: u32 = 0x8026_B320;
-/// `It_Kind_Hammer`, `It_Kind_ScBall`.
-const IT_KIND_HAMMER: i32 = 0x1C;
-const IT_KIND_SC_BALL: i32 = 0x1E;

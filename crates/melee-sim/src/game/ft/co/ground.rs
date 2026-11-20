@@ -7,10 +7,11 @@ use gekko_fp as fp;
 
 use super::super::super::state::Running;
 use super::super::coll::scaled_by_height;
-use super::checks::{KIND_FOX, KIND_MEWTWO, abs};
+use super::checks::abs;
 use super::ids::ms;
 use super::{PAD_A, PAD_B};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::structs::Fighter;
 use crate::hsd::gobj::GObjId;
 use crate::mp::coll::{LEFT_EDGE, RIGHT_EDGE};
@@ -87,7 +88,11 @@ impl Running<'_> {
         let table = self.data.ptr(ft_data.at(table_off));
         let replay = match table {
             None => true,
-            Some(_) => fp.item_gobj.is_some() && fp.kind != KIND_MEWTWO && fp.kind != KIND_FOX,
+            Some(_) => {
+                fp.item_gobj.is_some()
+                    && fp.kind != FighterKind::Mewtwo
+                    && fp.kind != FighterKind::Fox
+            }
         };
         if replay {
             let anim = fp.anim_id;

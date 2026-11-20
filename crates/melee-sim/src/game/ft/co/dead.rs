@@ -10,6 +10,7 @@ use super::super::super::state::Running;
 use super::super::sound::Track;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
+use crate::game::ft::CharacterKind;
 use crate::hsd::gobj::GObjId;
 
 /// The death states' variables (`ftCommon_MotionVars_unk_deadup`, `unk_800D331C`): the
@@ -48,8 +49,6 @@ const NO_SLOT: i32 = 6;
 /// `QuakeKind_Large`, the fighters' GObj list, and the wireframes' characters.
 const QUAKE_LARGE: i32 = 4;
 const P_LINK_FIGHTER: u8 = 8;
-const CKIND_BOY: i32 = 0x1B;
-const CKIND_GIRL: i32 = 0x1C;
 
 /// The blast zone a fighter left by.
 #[derive(Clone, Copy, melee_derive::StateEq)]
@@ -578,7 +577,8 @@ impl Running<'_> {
         let (rgb1, rgb2) = (rgb(self, 0x48), rgb(self, 0x4C));
         // `gm_801693BC`: a joiner's slot of a setup that has several, or a wireframe.
         let wireframe = (self.game.player_flags_bit1(slot) && self.game.gm.opponents.total > 1)
-            || (CKIND_BOY..=CKIND_GIRL).contains(&self.game.player_ckind(slot));
+            || (CharacterKind::Boy.id()..=CharacterKind::Girl.id())
+                .contains(&self.game.player_ckind(slot));
         let kind = if wireframe { 0x42C } else { 0x42B };
         let scale = self.common().f32(0x4F4);
         super::super::super::ef::spawn(

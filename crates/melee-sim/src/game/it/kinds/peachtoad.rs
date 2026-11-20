@@ -8,6 +8,7 @@ use crate::fpu::reg;
 use crate::game::code::ParticleHooks;
 use crate::game::ft::kirby::special_peach::KIRBY as PE_KIRBY;
 use crate::game::ft::peach::special_n::PEACH;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -19,9 +20,6 @@ pub const PICKED_UP: u32 = 0x802B_DFE0;
 pub const MOTION0_ANIM: u32 = 0x802B_E02C;
 pub const MOTION1_ANIM: u32 = 0x802B_E168;
 pub const EVT_UNK: u32 = 0x802B_E1F4;
-
-/// `It_Kind_Peach_Toad`.
-pub const KIND: i32 = 104;
 
 /// Runs one of Toad's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -80,7 +78,7 @@ pub fn spawn(
 fn owner_forgets(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
     if let Some(owner) = ip.owner {
-        if ip.kind == KIND {
+        if ip.kind == ItKind::PeachToad {
             r.peach_toad_gone(owner, &PEACH);
         } else {
             r.peach_toad_gone(owner, &PE_KIRBY);
@@ -92,7 +90,7 @@ fn owner_forgets(r: &mut Running, gobj: GObjId) {
 fn owner_done(r: &Running, gobj: GObjId) -> bool {
     let ip = item(r.game, gobj);
     match ip.owner {
-        Some(owner) if ip.kind == KIND => r.peach_toad_done(owner, &PEACH),
+        Some(owner) if ip.kind == ItKind::PeachToad => r.peach_toad_done(owner, &PEACH),
         Some(owner) => r.peach_toad_done(owner, &PE_KIRBY),
         None => true,
     }

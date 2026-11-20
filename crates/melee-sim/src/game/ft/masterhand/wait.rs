@@ -6,8 +6,9 @@ use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::{KIND_CRAZY_HAND, addr, attr, ms, mv, u};
+use super::{addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -145,7 +146,9 @@ impl Running<'_> {
             return;
         }
         self.mh_reset_timer(gobj);
-        if self.boss_motion_id(KIND_CRAZY_HAND) == super::super::crazyhand::ms::TAG_ROCK_PAPER {
+        if self.boss_motion_id(FighterKind::CrazyHand.id())
+            == super::super::crazyhand::ms::TAG_ROCK_PAPER
+        {
             self.mh_tag_attack(gobj);
             return;
         }

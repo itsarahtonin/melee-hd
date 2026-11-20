@@ -9,9 +9,10 @@ use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::common::GA_AIR;
 use super::super::parts::{HIP_N, TRANS_N2};
-use super::checks::KIND_YOSHI;
+
 use super::ids::ms;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::hsd::robj;
@@ -20,11 +21,6 @@ use crate::vec::Vec3;
 
 /// `FtPart_XRotN`.
 const X_ROT_N: i32 = 2;
-/// `Ft_Kind_Kirby`, `Ft_Kind_Koopa`, `Ft_Kind_Samus`, `Ft_Kind_GKoopa`.
-const KIND_KIRBY: i32 = 4;
-const KIND_KOOPA: i32 = 5;
-const KIND_SAMUS: i32 = 13;
-const KIND_GKOOPA: i32 = 31;
 
 /// `ftCommon_MotionVars_fighterthrow`: frozen at the release, released, and the victim (a
 /// thrown fighter's thrower, for `fn_800DE798`); `throw_`'s `xC`, the motion it froze with.
@@ -71,7 +67,7 @@ impl Running<'_> {
             fp::fdivs(1.0, fp::fmuls(reg(weight), reg(k)))
         };
         let kind = self.game.fighter(gobj).kind;
-        if msid == ms::THROW_LW && (kind == KIND_GKOOPA || kind == KIND_KOOPA) {
+        if msid == ms::THROW_LW && (kind == FighterKind::GKoopa || kind == FighterKind::Koopa) {
             let vk = self.game.fighter(victim).kind;
             if vk == 9 || vk == 19 {
                 victim_msid = 243;
@@ -86,12 +82,12 @@ impl Running<'_> {
         self.anim_update(gobj);
         self.game.fighter_mut(gobj).x1A6A = 0x1FF;
         self.enter_thrown(victim, victim_msid, mem(speed));
-        match kind {
-            KIND_KIRBY if msid == ms::THROW_HI => {
+        match FighterKind::from_id(kind) {
+            Some(FighterKind::Kirby) if msid == ms::THROW_HI => {
                 self.game.fighter_mut(gobj).x2219_b2 = true;
                 self.game.fighter_mut(victim).x2219_b2 = true;
             }
-            KIND_SAMUS => self.samus_throw_beam(gobj, msid, mem(speed)),
+            Some(FighterKind::Samus) => self.samus_throw_beam(gobj, msid, mem(speed)),
             _ => {}
         }
         let frames = self.common().i32(0x348);
@@ -138,7 +134,7 @@ impl Running<'_> {
                 self.thrown_freeze(victim, frame);
             }
             let fp = self.game.fighter(gobj);
-            if fp.kind == KIND_KIRBY && fp.motion_id == ms::THROW_HI {
+            if fp.kind == FighterKind::Kirby && fp.motion_id == ms::THROW_HI {
                 let victim = fp.victim_gobj;
                 self.game.fighter_mut(gobj).x2219_b2 = false;
                 if let Some(v) = victim {
@@ -398,10 +394,10 @@ impl Running<'_> {
         fp.facing_dir = facing;
         fp.set_mv_i32(THROWN_FROZEN, 0);
         self.change_motion_state(gobj, msid, 0, 0.0, speed, 0.0, Some(thrower));
-        if tkind == KIND_YOSHI {
+        if tkind == FighterKind::Yoshi {
             self.set_hit_status(gobj, 2);
         }
-        if tkind != KIND_KIRBY || (msid - ms::THROWN_F) as u32 > 1 {
+        if tkind != FighterKind::Kirby || (msid - ms::THROWN_F) as u32 > 1 {
             let timer = self.game.fighter(gobj).grab_timer;
             self.record_quick_throw(tslot, timer);
             self.game.fighter_mut(gobj).grab_timer = 0.0;
@@ -619,7 +615,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_ThrowHi_Cam")]
     pub fn co_throw_hi_cam(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if fp.kind == KIND_KIRBY && fp.motion_id == ms::THROW_HI {
+        if fp.kind == FighterKind::Kirby && fp.motion_id == ms::THROW_HI {
             self.update_camera_bone(gobj);
         } else {
             self.update_camera_box(gobj);
@@ -635,7 +631,7 @@ impl Running<'_> {
             .victim_gobj
             .expect("thrown by no one");
         let tf = self.game.fighter(t);
-        if tf.kind == KIND_KIRBY && tf.motion_id == ms::THROW_HI {
+        if tf.kind == FighterKind::Kirby && tf.motion_id == ms::THROW_HI {
             self.update_camera_bone(gobj);
         } else {
             self.update_camera_box(gobj);

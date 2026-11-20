@@ -13,6 +13,7 @@ use super::super::pokemon::{self, attr_f32, attr_i32};
 use super::super::{data, item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -38,9 +39,6 @@ pub const LEAF_REFLECTED: u32 = 0x802C_9CA0;
 pub const LEAF_ANIM: u32 = 0x802C_9CE8;
 pub const LEAF_PHYS: u32 = 0x802C_9D1C;
 pub const LEAF_COLL: u32 = 0x802C_9D20;
-
-/// `It_Kind_Chicorita_Leaf`.
-pub const CHICORITA_LEAF: i32 = 0xBF;
 
 /// Its variables past the release's (`itChicorita_ItemVars`): the leaves left (`x60`, -1
 /// until the first) and its own fall speed (`x64`).
@@ -259,7 +257,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId) {
     prev.x = mem(fp::fmadds(reg(ahead), facing, reg(prev.x)));
     prev.y = mem(fp::fadds(reg(prev.y), reg(up)));
     let mut spawn = SpawnItem {
-        kind: CHICORITA_LEAF,
+        kind: ItKind::ChicoritaLeaf.id(),
         ..Default::default()
     };
     spawn.prev_pos = prev;

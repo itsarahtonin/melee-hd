@@ -7,6 +7,7 @@ use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
 use super::koopaflame::{clamp_angle, clamp_angle_reverse};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg, eflib};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -139,7 +140,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     let parent = owner.expect("a flame without its shooter");
     let mut spawn = SpawnItem {
-        kind: super::L_GUN_BEAM,
+        kind: ItKind::LGunBeam.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

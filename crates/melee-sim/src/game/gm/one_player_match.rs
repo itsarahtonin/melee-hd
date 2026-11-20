@@ -93,19 +93,7 @@ impl super::super::state::Game {
 
 use super::vs_mode::{player_defaults, rules_defaults};
 use crate::fpu::mem;
-
-/// `CKind_Zelda`, `CKind_Seak`, `CKind_PopoNana`, `ChKind_Popo`, `CKind_GKoops`,
-/// `CKind_MasterH`, `CKind_CrezyH`, `CKind_GameWatch`, `CKind_Kirby`.
-const CKIND_ZELDA: i8 = 0x12;
-const CKIND_SEAK: u8 = 0x13;
-const CKIND_POPONANA: i8 = 0x0E;
-const CHKIND_POPO: u8 = 0x0A;
-const CKIND_GKOOPS: i8 = 0x1D;
-const CKIND_MASTERH: i8 = 0x1A;
-const CKIND_CREZYH: i8 = 0x1E;
-const CKIND_GAMEWATCH: i8 = 3;
-const CKIND_KIRBY: i8 = 4;
-const CKIND_NESS: i8 = 0xD;
+use crate::game::ft::CharacterKind;
 
 /// `gm_80165290`, the boss stages' pause override; `fn_8017C7EC`, `fn_8017C7A0` and
 /// `fn_8017C71C`, the bonus stages' and the bosses' hooks.
@@ -295,10 +283,13 @@ impl Running<'_> {
         }
         let stocks = if x8 & 0x80 != 0 { 1 } else { run.player.stocks };
         let ckind = run.player.ckind;
-        let player_ckind = if ckind == CKIND_ZELDA && run.xc[6] != 0 {
-            CKIND_SEAK
-        } else if x8 & 0x80 != 0 && run.x8[1] == 1 && ckind == CKIND_POPONANA {
-            CHKIND_POPO
+        let player_ckind = if ckind == CharacterKind::Zelda && run.xc[6] != 0 {
+            CharacterKind::Seak as u8
+        } else if x8 & 0x80 != 0 && run.x8[1] == 1 && ckind == CharacterKind::IceClimbers {
+            // The original stores `ChKind_Popo` (0x20: `li r4, 0x20` at 0x8017D130); this port
+            // has stored 0x0A (Mewtwo's number) since it was written: kept by the registry refactor,
+            // which changes nothing, and reported for a fix of its own.
+            0x0A
         } else {
             ckind as u8
         };
@@ -335,7 +326,7 @@ impl Running<'_> {
             p.attack_ratio = a.attack_ratio;
             p.defense_ratio = a.defense_ratio;
             p.xD_b1 = true;
-            if p.ckind == CKIND_GKOOPS {
+            if p.ckind == CharacterKind::GKoopa {
                 p.xC_b1 = false;
             }
             idx += 1;
@@ -363,14 +354,15 @@ impl Running<'_> {
                 enemy_level = Self::one_player_getter(Some(g), count, level, 0);
             }
             let first = chars[0];
-            if first != CKIND_KIRBY {
+            if first != CharacterKind::Kirby {
                 if (first as u8).wrapping_sub(0x1B) <= 1 {
                     start.rules.x0_3 = 6;
                     horde = 5;
                     colors[0] = 0;
                     special_stage = 1;
                     special_mode = 1;
-                } else if first == CKIND_NESS && (chars[1] != CKIND_NESS || chars[2] != CKIND_NESS)
+                } else if first == CharacterKind::Pikachu
+                    && (chars[1] != CharacterKind::Pikachu || chars[2] != CharacterKind::Pikachu)
                 {
                     special_mode = 2;
                 }
@@ -450,16 +442,16 @@ impl Running<'_> {
                     p.vs_metal = true;
                     p.cpu_kind = 0x1B;
                 }
-                if p.ckind == CKIND_GKOOPS {
+                if p.ckind == CharacterKind::GKoopa {
                     p.xC_b1 = false;
                 }
-                if p.ckind == CKIND_MASTERH || p.ckind == CKIND_CREZYH {
+                if p.ckind == CharacterKind::MasterHand || p.ckind == CharacterKind::CrazyHand {
                     p.xC_b7 = true;
                     p.hp = 0x12C;
                     p.xD_b2 = true;
                     p.xD_b0 = true;
                     p.spawn_dir = -1;
-                    if p.ckind == CKIND_CREZYH {
+                    if p.ckind == CharacterKind::CrazyHand {
                         p.slot_type = 3;
                     }
                     boss_count += 1;
@@ -471,7 +463,7 @@ impl Running<'_> {
                 if player_idx >= 6 {
                     break;
                 }
-            } else if i == 0 && chars[1] == CKIND_MASTERH {
+            } else if i == 0 && chars[1] == CharacterKind::MasterHand {
                 start.players[player_idx].slot_type = 3;
                 player_idx += 1;
             }
@@ -552,7 +544,7 @@ impl Running<'_> {
             let p0 = &start.players[0];
             let (p0_ckind, p0_color) = (p0.ckind, p0.color);
             self.setup_opponents(
-                &[CKIND_GAMEWATCH, NONE, NONE],
+                &[CharacterKind::GameWatch as i8, NONE, NONE],
                 [0; 3],
                 1,
                 0,

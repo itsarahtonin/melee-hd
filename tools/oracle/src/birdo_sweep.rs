@@ -29,13 +29,14 @@ use std::path::Path;
 use std::process::ExitCode;
 
 use melee_data::disc::Disc;
-use melee_sim::game::it::{self, item as gi, kinds};
+use melee_sim::game::it::{self, item as gi};
 use melee_sim::game::session::{Session, Setup};
 use melee_sim::game::state::{Game, Running};
 use melee_sim::input::controller::PadData;
 use melee_sim::input::pad::PadStatus;
 
 use crate::session::{Console, Recording};
+use melee_sim::game::it::ItKind;
 
 /// One tick of the session, its first controller held at `pad` (none: the recording's).
 fn step(s: &mut Session, reads: &mut Vec<PadData>, disc: &Disc, next: &mut usize, pad: PadStatus) {
@@ -60,7 +61,7 @@ fn step(s: &mut Session, reads: &mut Vec<PadData>, disc: &Disc, next: &mut usize
 fn birdo(g: &Game) -> Option<(melee_sim::hsd::gobj::GObjId, f32, f32, i32, i32)> {
     g.items
         .iter()
-        .find(|(_, it)| it.kind == kinds::KYASARIN)
+        .find(|(_, it)| it.kind == ItKind::Kyasarin)
         .map(|(_, it)| {
             let touches = match &it.xDD4_itemVar.member {
                 it::Member::Kyasarin(v) => *v.x14[1].peek(),
@@ -218,7 +219,7 @@ pub fn birdo_sweep(args: &[&str]) -> ExitCode {
     };
     if args.contains(&"--item-angles") {
         let mut all = BTreeSet::new();
-        for kind in 0..kinds::OLD_KURI {
+        for kind in 0..ItKind::OldKuri.id() {
             let Some(a) = gi::article_of(&s.game, &s.data, kind) else {
                 continue;
             };

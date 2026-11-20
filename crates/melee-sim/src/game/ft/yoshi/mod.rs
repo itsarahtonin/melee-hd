@@ -21,10 +21,8 @@ pub mod special_s;
 use super::super::code::Val;
 use super::super::handles::FighterId;
 use super::super::state::Running;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
-
-/// `FTKIND_YOSHI`.
-pub const KIND_YOSHI: i32 = 14;
 
 /// `It_Kind_Yoshi_EggThrow`, `_Star` and `_EggLay`, his articles in his `ftData`'s order.
 pub const ITEMS: [i32; 3] = [86, 88, 87];
@@ -318,8 +316,8 @@ impl Running<'_> {
     /// A word of Yoshi's loaded attributes (`gFtDataList[Ft_Kind_Yoshi]->ext_attr`), which
     /// the egg's victim reads whoever laid it.
     pub(crate) fn ys_ext_attr_word(&self, off: usize) -> u32 {
-        let d =
-            self.game.ft.data.data_list[KIND_YOSHI as usize].expect("Yoshi's ftData isn't loaded");
+        let d = self.game.ft.data.data_list[FighterKind::Yoshi as usize]
+            .expect("Yoshi's ftData isn't loaded");
         let ext = self.data.ptr(d.at(4)).expect("ftData::ext_attr");
         self.data.u32(ext.at(off as u32))
     }

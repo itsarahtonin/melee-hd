@@ -67,7 +67,9 @@ use leaf_check::calls::{
     Prepare, Report, Ret, Variant, check_variants, gobj_arg, peek_u32, poke_f32, poke_u32,
     saved_calls,
 };
+use melee_sim::game::ft::FighterKind;
 use melee_sim::game::gr::GrKind;
+use melee_sim::game::it::ItKind;
 use ssbm_rt::capture::Call;
 
 const CALLS: &str = "calls/ics";
@@ -103,8 +105,6 @@ const BEHAVIOR: u32 = CPU + 0x18;
 const FRAMES: u32 = CPU + 0x7C;
 const SCRIPT: u32 = CPU + 0x44C;
 const SCRIPT_WAIT: u32 = CPU + 0x450;
-/// `Ft_Kind_Nana`, the DI behavior, `ftCo_MS_CliffWait`.
-const KIND_NANA: u32 = 11;
 const DI: u32 = 18;
 const CLIFF_WAIT: u32 = 253;
 /// `Fighter::cur_pos`, `Fighter::pos_delta`.
@@ -131,9 +131,6 @@ const ITEM_KIND: u32 = 0x10;
 /// `Item::xDC8_word` and its `flags.x15`, which `Item_IsGrabbable` tests.
 const ITEM_FLAGS: u32 = 0xDC8;
 const GRABBABLE: u32 = 0x400;
-const BOBOMB: u32 = 6;
-const EGG: u32 = 3;
-const BEAM_SWORD: u32 = 0xC;
 /// The tumble's behavior; `ftCo_MS_DamageFall`, `ftCo_MS_AttackHi3`, `ftCo_MS_Guard`.
 const TUMBLE: u32 = 15;
 const DAMAGE_FALL: u32 = 38;
@@ -193,7 +190,7 @@ fn enemies(call: &Call, nana: u32) -> Vec<u32> {
 /// Nana's `Fighter` in a saved frame, if it's hers and Popo is there.
 fn nana_and_popo(call: &Call) -> Option<(u32, u32)> {
     let nana = peek_u32(call, call.regs.gpr[3] + 0x2C);
-    if peek_u32(call, nana + KIND) != KIND_NANA {
+    if peek_u32(call, nana + KIND) != FighterKind::Nana as u32 {
         return None;
     }
     Some((nana, popo(call, nana)?))
@@ -303,7 +300,7 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
             }
             while g != 0 {
                 let ip = peek_u32(call, g + 0x2C);
-                poke_u32(call, ip + ITEM_KIND, BEAM_SWORD);
+                poke_u32(call, ip + ITEM_KIND, ItKind::Sword as u32);
                 let flags = peek_u32(call, ip + ITEM_FLAGS);
                 poke_u32(call, ip + ITEM_FLAGS, flags | GRABBABLE);
                 g = peek_u32(call, g + 0x8);
@@ -378,9 +375,9 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
                 return false;
             }
             let kind = if matches!(change, Change::ThrowBobomb) {
-                BOBOMB
+                ItKind::BombHei as u32
             } else {
-                EGG
+                ItKind::Egg as u32
             };
             poke_u32(call, peek_u32(call, held + 0x2C) + ITEM_KIND, kind);
             poke_u32(call, nana + SCRIPT, 0);
@@ -484,7 +481,9 @@ fn nana_tumble_and_shields() {
 fn zero_knockback(call: &mut Call, hanging: bool) -> bool {
     let nana = peek_u32(call, call.regs.gpr[3] + 0x2C);
     let hitstun = peek_u32(call, nana + X221A) >> 24 & 0x10 != 0;
-    if peek_u32(call, nana + KIND) != KIND_NANA || peek_u32(call, nana + BEHAVIOR) != DI || !hitstun
+    if peek_u32(call, nana + KIND) != FighterKind::Nana as u32
+        || peek_u32(call, nana + BEHAVIOR) != DI
+        || !hitstun
     {
         return false;
     }

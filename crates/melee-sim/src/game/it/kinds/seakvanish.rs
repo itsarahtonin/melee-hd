@@ -3,6 +3,7 @@
 
 use super::super::item::{change, change_state, debug_owner_bubbles, spawn_air};
 use super::super::{item_mut, lib26b1, lib2725};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -34,7 +35,7 @@ pub fn run_event(_r: &mut Running, _gobj: GObjId, _addr: u32) -> bool {
 #[doc(alias = "it_802B1C60")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::SEAK_VANISH,
+        kind: ItKind::SeakVanish.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition`, off the plane.

@@ -6,6 +6,8 @@ use super::super::super::handles::FighterId;
 use super::super::super::state::Running;
 use super::super::common::GA_GROUND;
 use crate::fpu::reg;
+use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::aobj;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -23,11 +25,6 @@ const MS_DOWN_SPOT_D: i32 = 198;
 /// `ftCo_SM_Fall`, `ftCo_SM_FallAerial`.
 const SM_FALL: i32 = 20;
 const SM_FALL_AERIAL: i32 = 23;
-/// `Ft_Kind_MasterH`, `Ft_Kind_CrezyH`, `Ft_Kind_Link`, `Ft_Kind_CLink`.
-const KIND_MASTER_HAND: i32 = 27;
-const KIND_CRAZY_HAND: i32 = 28;
-const KIND_LINK: i32 = 6;
-const KIND_CLINK: i32 = 20;
 
 /// `ftCo_MS_DeadUpFall`, whose animation slot holds the waiting-with-an-item animation.
 const ANIM_WAIT_ITEM: i32 = 6;
@@ -56,9 +53,9 @@ impl Running<'_> {
     /// Back to waiting, `ft_8008A2BC`: the hands return to their places.
     #[doc(alias = "ft_8008A2BC")]
     pub fn enter_wait(&mut self, gobj: GObjId) {
-        match self.game.fighter(gobj).kind {
-            KIND_MASTER_HAND => self.mh_return(gobj),
-            KIND_CRAZY_HAND => self.ch_return(gobj),
+        match self.game.fighter(gobj).fighter_kind() {
+            FighterKind::MasterHand => self.mh_return(gobj),
+            FighterKind::CrazyHand => self.ch_return(gobj),
             _ => self.enter_wait_blend(gobj, 0.0),
         }
     }
@@ -90,10 +87,9 @@ impl Running<'_> {
             self.land(gobj);
         }
         let fp = &self.game.fighters[f.0];
-        if fp.kind == crate::game::ft::peach::KIND_PEACH
+        if fp.kind == FighterKind::Peach
             && let Some(item) = fp.item_gobj
-            && crate::game::it::lib26b1::kind(self.game, item)
-                == crate::game::it::kinds::peachparasol::KIND
+            && crate::game::it::lib26b1::kind(self.game, item) == ItKind::PeachParasol
         {
             crate::game::it::kinds::peachparasol::remove(self, item);
         }
@@ -105,9 +101,9 @@ impl Running<'_> {
         }
         let x5f0 = self.common().u32(0x5F0) as u16;
         self.game.fighters[f.0].x209A = x5f0;
-        match self.game.fighters[f.0].kind {
-            KIND_LINK => self.link_shield_absorb(gobj),
-            KIND_CLINK => self.clink_shield_absorb(gobj),
+        match self.game.fighters[f.0].fighter_kind() {
+            FighterKind::Link => self.link_shield_absorb(gobj),
+            FighterKind::Clink => self.clink_shield_absorb(gobj),
             _ => {}
         }
     }
@@ -118,12 +114,12 @@ impl Running<'_> {
     pub fn enter_fall(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        match fp.kind {
-            KIND_MASTER_HAND => {
+        match fp.fighter_kind() {
+            FighterKind::MasterHand => {
                 self.mh_return(gobj);
                 return;
             }
-            KIND_CRAZY_HAND => {
+            FighterKind::CrazyHand => {
                 self.ch_return(gobj);
                 return;
             }

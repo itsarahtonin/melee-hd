@@ -14,6 +14,7 @@ use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{CPU_FRAME, CPU_FRAME_SP, DECIDE_FRAME, Leftover, P_LINK_FIGHTER};
 use super::cpu_move::LINE_FLAG_PLATFORM;
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd;
 use crate::math;
 use crate::vec::Vec3;
@@ -563,7 +564,7 @@ impl Running<'_> {
         let item = if holds_other || fpp.x2168 != 0 {
             None
         } else {
-            self.cpu_common_item_target(f, super::cpu_decide::IT_KIND_L_GUN_RAY)
+            self.cpu_common_item_target(f, ItKind::COMMON_END.id())
         };
         self.game.fighters[f.0].cpu.x4C = item;
         let x50 = self.cpu_enemy_item_target(f);
