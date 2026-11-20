@@ -26,6 +26,21 @@ pub const XFB_ADDR: u32 = 0x00F0_0000;
 /// within 0.06%: 584.32 pixels by 480.
 pub const GAME_ASPECT: f32 = 73.0 / 60.0;
 
+/// The least a piece of a streamed frame holds ([`Frames::frame_streamed`]): enough that
+/// handing it on costs little beside building it, little enough that the renderer's threads
+/// start on a frame's first draws early.
+pub const STREAM_PIECE: usize = 4096;
+
+/// What takes a frame's stream in pieces as it's built ([`Frames::frame_streamed`]).
+pub trait Stream {
+    /// The frame starts: the address space is as the frame's draws find it (its ranges given
+    /// back and taken for the frame).
+    fn start(&mut self, _space: &Space) {}
+    /// The stream's next bytes, whole commands, with the marks so far (every draw these bytes
+    /// hold has its mark).
+    fn piece(&mut self, space: &Space, bytes: &[u8], marks: &[(u32, u32)]);
+}
+
 /// What the frame's stream starts from and keeps from frame to frame: GX's state and HSD's.
 pub struct Frames {
     pub gx: Gx,
@@ -96,6 +111,34 @@ impl Frames {
         draws: &[Draw],
         blend: Option<Blend<'_>>,
     ) -> Vec<u8> {
+        self.build(game, data, draws, blend, None)
+    }
+
+    /// The frame [`Frames::frame_blended`] builds, handed to `to` in pieces as it's built
+    /// (whole commands, at least [`STREAM_PIECE`] bytes but for the last), so whatever runs the
+    /// stream starts on the frame's first draws while the rest are built: the fast renderer's
+    /// threads draw beside the game thread rather than after it. The pieces are the frame's
+    /// stream in order, and [`Frames::marks`] counts offsets from the frame's start as before.
+    pub fn frame_streamed(
+        &mut self,
+        game: &Game,
+        data: &Archives,
+        draws: &[Draw],
+        blend: Option<Blend<'_>>,
+        to: &mut dyn Stream,
+    ) {
+        let rest = self.build(game, data, draws, blend, Some(to));
+        to.piece(&self.space, &rest, &self.marks);
+    }
+
+    fn build(
+        &mut self,
+        game: &Game,
+        data: &Archives,
+        draws: &[Draw],
+        blend: Option<Blend<'_>>,
+        mut to: Option<&mut dyn Stream>,
+    ) -> Vec<u8> {
         let patches = &game.objs.pobjs.refract_patches;
         if self.patched != patches.len() {
             self.patched = patches.len();
@@ -140,18 +183,31 @@ impl Frames {
             space: &self.space,
             blend,
         };
+        if let Some(to) = to.as_deref_mut() {
+            to.start(&self.space);
+        }
         ctx.gx.invalidate_vtx_cache();
         ctx.gx.invalidate_tex_all();
         ctx.start_render(false);
         self.marks.clear();
+        // Bytes handed on so far: the marks count from the frame's start.
+        let mut sent = 0u32;
         let mut i = 0;
         while i < draws.len() {
-            self.marks.push((ctx.gx.fifo.len() as u32, i as u32));
+            if let Some(to) = to.as_deref_mut()
+                && ctx.gx.fifo.len() >= STREAM_PIECE
+                && !ctx.gx.in_display_list()
+            {
+                to.piece(ctx.space, &ctx.gx.fifo, &self.marks);
+                sent += ctx.gx.fifo.len() as u32;
+                ctx.gx.fifo.clear();
+            }
+            self.marks.push((sent + ctx.gx.fifo.len() as u32, i as u32));
             i += ctx.draw(draws, i);
         }
         // What the frame sends after its draws (the copy to the XFB) is the list's end.
         self.marks
-            .push((ctx.gx.fifo.len() as u32, draws.len() as u32));
+            .push((sent + ctx.gx.fifo.len() as u32, draws.len() as u32));
         if let Some(n) = ctx.hsd.lights_after_render_mode.take() {
             ctx.load_lights(n);
         }

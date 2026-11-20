@@ -280,7 +280,9 @@ pub enum Which {
     F2,
     /// F3: F2's meshes transformed on the GPU, each draw's state built from the registers.
     F3,
-    /// The fast renderer as far as it goes: F4, F3 with materials as records.
+    /// F4: F3 with materials as records, each frame built before it runs.
+    F4,
+    /// The fast renderer as far as it goes: F5, F4 with the frame run as it's built.
     Fast,
 }
 
@@ -290,9 +292,22 @@ impl Which {
             "exact" => Which::Exact,
             "f2" => Which::F2,
             "f3" => Which::F3,
-            "fast" | "f4" => Which::Fast,
-            _ => panic!("--renderer {s}: exact, f2, f3 or fast (f4)"),
+            "f4" => Which::F4,
+            "fast" | "f5" => Which::Fast,
+            _ => panic!("--renderer {s}: exact, f2, f3, f4 or fast (f5)"),
         }
+    }
+
+    /// The renderer under test this names on `r`, on its threads with `threaded`; none for the
+    /// exact renderer.
+    pub fn fast(self, r: Renderer, threaded: bool) -> Option<Exact> {
+        Some(match self {
+            Which::Exact => return None,
+            Which::F2 => Exact::f2(r, threaded),
+            Which::F3 => Exact::f3(r, threaded),
+            Which::F4 => Exact::f4(r, threaded),
+            Which::Fast => Exact::fast(r, threaded),
+        })
     }
 }
 
@@ -336,26 +351,22 @@ pub fn cli(args: &[String]) -> ExitCode {
     let mut reference = Exact::new(renderer(&device, &queue, view), false);
     let mut right = Mutated::new(renderer(&device, &queue, view), Mutation::Spread(true));
     let mut left = Mutated::new(renderer(&device, &queue, view), Mutation::Spread(false));
-    let mut test: Box<dyn FrameRenderer> = match which {
-        Which::Fast | Which::F3 | Which::F2 => {
+    let mut r = renderer(&device, &queue, view);
+    // F4 onward draw as after their warm-up: every draw with its specialized shader, made as
+    // the draw first needs it.
+    if matches!(which, Which::F4 | Which::Fast) {
+        r.set_tev_mode(melee_gpu::TevMode::Sync);
+    }
+    let mut test: Box<dyn FrameRenderer> = match which.fast(r, threaded) {
+        Some(fast) => {
             assert_eq!(
                 mutation,
                 Mutation::None,
                 "--mutate changes the exact renderer"
             );
-            let mut r = renderer(&device, &queue, view);
-            Box::new(match which {
-                // F4 draws as it does after its warm-up: every draw with its specialized
-                // shader, made as the draw first needs it.
-                Which::Fast => {
-                    r.set_tev_mode(melee_gpu::TevMode::Sync);
-                    Exact::fast(r, threaded)
-                }
-                Which::F3 => Exact::f3(r, threaded),
-                _ => Exact::f2(r, threaded),
-            })
+            Box::new(fast)
         }
-        Which::Exact => Box::new(Mutated::new(renderer(&device, &queue, view), mutation)),
+        None => Box::new(Mutated::new(renderer(&device, &queue, view), mutation)),
     };
     println!(
         "{replay}: {} against {} at {scale}x on {adapter}",

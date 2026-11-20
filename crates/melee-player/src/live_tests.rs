@@ -217,6 +217,7 @@ fn a_live_match_draws_with_its_own_frame_builder() {
             scale: 1,
             efb_width: crate::present::Aspect::GAME.efb_width(1),
             msaa: 1,
+            fast: false,
         };
         let mut menus = Pair::new(&gpu, &s.dol);
         let mut live: Option<Pair> = None;

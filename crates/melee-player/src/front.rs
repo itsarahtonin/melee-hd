@@ -56,6 +56,7 @@ pub struct Given {
     pub jit_margin: bool,
     pub scale: bool,
     pub msaa: bool,
+    pub renderer: bool,
     pub record: bool,
     pub replays: bool,
     pub record_sessions: bool,
@@ -75,6 +76,8 @@ pub struct Settings {
     pub scale: u32,
     /// Four samples a pixel.
     pub msaa: bool,
+    /// Draws with the fast renderer (docs/fast-renderer.md) rather than the exact one.
+    pub fast_renderer: bool,
     /// High refresh: on is Extrapolate (the panel's toggle); the command line can give
     /// Interpolate, which the file keeps as on.
     pub high_refresh: Mode,
@@ -169,6 +172,13 @@ pub const STOP_TEXT: &str = "Melee reached something melee-hd can't play yet, or
 pub const REPORT_BUTTON: &str = "Report a bug";
 pub const REPORT_HELP: &str = "Saves a zip in the settings folder with this session's recording, the log, your latest captures and your settings, and opens the folder. Nothing is sent anywhere: attach the zip to your report yourself.";
 
+/// The Renderer setting's choices and help lines (proposed 2026-11-20, awaiting Sarah's word).
+fn renderer_name(fast: bool) -> &'static str {
+    if fast { "Fast" } else { "Exact" }
+}
+pub const RENDERER_FAST_HELP: &str = "Draws the same picture with far less of the processor's time, for low-end PCs and the lowest latency.";
+pub const RENDERER_EXACT_HELP: &str = "Draws every frame step by step as the console's graphics chip does: the reference the fast renderer is checked against.";
+
 /// A debug level's line of [`DEBUG_LEVELS`] (Off's for one not offered).
 fn debug_level(level: i32) -> (i32, &'static str, &'static str) {
     DEBUG_LEVELS
@@ -209,6 +219,7 @@ impl Default for Settings {
             fullscreen: false,
             scale: 0,
             msaa: false,
+            fast_renderer: false,
             // Both on by default since 2026-11-14 (Sarah).
             high_refresh: Mode::Extrapolate,
             present: Present::Mailbox,
@@ -266,9 +277,10 @@ impl Settings {
             self.audio_device,
             on(self.audio_exclusive),
         ) + &format!(
-            "recordings = {}\nruleset = {}\nsettings-version = {SETTINGS_VERSION}\n",
+            "recordings = {}\nruleset = {}\nrenderer = {}\nsettings-version = {SETTINGS_VERSION}\n",
             self.recordings,
-            ruleset_key(self.ruleset)
+            ruleset_key(self.ruleset),
+            if self.fast_renderer { "fast" } else { "exact" }
         )
     }
 
@@ -316,6 +328,11 @@ impl Settings {
                 "msaa" if !given.msaa => match v {
                     "4" => self.msaa = true,
                     "off" | "1" => self.msaa = false,
+                    _ => {}
+                },
+                "renderer" if !given.renderer => match v {
+                    "fast" => self.fast_renderer = true,
+                    "exact" => self.fast_renderer = false,
                     _ => {}
                 },
                 "high-refresh" if !given.high_refresh => {
@@ -735,6 +752,18 @@ impl Panel {
                 ui.label("");
                 ui.checkbox(&mut s.msaa, "Antialiasing (MSAA 4x)");
                 ui.end_row();
+                ui.label("Renderer");
+                let fast = &mut s.fast_renderer;
+                egui::ComboBox::from_id_salt("renderer")
+                    .selected_text(renderer_name(*fast))
+                    .width(220.0)
+                    .show_ui(ui, |ui| {
+                        for f in [true, false] {
+                            ui.selectable_value(fast, f, renderer_name(f));
+                        }
+                    });
+                ui.end_row();
+                help(ui, if s.fast_renderer { RENDERER_FAST_HELP } else { RENDERER_EXACT_HELP });
                 ui.label("Aspect ratio");
                 let aspect = &mut s.aspect;
                 egui::ComboBox::from_id_salt("aspect")

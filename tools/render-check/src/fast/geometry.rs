@@ -164,18 +164,19 @@ pub fn source_at(marks: &[(u32, u32)], offset: usize) -> u32 {
 /// Records each GX draw's transformed vertices as the exact renderer draws it, keyed by the
 /// display pass's draw it came from: as an observer of melee-render's stream (it follows the
 /// stream's offset by its commands), or fed by a host that knows the source.
-pub struct Recorder<'a> {
-    marks: &'a [(u32, u32)],
+pub struct Recorder {
+    /// The stream's marks (`Frames::marks`), as far as the stream has run.
+    marks: RefCell<Vec<(u32, u32)>>,
     offset: Cell<usize>,
     normals: RefCell<NormalCache>,
     inputs: RefCell<Vec<vertex::Input>>,
     pub draws: RefCell<Vec<DrawGeometry>>,
 }
 
-impl<'a> Recorder<'a> {
-    pub fn new(marks: &'a [(u32, u32)]) -> Self {
+impl Recorder {
+    pub fn new(marks: &[(u32, u32)]) -> Self {
         Recorder {
-            marks,
+            marks: RefCell::new(marks.to_vec()),
             offset: Cell::new(0),
             normals: RefCell::new([[0.0; 3]; 3]),
             inputs: RefCell::new(Vec::new()),
@@ -185,7 +186,7 @@ impl<'a> Recorder<'a> {
 
     /// The display pass's draw the stream's next command comes from.
     pub fn source(&self) -> u32 {
-        source_at(self.marks, self.offset.get())
+        source_at(&self.marks.borrow(), self.offset.get())
     }
 
     /// A command of the stream (not of a display list it calls) has run.
@@ -266,7 +267,7 @@ impl<'a> Recorder<'a> {
     }
 
     pub fn into_geometry(self) -> Geometry {
-        let groups = self.marks.iter().map(|&(_, s)| s).collect();
+        let groups = self.marks.borrow().iter().map(|&(_, s)| s).collect();
         Geometry {
             draws: self.draws.into_inner(),
             groups,
@@ -274,7 +275,13 @@ impl<'a> Recorder<'a> {
     }
 }
 
-impl melee_render::gpu::Observer for Recorder<'_> {
+impl melee_render::gpu::StreamObserver for Recorder {
+    fn marks(&self, marks: &[(u32, u32)]) {
+        marks.clone_into(&mut self.marks.borrow_mut());
+    }
+}
+
+impl melee_render::gpu::Observer for Recorder {
     fn draw(&self, state: &State, draw: &Draw<'_>, _mem: &dyn Memory) {
         self.record(self.source(), state, draw);
     }

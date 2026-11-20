@@ -17,7 +17,7 @@ use melee_gx::vertex::Attr;
 use melee_gx::xform;
 use melee_gx::{Draw, Memory, Produced, Sink, State};
 use melee_render::frame::Frames;
-use melee_render::gpu::{Gpu, Observer};
+use melee_render::gpu::{Gpu, Observer, StreamObserver};
 use melee_render::mem::Space;
 use melee_sim::hsd::display::Draw as DisplayDraw;
 
@@ -34,6 +34,8 @@ pub struct Exact {
     loaded: bool,
     gpu_transforms: bool,
     material_records: bool,
+    /// Each frame run as it's built (F5).
+    streamed: bool,
 }
 
 impl Exact {
@@ -53,13 +55,22 @@ impl Exact {
             loaded: false,
             gpu_transforms,
             material_records,
+            streamed: false,
         }
     }
 
-    /// The fast renderer as far as it goes (F4): the exact renderer with its shapes' display
-    /// lists drawn from meshes decoded once (`Gpu::with_meshes`), their vertices transformed
-    /// on the GPU, and each draw's state from its material's record.
-    pub fn fast(mut renderer: Renderer, threaded: bool) -> Exact {
+    /// The fast renderer as far as it goes (F5): F4, each frame run as it's built
+    /// (`Gpu::run_streamed`), so the renderer's threads draw beside the game thread.
+    pub fn fast(renderer: Renderer, threaded: bool) -> Exact {
+        let mut r = Exact::f4(renderer, threaded);
+        r.streamed = true;
+        r
+    }
+
+    /// F4: the exact renderer with its shapes' display lists drawn from meshes decoded once
+    /// (`Gpu::with_meshes`), their vertices transformed on the GPU, and each draw's state from
+    /// its material's record.
+    pub fn f4(mut renderer: Renderer, threaded: bool) -> Exact {
         renderer.gpu_transforms = true;
         renderer.material_records = true;
         Exact::with_meshes(renderer, threaded)
@@ -99,8 +110,10 @@ impl Exact {
 
 impl FrameRenderer for Exact {
     fn name(&self) -> String {
-        if self.gpu.meshes().is_some() && self.gpu_transforms && self.material_records {
-            "fast (F4: materials as records)".to_owned()
+        if self.gpu.meshes().is_some() && self.material_records && self.streamed {
+            "fast (F5: the frame run as it's built)".to_owned()
+        } else if self.gpu.meshes().is_some() && self.gpu_transforms && self.material_records {
+            "F4 (materials as records)".to_owned()
         } else if self.gpu.meshes().is_some() && self.gpu_transforms {
             "F3 (GPU transforms)".to_owned()
         } else if self.gpu.meshes().is_some() {
@@ -116,6 +129,24 @@ impl FrameRenderer for Exact {
             self.loaded = true;
         }
         let start = Instant::now();
+        if self.streamed && draw {
+            // Built and run at once: the build is within the submit.
+            let rec = geometry.then(|| Recorder::new(&[]));
+            let images = self.gpu.run_streamed(
+                &mut self.frames,
+                t.game,
+                t.data,
+                t.draws,
+                None,
+                rec.as_ref().map(|r| r as &dyn StreamObserver),
+            );
+            return Rendered {
+                image: images.into_iter().last(),
+                geometry: rec.map(Recorder::into_geometry),
+                build: std::time::Duration::ZERO,
+                submit: start.elapsed(),
+            };
+        }
         let fifo = self.frames.frame(t.game, t.data, t.draws);
         let build = start.elapsed();
         if !draw {
@@ -410,7 +441,7 @@ struct Host<'a> {
     space: &'a Space,
     data: &'a Archives,
     renderer: &'a RefCell<Renderer>,
-    rec: Option<&'a Recorder<'a>>,
+    rec: Option<&'a Recorder>,
     marks: &'a [(u32, u32)],
     offset: Cell<usize>,
     mutation: Mutation,

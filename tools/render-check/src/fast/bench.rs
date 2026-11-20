@@ -176,9 +176,7 @@ pub fn cli(args: &[String]) -> ExitCode {
     r.warm_specialized(&listed);
     let mut exact = match which {
         Which::Exact => Exact::new(r, threaded),
-        Which::F2 => Exact::f2(r, threaded),
-        Which::F3 => Exact::f3(r, threaded),
-        Which::Fast => Exact::fast(r, threaded),
+        w => w.fast(r, threaded).expect("a fast renderer"),
     };
     let times = measure(disc, replay, from, to, &mut exact);
     if let Some((s, (n, bytes))) = exact.meshes() {
