@@ -72,7 +72,8 @@ pub fn landed(_r: &mut Running, _gobj: GObjId) {}
 
 /// Forgets a GObj going away, `itFire_Logic6_EvtUnk` (`it_8026B894`).
 #[doc(alias = "itFire_Logic6_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

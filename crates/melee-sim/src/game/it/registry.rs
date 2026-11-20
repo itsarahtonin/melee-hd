@@ -2788,7 +2788,7 @@ mod tests {
             l.absorbed,
             l.shield_bounced,
             l.hit_shield,
-            l.evt_unk,
+            l.forget,
         ]
         .iter()
         .flatten()

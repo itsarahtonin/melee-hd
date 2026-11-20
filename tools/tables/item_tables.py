@@ -44,7 +44,7 @@ def snake(variant):
 
 CALLBACKS = [
     "spawned", "destroyed", "picked_up", "dropped", "thrown", "dmg_dealt", "dmg_received",
-    "entered_air", "reflected", "clanked", "absorbed", "shield_bounced", "hit_shield", "evt_unk",
+    "entered_air", "reflected", "clanked", "absorbed", "shield_bounced", "hit_shield", "forget",
 ]
 
 

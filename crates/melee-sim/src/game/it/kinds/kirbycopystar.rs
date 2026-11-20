@@ -91,4 +91,4 @@ fn coll(r: &mut Running, gobj: GObjId) -> bool {
     super::super::ground::air_touched_any(r, gobj)
 }
 
-// `it_802ADBE4`, its `evt_unk` (`it_8026B894`), is `game::it::evt_unk`'s.
+// `it_802ADBE4`, its `forget` (`it_8026B894`), is `game::it::forget`'s.

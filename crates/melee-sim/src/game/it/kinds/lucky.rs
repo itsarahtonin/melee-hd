@@ -321,7 +321,8 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
 /// (`it_8026B894`).
 #[doc(alias = "it_802D56F0")]
 // Ports `itLucky_Logic44_EvtUnk`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

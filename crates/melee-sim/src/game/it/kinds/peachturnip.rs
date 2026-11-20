@@ -316,7 +316,8 @@ fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 
 /// `itPeachTurnip_Logic56_EvtUnk`: forgets `other`, its puller among them.
 #[doc(alias = "itPeachTurnip_Logic56_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     let v = item_mut(r.game, gobj).xDD4_itemVar.peach_turnip();
     if v.xDE4_owner.get() == other {
         v.xDE4_owner.set(None);

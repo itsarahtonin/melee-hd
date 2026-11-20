@@ -127,7 +127,8 @@ pub fn landed(_r: &mut Running, _gobj: GObjId) {}
 
 /// Forgets a GObj going away, `it_802CE7D0` (`it_8026B894`).
 #[doc(alias = "it_802CE7D0")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
@@ -396,7 +397,8 @@ pub fn swarm_spawned(r: &mut Running, gobj: GObjId) {
 
 /// Forgets a GObj going away, `itUnknown_Logic38_EvtUnk` (`it_8026B894`).
 #[doc(alias = "itUnknown_Logic38_EvtUnk")]
-pub fn swarm_evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("swarm_evt_unk"))]
+pub fn swarm_forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

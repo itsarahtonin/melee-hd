@@ -180,6 +180,7 @@ fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 
 /// `itPeachToadSpore_Logic92_EvtUnk`: forgets `other`.
 #[doc(alias = "itPeachToadSpore_Logic92_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

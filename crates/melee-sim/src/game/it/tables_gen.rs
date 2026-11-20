@@ -70,7 +70,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x8027d614)),
         hit_shield: Some(CodeRef(0x8027d530)),
-        evt_unk: Some(CodeRef(0x8027d650)),
+        forget: Some(CodeRef(0x8027d650)),
     },
     // ItKind::Crate
     ItemLogic {
@@ -88,7 +88,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x80286ddc)),
-        evt_unk: Some(CodeRef(0x80287084)),
+        forget: Some(CodeRef(0x80287084)),
     },
     // ItKind::Barrel
     ItemLogic {
@@ -106,7 +106,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x80288958)),
-        evt_unk: Some(CodeRef(0x80288c68)),
+        forget: Some(CodeRef(0x80288c68)),
     },
     // ItKind::Egg
     ItemLogic {
@@ -124,7 +124,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x80289470)),
-        evt_unk: Some(CodeRef(0x802896ac)),
+        forget: Some(CodeRef(0x802896ac)),
     },
     // ItKind::PartyBall
     ItemLogic {
@@ -142,7 +142,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x8028af54)),
-        evt_unk: Some(CodeRef(0x8028b06c)),
+        forget: Some(CodeRef(0x8028b06c)),
     },
     // ItKind::BarrelCannon
     ItemLogic {
@@ -160,7 +160,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x802978ac)),
-        evt_unk: Some(CodeRef(0x802978bc)),
+        forget: Some(CodeRef(0x802978bc)),
     },
     // ItKind::BobOmb
     ItemLogic {
@@ -178,7 +178,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x80281104)),
         hit_shield: Some(CodeRef(0x802810c4)),
-        evt_unk: Some(CodeRef(0x80281144)),
+        forget: Some(CodeRef(0x80281144)),
     },
     // ItKind::MrSaturn
     ItemLogic {
@@ -196,7 +196,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x80283aa4)),
         hit_shield: Some(CodeRef(0x80283a80)),
-        evt_unk: Some(CodeRef(0x80283ac4)),
+        forget: Some(CodeRef(0x80283ac4)),
     },
     // ItKind::HeartContainer
     ItemLogic {
@@ -214,7 +214,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x80284194)),
+        forget: Some(CodeRef(0x80284194)),
     },
     // ItKind::MaximTomato
     ItemLogic {
@@ -232,7 +232,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x80284624)),
+        forget: Some(CodeRef(0x80284624)),
     },
     // ItKind::Starman
     ItemLogic {
@@ -250,7 +250,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x80284834)),
+        forget: Some(CodeRef(0x80284834)),
     },
     // ItKind::HomeRunBat
     ItemLogic {
@@ -268,7 +268,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x80284d14)),
         hit_shield: Some(CodeRef(0x80284cf0)),
-        evt_unk: Some(CodeRef(0x80284d34)),
+        forget: Some(CodeRef(0x80284d34)),
     },
     // ItKind::BeamSword
     ItemLogic {
@@ -286,7 +286,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x80286048)),
         hit_shield: Some(CodeRef(0x80286024)),
-        evt_unk: Some(CodeRef(0x80286068)),
+        forget: Some(CodeRef(0x80286068)),
     },
     // ItKind::Parasol
     ItemLogic {
@@ -304,7 +304,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x8028b560)),
         hit_shield: Some(CodeRef(0x8028b51c)),
-        evt_unk: Some(CodeRef(0x8028b8b8)),
+        forget: Some(CodeRef(0x8028b8b8)),
     },
     // ItKind::GreenShell
     ItemLogic {
@@ -322,7 +322,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x8028cf2c)),
         hit_shield: Some(CodeRef(0x8028ce1c)),
-        evt_unk: Some(CodeRef(0x8028cfc0)),
+        forget: Some(CodeRef(0x8028cfc0)),
     },
     // ItKind::RedShell
     ItemLogic {
@@ -340,7 +340,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x8028e684)),
         hit_shield: Some(CodeRef(0x8028e624)),
-        evt_unk: Some(CodeRef(0x8028e718)),
+        forget: Some(CodeRef(0x8028e718)),
     },
     // ItKind::RayGun
     ItemLogic {
@@ -358,7 +358,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x8028eae0)),
         hit_shield: Some(CodeRef(0x8028ea9c)),
-        evt_unk: Some(CodeRef(0x8028eb68)),
+        forget: Some(CodeRef(0x8028eb68)),
     },
     // ItKind::Freezie
     ItemLogic {
@@ -376,7 +376,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: Some(CodeRef(0x8028f3e4)),
         shield_bounced: Some(CodeRef(0x8028f40c)),
         hit_shield: Some(CodeRef(0x8028f3dc)),
-        evt_unk: Some(CodeRef(0x8028f8c4)),
+        forget: Some(CodeRef(0x8028f8c4)),
     },
     // ItKind::Food
     ItemLogic {
@@ -394,7 +394,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x8028fe70)),
+        forget: Some(CodeRef(0x8028fe70)),
     },
     // ItKind::MotionSensorBomb
     ItemLogic {
@@ -412,7 +412,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802908a4)),
         hit_shield: Some(CodeRef(0x80290850)),
-        evt_unk: Some(CodeRef(0x80290918)),
+        forget: Some(CodeRef(0x80290918)),
     },
     // ItKind::Flipper
     ItemLogic {
@@ -430,7 +430,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x80291998)),
         hit_shield: Some(CodeRef(0x802918a0)),
-        evt_unk: Some(CodeRef(0x80291bc0)),
+        forget: Some(CodeRef(0x80291bc0)),
     },
     // ItKind::SuperScope
     ItemLogic {
@@ -448,7 +448,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802922b8)),
         hit_shield: Some(CodeRef(0x80292274)),
-        evt_unk: Some(CodeRef(0x80292340)),
+        forget: Some(CodeRef(0x80292340)),
     },
     // ItKind::StarRod
     ItemLogic {
@@ -466,7 +466,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802927a8)),
         hit_shield: Some(CodeRef(0x8029276c)),
-        evt_unk: Some(CodeRef(0x802927c8)),
+        forget: Some(CodeRef(0x802927c8)),
     },
     // ItKind::LipsStick
     ItemLogic {
@@ -484,7 +484,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x80295c08)),
         hit_shield: Some(CodeRef(0x80295bcc)),
-        evt_unk: Some(CodeRef(0x80295c28)),
+        forget: Some(CodeRef(0x80295c28)),
     },
     // ItKind::Fan
     ItemLogic {
@@ -502,7 +502,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x80292d08)),
         hit_shield: Some(CodeRef(0x80292ccc)),
-        evt_unk: Some(CodeRef(0x80292d28)),
+        forget: Some(CodeRef(0x80292d28)),
     },
     // ItKind::FireFlower
     ItemLogic {
@@ -520,7 +520,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x80293514)),
         hit_shield: Some(CodeRef(0x802934d0)),
-        evt_unk: Some(CodeRef(0x80293640)),
+        forget: Some(CodeRef(0x80293640)),
     },
     // ItKind::SuperMushroom
     ItemLogic {
@@ -538,7 +538,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802939e8)),
+        forget: Some(CodeRef(0x802939e8)),
     },
     // ItKind::PoisonMushroom
     ItemLogic {
@@ -556,7 +556,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x80293d74)),
+        forget: Some(CodeRef(0x80293d74)),
     },
     // ItKind::Hammer
     ItemLogic {
@@ -574,7 +574,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x80294344)),
+        forget: Some(CodeRef(0x80294344)),
     },
     // ItKind::WarpStar
     ItemLogic {
@@ -592,7 +592,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x80294a90)),
+        forget: Some(CodeRef(0x80294a90)),
     },
     // ItKind::ScrewAttack
     ItemLogic {
@@ -610,7 +610,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x80294da0)),
         hit_shield: Some(CodeRef(0x80294d7c)),
-        evt_unk: Some(CodeRef(0x80294a90)),
+        forget: Some(CodeRef(0x80294a90)),
     },
     // ItKind::BunnyHood
     ItemLogic {
@@ -628,7 +628,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802953a8)),
+        forget: Some(CodeRef(0x802953a8)),
     },
     // ItKind::MetalBox
     ItemLogic {
@@ -646,7 +646,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802956ec)),
+        forget: Some(CodeRef(0x802956ec)),
     },
     // ItKind::CloakingDevice
     ItemLogic {
@@ -664,7 +664,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x80295eb4)),
+        forget: Some(CodeRef(0x80295eb4)),
     },
     // ItKind::PokeBall
     ItemLogic {
@@ -682,7 +682,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x80298114)),
         hit_shield: Some(CodeRef(0x802980d4)),
-        evt_unk: Some(CodeRef(0x80298148)),
+        forget: Some(CodeRef(0x80298148)),
     },
     // ItKind::RayGunShot
     ItemLogic {
@@ -700,7 +700,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: Some(CodeRef(0x8029864c)),
         shield_bounced: Some(CodeRef(0x80298828)),
         hit_shield: Some(CodeRef(0x80298644)),
-        evt_unk: Some(CodeRef(0x802988c4)),
+        forget: Some(CodeRef(0x802988c4)),
     },
     // ItKind::StarRodStar
     ItemLogic {
@@ -718,7 +718,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: Some(CodeRef(0x80298bfc)),
         shield_bounced: Some(CodeRef(0x80298ce8)),
         hit_shield: Some(CodeRef(0x80298bf4)),
-        evt_unk: Some(CodeRef(0x80298dcc)),
+        forget: Some(CodeRef(0x80298dcc)),
     },
     // ItKind::LipsStickSpore
     ItemLogic {
@@ -736,7 +736,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: Some(CodeRef(0x8029a618)),
         shield_bounced: Some(CodeRef(0x8029a704)),
         hit_shield: Some(CodeRef(0x8029a610)),
-        evt_unk: Some(CodeRef(0x8029a728)),
+        forget: Some(CodeRef(0x8029a728)),
     },
     // ItKind::SuperScopeShot
     ItemLogic {
@@ -754,7 +754,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: Some(CodeRef(0x80299378)),
         shield_bounced: Some(CodeRef(0x80299380)),
         hit_shield: Some(CodeRef(0x80299370)),
-        evt_unk: Some(CodeRef(0x802993c0)),
+        forget: Some(CodeRef(0x802993c0)),
     },
     // ItKind::FireFlowerFlame
     ItemLogic {
@@ -772,7 +772,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: Some(CodeRef(0x80299c10)),
         shield_bounced: Some(CodeRef(0x80299c18)),
         hit_shield: Some(CodeRef(0x80299c20)),
-        evt_unk: Some(CodeRef(0x80299c28)),
+        forget: Some(CodeRef(0x80299c28)),
     },
     // ItKind::HammerHead
     ItemLogic {
@@ -790,7 +790,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x8029a0c0)),
-        evt_unk: Some(CodeRef(0x8029a0f4)),
+        forget: Some(CodeRef(0x8029a0f4)),
     },
     // ItKind::LipsStickFlower
     ItemLogic {
@@ -808,7 +808,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x8029b0a8)),
+        forget: Some(CodeRef(0x8029b0a8)),
     },
     // ItKind::EventYoshiEgg
     ItemLogic {
@@ -826,7 +826,7 @@ pub static LOGIC_COMMON: [ItemLogic; 43] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x8029b4ec)),
-        evt_unk: Some(CodeRef(0x8029b6d8)),
+        forget: Some(CodeRef(0x8029b6d8)),
     },
 ];
 
@@ -970,7 +970,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::ReDead
     ItemLogic {
@@ -988,7 +988,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::Octorok
     ItemLogic {
@@ -1006,7 +1006,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802e5aa4)),
+        forget: Some(CodeRef(0x802e5aa4)),
     },
     // ItKind::Topi
     ItemLogic {
@@ -1024,7 +1024,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802e3784)),
+        forget: Some(CodeRef(0x802e3784)),
     },
     // ItKind::OctorokStone
     ItemLogic {
@@ -1042,7 +1042,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802e87f0)),
         shield_bounced: Some(CodeRef(0x802e881c)),
         hit_shield: Some(CodeRef(0x802e87e8)),
-        evt_unk: Some(CodeRef(0x802e89b0)),
+        forget: Some(CodeRef(0x802e89b0)),
     },
     // ItKind::MarioFireball
     ItemLogic {
@@ -1060,7 +1060,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x8029ba70)),
         shield_bounced: Some(CodeRef(0x8029ba78)),
         hit_shield: Some(CodeRef(0x8029ba68)),
-        evt_unk: Some(CodeRef(0x8029ba98)),
+        forget: Some(CodeRef(0x8029ba98)),
     },
     // ItKind::DrMarioMegavitamin
     ItemLogic {
@@ -1078,7 +1078,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c14b8)),
         shield_bounced: Some(CodeRef(0x802c1514)),
         hit_shield: Some(CodeRef(0x802c145c)),
-        evt_unk: Some(CodeRef(0x802c1570)),
+        forget: Some(CodeRef(0x802c1570)),
     },
     // ItKind::KirbyFinalCutterWave
     ItemLogic {
@@ -1096,7 +1096,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x8029bfc4)),
         shield_bounced: Some(CodeRef(0x8029c208)),
         hit_shield: Some(CodeRef(0x8029c4ac)),
-        evt_unk: Some(CodeRef(0x8029c4b4)),
+        forget: Some(CodeRef(0x8029c4b4)),
     },
     // ItKind::KirbyHammer
     ItemLogic {
@@ -1114,7 +1114,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802addb0)),
+        forget: Some(CodeRef(0x802addb0)),
     },
     // ItKind::KirbyCopyStar
     ItemLogic {
@@ -1132,7 +1132,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802adbe4)),
+        forget: Some(CodeRef(0x802adbe4)),
     },
     // ItKind::KirbySpitStar
     ItemLogic {
@@ -1150,7 +1150,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802f2bdc)),
+        forget: Some(CodeRef(0x802f2bdc)),
     },
     // ItKind::FoxLaser
     ItemLogic {
@@ -1168,7 +1168,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x8029cc4c)),
         shield_bounced: Some(CodeRef(0x8029cc54)),
         hit_shield: Some(CodeRef(0x8029ccf0)),
-        evt_unk: Some(CodeRef(0x8029ccf8)),
+        forget: Some(CodeRef(0x8029ccf8)),
     },
     // ItKind::FalcoLaser
     ItemLogic {
@@ -1186,7 +1186,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x8029cc4c)),
         shield_bounced: Some(CodeRef(0x8029cc54)),
         hit_shield: Some(CodeRef(0x8029ccf0)),
-        evt_unk: Some(CodeRef(0x8029ccf8)),
+        forget: Some(CodeRef(0x8029ccf8)),
     },
     // ItKind::FoxIllusion
     ItemLogic {
@@ -1204,7 +1204,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x8029d948)),
+        forget: Some(CodeRef(0x8029d948)),
     },
     // ItKind::FalcoPhantasm
     ItemLogic {
@@ -1222,7 +1222,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x8029d948)),
+        forget: Some(CodeRef(0x8029d948)),
     },
     // ItKind::LinkBomb
     ItemLogic {
@@ -1240,7 +1240,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x8029fd64)),
         hit_shield: Some(CodeRef(0x8029fd40)),
-        evt_unk: Some(CodeRef(0x8029fd84)),
+        forget: Some(CodeRef(0x8029fd84)),
     },
     // ItKind::YoungLinkBomb
     ItemLogic {
@@ -1258,7 +1258,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x8029fd64)),
         hit_shield: Some(CodeRef(0x8029fd40)),
-        evt_unk: Some(CodeRef(0x8029fd84)),
+        forget: Some(CodeRef(0x8029fd84)),
     },
     // ItKind::LinkBoomerang
     ItemLogic {
@@ -1276,7 +1276,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802a2048)),
         shield_bounced: Some(CodeRef(0x802a2320)),
         hit_shield: Some(CodeRef(0x802a2288)),
-        evt_unk: Some(CodeRef(0x802a23cc)),
+        forget: Some(CodeRef(0x802a23cc)),
     },
     // ItKind::YoungLinkBoomerang
     ItemLogic {
@@ -1294,7 +1294,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802a2048)),
         shield_bounced: Some(CodeRef(0x802a2320)),
         hit_shield: Some(CodeRef(0x802a2288)),
-        evt_unk: Some(CodeRef(0x802a23cc)),
+        forget: Some(CodeRef(0x802a23cc)),
     },
     // ItKind::LinkHookshot
     ItemLogic {
@@ -1312,7 +1312,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802a7d40)),
+        forget: Some(CodeRef(0x802a7d40)),
     },
     // ItKind::YoungLinkHookshot
     ItemLogic {
@@ -1330,7 +1330,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802a7d40)),
+        forget: Some(CodeRef(0x802a7d40)),
     },
     // ItKind::LinkArrow
     ItemLogic {
@@ -1348,7 +1348,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x802a9b08)),
-        evt_unk: Some(CodeRef(0x802aa034)),
+        forget: Some(CodeRef(0x802aa034)),
     },
     // ItKind::YoungLinkFireArrow
     ItemLogic {
@@ -1366,7 +1366,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x802a9b08)),
-        evt_unk: Some(CodeRef(0x802aa034)),
+        forget: Some(CodeRef(0x802aa034)),
     },
     // ItKind::NessPKFire
     ItemLogic {
@@ -1384,7 +1384,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802aa34c)),
         shield_bounced: Some(CodeRef(0x802aa37c)),
         hit_shield: Some(CodeRef(0x802aa354)),
-        evt_unk: Some(CodeRef(0x802aa474)),
+        forget: Some(CodeRef(0x802aa474)),
     },
     // ItKind::NessPKFirePillar
     ItemLogic {
@@ -1402,7 +1402,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802aa7c4)),
+        forget: Some(CodeRef(0x802aa7c4)),
     },
     // ItKind::NessPKFlash
     ItemLogic {
@@ -1420,7 +1420,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802ab3c8)),
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802ab3d0)),
+        forget: Some(CodeRef(0x802ab3d0)),
     },
     // ItKind::NessPKThunder
     ItemLogic {
@@ -1438,7 +1438,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802ac338)),
         shield_bounced: Some(CodeRef(0x802ac35c)),
         hit_shield: Some(CodeRef(0x802ac3f8)),
-        evt_unk: Some(CodeRef(0x802ac41c)),
+        forget: Some(CodeRef(0x802ac41c)),
     },
     // ItKind::NessPKThunderTrail1
     ItemLogic {
@@ -1456,7 +1456,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::NessPKThunderTrail2
     ItemLogic {
@@ -1474,7 +1474,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::NessPKThunderTrail3
     ItemLogic {
@@ -1492,7 +1492,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::NessPKThunderTrail4
     ItemLogic {
@@ -1510,7 +1510,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::FoxBlaster
     ItemLogic {
@@ -1528,7 +1528,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802af184)),
+        forget: Some(CodeRef(0x802af184)),
     },
     // ItKind::FalcoBlaster
     ItemLogic {
@@ -1546,7 +1546,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802af184)),
+        forget: Some(CodeRef(0x802af184)),
     },
     // ItKind::LinkBow
     ItemLogic {
@@ -1564,7 +1564,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802af920)),
+        forget: Some(CodeRef(0x802af920)),
     },
     // ItKind::YoungLinkBow
     ItemLogic {
@@ -1582,7 +1582,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802af920)),
+        forget: Some(CodeRef(0x802af920)),
     },
     // ItKind::NessPKFlashExplosion
     ItemLogic {
@@ -1600,7 +1600,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802afd54)),
         shield_bounced: Some(CodeRef(0x802afd5c)),
         hit_shield: Some(CodeRef(0x802afd64)),
-        evt_unk: Some(CodeRef(0x802afd6c)),
+        forget: Some(CodeRef(0x802afd6c)),
     },
     // ItKind::SheikNeedleThrown
     ItemLogic {
@@ -1618,7 +1618,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802b14dc)),
         hit_shield: Some(CodeRef(0x802b16e4)),
-        evt_unk: Some(CodeRef(0x802b1890)),
+        forget: Some(CodeRef(0x802b1890)),
     },
     // ItKind::SheikNeedleHeld
     ItemLogic {
@@ -1636,7 +1636,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802b1c40)),
+        forget: Some(CodeRef(0x802b1c40)),
     },
     // ItKind::PikachuThunder
     ItemLogic {
@@ -1654,7 +1654,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802b2520)),
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x802b2510)),
-        evt_unk: Some(CodeRef(0x802b2528)),
+        forget: Some(CodeRef(0x802b2528)),
     },
     // ItKind::PichuThunder
     ItemLogic {
@@ -1672,7 +1672,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802b2520)),
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x802b2510)),
-        evt_unk: Some(CodeRef(0x802b2528)),
+        forget: Some(CodeRef(0x802b2528)),
     },
     // ItKind::MarioCape
     ItemLogic {
@@ -1690,7 +1690,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802b2870)),
+        forget: Some(CodeRef(0x802b2870)),
     },
     // ItKind::DrMarioSuperSheet
     ItemLogic {
@@ -1708,7 +1708,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802b2870)),
+        forget: Some(CodeRef(0x802b2870)),
     },
     // ItKind::SheikVanish
     ItemLogic {
@@ -1726,7 +1726,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802b1dcc)),
+        forget: Some(CodeRef(0x802b1dcc)),
     },
     // ItKind::YoshiEggThrow
     ItemLogic {
@@ -1744,7 +1744,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802b2f88)),
         hit_shield: Some(CodeRef(0x802b2e7c)),
-        evt_unk: Some(CodeRef(0x802b2fa8)),
+        forget: Some(CodeRef(0x802b2fa8)),
     },
     // ItKind::YoshiEggLay
     ItemLogic {
@@ -1762,7 +1762,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802f3374)),
+        forget: Some(CodeRef(0x802f3374)),
     },
     // ItKind::YoshiStar
     ItemLogic {
@@ -1780,7 +1780,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802b3108)),
         shield_bounced: Some(CodeRef(0x802b312c)),
         hit_shield: Some(CodeRef(0x802b30e4)),
-        evt_unk: Some(CodeRef(0x802b3348)),
+        forget: Some(CodeRef(0x802b3348)),
     },
     // ItKind::PikachuThunderJoltGround
     ItemLogic {
@@ -1798,7 +1798,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802b3ca8)),
         shield_bounced: Some(CodeRef(0x802b3d70)),
         hit_shield: Some(CodeRef(0x802b3d0c)),
-        evt_unk: Some(CodeRef(0x802b3edc)),
+        forget: Some(CodeRef(0x802b3edc)),
     },
     // ItKind::PikachuThunderJoltAir
     ItemLogic {
@@ -1816,7 +1816,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802b4680)),
         shield_bounced: Some(CodeRef(0x802b4a60)),
         hit_shield: Some(CodeRef(0x802b4a18)),
-        evt_unk: Some(CodeRef(0x802b4aa8)),
+        forget: Some(CodeRef(0x802b4aa8)),
     },
     // ItKind::PichuThunderJoltGround
     ItemLogic {
@@ -1834,7 +1834,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802b3ca8)),
         shield_bounced: Some(CodeRef(0x802b3d70)),
         hit_shield: Some(CodeRef(0x802b3d0c)),
-        evt_unk: Some(CodeRef(0x802b3edc)),
+        forget: Some(CodeRef(0x802b3edc)),
     },
     // ItKind::PichuThunderJoltAir
     ItemLogic {
@@ -1852,7 +1852,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802b4680)),
         shield_bounced: Some(CodeRef(0x802b4a60)),
         hit_shield: Some(CodeRef(0x802b4a18)),
-        evt_unk: Some(CodeRef(0x802b4aa8)),
+        forget: Some(CodeRef(0x802b4aa8)),
     },
     // ItKind::SamusBomb
     ItemLogic {
@@ -1870,7 +1870,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802b5354)),
         hit_shield: Some(CodeRef(0x802b5320)),
-        evt_unk: Some(CodeRef(0x802b54e4)),
+        forget: Some(CodeRef(0x802b54e4)),
     },
     // ItKind::SamusChargeShot
     ItemLogic {
@@ -1888,7 +1888,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802b5fe8)),
         shield_bounced: Some(CodeRef(0x802b6144)),
         hit_shield: Some(CodeRef(0x802b613c)),
-        evt_unk: Some(CodeRef(0x802b62b0)),
+        forget: Some(CodeRef(0x802b62b0)),
     },
     // ItKind::SamusMissile
     ItemLogic {
@@ -1906,7 +1906,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802b6d24)),
         hit_shield: Some(CodeRef(0x802b6cd0)),
-        evt_unk: Some(CodeRef(0x802b7104)),
+        forget: Some(CodeRef(0x802b7104)),
     },
     // ItKind::SamusGrappleBeam
     ItemLogic {
@@ -1924,7 +1924,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802baea0)),
+        forget: Some(CodeRef(0x802baea0)),
     },
     // ItKind::SheikChain
     ItemLogic {
@@ -1942,7 +1942,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802bd10c)),
+        forget: Some(CodeRef(0x802bd10c)),
     },
     // ItKind::PeachBomberExplosion
     ItemLogic {
@@ -1960,7 +1960,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802bd30c)),
+        forget: Some(CodeRef(0x802bd30c)),
     },
     // ItKind::PeachTurnip
     ItemLogic {
@@ -1978,7 +1978,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802bd9e4)),
         hit_shield: Some(CodeRef(0x802bd9c0)),
-        evt_unk: Some(CodeRef(0x802bda08)),
+        forget: Some(CodeRef(0x802bda08)),
     },
     // ItKind::BowserFlame
     ItemLogic {
@@ -1996,7 +1996,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802ad38c)),
         shield_bounced: Some(CodeRef(0x802ad3b0)),
         hit_shield: Some(CodeRef(0x802ad450)),
-        evt_unk: Some(CodeRef(0x802ad458)),
+        forget: Some(CodeRef(0x802ad458)),
     },
     // ItKind::NessBat
     ItemLogic {
@@ -2014,7 +2014,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802ad9fc)),
+        forget: Some(CodeRef(0x802ad9fc)),
     },
     // ItKind::NessYoyo
     ItemLogic {
@@ -2032,7 +2032,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c016c)),
+        forget: Some(CodeRef(0x802c016c)),
     },
     // ItKind::PeachParasol
     ItemLogic {
@@ -2050,7 +2050,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802bddf8)),
+        forget: Some(CodeRef(0x802bddf8)),
     },
     // ItKind::PeachToad
     ItemLogic {
@@ -2068,7 +2068,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802be1f4)),
+        forget: Some(CodeRef(0x802be1f4)),
     },
     // ItKind::LuigiFireball
     ItemLogic {
@@ -2086,7 +2086,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c04c8)),
         shield_bounced: Some(CodeRef(0x802c04d0)),
         hit_shield: Some(CodeRef(0x802c04c0)),
-        evt_unk: Some(CodeRef(0x802c04f0)),
+        forget: Some(CodeRef(0x802c04f0)),
     },
     // ItKind::IceClimbersIceShot
     ItemLogic {
@@ -2104,7 +2104,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c20e4)),
         shield_bounced: Some(CodeRef(0x802c20ec)),
         hit_shield: Some(CodeRef(0x802c1ff8)),
-        evt_unk: Some(CodeRef(0x802c210c)),
+        forget: Some(CodeRef(0x802c210c)),
     },
     // ItKind::IceClimbersBlizzard
     ItemLogic {
@@ -2122,7 +2122,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c245c)),
         shield_bounced: Some(CodeRef(0x802c2464)),
         hit_shield: Some(CodeRef(0x802c2454)),
-        evt_unk: Some(CodeRef(0x802c246c)),
+        forget: Some(CodeRef(0x802c246c)),
     },
     // ItKind::ZeldaDinsFire
     ItemLogic {
@@ -2140,7 +2140,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c4558)),
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c4560)),
+        forget: Some(CodeRef(0x802c4560)),
     },
     // ItKind::ZeldaDinsFireExplosion
     ItemLogic {
@@ -2158,7 +2158,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c49a8)),
         shield_bounced: Some(CodeRef(0x802c49b0)),
         hit_shield: Some(CodeRef(0x802c49b8)),
-        evt_unk: Some(CodeRef(0x802c49c0)),
+        forget: Some(CodeRef(0x802c49c0)),
     },
     // ItKind::MewtwoDisable
     ItemLogic {
@@ -2176,7 +2176,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c4cc8)),
         shield_bounced: Some(CodeRef(0x802c4cd0)),
         hit_shield: Some(CodeRef(0x802c4cc0)),
-        evt_unk: Some(CodeRef(0x802c4cd8)),
+        forget: Some(CodeRef(0x802c4cd8)),
     },
     // ItKind::PeachToadSpore
     ItemLogic {
@@ -2194,7 +2194,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802be4f4)),
         shield_bounced: Some(CodeRef(0x802be518)),
         hit_shield: Some(CodeRef(0x802be4d0)),
-        evt_unk: Some(CodeRef(0x802be578)),
+        forget: Some(CodeRef(0x802be578)),
     },
     // ItKind::MewtwoShadowBall
     ItemLogic {
@@ -2212,7 +2212,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c60c4)),
         shield_bounced: Some(CodeRef(0x802c6140)),
         hit_shield: Some(CodeRef(0x802c6138)),
-        evt_unk: Some(CodeRef(0x802c61d4)),
+        forget: Some(CodeRef(0x802c61d4)),
     },
     // ItKind::IceClimbersBelayRope
     ItemLogic {
@@ -2230,7 +2230,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c3aa4)),
+        forget: Some(CodeRef(0x802c3aa4)),
     },
     // ItKind::GameAndWatchSprayer
     ItemLogic {
@@ -2248,7 +2248,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c65c4)),
+        forget: Some(CodeRef(0x802c65c4)),
     },
     // ItKind::GameAndWatchManhole
     ItemLogic {
@@ -2266,7 +2266,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c68d8)),
+        forget: Some(CodeRef(0x802c68d8)),
     },
     // ItKind::GameAndWatchTorch
     ItemLogic {
@@ -2284,7 +2284,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c6c18)),
+        forget: Some(CodeRef(0x802c6c18)),
     },
     // ItKind::GameAndWatchParachute
     ItemLogic {
@@ -2302,7 +2302,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c6f20)),
+        forget: Some(CodeRef(0x802c6f20)),
     },
     // ItKind::GameAndWatchTurtle
     ItemLogic {
@@ -2320,7 +2320,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c71ec)),
+        forget: Some(CodeRef(0x802c71ec)),
     },
     // ItKind::GameAndWatchSparky
     ItemLogic {
@@ -2338,7 +2338,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c74b8)),
+        forget: Some(CodeRef(0x802c74b8)),
     },
     // ItKind::GameAndWatchJudge
     ItemLogic {
@@ -2356,7 +2356,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c7d40)),
+        forget: Some(CodeRef(0x802c7d40)),
     },
     // ItKind::GameAndWatchOil
     ItemLogic {
@@ -2374,7 +2374,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c8018)),
+        forget: Some(CodeRef(0x802c8018)),
     },
     // ItKind::GameAndWatchSausage
     ItemLogic {
@@ -2392,7 +2392,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c899c)),
         shield_bounced: Some(CodeRef(0x802c8a08)),
         hit_shield: Some(CodeRef(0x802c8940)),
-        evt_unk: Some(CodeRef(0x802c8b08)),
+        forget: Some(CodeRef(0x802c8b08)),
     },
     // ItKind::YoungLinkMilk
     ItemLogic {
@@ -2410,7 +2410,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c8f2c)),
+        forget: Some(CodeRef(0x802c8f2c)),
     },
     // ItKind::GameAndWatchTrampoline
     ItemLogic {
@@ -2428,7 +2428,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c835c)),
+        forget: Some(CodeRef(0x802c835c)),
     },
     // ItKind::MasterHandLaser
     ItemLogic {
@@ -2446,7 +2446,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802f044c)),
+        forget: Some(CodeRef(0x802f044c)),
     },
     // ItKind::MasterHandBullet
     ItemLogic {
@@ -2464,7 +2464,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802f0f3c)),
         shield_bounced: Some(CodeRef(0x802f0f44)),
         hit_shield: Some(CodeRef(0x802f0f64)),
-        evt_unk: Some(CodeRef(0x802f0bc8)),
+        forget: Some(CodeRef(0x802f0bc8)),
     },
     // ItKind::CrazyHandLaser
     ItemLogic {
@@ -2482,7 +2482,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802f044c)),
+        forget: Some(CodeRef(0x802f044c)),
     },
     // ItKind::CrazyHandBullet
     ItemLogic {
@@ -2500,7 +2500,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802f0bc8)),
+        forget: Some(CodeRef(0x802f0bc8)),
     },
     // ItKind::CrazyHandBomb
     ItemLogic {
@@ -2518,7 +2518,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802f1094)),
+        forget: Some(CodeRef(0x802f1094)),
     },
     // ItKind::KirbyMarioFireball
     ItemLogic {
@@ -2536,7 +2536,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x8029ba70)),
         shield_bounced: Some(CodeRef(0x8029ba78)),
         hit_shield: Some(CodeRef(0x8029ba68)),
-        evt_unk: Some(CodeRef(0x8029ba98)),
+        forget: Some(CodeRef(0x8029ba98)),
     },
     // ItKind::KirbyDrMarioMegavitamin
     ItemLogic {
@@ -2554,7 +2554,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c14b8)),
         shield_bounced: Some(CodeRef(0x802c1514)),
         hit_shield: Some(CodeRef(0x802c145c)),
-        evt_unk: Some(CodeRef(0x802c1570)),
+        forget: Some(CodeRef(0x802c1570)),
     },
     // ItKind::KirbyLuigiFireball
     ItemLogic {
@@ -2572,7 +2572,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c04c8)),
         shield_bounced: Some(CodeRef(0x802c04d0)),
         hit_shield: Some(CodeRef(0x802c04c0)),
-        evt_unk: Some(CodeRef(0x802c04f0)),
+        forget: Some(CodeRef(0x802c04f0)),
     },
     // ItKind::KirbyIceClimbersIceShot
     ItemLogic {
@@ -2590,7 +2590,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c20e4)),
         shield_bounced: Some(CodeRef(0x802c20ec)),
         hit_shield: Some(CodeRef(0x802c1ff8)),
-        evt_unk: Some(CodeRef(0x802c210c)),
+        forget: Some(CodeRef(0x802c210c)),
     },
     // ItKind::KirbyPeachToad
     ItemLogic {
@@ -2608,7 +2608,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802be1f4)),
+        forget: Some(CodeRef(0x802be1f4)),
     },
     // ItKind::KirbyPeachToadSpore
     ItemLogic {
@@ -2626,7 +2626,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802be578)),
+        forget: Some(CodeRef(0x802be578)),
     },
     // ItKind::KirbyFoxLaser
     ItemLogic {
@@ -2644,7 +2644,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x8029cc4c)),
         shield_bounced: Some(CodeRef(0x8029cc54)),
         hit_shield: Some(CodeRef(0x8029ccf0)),
-        evt_unk: Some(CodeRef(0x8029ccf8)),
+        forget: Some(CodeRef(0x8029ccf8)),
     },
     // ItKind::KirbyFalcoLaser
     ItemLogic {
@@ -2662,7 +2662,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x8029cc4c)),
         shield_bounced: Some(CodeRef(0x8029cc54)),
         hit_shield: Some(CodeRef(0x8029ccf0)),
-        evt_unk: Some(CodeRef(0x8029ccf8)),
+        forget: Some(CodeRef(0x8029ccf8)),
     },
     // ItKind::KirbyFoxBlaster
     ItemLogic {
@@ -2680,7 +2680,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802af184)),
+        forget: Some(CodeRef(0x802af184)),
     },
     // ItKind::KirbyFalcoBlaster
     ItemLogic {
@@ -2698,7 +2698,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802af184)),
+        forget: Some(CodeRef(0x802af184)),
     },
     // ItKind::KirbyLinkArrow
     ItemLogic {
@@ -2716,7 +2716,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x802a9b08)),
-        evt_unk: Some(CodeRef(0x802aa034)),
+        forget: Some(CodeRef(0x802aa034)),
     },
     // ItKind::KirbyYoungLinkFireArrow
     ItemLogic {
@@ -2734,7 +2734,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x802a9b08)),
-        evt_unk: Some(CodeRef(0x802aa034)),
+        forget: Some(CodeRef(0x802aa034)),
     },
     // ItKind::KirbyLinkBow
     ItemLogic {
@@ -2752,7 +2752,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802af920)),
+        forget: Some(CodeRef(0x802af920)),
     },
     // ItKind::KirbyYoungLinkBow
     ItemLogic {
@@ -2770,7 +2770,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802af920)),
+        forget: Some(CodeRef(0x802af920)),
     },
     // ItKind::KirbyMewtwoShadowBall
     ItemLogic {
@@ -2788,7 +2788,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c60c4)),
         shield_bounced: Some(CodeRef(0x802c6140)),
         hit_shield: Some(CodeRef(0x802c6138)),
-        evt_unk: Some(CodeRef(0x802c61d4)),
+        forget: Some(CodeRef(0x802c61d4)),
     },
     // ItKind::KirbyNessPKFlash
     ItemLogic {
@@ -2806,7 +2806,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802ab3c8)),
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802ab3d0)),
+        forget: Some(CodeRef(0x802ab3d0)),
     },
     // ItKind::KirbyNessPKFlashExplosion
     ItemLogic {
@@ -2824,7 +2824,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802afd54)),
         shield_bounced: Some(CodeRef(0x802afd5c)),
         hit_shield: Some(CodeRef(0x802afd64)),
-        evt_unk: Some(CodeRef(0x802afd6c)),
+        forget: Some(CodeRef(0x802afd6c)),
     },
     // ItKind::KirbyPikachuThunderJoltGround
     ItemLogic {
@@ -2842,7 +2842,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802b3ca8)),
         shield_bounced: Some(CodeRef(0x802b3d70)),
         hit_shield: Some(CodeRef(0x802b3d0c)),
-        evt_unk: Some(CodeRef(0x802b3edc)),
+        forget: Some(CodeRef(0x802b3edc)),
     },
     // ItKind::KirbyPikachuThunderJoltAir
     ItemLogic {
@@ -2860,7 +2860,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802b4680)),
         shield_bounced: Some(CodeRef(0x802b4a60)),
         hit_shield: Some(CodeRef(0x802b4a18)),
-        evt_unk: Some(CodeRef(0x802b4aa8)),
+        forget: Some(CodeRef(0x802b4aa8)),
     },
     // ItKind::KirbyPichuThunderJoltGround
     ItemLogic {
@@ -2878,7 +2878,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802b3ca8)),
         shield_bounced: Some(CodeRef(0x802b3d70)),
         hit_shield: Some(CodeRef(0x802b3d0c)),
-        evt_unk: Some(CodeRef(0x802b3edc)),
+        forget: Some(CodeRef(0x802b3edc)),
     },
     // ItKind::KirbyPichuThunderJoltAir
     ItemLogic {
@@ -2896,7 +2896,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802b4680)),
         shield_bounced: Some(CodeRef(0x802b4a60)),
         hit_shield: Some(CodeRef(0x802b4a18)),
-        evt_unk: Some(CodeRef(0x802b4aa8)),
+        forget: Some(CodeRef(0x802b4aa8)),
     },
     // ItKind::KirbySamusChargeShot
     ItemLogic {
@@ -2914,7 +2914,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802b5fe8)),
         shield_bounced: Some(CodeRef(0x802b6144)),
         hit_shield: Some(CodeRef(0x802b613c)),
-        evt_unk: Some(CodeRef(0x802b62b0)),
+        forget: Some(CodeRef(0x802b62b0)),
     },
     // ItKind::KirbySheikNeedleThrown
     ItemLogic {
@@ -2932,7 +2932,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802b14dc)),
         hit_shield: Some(CodeRef(0x802b16e4)),
-        evt_unk: Some(CodeRef(0x802b1890)),
+        forget: Some(CodeRef(0x802b1890)),
     },
     // ItKind::KirbySheikNeedleHeld
     ItemLogic {
@@ -2950,7 +2950,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802b1c40)),
+        forget: Some(CodeRef(0x802b1c40)),
     },
     // ItKind::KirbyBowserFlame
     ItemLogic {
@@ -2968,7 +2968,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802ad38c)),
         shield_bounced: Some(CodeRef(0x802ad3b0)),
         hit_shield: Some(CodeRef(0x802ad450)),
-        evt_unk: Some(CodeRef(0x802ad458)),
+        forget: Some(CodeRef(0x802ad458)),
     },
     // ItKind::KirbyGameAndWatchSausage
     ItemLogic {
@@ -2986,7 +2986,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: Some(CodeRef(0x802c899c)),
         shield_bounced: Some(CodeRef(0x802c8a08)),
         hit_shield: Some(CodeRef(0x802c8940)),
-        evt_unk: Some(CodeRef(0x802c8b08)),
+        forget: Some(CodeRef(0x802c8b08)),
     },
     // ItKind::KirbyGameAndWatchPan
     ItemLogic {
@@ -3004,7 +3004,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c7754)),
+        forget: Some(CodeRef(0x802c7754)),
     },
     // ItKind::KirbyYoshiEggLay
     ItemLogic {
@@ -3022,7 +3022,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802f3374)),
+        forget: Some(CodeRef(0x802f3374)),
     },
     // ItKind::VsCoin
     ItemLogic {
@@ -3040,7 +3040,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802e6acc)),
+        forget: Some(CodeRef(0x802e6acc)),
     },
     // ItKind::Trophy
     ItemLogic {
@@ -3058,7 +3058,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802f18f0)),
+        forget: Some(CodeRef(0x802f18f0)),
     },
     // ItKind::StageHurtbox
     ItemLogic {
@@ -3076,7 +3076,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802e709c)),
+        forget: Some(CodeRef(0x802e709c)),
     },
 ];
 
@@ -3149,7 +3149,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c8fc4)),
+        forget: Some(CodeRef(0x802c8fc4)),
     },
     // ItKind::Chikorita
     ItemLogic {
@@ -3167,7 +3167,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c961c)),
+        forget: Some(CodeRef(0x802c961c)),
     },
     // ItKind::Snorlax
     ItemLogic {
@@ -3185,7 +3185,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802c9e24)),
+        forget: Some(CodeRef(0x802c9e24)),
     },
     // ItKind::Blastoise
     ItemLogic {
@@ -3203,7 +3203,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802ca538)),
+        forget: Some(CodeRef(0x802ca538)),
     },
     // ItKind::Weezing
     ItemLogic {
@@ -3221,7 +3221,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802cb0f8)),
+        forget: Some(CodeRef(0x802cb0f8)),
     },
     // ItKind::Charizard
     ItemLogic {
@@ -3239,7 +3239,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802cb940)),
+        forget: Some(CodeRef(0x802cb940)),
     },
     // ItKind::Moltres
     ItemLogic {
@@ -3257,7 +3257,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802cc744)),
+        forget: Some(CodeRef(0x802cc744)),
     },
     // ItKind::Zapdos
     ItemLogic {
@@ -3275,7 +3275,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802ccb14)),
+        forget: Some(CodeRef(0x802ccb14)),
     },
     // ItKind::Articuno
     ItemLogic {
@@ -3293,7 +3293,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802cd000)),
+        forget: Some(CodeRef(0x802cd000)),
     },
     // ItKind::Wobbuffet
     ItemLogic {
@@ -3311,7 +3311,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802cd4dc)),
+        forget: Some(CodeRef(0x802cd4dc)),
     },
     // ItKind::Scizor
     ItemLogic {
@@ -3329,7 +3329,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802cdc60)),
+        forget: Some(CodeRef(0x802cdc60)),
     },
     // ItKind::Unown
     ItemLogic {
@@ -3347,7 +3347,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802ce7d0)),
+        forget: Some(CodeRef(0x802ce7d0)),
     },
     // ItKind::Entei
     ItemLogic {
@@ -3365,7 +3365,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802cf450)),
+        forget: Some(CodeRef(0x802cf450)),
     },
     // ItKind::Raikou
     ItemLogic {
@@ -3383,7 +3383,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802cf884)),
+        forget: Some(CodeRef(0x802cf884)),
     },
     // ItKind::Suicune
     ItemLogic {
@@ -3401,7 +3401,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802cfcb8)),
+        forget: Some(CodeRef(0x802cfcb8)),
     },
     // ItKind::Bellossom
     ItemLogic {
@@ -3419,7 +3419,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d0118)),
+        forget: Some(CodeRef(0x802d0118)),
     },
     // ItKind::Electrode
     ItemLogic {
@@ -3437,7 +3437,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d0ab0)),
+        forget: Some(CodeRef(0x802d0ab0)),
     },
     // ItKind::Lugia
     ItemLogic {
@@ -3455,7 +3455,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d14d4)),
+        forget: Some(CodeRef(0x802d14d4)),
     },
     // ItKind::HoOh
     ItemLogic {
@@ -3473,7 +3473,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d25bc)),
+        forget: Some(CodeRef(0x802d25bc)),
     },
     // ItKind::Ditto
     ItemLogic {
@@ -3491,7 +3491,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d3070)),
+        forget: Some(CodeRef(0x802d3070)),
     },
     // ItKind::Clefairy
     ItemLogic {
@@ -3509,7 +3509,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d32dc)),
+        forget: Some(CodeRef(0x802d32dc)),
     },
     // ItKind::Togepi
     ItemLogic {
@@ -3527,7 +3527,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d372c)),
+        forget: Some(CodeRef(0x802d372c)),
     },
     // ItKind::Mew
     ItemLogic {
@@ -3545,7 +3545,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d3b6c)),
+        forget: Some(CodeRef(0x802d3b6c)),
     },
     // ItKind::Celebi
     ItemLogic {
@@ -3563,7 +3563,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d3f4c)),
+        forget: Some(CodeRef(0x802d3f4c)),
     },
     // ItKind::Staryu
     ItemLogic {
@@ -3581,7 +3581,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d43b0)),
+        forget: Some(CodeRef(0x802d43b0)),
     },
     // ItKind::Chansey
     ItemLogic {
@@ -3599,7 +3599,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d56f0)),
+        forget: Some(CodeRef(0x802d56f0)),
     },
     // ItKind::Porygon2
     ItemLogic {
@@ -3617,7 +3617,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d5cd8)),
+        forget: Some(CodeRef(0x802d5cd8)),
     },
     // ItKind::Cyndaquil
     ItemLogic {
@@ -3635,7 +3635,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d61a8)),
+        forget: Some(CodeRef(0x802d61a8)),
     },
     // ItKind::Marill
     ItemLogic {
@@ -3653,7 +3653,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d6fb0)),
+        forget: Some(CodeRef(0x802d6fb0)),
     },
     // ItKind::Venusaur
     ItemLogic {
@@ -3671,7 +3671,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d73d0)),
+        forget: Some(CodeRef(0x802d73d0)),
     },
     // ItKind::ChikoritaLeaf
     ItemLogic {
@@ -3689,7 +3689,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: Some(CodeRef(0x802c9c78)),
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x802c9c78)),
-        evt_unk: Some(CodeRef(0x802c9c80)),
+        forget: Some(CodeRef(0x802c9c80)),
     },
     // ItKind::BlastoiseHydroPump
     ItemLogic {
@@ -3707,7 +3707,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x802cadc0)),
-        evt_unk: Some(CodeRef(0x802cadd0)),
+        forget: Some(CodeRef(0x802cadd0)),
     },
     // ItKind::WeezingGas1
     ItemLogic {
@@ -3725,7 +3725,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802cb778)),
+        forget: Some(CodeRef(0x802cb778)),
     },
     // ItKind::WeezingGas2
     ItemLogic {
@@ -3743,7 +3743,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802cb778)),
+        forget: Some(CodeRef(0x802cb778)),
     },
     // ItKind::CharizardFlame1
     ItemLogic {
@@ -3761,7 +3761,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: Some(CodeRef(0x802cc5cc)),
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x802cc5c4)),
-        evt_unk: Some(CodeRef(0x802cc584)),
+        forget: Some(CodeRef(0x802cc584)),
     },
     // ItKind::CharizardFlame2
     ItemLogic {
@@ -3779,7 +3779,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: Some(CodeRef(0x802cc5cc)),
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x802cc5c4)),
-        evt_unk: Some(CodeRef(0x802cc584)),
+        forget: Some(CodeRef(0x802cc584)),
     },
     // ItKind::CharizardFlame3
     ItemLogic {
@@ -3797,7 +3797,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: Some(CodeRef(0x802cc5cc)),
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x802cc5c4)),
-        evt_unk: Some(CodeRef(0x802cc584)),
+        forget: Some(CodeRef(0x802cc584)),
     },
     // ItKind::CharizardFlame4
     ItemLogic {
@@ -3815,7 +3815,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: Some(CodeRef(0x802cc5cc)),
         shield_bounced: None,
         hit_shield: Some(CodeRef(0x802cc5c4)),
-        evt_unk: Some(CodeRef(0x802cc584)),
+        forget: Some(CodeRef(0x802cc584)),
     },
     // ItKind::UnownSwarm
     ItemLogic {
@@ -3833,7 +3833,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802cf0b4)),
+        forget: Some(CodeRef(0x802cf0b4)),
     },
     // ItKind::LugiaAeroblast
     ItemLogic {
@@ -3851,7 +3851,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d23d4)),
+        forget: Some(CodeRef(0x802d23d4)),
     },
     // ItKind::LugiaAeroblast2
     ItemLogic {
@@ -3869,7 +3869,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d23d4)),
+        forget: Some(CodeRef(0x802d23d4)),
     },
     // ItKind::LugiaAeroblast3
     ItemLogic {
@@ -3887,7 +3887,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d23d4)),
+        forget: Some(CodeRef(0x802d23d4)),
     },
     // ItKind::HoOhSacredFire
     ItemLogic {
@@ -3905,7 +3905,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d2ed0)),
+        forget: Some(CodeRef(0x802d2ed0)),
     },
     // ItKind::StaryuStar
     ItemLogic {
@@ -3923,7 +3923,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: Some(CodeRef(0x802d4f48)),
         shield_bounced: Some(CodeRef(0x802d4f08)),
         hit_shield: Some(CodeRef(0x802d4f50)),
-        evt_unk: Some(CodeRef(0x802d4f58)),
+        forget: Some(CodeRef(0x802d4f58)),
     },
     // ItKind::ChanseyEgg
     ItemLogic {
@@ -3941,7 +3941,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d5a9c)),
+        forget: Some(CodeRef(0x802d5a9c)),
     },
     // ItKind::CyndaquilFlame
     ItemLogic {
@@ -3959,7 +3959,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: Some(CodeRef(0x802d6838)),
         shield_bounced: Some(CodeRef(0x802d6840)),
         hit_shield: Some(CodeRef(0x802d6848)),
-        evt_unk: Some(CodeRef(0x802d6850)),
+        forget: Some(CodeRef(0x802d6850)),
     },
     // ItKind::PokemonUnused
     ItemLogic {
@@ -3977,7 +3977,7 @@ pub static LOGIC_POKEMON: [ItemLogic; 47] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
 ];
 
@@ -4033,7 +4033,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d84d8)),
+        forget: Some(CodeRef(0x802d84d8)),
     },
     // ItKind::Target
     ItemLogic {
@@ -4051,7 +4051,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::ShyGuy
     ItemLogic {
@@ -4069,7 +4069,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802d9a0c)),
+        forget: Some(CodeRef(0x802d9a0c)),
     },
     // ItKind::KoopaTroopa
     ItemLogic {
@@ -4087,7 +4087,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802dd7d0)),
+        forget: Some(CodeRef(0x802dd7d0)),
     },
     // ItKind::KoopaParatroopa
     ItemLogic {
@@ -4105,7 +4105,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802e16d8)),
+        forget: Some(CodeRef(0x802e16d8)),
     },
     // ItKind::LikeLike
     ItemLogic {
@@ -4123,7 +4123,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802e16d8)),
+        forget: Some(CodeRef(0x802e16d8)),
     },
     // ItKind::OldReDead
     ItemLogic {
@@ -4141,7 +4141,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::OldOctorok
     ItemLogic {
@@ -4159,7 +4159,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::OldTopi
     ItemLogic {
@@ -4177,7 +4177,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::PolarBear
     ItemLogic {
@@ -4195,7 +4195,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802e4a24)),
+        forget: Some(CodeRef(0x802e4a24)),
     },
     // ItKind::KlapTrap
     ItemLogic {
@@ -4213,7 +4213,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802e2450)),
+        forget: Some(CodeRef(0x802e2450)),
     },
     // ItKind::KoopaGreenShell
     ItemLogic {
@@ -4231,7 +4231,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802dfe40)),
         hit_shield: Some(CodeRef(0x802dfd60)),
-        evt_unk: Some(CodeRef(0x802dfed4)),
+        forget: Some(CodeRef(0x802dfed4)),
     },
     // ItKind::KoopaRedShell
     ItemLogic {
@@ -4249,7 +4249,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802e0448)),
         hit_shield: Some(CodeRef(0x802e0428)),
-        evt_unk: Some(CodeRef(0x802e0468)),
+        forget: Some(CodeRef(0x802e0468)),
     },
     // ItKind::Tingle
     ItemLogic {
@@ -4267,7 +4267,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802ec850)),
+        forget: Some(CodeRef(0x802ec850)),
     },
     // ItKind::Invalid1
     ItemLogic {
@@ -4285,7 +4285,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::Invalid2
     ItemLogic {
@@ -4303,7 +4303,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::Invalid3
     ItemLogic {
@@ -4321,7 +4321,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::WhispyApple
     ItemLogic {
@@ -4339,7 +4339,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802eef68)),
         hit_shield: Some(CodeRef(0x802eef30)),
-        evt_unk: Some(CodeRef(0x802eef88)),
+        forget: Some(CodeRef(0x802eef88)),
     },
     // ItKind::WhispyHealApple
     ItemLogic {
@@ -4357,7 +4357,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802eef68)),
         hit_shield: Some(CodeRef(0x802eef30)),
-        evt_unk: Some(CodeRef(0x802eef88)),
+        forget: Some(CodeRef(0x802eef88)),
     },
     // ItKind::Invalid4
     ItemLogic {
@@ -4375,7 +4375,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::Invalid5
     ItemLogic {
@@ -4393,7 +4393,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::Invalid6
     ItemLogic {
@@ -4411,7 +4411,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::FlatZoneTool
     ItemLogic {
@@ -4429,7 +4429,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: Some(CodeRef(0x802ef874)),
         shield_bounced: Some(CodeRef(0x802ef924)),
         hit_shield: Some(CodeRef(0x802ef7cc)),
-        evt_unk: Some(CodeRef(0x802efa24)),
+        forget: Some(CodeRef(0x802efa24)),
     },
     // ItKind::Invalid7
     ItemLogic {
@@ -4447,7 +4447,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::Invalid8
     ItemLogic {
@@ -4465,7 +4465,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::Birdo
     ItemLogic {
@@ -4483,7 +4483,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802ee1e0)),
+        forget: Some(CodeRef(0x802ee1e0)),
     },
     // ItKind::ArwingLaser
     ItemLogic {
@@ -4501,7 +4501,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: Some(CodeRef(0x802e8418)),
         shield_bounced: Some(CodeRef(0x802e85f4)),
         hit_shield: Some(CodeRef(0x802e8784)),
-        evt_unk: None,
+        forget: None,
     },
     // ItKind::GreatFoxLaser
     ItemLogic {
@@ -4519,7 +4519,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: Some(CodeRef(0x802eb454)),
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: Some(CodeRef(0x802eb5a8)),
+        forget: Some(CodeRef(0x802eb5a8)),
     },
     // ItKind::BirdoEgg
     ItemLogic {
@@ -4537,7 +4537,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: Some(CodeRef(0x802f01f8)),
         hit_shield: Some(CodeRef(0x802f0010)),
-        evt_unk: Some(CodeRef(0x802f0320)),
+        forget: Some(CodeRef(0x802f0320)),
     },
     // kind 237, no `ItKind`
     ItemLogic {
@@ -4555,7 +4555,7 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
         absorbed: None,
         shield_bounced: None,
         hit_shield: None,
-        evt_unk: None,
+        forget: None,
     },
 ];
 

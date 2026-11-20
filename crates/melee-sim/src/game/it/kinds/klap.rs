@@ -443,6 +443,7 @@ pub fn shot(
 
 /// Forgets a GObj the Klap Trap points to, `it_802E2450` (`it_8026B894`).
 #[doc(alias = "it_802E2450")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     let _ = super::super::lib26b1::forget(r.game, gobj, other);
 }

@@ -854,7 +854,8 @@ fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 
 /// `it_802A23CC`: forgets `other`, its thrower among them.
 #[doc(alias = "it_802A23CC")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
     let v = vars(r.game, gobj);
     if v.xF98.get() == other {

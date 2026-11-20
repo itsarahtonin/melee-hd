@@ -91,6 +91,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 
 /// Forgets a GObj, `it_802ADDB0` (`it_8026B894`).
 // Ports `it_802ADDB0`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

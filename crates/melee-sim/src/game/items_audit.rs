@@ -180,7 +180,7 @@ pub const MODULES: &[&str] = &[
     "it/draw",
     "it/drop",
     "it/effect",
-    "it/evt_unk",
+    "it/forget",
     "it/ground",
     "it/hitbox",
     "it/item",

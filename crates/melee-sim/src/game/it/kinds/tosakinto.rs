@@ -86,7 +86,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 
 /// Forgets a GObj going away, `it_802C8FC4` (`it_8026B894`).
 #[doc(alias = "it_802C8FC4")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

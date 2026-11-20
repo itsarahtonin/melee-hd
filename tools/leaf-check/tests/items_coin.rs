@@ -162,7 +162,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802F202C" => trophycoin::knocked_off(g, gobj),
         "itCoin_Logic116_EvtUnk" => {
             let other = gobj_or_none(4);
-            it::evt_unk::run(g, gobj, other, CodeRef(a));
+            it::forget::run(g, gobj, other, CodeRef(a));
         }
         _ => {
             if let Some(v) = melee_sim::game::code::try_pred(g, gobj, a) {

@@ -146,7 +146,7 @@ pub const PATHS: &[Paths] = &[
     // docs/oracle.md's sessions): the count, `fn_80188550`, with a player joining,
     // `gm_8016EDDC`, and leaving, `fn_8016EF98`, which frees its fighter
     // (`Player_80031EBC`, `Fighter_Unload_8006DABC` in `game/ft/unload.rs`, every item's
-    // `evt_unk` in `game/it/evt_unk.rs`), in `m6-training/tr-count` and
+    // `forget` in `game/it/forget.rs`), in `m6-training/tr-count` and
     // `m6-fighter-unload/un-churn` and `un-held`; the reset, `fn_80188644`, putting each
     // slot back (`Player_800328D4`, `ftLib_80087140`), in `m6-fighter-unload/un-reset`. Their
     // modules are the mode's, so a stop added to them has to say why Training can't reach it.
@@ -167,7 +167,7 @@ pub const PATHS: &[Paths] = &[
         modules: &[
             "gm/training",
             "ft/unload",
-            "it/evt_unk",
+            "it/forget",
             "gm/one_player",
             "gm/machine",
             "mn/charsel/one_door",
@@ -263,7 +263,7 @@ pub const PATHS: &[Paths] = &[
             "ft/zako",
             "ft/cpu_ai",
             "ft/unload",
-            "it/evt_unk",
+            "it/forget",
             "gm/one_player",
             "gm/machine",
             "mn/charsel/one_door",
@@ -870,8 +870,8 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "an enemy kind with no typed variables or KO bonus",
         // The adventure enemies are done: the Like Like and the Polar Bear by task 24's fourth
-        // round, the Koopa's and the red shell's evt_unk checked by review (Sarah, 2026-11-11:
-        // the identical it_8026B894 wrappers, game/it/evt_unk.rs), and the shells' state 9
+        // round, the Koopa's and the red shell's forget checked by review (Sarah, 2026-11-11:
+        // the identical it_8026B894 wrappers, game/it/forget.rs), and the shells' state 9
         // collision by m6-adv-close/mk-slope9 (task 24's fifth round).
         // Not Adventure (task 24's fifth round): the two stops are for a kind outside it/zako.rs's
         // lists, and every enemy Adventure can make is in both. Its stages' spawners

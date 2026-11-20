@@ -344,6 +344,7 @@ pub fn touched(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj the item points to, `it_2E6A_Logic117_EvtUnk` (`it_8026B894`).
 #[doc(alias = "it_2E6A_Logic117_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     super::super::lib26b1::forget(r.game, gobj, other);
 }

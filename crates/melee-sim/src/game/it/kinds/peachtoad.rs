@@ -174,6 +174,7 @@ fn releasing(r: &mut Running, gobj: GObjId) -> bool {
 
 /// `itPeachToad_Logic91_EvtUnk`: forgets `other`.
 #[doc(alias = "itPeachToad_Logic91_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

@@ -77,8 +77,9 @@ pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 
 /// Forgets a GObj going away, `it_802CF884` (`it_8026B894`).
 #[doc(alias = "it_802CF884")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    entei::evt_unk(r, gobj, other);
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+    entei::forget(r, gobj, other);
 }
 
 /// Lands out of the ball, `it_802CF8A4`: a large quake, its landing sound, stopped, and roaring.

@@ -221,6 +221,7 @@ fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `it_802B2FA8`.
 #[doc(alias = "it_802B2FA8")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

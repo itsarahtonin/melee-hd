@@ -71,7 +71,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// Forgets a GObj going away, `it_802D3F4C` (`it_8026B894`): only a fighter's unload at the
 /// scene's end runs it (`it_8026B7F8`), which no match reaches.
 // Ports `it_802D3F4C`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

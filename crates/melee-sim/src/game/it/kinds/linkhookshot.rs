@@ -1262,7 +1262,8 @@ fn hang_from(r: &mut Running, gobj: GObjId, mut l0: ItemLinkId, at: Vec3, dist: 
 
 /// `it_802A7D40`: forgets `other`, its fighter among them.
 #[doc(alias = "it_802A7D40")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     super::super::lib26b1::forget(r.game, gobj, other);
     let v = vars(r, gobj);
     if v.x8.get() == other {

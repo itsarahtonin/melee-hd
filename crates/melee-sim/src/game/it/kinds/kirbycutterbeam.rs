@@ -300,6 +300,7 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `it_8029C4B4` (`it_8026B894`).
 // Ports `it_8029C4B4`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

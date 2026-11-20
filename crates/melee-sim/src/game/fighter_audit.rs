@@ -315,7 +315,7 @@ pub(crate) mod tests {
             .map_or(&[], |(_, s)| s)
     }
 
-    /// A kind's callbacks: the logic table's (with whether it's the `evt_unk`) and its states'.
+    /// A kind's callbacks: the logic table's (with whether it's the `forget`) and its states'.
     fn callbacks(kind: i32) -> Vec<(u32, bool)> {
         let l = logic_of(kind);
         let mut v: Vec<(u32, bool)> = [
@@ -337,7 +337,7 @@ pub(crate) mod tests {
         .flatten()
         .map(|c| (c.0, false))
         .collect();
-        v.extend(l.evt_unk.map(|c| (c.0, true)));
+        v.extend(l.forget.map(|c| (c.0, true)));
         for s in states_of(l) {
             for c in [s.animated, s.physics_updated, s.collided]
                 .into_iter()
@@ -349,12 +349,12 @@ pub(crate) mod tests {
         v
     }
 
-    /// Every kind's `evt_unk`, which only `it_8026B7F8` calls, from a fighter's unload: a player
+    /// Every kind's `forget`, which only `it_8026B7F8` calls, from a fighter's unload: a player
     /// leaving a match in progress, which no VS match does.
-    fn evt_unks() -> BTreeSet<u32> {
+    fn forgets() -> BTreeSet<u32> {
         (0..4)
             .flat_map(|g| tables::logic_group(g).iter())
-            .filter_map(|l| l.evt_unk.map(|c| c.0))
+            .filter_map(|l| l.forget.map(|c| c.0))
             .collect()
     }
 
@@ -474,7 +474,7 @@ pub(crate) mod tests {
 
     /// Each character's own items are held to the ledger, the item tables and the code: every
     /// unaccounted function of the units its item kinds' callbacks are in is ported awaiting a
-    /// check (a `// Ports` comment, or code dispatching on its address), a kind's `evt_unk`
+    /// check (a `// Ports` comment, or code dispatching on its address), a kind's `forget`
     /// (only a fighter's unload runs those), or named by the entry as unreached, unsure or a gap;
     /// every callback in its kinds' logic and state tables is dispatched or named; every stop
     /// in the modules whose code names those callbacks is named; and every name still names
@@ -485,7 +485,7 @@ pub(crate) mod tests {
         let code = Code::read();
         let ledger = by_addr();
         let names = ledger_names();
-        let evt = evt_unks();
+        let evt = forgets();
         for r in crate::game::roster::characters() {
             let n = CHARACTERS.iter().filter(|c| c.kind == r.vs_kind()).count();
             assert_eq!(n, 1, "{} has {n} entries in the fighter audit", r.name);
@@ -599,7 +599,7 @@ pub(crate) mod tests {
     fn fighter_items_tally() {
         let code = Code::read();
         let ledger = by_addr();
-        let evt = evt_unks();
+        let evt = forgets();
         let mut rows: BTreeSet<u32> = BTreeSet::new();
         println!(
             "| Character | Kinds | Units | Ported, awaiting a check | Unreached | Unsure | Gaps |"

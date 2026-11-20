@@ -41,7 +41,7 @@ impl Running<'_> {
 
     /// Frees a fighter's user data, `Fighter_Unload_8006DABC`, while its GObj still holds it
     /// (`GObj_RemoveUserData`): its kind's remover (Jigglypuff's hat), the other fighters'
-    /// thrown hitboxes and grabs forgetting it, its deferred spawns, every item's `evt_unk`
+    /// thrown hitboxes and grabs forgetting it, its deferred spawns, every item's `forget`
     /// (`it_8026B7F8`), its camera box, dynamic bones, sounds and shadow, its accessory's,
     /// skeleton's, second joints' and lights' models, its kind's shared flag, its player
     /// slot's entity, and its seven blocks.
@@ -54,7 +54,7 @@ impl Running<'_> {
         let mut head = self.game.fighters[f.0].x60C.take();
         super::super::ef::queue_clear(self.game, &mut head);
         self.game.fighters[f.0].x60C = head;
-        super::super::it::evt_unk::fighter_unloaded(self, gobj);
+        super::super::it::forget::fighter_unloaded(self, gobj);
         if let Some(b) = self.game.fighters[f.0].x890_cameraBox {
             self.game.camera.free_box(b);
         }

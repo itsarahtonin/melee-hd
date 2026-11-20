@@ -12,7 +12,8 @@ pub mod data;
 pub mod draw;
 pub mod drop;
 pub mod effect;
-pub mod evt_unk;
+#[doc(alias("evt_unk"))]
+pub mod forget;
 pub mod ground;
 pub mod hitbox;
 pub mod item;

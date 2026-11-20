@@ -3442,7 +3442,7 @@ fn yaku_items() {
     check_calls_with(&d, from, 1, &callbacks("it_802E7054"), &touched);
     let forget = |r: &mut Running, maps: &Maps, call: &Call| {
         let other = maps.gobjs.get(&call.regs.gpr[4]).copied();
-        yaku::evt_unk(r, gobj_arg(maps, call), other);
+        yaku::forget(r, gobj_arg(maps, call), other);
         Ret::Nothing
     };
     let t = leaf_check::sym("it_2E6A_Logic117_EvtUnk");
@@ -4459,7 +4459,7 @@ fn klap() {
     }
     let forget = |r: &mut Running, maps: &Maps, call: &Call| {
         let other = maps.gobjs.get(&call.regs.gpr[4]).copied();
-        klap::evt_unk(r, gobj_arg(maps, call), other);
+        klap::forget(r, gobj_arg(maps, call), other);
         Ret::Nothing
     };
     let t = leaf_check::sym("it_802E2450");

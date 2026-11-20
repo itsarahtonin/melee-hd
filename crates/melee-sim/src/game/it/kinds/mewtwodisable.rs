@@ -188,7 +188,8 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `itMewtwoDisable_Logic67_EvtUnk`: its sender too if it's that one.
 #[doc(alias = "itMewtwoDisable_Logic67_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     if owner(r, gobj) == other {
         item_mut(r.game, gobj)
             .xDD4_itemVar

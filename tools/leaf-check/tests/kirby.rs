@@ -246,7 +246,7 @@ fn fighter_unit(u: usize) -> bool {
 /// Functions of the ported units that aren't ported: the item hooks (his matches' items are
 /// monsters, which he only inhales), the demo's and the scenes' callbacks and a swallowed
 /// Kirby's copy; and the throws' landing before the freeze (`fn_800DD5EC`), the held walk's animation
-/// (`ftKb_EatWalk_Anim`), the pan's `evt_unk` (nothing dispatches the items' `evt_unk` yet) and
+/// (`ftKb_EatWalk_Anim`), the pan's `forget` (nothing dispatches the items' `forget` yet) and
 /// Yoshi's copy's tongue catching an item (`fn_801095DC`, `fn_80109714`; items are off), which
 /// no capture reaches (the session `m6-routes/rt-tongue` checks them).
 const UNPORTED: &[&str] = &[

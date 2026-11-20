@@ -105,6 +105,7 @@ pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `itKirbyGameWatchChefPan_Logic113_EvtUnk`.
 // Ports `itKirbyGameWatchChefPan_Logic113_EvtUnk`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

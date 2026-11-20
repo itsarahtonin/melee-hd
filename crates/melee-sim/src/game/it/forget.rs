@@ -1,4 +1,4 @@
-//! The items' `evt_unk` callbacks (`ItemLogic::evt_unk`), which only a fighter's unload runs
+//! The items' `forget` callbacks (`ItemLogic::forget`, the decomp's `evt_unk`), which only a fighter's unload runs
 //! (`it_8026B7F8`, from `Fighter_Unload_8006DABC`): each item forgets the fighter going away.
 //! No VS match unloads a fighter; Training's computer players leaving do, and the
 //! single-player modes' players.
@@ -15,7 +15,7 @@ use crate::hsd::gobj::GObjId;
 /// The items' process link.
 const P_LINK_ITEM: u8 = 9;
 
-/// Every item lets the fighter `fighter` go, `it_8026B7F8`: its kind's `evt_unk`, then the
+/// Every item lets the fighter `fighter` go, `it_8026B7F8`: its kind's `forget`, then the
 /// item destroyed if a fighter has it (`x13`) and its owner was `fighter` before the
 /// callback.
 /// The next item is the freed GObj's next, as the original reads it after the destroy
@@ -26,7 +26,7 @@ pub fn fighter_unloaded(r: &mut Running, fighter: GObjId) {
     while let Some(g) = cur {
         let ip = item(r.game, g);
         let owner = ip.owner;
-        if let Some(f) = super::item::logic(r.game, g).evt_unk {
+        if let Some(f) = super::item::logic(r.game, g).forget {
             run(r, g, Some(fighter), f);
         }
         if item(r.game, g).xDC8_word.flags.x13 && owner == Some(fighter) {
@@ -36,7 +36,7 @@ pub fn fighter_unloaded(r: &mut Running, fighter: GObjId) {
     }
 }
 
-/// Runs an item's `evt_unk` with the GObj going away.
+/// Runs an item's `forget` with the GObj going away.
 pub fn run(r: &mut Running, gobj: GObjId, other: Option<GObjId>, f: CodeRef) {
     match f.0 {
         0x8029_0918 => msbomb::forget(r, gobj, other),
@@ -46,26 +46,26 @@ pub fn run(r: &mut Running, gobj: GObjId, other: Option<GObjId>, f: CodeRef) {
         0x8028_4834 => star::forget(r, gobj, other),
         0x8029_5EB4 => spycloak::forget(r, gobj, other),
         0x8029_CCF8 => foxlaser::forget(r, gobj, other),
-        0x8029_FD84 => linkbomb::evt_unk(r, gobj, other),
-        0x802A_23CC => linkboomerang::evt_unk(r, gobj, other),
-        0x802A_7D40 => linkhookshot::evt_unk(r, gobj, other),
+        0x8029_FD84 => linkbomb::forget(r, gobj, other),
+        0x802A_23CC => linkboomerang::forget(r, gobj, other),
+        0x802A_7D40 => linkhookshot::forget(r, gobj, other),
         0x802B_2528 => pikachu_thunder(r, gobj, other),
         0x802B_54E4 => samus_bomb(r, gobj, other),
         0x802B_7104 => samus_missile(r, gobj, other),
         0x802B_AEA0 => samus_grapple(r, gobj, other),
         0x802B_D10C => seakchain::forget(r, gobj, other),
-        0x802B_DA08 => peachturnip::evt_unk(r, gobj, other),
+        0x802B_DA08 => peachturnip::forget(r, gobj, other),
         0x802C_210C => climbers_ice(r, gobj, other),
         0x802C_3AA4 => climbersstring::forget(r, gobj, other),
-        0x802C_4CD8 => mewtwodisable::evt_unk(r, gobj, other),
-        0x802C_DC60 => hassam::evt_unk(r, gobj, other),
-        0x802D_0AB0 => marumine::evt_unk(r, gobj, other),
-        0x802D_43B0 => hitodeman::evt_unk(r, gobj, other),
-        a => unreachable!("{a:#010x} is no item kind's evt_unk"),
+        0x802C_4CD8 => mewtwodisable::forget(r, gobj, other),
+        0x802C_DC60 => hassam::forget(r, gobj, other),
+        0x802D_0AB0 => marumine::forget(r, gobj, other),
+        0x802D_43B0 => hitodeman::forget(r, gobj, other),
+        a => unreachable!("{a:#010x} is no item kind's forget"),
     }
 }
 
-/// The GObj forgotten as every item does (`it_8026B894`): the `evt_unk` of each kind in
+/// The GObj forgotten as every item does (`it_8026B894`): the `forget` of each kind in
 /// [`FORGET_ONLY`]. Those aliased here are reached by the fighter unload's sessions
 /// (docs/oracle.md, sessions) and the 1P coin's (leaf-check's `items_coin`), or checked by
 /// review (Sarah, 2026-11-11): each is, in the original, the same 8 instructions, a call of
@@ -198,7 +198,7 @@ fn climbers_ice(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
-/// The kinds whose `evt_unk` only forgets the GObj as every item does (`it_8026B894`), by
+/// The kinds whose `forget` only forgets the GObj as every item does (`it_8026B894`), by
 /// address: ssbm-rs's port of each is that call alone (Ness's yo-yo's, `it_2725_Logic59_EvtUnk`,
 /// also reads its owner and does nothing with it).
 // Each name here is aliased on `forget` or its kind's own function.
@@ -381,7 +381,7 @@ mod tests {
         0x802D_43B0,
     ];
 
-    /// The kinds' `evt_unk`s checked by review (Sarah, 2026-11-11, "Yes, by review"): in the
+    /// The kinds' `forget`s checked by review (Sarah, 2026-11-11, "Yes, by review"): in the
     /// asm listings each is `mflr; stw; stwu; bl it_8026B894; lwz; addi; mtlr; blr`, the same
     /// 8 instructions as the session-checked ones aliased on `forget` (ledger/checks.txt).
     pub(super) const REVIEWED: &[&str] = &[
@@ -447,7 +447,7 @@ mod tests {
         "it_27CF_Logic114_EvtUnk",
     ];
 
-    /// Each reviewed `evt_unk` is a [`FORGET_ONLY`](super::FORGET_ONLY) kind that `run` sends to
+    /// Each reviewed `forget` is a [`FORGET_ONLY`](super::FORGET_ONLY) kind that `run` sends to
     /// the shared `forget`, not to a kind's own port.
     #[test]
     fn the_reviewed_wrappers_share_the_forget() {
@@ -465,13 +465,13 @@ mod tests {
         assert_eq!(REVIEWED.len(), 60);
     }
 
-    /// Every item kind's `evt_unk` is dispatched: none falls through `run`.
+    /// Every item kind's `forget` is dispatched: none falls through `run`.
     #[test]
-    fn every_evt_unk_is_dispatched() {
+    fn every_forget_is_dispatched() {
         let mut n = 0;
         for g in 0..4 {
             for l in super::super::tables::logic_group(g) {
-                if let Some(f) = l.evt_unk {
+                if let Some(f) = l.forget {
                     let forget = super::FORGET_ONLY.iter().any(|&(a, _)| a == f.0);
                     assert!(
                         forget || OWN.contains(&f.0),

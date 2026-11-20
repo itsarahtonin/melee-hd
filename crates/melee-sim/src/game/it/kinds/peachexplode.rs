@@ -92,6 +92,7 @@ fn animated(r: &mut Running, gobj: GObjId) -> bool {
 
 /// `itPeachExplode_Logic55_EvtUnk`: forgets `other`.
 #[doc(alias = "itPeachExplode_Logic55_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

@@ -166,6 +166,7 @@ pub fn open(r: &mut Running, gobj: GObjId, speed: f32) {
 
 /// `itPeachParasol_Logic60_EvtUnk`: forgets `other`.
 #[doc(alias = "itPeachParasol_Logic60_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

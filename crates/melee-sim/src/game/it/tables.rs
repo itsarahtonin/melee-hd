@@ -26,7 +26,9 @@ pub struct ItemLogic {
     pub absorbed: Option<CodeRef>,
     pub shield_bounced: Option<CodeRef>,
     pub hit_shield: Option<CodeRef>,
-    pub evt_unk: Option<CodeRef>,
+    /// The item forgets a GObj going away (a fighter unloading, [`super::forget`]).
+    #[doc(alias("evt_unk"))]
+    pub forget: Option<CodeRef>,
 }
 
 /// `ItemStateTable`: one state's animation and its per-frame callbacks.

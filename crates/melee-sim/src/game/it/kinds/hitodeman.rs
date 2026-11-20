@@ -138,7 +138,8 @@ pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 /// Forgets a GObj going away, `it_802D43B0` (`it_8026B894`): no fighter to follow any more,
 /// and it goes.
 #[doc(alias = "it_802D43B0")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
     pokemon::vars(r.game, gobj).set_gobj(TARGET, None);
     item_mut(r.game, gobj).xDAC_itcmd_var0 = 1;
@@ -490,7 +491,8 @@ pub fn star_hit_shield(_: &mut Running, _: GObjId) -> bool {
 
 /// The star forgets a GObj going away, `it_802D4F58` (`it_8026B894`).
 #[doc(alias = "it_802D4F58")]
-pub fn star_evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("star_evt_unk"))]
+pub fn star_forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

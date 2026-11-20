@@ -767,6 +767,7 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj the ball points to, `itMewtwoShadowball_Logic101_EvtUnk` (`it_8026B894`).
 #[doc(alias = "itMewtwoShadowball_Logic101_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

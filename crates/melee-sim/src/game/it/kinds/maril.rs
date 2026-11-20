@@ -153,7 +153,8 @@ pub fn flame_gone(_: &mut Running, _: GObjId) -> bool {
 /// (`it_8026B894`).
 #[doc(alias = "it_802D6850")]
 #[doc(alias = "it_802D6FB0")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

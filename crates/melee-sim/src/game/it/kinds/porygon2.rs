@@ -116,6 +116,7 @@ pub fn coll1(_: &mut Running, _: GObjId) -> bool {
 
 /// Forgets a GObj going away, `it_802D5CD8` (`it_8026B894`).
 #[doc(alias = "it_802D5CD8")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
