@@ -45,7 +45,7 @@ pub struct Settings {
     /// as ssbm-rs's runs read at Slippi's fast disc speed unless told `DISC_RATE`, and the
     /// player reads at a drive's, as ssbm-rs's window does (`docs/engine.md`).
     pub disc: DiscSpeed,
-    /// UCF's pad buffer as the match starts (with `rules.ucf`).
+    /// UCF's pad buffer as the match starts (with [`Rules::ucf`](super::state::Rules::ucf)).
     pub ucf: ucf::Pads,
     /// A Slippi replay drives the match through Slippi's playback codes
     /// ([`Match::step_replay`]).
@@ -272,7 +272,7 @@ impl Settings {
         s.rules = Rules::from_codes(&codes)?;
         // Marth's trail colors read his costume a fixed distance before his attribute block,
         // wherever the heap put it (`game::player_codes`): a match with Marth is refused.
-        if s.rules.player.marth_trail
+        if s.rules.marth_trail()
             && s.start
                 .players
                 .iter()
@@ -888,7 +888,7 @@ pub fn init_scene(r: &mut Running) {
     g.reset_controller_map();
     // Slippi's `Common/AllocSceneBuffer.asm` (at `gm_801A4BD4+0xE0`, in its playback set):
     // a buffer for the scene, the last scene's freed with that scene's heap.
-    if g.playback.is_some() {
+    if g.runs_playback_codes() {
         crate::hsd::heap::with(|h| h.mem_alloc(0x80));
     }
     g.lb_reset_sound_objects();
