@@ -123,7 +123,7 @@ fn destroyed(r: &mut Running, gobj: GObjId) {
 fn is_kirbys(r: &Running, gobj: GObjId) -> bool {
     matches!(
         ItKind::of(item(r.game, gobj).kind),
-        ItKind::KirbyLinkBow | ItKind::KirbyCLinkBow
+        ItKind::KirbyLinkBow | ItKind::KirbyYoungLinkBow
     )
 }
 

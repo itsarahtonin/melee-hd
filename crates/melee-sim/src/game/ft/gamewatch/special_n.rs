@@ -43,7 +43,7 @@ pub const GAME_WATCH: Chef = Chef {
     states: [ms::SPECIAL_N, ms::SPECIAL_AIR_N],
     attrs: 0,
     u: 0,
-    sausage_kind: ItKind::GameWatchChef.id(),
+    sausage_kind: ItKind::GameAndWatchSausage.id(),
     sausage_cb: addr::SPECIAL_N_CREATE_SAUSAGE,
     start_cb: addr::SPECIAL_N_CREATE_SAUSAGE,
     keep: KEEP_FLAGS,

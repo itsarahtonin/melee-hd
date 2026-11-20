@@ -75,7 +75,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_8029BAB8")]
 pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) {
     let mut spawn = SpawnItem {
-        kind: ItKind::KirbyCBeam.id(),
+        kind: ItKind::KirbyFinalCutterWave.id(),
         ..Default::default()
     };
     spawn.prev_pos = Vec3::new(pos.x, pos.y, 0.0);

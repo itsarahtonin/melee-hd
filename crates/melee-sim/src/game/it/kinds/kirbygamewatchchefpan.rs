@@ -45,7 +45,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     gamewatch::spawn_held(
         r,
-        ItKind::KirbyGameWatchChefPan.id(),
+        ItKind::KirbyGameAndWatchPan.id(),
         parent,
         pos,
         part,

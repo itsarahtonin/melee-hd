@@ -171,7 +171,7 @@ fn args(call: &mut Call, target: &str, k: usize) {
             call.regs.fpr[1].ps0 = [1.0f64, 2.5][(k / 2) % 2];
         }
         "it_80279CDC" | "it_80279D5C" => call.regs.fpr[1].ps0 = [1.0f64, 0.5, 1.3][k % 3],
-        "it_802CC1CC" => g[4] = ItKind::LizardonFlame1.id() as u32 + (k % 4) as u32,
+        "it_802CC1CC" => g[4] = ItKind::CharizardFlame1.id() as u32 + (k % 4) as u32,
         "it_802D1E8C" => {
             g[4] = [
                 ItKind::LugiaAeroblast.id() as u32,
@@ -348,7 +348,7 @@ fn item_check(g: &Running, gobj: GObjId, a: u32) {
 fn kinds_naming(addr: u32) -> Vec<i32> {
     use melee_sim::game::handles::{CodeRef, ItemStatesRef};
     use melee_sim::game::it::tables;
-    (ItKind::FIRST_POKEMON.id()..=ItKind::PokemonUnk.id())
+    (ItKind::FIRST_POKEMON.id()..=ItKind::PokemonUnused.id())
         .filter(|&k| {
             let l = tables::logic(tables::logic_ref(k));
             let f = Some(CodeRef(addr));
@@ -412,11 +412,11 @@ fn kind_check(g: &Running, gobj: GObjId, name: &str) {
         "it_8027AB64" | "it_8027AAA0" | "it_8027A364" | "it_8027A4D4"
     );
     let ok = if ball {
-        kind == ItKind::MBall
+        kind == ItKind::PokeBall
     } else if unit(addr).is_some_and(|u| u >= 2) && !forgets(name) {
         owners(addr).contains(&kind)
     } else {
-        (ItKind::FIRST_POKEMON.id()..=ItKind::PokemonUnk.id()).contains(&kind)
+        (ItKind::FIRST_POKEMON.id()..=ItKind::PokemonUnused.id()).contains(&kind)
     };
     if !ok {
         panic!("{SKIP}{name} doesn't take an item of kind {kind}");

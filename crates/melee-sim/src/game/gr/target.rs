@@ -300,7 +300,8 @@ pub fn spawn_targets(r: &mut Running) -> i32 {
         let Some(j) = r.game.stage_info.x280[i] else {
             continue;
         };
-        if super::super::it::zako::spawn(r, ItKind::Mato.id(), None, Some(j), None, false).is_some()
+        if super::super::it::zako::spawn(r, ItKind::Target.id(), None, Some(j), None, false)
+            .is_some()
         {
             count = count.wrapping_add(1);
         }

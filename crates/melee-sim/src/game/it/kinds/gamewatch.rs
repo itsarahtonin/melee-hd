@@ -215,7 +215,7 @@ pub(super) fn colors(r: &mut Running, gobj: GObjId, fighter: GObjId, attr: Optio
         ip.xBC4 = s;
     }
     super::super::lib2725::scale_by_owner(r, gobj);
-    if item(r.game, gobj).kind == ItKind::GameWatchRescue {
+    if item(r.game, gobj).kind == ItKind::GameAndWatchTrampoline {
         item_mut(r.game, gobj)
             .xDD4_itemVar
             .game_watch_rescue()
@@ -284,7 +284,7 @@ pub fn outline_lists(
     r: &mut Running,
     gobj: GObjId,
 ) -> ((u16, Option<DataRef>), (u16, Option<DataRef>)) {
-    let attr = if item(r.game, gobj).kind == ItKind::GameWatchRescue {
+    let attr = if item(r.game, gobj).kind == ItKind::GameAndWatchTrampoline {
         item_mut(r.game, gobj)
             .xDD4_itemVar
             .game_watch_rescue()

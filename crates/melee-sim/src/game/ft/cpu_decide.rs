@@ -486,10 +486,10 @@ impl Running<'_> {
             // `ftCo_800A648C_inline1`: `It_Kind_Kuriboh` up to `_Octarock_Stone` (the
             // containers' monsters), `_Nokonoko`, `_Patapata` and the next, `_Whitebea`.
             let kind = ip.kind;
-            let enemy = (ItKind::Kuriboh.id()..ItKind::OctarockStone.id()).contains(&kind)
-                || kind == ItKind::Nokonoko
-                || (kind.wrapping_sub(ItKind::Patapata.id()) as u32) <= 1
-                || kind == ItKind::Whitebea;
+            let enemy = (ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind)
+                || kind == ItKind::KoopaTroopa
+                || (kind.wrapping_sub(ItKind::KoopaParatroopa.id()) as u32) <= 1
+                || kind == ItKind::PolarBear;
             if !enemy || self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) {
                 continue;
             }
@@ -781,9 +781,9 @@ impl Running<'_> {
         }
         let kind = self.game.items[super::super::it::item_of(self.game, g).0].kind;
         // `It_Kind_Capsule` to `_BombHei`, `_M_Ball`, `_EvYoshiEgg`.
-        if (ItKind::Capsule.id()..=ItKind::BombHei.id()).contains(&kind)
-            || kind == ItKind::MBall
-            || kind == ItKind::EvYoshiEgg
+        if (ItKind::Capsule.id()..=ItKind::BobOmb.id()).contains(&kind)
+            || kind == ItKind::PokeBall
+            || kind == ItKind::EventYoshiEgg
         {
             return true;
         }
@@ -911,7 +911,7 @@ impl Running<'_> {
             if !live
                 || !matches!(
                     ip.item_kind(),
-                    ItKind::BombHei | ItKind::GShell | ItKind::RShell
+                    ItKind::BobOmb | ItKind::GreenShell | ItKind::RedShell
                 )
             {
                 continue;

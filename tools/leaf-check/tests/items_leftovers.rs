@@ -126,12 +126,12 @@ const TAKES_MORE: &[&str] = &[
 /// The item kind a kind's own function takes (its variables are that kind's), if it's one.
 fn kind_of(name: &str) -> Option<i32> {
     Some(match name {
-        "it_8028F8E4" | "it_8028F968" | "it_8028F9B8" | "it_8028F9D8" => ItKind::Foods.id(),
-        "it_802D8688" | "it_802D8EC8" | "it_802D96B0" | "it_802D9714" => ItKind::Heiho.id(),
-        "it_80280B60" | "it_8027D730" => ItKind::BombHei.id(),
+        "it_8028F8E4" | "it_8028F968" | "it_8028F9B8" | "it_8028F9D8" => ItKind::Food.id(),
+        "it_802D8688" | "it_802D8EC8" | "it_802D96B0" | "it_802D9714" => ItKind::ShyGuy.id(),
+        "it_80280B60" | "it_8027D730" => ItKind::BobOmb.id(),
         "it_8028FE90" | "itMSBomb_Logic19_Reflected" => 19,
         "itFlipper_Reflected" | "itFlipper_ShieldBounced" => ItKind::Flipper.id(),
-        "itBox_Logic1_Destroyed" => ItKind::Box.id(),
+        "itBox_Logic1_Destroyed" => ItKind::Crate.id(),
         _ => return None,
     })
 }

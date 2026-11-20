@@ -76,7 +76,7 @@ fn vars(game: &mut Game, gobj: GObjId) -> &mut itFFlowerFlame_ItemVars {
 #[doc(alias = "it_8029A748")]
 pub fn grow(r: &mut Running, owner: GObjId, pos: Vec3, part: i32, facing: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::FFlowerFlame.id(),
+        kind: ItKind::LipsStickFlower.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

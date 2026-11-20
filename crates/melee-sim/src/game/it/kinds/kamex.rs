@@ -289,7 +289,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId) {
         mem(fp::fmadds(reg(side), facing, reg(prev.z)))
     };
     let mut spawn = SpawnItem {
-        kind: ItKind::KamexHydroPump.id(),
+        kind: ItKind::BlastoiseHydroPump.id(),
         ..Default::default()
     };
     spawn.prev_pos = prev;

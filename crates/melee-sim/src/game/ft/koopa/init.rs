@@ -44,7 +44,7 @@ impl Running<'_> {
         super::super::super::it::item::set_char_article(
             self.game,
             article,
-            ItKind::KoopaFlame.id(),
+            ItKind::BowserFlame.id(),
         );
         self.game.fighters[f.0].x2226_b1 = true;
     }

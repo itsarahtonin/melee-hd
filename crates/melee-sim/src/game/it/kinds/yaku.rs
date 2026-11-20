@@ -250,7 +250,7 @@ pub fn spawn(
     // table's last entry, an article in `ItCo.dat`'s data, which the heap's image takes where
     // it holds the file.
     if let Some(a) =
-        r.game.it.char_articles[(ItKind::StageHurtbox.id() - ItKind::Kuriboh.id()) as usize]
+        r.game.it.char_articles[(ItKind::StageHurtbox.id() - ItKind::Goomba.id()) as usize]
         && crate::hsd::heap::image_on()
     {
         crate::hsd::heap::with(|h| h.image.file_word(a, 0x803F_8C08));

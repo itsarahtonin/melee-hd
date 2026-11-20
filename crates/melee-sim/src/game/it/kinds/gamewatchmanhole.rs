@@ -46,7 +46,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     gamewatch::spawn_held(
         r,
-        ItKind::GameWatchManhole.id(),
+        ItKind::GameAndWatchManhole.id(),
         parent,
         pos,
         part,

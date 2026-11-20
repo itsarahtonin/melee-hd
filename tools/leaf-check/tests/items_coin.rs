@@ -85,7 +85,7 @@ fn name_of(addr: u32) -> String {
 /// A coin's callbacks take a coin.
 fn coin_check(g: &Running, gobj: GObjId, name: &str) {
     if g.game.world.gobj(gobj).classifier != CLASS_ITEM
-        || it::lib26b1::kind(g.game, gobj) != ItKind::Coin
+        || it::lib26b1::kind(g.game, gobj) != ItKind::Trophy
     {
         panic!("{SKIP}{name} takes a 1P coin");
     }

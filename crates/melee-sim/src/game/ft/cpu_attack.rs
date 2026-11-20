@@ -155,7 +155,7 @@ impl Running<'_> {
         // `ftCo_800A5A5C`: a container.
         if matches!(
             ItKind::of(kind),
-            ItKind::Box | ItKind::Taru | ItKind::Kusudama | ItKind::TaruCann
+            ItKind::Crate | ItKind::Barrel | ItKind::PartyBall | ItKind::BarrelCannon
         ) {
             self.game.fighters[f.0].cpu.xA4 = 2;
             return true;
@@ -164,14 +164,14 @@ impl Running<'_> {
         if matches!(
             ItKind::of(kind),
             ItKind::Capsule
-                | ItKind::BombHei
-                | ItKind::Dosei
-                | ItKind::GShell
-                | ItKind::RShell
-                | ItKind::Freeze
-                | ItKind::MSBomb
+                | ItKind::BobOmb
+                | ItKind::MrSaturn
+                | ItKind::GreenShell
+                | ItKind::RedShell
+                | ItKind::Freezie
+                | ItKind::MotionSensorBomb
                 | ItKind::Flipper
-                | ItKind::MBall
+                | ItKind::PokeBall
         ) {
             let a = if angle > 1.308_996_928_855_776_8 {
                 0xD
@@ -181,7 +181,7 @@ impl Running<'_> {
                 return false;
             } else if angle < 0.261_799_385_771_155_36 && angle > -0.261_799_385_771_155_36 {
                 0xF
-            } else if kind == ItKind::MBall {
+            } else if kind == ItKind::PokeBall {
                 0xE
             } else {
                 return false;
@@ -205,11 +205,11 @@ impl Running<'_> {
     pub(super) fn cpu_item_swung(&self, it: ItemId) -> bool {
         matches!(
             ItKind::of(self.game.items[it.0].kind),
-            ItKind::Harisen
+            ItKind::Fan
                 | ItKind::StarRod
-                | ItKind::LipStick
-                | ItKind::Bat
-                | ItKind::Sword
+                | ItKind::LipsStick
+                | ItKind::HomeRunBat
+                | ItKind::BeamSword
                 | ItKind::Parasol
         )
     }
@@ -649,11 +649,11 @@ impl Running<'_> {
                 let slot = match ItKind::of(
                     self.game.items[super::super::it::item_of(self.game, g).0].kind,
                 ) {
-                    ItKind::Harisen => Some(0),
-                    ItKind::LipStick => Some(1),
+                    ItKind::Fan => Some(0),
+                    ItKind::LipsStick => Some(1),
                     ItKind::StarRod => Some(2),
-                    ItKind::Sword => Some(3),
-                    ItKind::Bat => Some(4),
+                    ItKind::BeamSword => Some(3),
+                    ItKind::HomeRunBat => Some(4),
                     ItKind::Parasol => Some(5),
                     _ => None,
                 };
@@ -1622,12 +1622,17 @@ impl Running<'_> {
         }
         // `It_Kind_Star`, `It_Kind_Unk4`, and `ftCo_800A5980` on the item read as a fighter.
         let kind = self.game.items[it.0].kind;
-        if kind == ItKind::Star
-            || kind == ItKind::Unk4
-            || (ItKind::Kuriboh.id()..ItKind::OctarockStone.id()).contains(&kind)
+        if kind == ItKind::Starman
+            || kind == ItKind::VsCoin
+            || (ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind)
             || matches!(
                 ItKind::from_id(kind),
-                Some(ItKind::Nokonoko | ItKind::Patapata | ItKind::Likelike | ItKind::Whitebea)
+                Some(
+                    ItKind::KoopaTroopa
+                        | ItKind::KoopaParatroopa
+                        | ItKind::LikeLike
+                        | ItKind::PolarBear
+                )
             )
         {
             return 0;
@@ -1729,7 +1734,7 @@ impl Running<'_> {
             let side = fp::fsubs(reg(fpp.cur_pos.x), reg(ip.pos.x)) > 0.0;
             match ItKind::of(ip.kind) {
                 // `inline0`: shield by an island's end, else roll away from it.
-                ItKind::Flipper | ItKind::TaruCann => {
+                ItKind::Flipper | ItKind::BarrelCannon => {
                     if self.cpu_near_island_end(f, 1.0) {
                         self.cpu_hold_shield(f);
                     } else if side {
@@ -1739,7 +1744,7 @@ impl Running<'_> {
                     }
                 }
                 // `inline1`: roll through a Poison Mushroom.
-                ItKind::DKinoko => {
+                ItKind::PoisonMushroom => {
                     if side {
                         self.cpu_roll_left(f);
                     } else {

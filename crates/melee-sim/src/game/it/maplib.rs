@@ -99,17 +99,17 @@ pub fn enter_air(ip: &mut Item) {
 
 /// The collision kind a new item's collision data gets (`x34_flags.b1234`), by its kind.
 pub fn coll_kind(kind: i32) -> Option<u8> {
-    Some(if kind < ItKind::LGunRay {
+    Some(if kind < ItKind::RayGunShot {
         2
-    } else if kind < ItKind::Kuriboh {
+    } else if kind < ItKind::Goomba {
         4
-    } else if kind < ItKind::OctarockStone {
+    } else if kind < ItKind::OctorokStone {
         3
-    } else if kind < ItKind::MarioFire {
+    } else if kind < ItKind::MarioFireball {
         4
     } else if kind < ItKind::POKEMON_END {
         5
-    } else if kind < ItKind::OldKuri {
+    } else if kind < ItKind::OldGoomba {
         4
     } else if kind < ItKind::ArwingLaser {
         3

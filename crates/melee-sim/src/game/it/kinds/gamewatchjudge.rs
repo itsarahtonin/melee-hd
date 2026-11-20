@@ -47,7 +47,7 @@ pub fn spawn(
     number: u32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::GameWatchJudge.id(),
+        kind: ItKind::GameAndWatchJudge.id(),
         ..Default::default()
     };
     gamewatch::spawn_position(&mut spawn, pos, false);

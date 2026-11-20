@@ -29,7 +29,7 @@ use crate::quat::Quat;
 use crate::vec::Vec3;
 
 /// `Pokemon_ID_Metamon` and `Pokemon_ID_Tosakinto` (`PokemonKind`, from Goldeen's 0).
-const POKEMON_ID_METAMON: i32 = ItKind::Metamon.id() - ItKind::FIRST_POKEMON.id();
+const POKEMON_ID_METAMON: i32 = ItKind::Ditto.id() - ItKind::FIRST_POKEMON.id();
 const POKEMON_ID_TOSAKINTO: i32 = 0;
 
 /// The release's variables (`itPokemonSpawn_ItemVars`), by offset in the union.
@@ -99,7 +99,7 @@ fn rare(r: &mut Running) -> Option<i32> {
     {
         r.game.it.pokemon.rare_spawned = 1;
         r.record_rare_pokemon(RECORD_CEREBI);
-        return Some(ItKind::Cerebi.id() - ItKind::FIRST_POKEMON.id());
+        return Some(ItKind::Celebi.id() - ItKind::FIRST_POKEMON.id());
     }
     if r.game.objs.rng.below(251) == 0
         && r.game.it.pokemon.rare_spawned == 0
@@ -163,7 +163,7 @@ fn draw_from_list(r: &mut Running, ball: GObjId, list: &[i32]) -> i32 {
     }
     let roll = r.game.objs.rng.below(total);
     let mut accum = 0i32;
-    let mut result = ItKind::Sonans.id();
+    let mut result = ItKind::Wobbuffet.id();
     for &(kind, w) in &entries[..n] {
         accum = accum.wrapping_add(w);
         if roll < accum {
@@ -208,7 +208,7 @@ fn choose(r: &mut Running, ball: GObjId) -> i32 {
         kind -= 1;
     }
     if kind == POKEMON_ID_METAMON
-        && (lib26b1::count_kind(r.game, ItKind::Metamon.id()) != 0 || r.game.ft_count() == 4)
+        && (lib26b1::count_kind(r.game, ItKind::Ditto.id()) != 0 || r.game.ft_count() == 4)
     {
         kind = POKEMON_ID_TOSAKINTO;
     }
@@ -222,7 +222,7 @@ fn choose(r: &mut Running, ball: GObjId) -> i32 {
 fn event_list(r: &mut Running, ball: GObjId) -> i32 {
     let ev = r.event();
     let Some(list) = r.event_entry(ev).and_then(|e| e.x4(r)) else {
-        return ItKind::Sonans.id();
+        return ItKind::Wobbuffet.id();
     };
     if let Some(k) = rare(r) {
         return k;
@@ -266,7 +266,7 @@ pub fn release(r: &mut Running, ball: GObjId) -> bool {
         ..Default::default()
     };
     spawn.x44_flag[0] |= 0x80;
-    if spawn.kind == ItKind::Cerebi {
+    if spawn.kind == ItKind::Celebi {
         r.record_rare_pokemon(RECORD_CEREBI);
     }
     if spawn.kind == ItKind::Mew {
@@ -337,7 +337,7 @@ pub fn count_attack(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8027AAA0")]
 pub fn set_release_vars(r: &mut Running, ball: GObjId, gobj: GObjId, kind: i32) {
     let a = |off| r.data.f32(ball_attr(r, ball, off));
-    let (fall, fall_max) = if kind == ItKind::Marumine {
+    let (fall, fall_max) = if kind == ItKind::Electrode {
         (0.0, 0.0)
     } else {
         (a(0xC), a(0x10))

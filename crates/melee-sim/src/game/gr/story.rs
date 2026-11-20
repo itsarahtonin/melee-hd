@@ -152,7 +152,7 @@ pub fn proc_shyguys(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "grStory_801E3418")]
 pub fn shyguys_tick(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    if crate::game::it::lib26b1::count_kind(r.game, ItKind::Heiho.id()) != 0 {
+    if crate::game::it::lib26b1::count_kind(r.game, ItKind::ShyGuy.id()) != 0 {
         return;
     }
     let v = r.game.grounds[g.0].u.story_shyguys();

@@ -231,7 +231,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::bytes(r.game, gobj).set_gobj(off::FREEZIE, None);
     let makes = if r.game.vs_item_freq() == -1 {
         0
-    } else if super::super::spawn::kind_on(r.game, ItKind::Freeze.id()) && {
+    } else if super::super::spawn::kind_on(r.game, ItKind::Freezie.id()) && {
         let odds = i32::from(r.data.u8(attr(r, gobj, 0x28)) as i8);
         r.game.objs.rng.below(odds) == 0
     } {

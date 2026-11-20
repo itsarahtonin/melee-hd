@@ -37,7 +37,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "it_802ADA1C")]
 pub fn spawn(r: &mut Running, pos: Vec3, vel: Vec3, facing_dir: f32) {
     let mut spawn = SpawnItem {
-        kind: ItKind::Unk1.id(),
+        kind: ItKind::KirbyCopyStar.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;

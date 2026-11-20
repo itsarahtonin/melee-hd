@@ -398,8 +398,8 @@ impl Running<'_> {
         let (x2072_b1, x2073) = (fp.x2070[2] & 0x40 != 0, fp.x2070[3]);
         let slope = (!airborne).then(|| reg(game.ft_ground_slope_angle(g)));
         let nudged = game.ft_is_being_nudged(g);
-        let scball = game.ft_holds_item_kind(g, ItKind::ScBall.id());
-        let dosei = game.ft_holds_item_kind(g, ItKind::Dosei.id());
+        let scball = game.ft_holds_item_kind(g, ItKind::ScrewAttack.id());
+        let dosei = game.ft_holds_item_kind(g, ItKind::MrSaturn.id());
         let item = fp.item_gobj.map(|it| {
             let kind = super::super::it::item(game, it).kind;
             match_item_kind(kind) != -1

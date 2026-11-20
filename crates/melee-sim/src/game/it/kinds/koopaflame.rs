@@ -159,7 +159,7 @@ pub fn spawn(
     v.x0_pos.set(pos);
     v.x34_base_scale.set(0.0);
     match ItKind::of(kind) {
-        ItKind::KoopaFlame => {
+        ItKind::BowserFlame => {
             let full_speed = r.kp_flame_max_speed(owner, &KOOPA);
             let full_size = r.kp_flame_max_size(owner, &KOOPA);
             let v = item_mut(r.game, gobj).xDD4_itemVar.koopa_flame();
@@ -172,7 +172,7 @@ pub fn spawn(
                 fp::frsp(f64::from(full_size)),
             )));
         }
-        ItKind::KirbyKoopaFlame => {
+        ItKind::KirbyBowserFlame => {
             let full_speed = r.kp_flame_max_speed(owner, &KP_KIRBY);
             let full_size = r.kp_flame_max_size(owner, &KP_KIRBY);
             let v = item_mut(r.game, gobj).xDD4_itemVar.koopa_flame();
@@ -278,10 +278,10 @@ fn animate_0(r: &mut Running, gobj: GObjId) -> bool {
         v.x44_spawned.set(1);
         let gfx = v.x48_gfx.get();
         match ItKind::of(kind) {
-            ItKind::KoopaFlame => {
+            ItKind::BowserFlame => {
                 ef::spawn(r, 0x4DB_i32.wrapping_add(gfx), Some(gobj), &[Arg::JObj(j)]);
             }
-            ItKind::KirbyKoopaFlame => {
+            ItKind::KirbyBowserFlame => {
                 ef::spawn(r, 0x4A5_i32.wrapping_add(gfx), Some(gobj), &[Arg::JObj(j)]);
             }
             _ => {}

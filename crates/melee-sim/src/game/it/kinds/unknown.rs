@@ -346,7 +346,7 @@ pub fn spawn_swarm(r: &mut Running, gobj: GObjId) {
         x3C_damage: 0,
         vel: pokemon::vars(r.game, gobj).vec(SWARM_VEL),
         x40: 0,
-        kind: ItKind::UnknownSwarm.id(),
+        kind: ItKind::UnownSwarm.id(),
         x0_parent_gobj: owner,
         x4_parent_gobj2: Some(gobj),
         ..Default::default()

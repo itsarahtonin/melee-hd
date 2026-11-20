@@ -116,27 +116,27 @@ pub fn apply_facing(game: &mut Game, gobj: GObjId, j: Option<JObjId>) {
 /// The hold kind `Item_802674AC` gives an item kind.
 #[doc(alias = "Item_802674AC")]
 pub fn hold_kind_of(kind: i32) -> i32 {
-    if kind == ItKind::Foods {
+    if kind == ItKind::Food {
         2
     } else if kind == ItKind::StageHurtbox {
         3
     } else if kind < ItKind::COMMON_END {
         0
-    } else if kind < ItKind::Kuriboh {
+    } else if kind < ItKind::Goomba {
         1
-    } else if kind < ItKind::OctarockStone {
+    } else if kind < ItKind::OctorokStone {
         6
-    } else if kind < ItKind::MarioFire {
+    } else if kind < ItKind::MarioFireball {
         7
-    } else if kind < ItKind::Unk4 {
+    } else if kind < ItKind::VsCoin {
         8
-    } else if kind == ItKind::Unk4 {
+    } else if kind == ItKind::VsCoin {
         12
     } else if kind < ItKind::StageHurtbox {
         11
     } else if kind < ItKind::POKEMON_END {
         9
-    } else if kind < ItKind::OldKuri {
+    } else if kind < ItKind::OldGoomba {
         10
     } else if kind < ItKind::ArwingLaser {
         4
@@ -191,7 +191,7 @@ pub fn count(game: &mut Game, gobj: GObjId) {
         bump_count(&mut game.it.counts, hold_kind, 1);
     }
     match hold_kind {
-        0 if kind == ItKind::MBall => game.it.counts.x1C = game.it.counts.x1C.wrapping_add(1),
+        0 if kind == ItKind::PokeBall => game.it.counts.x1C = game.it.counts.x1C.wrapping_add(1),
         2 => super::lib2725::count_food(game),
         _ => {}
     }
@@ -230,7 +230,7 @@ pub fn at_limit(game: &mut Game, hold_kind: i32) -> bool {
 /// Registers a character item's article as its character loads, `it_8026B3F8`.
 #[doc(alias = "it_8026B3F8")]
 pub fn set_char_article(game: &mut Game, article: Option<DataRef>, kind: i32) {
-    game.it.char_articles[(kind - ItKind::Kuriboh.id()) as usize] = article;
+    game.it.char_articles[(kind - ItKind::Goomba.id()) as usize] = article;
     // The entry is a word of `ItCo.dat`'s data, which the heap's image takes where it holds
     // the file (the preload cache's copy a later scene's heap reuses).
     if let Some(t) = game.it.char_table
@@ -240,7 +240,7 @@ pub fn set_char_article(game: &mut Game, article: Option<DataRef>, kind: i32) {
             let w = article.map_or(Some(0), |a| h.image.data_addr(a));
             if let Some(w) = w {
                 h.image
-                    .file_word(t.at(4 * (kind - ItKind::Kuriboh.id()) as u32), w);
+                    .file_word(t.at(4 * (kind - ItKind::Goomba.id()) as u32), w);
             }
         });
     }
@@ -249,17 +249,17 @@ pub fn set_char_article(game: &mut Game, article: Option<DataRef>, kind: i32) {
 /// An item kind's article (`it_804D6D24` and friends, by `Item_80267978`'s split).
 pub fn article_of(game: &Game, data: &Archives, kind: i32) -> Option<DataRef> {
     let g = &game.it;
-    if kind < ItKind::Kuriboh {
+    if kind < ItKind::Goomba {
         data.ptr(g.common_articles?.at(4 * kind as u32))
     } else if kind < ItKind::FIRST_POKEMON {
-        g.char_articles[(kind - ItKind::Kuriboh.id()) as usize]
-    } else if kind < ItKind::OldKuri {
+        g.char_articles[(kind - ItKind::Goomba.id()) as usize]
+    } else if kind < ItKind::OldGoomba {
         data.ptr(
             g.pokemon_articles?
                 .at(4 * (kind - ItKind::FIRST_POKEMON.id()) as u32),
         )
     } else {
-        let a = game.gr.stage_articles[(kind - ItKind::OldKuri.id()) as usize];
+        let a = game.gr.stage_articles[(kind - ItKind::OldGoomba.id()) as usize];
         assert!(
             a.is_some(),
             "not found zako model data! check ground dat file!"
@@ -695,7 +695,9 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
         let ip = super::item(r.game, gobj);
         (ip.kind, ip.owner)
     };
-    if (ItKind::MarioFire.id()..ItKind::Unk4.id()).contains(&kind) && is_fighter(r.game, owner) {
+    if (ItKind::MarioFireball.id()..ItKind::VsCoin.id()).contains(&kind)
+        && is_fighter(r.game, owner)
+    {
         let f = super::owner::fighter_of(r.game, owner.unwrap());
         let fkind = r.game.fighters[f.0].kind;
         let ip = item_mut(r.game, gobj);
@@ -1480,7 +1482,7 @@ pub fn react_shield(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "Item_80269F14")]
 pub fn react_reflect(r: &mut Running, gobj: GObjId) -> bool {
     let ip = super::item(r.game, gobj);
-    if !ip.xDCC_flag.b1 && (ip.kind != ItKind::MBall || !ip.xDCC_flag.b2) {
+    if !ip.xDCC_flag.b1 && (ip.kind != ItKind::PokeBall || !ip.xDCC_flag.b2) {
         let reflector = ip.xC64_reflectGObj;
         let team = super::owner::team(r.game, reflector);
         let ip = item_mut(r.game, gobj);
@@ -1724,7 +1726,7 @@ pub fn exit_hitlag(r: &mut Running, gobj: GObjId) {
 pub fn is_special_held(ip: &Item) -> bool {
     ip.hold_kind == 8
         && ip.kind != ItKind::LinkBomb
-        && ip.kind != ItKind::CLinkBomb
+        && ip.kind != ItKind::YoungLinkBomb
         && ip.kind != ItKind::PeachTurnip
         && ip.kind != ItKind::PeachParasol
 }

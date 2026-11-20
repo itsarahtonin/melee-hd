@@ -203,17 +203,17 @@ fn fighter_check(g: &Running, gobj: GObjId, a: u32) {
 fn kind_check(g: &Running, gobj: GObjId, a: u32) {
     let kind = it::lib26b1::kind(g.game, gobj);
     let ok = match unit(a) {
-        Some(0) => (ItKind::Kuriboh.id()..=ItKind::OctarockStone.id()).contains(&kind),
-        Some(1) => kind == ItKind::Leadead,
-        Some(3) => kind == ItKind::Kuriboh,
-        Some(4) => kind == ItKind::Octarock,
+        Some(0) => (ItKind::Goomba.id()..=ItKind::OctorokStone.id()).contains(&kind),
+        Some(1) => kind == ItKind::ReDead,
+        Some(3) => kind == ItKind::Goomba,
+        Some(4) => kind == ItKind::Octorok,
         // The stone's spawn takes the Octorok that spits it.
-        Some(5) if name_of(a) == "it_802E8ADC" => kind == ItKind::Octarock,
-        Some(5) => kind == ItKind::OctarockStone,
-        Some(6) => kind == ItKind::Ottosea,
+        Some(5) if name_of(a) == "it_802E8ADC" => kind == ItKind::Octorok,
+        Some(5) => kind == ItKind::OctorokStone,
+        Some(6) => kind == ItKind::Topi,
         // The pushed Freezie's spawn takes the Topi that pushes it.
-        Some(7) if name_of(a) == "it_8028EB88" => kind == ItKind::Ottosea,
-        Some(7) => kind == ItKind::Freeze,
+        Some(7) if name_of(a) == "it_8028EB88" => kind == ItKind::Topi,
+        Some(7) => kind == ItKind::Freezie,
         _ => true,
     };
     if !ok {
@@ -228,7 +228,7 @@ fn held_check(g: &Running, gobj: GObjId, a: u32) {
         && fp
             .mv
             .gobj_at(0)
-            .is_some_and(|i| it::lib26b1::kind(g.game, i) == ItKind::Leadead);
+            .is_some_and(|i| it::lib26b1::kind(g.game, i) == ItKind::ReDead);
     if !held && name_of(a) != "ftCo_800C7590" {
         panic!("{SKIP}{} takes a fighter a ReDead holds", name_of(a));
     }
@@ -236,7 +236,7 @@ fn held_check(g: &Running, gobj: GObjId, a: u32) {
         && !fp
             .dmg
             .x1868_source
-            .is_some_and(|i| it::lib26b1::kind(g.game, i) == ItKind::Leadead)
+            .is_some_and(|i| it::lib26b1::kind(g.game, i) == ItKind::ReDead)
     {
         panic!("{SKIP}ftCo_800C7590 takes a fighter a ReDead hit");
     }
@@ -827,7 +827,7 @@ fn tilt_floor(call: &mut Call, kind: u32) -> bool {
     };
     let line = peek_u32(call, ip + 0x378 + 0x14C) as i32;
     let lines = peek_u32(call, leaf_check::sym("groundCollLine"));
-    if !(0..1536).contains(&line) || peek_u32(call, ip + 0x10) != ItKind::Leadead as u32 {
+    if !(0..1536).contains(&line) || peek_u32(call, ip + 0x10) != ItKind::ReDead as u32 {
         return false;
     }
     let Some(at) = in_mem1(lines + 8 * line as u32 + 4) else {

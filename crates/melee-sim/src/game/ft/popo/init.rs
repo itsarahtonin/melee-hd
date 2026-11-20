@@ -21,9 +21,9 @@ impl Running<'_> {
             .expect("a fighter without data");
         let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
         for (i, kind) in [
-            ItKind::IceClimberIce.id(),
-            ItKind::IceClimberBlizzard.id(),
-            ItKind::IceClimberGumStrings.id(),
+            ItKind::IceClimbersIceShot.id(),
+            ItKind::IceClimbersBlizzard.id(),
+            ItKind::IceClimbersBelayRope.id(),
         ]
         .into_iter()
         .enumerate()

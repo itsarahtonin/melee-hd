@@ -226,7 +226,7 @@ impl Running<'_> {
             if cd.x38 == generation {
                 self.map_ecbs(&cd);
             }
-            if kind == ItKind::LinkHShot {
+            if kind == ItKind::LinkHookshot {
                 let tip = super::it::item_mut(self.game, g)
                     .xDD4_itemVar
                     .link_hookshot()

@@ -413,7 +413,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId) {
     prev.x = mem(fp::fmadds(reg(facing), reg(ahead), reg(prev.x)));
     prev.y = mem(fp::fadds(reg(prev.y), reg(up)));
     let mut spawn = SpawnItem {
-        kind: ItKind::HitodemanStar.id(),
+        kind: ItKind::StaryuStar.id(),
         ..Default::default()
     };
     spawn.prev_pos = prev;

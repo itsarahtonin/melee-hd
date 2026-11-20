@@ -513,7 +513,7 @@ pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Opti
         return None;
     }
     let mut spawn = SpawnItem {
-        kind: ItKind::SamusGBeam.id(),
+        kind: ItKind::SamusGrappleBeam.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition(&spawn, pos, false)`.

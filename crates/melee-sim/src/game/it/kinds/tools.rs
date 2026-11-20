@@ -154,7 +154,7 @@ fn motion(r: &mut Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_802EEFA8")]
 pub fn spawn(r: &mut Running, pos: Vec3, which: i32, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::Tools.id(),
+        kind: ItKind::FlatZoneTool.id(),
         prev_pos: pos,
         pos,
         facing_dir,

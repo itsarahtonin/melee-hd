@@ -259,7 +259,7 @@ pub fn destroy(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itSeakChain_Spawn")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::SeakChain.id(),
+        kind: ItKind::SheikChain.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition`, off the plane.

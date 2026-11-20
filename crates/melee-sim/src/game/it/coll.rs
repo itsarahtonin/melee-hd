@@ -148,9 +148,9 @@ fn log_damage(game: &mut Game, e: DamageLogEntry) {
 #[doc(alias = "it_8026B6C8")]
 pub(crate) fn is_enemy(game: &Game, gobj: GObjId) -> bool {
     let kind = item(game, gobj).kind;
-    ((ItKind::Kuriboh.id()..ItKind::OctarockStone.id()).contains(&kind)
-        || (ItKind::OldKuri.id()..ItKind::ArwingLaser.id()).contains(&kind))
-        && kind != ItKind::KyasarinEgg
+    ((ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind)
+        || (ItKind::OldGoomba.id()..ItKind::ArwingLaser.id()).contains(&kind))
+        && kind != ItKind::BirdoEgg
         && kind != ItKind::WhispyApple
 }
 

@@ -61,7 +61,7 @@ fn step(s: &mut Session, reads: &mut Vec<PadData>, disc: &Disc, next: &mut usize
 fn birdo(g: &Game) -> Option<(melee_sim::hsd::gobj::GObjId, f32, f32, i32, i32)> {
     g.items
         .iter()
-        .find(|(_, it)| it.kind == ItKind::Kyasarin)
+        .find(|(_, it)| it.kind == ItKind::Birdo)
         .map(|(_, it)| {
             let touches = match &it.xDD4_itemVar.member {
                 it::Member::Kyasarin(v) => *v.x14[1].peek(),
@@ -219,7 +219,7 @@ pub fn birdo_sweep(args: &[&str]) -> ExitCode {
     };
     if args.contains(&"--item-angles") {
         let mut all = BTreeSet::new();
-        for kind in 0..ItKind::OldKuri.id() {
+        for kind in 0..ItKind::OldGoomba.id() {
             let Some(a) = gi::article_of(&s.game, &s.data, kind) else {
                 continue;
             };

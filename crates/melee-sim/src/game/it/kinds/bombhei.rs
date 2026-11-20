@@ -204,7 +204,7 @@ fn tick(r: &mut Running, gobj: GObjId) -> i32 {
 pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
     let facing = owner::facing_for(r.game, r.data, pos);
     let mut spawn = SpawnItem {
-        kind: ItKind::BombHei.id(),
+        kind: ItKind::BobOmb.id(),
         pos,
         prev_pos: pos,
         ..Default::default()

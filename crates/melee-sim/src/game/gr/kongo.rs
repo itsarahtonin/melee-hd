@@ -642,7 +642,7 @@ pub fn events(r: &mut Running, gobj: GObjId) {
     }
     let p = param(r.game);
     let boxes = |r: &Running| {
-        r.game.vs_x6() == 0 && super::super::it::spawn::kind_on(r.game, ItKind::Box.id())
+        r.game.vs_x6() == 0 && super::super::it::spawn::kind_on(r.game, ItKind::Crate.id())
     };
     let box_w = if boxes(r) {
         reg(p.f(r.data, BOX_WEIGHT))
@@ -1029,7 +1029,7 @@ pub fn klap_near(r: &Running) -> Option<GObjId> {
     let reach = reg(param(r.game).f(r.data, BARREL_IN));
     let mut cur = r.game.world.first_in(super::super::it::P_LINK_ITEM);
     while let Some(c) = cur {
-        if super::super::it::item(r.game, c).kind == ItKind::Klap {
+        if super::super::it::item(r.game, c).kind == ItKind::KlapTrap {
             let pos = super::super::it::item(r.game, c).pos;
             let d = |a: f32, b: f32| fp::fsubs(reg(a), reg(b));
             let (dx, dy, dz) = (d(at.x, pos.x), d(at.y, pos.y), d(at.z, pos.z));

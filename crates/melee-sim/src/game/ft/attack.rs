@@ -1151,7 +1151,7 @@ impl Running<'_> {
         let mut cur = self.game.world.first_in(it::P_LINK_ITEM);
         while let Some(g) = cur {
             cur = self.game.world.gobjs[g.0].next;
-            if it::item(self.game, g).kind != ItKind::Unk4 {
+            if it::item(self.game, g).kind != ItKind::VsCoin {
                 continue;
             }
             let owner = it::item(self.game, g).owner;
@@ -1227,7 +1227,7 @@ impl Running<'_> {
         while let Some(g) = cur {
             cur = self.game.world.gobjs[g.0].next;
             let ip = it::item(self.game, g);
-            if ip.kind == ItKind::Unk4 {
+            if ip.kind == ItKind::VsCoin {
                 continue;
             }
             let (owner, b5, b6, team) = (
@@ -2775,7 +2775,7 @@ impl Running<'_> {
             u32::from_be_bytes(ip.xD90),
             ip.xDA8_short,
         );
-        if kind == ItKind::BombHei {
+        if kind == ItKind::BobOmb {
             let spawn = ip.x1C as u16;
             let slot = i32::from(self.game.fighters[me.0].player_idx);
             self.game.count_bombhei_hit(slot, spawn);

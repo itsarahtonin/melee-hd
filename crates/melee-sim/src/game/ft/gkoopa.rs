@@ -61,7 +61,7 @@ impl Running<'_> {
         let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
         self.push_attrs(f, attr::SIZE);
         let article = self.data.ptr(items.at(0));
-        super::super::it::item::set_char_article(self.game, article, ItKind::KoopaFlame.id());
+        super::super::it::item::set_char_article(self.game, article, ItKind::BowserFlame.id());
         let fp = &mut self.game.fighters[f.0];
         fp.x2226_b1 = true;
         fp.x222A_b0 = true;

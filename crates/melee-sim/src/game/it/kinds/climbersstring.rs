@@ -265,7 +265,7 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802C27D4")]
 pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::IceClimberGumStrings.id(),
+        kind: ItKind::IceClimbersBelayRope.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition(&spawn, pos, false)`.

@@ -313,7 +313,7 @@ impl CoinTouch {
     pub fn apply(self, r: &mut Running) {
         use super::super::it::kinds::trophycoin;
         for (g, coin, x) in self.0 {
-            if super::super::it::item(r.game, coin).kind != ItKind::Coin
+            if super::super::it::item(r.game, coin).kind != ItKind::Trophy
                 || r.game.grounds[g.0].u.figureget().x8 >= 3
             {
                 continue;

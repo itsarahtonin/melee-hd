@@ -116,7 +116,7 @@ pub fn pick(game: &mut Game, table: &PickTable) -> i32 {
 /// have them), `it_8026C704`.
 #[doc(alias = "it_8026C704")]
 pub fn poke_balls_full(game: &Game) -> bool {
-    game.it.counts.x1C >= game.it.counts.x20 || !kind_on(game, ItKind::MBall.id())
+    game.it.counts.x1C >= game.it.counts.x20 || !kind_on(game, ItKind::PokeBall.id())
 }
 
 /// Draws a kind from a table, `it_8026C75C`; -1 for none. While no more Poké Balls may
@@ -132,7 +132,7 @@ pub fn pick_kind(game: &mut Game, which: fn(&mut Game) -> &mut PickTable) -> i32
     if full {
         let last = usize::from(t.size).wrapping_sub(1);
         let kinds = t.kinds.as_deref().expect("a table without kinds");
-        if i32::from(kinds[last]) == ItKind::MBall {
+        if i32::from(kinds[last]) == ItKind::PokeBall {
             if (i32::from(t.size) - 1) < 1 {
                 return -1;
             }
@@ -148,7 +148,7 @@ pub fn pick_kind(game: &mut Game, which: fn(&mut Game) -> &mut PickTable) -> i32
             let t = which(game);
             t.total = total;
             t.size = t.size.wrapping_add(1);
-            if kind == ItKind::MBall { -1 } else { kind }
+            if kind == ItKind::PokeBall { -1 } else { kind }
         }
         None => kind,
     }
@@ -309,7 +309,7 @@ pub fn build_monsters(game: &mut Game, data: &Archives) {
         weights.push(cumulative as u16);
         cumulative = cumulative.wrapping_add(x as u32);
     }
-    let kinds: Vec<u8> = (0..4).map(|i| ItKind::Kuriboh.id() as u8 + i).collect();
+    let kinds: Vec<u8> = (0..4).map(|i| ItKind::Goomba.id() as u8 + i).collect();
     if let Some(at) = arrays {
         lay_arrays(at, &kinds, &weights);
     }
@@ -352,15 +352,15 @@ pub fn setup(r: &mut Running) {
         return;
     }
     build(&mut game.it.spawn.spawner.table, &counts, mask, 0, weight);
-    let mask = mask >> ItKind::BombHei.id();
-    let t = total(&counts, mask, ItKind::BombHei.id(), weight);
+    let mask = mask >> ItKind::BobOmb.id();
+    let t = total(&counts, mask, ItKind::BobOmb.id(), weight);
     game.it.spawn.no_containers.total = t;
     if t != 0 {
         build(
             &mut game.it.spawn.no_containers,
             &counts,
             mask,
-            ItKind::BombHei.id(),
+            ItKind::BobOmb.id(),
             weight,
         );
     }
@@ -407,9 +407,9 @@ pub fn kind_on(game: &Game, kind: i32) -> bool {
 /// Whether any healing item is on, `it_8026D3CC`.
 #[doc(alias = "it_8026D3CC")]
 pub fn healing_on(game: &Game) -> bool {
-    kind_on(game, ItKind::Heart.id())
-        | kind_on(game, ItKind::Tomato.id())
-        | kind_on(game, ItKind::Foods.id())
+    kind_on(game, ItKind::HeartContainer.id())
+        | kind_on(game, ItKind::MaximTomato.id())
+        | kind_on(game, ItKind::Food.id())
 }
 
 /// A random spot on the stage where an item can stand, `it_8026CB3C`.

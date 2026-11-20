@@ -43,14 +43,14 @@ const LOGIC_ADDRS: [u32; 4] = [0x803F_14C4, 0x803F_3100, 0x803F_23CC, 0x803F_4D2
 
 /// Which group a kind's tables are in and its index there (`Item_80267978`'s split).
 pub fn group(kind: i32) -> (usize, usize) {
-    if kind < ItKind::Kuriboh {
+    if kind < ItKind::Goomba {
         (0, kind as usize)
     } else if kind < ItKind::FIRST_POKEMON {
-        (1, (kind - ItKind::Kuriboh.id()) as usize)
-    } else if kind < ItKind::OldKuri {
+        (1, (kind - ItKind::Goomba.id()) as usize)
+    } else if kind < ItKind::OldGoomba {
         (2, (kind - ItKind::FIRST_POKEMON.id()) as usize)
     } else {
-        (3, (kind - ItKind::OldKuri.id()) as usize)
+        (3, (kind - ItKind::OldGoomba.id()) as usize)
     }
 }
 

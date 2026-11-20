@@ -123,7 +123,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 fn is_kirbys(r: &Running, gobj: GObjId) -> bool {
     matches!(
         ItKind::of(item(r.game, gobj).kind),
-        ItKind::KirbyLinkArrow | ItKind::KirbyCLinkArrow
+        ItKind::KirbyLinkArrow | ItKind::KirbyYoungLinkFireArrow
     )
 }
 
@@ -589,7 +589,7 @@ fn stick(r: &mut Running, gobj: GObjId) {
     remove_trails(r, gobj);
     if matches!(
         ItKind::of(item(r.game, gobj).kind),
-        ItKind::CLinkArrow | ItKind::KirbyCLinkArrow
+        ItKind::YoungLinkFireArrow | ItKind::KirbyYoungLinkFireArrow
     ) {
         play_sfx(r, gobj, SFX_STICK_CLINK, 0x7F, 0x40);
         let at = Vec3::new(0.0, 0.0, 5.0);

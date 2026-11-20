@@ -413,7 +413,7 @@ pub fn bounce_sfx(r: &mut Running, gobj: GObjId) {
         return;
     }
     let sfx = ip.xD84;
-    if ip.kind == ItKind::Unk4 {
+    if ip.kind == ItKind::VsCoin {
         r.sfx_play_track(sfx, 127, 64, 154);
         return;
     }

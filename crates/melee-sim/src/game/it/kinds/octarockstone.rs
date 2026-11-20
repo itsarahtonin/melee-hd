@@ -210,7 +210,7 @@ pub fn spawn(
     max_vy: f32,
 ) {
     let mut spawn = SpawnItem {
-        kind: ItKind::OctarockStone.id(),
+        kind: ItKind::OctorokStone.id(),
         ..SpawnItem::default()
     };
     spawn.prev_pos = Vec3::new(pos.x, pos.y, 0.0);

@@ -392,7 +392,7 @@ pub fn init_blocks(r: &mut Running, gobj: GObjId) {
         blocks(r.game, g)[i].item_gobj = item;
     }
     if r.game.vs_item_freq() != -1 && r.game.vs_x6() == 0 {
-        let any = (ItKind::Capsule.id()..ItKind::LGunRay.id())
+        let any = (ItKind::Capsule.id()..ItKind::RayGunShot.id())
             .any(|k| super::super::it::spawn::kind_on(r.game, k));
         if any {
             let first = r.game.objs.rng.below(BLOCK_COUNT as i32);

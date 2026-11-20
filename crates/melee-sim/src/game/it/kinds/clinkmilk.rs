@@ -59,7 +59,7 @@ pub fn spawn(
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::CLinkMilk.id(),
+        kind: ItKind::YoungLinkMilk.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;

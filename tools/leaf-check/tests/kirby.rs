@@ -450,7 +450,7 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         let ok = if a < STAR_START {
             ip.xBC_itemStateContainer.map(|s| s.0) == Some(0x803F_9450)
         } else {
-            ip.kind == ItKind::Unk2.id()
+            ip.kind == ItKind::KirbySpitStar.id()
         };
         if !ok {
             panic!("{SKIP}{name} takes an item his inhale holds or its star");

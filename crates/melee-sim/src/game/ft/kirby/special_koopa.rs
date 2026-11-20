@@ -65,7 +65,7 @@ pub const KIRBY: FireBreath = FireBreath {
         y: 0.5,
         z: 3.0,
     }),
-    flame_kind: ItKind::KirbyKoopaFlame.id(),
+    flame_kind: ItKind::KirbyBowserFlame.id(),
     first_dir: -1,
     sfx_by_kind: false,
     air_start_lands_in_loop: true,

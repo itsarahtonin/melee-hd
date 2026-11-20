@@ -88,7 +88,7 @@ pub fn spawn(
     size: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::ZeldaDinFireExplode.id(),
+        kind: ItKind::ZeldaDinsFireExplosion.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition`, on the plane.

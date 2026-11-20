@@ -166,7 +166,7 @@ pub fn spawn(r: &mut Running, parent: Option<GObjId>, pos: Vec3, dir: f32) {
         return;
     }
     let Some(egg) =
-        super::super::zako::spawn(r, ItKind::KyasarinEgg.id(), Some(pos), None, None, true)
+        super::super::zako::spawn(r, ItKind::BirdoEgg.id(), Some(pos), None, None, true)
     else {
         return;
     };

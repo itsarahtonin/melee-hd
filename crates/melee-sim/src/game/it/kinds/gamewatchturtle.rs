@@ -44,7 +44,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     gamewatch::spawn_held(
         r,
-        ItKind::GameWatchTurtle.id(),
+        ItKind::GameAndWatchTurtle.id(),
         parent,
         pos,
         part,

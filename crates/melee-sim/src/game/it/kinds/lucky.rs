@@ -338,7 +338,7 @@ pub fn spawn_egg(
     let parent = parent?;
     let owner = item(r.game, parent).owner;
     let mut spawn = SpawnItem {
-        kind: ItKind::LuckyEgg.id(),
+        kind: ItKind::ChanseyEgg.id(),
         ..Default::default()
     };
     spawn.prev_pos = Vec3::new(pos.x, pos.y, 0.0);

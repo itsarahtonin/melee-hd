@@ -144,7 +144,7 @@ fn collide(r: &mut Running, gobj: GObjId) -> bool {
     if reg(crate::math::sqrt_accurate(mem(sq))) < reg(min) {
         return true;
     }
-    if item(r.game, gobj).kind == ItKind::MarioFire {
+    if item(r.game, gobj).kind == ItKind::MarioFireball {
         play_sfx(r, gobj, BOUNCE_SFX, 0x7F, 0x40);
         queue(r, gobj, SpawnKind::Pos, 0x47B, j, &[]);
     } else {

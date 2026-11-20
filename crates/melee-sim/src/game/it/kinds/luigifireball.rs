@@ -135,7 +135,7 @@ fn collide(r: &mut Running, gobj: GObjId) -> bool {
     if reg(crate::math::sqrt_accurate(mem(sq))) < reg(min) {
         return true;
     }
-    let id = if item(r.game, gobj).kind == ItKind::LuigiFire {
+    let id = if item(r.game, gobj).kind == ItKind::LuigiFireball {
         0x508
     } else {
         0x4B2

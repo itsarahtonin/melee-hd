@@ -431,7 +431,7 @@ fn coin_check(g: &Running, gobj: GObjId, a: u32) {
         && a != 0x802E_5F00
         && a != 0x802E_5F8C
         && a != 0x802E_6658
-        && it::item(g.game, gobj).kind != ItKind::Unk4
+        && it::item(g.game, gobj).kind != ItKind::VsCoin
     {
         panic!("{SKIP}{} takes a coin", name_of(a));
     }

@@ -20,7 +20,7 @@ use melee_sim::game::it::ItKind;
 
 /// Samus's grapple beam's article's slot among the character items' (`It_Kind_Samus_GBeam`
 /// less `It_Kind_Kuriboh`).
-const GRAPPLE_ARTICLE: usize = (ItKind::SamusGBeam.id() - ItKind::Kuriboh.id()) as usize;
+const GRAPPLE_ARTICLE: usize = (ItKind::SamusGrappleBeam.id() - ItKind::Goomba.id()) as usize;
 use crate::compare::Comparer;
 use crate::import::{Importer, sym};
 
@@ -265,7 +265,7 @@ impl Importer<'_> {
             .game
             .it
             .char_articles
-            .get((ItKind::StageHurtbox.id() - ItKind::Kuriboh.id()) as usize)
+            .get((ItKind::StageHurtbox.id() - ItKind::Goomba.id()) as usize)
             .copied()
             .flatten();
         self.game.it.yaku_attr =
@@ -299,7 +299,7 @@ impl Importer<'_> {
                 .game
                 .it
                 .char_articles
-                .get((kind - ItKind::Kuriboh.id()) as usize)
+                .get((kind - ItKind::Goomba.id()) as usize)
                 .copied()
                 .flatten();
             let Some(article) = article else { continue };
@@ -581,7 +581,7 @@ impl Comparer<'_> {
         }
         let random = g
             .char_articles
-            .get((ItKind::StageHurtbox.id() - ItKind::Kuriboh.id()) as usize)
+            .get((ItKind::StageHurtbox.id() - ItKind::Goomba.id()) as usize)
             .copied()
             .flatten();
         // A file its scene let go of (a match's, until the next one's items load again): what

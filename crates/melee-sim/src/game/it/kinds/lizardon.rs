@@ -275,7 +275,7 @@ pub fn accessory(r: &mut Running, gobj: GObjId) {
             .objs
             .rng
             .below(4)
-            .wrapping_add(ItKind::LizardonFlame1.id());
+            .wrapping_add(ItKind::CharizardFlame1.id());
         flame(r, gobj, kind);
     }
     let v = pokemon::vars(r.game, gobj);

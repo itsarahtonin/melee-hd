@@ -195,8 +195,8 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     if let Some(ness) = field {
         if owner == Some(ness) {
             match ItKind::of(kind) {
-                ItKind::NessPKFlush => r.ness_special_n_set_null(ness, &NESS),
-                ItKind::KirbyNessPKFlush => r.ness_special_n_set_null(ness, &NS_KIRBY),
+                ItKind::NessPKFlash => r.ness_special_n_set_null(ness, &NESS),
+                ItKind::KirbyNessPKFlash => r.ness_special_n_set_null(ness, &NS_KIRBY),
                 _ => {}
             }
         }
@@ -249,8 +249,8 @@ pub fn start(r: &mut Running, gobj: GObjId) {
 /// Whether the flash's owner (`xDE0`) still charges it.
 fn owner_holding(r: &mut Running, gobj: GObjId, owner: GObjId) -> bool {
     match ItKind::of(item(r.game, gobj).kind) {
-        ItKind::NessPKFlush => r.ness_special_n_holding(owner, &NESS),
-        ItKind::KirbyNessPKFlush => r.ness_special_n_holding(owner, &NS_KIRBY),
+        ItKind::NessPKFlash => r.ness_special_n_holding(owner, &NESS),
+        ItKind::KirbyNessPKFlash => r.ness_special_n_holding(owner, &NS_KIRBY),
         // The original reads a register it never set.
         _ => unported_call("itNesspkflash_UnkMotion0_Anim on another kind"),
     }
@@ -338,24 +338,24 @@ pub fn animate_1(r: &mut Running, gobj: GObjId) -> bool {
     {
         let size = v.xDD8_PKFlash.get();
         match ItKind::of(kind) {
-            ItKind::NessPKFlush => {
+            ItKind::NessPKFlash => {
                 super::nesspkflashexplode::spawn(
                     r,
                     ness,
                     gobj,
                     pos,
-                    ItKind::NessPKFlushExplode.id(),
+                    ItKind::NessPKFlashExplosion.id(),
                     facing,
                     size,
                 );
             }
-            ItKind::KirbyNessPKFlush => {
+            ItKind::KirbyNessPKFlash => {
                 super::nesspkflashexplode::spawn(
                     r,
                     ness,
                     gobj,
                     pos,
-                    ItKind::KirbyNessPKFlushExplode.id(),
+                    ItKind::KirbyNessPKFlashExplosion.id(),
                     facing,
                     size,
                 );

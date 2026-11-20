@@ -355,7 +355,10 @@ impl Running<'_> {
                 return;
             };
             let kind = crate::game::it::lib26b1::kind(self.game, item);
-            assert!(kind == ItKind::Sword, "ftCo_800C2FD8: no afterimage item!");
+            assert!(
+                kind == ItKind::BeamSword,
+                "ftCo_800C2FD8: no afterimage item!"
+            );
             let (w0, w1) = crate::game::it::kinds::sword::trail_widths(self.game, item);
             let fp = &mut self.game.fighters[f.0];
             fp.x20F8 = w0;

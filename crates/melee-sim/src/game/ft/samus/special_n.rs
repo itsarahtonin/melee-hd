@@ -71,7 +71,7 @@ pub const SAMUS: ChargeShot = ChargeShot {
     hand: PART_R_HAND_NB,
     fire_joint: PART_THROW_N,
     fire_offset: None,
-    shot_kind: ItKind::SamusCharge.id(),
+    shot_kind: ItKind::SamusChargeShot.id(),
     flash: 0x486,
     full_glow: 53,
     on_death: addr::DAMAGE_CB,

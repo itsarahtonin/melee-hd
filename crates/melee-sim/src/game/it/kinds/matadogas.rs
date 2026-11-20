@@ -154,10 +154,10 @@ pub fn puff_when_told(r: &mut Running, gobj: GObjId) {
     pokemon::vars(r.game, gobj).set_i32(PUFF_FRAMES, fp::fctiwz(reg(frames)));
     if r.game.objs.rng.below(2) == 0 {
         let speed = attr_f32(r, gobj, 8);
-        puff(r, gobj, ItKind::MatadogasGas1.id(), speed);
+        puff(r, gobj, ItKind::WeezingGas1.id(), speed);
     } else {
         let speed = attr_f32(r, gobj, 0xC);
-        puff(r, gobj, ItKind::MatadogasGas2.id(), speed);
+        puff(r, gobj, ItKind::WeezingGas2.id(), speed);
     }
 }
 
@@ -287,8 +287,8 @@ pub fn gas_anim(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802CB844")]
 pub fn gas_phys(r: &mut Running, gobj: GObjId) {
     let scale = match ItKind::of(item(r.game, gobj).kind) {
-        ItKind::MatadogasGas1 => attr_f32(r, gobj, 4),
-        ItKind::MatadogasGas2 => attr_f32(r, gobj, 8),
+        ItKind::WeezingGas1 => attr_f32(r, gobj, 4),
+        ItKind::WeezingGas2 => attr_f32(r, gobj, 8),
         _ => 0.0,
     };
     let ip = item_mut(r.game, gobj);

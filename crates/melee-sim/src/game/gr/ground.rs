@@ -476,7 +476,7 @@ pub fn proc_watch(r: &mut Running, _gobj: GObjId) {
             let (found, at) = bomb_rain_point(r.game, r.data, Vec3::default());
             if found {
                 // `Ground_803B7DEC`: a bob-omb (kind 6), not held.
-                super::super::it::lib26b1::drop_by_kind(r, ItKind::BombHei.id(), at, false);
+                super::super::it::lib26b1::drop_by_kind(r, ItKind::BobOmb.id(), at, false);
             }
         }
     }

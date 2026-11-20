@@ -87,7 +87,7 @@ pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
     // `Item_InitSpawnPosition`, the caller's z cleared first.
     let at = Vec3::new(pos.x, pos.y, 0.0);
     let mut spawn = crate::game::structs::SpawnItem {
-        kind: ItKind::Bat.id(),
+        kind: ItKind::HomeRunBat.id(),
         pos: at,
         prev_pos: at,
         ..Default::default()

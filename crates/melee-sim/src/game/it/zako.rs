@@ -183,24 +183,24 @@ pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
         }};
     }
     match ItKind::of(kind) {
-        ItKind::Heiho => of!(vars.heiho()),
-        ItKind::Tincle => of!(vars.tincle()),
-        ItKind::Klap => of!(vars.klap()),
-        ItKind::Kyasarin => of!(vars.kyasarin()),
-        ItKind::KyasarinEgg => of!(vars.kyasarin_egg()),
+        ItKind::ShyGuy => of!(vars.heiho()),
+        ItKind::Tingle => of!(vars.tincle()),
+        ItKind::KlapTrap => of!(vars.klap()),
+        ItKind::Birdo => of!(vars.kyasarin()),
+        ItKind::BirdoEgg => of!(vars.kyasarin_egg()),
         ItKind::GreatFoxLaser => of!(vars.greatfox_laser()),
-        ItKind::Kuriboh
-        | ItKind::Leadead
-        | ItKind::Octarock
-        | ItKind::Ottosea
-        | ItKind::OctarockStone
-        | ItKind::Nokonoko
-        | ItKind::Patapata
-        | ItKind::Likelike
-        | ItKind::Whitebea
-        | ItKind::ZGShell
-        | ItKind::ZRShell
-        | ItKind::Mato => CommonVars::Bytes(vars.zako()),
+        ItKind::Goomba
+        | ItKind::ReDead
+        | ItKind::Octorok
+        | ItKind::Topi
+        | ItKind::OctorokStone
+        | ItKind::KoopaTroopa
+        | ItKind::KoopaParatroopa
+        | ItKind::LikeLike
+        | ItKind::PolarBear
+        | ItKind::KoopaGreenShell
+        | ItKind::KoopaRedShell
+        | ItKind::Target => CommonVars::Bytes(vars.zako()),
         k => code::unported_call(&format!("it_8027B5B0 (an enemy of kind {})", k.id())),
     }
 }
@@ -234,7 +234,7 @@ pub fn clear_x1e(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "grZakoGenerator_801CAC14")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let kind = item(r.game, gobj).kind;
-    if kind == ItKind::Coin {
+    if kind == ItKind::Trophy {
         // A trophy point's slot (the last) forgets the coin it made.
         let slots = r
             .game
@@ -778,7 +778,7 @@ pub fn set_source_player(game: &mut Game, gobj: GObjId, fighter: GObjId) {
 pub fn ko(r: &mut Running, gobj: GObjId) {
     let kind = item(r.game, gobj).kind;
     ko_bonus(r, gobj);
-    if kind == ItKind::Coin {
+    if kind == ItKind::Trophy {
         // A trophy point's slot (the last) frees, the coin it made taken.
         let slots = r
             .game
@@ -829,22 +829,22 @@ impl Running<'_> {
             "zako ko player illegal ! :{player}"
         );
         let bonus = match ItKind::of(kind) {
-            ItKind::Kuriboh | ItKind::OldKuri => 0xCE,
-            ItKind::Heiho => 0xD6,
-            ItKind::Leadead => 0xD1,
-            ItKind::Octarock => 0xD3,
-            ItKind::Ottosea => 0xD4,
-            ItKind::Nokonoko => 0xCF,
-            ItKind::Patapata => 0xD0,
-            ItKind::Likelike => 0xD2,
-            ItKind::Whitebea => 0xD5,
+            ItKind::Goomba | ItKind::OldGoomba => 0xCE,
+            ItKind::ShyGuy => 0xD6,
+            ItKind::ReDead => 0xD1,
+            ItKind::Octorok => 0xD3,
+            ItKind::Topi => 0xD4,
+            ItKind::KoopaTroopa => 0xCF,
+            ItKind::KoopaParatroopa => 0xD0,
+            ItKind::LikeLike => 0xD2,
+            ItKind::PolarBear => 0xD5,
             // No bonus (the switch's default).
-            ItKind::Klap
-            | ItKind::Kyasarin
-            | ItKind::KyasarinEgg
-            | ItKind::ZGShell
-            | ItKind::ZRShell
-            | ItKind::Coin => return,
+            ItKind::KlapTrap
+            | ItKind::Birdo
+            | ItKind::BirdoEgg
+            | ItKind::KoopaGreenShell
+            | ItKind::KoopaRedShell
+            | ItKind::Trophy => return,
             _ => code::unported_call(&format!("pl_8004049C (an enemy of kind {kind})")),
         };
         let points = bonus_points(bonus);

@@ -257,7 +257,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId) {
     prev.x = mem(fp::fmadds(reg(ahead), facing, reg(prev.x)));
     prev.y = mem(fp::fadds(reg(prev.y), reg(up)));
     let mut spawn = SpawnItem {
-        kind: ItKind::ChicoritaLeaf.id(),
+        kind: ItKind::ChikoritaLeaf.id(),
         ..Default::default()
     };
     spawn.prev_pos = prev;

@@ -33,7 +33,7 @@ pub const LUIGI: Fireball = Fireball {
     air: ms::SPECIAL_AIR_N,
     throw: addr::SPECIAL_N_FIRE_SPAWN,
     hand: part::L_1ST_NB,
-    item_kind: ItKind::LuigiFire.id(),
+    item_kind: ItKind::LuigiFireball.id(),
     flash: 0x507,
 };
 

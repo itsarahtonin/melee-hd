@@ -161,14 +161,14 @@ pub fn spawn(
         lib26b1::silence(r.game, gobj);
     }
     super::super::item::pick_up(r, gobj, parent, part);
-    if kind != ItKind::Sword {
+    if kind != ItKind::BeamSword {
         lib2725::scale_by_owner(r, gobj);
         let ip = item_mut(r.game, gobj);
         let scl = ip.scl;
         // The union's word at 0x14 for a Bob-omb, at 0xC for Mr. Saturn and a turnip.
         match ItKind::of(ip.kind) {
-            ItKind::BombHei => ip.xDD4_itemVar.bombhei().xDE8.set(scl),
-            ItKind::Dosei => ip.xDD4_itemVar.dosei().xDE0.set(scl),
+            ItKind::BobOmb => ip.xDD4_itemVar.bombhei().xDE8.set(scl),
+            ItKind::MrSaturn => ip.xDD4_itemVar.dosei().xDE0.set(scl),
             ItKind::PeachTurnip => ip.xDD4_itemVar.peach_turnip().xDE0_scl.set(scl),
             _ => {}
         }

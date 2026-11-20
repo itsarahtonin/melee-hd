@@ -24,7 +24,11 @@ impl Running<'_> {
         let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
         let cape = self.char_attr_word(f, attr::SPECIALS_CAPE_KIND) as i32;
         let fire = self.data.ptr(items.at(0));
-        super::super::super::it::item::set_char_article(self.game, fire, ItKind::MarioFire.id());
+        super::super::super::it::item::set_char_article(
+            self.game,
+            fire,
+            ItKind::MarioFireball.id(),
+        );
         let cape_article = self.data.ptr(items.at(8));
         super::super::super::it::item::set_char_article(self.game, cape_article, cape);
     }
