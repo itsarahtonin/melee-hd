@@ -171,7 +171,7 @@ impl Pair {
 fn renderer(gpu: &crate::present::Gpu) -> melee_render::gpu::Gpu {
     let mut r = crate::pipelines::renderer(gpu, 1, 1, crate::present::Aspect::GAME);
     r.xfb_readback = true;
-    crate::gpu_for(r, true)
+    crate::gpu_for(r, true, false)
 }
 
 fn draw(

@@ -557,7 +557,7 @@ The settings panel's Display section has a Renderer setting, Fast or Exact (`ren
 
 ### The frames
 
-`tests/fast.rs`'s `the_fast_renderer::*` with F5 under test (the 106 frames of 38 matches, and the depth range's edge), 2026-11-20 at `--test-threads=2`: every frame within tolerance. DOCUMENTED
+`tests/fast.rs`'s `the_fast_renderer::*` with F5 under test (the 106 frames of 38 matches, and the depth range's edge), 2026-11-20 at `--test-threads=2`: every frame within tolerance. The exact renderer's own frames with the depth barrier (`gx.wgsl` is both renderers'): the documented frames (`tests/documented.rs`, with `--ignored`) at `--test-threads=2` on this PC's RTX 5070 Ti through Vulkan, all 535 pass (2026-11-20, at `0702c3b2`): the depth unit the fusion moved changed no frame beyond the frames checks' tolerance against ssbm-rs's.
 
 ### Speed on the worker (2026-11-20), the deciding numbers
 

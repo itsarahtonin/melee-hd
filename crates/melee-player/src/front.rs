@@ -1093,6 +1093,7 @@ mod tests {
             fullscreen: true,
             scale: 3,
             msaa: true,
+            fast_renderer: true,
             high_refresh: Mode::Off,
             present: Present::Immediate,
             added_delay: 2,
