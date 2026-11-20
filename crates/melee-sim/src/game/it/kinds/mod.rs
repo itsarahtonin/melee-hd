@@ -68,6 +68,7 @@ pub mod kusudama;
 pub mod kyasarin;
 pub mod kyasarinegg;
 pub mod leadead;
+pub mod legendary;
 pub mod lgun;
 pub mod lgunbeam;
 pub mod lgunray;
