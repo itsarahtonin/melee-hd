@@ -1116,6 +1116,31 @@ fn classics_very_hard_clear_with_crazy_hand_runs_clean_to_its_card_after() {
     );
 }
 
+/// Classic's Break the Targets as the Ice Climbers (docs/oracle.md, "Sessions"):
+/// `popo-classic/cl-ics-targets`, the debug menu's Reg:Easy at 3 (Classic from its third stage)
+/// and the Ice Climbers on the one-door select, so `gm_8017CE34` stores Popo alone
+/// (`ChKind_Popo`) as the player's character; Popo stands on the stage to the trace's end. Clean
+/// from power-on with `--all --heap` and the card after the original's; storing 0x0A (Mewtwo's
+/// character kind, the port's old line) stops in tick 1843, the stage's first, on the original's
+/// assertion that a file wasn't preloaded.
+#[test]
+fn classics_targets_round_as_the_ice_climbers_runs_clean_to_its_card_after() {
+    let after = ssbm_rs_local("traces/popo-classic/cl-ics-targets-play.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    let Some(out) = session_in("popo-classic", "cl-ics-targets", &args) else {
+        return;
+    };
+    assert!(
+        out.contains("3286 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
 /// Master Hand by the character select's name entry glitch (`m6-multiman`, task 15's third
 /// round; docs/oracle.md, "Sessions"; docs/melee-bugs.md): on a card with no last character,
 /// B held with the name list open and A on "NAME ENTRY" the tick after the back request start
