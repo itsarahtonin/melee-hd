@@ -578,8 +578,8 @@ impl GpuMeshes {
         queue: &Ordered,
         vertex_layout: &wgpu::BindGroupLayout,
         encoder: &mut wgpu::CommandEncoder,
-        words: &[u32],
-        indices: &[u32],
+        words: &mut Vec<u32>,
+        indices: &mut Vec<u32>,
     ) -> (u32, u32) {
         let storage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
         let b = &mut self.batch;
@@ -616,14 +616,10 @@ impl GpuMeshes {
             self.indices.as_ref().expect("indices"),
         );
         if !words.is_empty() {
-            queue.write_buffer(out, words_at * 4, bytemuck::cast_slice(words));
+            queue.write_words(out, words_at * 4, words);
         }
         if !indices.is_empty() {
-            queue.write_buffer(
-                drawn,
-                u64::from(mesh_indices) * 4,
-                bytemuck::cast_slice(indices),
-            );
+            queue.write_words(drawn, u64::from(mesh_indices) * 4, indices);
         }
         let place = (words_at as u32, mesh_indices);
         if b.records.is_empty() && b.copies.is_empty() {
@@ -688,9 +684,9 @@ impl GpuMeshes {
                 self.xf.as_ref().expect("xf"),
                 self.work.as_ref().expect("work"),
             );
-            queue.write_buffer(records, 0, bytemuck::cast_slice(&b.records));
+            queue.write_words(records, 0, &mut b.records);
             if !b.xf.is_empty() {
-                queue.write_buffer(xf, 0, bytemuck::cast_slice(&b.xf));
+                queue.write_words(xf, 0, &mut b.xf);
             }
             queue.write_buffer(work, 0, bytemuck::cast_slice(&b.work));
             let buffers = [&self.arena.buffer, records, xf, work, out];
@@ -866,7 +862,14 @@ impl GpuMeshes {
         let start = u64::from(first) * u64::from(6 + 3 * tg) * 4;
         let size = self.batch.out_words * 4 - start;
         let mut encoder = device.create_command_encoder(&Default::default());
-        self.flush(device, queue, vertex_layout, &mut encoder, &[], &[]);
+        self.flush(
+            device,
+            queue,
+            vertex_layout,
+            &mut encoder,
+            &mut Vec::new(),
+            &mut Vec::new(),
+        );
         if size == 0 {
             return Vec::new();
         }

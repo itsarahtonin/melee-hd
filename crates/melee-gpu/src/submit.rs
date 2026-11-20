@@ -21,8 +21,23 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, mpsc};
 
+/// Bytes to write, as the renderer built them.
+enum Data {
+    Bytes(Vec<u8>),
+    Words(Vec<u32>),
+}
+
+impl Data {
+    fn bytes(&self) -> &[u8] {
+        match self {
+            Data::Bytes(b) => b,
+            Data::Words(w) => bytemuck::cast_slice(w),
+        }
+    }
+}
+
 enum Op {
-    Write(wgpu::Buffer, u64, Vec<u8>),
+    Write(wgpu::Buffer, u64, Data),
     Submit(wgpu::CommandEncoder),
     /// Signalled once everything before it is submitted.
     Sync(mpsc::SyncSender<()>),
@@ -32,10 +47,11 @@ struct Thread {
     tx: Option<mpsc::Sender<Op>>,
     /// Written bytes' buffers back from the thread, to write into again.
     spare: mpsc::Receiver<Vec<u8>>,
+    spare_words: mpsc::Receiver<Vec<u32>>,
     thread: Option<std::thread::JoinHandle<()>>,
-    /// The thread's time writing, finishing encoders and submitting them, in nanoseconds
-    /// (for the profile, `GX_PROFILE`).
-    times: Arc<[AtomicU64; 3]>,
+    /// The thread's time writing, finishing encoders and submitting them, in nanoseconds,
+    /// and the writes and their bytes (for the profile, `GX_PROFILE`).
+    times: Arc<[AtomicU64; 5]>,
 }
 
 impl Drop for Thread {
@@ -69,8 +85,9 @@ impl Ordered {
         }
         let (tx, rx) = mpsc::channel::<Op>();
         let (spare_tx, spare) = mpsc::channel();
+        let (words_tx, spare_words) = mpsc::channel();
         let queue = self.queue.clone();
-        let times: Arc<[AtomicU64; 3]> = Arc::default();
+        let times: Arc<[AtomicU64; 5]> = Arc::default();
         let spent = times.clone();
         let thread = std::thread::Builder::new()
             .name("submit".to_owned())
@@ -82,9 +99,14 @@ impl Ordered {
                     let t = std::time::Instant::now();
                     match op {
                         Op::Write(buffer, offset, data) => {
-                            queue.write_buffer(&buffer, offset, &data);
+                            queue.write_buffer(&buffer, offset, data.bytes());
                             add(0, t);
-                            let _ = spare_tx.send(data);
+                            spent[3].fetch_add(1, Ordering::Relaxed);
+                            spent[4].fetch_add(data.bytes().len() as u64, Ordering::Relaxed);
+                            let _ = match data {
+                                Data::Bytes(b) => spare_tx.send(b).is_ok(),
+                                Data::Words(w) => words_tx.send(w).is_ok(),
+                            };
                         }
                         Op::Submit(encoder) => {
                             let commands = encoder.finish();
@@ -103,16 +125,18 @@ impl Ordered {
         self.thread = Some(Thread {
             tx: Some(tx),
             spare,
+            spare_words,
             thread: Some(thread),
             times,
         });
     }
 
-    /// The thread's time since last asked writing, finishing encoders and submitting them.
-    pub(crate) fn take_times(&self) -> Option<[std::time::Duration; 3]> {
+    /// The thread's time since last asked writing, finishing encoders and submitting them (in
+    /// nanoseconds), and the writes and their bytes.
+    pub(crate) fn take_times(&self) -> Option<[u64; 5]> {
         let t = self.thread.as_ref()?;
         Some(std::array::from_fn(|k| {
-            std::time::Duration::from_nanos(t.times[k].swap(0, Ordering::Relaxed))
+            t.times[k].swap(0, Ordering::Relaxed)
         }))
     }
 
@@ -141,9 +165,43 @@ impl Ordered {
                 let mut bytes = t.spare.try_recv().unwrap_or_default();
                 bytes.clear();
                 bytes.extend_from_slice(data);
-                let _ = self.send(Op::Write(buffer.clone(), offset, bytes));
+                let _ = self.send(Op::Write(buffer.clone(), offset, Data::Bytes(bytes)));
             }
             None => self.queue.write_buffer(buffer, offset, data),
+        }
+    }
+
+    /// Writes `bytes` to `buffer` at `offset`, in its turn, taking them: `bytes` is left
+    /// empty (another buffer, to build into again), with no copy made here.
+    pub(crate) fn write_bytes(&self, buffer: &wgpu::Buffer, offset: u64, bytes: &mut Vec<u8>) {
+        match &self.thread {
+            Some(t) => {
+                let mut spare = t.spare.try_recv().unwrap_or_default();
+                spare.clear();
+                let data = Data::Bytes(std::mem::replace(bytes, spare));
+                let _ = self.send(Op::Write(buffer.clone(), offset, data));
+            }
+            None => {
+                self.queue.write_buffer(buffer, offset, bytes);
+                bytes.clear();
+            }
+        }
+    }
+
+    /// [`Ordered::write_bytes`] of words.
+    pub(crate) fn write_words(&self, buffer: &wgpu::Buffer, offset: u64, words: &mut Vec<u32>) {
+        match &self.thread {
+            Some(t) => {
+                let mut spare = t.spare_words.try_recv().unwrap_or_default();
+                spare.clear();
+                let data = Data::Words(std::mem::replace(words, spare));
+                let _ = self.send(Op::Write(buffer.clone(), offset, data));
+            }
+            None => {
+                self.queue
+                    .write_buffer(buffer, offset, bytemuck::cast_slice(words));
+                words.clear();
+            }
         }
     }
 
@@ -216,7 +274,9 @@ mod tests {
         let data = slice.get_mapped_range().expect("mapped");
         for k in 0..N as usize {
             assert!(
-                data[k * 256..(k + 1) * 256].iter().all(|&b| b == k as u8 + 1),
+                data[k * 256..(k + 1) * 256]
+                    .iter()
+                    .all(|&b| b == k as u8 + 1),
                 "submission {k} read {}",
                 data[k * 256]
             );

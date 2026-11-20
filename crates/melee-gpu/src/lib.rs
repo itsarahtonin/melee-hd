@@ -373,7 +373,7 @@ struct Profile {
     /// The frame's wait at its end for the submission thread (`submit`) to submit it, and
     /// that thread's time writing, finishing encoders and submitting them.
     drain: std::time::Duration,
-    submit: [std::time::Duration; 3],
+    submit: [u64; 5],
     /// The state set between calls: pipelines, uniforms, textures, scissors.
     changes: [u64; 4],
 }
@@ -411,12 +411,15 @@ impl Profile {
             self.changes[2] as f64 / n as f64,
             self.changes[3] as f64 / n as f64,
         );
-        if self.submit.iter().any(|d| !d.is_zero()) {
+        if self.submit.iter().any(|&d| d != 0) {
+            let ns = |d: u64| ms(std::time::Duration::from_nanos(d));
             eprintln!(
-                "submission thread per frame: writes {:.3} ms, finishing encoders {:.3} ms, submitting {:.3} ms",
-                ms(self.submit[0]),
-                ms(self.submit[1]),
-                ms(self.submit[2]),
+                "submission thread per frame: writes {:.3} ms ({} of them, {} KB), finishing encoders {:.3} ms, submitting {:.3} ms",
+                ns(self.submit[0]),
+                self.submit[3] / n,
+                self.submit[4] / n / 1024,
+                ns(self.submit[1]),
+                ns(self.submit[2]),
             );
         }
         *self = Profile::default();
@@ -1948,8 +1951,8 @@ impl Renderer {
                 &self.queue,
                 &self.vertex_layout,
                 &mut encoder,
-                &self.vertices,
-                &self.indices,
+                &mut self.vertices,
+                &mut self.indices,
             )
         });
         let vbytes: &[u8] = bytemuck::cast_slice(&self.vertices);
@@ -2030,7 +2033,7 @@ impl Renderer {
             }
         };
         let (ubuf, ugroup) = self.uniform_buffer.as_ref().unwrap();
-        self.queue.write_buffer(ubuf, 0, &self.uniforms);
+        self.queue.write_bytes(ubuf, 0, &mut self.uniforms);
         self.tev.collect();
         let mut changes = [0u64; 4];
         {

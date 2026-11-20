@@ -176,6 +176,8 @@ pub struct Threaded {
     /// Whether meshes are drawn with their vertices transformed on the GPU
     /// (`Renderer::gpu_transforms`).
     gpu_transforms: bool,
+    /// How long the last frame's end waited for the renderer.
+    waited: std::time::Duration,
 }
 
 /// How many transform threads share the draws out: a quarter of the processor's threads, from
@@ -212,8 +214,14 @@ impl Threaded {
             .or(Some(FLUSH_AT))
             .filter(|&n| n > 0);
         // The flushes encoded and submitted on a thread of their own, while the render thread
-        // records the next (`MELEE_GPU_SUBMIT=0` keeps them on the render thread).
-        if std::env::var("MELEE_GPU_SUBMIT").map_or(true, |v| v != "0") {
+        // records the next, where the processor runs four threads or more at once (on two cores
+        // the thread costs more than it saves); `MELEE_GPU_SUBMIT` 1 or 0 says so either way.
+        let submit = match std::env::var("MELEE_GPU_SUBMIT").as_deref() {
+            Ok("0") => false,
+            Ok("1") => true,
+            _ => std::thread::available_parallelism().is_ok_and(|n| n.get() >= 4),
+        };
+        if submit {
             renderer.queue.start();
         }
         let (frames_tx, finished) = mpsc::channel();
@@ -262,6 +270,7 @@ impl Threaded {
             copies,
             before: VecDeque::new(),
             gpu_transforms,
+            waited: std::time::Duration::ZERO,
         }
     }
 
@@ -482,6 +491,7 @@ impl Sink for Threaded {
             self.send();
             self.hashes.clear();
             self.frames += 1;
+            let t = std::time::Instant::now();
             let mut done = self.done.frames.lock().unwrap();
             while *done + self.ahead < self.frames {
                 // A render thread that stopped (it panicked) never finishes the frame.
@@ -496,6 +506,7 @@ impl Sink for Threaded {
                     .unwrap()
                     .0;
             }
+            self.waited = t.elapsed();
         }
     }
 }
@@ -508,6 +519,12 @@ impl Threaded {
         self.batch.packets.push(Packet::FinishSpecialized(tx));
         self.send();
         let _ = rx.recv();
+    }
+
+    /// How long the last frame's end (its copy to the XFB) waited for the renderer: with
+    /// [`Threaded::spawn_synced`], the time it took after the game thread sent the frame.
+    pub fn waited(&self) -> std::time::Duration {
+        self.waited
     }
 
     /// Whether meshes are drawn with their vertices transformed on the GPU.
