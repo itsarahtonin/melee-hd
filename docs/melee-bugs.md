@@ -772,6 +772,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** not recorded beyond the spin's sign.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (the Octorok's stone's paragraph).
 
+### Topi's and the Polar Bear's knockbacks never leave the ground
+
+- **Where:** `it_802E2C80` (Topi's knockback, `itoldottosea.c`) and `it_802E3ED0` (the Polar Bear's, `itwhitebea.c`), `crates/melee-sim/src/game/it/zako.rs` (`knock_back` with `Knock::Free` and `Knock::Fifth`).
+- **Defect:** each puts the enemy in the air (`it_802762BC`) before asking the knockback whether it points off the floor (`it_8027B798`), which answers that only for an item on the ground, so the answer is always no and both take the floor's branch: on the ground (`it_802762B0`), and for the Polar Bear a fifth of its sideways speed. The Goomba's, ReDead's and Octorok's knockbacks ask first and take off when the hit points up.
+- **Effect:** a hit Topi or Polar Bear short of its health always lands its knockback on the ground, its vertical speed whatever the knockback's angle gave it; the Polar Bear's airborne branch (up at least 0.2, else a fifth of its vertical speed) never runs.
+- **melee-hd:** modeled: the shared knockback enters the air first for those two settings (`Knock::Free`, `Knock::Fifth`), so the floor's branch runs as in the original.
+- **Fix:** enter the air after `it_8027B798`, in its branch, as the other enemies do.
+- **Fix impact:** a hit Topi or Polar Bear would fly up when hit upward.
+- **Source:** ssbm-rs's ports (`crates/game/src/tu/melee__it__kinds__itoldottosea.rs`'s `it_802E2C80`, `itwhitebea.rs`'s `it_802E3ED0`), found while folding the enemies' knockbacks into one (docs/refactor.md, task 11's enemies).
+
 ### A stage's hurtbox item's spawn flags keep seven bits from the stack
 
 - **Where:** `it_802E6AEC` (a stage's hurtbox item, from `grMaterial_801C8CFC` and `grMaterial_801C8D44`; Peach's Castle's among them), `crates/melee-sim/src/game/it/kinds/yaku.rs` (`spawn`).
