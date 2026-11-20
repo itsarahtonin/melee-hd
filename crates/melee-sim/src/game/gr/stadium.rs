@@ -397,7 +397,7 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
                 r.game.gr.stadium.buffer_address
             }
         } else {
-            crate::hsd::heap::with(|h| h.mem_alloc_unclaimed(0x5_0000))
+            crate::hsd::heap::mirror(|h| h.mem_alloc_unclaimed(0x5_0000))
                 .unwrap_or(r.game.gr.stadium.buffer_address)
         };
         let v = r.game.grounds[g.0].u.stadium();

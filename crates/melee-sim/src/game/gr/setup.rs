@@ -1618,7 +1618,7 @@ pub fn mark_materials(game: &mut Game, data: &Archives, map_head: Option<DataRef
             // The descriptor's `rendermode` in the file, which the heap's image holds where
             // the scene read the file into its heap.
             let word = data.u32(d.at(4)) | *marks;
-            crate::hsd::heap::with(|h| h.image.file_word(d.at(4), word));
+            crate::hsd::heap::image(|i| i.file_word(d.at(4), word));
         }
     }
 }

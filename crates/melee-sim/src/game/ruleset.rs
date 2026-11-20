@@ -235,6 +235,9 @@ pub struct Fixes {
     /// stand-in for its GObj's address where the allocator model is off
     /// (`sscope::ADDRESS_STAND_IN`).
     pub sscope_stand_in: bool,
+    /// What a match of its own (a replay's playback or a live match) models of the
+    /// original's memory beyond the rules ([`Memory`], `docs/refactor.md`, task 6).
+    pub memory: Memory,
 }
 
 /// Final Destination's background cycle (`grLast_8021AAB0`).
@@ -259,6 +262,23 @@ pub enum NanaDeterminism {
     ClearsR30AndR5,
 }
 
+/// What a match models of the original's memory beyond its rules: Vanilla's modelling (the
+/// allocator model's addresses, the heap's image and the menus' layouts, r5 through the
+/// computer player's frame), or only what Slippi Dolphin itself reads.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Memory {
+    /// Vanilla's modelling, exact to the console: the allocator model wherever the match's
+    /// settings turn it on, a session's heap image and the menus' layouts. 3.16's and 3.14's
+    /// versions keep it: their NanaDeterminism leaves r5, which can hold an item's address
+    /// only the model gives.
+    Modelled,
+    /// Only what Slippi's own playback reads (Slippi 3.19's): in a match of its own nothing of
+    /// Vanilla's modelling runs, the allocator model only where Slippi Dolphin reads an
+    /// address only it gives (Samus's grapple swing), and a fixed stand-in where every
+    /// address takes the same branches (the Super Scope's).
+    WhatSlippiReads,
+}
+
 /// Vanilla's choices: no fix.
 pub const VANILLA: Fixes = Fixes {
     init_player_data: false,
@@ -273,6 +293,7 @@ pub const VANILLA: Fixes = Fixes {
     efb_copies_texture_only: false,
     playback_note: false,
     sscope_stand_in: false,
+    memory: Memory::Modelled,
 };
 
 /// Slippi 3.19's.
@@ -289,6 +310,7 @@ pub const SLIPPI_3_19: Fixes = Fixes {
     efb_copies_texture_only: true,
     playback_note: true,
     sscope_stand_in: true,
+    memory: Memory::WhatSlippiReads,
 };
 
 /// Slippi 3.16's, which 3.17 keeps word for word and 3.15 already has.
@@ -296,6 +318,7 @@ pub const SLIPPI_3_16: Fixes = Fixes {
     fd_background: FdBackground::Skipped,
     stadium_frozen: true,
     nana_determinism: NanaDeterminism::ClearsR30,
+    memory: Memory::Modelled,
     ..SLIPPI_3_19
 };
 
@@ -658,6 +681,56 @@ impl Rules {
     }
 }
 
+// Hook point: Vanilla's memory modelling (`docs/refactor.md`, task 6).
+
+impl Rules {
+    /// Whether a match built as Slippi's playback builds one (a replay's, a live match) under
+    /// these rules runs the allocator model, `samus` when one of its players is Samus:
+    /// Vanilla's modelling always does (laid out as playback's heap); Slippi 3.19's only for
+    /// Samus, whose grapple swing reads her `ThrowN` joint's address, as Slippi Dolphin has it
+    /// (Sarah, 2026-11-18: "Yes, model on"; `samusgrapple::SwingSlot::SavedR31`).
+    #[inline]
+    pub fn playback_runs_model(&self, samus: bool) -> bool {
+        match self.fixes().memory {
+            Memory::Modelled => true,
+            Memory::WhatSlippiReads => samus,
+        }
+    }
+
+    /// Whether the computer player's frame follows r5 for the DI with no knockback: not where
+    /// NanaDeterminism clears it before the DI reads it (3.19's), so nothing reads it.
+    #[inline]
+    pub fn follows_r5(&self) -> bool {
+        self.nana_determinism() != NanaDeterminism::ClearsR30AndR5
+    }
+}
+
+impl Game {
+    /// The one test of Vanilla's memory modelling: whether this step may model memory (the
+    /// allocator model, the heap's image and the menus' layouts), which lends the model out
+    /// (`hsd::heap::Lent`). Always outside a match of its own (a session's menus and the
+    /// matches they keep, which run Vanilla's menus whatever the ruleset) and under
+    /// [`Memory::Modelled`]; under [`Memory::WhatSlippiReads`] in a replay's playback or a live
+    /// match only where its settings started the model ([`Rules::playback_runs_model`], or a
+    /// tool comparing its addresses with the original's). Where it doesn't, the step lends
+    /// nothing: the allocators' hooks give unknown addresses and anything else that reaches
+    /// the model stops by name (`hsd::heap::with`).
+    #[inline]
+    pub fn models_memory(&self) -> bool {
+        self.rules.fixes().memory == Memory::Modelled
+            || !self.runs_playback_codes()
+            || self.objs.heap.active
+    }
+
+    /// The model lent out for a step ([`Game::models_memory`]); give it back with
+    /// [`crate::hsd::heap::Lent::give_back`].
+    #[inline]
+    pub fn lend_model(&mut self) -> crate::hsd::heap::Lent {
+        let models = self.models_memory();
+        crate::hsd::heap::Lent::take(&mut self.objs.heap, models)
+    }
+}
+
 // Hook point: the single-player modes' C-stick.
 
 impl Rules {
@@ -828,6 +901,10 @@ mod tests {
             assert_eq!(r.stadium_loads_synchronously(), slippi);
             assert_eq!(r.notes_playback(), slippi);
             assert_eq!(r.sscope_stand_in(), slippi);
+            for samus in [false, true] {
+                assert_eq!(r.playback_runs_model(samus), !v3_19 || samus);
+            }
+            assert_eq!(r.follows_r5(), !v3_19);
             assert_eq!(r.stadium_frozen(), slippi && !v3_19);
             assert_eq!(
                 r.whispy_blow_dir_fix(),

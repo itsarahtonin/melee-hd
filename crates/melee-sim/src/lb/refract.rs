@@ -79,7 +79,7 @@ impl Game {
         let n = data.u8(table);
         // The screen copy's image (320 by 240 in RGB565), the textures' list and their image
         // descriptors, then each entry's 32 by 32 IA8 indirect map ahead of its textures.
-        crate::hsd::heap::with(|h| {
+        crate::hsd::heap::mirror(|h| {
             h.mem_alloc(0x2_5800);
             h.mem_alloc(u32::from(n) * 4);
             h.mem_alloc(u32::from(n) * 0x18);

@@ -1,4 +1,4 @@
-//! `melee-bench corpus [--rules slippi|own] [--heap off|on] [--fp slippi|hardware|own]
+//! `melee-bench corpus [--rules slippi|own] [--heap rules|off|on] [--fp slippi|hardware|own]
 //! [--jobs N] [--list FILE]... [PATH...]`: plays every replay named (a `.slp` file, or every
 //! `.slp` under a directory; `--list` files name one path a line, `#` starting a comment) from
 //! its start through `vs_match`'s replay path with the display pass, as `native` does, and
@@ -9,11 +9,12 @@
 //! It is the Slippi ruleset's run of the replay corpus ([the plan](docs/slippi-ruleset.md),
 //! design call 8): by default every replay plays under Slippi 3.19's online rules
 //! (`Rules::slippi_online`, whatever rules it was recorded with), in Slippi Dolphin's floating
-//! point, with the allocator model off (no `Settings::heap`), as the player's Slippi matches
-//! would run. A replay recorded under other rules leaves its recording (its desync column
+//! point, with the allocator model as the rules choose (`Settings::playback_needs_model`: off
+//! under 3.19's but for a match with Samus), as the player's Slippi matches run, where reaching
+//! the model stops by name (`docs/refactor.md`, task 6). A replay recorded under other rules leaves its recording (its desync column
 //! says where) and plays on, its recorded inputs driving the 3.19 match: what counts is that
 //! nothing stops. `--rules own` plays each under its own codes' rules instead, `--heap on`
-//! with the model as replays have it, and `--fp own` in the console's floating point for a
+//! with the model laid out as playback's heap, `--heap off` without it whatever the rules, and `--fp own` in the console's floating point for a
 //! replay with no Slippi codes (the benchmark matches), Slippi's for the rest.
 //!
 //! One line per replay, tab-separated, as each finishes: the path, its own rules, its last
@@ -51,7 +52,8 @@ enum Fp {
 struct Options {
     /// Slippi 3.19's online rules for every replay; else each replay's own.
     slippi: bool,
-    heap: bool,
+    /// The allocator model on or off, or as the rules choose (`None`).
+    heap: Option<bool>,
     fp: Fp,
     jobs: usize,
     paths: Vec<PathBuf>,
@@ -60,7 +62,7 @@ struct Options {
 fn parse(args: &[String]) -> Options {
     let mut o = Options {
         slippi: true,
-        heap: false,
+        heap: None,
         fp: Fp::Slippi,
         jobs: 1,
         paths: Vec::new(),
@@ -78,9 +80,10 @@ fn parse(args: &[String]) -> Options {
             }
             "--heap" => {
                 o.heap = match value() {
-                    "on" => true,
-                    "off" => false,
-                    v => panic!("--heap on or off, not {v:?}"),
+                    "rules" => None,
+                    "on" => Some(true),
+                    "off" => Some(false),
+                    v => panic!("--heap rules, on or off, not {v:?}"),
                 }
             }
             "--fp" => {
@@ -227,9 +230,16 @@ fn play(o: &Options, files: &mut Files, path: &Path) -> Outcome {
     if o.slippi {
         settings.rules = Rules::slippi_online();
     }
-    if !o.heap {
-        settings.heap = None;
-        settings.playback_heap = None;
+    match o.heap {
+        None => {
+            settings.heap = Settings::playback_needs_model(&settings.rules, &settings.start)
+                .then(melee_sim::hsd::heap::Layout::slippi_playback);
+        }
+        Some(true) => settings.keep_model(),
+        Some(false) => {
+            settings.heap = None;
+            settings.playback_heap = None;
+        }
     }
     let same_rules = own.as_ref().is_ok_and(|r| *r == settings.rules);
     let slippi_fp = match o.fp {
@@ -332,7 +342,11 @@ pub fn main(args: &[String]) {
         "{} replays, rules {}, allocator model {}, float mode {}, {} jobs",
         paths.len(),
         if o.slippi { "3.19 online" } else { "their own" },
-        if o.heap { "on" } else { "off" },
+        match o.heap {
+            None => "as the rules choose",
+            Some(true) => "on",
+            Some(false) => "off",
+        },
         match o.fp {
             Fp::Slippi => "Slippi's",
             Fp::Hardware => "the console's",

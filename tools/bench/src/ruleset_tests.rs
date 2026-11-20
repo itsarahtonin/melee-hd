@@ -493,7 +493,7 @@ fn grapple_swing_stops_by_name_without_the_model() {
 }
 
 /// A live match with Samus in it runs with the allocator model (Sarah, 2026-11-18: "Yes, model
-/// on"; `Settings::live_needs_model`), laid out as playback's heap, so her grapple swing reads
+/// on"; `Settings::playback_needs_model`), laid out as playback's heap, so her grapple swing reads
 /// her `ThrowN` joint's address (`samusgrapple::SwingSlot::SavedR31`) as Slippi Dolphin has it
 /// instead of stopping by name. `grapple-samus-bf`'s game start, as a live match's settings,
 /// keeps playback's layout, the one its playback runs with (`Settings::from_replay`, which the

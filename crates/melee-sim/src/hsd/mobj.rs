@@ -564,7 +564,7 @@ pub fn compile_tev(objs: &mut Objects, m: Option<MObjId>) {
     let mut s = std::mem::take(&mut objs.mobjs.texp_scratch);
     s.list.clear();
     let root = super::texp::make::mobj_make_texp(objs, m, &chain[..n], &mut s.list);
-    let heap = super::heap::with(|_| ()).is_some();
+    let heap = super::heap::modelled();
     if heap {
         super::texp_heap::alloc_exprs(objs, m, &mut s);
     }

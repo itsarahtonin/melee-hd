@@ -188,7 +188,7 @@ impl<T, const K: u8> Pool<T, K> {
         if K == 0 {
             return 0;
         }
-        heap::with(|h| h.obj_alloc(heap::Kind::ALL[K as usize - 1])).unwrap_or(0)
+        heap::mirror(|h| h.obj_alloc(heap::Kind::ALL[K as usize - 1])).unwrap_or(0)
     }
 
     /// Counts a new object in `slot`, at `addr`.
@@ -296,7 +296,7 @@ impl<T, const K: u8> Pool<T, K> {
     /// A session's heap image notes the scene's objects (`hsd::image`).
     fn note(slot: u32) {
         if heap::image_on() {
-            heap::with(|h| h.image.note_slot(std::any::type_name::<T>(), slot));
+            heap::image(|i| i.note_slot(std::any::type_name::<T>(), slot));
         }
     }
 
@@ -359,7 +359,7 @@ impl<T, const K: u8> Pool<T, K> {
                 num_limit: limit,
                 num_limit_flag: on,
             } = self.limit;
-            heap::with(|h| h.set_num_limit(heap::Kind::ALL[K as usize - 1], limit, on));
+            heap::mirror(|h| h.set_num_limit(heap::Kind::ALL[K as usize - 1], limit, on));
         }
     }
 
@@ -422,7 +422,7 @@ impl<T, const K: u8> Pool<T, K> {
         }
         let addr = self.meta(slot).addr;
         if K != 0 {
-            heap::with(|h| h.obj_free(heap::Kind::ALL[K as usize - 1], addr));
+            heap::mirror(|h| h.obj_free(heap::Kind::ALL[K as usize - 1], addr));
         }
         let at = self.free.len() as u32;
         let m = self.meta_mut(slot);

@@ -1315,9 +1315,9 @@ pub fn with_image(f: impl FnOnce(&mut Image)) {
     if !super::heap::image_on() {
         return;
     }
-    super::heap::with(|h| {
-        if h.image.on {
-            f(&mut h.image);
+    super::heap::image(|i| {
+        if i.on {
+            f(i);
         }
     });
 }
