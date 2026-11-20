@@ -326,7 +326,11 @@ fn pipeline(
 }
 
 impl GpuXfb {
-    pub fn new(device: &wgpu::Device, queue: &wgpu::Queue, efb: &wgpu::TextureView) -> Self {
+    pub fn new(
+        device: &wgpu::Device,
+        queue: &crate::submit::Ordered,
+        efb: &wgpu::TextureView,
+    ) -> Self {
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("xfb"),
             source: wgpu::ShaderSource::Wgsl(include_str!("xfb.wgsl").into()),
@@ -406,7 +410,7 @@ impl GpuXfb {
     pub fn copy(
         &mut self,
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        queue: &crate::submit::Ordered,
         state: &State,
         value: u32,
         rect: [u32; 4],
@@ -571,7 +575,7 @@ impl GpuXfb {
             pass.set_bind_group(0, group, &[]);
             pass.draw(0..3, 0..1);
         }
-        queue.submit([encoder.finish()]);
+        queue.submit(encoder);
         (shown, width, out_height)
     }
 }

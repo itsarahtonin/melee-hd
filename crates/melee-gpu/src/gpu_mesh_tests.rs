@@ -125,7 +125,10 @@ fn the_gpu_transforms_as_the_cpu_does() {
     let Some(mut renderer) = crate::testing::renderer() else {
         return;
     };
-    let (device, queue) = (renderer.device.clone(), renderer.queue.clone());
+    // The writes and submissions on a thread of their own, as the render thread makes them.
+    let device = renderer.device.clone();
+    let mut queue = crate::submit::Ordered::new(renderer.queue.raw().clone());
+    queue.start();
     let layout = renderer.vertex_layout.clone();
     let meshes = renderer.gpu_meshes();
     let mut r = Rng(0x2545_F491_4F6C_DD1D);

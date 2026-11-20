@@ -211,6 +211,11 @@ impl Threaded {
             .and_then(|v| v.parse().ok())
             .or(Some(FLUSH_AT))
             .filter(|&n| n > 0);
+        // The flushes encoded and submitted on a thread of their own, while the render thread
+        // records the next (`MELEE_GPU_SUBMIT=0` keeps them on the render thread).
+        if std::env::var("MELEE_GPU_SUBMIT").map_or(true, |v| v != "0") {
+            renderer.queue.start();
+        }
         let (frames_tx, finished) = mpsc::channel();
         renderer.on_frame(move |f| {
             let _ = frames_tx.send(f);
