@@ -118,7 +118,7 @@ pub fn apply_facing(game: &mut Game, gobj: GObjId, j: Option<JObjId>) {
 pub fn hold_kind_of(kind: i32) -> i32 {
     if kind == ItKind::Foods {
         2
-    } else if kind == ItKind::PokemonRandom {
+    } else if kind == ItKind::StageHurtbox {
         3
     } else if kind < ItKind::COMMON_END {
         0
@@ -132,7 +132,7 @@ pub fn hold_kind_of(kind: i32) -> i32 {
         8
     } else if kind == ItKind::Unk4 {
         12
-    } else if kind < ItKind::PokemonRandom {
+    } else if kind < ItKind::StageHurtbox {
         11
     } else if kind < ItKind::POKEMON_END {
         9
@@ -284,7 +284,7 @@ pub fn set_kind_data(game: &mut Game, data: &Archives, gobj: GObjId) {
 pub fn attr_of(ip: &Item) -> Attr {
     // Only a stage's hurtbox item has attributes outside the archives (`it_803F8C08`).
     assert!(
-        ip.xCC_item_attr.is_some() || ip.kind == ItKind::PokemonRandom,
+        ip.xCC_item_attr.is_some() || ip.kind == ItKind::StageHurtbox,
         "an item without attributes"
     );
     Attr(ip.xCC_item_attr)
@@ -325,7 +325,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         ip.xC8_joint = a.model(data).joint(data);
         // The stage items' spawn (`it_802E6AEC`) points the kind's article at the
         // executable's attributes, which no archive holds.
-        ip.xCC_item_attr = if ip.kind == ItKind::PokemonRandom && yaku_attr {
+        ip.xCC_item_attr = if ip.kind == ItKind::StageHurtbox && yaku_attr {
             None
         } else {
             Some(a.attr(data))

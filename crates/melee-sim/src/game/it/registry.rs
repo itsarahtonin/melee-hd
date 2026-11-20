@@ -369,8 +369,9 @@ pub enum ItKind {
     Unk4 = 158,
     /// `It_Kind_Coin`: the trophy coin.
     Coin = 159,
-    /// `It_PKind_Random`: the stages' hurtbox items (the Poké Ball's random Pokémon value).
-    PokemonRandom = 160,
+    /// The stages' hurtbox items (`It_PKind_Random` in the decompilation, the number the Poké
+    /// Ball's random Pokémon would take; every use here is the stages' items).
+    StageHurtbox = 160,
     /// `It_PKind_Tosakinto`: Goldeen.
     Tosakinto = 161,
     /// `It_PKind_Chicorita`: Chikorita.
@@ -691,7 +692,7 @@ impl ItKind {
         ItKind::KirbyYoshiEggLay,
         ItKind::Unk4,
         ItKind::Coin,
-        ItKind::PokemonRandom,
+        ItKind::StageHurtbox,
         ItKind::Tosakinto,
         ItKind::Chicorita,
         ItKind::Kabigon,
@@ -2046,7 +2047,7 @@ pub static ITEMS: [ItemKind; ItKind::COUNT] = [
         vars: VarsKind::TrophyCoin,
     },
     ItemKind {
-        kind: ItKind::PokemonRandom,
+        kind: ItKind::StageHurtbox,
         name: "Stages' hurtbox items",
         events: &[yaku::run_event],
         preds: &[yaku::run_pred],

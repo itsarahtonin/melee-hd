@@ -53,7 +53,7 @@ def load_dol(path):
 
 # The decomp's markers that share a kind's number, and the one name melee-hd changes.
 SKIP_KINDS = {'It_PKind_Start', 'It_PKind_Terminate', 'It_Kind_Unselected', 'It_Kind_None'}
-RENAME_KINDS = {'It_PKind_Random': 'PokemonRandom'}
+RENAME_KINDS = {'It_PKind_Random': 'StageHurtbox'}
 
 
 def kind_names(path):

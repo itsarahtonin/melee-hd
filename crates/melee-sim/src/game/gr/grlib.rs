@@ -336,7 +336,7 @@ pub fn point_near_object(game: &Game, point: Vec3, offset: f32) -> bool {
     }
     let mut cur = game.world.first_in(crate::game::it::P_LINK_ITEM);
     while let Some(g) = cur {
-        if crate::game::it::lib26b1::kind(game, g) != ItKind::PokemonRandom {
+        if crate::game::it::lib26b1::kind(game, g) != ItKind::StageHurtbox {
             let ip = crate::game::it::item(game, g);
             if point_in_ecb(&ip.x378_itemColl, point, offset) {
                 return true;

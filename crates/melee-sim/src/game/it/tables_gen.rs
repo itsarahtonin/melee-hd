@@ -3060,7 +3060,7 @@ pub static LOGIC_CHAR: [ItemLogic; 118] = [
         hit_shield: None,
         evt_unk: Some(CodeRef(0x802f18f0)),
     },
-    // ItKind::PokemonRandom
+    // ItKind::StageHurtbox
     ItemLogic {
         states: 0x803f8c8c,
         spawned: None,

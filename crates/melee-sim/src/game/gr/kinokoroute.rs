@@ -492,7 +492,7 @@ pub fn shut(r: &mut Running, gobj: GObjId, on: bool) {
         r.game.geometry_mut().enable_joint(0x3C);
         r.game.geometry_mut().enable_joint(0x33);
         for item in items {
-            if super::super::it::item(r.game, item).kind == ItKind::PokemonRandom {
+            if super::super::it::item(r.game, item).kind == ItKind::StageHurtbox {
                 material::item_hurtbox_on(r.game, item);
             }
         }
@@ -504,7 +504,7 @@ pub fn shut(r: &mut Running, gobj: GObjId, on: bool) {
         r.game.geometry_mut().disable_joint(0x3C);
         r.game.geometry_mut().disable_joint(0x33);
         for item in items {
-            if super::super::it::item(r.game, item).kind == ItKind::PokemonRandom {
+            if super::super::it::item(r.game, item).kind == ItKind::StageHurtbox {
                 material::item_hurtbox_off(r.game, item);
             }
         }

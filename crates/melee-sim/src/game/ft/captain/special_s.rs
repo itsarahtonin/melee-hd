@@ -105,7 +105,7 @@ impl Running<'_> {
                 k < ItKind::BombHei
                     || (ItKind::Kuriboh.id()..ItKind::OctarockStone.id()).contains(&k)
                     || (ItKind::OldKuri.id()..ItKind::ArwingLaser.id()).contains(&k)
-                    || k == ItKind::PokemonRandom
+                    || k == ItKind::StageHurtbox
             }
             _ => false,
         };

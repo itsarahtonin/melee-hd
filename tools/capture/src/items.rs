@@ -265,7 +265,7 @@ impl Importer<'_> {
             .game
             .it
             .char_articles
-            .get((ItKind::PokemonRandom.id() - ItKind::Kuriboh.id()) as usize)
+            .get((ItKind::StageHurtbox.id() - ItKind::Kuriboh.id()) as usize)
             .copied()
             .flatten();
         self.game.it.yaku_attr =
@@ -581,7 +581,7 @@ impl Comparer<'_> {
         }
         let random = g
             .char_articles
-            .get((ItKind::PokemonRandom.id() - ItKind::Kuriboh.id()) as usize)
+            .get((ItKind::StageHurtbox.id() - ItKind::Kuriboh.id()) as usize)
             .copied()
             .flatten();
         // A file its scene let go of (a match's, until the next one's items load again): what

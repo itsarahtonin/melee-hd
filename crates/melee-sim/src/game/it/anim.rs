@@ -402,7 +402,7 @@ pub fn state_script(
     index: i32,
     desc: DataRef,
 ) -> Option<DataRef> {
-    if kind == ItKind::PokemonRandom
+    if kind == ItKind::StageHurtbox
         && let Some(&(_, s)) = game
             .gr
             .yaku_scripts

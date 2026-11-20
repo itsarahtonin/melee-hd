@@ -1577,7 +1577,7 @@ fn image_yaku_script(game: &Game, data: &Archives, i: u32, script: DataRef) {
     let article = game
         .it
         .char_articles
-        .get((ItKind::PokemonRandom.id() - ItKind::Kuriboh.id()) as usize)
+        .get((ItKind::StageHurtbox.id() - ItKind::Kuriboh.id()) as usize)
         .copied()
         .flatten();
     let Some(states) = article.and_then(|a| data.ptr(a.at(0xC))) else {

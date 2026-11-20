@@ -1237,7 +1237,7 @@ pub fn block_hit(r: &mut Running, g: GroundId, i: usize) {
 pub fn block_touched(r: &mut Running, g: GroundId, toucher: Option<GObjId>, i: usize) {
     let by = toucher.expect("grcastle.c: a toucher");
     if super::super::it::item::is_fighter(r.game, Some(by))
-        || super::super::it::lib26b1::kind(r.game, by) != ItKind::PokemonRandom
+        || super::super::it::lib26b1::kind(r.game, by) != ItKind::StageHurtbox
     {
         knock(r, g, i);
     }
