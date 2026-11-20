@@ -148,9 +148,9 @@ fn log_damage(game: &mut Game, e: DamageLogEntry) {
 #[doc(alias = "it_8026B6C8")]
 pub(crate) fn is_enemy(game: &Game, gobj: GObjId) -> bool {
     let kind = item(game, gobj).kind;
-    ((ItKind::Kuriboh.id()..ItKind::OctarockStone.id()).contains(&kind)
-        || (ItKind::OldKuri.id()..ItKind::ArwingLaser.id()).contains(&kind))
-        && kind != ItKind::KyasarinEgg
+    ((ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&kind)
+        || (ItKind::OldGoomba.id()..ItKind::ArwingLaser.id()).contains(&kind))
+        && kind != ItKind::BirdoEgg
         && kind != ItKind::WhispyApple
 }
 
@@ -430,7 +430,7 @@ fn fighter_hits_item(r: &mut Running, fg: GObjId, hi: usize, me: GObjId) {
 /// hit's sound kind 1 or 2 (a sound of its own, 0x61A87) or 8 with those kinds (none).
 fn random_kind_hit_sound(r: &mut Running, me: GObjId, sfx_kind: i32, sfx_severity: i32) {
     let pokemon = (item(r.game, me).kind == ItKind::StageHurtbox)
-        .then(|| item_mut(r.game, me).xDD4_itemVar.yaku().x0.get());
+        .then(|| item_mut(r.game, me).xDD4_itemVar.yaku().hit_sound.get());
     let kind_1_or_2 = sfx_kind == 1 || sfx_kind == 2;
     match pokemon {
         Some(7) if kind_1_or_2 => {
@@ -1163,15 +1163,17 @@ pub fn keep_clear(game: &mut Game, data: &Archives, gobj: GObjId) {
     }
 }
 
-/// Clears `x1B`, `it_80272280`.
+/// Pushed apart from an overlapping item by its nudge again (`xDC8`'s `x1B` cleared), `it_80272280`.
 #[doc(alias = "it_80272280")]
-pub fn clear_x1b(game: &mut Game, gobj: GObjId) {
+#[doc(alias("clear_x1b"))]
+pub fn clear_random_push(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).xDC8_word.flags.x1B = false;
 }
 
-/// Sets `x1B`, `it_80272298`.
+/// Pushed apart from an overlapping item a random way (`xDC8`'s `x1B` set), `it_80272298`.
 #[doc(alias = "it_80272298")]
-pub fn set_x1b(game: &mut Game, gobj: GObjId) {
+#[doc(alias("set_x1b"))]
+pub fn set_random_push(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).xDC8_word.flags.x1B = true;
 }
 

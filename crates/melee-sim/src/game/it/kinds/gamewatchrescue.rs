@@ -13,7 +13,8 @@ use crate::vec::Vec3;
 pub const ANIM: u32 = 0x802C_8240;
 pub const PHYS: u32 = 0x802C_8350;
 pub const COLL: u32 = 0x802C_8354;
-pub const EVT_UNK: u32 = 0x802C_835C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_835C;
 
 /// Runs one of the trampoline's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -54,7 +55,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     let parent = parent?;
     let mut spawn = SpawnItem {
-        kind: ItKind::GameWatchRescue.id(),
+        kind: ItKind::GameAndWatchTrampoline.id(),
         ..Default::default()
     };
     gamewatch::spawn_position(&mut spawn, pos, true);
@@ -135,6 +136,7 @@ pub fn collide(_r: &mut Running, _gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `itGameWatchRescue_Logic81_EvtUnk`.
 // Ports `itGameWatchRescue_Logic81_EvtUnk`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

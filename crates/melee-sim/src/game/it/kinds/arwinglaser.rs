@@ -76,53 +76,70 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// collision joint it may meet (`xE48`) and its sound's state (`xE4C`).
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct ArwingLaserVars {
-    pub xDF4: Var<Option<GObjId>>,
-    pub xDF8: Var<Option<JObjId>>,
-    pub xDFC: Var<f32>,
-    pub xE00: Var<f32>,
-    pub xE04: Var<f32>,
-    pub xE08: Var<f32>,
-    pub xE0C: Var<Vec3>,
-    pub xE18: Var<Vec3>,
-    pub xE24: Var<Vec3>,
-    pub xE30: Var<i16>,
-    pub xE34: Var<f32>,
-    pub xE38: Var<i32>,
-    pub xE3C: Var<i32>,
-    pub xE40: Var<Option<GObjId>>,
-    pub xE44: Var<Option<GObjId>>,
-    pub xE48: Var<i32>,
-    pub xE4C: Var<i32>,
+    #[doc(alias("xDF4"))]
+    pub parent: Var<Option<GObjId>>,
+    #[doc(alias("xDF8"))]
+    pub gun: Var<Option<JObjId>>,
+    #[doc(alias("xDFC"))]
+    pub stage_scale: Var<f32>,
+    #[doc(alias("xE00"))]
+    pub offset_x: Var<f32>,
+    #[doc(alias("xE04"))]
+    pub offset_y: Var<f32>,
+    #[doc(alias("xE08"))]
+    pub offset_z: Var<f32>,
+    #[doc(alias("xE0C"))]
+    pub heading: Var<Vec3>,
+    #[doc(alias("xE18"))]
+    pub tip: Var<Vec3>,
+    #[doc(alias("xE24"))]
+    pub last_tip: Var<Vec3>,
+    #[doc(alias("xE30"))]
+    pub left_gun: Var<i16>,
+    #[doc(alias("xE34"))]
+    pub scale: Var<f32>,
+    #[doc(alias("xE38"))]
+    pub shot_type: Var<i32>,
+    #[doc(alias("xE3C"))]
+    pub reflected: Var<i32>,
+    #[doc(alias("xE40"))]
+    pub beam1: Var<Option<GObjId>>,
+    #[doc(alias("xE44"))]
+    pub beam2: Var<Option<GObjId>>,
+    #[doc(alias("xE48"))]
+    pub joint: Var<i32>,
+    #[doc(alias("xE4C"))]
+    pub sound_state: Var<i32>,
 }
 
 impl ArwingLaserVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDF4.mark_stale();
-        self.xDF8.mark_stale();
+        self.parent.mark_stale();
+        self.gun.mark_stale();
         for v in [
-            &mut self.xDFC,
-            &mut self.xE00,
-            &mut self.xE04,
-            &mut self.xE08,
-            &mut self.xE34,
+            &mut self.stage_scale,
+            &mut self.offset_x,
+            &mut self.offset_y,
+            &mut self.offset_z,
+            &mut self.scale,
         ] {
             v.mark_stale();
         }
-        for v in [&mut self.xE0C, &mut self.xE18, &mut self.xE24] {
+        for v in [&mut self.heading, &mut self.tip, &mut self.last_tip] {
             v.mark_stale();
         }
-        self.xE30.mark_stale();
+        self.left_gun.mark_stale();
         for v in [
-            &mut self.xE38,
-            &mut self.xE3C,
-            &mut self.xE48,
-            &mut self.xE4C,
+            &mut self.shot_type,
+            &mut self.reflected,
+            &mut self.joint,
+            &mut self.sound_state,
         ] {
             v.mark_stale();
         }
-        self.xE40.mark_stale();
-        self.xE44.mark_stale();
+        self.beam1.mark_stale();
+        self.beam2.mark_stale();
     }
 }
 
@@ -137,47 +154,47 @@ impl Mirror for ArwingLaserVars {
         };
         let i = |a: u32| Var::new(m.u32(a) as i32);
         ArwingLaserVars {
-            xDF4: Var::new(cx.import_handle("GObjId", m.u32(at + 0x20)).map(GObjId)),
-            xDF8: Var::new(cx.import_handle("JObjId", m.u32(at + 0x24)).map(JObjId)),
-            xDFC: f(at + 0x28),
-            xE00: f(at + 0x2C),
-            xE04: f(at + 0x30),
-            xE08: f(at + 0x34),
-            xE0C: v3(at + 0x38),
-            xE18: v3(at + 0x44),
-            xE24: v3(at + 0x50),
-            xE30: Var::new(m.u16(at + 0x5C) as i16),
-            xE34: f(at + 0x60),
-            xE38: i(at + 0x64),
-            xE3C: i(at + 0x68),
-            xE40: Var::new(cx.import_handle("GObjId", m.u32(at + 0x6C)).map(GObjId)),
-            xE44: Var::new(cx.import_handle("GObjId", m.u32(at + 0x70)).map(GObjId)),
-            xE48: i(at + 0x74),
-            xE4C: i(at + 0x78),
+            parent: Var::new(cx.import_handle("GObjId", m.u32(at + 0x20)).map(GObjId)),
+            gun: Var::new(cx.import_handle("JObjId", m.u32(at + 0x24)).map(JObjId)),
+            stage_scale: f(at + 0x28),
+            offset_x: f(at + 0x2C),
+            offset_y: f(at + 0x30),
+            offset_z: f(at + 0x34),
+            heading: v3(at + 0x38),
+            tip: v3(at + 0x44),
+            last_tip: v3(at + 0x50),
+            left_gun: Var::new(m.u16(at + 0x5C) as i16),
+            scale: f(at + 0x60),
+            shot_type: i(at + 0x64),
+            reflected: i(at + 0x68),
+            beam1: Var::new(cx.import_handle("GObjId", m.u32(at + 0x6C)).map(GObjId)),
+            beam2: Var::new(cx.import_handle("GObjId", m.u32(at + 0x70)).map(GObjId)),
+            joint: i(at + 0x74),
+            sound_state: i(at + 0x78),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let p = |n: &str| format!("{path}.{n}");
         for (name, v, off) in [
-            ("xDF4", &self.xDF4, 0x20),
-            ("xE40", &self.xE40, 0x6C),
-            ("xE44", &self.xE44, 0x70),
+            ("xDF4", &self.parent, 0x20),
+            ("xE40", &self.beam1, 0x6C),
+            ("xE44", &self.beam2, 0x70),
         ] {
             if v.live(&p(name), cx) {
                 cx.compare_handle(&p(name), "GObjId", v.peek().map(|g| g.0), m.u32(at + off));
             }
         }
-        if self.xDF8.live(&p("xDF8"), cx) {
-            let ours = self.xDF8.peek().map(|j| j.0);
+        if self.gun.live(&p("xDF8"), cx) {
+            let ours = self.gun.peek().map(|j| j.0);
             cx.compare_handle(&p("xDF8"), "JObjId", ours, m.u32(at + 0x24));
         }
         let floats: [(&str, &Var<f32>, u32); 5] = [
-            ("xDFC", &self.xDFC, 0x28),
-            ("xE00", &self.xE00, 0x2C),
-            ("xE04", &self.xE04, 0x30),
-            ("xE08", &self.xE08, 0x34),
-            ("xE34", &self.xE34, 0x60),
+            ("xDFC", &self.stage_scale, 0x28),
+            ("xE00", &self.offset_x, 0x2C),
+            ("xE04", &self.offset_y, 0x30),
+            ("xE08", &self.offset_z, 0x34),
+            ("xE34", &self.scale, 0x60),
         ];
         for (name, v, off) in floats {
             if v.live(&p(name), cx) && v.peek().to_bits() != m.u32(at + off) {
@@ -188,21 +205,21 @@ impl Mirror for ArwingLaserVars {
                 );
             }
         }
-        self.xE0C.compare(m, at + 0x38, &p("xE0C"), cx);
-        self.xE18.compare(m, at + 0x44, &p("xE18"), cx);
-        self.xE24.compare(m, at + 0x50, &p("xE24"), cx);
-        if self.xE30.live(&p("xE30"), cx) && *self.xE30.peek() != m.u16(at + 0x5C) as i16 {
+        self.heading.compare(m, at + 0x38, &p("xE0C"), cx);
+        self.tip.compare(m, at + 0x44, &p("xE18"), cx);
+        self.last_tip.compare(m, at + 0x50, &p("xE24"), cx);
+        if self.left_gun.live(&p("xE30"), cx) && *self.left_gun.peek() != m.u16(at + 0x5C) as i16 {
             cx.mismatch(
                 &p("xE30"),
-                format!("{}", self.xE30.peek()),
+                format!("{}", self.left_gun.peek()),
                 format!("{}", m.u16(at + 0x5C) as i16),
             );
         }
         let ints: [(&str, &Var<i32>, u32); 4] = [
-            ("xE38", &self.xE38, 0x64),
-            ("xE3C", &self.xE3C, 0x68),
-            ("xE48", &self.xE48, 0x74),
-            ("xE4C", &self.xE4C, 0x78),
+            ("xE38", &self.shot_type, 0x64),
+            ("xE3C", &self.reflected, 0x68),
+            ("xE48", &self.joint, 0x74),
+            ("xE4C", &self.sound_state, 0x78),
         ];
         for (name, v, off) in ints {
             if v.live(&p(name), cx) && *v.peek() != m.u32(at + off) as i32 {
@@ -252,8 +269,8 @@ fn attrs(r: &Running, gobj: GObjId) -> (f64, f64, f64) {
 pub fn meets_stage(r: &mut Running, gobj: GObjId) -> bool {
     let b4 = bone(r.game, gobj, 4);
     let tip = world_position(&mut r.game.objs, r.data, b4, None);
-    let joint = vars(r.game, gobj).xE48.get();
-    let mut from = vars(r.game, gobj).xE18.get();
+    let joint = vars(r.game, gobj).joint.get();
+    let mut from = vars(r.game, gobj).tip.get();
     from.z = 0.0;
     let g = r.game.geometry.as_mut().expect("no collision geometry");
     if let Some(hit) = g.check_all_remap(-1, joint, from.x, from.y, tip.x, tip.y) {
@@ -326,16 +343,16 @@ pub fn spawn_straight(
     let s = super::super::super::gr::ground::scale(r.game);
     {
         let v = vars(r.game, gobj);
-        v.xE24.set(at);
-        v.xE18.set(at);
-        v.xE30.set(0);
-        v.xDFC.set(s);
-        v.xDF4.set(Some(parent));
-        v.xDF8.set(gun);
-        v.xE34.set(scale);
-        v.xE38.set(ty);
-        v.xE3C.set(0);
-        v.xE4C.set(0);
+        v.last_tip.set(at);
+        v.tip.set(at);
+        v.left_gun.set(0);
+        v.stage_scale.set(s);
+        v.parent.set(Some(parent));
+        v.gun.set(gun);
+        v.scale.set(scale);
+        v.shot_type.set(ty);
+        v.reflected.set(0);
+        v.sound_state.set(0);
     }
     let face = reg(item(r.game, gobj).facing_dir);
     let ry = mem(fp::frsp(fp::fmul(std::f64::consts::FRAC_PI_2, face)));
@@ -343,20 +360,20 @@ pub fn spawn_straight(
     match ty {
         0 | 2 => {
             let v = vars(r.game, gobj);
-            v.xE00.set(0.0);
-            v.xE04.set(0.0);
-            v.xE08.set(0.0);
+            v.offset_x.set(0.0);
+            v.offset_y.set(0.0);
+            v.offset_z.set(0.0);
             enter(r, gobj);
             if ty == 0 {
                 jobj::set_flags_all(&mut r.game.objs.jobjs, Some(j), jobj::HIDDEN);
                 let a = spawn_straight(r, gobj, gun, 4, facing, scale);
-                vars(r.game, gobj).xE40.set(a);
+                vars(r.game, gobj).beam1.set(a);
                 let b = spawn_straight(r, gobj, gun, 5, facing, scale);
-                vars(r.game, gobj).xE44.set(b);
+                vars(r.game, gobj).beam2.set(b);
             } else {
                 let v = vars(r.game, gobj);
-                v.xE40.set(None);
-                v.xE44.set(None);
+                v.beam1.set(None);
+                v.beam2.set(None);
             }
         }
         4 | 5 => {
@@ -364,11 +381,11 @@ pub fn spawn_straight(
             let z = if z < 0.0 { fp::fneg(z) } else { z };
             let z = mem(if ty == 4 { z } else { fp::fneg(z) });
             let v = vars(r.game, gobj);
-            v.xE40.set(None);
-            v.xE44.set(None);
-            v.xE00.set(0.0);
-            v.xE04.set(0.0);
-            v.xE08.set(z);
+            v.beam1.set(None);
+            v.beam2.set(None);
+            v.offset_x.set(0.0);
+            v.offset_y.set(0.0);
+            v.offset_z.set(z);
             enter(r, gobj);
         }
         _ => {}
@@ -440,20 +457,20 @@ pub fn spawn_aimed(
     );
     {
         let v = vars(r.game, gobj);
-        v.xE24.set(at);
-        v.xE18.set(at);
-        v.xE30.set(0);
-        v.xDFC.set(s);
-        v.xDF4.set(Some(owner));
-        v.xDF8.set(gun);
-        v.xE34.set(scale);
-        v.xE38.set(ty);
-        v.xE3C.set(0);
-        v.xE48.set(joint);
-        v.xE4C.set(0);
+        v.last_tip.set(at);
+        v.tip.set(at);
+        v.left_gun.set(0);
+        v.stage_scale.set(s);
+        v.parent.set(Some(owner));
+        v.gun.set(gun);
+        v.scale.set(scale);
+        v.shot_type.set(ty);
+        v.reflected.set(0);
+        v.joint.set(joint);
+        v.sound_state.set(0);
     }
     dir.normalize();
-    vars(r.game, gobj).xE0C.set(dir);
+    vars(r.game, gobj).heading.set(dir);
     item_mut(r.game, gobj).facing_dir = if reg(dir.x) >= 0.0 { 1.0 } else { -1.0 };
     let rx = mem(fp::fneg(reg(crate::math::atan2(dir.y, dir.z))));
     lib2725::set_rotation_x(r.game, j, rx);
@@ -468,25 +485,25 @@ pub fn spawn_aimed(
 /// A lead's destroy callback, `it_802E79C8`: it lets go of its beams, which let go of it.
 #[doc(alias = "it_802E79C8")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
-    if !matches!(vars(r.game, gobj).xE38.get(), 0 | 2) {
+    if !matches!(vars(r.game, gobj).shot_type.get(), 0 | 2) {
         return;
     }
-    vars(r.game, gobj).xDF4.set(None);
+    vars(r.game, gobj).parent.set(None);
     for which in [0, 1] {
         let beam = if which == 0 {
-            vars(r.game, gobj).xE40.get()
+            vars(r.game, gobj).beam1.get()
         } else {
-            vars(r.game, gobj).xE44.get()
+            vars(r.game, gobj).beam2.get()
         };
         if let Some(b) = beam
-            && vars(r.game, b).xDF4.get() == Some(gobj)
+            && vars(r.game, b).parent.get() == Some(gobj)
         {
-            vars(r.game, b).xDF4.set(None);
+            vars(r.game, b).parent.set(None);
         }
         if which == 0 {
-            vars(r.game, gobj).xE40.set(None);
+            vars(r.game, gobj).beam1.set(None);
         } else {
-            vars(r.game, gobj).xE44.set(None);
+            vars(r.game, gobj).beam2.set(None);
         }
     }
 }
@@ -495,7 +512,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802E7A4C")]
 pub fn enter(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
-    let ty = vars(r.game, gobj).xE38.get();
+    let ty = vars(r.game, gobj).shot_type.get();
     change_state(r, gobj, ty, change::ANIM_UPDATE);
 }
 
@@ -504,10 +521,10 @@ pub fn enter(r: &mut Running, gobj: GObjId) {
 /// down (which the state's caller takes as the predicate: the register its last call left).
 #[doc(alias = "itArwinglaser_UnkMotion2_Anim")]
 pub fn anim_ride(r: &mut Running, gobj: GObjId) -> bool {
-    let tip = vars(r.game, gobj).xE18.get();
-    vars(r.game, gobj).xE24.set(tip);
+    let tip = vars(r.game, gobj).tip.get();
+    vars(r.game, gobj).last_tip.set(tip);
     if !lib2725::is_animating(r.game, gobj) {
-        vars(r.game, gobj).xE30.set(1);
+        vars(r.game, gobj).left_gun.set(1);
     }
     lib2725::tick_lifetime(r.game, gobj)
 }
@@ -516,9 +533,9 @@ pub fn anim_ride(r: &mut Running, gobj: GObjId) -> bool {
 /// close shot's, flying from the start.
 #[doc(alias = "itArwinglaser_UnkMotion3_Anim")]
 pub fn anim_fly(r: &mut Running, gobj: GObjId) -> bool {
-    let tip = vars(r.game, gobj).xE18.get();
-    vars(r.game, gobj).xE24.set(tip);
-    vars(r.game, gobj).xE30.set(1);
+    let tip = vars(r.game, gobj).tip.get();
+    vars(r.game, gobj).last_tip.set(tip);
+    vars(r.game, gobj).left_gun.set(1);
     lib2725::tick_lifetime(r.game, gobj)
 }
 
@@ -527,14 +544,14 @@ pub fn anim_fly(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itArwinglaser_UnkMotion2_Phys")]
 pub fn phys_straight(r: &mut Running, gobj: GObjId) {
     let (speed, _, _) = attrs(r, gobj);
-    if matches!(vars(r.game, gobj).xE38.get(), 0 | 2) {
-        if vars(r.game, gobj).xE30.get() == 1 {
+    if matches!(vars(r.game, gobj).shot_type.get(), 0 | 2) {
+        if vars(r.game, gobj).left_gun.get() == 1 {
             let ip = item_mut(r.game, gobj);
             ip.x40_vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
             ip.x40_vel.z = 0.0;
             ip.x40_vel.y = 0.0;
         } else {
-            let gun = vars(r.game, gobj).xDF8.get();
+            let gun = vars(r.game, gobj).gun.get();
             let at = world_position(&mut r.game.objs, r.data, gun, None);
             let ip = item_mut(r.game, gobj);
             ip.pos = at;
@@ -543,7 +560,7 @@ pub fn phys_straight(r: &mut Running, gobj: GObjId) {
         }
     }
     let v = vars(r.game, gobj);
-    let s = mem(fp::fmuls(reg(v.xDFC.get()), reg(v.xE34.get())));
+    let s = mem(fp::fmuls(reg(v.stage_scale.get()), reg(v.scale.get())));
     let j = jobj_of(r.game, gobj).expect("an Arwing's laser without a model");
     jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
 }
@@ -554,8 +571,8 @@ pub fn phys_straight(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itArwinglaser_UnkMotion3_Phys")]
 pub fn phys_aimed(r: &mut Running, gobj: GObjId) {
     let (speed, mul, thick) = attrs(r, gobj);
-    if matches!(vars(r.game, gobj).xE38.get(), 1 | 3) {
-        let h = vars(r.game, gobj).xE0C.get();
+    if matches!(vars(r.game, gobj).shot_type.get(), 1 | 3) {
+        let h = vars(r.game, gobj).heading.get();
         let k = fp::fmuls(speed, mul);
         let ip = item_mut(r.game, gobj);
         ip.x40_vel.x = mem(fp::fmuls(reg(h.x), k));
@@ -563,7 +580,7 @@ pub fn phys_aimed(r: &mut Running, gobj: GObjId) {
         ip.x40_vel.z = mem(fp::fmuls(reg(h.z), k));
     }
     let v = vars(r.game, gobj);
-    let s = fp::fmuls(reg(v.xDFC.get()), reg(v.xE34.get()));
+    let s = fp::fmuls(reg(v.stage_scale.get()), reg(v.scale.get()));
     let scale = Vec3::new(mem(s), mem(fp::fmuls(s, thick)), mem(fp::fmuls(s, thick)));
     let j = jobj_of(r.game, gobj).expect("an Arwing's laser without a model");
     jobj::set_scale(&mut r.game.objs.jobjs, j, scale);
@@ -589,9 +606,9 @@ fn burst(r: &mut Running, gobj: GObjId, at: Vec3) {
 pub fn coll_straight(r: &mut Running, gobj: GObjId) -> bool {
     let b4 = bone(r.game, gobj, 4);
     let tip = world_position(&mut r.game.objs, r.data, b4, None);
-    vars(r.game, gobj).xE18.set(tip);
-    let mut to = vars(r.game, gobj).xE18.get();
-    let mut from = vars(r.game, gobj).xE24.get();
+    vars(r.game, gobj).tip.set(tip);
+    let mut to = vars(r.game, gobj).tip.get();
+    let mut from = vars(r.game, gobj).last_tip.get();
     from.z = 0.0;
     to.z = 0.0;
     let g = r.game.geometry.as_mut().expect("no collision geometry");
@@ -604,7 +621,7 @@ pub fn coll_straight(r: &mut Running, gobj: GObjId) -> bool {
     if let Some(v) = g.line_speed(hit.line, pos) {
         item_mut(r.game, gobj).x40_vel = v;
     }
-    let cur = vars(r.game, gobj).xE18.get();
+    let cur = vars(r.game, gobj).tip.get();
     let ip = item_mut(r.game, gobj);
     ip.pos.x = mem(fp::fadds(reg(ip.pos.x), fp::fsubs(reg(to.x), reg(cur.x))));
     burst(r, gobj, tip);
@@ -618,20 +635,20 @@ pub fn coll_straight(r: &mut Running, gobj: GObjId) -> bool {
 pub fn coll_aimed(r: &mut Running, gobj: GObjId) -> bool {
     let b4 = bone(r.game, gobj, 4);
     let tip = world_position(&mut r.game.objs, r.data, b4, None);
-    vars(r.game, gobj).xE18.set(tip);
-    let z = reg(vars(r.game, gobj).xE24.z());
+    vars(r.game, gobj).tip.set(tip);
+    let z = reg(vars(r.game, gobj).last_tip.z());
     if !(z > -30.0 && z < 30.0) {
         return false;
     }
-    vars(r.game, gobj).xE4C.update(|n| n.wrapping_add(1));
-    if vars(r.game, gobj).xE4C.get() == 1 {
-        let sfx = if vars(r.game, gobj).xE48.get() == 3 {
+    vars(r.game, gobj).sound_state.update(|n| n.wrapping_add(1));
+    if vars(r.game, gobj).sound_state.get() == 1 {
+        let sfx = if vars(r.game, gobj).joint.get() == 3 {
             0x5573B
         } else {
             0x6B6CA
         };
         play_sfx(r, gobj, sfx, 0x7F, 0x40);
-        vars(r.game, gobj).xE4C.update(|n| n.wrapping_add(1));
+        vars(r.game, gobj).sound_state.update(|n| n.wrapping_add(1));
     }
     if meets_stage(r, gobj) {
         burst(r, gobj, tip);
@@ -645,17 +662,20 @@ pub fn coll_aimed(r: &mut Running, gobj: GObjId) -> bool {
 /// ends.
 #[doc(alias = "itArwinglaser_UnkMotion5_Coll")]
 pub fn coll_beam(r: &mut Running, gobj: GObjId) -> bool {
-    let Some(lead) = vars(r.game, gobj).xDF4.get() else {
+    let Some(lead) = vars(r.game, gobj).parent.get() else {
         return true;
     };
-    let (a, b) = (vars(r.game, lead).xE40.get(), vars(r.game, lead).xE44.get());
+    let (a, b) = (
+        vars(r.game, lead).beam1.get(),
+        vars(r.game, lead).beam2.get(),
+    );
     if a != Some(gobj) && b != Some(gobj) {
         return true;
     }
     let from = bone(r.game, lead, 0).expect("a lead's bone");
     let to = bone(r.game, gobj, 0).expect("a beam's bone");
     let mut t = r.game.objs.jobjs[from].translate;
-    t.z = vars(r.game, gobj).xE08.get();
+    t.z = vars(r.game, gobj).offset_z.get();
     jobj::set_translate(&mut r.game.objs.jobjs, to, t);
     item_mut(r.game, gobj).pos = t;
     let s = r.game.objs.jobjs[from].scale;
@@ -671,7 +691,7 @@ pub fn coll_beam(r: &mut Running, gobj: GObjId) -> bool {
 pub fn dealt(r: &mut Running, gobj: GObjId) -> bool {
     let b4 = bone(r.game, gobj, 4);
     let tip = world_position(&mut r.game.objs, r.data, b4, None);
-    vars(r.game, gobj).xE18.set(tip);
+    vars(r.game, gobj).tip.set(tip);
     burst(r, gobj, tip);
     true
 }
@@ -694,14 +714,14 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     } else {
         ip.xC64_reflectGObj
     };
-    vars(r.game, gobj).xE3C.set(1);
-    match vars(r.game, gobj).xE38.get() {
+    vars(r.game, gobj).reflected.set(1);
+    match vars(r.game, gobj).shot_type.get() {
         0 | 2 => {
             let b4 = bone(r.game, gobj, 4);
             let tip = world_position(&mut r.game.objs, r.data, b4, None);
             item_mut(r.game, gobj).pos = tip;
-            vars(r.game, gobj).xE24.set(tip);
-            vars(r.game, gobj).xE18.set(tip);
+            vars(r.game, gobj).last_tip.set(tip);
+            vars(r.game, gobj).tip.set(tip);
             let ip = item_mut(r.game, gobj);
             ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
             ip.x40_vel.x = mem(fp::fneg(reg(ip.x40_vel.x)));
@@ -728,16 +748,16 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802E85F4")]
 pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj).expect("an Arwing's laser without a model");
-    vars(r.game, gobj).xE3C.set(1);
+    vars(r.game, gobj).reflected.set(1);
     let ip = item_mut(r.game, gobj);
     let axis = ip.xC58;
     ip.x40_vel.mirror_xy(axis);
     let b4 = bone(r.game, gobj, 4);
     let tip = world_position(&mut r.game.objs, r.data, b4, None);
     item_mut(r.game, gobj).pos = tip;
-    vars(r.game, gobj).xE24.set(tip);
-    vars(r.game, gobj).xE18.set(tip);
-    if matches!(vars(r.game, gobj).xE38.get(), 0 | 2) {
+    vars(r.game, gobj).last_tip.set(tip);
+    vars(r.game, gobj).tip.set(tip);
+    if matches!(vars(r.game, gobj).shot_type.get(), 0 | 2) {
         let ip = item_mut(r.game, gobj);
         ip.facing_dir = if reg(ip.x40_vel.x) < 0.0 { -1.0 } else { 1.0 };
         let face = reg(ip.facing_dir);

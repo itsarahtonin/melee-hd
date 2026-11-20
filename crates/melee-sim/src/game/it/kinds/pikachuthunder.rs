@@ -31,7 +31,8 @@ pub const HIT_SHIELD: u32 = 0x802B_2510;
 pub const CLANKED: u32 = 0x802B_2518;
 #[doc(alias = "itPikachuThunder_Logic39_Absorbed")]
 pub const ABSORBED: u32 = 0x802B_2520;
-pub const EVT_UNK: u32 = 0x802B_2528;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_2528;
 
 /// `itPikachuthunderAttributes`: the lifetime, a link's length, and how far below a link
 /// its tip is.

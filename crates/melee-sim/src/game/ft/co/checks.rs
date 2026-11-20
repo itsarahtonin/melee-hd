@@ -432,10 +432,10 @@ impl Running<'_> {
         // an item (`It_Kind_Coin`, `_Lucky_Egg`, `_WhispyHealApple` besides the food).
         let heals = |k: i32| {
             [
-                ItKind::Heart.id(),
-                ItKind::Tomato.id(),
-                ItKind::Foods.id(),
-                ItKind::LuckyEgg.id(),
+                ItKind::HeartContainer.id(),
+                ItKind::MaximTomato.id(),
+                ItKind::Food.id(),
+                ItKind::ChanseyEgg.id(),
             ]
             .contains(&k)
                 || k == ItKind::WhispyHealApple
@@ -454,7 +454,7 @@ impl Running<'_> {
             }
             let fp = self.game.fighter(gobj);
             let ip = it::item(self.game, g);
-            let takes_held = heals(ip.kind) || ip.kind == ItKind::Coin;
+            let takes_held = heals(ip.kind) || ip.kind == ItKind::Trophy;
             if fp.item_gobj.is_some() && !takes_held {
                 continue;
             }
@@ -509,11 +509,11 @@ impl Running<'_> {
         }
         let k = it::item(self.game, item).kind;
         let takes_held = [
-            ItKind::Heart.id(),
-            ItKind::Tomato.id(),
-            ItKind::Foods.id(),
-            ItKind::Coin.id(),
-            ItKind::LuckyEgg.id(),
+            ItKind::HeartContainer.id(),
+            ItKind::MaximTomato.id(),
+            ItKind::Food.id(),
+            ItKind::Trophy.id(),
+            ItKind::ChanseyEgg.id(),
         ]
         .contains(&k)
             || k == ItKind::WhispyHealApple;
@@ -552,7 +552,7 @@ impl Running<'_> {
     /// Whether the held item is the screw attack, `ft_800D2D0C`.
     #[doc(alias = "ft_800D2D0C")]
     pub fn holding_screw(&mut self, gobj: GObjId) -> bool {
-        self.holding_item_kind(gobj, ItKind::ScBall.id())
+        self.holding_item_kind(gobj, ItKind::ScrewAttack.id())
     }
 
     fn holding_item_kind(&mut self, gobj: GObjId, kind: i32) -> bool {

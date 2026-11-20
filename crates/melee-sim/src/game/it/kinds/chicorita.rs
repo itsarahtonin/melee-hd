@@ -21,7 +21,8 @@ use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802C_9588;
 pub const LANDED_NOTHING: u32 = 0x802C_9618;
-pub const EVT_UNK: u32 = 0x802C_961C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_961C;
 pub const ANIM0: u32 = 0x802C_96CC;
 pub const PHYS0: u32 = 0x802C_9798;
 pub const COLL0: u32 = 0x802C_9850;
@@ -34,7 +35,8 @@ pub const PHYS2: u32 = 0x802C_9AD8;
 pub const COLL2: u32 = 0x802C_9AF8;
 pub const LEAF_SPAWNED: u32 = 0x802C_9C20;
 pub const LEAF_KEPT: u32 = 0x802C_9C78;
-pub const LEAF_EVT_UNK: u32 = 0x802C_9C80;
+#[doc(alias("LEAF_EVT_UNK"))]
+pub const LEAF_FORGET: u32 = 0x802C_9C80;
 pub const LEAF_REFLECTED: u32 = 0x802C_9CA0;
 pub const LEAF_ANIM: u32 = 0x802C_9CE8;
 pub const LEAF_PHYS: u32 = 0x802C_9D1C;
@@ -99,7 +101,8 @@ pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 /// `itChicoritaLeaf_Logic30_EvtUnk` (`it_8026B894`).
 #[doc(alias = "itChicorita_Logic1_EvtUnk")]
 #[doc(alias = "itChicoritaLeaf_Logic30_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
@@ -257,7 +260,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId) {
     prev.x = mem(fp::fmadds(reg(ahead), facing, reg(prev.x)));
     prev.y = mem(fp::fadds(reg(prev.y), reg(up)));
     let mut spawn = SpawnItem {
-        kind: ItKind::ChicoritaLeaf.id(),
+        kind: ItKind::ChikoritaLeaf.id(),
         ..Default::default()
     };
     spawn.prev_pos = prev;

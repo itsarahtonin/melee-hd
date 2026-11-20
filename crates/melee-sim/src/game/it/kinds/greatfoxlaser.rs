@@ -63,13 +63,20 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 pub struct GreatFoxLaserVars {
     pub jobj: Var<Option<JObjId>>,
     pub idx: Var<i32>,
-    pub x8: Var<Vec3>,
-    pub x14: [Var<i32>; 3],
-    pub x20: Var<Option<GObjId>>,
-    pub x28: Var<Vec3>,
-    pub x34: Var<i16>,
-    pub x36: Var<i16>,
-    pub x38: Var<i16>,
+    #[doc(alias("x8"))]
+    pub normal: Var<Vec3>,
+    #[doc(alias("x14"))]
+    pub words: [Var<i32>; 3],
+    #[doc(alias("x20"))]
+    pub great_fox: Var<Option<GObjId>>,
+    #[doc(alias("x28"))]
+    pub gun_offset: Var<Vec3>,
+    #[doc(alias("x34"))]
+    pub reflected: Var<i16>,
+    #[doc(alias("x36"))]
+    pub state_ticks: Var<i16>,
+    #[doc(alias("x38"))]
+    pub shot_type: Var<i16>,
 }
 
 impl GreatFoxLaserVars {
@@ -77,13 +84,17 @@ impl GreatFoxLaserVars {
     pub fn mark_stale(&mut self) {
         self.jobj.mark_stale();
         self.idx.mark_stale();
-        self.x8.mark_stale();
-        for v in &mut self.x14 {
+        self.normal.mark_stale();
+        for v in &mut self.words {
             v.mark_stale();
         }
-        self.x20.mark_stale();
-        self.x28.mark_stale();
-        for v in [&mut self.x34, &mut self.x36, &mut self.x38] {
+        self.great_fox.mark_stale();
+        self.gun_offset.mark_stale();
+        for v in [
+            &mut self.reflected,
+            &mut self.state_ticks,
+            &mut self.shot_type,
+        ] {
             v.mark_stale();
         }
     }
@@ -99,13 +110,13 @@ impl Mirror for GreatFoxLaserVars {
         GreatFoxLaserVars {
             jobj: Var::new(cx.import_handle("JObjId", m.u32(at)).map(JObjId)),
             idx: i(at + 4),
-            x8: Var::new(Vec3::new(f(at + 8), f(at + 0xC), f(at + 0x10))),
-            x14: std::array::from_fn(|k| i(at + 0x14 + 4 * k as u32)),
-            x20: Var::new(cx.import_handle("GObjId", m.u32(at + 0x20)).map(GObjId)),
-            x28: Var::new(Vec3::new(f(at + 0x28), f(at + 0x2C), f(at + 0x30))),
-            x34: h(at + 0x34),
-            x36: h(at + 0x36),
-            x38: h(at + 0x38),
+            normal: Var::new(Vec3::new(f(at + 8), f(at + 0xC), f(at + 0x10))),
+            words: std::array::from_fn(|k| i(at + 0x14 + 4 * k as u32)),
+            great_fox: Var::new(cx.import_handle("GObjId", m.u32(at + 0x20)).map(GObjId)),
+            gun_offset: Var::new(Vec3::new(f(at + 0x28), f(at + 0x2C), f(at + 0x30))),
+            reflected: h(at + 0x34),
+            state_ticks: h(at + 0x36),
+            shot_type: h(at + 0x38),
         }
     }
 
@@ -117,9 +128,9 @@ impl Mirror for GreatFoxLaserVars {
         }
         let ints: [(&str, &Var<i32>, u32); 4] = [
             ("idx", &self.idx, 4),
-            ("x14.x", &self.x14[0], 0x14),
-            ("x14.y", &self.x14[1], 0x18),
-            ("x14.z", &self.x14[2], 0x1C),
+            ("x14.x", &self.words[0], 0x14),
+            ("x14.y", &self.words[1], 0x18),
+            ("x14.z", &self.words[2], 0x1C),
         ];
         for (name, v, off) in ints {
             if v.live(&p(name), cx) && *v.peek() != m.u32(at + off) as i32 {
@@ -130,16 +141,16 @@ impl Mirror for GreatFoxLaserVars {
                 );
             }
         }
-        self.x8.compare(m, at + 8, &p("x8"), cx);
-        if self.x20.live(&p("x20"), cx) {
-            let ours = self.x20.peek().map(|g| g.0);
+        self.normal.compare(m, at + 8, &p("x8"), cx);
+        if self.great_fox.live(&p("x20"), cx) {
+            let ours = self.great_fox.peek().map(|g| g.0);
             cx.compare_handle(&p("x20"), "GObjId", ours, m.u32(at + 0x20));
         }
-        self.x28.compare(m, at + 0x28, &p("x28"), cx);
+        self.gun_offset.compare(m, at + 0x28, &p("x28"), cx);
         let shorts: [(&str, &Var<i16>, u32); 3] = [
-            ("x34", &self.x34, 0x34),
-            ("x36", &self.x36, 0x36),
-            ("x38", &self.x38, 0x38),
+            ("x34", &self.reflected, 0x34),
+            ("x36", &self.state_ticks, 0x36),
+            ("x38", &self.shot_type, 0x38),
         ];
         for (name, v, off) in shorts {
             if v.live(&p(name), cx) && *v.peek() != m.u16(at + off) as i16 {
@@ -198,10 +209,10 @@ pub fn spawn(r: &mut Running, owner: GObjId, offset: Vec3, ty: i32) -> Option<GO
     jobj::set_srt(&mut r.game.objs.jobjs, mj, |o| o.scale.y = s);
     jobj::set_srt(&mut r.game.objs.jobjs, mj, |o| o.scale.z = s);
     let v = vars(r.game, gobj);
-    v.x20.set(Some(owner));
-    v.x28.set(offset);
-    v.x38.set(ty as i16);
-    let off = if vars(r.game, gobj).x38.get() == 0 {
+    v.great_fox.set(Some(owner));
+    v.gun_offset.set(offset);
+    v.shot_type.set(ty as i16);
+    let off = if vars(r.game, gobj).shot_type.get() == 0 {
         attr::BIG_DAMAGE
     } else {
         attr::DAMAGE
@@ -223,7 +234,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     ip.xD5C = 0;
     ip.xDC8_word.flags.x15 = false;
     super::super::hitbox::clear_hit_ids_b7(r.game, gobj);
-    vars(r.game, gobj).x36.set(1);
+    vars(r.game, gobj).state_ticks.set(1);
     enter(r, gobj);
 }
 
@@ -233,8 +244,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 pub fn enter(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
     let v = vars(r.game, gobj);
-    v.x36.set(60);
-    v.x34.set(0);
+    v.state_ticks.set(60);
+    v.reflected.set(0);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 
@@ -244,7 +255,7 @@ pub fn enter(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itGreatfoxlaser_UnkMotion1_Anim")]
 pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     if !lib2725::is_animating(r.game, gobj) {
-        let big = vars(r.game, gobj).x38.get() == 0;
+        let big = vars(r.game, gobj).shot_type.get() == 0;
         let speed = reg(attr_f(
             r,
             gobj,
@@ -254,16 +265,16 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
         ip.x40_vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
         set_damage(r, gobj, if big { attr::BIG_DAMAGE } else { attr::DAMAGE });
     } else {
-        let owner = vars(r.game, gobj).x20.get();
+        let owner = vars(r.game, gobj).great_fox.get();
         let j = owner.and_then(|o| super::super::super::gr::ground::jobj_of(r.game, o));
-        let off = vars(r.game, gobj).x28.get();
+        let off = vars(r.game, gobj).gun_offset.get();
         let at = world_position(&mut r.game.objs, r.data, j, Some(off));
         item_mut(r.game, gobj).pos = at;
     }
-    if vars(r.game, gobj).x36.get() == 0 {
+    if vars(r.game, gobj).state_ticks.get() == 0 {
         return true;
     }
-    vars(r.game, gobj).x36.update(|n| n.wrapping_sub(1));
+    vars(r.game, gobj).state_ticks.update(|n| n.wrapping_sub(1));
     false
 }
 
@@ -271,7 +282,7 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
 /// charges again in its second state.
 #[doc(alias = "itGreatfoxlaser_UnkMotion1_Phys")]
 pub fn physics(r: &mut Running, gobj: GObjId) {
-    if vars(r.game, gobj).x34.get() == 0 {
+    if vars(r.game, gobj).reflected.get() == 0 {
         return;
     }
     let ip = item_mut(r.game, gobj);
@@ -280,8 +291,8 @@ pub fn physics(r: &mut Running, gobj: GObjId) {
     zako::face(r, gobj, face);
     lib26b1::disable_pickup(r.game, gobj);
     let v = vars(r.game, gobj);
-    v.x36.set(60);
-    v.x34.set(0);
+    v.state_ticks.set(60);
+    v.reflected.set(0);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
 }
 
@@ -302,15 +313,15 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     }
     let by = item(r.game, gobj).xC64_reflectGObj.expect("a reflector");
     let at = r.game.ft_pos(by);
-    let owner = vars(r.game, gobj).x20.get();
+    let owner = vars(r.game, gobj).great_fox.get();
     let j = owner.and_then(|o| super::super::super::gr::ground::jobj_of(r.game, o));
-    let off = vars(r.game, gobj).x28.get();
+    let off = vars(r.game, gobj).gun_offset.get();
     let laser = world_position(&mut r.game.objs, r.data, j, Some(off));
     let d = fp::fsubs(reg(laser.x), reg(at.x));
     let d = if d < 0.0 { fp::fneg(d) } else { d };
     let mut off = off;
     off.x = mem(fp::fsubs(reg(off.x), d));
-    vars(r.game, gobj).x28.set(off);
+    vars(r.game, gobj).gun_offset.set(off);
     let pos = world_position(&mut r.game.objs, r.data, j, Some(off));
     item_mut(r.game, gobj).pos = pos;
     let t = item(r.game, gobj)
@@ -318,6 +329,6 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
         .expect("the Great Fox's laser without bones");
     let b2 = r.game.it.bone_tables[t.0].bones[2].expect("a bone");
     jobj::set_translate(&mut r.game.objs.jobjs, b2, pos);
-    vars(r.game, gobj).x34.set(1);
+    vars(r.game, gobj).reflected.set(1);
     false
 }

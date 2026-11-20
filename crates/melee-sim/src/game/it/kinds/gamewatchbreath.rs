@@ -11,7 +11,8 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802C_7310;
 pub const PICKED_UP: u32 = 0x802C_73CC;
 pub const ANIM: u32 = 0x802C_744C;
-pub const EVT_UNK: u32 = 0x802C_74B8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_74B8;
 
 /// Runs one of the Sparky's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -44,7 +45,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     gamewatch::spawn_held(
         r,
-        ItKind::GameWatchBreath.id(),
+        ItKind::GameAndWatchSparky.id(),
         parent,
         pos,
         part,
@@ -110,6 +111,7 @@ pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `itGameWatchBreath_Logic76_EvtUnk`.
 // Ports `itGameWatchBreath_Logic76_EvtUnk`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

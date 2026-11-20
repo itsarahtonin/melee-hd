@@ -222,11 +222,11 @@ fn run_mewtwo(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802C573C" => mewtwoshadowball::remove(g, gobj),
         "it_802C5B18" => mewtwoshadowball::fired(g, gobj),
         "it_802C5E5C" => mewtwoshadowball::burst(g, gobj),
-        "itMewtwoShadowball_Logic101_EvtUnk" => mewtwoshadowball::evt_unk(g, gobj, other()),
+        "itMewtwoShadowball_Logic101_EvtUnk" => mewtwoshadowball::forget(g, gobj, other()),
         "itMewtwoDisable_Logic67_Destroy" => mewtwodisable::destroy(g, gobj),
         "it_802C4B38" => mewtwodisable::start(g, gobj),
         "it_802C4BB8" => mewtwodisable::scale_hitboxes(g, gobj),
-        "itMewtwoDisable_Logic67_EvtUnk" => mewtwodisable::evt_unk(g, gobj, other()),
+        "itMewtwoDisable_Logic67_EvtUnk" => mewtwodisable::forget(g, gobj, other()),
         _ => return run_callback(g, gobj, a),
     }
     Ret::Nothing

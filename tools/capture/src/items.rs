@@ -20,7 +20,7 @@ use melee_sim::game::it::ItKind;
 
 /// Samus's grapple beam's article's slot among the character items' (`It_Kind_Samus_GBeam`
 /// less `It_Kind_Kuriboh`).
-const GRAPPLE_ARTICLE: usize = (ItKind::SamusGBeam.id() - ItKind::Kuriboh.id()) as usize;
+const GRAPPLE_ARTICLE: usize = (ItKind::SamusGrappleBeam.id() - ItKind::Goomba.id()) as usize;
 use crate::compare::Comparer;
 use crate::import::{Importer, sym};
 
@@ -265,7 +265,7 @@ impl Importer<'_> {
             .game
             .it
             .char_articles
-            .get((ItKind::StageHurtbox.id() - ItKind::Kuriboh.id()) as usize)
+            .get((ItKind::StageHurtbox.id() - ItKind::Goomba.id()) as usize)
             .copied()
             .flatten();
         self.game.it.yaku_attr =
@@ -299,7 +299,7 @@ impl Importer<'_> {
                 .game
                 .it
                 .char_articles
-                .get((kind - ItKind::Kuriboh.id()) as usize)
+                .get((kind - ItKind::Goomba.id()) as usize)
                 .copied()
                 .flatten();
             let Some(article) = article else { continue };
@@ -318,15 +318,16 @@ impl Importer<'_> {
         self.game.it.db_menu =
             db_ItemAndPokemonMenu_t::import(&m, sym("db_ItemAndPokemonMenu"), self);
         self.game.it.pokemon = PokemonSelectionState::import(&m, sym("Item_804A0E24"), self);
-        self.game.it.x6d00 = cap.call.mem1[(sym("it_804D6D00") - MEM1) as usize] as i8;
+        self.game.it.warp_star_last_anim =
+            cap.call.mem1[(sym("it_804D6D00") - MEM1) as usize] as i8;
         self.game.it.spawned = cap.u32(sym("it_804D6D0C")) as i32;
-        self.game.it.x6d08 = cap.u32(sym("it_804D6D08")) as i32;
+        self.game.it.foods_spawned = cap.u32(sym("it_804D6D08")) as i32;
         let sp = sym("it_804A0E30");
         self.game.it.spawn = Tables {
             spawner: Spawner {
                 timer: cap.u32(sp) as i32,
                 table: pick_table(|a| cap.u32(a), sp + 4),
-                x14: cap.u32(sp + 0x14) as i32,
+                unused: cap.u32(sp + 0x14) as i32,
                 mask: u64::from(cap.u32(sp + 0x18)) << 32 | u64::from(cap.u32(sp + 0x1C)),
             },
             no_containers: pick_table(|a| cap.u32(a), sym("it_804A0E50")),
@@ -581,7 +582,7 @@ impl Comparer<'_> {
         }
         let random = g
             .char_articles
-            .get((ItKind::StageHurtbox.id() - ItKind::Kuriboh.id()) as usize)
+            .get((ItKind::StageHurtbox.id() - ItKind::Goomba.id()) as usize)
             .copied()
             .flatten();
         // A file its scene let go of (a match's, until the next one's items load again): what
@@ -623,7 +624,7 @@ impl Comparer<'_> {
         g.pokemon
             .compare(&m, sym("Item_804A0E24"), "Item_804A0E24", self);
         let x6d00 = self.mem[(sym("it_804D6D00") - MEM1) as usize] as i8;
-        self.check("it_804D6D00", "value", g.x6d00, x6d00);
+        self.check("it_804D6D00", "value", g.warp_star_last_anim, x6d00);
         // The last Ditto, which nothing reads: compared while it's out (past its end both
         // name its freed GObj, whose slot the next object can take).
         let slots = self.game.world.gobjs.slots();
@@ -641,7 +642,7 @@ impl Comparer<'_> {
         let spawned = self.u32(sym("it_804D6D0C")) as i32;
         self.check("it_804D6D0C", "value", g.spawned, spawned);
         let x6d08 = self.u32(sym("it_804D6D08")) as i32;
-        self.check("it_804D6D08", "value", g.x6d08, x6d08);
+        self.check("it_804D6D08", "value", g.foods_spawned, x6d08);
         let sp = sym("it_804A0E30");
         let word = |a: u32| {
             let i = (a - MEM1) as usize;
@@ -651,7 +652,7 @@ impl Comparer<'_> {
             spawner: Spawner {
                 timer: word(sp) as i32,
                 table: pick_table(word, sp + 4),
-                x14: word(sp + 0x14) as i32,
+                unused: word(sp + 0x14) as i32,
                 mask: u64::from(word(sp + 0x18)) << 32 | u64::from(word(sp + 0x1C)),
             },
             no_containers: pick_table(word, sym("it_804A0E50")),

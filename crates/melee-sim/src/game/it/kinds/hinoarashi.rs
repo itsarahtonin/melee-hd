@@ -35,7 +35,8 @@ pub const COLL1: u32 = 0x802D_60A4;
 pub const ANIM2: u32 = 0x802D_60C8;
 pub const PHYS2: u32 = 0x802D_60D0;
 pub const DMG_RECEIVED: u32 = 0x802D_6100;
-pub const EVT_UNK: u32 = 0x802D_61A8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_61A8;
 
 /// Cyndaquil's variables (`itHinoarashi_ItemVars`): its flags (`x60`: `b0` its back's flame
 /// effect lit, `b1` its flames out) and the frames to its next flame sound (`x64`).
@@ -162,7 +163,7 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
     effect_hitlag(r.game, gobj);
     hitbox::end_blink(r.game, gobj);
     hitbox::set_hit_ids2(r.game, gobj);
-    hitbox::clear_xdce_b2(r.game, gobj);
+    hitbox::clear_hit_by_own_items(r.game, gobj);
     lib2725::clear_velocity(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(ACCESSORY));
@@ -241,7 +242,8 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj going away, `it_802D61A8` (`it_8026B894`).
 #[doc(alias = "it_802D61A8")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
@@ -334,7 +336,7 @@ pub fn turn_off_surface(r: &mut Running, gobj: GObjId, coll: i32) {
 pub fn spawn_flame(r: &mut Running, gobj: GObjId, pos: Vec3, attack_id: u32, facing_dir: f32) {
     let owner = item(r.game, gobj).owner;
     let mut spawn = SpawnItem {
-        kind: ItKind::HinoarashiFlame.id(),
+        kind: ItKind::CyndaquilFlame.id(),
         prev_pos: Vec3::new(pos.x, pos.y, 0.0),
         pos: lib26b1::ecb_center(r.game, gobj),
         facing_dir,

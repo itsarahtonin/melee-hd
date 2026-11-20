@@ -95,13 +95,14 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// `itTools_ItemVars`: which tool it is (`x0`, 0 to 4), its states' and attributes' index.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct ToolsVars {
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub tool: Var<i32>,
 }
 
 impl ToolsVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
+        self.tool.mark_stale();
     }
 }
 
@@ -110,16 +111,16 @@ impl Mirror for ToolsVars {
 
     fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
         ToolsVars {
-            x0: Var::new(m.u32(at) as i32),
+            tool: Var::new(m.u32(at) as i32),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let p = format!("{path}.x0");
-        if self.x0.live(&p, cx) && *self.x0.peek() != m.u32(at) as i32 {
+        if self.tool.live(&p, cx) && *self.tool.peek() != m.u32(at) as i32 {
             cx.mismatch(
                 &p,
-                format!("{}", self.x0.peek()),
+                format!("{}", self.tool.peek()),
                 format!("{}", m.u32(at) as i32),
             );
         }
@@ -128,7 +129,7 @@ impl Mirror for ToolsVars {
 
 /// Which tool it is.
 fn tool(r: &mut Running, gobj: GObjId) -> i32 {
-    item_mut(r.game, gobj).xDD4_itemVar.tools().x0.get()
+    item_mut(r.game, gobj).xDD4_itemVar.tools().tool.get()
 }
 
 /// The word at `off` of the tools' attributes.
@@ -154,7 +155,7 @@ fn motion(r: &mut Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_802EEFA8")]
 pub fn spawn(r: &mut Running, pos: Vec3, which: i32, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::Tools.id(),
+        kind: ItKind::FlatZoneTool.id(),
         prev_pos: pos,
         pos,
         facing_dir,
@@ -175,7 +176,7 @@ pub fn spawn(r: &mut Running, pos: Vec3, which: i32, facing_dir: f32) -> Option<
 /// speed straight down, out of reach, in the tool's falling state.
 #[doc(alias = "it_802EF098")]
 pub fn start(r: &mut Running, gobj: GObjId, which: i32) {
-    item_mut(r.game, gobj).xDD4_itemVar.tools().x0.set(which);
+    item_mut(r.game, gobj).xDD4_itemVar.tools().tool.set(which);
     let life = attr_f(r, gobj, a::FALL_LIFE);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
     let speed = motion(r, gobj, m::START_SPEED);

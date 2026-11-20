@@ -45,10 +45,10 @@ pub fn drop_contents(r: &mut Running, gobj: GObjId, n: i32, same: bool) -> Dropp
         }
         let k = out.kind;
         if k == -1
-            || k >= ItKind::LGunRay
-            || (k == ItKind::MBall && super::spawn::poke_balls_full(r.game))
+            || k >= ItKind::RayGunShot
+            || (k == ItKind::PokeBall && super::spawn::poke_balls_full(r.game))
         {
-            out.stopped |= k >= ItKind::LGunRay;
+            out.stopped |= k >= ItKind::RayGunShot;
             break;
         }
         out.gobj = spawn_at(r, Some(gobj), k, pos);

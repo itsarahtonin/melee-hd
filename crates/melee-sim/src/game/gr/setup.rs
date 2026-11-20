@@ -1314,7 +1314,7 @@ fn setup_inner(r: &mut Running, grkind: i32) {
         let mut at = items;
         while let Some(item) = data.ptr(at) {
             let kind = data.u32(item) as i32;
-            game.gr.stage_articles[(kind - ItKind::OldKuri.id()) as usize] = data.ptr(item.at(4));
+            game.gr.stage_articles[(kind - ItKind::OldGoomba.id()) as usize] = data.ptr(item.at(4));
             at = at.at(4);
         }
     }
@@ -1577,7 +1577,7 @@ fn image_yaku_script(game: &Game, data: &Archives, i: u32, script: DataRef) {
     let article = game
         .it
         .char_articles
-        .get((ItKind::StageHurtbox.id() - ItKind::Kuriboh.id()) as usize)
+        .get((ItKind::StageHurtbox.id() - ItKind::Goomba.id()) as usize)
         .copied()
         .flatten();
     let Some(states) = article.and_then(|a| data.ptr(a.at(0xC))) else {

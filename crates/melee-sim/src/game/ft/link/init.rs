@@ -63,7 +63,7 @@ impl Running<'_> {
         }
         if clink {
             let article = self.data.ptr(items.at(20));
-            let kind = ItKind::CLinkMilk.id();
+            let kind = ItKind::YoungLinkMilk.id();
             super::super::super::it::item::set_char_article(self.game, article, kind);
         }
         let joint = self.data.ptr(items.at(24)).expect("ftData::x48_items[6]");

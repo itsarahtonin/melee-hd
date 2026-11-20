@@ -53,7 +53,8 @@ pub const PICKED_UP: u32 = 0x802B_FE34;
 pub const RELEASE: u32 = 0x802B_FE5C;
 pub const NUDGE: u32 = 0x802B_FEC4;
 pub const SPIN_OUT: u32 = 0x802C_0010;
-pub const EVT_UNK: u32 = 0x802C_016C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_016C;
 
 /// The link GObjs' process link.
 const LINK_P_LINK: u8 = 0xA;

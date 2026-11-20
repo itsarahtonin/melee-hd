@@ -45,7 +45,7 @@ pub const NESS: PkFlash = PkFlash {
     attrs: 0,
     u: 0,
     bone: PART_L2ND_NA,
-    flash_kind: ItKind::NessPKFlush.id(),
+    flash_kind: ItKind::NessPKFlash.id(),
     on_death: addr::ON_DAMAGE,
     on_damage: addr::ON_DAMAGE,
     clears_hooks: true,

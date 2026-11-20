@@ -51,7 +51,8 @@ pub const ABSORBED: u32 = 0x802A_2048;
 pub const REFLECTED: u32 = 0x802A_20E8;
 pub const HIT_SHIELD: u32 = 0x802A_2288;
 pub const SHIELD_BOUNCED: u32 = 0x802A_2320;
-pub const EVT_UNK: u32 = 0x802A_23CC;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_23CC;
 
 /// `itLinkBoomerangAttributes` offsets.
 mod attr {
@@ -854,7 +855,8 @@ fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 
 /// `it_802A23CC`: forgets `other`, its thrower among them.
 #[doc(alias = "it_802A23CC")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
     let v = vars(r.game, gobj);
     if v.xF98.get() == other {

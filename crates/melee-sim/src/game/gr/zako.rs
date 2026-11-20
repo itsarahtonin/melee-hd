@@ -189,13 +189,13 @@ fn trophy_at_point(r: &mut Running, trophy: i32, point: i32) -> Option<GObjId> {
 fn spawn_enemy(r: &mut Running, kind: i32, x2: i32, pos: crate::vec::Vec3) -> Option<GObjId> {
     use crate::game::it::{kinds, zako as itzako};
     match ItKind::of(kind) {
-        ItKind::Kuriboh | ItKind::Octarock | ItKind::Ottosea | ItKind::Whitebea => {
+        ItKind::Goomba | ItKind::Octorok | ItKind::Topi | ItKind::PolarBear => {
             itzako::spawn(r, kind, Some(pos), None, None, true)
         }
-        ItKind::Leadead => kinds::leadead::spawn(r, pos, -1),
-        ItKind::Nokonoko => kinds::nokonoko::spawn(r, x2, pos, None, -1),
-        ItKind::Patapata => kinds::patapata::spawn(r, x2, pos, -1),
-        ItKind::Likelike => kinds::likelike::spawn(r, x2, pos),
+        ItKind::ReDead => kinds::leadead::spawn(r, pos, -1),
+        ItKind::KoopaTroopa => kinds::nokonoko::spawn(r, x2, pos, None, -1),
+        ItKind::KoopaParatroopa => kinds::patapata::spawn(r, x2, pos, -1),
+        ItKind::LikeLike => kinds::likelike::spawn(r, x2, pos),
         _ => None,
     }
 }
@@ -239,7 +239,7 @@ pub fn clear_enemies(r: &mut Running) {
             if crate::game::it::lib26b1::free_to_take(r.game, c) {
                 crate::game::it::item::destroy(r, c);
             }
-        } else if kind == ItKind::Coin {
+        } else if kind == ItKind::Trophy {
             crate::game::it::item::destroy(r, c);
         }
         cur = next;

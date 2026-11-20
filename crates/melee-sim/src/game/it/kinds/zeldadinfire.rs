@@ -32,7 +32,8 @@ pub const REFLECTED: u32 = 0x802C_443C;
 pub const CLANKED: u32 = 0x802C_4550;
 // `itZeldaDinFire_Logic65_Absorbed`: dead, no script of the kind opens a hitbox (ledger/dead.txt).
 pub const ABSORBED: u32 = 0x802C_4558;
-pub const EVT_UNK: u32 = 0x802C_4560;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_4560;
 
 /// `ItZeldaDinFire_ItemVars` (the article's attributes): the lifetime, the growth's frames, the
 /// smallest and largest scale, the first angle, speed, acceleration and most speed, the
@@ -130,7 +131,7 @@ pub fn hit_stage(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802C3BAC")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::ZeldaDinFire.id(),
+        kind: ItKind::ZeldaDinsFire.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

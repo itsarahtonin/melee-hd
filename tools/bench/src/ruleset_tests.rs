@@ -616,7 +616,7 @@ fn slippi_super_scope_stand_in_matches_the_model() {
                     panic!("{name}: tick {t}'s events differ without the allocator model: {d}");
                 }
                 for (i, it) in on.game.items.iter() {
-                    if it.kind != ItKind::SScope {
+                    if it.kind != ItKind::SuperScope {
                         continue;
                     }
                     let addr = it.entity.map_or(0, |g| on.game.world.gobjs.addr(g.0)) as i32;

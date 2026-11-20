@@ -328,11 +328,11 @@ impl PokemonVars {
 pub fn handle_words(kind: i32) -> &'static [(usize, &'static str)] {
     use crate::game::it::kinds::hitodeman;
     match ItKind::of(kind) {
-        ItKind::Hitodeman => hitodeman::HANDLES,
+        ItKind::Staryu => hitodeman::HANDLES,
         // The enemies' common joint, the fighter a ReDead holds, and Topi's Freezie.
-        ItKind::Leadead => &[(0, "JObjId"), (0x38, "GObjId")],
-        ItKind::Ottosea => &[(0, "JObjId"), (0x20, "GObjId")],
-        ItKind::Kuriboh | ItKind::Octarock | ItKind::OctarockStone => &[(0, "JObjId")],
+        ItKind::ReDead => &[(0, "JObjId"), (0x38, "GObjId")],
+        ItKind::Topi => &[(0, "JObjId"), (0x20, "GObjId")],
+        ItKind::Goomba | ItKind::Octorok | ItKind::OctorokStone => &[(0, "JObjId")],
         _ => &[],
     }
 }

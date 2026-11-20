@@ -37,7 +37,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "it_802ADA1C")]
 pub fn spawn(r: &mut Running, pos: Vec3, vel: Vec3, facing_dir: f32) {
     let mut spawn = SpawnItem {
-        kind: ItKind::Unk1.id(),
+        kind: ItKind::KirbyCopyStar.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;
@@ -91,4 +91,4 @@ fn coll(r: &mut Running, gobj: GObjId) -> bool {
     super::super::ground::air_touched_any(r, gobj)
 }
 
-// `it_802ADBE4`, its `evt_unk` (`it_8026B894`), is `game::it::evt_unk`'s.
+// `it_802ADBE4`, its `forget` (`it_8026B894`), is `game::it::forget`'s.

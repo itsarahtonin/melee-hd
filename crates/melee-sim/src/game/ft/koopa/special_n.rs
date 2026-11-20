@@ -65,7 +65,7 @@ pub const KOOPA: FireBreath = FireBreath {
     u: 0,
     mouth_bone: 48,
     mouth: None,
-    flame_kind: ItKind::KoopaFlame.id(),
+    flame_kind: ItKind::BowserFlame.id(),
     first_dir: 0,
     sfx_by_kind: true,
     air_start_lands_in_loop: false,

@@ -28,7 +28,8 @@ pub const FLAME_CLANKED: u32 = 0x802D_6830;
 pub const FLAME_ABSORBED: u32 = 0x802D_6838;
 pub const FLAME_SHIELD_BOUNCED: u32 = 0x802D_6840;
 pub const FLAME_HIT_SHIELD: u32 = 0x802D_6848;
-pub const FLAME_EVT_UNK: u32 = 0x802D_6850;
+#[doc(alias("FLAME_EVT_UNK"))]
+pub const FLAME_FORGET: u32 = 0x802D_6850;
 pub const SPAWNED: u32 = 0x802D_6870;
 pub const ANIM0: u32 = 0x802D_6978;
 pub const PHYS0: u32 = 0x802D_699C;
@@ -42,7 +43,8 @@ pub const COLL2: u32 = 0x802D_6E6C;
 pub const ANIM3: u32 = 0x802D_6E98;
 pub const PHYS3: u32 = 0x802D_6ED0;
 pub const DMG_RECEIVED: u32 = 0x802D_6F00;
-pub const EVT_UNK: u32 = 0x802D_6FB0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_6FB0;
 
 /// Its variables past the release's (`itMaril_ItemVars`): the flag byte whose top bit says
 /// it's turning round (`x60.x0_s.x0`), its walking speed (`x64`), `x68`, and the turn's step
@@ -153,7 +155,8 @@ pub fn flame_gone(_: &mut Running, _: GObjId) -> bool {
 /// (`it_8026B894`).
 #[doc(alias = "it_802D6850")]
 #[doc(alias = "it_802D6FB0")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
@@ -229,7 +232,7 @@ pub fn walk(r: &mut Running, gobj: GObjId) {
     lib26b1::keep_clear(r.game, gobj);
     hitbox::end_blink(r.game, gobj);
     hitbox::set_hit_ids2(r.game, gobj);
-    hitbox::clear_xdce_b2(r.game, gobj);
+    hitbox::clear_hit_by_own_items(r.game, gobj);
 }
 
 /// Its life counted down: whether it ran out (the inline `itMaril_UnkMotion2_Anim_inline`,

@@ -18,7 +18,8 @@ pub const LEAVE: u32 = 0x802D_5C00;
 pub const ANIM1: u32 = 0x802D_5C60;
 pub const PHYS1: u32 = 0x802D_5CB0;
 pub const COLL1: u32 = 0x802D_5CD0;
-pub const EVT_UNK: u32 = 0x802D_5CD8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_5CD8;
 
 /// Runs one of Porygon2's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -116,6 +117,7 @@ pub fn coll1(_: &mut Running, _: GObjId) -> bool {
 
 /// Forgets a GObj going away, `it_802D5CD8` (`it_8026B894`).
 #[doc(alias = "it_802D5CD8")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

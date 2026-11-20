@@ -171,7 +171,7 @@ fn args(call: &mut Call, target: &str, k: usize) {
             call.regs.fpr[1].ps0 = [1.0f64, 2.5][(k / 2) % 2];
         }
         "it_80279CDC" | "it_80279D5C" => call.regs.fpr[1].ps0 = [1.0f64, 0.5, 1.3][k % 3],
-        "it_802CC1CC" => g[4] = ItKind::LizardonFlame1.id() as u32 + (k % 4) as u32,
+        "it_802CC1CC" => g[4] = ItKind::CharizardFlame1.id() as u32 + (k % 4) as u32,
         "it_802D1E8C" => {
             g[4] = [
                 ItKind::LugiaAeroblast.id() as u32,
@@ -348,7 +348,7 @@ fn item_check(g: &Running, gobj: GObjId, a: u32) {
 fn kinds_naming(addr: u32) -> Vec<i32> {
     use melee_sim::game::handles::{CodeRef, ItemStatesRef};
     use melee_sim::game::it::tables;
-    (ItKind::FIRST_POKEMON.id()..=ItKind::PokemonUnk.id())
+    (ItKind::FIRST_POKEMON.id()..=ItKind::PokemonUnused.id())
         .filter(|&k| {
             let l = tables::logic(tables::logic_ref(k));
             let f = Some(CodeRef(addr));
@@ -366,7 +366,7 @@ fn kinds_naming(addr: u32) -> Vec<i32> {
                 l.absorbed,
                 l.shield_bounced,
                 l.hit_shield,
-                l.evt_unk,
+                l.forget,
             ];
             events.contains(&f)
                 || l.states != 0
@@ -412,11 +412,11 @@ fn kind_check(g: &Running, gobj: GObjId, name: &str) {
         "it_8027AB64" | "it_8027AAA0" | "it_8027A364" | "it_8027A4D4"
     );
     let ok = if ball {
-        kind == ItKind::MBall
+        kind == ItKind::PokeBall
     } else if unit(addr).is_some_and(|u| u >= 2) && !forgets(name) {
         owners(addr).contains(&kind)
     } else {
-        (ItKind::FIRST_POKEMON.id()..=ItKind::PokemonUnk.id()).contains(&kind)
+        (ItKind::FIRST_POKEMON.id()..=ItKind::PokemonUnused.id()).contains(&kind)
     };
     if !ok {
         panic!("{SKIP}{name} doesn't take an item of kind {kind}");
@@ -519,37 +519,37 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_8027A344" => pokemon::move_by_bone(g.game, gobj),
         "it_8027AE34" => return b(pokemon::bounce_off_wall(g, gobj)),
         "it_8027AF50" => return b(pokemon::bounce_off_surface(g, gobj)),
-        "itKireihana_Logic15_EvtUnk" => kireihana::evt_unk(g, gobj, maybe(4)),
-        "itChicorita_Logic1_EvtUnk" => chicorita::evt_unk(g, gobj, maybe(4)),
-        "itChicoritaLeaf_Logic30_EvtUnk" => chicorita::evt_unk(g, gobj, maybe(4)),
-        "it_802CA538" | "itKamex_Logic31_EvtUnk" => kamex::evt_unk(g, gobj, maybe(4)),
-        "it_802CB0F8" | "itMatadogas_Logic33_EvtUnk" => matadogas::evt_unk(g, gobj, maybe(4)),
-        "it_802CCB14" => thunder::evt_unk(g, gobj, maybe(4)),
-        "it_802CD4DC" => sonans::evt_unk(g, gobj, maybe(4)),
-        "it_802D0AB0" => marumine::evt_unk(g, gobj, maybe(4)),
-        "itTogepy_Logic21_EvtUnk" => togepy::evt_unk(g, gobj, maybe(4)),
-        "it_802D56F0" | "itLucky_Logic44_EvtUnk" => lucky::evt_unk(g, gobj, maybe(4)),
-        "it_802D6850" | "it_802D6FB0" => maril::evt_unk(g, gobj, maybe(4)),
-        "itFire_Logic6_EvtUnk" => fire::evt_unk(g, gobj, maybe(4)),
-        "itHassam_802CDC60" => hassam::evt_unk(g, gobj, maybe(4)),
-        "it_802CE7D0" => unknown::evt_unk(g, gobj, maybe(4)),
-        "itUnknown_Logic38_EvtUnk" => unknown::swarm_evt_unk(g, gobj, maybe(4)),
-        "it_802D61A8" => hinoarashi::evt_unk(g, gobj, maybe(4)),
-        "it_802C8FC4" => tosakinto::evt_unk(g, gobj, maybe(4)),
-        "it_802CB940" | "itLizardon_Logic37_EvtUnk" => lizardon::evt_unk(g, gobj, maybe(4)),
-        "it_802D32DC" => pippi::evt_unk(g, gobj, maybe(4)),
-        "it_802D5CD8" => porygon2::evt_unk(g, gobj, maybe(4)),
+        "itKireihana_Logic15_EvtUnk" => kireihana::forget(g, gobj, maybe(4)),
+        "itChicorita_Logic1_EvtUnk" => chicorita::forget(g, gobj, maybe(4)),
+        "itChicoritaLeaf_Logic30_EvtUnk" => chicorita::forget(g, gobj, maybe(4)),
+        "it_802CA538" | "itKamex_Logic31_EvtUnk" => kamex::forget(g, gobj, maybe(4)),
+        "it_802CB0F8" | "itMatadogas_Logic33_EvtUnk" => matadogas::forget(g, gobj, maybe(4)),
+        "it_802CCB14" => thunder::forget(g, gobj, maybe(4)),
+        "it_802CD4DC" => sonans::forget(g, gobj, maybe(4)),
+        "it_802D0AB0" => marumine::forget(g, gobj, maybe(4)),
+        "itTogepy_Logic21_EvtUnk" => togepy::forget(g, gobj, maybe(4)),
+        "it_802D56F0" | "itLucky_Logic44_EvtUnk" => lucky::forget(g, gobj, maybe(4)),
+        "it_802D6850" | "it_802D6FB0" => maril::forget(g, gobj, maybe(4)),
+        "itFire_Logic6_EvtUnk" => fire::forget(g, gobj, maybe(4)),
+        "itHassam_802CDC60" => hassam::forget(g, gobj, maybe(4)),
+        "it_802CE7D0" => unknown::forget(g, gobj, maybe(4)),
+        "itUnknown_Logic38_EvtUnk" => unknown::swarm_forget(g, gobj, maybe(4)),
+        "it_802D61A8" => hinoarashi::forget(g, gobj, maybe(4)),
+        "it_802C8FC4" => tosakinto::forget(g, gobj, maybe(4)),
+        "it_802CB940" | "itLizardon_Logic37_EvtUnk" => lizardon::forget(g, gobj, maybe(4)),
+        "it_802D32DC" => pippi::forget(g, gobj, maybe(4)),
+        "it_802D5CD8" => porygon2::forget(g, gobj, maybe(4)),
         "it_802CC1CC" => lizardon::flame(g, gobj, r(4) as i32),
-        "it_802C9E24" => kabigon::evt_unk(g, gobj, maybe(4)),
-        "it_802CF450" => entei::evt_unk(g, gobj, maybe(4)),
-        "itLugia_Logic17_EvtUnk" | "it_802D23D4" => lugia::evt_unk(g, gobj, maybe(4)),
-        "it_802D25BC" | "it_802D2ED0" => houou::evt_unk(g, gobj, maybe(4)),
-        "itFreezer_802CD000" => freezer::evt_unk(g, gobj, maybe(4)),
-        "it_802CF884" => raikou::evt_unk(g, gobj, maybe(4)),
-        "it_802CFCB8" => suikun::evt_unk(g, gobj, maybe(4)),
-        "it_802D3B6C" => mew::evt_unk(g, gobj, maybe(4)),
-        "it_802D43B0" => hitodeman::evt_unk(g, gobj, maybe(4)),
-        "it_802D4F58" => hitodeman::star_evt_unk(g, gobj, maybe(4)),
+        "it_802C9E24" => kabigon::forget(g, gobj, maybe(4)),
+        "it_802CF450" => entei::forget(g, gobj, maybe(4)),
+        "itLugia_Logic17_EvtUnk" | "it_802D23D4" => lugia::forget(g, gobj, maybe(4)),
+        "it_802D25BC" | "it_802D2ED0" => houou::forget(g, gobj, maybe(4)),
+        "itFreezer_802CD000" => freezer::forget(g, gobj, maybe(4)),
+        "it_802CF884" => raikou::forget(g, gobj, maybe(4)),
+        "it_802CFCB8" => suikun::forget(g, gobj, maybe(4)),
+        "it_802D3B6C" => mew::forget(g, gobj, maybe(4)),
+        "it_802D43B0" => hitodeman::forget(g, gobj, maybe(4)),
+        "it_802D4F58" => hitodeman::star_forget(g, gobj, maybe(4)),
         "it_802D1E8C" => {
             lugia::shoot(g, gobj, r(4) as i32, f(1));
         }

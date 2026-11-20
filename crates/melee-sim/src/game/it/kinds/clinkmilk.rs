@@ -18,7 +18,8 @@ pub const PICKED_UP: u32 = 0x802C_8C74;
 pub const ANIM: u32 = 0x802C_8CDC;
 pub const PHYS: u32 = 0x802C_8F20;
 pub const COLL: u32 = 0x802C_8F24;
-pub const EVT_UNK: u32 = 0x802C_8F2C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_8F2C;
 
 /// `JOBJ_HIDDEN`.
 const HIDDEN: u32 = 1 << 4;
@@ -59,7 +60,7 @@ pub fn spawn(
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::CLinkMilk.id(),
+        kind: ItKind::YoungLinkMilk.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;
@@ -166,6 +167,7 @@ fn coll(_: &mut Running, _: GObjId) -> bool {
 
 /// `itCLinkMilk_Logic80_EvtUnk`: forgets `other` (`it_8026B894`).
 #[doc(alias = "itCLinkMilk_Logic80_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

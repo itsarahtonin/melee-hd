@@ -37,7 +37,7 @@ impl Running<'_> {
             self.data
                 .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x10)),
         );
-        let part = if lib26b1::kind(self.game, held) == ItKind::WStar {
+        let part = if lib26b1::kind(self.game, held) == ItKind::WarpStar {
             0
         } else {
             hand
@@ -73,7 +73,7 @@ impl Running<'_> {
             return false;
         }
         match ItKind::of(lib26b1::kind(self.game, it)) {
-            ItKind::WStar => {
+            ItKind::WarpStar => {
                 self.enter_warp_star(gobj);
                 true
             }
@@ -97,7 +97,7 @@ impl Running<'_> {
             return;
         }
         match ItKind::of(lib26b1::kind(self.game, it)) {
-            ItKind::WStar => release::drop(self, it, Vec3::new(0.0, 0.0, 0.0), 1.0),
+            ItKind::WarpStar => release::drop(self, it, Vec3::new(0.0, 0.0, 0.0), 1.0),
             ItKind::Hammer => self.start_hammer_timers(gobj),
             k => self.use_picked_up(gobj, it, k.id()),
         }
@@ -108,22 +108,22 @@ impl Running<'_> {
     /// Device take effect and go, and a coin goes.
     fn use_picked_up(&mut self, gobj: GObjId, it: GObjId, kind: i32) {
         match ItKind::of(kind) {
-            ItKind::Heart
-            | ItKind::Tomato
-            | ItKind::Foods
-            | ItKind::LuckyEgg
+            ItKind::HeartContainer
+            | ItKind::MaximTomato
+            | ItKind::Food
+            | ItKind::ChanseyEgg
             | ItKind::WhispyHealApple => self.heal_with(gobj, it),
-            ItKind::RabbitC => self.put_on_hood(gobj, it),
-            ItKind::MetalB => {
+            ItKind::BunnyHood => self.put_on_hood(gobj, it),
+            ItKind::MetalBox => {
                 self.apply_metal_box(gobj, it);
                 item::destroy(self, it);
             }
-            ItKind::Spycloak => {
+            ItKind::CloakingDevice => {
                 let frames = self.common().i32(CLOAK_FRAMES);
                 self.start_cloak(gobj, frames, true);
                 item::destroy(self, it);
             }
-            ItKind::Coin => item::destroy(self, it),
+            ItKind::Trophy => item::destroy(self, it),
             _ => {}
         }
     }
@@ -162,7 +162,7 @@ impl Running<'_> {
         let owner = ip.owner;
         if me != owner && ip.xDC8_word.flags.x14 {
             self.count_bonus(slot, BONUS_CATCH);
-            if lib26b1::kind(self.game, it) == ItKind::Dosei {
+            if lib26b1::kind(self.game, it) == ItKind::MrSaturn {
                 self.set_point(slot, BONUS_DOSEI, 1);
             }
             let is_fighter = owner.is_some_and(|o| {
@@ -178,7 +178,7 @@ impl Running<'_> {
                 self.game.players[slot as usize].set_ext_u32(0xD6C, thrower);
             }
         }
-        if lib26b1::kind(self.game, it) == ItKind::BombHei
+        if lib26b1::kind(self.game, it) == ItKind::BobOmb
             && reg(lib26b1::fuse_left(self.game, it)) <= reg(self.bonus_param_f32(0x180))
         {
             let spawn = lib26b1::spawn_number(self.game, it) as u16;

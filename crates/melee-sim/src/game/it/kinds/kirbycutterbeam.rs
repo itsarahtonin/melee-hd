@@ -27,7 +27,8 @@ pub const ABSORBED: u32 = 0x8029_BFC4;
 pub const REFLECTED: u32 = 0x8029_BFCC;
 pub const SHIELD_BOUNCED: u32 = 0x8029_C208;
 pub const HIT_SHIELD: u32 = 0x8029_C4AC;
-pub const EVT_UNK: u32 = 0x8029_C4B4;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x8029_C4B4;
 
 /// `itKirbyCutterBeamAttributes`: its speed, its life and its slowing.
 mod attr {
@@ -75,7 +76,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_8029BAB8")]
 pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) {
     let mut spawn = SpawnItem {
-        kind: ItKind::KirbyCBeam.id(),
+        kind: ItKind::KirbyFinalCutterWave.id(),
         ..Default::default()
     };
     spawn.prev_pos = Vec3::new(pos.x, pos.y, 0.0);
@@ -300,6 +301,7 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `it_8029C4B4` (`it_8026B894`).
 // Ports `it_8029C4B4`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

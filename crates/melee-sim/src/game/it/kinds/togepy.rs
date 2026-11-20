@@ -11,7 +11,8 @@ use crate::hsd::gobj::GObjId;
 
 pub const SPAWNED: u32 = 0x802D_36B0;
 pub const LANDED: u32 = 0x802D_3728;
-pub const EVT_UNK: u32 = 0x802D_372C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_372C;
 pub const ANIM1: u32 = 0x802D_374C;
 pub const PHYS1: u32 = 0x802D_37C0;
 pub const COLL1: u32 = 0x802D_37FC;
@@ -79,7 +80,8 @@ pub fn landed(_: &mut Running, _: GObjId) {}
 
 /// Forgets a GObj going away, `itTogepy_Logic21_EvtUnk` (`it_8026B894`).
 #[doc(alias = "itTogepy_Logic21_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

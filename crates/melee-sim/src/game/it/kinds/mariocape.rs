@@ -13,7 +13,8 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802B_2644;
 pub const PICKED_UP: u32 = 0x802B_2700;
 pub const MOTION1_ANIM: u32 = 0x802B_2788;
-pub const EVT_UNK: u32 = 0x802B_2870;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_2870;
 
 /// Runs one of the cape's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]

@@ -57,7 +57,8 @@ pub const COLL_6: u32 = 0x8029_FCEC;
 pub const REFLECTED: u32 = 0x8029_FD20;
 pub const HIT_SHIELD: u32 = 0x8029_FD40;
 pub const SHIELD_BOUNCED: u32 = 0x8029_FD64;
-pub const EVT_UNK: u32 = 0x8029_FD84;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x8029_FD84;
 
 /// `itLinkBombAttributes` offsets.
 mod attr {
@@ -358,7 +359,7 @@ fn dropped(r: &mut Running, gobj: GObjId) {
 
 fn fly(r: &mut Running, gobj: GObjId, msid: i32) {
     hitbox::let_own_items_hit(r.game, gobj);
-    hitbox::set_xdce_b2(r.game, gobj);
+    hitbox::set_hit_by_own_items(r.game, gobj);
     let keep = if item(r.game, gobj).msid != msid {
         0
     } else {
@@ -452,7 +453,7 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     lib2725::clear_velocity(r.game, gobj);
     let j = jobj_of(r.game, gobj);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     hitbox::start_blink(r.game, gobj);
     lib2725::blast_large(r, gobj);
@@ -531,7 +532,8 @@ fn entered_air(r: &mut Running, gobj: GObjId) {
 
 /// `it_8029FD84`: forgets `other`, its puller among them.
 #[doc(alias = "it_8029FD84")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     let v = vars(r.game, gobj);
     if v.x10.get() == other {
         v.x10.set(None);

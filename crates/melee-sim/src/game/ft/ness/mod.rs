@@ -29,14 +29,14 @@ pub(crate) use super::common::GA_AIR;
 /// The items Ness registers at his creation, by their slot in his data's item list.
 pub(crate) const ITEMS: [(u32, i32); 11] = [
     (0, ItKind::NessPKFire.id()),
-    (1, ItKind::NessPKFireFlame.id()),
-    (2, ItKind::NessPKFlush.id()),
-    (8, ItKind::NessPKFlushExplode.id()),
+    (1, ItKind::NessPKFirePillar.id()),
+    (2, ItKind::NessPKFlash.id()),
+    (8, ItKind::NessPKFlashExplosion.id()),
     (3, ItKind::NessPKThunder.id()),
-    (4, ItKind::NessPKThunder1.id()),
-    (5, ItKind::NessPKThunder2.id()),
-    (6, ItKind::NessPKThunder3.id()),
-    (7, ItKind::NessPKThunder4.id()),
+    (4, ItKind::NessPKThunderTrail1.id()),
+    (5, ItKind::NessPKThunderTrail2.id()),
+    (6, ItKind::NessPKThunderTrail3.id()),
+    (7, ItKind::NessPKThunderTrail4.id()),
     (9, ItKind::NessBat.id()),
     (10, ItKind::NessYoyo.id()),
 ];

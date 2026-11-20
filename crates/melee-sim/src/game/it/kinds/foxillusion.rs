@@ -25,7 +25,8 @@ pub const MOTION2_COLL: u32 = 0x8029_D940;
 #[doc(alias = "itFoxIllusion_Logic14_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x8029_CF8C;
 pub const DESTROYED: u32 = 0x8029_CFA0;
-pub const EVT_UNK: u32 = 0x8029_D948;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x8029_D948;
 /// `it_8029CD18`, the kind's render callback.
 pub const RENDER: u32 = 0x8029_CD18;
 

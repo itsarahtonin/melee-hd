@@ -231,7 +231,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::bytes(r.game, gobj).set_gobj(off::FREEZIE, None);
     let makes = if r.game.vs_item_freq() == -1 {
         0
-    } else if super::super::spawn::kind_on(r.game, ItKind::Freeze.id()) && {
+    } else if super::super::spawn::kind_on(r.game, ItKind::Freezie.id()) && {
         let odds = i32::from(r.data.u8(attr(r, gobj, 0x28)) as i8);
         r.game.objs.rng.below(odds) == 0
     } {
@@ -397,7 +397,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
     set(r, gobj, off::FRAME, n);
     if item(r.game, gobj).x40_vel.x != 0.0
         && freezie(r, gobj).is_none()
-        && lib2725::xdc0_has(r.game, gobj, 2)
+        && lib2725::script_flags_have(r.game, gobj, 2)
     {
         turn(r, gobj);
     }
@@ -578,7 +578,7 @@ pub fn phys7(r: &mut Running, gobj: GObjId) {
     set(r, gobj, off::FRAME, n.wrapping_add(1));
     if item(r.game, gobj).x40_vel.x != 0.0
         && freezie(r, gobj).is_none()
-        && lib2725::xdc0_has(r.game, gobj, 2)
+        && lib2725::script_flags_have(r.game, gobj, 2)
     {
         turn(r, gobj);
     }

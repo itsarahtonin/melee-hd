@@ -9,7 +9,8 @@ use crate::hsd::gobj::GObjId;
 
 pub const SPAWNED: u32 = 0x802C_F814;
 pub const LANDED_NOTHING: u32 = 0x802C_F880;
-pub const EVT_UNK: u32 = 0x802C_F884;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_F884;
 pub const OUT_LANDED: u32 = 0x802C_F8A4;
 pub const ANIM0: u32 = 0x802C_F978;
 pub const PHYS0: u32 = 0x802C_FA74;
@@ -77,8 +78,9 @@ pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 
 /// Forgets a GObj going away, `it_802CF884` (`it_8026B894`).
 #[doc(alias = "it_802CF884")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    entei::evt_unk(r, gobj, other);
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+    entei::forget(r, gobj, other);
 }
 
 /// Lands out of the ball, `it_802CF8A4`: a large quake, its landing sound, stopped, and roaring.

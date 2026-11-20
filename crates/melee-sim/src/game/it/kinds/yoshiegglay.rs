@@ -25,7 +25,8 @@ pub const SIT_PHYS: u32 = 0x802F_3260;
 pub const SIT_COLL: u32 = 0x802F_3264;
 pub const BREAK_ANIM: u32 = 0x802F_32F8;
 pub const DMG_RECEIVED: u32 = 0x802F_3330;
-pub const EVT_UNK: u32 = 0x802F_3374;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802F_3374;
 
 /// What the egg lay hands the egg (`itYoshiEggLay_DatAttrs`): where it's laid and how fast,
 /// its facing, its lifetime, its damage behavior (`x24`, the item's `xC98`) and how much each
@@ -37,7 +38,8 @@ pub struct Laid {
     pub vel: Vec3,
     pub facing_dir: f32,
     pub lifetime: f32,
-    pub x24: f32,
+    #[doc(alias("x24"))]
+    pub damage_behavior: f32,
     pub damage_mul: f32,
 }
 
@@ -93,7 +95,7 @@ pub fn spawn(r: &mut Running, laid: &Laid) -> Option<GObjId> {
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     vars(r.game, gobj).x0.set(laid.damage_mul);
-    item_mut(r.game, gobj).xC98 = laid.x24;
+    item_mut(r.game, gobj).xC98 = laid.damage_behavior;
     lib2725::set_lifetime(r.game, r.data, gobj, laid.lifetime);
     fall(r, gobj);
     Some(gobj)
@@ -202,6 +204,7 @@ fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `it_27CF_Logic114_EvtUnk`.
 // Ports `it_27CF_Logic114_EvtUnk`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

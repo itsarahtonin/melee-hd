@@ -26,7 +26,8 @@ pub const CLANKED: u32 = 0x802B_2D50;
 pub const REFLECTED: u32 = 0x802B_2E5C;
 pub const HIT_SHIELD: u32 = 0x802B_2E7C;
 pub const SHIELD_BOUNCED: u32 = 0x802B_2F88;
-pub const EVT_UNK: u32 = 0x802B_2FA8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_2FA8;
 
 /// `itYoshiEggThrowAttributes`: the flight's lifetime and the broken shell's.
 mod attr {
@@ -186,7 +187,7 @@ fn crack(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, MS_BREAK, 0x12);
     lib26b1::hide(r.game, gobj);
     lib2725::rumble_owner(r, gobj, 12, 10);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     lib2725::clear_velocity(r.game, gobj);
     item_mut(r.game, gobj).xD44_lifeTimer = time;
@@ -221,6 +222,7 @@ fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `it_802B2FA8`.
 #[doc(alias = "it_802B2FA8")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

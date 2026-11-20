@@ -20,7 +20,8 @@ use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802D_42C4;
 pub const LANDED_NOTHING: u32 = 0x802D_43AC;
-pub const EVT_UNK: u32 = 0x802D_43B0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_43B0;
 pub const ANIM0: u32 = 0x802D_4564;
 pub const PHYS0: u32 = 0x802D_472C;
 pub const COLL0: u32 = 0x802D_48A8;
@@ -37,7 +38,8 @@ pub const STAR_SHIELD_BOUNCED: u32 = 0x802D_4F08;
 pub const STAR_REFLECTED: u32 = 0x802D_4F28;
 pub const STAR_ABSORBED: u32 = 0x802D_4F48;
 pub const STAR_HIT_SHIELD: u32 = 0x802D_4F50;
-pub const STAR_EVT_UNK: u32 = 0x802D_4F58;
+#[doc(alias("STAR_EVT_UNK"))]
+pub const STAR_FORGET: u32 = 0x802D_4F58;
 pub const STAR_ANIM: u32 = 0x802D_4FFC;
 pub const STAR_PHYS: u32 = 0x802D_5044;
 pub const STAR_COLL: u32 = 0x802D_5048;
@@ -138,7 +140,8 @@ pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 /// Forgets a GObj going away, `it_802D43B0` (`it_8026B894`): no fighter to follow any more,
 /// and it goes.
 #[doc(alias = "it_802D43B0")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
     pokemon::vars(r.game, gobj).set_gobj(TARGET, None);
     item_mut(r.game, gobj).xDAC_itcmd_var0 = 1;
@@ -413,7 +416,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId) {
     prev.x = mem(fp::fmadds(reg(facing), reg(ahead), reg(prev.x)));
     prev.y = mem(fp::fadds(reg(prev.y), reg(up)));
     let mut spawn = SpawnItem {
-        kind: ItKind::HitodemanStar.id(),
+        kind: ItKind::StaryuStar.id(),
         ..Default::default()
     };
     spawn.prev_pos = prev;
@@ -490,7 +493,8 @@ pub fn star_hit_shield(_: &mut Running, _: GObjId) -> bool {
 
 /// The star forgets a GObj going away, `it_802D4F58` (`it_8026B894`).
 #[doc(alias = "it_802D4F58")]
-pub fn star_evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("star_evt_unk"))]
+pub fn star_forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

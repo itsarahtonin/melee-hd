@@ -28,7 +28,8 @@ pub const DMG_DEALT: u32 = 0x802E_6F7C;
 pub const DMG_RECEIVED: u32 = 0x802E_6FC0;
 /// `it_802E7054`, the touch callback (`Item::touched`).
 pub const TOUCHED: u32 = 0x802E_7054;
-pub const EVT_UNK: u32 = 0x802E_709C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802E_709C;
 
 /// `it_803F8C08`, the attributes the spawn gives the kind (an `ItemAttr`, big-endian as the
 /// executable holds it): hold kind 1, `x0_78` 6, `x1_5` set, its collision box 2 each way, its
@@ -94,7 +95,8 @@ pub enum Anchor {
 /// and a touch (`x1C`).
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct YakuVars {
-    pub x0: Var<i16>,
+    #[doc(alias("x0"))]
+    pub hit_sound: Var<i16>,
     pub anchor: Var<Anchor>,
     pub ground: Var<Option<GroundId>>,
     pub dealt: Var<Option<CodeRef>>,
@@ -105,7 +107,7 @@ pub struct YakuVars {
 impl YakuVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
+        self.hit_sound.mark_stale();
         self.anchor.mark_stale();
         self.ground.mark_stale();
         self.dealt.mark_stale();
@@ -129,7 +131,7 @@ impl Mirror for YakuVars {
             _ => Anchor::None,
         };
         YakuVars {
-            x0: Var::new(m.u16(at) as i16),
+            hit_sound: Var::new(m.u16(at) as i16),
             anchor: Var::new(anchor),
             ground: Var::new(cx.import_handle("GroundId", m.u32(at + 0x10)).map(GroundId)),
             dealt: Var::new(code(at + 0x14)),
@@ -140,10 +142,10 @@ impl Mirror for YakuVars {
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let p = |n: &str| format!("{path}.{n}");
-        if self.x0.live(&p("x0"), cx) && *self.x0.peek() != m.u16(at) as i16 {
+        if self.hit_sound.live(&p("x0"), cx) && *self.hit_sound.peek() != m.u16(at) as i16 {
             cx.mismatch(
                 &p("x0"),
-                format!("{:?}", self.x0.peek()),
+                format!("{:?}", self.hit_sound.peek()),
                 format!("{:?}", m.u16(at) as i16),
             );
         }
@@ -250,7 +252,7 @@ pub fn spawn(
     // table's last entry, an article in `ItCo.dat`'s data, which the heap's image takes where
     // it holds the file.
     if let Some(a) =
-        r.game.it.char_articles[(ItKind::StageHurtbox.id() - ItKind::Kuriboh.id()) as usize]
+        r.game.it.char_articles[(ItKind::StageHurtbox.id() - ItKind::Goomba.id()) as usize]
         && crate::hsd::heap::image_on()
     {
         crate::hsd::heap::with(|h| h.image.file_word(a, 0x803F_8C08));
@@ -262,7 +264,7 @@ pub fn spawn(
     } else if let Some(p) = pos {
         v.anchor.set(Anchor::Point(p));
     }
-    v.x0.set(x0 as i16);
+    v.hit_sound.set(x0 as i16);
     v.ground.set(ground);
     v.dealt.set(dealt);
     v.received.set(received);
@@ -344,6 +346,7 @@ pub fn touched(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj the item points to, `it_2E6A_Logic117_EvtUnk` (`it_8026B894`).
 #[doc(alias = "it_2E6A_Logic117_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     super::super::lib26b1::forget(r.game, gobj, other);
 }

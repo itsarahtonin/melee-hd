@@ -166,7 +166,7 @@ pub fn init_platform(r: &mut Running, gobj: GObjId) {
     anime::start_map(r.game, r.data, gobj, m, 0);
     for i in 0..param(r, 0) {
         if r.game.one_player.allstar.x90[i as usize] != 0 {
-            drop_heart(r, ItKind::Heart.id(), HEART_JOINTS[i as usize], i);
+            drop_heart(r, ItKind::HeartContainer.id(), HEART_JOINTS[i as usize], i);
         }
     }
 }

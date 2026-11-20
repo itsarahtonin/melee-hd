@@ -57,7 +57,8 @@ pub const ABSORBED: u32 = 0x802C_60C4;
 pub const REFLECTED: u32 = 0x802C_60CC;
 pub const HIT_SHIELD: u32 = 0x802C_6138;
 pub const SHIELD_BOUNCED: u32 = 0x802C_6140;
-pub const EVT_UNK: u32 = 0x802C_61D4;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_61D4;
 
 /// `itMewtwoShadowball_DatAttrs`.
 mod attr {
@@ -767,6 +768,7 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj the ball points to, `itMewtwoShadowball_Logic101_EvtUnk` (`it_8026B894`).
 #[doc(alias = "itMewtwoShadowball_Logic101_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

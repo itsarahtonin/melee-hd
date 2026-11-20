@@ -102,9 +102,9 @@ impl Running<'_> {
             CLASS_FIGHTER => true,
             CLASS_ITEM => {
                 let k = it::item(self.game, detected).kind;
-                k < ItKind::BombHei
-                    || (ItKind::Kuriboh.id()..ItKind::OctarockStone.id()).contains(&k)
-                    || (ItKind::OldKuri.id()..ItKind::ArwingLaser.id()).contains(&k)
+                k < ItKind::BobOmb
+                    || (ItKind::Goomba.id()..ItKind::OctorokStone.id()).contains(&k)
+                    || (ItKind::OldGoomba.id()..ItKind::ArwingLaser.id()).contains(&k)
                     || k == ItKind::StageHurtbox
             }
             _ => false,

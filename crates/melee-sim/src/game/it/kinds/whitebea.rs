@@ -27,7 +27,8 @@ pub const DMG_RECEIVED: u32 = 0x802E_3884;
 pub const PICKED_UP: u32 = 0x802E_468C;
 pub const DROPPED: u32 = 0x802E_4700;
 pub const THROWN: u32 = 0x802E_47C0;
-pub const EVT_UNK: u32 = 0x802E_4A24;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802E_4A24;
 pub const ANIM0: u32 = 0x802E_39C8;
 pub const PHYS0: u32 = 0x802E_3A10;
 pub const COLL0: u32 = 0x802E_3A8C;
@@ -352,7 +353,7 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
     } else {
         set(r, gobj, off::WALK, w.wrapping_sub(1));
     }
-    if lib2725::xdc0_has(r.game, gobj, 2) {
+    if lib2725::script_flags_have(r.game, gobj, 2) {
         turn(r, gobj);
     }
     let ip = item_mut(r.game, gobj);

@@ -86,25 +86,35 @@ pub struct KyasarinVars {
     /// +0x4, `zako.idx`.
     pub idx: Var<i32>,
     /// +0x8, `zako.x8`.
-    pub x8: Var<Vec3>,
+    #[doc(alias("x8"))]
+    pub normal: Var<Vec3>,
     /// +0x14, `zako.x14` (`x18` is its second word).
-    pub x14: [Var<i32>; 3],
+    #[doc(alias("x14"))]
+    pub words: [Var<i32>; 3],
     /// +0x20: her platform (the stage's map 15).
-    pub x20: Var<Option<GObjId>>,
+    #[doc(alias("x20"))]
+    pub platform: Var<Option<GObjId>>,
     /// +0x24: a wait at a mark.
-    pub x24: Var<f32>,
+    #[doc(alias("x24"))]
+    pub mark_wait: Var<f32>,
     /// +0x28: the wait before her next egg.
-    pub x28: Var<f32>,
+    #[doc(alias("x28"))]
+    pub egg_wait: Var<f32>,
     /// +0x2C: what's left of her stand.
-    pub x2C: Var<f32>,
+    #[doc(alias("x2C"))]
+    pub stand_left: Var<f32>,
     /// +0x30: the side she came in facing.
-    pub x30: Var<f32>,
+    #[doc(alias("x30"))]
+    pub entry_facing: Var<f32>,
     /// +0x34: the eggs left to spit.
-    pub x34: Var<i32>,
+    #[doc(alias("x34"))]
+    pub eggs_left: Var<i32>,
     /// +0x38: the damage she has taken.
-    pub x38: Var<i32>,
+    #[doc(alias("x38"))]
+    pub damage: Var<i32>,
     /// +0x3C: the state a flinch goes back to.
-    pub x3C: Var<i32>,
+    #[doc(alias("x3C"))]
+    pub flinch_state: Var<i32>,
 }
 
 impl KyasarinVars {
@@ -112,15 +122,24 @@ impl KyasarinVars {
     pub fn mark_stale(&mut self) {
         self.jobj.mark_stale();
         self.idx.mark_stale();
-        self.x8.mark_stale();
-        for v in &mut self.x14 {
+        self.normal.mark_stale();
+        for v in &mut self.words {
             v.mark_stale();
         }
-        self.x20.mark_stale();
-        for v in [&mut self.x24, &mut self.x28, &mut self.x2C, &mut self.x30] {
+        self.platform.mark_stale();
+        for v in [
+            &mut self.mark_wait,
+            &mut self.egg_wait,
+            &mut self.stand_left,
+            &mut self.entry_facing,
+        ] {
             v.mark_stale();
         }
-        for v in [&mut self.x34, &mut self.x38, &mut self.x3C] {
+        for v in [
+            &mut self.eggs_left,
+            &mut self.damage,
+            &mut self.flinch_state,
+        ] {
             v.mark_stale();
         }
     }
@@ -135,16 +154,16 @@ impl Mirror for KyasarinVars {
         KyasarinVars {
             jobj: Var::new(cx.import_handle("JObjId", m.u32(at)).map(JObjId)),
             idx: i(at + 4),
-            x8: Var::new(Vec3::new(f(at + 8), f(at + 0xC), f(at + 0x10))),
-            x14: std::array::from_fn(|k| i(at + 0x14 + 4 * k as u32)),
-            x20: Var::new(cx.import_handle("GObjId", m.u32(at + 0x20)).map(GObjId)),
-            x24: Var::new(f(at + 0x24)),
-            x28: Var::new(f(at + 0x28)),
-            x2C: Var::new(f(at + 0x2C)),
-            x30: Var::new(f(at + 0x30)),
-            x34: i(at + 0x34),
-            x38: i(at + 0x38),
-            x3C: i(at + 0x3C),
+            normal: Var::new(Vec3::new(f(at + 8), f(at + 0xC), f(at + 0x10))),
+            words: std::array::from_fn(|k| i(at + 0x14 + 4 * k as u32)),
+            platform: Var::new(cx.import_handle("GObjId", m.u32(at + 0x20)).map(GObjId)),
+            mark_wait: Var::new(f(at + 0x24)),
+            egg_wait: Var::new(f(at + 0x28)),
+            stand_left: Var::new(f(at + 0x2C)),
+            entry_facing: Var::new(f(at + 0x30)),
+            eggs_left: i(at + 0x34),
+            damage: i(at + 0x38),
+            flinch_state: i(at + 0x3C),
         }
     }
 
@@ -156,12 +175,12 @@ impl Mirror for KyasarinVars {
         }
         let ints: [(&str, &Var<i32>, u32); 7] = [
             ("idx", &self.idx, 4),
-            ("x14.x", &self.x14[0], 0x14),
-            ("x14.y", &self.x14[1], 0x18),
-            ("x14.z", &self.x14[2], 0x1C),
-            ("x34", &self.x34, 0x34),
-            ("x38", &self.x38, 0x38),
-            ("x3C", &self.x3C, 0x3C),
+            ("x14.x", &self.words[0], 0x14),
+            ("x14.y", &self.words[1], 0x18),
+            ("x14.z", &self.words[2], 0x1C),
+            ("x34", &self.eggs_left, 0x34),
+            ("x38", &self.damage, 0x38),
+            ("x3C", &self.flinch_state, 0x3C),
         ];
         for (name, v, off) in ints {
             if v.live(&p(name), cx) && *v.peek() != m.u32(at + off) as i32 {
@@ -172,16 +191,16 @@ impl Mirror for KyasarinVars {
                 );
             }
         }
-        self.x8.compare(m, at + 8, &p("x8"), cx);
-        if self.x20.live(&p("x20"), cx) {
-            let ours = self.x20.peek().map(|g| g.0);
+        self.normal.compare(m, at + 8, &p("x8"), cx);
+        if self.platform.live(&p("x20"), cx) {
+            let ours = self.platform.peek().map(|g| g.0);
             cx.compare_handle(&p("x20"), "GObjId", ours, m.u32(at + 0x20));
         }
         let floats: [(&str, &Var<f32>, u32); 4] = [
-            ("x24", &self.x24, 0x24),
-            ("x28", &self.x28, 0x28),
-            ("x2C", &self.x2C, 0x2C),
-            ("x30", &self.x30, 0x30),
+            ("x24", &self.mark_wait, 0x24),
+            ("x28", &self.egg_wait, 0x28),
+            ("x2C", &self.stand_left, 0x2C),
+            ("x30", &self.entry_facing, 0x30),
         ];
         for (name, v, off) in floats {
             if v.live(&p(name), cx) && v.peek().to_bits() != m.u32(at + off) {
@@ -266,10 +285,10 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// waits to send her again (`grInishie2_801FD448`).
 #[doc(alias = "itKyasarin_Logic25_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
-    if let Some(platform) = vars(r.game, gobj).x20.get() {
+    if let Some(platform) = vars(r.game, gobj).platform.get() {
         crate::game::gr::inishie2::birdo_gone(r, platform);
     }
-    vars(r.game, gobj).x20.set(None);
+    vars(r.game, gobj).platform.set(None);
 }
 
 /// Her position, `it_802ECD1C`.
@@ -282,13 +301,13 @@ pub fn position(game: &Game, gobj: GObjId) -> Vec3 {
 /// half round facing right), her damage none, walking in; or none.
 #[doc(alias = "it_802ECD3C")]
 pub fn spawn(r: &mut Running, platform: GObjId, pos: Vec3, facing: f32) -> Option<GObjId> {
-    let gobj = zako::spawn(r, ItKind::Kyasarin.id(), Some(pos), None, None, true)?;
+    let gobj = zako::spawn(r, ItKind::Birdo.id(), Some(pos), None, None, true)?;
     let v = vars(r.game, gobj);
-    v.x20.set(Some(platform));
-    v.x38.set(0);
+    v.platform.set(Some(platform));
+    v.damage.set(0);
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = facing;
-    vars(r.game, gobj).x30.set(facing);
+    vars(r.game, gobj).entry_facing.set(facing);
     if item(r.game, gobj).facing_dir == 1.0 {
         let rot = fp::frsp(fp::fmul(
             std::f64::consts::PI,
@@ -356,14 +375,14 @@ pub fn wait_in(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     lib2725::clear_velocity(r.game, gobj);
     let w = mem(attr(r, gobj, a::WAIT_IN).f(r));
-    vars(r.game, gobj).x24.set(w);
+    vars(r.game, gobj).mark_wait.set(w);
 }
 
 /// Counts her wait down a tick; whether it ran out.
 fn wait_over(r: &mut Running, gobj: GObjId) -> bool {
     let v = vars(r.game, gobj);
-    let w = mem(fp::fsubs(reg(v.x24.get()), 1.0));
-    v.x24.set(w);
+    let w = mem(fp::fsubs(reg(v.mark_wait.get()), 1.0));
+    v.mark_wait.set(w);
     reg(w) < 0.0
 }
 
@@ -407,7 +426,7 @@ fn wait_out(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 3, change::ANIM_UPDATE);
     lib2725::clear_velocity(r.game, gobj);
     let w = mem(attr(r, gobj, a::WAIT_OUT).f(r));
-    vars(r.game, gobj).x24.set(w);
+    vars(r.game, gobj).mark_wait.set(w);
 }
 
 /// Backing off's collision, `itKyasarin_UnkMotion2_Coll`: at her far mark she waits.
@@ -457,21 +476,21 @@ pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
             attr(r, gobj, a::STAND).f(r),
             fp::frsp(f64::from(k)),
         ));
-        vars(r.game, gobj).x2C.set(length);
+        vars(r.game, gobj).stand_left.set(length);
         let n = fp::fctiwz(attr(r, gobj, a::EGG_SPREAD).f(r));
         let k = randi(r, n);
         let egg = mem(fp::fadds(
             attr(r, gobj, a::EGG_WAIT).f(r),
             fp::frsp(f64::from(k)),
         ));
-        vars(r.game, gobj).x28.set(egg);
+        vars(r.game, gobj).egg_wait.set(egg);
         lib2725::clear_velocity(r.game, gobj);
         let eggs = if randi(r, 2) != 0 {
             attr(r, gobj, a::EGGS).i(r)
         } else {
             0
         };
-        vars(r.game, gobj).x34.set(eggs);
+        vars(r.game, gobj).eggs_left.set(eggs);
         stand(r, gobj);
     }
     false
@@ -488,7 +507,7 @@ pub fn stand(r: &mut Running, gobj: GObjId) {
 /// off at her speed times her animation's.
 fn turn_around(r: &mut Running, gobj: GObjId) {
     turn(r, gobj);
-    let from = vars(r.game, gobj).x30.get();
+    let from = vars(r.game, gobj).entry_facing.get();
     let rot = if from == -1.0 {
         fp::frsp(fp::fmul(std::f64::consts::PI, reg(from)))
     } else {
@@ -511,13 +530,13 @@ fn turn_around(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itKyasarin_UnkMotion6_Anim")]
 pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
     let v = vars(r.game, gobj);
-    let stand_left = mem(fp::fsubs(reg(v.x2C.get()), 1.0));
-    v.x2C.set(stand_left);
-    let egg_left = mem(fp::fsubs(reg(v.x28.get()), 1.0));
-    v.x28.set(egg_left);
-    if reg(v.x2C.get()) < 0.0 {
+    let stand_left = mem(fp::fsubs(reg(v.stand_left.get()), 1.0));
+    v.stand_left.set(stand_left);
+    let egg_left = mem(fp::fsubs(reg(v.egg_wait.get()), 1.0));
+    v.egg_wait.set(egg_left);
+    if reg(v.stand_left.get()) < 0.0 {
         turn_around(r, gobj);
-    } else if reg(v.x28.get()) < 0.0 {
+    } else if reg(v.egg_wait.get()) < 0.0 {
         spit(r, gobj);
     } else if !lib2725::is_animating(r.game, gobj) {
         stand(r, gobj);
@@ -545,8 +564,8 @@ pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
         pos.z = 0.0;
         super::kyasarinegg::spawn(r, Some(gobj), pos, facing);
         let v = vars(r.game, gobj);
-        let left = v.x34.get().wrapping_sub(1);
-        v.x34.set(left);
+        let left = v.eggs_left.get().wrapping_sub(1);
+        v.eggs_left.set(left);
         if left <= 0 {
             let n = fp::fctiwz(attr(r, gobj, a::EGG_SPREAD).f(r));
             let k = randi(r, n);
@@ -554,7 +573,7 @@ pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
                 attr(r, gobj, a::EGG_WAIT).f(r),
                 fp::frsp(f64::from(k)),
             ));
-            vars(r.game, gobj).x28.set(egg);
+            vars(r.game, gobj).egg_wait.set(egg);
             change_state(r, gobj, 6, change::ANIM_UPDATE);
         } else {
             change_state(r, gobj, 7, change::ANIM_UPDATE);
@@ -582,7 +601,7 @@ pub fn anim5(r: &mut Running, gobj: GObjId) -> bool {
 /// state 8, still, her hurtbox blinking.
 fn flinch(r: &mut Running, gobj: GObjId) {
     let msid = item(r.game, gobj).msid;
-    vars(r.game, gobj).x3C.set(msid);
+    vars(r.game, gobj).flinch_state.set(msid);
     change_state(r, gobj, 8, change::ANIM_UPDATE);
     lib2725::clear_velocity(r.game, gobj);
     hitbox::start_blink(r.game, gobj);
@@ -593,7 +612,7 @@ fn flinch(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itKyasarin_UnkMotion8_Anim")]
 pub fn anim8(r: &mut Running, gobj: GObjId) -> bool {
     if !lib2725::is_animating(r.game, gobj) {
-        match vars(r.game, gobj).x3C.get() {
+        match vars(r.game, gobj).flinch_state.get() {
             0 => walk_in(r, gobj),
             1 => wait_in(r, gobj),
             2 => back_off(r, gobj),
@@ -680,8 +699,8 @@ fn flip_and_fall(r: &mut Running, gobj: GObjId) {
 pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
     let hit = item(r.game, gobj).xCA0;
     let v = vars(r.game, gobj);
-    let total = v.x38.get().wrapping_add(hit);
-    v.x38.set(total);
+    let total = v.damage.get().wrapping_add(hit);
+    v.damage.set(total);
     if total < attr(r, gobj, a::TURN_DAMAGE).i(r) {
         flinch(r, gobj);
     } else if total < attr(r, gobj, a::FALL_DAMAGE).i(r) {
@@ -689,7 +708,7 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
         item_mut(r.game, gobj).x5D0_animFrameSpeed = speed;
         turn_around(r, gobj);
     } else {
-        if let Some(platform) = vars(r.game, gobj).x20.get() {
+        if let Some(platform) = vars(r.game, gobj).platform.get() {
             crate::game::gr::inishie2::birdo_down(r, platform);
         }
         item_mut(r.game, gobj).xDCC_flag.b3 = true;
@@ -703,7 +722,7 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
         } else {
             flip_and_fall(r, gobj);
             zako::launch(r, gobj, false);
-            vars(r.game, gobj).x14[1].set(0);
+            vars(r.game, gobj).words[1].set(0);
             change_state(r, gobj, 10, change::ANIM_UPDATE);
         }
     }

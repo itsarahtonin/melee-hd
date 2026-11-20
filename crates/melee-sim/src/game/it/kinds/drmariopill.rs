@@ -43,7 +43,8 @@ pub const HIT_SHIELD: u32 = 0x802C_145C;
 pub const ABSORBED: u32 = 0x802C_14B8;
 #[doc(alias = "itDrMarioPill_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x802C_1514;
-pub const EVT_UNK: u32 = 0x802C_1570;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_1570;
 
 /// `itDrMarioPillAttributes`: the speed, the angle, the lifetime and the slowest speed a
 /// bounce keeps it.

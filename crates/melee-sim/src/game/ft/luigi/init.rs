@@ -19,7 +19,11 @@ impl Running<'_> {
             .expect("a fighter without data");
         let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
         let article = self.data.ptr(items.at(0));
-        super::super::super::it::item::set_char_article(self.game, article, ItKind::LuigiFire.id());
+        super::super::super::it::item::set_char_article(
+            self.game,
+            article,
+            ItKind::LuigiFireball.id(),
+        );
     }
 
     /// Luigi's spawn, `ftLg_Init_OnDeath`: his first model variant, `x2234` cleared.

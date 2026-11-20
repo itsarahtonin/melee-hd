@@ -110,7 +110,7 @@ impl Running<'_> {
         let ip = &mut game.items[i.0];
         let objs = &mut game.objs;
         let mut drew = false;
-        if ip.kind == ItKind::Unk4 {
+        if ip.kind == ItKind::VsCoin {
             // The coin (`It_Kind_Unk4`): its range while it can be picked up.
             let v = &mut ip.xDD4_itemVar.coin().vars;
             let f = v.x18.get();

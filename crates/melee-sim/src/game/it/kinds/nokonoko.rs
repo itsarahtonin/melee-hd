@@ -34,7 +34,8 @@ pub const STOMPED: u32 = 0x802D_C83C;
 pub const PICKED_UP: u32 = 0x802D_D4F4;
 pub const DROPPED: u32 = 0x802D_D59C;
 pub const THROWN: u32 = 0x802D_D67C;
-pub const EVT_UNK: u32 = 0x802D_D7D0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_D7D0;
 pub const ANIM1: u32 = 0x802D_C910;
 pub const PHYS1: u32 = 0x802D_C918;
 pub const COLL1: u32 = 0x802D_C954;
@@ -328,7 +329,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
     } else {
         set(r, gobj, off::WALK, w.wrapping_sub(1));
     }
-    if lib2725::xdc0_has(r.game, gobj, 2) {
+    if lib2725::script_flags_have(r.game, gobj, 2) {
         turn(r, gobj);
     }
     let ip = item_mut(r.game, gobj);
@@ -688,7 +689,7 @@ pub fn spawn(
     vel: Option<Vec3>,
     facing: i32,
 ) -> Option<GObjId> {
-    let gobj = zako::spawn(r, ItKind::Nokonoko.id(), Some(pos), None, vel, true)?;
+    let gobj = zako::spawn(r, ItKind::KoopaTroopa.id(), Some(pos), None, vel, true)?;
     let j = jobj_of(r.game, gobj).expect("a Koopa Troopa without a model");
     let f = mem(fp::frsp(f64::from(facing)));
     item_mut(r.game, gobj).facing_dir = f;

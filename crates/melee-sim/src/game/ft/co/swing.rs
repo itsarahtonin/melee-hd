@@ -255,7 +255,7 @@ impl Running<'_> {
     pub fn lipstick_hand(&mut self, gobj: GObjId) {
         let it = self.game.fighter(gobj).item_gobj;
         assert!(
-            it.is_some_and(|it| lib26b1::kind(self.game, it) == ItKind::LipStick),
+            it.is_some_and(|it| lib26b1::kind(self.game, it) == ItKind::LipsStick),
             "ftlipstickswing.c:99: itGetKind(fp->item_gobj) == It_Kind_LipStick"
         );
         let Some(it) = it else {

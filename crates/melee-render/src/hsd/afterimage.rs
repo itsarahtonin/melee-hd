@@ -100,7 +100,10 @@ impl Ctx<'_> {
                 .item_gobj
                 .expect("a held item's afterimage without an item");
             let kind = melee_sim::game::it::item(game, item).kind;
-            assert!(kind == ItKind::Sword, "ftCo_800C2600: no afterimage item!");
+            assert!(
+                kind == ItKind::BeamSword,
+                "ftCo_800C2600: no afterimage item!"
+            );
             let at = melee_sim::game::it::kinds::sword::trail_params(game, self.data, item);
             held = (0..0x14u32)
                 .map(|i| self.data.u8(at.at(i)))

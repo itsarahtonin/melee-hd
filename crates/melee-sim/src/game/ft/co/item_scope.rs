@@ -55,9 +55,9 @@ impl Running<'_> {
             return;
         }
         match ItKind::of(self.held_kind(gobj)) {
-            ItKind::LGun => self.enter_lgun_shoot(gobj),
-            ItKind::FFlower => self.enter_fflower_shoot(gobj),
-            ItKind::SScope => self.enter_scope_start(gobj),
+            ItKind::RayGun => self.enter_lgun_shoot(gobj),
+            ItKind::FireFlower => self.enter_fflower_shoot(gobj),
+            ItKind::SuperScope => self.enter_scope_start(gobj),
             _ => {}
         }
     }
@@ -66,9 +66,9 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800CDDA0")]
     pub fn enter_item_shoot_air(&mut self, gobj: GObjId) {
         match ItKind::of(self.held_kind(gobj)) {
-            ItKind::LGun => self.enter_lgun_shoot_air(gobj),
-            ItKind::FFlower => self.enter_fflower_shoot_air(gobj),
-            ItKind::SScope => self.enter_scope_air_start(gobj),
+            ItKind::RayGun => self.enter_lgun_shoot_air(gobj),
+            ItKind::FireFlower => self.enter_fflower_shoot_air(gobj),
+            ItKind::SuperScope => self.enter_scope_air_start(gobj),
             _ => {}
         }
     }

@@ -13,7 +13,8 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802C_66E8;
 pub const PICKED_UP: u32 = 0x802C_67A4;
 pub const ANIM: u32 = 0x802C_6808;
-pub const EVT_UNK: u32 = 0x802C_68D8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_68D8;
 
 /// Runs one of the manhole's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -46,7 +47,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     gamewatch::spawn_held(
         r,
-        ItKind::GameWatchManhole.id(),
+        ItKind::GameAndWatchManhole.id(),
         parent,
         pos,
         part,
@@ -123,6 +124,7 @@ pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `itGameWatchManhole_Logic72_EvtUnk`.
 // Ports `itGameWatchManhole_Logic72_EvtUnk`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

@@ -106,8 +106,8 @@ pub fn fire(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3, facing: f32) {
 /// (`itLGun_ItemVars::timer`, their first word, which is its ammunition).
 #[doc(alias = "it_8026C1D4")]
 pub fn shots_bonus(game: &crate::game::state::Game, data: &melee_data::archive::Archives) -> u32 {
-    let a =
-        super::super::item::article_of(game, data, ItKind::LGun.id()).expect("no Ray Gun article");
+    let a = super::super::item::article_of(game, data, ItKind::RayGun.id())
+        .expect("no Ray Gun article");
     let attrs = super::super::data::Article(a)
         .special(data)
         .expect("a Ray Gun without attributes");

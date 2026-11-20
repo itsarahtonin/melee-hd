@@ -495,7 +495,7 @@ impl Running<'_> {
                 .item_gobj
                 .expect("ftCo_800C2600: a held item's afterimage without an item");
             assert!(
-                super::super::it::lib26b1::kind(self.game, item) == ItKind::Sword,
+                super::super::it::lib26b1::kind(self.game, item) == ItKind::BeamSword,
                 "ftCo_800C2600: no afterimage item!"
             );
         } else {

@@ -273,7 +273,7 @@ pub fn rain(r: &mut Running, gobj: GObjId, kind_w: i32, food_w: i32, random_w: i
     if drop::drop_monster(r, Some(gobj), pos, Some(vel)).is_some() {
         return;
     }
-    let food_w = if spawn::kind_on(r.game, ItKind::Foods.id()) {
+    let food_w = if spawn::kind_on(r.game, ItKind::Food.id()) {
         food_w
     } else {
         0
@@ -289,12 +289,12 @@ pub fn rain(r: &mut Running, gobj: GObjId, kind_w: i32, food_w: i32, random_w: i
         if roll < kind_w {
             let kind = r.data.u32(attr(r, gobj, 0x10)) as i32;
             let n = attr_i(r, gobj, 0x14);
-            let refused = (kind == ItKind::MBall && spawn::poke_balls_full(r.game))
+            let refused = (kind == ItKind::PokeBall && spawn::poke_balls_full(r.game))
                 || !spawn::kind_on(r.game, kind);
             if !refused {
                 let mut i = 0;
                 while i < n {
-                    if kind == ItKind::MBall && spawn::poke_balls_full(r.game) {
+                    if kind == ItKind::PokeBall && spawn::poke_balls_full(r.game) {
                         break;
                     }
                     if let Some(k) = throw_out(r, gobj, kind, 1.4) {
@@ -316,7 +316,7 @@ pub fn rain(r: &mut Running, gobj: GObjId, kind_w: i32, food_w: i32, random_w: i
         if roll < food_w {
             let n = r.game.objs.rng.below(5) + 10;
             for i in 0..n {
-                if let Some(k) = throw_out(r, gobj, ItKind::Foods.id(), 1.8) {
+                if let Some(k) = throw_out(r, gobj, ItKind::Food.id(), 1.8) {
                     out[i as usize] = k;
                 }
             }
@@ -358,7 +358,7 @@ fn stand(r: &mut Running, gobj: GObjId) {
 /// A party ball standing at `pos`, `it_802896CC`.
 #[doc(alias = "it_802896CC")]
 pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
-    let mut spawn = super::super::item::drop_spawn(ItKind::Kusudama.id(), pos, false);
+    let mut spawn = super::super::item::drop_spawn(ItKind::PartyBall.id(), pos, false);
     let gobj = super::super::item::spawn_ground(r, &mut spawn)?;
     stopped(r, gobj);
     Some(gobj)
@@ -592,7 +592,7 @@ pub fn burst(r: &mut Running, gobj: GObjId) {
     lib2725::blast_effect(r, gobj);
     hitbox::start_blink(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
     ip.x40_vel.x = 0.0;

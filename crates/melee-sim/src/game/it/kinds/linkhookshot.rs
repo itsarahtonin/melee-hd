@@ -114,7 +114,7 @@ impl Lengths {
 
 /// The hookshots' item kinds, Link's and Young Link's: each has its own article, its
 /// attributes in its character's archive, and its own [`Lengths`] (in this order).
-pub const KINDS: [i32; 2] = [ItKind::LinkHShot.id(), ItKind::CLinkHShot.id()];
+pub const KINDS: [i32; 2] = [ItKind::LinkHookshot.id(), ItKind::YoungLinkHookshot.id()];
 
 /// The hookshot of `kind`'s entry in [`Globals::hookshot_lengths`](super::super::Globals::hookshot_lengths).
 pub fn lengths_slot(kind: i32) -> usize {
@@ -1262,7 +1262,8 @@ fn hang_from(r: &mut Running, gobj: GObjId, mut l0: ItemLinkId, at: Vec3, dist: 
 
 /// `it_802A7D40`: forgets `other`, its fighter among them.
 #[doc(alias = "it_802A7D40")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     super::super::lib26b1::forget(r.game, gobj, other);
     let v = vars(r, gobj);
     if v.x8.get() == other {

@@ -238,7 +238,7 @@ fn run_bowser(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "itKoopaFlame_Update_Direction" => koopaflame::update_direction(g, gobj, r4 as i32),
         "itKoopaFlame_Update_Angle" => koopaflame::update_angle(g, gobj, r4 as i32),
         "itKoopaFlame_Setup" => koopaflame::setup(g, gobj, gobj_reg(maps, call, 4, &name)),
-        "itKoopaFlame_Logic111_EvtUnk" => koopaflame::evt_unk(g, gobj, other()),
+        "itKoopaFlame_Logic111_EvtUnk" => koopaflame::forget(g, gobj, other()),
         _ => return run_callback(g, gobj, a),
     }
     Ret::Nothing

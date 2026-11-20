@@ -26,12 +26,12 @@ pub const COLL: u32 = 0x802A_C8A0;
 
 /// `it_803F6C18`: each trail's kind.
 const KINDS: [i32; 6] = [
-    ItKind::NessPKThunder1.id(),
-    ItKind::NessPKThunder1.id(),
-    ItKind::NessPKThunder1.id(),
-    ItKind::NessPKThunder2.id(),
-    ItKind::NessPKThunder3.id(),
-    ItKind::NessPKThunder4.id(),
+    ItKind::NessPKThunderTrail1.id(),
+    ItKind::NessPKThunderTrail1.id(),
+    ItKind::NessPKThunderTrail1.id(),
+    ItKind::NessPKThunderTrail2.id(),
+    ItKind::NessPKThunderTrail3.id(),
+    ItKind::NessPKThunderTrail4.id(),
 ];
 
 /// `JOBJ_HIDDEN`.

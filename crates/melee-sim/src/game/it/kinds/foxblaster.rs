@@ -25,7 +25,8 @@ pub const MOTION10_ANIM: u32 = 0x802A_F064;
 pub const MOTION10_PHYS: u32 = 0x802A_F178;
 pub const MOTION10_COLL: u32 = 0x802A_F17C;
 pub const PICKED_UP: u32 = 0x802A_EB00;
-pub const EVT_UNK: u32 = 0x802A_F184;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_F184;
 /// `it_802ADEF0`, the accessory callback a shot sets.
 pub const ON_SHOT: u32 = 0x802A_DEF0;
 

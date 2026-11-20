@@ -23,7 +23,8 @@ use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802D_251C;
 pub const LANDED_NOTHING: u32 = 0x802D_25B8;
-pub const EVT_UNK: u32 = 0x802D_25BC;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_25BC;
 pub const ANIM1: u32 = 0x802D_25DC;
 pub const PHYS1: u32 = 0x802D_2640;
 pub const COLL1: u32 = 0x802D_2660;
@@ -44,7 +45,8 @@ pub const ANIM0: u32 = 0x802D_2C54;
 pub const PHYS0: u32 = 0x802D_2C78;
 pub const COLL0: u32 = 0x802D_2D04;
 pub const FIRE_SPAWNED: u32 = 0x802D_2E80;
-pub const FIRE_EVT_UNK: u32 = 0x802D_2ED0;
+#[doc(alias("FIRE_EVT_UNK"))]
+pub const FIRE_FORGET: u32 = 0x802D_2ED0;
 pub const FIRE_ANIM: u32 = 0x802D_2F3C;
 pub const FIRE_PHYS: u32 = 0x802D_2F70;
 pub const FIRE_COLL: u32 = 0x802D_2FE8;
@@ -133,7 +135,8 @@ pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 /// (`it_8026B894`).
 #[doc(alias = "it_802D25BC")]
 #[doc(alias = "it_802D2ED0")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
@@ -349,7 +352,7 @@ pub fn sacred_fire(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
     let (facing, owner) = (ip.facing_dir, ip.owner);
     let mut spawn = SpawnItem {
-        kind: ItKind::HououSacredFire.id(),
+        kind: ItKind::HoOhSacredFire.id(),
         ..Default::default()
     };
     spawn.prev_pos = hit.pos;

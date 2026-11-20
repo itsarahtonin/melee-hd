@@ -13,7 +13,8 @@ pub const SPAWN: u32 = 0x802B_1C60;
 pub const DMG_DEALT: u32 = 0x802B_1D38;
 pub const INIT: u32 = 0x802B_1D40;
 pub const ANIM: u32 = 0x802B_1DAC;
-pub const EVT_UNK: u32 = 0x802B_1DCC;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_1DCC;
 
 /// Runs one of the flash's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -35,7 +36,7 @@ pub fn run_event(_r: &mut Running, _gobj: GObjId, _addr: u32) -> bool {
 #[doc(alias = "it_802B1C60")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::SeakVanish.id(),
+        kind: ItKind::SheikVanish.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition`, off the plane.
@@ -64,7 +65,7 @@ pub fn init(r: &mut Running, gobj: GObjId, owner: GObjId) {
     ip.xDAC_itcmd_var0 = 0;
     lib26b1::hide(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }

@@ -29,7 +29,8 @@ const UNK_0X1: u32 = 1;
 pub const SPAWNED: u32 = 0x802E_B5C8;
 pub const DMG_RECEIVED: u32 = 0x802E_B684;
 pub const DMG_DEALT: u32 = 0x802E_B6A8;
-pub const EVT_UNK: u32 = 0x802E_C850;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802E_C850;
 pub const ANIM0: u32 = 0x802E_B808;
 pub const PHYS0: u32 = 0x802E_B810;
 pub const COLL0: u32 = 0x802E_B84C;
@@ -118,42 +119,62 @@ pub struct TincleVars {
     /// +0x4, `zako.idx`.
     pub idx: Var<i32>,
     /// +0x8, `zako.x8`.
-    pub x8: Var<Vec3>,
+    #[doc(alias("x8"))]
+    pub normal: Var<Vec3>,
     /// +0x14, `zako.x14`.
-    pub x14: [Var<i32>; 3],
+    #[doc(alias("x14"))]
+    pub words: [Var<i32>; 3],
     /// +0x20: a countdown (the wait, a state's ticks).
-    pub x20: Var<i32>,
+    #[doc(alias("x20"))]
+    pub countdown: Var<i32>,
     /// +0x24: a drift's length in ticks (0 while still); +0x28: its ticks so far.
-    pub x24: Var<i32>,
-    pub x28: Var<i32>,
+    #[doc(alias("x24"))]
+    pub drift_ticks: Var<i32>,
+    #[doc(alias("x28"))]
+    pub drift_elapsed: Var<i32>,
     /// +0x2C: the bob's half-cycle count, or the distance left to rise.
-    pub x2c: Var<i32>,
+    #[doc(alias("x2c"))]
+    pub bob_count: Var<i32>,
     /// +0x30: the state a press interrupted.
-    pub x30: Var<f32>,
+    #[doc(alias("x30"))]
+    pub interrupted_state: Var<f32>,
     /// +0x34: the drift's acceleration.
-    pub x34: Var<f32>,
+    #[doc(alias("x34"))]
+    pub drift_accel: Var<f32>,
     /// +0x38: the bob's or the rise's acceleration.
-    pub x38: Var<f32>,
+    #[doc(alias("x38"))]
+    pub bob_accel: Var<f32>,
     /// +0x3C: the bob's half-cycles left.
-    pub x3c: Var<f32>,
+    #[doc(alias("x3c"))]
+    pub bob_half_cycles_left: Var<f32>,
     /// +0x40, +0x44, +0x48: the interrupted state's half-cycle count, vertical speed and
     /// acceleration.
-    pub x40: Var<f32>,
-    pub x44: Var<f32>,
-    pub x48: Var<f32>,
+    #[doc(alias("x40"))]
+    pub saved_bob_count: Var<f32>,
+    #[doc(alias("x44"))]
+    pub saved_vertical_speed: Var<f32>,
+    #[doc(alias("x48"))]
+    pub saved_accel: Var<f32>,
     /// +0x4C: the height a press started from.
-    pub x4c: Var<f32>,
+    #[doc(alias("x4c"))]
+    pub press_height: Var<f32>,
     /// +0x50: how far above his place the balloon's top is.
-    pub x50: Var<f32>,
+    #[doc(alias("x50"))]
+    pub balloon_top: Var<f32>,
     /// +0x54: the weight stood on him (the stage's).
-    pub x54: Var<f32>,
+    #[doc(alias("x54"))]
+    pub stood_weight: Var<f32>,
     /// +0x58: the middle of his range; +0x5C: the height he floats at.
-    pub x58: Var<f32>,
-    pub x5c: Var<f32>,
+    #[doc(alias("x58"))]
+    pub range_middle: Var<f32>,
+    #[doc(alias("x5c"))]
+    pub float_height: Var<f32>,
     /// +0x64: the stage object that made him.
-    pub x64: Var<Option<GObjId>>,
+    #[doc(alias("x64"))]
+    pub stage_object: Var<Option<GObjId>>,
     /// +0x68: his collision box as his attributes give it.
-    pub x68: Var<Ecb>,
+    #[doc(alias("x68"))]
+    pub ecb: Var<Ecb>,
 }
 
 /// An `itECB` as plain data a [`Var`] can hold.
@@ -181,48 +202,53 @@ impl TincleVars {
     pub fn mark_stale(&mut self) {
         self.jobj.mark_stale();
         self.idx.mark_stale();
-        self.x8.mark_stale();
-        for v in &mut self.x14 {
-            v.mark_stale();
-        }
-        for v in [&mut self.x20, &mut self.x24, &mut self.x28, &mut self.x2c] {
+        self.normal.mark_stale();
+        for v in &mut self.words {
             v.mark_stale();
         }
         for v in [
-            &mut self.x30,
-            &mut self.x34,
-            &mut self.x38,
-            &mut self.x3c,
-            &mut self.x40,
-            &mut self.x44,
-            &mut self.x48,
-            &mut self.x4c,
-            &mut self.x50,
-            &mut self.x54,
-            &mut self.x58,
-            &mut self.x5c,
+            &mut self.countdown,
+            &mut self.drift_ticks,
+            &mut self.drift_elapsed,
+            &mut self.bob_count,
         ] {
             v.mark_stale();
         }
-        self.x64.mark_stale();
-        self.x68.mark_stale();
+        for v in [
+            &mut self.interrupted_state,
+            &mut self.drift_accel,
+            &mut self.bob_accel,
+            &mut self.bob_half_cycles_left,
+            &mut self.saved_bob_count,
+            &mut self.saved_vertical_speed,
+            &mut self.saved_accel,
+            &mut self.press_height,
+            &mut self.balloon_top,
+            &mut self.stood_weight,
+            &mut self.range_middle,
+            &mut self.float_height,
+        ] {
+            v.mark_stale();
+        }
+        self.stage_object.mark_stale();
+        self.ecb.mark_stale();
     }
 
     /// The floats, by offset.
     fn floats(&self) -> [(&'static str, &Var<f32>, u32); 12] {
         [
-            ("x30", &self.x30, 0x30),
-            ("x34", &self.x34, 0x34),
-            ("x38", &self.x38, 0x38),
-            ("x3C", &self.x3c, 0x3C),
-            ("x40", &self.x40, 0x40),
-            ("x44", &self.x44, 0x44),
-            ("x48", &self.x48, 0x48),
-            ("x4C", &self.x4c, 0x4C),
-            ("x50", &self.x50, 0x50),
-            ("x54", &self.x54, 0x54),
-            ("x58", &self.x58, 0x58),
-            ("x5C", &self.x5c, 0x5C),
+            ("x30", &self.interrupted_state, 0x30),
+            ("x34", &self.drift_accel, 0x34),
+            ("x38", &self.bob_accel, 0x38),
+            ("x3C", &self.bob_half_cycles_left, 0x3C),
+            ("x40", &self.saved_bob_count, 0x40),
+            ("x44", &self.saved_vertical_speed, 0x44),
+            ("x48", &self.saved_accel, 0x48),
+            ("x4C", &self.press_height, 0x4C),
+            ("x50", &self.balloon_top, 0x50),
+            ("x54", &self.stood_weight, 0x54),
+            ("x58", &self.range_middle, 0x58),
+            ("x5C", &self.float_height, 0x5C),
         ]
     }
 }
@@ -236,26 +262,26 @@ impl Mirror for TincleVars {
         TincleVars {
             jobj: Var::new(cx.import_handle("JObjId", m.u32(at)).map(JObjId)),
             idx: i(at + 4),
-            x8: Var::new(Vec3::new(f(at + 8), f(at + 0xC), f(at + 0x10))),
-            x14: std::array::from_fn(|k| i(at + 0x14 + 4 * k as u32)),
-            x20: i(at + 0x20),
-            x24: i(at + 0x24),
-            x28: i(at + 0x28),
-            x2c: i(at + 0x2C),
-            x30: Var::new(f(at + 0x30)),
-            x34: Var::new(f(at + 0x34)),
-            x38: Var::new(f(at + 0x38)),
-            x3c: Var::new(f(at + 0x3C)),
-            x40: Var::new(f(at + 0x40)),
-            x44: Var::new(f(at + 0x44)),
-            x48: Var::new(f(at + 0x48)),
-            x4c: Var::new(f(at + 0x4C)),
-            x50: Var::new(f(at + 0x50)),
-            x54: Var::new(f(at + 0x54)),
-            x58: Var::new(f(at + 0x58)),
-            x5c: Var::new(f(at + 0x5C)),
-            x64: Var::new(cx.import_handle("GObjId", m.u32(at + 0x64)).map(GObjId)),
-            x68: Var::new(Ecb {
+            normal: Var::new(Vec3::new(f(at + 8), f(at + 0xC), f(at + 0x10))),
+            words: std::array::from_fn(|k| i(at + 0x14 + 4 * k as u32)),
+            countdown: i(at + 0x20),
+            drift_ticks: i(at + 0x24),
+            drift_elapsed: i(at + 0x28),
+            bob_count: i(at + 0x2C),
+            interrupted_state: Var::new(f(at + 0x30)),
+            drift_accel: Var::new(f(at + 0x34)),
+            bob_accel: Var::new(f(at + 0x38)),
+            bob_half_cycles_left: Var::new(f(at + 0x3C)),
+            saved_bob_count: Var::new(f(at + 0x40)),
+            saved_vertical_speed: Var::new(f(at + 0x44)),
+            saved_accel: Var::new(f(at + 0x48)),
+            press_height: Var::new(f(at + 0x4C)),
+            balloon_top: Var::new(f(at + 0x50)),
+            stood_weight: Var::new(f(at + 0x54)),
+            range_middle: Var::new(f(at + 0x58)),
+            float_height: Var::new(f(at + 0x5C)),
+            stage_object: Var::new(cx.import_handle("GObjId", m.u32(at + 0x64)).map(GObjId)),
+            ecb: Var::new(Ecb {
                 top: f(at + 0x68),
                 bottom: f(at + 0x6C),
                 right: f(at + 0x70),
@@ -272,13 +298,13 @@ impl Mirror for TincleVars {
         }
         let ints: [(&str, &Var<i32>, u32); 8] = [
             ("idx", &self.idx, 4),
-            ("x14.x", &self.x14[0], 0x14),
-            ("x14.y", &self.x14[1], 0x18),
-            ("x14.z", &self.x14[2], 0x1C),
-            ("x20", &self.x20, 0x20),
-            ("x24", &self.x24, 0x24),
-            ("x28", &self.x28, 0x28),
-            ("x2C", &self.x2c, 0x2C),
+            ("x14.x", &self.words[0], 0x14),
+            ("x14.y", &self.words[1], 0x18),
+            ("x14.z", &self.words[2], 0x1C),
+            ("x20", &self.countdown, 0x20),
+            ("x24", &self.drift_ticks, 0x24),
+            ("x28", &self.drift_elapsed, 0x28),
+            ("x2C", &self.bob_count, 0x2C),
         ];
         for (name, v, off) in ints {
             if v.live(&p(name), cx) && *v.peek() != m.u32(at + off) as i32 {
@@ -298,13 +324,13 @@ impl Mirror for TincleVars {
                 );
             }
         }
-        self.x8.compare(m, at + 8, &p("x8"), cx);
-        if self.x64.live(&p("x64"), cx) {
-            let ours = self.x64.peek().map(|g| g.0);
+        self.normal.compare(m, at + 8, &p("x8"), cx);
+        if self.stage_object.live(&p("x64"), cx) {
+            let ours = self.stage_object.peek().map(|g| g.0);
             cx.compare_handle(&p("x64"), "GObjId", ours, m.u32(at + 0x64));
         }
-        if self.x68.live(&p("x68"), cx) {
-            let e = self.x68.peek();
+        if self.ecb.live(&p("x68"), cx) {
+            let e = self.ecb.peek();
             let ours = [e.top, e.bottom, e.right, e.left].map(f32::to_bits);
             let theirs: [u32; 4] = std::array::from_fn(|k| m.u32(at + 0x68 + 4 * k as u32));
             if ours != theirs {
@@ -379,9 +405,9 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, bone, None);
     let y = reg(item(r.game, gobj).pos.y);
     let h = mem(abs(fp::fsubs(reg(pos.y), y)));
-    vars(r.game, gobj).x50.set(h);
+    vars(r.game, gobj).balloon_top.set(h);
     let b = Ecb::of(&item(r.game, gobj).xC1C);
-    vars(r.game, gobj).x68.set(b);
+    vars(r.game, gobj).ecb.set(b);
     wait(r, gobj);
 }
 
@@ -421,13 +447,13 @@ pub fn wait(r: &mut Running, gobj: GObjId) {
     }
     let w = r.game.objs.rng.below(range);
     let v = vars(r.game, gobj);
-    v.x20.set(w);
-    v.x24.set(0);
-    v.x28.set(0);
-    v.x2c.set(0);
-    v.x34.set(0.0);
-    v.x38.set(0.0);
-    v.x4c.set(0.0);
+    v.countdown.set(w);
+    v.drift_ticks.set(0);
+    v.drift_elapsed.set(0);
+    v.bob_count.set(0);
+    v.drift_accel.set(0.0);
+    v.bob_accel.set(0.0);
+    v.press_height.set(0.0);
     hitbox::start_blink(r.game, gobj);
     hide(r.game, gobj, true);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
@@ -456,11 +482,11 @@ pub fn phys_none(_: &mut Running, _: GObjId) {}
 /// The wait's countdown, `itTincle_UnkMotion0_Phys`: then he drops in.
 #[doc(alias = "itTincle_UnkMotion0_Phys")]
 pub fn phys0(r: &mut Running, gobj: GObjId) {
-    if vars(r.game, gobj).x20.get() <= 0 {
+    if vars(r.game, gobj).countdown.get() <= 0 {
         drop_in(r, gobj);
         return;
     }
-    vars(r.game, gobj).x20.update(|t| t.wrapping_sub(1));
+    vars(r.game, gobj).countdown.update(|t| t.wrapping_sub(1));
 }
 
 /// `itTincle_UnkMotion0_Coll`: the air collision.
@@ -477,12 +503,12 @@ pub fn drop_in(r: &mut Running, gobj: GObjId) {
     let (lo, hi) = (attr(r, gobj, 0xC).f(r), attr(r, gobj, 0x10).f(r));
     let s = fp::fctiwz(fp::fdivs(abs(fp::fsubs(hi, lo)), fp::frsp(2.0)));
     vars(r.game, gobj)
-        .x58
+        .range_middle
         .set(mem(fp::fadds(lo, fp::frsp(f64::from(s)))));
     let (a, b) = (attr(r, gobj, 0x1C).f(r), attr(r, gobj, 0x20).f(r));
     let s = r.game.objs.rng.below(fp::fctiwz(abs(fp::fsubs(a, b))));
     vars(r.game, gobj)
-        .x5c
+        .float_height
         .set(mem(fp::fadds(b, fp::frsp(f64::from(s)))));
     let fall = attr(r, gobj, 0x18).f(r);
     let ip = item_mut(r.game, gobj);
@@ -497,7 +523,7 @@ pub fn drop_in(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itTincle_UnkMotion1_Phys")]
 pub fn phys1(r: &mut Running, gobj: GObjId) {
     let y = reg(item(r.game, gobj).pos.y);
-    if y <= reg(vars(r.game, gobj).x5c.get()) {
+    if y <= reg(vars(r.game, gobj).float_height.get()) {
         float(r, gobj);
     }
 }
@@ -518,16 +544,16 @@ pub fn float(r: &mut Running, gobj: GObjId) {
     reset_velocity(r.game, gobj);
     let wait = attr(r, gobj, 0x2C).i(r);
     let half = attr(r, gobj, 0x28).i(r).wrapping_mul(2);
-    vars(r.game, gobj).x20.set(wait);
+    vars(r.game, gobj).countdown.set(wait);
     item_mut(r.game, gobj).x40_vel.y = 0.0;
     let v = vars(r.game, gobj);
-    v.x38
+    v.bob_accel
         .set(mem(fp::fdivs(fp::fmuls(2.0, height), fp::fmuls(dur, dur))));
-    let a = reg(v.x38.get());
-    v.x38.set(mem(fp::fmuls(a, 0.5)));
-    v.x2c.set(half);
-    v.x3c.set(2.0);
-    v.x24.set(0);
+    let a = reg(v.bob_accel.get());
+    v.bob_accel.set(mem(fp::fmuls(a, 0.5)));
+    v.bob_count.set(half);
+    v.bob_half_cycles_left.set(2.0);
+    v.drift_ticks.set(0);
     hitbox::end_blink(r.game, gobj);
     item_mut(r.game, gobj).xDC8_word.flags.x1A = true;
     hide(r.game, gobj, false);
@@ -549,35 +575,37 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
 /// sideways drift (speeding up, then slowing to a stop past halfway).
 #[doc(alias = "itTincle_UnkMotion2_Phys")]
 pub fn phys2(r: &mut Running, gobj: GObjId) {
-    let bounce = reg(vars(r.game, gobj).x3c.get());
+    let bounce = reg(vars(r.game, gobj).bob_half_cycles_left.get());
     let quarter = attr(r, gobj, 0x28).i(r);
     if bounce == 0.0 {
         let v = vars(r.game, gobj);
-        v.x3c.set(2.0);
-        v.x2c.set(quarter.wrapping_mul(2));
-        let a = reg(v.x38.get());
-        v.x38.set(mem(fp::fmuls(a, fp::fneg(1.0))));
+        v.bob_half_cycles_left.set(2.0);
+        v.bob_count.set(quarter.wrapping_mul(2));
+        let a = reg(v.bob_accel.get());
+        v.bob_accel.set(mem(fp::fmuls(a, fp::fneg(1.0))));
     } else {
-        let half = vars(r.game, gobj).x2c.get();
+        let half = vars(r.game, gobj).bob_count.get();
         if half == 0 {
-            vars(r.game, gobj).x3c.set(mem(fp::fsubs(bounce, 1.0)));
+            vars(r.game, gobj)
+                .bob_half_cycles_left
+                .set(mem(fp::fsubs(bounce, 1.0)));
         } else {
-            let a = reg(vars(r.game, gobj).x38.get());
+            let a = reg(vars(r.game, gobj).bob_accel.get());
             let ip = item_mut(r.game, gobj);
             ip.x40_vel.y = if half < quarter {
                 mem(fp::fadds(reg(ip.x40_vel.y), a))
             } else {
                 mem(fp::fsubs(reg(ip.x40_vel.y), a))
             };
-            vars(r.game, gobj).x2c.update(|c| c.wrapping_sub(1));
+            vars(r.game, gobj).bob_count.update(|c| c.wrapping_sub(1));
         }
     }
-    let t = vars(r.game, gobj).x20.get();
+    let t = vars(r.game, gobj).countdown.get();
     if t != 0 {
-        vars(r.game, gobj).x20.set(t.wrapping_sub(1));
+        vars(r.game, gobj).countdown.set(t.wrapping_sub(1));
         return;
     }
-    let drift = vars(r.game, gobj).x24.get();
+    let drift = vars(r.game, gobj).drift_ticks.get();
     let wait = attr(r, gobj, 0x2C).i(r);
     if drift == 0 {
         let odds = attr(r, gobj, 0x30).i(r);
@@ -586,27 +614,31 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
             return;
         }
         item_mut(r.game, gobj).x40_vel.x = 0.0;
-        vars(r.game, gobj).x20.set(wait);
+        vars(r.game, gobj).countdown.set(wait);
         return;
     }
-    let n = vars(r.game, gobj).x28.get();
+    let n = vars(r.game, gobj).drift_elapsed.get();
     if n >= drift {
         item_mut(r.game, gobj).x40_vel.x = 0.0;
         let v = vars(r.game, gobj);
-        v.x34.set(0.0);
-        v.x28.set(0);
-        v.x24.set(0);
-        v.x20.set(wait);
+        v.drift_accel.set(0.0);
+        v.drift_elapsed.set(0);
+        v.drift_ticks.set(0);
+        v.countdown.set(wait);
         return;
     }
     if n == drift / 2 {
-        let a = reg(vars(r.game, gobj).x34.get());
-        vars(r.game, gobj).x34.set(mem(fp::fmuls(a, fp::fneg(1.0))));
+        let a = reg(vars(r.game, gobj).drift_accel.get());
+        vars(r.game, gobj)
+            .drift_accel
+            .set(mem(fp::fmuls(a, fp::fneg(1.0))));
     }
-    let a = reg(vars(r.game, gobj).x34.get());
+    let a = reg(vars(r.game, gobj).drift_accel.get());
     let ip = item_mut(r.game, gobj);
     ip.x40_vel.x = mem(fp::fadds(reg(ip.x40_vel.x), a));
-    vars(r.game, gobj).x28.update(|c| c.wrapping_add(1));
+    vars(r.game, gobj)
+        .drift_elapsed
+        .update(|c| c.wrapping_add(1));
 }
 
 /// `itTincle_UnkMotion2_Coll`: touching anything turns a drift back.
@@ -623,12 +655,12 @@ fn note_state(game: &mut Game, gobj: GObjId) {
     let ip = item(game, gobj);
     let (msid, vy) = (ip.msid, ip.x40_vel.y);
     let v = vars(game, gobj);
-    v.x30.set(mem(fp::frsp(f64::from(msid))));
-    v.x44.set(vy);
-    let a = v.x38.get();
-    v.x48.set(a);
-    let c = v.x2c.get();
-    v.x40.set(mem(fp::frsp(f64::from(c))));
+    v.interrupted_state.set(mem(fp::frsp(f64::from(msid))));
+    v.saved_vertical_speed.set(vy);
+    let a = v.bob_accel.get();
+    v.saved_accel.set(a);
+    let c = v.bob_count.get();
+    v.saved_bob_count.set(mem(fp::frsp(f64::from(c))));
 }
 
 /// Pressed down, `it_802EBD14` (the stage's, while fighters stand on him): the state noted,
@@ -636,16 +668,16 @@ fn note_state(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_802EBD14")]
 pub fn press(r: &mut Running, gobj: GObjId) {
     note_state(r.game, gobj);
-    let w = reg(vars(r.game, gobj).x54.get());
+    let w = reg(vars(r.game, gobj).stood_weight.get());
     let y = item(r.game, gobj).pos.y;
     let ip = item_mut(r.game, gobj);
     ip.x40_vel.z = 0.0;
     ip.x40_vel.x = 0.0;
     ip.x40_vel.y = mem(fp::fneg(w));
     let v = vars(r.game, gobj);
-    v.x38.set(mem(fp::fdivs(w, 10.0)));
-    v.x20.set(0x13);
-    v.x4c.set(y);
+    v.bob_accel.set(mem(fp::fdivs(w, 10.0)));
+    v.countdown.set(0x13);
+    v.press_height.set(y);
     change_state(r, gobj, 3, change::ANIM_UPDATE);
 }
 
@@ -653,17 +685,17 @@ pub fn press(r: &mut Running, gobj: GObjId) {
 /// height, sitting.
 #[doc(alias = "itTincle_UnkMotion3_Phys")]
 pub fn phys3(r: &mut Running, gobj: GObjId) {
-    if vars(r.game, gobj).x20.get() == 0 {
-        let y = vars(r.game, gobj).x4c.get();
+    if vars(r.game, gobj).countdown.get() == 0 {
+        let y = vars(r.game, gobj).press_height.get();
         let ip = item_mut(r.game, gobj);
         ip.pos.y = y;
         ip.x40_vel.y = 0.0;
         sit(r, gobj);
     } else {
-        let a = reg(vars(r.game, gobj).x38.get());
+        let a = reg(vars(r.game, gobj).bob_accel.get());
         let ip = item_mut(r.game, gobj);
         ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), a));
-        vars(r.game, gobj).x20.update(|t| t.wrapping_sub(1));
+        vars(r.game, gobj).countdown.update(|t| t.wrapping_sub(1));
     }
 }
 
@@ -684,8 +716,8 @@ pub fn sit(r: &mut Running, gobj: GObjId) {
     let w = attr(r, gobj, 0x40).i(r);
     let y = item(r.game, gobj).pos.y;
     let v = vars(r.game, gobj);
-    v.x20.set(w);
-    v.x4c.set(y);
+    v.countdown.set(w);
+    v.press_height.set(y);
     change_state(r, gobj, 4, change::ANIM_UPDATE);
 }
 
@@ -693,16 +725,16 @@ pub fn sit(r: &mut Running, gobj: GObjId) {
 /// pops once it has sunk past their limit.
 #[doc(alias = "itTincle_UnkMotion4_Phys")]
 pub fn phys4(r: &mut Running, gobj: GObjId) {
-    if vars(r.game, gobj).x20.get() == 0 {
+    if vars(r.game, gobj).countdown.get() == 0 {
         let speed = attr(r, gobj, 0x48).f(r);
         item_mut(r.game, gobj).x40_vel.y = mem(fp::fneg(speed));
-        let from = reg(vars(r.game, gobj).x4c.get());
+        let from = reg(vars(r.game, gobj).press_height.get());
         let dist = abs(fp::fsubs(from, reg(item(r.game, gobj).pos.y)));
         if dist > attr(r, gobj, 0x44).f(r) {
             pop(r, gobj);
         }
     } else {
-        vars(r.game, gobj).x20.update(|t| t.wrapping_sub(1));
+        vars(r.game, gobj).countdown.update(|t| t.wrapping_sub(1));
     }
 }
 
@@ -712,7 +744,7 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802EBFAC")]
 pub fn release(r: &mut Running, gobj: GObjId) {
     let dist = fp::fsubs(
-        reg(vars(r.game, gobj).x5c.get()),
+        reg(vars(r.game, gobj).float_height.get()),
         reg(item(r.game, gobj).pos.y),
     );
     let max = attr(r, gobj, 0x4C).f(r);
@@ -723,33 +755,37 @@ pub fn release(r: &mut Running, gobj: GObjId) {
         ip.x40_vel.x = 0.0;
         let vy = reg(ip.x40_vel.y);
         let v = vars(r.game, gobj);
-        v.x2c.set(fp::fctiwz(dist));
-        let c = v.x2c.get();
-        v.x38.set(mem(fp::fdivs(
+        v.bob_count.set(fp::fctiwz(dist));
+        let c = v.bob_count.get();
+        v.bob_accel.set(mem(fp::fdivs(
             fp::fneg(fp::fmuls(vy, vy)),
             fp::fadds(vy, fp::frsp(f64::from(c.wrapping_mul(2)))),
         )));
-        v.x20.set(0);
+        v.countdown.set(0);
         change_state(r, gobj, 5, UNK_0X1);
         return;
     }
-    let was = reg(vars(r.game, gobj).x30.get());
+    let was = reg(vars(r.game, gobj).interrupted_state.get());
     let (vy, a, c) = {
         let v = vars(r.game, gobj);
-        (v.x44.get(), v.x48.get(), v.x40.get())
+        (
+            v.saved_vertical_speed.get(),
+            v.saved_accel.get(),
+            v.saved_bob_count.get(),
+        )
     };
     let ip = item_mut(r.game, gobj);
     ip.x40_vel.y = vy;
     ip.x40_vel.z = 0.0;
     ip.x40_vel.x = 0.0;
     let v = vars(r.game, gobj);
-    v.x38.set(a);
-    v.x2c.set(fp::fctiwz(reg(c)));
+    v.bob_accel.set(a);
+    v.bob_count.set(fp::fctiwz(reg(c)));
     if was == 2.0 {
         let wait = attr(r, gobj, 0x2C).i(r);
         let v = vars(r.game, gobj);
-        v.x20.set(wait);
-        v.x24.set(0);
+        v.countdown.set(wait);
+        v.drift_ticks.set(0);
         change_state(r, gobj, 2, UNK_0X1);
         return;
     }
@@ -764,12 +800,12 @@ pub fn phys_rise(r: &mut Running, gobj: GObjId) {
     if reg(item(r.game, gobj).x40_vel.y) <= 0.0 {
         reset_velocity(r.game, gobj);
         let v = vars(r.game, gobj);
-        v.x38.set(0.0);
-        v.x2c.set(0);
-        v.x20.set(0);
+        v.bob_accel.set(0.0);
+        v.bob_count.set(0);
+        v.countdown.set(0);
         float(r, gobj);
     } else {
-        let a = reg(vars(r.game, gobj).x38.get());
+        let a = reg(vars(r.game, gobj).bob_accel.get());
         let ip = item_mut(r.game, gobj);
         ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), a));
     }
@@ -789,7 +825,7 @@ pub fn coll_rise(r: &mut Running, gobj: GObjId) -> bool {
 pub fn pop(r: &mut Running, gobj: GObjId) {
     reset_velocity(r.game, gobj);
     hitbox::start_blink(r.game, gobj);
-    vars(r.game, gobj).x20.set(3);
+    vars(r.game, gobj).countdown.set(3);
     change_state(r, gobj, 6, change::HIT_PRESERVE | change::ANIM_UPDATE);
     set_box(r, gobj);
 }
@@ -799,7 +835,7 @@ pub fn pop(r: &mut Running, gobj: GObjId) {
 pub fn pop_hit(r: &mut Running, gobj: GObjId) {
     reset_velocity(r.game, gobj);
     hitbox::start_blink(r.game, gobj);
-    vars(r.game, gobj).x20.set(0);
+    vars(r.game, gobj).countdown.set(0);
     change_state(r, gobj, 7, change::HIT_PRESERVE | change::ANIM_UPDATE);
     set_box(r, gobj);
 }
@@ -808,14 +844,14 @@ pub fn pop_hit(r: &mut Running, gobj: GObjId) {
 /// into 7; its animation done, he falls.
 #[doc(alias = "itTincle_UnkMotion7_Anim")]
 pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
-    let t = vars(r.game, gobj).x20.get();
+    let t = vars(r.game, gobj).countdown.get();
     if t == 0 {
-        vars(r.game, gobj).x20.set(-1);
+        vars(r.game, gobj).countdown.set(-1);
         if item(r.game, gobj).msid == 6 {
             change_state(r, gobj, 7, UNK_0X1);
         }
     } else if t > 0 {
-        vars(r.game, gobj).x20.set(t.wrapping_sub(1));
+        vars(r.game, gobj).countdown.set(t.wrapping_sub(1));
     }
     if !lib2725::is_animating(r.game, gobj) {
         fall(r, gobj);
@@ -830,7 +866,7 @@ pub fn coll7(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).ground_or_air == 1 {
         ground::fall_to_floor(r, gobj, land);
     } else {
-        if vars(r.game, gobj).x20.get() < 0 {
+        if vars(r.game, gobj).countdown.get() < 0 {
             land(r, gobj);
         }
         ground::ground_or(r, gobj, fall);
@@ -903,8 +939,8 @@ pub fn lie(r: &mut Running, gobj: GObjId) {
     }
     let k = r.game.objs.rng.below(range);
     let v = vars(r.game, gobj);
-    v.x20.set(k);
-    v.x20.update(|t| t.wrapping_add(lo));
+    v.countdown.set(k);
+    v.countdown.update(|t| t.wrapping_add(lo));
     change_state(r, gobj, 10, change::ANIM_UPDATE);
 }
 
@@ -912,8 +948,8 @@ pub fn lie(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itTincle_UnkMotion10_Anim")]
 pub fn anim10(r: &mut Running, gobj: GObjId) -> bool {
     if !lib2725::is_animating(r.game, gobj) {
-        vars(r.game, gobj).x20.update(|t| t.wrapping_sub(1));
-        if vars(r.game, gobj).x20.get() != 0 {
+        vars(r.game, gobj).countdown.update(|t| t.wrapping_sub(1));
+        if vars(r.game, gobj).countdown.get() != 0 {
             change_state(r, gobj, 10, change::ANIM_UPDATE);
         } else {
             get_up(r, gobj);
@@ -942,10 +978,12 @@ pub fn anim11(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802EC69C")]
 pub fn rise_again(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).pos.z = 0.0;
-    let to = reg(vars(r.game, gobj).x5c.get());
+    let to = reg(vars(r.game, gobj).float_height.get());
     let mut dist = abs(fp::fsubs(to, reg(item(r.game, gobj).pos.y)));
     if dist < attr(r, gobj, 0x44).f(r) {
-        vars(r.game, gobj).x5c.set(mem(fp::fadds(to, 20.0)));
+        vars(r.game, gobj)
+            .float_height
+            .set(mem(fp::fadds(to, 20.0)));
         dist = fp::fadds(dist, 20.0);
     }
     let speed = r.data.f32(attr(r, gobj, 0x50).0);
@@ -955,13 +993,13 @@ pub fn rise_again(r: &mut Running, gobj: GObjId) {
     ip.x40_vel.x = 0.0;
     let vy = reg(ip.x40_vel.y);
     let v = vars(r.game, gobj);
-    v.x2c.set(fp::fctiwz(dist));
-    let c = v.x2c.get();
-    v.x38.set(mem(fp::fdivs(
+    v.bob_count.set(fp::fctiwz(dist));
+    let c = v.bob_count.get();
+    v.bob_accel.set(mem(fp::fdivs(
         fp::fneg(fp::fmuls(vy, vy)),
         fp::fadds(vy, fp::frsp(f64::from(c.wrapping_mul(2)))),
     )));
-    v.x20.set(0);
+    v.countdown.set(0);
     maplib::enter_air(item_mut(r.game, gobj));
     hitbox::end_blink(r.game, gobj);
     change_state(r, gobj, 0xC, UNK_0X1);
@@ -991,11 +1029,13 @@ pub fn turn(r: &mut Running, gobj: GObjId, back: i32) {
         let ip = item_mut(r.game, gobj);
         ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
         ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), fp::fneg(1.0)));
-        let a = reg(vars(r.game, gobj).x34.get());
-        vars(r.game, gobj).x34.set(mem(fp::fmuls(a, fp::fneg(1.0))));
+        let a = reg(vars(r.game, gobj).drift_accel.get());
+        vars(r.game, gobj)
+            .drift_accel
+            .set(mem(fp::fmuls(a, fp::fneg(1.0))));
         return;
     }
-    let mid = reg(vars(r.game, gobj).x58.get());
+    let mid = reg(vars(r.game, gobj).range_middle.get());
     let x = reg(item(r.game, gobj).pos.x);
     item_mut(r.game, gobj).facing_dir = if x < mid { 1.0 } else { -1.0 };
     if r.game.objs.rng.below(3) == 0 {
@@ -1013,24 +1053,26 @@ pub fn turn(r: &mut Running, gobj: GObjId, back: i32) {
     let f = reg(r.game.objs.rng.draw_f32());
     item_mut(r.game, gobj).x40_vel.x = mem(fp::fmuls(range, f));
     let len = attr(r, gobj, 0x3C).i(r);
-    vars(r.game, gobj).x24.set(len);
+    vars(r.game, gobj).drift_ticks.set(len);
     let vx = reg(item(r.game, gobj).x40_vel.x);
     let pull = mem(fp::fdivs(fp::fsubs(top, vx), fp::frsp(f64::from(len / 2))));
-    vars(r.game, gobj).x34.set(pull);
+    vars(r.game, gobj).drift_accel.set(pull);
     let facing = reg(item(r.game, gobj).facing_dir);
     let ip = item_mut(r.game, gobj);
     ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), facing));
-    let a = reg(vars(r.game, gobj).x34.get());
-    vars(r.game, gobj).x34.set(mem(fp::fmuls(a, facing)));
-    vars(r.game, gobj).x28.set(0);
+    let a = reg(vars(r.game, gobj).drift_accel.get());
+    vars(r.game, gobj)
+        .drift_accel
+        .set(mem(fp::fmuls(a, facing)));
+    vars(r.game, gobj).drift_elapsed.set(0);
 }
 
 /// His collision box, `it_802EC9E8`: his attributes' (`x68`), its top and sides halved while
 /// he's down (states 6 to 11).
 #[doc(alias = "it_802EC9E8")]
 pub fn set_box(r: &mut Running, gobj: GObjId) {
-    let mut b = *vars(r.game, gobj).x68.peek();
-    vars(r.game, gobj).x68.get();
+    let mut b = *vars(r.game, gobj).ecb.peek();
+    vars(r.game, gobj).ecb.get();
     if (6..=11).contains(&item(r.game, gobj).msid) {
         b.top = mem(fp::fmuls(reg(b.top), 0.5));
         b.right = mem(fp::fmuls(reg(b.right), 0.5));
@@ -1050,7 +1092,7 @@ pub fn set_box(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802ECA70")]
 pub fn create(r: &mut Running, owner: GObjId) -> Option<GObjId> {
     let pos = Vec3::new(0.0, 200.0, 0.0);
-    let gobj = zako::spawn(r, ItKind::Tincle.id(), Some(pos), None, None, true)?;
+    let gobj = zako::spawn(r, ItKind::Tingle.id(), Some(pos), None, None, true)?;
     let s = super::super::super::gr::ground::scale(r.game);
     item_mut(r.game, gobj).scl = s;
     let j = jobj_of(r.game, gobj).expect("Tingle without a model");
@@ -1060,7 +1102,7 @@ pub fn create(r: &mut Running, owner: GObjId) -> Option<GObjId> {
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.z = scl);
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
-    vars(r.game, gobj).x64.set(Some(owner));
+    vars(r.game, gobj).stage_object.set(Some(owner));
     item_mut(r.game, gobj).x378_itemColl.joint_id_skip = 5;
     wait(r, gobj);
     Some(gobj)
@@ -1069,13 +1111,13 @@ pub fn create(r: &mut Running, owner: GObjId) -> Option<GObjId> {
 /// His countdown, `it_802ECC8C` (the stage's: whether a pop's effect is due).
 #[doc(alias = "it_802ECC8C")]
 pub fn timer(game: &mut Game, gobj: GObjId) -> i32 {
-    vars(game, gobj).x20.get()
+    vars(game, gobj).countdown.get()
 }
 
 /// The weight stood on him, `it_802ECC98` (the stage's).
 #[doc(alias = "it_802ECC98")]
 pub fn set_weight(game: &mut Game, gobj: GObjId, w: f32) {
-    vars(game, gobj).x54.set(w);
+    vars(game, gobj).stood_weight.set(w);
 }
 
 /// His state and his balloon's top, `it_802ECCA4` (the stage's).
@@ -1083,7 +1125,7 @@ pub fn set_weight(game: &mut Game, gobj: GObjId, w: f32) {
 pub fn state_and_place(game: &mut Game, gobj: GObjId) -> (i32, Vec3) {
     let ip = item(game, gobj);
     let (mut pos, msid) = (ip.pos, ip.msid);
-    let h = reg(vars(game, gobj).x50.get());
+    let h = reg(vars(game, gobj).balloon_top.get());
     pos.y = mem(fp::fadds(reg(pos.y), h));
     (msid, pos)
 }

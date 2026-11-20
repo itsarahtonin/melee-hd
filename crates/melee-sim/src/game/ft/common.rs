@@ -107,10 +107,10 @@ impl Running<'_> {
             kind
         } else {
             match ItKind::of(kind) {
-                ItKind::LuckyEgg => ItKind::LGunRay.id(),
+                ItKind::ChanseyEgg => ItKind::RayGunShot.id(),
                 ItKind::WhispyApple => ItKind::StarRodStar.id(),
-                ItKind::WhispyHealApple => ItKind::LipStickSpore.id(),
-                ItKind::HammerHead => ItKind::SScopeBeam.id(),
+                ItKind::WhispyHealApple => ItKind::LipsStickSpore.id(),
+                ItKind::HammerHead => ItKind::SuperScopeShot.id(),
                 _ => -1,
             }
         };
@@ -119,9 +119,9 @@ impl Running<'_> {
         let touched = ip.xDC8_word.flags.xF;
         let by = |p: i32| i32::from(touched) & (1 << p) != 0;
         if kind2 != -1
-            && (kind2 == ItKind::LGunRay
+            && (kind2 == ItKind::RayGunShot
                 || kind2 == ItKind::Egg
-                || kind2 == ItKind::SScopeBeam
+                || kind2 == ItKind::SuperScopeShot
                 || thrown)
         {
             let t = self.game.player_stale_moves(slot);

@@ -267,7 +267,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 /// turn, it walks right; along the floor.
 #[doc(alias = "itOldkuri_UnkMotion1_Phys")]
 pub fn phys1(r: &mut Running, gobj: GObjId) {
-    if get(r, gobj, off::TURN) != 0 && lib2725::xdc0_has(r.game, gobj, 2) {
+    if get(r, gobj, off::TURN) != 0 && lib2725::script_flags_have(r.game, gobj, 2) {
         walk_right(r, gobj);
     }
     along_floor(r, gobj);
@@ -320,7 +320,7 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
 /// it walks left; its walking speed again, along the floor.
 #[doc(alias = "itOldkuri_UnkMotion2_Phys")]
 pub fn phys2(r: &mut Running, gobj: GObjId) {
-    if get(r, gobj, off::TURN) != 0 && lib2725::xdc0_has(r.game, gobj, 2) {
+    if get(r, gobj, off::TURN) != 0 && lib2725::script_flags_have(r.game, gobj, 2) {
         walk_left(r, gobj);
     }
     let v = zako::bytes(r.game, gobj).f32(off::SPEED);

@@ -14,7 +14,8 @@ pub const DESTROYED: u32 = 0x802A_DC04;
 pub const REMOVE: u32 = 0x802A_DC34;
 pub const SPAWN: u32 = 0x802A_DC54;
 pub const PICKED_UP: u32 = 0x802A_DD88;
-pub const EVT_UNK: u32 = 0x802A_DDB0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_DDB0;
 
 /// Runs one of the hammer's events, if `addr` is one.
 #[melee_callbacks::callbacks(Proc)]
@@ -91,6 +92,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 
 /// Forgets a GObj, `it_802ADDB0` (`it_8026B894`).
 // Ports `it_802ADDB0`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

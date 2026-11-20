@@ -73,7 +73,7 @@ pub fn spawn(
     let mut v = common(r.game, gobj);
     v.set_jobj(jobj);
     v.set_idx(-1);
-    v.set_x14(2, 0);
+    v.set_word(2, 0);
     item_mut(r.game, gobj).x378_itemColl.x34_flags.b1234 = 3;
     Some(gobj)
 }
@@ -85,20 +85,24 @@ pub fn reset(game: &mut Game, gobj: GObjId) {
     let mut v = common(game, gobj);
     v.set_jobj(None);
     v.set_idx(-1);
-    v.set_x8(Vec3::new(0.0, 1.0, 0.0));
+    v.set_normal(Vec3::new(0.0, 1.0, 0.0));
     for i in 0..3 {
-        v.set_x14(i, 0);
+        v.set_word(i, 0);
     }
     clear_x1c(game, gobj);
     clear_x1e(game, gobj);
 }
 
-/// An enemy's common variables (`itZako_ItemVars`), the first words of its kind's member.
+/// An enemy's common variables (`itZako_ItemVars`), the first words of its kind's member: its
+/// joint and spawner slot, the surface normal its model turns toward (`x8`), and three words
+/// (`x14`): the turn's frames left, its bounces in a KO's flight and its last hurt sound.
 pub struct Common<'a> {
     pub jobj: &'a mut super::Var<Option<JObjId>>,
     pub idx: &'a mut super::Var<i32>,
-    pub x8: &'a mut super::Var<Vec3>,
-    pub x14: &'a mut [super::Var<i32>; 3],
+    #[doc(alias("x8"))]
+    pub normal: &'a mut super::Var<Vec3>,
+    #[doc(alias("x14"))]
+    pub words: &'a mut [super::Var<i32>; 3],
 }
 
 /// The enemy's common variables: typed in the Shy Guys', Tingle's and the Klap Trap's members,
@@ -112,8 +116,8 @@ pub enum CommonVars<'a> {
 pub mod off {
     pub const JOBJ: usize = 0;
     pub const IDX: usize = 4;
-    pub const X8: usize = 8;
-    pub const X14: usize = 0x14;
+    pub const NORMAL: usize = 8;
+    pub const WORDS: usize = 0x14;
 }
 
 impl CommonVars<'_> {
@@ -138,31 +142,35 @@ impl CommonVars<'_> {
         }
     }
 
-    pub fn x8(&mut self) -> Vec3 {
+    #[doc(alias("x8"))]
+    pub fn normal(&mut self) -> Vec3 {
         match self {
-            CommonVars::Typed(v) => v.x8.get(),
-            CommonVars::Bytes(b) => b.vec(off::X8),
+            CommonVars::Typed(v) => v.normal.get(),
+            CommonVars::Bytes(b) => b.vec(off::NORMAL),
         }
     }
 
-    pub fn set_x8(&mut self, x: Vec3) {
+    #[doc(alias("set_x8"))]
+    pub fn set_normal(&mut self, x: Vec3) {
         match self {
-            CommonVars::Typed(v) => v.x8.set(x),
-            CommonVars::Bytes(b) => b.set_vec(off::X8, x),
+            CommonVars::Typed(v) => v.normal.set(x),
+            CommonVars::Bytes(b) => b.set_vec(off::NORMAL, x),
         }
     }
 
-    pub fn x14(&mut self, i: usize) -> i32 {
+    #[doc(alias("x14"))]
+    pub fn word(&mut self, i: usize) -> i32 {
         match self {
-            CommonVars::Typed(v) => v.x14[i].get(),
-            CommonVars::Bytes(b) => b.i32(off::X14 + 4 * i),
+            CommonVars::Typed(v) => v.words[i].get(),
+            CommonVars::Bytes(b) => b.i32(off::WORDS + 4 * i),
         }
     }
 
-    pub fn set_x14(&mut self, i: usize, x: i32) {
+    #[doc(alias("set_x14"))]
+    pub fn set_word(&mut self, i: usize, x: i32) {
         match self {
-            CommonVars::Typed(v) => v.x14[i].set(x),
-            CommonVars::Bytes(b) => b.set_i32(off::X14 + 4 * i, x),
+            CommonVars::Typed(v) => v.words[i].set(x),
+            CommonVars::Bytes(b) => b.set_i32(off::WORDS + 4 * i, x),
         }
     }
 }
@@ -177,30 +185,30 @@ pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
             CommonVars::Typed(Common {
                 jobj: &mut v.jobj,
                 idx: &mut v.idx,
-                x8: &mut v.x8,
-                x14: &mut v.x14,
+                normal: &mut v.normal,
+                words: &mut v.words,
             })
         }};
     }
     match ItKind::of(kind) {
-        ItKind::Heiho => of!(vars.heiho()),
-        ItKind::Tincle => of!(vars.tincle()),
-        ItKind::Klap => of!(vars.klap()),
-        ItKind::Kyasarin => of!(vars.kyasarin()),
-        ItKind::KyasarinEgg => of!(vars.kyasarin_egg()),
+        ItKind::ShyGuy => of!(vars.heiho()),
+        ItKind::Tingle => of!(vars.tincle()),
+        ItKind::KlapTrap => of!(vars.klap()),
+        ItKind::Birdo => of!(vars.kyasarin()),
+        ItKind::BirdoEgg => of!(vars.kyasarin_egg()),
         ItKind::GreatFoxLaser => of!(vars.greatfox_laser()),
-        ItKind::Kuriboh
-        | ItKind::Leadead
-        | ItKind::Octarock
-        | ItKind::Ottosea
-        | ItKind::OctarockStone
-        | ItKind::Nokonoko
-        | ItKind::Patapata
-        | ItKind::Likelike
-        | ItKind::Whitebea
-        | ItKind::ZGShell
-        | ItKind::ZRShell
-        | ItKind::Mato => CommonVars::Bytes(vars.zako()),
+        ItKind::Goomba
+        | ItKind::ReDead
+        | ItKind::Octorok
+        | ItKind::Topi
+        | ItKind::OctorokStone
+        | ItKind::KoopaTroopa
+        | ItKind::KoopaParatroopa
+        | ItKind::LikeLike
+        | ItKind::PolarBear
+        | ItKind::KoopaGreenShell
+        | ItKind::KoopaRedShell
+        | ItKind::Target => CommonVars::Bytes(vars.zako()),
         k => code::unported_call(&format!("it_8027B5B0 (an enemy of kind {})", k.id())),
     }
 }
@@ -234,7 +242,7 @@ pub fn clear_x1e(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "grZakoGenerator_801CAC14")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let kind = item(r.game, gobj).kind;
-    if kind == ItKind::Coin {
+    if kind == ItKind::Trophy {
         // A trophy point's slot (the last) forgets the coin it made.
         let slots = r
             .game
@@ -418,7 +426,7 @@ const FLOOR_MASK: i32 = FLOOR_PUSH | FLOOR_HUG;
 const CEILING_MASK: i32 = CEILING_PUSH | CEILING_HUG;
 
 /// Turns the model toward the surface normal `normal` over `frames` frames (the turn's count in
-/// `x14.x`, restarted when the surface changes), facing `facing` about y (`it_8027BBF4` and
+/// word 0, `x14.x`, restarted when the surface changes), facing `facing` about y (`it_8027BBF4` and
 /// `it_8027C0F0` once they have their normal).
 fn align(r: &mut Running, gobj: GObjId, normal: Vec3, facing: f64, frames: f64) {
     let j = jobj_of(r.game, gobj).expect("an enemy without a model");
@@ -427,18 +435,18 @@ fn align(r: &mut Running, gobj: GObjId, normal: Vec3, facing: f64, frames: f64) 
     let mut up = Vec3::new(0.0, 1.0, 0.0);
     rotate_euler(&mut up, angles);
     let mut v = common(r.game, gobj);
-    if reg(v.x8().angle_xy(normal)) > reg(NEW_SURFACE) {
-        v.set_x8(normal);
-        v.set_x14(0, fp::fctiwz(frames));
+    if reg(v.normal().angle_xy(normal)) > reg(NEW_SURFACE) {
+        v.set_normal(normal);
+        v.set_word(0, fp::fctiwz(frames));
     }
-    let x8 = v.x8();
+    let x8 = v.normal();
     let turn = reg(up.angle_xy(x8));
-    let (x, y) = if turn < reg(NEW_SURFACE) || v.x14(0) < 2 {
+    let (x, y) = if turn < reg(NEW_SURFACE) || v.word(0) < 2 {
         (reg(normal.x), reg(normal.y))
     } else {
-        let left = v.x14(0);
+        let left = v.word(0);
         let mut step = fp::fdivs(turn, fp::frsp(f64::from(left)));
-        v.set_x14(0, left.wrapping_sub(1));
+        v.set_word(0, left.wrapping_sub(1));
         let cross = fp::fmsubs(
             reg(up.x),
             reg(normal.y),
@@ -526,8 +534,8 @@ pub fn face(r: &mut Running, gobj: GObjId, y_rot: f32) {
     jobj::set_rotation_y(jobjs, j, y);
     jobj::set_rotation_z(jobjs, j, 0.0);
     let mut v = common(r.game, gobj);
-    v.set_x8(Vec3::new(0.0, 1.0, 0.0));
-    v.set_x14(0, 0);
+    v.set_normal(Vec3::new(0.0, 1.0, 0.0));
+    v.set_word(0, 0);
 }
 
 /// A collision callback that answers false, `it_8027C794`.
@@ -537,7 +545,7 @@ pub fn answers_false(_: &mut Running, _: GObjId) -> bool {
 }
 
 /// Bounces off what it touches in the air, `it_8027C79C`: a hurt sound, the launch off the
-/// surfaces, and past the common data's count of bounces (`x14.y`), a 1P mode's trophy roll;
+/// surfaces, and past the common data's count of bounces (word 1, `x14.y`), a 1P mode's trophy roll;
 /// true then.
 #[doc(alias = "it_8027C79C")]
 pub fn bounce(r: &mut Running, gobj: GObjId) -> bool {
@@ -545,8 +553,8 @@ pub fn bounce(r: &mut Running, gobj: GObjId) -> bool {
         hurt_sound(r, gobj);
         launch(r, gobj, true);
         let mut v = common(r.game, gobj);
-        let n = v.x14(1).wrapping_add(1);
-        v.set_x14(1, n);
+        let n = v.word(1).wrapping_add(1);
+        v.set_word(1, n);
         let zako = r.game.it.zako.expect("no enemies' common data");
         if n > r.data.u32(zako) as i32 {
             trophy_roll(r, gobj);
@@ -616,12 +624,12 @@ pub fn along_surface(v: &mut Vec3, normal: Vec3, facing: f32) {
 pub fn hurt_sound(r: &mut Running, gobj: GObjId) {
     const SOUNDS: [i32; 4] = [0x131, 0x132, 0x133, 0x134];
     let mut s = SOUNDS[r.game.objs.rng.below(4) as usize];
-    while s == common(r.game, gobj).x14(2) {
+    while s == common(r.game, gobj).word(2) {
         s = SOUNDS[r.game.objs.rng.below(4) as usize];
     }
     let mut v = common(r.game, gobj);
-    v.set_x14(2, s);
-    let s = v.x14(2);
+    v.set_word(2, s);
+    let s = v.word(2);
     super::item::play_sfx(r, gobj, s, 127, 64);
 }
 
@@ -778,7 +786,7 @@ pub fn set_source_player(game: &mut Game, gobj: GObjId, fighter: GObjId) {
 pub fn ko(r: &mut Running, gobj: GObjId) {
     let kind = item(r.game, gobj).kind;
     ko_bonus(r, gobj);
-    if kind == ItKind::Coin {
+    if kind == ItKind::Trophy {
         // A trophy point's slot (the last) frees, the coin it made taken.
         let slots = r
             .game
@@ -829,22 +837,22 @@ impl Running<'_> {
             "zako ko player illegal ! :{player}"
         );
         let bonus = match ItKind::of(kind) {
-            ItKind::Kuriboh | ItKind::OldKuri => 0xCE,
-            ItKind::Heiho => 0xD6,
-            ItKind::Leadead => 0xD1,
-            ItKind::Octarock => 0xD3,
-            ItKind::Ottosea => 0xD4,
-            ItKind::Nokonoko => 0xCF,
-            ItKind::Patapata => 0xD0,
-            ItKind::Likelike => 0xD2,
-            ItKind::Whitebea => 0xD5,
+            ItKind::Goomba | ItKind::OldGoomba => 0xCE,
+            ItKind::ShyGuy => 0xD6,
+            ItKind::ReDead => 0xD1,
+            ItKind::Octorok => 0xD3,
+            ItKind::Topi => 0xD4,
+            ItKind::KoopaTroopa => 0xCF,
+            ItKind::KoopaParatroopa => 0xD0,
+            ItKind::LikeLike => 0xD2,
+            ItKind::PolarBear => 0xD5,
             // No bonus (the switch's default).
-            ItKind::Klap
-            | ItKind::Kyasarin
-            | ItKind::KyasarinEgg
-            | ItKind::ZGShell
-            | ItKind::ZRShell
-            | ItKind::Coin => return,
+            ItKind::KlapTrap
+            | ItKind::Birdo
+            | ItKind::BirdoEgg
+            | ItKind::KoopaGreenShell
+            | ItKind::KoopaRedShell
+            | ItKind::Trophy => return,
             _ => code::unported_call(&format!("pl_8004049C (an enemy of kind {kind})")),
         };
         let points = bonus_points(bonus);

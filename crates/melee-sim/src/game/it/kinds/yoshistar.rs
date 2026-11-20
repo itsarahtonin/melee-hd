@@ -25,7 +25,8 @@ pub const REFLECTED: u32 = 0x802B_314C;
 pub const ANIM: u32 = 0x802B_3294;
 pub const PHYS: u32 = 0x802B_32C8;
 pub const COLL: u32 = 0x802B_3324;
-pub const EVT_UNK: u32 = 0x802B_3348;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_3348;
 
 /// `StarAttrs`: the speed it starts with and its acceleration, both along its facing.
 mod attr {
@@ -156,6 +157,7 @@ fn collide(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `it_802B3348`.
 #[doc(alias = "it_802B3348")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

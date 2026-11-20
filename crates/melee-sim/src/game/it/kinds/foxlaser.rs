@@ -23,7 +23,8 @@ pub const ABSORBED: u32 = 0x8029_CC4C;
 pub const SHIELD_BOUNCED: u32 = 0x8029_CC54;
 #[doc(alias = "itFoxLaser_Logic94_HitShield")]
 pub const HIT_SHIELD: u32 = 0x8029_CCF0;
-pub const EVT_UNK: u32 = 0x8029_CCF8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x8029_CCF8;
 
 /// `FoxLaserAttr` offsets: the lifetime and the full length.
 const LIFETIME: u32 = 0;

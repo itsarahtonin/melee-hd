@@ -32,7 +32,8 @@ pub const HIT_SHIELD: u32 = 0x802C_2454;
 pub const ABSORBED: u32 = 0x802C_245C;
 #[doc(alias = "itClimbersBlizzard_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x802C_2464;
-pub const EVT_UNK: u32 = 0x802C_246C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_246C;
 
 /// `itClimbersBlizzardAttributes` offsets: its lifetime, speed, rise, and its angle's spread.
 mod attr {
@@ -95,7 +96,7 @@ fn tick_lifetime(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itClimbersBlizzard_Spawn")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::IceClimberBlizzard.id(),
+        kind: ItKind::IceClimbersBlizzard.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;
