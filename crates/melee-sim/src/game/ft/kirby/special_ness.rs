@@ -6,11 +6,11 @@
 //! ([`KIRBY`]); the charge's variables are laid out as Ness's (`mv.ns.specialn`). Only his
 //! copy's addresses are here.
 
-use super::super::super::it::kinds as k;
 use super::super::super::state::Running;
 use super::super::ness::ms as ns;
 use super::super::ness::special_n::PkFlash;
 use super::ms;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// The copy's function addresses.
@@ -52,7 +52,7 @@ pub const KIRBY: PkFlash = PkFlash {
     attrs: 0x1A0,
     u: 0x68,
     bone: 5,
-    flash_kind: k::KIRBY_NESS_PK_FLUSH,
+    flash_kind: ItKind::KirbyNessPKFlush.id(),
     on_death: super::addr::DEATH3,
     on_damage: super::addr::DEATH1,
     clears_hooks: false,

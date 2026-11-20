@@ -24,9 +24,6 @@ pub const SHIELD_BOUNCED: u32 = 0x802B_E518;
 pub const REFLECTED: u32 = 0x802B_E538;
 pub const EVT_UNK: u32 = 0x802B_E578;
 
-/// `It_Kind_Peach_ToadSpore`.
-pub const KIND: i32 = 111;
-
 /// The spores' effect.
 const GFX_SPORE: i32 = 0x4D3;
 

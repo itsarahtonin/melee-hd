@@ -10,6 +10,7 @@ use super::super::ground::{air, fall, ground_or_fall};
 use super::super::item::{article, attr_of, change, change_state, common_data, play_sfx};
 use super::super::{drop, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, spawn};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::itKusudama_ItemVars;
 use crate::hsd::gobj::GObjId;
@@ -272,7 +273,7 @@ pub fn rain(r: &mut Running, gobj: GObjId, kind_w: i32, food_w: i32, random_w: i
     if drop::drop_monster(r, Some(gobj), pos, Some(vel)).is_some() {
         return;
     }
-    let food_w = if spawn::kind_on(r.game, super::FOODS) {
+    let food_w = if spawn::kind_on(r.game, ItKind::Foods.id()) {
         food_w
     } else {
         0
@@ -288,12 +289,12 @@ pub fn rain(r: &mut Running, gobj: GObjId, kind_w: i32, food_w: i32, random_w: i
         if roll < kind_w {
             let kind = r.data.u32(attr(r, gobj, 0x10)) as i32;
             let n = attr_i(r, gobj, 0x14);
-            let refused = (kind == super::M_BALL && spawn::poke_balls_full(r.game))
+            let refused = (kind == ItKind::MBall && spawn::poke_balls_full(r.game))
                 || !spawn::kind_on(r.game, kind);
             if !refused {
                 let mut i = 0;
                 while i < n {
-                    if kind == super::M_BALL && spawn::poke_balls_full(r.game) {
+                    if kind == ItKind::MBall && spawn::poke_balls_full(r.game) {
                         break;
                     }
                     if let Some(k) = throw_out(r, gobj, kind, 1.4) {
@@ -315,7 +316,7 @@ pub fn rain(r: &mut Running, gobj: GObjId, kind_w: i32, food_w: i32, random_w: i
         if roll < food_w {
             let n = r.game.objs.rng.below(5) + 10;
             for i in 0..n {
-                if let Some(k) = throw_out(r, gobj, super::FOODS, 1.8) {
+                if let Some(k) = throw_out(r, gobj, ItKind::Foods.id(), 1.8) {
                     out[i as usize] = k;
                 }
             }
@@ -357,7 +358,7 @@ fn stand(r: &mut Running, gobj: GObjId) {
 /// A party ball standing at `pos`, `it_802896CC`.
 #[doc(alias = "it_802896CC")]
 pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
-    let mut spawn = super::super::item::drop_spawn(super::KUSUDAMA, pos, false);
+    let mut spawn = super::super::item::drop_spawn(ItKind::Kusudama.id(), pos, false);
     let gobj = super::super::item::spawn_ground(r, &mut spawn)?;
     stopped(r, gobj);
     Some(gobj)

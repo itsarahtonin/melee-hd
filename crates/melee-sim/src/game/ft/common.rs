@@ -9,6 +9,7 @@ use super::super::state::Running;
 use super::super::structs::{Fighter, Vec2};
 use super::parts::{TOP_N, TRANS_N};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::lb::joint::world_position;
@@ -100,17 +101,16 @@ impl Running<'_> {
     #[doc(alias = "it_8026B774")]
     #[doc(alias = "pl_8003E17C")]
     pub fn item_pickup_stat(&mut self, slot: i32, _sub: i32, item: GObjId) {
-        use crate::game::it::kinds::{EGG, L_GUN_RAY, LIPSTICK_SPORE, S_SCOPE_BEAM, STARROD_STAR};
         let ip = crate::game::it::item(self.game, item);
         let kind = ip.kind;
-        let kind2 = if (0..L_GUN_RAY).contains(&kind) {
+        let kind2 = if (0..ItKind::COMMON_END.id()).contains(&kind) {
             kind
         } else {
-            match kind {
-                205 => L_GUN_RAY,
-                225 => STARROD_STAR,
-                226 => LIPSTICK_SPORE,
-                40 => S_SCOPE_BEAM,
+            match ItKind::of(kind) {
+                ItKind::LuckyEgg => ItKind::LGunRay.id(),
+                ItKind::WhispyApple => ItKind::StarRodStar.id(),
+                ItKind::WhispyHealApple => ItKind::LipStickSpore.id(),
+                ItKind::HammerHead => ItKind::SScopeBeam.id(),
                 _ => -1,
             }
         };
@@ -118,7 +118,12 @@ impl Running<'_> {
         let thrown = ip.xDC8_word.flags.x1;
         let touched = ip.xDC8_word.flags.xF;
         let by = |p: i32| i32::from(touched) & (1 << p) != 0;
-        if kind2 != -1 && (kind2 == L_GUN_RAY || kind2 == EGG || kind2 == S_SCOPE_BEAM || thrown) {
+        if kind2 != -1
+            && (kind2 == ItKind::LGunRay
+                || kind2 == ItKind::Egg
+                || kind2 == ItKind::SScopeBeam
+                || thrown)
+        {
             let t = self.game.player_stale_moves(slot);
             if !by(slot) {
                 t.x674[kind2 as usize] = t.x674[kind2 as usize].wrapping_add(1);
@@ -671,7 +676,7 @@ impl Running<'_> {
             } else {
                 let roll = self.game.objs.rng.below(100) + 1;
                 let star_chance = self.common().i32(0x520);
-                let free = super::super::camera::is_free(&self.game.camera.cam);
+                let free = self.game.camera.is_free();
                 match (!free && star_chance >= roll, ice) {
                     (true, true) => self.enter_dead_up_fall_ice(gobj),
                     (true, false) => self.enter_dead_up_fall(gobj),

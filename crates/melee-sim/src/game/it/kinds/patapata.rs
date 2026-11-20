@@ -21,6 +21,7 @@ use super::super::{data, ground, hitbox, item, item_mut, lib26b1, lib2725, mapli
 use crate::fpu::{mem, reg};
 use crate::game::camera;
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -749,7 +750,7 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 pub fn spawn(r: &mut Running, kind: i32, pos: Vec3, facing: i32) -> Option<GObjId> {
     let gobj = zako::spawn(
         r,
-        super::PATAPATA,
+        ItKind::Patapata.id(),
         Some(pos),
         None,
         Some(Vec3::new(0.0, 0.0, 0.0)),

@@ -23,6 +23,7 @@ use crate::fpu::{mem, reg};
 use crate::game::camera;
 use crate::game::ef::{Arg, SpawnKind};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -1091,7 +1092,7 @@ pub(super) fn settle(r: &mut Running, gobj: GObjId) {
 pub fn spawn(r: &mut Running, kind: i32, pos: Vec3, facing: i32) -> Option<GObjId> {
     let gobj = zako::spawn(
         r,
-        super::ZGSHELL,
+        ItKind::ZGShell.id(),
         Some(pos),
         None,
         Some(Vec3::new(0.0, 0.0, 0.0)),

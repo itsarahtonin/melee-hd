@@ -7,13 +7,14 @@
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{self as it_kinds, yoshiegglay, yoshitongue};
+use super::super::super::it::kinds::{yoshiegglay, yoshitongue};
 use super::super::super::state::Running;
 use super::super::co::yoshi_egg::KB_CAPTURE;
 use super::super::parts::TRANS_N2;
 use super::{ms, u};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
@@ -342,7 +343,7 @@ impl Running<'_> {
             ));
             let (a, b) = (self.kb_ext_attr_f32(DAMAGE), self.kb_ext_attr_f32(BEHAVIOR));
             let laid = yoshiegglay::Laid {
-                kind: it_kinds::KIRBY_YOSHI_EGG_LAY,
+                kind: ItKind::KirbyYoshiEggLay.id(),
                 pos,
                 vel: Vec3::new(vx, self.kb_attr_f32(f, VEL_Y), 0.0),
                 facing_dir: facing,

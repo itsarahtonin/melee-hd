@@ -21,6 +21,7 @@ use crate::fpu::{mem, reg};
 use crate::game::code::ParticleHooks;
 use crate::game::ft::ness::attack_hi4;
 use crate::game::handles::{CodeRef, ItemLinkId};
+use crate::game::it::ItKind;
 use crate::game::state::{Obj, Running, UserData};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::{self as gobjs, GObjId};
@@ -253,7 +254,7 @@ pub fn spawn(
     msid: i32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::NESS_YOYO,
+        kind: ItKind::NessYoyo.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition(&spawn, pos, false)`.

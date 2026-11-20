@@ -7,12 +7,12 @@
 //! here.
 
 use super::super::super::code::Val;
-use super::super::super::it::kinds::KIRBY_KOOPA_FLAME;
 use super::super::super::state::Running;
 use super::super::koopa::ms as kp;
 use super::super::koopa::special_n::{FireBreath, Phase};
 use super::copy::KindFrom;
 use super::ms;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -65,7 +65,7 @@ pub const KIRBY: FireBreath = FireBreath {
         y: 0.5,
         z: 3.0,
     }),
-    flame_kind: KIRBY_KOOPA_FLAME,
+    flame_kind: ItKind::KirbyKoopaFlame.id(),
     first_dir: -1,
     sfx_by_kind: false,
     air_start_lands_in_loop: true,

@@ -6,6 +6,7 @@ use super::super::ground::{fall_to_floor, ground_or_fall};
 use super::super::item::{article, change, change_state, play_sfx, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::{GObjId, Host};
@@ -101,11 +102,11 @@ pub fn gone(r: &mut Running, gobj: GObjId) {
 /// center (`it_8026BB68`) or `pos`, facing left.
 #[doc(alias = "it_8028FAF4")]
 pub fn spawn(r: &mut Running, parent: Option<GObjId>, pos: Vec3) -> Option<GObjId> {
-    if !super::super::spawn::kind_on(r.game, super::FOODS) {
+    if !super::super::spawn::kind_on(r.game, ItKind::Foods.id()) {
         return None;
     }
     let mut spawn = SpawnItem {
-        kind: super::FOODS,
+        kind: ItKind::Foods.id(),
         prev_pos: pos,
         ..Default::default()
     };

@@ -593,7 +593,7 @@ impl Running<'_> {
                 }
             }
         }
-        let width = reg(super::super::camera::average_width(&self.game.camera.cam));
+        let width = reg(self.game.camera.average_width());
         // The two bonuses by the camera's width average: under Slippi's rules also taken with
         // playback's (`live::PlaybackCamera`), a different outcome noted (design call 9).
         let scales = (self.plco_f32(0x104), self.plco_f32(0x114));

@@ -7,6 +7,7 @@
 use super::super::item::{animate, change, change_state, destroy, pick_up, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1};
 use crate::fpu::mem;
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{SpawnItem, itCLinkMilk_ItemVars};
 use crate::hsd::gobj::GObjId;
@@ -58,7 +59,7 @@ pub fn spawn(
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::CLINK_MILK,
+        kind: ItKind::CLinkMilk.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;

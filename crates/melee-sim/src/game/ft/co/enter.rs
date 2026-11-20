@@ -7,6 +7,7 @@ use super::super::super::state::Running;
 use super::super::common::GA_GROUND;
 use crate::fpu::reg;
 use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::aobj;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -88,8 +89,7 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         if fp.kind == FighterKind::Peach
             && let Some(item) = fp.item_gobj
-            && crate::game::it::lib26b1::kind(self.game, item)
-                == crate::game::it::kinds::peachparasol::KIND
+            && crate::game::it::lib26b1::kind(self.game, item) == ItKind::PeachParasol
         {
             crate::game::it::kinds::peachparasol::remove(self, item);
         }

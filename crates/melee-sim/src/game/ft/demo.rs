@@ -15,6 +15,7 @@ use super::create::AllocInfo;
 use super::data::kind_tables;
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 use gekko_fp as fp;
@@ -31,9 +32,6 @@ pub const CUTSCENE_PHYS: [u32; 5] = [
     0x800C_7414,
     0x800C_74AC,
 ];
-
-/// `It_Kind_DrMario_Vitamin`.
-const IT_KIND_DRMARIO_VITAMIN: i32 = 49;
 
 /// The demo action-state table (`ftData_803C52A0`) and its states' count (`x18`).
 const DEMO_STATE_LIST: u32 = 0x803C_52A0;
@@ -391,7 +389,7 @@ impl Running<'_> {
         self.create_own_light(f);
         self.on_load(gobj, super::create_model::Creator::Demo);
         self.init_hurt_capsules(f);
-        let cam_box = super::super::camera::alloc_box(&mut self.game.camera.boxes, 0);
+        let cam_box = self.game.camera.alloc_box(0);
         self.game.fighters[f.0].x890_cameraBox = Some(cam_box);
         let root = self.root_jobj(gobj);
         self.create_shadow(f, root);
@@ -529,7 +527,7 @@ impl Running<'_> {
                     self,
                     gobj,
                     color,
-                    IT_KIND_DRMARIO_VITAMIN,
+                    ItKind::DrMarioVitamin.id(),
                     2,
                     part,
                     facing,
@@ -636,7 +634,7 @@ impl Running<'_> {
                         self,
                         gobj,
                         color,
-                        IT_KIND_DRMARIO_VITAMIN,
+                        ItKind::DrMarioVitamin.id(),
                         msid,
                         0,
                         facing,

@@ -8,6 +8,7 @@ use melee_data::archive::Archives;
 use super::handles::{CameraBoxId, FighterId, ItemId};
 use super::mirror::{LayCx, LayOut, Mirror};
 use super::state::{Game, Obj, UserData};
+use crate::game::it::ItKind;
 use crate::hsd::export::{Lay, live_objects};
 use crate::hsd::gobj::{GObjId, ProcId};
 use crate::hsd::image::Image;
@@ -746,7 +747,7 @@ fn wind_sources(game: &Game, data: &Archives, img: &mut Image) {
 /// since as melee-sim holds it (`Camera_80029020`, `Camera_80028F5C`); nothing writes the flag
 /// byte's other bits or the byte after it.
 fn camera_boxes(game: &Game, img: &mut Image) {
-    let b = &game.camera.boxes;
+    let b = game.camera.raw_parts().boxes;
     if b.addr == 0 {
         return;
     }
@@ -1124,7 +1125,9 @@ impl LayCx for Addrs<'_> {
             "QueuedId" => g.ef.queued.addr(h),
             // The items' tables in the executable: the handle is the address.
             "GroundId" => g.grounds.addr(h),
-            "CameraBoxId" if g.camera.boxes.addr != 0 => g.camera.boxes.addr + 0x6C * h,
+            "CameraBoxId" if g.camera.raw_parts().boxes.addr != 0 => {
+                g.camera.raw_parts().boxes.addr + 0x6C * h
+            }
             // A wind source (`lb_8000FCDC`'s second block, `WIND_POOL`) by its index.
             "WindSource" if g.ft.winds_block != 0 => {
                 g.ft.winds_block + super::gr::vars::WIND_SIZE * h
@@ -1215,7 +1218,7 @@ pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
     }
     // A stage's hurtbox item's attributes are the executable's (`it_803F8C08`), which the
     // mirror holds as none.
-    if o.kind == super::it::kinds::PKIND_RANDOM && o.xCC_item_attr.is_none() {
+    if o.kind == ItKind::PokemonRandom && o.xCC_item_attr.is_none() {
         l.put_u32(at + 0xCC, 0x803F_8C08);
     }
     // The command script's cursor is a state's script in the item's file (`Item_80268E5C`)

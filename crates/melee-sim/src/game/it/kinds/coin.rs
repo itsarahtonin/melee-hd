@@ -8,6 +8,7 @@ use super::super::{flag, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, mapl
 use super::foods::set_model;
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::it::{CoinFlags, Var};
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::state::{Game, Running};
@@ -163,7 +164,7 @@ fn tier(r: &Running, gobj: GObjId, t: i32) -> DataRef {
 /// The coin's spawn description (`it_802E614C`): from `pos` at `vel`, parents `p1` and `p2`.
 fn spawn_desc(p1: Option<GObjId>, p2: Option<GObjId>, pos: Vec3, vel: Vec3) -> SpawnItem {
     let mut s = SpawnItem {
-        kind: super::UNK4,
+        kind: ItKind::Unk4.id(),
         ..Default::default()
     };
     s.prev_pos = pos;
@@ -418,7 +419,7 @@ pub fn tick(r: &mut Running, gobj: GObjId) -> bool {
 pub fn limit_coins(r: &mut Running) {
     let limit = super::super::item::common_data(r.game).u32(r.data, 0x20);
     if r.game.it.counts.x50 as u32 >= limit.wrapping_sub(2) {
-        let last = super::super::spawn::find_kind(r.game, super::UNK4);
+        let last = super::super::spawn::find_kind(r.game, ItKind::Unk4.id());
         super::super::item::destroy(r, last.expect("it_802E6658: no coin to take off"));
     }
 }

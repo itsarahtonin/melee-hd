@@ -10,11 +10,12 @@
 
 use gekko_fp as fp;
 
-use super::super::super::it::kinds::{self, gamewatchchef as chef};
+use super::super::super::it::kinds::gamewatchchef as chef;
 use super::super::super::state::Running;
 use super::super::motion::flags::*;
 use super::{addr, attr, ms, mv, part, u};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -42,7 +43,7 @@ pub const GAME_WATCH: Chef = Chef {
     states: [ms::SPECIAL_N, ms::SPECIAL_AIR_N],
     attrs: 0,
     u: 0,
-    sausage_kind: kinds::GAME_WATCH_CHEF,
+    sausage_kind: ItKind::GameWatchChef.id(),
     sausage_cb: addr::SPECIAL_N_CREATE_SAUSAGE,
     start_cb: addr::SPECIAL_N_CREATE_SAUSAGE,
     keep: KEEP_FLAGS,

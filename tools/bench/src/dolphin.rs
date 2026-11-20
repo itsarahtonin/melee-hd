@@ -352,35 +352,21 @@ impl Env {
                 codes.display()
             )
         });
-        let ini = match self.cpu_stick_byte(name) {
-            Some(byte) => with_di_patch(&ini, byte),
-            None => ini,
-        };
-        std::fs::write(settings.join("GALE01.ini"), ini).unwrap();
-    }
-
-    /// For a match where a fighter runs CPU code (Nana), the byte the CPU's DI took as its stick
-    /// when the match was recorded: the low byte of that fighter's address in ssbm-rs, from the
-    /// start of its state trace (`crate::sync::start_trace_path`, which `make-matches.sh` writes). None
-    /// for a match without one.
-    fn cpu_stick_byte(&self, name: &str) -> Option<u8> {
+        // A fighter running CPU code (Nana) reads a byte of its address in its DI with no
+        // knockback: the match is the recording's only where the codes lay the heap out as the
+        // recording did (`matches::PLAYBACK_LAYOUT`, the layout code).
         let has_follower = self
             .replay(name)
             .frames
             .values()
             .any(|f| f.followers.iter().any(Option::is_some));
-        if !has_follower {
-            return None;
-        }
-        let path = crate::sync::start_trace_path(&self.dir, name);
-        let address = follower_address(&path).unwrap_or_else(|| {
-            panic!(
-                "{name} has a fighter running CPU code: its DI patch needs ssbm-rs's state trace \
-                 of the match's start, {} (make-matches.sh writes it)",
-                path.display()
-            )
-        });
-        Some(address as u8)
+        assert!(
+            !has_follower || ini.contains("$melee-bench layout"),
+            "{name} has a fighter running CPU code, but its codes ({}) don't lay the heap out as \
+             playback does (matches::PLAYBACK_LAYOUT): write them again with `melee-bench codes`",
+            codes.display()
+        );
+        std::fs::write(settings.join("GALE01.ini"), ini).unwrap();
     }
 
     fn command_args(&self, dtm: &Path, speed: f64) -> Vec<String> {
@@ -913,39 +899,6 @@ fn windows_command_line(args: &[String]) -> String {
         })
         .collect();
     quoted.join(" ")
-}
-
-/// The match's Gecko codes with the DI patch (`tools/bench/gecko/di.s`), a benchmark-only
-/// code: on the path where `ftCo_800AC5A0` takes a stick it never set, it gives the CPU the
-/// byte it took when the match was recorded, which came from the fighter's heap address.
-fn with_di_patch(ini: &str, byte: u8) -> String {
-    use crate::gecko_words::{DI, DI_PATCH};
-    let mut words = DI.to_vec();
-    words[DI_PATCH] = (words[DI_PATCH] & 0xFFFF_0000) | u32::from(byte);
-    if words.len().is_multiple_of(2) {
-        words.push(0x6000_0000);
-    }
-    words.push(0);
-    let mut code = String::from("$melee-bench DI patch\n");
-    code +=
-        &format!("*Benchmark only: the CPU's unset DI stick is {byte:#04X}, as when recorded.\n");
-    code += &format!("C20AC6D0 {:08X}\n", words.len() / 2);
-    for pair in words.chunks(2) {
-        code += &format!("{:08X} {:08X}\n", pair[0], pair[1]);
-    }
-    let (gecko, enabled) = ini.split_once("[Gecko_Enabled]").expect("[Gecko_Enabled]");
-    format!(
-        "{gecko}{code}[Gecko_Enabled]{}\n$melee-bench DI patch\n",
-        enabled.trim_end()
-    )
-}
-
-/// The address of the first follower (Nana) in an ssbm-rs state trace.
-fn follower_address(path: &Path) -> Option<u32> {
-    crate::sync::traced_fighters(path)?
-        .into_iter()
-        .find(|f| f.follower)
-        .map(|f| f.address)
 }
 
 /// Calibration plays at twice the console's speed, not unlimited: the game then idles between

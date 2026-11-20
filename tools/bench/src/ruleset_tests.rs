@@ -21,6 +21,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use melee_data::disc::Disc;
 use melee_sim::game::ft::FighterKind;
 use melee_sim::game::gr::vars::GroundVars;
+use melee_sim::game::it::ItKind;
 use melee_sim::game::state::{Game, Obj, Rules};
 use melee_sim::game::structs::S32Vec2;
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
@@ -289,7 +290,7 @@ fn slippi_stadium_monitor_ignores_the_display_pass() {
         "fox-marth-ps",
         "the game camera",
         &|g, junk| {
-            let Some(cam) = melee_sim::game::camera::gobj(&g.camera.cam) else {
+            let Some(cam) = g.camera.gobj() else {
                 return;
             };
             let Some(Obj::CObj(c)) = g.world.gobj(cam).obj else {
@@ -376,7 +377,7 @@ fn slippi_opponents_side_ignores_the_display_pass() {
 /// frame's register bookkeeping follows r5 (`cpu_ai::Leftover`). Under 3.19's NanaDeterminism
 /// both are cleared, so the bookkeeping is never consulted (the frame hands on a word that
 /// stops by name if anything reads it) and the model can stay off. `ics-peach-ps` with the
-/// model off stops by name where Nana's DI reads her address (frame 10,137): from the tick
+/// model off stops by name where Nana's DI first reads her address (frame 6,808): from the tick
 /// before, under 3.19's rules the same tick runs and she pushes the stick to (0, 0); under
 /// 3.16's (r30 cleared, r5 followed) it runs too; under Vanilla's it stops by name.
 #[test]
@@ -576,7 +577,7 @@ fn a_live_match_with_samus_reads_her_swing_from_the_model() {
 /// `sscope-click-fd`.
 #[test]
 fn slippi_super_scope_stand_in_matches_the_model() {
-    use melee_sim::game::it::kinds::{S_SCOPE, sscope::ADDRESS_STAND_IN};
+    use melee_sim::game::it::kinds::sscope::ADDRESS_STAND_IN;
     use melee_sim::state_eq::StateEq;
     use melee_slippi::replay::event::POST_FRAME;
     let Some(disc) = disc() else { return };
@@ -615,7 +616,7 @@ fn slippi_super_scope_stand_in_matches_the_model() {
                     panic!("{name}: tick {t}'s events differ without the allocator model: {d}");
                 }
                 for (i, it) in on.game.items.iter() {
-                    if it.kind != S_SCOPE {
+                    if it.kind != ItKind::SScope {
                         continue;
                     }
                     let addr = it.entity.map_or(0, |g| on.game.world.gobjs.addr(g.0)) as i32;
@@ -810,12 +811,12 @@ fn displace_playback_camera(g: &mut Game, shift: Vec3) {
     if !g.follows_playback_camera() {
         g.start_following();
     }
-    let mut c = Course::of(&g.camera.cam);
+    let mut c = Course::of(g.camera.raw_parts().cam);
     for t in [&mut c.transform, &mut c.transform_copy] {
         t.interest = t.interest + shift;
         t.position = t.position + shift;
     }
-    g.camera.followed = Some(c);
+    *g.camera.raw_parts_mut().followed = Some(c);
 }
 
 /// One tick of `m` and its display pass when due, unless `skip` (a doubled round: the tick
@@ -892,7 +893,7 @@ fn doubled_round_notes(
                     displace_playback_camera(&mut m.game, shift);
                 }
                 if pull == Some(t) {
-                    let p = &mut m.game.camera.cam.transform.position;
+                    let p = &mut m.game.camera.raw_parts_mut().cam.transform.position;
                     p.z *= 20.0;
                 }
                 let (rendered, ended) = tick_skipping(&mut m, &mut device, skip == Some(t));
@@ -1307,7 +1308,13 @@ fn measure_following_playbacks_camera() {
                     let (_, ended) = tick(&mut m, &mut device);
                     times.push(at.elapsed());
                     if to_the_end && t == 0 {
-                        let f = m.game.camera.followed.as_mut().expect("followed");
+                        let f = m
+                            .game
+                            .camera
+                            .raw_parts_mut()
+                            .followed
+                            .as_mut()
+                            .expect("followed");
                         f.transform.interest.z += 1.0;
                     }
                     if m.game.follows_playback_camera() {

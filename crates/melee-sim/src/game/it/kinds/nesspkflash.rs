@@ -15,6 +15,7 @@ use crate::fpu::{mem, reg};
 use crate::game::code::unported_call;
 use crate::game::ft::kirby::special_ness::KIRBY as NS_KIRBY;
 use crate::game::ft::ness::special_n::NESS;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -193,9 +194,9 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let field = ip.xDD4_itemVar.pk_flush().xDE0_PKFlash_Owner.get();
     if let Some(ness) = field {
         if owner == Some(ness) {
-            match kind {
-                super::NESS_PK_FLUSH => r.ness_special_n_set_null(ness, &NESS),
-                super::KIRBY_NESS_PK_FLUSH => r.ness_special_n_set_null(ness, &NS_KIRBY),
+            match ItKind::of(kind) {
+                ItKind::NessPKFlush => r.ness_special_n_set_null(ness, &NESS),
+                ItKind::KirbyNessPKFlush => r.ness_special_n_set_null(ness, &NS_KIRBY),
                 _ => {}
             }
         }
@@ -247,9 +248,9 @@ pub fn start(r: &mut Running, gobj: GObjId) {
 
 /// Whether the flash's owner (`xDE0`) still charges it.
 fn owner_holding(r: &mut Running, gobj: GObjId, owner: GObjId) -> bool {
-    match item(r.game, gobj).kind {
-        super::NESS_PK_FLUSH => r.ness_special_n_holding(owner, &NESS),
-        super::KIRBY_NESS_PK_FLUSH => r.ness_special_n_holding(owner, &NS_KIRBY),
+    match ItKind::of(item(r.game, gobj).kind) {
+        ItKind::NessPKFlush => r.ness_special_n_holding(owner, &NESS),
+        ItKind::KirbyNessPKFlush => r.ness_special_n_holding(owner, &NS_KIRBY),
         // The original reads a register it never set.
         _ => unported_call("itNesspkflash_UnkMotion0_Anim on another kind"),
     }
@@ -336,25 +337,25 @@ pub fn animate_1(r: &mut Running, gobj: GObjId) -> bool {
         && n >= fp::fctiwz(reg(delay)).wrapping_sub(2)
     {
         let size = v.xDD8_PKFlash.get();
-        match kind {
-            super::NESS_PK_FLUSH => {
+        match ItKind::of(kind) {
+            ItKind::NessPKFlush => {
                 super::nesspkflashexplode::spawn(
                     r,
                     ness,
                     gobj,
                     pos,
-                    super::NESS_PK_FLUSH_EXPLODE,
+                    ItKind::NessPKFlushExplode.id(),
                     facing,
                     size,
                 );
             }
-            super::KIRBY_NESS_PK_FLUSH => {
+            ItKind::KirbyNessPKFlush => {
                 super::nesspkflashexplode::spawn(
                     r,
                     ness,
                     gobj,
                     pos,
-                    super::KIRBY_NESS_PK_FLUSH_EXPLODE,
+                    ItKind::KirbyNessPKFlushExplode.id(),
                     facing,
                     size,
                 );

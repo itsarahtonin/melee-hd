@@ -177,8 +177,8 @@ pub fn on_init(r: &mut Running) {
     }
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
-    super::super::camera::set_near(&mut r.game.camera.cam, 1.0);
-    super::super::camera::set_far(&mut r.game.camera.cam, 4000.0);
+    r.game.camera.set_near(1.0);
+    r.game.camera.set_far(4000.0);
 }
 
 /// `grInishie2_801FCBC0` does nothing (only a demo runs it).

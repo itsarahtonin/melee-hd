@@ -9,6 +9,7 @@ use super::super::code;
 use super::super::state::{Obj, Running};
 use crate::fpu::{mem, reg};
 use crate::game::handles::FighterId;
+use crate::game::it::ItKind;
 use crate::hsd::display::{self, FighterFlags, FighterMaterial};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -71,7 +72,7 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         if !fp.x2229_b3
             && !fp.x2220_b7
-            && let Some(cg) = camera::gobj(&self.game.camera.cam)
+            && let Some(cg) = self.game.camera.gobj()
         {
             let c = match self.game.world.gobj(cg).obj {
                 Some(Obj::CObj(c)) => Some(c),
@@ -494,7 +495,7 @@ impl Running<'_> {
                 .item_gobj
                 .expect("ftCo_800C2600: a held item's afterimage without an item");
             assert!(
-                super::super::it::lib26b1::kind(self.game, item) == super::super::it::kinds::SWORD,
+                super::super::it::lib26b1::kind(self.game, item) == ItKind::Sword,
                 "ftCo_800C2600: no afterimage item!"
             );
         } else {
@@ -593,7 +594,7 @@ impl Running<'_> {
     /// [`Running::render_fighter`]'s drawing, for a fighter that draws.
     fn draw_fighter_passes(&mut self, g: GObjId, pass: i32) {
         let f = self.game.fighter_id(g);
-        match camera::pass(&self.game.camera.cam) {
+        match self.game.camera.pass() {
             1 => {
                 if self.game.fighters[f.0].x2220_b7 {
                     self.place_by_camera(g);

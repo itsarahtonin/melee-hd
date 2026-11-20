@@ -8,6 +8,7 @@ use super::super::ground::air_touched_any;
 use super::super::item::{article, change, change_state, debug_owner_bubbles, spawn_air};
 use super::super::{coll, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -60,7 +61,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> melee_data::archive::DataRef {
 #[doc(alias = "it_802988E4")]
 pub fn fire(r: &mut Running, owner: GObjId, pos: Vec3, big: i32, facing: f32) {
     let mut spawn = SpawnItem {
-        kind: super::STARROD_STAR,
+        kind: ItKind::StarRodStar.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

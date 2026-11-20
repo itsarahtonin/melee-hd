@@ -8,6 +8,7 @@ use super::super::super::state::Running;
 use super::super::SCALE_PARAMS;
 use super::super::coll::scaled_by_height;
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// `ftCo_MS_LightGet` and `ftCo_MS_HeavyGet`.
@@ -21,8 +22,6 @@ pub const COLL: u32 = 0x8009_4B44;
 pub const ON_DAMAGE: u32 = 0x8009_4DF8;
 /// `mv.co.itemget.x0`: a heavy item's pickup.
 const MV_HEAVY: usize = 0x0;
-/// `It_Kind_WStar`, held at the top joint.
-const IT_KIND_WSTAR: i32 = 0x1D;
 
 impl Running<'_> {
     /// Bends down to pick an item up, `ftpickupitem_80094694`: the light or heavy pickup, its
@@ -78,7 +77,7 @@ impl Running<'_> {
                 self.data
                     .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x11)),
             )
-        } else if lib26b1::kind(self.game, it) == IT_KIND_WSTAR {
+        } else if lib26b1::kind(self.game, it) == ItKind::WStar {
             0
         } else {
             i32::from(

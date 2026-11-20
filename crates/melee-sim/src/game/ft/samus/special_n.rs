@@ -16,6 +16,7 @@ use super::super::super::state::Running;
 use super::super::sound::Track;
 use super::{PART_R_HAND_NB, PART_THROW_N, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -70,7 +71,7 @@ pub const SAMUS: ChargeShot = ChargeShot {
     hand: PART_R_HAND_NB,
     fire_joint: PART_THROW_N,
     fire_offset: None,
-    shot_kind: samuschargeshot::KIND,
+    shot_kind: ItKind::SamusCharge.id(),
     flash: 0x486,
     full_glow: 53,
     on_death: addr::DAMAGE_CB,

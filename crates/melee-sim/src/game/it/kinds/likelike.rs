@@ -22,6 +22,7 @@ use super::super::{data, ground, hitbox, item, item_mut, lib2725, maplib, owner,
 use crate::fpu::{mem, reg};
 use crate::game::camera;
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -1307,7 +1308,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802DC4BC")]
 pub fn spawn(r: &mut Running, ceiling: i32, pos: Vec3) -> Option<GObjId> {
     let zero = Vec3::new(0.0, 0.0, 0.0);
-    let gobj = zako::spawn(r, super::LIKELIKE, Some(pos), None, Some(zero), true)?;
+    let gobj = zako::spawn(r, ItKind::Likelike.id(), Some(pos), None, Some(zero), true)?;
     set(r, gobj, off::CEILING, ceiling);
     maplib::enter_air(item_mut(r.game, gobj));
     if ceiling == 0 {

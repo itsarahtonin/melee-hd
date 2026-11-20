@@ -234,7 +234,7 @@ impl Running<'_> {
         let h = self.player_nametag_height(s);
         v.y = mem(fp::fadds(reg(v.y), h));
         v.y = mem(fp::fsubs(reg(v.y), 2.5));
-        let cam = super::super::camera::gobj(&self.game.camera.cam).expect("the camera's GObj");
+        let cam = self.game.camera.gobj().expect("the camera's GObj");
         let Some(Obj::CObj(c)) = self.game.world.gobj(cam).obj else {
             panic!("the camera's GObj without its CObj");
         };

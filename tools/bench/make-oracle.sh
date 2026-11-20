@@ -59,7 +59,9 @@ make() {
     fi
     times+="make $((SECONDS - t)) s"
     t=$SECONDS
-    nice -n 10 "$run" --replay "$out.slp" --fp hardware --fields "$fields" > "$out.check.log" 2>&1
+    # Names off, as the trace below and melee-hd's allocator model lay the heap out: shown names
+    # move it, and a computer player's no-knockback DI reads a fighter's address (performance.md).
+    SLIPPI_PLAYER_NAMES=0 nice -n 10 "$run" --replay "$out.slp" --fp hardware --fields "$fields" > "$out.check.log" 2>&1
     local check=$?
     times+=", check $((SECONDS - t)) s"
     local result="$name: $(grep -h '^replay check' "$out.check.log") (exit $check)"

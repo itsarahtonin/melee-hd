@@ -13,7 +13,7 @@ use gekko_fp as fp;
 
 use super::super::super::camera;
 use super::super::super::code::Val;
-use super::super::super::it::kinds::{KOOPA_FLAME, koopaflame};
+use super::super::super::it::kinds::koopaflame;
 use super::super::super::state::Running;
 use super::super::common::GA_GROUND;
 use super::super::kirby::copy::KindFrom;
@@ -21,6 +21,7 @@ use super::super::motion::flags::SKIP_RUMBLE;
 use super::{addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -64,7 +65,7 @@ pub const KOOPA: FireBreath = FireBreath {
     u: 0,
     mouth_bone: 48,
     mouth: None,
-    flame_kind: KOOPA_FLAME,
+    flame_kind: ItKind::KoopaFlame.id(),
     first_dir: 0,
     sfx_by_kind: true,
     air_start_lands_in_loop: false,

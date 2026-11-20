@@ -13,6 +13,7 @@ use super::ground::{ground_of, jobj_of, map_gobj, nth_joint};
 use super::vars::MapVars;
 use super::{anime, setup, zako};
 use crate::game::ft::CharacterKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, HIDDEN};
 
@@ -59,8 +60,6 @@ const FRAME_CHARACTERS: [i32; 26] = [
 
 /// `grHeal_804D49D8`: the hearts' joints.
 const HEART_JOINTS: [i32; 3] = [7, 8, 9];
-
-const HEART_KIND: i32 = 8;
 
 /// A stage object's process or callback, by address: the rest area's.
 #[melee_callbacks::callbacks(Proc)]
@@ -167,7 +166,7 @@ pub fn init_platform(r: &mut Running, gobj: GObjId) {
     anime::start_map(r.game, r.data, gobj, m, 0);
     for i in 0..param(r, 0) {
         if r.game.one_player.allstar.x90[i as usize] != 0 {
-            drop_heart(r, HEART_KIND, HEART_JOINTS[i as usize], i);
+            drop_heart(r, ItKind::Heart.id(), HEART_JOINTS[i as usize], i);
         }
     }
 }

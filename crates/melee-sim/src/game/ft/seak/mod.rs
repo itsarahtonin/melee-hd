@@ -174,10 +174,6 @@ pub(crate) mod attr {
     pub const X70: usize = 0x70;
 }
 
-/// `It_Kind_Seak_NeedleThrow`, `_NeedleHeld`, `_Vanish`, `_Chain`.
-pub const IT_NEEDLE_THROW: i32 = 79;
-pub const IT_NEEDLE_HELD: i32 = 80;
-pub const IT_VANISH: i32 = 85;
 pub const IT_CHAIN: i32 = 97;
 
 /// `HSD_PAD_B`, `HSD_PAD_LR`.

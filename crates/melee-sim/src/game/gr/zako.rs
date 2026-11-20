@@ -12,6 +12,7 @@ use melee_data::archive::{Archives as DataArchives, DataRef};
 use super::super::state::{Game, Running};
 use super::stage;
 use crate::fpu::reg;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// A spawn slot (`grZakoGenerator_Entry`).
@@ -187,14 +188,14 @@ fn trophy_at_point(r: &mut Running, trophy: i32, point: i32) -> Option<GObjId> {
 /// `grZakoGenerator_801CA8B4` spawns them: none for a kind the switch doesn't name.
 fn spawn_enemy(r: &mut Running, kind: i32, x2: i32, pos: crate::vec::Vec3) -> Option<GObjId> {
     use crate::game::it::{kinds, zako as itzako};
-    match kind {
-        kinds::KURIBOH | kinds::OCTAROCK | kinds::OTTOSEA | kinds::WHITEBEA => {
+    match ItKind::of(kind) {
+        ItKind::Kuriboh | ItKind::Octarock | ItKind::Ottosea | ItKind::Whitebea => {
             itzako::spawn(r, kind, Some(pos), None, None, true)
         }
-        kinds::LEADEAD => kinds::leadead::spawn(r, pos, -1),
-        kinds::NOKONOKO => kinds::nokonoko::spawn(r, x2, pos, None, -1),
-        kinds::PATAPATA => kinds::patapata::spawn(r, x2, pos, -1),
-        kinds::LIKELIKE => kinds::likelike::spawn(r, x2, pos),
+        ItKind::Leadead => kinds::leadead::spawn(r, pos, -1),
+        ItKind::Nokonoko => kinds::nokonoko::spawn(r, x2, pos, None, -1),
+        ItKind::Patapata => kinds::patapata::spawn(r, x2, pos, -1),
+        ItKind::Likelike => kinds::likelike::spawn(r, x2, pos),
         _ => None,
     }
 }
@@ -238,7 +239,7 @@ pub fn clear_enemies(r: &mut Running) {
             if crate::game::it::lib26b1::free_to_take(r.game, c) {
                 crate::game::it::item::destroy(r, c);
             }
-        } else if kind == crate::game::it::kinds::COIN {
+        } else if kind == ItKind::Coin {
             crate::game::it::item::destroy(r, c);
         }
         cur = next;

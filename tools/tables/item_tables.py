@@ -4,9 +4,13 @@ render function (`it_803F1418` and its siblings), each kind's logic table (`it_8
 its siblings: its states and its callbacks), and every state table those name (each state's
 animation and three callbacks). Functions are their addresses, which melee-sim dispatches on.
 
-Usage: item_tables.py MAIN_DOL SYMBOLS_TXT OUT_RS
+Each kind is named by its `ItKind` variant (melee-sim's `game::it::registry`), which spells the
+decomp's `ItemKind` names (`It_Kind_G_Shell` is `GShell`).
+
+Usage: item_tables.py MAIN_DOL SYMBOLS_TXT FORWARD_H OUT_RS
   MAIN_DOL is the disc's main.dol (the decomp extracts it to orig/GALE01/sys/main.dol);
-  SYMBOLS_TXT is the decomp's config/GALE01/symbols.txt.
+  SYMBOLS_TXT is the decomp's config/GALE01/symbols.txt;
+  FORWARD_H is the decomp's src/melee/it/forward.h, whose `ItemKind` names the kinds.
 """
 
 import re
@@ -47,12 +51,37 @@ def load_dol(path):
     return read
 
 
+# The decomp's markers that share a kind's number, and the one name melee-hd changes.
+SKIP_KINDS = {'It_PKind_Start', 'It_PKind_Terminate', 'It_Kind_Unselected', 'It_Kind_None'}
+RENAME_KINDS = {'It_PKind_Random': 'PokemonRandom'}
+
+
+def kind_names(path):
+    """Each kind's `ItKind` variant, by number, from the decomp's `enum ItemKind`."""
+    src = open(path, encoding='utf-8').read()
+    body = src[src.index('typedef enum ItemKind {'):src.index('} ItemKind;')]
+    body = re.sub(r'//[^\n]*|/\*.*?\*/', '', body, flags=re.S)
+    values, names, n = {}, {}, -1
+    for m in re.finditer(r'\b(It_P?Kind_\w+)\s*(?:=\s*(-?\w+))?\s*,', body):
+        name, value = m.groups()
+        n = (int(value, 0) if re.fullmatch(r'-?\d+|0x[0-9A-Fa-f]+', value) else values[value]) if value else n + 1
+        values[name] = n
+        if name in SKIP_KINDS:
+            continue
+        s = re.sub(r'^It_P?Kind_', '', name)
+        names[n] = RENAME_KINDS.get(name, ''.join(p[:1].upper() + p[1:] for p in s.split('_')))
+    return names
+
+
 def code(a):
     return 'None' if a == 0 else f'Some(CodeRef({a:#x}))'
 
 
 def main():
     read = load_dol(sys.argv[1])
+    kinds = kind_names(sys.argv[3])
+    kind_label = lambda k: f'ItKind::{kinds[k]}' if k in kinds else f'kind {k}, no `ItKind`'
+
     names, objects, by_name = {}, {}, {}
     for line in open(sys.argv[2], encoding='utf-8'):
         m = re.match(r'(\S+) = \.(\w+):0x([0-9A-Fa-f]+); // type:(\w+)(?: size:0x([0-9A-Fa-f]+))?', line)
@@ -80,18 +109,18 @@ def main():
         n = rsize // 4
         laddr, lsize = by_name[logic]
         assert lsize // 0x3C == n, (logic, lsize, n)
-        out.append(f'/// `{render}`: each kind\'s render function, from kind {first}.')
+        out.append(f'/// `{render}`: each kind\'s render function, from `{kind_label(first)}`.')
         out.append(f'pub static RENDER_{group}: [CodeRef; {n}] = [')
         for i in range(n):
             a = struct.unpack('>I', read(raddr + 4 * i, 4))[0]
             out.append(f'    CodeRef({a:#x}), // {names.get(a, "?")}')
         out.append('];')
         out.append('')
-        out.append(f'/// `{logic}`, at {laddr:#x}: each kind\'s logic table, from kind {first}.')
+        out.append(f'/// `{logic}`, at {laddr:#x}: each kind\'s logic table, from `{kind_label(first)}`.')
         out.append(f'pub static LOGIC_{group}: [ItemLogic; {n}] = [')
         for i in range(n):
             w = struct.unpack('>15I', read(laddr + 0x3C * i, 0x3C))
-            out.append(f'    // kind {first + i}')
+            out.append(f'    // {kind_label(first + i)}')
             out.append('    ItemLogic {')
             out.append(f'        states: {w[0]:#x},')
             if w[0]:
@@ -130,7 +159,7 @@ def main():
         out.append(f'    ({addr:#x}, &{const}),')
     out.append('];')
     out.append('')
-    open(sys.argv[3], 'w', newline='\n', encoding='utf-8').write('\n'.join(out))
+    open(sys.argv[4], 'w', newline='\n', encoding='utf-8').write('\n'.join(out))
     print(f'{len(entries)} state tables')
 
 

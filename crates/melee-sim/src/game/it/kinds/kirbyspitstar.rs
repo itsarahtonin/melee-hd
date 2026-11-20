@@ -8,14 +8,12 @@ use gekko_fp as fp;
 use super::super::item::{change, change_state, destroy, spawn_air};
 use super::super::{coll, hitbox, item, item_mut, lib26b1, lib2725, zako};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::math;
 use crate::vec::Vec3;
-
-/// `It_Kind_Unk2`.
-pub const KIND: i32 = super::KIRBY_UNK2;
 
 pub const ANIM: u32 = 0x802F_2AB0;
 pub const PHYS: u32 = 0x802F_2AE8;
@@ -77,7 +75,7 @@ pub fn spawn(
     decel: f32,
 ) -> f32 {
     let mut spawn = SpawnItem {
-        kind: KIND,
+        kind: ItKind::Unk2.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;

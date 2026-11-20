@@ -9,8 +9,8 @@ use super::super::item::{change, change_state, play_sfx, spawn_air};
 use super::super::pokemon::{self, attr_f32, attr_i32, effect_hitlag};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
-use crate::game::camera;
 use crate::game::gr::stage;
+use crate::game::it::ItKind;
 use crate::game::it::item::article;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
@@ -36,9 +36,6 @@ pub const SWARM_EVT_UNK: u32 = 0x802C_F0B4;
 pub const SWARM_ANIM: u32 = 0x802C_F120;
 pub const SWARM_PHYS: u32 = 0x802C_F154;
 pub const SWARM_COLL: u32 = 0x802C_F3D8;
-
-/// `It_Kind_Unknown_Swarm`.
-pub const SWARM: i32 = super::UNKNOWN_SWARM;
 
 /// Unown's variables (`itUnknown_ItemVars`): its drift's way (`x60`, ±1), the frames to the
 /// next swarm (`x64.i`) and the swarms left (`x68.i`), the edge point it sends them from
@@ -215,7 +212,7 @@ pub fn start_swarms(r: &mut Running, gobj: GObjId) {
         }
     };
     let speed = attr_f32(r, gobj, 0x14);
-    let interest = camera::interest(&r.game.camera.cam);
+    let interest = r.game.camera.interest();
     let v = pokemon::vars(r.game, gobj);
     v.set_i32(SIDE, side);
     v.set_f32(EDGE, x);
@@ -349,7 +346,7 @@ pub fn spawn_swarm(r: &mut Running, gobj: GObjId) {
         x3C_damage: 0,
         vel: pokemon::vars(r.game, gobj).vec(SWARM_VEL),
         x40: 0,
-        kind: SWARM,
+        kind: ItKind::UnknownSwarm.id(),
         x0_parent_gobj: owner,
         x4_parent_gobj2: Some(gobj),
         ..Default::default()

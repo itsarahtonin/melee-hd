@@ -8,6 +8,7 @@ use super::data::common;
 use super::item::{attr_of, common_data, destroy};
 use super::{flag, item, item_mut};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -45,11 +46,14 @@ pub fn use_kind(game: &Game, data: &Archives, gobj: GObjId) -> i32 {
     i32::from(attr_of(item(game, gobj)).x0_78(data))
 }
 
-/// Whether the item, of kind 16, 21 to 23 or 25, has no uses left (`xD4C`), `it_8026B594`.
+/// Whether the item, a Ray Gun, Super Scope, Star Rod, Lip's Stick or Fire Flower, has no uses left (`xD4C`), `it_8026B594`.
 #[doc(alias = "it_8026B594")]
 pub fn is_empty_shooter(game: &Game, gobj: GObjId) -> bool {
     let ip = item(game, gobj);
-    matches!(ip.kind, 16 | 21 | 22 | 23 | 25) && ip.xD4C <= 0
+    matches!(
+        ip.item_kind(),
+        ItKind::LGun | ItKind::SScope | ItKind::StarRod | ItKind::LipStick | ItKind::FFlower
+    ) && ip.xD4C <= 0
 }
 
 /// The item's kind, `itGetKind`.
@@ -64,23 +68,19 @@ pub fn position(game: &Game, gobj: GObjId) -> crate::vec::Vec3 {
     item(game, gobj).pos
 }
 
-/// The Lucky's egg and Whispy's apple, the healing items besides the heart, tomato and food.
-pub const LUCKY_EGG: i32 = 205;
-pub const WHISPY_HEAL_APPLE: i32 = 226;
-
 /// A healing item's heal, 0 for any other item, `it_8026B47C`.
 #[doc(alias = "it_8026B47C")]
 pub fn heal_amount(game: &mut Game, gobj: GObjId) -> i32 {
     let kind = item(game, gobj).kind;
     let v = &mut item_mut(game, gobj).xDD4_itemVar;
-    match kind {
-        super::kinds::HEART => v.heart().xDD4_heal.get(),
-        super::kinds::TOMATO => v.tomato().heal_amount.get(),
-        super::kinds::FOODS => v.foods().heal_amount.get() as i32,
+    match ItKind::of(kind) {
+        ItKind::Heart => v.heart().xDD4_heal.get(),
+        ItKind::Tomato => v.tomato().heal_amount.get(),
+        ItKind::Foods => v.foods().heal_amount.get() as i32,
         // The egg is one of the Pokémon's items, whose union member is theirs: its
         // `itEgg_ItemVars.heal_amount` is the word `itLucky_Logic44_Spawned` wrote at 0x60.
-        LUCKY_EGG => v.pokemon().i32(0x60),
-        WHISPY_HEAL_APPLE => v.whispy_apple().heal.get(),
+        ItKind::LuckyEgg => v.pokemon().i32(0x60),
+        ItKind::WhispyHealApple => v.whispy_apple().heal.get(),
         _ => 0,
     }
 }
@@ -156,9 +156,9 @@ pub fn spawn_number(game: &Game, gobj: GObjId) -> i32 {
 #[doc(alias = "it_8026B960")]
 pub fn fuse_left(game: &mut Game, gobj: GObjId) -> f32 {
     let ip = super::item_mut(game, gobj);
-    match ip.kind {
-        super::kinds::BOMBHEI if ip.msid != 0xB => ip.xDD4_itemVar.bombhei().xDEC.get(),
-        super::kinds::LINK_BOMB if ip.msid != 5 => ip.xD44_lifeTimer,
+    match ItKind::of(ip.kind) {
+        ItKind::BombHei if ip.msid != 0xB => ip.xDD4_itemVar.bombhei().xDEC.get(),
+        ItKind::LinkBomb if ip.msid != 5 => ip.xD44_lifeTimer,
         _ => -1.0,
     }
 }
@@ -232,9 +232,8 @@ pub fn hand_over(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
 #[doc(alias = "it_8026B924")]
 pub fn uses_left(game: &Game, gobj: GObjId) -> i32 {
     let ip = item(game, gobj);
-    use super::kinds::{F_FLOWER, L_GUN, S_SCOPE, STARROD};
-    match ip.kind {
-        S_SCOPE | STARROD | L_GUN | F_FLOWER => ip.xD4C,
+    match ItKind::of(ip.kind) {
+        ItKind::SScope | ItKind::StarRod | ItKind::LGun | ItKind::FFlower => ip.xD4C,
         _ => -1,
     }
 }
@@ -461,29 +460,31 @@ pub fn hold_flags_on(game: &mut Game, gobj: GObjId) {
 pub fn drop_by_kind(r: &mut Running, kind: i32, pos: Vec3, hold: bool) -> Option<GObjId> {
     use super::kinds::{fflower, kusudama, rabbitc, sscope, sword};
     use super::lib2725::hold_still;
-    if r.game.vs_x6() != 0 && kind != 6 {
+    if r.game.vs_x6() != 0 && kind != ItKind::BombHei {
         return None;
     }
-    let gobj = match kind {
-        4 => {
-            if !super::spawn::kind_on(r.game, super::kinds::KUSUDAMA) {
+    let gobj = match ItKind::of(kind) {
+        ItKind::Kusudama => {
+            if !super::spawn::kind_on(r.game, ItKind::Kusudama.id()) {
                 return None;
             }
             kusudama::spawn_at(r, pos)
         }
-        12 => sword::spawn_at(r, pos),
-        21 => sscope::spawn_at(r, pos),
-        25 => fflower::spawn_at(r, pos),
-        31 => rabbitc::spawn_at(r, pos),
+        ItKind::Sword => sword::spawn_at(r, pos),
+        ItKind::SScope => sscope::spawn_at(r, pos),
+        ItKind::FFlower => fflower::spawn_at(r, pos),
+        ItKind::RabbitC => rabbitc::spawn_at(r, pos),
         // A bob-omb (`it_8027D670`), given back as none.
-        6 => {
+        ItKind::BombHei => {
             super::kinds::bombhei::spawn_at(r, pos);
             return None;
         }
-        11 => super::kinds::bat::spawn_at(r, pos),
-        1 | 20 | 8 | 9 => crate::game::code::unported_call(
-            "it_8026BE84 (a box, Flipper or food) without the stage's object",
-        ),
+        ItKind::Bat => super::kinds::bat::spawn_at(r, pos),
+        ItKind::Box | ItKind::Flipper | ItKind::Heart | ItKind::Tomato => {
+            crate::game::code::unported_call(
+                "it_8026BE84 (a box, Flipper or food) without the stage's object",
+            )
+        }
         _ => None,
     }?;
     hold_still(r.game, gobj);
@@ -508,13 +509,13 @@ pub fn drop_food(
     hold: bool,
 ) -> Option<GObjId> {
     let _ = owner;
-    if r.game.vs_x6() != 0 && kind != 6 {
+    if r.game.vs_x6() != 0 && kind != ItKind::BombHei {
         return None;
     }
-    if kind != super::kinds::HEART {
+    if kind != ItKind::Heart {
         crate::game::code::unported_call("it_8026BE84's food of kind 9 (it_802841B4)");
     }
-    let mut spawn = super::item::drop_spawn(super::kinds::HEART, pos, true);
+    let mut spawn = super::item::drop_spawn(ItKind::Heart.id(), pos, true);
     let gobj = super::item::spawn_air(r, &mut spawn)?;
     let v = item_mut(r.game, gobj).xDD4_itemVar.heart();
     v.xDD8.set(super::TurnipFlag { picked_up: true });
@@ -537,7 +538,7 @@ pub fn drop_flipper(
     jobj: crate::hsd::jobj::JObjId,
     hold: bool,
 ) -> Option<GObjId> {
-    if r.game.vs_x6() != 0 && kind != 6 {
+    if r.game.vs_x6() != 0 && kind != ItKind::BombHei {
         return None;
     }
     let gobj = super::kinds::flipper::spawn(r, Some(jobj))?;

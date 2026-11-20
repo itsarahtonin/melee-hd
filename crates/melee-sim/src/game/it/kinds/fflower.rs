@@ -6,6 +6,7 @@ use super::super::ground::{air, fall, ground_or_fall, ground_skid};
 use super::super::item::{article, change, change_state, next_attack_id};
 use super::super::{IgnoreId, item, item_mut, lib26b1, lib2725};
 use crate::game::ef::eflib;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 
@@ -157,7 +158,7 @@ pub fn fire(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3, dir: f32) {
 #[doc(alias = "it_80292D48")]
 pub fn spawn_at(r: &mut Running, pos: crate::vec::Vec3) -> Option<GObjId> {
     let mut spawn = crate::game::structs::SpawnItem {
-        kind: super::F_FLOWER,
+        kind: ItKind::FFlower.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;

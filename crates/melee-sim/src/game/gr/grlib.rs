@@ -8,6 +8,7 @@ use super::super::handles::CodeRef;
 use super::super::state::{Game, OBJ_JOBJ, Obj, Running};
 use super::ground::ground_of;
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::aobj;
 use crate::hsd::generator::{self, GeneratorId};
 use crate::hsd::gobj::GObjId;
@@ -277,7 +278,9 @@ pub fn quake_proc(r: &mut Running, gobj: GObjId, looping: bool) {
         Some(j),
     );
     let t = r.game.objs.jobjs[j].translate;
-    camera::set_quake_offset(&mut r.game.camera, f64::from(t.x), f64::from(t.y));
+    r.game
+        .camera
+        .set_quake_offset(f64::from(t.x), f64::from(t.y));
     r.game.quake_model_shook();
     if !looping && a.is_none_or(|a| r.game.objs.aobjs[a].flags & aobj::NO_ANIM != 0) {
         crate::hsd::gobj::free(r, gobj);
@@ -333,7 +336,7 @@ pub fn point_near_object(game: &Game, point: Vec3, offset: f32) -> bool {
     }
     let mut cur = game.world.first_in(crate::game::it::P_LINK_ITEM);
     while let Some(g) = cur {
-        if crate::game::it::lib26b1::kind(game, g) != crate::game::it::kinds::PKIND_RANDOM {
+        if crate::game::it::lib26b1::kind(game, g) != ItKind::PokemonRandom {
             let ip = crate::game::it::item(game, g);
             if point_in_ecb(&ip.x378_itemColl, point, offset) {
                 return true;

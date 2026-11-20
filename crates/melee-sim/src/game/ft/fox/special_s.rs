@@ -10,6 +10,7 @@ use super::super::motion::flags::SKIP_RUMBLE;
 use super::{GA_AIR, PAD_B, addr, attr, facing_dir_int, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -17,10 +18,6 @@ use crate::vec::Vec3;
 /// between the ground and the air.
 const COLL_FLAGS: u32 = 0x0C4C_5880;
 const DASH_COLL_FLAGS: u32 = 0x0C4C_5884;
-
-/// `It_Kind_Fox_Illusion`, `It_Kind_Falco_Phantasm`.
-const IT_KIND_FOX_ILLUSION: i32 = 56;
-const IT_KIND_FALCO_PHANTASM: i32 = 57;
 
 /// `FtPart_TopN`.
 const PART_TOP_N: usize = 0;
@@ -225,9 +222,9 @@ impl Running<'_> {
         self.game.fighters[f.0].cmd_vars[2] = 0;
         let fp = &self.game.fighters[f.0];
         let kind = if fp.kind == FighterKind::Fox {
-            IT_KIND_FOX_ILLUSION
+            ItKind::FoxIllusion.id()
         } else {
-            IT_KIND_FALCO_PHANTASM
+            ItKind::FalcoPhantasm.id()
         };
         let (pos, facing) = (fp.cur_pos, fp.facing_dir);
         let ghost =

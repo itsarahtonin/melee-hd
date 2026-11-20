@@ -1841,8 +1841,8 @@ fn ground_settings_and_queries() {
         },
         |r: &mut Running, _: &Maps| {
             g::apply_background_color(r.game);
-            let b = &r.game.camera.cam.background_color;
-            u32::from_be_bytes([0, b.r, b.g, b.b])
+            let [r, g, b] = r.game.camera.background_color();
+            u32::from_be_bytes([0, r, g, b])
         }
     );
     q!(
@@ -2773,8 +2773,8 @@ fn ground_background_color() {
     let ours = |r: &mut Running, _: &Maps| {
         assert!(ground::fog_color(r.game).is_some(), "the stage's fog");
         ground::apply_background_color(r.game);
-        let b = &r.game.camera.cam.background_color;
-        let c = u32::from_be_bytes([0, b.r, b.g, b.b]);
+        let [cr, cg, cb] = r.game.camera.background_color();
+        let c = u32::from_be_bytes([0, cr, cg, cb]);
         assert_eq!(c, answered(), "Ground_ApplyStageBackgroundColor");
     };
     on_state(

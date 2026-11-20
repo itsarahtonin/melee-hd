@@ -15,6 +15,7 @@ use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725, set_flag};
 use crate::fpu::{mem, reg};
 use crate::game::gr::stage;
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -50,11 +51,6 @@ pub const BLAST_EVT_UNK: u32 = 0x802D_23D4;
 pub const BLAST_ANIM: u32 = 0x802D_246C;
 pub const BLAST_PHYS: u32 = 0x802D_24A0;
 pub const BLAST_COLL: u32 = 0x802D_24FC;
-
-/// `It_Kind_Lugia_Aeroblast`, `_Aeroblast2` and `_Aeroblast3`.
-pub const AEROBLAST: i32 = 0xC8;
-pub const AEROBLAST2: i32 = 0xC9;
-pub const AEROBLAST3: i32 = 0xCA;
 
 /// Its variables past the release's (`itLugia_ItemVars`): the frames it comes towards the
 /// camera (`x60`), where it came out (`x64`), where its Aeroblasts start (`x70`, its mouth),
@@ -350,7 +346,7 @@ pub fn fire_when_told(r: &mut Running, gobj: GObjId) {
     count_up(r, gobj, COUNT3, s3);
     if take_one(r, gobj, COUNT1) {
         let speed = attr_f32(r, gobj, 0x1C);
-        shoot(r, gobj, AEROBLAST, speed);
+        shoot(r, gobj, ItKind::LugiaAeroblast.id(), speed);
         let sfx = match r.game.objs.rng.below(3) {
             0 => 0x274D,
             1 => 0x274E,
@@ -361,11 +357,11 @@ pub fn fire_when_told(r: &mut Running, gobj: GObjId) {
     }
     if take_one(r, gobj, COUNT2) {
         let speed = attr_f32(r, gobj, 0x24);
-        shoot(r, gobj, AEROBLAST2, speed);
+        shoot(r, gobj, ItKind::LugiaAeroblast2.id(), speed);
     }
     if take_one(r, gobj, COUNT3) {
         let speed = attr_f32(r, gobj, 0x2C);
-        shoot(r, gobj, AEROBLAST3, speed);
+        shoot(r, gobj, ItKind::LugiaAeroblast3.id(), speed);
     }
 }
 
@@ -566,10 +562,10 @@ pub fn blast_anim(r: &mut Running, gobj: GObjId) -> bool {
 /// factor (its attributes' second to fourth words).
 #[doc(alias = "it_802D24A0")]
 pub fn blast_phys(r: &mut Running, gobj: GObjId) {
-    let factor = match item(r.game, gobj).kind {
-        AEROBLAST => attr_f32(r, gobj, 4),
-        AEROBLAST2 => attr_f32(r, gobj, 8),
-        AEROBLAST3 => attr_f32(r, gobj, 0xC),
+    let factor = match ItKind::of(item(r.game, gobj).kind) {
+        ItKind::LugiaAeroblast => attr_f32(r, gobj, 4),
+        ItKind::LugiaAeroblast2 => attr_f32(r, gobj, 8),
+        ItKind::LugiaAeroblast3 => attr_f32(r, gobj, 0xC),
         _ => 0.0,
     };
     let ip = item_mut(r.game, gobj);

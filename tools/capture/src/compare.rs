@@ -381,7 +381,7 @@ impl<'a> Comparer<'a> {
             base: MEM1,
         };
         let game = self.game;
-        let c = &game.camera;
+        let c = game.camera.raw_parts();
         c.cam.compare(&mem, sym("game_camera"), "camera", self);
         let base = self.u32(sym("cm_804D645C"));
         for (i, b) in c.boxes.boxes.iter().enumerate() {

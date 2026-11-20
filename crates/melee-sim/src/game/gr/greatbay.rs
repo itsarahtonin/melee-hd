@@ -1007,7 +1007,7 @@ pub fn sea_device(r: &mut Running, fighter: GObjId) -> bool {
     let (cur, prev) = (fp.cur_pos, fp.prev_pos);
     if !fp.x221D_b7 && reg(cur.y) < fp::fneg(5.0) && reg(prev.y) > fp::fneg(5.0) {
         let b = fp.x890_cameraBox.expect("a fighter without a camera box");
-        let depth = r.game.camera.boxes[b].target_ext.v.z;
+        let depth = r.game.camera.subject(b).target_ext.v.z;
         let k = fp::fdivs(reg(depth), 10.0);
         let mut at = cur;
         at.y = -5.0;

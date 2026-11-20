@@ -3,7 +3,6 @@
 //! for objects that receive shadows, joint by joint with each fighter's shadow switched by
 //! the stage's shadow check. The shadows' switches are state.
 
-use super::super::camera;
 use super::super::code;
 use super::super::state::{Obj, Running};
 use super::ground::{ground_of, jobj_of};
@@ -110,8 +109,7 @@ impl Running<'_> {
         if flags & (trsp << TRSP_SHIFT) != 0 {
             let mut f = self.first_fighter();
             while let Some(g) = f {
-                let casts =
-                    camera::shadows(&self.game.camera.cam) || self.stage_receives_shadow(g, j);
+                let casts = self.game.camera.shadows() || self.stage_receives_shadow(g, j);
                 self.game.fighter_mut(g).x20A4.x0_b4 = !casts;
                 f = self.game.world.gobj(g).next;
             }
@@ -137,7 +135,7 @@ impl Running<'_> {
         };
         if display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
             self.game.world.gobj_mut(gobj).gxlink_prios = 8;
-            camera::set_layer(&mut self.game.camera.cam, 0);
+            self.game.camera.set_layer(0);
             self.render_links(gobj, 7);
             display::camera_end(&mut self.game.objs);
         }
@@ -152,7 +150,7 @@ impl Running<'_> {
     pub fn render_stage_object(&mut self, gobj: GObjId, pass: i32) {
         let gid = ground_of(self.game, gobj);
         let gp = &self.game.grounds[gid.0];
-        if gp.x11_flags.b012 != camera::layer(&self.game.camera.cam) {
+        if gp.x11_flags.b012 != self.game.camera.layer() {
             return;
         }
         let rendering = self
@@ -168,7 +166,7 @@ impl Running<'_> {
                     if !follows {
                         return;
                     }
-                    let Some(cg) = camera::gobj(&self.game.camera.cam) else {
+                    let Some(cg) = self.game.camera.gobj() else {
                         return;
                     };
                     let Some(Obj::CObj(c)) = self.game.world.gobj(cg).obj else {
@@ -187,8 +185,8 @@ impl Running<'_> {
                 }
             }
         }
-        let cam = &self.game.camera.cam;
-        if camera::draw_collisions(cam) || !camera::stage_visible(cam) {
+        let cam = &self.game.camera;
+        if cam.draw_collisions() || !cam.stage_visible() {
             return;
         }
         let gp = &self.game.grounds[gid.0];
@@ -210,7 +208,7 @@ impl Running<'_> {
             self.render_jobj(gobj, pass);
         }
         if !keeps_fog
-            && !camera::draw_collisions(&self.game.camera.cam)
+            && !self.game.camera.draw_collisions()
             && self.game.stage_info.unk8C.b2
             && let Some(fg) = self.game.stage_info.x12C
             && let Some(Obj::Fog(f)) = self.game.world.gobj(fg).obj

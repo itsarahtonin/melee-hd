@@ -5,9 +5,9 @@ use gekko_fp as fp;
 
 use super::data::{attr, common};
 use super::item::{attr_of, common_data, spawn_air};
-use super::kinds::{L_GUN_RAY, M_BALL};
 use super::{item, item_mut};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -44,8 +44,11 @@ pub fn drop_contents(r: &mut Running, gobj: GObjId, n: i32, same: bool) -> Dropp
             out.kind = pick(r.game);
         }
         let k = out.kind;
-        if k == -1 || k >= L_GUN_RAY || (k == M_BALL && super::spawn::poke_balls_full(r.game)) {
-            out.stopped |= k >= L_GUN_RAY;
+        if k == -1
+            || k >= ItKind::LGunRay
+            || (k == ItKind::MBall && super::spawn::poke_balls_full(r.game))
+        {
+            out.stopped |= k >= ItKind::LGunRay;
             break;
         }
         out.gobj = spawn_at(r, Some(gobj), k, pos);

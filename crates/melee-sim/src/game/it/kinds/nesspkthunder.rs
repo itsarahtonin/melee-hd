@@ -11,6 +11,7 @@ use gekko_fp as fp;
 use super::super::item::{article, change, change_state, debug_owner_bubbles, spawn_air};
 use super::super::{ground, item, item_mut, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -139,7 +140,7 @@ pub fn owner(r: &Running, gobj: GObjId) -> Option<GObjId> {
 #[doc(alias = "it_802AB58C")]
 pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::NESS_PK_THUNDER,
+        kind: ItKind::NessPKThunder.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

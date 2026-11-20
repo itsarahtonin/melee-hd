@@ -31,6 +31,7 @@ use super::data::{StageCallbacks, StageData};
 use super::ground::{ground_of, jobj_of};
 use super::{GrKind, anime, material, setup, zako};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
@@ -58,11 +59,6 @@ const PURIN_PARTS: [i32; 7] = [55, 57, 59, 61, 63, 65, 67];
 /// The template's points: the targets' and the Flippers'.
 const TARGET_POINTS: std::ops::Range<usize> = 199..220;
 const FLIPPER_POINTS: std::ops::Range<usize> = 252..0x104;
-
-/// `It_Kind_Mato`.
-const MATO: i32 = super::super::it::kinds::MATO;
-/// `It_Kind_Flipper`.
-const FLIPPER: i32 = super::super::it::kinds::FLIPPER;
 
 /// The `yakumono_param` statics of the stages that read their parameters, by
 /// [`Target::yakumono`]: Falco's, Fox's, Mewtwo's, Jigglypuff's and Ganondorf's
@@ -304,7 +300,8 @@ pub fn spawn_targets(r: &mut Running) -> i32 {
         let Some(j) = r.game.stage_info.x280[i] else {
             continue;
         };
-        if super::super::it::zako::spawn(r, MATO, None, Some(j), None, false).is_some() {
+        if super::super::it::zako::spawn(r, ItKind::Mato.id(), None, Some(j), None, false).is_some()
+        {
             count = count.wrapping_add(1);
         }
     }
@@ -319,7 +316,7 @@ pub fn spawn_targets(r: &mut Running) -> i32 {
 pub fn spawn_flippers(r: &mut Running) {
     for i in FLIPPER_POINTS {
         if let Some(j) = r.game.stage_info.x280[i] {
-            super::super::it::lib26b1::drop_flipper(r, FLIPPER, j, true);
+            super::super::it::lib26b1::drop_flipper(r, ItKind::Flipper.id(), j, true);
         }
     }
 }

@@ -12,14 +12,13 @@ use super::super::ground::air_touches;
 use super::super::item::{article, change, change_state, is_fighter};
 use super::super::{coll, hitbox, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
-
-use super::TOOLS;
 
 pub const DMG_DEALT: u32 = 0x802E_F074;
 pub const ANIM_FALL: u32 = 0x802E_F128;
@@ -155,7 +154,7 @@ fn motion(r: &mut Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_802EEFA8")]
 pub fn spawn(r: &mut Running, pos: Vec3, which: i32, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: TOOLS,
+        kind: ItKind::Tools.id(),
         prev_pos: pos,
         pos,
         facing_dir,

@@ -7,6 +7,7 @@ use gekko_fp as fp;
 use super::super::item::{attr_of, change, change_state, play_sfx, spawn_air};
 use super::super::{data, ground, hitbox, item, item_mut, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -209,7 +210,7 @@ pub fn spawn(
     max_vy: f32,
 ) {
     let mut spawn = SpawnItem {
-        kind: super::OCTAROCK_STONE,
+        kind: ItKind::OctarockStone.id(),
         ..SpawnItem::default()
     };
     spawn.prev_pos = Vec3::new(pos.x, pos.y, 0.0);

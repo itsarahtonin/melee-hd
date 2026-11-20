@@ -14,6 +14,7 @@ use crate::game::ef::{self, Arg};
 use crate::game::ft::samus::special_n::ChargeShot;
 use crate::game::ft::{kirby, samus};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -24,19 +25,14 @@ use crate::mp::coll::{
 };
 use crate::vec::Vec3;
 
-/// `It_Kind_Samus_Charge`.
-pub const KIND: i32 = super::SAMUS_CHARGE;
-
 /// The Charge Shot its maker charges it with, by the shot's kind: Samus's or Kirby's copy's.
 fn maker_shot(kind: i32) -> Option<&'static ChargeShot> {
-    match kind {
-        KIND => Some(&samus::special_n::SAMUS),
-        KIRBY_SAMUS_CHARGE => Some(&kirby::special_samus::KIRBY),
+    match ItKind::of(kind) {
+        ItKind::SamusCharge => Some(&samus::special_n::SAMUS),
+        ItKind::KirbySamusCharge => Some(&kirby::special_samus::KIRBY),
         _ => None,
     }
 }
-/// `It_Kind_Kirby_SamusCharge`.
-const KIRBY_SAMUS_CHARGE: i32 = 151;
 
 pub const HIT_STAGE: u32 = 0x802B_5518;
 pub const SPAWN: u32 = 0x802B_55C8;
@@ -341,8 +337,8 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
     let j = grandchild(r, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
-    match item(r.game, gobj).kind {
-        KIND => {
+    match ItKind::of(item(r.game, gobj).kind) {
+        ItKind::SamusCharge => {
             ef::spawn(r, GFX_HELD, Some(gobj), &[Arg::JObj(Some(j))]);
             item_mut(r.game, gobj)
                 .xDD4_itemVar
@@ -350,7 +346,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
                 .xDFC
                 .set(1);
         }
-        KIRBY_SAMUS_CHARGE => {
+        ItKind::KirbySamusCharge => {
             ef::spawn(r, GFX_HELD_KIRBY, Some(gobj), &[Arg::JObj(Some(j))]);
             item_mut(r.game, gobj)
                 .xDD4_itemVar
@@ -445,13 +441,13 @@ pub fn sparkle(r: &mut Running, gobj: GObjId) {
     let kind = ip.kind;
     let v = ip.xDD4_itemVar.samus_chargeshot();
     if v.xDEC.get() == v.xDF0.get() && v.xDF4.get() == 0 {
-        match kind {
-            KIND => {
+        match ItKind::of(kind) {
+            ItKind::SamusCharge => {
                 for gfx in GFX_FULL {
                     ef::spawn(r, gfx, Some(gobj), &[Arg::JObj(j)]);
                 }
             }
-            KIRBY_SAMUS_CHARGE => {
+            ItKind::KirbySamusCharge => {
                 for gfx in GFX_FULL_KIRBY {
                     ef::spawn(r, gfx, Some(gobj), &[Arg::JObj(j)]);
                 }

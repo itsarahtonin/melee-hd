@@ -18,6 +18,7 @@ use super::super::ground::{fall, fall_to_floor, ground_or_fall, ground_skid};
 use super::super::item::{article, attr_of, change, change_state};
 use super::super::{data, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, zako};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::{OBJ_JOBJ, Obj, Running};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::{GObjId, Host};
@@ -107,7 +108,7 @@ pub fn spawn(
     kind: i32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::COIN,
+        kind: ItKind::Coin.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;
@@ -455,11 +456,11 @@ impl Running<'_> {
                 .trophy_coin()
                 .x14
                 .get();
-            let zoom = reg(crate::game::camera::zoom(&self.game.camera.cam));
+            let zoom = reg(self.game.camera.zoom());
             (self.game.db_pause_flag(1) || zoom < x48)
                 && !crate::game::gr::figureget::done(self.game, stand)
         } else {
-            let zoom = reg(crate::game::camera::zoom(&self.game.camera.cam));
+            let zoom = reg(self.game.camera.zoom());
             (self.game.db_pause_flag(1) && crate::game::gr::ground::flags(self.game, 0x330) == 0)
                 || zoom < x48
         };

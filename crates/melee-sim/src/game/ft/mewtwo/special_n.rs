@@ -21,6 +21,7 @@ use super::{PART_L_HAND_NB, PART_R_SHOULDER_N, PART_TOP_N, addr, attr, ms, mv, u
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::math;
 use crate::vec::Vec3;
@@ -61,7 +62,7 @@ pub const MEWTWO: ShadowBall = ShadowBall {
     attrs: 0,
     u: 0,
     hand: PART_R_SHOULDER_N,
-    ball_kind: ball::KIND,
+    ball_kind: ItKind::MewtwoShadowBall.id(),
     charge_sfx: [200_121, 200_124, 200_127, 200_130],
     full_flash_y: 7.0,
     full_glow: COLANIM_CHARGED,
@@ -740,7 +741,15 @@ impl Running<'_> {
             mem(fp::fsubs(reg(from.x), reg(to.x))),
         );
         let facing = self.game.fighters[f.0].facing_dir;
-        ball::spawn_fired(self, gobj, from, ball::KIND, cycles, angle, facing);
+        ball::spawn_fired(
+            self,
+            gobj,
+            from,
+            ItKind::MewtwoShadowBall.id(),
+            cycles,
+            angle,
+            facing,
+        );
         self.fighter_play_sfx(f, SFX_FIRE, 127, 64);
     }
 }

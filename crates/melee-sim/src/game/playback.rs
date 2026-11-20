@@ -710,9 +710,7 @@ impl Running<'_> {
         self.update_camera_box(gobj);
         let fp = &self.game.fighters[f.0];
         let b = fp.x890_cameraBox.expect("a fighter's camera box");
-        let cb = &mut self.game.camera.boxes[b];
-        cb.ext.h.x = cb.target_ext.h.x;
-        cb.ext.h.y = cb.target_ext.h.y;
+        self.game.camera.fit_horizontal_extents(b);
         super::camera::snap(self);
     }
 }

@@ -18,6 +18,7 @@ use super::super::motion::flags::*;
 use super::{addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -62,8 +63,8 @@ pub const PEACH: Toad = Toad {
     bubble_attrs: 0,
     u: 0,
     bone: PART_TOAD,
-    toad_kind: peachtoad::KIND,
-    spore_kind: peachtoadspore::KIND,
+    toad_kind: ItKind::PeachToad.id(),
+    spore_kind: ItKind::PeachToadSpore.id(),
     on_death: addr::ON_DEATH2,
     on_damage: addr::ON_DEATH2,
     on_accessory4: addr::N_ON_ACCESSORY4,

@@ -3,13 +3,11 @@
 
 use super::super::item::{article, attr_of, change, change_state, spawn_air};
 use super::super::{data, item, item_mut, lib26b1, lib2725};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
-
-/// `It_Kind_Unk1`.
-pub const KIND: i32 = super::KIRBY_COPY_STAR;
 
 pub const ANIM: u32 = 0x802A_DB48;
 pub const PHYS: u32 = 0x802A_DB80;
@@ -39,7 +37,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "it_802ADA1C")]
 pub fn spawn(r: &mut Running, pos: Vec3, vel: Vec3, facing_dir: f32) {
     let mut spawn = SpawnItem {
-        kind: KIND,
+        kind: ItKind::Unk1.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;

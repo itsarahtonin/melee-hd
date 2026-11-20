@@ -134,7 +134,6 @@ fn procs(game: &mut Running, gobj: GObjId, cb: u32) -> bool {
         0x8006_D9EC => super::ft::camera::proc_camera(game, gobj),
         0x8009_F480 => super::ft::create_model::light_proc(game, gobj),
         addr if super::it::item::run_proc(game, gobj, addr) => {}
-        addr if super::it::kinds::run_event(game, gobj, addr) => {}
         super::ef::UPDATE_PROC => super::ef::update(game, gobj),
         super::ef::PARTICLES_PROC_MAIN => super::ef::particles_proc_main(game),
         super::ef::PARTICLES_PROC_AUX => super::ef::particles_proc_aux(game),

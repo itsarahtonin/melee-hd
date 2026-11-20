@@ -4,6 +4,7 @@
 use super::super::item::{animate, change, change_state, destroy};
 use super::super::{item, item_mut, lib26b1, lib2725};
 use super::gamewatch;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -46,7 +47,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     gamewatch::spawn_held(
         r,
-        super::GAME_WATCH_GREENHOUSE,
+        ItKind::GameWatchGreenhouse.id(),
         parent,
         pos,
         part,

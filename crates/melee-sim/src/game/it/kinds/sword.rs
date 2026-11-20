@@ -7,6 +7,7 @@ use super::super::ground::{fall, ground_or_fall, ground_skid};
 use super::super::item::{article, attr_of, change, change_state, common_data};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{SpawnItem, itSword_ItemVars};
 use crate::hsd::gobj::GObjId;
@@ -489,7 +490,7 @@ pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
     // `Item_InitSpawnPosition` on the plane.
     let at = Vec3::new(pos.x, pos.y, 0.0);
     let mut spawn = SpawnItem {
-        kind: super::SWORD,
+        kind: ItKind::Sword.id(),
         pos: at,
         prev_pos: at,
         ..Default::default()

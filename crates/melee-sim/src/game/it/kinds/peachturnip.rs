@@ -12,6 +12,7 @@ use crate::vec::Vec3;
 use gekko_fp as fp;
 
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 
 pub const DESTROYED: u32 = 0x802B_D47C;
 pub const PICKED_UP: u32 = 0x802B_D628;
@@ -30,13 +31,6 @@ pub const REFLECTED: u32 = 0x802B_D99C;
 pub const HIT_SHIELD: u32 = 0x802B_D9C0;
 pub const SHIELD_BOUNCED: u32 = 0x802B_D9E4;
 pub const EVT_UNK: u32 = 0x802B_DA08;
-
-/// `It_Kind_Peach_Turnip`.
-pub const KIND: i32 = 99;
-/// `It_Kind_BombHei`, `It_Kind_Dosei` (Mr. Saturn) and `It_Kind_Sword`, which she can pull too.
-const BOMBHEI: i32 = 6;
-const DOSEI: i32 = 7;
-const SWORD: i32 = 12;
 
 /// Runs one of the vegetable's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -148,7 +142,7 @@ pub fn spawn(
     spawn.x44_flag[0] |= 0x80;
     spawn.x40 = 0;
     let gobj = super::super::item::spawn_air(r, &mut spawn)?;
-    if kind == KIND {
+    if kind == ItKind::PeachTurnip {
         let life = f32::from_bits(attr_word(r, gobj, 0));
         lib2725::set_lifetime(r.game, r.data, gobj, life);
         let face = pick_face(r, gobj);
@@ -167,15 +161,15 @@ pub fn spawn(
         lib26b1::silence(r.game, gobj);
     }
     super::super::item::pick_up(r, gobj, parent, part);
-    if kind != SWORD {
+    if kind != ItKind::Sword {
         lib2725::scale_by_owner(r, gobj);
         let ip = item_mut(r.game, gobj);
         let scl = ip.scl;
         // The union's word at 0x14 for a Bob-omb, at 0xC for Mr. Saturn and a turnip.
-        match ip.kind {
-            BOMBHEI => ip.xDD4_itemVar.bombhei().xDE8.set(scl),
-            DOSEI => ip.xDD4_itemVar.dosei().xDE0.set(scl),
-            KIND => ip.xDD4_itemVar.peach_turnip().xDE0_scl.set(scl),
+        match ItKind::of(ip.kind) {
+            ItKind::BombHei => ip.xDD4_itemVar.bombhei().xDE8.set(scl),
+            ItKind::Dosei => ip.xDD4_itemVar.dosei().xDE0.set(scl),
+            ItKind::PeachTurnip => ip.xDD4_itemVar.peach_turnip().xDE0_scl.set(scl),
             _ => {}
         }
     }

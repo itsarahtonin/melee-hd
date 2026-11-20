@@ -21,6 +21,7 @@ use crate::audio::clock::DiscSpeed;
 use crate::audio::dsp::DspModel;
 use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::input::controller::{PadData, Requests};
 use crate::input::pad::PadStatus;
 
@@ -124,7 +125,7 @@ const PKIND_CPU: u8 = 1;
 /// Whether the rules' item switch can spawn a Super Scope: items on (`it_8026D018`) with its
 /// kind in the switch's mask, which the spawner, the containers and the Party Ball all follow.
 fn scope_on(rules: &super::structs::StartMeleeRules) -> bool {
-    rules.item_freq != -1 && rules.x20 >> super::it::kinds::S_SCOPE & 1 != 0
+    rules.item_freq != -1 && rules.x20 >> ItKind::SScope.id() & 1 != 0
 }
 
 /// A player in [`Settings::vs`].

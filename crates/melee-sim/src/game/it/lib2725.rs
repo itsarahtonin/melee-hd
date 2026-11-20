@@ -8,6 +8,7 @@ use super::data::common;
 use super::item::{article, common_data};
 use super::{item, item_mut, jobj_of, set_flag};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
@@ -412,7 +413,7 @@ pub fn bounce_sfx(r: &mut Running, gobj: GObjId) {
         return;
     }
     let sfx = ip.xD84;
-    if ip.kind == super::kinds::UNK4 {
+    if ip.kind == ItKind::Unk4 {
         r.sfx_play_track(sfx, 127, 64, 154);
         return;
     }

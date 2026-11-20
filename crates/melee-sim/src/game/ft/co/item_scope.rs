@@ -6,13 +6,14 @@
 //! The Ray Gun's states are in `item_lgun`, the Fire Flower's in `item_fflower`.
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{F_FLOWER, L_GUN, S_SCOPE, sscope};
+use super::super::super::it::kinds::sscope;
 use super::super::super::it::lib26b1;
 use super::super::super::state::Running;
 use super::PAD_A;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
 use crate::game::ef::Arg;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
@@ -53,10 +54,10 @@ impl Running<'_> {
         if self.pick_up_item_check(gobj) {
             return;
         }
-        match self.held_kind(gobj) {
-            L_GUN => self.enter_lgun_shoot(gobj),
-            F_FLOWER => self.enter_fflower_shoot(gobj),
-            S_SCOPE => self.enter_scope_start(gobj),
+        match ItKind::of(self.held_kind(gobj)) {
+            ItKind::LGun => self.enter_lgun_shoot(gobj),
+            ItKind::FFlower => self.enter_fflower_shoot(gobj),
+            ItKind::SScope => self.enter_scope_start(gobj),
             _ => {}
         }
     }
@@ -64,10 +65,10 @@ impl Running<'_> {
     /// A shot with the held shooting item in the air, `ftCo_800CDDA0`.
     #[doc(alias = "ftCo_800CDDA0")]
     pub fn enter_item_shoot_air(&mut self, gobj: GObjId) {
-        match self.held_kind(gobj) {
-            L_GUN => self.enter_lgun_shoot_air(gobj),
-            F_FLOWER => self.enter_fflower_shoot_air(gobj),
-            S_SCOPE => self.enter_scope_air_start(gobj),
+        match ItKind::of(self.held_kind(gobj)) {
+            ItKind::LGun => self.enter_lgun_shoot_air(gobj),
+            ItKind::FFlower => self.enter_fflower_shoot_air(gobj),
+            ItKind::SScope => self.enter_scope_air_start(gobj),
             _ => {}
         }
     }

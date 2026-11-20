@@ -6,11 +6,11 @@
 //! his voice, and two branches of his own ([`KIRBY`]). Only his copy's addresses and his
 //! hammer are here.
 
-use super::super::super::it::kinds as k;
 use super::super::super::state::Running;
 use super::super::popo::special_n::IceShot;
 use super::{attr, ms};
 use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// The copy's function addresses.
@@ -36,7 +36,7 @@ pub const KIRBY: IceShot = IceShot {
     attrs: attr::PP_AIR_HOP - 0x4,
     u_ice: 0xC0,
     u_air: 0xA4,
-    ice_kind: k::KIRBY_ICE_CLIMBER_ICE,
+    ice_kind: ItKind::KirbyIceClimberIce.id(),
     on_death: super::addr::DEATH3,
     on_damage: super::addr::DEATH1,
     ice_cb: addr::ICE,

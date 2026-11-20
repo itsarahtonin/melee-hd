@@ -18,7 +18,7 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
 
-use super::{WHISPY_APPLE, WHISPY_HEAL_APPLE};
+use crate::game::it::ItKind;
 
 pub const ANIM0: u32 = 0x802E_E434;
 pub const PHYS0: u32 = 0x802E_E544;
@@ -176,11 +176,11 @@ pub fn spawn(
             rand = 0.0;
         }
         heal = 0.0;
-        spawn.kind = WHISPY_APPLE;
+        spawn.kind = ItKind::WhispyApple.id();
     } else if rand < heal {
-        spawn.kind = WHISPY_HEAL_APPLE;
+        spawn.kind = ItKind::WhispyHealApple.id();
     } else {
-        spawn.kind = WHISPY_APPLE;
+        spawn.kind = ItKind::WhispyApple.id();
     }
     let gobj = super::super::item::spawn_air(r, &mut spawn)?;
     lib2725::count_spawned(r.game);

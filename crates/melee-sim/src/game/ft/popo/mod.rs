@@ -20,11 +20,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// The Ice Climbers' items: `It_Kind_IceClimber_Ice`, `_Blizzard` and `_GumStrings`.
-pub const IT_KIND_ICE: i32 = 106;
-pub const IT_KIND_BLIZZARD: i32 = 107;
-pub const IT_KIND_GUM_STRINGS: i32 = 113;
-
 /// Offsets into `ftIceClimberAttributes`.
 pub mod attr {
     /// Popo's `Fighter::x40`.

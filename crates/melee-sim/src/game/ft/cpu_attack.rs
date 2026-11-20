@@ -12,6 +12,7 @@ use super::super::state::Running;
 use super::common::GA_AIR;
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::lb::{collision, hitcapsule};
 use crate::math;
 use crate::vec::Vec3;
@@ -118,7 +119,6 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800B9A04")]
     #[doc(alias = "ftCo_800A5A28")]
     fn cpu_held_item_attack(&mut self, f: FighterId, it: ItemId, angle: f64, dist: f64) -> bool {
-        use super::super::it::kinds as k;
         if self.cpu_item_heals(it) || self.cpu_item_attacking(f) {
             return false;
         }
@@ -145,7 +145,7 @@ impl Running<'_> {
                 && angle > -0.087_266_461_923_718_45
                 && dist > 30.0
             {
-                if kind == k::STARROD { 0xF } else { 2 }
+                if kind == ItKind::StarRod { 0xF } else { 2 }
             } else {
                 0x2A
             };
@@ -153,22 +153,25 @@ impl Running<'_> {
             return true;
         }
         // `ftCo_800A5A5C`: a container.
-        if matches!(kind, k::BOX | k::TARU | k::KUSUDAMA | k::TARU_CANN) {
+        if matches!(
+            ItKind::of(kind),
+            ItKind::Box | ItKind::Taru | ItKind::Kusudama | ItKind::TaruCann
+        ) {
             self.game.fighters[f.0].cpu.xA4 = 2;
             return true;
         }
         // `ftCo_800A5A28`: an item thrown at the target.
         if matches!(
-            kind,
-            k::CAPSULE
-                | k::BOMBHEI
-                | k::DOSEI
-                | k::G_SHELL
-                | k::R_SHELL
-                | k::FREEZE
-                | k::MSBOMB
-                | k::FLIPPER
-                | k::M_BALL
+            ItKind::of(kind),
+            ItKind::Capsule
+                | ItKind::BombHei
+                | ItKind::Dosei
+                | ItKind::GShell
+                | ItKind::RShell
+                | ItKind::Freeze
+                | ItKind::MSBomb
+                | ItKind::Flipper
+                | ItKind::MBall
         ) {
             let a = if angle > 1.308_996_928_855_776_8 {
                 0xD
@@ -178,7 +181,7 @@ impl Running<'_> {
                 return false;
             } else if angle < 0.261_799_385_771_155_36 && angle > -0.261_799_385_771_155_36 {
                 0xF
-            } else if kind == k::M_BALL {
+            } else if kind == ItKind::MBall {
                 0xE
             } else {
                 return false;
@@ -200,10 +203,14 @@ impl Running<'_> {
     /// Sword or parasol.
     #[doc(alias = "ftCo_800A59E4")]
     pub(super) fn cpu_item_swung(&self, it: ItemId) -> bool {
-        use super::super::it::kinds as k;
         matches!(
-            self.game.items[it.0].kind,
-            k::HARISEN | k::STARROD | k::LIPSTICK | k::BAT | k::SWORD | k::PARASOL
+            ItKind::of(self.game.items[it.0].kind),
+            ItKind::Harisen
+                | ItKind::StarRod
+                | ItKind::LipStick
+                | ItKind::Bat
+                | ItKind::Sword
+                | ItKind::Parasol
         )
     }
 
@@ -639,14 +646,15 @@ impl Running<'_> {
             if let Some(g) = self.game.fighters[f.0].item_gobj
                 && self.cpu_item_swung(super::super::it::item_of(self.game, g))
             {
-                use super::super::it::kinds as k;
-                let slot = match self.game.items[super::super::it::item_of(self.game, g).0].kind {
-                    k::HARISEN => Some(0),
-                    k::LIPSTICK => Some(1),
-                    k::STARROD => Some(2),
-                    k::SWORD => Some(3),
-                    k::BAT => Some(4),
-                    k::PARASOL => Some(5),
+                let slot = match ItKind::of(
+                    self.game.items[super::super::it::item_of(self.game, g).0].kind,
+                ) {
+                    ItKind::Harisen => Some(0),
+                    ItKind::LipStick => Some(1),
+                    ItKind::StarRod => Some(2),
+                    ItKind::Sword => Some(3),
+                    ItKind::Bat => Some(4),
+                    ItKind::Parasol => Some(5),
                     _ => None,
                 };
                 let reach = slot.map_or(0.0, |i| {
@@ -1614,7 +1622,13 @@ impl Running<'_> {
         }
         // `It_Kind_Star`, `It_Kind_Unk4`, and `ftCo_800A5980` on the item read as a fighter.
         let kind = self.game.items[it.0].kind;
-        if kind == 10 || kind == 158 || (43..47).contains(&kind) || matches!(kind, 211..=213 | 217)
+        if kind == ItKind::Star
+            || kind == ItKind::Unk4
+            || (ItKind::Kuriboh.id()..ItKind::OctarockStone.id()).contains(&kind)
+            || matches!(
+                ItKind::from_id(kind),
+                Some(ItKind::Nokonoko | ItKind::Patapata | ItKind::Likelike | ItKind::Whitebea)
+            )
         {
             return 0;
         }
@@ -1711,12 +1725,11 @@ impl Running<'_> {
             }
         } else if threat == 2 {
             let item = fpp.cpu.xF4.expect("an item threat without its item");
-            use super::super::it::kinds as k;
             let ip = &self.game.items[item.0];
             let side = fp::fsubs(reg(fpp.cur_pos.x), reg(ip.pos.x)) > 0.0;
-            match ip.kind {
+            match ItKind::of(ip.kind) {
                 // `inline0`: shield by an island's end, else roll away from it.
-                k::FLIPPER | k::TARU_CANN => {
+                ItKind::Flipper | ItKind::TaruCann => {
                     if self.cpu_near_island_end(f, 1.0) {
                         self.cpu_hold_shield(f);
                     } else if side {
@@ -1726,7 +1739,7 @@ impl Running<'_> {
                     }
                 }
                 // `inline1`: roll through a Poison Mushroom.
-                k::DKINOKO => {
+                ItKind::DKinoko => {
                     if side {
                         self.cpu_roll_left(f);
                     } else {

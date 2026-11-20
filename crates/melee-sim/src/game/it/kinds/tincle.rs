@@ -21,6 +21,7 @@ use crate::hsd::jobj::{self, JObjId};
 use crate::vec::Vec3;
 
 use super::super::Var;
+use crate::game::it::ItKind;
 
 /// `ITEM_UNK_0x1`: the state change's lowest flag.
 const UNK_0X1: u32 = 1;
@@ -1049,7 +1050,7 @@ pub fn set_box(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802ECA70")]
 pub fn create(r: &mut Running, owner: GObjId) -> Option<GObjId> {
     let pos = Vec3::new(0.0, 200.0, 0.0);
-    let gobj = zako::spawn(r, super::TINCLE, Some(pos), None, None, true)?;
+    let gobj = zako::spawn(r, ItKind::Tincle.id(), Some(pos), None, None, true)?;
     let s = super::super::super::gr::ground::scale(r.game);
     item_mut(r.game, gobj).scl = s;
     let j = jobj_of(r.game, gobj).expect("Tingle without a model");

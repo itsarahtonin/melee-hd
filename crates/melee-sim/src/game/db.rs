@@ -15,6 +15,7 @@ use super::hud::devtext::DevText;
 use super::state::{Game, Running};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::cobj;
 use crate::hsd::gobj::GObjId;
 use crate::input::pad::{
@@ -32,17 +33,6 @@ const DEVELOP: i32 = 4;
 const P_LINK_FIGHTER: u8 = 8;
 const P_LINK_ITEM: u8 = 9;
 const P_LINK_GROUND: u8 = 5;
-
-/// `It_Kind_M_Ball`, `It_Kind_L_Gun_Ray` (`It_Common_End`), `It_Kind_Kuriboh`,
-/// `It_Kind_Octarock_Stone`, `It_Kind_Unk4` (a coin), `It_Kind_Old_Kuri`,
-/// `It_Kind_Arwing_Laser`.
-const IT_M_BALL: i32 = 0x22;
-const IT_COMMON_END: i32 = 0x23;
-const IT_KURIBOH: i32 = 0x2B;
-const IT_OCTAROCK_STONE: i32 = 0x2F;
-const IT_COIN: i32 = 0x9E;
-const IT_OLD_KURI: i32 = 0xD0;
-const IT_ARWING_LASER: i32 = 0xEA;
 
 /// A port's buttons as the tools read them (`db_ButtonStates`): held, held the frame
 /// before, pressed and released this frame, and the pad library's repeat.
@@ -764,15 +754,15 @@ impl Running<'_> {
                 _ => (true, false, false, false, false, false, false, false),
             };
             self.db_fighter_shadows(step.0);
-            let c = &mut self.game.camera.cam;
-            camera::set_shadows(c, step.1);
-            camera::set_draw_collisions(c, step.2);
-            camera::set_draw_zones(c, step.3);
+            let c = &mut self.game.camera;
+            c.set_shadows(step.1);
+            c.set_draw_collisions(step.2);
+            c.set_draw_zones(step.3);
             self.db_ground_flag(step.4);
-            let c = &mut self.game.camera.cam;
-            camera::set_x39a_b0(c, step.5);
-            camera::set_x39a_b1(c, step.6);
-            camera::set_draw_special_points(c, step.7);
+            let c = &mut self.game.camera;
+            c.set_x39a_b0(step.5);
+            c.set_x39a_b1(step.6);
+            c.set_draw_special_points(step.7);
             if !(1..=6).contains(&self.game.db.stage_visuals) {
                 self.game.db.stage_visuals = 0;
             }
@@ -781,9 +771,9 @@ impl Running<'_> {
             match self.game.db.misc_effects {
                 0 | 1 => {
                     super::gr::ground::apply_background_color(self.game);
-                    camera::set_stage_visible(&mut self.game.camera.cam, 1);
+                    self.game.camera.set_stage_visible(1);
                 }
-                _ => camera::set_stage_visible(&mut self.game.camera.cam, 0),
+                _ => self.game.camera.set_stage_visible(0),
             }
         }
     }
@@ -823,9 +813,9 @@ impl Running<'_> {
         if !super::gm::is_training(self.game)
             && self.game.game_mode != super::gm::camera_mode::GM_CAMERA_MODE
         {
-            let c = &self.game.camera.cam;
-            if !camera::is_debug_free(c)
-                && !camera::is_debug_follow(c)
+            let c = &self.game.camera;
+            if !c.is_debug_free()
+                && !c.is_debug_follow()
                 && (abs(cx) > threshold || abs(cy) > threshold)
             {
                 self.db_camera_screen();
@@ -834,24 +824,22 @@ impl Running<'_> {
                 self.db_camera_screen();
                 let mods = u32::from(BUTTON_Y | BUTTON_X | TRIGGER_L | TRIGGER_R);
                 if down & mods == 0 {
-                    if camera::is_debug_free(&self.game.camera.cam) {
+                    if self.game.camera.is_debug_free() {
                         camera::debug_follow(self.game, self.data, port);
-                    } else if camera::is_debug_follow(&self.game.camera.cam) {
-                        camera::leave_debug(&mut self.game.camera);
+                    } else if self.game.camera.is_debug_follow() {
+                        self.game.camera.leave_debug();
                     } else {
                         camera::debug_free(self.game, self.data);
                     }
                 }
             }
         }
-        if camera::is_debug_follow(&self.game.camera.cam) {
+        if self.game.camera.is_debug_follow() {
             self.db_follow_camera_input(port);
-        } else if camera::is_debug_free(&self.game.camera.cam) {
+        } else if self.game.camera.is_debug_free() {
             self.db_free_camera_input(port);
         }
-        if camera::is_debug_free(&self.game.camera.cam)
-            && self.game.db.stage_visuals.wrapping_sub(3) <= 1
-        {
+        if self.game.camera.is_debug_free() && self.game.db.stage_visuals.wrapping_sub(3) <= 1 {
             if pressed & u32::from(BUTTON_B) != 0 {
                 self.game.db.camera_shown = u8::from(self.game.db.camera_shown == 0);
             }
@@ -861,8 +849,8 @@ impl Running<'_> {
         self.db_update_camera_info();
         if self.game.db_combo(port, BUTTON_X, BUTTON_DOWN) {
             match self.game.db.misc_effects {
-                2 => camera::set_background_color(&mut self.game.camera.cam, 0xFF, 0xFF, 0xFF),
-                3 => camera::set_background_color(&mut self.game.camera.cam, 0, 0, 0),
+                2 => self.game.camera.set_background_color(0xFF, 0xFF, 0xFF),
+                3 => self.game.camera.set_background_color(0, 0, 0),
                 _ => {}
             }
         }
@@ -875,7 +863,7 @@ impl Running<'_> {
         let Some(t) = self.game.db.camera_text else {
             return;
         };
-        let gobj = camera::gobj(&self.game.camera.cam);
+        let gobj = self.game.camera.gobj();
         if gobj.is_none() || self.game.db.camera_shown == 0 {
             let s = &mut self.game.hud.devtext.pool[usize::from(t)];
             s.hide_background();
@@ -945,7 +933,7 @@ impl Running<'_> {
     fn db_follow_camera_input(&mut self, port: i32) {
         let (cx, cy, buttons) = self.db_camera_stick(port);
         let b = camera::debug_followed(self.game);
-        let at = self.game.camera.boxes[b].bone_pos;
+        let at = self.game.camera.subject(b).bone_pos;
         if buttons & u32::from(BUTTON_LEFT) != 0 {
             self.db_follow_dolly(at, cy);
         } else if buttons & u32::from(BUTTON_RIGHT) != 0 {
@@ -966,10 +954,10 @@ impl Running<'_> {
             self.db_free_pan(fp::fneg(cx), fp::fneg(cy));
         } else if cx != 0.0 || cy != 0.0 {
             // `fn_80227B64`.
-            let d = &self.game.camera.debug;
+            let d = self.game.camera.debug_cameras();
             let (eye, int) = (d.free_eye_pos, d.free_int_pos);
             let eye = self.db_orbit(int, eye, cx, cy);
-            self.game.camera.debug.free_eye_pos = eye;
+            self.game.camera.debug_cameras_mut().free_eye_pos = eye;
         }
         self.game.db.camera_timer = 60;
     }
@@ -1026,7 +1014,7 @@ impl Running<'_> {
     /// The followed camera's eye and interest from its offsets around `at` (the struct's
     /// names swapped, as `Camera_8002FEEC` sets them).
     fn db_follow_place(&mut self, at: Vec3) {
-        let d = &mut self.game.camera.debug;
+        let d = self.game.camera.debug_cameras_mut();
         d.follow_eye_pos = d.follow_int_offset + at;
         d.follow_int_pos = d.follow_eye_offset + at;
     }
@@ -1035,10 +1023,10 @@ impl Running<'_> {
     /// offset, then placed.
     #[doc(alias = "fn_80227BA8")]
     fn db_follow_orbit(&mut self, at: Vec3, cx: f64, cy: f64) {
-        let d = &self.game.camera.debug;
+        let d = self.game.camera.debug_cameras();
         let (eye, int) = (d.follow_eye_offset, d.follow_int_offset);
         let eye = self.db_orbit(int, eye, cx, cy);
-        self.game.camera.debug.follow_eye_offset = eye;
+        self.game.camera.debug_cameras_mut().follow_eye_offset = eye;
         self.db_follow_place(at);
     }
 
@@ -1055,7 +1043,7 @@ impl Running<'_> {
     fn db_follow_dolly(&mut self, at: Vec3, cy: f64) {
         if cy != 0.0 {
             let v = self.db_dolly(cy);
-            let d = &mut self.game.camera.debug;
+            let d = self.game.camera.debug_cameras_mut();
             d.follow_eye_offset = d.follow_int_offset.sdk_sub(v);
         }
         self.db_follow_place(at);
@@ -1066,7 +1054,7 @@ impl Running<'_> {
     fn db_free_dolly(&mut self, cy: f64) {
         if cy != 0.0 {
             let v = self.db_dolly(cy);
-            let d = &mut self.game.camera.debug;
+            let d = self.game.camera.debug_cameras_mut();
             d.free_eye_pos = d.free_int_pos.sdk_sub(v);
         }
     }
@@ -1103,7 +1091,7 @@ impl Running<'_> {
     #[doc(alias = "fn_80228124")]
     fn db_follow_pan(&mut self, at: Vec3, x: f64, y: f64) {
         let (left, up) = self.db_pan_moves(x, y);
-        let d = &mut self.game.camera.debug;
+        let d = self.game.camera.debug_cameras_mut();
         for v in [left, up].into_iter().flatten() {
             d.follow_int_offset = d.follow_int_offset.sdk_add(v);
             d.follow_eye_offset = d.follow_eye_offset.sdk_add(v);
@@ -1118,7 +1106,7 @@ impl Running<'_> {
             return;
         }
         let (left, up) = self.db_pan_moves(x, y);
-        let d = &mut self.game.camera.debug;
+        let d = self.game.camera.debug_cameras_mut();
         for v in [left, up].into_iter().flatten() {
             d.free_int_pos = d.free_int_pos.sdk_add(v);
             d.free_eye_pos = d.free_eye_pos.sdk_add(v);
@@ -1259,7 +1247,7 @@ impl Running<'_> {
     fn db_setup_item_menu(&mut self) {
         let m = &mut self.game.it.db_menu;
         m.DisplayStatus = 0;
-        m.CurrentlySelectedItem = IT_M_BALL;
+        m.CurrentlySelectedItem = ItKind::MBall.id();
         m.LastSelectedItem = m.CurrentlySelectedItem;
         m.CurrentlySelectedPokemon = 0;
         m.LastSelectedPokemon = m.CurrentlySelectedPokemon;
@@ -1293,7 +1281,7 @@ impl Running<'_> {
                 (1, false) => *flags &= !0x08,
                 // `b0`, for a coin.
                 (2, on) => {
-                    if ip.kind == IT_COIN {
+                    if ip.kind == ItKind::Unk4 {
                         if on {
                             ip.xDAA[0] |= 0x80;
                         } else {
@@ -1338,30 +1326,30 @@ impl Running<'_> {
         let m = &mut self.game.it.db_menu;
         let item = &mut m.CurrentlySelectedItem;
         if l && rep & u32::from(BUTTON_UP) != 0 {
-            if *item < IT_COMMON_END {
+            if *item < ItKind::COMMON_END {
                 *item += 1;
-                if *item == IT_COMMON_END {
-                    *item = IT_KURIBOH;
+                if *item == ItKind::COMMON_END {
+                    *item = ItKind::Kuriboh.id();
                 }
-            } else if *item < IT_OCTAROCK_STONE {
+            } else if *item < ItKind::OctarockStone {
                 *item += 1;
-                if *item == IT_OCTAROCK_STONE {
-                    *item = IT_OLD_KURI;
+                if *item == ItKind::OctarockStone {
+                    *item = ItKind::OldKuri.id();
                 }
-            } else if *item < IT_ARWING_LASER - 1 {
+            } else if *item < ItKind::ArwingLaser.id() - 1 {
                 *item += 1;
             }
         }
         if l && rep & u32::from(BUTTON_DOWN) != 0 {
-            if *item >= IT_OLD_KURI {
+            if *item >= ItKind::OldKuri {
                 *item -= 1;
-                if *item < IT_OLD_KURI {
-                    *item = IT_OCTAROCK_STONE - 1;
+                if *item < ItKind::OldKuri {
+                    *item = ItKind::OctarockStone.id() - 1;
                 }
-            } else if *item >= IT_KURIBOH {
+            } else if *item >= ItKind::Kuriboh {
                 *item -= 1;
-                if *item < IT_KURIBOH {
-                    *item = IT_COMMON_END - 1;
+                if *item < ItKind::Kuriboh {
+                    *item = ItKind::COMMON_END.id() - 1;
                 }
             } else if *item > 0 {
                 *item -= 1;
@@ -1418,13 +1406,13 @@ impl Running<'_> {
         }
         let m = &self.game.it.db_menu;
         let i = m.CurrentlySelectedItem;
-        let item: &[u8] = if i < IT_COMMON_END {
+        let item: &[u8] = if i < ItKind::COMMON_END {
             ITEM_NAMES[i as usize]
-        } else if i < IT_OCTAROCK_STONE {
-            BARREL_ENEMIES[(i - IT_KURIBOH) as usize]
-        } else if i < IT_ARWING_LASER {
+        } else if i < ItKind::OctarockStone {
+            BARREL_ENEMIES[(i - ItKind::Kuriboh.id()) as usize]
+        } else if i < ItKind::ArwingLaser {
             ADVENTURE_ENEMIES
-                .get((i - IT_OLD_KURI) as usize)
+                .get((i - ItKind::OldKuri.id()) as usize)
                 .copied()
                 .unwrap_or(b"")
         } else {
@@ -1466,7 +1454,7 @@ impl Running<'_> {
         }
         let kind = self.game.it.db_menu.CurrentlySelectedItem;
         // `Item_80266F3C`: the common items only in a match that has items.
-        if self.game.vs_item_freq() == -1 && kind < IT_COMMON_END {
+        if self.game.vs_item_freq() == -1 && kind < ItKind::COMMON_END {
             return;
         }
         let mut pos = self.game.player_pos(port);
@@ -1485,21 +1473,21 @@ impl Running<'_> {
         };
         let common = super::it::item::common_data(self.game);
         let counts = &self.game.it.counts;
-        if kind < IT_COMMON_END && counts.x0 as u32 >= common.u32(self.data, 0) {
+        if kind < ItKind::COMMON_END && counts.x0 as u32 >= common.u32(self.data, 0) {
             // "Item Max Over."
             return;
         }
-        if kind < IT_OCTAROCK_STONE && counts.x2C as u32 >= common.u32(self.data, 0x14) {
+        if kind < ItKind::OctarockStone && counts.x2C as u32 >= common.u32(self.data, 0x14) {
             // "couldn't get Item struct.(CZako)"
             return;
         }
         // An adventure enemy only when the stage loaded its article (`it_804A0F60`).
-        if (IT_OLD_KURI..IT_ARWING_LASER).contains(&kind)
-            && self.game.gr.stage_articles[(kind - IT_OLD_KURI) as usize].is_none()
+        if (ItKind::OldKuri.id()..ItKind::ArwingLaser.id()).contains(&kind)
+            && self.game.gr.stage_articles[(kind - ItKind::OldKuri.id()) as usize].is_none()
         {
             return;
         }
-        if kind == IT_M_BALL && super::it::spawn::poke_balls_full(self.game) {
+        if kind == ItKind::MBall && super::it::spawn::poke_balls_full(self.game) {
             return;
         }
         if let Some(g) = super::it::item::spawn_air(self, &mut spawn) {

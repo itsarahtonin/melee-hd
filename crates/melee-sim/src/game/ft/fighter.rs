@@ -11,6 +11,7 @@ use super::anim::x594_bit;
 use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::math::{self, sqrt_reg};
@@ -246,10 +247,8 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         if fp.x2104 == 0 {
             fp.x2221_b4 = false;
             let item = fp.item_gobj;
-            let parasol = item.is_some_and(|i| {
-                crate::game::it::lib26b1::kind(g.game, i)
-                    == crate::game::it::kinds::peachparasol::KIND
-            });
+            let parasol = item
+                .is_some_and(|i| crate::game::it::lib26b1::kind(g.game, i) == ItKind::PeachParasol);
             if parasol {
                 g.game.fighters[f.0].x2221_b5 = true;
                 g.enter_fall_special_basic(gobj);
@@ -259,7 +258,7 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         }
     }
     // Off-screen damage.
-    if !g.game.fighters[f.0].is_sub_fighter && g.game.camera.cam.x2BC == 1.0 {
+    if !g.game.fighters[f.0].is_sub_fighter && g.game.camera.zoom() == 1.0 {
         let c = g.common();
         let (limit, frames, damage) = (c.i32(0x7B0), c.i32(0x7AC), c.i32(0x7B4));
         let fp = &g.game.fighters[f.0];

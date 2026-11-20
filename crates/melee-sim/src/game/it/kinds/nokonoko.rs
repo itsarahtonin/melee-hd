@@ -20,6 +20,7 @@ use super::super::{data, ground, hitbox, item, item_mut, jobj_of, lib26b1, lib27
 use crate::fpu::{mem, reg};
 use crate::game::camera;
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::_itECB;
 use crate::hsd::gobj::GObjId;
@@ -687,7 +688,7 @@ pub fn spawn(
     vel: Option<Vec3>,
     facing: i32,
 ) -> Option<GObjId> {
-    let gobj = zako::spawn(r, super::NOKONOKO, Some(pos), None, vel, true)?;
+    let gobj = zako::spawn(r, ItKind::Nokonoko.id(), Some(pos), None, vel, true)?;
     let j = jobj_of(r.game, gobj).expect("a Koopa Troopa without a model");
     let f = mem(fp::frsp(f64::from(facing)));
     item_mut(r.game, gobj).facing_dir = f;

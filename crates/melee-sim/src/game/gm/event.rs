@@ -1099,7 +1099,7 @@ impl Running<'_> {
             self.game.bgflash.set_scale(0.2);
         }
         let q = self.game.game_data.vs.unk_530.x1C;
-        super::super::camera::set_quake_scale(&mut self.game.camera.cam, q);
+        self.game.camera.set_quake_scale(q);
         let w = &mut self.game.world;
         let g = w.create(0xF, 0x11, 0);
         w.setup_proc(

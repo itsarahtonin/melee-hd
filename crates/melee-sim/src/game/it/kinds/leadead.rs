@@ -20,6 +20,7 @@ use super::super::{data, ground, hitbox, item, item_mut, lib26b1, lib2725, mapli
 use crate::fpu::{mem, reg};
 use crate::game::camera;
 use crate::game::code;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::_itECB;
 use crate::hsd::gobj::{GObjId, PROC_F27};
@@ -1147,7 +1148,7 @@ pub fn touches_ahead(r: &mut Running, gobj: GObjId, _dx: f32, _dy: f32) -> i32 {
 /// too), its state 0's animation run once, in the air, falling.
 #[doc(alias = "it_802EA9FC")]
 pub fn spawn(r: &mut Running, pos: Vec3, facing: i32) -> Option<GObjId> {
-    let gobj = zako::spawn(r, super::LEADEAD, Some(pos), None, None, true)?;
+    let gobj = zako::spawn(r, ItKind::Leadead.id(), Some(pos), None, None, true)?;
     item_mut(r.game, gobj).facing_dir = mem(fp::frsp(f64::from(facing)));
     set_coll_facing(r, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);

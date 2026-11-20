@@ -692,9 +692,10 @@ fn keep_in_bounds() {
         |f| f.camera(),
         |r, a| {
             let g = &mut *r.game;
+            let p = g.camera.raw_parts_mut();
             let t = match a.which(a.r(3)) {
-                Which::Main => &mut g.camera.cam.transform,
-                Which::Copy => &mut g.camera.cam.transform_copy,
+                Which::Main => &mut p.cam.transform,
+                Which::Copy => &mut p.cam.transform_copy,
             };
             camera::keep_in_bounds(&g.stage_info, t, a.r(4) != 0);
             vec![]
@@ -713,11 +714,12 @@ fn track_bounds() {
         },
         |r, a| {
             let g = &mut *r.game;
+            let p = g.camera.raw_parts_mut();
             let t = match a.which(a.r(4)) {
-                Which::Main => g.camera.cam.transform.clone(),
-                Which::Copy => g.camera.cam.transform_copy.clone(),
+                Which::Main => p.cam.transform.clone(),
+                Which::Copy => p.cam.transform_copy.clone(),
             };
-            let b = camera::track_bounds(&mut g.camera.boxes, &g.stage_info, &t);
+            let b = camera::track_bounds(p.boxes, &g.stage_info, &t);
             vec![Out::Words(a.r(3), bounds_words(&b))]
         },
     );
@@ -754,9 +756,10 @@ fn frame() {
         },
         |r, a| {
             let g = &mut *r.game;
+            let p = g.camera.raw_parts_mut();
             let t = match a.which(a.r(4)) {
-                Which::Main => &mut g.camera.cam.transform,
-                Which::Copy => &mut g.camera.cam.transform_copy,
+                Which::Main => &mut p.cam.transform,
+                Which::Copy => &mut p.cam.transform_copy,
             };
             camera::frame(&a.bounds(a.r(3)), &g.stage_info, t);
             vec![]
@@ -787,7 +790,7 @@ fn ease_interest() {
             f.uniform(z, 0.0, 2.0);
         },
         |r, a| {
-            let zoom = r.game.camera.cam.x2BC;
+            let zoom = r.game.camera.zoom();
             let t = transform(r.game, a.which(a.r(4)));
             camera::ease_interest(&a.bounds(a.r(3)), t, a.f(1), zoom);
             vec![]
@@ -825,9 +828,10 @@ fn fit_depth() {
         |r, a| {
             let mut b = a.bounds(a.r(3));
             let g = &mut *r.game;
+            let p = g.camera.raw_parts_mut();
             let t = match a.which(a.r(4)) {
-                Which::Main => &g.camera.cam.transform,
-                Which::Copy => &g.camera.cam.transform_copy,
+                Which::Main => &p.cam.transform,
+                Which::Copy => &p.cam.transform_copy,
             };
             camera::fit_depth(&mut b, &g.stage_info, t);
             vec![Out::Words(a.r(3), bounds_words(&b))]
@@ -843,7 +847,7 @@ fn ease_extents() {
         |f| f.boxes(),
         |r, _| {
             let g = &mut *r.game;
-            camera::ease_extents(&mut g.camera.boxes, &g.stage_info);
+            camera::ease_extents(g.camera.raw_parts_mut().boxes, &g.stage_info);
             vec![]
         },
     );
@@ -858,7 +862,7 @@ fn is_framed() {
         |r, a| {
             let g = &mut *r.game;
             let b = a.camera_box(a.r(3));
-            let framed = camera::is_framed(&g.stage_info, &mut g.camera.boxes[b]);
+            let framed = camera::is_framed(&g.stage_info, g.camera.subject_mut(b));
             vec![Out::R3(u32::from(framed))]
         },
     );
@@ -935,15 +939,15 @@ fn update_zoom() {
 #[test]
 fn quake_offset_and_translation() {
     check("Camera_SetQuakeOffset", |r, a| {
-        camera::set_quake_offset(&mut r.game.camera, a.f(1), a.f(2));
+        r.game.camera.set_quake_offset(a.f(1), a.f(2));
         vec![]
     });
     check("Camera_80030DE4", |r, a| {
-        camera::set_translation(&mut r.game.camera.cam, a.f(1), a.f(2));
+        camera::set_translation(r.game.camera.raw_parts_mut().cam, a.f(1), a.f(2));
         vec![]
     });
     check("Camera_80030DF8", |r, _| {
-        camera::clear_translation(&mut r.game.camera.cam);
+        camera::clear_translation(r.game.camera.raw_parts_mut().cam);
         vec![]
     });
 }
@@ -951,47 +955,45 @@ fn quake_offset_and_translation() {
 #[test]
 fn flags() {
     check("Camera_80031144", |r, _| {
-        vec![Out::F1(camera::zoom(&r.game.camera.cam))]
+        vec![Out::F1(r.game.camera.zoom())]
     });
     check("Camera_8003108C", |r, _| {
-        vec![Out::R3(camera::layer(&r.game.camera.cam).into())]
+        vec![Out::R3(r.game.camera.layer().into())]
     });
     check("Camera_800310A0", |r, a| {
-        camera::set_layer(&mut r.game.camera.cam, a.r(3) as u8);
+        r.game.camera.set_layer(a.r(3) as u8);
         vec![]
     });
     check("Camera_80031060", |r, _| {
-        vec![Out::R3(camera::pass(&r.game.camera.cam).into())]
+        vec![Out::R3(r.game.camera.pass().into())]
     });
     check("Camera_80031074", |r, a| {
-        camera::set_pass(&mut r.game.camera.cam, a.r(3) as u8);
+        r.game.camera.set_pass(a.r(3) as u8);
         vec![]
     });
     check("Camera_80030AF8", |r, _| {
-        vec![Out::R3(camera::hold_off_plane(&r.game.camera.cam).into())]
+        vec![Out::R3(r.game.camera.hold_off_plane().into())]
     });
     check("Camera_80030130", |r, _| {
-        vec![Out::R3(camera::is_boss_intro(&r.game.camera.cam).into())]
+        vec![Out::R3(r.game.camera.is_boss_intro().into())]
     });
     check("Camera_8003010C", |r, _| {
-        vec![Out::R3(camera::is_free(&r.game.camera.cam).into())]
+        vec![Out::R3(r.game.camera.is_free().into())]
     });
     check("Camera_80030AC4", |r, _| {
-        vec![Out::R3(camera::stage_visible(&r.game.camera.cam).into())]
+        vec![Out::R3(r.game.camera.stage_visible().into())]
     });
     check("Camera_80030A78", |r, _| {
-        vec![Out::R3(camera::draw_collisions(&r.game.camera.cam).into())]
+        vec![Out::R3(r.game.camera.draw_collisions().into())]
     });
     check("Camera_80030B24", |r, _| {
-        vec![Out::R3(camera::shadows(&r.game.camera.cam).into())]
+        vec![Out::R3(r.game.camera.shadows().into())]
     });
     check("Camera_80030BA8", |r, _| {
-        vec![Out::R3(
-            camera::draw_special_points(&r.game.camera.cam).into(),
-        )]
+        vec![Out::R3(r.game.camera.draw_special_points().into())]
     });
     check("Camera_80030A50", |r, _| {
-        vec![Out::GObj(camera::gobj(&r.game.camera.cam))]
+        vec![Out::GObj(r.game.camera.gobj())]
     });
 }
 
@@ -1126,7 +1128,7 @@ fn quakes() {
                 // The original's length is then the epicenter's address, which our state
                 // can't hold: the port counts a stale read, and the address is put back here.
                 assert_eq!(r.game.objs.stale_reads, stale + 1);
-                r.game.camera.cam.quake_frames_left[kind as usize] = a.r(4) as i32;
+                r.game.camera.raw_parts_mut().cam.quake_frames_left[kind as usize] = a.r(4) as i32;
             }
             vec![]
         },
@@ -1141,7 +1143,7 @@ fn quakes() {
         },
         |r, a| {
             camera::stop_quake(r.game, a.r(3) as i32);
-            camera::set_quake_scale(&mut r.game.camera.cam, f1(a));
+            r.game.camera.set_quake_scale(f1(a));
             vec![]
         },
         |ctx, call| {
@@ -1163,7 +1165,7 @@ fn average_width() {
             f.put16(c + 0x2B8, n.wrapping_sub(1));
             f.nudge(c + 0x2B0, 100.0);
         },
-        |r, _| vec![Out::F1(camera::average_width(&r.game.camera.cam))],
+        |r, _| vec![Out::F1(r.game.camera.average_width())],
         |ctx, _| (0, fns::Camera_80030E10(ctx)),
     );
 }
@@ -1236,19 +1238,19 @@ fn setters_and_getters() {
         },
         |r, a| {
             let (b, v) = (a.r(3) & 1 != 0, f1(a));
-            let c = &mut r.game.camera.cam;
-            camera::set_far(c, v);
-            camera::set_near(c, v);
-            camera::set_draw_collisions(c, b);
-            camera::set_draw_zones(c, b);
-            camera::set_hold_off_plane(c, b);
-            camera::set_shadows(c, b);
-            camera::set_x39a_b0(c, b);
-            camera::set_x39a_b1(c, b);
-            camera::set_draw_special_points(c, b);
-            camera::set_stage_visible(c, a.r(3) as i32);
-            camera::set_background_color(c, 1, a.r(3) as u8, 3);
-            camera::set_default_fov(&mut r.game.camera, v);
+            let c = &mut r.game.camera;
+            c.set_far(v);
+            c.set_near(v);
+            c.set_draw_collisions(b);
+            c.set_draw_zones(b);
+            c.set_hold_off_plane(b);
+            c.set_shadows(b);
+            c.set_x39a_b0(b);
+            c.set_x39a_b1(b);
+            c.set_draw_special_points(b);
+            c.set_stage_visible(a.r(3) as i32);
+            c.set_background_color(1, a.r(3) as u8, 3);
+            r.game.camera.set_default_fov(v);
             vec![]
         },
         |ctx, call| {
@@ -1277,8 +1279,8 @@ fn setters_and_getters() {
             f.mem[i] = flags;
         },
         |r, _| {
-            let c = &r.game.camera.cam;
-            let bits = u32::from(camera::x39a_b0(c)) | u32::from(camera::x39a_b1(c)) << 1;
+            let c = &r.game.camera;
+            let bits = u32::from(c.x39a_b0()) | u32::from(c.x39a_b1()) << 1;
             vec![Out::R3(bits)]
         },
         |ctx, _| {
@@ -1296,14 +1298,13 @@ fn setters_and_getters() {
             f.put(sym("cm_80453004"), last);
         },
         |r, a| {
-            let c = &r.game.camera.cam;
-            let modes =
-                u32::from(camera::is_debug_follow(c)) | u32::from(camera::is_debug_free(c)) << 1;
-            let color = camera::background_color(c);
+            let c = &r.game.camera;
+            let modes = u32::from(c.is_debug_follow()) | u32::from(c.is_debug_free()) << 1;
+            let color = c.background_color();
             let at = scratch(&a.cap.call);
-            let (p, i) = (camera::position(c), camera::interest(c));
-            camera::show_all_layers(&mut r.game.camera.cam);
-            camera::leave_debug(&mut r.game.camera);
+            let (p, i) = (c.position(), c.interest());
+            r.game.camera.show_all_layers();
+            r.game.camera.leave_debug();
             vec![
                 Out::R3(modes),
                 Out::Words(
@@ -1333,9 +1334,9 @@ fn setters_and_getters() {
         0,
         |_| {},
         |r, _| {
-            camera::set_standard(&mut r.game.camera.cam);
-            let s = r.game.camera.cam.mode;
-            camera::set_fixed(&mut r.game.camera.cam);
+            r.game.camera.set_standard();
+            let s = r.game.camera.mode();
+            r.game.camera.set_fixed();
             vec![Out::R3(s as u32)]
         },
         |ctx, _| {
@@ -1370,7 +1371,7 @@ fn cobj_copy_view() {
         |f| f.camera(),
         |r, _| {
             let g = &mut *r.game;
-            let copy = g.camera.cobj_copy;
+            let copy = g.camera.cobj_copy();
             camera::aim(g, copy, Which::Copy);
             camera::cobj_copy_view(g, r.data);
             vec![]
@@ -1392,7 +1393,7 @@ fn camera_boxes() {
         6,
         |f| f.regs.gpr[3] = f.rand.below(3) as u32,
         |r, a| {
-            let b = camera::alloc_box(&mut r.game.camera.boxes, a.r(3) as i32);
+            let b = r.game.camera.alloc_box(a.r(3) as i32);
             vec![Out::Box(Some(b))]
         },
         |ctx, call| {
@@ -1405,7 +1406,7 @@ fn camera_boxes() {
         0,
         |_| {},
         |r, _| {
-            let b = camera::alloc_box(&mut r.game.camera.boxes, camera::ACTIVE);
+            let b = r.game.camera.alloc_box(camera::ACTIVE);
             vec![Out::Box(Some(b))]
         },
         |ctx, _| (fns::Camera_80029020(ctx).addr(), 0.0),
@@ -1427,9 +1428,9 @@ fn camera_boxes() {
             f.regs.gpr[5] = f.rand.below(3) as u32;
         },
         |r, a| {
-            let boxes = &mut r.game.camera.boxes;
-            camera::free_box(boxes, a.camera_box(a.r(3)));
-            camera::reset_box(boxes, Some(a.camera_box(a.r(4))), a.r(5) as i32);
+            let boxes = &mut r.game.camera;
+            boxes.free_box(a.camera_box(a.r(3)));
+            boxes.reset_box(Some(a.camera_box(a.r(4))), a.r(5) as i32);
             vec![]
         },
         |ctx, call| {
@@ -1448,7 +1449,7 @@ fn camera_init() {
         4,
         |f| f.regs.gpr[3] = 1 + f.rand.below(4) as u32,
         |r, a| {
-            camera::init(&mut r.game.camera, a.r(3) as i32);
+            r.game.camera.init(a.r(3) as i32);
             vec![Out::OnlyCamera]
         },
         |ctx, call| {
@@ -1474,7 +1475,7 @@ fn debug_cameras() {
             camera::debug_follow(r.game, r.data, slot);
             let state = &r.game.camera;
             let mut outs = vec![Out::R3(0)];
-            if state.cam.mode == camera::DEBUG_FOLLOW && state.debug.ply_slot == slot {
+            if state.mode() == camera::DEBUG_FOLLOW && state.debug_cameras().ply_slot == slot {
                 outs = vec![Out::Bone(camera::debug_followed(r.game))];
             }
             camera::debug_free(r.game, r.data);
@@ -1542,7 +1543,7 @@ fn their_frames(ctx: &Ctx, frames: u32) {
 
 fn our_frames(r: &mut Running, frames: u32) {
     for _ in 0..frames {
-        let g = r.game.camera.cam.gobj.expect("the camera's GObj");
+        let g = r.game.camera.gobj().expect("the camera's GObj");
         camera::proc(r, g);
     }
 }
@@ -1636,7 +1637,7 @@ fn orbit_controls() {
             camera::set_up_free(r.game, 0, 0);
             let inputs = camera::read_inputs(r.game, a.r(4) as i32);
             let next = camera::next_slot(r.game, a.r(3) as i32, 1);
-            let c = &mut r.game.camera.cam;
+            let c = r.game.camera.raw_parts_mut().cam;
             camera::orbit_zoom(c, a.f(1));
             camera::orbit_rotate(c, a.f(2), a.f(3));
             camera::orbit_pan(c, a.f(4), a.f(1));
@@ -1695,11 +1696,11 @@ fn training_and_clear_cameras() {
         |r, a| {
             let slot = a.r(3) as i8;
             match a.r(4) {
-                0 => camera::set_up_training(&mut r.game.camera.cam, slot, 4),
+                0 => r.game.camera.set_up_training(slot, 4),
                 _ => camera::set_up_clear(r.game, slot),
             }
             if a.r(9) != 0 {
-                let c = &mut r.game.camera.cam;
+                let c = r.game.camera.raw_parts_mut().cam;
                 c.pitch_offset = f32::from_bits(leaf_check::bits(a.f(12)));
                 c.yaw_offset = f32::from_bits(leaf_check::bits(a.f(13)));
             }
@@ -1740,7 +1741,7 @@ fn fixed_camera() {
             f.nudge(ci + 0x70, 20.0);
         },
         |r, a| {
-            camera::set_fixed(&mut r.game.camera.cam);
+            r.game.camera.set_fixed();
             our_frames(r, a.r(6));
             vec![]
         },
@@ -1790,25 +1791,26 @@ fn cutscene_camera() {
                 // A callback the script leaves null.
                 _ => camera::script_look_at_callback(r, CodeRef(0)),
             }
-            let c = &mut r.game.camera.cam;
+            let c = &mut r.game.camera;
             match g(4) {
-                0 => camera::script_eye_at(c, p),
-                1 => camera::script_hold_eye(c),
+                0 => c.script_eye_at(p),
+                1 => c.script_hold_eye(),
                 _ => {
-                    camera::script_orbit_distance(c, fv(8));
-                    camera::script_orbit_yaw(c, fv(4));
-                    camera::script_orbit_pitch(c, fv(5));
+                    c.script_orbit_distance(fv(8));
+                    c.script_orbit_yaw(fv(4));
+                    c.script_orbit_pitch(fv(5));
                 }
             }
-            camera::script_fov(c, fv(9));
-            camera::script_transition(c, g(7) as i32);
+            c.script_fov(fv(9));
+            c.script_transition(g(7) as i32);
             if g(8) != 0 {
+                let c = r.game.camera.raw_parts_mut().cam;
                 c.x341_b5_b6 = 2;
                 c.x378 = fv(10).to_be_bytes();
                 c.x37C = fv(11).to_be_bytes();
             }
             our_frames(r, g(6));
-            let done = camera::script_done(&r.game.camera.cam);
+            let done = r.game.camera.script_done();
             match g(5) {
                 0 => camera::script_jump(r),
                 1 => camera::snap(r),
@@ -1878,7 +1880,7 @@ fn camera_create() {
 #[test]
 fn scene_setup() {
     check("Camera_Init", |r, a| {
-        camera::init(&mut r.game.camera, a.r(3) as i32);
+        r.game.camera.init(a.r(3) as i32);
         vec![]
     });
     check("Camera_Create", |r, _| {
@@ -1886,41 +1888,41 @@ fn scene_setup() {
         vec![]
     });
     check("Camera_80029044", |r, a| {
-        let b = camera::alloc_box(&mut r.game.camera.boxes, a.r(3) as i32);
+        let b = r.game.camera.alloc_box(a.r(3) as i32);
         vec![Out::Box(Some(b))]
     });
     check("Camera_80029020", |r, _| {
-        let b = camera::alloc_box(&mut r.game.camera.boxes, camera::ACTIVE);
+        let b = r.game.camera.alloc_box(camera::ACTIVE);
         vec![Out::Box(Some(b))]
     });
     check("Camera_80028F5C", |r, a| {
         let b = (a.r(3) != 0).then(|| a.camera_box(a.r(3)));
-        camera::reset_box(&mut r.game.camera.boxes, b, a.r(4) as i32);
+        r.game.camera.reset_box(b, a.r(4) as i32);
         vec![]
     });
     check("Camera_SetModeToStandard", |r, _| {
-        camera::set_standard(&mut r.game.camera.cam);
+        r.game.camera.set_standard();
         vec![]
     });
     check("Camera_SetBackgroundColor", |r, a| {
-        let c = &mut r.game.camera.cam;
-        camera::set_background_color(c, a.r(3) as u8, a.r(4) as u8, a.r(5) as u8);
+        let c = &mut r.game.camera;
+        c.set_background_color(a.r(3) as u8, a.r(4) as u8, a.r(5) as u8);
         vec![]
     });
     check("Camera_80030730", |r, a| {
-        camera::set_default_fov(&mut r.game.camera, f1(a));
+        r.game.camera.set_default_fov(f1(a));
         vec![]
     });
     check("Camera_SetQuakeScale", |r, a| {
-        camera::set_quake_scale(&mut r.game.camera.cam, f1(a));
+        r.game.camera.set_quake_scale(f1(a));
         vec![]
     });
     check("Camera_800311CC", |r, a| {
-        camera::set_far(&mut r.game.camera.cam, f1(a));
+        r.game.camera.set_far(f1(a));
         vec![]
     });
     check("Camera_800311DC", |r, a| {
-        camera::set_near(&mut r.game.camera.cam, f1(a));
+        r.game.camera.set_near(f1(a));
         vec![]
     });
     check("Camera_8002F3AC", |r, _| {

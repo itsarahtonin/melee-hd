@@ -18,8 +18,9 @@
 use std::borrow::Cow;
 use std::fmt::Write as _;
 
-use crate::gecko_words::{INFO, INFO_DATA, SCENE, SCENE_DATA};
+use crate::gecko_words::{INFO, INFO_DATA, LAYOUT, LAYOUT_PATCH, SCENE, SCENE_DATA};
 use melee_sim::game::gr::StKind;
+use melee_sim::game::it::ItKind;
 
 /// Who plays a player.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -119,7 +120,7 @@ pub struct Items {
 pub const FREQ_HIGH: i8 = 3;
 
 /// How many item kinds the random spawner draws from (`It_Kind_Capsule` to `It_Kind_M_Ball`).
-const RANDOM_KINDS: u8 = 35;
+const RANDOM_KINDS: u8 = ItKind::COMMON_END as u8;
 
 impl Items {
     /// Items off, the switch all on, as a menu-made match with items off records it.
@@ -608,13 +609,12 @@ pub const MATCHES: &[Match] = &[
         0x1F0F_0004,
     ),
     // Nana runs CPU code, and the CPU's DI reads a byte of her heap address when her knockback
-    // is zero: in Dolphin, melee-bench pins it to the recording's (its DI patch; see
-    // docs/performance.md).
+    // is zero: its codes lay the heap out as playback does ([`PLAYBACK_LAYOUT`]).
     Match::bench(
         "ics-peach-ps",
         POKEMON_STADIUM,
         &[p(ICE_CLIMBERS, 0), p(PEACH, 0)],
-        0x1F0F_0005,
+        0x1F0F_0015,
     ),
     // For the oracle: no replay pairs Ganondorf with ported characters on a ported stage.
     Match::bench(
@@ -624,6 +624,24 @@ pub const MATCHES: &[Match] = &[
         0x1F0F_0006,
     ),
 ];
+
+/// The benchmark matches with a fighter that runs CPU code (Nana), whose DI with no knockback
+/// reads a byte of her `Fighter`'s address (docs/melee-bugs.md), and the address Slippi's
+/// playback gives the first fighter's block (the allocator model's, `Layout::slippi_playback`
+/// with the replay's code list; the test `playback_layouts_are_the_models` checks it). Their
+/// codes add `layout.s`, which fills the heap up to there before the first fighter is made, so
+/// ssbm-rs's recording run and Dolphin give every fighter the address playback does and the
+/// match goes the same way in each (docs/performance.md, "Ice Climbers").
+pub const PLAYBACK_LAYOUT: &[(&str, u32)] = &[("ics-peach-ps", 0x80EB_5F80)];
+
+/// The address playback gives the first fighter's block in the match `name`, for a match whose
+/// codes lay the heap out as playback does ([`PLAYBACK_LAYOUT`]).
+pub fn playback_layout(name: &str) -> Option<u32> {
+    PLAYBACK_LAYOUT
+        .iter()
+        .find(|(n, _)| *n == name)
+        .map(|&(_, a)| a)
+}
 
 const KIRBY: u8 = 0x04;
 
@@ -873,30 +891,71 @@ pub const FAMILIES: &[Family] = &[
     // tomato, Home-Run Bat, Beam Sword, both shells and the hammer (task 3's engine work).
     Family {
         name: "ported",
-        kinds: &[0, 1, 2, 4, 6, 7, 8, 9, 11, 12, 14, 15, 28],
+        kinds: &[
+            ItKind::Capsule as u8,
+            ItKind::Box as u8,
+            ItKind::Taru as u8,
+            ItKind::Kusudama as u8,
+            ItKind::BombHei as u8,
+            ItKind::Dosei as u8,
+            ItKind::Heart as u8,
+            ItKind::Tomato as u8,
+            ItKind::Bat as u8,
+            ItKind::Sword as u8,
+            ItKind::GShell as u8,
+            ItKind::RShell as u8,
+            ItKind::Hammer as u8,
+        ],
     },
     // Held and swung (task 7): heavy pickups (box, barrel), barrel cannon, parasol, star rod,
     // lipstick, fan, screw attack.
     Family {
         name: "held",
-        kinds: &[1, 2, 5, 13, 22, 23, 24, 30],
+        kinds: &[
+            ItKind::Box as u8,
+            ItKind::Taru as u8,
+            ItKind::TaruCann as u8,
+            ItKind::Parasol as u8,
+            ItKind::StarRod as u8,
+            ItKind::LipStick as u8,
+            ItKind::Harisen as u8,
+            ItKind::ScBall as u8,
+        ],
     },
     // Shooting and thrown (task 8): egg, ray gun, Freezie, food, motion-sensor bomb, flipper,
     // Super Scope, fire flower.
     Family {
         name: "shoot",
-        kinds: &[3, 16, 17, 18, 19, 20, 21, 25],
+        kinds: &[
+            ItKind::Egg as u8,
+            ItKind::LGun as u8,
+            ItKind::Freeze as u8,
+            ItKind::Foods as u8,
+            ItKind::MSBomb as u8,
+            ItKind::Flipper as u8,
+            ItKind::SScope as u8,
+            ItKind::FFlower as u8,
+        ],
     },
     // Power-ups (task 9): starman, both mushrooms, hammer, Warp Star, bunny hood, metal box,
     // cloaking device.
     Family {
         name: "powerups",
-        kinds: &[10, 26, 27, 28, 29, 31, 32, 33],
+        kinds: &[
+            ItKind::Star as u8,
+            ItKind::Kinoko as u8,
+            ItKind::DKinoko as u8,
+            ItKind::Hammer as u8,
+            ItKind::WStar as u8,
+            ItKind::RabbitC as u8,
+            ItKind::MetalB as u8,
+            ItKind::Spycloak as u8,
+        ],
     },
 ];
 
 /// The Poké Ball's kind (task 10).
-const POKE_BALL: u8 = 34;
+const POKE_BALL: u8 = ItKind::MBall as u8;
 /// Items matches' length.
 const ITEMS_TIME: u32 = 120;
 /// Poké Ball matches, one seed each, so that the Pokémon it can't choose all come out.
@@ -956,7 +1015,11 @@ pub fn coins_set() -> Vec<Match> {
     };
     vec![
         coin("coins-fd", 0x1F0F_0601, Items::OFF),
-        coin("coins-items-fd", 0x1F0F_0602, Items::only(FREQ_HIGH, &[0])),
+        coin(
+            "coins-items-fd",
+            0x1F0F_0602,
+            Items::only(FREQ_HIGH, &[ItKind::Capsule as u8]),
+        ),
     ]
 }
 
@@ -968,14 +1031,30 @@ pub fn held_extra_set() -> Vec<Match> {
     /// A match's name, stage, switch kinds and characters.
     type Extra = (&'static str, u16, &'static [u8], (u8, u8));
     let matches: [Extra; 3] = [
-        ("items-cannon-fd", FINAL_DESTINATION, &[5], (FOX, MARTH)),
+        (
+            "items-cannon-fd",
+            FINAL_DESTINATION,
+            &[ItKind::TaruCann as u8],
+            (FOX, MARTH),
+        ),
         (
             "items-swing-bf",
             BATTLEFIELD,
-            &[13, 22, 23, 24, 30],
+            &[
+                ItKind::Parasol as u8,
+                ItKind::StarRod as u8,
+                ItKind::LipStick as u8,
+                ItKind::Harisen as u8,
+                ItKind::ScBall as u8,
+            ],
             (CAPTAIN, PEACH),
         ),
-        ("items-heavy-ps", POKEMON_STADIUM, &[1, 2], (FALCO, SHEIK)),
+        (
+            "items-heavy-ps",
+            POKEMON_STADIUM,
+            &[ItKind::Box as u8, ItKind::Taru as u8],
+            (FALCO, SHEIK),
+        ),
     ];
     matches
         .iter()
@@ -1118,7 +1197,15 @@ pub fn leftovers_set() -> Vec<Match> {
             "items-leftovers-fd",
             FINAL_DESTINATION,
             (FOX, FALCO),
-            &[6, 13, 17, 19, 20, 30, 31],
+            &[
+                ItKind::BombHei as u8,
+                ItKind::Parasol as u8,
+                ItKind::Freeze as u8,
+                ItKind::MSBomb as u8,
+                ItKind::Flipper as u8,
+                ItKind::ScBall as u8,
+                ItKind::RabbitC as u8,
+            ],
             4,
             180,
         ),
@@ -1126,7 +1213,13 @@ pub fn leftovers_set() -> Vec<Match> {
             "items-leftovers-bf",
             BATTLEFIELD,
             (CAPTAIN, BOWSER),
-            &[6, 13, 17, 30, 31],
+            &[
+                ItKind::BombHei as u8,
+                ItKind::Parasol as u8,
+                ItKind::Freeze as u8,
+                ItKind::ScBall as u8,
+                ItKind::RabbitC as u8,
+            ],
             4,
             180,
         ),
@@ -1134,7 +1227,7 @@ pub fn leftovers_set() -> Vec<Match> {
             "items-box-kongo-jungle",
             KONGO_JUNGLE,
             (MARIO, LUIGI),
-            &[1],
+            &[ItKind::Box as u8],
             FREQ_HIGH,
             ITEMS_TIME,
         ),
@@ -1142,7 +1235,7 @@ pub fn leftovers_set() -> Vec<Match> {
             "items-foods-yoshis-story",
             YOSHIS_STORY,
             (SAMUS, YOSHI),
-            &[18],
+            &[ItKind::Foods as u8],
             FREQ_HIGH,
             ITEMS_TIME,
         ),
@@ -1163,7 +1256,11 @@ pub fn leftovers_set() -> Vec<Match> {
 }
 
 /// The containers: the box, barrel and Party Ball.
-const CONTAINERS: [u8; 3] = [1, 2, 4];
+const CONTAINERS: [u8; 3] = [
+    ItKind::Box as u8,
+    ItKind::Taru as u8,
+    ItKind::Kusudama as u8,
+];
 
 /// The monsters set (the containers' monsters): the containers alone at item frequency very
 /// high, whose openings sometimes release an enemy from the monsters' table (`it_8026F6BC`, 1 in
@@ -1373,10 +1470,27 @@ pub fn fighters_set() -> Vec<Match> {
     // The heavy items (box, barrel, Party Ball) and the barrel cannon; for Zelda and Sheik the
     // Starman, Lip's Stick (its flower), Bunny Hood, Metal Box and Cloaking Device, with the
     // Beam Sword and Ray Gun to hold; then the worn ones alone, and Lip's Stick alone.
-    const HEAVY: &[u8] = &[1, 2, 4, 5];
-    const TRANSFORM: &[u8] = &[10, 12, 16, 23, 31, 32, 33];
-    const WORN: &[u8] = &[23, 31, 32];
-    const FLOWER: &[u8] = &[23];
+    const HEAVY: &[u8] = &[
+        ItKind::Box as u8,
+        ItKind::Taru as u8,
+        ItKind::Kusudama as u8,
+        ItKind::TaruCann as u8,
+    ];
+    const TRANSFORM: &[u8] = &[
+        ItKind::Star as u8,
+        ItKind::Sword as u8,
+        ItKind::LGun as u8,
+        ItKind::LipStick as u8,
+        ItKind::RabbitC as u8,
+        ItKind::MetalB as u8,
+        ItKind::Spycloak as u8,
+    ];
+    const WORN: &[u8] = &[
+        ItKind::LipStick as u8,
+        ItKind::RabbitC as u8,
+        ItKind::MetalB as u8,
+    ];
+    const FLOWER: &[u8] = &[ItKind::LipStick as u8];
     let matches: [Fighters; 8] = [
         (
             "items-dk-heavy-fd",
@@ -1480,7 +1594,7 @@ pub fn sscope_set() -> Vec<Match> {
                 rules: Rules::Time {
                     time_limit: ITEMS_TIME,
                 },
-                items: Items::only(FREQ_VERY_HIGH, &[S_SCOPE]),
+                items: Items::only(FREQ_VERY_HIGH, &[ItKind::SScope as u8]),
                 special: Special::NONE,
             }
         })
@@ -2157,14 +2271,16 @@ pub fn starfox_set() -> Vec<Match> {
     out
 }
 
-/// The containers and the Freezie (kind 17), which a Topi pushes when Freezies are on.
-const CONTAINERS_AND_FREEZIE: [u8; 4] = [1, 2, 4, 17];
+/// The containers and the Freezie, which a Topi pushes when Freezies are on.
+const CONTAINERS_AND_FREEZIE: [u8; 4] = [
+    ItKind::Box as u8,
+    ItKind::Taru as u8,
+    ItKind::Kusudama as u8,
+    ItKind::Freeze as u8,
+];
 
 /// The Topi-with-a-Freezie match's seed.
 const FREEZIE_SEED: u32 = 0x1F0F_10D7;
-
-/// The Super Scope's item kind (`It_Kind_S_Scope`).
-const S_SCOPE: u8 = 21;
 
 /// The VS stages besides the tournament stages, with match names; the moving stages are marked.
 const OTHER_STAGES: [(u16, &str, bool); 23] = [
@@ -2585,7 +2701,11 @@ pub fn cpu_items_set() -> Vec<Match> {
 /// `1F0F23xx`.
 pub fn cpu_approach_set() -> Vec<Match> {
     // `It_Kind_Star`, `_DKinoko`, `_Hammer`.
-    const KINDS: [u8; 3] = [0x0A, 0x1B, 0x1C];
+    const KINDS: [u8; 3] = [
+        ItKind::Star as u8,
+        ItKind::DKinoko as u8,
+        ItKind::Hammer as u8,
+    ];
     let matches: [(u8, u8, u16, &str); 4] = [
         (YOSHI, FOX, BATTLEFIELD, "bf"),
         (YOSHI, MARTH, FOUNTAIN_OF_DREAMS, "fod"),
@@ -2614,7 +2734,13 @@ pub fn cpu_approach_set() -> Vec<Match> {
 /// which goes for them (`items-platforms-cpu-big-blue`). Eight-minute time matches, as the
 /// stages set's moving stages have, seeds `1F0F26xx`.
 pub fn bigblue_items_set() -> Vec<Match> {
-    const KINDS: [u8; 5] = [4, 12, 21, 25, 31];
+    const KINDS: [u8; 5] = [
+        ItKind::Kusudama as u8,
+        ItKind::Sword as u8,
+        ItKind::SScope as u8,
+        ItKind::FFlower as u8,
+        ItKind::RabbitC as u8,
+    ];
     const FREQ_LOW: i8 = 1;
     let players = [
         ("items-platforms-big-blue", vec![p(MARIO, 0), p(SHEIK, 0)]),
@@ -3100,9 +3226,27 @@ impl Match {
         s += "*Slippi's recording setup that changes the game: Init Player Data and Init Stage Data\n";
         s += "*(tagged affects-gameplay) and the larger player block (ExtendPlayerBlock).\n";
         s += SLIPPI_GAMEPLAY;
+        let layout = playback_layout(&self.name);
+        if let Some(first) = layout {
+            // The heap's cell holds a 0x20-byte header before the block.
+            let cell = first - 0x20;
+            let mut words = LAYOUT.to_vec();
+            words[LAYOUT_PATCH] = (words[LAYOUT_PATCH] & 0xFFFF_0000) | cell >> 16;
+            words[LAYOUT_PATCH + 1] = (words[LAYOUT_PATCH + 1] & 0xFFFF_0000) | cell & 0xFFFF;
+            s += "$melee-bench layout\n";
+            let _ = writeln!(
+                s,
+                "*The fighters' blocks where Slippi's playback puts them, the first at {first:#010X}:"
+            );
+            s += "*a computer player's DI reads its address (tools/bench/gecko/layout.s).\n";
+            push_c2(&mut s, 0x8006_8EE4, &words);
+        }
         s += "[Gecko_Enabled]\n";
         s += "$melee-bench boot\n";
         s += "$melee-bench gameplay\n";
+        if layout.is_some() {
+            s += "$melee-bench layout\n";
+        }
         s
     }
 }
@@ -3268,8 +3412,22 @@ mod tests {
 
     #[test]
     fn items_switch() {
-        let items = Items::only(FREQ_HIGH, &[0, 6, 34]);
-        assert_eq!(items.kinds(), vec![0, 6, 34]);
+        let items = Items::only(
+            FREQ_HIGH,
+            &[
+                ItKind::Capsule as u8,
+                ItKind::BombHei as u8,
+                ItKind::MBall as u8,
+            ],
+        );
+        assert_eq!(
+            items.kinds(),
+            vec![
+                ItKind::Capsule as u8,
+                ItKind::BombHei as u8,
+                ItKind::MBall as u8
+            ]
+        );
         assert_eq!(items.mask, 0xFFFF_FFF8_0000_0000 | 1 | 1 << 6 | 1 << 34);
         let m = Match {
             name: "i".into(),

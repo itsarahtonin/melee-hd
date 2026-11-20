@@ -4,13 +4,11 @@
 use super::super::item::{self, change, change_state, spawn_air};
 use super::super::{effect, item_mut, lib26b1, lib2725};
 use crate::game::ef::SpawnKind;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
-
-/// `It_Kind_Kirby_Hammer`.
-pub const KIND: i32 = super::KIRBY_HAMMER;
 
 pub const DESTROYED: u32 = 0x802A_DC04;
 pub const REMOVE: u32 = 0x802A_DC34;
@@ -56,7 +54,7 @@ pub fn spawn(
     dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: KIND,
+        kind: ItKind::KirbyHammer.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;

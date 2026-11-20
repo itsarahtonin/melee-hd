@@ -9,6 +9,7 @@ use super::pokemon::PokemonVars;
 use super::{item, item_mut, jobj_of, owner};
 use crate::fpu::{mem, reg};
 use crate::game::code;
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -168,7 +169,6 @@ impl CommonVars<'_> {
 
 /// The enemy's common variables in its kind's member.
 pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
-    use super::kinds;
     let kind = item(game, gobj).kind;
     let vars = &mut item_mut(game, gobj).xDD4_itemVar;
     macro_rules! of {
@@ -182,22 +182,26 @@ pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
             })
         }};
     }
-    match kind {
-        kinds::HEIHO => of!(vars.heiho()),
-        kinds::TINCLE => of!(vars.tincle()),
-        kinds::KLAP => of!(vars.klap()),
-        kinds::KYASARIN => of!(vars.kyasarin()),
-        kinds::KYASARIN_EGG => of!(vars.kyasarin_egg()),
-        kinds::GREATFOX_LASER => of!(vars.greatfox_laser()),
-        kinds::KURIBOH..=kinds::OCTAROCK_STONE
-        | kinds::NOKONOKO
-        | kinds::PATAPATA
-        | kinds::LIKELIKE
-        | kinds::WHITEBEA
-        | kinds::ZGSHELL
-        | kinds::ZRSHELL
-        | kinds::MATO => CommonVars::Bytes(vars.zako()),
-        k => code::unported_call(&format!("it_8027B5B0 (an enemy of kind {k})")),
+    match ItKind::of(kind) {
+        ItKind::Heiho => of!(vars.heiho()),
+        ItKind::Tincle => of!(vars.tincle()),
+        ItKind::Klap => of!(vars.klap()),
+        ItKind::Kyasarin => of!(vars.kyasarin()),
+        ItKind::KyasarinEgg => of!(vars.kyasarin_egg()),
+        ItKind::GreatFoxLaser => of!(vars.greatfox_laser()),
+        ItKind::Kuriboh
+        | ItKind::Leadead
+        | ItKind::Octarock
+        | ItKind::Ottosea
+        | ItKind::OctarockStone
+        | ItKind::Nokonoko
+        | ItKind::Patapata
+        | ItKind::Likelike
+        | ItKind::Whitebea
+        | ItKind::ZGShell
+        | ItKind::ZRShell
+        | ItKind::Mato => CommonVars::Bytes(vars.zako()),
+        k => code::unported_call(&format!("it_8027B5B0 (an enemy of kind {})", k.id())),
     }
 }
 
@@ -230,7 +234,7 @@ pub fn clear_x1e(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "grZakoGenerator_801CAC14")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let kind = item(r.game, gobj).kind;
-    if kind == COIN {
+    if kind == ItKind::Coin {
         // A trophy point's slot (the last) forgets the coin it made.
         let slots = r
             .game
@@ -259,9 +263,6 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
         slot.timer = 2;
     }
 }
-
-/// `It_Kind_Coin`, the single-player coin.
-const COIN: i32 = super::kinds::COIN;
 
 /// The knockback's launch angle (the inline `it_8027B798_CalcAngle`): the hit's own, or for
 /// the Sakurai angle (361) `ftCommonData`'s in the air and on the ground a slope from 0.
@@ -363,7 +364,7 @@ pub fn launch(r: &mut Running, gobj: GObjId, chk: bool) {
 /// original returns no value; its callers ignore what it leaves.)
 #[doc(alias = "it_8027BA54")]
 pub fn toward_camera(r: &mut Running, gobj: GObjId) -> Vec3 {
-    let cam = crate::game::camera::position(&r.game.camera.cam);
+    let cam = r.game.camera.position();
     let (f, g) = (
         reg(r.game.objs.rng.draw_f32()),
         reg(r.game.objs.rng.draw_f32()),
@@ -777,7 +778,7 @@ pub fn set_source_player(game: &mut Game, gobj: GObjId, fighter: GObjId) {
 pub fn ko(r: &mut Running, gobj: GObjId) {
     let kind = item(r.game, gobj).kind;
     ko_bonus(r, gobj);
-    if kind == COIN {
+    if kind == ItKind::Coin {
         // A trophy point's slot (the last) frees, the coin it made taken.
         let slots = r
             .game
@@ -827,24 +828,23 @@ impl Running<'_> {
             (0..6).contains(&player),
             "zako ko player illegal ! :{player}"
         );
-        use super::kinds;
-        let bonus = match kind {
-            kinds::KURIBOH | kinds::OLD_KURI => 0xCE,
-            kinds::HEIHO => 0xD6,
-            kinds::LEADEAD => 0xD1,
-            kinds::OCTAROCK => 0xD3,
-            kinds::OTTOSEA => 0xD4,
-            kinds::NOKONOKO => 0xCF,
-            kinds::PATAPATA => 0xD0,
-            kinds::LIKELIKE => 0xD2,
-            kinds::WHITEBEA => 0xD5,
+        let bonus = match ItKind::of(kind) {
+            ItKind::Kuriboh | ItKind::OldKuri => 0xCE,
+            ItKind::Heiho => 0xD6,
+            ItKind::Leadead => 0xD1,
+            ItKind::Octarock => 0xD3,
+            ItKind::Ottosea => 0xD4,
+            ItKind::Nokonoko => 0xCF,
+            ItKind::Patapata => 0xD0,
+            ItKind::Likelike => 0xD2,
+            ItKind::Whitebea => 0xD5,
             // No bonus (the switch's default).
-            kinds::KLAP
-            | kinds::KYASARIN
-            | kinds::KYASARIN_EGG
-            | kinds::ZGSHELL
-            | kinds::ZRSHELL
-            | kinds::COIN => return,
+            ItKind::Klap
+            | ItKind::Kyasarin
+            | ItKind::KyasarinEgg
+            | ItKind::ZGShell
+            | ItKind::ZRShell
+            | ItKind::Coin => return,
             _ => code::unported_call(&format!("pl_8004049C (an enemy of kind {kind})")),
         };
         let points = bonus_points(bonus);

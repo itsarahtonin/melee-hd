@@ -316,7 +316,7 @@ impl Running<'_> {
             .fighter(gobj)
             .x890_cameraBox
             .expect("a fighter without a camera box");
-        let cb = &mut self.game.camera.boxes[b];
+        let cb = self.game.camera.subject_mut(b);
         cb.pos.x = mem(fp::fdivs(fp::fmuls(reg(cb.pos.x), c), d));
         cb.pos.y = top;
     }
