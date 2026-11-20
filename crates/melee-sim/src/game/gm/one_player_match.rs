@@ -286,10 +286,7 @@ impl Running<'_> {
         let player_ckind = if ckind == CharacterKind::Zelda && run.xc[6] != 0 {
             CharacterKind::Seak as u8
         } else if x8 & 0x80 != 0 && run.x8[1] == 1 && ckind == CharacterKind::IceClimbers {
-            // The original stores `ChKind_Popo` (0x20: `li r4, 0x20` at 0x8017D130); this port
-            // has stored 0x0A (Mewtwo's number) since it was written: kept by the registry refactor,
-            // which changes nothing, and reported for a fix of its own.
-            0x0A
+            CharacterKind::Popo as u8
         } else {
             ckind as u8
         };
