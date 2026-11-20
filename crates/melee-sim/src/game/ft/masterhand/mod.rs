@@ -27,6 +27,7 @@ pub mod wait;
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::FighterKind;
+use super::co::ids::ms as co_ms;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -436,7 +437,6 @@ pub(crate) mod attr {
     pub const X90: usize = 0x90;
     pub const X94: usize = 0x94;
     pub const X98: usize = 0x98;
-    pub const X9C: usize = 0x9C;
     pub const XA0: usize = 0xA0;
     pub const XA4: usize = 0xA4;
     pub const XA8: usize = 0xA8;
@@ -449,7 +449,6 @@ pub(crate) mod attr {
     pub const XD4: usize = 0xD4;
     pub const XD8: usize = 0xD8;
     pub const XDC: usize = 0xDC;
-    pub const XE0: usize = 0xE0;
     pub const XE4: usize = 0xE4;
     pub const XE8: usize = 0xE8;
     pub const XEC: usize = 0xEC;
@@ -460,7 +459,6 @@ pub(crate) mod attr {
     pub const X100: usize = 0x100;
     pub const X104: usize = 0x104;
     pub const X108: usize = 0x108;
-    pub const X10C: usize = 0x10C;
     pub const X110: usize = 0x110;
     pub const X118: usize = 0x118;
     pub const X120: usize = 0x120;
@@ -523,6 +521,8 @@ pub struct Hand {
     pub waist: u32,
     pub entry_sfx: i32,
     pub entry_facing: f32,
+    /// The grab.
+    pub grab: grab::Grab,
     /// Crazy Hand cries on the script's flag while waiting, and clears it as a wait starts.
     pub cries_waiting: bool,
     /// Master Hand's timer joins Crazy Hand's tag attack when Crazy Hand waits at one.
@@ -576,6 +576,27 @@ pub const HAND: Hand = Hand {
     waist: addr::MS_343_80151428,
     entry_sfx: 320001,
     entry_facing: -1.0,
+    grab: grab::Grab {
+        reach: ms::WAIT1_1,
+        grab: ms::GRAB,
+        close_caught: ms::SQUEEZING0,
+        close_empty: ms::SQUEEZING1,
+        miss: ms::FAIL,
+        let_go: ms::CANCEL,
+        squeeze: ms::SQUEEZE,
+        throws: [ms::THROW, ms::SLAM],
+        reach_frames: attr::X110,
+        reach_chase: attr::X108,
+        squeeze_at: attr::X118,
+        let_go_frames: attr::X120,
+        box_size: 128,
+        caught: addr::MS_375_80154A2C,
+        victim: addr::MS_388_80155A58,
+        capture: co_ms::CAPTURE_MASTER_HAND,
+        capture_damage: co_ms::CAPTURE_DAMAGE_MASTER_HAND,
+        capture_wait: co_ms::CAPTURE_WAIT_MASTER_HAND,
+        thrown: co_ms::THROWN_MASTER_HAND,
+    },
     cries_waiting: false,
     tags_from_wait: true,
     fewer_rows_alone: false,

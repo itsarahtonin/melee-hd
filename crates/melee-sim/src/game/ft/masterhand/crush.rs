@@ -139,7 +139,7 @@ impl Running<'_> {
         if reg(self.game.fighters[f.0].mv_f32(mv::X4)) == 0.0 {
             return;
         }
-        self.mh_chase(gobj, attr::X98, attr::X9C);
+        self.hand_chase(gobj, &super::HAND, attr::X98);
     }
 }
 

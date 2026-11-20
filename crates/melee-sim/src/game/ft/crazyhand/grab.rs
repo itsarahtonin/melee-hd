@@ -1,250 +1,19 @@
-//! Crazy Hand's grab and the attacks that follow it (`ftcrazyhandfingerbeam.c`,
-//! `ftcrazyhandfingergun2.c`, `ftcrazyhandbackairplane1.c` to `3.c`), his vanishing attacks
-//! (`ftcrazyhandbackcrush.c`, `ftcrazyhandbackdisappear.c`, `ftcrazyhandwait11.c`), the
-//! stomp (`ftcrazyhandgrab.c`, `ftcrazyhandcancel.c`, `ftcrazyhandsqueezing0.c`), and the
-//! grabbed fighter's states (`ftcrazyhandcapture*.c`, `ftcrazyhandthrowncrazyhand.c`): he
-//! follows the nearest opponent with his hand open, closes it, squeezes, then throws; a
-//! victim mashing free makes him let go.
+//! Crazy Hand's grab (the hands' shared one, `ft::masterhand::grab`, in his states
+//! `FingerBeamLoop` to `BackAirplane3`), his vanishing attacks (`ftcrazyhandbackcrush.c`,
+//! `ftcrazyhandbackdisappear.c`, `ftcrazyhandwait11.c`) and the stomp (`ftcrazyhandgrab.c`,
+//! `ftcrazyhandcancel.c`, `ftcrazyhandsqueezing0.c`).
 
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::super::co::ids::ms as co_ms;
-use super::super::masterhand::u;
 use super::super::masterhand::wait::set_mv_vec;
-use super::{addr, attr, ms, mv};
+use super::{HAND, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
-/// `ftCo_800DB464`, `ftCo_800DE508`: a held and a thrown fighter's accessories.
-const HELD_FOLLOW: u32 = 0x800D_B464;
-const THROWN_FOLLOW: u32 = 0x800D_E508;
-
 impl Running<'_> {
-    /// His place as the glide's point (`x18`, `x1C`).
-    fn ch_target_home(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        let p = super::HAND.point(self, f, attr::X18);
-        set_mv_vec(&mut self.game.fighters[f.0], mv::TARGET, p);
-    }
-
-    /// The reach, `ftCh_Init_80158B3C`: his wait's frame kept at `xCC`'s rate, for `xC8`
-    /// frames (`mv.x8`).
-    #[doc(alias = "ftCh_Init_80158B3C")]
-    pub fn ch_reach_enter(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        let frame = self.game.fighters[f.0].cur_anim_frame;
-        self.change_motion_state(gobj, ms::FINGER_BEAM_LOOP, 0, frame, 1.0, 0.0, None);
-        let rate = super::HAND.f32(self, f, attr::XCC);
-        self.set_anim_rate(gobj, rate);
-        let n = super::HAND.f32(self, f, attr::XC8);
-        self.game.fighters[f.0].set_mv_i32(mv::X8, fp::fctiwz(reg(n)));
-    }
-
-    /// `ftCh_FingerBeamLoop_Anim`: the grab once the count runs out; the reach's animation
-    /// again.
-    #[doc(alias = "ftCh_FingerBeamLoop_Anim")]
-    pub fn ch_reach_anim(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter_mut(gobj);
-        let n = fp.mv_i32(mv::X8).wrapping_sub(1);
-        fp.set_mv_i32(mv::X8, n);
-        if n == 0 {
-            self.set_anim_rate(gobj, 1.0);
-            self.ch_grab_enter(gobj);
-        }
-        if !self.anim_frames_remaining(gobj) {
-            self.hand_enter(gobj, ms::FINGER_BEAM_LOOP);
-        }
-    }
-
-    /// `ftCh_FingerBeamLoop_Phys`: the air motion, chasing `xC0`, `xC4` off the nearest
-    /// opponent.
-    #[doc(alias = "ftCh_FingerBeamLoop_Phys")]
-    pub fn ch_reach_phys(&mut self, gobj: GObjId) {
-        self.air_anim_motion(gobj);
-        self.ch_chase(gobj, attr::XC0, attr::XC4);
-    }
-
-    /// The grab, `ftCh_Init_80158DFC`: his grab box's callbacks (`ftCommon_8007E2D0`: 0x100,
-    /// caught `fn_80159288`, the victim `fn_8015B548`), holding no one.
-    #[doc(alias = "ftCh_Init_80158DFC")]
-    pub fn ch_grab_enter(&mut self, gobj: GObjId) {
-        self.hand_enter(gobj, ms::FINGER_BEAM_END);
-        let fp = self.game.fighter_mut(gobj);
-        fp.x221E_b6 = true;
-        fp.x1A68 = 0x100;
-        fp.grab_cb = Some(CodeRef(addr::FN_80159288));
-        fp.grabbed_cb = Some(CodeRef(addr::FN_8015B548));
-        fp.x2194 = None;
-        fp.set_mv_i32(mv::HOLDING, 0);
-    }
-
-    /// `ftCh_FingerBeamEnd_Anim`: a miss once it ends; still, back toward his place.
-    #[doc(alias = "ftCh_FingerBeamEnd_Anim")]
-    pub fn ch_grab_anim(&mut self, gobj: GObjId) {
-        if !self.anim_frames_remaining(gobj) {
-            self.game.fighter_mut(gobj).self_vel = Vec3::new(0.0, 0.0, 0.0);
-            self.ch_miss_enter(gobj);
-        }
-    }
-
-    /// A fighter caught, `fn_80159288` (the grab's callback): still, holding it, the grab box
-    /// off, closing his hand.
-    #[doc(alias = "fn_80159288")]
-    pub fn ch_caught(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter_mut(gobj);
-        fp.self_vel = Vec3::new(0.0, 0.0, 0.0);
-        fp.set_mv_i32(mv::HOLDING, 1);
-        fp.x221E_b6 = false;
-        self.ch_close_enter(gobj);
-    }
-
-    /// The hand closing on a catch, `ftCh_GrabUnk1_8015ABD0`: toward `xD0`, `xD4`.
-    #[doc(alias = "ftCh_GrabUnk1_8015ABD0")]
-    pub fn ch_close_enter(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        self.hand_enter(gobj, ms::FINGER_GUN2);
-        let p = super::HAND.point(self, f, attr::XD0);
-        set_mv_vec(&mut self.game.fighters[f.0], mv::TARGET, p);
-    }
-
-    /// The hand closing on nothing, `ftCh_GrabUnk1_8015AC50`: toward his place.
-    #[doc(alias = "ftCh_GrabUnk1_8015AC50")]
-    pub fn ch_miss_enter(&mut self, gobj: GObjId) {
-        self.hand_enter(gobj, ms::FINGER_GUN3);
-        self.ch_target_home(gobj);
-    }
-
-    /// `ftCh_FingerGun2_Anim` (the closing hand's): the squeeze if he holds someone, else
-    /// back to his place.
-    #[doc(alias = "ftCh_FingerGun2_Anim")]
-    pub fn ch_close_anim(&mut self, gobj: GObjId) {
-        if !self.anim_frames_remaining(gobj) {
-            if self.game.fighter(gobj).mv_i32(mv::HOLDING) == 1 {
-                self.ch_squeeze_enter(gobj);
-            } else {
-                self.ch_back_home_enter(gobj);
-            }
-        }
-    }
-
-    /// Back toward his place after a miss, `ftCh_Init_80158F34`.
-    #[doc(alias = "ftCh_Init_80158F34")]
-    pub fn ch_back_home_enter(&mut self, gobj: GObjId) {
-        self.hand_enter(gobj, ms::BACK_PUNCH);
-        self.ch_target_home(gobj);
-    }
-
-    /// Letting go, `ftCh_Init_80159098`: the victim freed after `xD8` frames (`mv.x24`),
-    /// still, back toward his place.
-    #[doc(alias = "ftCh_Init_80159098")]
-    pub fn ch_let_go_enter(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        self.hand_enter(gobj, ms::FINGER_GUN1);
-        let t = super::HAND.f32(self, f, attr::XD8);
-        let fp = &mut self.game.fighters[f.0];
-        fp.set_mv_f32(mv::X24, reg(t));
-        fp.cmd_vars[0] = 1;
-        fp.self_vel = Vec3::new(0.0, 0.0, 0.0);
-        self.ch_target_home(gobj);
-    }
-
-    /// `ftCh_FingerGun1_Anim`: the victim cut loose once the count runs out; back to his place
-    /// once it ends.
-    #[doc(alias = "ftCh_FingerGun1_Anim")]
-    pub fn ch_let_go_anim(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        let fp = &mut self.game.fighters[f.0];
-        let t = fp::fsubs(reg(fp.mv_f32(mv::X24)), 1.0);
-        fp.set_mv_f32(mv::X24, t);
-        if reg(fp.mv_f32(mv::X24)) <= 0.0 && fp.cmd_vars[0] != 0 {
-            let victim = fp.victim_gobj.expect("Crazy Hand lets go of no one");
-            self.ch_capture_cut(victim);
-            let fp = &mut self.game.fighters[f.0];
-            fp.set_mv_i32(mv::HOLDING, 0);
-            fp.cmd_vars[0] = 0;
-        }
-        if !self.anim_frames_remaining(gobj) {
-            self.hand_return(gobj, &super::HAND);
-        }
-    }
-
-    /// The squeeze, `ftCh_Init_801592D4`: the victim's damage state, the throw's angle (511,
-    /// `ftCommon_8007E2F4`), still, toward `xD0`, `xD4`.
-    #[doc(alias = "ftCh_Init_801592D4")]
-    #[doc(alias = "ftCommon_8007E2F4")]
-    pub fn ch_squeeze_enter(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        self.game.fighters[f.0].cmd_vars[1] = 0;
-        self.hand_enter(gobj, ms::BACK_AIRPLANE1);
-        let fp = &mut self.game.fighters[f.0];
-        fp.x2222_b2 = true;
-        fp.x1A6A = 511;
-        self.stop_dead(gobj);
-        let victim = self.game.fighters[f.0]
-            .victim_gobj
-            .expect("Crazy Hand squeezes no one");
-        self.ch_capture_damage_enter(victim);
-        let p = super::HAND.point(self, f, attr::XD0);
-        set_mv_vec(&mut self.game.fighters[f.0], mv::TARGET, p);
-    }
-
-    /// `ftCh_BackAirplane1_Anim`: a cry on the script's flag; then one of the two throws, as
-    /// he chose.
-    #[doc(alias = "ftCh_BackAirplane1_Anim")]
-    pub fn ch_squeeze_anim(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].cmd_vars[1] != 0 {
-            self.boss_cry(gobj);
-            self.game.fighters[f.0].cmd_vars[1] = 0;
-        }
-        if !self.anim_frames_remaining(gobj) {
-            if self.game.fighters[f.0].u_i32(u::NEXT_ATTACK) == ms::BACK_AIRPLANE2 {
-                self.ch_throw_enter(gobj, ms::BACK_AIRPLANE2);
-            } else {
-                self.ch_throw_enter(gobj, ms::BACK_AIRPLANE3);
-            }
-        }
-    }
-
-    /// The throws, `ftCh_Init_801594D4` and `ftCh_Init_80159670`.
-    #[doc(alias = "ftCh_Init_801594D4")]
-    #[doc(alias = "ftCh_Init_80159670")]
-    pub fn ch_throw_enter(&mut self, gobj: GObjId, msid: i32) {
-        self.hand_enter(gobj, msid);
-        self.game.fighter_mut(gobj).cmd_vars[0] = 0;
-    }
-
-    /// `ftCh_BackAirplane2_Anim` and `ftCh_BackAirplane3_Anim`: on the script's flag the
-    /// victim is thrown (`ftCo_800DE2A8`, `ftCo_800DE7C0`; the first throw turns it around);
-    /// back to his place once it ends.
-    #[doc(alias = "ftCh_BackAirplane2_Anim")]
-    #[doc(alias = "ftCh_BackAirplane3_Anim")]
-    pub fn ch_throw_anim(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].cmd_vars[0] != 0 {
-            self.game.fighters[f.0].cmd_vars[0] = 0;
-            let turn = self.game.fighters[f.0].motion_id == ms::BACK_AIRPLANE2;
-            let victim = self.game.fighters[f.0].victim_gobj;
-            self.ch_thrown_enter(victim.expect("Crazy Hand throws no one"));
-            if let Some(v) = self.game.fighters[f.0].victim_gobj {
-                self.game.fighters[f.0].x1A6A = 0;
-                self.throw_hit(gobj, v, true);
-                if turn {
-                    let vf = self.game.fighter_mut(v);
-                    vf.dmg.facing_dir_1 = mem(fp::fmuls(reg(vf.dmg.facing_dir_1), -1.0));
-                }
-                self.thrown_launch(v, None, false);
-            }
-            self.game.fighters[f.0].set_mv_i32(mv::HOLDING, 0);
-        }
-        if !self.anim_frames_remaining(gobj) {
-            self.hand_return(gobj, &super::HAND);
-        }
-    }
-
     /// The wind-up of his vanishing attacks, `ftCh_Init_801597F0`: `cb` once it ends.
     #[doc(alias = "ftCh_Init_801597F0")]
     pub fn ch_back_crush_enter(&mut self, gobj: GObjId, cb: u32) {
@@ -424,140 +193,29 @@ impl Running<'_> {
         fp.cur_pos.y = y;
         fp.self_vel = Vec3::new(0.0, 0.0, 0.0);
     }
-
-    /// Caught by Crazy Hand, `fn_8015B548` (the grab's victim callback): it lets go of what
-    /// it held, faces him, its mash timer from his own damage and rank (`ftCo_800DA824` of
-    /// the hand), held at his hand, invisible, airborne.
-    #[doc(alias = "fn_8015B548")]
-    pub fn ch_capture_enter(&mut self, gobj: GObjId, hand: GObjId) {
-        self.damage_hooks(gobj);
-        self.drop_heavy_item(gobj);
-        self.release_victim(gobj);
-        let hf = self.game.fighter(hand).facing_dir;
-        let fp = self.game.fighter_mut(gobj);
-        fp.x1A5C = Some(hand);
-        fp.victim_gobj = Some(hand);
-        fp.x221B.x221B_b5 = false;
-        fp.x221B.x221B_b7 = false;
-        fp.facing_dir = hf;
-        let timer = mem(self.grab_escape_time(hand));
-        let fp = self.game.fighter_mut(gobj);
-        fp.grab_timer = timer;
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = false;
-        self.attach_to_thrower(hand, gobj);
-        let f = self.game.fighter_id(gobj);
-        self.game.fighters[f.0].accessory1_cb = Some(CodeRef(HELD_FOLLOW));
-        self.go_airborne(f);
-        self.change_motion_state(gobj, co_ms::CAPTURE_CRAZY_HAND, 0, 0.0, 1.0, 0.0, None);
-        let fp = &mut self.game.fighters[f.0];
-        fp.invisible = true;
-        fp.x1A6A = 511;
-        fp.x2220_b3 = true;
-        self.anim_update(gobj);
-        self.stop_dead(gobj);
-    }
-
-    /// Squeezed, `ftCh_GrabUnk1_8015B670`.
-    #[doc(alias = "ftCh_GrabUnk1_8015B670")]
-    pub fn ch_capture_damage_enter(&mut self, gobj: GObjId) {
-        self.change_motion_state(
-            gobj,
-            co_ms::CAPTURE_DAMAGE_CRAZY_HAND,
-            0,
-            0.0,
-            1.0,
-            0.0,
-            None,
-        );
-        let fp = self.game.fighter_mut(gobj);
-        fp.invisible = true;
-        fp.accessory1_cb = Some(CodeRef(HELD_FOLLOW));
-        fp.x1A6A = 511;
-        fp.x2220_b3 = true;
-        self.anim_update(gobj);
-    }
-
-    /// `ftCo_CaptureDamageCrazyHand_Anim`: mashing (`ftCommonData` x3A8); free once the
-    /// timer runs out, and he lets go.
-    #[doc(alias = "ftCo_CaptureDamageCrazyHand_Anim")]
-    pub fn ch_capture_damage_anim(&mut self, gobj: GObjId) {
-        let amount = self.common().f32(0x3A8);
-        self.grab_mash(gobj, amount);
-        let fp = self.game.fighter(gobj);
-        if fp.grab_timer <= 0.0 {
-            let hand = fp.victim_gobj.expect("a held fighter without its holder");
-            self.ch_capture_wait_enter(gobj);
-            self.ch_let_go_enter(hand);
-        }
-    }
-
-    /// Held, waiting to be let go, `ftCh_GrabUnk1_8015B778`.
-    #[doc(alias = "ftCh_GrabUnk1_8015B778")]
-    pub fn ch_capture_wait_enter(&mut self, gobj: GObjId) {
-        self.change_motion_state(gobj, co_ms::CAPTURE_WAIT_CRAZY_HAND, 0, 0.0, 1.0, 0.0, None);
-        let fp = self.game.fighter_mut(gobj);
-        fp.invisible = true;
-        fp.x1A6A = 511;
-        fp.x2220_b3 = true;
-        self.anim_update(gobj);
-    }
-
-    /// Let go, `ftCh_GrabUnk1_8015B800`: visible, turned around, cut loose
-    /// (`ftCo_CaptureCut_Enter`).
-    #[doc(alias = "ftCh_GrabUnk1_8015B800")]
-    pub fn ch_capture_cut(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter_mut(gobj);
-        fp.invisible = false;
-        fp.facing_dir = mem(fp::fneg(reg(fp.facing_dir)));
-        self.enter_capture_cut(gobj);
-    }
-
-    /// Thrown, `ftCh_GrabUnk1_8015B850`: facing as its holder does, visible, following the
-    /// throw (`ftCo_800DE508`). The state is always `ftCo_MS_ThrownCrazyHand`, whatever the
-    /// caller passes (both pass it).
-    #[doc(alias = "ftCh_GrabUnk1_8015B850")]
-    pub fn ch_thrown_enter(&mut self, gobj: GObjId) {
-        let hand = self
-            .game
-            .fighter(gobj)
-            .victim_gobj
-            .expect("a thrown fighter without its thrower");
-        let hf = self.game.fighter(hand).facing_dir;
-        let fp = self.game.fighter_mut(gobj);
-        fp.facing_dir = hf;
-        fp.set_mv_i32(mv::X0, 0);
-        self.change_motion_state(gobj, co_ms::THROWN_CRAZY_HAND, 0, 0.0, 1.0, 0.0, None);
-        let fp = self.game.fighter_mut(gobj);
-        fp.invisible = false;
-        fp.accessory1_cb = Some(CodeRef(THROWN_FOLLOW));
-        fp.x1A6A = 511;
-        self.anim_update(gobj);
-    }
 }
 
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use addr::*;
     match a {
-        INIT_80158B3C => g.ch_reach_enter(gobj),
-        FINGER_BEAM_LOOP_ANIM => g.ch_reach_anim(gobj),
-        FINGER_BEAM_LOOP_PHYS => g.ch_reach_phys(gobj),
-        INIT_80158DFC => g.ch_grab_enter(gobj),
-        FINGER_BEAM_END_ANIM => g.ch_grab_anim(gobj),
-        FN_80159288 => g.ch_caught(gobj),
-        GRAB_UNK1_8015ABD0 => g.ch_close_enter(gobj),
-        GRAB_UNK1_8015AC50 => g.ch_miss_enter(gobj),
-        FINGER_GUN2_ANIM => g.ch_close_anim(gobj),
-        INIT_80158F34 => g.ch_back_home_enter(gobj),
-        INIT_80159098 => g.ch_let_go_enter(gobj),
-        FINGER_GUN1_ANIM => g.ch_let_go_anim(gobj),
-        INIT_801592D4 => g.ch_squeeze_enter(gobj),
-        BACK_AIRPLANE1_ANIM => g.ch_squeeze_anim(gobj),
-        INIT_801594D4 => g.ch_throw_enter(gobj, ms::BACK_AIRPLANE2),
-        INIT_80159670 => g.ch_throw_enter(gobj, ms::BACK_AIRPLANE3),
-        BACK_AIRPLANE2_ANIM | BACK_AIRPLANE3_ANIM => g.ch_throw_anim(gobj),
+        INIT_80158B3C => g.hand_reach_enter(gobj, &HAND),
+        FINGER_BEAM_LOOP_ANIM => g.hand_reach_anim(gobj, &HAND),
+        FINGER_BEAM_LOOP_PHYS => g.hand_reach_phys(gobj, &HAND),
+        INIT_80158DFC => g.hand_grab_enter(gobj, &HAND),
+        FINGER_BEAM_END_ANIM => g.hand_grab_anim(gobj, &HAND),
+        FN_80159288 => g.hand_caught(gobj, &HAND),
+        GRAB_UNK1_8015ABD0 => g.hand_close_caught_enter(gobj, &HAND),
+        GRAB_UNK1_8015AC50 => g.hand_close_empty_enter(gobj, &HAND),
+        FINGER_GUN2_ANIM => g.hand_close_anim(gobj, &HAND),
+        INIT_80158F34 => g.hand_miss_enter(gobj, &HAND),
+        INIT_80159098 => g.hand_let_go_enter(gobj, &HAND),
+        FINGER_GUN1_ANIM => g.hand_let_go_anim(gobj, &HAND),
+        INIT_801592D4 => g.hand_squeeze_enter(gobj, &HAND),
+        BACK_AIRPLANE1_ANIM => g.hand_squeeze_anim(gobj, &HAND),
+        INIT_801594D4 => g.hand_throw_enter(gobj, HAND.grab.throws[0]),
+        INIT_80159670 => g.hand_throw_enter(gobj, HAND.grab.throws[1]),
+        BACK_AIRPLANE2_ANIM | BACK_AIRPLANE3_ANIM => g.hand_throw_anim(gobj, &HAND),
         BACK_CRUSH_ANIM => g.ch_back_crush_anim(gobj),
         FN_80159908 => g.ch_dive_enter(gobj),
         BACK_DISAPPEAR_ANIM => g.ch_dive_anim(gobj),
@@ -571,11 +229,11 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         CANCEL_ANIM => g.ch_stomp_anim(gobj),
         CANCEL_PHYS => g.ch_stomp_phys(gobj),
         INIT_8015A184 => g.ch_stomp_end_enter(gobj),
-        GRAB_UNK1_8015B670 => g.ch_capture_damage_enter(gobj),
-        CAPTURE_DAMAGE_CRAZY_HAND_ANIM => g.ch_capture_damage_anim(gobj),
-        GRAB_UNK1_8015B778 => g.ch_capture_wait_enter(gobj),
-        GRAB_UNK1_8015B800 => g.ch_capture_cut(gobj),
-        GRAB_UNK1_8015B850 => g.ch_thrown_enter(gobj),
+        GRAB_UNK1_8015B670 => g.hand_capture_damage_enter(gobj, &HAND),
+        CAPTURE_DAMAGE_CRAZY_HAND_ANIM => g.hand_capture_damage_anim(gobj, &HAND),
+        GRAB_UNK1_8015B778 => g.hand_capture_wait_enter(gobj, &HAND),
+        GRAB_UNK1_8015B800 => g.hand_capture_cut(gobj),
+        GRAB_UNK1_8015B850 => g.hand_thrown_enter(gobj, &HAND),
         _ => return false,
     }
     true

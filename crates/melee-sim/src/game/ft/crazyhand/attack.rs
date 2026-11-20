@@ -278,40 +278,8 @@ impl Running<'_> {
     pub fn ch_rock_up_phys(&mut self, gobj: GObjId) {
         self.air_anim_motion(gobj);
         if reg(self.game.fighter(gobj).mv_f32(mv::X4)) != 0.0 {
-            self.ch_chase(gobj, attr::X5C, attr::X60);
+            self.hand_chase(gobj, &super::HAND, attr::X5C);
         }
-    }
-
-    /// Chasing a point `off` off the nearest opponent at `x10` of the distance a frame (all
-    /// of it within `x14`).
-    // NaN takes the original's branch (`len < x14` fails).
-    #[allow(clippy::neg_cmp_op_on_partial_ord)]
-    pub(crate) fn ch_chase(&mut self, gobj: GObjId, off_x: usize, off_y: usize) {
-        let f = self.game.fighter_id(gobj);
-        let mut pos = self.boss_nearest_pos(gobj);
-        pos.x = mem(fp::fadds(reg(pos.x), reg(super::HAND.f32(self, f, off_x))));
-        pos.y = mem(fp::fadds(reg(pos.y), reg(super::HAND.f32(self, f, off_y))));
-        pos.z = 0.0;
-        let (near, rate) = (
-            super::HAND.f32(self, f, attr::X14),
-            super::HAND.f32(self, f, attr::X10),
-        );
-        let fp = &mut self.game.fighters[f.0];
-        let mut vel = pos - fp.cur_pos;
-        let (x, y, z) = (reg(vel.x), reg(vel.y), reg(vel.z));
-        let len = crate::math::sqrt_reg(fp::fadds(
-            fp::fmuls(z, z),
-            fp::fadds(fp::fmuls(x, x), fp::fmuls(y, y)),
-        ));
-        if !(len < reg(near)) {
-            vel.normalize();
-            let speed = fp::fmuls(len, reg(rate));
-            vel.x = mem(fp::fmuls(reg(vel.x), speed));
-            vel.y = mem(fp::fmuls(reg(vel.y), speed));
-            vel.z = mem(fp::fmuls(reg(vel.z), speed));
-        }
-        fp.self_vel.x = vel.x;
-        fp.self_vel.y = vel.y;
     }
 
     /// The falling crush, `fn_80158144`: its frame count from 107.

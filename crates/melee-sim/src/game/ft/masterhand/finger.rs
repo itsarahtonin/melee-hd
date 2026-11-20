@@ -184,7 +184,7 @@ impl Running<'_> {
     pub fn mh_gun1_phys(&mut self, gobj: GObjId) {
         self.air_anim_motion(gobj);
         if self.game.fighter(gobj).cmd_vars[2] != 0 {
-            self.mh_chase(gobj, attr::XDC, attr::XE0);
+            self.hand_chase(gobj, &super::HAND, attr::XDC);
         }
     }
 

@@ -26,7 +26,9 @@ pub mod wait;
 
 use super::super::state::Running;
 use super::FighterKind;
+use super::co::ids::ms as co_ms;
 use super::masterhand::Hand;
+use super::masterhand::grab::Grab;
 use crate::hsd::gobj::GObjId;
 
 /// `It_Kind_CrazyHand_Laser`, `_Bullet` and `_Bomb`, his articles in his `ftData`'s order.
@@ -361,8 +363,6 @@ pub(crate) mod mv {
     pub const X1C: usize = 0x1C;
     /// Whether he holds a fighter (`unk0.x20`).
     pub const HOLDING: usize = 0x20;
-    /// The frames until he lets a held fighter go (`unk0.x24`, a float).
-    pub const X24: usize = 0x24;
     /// The poke's lasers (`grab.x28` to `x34`).
     pub const LASERS: [usize; 4] = [0x28, 0x2C, 0x30, 0x34];
     /// The poke's hums (`unk0.x38` to `x40`).
@@ -405,7 +405,6 @@ pub(crate) mod attr {
     pub const X54: usize = 0x54;
     pub const X58: usize = 0x58;
     pub const X5C: usize = 0x5C;
-    pub const X60: usize = 0x60;
     pub const X64: usize = 0x64;
     pub const X68: usize = 0x68;
     pub const X6C: usize = 0x6C;
@@ -425,9 +424,7 @@ pub(crate) mod attr {
     pub const XB8: usize = 0xB8;
     pub const XBC: usize = 0xBC;
     pub const XC0: usize = 0xC0;
-    pub const XC4: usize = 0xC4;
     pub const XC8: usize = 0xC8;
-    pub const XCC: usize = 0xCC;
     pub const XD0: usize = 0xD0;
     pub const XD8: usize = 0xD8;
     pub const XDC: usize = 0xDC;
@@ -478,6 +475,27 @@ pub const HAND: Hand = Hand {
     waist: addr::FN_8015B4EC,
     entry_sfx: 320002,
     entry_facing: 1.0,
+    grab: Grab {
+        reach: ms::FINGER_BEAM_LOOP,
+        grab: ms::FINGER_BEAM_END,
+        close_caught: ms::FINGER_GUN2,
+        close_empty: ms::FINGER_GUN3,
+        miss: ms::BACK_PUNCH,
+        let_go: ms::FINGER_GUN1,
+        squeeze: ms::BACK_AIRPLANE1,
+        throws: [ms::BACK_AIRPLANE2, ms::BACK_AIRPLANE3],
+        reach_frames: attr::XC8,
+        reach_chase: attr::XC0,
+        squeeze_at: attr::XD0,
+        let_go_frames: attr::XD8,
+        box_size: 0x100,
+        caught: addr::FN_80159288,
+        victim: addr::FN_8015B548,
+        capture: co_ms::CAPTURE_CRAZY_HAND,
+        capture_damage: co_ms::CAPTURE_DAMAGE_CRAZY_HAND,
+        capture_wait: co_ms::CAPTURE_WAIT_CRAZY_HAND,
+        thrown: co_ms::THROWN_CRAZY_HAND,
+    },
     cries_waiting: true,
     tags_from_wait: false,
     fewer_rows_alone: true,

@@ -39,7 +39,7 @@ impl Running<'_> {
             let victim = self.game.fighters[f.0]
                 .victim_gobj
                 .expect("a beaten hand holding no one");
-            self.mh_capture_cut(victim);
+            self.hand_capture_cut(victim);
         }
         let (vy, vz, frames) = (
             super::HAND.f32(self, f, attr::X14C),
