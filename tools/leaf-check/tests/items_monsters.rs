@@ -45,7 +45,7 @@ use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::ItKind;
-use melee_sim::game::it::kinds::{freeze, leadead, octarock, octarockstone, oldkuri, oldottosea};
+use melee_sim::game::it::kinds::{freeze, goomba, octarockstone, octorok, redead, topi};
 use melee_sim::game::it::{self, CLASS_ITEM, zako};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -304,7 +304,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
                 .unwrap_or_else(|| panic!("{SKIP}{name} takes an item not imported"));
             let gobj = g.game.items[id.0].entity.expect("an item without its GObj");
             kind_check(g, gobj, leaf_check::sym("it_802E5944"));
-            octarock::follow_bone(g, Some(j), gobj);
+            octorok::follow_bone(g, Some(j), gobj);
             return Ret::Nothing;
         }
         _ => {}
@@ -407,14 +407,14 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
                 .find(|&(_, id)| g.game.items[id.0].entity == Some(gobj))
                 .map(|(&a, _)| a)
                 .expect("the item's address");
-            if at != base + 0xDD4 + leadead::off::HURT as u32 {
+            if at != base + 0xDD4 + redead::off::HURT as u32 {
                 panic!("{SKIP}{name} writes a capsule outside a ReDead's variables");
             }
             let (pa, pb, s) = it::coll::hurt_capsule(g.game, g.data, gobj, r(4) as usize);
             let v = zako::bytes(g.game, gobj);
-            v.set_vec(leadead::off::HURT + 4, pa);
-            v.set_vec(leadead::off::HURT + 0x10, pb);
-            v.set_f32(leadead::off::HURT + 0x1C, s);
+            v.set_vec(redead::off::HURT + 4, pa);
+            v.set_vec(redead::off::HURT + 0x10, pb);
+            v.set_f32(redead::off::HURT + 0x1C, s);
         }
         "it_80275258" => zako::clear_dd0_b4(g.game, gobj),
         "it_80275270" => zako::set_dd0_b4(g.game, gobj),
@@ -430,63 +430,63 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             let thrower = (r(4) != 0).then(|| other(4));
             it::release::thrown(g, gobj, thrower);
         }
-        "it_802EA478" => leadead::set_box(g, gobj, r(4) as i32, r(5) as i32),
-        "it_802EA804" => return b(leadead::ground_ahead(g, gobj, f(1) as f32, f(27))),
+        "it_802EA478" => redead::set_box(g, gobj, r(4) as i32, r(5) as i32),
+        "it_802EA804" => return b(redead::ground_ahead(g, gobj, f(1) as f32, f(27))),
         "it_802EA988" => {
-            return Ret::Int(leadead::touches_ahead(g, gobj, f(1) as f32, f(2) as f32) as u32);
+            return Ret::Int(redead::touches_ahead(g, gobj, f(1) as f32, f(2) as f32) as u32);
         }
-        "it_802EAAEC" => leadead::grab(g, gobj, other(4), r(5) as i32),
+        "it_802EAAEC" => redead::grab(g, gobj, other(4), r(5) as i32),
         "it_802EAF28" => {
-            let h = leadead::held(g, gobj);
+            let h = redead::held(g, gobj);
             return Ret::Int(addr_of(&maps.gobjs, h));
         }
-        "it_802E8F24" => leadead::land(g, gobj),
-        "it_802E9038" => leadead::walk(g, gobj),
-        "it_802E9308" => leadead::fall(g, gobj),
-        "it_802E93C8" => leadead::knocked_back(g, gobj),
-        "it_802E9494" => leadead::knocked_down_again(g, gobj),
-        "it_802E9738" => leadead::dodge(g, gobj),
-        "it_802E98E0" => leadead::lie_down(g, gobj),
-        "it_802E9A00" => leadead::get_up(g, gobj),
-        "it_802E9BA0" => leadead::turn(g, gobj),
-        "it_802E9D50" => leadead::lunge(g, gobj),
-        "it_802EA2A0" => zako::fling(g, gobj, &leadead::REDEAD),
-        "it_802EA334" => zako::fling_to_screen(g, gobj, &leadead::REDEAD),
-        "it_802EA674" => return b(leadead::faces_away(g, gobj)),
-        "it_802EA6F4" => return b(leadead::in_reach(g, gobj)),
-        "it_802EAC8C" => leadead::let_go(g, gobj),
-        "it_802EADD8" => leadead::victim_hit(g, gobj),
-        "it_802EAE80" => leadead::victim_free(g, gobj),
-        "it_802D758C" => oldkuri::walk_left(g, gobj),
-        "it_802D775C" => oldkuri::walk_right(g, gobj),
-        "it_802D813C" => oldkuri::flatten(g, gobj),
-        "it_802D81FC" => oldkuri::knock_down(g, gobj),
-        "it_802D82C4" => zako::fling(g, gobj, &oldkuri::GOOMBA),
-        "it_802D839C" => zako::fling_to_screen(g, gobj, &oldkuri::GOOMBA),
-        "it_802D848C" => oldkuri::enter(g, gobj, r(4) as i32, r(5)),
-        "it_802E4C08" => octarock::stand(g, gobj),
-        "it_802E4DB4" => octarock::fall(g, gobj),
-        "it_802E4E6C" => octarock::knocked_back(g, gobj),
-        "it_802E503C" => octarock::shoot(g, gobj),
-        "it_802E52E0" => return Ret::Int(octarock::sees(g, gobj) as u32),
-        "it_802E53C8" => octarock::turn(g, gobj),
-        "it_802E57D4" => zako::fling(g, gobj, &octarock::OCTOROK),
-        "it_802E58A0" => zako::fling_to_screen(g, gobj, &octarock::OCTOROK),
-        "it_802E5944" => octarock::forget_bone(g, gobj),
-        "it_802E5AA4" => octarock::forget(g, gobj, Some(other(4))),
+        "it_802E8F24" => redead::land(g, gobj),
+        "it_802E9038" => redead::walk(g, gobj),
+        "it_802E9308" => redead::fall(g, gobj),
+        "it_802E93C8" => redead::knocked_back(g, gobj),
+        "it_802E9494" => redead::knocked_down_again(g, gobj),
+        "it_802E9738" => redead::dodge(g, gobj),
+        "it_802E98E0" => redead::lie_down(g, gobj),
+        "it_802E9A00" => redead::get_up(g, gobj),
+        "it_802E9BA0" => redead::turn(g, gobj),
+        "it_802E9D50" => redead::lunge(g, gobj),
+        "it_802EA2A0" => zako::fling(g, gobj, &redead::REDEAD),
+        "it_802EA334" => zako::fling_to_screen(g, gobj, &redead::REDEAD),
+        "it_802EA674" => return b(redead::faces_away(g, gobj)),
+        "it_802EA6F4" => return b(redead::in_reach(g, gobj)),
+        "it_802EAC8C" => redead::let_go(g, gobj),
+        "it_802EADD8" => redead::victim_hit(g, gobj),
+        "it_802EAE80" => redead::victim_free(g, gobj),
+        "it_802D758C" => goomba::walk_left(g, gobj),
+        "it_802D775C" => goomba::walk_right(g, gobj),
+        "it_802D813C" => goomba::flatten(g, gobj),
+        "it_802D81FC" => goomba::knock_down(g, gobj),
+        "it_802D82C4" => zako::fling(g, gobj, &goomba::GOOMBA),
+        "it_802D839C" => zako::fling_to_screen(g, gobj, &goomba::GOOMBA),
+        "it_802D848C" => goomba::enter(g, gobj, r(4) as i32, r(5)),
+        "it_802E4C08" => octorok::stand(g, gobj),
+        "it_802E4DB4" => octorok::fall(g, gobj),
+        "it_802E4E6C" => octorok::knocked_back(g, gobj),
+        "it_802E503C" => octorok::shoot(g, gobj),
+        "it_802E52E0" => return Ret::Int(octorok::sees(g, gobj) as u32),
+        "it_802E53C8" => octorok::turn(g, gobj),
+        "it_802E57D4" => zako::fling(g, gobj, &octorok::OCTOROK),
+        "it_802E58A0" => zako::fling_to_screen(g, gobj, &octorok::OCTOROK),
+        "it_802E5944" => octorok::forget_bone(g, gobj),
+        "it_802E5AA4" => octorok::forget(g, gobj, Some(other(4))),
         "itOctarockstone_802E883C" => octarockstone::fly(g, gobj),
-        "it_802E269C" => oldottosea::stand(g, gobj),
-        "it_802E27B4" => oldottosea::walk(g, gobj),
-        "it_802E2BC0" => oldottosea::fall(g, gobj),
-        "it_802E2C80" => oldottosea::knocked_back(g, gobj),
-        "it_802E2DF4" => oldottosea::landed_knocked(g, gobj),
-        "it_802E2E30" => oldottosea::charge(g, gobj),
-        "it_802E3098" => oldottosea::turn(g, gobj),
-        "it_802E3400" => zako::fling(g, gobj, &oldottosea::TOPI),
-        "it_802E3528" => zako::fling_to_screen(g, gobj, &oldottosea::TOPI),
-        "it_802E35CC" => return b(oldottosea::watch(g, gobj)),
-        "it_802E37A4" => oldottosea::forget_freezie(g, gobj),
-        "it_802E3784" => oldottosea::forget(g, gobj, Some(other(4))),
+        "it_802E269C" => topi::stand(g, gobj),
+        "it_802E27B4" => topi::walk(g, gobj),
+        "it_802E2BC0" => topi::fall(g, gobj),
+        "it_802E2C80" => topi::knocked_back(g, gobj),
+        "it_802E2DF4" => topi::landed_knocked(g, gobj),
+        "it_802E2E30" => topi::charge(g, gobj),
+        "it_802E3098" => topi::turn(g, gobj),
+        "it_802E3400" => zako::fling(g, gobj, &topi::TOPI),
+        "it_802E3528" => zako::fling_to_screen(g, gobj, &topi::TOPI),
+        "it_802E35CC" => return b(topi::watch(g, gobj)),
+        "it_802E37A4" => topi::forget_freezie(g, gobj),
+        "it_802E3784" => topi::forget(g, gobj, Some(other(4))),
         "it_8028EB88" => {
             let pos = vec_at(r(4));
             // The new Freezie compares with the rest of the state; its address, which the
@@ -511,12 +511,12 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         }
         "itOctarockstone_802E890C" => octarockstone::drop_away(g, gobj),
         "itOctarockstone_802E89B0" => octarockstone::forget(g, gobj, Some(other(4))),
-        "it_802D84D8" | "itOldKuri_Logic29_EvtUnk" => oldkuri::forget(g, gobj, Some(other(4))),
+        "it_802D84D8" | "itOldKuri_Logic29_EvtUnk" => goomba::forget(g, gobj, Some(other(4))),
         "it_802D8098" => {
             if it::item(g.game, gobj).xCFC.is_none() {
                 panic!("{SKIP}{name} takes a Goomba a fighter landed on");
             }
-            return b(oldkuri::stomped(g, gobj));
+            return b(goomba::stomped(g, gobj));
         }
         _ => return run_item(g, gobj, a, &name),
     }

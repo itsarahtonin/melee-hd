@@ -64,7 +64,7 @@ pub const ANIM11: u32 = 0x802E_3588;
 pub const PHYS11: u32 = 0x802E_3590;
 pub const COLL11: u32 = 0x802E_35AC;
 
-/// Its variables' offsets in the union (`itOldottosea_ItemVars`; its `x18`, `whitebea.x18`, is
+/// Its variables' offsets in the union (`itOldottosea_ItemVars`; its `x18`, the Polar Bear's `x18`, is
 /// the common `x14.y`, [`zako::BOUNCES`]).
 pub mod off {
     /// `x20`: the Freezie it pushes.

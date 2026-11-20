@@ -1,5 +1,5 @@
 //! The Polar Bear, `melee/it/kinds/itwhitebea.c` from `it_802E37BC` on (`It_Kind_Whitebea`; the
-//! file's start is Topi's, [`super::oldottosea`]): an adventure enemy the adventure's Icicle
+//! file's start is Topi's, [`super::topi`]): an adventure enemy the adventure's Icicle
 //! Mountain's spawner makes. It falls to the floor, stands a while, then walks the way it faces
 //! (a step's sound every 15 frames), turning at walls, ledges and the script's turn points;
 //! standing, one draw in two (never after a walk) it crouches and jumps, and its landing speeds

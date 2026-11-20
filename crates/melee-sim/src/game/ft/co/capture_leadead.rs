@@ -1,4 +1,4 @@
-//! Held by a ReDead (`ftCo_800C7590.c`): a ReDead's grab (`it::kinds::leadead`) catches a
+//! Held by a ReDead (`ftCo_800C7590.c`): a ReDead's grab (`it::kinds::redead`) catches a
 //! fighter, which mashes out against a timer that grows with its percent and its player's
 //! handicap and standing, then is thrown back from it (`CaptureCut`). A hit on the fighter makes
 //! the ReDead let go (`ftCo_800C7434.c`'s damage callbacks).
@@ -6,7 +6,7 @@
 use gekko_fp as fp;
 
 use super::super::super::camera;
-use super::super::super::it::kinds::leadead;
+use super::super::super::it::kinds::redead;
 use super::super::super::state::Running;
 use super::super::common::GA_GROUND;
 use super::ids::ms;
@@ -86,7 +86,7 @@ impl Running<'_> {
             .mv
             .gobj_at(LEADEAD)
             .expect("a ReDead's grab without the ReDead");
-        leadead::grab(self, redead, gobj, 0);
+        redead::grab(self, redead, gobj, 0);
         self.start_rumble(f, 0xC, 0);
         let pos = self.game.fighters[f.0].cur_pos;
         camera::request_quake(self, QUAKE_SMALL, Some(pos));
@@ -107,7 +107,7 @@ impl Running<'_> {
                 .mv
                 .gobj_at(LEADEAD)
                 .expect("a ReDead's hold without the ReDead");
-            leadead::victim_free(self, redead);
+            redead::victim_free(self, redead);
             self.capture_leadead_cut(gobj);
         }
     }
@@ -158,7 +158,7 @@ impl Running<'_> {
             .mv
             .gobj_at(LEADEAD)
             .expect("a ReDead's hold without the ReDead");
-        leadead::victim_hit(self, redead);
+        redead::victim_hit(self, redead);
     }
 }
 
