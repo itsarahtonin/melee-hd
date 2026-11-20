@@ -31,6 +31,7 @@ melee-hd's target is identical gameplay and identical presentation (what players
 ## Names and the ledger
 
 - Give ports idiomatic Rust names and types, and put `#[doc(alias = "OriginalName")]` on the item that ports each original function. One item may carry several aliases (wrappers, inline copies with a symbol).
+- When you rename an item, keep its old name findable with `#[doc(alias("OldName"))]`, the list form: the ledger reads `alias = "..."` as a port of the function of that name and refuses a name ssbm-rs has no function for ([rename waves](refactor.md#task-12-wave-3-the-items-names)).
 - Where the SDK and the game compute the same thing differently, the SDK version is `sdk_*`.
 - Every alias needs a check: a leaf-check test that calls `fns::OriginalName`, or a line in `ledger/checks.txt` naming the system-level check that covers it. Functions replaced by a native subsystem go in `ledger/replaced.txt`, provably dead ones in `ledger/dead.txt`, each with its reason. `cargo run --release -p ledger -- --check` must pass.
 - A character that can play a whole match gets its roster fields in its registry entry (`vs`, the `CharacterKind` a match takes it as, and `keys`, below), and a stage its own (below), which the player's command line, `--help` and launcher list. A stage is offered only once its audit finds nothing a match on it reaches unported ([the player](player.md#stages-the-player-offers)).
