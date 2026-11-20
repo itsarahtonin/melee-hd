@@ -142,7 +142,8 @@ impl FrameRenderer for Exact {
         }
         let start = Instant::now();
         if self.streamed && draw {
-            // Built and run at once: the build is within the submit.
+            // Built and run at once: the build is the game thread's, until it hands the frame
+            // over, and the submit the renderer's threads' time after that.
             let rec = geometry.then(|| Recorder::new(&[]));
             let images = self.gpu.run_streamed(
                 &mut self.frames,
@@ -150,13 +151,16 @@ impl FrameRenderer for Exact {
                 t.data,
                 t.draws,
                 None,
-                rec.as_ref().map(|r| r as &dyn StreamObserver),
+                rec.as_ref().map(|r| r as &(dyn StreamObserver + Sync)),
             );
+            let (all, waited) = (start.elapsed(), self.gpu.waited());
             return Rendered {
                 image: images.into_iter().last(),
                 geometry: rec.map(Recorder::into_geometry),
-                build: std::time::Duration::ZERO,
-                submit: start.elapsed(),
+                build: all.saturating_sub(waited),
+                submit: waited.min(all),
+                // The last piece's run holds the frame's end, which waited.
+                stream: self.gpu.fed().saturating_sub(waited),
             };
         }
         let fifo = self.frames.frame(t.game, t.data, t.draws);
@@ -181,6 +185,7 @@ impl FrameRenderer for Exact {
             geometry: rec.map(Recorder::into_geometry),
             build,
             submit,
+            ..Rendered::default()
         }
     }
 
@@ -690,6 +695,7 @@ impl FrameRenderer for Mutated {
             geometry: rec.map(Recorder::into_geometry),
             build,
             submit,
+            ..Rendered::default()
         }
     }
 

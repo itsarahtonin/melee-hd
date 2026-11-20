@@ -100,7 +100,12 @@ fn identical(game: &Game, frames: &[u32]) {
 
 /// The fast renderer draws every frame within the tolerance; prints each frame's report.
 fn within(game: &Game, frames: &[u32]) {
-    let (ok, text) = fast(game, frames, &["--renderer", "fast"]);
+    within_with(game, frames, &["--renderer", "fast"]);
+}
+
+/// [`within`] with `args`.
+fn within_with(game: &Game, frames: &[u32], args: &[&str]) {
+    let (ok, text) = fast(game, frames, args);
     let each = frames_of(&text);
     println!("{text}");
     assert!(ok && each.len() == frames.len(), "{}: {text}", game.name);
@@ -132,6 +137,22 @@ macro_rules! identical {
                 #[ignore = "needs the disc, ssbm-rs's local data and the Slippi replays"]
                 fn $name() {
                     within(&$game, &[$($frame),*]);
+                }
+            )*
+        }
+
+        /// The fast renderer on its threads (`--threaded`), as the player draws: each frame's
+        /// stream run on a thread of its own as it's built, and the flushes encoded and
+        /// submitted on another (its geometry is the CPU's transforms of the meshes, its image
+        /// the GPU's).
+        mod the_fast_renderer_threaded {
+            use super::*;
+
+            $(
+                #[test]
+                #[ignore = "needs the disc, ssbm-rs's local data and the Slippi replays"]
+                fn $name() {
+                    within_with(&$game, &[$($frame),*], &["--renderer", "fast", "--threaded"]);
                 }
             )*
         }

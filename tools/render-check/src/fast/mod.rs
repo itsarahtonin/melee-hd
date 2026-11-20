@@ -46,6 +46,9 @@ pub struct Rendered {
     /// it (the exact renderer's stream run and drawn, the GPU's work submitted).
     pub build: Duration,
     pub submit: Duration,
+    /// Of the build, a frame run as it's built: the game thread's time running its stream's
+    /// pieces (through melee-gx to the renderer's threads), beside building them.
+    pub stream: Duration,
 }
 
 /// A renderer the harness compares or measures.

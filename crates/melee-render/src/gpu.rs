@@ -28,6 +28,8 @@ pub struct Gpu {
     meshes: Option<RefCell<Meshes>>,
     /// Each frame run as it's built ([`Gpu::fast`]).
     streamed: bool,
+    /// The last streamed frame's time running its pieces ([`Gpu::fed`]).
+    fed: std::time::Duration,
 }
 
 /// Where the renderer runs: on the game's thread, or on threads of its own that work on a frame
@@ -150,6 +152,18 @@ impl Memory for Host<'_> {
     }
 }
 
+/// Whether a streamed frame's pieces run on a thread of their own (`Frames::frame_piped`):
+/// where the processor runs four threads or more at once (on two cores the thread costs more
+/// than it takes off the game thread); `MELEE_RENDER_PIPE` 1 or 0 says so either way.
+fn piped() -> bool {
+    static PIPED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *PIPED.get_or_init(|| match std::env::var("MELEE_RENDER_PIPE").as_deref() {
+        Ok("0") => false,
+        Ok("1") => true,
+        _ => std::thread::available_parallelism().is_ok_and(|n| n.get() >= 4),
+    })
+}
+
 /// Memory for a stream run without drawing: the GPU's state follows it, nothing draws.
 struct Quiet<'a> {
     space: &'a Space,
@@ -194,6 +208,7 @@ impl Gpu {
             reclaims: 0,
             meshes: None,
             streamed: false,
+            fed: std::time::Duration::ZERO,
         }
     }
 
@@ -274,6 +289,7 @@ impl Gpu {
             reclaims: 0,
             meshes: None,
             streamed: false,
+            fed: std::time::Duration::ZERO,
         }
     }
 
@@ -347,6 +363,20 @@ impl Gpu {
         self.reclaims = now;
     }
 
+    /// How long the last streamed frame's game thread spent running its stream's pieces
+    /// (through melee-gx to the renderer), beside building them.
+    pub fn fed(&self) -> std::time::Duration {
+        self.fed
+    }
+
+    /// How long the last frame's end waited for the renderer's threads (zero on one thread).
+    pub fn waited(&self) -> std::time::Duration {
+        match &*self.renderer.borrow() {
+            Backend::Threaded(t) => t.waited(),
+            Backend::Here(_) => std::time::Duration::ZERO,
+        }
+    }
+
     /// Runs a frame's stream; returns the frames it copied to the XFB.
     pub fn run(
         &mut self,
@@ -371,12 +401,12 @@ impl Gpu {
         data: &Archives,
         draws: &[melee_sim::hsd::display::Draw],
         blend: Option<crate::blend::Blend<'_>>,
-        observer: Option<&dyn StreamObserver>,
+        observer: Option<&(dyn StreamObserver + Sync)>,
     ) -> Vec<Frame> {
         struct To<'a, 'g> {
             gpu: &'g mut Gpu,
             data: &'a Archives,
-            observer: Option<&'a dyn StreamObserver>,
+            observer: Option<&'a (dyn StreamObserver + Sync)>,
         }
         impl crate::frame::Stream for To<'_, '_> {
             fn start(&mut self, space: &Space) {
@@ -387,8 +417,42 @@ impl Gpu {
                     o.marks(marks);
                 }
                 let o = self.observer.map(|o| o as &dyn Observer);
+                let t = std::time::Instant::now();
                 self.gpu.feed(space, self.data, bytes, o);
+                self.gpu.fed += t.elapsed();
             }
+        }
+        self.fed = std::time::Duration::ZERO;
+        // On the renderer's threads its pieces run on a thread of their own
+        // (`MELEE_RENDER_PIPE=0` runs them on the game thread).
+        let threaded = matches!(*self.renderer.borrow(), Backend::Threaded(_));
+        if threaded && piped() {
+            struct Run<'a, 'g> {
+                gpu: &'g mut Gpu,
+                data: &'a Archives,
+                observer: Option<&'a (dyn StreamObserver + Sync)>,
+            }
+            impl crate::frame::Stream for Run<'_, '_> {
+                fn start(&mut self, space: &Space) {
+                    self.gpu.begin(space);
+                }
+                fn piece(&mut self, space: &Space, bytes: &[u8], marks: &[(u32, u32)]) {
+                    if let Some(o) = self.observer {
+                        o.marks(marks);
+                    }
+                    let o = self.observer.map(|o| o as &dyn Observer);
+                    let t = std::time::Instant::now();
+                    self.gpu.feed(space, self.data, bytes, o);
+                    self.gpu.fed += t.elapsed();
+                }
+            }
+            let mut run = Run {
+                gpu: self,
+                data,
+                observer,
+            };
+            frames.frame_piped(game, data, draws, blend, &mut run);
+            return self.end(&frames.space);
         }
         frames.frame_streamed(
             game,
