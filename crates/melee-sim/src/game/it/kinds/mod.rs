@@ -6,6 +6,7 @@ pub mod bat;
 pub mod bombhei;
 pub mod capsule;
 pub mod cerebi;
+pub mod chargedshot;
 pub mod chicorita;
 pub mod climbersblizzard;
 pub mod climbersice;

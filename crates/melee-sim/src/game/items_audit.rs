@@ -189,6 +189,7 @@ pub const MODULES: &[&str] = &[
     "it/kinds/bombhei",
     "it/kinds/capsule",
     "it/kinds/cerebi",
+    "it/kinds/chargedshot",
     "it/kinds/chicorita",
     "it/kinds/climbersblizzard",
     "it/kinds/climbersice",

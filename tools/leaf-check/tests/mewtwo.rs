@@ -37,7 +37,7 @@ use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::mewtwo::special_n::MEWTWO;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
-use melee_sim::game::it::kinds::{mewtwodisable, mewtwoshadowball};
+use melee_sim::game::it::kinds::{chargedshot, mewtwodisable, mewtwoshadowball};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::capture::Call;
@@ -218,11 +218,11 @@ fn run_mewtwo(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             return b(g.mt_n_ball_put_away(Some(gobj), &MEWTWO));
         }
         "it_802C4D10" => mewtwoshadowball::wobble(g, gobj),
-        "it_802C4F50" => return b(mewtwoshadowball::hit_stage(g, gobj)),
+        "it_802C4F50" => return b(chargedshot::hit_stage(g, gobj)),
         "it_802C573C" => mewtwoshadowball::remove(g, gobj),
-        "it_802C5B18" => mewtwoshadowball::fired(g, gobj),
+        "it_802C5B18" => chargedshot::fired(g, gobj, &mewtwoshadowball::SHADOW_BALL),
         "it_802C5E5C" => mewtwoshadowball::burst(g, gobj),
-        "itMewtwoShadowball_Logic101_EvtUnk" => mewtwoshadowball::forget(g, gobj, other()),
+        "itMewtwoShadowball_Logic101_EvtUnk" => chargedshot::forget(g, gobj, other()),
         "itMewtwoDisable_Logic67_Destroy" => mewtwodisable::destroy(g, gobj),
         "it_802C4B38" => mewtwodisable::start(g, gobj),
         "it_802C4BB8" => mewtwodisable::scale_hitboxes(g, gobj),

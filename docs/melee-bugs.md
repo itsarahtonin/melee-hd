@@ -400,13 +400,13 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Mewtwo: the fired ball's dropped comparison
 
-- **Where:** `fn_802C5E18`, `crates/melee-sim/src/game/it/kinds/mewtwoshadowball.rs` (`sparkle`).
+- **Where:** `fn_802C5E18`, `crates/melee-sim/src/game/it/kinds/chargedshot.rs` (`sparkle`, shared with the Charge Shot's `it_802B5EDC`; the Shadow Ball's `full_sparkles` are none).
 - **Defect:** the full ball's test compares two variables (`x18`, `x1C`) and does nothing with the result.
 - **Effect:** none observable.
-- **melee-hd:** modeled (the comparison computed and dropped).
+- **melee-hd:** modeled (the comparison computed, the Charge Shot's sparkles' test, with no sparkles to spawn).
 - **Fix:** not recorded.
 - **Fix impact:** none.
-- **Source:** `crates/melee-sim/src/game/it/kinds/mewtwoshadowball.rs:640`.
+- **Source:** `crates/melee-sim/src/game/it/kinds/chargedshot.rs:617`.
 
 ### Mewtwo: the forward throw's self-assignment
 
