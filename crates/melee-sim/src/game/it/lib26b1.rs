@@ -43,7 +43,7 @@ pub fn is_heavy(game: &Game, data: &Archives, gobj: GObjId) -> bool {
 /// How a fighter uses the item (its attributes' `x0_78`), `it_8026B30C`.
 #[doc(alias = "it_8026B30C")]
 pub fn use_kind(game: &Game, data: &Archives, gobj: GObjId) -> i32 {
-    i32::from(attr_of(item(game, gobj)).x0_78(data))
+    i32::from(attr_of(item(game, gobj)).use_kind(data))
 }
 
 /// Whether the item, a Ray Gun, Super Scope, Star Rod, Lip's Stick or Fire Flower, has no uses left (`xD4C`), `it_8026B594`.
@@ -280,7 +280,8 @@ pub fn hitlag_frames(game: &Game, data: &Archives, damage: i32) -> f64 {
 
 /// The first float of the kind's own attributes, `it_8026B560` (the Metal Box's frames).
 #[doc(alias = "it_8026B560")]
-pub fn special_x0(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
+#[doc(alias("special_x0"))]
+pub fn metal_box_frames(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
     let a = super::item::article(item(game, gobj))
         .special(data)
         .expect("an item without its attributes");
@@ -289,13 +290,15 @@ pub fn special_x0(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
 
 /// The same float, `it_8026B54C` (the Bunny Hood's frames).
 #[doc(alias = "it_8026B54C")]
-pub fn special_x0_hood(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
-    special_x0(game, data, gobj)
+#[doc(alias("special_x0_hood"))]
+pub fn bunny_hood_frames(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
+    metal_box_frames(game, data, gobj)
 }
 
 /// The second float of the kind's own attributes, `it_8026B574` (the Metal Box's health).
 #[doc(alias = "it_8026B574")]
-pub fn special_x4(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
+#[doc(alias("special_x4"))]
+pub fn metal_box_health(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
     let a = super::item::article(item(game, gobj))
         .special(data)
         .expect("an item without its attributes");
@@ -382,7 +385,8 @@ pub fn attack_id(game: &Game, gobj: GObjId) -> i32 {
 
 /// Marks the item quiet, `it_8026BD6C`.
 #[doc(alias = "it_8026BD6C")]
-pub fn set_xdcd_b3(game: &mut Game, gobj: GObjId) {
+#[doc(alias("set_xdcd_b3"))]
+pub fn set_quiet(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).xDCD_flag.x0.b3 = true;
 }
 
@@ -424,9 +428,10 @@ pub fn check_burst(r: &mut Running, gobj: GObjId) {
     }
 }
 
-/// `xDD0_flag.b3`, `it_8026BD24`.
+/// The item's lifetime stops counting down (`xDD0_flag.b3`), `it_8026BD24`.
 #[doc(alias = "it_8026BD24")]
-pub fn set_xdd0_b3(game: &mut Game, gobj: GObjId) {
+#[doc(alias("set_xdd0_b3"))]
+pub fn freeze_lifetime(game: &mut Game, gobj: GObjId) {
     super::set_flag(&mut item_mut(game, gobj).xDD0_flag, 3, true);
 }
 

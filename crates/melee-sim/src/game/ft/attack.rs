@@ -1799,7 +1799,7 @@ impl Running<'_> {
         use super::super::it;
         let data = self.data;
         let ip = it::item(self.game, g);
-        if it::item::attr_of(ip).x0_78(data) == 4 {
+        if it::item::attr_of(ip).use_kind(data) == 4 {
             self.take_touch_item(g, j, me);
             return false;
         }

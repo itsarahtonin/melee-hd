@@ -126,7 +126,7 @@ fn phys_0(r: &mut Running, gobj: GObjId) {
 pub fn land(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     lib2725::clear_velocity(r.game, gobj);
     lib2725::blast_effect(r, gobj);

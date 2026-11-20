@@ -92,7 +92,8 @@ impl Attr {
     }
 
     /// `x0_78`: how a fighter uses the item (0 thrown, 2 swung, 3 shot, ...).
-    pub fn x0_78(self, data: &Archives) -> u8 {
+    #[doc(alias("x0_78"))]
+    pub fn use_kind(self, data: &Archives) -> u8 {
         (self.u8(data, 0) >> 3) & 0xF
     }
 
@@ -102,11 +103,14 @@ impl Attr {
     }
 
     /// `x1_1`: the axis the item spins about.
-    pub fn x1_1(self, data: &Archives) -> u8 {
+    #[doc(alias("x1_1"))]
+    pub fn spin_axis(self, data: &Archives) -> u8 {
         self.u8(data, 1) >> 6
     }
 
-    pub fn x1_3(self, data: &Archives) -> bool {
+    /// `x1_3`: whether the model turns to face the item's way (`xDC8`'s `x19`).
+    #[doc(alias("x1_3"))]
+    pub fn turns_to_face(self, data: &Archives) -> bool {
         self.u8(data, 1) & 0x20 != 0
     }
 
@@ -114,7 +118,9 @@ impl Attr {
         self.u8(data, 1) & 0x10 != 0
     }
 
-    pub fn x1_5(self, data: &Archives) -> bool {
+    /// `x1_5`: whether the item's hits count toward its hitlag (`xDC8`'s `xC`).
+    #[doc(alias("x1_5"))]
+    pub fn hits_counted(self, data: &Archives) -> bool {
         self.u8(data, 1) & 0x08 != 0
     }
 

@@ -1163,15 +1163,17 @@ pub fn keep_clear(game: &mut Game, data: &Archives, gobj: GObjId) {
     }
 }
 
-/// Clears `x1B`, `it_80272280`.
+/// Pushed apart from an overlapping item by its nudge again (`xDC8`'s `x1B` cleared), `it_80272280`.
 #[doc(alias = "it_80272280")]
-pub fn clear_x1b(game: &mut Game, gobj: GObjId) {
+#[doc(alias("clear_x1b"))]
+pub fn clear_random_push(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).xDC8_word.flags.x1B = false;
 }
 
-/// Sets `x1B`, `it_80272298`.
+/// Pushed apart from an overlapping item a random way (`xDC8`'s `x1B` set), `it_80272298`.
 #[doc(alias = "it_80272298")]
-pub fn set_x1b(game: &mut Game, gobj: GObjId) {
+#[doc(alias("set_x1b"))]
+pub fn set_random_push(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).xDC8_word.flags.x1B = true;
 }
 

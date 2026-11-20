@@ -237,7 +237,7 @@ pub fn out(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     hitbox::end_blink(r.game, gobj);
     hitbox::set_hit_ids2(r.game, gobj);
-    hitbox::clear_xdce_b2(r.game, gobj);
+    hitbox::clear_hit_by_own_items(r.game, gobj);
 }
 
 /// Falls off the floor, `it_802D546C`.

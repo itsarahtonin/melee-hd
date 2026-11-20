@@ -464,7 +464,7 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 /// The burst's common start: its model hidden, `xDD0` bit 3, vanishing, still, no effects.
 fn burst_start(r: &mut Running, gobj: GObjId) {
     lib26b1::hide(r.game, gobj);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     lib2725::clear_velocity(r.game, gobj);
     ef::eflib::destroy_all(r, gobj);

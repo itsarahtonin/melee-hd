@@ -353,7 +353,7 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
     } else {
         set(r, gobj, off::WALK, w.wrapping_sub(1));
     }
-    if lib2725::xdc0_has(r.game, gobj, 2) {
+    if lib2725::script_flags_have(r.game, gobj, 2) {
         turn(r, gobj);
     }
     let ip = item_mut(r.game, gobj);

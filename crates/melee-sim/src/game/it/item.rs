@@ -365,8 +365,8 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     let a = attr_of(ip);
     set_flag(&mut ip.xDD0_flag, 3, false);
     ip.spin_spd = a.f32(data, attr::SPIN_SPEED);
-    ip.xDC8_word.flags.x19 = a.x1_3(data);
-    ip.xDC8_word.flags.x17 = a.x1_1(data);
+    ip.xDC8_word.flags.x19 = a.turns_to_face(data);
+    ip.xDC8_word.flags.x17 = a.spin_axis(data);
     ip.xBCC_unk = a.vec2(data, attr::X30);
     ip.xBD4_grabRange = a.vec2(data, attr::GRAB_RANGE);
     ip.xDC8_word.flags.x1A = a.x1_4(data);
@@ -378,7 +378,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     ip.xC1C = a.ecb(data, attr::X40);
     ip.xC0C = ip.xC1C.clone();
     ip.xBFC = ip.xC0C.clone();
-    ip.xDC8_word.flags.xC = a.x1_5(data);
+    ip.xDC8_word.flags.xC = a.hits_counted(data);
     ip.xDC8_word.flags.xD = true;
     ip.xDCD_flag.x0.b01 = a.cam_kind(data);
     set_flag(&mut ip.xDCE_flag, 3, false);
@@ -771,7 +771,7 @@ pub fn init_position(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     lib2725::clamp_fall(r.game, gobj, x6c);
     lib2725::clear_hitboxes(r.game, r.data, gobj);
     coll::set_hurtbox_state(r.game, gobj, coll::HURT_ENABLED);
-    coll::clear_x1b(r.game, gobj);
+    coll::clear_random_push(r.game, gobj);
     {
         let ip = item_mut(r.game, gobj);
         ip.on_accessory = None;
@@ -1199,7 +1199,7 @@ pub fn proc_anim(r: &mut Running, gobj: GObjId) {
         }
     }
     coll::keep_clear(r.game, r.data, gobj);
-    coll::set_x1b(r.game, gobj);
+    coll::set_random_push(r.game, gobj);
     super::anim::run_overlay(r, gobj);
 }
 
@@ -1262,7 +1262,7 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
     }
     let ip = item_mut(r.game, gobj);
     ip.pos = vec_add(ip.pos, ip.x58_vec_unk);
-    lib2725::clear_x58(r.game, gobj);
+    lib2725::clear_displacement(r.game, gobj);
     let ip = super::item(r.game, gobj);
     if ip.ground_or_air == 0 {
         let line = if flag(ip.xDCE_flag, 3) && super::ground::on_line(r.game, gobj) {
@@ -1277,7 +1277,7 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
     }
     let ip = item_mut(r.game, gobj);
     ip.pos = vec_add(ip.pos, ip.x64_vec_unk2);
-    lib2725::clear_x64(r.game, gobj);
+    lib2725::clear_floor_motion(r.game, gobj);
     coll::refresh_hurtboxes(r.game, gobj);
 }
 
@@ -1319,7 +1319,7 @@ pub fn proc_accessory(r: &mut Running, gobj: GObjId) {
         cb.bone_pos = pos;
     }
     coll::update_ecb(r.game, r.data, gobj);
-    coll::clear_x1b(r.game, gobj);
+    coll::clear_random_push(r.game, gobj);
     coll::track_fighters(r.game, gobj);
 }
 
@@ -1613,10 +1613,11 @@ pub fn proc_react(r: &mut Running, gobj: GObjId) {
     clear_hit_record(item_mut(r.game, gobj));
 }
 
-/// Every item's `xDC8` flag 3 set (`it_8026B724` on each), `it_8026C3FC`: the hands'
+/// Every item paused (`xDC8`'s flag 3 set, `it_8026B724` on each), `it_8026C3FC`: the hands'
 /// slowdown for Crazy Hand's arrival.
 #[doc(alias = "it_8026C3FC")]
-pub fn flag_all_x3(game: &mut Game) {
+#[doc(alias("flag_all_x3"))]
+pub fn pause_all(game: &mut Game) {
     let mut cur = game.world.first_in(super::P_LINK_ITEM);
     while let Some(g) = cur {
         item_mut(game, g).xDC8_word.flags.x3 = true;
@@ -1624,9 +1625,10 @@ pub fn flag_all_x3(game: &mut Game) {
     }
 }
 
-/// Every item's `xDC8` flag 3 cleared, `it_8026C42C`, and flag 5 set where flag 7 is.
+/// Every item resumed (`xDC8`'s flag 3 cleared), `it_8026C42C`, and flag 5 set where flag 7 is.
 #[doc(alias = "it_8026C42C")]
-pub fn unflag_all_x3(game: &mut Game) {
+#[doc(alias("unflag_all_x3"))]
+pub fn resume_all(game: &mut Game) {
     let mut cur = game.world.first_in(super::P_LINK_ITEM);
     while let Some(g) = cur {
         let f = &mut item_mut(game, g).xDC8_word.flags;

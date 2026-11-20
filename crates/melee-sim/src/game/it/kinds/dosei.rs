@@ -214,7 +214,9 @@ fn show(r: &mut Running, gobj: GObjId) {
     jobj::clear_flags_all(&mut r.game.objs.jobjs, child, jobj::HIDDEN);
 }
 
-fn set_x17_x19(game: &mut Game, gobj: GObjId) {
+/// Spins it about its axis 1 and turns its model to face its way (`xDC8`'s `x17` and `x19`).
+#[doc(alias("set_x17_x19"))]
+fn set_spin_and_facing(game: &mut Game, gobj: GObjId) {
     let f = &mut item_mut(game, gobj).xDC8_word.flags;
     f.x17 = 1;
     f.x19 = true;
@@ -472,7 +474,7 @@ fn hold(r: &mut Running, gobj: GObjId) {
         change_state(r, gobj, 4, change::ANIM_UPDATE);
         show(r, gobj);
         set_speed(r, gobj, pace);
-        set_x17_x19(r.game, gobj);
+        set_spin_and_facing(r.game, gobj);
     } else {
         change_state(r, gobj, 4, change::ANIM_UPDATE);
     }
@@ -496,7 +498,7 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
     let pace = attr_f32(r, gobj, 0);
     lib26b1::enable_pickup(r.game, gobj);
     show(r, gobj);
-    set_x17_x19(r.game, gobj);
+    set_spin_and_facing(r.game, gobj);
     change_state(r, gobj, 5, change::ANIM_UPDATE | change::DROP_UPDATE);
     set_speed(r, gobj, pace);
     face_ahead(r, gobj);

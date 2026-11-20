@@ -838,9 +838,10 @@ fn is_stomp() {
 }
 
 #[test]
-fn set_xdcd_b3() {
+#[doc(alias("set_xdcd_b3"))]
+fn set_quiet() {
     leaf_check::shard_test!();
-    check_game("it_8026BD6C", lib26b1::set_xdcd_b3);
+    check_game("it_8026BD6C", lib26b1::set_quiet);
 }
 
 #[test]
@@ -999,15 +1000,17 @@ fn keep_clear() {
 }
 
 #[test]
-fn clear_x1b() {
+#[doc(alias("clear_x1b"))]
+fn clear_random_push() {
     leaf_check::shard_test!();
-    check_game("it_80272280", coll::clear_x1b);
+    check_game("it_80272280", coll::clear_random_push);
 }
 
 #[test]
-fn set_x1b() {
+#[doc(alias("set_x1b"))]
+fn set_random_push() {
     leaf_check::shard_test!();
-    check_game("it_80272298", coll::set_x1b);
+    check_game("it_80272298", coll::set_random_push);
 }
 
 #[test]
@@ -1128,15 +1131,17 @@ fn play_sfx_unless_quiet() {
 }
 
 #[test]
-fn clear_x64() {
+#[doc(alias("clear_x64"))]
+fn clear_floor_motion() {
     leaf_check::shard_test!();
-    check_game("it_8027346C", lib2725::clear_x64);
+    check_game("it_8027346C", lib2725::clear_floor_motion);
 }
 
 #[test]
-fn clear_x58() {
+#[doc(alias("clear_x58"))]
+fn clear_displacement() {
     leaf_check::shard_test!();
-    check_game("it_80273484", lib2725::clear_x58);
+    check_game("it_80273484", lib2725::clear_displacement);
 }
 
 #[test]
@@ -2988,7 +2993,7 @@ fn item_lib_small() {
             },
         );
     };
-    on("it_8026BD24", |r, g| lib26b1::set_xdd0_b3(r.game, g));
+    on("it_8026BD24", |r, g| lib26b1::freeze_lifetime(r.game, g));
     on("it_8026BDB4", |r, g| lib26b1::stop_keeping_clear(r.game, g));
     on("it_8027518C", |r, g| {
         lib2725::start_vanishing(r.game, r.data, g)

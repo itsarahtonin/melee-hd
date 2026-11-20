@@ -343,7 +343,7 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     }
     lib26b1::disable_pickup(r.game, gobj);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     lib2725::clear_velocity(r.game, gobj);
     hitbox::start_blink(r.game, gobj);

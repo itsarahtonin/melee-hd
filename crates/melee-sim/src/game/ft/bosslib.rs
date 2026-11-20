@@ -309,13 +309,13 @@ impl Running<'_> {
                 self.game.ft_80086a4c(g, v);
             }
         }
-        super::super::it::item::flag_all_x3(self.game);
+        super::super::it::item::pause_all(self.game);
     }
 
     /// `ftBossLib_8015CB7C`: the items' rates back (`it_8026C42C`).
     #[doc(alias = "ftBossLib_8015CB7C")]
     pub fn boss_reset_item_rate(&mut self) {
-        super::super::it::item::unflag_all_x3(self.game);
+        super::super::it::item::resume_all(self.game);
     }
 
     /// The cutscene camera looks at a player from `x178` in front, over 10 frames,

@@ -163,7 +163,7 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
     effect_hitlag(r.game, gobj);
     hitbox::end_blink(r.game, gobj);
     hitbox::set_hit_ids2(r.game, gobj);
-    hitbox::clear_xdce_b2(r.game, gobj);
+    hitbox::clear_hit_by_own_items(r.game, gobj);
     lib2725::clear_velocity(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(ACCESSORY));

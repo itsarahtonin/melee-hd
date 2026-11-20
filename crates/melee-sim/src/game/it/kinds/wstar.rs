@@ -309,7 +309,7 @@ pub fn crash(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3) {
     let j = super::super::jobj_of(r.game, gobj).expect("a Warp Star without a model");
     super::super::item::set_translate(r.game, j, pos);
     crate::hsd::jobj::set_flags_all(&mut r.game.objs.jobjs, Some(j), crate::hsd::jobj::HIDDEN);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     eflib::destroy_all(r, gobj);
     let p = item(r.game, gobj).pos;

@@ -211,7 +211,7 @@ pub fn spawn(
     v.xDFC.set(0.0);
     v.xDF8.set(0.0);
     v.xDE4.set(pos);
-    lib26b1::set_xdcd_b3(r.game, gobj);
+    lib26b1::set_quiet(r.game, gobj);
     Some(gobj)
 }
 
@@ -242,7 +242,7 @@ fn launch_common(r: &mut Running, gobj: GObjId, owner: GObjId, msid: i32) {
     item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
     lib2725::show(r.game, gobj);
     change_state(r, gobj, msid, change::ANIM_UPDATE);
-    lib26b1::set_xdcd_b3(r.game, gobj);
+    lib26b1::set_quiet(r.game, gobj);
     let lifetime = attr_f32(r, gobj, LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
 }

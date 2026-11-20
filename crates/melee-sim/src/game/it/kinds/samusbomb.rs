@@ -263,7 +263,7 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     lib26b1::hide(r.game, gobj);
     lib2725::blast_small(r, gobj);
     lib26b1::disable_pickup(r.game, gobj);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(BLAST));

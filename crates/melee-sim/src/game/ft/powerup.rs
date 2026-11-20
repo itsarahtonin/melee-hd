@@ -231,10 +231,10 @@ impl Running<'_> {
             it::lib26b1::kind(self.game, box_gobj) == ItKind::MetalBox,
             "itGetKind(item_gobj) == It_Kind_MetalB"
         );
-        let health = fp::fctiwz(crate::fpu::reg(it::lib26b1::special_x4(
+        let health = fp::fctiwz(crate::fpu::reg(it::lib26b1::metal_box_health(
             self.game, self.data, box_gobj,
         )));
-        let timer = fp::fctiwz(crate::fpu::reg(it::lib26b1::special_x0(
+        let timer = fp::fctiwz(crate::fpu::reg(it::lib26b1::metal_box_frames(
             self.game, self.data, box_gobj,
         )));
         self.set_metal(gobj, timer, health);
@@ -425,7 +425,7 @@ impl Running<'_> {
     pub fn put_on_hood(&mut self, gobj: GObjId, hood: GObjId) {
         use gekko_fp as fp;
         let f = self.game.fighter_id(gobj);
-        let frames = fp::fctiwz(crate::fpu::reg(it::lib26b1::special_x0_hood(
+        let frames = fp::fctiwz(crate::fpu::reg(it::lib26b1::bunny_hood_frames(
             self.game, self.data, hood,
         )));
         if self.game.fighters[f.0].x197C.is_some() {

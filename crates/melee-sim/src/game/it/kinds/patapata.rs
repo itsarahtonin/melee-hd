@@ -334,7 +334,7 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
 /// middle, the acceleration flipping at its end) and its bob, 2 its bob.
 #[doc(alias = "itPatapata_UnkMotion3_Phys")]
 pub fn phys3(r: &mut Running, gobj: GObjId) {
-    if lib2725::xdc0_has(r.game, gobj, 2) && item(r.game, gobj).msid == 2 {
+    if lib2725::script_flags_have(r.game, gobj, 2) && item(r.game, gobj).msid == 2 {
         turn(r, gobj);
     }
     match get(r, gobj, off::KIND) {

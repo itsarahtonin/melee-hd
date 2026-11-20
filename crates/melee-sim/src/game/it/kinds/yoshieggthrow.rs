@@ -187,7 +187,7 @@ fn crack(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, MS_BREAK, 0x12);
     lib26b1::hide(r.game, gobj);
     lib2725::rumble_owner(r, gobj, 12, 10);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     lib2725::clear_velocity(r.game, gobj);
     item_mut(r.game, gobj).xD44_lifeTimer = time;

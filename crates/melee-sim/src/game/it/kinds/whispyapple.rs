@@ -413,7 +413,7 @@ pub fn burst(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::set_lifetime(r.game, r.data, gobj, 20.0);
     lib26b1::stop_keeping_clear(r.game, gobj);
     let ip = item_mut(r.game, gobj);

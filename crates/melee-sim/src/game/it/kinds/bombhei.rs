@@ -696,7 +696,7 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
     let j = jobj_of(r.game, gobj);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     item_mut(r.game, gobj).x5D0_animFrameSpeed = 1.0;
     lib2725::clear_velocity(r.game, gobj);

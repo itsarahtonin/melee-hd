@@ -370,15 +370,19 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_8027B330" => wstar::set_attack_id(g, gobj, r(4) as i32),
         "it_8026C16C" => melee_sim::game::ft::co::hammer::hammer_hits_on(g, gobj, r(4) != 0),
         "it_8026B54C" => {
-            return Ret::Float(f64::from(it::lib26b1::special_x0_hood(
+            return Ret::Float(f64::from(it::lib26b1::bunny_hood_frames(
                 g.game, g.data, gobj,
             )));
         }
         "it_8026B560" => {
-            return Ret::Float(f64::from(it::lib26b1::special_x0(g.game, g.data, gobj)));
+            return Ret::Float(f64::from(it::lib26b1::metal_box_frames(
+                g.game, g.data, gobj,
+            )));
         }
         "it_8026B574" => {
-            return Ret::Float(f64::from(it::lib26b1::special_x4(g.game, g.data, gobj)));
+            return Ret::Float(f64::from(it::lib26b1::metal_box_health(
+                g.game, g.data, gobj,
+            )));
         }
         // The fighter's, on its GObj and more.
         "ftCo_800C8348" => g.set_metal(gobj, r(4) as i32, r(5) as i32),

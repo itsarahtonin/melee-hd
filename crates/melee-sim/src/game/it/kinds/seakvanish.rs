@@ -65,7 +65,7 @@ pub fn init(r: &mut Running, gobj: GObjId, owner: GObjId) {
     ip.xDAC_itcmd_var0 = 0;
     lib26b1::hide(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }

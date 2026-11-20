@@ -126,15 +126,17 @@ pub fn let_own_items_hit(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).xDCD_flag.x0.b7 = true;
 }
 
-/// Sets `xDCE`'s third flag, `it_802754A4`.
+/// Lets ownerless and its own player's items hit it (`xDCE`'s third flag), `it_802754A4`.
 #[doc(alias = "it_802754A4")]
-pub fn set_xdce_b2(game: &mut Game, gobj: GObjId) {
+#[doc(alias("set_xdce_b2"))]
+pub fn set_hit_by_own_items(game: &mut Game, gobj: GObjId) {
     set_flag(&mut item_mut(game, gobj).xDCE_flag, 2, true);
 }
 
-/// Clears `xDCE`'s third flag, `it_802754BC`.
+/// Stops ownerless and its own player's items hitting it (`xDCE`'s third flag), `it_802754BC`.
 #[doc(alias = "it_802754BC")]
-pub fn clear_xdce_b2(game: &mut Game, gobj: GObjId) {
+#[doc(alias("clear_xdce_b2"))]
+pub fn clear_hit_by_own_items(game: &mut Game, gobj: GObjId) {
     set_flag(&mut item_mut(game, gobj).xDCE_flag, 2, false);
 }
 

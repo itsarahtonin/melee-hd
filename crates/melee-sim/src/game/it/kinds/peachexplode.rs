@@ -78,7 +78,7 @@ pub fn setup(r: &mut Running, gobj: GObjId, owner: GObjId, smash: bool) {
     lib26b1::hide(r.game, gobj);
     lib2725::blast_effect(r, gobj);
     lib26b1::disable_pickup(r.game, gobj);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     change_state(r, gobj, i32::from(smash), change::ANIM_UPDATE);
     // `it_80274574`.
