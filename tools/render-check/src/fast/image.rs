@@ -256,24 +256,35 @@ pub fn shift_tolerant(a: &[u8], b: &[u8], w: u32, de: &[f32]) -> Vec<f32> {
         .collect()
 }
 
+/// One in [`Sums`]' fixed point: linear light in units of 2^-32.
+const FIXED_ONE: f64 = (1u64 << 32) as f64;
+
 /// An image's linear light summed over every rectangle from its top left (a summed-area
-/// table), to average blocks anywhere.
+/// table), to average blocks anywhere. In fixed point, so the sums are exact: two squares of
+/// the same pixels have the same mean to the bit wherever they are and whatever the frames
+/// hold around them. In floats, the four corners' cancellation left a rounding error that
+/// depends on everything above and left of the square, so blocks the same in both frames
+/// differed by a ΔE₀₀ of about 1e-12, and which of them came out "nearest its limit" in
+/// [`compare`]'s report depended on the platform's maths library (Windows' `cbrt` and
+/// glibc's round differently). 2^32 levels per unit: a frame of 4 billion pixels fits in a
+/// u64.
 struct Sums {
     w: usize,
-    s: Vec<[f64; 3]>,
+    s: Vec<[u64; 3]>,
 }
 
 impl Sums {
     fn new(rgb: &[u8], w: u32, lin: &[f64; 256]) -> Sums {
+        let fixed = lin.map(|l| (l * FIXED_ONE).round() as u64);
         let w = w as usize;
         let h = rgb.len() / 3 / w;
-        let mut s = vec![[0f64; 3]; (w + 1) * (h + 1)];
+        let mut s = vec![[0u64; 3]; (w + 1) * (h + 1)];
         for y in 0..h {
-            let mut row = [0f64; 3];
+            let mut row = [0u64; 3];
             for x in 0..w {
                 let p = &rgb[(y * w + x) * 3..][..3];
                 for c in 0..3 {
-                    row[c] += lin[usize::from(p[c])];
+                    row[c] += fixed[usize::from(p[c])];
                     s[(y + 1) * (w + 1) + x + 1][c] = s[y * (w + 1) + x + 1][c] + row[c];
                 }
             }
@@ -291,7 +302,7 @@ impl Sums {
             at(x + side, y + side),
         );
         let n = (side * side) as f64;
-        std::array::from_fn(|k| (d[k] - b[k] - c[k] + a[k]) / n)
+        std::array::from_fn(|k| (d[k] + a[k] - b[k] - c[k]) as f64 / FIXED_ONE / n)
     }
 }
 
@@ -592,9 +603,29 @@ mod tests {
         assert!(!r.within(), "{}", r.line());
         let r = compare(&a, &off, &[&shifted], w, h, 1);
         assert!(r.within() && r.block.mean_spread > 0.0, "{}", r.line());
+        // The block reported is the painted one, though it's well within its limit.
+        assert_eq!(r.block_at, (16, 16), "{}", r.line());
         // Far past twice the spread: out again.
         let r = compare(&a, &paint(250), &[&shifted], w, h, 1);
         assert!(!r.within(), "{}", r.line());
+    }
+
+    /// Blocks the same in both frames differ by exactly 0, however much differs above and left
+    /// of them (which every summed-area corner after it holds).
+    #[test]
+    fn blocks_the_same_are_exactly_the_same() {
+        let (w, h) = (640, 480);
+        let a = gray(w, h, 90);
+        let mut b = a.clone();
+        for y in 16..24 {
+            for x in 16..24 {
+                let at = ((y * w + x) * 3) as usize;
+                b[at..at + 3].copy_from_slice(&[120, 90, 90]);
+            }
+        }
+        let d = block_differences(&a, &b, w, h, 1);
+        let differ: Vec<usize> = (0..d.len()).filter(|&i| d[i] != 0.0).collect();
+        assert_eq!(differ, [2 * 80 + 2], "only the painted block");
     }
 
     /// At 2x a block covers 16 by 16 of the frame's pixels and its corner is reported in the
