@@ -12,6 +12,7 @@ use super::{Loaded, STATE_SSS, STATE_VS};
 use crate::fpu::{mem, reg};
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
+use crate::hsd::jobj::JObjId;
 
 /// The screen's processes.
 pub const PROC_BG: u32 = 0x8019_6DBC;
@@ -73,7 +74,8 @@ const RANKS: [[u8; 6]; 32] = [
     [16, 20, 0, 0, 22, 23],
 ];
 
-/// `lbl_803B7CE0`: the players' models' frames by state (start, end, loop).
+/// `lbl_803B7CE0`: the players' models' frames by state (start, end, loop); the match-up
+/// screen's `lbl_803B7D18` holds the same.
 const PLAYER_ANIMS: [(u8, u8, u8); 6] = [
     (0, 30, 0),
     (50, 59, 0),
@@ -89,6 +91,74 @@ const PAD_START: u32 = 0x1000;
 const PAD_UP: u32 = 0x0001_0008;
 const PAD_DOWN: u32 = 0x0002_0004;
 const GM_MENU: u8 = 1;
+
+/// What the bracket's players' screen (`gmtou_1.c`) and winner-out's and loser-out's
+/// match-up screen (`gmtou_2.c`) each have their own in the processes they share, one copy in
+/// the original: the bracket's [`PLAYERS`], the match-up screen's `alt::MATCH_UP`.
+pub struct Screen {
+    /// The bracket's: its players' screen is a step of the bracket, so its models hide
+    /// outside the players' step (`cur_option` 0x1B to 0x1E) and show in it, and an unplugged
+    /// controller hides a human's only (a computer plays on). The match-up screen is that
+    /// screen alone: shown once a model is past the unplugged test, which hides anyone's.
+    pub step_only: bool,
+    /// The screen's statics the processes count with.
+    pub counters: for<'a> fn(&'a mut super::Tournament) -> Counters<'a>,
+    /// The character icon's height over the model.
+    pub icon_y: f64,
+    /// The match-up screen's: the icon shows the player's character and the base its icon
+    /// and color every frame (a player picks there); the bracket sets them as it makes them.
+    pub icon_each_frame: bool,
+    /// The match-up screen's: the title's frames from 100 past winner-out's or loser-out's
+    /// hundred (`match_type() * 100 + 100`).
+    pub title_by_type: bool,
+    /// The name tag's height.
+    pub tag_y: f32,
+    /// The bar's first frame.
+    pub bar_first: i32,
+    /// The bracket's: the handicap hides once its player is out.
+    pub handicap_hides_out: bool,
+}
+
+/// A screen's statics the shared processes read and step (`lbl_804799D8`'s, `lbl_80479A58`'s
+/// members).
+pub struct Counters<'a> {
+    pub bg: &'a mut u16,
+    pub panel: &'a mut u8,
+    pub title: &'a mut u8,
+    /// Each name tag's frame of its bounce, and the bounce's heights read from its model.
+    pub bounce: &'a mut [u8; 4],
+    pub bounce_ys: &'a [f32; 41],
+    pub bar: &'a mut u8,
+    pub anims: &'a mut [super::PlayerAnim; 4],
+    /// Each player's choice (6 until they make one).
+    pub choice: &'a mut [u8; 4],
+}
+
+fn bracket_counters(t: &mut super::Tournament) -> Counters<'_> {
+    let b = &mut t.bracket_scene;
+    Counters {
+        bg: &mut b.x10,
+        panel: &mut b.x1a,
+        title: &mut b.x1c,
+        bounce: &mut b.x1d,
+        bounce_ys: &t.bounce,
+        bar: &mut b.x29,
+        anims: &mut b.x2a,
+        choice: &mut b.x44,
+    }
+}
+
+/// The bracket's players' screen.
+pub const PLAYERS: Screen = Screen {
+    step_only: true,
+    counters: bracket_counters,
+    icon_y: 5.5,
+    icon_each_frame: false,
+    title_by_type: false,
+    tag_y: 12.6,
+    bar_first: 0,
+    handicap_hides_out: true,
+};
 
 /// `gmTournament_GetPlayerX`: a player's place across the screen by the players a match.
 pub(crate) fn player_x(players: u8, p: i32) -> f64 {
@@ -169,35 +239,6 @@ impl Running<'_> {
         r
     }
 
-    /// `fn_80196DBC`: the background's loop.
-    #[doc(alias = "fn_80196DBC")]
-    fn br_bg_proc(&mut self, gobj: GObjId) {
-        let j = self.tou_jobj(gobj);
-        if self.br().x10 > 0x320 {
-            self.br().x10 = 0;
-        }
-        let c = self.br().x10;
-        self.tou_frame(Some(j), mem(f(i32::from(c))));
-        self.br().x10 = c.wrapping_add(1);
-    }
-
-    /// `fn_80196E30`: the panel's loops, its second while the players get ready.
-    #[doc(alias = "fn_80196E30")]
-    fn br_panel_proc(&mut self, gobj: GObjId) {
-        let cur = self.game.tou.tm.cur_option;
-        let j = self.tou_jobj(gobj);
-        if cur <= 0x1A || cur >= 0x1F {
-            if self.br().x1a > 0x77 {
-                self.br().x1a = 0x5A;
-            }
-        } else if self.br().x1a > 0x9F {
-            self.br().x1a = 0x82;
-        }
-        let c = self.br().x1a;
-        self.tou_frame(Some(j), mem(f(i32::from(c))));
-        self.br().x1a = c.wrapping_add(1);
-    }
-
     /// `fn_80196EEC`: the rank reached, shown while the bracket comes in (hidden early when
     /// it's the one already shown), and the slide's start once it's done.
     #[doc(alias = "fn_80196EEC")]
@@ -246,33 +287,114 @@ impl Running<'_> {
         a.cur
     }
 
-    /// `fn_80196FFC`: a player's character model: hidden for an unplugged human, their
-    /// name's size, placed by the players a match, and its state's frames (it comes in, and a
+    /// The screen's statics the shared processes read.
+    fn scr(&mut self, s: &Screen) -> Counters<'_> {
+        (s.counters)(&mut self.game.tou)
+    }
+
+    /// Whether player `p`'s controller hides their models: unplugged, and on the bracket's
+    /// screen a human (a computer plays on without one).
+    fn screen_unplugged(&self, s: &Screen, p: usize) -> bool {
+        self.tou_pad_err(p) != 0 && (!s.step_only || self.game.tou.tm.x4b8[p].x0 != 1)
+    }
+
+    /// The bracket's screen hidden outside the players' step, and shown in it; whether to
+    /// go on.
+    fn screen_step(&mut self, s: &Screen, j: JObjId) -> bool {
+        if s.step_only {
+            if !self.players_step() {
+                self.tou_hide(Some(j));
+                return false;
+            }
+            self.tou_show(Some(j));
+        }
+        true
+    }
+
+    /// A player's model's common start: hidden outside the bracket's players' step and for
+    /// an unplugged player ([`Running::screen_unplugged`]), else shown; whether to go on.
+    fn screen_shown(&mut self, s: &Screen, j: JObjId, p: usize) -> bool {
+        if !self.screen_step(s, j) {
+            return false;
+        }
+        if self.screen_unplugged(s, p) {
+            self.tou_hide(Some(j));
+            return false;
+        }
+        if !s.step_only {
+            self.tou_show(Some(j));
+        }
+        true
+    }
+
+    /// The background's loop.
+    #[doc(alias = "fn_80196DBC")]
+    #[doc(alias = "fn_8019BF18")]
+    #[doc(alias("br_bg_proc", "alt_bg_proc"))]
+    pub(super) fn screen_bg_proc(&mut self, gobj: GObjId, s: &Screen) {
+        let j = self.tou_jobj(gobj);
+        if *self.scr(s).bg > 0x320 {
+            *self.scr(s).bg = 0;
+        }
+        let c = *self.scr(s).bg;
+        self.tou_frame(Some(j), mem(f(i32::from(c))));
+        *self.scr(s).bg = c.wrapping_add(1);
+    }
+
+    /// The panel's loops, its second while the players get ready (the match-up screen's
+    /// copy asks `cur_option <= 0x1E` again in the second's test, which its first already
+    /// decided).
+    #[doc(alias = "fn_80196E30")]
+    #[doc(alias = "fn_8019BF8C")]
+    #[doc(alias("br_panel_proc", "alt_panel_proc"))]
+    pub(super) fn screen_panel_proc(&mut self, gobj: GObjId, s: &Screen) {
+        let cur = self.game.tou.tm.cur_option;
+        let j = self.tou_jobj(gobj);
+        if cur <= 0x1A || cur >= 0x1F {
+            if *self.scr(s).panel > 0x77 {
+                *self.scr(s).panel = 0x5A;
+            }
+        } else if *self.scr(s).panel > 0x9F {
+            *self.scr(s).panel = 0x82;
+        }
+        let c = *self.scr(s).panel;
+        self.tou_frame(Some(j), mem(f(i32::from(c))));
+        *self.scr(s).panel = c.wrapping_add(1);
+    }
+
+    /// A player's character model: hidden for an unplugged player, their name's size,
+    /// placed by the players a match, and its state's frames (it comes in, and a
     /// computer's or a ready human's goes on to wait).
     #[doc(alias = "fn_80196FFC")]
-    fn br_player_proc(&mut self, gobj: GObjId) {
+    #[doc(alias = "fn_8019C048")]
+    #[doc(alias("br_player_proc", "alt_player_proc"))]
+    pub(super) fn screen_player_proc(&mut self, gobj: GObjId, s: &Screen) {
         let p = self.tou_index(gobj) as usize;
         let j = self.tou_jobj(gobj);
-        if !self.players_step() {
-            self.tou_hide(Some(j));
+        if !self.screen_step(s, j) {
             return;
         }
-        self.tou_show(Some(j));
         let t = self.game.tou.tm.x524(2).expect("the players' names");
-        if self.tou_pad_err(p) != 0 && self.game.tou.tm.x4b8[p].x0 != 1 {
+        if self.screen_unplugged(s, p) {
             self.tou_hide(Some(j));
             self.game.sis.set_scale(self.data, t, p as i32, 0.0, 0.0);
             return;
         }
-        let state = self.br().x2a[p].state;
-        let s = if state == 4 { 0.0 } else { 1.0 };
-        self.game.sis.set_scale(self.data, t, p as i32, s, s);
+        if !s.step_only {
+            self.tou_show(Some(j));
+        }
+        let state = self.scr(s).anims[p].state;
+        let k = if state == 4 { 0.0 } else { 1.0 };
+        self.game.sis.set_scale(self.data, t, p as i32, k, k);
         let x = player_x(self.game.tou.tm.x30, p as i32);
         self.tou_set_tx(Some(j), mem(x));
         self.game.sis.text_mut(t).hidden = 0;
-        let mut a = self.br().x2a[p];
+        let mut a = self.scr(s).anims[p];
         Self::player_anim_step(&mut a);
-        if a.state == 0 && self.br().x44[p] == 6 && a.done != 0 && self.game.tou.tm.x4b8[p].x0 != 0
+        if a.state == 0
+            && self.scr(s).choice[p] == 6
+            && a.done != 0
+            && self.game.tou.tm.x4b8[p].x0 != 0
         {
             a.state = 1;
             a.done = 0;
@@ -281,96 +403,162 @@ impl Running<'_> {
             a.state = 2;
             a.done = 0;
         }
-        self.br().x2a[p] = a;
+        self.scr(s).anims[p] = a;
         self.tou_frame(Some(j), mem(f(i32::from(a.cur))));
     }
 
-    /// The player-screen models' common start: hidden outside the players' step, shown, and
-    /// hidden for an unplugged human (`err` set and not a computer); whether to go on.
-    fn br_player_shown(&mut self, j: crate::hsd::jobj::JObjId, p: usize) -> bool {
-        if !self.players_step() {
-            self.tou_hide(Some(j));
-            return false;
-        }
-        self.tou_show(Some(j));
-        if self.tou_pad_err(p) != 0 && self.game.tou.tm.x4b8[p].x0 != 1 {
-            self.tou_hide(Some(j));
-            return false;
-        }
-        true
-    }
-
-    /// `fn_801973F8`: a player's character icon over its model, hidden once out.
+    /// A player's character icon over its model, hidden once out (the match-up screen's
+    /// showing their character's, every frame).
     #[doc(alias = "fn_801973F8")]
-    fn br_icon_proc(&mut self, gobj: GObjId) {
+    #[doc(alias = "fn_8019C3EC")]
+    #[doc(alias("br_icon_proc", "alt_icon_proc"))]
+    pub(super) fn screen_icon_proc(&mut self, gobj: GObjId, s: &Screen) {
         let p = self.tou_index(gobj) as usize;
         let j = self.tou_jobj(gobj);
-        if !self.br_player_shown(j, p) {
+        if !self.screen_shown(s, j, p) {
             return;
         }
         let x = player_x(self.game.tou.tm.x30, p as i32);
-        self.tou_move(j, fp::fadds(4.5, x), 5.5, 666.0);
-        if self.br().x2a[p].state == 4 {
+        self.tou_move(j, fp::fadds(4.5, x), s.icon_y, 666.0);
+        if self.scr(s).anims[p].state == 4 {
             self.tou_hide(Some(j));
+        }
+        if s.icon_each_frame {
+            self.alt_icon_model(p, j);
         }
     }
 
-    /// `fn_801975C8`: a player's base, hidden once out.
+    /// A player's base, hidden once out (the match-up screen's taking their character's
+    /// icon and color every frame).
     #[doc(alias = "fn_801975C8")]
-    fn br_base_proc(&mut self, gobj: GObjId) {
+    #[doc(alias = "fn_8019C570")]
+    #[doc(alias("br_base_proc", "alt_base_proc"))]
+    pub(super) fn screen_base_proc(&mut self, gobj: GObjId, s: &Screen) {
         let p = self.tou_index(gobj) as usize;
         let j = self.tou_jobj(gobj);
-        if !self.br_player_shown(j, p) {
+        if !self.screen_shown(s, j, p) {
             return;
         }
-        if self.br().x2a[p].state == 4 {
+        if self.scr(s).anims[p].state == 4 {
             self.tou_hide(Some(j));
         }
+        if !s.icon_each_frame {
+            return;
+        }
+        let m = self.game.tou.tm.x4b8[p];
+        let c = self.tou_child(Some(j));
+        let c = self.tou_next(c);
+        if m.x2 != 0 {
+            self.tou_frame(c, 201.0);
+            return;
+        }
+        self.tou_frame(c, icon_frame(i32::from(m.x1), i32::from(m.x3)));
     }
 
-    /// `fn_801976D4`: the screen's title coming in, sixty frames.
+    /// The screen's title coming in, sixty frames (the match-up screen's, winner-out's or
+    /// loser-out's).
     #[doc(alias = "fn_801976D4")]
-    fn br_title_proc(&mut self, gobj: GObjId) {
+    #[doc(alias = "fn_8019C6AC")]
+    #[doc(alias("br_title_proc", "alt_title_proc"))]
+    pub(super) fn screen_title_proc(&mut self, gobj: GObjId, s: &Screen) {
         let j = self.tou_jobj(gobj);
-        if !self.players_step() {
-            self.tou_hide(Some(j));
+        if !self.screen_step(s, j) {
             return;
         }
-        self.tou_show(Some(j));
-        if self.br().x1c > 0x3C {
-            self.br().x1c = 0x3C;
+        if *self.scr(s).title > 0x3C {
+            *self.scr(s).title = 0x3C;
         }
-        let c = self.br().x1c;
-        self.tou_frame(Some(j), mem(f(i32::from(c))));
-        self.br().x1c = c.wrapping_add(1);
+        let c = *self.scr(s).title;
+        let first = if s.title_by_type {
+            self.game.tou.tm.match_type() * 100 + 100
+        } else {
+            0
+        };
+        self.tou_frame(Some(j), mem(f(i32::from(c) + first)));
+        *self.scr(s).title = c.wrapping_add(1);
     }
 
-    /// `fn_801977AC`: a player's name tag, bouncing away once they're out.
+    /// A player's name tag, bouncing away once they're out.
     #[doc(alias = "fn_801977AC")]
-    fn br_tag_proc(&mut self, gobj: GObjId) {
+    #[doc(alias = "fn_8019C744")]
+    #[doc(alias("br_tag_proc", "alt_tag_proc"))]
+    pub(super) fn screen_tag_proc(&mut self, gobj: GObjId, s: &Screen) {
         let p = self.tou_index(gobj) as usize;
         let j = self.tou_jobj(gobj);
-        if !self.players_step() {
-            self.tou_hide(Some(j));
+        if !self.screen_step(s, j) {
             return;
         }
-        self.tou_show(Some(j));
         let x = player_x(self.game.tou.tm.x30, p as i32);
-        self.tou_move(j, fp::fadds(reg(0.3), x), reg(12.6), 666.0);
-        if self.br().x2a[p].state == 4 {
-            if self.br().x1d[p] < 0x28 {
-                self.br().x1d[p] += 1;
+        self.tou_move(j, fp::fadds(reg(0.3), x), reg(s.tag_y), 666.0);
+        if self.scr(s).anims[p].state == 4 {
+            let c = self.scr(s);
+            if c.bounce[p] < 0x28 {
+                c.bounce[p] += 1;
             }
-            let y = self.game.tou.bounce[usize::from(self.br().x1d[p])];
+            let y = c.bounce_ys[usize::from(c.bounce[p])];
             self.tou_set_ty(Some(j), y);
         } else {
-            self.br().x1d[p] = 0;
+            self.scr(s).bounce[p] = 0;
         }
         if self.tou_pad_err(p) != 0 && self.game.tou.tm.x4b8[p].x0 != 1 {
             self.tou_show(Some(j));
             let x = player_x(self.game.tou.tm.x30, p as i32);
-            self.tou_move(j, fp::fadds(reg(0.3), x), reg(12.6), 666.0);
+            self.tou_move(j, fp::fadds(reg(0.3), x), reg(s.tag_y), 666.0);
         }
+    }
+
+    /// The players' bar coming in, ten frames.
+    #[doc(alias = "fn_80197D4C")]
+    #[doc(alias = "fn_8019CBFC")]
+    #[doc(alias("br_bar_proc", "alt_bar_proc"))]
+    pub(super) fn screen_bar_proc(&mut self, gobj: GObjId, s: &Screen) {
+        let j = self.tou_jobj(gobj);
+        if !self.screen_step(s, j) {
+            return;
+        }
+        let c = i32::from(*self.scr(s).bar);
+        self.tou_frame(Some(j), mem(f(c + s.bar_first)));
+        if *self.scr(s).bar < 10 {
+            *self.scr(s).bar += 1;
+        }
+    }
+
+    /// A player's handicap (with the rule on), on the bracket's screen hidden once out.
+    #[doc(alias = "fn_80197FD8")]
+    #[doc(alias = "fn_8019D074")]
+    #[doc(alias("br_handicap_proc", "alt_handicap_proc"))]
+    pub(super) fn screen_handicap_proc(&mut self, gobj: GObjId, s: &Screen) {
+        let p = self.tou_index(gobj) as usize;
+        let j = self.tou_jobj(gobj);
+        if !self.screen_shown(s, j, p) {
+            return;
+        }
+        if s.handicap_hides_out && self.tou_pad_err(p) == 0 && self.scr(s).anims[p].state == 4 {
+            self.tou_hide(Some(j));
+        }
+        let x = player_x(self.game.tou.tm.x30, p as i32);
+        self.tou_move(j, x, 666.0, 666.0);
+    }
+
+    /// "No controller" over an unplugged player ([`Running::screen_unplugged`]).
+    #[doc(alias = "fn_801983E4")]
+    #[doc(alias = "fn_8019CC74")]
+    #[doc(alias("br_unplugged_proc", "alt_unplugged_proc"))]
+    pub(super) fn screen_unplugged_proc(&mut self, gobj: GObjId, s: &Screen) {
+        let p = self.tou_index(gobj) as usize;
+        let j = self.tou_jobj(gobj);
+        if !self.screen_step(s, j) {
+            return;
+        }
+        if !self.screen_unplugged(s, p) {
+            self.tou_hide(Some(j));
+            return;
+        }
+        if !s.step_only {
+            self.tou_show(Some(j));
+        }
+        let x = player_x(self.game.tou.tm.x30, p as i32);
+        self.tou_move(j, x, 666.0, reg(0.01));
     }
 
     /// `fn_80197AF0`: a human's ready-or-out choice, looping while it's asked.
@@ -378,7 +566,7 @@ impl Running<'_> {
     fn br_choice_proc(&mut self, gobj: GObjId) {
         let p = self.tou_index(gobj) as usize;
         let j = self.tou_jobj(gobj);
-        if !self.br_player_shown(j, p) {
+        if !self.screen_shown(&PLAYERS, j, p) {
             return;
         }
         if self.game.tou.tm.x4b8[p].x0 == 1 {
@@ -399,53 +587,15 @@ impl Running<'_> {
         self.tou_frame(Some(j), mem(f(i32::from(c))));
     }
 
-    /// `fn_80197D4C`: the players' bar coming in, ten frames.
-    #[doc(alias = "fn_80197D4C")]
-    fn br_bar_proc(&mut self, gobj: GObjId) {
-        let j = self.tou_jobj(gobj);
-        if !self.players_step() {
-            self.tou_hide(Some(j));
-            return;
-        }
-        self.tou_show(Some(j));
-        let c = self.br().x29;
-        self.tou_frame(Some(j), mem(f(i32::from(c))));
-        if self.br().x29 < 10 {
-            self.br().x29 += 1;
-        }
-    }
-
     /// `fn_80197E18`: a computer's level, shown for computers.
     #[doc(alias = "fn_80197E18")]
     fn br_level_proc(&mut self, gobj: GObjId) {
         let p = self.tou_index(gobj) as usize;
         let j = self.tou_jobj(gobj);
-        if !self.br_player_shown(j, p) {
+        if !self.screen_shown(&PLAYERS, j, p) {
             return;
         }
         if self.game.tou.tm.x4b8[p].x0 != 1 {
-            self.tou_hide(Some(j));
-        }
-        let x = player_x(self.game.tou.tm.x30, p as i32);
-        self.tou_move(j, x, 666.0, 666.0);
-    }
-
-    /// `fn_80197FD8`: a player's handicap (with the rule on), hidden once out.
-    #[doc(alias = "fn_80197FD8")]
-    fn br_handicap_proc(&mut self, gobj: GObjId) {
-        let p = self.tou_index(gobj) as usize;
-        let j = self.tou_jobj(gobj);
-        if !self.players_step() {
-            self.tou_hide(Some(j));
-            return;
-        }
-        self.tou_show(Some(j));
-        if self.tou_pad_err(p) != 0 {
-            if self.game.tou.tm.x4b8[p].x0 != 1 {
-                self.tou_hide(Some(j));
-                return;
-            }
-        } else if self.br().x2a[p].state == 4 {
             self.tou_hide(Some(j));
         }
         let x = player_x(self.game.tou.tm.x30, p as i32);
@@ -479,24 +629,6 @@ impl Running<'_> {
             i32::from(c) + 0x14
         };
         self.tou_frame(Some(j), mem(f(frame)));
-    }
-
-    /// `fn_801983E4`: "no controller" over an unplugged human.
-    #[doc(alias = "fn_801983E4")]
-    fn br_unplugged_proc(&mut self, gobj: GObjId) {
-        let p = self.tou_index(gobj) as usize;
-        let j = self.tou_jobj(gobj);
-        if !self.players_step() {
-            self.tou_hide(Some(j));
-            return;
-        }
-        self.tou_show(Some(j));
-        if self.tou_pad_err(p) == 0 || self.game.tou.tm.x4b8[p].x0 == 1 {
-            self.tou_hide(Some(j));
-            return;
-        }
-        let x = player_x(self.game.tou.tm.x30, p as i32);
-        self.tou_move(j, x, 666.0, reg(0.01));
     }
 
     /// `fn_80198584`: the computers' match's notice, at its step.
@@ -1466,20 +1598,20 @@ impl Running<'_> {
     #[melee_callbacks::callbacks(Proc)]
     pub(crate) fn tou_bracket_run(&mut self, gobj: GObjId, addr: u32) -> bool {
         match addr {
-            PROC_BG => self.br_bg_proc(gobj),
-            PROC_PANEL => self.br_panel_proc(gobj),
+            PROC_BG => self.screen_bg_proc(gobj, &PLAYERS),
+            PROC_PANEL => self.screen_panel_proc(gobj, &PLAYERS),
             PROC_RANK => self.br_rank_proc(gobj),
-            PROC_PLAYER => self.br_player_proc(gobj),
-            PROC_ICON => self.br_icon_proc(gobj),
-            PROC_BASE => self.br_base_proc(gobj),
-            PROC_TITLE => self.br_title_proc(gobj),
-            PROC_TAG => self.br_tag_proc(gobj),
+            PROC_PLAYER => self.screen_player_proc(gobj, &PLAYERS),
+            PROC_ICON => self.screen_icon_proc(gobj, &PLAYERS),
+            PROC_BASE => self.screen_base_proc(gobj, &PLAYERS),
+            PROC_TITLE => self.screen_title_proc(gobj, &PLAYERS),
+            PROC_TAG => self.screen_tag_proc(gobj, &PLAYERS),
             PROC_CHOICE => self.br_choice_proc(gobj),
-            PROC_BAR => self.br_bar_proc(gobj),
+            PROC_BAR => self.screen_bar_proc(gobj, &PLAYERS),
             PROC_LEVEL => self.br_level_proc(gobj),
-            PROC_HANDICAP => self.br_handicap_proc(gobj),
+            PROC_HANDICAP => self.screen_handicap_proc(gobj, &PLAYERS),
             PROC_CURSOR => self.br_cursor_proc(gobj),
-            PROC_UNPLUGGED => self.br_unplugged_proc(gobj),
+            PROC_UNPLUGGED => self.screen_unplugged_proc(gobj, &PLAYERS),
             PROC_START => self.br_start_proc(gobj),
             PROC_RESULT => self.br_result_proc(gobj),
             PROC_RESULT_ICON => self.br_result_icon_proc(gobj),
