@@ -1,8 +1,10 @@
 //! The transforms on the GPU (F3, xform.wgsl) as the CPU's, over mesh_tests' random display
 //! lists, transform states and normals left by the draws before:
 //!
-//! - each vertex's clip-space position is the CPU's bit for bit (no multiply-add fused), so what
-//!   lies on the depth range's edge stays exactly there;
+//! - each vertex's clip-space position is the CPU's bit for bit (no multiply-add fused, no sum
+//!   reordered: Metal's fast maths reassociates, NVIDIA's Vulkan compiler reorders), so what
+//!   lies on the depth range's edge stays exactly there, on every backend (Metal is checked by
+//!   CI's macOS runner alone);
 //! - the words each draw's vertex shader reads (triangles' vertices, lines' and points' quads)
 //!   are those `crate::build` writes, within float noise: positions within a 64th of a pixel
 //!   (or both off the snap's grid), depth and w exact, colors within a level, texture

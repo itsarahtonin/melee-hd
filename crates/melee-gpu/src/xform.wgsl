@@ -10,9 +10,11 @@
 // here, as melee-gpu's `line` and `point` make them.
 //
 // Every product feeding an add goes through `o`, which the compiler can't see through, so no
-// multiply-add is fused: the positions and depths come out as the CPU's IEEE operations make
-// them, and what lies on the depth range's edge (the shadow cameras' erases, on the near plane)
-// stays exactly there.
+// multiply-add is fused; and so does every sum feeding another add (`sum3`, `sum4`, the lights'
+// running sums, the clip-space position), so no sum is reordered: Metal compiles with fast
+// maths, which reassociates additions (macOS turned `a + b + c + d` into `((d + a) + b) + c`).
+// The positions and depths come out as the CPU's IEEE operations make them, and what lies on
+// the depth range's edge (the shadow cameras' erases, on the near plane) stays exactly there.
 
 @group(0) @binding(0) var<storage, read> arena: array<u32>;
 @group(0) @binding(1) var<storage, read> records: array<u32>;
@@ -101,8 +103,18 @@ fn reg(i: u32) -> u32 {
     return xfd[xf_regs + i - 0x1000u];
 }
 
+/// `(a + b) + c`, in that order, and opaque to the add it feeds.
+fn sum3(a: f32, b: f32, c: f32) -> f32 {
+    return o(o(a + b) + c);
+}
+
+/// `((a + b) + c) + d`, in that order, and opaque to the add it feeds.
+fn sum4(a: f32, b: f32, c: f32, d: f32) -> f32 {
+    return o(o(o(a + b) + c) + d);
+}
+
 fn dot3(a: vec3<f32>, b: vec3<f32>) -> f32 {
-    return o(a.x * b.x) + o(a.y * b.y) + o(a.z * b.z);
+    return sum3(o(a.x * b.x), o(a.y * b.y), o(a.z * b.z));
 }
 
 fn normalized(a: vec3<f32>) -> vec3<f32> {
@@ -113,17 +125,17 @@ fn normalized(a: vec3<f32>) -> vec3<f32> {
 /// A 3x4 matrix of position memory at `at` times (v, 1).
 fn mat34(at: u32, v: vec3<f32>) -> vec3<f32> {
     return vec3<f32>(
-        o(pm(at) * v.x) + o(pm(at + 1u) * v.y) + o(pm(at + 2u) * v.z) + pm(at + 3u),
-        o(pm(at + 4u) * v.x) + o(pm(at + 5u) * v.y) + o(pm(at + 6u) * v.z) + pm(at + 7u),
-        o(pm(at + 8u) * v.x) + o(pm(at + 9u) * v.y) + o(pm(at + 10u) * v.z) + pm(at + 11u),
+        sum4(o(pm(at) * v.x), o(pm(at + 1u) * v.y), o(pm(at + 2u) * v.z), pm(at + 3u)),
+        sum4(o(pm(at + 4u) * v.x), o(pm(at + 5u) * v.y), o(pm(at + 6u) * v.z), pm(at + 7u)),
+        sum4(o(pm(at + 8u) * v.x), o(pm(at + 9u) * v.y), o(pm(at + 10u) * v.z), pm(at + 11u)),
     );
 }
 
 fn post34(at: u32, v: vec3<f32>) -> vec3<f32> {
     return vec3<f32>(
-        o(post(at) * v.x) + o(post(at + 1u) * v.y) + o(post(at + 2u) * v.z) + post(at + 3u),
-        o(post(at + 4u) * v.x) + o(post(at + 5u) * v.y) + o(post(at + 6u) * v.z) + post(at + 7u),
-        o(post(at + 8u) * v.x) + o(post(at + 9u) * v.y) + o(post(at + 10u) * v.z) + post(at + 11u),
+        sum4(o(post(at) * v.x), o(post(at + 1u) * v.y), o(post(at + 2u) * v.z), post(at + 3u)),
+        sum4(o(post(at + 4u) * v.x), o(post(at + 5u) * v.y), o(post(at + 6u) * v.z), post(at + 7u)),
+        sum4(o(post(at + 8u) * v.x), o(post(at + 9u) * v.y), o(post(at + 10u) * v.z), post(at + 11u)),
     );
 }
 
@@ -293,8 +305,8 @@ fn contribution(l: Light, mv: vec3<f32>, normal: vec3<f32>, chan: u32) -> f32 {
             let a = max(dot3(ldir, l.dir), 0.0);
             let c = l.cos_att;
             let d = l.dist_att;
-            let cos_att = c.x + o(c.y * a) + o(o(c.z * a) * a);
-            let dist_att = d.x + o(d.y * dist) + o(d.z * dist2);
+            let cos_att = sum3(c.x, o(c.y * a), o(o(c.z * a) * a));
+            let dist_att = sum3(d.x, o(d.y * dist), o(d.z * dist2));
             attn = safe_divide(max(cos_att, 0.0), dist_att);
         }
         // None and Dir
@@ -352,9 +364,9 @@ fn channel(ch: u32, vc: vec4<u32>, mv: vec3<f32>, normal: vec3<f32>) -> vec4<u32
                 let l = light(i);
                 let s = contribution(l, mv, normal, cc);
                 light_sum = vec3<f32>(
-                    light_sum.x + o(f32(l.color.x) * s),
-                    light_sum.y + o(f32(l.color.y) * s),
-                    light_sum.z + o(f32(l.color.z) * s),
+                    o(light_sum.x + o(f32(l.color.x) * s)),
+                    o(light_sum.y + o(f32(l.color.y) * s)),
+                    o(light_sum.z + o(f32(l.color.z) * s)),
                 );
             }
         }
@@ -375,7 +387,7 @@ fn channel(ch: u32, vc: vec4<u32>, mv: vec3<f32>, normal: vec3<f32>) -> vec4<u32
         for (var i = 0u; i < 8u; i++) {
             if (mask & (1u << i)) != 0u {
                 let l = light(i);
-                light_a = light_a + o(f32(l.color.w) * contribution(l, mv, normal, ac));
+                light_a = o(light_a + o(f32(l.color.w) * contribution(l, mv, normal, ac)));
             }
         }
         color.w = lit(mat_a, light_a);
@@ -410,11 +422,11 @@ fn regular(info: u32, n: u32, v: Input) -> vec3<f32> {
     if !ab11 {
         third = vec3<f32>(o(pm(m + 2u) * src.z), o(pm(m + 6u) * src.z), o(pm(m + 10u) * src.z));
     }
-    let row0 = o(pm(m) * src.x) + o(pm(m + 1u) * src.y) + third.x + pm(m + 3u);
-    let row1 = o(pm(m + 4u) * src.x) + o(pm(m + 5u) * src.y) + third.y + pm(m + 7u);
+    let row0 = sum4(o(pm(m) * src.x), o(pm(m + 1u) * src.y), third.x, pm(m + 3u));
+    let row1 = sum4(o(pm(m + 4u) * src.x), o(pm(m + 5u) * src.y), third.y, pm(m + 7u));
     var dst = vec3<f32>(row0, row1, 1.0);
     if bits(info, 1u, 1u) != 0u {
-        dst.z = o(pm(m + 8u) * src.x) + o(pm(m + 9u) * src.y) + third.z + pm(m + 11u);
+        dst.z = sum4(o(pm(m + 8u) * src.x), o(pm(m + 9u) * src.y), third.z, pm(m + 11u));
     }
     if (reg(0x1012u) & 1u) != 0u {
         let p = reg(0x1050u + n);
@@ -459,18 +471,19 @@ fn transform(v: u32) -> Output {
     let mv = out.mv;
     let p = 0x1020u;
     if reg(p + 6u) == 0u {
+        // Each component opaque to the adds it feeds (`screen`, the depth word's z + w).
         out.clip = vec4<f32>(
-            o(f(reg(p)) * mv.x) + o(f(reg(p + 1u)) * mv.z),
-            o(f(reg(p + 2u)) * mv.y) + o(f(reg(p + 3u)) * mv.z),
+            o(o(f(reg(p)) * mv.x) + o(f(reg(p + 1u)) * mv.z)),
+            o(o(f(reg(p + 2u)) * mv.y) + o(f(reg(p + 3u)) * mv.z)),
             // (p4 mv.z + p5) (1 - 1e-7), as f32 rounds 1 - 1e-7.
             o((o(f(reg(p + 4u)) * mv.z) + f(reg(p + 5u))) * bitcast<f32>(0x3F7FFFFEu)),
             -mv.z,
         );
     } else {
         out.clip = vec4<f32>(
-            o(f(reg(p)) * mv.x) + f(reg(p + 1u)),
-            o(f(reg(p + 2u)) * mv.y) + f(reg(p + 3u)),
-            o(f(reg(p + 4u)) * mv.z) + f(reg(p + 5u)),
+            o(o(f(reg(p)) * mv.x) + f(reg(p + 1u))),
+            o(o(f(reg(p + 2u)) * mv.y) + f(reg(p + 3u))),
+            o(o(f(reg(p + 4u)) * mv.z) + f(reg(p + 5u))),
             1.0,
         );
     }
@@ -502,9 +515,9 @@ fn transform(v: u32) -> Output {
 
 fn normal_mtx(at: u32, n: vec3<f32>) -> vec3<f32> {
     return vec3<f32>(
-        o(nm(at) * n.x) + o(nm(at + 1u) * n.y) + o(nm(at + 2u) * n.z),
-        o(nm(at + 3u) * n.x) + o(nm(at + 4u) * n.y) + o(nm(at + 5u) * n.z),
-        o(nm(at + 6u) * n.x) + o(nm(at + 7u) * n.y) + o(nm(at + 8u) * n.z),
+        sum3(o(nm(at) * n.x), o(nm(at + 1u) * n.y), o(nm(at + 2u) * n.z)),
+        sum3(o(nm(at + 3u) * n.x), o(nm(at + 4u) * n.y), o(nm(at + 5u) * n.z)),
+        sum3(o(nm(at + 6u) * n.x), o(nm(at + 7u) * n.y), o(nm(at + 8u) * n.z)),
     );
 }
 
@@ -538,10 +551,11 @@ fn viewport() -> Viewport {
 /// A clip-space position on the screen (`Viewport::screen`).
 fn screen(vp: Viewport, clip: vec4<f32>) -> vec3<f32> {
     let inv = 1.0 / clip.w;
+    // Opaque to the corners' offsets and `gpu_position`'s scissor offset that follow.
     return vec3<f32>(
-        o(o(clip.x * inv) * vp.wd) + vp.x_orig,
-        o(o(clip.y * inv) * vp.ht) + vp.y_orig,
-        o(o(clip.z * inv) * vp.z_range) + vp.far_z,
+        o(o(o(clip.x * inv) * vp.wd) + vp.x_orig),
+        o(o(o(clip.y * inv) * vp.ht) + vp.y_orig),
+        o(o(o(clip.z * inv) * vp.z_range) + vp.far_z),
     );
 }
 
@@ -562,8 +576,9 @@ fn snap(v: f32) -> f32 {
 fn gpu_position(vp: Viewport, clip: vec4<f32>, at: vec3<f32>) -> vec4<f32> {
     let w = clip.w;
     let off = vec2<f32>(f(r(R_OFF)), f(r(R_OFF + 1u)));
-    var x = snap(at.x - off.x) / 320.0 - 1.0;
-    var y = 1.0 - snap(at.y - off.y) / 264.0;
+    // `at` may be a corner (the screen position plus an offset): kept apart from the scissor's.
+    var x = snap(o(at.x) - off.x) / 320.0 - 1.0;
+    var y = 1.0 - snap(o(at.y) - off.y) / 264.0;
     if is_finite(x) && is_finite(y) {
         x = x * w;
         y = y * w;
