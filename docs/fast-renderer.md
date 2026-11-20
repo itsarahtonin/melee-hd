@@ -2,14 +2,14 @@
 
 The fast renderer is a track of its own beside the refactor ([the refactor](refactor.md#the-fast-renderer)): a GPU-driven renderer for low-end PCs that becomes the default, with the exact renderer (melee-render's GX stream drawn by melee-gpu, [the player](player.md#rendering)) kept as the reference, the frames tests' oracle and an "accurate" option. It may differ from the exact renderer in vertex float maths, the rasterizer's 1/16 snap, depth precision and later enhancements; not in what's drawn, the order, materials, blending or effects (Sarah, 2026-10-19). Its own work needs no full verify: it is checked against the exact renderer (Sarah, 2026-11-14), by the harness below.
 
-This document is F1, the comparison harness and the measurement setup, [F2](#f2-the-mesh-cache), the renderer's first part: the mesh cache, and [F3](#f3-transforms-skinning-and-lighting-on-the-gpu), the transforms, skinning and lighting on the GPU, and [F4](#f4-materials-as-records), materials as records. F5 onward add the rest.
+This document is F1, the comparison harness and the measurement setup, [F2](#f2-the-mesh-cache), the renderer's first part: the mesh cache, and [F3](#f3-transforms-skinning-and-lighting-on-the-gpu), the transforms, skinning and lighting on the GPU, and [F4](#f4-materials-as-records), materials as records, and [F5](#f5-the-whole-scene-first-round)'s first round: the frame run as it's built, and the player's choice of renderer. F5's second round and F6 add the rest.
 
 ## The comparison harness
 
 `melee-render-check fast` (`tools/render-check/src/fast/`) draws a frame two ways from the same state, by a renderer under test and by the exact renderer, and compares each draw's transformed positions and the image.
 
 ```sh
-melee-render-check fast DISC REPLAY [--renderer exact|f2|f3|fast] [--mutate NAME] [--scale N] [--threaded] [--out DIR] FRAME...
+melee-render-check fast DISC REPLAY [--renderer exact|f2|f3|f4|fast] [--mutate NAME] [--scale N] [--threaded] [--out DIR] FRAME...
 ```
 
 FRAME is a native frame (the documented frames' log frame less 3 for a replay; frames named in this document are log frames, as the documented frames name them; `CHECK_FP=slippi` for a Slippi replay, as for `compare`). Each frame is drawn with the eight before it, whose copies it may sample, by both renderers; with `--out`, each compared frame's two images and a heatmap are saved (`frame_N_reference.png`, `frame_N_test.png`, `frame_N_heat.png`). It exits with failure when a frame is out of tolerance, and prints a report per frame:
@@ -104,14 +104,14 @@ SSBM_DISC=... SSBM_RS_LOCAL=... SLIPPI_REPLAYS=... \
 
 `tests/fast.rs` builds only with the `fast` feature, so the pre-push frames step doesn't run it. Unit tests of the measures (CIEDE2000 against Sharma's published pairs, the tolerances, the primitives' expansion, the matching) run with `cargo test -p melee-render-check`.
 
-The fast renderer implements `FrameRenderer` and is the renderer under test with `--renderer fast` (as far as it goes: F4, [below](#f4-materials-as-records), each draw with its specialized shader as after its warm-up), F3 with `--renderer f3` and F2 alone with `--renderer f2`; `tests/fast.rs` runs the fast renderer over the same frames (`the_fast_renderer::*`) and expects every one within tolerance. `--threaded` runs the renderer under test on its own threads, as the player draws (its geometry is then the CPU's transforms of the meshes, the image the GPU's).
+The fast renderer implements `FrameRenderer` and is the renderer under test with `--renderer fast` (as far as it goes: F5's first round, [below](#f5-the-whole-scene-first-round), each draw with its specialized shader as after its warm-up), F4 with `--renderer f4`, F3 with `--renderer f3` and F2 alone with `--renderer f2`; `tests/fast.rs` runs the fast renderer over the same frames (`the_fast_renderer::*`) and expects every one within tolerance. `--threaded` runs the renderer under test on its own threads, as the player draws (its geometry is then the CPU's transforms of the meshes, the image the GPU's).
 
 ## Measuring speed
 
 `melee-render-check bench` (`fast::bench`) draws a replay's frames with one renderer, headless, and measures each frame: the CPU's time building what it draws (the exact renderer's GX stream), submitting it (the stream run, the vertices transformed and the GPU's work submitted: on the renderer's own threads, as the player draws, until the frame's copy to the XFB returns), and the GPU's time finishing it after that. The simulation runs but isn't timed. Frames before `--from` are drawn but not measured (textures, pipelines and specialized shaders made), and the warm-up ends once every specialized shader they asked for is made; the frame stays on the GPU, with no readback. With `--warm-list FILE` the specialized shaders earlier runs needed (FILE, as the player saves its own) are asked for before the first frame, and this run's are added to FILE after: a replay's second run draws no call with the uber shader after the warm-up. It prints the measured frames' draw calls with their specialized shaders and with the uber shader (waiting for theirs). With `PERF_CTL_FIFO` and `PERF_ACK_FIFO` (`perf record -D -1 --control fifo:CTL,ACK`) a profile holds the measured frames alone.
 
 ```sh
-melee-render-check bench DISC REPLAY [--renderer exact|f2|f3|fast] [--scale N] [--from A] [--to B] [--one-thread] [--adapter NAME|fallback] [--warm-list FILE]
+melee-render-check bench DISC REPLAY [--renderer exact|f2|f3|f4|fast] [--scale N] [--from A] [--to B] [--one-thread] [--adapter NAME|fallback] [--warm-list FILE]
 ```
 
 It prints mean and percentiles of each, frames a second (one over the mean of the three: each frame waits for the GPU before the next starts, so this is the renderer's alone with CPU and GPU in turn, a floor under the player, which overlaps them), and a table row. "CPU" (build and submit) is the player's "CPU build" (`--perf-report`), the quantity F2 and F3's targets name; the player's own rate in a window is `melee-bench player`'s ([performance](performance.md#rendering-speed)). `--renderer fast` measures the fast renderer through the same `FrameRenderer`, on the same frames.
@@ -342,7 +342,7 @@ So the rest is F3's and F4's: transforms on the GPU take the transform threads' 
 
 Why the sums too (2026-11-19): Metal compiles with fast maths (wgpu 30 leaves `MTLCompileOptions` at Apple's default, and has no setting for it), which reassociates additions. On CI's macOS runner the position rows `o(a x) + o(b y) + o(c z) + d` came out as `((d + a x) + b y) + c z`, one or two ulps off (`gpu_mesh_tests`, round 7, from batch 4 until this fix). NVIDIA's Vulkan compiler reorders sums too: the spot lights' `d.x + o(d.y dist) + o(d.z dist²)` and `c.x + ...`, whose random terms (`mesh_tests`' multiples of 1/500) often cancel, came out exactly 0 on one side and a tiny remainder on the other, so `safe_divide` gave 1 or a huge scale and a channel came out at its material's level or 0 (869 colors and 279 texture coordinates over tolerance on the worker's GTX 1080 Ti; no NaN or infinity involved). With the barriers, the worker's counts are D3D12's exactly. **Metal is verified only by CI's macOS runner** (GitHub's, its Metal adapter a real one, not a software fallback); no Mac here has run it. The barriers cost nothing measurable: on the worker's exclusive runner (GTX 1080 Ti, Vulkan, driver 580.178.04), `bench --renderer fast` at 1x, frames 600 to 1800, five runs of each build alternated, the medians of the runs' means before and after were 3.399 and 3.347 ms of CPU, 0.281 and 0.215 ms of GPU wait on Fountain of Dreams, and 2.559 and 2.605, 0.112 and 0.111 on fox-marth-ps: within the runs' own spread, in opposite directions. The shadow cameras' erase quads themselves are the CPU's draws until F5; `tests/fast.rs`'s `the_fast_renderer_keeps_the_depth_range_s_edge` holds the fast renderer to no vertex on the other side of the edge from the exact renderer's on the tournament stages' frames, where the erases are, and proves itself on `--mutate edge`, which it fails. On a GPU or shader compiler that fuses or reorders past the barriers anyway, the check is where it shows.
 
-**Not checked: the exact renderer on Metal.** Metal's fast maths applies to the exact renderer's `gx.wgsl` too, and nobody has checked its float sums on Metal: its `opaque` keeps a product from fusing where it's used, but nothing there stops a sum of three or more terms from being reordered (and NVIDIA's Vulkan compiler reorders as well, above). Listed for later; `gx.wgsl` is unchanged.
+**The exact renderer on Metal** (checked in F5, [below](#gxwgsl-under-metals-fast-maths)): `gx.wgsl`'s one float sum that decides pixels, the screen depth, now keeps its product apart from its add, and a GPU test holds it to the CPU's depth bit for bit.
 
 **The frames.** `tests/fast.rs`'s `the_fast_renderer::*`, the 106 frames of 38 matches (2026-11-18, `--test-threads=2`): every frame within tolerance. Every frame's geometry is identical to the exact renderer's (the harness reads the GPU's clip-space positions back, `Renderer::mesh_clips`, a dispatch of the same transforms per mesh draw); 74 images are identical, and 32 differ in a few pixels each (at most 0.005% of a frame over 2.3 ΔE₀₀, no block near its limit): lighting and texture coordinates go through square roots and divisions the GPU rounds otherwise. No frame needed an exception. `--threaded` (the renderer on its threads, as the player draws) was checked by hand on the Fox ditto's 600 and 11000, the Ice Climbers' 600 and 2000 and Fountain of Dreams' 600: the same. The exact renderer's own frames are unchanged: `gpu_transforms` is off for it, and the documented frames (`tests/documented.rs`, all 535 with `--ignored`) pass at `--test-threads=2`.
 
@@ -532,3 +532,124 @@ for r in fox-marth-fd fox-marth-bf fox-marth-ps ics-peach-ps fod; do
   for w in f3 fast; do GX_PROFILE=1 bench $r --renderer $w; done
 done
 ```
+
+## F5: the whole scene (first round)
+
+F5 is an L task in two rounds. This first round runs the frame as it's built, gives the player the fast renderer as a choice, and checks `gx.wgsl` under Metal's fast maths; what it measured decides the second ([what's left](#whats-left-toward-1-ms-after-f5s-first-round)).
+
+**The frame run as it's built** (`--renderer fast`; `melee_render::gpu::Gpu::fast` and `Gpu::run_streamed`, `Frames::frame_streamed` in code). Through F4 the game thread built a frame's whole GX stream, then ran it, and the renderer's threads waited for the build (about 0.9 ms on Fountain of Dreams on the worker). Now the stream goes on in pieces as it's built: at each display draw's start, once at least 4 KB (`STREAM_PIECE`) wait and no display list is being built, the bytes so far run through melee-gx and on to the renderer's threads, which draw the frame's first draws while the rest are built. What's drawn is the same stream in the same order: only when each part of it starts running changes. `Frames::marks` still count from the frame's start, and the harness's geometry recorder takes them as they grow (`StreamObserver`). On one thread nothing draws beside the build, so there the fast renderer builds the frame first, as F4 did (`Gpu::draw`; on one thread the pieces cost 1 to 5% on the worker, below); the harness checks the streamed frame either way (`Exact::always_streamed`). F4 as it was is `--renderer f4`.
+
+**Decision: stream the frame before replacing it.** The brief asked for records built straight from the `Draw` list in place of the GX stream, so the stream's building leaves the fast path. Measured first (the worker's profile below): with F4, the render thread is the critical path (about 2.5 ms of Fountain of Dreams' 3.4 ms frame), and the stream's building (0.9 ms) ran before it, not beside it. Running the stream as it's built takes the building off the frame's critical path at once, for every `Draw` kind, with nothing drawn differently; replacing the stream by records would then shorten the game thread's work, which only shows once the render thread is shorter than it. So the records wait for the render thread's work ([what's left](#whats-left-toward-1-ms-after-f5s-first-round)).
+
+**The flushes' size.** "Fewer, larger submissions" was measured before it was made: the render thread flushes every 160 calls (`FLUSH_AT`), about 7 times a frame on Fountain of Dreams (4 of them for its copies). On the worker's exclusive runner, F5 with `MELEE_GPU_FLUSH_AT` 160, 320, 640 and unlimited (Fountain of Dreams and `fox-marth-ps`, 1x and 5x, two rounds): fewer flushes didn't cut the CPU's frame (Fountain of Dreams at 1x 2.70 to 2.88 ms at 160, 2.78 to 3.13 at the others; `fox-marth-ps` 2.29 to 2.32 against 2.40 to 2.59) and kept the GPU waiting longer after the submit (Fountain of Dreams at 5x 1.87 to 1.89 ms at 160, 2.16 to 2.21 at the others), since the GPU starts each flush's work only when it's submitted. The flushes' time is wgpu's work per call and per state change (encoding about 550 calls and 1,150 state changes a frame on Fountain of Dreams), not per submission, so 160 stays.
+
+### `gx.wgsl` under Metal's fast maths
+
+Metal compiles with fast maths (wgpu 30 leaves `MTLCompileOptions` at Apple's default, with no setting for it), which may fuse a multiply into an add and reorder sums. `gx.wgsl`'s TEV, texture filtering, alpha test, z textures, fog blend and EFB formats are integer maths, exact in any order. Its float maths: the screen depth (`depth.y + depth.x * (z - 1)`), the texture coordinates and colors moved back to the console's sample point (`uv - back * (dx + dy)`), the texture coordinates' projection, the level of detail's sums of two terms, and fog's range adjustment (products and sums of two, a square root and divisions). None sums three terms or more, so reordering can't change any; a fused multiply-add can. Of those, the depth decides pixels wherever two surfaces meet (the depth test compares integers truncated from it): NVIDIA's Vulkan compiler fused it, a depth unit off the CPU's for some depths (`0x3E165284` at z range 3437060 and far z 13936794: the GPU's 11004291, the CPU's 11004292). Its product now goes through `opaque` (as fog's subtraction already did), so no compiler fuses it. The rest change a texture coordinate by an ulp of a texel's 128th at most, which the exact renderer's frames' tolerance already takes from GPUs that fuse there; Metal's fast maths also computes divisions, square roots and `exp2` approximately, which no barrier stops (the projection and fog's range adjustment).
+
+**Checked** (melee-gpu, on the GPU; skipped without one): `depth_tests::the_gpu_writes_the_cpu_s_depth` draws 6,656 flat quads at random depths (a quarter of them anywhere in the floats from 0 to 1), z ranges and far z, and finds every pixel's EFB depth the CPU's, unfused, bit for bit. Without the barrier it fails on this PC's RTX 5070 Ti through Vulkan (the depth above). **What CI's macOS runner now checks:** this test under Metal (GitHub's runner, a real Metal adapter), beside `tev_tests`' specialized shaders against the uber shader (both compiled with fast maths, so a reordering the two compile differently shows there) and `gpu_mesh_tests`' transforms against the CPU's. It doesn't check the rest of a frame's pixels against the CPU's; no Mac here has drawn one. The exact renderer's documented frames after the barrier: [below](#the-frames).
+
+`copy.wgsl`'s box filter (a console pixel from the scaled EFB's pixels, above 1x) summed floats, whose ties' rounding followed the sum's order: it sums integers now, exact in any order (at 1x it averages one pixel, unchanged).
+
+### The player's choice
+
+The settings panel's Display section has a Renderer setting, Fast or Exact (`renderer = fast|exact` in `settings.txt`, `--renderer fast|exact` on the command line), exact by default until Sarah decides ([the player](player.md#rendering)). Its wording (player-facing, proposed 2026-11-20, awaiting Sarah's word): Fast, "Draws the same picture with far less of the processor's time, for low-end PCs and the lowest latency."; Exact, "Draws every frame step by step as the console's graphics chip does: the reference the fast renderer is checked against." **Proposed:** the fast renderer the default, the exact one kept as the accurate choice: every frames test's frame is within tolerance, the player's frame at 1440p is about half the exact renderer's (below), and the latency is lower by as much.
+
+### The frames
+
+`tests/fast.rs`'s `the_fast_renderer::*` with F5 under test (the 106 frames of 38 matches, and the depth range's edge), 2026-11-20 at `--test-threads=2`: every frame within tolerance. DOCUMENTED
+
+### Speed on the worker (2026-11-20), the deciding numbers
+
+`feat/fast-f5` at `95a36a1e` with this section's docs (the worker's snapshot `357c13dd`), release with line tables, on the worker's GTX 1080 Ti through Vulkan, in one exclusive reservation of its runner after its quietness check (processor and GPU idle; 0 to 2% busy between scales). Each replay's warm list made first by one run of each renderer; then the fixed runs, frames 600 to 1800, threaded, in two rounds (exact, F4, F5 in the first and F5, F4, exact in the second), every run warm from its list and no measured call drawn with the uber shader. Each cell gives both rounds: frames a second; the CPU's frame (the mean) in ms, and its 95th percentile in brackets. "F5 against F4" compares the rounds' mean CPU frames; "GPU after" is F5's mean wait for the GPU after the submit:
+
+| Replay | Scale | Exact | F4 | F5 | F5 against F4 | GPU after, F5 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fox-marth-fd` | 1x | 299/296; 3.30 / 3.20 (4.63/3.67) | 473/475; 2.01 / 1.97 (2.52/2.40) | 519/523; 1.82 / 1.78 (2.36/2.25) | -10% | 0.12 |
+| `fox-marth-bf` | 1x | 297/270; 3.31 / 3.53 (4.14/4.73) | 453/455; 2.08 / 2.07 (2.35/2.29) | 484/482; 1.94 / 1.96 (2.32/2.33) | -6% | 0.12 |
+| `fox-marth-ps` | 1x | 257/251; 3.73 / 3.84 (4.86/4.99) | 370/375; 2.57 / 2.57 (3.02/3.00) | 413/414; 2.32 / 2.31 (2.72/2.64) | -10% | 0.11 |
+| `ics-peach-ps` | 1x | 259/258; 3.71 / 3.72 (4.77/5.03) | 361/335; 2.63 / 2.70 (3.69/3.87) | 404/408; 2.37 / 2.36 (3.21/3.27) | -11% | 0.10 |
+| Fountain of Dreams | 1x | 107/111; 8.59 / 8.40 (10.47/9.34) | 289/265; 3.40 / 3.44 (4.13/4.06) | 353/328; 2.74 / 2.85 (3.02/3.69) | -18% | 0.15 |
+| `fox-marth-fd` | 2x | 277/281; 3.28 / 3.22 (4.26/3.98) | 406/394; 1.98 / 2.06 (2.28/2.56) | 435/436; 1.82 / 1.81 (2.34/2.16) | -10% | 0.48 |
+| `fox-marth-bf` | 2x | 239/270; 3.36 / 3.45 (4.03/4.33) | 395/383; 2.17 / 2.24 (2.42/2.94) | 407/417; 2.12 / 2.05 (3.01/2.68) | -5% | 0.34 |
+| `fox-marth-ps` | 2x | 247/257; 3.85 / 3.61 (5.49/4.60) | 330/321; 2.69 / 2.70 (3.22/3.18) | 365/365; 2.39 / 2.39 (3.00/2.93) | -11% | 0.35 |
+| `ics-peach-ps` | 2x | 264/253; 3.55 / 3.69 (4.84/5.00) | 310/301; 2.71 / 2.89 (3.96/4.21) | 357/361; 2.41 / 2.38 (3.58/3.48) | -14% | 0.39 |
+| Fountain of Dreams | 2x | 115/134; 7.80 / 7.28 (8.95/8.86) | 269/268; 3.42 / 3.47 (3.92/4.48) | 307/325; 3.04 / 2.82 (4.10/3.73) | -15% | 0.24 |
+| `fox-marth-fd` | 3x | 249/258; 3.14 / 3.15 (3.75/3.86) | 338/351; 2.03 / 1.99 (2.60/2.53) | 367/375; 1.84 / 1.81 (2.69/2.17) | -9% | 0.87 |
+| `fox-marth-bf` | 3x | 247/239; 3.36 / 3.48 (4.33/4.50) | 323/325; 2.21 / 2.27 (3.04/3.12) | 346/368; 2.09 / 1.97 (2.72/2.28) | -9% | 0.77 |
+| `fox-marth-ps` | 3x | 239/233; 3.70 / 3.84 (4.91/4.94) | 283/280; 2.68 / 2.73 (3.17/3.63) | 292/304; 2.59 / 2.46 (3.56/3.31) | -7% | 0.83 |
+| `ics-peach-ps` | 3x | 237/232; 3.72 / 3.81 (5.08/5.21) | 269/272; 2.82 / 2.79 (4.23/4.12) | 305/298; 2.40 / 2.49 (3.45/3.73) | -13% | 0.87 |
+| Fountain of Dreams | 3x | 131/128; 7.17 / 7.31 (8.26/8.74) | 245/242; 3.41 / 3.59 (3.86/4.71) | 299/288; 2.83 / 2.97 (3.73/4.08) | -17% | 0.51 |
+| `fox-marth-fd` | 5x | 185/184; 3.24 / 3.27 (4.16/4.06) | 220/218; 2.10 / 2.18 (2.93/3.53) | 242/241; 1.82 / 1.86 (2.22/2.51) | -14% | 2.30 |
+| `fox-marth-bf` | 5x | 183/182; 3.39 / 3.42 (4.36/4.46) | 217/217; 2.27 / 2.26 (3.39/3.63) | 237/234; 2.04 / 2.12 (2.69/2.97) | -8% | 2.17 |
+| `fox-marth-ps` | 5x | 166/163; 3.65 / 3.81 (4.88/5.40) | 167/165; 2.79 / 2.98 (3.48/4.38) | 185/186; 2.62 / 2.55 (4.01/3.66) | -10% | 2.81 |
+| `ics-peach-ps` | 5x | 156/156; 3.69 / 3.70 (5.16/5.18) | 153/154; 3.11 / 2.96 (4.85/4.50) | 170/171; 2.60 / 2.61 (4.16/4.00) | -14% | 3.26 |
+| Fountain of Dreams | 5x | 120/120; 7.20 / 7.26 (8.60/8.99) | 180/177; 3.57 / 3.70 (4.80/5.02) | 210/207; 2.82 / 2.96 (3.89/4.04) | -20% | 1.91 |
+
+The low-end runs, one round (on one thread F5 is F4, as `Gpu::draw` does; these ran the streamed frame there, so they show what the pieces cost without threads):
+
+| Replay | Setting | Exact | F4 | F5 | F5 against F4 | GPU after, F5 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fox-marth-fd` | `--one-thread` | 115; 7.33 (8.08) | 441; 2.06 (2.36) | 437; 2.08 (2.37) | +1% | 0.21 |
+| `fox-marth-fd` | `MELEE_GPU_WORKERS=1` | 124; 6.87 (7.93) | 486; 1.90 (2.37) | 526; 1.75 (2.28) | -8% | 0.15 |
+| `fox-marth-fd` | `MELEE_GPU_WORKERS=1`, two cores | 120; 6.94 (7.77) | 441; 2.11 (2.50) | 492; 1.91 (2.30) | -9% | 0.12 |
+| `fox-marth-ps` | `--one-thread` | 89; 9.27 (10.36) | 297; 3.17 (3.70) | 282; 3.28 (3.83) | +3% | 0.27 |
+| `fox-marth-ps` | `MELEE_GPU_WORKERS=1` | 119; 7.69 (8.51) | 346; 2.67 (3.68) | 405; 2.37 (3.18) | -11% | 0.10 |
+| `fox-marth-ps` | `MELEE_GPU_WORKERS=1`, two cores | 132; 7.52 (8.56) | 286; 3.10 (3.81) | 351; 2.61 (3.12) | -16% | 0.24 |
+| `ics-peach-ps` | `--one-thread` | 113; 8.74 (9.62) | 281; 3.31 (4.03) | 269; 3.46 (4.19) | +5% | 0.25 |
+| `ics-peach-ps` | `MELEE_GPU_WORKERS=1` | 129; 7.38 (8.08) | 350; 2.69 (4.03) | 412; 2.32 (3.42) | -14% | 0.10 |
+| `ics-peach-ps` | `MELEE_GPU_WORKERS=1`, two cores | 118; 7.83 (8.73) | 273; 3.28 (4.13) | 348; 2.72 (3.44) | -17% | 0.15 |
+| Fountain of Dreams | `--one-thread` | 46; 18.41 (19.74) | 204; 4.09 (4.89) | 201; 4.11 (4.99) | +0% | 0.86 |
+| Fountain of Dreams | `MELEE_GPU_WORKERS=1` | 61; 15.14 (17.18) | 261; 3.50 (4.31) | 332; 2.82 (3.93) | -19% | 0.19 |
+| Fountain of Dreams | `MELEE_GPU_WORKERS=1`, two cores | 60; 15.39 (16.46) | 218; 4.07 (4.85) | 259; 3.43 (3.96) | -16% | 0.43 |
+
+**The player at 1440p** (`melee-hd --replay R --bench 1980 --size 2560x1440 --renderer exact|fast`, headless, internal 3x; two runs each, in the same reservation; a frame's ticks and drawing are the simulation, the GX stream and the renderer, and presenting adds the GPU's wait and the present):
+
+| Replay | Renderer | A frame's ticks and drawing: p50, p99 (ms) | With presenting: p50, p99 | The renderer, a frame (mean) |
+| --- | --- | --- | --- | --- |
+| `fox-marth-ps` | exact | 5.77, 8.59 / 4.89, 7.74 | 9.69, 14.08 / 5.37, 9.18 | 3.69 / 3.11 (and the GX stream 0.86 / 0.76) |
+| `fox-marth-ps` | fast | 3.71, 6.08 / 3.42, 5.66 | 4.61, 10.29 / 4.31, 10.43 | 4.92 / 2.43 (the stream within it) |
+| Fountain of Dreams | exact | 8.86, 13.75 / 8.97, 14.30 | 9.53, 16.53 / 9.51, 17.11 | 6.70 / 6.81 (and the GX stream 1.03 / 1.03) |
+| Fountain of Dreams | fast | 4.16, 7.24 / 4.21, 7.74 | 4.72, 11.21 / 4.75, 14.28 | 3.02 / 3.11 (the stream within it) |
+
+The fast renderer's first run on `fox-marth-ps` spent 4.6 s on one frame (its worst; the driver compiling the barriered shaders the first time, which its shader cache keeps after), which is in that run's mean renderer time, not in its percentiles.
+
+**Against the targets.** The player's 99th percentile at 1440p: the frame's ticks and drawing are under 8 ms with the fast renderer (5.7 to 7.7 ms; the exact renderer 7.7 to 14.3), the frame with presenting isn't (10.3 to 14.3 ms: the GPU's wait and the present, whose worst frames F5 doesn't touch). The CPU's frame under 1 ms on every stage: not met. F5 is 1.8 to 2.1 ms on Final Destination and Battlefield, 2.3 to 2.6 on Pokémon Stadium (both matches) and 2.7 to 3.0 on Fountain of Dreams threaded, 5 to 20% below F4 and 30 to 67% below the exact renderer. What's left:
+
+### What's left toward 1 ms (after F5's first round)
+
+From the worker's profile of the measured frames (`perf record -e task-clock -F 2000`, F5 on Fountain of Dreams at 1x threaded, the measured frames alone) and `GX_PROFILE`'s split:
+
+- **The render thread is the critical path**: about 2.5 ms a frame (2.99 s on the CPU over 1,201 frames). Its flushes are about 1.3 ms of it (wgpu's encoding of about 550 calls and 1,150 state changes, the uploads, the transforms' pass and 7 submits; wgpu-core's trackers and binders and the driver, none of it a single hot spot), the draws' state 0.33, the rest the meshes' records, the state's changes and the packets. The flushes don't shrink with fewer submissions (above); they shrink with fewer calls or state changes, or move: encoding a flush on a thread of its own while the render thread builds the next takes them off the critical path (about 1.3 ms there), which every queue write and copy would then go through in order.
+- **The game thread** builds and runs the stream beside it, about 1.7 ms a frame besides the simulation (3.2 ms with it): melee-gx's parsing (`State::run`, the game thread's largest function), HSD's matrices and materials, the state's changes for the threads (`take_delta_into`). Once the render thread is under it, this is the critical path, and records built straight from the `Draw` list (or, first, GX writing its registers straight into melee-gx's state with no bytes encoded and parsed) are what shorten it.
+- **The meshes' records on the transform threads** (F4's optional part): not done. The profile has `GpuMeshes::draw` and `Batch::record` at under 2% of the render thread; the 0.6 ms `GX_PROFILE` calls the meshes' transforms includes the flushes they start.
+
+So 1 ms needs both threads well under it: the render thread's flushes off its path and fewer calls, then the game thread's stream replaced. F5's second round.
+
+The commands (the worker's scripts set `R` to the build and `bench R ...` to `melee-render-check bench "$SSBM_DISC" R.slp --warm-list warm-R.bin ...`, Fountain of Dreams with `CHECK_FP=slippi`):
+
+```sh
+# The warm lists, then two rounds, the renderers' order turned round in the second.
+for r in fox-marth-fd fox-marth-bf fox-marth-ps ics-peach-ps fod; do
+  for w in exact f4 fast; do bench $r --renderer $w; done
+done
+for s in 1 2 3 5; do
+  for r in fox-marth-fd fox-marth-bf fox-marth-ps ics-peach-ps fod; do
+    for w in exact f4 fast; do bench $r --scale $s --renderer $w; done
+  done
+done
+# The low-end runs.
+for w in exact f4 fast; do
+  for r in fox-marth-fd fox-marth-ps ics-peach-ps fod; do
+    bench $r --renderer $w --one-thread
+    MELEE_GPU_WORKERS=1 bench $r --renderer $w
+    MELEE_GPU_WORKERS=1 taskset -c 0,1 bench $r --renderer $w
+  done
+done
+# The flush threshold.
+for f in 160 320 640 100000; do MELEE_GPU_FLUSH_AT=$f GX_PROFILE=1 bench fod --renderer fast --scale 5; done
+# The player at 1440p.
+melee-hd --disc "$SSBM_DISC" --replay R.slp --bench 1980 --size 2560x1440 --renderer fast
+```
+
+**Indicative, on the busy PC** (2026-11-20, the machine at 100% with other agents' work; these decide nothing): Fountain of Dreams at 1x threaded, three alternating pairs of F4 and F5, 6.17 / 4.83, 4.77 / 4.71 and 5.63 / 4.98 ms; the player's `--bench 1200` on `fox-marth-fd` at 2x, p50 of a frame's ticks and drawing 2.39 and 2.59 ms fast against 3.74 exact.

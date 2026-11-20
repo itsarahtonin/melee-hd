@@ -359,6 +359,7 @@ pub fn cli(args: &[String]) -> ExitCode {
     }
     let mut test: Box<dyn FrameRenderer> = match which.fast(r, threaded) {
         Some(fast) => {
+            let fast = fast.always_streamed();
             assert_eq!(
                 mutation,
                 Mutation::None,

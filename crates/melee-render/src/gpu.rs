@@ -213,8 +213,8 @@ impl Gpu {
     }
 
     /// The fast renderer (docs/fast-renderer.md): the meshes ([`Gpu::with_meshes`]) transformed
-    /// on the GPU, each draw's state from its material's record, and each frame run as it's
-    /// built ([`Gpu::draw`]), on the renderer's own threads unless `threaded` is false.
+    /// on the GPU and each draw's state from its material's record, on the renderer's own
+    /// threads unless `threaded` is false, where each frame runs as it's built ([`Gpu::draw`]).
     pub fn fast(mut renderer: Renderer, threaded: bool) -> Gpu {
         renderer.gpu_transforms = true;
         renderer.material_records = true;
@@ -233,8 +233,8 @@ impl Gpu {
         self.streamed
     }
 
-    /// Builds and draws a frame with `frames`: the fast renderer runs it as it's built
-    /// ([`Gpu::run_streamed`]), the exact one once `Frames::frame_blended` has built it. Returns
+    /// Builds and draws a frame with `frames`: the fast renderer on its threads runs it as it's
+    /// built ([`Gpu::run_streamed`]), the exact one and the fast one on one thread once `Frames::frame_blended` has built it. Returns
     /// the frames it copied to the XFB.
     pub fn draw(
         &mut self,
@@ -244,7 +244,9 @@ impl Gpu {
         draws: &[melee_sim::hsd::display::Draw],
         blend: Option<crate::blend::Blend<'_>>,
     ) -> Vec<Frame> {
-        if self.streamed {
+        // On one thread nothing draws beside the build: the stream in pieces only costs.
+        let threaded = matches!(*self.renderer.borrow(), Backend::Threaded(_));
+        if self.streamed && threaded {
             self.run_streamed(frames, game, data, draws, blend, None)
         } else {
             let fifo = frames.frame_blended(game, data, draws, blend);

@@ -36,6 +36,8 @@ pub struct Exact {
     material_records: bool,
     /// Each frame run as it's built (F5).
     streamed: bool,
+    /// F5 (streamed only on threads).
+    fast: bool,
 }
 
 impl Exact {
@@ -56,15 +58,25 @@ impl Exact {
             gpu_transforms,
             material_records,
             streamed: false,
+            fast: false,
         }
     }
 
     /// The fast renderer as far as it goes (F5): F4, each frame run as it's built
-    /// (`Gpu::run_streamed`), so the renderer's threads draw beside the game thread.
+    /// (`Gpu::run_streamed`) where it runs on threads of its own, so they draw beside the game
+    /// thread (as `Gpu::draw` does; on one thread it's F4).
     pub fn fast(renderer: Renderer, threaded: bool) -> Exact {
         let mut r = Exact::f4(renderer, threaded);
-        r.streamed = true;
+        r.streamed = threaded;
+        r.fast = true;
         r
+    }
+
+    /// Runs each frame as it's built on one thread too: the harness checks the streamed frame
+    /// whether or not the renderer has threads of its own.
+    pub fn always_streamed(mut self) -> Exact {
+        self.streamed = self.fast;
+        self
     }
 
     /// F4: the exact renderer with its shapes' display lists drawn from meshes decoded once
@@ -110,7 +122,7 @@ impl Exact {
 
 impl FrameRenderer for Exact {
     fn name(&self) -> String {
-        if self.gpu.meshes().is_some() && self.material_records && self.streamed {
+        if self.gpu.meshes().is_some() && self.material_records && self.fast {
             "fast (F5: the frame run as it's built)".to_owned()
         } else if self.gpu.meshes().is_some() && self.gpu_transforms && self.material_records {
             "F4 (materials as records)".to_owned()
