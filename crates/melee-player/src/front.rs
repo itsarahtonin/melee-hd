@@ -172,11 +172,12 @@ pub const STOP_TEXT: &str = "Melee reached something melee-hd can't play yet, or
 pub const REPORT_BUTTON: &str = "Report a bug";
 pub const REPORT_HELP: &str = "Saves a zip in the settings folder with this session's recording, the log, your latest captures and your settings, and opens the folder. Nothing is sent anywhere: attach the zip to your report yourself.";
 
-/// The Renderer setting's choices and help lines (proposed 2026-11-20, awaiting Sarah's word).
+/// The Renderer setting's choices and help lines (Sarah, 2026-11-20: signed off, Fast's line
+/// with "giving high performance" for "for low-end PCs").
 fn renderer_name(fast: bool) -> &'static str {
     if fast { "Fast" } else { "Exact" }
 }
-pub const RENDERER_FAST_HELP: &str = "Draws the same picture with far less of the processor's time, for low-end PCs and the lowest latency.";
+pub const RENDERER_FAST_HELP: &str = "Draws the same picture with far less of the processor's time, giving high performance and the lowest latency.";
 pub const RENDERER_EXACT_HELP: &str = "Draws every frame step by step as the console's graphics chip does: the reference the fast renderer is checked against.";
 
 /// A debug level's line of [`DEBUG_LEVELS`] (Off's for one not offered).
@@ -219,7 +220,8 @@ impl Default for Settings {
             fullscreen: false,
             scale: 0,
             msaa: false,
-            fast_renderer: false,
+            // The fast renderer by default since 2026-11-20 (Sarah).
+            fast_renderer: true,
             // Both on by default since 2026-11-14 (Sarah).
             high_refresh: Mode::Extrapolate,
             present: Present::Mailbox,
@@ -1093,7 +1095,7 @@ mod tests {
             fullscreen: true,
             scale: 3,
             msaa: true,
-            fast_renderer: true,
+            fast_renderer: false,
             high_refresh: Mode::Off,
             present: Present::Immediate,
             added_delay: 2,
@@ -1142,6 +1144,19 @@ mod tests {
         s.restore(&picked().save(), &given);
         assert_eq!((s.scale, s.aspect), (2, Aspect::STRETCHED));
         assert!(s.msaa && !s.record_sessions);
+    }
+
+    /// The fast renderer is the default (Sarah, 2026-11-20); a file that names the exact one
+    /// keeps it, and one that names neither takes the default.
+    #[test]
+    fn the_fast_renderer_is_the_default() {
+        assert!(Settings::default().fast_renderer);
+        let mut s = Settings::default();
+        s.restore("renderer = exact\n", &Given::default());
+        assert!(!s.fast_renderer);
+        let mut s = Settings::default();
+        s.restore("msaa = 4\n", &Given::default());
+        assert!(s.fast_renderer);
     }
 
     /// High refresh and just-in-time ticks are on by default; an older file's Interpolate reads

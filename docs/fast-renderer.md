@@ -553,7 +553,7 @@ Metal compiles with fast maths (wgpu 30 leaves `MTLCompileOptions` at Apple's de
 
 ### The player's choice
 
-The settings panel's Display section has a Renderer setting, Fast or Exact (`renderer = fast|exact` in `settings.txt`, `--renderer fast|exact` on the command line), exact by default until Sarah decides ([the player](player.md#rendering)). Its wording (player-facing, proposed 2026-11-20, awaiting Sarah's word): Fast, "Draws the same picture with far less of the processor's time, for low-end PCs and the lowest latency."; Exact, "Draws every frame step by step as the console's graphics chip does: the reference the fast renderer is checked against." **Proposed:** the fast renderer the default, the exact one kept as the accurate choice: every frames test's frame is within tolerance, the player's frame at 1440p is about half the exact renderer's (below), and the latency is lower by as much.
+The settings panel's Display section has a Renderer setting, Fast or Exact (`renderer = fast|exact` in `settings.txt`, `--renderer fast|exact` on the command line), fast by default since 2026-11-20 (Sarah: "fast default sounds good to me"), the exact one kept as the accurate choice ([the player](player.md#rendering)). Its wording, signed off the same day: Fast, "Draws the same picture with far less of the processor's time, giving high performance and the lowest latency."; Exact, "Draws every frame step by step as the console's graphics chip does: the reference the fast renderer is checked against."
 
 ### The frames
 

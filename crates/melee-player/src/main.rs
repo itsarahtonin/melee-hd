@@ -336,7 +336,8 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
         aspect: present::Aspect::GAME,
         one_thread: false,
         msaa: 1,
-        fast: false,
+        // The fast renderer by default (Sarah, 2026-11-20); `--renderer exact` for the other.
+        fast: true,
         front: false,
         settings_shot: None,
         settings_tab: front::Tab::Settings,
