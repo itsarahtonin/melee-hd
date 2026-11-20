@@ -324,7 +324,7 @@ pub fn proc_flights(r: &mut Running, gobj: GObjId) {
     let (step, mut x) = flight_start(from, count, left, right);
     // Under Slippi's rules, where it would start through the views playback's run can leave
     // the camera's CObj (`Game::playback_spans`, design call 9).
-    if r.game.rules.slippi
+    if r.game.rules.notes_playback()
         && r.game.playback_spans(r.data).is_none_or(|spans| {
             (spans.into_iter().flatten()).any(|[left, _, right]| {
                 flight_start(from, count, left, right).1.to_bits() != x.to_bits()

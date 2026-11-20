@@ -231,10 +231,7 @@ pub fn opponents_dir(game: &mut Game, data: &Archives, pos: Vec3, gobj: Option<G
         let v = camera_bone_pos(game, data, g);
         // The Slippi ruleset's WhispyBlowDirFix (`8008653C`, not in 3.14's codes): a fighter in
         // a dead or sleeping state (motion 11 or below) counts for neither side.
-        if game.rules.slippi
-            && game.rules.codes != crate::game::slippi::CodeSet::V3_14
-            && fighter(game, g).motion_id <= 11
-        {
+        if game.rules.whispy_blow_dir_fix() && fighter(game, g).motion_id <= 11 {
             continue;
         }
         result = result.wrapping_add(if fp::fsubs(reg(v.x), reg(pos.x)) < 0.0 {
@@ -292,7 +289,7 @@ fn nearest_by_bone(
         n += 1;
     }
     let result = nearest_of(pos, &bones[..n], facing_dir);
-    if game.rules.slippi {
+    if game.rules.notes_playback() {
         // The bones with each fighter the camera places at the other display-phase placement;
         // while playback's camera is followed apart from this one, at the logic's placement and
         // at the pass's through playback's camera instead (`DisplayPhase::place`).

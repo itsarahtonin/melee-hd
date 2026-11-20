@@ -690,7 +690,7 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
             let speed = v.car_speed;
             drive(r.game, car_j, speed);
             let x110 = r.game.grounds[g.0].u.onett_car().x110;
-            if x110 == 1 && r.game.rules.slippi {
+            if x110 == 1 && r.game.rules.notes_playback() {
                 let horn = p.f(r.data, p::HORN_X);
                 note_other_phase(r, car_j, [center, right], horn);
             }

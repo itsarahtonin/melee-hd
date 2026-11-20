@@ -26,7 +26,6 @@ use melee_data::archive::{ArchiveId, Archives, DataRef};
 
 use super::super::camera;
 use super::super::handles::{CameraBoxId, CodeRef};
-use super::super::slippi::CodeSet;
 use super::super::state::{Game, OBJ_CAMERA, Obj, Running, UserData};
 use super::super::structs::HSD_ImageDesc;
 use super::data::{STADIUM_CALLBACKS, StageCallbacks};
@@ -923,7 +922,7 @@ pub fn display_tick(r: &mut Running, gobj: GObjId) {
 /// player's position is within fixed bounds, the code's own data.
 fn zoom_keeps_player(r: &mut Running, gobj: GObjId) -> bool {
     let in_view = zoom_origin(r, gobj);
-    if !r.game.rules.slippi {
+    if !r.game.rules.stadium_monitor_fixed() {
         return in_view;
     }
     let g = ground_of(r.game, gobj);
@@ -1035,7 +1034,7 @@ pub fn next_mode(r: &mut Running, gobj: GObjId) {
     } else {
         // The monitor weights code (`game::player_codes`) loads 0 for the weights of modes 8
         // and 7 and skips the repeat check.
-        let weights = r.game.rules.player.stadium_weights;
+        let weights = r.game.rules.stadium_weights();
         let (w48, w4a, w4c, w4e) = (
             if weights { 0 } else { i32::from(p.h(d, 0x48)) },
             i32::from(p.h(d, 0x4A)),
@@ -1734,7 +1733,7 @@ pub fn dust(r: &mut Running, gobj: GObjId) {
 /// `801D4724`, and clearing their mark at `801D4F14`) all sit in the cycle past that return,
 /// so they never run; only their mark's clearing in the setup (`801D14C8`) does.
 pub fn frozen(game: &Game) -> bool {
-    game.rules.slippi && game.rules.codes != CodeSet::V3_19
+    game.rules.stadium_frozen()
 }
 
 /// The transformation cycle, `grStadium_801D4548` (the replays' with the Slippi ruleset's codes
@@ -1964,7 +1963,7 @@ pub fn free_archive(game: &mut Game, slot: Option<u8>) {
     let Some(slot) = slot else { return };
     let e = &mut game.gr.archives[slot as usize];
     match e {
-        None if game.rules.slippi => {}
+        None if game.rules.stadium_loads_synchronously() => {}
         None => panic!("grAnime_801C65B0 frees an empty entry's null archive"),
         Some(a) if a.kind == 0 => {
             panic!("freeing a stage archive the stage loaded itself (lbArchive_80016EFC)")
@@ -2003,7 +2002,7 @@ pub fn start_load(r: &mut Running, idx: usize) {
     let (entrynum, size) = r.game.ft.data.files.entry(name);
     r.game.grounds[g.0].u.stadium().size = size;
     let buffer = r.game.grounds[g.0].u.stadium().buffer;
-    if !r.game.rules.slippi {
+    if !r.game.rules.stadium_loads_synchronously() {
         // `lbFile_800164A4`: queued on the device commands, ending in `fn_801D4220`
         // ([`take_load_end`]) on the timeline; only a timeline ends it.
         assert!(
@@ -2112,7 +2111,7 @@ fn register_archive(
 #[doc(alias = "grStadium_801D42B8")]
 fn load_done(r: &mut Running) -> bool {
     let gm = map_gobj(r.game, MAP_MAIN).expect("grpstadium.c: map_gobj");
-    if !r.game.rules.slippi {
+    if !r.game.rules.stadium_loads_synchronously() {
         // The original's: once `fn_801D4220` cleared the mark, registers the buffer's archive
         // (`grDatFiles_801C6478`, marking its materials).
         take_load_end(r.game);

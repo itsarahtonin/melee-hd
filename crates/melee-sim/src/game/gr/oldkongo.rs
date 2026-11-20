@@ -605,7 +605,7 @@ pub fn proc_birds(r: &mut Running, gobj: GObjId) {
         let part = if from_right { 3 } else { 1 };
         // Under Slippi's rules, where they'd start through the views playback's run can leave
         // the camera's CObj (`Game::playback_spans`, design call 9).
-        if r.game.rules.slippi
+        if r.game.rules.notes_playback()
             && r.game.playback_spans(r.data).is_none_or(|spans| {
                 (spans.into_iter().flatten()).any(|[left, _, right]| {
                     birds_x(from_right, left, right).to_bits() != x.to_bits()
