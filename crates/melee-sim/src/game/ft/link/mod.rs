@@ -25,10 +25,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `FTKIND_LINK` and `FTKIND_CLINK`.
-pub const KIND_LINK: i32 = 6;
-pub const KIND_CLINK: i32 = 20;
-
 /// Link's functions, by address: the callbacks his states and hooks hold and the entries other
 /// code calls.
 pub mod addr {

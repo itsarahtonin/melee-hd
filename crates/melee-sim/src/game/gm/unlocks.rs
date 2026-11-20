@@ -10,6 +10,7 @@
 use super::super::state::{Game, Running};
 use super::code;
 use super::machine::GM_CHALLENGER_APPROACH;
+use crate::game::ft::CharacterKind;
 
 /// A selectable character's kind, `gm_SelKindToCKind` (`selkind_to_ckind_map`).
 pub fn selkind_to_ckind(selkind: u8) -> u8 {
@@ -456,7 +457,7 @@ impl Running<'_> {
     pub fn challenger_check(&mut self, mode: u8, slot: u8) -> bool {
         if self.notice_waits() {
             self.game.gm.challenger = ChallengerData {
-                human_ckind: CKIND_NONE,
+                human_ckind: CharacterKind::NONE,
                 human_slot: slot,
                 curr_mode: mode,
                 ..ChallengerData::default()
@@ -469,9 +470,6 @@ impl Running<'_> {
         false
     }
 }
-
-/// `ChKind_None`.
-const CKIND_NONE: u8 = 0x21;
 
 /// `lbl_803D6300`'s messages and masks (`0x42` ends it).
 const MESSAGE_MASKS: [(u8, u16); 41] = [

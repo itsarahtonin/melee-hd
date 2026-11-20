@@ -7,12 +7,14 @@
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{self as it_kinds, yoshiegglay, yoshitongue};
+use super::super::super::it::kinds::{yoshiegglay, yoshitongue};
 use super::super::super::state::Running;
 use super::super::co::yoshi_egg::KB_CAPTURE;
 use super::super::parts::TRANS_N2;
 use super::{ms, u};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
@@ -69,8 +71,6 @@ pub(super) mod addr {
     pub const RELEASE_ITEM: u32 = 0x8010_A8BC;
 }
 
-/// Yoshi's copied kind.
-const KIND_YOSHI: usize = 14;
 /// The swallow's flags (keeping the tongue's effects and models), the catch's, and the
 /// switches between the ground and the air (`ftYs_MF_SpecialN_Coll`, `_CollHit`).
 const FLAGS0: u32 = 0x80012;
@@ -95,7 +95,8 @@ impl Running<'_> {
     /// One of the copy's tongue animations (its data's dynamics `idx`) put on his hat and
     /// started, and played a frame when `play`.
     fn kb_ys_hat_anim(&mut self, gobj: GObjId, idx: u32, play: bool) {
-        let copy = self.game.ft.kirby.copies[KIND_YOSHI].expect("a copy without its data");
+        let copy =
+            self.game.ft.kirby.copies[FighterKind::Yoshi.index()].expect("a copy without its data");
         let anim = self.data.ptr(copy.at(0xC + 4 * idx));
         let hat = self.game.fighter(gobj).u.jobj_at(u::HAT_JOBJ);
         jobj::add_anim_all(&mut self.game.objs, self.data, hat, anim, None, None);
@@ -342,7 +343,7 @@ impl Running<'_> {
             ));
             let (a, b) = (self.kb_ext_attr_f32(DAMAGE), self.kb_ext_attr_f32(BEHAVIOR));
             let laid = yoshiegglay::Laid {
-                kind: it_kinds::KIRBY_YOSHI_EGG_LAY,
+                kind: ItKind::KirbyYoshiEggLay.id(),
                 pos,
                 vel: Vec3::new(vx, self.kb_attr_f32(f, VEL_Y), 0.0),
                 facing_dir: facing,

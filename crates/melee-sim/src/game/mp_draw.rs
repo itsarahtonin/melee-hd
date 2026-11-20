@@ -11,6 +11,7 @@ use gekko_fp as fp;
 use super::gr::{ground, stage};
 use super::state::Running;
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::structs::CollData;
 use crate::hsd::gobj::GObjId;
 use crate::lb::coll_draw::{self, DebugDraw};
@@ -225,7 +226,7 @@ impl Running<'_> {
             if cd.x38 == generation {
                 self.map_ecbs(&cd);
             }
-            if kind == super::it::kinds::LINK_HSHOT {
+            if kind == ItKind::LinkHShot {
                 let tip = super::it::item_mut(self.game, g)
                     .xDD4_itemVar
                     .link_hookshot()

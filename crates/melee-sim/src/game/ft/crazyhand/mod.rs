@@ -29,8 +29,6 @@ use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
-pub use super::masterhand::{KIND_CRAZY_HAND, KIND_MASTER_HAND};
-
 /// `It_Kind_CrazyHand_Laser`, `_Bullet` and `_Bomb`, his articles in his `ftData`'s order.
 pub const ITEMS: [i32; 3] = [127, 128, 129];
 

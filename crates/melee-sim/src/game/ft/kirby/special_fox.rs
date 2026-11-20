@@ -12,6 +12,7 @@ use super::super::co::ids::ms as co_ms;
 use super::super::motion::flags::{KEEP_GFX, SKIP_ATTACK_COUNT, SKIP_MODEL};
 use super::{attr, ms, u};
 use crate::fpu::reg;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -56,9 +57,6 @@ pub(crate) const BLASTER: usize = 0xB0;
 const MV_LOOP: usize = 0x0;
 /// `FtPart_R3rdNa`: the joint the blaster is held at.
 const PART_R3RD_NA: i32 = 44;
-/// The copied kinds.
-const KIND_FOX: i32 = 1;
-const KIND_FALCO: i32 = 22;
 /// `HSD_PAD_B`.
 const PAD_B: u32 = 0x200;
 /// The shot's sound, facing right and left (`ftKb_Init_804D3DB8`, `ftKb_Init_804D3DC0`).
@@ -67,7 +65,7 @@ const FALCO_SFX: [i32; 2] = [0x18703, 0x18706];
 
 /// The copy's six states, as their first.
 fn first_state(kind: i32) -> i32 {
-    if kind == KIND_FALCO {
+    if kind == FighterKind::Falco {
         ms::FC_SPECIAL_N_START
     } else {
         ms::FX_SPECIAL_N_START
@@ -119,7 +117,7 @@ impl Running<'_> {
         let Some(gobj) = gobj else { return 9 };
         let fp = self.game.fighter(gobj);
         let kind = fp.u_i32(u::HAT_KIND);
-        if kind != KIND_FOX && kind != KIND_FALCO {
+        if kind != FighterKind::Fox && kind != FighterKind::Falco {
             return 9;
         }
         let m = fp.motion_id;
@@ -140,7 +138,7 @@ impl Running<'_> {
         let Some(gobj) = gobj else { return true };
         let fp = self.game.fighter(gobj);
         let kind = fp.u_i32(u::HAT_KIND);
-        if kind != KIND_FOX && kind != KIND_FALCO {
+        if kind != FighterKind::Fox && kind != FighterKind::Falco {
             return true;
         }
         let m = fp.motion_id;
@@ -184,21 +182,22 @@ impl Running<'_> {
         self.game.fighters[f.0].cmd_vars[2] = 0;
         let mut pos = self.kb_fx_muzzle(Some(gobj));
         pos.z = 0.0;
-        let (angle, speed, shot, sfx) = match self.game.fighters[f.0].u_i32(u::HAT_KIND) {
-            KIND_FOX => (
-                attr::FX_ANGLE,
-                attr::FX_SPEED,
-                attr::FX_SHOT_ITKIND,
-                FOX_SFX,
-            ),
-            KIND_FALCO => (
-                attr::FC_ANGLE,
-                attr::FC_SPEED,
-                attr::FC_SHOT_ITKIND,
-                FALCO_SFX,
-            ),
-            _ => return,
-        };
+        let (angle, speed, shot, sfx) =
+            match FighterKind::from_id(self.game.fighters[f.0].u_i32(u::HAT_KIND)) {
+                Some(FighterKind::Fox) => (
+                    attr::FX_ANGLE,
+                    attr::FX_SPEED,
+                    attr::FX_SHOT_ITKIND,
+                    FOX_SFX,
+                ),
+                Some(FighterKind::Falco) => (
+                    attr::FC_ANGLE,
+                    attr::FC_SPEED,
+                    attr::FC_SHOT_ITKIND,
+                    FALCO_SFX,
+                ),
+                _ => return,
+            };
         let a = reg(self.kb_attr_f32(f, angle));
         let a = if self.game.fighters[f.0].facing_dir == 1.0 {
             a
@@ -221,10 +220,10 @@ impl Running<'_> {
     /// blaster; the original asserts it's made.
     fn kb_fx_spawn_blaster(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let gun = match self.game.fighters[f.0].u_i32(u::HAT_KIND) {
-            KIND_FOX => self.kb_attr_i32(f, attr::FX_GUN_ITKIND),
-            KIND_FALCO => self.kb_attr_i32(f, attr::FC_GUN_ITKIND),
-            k => panic!("the blaster of copy kind {k}"),
+        let gun = match FighterKind::from_id(self.game.fighters[f.0].u_i32(u::HAT_KIND)) {
+            Some(FighterKind::Fox) => self.kb_attr_i32(f, attr::FX_GUN_ITKIND),
+            Some(FighterKind::Falco) => self.kb_attr_i32(f, attr::FC_GUN_ITKIND),
+            k => panic!("the blaster of copy kind {k:?}"),
         };
         let fp = &self.game.fighters[f.0];
         let (facing, pos) = (fp.facing_dir, fp.cur_pos);
@@ -398,10 +397,10 @@ impl Running<'_> {
         }
         self.kb_fx_forget_blaster(Some(gobj));
         let f = self.game.fighter_id(gobj);
-        let lag = match self.game.fighters[f.0].u_i32(u::HAT_KIND) {
-            KIND_FOX => self.kb_attr_f32(f, attr::FX_FREEFALL),
-            KIND_FALCO => self.kb_attr_f32(f, attr::FC_FREEFALL),
-            k => panic!("the landing lag of copy kind {k}"),
+        let lag = match FighterKind::from_id(self.game.fighters[f.0].u_i32(u::HAT_KIND)) {
+            Some(FighterKind::Fox) => self.kb_attr_f32(f, attr::FX_FREEFALL),
+            Some(FighterKind::Falco) => self.kb_attr_f32(f, attr::FC_FREEFALL),
+            k => panic!("the landing lag of copy kind {k:?}"),
         };
         if lag == 0.0 {
             self.enter_fall(gobj);

@@ -8,6 +8,7 @@ use super::super::item::{article, attr_of, change, change_state, pick_up, spawn_
 use super::super::{data, ground, item, item_mut, jobj_of, lib26b1, lib2725, release};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{Arg, SpawnKind};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -107,7 +108,7 @@ pub fn spawn(
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::YOSHI_EGG_THROW,
+        kind: ItKind::YoshiEggThrow.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;

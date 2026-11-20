@@ -13,6 +13,7 @@ use super::super::state::Running;
 use super::super::structs::{StartMeleeData, VsModeData};
 use super::machine::GM_MENU;
 use super::vs_melee::{CssData, SssData};
+use crate::game::ft::CharacterKind;
 use gekko_fp as fp;
 
 /// The single-player `GameModeKind`s with a select.
@@ -30,9 +31,6 @@ pub const REG_ALLSTAR: u8 = 0xD;
 pub const STADIUM_TARGET: u8 = 0xF;
 pub const STADIUM_HOMERUN: u8 = 0x10;
 pub const TRAINING_MODE: u8 = 0x17;
-
-/// `ChKind_None`, `ChKind_Sandbag`, `CKind_Boy`, `CKind_Girl`, `CKind_GameWatch`.
-const CHKIND_NONE: i8 = 0x21;
 
 /// `lbl_803D5168`: each character's target stage (its stage kind, the character), ending in
 /// a row of zeros.
@@ -102,7 +100,6 @@ fn set_target_best(rec: &mut crate::game::structs::gmm_retval_EDBC, sel: u8, v: 
     let o = 4 * (i - 4);
     rec.padding_x4C[o..o + 4].copy_from_slice(&v.to_be_bytes());
 }
-const CHKIND_SANDBAG: i32 = 0x1F;
 
 /// A cleared target stage in `selkind`'s records (Target Test's `gm_801B65D4`, Classic's
 /// `gmClassic_801B3B40`): the session's best time (`gmMainLib_8015D450`, the first clear's
@@ -513,7 +510,10 @@ pub fn matchup(r: MatchupRef) -> Option<Matchup> {
             .iter()
             .find(|e| e.0 == t)
             .map(|e| e.1[usize::from(i)]),
-        MatchupRef::Bonus(k) => Some((CLASSIC_BONUS[usize::from(k) - 1], [CHKIND_NONE; 3])),
+        MatchupRef::Bonus(k) => Some((
+            CLASSIC_BONUS[usize::from(k) - 1],
+            [CharacterKind::NONE as i8; 3],
+        )),
     }
 }
 
@@ -601,7 +601,7 @@ impl Running<'_> {
     fn one_player_run_start(run: &mut Unk1PData, slot: u8) {
         *run = Unk1PData::default();
         for o in &mut run.opponents {
-            o.ckind = CHKIND_NONE;
+            o.ckind = CharacterKind::NONE as i8;
         }
         run.player.slot = slot;
     }
@@ -783,7 +783,7 @@ impl Running<'_> {
             let entry = t[usize::from(idx)];
             for j in 0..3 {
                 let c = i32::from(entry.1[j]);
-                if c == i32::from(CHKIND_NONE) {
+                if c == i32::from(CharacterKind::NONE) {
                     continue;
                 }
                 if !self.stage_unlocked(entry.0)
@@ -880,7 +880,7 @@ impl Running<'_> {
         let a = &mut self.game.one_player.allstar;
         a.x74 = 0;
         a.x9c = 0;
-        a.x76 = [CHKIND_NONE as u8; 26];
+        a.x76 = [CharacterKind::NONE; 26];
         a.x90 = [1; 4];
         self.set_game_mode_state_id(0x70);
         self.game.clear_trophy_notices();
@@ -940,7 +940,7 @@ impl Running<'_> {
     pub fn allstar_round_setup(&mut self, round: usize) {
         let (start, count) = ALLSTAR_ROUNDS[round];
         let opponents = self.game.one_player.allstar_opponents;
-        let mut chars = [CHKIND_NONE; 3];
+        let mut chars = [CharacterKind::NONE as i8; 3];
         for i in 0..count {
             chars[i] = opponents[start + i][3] as i8;
         }
@@ -957,7 +957,7 @@ impl Running<'_> {
         enemy_color_table(run.player.ckind, run.player.color, &chars, &mut colors);
         let last = round == 0xC;
         if last {
-            chars = [CKIND_GAMEWATCH; 3];
+            chars = [CharacterKind::GameWatch as i8; 3];
             colors = [0; 3];
         }
         self.dvd_mut().keep_class();
@@ -971,7 +971,7 @@ impl Running<'_> {
         let gc = &mut self.dvd_mut().cache.scene.game_cache;
         let mut slot = 1;
         for i in 0..3 {
-            if chars[i] != CHKIND_NONE {
+            if chars[i] != CharacterKind::NONE as i8 {
                 gc.entries[slot].char_id = i32::from(chars[i]);
                 gc.entries[slot].color = if last { 0xFF } else { colors[i] };
                 slot += 1;
@@ -1145,7 +1145,7 @@ impl Running<'_> {
             self.target_trophies();
             self.trophy_unlocks();
             self.special_unlocks(0x80);
-            if challenger != CHKIND_NONE as u8 {
+            if challenger != CharacterKind::NONE {
                 self.init_challenger(
                     t.unk_584 as u8,
                     t.unk_585,
@@ -1169,12 +1169,16 @@ impl Running<'_> {
     #[doc(alias = "gm_801733D8")]
     fn target_challenger(&mut self) -> u8 {
         self.game.sync_unlocks();
-        if !self.game.gm.unlocks.ckind_unlocked(CKIND_GAMEWATCH as u8)
+        if !self
+            .game
+            .gm
+            .unlocks
+            .ckind_unlocked(CharacterKind::GameWatch as u8)
             && self.all_cleared_one_mode()
         {
-            return CKIND_GAMEWATCH as u8;
+            return CharacterKind::GameWatch as u8;
         }
-        CHKIND_NONE as u8
+        CharacterKind::NONE
     }
 
     /// `fn_80172FAC`: whether every character but Mr. Game & Watch is marked in one of the
@@ -1259,7 +1263,7 @@ impl Running<'_> {
         );
         self.setup_vs_preload_cache();
         let gc = &mut self.dvd_mut().cache.scene.game_cache;
-        gc.entries[1].char_id = CHKIND_SANDBAG;
+        gc.entries[1].char_id = CharacterKind::Sandbag.id();
         gc.entries[1].color = 0;
         gc.stkind = 0x54;
         self.preload_refresh();
@@ -1284,7 +1288,7 @@ impl Running<'_> {
         p.color = color;
         p.nametag = nametag;
         let s = &mut vs.start.players[1];
-        s.ckind = CHKIND_SANDBAG as i8;
+        s.ckind = CharacterKind::Sandbag as i8;
         s.cpu_kind = 0xF;
         s.defense_ratio = 1.0;
         s.slot_type = 1;
@@ -1430,9 +1434,6 @@ impl Running<'_> {
     }
 }
 
-/// `CKind_GameWatch`.
-const CKIND_GAMEWATCH: i8 = 3;
-
 /// `gm_803DEC4C`: each All-Star round's first opponent in the shuffled table and their count.
 pub(super) const ALLSTAR_ROUNDS: [(usize, usize); 13] = [
     (0, 1),
@@ -1533,19 +1534,20 @@ pub(super) fn allstar_level(round: u8, level: u8) -> (u8, u16, u16, [u8; 10]) {
 pub fn enemy_color_table(ckind: i8, color: u8, ckinds: &[i8; 3], colors: &mut [u8; 3]) {
     let n = crate::game::playback::costume_count(ckind as u8);
     for i in 0..3 {
-        if ckinds[i] != CHKIND_NONE && ckind == ckinds[i] && color == colors[i] {
+        if ckinds[i] != CharacterKind::NONE as i8 && ckind == ckinds[i] && color == colors[i] {
             colors[i] = 0xFF;
         }
     }
     for i in 0..3 {
-        if ckinds[i] == CHKIND_NONE || colors[i] != 0xFF {
+        if ckinds[i] == CharacterKind::NONE as i8 || colors[i] != 0xFF {
             continue;
         }
         for j in 0..n {
             if color == j {
                 continue;
             }
-            let free = (0..3).all(|k| i == k || ckinds[k] == CHKIND_NONE || colors[k] != j);
+            let free =
+                (0..3).all(|k| i == k || ckinds[k] == CharacterKind::NONE as i8 || colors[k] != j);
             if free {
                 colors[i] = j;
                 break;

@@ -5,6 +5,7 @@
 use super::super::item::{animate, change, change_state, destroy};
 use super::super::{item, item_mut, jobj_of, lib26b1};
 use super::gamewatch;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -43,7 +44,14 @@ pub fn spawn(
     part: i32,
     facing_dir: f32,
 ) -> Option<GObjId> {
-    gamewatch::spawn_held(r, super::GAME_WATCH_MANHOLE, parent, pos, part, facing_dir)
+    gamewatch::spawn_held(
+        r,
+        ItKind::GameWatchManhole.id(),
+        parent,
+        pos,
+        part,
+        facing_dir,
+    )
 }
 
 /// Gone, `itGameWatchManhole_Logic72_Destroyed`: its owner forgets it and takes back the

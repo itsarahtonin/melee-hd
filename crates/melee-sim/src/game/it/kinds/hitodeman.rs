@@ -11,15 +11,12 @@ use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::lb::sound_obj::SoundParams;
 use crate::vec::Vec3;
-
-/// `It_PKind_Hitodeman` and `It_Kind_Hitodeman_Star`.
-pub const KIND: i32 = 0xB9;
-pub const STAR: i32 = 0xCC;
 
 pub const SPAWNED: u32 = 0x802D_42C4;
 pub const LANDED_NOTHING: u32 = 0x802D_43AC;
@@ -416,7 +413,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId) {
     prev.x = mem(fp::fmadds(reg(facing), reg(ahead), reg(prev.x)));
     prev.y = mem(fp::fadds(reg(prev.y), reg(up)));
     let mut spawn = SpawnItem {
-        kind: STAR,
+        kind: ItKind::HitodemanStar.id(),
         ..Default::default()
     };
     spawn.prev_pos = prev;

@@ -21,11 +21,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `Ft_Kind_Koopa`.
-pub const KIND_KOOPA: i32 = 5;
-/// `Ft_Kind_GKoopa`, Giga Bowser, who runs the same code.
-pub const KIND_GKOOPA: i32 = 31;
-
 /// Bowser's functions, by address: the callbacks his states and hooks hold and the entries
 /// other code calls.
 pub mod addr {

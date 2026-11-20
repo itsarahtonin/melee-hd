@@ -7,9 +7,10 @@ use super::super::super::state::Running;
 use super::super::coll::PLATFORM_FILTER;
 use super::super::sound::Track;
 use super::PAD_XY;
-use super::checks::{KIND_MEWTWO, KIND_NESS, KIND_PEACH, KIND_YOSHI, abs};
+use super::checks::abs;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 
 /// `ftCo_JumpAerial_Phys_Cb`.
@@ -343,11 +344,11 @@ impl Running<'_> {
             self.screw_jump(gobj, vel);
             return true;
         }
-        match self.game.fighter(gobj).kind {
-            KIND_NESS => self.ness_jump_aerial_enter(gobj),
-            KIND_YOSHI => self.ys_jump_aerial_enter(gobj),
-            KIND_PEACH => self.peach_jump_aerial_enter(gobj),
-            KIND_MEWTWO => self.peach_jump_aerial_enter(gobj),
+        match self.game.fighter(gobj).fighter_kind() {
+            FighterKind::Ness => self.ness_jump_aerial_enter(gobj),
+            FighterKind::Yoshi => self.ys_jump_aerial_enter(gobj),
+            FighterKind::Peach => self.peach_jump_aerial_enter(gobj),
+            FighterKind::Mewtwo => self.peach_jump_aerial_enter(gobj),
             _ => self.enter_jump_aerial_basic(gobj),
         }
         true
@@ -436,7 +437,10 @@ impl Running<'_> {
         // `ft_JumpAerial_Sound`.
         let fp = self.game.fighter(gobj);
         let kind = fp.kind;
-        if kind != KIND_MEWTWO && (kind >= 0x10 || kind != KIND_NESS) && fp.x197C.is_some() {
+        if kind != FighterKind::Mewtwo
+            && (kind >= 0x10 || kind != FighterKind::Ness)
+            && fp.x197C.is_some()
+        {
             self.play_sfx(gobj, 0x11B, 0x7F, 0x40);
         }
     }
@@ -518,12 +522,14 @@ impl Running<'_> {
     /// A tether, `ftCo_800C3B10`: Link, Young Link and Samus with a shoulder and A.
     #[doc(alias = "ftCo_800C3B10")]
     pub fn tether_check(&mut self, gobj: GObjId) -> bool {
-        use super::checks::{KIND_LINK, KIND_SAMUS};
         let fp = self.game.fighter(gobj);
         if fp.used_tether {
             return false;
         }
-        if fp.kind != KIND_LINK && fp.kind != super::checks::KIND_CLINK && fp.kind != KIND_SAMUS {
+        if fp.kind != FighterKind::Link
+            && fp.kind != FighterKind::Clink
+            && fp.kind != FighterKind::Samus
+        {
             return false;
         }
         if fp.accessory2_cb.is_some() || fp.death1_cb.is_some() || fp.accessory3_cb.is_some() {

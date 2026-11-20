@@ -20,7 +20,6 @@ use super::super::parts::TOP_N;
 use super::super::sound::Track;
 use super::PAD_LR;
 use super::ids::ms;
-use super::kind_callbacks as kinds;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::math::{self, sqrt_reg};
@@ -474,7 +473,9 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007F824")]
     pub fn knockback_enter(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
-        let cb = kinds::ON_KNOCKBACK_ENTER[kind as usize];
+        let cb = crate::game::ft::registry::character(kind)
+            .callbacks
+            .on_knockback_enter;
         if cb != 0 {
             run_fighter_cb(self, gobj, CodeRef(cb));
         }

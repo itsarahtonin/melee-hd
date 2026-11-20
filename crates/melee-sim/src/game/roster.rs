@@ -1,21 +1,13 @@
 //! The characters and stages a match can be started with: those whose code is ported. A new
-//! character's port adds its line here, a stage's its roster fields in its entry of the stage
+//! character's port fills its roster fields in its entry of the character registry
+//! ([`ft::registry`](super::ft::registry): `vs`, `keys`), a stage's in its entry of the stage
 //! registry ([`gr::registry`](super::gr::registry): `vs`, `keys`, `audit`), and the frontends
 //! (the player's command line, its `--help` and its launcher) list what this lists; a stage
 //! only once its audit finds nothing a match on it reaches unported (`Stage::audit`,
 //! docs/player.md). Presentation data only: nothing in the simulation reads it.
 
+pub use super::ft::Character;
 pub use super::gr::Stage;
-
-/// A character a match can have, by its `CharacterKind` (the game's external ID, as
-/// [`Player::character`](super::vs_match::Player::character) takes it).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
-pub struct Character {
-    pub kind: u8,
-    pub name: &'static str,
-    /// The names the command line takes, the first the usual one.
-    pub keys: &'static [&'static str],
-}
 
 /// A stage's audit: the code a match on it can reach beyond the shared code, and what of it
 /// isn't ported. The roster's tests hold it to the port ledger and the stops in the code.
@@ -88,148 +80,23 @@ impl Stage {
     }
 }
 
-/// The ported characters, by name.
-pub const CHARACTERS: &[Character] = &[
-    Character {
-        kind: 5,
-        name: "Bowser",
-        keys: &["bowser", "koopa"],
-    },
-    Character {
-        kind: 0,
-        name: "Captain Falcon",
-        keys: &["falcon", "captain-falcon", "cf"],
-    },
-    Character {
-        kind: 1,
-        name: "Donkey Kong",
-        keys: &["donkey-kong", "dk", "donkey"],
-    },
-    Character {
-        kind: 22,
-        name: "Dr. Mario",
-        keys: &["drmario", "dr-mario", "doc"],
-    },
-    Character {
-        kind: 20,
-        name: "Falco",
-        keys: &["falco"],
-    },
-    Character {
-        kind: 2,
-        name: "Fox",
-        keys: &["fox"],
-    },
-    Character {
-        kind: 25,
-        name: "Ganondorf",
-        keys: &["ganondorf", "ganon"],
-    },
-    Character {
-        kind: 15,
-        name: "Jigglypuff",
-        keys: &["jigglypuff", "puff", "jiggs"],
-    },
-    Character {
-        kind: 14,
-        name: "Ice Climbers",
-        keys: &["ice-climbers", "ics"],
-    },
-    Character {
-        kind: 4,
-        name: "Kirby",
-        keys: &["kirby"],
-    },
-    Character {
-        kind: 6,
-        name: "Link",
-        keys: &["link"],
-    },
-    Character {
-        kind: 7,
-        name: "Luigi",
-        keys: &["luigi"],
-    },
-    Character {
-        kind: 8,
-        name: "Mario",
-        keys: &["mario"],
-    },
-    Character {
-        kind: 9,
-        name: "Marth",
-        keys: &["marth"],
-    },
-    Character {
-        kind: 10,
-        name: "Mewtwo",
-        keys: &["mewtwo"],
-    },
-    Character {
-        kind: 3,
-        name: "Mr. Game & Watch",
-        keys: &["game-and-watch", "gnw", "gw", "mr-game-and-watch"],
-    },
-    Character {
-        kind: 11,
-        name: "Ness",
-        keys: &["ness"],
-    },
-    Character {
-        kind: 12,
-        name: "Peach",
-        keys: &["peach"],
-    },
-    Character {
-        kind: 24,
-        name: "Pichu",
-        keys: &["pichu"],
-    },
-    Character {
-        kind: 13,
-        name: "Pikachu",
-        keys: &["pikachu", "pika"],
-    },
-    Character {
-        kind: 23,
-        name: "Roy",
-        keys: &["roy"],
-    },
-    Character {
-        kind: 16,
-        name: "Samus",
-        keys: &["samus"],
-    },
-    Character {
-        kind: 19,
-        name: "Sheik",
-        keys: &["sheik"],
-    },
-    Character {
-        kind: 17,
-        name: "Yoshi",
-        keys: &["yoshi"],
-    },
-    Character {
-        kind: 21,
-        name: "Young Link",
-        keys: &["young-link", "ylink", "yl"],
-    },
-    Character {
-        kind: 18,
-        name: "Zelda",
-        keys: &["zelda"],
-    },
-];
-
-/// A ported character by one of its command-line names.
-pub fn character(key: &str) -> Option<&'static Character> {
-    CHARACTERS.iter().find(|c| c.keys.contains(&key))
+/// The roster's characters, by name: the registry's characters a match can have (`vs`).
+pub fn characters() -> impl Iterator<Item = &'static Character> {
+    let mut v: Vec<&'static Character> = super::ft::registry::ported()
+        .filter(|c| c.vs.is_some())
+        .collect();
+    v.sort_by_key(|c| c.name);
+    v.into_iter()
 }
 
-/// A ported character by its `CharacterKind`.
+/// A roster character by one of its command-line names.
+pub fn character(key: &str) -> Option<&'static Character> {
+    characters().find(|c| c.keys.contains(&key))
+}
+
+/// A roster character by its `CharacterKind`.
 pub fn character_by_kind(kind: u8) -> Option<&'static Character> {
-    CHARACTERS.iter().find(|c| c.kind == kind)
+    characters().find(|c| c.vs_kind() == kind)
 }
 
 /// The roster's stages, by name: the registry's stages a VS match can start on (`vs`).
@@ -260,13 +127,13 @@ impl Character {
     /// Whether the launcher and the command line offer the character: nothing a match can reach
     /// in its own items stops the match (the fighter audit, [`super::fighter_audit`]).
     pub fn offered(&self) -> bool {
-        super::fighter_audit::missing_with(&[self.kind]).is_empty()
+        super::fighter_audit::missing_with(&[self.vs_kind()]).is_empty()
     }
 }
 
 /// The characters the launcher and the command line offer ([`Character::offered`]).
 pub fn offered_characters() -> impl Iterator<Item = &'static Character> {
-    CHARACTERS.iter().filter(|c| c.offered())
+    characters().filter(|c| c.offered())
 }
 
 /// Why a match with these characters (`CharacterKind`s) isn't offered, if it isn't: the gaps
@@ -297,19 +164,18 @@ pub(crate) mod tests {
 
     #[test]
     fn names_and_kinds_are_unique() {
-        let keys: Vec<&str> = CHARACTERS
-            .iter()
-            .flat_map(|c| c.keys.iter().copied())
-            .collect();
+        let keys: Vec<&str> = characters().flat_map(|c| c.keys.iter().copied()).collect();
         let stage_keys: Vec<&str> = stages().flat_map(|s| s.keys.iter().copied()).collect();
         for list in [&keys, &stage_keys] {
             for (i, k) in list.iter().enumerate() {
                 assert!(!list[..i].contains(k), "{k} names two entries");
             }
         }
-        for (i, c) in CHARACTERS.iter().enumerate() {
-            assert!(CHARACTERS[..i].iter().all(|d| d.kind != c.kind), "{c:?}");
-            assert!(character(c.keys[0]) == Some(c));
+        let all: Vec<_> = characters().collect();
+        for (i, c) in all.iter().enumerate() {
+            assert!(all[..i].iter().all(|d| d.vs != c.vs), "{c:?}");
+            assert!(character(c.keys[0]) == Some(*c));
+            assert!(character_by_kind(c.vs_kind()) == Some(*c));
         }
         let all: Vec<_> = stages().collect();
         for (i, s) in all.iter().enumerate() {
@@ -520,12 +386,15 @@ pub(crate) mod tests {
     /// since Samus's grapple swing was modeled (2026-10-21).
     #[test]
     fn offered_characters_are_complete() {
-        for c in CHARACTERS {
-            let gaps = super::super::fighter_audit::missing_with(&[c.kind]);
+        for c in characters() {
+            let gaps = super::super::fighter_audit::missing_with(&[c.vs_kind()]);
             assert_eq!(c.offered(), gaps.is_empty(), "{}", c.name);
-            assert_eq!(characters_refusal(&[c.kind]).is_none(), gaps.is_empty());
+            assert_eq!(
+                characters_refusal(&[c.vs_kind()]).is_none(),
+                gaps.is_empty()
+            );
         }
-        assert_eq!(offered_characters().count(), CHARACTERS.len());
+        assert_eq!(offered_characters().count(), characters().count());
         let gap = super::super::fighter_audit::Gap {
             what: "a move",
             covers: &[],

@@ -15,8 +15,9 @@ use super::super::super::ef::{Arg, spawn};
 use super::super::super::it::kinds::pikachutjoltground;
 use super::super::super::state::Running;
 use super::super::kirby::KindFrom;
-use super::{KIND_PICHU, KIND_PIKACHU, addr, attr, ms, mv, part};
+use super::{addr, attr, ms, mv, part};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -49,7 +50,7 @@ impl Running<'_> {
     /// The state of the throw for the kind the user runs it as: Pichu's, or Pikachu's for any
     /// other.
     fn pk_special_n_state(&self, gobj: GObjId, t: &ThunderJolt, air: bool) -> i32 {
-        let (ground, aerial) = if self.special_kind(gobj, t.kind) == KIND_PICHU {
+        let (ground, aerial) = if self.special_kind(gobj, t.kind) == FighterKind::Pichu {
             t.pichu
         } else {
             t.pikachu
@@ -61,9 +62,9 @@ impl Running<'_> {
     /// Pikachu's or Pichu's. Kirby without either copy has none (Pikachu's own code plays no
     /// sound for another kind, which never runs it).
     fn pk_special_n_kind(&self, gobj: GObjId, t: &ThunderJolt) -> Option<(usize, i32)> {
-        match self.special_kind(gobj, t.kind) {
-            KIND_PIKACHU => Some((t.attrs.0, 0x3A9CC)),
-            KIND_PICHU => Some((t.attrs.1, 0x382B3)),
+        match FighterKind::from_id(self.special_kind(gobj, t.kind)) {
+            Some(FighterKind::Pikachu) => Some((t.attrs.0, 0x3A9CC)),
+            Some(FighterKind::Pichu) => Some((t.attrs.1, 0x382B3)),
             _ => None,
         }
     }

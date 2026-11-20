@@ -22,6 +22,7 @@ use crate::hsd::jobj::{self, JObjId};
 use crate::vec::Vec3;
 
 use super::super::Var;
+use crate::game::it::ItKind;
 
 pub const SPAWNED: u32 = 0x802D_8688;
 pub const DMG_RECEIVED: u32 = 0x802D_8EC8;
@@ -234,8 +235,8 @@ fn face_model(game: &mut Game, gobj: GObjId) {
 /// and the ticks before it starts.
 #[doc(alias = "it_802D8618")]
 pub fn spawn(r: &mut Running, i: i32, pos: Vec3, speed: i32, delay: i32) {
-    let gobj =
-        zako::spawn(r, super::HEIHO, Some(pos), None, None, true).expect("it_802D8618: no Shy Guy");
+    let gobj = zako::spawn(r, ItKind::Heiho.id(), Some(pos), None, None, true)
+        .expect("it_802D8618: no Shy Guy");
     let v = vars(r.game, gobj);
     v.x20.set(i as i8);
     v.x21.set(speed as i8);

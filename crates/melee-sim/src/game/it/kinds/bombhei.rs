@@ -9,6 +9,7 @@ use super::super::ground::{fall, fall_to_floor, ground_or_fall, ground_skid, gro
 use super::super::item::{article, attr_of, change, change_state, common_data, play_sfx};
 use super::super::{hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{SpawnItem, itBombHei_ItemVars};
 use crate::hsd::gobj::GObjId;
@@ -203,7 +204,7 @@ fn tick(r: &mut Running, gobj: GObjId) -> i32 {
 pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
     let facing = owner::facing_for(r.game, r.data, pos);
     let mut spawn = SpawnItem {
-        kind: super::BOMBHEI,
+        kind: ItKind::BombHei.id(),
         pos,
         prev_pos: pos,
         ..Default::default()

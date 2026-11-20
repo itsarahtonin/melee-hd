@@ -11,6 +11,7 @@ use super::super::state::{Obj, Running};
 use super::Loaded;
 use super::v1201v1::TROPHY_KOOPA;
 use crate::fpu::{mem, reg};
+use crate::game::ft::CharacterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::vec::Vec3;
@@ -29,9 +30,6 @@ pub const FOG_PROC: u32 = 0x8032_0A1C;
 
 /// `mn_8022EAE0`, the other models' process (the main menu's background's).
 const MODEL_PROC: u32 = 0x8022_EAE0;
-
-/// `CKind_GKoops`.
-const CKIND_GKOOPS: i32 = 0x1D;
 
 /// The first model's frame at which Giga Bowser comes in.
 const TRANSFORM_FRAME: f32 = 251.0;
@@ -93,7 +91,15 @@ impl Running<'_> {
         jobj::req_anim_all(&mut g.objs, Some(j), TRANSFORM_FRAME);
         g.world.setup_proc(gobj, CodeRef(MODEL_PROC), 0);
         let archive = self.game.vi.v1201v2.archive;
-        self.vi_player(1, CKIND_GKOOPS, 0, archive, 8, -1.0, Some(Vec3::ZERO));
+        self.vi_player(
+            1,
+            CharacterKind::GKoopa.id(),
+            0,
+            archive,
+            8,
+            -1.0,
+            Some(Vec3::ZERO),
+        );
         self.player_create_demo(1, 0xF);
         let s = self.player_scale_ratio(1);
         let s = mem(fp::fdivs(1.0, reg(s)));

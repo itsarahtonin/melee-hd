@@ -160,7 +160,7 @@ fn predicting_with_held_controllers_changes_nothing() {
         let Some(disc) = disc() else { return };
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
         let player = |key: &str, port: u8| Player {
-            character: roster::character(key).expect("ported").kind,
+            character: roster::character(key).expect("ported").vs_kind(),
             costume: 0,
             port,
             kind: 0,

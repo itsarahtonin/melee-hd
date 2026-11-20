@@ -15,9 +15,6 @@ use crate::hsd::jobj::{self, JObjId};
 use crate::lb::joint::world_position;
 use crate::vec::Vec3;
 
-/// `It_Kind_MasterHand_Laser`.
-pub const KIND: i32 = 125;
-
 #[doc(alias = "itMasterhandlaser_UnkMotion0_Anim")]
 pub const ANIM_0: u32 = 0x802F_04F0;
 #[doc(alias = "itMasterhandlaser_UnkMotion0_Phys")]

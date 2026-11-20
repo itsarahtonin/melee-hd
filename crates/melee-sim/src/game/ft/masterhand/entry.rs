@@ -8,6 +8,7 @@
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::{PART_WAIST_N, addr, attr, ms, mv, u};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -52,7 +53,7 @@ impl Running<'_> {
     /// The camera's point on Master Hand's waist, `ftMh_MS_343_80151428`; whether he's there.
     #[doc(alias = "ftMh_MS_343_80151428")]
     pub fn mh_waist_point(&mut self) -> Option<Vec3> {
-        let g = self.boss_gobj(super::KIND_MASTER_HAND)?;
+        let g = self.boss_gobj(FighterKind::MasterHand.id())?;
         let parts = self.game.fighter(g).parts.expect("a fighter without parts");
         let j = self.game.fighter_parts[parts.0][PART_WAIST_N].joint;
         Some(crate::lb::joint::world_position(

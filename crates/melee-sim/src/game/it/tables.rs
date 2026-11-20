@@ -5,8 +5,8 @@
 
 pub use super::tables_gen::*;
 
-use super::kinds::{KURIBOH, OLD_KURI, PKIND_START};
 use crate::game::handles::{CodeRef, ItemLogicRef, ItemStatesRef};
+use crate::game::it::ItKind;
 
 /// `ItemLogicTable`: an item kind's states and the callbacks the item code calls on events.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
@@ -43,14 +43,14 @@ const LOGIC_ADDRS: [u32; 4] = [0x803F_14C4, 0x803F_3100, 0x803F_23CC, 0x803F_4D2
 
 /// Which group a kind's tables are in and its index there (`Item_80267978`'s split).
 pub fn group(kind: i32) -> (usize, usize) {
-    if kind < KURIBOH {
+    if kind < ItKind::Kuriboh {
         (0, kind as usize)
-    } else if kind < PKIND_START {
-        (1, (kind - KURIBOH) as usize)
-    } else if kind < OLD_KURI {
-        (2, (kind - PKIND_START) as usize)
+    } else if kind < ItKind::FIRST_POKEMON {
+        (1, (kind - ItKind::Kuriboh.id()) as usize)
+    } else if kind < ItKind::OldKuri {
+        (2, (kind - ItKind::FIRST_POKEMON.id()) as usize)
     } else {
-        (3, (kind - OLD_KURI) as usize)
+        (3, (kind - ItKind::OldKuri.id()) as usize)
     }
 }
 

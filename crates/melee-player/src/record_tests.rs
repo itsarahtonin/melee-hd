@@ -28,7 +28,7 @@ fn settings() -> Settings {
 /// [`settings`] on the stage `key` names.
 fn settings_on(key: &str) -> Settings {
     let player = |key: &str, port: u8| Player {
-        character: roster::character(key).expect("ported").kind,
+        character: roster::character(key).expect("ported").vs_kind(),
         costume: 0,
         port,
         kind: 0,

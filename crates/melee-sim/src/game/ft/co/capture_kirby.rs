@@ -10,17 +10,11 @@ use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::structs::{Vec2, ftCollisionBox};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
-
-/// `Ft_Kind_Kirby`, `Ft_Kind_Nana`, `Ft_Kind_Popo`, `Ft_Kind_Boy`, `Ft_Kind_Sandbag`.
-const KIND_KIRBY: i32 = 4;
-const KIND_POPO: i32 = 10;
-const KIND_NANA: i32 = 11;
-const KIND_BOY: i32 = 29;
-const KIND_SANDBAG: i32 = 32;
 
 /// `FtPart_YRotN`.
 const PART_Y_ROT_N: i32 = 3;
@@ -338,18 +332,18 @@ impl Running<'_> {
     pub fn copy_kind_of(&mut self, gobj: GObjId, victim: GObjId) -> i32 {
         let vf = self.game.fighter(victim);
         let kind = vf.kind;
-        if kind == KIND_KIRBY {
+        if kind == FighterKind::Kirby {
             let hat = vf.u_i32(0xC);
-            if hat != KIND_KIRBY {
+            if hat != FighterKind::Kirby {
                 self.game.fighter_mut(victim).mv[thr::FLAGS] |= 0x40;
             }
             return hat;
         }
-        if (kind.wrapping_sub(KIND_BOY) as u32) <= 1 || kind == KIND_SANDBAG {
+        if (kind.wrapping_sub(FighterKind::Boy.id()) as u32) <= 1 || kind == FighterKind::Sandbag {
             return self.game.fighter(gobj).u_i32(0xC);
         }
-        if kind == KIND_NANA {
-            return KIND_POPO;
+        if kind == FighterKind::Nana {
+            return FighterKind::Popo.id();
         }
         kind
     }
@@ -542,11 +536,16 @@ impl Running<'_> {
                 });
                 mem(fp::fmuls(reg(v.x), s))
             };
-        } else if fp.kind == KIND_KIRBY && fp.mv[thr::FLAGS] & 0x40 != 0 && fp.u[0x8] & 0x80 == 0 {
+        } else if fp.kind == FighterKind::Kirby
+            && fp.mv[thr::FLAGS] & 0x40 != 0
+            && fp.u[0x8] & 0x80 == 0
+        {
             let kind = fp.u_i32(0xC);
             self.kb_reset_copy_vars(gobj);
             self.kb_remove_hat(gobj, kind);
-            self.game.fighter_mut(gobj).set_u_i32(0xC, KIND_KIRBY);
+            self.game
+                .fighter_mut(gobj)
+                .set_u_i32(0xC, FighterKind::Kirby.id());
         }
         let spin = self.kb_thrown_spin();
         self.game.fighter_mut(gobj).set_mv_f32(thr::TIME, reg(spin));
@@ -624,8 +623,8 @@ impl Running<'_> {
     /// common data's `x9C` and `xA0`).
     #[doc(alias = "ftKb_SpecialN_800F5874")]
     pub fn kb_thrown_vel(&self) -> Vec2 {
-        let d =
-            self.game.ft.data.data_list[KIND_KIRBY as usize].expect("Kirby's data without Kirby");
+        let d = self.game.ft.data.data_list[FighterKind::Kirby as usize]
+            .expect("Kirby's data without Kirby");
         let ext = self.data.ptr(d.at(4)).expect("ftData::ext_attr");
         Vec2 {
             x: self.data.f32(ext.at(0x9C)),

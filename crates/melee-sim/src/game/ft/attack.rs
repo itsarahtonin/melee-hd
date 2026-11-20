@@ -18,6 +18,7 @@ use super::super::pl::trick::AttackRecord;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::lb::collision::hitboxes_touch;
 use crate::lb::hitcapsule::{self, Victim};
@@ -40,10 +41,6 @@ const HURT_ENABLED: i32 = 0;
 
 /// `ftCo_MS_DamageIce`.
 const MS_DAMAGE_ICE: i32 = 325;
-
-/// `It_Kind_BombHei`, and `It_Kind_Unk4`, which hits no fighter.
-const IT_KIND_BOMBHEI: i32 = 6;
-const IT_KIND_UNK4: i32 = 158;
 
 /// `ItCo.dat`'s common item data (`it_804D6D28`): the speed below which an item's hit
 /// pushes away from it rather than along its flight, for the damage result and for its
@@ -1154,7 +1151,7 @@ impl Running<'_> {
         let mut cur = self.game.world.first_in(it::P_LINK_ITEM);
         while let Some(g) = cur {
             cur = self.game.world.gobjs[g.0].next;
-            if it::item(self.game, g).kind != kinds::UNK4 {
+            if it::item(self.game, g).kind != ItKind::Unk4 {
                 continue;
             }
             let owner = it::item(self.game, g).owner;
@@ -1230,7 +1227,7 @@ impl Running<'_> {
         while let Some(g) = cur {
             cur = self.game.world.gobjs[g.0].next;
             let ip = it::item(self.game, g);
-            if ip.kind == IT_KIND_UNK4 {
+            if ip.kind == ItKind::Unk4 {
                 continue;
             }
             let (owner, b5, b6, team) = (
@@ -2174,71 +2171,13 @@ impl Running<'_> {
 
     /// The hit the stage gives a line ([`Self::line_hazard`]'s `DynamicsDesc`).
     pub(crate) fn line_hazard_desc(&mut self, line: i32) -> Option<melee_data::archive::DataRef> {
-        match self.game.stage_info.on_touch_line {
-            None => None,
-            Some(f) if f.0 == 0x801F_2BBC => {
-                super::super::gr::mutecity::line_hazard(self.game, self.data, line)
-            }
-            Some(f) if f.0 == super::super::gr::pushon::ON_TOUCH_LINE => {
-                super::super::gr::pushon::line_hazard(self.game, self.data, line)
-            }
-            Some(f) if f.0 == super::super::gr::figureget::ON_TOUCH_LINE => {
-                super::super::gr::figureget::on_touch_line(line)
-            }
-            Some(f) if super::super::gr::target::is_on_touch_line(f.0) => {
-                super::super::gr::target::line_hazard(self.game, self.data, line)
-            }
-
-            Some(f) if super::super::gr::figure::ON_TOUCH_LINE.contains(&f.0) => {
-                super::super::gr::figure::on_touch_line(line)
-            }
-            Some(f) if f.0 == super::super::gr::teststage::ON_TOUCH_LINE => {
-                super::super::gr::teststage::on_touch_line(line)
-            }
-            Some(f) if f.0 == super::super::gr::heal::ON_TOUCH_LINE => {
-                super::super::gr::heal::on_touch_line(line)
-            }
-            // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine and the others
-            // here: `return NULL`.
-            Some(f)
-                if f.0 == 0x8021_C740
-                    || f.0 == 0x8021_A610
-                    || f.0 == 0x801D_50B8
-                    || f.0 == 0x801E_36D0
-                    || f.0 == 0x8021_1CA0
-                    || f.0 == 0x801C_D278
-                    || f.0 == 0x8020_F404
-                    || f.0 == 0x801F_F154
-                    || f.0 == 0x801F_41E0
-                    || f.0 == 0x801F_680C
-                    || f.0 == 0x8021_0780
-                    || f.0 == 0x8020_1F44
-                    || f.0 == 0x8020_8754
-                    || f.0 == 0x8020_B104
-                    || f.0 == 0x8020_DF78
-                    || f.0 == 0x8020_B854
-                    || f.0 == 0x8021_EEB4
-                    || f.0 == 0x8020_2B5C
-                    || f.0 == 0x8020_35C8
-                    || f.0 == 0x801D_8444
-                    || f.0 == 0x8021_6E64
-                    || f.0 == 0x801D_CCB8
-                    || f.0 == 0x801E_5760
-                    || f.0 == 0x8021_30C0
-                    || f.0 == 0x8020_1C50
-                    || f.0 == 0x8021_82B4
-                    || f.0 == 0x801F_CBB0
-                    || f.0 == 0x801F_DFE8
-                    || f.0 == 0x801F_A8F8
-                    || f.0 == 0x801E_2EE4
-                    || f.0 == 0x8020_6D74
-                    || f.0 == 0x801D_0B04
-                    || f.0 == 0x801E_FC0C =>
-            {
-                None
-            }
-            Some(f) => unported_call(&format!("a stage's on_touch_line {:#x}", f.0)),
-        }
+        let f = self.game.stage_info.on_touch_line?;
+        let touch = super::super::gr::registry::by_address(self.game.stage_info.grkind, f.0, |d| {
+            d.on_touch_line
+        })
+        .and_then(|s| s.touch_line)
+        .unwrap_or_else(|| unported_call(&format!("a stage's on_touch_line {:#x}", f.0)));
+        touch(self, line)
     }
 
     /// Thrown fighters' hitboxes against each other, `ft_8007C4BC`: when this fighter's
@@ -2836,7 +2775,7 @@ impl Running<'_> {
             u32::from_be_bytes(ip.xD90),
             ip.xDA8_short,
         );
-        if kind == IT_KIND_BOMBHEI {
+        if kind == ItKind::BombHei {
             let spawn = ip.x1C as u16;
             let slot = i32::from(self.game.fighters[me.0].player_idx);
             self.game.count_bombhei_hit(slot, spawn);

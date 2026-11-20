@@ -4,7 +4,7 @@
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
-use super::super::code::{self, unported_call};
+use super::super::code;
 use super::super::handles::{AttrsId, CodeRef, FighterId};
 use super::super::state::{Game, OBJ_JOBJ, Running, UserData};
 use super::super::structs::Fighter;
@@ -115,14 +115,11 @@ impl Running<'_> {
         self.create_fighter_light();
         self.load_metal_models();
         self.game.ft.spawn_counter = 1;
-        for kind in 0..super::data::KIND_COUNT as i32 {
-            match kind_tables(kind).on_first_init {
-                0 => {}
-                // ftKb_Init_800EE528: Kirby's copied costumes.
-                0x800E_E528 => self.game.ft.kirby.reset(),
-                // ftPr_Init_8013C2F8: Jigglypuff's hats.
-                0x8013_C2F8 => self.game.ft.purin_hats = [None; 5],
-                other => unported_call(&format!("fighter first-init callback {other:#010x}")),
+        // Each kind's first setup (`ftData_Table_Unk1`): Kirby's copied costumes
+        // (`ftKb_Init_800EE528`) and Jigglypuff's hats (`ftPr_Init_8013C2F8`).
+        for c in super::registry::ported() {
+            if let Some(f) = c.first_init {
+                f(self);
             }
         }
     }

@@ -9,8 +9,9 @@ use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::common::GA_GROUND;
 use super::super::parts::TRANS_N;
-use super::{KIND_LINK, addr, attr, ms, u};
+use super::{addr, attr, ms, u};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -33,7 +34,7 @@ impl Running<'_> {
     pub fn link_special_hi_trail(&mut self, gobj: GObjId) {
         let from = self.part_joint(gobj, TRANS_N);
         let fp = self.game.fighter(gobj);
-        let to_part = if fp.kind == KIND_LINK {
+        let to_part = if fp.kind == FighterKind::Link {
             PART_L2ND_NA
         } else {
             PART_L3RD_NA

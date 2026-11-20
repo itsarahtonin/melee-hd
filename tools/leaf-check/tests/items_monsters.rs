@@ -44,9 +44,8 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
-use melee_sim::game::it::kinds::{
-    self, freeze, leadead, octarock, octarockstone, oldkuri, oldottosea,
-};
+use melee_sim::game::it::ItKind;
+use melee_sim::game::it::kinds::{freeze, leadead, octarock, octarockstone, oldkuri, oldottosea};
 use melee_sim::game::it::{self, CLASS_ITEM, zako};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -204,17 +203,17 @@ fn fighter_check(g: &Running, gobj: GObjId, a: u32) {
 fn kind_check(g: &Running, gobj: GObjId, a: u32) {
     let kind = it::lib26b1::kind(g.game, gobj);
     let ok = match unit(a) {
-        Some(0) => (kinds::KURIBOH..=kinds::OCTAROCK_STONE).contains(&kind),
-        Some(1) => kind == kinds::LEADEAD,
-        Some(3) => kind == kinds::KURIBOH,
-        Some(4) => kind == kinds::OCTAROCK,
+        Some(0) => (ItKind::Kuriboh.id()..=ItKind::OctarockStone.id()).contains(&kind),
+        Some(1) => kind == ItKind::Leadead,
+        Some(3) => kind == ItKind::Kuriboh,
+        Some(4) => kind == ItKind::Octarock,
         // The stone's spawn takes the Octorok that spits it.
-        Some(5) if name_of(a) == "it_802E8ADC" => kind == kinds::OCTAROCK,
-        Some(5) => kind == kinds::OCTAROCK_STONE,
-        Some(6) => kind == kinds::OTTOSEA,
+        Some(5) if name_of(a) == "it_802E8ADC" => kind == ItKind::Octarock,
+        Some(5) => kind == ItKind::OctarockStone,
+        Some(6) => kind == ItKind::Ottosea,
         // The pushed Freezie's spawn takes the Topi that pushes it.
-        Some(7) if name_of(a) == "it_8028EB88" => kind == kinds::OTTOSEA,
-        Some(7) => kind == kinds::FREEZE,
+        Some(7) if name_of(a) == "it_8028EB88" => kind == ItKind::Ottosea,
+        Some(7) => kind == ItKind::Freeze,
         _ => true,
     };
     if !ok {
@@ -229,7 +228,7 @@ fn held_check(g: &Running, gobj: GObjId, a: u32) {
         && fp
             .mv
             .gobj_at(0)
-            .is_some_and(|i| it::lib26b1::kind(g.game, i) == kinds::LEADEAD);
+            .is_some_and(|i| it::lib26b1::kind(g.game, i) == ItKind::Leadead);
     if !held && name_of(a) != "ftCo_800C7590" {
         panic!("{SKIP}{} takes a fighter a ReDead holds", name_of(a));
     }
@@ -237,7 +236,7 @@ fn held_check(g: &Running, gobj: GObjId, a: u32) {
         && !fp
             .dmg
             .x1868_source
-            .is_some_and(|i| it::lib26b1::kind(g.game, i) == kinds::LEADEAD)
+            .is_some_and(|i| it::lib26b1::kind(g.game, i) == ItKind::Leadead)
     {
         panic!("{SKIP}ftCo_800C7590 takes a fighter a ReDead hit");
     }
@@ -828,7 +827,7 @@ fn tilt_floor(call: &mut Call, kind: u32) -> bool {
     };
     let line = peek_u32(call, ip + 0x378 + 0x14C) as i32;
     let lines = peek_u32(call, leaf_check::sym("groundCollLine"));
-    if !(0..1536).contains(&line) || peek_u32(call, ip + 0x10) != kinds::LEADEAD as u32 {
+    if !(0..1536).contains(&line) || peek_u32(call, ip + 0x10) != ItKind::Leadead as u32 {
         return false;
     }
     let Some(at) = in_mem1(lines + 8 * line as u32 + 4) else {

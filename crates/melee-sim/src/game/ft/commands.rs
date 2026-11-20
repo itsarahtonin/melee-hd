@@ -13,6 +13,7 @@ use super::colanim::Overlay;
 use super::common::{FIGHTER_P_LINK, GA_AIR};
 use super::sound::Track;
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::{aobj, tobj};
 use crate::lb::command::Script;
@@ -632,7 +633,9 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         if fp.item_gobj.is_some() && fp.x221E_b3 != v {
             if v {
-                let cb = super::co::kind_callbacks::ON_ITEM_VISIBLE[fp.kind as usize];
+                let cb = crate::game::ft::registry::character(fp.kind)
+                    .callbacks
+                    .on_item_visible;
                 if cb != 0 {
                     super::super::code::run_fighter_cb(
                         self,
@@ -655,7 +658,9 @@ impl Running<'_> {
         if fp.item_gobj.is_none() {
             return;
         }
-        let cb = super::co::kind_callbacks::ON_ITEM_INVISIBLE[fp.kind as usize];
+        let cb = crate::game::ft::registry::character(fp.kind)
+            .callbacks
+            .on_item_invisible;
         if cb != 0 {
             super::super::code::run_fighter_cb(self, gobj, crate::game::handles::CodeRef(cb));
         }
@@ -765,8 +770,7 @@ impl Running<'_> {
             self.game.world.gobj(item).user_data,
             Some(crate::game::state::UserData::Item(_))
         );
-        (is_item
-            && crate::game::it::lib26b1::kind(self.game, item) == crate::game::it::kinds::SWORD)
+        (is_item && crate::game::it::lib26b1::kind(self.game, item) == ItKind::Sword)
             .then_some(item)
     }
 

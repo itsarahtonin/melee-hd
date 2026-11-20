@@ -7,6 +7,7 @@
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use super::*;
+use crate::game::ft::CharacterKind;
 
 /// `mnCharSel_CursorThink`.
 pub const CURSOR_THINK: u32 = 0x8026_02A0;
@@ -325,7 +326,7 @@ impl Running<'_> {
                         self.token_mut(d).held_by = 0;
                         self.game.charsel.doors[d].sel_icon = NO_ICON;
                         let player = self.door_player(door);
-                        self.css_start().players[player].ckind = CHKIND_NONE;
+                        self.css_start().players[player].ckind = CharacterKind::NONE as i8;
                     }
                     self.charsel_door(door);
                     self.cursor_mut(me).state = 2;

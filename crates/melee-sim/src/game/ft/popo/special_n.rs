@@ -11,11 +11,13 @@
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{ICE_CLIMBER_ICE, climbersice};
+use super::super::super::it::kinds::climbersice;
 use super::super::super::state::Running;
 use super::super::sound::Track;
-use super::{KIND_POPO, addr, var};
+use super::{addr, var};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// What tells one Ice Shot from the other.
@@ -51,7 +53,7 @@ pub const POPO: IceShot = IceShot {
     attrs: 0,
     u_ice: 0,
     u_air: 0,
-    ice_kind: ICE_CLIMBER_ICE,
+    ice_kind: ItKind::IceClimberIce.id(),
     on_death: addr::PP_REMOVE_ITEMS,
     on_damage: addr::PP_REMOVE_ITEMS,
     ice_cb: addr::PP_SPECIAL_N_ICE,
@@ -203,7 +205,7 @@ impl Running<'_> {
                 };
                 climbersice::throw(self, ice);
                 self.game.fighter_mut(gobj).cmd_vars[0] = 0;
-                let voice = if self.game.fighters[f.0].kind == KIND_POPO {
+                let voice = if self.game.fighters[f.0].kind == FighterKind::Popo {
                     p.voices[0]
                 } else {
                     p.voices[1]

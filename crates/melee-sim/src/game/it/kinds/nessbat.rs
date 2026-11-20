@@ -3,6 +3,7 @@
 
 use super::super::item::{change, change_state, destroy, pick_up, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -60,7 +61,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     let ness = ness?;
     let mut spawn = SpawnItem {
-        kind: super::NESS_BAT,
+        kind: ItKind::NessBat.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition(&spawn, pos, true)`.
@@ -96,7 +97,7 @@ pub fn spawn_demo(r: &mut Running, ness: GObjId, part: i32) -> Option<GObjId> {
     let fp = r.game.fighter_mut(ness);
     let (pos, facing_dir) = (fp.cur_pos, fp.facing_dir);
     let mut spawn = SpawnItem {
-        kind: super::NESS_BAT,
+        kind: ItKind::NessBat.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;

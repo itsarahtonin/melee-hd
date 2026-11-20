@@ -7,6 +7,7 @@ use gekko_fp as fp;
 use super::super::item::{change, change_state, debug_owner_bubbles, spawn_air};
 use super::super::{item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -25,12 +26,12 @@ pub const COLL: u32 = 0x802A_C8A0;
 
 /// `it_803F6C18`: each trail's kind.
 const KINDS: [i32; 6] = [
-    super::NESS_PK_THUNDER1,
-    super::NESS_PK_THUNDER1,
-    super::NESS_PK_THUNDER1,
-    super::NESS_PK_THUNDER2,
-    super::NESS_PK_THUNDER3,
-    super::NESS_PK_THUNDER4,
+    ItKind::NessPKThunder1.id(),
+    ItKind::NessPKThunder1.id(),
+    ItKind::NessPKThunder1.id(),
+    ItKind::NessPKThunder2.id(),
+    ItKind::NessPKThunder3.id(),
+    ItKind::NessPKThunder4.id(),
 ];
 
 /// `JOBJ_HIDDEN`.

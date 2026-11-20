@@ -21,6 +21,7 @@ use crate::hsd::jobj::{self, JObjId};
 use crate::vec::Vec3;
 
 use super::super::Var;
+use crate::game::it::ItKind;
 
 pub const PHYS: u32 = 0x802E_6D60;
 pub const DMG_DEALT: u32 = 0x802E_6F7C;
@@ -28,9 +29,6 @@ pub const DMG_RECEIVED: u32 = 0x802E_6FC0;
 /// `it_802E7054`, the touch callback (`Item::touched`).
 pub const TOUCHED: u32 = 0x802E_7054;
 pub const EVT_UNK: u32 = 0x802E_709C;
-
-/// `It_PKind_Random`, the kind the hurtbox items take.
-pub const KIND: i32 = super::PKIND_RANDOM;
 
 /// `it_803F8C08`, the attributes the spawn gives the kind (an `ItemAttr`, big-endian as the
 /// executable holds it): hold kind 1, `x0_78` 6, `x1_5` set, its collision box 2 each way, its
@@ -231,7 +229,7 @@ pub fn spawn(
         pos?
     };
     let mut s = SpawnItem {
-        kind: KIND,
+        kind: ItKind::StageHurtbox.id(),
         ..Default::default()
     };
     s.prev_pos = at;
@@ -251,7 +249,8 @@ pub fn spawn(
     // `it_804D6D38[It_PKind_Random - It_Kind_Kuriboh]->x0_common_attr = &it_803F8C08`: the
     // table's last entry, an article in `ItCo.dat`'s data, which the heap's image takes where
     // it holds the file.
-    if let Some(a) = r.game.it.char_articles[(KIND - super::KURIBOH) as usize]
+    if let Some(a) =
+        r.game.it.char_articles[(ItKind::StageHurtbox.id() - ItKind::Kuriboh.id()) as usize]
         && crate::hsd::heap::image_on()
     {
         crate::hsd::heap::with(|h| h.image.file_word(a, 0x803F_8C08));

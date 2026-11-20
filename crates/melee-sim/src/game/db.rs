@@ -14,6 +14,8 @@ use super::camera;
 use super::hud::devtext::DevText;
 use super::state::{Game, Running};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::cobj;
 use crate::hsd::gobj::GObjId;
 use crate::input::pad::{
@@ -31,21 +33,6 @@ const DEVELOP: i32 = 4;
 const P_LINK_FIGHTER: u8 = 8;
 const P_LINK_ITEM: u8 = 9;
 const P_LINK_GROUND: u8 = 5;
-
-/// `Ft_Kind_MasterH`, `Ft_Kind_CrezyH`.
-const KIND_MASTER_HAND: i32 = 0x1B;
-const KIND_CRAZY_HAND: i32 = 0x1C;
-
-/// `It_Kind_M_Ball`, `It_Kind_L_Gun_Ray` (`It_Common_End`), `It_Kind_Kuriboh`,
-/// `It_Kind_Octarock_Stone`, `It_Kind_Unk4` (a coin), `It_Kind_Old_Kuri`,
-/// `It_Kind_Arwing_Laser`.
-const IT_M_BALL: i32 = 0x22;
-const IT_COMMON_END: i32 = 0x23;
-const IT_KURIBOH: i32 = 0x2B;
-const IT_OCTAROCK_STONE: i32 = 0x2F;
-const IT_COIN: i32 = 0x9E;
-const IT_OLD_KURI: i32 = 0xD0;
-const IT_ARWING_LASER: i32 = 0xEA;
 
 /// A port's buttons as the tools read them (`db_ButtonStates`): held, held the frame
 /// before, pressed and released this frame, and the pad library's repeat.
@@ -344,8 +331,8 @@ impl Running<'_> {
         if self.game.gm.db_level < DEBUG_ROM {
             return;
         }
-        let ports = if self.game.hand_present(KIND_MASTER_HAND)
-            || self.game.hand_present(KIND_CRAZY_HAND)
+        let ports = if self.game.hand_present(FighterKind::MasterHand.id())
+            || self.game.hand_present(FighterKind::CrazyHand.id())
         {
             2
         } else {
@@ -1260,7 +1247,7 @@ impl Running<'_> {
     fn db_setup_item_menu(&mut self) {
         let m = &mut self.game.it.db_menu;
         m.DisplayStatus = 0;
-        m.CurrentlySelectedItem = IT_M_BALL;
+        m.CurrentlySelectedItem = ItKind::MBall.id();
         m.LastSelectedItem = m.CurrentlySelectedItem;
         m.CurrentlySelectedPokemon = 0;
         m.LastSelectedPokemon = m.CurrentlySelectedPokemon;
@@ -1294,7 +1281,7 @@ impl Running<'_> {
                 (1, false) => *flags &= !0x08,
                 // `b0`, for a coin.
                 (2, on) => {
-                    if ip.kind == IT_COIN {
+                    if ip.kind == ItKind::Unk4 {
                         if on {
                             ip.xDAA[0] |= 0x80;
                         } else {
@@ -1339,30 +1326,30 @@ impl Running<'_> {
         let m = &mut self.game.it.db_menu;
         let item = &mut m.CurrentlySelectedItem;
         if l && rep & u32::from(BUTTON_UP) != 0 {
-            if *item < IT_COMMON_END {
+            if *item < ItKind::COMMON_END {
                 *item += 1;
-                if *item == IT_COMMON_END {
-                    *item = IT_KURIBOH;
+                if *item == ItKind::COMMON_END {
+                    *item = ItKind::Kuriboh.id();
                 }
-            } else if *item < IT_OCTAROCK_STONE {
+            } else if *item < ItKind::OctarockStone {
                 *item += 1;
-                if *item == IT_OCTAROCK_STONE {
-                    *item = IT_OLD_KURI;
+                if *item == ItKind::OctarockStone {
+                    *item = ItKind::OldKuri.id();
                 }
-            } else if *item < IT_ARWING_LASER - 1 {
+            } else if *item < ItKind::ArwingLaser.id() - 1 {
                 *item += 1;
             }
         }
         if l && rep & u32::from(BUTTON_DOWN) != 0 {
-            if *item >= IT_OLD_KURI {
+            if *item >= ItKind::OldKuri {
                 *item -= 1;
-                if *item < IT_OLD_KURI {
-                    *item = IT_OCTAROCK_STONE - 1;
+                if *item < ItKind::OldKuri {
+                    *item = ItKind::OctarockStone.id() - 1;
                 }
-            } else if *item >= IT_KURIBOH {
+            } else if *item >= ItKind::Kuriboh {
                 *item -= 1;
-                if *item < IT_KURIBOH {
-                    *item = IT_COMMON_END - 1;
+                if *item < ItKind::Kuriboh {
+                    *item = ItKind::COMMON_END.id() - 1;
                 }
             } else if *item > 0 {
                 *item -= 1;
@@ -1419,13 +1406,13 @@ impl Running<'_> {
         }
         let m = &self.game.it.db_menu;
         let i = m.CurrentlySelectedItem;
-        let item: &[u8] = if i < IT_COMMON_END {
+        let item: &[u8] = if i < ItKind::COMMON_END {
             ITEM_NAMES[i as usize]
-        } else if i < IT_OCTAROCK_STONE {
-            BARREL_ENEMIES[(i - IT_KURIBOH) as usize]
-        } else if i < IT_ARWING_LASER {
+        } else if i < ItKind::OctarockStone {
+            BARREL_ENEMIES[(i - ItKind::Kuriboh.id()) as usize]
+        } else if i < ItKind::ArwingLaser {
             ADVENTURE_ENEMIES
-                .get((i - IT_OLD_KURI) as usize)
+                .get((i - ItKind::OldKuri.id()) as usize)
                 .copied()
                 .unwrap_or(b"")
         } else {
@@ -1467,7 +1454,7 @@ impl Running<'_> {
         }
         let kind = self.game.it.db_menu.CurrentlySelectedItem;
         // `Item_80266F3C`: the common items only in a match that has items.
-        if self.game.vs_item_freq() == -1 && kind < IT_COMMON_END {
+        if self.game.vs_item_freq() == -1 && kind < ItKind::COMMON_END {
             return;
         }
         let mut pos = self.game.player_pos(port);
@@ -1486,21 +1473,21 @@ impl Running<'_> {
         };
         let common = super::it::item::common_data(self.game);
         let counts = &self.game.it.counts;
-        if kind < IT_COMMON_END && counts.x0 as u32 >= common.u32(self.data, 0) {
+        if kind < ItKind::COMMON_END && counts.x0 as u32 >= common.u32(self.data, 0) {
             // "Item Max Over."
             return;
         }
-        if kind < IT_OCTAROCK_STONE && counts.x2C as u32 >= common.u32(self.data, 0x14) {
+        if kind < ItKind::OctarockStone && counts.x2C as u32 >= common.u32(self.data, 0x14) {
             // "couldn't get Item struct.(CZako)"
             return;
         }
         // An adventure enemy only when the stage loaded its article (`it_804A0F60`).
-        if (IT_OLD_KURI..IT_ARWING_LASER).contains(&kind)
-            && self.game.gr.stage_articles[(kind - IT_OLD_KURI) as usize].is_none()
+        if (ItKind::OldKuri.id()..ItKind::ArwingLaser.id()).contains(&kind)
+            && self.game.gr.stage_articles[(kind - ItKind::OldKuri.id()) as usize].is_none()
         {
             return;
         }
-        if kind == IT_M_BALL && super::it::spawn::poke_balls_full(self.game) {
+        if kind == ItKind::MBall && super::it::spawn::poke_balls_full(self.game) {
             return;
         }
         if let Some(g) = super::it::item::spawn_air(self, &mut spawn) {

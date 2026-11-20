@@ -13,6 +13,7 @@ use super::super::super::it;
 use super::super::super::state::Running;
 use super::{addr, attr, ms, mv, part, u};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// The flags the lunge keeps from the wind-up.
@@ -21,11 +22,6 @@ const DETECT_FLAGS: u32 = 0x0C4C_5082;
 /// `HSD_GOBJ_CLASS_FIGHTER` and `HSD_GOBJ_CLASS_ITEM`.
 const CLASS_FIGHTER: u16 = 4;
 const CLASS_ITEM: u16 = 6;
-
-/// The item kinds the wind-up detects: the common items before `It_Kind_BombHei`, the
-/// enemies (`It_Kind_Kuriboh` up to `It_Kind_Octarock_Stone`, `It_Kind_Old_Kuri` up to
-/// `It_Kind_Arwing_Laser`) and `It_PKind_Random`.
-const IT_KIND_BOMB_HEI: i32 = 6;
 
 /// `Collide_LeftWallMask` and `Collide_RightWallMask` in `CollData::env_flags`.
 const LEFT_WALL: i32 = 0x3F;
@@ -106,10 +102,10 @@ impl Running<'_> {
             CLASS_FIGHTER => true,
             CLASS_ITEM => {
                 let k = it::item(self.game, detected).kind;
-                k < IT_KIND_BOMB_HEI
-                    || (it::kinds::KURIBOH..it::kinds::OCTAROCK_STONE).contains(&k)
-                    || (it::kinds::OLD_KURI..it::kinds::ARWING_LASER).contains(&k)
-                    || k == it::kinds::PKIND_RANDOM
+                k < ItKind::BombHei
+                    || (ItKind::Kuriboh.id()..ItKind::OctarockStone.id()).contains(&k)
+                    || (ItKind::OldKuri.id()..ItKind::ArwingLaser.id()).contains(&k)
+                    || k == ItKind::StageHurtbox
             }
             _ => false,
         };

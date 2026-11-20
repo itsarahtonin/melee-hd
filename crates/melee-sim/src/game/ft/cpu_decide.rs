@@ -11,14 +11,12 @@ use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::math;
 use crate::mp::FloorR5;
 
 /// `HSD_GOBJ_PLINK_ITEM`.
 const P_LINK_ITEM: u8 = 9;
-
-/// `It_Kind_L_Gun_Ray`: the first item kind past the common items.
-pub(super) const IT_KIND_L_GUN_RAY: i32 = 0x23;
 
 /// The return addresses `ftCo_800A4BEC`'s calls to `ftCo_IsAlly` and `ftCo_800A0F00` leave
 /// in its frame's link register slot.
@@ -26,7 +24,7 @@ const FIND_TARGET_ALLY_RET: u32 = 0x800A_4CB4;
 const FIND_TARGET_CLOAKED_RET: u32 = 0x800A_4D48;
 
 /// What each common item is worth to a computer player, `ftCo_803C5A68`.
-const ITEM_WORTH: [i32; IT_KIND_L_GUN_RAY as usize] = [
+const ITEM_WORTH: [i32; ItKind::COMMON_END.id() as usize] = [
     1, 0, 0, 1, 0, 0, 0, 1, 7, 6, 5, 4, 4, 3, 1, 1, 2, 1, 5, 2, 2, 2, 3, 3, 3, 4, 0, 0, 8, 4, 1, 4,
     4, 5, 5,
 ];
@@ -398,10 +396,10 @@ impl Running<'_> {
             }
             let it = super::super::it::item_of(self.game, g);
             let ip = &self.game.items[it.0];
-            if kind != IT_KIND_L_GUN_RAY && ip.kind != kind {
+            if kind != ItKind::COMMON_END && ip.kind != kind {
                 continue;
             }
-            if self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) || ip.kind >= IT_KIND_L_GUN_RAY {
+            if self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) || ip.kind >= ItKind::COMMON_END {
                 continue;
             }
             let worth = ITEM_WORTH[ip.kind as usize];
@@ -442,7 +440,7 @@ impl Running<'_> {
                 continue;
             }
             let ip = &self.game.items[it.0];
-            if self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) || ip.kind >= IT_KIND_L_GUN_RAY {
+            if self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) || ip.kind >= ItKind::COMMON_END {
                 continue;
             }
             let worth = ITEM_WORTH[ip.kind as usize];
@@ -479,7 +477,6 @@ impl Running<'_> {
     /// monsters and the adventure's Koopas, Like Likes and Topis in reach of the blast zones.
     #[doc(alias = "ftCo_800A648C")]
     pub(super) fn cpu_enemy_item_target(&mut self, f: FighterId) -> Option<ItemId> {
-        use super::super::it::kinds as k;
         let mut closest: Option<(ItemId, f64)> = None;
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(g) = cur {
@@ -489,10 +486,10 @@ impl Running<'_> {
             // `ftCo_800A648C_inline1`: `It_Kind_Kuriboh` up to `_Octarock_Stone` (the
             // containers' monsters), `_Nokonoko`, `_Patapata` and the next, `_Whitebea`.
             let kind = ip.kind;
-            let enemy = (k::KURIBOH..k::OCTAROCK_STONE).contains(&kind)
-                || kind == 0xD3
-                || (kind.wrapping_sub(0xD4) as u32) <= 1
-                || kind == 0xD9;
+            let enemy = (ItKind::Kuriboh.id()..ItKind::OctarockStone.id()).contains(&kind)
+                || kind == ItKind::Nokonoko
+                || (kind.wrapping_sub(ItKind::Patapata.id()) as u32) <= 1
+                || kind == ItKind::Whitebea;
             if !enemy || self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) {
                 continue;
             }
@@ -784,7 +781,10 @@ impl Running<'_> {
         }
         let kind = self.game.items[super::super::it::item_of(self.game, g).0].kind;
         // `It_Kind_Capsule` to `_BombHei`, `_M_Ball`, `_EvYoshiEgg`.
-        if (0..7).contains(&kind) || kind == 0x22 || kind == 0x2A {
+        if (ItKind::Capsule.id()..=ItKind::BombHei.id()).contains(&kind)
+            || kind == ItKind::MBall
+            || kind == ItKind::EvYoshiEgg
+        {
             return true;
         }
         // `ftCo_800A5980`'s `ftCo_MS_LandingFallSpecial` up to `_Attack100Start`, and
@@ -908,7 +908,12 @@ impl Running<'_> {
             // `it_8026C1B4`: a hitbox on.
             let live = ip.x5D4_hitboxes.iter().take(4).any(|h| h.hit.state != 0);
             // `ftCo_800A5944`: `It_Kind_BombHei`, `_G_Shell`, `_R_Shell`.
-            if !live || !matches!(ip.kind, 6 | 14 | 15) {
+            if !live
+                || !matches!(
+                    ip.item_kind(),
+                    ItKind::BombHei | ItKind::GShell | ItKind::RShell
+                )
+            {
                 continue;
             }
             if geo.island_of_line(ip.x378_itemColl.floor.index) == Some(island) {

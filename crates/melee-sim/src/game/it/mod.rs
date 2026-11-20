@@ -25,6 +25,7 @@ pub mod link;
 pub mod maplib;
 pub mod owner;
 pub mod pokemon;
+pub mod registry;
 pub mod release;
 pub mod spawn;
 pub mod tables;
@@ -32,7 +33,8 @@ mod tables_gen;
 pub mod vars;
 pub mod zako;
 
-pub use vars::{CoinFlags, ItemVars, LinkBombFlags, Member, TurnipFlag, Var, VarsKind, vars_kind};
+pub use registry::{ItKind, ItemKind, vars_kind};
+pub use vars::{CoinFlags, ItemVars, LinkBombFlags, Member, TurnipFlag, Var, VarsKind};
 
 use melee_data::archive::DataRef;
 
@@ -58,7 +60,7 @@ pub const BONE_TABLE_LEN: usize = 100;
 
 /// The character items' kinds (`It_Kind_Kuriboh` to `It_PKind_Random`), which index
 /// `it_804D6D38`.
-pub const CHAR_ARTICLES: usize = (kinds::PKIND_START - kinds::KURIBOH) as usize;
+pub const CHAR_ARTICLES: usize = (ItKind::FIRST_POKEMON.id() - ItKind::Kuriboh.id()) as usize;
 
 /// An item's table of its model's joints in depth-first order (`DynamicBoneTable`). The
 /// original's block comes uncleared from `HSD_ObjAlloc` and only the model's joints are

@@ -28,10 +28,6 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-/// `FTKIND_MASTERH` and `FTKIND_CREZYH`.
-pub const KIND_MASTER_HAND: i32 = 0x1B;
-pub const KIND_CRAZY_HAND: i32 = 0x1C;
-
 /// `It_Kind_MasterHand_Laser` and `_Bullet`, his articles in his `ftData`'s order.
 pub const ITEMS: [i32; 2] = [125, 126];
 

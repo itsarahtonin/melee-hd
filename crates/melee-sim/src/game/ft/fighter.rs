@@ -10,6 +10,8 @@ use super::super::state::Running;
 use super::anim::x594_bit;
 use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::math::{self, sqrt_reg};
@@ -245,10 +247,8 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         if fp.x2104 == 0 {
             fp.x2221_b4 = false;
             let item = fp.item_gobj;
-            let parasol = item.is_some_and(|i| {
-                crate::game::it::lib26b1::kind(g.game, i)
-                    == crate::game::it::kinds::peachparasol::KIND
-            });
+            let parasol = item
+                .is_some_and(|i| crate::game::it::lib26b1::kind(g.game, i) == ItKind::PeachParasol);
             if parasol {
                 g.game.fighters[f.0].x2221_b5 = true;
                 g.enter_fall_special_basic(gobj);
@@ -322,10 +322,10 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         }
     }
     // `ftData_UnkMotionStates3`: Kirby's, Bowser's (his flame's refill) and Giga Bowser's.
-    match fp.kind {
-        super::koopa::KIND_KOOPA => g.kp_unk_motion_states3(gobj),
-        super::kirby::KIND_KIRBY => g.kb_unk_motion_states3(gobj),
-        super::koopa::KIND_GKOOPA => g.gk_unk_motion_states3(gobj),
+    match fp.fighter_kind() {
+        FighterKind::Koopa => g.kp_unk_motion_states3(gobj),
+        FighterKind::Kirby => g.kb_unk_motion_states3(gobj),
+        FighterKind::GKoopa => g.gk_unk_motion_states3(gobj),
         _ => {}
     }
     let fp = &mut g.game.fighters[f.0];

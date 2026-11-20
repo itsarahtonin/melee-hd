@@ -12,10 +12,9 @@ use super::super::common::GA_AIR;
 use super::super::sound::Track;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 
-/// `Ft_Kind_Purin`.
-const KIND_PURIN: i32 = 15;
 /// The shield's shatter, on the shield's joint.
 const GFX_SHIELD_BREAK: i32 = 0x41B;
 /// The shatter's sound.
@@ -42,7 +41,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.self_vel.x = 0.0;
         fp.self_vel.y = fp.co_attrs.shield_break_initial_velocity;
-        if fp.kind == KIND_PURIN {
+        if fp.kind == FighterKind::Purin {
             fp.x2222_b3 = true;
         }
         let joint = self.shield_joint(gobj);

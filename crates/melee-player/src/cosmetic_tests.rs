@@ -72,11 +72,11 @@ const HAT_DYNAMICS: &[&str] = &[
 /// The joints of Kirby's and Jigglypuff's hats: each hat's model (`u`'s joint at 0x10 for
 /// both, `ftKb_FighterVars::hat.jobj` and `ftPurin_FighterVars`'), with every joint under it.
 fn hat_joints(game: &Game) -> HashSet<u32> {
-    use melee_sim::game::ft::{kirby::KIND_KIRBY, purin::KIND_PURIN};
+    use melee_sim::game::ft::FighterKind;
     let roots: Vec<JObjId> = game
         .fighters
         .iter()
-        .filter(|(_, f)| f.kind == KIND_KIRBY || f.kind == KIND_PURIN)
+        .filter(|(_, f)| f.kind == FighterKind::Kirby || f.kind == FighterKind::Purin)
         .filter_map(|(_, f)| f.u.jobj_at(0x10))
         .collect();
     let jobjs = &game.objs.jobjs.pool;

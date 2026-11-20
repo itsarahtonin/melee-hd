@@ -19,6 +19,7 @@ use crate::hsd::jobj::{self, JObjId};
 use crate::vec::Vec3;
 
 use super::super::Var;
+use crate::game::it::ItKind;
 
 pub const SPAWNED: u32 = 0x802E_1820;
 pub const DESTROYED: u32 = 0x802E_1874;
@@ -210,7 +211,7 @@ pub fn spawn(r: &mut Running, path: Option<GObjId>) -> Option<GObjId> {
     let path = path?;
     let j = jobj_of(r.game, path);
     let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, j, None);
-    let gobj = zako::spawn(r, super::KLAP, Some(pos), None, None, true)?;
+    let gobj = zako::spawn(r, ItKind::Klap.id(), Some(pos), None, None, true)?;
     vars(r.game, gobj).x20.set(Some(path));
     super::super::lib26b1::stop_keeping_clear(r.game, gobj);
     Some(gobj)

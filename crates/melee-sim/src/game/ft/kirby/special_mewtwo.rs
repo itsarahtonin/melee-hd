@@ -5,10 +5,10 @@
 //! his generic cleanups as hooks, and one branch of his own ([`KIRBY`]); the charge's
 //! variables are laid out as Mewtwo's (`mv.kb.specialhi`). Only his copy's addresses are here.
 
-use super::super::super::it::kinds as k;
 use super::super::super::state::Running;
 use super::super::mewtwo::special_n::{Phase, ShadowBall};
 use super::{attr, ms};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// The copy's function addresses.
@@ -70,7 +70,7 @@ pub const KIRBY: ShadowBall = ShadowBall {
     attrs: attr::MT_CHARGE_TIME,
     u: 0x94,
     hand: 39,
-    ball_kind: k::KIRBY_MEWTWO_SHADOWBALL,
+    ball_kind: ItKind::KirbyMewtwoShadowBall.id(),
     charge_sfx: [0x30DB9, 0x30DBC, 0x30DBF, 0x30DC2],
     full_flash_y: 4.0,
     full_glow: 0x5D,

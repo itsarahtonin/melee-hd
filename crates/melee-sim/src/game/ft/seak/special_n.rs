@@ -13,8 +13,9 @@ use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::{seakneedleheld, seakneedlethrown};
 use super::super::super::state::Running;
-use super::{GA_GROUND, IT_NEEDLE_HELD, IT_NEEDLE_THROW, PAD_B, PAD_LR, addr, attr, ms, mv, u};
+use super::{GA_GROUND, PAD_B, PAD_LR, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// What tells one needle throw from the other.
@@ -47,8 +48,8 @@ pub const SEAK: Needles = Needles {
     attrs: 0,
     u: 0,
     needle_part: 23,
-    held_kind: IT_NEEDLE_HELD,
-    thrown_kind: IT_NEEDLE_THROW,
+    held_kind: ItKind::SeakNeedleHeld.id(),
+    thrown_kind: ItKind::SeakNeedleThrow.id(),
     full_glow: 86,
     on_death: addr::DAMAGE_CB,
     on_damage: addr::DAMAGE_CB,

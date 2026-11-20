@@ -14,6 +14,7 @@ use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib, set_flag};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -39,10 +40,6 @@ pub const GAS_EVT_UNK: u32 = 0x802C_B778;
 pub const GAS_ANIM: u32 = 0x802C_B810;
 pub const GAS_PHYS: u32 = 0x802C_B844;
 pub const GAS_COLL: u32 = 0x802C_B8A4;
-
-/// `It_Kind_Matadogas_Gas1` and `_Gas2`.
-pub const MATADOGAS_GAS1: i32 = 0xC1;
-pub const MATADOGAS_GAS2: i32 = 0xC2;
 
 /// Its variables past the release's (`itMatadogas_ItemVars`): the frames to its next puff
 /// (`x60`), and whether the next puff is silent (`x64`, flipped each puff).
@@ -157,10 +154,10 @@ pub fn puff_when_told(r: &mut Running, gobj: GObjId) {
     pokemon::vars(r.game, gobj).set_i32(PUFF_FRAMES, fp::fctiwz(reg(frames)));
     if r.game.objs.rng.below(2) == 0 {
         let speed = attr_f32(r, gobj, 8);
-        puff(r, gobj, MATADOGAS_GAS1, speed);
+        puff(r, gobj, ItKind::MatadogasGas1.id(), speed);
     } else {
         let speed = attr_f32(r, gobj, 0xC);
-        puff(r, gobj, MATADOGAS_GAS2, speed);
+        puff(r, gobj, ItKind::MatadogasGas2.id(), speed);
     }
 }
 
@@ -289,9 +286,9 @@ pub fn gas_anim(r: &mut Running, gobj: GObjId) -> bool {
 /// second its `x8`).
 #[doc(alias = "it_802CB844")]
 pub fn gas_phys(r: &mut Running, gobj: GObjId) {
-    let scale = match item(r.game, gobj).kind {
-        MATADOGAS_GAS1 => attr_f32(r, gobj, 4),
-        MATADOGAS_GAS2 => attr_f32(r, gobj, 8),
+    let scale = match ItKind::of(item(r.game, gobj).kind) {
+        ItKind::MatadogasGas1 => attr_f32(r, gobj, 4),
+        ItKind::MatadogasGas2 => attr_f32(r, gobj, 8),
         _ => 0.0,
     };
     let ip = item_mut(r.game, gobj);

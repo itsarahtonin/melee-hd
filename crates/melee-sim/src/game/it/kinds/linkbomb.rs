@@ -24,9 +24,6 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::vec::Vec3;
 
-/// `It_Kind_Link_Bomb`.
-pub const KIND: i32 = super::LINK_BOMB;
-
 pub const SET_OFF: u32 = 0x8029_D968;
 pub const PICKED_UP: u32 = 0x8029_DEB0;
 pub const ANIM_0: u32 = 0x8029_E074;

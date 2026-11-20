@@ -8,6 +8,7 @@ use super::super::ground::{air, fall, ground_or_fall, ground_skid};
 use super::super::item::{article, change, change_state};
 use super::super::{item, item_mut, lib26b1, lib2725};
 use super::{falling_phys, sscopebeam};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -225,7 +226,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId, pos: Vec3, level: i32, facing: f32) 
 /// A Super Scope standing at `pos`, `it_80291BE0`.
 #[doc(alias = "it_80291BE0")]
 pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
-    let mut spawn = super::super::item::drop_spawn(super::S_SCOPE, pos, false);
+    let mut spawn = super::super::item::drop_spawn(ItKind::SScope.id(), pos, false);
     let gobj = super::super::item::spawn_ground(r, &mut spawn)?;
     landed(r, gobj);
     Some(gobj)

@@ -3,6 +3,7 @@
 
 use super::super::item::{change, change_state, debug_owner_bubbles, spawn_air};
 use super::super::{item_mut, lib26b1, lib2725};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -11,9 +12,6 @@ use crate::vec::Vec3;
 pub const DMG_DEALT: u32 = 0x802B_D240;
 pub const MOTION1_ANIM: u32 = 0x802B_D2EC;
 pub const EVT_UNK: u32 = 0x802B_D30C;
-
-/// `It_Kind_Peach_Explode`.
-pub const KIND: i32 = 98;
 
 /// Runs one of the explosion's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -41,7 +39,7 @@ pub fn spawn(
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: KIND,
+        kind: ItKind::PeachExplode.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition`, keeping its depth.

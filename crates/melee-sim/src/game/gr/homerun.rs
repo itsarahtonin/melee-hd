@@ -19,6 +19,7 @@ use super::ground::{
 };
 use super::{anime, setup, stage};
 use crate::fpu::{copy, mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::TextId;
@@ -677,7 +678,7 @@ pub fn label_text(r: &mut Running, n: i32) -> TextId {
 pub fn drop_bat(r: &mut Running) {
     let j = point_joint(r.game, 0x7F);
     let pos = world_position(&mut r.game.objs, r.data, j, None);
-    super::super::it::lib26b1::drop_by_kind(r, 11, pos, true);
+    super::super::it::lib26b1::drop_by_kind(r, ItKind::Bat.id(), pos, true);
 }
 
 /// The field's units, `grHomeRun_8021EDD4`: metres with Japanese saved (a label every 50),

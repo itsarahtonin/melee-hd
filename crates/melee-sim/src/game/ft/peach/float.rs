@@ -8,8 +8,9 @@ use super::super::super::ef::{self, SpawnKind};
 use super::super::super::state::Running;
 use super::super::coll::PLATFORM_FILTER;
 use super::super::parts::TRANS_N;
-use super::{KIND_PEACH, addr, attr, ms, mv, u};
+use super::{addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 
 /// `HSD_PAD_X | HSD_PAD_Y`.
@@ -46,7 +47,7 @@ impl Running<'_> {
         let down = fp::fneg(reg(self.common().f32(CD_X88)));
         let fp = self.game.fighter(gobj);
         let input = reg(fp.input.lstick[0].y) <= down && fp.input.held_buttons[0] & PAD_XY != 0;
-        if fp.kind == KIND_PEACH && fp.u_i32(u::HAS_FLOAT) != 0 && input {
+        if fp.kind == FighterKind::Peach && fp.u_i32(u::HAS_FLOAT) != 0 && input {
             self.peach_enter_float(gobj, true);
             return true;
         }
@@ -57,7 +58,7 @@ impl Running<'_> {
     #[doc(alias = "ftPe_8011BAD8")]
     pub fn peach_float_continue_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        if fp.kind == KIND_PEACH
+        if fp.kind == FighterKind::Peach
             && fp.self_vel.y <= 0.0
             && fp.u_i32(u::HAS_FLOAT) != 0
             && self.peach_float_held(gobj)

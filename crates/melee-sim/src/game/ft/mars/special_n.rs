@@ -19,15 +19,16 @@ use super::super::super::state::Running;
 use super::super::common::GA_GROUND;
 use super::super::kirby::copy::KindFrom;
 use super::super::motion::flags::*;
-use super::{KIND_EMBLEM, KIND_MARS, PAD_B, addr, attr, ms, mv};
+use super::{PAD_B, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::lb::hitcapsule;
 
 /// What tells one Shield Breaker from the other.
 pub struct ShieldBreaker {
     /// Where the swordsman's kind comes from (the fighter's, or Kirby's copy's): Marth's
-    /// (`KIND_MARS`) picks the first of each pair below, any other the second (Roy's).
+    /// (`FighterKind::Mars`) picks the first of each pair below, any other the second (Roy's).
     pub(crate) kind: KindFrom,
     /// Added to Marth's states (`ms::SPECIAL_N_START` on): 0 for Marth and Roy alike;
     /// Kirby's Marth copy's `MS_SPECIAL_N_START` on, his Roy copy's `FE_SPECIAL_N_START` on.
@@ -118,7 +119,7 @@ fn sixty_degrees() -> f32 {
 impl Running<'_> {
     /// Which of the pairs the swordsman takes: 0 for Marth's, 1 for any other (Roy's).
     fn mars_n_which(&self, gobj: GObjId, p: &ShieldBreaker) -> usize {
-        usize::from(self.special_kind(gobj, p.kind) != KIND_MARS)
+        usize::from(self.special_kind(gobj, p.kind) != FighterKind::Mars)
     }
 
     /// The move's state `s` (Marth's numbers) for the swordsman.
@@ -145,9 +146,9 @@ impl Running<'_> {
     #[doc(alias = "fn_8010B1F4")]
     pub(crate) fn mars_special_n_flash(&mut self, gobj: GObjId, p: &ShieldBreaker, air: bool) {
         if !self.game.fighter(gobj).x2219_b0 {
-            let row = match self.special_kind(gobj, p.kind) {
-                KIND_MARS => Some(0),
-                KIND_EMBLEM => Some(1),
+            let row = match FighterKind::from_id(self.special_kind(gobj, p.kind)) {
+                Some(FighterKind::Mars) => Some(0),
+                Some(FighterKind::Emblem) => Some(1),
                 _ if p.one_flash => Some(1),
                 _ => None,
             };
@@ -227,7 +228,7 @@ impl Running<'_> {
     pub(crate) fn mars_special_n_start_anim(&mut self, gobj: GObjId, p: &ShieldBreaker, air: bool) {
         if !self.anim_frames_remaining(gobj) {
             self.mars_special_n_loop(gobj, p, air);
-            let color = if self.special_kind(gobj, p.kind) == KIND_MARS {
+            let color = if self.special_kind(gobj, p.kind) == FighterKind::Mars {
                 99
             } else {
                 100

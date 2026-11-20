@@ -17,9 +17,11 @@ use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::motion::flags::*;
 use super::super::sound::Track;
 use super::init::COLANIM_CHARGED;
-use super::{KIND_MEWTWO, PART_L_HAND_NB, PART_R_SHOULDER_N, PART_TOP_N, addr, attr, ms, mv, u};
+use super::{PART_L_HAND_NB, PART_R_SHOULDER_N, PART_TOP_N, addr, attr, ms, mv, u};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::math;
 use crate::vec::Vec3;
@@ -60,7 +62,7 @@ pub const MEWTWO: ShadowBall = ShadowBall {
     attrs: 0,
     u: 0,
     hand: PART_R_SHOULDER_N,
-    ball_kind: ball::KIND,
+    ball_kind: ItKind::MewtwoShadowBall.id(),
     charge_sfx: [200_121, 200_124, 200_127, 200_130],
     full_flash_y: 7.0,
     full_glow: COLANIM_CHARGED,
@@ -720,7 +722,9 @@ impl Running<'_> {
     #[doc(alias = "ftMt_SpecialN_Shoot")]
     pub fn mt_n_shoot(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].kind != KIND_MEWTWO || self.game.fighters[f.0].cmd_vars[3] != 1 {
+        if self.game.fighters[f.0].kind != FighterKind::Mewtwo
+            || self.game.fighters[f.0].cmd_vars[3] != 1
+        {
             return;
         }
         self.game.fighters[f.0].cmd_vars[3] = 0;
@@ -737,7 +741,15 @@ impl Running<'_> {
             mem(fp::fsubs(reg(from.x), reg(to.x))),
         );
         let facing = self.game.fighters[f.0].facing_dir;
-        ball::spawn_fired(self, gobj, from, ball::KIND, cycles, angle, facing);
+        ball::spawn_fired(
+            self,
+            gobj,
+            from,
+            ItKind::MewtwoShadowBall.id(),
+            cycles,
+            angle,
+            facing,
+        );
         self.fighter_play_sfx(f, SFX_FIRE, 127, 64);
     }
 }

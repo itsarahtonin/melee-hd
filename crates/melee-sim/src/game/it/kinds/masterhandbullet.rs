@@ -16,9 +16,6 @@ use crate::hsd::gobj::GObjId;
 use crate::quat::Quat;
 use crate::vec::Vec3;
 
-/// `It_Kind_MasterHand_Bullet`.
-pub const KIND: i32 = 126;
-
 #[doc(alias = "itMasterhandbullet_UnkMotion1_Anim")]
 pub const ANIM: u32 = 0x802F_0E70;
 #[doc(alias = "itMasterhandbullet_UnkMotion1_Phys")]

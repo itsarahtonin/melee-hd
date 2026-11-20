@@ -8,6 +8,7 @@ use super::super::handles::CodeRef;
 use super::super::state::{Game, OBJ_JOBJ, Obj, Running};
 use super::ground::ground_of;
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::aobj;
 use crate::hsd::generator::{self, GeneratorId};
 use crate::hsd::gobj::GObjId;
@@ -335,7 +336,7 @@ pub fn point_near_object(game: &Game, point: Vec3, offset: f32) -> bool {
     }
     let mut cur = game.world.first_in(crate::game::it::P_LINK_ITEM);
     while let Some(g) = cur {
-        if crate::game::it::lib26b1::kind(game, g) != crate::game::it::kinds::PKIND_RANDOM {
+        if crate::game::it::lib26b1::kind(game, g) != ItKind::StageHurtbox {
             let ip = crate::game::it::item(game, g);
             if point_in_ecb(&ip.x378_itemColl, point, offset) {
                 return true;

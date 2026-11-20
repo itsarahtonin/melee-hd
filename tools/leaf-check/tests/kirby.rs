@@ -88,9 +88,9 @@ use melee_sim::game::ft::kirby::special_samus::KIRBY as SS_KIRBY;
 use melee_sim::game::ft::kirby::special_seak::KIRBY as SK_KIRBY;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
+use melee_sim::game::it::ItKind;
 use melee_sim::game::it::kinds::{
-    kirbycutterbeam, kirbygamewatchchefpan, kirbyhammer, kirbyinhale, kirbyspitstar, peachtoad,
-    seakneedleheld,
+    kirbycutterbeam, kirbygamewatchchefpan, kirbyhammer, kirbyinhale, peachtoad, seakneedleheld,
 };
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -450,7 +450,7 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         let ok = if a < STAR_START {
             ip.xBC_itemStateContainer.map(|s| s.0) == Some(0x803F_9450)
         } else {
-            ip.kind == kirbyspitstar::KIND
+            ip.kind == ItKind::Unk2.id()
         };
         if !ok {
             panic!("{SKIP}{name} takes an item his inhale holds or its star");

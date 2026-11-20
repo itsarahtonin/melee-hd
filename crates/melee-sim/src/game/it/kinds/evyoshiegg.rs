@@ -12,6 +12,7 @@ use super::super::item::{article, change, change_state, play_sfx, spawn_air};
 use super::super::{hitbox, item, item_mut, jobj_of, lib26b1, lib2725};
 use super::falling_phys;
 use crate::game::ef;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -92,7 +93,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "itEvYoshiEgg_Spawn")]
 pub fn spawn(r: &mut Running, pos: Vec3) {
     let mut spawn = SpawnItem {
-        kind: super::EV_YOSHI_EGG,
+        kind: ItKind::EvYoshiEgg.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;

@@ -4,6 +4,7 @@
 use super::super::ground::{fall, ground_or_fall, ground_skid};
 use super::super::item::{article, attr_of, change, change_state, common_data};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -86,7 +87,7 @@ pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
     // `Item_InitSpawnPosition`, the caller's z cleared first.
     let at = Vec3::new(pos.x, pos.y, 0.0);
     let mut spawn = crate::game::structs::SpawnItem {
-        kind: super::BAT,
+        kind: ItKind::Bat.id(),
         pos: at,
         prev_pos: at,
         ..Default::default()

@@ -10,8 +10,9 @@
 
 use super::super::super::it::kinds::masterhandlaser;
 use super::super::super::state::Running;
-use super::{KIND_MASTER_HAND, addr, attr, ms, mv};
+use super::{addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -59,7 +60,7 @@ impl Running<'_> {
         if msid != ms::SQUEEZING1 {
             self.game.fighter_mut(gobj).cmd_vars[1] = 0;
         }
-        let mh = self.boss_gobj(KIND_MASTER_HAND);
+        let mh = self.boss_gobj(FighterKind::MasterHand.id());
         self.game.fighter_mut(gobj).x1A5C = mh;
         self.ch_enter(gobj, msid);
     }

@@ -9,6 +9,7 @@ use super::super::ground::{air_touches, fall_to_floor, ground_or_fall};
 use super::super::item::{article, change, change_state, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -116,7 +117,7 @@ pub fn spawn_pushed(
     decel: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::FREEZE,
+        kind: ItKind::Freeze.id(),
         ..SpawnItem::default()
     };
     spawn.prev_pos = pos;

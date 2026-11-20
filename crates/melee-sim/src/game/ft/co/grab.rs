@@ -14,10 +14,11 @@ use super::super::super::it::kinds::{linkhookshot, samusgrapple};
 use super::super::super::state::Running;
 use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::motion::flags::UPDATE_CMD;
-use super::checks::{KIND_CLINK, KIND_LINK, KIND_SAMUS, KIND_YOSHI};
+
 use super::ids::ms;
 use super::{PAD_A, PAD_XY};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::lb::joint::world_position;
@@ -70,7 +71,7 @@ impl Running<'_> {
         fp.gr_vel = 0.0;
         let mut frame = fp.cur_anim_frame;
         let next = if fp.motion_id == ms::CATCH {
-            if fp.kind == KIND_YOSHI {
+            if fp.kind == FighterKind::Yoshi {
                 frame = self.ys_catch_pull_frame(gobj, frame);
             }
             ms::CATCH_PULL
@@ -78,9 +79,9 @@ impl Running<'_> {
             ms::CATCH_DASH_PULL
         };
         let kind = self.game.fighter(gobj).kind;
-        let j = match kind {
+        let j = match FighterKind::from_id(kind) {
             // The hookshot winds in, and he holds at its tip.
-            KIND_LINK | KIND_CLINK => {
+            Some(FighterKind::Link | FighterKind::Clink) => {
                 let hs = self
                     .game
                     .fighter(gobj)
@@ -95,7 +96,7 @@ impl Running<'_> {
                     .get()
             }
             // The beam winds in fast, and she holds at its tip.
-            KIND_SAMUS => {
+            Some(FighterKind::Samus) => {
                 let beam = self
                     .game
                     .fighter(gobj)
@@ -124,7 +125,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_CatchPull_Anim")]
     pub fn co_catch_pull_anim(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
-        if kind == KIND_LINK || kind == KIND_CLINK {
+        if kind == FighterKind::Link || kind == FighterKind::Clink {
             // Holding once the hookshot is all in.
             let go = match self.game.fighter(gobj).u.gobj_at(0xC) {
                 None => true,
@@ -142,7 +143,7 @@ impl Running<'_> {
             }
             return;
         }
-        if kind == KIND_SAMUS {
+        if kind == FighterKind::Samus {
             // Holding once the beam is all in.
             let go = match self.game.fighter(gobj).u.gobj_at(0x10) {
                 None => true,
@@ -217,7 +218,10 @@ impl Running<'_> {
     pub fn catch_follow(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
         if self.game.fighter(gobj).accessory1_cb == Some(CodeRef(PULL_FOLLOW))
-            && matches!(kind, KIND_LINK | KIND_SAMUS | KIND_CLINK)
+            && matches!(
+                FighterKind::from_id(kind),
+                Some(FighterKind::Link | FighterKind::Samus | FighterKind::Clink)
+            )
         {
             return;
         }
@@ -296,10 +300,15 @@ impl Running<'_> {
         } else {
             self.throw_check(gobj)
         };
-        if acted && matches!(kind, KIND_LINK | KIND_CLINK) {
+        if acted
+            && matches!(
+                FighterKind::from_id(kind),
+                Some(FighterKind::Link | FighterKind::Clink)
+            )
+        {
             linkhookshot::ft_death(self, gobj);
         }
-        if acted && kind == KIND_SAMUS {
+        if acted && kind == FighterKind::Samus {
             samusgrapple::ft_death(self, gobj);
         }
     }
@@ -467,7 +476,7 @@ impl Running<'_> {
     /// [`Self::grab_release`]'s part for a victim inside its grabber's model (`x2226_b2`).
     fn release_from_model(&mut self, holder: GObjId, held: GObjId) {
         let hp = self.game.fighter(holder);
-        let pos = if hp.kind == super::checks::KIND_KIRBY
+        let pos = if hp.kind == FighterKind::Kirby
             && matches!(
                 hp.motion_id,
                 KB_SPECIAL_N_CAPTURE_0 | KB_SPECIAL_AIR_N_CAPTURE_0
@@ -939,14 +948,14 @@ impl Running<'_> {
         };
         self.capture_wait_state(gobj, msid);
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
-        match self.game.fighter(grabber).kind {
-            KIND_YOSHI => self.attach_to_thrower(grabber, gobj),
-            KIND_LINK | KIND_CLINK => {
+        match self.game.fighter(grabber).fighter_kind() {
+            FighterKind::Yoshi => self.attach_to_thrower(grabber, gobj),
+            FighterKind::Link | FighterKind::Clink => {
                 if let Some(hs) = self.game.fighter(grabber).u.gobj_at(0xC) {
                     linkhookshot::to_retract_caught(self, hs);
                 }
             }
-            KIND_SAMUS => {
+            FighterKind::Samus => {
                 if let Some(beam) = self.game.fighter(grabber).u.gobj_at(0x10) {
                     samusgrapple::to_retract_fast(self, beam);
                 }
@@ -964,7 +973,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800DBAE4")]
     fn capture_yoshi_check(&mut self, gobj: GObjId) {
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
-        if self.game.fighter(grabber).kind != KIND_YOSHI {
+        if self.game.fighter(grabber).kind != FighterKind::Yoshi {
             return;
         }
         let f = self.game.fighter_id(gobj);

@@ -10,6 +10,7 @@ use super::super::item::{
 use super::super::{data, ground, item, item_mut, jobj_of, lib2725, maplib};
 use crate::fpu::{mem, reg};
 use crate::game::ef::SpawnKind;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -41,9 +42,6 @@ mod attr {
     pub const LIFETIME: u32 = 0x8;
     pub const MIN_SPEED: u32 = 0x10;
 }
-
-/// `It_Kind_Mario_Fire`, whose bounce has a sound and its own flash, unlike Kirby's copy's.
-const KIND_MARIO_FIRE: i32 = 48;
 
 /// The bounce's sound.
 const BOUNCE_SFX: i32 = 0x2BF39;
@@ -146,7 +144,7 @@ fn collide(r: &mut Running, gobj: GObjId) -> bool {
     if reg(crate::math::sqrt_accurate(mem(sq))) < reg(min) {
         return true;
     }
-    if item(r.game, gobj).kind == KIND_MARIO_FIRE {
+    if item(r.game, gobj).kind == ItKind::MarioFire {
         play_sfx(r, gobj, BOUNCE_SFX, 0x7F, 0x40);
         queue(r, gobj, SpawnKind::Pos, 0x47B, j, &[]);
     } else {

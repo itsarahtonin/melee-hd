@@ -13,8 +13,6 @@ use super::super::state::Running;
 use super::link::u;
 use crate::hsd::gobj::GObjId;
 
-pub use super::link::KIND_CLINK;
-
 /// Young Link's functions other code reaches by address.
 pub mod addr {
     pub const ON_DEATH: u32 = 0x8014_8C64;

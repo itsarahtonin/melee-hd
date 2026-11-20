@@ -9,13 +9,11 @@ use super::super::state::Running;
 use super::common::GA_GROUND;
 use super::cpu_script::cmd;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::math;
 
 /// `Collide_WallMask` in `CollData::env_flags`.
 const WALL_MASK: i32 = 0xFFF;
-
-/// `Ft_Kind_Luigi`.
-const KIND_LUIGI: i32 = 17;
 
 /// Which end of an island a ledge target sits at.
 #[derive(Clone, Copy, PartialEq, Eq, melee_derive::StateEq)]
@@ -361,7 +359,7 @@ impl Running<'_> {
         if fpp.coll_data.env_flags & WALL_MASK != 0 {
             return true;
         }
-        if fpp.kind == KIND_LUIGI {
+        if fpp.kind == FighterKind::Luigi {
             return fpp.pos_delta.y < 0.0;
         }
         let feet = fp::fadds(

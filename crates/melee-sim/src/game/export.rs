@@ -8,6 +8,7 @@ use melee_data::archive::Archives;
 use super::handles::{CameraBoxId, FighterId, ItemId};
 use super::mirror::{LayCx, LayOut, Mirror};
 use super::state::{Game, Obj, UserData};
+use crate::game::it::ItKind;
 use crate::hsd::export::{Lay, live_objects};
 use crate::hsd::gobj::{GObjId, ProcId};
 use crate::hsd::image::Image;
@@ -1217,7 +1218,7 @@ pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
     }
     // A stage's hurtbox item's attributes are the executable's (`it_803F8C08`), which the
     // mirror holds as none.
-    if o.kind == super::it::kinds::PKIND_RANDOM && o.xCC_item_attr.is_none() {
+    if o.kind == ItKind::StageHurtbox && o.xCC_item_attr.is_none() {
         l.put_u32(at + 0xCC, 0x803F_8C08);
     }
     // The command script's cursor is a state's script in the item's file (`Item_80268E5C`)

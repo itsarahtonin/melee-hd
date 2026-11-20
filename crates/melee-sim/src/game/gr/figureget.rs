@@ -17,6 +17,7 @@ use super::ground::{ground_of, yakumono_param};
 use super::{CollUser, anime, setup, stage, zako};
 use crate::fpu::{mem, reg};
 use crate::game::handles::{CodeRef, GroundId};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -25,10 +26,6 @@ const P_LINK_FIGHTER: u8 = 8;
 
 /// `grFigureGet_80219B10`, the stand's collision joint's callback (`mpJointSetCb1`).
 pub const COIN_TOUCHED: u32 = 0x8021_9B10;
-/// `grFigureGet_OnTouchLine`, the stage's line-touch dynamics.
-pub const ON_TOUCH_LINE: u32 = 0x8021_9C88;
-/// `grFigureGet_OnCheckShadowRender`, the stage's shadow check.
-pub const CHECK_SHADOW_RENDER: u32 = 0x8021_9C90;
 /// `grFigureGet_OnDemoInit`.
 pub const ON_DEMO_INIT: u32 = 0x8021_9530;
 
@@ -314,9 +311,9 @@ impl CoinTouch {
     /// off its stand (`it_802F202C`) and snagged, its trophy kept.
     #[doc(alias = "grFigureGet_80219B10")]
     pub fn apply(self, r: &mut Running) {
-        use super::super::it::kinds::{COIN, trophycoin};
+        use super::super::it::kinds::trophycoin;
         for (g, coin, x) in self.0 {
-            if super::super::it::item(r.game, coin).kind != COIN
+            if super::super::it::item(r.game, coin).kind != ItKind::Coin
                 || r.game.grounds[g.0].u.figureget().x8 >= 3
             {
                 continue;

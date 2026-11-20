@@ -47,8 +47,6 @@ pub const SYMBOL_TOUCHED: u32 = 0x8020_AD58;
 pub const PIT_DEVICE: u32 = 0x8020_AE08;
 /// `grShrineRoute_8020AD24`, an arena's event callback.
 pub const ARENA_EVENT: u32 = 0x8020_AD24;
-/// `grShrineRoute_OnCheckShadowRender`, the stage's shadow check.
-pub const CHECK_SHADOW_RENDER: u32 = 0x8020_B10C;
 
 /// The maze's map id.
 const MAP_MAZE: i32 = 4;

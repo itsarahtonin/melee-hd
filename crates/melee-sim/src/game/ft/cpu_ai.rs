@@ -12,6 +12,7 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::math;
 
@@ -20,13 +21,6 @@ pub(super) const P_LINK_FIGHTER: u8 = 8;
 
 /// `CpuKind_Nana`.
 const CPU_KIND_NANA: i32 = 6;
-
-/// `Ft_Kind_Nana`, `_Donkey`, `_Kirby`, `_Samus`, `_Mewtwo`.
-const KIND_NANA: i32 = 11;
-const KIND_DONKEY: i32 = 3;
-const KIND_KIRBY: i32 = 4;
-const KIND_SAMUS: i32 = 13;
-const KIND_MEWTWO: i32 = 16;
 
 /// `ftPp_MS_SpecialLw`, `ftPp_MS_SpecialAirLw`, and the Ice Climbers' up special's states
 /// (`ftPp_MS_SpecialHi_0` to `_5`).
@@ -318,10 +312,10 @@ impl Running<'_> {
         let x = fp::fmuls(x, fp::fmuls(x, x));
         let r = fp::fsubs(1.0, x);
         let fpp = &mut self.game.fighters[f.0];
-        fpp.cpu.x56C = mem(match fpp.kind {
-            3 | 5 => fp::frsp(fp::fmul(9.0, r)),
-            31 => fp::frsp(fp::fmul(18.0, r)),
-            KIND_NANA => fp::frsp(r),
+        fpp.cpu.x56C = mem(match fpp.fighter_kind() {
+            FighterKind::Donkey | FighterKind::Koopa => fp::frsp(fp::fmul(9.0, r)),
+            FighterKind::GKoopa => fp::frsp(fp::fmul(18.0, r)),
+            FighterKind::Nana => fp::frsp(r),
             _ => fp::frsp(fp::fmul(4.0, r)),
         });
     }
@@ -1017,25 +1011,27 @@ impl Running<'_> {
             return None;
         }
         let ms = fpp.motion_id;
-        let tap_and_wait = match fpp.kind {
-            KIND_DONKEY => {
+        let tap_and_wait = match fpp.fighter_kind() {
+            FighterKind::Donkey => {
                 if ms == super::donkey::ms::SPECIAL_N_LOOP {
                     self.cpu_tap_r(f);
                     return Some(Leftover::Word(1));
                 }
                 return None;
             }
-            KIND_SAMUS => ms == super::samus::ms::SPECIAL_N_HOLD,
-            KIND_MEWTWO => {
+            FighterKind::Samus => ms == super::samus::ms::SPECIAL_N_HOLD,
+            FighterKind::Mewtwo => {
                 ms == super::mewtwo::ms::SPECIAL_N_LOOP
                     || ms == super::mewtwo::ms::SPECIAL_N_LOOP_FULL
             }
-            KIND_KIRBY => {
+            FighterKind::Kirby => {
                 use super::kirby::ms as kb;
-                match fpp.u_i32(super::kirby::u::HAT_KIND) {
-                    KIND_DONKEY => ms == kb::DK_SPECIAL_N_LOOP,
-                    KIND_SAMUS => ms == kb::SS_SPECIAL_N_HOLD,
-                    KIND_MEWTWO => ms == kb::MT_SPECIAL_N_LOOP || ms == kb::MT_SPECIAL_N_LOOP_FULL,
+                match FighterKind::from_id(fpp.u_i32(super::kirby::u::HAT_KIND)) {
+                    Some(FighterKind::Donkey) => ms == kb::DK_SPECIAL_N_LOOP,
+                    Some(FighterKind::Samus) => ms == kb::SS_SPECIAL_N_HOLD,
+                    Some(FighterKind::Mewtwo) => {
+                        ms == kb::MT_SPECIAL_N_LOOP || ms == kb::MT_SPECIAL_N_LOOP_FULL
+                    }
                     _ => false,
                 }
             }

@@ -4,10 +4,10 @@
 //! each copy, his hand, the copies' own item kinds and flash, the pill's colors in his `u`
 //! (`x68`, `x6C`) and the kind his copy's ([`KIRBY`]); only his copies' addresses are here.
 
-use super::super::super::it::kinds as k;
 use super::super::super::state::Running;
 use super::super::mario::special_n::Fireball;
 use super::{KindFrom, ms};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// The copies' function addresses.
@@ -35,8 +35,8 @@ pub const KIRBY: Fireball = Fireball {
     doctor: (ms::DR_SPECIAL_N, ms::DR_SPECIAL_AIR_N),
     throw: addr::THROW,
     hand: 21,
-    fire_kind: k::KIRBY_MARIO_FIRE,
-    pill_kind: k::KIRBY_DRMARIO_VITAMIN,
+    fire_kind: ItKind::KirbyMarioFire.id(),
+    pill_kind: ItKind::KirbyDrMarioVitamin.id(),
     flash: 0x49F,
     vitamin_curr: 0x68,
     vitamin_prev: 0x6C,

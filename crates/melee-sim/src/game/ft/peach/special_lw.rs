@@ -10,6 +10,7 @@ use super::super::co::ids::ms as co_ms;
 use super::super::motion::flags::*;
 use super::{addr, attr, ms, u};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// `FtPart_109`, the hand she pulls with.
@@ -93,7 +94,7 @@ impl Running<'_> {
         let Some(veg) = fp.u.gobj_at(u::VEG) else {
             return;
         };
-        if Some(veg) == fp.item_gobj && lib26b1::kind(self.game, veg) == peachturnip::KIND {
+        if Some(veg) == fp.item_gobj && lib26b1::kind(self.game, veg) == ItKind::PeachTurnip {
             peachturnip::remove(self, veg);
             self.peach_unset_veg(gobj);
         }
@@ -115,7 +116,7 @@ impl Running<'_> {
         let kind = if self.game.objs.rng.below(odds) == 0 {
             self.peach_pick_veg(gobj)
         } else {
-            peachturnip::KIND
+            ItKind::PeachTurnip.id()
         };
         // `setupVeg`.
         let part = i32::from(
@@ -142,7 +143,7 @@ impl Running<'_> {
         let Some(item) = self.game.fighter(gobj).item_gobj else {
             return false;
         };
-        if lib26b1::kind(self.game, item) == peachturnip::KIND {
+        if lib26b1::kind(self.game, item) == ItKind::PeachTurnip {
             self.enter_item_throw(gobj, msid);
         }
         true

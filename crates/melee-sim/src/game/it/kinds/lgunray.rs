@@ -6,6 +6,7 @@ use super::super::item::{article, change, change_state, debug_owner_bubbles, spa
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
 use super::foxlaser::{hits_stage, normalize, turned};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -63,7 +64,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 pub fn spawn(r: &mut Running, owner: Option<GObjId>, pos: Vec3, facing: f32) {
     let parent = owner.expect("a ray without its shooter");
     let mut spawn = SpawnItem {
-        kind: super::L_GUN_RAY,
+        kind: ItKind::LGunRay.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

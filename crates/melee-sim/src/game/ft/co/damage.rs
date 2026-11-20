@@ -87,12 +87,12 @@ impl Running<'_> {
     pub fn special_hi_air_out_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
         let kind = fp.kind as usize;
-        if kinds::SPECIAL_HI[kind] == 0 {
+        if kinds::KINDS[kind].special_hi == 0 {
             return false;
         }
         let window = self.common().u32(0x1C);
         if fp.x686 == 0 && u32::from(fp.x68B) >= window {
-            let entry = kinds::SPECIAL_AIR_HI[kind];
+            let entry = kinds::KINDS[kind].special_air_hi;
             self.call_kind_fn(entry, gobj);
             return true;
         }

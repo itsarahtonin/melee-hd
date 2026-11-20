@@ -13,6 +13,7 @@ use gekko_fp as fp;
 use super::super::item::{article, change, change_state, play_sfx, spawn_air};
 use super::super::{Var, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::state::{Game, Running};
 use crate::game::structs::SpawnItem;
@@ -20,9 +21,6 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::lb::joint::world_position;
 use crate::vec::Vec3;
-
-/// `It_Kind_Arwing_Laser`.
-pub const KIND: i32 = super::ARWING_LASER;
 
 pub const ANIM2: u32 = 0x802E_7A94;
 pub const ANIM3: u32 = 0x802E_7AFC;
@@ -311,7 +309,7 @@ pub fn spawn_straight(
         _ => {}
     }
     let mut spawn = SpawnItem {
-        kind: KIND,
+        kind: ItKind::ArwingLaser.id(),
         pos: at,
         prev_pos: at,
         facing_dir: facing,
@@ -414,7 +412,7 @@ pub fn spawn_aimed(
         Vec3::new(f32::from_bits(1), 0.0, f32::from_bits(0x804E_E9F0))
     };
     let mut spawn = SpawnItem {
-        kind: KIND,
+        kind: ItKind::ArwingLaser.id(),
         pos,
         prev_pos: at,
         facing_dir: 0.0,

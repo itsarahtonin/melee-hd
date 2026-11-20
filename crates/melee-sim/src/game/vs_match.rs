@@ -19,6 +19,9 @@ use super::structs::StartMeleeData;
 use super::ucf;
 use crate::audio::clock::DiscSpeed;
 use crate::audio::dsp::DspModel;
+use crate::game::ft::CharacterKind;
+use crate::game::ft::FighterKind;
+use crate::game::it::ItKind;
 use crate::input::controller::{PadData, Requests};
 use crate::input::pad::PadStatus;
 
@@ -116,18 +119,13 @@ pub struct ReplayStart {
     pub unlocks: Option<super::gm::Unlocks>,
 }
 
-/// The Ice Climbers' `CharacterKind`.
-const CKIND_ICE_CLIMBERS: u8 = 14;
 /// `Gm_PKind`'s computer player.
 const PKIND_CPU: u8 = 1;
-const CKIND_MARTH: i8 = 9;
-/// Samus's fighter kind (`FTKIND_SAMUS`).
-const FTKIND_SAMUS: i32 = 0x0D;
 
 /// Whether the rules' item switch can spawn a Super Scope: items on (`it_8026D018`) with its
 /// kind in the switch's mask, which the spawner, the containers and the Party Ball all follow.
 fn scope_on(rules: &super::structs::StartMeleeRules) -> bool {
-    rules.item_freq != -1 && rules.x20 >> super::it::kinds::S_SCOPE & 1 != 0
+    rules.item_freq != -1 && rules.x20 >> ItKind::SScope.id() & 1 != 0
 }
 
 /// A player in [`Settings::vs`].
@@ -206,7 +204,7 @@ impl Settings {
         vs.rules.stkind = stage;
         // What the character select leaves in the four ports' blocks as it sets up its coins
         // and doors on its first entry: a port with no character on the screen takes `0x1A`
-        // (`CKIND_PLAYABLE`), and every port's computer level is at least 1 (docs/oracle.md,
+        // (`CharacterKind::PLAYABLE`), and every port's computer level is at least 1 (docs/oracle.md,
         // the shortcut's check against the menus' match).
         for d in &mut vs.players[..4] {
             d.ckind = 0x1A;
@@ -226,7 +224,7 @@ impl Settings {
         };
         let heap = players
             .iter()
-            .any(|p| p.kind == PKIND_CPU || p.character == CKIND_ICE_CLIMBERS)
+            .any(|p| p.kind == PKIND_CPU || p.character == CharacterKind::IceClimbers)
             || scope_on(&start.rules);
         Settings {
             start,
@@ -278,7 +276,7 @@ impl Settings {
             && s.start
                 .players
                 .iter()
-                .any(|p| p.slot_type != 3 && p.ckind == CKIND_MARTH)
+                .any(|p| p.slot_type != 3 && p.ckind == CharacterKind::Mars)
         {
             return Err(CodeError::Unknown {
                 kind: 0xC2,
@@ -329,7 +327,7 @@ impl Settings {
     pub fn live_needs_model(d: &StartMeleeData) -> bool {
         d.players.iter().any(|p| {
             p.slot_type != 3
-                && super::pl::player::ckind_ftkind(i32::from(p.ckind), 0) == FTKIND_SAMUS
+                && super::pl::player::ckind_ftkind(i32::from(p.ckind), 0) == FighterKind::Samus
         })
     }
 
@@ -1023,7 +1021,7 @@ pub fn load_fighter_files(
         .iter()
         .filter(|p| {
             i32::from(p.slot_type) != super::pl::player::PKIND_NONE
-                && i32::from(p.ckind) == super::pl::player::CKIND_KIRBY
+                && i32::from(p.ckind) == CharacterKind::Kirby
         })
         .map(|p| usize::from(p.color))
         .collect();
@@ -1035,7 +1033,7 @@ pub fn load_fighter_files(
             }
             let m = super::pl::player::mapping(i32::from(p.ckind));
             for kind in [m.internal_id, m.extra_internal_id] {
-                if kind < 0 || i32::from(kind) == super::ft::kirby::KIND_KIRBY {
+                if kind < 0 || i32::from(kind) == FighterKind::Kirby {
                     continue;
                 }
                 if let Some((file, _)) = COPY_FILES[kind as usize] {
@@ -1237,7 +1235,7 @@ pub fn load_kirby_copy_files(
     }
     let mut names: Vec<(std::borrow::Cow<'static, str>, bool)> = Vec::new();
     for (kind, c) in kinds {
-        if kind < 0 || kind == super::ft::kirby::KIND_KIRBY {
+        if kind < 0 || kind == FighterKind::Kirby {
             continue;
         }
         if let Some((file, _)) = COPY_FILES[kind as usize] {

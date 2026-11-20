@@ -69,7 +69,7 @@ fn main() {
             })
             .collect(),
     };
-    let chars = roster::CHARACTERS;
+    let chars: Vec<_> = roster::characters().collect();
     let levels = [1u8, 9, 5, 3, 7, 2, 8, 4, 6];
     let mut jobs = Vec::new();
     let mut n = 0usize;
@@ -79,7 +79,7 @@ fn main() {
                 .map(|p| {
                     let c = &chars[(n * 4 + p) % chars.len()];
                     Player {
-                        character: c.kind,
+                        character: c.vs_kind(),
                         costume: 0,
                         port: p as u8,
                         kind: 1,

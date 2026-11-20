@@ -8,8 +8,9 @@ use super::super::super::code::Val;
 use super::super::super::it::kinds::{foxblaster, foxlaser};
 use super::super::super::state::Running;
 use super::super::motion::flags::{KEEP_GFX, SKIP_ATTACK_COUNT, SKIP_MODEL};
-use super::{BLASTER, KIND_FALCO, KIND_FOX, PAD_B, addr, attr, ms, mv};
+use super::{BLASTER, PAD_B, addr, attr, ms, mv};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -96,9 +97,9 @@ impl Running<'_> {
         let b = self.fox_blaster(gobj).expect("a shot without a blaster");
         foxblaster::shot(self.game, b);
         let left = usize::from(self.game.fighters[f.0].facing_dir == -1.0);
-        match self.game.ft_kind(gobj) {
-            KIND_FOX => self.fighter_play_sfx(f, FOX_SFX[left], 0x7F, 0x40),
-            KIND_FALCO => self.fighter_play_sfx(f, FALCO_SFX[left], 0x7F, 0x40),
+        match FighterKind::from_id(self.game.ft_kind(gobj)) {
+            Some(FighterKind::Fox) => self.fighter_play_sfx(f, FOX_SFX[left], 0x7F, 0x40),
+            Some(FighterKind::Falco) => self.fighter_play_sfx(f, FALCO_SFX[left], 0x7F, 0x40),
             _ => {}
         }
     }
@@ -347,7 +348,7 @@ impl Running<'_> {
     pub fn fox_throw_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let kind = self.game.fighters[f.0].kind;
-        if kind != KIND_FOX && kind != KIND_FALCO {
+        if kind != FighterKind::Fox && kind != FighterKind::Falco {
             return;
         }
         if !self.anim_frames_remaining(gobj) {
@@ -416,16 +417,20 @@ impl Running<'_> {
                 foxblaster::shot(self.game, b);
                 let kind = self.game.ft_kind(gobj);
                 match self.game.fighters[f.0].motion_id {
-                    ms::THROW_HI | ms::THROW_LW => match kind {
-                        KIND_FOX => self.fighter_play_sfx(f, 110109, 0x7F, 0x40),
-                        KIND_FALCO => self.fighter_play_sfx(f, 100105, 0x7F, 0x40),
+                    ms::THROW_HI | ms::THROW_LW => match FighterKind::from_id(kind) {
+                        Some(FighterKind::Fox) => self.fighter_play_sfx(f, 110109, 0x7F, 0x40),
+                        Some(FighterKind::Falco) => self.fighter_play_sfx(f, 100105, 0x7F, 0x40),
                         _ => {}
                     },
                     ms::THROW_B => {
                         let right = usize::from(self.game.fighters[f.0].facing_dir == 1.0);
-                        match kind {
-                            KIND_FOX => self.fighter_play_sfx(f, FOX_SFX[right], 0x7F, 0x40),
-                            KIND_FALCO => self.fighter_play_sfx(f, FALCO_SFX[right], 0x7F, 0x40),
+                        match FighterKind::from_id(kind) {
+                            Some(FighterKind::Fox) => {
+                                self.fighter_play_sfx(f, FOX_SFX[right], 0x7F, 0x40)
+                            }
+                            Some(FighterKind::Falco) => {
+                                self.fighter_play_sfx(f, FALCO_SFX[right], 0x7F, 0x40)
+                            }
                             _ => {}
                         }
                     }
@@ -436,9 +441,9 @@ impl Running<'_> {
                 if self.fox_blaster(gobj).is_some() {
                     self.set_fox_blaster(gobj, None);
                     self.set_damage_cb(gobj, None);
-                    match self.game.ft_kind(gobj) {
-                        KIND_FOX => self.fighter_play_sfx(f, 110100, 0x7F, 0x40),
-                        KIND_FALCO => self.fighter_play_sfx(f, 100096, 0x7F, 0x40),
+                    match FighterKind::from_id(self.game.ft_kind(gobj)) {
+                        Some(FighterKind::Fox) => self.fighter_play_sfx(f, 110100, 0x7F, 0x40),
+                        Some(FighterKind::Falco) => self.fighter_play_sfx(f, 100096, 0x7F, 0x40),
                         _ => {}
                     }
                 }

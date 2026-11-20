@@ -10,7 +10,8 @@
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::masterhand::{PART_WAIST_N, u};
-use super::{KIND_CRAZY_HAND, addr, attr, ms, mv};
+use super::{addr, attr, ms, mv};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
@@ -53,7 +54,7 @@ impl Running<'_> {
     /// The camera's point on Crazy Hand's waist, `fn_8015B4EC`; whether he's there.
     #[doc(alias = "fn_8015B4EC")]
     pub fn ch_waist_point(&mut self) -> Option<Vec3> {
-        let g = self.boss_gobj(KIND_CRAZY_HAND)?;
+        let g = self.boss_gobj(FighterKind::CrazyHand.id())?;
         let parts = self.game.fighter(g).parts.expect("a fighter without parts");
         let j = self.game.fighter_parts[parts.0][PART_WAIST_N].joint;
         Some(crate::lb::joint::world_position(

@@ -8,6 +8,7 @@ use super::super::ground::{air_stay, air_touches};
 use super::super::item::{article, change, change_state, debug_owner_bubbles, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -74,7 +75,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_80298DEC")]
 pub fn fire(r: &mut Running, owner: GObjId, pos: Vec3, charge: i32, facing: f32) {
     let mut spawn = SpawnItem {
-        kind: super::S_SCOPE_BEAM,
+        kind: ItKind::SScopeBeam.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

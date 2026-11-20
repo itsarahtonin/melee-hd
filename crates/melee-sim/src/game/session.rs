@@ -18,6 +18,7 @@ use super::vs_match::{DiscFile, Frame};
 use crate::audio::boot::{BootTimes, console_boot_delay};
 use crate::audio::clock::{DiscSpeed, TB_HZ};
 use crate::audio::dsp::DspModel;
+use crate::game::ft::FighterKind;
 use crate::input::controller::PadData;
 use crate::input::pad::{ERR_NONE, ERR_NOT_READY, ERR_TRANSFER};
 use crate::lb::save::{CardDevice, CardLent, CardSlot};
@@ -997,7 +998,7 @@ impl Session {
                 &mut self.game,
                 &mut self.data,
                 &mut self.joiner_files,
-                &[super::ft::masterhand::KIND_CRAZY_HAND],
+                &[FighterKind::CrazyHand.id()],
                 &mut |n| console.file(n),
             );
         }
@@ -1021,7 +1022,7 @@ impl Session {
                 &mut |n| console.file(n),
             );
             // Kirby's hats on Green Greens, and Kirby's data setup's copies.
-            if kinds.contains(&super::ft::kirby::KIND_KIRBY) {
+            if kinds.contains(&FighterKind::Kirby.id()) {
                 let a = self.game.one_player.adventure.base.player;
                 let costume = usize::from(a.ckind == 4 && a.color == 0);
                 let playing: Vec<(i32, i32)> = start

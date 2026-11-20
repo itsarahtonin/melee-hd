@@ -8,18 +8,13 @@ use gekko_fp as fp;
 use super::super::state::{Game, Running};
 use super::super::structs::_StaticPlayer;
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::vec::Vec3;
 
 /// A bit of `xDD0` or `xDD1`, `bit0` the top one.
 const fn bit(n: u8) -> u8 {
     0x80 >> n
 }
-
-/// `It_Kind_ScBall` and `It_Kind_Dosei`.
-const IT_KIND_SCBALL: i32 = 0x1E;
-const IT_KIND_DOSEI: i32 = 7;
-/// `It_Kind_L_Gun_Ray`, past the common items.
-const IT_KIND_L_GUN_RAY: i32 = 0x23;
 
 /// `HSD_PAD_A`, `HSD_PAD_B` and `HSD_PAD_LR`.
 const PAD_A: u32 = 0x100;
@@ -44,7 +39,7 @@ fn average(val: f64, total: f64) -> f32 {
 
 /// The item log's kind for an item, `match_item_kind`, or -1 for one it doesn't log.
 fn match_item_kind(kind: i32) -> i32 {
-    if (0..IT_KIND_L_GUN_RAY).contains(&kind) {
+    if (0..ItKind::COMMON_END.id()).contains(&kind) {
         return kind;
     }
     match kind {
@@ -219,7 +214,7 @@ impl Running<'_> {
     pub fn count_items_got(&mut self, slot: i32, kinds: &[i32]) {
         // `match_item_kind`: the common items, and four others past them.
         let entry = |k: i32| -> i32 {
-            if (0..IT_KIND_L_GUN_RAY).contains(&k) {
+            if (0..ItKind::COMMON_END.id()).contains(&k) {
                 k
             } else {
                 match k {
@@ -403,8 +398,8 @@ impl Running<'_> {
         let (x2072_b1, x2073) = (fp.x2070[2] & 0x40 != 0, fp.x2070[3]);
         let slope = (!airborne).then(|| reg(game.ft_ground_slope_angle(g)));
         let nudged = game.ft_is_being_nudged(g);
-        let scball = game.ft_holds_item_kind(g, IT_KIND_SCBALL);
-        let dosei = game.ft_holds_item_kind(g, IT_KIND_DOSEI);
+        let scball = game.ft_holds_item_kind(g, ItKind::ScBall.id());
+        let dosei = game.ft_holds_item_kind(g, ItKind::Dosei.id());
         let item = fp.item_gobj.map(|it| {
             let kind = super::super::it::item(game, it).kind;
             match_item_kind(kind) != -1

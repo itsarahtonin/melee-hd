@@ -4,7 +4,8 @@
 use super::super::super::code::Val;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
-use super::{KIND_FALCO, KIND_FOX, PAD_DPAD_DOWN, addr, ext, ms, mv};
+use super::{PAD_DPAD_DOWN, addr, ext, ms, mv};
+use crate::game::ft::FighterKind;
 use crate::game::gr::corneria::{falco_talk, fox_talk, talking, taunt_interrupted};
 use crate::game::structs::plActionStats;
 use crate::hsd::gobj::GObjId;
@@ -77,7 +78,7 @@ impl Running<'_> {
     #[doc(alias = "ftFx_AppealS_CheckInput")]
     pub fn fox_appeal_s_check_input(&mut self, gobj: GObjId) -> bool {
         let kind = self.game.fighter(gobj).kind;
-        if !(kind == KIND_FOX || kind == KIND_FALCO) {
+        if !(kind == FighterKind::Fox || kind == FighterKind::Falco) {
             return false;
         }
         if !self.corneria_taunt_stage() {
@@ -124,9 +125,9 @@ impl Running<'_> {
         // `ftCheckThrowB3`.
         if self.game.fighter(gobj).throw_flag(3) {
             self.game.fighter_mut(gobj).set_throw_flag(3, false);
-            let check = match self.game.fighter(gobj).kind {
-                KIND_FOX => Some(ext::GRCORNERIA_801E2B80),
-                KIND_FALCO => Some(ext::GRCORNERIA_801E2C34),
+            let check = match self.game.fighter(gobj).fighter_kind() {
+                FighterKind::Fox => Some(ext::GRCORNERIA_801E2B80),
+                FighterKind::Falco => Some(ext::GRCORNERIA_801E2C34),
                 _ => None,
             };
             if let Some(c) = check

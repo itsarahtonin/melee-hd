@@ -3,7 +3,6 @@
 
 use melee_data::archive::DataRef;
 
-use super::super::code::unported_call;
 use super::super::handles::{CodeRef, DObjListId, FighterId};
 use super::super::state::{OBJ_LIGHT, Obj, Running};
 use super::bind::next_joint;
@@ -342,128 +341,23 @@ impl Running<'_> {
         self.game.fighters[f.0].x588 = Some(l);
     }
 
-    /// The character's creation callback (`ftData_OnLoad`), from `by`.
+    /// The character's creation callback (`ftData_OnLoad`), from `by`: its registry entry's.
     pub fn on_load(&mut self, gobj: GObjId, by: Creator) {
         let kind = self.game.fighter(gobj).kind;
-        match super::data::kind_tables(kind).on_load {
-            0 => {}
-            0x800E_57AC => self.fox_on_load(gobj),
-            0x8013_64AC => self.mars_on_load(gobj),
-            0x8011_00EC => self.seak_on_load(gobj),
-            0x8013_9334 => self.zelda_on_load(gobj),
-            0x8011_480C => self.ness_on_load(gobj),
-            0x8013_C67C => self.purin_on_load(gobj),
-            0x8012_837C => self.samus_on_load(gobj),
-            0x8011_B628 => self.peach_on_load(gobj),
-            0x8012_B99C => self.ys_on_load(gobj),
-            0x8014_4E48 => self.mt_on_load(gobj),
-            0x8013_2ABC => self.kp_on_load(gobj),
-            0x8014_A37C => self.gw_on_load(gobj),
-            0x800E_E680 => self.kb_on_load(gobj),
-            0x800E_AE44 => self.link_on_load(gobj, by),
-            0x8014_8CE4 => self.clink_on_load(gobj, by),
-            0x8014_9CC4 => self.falco_on_load(gobj),
-            0x800E_2AEC => self.ca_on_load(gobj),
-            0x8014_EE1C => self.gn_on_load(gobj),
-            0x8014_2324 => self.lg_on_load(gobj),
-            0x800E_0960 => self.mr_on_load(gobj),
-            0x8014_94E4 => self.dr_on_load(gobj),
-            0x8012_43E4 => self.pk_on_load(gobj),
-            0x8010_D9AC => self.dk_on_load(gobj),
-            0x8014_9E34 => self.pc_on_load(gobj),
-            0x8014_F124 => self.fe_on_load(gobj),
-            0x8011_EF3C => self.popo_on_load(gobj),
-            0x8012_2EDC => self.nana_on_load(gobj),
-            super::masterhand::addr::INIT_ON_LOAD => self.mh_on_load(gobj),
-            super::gkoopa::addr::ON_LOAD => self.gk_on_load(gobj),
-            super::zako::addr::BOY_ON_LOAD | super::zako::addr::GIRL_ON_LOAD => {
-                self.zako_on_load(gobj)
-            }
-            super::sandbag::addr::ON_LOAD => self.sb_on_load(gobj),
-            super::crazyhand::addr::INIT_ON_LOAD => self.ch_on_load(gobj),
-            other => unported_call(&format!("fighter OnLoad {other:#010x}")),
-        }
+        (super::registry::character(kind).on_load)(self, gobj, by)
     }
 
-    /// The character's spawn callback (`ftData_OnDeath`).
+    /// The character's spawn callback (`ftData_OnDeath`): its registry entry's.
     pub fn on_death(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
-        match super::data::kind_tables(kind).on_death {
-            0 => {}
-            0x800E_5554 => self.fox_on_death(gobj),
-            0x8013_6258 => self.mars_on_death(gobj),
-            0x8011_0094 => self.seak_on_death(gobj),
-            0x8013_92DC => self.zelda_on_death(gobj),
-            0x8011_47C0 => self.ness_on_death(gobj),
-            0x8013_C318 => self.purin_on_death(gobj),
-            0x8012_832C => self.samus_on_death(gobj),
-            0x8011_B51C => self.peach_on_death(gobj),
-            0x8012_B960 => self.ys_on_death(gobj),
-            0x8014_4DFC => self.mt_on_death(gobj),
-            0x8013_2A0C => self.kp_on_death(gobj),
-            0x8014_A250 => self.gw_on_death(gobj),
-            0x800E_E5C0 => self.kb_on_death(gobj),
-            0x800E_AD84 | 0x8014_8C64 => self.link_on_death(gobj),
-            0x8014_9ACC => self.falco_on_death(gobj),
-            0x800E_2888 => self.ca_on_death(gobj),
-            0x8014_EBFC => self.gn_on_death(gobj),
-            0x8014_22E8 => self.lg_on_death(gobj),
-            0x800E_08CC => self.mr_on_death(gobj),
-            0x8014_949C => self.dr_on_death(gobj),
-            0x8012_4474 => self.pk_on_death(gobj),
-            0x8010_D740 => self.dk_on_death(gobj),
-            0x8014_9EAC => self.pc_on_death(gobj),
-            0x8014_EEF8 => self.fe_on_death(gobj),
-            0x8011_EFE8 => self.popo_on_death(gobj),
-            0x8012_2F28 => self.nana_on_death(gobj),
-            super::masterhand::addr::INIT_ON_DEATH => self.mh_on_death(gobj),
-            super::gkoopa::addr::ON_DEATH => self.gk_on_death(gobj),
-            super::zako::addr::BOY_ON_DEATH | super::zako::addr::GIRL_ON_DEATH => {
-                self.zako_on_death(gobj)
-            }
-            super::sandbag::addr::ON_DEATH => self.sb_on_death(gobj),
-            super::crazyhand::addr::INIT_ON_DEATH => self.ch_on_death(gobj),
-            other => unported_call(&format!("fighter OnDeath {other:#010x}")),
-        }
+        (super::registry::character(kind).on_death)(self, gobj)
     }
 
-    /// The character's attribute change callback (`ftKindCalcIndiviParamTable`); the
-    /// original asserts there is one.
+    /// The character's attribute change callback (`ftKindCalcIndiviParamTable`): its registry
+    /// entry's (the original asserts there is one; every kind has one).
     pub fn load_special_attrs(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
-        match super::data::kind_tables(kind).load_special_attrs {
-            0 => panic!("the original's assertion failed: ftKindCalcIndiviParamTable"),
-            0x800E_5858 => self.fox_load_special_attrs(gobj),
-            0x8013_64E8 => self.mars_load_special_attrs(gobj),
-            0x8011_03C8 => self.seak_load_special_attrs(gobj),
-            0x8013_9590 => self.zelda_load_special_attrs(gobj),
-            0x8011_4B2C => self.ness_load_special_attrs(gobj),
-            0x8013_C88C => self.purin_load_special_attrs(gobj),
-            0x8012_8684 => self.samus_load_special_attrs(gobj),
-            0x8011_B904 => self.peach_load_special_attrs(gobj),
-            0x8012_BC90 => self.ys_load_special_attrs(gobj),
-            0x8014_4FB4 => self.mt_load_special_attrs(gobj),
-            0x8013_2D00 => self.kp_load_special_attrs(gobj),
-            0x8014_A7B4 => self.gw_load_special_attrs(gobj),
-            0x800E_EAC0 => self.kb_load_special_attrs(gobj),
-            0x800E_B250 | 0x8014_906C => self.link_load_special_attrs(gobj),
-            0x8014_9D3C => self.falco_load_special_attrs(gobj),
-            0x800E_2B40 | 0x8014_EE40 => self.ca_load_special_attrs(gobj),
-            0x8014_254C => self.lg_load_special_attrs(gobj),
-            0x800E_0BE4 => self.mr_load_special_attrs(gobj),
-            0x8014_9724 => self.dr_load_special_attrs(gobj),
-            0x8012_4704 | 0x8014_A1A8 => self.pk_load_special_attrs(gobj),
-            0x8010_DA74 => self.dk_load_special_attrs(gobj),
-            0x8014_F148 => self.fe_load_special_attrs(gobj),
-            0x8011_F0A4 | 0x8012_2FCC => self.popo_load_special_attrs(gobj),
-            super::masterhand::addr::INIT_LOAD_SPECIAL_ATTRS => self.mh_load_special_attrs(gobj),
-            super::gkoopa::addr::LOAD_SPECIAL_ATTRS => self.gk_load_special_attrs(gobj),
-            super::zako::addr::BOY_LOAD_SPECIAL_ATTRS
-            | super::zako::addr::GIRL_LOAD_SPECIAL_ATTRS => self.zako_load_special_attrs(gobj),
-            super::sandbag::addr::LOAD_SPECIAL_ATTRS => self.sb_load_special_attrs(gobj),
-            super::crazyhand::addr::INIT_LOAD_SPECIAL_ATTRS => self.ch_load_special_attrs(gobj),
-            other => unported_call(&format!("fighter LoadSpecialAttrs {other:#010x}")),
-        }
+        (super::registry::character(kind).load_special_attrs)(self, gobj)
     }
 }
 

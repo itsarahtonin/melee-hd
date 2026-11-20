@@ -11,8 +11,9 @@ use super::super::super::ef::{Arg, spawn};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::super::fox::facing_dir_int;
-use super::{KIND_PICHU, addr, attr, ms, mv, part};
+use super::{addr, attr, ms, mv, part};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::math;
@@ -173,7 +174,7 @@ impl Running<'_> {
     /// The zip's sparks (not Pichu's): on the last frame at the rotation joint, else
     /// scattered by `spread` around it.
     fn pk_special_hi_spark(&mut self, gobj: GObjId, spread: Option<(f64, f64)>) {
-        if self.game.fighter(gobj).kind == KIND_PICHU {
+        if self.game.fighter(gobj).kind == FighterKind::Pichu {
             return;
         }
         let j = self.part_joint(gobj, part::X_ROT_N);

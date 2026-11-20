@@ -22,6 +22,7 @@ use crate::hsd::jobj::JObjId;
 use crate::vec::Vec3;
 
 use super::super::Var;
+use crate::game::it::ItKind;
 
 pub const PICKED_UP: u32 = 0x802E_FBC0;
 pub const DROPPED: u32 = 0x802E_FBE8;
@@ -164,7 +165,8 @@ pub fn spawn(r: &mut Running, parent: Option<GObjId>, pos: Vec3, dir: f32) {
     if parent.is_none() {
         return;
     }
-    let Some(egg) = super::super::zako::spawn(r, super::KYASARIN_EGG, Some(pos), None, None, true)
+    let Some(egg) =
+        super::super::zako::spawn(r, ItKind::KyasarinEgg.id(), Some(pos), None, None, true)
     else {
         return;
     };

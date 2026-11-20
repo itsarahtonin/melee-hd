@@ -9,8 +9,6 @@ use super::super::code::Val;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
-pub use super::fox::KIND_FALCO;
-
 /// Falco's functions other code reaches by address.
 pub mod addr {
     pub const ON_DEATH: u32 = 0x8014_9ACC;

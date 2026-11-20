@@ -9,6 +9,7 @@ use super::super::item::{article, attr_of, change, change_state, common_data, pl
 use super::super::{drop, effect, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
+use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{SpawnItem, itBox_ItemVars};
 use crate::hsd::gobj::GObjId;
@@ -122,7 +123,7 @@ pub fn spawn_floating(r: &mut Running, parent: Option<GObjId>) -> Option<GObjId>
     let pj = parent.and_then(|p| jobj_of(r.game, p))?;
     let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, Some(pj), None);
     let mut spawn = SpawnItem {
-        kind: super::BOX,
+        kind: ItKind::Box.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition`.

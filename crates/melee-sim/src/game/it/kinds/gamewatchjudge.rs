@@ -4,6 +4,7 @@
 use super::super::item::{change, change_state, destroy, spawn_air};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
 use super::gamewatch;
+use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
@@ -46,7 +47,7 @@ pub fn spawn(
     number: u32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::GAME_WATCH_JUDGE,
+        kind: ItKind::GameWatchJudge.id(),
         ..Default::default()
     };
     gamewatch::spawn_position(&mut spawn, pos, false);

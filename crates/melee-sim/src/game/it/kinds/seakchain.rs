@@ -20,6 +20,7 @@ use super::super::maplib::with_stage_coll;
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
 use crate::game::handles::{CodeRef, ItemLinkId};
+use crate::game::it::ItKind;
 use crate::game::state::{Obj, Running, UserData};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::{self as gobjs, GObjId};
@@ -258,7 +259,7 @@ pub fn destroy(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itSeakChain_Spawn")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: super::SEAK_CHAIN,
+        kind: ItKind::SeakChain.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition`, off the plane.

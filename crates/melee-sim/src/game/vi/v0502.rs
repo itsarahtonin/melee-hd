@@ -6,6 +6,7 @@ use melee_data::archive::DataRef;
 
 use super::super::state::Running;
 use super::Loaded;
+use crate::game::ft::CharacterKind;
 use crate::game::gr::StKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -18,9 +19,6 @@ const FRAMES: u32 = 0x28 + 0x58;
 pub const JOBJ_PROC: u32 = 0x8031_E304;
 pub const CAMERA_RENDER: u32 = 0x8031_E328;
 pub const CAMERA_PROC: u32 = 0x8031_E3BC;
-
-/// `CKind_Kirby`.
-const CKIND_KIRBY: i32 = 4;
 
 /// `un_804000D0.initial_pos`: where the character stands.
 const START: Vec3 = Vec3 {
@@ -60,7 +58,15 @@ impl Running<'_> {
         let v = self.game.vi.v0502;
         self.vi_player(0, ckind, costume, v.waits, 3, 1.0, Some(START));
         self.player_create_demo(0, 8);
-        self.vi_player(1, CKIND_KIRBY, kirby_costume, v.archive, 7, -1.0, None);
+        self.vi_player(
+            1,
+            CharacterKind::Kirby.id(),
+            kirby_costume,
+            v.archive,
+            7,
+            -1.0,
+            None,
+        );
         self.player_create_demo(1, 14);
         let g = self.game.player_entity(1);
         self.game.vi.v0502.kirby = g;

@@ -282,7 +282,9 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007F86C")]
     pub fn knockback_exit(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
-        let cb = super::kind_callbacks::ON_KNOCKBACK_EXIT[kind as usize];
+        let cb = crate::game::ft::registry::character(kind)
+            .callbacks
+            .on_knockback_exit;
         if cb != 0 {
             run_fighter_cb(self, gobj, CodeRef(cb));
         }
