@@ -464,8 +464,10 @@ fn fs_main(in: Varyings) -> Out {
     // it the EFB's width for the console's 640).
     let ex = i32(in.pos.x) * 640 / i32(max(st.mode.w >> 4u, 1u));
     let ey = i32(in.pos.y) / i32(max(st.mode.w & 15u, 1u));
-    // Screen z from the GPU's, then as the EFB holds it.
-    let screen_z = st.depth.y + st.depth.x * (in.pos.z - 1.0);
+    // Screen z from the GPU's, then as the EFB holds it. The product is kept apart from the add
+    // (`opaque`): NVIDIA's Vulkan compiler fused them, a depth unit off the CPU's in places, and
+    // Metal's fast maths may too (depth_tests' `the_gpu_writes_the_cpu_s_depth`).
+    let screen_z = st.depth.y + opaque(st.depth.x * (in.pos.z - 1.0));
     var z = i32(clamp(screen_z, 0.0, 16777215.0));
     let raster_z = z;
     if st.mode.x == 3u {
