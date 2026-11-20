@@ -137,11 +137,13 @@ impl Rules {
     }
 
     /// The version of Slippi's codes the rules come from (a replay's, for its playback).
+    #[inline]
     pub fn code_set(&self) -> CodeSet {
         self.codes
     }
 
     /// The version of UCF the rules run.
+    #[inline]
     pub fn ucf(&self) -> Ucf {
         self.ucf
     }
@@ -170,6 +172,7 @@ impl Rules {
     }
 
     /// The determinism fixes' choices: the version's table, or Vanilla's with them off.
+    #[inline]
     fn fixes(&self) -> &'static Fixes {
         if !self.slippi {
             return &VANILLA;
@@ -182,6 +185,7 @@ impl Rules {
     }
 
     /// UCF's choices: the version's table.
+    #[inline]
     fn ucf_codes(&self) -> &'static UcfCodes {
         match self.ucf {
             Ucf::Off => &UCF_OFF,
@@ -419,6 +423,7 @@ pub const SLIPPI_SESSION: Session = Session {
 // Hook point: session boot (the card, the unlock getters, the messages, the float mode).
 
 impl Ruleset {
+    #[inline]
     fn session(self) -> &'static Session {
         match self {
             Ruleset::Vanilla => &VANILLA_SESSION,
@@ -427,32 +432,38 @@ impl Ruleset {
     }
 
     /// The floating point the session runs in.
+    #[inline]
     pub fn fp_mode(self) -> FpMode {
         self.session().fp_mode
     }
 
     /// The gameplay rules every match of the session runs, in every scene, as Slippi Dolphin
     /// runs its codes.
+    #[inline]
     pub fn rules(self) -> Rules {
         self.session().rules.clone()
     }
 
     /// Whether the session may have a memory card and the developer setting.
+    #[inline]
     pub fn allows_card_and_develop(self) -> bool {
         self.session().card_and_develop
     }
 
     /// Whether the playback set's general codes run in the unlock getters.
+    #[inline]
     pub fn runs_general_codes(self) -> bool {
         self.session().general_codes
     }
 
     /// Whether the memory card scene skips its question (Skip Memcard Prompt).
+    #[inline]
     pub fn skips_memcard_prompt(self) -> bool {
         self.session().skip_memcard_prompt
     }
 
     /// Whether VS matches playback can rebuild are live matches.
+    #[inline]
     pub fn builds_live_matches(self) -> bool {
         self.session().live_matches
     }
@@ -462,16 +473,19 @@ impl Ruleset {
 
 impl Rules {
     /// Neutral spawn points (`External/NeutralSpawn`, `Running::neutral_spawn`).
+    #[inline]
     pub fn neutral_spawns(&self) -> bool {
         self.neutral_spawn
     }
 
     /// `Init Player Data`: a fighter's block zeroed when `Fighter_Create` makes it.
+    #[inline]
     pub fn inits_player_data(&self) -> bool {
         self.fixes().init_player_data
     }
 
     /// `Init Stage Data`: a stage object's block zeroed when `Ground_GetStageGObj` makes it.
+    #[inline]
     pub fn inits_stage_data(&self) -> bool {
         self.fixes().init_stage_data
     }
@@ -481,46 +495,55 @@ impl Rules {
 
 impl Rules {
     /// Whether any UCF runs (the recording's UCF toggles).
+    #[inline]
     pub fn ucf_on(&self) -> bool {
         self.ucf != Ucf::Off
     }
 
     /// UCF's pad buffer and 1.0 cardinals (`Running::ucf_pad_buffer`).
+    #[inline]
     pub fn ucf_pad_buffer(&self) -> bool {
         self.ucf_codes().pad_buffer
     }
 
     /// UCF's dashback, in its version (`Running::ucf_dashback`).
+    #[inline]
     pub fn ucf_dashback(&self) -> Ucf {
         self.ucf_codes().dashback
     }
 
     /// UCF's shield drop, in its version.
+    #[inline]
     pub fn ucf_shield_drop(&self) -> Ucf {
         self.ucf_codes().shield_drop
     }
 
     /// UCF 0.84's Shield Drop Extended.
+    #[inline]
     pub fn ucf_shield_drop_extended(&self) -> bool {
         self.ucf_codes().shield_drop_extended
     }
 
     /// UCF 0.84's down-smash out of crouch fix.
+    #[inline]
     pub fn ucf_crouch_fix(&self) -> bool {
         self.ucf_codes().crouch_fix
     }
 
     /// UCF 0.84's shield SDI (`Running::ucf_shield_sdi`).
+    #[inline]
     pub fn ucf_shield_sdi(&self) -> bool {
         self.ucf_codes().shield_sdi
     }
 
     /// UCF 0.84's SDI (`Running::ucf_sdi`).
+    #[inline]
     pub fn ucf_sdi(&self) -> bool {
         self.ucf_codes().sdi
     }
 
     /// UCF's tumble wiggle, in its version (`Running::ucf_tumble`).
+    #[inline]
     pub fn ucf_tumble(&self) -> Ucf {
         self.ucf_codes().tumble
     }
@@ -531,6 +554,7 @@ impl Rules {
 impl Rules {
     /// Off-screen damage from the stage's camera limits (`BrawlOffscreenDamage`,
     /// `Game::offscreen_limits`), in place of the display pass's mark.
+    #[inline]
     pub fn offscreen_damage_from_limits(&self) -> bool {
         self.offscreen_limits
     }
@@ -541,6 +565,7 @@ impl Rules {
 impl Rules {
     /// `FreezeDeadUpFallPhysics`: the slide's speed kept in the state's variables, and only
     /// the model placed.
+    #[inline]
     pub fn freezes_dead_up_fall(&self) -> bool {
         self.fixes().freeze_dead_up_fall
     }
@@ -551,12 +576,14 @@ impl Rules {
 
 impl Rules {
     /// `WhispyBlowDirFix`: a dead or sleeping fighter counts for neither side (`it::owner`).
+    #[inline]
     pub fn whispy_blow_dir_fix(&self) -> bool {
         self.fixes().whispy_blow_dir_fix
     }
 
     /// Whether reads Slippi's playback could decide otherwise are decided both ways and
     /// counted into the playback note ([`Fixes::playback_note`]).
+    #[inline]
     pub fn notes_playback(&self) -> bool {
         self.fixes().playback_note
     }
@@ -566,22 +593,26 @@ impl Rules {
 
 impl Rules {
     /// Final Destination's background cycle.
+    #[inline]
     pub fn fd_background(&self) -> FdBackground {
         self.fixes().fd_background
     }
 
     /// `PSCameraIndependentMonitor`: Pokémon Stadium's close-up keeps its player by fixed
     /// bounds.
+    #[inline]
     pub fn stadium_monitor_fixed(&self) -> bool {
         self.fixes().stadium_monitor_fixed
     }
 
     /// Pokémon Stadium frozen (`gr::stadium::frozen`).
+    #[inline]
     pub fn stadium_frozen(&self) -> bool {
         self.fixes().stadium_frozen
     }
 
     /// Pokémon Stadium's transformations load synchronously.
+    #[inline]
     pub fn stadium_loads_synchronously(&self) -> bool {
         self.fixes().stadium_loads_synchronously
     }
@@ -591,6 +622,7 @@ impl Rules {
 
 impl Rules {
     /// Wobbling prevention (`External/PreventWobbling`).
+    #[inline]
     pub fn prevents_wobbling(&self) -> bool {
         self.prevent_wobbling
     }
@@ -600,6 +632,7 @@ impl Rules {
 
 impl Rules {
     /// The freeze glitch fix (`External/FreezeGlitchFix`).
+    #[inline]
     pub fn fixes_freeze_glitch(&self) -> bool {
         self.freeze_glitch_fix
     }
@@ -609,6 +642,7 @@ impl Rules {
 
 impl Rules {
     /// What the DI with no knockback reads (`NanaDeterminism`).
+    #[inline]
     pub fn nana_determinism(&self) -> NanaDeterminism {
         self.fixes().nana_determinism
     }
@@ -618,6 +652,7 @@ impl Rules {
 
 impl Rules {
     /// The Super Scope's stand-in address where the allocator model is off.
+    #[inline]
     pub fn sscope_stand_in(&self) -> bool {
         self.fixes().sscope_stand_in
     }
@@ -627,6 +662,7 @@ impl Rules {
 
 impl Rules {
     /// The Slippi ruleset's C-stick rule ([`Rules::c_stick_1p`]).
+    #[inline]
     pub fn c_stick_1p(&self) -> bool {
         self.c_stick_1p
     }
@@ -640,6 +676,7 @@ impl Game {
     /// what it held before them: melee-hd follows it under the Slippi ruleset and in a
     /// replay's playback (Sarah, 2026-11-07), the console elsewhere (docs/engine.md, "The GPU's
     /// pixels").
+    #[inline]
     pub fn copies_reach_memory(&self) -> bool {
         !(self.rules.fixes().efb_copies_texture_only || self.runs_playback_codes())
     }
@@ -653,6 +690,7 @@ impl Game {
     /// 2026-11-16: "if slippi differs between live play and playback, so too should we in the
     /// same way"). The oracle can turn it off (`oracle_hooks::set_dynamics_fix_off`), to see
     /// what else its comparison finds.
+    #[inline]
     pub fn dynamics_fix(&self) -> bool {
         #[cfg(feature = "oracle-hooks")]
         if super::oracle_hooks::dynamics_fix_off() {
@@ -664,12 +702,14 @@ impl Game {
     /// Whether Slippi's playback set runs in this match (a replay's, or a live match built as
     /// playback builds one): its `Common` codes (the frame count, `AllocSceneBuffer`,
     /// `CostumeBoundCheck`), its GObjs, and the recorder's processes as its codes'.
+    #[inline]
     pub fn runs_playback_codes(&self) -> bool {
         self.playback.is_some()
     }
 
     /// Whether playback's sound codes act (`Playback::sound_codes`): a replay's match from its
     /// scene on; never a live match.
+    #[inline]
     pub fn runs_sound_codes(&self) -> bool {
         self.playback.as_ref().is_some_and(|p| p.sound_codes())
     }
@@ -679,71 +719,85 @@ impl Game {
 
 impl Rules {
     /// X/Z swap (`C2 8034E2AC`).
+    #[inline]
     pub fn swaps_xz(&self) -> bool {
         self.player.swap_xz
     }
 
     /// Invisible techs (`C2 80080A30`).
+    #[inline]
     pub fn hides_techs(&self) -> bool {
         self.player.invisible_techs
     }
 
     /// Fast-fall spark (`C2 8007D5A0`).
+    #[inline]
     pub fn fall_fast_spark(&self) -> bool {
         self.player.fall_fast_spark
     }
 
     /// Quiet announcer (`04 800249A4`).
+    #[inline]
     pub fn quiet_announcer(&self) -> bool {
         self.player.quiet_announcer
     }
 
     /// The camera code (`C2 801C0A50`).
+    #[inline]
     pub fn player_camera(&self) -> bool {
         self.player.camera
     }
 
     /// What `C2 8016E750` writes into the match's start data.
+    #[inline]
     pub fn start_rules(&self) -> Option<StartRules> {
         self.player.start_rules
     }
 
     /// What `C2 8016E91C` writes at the end of the scene's entry.
+    #[inline]
     pub fn end_rules(&self) -> Option<EndRules> {
         self.player.end_rules
     }
 
     /// SDI colors (`C2 8008E588`).
+    #[inline]
     pub fn sdi_colors(&self) -> bool {
         self.player.sdi_colors
     }
 
     /// SDI colors' reset (`C2 8008E734`).
+    #[inline]
     pub fn sdi_colors_reset(&self) -> bool {
         self.player.sdi_colors_reset
     }
 
     /// Dash grab color (`C2 8006A138`).
+    #[inline]
     pub fn dash_grab_color(&self) -> bool {
         self.player.dash_grab_color
     }
 
     /// Fountain of Dreams' reflection at 640x480.
+    #[inline]
     pub fn izumi_reflection_size(&self) -> bool {
         self.player.izumi_reflection_size
     }
 
     /// Fountain of Dreams' reflection keeping the fighters' render callbacks.
+    #[inline]
     pub fn izumi_reflection_callbacks(&self) -> bool {
         self.player.izumi_reflection_callbacks
     }
 
     /// Marth's sword trail colors (`C2 80136510`), accepted only without Marth.
+    #[inline]
     pub fn marth_trail(&self) -> bool {
         self.player.marth_trail
     }
 
     /// Pokémon Stadium's monitor weights.
+    #[inline]
     pub fn stadium_weights(&self) -> bool {
         self.player.stadium_weights
     }
