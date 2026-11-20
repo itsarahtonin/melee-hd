@@ -264,7 +264,7 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         let fp = &g.game.fighters[f.0];
         if fp.dmg.x1830_percent < mem(fp::frsp(f64::from(limit))) {
             let slot = i32::from(fp.player_idx);
-            let off = if g.game.rules.offscreen_limits {
+            let off = if g.game.rules.offscreen_damage_from_limits() {
                 g.game.offscreen_limits(f)
             } else {
                 g.magnify_offscreen(slot)
