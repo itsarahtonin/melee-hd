@@ -336,9 +336,9 @@ fn run_link(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     match name.as_str() {
         "ftCo_800CECE8" => return b(g.smash_combo_check(gobj)),
         "ftCo_800CED30" => g.link_attack_s42_enter(gobj),
-        "fn_800D8EC8" => return b(g.link_catch_tether(gobj, false)),
-        "fn_800D9228" => return b(g.link_catch_tether(gobj, true)),
-        "fn_800D949C" => g.link_catch_off_ground(gobj),
+        "fn_800D8EC8" => return b(g.catch_tether(gobj, false)),
+        "fn_800D9228" => return b(g.catch_tether(gobj, true)),
+        "fn_800D949C" => g.tether_off_ground(gobj),
         "ftCo_800D94D8" => g.link_hookshot_put_away(gobj),
         "ftLk_Init_BoomerangExists" => return b(g.link_boomerang_exists(gobj)),
         "ftLk_800EAF38" => g.link_remove_boomerang_cb(gobj),

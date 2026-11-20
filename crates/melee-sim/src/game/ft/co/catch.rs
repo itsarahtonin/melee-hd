@@ -55,15 +55,6 @@ impl Running<'_> {
         self.enter_item_get(gobj, super::item_get::MS_HEAVY_GET, true);
     }
 
-    /// Link's hookshot (`fn_800D8EC8`, `fn_800D9228`) and Samus's grapple beam
-    /// (`fn_800D9558`, `fn_800D9930`) on their grab and dash grab: whether it ended the grab.
-    fn catch_tether(&mut self, gobj: GObjId, dash: bool) -> bool {
-        if self.link_catch_tether(gobj, dash) {
-            return true;
-        }
-        self.samus_catch_tether(gobj, dash)
-    }
-
     /// `ftCo_Catch_Anim` and `ftCo_CatchDash_Anim`: the tether's, then back to waiting when
     /// the animation ends.
     #[doc(alias = "ftCo_Catch_Anim")]
@@ -109,8 +100,7 @@ impl Running<'_> {
     /// `fn_800D9C64`), then falling.
     #[doc(alias = "fn_800D8E30")]
     fn catch_off_ground(&mut self, gobj: GObjId) {
-        self.link_catch_off_ground(gobj);
-        self.samus_catch_off_ground(gobj);
+        self.tether_off_ground(gobj);
         self.enter_fall(gobj);
     }
 }
