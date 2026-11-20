@@ -535,7 +535,7 @@ impl<'a> Comparer<'a> {
                         }
                     }
                     // The SDI colors code's count, which only the code reads.
-                    if self.game.rules.player.sdi_colors {
+                    if self.game.rules.sdi_colors() {
                         let ours = self.game.player_code_state.sdi_count.get(f.0 as usize);
                         let theirs = self.mem[(ud + crate::import::SDI_COUNT - MEM1) as usize];
                         self.check(

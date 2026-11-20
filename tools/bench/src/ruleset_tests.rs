@@ -412,8 +412,7 @@ fn slippi_cpu_di_reads_neither_register() {
         let frame = before.game.playback.as_ref().unwrap().frame_index;
         let run = |slippi: bool, codes: CodeSet| {
             let mut m = before.clone();
-            m.game.rules.slippi = slippi;
-            m.game.rules.codes = codes;
+            m.game.rules = m.game.rules.clone().with_fixes(slippi.then_some(codes));
             let mut device = Device(&bench.replay);
             // The device answers by the frame playback asks for, so it picks up where the
             // match is.

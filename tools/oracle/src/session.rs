@@ -1258,7 +1258,7 @@ impl Run<'_> {
         match self.mutation {
             Some(Mutation::SceneTicks) => s.game.scene.unk_0 = s.game.scene.unk_0.wrapping_add(1),
             Some(Mutation::Seed) => s.game.objs.rng.seed = s.game.objs.rng.seed.wrapping_add(1),
-            Some(Mutation::CStick1P) => s.game.rules.c_stick_1p = false,
+            Some(Mutation::CStick1P) => s.game.rules = s.game.rules.clone().with_c_stick_1p(false),
             _ => {}
         }
         melee_sim::game::oracle_hooks::set_dynamics_fix_off(
