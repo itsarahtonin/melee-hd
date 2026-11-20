@@ -145,11 +145,6 @@ pub(crate) mod attr {
     pub const X20: usize = 0x20;
     pub const X24: usize = 0x24;
     pub const X28: usize = 0x28;
-    pub const X60: usize = 0x60;
-    pub const X64: usize = 0x64;
-    pub const X68: usize = 0x68;
-    pub const X6C: usize = 0x6C;
-    pub const X70: usize = 0x70;
 }
 
 pub const IT_CHAIN: i32 = 97;

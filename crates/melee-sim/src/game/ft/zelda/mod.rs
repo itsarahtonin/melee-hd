@@ -90,11 +90,6 @@ pub(crate) mod attr {
     pub const XC: usize = 0xC;
     pub const X2C: usize = 0x2C;
     pub const X34: usize = 0x34;
-    pub const X70: usize = 0x70;
-    pub const X74: usize = 0x74;
-    pub const X78: usize = 0x78;
-    pub const X7C: usize = 0x7C;
-    pub const X80: usize = 0x80;
 }
 
 pub(crate) use super::common::GA_GROUND;
