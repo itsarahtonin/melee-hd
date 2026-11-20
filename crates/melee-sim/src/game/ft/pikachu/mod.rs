@@ -219,27 +219,8 @@ pub(crate) mod attr {
     pub const SPECIALAIRN_LANDING_LAG: usize = 0x10;
     pub const SPECIALN_ITKIND: usize = 0x14;
     pub const SPECIALAIRN_ITKIND: usize = 0x18;
-    /// The Skull Bash's smash window, its smash charge and its longest charge.
-    pub const X1C: usize = 0x1C;
-    pub const X20: usize = 0x20;
-    pub const X24: usize = 0x24;
-    /// Its damage, base and per frame of charge.
-    pub const X28: usize = 0x28;
-    pub const X2C: usize = 0x2C;
-    /// The speed it starts with is divided by this.
-    pub const X30: usize = 0x30;
-    pub const SPECIALS_START_FRICTION: usize = 0x34;
-    pub const SPECIALS_START_GRAVITY: usize = 0x38;
-    /// The flight's speed ahead, base and per frame of charge, and up.
-    pub const X3C: usize = 0x3C;
-    pub const X40: usize = 0x40;
-    pub const X44: usize = 0x44;
-    /// The flight's gravity and terminal speed, the end's speed cut, friction and gravity.
-    pub const X48: usize = 0x48;
-    pub const X4C: usize = 0x4C;
-    pub const X50: usize = 0x50;
-    pub const X54: usize = 0x54;
-    pub const X58: usize = 0x58;
+    // The Skull Bash's attributes from x1C to x58: the shared
+    // `luigi::special_s::Missile` layout.
     /// The Quick Attack's frames before falling (`int`), each zip's frames (`int`), its
     /// gravity.
     pub const X5C: usize = 0x5C;
@@ -286,8 +267,6 @@ pub(crate) mod attr {
 
 /// The `mv` offsets of `ftPikachu_MotionVars`' members.
 pub(crate) mod mv {
-    /// The Skull Bash's charge (`unk2.x0`, `unk3.x0`).
-    pub const S_CHARGE: usize = 0x0;
     /// `SpecialHi`: the frames before falling (`x0`), the zip's frames left (`x4`), whether
     /// it's the second zip (`x8`), the stick at the zip (`x10`), the frames airborne
     /// (`x18`), the speed it ended with (`x1C`, `x24`).

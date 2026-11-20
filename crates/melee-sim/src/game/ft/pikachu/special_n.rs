@@ -15,7 +15,7 @@ use super::super::super::ef::{Arg, spawn};
 use super::super::super::it::kinds::pikachutjoltground;
 use super::super::super::state::Running;
 use super::super::kirby::KindFrom;
-use super::{addr, attr, ms, mv, part};
+use super::{addr, attr, ms, part};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
@@ -218,24 +218,6 @@ impl Running<'_> {
     pub fn pk_special_n_spawn_effect1(&mut self, gobj: GObjId) {
         self.pk_special_n_spark(gobj, 0x4BF);
     }
-
-    /// `ftPk_SpecialN_80124DC8` (the Skull Bash's `x21EC`): charged from the start by a smash
-    /// input (the stick's tilt timer below `x1C`).
-    #[doc(alias = "ftPk_SpecialN_80124DC8")]
-    pub fn pk_special_n_set_charge(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        let window = reg(self.pk_attr_f32(f, attr::X1C));
-        let charge = reg(self.pk_attr_f32(f, attr::X20));
-        let fp = &mut self.game.fighters[f.0];
-        fp.cmd_vars[0] = 0;
-        let timer = fp::frsp(f64::from(i32::from(fp.active_sticky.lstick.x)));
-        if timer < window {
-            fp.set_mv_i32(mv::S_CHARGE, fp::fctiwz(charge));
-            fp.x2070[2] |= 0x08;
-        } else {
-            fp.set_mv_i32(mv::S_CHARGE, 0);
-        }
-    }
 }
 
 #[melee_callbacks::callbacks(Fighter)]
@@ -253,7 +235,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_N_COLL => g.pk_special_air_n_coll(gobj, t),
         addr::SPECIAL_N_SPAWN_EFFECT0 => g.pk_special_n_spawn_effect0(gobj),
         addr::SPECIAL_N_SPAWN_EFFECT1 => g.pk_special_n_spawn_effect1(gobj),
-        addr::SPECIAL_N_SET_CHARGE => g.pk_special_n_set_charge(gobj),
+        addr::SPECIAL_N_SET_CHARGE => g.missile_set_vars(gobj, &super::special_s::SKULL_BASH),
         _ => return false,
     }
     true
