@@ -43,10 +43,10 @@ impl Running<'_> {
     #[doc(alias = "ftCh_TagRockPaper_Anim")]
     pub fn ch_tag_wait_anim(&mut self, gobj: GObjId) {
         if self.ch_partner_gone() {
-            self.ch_return(gobj);
+            self.hand_return(gobj, &super::HAND);
         }
         if !self.anim_frames_remaining(gobj) {
-            self.ch_enter(gobj, ms::TAG_ROCK_PAPER);
+            self.hand_enter(gobj, ms::TAG_ROCK_PAPER);
         }
     }
 
@@ -62,7 +62,7 @@ impl Running<'_> {
         }
         let mh = self.boss_gobj(FighterKind::MasterHand.id());
         self.game.fighter_mut(gobj).x1A5C = mh;
-        self.ch_enter(gobj, msid);
+        self.hand_enter(gobj, msid);
     }
 
     /// `ftCh_Squeezing1_Anim`, `ftCh_Squeeze_Anim` and `ftCh_Throw_Anim`: a cry on the
@@ -81,7 +81,7 @@ impl Running<'_> {
         if self.ch_partner_gone() || !self.anim_frames_remaining(gobj) {
             self.ic_thaw(gobj);
             self.game.fighter_mut(gobj).x1A5C = None;
-            self.ch_return(gobj);
+            self.hand_return(gobj, &super::HAND);
         }
     }
 
@@ -113,15 +113,15 @@ impl Running<'_> {
             self.ch_capture_cut(victim);
         }
         let (vy, vz, frames) = (
-            self.ch_da_f32(f, attr::X12C),
-            self.ch_da_f32(f, attr::X134),
-            self.ch_da_f32(f, attr::X13C),
+            super::HAND.f32(self, f, attr::X12C),
+            super::HAND.f32(self, f, attr::X134),
+            super::HAND.f32(self, f, attr::X13C),
         );
         let fp = &mut self.game.fighters[f.0];
         fp.self_vel.y = vy;
         fp.self_vel.z = vz;
         fp.set_mv_i32(mv::X8, gekko_fp::fctiwz(reg(frames)));
-        self.ch_enter(gobj, ms::TAG_GRAB);
+        self.hand_enter(gobj, ms::TAG_GRAB);
         self.fighter_play_track(
             f,
             super::super::sound::Track::Voice,
@@ -143,7 +143,10 @@ impl Running<'_> {
     pub fn ch_beaten_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] != 0 {
-            let (first, second) = (self.ch_da_i32(f, attr::X124), self.ch_da_i32(f, attr::X128));
+            let (first, second) = (
+                super::HAND.i32(self, f, attr::X124),
+                super::HAND.i32(self, f, attr::X128),
+            );
             let fp = &mut self.game.fighters[f.0];
             let n = fp.mv_i32(mv::CHEERS).wrapping_add(1);
             fp.set_mv_i32(mv::CHEERS, n);
@@ -159,7 +162,7 @@ impl Running<'_> {
             self.game.fighters[f.0].cmd_vars[0] = 0;
         }
         if self.game.fighters[f.0].mv_i32(mv::X8) > 0 && !self.anim_frames_remaining(gobj) {
-            self.ch_enter(gobj, ms::TAG_SQUEEZE);
+            self.hand_enter(gobj, ms::TAG_SQUEEZE);
         }
         let fp = &mut self.game.fighters[f.0];
         let n = fp.mv_i32(mv::X8).wrapping_sub(1);
@@ -173,7 +176,10 @@ impl Running<'_> {
     #[doc(alias = "ftCh_TagGrab_Phys")]
     pub fn ch_beaten_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let (dy, dz) = (self.ch_da_f32(f, attr::X130), self.ch_da_f32(f, attr::X138));
+        let (dy, dz) = (
+            super::HAND.f32(self, f, attr::X130),
+            super::HAND.f32(self, f, attr::X138),
+        );
         let fp = &mut self.game.fighters[f.0];
         fp.self_vel.y = mem(gekko_fp::fadds(reg(fp.self_vel.y), reg(dy)));
         fp.self_vel.z = mem(gekko_fp::fadds(reg(fp.self_vel.z), reg(dz)));

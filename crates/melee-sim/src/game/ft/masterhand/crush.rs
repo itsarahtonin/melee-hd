@@ -18,8 +18,8 @@ impl Running<'_> {
     pub fn mh_rock_up_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             let f = self.game.fighter_id(gobj);
-            self.mh_enter(gobj, ms::ROCK_CRUSH_WAIT);
-            let n = self.mh_da_i32(f, attr::XA0);
+            self.hand_enter(gobj, ms::ROCK_CRUSH_WAIT);
+            let n = super::HAND.i32(self, f, attr::XA0);
             self.game.fighters[f.0].set_mv_i32(mv::X8, n);
         }
     }
@@ -34,7 +34,7 @@ impl Running<'_> {
             self.mh_rock_down_enter(gobj);
         }
         if !self.anim_frames_remaining(gobj) {
-            self.mh_enter(gobj, ms::ROCK_CRUSH_WAIT);
+            self.hand_enter(gobj, ms::ROCK_CRUSH_WAIT);
         }
     }
 
@@ -44,7 +44,7 @@ impl Running<'_> {
     pub fn mh_rock_wait_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.air_anim_motion(gobj);
-        let max = self.mh_da_f32(f, attr::XA4);
+        let max = super::HAND.f32(self, f, attr::XA4);
         self.boss_follow_x(gobj, max);
         self.boss_clamp_to_floor(gobj);
     }
@@ -53,13 +53,13 @@ impl Running<'_> {
     #[doc(alias = "ftMh_MS_356_801525E0")]
     pub fn mh_rock_down_enter(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).self_vel.x = 0.0;
-        self.mh_enter(gobj, ms::ROCK_CRUSH_DOWN);
+        self.hand_enter(gobj, ms::ROCK_CRUSH_DOWN);
     }
 
     /// The flat slap, `ftMh_MS_357_801526D8`: its frame count from 0 (`mv.x0`).
     #[doc(alias = "ftMh_MS_357_801526D8")]
     pub fn mh_paper_enter(&mut self, gobj: GObjId) {
-        self.mh_enter(gobj, ms::PAPER_CRUSH);
+        self.hand_enter(gobj, ms::PAPER_CRUSH);
         self.game.fighter_mut(gobj).set_mv_f32(mv::X0, 0.0);
     }
 
@@ -70,9 +70,9 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         self.air_anim_motion(gobj);
         let (lo, hi, max) = (
-            self.mh_da_i32(f, attr::XB0),
-            self.mh_da_i32(f, attr::XB4),
-            self.mh_da_f32(f, attr::XB8),
+            super::HAND.i32(self, f, attr::XB0),
+            super::HAND.i32(self, f, attr::XB4),
+            super::HAND.f32(self, f, attr::XB8),
         );
         let fp = &mut self.game.fighters[f.0];
         let n = fp::fadds(reg(fp.mv_f32(mv::X0)), 1.0);
@@ -91,8 +91,11 @@ impl Running<'_> {
     #[doc(alias = "ftMh_MS_358_80152880")]
     pub fn mh_poke_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.mh_enter(gobj, ms::POKE1);
-        let (hi, lo) = (self.mh_da_i32(f, attr::X90), self.mh_da_i32(f, attr::X94));
+        self.hand_enter(gobj, ms::POKE1);
+        let (hi, lo) = (
+            super::HAND.i32(self, f, attr::X90),
+            super::HAND.i32(self, f, attr::X94),
+        );
         let r = self.game.objs.rng.below(hi.wrapping_sub(lo));
         let fp = &mut self.game.fighters[f.0];
         fp.set_mv_f32(mv::X0, fp::frsp(f64::from(lo.wrapping_add(r))));
@@ -114,7 +117,7 @@ impl Running<'_> {
             fp.set_mv_f32(mv::X4, 0.0);
             fp.self_vel.x = 0.0;
             fp.self_vel.y = 0.0;
-            self.mh_enter(gobj, ms::POKE2);
+            self.hand_enter(gobj, ms::POKE2);
             self.fighter_play_sfx(f, SFX_POKE, 127, 64);
         }
     }
@@ -123,7 +126,7 @@ impl Running<'_> {
     #[doc(alias = "ftMh_Poke2_Anim")]
     pub fn mh_poke2_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
-            self.mh_return(gobj);
+            self.hand_return(gobj, &super::HAND);
         }
     }
 
@@ -143,9 +146,9 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::MS_354_80152370 => g.mh_enter(gobj, ms::ROCK_CRUSH_UP),
+        addr::MS_354_80152370 => g.hand_enter(gobj, ms::ROCK_CRUSH_UP),
         addr::ROCK_CRUSH_UP_ANIM => g.mh_rock_up_anim(gobj),
-        addr::MS_355_8015247C => g.mh_enter(gobj, ms::ROCK_CRUSH_WAIT),
+        addr::MS_355_8015247C => g.hand_enter(gobj, ms::ROCK_CRUSH_WAIT),
         addr::ROCK_CRUSH_WAIT_ANIM => g.mh_rock_wait_anim(gobj),
         addr::ROCK_CRUSH_WAIT_PHYS => g.mh_rock_wait_phys(gobj),
         addr::MS_356_801525E0 => g.mh_rock_down_enter(gobj),
@@ -154,7 +157,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::MS_358_80152880 => g.mh_poke_enter(gobj),
         addr::POKE1_ANIM => g.mh_poke1_anim(gobj),
         addr::POKE2_ANIM => g.mh_poke2_anim(gobj),
-        addr::POKE1_IASA => g.mh_human_nop(gobj),
+        addr::POKE1_IASA => g.hand_human_nop(gobj),
         addr::POKE1_PHYS => g.mh_poke1_phys(gobj),
         _ => return false,
     }

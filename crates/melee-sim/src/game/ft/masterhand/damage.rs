@@ -42,15 +42,15 @@ impl Running<'_> {
             self.mh_capture_cut(victim);
         }
         let (vy, vz, frames) = (
-            self.mh_da_f32(f, attr::X14C),
-            self.mh_da_f32(f, attr::X154),
-            self.mh_da_f32(f, attr::X15C),
+            super::HAND.f32(self, f, attr::X14C),
+            super::HAND.f32(self, f, attr::X154),
+            super::HAND.f32(self, f, attr::X15C),
         );
         let fp = &mut self.game.fighters[f.0];
         fp.self_vel.y = vy;
         fp.self_vel.z = vz;
         fp.set_mv_i32(mv::X8, gekko_fp::fctiwz(crate::fpu::reg(frames)));
-        self.mh_enter(gobj, ms::DAMAGE);
+        self.hand_enter(gobj, ms::DAMAGE);
         self.fighter_play_track(
             f,
             super::super::sound::Track::Voice,
@@ -71,7 +71,10 @@ impl Running<'_> {
     pub fn mh_damage_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] != 0 {
-            let (first, second) = (self.mh_da_i32(f, attr::X144), self.mh_da_i32(f, attr::X148));
+            let (first, second) = (
+                super::HAND.i32(self, f, attr::X144),
+                super::HAND.i32(self, f, attr::X148),
+            );
             let fp = &mut self.game.fighters[f.0];
             let n = fp.mv_i32(mv::X74).wrapping_add(1);
             fp.set_mv_i32(mv::X74, n);
@@ -87,7 +90,7 @@ impl Running<'_> {
             self.game.fighters[f.0].cmd_vars[0] = 0;
         }
         if self.game.fighters[f.0].mv_i32(mv::X8) > 0 && !self.anim_frames_remaining(gobj) {
-            self.mh_enter(gobj, ms::DAMAGE2);
+            self.hand_enter(gobj, ms::DAMAGE2);
         }
         let fp = &mut self.game.fighters[f.0];
         let n = fp.mv_i32(mv::X8).wrapping_sub(1);

@@ -23,9 +23,9 @@ impl Running<'_> {
     #[doc(alias = "doAnim")]
     pub fn mh_airplane2_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.mh_enter(gobj, ms::BACK_AIRPLANE2);
+        self.hand_enter(gobj, ms::BACK_AIRPLANE2);
         let pos = self.boss_nearest_pos(gobj);
-        let y = self.mh_da_f32(f, attr::X5C);
+        let y = super::HAND.f32(self, f, attr::X5C);
         let fp = &mut self.game.fighters[f.0];
         fp.cur_pos.x = pos.x;
         fp.cur_pos.y = y;
@@ -45,7 +45,7 @@ impl Running<'_> {
     #[doc(alias = "ftMh_BackAirplane2_Phys")]
     pub fn mh_airplane2_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let max = self.mh_da_f32(f, attr::X58);
+        let max = super::HAND.f32(self, f, attr::X58);
         self.boss_follow_x_add(gobj, max);
     }
 
@@ -53,8 +53,11 @@ impl Running<'_> {
     #[doc(alias = "ftMh_MS_368_80153A64")]
     pub fn mh_airplane3_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.mh_enter(gobj, ms::BACK_AIRPLANE3);
-        let (x, y) = (self.mh_da_f32(f, attr::X60), self.mh_da_f32(f, attr::X64));
+        self.hand_enter(gobj, ms::BACK_AIRPLANE3);
+        let (x, y) = (
+            super::HAND.f32(self, f, attr::X60),
+            super::HAND.f32(self, f, attr::X64),
+        );
         let fp = &mut self.game.fighters[f.0];
         fp.cur_pos.x = x;
         fp.cur_pos.y = y;
@@ -66,11 +69,11 @@ impl Running<'_> {
     #[doc(alias = "ftMh_MS_369_80153B90")]
     pub fn mh_back_punch_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.mh_enter(gobj, ms::BACK_PUNCH);
-        let n = self.mh_da_i32(f, attr::X6C);
+        self.hand_enter(gobj, ms::BACK_PUNCH);
+        let n = super::HAND.i32(self, f, attr::X6C);
         self.game.fighters[f.0].set_mv_f32(mv::X0, fp::frsp(f64::from(n)));
         let pos = self.boss_nearest_pos(gobj);
-        let y = self.mh_da_f32(f, attr::X68);
+        let y = super::HAND.f32(self, f, attr::X68);
         let fp = &mut self.game.fighters[f.0];
         fp.cur_pos.x = pos.x;
         fp.cur_pos.y = y;
@@ -82,7 +85,7 @@ impl Running<'_> {
     pub fn mh_back_punch_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.game.fighter_mut(gobj).self_vel.x = 0.0;
-            self.mh_return(gobj);
+            self.hand_return(gobj, &super::HAND);
         }
     }
 
@@ -93,7 +96,7 @@ impl Running<'_> {
         let n = fp::fsubs(reg(fp.mv_f32(mv::X0)), 1.0);
         fp.set_mv_f32(mv::X0, n);
         if reg(fp.mv_f32(mv::X0)) > 0.0 {
-            let max = self.mh_da_f32(f, attr::X58);
+            let max = super::HAND.f32(self, f, attr::X58);
             self.boss_follow_x_add(gobj, max);
         } else {
             self.game.fighters[f.0].self_vel.x = 0.0;
@@ -113,13 +116,13 @@ impl Running<'_> {
     pub fn mh_back_crush_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let root = self.root_jobj(gobj);
-        self.mh_enter(gobj, ms::BACK_CRUSH);
+        self.hand_enter(gobj, ms::BACK_CRUSH);
         let pos = self.boss_nearest_pos(gobj);
         let (y, frames, small, grow) = (
-            self.mh_da_i32(f, attr::X70),
-            self.mh_da_i32(f, attr::X74),
-            self.mh_da_f32(f, attr::X78),
-            self.mh_da_i32(f, attr::X7C),
+            super::HAND.i32(self, f, attr::X70),
+            super::HAND.i32(self, f, attr::X74),
+            super::HAND.f32(self, f, attr::X78),
+            super::HAND.i32(self, f, attr::X7C),
         );
         let fp = &mut self.game.fighters[f.0];
         fp.cur_pos.x = pos.x;
@@ -166,7 +169,7 @@ impl Running<'_> {
         }
         if !self.anim_frames_remaining(gobj) {
             self.game.fighters[f.0].self_vel.x = 0.0;
-            self.mh_return(gobj);
+            self.hand_return(gobj, &super::HAND);
         }
     }
 
@@ -180,7 +183,7 @@ impl Running<'_> {
     /// Into the background, then `cb` once the animation ends, `ftMh_MS_371_801541C8`.
     #[doc(alias = "ftMh_MS_371_801541C8")]
     pub fn mh_back_disappear_enter(&mut self, gobj: GObjId, cb: u32) {
-        self.mh_enter(gobj, ms::BACK_DISAPPEAR);
+        self.hand_enter(gobj, ms::BACK_DISAPPEAR);
         self.game.fighter_mut(gobj).set_mv_i32(mv::X4, cb as i32);
     }
 }
@@ -188,7 +191,7 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::MS_366_80153820 => g.mh_enter(gobj, ms::BACK_AIRPLANE1),
+        addr::MS_366_80153820 => g.hand_enter(gobj, ms::BACK_AIRPLANE1),
         addr::BACK_AIRPLANE1_ANIM => g.mh_airplane1_anim(gobj),
         addr::DO_ANIM => g.mh_airplane2_enter(gobj),
         addr::BACK_AIRPLANE2_ANIM => g.mh_airplane2_anim(gobj),

@@ -3517,8 +3517,10 @@ fn union_s16(b: &[u8], at: usize) -> i16 {
 fn script_point(r: &mut Running, cb: u32) -> Option<Vec3> {
     match cb {
         0 => None,
-        super::ft::masterhand::addr::MS_343_80151428 => r.mh_waist_point(),
-        super::ft::crazyhand::addr::FN_8015B4EC => r.ch_waist_point(),
+        super::ft::masterhand::addr::MS_343_80151428 => {
+            r.hand_waist_point(&super::ft::masterhand::HAND)
+        }
+        super::ft::crazyhand::addr::FN_8015B4EC => r.hand_waist_point(&super::ft::crazyhand::HAND),
         _ => unported(&format!("the cutscene camera's callback {cb:#010x}")),
     }
 }

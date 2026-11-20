@@ -38,8 +38,8 @@ impl Running<'_> {
         let frame = self.game.fighters[f.0].cur_anim_frame;
         self.change_motion_state(gobj, ms::WAIT1_1, 0, frame, 1.0, 0.0, None);
         let (n, rate) = (
-            self.mh_da_f32(f, attr::X110),
-            self.mh_da_f32(f, attr::X110 + 4),
+            super::HAND.f32(self, f, attr::X110),
+            super::HAND.f32(self, f, attr::X110 + 4),
         );
         self.set_anim_rate(gobj, rate);
         self.game.fighters[f.0].set_mv_i32(mv::X8, fp::fctiwz(reg(n)));
@@ -56,7 +56,7 @@ impl Running<'_> {
             self.mh_grab_enter(gobj);
         }
         if !self.anim_frames_remaining(gobj) {
-            self.mh_enter(gobj, ms::WAIT1_1);
+            self.hand_enter(gobj, ms::WAIT1_1);
         }
     }
 
@@ -67,10 +67,13 @@ impl Running<'_> {
     pub(crate) fn mh_chase(&mut self, gobj: GObjId, off_x: usize, off_y: usize) {
         let f = self.game.fighter_id(gobj);
         let mut pos = self.boss_nearest_pos(gobj);
-        pos.x = mem(fp::fadds(reg(pos.x), reg(self.mh_da_f32(f, off_x))));
-        pos.y = mem(fp::fadds(reg(pos.y), reg(self.mh_da_f32(f, off_y))));
+        pos.x = mem(fp::fadds(reg(pos.x), reg(super::HAND.f32(self, f, off_x))));
+        pos.y = mem(fp::fadds(reg(pos.y), reg(super::HAND.f32(self, f, off_y))));
         pos.z = 0.0;
-        let (near, rate) = (self.mh_da_f32(f, attr::X2C), self.mh_da_f32(f, attr::X28));
+        let (near, rate) = (
+            super::HAND.f32(self, f, attr::X2C),
+            super::HAND.f32(self, f, attr::X28),
+        );
         let fp = &mut self.game.fighters[f.0];
         let mut vel = pos - fp.cur_pos;
         let (x, y, z) = (reg(vel.x), reg(vel.y), reg(vel.z));
@@ -100,7 +103,7 @@ impl Running<'_> {
     /// 128, caught `ftMh_MS_375_80154A2C`, the victim `ftMh_MS_388_80155A58`), holding no one.
     #[doc(alias = "ftMh_MS_373_801545A0")]
     pub fn mh_grab_enter(&mut self, gobj: GObjId) {
-        self.mh_enter(gobj, ms::GRAB);
+        self.hand_enter(gobj, ms::GRAB);
         let fp = self.game.fighter_mut(gobj);
         fp.x221E_b6 = true;
         fp.x1A68 = 128;
@@ -122,25 +125,15 @@ impl Running<'_> {
     /// His place as the glide's point (`x30`).
     fn mh_target_home(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let p = self.mh_da_vec2(f, attr::X30);
+        let p = super::HAND.point(self, f, attr::X30);
         set_mv_vec(&mut self.game.fighters[f.0], mv::TARGET, p);
     }
 
     /// The miss, `ftMh_MS_374_801546D8`: back toward his place.
     #[doc(alias = "ftMh_MS_374_801546D8")]
     pub fn mh_fail_enter(&mut self, gobj: GObjId) {
-        self.mh_enter(gobj, ms::FAIL);
+        self.hand_enter(gobj, ms::FAIL);
         self.mh_target_home(gobj);
-    }
-
-    /// The glide toward `mv.xC` with the air motion (`ftMh_UpdateBossMotion`): the miss's,
-    /// the let-go's, the closing hand's and the squeeze's physics.
-    #[doc(alias = "ftMh_Fail_Phys")]
-    #[doc(alias = "ftMh_Cancel_Phys")]
-    #[doc(alias = "ftMh_Squeezing_Phys")]
-    #[doc(alias = "ftMh_Squeeze_Phys")]
-    pub fn mh_glide_motion(&mut self, gobj: GObjId) {
-        self.mh_update_motion(gobj);
     }
 
     /// Letting go, `ftMh_MS_381_8015483C`: the victim freed after `x120` frames (`mv.x24`),
@@ -148,8 +141,8 @@ impl Running<'_> {
     #[doc(alias = "ftMh_MS_381_8015483C")]
     pub fn mh_cancel_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.mh_enter(gobj, ms::CANCEL);
-        let t = self.mh_da_f32(f, attr::X120);
+        self.hand_enter(gobj, ms::CANCEL);
+        let t = super::HAND.f32(self, f, attr::X120);
         let fp = &mut self.game.fighters[f.0];
         fp.set_mv_f32(mv::X24, reg(t));
         fp.cmd_vars[0] = 1;
@@ -173,17 +166,7 @@ impl Running<'_> {
             fp.cmd_vars[0] = 0;
         }
         if !self.anim_frames_remaining(gobj) {
-            self.mh_return(gobj);
-        }
-    }
-
-    /// Stopped where the glide ends: `ftMh_Cancel_Coll` and `ftMh_Squeeze_Coll`.
-    #[doc(alias = "ftMh_Cancel_Coll")]
-    #[doc(alias = "ftMh_Squeeze_Coll")]
-    pub fn mh_stop_at_target(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter_mut(gobj);
-        if reg(fp.mv_f32(mv::DISTANCE)) == 0.0 {
-            fp.self_vel = Vec3::new(0.0, 0.0, 0.0);
+            self.hand_return(gobj, &super::HAND);
         }
     }
 
@@ -202,15 +185,15 @@ impl Running<'_> {
     #[doc(alias = "ftMh_MS_375_80154C78")]
     pub fn mh_squeezing0_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.mh_enter(gobj, ms::SQUEEZING0);
-        let p = self.mh_da_vec2(f, attr::X118);
+        self.hand_enter(gobj, ms::SQUEEZING0);
+        let p = super::HAND.point(self, f, attr::X118);
         set_mv_vec(&mut self.game.fighters[f.0], mv::TARGET, p);
     }
 
     /// The hand closing on nothing yet, `ftMh_MS_378_80154CF8`: toward his place.
     #[doc(alias = "ftMh_MS_378_80154CF8")]
     pub fn mh_squeezing1_enter(&mut self, gobj: GObjId) {
-        self.mh_enter(gobj, ms::SQUEEZING1);
+        self.hand_enter(gobj, ms::SQUEEZING1);
         self.mh_target_home(gobj);
     }
 
@@ -232,7 +215,7 @@ impl Running<'_> {
     pub fn mh_squeeze_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].cmd_vars[1] = 0;
-        self.mh_enter(gobj, ms::SQUEEZE);
+        self.hand_enter(gobj, ms::SQUEEZE);
         let fp = &mut self.game.fighters[f.0];
         fp.x2222_b2 = true;
         fp.x1A6A = 511;
@@ -241,7 +224,7 @@ impl Running<'_> {
             .victim_gobj
             .expect("Master Hand squeezes no one");
         self.mh_capture_damage_enter(victim);
-        let p = self.mh_da_vec2(f, attr::X118);
+        let p = super::HAND.point(self, f, attr::X118);
         set_mv_vec(&mut self.game.fighters[f.0], mv::TARGET, p);
     }
 
@@ -267,7 +250,7 @@ impl Running<'_> {
     #[doc(alias = "ftMh_MS_376_80154E78")]
     #[doc(alias = "ftMh_MS_379_80155014")]
     pub fn mh_throw_enter(&mut self, gobj: GObjId, msid: i32) {
-        self.mh_enter(gobj, msid);
+        self.hand_enter(gobj, msid);
         self.game.fighter_mut(gobj).cmd_vars[0] = 0;
     }
 
@@ -295,7 +278,7 @@ impl Running<'_> {
             self.game.fighters[f.0].set_mv_i32(mv::HOLDING, 0);
         }
         if !self.anim_frames_remaining(gobj) {
-            self.mh_return(gobj);
+            self.hand_return(gobj, &super::HAND);
         }
     }
 
@@ -423,20 +406,20 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::BACK_DISAPPEAR_ANIM => g.mh_back_disappear_anim(gobj),
-        addr::BACK_DISAPPEAR_IASA => g.mh_human_nop(gobj),
+        addr::BACK_DISAPPEAR_IASA => g.hand_human_nop(gobj),
         addr::MS_372_801542E0 => g.mh_reach_enter(gobj),
         addr::WAIT1_1_ANIM => g.mh_reach_anim(gobj),
         addr::WAIT1_1_PHYS => g.mh_reach_phys(gobj),
         addr::MS_373_801545A0 => g.mh_grab_enter(gobj),
         addr::GRAB_ANIM => g.mh_grab_anim(gobj),
-        addr::GRAB_IASA => g.mh_human_nop(gobj),
+        addr::GRAB_IASA => g.hand_human_nop(gobj),
         addr::MS_374_801546D8 => g.mh_fail_enter(gobj),
         addr::FAIL_PHYS | addr::CANCEL_PHYS | addr::SQUEEZING_PHYS | addr::SQUEEZE_PHYS => {
-            g.mh_glide_motion(gobj)
+            g.hand_glide_motion(gobj, &super::HAND)
         }
         addr::MS_381_8015483C => g.mh_cancel_enter(gobj),
         addr::CANCEL_ANIM => g.mh_cancel_anim(gobj),
-        addr::CANCEL_COLL | addr::SQUEEZE_COLL => g.mh_stop_at_target(gobj),
+        addr::CANCEL_COLL | addr::SQUEEZE_COLL => g.hand_stop_at_target(gobj),
         addr::MS_375_80154A2C => g.mh_caught(gobj),
         addr::MS_375_80154C78 => g.mh_squeezing0_enter(gobj),
         addr::MS_378_80154CF8 => g.mh_squeezing1_enter(gobj),

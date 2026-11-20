@@ -37,7 +37,7 @@ impl Running<'_> {
             self.ch_tag_enter(ch, ch_msid);
         }
         self.game.fighter_mut(gobj).x1A5C = ch;
-        self.mh_enter(gobj, msid);
+        self.hand_enter(gobj, msid);
     }
 
     /// `ftMh_TagCrush_Anim`, `ftMh_TagApplaud_Anim` and `ftMh_TagRockPaper_Anim`: a cry on the
@@ -57,7 +57,7 @@ impl Running<'_> {
         if self.boss_ch_beaten() || self.boss_ch_sleeping() || !self.anim_frames_remaining(gobj) {
             self.ic_thaw(gobj);
             self.game.fighters[f.0].x1A5C = None;
-            self.mh_return(gobj);
+            self.hand_return(gobj, &super::HAND);
         }
     }
 }

@@ -5,10 +5,6 @@ use super::{ITEMS, addr, attr, ms, mv, u};
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
-    /// His spawn, `ftMh_Init_OnDeath`: nothing.
-    #[doc(alias = "ftMh_Init_OnDeath")]
-    pub fn mh_on_death(&mut self, _gobj: GObjId) {}
-
     /// His creation, `ftMh_Init_OnLoad`: his attributes pushed, his lasers and bullets
     /// registered, no normal motion, no knockback, his place, the nearest opponent, and the
     /// first attack timer at computer level 1.
@@ -25,7 +21,7 @@ impl Running<'_> {
             let article = self.data.ptr(items.at(4 * i as u32));
             super::super::super::it::item::set_char_article(self.game, article, kind);
         }
-        let pos = self.mh_da_vec2(f, attr::X30);
+        let pos = super::HAND.point(self, f, attr::X30);
         let fp = &mut self.game.fighters[f.0];
         fp.no_normal_motion = true;
         fp.x2229_b6 = true;
@@ -51,22 +47,7 @@ impl Running<'_> {
         fp.set_u_i32(u::NEXT_ATTACK, ms::SWEEP_LOOP);
         fp.set_u_i32(u::SINCE_WALK, 0);
         fp.cpu.level = 1;
-        self.mh_reset_timer(gobj);
-    }
-
-    /// The next attack's timer from his computer level (`ftBossLib_8015BD24` with
-    /// `x18`, `x20` and `x1C`).
-    pub(crate) fn mh_reset_timer(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        let fp = &self.game.fighters[f.0];
-        let (level, speed) = (fp.cpu.level, fp.u_f32(u::TIMER_SPEED));
-        let (base, hi, lo) = (
-            self.mh_da_i32(f, attr::X18),
-            self.mh_da_i32(f, attr::X20),
-            self.mh_da_i32(f, attr::X1C),
-        );
-        let t = self.boss_attack_timer(level, speed, base, hi, lo);
-        self.game.fighters[f.0].set_u_f32(u::TIMER, t);
+        self.hand_reset_timer(gobj, &super::HAND);
     }
 
     /// `ftMh_Init_LoadSpecialAttrs`: his attributes copied again.
@@ -80,7 +61,7 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::INIT_ON_DEATH => g.mh_on_death(gobj),
+        addr::INIT_ON_DEATH => g.hand_nothing(gobj),
         _ => return false,
     }
     true

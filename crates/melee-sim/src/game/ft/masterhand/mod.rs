@@ -26,7 +26,9 @@ pub mod wait;
 
 use super::super::handles::FighterId;
 use super::super::state::Running;
+use super::FighterKind;
 use crate::hsd::gobj::GObjId;
+use crate::vec::Vec3;
 
 /// `It_Kind_MasterHand_Laser` and `_Bullet`, his articles in his `ftData`'s order.
 pub const ITEMS: [i32; 2] = [125, 126];
@@ -476,24 +478,108 @@ pub(crate) mod attr {
     pub const CAMERA_Z: usize = 0x178;
 }
 
-impl Running<'_> {
+/// What tells Master Hand's and Crazy Hand's shared code apart (task 11, design call 7): the
+/// original's Crazy Hand is a copy of Master Hand's code (his states keep Master Hand's
+/// numbers and names) over his own attributes, states and functions. Each hand's `HAND` is
+/// passed to the code both run, which lives here in Master Hand's module; what only one of
+/// them has is a named branch.
+pub struct Hand {
+    pub kind: FighterKind,
+    /// His attributes' size (`ftData::ext_attr`, read from his data, not the fighter's copy).
+    pub attrs_size: usize,
+    /// The attributes of his place (a point), and of the glide toward a point: within `near`
+    /// it ends, else it covers `rate` of the distance a frame (`ftBossLib_8015BE40`).
+    pub home: usize,
+    pub glide_near: usize,
+    pub glide_rate: usize,
+    /// The attack timer's attributes (`ftBossLib_8015BD24`'s base, high and low), and the
+    /// attacks between forced walks.
+    pub timer: [usize; 3],
+    pub walk_every: usize,
+    /// His still waits (`Wait1_0`, `Wait2_0`) and their moving forms, the glides.
+    pub wait1: i32,
+    pub wait2: i32,
+    pub glide1: i32,
+    pub glide2: i32,
+    /// The function a return to his place glides to (the wait his last glide matches), and
+    /// the glide it marks him as in first (`u.x2258`): Master Hand's second, so the return
+    /// starts its glide from the first frame; Crazy Hand's first, so his keeps the frame.
+    pub back_to_wait: u32,
+    pub return_mark: i32,
+    /// The attack table (`ftMh_Init_803D40D0`, `ftCh_Init_803D4878`): the attacks (states
+    /// standing for them), each row as a run of them (the first and how many), and each row's
+    /// five next rows.
+    pub attacks: &'static [i32],
+    pub rows: &'static [(u8, u8)],
+    pub next_rows: &'static [u8],
+    /// Starting the attack the table drew (the states standing for his attacks), and a
+    /// human's choice from his port's buttons.
+    pub start_attack: fn(&mut Running<'_>, GObjId, i32),
+    pub human_attack: fn(&mut Running<'_>, GObjId),
+    /// The entrance's state, its camera script (his accessory), the camera's point on his
+    /// waist, its roar and the way he faces.
+    pub entry: i32,
+    pub entry_camera: u32,
+    pub waist: u32,
+    pub entry_sfx: i32,
+    pub entry_facing: f32,
+    /// Crazy Hand cries on the script's flag while waiting, and clears it as a wait starts.
+    pub cries_waiting: bool,
+    /// Master Hand's timer joins Crazy Hand's tag attack when Crazy Hand waits at one.
+    pub tags_from_wait: bool,
+    /// Crazy Hand draws the next row from four, not five, once Master Hand is beaten: the
+    /// tag attacks' row is left out.
+    pub fewer_rows_alone: bool,
+}
+
+impl Hand {
     /// A float of his attributes (`ftData::ext_attr`), `off` bytes in.
-    pub(crate) fn mh_da_f32(&self, f: FighterId, off: usize) -> f32 {
-        let b = self.ext_attrs(f, attr::SIZE);
+    pub(crate) fn f32(&self, r: &Running, f: FighterId, off: usize) -> f32 {
+        let b = r.ext_attrs(f, self.attrs_size);
         f32::from_be_bytes(b[off..off + 4].try_into().unwrap())
     }
 
     /// A word of his attributes.
-    pub(crate) fn mh_da_i32(&self, f: FighterId, off: usize) -> i32 {
-        let b = self.ext_attrs(f, attr::SIZE);
+    pub(crate) fn i32(&self, r: &Running, f: FighterId, off: usize) -> i32 {
+        let b = r.ext_attrs(f, self.attrs_size);
         i32::from_be_bytes(b[off..off + 4].try_into().unwrap())
     }
 
     /// A point of his attributes (`Vec2`, z 0).
-    pub(crate) fn mh_da_vec2(&self, f: FighterId, off: usize) -> crate::vec::Vec3 {
-        crate::vec::Vec3::new(self.mh_da_f32(f, off), self.mh_da_f32(f, off + 4), 0.0)
+    pub(crate) fn point(&self, r: &Running, f: FighterId, off: usize) -> Vec3 {
+        Vec3::new(self.f32(r, f, off), self.f32(r, f, off + 4), 0.0)
     }
 }
+
+/// Master Hand's settings of the hands' shared code.
+pub const HAND: Hand = Hand {
+    kind: FighterKind::MasterHand,
+    attrs_size: attr::SIZE,
+    home: attr::X30,
+    glide_near: attr::X2C,
+    glide_rate: attr::X28,
+    timer: [attr::X18, attr::X20, attr::X1C],
+    walk_every: attr::X24,
+    wait1: ms::WAIT1_0,
+    wait2: ms::WAIT2_0,
+    glide1: ms::WAIT1_2,
+    glide2: ms::WAIT2_1,
+    back_to_wait: addr::MS_341_8014FFDC,
+    return_mark: ms::WAIT2_1,
+    attacks: &wait::ATTACKS,
+    rows: &wait::ROWS,
+    next_rows: &wait::NEXT_ROWS,
+    start_attack: |r, g, a| r.mh_start_attack(g, a),
+    human_attack: |r, g| r.mh_human_attack(g),
+    entry: ms::ENTRY,
+    entry_camera: addr::MS_343_801511FC,
+    waist: addr::MS_343_80151428,
+    entry_sfx: 320001,
+    entry_facing: -1.0,
+    cries_waiting: false,
+    tags_from_wait: true,
+    fewer_rows_alone: false,
+};
 
 /// Runs one of Master Hand's callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr`
 /// is one.

@@ -263,7 +263,7 @@ impl Running<'_> {
             0..=4 => 4 * level as usize,
             _ => 0x14,
         };
-        self.mh_da_i32(f, off)
+        super::masterhand::HAND.i32(self, f, off)
     }
 
     /// One of four cries, `ftBossLib_8015C5F8`.
@@ -293,7 +293,7 @@ impl Running<'_> {
     #[doc(alias = "ftBossLib_8015C9CC")]
     pub fn boss_mh_word(&self, off: usize) -> i32 {
         match self.boss_mh_attrs() {
-            Some(f) => self.mh_da_i32(f, off),
+            Some(f) => super::masterhand::HAND.i32(self, f, off),
             None => -1,
         }
     }
@@ -325,7 +325,7 @@ impl Running<'_> {
         let mut v = self.game.player_pos(slot);
         camera::script_look_at(self, v);
         let dz = match self.boss_mh_attrs() {
-            Some(f) => reg(self.mh_da_f32(f, attr::CAMERA_Z)),
+            Some(f) => reg(super::masterhand::HAND.f32(self, f, attr::CAMERA_Z)),
             None => fp::frsp(-1.0),
         };
         v.z = mem(fp::fadds(reg(v.z), dz));

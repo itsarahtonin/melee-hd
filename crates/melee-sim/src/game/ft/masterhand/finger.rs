@@ -30,7 +30,7 @@ impl Running<'_> {
     /// The finger beams' start, `ftMh_MS_359_80152BCC`: no hum playing (`mv.x28` to `x30`).
     #[doc(alias = "ftMh_MS_359_80152BCC")]
     pub fn mh_beam_enter(&mut self, gobj: GObjId) {
-        self.mh_enter(gobj, ms::FINGER_BEAM_START);
+        self.hand_enter(gobj, ms::FINGER_BEAM_START);
         let fp = self.game.fighter_mut(gobj);
         for off in [mv::X28, mv::X2C, mv::X30] {
             fp.set_mv_i32(off, -1);
@@ -48,7 +48,7 @@ impl Running<'_> {
     /// The beams, `ftMh_MS_361_80152CD8`: made by the accessory on its first frame.
     #[doc(alias = "ftMh_MS_361_80152CD8")]
     pub fn mh_beam_loop_enter(&mut self, gobj: GObjId) {
-        self.mh_enter(gobj, ms::FINGER_BEAM_LOOP);
+        self.hand_enter(gobj, ms::FINGER_BEAM_LOOP);
         let fp = self.game.fighter_mut(gobj);
         fp.accessory4_cb = Some(CodeRef(addr::MS_362_80152E28));
         fp.cmd_vars[0] = 1;
@@ -119,7 +119,7 @@ impl Running<'_> {
     /// The beams' end, `ftMh_MS_362_80152F80`: the hums stopped.
     #[doc(alias = "ftMh_MS_362_80152F80")]
     pub fn mh_beam_end_enter(&mut self, gobj: GObjId) {
-        self.mh_enter(gobj, ms::FINGER_BEAM_END);
+        self.hand_enter(gobj, ms::FINGER_BEAM_END);
         let f = self.game.fighter_id(gobj);
         for off in [mv::X28, mv::X2C, mv::X30] {
             let h = self.game.fighters[f.0].mv_i32(off);
@@ -136,8 +136,11 @@ impl Running<'_> {
     #[doc(alias = "ftMh_MS_363_801530A4")]
     pub fn mh_gun_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.mh_enter(gobj, ms::FINGER_GUN1);
-        let (hi, lo) = (self.mh_da_f32(f, attr::XE8), self.mh_da_f32(f, attr::XE4));
+        self.hand_enter(gobj, ms::FINGER_GUN1);
+        let (hi, lo) = (
+            super::HAND.f32(self, f, attr::XE8),
+            super::HAND.f32(self, f, attr::XE4),
+        );
         let r = self
             .game
             .objs
@@ -164,8 +167,8 @@ impl Running<'_> {
         fp.set_mv_f32(mv::X50, reg(n));
         if reg(n) < 0.0 {
             self.mh_gun2_enter(gobj);
-            let rounds = if self.game.ft_percent(gobj) > self.mh_da_i32(f, attr::XEC) {
-                self.mh_da_i32(f, attr::XF0)
+            let rounds = if self.game.ft_percent(gobj) > super::HAND.i32(self, f, attr::XEC) {
+                super::HAND.i32(self, f, attr::XF0)
             } else {
                 1
             };
@@ -190,9 +193,9 @@ impl Running<'_> {
     #[doc(alias = "ftMh_MS_364_801533CC")]
     pub fn mh_gun2_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.mh_enter(gobj, ms::FINGER_GUN2);
-        if self.game.ft_percent(gobj) > self.mh_da_i32(f, attr::XEC) {
-            let rate = self.mh_da_f32(f, attr::XF4);
+        self.hand_enter(gobj, ms::FINGER_GUN2);
+        if self.game.ft_percent(gobj) > super::HAND.i32(self, f, attr::XEC) {
+            let rate = super::HAND.f32(self, f, attr::XF4);
             self.set_anim_rate(gobj, rate);
         }
         let fp = &mut self.game.fighters[f.0];
@@ -212,7 +215,7 @@ impl Running<'_> {
         fp.set_mv_i32(mv::X54, n);
         if n == 0 {
             self.set_anim_rate(gobj, 1.0);
-            self.mh_enter(gobj, ms::FINGER_GUN3);
+            self.hand_enter(gobj, ms::FINGER_GUN3);
         } else {
             self.mh_gun2_enter(gobj);
         }
@@ -225,13 +228,19 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] != 0 {
             let j = self.mh_part_joint(gobj, PART_L_KNEE_J);
-            let (dx, dy) = (self.mh_da_f32(f, attr::XF8), self.mh_da_f32(f, attr::XFC));
+            let (dx, dy) = (
+                super::HAND.f32(self, f, attr::XF8),
+                super::HAND.f32(self, f, attr::XFC),
+            );
             self.mh_gun_shot(gobj, j, dx, dy);
             self.game.fighters[f.0].cmd_vars[0] = 0;
         }
         if self.game.fighters[f.0].cmd_vars[1] != 0 {
             let j = self.mh_part_joint(gobj, PART_R_KNEE_J);
-            let (dx, dy) = (self.mh_da_f32(f, attr::X100), self.mh_da_f32(f, attr::X104));
+            let (dx, dy) = (
+                super::HAND.f32(self, f, attr::X100),
+                super::HAND.f32(self, f, attr::X104),
+            );
             self.mh_gun_shot(gobj, j, dx, dy);
             self.game.fighters[f.0].cmd_vars[1] = 0;
         }
@@ -255,9 +264,12 @@ impl Running<'_> {
             crate::fpu::mem(fp::fadds(reg(at.y), reg(dy))),
             at.z,
         );
-        let fast = self.game.ft_percent(gobj) > self.mh_da_i32(f, attr::XEC);
+        let fast = self.game.ft_percent(gobj) > super::HAND.i32(self, f, attr::XEC);
         let facing = self.game.fighters[f.0].facing_dir;
-        let (sx, sy) = (self.mh_da_f32(f, attr::XD4), self.mh_da_f32(f, attr::XD8));
+        let (sx, sy) = (
+            super::HAND.f32(self, f, attr::XD4),
+            super::HAND.f32(self, f, attr::XD8),
+        );
         masterhandbullet::spawn(
             self,
             gobj,
@@ -287,7 +299,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::MS_364_801533CC => g.mh_gun2_enter(gobj),
         addr::FINGER_GUN2_ANIM => g.mh_gun2_anim(gobj),
         addr::MS_365_801535B0 => g.mh_gun_shots(gobj),
-        addr::MS_365_80153730 => g.mh_enter(gobj, ms::FINGER_GUN3),
+        addr::MS_365_80153730 => g.hand_enter(gobj, ms::FINGER_GUN3),
         _ => return false,
     }
     true

@@ -1,199 +1,10 @@
-//! The callbacks his states share: a human's input, the air motion, the glide toward his
-//! target, the empty ones, and the return once an animation ends.
+//! Which of his states' callbacks are the hands' common ones (`ft::masterhand::common`):
+//! a human's input, the air motion, the glide toward his target, the empty ones, and the
+//! return once an animation ends.
 
 use super::super::super::state::Running;
-use super::super::masterhand::wait::mv_vec;
-use super::{addr, attr, mv};
-use crate::fpu::reg;
+use super::{HAND, addr};
 use crate::hsd::gobj::GObjId;
-use crate::vec::Vec3;
-
-impl Running<'_> {
-    /// A human-played hand has nothing to do (`ftBossLib_8015BD20`), a computer's nothing
-    /// either: the states' input callbacks.
-    #[doc(alias = "ftCh_Wait1_0_IASA")]
-    #[doc(alias = "ftCh_Entry_IASA")]
-    #[doc(alias = "ftCh_Damage_IASA")]
-    #[doc(alias = "ftCh_Damage2_IASA")]
-    #[doc(alias = "ftCh_WaitSweep_IASA")]
-    #[doc(alias = "ftCh_SweepLoop_IASA")]
-    #[doc(alias = "ftCh_SweepWait_IASA")]
-    #[doc(alias = "ftCh_Slap_IASA")]
-    #[doc(alias = "ftCh_Walk2_IASA")]
-    #[doc(alias = "ftCh_WalkLoop_IASA")]
-    #[doc(alias = "ftCh_WalkWait_IASA")]
-    #[doc(alias = "ftCh_WalkShoot_IASA")]
-    #[doc(alias = "ftCh_Drill_IASA")]
-    #[doc(alias = "ftCh_RockCrushUp_IASA")]
-    #[doc(alias = "ftCh_RockCrushDown_IASA")]
-    #[doc(alias = "ftCh_PaperCrush_IASA")]
-    #[doc(alias = "ftCh_Poke1_IASA")]
-    #[doc(alias = "ftCh_Poke2_IASA")]
-    #[doc(alias = "ftCh_FingerBeamStart_IASA")]
-    #[doc(alias = "ftCh_FingerBeamLoop_IASA")]
-    #[doc(alias = "ftCh_FingerBeamEnd_IASA")]
-    #[doc(alias = "ftCh_BackPunch_IASA")]
-    #[doc(alias = "ftCh_FingerGun1_IASA")]
-    #[doc(alias = "ftCh_BackAirplane1_IASA")]
-    #[doc(alias = "ftCh_BackAirplane2_IASA")]
-    #[doc(alias = "ftCh_BackAirplane3_IASA")]
-    #[doc(alias = "ftCh_BackCrush_IASA")]
-    #[doc(alias = "ftCh_BackDisappear_IASA")]
-    #[doc(alias = "ftCh_Wait1_1_IASA")]
-    #[doc(alias = "ftCh_Grab_IASA")]
-    #[doc(alias = "ftCh_Cancel_IASA")]
-    #[doc(alias = "ftCh_Squeezing0_IASA")]
-    #[doc(alias = "ftCh_Squeezing1_IASA")]
-    #[doc(alias = "ftCh_Squeeze_IASA")]
-    #[doc(alias = "ftCh_Throw_IASA")]
-    #[doc(alias = "ftCh_TagRockPaper_IASA")]
-    #[doc(alias = "ftCh_FingerGun2_IASA")]
-    #[doc(alias = "ftCh_TagGrab_IASA")]
-    #[doc(alias = "ftCh_TagFail_IASA")]
-    pub fn ch_human_nop(&mut self, gobj: GObjId) {
-        self.mh_human_nop(gobj);
-    }
-
-    /// The animation's motion in the air (`ft_80085134`): the states' physics.
-    #[doc(alias = "ftCh_Wait1_0_Phys")]
-    #[doc(alias = "ftCh_Entry_Phys")]
-    #[doc(alias = "ftCh_Damage_Phys")]
-    #[doc(alias = "ftCh_WaitSweep_Phys")]
-    #[doc(alias = "ftCh_SweepLoop_Phys")]
-    #[doc(alias = "ftCh_SweepWait_Phys")]
-    #[doc(alias = "ftCh_Walk2_Phys")]
-    #[doc(alias = "ftCh_WalkLoop_Phys")]
-    #[doc(alias = "ftCh_WalkShoot_Phys")]
-    #[doc(alias = "ftCh_PaperCrush_Phys")]
-    #[doc(alias = "ftCh_Poke1_Phys")]
-    #[doc(alias = "ftCh_Poke2_Phys")]
-    #[doc(alias = "ftCh_FingerBeamStart_Phys")]
-    #[doc(alias = "ftCh_FingerBeamEnd_Phys")]
-    #[doc(alias = "ftCh_BackAirplane2_Phys")]
-    #[doc(alias = "ftCh_BackAirplane3_Phys")]
-    #[doc(alias = "ftCh_BackCrush_Phys")]
-    #[doc(alias = "ftCh_Grab_Phys")]
-    #[doc(alias = "ftCh_Squeezing0_Phys")]
-    #[doc(alias = "ftCh_Squeezing1_Phys")]
-    #[doc(alias = "ftCh_Squeeze_Phys")]
-    #[doc(alias = "ftCh_Throw_Phys")]
-    pub fn ch_air_motion(&mut self, gobj: GObjId) {
-        self.air_anim_motion(gobj);
-    }
-
-    /// The air motion and the glide toward `mv.xC` (`ftCh_UpdateBossMotion`: `ft_80085134` and
-    /// `ftBossLib_8015BE40` with `x14` and `x10`).
-    #[doc(alias = "ftCh_BackPunch_Phys")]
-    #[doc(alias = "ftCh_FingerGun1_Phys")]
-    #[doc(alias = "ftCh_BackAirplane1_Phys")]
-    #[doc(alias = "ftCh_FingerGun2_Phys")]
-    #[doc(alias = "ftCh_TagCancel_Phys")]
-    #[doc(alias = "ftCh_Damage2_Phys")]
-    pub fn ch_update_motion(&mut self, gobj: GObjId) {
-        self.air_anim_motion(gobj);
-        self.ch_glide_step(gobj);
-    }
-
-    /// `ftBossLib_8015BE40` toward `mv.xC` at `x10` of the distance a frame, none within
-    /// `x14`; the distance left into `mv.x18`.
-    pub(crate) fn ch_glide_step(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        let target = mv_vec(&self.game.fighters[f.0], mv::TARGET);
-        let (near, rate) = (self.ch_da_f32(f, attr::X14), self.ch_da_f32(f, attr::X10));
-        let d = self.boss_glide(gobj, target, near, rate);
-        self.game.fighters[f.0].set_mv_f32(mv::DISTANCE, reg(d));
-    }
-
-    /// Stopped where the glide ends: `ftCh_FingerGun1_Coll` and `ftCh_BackAirplane1_Coll`.
-    #[doc(alias = "ftCh_FingerGun1_Coll")]
-    #[doc(alias = "ftCh_BackAirplane1_Coll")]
-    pub fn ch_stop_at_target(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter_mut(gobj);
-        if reg(fp.mv_f32(mv::DISTANCE)) == 0.0 {
-            fp.self_vel = Vec3::new(0.0, 0.0, 0.0);
-        }
-    }
-
-    /// Nothing: the states' empty callbacks.
-    #[doc(alias = "ftCh_Wait1_0_Coll")]
-    #[doc(alias = "ftCh_Entry_Coll")]
-    #[doc(alias = "ftCh_Damage_Coll")]
-    #[doc(alias = "ftCh_Damage2_Coll")]
-    #[doc(alias = "ftCh_WaitSweep_Coll")]
-    #[doc(alias = "ftCh_SweepLoop_Coll")]
-    #[doc(alias = "ftCh_SweepWait_Coll")]
-    #[doc(alias = "ftCh_Slap_Coll")]
-    #[doc(alias = "ftCh_WalkLoop_Coll")]
-    #[doc(alias = "ftCh_WalkWait_Coll")]
-    #[doc(alias = "ftCh_WalkShoot_Coll")]
-    #[doc(alias = "ftCh_Drill_Coll")]
-    #[doc(alias = "ftCh_RockCrushUp_Coll")]
-    #[doc(alias = "ftCh_RockCrushDown_Coll")]
-    #[doc(alias = "ftCh_PaperCrush_Coll")]
-    #[doc(alias = "ftCh_Poke1_Coll")]
-    #[doc(alias = "ftCh_Poke2_Coll")]
-    #[doc(alias = "ftCh_FingerBeamStart_Coll")]
-    #[doc(alias = "ftCh_FingerBeamLoop_Coll")]
-    #[doc(alias = "ftCh_FingerBeamEnd_Coll")]
-    #[doc(alias = "ftCh_BackPunch_Coll")]
-    #[doc(alias = "ftCh_BackAirplane2_Coll")]
-    #[doc(alias = "ftCh_BackAirplane3_Coll")]
-    #[doc(alias = "ftCh_BackCrush_Coll")]
-    #[doc(alias = "ftCh_BackDisappear_Coll")]
-    #[doc(alias = "ftCh_Wait1_1_Coll")]
-    #[doc(alias = "ftCh_Grab_Coll")]
-    #[doc(alias = "ftCh_Cancel_Coll")]
-    #[doc(alias = "ftCh_Squeezing0_Coll")]
-    #[doc(alias = "ftCh_Squeezing1_Coll")]
-    #[doc(alias = "ftCh_Squeeze_Coll")]
-    #[doc(alias = "ftCh_Throw_Coll")]
-    #[doc(alias = "ftCh_TagRockPaper_Phys")]
-    #[doc(alias = "ftCh_TagRockPaper_Coll")]
-    #[doc(alias = "ftCh_FingerGun2_Coll")]
-    #[doc(alias = "ftCh_TagGrab_Coll")]
-    #[doc(alias = "ftCh_TagFail_Phys")]
-    #[doc(alias = "ftCh_TagFail_Coll")]
-    #[doc(alias = "ftCo_CaptureCrazyHand_Anim")]
-    #[doc(alias = "ftCo_CaptureCrazyHand_IASA")]
-    #[doc(alias = "ftCo_CaptureCrazyHand_Phys")]
-    #[doc(alias = "ftCo_CaptureCrazyHand_Coll")]
-    #[doc(alias = "ftCo_CaptureDamageCrazyHand_IASA")]
-    #[doc(alias = "ftCo_CaptureDamageCrazyHand_Phys")]
-    #[doc(alias = "ftCo_CaptureDamageCrazyHand_Coll")]
-    #[doc(alias = "ftCo_CaptureWaitCrazyHand_Anim")]
-    #[doc(alias = "ftCo_CaptureWaitCrazyHand_IASA")]
-    #[doc(alias = "ftCo_CaptureWaitCrazyHand_Phys")]
-    #[doc(alias = "ftCo_CaptureWaitCrazyHand_Coll")]
-    // `ftCo_ThrownCrazyHand_*` run here too, but never: the victim leaves the state in the
-    // call that enters it (ledger/dead.txt).
-    pub fn ch_nothing(&mut self, _gobj: GObjId) {}
-
-    /// Back to his place and the wait once the animation ends (`ftCh_GrabUnk1_8015BC88`).
-    #[doc(alias = "ftCh_Entry_Anim")]
-    #[doc(alias = "ftCh_WaitSweep_Anim")]
-    #[doc(alias = "ftCh_SweepLoop_Anim")]
-    #[doc(alias = "ftCh_Walk2_Anim")]
-    #[doc(alias = "ftCh_WalkShoot_Anim")]
-    #[doc(alias = "ftCh_Drill_Anim")]
-    #[doc(alias = "ftCh_RockCrushWait_Anim")]
-    #[doc(alias = "ftCh_RockCrushDown_Anim")]
-    #[doc(alias = "ftCh_Poke2_Anim")]
-    #[doc(alias = "ftCh_FingerBeamStart_Anim")]
-    #[doc(alias = "ftCh_BackPunch_Anim")]
-    #[doc(alias = "ftCh_Squeezing0_Anim")]
-    pub fn ch_anim_return(&mut self, gobj: GObjId) {
-        if !self.anim_frames_remaining(gobj) {
-            self.ch_return(gobj);
-        }
-    }
-
-    /// Enters one of his states from its first frame (`Fighter_ChangeMotionState` and
-    /// `ftAnim_8006EBA4`).
-    pub(crate) fn ch_enter(&mut self, gobj: GObjId, msid: i32) {
-        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
-        self.anim_update(gobj);
-    }
-}
 
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
@@ -237,7 +48,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | TAG_ROCK_PAPER_IASA
         | FINGER_GUN2_IASA
         | TAG_GRAB_IASA
-        | TAG_FAIL_IASA => g.ch_human_nop(gobj),
+        | TAG_FAIL_IASA => g.hand_human_nop(gobj),
         WAIT1_0_PHYS
         | ENTRY_PHYS
         | DAMAGE_PHYS
@@ -259,10 +70,10 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | SQUEEZING0_PHYS
         | SQUEEZING1_PHYS
         | SQUEEZE_PHYS
-        | THROW_PHYS => g.ch_air_motion(gobj),
+        | THROW_PHYS => g.hand_air_motion(gobj),
         BACK_PUNCH_PHYS | FINGER_GUN1_PHYS | BACK_AIRPLANE1_PHYS | FINGER_GUN2_PHYS
-        | TAG_CANCEL_PHYS => g.ch_update_motion(gobj),
-        FINGER_GUN1_COLL | BACK_AIRPLANE1_COLL => g.ch_stop_at_target(gobj),
+        | TAG_CANCEL_PHYS => g.hand_glide_motion(gobj, &HAND),
+        FINGER_GUN1_COLL | BACK_AIRPLANE1_COLL => g.hand_stop_at_target(gobj),
         WAIT1_0_COLL
         | ENTRY_COLL
         | DAMAGE_COLL
@@ -315,7 +126,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | THROWN_CRAZY_HAND_ANIM
         | THROWN_CRAZY_HAND_IASA
         | THROWN_CRAZY_HAND_PHYS
-        | THROWN_CRAZY_HAND_COLL => g.ch_nothing(gobj),
+        | THROWN_CRAZY_HAND_COLL => g.hand_nothing(gobj),
         ENTRY_ANIM
         | WAIT_SWEEP_ANIM
         | SWEEP_LOOP_ANIM
@@ -327,7 +138,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | POKE2_ANIM
         | FINGER_BEAM_START_ANIM
         | BACK_PUNCH_ANIM
-        | SQUEEZING0_ANIM => g.ch_anim_return(gobj),
+        | SQUEEZING0_ANIM => g.hand_anim_return(gobj, &HAND),
         _ => return false,
     }
     true

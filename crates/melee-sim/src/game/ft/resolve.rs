@@ -86,11 +86,10 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
             run_fighter_cb(g, gobj, cb);
         }
         if g.game.fighters[f.0].no_kb {
-            // A hand takes no reaction: its kind's hook (Master Hand's is empty), then
+            // A hand takes no reaction: its kind's hook (both hands' are empty), then
             // `ftCo_8008E9D0`; the original asserts on any other kind.
             match g.game.fighters[f.0].fighter_kind() {
-                FighterKind::MasterHand => g.mh_nop(gobj),
-                FighterKind::CrazyHand => g.ch_hit_nop(gobj),
+                FighterKind::MasterHand | FighterKind::CrazyHand => g.hand_nothing(gobj),
                 _ => panic!("the original's assertion failed: ellegal flag fp->no_reaction_always"),
             }
             g.damage_no_reaction(gobj);

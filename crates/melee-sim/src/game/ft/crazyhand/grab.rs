@@ -26,7 +26,7 @@ impl Running<'_> {
     /// His place as the glide's point (`x18`, `x1C`).
     fn ch_target_home(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let p = self.ch_da_point(f, attr::X18, attr::X1C);
+        let p = super::HAND.point(self, f, attr::X18);
         set_mv_vec(&mut self.game.fighters[f.0], mv::TARGET, p);
     }
 
@@ -37,9 +37,9 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let frame = self.game.fighters[f.0].cur_anim_frame;
         self.change_motion_state(gobj, ms::FINGER_BEAM_LOOP, 0, frame, 1.0, 0.0, None);
-        let rate = self.ch_da_f32(f, attr::XCC);
+        let rate = super::HAND.f32(self, f, attr::XCC);
         self.set_anim_rate(gobj, rate);
-        let n = self.ch_da_f32(f, attr::XC8);
+        let n = super::HAND.f32(self, f, attr::XC8);
         self.game.fighters[f.0].set_mv_i32(mv::X8, fp::fctiwz(reg(n)));
     }
 
@@ -55,7 +55,7 @@ impl Running<'_> {
             self.ch_grab_enter(gobj);
         }
         if !self.anim_frames_remaining(gobj) {
-            self.ch_enter(gobj, ms::FINGER_BEAM_LOOP);
+            self.hand_enter(gobj, ms::FINGER_BEAM_LOOP);
         }
     }
 
@@ -71,7 +71,7 @@ impl Running<'_> {
     /// caught `fn_80159288`, the victim `fn_8015B548`), holding no one.
     #[doc(alias = "ftCh_Init_80158DFC")]
     pub fn ch_grab_enter(&mut self, gobj: GObjId) {
-        self.ch_enter(gobj, ms::FINGER_BEAM_END);
+        self.hand_enter(gobj, ms::FINGER_BEAM_END);
         let fp = self.game.fighter_mut(gobj);
         fp.x221E_b6 = true;
         fp.x1A68 = 0x100;
@@ -105,15 +105,15 @@ impl Running<'_> {
     #[doc(alias = "ftCh_GrabUnk1_8015ABD0")]
     pub fn ch_close_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.ch_enter(gobj, ms::FINGER_GUN2);
-        let p = self.ch_da_point(f, attr::XD0, attr::XD4);
+        self.hand_enter(gobj, ms::FINGER_GUN2);
+        let p = super::HAND.point(self, f, attr::XD0);
         set_mv_vec(&mut self.game.fighters[f.0], mv::TARGET, p);
     }
 
     /// The hand closing on nothing, `ftCh_GrabUnk1_8015AC50`: toward his place.
     #[doc(alias = "ftCh_GrabUnk1_8015AC50")]
     pub fn ch_miss_enter(&mut self, gobj: GObjId) {
-        self.ch_enter(gobj, ms::FINGER_GUN3);
+        self.hand_enter(gobj, ms::FINGER_GUN3);
         self.ch_target_home(gobj);
     }
 
@@ -133,7 +133,7 @@ impl Running<'_> {
     /// Back toward his place after a miss, `ftCh_Init_80158F34`.
     #[doc(alias = "ftCh_Init_80158F34")]
     pub fn ch_back_home_enter(&mut self, gobj: GObjId) {
-        self.ch_enter(gobj, ms::BACK_PUNCH);
+        self.hand_enter(gobj, ms::BACK_PUNCH);
         self.ch_target_home(gobj);
     }
 
@@ -142,8 +142,8 @@ impl Running<'_> {
     #[doc(alias = "ftCh_Init_80159098")]
     pub fn ch_let_go_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.ch_enter(gobj, ms::FINGER_GUN1);
-        let t = self.ch_da_f32(f, attr::XD8);
+        self.hand_enter(gobj, ms::FINGER_GUN1);
+        let t = super::HAND.f32(self, f, attr::XD8);
         let fp = &mut self.game.fighters[f.0];
         fp.set_mv_f32(mv::X24, reg(t));
         fp.cmd_vars[0] = 1;
@@ -167,7 +167,7 @@ impl Running<'_> {
             fp.cmd_vars[0] = 0;
         }
         if !self.anim_frames_remaining(gobj) {
-            self.ch_return(gobj);
+            self.hand_return(gobj, &super::HAND);
         }
     }
 
@@ -178,7 +178,7 @@ impl Running<'_> {
     pub fn ch_squeeze_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].cmd_vars[1] = 0;
-        self.ch_enter(gobj, ms::BACK_AIRPLANE1);
+        self.hand_enter(gobj, ms::BACK_AIRPLANE1);
         let fp = &mut self.game.fighters[f.0];
         fp.x2222_b2 = true;
         fp.x1A6A = 511;
@@ -187,7 +187,7 @@ impl Running<'_> {
             .victim_gobj
             .expect("Crazy Hand squeezes no one");
         self.ch_capture_damage_enter(victim);
-        let p = self.ch_da_point(f, attr::XD0, attr::XD4);
+        let p = super::HAND.point(self, f, attr::XD0);
         set_mv_vec(&mut self.game.fighters[f.0], mv::TARGET, p);
     }
 
@@ -213,7 +213,7 @@ impl Running<'_> {
     #[doc(alias = "ftCh_Init_801594D4")]
     #[doc(alias = "ftCh_Init_80159670")]
     pub fn ch_throw_enter(&mut self, gobj: GObjId, msid: i32) {
-        self.ch_enter(gobj, msid);
+        self.hand_enter(gobj, msid);
         self.game.fighter_mut(gobj).cmd_vars[0] = 0;
     }
 
@@ -241,14 +241,14 @@ impl Running<'_> {
             self.game.fighters[f.0].set_mv_i32(mv::HOLDING, 0);
         }
         if !self.anim_frames_remaining(gobj) {
-            self.ch_return(gobj);
+            self.hand_return(gobj, &super::HAND);
         }
     }
 
     /// The wind-up of his vanishing attacks, `ftCh_Init_801597F0`: `cb` once it ends.
     #[doc(alias = "ftCh_Init_801597F0")]
     pub fn ch_back_crush_enter(&mut self, gobj: GObjId, cb: u32) {
-        self.ch_enter(gobj, ms::BACK_CRUSH);
+        self.hand_enter(gobj, ms::BACK_CRUSH);
         self.game.fighter_mut(gobj).set_mv_i32(mv::X4, cb as i32);
     }
 
@@ -275,10 +275,10 @@ impl Running<'_> {
     #[doc(alias = "fn_80159908")]
     pub fn ch_dive_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.ch_enter(gobj, ms::BACK_DISAPPEAR);
-        let n = self.ch_da_i32(f, attr::XF0);
+        self.hand_enter(gobj, ms::BACK_DISAPPEAR);
+        let n = super::HAND.i32(self, f, attr::XF0);
         self.game.fighters[f.0].set_mv_f32(mv::X0, fp::frsp(f64::from(n)));
-        let y = self.ch_da_f32(f, attr::XEC);
+        let y = super::HAND.f32(self, f, attr::XEC);
         self.ch_appear_over_opponent(gobj, y);
     }
 
@@ -288,7 +288,7 @@ impl Running<'_> {
     pub fn ch_dive_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.game.fighter_mut(gobj).self_vel.x = 0.0;
-            self.ch_return(gobj);
+            self.hand_return(gobj, &super::HAND);
         }
     }
 
@@ -300,7 +300,7 @@ impl Running<'_> {
         let n = fp::fsubs(reg(fp.mv_f32(mv::X0)), 1.0);
         fp.set_mv_f32(mv::X0, n);
         if reg(fp.mv_f32(mv::X0)) > 0.0 {
-            let max = self.ch_da_f32(f, attr::XDC);
+            let max = super::HAND.f32(self, f, attr::XDC);
             self.boss_follow_x_add(gobj, max);
         } else {
             fp.self_vel.x = 0.0;
@@ -319,12 +319,12 @@ impl Running<'_> {
     pub fn ch_shrink_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let j = self.root_jobj(gobj);
-        self.ch_enter(gobj, ms::WAIT1_1);
-        let y = fp::frsp(f64::from(self.ch_da_i32(f, attr::XF4)));
+        self.hand_enter(gobj, ms::WAIT1_1);
+        let y = fp::frsp(f64::from(super::HAND.i32(self, f, attr::XF4)));
         self.ch_appear_over_opponent(gobj, mem(y));
-        let frames = self.ch_da_i32(f, attr::XF8);
-        let n = self.ch_da_i32(f, attr::X100);
-        let small = reg(self.ch_da_f32(f, attr::XFC));
+        let frames = super::HAND.i32(self, f, attr::XF8);
+        let n = super::HAND.i32(self, f, attr::X100);
+        let small = reg(super::HAND.f32(self, f, attr::XFC));
         let scl = self.game.objs.jobjs[j].scale;
         let steps = fp::frsp(f64::from(n));
         let step = |v: f32| mem(fp::fdivs(fp::fsubs(reg(v), small), steps));
@@ -373,7 +373,7 @@ impl Running<'_> {
     /// The stomp's rise, `ftCh_Init_80159F40`.
     #[doc(alias = "ftCh_Init_80159F40")]
     pub fn ch_stomp_rise_enter(&mut self, gobj: GObjId) {
-        self.ch_enter(gobj, ms::GRAB);
+        self.hand_enter(gobj, ms::GRAB);
     }
 
     /// `ftCh_Grab_Anim`: the stomp once the rise ends.
@@ -388,8 +388,8 @@ impl Running<'_> {
     #[doc(alias = "ftCh_Init_8015A030")]
     pub fn ch_stomp_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.ch_enter(gobj, ms::CANCEL);
-        let y = self.ch_da_f32(f, attr::XE0);
+        self.hand_enter(gobj, ms::CANCEL);
+        let y = super::HAND.f32(self, f, attr::XE0);
         self.ch_appear_over_opponent(gobj, y);
     }
 
@@ -406,7 +406,7 @@ impl Running<'_> {
     #[doc(alias = "ftCh_Cancel_Phys")]
     pub fn ch_stomp_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let max = self.ch_da_f32(f, attr::XDC);
+        let max = super::HAND.f32(self, f, attr::XDC);
         self.boss_follow_x_add(gobj, max);
     }
 
@@ -414,8 +414,11 @@ impl Running<'_> {
     #[doc(alias = "ftCh_Init_8015A184")]
     pub fn ch_stomp_end_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.ch_enter(gobj, ms::SQUEEZING0);
-        let (x, y) = (self.ch_da_f32(f, attr::XE4), self.ch_da_f32(f, attr::XE8));
+        self.hand_enter(gobj, ms::SQUEEZING0);
+        let (x, y) = (
+            super::HAND.f32(self, f, attr::XE4),
+            super::HAND.f32(self, f, attr::XE8),
+        );
         let fp = &mut self.game.fighters[f.0];
         fp.cur_pos.x = x;
         fp.cur_pos.y = y;
