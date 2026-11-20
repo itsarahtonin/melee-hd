@@ -400,8 +400,6 @@ pub(crate) mod mv {
     pub const X50: usize = 0x50;
     pub const X54: usize = 0x54;
     pub const X58: usize = 0x58;
-    pub const X64: usize = 0x64;
-    pub const X70: usize = 0x70;
     pub const X74: usize = 0x74;
     pub const X78: usize = 0x78;
 }
@@ -424,7 +422,6 @@ pub(crate) mod attr {
     pub const X58: usize = 0x58;
     pub const X5C: usize = 0x5C;
     pub const X60: usize = 0x60;
-    pub const X64: usize = 0x64;
     pub const X68: usize = 0x68;
     pub const X6C: usize = 0x6C;
     pub const X70: usize = 0x70;
@@ -435,7 +432,6 @@ pub(crate) mod attr {
     pub const X84: usize = 0x84;
     pub const X88: usize = 0x88;
     pub const X90: usize = 0x90;
-    pub const X94: usize = 0x94;
     pub const X98: usize = 0x98;
     pub const XA0: usize = 0xA0;
     pub const XA4: usize = 0xA4;
@@ -535,6 +531,16 @@ pub struct Hand {
     pub beaten: damage::Beaten,
     /// Which tag attack states cry.
     pub tag_cry: tag::TagCry,
+    /// The attacks both hands make, each in his own states over his own attributes.
+    pub hold: crush::Hold,
+    pub window: crush::Window,
+    pub countdown: crush::Countdown,
+    pub chases: crush::Chases,
+    pub pass: airplane::Pass,
+    pub ram: airplane::Ram,
+    pub beams: finger::Beams,
+    /// The vanishing wind-up's state.
+    pub vanish: i32,
     /// Crazy Hand cries on the script's flag while waiting, and clears it as a wait starts.
     pub cries_waiting: bool,
     /// Master Hand's timer joins Crazy Hand's tag attack when Crazy Hand waits at one.
@@ -632,6 +638,51 @@ pub const HAND: Hand = Hand {
         sfx: 320024,
     },
     tag_cry: tag::TagCry::Only(ms::TAG_APPLAUD),
+    hold: crush::Hold {
+        states: [ms::ROCK_CRUSH_WAIT, ms::ROCK_CRUSH_DOWN],
+        frames: attr::XA0,
+        follow: attr::XA4,
+    },
+    window: crush::Window {
+        state: ms::PAPER_CRUSH,
+        frames: [attr::XB0, attr::XB4],
+        follow: attr::XB8,
+    },
+    countdown: crush::Countdown {
+        state: ms::DRILL,
+        late: attr::X84,
+        follow: attr::X80,
+    },
+    chases: crush::Chases {
+        states: [ms::POKE1, ms::POKE2],
+        count: attr::X90,
+        point: attr::X98,
+    },
+    pass: airplane::Pass {
+        states: [ms::BACK_AIRPLANE2, ms::BACK_AIRPLANE3],
+        over: attr::X5C,
+        follow: attr::X58,
+        back: attr::X60,
+    },
+    ram: airplane::Ram {
+        states: [ms::BACK_PUNCH, ms::BACK_CRUSH],
+        over: [attr::X68, attr::X70],
+        frames: [attr::X6C, attr::X74],
+        follow: attr::X58,
+        small: attr::X78,
+        grow: attr::X7C,
+        growth: mv::X58,
+    },
+    beams: finger::Beams {
+        states: [
+            ms::FINGER_BEAM_START,
+            ms::FINGER_BEAM_LOOP,
+            ms::FINGER_BEAM_END,
+        ],
+        lasers: addr::MS_362_80152E28,
+        partners_lasers: false,
+    },
+    vanish: ms::BACK_DISAPPEAR,
     cries_waiting: false,
     tags_from_wait: true,
     fewer_rows_alone: false,
@@ -658,7 +709,7 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// if `addr` is one.
 pub fn run_with(g: &mut Running, gobj: GObjId, addr: u32, cb: u32) -> bool {
     match addr {
-        addr::MS_371_801541C8 => g.mh_back_disappear_enter(gobj, cb),
+        addr::MS_371_801541C8 => g.hand_vanish_enter(gobj, &HAND, cb),
         _ => return false,
     }
     true

@@ -280,6 +280,7 @@ impl Running<'_> {
     #[doc(alias = "ftCh_FingerBeamStart_Anim")]
     #[doc(alias = "ftCh_BackPunch_Anim")]
     #[doc(alias = "ftCh_Squeezing0_Anim")]
+    #[doc(alias = "ftMh_Poke2_Anim")]
     pub fn hand_anim_return(&mut self, gobj: GObjId, h: &Hand) {
         if !self.anim_frames_remaining(gobj) {
             self.hand_return(gobj, h);
@@ -290,7 +291,7 @@ impl Running<'_> {
     /// `ftAnim_8006EBA4`): `ftMh_MS_344_80151828` (the sweep's wind-up),
     /// `ftMh_MS_347_80151AC8` (its end), `ftMh_MS_348_80151BB8` (the slap),
     /// `ftMh_MS_353_80151DC4` and `ftMh_MS_350_80151EB4` (the walk), `ftMh_MS_354_80152370` and
-    /// `ftMh_MS_355_8015247C` (the punch).
+    /// `ftMh_MS_355_8015247C` (the punch), and Crazy Hand's like them.
     #[doc(alias = "ftMh_MS_344_80151828")]
     #[doc(alias = "ftMh_MS_347_80151AC8")]
     #[doc(alias = "ftMh_MS_348_80151BB8")]
@@ -300,6 +301,14 @@ impl Running<'_> {
     #[doc(alias = "ftMh_MS_355_8015247C")]
     #[doc(alias = "ftMh_MS_366_80153820")]
     #[doc(alias = "ftMh_MS_365_80153730")]
+    #[doc(alias = "fn_80157080")]
+    #[doc(alias = "ftCh_Init_8015737C")]
+    #[doc(alias = "fn_8015746C")]
+    #[doc(alias = "fn_8015755C")]
+    #[doc(alias = "ftCh_Init_801577F8")]
+    #[doc(alias = "fn_801578E8")]
+    #[doc(alias = "ftCh_Init_801579F4")]
+    #[doc(alias = "ftCh_Init_80159F40")]
     pub fn hand_enter(&mut self, gobj: GObjId, msid: i32) {
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);

@@ -55,15 +55,6 @@ pub struct Grab {
 }
 
 impl Running<'_> {
-    /// `ftMh_BackDisappear_Anim`: the callback the disappearance was given once it ends.
-    #[doc(alias = "ftMh_BackDisappear_Anim")]
-    pub fn mh_back_disappear_anim(&mut self, gobj: GObjId) {
-        if !self.anim_frames_remaining(gobj) {
-            let cb = self.game.fighter(gobj).mv_i32(mv::X4) as u32;
-            super::super::super::code::run_fighter_cb(self, gobj, CodeRef(cb));
-        }
-    }
-
     /// The reach, `ftMh_MS_372_801542E0` and `ftCh_Init_80158B3C`: his wait's frame kept at
     /// his reach's rate, for its frames (`mv.x8`).
     #[doc(alias = "ftMh_MS_372_801542E0")]
@@ -458,7 +449,6 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::BACK_DISAPPEAR_ANIM => g.mh_back_disappear_anim(gobj),
         addr::BACK_DISAPPEAR_IASA => g.hand_human_nop(gobj),
         addr::MS_372_801542E0 => g.hand_reach_enter(gobj, &HAND),
         addr::WAIT1_1_ANIM => g.hand_reach_anim(gobj, &HAND),

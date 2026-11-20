@@ -28,7 +28,10 @@ use super::super::state::Running;
 use super::FighterKind;
 use super::co::ids::ms as co_ms;
 use super::masterhand::Hand;
+use super::masterhand::airplane::{Pass, Ram};
+use super::masterhand::crush::{Chases, Countdown, Hold, Window};
 use super::masterhand::damage::Beaten;
+use super::masterhand::finger::Beams;
 use super::masterhand::grab::Grab;
 use super::masterhand::tag::TagCry;
 use crate::hsd::gobj::GObjId;
@@ -350,28 +353,18 @@ pub mod ms {
     pub const WAIT2_1: i32 = 0x185;
 }
 
-/// `ftMasterHand_MotionVars`' offsets in `mv` as he uses them (`fp->mv.ch`).
+/// `ftMasterHand_MotionVars`' offsets in `mv` as he uses them (`fp->mv.ch`) where they aren't
+/// the hands' shared words (`ft::masterhand::mv`).
 pub(crate) mod mv {
-    /// A float count (`unk0.x0`), the entrance's camera step (`unk4.x0`), or the rises left
-    /// before the crush (`unk13.x0`, a float).
-    pub const X0: usize = 0x0;
-    /// The callback once he's at `TARGET` (`unk0.x4`), or whether the rise follows its target
-    /// (`unk13.x4`, a float).
-    pub const X4: usize = 0x4;
-    /// A frame count (`unk0.x8`, `unk4.x8`).
-    pub const X8: usize = 0x8;
-    /// Where he's gliding (`unk0.xC`); its distance and whether he holds someone are the
-    /// hands' shared words (`ft::masterhand::mv`).
+    /// Where he's gliding (`unk0.xC`).
     pub const TARGET: usize = 0xC;
     /// The poke's lasers (`grab.x28` to `x34`).
     pub const LASERS: [usize; 4] = [0x28, 0x2C, 0x30, 0x34];
     /// The poke's hums (`unk0.x38` to `x40`).
     pub const HUMS: [usize; 3] = [0x38, 0x3C, 0x40];
-    /// The shrink's scale step, his scale before it and its frames left (`ch_backcrush.x44`,
-    /// `x50`, `x5C`).
+    /// The shrink's growth (`ch_backcrush.x44`: its step, then his full scale at `x50` and
+    /// its count at `x5C`).
     pub const SCALE_STEP: usize = 0x44;
-    pub const SCALE: usize = 0x50;
-    pub const SCALE_FRAMES: usize = 0x5C;
     /// The defeat's cheers so far (`ch_dmg.x60`, `x64`).
     pub const CHEERS: usize = 0x60;
     pub const CHEERS2: usize = 0x64;
@@ -402,7 +395,6 @@ pub(crate) mod attr {
     pub const X48: usize = 0x48;
     pub const X4C: usize = 0x4C;
     pub const X54: usize = 0x54;
-    pub const X58: usize = 0x58;
     pub const X5C: usize = 0x5C;
     pub const X64: usize = 0x64;
     pub const X68: usize = 0x68;
@@ -429,7 +421,6 @@ pub(crate) mod attr {
     pub const XDC: usize = 0xDC;
     pub const XE0: usize = 0xE0;
     pub const XE4: usize = 0xE4;
-    pub const XE8: usize = 0xE8;
     pub const XEC: usize = 0xEC;
     pub const XF0: usize = 0xF0;
     pub const XF4: usize = 0xF4;
@@ -509,6 +500,47 @@ pub const HAND: Hand = Hand {
         sfx: 0x4E219,
     },
     tag_cry: TagCry::AllBut(ms::SQUEEZING1),
+    hold: Hold {
+        states: [ms::WALK_WAIT, ms::WALK_SHOOT],
+        frames: attr::X64,
+        follow: attr::X68,
+    },
+    window: Window {
+        state: ms::DRILL,
+        frames: [attr::X74, attr::X78],
+        follow: attr::X7C,
+    },
+    countdown: Countdown {
+        state: ms::ROCK_CRUSH_DOWN,
+        late: attr::X48,
+        follow: attr::X44,
+    },
+    chases: Chases {
+        states: [ms::ROCK_CRUSH_UP, ms::ROCK_CRUSH_WAIT],
+        count: attr::X54,
+        point: attr::X5C,
+    },
+    pass: Pass {
+        states: [ms::CANCEL, ms::SQUEEZING0],
+        over: attr::XE0,
+        follow: attr::XDC,
+        back: attr::XE4,
+    },
+    ram: Ram {
+        states: [ms::BACK_DISAPPEAR, ms::WAIT1_1],
+        over: [attr::XEC, attr::XF4],
+        frames: [attr::XF0, attr::XF8],
+        follow: attr::XDC,
+        small: attr::XFC,
+        grow: attr::X100,
+        growth: mv::SCALE_STEP,
+    },
+    beams: Beams {
+        states: [ms::PAPER_CRUSH, ms::POKE1, ms::POKE2],
+        lasers: addr::FN_80158534,
+        partners_lasers: true,
+    },
+    vanish: ms::BACK_CRUSH,
     cries_waiting: true,
     tags_from_wait: false,
     fewer_rows_alone: true,
@@ -531,7 +563,7 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// `addr` is one.
 pub fn run_with(g: &mut Running, gobj: GObjId, addr: u32, cb: u32) -> bool {
     match addr {
-        addr::INIT_801597F0 => g.ch_back_crush_enter(gobj, cb),
+        addr::INIT_801597F0 => g.hand_vanish_enter(gobj, &HAND, cb),
         _ => return false,
     }
     true

@@ -230,13 +230,13 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Crazy Hand: the poke makes Master Hand's lasers
 
-- **Where:** `fn_80158534` (`ftcrazyhandpoke.c`, the poke's accessory), through `it_802F0340`, `Item_80268B18` and `Item_8026862C` to `Item_80267AA8`; `crates/melee-sim/src/game/ft/crazyhand/attack.rs` (`ch_poke_lasers`).
+- **Where:** `fn_80158534` (`ftcrazyhandpoke.c`, the poke's accessory), through `it_802F0340`, `Item_80268B18` and `Item_8026862C` to `Item_80267AA8`; `crates/melee-sim/src/game/ft/masterhand/finger.rs` (`hand_beams_lasers`, the hands' shared finger beams; Crazy Hand's `Beams::partners_lasers` carries it).
 - **Defect:** the poke's four lasers are made as `It_Kind_MasterHand_Laser` (125, `li r7, 0x7D` in the machine code), not his own laser (127), whose article his creation registers (`ftCh_Init_OnLoad`) and nothing makes. Only Master Hand's creation registers kind 125's article.
 - **Effect:** with Master Hand in the match (the single-player modes always field them together) the lasers are Master Hand's, with his laser's attributes. Without him (a debug VS match with Crazy Hand alone) kind 125's article is null and the first laser's creation reads it at address 0x10, which faults: ssbm-rs stops with an unmapped read in `Item_80267AA8` (`m6-crazy-hand/ch-alone-1` at field 5145, and `ch-alone-3`).
 - **melee-hd:** modeled with Master Hand there; without him it stops by name, as the console's game stops there ([design call 7](milestone-6.md#design-calls)): `Melee crashes: Crazy Hand's poke makes Master Hand's laser (item kind 125), whose article no Master Hand registered…`.
 - **Fix:** make kind 127.
 - **Fix impact:** changes the lasers' attributes in the single-player modes where his laser's differ from Master Hand's, so it changes gameplay there; debug VS matches stop crashing.
-- **Source:** the decompilation's `fn_80158534` and its listing (`ftcrazyhandpoke.s`); `crates/melee-sim/src/game/ft/crazyhand/attack.rs` (`ch_poke_lasers`).
+- **Source:** the decompilation's `fn_80158534` and its listing (`ftcrazyhandpoke.s`); `crates/melee-sim/src/game/ft/masterhand/finger.rs` (`hand_beams_lasers`).
 
 ### Master Hand and Crazy Hand: the attack timer divides by a computer level of 0
 

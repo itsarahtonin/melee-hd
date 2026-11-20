@@ -1,7 +1,5 @@
 //! The stage-wide sweep and the slap (`ftmasterhandsweep.c`, `ftmasterhandsweepwait.c`,
-//! `ftmasterhandslap.c`), the walk with its finger shots, and the drill
-//! (`ftmasterhandwalk.c`, `ftmasterhanddrill.c`); `ftmasterhandsweep.c` also holds the beaten
-//! hand's physics.
+//! `ftmasterhandslap.c`) and the walk with its finger shots (`ftmasterhandwalk.c`).
 
 use gekko_fp as fp;
 
@@ -121,35 +119,6 @@ impl Running<'_> {
         self.hand_enter(gobj, ms::WALK_WAIT);
         self.game.fighter_mut(gobj).self_vel.x = 0.0;
     }
-
-    /// The drill, `ftMh_MS_352_801521DC`: 107 frames (`mv.x0`).
-    #[doc(alias = "ftMh_MS_352_801521DC")]
-    pub fn mh_drill_enter(&mut self, gobj: GObjId) {
-        self.hand_enter(gobj, ms::DRILL);
-        self.game.fighter_mut(gobj).set_mv_f32(mv::X0, 107.0);
-    }
-
-    /// `ftMh_Drill_Phys`: following the nearest opponent (at most `x80` a frame) while the
-    /// count is within `x84`, over the stage.
-    #[doc(alias = "ftMh_Drill_Phys")]
-    pub fn mh_drill_phys(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        self.air_anim_motion(gobj);
-        let (lim, max) = (
-            super::HAND.i32(self, f, attr::X84),
-            super::HAND.f32(self, f, attr::X80),
-        );
-        let fp = &mut self.game.fighters[f.0];
-        let n = fp::fsubs(reg(fp.mv_f32(mv::X0)), 1.0);
-        fp.set_mv_f32(mv::X0, n);
-        let n = reg(fp.mv_f32(mv::X0));
-        if n > fp::frsp(f64::from(lim)) || n < 0.0 {
-            fp.self_vel.x = 0.0;
-        } else {
-            self.boss_follow_x(gobj, max);
-        }
-        self.boss_clamp_to_floor(gobj);
-    }
 }
 
 #[melee_callbacks::callbacks(Fighter)]
@@ -169,8 +138,6 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::WALK_LOOP_ANIM => g.mh_walk_loop_anim(gobj),
         addr::WALK_LOOP_PHYS => g.mh_walk_loop_phys(gobj),
         addr::MS_351_801520D8 => g.mh_walk_wait_enter(gobj),
-        addr::MS_352_801521DC => g.mh_drill_enter(gobj),
-        addr::DRILL_PHYS => g.mh_drill_phys(gobj),
         _ => return false,
     }
     true
