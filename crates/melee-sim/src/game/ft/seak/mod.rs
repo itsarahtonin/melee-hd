@@ -130,15 +130,6 @@ pub(crate) mod mv {
     pub const S_X18: usize = 0x18;
     pub const S_X1C: usize = 0x1C;
     pub const S_X20: usize = 0x20;
-    /// `specialhi.x0`, `vel`, `xC`.
-    pub const HI_X0: usize = 0;
-    pub const HI_VEL_X: usize = 4;
-    pub const HI_VEL_Y: usize = 8;
-    pub const HI_XC: usize = 0xC;
-    /// `mv.co.walk.fast_anim_frame`, `mv.co.common.x14`, `x18`.
-    pub const CO_X10: usize = 0x10;
-    pub const CO_X14: usize = 0x14;
-    pub const CO_X18: usize = 0x18;
 }
 
 /// `ftSeakAttributes`' offsets.
@@ -154,19 +145,6 @@ pub(crate) mod attr {
     pub const X20: usize = 0x20;
     pub const X24: usize = 0x24;
     pub const X28: usize = 0x28;
-    pub const SELF_VEL_Y: usize = 0x2C;
-    pub const X30: usize = 0x30;
-    pub const X34: usize = 0x34;
-    pub const X38: usize = 0x38;
-    pub const X3C: usize = 0x3C;
-    pub const X40: usize = 0x40;
-    pub const X44: usize = 0x44;
-    pub const X48: usize = 0x48;
-    pub const X4C: usize = 0x4C;
-    pub const X50: usize = 0x50;
-    pub const X54: usize = 0x54;
-    pub const X58: usize = 0x58;
-    pub const X5C: usize = 0x5C;
     pub const X60: usize = 0x60;
     pub const X64: usize = 0x64;
     pub const X68: usize = 0x68;
@@ -186,10 +164,6 @@ impl Running<'_> {
     /// A float of the fighter's `ftSeakAttributes`, `off` bytes in.
     pub(crate) fn seak_attr_f32(&self, f: FighterId, off: usize) -> f32 {
         f32::from_bits(self.seak_attr_word(f, off))
-    }
-
-    pub(crate) fn seak_attr_i32(&self, f: FighterId, off: usize) -> i32 {
-        self.seak_attr_word(f, off) as i32
     }
 
     fn seak_attr_word(&self, f: FighterId, off: usize) -> u32 {

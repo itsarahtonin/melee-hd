@@ -74,14 +74,6 @@ pub mod addr {
 
 /// The `mv` offsets of `ftZelda_MotionVars`' members.
 pub(crate) mod mv {
-    /// `specialhi.x0`, `x4`, `xC`, `x10`, `x18`.
-    pub const HI_X0: usize = 0;
-    pub const HI_X4_X: usize = 4;
-    pub const HI_X4_Y: usize = 8;
-    pub const HI_XC: usize = 0xC;
-    pub const HI_X10_X: usize = 0x10;
-    pub const HI_X10_Y: usize = 0x14;
-    pub const HI_X18: usize = 0x18;
     /// `specialn.x0`.
     pub const N_X0: usize = 0;
     /// `specials.x0`, `x4`, `x8`, `xC`.
@@ -98,20 +90,6 @@ pub(crate) mod attr {
     pub const XC: usize = 0xC;
     pub const X2C: usize = 0x2C;
     pub const X34: usize = 0x34;
-    pub const X38: usize = 0x38;
-    pub const X3C: usize = 0x3C;
-    pub const X40: usize = 0x40;
-    pub const X44: usize = 0x44;
-    pub const X48: usize = 0x48;
-    pub const X4C: usize = 0x4C;
-    pub const X50: usize = 0x50;
-    pub const X54: usize = 0x54;
-    pub const X58: usize = 0x58;
-    pub const X5C: usize = 0x5C;
-    pub const X60: usize = 0x60;
-    pub const X64: usize = 0x64;
-    pub const X68: usize = 0x68;
-    pub const X6C: usize = 0x6C;
     pub const X70: usize = 0x70;
     pub const X74: usize = 0x74;
     pub const X78: usize = 0x78;

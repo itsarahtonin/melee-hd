@@ -223,15 +223,6 @@ pub(crate) mod mv {
     pub const N_LEVEL: usize = 0x10;
     /// `SpecialS.isConfusionReflect`, the top bit of the first byte.
     pub const S_FLAGS: usize = 0x0;
-    /// `SpecialHi`: the travel's frames, the stick, the frames in the air, and the travel's
-    /// speeds kept when he reappears.
-    pub const HI_FRAMES: usize = 0x0;
-    pub const HI_STICK_X: usize = 0x4;
-    pub const HI_STICK_Y: usize = 0x8;
-    pub const HI_AIR_FRAMES: usize = 0xC;
-    pub const HI_VEL_X: usize = 0x10;
-    pub const HI_VEL_Y: usize = 0x14;
-    pub const HI_GR_VEL: usize = 0x18;
 }
 
 /// `ftMewtwoAttributes`' offsets (0x88 bytes).
@@ -248,21 +239,9 @@ pub(crate) mod attr {
     /// Confusion: the rise in the air and the reflector (`ReflectDesc`).
     pub const S_AIR_BOOST: usize = 0x18;
     pub const S_REFLECT: usize = 0x1C;
-    /// Teleport.
+    /// Teleport's, from its first speed divisor to its landing lag (0x38 bytes, the layout
+    /// `zelda::special_hi::Teleport` reads).
     pub const HI_VEL_DIV_X: usize = 0x40;
-    pub const HI_VEL_DIV_Y: usize = 0x44;
-    pub const HI_GRAVITY: usize = 0x48;
-    pub const HI_TERMINAL_VEL: usize = 0x4C;
-    pub const HI_DURATION: usize = 0x50;
-    pub const HI_LAND_FRAMES: usize = 0x54;
-    pub const HI_STICK_MIN: usize = 0x58;
-    pub const HI_MOMENTUM: usize = 0x5C;
-    pub const HI_MOMENTUM_ADD: usize = 0x60;
-    pub const HI_DRIFT: usize = 0x64;
-    pub const HI_ANGLE_CLAMP: usize = 0x68;
-    pub const HI_MOMENTUM_END_MUL: usize = 0x6C;
-    pub const HI_FREEFALL_MOBILITY: usize = 0x70;
-    pub const HI_LANDING_LAG: usize = 0x74;
     /// Disable.
     pub const LW_GRAVITY: usize = 0x78;
     pub const LW_TERMINAL_VEL: usize = 0x7C;
