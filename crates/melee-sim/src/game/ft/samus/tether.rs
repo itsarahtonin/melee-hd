@@ -9,11 +9,13 @@ use gekko_fp as fp;
 
 use super::super::super::ef::{self, Arg};
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::samusgrapple;
+use super::super::super::it::kinds::samusgrapple::{self, GRAPPLE};
+use super::super::super::it::kinds::tether;
 use super::super::super::state::Running;
 use super::super::common::{GA_AIR, GA_GROUND};
 use super::{PART_THROW_N, attr, ms, u};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::mp::coll::{LEFT_LEDGE_GRAB, RIGHT_LEDGE_GRAB};
@@ -75,7 +77,7 @@ impl Running<'_> {
         let throw_n = self.bone_joint(gobj, PART_THROW_N);
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, throw_n, None);
         let facing = self.game.fighter(gobj).facing_dir;
-        let beam = samusgrapple::spawn(self, gobj, pos, facing);
+        let beam = tether::spawn(self, gobj, pos, facing, ItKind::SamusGBeam.id(), &GRAPPLE);
         self.game.fighter_mut(gobj).u.set_gobj_at(u::GRAPPLE, beam);
         beam
     }
@@ -88,8 +90,8 @@ impl Running<'_> {
             if frame != fp::frsp(f64::from(i * 3 + 0x14)) {
                 continue;
             }
-            let seg = samusgrapple::tip_gobj(self, beam);
-            let j = samusgrapple::model_of(self, seg);
+            let seg = tether::tip_gobj(self, beam, &GRAPPLE);
+            let j = tether::model_of(self, seg);
             jobj::setup_matrix(&mut self.game.objs, self.data, j);
             let m = self.game.objs.jobjs[j.expect("the tip's model")].mtx;
             let mut at = Vec3::new(m.m[0][3], m.m[1][3], m.m[2][3]);
@@ -169,7 +171,7 @@ impl Running<'_> {
             return false;
         }
         let beam = self.game.fighters[f.0].u.gobj_at(u::GRAPPLE);
-        let shot = beam.map(|b| samusgrapple::shot_speed(self, b));
+        let shot = beam.map(|b| tether::shot_speed(self, b, &GRAPPLE));
         if let Some(b) = beam {
             self.samus_grapple_sparks(gobj, b, sparks);
         }
@@ -177,19 +179,19 @@ impl Running<'_> {
         let beam = beam.expect("a grapple beam's frames without the beam");
         if frame == at(self, attach) {
             if !dash && self.samus_tether_blocked(gobj) {
-                samusgrapple::put_away(self, beam);
+                tether::put_away(self, beam, &GRAPPLE);
                 self.enter_wait(gobj);
                 return true;
             }
             let facing = reg(self.game.fighters[f.0].facing_dir);
             let mut vel = Vec3::new(shot.unwrap(), 0.0, 0.0);
             vel.x = mem(fp::fmuls(reg(vel.x), facing));
-            samusgrapple::shoot(self, beam, vel);
+            tether::shoot(self, beam, vel, &GRAPPLE);
         } else if frame == at(self, retract) {
-            samusgrapple::to_retract(self, beam);
+            tether::to_retract(self, beam);
         } else if frame == at(self, end) {
             let b = self.game.fighters[f.0].u.gobj_at(u::GRAPPLE);
-            samusgrapple::put_away(self, b.expect("the grapple beam"));
+            tether::put_away(self, b.expect("the grapple beam"), &GRAPPLE);
         }
         false
     }
@@ -201,7 +203,7 @@ impl Running<'_> {
         if self.game.fighter(gobj).kind == FighterKind::Samus
             && let Some(beam) = self.game.fighter(gobj).u.gobj_at(u::GRAPPLE)
         {
-            samusgrapple::put_away(self, beam);
+            tether::put_away(self, beam, &GRAPPLE);
         }
     }
 
@@ -209,7 +211,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800D9C98")]
     pub fn samus_grapple_put_away(&mut self, gobj: GObjId) {
         if let Some(beam) = self.game.fighter(gobj).u.gobj_at(u::GRAPPLE) {
-            samusgrapple::put_away(self, beam);
+            tether::put_away(self, beam, &GRAPPLE);
             self.game.fighter_mut(gobj).u.set_gobj_at(u::GRAPPLE, None);
         }
         let fp = self.game.fighter_mut(gobj);
@@ -374,20 +376,20 @@ impl Running<'_> {
                 .expect("the grapple beam");
             if frame == at(self, attr::AIR_CATCH_ATTACH) {
                 if self.samus_tether_blocked(gobj) {
-                    samusgrapple::put_away(self, beam);
+                    tether::put_away(self, beam, &GRAPPLE);
                     self.enter_fall_special_basic(gobj);
                     return;
                 }
-                let shot = samusgrapple::shot_speed(self, beam);
+                let shot = tether::shot_speed(self, beam, &GRAPPLE);
                 let fp = &self.game.fighters[f.0];
                 let mut vel = Vec3::new(shot, 0.0, 0.0);
                 vel.x = mem(fp::fmuls(reg(vel.x), reg(fp.facing_dir)));
                 vel.x = mem(fp::fadds(reg(vel.x), reg(fp.pos_delta.x)));
-                samusgrapple::shoot(self, beam, vel);
+                tether::shoot(self, beam, vel, &GRAPPLE);
             } else if frame == at(self, 0xC4) {
-                samusgrapple::to_retract(self, beam);
+                tether::to_retract(self, beam);
             } else if frame == at(self, 0xC8) {
-                samusgrapple::put_away(self, beam);
+                tether::put_away(self, beam, &GRAPPLE);
             }
         }
         if !self.anim_frames_remaining(gobj) {

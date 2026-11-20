@@ -146,6 +146,7 @@ pub mod suikun;
 pub mod sword;
 pub mod taru;
 pub mod tarucann;
+pub mod tether;
 pub mod thunder;
 pub mod tincle;
 pub mod togepy;

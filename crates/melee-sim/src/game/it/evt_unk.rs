@@ -5,7 +5,8 @@
 
 use super::kinds::{
     climbersstring, fflower, flipper, foxlaser, hassam, hitodeman, linkbomb, linkboomerang,
-    linkhookshot, marumine, mewtwodisable, msbomb, peachturnip, seakchain, spycloak, star,
+    linkhookshot, marumine, mewtwodisable, msbomb, peachturnip, samusgrapple, seakchain, spycloak,
+    star, tether,
 };
 use super::{item, item_mut, lib26b1};
 use crate::game::handles::CodeRef;
@@ -48,11 +49,11 @@ pub fn run(r: &mut Running, gobj: GObjId, other: Option<GObjId>, f: CodeRef) {
         0x8029_CCF8 => foxlaser::forget(r, gobj, other),
         0x8029_FD84 => linkbomb::evt_unk(r, gobj, other),
         0x802A_23CC => linkboomerang::evt_unk(r, gobj, other),
-        0x802A_7D40 => linkhookshot::evt_unk(r, gobj, other),
+        0x802A_7D40 => tether::forget(r, gobj, other, &linkhookshot::HOOKSHOT),
         0x802B_2528 => pikachu_thunder(r, gobj, other),
         0x802B_54E4 => samus_bomb(r, gobj, other),
         0x802B_7104 => samus_missile(r, gobj, other),
-        0x802B_AEA0 => samus_grapple(r, gobj, other),
+        0x802B_AEA0 => tether::forget(r, gobj, other, &samusgrapple::GRAPPLE),
         0x802B_D10C => seakchain::forget(r, gobj, other),
         0x802B_DA08 => peachturnip::evt_unk(r, gobj, other),
         0x802C_210C => climbers_ice(r, gobj, other),
@@ -174,17 +175,6 @@ fn samus_missile(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     let v = item_mut(r.game, gobj).xDD4_itemVar.samus_missile();
     if v.owner.get() == other {
         v.owner.set(None);
-    }
-}
-
-/// Samus's grapple beam forgets its fighter if it's the one going,
-/// `itSamusGrapple_Logic53_EvtUnk`.
-#[doc(alias = "itSamusGrapple_Logic53_EvtUnk")]
-fn samus_grapple(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    lib26b1::forget(r.game, gobj, other);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.samus_grapple();
-    if v.x8.get() == other {
-        v.x8.set(None);
     }
 }
 

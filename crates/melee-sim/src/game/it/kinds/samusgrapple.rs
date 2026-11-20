@@ -1,16 +1,16 @@
-//! Samus's grapple beam, `melee/it/kinds/itsamusgrapple.c`: a string of links (`ItemLink`,
-//! see [`super::super::link`]) from her arm cannon, the item's own model at the tip. Her grab
-//! and dash grab (`ftCo_Catch`'s tether frames), her air grab (`ftCo_AirCatch`) and its hang
-//! from a ledge drive it: shot out (state 1), the tip leads and the links follow one by one,
-//! each held to the link length from the one before; bouncing back off the stage (state 2),
-//! falling (state 3), drawn back in (states 4 and 5), latched on a ledge (state 6), pulling her
-//! up (state 7) or hanging (state 8); state 0 is the beam folded in her hand. The item's states
-//! keep no callbacks but physics, which only name the frame's work (`unk_10`); the fighter's
-//! accessory hooks run it, then line the links' models up.
+//! Samus's grapple beam, `melee/it/kinds/itsamusgrapple.c`: a [tether](super::tether) from her
+//! arm cannon (her `ThrowN` bone), the item's own model at the tip, every link's model
+//! animating. The states, the spawn, the hooks and the transitions are the tether's, shared
+//! with Link's hookshot; this file keeps the beam's addresses, its [`GRAPPLE`], its links and
+//! their physics: the tip leads and the links follow one by one, each swinging at random and
+//! held between the two link lengths from the one before. The button sequence (D-pad up, down,
+//! up, then A, [`sequence`]) gives a ground beam that swings a hitbox and homes on the nearest
+//! foe with Z, twice as long, or an air beam whose hang Z lengthens.
 //!
-//! The beam's variables (`itSamusGrapple_ItemVars`) keep its tip (`x0`, the last link made),
-//! the link at the hand (`x4`), its fighter (`x8`) and the tip's model (`xC`); the links point
-//! toward the tip through `prev` and toward the hand through `next`.
+//! The beam's variables (`itSamusGrapple_ItemVars`) keep the tether's (its tip, `x0`, the last
+//! link made; the link at the hand, `x4`; its fighter, `x8`; the tip's model, `xC`; the frame's
+//! work, `unk_10`; `x14`), the links made (`x15`) and the sequence's beam (`x16`); the links
+//! point toward the tip through `prev` and toward the hand through `next`.
 //!
 //! The beam's spawn writes its lengths for her height into its attributes in the character's
 //! loaded data (`x34` to `x58`); they're state ([`Globals::grapple_lengths`]) until the file
@@ -21,19 +21,16 @@
 
 use gekko_fp as fp;
 
-use super::super::item::{article, change, change_state, pick_up, spawn_air};
+use super::super::item::article;
 use super::super::link::{self, apply_vel, direction, link as lk, link_mut, move_coll, place_coll};
 use super::super::{item, item_mut, jobj_of};
+use super::tether::{self, FighterAttr, Hand, Lead, Tether};
 use crate::fpu::{mem, reg};
 use crate::game::code::unported_call;
-use crate::game::ef::{self, Arg};
 use crate::game::handles::{CodeRef, ItemLinkId};
-use crate::game::it::ItKind;
 use crate::game::state::{Obj, Running, UserData};
-use crate::game::structs::SpawnItem;
-use crate::hsd::gobj::{self as gobjs, GObjId};
+use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
-use crate::mtx::Mtx34;
 use crate::vec::Vec3;
 use melee_data::archive::DataRef;
 
@@ -44,31 +41,22 @@ pub const MAKE_LINKS: u32 = 0x802B_75FC;
 pub const PUT_AWAY: u32 = 0x802B_7B84;
 pub const SPAWN: u32 = 0x802B_7C18;
 pub const FOLDED: u32 = 0x802B_7E34;
-#[doc(alias = "itSamusgrapple_UnkMotion0_Phys")]
 pub const PHYS_0: u32 = 0x802B_8048;
 pub const SHOT: u32 = 0x802B_805C;
-#[doc(alias = "itSamusgrapple_UnkMotion1_Phys")]
 pub const PHYS_1: u32 = 0x802B_8370;
 pub const BOUNCED: u32 = 0x802B_8384;
-#[doc(alias = "itSamusgrapple_UnkMotion2_Phys")]
 pub const PHYS_2: u32 = 0x802B_8510;
 pub const FALLING: u32 = 0x802B_8524;
-#[doc(alias = "itSamusgrapple_UnkMotion3_Phys")]
 pub const PHYS_3: u32 = 0x802B_8670;
 pub const RETRACT: u32 = 0x802B_8684;
-#[doc(alias = "itSamusgrapple_UnkMotion4_Phys")]
 pub const PHYS_4: u32 = 0x802B_8800;
 pub const RETRACT_FAST: u32 = 0x802B_8814;
-#[doc(alias = "itSamusgrapple_UnkMotion5_Phys")]
 pub const PHYS_5: u32 = 0x802B_8948;
 pub const LATCHED: u32 = 0x802B_895C;
-#[doc(alias = "itSamusgrapple_UnkMotion6_Phys")]
 pub const PHYS_6: u32 = 0x802B_8B40;
 pub const PULL: u32 = 0x802B_8B54;
-#[doc(alias = "itSamusgrapple_UnkMotion7_Phys")]
 pub const PHYS_7: u32 = 0x802B_8D24;
 pub const HANG: u32 = 0x802B_8D38;
-#[doc(alias = "itSamusgrapple_UnkMotion8_Phys")]
 pub const PHYS_8: u32 = 0x802B_8FF8;
 pub const PICKED_UP: u32 = 0x802B_A97C;
 pub const TO_FALL: u32 = 0x802B_A9B8;
@@ -88,7 +76,6 @@ pub const EVT_UNK: u32 = 0x802B_AEA0;
 
 /// `itSamusGrappleAttributes` offsets.
 mod attr {
-    pub const BOUNCE: u32 = 0x0;
     pub const BIG_SHARE: u32 = 0x8;
     pub const COUNT: u32 = 0xC;
     pub const LENGTH: u32 = 0x10;
@@ -155,58 +142,194 @@ pub(super) fn image_lengths(at: DataRef, n: i32, words: &[f32]) {
 }
 
 /// `ftCo_MS_Catch`, `ftCo_MS_CatchDash` and `ftSs_MS_SpecialAirLw`'s slot `0x165`, the air
-/// grab: the states the beam lives through.
+/// grab, and its latch: the states the beam lives through.
 const MS_CATCH: i32 = 0xD4;
 const MS_CATCH_DASH: i32 = 0xD6;
 const MS_AIR_CATCH: i32 = 0x165;
 const MS_AIR_CATCH_HIT: i32 = 0x166;
 /// The links' process link.
 const LINK_P_LINK: u8 = 0xA;
-/// `FtPart_ThrowN`, where the beam comes from, and part `0x8B`, which follows its tip.
+/// `FtPart_ThrowN`, where the beam comes from (the bone of that index).
 const PART_THROW_N: i32 = 51;
-const PART_TIP: usize = 0x8B;
-/// The latch's sparks and sound effect, the hit spark.
-const GFX_LATCH: i32 = 0x41C;
-const GFX_LATCH_HIT: i32 = 0x3F1;
 /// `HSD_PAD_A`, the button sequence's (`x2240`) inputs: `HSD_PAD_DPADUP`, `_DPADDOWN`.
 const PAD_A: u32 = 0x100;
 const PAD_Z: u32 = 0x40;
 
+/// The grapple beam's tether.
+pub static GRAPPLE: Tether = Tether {
+    vars: |v| {
+        let v = v.samus_grapple();
+        tether::Vars {
+            tip: &mut v.x0,
+            hand: &mut v.x4,
+            fighter: &mut v.x8,
+            tip_model: &mut v.xC,
+            frame: &mut v.unk_10,
+            done: &mut v.x14,
+        }
+    },
+    slot: crate::game::ft::samus::u::GRAPPLE,
+    hooks: [FT_FRAME, FT_DEATH, FT_LINE_UP],
+    states: [MS_CATCH, MS_CATCH_DASH, MS_AIR_CATCH, MS_AIR_CATCH_HIT],
+    hand: Hand::Bone(PART_THROW_N),
+    ahead: None,
+    attr: |r, gobj, off| mem(Attrs::of(r, gobj).f(r, off)),
+    shot_speed: attr::SHOT_SPEED,
+    retract: attr::RETRACT,
+    retract_caught: attr::RETRACT_FAST,
+    hang_frames: FighterAttr::Character(crate::game::ft::samus::attr::TETHER_HANG),
+    landing_lag: crate::game::ft::samus::attr::TETHER_LANDING_LAG,
+    make_links,
+    lead: |r, gobj, f| {
+        let t = tether::tip(r, gobj, &GRAPPLE);
+        // `samus_grapple_setup_pos`: whether `HSD_JObjSetupMatrix` rebuilds the tip's matrix
+        // under its parent decides what `it_802B9328`'s swing finds on the stack.
+        let slot = match lk(r.game, t).jobj {
+            Some(j)
+                if r.game.objs.jobjs[j].mtx_is_dirty()
+                    && r.game.objs.jobjs[j].parent.is_some()
+                    && r.game.objs.jobjs[j]
+                        .aobj
+                        .and_then(|o| r.game.objs.aobjs[o].hsd_obj)
+                        .is_none() =>
+            {
+                SwingSlot::SavedF14
+            }
+            _ => SwingSlot::Unknown("fn_802B805C with the tip's matrix not rebuilt under a parent"),
+        };
+        let mut pos = tether::point(r, &GRAPPLE, t);
+        let a = Attrs::of(r, gobj);
+        let lead = match lead(r, t, &mut pos, a, f, slot) {
+            1 => Lead::Wall,
+            2 => Lead::Surface,
+            3 => Lead::AllOut,
+            _ => Lead::Going,
+        };
+        (lead, pos)
+    },
+    bounce: |r, gobj, f| {
+        let t = tether::tip(r, gobj, &GRAPPLE);
+        let slot = rebuilt_slot(r, t, "fn_802B8384 with the links' joint not rebuilt");
+        let mut pos = tether::point(r, &GRAPPLE, t);
+        let a = Attrs::of(r, gobj);
+        let lead = match fall_back(r, t, &mut pos, a, f, slot) {
+            1 => Lead::Wall,
+            2 => Lead::Surface,
+            3 => Lead::AllOut,
+            _ => Lead::Going,
+        };
+        (lead, pos)
+    },
+    fall: |r, gobj, f| {
+        let h = tether::hand(r, gobj, &GRAPPLE);
+        let slot = rebuilt_slot(r, h, "fn_802B8524 with the links' joint not rebuilt");
+        let mut pos = tether::point(r, &GRAPPLE, h);
+        let a = Attrs::of(r, gobj);
+        hang_links(r, h, &mut pos, a, f, slot);
+        pos
+    },
+    reel: |r, gobj, h, pos, speed| wind_in(r, h, pos, Attrs::of(r, gobj), speed),
+    reel_caught: |r, gobj, h, pos, speed| wind_in_chain(r, h, pos, Attrs::of(r, gobj), speed),
+    pay_out: |r, gobj, t, pos| pay_out(r, t, pos, Attrs::of(r, gobj)),
+    climb: |r, gobj, h, t, pos, speed| climb(r, h, t, pos, Attrs::of(r, gobj), speed),
+    hold_on: |r, gobj, h, t, pos| hold_on(r, h, t, pos, Attrs::of(r, gobj)),
+    follow: |r, gobj, t, pos, f| before_attach(r, t, pos, Attrs::of(r, gobj), f),
+    line_up_held: None,
+    sequence: Some(sequence),
+    animate: Some(animate),
+    bounces_off_surfaces: true,
+    air_retract_doubles: true,
+    lines_up_on_hang: false,
+    on_spawn: Some(on_spawn),
+    after_links: Some(after_links),
+    stale_ignore_id: true,
+    on_hang: Some(on_hang),
+};
+
 /// Runs one of the beam's events, if `addr` is one.
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
+    let t = &GRAPPLE;
     match addr {
-        SPAWNED => spawned(r, gobj),
-        PUT_AWAY => put_away(r, gobj),
-        PHYS_0 => set_frame(r, gobj, FOLDED),
-        PHYS_1 => set_frame(r, gobj, SHOT),
-        PHYS_2 => set_frame(r, gobj, BOUNCED),
-        PHYS_3 => set_frame(r, gobj, FALLING),
-        PHYS_4 => set_frame(r, gobj, RETRACT),
-        PHYS_5 => set_frame(r, gobj, RETRACT_FAST),
-        PHYS_6 => set_frame(r, gobj, LATCHED),
-        PHYS_7 => set_frame(r, gobj, PULL),
-        PHYS_8 => set_frame(r, gobj, HANG),
-        FOLDED => folded(r, gobj),
-        SHOT => shot(r, gobj),
-        BOUNCED => bounced(r, gobj),
-        FALLING => falling(r, gobj),
-        RETRACT => retract(r, gobj),
-        RETRACT_FAST => retract_fast(r, gobj),
-        LATCHED => latched(r, gobj),
-        PULL => pull(r, gobj),
-        HANG => hang(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
-        TO_FALL => to_fall(r, gobj),
-        TO_BOUNCE => to_bounce(r, gobj),
-        TO_RETRACT => to_retract(r, gobj),
-        TO_RETRACT_FAST => to_retract_fast(r, gobj),
-        TO_LATCH => to_latch(r, gobj),
-        TO_PULL => to_pull(r, gobj),
-        TO_HANG => to_hang(r, gobj),
+        SPAWNED => tether::set_frame(r, gobj, t, None),
+        PUT_AWAY => tether::put_away(r, gobj, t),
+        PHYS_0 => tether::set_frame(r, gobj, t, Some(FOLDED)),
+        PHYS_1 => tether::set_frame(r, gobj, t, Some(SHOT)),
+        PHYS_2 => tether::set_frame(r, gobj, t, Some(BOUNCED)),
+        PHYS_3 => tether::set_frame(r, gobj, t, Some(FALLING)),
+        PHYS_4 => tether::set_frame(r, gobj, t, Some(RETRACT)),
+        PHYS_5 => tether::set_frame(r, gobj, t, Some(RETRACT_FAST)),
+        PHYS_6 => tether::set_frame(r, gobj, t, Some(LATCHED)),
+        PHYS_7 => tether::set_frame(r, gobj, t, Some(PULL)),
+        PHYS_8 => tether::set_frame(r, gobj, t, Some(HANG)),
+        FOLDED => tether::folded(r, gobj, t),
+        SHOT => tether::shot(r, gobj, t),
+        BOUNCED => tether::bounced(r, gobj, t),
+        FALLING => tether::falling(r, gobj, t),
+        RETRACT => tether::retract(r, gobj, t),
+        RETRACT_FAST => tether::retract_caught(r, gobj, t),
+        LATCHED => tether::latched(r, gobj, t),
+        PULL => tether::pull(r, gobj, t),
+        HANG => tether::hang(r, gobj, t),
+        PICKED_UP => tether::picked_up(r, gobj),
+        TO_FALL => tether::to_fall(r, gobj, t),
+        TO_BOUNCE => tether::to_bounce(r, gobj, t),
+        TO_RETRACT => tether::to_retract(r, gobj),
+        TO_RETRACT_FAST => tether::to_retract_caught(r, gobj, t),
+        TO_LATCH => tether::to_latch(r, gobj),
+        TO_PULL => tether::to_pull(r, gobj),
+        TO_HANG => tether::to_hang(r, gobj, t),
         _ => return false,
     }
     true
+}
+
+/// The spawn's button sequence (`x16`): through it (`x2240` 4) a ground beam on the ground
+/// (1), else an air beam (2); before it, none, and the sequence starts again.
+fn on_spawn(r: &mut Running, beam: GObjId, owner: GObjId) {
+    let fp = r.game.fighter(owner);
+    let x16 = if fp.u[0x14] >= 4 {
+        if fp.ground_or_air == crate::game::ft::common::GA_GROUND {
+            1
+        } else {
+            2
+        }
+    } else {
+        0
+    };
+    if x16 == 0 {
+        r.game.fighter_mut(owner).u[0x14] = 0;
+    }
+    item_mut(r.game, beam)
+        .xDD4_itemVar
+        .samus_grapple()
+        .x16
+        .set(x16);
+}
+
+/// The beam's own animations, after its links.
+fn after_links(r: &mut Running, beam: GObjId) {
+    let a = Attrs::of(r, beam);
+    let [an, mat, shape] = attr::BEAM_ANIMS;
+    let (shape, mat, an) = (a.anim(r, shape), a.anim(r, mat), a.anim(r, an));
+    let root = jobj_of(r.game, beam).expect("a grapple beam without a model");
+    let child = r.game.objs.jobjs[root].child;
+    jobj::add_anim_all(&mut r.game.objs, r.data, child, an, mat, shape);
+    jobj::req_anim_all(&mut r.game.objs, child, 0.0);
+}
+
+/// Hanging: the sequence's beam (`x16`) with Z held lengthens her hang a frame.
+fn on_hang(r: &mut Running, gobj: GObjId, f: GObjId) {
+    let x16 = item_mut(r.game, gobj)
+        .xDD4_itemVar
+        .samus_grapple()
+        .x16
+        .get();
+    let fp = r.game.fighter_mut(f);
+    if x16 != 0 && fp.input.held_buttons[0] & PAD_Z != 0 {
+        let v = fp::fadds(reg(fp.mv_f32(tether::MV_HANG)), 1.0);
+        fp.set_mv_f32(tether::MV_HANG, v);
+    }
 }
 
 /// The beam's attributes (`itSamusGrappleAttributes`), the derived lengths read from the
@@ -241,58 +364,6 @@ impl Attrs {
     }
 }
 
-fn tip(r: &mut Running, gobj: GObjId) -> ItemLinkId {
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .samus_grapple()
-        .x0
-        .get()
-        .expect("a grapple beam without its tip")
-}
-
-fn hand(r: &mut Running, gobj: GObjId) -> ItemLinkId {
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .samus_grapple()
-        .x4
-        .get()
-        .expect("a grapple beam without its hand link")
-}
-
-/// The tip link's GObj.
-pub fn tip_gobj(r: &mut Running, gobj: GObjId) -> GObjId {
-    let t = tip(r, gobj);
-    lk(r.game, t).gobj.expect("a link without its GObj")
-}
-
-/// A link GObj's model.
-pub fn model_of(r: &Running, g: GObjId) -> Option<JObjId> {
-    match r.game.world.gobj(g).obj {
-        Some(Obj::JObj(j)) => Some(j),
-        _ => None,
-    }
-}
-
-/// The beam's shot speed for her height (its attributes' `x40` as its spawn wrote it).
-pub fn shot_speed(r: &Running, gobj: GObjId) -> f32 {
-    mem(Attrs::of(r, gobj).f(r, attr::SHOT_SPEED))
-}
-
-/// Whether the fighter is in a state the beam lives through (`samus_grapple_fighter_compare`).
-fn holds_beam(motion: i32) -> bool {
-    matches!(
-        motion,
-        MS_AIR_CATCH | MS_AIR_CATCH_HIT | MS_CATCH | MS_CATCH_DASH
-    )
-}
-
-/// The owner's fighter.
-fn owner_of(r: &Running, gobj: GObjId) -> GObjId {
-    item(r.game, gobj)
-        .owner
-        .expect("a grapple beam without its owner")
-}
-
 /// A random swing of up to `amp` in the direction of `vel_y`, one time in ten
 /// (`samus_grapple_calc_grav` and `it_802B9328_grav`): the double `0.9` and `0.0` as compared.
 fn swing(r: &mut Running, vel_y: f32, amp: f64) -> f64 {
@@ -314,25 +385,6 @@ fn joint_pos(r: &mut Running, l: ItemLinkId) -> Vec3 {
     jobj::setup_matrix(&mut r.game.objs, r.data, j);
     let m = r.game.objs.jobjs[j.expect("a link without its joint")].mtx;
     Vec3::new(m.m[0][3], m.m[1][3], m.m[2][3])
-}
-
-/// `itSamusGrapple_Logic53_Spawned`: no frame work yet.
-#[doc(alias = "itSamusGrapple_Logic53_Spawned")]
-pub fn spawned(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .samus_grapple()
-        .unk_10
-        .set(None);
-}
-
-/// Names the frame's work, the states' physics (`itSamusgrapple_UnkMotion0_Phys` to `8`).
-fn set_frame(r: &mut Running, gobj: GObjId, f: u32) {
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .samus_grapple()
-        .unk_10
-        .set(Some(CodeRef(f)));
 }
 
 /// A link's model, `it_802B743C`: the link type's joint, drawn by the links' render callback,
@@ -476,149 +528,6 @@ pub fn make_links(
     result
 }
 
-/// Puts the beam away, `it_802B7B84`: while its fighter is known, her beam and hooks are
-/// cleared, its links' GObjs go, then the item.
-#[doc(alias = "it_802B7B84")]
-pub fn put_away(r: &mut Running, gobj: GObjId) {
-    let Some(f) = item_mut(r.game, gobj).xDD4_itemVar.samus_grapple().x8.get() else {
-        return;
-    };
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .samus_grapple()
-        .unk_10
-        .set(None);
-    let fp = r.game.fighter_mut(f);
-    fp.u.set_gobj_at(0x10, None);
-    fp.accessory2_cb = None;
-    fp.death1_cb = None;
-    fp.accessory3_cb = None;
-    let mut cur = item_mut(r.game, gobj).xDD4_itemVar.samus_grapple().x0.get();
-    while let Some(l) = cur {
-        let g = lk(r.game, l).gobj.expect("a link without its GObj");
-        cur = lk(r.game, l).next;
-        gobjs::free(r, g);
-    }
-    super::super::item::destroy(r, gobj);
-}
-
-/// Makes the beam at `pos` for `owner`, `it_802B7C18`: only in the states that use it; the
-/// button sequence's beam (`x2240` 4, `x16`) on the ground or in the air; its links from her
-/// throw joint; the beam's own animations; her tip part following its tip; held at her
-/// throw joint, folded.
-#[doc(alias = "it_802B7C18")]
-pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
-    let motion = r.game.fighter(owner).motion_id;
-    if !holds_beam(motion) {
-        return None;
-    }
-    let mut spawn = SpawnItem {
-        kind: ItKind::SamusGBeam.id(),
-        ..Default::default()
-    };
-    // `Item_InitSpawnPosition(&spawn, pos, false)`.
-    spawn.prev_pos = pos;
-    spawn.pos = spawn.prev_pos;
-    spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
-    spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(owner);
-    spawn.x4_parent_gobj2 = spawn.x0_parent_gobj;
-    spawn.x44_flag[0] |= 0x80;
-    let beam = spawn_air(r, &mut spawn)?;
-    // The spawn never sets `x40`, a stack word: the beam's ignore id is stale.
-    item_mut(r.game, beam).xAC4_ignoreItemID = super::super::IgnoreId(None);
-    item_mut(r.game, beam)
-        .xDD4_itemVar
-        .samus_grapple()
-        .x14
-        .set(0);
-    let fp = r.game.fighter(owner);
-    let x16 = if fp.u[0x14] >= 4 {
-        if fp.ground_or_air == crate::game::ft::common::GA_GROUND {
-            1
-        } else {
-            2
-        }
-    } else {
-        0
-    };
-    if x16 == 0 {
-        r.game.fighter_mut(owner).u[0x14] = 0;
-    }
-    item_mut(r.game, beam)
-        .xDD4_itemVar
-        .samus_grapple()
-        .x16
-        .set(x16);
-    let air = motion == MS_AIR_CATCH;
-    let throw_n = r.bone_joint(owner, PART_THROW_N);
-    let scale = r.game.fighter(owner).x34_scale.y;
-    if make_links(r, beam, throw_n, air, scale).is_none() {
-        super::super::item::destroy(r, beam);
-        return None;
-    }
-    let a = Attrs::of(r, beam);
-    let [an, mat, shape] = attr::BEAM_ANIMS;
-    let (shape, mat, an) = (a.anim(r, shape), a.anim(r, mat), a.anim(r, an));
-    let root = jobj_of(r.game, beam).expect("a grapple beam without a model");
-    let child = r.game.objs.jobjs[root].child;
-    jobj::add_anim_all(&mut r.game.objs, r.data, child, an, mat, shape);
-    jobj::req_anim_all(&mut r.game.objs, child, 0.0);
-    let t = tip(r, beam);
-    let tip_model = match r.game.world.gobj(lk(r.game, t).gobj.unwrap()).obj {
-        Some(Obj::JObj(j)) => Some(j),
-        _ => None,
-    };
-    let v = item_mut(r.game, beam).xDD4_itemVar.samus_grapple();
-    v.x8.set(Some(owner));
-    v.xC.set(tip_model);
-    // Past her bones, the table's last entry (`MAX_FT_PARTS` of them).
-    let f = r.game.fighter_id(owner);
-    let parts = r.game.fighters[f.0].parts.expect("a fighter without parts");
-    crate::game::leftovers::grow_parts(r, parts, PART_TIP + 1);
-    r.game.fighter_parts[parts.0][PART_TIP].joint = tip_model;
-    pick_up(r, beam, owner, PART_THROW_N);
-    stop_anim(r, beam);
-    Some(beam)
-}
-
-/// The beam's (or Link's hookshot's) scale from its owner's, `it_802A2428` (the hookshot's
-/// unit): it reads its owner as an item, whose `scl` is a fighter's height (`x34_scale.y`, at
-/// the same offset), times its own attributes' scale.
-#[doc(alias = "it_802A2428")]
-pub(super) fn stop_anim(r: &mut Running, gobj: GObjId) {
-    let owner = owner_of(r, gobj);
-    let height = reg(r.game.fighter(owner).x34_scale.y);
-    let a = super::super::item::attr_of(item(r.game, gobj));
-    let s = mem(fp::fmuls(
-        height,
-        reg(a.f32(r.data, super::super::data::attr::SCALE)),
-    ));
-    item_mut(r.game, gobj).scl = s;
-    let j = jobj_of(r.game, gobj).expect("a tether without a model");
-    super::super::lib2725::set_uniform_scale(r.game, j, s);
-}
-
-/// The tip's model put on the tip link's joint's matrix (`fn_802B7E34_inline`).
-fn tip_on_hand(r: &mut Running, gobj: GObjId) {
-    let t = tip(r, gobj);
-    let g = lk(r.game, t).gobj.expect("a link without its GObj");
-    let model = match r.game.world.gobj(g).obj {
-        Some(Obj::JObj(j)) => j,
-        ref o => panic!("a link GObj holding {o:?}"),
-    };
-    let j = lk(r.game, t).jobj;
-    jobj::setup_matrix(&mut r.game.objs, r.data, j);
-    let m = r.game.objs.jobjs[j.expect("a link without its joint")]
-        .mtx
-        .concat(&Mtx34::IDENTITY);
-    let jobjs = &mut r.game.objs.jobjs;
-    jobjs[model].mtx = m;
-    jobjs[model].flags |= 0x0380_0000;
-    jobj::set_mtx_dirty(jobjs, Some(model));
-}
-
 /// The beam's models animate, the links' from the hand out (`samus_grapple_anim`).
 fn animate(r: &mut Running, gobj: GObjId) {
     let root = jobj_of(r.game, gobj);
@@ -628,7 +537,7 @@ fn animate(r: &mut Running, gobj: GObjId) {
         &mut crate::game::code::ParticleHooks,
         root,
     );
-    let mut cur = Some(hand(r, gobj));
+    let mut cur = Some(tether::hand(r, gobj, &GRAPPLE));
     while let Some(l) = cur {
         let g = lk(r.game, l).gobj.expect("a link without its GObj");
         let model = match r.game.world.gobj(g).obj {
@@ -657,347 +566,6 @@ fn sequence(r: &mut Running, f: GObjId) {
     };
     if step {
         fp.u[0x14] = fp.u[0x14].wrapping_add(1);
-    }
-}
-
-/// Folded in her hand (state 0), `fn_802B7E34`: the tip on her hand and the models
-/// animating; out of the states that use it, put away.
-#[doc(alias = "fn_802B7E34")]
-pub fn folded(r: &mut Running, gobj: GObjId) {
-    let f = owner_of(r, gobj);
-    sequence(r, f);
-    tip_on_hand(r, gobj);
-    animate(r, gobj);
-    if !holds_beam(r.game.fighter(f).motion_id) {
-        put_away(r, gobj);
-    }
-}
-
-/// Shot out (state 1), `fn_802B805C`: out of the states that use it with the first link not
-/// out, put away; else the tip leads ([`lead`]): against a wall, the air grab latches on (the
-/// latch's effects), else the tip bounces back off the wall or the floor, and her hit status
-/// clears; all out, it falls.
-#[doc(alias = "fn_802B805C")]
-pub fn shot(r: &mut Running, gobj: GObjId) {
-    let a = Attrs::of(r, gobj);
-    let f = owner_of(r, gobj);
-    sequence(r, f);
-    let t = tip(r, gobj);
-    let first_out = lk(r.game, t).next.is_some_and(|n| lk(r.game, n).x2C_b0);
-    if !holds_beam(r.game.fighter(f).motion_id) && !first_out {
-        put_away(r, gobj);
-        return;
-    }
-    // `samus_grapple_setup_pos`: whether `HSD_JObjSetupMatrix` rebuilds the tip's matrix
-    // under its parent decides what `it_802B9328`'s swing finds on the stack.
-    let slot = match lk(r.game, t).jobj {
-        Some(j)
-            if r.game.objs.jobjs[j].mtx_is_dirty()
-                && r.game.objs.jobjs[j].parent.is_some()
-                && r.game.objs.jobjs[j]
-                    .aobj
-                    .and_then(|o| r.game.objs.aobjs[o].hsd_obj)
-                    .is_none() =>
-        {
-            SwingSlot::SavedF14
-        }
-        _ => SwingSlot::Unknown("fn_802B805C with the tip's matrix not rebuilt under a parent"),
-    };
-    let mut pos = joint_pos(r, t);
-    match lead(r, t, &mut pos, a, f, slot) {
-        1 => {
-            if r.game.fighter(f).motion_id == MS_AIR_CATCH {
-                r.enter_air_catch_hit(f);
-                to_latch(r, gobj);
-                let t = tip(r, gobj);
-                let at = lk(r.game, t).pos;
-                let g = lk(r.game, t).gobj.expect("a link without its GObj");
-                let facing = r.game.fighter(f).facing_dir;
-                ef::spawn(r, GFX_LATCH, Some(g), &[Arg::Vec(at)]);
-                ef::spawn(
-                    r,
-                    GFX_LATCH_HIT,
-                    Some(g),
-                    &[Arg::Vec(at), Arg::Float(facing)],
-                );
-                return;
-            }
-            let bounce = a.f(r, attr::BOUNCE);
-            let k = link_mut(r.game, t);
-            k.vel.x = mem(fp::fmuls(reg(k.vel.x), fp::fneg(bounce)));
-            to_bounce(r, gobj);
-            r.game.fighter_mut(f).x1A6A = 0;
-        }
-        2 => {
-            let k = link_mut(r.game, t);
-            let mut normal = k.coll_data.floor.normal;
-            normal.normalize();
-            k.vel.mirror_xy(normal);
-            let bounce = a.f(r, attr::BOUNCE);
-            let k = link_mut(r.game, t);
-            k.vel.y = mem(fp::fmuls(reg(k.vel.y), bounce));
-            to_bounce(r, gobj);
-            r.game.fighter_mut(f).x1A6A = 0;
-        }
-        3 => {
-            to_fall(r, gobj);
-            r.game.fighter_mut(f).x1A6A = 0;
-        }
-        _ => {}
-    }
-    let scale = r.game.fighter(f).x34_scale.y;
-    line_up(r, gobj, pos, scale);
-    animate(r, gobj);
-}
-
-/// Bouncing back (state 2), `fn_802B8384`: the tip falls back ([`fall_back`]), bouncing off
-/// walls and floors; all out, it falls.
-#[doc(alias = "fn_802B8384")]
-pub fn bounced(r: &mut Running, gobj: GObjId) {
-    let a = Attrs::of(r, gobj);
-    let f = owner_of(r, gobj);
-    let t = tip(r, gobj);
-    let slot = rebuilt_slot(r, t, "fn_802B8384 with the links' joint not rebuilt");
-    let mut pos = joint_pos(r, t);
-    match fall_back(r, t, &mut pos, a, f, slot) {
-        1 => {
-            let bounce = a.f(r, attr::BOUNCE);
-            let k = link_mut(r.game, t);
-            k.vel.x = mem(fp::fmuls(reg(k.vel.x), fp::fneg(bounce)));
-        }
-        2 => {
-            let k = link_mut(r.game, t);
-            let mut normal = k.coll_data.floor.normal;
-            normal.normalize();
-            k.vel.mirror_xy(normal);
-            let bounce = a.f(r, attr::BOUNCE);
-            let k = link_mut(r.game, t);
-            k.vel.y = mem(fp::fmuls(reg(k.vel.y), bounce));
-        }
-        3 => to_fall(r, gobj),
-        _ => {}
-    }
-    let scale = r.game.fighter(f).x34_scale.y;
-    line_up(r, gobj, pos, scale);
-    animate(r, gobj);
-}
-
-/// Falling (state 3), `fn_802B8524`: the links hang from the hand ([`hang_links`]); out of
-/// the states that use it, drawn back in.
-#[doc(alias = "fn_802B8524")]
-pub fn falling(r: &mut Running, gobj: GObjId) {
-    let a = Attrs::of(r, gobj);
-    let f = owner_of(r, gobj);
-    let h = hand(r, gobj);
-    let slot = rebuilt_slot(r, h, "fn_802B8524 with the links' joint not rebuilt");
-    let mut pos = joint_pos(r, h);
-    hang_links(r, h, &mut pos, a, f, slot);
-    let scale = r.game.fighter(f).x34_scale.y;
-    line_up(r, gobj, pos, scale);
-    animate(r, gobj);
-    if !holds_beam(r.game.fighter(f).motion_id) {
-        to_retract(r, gobj);
-    }
-}
-
-/// Drawn in (state 4), `fn_802B8684`: the links wind in at the attributes' `x4C` (twice that
-/// in the air); all in, it's put away out of the states that use it, else folds.
-#[doc(alias = "fn_802B8684")]
-pub fn retract(r: &mut Running, gobj: GObjId) {
-    let a = Attrs::of(r, gobj);
-    let f = owner_of(r, gobj);
-    let h = hand(r, gobj);
-    let mut pos = joint_pos(r, h);
-    let speed = if r.game.fighter(f).ground_or_air == crate::game::ft::common::GA_GROUND {
-        a.f(r, attr::RETRACT)
-    } else {
-        fp::frsp(fp::fmul(2.0, a.f(r, attr::RETRACT)))
-    };
-    if wind_in(r, h, &mut pos, a, speed) {
-        if !holds_beam(r.game.fighter(f).motion_id) {
-            put_away(r, gobj);
-            return;
-        }
-        picked_up(r, gobj);
-    }
-    let scale = r.game.fighter(f).x34_scale.y;
-    line_up(r, gobj, pos, scale);
-    animate(r, gobj);
-}
-
-/// Drawn in fast (state 5), `fn_802B8814`: all in the frame before (`x14`), put away; else the
-/// links come in at the attributes' `x54`.
-#[doc(alias = "fn_802B8814")]
-pub fn retract_fast(r: &mut Running, gobj: GObjId) {
-    let a = Attrs::of(r, gobj);
-    let f = owner_of(r, gobj);
-    if item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .samus_grapple()
-        .x14
-        .get()
-        != 0
-    {
-        put_away(r, gobj);
-        return;
-    }
-    let h = hand(r, gobj);
-    let mut pos = joint_pos(r, h);
-    let speed = a.f(r, attr::RETRACT_FAST);
-    if wind_in_chain(r, h, &mut pos, a, speed) {
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .samus_grapple()
-            .x14
-            .set(1);
-        return;
-    }
-    let scale = r.game.fighter(f).x34_scale.y;
-    line_up(r, gobj, pos, scale);
-    animate(r, gobj);
-}
-
-/// Whether the stage cuts between the tip and the hand's point, or her and the tip
-/// (`itGrappleCheckCollision`).
-fn cut(r: &mut Running, tip: ItemLinkId, f: GObjId, pos: Vec3) -> bool {
-    let at = lk(r.game, tip).pos;
-    let me = r.game.fighter(f).cur_pos;
-    let g = r.game.geometry.as_mut().expect("no collision geometry");
-    g.check_all_remap(-1, -1, pos.x, pos.y, at.x, at.y)
-        .is_some()
-        || g.check_all_remap(-1, -1, me.x, me.y, at.x, at.y).is_some()
-}
-
-/// Latched on (state 6), `fn_802B895C`: if the stage cuts the beam she tumbles and it's put
-/// away; once the links are all out it hangs; on the ground it's drawn in; A pulls her up.
-#[doc(alias = "fn_802B895C")]
-pub fn latched(r: &mut Running, gobj: GObjId) {
-    let a = Attrs::of(r, gobj);
-    let f = owner_of(r, gobj);
-    let h = hand(r, gobj);
-    let mut pos = joint_pos(r, h);
-    let t = tip(r, gobj);
-    if cut(r, t, f, pos) {
-        r.enter_damage_fall(f);
-        put_away(r, gobj);
-        return;
-    }
-    if pay_out(r, t, &mut pos, a) {
-        to_hang(r, gobj);
-        return;
-    }
-    let scale = r.game.fighter(f).x34_scale.y;
-    line_up(r, gobj, pos, scale);
-    animate(r, gobj);
-    if r.game.fighter(f).ground_or_air != crate::game::ft::common::GA_AIR {
-        to_retract(r, gobj);
-        return;
-    }
-    if r.game.fighter(f).input.pressed_buttons & PAD_A != 0 {
-        to_pull(r, gobj);
-    }
-}
-
-/// Pulling her up (state 7), `fn_802B8B54`: the links wind in at the attributes' `x4C`, she
-/// keeps her place on the beam; all in, she catches the ledge if one is in reach and free,
-/// else stops and lands helpless (`ftCo_8009B390`, her attributes' `xCC`), and it's put away;
-/// on the ground it's drawn in.
-#[doc(alias = "fn_802B8B54")]
-pub fn pull(r: &mut Running, gobj: GObjId) {
-    let a = Attrs::of(r, gobj);
-    let f = owner_of(r, gobj);
-    let h = hand(r, gobj);
-    let mut pos = joint_pos(r, h);
-    let fp = r.game.fighter(f);
-    let dx = mem(fp::fsubs(reg(fp.cur_pos.x), reg(pos.x)));
-    let dy = mem(fp::fsubs(reg(fp.cur_pos.y), reg(pos.y)));
-    let t = tip(r, gobj);
-    let speed = a.f(r, attr::RETRACT);
-    let done = climb(r, h, t, &mut pos, a, speed);
-    let fp = r.game.fighter_mut(f);
-    fp.cur_pos.x = mem(fp::fadds(reg(pos.x), reg(dx)));
-    fp.cur_pos.y = mem(fp::fadds(reg(pos.y), reg(dy)));
-    if done {
-        if r.ledge_in_reach(f) && !r.ledge_taken(f) {
-            r.enter_cliff_catch(f);
-        } else {
-            r.game.fighter_mut(f).self_vel.x = 0.0;
-            r.samus_tether_landing(f);
-        }
-        put_away(r, gobj);
-        return;
-    }
-    let scale = r.game.fighter(f).x34_scale.y;
-    line_up(r, gobj, pos, scale);
-    animate(r, gobj);
-    if r.game.fighter(f).ground_or_air != crate::game::ft::common::GA_AIR {
-        to_retract(r, gobj);
-    }
-}
-
-/// Hanging (state 8), `fn_802B8D38`: if the stage cuts the beam she tumbles and it's put
-/// away; the links hold her to the beam, which moves her; Z held lengthens the button
-/// sequence's hang; on the ground it's drawn in; A pulls her up; when her hang runs out she
-/// tumbles and it's put away.
-#[doc(alias = "fn_802B8D38")]
-pub fn hang(r: &mut Running, gobj: GObjId) {
-    let a = Attrs::of(r, gobj);
-    let f = owner_of(r, gobj);
-    let h = hand(r, gobj);
-    let mut pos = joint_pos(r, h);
-    let t = tip(r, gobj);
-    if cut(r, t, f, pos) {
-        r.enter_damage_fall(f);
-        put_away(r, gobj);
-        return;
-    }
-    let fp = r.game.fighter(f);
-    let ox = mem(fp::fsubs(reg(fp.cur_pos.x), reg(pos.x)));
-    let oy = mem(fp::fsubs(reg(fp.cur_pos.y), reg(pos.y)));
-    let saved = fp.cur_pos;
-    hold_on(r, h, t, &mut pos, a);
-    let fp = r.game.fighter_mut(f);
-    fp.cur_pos.x = mem(fp::fadds(reg(pos.x), reg(ox)));
-    fp.cur_pos.y = mem(fp::fadds(reg(pos.y), reg(oy)));
-    let vx = mem(fp::fadds(
-        reg(fp.self_vel.x),
-        fp::fsubs(reg(fp.cur_pos.x), reg(saved.x)),
-    ));
-    fp.self_vel.x = vx;
-    fp.pos_delta.x = vx;
-    let vy = mem(fp::fadds(
-        reg(fp.self_vel.y),
-        fp::fsubs(reg(fp.cur_pos.y), reg(saved.y)),
-    ));
-    fp.self_vel.y = vy;
-    fp.pos_delta.y = vy;
-    let scale = fp.x34_scale.y;
-    line_up(r, gobj, pos, scale);
-    animate(r, gobj);
-    const HANG: usize = crate::game::ft::samus::mv::GRAPPLE_HANG;
-    let x16 = item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .samus_grapple()
-        .x16
-        .get();
-    let fp = r.game.fighter_mut(f);
-    if x16 != 0 && fp.input.held_buttons[0] & PAD_Z != 0 {
-        let v = fp::fadds(reg(fp.mv_f32(HANG)), 1.0);
-        fp.set_mv_f32(HANG, v);
-    }
-    if fp.ground_or_air != crate::game::ft::common::GA_AIR {
-        to_retract(r, gobj);
-        return;
-    }
-    if fp.input.pressed_buttons & PAD_A != 0 {
-        to_pull(r, gobj);
-        return;
-    }
-    let left = fp.mv_f32(HANG);
-    fp.set_mv_f32(HANG, fp::fsubs(reg(left), 1.0));
-    if left <= 0.0 {
-        r.enter_damage_fall(f);
-        put_away(r, gobj);
     }
 }
 
@@ -1718,148 +1286,4 @@ pub fn before_attach(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, f
     }
     chase(r, cur, *pos, a, max);
     false
-}
-
-/// Lines the links' models up between their neighbours at her height (`it_802A7168`, the
-/// hookshot's unit).
-fn line_up(r: &mut Running, gobj: GObjId, pos: Vec3, scale: f32) {
-    let h = hand(r, gobj);
-    link::line_up_models(r, h, pos, scale);
-}
-
-/// Folded, `itSamusGrapple_Logic53_PickedUp`: state 0.
-#[doc(alias = "itSamusGrapple_Logic53_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
-    stop_anim(r, gobj);
-}
-
-/// Falling, `it_802BA9B8`: state 3, her hit status cleared.
-#[doc(alias = "it_802BA9B8")]
-pub fn to_fall(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 3, change::ANIM_UPDATE);
-    let f = item_mut(r.game, gobj).xDD4_itemVar.samus_grapple().x8.get();
-    r.fighter_clear_hitboxes(f.expect("a grapple beam without its fighter"));
-    stop_anim(r, gobj);
-}
-
-/// Bouncing back, `it_802BAA08`: state 2, her hit status cleared.
-#[doc(alias = "it_802BAA08")]
-pub fn to_bounce(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
-    let f = item_mut(r.game, gobj).xDD4_itemVar.samus_grapple().x8.get();
-    r.fighter_clear_hitboxes(f.expect("a grapple beam without its fighter"));
-    stop_anim(r, gobj);
-}
-
-/// Drawn in, `it_802BAA58`: state 4.
-#[doc(alias = "it_802BAA58")]
-pub fn to_retract(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 4, change::ANIM_UPDATE);
-    stop_anim(r, gobj);
-}
-
-/// Drawn in fast, `it_802BAA94`: state 5, her hit status cleared.
-#[doc(alias = "it_802BAA94")]
-pub fn to_retract_fast(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 5, change::ANIM_UPDATE);
-    let f = item_mut(r.game, gobj).xDD4_itemVar.samus_grapple().x8.get();
-    r.fighter_clear_hitboxes(f.expect("a grapple beam without its fighter"));
-    stop_anim(r, gobj);
-}
-
-/// Shot out at `vel`, `it_802BAAE4`: the tip's speed, state 1.
-#[doc(alias = "it_802BAAE4")]
-pub fn shoot(r: &mut Running, gobj: GObjId, vel: Vec3) {
-    let t = tip(r, gobj);
-    link_mut(r.game, t).vel = vel;
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
-    stop_anim(r, gobj);
-}
-
-fn to_latch(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 6, change::ANIM_UPDATE);
-    stop_anim(r, gobj);
-}
-
-/// Latched, `it_802BAB40`: state 6; pulling, `it_802BAB7C`: state 7.
-#[doc(alias = "it_802BAB40")]
-#[doc(alias = "it_802BAB7C")]
-pub fn to_pull(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 7, change::ANIM_UPDATE);
-    stop_anim(r, gobj);
-}
-
-/// Hanging, `it_802BABB8`: state 8, her hang's frames from her attributes' `xD0` (the
-/// character's own).
-#[doc(alias = "it_802BABB8")]
-pub fn to_hang(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 8, change::ANIM_UPDATE);
-    stop_anim(r, gobj);
-    let f = owner_of(r, gobj);
-    let fid = r.game.fighter_id(f);
-    let frames = r.samus_ext_attr_i32(fid, crate::game::ft::samus::attr::TETHER_HANG);
-    r.game.fighters[fid.0].set_mv_f32(
-        crate::game::ft::samus::mv::GRAPPLE_HANG,
-        fp::frsp(f64::from(frames)),
-    );
-}
-
-/// Her death while the beam is out, `it_802BAC3C`: it's put away, or with none her hooks
-/// clear.
-#[doc(alias = "it_802BAC3C")]
-pub fn ft_death(r: &mut Running, f: GObjId) {
-    if let Some(beam) = r.game.fighter(f).u.gobj_at(0x10) {
-        put_away(r, beam);
-        return;
-    }
-    let fp = r.game.fighter_mut(f);
-    fp.accessory2_cb = None;
-    fp.death1_cb = None;
-    fp.accessory3_cb = None;
-}
-
-/// Her frame with the beam out, `it_802BAC80`: its frame's work.
-#[doc(alias = "it_802BAC80")]
-pub fn ft_frame(r: &mut Running, f: GObjId) {
-    let Some(beam) = r.game.fighter(f).u.gobj_at(0x10) else {
-        return;
-    };
-    if let Some(cb) = item_mut(r.game, beam)
-        .xDD4_itemVar
-        .samus_grapple()
-        .unk_10
-        .get()
-    {
-        crate::game::code::run_proc(r, beam, cb);
-    }
-}
-
-/// After her animation, `it_802BACC4`: before the beam attaches, its tip on her hand; after,
-/// its links' models lined up.
-#[doc(alias = "it_802BACC4")]
-pub fn ft_line_up(r: &mut Running, f: GObjId) {
-    let Some(beam) = r.game.fighter(f).u.gobj_at(0x10) else {
-        return;
-    };
-    let a = Attrs::of(r, beam);
-    let t = tip(r, beam);
-    let mut pos = joint_pos(r, t);
-    if before_attach(r, t, &mut pos, a, f) {
-        tip_on_hand(r, beam);
-    } else {
-        let scale = r.game.fighter(f).x34_scale.y;
-        line_up(r, beam, pos, scale);
-    }
-}
-
-/// Forgets a GObj the beam points to, `itSamusGrapple_Logic53_EvtUnk` (`it_8026B894`): and its
-/// fighter, if that.
-// `itSamusGrapple_Logic53_EvtUnk`, as game/it/evt_unk.rs runs it (aliased there).
-pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    super::super::lib26b1::forget(r.game, gobj, other);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.samus_grapple();
-    if v.x8.get() == other {
-        v.x8.set(None);
-    }
 }

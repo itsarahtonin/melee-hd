@@ -7,7 +7,8 @@
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::linkhookshot;
+use super::super::super::it::kinds::linkhookshot::{self, HOOKSHOT};
+use super::super::super::it::kinds::tether;
 use super::super::super::state::Running;
 use super::u;
 use crate::fpu::{mem, reg};
@@ -63,7 +64,7 @@ impl Running<'_> {
             let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, thumb, None);
             let facing = self.game.fighters[f.0].facing_dir;
             let item_kind = self.link_attr_i32(f, HOOKSHOT_KIND);
-            let hs = linkhookshot::spawn(self, gobj, pos, facing, item_kind);
+            let hs = tether::spawn(self, gobj, pos, facing, item_kind, &HOOKSHOT);
             self.game.fighters[f.0].u.set_gobj_at(u::HOOKSHOT, hs);
             if hs.is_none() {
                 self.enter_wait(gobj);
@@ -81,20 +82,20 @@ impl Running<'_> {
             .expect("a hookshot's frames without the hookshot");
         if frame == at(self, shoot) {
             if !dash && self.link_tether_blocked(gobj) {
-                linkhookshot::put_away(self, hs);
+                tether::put_away(self, hs, &HOOKSHOT);
                 self.enter_wait(gobj);
                 return true;
             }
-            let speed = linkhookshot::shot_speed(self, hs);
+            let speed = tether::shot_speed(self, hs, &HOOKSHOT);
             let facing = reg(self.game.fighters[f.0].facing_dir);
             let vel = Vec3::new(mem(fp::fmuls(reg(speed), facing)), 0.0, 0.0);
-            linkhookshot::shoot(self, hs, vel);
+            tether::shoot(self, hs, vel, &HOOKSHOT);
             self.play_sfx(gobj, SFX_SHOT[clink], 0x7F, 0x40);
         } else if frame == at(self, draw_in) {
-            linkhookshot::to_retract(self, hs);
+            tether::to_retract(self, hs);
             self.play_sfx(gobj, SFX_IN[clink], 0x7F, 0x40);
         } else if frame == at(self, end) {
-            linkhookshot::put_away(self, hs);
+            tether::put_away(self, hs, &HOOKSHOT);
         }
         false
     }
@@ -118,7 +119,7 @@ impl Running<'_> {
             let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, thumb, None);
             let facing = self.game.fighters[f.0].facing_dir;
             let item_kind = self.link_attr_i32(f, HOOKSHOT_KIND);
-            let hs = linkhookshot::spawn(self, gobj, pos, facing, item_kind);
+            let hs = tether::spawn(self, gobj, pos, facing, item_kind, &HOOKSHOT);
             self.game.fighters[f.0].u.set_gobj_at(u::HOOKSHOT, hs);
             if hs.is_none() {
                 self.enter_fall_special_basic(gobj);
@@ -136,21 +137,21 @@ impl Running<'_> {
             .expect("a hookshot's frames without the hookshot");
         if frame == at(self, shoot) {
             if self.link_tether_blocked(gobj) {
-                linkhookshot::put_away(self, hs);
+                tether::put_away(self, hs, &HOOKSHOT);
                 self.enter_fall_special_basic(gobj);
                 return true;
             }
-            let speed = linkhookshot::shot_speed(self, hs);
+            let speed = tether::shot_speed(self, hs, &HOOKSHOT);
             let fp_ = &self.game.fighters[f.0];
             let x = mem(fp::fmuls(reg(speed), reg(fp_.facing_dir)));
             let x = mem(fp::fadds(reg(x), reg(fp_.pos_delta.x)));
-            linkhookshot::shoot(self, hs, Vec3::new(x, 0.0, 0.0));
+            tether::shoot(self, hs, Vec3::new(x, 0.0, 0.0), &HOOKSHOT);
             self.play_sfx(gobj, SFX_SHOT[clink], 0x7F, 0x40);
         } else if frame == at(self, draw_in) {
-            linkhookshot::to_retract(self, hs);
+            tether::to_retract(self, hs);
             self.play_sfx(gobj, SFX_IN[clink], 0x7F, 0x40);
         } else if frame == at(self, end) {
-            linkhookshot::put_away(self, hs);
+            tether::put_away(self, hs, &HOOKSHOT);
         }
         false
     }
@@ -181,7 +182,7 @@ impl Running<'_> {
         if (kind == FighterKind::Link || kind == FighterKind::Clink)
             && let Some(hs) = self.game.fighter(gobj).u.gobj_at(u::HOOKSHOT)
         {
-            linkhookshot::put_away(self, hs);
+            tether::put_away(self, hs, &HOOKSHOT);
         }
     }
 
@@ -189,7 +190,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800D94D8")]
     pub fn link_hookshot_put_away(&mut self, gobj: GObjId) {
         if let Some(hs) = self.game.fighter(gobj).u.gobj_at(u::HOOKSHOT) {
-            linkhookshot::put_away(self, hs);
+            tether::put_away(self, hs, &HOOKSHOT);
             self.game.fighter_mut(gobj).u.set_gobj_at(u::HOOKSHOT, None);
         }
         self.link_boomerang_exists(gobj);

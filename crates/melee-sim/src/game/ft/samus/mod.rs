@@ -175,8 +175,6 @@ pub(crate) mod mv {
     pub const N_X8: usize = 0x8;
     /// `unk5.x0`: whether the Screw Attack has turned.
     pub const HI_TURNED: usize = 0x0;
-    /// `grapple.x4`: the frames the tether hangs, a float.
-    pub const GRAPPLE_HANG: usize = 0x4;
 }
 
 /// `ftSs_DatAttrs`' offsets (0xD4 bytes).
