@@ -176,7 +176,7 @@ impl Running<'_> {
             self.game.fighters[f.0].set_u_i32(u::SINCE_WALK, 0);
             2
         } else {
-            let n = if h.fewer_rows_alone && self.boss_mh_beaten() {
+            let n = if h.fewer_rows_alone && self.boss_hand_beaten(Hand::of(h.partner)) {
                 4
             } else {
                 5

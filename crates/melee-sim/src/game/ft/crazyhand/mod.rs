@@ -28,7 +28,9 @@ use super::super::state::Running;
 use super::FighterKind;
 use super::co::ids::ms as co_ms;
 use super::masterhand::Hand;
+use super::masterhand::damage::Beaten;
 use super::masterhand::grab::Grab;
+use super::masterhand::tag::TagCry;
 use crate::hsd::gobj::GObjId;
 
 /// `It_Kind_CrazyHand_Laser`, `_Bullet` and `_Bomb`, his articles in his `ftData`'s order.
@@ -358,11 +360,9 @@ pub(crate) mod mv {
     pub const X4: usize = 0x4;
     /// A frame count (`unk0.x8`, `unk4.x8`).
     pub const X8: usize = 0x8;
-    /// Where he's gliding (`unk0.xC`; how far it is, `x18`, the hands' shared code keeps).
+    /// Where he's gliding (`unk0.xC`); its distance and whether he holds someone are the
+    /// hands' shared words (`ft::masterhand::mv`).
     pub const TARGET: usize = 0xC;
-    pub const X1C: usize = 0x1C;
-    /// Whether he holds a fighter (`unk0.x20`).
-    pub const HOLDING: usize = 0x20;
     /// The poke's lasers (`grab.x28` to `x34`).
     pub const LASERS: [usize; 4] = [0x28, 0x2C, 0x30, 0x34];
     /// The poke's hums (`unk0.x38` to `x40`).
@@ -391,7 +391,6 @@ pub(crate) mod attr {
     pub const X14: usize = 0x14;
     /// His place (`x18`, `x1C`).
     pub const X18: usize = 0x18;
-    pub const X1C: usize = 0x1C;
     pub const X20: usize = 0x20;
     pub const X24: usize = 0x24;
     pub const X28: usize = 0x28;
@@ -475,6 +474,11 @@ pub const HAND: Hand = Hand {
     waist: addr::FN_8015B4EC,
     entry_sfx: 320002,
     entry_facing: 1.0,
+    items: &ITEMS,
+    first_attack: ms::DAMAGE2,
+    lasers: mv::LASERS,
+    hums: mv::HUMS,
+    partner: FighterKind::MasterHand,
     grab: Grab {
         reach: ms::FINGER_BEAM_LOOP,
         grab: ms::FINGER_BEAM_END,
@@ -496,6 +500,15 @@ pub const HAND: Hand = Hand {
         capture_wait: co_ms::CAPTURE_WAIT_CRAZY_HAND,
         thrown: co_ms::THROWN_CRAZY_HAND,
     },
+    beaten: Beaten {
+        states: [ms::TAG_GRAB, ms::TAG_SQUEEZE],
+        fall: [attr::X12C, attr::X134, attr::X13C],
+        accel: [attr::X130, attr::X138],
+        cheer_counts: [attr::X124, attr::X128],
+        cheers: [mv::CHEERS, mv::CHEERS2],
+        sfx: 0x4E219,
+    },
+    tag_cry: TagCry::AllBut(ms::SQUEEZING1),
     cries_waiting: true,
     tags_from_wait: false,
     fewer_rows_alone: true,

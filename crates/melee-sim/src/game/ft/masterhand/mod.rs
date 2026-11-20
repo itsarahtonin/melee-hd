@@ -521,8 +521,20 @@ pub struct Hand {
     pub waist: u32,
     pub entry_sfx: i32,
     pub entry_facing: f32,
+    /// His articles in his `ftData`'s order (`It_Kind_*`), his first attack (`u.x2250`), and
+    /// his lasers' and their hums' words in `mv` (a union laid out differently for each).
+    pub items: &'static [i32],
+    pub first_attack: i32,
+    pub lasers: [usize; 4],
+    pub hums: [usize; 3],
+    /// The other hand, his tag attacks' partner.
+    pub partner: FighterKind,
     /// The grab.
     pub grab: grab::Grab,
+    /// The defeat.
+    pub beaten: damage::Beaten,
+    /// Which tag attack states cry.
+    pub tag_cry: tag::TagCry,
     /// Crazy Hand cries on the script's flag while waiting, and clears it as a wait starts.
     pub cries_waiting: bool,
     /// Master Hand's timer joins Crazy Hand's tag attack when Crazy Hand waits at one.
@@ -533,6 +545,15 @@ pub struct Hand {
 }
 
 impl Hand {
+    /// The hand of fighter kind `kind`.
+    pub fn of(kind: FighterKind) -> &'static Hand {
+        match kind {
+            FighterKind::MasterHand => &HAND,
+            FighterKind::CrazyHand => &super::crazyhand::HAND,
+            k => panic!("{k:?} is no hand"),
+        }
+    }
+
     /// A float of his attributes (`ftData::ext_attr`), `off` bytes in.
     pub(crate) fn f32(&self, r: &Running, f: FighterId, off: usize) -> f32 {
         let b = r.ext_attrs(f, self.attrs_size);
@@ -576,6 +597,11 @@ pub const HAND: Hand = Hand {
     waist: addr::MS_343_80151428,
     entry_sfx: 320001,
     entry_facing: -1.0,
+    items: &ITEMS,
+    first_attack: ms::SWEEP_LOOP,
+    lasers: [mv::X34, mv::X38, mv::X3C, mv::X40],
+    hums: [mv::X28, mv::X2C, mv::X30],
+    partner: FighterKind::CrazyHand,
     grab: grab::Grab {
         reach: ms::WAIT1_1,
         grab: ms::GRAB,
@@ -597,6 +623,15 @@ pub const HAND: Hand = Hand {
         capture_wait: co_ms::CAPTURE_WAIT_MASTER_HAND,
         thrown: co_ms::THROWN_MASTER_HAND,
     },
+    beaten: damage::Beaten {
+        states: [ms::DAMAGE, ms::DAMAGE2],
+        fall: [attr::X14C, attr::X154, attr::X15C],
+        accel: [attr::X150, attr::X158],
+        cheer_counts: [attr::X144, attr::X148],
+        cheers: [mv::X74, mv::X78],
+        sfx: 320024,
+    },
+    tag_cry: tag::TagCry::Only(ms::TAG_APPLAUD),
     cries_waiting: false,
     tags_from_wait: true,
     fewer_rows_alone: false,

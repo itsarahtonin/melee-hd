@@ -33,11 +33,8 @@ impl Running<'_> {
     fn stamina_ko(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
         if kind == FighterKind::MasterHand || kind == FighterKind::CrazyHand {
-            if kind == FighterKind::MasterHand {
-                self.mh_beaten(gobj);
-            } else {
-                self.ch_beaten(gobj);
-            }
+            let hand = super::super::masterhand::Hand::of(self.game.fighter(gobj).fighter_kind());
+            self.hand_beaten_enter(gobj, hand);
             let fp = self.game.fighter(gobj);
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
             self.game.fighter_lost(slot, sub);

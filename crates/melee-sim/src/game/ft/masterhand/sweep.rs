@@ -13,19 +13,6 @@ use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
 impl Running<'_> {
-    /// `ftMh_Damage_Phys`: the beaten hand falls away (`x150`, `x158` each frame).
-    #[doc(alias = "ftMh_Damage_Phys")]
-    pub fn mh_damage_phys(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        let (dy, dz) = (
-            super::HAND.f32(self, f, attr::X150),
-            super::HAND.f32(self, f, attr::X158),
-        );
-        let fp = &mut self.game.fighters[f.0];
-        fp.self_vel.y = mem(fp::fadds(reg(fp.self_vel.y), reg(dy)));
-        fp.self_vel.z = mem(fp::fadds(reg(fp.self_vel.z), reg(dz)));
-    }
-
     /// `ftMh_WaitSweep_Anim`: the sweep once the wind-up ends.
     #[doc(alias = "ftMh_WaitSweep_Anim")]
     pub fn mh_wait_sweep_anim(&mut self, gobj: GObjId) {
@@ -168,7 +155,6 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::DAMAGE_PHYS => g.mh_damage_phys(gobj),
         addr::MS_344_80151828 => g.hand_enter(gobj, ms::WAIT_SWEEP),
         addr::WAIT_SWEEP_ANIM => g.mh_wait_sweep_anim(gobj),
         addr::MS_346_80151918 => g.mh_sweep_enter(gobj),
