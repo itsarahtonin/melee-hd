@@ -24,16 +24,17 @@ use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
 use super::super::handles::CodeRef;
-use super::super::state::{Game, Obj, Running};
+use super::super::state::{Game, Running};
 use super::data::{SHRINEROUTE_CALLBACKS, StageCallbacks};
 use super::ground::{
     ground_of, jobj_of, map_gobj, nth_joint, p1_fighter, point, point_joint, scale, set_cam_offset,
 };
+use super::pushon::{AddedLight, Lights, first_lobj, init_lights, proc_lights};
 use super::{CollUser, anime, grlib, material, setup, stage, zako};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
-use crate::hsd::lobj::{self, LObjId};
+use crate::hsd::lobj;
 use crate::lb::joint::world_position;
 use crate::vec::Vec3;
 
@@ -66,8 +67,8 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         START_HOOK => place_symbols(r, gobj),
         0x8020_9AF0 => init_portal(r, gobj),
         0x8020_9BEC => proc_portal(r, gobj),
-        0x8020_A104 => init_lights(r, gobj),
-        0x8020_A21C => proc_lights(r, gobj),
+        0x8020_A104 => init_lights(r, gobj, &LIGHTS),
+        0x8020_A21C => proc_lights(r, gobj, &LIGHTS),
         _ => return false,
     }
     true
@@ -757,47 +758,27 @@ pub fn place_spin(r: &mut Running, gobj: GObjId) {
     r.game.grounds[g.0].u.shrineroute3().spin_y = mem(fp::fmuls(k, fp::fmsubs(2.0, f, 1.0)));
 }
 
-/// The lights' object (map 6), `grShrineRoute_8020A104`: the fighters' lights (the first GObj
-/// of classifier 0xC on the lights' link), fifteen of them set up from the table, each of its
-/// lights and its flags kept, the two added lights, and the lights' process run once.
-#[doc(alias = "grShrineRoute_8020A104")]
-pub fn init_lights(r: &mut Running, gobj: GObjId) {
-    let g = ground_of(r.game, gobj);
-    let mut lg = r.game.world.first_in(3);
+/// The fighters' lights: the first GObj of classifier 0xC on the lights' link.
+fn classified_lights(game: &Game) -> Option<GObjId> {
+    let mut lg = game.world.first_in(3);
     while let Some(o) = lg {
-        if r.game.world.gobj(o).classifier == 0xC {
+        if game.world.gobj(o).classifier == 0xC {
             break;
         }
-        lg = r.game.world.gobj(o).next;
+        lg = game.world.gobj(o).next;
     }
-    let lights = lg.expect("grshrineroute.c:1106: lgobj");
-    r.game.grounds[g.0].u.pushon().gobj = Some(lights);
-    set_up_lights(r.game, lights);
-    let mut cur = first_lobj(r.game, lights);
-    r.game.grounds[g.0].u.pushon().count = 0;
-    while let Some(l) = cur {
-        let flags = lobj::flags(&r.game.objs.lobjs, Some(l));
-        let v = r.game.grounds[g.0].u.pushon();
-        let n = v.count as usize;
-        v.lobjs[n] = Some(l);
-        v.lobj_flags[n] = flags;
-        cur = r.game.objs.lobjs[l].next;
-        r.game.grounds[g.0].u.pushon().count += 1;
-    }
-    let point = add_light(r.game, lights, &FOLLOWER);
-    r.game.grounds[g.0].u.pushon().point_light = point;
-    let spec = add_light(r.game, lights, &SECOND);
-    r.game.grounds[g.0].u.pushon().spot_light = spec;
-    proc_lights(r, gobj);
+    lg
 }
 
-fn first_lobj(game: &Game, gobj: GObjId) -> Option<LObjId> {
-    match game.world.gobjs[gobj.0].obj {
-        Some(Obj::LObj(l)) => Some(l),
-        None => None,
-        ref other => panic!("the fighters' lights' GObj holds {other:?}"),
-    }
-}
+/// The maze's lights (the race's, `pushon::Lights`).
+pub const LIGHTS: Lights = Lights {
+    find: classified_lights,
+    set_up: set_up_lights,
+    follower: FOLLOWER,
+    second: SECOND,
+    shown: 6,
+    under: 15.0,
+};
 
 /// One of the maze's lights (`grSh_Route_LightConfig`): its color, place, interest (a spot
 /// light's), whether it's a spot light, a spot light's cutoff and function, its reference
@@ -935,20 +916,6 @@ pub fn set_up_lights(game: &mut Game, gobj: GObjId) {
     }
 }
 
-/// One of the two lights the maze adds (`lobj0`, `lobj1`): its flags, whether it starts hidden,
-/// and its point parameters as `HSD_LObjLoadDesc` reads them. Each descriptor's parameters point
-/// at a lone float, 16 (`lobj0_shininess` at 0x804D4824, `lobj1_shininess` at 0x804D4838), and
-/// the load reads an `HSD_LightPointDesc` there: that float as the reference brightness, then
-/// the two words after it in the executable's small data as the reference distance and the
-/// distance function, as the race's lights do (docs/melee-bugs.md).
-struct AddedLight {
-    flags: u16,
-    hidden: bool,
-    ref_br: u32,
-    ref_dist: u32,
-    dist_func: u32,
-}
-
 /// `lobj0`: a diffuse point light, hidden, which follows the first fighter.
 const FOLLOWER: AddedLight = AddedLight {
     flags: lobj::POINT | lobj::DIFFUSE,
@@ -968,177 +935,6 @@ const SECOND: AddedLight = AddedLight {
     ref_dist: 0,
     dist_func: 0x676F_626A,
 };
-
-/// Adds a light at the end of the set's chain, `grShrineRoute_8020AB58` and
-/// `grShrineRoute_8020AC44`: the descriptor loaded (white, no position), placed at (0, 100, 0)
-/// and, the first, hidden.
-#[doc(alias = "grShrineRoute_8020AB58")]
-#[doc(alias = "grShrineRoute_8020AC44")]
-fn add_light(game: &mut Game, gobj: GObjId, desc: &AddedLight) -> Option<LObjId> {
-    let mut last = first_lobj(game, gobj)?;
-    while let Some(n) = game.objs.lobjs[last].next {
-        last = n;
-    }
-    let l = lobj::load_static_point(
-        &mut game.objs,
-        desc.flags,
-        [0xFF; 4],
-        [desc.ref_br, desc.ref_dist, desc.dist_func],
-    );
-    game.objs.lobjs[last].next = Some(l);
-    lobj::set_position(&mut game.objs, l, Vec3::new(0.0, 100.0, 0.0));
-    if desc.hidden {
-        lobj::set_flags(&mut game.objs.lobjs, Some(l), u32::from(lobj::HIDDEN));
-    }
-    Some(l)
-}
-
-/// A light's place, for the lights' process: every light it reads has one (a light without
-/// would leave a stack vector unwritten).
-fn position_of(game: &mut Game, data: &Archives, l: LObjId) -> Vec3 {
-    lobj::position(&mut game.objs, data, Some(l))
-        .unwrap_or_else(|| panic!("stale read: the position of light {l:?}"))
-}
-
-/// The lights' process (map 6), `grShrineRoute_8020A21C`.
-///
-/// Each kept light's distance from the first fighter (in x and y; a spot light's in x alone; an
-/// ambient light -100), at least 10, sorts the lights nearest first; the six nearest are shown
-/// and the rest hidden. The hidden follower moves 20 from the first fighter toward the lights
-/// past the nearest (each weighed by the second nearest's distance over its own, less when
-/// under 15 above the fighter, none below it), looking at the fighter. The specular light takes
-/// the second nearest's place, interest and flags (made specular, not diffuse) and its color,
-/// dimmed while the third nearest is within 50 of it.
-#[doc(alias = "grShrineRoute_8020A21C")]
-pub fn proc_lights(r: &mut Running, gobj: GObjId) {
-    let g = ground_of(r.game, gobj);
-    let player = match p1_fighter(r.game) {
-        Some(f) => r.game.ft_pos(f),
-        None => Vec3::new(0.0, 0.0, 0.0),
-    };
-    if r.game.grounds[g.0].u.pushon().gobj.is_none() {
-        return;
-    }
-    let v = r.game.grounds[g.0].u.pushon();
-    let count = v.count;
-    let lobjs = v.lobjs;
-    let n = count.max(0) as usize;
-    let light = |i: usize| lobjs[i].expect("grshrineroute.c: a kept light");
-    let mut distances = [0.0f32; 20];
-    let mut sorted = [0usize; 20];
-    for i in 0..n {
-        let l = light(i);
-        let kind = r.game.objs.lobjs[l].flags & 3;
-        distances[i] = match kind {
-            0 => mem(fp::fneg(100.0)),
-            1 | 2 => {
-                let p = position_of(r.game, r.data, l);
-                let dx = fp::fsubs(reg(player.x), reg(p.x));
-                let dy = fp::fsubs(reg(player.y), reg(p.y));
-                mem(crate::math::sqrt_reg(fp::fadds(
-                    fp::fmuls(dx, dx),
-                    fp::fmuls(dy, dy),
-                )))
-            }
-            _ => {
-                let p = position_of(r.game, r.data, l);
-                let d = fp::fsubs(reg(player.x), reg(p.x));
-                mem(if d < fp::frsp(0.0) { fp::fneg(d) } else { d })
-            }
-        };
-        if reg(distances[i]) < 10.0 {
-            distances[i] = 10.0;
-        }
-        sorted[i] = i;
-    }
-    for i in 0..n {
-        let mut min_dist = f64::from(f32::MAX);
-        let mut best = 0;
-        for j in i..n {
-            if min_dist > reg(distances[sorted[j]]) {
-                best = j;
-                min_dist = reg(distances[sorted[j]]);
-            }
-        }
-        sorted.swap(i, best);
-    }
-    // The second and third nearest are read whatever the count; the maze's set has more than
-    // three lights.
-    assert!(
-        n > 2,
-        "grshrineroute.c: {n} lights, the third nearest a stack word"
-    );
-    for (i, &s) in sorted.iter().enumerate().take(n) {
-        if i < 6 {
-            lobj::clear_flags(
-                &mut r.game.objs.lobjs,
-                Some(light(s)),
-                u32::from(lobj::HIDDEN),
-            );
-        } else {
-            lobj::set_flags(
-                &mut r.game.objs.lobjs,
-                Some(light(s)),
-                u32::from(lobj::HIDDEN),
-            );
-        }
-    }
-    let mut dir = Vec3::new(0.0, 0.0, 0.0);
-    let ref_dist = reg(distances[sorted[1]]);
-    for &s in sorted.iter().take(n).skip(1) {
-        let Some(mut lp) = lobj::position(&mut r.game.objs, r.data, Some(light(s))) else {
-            continue;
-        };
-        let mut weight = fp::fdivs(ref_dist, reg(distances[s]));
-        lp = lp - player;
-        if reg(lp.y) < 15.0 {
-            if reg(lp.y) < 0.0 {
-                weight = 0.0;
-            } else {
-                weight = fp::fmuls(weight, fp::fdivs(reg(lp.y), 15.0));
-            }
-        }
-        lp.normalize();
-        lp.x = mem(fp::fmuls(reg(lp.x), weight));
-        lp.y = mem(fp::fmuls(reg(lp.y), weight));
-        lp.z = mem(fp::fmuls(reg(lp.z), weight));
-        dir = dir + lp;
-    }
-    let sq = |a: f32| fp::fmuls(reg(a), reg(a));
-    let len = crate::math::sqrt_reg(fp::fadds(sq(dir.z), fp::fadds(sq(dir.x), sq(dir.y))));
-    if len < reg(0.01) {
-        dir.y = 100.0;
-    }
-    dir.normalize();
-    dir.x = mem(fp::fmuls(reg(dir.x), 20.0));
-    dir.y = mem(fp::fmuls(reg(dir.y), 20.0));
-    dir.z = mem(fp::fmuls(reg(dir.z), 20.0));
-    dir = dir + player;
-    let v = r.game.grounds[g.0].u.pushon();
-    let (point, spec) = (v.point_light, v.spot_light);
-    let point = point.expect("grshrineroute.c: the follower");
-    lobj::set_position(&mut r.game.objs, point, dir);
-    lobj::set_interest(&mut r.game.objs, point, player);
-    lobj::set_flags(&mut r.game.objs.lobjs, Some(point), 0x400);
-    let second = light(sorted[1]);
-    let dist_diff = fp::fsubs(reg(distances[sorted[2]]), reg(distances[sorted[1]]));
-    let mut color = lobj::color(&r.game.objs.lobjs, second);
-    if fp::fsubs(reg(distances[sorted[2]]), reg(distances[sorted[1]])) < 50.0 {
-        let ratio = fp::fdivs(dist_diff, 50.0);
-        for c in &mut color[..3] {
-            *c = fp::fctiwz(fp::fmuls(fp::frsp(f64::from(*c)), ratio)) as u8;
-        }
-    }
-    let spec = spec.expect("grshrineroute.c: the specular light");
-    lobj::set_color(&mut r.game.objs.lobjs, spec, color);
-    let zero = Vec3::new(0.0, 0.0, 0.0);
-    let at = lobj::position(&mut r.game.objs, r.data, Some(second)).unwrap_or(zero);
-    lobj::set_position(&mut r.game.objs, spec, at);
-    let at = lobj::interest(&mut r.game.objs, r.data, Some(second)).unwrap_or(zero);
-    lobj::set_interest(&mut r.game.objs, spec, at);
-    let flags = r.game.objs.lobjs[second].flags;
-    r.game.objs.lobjs[spec].flags = flags & !lobj::DIFFUSE | lobj::SPECULAR;
-}
 
 /// An arena's event callback, `grShrineRoute_8020AD24`: on 1, the stage's `x6D8` set to 1,
 /// answering true.
