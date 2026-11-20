@@ -35,7 +35,8 @@ pub struct Spawner {
     /// Ticks until the next item (`x0`).
     pub timer: i32,
     pub table: PickTable,
-    pub x14: i32,
+    #[doc(alias("x14"))]
+    pub unused: i32,
     /// The rules' item switches, by kind (`x18`).
     pub mask: u64,
 }

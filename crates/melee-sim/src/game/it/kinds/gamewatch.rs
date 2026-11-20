@@ -24,14 +24,15 @@ pub struct GameWatchVars {
     /// +0x0
     pub attr: Var<Option<DataRef>>,
     /// +0x4
-    pub x4: Var<i32>,
+    #[doc(alias("x4"))]
+    pub sausage: Var<i32>,
 }
 
 impl Default for GameWatchVars {
     fn default() -> Self {
         GameWatchVars {
             attr: Var::new(None),
-            x4: Var::new(0),
+            sausage: Var::new(0),
         }
     }
 }
@@ -40,7 +41,7 @@ impl GameWatchVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
         self.attr.mark_stale();
-        self.x4.mark_stale();
+        self.sausage.mark_stale();
     }
 }
 
@@ -50,7 +51,7 @@ impl Mirror for GameWatchVars {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         GameWatchVars {
             attr: Var::new(cx.import_data(m.u32(at))),
-            x4: Var::new(m.u32(at + 4) as i32),
+            sausage: Var::new(m.u32(at + 4) as i32),
         }
     }
 
@@ -59,10 +60,10 @@ impl Mirror for GameWatchVars {
         if self.attr.live(&p("attr"), cx) {
             cx.compare_data(&p("attr"), *self.attr.peek(), m.u32(at));
         }
-        if self.x4.live(&p("x4"), cx) && *self.x4.peek() != m.u32(at + 4) as i32 {
+        if self.sausage.live(&p("x4"), cx) && *self.sausage.peek() != m.u32(at + 4) as i32 {
             cx.mismatch(
                 &p("x4"),
-                format!("{:?}", self.x4.peek()),
+                format!("{:?}", self.sausage.peek()),
                 format!("{:?}", m.u32(at + 4) as i32),
             );
         }

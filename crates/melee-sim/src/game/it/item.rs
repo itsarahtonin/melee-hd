@@ -2092,11 +2092,11 @@ pub fn init_globals(game: &mut Game, data: &Archives) {
     game.it.pokemon.last_kind = UNSELECTED;
     game.it.pokemon.previous_kind = UNSELECTED;
     game.it.pokemon.rare_spawned = 0;
-    game.it.x6d00 = -1;
+    game.it.warp_star_last_anim = -1;
     game.it.next_attack_id = 1;
     game.it.made = 0;
     game.it.spawned = 0;
-    game.it.x6d08 = 0;
+    game.it.foods_spawned = 0;
     let s = &mut game.it.spawn;
     for t in [&mut s.monsters, &mut s.no_containers, &mut s.spawner.table] {
         t.total = 0;

@@ -86,31 +86,36 @@ fn data(l: &mut Lay, cx: &dyn LayCx, at: u32, v: &Var<Option<DataRef>>) {
 
 impl LayOut for ArwingLaserVars {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
-        gobj(l, cx, at + 0x20, &self.xDF4);
-        jobj(l, cx, at + 0x24, &self.xDF8);
+        gobj(l, cx, at + 0x20, &self.parent);
+        jobj(l, cx, at + 0x24, &self.gun);
         f32s(
             l,
             at + 0x28,
-            &[&self.xDFC, &self.xE00, &self.xE04, &self.xE08],
+            &[
+                &self.stage_scale,
+                &self.offset_x,
+                &self.offset_y,
+                &self.offset_z,
+            ],
         );
-        vec3(l, at + 0x38, &self.xE0C);
-        vec3(l, at + 0x44, &self.xE18);
-        vec3(l, at + 0x50, &self.xE24);
-        i16_(l, at + 0x5C, &self.xE30);
-        f32_(l, at + 0x60, &self.xE34);
-        i32_(l, at + 0x64, &self.xE38);
-        i32_(l, at + 0x68, &self.xE3C);
-        gobj(l, cx, at + 0x6C, &self.xE40);
-        gobj(l, cx, at + 0x70, &self.xE44);
-        i32_(l, at + 0x74, &self.xE48);
-        i32_(l, at + 0x78, &self.xE4C);
+        vec3(l, at + 0x38, &self.heading);
+        vec3(l, at + 0x44, &self.tip);
+        vec3(l, at + 0x50, &self.last_tip);
+        i16_(l, at + 0x5C, &self.left_gun);
+        f32_(l, at + 0x60, &self.scale);
+        i32_(l, at + 0x64, &self.shot_type);
+        i32_(l, at + 0x68, &self.reflected);
+        gobj(l, cx, at + 0x6C, &self.beam1);
+        gobj(l, cx, at + 0x70, &self.beam2);
+        i32_(l, at + 0x74, &self.joint);
+        i32_(l, at + 0x78, &self.sound_state);
     }
 }
 
 impl LayOut for GameWatchVars {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         data(l, cx, at, &self.attr);
-        i32_(l, at + 4, &self.x4);
+        i32_(l, at + 4, &self.sausage);
     }
 }
 
@@ -125,13 +130,13 @@ impl LayOut for GreatFoxLaserVars {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         jobj(l, cx, at, &self.jobj);
         i32_(l, at + 4, &self.idx);
-        vec3(l, at + 8, &self.x8);
-        i32s(l, at + 0x14, &self.x14);
-        gobj(l, cx, at + 0x20, &self.x20);
-        vec3(l, at + 0x28, &self.x28);
-        i16_(l, at + 0x34, &self.x34);
-        i16_(l, at + 0x36, &self.x36);
-        i16_(l, at + 0x38, &self.x38);
+        vec3(l, at + 8, &self.normal);
+        i32s(l, at + 0x14, &self.words);
+        gobj(l, cx, at + 0x20, &self.great_fox);
+        vec3(l, at + 0x28, &self.gun_offset);
+        i16_(l, at + 0x34, &self.reflected);
+        i16_(l, at + 0x36, &self.state_ticks);
+        i16_(l, at + 0x38, &self.shot_type);
     }
 }
 
@@ -146,15 +151,15 @@ impl LayOut for HeihoVars {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         jobj(l, cx, at, &self.jobj);
         i32_(l, at + 4, &self.idx);
-        vec3(l, at + 8, &self.x8);
-        i32s(l, at + 0x14, &self.x14);
-        i8_(l, at + 0x20, &self.x20);
-        i8_(l, at + 0x21, &self.x21);
-        i8_(l, at + 0x22, &self.x22);
-        i32_(l, at + 0x24, &self.x24);
-        i32_(l, at + 0x2C, &self.x2c);
-        vec3(l, at + 0x3C, &self.x3c);
-        gobj(l, cx, at + 0x54, &self.x54);
+        vec3(l, at + 8, &self.normal);
+        i32s(l, at + 0x14, &self.words);
+        i8_(l, at + 0x20, &self.flight_place);
+        i8_(l, at + 0x21, &self.speed_index);
+        i8_(l, at + 0x22, &self.inside_blast_zones);
+        i32_(l, at + 0x24, &self.countdown);
+        i32_(l, at + 0x2C, &self.sink_count);
+        vec3(l, at + 0x3C, &self.last_bone_translation);
+        gobj(l, cx, at + 0x54, &self.food);
     }
 }
 
@@ -162,10 +167,10 @@ impl LayOut for KlapVars {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         jobj(l, cx, at, &self.jobj);
         i32_(l, at + 4, &self.idx);
-        vec3(l, at + 8, &self.x8);
-        i32s(l, at + 0x14, &self.x14);
-        gobj(l, cx, at + 0x20, &self.x20);
-        f32s(l, at + 0x24, &[&self.x24, &self.x28]);
+        vec3(l, at + 8, &self.normal);
+        i32s(l, at + 0x14, &self.words);
+        gobj(l, cx, at + 0x20, &self.path_object);
+        f32s(l, at + 0x24, &[&self.spin_y, &self.spin_z]);
     }
 }
 
@@ -173,13 +178,22 @@ impl LayOut for KyasarinVars {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         jobj(l, cx, at, &self.jobj);
         i32_(l, at + 4, &self.idx);
-        vec3(l, at + 8, &self.x8);
-        i32s(l, at + 0x14, &self.x14);
-        gobj(l, cx, at + 0x20, &self.x20);
-        f32s(l, at + 0x24, &[&self.x24, &self.x28, &self.x2C, &self.x30]);
-        i32_(l, at + 0x34, &self.x34);
-        i32_(l, at + 0x38, &self.x38);
-        i32_(l, at + 0x3C, &self.x3C);
+        vec3(l, at + 8, &self.normal);
+        i32s(l, at + 0x14, &self.words);
+        gobj(l, cx, at + 0x20, &self.platform);
+        f32s(
+            l,
+            at + 0x24,
+            &[
+                &self.mark_wait,
+                &self.egg_wait,
+                &self.stand_left,
+                &self.entry_facing,
+            ],
+        );
+        i32_(l, at + 0x34, &self.eggs_left);
+        i32_(l, at + 0x38, &self.damage);
+        i32_(l, at + 0x3C, &self.flinch_state);
     }
 }
 
@@ -187,9 +201,9 @@ impl LayOut for KyasarinEggVars {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         jobj(l, cx, at, &self.jobj);
         i32_(l, at + 4, &self.idx);
-        vec3(l, at + 8, &self.x8);
-        i32s(l, at + 0x14, &self.x14);
-        i32_(l, at + 0x20, &self.x20);
+        vec3(l, at + 8, &self.normal);
+        i32s(l, at + 0x14, &self.words);
+        i32_(l, at + 0x20, &self.broken);
     }
 }
 
@@ -197,23 +211,33 @@ impl LayOut for TincleVars {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         jobj(l, cx, at, &self.jobj);
         i32_(l, at + 4, &self.idx);
-        vec3(l, at + 8, &self.x8);
-        i32s(l, at + 0x14, &self.x14);
-        i32_(l, at + 0x20, &self.x20);
-        i32_(l, at + 0x24, &self.x24);
-        i32_(l, at + 0x28, &self.x28);
-        i32_(l, at + 0x2C, &self.x2c);
+        vec3(l, at + 8, &self.normal);
+        i32s(l, at + 0x14, &self.words);
+        i32_(l, at + 0x20, &self.countdown);
+        i32_(l, at + 0x24, &self.drift_ticks);
+        i32_(l, at + 0x28, &self.drift_elapsed);
+        i32_(l, at + 0x2C, &self.bob_count);
         f32s(
             l,
             at + 0x30,
             &[
-                &self.x30, &self.x34, &self.x38, &self.x3c, &self.x40, &self.x44, &self.x48,
-                &self.x4c, &self.x50, &self.x54, &self.x58, &self.x5c,
+                &self.interrupted_state,
+                &self.drift_accel,
+                &self.bob_accel,
+                &self.bob_half_cycles_left,
+                &self.saved_bob_count,
+                &self.saved_vertical_speed,
+                &self.saved_accel,
+                &self.press_height,
+                &self.balloon_top,
+                &self.stood_weight,
+                &self.range_middle,
+                &self.float_height,
             ],
         );
-        gobj(l, cx, at + 0x64, &self.x64);
-        if self.x68.is_live() {
-            let e = self.x68.peek();
+        gobj(l, cx, at + 0x64, &self.stage_object);
+        if self.ecb.is_live() {
+            let e = self.ecb.peek();
             for (k, f) in [e.top, e.bottom, e.right, e.left].into_iter().enumerate() {
                 l.put_u32(at + 0x68 + 4 * k as u32, f.to_bits());
             }
@@ -223,14 +247,14 @@ impl LayOut for TincleVars {
 
 impl LayOut for ToolsVars {
     fn lay(&self, l: &mut Lay, at: u32, _: &dyn LayCx) {
-        i32_(l, at, &self.x0);
+        i32_(l, at, &self.tool);
     }
 }
 
 impl LayOut for WhispyAppleVars {
     fn lay(&self, l: &mut Lay, at: u32, _: &dyn LayCx) {
         i32_(l, at, &self.heal);
-        i32_(l, at + 4, &self.xdd8);
+        i32_(l, at + 4, &self.bursts);
     }
 }
 
@@ -238,7 +262,7 @@ impl LayOut for YakuVars {
     /// The anchor's kind (`x2`): 1 for a joint, 2 for a point; a kind the code never writes
     /// stays unknown.
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
-        i16_(l, at, &self.x0);
+        i16_(l, at, &self.hit_sound);
         if self.anchor.is_live() {
             match *self.anchor.peek() {
                 Anchor::Joint(j) => {

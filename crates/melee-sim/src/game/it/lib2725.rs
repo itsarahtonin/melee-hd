@@ -692,7 +692,7 @@ pub fn count_spawned(game: &mut Game) {
 /// Counts a food in (hold kind 2), `it_80274EE8`.
 #[doc(alias = "it_80274EE8")]
 pub fn count_food(game: &mut Game) {
-    game.it.x6d08 = game.it.x6d08.wrapping_add(1);
+    game.it.foods_spawned = game.it.foods_spawned.wrapping_add(1);
 }
 
 /// A small blast, `it_80272B40`: its effect (0x40C), its sound, and its hits counted afresh.

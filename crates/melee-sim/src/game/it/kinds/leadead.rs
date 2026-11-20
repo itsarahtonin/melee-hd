@@ -1250,7 +1250,7 @@ mod tests {
 
     #[test]
     fn offsets_follow_the_decomp() {
-        assert_eq!(off::XDEC, zako::off::X14 + 4);
+        assert_eq!(off::XDEC, zako::off::WORDS + 4);
         assert_eq!(off::HURT + 4, 0x60);
         assert_eq!(off::ECB, 0x7C);
     }

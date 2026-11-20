@@ -430,7 +430,7 @@ fn fighter_hits_item(r: &mut Running, fg: GObjId, hi: usize, me: GObjId) {
 /// hit's sound kind 1 or 2 (a sound of its own, 0x61A87) or 8 with those kinds (none).
 fn random_kind_hit_sound(r: &mut Running, me: GObjId, sfx_kind: i32, sfx_severity: i32) {
     let pokemon = (item(r.game, me).kind == ItKind::StageHurtbox)
-        .then(|| item_mut(r.game, me).xDD4_itemVar.yaku().x0.get());
+        .then(|| item_mut(r.game, me).xDD4_itemVar.yaku().hit_sound.get());
     let kind_1_or_2 = sfx_kind == 1 || sfx_kind == 2;
     match pokemon {
         Some(7) if kind_1_or_2 => {

@@ -342,7 +342,7 @@ impl Running<'_> {
                 vel: self.ys_n_item_vel(gobj),
                 facing_dir: self.ys_n_facing(gobj),
                 lifetime: self.ys_n_attr(gobj, attr::X24),
-                x24: self.ys_n_attr(gobj, attr::X18),
+                damage_behavior: self.ys_n_attr(gobj, attr::X18),
                 damage_mul: self.ys_n_damage_mul(),
             };
             yoshiegglay::spawn(self, &laid);

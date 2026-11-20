@@ -729,7 +729,7 @@ impl Running<'_> {
         if g.items_logged2_total(player) == g.it.spawned as u32 {
             flags.push(0x9F);
         }
-        let x6d08 = g.it.x6d08;
+        let x6d08 = g.it.foods_spawned;
         if x6d08 != 0 && x6d08 as u32 == g.items_logged2(player, 18) {
             flags.push(0xA0);
         }

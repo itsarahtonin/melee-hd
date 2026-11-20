@@ -37,7 +37,8 @@ pub struct Laid {
     pub vel: Vec3,
     pub facing_dir: f32,
     pub lifetime: f32,
-    pub x24: f32,
+    #[doc(alias("x24"))]
+    pub damage_behavior: f32,
     pub damage_mul: f32,
 }
 
@@ -93,7 +94,7 @@ pub fn spawn(r: &mut Running, laid: &Laid) -> Option<GObjId> {
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     vars(r.game, gobj).x0.set(laid.damage_mul);
-    item_mut(r.game, gobj).xC98 = laid.x24;
+    item_mut(r.game, gobj).xC98 = laid.damage_behavior;
     lib2725::set_lifetime(r.game, r.data, gobj, laid.lifetime);
     fall(r, gobj);
     Some(gobj)

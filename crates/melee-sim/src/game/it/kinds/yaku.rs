@@ -94,7 +94,8 @@ pub enum Anchor {
 /// and a touch (`x1C`).
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct YakuVars {
-    pub x0: Var<i16>,
+    #[doc(alias("x0"))]
+    pub hit_sound: Var<i16>,
     pub anchor: Var<Anchor>,
     pub ground: Var<Option<GroundId>>,
     pub dealt: Var<Option<CodeRef>>,
@@ -105,7 +106,7 @@ pub struct YakuVars {
 impl YakuVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
+        self.hit_sound.mark_stale();
         self.anchor.mark_stale();
         self.ground.mark_stale();
         self.dealt.mark_stale();
@@ -129,7 +130,7 @@ impl Mirror for YakuVars {
             _ => Anchor::None,
         };
         YakuVars {
-            x0: Var::new(m.u16(at) as i16),
+            hit_sound: Var::new(m.u16(at) as i16),
             anchor: Var::new(anchor),
             ground: Var::new(cx.import_handle("GroundId", m.u32(at + 0x10)).map(GroundId)),
             dealt: Var::new(code(at + 0x14)),
@@ -140,10 +141,10 @@ impl Mirror for YakuVars {
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let p = |n: &str| format!("{path}.{n}");
-        if self.x0.live(&p("x0"), cx) && *self.x0.peek() != m.u16(at) as i16 {
+        if self.hit_sound.live(&p("x0"), cx) && *self.hit_sound.peek() != m.u16(at) as i16 {
             cx.mismatch(
                 &p("x0"),
-                format!("{:?}", self.x0.peek()),
+                format!("{:?}", self.hit_sound.peek()),
                 format!("{:?}", m.u16(at) as i16),
             );
         }
@@ -262,7 +263,7 @@ pub fn spawn(
     } else if let Some(p) = pos {
         v.anchor.set(Anchor::Point(p));
     }
-    v.x0.set(x0 as i16);
+    v.hit_sound.set(x0 as i16);
     v.ground.set(ground);
     v.dealt.set(dealt);
     v.received.set(received);
