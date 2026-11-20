@@ -1999,7 +1999,9 @@ fn oldkongo_birds() {
 #[test]
 fn oldkongo_direction() {
     let d = dir(OK64);
-    let ours = |r: &mut Running, _: &Maps, _: &Call| Ret::Float(f64::from(oldkongo::direction(r)));
+    let ours = |r: &mut Running, _: &Maps, _: &Call| {
+        Ret::Float(f64::from(kongo::direction(r, &oldkongo::BARREL)))
+    };
     check_calls_with(&d, "grOldKongo_80210650", 1, &as_saved, &ours);
     // Seeds spread so every direction with a weight comes out.
     for s in 0..24u32 {
@@ -4088,7 +4090,9 @@ fn kongo_barrel() {
     for p in prepares {
         check_calls_with(&d, f, 1, p, &by_address);
     }
-    let ours = |r: &mut Running, _: &Maps, _: &Call| Ret::Float(f64::from(kongo::direction(r)));
+    let ours = |r: &mut Running, _: &Maps, _: &Call| {
+        Ret::Float(f64::from(kongo::direction(r, &kongo::BARREL)))
+    };
     for s in 0..24u32 {
         check_calls_with(
             &d,
