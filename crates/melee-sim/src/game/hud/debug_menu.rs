@@ -1620,8 +1620,19 @@ mod tests {
             let n = dol[o..].iter().position(|&b| b == 0).unwrap();
             dol[o..o + n].to_vec()
         };
+        // A names list the executable holds once is one list here too.
+        let mut lists = std::collections::HashMap::new();
         for t in TABLES {
             for (i, e) in t.entries.iter().enumerate() {
+                if e.choices_at != 0 {
+                    let first = *lists.entry(e.choices_at).or_insert(e.choices.as_ptr());
+                    assert!(
+                        std::ptr::eq(first, e.choices.as_ptr()),
+                        "{:#x} entry {i}: a copy of the names at {:#x}",
+                        t.addr,
+                        e.choices_at
+                    );
+                }
                 let o = at(t.addr + 0x20 * i as u32);
                 let word = |k: usize| w(o + 4 * k);
                 assert_eq!(
