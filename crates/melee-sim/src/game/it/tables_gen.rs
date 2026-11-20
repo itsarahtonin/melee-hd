@@ -4559,8 +4559,9 @@ pub static LOGIC_STAGE: [ItemLogic; 30] = [
     },
 ];
 
-/// `it_803F5468`.
-pub static STATES_IT_803F5468: [ItemState; 7] = [
+/// `it_803F5468`: the states of `ItKind::Capsule`.
+#[doc(alias("STATES_IT_803F5468", "it_803F5468"))]
+pub static STATES_CAPSULE: [ItemState; 7] = [
     // 0: itCapsule_UnkMotion0_Anim, itCapsule_UnkMotion0_Phys, itCapsule_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -4612,8 +4613,9 @@ pub static STATES_IT_803F5468: [ItemState; 7] = [
     },
 ];
 
-/// `it_803F54D8`.
-pub static STATES_IT_803F54D8: [ItemState; 13] = [
+/// `it_803F54D8`: the states of `ItKind::BobOmb`.
+#[doc(alias("STATES_IT_803F54D8", "it_803F54D8"))]
+pub static STATES_BOB_OMB: [ItemState; 13] = [
     // 0: itBombhei_UnkMotion0_Anim, itBombhei_UnkMotion0_Phys, itBombhei_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -4707,8 +4709,9 @@ pub static STATES_IT_803F54D8: [ItemState; 13] = [
     },
 ];
 
-/// `it_803F55D0`.
-pub static STATES_IT_803F55D0: [ItemState; 12] = [
+/// `it_803F55D0`: the states of `ItKind::MrSaturn`.
+#[doc(alias("STATES_IT_803F55D0", "it_803F55D0"))]
+pub static STATES_MR_SATURN: [ItemState; 12] = [
     // 0: itDosei_UnkMotion0_Anim, itDosei_UnkMotion0_Phys, itDosei_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -4795,8 +4798,9 @@ pub static STATES_IT_803F55D0: [ItemState; 12] = [
     },
 ];
 
-/// `it_803F56C8`.
-pub static STATES_IT_803F56C8: [ItemState; 5] = [
+/// `it_803F56C8`: the states of `ItKind::HeartContainer`.
+#[doc(alias("STATES_IT_803F56C8", "it_803F56C8"))]
+pub static STATES_HEART_CONTAINER: [ItemState; 5] = [
     // 0: itHeart_UnkMotion0_Anim, itHeart_UnkMotion0_Phys, itHeart_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -4834,8 +4838,9 @@ pub static STATES_IT_803F56C8: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F5740`.
-pub static STATES_IT_803F5740: [ItemState; 6] = [
+/// `it_803F5740`: the states of `ItKind::MaximTomato`.
+#[doc(alias("STATES_IT_803F5740", "it_803F5740"))]
+pub static STATES_MAXIM_TOMATO: [ItemState; 6] = [
     // 0: itTomato_UnkMotion0_Anim, itTomato_UnkMotion0_Phys, itTomato_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -4880,8 +4885,9 @@ pub static STATES_IT_803F5740: [ItemState; 6] = [
     },
 ];
 
-/// `it_803F57A0`.
-pub static STATES_IT_803F57A0: [ItemState; 1] = [
+/// `it_803F57A0`: the states of `ItKind::Starman`.
+#[doc(alias("STATES_IT_803F57A0", "it_803F57A0"))]
+pub static STATES_STARMAN: [ItemState; 1] = [
     // 0: itStar_UnkMotion0_Anim, itStar_UnkMotion0_Phys, itStar_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -4891,8 +4897,9 @@ pub static STATES_IT_803F57A0: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F57B0`.
-pub static STATES_IT_803F57B0: [ItemState; 5] = [
+/// `it_803F57B0`: the states of `ItKind::HomeRunBat`.
+#[doc(alias("STATES_IT_803F57B0", "it_803F57B0"))]
+pub static STATES_HOME_RUN_BAT: [ItemState; 5] = [
     // 0: itBat_UnkMotion0_Anim, itBat_UnkMotion0_Phys, itBat_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -4930,8 +4937,9 @@ pub static STATES_IT_803F57B0: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F5800`.
-pub static STATES_IT_803F5800: [ItemState; 5] = [
+/// `it_803F5800`: the states of `ItKind::BeamSword`.
+#[doc(alias("STATES_IT_803F5800", "it_803F5800"))]
+pub static STATES_BEAM_SWORD: [ItemState; 5] = [
     // 0: itSword_UnkMotion0_Anim, itSword_UnkMotion0_Phys, itSword_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -4969,8 +4977,9 @@ pub static STATES_IT_803F5800: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F5850`.
-pub static STATES_IT_803F5850: [ItemState; 9] = [
+/// `it_803F5850`: the states of `ItKind::Crate`.
+#[doc(alias("STATES_IT_803F5850", "it_803F5850"))]
+pub static STATES_CRATE: [ItemState; 9] = [
     // 0: itBox_UnkMotion0_Anim, itBox_UnkMotion0_Phys, itBox_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5036,8 +5045,9 @@ pub static STATES_IT_803F5850: [ItemState; 9] = [
     },
 ];
 
-/// `it_803F58E0`.
-pub static STATES_IT_803F58E0: [ItemState; 8] = [
+/// `it_803F58E0`: the states of `ItKind::Barrel`.
+#[doc(alias("STATES_IT_803F58E0", "it_803F58E0"))]
+pub static STATES_BARREL: [ItemState; 8] = [
     // 0: itTaru_UnkMotion0_Anim, itTaru_UnkMotion0_Phys, itTaru_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5096,8 +5106,9 @@ pub static STATES_IT_803F58E0: [ItemState; 8] = [
     },
 ];
 
-/// `it_803F5988`.
-pub static STATES_IT_803F5988: [ItemState; 7] = [
+/// `it_803F5988`: the states of `ItKind::Egg`.
+#[doc(alias("STATES_IT_803F5988", "it_803F5988"))]
+pub static STATES_EGG: [ItemState; 7] = [
     // 0: itEgg_UnkMotion0_Anim, itEgg_UnkMotion0_Phys, itEgg_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5149,8 +5160,9 @@ pub static STATES_IT_803F5988: [ItemState; 7] = [
     },
 ];
 
-/// `it_803F59F8`.
-pub static STATES_IT_803F59F8: [ItemState; 9] = [
+/// `it_803F59F8`: the states of `ItKind::PartyBall`.
+#[doc(alias("STATES_IT_803F59F8", "it_803F59F8"))]
+pub static STATES_PARTY_BALL: [ItemState; 9] = [
     // 0: itKusudama_UnkMotion0_Anim, itKusudama_UnkMotion0_Phys, itKusudama_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5216,8 +5228,9 @@ pub static STATES_IT_803F59F8: [ItemState; 9] = [
     },
 ];
 
-/// `it_803F5AB0`.
-pub static STATES_IT_803F5AB0: [ItemState; 11] = [
+/// `it_803F5AB0`: the states of `ItKind::Parasol`.
+#[doc(alias("STATES_IT_803F5AB0", "it_803F5AB0"))]
+pub static STATES_PARASOL: [ItemState; 11] = [
     // 0: itParasol_UnkMotion0_Anim, itParasol_UnkMotion0_Phys, itParasol_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5297,8 +5310,9 @@ pub static STATES_IT_803F5AB0: [ItemState; 11] = [
     },
 ];
 
-/// `it_803F5BA8`.
-pub static STATES_IT_803F5BA8: [ItemState; 10] = [
+/// `it_803F5BA8`: the states of `ItKind::GreenShell`.
+#[doc(alias("STATES_IT_803F5BA8", "it_803F5BA8"))]
+pub static STATES_GREEN_SHELL: [ItemState; 10] = [
     // 0: itGshell_UnkMotion0_Anim, itGshell_UnkMotion0_Phys, itGshell_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5371,8 +5385,9 @@ pub static STATES_IT_803F5BA8: [ItemState; 10] = [
     },
 ];
 
-/// `it_803F5C48`.
-pub static STATES_IT_803F5C48: [ItemState; 8] = [
+/// `it_803F5C48`: the states of `ItKind::RedShell`.
+#[doc(alias("STATES_IT_803F5C48", "it_803F5C48"))]
+pub static STATES_RED_SHELL: [ItemState; 8] = [
     // 0: itRshell_UnkMotion0_Anim, itRshell_UnkMotion0_Phys, itRshell_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5431,8 +5446,9 @@ pub static STATES_IT_803F5C48: [ItemState; 8] = [
     },
 ];
 
-/// `it_803F5CC8`.
-pub static STATES_IT_803F5CC8: [ItemState; 6] = [
+/// `it_803F5CC8`: the states of `ItKind::RayGun`.
+#[doc(alias("STATES_IT_803F5CC8", "it_803F5CC8"))]
+pub static STATES_RAY_GUN: [ItemState; 6] = [
     // 0: itLgun_UnkMotion0_Anim, itLgun_UnkMotion0_Phys, itLgun_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5477,8 +5493,9 @@ pub static STATES_IT_803F5CC8: [ItemState; 6] = [
     },
 ];
 
-/// `it_803F5D28`.
-pub static STATES_IT_803F5D28: [ItemState; 6] = [
+/// `it_803F5D28`: the states of `ItKind::Freezie`.
+#[doc(alias("STATES_IT_803F5D28", "it_803F5D28"))]
+pub static STATES_FREEZIE: [ItemState; 6] = [
     // 0: itFreeze_UnkMotion0_Anim, itFreeze_UnkMotion0_Phys, itFreeze_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -5523,8 +5540,9 @@ pub static STATES_IT_803F5D28: [ItemState; 6] = [
     },
 ];
 
-/// `it_803F5DB0`.
-pub static STATES_IT_803F5DB0: [ItemState; 4] = [
+/// `it_803F5DB0`: the states of `ItKind::Food`.
+#[doc(alias("STATES_IT_803F5DB0", "it_803F5DB0"))]
+pub static STATES_FOOD: [ItemState; 4] = [
     // 0: itFoods_UnkMotion0_Anim, itFoods_UnkMotion0_Phys, itFoods_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5555,8 +5573,9 @@ pub static STATES_IT_803F5DB0: [ItemState; 4] = [
     },
 ];
 
-/// `ItemStateTable_MsBomb`.
-pub static STATES_ITEMSTATETABLE_MSBOMB: [ItemState; 8] = [
+/// `ItemStateTable_MsBomb`: the states of `ItKind::MotionSensorBomb`.
+#[doc(alias("STATES_ITEMSTATETABLE_MSBOMB", "ItemStateTable_MsBomb"))]
+pub static STATES_MOTION_SENSOR_BOMB: [ItemState; 8] = [
     // 0: -, -, itMsbomb_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5615,8 +5634,9 @@ pub static STATES_ITEMSTATETABLE_MSBOMB: [ItemState; 8] = [
     },
 ];
 
-/// `ItemStateTable_Flipper`.
-pub static STATES_ITEMSTATETABLE_FLIPPER: [ItemState; 7] = [
+/// `ItemStateTable_Flipper`: the states of `ItKind::Flipper`.
+#[doc(alias("STATES_ITEMSTATETABLE_FLIPPER", "ItemStateTable_Flipper"))]
+pub static STATES_FLIPPER: [ItemState; 7] = [
     // 0: itFlipper_Resting_Anim, itFlipper_Resting_Phys, itFlipper_Resting_Coll
     ItemState {
         anim_id: -1,
@@ -5668,8 +5688,9 @@ pub static STATES_ITEMSTATETABLE_FLIPPER: [ItemState; 7] = [
     },
 ];
 
-/// `it_803F5F40`.
-pub static STATES_IT_803F5F40: [ItemState; 5] = [
+/// `it_803F5F40`: the states of `ItKind::SuperScope`.
+#[doc(alias("STATES_IT_803F5F40", "it_803F5F40"))]
+pub static STATES_SUPER_SCOPE: [ItemState; 5] = [
     // 0: itSscope_UnkMotion0_Anim, itSscope_UnkMotion0_Phys, itSscope_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5707,8 +5728,9 @@ pub static STATES_IT_803F5F40: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F5F90`.
-pub static STATES_IT_803F5F90: [ItemState; 6] = [
+/// `it_803F5F90`: the states of `ItKind::StarRod`.
+#[doc(alias("STATES_IT_803F5F90", "it_803F5F90"))]
+pub static STATES_STAR_ROD: [ItemState; 6] = [
     // 0: itStarrod_UnkMotion0_Anim, itStarrod_UnkMotion0_Phys, itStarrod_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5753,8 +5775,9 @@ pub static STATES_IT_803F5F90: [ItemState; 6] = [
     },
 ];
 
-/// `it_803F5FF0`.
-pub static STATES_IT_803F5FF0: [ItemState; 10] = [
+/// `it_803F5FF0`: the states of `ItKind::Fan`.
+#[doc(alias("STATES_IT_803F5FF0", "it_803F5FF0"))]
+pub static STATES_FAN: [ItemState; 10] = [
     // 0: itHarisen_UnkMotion0_Anim, itHarisen_UnkMotion0_Phys, itHarisen_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5827,8 +5850,9 @@ pub static STATES_IT_803F5FF0: [ItemState; 10] = [
     },
 ];
 
-/// `it_803F6090`.
-pub static STATES_IT_803F6090: [ItemState; 8] = [
+/// `it_803F6090`: the states of `ItKind::FireFlower`.
+#[doc(alias("STATES_IT_803F6090", "it_803F6090"))]
+pub static STATES_FIRE_FLOWER: [ItemState; 8] = [
     // 0: itFflower_UnkMotion0_Anim, itFflower_UnkMotion0_Phys, itFflower_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -5887,8 +5911,9 @@ pub static STATES_IT_803F6090: [ItemState; 8] = [
     },
 ];
 
-/// `it_803F6110`.
-pub static STATES_IT_803F6110: [ItemState; 2] = [
+/// `it_803F6110`: the states of `ItKind::SuperMushroom`.
+#[doc(alias("STATES_IT_803F6110", "it_803F6110"))]
+pub static STATES_SUPER_MUSHROOM: [ItemState; 2] = [
     // 0: itKinoko_UnkMotion0_Anim, itKinoko_UnkMotion0_Phys, itKinoko_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -5905,8 +5930,9 @@ pub static STATES_IT_803F6110: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F6130`.
-pub static STATES_IT_803F6130: [ItemState; 2] = [
+/// `it_803F6130`: the states of `ItKind::PoisonMushroom`.
+#[doc(alias("STATES_IT_803F6130", "it_803F6130"))]
+pub static STATES_POISON_MUSHROOM: [ItemState; 2] = [
     // 0: itDkinoko_UnkMotion0_Anim, itDkinoko_UnkMotion0_Phys, itDkinoko_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -5923,8 +5949,9 @@ pub static STATES_IT_803F6130: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F6150`.
-pub static STATES_IT_803F6150: [ItemState; 6] = [
+/// `it_803F6150`: the states of `ItKind::Hammer`.
+#[doc(alias("STATES_IT_803F6150", "it_803F6150"))]
+pub static STATES_HAMMER: [ItemState; 6] = [
     // 0: itHammer_UnkMotion0_Anim, itHammer_UnkMotion0_Phys, itHammer_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -5969,8 +5996,9 @@ pub static STATES_IT_803F6150: [ItemState; 6] = [
     },
 ];
 
-/// `it_803F61B0`.
-pub static STATES_IT_803F61B0: [ItemState; 6] = [
+/// `it_803F61B0`: the states of `ItKind::WarpStar`.
+#[doc(alias("STATES_IT_803F61B0", "it_803F61B0"))]
+pub static STATES_WARP_STAR: [ItemState; 6] = [
     // 0: itWstar_UnkMotion0_Anim, itWstar_UnkMotion0_Phys, itWstar_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6015,8 +6043,9 @@ pub static STATES_IT_803F61B0: [ItemState; 6] = [
     },
 ];
 
-/// `it_803F6220`.
-pub static STATES_IT_803F6220: [ItemState; 5] = [
+/// `it_803F6220`: the states of `ItKind::ScrewAttack`.
+#[doc(alias("STATES_IT_803F6220", "it_803F6220"))]
+pub static STATES_SCREW_ATTACK: [ItemState; 5] = [
     // 0: itScball_UnkMotion0_Anim, itScball_UnkMotion0_Phys, itScball_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -6054,8 +6083,9 @@ pub static STATES_IT_803F6220: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F6270`.
-pub static STATES_IT_803F6270: [ItemState; 5] = [
+/// `it_803F6270`: the states of `ItKind::BunnyHood`.
+#[doc(alias("STATES_IT_803F6270", "it_803F6270"))]
+pub static STATES_BUNNY_HOOD: [ItemState; 5] = [
     // 0: itRabbitc_UnkMotion0_Anim, itRabbitc_UnkMotion0_Phys, itRabbitc_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -6093,8 +6123,9 @@ pub static STATES_IT_803F6270: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F62C0`.
-pub static STATES_IT_803F62C0: [ItemState; 5] = [
+/// `it_803F62C0`: the states of `ItKind::MetalBox`.
+#[doc(alias("STATES_IT_803F62C0", "it_803F62C0"))]
+pub static STATES_METAL_BOX: [ItemState; 5] = [
     // 0: itMetalb_UnkMotion0_Anim, itMetalb_UnkMotion0_Phys, itMetalb_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -6132,8 +6163,9 @@ pub static STATES_IT_803F62C0: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F6310`.
-pub static STATES_IT_803F6310: [ItemState; 6] = [
+/// `it_803F6310`: the states of `ItKind::LipsStick`.
+#[doc(alias("STATES_IT_803F6310", "it_803F6310"))]
+pub static STATES_LIPS_STICK: [ItemState; 6] = [
     // 0: itLipstick_UnkMotion0_Anim, itLipstick_UnkMotion0_Phys, itLipstick_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6178,8 +6210,9 @@ pub static STATES_IT_803F6310: [ItemState; 6] = [
     },
 ];
 
-/// `it_803F6370`.
-pub static STATES_IT_803F6370: [ItemState; 5] = [
+/// `it_803F6370`: the states of `ItKind::CloakingDevice`.
+#[doc(alias("STATES_IT_803F6370", "it_803F6370"))]
+pub static STATES_CLOAKING_DEVICE: [ItemState; 5] = [
     // 0: itSpycloak_UnkMotion0_Anim, itSpycloak_UnkMotion0_Phys, itSpycloak_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6217,8 +6250,9 @@ pub static STATES_IT_803F6370: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F63C0`.
-pub static STATES_IT_803F63C0: [ItemState; 10] = [
+/// `it_803F63C0`: the states of `ItKind::BarrelCannon`.
+#[doc(alias("STATES_IT_803F63C0", "it_803F63C0"))]
+pub static STATES_BARREL_CANNON: [ItemState; 10] = [
     // 0: itTarucann_UnkMotion0_Anim, itTarucann_UnkMotion0_Phys, itTarucann_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -6291,8 +6325,9 @@ pub static STATES_IT_803F63C0: [ItemState; 10] = [
     },
 ];
 
-/// `it_803F6488`.
-pub static STATES_IT_803F6488: [ItemState; 7] = [
+/// `it_803F6488`: the states of `ItKind::PokeBall`.
+#[doc(alias("STATES_IT_803F6488", "it_803F6488"))]
+pub static STATES_POKE_BALL: [ItemState; 7] = [
     // 0: itMball_Motion0_Anim, itMball_Motion0_Phys, itMball_Motion0_Coll
     ItemState {
         anim_id: -1,
@@ -6344,8 +6379,9 @@ pub static STATES_IT_803F6488: [ItemState; 7] = [
     },
 ];
 
-/// `it_803F64F8`.
-pub static STATES_IT_803F64F8: [ItemState; 1] = [
+/// `it_803F64F8`: the states of `ItKind::RayGunShot`.
+#[doc(alias("STATES_IT_803F64F8", "it_803F64F8"))]
+pub static STATES_RAY_GUN_SHOT: [ItemState; 1] = [
     // 0: itLgunray_UnkMotion0_Anim, itLgunray_UnkMotion0_Phys, itLgunray_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6355,8 +6391,9 @@ pub static STATES_IT_803F64F8: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F6530`.
-pub static STATES_IT_803F6530: [ItemState; 1] = [
+/// `it_803F6530`: the states of `ItKind::StarRodStar`.
+#[doc(alias("STATES_IT_803F6530", "it_803F6530"))]
+pub static STATES_STAR_ROD_STAR: [ItemState; 1] = [
     // 0: itStarrodstar_UnkMotion0_Anim, itStarrodstar_UnkMotion0_Phys, itStarrodstar_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6366,8 +6403,9 @@ pub static STATES_IT_803F6530: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F6568`.
-pub static STATES_IT_803F6568: [ItemState; 10] = [
+/// `it_803F6568`: the states of `ItKind::SuperScopeShot`.
+#[doc(alias("STATES_IT_803F6568", "it_803F6568"))]
+pub static STATES_SUPER_SCOPE_SHOT: [ItemState; 10] = [
     // 0: itSscopebeam_UnkMotion9_Anim, itSscopebeam_UnkMotion9_Phys, itSscopebeam_UnkMotion9_Coll
     ItemState {
         anim_id: 0,
@@ -6440,8 +6478,9 @@ pub static STATES_IT_803F6568: [ItemState; 10] = [
     },
 ];
 
-/// `it_803F6630`.
-pub static STATES_IT_803F6630: [ItemState; 1] = [
+/// `it_803F6630`: the states of `ItKind::FireFlowerFlame`.
+#[doc(alias("STATES_IT_803F6630", "it_803F6630"))]
+pub static STATES_FIRE_FLOWER_FLAME: [ItemState; 1] = [
     // 0: itLgunbeam_UnkMotion0_Anim, itLgunbeam_UnkMotion0_Phys, itLgunbeam_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6451,8 +6490,9 @@ pub static STATES_IT_803F6630: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F6640`.
-pub static STATES_IT_803F6640: [ItemState; 4] = [
+/// `it_803F6640`: the states of `ItKind::HammerHead`.
+#[doc(alias("STATES_IT_803F6640", "it_803F6640"))]
+pub static STATES_HAMMER_HEAD: [ItemState; 4] = [
     // 0: itHammerhead_UnkMotion2_Anim, itHammerhead_UnkMotion2_Phys, itHammerhead_UnkMotion2_Coll
     ItemState {
         anim_id: -1,
@@ -6483,8 +6523,9 @@ pub static STATES_IT_803F6640: [ItemState; 4] = [
     },
 ];
 
-/// `it_803F6680`.
-pub static STATES_IT_803F6680: [ItemState; 2] = [
+/// `it_803F6680`: the states of `ItKind::LipsStickSpore`.
+#[doc(alias("STATES_IT_803F6680", "it_803F6680"))]
+pub static STATES_LIPS_STICK_SPORE: [ItemState; 2] = [
     // 0: itLipstickspore_UnkMotion0_Anim, itLipstickspore_UnkMotion0_Phys, itLipstickspore_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6501,8 +6542,9 @@ pub static STATES_IT_803F6680: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F66C8`.
-pub static STATES_IT_803F66C8: [ItemState; 5] = [
+/// `it_803F66C8`: the states of `ItKind::LipsStickFlower`.
+#[doc(alias("STATES_IT_803F66C8", "it_803F66C8"))]
+pub static STATES_LIPS_STICK_FLOWER: [ItemState; 5] = [
     // 0: itFflowerflame_UnkMotion0_Anim, itFflowerflame_UnkMotion0_Phys, itFflowerflame_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6540,8 +6582,9 @@ pub static STATES_IT_803F66C8: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F6728`.
-pub static STATES_IT_803F6728: [ItemState; 6] = [
+/// `it_803F6728`: the states of `ItKind::EventYoshiEgg`.
+#[doc(alias("STATES_IT_803F6728", "it_803F6728"))]
+pub static STATES_EVENT_YOSHI_EGG: [ItemState; 6] = [
     // 0: itEvyoshiegg_UnkMotion0_Anim, itEvyoshiegg_UnkMotion0_Phys, itEvyoshiegg_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -6586,8 +6629,9 @@ pub static STATES_IT_803F6728: [ItemState; 6] = [
     },
 ];
 
-/// `it_803F6788`.
-pub static STATES_IT_803F6788: [ItemState; 1] = [
+/// `it_803F6788`: the states of `ItKind::MarioFireball`, `ItKind::KirbyMarioFireball`.
+#[doc(alias("STATES_IT_803F6788", "it_803F6788"))]
+pub static STATES_MARIO_FIREBALL: [ItemState; 1] = [
     // 0: itMariofireball_UnkMotion0_Anim, itMariofireball_UnkMotion0_Phys, itMariofireball_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6597,8 +6641,9 @@ pub static STATES_IT_803F6788: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F6798`.
-pub static STATES_IT_803F6798: [ItemState; 1] = [
+/// `it_803F6798`: the states of `ItKind::KirbyFinalCutterWave`.
+#[doc(alias("STATES_IT_803F6798", "it_803F6798"))]
+pub static STATES_KIRBY_FINAL_CUTTER_WAVE: [ItemState; 1] = [
     // 0: itKirbycutterbeam_UnkMotion0_Anim, itKirbycutterbeam_UnkMotion0_Phys, itKirbycutterbeam_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6608,8 +6653,9 @@ pub static STATES_IT_803F6798: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F67D0`.
-pub static STATES_IT_803F67D0: [ItemState; 2] = [
+/// `it_803F67D0`: the states of `ItKind::FoxLaser`, `ItKind::FalcoLaser`, `ItKind::KirbyFoxLaser`, `ItKind::KirbyFalcoLaser`.
+#[doc(alias("STATES_IT_803F67D0", "it_803F67D0"))]
+pub static STATES_FOX_LASER: [ItemState; 2] = [
     // 0: itFoxlaser_UnkMotion1_Anim, itFoxlaser_UnkMotion1_Phys, itFoxlaser_UnkMotion1_Coll
     ItemState {
         anim_id: 0,
@@ -6626,8 +6672,9 @@ pub static STATES_IT_803F67D0: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F6818`.
-pub static STATES_IT_803F6818: [ItemState; 3] = [
+/// `it_803F6818`: the states of `ItKind::FoxIllusion`, `ItKind::FalcoPhantasm`.
+#[doc(alias("STATES_IT_803F6818", "it_803F6818"))]
+pub static STATES_FOX_ILLUSION: [ItemState; 3] = [
     // 0: itFoxillusion_UnkMotion0_Anim, itFoxillusion_UnkMotion0_Phys, itFoxillusion_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6651,8 +6698,9 @@ pub static STATES_IT_803F6818: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F6888`.
-pub static STATES_IT_803F6888: [ItemState; 7] = [
+/// `it_803F6888`: the states of `ItKind::LinkBomb`, `ItKind::YoungLinkBomb`.
+#[doc(alias("STATES_IT_803F6888", "it_803F6888"))]
+pub static STATES_LINK_BOMB: [ItemState; 7] = [
     // 0: itLinkbomb_UnkMotion0_Anim, itLinkbomb_UnkMotion0_Phys, -
     ItemState {
         anim_id: 0,
@@ -6704,8 +6752,9 @@ pub static STATES_IT_803F6888: [ItemState; 7] = [
     },
 ];
 
-/// `it_803F6920`.
-pub static STATES_IT_803F6920: [ItemState; 4] = [
+/// `it_803F6920`: the states of `ItKind::LinkBoomerang`, `ItKind::YoungLinkBoomerang`.
+#[doc(alias("STATES_IT_803F6920", "it_803F6920"))]
+pub static STATES_LINK_BOOMERANG: [ItemState; 4] = [
     // 0: itLinkboomerang_UnkMotion0_Anim, -, -
     ItemState {
         anim_id: -1,
@@ -6736,8 +6785,9 @@ pub static STATES_IT_803F6920: [ItemState; 4] = [
     },
 ];
 
-/// `it_803F6998`.
-pub static STATES_IT_803F6998: [ItemState; 9] = [
+/// `it_803F6998`: the states of `ItKind::LinkHookshot`, `ItKind::YoungLinkHookshot`.
+#[doc(alias("STATES_IT_803F6998", "it_803F6998"))]
+pub static STATES_LINK_HOOKSHOT: [ItemState; 9] = [
     // 0: -, itLinkhookshot_UnkMotion0_Phys, -
     ItemState {
         anim_id: -1,
@@ -6803,8 +6853,9 @@ pub static STATES_IT_803F6998: [ItemState; 9] = [
     },
 ];
 
-/// `it_803F6A28`.
-pub static STATES_IT_803F6A28: [ItemState; 5] = [
+/// `it_803F6A28`: the states of `ItKind::LinkArrow`, `ItKind::YoungLinkFireArrow`, `ItKind::KirbyLinkArrow`, `ItKind::KirbyYoungLinkFireArrow`.
+#[doc(alias("STATES_IT_803F6A28", "it_803F6A28"))]
+pub static STATES_LINK_ARROW: [ItemState; 5] = [
     // 0: itLinkarrow_UnkMotion0_Anim, itLinkarrow_UnkMotion0_Phys, itLinkarrow_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -6842,8 +6893,9 @@ pub static STATES_IT_803F6A28: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F6B28`.
-pub static STATES_IT_803F6B28: [ItemState; 1] = [
+/// `it_803F6B28`: the states of `ItKind::NessPKFire`.
+#[doc(alias("STATES_IT_803F6B28", "it_803F6B28"))]
+pub static STATES_NESS_PK_FIRE: [ItemState; 1] = [
     // 0: itNesspkfire_UnkMotion0_Anim, -, itNesspkfire_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6853,8 +6905,9 @@ pub static STATES_IT_803F6B28: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F6B60`.
-pub static STATES_IT_803F6B60: [ItemState; 1] = [
+/// `it_803F6B60`: the states of `ItKind::NessPKFirePillar`.
+#[doc(alias("STATES_IT_803F6B60", "it_803F6B60"))]
+pub static STATES_NESS_PK_FIRE_PILLAR: [ItemState; 1] = [
     // 0: itNesspkfirepillar_UnkMotion0_Anim, itNesspkfirepillar_UnkMotion0_Phys, itNesspkfirepillar_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6864,8 +6917,9 @@ pub static STATES_IT_803F6B60: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F6B70`.
-pub static STATES_IT_803F6B70: [ItemState; 3] = [
+/// `it_803F6B70`: the states of `ItKind::NessPKFlash`, `ItKind::KirbyNessPKFlash`.
+#[doc(alias("STATES_IT_803F6B70", "it_803F6B70"))]
+pub static STATES_NESS_PK_FLASH: [ItemState; 3] = [
     // 0: itNesspkflash_UnkMotion0_Anim, itNesspkflash_UnkMotion0_Phys, itNesspkflash_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6889,8 +6943,9 @@ pub static STATES_IT_803F6B70: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F6BC8`.
-pub static STATES_IT_803F6BC8: [ItemState; 1] = [
+/// `it_803F6BC8`: the states of `ItKind::NessPKThunder`.
+#[doc(alias("STATES_IT_803F6BC8", "it_803F6BC8"))]
+pub static STATES_NESS_PK_THUNDER: [ItemState; 1] = [
     // 0: itNesspkthunderball_UnkMotion0_Anim, itNesspkthunderball_UnkMotion0_Phys, itNesspkthunderball_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6900,8 +6955,9 @@ pub static STATES_IT_803F6BC8: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F6C08`.
-pub static STATES_IT_803F6C08: [ItemState; 1] = [
+/// `it_803F6C08`: the states of `ItKind::NessPKThunderTrail1`, `ItKind::NessPKThunderTrail2`, `ItKind::NessPKThunderTrail3`, `ItKind::NessPKThunderTrail4`.
+#[doc(alias("STATES_IT_803F6C08", "it_803F6C08"))]
+pub static STATES_NESS_PK_THUNDER_TRAIL1: [ItemState; 1] = [
     // 0: itNesspkthundertrail_UnkMotion0_Anim, itNesspkthundertrail_UnkMotion0_Phys, itNesspkthundertrail_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6911,8 +6967,9 @@ pub static STATES_IT_803F6C08: [ItemState; 1] = [
     },
 ];
 
-/// `ItemStateTable_KoopaFlame`.
-pub static STATES_ITEMSTATETABLE_KOOPAFLAME: [ItemState; 1] = [
+/// `ItemStateTable_KoopaFlame`: the states of `ItKind::BowserFlame`, `ItKind::KirbyBowserFlame`.
+#[doc(alias("STATES_ITEMSTATETABLE_KOOPAFLAME", "ItemStateTable_KoopaFlame"))]
+pub static STATES_BOWSER_FLAME: [ItemState; 1] = [
     // 0: itKoopaFlame_UnkMotion0_Anim, itKoopaFlame_UnkMotion0_Phys, itKoopaFlame_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6922,8 +6979,9 @@ pub static STATES_ITEMSTATETABLE_KOOPAFLAME: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F6C68`.
-pub static STATES_IT_803F6C68: [ItemState; 2] = [
+/// `it_803F6C68`: the states of `ItKind::NessBat`.
+#[doc(alias("STATES_IT_803F6C68", "it_803F6C68"))]
+pub static STATES_NESS_BAT: [ItemState; 2] = [
     // 0: itNessbat_UnkMotion0_Anim, itNessbat_UnkMotion0_Phys, itNessbat_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6940,8 +6998,9 @@ pub static STATES_IT_803F6C68: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F6C88`.
-pub static STATES_IT_803F6C88: [ItemState; 1] = [
+/// `it_803F6C88`: the states of `ItKind::KirbyCopyStar`.
+#[doc(alias("STATES_IT_803F6C88", "it_803F6C88"))]
+pub static STATES_KIRBY_COPY_STAR: [ItemState; 1] = [
     // 0: it_2ADA_UnkMotion0_Anim, it_2ADA_UnkMotion0_Phys, it_2ADA_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -6951,8 +7010,9 @@ pub static STATES_IT_803F6C88: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F6C98`.
-pub static STATES_IT_803F6C98: [ItemState; 1] = [
+/// `it_803F6C98`: the states of `ItKind::KirbyHammer`.
+#[doc(alias("STATES_IT_803F6C98", "it_803F6C98"))]
+pub static STATES_KIRBY_HAMMER: [ItemState; 1] = [
     // 0: -, -, -
     ItemState {
         anim_id: 0,
@@ -6962,8 +7022,9 @@ pub static STATES_IT_803F6C98: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F6CA8`.
-pub static STATES_IT_803F6CA8: [ItemState; 11] = [
+/// `it_803F6CA8`: the states of `ItKind::FoxBlaster`, `ItKind::FalcoBlaster`, `ItKind::KirbyFoxBlaster`, `ItKind::KirbyFalcoBlaster`.
+#[doc(alias("STATES_IT_803F6CA8", "it_803F6CA8"))]
+pub static STATES_FOX_BLASTER: [ItemState; 11] = [
     // 0: itFoxblaster_UnkMotion8_Anim, itFoxblaster_UnkMotion8_Phys, itFoxblaster_UnkMotion8_Coll
     ItemState {
         anim_id: 0,
@@ -7043,8 +7104,9 @@ pub static STATES_IT_803F6CA8: [ItemState; 11] = [
     },
 ];
 
-/// `it_803F6E98`.
-pub static STATES_IT_803F6E98: [ItemState; 7] = [
+/// `it_803F6E98`: the states of `ItKind::LinkBow`, `ItKind::YoungLinkBow`, `ItKind::KirbyLinkBow`, `ItKind::KirbyYoungLinkBow`.
+#[doc(alias("STATES_IT_803F6E98", "it_803F6E98"))]
+pub static STATES_LINK_BOW: [ItemState; 7] = [
     // 0: itLinkbow_UnkMotion5_Anim, itLinkbow_UnkMotion5_Phys, itLinkbow_UnkMotion5_Coll
     ItemState {
         anim_id: 0,
@@ -7096,8 +7158,9 @@ pub static STATES_IT_803F6E98: [ItemState; 7] = [
     },
 ];
 
-/// `it_803F6F40`.
-pub static STATES_IT_803F6F40: [ItemState; 1] = [
+/// `it_803F6F40`: the states of `ItKind::NessPKFlashExplosion`, `ItKind::KirbyNessPKFlashExplosion`.
+#[doc(alias("STATES_IT_803F6F40", "it_803F6F40"))]
+pub static STATES_NESS_PK_FLASH_EXPLOSION: [ItemState; 1] = [
     // 0: itNessPKFlashExplode_UnkMotion0_Anim, itNessPKFlashExplode_UnkMotion0_Phys, itNessPKFlashExplode_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7107,8 +7170,9 @@ pub static STATES_IT_803F6F40: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F6F50`.
-pub static STATES_IT_803F6F50: [ItemState; 5] = [
+/// `it_803F6F50`: the states of `ItKind::SheikNeedleThrown`, `ItKind::KirbySheikNeedleThrown`.
+#[doc(alias("STATES_IT_803F6F50", "it_803F6F50"))]
+pub static STATES_SHEIK_NEEDLE_THROWN: [ItemState; 5] = [
     // 0: itSeakneedlethrown_UnkMotion0_Anim, itSeakneedlethrown_UnkMotion0_Phys, itSeakneedlethrown_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7146,8 +7210,9 @@ pub static STATES_IT_803F6F50: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F70A8`.
-pub static STATES_IT_803F70A8: [ItemState; 1] = [
+/// `it_803F70A8`: the states of `ItKind::SheikNeedleHeld`, `ItKind::KirbySheikNeedleHeld`.
+#[doc(alias("STATES_IT_803F70A8", "it_803F70A8"))]
+pub static STATES_SHEIK_NEEDLE_HELD: [ItemState; 1] = [
     // 0: itSeakneedleheld_UnkMotion0_Anim, itSeakneedleheld_UnkMotion0_Phys, itSeakneedleheld_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -7157,8 +7222,9 @@ pub static STATES_IT_803F70A8: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F70B8`.
-pub static STATES_IT_803F70B8: [ItemState; 1] = [
+/// `it_803F70B8`: the states of `ItKind::SheikVanish`.
+#[doc(alias("STATES_IT_803F70B8", "it_803F70B8"))]
+pub static STATES_SHEIK_VANISH: [ItemState; 1] = [
     // 0: itSeakvanish_UnkMotion0_Anim, -, -
     ItemState {
         anim_id: 0,
@@ -7168,8 +7234,9 @@ pub static STATES_IT_803F70B8: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F70C8`.
-pub static STATES_IT_803F70C8: [ItemState; 3] = [
+/// `it_803F70C8`: the states of `ItKind::PikachuThunder`, `ItKind::PichuThunder`.
+#[doc(alias("STATES_IT_803F70C8", "it_803F70C8"))]
+pub static STATES_PIKACHU_THUNDER: [ItemState; 3] = [
     // 0: itPikachuthunder_UnkMotion0_Anim, -, -
     ItemState {
         anim_id: -1,
@@ -7193,8 +7260,9 @@ pub static STATES_IT_803F70C8: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F70F8`.
-pub static STATES_IT_803F70F8: [ItemState; 2] = [
+/// `it_803F70F8`: the states of `ItKind::MarioCape`, `ItKind::DrMarioSuperSheet`.
+#[doc(alias("STATES_IT_803F70F8", "it_803F70F8"))]
+pub static STATES_MARIO_CAPE: [ItemState; 2] = [
     // 0: itMariocape_UnkMotion1_Anim, -, -
     ItemState {
         anim_id: 0,
@@ -7211,8 +7279,9 @@ pub static STATES_IT_803F70F8: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F7118`.
-pub static STATES_IT_803F7118: [ItemState; 3] = [
+/// `it_803F7118`: the states of `ItKind::YoshiEggThrow`.
+#[doc(alias("STATES_IT_803F7118", "it_803F7118"))]
+pub static STATES_YOSHI_EGG_THROW: [ItemState; 3] = [
     // 0: -, -, -
     ItemState {
         anim_id: -1,
@@ -7236,8 +7305,9 @@ pub static STATES_IT_803F7118: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F7158`.
-pub static STATES_IT_803F7158: [ItemState; 1] = [
+/// `it_803F7158`: the states of `ItKind::YoshiStar`.
+#[doc(alias("STATES_IT_803F7158", "it_803F7158"))]
+pub static STATES_YOSHI_STAR: [ItemState; 1] = [
     // 0: itYoshistar_UnkMotion0_Anim, itYoshistar_UnkMotion0_Phys, itYoshistar_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7247,8 +7317,9 @@ pub static STATES_IT_803F7158: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F7190`.
-pub static STATES_IT_803F7190: [ItemState; 2] = [
+/// `it_803F7190`: the states of `ItKind::PikachuThunderJoltGround`, `ItKind::PichuThunderJoltGround`, `ItKind::KirbyPikachuThunderJoltGround`, `ItKind::KirbyPichuThunderJoltGround`.
+#[doc(alias("STATES_IT_803F7190", "it_803F7190"))]
+pub static STATES_PIKACHU_THUNDER_JOLT_GROUND: [ItemState; 2] = [
     // 0: itPikachutjoltground_UnkMotion0_Anim, itPikachutjoltground_UnkMotion0_Phys, itPikachutjoltground_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7265,8 +7336,9 @@ pub static STATES_IT_803F7190: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F71D8`.
-pub static STATES_IT_803F71D8: [ItemState; 1] = [
+/// `it_803F71D8`: the states of `ItKind::PikachuThunderJoltAir`, `ItKind::PichuThunderJoltAir`, `ItKind::KirbyPikachuThunderJoltAir`, `ItKind::KirbyPichuThunderJoltAir`.
+#[doc(alias("STATES_IT_803F71D8", "it_803F71D8"))]
+pub static STATES_PIKACHU_THUNDER_JOLT_AIR: [ItemState; 1] = [
     // 0: itPikachutjoltair_UnkMotion0_Anim, itPikachutjoltair_UnkMotion0_Phys, itPikachutjoltair_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7276,8 +7348,9 @@ pub static STATES_IT_803F71D8: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F7220`.
-pub static STATES_IT_803F7220: [ItemState; 4] = [
+/// `it_803F7220`: the states of `ItKind::SamusBomb`.
+#[doc(alias("STATES_IT_803F7220", "it_803F7220"))]
+pub static STATES_SAMUS_BOMB: [ItemState; 4] = [
     // 0: itSamusbomb_UnkMotion0_Anim, itSamusbomb_UnkMotion0_Phys, itSamusbomb_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7308,8 +7381,9 @@ pub static STATES_IT_803F7220: [ItemState; 4] = [
     },
 ];
 
-/// `it_803F7288`.
-pub static STATES_IT_803F7288: [ItemState; 9] = [
+/// `it_803F7288`: the states of `ItKind::SamusChargeShot`, `ItKind::KirbySamusChargeShot`.
+#[doc(alias("STATES_IT_803F7288", "it_803F7288"))]
+pub static STATES_SAMUS_CHARGE_SHOT: [ItemState; 9] = [
     // 0: itSamuschargeshot_UnkMotion0_Anim, itSamuschargeshot_UnkMotion0_Phys, itSamuschargeshot_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7375,8 +7449,9 @@ pub static STATES_IT_803F7288: [ItemState; 9] = [
     },
 ];
 
-/// `it_803F7340`.
-pub static STATES_IT_803F7340: [ItemState; 4] = [
+/// `it_803F7340`: the states of `ItKind::SamusMissile`.
+#[doc(alias("STATES_IT_803F7340", "it_803F7340"))]
+pub static STATES_SAMUS_MISSILE: [ItemState; 4] = [
     // 0: itSamusmissile_UnkMotion0_Anim, itSamusmissile_UnkMotion0_Phys, itSamusmissile_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7407,8 +7482,9 @@ pub static STATES_IT_803F7340: [ItemState; 4] = [
     },
 ];
 
-/// `it_803F73A8`.
-pub static STATES_IT_803F73A8: [ItemState; 9] = [
+/// `it_803F73A8`: the states of `ItKind::SamusGrappleBeam`.
+#[doc(alias("STATES_IT_803F73A8", "it_803F73A8"))]
+pub static STATES_SAMUS_GRAPPLE_BEAM: [ItemState; 9] = [
     // 0: -, itSamusgrapple_UnkMotion0_Phys, -
     ItemState {
         anim_id: -1,
@@ -7474,8 +7550,9 @@ pub static STATES_IT_803F73A8: [ItemState; 9] = [
     },
 ];
 
-/// `it_803F7438`.
-pub static STATES_IT_803F7438: [ItemState; 5] = [
+/// `it_803F7438`: the states of `ItKind::SheikChain`.
+#[doc(alias("STATES_IT_803F7438", "it_803F7438"))]
+pub static STATES_SHEIK_CHAIN: [ItemState; 5] = [
     // 0: itSeakchain_UnkMotion4_Anim, -, -
     ItemState {
         anim_id: -1,
@@ -7513,8 +7590,9 @@ pub static STATES_IT_803F7438: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F7488`.
-pub static STATES_IT_803F7488: [ItemState; 2] = [
+/// `it_803F7488`: the states of `ItKind::PeachBomberExplosion`.
+#[doc(alias("STATES_IT_803F7488", "it_803F7488"))]
+pub static STATES_PEACH_BOMBER_EXPLOSION: [ItemState; 2] = [
     // 0: itPeachexplode_UnkMotion1_Anim, -, -
     ItemState {
         anim_id: 0,
@@ -7531,8 +7609,9 @@ pub static STATES_IT_803F7488: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F74A8`.
-pub static STATES_IT_803F74A8: [ItemState; 5] = [
+/// `it_803F74A8`: the states of `ItKind::PeachTurnip`.
+#[doc(alias("STATES_IT_803F74A8", "it_803F74A8"))]
+pub static STATES_PEACH_TURNIP: [ItemState; 5] = [
     // 0: itPeachturnip_UnkMotion4_Anim, itPeachturnip_UnkMotion4_Phys, -
     ItemState {
         anim_id: 1,
@@ -7570,8 +7649,9 @@ pub static STATES_IT_803F74A8: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F74F8`.
-pub static STATES_IT_803F74F8: [ItemState; 3] = [
+/// `it_803F74F8`: the states of `ItKind::PeachParasol`.
+#[doc(alias("STATES_IT_803F74F8", "it_803F74F8"))]
+pub static STATES_PEACH_PARASOL: [ItemState; 3] = [
     // 0: itPeachparasol_UnkMotion2_Anim, -, -
     ItemState {
         anim_id: -1,
@@ -7595,8 +7675,9 @@ pub static STATES_IT_803F74F8: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F7528`.
-pub static STATES_IT_803F7528: [ItemState; 2] = [
+/// `it_803F7528`: the states of `ItKind::PeachToad`, `ItKind::KirbyPeachToad`.
+#[doc(alias("STATES_IT_803F7528", "it_803F7528"))]
+pub static STATES_PEACH_TOAD: [ItemState; 2] = [
     // 0: itPeachtoad_UnkMotion0_Anim, -, -
     ItemState {
         anim_id: 0,
@@ -7613,8 +7694,9 @@ pub static STATES_IT_803F7528: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F7548`.
-pub static STATES_IT_803F7548: [ItemState; 1] = [
+/// `it_803F7548`: the states of `ItKind::PeachToadSpore`, `ItKind::KirbyPeachToadSpore`.
+#[doc(alias("STATES_IT_803F7548", "it_803F7548"))]
+pub static STATES_PEACH_TOAD_SPORE: [ItemState; 1] = [
     // 0: itPeachtoadspore_UnkMotion0_Anim, itPeachtoadspore_UnkMotion0_Phys, -
     ItemState {
         anim_id: 0,
@@ -7624,8 +7706,9 @@ pub static STATES_IT_803F7548: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F7558`.
-pub static STATES_IT_803F7558: [ItemState; 4] = [
+/// `it_803F7558`: the states of `ItKind::NessYoyo`.
+#[doc(alias("STATES_IT_803F7558", "it_803F7558"))]
+pub static STATES_NESS_YOYO: [ItemState; 4] = [
     // 0: itNessyoyo_UnkMotion3_Anim, itNessyoyo_UnkMotion0_Phys, -
     ItemState {
         anim_id: -1,
@@ -7656,8 +7739,9 @@ pub static STATES_IT_803F7558: [ItemState; 4] = [
     },
 ];
 
-/// `it_803F75C0`.
-pub static STATES_IT_803F75C0: [ItemState; 1] = [
+/// `it_803F75C0`: the states of `ItKind::LuigiFireball`, `ItKind::KirbyLuigiFireball`.
+#[doc(alias("STATES_IT_803F75C0", "it_803F75C0"))]
+pub static STATES_LUIGI_FIREBALL: [ItemState; 1] = [
     // 0: itLuigifireball_UnkMotion0_Anim, itLuigifireball_UnkMotion0_Phys, itLuigifireball_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7667,8 +7751,9 @@ pub static STATES_IT_803F75C0: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F75D0`.
-pub static STATES_IT_803F75D0: [ItemState; 7] = [
+/// `it_803F75D0`: the states of `ItKind::DrMarioMegavitamin`, `ItKind::KirbyDrMarioMegavitamin`.
+#[doc(alias("STATES_IT_803F75D0", "it_803F75D0"))]
+pub static STATES_DR_MARIO_MEGAVITAMIN: [ItemState; 7] = [
     // 0: itDrMarioPill_UnkMotion0_Anim, itDrMarioPill_UnkMotion0_Phys, itDrmariopill_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7720,8 +7805,9 @@ pub static STATES_IT_803F75D0: [ItemState; 7] = [
     },
 ];
 
-/// `it_803F7668`.
-pub static STATES_IT_803F7668: [ItemState; 4] = [
+/// `it_803F7668`: the states of `ItKind::IceClimbersIceShot`, `ItKind::KirbyIceClimbersIceShot`.
+#[doc(alias("STATES_IT_803F7668", "it_803F7668"))]
+pub static STATES_ICE_CLIMBERS_ICE_SHOT: [ItemState; 4] = [
     // 0: itClimbersice_UnkMotion0_Anim, itClimbersice_UnkMotion0_Phys, itClimbersice_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -7752,8 +7838,9 @@ pub static STATES_IT_803F7668: [ItemState; 4] = [
     },
 ];
 
-/// `it_803F76A8`.
-pub static STATES_IT_803F76A8: [ItemState; 1] = [
+/// `it_803F76A8`: the states of `ItKind::IceClimbersBlizzard`.
+#[doc(alias("STATES_IT_803F76A8", "it_803F76A8"))]
+pub static STATES_ICE_CLIMBERS_BLIZZARD: [ItemState; 1] = [
     // 0: itClimbersBlizzard_UnkMotion0_Anim, itClimbersBlizzard_UnkMotion0_Phys, itClimbersBlizzard_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7763,8 +7850,9 @@ pub static STATES_IT_803F76A8: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F76B8`.
-pub static STATES_IT_803F76B8: [ItemState; 4] = [
+/// `it_803F76B8`: the states of `ItKind::IceClimbersBelayRope`.
+#[doc(alias("STATES_IT_803F76B8", "it_803F76B8"))]
+pub static STATES_ICE_CLIMBERS_BELAY_ROPE: [ItemState; 4] = [
     // 0: itClimbersstring_UnkMotion3_Anim, -, -
     ItemState {
         anim_id: -1,
@@ -7795,8 +7883,9 @@ pub static STATES_IT_803F76B8: [ItemState; 4] = [
     },
 ];
 
-/// `ItemStateTable_ZeldaDinFire`.
-pub static STATES_ITEMSTATETABLE_ZELDADINFIRE: [ItemState; 2] = [
+/// `ItemStateTable_ZeldaDinFire`: the states of `ItKind::ZeldaDinsFire`.
+#[doc(alias("STATES_ITEMSTATETABLE_ZELDADINFIRE", "ItemStateTable_ZeldaDinFire"))]
+pub static STATES_ZELDA_DINS_FIRE: [ItemState; 2] = [
     // 0: itZeldadinfire_UnkMotion0_Anim, itZeldadinfire_UnkMotion0_Phys, itZeldadinfire_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7813,8 +7902,9 @@ pub static STATES_ITEMSTATETABLE_ZELDADINFIRE: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F7740`.
-pub static STATES_IT_803F7740: [ItemState; 1] = [
+/// `it_803F7740`: the states of `ItKind::ZeldaDinsFireExplosion`.
+#[doc(alias("STATES_IT_803F7740", "it_803F7740"))]
+pub static STATES_ZELDA_DINS_FIRE_EXPLOSION: [ItemState; 1] = [
     // 0: itZeldadinfireexplode_UnkMotion0_Anim, itZeldadinfireexplode_UnkMotion0_Phys, itZeldadinfireexplode_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7824,8 +7914,9 @@ pub static STATES_IT_803F7740: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F7750`.
-pub static STATES_IT_803F7750: [ItemState; 1] = [
+/// `it_803F7750`: the states of `ItKind::MewtwoDisable`.
+#[doc(alias("STATES_IT_803F7750", "it_803F7750"))]
+pub static STATES_MEWTWO_DISABLE: [ItemState; 1] = [
     // 0: itMewtwodisable_UnkMotion0_Anim, itMewtwodisable_UnkMotion0_Phys, itMewtwodisable_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7835,8 +7926,9 @@ pub static STATES_IT_803F7750: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F7760`.
-pub static STATES_IT_803F7760: [ItemState; 18] = [
+/// `it_803F7760`: the states of `ItKind::MewtwoShadowBall`, `ItKind::KirbyMewtwoShadowBall`.
+#[doc(alias("STATES_IT_803F7760", "it_803F7760"))]
+pub static STATES_MEWTWO_SHADOW_BALL: [ItemState; 18] = [
     // 0: itMewtwoshadowball_UnkMotion0_Anim, itMewtwoshadowball_UnkMotion0_Phys, itMewtwoshadowball_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -7965,8 +8057,9 @@ pub static STATES_IT_803F7760: [ItemState; 18] = [
     },
 ];
 
-/// `it_803F7898`.
-pub static STATES_IT_803F7898: [ItemState; 4] = [
+/// `it_803F7898`: the states of `ItKind::GameAndWatchSprayer`.
+#[doc(alias("STATES_IT_803F7898", "it_803F7898"))]
+pub static STATES_GAME_AND_WATCH_SPRAYER: [ItemState; 4] = [
     // 0: itGamewatchGreenhouse_Motion3_Anim, -, -
     ItemState {
         anim_id: 0,
@@ -7997,8 +8090,9 @@ pub static STATES_IT_803F7898: [ItemState; 4] = [
     },
 ];
 
-/// `it_803F78D8`.
-pub static STATES_IT_803F78D8: [ItemState; 1] = [
+/// `it_803F78D8`: the states of `ItKind::GameAndWatchManhole`.
+#[doc(alias("STATES_IT_803F78D8", "it_803F78D8"))]
+pub static STATES_GAME_AND_WATCH_MANHOLE: [ItemState; 1] = [
     // 0: itGamewatchmanhole_UnkMotion0_Anim, -, -
     ItemState {
         anim_id: 0,
@@ -8008,8 +8102,9 @@ pub static STATES_IT_803F78D8: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F78E8`.
-pub static STATES_IT_803F78E8: [ItemState; 1] = [
+/// `it_803F78E8`: the states of `ItKind::GameAndWatchTorch`.
+#[doc(alias("STATES_IT_803F78E8", "it_803F78E8"))]
+pub static STATES_GAME_AND_WATCH_TORCH: [ItemState; 1] = [
     // 0: itGamewatchFire_Motion0_Anim, -, -
     ItemState {
         anim_id: 0,
@@ -8019,8 +8114,9 @@ pub static STATES_IT_803F78E8: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F78F8`.
-pub static STATES_IT_803F78F8: [ItemState; 2] = [
+/// `it_803F78F8`: the states of `ItKind::GameAndWatchParachute`.
+#[doc(alias("STATES_IT_803F78F8", "it_803F78F8"))]
+pub static STATES_GAME_AND_WATCH_PARACHUTE: [ItemState; 2] = [
     // 0: itGamewatchparachute_UnkMotion1_Anim, -, -
     ItemState {
         anim_id: 0,
@@ -8037,8 +8133,9 @@ pub static STATES_IT_803F78F8: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F7918`.
-pub static STATES_IT_803F7918: [ItemState; 2] = [
+/// `it_803F7918`: the states of `ItKind::GameAndWatchTurtle`.
+#[doc(alias("STATES_IT_803F7918", "it_803F7918"))]
+pub static STATES_GAME_AND_WATCH_TURTLE: [ItemState; 2] = [
     // 0: itGamewatchturtle_UnkMotion1_Anim, -, -
     ItemState {
         anim_id: 0,
@@ -8055,8 +8152,9 @@ pub static STATES_IT_803F7918: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F7938`.
-pub static STATES_IT_803F7938: [ItemState; 2] = [
+/// `it_803F7938`: the states of `ItKind::GameAndWatchSparky`.
+#[doc(alias("STATES_IT_803F7938", "it_803F7938"))]
+pub static STATES_GAME_AND_WATCH_SPARKY: [ItemState; 2] = [
     // 0: itGamewatchbreath_UnkMotion1_Anim, -, -
     ItemState {
         anim_id: 0,
@@ -8073,8 +8171,9 @@ pub static STATES_IT_803F7938: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F7958`.
-pub static STATES_IT_803F7958: [ItemState; 1] = [
+/// `it_803F7958`: the states of `ItKind::KirbyGameAndWatchPan`.
+#[doc(alias("STATES_IT_803F7958", "it_803F7958"))]
+pub static STATES_KIRBY_GAME_AND_WATCH_PAN: [ItemState; 1] = [
     // 0: itKirbygamewatchchefpan_UnkMotion0_Anim, -, -
     ItemState {
         anim_id: -1,
@@ -8084,8 +8183,9 @@ pub static STATES_IT_803F7958: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F7968`.
-pub static STATES_IT_803F7968: [ItemState; 1] = [
+/// `it_803F7968`: the states of `ItKind::GameAndWatchJudge`.
+#[doc(alias("STATES_IT_803F7968", "it_803F7968"))]
+pub static STATES_GAME_AND_WATCH_JUDGE: [ItemState; 1] = [
     // 0: itGamewatchjudge_UnkMotion0_Anim, -, -
     ItemState {
         anim_id: 0,
@@ -8095,8 +8195,9 @@ pub static STATES_IT_803F7968: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F79A0`.
-pub static STATES_IT_803F79A0: [ItemState; 2] = [
+/// `it_803F79A0`: the states of `ItKind::GameAndWatchOil`.
+#[doc(alias("STATES_IT_803F79A0", "it_803F79A0"))]
+pub static STATES_GAME_AND_WATCH_OIL: [ItemState; 2] = [
     // 0: itGamewatchpanic_UnkMotion1_Anim, -, -
     ItemState {
         anim_id: 0,
@@ -8113,8 +8214,9 @@ pub static STATES_IT_803F79A0: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F79C0`.
-pub static STATES_IT_803F79C0: [ItemState; 2] = [
+/// `it_803F79C0`: the states of `ItKind::GameAndWatchTrampoline`.
+#[doc(alias("STATES_IT_803F79C0", "it_803F79C0"))]
+pub static STATES_GAME_AND_WATCH_TRAMPOLINE: [ItemState; 2] = [
     // 0: itGamewatchrescue_UnkMotion1_Anim, itGamewatchrescue_UnkMotion1_Phys, itGamewatchrescue_UnkMotion1_Coll
     ItemState {
         anim_id: 0,
@@ -8131,8 +8233,9 @@ pub static STATES_IT_803F79C0: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F79E0`.
-pub static STATES_IT_803F79E0: [ItemState; 2] = [
+/// `it_803F79E0`: the states of `ItKind::GameAndWatchSausage`, `ItKind::KirbyGameAndWatchSausage`.
+#[doc(alias("STATES_IT_803F79E0", "it_803F79E0"))]
+pub static STATES_GAME_AND_WATCH_SAUSAGE: [ItemState; 2] = [
     // 0: itGamewatchchef_UnkMotion0_Anim, itGamewatchchef_UnkMotion0_Phys, itGamewatchchef_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8149,8 +8252,9 @@ pub static STATES_IT_803F79E0: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F7A28`.
-pub static STATES_IT_803F7A28: [ItemState; 2] = [
+/// `it_803F7A28`: the states of `ItKind::YoungLinkMilk`.
+#[doc(alias("STATES_IT_803F7A28", "it_803F7A28"))]
+pub static STATES_YOUNG_LINK_MILK: [ItemState; 2] = [
     // 0: itClinkmilk_UnkMotion1_Anim, itClinkmilk_UnkMotion1_Phys, itClinkmilk_UnkMotion1_Coll
     ItemState {
         anim_id: 0,
@@ -8167,8 +8271,9 @@ pub static STATES_IT_803F7A28: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F7A48`.
-pub static STATES_IT_803F7A48: [ItemState; 5] = [
+/// `it_803F7A48`: the states of `ItKind::Goldeen`.
+#[doc(alias("STATES_IT_803F7A48", "it_803F7A48"))]
+pub static STATES_GOLDEEN: [ItemState; 5] = [
     // 0: itTosakinto_UnkMotion2_Anim, itTosakinto_UnkMotion2_Phys, itTosakinto_UnkMotion2_Coll
     ItemState {
         anim_id: 0,
@@ -8206,8 +8311,9 @@ pub static STATES_IT_803F7A48: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F7A98`.
-pub static STATES_IT_803F7A98: [ItemState; 3] = [
+/// `it_803F7A98`: the states of `ItKind::Chikorita`.
+#[doc(alias("STATES_IT_803F7A98", "it_803F7A98"))]
+pub static STATES_CHIKORITA: [ItemState; 3] = [
     // 0: itChicorita_UnkMotion0_Anim, itChicorita_UnkMotion0_Phys, itChicorita_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8231,8 +8337,9 @@ pub static STATES_IT_803F7A98: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F7AC8`.
-pub static STATES_IT_803F7AC8: [ItemState; 1] = [
+/// `it_803F7AC8`: the states of `ItKind::ChikoritaLeaf`.
+#[doc(alias("STATES_IT_803F7AC8", "it_803F7AC8"))]
+pub static STATES_CHIKORITA_LEAF: [ItemState; 1] = [
     // 0: itChicoritaleaf_UnkMotion0_Anim, itChicoritaleaf_UnkMotion0_Phys, itChicoritaleaf_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8242,8 +8349,9 @@ pub static STATES_IT_803F7AC8: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F7AD8`.
-pub static STATES_IT_803F7AD8: [ItemState; 3] = [
+/// `it_803F7AD8`: the states of `ItKind::Snorlax`.
+#[doc(alias("STATES_IT_803F7AD8", "it_803F7AD8"))]
+pub static STATES_SNORLAX: [ItemState; 3] = [
     // 0: itKabigon_UnkMotion0_Anim, itKabigon_UnkMotion0_Phys, itKabigon_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8267,8 +8375,9 @@ pub static STATES_IT_803F7AD8: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F7B08`.
-pub static STATES_IT_803F7B08: [ItemState; 4] = [
+/// `it_803F7B08`: the states of `ItKind::Blastoise`.
+#[doc(alias("STATES_IT_803F7B08", "it_803F7B08"))]
+pub static STATES_BLASTOISE: [ItemState; 4] = [
     // 0: it_802CA5D8, it_802CA618, it_802CA654
     ItemState {
         anim_id: 0,
@@ -8299,8 +8408,9 @@ pub static STATES_IT_803F7B08: [ItemState; 4] = [
     },
 ];
 
-/// `it_803F7B48`.
-pub static STATES_IT_803F7B48: [ItemState; 1] = [
+/// `it_803F7B48`: the states of `ItKind::BlastoiseHydroPump`.
+#[doc(alias("STATES_IT_803F7B48", "it_803F7B48"))]
+pub static STATES_BLASTOISE_HYDRO_PUMP: [ItemState; 1] = [
     // 0: it_802CAE60, it_802CAE94, it_802CAFB4
     ItemState {
         anim_id: 0,
@@ -8310,8 +8420,9 @@ pub static STATES_IT_803F7B48: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F7B58`.
-pub static STATES_IT_803F7B58: [ItemState; 3] = [
+/// `it_803F7B58`: the states of `ItKind::Weezing`.
+#[doc(alias("STATES_IT_803F7B58", "it_803F7B58"))]
+pub static STATES_WEEZING: [ItemState; 3] = [
     // 0: it_802CB118, it_802CB14C, it_802CB150
     ItemState {
         anim_id: 0,
@@ -8335,8 +8446,9 @@ pub static STATES_IT_803F7B58: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F7BB0`.
-pub static STATES_IT_803F7BB0: [ItemState; 1] = [
+/// `it_803F7BB0`: the states of `ItKind::WeezingGas1`, `ItKind::WeezingGas2`.
+#[doc(alias("STATES_IT_803F7BB0", "it_803F7BB0"))]
+pub static STATES_WEEZING_GAS1: [ItemState; 1] = [
     // 0: it_802CB810, it_802CB844, it_802CB8A4
     ItemState {
         anim_id: 0,
@@ -8346,8 +8458,9 @@ pub static STATES_IT_803F7BB0: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F7BC0`.
-pub static STATES_IT_803F7BC0: [ItemState; 4] = [
+/// `it_803F7BC0`: the states of `ItKind::Charizard`.
+#[doc(alias("STATES_IT_803F7BC0", "it_803F7BC0"))]
+pub static STATES_CHARIZARD: [ItemState; 4] = [
     // 0: it_802CC160, it_802CC184, it_802CC1A4
     ItemState {
         anim_id: 0,
@@ -8378,8 +8491,9 @@ pub static STATES_IT_803F7BC0: [ItemState; 4] = [
     },
 ];
 
-/// `it_803F7C00`.
-pub static STATES_IT_803F7C00: [ItemState; 1] = [
+/// `it_803F7C00`: the states of `ItKind::CharizardFlame1`, `ItKind::CharizardFlame2`, `ItKind::CharizardFlame3`, `ItKind::CharizardFlame4`.
+#[doc(alias("STATES_IT_803F7C00", "it_803F7C00"))]
+pub static STATES_CHARIZARD_FLAME1: [ItemState; 1] = [
     // 0: it_802CC650, it_802CC684, it_802CC6C4
     ItemState {
         anim_id: 0,
@@ -8389,8 +8503,9 @@ pub static STATES_IT_803F7C00: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F7C10`.
-pub static STATES_IT_803F7C10: [ItemState; 3] = [
+/// `it_803F7C10`: the states of `ItKind::Moltres`.
+#[doc(alias("STATES_IT_803F7C10", "it_803F7C10"))]
+pub static STATES_MOLTRES: [ItemState; 3] = [
     // 0: itFire_UnkMotion0_Anim, itFire_UnkMotion0_Phys, itFire_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8414,8 +8529,9 @@ pub static STATES_IT_803F7C10: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F7C40`.
-pub static STATES_IT_803F7C40: [ItemState; 3] = [
+/// `it_803F7C40`: the states of `ItKind::Zapdos`.
+#[doc(alias("STATES_IT_803F7C40", "it_803F7C40"))]
+pub static STATES_ZAPDOS: [ItemState; 3] = [
     // 0: itThunder_UnkMotion0_Anim, itThunder_UnkMotion0_Phys, itThunder_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8439,8 +8555,9 @@ pub static STATES_IT_803F7C40: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F7C70`.
-pub static STATES_IT_803F7C70: [ItemState; 3] = [
+/// `it_803F7C70`: the states of `ItKind::Articuno`.
+#[doc(alias("STATES_IT_803F7C70", "it_803F7C70"))]
+pub static STATES_ARTICUNO: [ItemState; 3] = [
     // 0: itFreezer_UnkMotion0_Anim, itFreezer_UnkMotion0_Phys, itFreezer_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8464,8 +8581,9 @@ pub static STATES_IT_803F7C70: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F7CA0`.
-pub static STATES_IT_803F7CA0: [ItemState; 3] = [
+/// `it_803F7CA0`: the states of `ItKind::Wobbuffet`.
+#[doc(alias("STATES_IT_803F7CA0", "it_803F7CA0"))]
+pub static STATES_WOBBUFFET: [ItemState; 3] = [
     // 0: itSonans_UnkMotion0_Anim, itSonans_UnkMotion0_Phys, itSonans_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8489,8 +8607,9 @@ pub static STATES_IT_803F7CA0: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F7CF8`.
-pub static STATES_IT_803F7CF8: [ItemState; 4] = [
+/// `it_803F7CF8`: the states of `ItKind::Scizor`.
+#[doc(alias("STATES_IT_803F7CF8", "it_803F7CF8"))]
+pub static STATES_SCIZOR: [ItemState; 4] = [
     // 0: itHassam_UnkMotion0_Anim, itHassam_UnkMotion0_Phys, itHassam_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8521,8 +8640,9 @@ pub static STATES_IT_803F7CF8: [ItemState; 4] = [
     },
 ];
 
-/// `it_803F7D60`.
-pub static STATES_IT_803F7D60: [ItemState; 4] = [
+/// `it_803F7D60`: the states of `ItKind::Unown`.
+#[doc(alias("STATES_IT_803F7D60", "it_803F7D60"))]
+pub static STATES_UNOWN: [ItemState; 4] = [
     // 0: itUnknown_UnkMotion0_Anim, itUnknown_UnkMotion0_Phys, itUnknown_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8553,8 +8673,9 @@ pub static STATES_IT_803F7D60: [ItemState; 4] = [
     },
 ];
 
-/// `it_803F7D60+0x30`.
-pub static STATES_IT_803F7D60_30: [ItemState; 1] = [
+/// `it_803F7D60+0x30`: the states of `ItKind::UnownSwarm`.
+#[doc(alias("STATES_IT_803F7D60_30"))]
+pub static STATES_UNOWN_SWARM: [ItemState; 1] = [
     // 0: it_802CF120, it_802CF154, it_802CF3D8
     ItemState {
         anim_id: 0,
@@ -8564,8 +8685,9 @@ pub static STATES_IT_803F7D60_30: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F7DC8`.
-pub static STATES_IT_803F7DC8: [ItemState; 2] = [
+/// `it_803F7DC8`: the states of `ItKind::Entei`.
+#[doc(alias("STATES_IT_803F7DC8", "it_803F7DC8"))]
+pub static STATES_ENTEI: [ItemState; 2] = [
     // 0: itEntei_UnkMotion0_Anim, itEntei_UnkMotion0_Phys, itEntei_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8582,8 +8704,9 @@ pub static STATES_IT_803F7DC8: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F7DE8`.
-pub static STATES_IT_803F7DE8: [ItemState; 2] = [
+/// `it_803F7DE8`: the states of `ItKind::Raikou`.
+#[doc(alias("STATES_IT_803F7DE8", "it_803F7DE8"))]
+pub static STATES_RAIKOU: [ItemState; 2] = [
     // 0: itRaikou_UnkMotion0_Anim, itRaikou_UnkMotion0_Phys, itRaikou_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8600,8 +8723,9 @@ pub static STATES_IT_803F7DE8: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F7E08`.
-pub static STATES_IT_803F7E08: [ItemState; 2] = [
+/// `it_803F7E08`: the states of `ItKind::Suicune`.
+#[doc(alias("STATES_IT_803F7E08", "it_803F7E08"))]
+pub static STATES_SUICUNE: [ItemState; 2] = [
     // 0: itSuikun_UnkMotion0_Anim, itSuikun_UnkMotion0_Phys, itSuikun_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8618,8 +8742,9 @@ pub static STATES_IT_803F7E08: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F7E28`.
-pub static STATES_IT_803F7E28: [ItemState; 5] = [
+/// `it_803F7E28`: the states of `ItKind::Bellossom`.
+#[doc(alias("STATES_IT_803F7E28", "it_803F7E28"))]
+pub static STATES_BELLOSSOM: [ItemState; 5] = [
     // 0: itKireihana_UnkMotion0_Anim, itKireihana_UnkMotion0_Phys, itKireihana_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8657,8 +8782,9 @@ pub static STATES_IT_803F7E28: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F7E78`.
-pub static STATES_IT_803F7E78: [ItemState; 7] = [
+/// `it_803F7E78`: the states of `ItKind::Electrode`.
+#[doc(alias("STATES_IT_803F7E78", "it_803F7E78"))]
+pub static STATES_ELECTRODE: [ItemState; 7] = [
     // 0: itMarumine_UnkMotion0_Anim, itMarumine_UnkMotion0_Phys, itMarumine_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8710,8 +8836,9 @@ pub static STATES_IT_803F7E78: [ItemState; 7] = [
     },
 ];
 
-/// `it_803F7EE8`.
-pub static STATES_IT_803F7EE8: [ItemState; 6] = [
+/// `it_803F7EE8`: the states of `ItKind::Lugia`.
+#[doc(alias("STATES_IT_803F7EE8", "it_803F7EE8"))]
+pub static STATES_LUGIA: [ItemState; 6] = [
     // 0: it_802D1DB4, it_802D1DD8, it_802D1E64
     ItemState {
         anim_id: 0,
@@ -8756,8 +8883,9 @@ pub static STATES_IT_803F7EE8: [ItemState; 6] = [
     },
 ];
 
-/// `it_803F7F48`.
-pub static STATES_IT_803F7F48: [ItemState; 1] = [
+/// `it_803F7F48`: the states of `ItKind::LugiaAeroblast`, `ItKind::LugiaAeroblast2`, `ItKind::LugiaAeroblast3`.
+#[doc(alias("STATES_IT_803F7F48", "it_803F7F48"))]
+pub static STATES_LUGIA_AEROBLAST: [ItemState; 1] = [
     // 0: it_802D246C, it_802D24A0, it_802D24FC
     ItemState {
         anim_id: 0,
@@ -8767,8 +8895,9 @@ pub static STATES_IT_803F7F48: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F7F58`.
-pub static STATES_IT_803F7F58: [ItemState; 6] = [
+/// `it_803F7F58`: the states of `ItKind::HoOh`.
+#[doc(alias("STATES_IT_803F7F58", "it_803F7F58"))]
+pub static STATES_HO_OH: [ItemState; 6] = [
     // 0: it_802D2C54, it_802D2C78, it_802D2D04
     ItemState {
         anim_id: 0,
@@ -8813,8 +8942,9 @@ pub static STATES_IT_803F7F58: [ItemState; 6] = [
     },
 ];
 
-/// `it_803F7FB8`.
-pub static STATES_IT_803F7FB8: [ItemState; 1] = [
+/// `it_803F7FB8`: the states of `ItKind::HoOhSacredFire`.
+#[doc(alias("STATES_IT_803F7FB8", "it_803F7FB8"))]
+pub static STATES_HO_OH_SACRED_FIRE: [ItemState; 1] = [
     // 0: it_802D2F3C, it_802D2F70, it_802D2FE8
     ItemState {
         anim_id: 0,
@@ -8824,8 +8954,9 @@ pub static STATES_IT_803F7FB8: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F7FC8`.
-pub static STATES_IT_803F7FC8: [ItemState; 3] = [
+/// `it_803F7FC8`: the states of `ItKind::Ditto`.
+#[doc(alias("STATES_IT_803F7FC8", "it_803F7FC8"))]
+pub static STATES_DITTO: [ItemState; 3] = [
     // 0: itMetamon_UnkMotion0_Anim, itMetamon_UnkMotion0_Phys, itMetamon_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8849,8 +8980,9 @@ pub static STATES_IT_803F7FC8: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F7FF8`.
-pub static STATES_IT_803F7FF8: [ItemState; 6] = [
+/// `it_803F7FF8`: the states of `ItKind::Clefairy`.
+#[doc(alias("STATES_IT_803F7FF8", "it_803F7FF8"))]
+pub static STATES_CLEFAIRY: [ItemState; 6] = [
     // 0: itPippi_UnkMotion0_Anim, itPippi_UnkMotion0_Phys, itPippi_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8895,8 +9027,9 @@ pub static STATES_IT_803F7FF8: [ItemState; 6] = [
     },
 ];
 
-/// `it_803F8058`.
-pub static STATES_IT_803F8058: [ItemState; 7] = [
+/// `it_803F8058`: the states of `ItKind::Togepi`.
+#[doc(alias("STATES_IT_803F8058", "it_803F8058"))]
+pub static STATES_TOGEPI: [ItemState; 7] = [
     // 0: itTogepy_UnkMotion0_Anim, itTogepy_UnkMotion0_Phys, itTogepy_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8948,8 +9081,9 @@ pub static STATES_IT_803F8058: [ItemState; 7] = [
     },
 ];
 
-/// `it_803F80C8`.
-pub static STATES_IT_803F80C8: [ItemState; 3] = [
+/// `it_803F80C8`: the states of `ItKind::Mew`.
+#[doc(alias("STATES_IT_803F80C8", "it_803F80C8"))]
+pub static STATES_MEW: [ItemState; 3] = [
     // 0: itMew_UnkMotion0_Anim, itMew_UnkMotion0_Phys, itMew_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8973,8 +9107,9 @@ pub static STATES_IT_803F80C8: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F80F8`.
-pub static STATES_IT_803F80F8: [ItemState; 3] = [
+/// `it_803F80F8`: the states of `ItKind::Celebi`.
+#[doc(alias("STATES_IT_803F80F8", "it_803F80F8"))]
+pub static STATES_CELEBI: [ItemState; 3] = [
     // 0: itCerebi_UnkMotion0_Anim, itCerebi_UnkMotion0_Phys, itCerebi_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -8998,8 +9133,9 @@ pub static STATES_IT_803F80F8: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F8128`.
-pub static STATES_IT_803F8128: [ItemState; 3] = [
+/// `it_803F8128`: the states of `ItKind::Staryu`.
+#[doc(alias("STATES_IT_803F8128", "it_803F8128"))]
+pub static STATES_STARYU: [ItemState; 3] = [
     // 0: it_802D4564, it_802D472C, it_802D48A8
     ItemState {
         anim_id: 0,
@@ -9023,8 +9159,9 @@ pub static STATES_IT_803F8128: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F8180`.
-pub static STATES_IT_803F8180: [ItemState; 1] = [
+/// `it_803F8180`: the states of `ItKind::StaryuStar`.
+#[doc(alias("STATES_IT_803F8180", "it_803F8180"))]
+pub static STATES_STARYU_STAR: [ItemState; 1] = [
     // 0: it_802D4FFC, it_802D5044, it_802D5048
     ItemState {
         anim_id: 0,
@@ -9034,8 +9171,9 @@ pub static STATES_IT_803F8180: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F8190`.
-pub static STATES_IT_803F8190: [ItemState; 7] = [
+/// `it_803F8190`: the states of `ItKind::Chansey`.
+#[doc(alias("STATES_IT_803F8190", "it_803F8190"))]
+pub static STATES_CHANSEY: [ItemState; 7] = [
     // 0: it_802D55DC, it_802D5600, it_802D5620
     ItemState {
         anim_id: -1,
@@ -9087,8 +9225,9 @@ pub static STATES_IT_803F8190: [ItemState; 7] = [
     },
 ];
 
-/// `it_803F8200`.
-pub static STATES_IT_803F8200: [ItemState; 5] = [
+/// `it_803F8200`: the states of `ItKind::ChanseyEgg`.
+#[doc(alias("STATES_IT_803F8200", "it_803F8200"))]
+pub static STATES_CHANSEY_EGG: [ItemState; 5] = [
     // 0: it_802D5884, it_802D58BC, it_802D58C0
     ItemState {
         anim_id: -1,
@@ -9126,8 +9265,9 @@ pub static STATES_IT_803F8200: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F8250`.
-pub static STATES_IT_803F8250: [ItemState; 2] = [
+/// `it_803F8250`: the states of `ItKind::Porygon2`.
+#[doc(alias("STATES_IT_803F8250", "it_803F8250"))]
+pub static STATES_PORYGON2: [ItemState; 2] = [
     // 0: itPorygon2_UnkMotion0_Anim, itPorygon2_UnkMotion0_Phys, itPorygon2_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -9144,8 +9284,9 @@ pub static STATES_IT_803F8250: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F8270`.
-pub static STATES_IT_803F8270: [ItemState; 3] = [
+/// `it_803F8270`: the states of `ItKind::Cyndaquil`.
+#[doc(alias("STATES_IT_803F8270", "it_803F8270"))]
+pub static STATES_CYNDAQUIL: [ItemState; 3] = [
     // 0: it_802D5EC8, it_802D5EEC, it_802D5F0C
     ItemState {
         anim_id: -1,
@@ -9169,8 +9310,9 @@ pub static STATES_IT_803F8270: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F82A0`.
-pub static STATES_IT_803F82A0: [ItemState; 1] = [
+/// `it_803F82A0`: the states of `ItKind::CyndaquilFlame`.
+#[doc(alias("STATES_IT_803F82A0", "it_803F82A0"))]
+pub static STATES_CYNDAQUIL_FLAME: [ItemState; 1] = [
     // 0: it_802D66F8, it_802D6740, it_802D6798
     ItemState {
         anim_id: 0,
@@ -9180,8 +9322,9 @@ pub static STATES_IT_803F82A0: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F82B0`.
-pub static STATES_IT_803F82B0: [ItemState; 4] = [
+/// `it_803F82B0`: the states of `ItKind::Marill`.
+#[doc(alias("STATES_IT_803F82B0", "it_803F82B0"))]
+pub static STATES_MARILL: [ItemState; 4] = [
     // 0: itMaril_UnkMotion0_Anim, itMaril_UnkMotion0_Phys, itMaril_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -9212,8 +9355,9 @@ pub static STATES_IT_803F82B0: [ItemState; 4] = [
     },
 ];
 
-/// `it_803F82F0`.
-pub static STATES_IT_803F82F0: [ItemState; 3] = [
+/// `it_803F82F0`: the states of `ItKind::Venusaur`.
+#[doc(alias("STATES_IT_803F82F0", "it_803F82F0"))]
+pub static STATES_VENUSAUR: [ItemState; 3] = [
     // 0: itFushigibana_UnkMotion0_Anim, itFushigibana_UnkMotion0_Phys, itFushigibana_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -9237,8 +9381,9 @@ pub static STATES_IT_803F82F0: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F8320`.
-pub static STATES_IT_803F8320: [ItemState; 12] = [
+/// `it_803F8320`: the states of `ItKind::Goomba`, `ItKind::OldGoomba`.
+#[doc(alias("STATES_IT_803F8320", "it_803F8320"))]
+pub static STATES_GOOMBA: [ItemState; 12] = [
     // 0: itOldkuri_UnkMotion0_Anim, itOldkuri_UnkMotion0_Phys, itOldkuri_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -9325,8 +9470,9 @@ pub static STATES_IT_803F8320: [ItemState; 12] = [
     },
 ];
 
-/// `it_803F83E0`.
-pub static STATES_IT_803F83E0: [ItemState; 1] = [
+/// `it_803F83E0`: the states of `ItKind::Target`.
+#[doc(alias("STATES_IT_803F83E0", "it_803F83E0"))]
+pub static STATES_TARGET: [ItemState; 1] = [
     // 0: itMato_UnkMotion0_Anim, itMato_UnkMotion0_Phys, itMato_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -9336,8 +9482,9 @@ pub static STATES_IT_803F83E0: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F83F0`.
-pub static STATES_IT_803F83F0: [ItemState; 5] = [
+/// `it_803F83F0`: the states of `ItKind::ShyGuy`.
+#[doc(alias("STATES_IT_803F83F0", "it_803F83F0"))]
+pub static STATES_SHY_GUY: [ItemState; 5] = [
     // 0: itHeiho_UnkMotion0_Anim, itHeiho_UnkMotion0_Phys, itHeiho_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -9375,8 +9522,9 @@ pub static STATES_IT_803F83F0: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F8468`.
-pub static STATES_IT_803F8468: [ItemState; 22] = [
+/// `it_803F8468`: the states of `ItKind::LikeLike`.
+#[doc(alias("STATES_IT_803F8468", "it_803F8468"))]
+pub static STATES_LIKE_LIKE: [ItemState; 22] = [
     // 0: itLikelike_UnkMotion0_Anim, itLikelike_UnkMotion0_Phys, itLikelike_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -9533,8 +9681,9 @@ pub static STATES_IT_803F8468: [ItemState; 22] = [
     },
 ];
 
-/// `it_803F85F0`.
-pub static STATES_IT_803F85F0: [ItemState; 11] = [
+/// `it_803F85F0`: the states of `ItKind::KoopaTroopa`.
+#[doc(alias("STATES_IT_803F85F0", "it_803F85F0"))]
+pub static STATES_KOOPA_TROOPA: [ItemState; 11] = [
     // 0: -, -, -
     ItemState {
         anim_id: 0,
@@ -9614,8 +9763,9 @@ pub static STATES_IT_803F85F0: [ItemState; 11] = [
     },
 ];
 
-/// `it_803F86C8`.
-pub static STATES_IT_803F86C8: [ItemState; 12] = [
+/// `it_803F86C8`: the states of `ItKind::KoopaGreenShell`.
+#[doc(alias("STATES_IT_803F86C8", "it_803F86C8"))]
+pub static STATES_KOOPA_GREEN_SHELL: [ItemState; 12] = [
     // 0: itZrshell_UnkMotion0_Anim, itZrshell_UnkMotion0_Phys, itZrshell_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -9702,8 +9852,9 @@ pub static STATES_IT_803F86C8: [ItemState; 12] = [
     },
 ];
 
-/// `it_803F87F0`.
-pub static STATES_IT_803F87F0: [ItemState; 13] = [
+/// `it_803F87F0`: the states of `ItKind::KoopaRedShell`.
+#[doc(alias("STATES_IT_803F87F0", "it_803F87F0"))]
+pub static STATES_KOOPA_RED_SHELL: [ItemState; 13] = [
     // 0: itZrshell_UnkMotion0_Anim, itZrshell_UnkMotion0_Phys, itZrshell_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -9797,8 +9948,9 @@ pub static STATES_IT_803F87F0: [ItemState; 13] = [
     },
 ];
 
-/// `it_803F88C0`.
-pub static STATES_IT_803F88C0: [ItemState; 8] = [
+/// `it_803F88C0`: the states of `ItKind::KoopaParatroopa`.
+#[doc(alias("STATES_IT_803F88C0", "it_803F88C0"))]
+pub static STATES_KOOPA_PARATROOPA: [ItemState; 8] = [
     // 0: -, -, -
     ItemState {
         anim_id: 0,
@@ -9857,8 +10009,9 @@ pub static STATES_IT_803F88C0: [ItemState; 8] = [
     },
 ];
 
-/// `it_803F8940`.
-pub static STATES_IT_803F8940: [ItemState; 5] = [
+/// `it_803F8940`: the states of `ItKind::KlapTrap`.
+#[doc(alias("STATES_IT_803F8940", "it_803F8940"))]
+pub static STATES_KLAP_TRAP: [ItemState; 5] = [
     // 0: itKlap_UnkMotion1_Anim, itKlap_UnkMotion1_Phys, itKlap_UnkMotion1_Coll
     ItemState {
         anim_id: 0,
@@ -9896,8 +10049,9 @@ pub static STATES_IT_803F8940: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F89C8`.
-pub static STATES_IT_803F89C8: [ItemState; 12] = [
+/// `it_803F89C8`: the states of `ItKind::Topi`, `ItKind::OldTopi`.
+#[doc(alias("STATES_IT_803F89C8", "it_803F89C8"))]
+pub static STATES_TOPI: [ItemState; 12] = [
     // 0: itOldottosea_UnkMotion0_Anim, itOldottosea_UnkMotion0_Phys, itOldottosea_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -9984,8 +10138,9 @@ pub static STATES_IT_803F89C8: [ItemState; 12] = [
     },
 ];
 
-/// `it_803F8A88`.
-pub static STATES_IT_803F8A88: [ItemState; 12] = [
+/// `it_803F8A88`: the states of `ItKind::PolarBear`.
+#[doc(alias("STATES_IT_803F8A88", "it_803F8A88"))]
+pub static STATES_POLAR_BEAR: [ItemState; 12] = [
     // 0: itWhitebea_UnkMotion0_Anim, itWhitebea_UnkMotion0_Phys, itWhitebea_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -10072,8 +10227,9 @@ pub static STATES_IT_803F8A88: [ItemState; 12] = [
     },
 ];
 
-/// `it_803F8B48`.
-pub static STATES_IT_803F8B48: [ItemState; 9] = [
+/// `it_803F8B48`: the states of `ItKind::Octorok`.
+#[doc(alias("STATES_IT_803F8B48", "it_803F8B48"))]
+pub static STATES_OCTOROK: [ItemState; 9] = [
     // 0: itOctarock_UnkMotion0_Anim, itOctarock_UnkMotion0_Phys, itOctarock_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -10139,8 +10295,9 @@ pub static STATES_IT_803F8B48: [ItemState; 9] = [
     },
 ];
 
-/// `it_803F8BD8`.
-pub static STATES_IT_803F8BD8: [ItemState; 3] = [
+/// `it_803F8BD8`: the states of `ItKind::VsCoin`.
+#[doc(alias("STATES_IT_803F8BD8", "it_803F8BD8"))]
+pub static STATES_VS_COIN: [ItemState; 3] = [
     // 0: it_2E5A_UnkMotion1_Anim, it_2E5A_UnkMotion1_Phys, it_2E5A_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -10164,8 +10321,9 @@ pub static STATES_IT_803F8BD8: [ItemState; 3] = [
     },
 ];
 
-/// `it_803F8C8C`.
-pub static STATES_IT_803F8C8C: [ItemState; 20] = [
+/// `it_803F8C8C`: the states of `ItKind::StageHurtbox`.
+#[doc(alias("STATES_IT_803F8C8C", "it_803F8C8C"))]
+pub static STATES_STAGE_HURTBOX: [ItemState; 20] = [
     // 0: -, it_2E6A_UnkMotion19_Phys, -
     ItemState {
         anim_id: 0,
@@ -10308,8 +10466,9 @@ pub static STATES_IT_803F8C8C: [ItemState; 20] = [
     },
 ];
 
-/// `it_803F8DE8`.
-pub static STATES_IT_803F8DE8: [ItemState; 6] = [
+/// `it_803F8DE8`: the states of `ItKind::ArwingLaser`.
+#[doc(alias("STATES_IT_803F8DE8", "it_803F8DE8"))]
+pub static STATES_ARWING_LASER: [ItemState; 6] = [
     // 0: itArwinglaser_UnkMotion2_Anim, itArwinglaser_UnkMotion2_Phys, itArwinglaser_UnkMotion2_Coll
     ItemState {
         anim_id: 0,
@@ -10354,8 +10513,9 @@ pub static STATES_IT_803F8DE8: [ItemState; 6] = [
     },
 ];
 
-/// `it_803F8E90`.
-pub static STATES_IT_803F8E90: [ItemState; 2] = [
+/// `it_803F8E90`: the states of `ItKind::OctorokStone`.
+#[doc(alias("STATES_IT_803F8E90", "it_803F8E90"))]
+pub static STATES_OCTOROK_STONE: [ItemState; 2] = [
     // 0: itOctarockstone_UnkMotion0_Anim, itOctarockstone_UnkMotion0_Phys, itOctarockstone_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -10372,8 +10532,9 @@ pub static STATES_IT_803F8E90: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F8EB0`.
-pub static STATES_IT_803F8EB0: [ItemState; 18] = [
+/// `it_803F8EB0`: the states of `ItKind::ReDead`.
+#[doc(alias("STATES_IT_803F8EB0", "it_803F8EB0"))]
+pub static STATES_RE_DEAD: [ItemState; 18] = [
     // 0: -, -, -
     ItemState {
         anim_id: 0,
@@ -10502,8 +10663,9 @@ pub static STATES_IT_803F8EB0: [ItemState; 18] = [
     },
 ];
 
-/// `it_803F8FD0`.
-pub static STATES_IT_803F8FD0: [ItemState; 2] = [
+/// `it_803F8FD0`: the states of `ItKind::GreatFoxLaser`.
+#[doc(alias("STATES_IT_803F8FD0", "it_803F8FD0"))]
+pub static STATES_GREAT_FOX_LASER: [ItemState; 2] = [
     // 0: itGreatfoxlaser_UnkMotion1_Anim, itGreatfoxlaser_UnkMotion1_Phys, -
     ItemState {
         anim_id: 0,
@@ -10520,8 +10682,9 @@ pub static STATES_IT_803F8FD0: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F9000`.
-pub static STATES_IT_803F9000: [ItemState; 13] = [
+/// `it_803F9000`: the states of `ItKind::Tingle`.
+#[doc(alias("STATES_IT_803F9000", "it_803F9000"))]
+pub static STATES_TINGLE: [ItemState; 13] = [
     // 0: itTincle_UnkMotion0_Anim, itTincle_UnkMotion0_Phys, itTincle_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -10615,8 +10778,9 @@ pub static STATES_IT_803F9000: [ItemState; 13] = [
     },
 ];
 
-/// `it_803F90D0`.
-pub static STATES_IT_803F90D0: [ItemState; 11] = [
+/// `it_803F90D0`: the states of `ItKind::Birdo`.
+#[doc(alias("STATES_IT_803F90D0", "it_803F90D0"))]
+pub static STATES_BIRDO: [ItemState; 11] = [
     // 0: itKyasarin_UnkMotion0_Anim, -, itKyasarin_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -10696,8 +10860,9 @@ pub static STATES_IT_803F90D0: [ItemState; 11] = [
     },
 ];
 
-/// `it_803F91D0`.
-pub static STATES_IT_803F91D0: [ItemState; 8] = [
+/// `it_803F91D0`: the states of `ItKind::WhispyApple`, `ItKind::WhispyHealApple`.
+#[doc(alias("STATES_IT_803F91D0", "it_803F91D0"))]
+pub static STATES_WHISPY_APPLE: [ItemState; 8] = [
     // 0: itWhispyapple_UnkMotion0_Anim, itWhispyapple_UnkMotion0_Phys, itWhispyapple_UnkMotion0_Coll
     ItemState {
         anim_id: 1,
@@ -10756,8 +10921,9 @@ pub static STATES_IT_803F91D0: [ItemState; 8] = [
     },
 ];
 
-/// `it_803F9260`.
-pub static STATES_IT_803F9260: [ItemState; 10] = [
+/// `it_803F9260`: the states of `ItKind::FlatZoneTool`.
+#[doc(alias("STATES_IT_803F9260", "it_803F9260"))]
+pub static STATES_FLAT_ZONE_TOOL: [ItemState; 10] = [
     // 0: itTools_UnkMotion4_Anim, itTools_UnkMotion4_Phys, itTools_UnkMotion4_Coll
     ItemState {
         anim_id: 0,
@@ -10830,8 +10996,9 @@ pub static STATES_IT_803F9260: [ItemState; 10] = [
     },
 ];
 
-/// `it_803F9328`.
-pub static STATES_IT_803F9328: [ItemState; 5] = [
+/// `it_803F9328`: the states of `ItKind::BirdoEgg`.
+#[doc(alias("STATES_IT_803F9328", "it_803F9328"))]
+pub static STATES_BIRDO_EGG: [ItemState; 5] = [
     // 0: -, -, itKyasarinegg_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -10869,8 +11036,9 @@ pub static STATES_IT_803F9328: [ItemState; 5] = [
     },
 ];
 
-/// `it_803F9378`.
-pub static STATES_IT_803F9378: [ItemState; 1] = [
+/// `it_803F9378`: the states of `ItKind::MasterHandLaser`, `ItKind::CrazyHandLaser`.
+#[doc(alias("STATES_IT_803F9378", "it_803F9378"))]
+pub static STATES_MASTER_HAND_LASER: [ItemState; 1] = [
     // 0: itMasterhandlaser_UnkMotion0_Anim, itMasterhandlaser_UnkMotion0_Phys, itMasterhandlaser_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -10880,8 +11048,9 @@ pub static STATES_IT_803F9378: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F9388`.
-pub static STATES_IT_803F9388: [ItemState; 2] = [
+/// `it_803F9388`: the states of `ItKind::MasterHandBullet`, `ItKind::CrazyHandBullet`.
+#[doc(alias("STATES_IT_803F9388", "it_803F9388"))]
+pub static STATES_MASTER_HAND_BULLET: [ItemState; 2] = [
     // 0: itMasterhandbullet_UnkMotion1_Anim, itMasterhandbullet_UnkMotion1_Phys, itMasterhandbullet_UnkMotion1_Coll
     ItemState {
         anim_id: 0,
@@ -10898,8 +11067,9 @@ pub static STATES_IT_803F9388: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F93A8`.
-pub static STATES_IT_803F93A8: [ItemState; 2] = [
+/// `it_803F93A8`: the states of `ItKind::CrazyHandBomb`.
+#[doc(alias("STATES_IT_803F93A8", "it_803F93A8"))]
+pub static STATES_CRAZY_HAND_BOMB: [ItemState; 2] = [
     // 0: itCrazyhandbomb_UnkMotion0_Anim, itCrazyhandbomb_UnkMotion0_Phys, itCrazyhandbomb_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -10916,8 +11086,9 @@ pub static STATES_IT_803F93A8: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F93C8`.
-pub static STATES_IT_803F93C8: [ItemState; 6] = [
+/// `it_803F93C8`: the states of `ItKind::Trophy`.
+#[doc(alias("STATES_IT_803F93C8", "it_803F93C8"))]
+pub static STATES_TROPHY: [ItemState; 6] = [
     // 0: itCoin_UnkMotion0_Anim, itCoin_UnkMotion0_Phys, itCoin_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -10962,8 +11133,9 @@ pub static STATES_IT_803F93C8: [ItemState; 6] = [
     },
 ];
 
-/// `it_803F9450`.
-pub static STATES_IT_803F9450: [ItemState; 2] = [
+/// `it_803F9450`: the states of an item Kirby's inhale holds.
+#[doc(alias("STATES_IT_803F9450", "it_803F9450"))]
+pub static STATES_KIRBY_INHALED: [ItemState; 2] = [
     // 0: itKirby_2F23_UnkMotion0_Anim, itKirby_2F23_UnkMotion0_Phys, itKirby_2F23_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -10980,8 +11152,9 @@ pub static STATES_IT_803F9450: [ItemState; 2] = [
     },
 ];
 
-/// `it_803F9470`.
-pub static STATES_IT_803F9470: [ItemState; 1] = [
+/// `it_803F9470`: the states of `ItKind::KirbySpitStar`.
+#[doc(alias("STATES_IT_803F9470", "it_803F9470"))]
+pub static STATES_KIRBY_SPIT_STAR: [ItemState; 1] = [
     // 0: it_2F28_UnkMotion0_Anim, it_2F28_UnkMotion0_Phys, it_2F28_UnkMotion0_Coll
     ItemState {
         anim_id: 0,
@@ -10991,8 +11164,9 @@ pub static STATES_IT_803F9470: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F9480`.
-pub static STATES_IT_803F9480: [ItemState; 1] = [
+/// `it_803F9480`: the states of an item Yoshi's tongue holds.
+#[doc(alias("STATES_IT_803F9480", "it_803F9480"))]
+pub static STATES_YOSHI_TONGUED: [ItemState; 1] = [
     // 0: it_2F2B_UnkMotion0_Anim, it_2F2B_UnkMotion0_Phys, it_2F2B_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -11002,8 +11176,9 @@ pub static STATES_IT_803F9480: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F9490`.
-pub static STATES_IT_803F9490: [ItemState; 1] = [
+/// `it_803F9490`: the states of an item Kirby's copy of Yoshi's tongue holds.
+#[doc(alias("STATES_IT_803F9490", "it_803F9490"))]
+pub static STATES_KIRBY_TONGUED: [ItemState; 1] = [
     // 0: itKirbyyoshispecialn_UnkMotion0_Anim, itKirbyyoshispecialn_UnkMotion0_Phys, itKirbyyoshispecialn_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -11013,8 +11188,9 @@ pub static STATES_IT_803F9490: [ItemState; 1] = [
     },
 ];
 
-/// `it_803F94A0`.
-pub static STATES_IT_803F94A0: [ItemState; 3] = [
+/// `it_803F94A0`: the states of `ItKind::YoshiEggLay`, `ItKind::KirbyYoshiEggLay`.
+#[doc(alias("STATES_IT_803F94A0", "it_803F94A0"))]
+pub static STATES_YOSHI_EGG_LAY: [ItemState; 3] = [
     // 0: it_27CF_UnkMotion0_Anim, it_27CF_UnkMotion0_Phys, it_27CF_UnkMotion0_Coll
     ItemState {
         anim_id: -1,
@@ -11040,180 +11216,180 @@ pub static STATES_IT_803F94A0: [ItemState; 3] = [
 
 /// Every state table, by its address.
 pub static STATE_TABLES: [(u32, &[ItemState]); 176] = [
-    (0x803f5468, &STATES_IT_803F5468),
-    (0x803f54d8, &STATES_IT_803F54D8),
-    (0x803f55d0, &STATES_IT_803F55D0),
-    (0x803f56c8, &STATES_IT_803F56C8),
-    (0x803f5740, &STATES_IT_803F5740),
-    (0x803f57a0, &STATES_IT_803F57A0),
-    (0x803f57b0, &STATES_IT_803F57B0),
-    (0x803f5800, &STATES_IT_803F5800),
-    (0x803f5850, &STATES_IT_803F5850),
-    (0x803f58e0, &STATES_IT_803F58E0),
-    (0x803f5988, &STATES_IT_803F5988),
-    (0x803f59f8, &STATES_IT_803F59F8),
-    (0x803f5ab0, &STATES_IT_803F5AB0),
-    (0x803f5ba8, &STATES_IT_803F5BA8),
-    (0x803f5c48, &STATES_IT_803F5C48),
-    (0x803f5cc8, &STATES_IT_803F5CC8),
-    (0x803f5d28, &STATES_IT_803F5D28),
-    (0x803f5db0, &STATES_IT_803F5DB0),
-    (0x803f5e00, &STATES_ITEMSTATETABLE_MSBOMB),
-    (0x803f5ea8, &STATES_ITEMSTATETABLE_FLIPPER),
-    (0x803f5f40, &STATES_IT_803F5F40),
-    (0x803f5f90, &STATES_IT_803F5F90),
-    (0x803f5ff0, &STATES_IT_803F5FF0),
-    (0x803f6090, &STATES_IT_803F6090),
-    (0x803f6110, &STATES_IT_803F6110),
-    (0x803f6130, &STATES_IT_803F6130),
-    (0x803f6150, &STATES_IT_803F6150),
-    (0x803f61b0, &STATES_IT_803F61B0),
-    (0x803f6220, &STATES_IT_803F6220),
-    (0x803f6270, &STATES_IT_803F6270),
-    (0x803f62c0, &STATES_IT_803F62C0),
-    (0x803f6310, &STATES_IT_803F6310),
-    (0x803f6370, &STATES_IT_803F6370),
-    (0x803f63c0, &STATES_IT_803F63C0),
-    (0x803f6488, &STATES_IT_803F6488),
-    (0x803f64f8, &STATES_IT_803F64F8),
-    (0x803f6530, &STATES_IT_803F6530),
-    (0x803f6568, &STATES_IT_803F6568),
-    (0x803f6630, &STATES_IT_803F6630),
-    (0x803f6640, &STATES_IT_803F6640),
-    (0x803f6680, &STATES_IT_803F6680),
-    (0x803f66c8, &STATES_IT_803F66C8),
-    (0x803f6728, &STATES_IT_803F6728),
-    (0x803f6788, &STATES_IT_803F6788),
-    (0x803f6798, &STATES_IT_803F6798),
-    (0x803f67d0, &STATES_IT_803F67D0),
-    (0x803f6818, &STATES_IT_803F6818),
-    (0x803f6888, &STATES_IT_803F6888),
-    (0x803f6920, &STATES_IT_803F6920),
-    (0x803f6998, &STATES_IT_803F6998),
-    (0x803f6a28, &STATES_IT_803F6A28),
-    (0x803f6b28, &STATES_IT_803F6B28),
-    (0x803f6b60, &STATES_IT_803F6B60),
-    (0x803f6b70, &STATES_IT_803F6B70),
-    (0x803f6bc8, &STATES_IT_803F6BC8),
-    (0x803f6c08, &STATES_IT_803F6C08),
-    (0x803f6c58, &STATES_ITEMSTATETABLE_KOOPAFLAME),
-    (0x803f6c68, &STATES_IT_803F6C68),
-    (0x803f6c88, &STATES_IT_803F6C88),
-    (0x803f6c98, &STATES_IT_803F6C98),
-    (0x803f6ca8, &STATES_IT_803F6CA8),
-    (0x803f6e98, &STATES_IT_803F6E98),
-    (0x803f6f40, &STATES_IT_803F6F40),
-    (0x803f6f50, &STATES_IT_803F6F50),
-    (0x803f70a8, &STATES_IT_803F70A8),
-    (0x803f70b8, &STATES_IT_803F70B8),
-    (0x803f70c8, &STATES_IT_803F70C8),
-    (0x803f70f8, &STATES_IT_803F70F8),
-    (0x803f7118, &STATES_IT_803F7118),
-    (0x803f7158, &STATES_IT_803F7158),
-    (0x803f7190, &STATES_IT_803F7190),
-    (0x803f71d8, &STATES_IT_803F71D8),
-    (0x803f7220, &STATES_IT_803F7220),
-    (0x803f7288, &STATES_IT_803F7288),
-    (0x803f7340, &STATES_IT_803F7340),
-    (0x803f73a8, &STATES_IT_803F73A8),
-    (0x803f7438, &STATES_IT_803F7438),
-    (0x803f7488, &STATES_IT_803F7488),
-    (0x803f74a8, &STATES_IT_803F74A8),
-    (0x803f74f8, &STATES_IT_803F74F8),
-    (0x803f7528, &STATES_IT_803F7528),
-    (0x803f7548, &STATES_IT_803F7548),
-    (0x803f7558, &STATES_IT_803F7558),
-    (0x803f75c0, &STATES_IT_803F75C0),
-    (0x803f75d0, &STATES_IT_803F75D0),
-    (0x803f7668, &STATES_IT_803F7668),
-    (0x803f76a8, &STATES_IT_803F76A8),
-    (0x803f76b8, &STATES_IT_803F76B8),
-    (0x803f76f8, &STATES_ITEMSTATETABLE_ZELDADINFIRE),
-    (0x803f7740, &STATES_IT_803F7740),
-    (0x803f7750, &STATES_IT_803F7750),
-    (0x803f7760, &STATES_IT_803F7760),
-    (0x803f7898, &STATES_IT_803F7898),
-    (0x803f78d8, &STATES_IT_803F78D8),
-    (0x803f78e8, &STATES_IT_803F78E8),
-    (0x803f78f8, &STATES_IT_803F78F8),
-    (0x803f7918, &STATES_IT_803F7918),
-    (0x803f7938, &STATES_IT_803F7938),
-    (0x803f7958, &STATES_IT_803F7958),
-    (0x803f7968, &STATES_IT_803F7968),
-    (0x803f79a0, &STATES_IT_803F79A0),
-    (0x803f79c0, &STATES_IT_803F79C0),
-    (0x803f79e0, &STATES_IT_803F79E0),
-    (0x803f7a28, &STATES_IT_803F7A28),
-    (0x803f7a48, &STATES_IT_803F7A48),
-    (0x803f7a98, &STATES_IT_803F7A98),
-    (0x803f7ac8, &STATES_IT_803F7AC8),
-    (0x803f7ad8, &STATES_IT_803F7AD8),
-    (0x803f7b08, &STATES_IT_803F7B08),
-    (0x803f7b48, &STATES_IT_803F7B48),
-    (0x803f7b58, &STATES_IT_803F7B58),
-    (0x803f7bb0, &STATES_IT_803F7BB0),
-    (0x803f7bc0, &STATES_IT_803F7BC0),
-    (0x803f7c00, &STATES_IT_803F7C00),
-    (0x803f7c10, &STATES_IT_803F7C10),
-    (0x803f7c40, &STATES_IT_803F7C40),
-    (0x803f7c70, &STATES_IT_803F7C70),
-    (0x803f7ca0, &STATES_IT_803F7CA0),
-    (0x803f7cf8, &STATES_IT_803F7CF8),
-    (0x803f7d60, &STATES_IT_803F7D60),
-    (0x803f7d90, &STATES_IT_803F7D60_30),
-    (0x803f7dc8, &STATES_IT_803F7DC8),
-    (0x803f7de8, &STATES_IT_803F7DE8),
-    (0x803f7e08, &STATES_IT_803F7E08),
-    (0x803f7e28, &STATES_IT_803F7E28),
-    (0x803f7e78, &STATES_IT_803F7E78),
-    (0x803f7ee8, &STATES_IT_803F7EE8),
-    (0x803f7f48, &STATES_IT_803F7F48),
-    (0x803f7f58, &STATES_IT_803F7F58),
-    (0x803f7fb8, &STATES_IT_803F7FB8),
-    (0x803f7fc8, &STATES_IT_803F7FC8),
-    (0x803f7ff8, &STATES_IT_803F7FF8),
-    (0x803f8058, &STATES_IT_803F8058),
-    (0x803f80c8, &STATES_IT_803F80C8),
-    (0x803f80f8, &STATES_IT_803F80F8),
-    (0x803f8128, &STATES_IT_803F8128),
-    (0x803f8180, &STATES_IT_803F8180),
-    (0x803f8190, &STATES_IT_803F8190),
-    (0x803f8200, &STATES_IT_803F8200),
-    (0x803f8250, &STATES_IT_803F8250),
-    (0x803f8270, &STATES_IT_803F8270),
-    (0x803f82a0, &STATES_IT_803F82A0),
-    (0x803f82b0, &STATES_IT_803F82B0),
-    (0x803f82f0, &STATES_IT_803F82F0),
-    (0x803f8320, &STATES_IT_803F8320),
-    (0x803f83e0, &STATES_IT_803F83E0),
-    (0x803f83f0, &STATES_IT_803F83F0),
-    (0x803f8468, &STATES_IT_803F8468),
-    (0x803f85f0, &STATES_IT_803F85F0),
-    (0x803f86c8, &STATES_IT_803F86C8),
-    (0x803f87f0, &STATES_IT_803F87F0),
-    (0x803f88c0, &STATES_IT_803F88C0),
-    (0x803f8940, &STATES_IT_803F8940),
-    (0x803f89c8, &STATES_IT_803F89C8),
-    (0x803f8a88, &STATES_IT_803F8A88),
-    (0x803f8b48, &STATES_IT_803F8B48),
-    (0x803f8bd8, &STATES_IT_803F8BD8),
-    (0x803f8c8c, &STATES_IT_803F8C8C),
-    (0x803f8de8, &STATES_IT_803F8DE8),
-    (0x803f8e90, &STATES_IT_803F8E90),
-    (0x803f8eb0, &STATES_IT_803F8EB0),
-    (0x803f8fd0, &STATES_IT_803F8FD0),
-    (0x803f9000, &STATES_IT_803F9000),
-    (0x803f90d0, &STATES_IT_803F90D0),
-    (0x803f91d0, &STATES_IT_803F91D0),
-    (0x803f9260, &STATES_IT_803F9260),
-    (0x803f9328, &STATES_IT_803F9328),
-    (0x803f9378, &STATES_IT_803F9378),
-    (0x803f9388, &STATES_IT_803F9388),
-    (0x803f93a8, &STATES_IT_803F93A8),
-    (0x803f93c8, &STATES_IT_803F93C8),
-    (0x803f9450, &STATES_IT_803F9450),
-    (0x803f9470, &STATES_IT_803F9470),
-    (0x803f9480, &STATES_IT_803F9480),
-    (0x803f9490, &STATES_IT_803F9490),
-    (0x803f94a0, &STATES_IT_803F94A0),
+    (0x803f5468, &STATES_CAPSULE),
+    (0x803f54d8, &STATES_BOB_OMB),
+    (0x803f55d0, &STATES_MR_SATURN),
+    (0x803f56c8, &STATES_HEART_CONTAINER),
+    (0x803f5740, &STATES_MAXIM_TOMATO),
+    (0x803f57a0, &STATES_STARMAN),
+    (0x803f57b0, &STATES_HOME_RUN_BAT),
+    (0x803f5800, &STATES_BEAM_SWORD),
+    (0x803f5850, &STATES_CRATE),
+    (0x803f58e0, &STATES_BARREL),
+    (0x803f5988, &STATES_EGG),
+    (0x803f59f8, &STATES_PARTY_BALL),
+    (0x803f5ab0, &STATES_PARASOL),
+    (0x803f5ba8, &STATES_GREEN_SHELL),
+    (0x803f5c48, &STATES_RED_SHELL),
+    (0x803f5cc8, &STATES_RAY_GUN),
+    (0x803f5d28, &STATES_FREEZIE),
+    (0x803f5db0, &STATES_FOOD),
+    (0x803f5e00, &STATES_MOTION_SENSOR_BOMB),
+    (0x803f5ea8, &STATES_FLIPPER),
+    (0x803f5f40, &STATES_SUPER_SCOPE),
+    (0x803f5f90, &STATES_STAR_ROD),
+    (0x803f5ff0, &STATES_FAN),
+    (0x803f6090, &STATES_FIRE_FLOWER),
+    (0x803f6110, &STATES_SUPER_MUSHROOM),
+    (0x803f6130, &STATES_POISON_MUSHROOM),
+    (0x803f6150, &STATES_HAMMER),
+    (0x803f61b0, &STATES_WARP_STAR),
+    (0x803f6220, &STATES_SCREW_ATTACK),
+    (0x803f6270, &STATES_BUNNY_HOOD),
+    (0x803f62c0, &STATES_METAL_BOX),
+    (0x803f6310, &STATES_LIPS_STICK),
+    (0x803f6370, &STATES_CLOAKING_DEVICE),
+    (0x803f63c0, &STATES_BARREL_CANNON),
+    (0x803f6488, &STATES_POKE_BALL),
+    (0x803f64f8, &STATES_RAY_GUN_SHOT),
+    (0x803f6530, &STATES_STAR_ROD_STAR),
+    (0x803f6568, &STATES_SUPER_SCOPE_SHOT),
+    (0x803f6630, &STATES_FIRE_FLOWER_FLAME),
+    (0x803f6640, &STATES_HAMMER_HEAD),
+    (0x803f6680, &STATES_LIPS_STICK_SPORE),
+    (0x803f66c8, &STATES_LIPS_STICK_FLOWER),
+    (0x803f6728, &STATES_EVENT_YOSHI_EGG),
+    (0x803f6788, &STATES_MARIO_FIREBALL),
+    (0x803f6798, &STATES_KIRBY_FINAL_CUTTER_WAVE),
+    (0x803f67d0, &STATES_FOX_LASER),
+    (0x803f6818, &STATES_FOX_ILLUSION),
+    (0x803f6888, &STATES_LINK_BOMB),
+    (0x803f6920, &STATES_LINK_BOOMERANG),
+    (0x803f6998, &STATES_LINK_HOOKSHOT),
+    (0x803f6a28, &STATES_LINK_ARROW),
+    (0x803f6b28, &STATES_NESS_PK_FIRE),
+    (0x803f6b60, &STATES_NESS_PK_FIRE_PILLAR),
+    (0x803f6b70, &STATES_NESS_PK_FLASH),
+    (0x803f6bc8, &STATES_NESS_PK_THUNDER),
+    (0x803f6c08, &STATES_NESS_PK_THUNDER_TRAIL1),
+    (0x803f6c58, &STATES_BOWSER_FLAME),
+    (0x803f6c68, &STATES_NESS_BAT),
+    (0x803f6c88, &STATES_KIRBY_COPY_STAR),
+    (0x803f6c98, &STATES_KIRBY_HAMMER),
+    (0x803f6ca8, &STATES_FOX_BLASTER),
+    (0x803f6e98, &STATES_LINK_BOW),
+    (0x803f6f40, &STATES_NESS_PK_FLASH_EXPLOSION),
+    (0x803f6f50, &STATES_SHEIK_NEEDLE_THROWN),
+    (0x803f70a8, &STATES_SHEIK_NEEDLE_HELD),
+    (0x803f70b8, &STATES_SHEIK_VANISH),
+    (0x803f70c8, &STATES_PIKACHU_THUNDER),
+    (0x803f70f8, &STATES_MARIO_CAPE),
+    (0x803f7118, &STATES_YOSHI_EGG_THROW),
+    (0x803f7158, &STATES_YOSHI_STAR),
+    (0x803f7190, &STATES_PIKACHU_THUNDER_JOLT_GROUND),
+    (0x803f71d8, &STATES_PIKACHU_THUNDER_JOLT_AIR),
+    (0x803f7220, &STATES_SAMUS_BOMB),
+    (0x803f7288, &STATES_SAMUS_CHARGE_SHOT),
+    (0x803f7340, &STATES_SAMUS_MISSILE),
+    (0x803f73a8, &STATES_SAMUS_GRAPPLE_BEAM),
+    (0x803f7438, &STATES_SHEIK_CHAIN),
+    (0x803f7488, &STATES_PEACH_BOMBER_EXPLOSION),
+    (0x803f74a8, &STATES_PEACH_TURNIP),
+    (0x803f74f8, &STATES_PEACH_PARASOL),
+    (0x803f7528, &STATES_PEACH_TOAD),
+    (0x803f7548, &STATES_PEACH_TOAD_SPORE),
+    (0x803f7558, &STATES_NESS_YOYO),
+    (0x803f75c0, &STATES_LUIGI_FIREBALL),
+    (0x803f75d0, &STATES_DR_MARIO_MEGAVITAMIN),
+    (0x803f7668, &STATES_ICE_CLIMBERS_ICE_SHOT),
+    (0x803f76a8, &STATES_ICE_CLIMBERS_BLIZZARD),
+    (0x803f76b8, &STATES_ICE_CLIMBERS_BELAY_ROPE),
+    (0x803f76f8, &STATES_ZELDA_DINS_FIRE),
+    (0x803f7740, &STATES_ZELDA_DINS_FIRE_EXPLOSION),
+    (0x803f7750, &STATES_MEWTWO_DISABLE),
+    (0x803f7760, &STATES_MEWTWO_SHADOW_BALL),
+    (0x803f7898, &STATES_GAME_AND_WATCH_SPRAYER),
+    (0x803f78d8, &STATES_GAME_AND_WATCH_MANHOLE),
+    (0x803f78e8, &STATES_GAME_AND_WATCH_TORCH),
+    (0x803f78f8, &STATES_GAME_AND_WATCH_PARACHUTE),
+    (0x803f7918, &STATES_GAME_AND_WATCH_TURTLE),
+    (0x803f7938, &STATES_GAME_AND_WATCH_SPARKY),
+    (0x803f7958, &STATES_KIRBY_GAME_AND_WATCH_PAN),
+    (0x803f7968, &STATES_GAME_AND_WATCH_JUDGE),
+    (0x803f79a0, &STATES_GAME_AND_WATCH_OIL),
+    (0x803f79c0, &STATES_GAME_AND_WATCH_TRAMPOLINE),
+    (0x803f79e0, &STATES_GAME_AND_WATCH_SAUSAGE),
+    (0x803f7a28, &STATES_YOUNG_LINK_MILK),
+    (0x803f7a48, &STATES_GOLDEEN),
+    (0x803f7a98, &STATES_CHIKORITA),
+    (0x803f7ac8, &STATES_CHIKORITA_LEAF),
+    (0x803f7ad8, &STATES_SNORLAX),
+    (0x803f7b08, &STATES_BLASTOISE),
+    (0x803f7b48, &STATES_BLASTOISE_HYDRO_PUMP),
+    (0x803f7b58, &STATES_WEEZING),
+    (0x803f7bb0, &STATES_WEEZING_GAS1),
+    (0x803f7bc0, &STATES_CHARIZARD),
+    (0x803f7c00, &STATES_CHARIZARD_FLAME1),
+    (0x803f7c10, &STATES_MOLTRES),
+    (0x803f7c40, &STATES_ZAPDOS),
+    (0x803f7c70, &STATES_ARTICUNO),
+    (0x803f7ca0, &STATES_WOBBUFFET),
+    (0x803f7cf8, &STATES_SCIZOR),
+    (0x803f7d60, &STATES_UNOWN),
+    (0x803f7d90, &STATES_UNOWN_SWARM),
+    (0x803f7dc8, &STATES_ENTEI),
+    (0x803f7de8, &STATES_RAIKOU),
+    (0x803f7e08, &STATES_SUICUNE),
+    (0x803f7e28, &STATES_BELLOSSOM),
+    (0x803f7e78, &STATES_ELECTRODE),
+    (0x803f7ee8, &STATES_LUGIA),
+    (0x803f7f48, &STATES_LUGIA_AEROBLAST),
+    (0x803f7f58, &STATES_HO_OH),
+    (0x803f7fb8, &STATES_HO_OH_SACRED_FIRE),
+    (0x803f7fc8, &STATES_DITTO),
+    (0x803f7ff8, &STATES_CLEFAIRY),
+    (0x803f8058, &STATES_TOGEPI),
+    (0x803f80c8, &STATES_MEW),
+    (0x803f80f8, &STATES_CELEBI),
+    (0x803f8128, &STATES_STARYU),
+    (0x803f8180, &STATES_STARYU_STAR),
+    (0x803f8190, &STATES_CHANSEY),
+    (0x803f8200, &STATES_CHANSEY_EGG),
+    (0x803f8250, &STATES_PORYGON2),
+    (0x803f8270, &STATES_CYNDAQUIL),
+    (0x803f82a0, &STATES_CYNDAQUIL_FLAME),
+    (0x803f82b0, &STATES_MARILL),
+    (0x803f82f0, &STATES_VENUSAUR),
+    (0x803f8320, &STATES_GOOMBA),
+    (0x803f83e0, &STATES_TARGET),
+    (0x803f83f0, &STATES_SHY_GUY),
+    (0x803f8468, &STATES_LIKE_LIKE),
+    (0x803f85f0, &STATES_KOOPA_TROOPA),
+    (0x803f86c8, &STATES_KOOPA_GREEN_SHELL),
+    (0x803f87f0, &STATES_KOOPA_RED_SHELL),
+    (0x803f88c0, &STATES_KOOPA_PARATROOPA),
+    (0x803f8940, &STATES_KLAP_TRAP),
+    (0x803f89c8, &STATES_TOPI),
+    (0x803f8a88, &STATES_POLAR_BEAR),
+    (0x803f8b48, &STATES_OCTOROK),
+    (0x803f8bd8, &STATES_VS_COIN),
+    (0x803f8c8c, &STATES_STAGE_HURTBOX),
+    (0x803f8de8, &STATES_ARWING_LASER),
+    (0x803f8e90, &STATES_OCTOROK_STONE),
+    (0x803f8eb0, &STATES_RE_DEAD),
+    (0x803f8fd0, &STATES_GREAT_FOX_LASER),
+    (0x803f9000, &STATES_TINGLE),
+    (0x803f90d0, &STATES_BIRDO),
+    (0x803f91d0, &STATES_WHISPY_APPLE),
+    (0x803f9260, &STATES_FLAT_ZONE_TOOL),
+    (0x803f9328, &STATES_BIRDO_EGG),
+    (0x803f9378, &STATES_MASTER_HAND_LASER),
+    (0x803f9388, &STATES_MASTER_HAND_BULLET),
+    (0x803f93a8, &STATES_CRAZY_HAND_BOMB),
+    (0x803f93c8, &STATES_TROPHY),
+    (0x803f9450, &STATES_KIRBY_INHALED),
+    (0x803f9470, &STATES_KIRBY_SPIT_STAR),
+    (0x803f9480, &STATES_YOSHI_TONGUED),
+    (0x803f9490, &STATES_KIRBY_TONGUED),
+    (0x803f94a0, &STATES_YOSHI_EGG_LAY),
 ];

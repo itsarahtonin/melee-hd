@@ -6,7 +6,9 @@ animation and three callbacks). Functions are their addresses, which melee-sim d
 
 Each kind is named by its `ItKind` variant (melee-sim's `game::it::registry`): the decomp's
 `ItemKind` name spelled as a variant (`It_Kind_Hammer_Head` is `HammerHead`), or the name
-players know it by where `RENAME_KINDS` gives one (`It_Kind_BombHei` is `BobOmb`).
+players know it by where `RENAME_KINDS` gives one (`It_Kind_BombHei` is `BobOmb`). Each state
+table is named by the first kind whose logic table names it (`STATES_BOB_OMB`), its symbol and
+its old name kept as `#[doc(alias)]`.
 
 Usage: item_tables.py MAIN_DOL SYMBOLS_TXT FORWARD_H OUT_RS
   MAIN_DOL is the disc's main.dol (the decomp extracts it to orig/GALE01/sys/main.dol);
@@ -26,10 +28,19 @@ GROUPS = [
     ("STAGE", 208, "it_803F4CA8", "it_803F4D20"),
 ]
 
-# State tables code sets itself rather than through a logic table: an item Kirby's inhale holds
-# (`it_802F23EC`), and one Yoshi's tongue or Kirby's copy of it holds (`it_802F2BFC`,
-# `it_802F2D98`).
-EXTRA_STATES = ["it_803F9450", "it_803F9480", "it_803F9490"]
+# State tables code sets itself rather than through a logic table, and their names: an item
+# Kirby's inhale holds (`it_802F23EC`), and one Yoshi's tongue or Kirby's copy of it holds
+# (`it_802F2BFC`, `it_802F2D98`).
+EXTRA_STATES = {
+    "it_803F9450": ("KIRBY_INHALED", "an item Kirby's inhale holds"),
+    "it_803F9480": ("YOSHI_TONGUED", "an item Yoshi's tongue holds"),
+    "it_803F9490": ("KIRBY_TONGUED", "an item Kirby's copy of Yoshi's tongue holds"),
+}
+
+
+def snake(variant):
+    """`NessPKFire` as `NESS_PK_FIRE`."""
+    return re.sub(r'(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])', '_', variant).upper()
 
 CALLBACKS = [
     "spawned", "destroyed", "picked_up", "dropped", "thrown", "dmg_dealt", "dmg_received",
@@ -272,6 +283,7 @@ def main():
         '',
     ]
     state_tables = set()
+    owners = {}  # a state table's address: the kinds whose logic tables name it
     for group, first, render, logic in GROUPS:
         raddr, rsize = by_name[render]
         n = rsize // 4
@@ -293,13 +305,16 @@ def main():
             out.append(f'        states: {w[0]:#x},')
             if w[0]:
                 state_tables.add(w[0])
+                owners.setdefault(w[0], []).append(first + i)
             for field, a in zip(CALLBACKS, w[1:]):
                 out.append(f'        {field}: {code(a)},')
             out.append('    },')
         out.append('];')
         out.append('')
-    for name in EXTRA_STATES:
+    extra = {}
+    for name, (const, what) in EXTRA_STATES.items():
         state_tables.add(by_name[name][0])
+        extra[by_name[name][0]] = (const, what)
     entries = []
     for addr in sorted(state_tables):
         # A table can start inside a symbol's object (several kinds share its later states).
@@ -309,8 +324,22 @@ def main():
         n = (base + size - addr) // 0x10
         if base != addr:
             name = f'{name}+{addr - base:#x}'
-        const = 'STATES_' + name.upper().replace('+0X', '_')
-        out.append(f'/// `{name}`.')
+        # Named by the first kind whose logic table names it (or the code that sets it), the
+        # symbol (and the name it had) kept as aliases.
+        old = 'STATES_' + name.upper().replace('+0X', '_')
+        if addr in owners:
+            ks = owners[addr]
+            const = 'STATES_' + snake(kinds[ks[0]])
+            what = ', '.join(f'`ItKind::{kinds[k]}`' for k in ks)
+            what = f'the states of {what}'
+        else:
+            const, what = extra[addr]
+            const = 'STATES_' + const
+            what = f'the states of {what}'
+        assert all(const != c for _, c in entries), const
+        aliases = f'"{old}", "{name}"' if base == addr else f'"{old}"'
+        out.append(f'/// `{name}`: {what}.')
+        out.append(f'#[doc(alias({aliases}))]')
         out.append(f'pub static {const}: [ItemState; {n}] = [')
         for i in range(n):
             w = struct.unpack('>4I', read(addr + 0x10 * i, 0x10))
