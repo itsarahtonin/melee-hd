@@ -14,7 +14,7 @@
 //!
 //! ```text
 //! melee-render-check fast DISC REPLAY [--renderer exact|f2|f3|fast] [--mutate NAME] [--scale N]
-//!     [--threaded] [--out DIR] FRAME...
+//!     [--threaded] [--interpolate T | --extrapolate T] [--out DIR] FRAME...
 //! melee-render-check bench DISC REPLAY [--renderer exact|f2|f3|fast] [--scale N] [--from A] [--to B]
 //!     [--one-thread] [--adapter NAME|fallback] [--warm-list FILE]
 //! ```
@@ -28,6 +28,7 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use melee_gpu::{Frame, Renderer};
+use melee_render::blend::{Blend, Capture};
 use melee_sim::game::state::Cosmetic;
 use melee_sim::hsd::display::Draw as DisplayDraw;
 
@@ -230,16 +231,27 @@ pub struct Renderers<'a> {
     pub test: &'a mut dyn FrameRenderer,
 }
 
+/// Frames between two ticks, drawn in place of the ticks' own (the player's High refresh): `t`
+/// of the way from the tick before to the tick drawn (Interpolate), or from the tick drawn to
+/// the next, its prediction made exactly from the replay's inputs (Extrapolate).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Blending {
+    Interpolate(f32),
+    Extrapolate(f32),
+}
+
 /// Draws the replay's native frames `at` with the reference, its spreads and the renderer
 /// under test, each with the frames before whose copies it may sample, and compares them;
 /// calls `each` with each frame's number, its replay frame, the comparison and the display
-/// draws.
+/// draws. With `blending`, every renderer draws each tick's frame blended so.
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     disc: &str,
     replay: &str,
     at: &[u32],
     scale: u32,
     r: Renderers<'_>,
+    blending: Option<Blending>,
     out: Option<&std::path::Path>,
     mut each: impl FnMut(u32, i32, &FrameReport, &[DisplayDraw]),
 ) {
@@ -250,7 +262,26 @@ pub fn run(
     } = r;
     let last = at.iter().copied().max().unwrap_or(0);
     let mut seen = 0;
-    native::drive(disc, replay, last, Cosmetic::default(), |t| {
+    // As the player keeps them: the tick before's display pass and the tick drawn's.
+    let (mut before, mut after) = (Capture::default(), Capture::default());
+    let predict = |n: u32| {
+        matches!(blending, Some(Blending::Extrapolate(_)))
+            && at.iter().any(|&a| native::drawn_for(n, a, native::WARM_UP))
+    };
+    native::drive_predicting(disc, replay, last, Cosmetic::default(), &predict, |t| {
+        let blend = match blending {
+            None => None,
+            Some(Blending::Interpolate(x)) => {
+                std::mem::swap(&mut before, &mut after);
+                after.fill(t.game, t.draws);
+                Some(Blend {
+                    from: &before,
+                    t: x,
+                })
+            }
+            Some(Blending::Extrapolate(x)) => t.predicted.map(|from| Blend { from, t: 1.0 - x }),
+        };
+        let t = &native::Tick { blend, ..*t };
         let draw = at
             .iter()
             .any(|&a| native::drawn_for(t.n, a, native::WARM_UP));
@@ -322,6 +353,7 @@ pub fn cli(args: &[String]) -> ExitCode {
     let mut which = Which::Exact;
     let mut scale = 1;
     let mut threaded = false;
+    let mut blending = None;
     let mut out = None;
     let mut at = Vec::new();
     let mut rest = args[3..].iter();
@@ -337,6 +369,18 @@ pub fn cli(args: &[String]) -> ExitCode {
             }
             "--scale" => scale = rest.next().and_then(|s| s.parse().ok()).expect("--scale N"),
             "--threaded" => threaded = true,
+            "--interpolate" | "--extrapolate" => {
+                let x: f32 = rest
+                    .next()
+                    .and_then(|s| s.parse().ok())
+                    .filter(|x| (0.0..=1.0).contains(x))
+                    .expect("--interpolate T or --extrapolate T, T from 0 to 1");
+                blending = Some(if a == "--interpolate" {
+                    Blending::Interpolate(x)
+                } else {
+                    Blending::Extrapolate(x)
+                });
+            }
             "--out" => {
                 let d = std::path::PathBuf::from(rest.next().expect("--out DIR"));
                 std::fs::create_dir_all(&d).expect("making the output directory");
@@ -373,9 +417,10 @@ pub fn cli(args: &[String]) -> ExitCode {
         None => Box::new(Mutated::new(renderer(&device, &queue, view), mutation)),
     };
     println!(
-        "{replay}: {} against {} at {scale}x on {adapter}",
+        "{replay}: {} against {} at {scale}x on {adapter}{}",
         test.name(),
-        reference.name()
+        reference.name(),
+        blending.map_or(String::new(), |b| format!(", frames blended: {b:?}"))
     );
     let mut failed = 0;
     run(
@@ -388,6 +433,7 @@ pub fn cli(args: &[String]) -> ExitCode {
             spreads: vec![&mut right, &mut left],
             test: &mut *test,
         },
+        blending,
         out.as_deref(),
         |n, replay_frame, report, draws| {
             let ok = report.within();

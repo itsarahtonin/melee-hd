@@ -150,7 +150,7 @@ impl FrameRenderer for Exact {
                 t.game,
                 t.data,
                 t.draws,
-                None,
+                t.blend,
                 rec.as_ref().map(|r| r as &(dyn StreamObserver + Sync)),
             );
             let (all, waited) = (start.elapsed(), self.gpu.waited());
@@ -163,7 +163,7 @@ impl FrameRenderer for Exact {
                 stream: self.gpu.fed().saturating_sub(waited),
             };
         }
-        let fifo = self.frames.frame(t.game, t.data, t.draws);
+        let fifo = self.frames.frame_blended(t.game, t.data, t.draws, t.blend);
         let build = start.elapsed();
         if !draw {
             self.gpu.follow(&self.frames.space, t.data, &fifo);
@@ -651,7 +651,7 @@ impl FrameRenderer for Mutated {
             self.loaded = true;
         }
         let start = Instant::now();
-        let fifo = self.frames.frame(t.game, t.data, t.draws);
+        let fifo = self.frames.frame_blended(t.game, t.data, t.draws, t.blend);
         let build = start.elapsed();
         let plan = std::mem::take(&mut self.plan);
         if !draw {

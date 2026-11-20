@@ -373,3 +373,32 @@ fn an_ulp_in_the_matrices_passes() {
 fn a_sixteenth_of_a_pixel_passes() {
     noise("snap");
 }
+
+/// The matches the blended frames are drawn on: a match of four fighters, Fox's ditto with its
+/// lasers and shines (particles), and Fountain of Dreams (its reflection's copy).
+const BLEND_SAMPLE: &[(Game, &[u32])] = &[
+    (FOUR_FD, &[600]),
+    (FOX_FOX_FD, &[600, 2600]),
+    (SHEIK_FOX_FOD, &[600]),
+];
+
+/// The fast renderer's frames between ticks, as the player's High refresh draws them, within
+/// tolerance of the exact renderer's: interpolated (from the tick before) and extrapolated
+/// (toward the next tick, predicted exactly), a quarter, half and three quarters of the way,
+/// on one thread, and halfway on its threads.
+#[test]
+#[ignore = "needs the disc, ssbm-rs's local data and the Slippi replays"]
+fn the_fast_renderer_draws_blended_frames() {
+    for (game, frames) in BLEND_SAMPLE {
+        for mode in ["--interpolate", "--extrapolate"] {
+            for t in ["0.25", "0.5", "0.75"] {
+                within_with(game, frames, &["--renderer", "fast", mode, t]);
+            }
+            within_with(
+                game,
+                frames,
+                &["--renderer", "fast", "--threaded", mode, "0.5"],
+            );
+        }
+    }
+}

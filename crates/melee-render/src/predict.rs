@@ -162,6 +162,11 @@ impl<S: Ahead> Predictor<S> {
         }
     }
 
+    /// The predicted tick's display pass, as kept.
+    pub fn capture(&self) -> &Capture {
+        &self.capture
+    }
+
     /// The copy as the predicted tick left it.
     pub fn predicted(&self) -> Option<&S> {
         self.copy.as_ref()
