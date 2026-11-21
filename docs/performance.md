@@ -1,6 +1,6 @@
 # Performance
 
-Measured with `tools/bench` (`melee-bench`), release builds, other applications closed, median of 5 runs. Every number names the machine it came from.
+Measured with `tools/bench` (`melee-bench`), release builds, other applications closed, median of 5 runs. Every number names the machine it came from. The speed targets are measured on `release` (Sarah, 2026-11-21, [the refactor's design call 10](refactor.md#design-calls)): it is the quick build to develop against, and the player's build (`dist`) only runs faster ([which build](#which-build-2026-11-21)). `melee-bench`'s tables name the profile they were built with.
 
 ## Targets
 
@@ -400,6 +400,54 @@ melee-bench rollback-split --at 12500 --runs 400 fox-marth-ps
 ```
 
 On this PC, with other agents' work running (indicative only): `rollback-split --at 12500` on the branch's allocation commit and on its memo commit, three rounds alternating, moved between 1.6 and 2.5 ms from run to run, more than the change, so it shows nothing either way.
+
+## Which build (2026-11-21)
+
+[The refactor's](refactor.md#task-17-the-players-build) task 17. Players run `dist` (`cargo run -p dist`: fat LTO, one codegen unit); the speed targets are measured on `release` (sixteen codegen units, no LTO), as Sarah decided (2026-11-21, design call 10: "if the quick build does, so too should the player's build"; to be revisited if the speed tasks run out of meaningful wins before a target is reached). The bench builds with `dist`'s settings as the `bench-dist` profile, to report the gap: `cargo build --locked --profile bench-dist -p melee-bench`, its binary in `target/bench-dist`.
+
+**Measured on [the worker](#machine)**, main `8f421fde` with the profile added (`perf/player-build` `a8dd8d5c`; nothing in the simulation changed): four builds of `melee-bench` at `-j 3`: `release`, `bench-dist`, and two PGO builds of `bench-dist` (below). Three exclusive reservations of `melee-bench native --runs 5` (the six benchmark matches, and Sarah's 3.19 replay with `MELEE_BENCH_FP=slippi`), the builds' order reversed every other round, and two of `snapshot-match --every 2500`, the builds alternating match by match; the processor 0 to 3% busy before and after each build's runs. Every run was in sync. Median frames per second of the 15 runs, their range, and the change against `release`:
+
+| Match | `release` | `bench-dist` | PGO, all | PGO, replays only |
+| --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 2,620 (2,600 to 2,658) | 2,837 (2,808 to 2,895), +8.3% | 3,151 (3,040 to 3,206), +20.3% | 2,759, +5.3% |
+| `fox-marth-bf` | 2,562 (2,546 to 2,576) | 2,794 (2,756 to 2,831), +9.1% | 3,093 (3,058 to 3,129), +20.7% | 2,697, +5.3% |
+| `fox-marth-fd` | 2,430 (2,420 to 2,445) | 2,664 (2,614 to 2,689), +9.6% | 2,936 (2,896 to 2,968), +20.8% | 2,567, +5.6% |
+| `fox-marth-ps` | 2,176 (2,159 to 2,190) | 2,374 (2,352 to 2,420), +9.1% | 2,659 (2,621 to 2,700), +22.2% | 2,347, +7.9% |
+| `ics-peach-ps` | 1,696 (1,664 to 1,707) | 1,827 (1,817 to 1,845), +7.7% | 2,052 (2,033 to 2,094), +21.0% | 1,823, +7.5% |
+| `ganon-captain-fd` | 2,436 (2,411 to 2,462) | 2,652 (2,634 to 2,661), +8.9% | 2,949 (2,917 to 3,012), +21.1% | 2,589, +6.3% |
+| Sarah's 3.19 replay | 2,801 (2,765 to 2,817) | 3,161 (3,135 to 3,215), +12.9% | 3,604 (3,568 to 3,665), +28.7% | 3,652 (3,595 to 3,673), +30.4% |
+
+The rounds' medians agree within 3% for every build. `release` here is faster than the [baselines above](#baselines-on-the-worker-2026-11-19) (`fox-fox-fd` 2,620 against 2,222 at `c6e274d5`): main has gained since (task 1's callback table among it), and these builds have no line tables.
+
+**Restore and 8 ticks** (`snapshot-match --every 2500`, two rounds; each state's median of the rounds, then the mean over a match's states and its worst state):
+
+| Match | `release`: mean, worst | `bench-dist` | PGO, all | PGO, replays only |
+| --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 3.12, 3.82 ms (5,000) | 2.94, 3.59 (−5%) | 2.53, 3.15 (−19%) | 2.90, 3.79 (−7%) |
+| `fox-marth-bf` | 2.86, 3.51 (15,000) | 2.67, 3.27 (−7%) | 2.40, 2.94 (−16%) | 2.66, 3.29 (−7%) |
+| `fox-marth-fd` | 3.06, 3.35 (15,000) | 2.89, 3.17 (−6%) | 2.61, 3.10 (−15%) | 2.95, 3.35 (−4%) |
+| `fox-marth-ps` | 3.75, 4.07 (12,500) | 3.50, 3.82 (−7%) | 3.14, 3.43 (−16%) | 3.49, 3.84 (−7%) |
+| `ics-peach-ps` | 4.59, 5.71 (12,500) | 4.46, 5.58 (−3%) | 3.98, 5.08 (−13%) | 4.37, 5.48 (−5%) |
+| `ganon-captain-fd` | 3.19, 3.38 (7,500) | 2.93, 3.06 (−8%) | 2.67, 2.80 (−16%) | 3.04, 3.25 (−5%) |
+| Sarah's 3.19 replay | 3.09, 3.80 (7,500) | 2.76, 3.45 (−11%) | 2.44, 3.05 (−21%) | 2.43, 3.04 (−21%) |
+
+The snapshot's clone and restore move by a few µs either way (clone 218 to 289 µs, restore 134 to 197 µs over every match and build); Pokémon Stadium's ticks still allocate (8 to 12 a tick). **`ics-peach-ps`, measured here for the first time since its new recording, is over the 4 ms target in every build**: in `release` its five states take 3.8 to 5.8 ms, four of them over 4 ms in both rounds, the worst tick 12,500 at 5.63 and 5.78 ms (5.18 and 4.98 with PGO); `fox-marth-ps`'s tick 12,500 is at the line (4.06 and 4.08 ms) as [before](#baselines-on-the-worker-2026-11-19).
+
+**PGO.** Profile-guided optimization with rustc's instrumentation (`llvm-tools`, installed on the worker for this): `bench-dist` built with `-Cprofile-generate`, trained, the raw profiles merged with `llvm-profdata`, and `bench-dist` built again with `-Cprofile-use`. Two profiles from the same instrumented build: **all**, the benchmark matches (`native --runs 1` on the six and Sarah's replay, and `snapshot-match --every 5000` on `fox-fox-fd`, `fox-marth-ps` and Sarah's replay) and the author's replays (`corpus --jobs 3` on 202 of `$SLIPPI_REPLAYS`, Sarah's 3.19 replay left out: 171 played to their ends and 31 stop as their matches start on characters no port has, as [the oracle](oracle.md) records); and **replays only**, the corpus run alone, which plays under Slippi 3.19's rules in Slippi's float mode and never ran the replay it is measured on. The replays-only profile gives the full gain on Sarah's replay, a replay it never saw (+15.5% over `bench-dist`), but none on the Vanilla benchmark matches, which run the console's float mode and Vanilla's rules: −0.2 to −3.6% against `bench-dist`. PGO pays on the code its training ran and costs a little on code it didn't (unprofiled code is laid out and inlined as cold).
+
+**Cost.** On the worker (`-j 3`, other jobs running beside some builds): `release` 4.7 minutes, `bench-dist` 7.3, the instrumented build 9.3, the training 34 (1.5 for the benchmark matches, 31 for the replays; the instrumented build ran the bench at about 70% of `bench-dist`'s speed), the merge seconds, each PGO build 4.8. Every build peaked at 9.0 to 9.7 GB (GNU `time`'s maximum resident size; one codegen unit doesn't take more than sixteen). A merged profile is 9.6 MB, over the repository's 5 MiB limit for a file, and a profile matches only the functions it was taken from (a changed function's counts are dropped, with a warning), so a PGO player would make its profile at build time: `dist` builds the player instrumented, plays a training set, merges, and builds again. That set would have to cover every path players take (both rulesets and float modes, the renderers, audio, the menus from power-on: the player itself, `melee-hd --bench` on replays and `--inputs` sessions, not the bench), or what it misses runs slower, as the replays-only profile shows. On this PC the player's `dist` build took 24 minutes (busy), so a PGO `dist` would take roughly an hour. Not made the player's build here: proposed, for Sarah's decision.
+
+**Indicative, this PC** (busy with other agents' builds, `melee-bench native --runs 5`, three rounds alternating, the round medians): `fox-fox-fd` `release` 3,475, 3,483, 3,594; `bench-dist` 3,856, 3,722, 3,733; PGO (all, trained on this PC) 4,453, 4,496, 4,629. `fox-marth-ps` 3,024, 2,950, 3,091; 3,126, 3,197, 3,130; 3,706, 3,903, 4,021. `ics-peach-ps` 2,246, 2,289, 2,342; 2,452, 2,399, 2,406; 2,887, 2,854, 3,011. Sarah's replay 3,525, 3,488, 3,671; 4,254, 4,210, 4,137; 5,343, 5,233, 5,275. The same order as the worker: `bench-dist` 4 to 19% over `release` (medians of the rounds), PGO 20 to 25% over `bench-dist`. On this PC `bench-dist` built in 15 minutes, the instrumented build in 17 and the PGO build in 14, and the PGO build on Windows needs nothing more than on Linux (`llvm-tools` was already installed).
+
+```sh
+cargo build --locked --release -p melee-bench                 # the deciding build
+cargo build --locked --profile bench-dist -p melee-bench      # the player's settings, target/bench-dist
+# PGO (trial): instrument, train, merge, rebuild
+CARGO_TARGET_DIR=target-pgo-gen RUSTFLAGS=-Cprofile-generate=/tmp/pgo cargo build --locked --profile bench-dist -p melee-bench
+LLVM_PROFILE_FILE=/tmp/pgo/%p-%m.profraw target-pgo-gen/bench-dist/melee-bench native --runs 1    # and the replays: corpus --list FILE
+"$(rustc --print sysroot)/lib/rustlib/x86_64-unknown-linux-gnu/bin/llvm-profdata" merge -o pgo.profdata /tmp/pgo/*.profraw
+CARGO_TARGET_DIR=target-pgo RUSTFLAGS=-Cprofile-use=$PWD/pgo.profdata cargo build --locked --profile bench-dist -p melee-bench
+```
 
 ## Benchmark matches
 
