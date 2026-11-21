@@ -510,13 +510,13 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Zelda: Din's Fire's explosion keeps its x speed
 
-- **Where:** `itZeldadinfireexplode_UnkMotion0_Phys`, `crates/melee-sim/src/game/it/kinds/zeldadinfireexplode.rs`.
+- **Where:** `itZeldadinfireexplode_UnkMotion0_Phys`, and PK Flash's blast's `itNessPKFlashExplode_UnkMotion0_Phys` (the same code); both blasts run `steeredshot::blast_stopped`, `crates/melee-sim/src/game/it/kinds/steeredshot.rs`.
 - **Defect:** it stops the vertical and depth speeds, clearing z twice and leaving x.
 - **Effect:** not recorded.
 - **melee-hd:** modeled.
 - **Fix:** clear x.
 - **Fix impact:** not recorded.
-- **Source:** `crates/melee-sim/src/game/it/kinds/zeldadinfireexplode.rs:215`.
+- **Source:** `crates/melee-sim/src/game/it/kinds/steeredshot.rs` (`blast_stopped`); refactor task 25 ([refactor](refactor.md#task-25-the-held-items-and-the-steered-shots)).
 
 ### Yoshi: the egg keeps a powershield's flags, and its timer counts down a grab's address
 
@@ -2349,7 +2349,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A damage display that isn't one | `ifStatus_802F4EDC`, `game/hud/status.rs` | Reads a null display | `crates/melee-sim/src/game/hud/status.rs:342` |
 | Peach's Castle's path draw with no path left | `grCastle_801CE054`, `game/gr/peachs_castle.rs` | Takes the first entry of a stack array it never filled when all nine Bullet Bill paths are among the last three flown; only three are ever recorded | `crates/melee-sim/src/game/gr/peachs_castle.rs` (`pick_path`) |
 | A sound command's pan direction past 3 | `ftAction_80072320`, `game/ft/commands.rs` | Passes what `f31` holds | `crates/melee-sim/src/game/ft/commands.rs:973` |
-| PK Flash of another kind | `it_802AAA80`, `game/it/kinds/nesspkflash.rs` | Reads a register it never set | `crates/melee-sim/src/game/it/kinds/nesspkflash.rs:243` |
+| PK Flash of another kind | `itNesspkflash_UnkMotion0_Anim`, `game/it/kinds/nesspkflash.rs` | Reads a register it never set | `crates/melee-sim/src/game/it/kinds/nesspkflash.rs` (`owner_holding`) |
 | The main menu's light color for a list past the table | `mn_8022C010`, `mn_8022BFBC` (inlined in `fn_8022C128`, `mn_8022C304`), `game/mn/main.rs` (`light_color`) | A list kind past 0x21 falls out of the switch and returns its own number as the color group, and a group past 4 returns its own number as the color's address (inlined, a callee-saved register its caller left); every list the menu reaches is in the table | `crates/melee-sim/src/game/mn/main.rs` (`light_color`) |
 | A leaving list's process in another state | `fn_8022AF10`, `game/mn/main.rs` (`list_leave_proc`) | Leaves its animation loop pointer unset for a state other than the two it's set up for; only those two hand a list to it | `crates/melee-sim/src/game/mn/main.rs` (`list_leave_proc`) |
 | An idle list without a description | `fn_8022AFEC`, `game/mn/main.rs` (`list_proc`) | Writes the description's `hidden` byte through a null pointer (address 0x4D) when an idle list has no description; every list the menu makes has its strings | `crates/melee-sim/src/game/mn/main.rs` (`list_proc`) |
