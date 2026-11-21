@@ -65,14 +65,24 @@ const ENTRY_VOICES: (u32, [u32; 4]) = (0x803D_5620, [0x7C859, 0x7C85A, 0x7C85B, 
 
 /// The functions of the original's the match calls, by address.
 mod addr {
-    pub const FN_8016B88C: u32 = 0x8016_B88C;
-    pub const FN_8016B7B4: u32 = 0x8016_B7B4;
-    pub const FN_8016B7F8: u32 = 0x8016_B7F8;
-    pub const FN_80182B5C: u32 = 0x8018_2B5C;
+    /// `fn_8016B88C`, GAME!'s start.
+    #[doc(alias("FN_8016B88C"))]
+    pub const GAME_END: u32 = 0x8016_B88C;
+    /// `fn_8016B7B4`, Ready's start.
+    #[doc(alias("FN_8016B7B4"))]
+    pub const READY: u32 = 0x8016_B7B4;
+    /// `fn_8016B7F8`, Ready's end and GO!.
+    #[doc(alias("FN_8016B7F8"))]
+    pub const GO: u32 = 0x8016_B7F8;
+    /// `fn_80182B5C`, a Multi-Man match's end.
+    #[doc(alias("FN_80182B5C"))]
+    pub const MULTI_MAN_MATCH_END: u32 = 0x8018_2B5C;
     pub const EFLIB_INIT: u32 = 0x8005_B4B8;
     pub const EFASYNC_LOAD_SYNC: u32 = 0x8006_737C;
     pub const SFX_SETUP_CROWD_SFX: u32 = 0x8032_1900;
-    pub const FN_8016B784: u32 = 0x8016_B784;
+    /// `fn_8016B784`, GO!'s end: the HUD comes on.
+    #[doc(alias("FN_8016B784"))]
+    pub const HUD_ON: u32 = 0x8016_B784;
 }
 
 /// The match's live standings (`gm_16F1.c`'s `lbl_8046DBC8`, `lbl_804D65A8` and
@@ -82,7 +92,8 @@ mod addr {
 pub struct Ranks {
     /// `lbl_8046DBC8.x0`, `x1`: the first ranking with a leader was taken.
     pub taken: u8,
-    pub x1: u8,
+    #[doc(alias("x1"))]
+    pub trailer_taken: u8,
     /// `lbl_8046DBC8.x2`: per player, led (`x0`) or trailed (`x1`) then and still does.
     pub first: [(u8, u8); 6],
     /// `lbl_804D65A8`: how many players score above each.
@@ -114,9 +125,11 @@ impl Game {
         i32::from(self.vs.start.item_freq)
     }
 
-    /// `gm_8016AE94`.
+    /// The weight on each item kind's count in the random items' table (`state.unk_34`,
+    /// [`item_weight`]), `gm_8016AE94`.
+    #[doc(alias("vs_unk34"))]
     #[doc(alias = "gm_8016AE94")]
-    pub fn vs_unk34(&self) -> f32 {
+    pub fn vs_item_weight(&self) -> f32 {
         self.vs.state.unk_34
     }
 
@@ -176,8 +189,10 @@ impl Game {
         self.vs.start.friendly_fire
     }
 
+    /// Whether the rules are a single-player run's or Target Test's (`rules.x4_2`).
+    #[doc(alias("vs_x4_2"))]
     #[doc(alias = "gm_8016B0E8")]
-    pub fn vs_x4_2(&self) -> bool {
+    pub fn vs_single_player_rules(&self) -> bool {
         self.vs.start.x4_2
     }
 
@@ -201,8 +216,10 @@ impl Game {
         self.vs.start.timer_counts_up
     }
 
+    /// The rules' `x2_1`, which the HUD's offscreen arrows keep (`arrows.x30`).
+    #[doc(alias("vs_x2_1"))]
     #[doc(alias = "gm_8016B124")]
-    pub fn vs_x2_1(&self) -> bool {
+    pub fn vs_arrows_flag(&self) -> bool {
         self.vs.start.x2_1
     }
 
@@ -222,18 +239,26 @@ impl Game {
         self.vs.state.is_singleplayer == 1
     }
 
+    /// Whether the match is a Target Test stage (`rules.x9` 1: the target icons, the
+    /// targets' bonus).
+    #[doc(alias("vs_x9_is_1"))]
     #[doc(alias = "gm_8016B1A8")]
-    pub fn vs_x9_is_1(&self) -> bool {
+    pub fn vs_target_test(&self) -> bool {
         self.vs.start.x9 == 1
     }
 
+    /// Whether fighters' hitboxes hit no fighters (`rules.x5_2`, an event's).
+    #[doc(alias("vs_x5_2"))]
     #[doc(alias = "gm_8016B1C4")]
-    pub fn vs_x5_2(&self) -> bool {
+    pub fn vs_no_fighter_hits(&self) -> bool {
         self.vs.start.x5_2
     }
 
+    /// Whether Jigglypuff's Rest asks if the Stadium's screen shows her (`rules.x5_3`, an
+    /// event's).
+    #[doc(alias("vs_x5_3"))]
     #[doc(alias = "gm_8016B1D8")]
-    pub fn vs_x5_3(&self) -> bool {
+    pub fn vs_stadium_zoom(&self) -> bool {
         self.vs.start.x5_3
     }
 
@@ -249,8 +274,10 @@ impl Game {
         self.vs.start.time_limit == 0 || !self.vs.start.timer_enabled
     }
 
+    /// Whether the match is a Sudden Death (`rules.x6`): no items but the Bob-ombs' rain.
+    #[doc(alias("vs_x6"))]
     #[doc(alias = "gm_8016B238")]
-    pub fn vs_x6(&self) -> u8 {
+    pub fn vs_sudden_death(&self) -> u8 {
         self.vs.start.x6
     }
 
@@ -260,8 +287,10 @@ impl Game {
         self.vs.start.x30
     }
 
+    /// Whether the slot's fighter shows hearts for its team (`fighters[slot].x4`'s 0x10).
+    #[doc(alias("vs_fighter_x4_b3"))]
     #[doc(alias = "gm_8016B258")]
-    pub fn vs_fighter_x4_b3(&self, slot: i32) -> bool {
+    pub fn vs_fighter_shows_hearts(&self, slot: i32) -> bool {
         self.vs.state.fighters[slot as usize].x4[0] & 0x10 != 0
     }
 
@@ -313,14 +342,17 @@ impl Game {
             .count() as i32
     }
 
+    /// How many opponents joined the match (`state.unk_C`), for the results.
+    #[doc(alias("vs_unk_c"))]
     #[doc(alias = "fn_8016B728")]
-    pub fn vs_unk_c(&self) -> u8 {
+    pub fn vs_joiners(&self) -> u8 {
         self.vs.state.unk_C
     }
 
     /// Whether the rules come with a challenger's record (`x58`), `gm_8016A944`.
+    #[doc(alias("vs_has_x58"))]
     #[doc(alias = "gm_8016A944")]
-    pub fn vs_has_x58(&self) -> bool {
+    pub fn vs_has_challenger_record(&self) -> bool {
         self.vs.start.x58.0 != 0
     }
 
@@ -553,7 +585,7 @@ impl Game {
     pub fn reset_ranks(&mut self) {
         let r = &mut self.gm.ranks;
         r.taken = 0;
-        r.x1 = 0;
+        r.trailer_taken = 0;
         r.first = [(0, 0); 6];
     }
 
@@ -566,7 +598,7 @@ impl Game {
     /// Whether a player trailed the first ranking and still does, `fn_80171B2C`.
     #[doc(alias = "fn_80171B2C")]
     pub fn trailed_from_first(&self, slot: i32) -> bool {
-        self.gm.ranks.x1 != 0 && self.gm.ranks.first[slot as usize].1 != 0
+        self.gm.ranks.trailer_taken != 0 && self.gm.ranks.first[slot as usize].1 != 0
     }
 
     /// Ranks the players by score (KOs less falls, self-destructs counted at the rules'
@@ -644,7 +676,7 @@ impl Game {
         let r = &mut self.gm.ranks;
         if r.taken == 0 && 0 < r.lowest {
             r.taken = 1;
-            r.x1 = 1;
+            r.trailer_taken = 1;
             for (i, &k) in pkinds.iter().enumerate() {
                 if k == 3 {
                     continue;
@@ -726,7 +758,7 @@ impl Running<'_> {
         self.start_stage(stkind);
         self.stadium_go();
         let kind = if self.game.vs.start.x1_3 { 8 } else { 4 };
-        self.announce(kind, -1, -1, 0, None, Some(CodeRef(addr::FN_8016B784)));
+        self.announce(kind, -1, -1, 0, None, Some(CodeRef(addr::HUD_ON)));
         self.game.unshow_nametags();
     }
 
@@ -945,7 +977,7 @@ impl Running<'_> {
             self.tou_rumble(port, tag, 0xD, 0x5A);
         }
         if (super::GM_10MAN_VS..=super::GM_CRUEL_VS).contains(&mode) {
-            code::call(self, addr::FN_80182B5C, &[]);
+            code::call(self, addr::MULTI_MAN_MATCH_END, &[]);
         }
     }
 
@@ -1088,7 +1120,7 @@ impl Running<'_> {
     /// the crowd, and the match freezes.
     fn vs_match_over(&mut self) {
         self.vs_end();
-        self.announce_match_end(Some(CodeRef(addr::FN_8016B88C)));
+        self.announce_match_end(Some(CodeRef(addr::GAME_END)));
         self.lb_audio_reset_flush();
         self.game.set_db_pause_flag(4);
         self.game.vs.state.unk_0 = 1;
@@ -1142,7 +1174,7 @@ impl Running<'_> {
             {
                 result = false;
             }
-            if run == 1 && g.one_player.classic.base.x8[0] & 0x20 != 0 {
+            if run == 1 && g.one_player.classic.base.stage[0] & 0x20 != 0 {
                 result = false;
             }
         }
@@ -1270,7 +1302,9 @@ impl Running<'_> {
                 "gm_80167320's joiners' leaving (Player_80031EBC) as the first player falls",
             );
         }
-        if (self.game.vs_is_stock() || self.game.vs_x4_2()) && self.game.player_stocks(slot) == 0 {
+        if (self.game.vs_is_stock() || self.game.vs_single_player_rules())
+            && self.game.player_stocks(slot) == 0
+        {
             let (ckind, costume) = (self.game.player_ckind(slot), self.game.player_costume(slot));
             self.out_of_stocks(ckind as i8, costume as i8);
             return;
@@ -1284,7 +1318,7 @@ impl Running<'_> {
     /// does nothing. Whether one was marked.
     #[doc(alias = "gm_8016AC44")]
     pub fn out_of_stocks(&mut self, ckind: i8, costume: i8) -> bool {
-        if !self.game.vs_has_x58() {
+        if !self.game.vs_has_challenger_record() {
             return false;
         }
         let list = &mut self.game.gm.left;
@@ -1322,7 +1356,7 @@ impl Running<'_> {
         let g = &mut *self.game;
         g.set_player_spawn_platform_pos(slot, pos);
         if !g.stage_info.unk8C.b5 {
-            g.set_player_unk4e(slot, point);
+            g.set_player_spawn_point(slot, point);
             g.set_player_some_pos(slot, off);
         }
         pos.y = super::super::gr::stage::cam_top(g);
@@ -1330,7 +1364,7 @@ impl Running<'_> {
         g.set_player_facing(slot, if pos.x >= 0.0 { -1.0 } else { 1.0 });
         let damage = i32::from(g.vs.state.fighters[slot as usize].x6);
         g.set_player_damage_at(slot, sub, damage);
-        self.player_80032070(slot, sub != 0);
+        self.player_next_stock(slot, sub != 0);
         if sub != 1 {
             self.show_damage_display(slot);
             if self.game.vs.state.fighters[slot as usize].xC & 0x8000 != 0 {
@@ -1583,7 +1617,7 @@ impl Running<'_> {
             teams,
             g.player_pkind(0) as u8,
         );
-        g.set_player_unk45(0, i32::from(cap_color(color as u8)));
+        g.set_player_effect_color(0, i32::from(cap_color(color as u8)));
         self.player_create_fighters(0);
         if self.game.vs.state.fighters[0].x4[0] & 0x08 != 0 {
             self.sfx_play(0x41F4E, 0x7F, 0x40);
@@ -1621,7 +1655,7 @@ impl Running<'_> {
                 let kind = ckind_ftkind(i32::from(ck), sub);
                 if kind != -1 && kind != 4 {
                     for &c in &costumes {
-                        r.player_80031da8(kind, c);
+                        r.player_kirby_copy(kind, c);
                     }
                 }
             }
@@ -1648,7 +1682,7 @@ impl Running<'_> {
             while o.costumes[i] != END {
                 let v = o.costumes[i];
                 if v != -1 && o.characters[i] == 4 && o.copies[i] != -1 {
-                    self.player_80031da8(i32::from(o.copies[i]), i32::from(v));
+                    self.player_kirby_copy(i32::from(o.copies[i]), i32::from(v));
                 }
                 i += 1;
             }
@@ -1657,7 +1691,7 @@ impl Running<'_> {
             let mut i = 0;
             while o.costumes[i] != END {
                 if o.costumes[i] != -1 && o.copies[i] != -1 {
-                    self.player_80031da8(i32::from(o.copies[i]), i32::from(costume));
+                    self.player_kirby_copy(i32::from(o.copies[i]), i32::from(costume));
                 }
                 i += 1;
             }
@@ -1688,7 +1722,7 @@ impl Running<'_> {
                 let kind = self.game.player_ftkind(i, sub);
                 if kind != -1 && kind != 4 {
                     for &c in &costumes {
-                        self.player_80031da8(kind, c);
+                        self.player_kirby_copy(kind, c);
                     }
                 }
             }
@@ -1704,7 +1738,7 @@ impl Running<'_> {
     /// stops by name where it would decide a facing (`f26`, none).
     #[doc(alias = "fn_8016E2BC")]
     pub fn place_players(&mut self, f26: Option<f64>) {
-        self.player_80036da4();
+        self.player_lib_init();
         if self.game.vs.state.is_singleplayer == 1 {
             self.place_single_player();
             return;
@@ -1740,7 +1774,7 @@ impl Running<'_> {
                 teams,
                 g.player_pkind(i) as u8,
             );
-            g.set_player_unk45(i, i32::from(cap_color(color as u8)));
+            g.set_player_effect_color(i, i32::from(cap_color(color as u8)));
             self.player_create_fighters(i);
             if self.game.vs.state.fighters[i as usize].x4[0] & 0x08 != 0 {
                 self.sfx_play(0x41F4E, 0x7F, 0x40);
@@ -1788,7 +1822,7 @@ impl Game {
             self.vs.state.unk_A = self.vs.state.unk_A.wrapping_add(5);
             self.set_player_flags_bit3(slot, 1);
             let a = self.vs.state.unk_A;
-            self.set_player_unk4c(slot, a);
+            self.set_player_entry_delay(slot, a);
         }
         // `Player_SetPlayerAndEntityCpuType` and `...CpuLevel`: the slot has no fighters yet.
         assert!(self.player_entity(slot).is_none() && self.player_entity_at(slot, 1).is_none());
@@ -1990,7 +2024,7 @@ impl Running<'_> {
         self.game.coll.reset();
         super::super::gr::setup::prepare(self.game);
         super::super::gr::setup::select(self, i32::from(d.rules.stkind), files.stage);
-        self.game.vs.state.unk_34 = vs_speed_scale(self.game);
+        self.game.vs.state.unk_34 = item_weight(self.game);
         // `Item_80266F70`'s `lbArchive_80017040`: the common items from the preload cache.
         let kept = self.take_cached_named("ItCo.usd");
         super::super::it::item::load_common_data(self.game, self.data, files.it_co, kept);
@@ -2064,8 +2098,8 @@ impl Running<'_> {
             -1,
             -1,
             0,
-            Some(CodeRef(addr::FN_8016B7B4)),
-            Some(CodeRef(addr::FN_8016B7F8)),
+            Some(CodeRef(addr::READY)),
+            Some(CodeRef(addr::GO)),
         );
         self.create_timers();
         self.show_damage_displays(i32::from(d.rules.x0_3));
@@ -2092,17 +2126,20 @@ impl Running<'_> {
             -1,
             -1,
             0,
-            Some(CodeRef(addr::FN_8016B7B4)),
-            Some(CodeRef(addr::FN_8016B7F8)),
+            Some(CodeRef(addr::READY)),
+            Some(CodeRef(addr::GO)),
         );
         self.create_timers();
         self.show_damage_displays(i32::from(d.rules.x0_3));
     }
 }
 
-/// The match's speed scale (the inline `get_unk_float`): 1 in single-player modes, else
-/// by how many play.
-fn vs_speed_scale(g: &Game) -> f32 {
+/// The weight the random items' table gives each kind's count on the stage (the inline
+/// `get_unk_float`, kept in `state.unk_34`, which `it::spawn::setup` reads through
+/// `gm_8016AE94`): 1 in single-player modes, else by how many play, 1.1 with three and 1.2
+/// with four. Nothing else reads it; it was named a speed scale before (wave 5).
+#[doc(alias("vs_speed_scale"))]
+fn item_weight(g: &Game) -> f32 {
     if super::is_1p_mode(g) {
         return 1.0;
     }
@@ -2118,7 +2155,7 @@ mod c_stick_rule_tests {
     use super::super::super::camera::{self, Bounds, Which};
     use super::super::super::state::Game;
     use super::super::{GM_CLASSIC, GM_VS, is_1p_mode_for_c_stick};
-    use super::vs_speed_scale;
+    use super::item_weight;
 
     /// Classic (or `mode`) with three players, the camera's zoom allowed, the first player's
     /// C-stick held up and a quake pending, under the Slippi ruleset's C-stick rule or not.
@@ -2185,10 +2222,10 @@ mod c_stick_rule_tests {
             "the quake tells the modes apart"
         );
 
-        assert_eq!(vs_speed_scale(&game(GM_CLASSIC, false)), 1.0);
-        assert_eq!(vs_speed_scale(&game(GM_CLASSIC, true)), 1.0);
+        assert_eq!(item_weight(&game(GM_CLASSIC, false)), 1.0);
+        assert_eq!(item_weight(&game(GM_CLASSIC, true)), 1.0);
         assert_eq!(
-            vs_speed_scale(&game(GM_VS, true)),
+            item_weight(&game(GM_VS, true)),
             1.1,
             "three players weigh the table outside 1P"
         );

@@ -75,14 +75,14 @@ impl Running<'_> {
         let part = if heavy {
             i32::from(
                 self.data
-                    .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x11)),
+                    .u8(self.ft_model_desc(&self.game.fighters[f.0]).at(0x11)),
             )
         } else if lib26b1::kind(self.game, it) == ItKind::WarpStar {
             0
         } else {
             i32::from(
                 self.data
-                    .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x10)),
+                    .u8(self.ft_model_desc(&self.game.fighters[f.0]).at(0x10)),
             )
         };
         let (slot, sub) = {
@@ -93,7 +93,7 @@ impl Running<'_> {
         super::super::super::it::item::pick_up(self, it, gobj, part);
         if lib26b1::is_heavy(self.game, self.data, it) {
             let sfx = self.character_sfx(gobj, 0x2C);
-            self.play_track(gobj, super::jump::FT_800881D8, sfx);
+            self.play_track(gobj, super::jump::PLAY_VOICE, sfx);
         }
     }
 

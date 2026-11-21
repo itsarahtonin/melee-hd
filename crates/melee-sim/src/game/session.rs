@@ -727,7 +727,7 @@ impl Session {
         g.audio.power_on = self.setup.power_on;
         g.audio.mono = self.setup.sram_flags & SRAM_STEREO == 0;
         let card = CardLent::take(&mut self.card);
-        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let lent = self.game.lend_model();
         let mut r = Running {
             game: &mut self.game,
             data: &self.data,
@@ -766,7 +766,7 @@ impl Session {
             card.give_back(&mut self.card);
             return self.live_tick(console);
         }
-        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let lent = self.game.lend_model();
         let mut r = Running {
             game: &mut self.game,
             data: &self.data,
@@ -800,7 +800,7 @@ impl Session {
     /// The modes' loops to the next scene (the card lent): its files read first when its
     /// entry loads a match's, then the pad alarm's reads meanwhile and the scene loop's start.
     fn enter_next_scene(&mut self, console: &mut dyn Console) {
-        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let lent = self.game.lend_model();
         with_feed(console, |_| {
             Running {
                 game: &mut self.game,
@@ -853,7 +853,7 @@ impl Session {
             } else {
                 self.read_scene_files(console);
             }
-            let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+            let lent = self.game.lend_model();
             with_feed(console, |_| {
                 Running {
                     game: &mut self.game,
@@ -865,7 +865,7 @@ impl Session {
         }
         // The song the scene's entry started (a match's stage's, the results' fanfare).
         self.read_song(console);
-        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let lent = self.game.lend_model();
         let mut r = Running {
             game: &mut self.game,
             data: &self.data,
@@ -966,7 +966,7 @@ impl Session {
         // Classic's horde stages' opponents join in the costumes their setup drew, every one
         // of which the intro's game cache holds (color 0xFF).
         if self.game.game_mode == super::gm::one_player::GM_CLASSIC
-            && self.game.one_player.classic.base.x8[0] & 8 != 0
+            && self.game.one_player.classic.base.stage[0] & 8 != 0
         {
             let mut kinds: Vec<i32> = Vec::new();
             for &c in &self.game.gm.opponents.kinds {
@@ -1175,7 +1175,7 @@ impl Session {
         settings.disc = self.setup.disc;
         settings.dsp = self.setup.dsp;
         if self.live_model {
-            settings.heap = Some(crate::hsd::heap::Layout::slippi_playback());
+            settings.keep_model();
         }
         settings.follow_playback_camera = self.follow_playback_camera;
         settings.record = self.game.recorder.is_some().then_some(setup);
@@ -1227,7 +1227,7 @@ impl Session {
         probe.audio.mix = self.game.audio.mix.take();
         let mut sounds = Vec::new();
         crate::lb::save::with_card_copy(|| {
-            let lent = crate::hsd::heap::Lent::take(&mut probe.objs.heap);
+            let lent = probe.lend_model();
             (_, sounds) = super::live::record_entry_sounds(|| {
                 with_feed(console, |_| {
                     Running {
@@ -1239,7 +1239,7 @@ impl Session {
             });
             lent.give_back(&mut probe.objs.heap);
             read_song(&mut probe, &mut self.data, console);
-            let lent = crate::hsd::heap::Lent::take(&mut probe.objs.heap);
+            let lent = probe.lend_model();
             let mut r = Running {
                 game: &mut probe,
                 data: &self.data,
@@ -1258,7 +1258,7 @@ impl Session {
     /// the pad alarm's handler probing the console's card slots.
     fn live_tick(&mut self, console: &mut dyn Console) -> (Frame, bool) {
         let card = CardLent::take(&mut self.card);
-        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let lent = self.game.lend_model();
         let mut r = Running {
             game: &mut self.game,
             data: &self.data,
@@ -1284,7 +1284,7 @@ impl Session {
     /// ([`Aside`]).
     fn hand_back(&mut self) {
         let aside = self.aside.take().expect("a live match");
-        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let lent = self.game.lend_model();
         let back = Running {
             game: &mut self.game,
             data: &self.data,
@@ -1323,7 +1323,7 @@ impl Session {
             // A live match's, as playback's match renders ([`super::vs_match::Match::render`]);
             // the pass's wait can take the pad alarm.
             let card = CardLent::take(&mut self.card);
-            let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+            let lent = self.game.lend_model();
             scene::render_screen(&mut Running {
                 game: &mut self.game,
                 data: &self.data,
@@ -1334,7 +1334,7 @@ impl Session {
         }
         // The pass's wait can take the pad alarm, whose handler probes the card.
         let card = CardLent::take(&mut self.card);
-        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let lent = self.game.lend_model();
         let mut r = Running {
             game: &mut self.game,
             data: &self.data,

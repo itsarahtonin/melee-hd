@@ -53,8 +53,8 @@ impl<'a> Comparer<'a> {
                 u32::from(ml.skip_intro),
                 u32::from(ml.resetting),
                 u32::from(ml.progressive),
-                u32::from(ml.xc),
-                ml.x10,
+                u32::from(ml.movie_skip),
+                ml.power_clock,
                 0,
             ),
             (
@@ -160,7 +160,7 @@ impl<'a> Comparer<'a> {
         self.check(
             "load_data",
             "x0, x4, mode",
-            (b.load_x0, b.load_x4, b.load_mode),
+            (b.load_question, b.load_channel, b.load_mode),
             (
                 self.u32(LOAD_DATA),
                 self.u8(LOAD_DATA + 4),
@@ -170,7 +170,7 @@ impl<'a> Comparer<'a> {
         self.check(
             "leave_data",
             "x0, mode",
-            (b.leave_x0, b.leave_mode),
+            (b.leave_answer, b.leave_mode),
             (self.u32(LEAVE_DATA), self.u8(LEAVE_DATA + 4)),
         );
         self.check(

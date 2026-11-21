@@ -117,7 +117,7 @@ pub fn css_one_player(
     vs.ordered_stage_index = -1;
     vs.winner = -1;
     css.match_type = match_type;
-    css.unk_0x0 = u16::from(slot) + 1;
+    css.first_port = u16::from(slot) + 1;
     let p = &mut css.vs.start.players[usize::from(slot)];
     p.ckind = ckind;
     p.stocks = stocks;
@@ -133,7 +133,7 @@ pub fn css_one_player(
 /// tag and level.
 #[doc(alias = "gm_801B0730")]
 pub fn css_one_player_choice(css: &CssData) -> (i8, u8, u8, u8, u8) {
-    let slot = usize::from(css.unk_0x0.wrapping_sub(1));
+    let slot = usize::from(css.first_port.wrapping_sub(1));
     let p = &css.vs.start.players[slot];
     (p.ckind, p.stocks as u8, p.color, p.nametag, p.cpu_level)
 }
@@ -163,7 +163,7 @@ pub fn css_set_partner(
 /// than the screen's port's.
 #[doc(alias = "gm_801B07E8")]
 pub fn css_partner_choice(css: &CssData) -> (i8, i8, i8, i8, u8) {
-    let slot = usize::from(css.unk_0x0.wrapping_sub(1) == 0);
+    let slot = usize::from(css.first_port.wrapping_sub(1) == 0);
     let p = &css.vs.start.players[slot];
     (
         p.ckind,

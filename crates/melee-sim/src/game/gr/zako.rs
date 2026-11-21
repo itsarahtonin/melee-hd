@@ -193,8 +193,8 @@ fn spawn_enemy(r: &mut Running, kind: i32, x2: i32, pos: crate::vec::Vec3) -> Op
             itzako::spawn(r, kind, Some(pos), None, None, true)
         }
         ItKind::ReDead => kinds::redead::spawn(r, pos, -1),
-        ItKind::KoopaTroopa => kinds::nokonoko::spawn(r, x2, pos, None, -1),
-        ItKind::KoopaParatroopa => kinds::patapata::spawn(r, x2, pos, -1),
+        ItKind::KoopaTroopa => kinds::koopa_troopa::spawn(r, x2, pos, None, -1),
+        ItKind::KoopaParatroopa => kinds::koopa_paratroopa::spawn(r, x2, pos, -1),
         ItKind::LikeLike => kinds::like_like::spawn(r, x2, pos),
         _ => None,
     }

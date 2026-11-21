@@ -53,9 +53,11 @@ impl Running<'_> {
     /// How often a player used the taunt (`pl_800386D8` on their action stats). The stats
     /// are the player block's, which a stand-in's log can't name.
     fn fox_appeal_count(&mut self, slot: i32) -> i32 {
-        self.appeal_seam(ext::PL_800386D8, &[Val::None, Val::Int(ATTACK_ID)], |r| {
-            Val::Int(by_attack_hi(r.game.player_action_stats(slot), ATTACK_ID) as i32)
-        })
+        self.appeal_seam(
+            ext::PL_ATTACK_COUNT,
+            &[Val::None, Val::Int(ATTACK_ID)],
+            |r| Val::Int(by_attack_hi(r.game.player_action_stats(slot), ATTACK_ID) as i32),
+        )
         .int()
     }
 
@@ -66,7 +68,7 @@ impl Running<'_> {
         let slot = i32::from(self.game.fighters[f.0].player_idx);
         self.fox_appeal_count(slot) != 0
             && self
-                .appeal_seam(ext::GRCORNERIA_801E2D14, &[], |r| {
+                .appeal_seam(ext::GRCORNERIA_TALKING, &[], |r| {
                     Val::Int(i32::from(talking(r.game)))
                 })
                 .int()
@@ -97,7 +99,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
         self.appeal_seam(
-            ext::PL_80040120,
+            ext::PL_TAUNT_STATS,
             &[Val::Int(slot), Val::Int(i32::from(sub))],
             |r| {
                 r.taunt_stats(slot, sub);
@@ -126,14 +128,14 @@ impl Running<'_> {
         if self.game.fighter(gobj).throw_flag(3) {
             self.game.fighter_mut(gobj).set_throw_flag(3, false);
             let check = match self.game.fighter(gobj).fighter_kind() {
-                FighterKind::Fox => Some(ext::GRCORNERIA_801E2B80),
-                FighterKind::Falco => Some(ext::GRCORNERIA_801E2C34),
+                FighterKind::Fox => Some(ext::GRCORNERIA_FOX_TALK),
+                FighterKind::Falco => Some(ext::GRCORNERIA_FALCO_TALK),
                 _ => None,
             };
             if let Some(c) = check
                 && self
                     .appeal_seam(c, &[], |r| {
-                        let talks = if c == ext::GRCORNERIA_801E2B80 {
+                        let talks = if c == ext::GRCORNERIA_FOX_TALK {
                             fox_talk(r)
                         } else {
                             falco_talk(r)
@@ -152,7 +154,7 @@ impl Running<'_> {
             let n = fp.mv_i32(mv::APPEAL_COUNT).wrapping_add(1);
             fp.set_mv_i32(mv::APPEAL_COUNT, n);
             if n >= 3 {
-                self.appeal_seam(ext::FT_8008A324, &[Val::GObj(Some(gobj))], |r| {
+                self.appeal_seam(ext::FT_ENTER_WAIT_NEUTRAL, &[Val::GObj(Some(gobj))], |r| {
                     r.enter_wait_neutral(gobj);
                     Val::None
                 });
@@ -173,7 +175,7 @@ impl Running<'_> {
     /// Hit during the call, `ftFx_AppealS_OnTakeDamage` (`death1_cb`): the call is cut off.
     #[doc(alias = "ftFx_AppealS_OnTakeDamage")]
     pub fn fox_appeal_s_on_take_damage(&mut self, gobj: GObjId) {
-        self.appeal_seam(ext::GRCORNERIA_801E2AF4, &[], |r| {
+        self.appeal_seam(ext::GRCORNERIA_TAUNT_INTERRUPTED, &[], |r| {
             taunt_interrupted(r);
             Val::None
         });

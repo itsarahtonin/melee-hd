@@ -354,7 +354,7 @@ impl Running<'_> {
         if fp.cur_anim_frame == 3.0 {
             fp.cmd_vars[1] = 1;
         }
-        fp.accessory4_cb = Some(CodeRef(addr::SPECIAL_LW_8012ADF0));
+        fp.accessory4_cb = Some(CodeRef(addr::BOMB_DROP));
     }
 
     /// `ftSs_SpecialLw_Enter`: her ground speed scaled by the attributes' `x6C`; from a
@@ -510,7 +510,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.cmd_vars[1] = 2;
         fp.set_mv_i32(mv::INTANGIBLE, 0);
-        fp.accessory4_cb = Some(CodeRef(addr::SPECIAL_LW_8012ADF0));
+        fp.accessory4_cb = Some(CodeRef(addr::BOMB_DROP));
     }
 
     /// The bomb off the ground, `ftSs_SpecialLw_8012B570`.
@@ -528,7 +528,7 @@ impl Running<'_> {
         let rise = self.samus_attr_f32(f, attr::LW_VEL_Y);
         self.game.fighters[f.0].self_vel.y = rise;
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_LW_BOMB, KEEP);
-        self.game.fighters[f.0].accessory4_cb = Some(CodeRef(addr::SPECIAL_LW_8012ADF0));
+        self.game.fighters[f.0].accessory4_cb = Some(CodeRef(addr::BOMB_DROP));
     }
 
     /// The bomb landing, `ftSs_SpecialLw_8012B668`.
@@ -551,11 +551,11 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_LW_PHYS => g.samus_special_air_lw_phys(gobj),
         addr::SPECIAL_LW_COLL => g.samus_special_lw_coll(gobj),
         addr::SPECIAL_AIR_LW_COLL => g.samus_special_air_lw_coll(gobj),
-        addr::SPECIAL_LW_80129048 => g.samus_bomb_jump_to_air(gobj),
-        addr::SPECIAL_LW_801290A4 => g.samus_bomb_jump_to_ground(gobj),
-        addr::SPECIAL_LW_8012ADF0 => g.samus_bomb_drop(gobj),
-        addr::SPECIAL_LW_8012AEBC => g.samus_ball_intangible(gobj),
-        addr::SPECIAL_LW_8012AF38 => g.samus_ball_tangible(gobj),
+        addr::BOMB_JUMP_TO_AIR => g.samus_bomb_jump_to_air(gobj),
+        addr::BOMB_JUMP_TO_GROUND => g.samus_bomb_jump_to_ground(gobj),
+        addr::BOMB_DROP => g.samus_bomb_drop(gobj),
+        addr::BALL_INTANGIBLE => g.samus_ball_intangible(gobj),
+        addr::BALL_TANGIBLE => g.samus_ball_tangible(gobj),
         addr::SPECIAL_LW_ENTER => g.samus_special_lw_enter(gobj),
         addr::SPECIAL_AIR_LW_ENTER => g.samus_special_air_lw_enter(gobj),
         addr::SPECIAL_LW_BOMB_ANIM => g.samus_special_lw_bomb_anim(gobj),
@@ -566,9 +566,9 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_LW_BOMB_PHYS => g.samus_special_air_lw_bomb_phys(gobj),
         addr::SPECIAL_LW_BOMB_COLL => g.samus_special_lw_bomb_coll(gobj),
         addr::SPECIAL_AIR_LW_BOMB_COLL => g.samus_special_air_lw_bomb_coll(gobj),
-        addr::SPECIAL_LW_8012B570 => g.samus_bomb_to_air(gobj),
-        addr::SPECIAL_LW_8012B5F0 => g.samus_bomb_hop(gobj),
-        addr::SPECIAL_LW_8012B668 => g.samus_bomb_to_ground(gobj),
+        addr::BOMB_TO_AIR => g.samus_bomb_to_air(gobj),
+        addr::BOMB_HOP => g.samus_bomb_hop(gobj),
+        addr::BOMB_TO_GROUND => g.samus_bomb_to_ground(gobj),
         _ => return false,
     }
     true

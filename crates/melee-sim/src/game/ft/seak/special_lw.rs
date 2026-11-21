@@ -15,19 +15,19 @@ pub const SHEIK: Transform = Transform {
     states: ms::SPECIAL_LW,
     attrs: 0x60,
     start_part: PART_R2ND_NB,
-    start_cb: addr::LW_FN_80114034,
-    end_cb: addr::LW_FN_801140B0,
-    swap_cb: addr::LW_FN_8011412C,
-    into: super::super::zelda::addr::LW_8013B4D8,
+    start_cb: addr::SPECIAL_LW_START_GFX,
+    end_cb: addr::SPECIAL_LW_END_GFX,
+    swap_cb: addr::SPECIAL_LW_SWAP,
+    into: super::super::zelda::addr::SPECIAL_LW_FINISH,
 };
 
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     let t = &SHEIK;
     match a {
-        addr::LW_FN_80114034 => g.transform_start_gfx(gobj, t),
-        addr::LW_FN_801140B0 => g.transform_end_gfx(gobj),
-        addr::LW_FN_8011412C => g.transform_swap(gobj, t),
+        addr::SPECIAL_LW_START_GFX => g.transform_start_gfx(gobj, t),
+        addr::SPECIAL_LW_END_GFX => g.transform_end_gfx(gobj),
+        addr::SPECIAL_LW_SWAP => g.transform_swap(gobj, t),
         addr::SPECIAL_LW_ENTER => g.transform_enter(gobj, t),
         addr::SPECIAL_AIR_LW_ENTER => g.transform_air_enter(gobj, t),
         0x8011_42E8 | 0x8011_4328 => g.transform_anim(gobj, t),
@@ -44,7 +44,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         0x8011_4644 => g.transform_air_second_coll(gobj, t),
         0x8011_4680 => g.transform_second_to_air(gobj, t),
         0x8011_46EC => g.transform_second_to_ground(gobj, t),
-        addr::LW_80114758 => g.transform_finish(gobj, t),
+        addr::SPECIAL_LW_FINISH => g.transform_finish(gobj, t),
         _ => return false,
     }
     true

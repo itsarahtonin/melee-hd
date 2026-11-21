@@ -246,16 +246,16 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::MS_366_80153820 => g.hand_enter(gobj, ms::BACK_AIRPLANE1),
+        addr::BACK_AIRPLANE1_ENTER => g.hand_enter(gobj, ms::BACK_AIRPLANE1),
         addr::BACK_AIRPLANE1_ANIM => g.hand_pass_rise_anim(gobj, &HAND),
         addr::DO_ANIM => g.hand_pass_enter(gobj, &HAND),
         addr::BACK_AIRPLANE2_ANIM => g.hand_pass_anim(gobj, &HAND),
         addr::BACK_AIRPLANE2_PHYS => g.hand_pass_phys(gobj, &HAND),
-        addr::MS_368_80153A64 => g.hand_pass_back_enter(gobj, &HAND),
-        addr::MS_369_80153B90 => g.hand_ram_enter(gobj, &HAND),
+        addr::PASS_BACK_ENTER => g.hand_pass_back_enter(gobj, &HAND),
+        addr::RAM_ENTER => g.hand_ram_enter(gobj, &HAND),
         addr::BACK_PUNCH_ANIM => g.hand_ram_anim(gobj, &HAND),
         addr::BACK_PUNCH_PHYS => g.hand_ram_phys(gobj, &HAND),
-        addr::MS_370_80153D2C => g.hand_shrink_enter(gobj, &HAND),
+        addr::SHRINK_ENTER => g.hand_shrink_enter(gobj, &HAND),
         addr::BACK_CRUSH_ANIM => g.hand_shrink_anim(gobj, &HAND),
         addr::BACK_CRUSH_PHYS => g.hand_shrink_phys(gobj, &HAND),
         addr::BACK_DISAPPEAR_ANIM => g.hand_vanish_anim(gobj),

@@ -17,7 +17,6 @@ use super::super::zako::{self, GA_AIR, Knock, QUAKE_SMALL, attr};
 use super::super::{ground, hitbox, item, item_mut, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
 use crate::game::camera;
-use crate::game::handles::CodeRef;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 
@@ -459,13 +458,10 @@ pub fn anim8(r: &mut Running, gobj: GObjId) -> bool {
     !lib2725::is_animating(r.game, gobj)
 }
 
-/// Enters a state it can be landed on in, `it_802D848C`: stompable, its jumped-on callback
+/// Enters a state it can be landed on in ([`zako::enter_stompable`]), its jumped-on callback
 /// [`stomped`].
-#[doc(alias = "it_802D848C")]
-pub fn enter(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
-    change_state(r, gobj, msid, flags);
-    lib2725::make_stompable(r.game, gobj);
-    item_mut(r.game, gobj).jumped_on = Some(CodeRef(STOMPED));
+fn enter(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
+    zako::enter_stompable(r, gobj, msid, flags, STOMPED);
 }
 
 /// Forgets a GObj going away, `it_802D84D8` (`it_8026B894`): the adventure Goomba's (kind 208)

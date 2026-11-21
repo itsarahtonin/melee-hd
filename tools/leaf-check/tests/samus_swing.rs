@@ -36,7 +36,8 @@
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use leaf_check::calls::{Ret, Variant, check_variants, gobj_arg};
-use melee_sim::game::it::kinds::samusgrapple;
+use melee_sim::game::it::kinds::samusgrapple::GRAPPLE;
+use melee_sim::game::it::kinds::tether;
 use ssbm_rt::capture::Call;
 
 const CALLS: &str = "calls/samus-swing";
@@ -66,9 +67,9 @@ static SWINGS: [AtomicUsize; 3] = [const { AtomicUsize::new(0) }; 3];
 /// The beam's frames this checks: the function's name, ours and its index in [`SWINGS`].
 type Frame = fn(&mut melee_sim::game::state::Running, melee_sim::hsd::gobj::GObjId);
 const FRAMES: [(&str, Frame); 3] = [
-    ("fn_802B805C", samusgrapple::shot),
-    ("fn_802B8384", samusgrapple::bounced),
-    ("fn_802B8524", samusgrapple::falling),
+    ("fn_802B805C", |r, gobj| tether::shot(r, gobj, &GRAPPLE)),
+    ("fn_802B8384", |r, gobj| tether::bounced(r, gobj, &GRAPPLE)),
+    ("fn_802B8524", |r, gobj| tether::falling(r, gobj, &GRAPPLE)),
 ];
 
 fn run_frame(

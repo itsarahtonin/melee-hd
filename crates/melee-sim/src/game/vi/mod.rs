@@ -441,7 +441,7 @@ impl Running<'_> {
     /// `x7C`), which picks the Star Fox cutscene's later talks.
     #[doc(alias = "gm_8017E7E0")]
     pub(crate) fn adventure_starfox_lost(&self) -> bool {
-        self.game.one_player.adventure.x7c == 0x14
+        self.game.one_player.adventure.star_fox_kind == 0x14
     }
 
     /// The current and last frames of a camera's eye's animation.

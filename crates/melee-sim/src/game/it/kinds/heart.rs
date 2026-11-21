@@ -103,7 +103,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     {
         // All-Star's rest area's heart: its slot taken.
         let slot = item_mut(r.game, gobj).xDD4_itemVar.heart().xDDC.get();
-        r.game.one_player.allstar.x90[slot as usize] = 0;
+        r.game.one_player.allstar.hearts[slot as usize] = 0;
     }
 }
 

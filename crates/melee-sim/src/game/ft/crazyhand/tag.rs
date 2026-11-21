@@ -54,13 +54,13 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use addr::*;
     match a {
-        FN_8015AAC8 => g.ch_tag_wait_enter(gobj),
+        TAG_WAIT_ENTER => g.ch_tag_wait_enter(gobj),
         TAG_ROCK_PAPER_ANIM => g.ch_tag_wait_anim(gobj),
-        INIT_8015A2B0 => g.ch_tag_enter(gobj, ms::SQUEEZING1),
-        INIT_8015A3F4 => g.ch_tag_enter(gobj, ms::SQUEEZE),
-        INIT_8015A560 => g.ch_tag_enter(gobj, ms::THROW),
+        TAG_HALF_CRUSH_ENTER => g.ch_tag_enter(gobj, ms::SQUEEZING1),
+        TAG_HALF_APPLAUD_ENTER => g.ch_tag_enter(gobj, ms::SQUEEZE),
+        TAG_HALF_ROCK_PAPER_ENTER => g.ch_tag_enter(gobj, ms::THROW),
         SQUEEZING1_ANIM | SQUEEZE_ANIM | THROW_ANIM => g.hand_tag_anim(gobj, &HAND),
-        GRAB_UNK1_8015ADD0 => g.hand_beaten_enter(gobj, &HAND),
+        BEATEN_ENTER => g.hand_beaten_enter(gobj, &HAND),
         TAG_GRAB_ANIM | TAG_SQUEEZE_ANIM => g.hand_beaten_anim(gobj, &HAND),
         TAG_GRAB_PHYS => g.hand_beaten_phys(gobj, &HAND),
         _ => return false,

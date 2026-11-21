@@ -15,14 +15,14 @@
 //! ([`Cx::stale_read`]): its value is the block's, but a pointer among it reads as null.
 
 use super::kinds::arwinglaser::ArwingLaserVars;
+use super::kinds::birdo::KyasarinVars;
+use super::kinds::birdo_egg::KyasarinEggVars;
 use super::kinds::coin::CoinVars;
 use super::kinds::gamewatch::{GameWatchRescueVars, GameWatchVars};
 use super::kinds::greatfoxlaser::GreatFoxLaserVars;
-use super::kinds::heiho::HeihoVars;
-use super::kinds::klap::KlapVars;
-use super::kinds::kyasarin::KyasarinVars;
-use super::kinds::kyasarinegg::KyasarinEggVars;
-use super::kinds::tincle::TincleVars;
+use super::kinds::klap_trap::KlapVars;
+use super::kinds::shy_guy::HeihoVars;
+use super::kinds::tingle::TincleVars;
 use super::kinds::tools::ToolsVars;
 use super::kinds::whispyapple::WhispyAppleVars;
 use super::kinds::yaku::YakuVars;

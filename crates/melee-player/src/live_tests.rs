@@ -171,7 +171,7 @@ impl Pair {
 fn renderer(gpu: &crate::present::Gpu) -> melee_render::gpu::Gpu {
     let mut r = crate::pipelines::renderer(gpu, 1, 1, crate::present::Aspect::GAME);
     r.xfb_readback = true;
-    crate::gpu_for(r, true)
+    crate::gpu_for(r, true, false)
 }
 
 fn draw(
@@ -217,6 +217,7 @@ fn a_live_match_draws_with_its_own_frame_builder() {
             scale: 1,
             efb_width: crate::present::Aspect::GAME.efb_width(1),
             msaa: 1,
+            fast: false,
         };
         let mut menus = Pair::new(&gpu, &s.dol);
         let mut live: Option<Pair> = None;

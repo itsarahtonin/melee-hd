@@ -1083,8 +1083,8 @@ pub fn after_card_data(
         u32::from(main.skip_intro),
         u32::from(main.resetting),
         u32::from(main.progressive),
-        u32::from(main.xc),
-        main.x10,
+        u32::from(main.movie_skip),
+        main.power_clock,
         0,
     ] {
         out.extend_from_slice(&w.to_be_bytes());

@@ -325,7 +325,7 @@ pub fn menu_block(game: &Game, data: &Archives, img: &mut Image, ud: &UserData) 
             .map(|c| {
                 let mut l = Lay::new(c.addr, 0x14);
                 l.u32(0, game.world.gobjs.addr(c.gobj.0));
-                l.bytes(4, &[c.port, c.state, c.held, c.x7]);
+                l.bytes(4, &[c.port, c.state, c.held, c.unused]);
                 l.u16(8, c.hover);
                 l.u16(0xA, c.b_timer);
                 l.f32s(0xC, &[c.x, c.y]);
@@ -362,7 +362,7 @@ pub fn menu_block(game: &Game, data: &Archives, img: &mut Image, ud: &UserData) 
         UserData::MainMenuPanel(a) => game.menu.panels.get(&a).map(|d| {
             let mut l = Lay::leftover(img, data, a, 4);
             l.bytes(0, &[d.cur_menu, d.prev_menu]);
-            if let Some(x2) = d.x2 {
+            if let Some(x2) = d.leftover {
                 l.u8(2, x2);
             }
             l.u8(3, d.state);
@@ -372,7 +372,7 @@ pub fn menu_block(game: &Game, data: &Archives, img: &mut Image, ud: &UserData) 
         UserData::OptionMenu(a) => game.options.menus.get(&a).map(|d| {
             let mut l = Lay::leftover(img, data, a, 8);
             l.u8(0, d.cursor);
-            for (k, v) in [d.unk1, d.unk2, d.unk3].into_iter().enumerate() {
+            for (k, v) in [d.setting, d.state, d.balance].into_iter().enumerate() {
                 if let Some(v) = v {
                     l.u8(1 + k as u32, v);
                 }
@@ -574,7 +574,7 @@ pub fn debug_menu(game: &Game, data: &Archives, img: &mut Image, slot: u32, text
     l.u32(8, o.table);
     l.u32(0xC, o.cb);
     l.u32(0x10, o.gobj.map_or(0, |g| game.world.gobjs.addr(g.0)));
-    match (o.proc, o.x14) {
+    match (o.proc, o.submenu_leftover) {
         (Some(p), _) => l.u32(0x14, game.world.procs.addr(p.0)),
         (None, Some(w)) => l.u32(0x14, w),
         (None, None) => {}

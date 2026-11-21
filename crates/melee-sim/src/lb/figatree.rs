@@ -25,7 +25,7 @@ fn track_fobj(objs: &mut Objects, data: &Archives, track: DataRef) -> FObjId {
             ad_head,
             length: u32::from(data.u16(track)),
             flags: 0,
-            data_at: crate::hsd::heap::with(|h| h.image.copy_at(track.archive))
+            data_at: crate::hsd::heap::image(|i| i.copy_at(track.archive))
                 .flatten()
                 .unwrap_or(0),
             ..FObj::default()

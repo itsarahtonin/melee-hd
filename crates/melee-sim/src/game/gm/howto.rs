@@ -163,7 +163,7 @@ impl Running<'_> {
         self.game.audio.movie.take_frame();
         let _ = self.game.audio.movie.game_clock();
         let ended = self.game.audio.movie.has_ended();
-        let reset = self.game.main_lib.xc && !ended;
+        let reset = self.game.main_lib.movie_skip && !ended;
         let pressed = self.game.buttons_triggered(4)
             & u64::from(crate::input::pad::BUTTON_START | crate::input::pad::BUTTON_A)
             != 0;

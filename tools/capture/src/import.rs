@@ -692,9 +692,9 @@ impl<'a> Importer<'a> {
         }
         for s in 0..6 {
             let at = SLOT_WORDS + 8 * s;
-            self.game.ft.data.slot_words[s as usize] = melee_sim::game::ft::data::Ft8045993C {
-                x0: self.u32(at),
-                x6: self.u8(at + 6),
+            self.game.ft.data.slot_words[s as usize] = melee_sim::game::ft::data::SlotWord {
+                word: self.u32(at),
+                flags: self.u8(at + 6),
             };
         }
         self.game.ft.spawn_counter = self.u32(SPAWN_COUNTER);

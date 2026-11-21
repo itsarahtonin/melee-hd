@@ -113,8 +113,10 @@ pub struct Album {
     pub fullview_jobj: Option<JObjId>,
     pub dlg_root: Option<JObjId>,
     pub dlg_pos: Option<JObjId>,
-    pub dlg_x36: Option<JObjId>,
-    pub dlg_x37: Option<JObjId>,
+    #[doc(alias("dlg_x36"))]
+    pub dlg_joint4: Option<JObjId>,
+    #[doc(alias("dlg_x37"))]
+    pub dlg_joint5: Option<JObjId>,
     pub yes_jobj: Option<JObjId>,
     pub no_jobj: Option<JObjId>,
     pub dlg_frame: Option<JObjId>,
@@ -1686,8 +1688,8 @@ impl Running<'_> {
         let a = self.album_mut();
         a.dlg_root = root;
         a.dlg_pos = pos;
-        a.dlg_x36 = x36;
-        a.dlg_x37 = x37;
+        a.dlg_joint4 = x36;
+        a.dlg_joint5 = x37;
         a.yes_jobj = yes;
         a.no_jobj = no;
         a.dlg_frame = frame;

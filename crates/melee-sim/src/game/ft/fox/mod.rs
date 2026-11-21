@@ -72,17 +72,27 @@ pub mod ms {
 /// The functions other parts of the port own that Fox's code calls, by address: each answers
 /// `code::call` once its part is ported.
 pub mod ext {
-    pub const FTANIM_80070FB4: u32 = 0x8007_0FB4;
-    pub const FTANIM_80070C48: u32 = 0x8007_0C48;
-    pub const FTANIM_80070CC4: u32 = 0x8007_0CC4;
-    pub const PL_800386D8: u32 = 0x8003_86D8;
-    pub const PL_80040120: u32 = 0x8004_0120;
+    #[doc(alias("FTANIM_80070FB4"))]
+    pub const FTANIM_SET_PART_ANIM_POSE: u32 = 0x8007_0FB4;
+    #[doc(alias("FTANIM_80070C48"))]
+    pub const FTANIM_SHOW_PART_ANIM_POSE: u32 = 0x8007_0C48;
+    #[doc(alias("FTANIM_80070CC4"))]
+    pub const FTANIM_END_PART_ANIM: u32 = 0x8007_0CC4;
+    #[doc(alias("PL_800386D8"))]
+    pub const PL_ATTACK_COUNT: u32 = 0x8003_86D8;
+    #[doc(alias("PL_80040120"))]
+    pub const PL_TAUNT_STATS: u32 = 0x8004_0120;
     pub const IT_GET_HOLD_KIND: u32 = 0x8026_B320;
-    pub const GRCORNERIA_801E2D14: u32 = 0x801E_2D14;
-    pub const GRCORNERIA_801E2C34: u32 = 0x801E_2C34;
-    pub const GRCORNERIA_801E2B80: u32 = 0x801E_2B80;
-    pub const GRCORNERIA_801E2AF4: u32 = 0x801E_2AF4;
-    pub const FT_8008A324: u32 = 0x8008_A324;
+    #[doc(alias("GRCORNERIA_801E2D14"))]
+    pub const GRCORNERIA_TALKING: u32 = 0x801E_2D14;
+    #[doc(alias("GRCORNERIA_801E2C34"))]
+    pub const GRCORNERIA_FALCO_TALK: u32 = 0x801E_2C34;
+    #[doc(alias("GRCORNERIA_801E2B80"))]
+    pub const GRCORNERIA_FOX_TALK: u32 = 0x801E_2B80;
+    #[doc(alias("GRCORNERIA_801E2AF4"))]
+    pub const GRCORNERIA_TAUNT_INTERRUPTED: u32 = 0x801E_2AF4;
+    #[doc(alias("FT_8008A324"))]
+    pub const FT_ENTER_WAIT_NEUTRAL: u32 = 0x8008_A324;
     /// Callbacks Fox's code stores by address.
     pub const EFLIB_PAUSE_ALL: u32 = 0x8005_BA40;
     pub const EFLIB_RESUME_ALL: u32 = 0x8005_BAC4;

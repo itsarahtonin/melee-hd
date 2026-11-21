@@ -179,7 +179,8 @@ impl Running<'_> {
 
     /// `ftLk_SpecialHi_GetFv4`.
     #[doc(alias = "ftLk_SpecialHi_GetFv4")]
-    pub fn link_u_x4(&self, gobj: GObjId) -> i32 {
+    #[doc(alias("link_u_x4"))]
+    pub fn link_smash_boomerang(&self, gobj: GObjId) -> i32 {
         self.game.fighter(gobj).u_i32(u::X4)
     }
 }

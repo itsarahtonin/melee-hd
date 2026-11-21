@@ -33,7 +33,9 @@ use melee_sim::game::gr::{
     yoshis_island_64,
 };
 use melee_sim::game::handles::CodeRef;
-use melee_sim::game::it::kinds::{kyasarin, kyasarinegg};
+use melee_sim::game::it::item::change;
+use melee_sim::game::it::kinds::{birdo, birdo_egg};
+use melee_sim::game::it::zako as itzako;
 use melee_sim::game::state::Running;
 use melee_sim::game::structs::HitCapsule;
 use melee_sim::vec::Vec3;
@@ -1616,9 +1618,9 @@ fn tincle_states() {
     // The stage's questions and orders, from Tingle's calls.
     // Its answers go to Tingle's stage object's variables (map 10), as the stage passes them.
     let ask = |r: &mut Running, maps: &Maps, call: &Call| {
-        use melee_sim::game::it::kinds::tincle;
+        use melee_sim::game::it::kinds::tingle;
         let g = gobj_arg(maps, call);
-        let (state, pos) = tincle::state_and_place(r.game, g);
+        let (state, pos) = tingle::state_and_place(r.game, g);
         let vars = map_vars(call, 10);
         assert_eq!(
             (call.regs.gpr[4], call.regs.gpr[5]),
@@ -1638,7 +1640,7 @@ fn tincle_states() {
     check_hazard(&d, "it_802ECCA4", 1, &as_saved, &ask);
     let weight = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = gobj_arg(maps, call);
-        melee_sim::game::it::kinds::tincle::set_weight(r.game, g, call.regs.fpr[1].ps0 as f32);
+        melee_sim::game::it::kinds::tingle::set_weight(r.game, g, call.regs.fpr[1].ps0 as f32);
         Ret::Nothing
     };
     check_hazard(&d, "it_802ECC98", 1, &as_saved, &weight);
@@ -1648,16 +1650,16 @@ fn tincle_states() {
     let order = |target: &'static str| {
         let a = leaf_check::sym(target);
         let ours = move |r: &mut Running, maps: &Maps, call: &Call| {
-            use melee_sim::game::it::kinds::tincle;
+            use melee_sim::game::it::kinds::tingle;
             let g = gobj_arg(maps, call);
             match target {
-                "it_802EBD14" => tincle::press(r, g),
-                "it_802EBFAC" => tincle::release(r, g),
-                "it_802EC18C" => tincle::pop(r, g),
-                "it_802EC1F4" => tincle::pop_hit(r, g),
-                "it_802EC870" => tincle::turn(r, g, call.regs.gpr[4] as i32),
-                "it_802EC69C" => tincle::rise_again(r, g),
-                "it_802EC4D0" => tincle::lie(r, g),
+                "it_802EBD14" => tingle::press(r, g),
+                "it_802EBFAC" => tingle::release(r, g),
+                "it_802EC18C" => tingle::pop(r, g),
+                "it_802EC1F4" => tingle::pop_hit(r, g),
+                "it_802EC870" => tingle::turn(r, g, call.regs.gpr[4] as i32),
+                "it_802EC69C" => tingle::rise_again(r, g),
+                "it_802EC4D0" => tingle::lie(r, g),
                 _ => unreachable!(),
             }
             Ret::Nothing
@@ -1704,7 +1706,7 @@ fn tincle_states() {
     }
     // The states' entries, his box and his timer, from their own calls.
     let entry = |r: &mut Running, maps: &Maps, call: &Call| {
-        use melee_sim::game::it::kinds::tincle;
+        use melee_sim::game::it::kinds::tingle;
         let g = gobj_arg(maps, call);
         let name = TINCLE_ENTRIES
             .iter()
@@ -1712,23 +1714,23 @@ fn tincle_states() {
             .find(|&n| leaf_check::sym(n) == call.addr)
             .unwrap_or("?");
         match name {
-            "it_802EB6DC" => tincle::wait(r, g),
-            "it_802EB870" => tincle::drop_in(r, g),
-            "it_802EBA00" => tincle::float(r, g),
-            "it_802EBE5C" => tincle::sit(r, g),
-            "it_802EC35C" => tincle::fall(r, g),
-            "it_802EC3F4" => tincle::land(r, g),
-            "it_802EC604" => tincle::get_up(r, g),
-            "it_802EC9E8" => tincle::set_box(r, g),
-            "it_802ECC8C" => return Ret::Int(tincle::timer(r.game, g) as u32),
-            "it_802EBD14" => tincle::press(r, g),
-            "it_802EBFAC" => tincle::release(r, g),
-            "it_802EC18C" => tincle::pop(r, g),
-            "it_802EC1F4" => tincle::pop_hit(r, g),
-            "it_802EC870" => tincle::turn(r, g, call.regs.gpr[4] as i32),
-            "it_802EC69C" => tincle::rise_again(r, g),
-            "it_802EC4D0" => tincle::lie(r, g),
-            "it_802EC830" => tincle::destroy(r, g),
+            "it_802EB6DC" => tingle::wait(r, g),
+            "it_802EB870" => tingle::drop_in(r, g),
+            "it_802EBA00" => tingle::float(r, g),
+            "it_802EBE5C" => tingle::sit(r, g),
+            "it_802EC35C" => tingle::fall(r, g),
+            "it_802EC3F4" => tingle::land(r, g),
+            "it_802EC604" => tingle::get_up(r, g),
+            "it_802EC9E8" => tingle::set_box(r, g),
+            "it_802ECC8C" => return Ret::Int(tingle::timer(r.game, g) as u32),
+            "it_802EBD14" => tingle::press(r, g),
+            "it_802EBFAC" => tingle::release(r, g),
+            "it_802EC18C" => tingle::pop(r, g),
+            "it_802EC1F4" => tingle::pop_hit(r, g),
+            "it_802EC870" => tingle::turn(r, g, call.regs.gpr[4] as i32),
+            "it_802EC69C" => tingle::rise_again(r, g),
+            "it_802EC4D0" => tingle::lie(r, g),
+            "it_802EC830" => tingle::destroy(r, g),
             other => panic!("{other} isn't one of Tingle's entries"),
         }
         Ret::Nothing
@@ -4375,7 +4377,7 @@ fn kongo_unreached_callbacks() {
 
 #[test]
 fn klap() {
-    use melee_sim::game::it::kinds::klap;
+    use melee_sim::game::it::kinds::klap_trap;
     let d = dir(KG);
     let item = |f: fn(&mut Running, melee_sim::hsd::gobj::GObjId)| {
         move |r: &mut Running, maps: &Maps, call: &Call| {
@@ -4389,14 +4391,14 @@ fn klap() {
         }
     };
     for (name, f) in [
-        ("it_802E1820", klap::spawned as fn(&mut Running, _)),
-        ("itKlap_Logic10_Destroyed", klap::destroyed),
-        ("it_802E1930", klap::swim),
-        ("it_802E1C84", klap::fall),
-        ("itKlap_UnkMotion2_Phys", klap::phys2),
-        ("itKlap_UnkMotion4_Phys", klap::phys4),
-        ("it_802E20D8", klap::enter_barrel),
-        ("it_802E215C", klap::in_barrel),
+        ("it_802E1820", klap_trap::spawned as fn(&mut Running, _)),
+        ("itKlap_Logic10_Destroyed", klap_trap::destroyed),
+        ("it_802E1930", klap_trap::swim),
+        ("it_802E1C84", klap_trap::fall),
+        ("itKlap_UnkMotion2_Phys", klap_trap::phys2),
+        ("itKlap_UnkMotion4_Phys", klap_trap::phys4),
+        ("it_802E20D8", klap_trap::enter_barrel),
+        ("it_802E215C", klap_trap::in_barrel),
     ] {
         check_calls_with(&d, name, 1, &as_saved, &item(f));
     }
@@ -4405,14 +4407,14 @@ fn klap() {
     for p in [&as_saved as &Prepare, &|c, k| {
         set_seed(c, (k as u32).wrapping_mul(0x2545_F491))
     }] {
-        check_calls_with(&d, "itKlap_UnkMotion1_Phys", 1, p, &item(klap::phys1));
+        check_calls_with(&d, "itKlap_UnkMotion1_Phys", 1, p, &item(klap_trap::phys1));
     }
     check_calls_with(
         &d,
         "itKlap_UnkMotion1_Coll",
         1,
         &as_saved,
-        &pred(klap::coll1),
+        &pred(klap_trap::coll1),
     );
     // What the match never did to it, from its calls: snapping (from swimming's), and a hit
     // taken and its knockback (from falling's and spinning's, with a knockback set).
@@ -4422,11 +4424,14 @@ fn klap() {
         "it_802E1930",
         1,
         &move |c, _| c.addr = t,
-        &item(klap::snap),
+        &item(klap_trap::snap),
     );
     for (target, f) in [
         ("it_2725_Logic10_DmgReceived", None),
-        ("it_802E1E94", Some(klap::knocked as fn(&mut Running, _))),
+        (
+            "it_802E1E94",
+            Some(klap_trap::knocked as fn(&mut Running, _)),
+        ),
     ] {
         let t = leaf_check::sym(target);
         let hit = move |c: &mut Call, k: usize| {
@@ -4439,13 +4444,13 @@ fn klap() {
         for from in ["itKlap_UnkMotion2_Phys", "itKlap_UnkMotion4_Phys"] {
             match f {
                 Some(f) => check_calls_with(&d, from, 1, &hit, &item(f)),
-                None => check_calls_with(&d, from, 1, &hit, &pred(klap::damaged)),
+                None => check_calls_with(&d, from, 1, &hit, &pred(klap_trap::damaged)),
             }
         }
     }
     let spawn = |r: &mut Running, maps: &Maps, call: &Call| {
         let path = maps.gobjs.get(&call.regs.gpr[3]).copied();
-        let _ = klap::spawn(r, path);
+        let _ = klap_trap::spawn(r, path);
         Ret::Nothing
     };
     check_calls_with(&d, "it_802E18B4", 1, &as_saved, &spawn);
@@ -4470,7 +4475,7 @@ fn klap() {
             unk_count: w(4),
             ..Default::default()
         };
-        klap::shot(
+        klap_trap::shot(
             r,
             gobj_arg(maps, call),
             pos,
@@ -4486,7 +4491,7 @@ fn klap() {
     }
     let forget = |r: &mut Running, maps: &Maps, call: &Call| {
         let other = maps.gobjs.get(&call.regs.gpr[4]).copied();
-        klap::forget(r, gobj_arg(maps, call), other);
+        klap_trap::forget(r, gobj_arg(maps, call), other);
         Ret::Nothing
     };
     let t = leaf_check::sym("it_802E2450");
@@ -4530,7 +4535,7 @@ fn klap() {
             "itKlap_UnkMotion2_Phys",
             1,
             &move |c, _| c.addr = t,
-            &pred(klap::answers_false),
+            &pred(itzako::answers_false),
         );
     }
     let t = leaf_check::sym("itKlap_UnkMotion3_Phys");
@@ -4539,7 +4544,7 @@ fn klap() {
         "itKlap_UnkMotion2_Phys",
         1,
         &move |c, _| c.addr = t,
-        &item(klap::phys3),
+        &item(itzako::still),
     );
 }
 
@@ -7645,15 +7650,15 @@ fn kyasarin_states() {
         "itKyasarin_Logic25_Destroyed",
     ] {
         let port: fn(&mut Running, melee_sim::hsd::gobj::GObjId) = match f {
-            "it_802ECE90" => kyasarin::spawned,
-            "it_802ECEB0" => kyasarin::walk_in,
-            "it_802ECFE0" => kyasarin::wait_in,
-            "it_802ED0D0" => kyasarin::back_off,
-            "it_802ED25C" => kyasarin::walk_in_again,
-            "it_802ED4F8" => kyasarin::stand,
-            "it_802ED774" => kyasarin::spit,
-            "it_802ED8BC" => kyasarin::turn,
-            _ => kyasarin::destroyed,
+            "it_802ECE90" => birdo::spawned,
+            "it_802ECEB0" => birdo::walk_in,
+            "it_802ECFE0" => birdo::wait_in,
+            "it_802ED0D0" => birdo::back_off,
+            "it_802ED25C" => birdo::walk_in_again,
+            "it_802ED4F8" => birdo::stand,
+            "it_802ED774" => birdo::spit,
+            "it_802ED8BC" => birdo::turn,
+            _ => birdo::destroyed,
         };
         check_calls_with(&d, f, 1, &as_saved, &mk_of(port));
     }
@@ -7685,19 +7690,19 @@ fn kyasarin_states() {
     for (f, port) in [
         (
             "itKyasarin_UnkMotion0_Anim",
-            kyasarin::anim0 as fn(&mut Running, _) -> bool,
+            birdo::anim0 as fn(&mut Running, _) -> bool,
         ),
-        ("itKyasarin_UnkMotion0_Coll", kyasarin::coll0),
-        ("itKyasarin_UnkMotion1_Anim", kyasarin::anim1),
-        ("itKyasarin_UnkMotion2_Anim", kyasarin::anim2),
-        ("itKyasarin_UnkMotion2_Coll", kyasarin::coll2),
-        ("itKyasarin_UnkMotion3_Anim", kyasarin::anim3),
-        ("itKyasarin_UnkMotion4_Anim", kyasarin::anim4),
-        ("itKyasarin_UnkMotion4_Coll", kyasarin::coll4),
-        ("itKyasarin_UnkMotion5_Anim", kyasarin::anim5),
-        ("itKyasarin_UnkMotion6_Anim", kyasarin::anim6),
-        ("itKyasarin_UnkMotion7_Anim", kyasarin::anim7),
-        ("itKyasarin_UnkMotion8_Anim", kyasarin::anim8),
+        ("itKyasarin_UnkMotion0_Coll", birdo::coll0),
+        ("itKyasarin_UnkMotion1_Anim", birdo::anim1),
+        ("itKyasarin_UnkMotion2_Anim", birdo::anim2),
+        ("itKyasarin_UnkMotion2_Coll", birdo::coll2),
+        ("itKyasarin_UnkMotion3_Anim", birdo::anim3),
+        ("itKyasarin_UnkMotion4_Anim", birdo::anim4),
+        ("itKyasarin_UnkMotion4_Coll", birdo::coll4),
+        ("itKyasarin_UnkMotion5_Anim", birdo::anim5),
+        ("itKyasarin_UnkMotion6_Anim", birdo::anim6),
+        ("itKyasarin_UnkMotion7_Anim", birdo::anim7),
+        ("itKyasarin_UnkMotion8_Anim", birdo::anim8),
     ] {
         let ours = mk2_pred(port);
         check_calls_with(&d, f, 1, &as_saved, &ours);
@@ -7714,11 +7719,13 @@ fn kyasarin_states() {
     for (name, port) in [
         (
             "itKyasarin_UnkMotion9_Anim",
-            kyasarin::anim9 as fn(&mut Running, _) -> bool,
+            (|r, g| itzako::looped(r, g, 9, change::ANIM_UPDATE)) as fn(&mut Running, _) -> bool,
         ),
-        ("itKyasarin_UnkMotion10_Anim", kyasarin::anim10),
-        ("itKyasarin_UnkMotion9_Coll", kyasarin::coll9),
-        ("itKyasarin_UnkMotion10_Coll", kyasarin::coll10),
+        ("itKyasarin_UnkMotion10_Anim", |r, g| {
+            itzako::looped(r, g, 10, change::ANIM_UPDATE)
+        }),
+        ("itKyasarin_UnkMotion9_Coll", itzako::answers_false),
+        ("itKyasarin_UnkMotion10_Coll", itzako::bounce),
     ] {
         let t = leaf_check::sym(name);
         check_calls_with(
@@ -7732,9 +7739,9 @@ fn kyasarin_states() {
     for (name, port) in [
         (
             "itKyasarin_UnkMotion9_Phys",
-            kyasarin::phys9 as fn(&mut Running, _),
+            itzako::flight_physics as fn(&mut Running, _),
         ),
-        ("itKyasarin_UnkMotion10_Phys", kyasarin::phys10),
+        ("itKyasarin_UnkMotion10_Phys", itzako::still),
     ] {
         let t = leaf_check::sym(name);
         check_calls_with(
@@ -7747,7 +7754,7 @@ fn kyasarin_states() {
     }
     // Her hits: the damage she has taken and the hit's set for a flinch, a turn away and a
     // fall (toward the screen or bouncing, by the seed).
-    let damaged = mk2_pred(kyasarin::damaged);
+    let damaged = mk2_pred(birdo::damaged);
     check_calls_with(&d, "it_802EDDC0", 1, &as_saved, &damaged);
     for (taken, hit, seed) in [
         (0u32, 1u32, 1u32),
@@ -7775,7 +7782,7 @@ fn kyasarin_spawn() {
         let platform = gobj_arg(maps, call);
         let p = call.regs.gpr[4];
         let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
-        kyasarin::spawn(r, platform, pos, call.regs.fpr[1].ps0 as f32);
+        birdo::spawn(r, platform, pos, call.regs.fpr[1].ps0 as f32);
         Ret::Nothing
     };
     for p in [&as_saved as &Prepare, &|c: &mut Call, _: usize| {
@@ -7796,7 +7803,7 @@ fn kyasarin_eggs() {
         let parent = maps.gobjs.get(&call.regs.gpr[3]).copied();
         let p = call.regs.gpr[4];
         let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
-        kyasarinegg::spawn(r, parent, pos, call.regs.fpr[1].ps0 as f32);
+        birdo_egg::spawn(r, parent, pos, call.regs.fpr[1].ps0 as f32);
         Ret::Nothing
     };
     for p in [
@@ -7806,9 +7813,9 @@ fn kyasarin_eggs() {
     ] {
         check_calls_with(&d, "it_802EFA44", 1, p, &spit);
     }
-    check_calls_with(&d, "it_802EFB0C", 1, &as_saved, &mk_of(kyasarinegg::roll));
+    check_calls_with(&d, "it_802EFB0C", 1, &as_saved, &mk_of(birdo_egg::roll));
     let from = "itKyasarinegg_UnkMotion0_Coll";
-    check_calls_with(&d, from, 1, &as_saved, &mk2_pred(kyasarinegg::coll0));
+    check_calls_with(&d, from, 1, &as_saved, &mk2_pred(birdo_egg::coll0));
     // The egg in each state (its msid), broken already or not, with the seed set.
     let state = |msid: u32, broken: u32, seed: u32| {
         move |c: &mut Call, _: usize| {
@@ -7821,19 +7828,19 @@ fn kyasarin_eggs() {
     for (name, port) in [
         (
             "itKyasarinegg_UnkMotion0_Coll",
-            kyasarinegg::coll0 as fn(&mut Running, _) -> bool,
+            birdo_egg::coll0 as fn(&mut Running, _) -> bool,
         ),
-        ("itKyasarinegg_UnkMotion1_Coll", kyasarinegg::coll1),
-        ("itKyasarinegg_UnkMotion3_Coll", kyasarinegg::coll3),
-        ("itKyasarinegg_UnkMotion4_Anim", kyasarinegg::anim4),
-        ("it_2725_Logic28_DmgDealt", kyasarinegg::broken),
-        ("it_2725_Logic28_Clanked", kyasarinegg::broken),
-        ("it_2725_Logic28_HitShield", kyasarinegg::broken),
-        ("it_2725_Logic28_Reflected", kyasarinegg::broken),
-        ("it_802F022C", kyasarinegg::broken),
+        ("itKyasarinegg_UnkMotion1_Coll", birdo_egg::coll1),
+        ("itKyasarinegg_UnkMotion3_Coll", birdo_egg::coll3),
+        ("itKyasarinegg_UnkMotion4_Anim", birdo_egg::anim4),
+        ("it_2725_Logic28_DmgDealt", birdo_egg::broken),
+        ("it_2725_Logic28_Clanked", birdo_egg::broken),
+        ("it_2725_Logic28_HitShield", birdo_egg::broken),
+        ("it_2725_Logic28_Reflected", birdo_egg::broken),
+        ("it_802F022C", birdo_egg::broken),
         (
             "itKyasarinEgg_Logic28_ShieldBounced",
-            kyasarinegg::shield_bounced,
+            birdo_egg::shield_bounced,
         ),
     ] {
         let t = leaf_check::sym(name);
@@ -7853,13 +7860,13 @@ fn kyasarin_eggs() {
         }
     }
     for (name, port) in [
-        ("it_802EFCC0", kyasarinegg::bounce as fn(&mut Running, _)),
-        ("it_802EFD84", kyasarinegg::break_empty),
-        ("itKyasarinEgg_Logic28_PickedUp", kyasarinegg::picked_up),
-        ("itKyasarinEgg_Logic28_Dropped", kyasarinegg::thrown),
-        ("itKyasarinEgg_Logic28_Thrown", kyasarinegg::thrown),
-        ("itKyasarinegg_UnkMotion1_Phys", kyasarinegg::falling),
-        ("itKyasarinegg_UnkMotion3_Phys", kyasarinegg::falling),
+        ("it_802EFCC0", birdo_egg::bounce as fn(&mut Running, _)),
+        ("it_802EFD84", birdo_egg::break_empty),
+        ("itKyasarinEgg_Logic28_PickedUp", birdo_egg::picked_up),
+        ("itKyasarinEgg_Logic28_Dropped", birdo_egg::thrown),
+        ("itKyasarinEgg_Logic28_Thrown", birdo_egg::thrown),
+        ("itKyasarinegg_UnkMotion1_Phys", birdo_egg::falling),
+        ("itKyasarinegg_UnkMotion3_Phys", birdo_egg::falling),
     ] {
         let t = leaf_check::sym(name);
         check_calls_with(&d, from, 1, &retarget(t), &mk_of(port));

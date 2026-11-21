@@ -6,7 +6,7 @@
 //! The bridge is fifteen planks on a static table, each swinging back toward its rest angle and
 //! pulled by its neighbours, kicked by whatever lands on it; its collision lines follow their
 //! heights and its two end posts lean with the slope. The stage's process draws an event now
-//! and then: a Klap Trap on the river (an enemy item, `it::kinds::klap`), a box on it, or a
+//! and then: a Klap Trap on the river (an enemy item, `it::kinds::klap_trap`), a box on it, or a
 //! platform or a log. The barrel turns in spurts and swings as Kongo Jungle N64's does; it
 //! catches a Klap Trap that comes near or a fighter that falls in, and shoots it out.
 
@@ -223,7 +223,7 @@ pub fn on_init(r: &mut Running) {
     setup::measure_blast_zones(r.game, r.data);
     r.game.geometry_mut().disable_joint(0);
     r.game.geometry_mut().disable_joint(1);
-    if super::stage::stkind(r.game) != 0x3D && r.game.vs_x6() == 0 {
+    if super::stage::stkind(r.game) != 0x3D && r.game.vs_sudden_death() == 0 {
         r.stage_sound(0x5_A551);
     }
 }
@@ -639,7 +639,8 @@ pub fn events(r: &mut Running, gobj: GObjId) {
     }
     let p = param(r.game);
     let boxes = |r: &Running| {
-        r.game.vs_x6() == 0 && super::super::it::spawn::kind_on(r.game, ItKind::Crate.id())
+        r.game.vs_sudden_death() == 0
+            && super::super::it::spawn::kind_on(r.game, ItKind::Crate.id())
     };
     let box_w = if boxes(r) {
         reg(p.f(r.data, BOX_WEIGHT))
@@ -697,7 +698,7 @@ pub fn events(r: &mut Running, gobj: GObjId) {
     match event {
         1 => {
             if let Some(path) = create(r, 11, EVENT_FRAME)
-                && super::super::it::kinds::klap::spawn(r, Some(path)).is_none()
+                && super::super::it::kinds::klap_trap::spawn(r, Some(path)).is_none()
             {
                 setup::destroy(r, Some(path));
             }
@@ -1166,7 +1167,7 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
     match state {
         0 => {
             if let Some(klap) = klap_near(r) {
-                super::super::it::kinds::klap::enter_barrel(r, klap);
+                super::super::it::kinds::klap_trap::enter_barrel(r, klap);
                 let f = reg(r.game.objs.rng.draw_f32());
                 let (a, b) = (reg(p.f(r.data, HOLD_A)), reg(p.f(r.data, HOLD_B)));
                 let hold = fp::fctiwz(fp::fmadds(fp::fsubs(b, a), f, a));
@@ -1216,7 +1217,7 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
             let keep = keep.expect("grkongo.c: the barrel holds nothing");
             match r.game.world.gobj(keep).p_link {
                 8 => r.shoot_from_stage_barrel(keep, at, &shot_hit(words), a),
-                9 => super::super::it::kinds::klap::shot(r, keep, at, shot_hit(words), a),
+                9 => super::super::it::kinds::klap_trap::shot(r, keep, at, shot_hit(words), a),
                 _ => {}
             }
             r.game.grounds[g.0].u.kongo_barrel().hold = 3;

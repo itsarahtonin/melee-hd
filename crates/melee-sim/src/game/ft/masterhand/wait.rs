@@ -239,39 +239,39 @@ impl Running<'_> {
             ms::SWEEP_LOOP => {
                 let mut v = self.floor_right0();
                 v.y = HAND.f32(self, f, attr::X38);
-                self.hand_glide_to(gobj, &HAND, addr::MS_344_80151828, v);
+                self.hand_glide_to(gobj, &HAND, addr::WAIT_SWEEP_ENTER, v);
             }
             ms::SLAP => {
                 let mut v = self.floor_right0();
                 v.y = HAND.f32(self, f, attr::X50 + 4);
-                self.hand_glide_to(gobj, &HAND, addr::MS_348_80151BB8, v);
+                self.hand_glide_to(gobj, &HAND, addr::SLAP_ENTER, v);
             }
             ms::WALK_LOOP => {
                 let v = da(self, attr::X40);
-                self.hand_glide_to(gobj, &HAND, addr::MS_353_80151DC4, v);
+                self.hand_glide_to(gobj, &HAND, addr::WALK2_ENTER, v);
             }
             ms::DRILL => {
                 let v = da(self, attr::X88);
-                self.hand_glide_to(gobj, &HAND, addr::MS_352_801521DC, v);
+                self.hand_glide_to(gobj, &HAND, addr::COUNTDOWN_ENTER, v);
             }
             ms::ROCK_CRUSH_UP => {
                 let v = da(self, attr::XA8);
-                self.hand_glide_to(gobj, &HAND, addr::MS_354_80152370, v);
+                self.hand_glide_to(gobj, &HAND, addr::ROCK_CRUSH_UP_ENTER, v);
             }
             ms::PAPER_CRUSH => {
                 let v = da(self, attr::XBC);
-                self.hand_glide_to(gobj, &HAND, addr::MS_357_801526D8, v);
+                self.hand_glide_to(gobj, &HAND, addr::WINDOW_ENTER, v);
             }
-            ms::POKE1 => self.mh_dispatch(gobj, addr::MS_358_80152880),
-            ms::BACK_AIRPLANE1 => self.mh_dispatch(gobj, addr::MS_366_80153820),
-            ms::BACK_PUNCH => self.mh_back_attack(gobj, addr::MS_369_80153B90),
-            ms::BACK_CRUSH => self.mh_back_attack(gobj, addr::MS_370_80153D2C),
+            ms::POKE1 => self.mh_dispatch(gobj, addr::CHASES_ENTER),
+            ms::BACK_AIRPLANE1 => self.mh_dispatch(gobj, addr::BACK_AIRPLANE1_ENTER),
+            ms::BACK_PUNCH => self.mh_back_attack(gobj, addr::RAM_ENTER),
+            ms::BACK_CRUSH => self.mh_back_attack(gobj, addr::SHRINK_ENTER),
             ms::FINGER_BEAM_LOOP => {
                 let v = self.hand_point_around(f, &HAND, attr::XC4, attr::XCC);
-                self.hand_glide_to(gobj, &HAND, addr::MS_359_80152BCC, v);
+                self.hand_glide_to(gobj, &HAND, addr::BEAMS_WINDUP_ENTER, v);
             }
-            ms::FINGER_GUN2 => self.mh_dispatch(gobj, addr::MS_363_801530A4),
-            ms::THROW | ms::SLAM => self.mh_dispatch(gobj, addr::MS_372_801542E0),
+            ms::FINGER_GUN2 => self.mh_dispatch(gobj, addr::GUN_ENTER),
+            ms::THROW | ms::SLAM => self.mh_dispatch(gobj, addr::REACH_ENTER),
             _ => {}
         }
     }
@@ -310,9 +310,9 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         use super::super::crazyhand::ms as ch_ms;
         let (cb, off) = match self.boss_ch_next() {
-            ch_ms::SQUEEZING1 => (addr::MS_380_80155194, attr::X124),
-            ch_ms::SQUEEZE => (addr::MS_382_801552F8, attr::X12C),
-            ch_ms::THROW => (addr::MS_383_80155484, attr::X134),
+            ch_ms::SQUEEZING1 => (addr::TAG_CRUSH_ENTER, attr::X124),
+            ch_ms::SQUEEZE => (addr::TAG_APPLAUD_ENTER, attr::X12C),
+            ch_ms::THROW => (addr::TAG_ROCK_PAPER_ENTER, attr::X134),
             // The original sets the point for `Slam` and starts nothing.
             _ => return,
         };
@@ -332,42 +332,42 @@ impl Running<'_> {
         if l && on(PAD_DPAD_UP) {
             let mut v = self.floor_right0();
             v.y = HAND.f32(self, f, attr::X38);
-            self.hand_glide_to(gobj, &HAND, addr::MS_344_80151828, v);
+            self.hand_glide_to(gobj, &HAND, addr::WAIT_SWEEP_ENTER, v);
         } else if l && on(PAD_DPAD_RIGHT) {
             let mut v = self.floor_right0();
             v.y = HAND.f32(self, f, attr::X50 + 4);
-            self.hand_glide_to(gobj, &HAND, addr::MS_348_80151BB8, v);
+            self.hand_glide_to(gobj, &HAND, addr::SLAP_ENTER, v);
         } else if l && on(PAD_DPAD_DOWN) {
             let v = da(self, attr::X40);
-            self.hand_glide_to(gobj, &HAND, addr::MS_353_80151DC4, v);
+            self.hand_glide_to(gobj, &HAND, addr::WALK2_ENTER, v);
         } else if on(PAD_R) && on(PAD_DPAD_UP) {
             let v = da(self, attr::X88);
-            self.hand_glide_to(gobj, &HAND, addr::MS_352_801521DC, v);
+            self.hand_glide_to(gobj, &HAND, addr::COUNTDOWN_ENTER, v);
         } else if on(PAD_R) && on(PAD_DPAD_RIGHT) {
             let v = da(self, attr::XA8);
-            self.hand_glide_to(gobj, &HAND, addr::MS_354_80152370, v);
+            self.hand_glide_to(gobj, &HAND, addr::ROCK_CRUSH_UP_ENTER, v);
         } else if on(PAD_R) && on(PAD_DPAD_DOWN) {
             let v = da(self, attr::XBC);
-            self.hand_glide_to(gobj, &HAND, addr::MS_357_801526D8, v);
+            self.hand_glide_to(gobj, &HAND, addr::WINDOW_ENTER, v);
         } else if on(PAD_R) && on(PAD_DPAD_LEFT) {
-            self.mh_dispatch(gobj, addr::MS_358_80152880);
+            self.mh_dispatch(gobj, addr::CHASES_ENTER);
         } else if on(PAD_A) && on(PAD_DPAD_UP) {
-            self.mh_dispatch(gobj, addr::MS_366_80153820);
+            self.mh_dispatch(gobj, addr::BACK_AIRPLANE1_ENTER);
         } else if on(PAD_A) && on(PAD_DPAD_RIGHT) {
-            self.mh_back_attack(gobj, addr::MS_369_80153B90);
+            self.mh_back_attack(gobj, addr::RAM_ENTER);
         } else if on(PAD_A) && on(PAD_DPAD_DOWN) {
-            self.mh_back_attack(gobj, addr::MS_370_80153D2C);
+            self.mh_back_attack(gobj, addr::SHRINK_ENTER);
         } else if on(PAD_B) && on(PAD_DPAD_UP) {
             let v = self.hand_point_around(f, &HAND, attr::XC4, attr::XCC);
-            self.hand_glide_to(gobj, &HAND, addr::MS_359_80152BCC, v);
+            self.hand_glide_to(gobj, &HAND, addr::BEAMS_WINDUP_ENTER, v);
         } else if on(PAD_B) && on(PAD_DPAD_RIGHT) {
-            self.mh_dispatch(gobj, addr::MS_363_801530A4);
+            self.mh_dispatch(gobj, addr::GUN_ENTER);
         } else if on(PAD_Z) && on(PAD_DPAD_UP) {
             self.game.fighters[f.0].set_u_i32(u::NEXT_ATTACK, ms::THROW);
-            self.mh_dispatch(gobj, addr::MS_372_801542E0);
+            self.mh_dispatch(gobj, addr::REACH_ENTER);
         } else if on(PAD_Z) && on(PAD_DPAD_RIGHT) {
             self.game.fighters[f.0].set_u_i32(u::NEXT_ATTACK, ms::SLAM);
-            self.mh_dispatch(gobj, addr::MS_372_801542E0);
+            self.mh_dispatch(gobj, addr::REACH_ENTER);
         } else if on(PAD_Y) && on(PAD_DPAD_UP) {
             self.mh_tag_attack(gobj);
         }
@@ -505,7 +505,7 @@ impl Running<'_> {
 
     /// `ftMh_MS_371_801541C8` with its callback.
     fn mh_back_attack(&mut self, gobj: GObjId, cb: u32) {
-        if !super::run_with(self, gobj, addr::MS_371_801541C8, cb) {
+        if !super::run_with(self, gobj, addr::VANISH_ENTER, cb) {
             super::super::super::code::unported_call("ftMh_MS_371_801541C8");
         }
     }
@@ -536,20 +536,20 @@ pub(crate) fn set_mv_vec(fp: &mut super::super::super::structs::Fighter, off: us
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::MS_341_8014FE10 => g.hand_start(gobj, &HAND),
-        addr::MS_341_8014FE58 => g.hand_nothing(gobj),
-        addr::MS_341_8014FE5C => g.hand_enter_wait1(gobj, &HAND),
-        addr::MS_341_8014FF1C => g.hand_enter_wait2(gobj, &HAND),
-        addr::MS_341_8014FFDC => g.hand_enter_wait(gobj, &HAND),
+        addr::START => g.hand_start(gobj, &HAND),
+        addr::NOTHING => g.hand_nothing(gobj),
+        addr::WAIT1_ENTER => g.hand_enter_wait1(gobj, &HAND),
+        addr::WAIT2_ENTER => g.hand_enter_wait2(gobj, &HAND),
+        addr::WAIT_ENTER => g.hand_enter_wait(gobj, &HAND),
         addr::IF_STAGE251 => g.hand_start_in_place(gobj, &HAND),
         addr::WAIT1_0_ANIM => g.hand_wait_anim(gobj, &HAND),
-        addr::MS_341_80150894 => g.mh_human_attack(gobj),
-        addr::MS_389_80150C8C => g.hand_enter_glide1(gobj, &HAND),
-        addr::MS_389_80150D28 => g.hand_enter_glide2(gobj, &HAND),
+        addr::HUMAN_ATTACK => g.mh_human_attack(gobj),
+        addr::GLIDE1_ENTER => g.hand_enter_glide1(gobj, &HAND),
+        addr::GLIDE2_ENTER => g.hand_enter_glide2(gobj, &HAND),
         addr::WAIT1_2_ANIM => g.hand_glide_anim(gobj, &HAND),
         addr::WAIT1_2_PHYS => g.hand_glide_motion(gobj, &HAND),
         addr::WAIT1_2_COLL => g.hand_glide_coll(gobj),
-        addr::MS_389_80151018 => g.hand_return(gobj, &HAND),
+        addr::RETURN => g.hand_return(gobj, &HAND),
         _ => return false,
     }
     true

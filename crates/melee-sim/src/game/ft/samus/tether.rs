@@ -9,11 +9,13 @@ use gekko_fp as fp;
 
 use super::super::super::ef::{self, Arg};
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::samusgrapple;
+use super::super::super::it::kinds::samusgrapple::GRAPPLE;
+use super::super::super::it::kinds::tether::{self, Tether};
 use super::super::super::state::Running;
 use super::super::common::{GA_AIR, GA_GROUND};
-use super::{PART_THROW_N, attr, ms, u};
+use super::{attr, ms};
 use crate::fpu::{mem, reg};
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::mp::coll::{LEFT_LEDGE_GRAB, RIGHT_LEDGE_GRAB};
@@ -48,12 +50,59 @@ use super::super::co::ids::ms::{
     CLIFF_JUMP_SLOW2 as CO_CLIFF_JUMP_SLOW2,
 };
 use crate::game::ft::FighterKind;
-/// The grapple beam's hooks on the fighter.
-const HOOKS: [u32; 3] = [
-    samusgrapple::FT_FRAME,
-    samusgrapple::FT_DEATH,
-    samusgrapple::FT_LINE_UP,
+/// A character's tether grabs (Link's and Young Link's hookshot, Samus's grapple beam): the
+/// tether, and the frames and settings its grab, dash grab and air grab throw it with.
+pub struct TetherGrab {
+    /// The tether.
+    pub item: &'static Tether,
+    /// Its item kind.
+    pub kind: TetherKind,
+    /// The grab's, the dash grab's and the air grab's frames in the fighter's attributes: the
+    /// tether out, shot, drawn in and put away.
+    pub frames: [[usize; 4]; 3],
+    /// How far past the hand the stage blocks the shot, times his height.
+    pub reach: f64,
+    /// The beam's sparks on the grab's and the dash grab's frames 20, 23, ... (6 and 4).
+    pub sparks: [i32; 2],
+    /// The shot's and the draw-in's sounds (Link's and Young Link's own).
+    pub sfx: Option<[i32; 2]>,
+}
+
+/// A tether's item kind.
+pub enum TetherKind {
+    /// The fighter's attributes' word at this offset (Link's `xBC`: his or Young Link's).
+    Attr(usize),
+    /// This kind.
+    Item(ItKind),
+}
+
+/// The grab's tether frames (`x9C` to `xA8`), the dash grab's (`xAC` to `xB8`) and the air
+/// grab's (`xBC` to `xC8`).
+const FRAMES: [[usize; 4]; 3] = [
+    [
+        attr::CATCH_SPAWN,
+        attr::CATCH_ATTACH,
+        attr::CATCH_RETRACT,
+        attr::CATCH_END,
+    ],
+    [
+        attr::CATCH_DASH_SPAWN,
+        attr::CATCH_DASH_ATTACH,
+        attr::CATCH_DASH_RETRACT,
+        attr::CATCH_DASH_END,
+    ],
+    [0xBC, attr::AIR_CATCH_ATTACH, 0xC4, 0xC8],
 ];
+
+/// Samus's grapple beam grabs: two units of reach, the beam's sparks, no sounds.
+pub static SAMUS: TetherGrab = TetherGrab {
+    item: &GRAPPLE,
+    kind: TetherKind::Item(ItKind::SamusGrappleBeam),
+    frames: FRAMES,
+    reach: 2.0,
+    sparks: [6, 4],
+    sfx: None,
+};
 
 impl Running<'_> {
     /// The fighter's hitboxes cleared (`ftColl_8007AFF8`), for the item code.
@@ -62,34 +111,53 @@ impl Running<'_> {
         self.clear_hitboxes(f);
     }
 
-    /// The beam's hooks on the fighter: each frame, on death, after her animation.
-    fn samus_grapple_hooks(&mut self, gobj: GObjId) {
-        let fp = self.game.fighter_mut(gobj);
-        fp.accessory2_cb = Some(CodeRef(HOOKS[0]));
-        fp.death1_cb = Some(CodeRef(HOOKS[1]));
-        fp.accessory3_cb = Some(CodeRef(HOOKS[2]));
+    /// The fighter's tether grabs, if his character has them.
+    pub fn tether_grab(&self, gobj: GObjId) -> Option<&'static TetherGrab> {
+        match self.game.fighter(gobj).fighter_kind() {
+            FighterKind::Link => Some(&super::super::link::catch::LINK),
+            FighterKind::Clink => Some(&super::super::link::catch::CLINK),
+            FighterKind::Samus => Some(&SAMUS),
+            _ => None,
+        }
     }
 
-    /// The beam from her throw joint (`lb_8000B1CC` on `parts[FtPart_ThrowN]`).
-    fn samus_spawn_grapple(&mut self, gobj: GObjId) -> Option<GObjId> {
-        let throw_n = self.bone_joint(gobj, PART_THROW_N);
-        let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, throw_n, None);
+    /// The tether's hooks on the fighter: each frame, on death, after his animation.
+    fn tether_hooks(&mut self, gobj: GObjId, t: &Tether) {
+        let fp = self.game.fighter_mut(gobj);
+        fp.accessory2_cb = Some(CodeRef(t.hooks[0]));
+        fp.death1_cb = Some(CodeRef(t.hooks[1]));
+        fp.accessory3_cb = Some(CodeRef(t.hooks[2]));
+    }
+
+    /// The tether out at his hand (`lb_8000B1CC` on the hand's joint), kept in his word.
+    fn tether_out(&mut self, gobj: GObjId, g: &TetherGrab) -> Option<GObjId> {
+        let t = g.item;
+        let bone = tether::hand_bone(self, gobj, t);
+        let hand = self.bone_joint(gobj, bone);
+        let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, hand, None);
         let facing = self.game.fighter(gobj).facing_dir;
-        let beam = samusgrapple::spawn(self, gobj, pos, facing);
-        self.game.fighter_mut(gobj).u.set_gobj_at(u::GRAPPLE, beam);
-        beam
+        let kind = match g.kind {
+            TetherKind::Attr(off) => {
+                let f = self.game.fighter_id(gobj);
+                self.char_attr_word(f, off) as i32
+            }
+            TetherKind::Item(k) => k.id(),
+        };
+        let hs = tether::spawn(self, gobj, pos, facing, kind, t);
+        self.game.fighter_mut(gobj).u.set_gobj_at(t.slot, hs);
+        hs
     }
 
     /// The beam's sparks on its frames 20, 23, ... (`count` of them), each at the tip's joint
     /// with a random spread of 4.
-    fn samus_grapple_sparks(&mut self, gobj: GObjId, beam: GObjId, count: i32) {
+    fn tether_sparks(&mut self, gobj: GObjId, beam: GObjId, t: &Tether, count: i32) {
         let frame = reg(self.game.fighter(gobj).mv_f32(MV_FRAME));
         for i in 0..count {
             if frame != fp::frsp(f64::from(i * 3 + 0x14)) {
                 continue;
             }
-            let seg = samusgrapple::tip_gobj(self, beam);
-            let j = samusgrapple::model_of(self, seg);
+            let seg = tether::tip_gobj(self, beam, t);
+            let j = tether::model_of(self, seg);
             jobj::setup_matrix(&mut self.game.objs, self.data, j);
             let m = self.game.objs.jobjs[j.expect("the tip's model")].mtx;
             let mut at = Vec3::new(m.m[0][3], m.m[1][3], m.m[2][3]);
@@ -104,14 +172,15 @@ impl Running<'_> {
         }
     }
 
-    /// Whether the stage cuts the line from her to two units past her throw joint
-    /// (`mpCheckAllRemap`).
-    fn samus_tether_blocked(&mut self, gobj: GObjId) -> bool {
-        let throw_n = self.bone_joint(gobj, PART_THROW_N);
-        jobj::setup_matrix(&mut self.game.objs, self.data, throw_n);
-        let m = self.game.objs.jobjs[throw_n.expect("her throw joint")].mtx;
+    /// Whether the stage cuts the line from him to [`TetherGrab::reach`] times his height past
+    /// his hand (`mpCheckAllRemap`).
+    fn tether_blocked(&mut self, gobj: GObjId, g: &TetherGrab) -> bool {
+        let bone = tether::hand_bone(self, gobj, g.item);
+        let hand = self.bone_joint(gobj, bone);
+        jobj::setup_matrix(&mut self.game.objs, self.data, hand);
+        let m = self.game.objs.jobjs[hand.expect("his hand's joint")].mtx;
         let fp = self.game.fighter(gobj);
-        let reach = fp::fmul(2.0, reg(fp.facing_dir));
+        let reach = fp::fmul(g.reach, reg(fp.facing_dir));
         let x1 = mem(fp::frsp(fp::fmadd(
             reach,
             reg(fp.x34_scale.y),
@@ -123,95 +192,149 @@ impl Running<'_> {
         g.check_all_remap(-1, -1, x0, y, x1, y).is_some()
     }
 
-    /// Her grab's beam, `fn_800D9558` (`spawn`, `attach`, `retract` and `end` her attributes'
-    /// `x9C` to `xA8`, `sparks` 6) or her dash grab's, `fn_800D9930` (`xAC` to `xB8`, 4
-    /// sparks): on its frame the beam comes out (none, and she waits); then its sparks, and on
-    /// their frames it's shot (unless the stage is in the way, then she waits), drawn in, and
-    /// put away. True when she stopped grabbing.
+    /// The tether's sound on its frame `i` (shot, drawn in), if his character has one.
+    fn tether_sfx(&mut self, gobj: GObjId, g: &TetherGrab, i: usize) {
+        if let Some(sfx) = g.sfx {
+            self.play_sfx(gobj, sfx[i], 0x7F, 0x40);
+        }
+    }
+
+    /// His grab's tether (`fn_800D8EC8`, `fn_800D9558`) or his dash grab's (`fn_800D9228`,
+    /// `fn_800D9930`), Link's and Young Link's hookshot and Samus's grapple beam: on its frame
+    /// it comes out at his hand (none, and he waits); then the beam's sparks, and on their
+    /// frames it's shot (unless, for the grab, the stage is in the way, then he waits), drawn
+    /// in, and put away. True when he stopped grabbing.
+    #[doc(alias = "fn_800D8EC8")]
+    #[doc(alias = "fn_800D9228")]
     #[doc(alias = "fn_800D9558")]
     #[doc(alias = "fn_800D9930")]
-    pub fn samus_catch_tether(&mut self, gobj: GObjId, dash: bool) -> bool {
-        let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].kind != FighterKind::Samus {
+    #[doc(alias("link_catch_tether", "samus_catch_tether"))]
+    pub fn catch_tether(&mut self, gobj: GObjId, dash: bool) -> bool {
+        let Some(g) = self.tether_grab(gobj) else {
             return false;
-        }
-        let (spawn_at, attach, retract, end, sparks) = if dash {
-            (
-                attr::CATCH_DASH_SPAWN,
-                attr::CATCH_DASH_ATTACH,
-                attr::CATCH_DASH_RETRACT,
-                attr::CATCH_DASH_END,
-                4,
-            )
-        } else {
-            (
-                attr::CATCH_SPAWN,
-                attr::CATCH_ATTACH,
-                attr::CATCH_RETRACT,
-                attr::CATCH_END,
-                6,
-            )
         };
-        let at = |r: &Running, off| fp::frsp(f64::from(r.samus_attr_i32(f, off)));
-        let fp = &mut self.game.fighters[f.0];
-        let frame = mem(fp::frsp(fp::fadd(reg(fp.mv_f32(MV_FRAME)), 1.0)));
-        fp.set_mv_f32(MV_FRAME, reg(frame));
+        let t = g.item;
+        let f = self.game.fighter_id(gobj);
+        let [out, shoot, draw_in, end] = g.frames[usize::from(dash)];
+        let at = |r: &Running, off| fp::frsp(f64::from(r.char_attr_word(f, off) as i32));
+        let fp_ = &mut self.game.fighters[f.0];
+        let frame = mem(fp::frsp(fp::fadd(reg(fp_.mv_f32(MV_FRAME)), 1.0)));
+        fp_.set_mv_f32(MV_FRAME, reg(frame));
         let frame = reg(frame);
-        if frame == at(self, spawn_at) {
-            if self.samus_spawn_grapple(gobj).is_none() {
+        if frame == at(self, out) {
+            if self.tether_out(gobj, g).is_none() {
                 self.enter_wait(gobj);
                 return true;
             }
-            self.samus_grapple_hooks(gobj);
+            self.tether_hooks(gobj, t);
             return false;
         }
-        if !(frame > at(self, spawn_at)) || !(frame <= at(self, end)) {
+        if !(frame > at(self, out)) || !(frame <= at(self, end)) {
             return false;
         }
-        let beam = self.game.fighters[f.0].u.gobj_at(u::GRAPPLE);
-        let shot = beam.map(|b| samusgrapple::shot_speed(self, b));
-        if let Some(b) = beam {
-            self.samus_grapple_sparks(gobj, b, sparks);
+        let hs = self.game.fighters[f.0].u.gobj_at(t.slot);
+        if let Some(b) = hs {
+            self.tether_sparks(gobj, b, t, g.sparks[usize::from(dash)]);
         }
-        let frame = reg(self.game.fighters[f.0].mv_f32(MV_FRAME));
-        let beam = beam.expect("a grapple beam's frames without the beam");
-        if frame == at(self, attach) {
-            if !dash && self.samus_tether_blocked(gobj) {
-                samusgrapple::put_away(self, beam);
+        let hs = hs.expect("a tether's frames without the tether");
+        if frame == at(self, shoot) {
+            if !dash && self.tether_blocked(gobj, g) {
+                tether::put_away(self, hs, t);
                 self.enter_wait(gobj);
                 return true;
             }
+            let speed = tether::shot_speed(self, hs, t);
             let facing = reg(self.game.fighters[f.0].facing_dir);
-            let mut vel = Vec3::new(shot.unwrap(), 0.0, 0.0);
-            vel.x = mem(fp::fmuls(reg(vel.x), facing));
-            samusgrapple::shoot(self, beam, vel);
-        } else if frame == at(self, retract) {
-            samusgrapple::to_retract(self, beam);
+            let vel = Vec3::new(mem(fp::fmuls(reg(speed), facing)), 0.0, 0.0);
+            tether::shoot(self, hs, vel, t);
+            self.tether_sfx(gobj, g, 0);
+        } else if frame == at(self, draw_in) {
+            tether::to_retract(self, hs);
+            self.tether_sfx(gobj, g, 1);
         } else if frame == at(self, end) {
-            let b = self.game.fighters[f.0].u.gobj_at(u::GRAPPLE);
-            samusgrapple::put_away(self, b.expect("the grapple beam"));
+            tether::put_away(self, hs, t);
         }
         false
     }
 
-    /// Her grab ended off the ground, `fn_800D9C64`: the beam put away. A grab that leaves the
-    /// ground before the beam comes out passes none, which `it_802B7B84` ignores.
+    /// His air grab's tether, the Link and Samus parts of `ftCo_AirCatch_Anim`: on its frame
+    /// it comes out (none, and he falls helpless); then on their frames it's shot with his own
+    /// motion (unless the stage is in the way, then it's put away and he falls helpless),
+    /// drawn in, and put away. True when he stopped.
+    fn air_catch_tether(&mut self, gobj: GObjId) -> bool {
+        let Some(g) = self.tether_grab(gobj) else {
+            return false;
+        };
+        let t = g.item;
+        let f = self.game.fighter_id(gobj);
+        let [out, shoot, draw_in, end] = g.frames[2];
+        let at = |r: &Running, off| fp::frsp(f64::from(r.char_attr_word(f, off) as i32));
+        let fp_ = &mut self.game.fighters[f.0];
+        let frame = mem(fp::frsp(fp::fadd(reg(fp_.mv_f32(MV_FRAME)), 1.0)));
+        fp_.set_mv_f32(MV_FRAME, reg(frame));
+        let frame = reg(frame);
+        if frame == at(self, out) {
+            if self.tether_out(gobj, g).is_none() {
+                self.enter_fall_special_basic(gobj);
+            } else {
+                self.tether_hooks(gobj, t);
+            }
+            return false;
+        }
+        if !(frame > at(self, out)) || !(frame <= at(self, end)) {
+            return false;
+        }
+        let hs = self.game.fighters[f.0]
+            .u
+            .gobj_at(t.slot)
+            .expect("a tether's frames without the tether");
+        if frame == at(self, shoot) {
+            if self.tether_blocked(gobj, g) {
+                tether::put_away(self, hs, t);
+                self.enter_fall_special_basic(gobj);
+                return true;
+            }
+            let speed = tether::shot_speed(self, hs, t);
+            let fp_ = &self.game.fighters[f.0];
+            let x = mem(fp::fmuls(reg(speed), reg(fp_.facing_dir)));
+            let x = mem(fp::fadds(reg(x), reg(fp_.pos_delta.x)));
+            tether::shoot(self, hs, Vec3::new(x, 0.0, 0.0), t);
+            self.tether_sfx(gobj, g, 0);
+        } else if frame == at(self, draw_in) {
+            tether::to_retract(self, hs);
+            self.tether_sfx(gobj, g, 1);
+        } else if frame == at(self, end) {
+            tether::put_away(self, hs, t);
+        }
+        false
+    }
+
+    /// His grab ended off the ground, `fn_800D949C` (Link's and Young Link's) and
+    /// `fn_800D9C64` (Samus's): the tether put away. A grab that leaves the ground before the
+    /// tether comes out passes none, which the put-away ignores.
+    #[doc(alias = "fn_800D949C")]
     #[doc(alias = "fn_800D9C64")]
-    pub fn samus_catch_off_ground(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).kind == FighterKind::Samus
-            && let Some(beam) = self.game.fighter(gobj).u.gobj_at(u::GRAPPLE)
+    #[doc(alias("link_catch_off_ground", "samus_catch_off_ground"))]
+    pub fn tether_off_ground(&mut self, gobj: GObjId) {
+        if let Some(g) = self.tether_grab(gobj)
+            && let Some(hs) = self.game.fighter(gobj).u.gobj_at(g.item.slot)
         {
-            samusgrapple::put_away(self, beam);
+            tether::put_away(self, hs, g.item);
+        }
+    }
+
+    /// The tether put away and forgotten (`ftCo_800D94D8`'s and `ftCo_800D9C98`'s start).
+    pub fn tether_forget(&mut self, gobj: GObjId, t: &Tether) {
+        if let Some(hs) = self.game.fighter(gobj).u.gobj_at(t.slot) {
+            tether::put_away(self, hs, t);
+            self.game.fighter_mut(gobj).u.set_gobj_at(t.slot, None);
         }
     }
 
     /// The beam put away when she's hit, `ftCo_800D9C98`: and the damage hooks cleared.
     #[doc(alias = "ftCo_800D9C98")]
     pub fn samus_grapple_put_away(&mut self, gobj: GObjId) {
-        if let Some(beam) = self.game.fighter(gobj).u.gobj_at(u::GRAPPLE) {
-            samusgrapple::put_away(self, beam);
-            self.game.fighter_mut(gobj).u.set_gobj_at(u::GRAPPLE, None);
-        }
+        self.tether_forget(gobj, &GRAPPLE);
         let fp = self.game.fighter_mut(gobj);
         fp.death2_cb = None;
         fp.take_dmg_2_cb = None;
@@ -310,14 +433,6 @@ impl Running<'_> {
         self.ledge_taken_by(gobj).is_some()
     }
 
-    /// The tether's end in a ledge jump's rise, `ftCo_8009B390`: the quick or slow second
-    /// part, rising at her ledge jump's speed times her attributes' `xCC`.
-    pub fn samus_tether_landing(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        let mul = self.samus_attr_f32(f, attr::TETHER_LANDING_LAG);
-        self.tether_landing(gobj, mul);
-    }
-
     /// A tether's end in a ledge jump's rise, `ftCo_8009B390`: the quick or slow second part,
     /// rising at the fighter's ledge jump speed times `mul`.
     #[doc(alias = "ftCo_8009B390")]
@@ -340,55 +455,12 @@ impl Running<'_> {
         ));
     }
 
-    /// `ftCo_AirCatch_Anim` for Samus: on her attributes' `xBC` frame the beam comes out
-    /// (none, and she falls helpless); then on `xC0` it's shot (two units out is blocked, and
-    /// it's put away and she falls helpless), on `xC4` drawn in, on `xC8` put away; at the
-    /// animation's end she falls helpless.
+    /// `ftCo_AirCatch_Anim`: the tether's frames ([`Running::catch_tether`]'s air grab); at
+    /// the animation's end he falls helpless.
     #[doc(alias = "ftCo_AirCatch_Anim")]
     pub fn co_air_catch_anim(&mut self, gobj: GObjId) {
-        let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].kind != FighterKind::Samus {
-            if self.link_air_catch_tether(gobj) {
-                return;
-            }
-            if !self.anim_frames_remaining(gobj) {
-                self.enter_fall_special_basic(gobj);
-            }
+        if self.air_catch_tether(gobj) {
             return;
-        }
-        let at = |r: &Running, off| fp::frsp(f64::from(r.samus_attr_i32(f, off)));
-        let fp = &mut self.game.fighters[f.0];
-        let frame = mem(fp::frsp(fp::fadd(reg(fp.mv_f32(MV_FRAME)), 1.0)));
-        fp.set_mv_f32(MV_FRAME, reg(frame));
-        let frame = reg(frame);
-        if frame == at(self, 0xBC) {
-            if self.samus_spawn_grapple(gobj).is_none() {
-                self.enter_fall_special_basic(gobj);
-            } else {
-                self.samus_grapple_hooks(gobj);
-            }
-        } else if frame > at(self, 0xBC) && frame <= at(self, 0xC8) {
-            let beam = self.game.fighters[f.0]
-                .u
-                .gobj_at(u::GRAPPLE)
-                .expect("the grapple beam");
-            if frame == at(self, attr::AIR_CATCH_ATTACH) {
-                if self.samus_tether_blocked(gobj) {
-                    samusgrapple::put_away(self, beam);
-                    self.enter_fall_special_basic(gobj);
-                    return;
-                }
-                let shot = samusgrapple::shot_speed(self, beam);
-                let fp = &self.game.fighters[f.0];
-                let mut vel = Vec3::new(shot, 0.0, 0.0);
-                vel.x = mem(fp::fmuls(reg(vel.x), reg(fp.facing_dir)));
-                vel.x = mem(fp::fadds(reg(vel.x), reg(fp.pos_delta.x)));
-                samusgrapple::shoot(self, beam, vel);
-            } else if frame == at(self, 0xC4) {
-                samusgrapple::to_retract(self, beam);
-            } else if frame == at(self, 0xC8) {
-                samusgrapple::put_away(self, beam);
-            }
         }
         if !self.anim_frames_remaining(gobj) {
             self.enter_fall_special_basic(gobj);

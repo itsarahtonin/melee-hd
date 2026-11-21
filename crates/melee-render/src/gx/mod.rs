@@ -214,6 +214,11 @@ impl Gx {
         std::mem::take(&mut self.fifo)
     }
 
+    /// Whether a display list is being built, so [`Gx::fifo`] holds the list's bytes.
+    pub fn in_display_list(&self) -> bool {
+        self.display_list.is_some()
+    }
+
     /// `GX_WRITE_U8`.
     #[inline]
     pub(crate) fn write_u8(&mut self, v: u8) {

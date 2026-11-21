@@ -345,7 +345,8 @@ pub struct MotionState {
     pub anim_id: i32,
     pub flags: u32,
     /// The move id (top byte) and state bits (`MotionState_x8`).
-    pub x8: u32,
+    #[doc(alias("x8"))]
+    pub move_bits: u32,
     pub anim_cb: Option<super::handles::CodeRef>,
     pub input_cb: Option<super::handles::CodeRef>,
     pub phys_cb: Option<super::handles::CodeRef>,

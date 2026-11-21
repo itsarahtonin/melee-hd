@@ -212,7 +212,8 @@ pub struct Collection {
     pub rows: u8,
     /// `x78`: the last trophy made; `x7C` the debug view's trophy.
     pub last: Option<GObjId>,
-    pub x7c: i32,
+    #[doc(alias("x7c"))]
+    pub debug_trophy: i32,
     /// `_tyDisplay_804D6F1C` (`TyDspBgData`, 0x108 bytes): the table (`gobj4`, and its
     /// scaled joint), `TyMnDisp` and the categories' 43 archives.
     pub bg_block: u32,
@@ -220,7 +221,8 @@ pub struct Collection {
     pub bg_jobj: Option<JObjId>,
     pub archive: Option<Loaded>,
     pub archives: Vec<Option<Loaded>>,
-    pub x104: i16,
+    #[doc(alias("x104"))]
+    pub unused: i16,
     /// `_tyDisplay_804D6F20`: the debug view (0 on a retail console); `_tyDisplay_804D6F28`
     /// its B's frames, which no entry resets.
     pub debug: i32,
@@ -1045,7 +1047,7 @@ impl Running<'_> {
             let l = self.toy_load(f);
             self.coll().archives[i] = Some(l);
         }
-        self.coll().x104 = 0;
+        self.coll().unused = 0;
         let data = self.data;
         let desc = self.coll_sym(a.id, "ScMenDisplay_cam_int1_camera");
         let c = crate::lb::cobj::load_cobj(
@@ -1070,7 +1072,7 @@ impl Running<'_> {
         self.coll_table();
         if self.game.toys.collection.debug != 0 {
             self.coll_clear_grid();
-            let id = self.game.toys.collection.x7c;
+            let id = self.game.toys.collection.debug_trophy;
             let g = self.coll_trophy(id);
             self.coll().last = Some(g);
             self.coll_frame();
@@ -1394,7 +1396,7 @@ impl Running<'_> {
                     });
                     jobjs[j].translate.z
                 };
-                let id = self.game.toys.collection.x7c;
+                let id = self.game.toys.collection.debug_trophy;
                 self.coll_debug_place(id, axis, v);
             }
         }
@@ -1403,18 +1405,18 @@ impl Running<'_> {
                 let last = self.coll().last.take().expect("the debug view's trophy");
                 gobj::free(self, last);
                 let col = self.coll();
-                col.x7c = if next {
-                    if col.x7c + 1 >= super::TROPHY_COUNT as i32 {
+                col.debug_trophy = if next {
+                    if col.debug_trophy + 1 >= super::TROPHY_COUNT as i32 {
                         0
                     } else {
-                        col.x7c + 1
+                        col.debug_trophy + 1
                     }
-                } else if col.x7c - 1 < 0 {
+                } else if col.debug_trophy - 1 < 0 {
                     0x124
                 } else {
-                    col.x7c - 1
+                    col.debug_trophy - 1
                 };
-                let id = col.x7c;
+                let id = col.debug_trophy;
                 let g = self.coll_trophy(id);
                 self.coll().last = Some(g);
                 return;

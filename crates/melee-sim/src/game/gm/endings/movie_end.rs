@@ -122,7 +122,7 @@ impl Running<'_> {
             m.wait -= 1;
             return;
         }
-        let reset = self.game.main_lib.xc && !ended;
+        let reset = self.game.main_lib.movie_skip && !ended;
         let port = self.game.endings.gover.port();
         let start = self.game.buttons_triggered(port) as u32
             & u32::from(crate::input::pad::BUTTON_START)

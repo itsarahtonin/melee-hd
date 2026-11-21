@@ -48,28 +48,38 @@ pub mod addr {
     pub const ON_ITEM_DROP: u32 = 0x8013_953C;
     pub const ON_KNOCKBACK_ENTER: u32 = 0x8013_9624;
     pub const ON_KNOCKBACK_EXIT: u32 = 0x8013_9668;
-    pub const INIT_801393AC: u32 = 0x8013_93AC;
+    #[doc(alias("INIT_801393AC"))]
+    pub const SPECIAL_S_ON_DAMAGE: u32 = 0x8013_93AC;
     // The side special.
     pub const SPECIAL_S_ENTER: u32 = 0x8013_B638;
     pub const SPECIAL_AIR_S_ENTER: u32 = 0x8013_B6D8;
     // The neutral special.
-    pub const N_8013A830: u32 = 0x8013_A830;
-    pub const N_8013A8AC: u32 = 0x8013_A8AC;
+    #[doc(alias("N_8013A830"))]
+    pub const SPECIAL_N_GFX: u32 = 0x8013_A830;
+    #[doc(alias("N_8013A8AC"))]
+    pub const SPECIAL_AIR_N_GFX: u32 = 0x8013_A8AC;
     pub const SPECIAL_N_ENTER: u32 = 0x8013_A928;
     pub const SPECIAL_AIR_N_ENTER: u32 = 0x8013_A9A4;
-    pub const N_8013ADB0: u32 = 0x8013_ADB0;
+    #[doc(alias("N_8013ADB0"))]
+    pub const SPECIAL_N_REFLECTED: u32 = 0x8013_ADB0;
     // The up special.
-    pub const HI_801396AC: u32 = 0x8013_96AC;
-    pub const HI_8013979C: u32 = 0x8013_979C;
+    #[doc(alias("HI_801396AC"))]
+    pub const SPECIAL_HI_START_GFX_ONCE: u32 = 0x8013_96AC;
+    #[doc(alias("HI_8013979C"))]
+    pub const SPECIAL_HI_APPEAR_GFX: u32 = 0x8013_979C;
     pub const SPECIAL_HI_ENTER: u32 = 0x8013_9834;
     pub const SPECIAL_AIR_HI_ENTER: u32 = 0x8013_98E8;
     // The down special.
-    pub const LW_8013ADB4: u32 = 0x8013_ADB4;
-    pub const LW_8013AE30: u32 = 0x8013_AE30;
-    pub const LW_8013AEAC: u32 = 0x8013_AEAC;
+    #[doc(alias("LW_8013ADB4"))]
+    pub const SPECIAL_LW_START_GFX: u32 = 0x8013_ADB4;
+    #[doc(alias("LW_8013AE30"))]
+    pub const SPECIAL_LW_END_GFX: u32 = 0x8013_AE30;
+    #[doc(alias("LW_8013AEAC"))]
+    pub const SPECIAL_LW_SWAP: u32 = 0x8013_AEAC;
     pub const SPECIAL_LW_ENTER: u32 = 0x8013_AEE0;
     pub const SPECIAL_AIR_LW_ENTER: u32 = 0x8013_AFA4;
-    pub const LW_8013B4D8: u32 = 0x8013_B4D8;
+    #[doc(alias("LW_8013B4D8"))]
+    pub const SPECIAL_LW_FINISH: u32 = 0x8013_B4D8;
 }
 
 /// The `mv` offsets of `ftZelda_MotionVars`' members.

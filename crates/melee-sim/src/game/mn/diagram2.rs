@@ -582,7 +582,7 @@ impl Running<'_> {
     #[doc(alias = "mnDiagram2_Think")]
     pub fn d2_think(&mut self, gobj: GObjId) {
         let f = self.game.menu.flow;
-        if f.cur_menu != SCREEN || f.x10 != 1 {
+        if f.cur_menu != SCREEN || f.names_screen != 1 {
             if f.cur_menu == SCREEN {
                 gobj::free(self, gobj);
             } else {
@@ -660,7 +660,7 @@ impl Running<'_> {
     #[doc(alias = "mnDiagram2_Init")]
     pub fn d2_open(&mut self) {
         let f = &mut self.game.menu.flow;
-        f.x10 = 1;
+        f.names_screen = 1;
         f.hovered_selection = 0;
         self.d2_create();
         self.options_input_proc(INPUT);

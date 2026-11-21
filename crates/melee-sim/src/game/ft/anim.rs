@@ -275,7 +275,7 @@ impl Running<'_> {
         }
         let fp = &self.game.fighters[f.0];
         if !fp.x2226_b2 && fp.x2221_b2 {
-            let bone = self.data.u8(self.ft_data_x8(fp).at(0x10));
+            let bone = self.data.u8(self.ft_model_desc(fp).at(0x10));
             let j = self.bone(f, i32::from(bone)).joint.expect("a joint");
             let t = self.game.objs.jobjs[j].translate;
             let s = scale_of(fp);
@@ -287,7 +287,8 @@ impl Running<'_> {
     }
 
     /// `ft_data->x8`, the character's model description.
-    pub fn ft_data_x8(&self, fp: &Fighter) -> melee_data::archive::DataRef {
+    #[doc(alias("ft_data_x8"))]
+    pub fn ft_model_desc(&self, fp: &Fighter) -> melee_data::archive::DataRef {
         let d = fp.ft_data.expect("a fighter without data");
         self.data.ptr(d.at(8)).expect("ftData x8")
     }
@@ -602,7 +603,7 @@ impl Running<'_> {
             return;
         }
         let top = self.bone(f, 0).joint;
-        let bone = self.data.u8(self.ft_data_x8(fp).at(0x10));
+        let bone = self.data.u8(self.ft_model_desc(fp).at(0x10));
         let target = self.bone(f, i32::from(bone)).joint;
         let hip = self.bone(f, self.bone_index(fp, HIP_N)).joint;
         let c = self.common();
@@ -729,7 +730,7 @@ impl Running<'_> {
             .or_else(|| self.data.ptr(table));
         let (list, count) = (fp.dobj_list.data, fp.dobj_list.count);
         self.game.fighters[f.0].tobj_list.n_costume_tobjs = n;
-        self.game.fighters[f.0].tobj_list.x5D0 = indices;
+        self.game.fighters[f.0].tobj_list.tobj_indices = indices;
         for i in 0..n {
             let indices = indices.expect("texture animations without their list");
             let index = i32::from(self.data.u16(indices.at(2 * i)));

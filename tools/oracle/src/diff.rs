@@ -576,6 +576,8 @@ pub fn diff(args: &[&str]) -> ExitCode {
     let mut settings = Settings::from_replay(&melee_slippi::start(&replay))
         .unwrap_or_else(|e| panic!("{replay_path}: {e}"));
     settings.disc = disc_speed;
+    // The match's addresses compare with the original's, under every ruleset.
+    settings.keep_model();
     // What a golden is written for, the disc files and first tick once the match starts.
     let mut identity = None;
     if let Some(path) = &golden_file {

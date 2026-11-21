@@ -2,30 +2,28 @@
 //! grows with his charge (state 0) until he fires it, then a ball of the charge's size and
 //! speed (states 1 to 8, by charge) that wobbles as it flies (`it_802C4D10`) until its life runs
 //! out or it meets the stage, where it bursts (states 10 to 17). His forward throw fires a
-//! full one at once (state 9).
+//! full one at once (state 9). The Charge Shot's code ([`super::chargedshot`]) with its own
+//! wobble, burst and thrown ball.
 //!
 //! Kirby's copy (`It_Kind_Kirby_MewtwoShadowBall`) runs the same code with his own checks
 //! (`ft::kirby::special_mewtwo`).
 
 use gekko_fp as fp;
 
-use super::super::item::{article, change, change_state, pick_up, play_sfx, play_sfx1, spawn_air};
-use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725};
+use super::super::item::{change, change_state, play_sfx, play_sfx1};
+use super::super::vars::ItemVars;
+use super::super::{item_mut, jobj_of, lib26b1, lib2725};
+use super::chargedshot::{self as cs, ChargedShot, Hold, TAU, Top, Vars, attr_f32, lerp_int};
 use crate::fpu::{mem, reg};
 use crate::game::ef::{self, Arg};
 use crate::game::ft::kirby;
 use crate::game::ft::mewtwo::special_n::{self, ShadowBall};
-use crate::game::handles::CodeRef;
 use crate::game::it::ItKind;
 use crate::game::state::Running;
-use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
-use crate::hsd::jobj::{self, JObjId};
+use crate::hsd::jobj;
 use crate::lb::hitcapsule;
 use crate::math;
-use crate::mp::coll::{
-    CEILING_HUG, CEILING_PUSH, FLOOR_HUG, FLOOR_PUSH, LEFT_WALL_MASK, RIGHT_WALL_MASK,
-};
 use crate::vec::Vec3;
 
 pub const WOBBLE: u32 = 0x802C_4D10;
@@ -60,15 +58,8 @@ pub const SHIELD_BOUNCED: u32 = 0x802C_6140;
 #[doc(alias("EVT_UNK"))]
 pub const FORGET: u32 = 0x802C_61D4;
 
-/// `itMewtwoShadowball_DatAttrs`.
+/// `itMewtwoShadowball_DatAttrs` past the Charge Shot's ([`cs::attr`]).
 mod attr {
-    pub const LIFETIME: u32 = 0x0;
-    pub const SPEED_MIN: u32 = 0x8;
-    pub const SPEED_MAX: u32 = 0xC;
-    pub const DAMAGE_MIN: u32 = 0x10;
-    pub const DAMAGE_MAX: u32 = 0x14;
-    pub const SCALE_MIN: u32 = 0x18;
-    pub const SCALE_MAX: u32 = 0x1C;
     /// The wobble's period (an `int`).
     pub const WOBBLE_FRAMES: u32 = 0x20;
     /// The burst's hitbox scale and life.
@@ -83,24 +74,35 @@ const SFX_WOBBLE: [i32; 3] = [0x30DAA, 0x30DAD, 0x30DB0];
 /// The burst's effect and sound.
 const GFX_BURST: i32 = 0x40E;
 const SFX_BURST: i32 = 0x74;
-/// `@218` (`M_PI / 4`), `@247` (`M_TAU`) and `M_PI`.
+/// `@218` (`M_PI / 4`).
 const QUARTER_PI: f64 = std::f64::consts::FRAC_PI_4;
-const TAU: f64 = std::f64::consts::TAU;
-const PI: f64 = std::f64::consts::PI;
+
+/// The Shadow Ball: its maker's queries, no sparkles, its state up to the charge's levels, and
+/// it wobbles, keeping its facing.
+pub const SHADOW_BALL: ChargedShot = ChargedShot {
+    vars: shared,
+    released,
+    hold,
+    sparkle: SPARKLE,
+    top: Top::Levels,
+    full_sparkles: |_| &[],
+    wobbles: true,
+    turns: false,
+};
 
 /// Runs one of the ball's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM_0 => animate_held(r, gobj),
+        ANIM_0 => cs::animate_held(r, gobj, &SHADOW_BALL),
         COLL_0 | COLL_17 => no_coll(r, gobj),
-        ANIM_8 => animate_flying(r, gobj),
+        ANIM_8 => cs::animate_flying(r, gobj, &SHADOW_BALL),
         COLL_8 | COLL_9 => coll_flying(r, gobj),
         ANIM_9 => animate_thrown(r, gobj),
         ANIM_17 => animate_burst(r, gobj),
-        DMG_DEALT | CLANKED | ABSORBED | HIT_SHIELD => hit_ends(r, gobj),
-        REFLECTED => reflected(r, gobj),
-        SHIELD_BOUNCED => shield_bounced(r, gobj),
+        DMG_DEALT | CLANKED | ABSORBED | HIT_SHIELD => cs::hit_ends(r, gobj),
+        REFLECTED => cs::reflected(r, gobj, &SHADOW_BALL),
+        SHIELD_BOUNCED => cs::shield_bounced(r, gobj, &SHADOW_BALL),
         _ => return None,
     })
 }
@@ -109,48 +111,56 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        DESTROYED => destroyed(r, gobj),
+        DESTROYED => cs::destroyed(r, gobj, &SHADOW_BALL),
         PICKED_UP => picked_up(r, gobj),
         PHYS_0 | PHYS_9 => no_physics(r, gobj),
         PHYS_8 => physics_flying(r, gobj),
         PHYS_17 => physics_burst(r, gobj),
-        SPARKLE => sparkle(r, gobj),
+        SPARKLE => cs::sparkle(r, gobj, &SHADOW_BALL),
         _ => return false,
     }
     true
 }
 
-fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
-    let attrs = article(item(r.game, gobj))
-        .special(r.data)
-        .expect("the Shadow Ball without attributes");
-    r.data.f32(attrs.at(off))
+/// The fields the Charge Shot has too.
+fn shared(v: &mut ItemVars) -> &mut dyn Vars {
+    v.mewtwo_shadowball()
 }
 
 fn attr_i32(r: &Running, gobj: GObjId, off: u32) -> i32 {
     attr_f32(r, gobj, off).to_bits() as i32
 }
 
-/// The model's grandchild, which the ball scales and moves (`itGetJObjGrandchild`).
-fn grandchild(r: &Running, gobj: GObjId) -> JObjId {
-    let root = jobj_of(r.game, gobj).expect("the Shadow Ball without a model");
-    let child = r.game.objs.jobjs[root]
-        .child
-        .expect("the ball's model's child");
-    r.game.objs.jobjs[child]
-        .child
-        .expect("the ball's model's grandchild")
+/// Whose Shadow Ball a ball of `kind` is: Mewtwo's or Kirby's copy's (the original's queries
+/// of its maker are picked by the ball's kind).
+fn maker_ball(kind: i32) -> Option<&'static ShadowBall> {
+    match ItKind::of(kind) {
+        ItKind::MewtwoShadowBall => Some(&special_n::MEWTWO),
+        ItKind::KirbyMewtwoShadowBall => Some(&kirby::special_mewtwo::KIRBY),
+        _ => None,
+    }
 }
 
-/// From the attributes' `lo` to `hi` by `charge` of `max` (both integers).
-fn lerp_int(r: &Running, gobj: GObjId, lo: u32, hi: u32, charge: i32, max: i32) -> f64 {
-    let lo = reg(attr_f32(r, gobj, lo));
-    let hi = reg(attr_f32(r, gobj, hi));
-    fp::fmadds(
-        fp::frsp(f64::from(charge)),
-        fp::fdivs(fp::fsubs(hi, lo), fp::frsp(f64::from(max))),
-        lo,
-    )
+/// Its maker lets it go, `ftMt_SpecialN_SetNULL`.
+fn released(r: &mut Running, maker: GObjId, kind: i32) {
+    if let Some(b) = maker_ball(kind) {
+        r.mt_n_ball_released(maker, b);
+    }
+}
+
+/// Its maker's charge, unless he lost it (hit, out of the charge's states, putting it away or
+/// holding none).
+fn hold(r: &mut Running, maker: GObjId, kind: i32) -> Hold {
+    let Some(b) = maker_ball(kind) else {
+        return Hold::Unknown;
+    };
+    if r.mt_n_ball_lost(Some(maker), b) || r.mt_n_ball_put_away(Some(maker), b) {
+        return Hold::Lost;
+    }
+    match r.mt_n_charge_of(Some(maker), b) {
+        Some((charge, max)) => Hold::Charge(charge, max),
+        None => Hold::Lost,
+    }
 }
 
 /// The ball's wobble as it flies, `it_802C4D10`: every `x20` frames (after its first) a turn
@@ -160,7 +170,7 @@ fn lerp_int(r: &Running, gobj: GObjId, lo: u32, hi: u32, charge: i32, max: i32) 
 /// never sets, which no caller reads.)
 #[doc(alias = "it_802C4D10")]
 pub fn wobble(r: &mut Running, gobj: GObjId) {
-    let j = grandchild(r, gobj);
+    let j = cs::grandchild(r, gobj);
     let period = attr_i32(r, gobj, attr::WOBBLE_FRAMES);
     let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
     if v.x4C.get() > 0 {
@@ -204,62 +214,8 @@ pub fn wobble(r: &mut Running, gobj: GObjId) {
     v.x4C.set(n);
 }
 
-/// Whether the ball flew into the stage, `it_802C4F50`: a ceiling rising, a floor falling,
-/// the wall it flies toward.
-#[doc(alias = "it_802C4F50")]
-pub fn hit_stage(r: &mut Running, gobj: GObjId) -> bool {
-    ground::air(r, gobj);
-    let ip = item(r.game, gobj);
-    let env = ip.x378_itemColl.env_flags;
-    let mut hit = false;
-    if ip.x40_vel.y > 0.0 {
-        if env & (CEILING_PUSH | CEILING_HUG) != 0 {
-            hit = true;
-        }
-    } else if env & (FLOOR_PUSH | FLOOR_HUG) != 0 {
-        hit = true;
-    }
-    if ip.x40_vel.x > 0.0 {
-        if env & LEFT_WALL_MASK != 0 {
-            hit = true;
-        }
-    } else if env & RIGHT_WALL_MASK != 0 {
-        hit = true;
-    }
-    hit
-}
-
-/// `Item_InitSpawnPositionFromParent` and `Item_InitSpawnCommonFields(.., true)`.
-fn spawn_item(r: &mut Running, parent: GObjId, pos: Vec3, kind: i32, facing: f32) -> SpawnItem {
-    let mut spawn = SpawnItem {
-        kind,
-        ..Default::default()
-    };
-    spawn.prev_pos = pos;
-    spawn.prev_pos.z = 0.0;
-    spawn.pos = lib26b1::parent_ecb_center(r.game, parent);
-    spawn.facing_dir = facing;
-    spawn.x3C_damage = 0;
-    spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(parent);
-    spawn.x4_parent_gobj2 = spawn.x0_parent_gobj;
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
-    spawn
-}
-
-/// `Item_ClearCmdVars`.
-fn clear_cmd_vars(r: &mut Running, gobj: GObjId) {
-    let ip = item_mut(r.game, gobj);
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-}
-
-/// Makes the ball in `parent`'s hands at `pos`, `it_802C5000`: its lifetime, not fired, a
-/// random first wobble, his model's scale kept, and held at his part `part`.
-#[doc(alias = "it_802C5000")]
+/// Makes the ball in `parent`'s hands at `pos` ([`cs::spawn_held`]): not fired, a random first
+/// wobble, his model's scale kept.
 pub fn spawn_held(
     r: &mut Running,
     parent: GObjId,
@@ -268,11 +224,11 @@ pub fn spawn_held(
     kind: i32,
     facing_dir: f32,
 ) -> Option<GObjId> {
-    let mut spawn = spawn_item(r, parent, pos, kind, facing_dir);
-    let b = spawn_air(r, &mut spawn)?;
-    clear_cmd_vars(r, b);
-    let life = attr_f32(r, b, attr::LIFETIME);
-    lib2725::set_lifetime(r.game, r.data, b, life);
+    cs::spawn_held(r, parent, pos, part, kind, facing_dir, init)
+}
+
+/// Its variables as it's made in `parent`'s hands.
+fn init(r: &mut Running, b: GObjId, parent: GObjId) {
     let period = attr_i32(r, b, attr::WOBBLE_FRAMES);
     let v = item_mut(r.game, b).xDD4_itemVar.mewtwo_shadowball();
     v.x14.set(0);
@@ -296,8 +252,6 @@ pub fn spawn_held(
     let v = item_mut(r.game, b).xDD4_itemVar.mewtwo_shadowball();
     v.x54.set(scale);
     v.x58.set(Vec3::new(0.0, 0.0, 0.0));
-    pick_up(r, b, parent, part);
-    Some(b)
 }
 
 /// The full ball his forward throw fires from `pos` at `angle`, `it_802C519C`: already fired
@@ -313,11 +267,10 @@ pub fn spawn_fired(
     angle: f32,
     facing_dir: f32,
 ) -> Option<GObjId> {
-    let mut spawn = spawn_item(r, parent, pos, kind, facing_dir);
-    let b = spawn_air(r, &mut spawn)?;
+    let b = cs::make(r, parent, pos, kind, facing_dir)?;
     change_state(r, b, 9, change::ANIM_UPDATE);
-    clear_cmd_vars(r, b);
-    let life = attr_f32(r, b, attr::LIFETIME);
+    cs::clear_cmd_vars(r, b);
+    let life = attr_f32(r, b, cs::attr::LIFETIME);
     item_mut(r.game, b)
         .xDD4_itemVar
         .mewtwo_shadowball()
@@ -351,12 +304,19 @@ pub fn spawn_fired(
     let size = mem(lerp_int(
         r,
         b,
-        attr::SCALE_MIN,
-        attr::SCALE_MAX,
+        cs::attr::SCALE_MIN,
+        cs::attr::SCALE_MAX,
         charge,
         levels,
     ));
-    let damage = lerp_int(r, b, attr::DAMAGE_MIN, attr::DAMAGE_MAX, charge, levels);
+    let damage = lerp_int(
+        r,
+        b,
+        cs::attr::DAMAGE_MIN,
+        cs::attr::DAMAGE_MAX,
+        charge,
+        levels,
+    );
     let v = item_mut(r.game, b).xDD4_itemVar.mewtwo_shadowball();
     v.x10.set(size);
     v.x24.set(crate::ppc::cvt_fp2unsigned(damage));
@@ -372,133 +332,14 @@ pub fn spawn_fired(
     Some(b)
 }
 
-/// Fires the ball from `pos` at `angle`, `it_802C53F0`: its charge (`charge` within 0 and
-/// `max`) sets its speed, damage and size; while its owner is the one who made it, it leaves
-/// his hands ([`fired`], `it_8027429C`), flies his way, and is fired (`x14`).
-#[doc(alias = "it_802C53F0")]
+/// Fires the ball ([`cs::fire`]).
 pub fn fire(r: &mut Running, gobj: GObjId, pos: Vec3, angle: f32, charge: f32, max: f32) {
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .mewtwo_shadowball()
-        .x4
-        .set_x(angle);
-    let life = attr_f32(r, gobj, attr::LIFETIME);
-    lib2725::set_lifetime(r.game, r.data, gobj, life);
-    let mut charge = reg(charge);
-    if charge < 0.0 {
-        charge = 0.0;
-    }
-    let max = reg(max);
-    if charge > max {
-        charge = max;
-    }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    v.x18.set(fp::fctiwz(charge));
-    v.x1C.set(fp::fctiwz(max));
-    let ip = item_mut(r.game, gobj);
-    let owner = ip.owner;
-    let maker = ip.xDD4_itemVar.mewtwo_shadowball().x2C.get();
-    let Some(maker) = maker else { return };
-    if owner != Some(maker) {
-        return;
-    }
-    fired(r, gobj);
-    // `HSD_MtxGetRotation` of the held part's matrix: its result goes unused.
-    super::super::release::let_go(r, gobj, Vec3::new(0.0, 0.0, 0.0));
-    item_mut(r.game, gobj).xDC8_word.flags.x14 = false;
-    lib26b1::disable_pickup(r.game, gobj);
-    let lerp = |r: &Running, lo, hi| {
-        let (lo, hi) = (reg(attr_f32(r, gobj, lo)), reg(attr_f32(r, gobj, hi)));
-        fp::fmadds(charge, fp::fdivs(fp::fsubs(hi, lo), max), lo)
-    };
-    let speed = lerp(r, attr::SPEED_MIN, attr::SPEED_MAX);
-    let damage = lerp(r, attr::DAMAGE_MIN, attr::DAMAGE_MAX);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    v.x4.set_y(mem(speed));
-    v.x24.set(crate::ppc::cvt_fp2unsigned(damage));
-    v.x4.set_z(0.0);
-    let (level, levels) = (v.x18.get(), v.x1C.get());
-    let size = mem(lerp_int(
-        r,
-        gobj,
-        attr::SCALE_MIN,
-        attr::SCALE_MAX,
-        level,
-        levels,
-    ));
-    let facing = r.game.ft_facing_dir(maker);
-    let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.mewtwo_shadowball();
-    v.x10.set(size);
-    v.x20.set(0);
-    ip.facing_dir = facing;
-    ip.pos = pos;
-    let v = ip.xDD4_itemVar.mewtwo_shadowball();
-    v.x28.set(0);
-    let speed = fp::fmuls(reg(v.x4.y()), reg(v.x50.get()));
-    let c = reg(math::cos(v.x4.x()));
-    item_mut(r.game, gobj).x40_vel.x = mem(fp::fmuls(speed, c));
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    let speed = fp::fmuls(reg(v.x4.y()), reg(v.x50.get()));
-    let s = reg(math::sin(v.x4.x()));
-    let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fmuls(speed, s));
-    ip.x40_vel.z = 0.0;
-    let v = ip.xDD4_itemVar.mewtwo_shadowball();
-    v.x14.set(1);
-    v.x4C.set(0);
-    let root = jobj_of(r.game, gobj).expect("the Shadow Ball without a model");
-    let child = r.game.objs.jobjs[root].child;
-    let child = child.expect("HSD_JObjSetScale on a null joint");
-    jobj::set_scale(&mut r.game.objs.jobjs, child, Vec3::new(1.0, 1.0, 1.0));
+    cs::fire(r, gobj, pos, angle, charge, max, &SHADOW_BALL);
 }
 
-/// Whose Shadow Ball a ball of `kind` is: Mewtwo's or Kirby's copy's (the original's queries
-/// of its maker are picked by the ball's kind).
-fn maker_ball(kind: i32) -> Option<&'static ShadowBall> {
-    match ItKind::of(kind) {
-        ItKind::MewtwoShadowBall => Some(&special_n::MEWTWO),
-        ItKind::KirbyMewtwoShadowBall => Some(&kirby::special_mewtwo::KIRBY),
-        _ => None,
-    }
-}
-
-/// The ball's end, `it_2725_Logic101_Destroyed`: its effects gone; unfired, its maker lets
-/// it go (`ftMt_SpecialN_SetNULL`) if he still owns it; then no owner.
-#[doc(alias = "it_2725_Logic101_Destroyed")]
-pub fn destroyed(r: &mut Running, gobj: GObjId) {
-    ef::eflib::destroy_all(r, gobj);
-    let ip = item_mut(r.game, gobj);
-    let (owner, kind) = (ip.owner, ip.kind);
-    let v = ip.xDD4_itemVar.mewtwo_shadowball();
-    if v.x14.get() == 0 {
-        if let Some(maker) = v.x2C.get()
-            && owner == Some(maker)
-            && let Some(b) = maker_ball(kind)
-        {
-            r.mt_n_ball_released(maker, b);
-        }
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .mewtwo_shadowball()
-            .x2C
-            .set(None);
-    }
-    let ip = item_mut(r.game, gobj);
-    ip.owner = None;
-    ip.xDC8_word.flags.x13 = false;
-}
-
-/// The ball taken away from his hands, `it_802C573C`: its effects gone, and the item.
-#[doc(alias = "it_802C573C")]
+/// The ball taken away from his hands ([`cs::remove`]).
 pub fn remove(r: &mut Running, gobj: GObjId) {
-    ef::eflib::destroy_all(r, gobj);
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .mewtwo_shadowball()
-        .x28
-        .set(0);
-    super::super::item::destroy(r, gobj);
+    cs::remove(r, gobj, &SHADOW_BALL);
 }
 
 /// In his hands, `it_2725_Logic101_PickedUp`: the held state, no wobble.
@@ -512,121 +353,18 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
         .set(0.0);
 }
 
-/// `itMewtwoshadowball_UnkMotion0_Anim`: while its maker holds it, the ball goes once he
-/// loses it (hit, out of the charge's states, putting it away or holding none) and otherwise
-/// takes his charge; it grows with the charge, and its grandchild is set back by its first
-/// offset times his scale.
-#[doc(alias = "itMewtwoshadowball_UnkMotion0_Anim")]
-pub fn animate_held(r: &mut Running, gobj: GObjId) -> bool {
-    let j = grandchild(r, gobj);
-    let ip = item_mut(r.game, gobj);
-    let (owner, kind) = (ip.owner, ip.kind);
-    let maker = ip.xDD4_itemVar.mewtwo_shadowball().x2C.get();
-    if maker.is_some()
-        && owner == maker
-        && let Some(b) = maker_ball(kind)
-    {
-        if r.mt_n_ball_lost(maker, b) || r.mt_n_ball_put_away(maker, b) {
-            return true;
-        }
-        let Some((charge, max)) = r.mt_n_charge_of(maker, b) else {
-            return true;
-        };
-        let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-        v.x18.set(charge);
-        v.x1C.set(max);
-    }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    let (charge, max) = (v.x18.get(), v.x1C.get());
-    let s = mem(lerp_int(
-        r,
-        gobj,
-        attr::SCALE_MIN,
-        attr::SCALE_MAX,
-        charge,
-        max,
-    ));
-    jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    if v.x58.x() == 0.0 && v.x58.y() == 0.0 && v.x58.z() == 0.0 {
-        let t = r.game.objs.jobjs[j].translate;
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .mewtwo_shadowball()
-            .x58
-            .set(t);
-    }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    let k = reg(v.x54.get());
-    let o = v.x58.get();
-    let t = Vec3::new(
-        mem(fp::fmuls(fp::fneg(reg(o.x)), k)),
-        mem(fp::fmuls(fp::fneg(reg(o.y)), k)),
-        mem(fp::fmuls(fp::fneg(reg(o.z)), k)),
-    );
-    jobj::set_translate(&mut r.game.objs.jobjs, j, t);
-    false
-}
-
-/// Fired, `it_802C5B18`: its lifetime, its effects gone, the state for its charge (1 to 8),
-/// the sparkles hooked, and its wobble's size by the charge (half to whole).
-#[doc(alias = "it_802C5B18")]
-pub fn fired(r: &mut Running, gobj: GObjId) {
-    let life = attr_f32(r, gobj, attr::LIFETIME);
-    lib2725::set_lifetime(r.game, r.data, gobj, life);
-    ef::eflib::destroy_all(r, gobj);
-    let level = clamp_charge(r, gobj);
-    change_state(r, gobj, level.wrapping_add(1), change::ANIM_UPDATE);
-    let ip = item_mut(r.game, gobj);
-    ip.on_accessory = Some(CodeRef(SPARKLE));
-    let v = ip.xDD4_itemVar.mewtwo_shadowball();
-    let part = fp::fdivs(
-        fp::frsp(f64::from(v.x18.get())),
-        fp::frsp(f64::from(v.x1C.get())),
-    );
-    v.x50.set(mem(fp::fmadds(0.5, part, 0.5)));
-}
-
-/// No effects out (`x28`), and the charge kept within 0 and its levels; the charge.
-fn clamp_charge(r: &mut Running, gobj: GObjId) -> i32 {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    v.x28.set(0);
-    if v.x18.get() < 0 {
-        v.x18.set(0);
-    }
-    if v.x18.get() >= v.x1C.get() {
-        let m = v.x1C.get();
-        v.x18.set(m);
-    }
-    v.x18.get()
-}
-
-/// `itMewtwoshadowball_UnkMotion8_Anim`: its size, and its life counts down.
-#[doc(alias = "itMewtwoshadowball_UnkMotion8_Anim")]
-pub fn animate_flying(r: &mut Running, gobj: GObjId) -> bool {
-    let j = grandchild(r, gobj);
-    let s = item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .mewtwo_shadowball()
-        .x10
-        .get();
-    jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
-    lib2725::tick_lifetime(r.game, gobj)
-}
-
 /// `itMewtwoshadowball_UnkMotion8_Phys`: after its first frame its speed along its angle,
 /// then the wobble.
 #[doc(alias = "itMewtwoshadowball_UnkMotion8_Phys")]
 pub fn physics_flying(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    if v.x4C.get() > 0 {
-        let speed = reg(v.x4.y());
-        let c = reg(math::cos(v.x4.x()));
-        item_mut(r.game, gobj).x40_vel.x = mem(fp::fmuls(speed, c));
-        let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-        let speed = reg(v.x4.y());
-        let s = reg(math::sin(v.x4.x()));
-        item_mut(r.game, gobj).x40_vel.y = mem(fp::fmuls(speed, s));
+    if item_mut(r.game, gobj)
+        .xDD4_itemVar
+        .mewtwo_shadowball()
+        .x4C
+        .get()
+        > 0
+    {
+        cs::fly(r, gobj, &SHADOW_BALL);
     }
     wobble(r, gobj);
 }
@@ -635,22 +373,10 @@ pub fn physics_flying(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itMewtwoshadowball_UnkMotion8_Coll")]
 #[doc(alias = "itMewtwoshadowball_UnkMotion9_Coll")]
 pub fn coll_flying(r: &mut Running, gobj: GObjId) -> bool {
-    if hit_stage(r, gobj) {
+    if cs::hit_stage(r, gobj) {
         burst(r, gobj);
     }
     false
-}
-
-/// A fired ball's accessory, `fn_802C5E18`: a counter cycling every third frame (the full
-/// ball's test does nothing).
-#[doc(alias = "fn_802C5E18")]
-pub fn sparkle(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    let _ = v.x18.get() == v.x1C.get();
-    let n = v.x20.get().wrapping_add(1);
-    v.x20.set(n);
-    let n = v.x20.get() % 3;
-    v.x20.set(n);
 }
 
 /// The ball bursts, `it_802C5E5C`: hidden, its burst's life, its effects gone, the burst's
@@ -663,14 +389,14 @@ pub fn burst(r: &mut Running, gobj: GObjId) {
     let life = attr_f32(r, gobj, attr::BURST_LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
     ef::eflib::destroy_all(r, gobj);
-    let level = clamp_charge(r, gobj);
+    let level = cs::clamp_charge(r, gobj, &SHADOW_BALL);
     change_state(r, gobj, level.wrapping_add(10), change::ANIM_UPDATE);
     let k = reg(attr_f32(r, gobj, attr::BURST_SCALE));
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = None;
     let s = mem(fp::fmuls(reg(ip.x5D4_hitboxes[0].hit.scale), k));
     ip.xDD4_itemVar.mewtwo_shadowball().x64.set(s);
-    let j = grandchild(r, gobj);
+    let j = cs::grandchild(r, gobj);
     let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, Some(j), None);
     ef::spawn(r, GFX_BURST, Some(gobj), &[Arg::Vec(pos)]);
     play_sfx(r, gobj, SFX_BURST, 127, 64);
@@ -680,7 +406,7 @@ pub fn burst(r: &mut Running, gobj: GObjId) {
 /// counts down.
 #[doc(alias = "itMewtwoshadowball_UnkMotion17_Anim")]
 pub fn animate_burst(r: &mut Running, gobj: GObjId) -> bool {
-    let j = grandchild(r, gobj);
+    let j = cs::grandchild(r, gobj);
     let ip = item_mut(r.game, gobj);
     let s = ip.xDD4_itemVar.mewtwo_shadowball().x10.get();
     jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
@@ -716,59 +442,4 @@ pub fn no_physics(_r: &mut Running, _gobj: GObjId) {}
 #[doc(alias = "itMewtwoshadowball_UnkMotion17_Coll")]
 pub fn no_coll(_r: &mut Running, _gobj: GObjId) -> bool {
     false
-}
-
-/// A hit dealt, clanked, absorbed or on a shield ends the ball,
-/// `itMewtwoShadowball_Logic101_DmgDealt` and the others.
-#[doc(alias = "itMewtwoShadowball_Logic101_DmgDealt")]
-#[doc(alias = "itMewtwoShadowball_Logic101_Clanked")]
-#[doc(alias = "itMewtwoShadowball_Logic101_Absorbed")]
-#[doc(alias = "itMewtwoShadowball_Logic101_HitShield")]
-pub fn hit_ends(_r: &mut Running, _gobj: GObjId) -> bool {
-    true
-}
-
-/// The angle kept within a turn.
-fn wrap(a: f32) -> f32 {
-    let mut a = a;
-    while a < 0.0 {
-        a = mem(fp::frsp(fp::fadd(reg(a), TAU)));
-    }
-    while reg(a) > TAU {
-        a = mem(fp::frsp(fp::fsub(reg(a), TAU)));
-    }
-    a
-}
-
-/// Reflected, `it_2725_Logic101_Reflected`: it flies back (its facing unchanged).
-#[doc(alias = "it_2725_Logic101_Reflected")]
-pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    let a = mem(fp::frsp(fp::fadd(reg(v.x4.x()), PI)));
-    v.x4.set_x(a);
-    let a = wrap(v.x4.x());
-    v.x4.set_x(a);
-    false
-}
-
-/// Bouncing off a shield, `it_2725_Logic101_ShieldBounced`: its speed mirrored off the
-/// shield, its angle from the new speed.
-#[doc(alias = "it_2725_Logic101_ShieldBounced")]
-pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
-    let ip = item_mut(r.game, gobj);
-    let normal = ip.xC58;
-    ip.x40_vel.mirror_xy(normal);
-    let a = math::atan2(ip.x40_vel.y, ip.x40_vel.x);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    v.x4.set_x(a);
-    let a = wrap(v.x4.x());
-    v.x4.set_x(a);
-    false
-}
-
-/// Forgets a GObj the ball points to, `itMewtwoShadowball_Logic101_EvtUnk` (`it_8026B894`).
-#[doc(alias = "itMewtwoShadowball_Logic101_EvtUnk")]
-#[doc(alias("evt_unk"))]
-pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    lib26b1::forget(r.game, gobj, other);
 }

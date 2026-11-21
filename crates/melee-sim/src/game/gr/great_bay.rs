@@ -1,5 +1,5 @@
 //! Great Bay, `melee/gr/grgreatbay.c`: the island the fighters stand on (map 2) with its floating
-//! platform, the turtle (map 1), Tingle (map 10, riding the balloon item `it::kinds::tincle`),
+//! platform, the turtle (map 1), Tingle (map 10, riding the balloon item `it::kinds::tingle`),
 //! the moon and the four giants (maps 9, 5 to 8), the background and the water in front (maps 3
 //! and 4), and map 0.
 //!
@@ -11,7 +11,7 @@ use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
 use super::super::handles::CodeRef;
-use super::super::it::kinds::tincle;
+use super::super::it::kinds::tingle;
 use super::super::state::{Game, Running};
 use super::data::{GREATBAY_CALLBACKS, StageCallbacks};
 use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, set_guide_points, update_map_coll};
@@ -505,7 +505,7 @@ pub fn init_tingle(r: &mut Running, gobj: GObjId) {
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = 1000.0);
     update_map_coll(r.game, r.data, gobj);
     r.game.geometry_mut().settle_vertices(BALLOON_JOINT);
-    let item = tincle::create(r, gobj);
+    let item = tingle::create(r, gobj);
     reset_tingle(r, g, item);
 }
 
@@ -532,19 +532,19 @@ pub fn proc_tingle(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj).expect("jobj");
     let item = r.game.grounds[g.0].u.greatbay4().item;
     let item = item.expect("Tingle's balloon");
-    let (state, pos) = tincle::state_and_place(r.game, item);
+    let (state, pos) = tingle::state_and_place(r.game, item);
     let v = r.game.grounds[g.0].u.greatbay4();
     v.state = state;
     v.place = pos;
     if reg(pos.y) < fp::fneg(50.0) {
-        tincle::destroy(r, item);
+        tingle::destroy(r, item);
         r.game.geometry_mut().settle_vertices(BALLOON_JOINT);
-        let new = tincle::create(r, gobj);
+        let new = tingle::create(r, gobj);
         reset_tingle(r, g, new);
         return;
     }
     let weight = r.game.grounds[g.0].u.greatbay4().weight;
-    tincle::set_weight(r.game, item, weight);
+    tingle::set_weight(r.game, item, weight);
     let v = r.game.grounds[g.0].u.greatbay4();
     match v.state {
         1 => {
@@ -553,19 +553,19 @@ pub fn proc_tingle(r: &mut Running, gobj: GObjId) {
         }
         2 | 5 => {
             if v.standing != 0 && v.ledge_hang == 0 {
-                tincle::press(r, item);
+                tingle::press(r, item);
             }
         }
         4 => {
             if v.standing == 0 {
-                tincle::release(r, item);
+                tingle::release(r, item);
             } else if v.standing_last != v.standing {
-                tincle::press(r, item);
+                tingle::press(r, item);
             }
         }
         6 | 7 => {
             let (lit, mut at) = (v.popped, v.place);
-            if lit == 0 && tincle::timer(r.game, item) == 0 {
+            if lit == 0 && tingle::timer(r.game, item) == 0 {
                 at.y = mem(fp::fadds(reg(at.y), 10.0));
                 grlib::generator_at(r.game, r.data, 0x7534, 0x1E, at);
                 r.stage_sound(0x57E4A);
@@ -592,7 +592,7 @@ pub fn proc_tingle(r: &mut Running, gobj: GObjId) {
                 r.game.geometry_mut().enable_joint(BALLOON_JOINT);
             }
             if r.game.grounds[g.0].u.greatbay4().standing != 0 {
-                tincle::press(r, item);
+                tingle::press(r, item);
             }
         }
         _ => {}

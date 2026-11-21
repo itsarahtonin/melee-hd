@@ -11,7 +11,7 @@ use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::parts::TOP_N;
 use super::checks::abs;
 use super::ids::ms;
-use super::jump::FT_800881D8;
+use super::jump::PLAY_VOICE;
 use super::{PAD_A, PAD_B, PAD_LR};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -739,7 +739,7 @@ impl Running<'_> {
         }
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         let sfx = self.character_sfx(gobj, 0x24);
-        self.play_track(gobj, FT_800881D8, sfx);
+        self.play_track(gobj, PLAY_VOICE, sfx);
         self.play_sfx(gobj, 3, 0x7F, 0x40);
     }
 

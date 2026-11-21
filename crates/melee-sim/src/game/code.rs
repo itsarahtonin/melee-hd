@@ -251,22 +251,22 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
 fn fighter_callbacks(g: &mut Running, gobj: GObjId, cb: u32) -> bool {
     match cb {
         super::it::kinds::samusgrapple::FT_DEATH => {
-            super::it::kinds::samusgrapple::ft_death(g, gobj)
+            super::it::kinds::tether::ft_death(g, gobj, &super::it::kinds::samusgrapple::GRAPPLE)
         }
         super::it::kinds::samusgrapple::FT_FRAME => {
-            super::it::kinds::samusgrapple::ft_frame(g, gobj)
+            super::it::kinds::tether::ft_frame(g, gobj, &super::it::kinds::samusgrapple::GRAPPLE)
         }
         super::it::kinds::samusgrapple::FT_LINE_UP => {
-            super::it::kinds::samusgrapple::ft_line_up(g, gobj)
+            super::it::kinds::tether::ft_line_up(g, gobj, &super::it::kinds::samusgrapple::GRAPPLE)
         }
         super::it::kinds::linkhookshot::FT_DEATH => {
-            super::it::kinds::linkhookshot::ft_death(g, gobj)
+            super::it::kinds::tether::ft_death(g, gobj, &super::it::kinds::linkhookshot::HOOKSHOT)
         }
         super::it::kinds::linkhookshot::FT_FRAME => {
-            super::it::kinds::linkhookshot::ft_frame(g, gobj)
+            super::it::kinds::tether::ft_frame(g, gobj, &super::it::kinds::linkhookshot::HOOKSHOT)
         }
         super::it::kinds::linkhookshot::FT_LINE_UP => {
-            super::it::kinds::linkhookshot::ft_line_up(g, gobj)
+            super::it::kinds::tether::ft_line_up(g, gobj, &super::it::kinds::linkhookshot::HOOKSHOT)
         }
         addr if super::ft::co::cargo::run(g, gobj, addr) => {}
         addr if super::ft::co::hammer::run(g, gobj, addr) => {}

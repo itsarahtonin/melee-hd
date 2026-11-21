@@ -15,34 +15,39 @@ const NONE: u8 = 0x21;
 #[derive(Clone, Copy, Debug)]
 pub struct AdventureStage {
     pub id: u8,
-    pub x1: u8,
-    pub x2: u16,
-    pub x4: u16,
+    #[doc(alias("x1"))]
+    pub flags: u8,
+    #[doc(alias("x2"))]
+    pub time: u16,
+    #[doc(alias("x4"))]
+    pub opponents: u16,
     pub stkind: u16,
-    pub x8: u8,
-    pub x9: i8,
+    #[doc(alias("x8"))]
+    pub rules_bit: u8,
+    #[doc(alias("x9"))]
+    pub spawn_dir: i8,
     pub chars: [u8; 3],
 }
 
 #[allow(clippy::too_many_arguments)]
 const fn ae(
     id: u8,
-    x1: u8,
-    x2: u16,
-    x4: u16,
+    flags: u8,
+    time: u16,
+    opponents: u16,
     stkind: u16,
-    x8: u8,
-    x9: i8,
+    rules_bit: u8,
+    spawn_dir: i8,
     chars: [u8; 3],
 ) -> AdventureStage {
     AdventureStage {
         id,
-        x1,
-        x2,
-        x4,
+        flags,
+        time,
+        opponents,
         stkind,
-        x8,
-        x9,
+        rules_bit,
+        spawn_dir,
         chars,
     }
 }
@@ -999,23 +1004,23 @@ impl Running<'_> {
             .enumerate()
             .find(|(_, e)| e.id == id)
             .expect("an Adventure state's stage");
-        let (x4_flag, x5_flag) = if entry.x4 != 0 { (1, 0) } else { (0, 1) };
+        let (x4_flag, x5_flag) = if entry.opponents != 0 { (1, 0) } else { (0, 1) };
         let mut run = self.game.one_player.adventure.base;
-        run.x8[0] = entry.x1;
-        run.x8[1] = 0;
-        run.x8[3] = entry.x8;
-        run.x8[2] = entry.x9 as u8;
-        let color_kind = self.game.one_player.adventure_x910[index];
+        run.stage[0] = entry.flags;
+        run.stage[1] = 0;
+        run.stage[3] = entry.rules_bit;
+        run.stage[2] = entry.spawn_dir as u8;
+        let color_kind = self.game.one_player.adventure_results[index];
         let chars = entry.chars.map(|c| c as i8);
         let mut start = self.game.one_player.match_start.clone();
         self.one_player_stage_start(
             &mut start,
             &mut run,
             &chars,
-            entry.x4 as u8,
+            entry.opponents as u8,
             x4_flag,
             x5_flag,
-            i32::from(entry.x2),
+            i32::from(entry.time),
             i32::from(entry.stkind),
             i32::from(vs_count(id)),
             i32::from(color_kind),
@@ -1024,7 +1029,7 @@ impl Running<'_> {
         let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
         let tags = self.nametag_rumbles();
         super::vs_mode::load_rumble_enabled_with(&mut start, &prefs, &tags);
-        if entry.x1 & 8 != 0 {
+        if entry.flags & 8 != 0 {
             start.rules.on_match_start = Some(CodeRef(ON_MATCH_START));
         }
         self.game.one_player.match_start = start;
@@ -1041,8 +1046,8 @@ impl Running<'_> {
             .position(|e| e.id == id)
             .expect("an Adventure state's stage");
         let e = &self.game.one_player.match_exit;
-        let (won, time) = (e.x8 != 0, e.x4);
-        self.game.one_player.adventure_x910[index] = if won { 2 } else { 1 };
+        let (won, time) = (e.stage_flag != 0, e.timer_seconds);
+        self.game.one_player.adventure_results[index] = if won { 2 } else { 1 };
         let mut run = self.game.one_player.adventure.base;
         let on = self.one_player_match_exit(&mut run, GAME_OVER);
         self.game.one_player.adventure.base = run;
@@ -1078,8 +1083,8 @@ impl Running<'_> {
             .iter()
             .position(|e| e.id == id)
             .expect("an Adventure state's stage");
-        let won = self.game.one_player.match_exit.x8 != 0;
-        self.game.one_player.adventure_x910[index] = if won { 2 } else { 1 };
+        let won = self.game.one_player.match_exit.stage_flag != 0;
+        self.game.one_player.adventure_results[index] = if won { 2 } else { 1 };
         index
     }
 
@@ -1111,7 +1116,7 @@ impl Running<'_> {
     pub fn adventure_enter_cutscene(&mut self) {
         let run = &self.game.one_player.adventure.base;
         let ckind = run.player.ckind as u8;
-        let kind = if ckind == CharacterKind::Zelda && run.xc[6] != 0 {
+        let kind = if ckind == CharacterKind::Zelda && run.counters[6] != 0 {
             CharacterKind::Seak as u8
         } else {
             ckind
@@ -1150,7 +1155,7 @@ impl Running<'_> {
     pub fn adventure_exit_escape(&mut self) {
         let e = &mut self.game.one_player.match_exit;
         if e.match_end.outcome != OUTCOME_TIMEOUT {
-            self.game.one_player.adventure.x74[2] = 1;
+            self.game.one_player.adventure.feats[2] = 1;
         } else {
             let s = &mut e.match_end.player_standings[0].stocks;
             *s = s.wrapping_add(1);
@@ -1183,7 +1188,7 @@ impl Running<'_> {
             run.player.ckind as u8,
             run.player.color,
             i32::from(cpu_level),
-            i32::from(entry.x4),
+            i32::from(entry.opponents),
             at_once,
             1,
             0,
@@ -1191,7 +1196,7 @@ impl Running<'_> {
             attack,
             defense,
         );
-        self.game.one_player.adventure.base.xc[5] = 1;
+        self.game.one_player.adventure.base.counters[5] = 1;
     }
 
     /// The three Kirbys' cutscene's entry, `gm_801B4974`: the player's character and costume
@@ -1203,7 +1208,11 @@ impl Running<'_> {
     pub fn adventure_enter_kirbys(&mut self) {
         self.adventure_enter_cutscene();
         let id = self.game.machine.routing.curr_state_id;
-        let n = usize::from(stage_entry(id).expect("an Adventure state's stage").x4);
+        let n = usize::from(
+            stage_entry(id)
+                .expect("an Adventure state's stage")
+                .opponents,
+        );
         self.adventure_joiners();
         let o = &self.game.gm.opponents;
         let (first, copies) = (o.costumes[0], o.copies);
@@ -1218,7 +1227,7 @@ impl Running<'_> {
     /// (`xC.x11`), then the stage's match (`gm_801B4064`).
     #[doc(alias = "gm_801B4B28")]
     pub fn adventure_enter_team_kirby(&mut self) {
-        if self.game.one_player.adventure.base.xc[5] != 1 {
+        if self.game.one_player.adventure.base.counters[5] != 1 {
             self.adventure_joiners();
         }
         self.adventure_enter_vs();
@@ -1253,7 +1262,7 @@ impl Running<'_> {
             .unlocks
             .ckind_unlocked(CharacterKind::Falco as u8)
             && self.game.objs.rng.below(100) <= 33;
-        self.game.one_player.adventure.x7c = if falco {
+        self.game.one_player.adventure.star_fox_kind = if falco {
             CharacterKind::Falco as u8
         } else {
             first
@@ -1265,7 +1274,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801B4DAC")]
     pub fn adventure_enter_fox_falco(&mut self) {
         self.adventure_enter_vs();
-        if self.game.one_player.adventure.x7c == CharacterKind::Falco {
+        if self.game.one_player.adventure.star_fox_kind == CharacterKind::Falco {
             let p = self.game.one_player.adventure.base.player;
             let mut colors = [self.game.one_player.match_start.players[1].color, 0, 0];
             super::one_player::enemy_color_table(
@@ -1343,11 +1352,11 @@ impl Running<'_> {
         let run = &self.game.one_player.adventure;
         let giga = self.game.machine.routing.curr_mode == GM_ADVENTURE
             && run.base.player.cpu_level >= 2
-            && run.base.x20.wrapping_add(self.game.vs_frame_count()) < 0xFD20;
+            && run.base.frames.wrapping_add(self.game.vs_frame_count()) < 0xFD20;
         if !giga {
             self.game.vs.start.x4_5 = true;
         }
-        self.game.one_player.adventure.x74[3] = u8::from(giga);
+        self.game.one_player.adventure.feats[3] = u8::from(giga);
         self.set_next_game_mode_state_id(BOWSERTOY_CUTSCENE);
     }
 
@@ -1363,7 +1372,7 @@ impl Running<'_> {
     /// clear.
     #[doc(alias = "gm_801B5078")]
     pub fn adventure_exit_toy(&mut self) {
-        if self.game.one_player.adventure.x74[3] == 0 {
+        if self.game.one_player.adventure.feats[3] == 0 {
             self.adventure_clear();
         }
     }
@@ -1375,7 +1384,7 @@ impl Running<'_> {
         let run = &self.game.one_player.adventure.base;
         let e = &self.game.one_player.match_exit;
         if i32::from(run.player.stocks) == i32::from(e.match_end.player_standings[0].stocks) {
-            self.game.one_player.adventure.x74[4] = 1;
+            self.game.one_player.adventure.feats[4] = 1;
         }
         let id = self.game.machine.routing.curr_state_id;
         self.adventure_mark_stage(id);
@@ -1400,7 +1409,7 @@ impl Running<'_> {
             let p = &mut self.game.one_player.match_start.players[1];
             p.ckind = CharacterKind::Luigi as _;
             p.color = color;
-            self.game.one_player.adventure.x74[0] = 1;
+            self.game.one_player.adventure.feats[0] = 1;
         }
     }
 
@@ -1421,7 +1430,7 @@ impl Running<'_> {
         let on = self.one_player_match_exit(&mut run, GAME_OVER);
         self.game.one_player.adventure.base = run;
         if on {
-            self.game.one_player.adventure.x74[1] = u8::from(frames / 60 <= 60);
+            self.game.one_player.adventure.feats[1] = u8::from(frames / 60 <= 60);
         }
     }
 

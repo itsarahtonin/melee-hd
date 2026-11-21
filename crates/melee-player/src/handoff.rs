@@ -11,13 +11,15 @@
 
 use melee_render::frame::Frames;
 
-/// What a renderer was made for: its scale, its EFB's width and its samples a pixel. A renderer
+/// What a renderer was made for: its scale, its EFB's width, its samples a pixel and whether
+/// it's the fast renderer. A renderer
 /// set aside misses the changes the player made meanwhile, which it takes when it comes back.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Shape {
     pub scale: u32,
     pub efb_width: u32,
     pub msaa: u32,
+    pub fast: bool,
 }
 
 /// The menus' frame builder and renderer while a live match draws with its own.

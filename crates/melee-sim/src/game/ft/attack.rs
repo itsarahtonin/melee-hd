@@ -221,7 +221,7 @@ impl Running<'_> {
     /// a hurtbox.
     #[doc(alias = "ftColl_80078C70")]
     pub fn hits_from_fighters(&mut self, gobj: GObjId) {
-        if self.game.vs_x5_2() {
+        if self.game.vs_no_fighter_hits() {
             return;
         }
         let me = self.game.fighter_id(gobj);
@@ -1284,7 +1284,7 @@ impl Running<'_> {
         if h.x42_b2 && reg(mf.facing_dir) == reg(ip.facing_dir) {
             return;
         }
-        if self.game.vs_x5_2() && !ib.x138 {
+        if self.game.vs_no_fighter_hits() && !ib.x138 {
             return;
         }
         if hitcapsule::has_victim(h, victim(me)) {
@@ -1993,7 +1993,7 @@ impl Running<'_> {
     /// gives, then the stage lines the fighter touches.
     #[doc(alias = "ftColl_8007BAC0")]
     pub fn touch_devices(&mut self, gobj: GObjId) {
-        if self.game.vs_x5_2() {
+        if self.game.vs_no_fighter_hits() {
             return;
         }
         let me = self.game.fighter_id(gobj);

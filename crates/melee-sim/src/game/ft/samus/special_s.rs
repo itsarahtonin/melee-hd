@@ -77,7 +77,7 @@ impl Running<'_> {
         self.anim_update(gobj);
         let fp = self.game.fighter_mut(gobj);
         fp.x2210 = [0; 4];
-        fp.accessory4_cb = Some(CodeRef(addr::SPECIAL_S_8012A074));
+        fp.accessory4_cb = Some(CodeRef(addr::MISSILE_LAUNCH));
     }
 
     /// `ftSs_SpecialS_Enter`: her ground speed divided by the attributes' `x2C`, no rise.
@@ -173,7 +173,7 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::SPECIAL_S_8012A074 => g.samus_missile_launch(gobj),
+        addr::MISSILE_LAUNCH => g.samus_missile_launch(gobj),
         addr::SPECIAL_S_ENTER => g.samus_special_s_enter(gobj),
         addr::SPECIAL_AIR_S_ENTER => g.samus_special_air_s_enter(gobj),
         addr::SPECIAL_S_ANIM | addr::SPECIAL_S_SMASH_ANIM => g.samus_special_s_anim(gobj),
@@ -193,7 +193,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_S_COLL | addr::SPECIAL_AIR_S_SMASH_COLL => {
             g.samus_special_air_s_coll(gobj);
         }
-        addr::SPECIAL_S_8012A640 => g.samus_screw_effects_off(gobj),
+        addr::SCREW_EFFECTS_OFF => g.samus_screw_effects_off(gobj),
         _ => return false,
     }
     true

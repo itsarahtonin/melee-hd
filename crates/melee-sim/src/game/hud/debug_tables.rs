@@ -76,8 +76,9 @@ pub static SLOT_TYPES: [&[u8]; 4] = [b"Gm_Human", b"Gm_Cpu  ", b"Gm_Demo ", b"Gm
 /// `0x803FC1E0`: the teams, which 4 entries name.
 pub static TEAMS: [&[u8]; 3] = [b"Red-Team", b"Green-Team", b"Blue-Team"];
 
-/// `un_803FA4E0`.
-pub static T_803FA4E0: Table = Table {
+/// `un_803FA4E0`: the top page (its title the build date).
+#[doc(alias("T_803FA4E0"))]
+pub static TOP_MENU: Table = Table {
     addr: 0x803FA4E0,
     entries: &[
         Entry {
@@ -221,8 +222,9 @@ pub static T_803FA4E0: Table = Table {
     ],
 };
 
-/// `un_803FA658`.
-pub static T_803FA658: Table = Table {
+/// `un_803FA658`: the "Global Data Edit" page.
+#[doc(alias("T_803FA658"))]
+pub static GLOBAL_DATA_MENU: Table = Table {
     addr: 0x803FA658,
     entries: &[
         Entry {
@@ -324,8 +326,9 @@ pub static T_803FA658: Table = Table {
     ],
 };
 
-/// `un_803FA790`.
-pub static T_803FA790: Table = Table {
+/// `un_803FA790`: the "VERSUS MODE" page.
+#[doc(alias("T_803FA790"))]
+pub static VERSUS_MENU: Table = Table {
     addr: 0x803FA790,
     entries: &[
         Entry {
@@ -379,8 +382,9 @@ pub static T_803FA790: Table = Table {
     ],
 };
 
-/// `un_803FA8E8`.
-pub static T_803FA8E8: Table = Table {
+/// `un_803FA8E8`: the "Rule" page.
+#[doc(alias("T_803FA8E8"))]
+pub static RULE_MENU: Table = Table {
     addr: 0x803FA8E8,
     entries: &[
         Entry {
@@ -501,8 +505,9 @@ pub static T_803FA8E8: Table = Table {
     ],
 };
 
-/// `un_803FAA44`.
-pub static T_803FAA44: Table = Table {
+/// `un_803FAA44`: the "Rumble" page.
+#[doc(alias("T_803FAA44"))]
+pub static RUMBLE_MENU: Table = Table {
     addr: 0x803FAA44,
     entries: &[
         Entry {
@@ -580,8 +585,9 @@ pub static T_803FAA44: Table = Table {
     ],
 };
 
-/// `un_803FB168`.
-pub static T_803FB168: Table = Table {
+/// `un_803FB168`: the "DaiRanTou" page.
+#[doc(alias("T_803FB168"))]
+pub static MELEE_MENU: Table = Table {
     addr: 0x803FB168,
     entries: &[
         Entry {
@@ -866,8 +872,9 @@ pub static T_803FB168: Table = Table {
     ],
 };
 
-/// `un_803FB60C`.
-pub static T_803FB60C: Table = Table {
+/// `un_803FB60C`: the "CharSelect" page.
+#[doc(alias("T_803FB60C"))]
+pub static CHARACTER_MENU: Table = Table {
     addr: 0x803FB60C,
     entries: &[
         Entry {
@@ -957,8 +964,9 @@ pub static T_803FB60C: Table = Table {
     ],
 };
 
-/// `un_803FB728`.
-pub static T_803FB728: Table = Table {
+/// `un_803FB728`: the "Scale" page.
+#[doc(alias("T_803FB728"))]
+pub static SCALE_MENU: Table = Table {
     addr: 0x803FB728,
     entries: &[
         Entry {
@@ -1036,8 +1044,9 @@ pub static T_803FB728: Table = Table {
     ],
 };
 
-/// `un_803FB870`.
-pub static T_803FB870: Table = Table {
+/// `un_803FB870`: the "P Kind" page.
+#[doc(alias("T_803FB870"))]
+pub static PLAYER_KIND_MENU: Table = Table {
     addr: 0x803FB870,
     entries: &[
         Entry {
@@ -1127,8 +1136,9 @@ pub static T_803FB870: Table = Table {
     ],
 };
 
-/// `un_803FB98C`.
-pub static T_803FB98C: Table = Table {
+/// `un_803FB98C`: the "Color" page.
+#[doc(alias("T_803FB98C"))]
+pub static COLOR_MENU: Table = Table {
     addr: 0x803FB98C,
     entries: &[
         Entry {
@@ -1206,8 +1216,9 @@ pub static T_803FB98C: Table = Table {
     ],
 };
 
-/// `un_803FBA9C`.
-pub static T_803FBA9C: Table = Table {
+/// `un_803FBA9C`: the "Sub Color" page.
+#[doc(alias("T_803FBA9C"))]
+pub static SUB_COLOR_MENU: Table = Table {
     addr: 0x803FBA9C,
     entries: &[
         Entry {
@@ -1285,8 +1296,9 @@ pub static T_803FBA9C: Table = Table {
     ],
 };
 
-/// `un_803FBB98`.
-pub static T_803FBB98: Table = Table {
+/// `un_803FBB98`: the "Damage" page.
+#[doc(alias("T_803FBB98"))]
+pub static DAMAGE_MENU: Table = Table {
     addr: 0x803FBB98,
     entries: &[
         Entry {
@@ -1364,8 +1376,9 @@ pub static T_803FBB98: Table = Table {
     ],
 };
 
-/// `un_803FBCAC`.
-pub static T_803FBCAC: Table = Table {
+/// `un_803FBCAC`: the "Offence Ratio" page.
+#[doc(alias("T_803FBCAC"))]
+pub static OFFENSE_RATIO_MENU: Table = Table {
     addr: 0x803FBCAC,
     entries: &[
         Entry {
@@ -1443,8 +1456,9 @@ pub static T_803FBCAC: Table = Table {
     ],
 };
 
-/// `un_803FBDC0`.
-pub static T_803FBDC0: Table = Table {
+/// `un_803FBDC0`: the "Defence Ratio" page.
+#[doc(alias("T_803FBDC0"))]
+pub static DEFENSE_RATIO_MENU: Table = Table {
     addr: 0x803FBDC0,
     entries: &[
         Entry {
@@ -1522,8 +1536,9 @@ pub static T_803FBDC0: Table = Table {
     ],
 };
 
-/// `un_803FBFFC`.
-pub static T_803FBFFC: Table = Table {
+/// `un_803FBFFC`: the "Cpu Type" page.
+#[doc(alias("T_803FBFFC"))]
+pub static CPU_TYPE_MENU: Table = Table {
     addr: 0x803FBFFC,
     entries: &[
         Entry {
@@ -1601,8 +1616,9 @@ pub static T_803FBFFC: Table = Table {
     ],
 };
 
-/// `un_803FC0FC`.
-pub static T_803FC0FC: Table = Table {
+/// `un_803FC0FC`: the "Cpu Level" page.
+#[doc(alias("T_803FC0FC"))]
+pub static CPU_LEVEL_MENU: Table = Table {
     addr: 0x803FC0FC,
     entries: &[
         Entry {
@@ -1680,8 +1696,9 @@ pub static T_803FC0FC: Table = Table {
     ],
 };
 
-/// `un_803FC22C`.
-pub static T_803FC22C: Table = Table {
+/// `un_803FC22C`: the "Team Select" page.
+#[doc(alias("T_803FC22C"))]
+pub static TEAM_MENU: Table = Table {
     addr: 0x803FC22C,
     entries: &[
         Entry {
@@ -1759,8 +1776,9 @@ pub static T_803FC22C: Table = Table {
     ],
 };
 
-/// `un_803FC4CC`.
-pub static T_803FC4CC: Table = Table {
+/// `un_803FC4CC`: the "TEST MODE" page.
+#[doc(alias("T_803FC4CC"))]
+pub static TEST_MODE_MENU: Table = Table {
     addr: 0x803FC4CC,
     entries: &[
         Entry {
@@ -1886,8 +1904,9 @@ pub static T_803FC4CC: Table = Table {
     ],
 };
 
-/// `un_803FC63C`.
-pub static T_803FC63C: Table = Table {
+/// `un_803FC63C`: the "Hanyu Test" page.
+#[doc(alias("T_803FC63C"))]
+pub static HANYU_MENU: Table = Table {
     addr: 0x803FC63C,
     entries: &[
         Entry {
@@ -1941,8 +1960,9 @@ pub static T_803FC63C: Table = Table {
     ],
 };
 
-/// `un_803FC70C`.
-pub static T_803FC70C: Table = Table {
+/// `un_803FC70C`: the "Melee Count Set" page.
+#[doc(alias("T_803FC70C"))]
+pub static MELEE_COUNT_MENU: Table = Table {
     addr: 0x803FC70C,
     entries: &[
         Entry {
@@ -2032,8 +2052,9 @@ pub static T_803FC70C: Table = Table {
     ],
 };
 
-/// `un_803FC828`.
-pub static T_803FC828: Table = Table {
+/// `un_803FC828`: the "Player Count Set" page that "Set Target Clear" opens.
+#[doc(alias("T_803FC828"))]
+pub static TARGET_CLEAR_MENU: Table = Table {
     addr: 0x803FC828,
     entries: &[
         Entry {
@@ -2099,8 +2120,9 @@ pub static T_803FC828: Table = Table {
     ],
 };
 
-/// `un_803FC8C8`.
-pub static T_803FC8C8: Table = Table {
+/// `un_803FC8C8`: the "Player Count Set" page that "Set HomeRun Record" opens.
+#[doc(alias("T_803FC8C8"))]
+pub static HOME_RUN_RECORD_MENU: Table = Table {
     addr: 0x803FC8C8,
     entries: &[
         Entry {
@@ -2166,8 +2188,9 @@ pub static T_803FC8C8: Table = Table {
     ],
 };
 
-/// `un_803FCA40`.
-pub static T_803FCA40: Table = Table {
+/// `un_803FCA40`: the "Otoguro Test" page.
+#[doc(alias("T_803FCA40"))]
+pub static OTOGURO_MENU: Table = Table {
     addr: 0x803FCA40,
     entries: &[
         Entry {
@@ -2329,8 +2352,9 @@ pub static T_803FCA40: Table = Table {
     ],
 };
 
-/// `un_803FCC38`.
-pub static T_803FCC38: Table = Table {
+/// `un_803FCC38`: the "Taniguti Test" page.
+#[doc(alias("T_803FCC38"))]
+pub static TANIGUTI_MENU: Table = Table {
     addr: 0x803FCC38,
     entries: &[
         Entry {
@@ -2408,8 +2432,9 @@ pub static T_803FCC38: Table = Table {
     ],
 };
 
-/// `un_803FCD34`.
-pub static T_803FCD34: Table = Table {
+/// `un_803FCD34`: the "Regular Ending Test" page.
+#[doc(alias("T_803FCD34"))]
+pub static REGULAR_ENDING_MENU: Table = Table {
     addr: 0x803FCD34,
     entries: &[
         Entry {
@@ -2475,8 +2500,9 @@ pub static T_803FCD34: Table = Table {
     ],
 };
 
-/// `un_803FCE4C`.
-pub static T_803FCE4C: Table = Table {
+/// `un_803FCE4C`: the "Nagasima Test" page.
+#[doc(alias("T_803FCE4C"))]
+pub static NAGASIMA_MENU: Table = Table {
     addr: 0x803FCE4C,
     entries: &[
         Entry {
@@ -2566,8 +2592,9 @@ pub static T_803FCE4C: Table = Table {
     ],
 };
 
-/// `un_803FD064`.
-pub static T_803FD064: Table = Table {
+/// `un_803FD064`: the "Kim Test" page.
+#[doc(alias("T_803FD064"))]
+pub static KIM_MENU: Table = Table {
     addr: 0x803FD064,
     entries: &[
         Entry {
@@ -2755,8 +2782,9 @@ pub static T_803FD064: Table = Table {
     ],
 };
 
-/// `un_803FD310`.
-pub static T_803FD310: Table = Table {
+/// `un_803FD310`: the "Yoshiki Test" page.
+#[doc(alias("T_803FD310"))]
+pub static YOSHIKI_MENU: Table = Table {
     addr: 0x803FD310,
     entries: &[
         Entry {
@@ -2918,8 +2946,9 @@ pub static T_803FD310: Table = Table {
     ],
 };
 
-/// `un_803FD58C`.
-pub static T_803FD58C: Table = Table {
+/// `un_803FD58C`: the "INTRO EASY TEST" page.
+#[doc(alias("T_803FD58C"))]
+pub static INTRO_EASY_MENU: Table = Table {
     addr: 0x803FD58C,
     entries: &[
         Entry {
@@ -3117,8 +3146,9 @@ pub static T_803FD58C: Table = Table {
     ],
 };
 
-/// `un_803FD864`.
-pub static T_803FD864: Table = Table {
+/// `un_803FD864`: the "RESULT TEST" page.
+#[doc(alias("T_803FD864"))]
+pub static RESULT_TEST_MENU: Table = Table {
     addr: 0x803FD864,
     entries: &[
         Entry {
@@ -3352,8 +3382,9 @@ pub static T_803FD864: Table = Table {
     ],
 };
 
-/// `un_803FDAF8`.
-pub static T_803FDAF8: Table = Table {
+/// `un_803FDAF8`: the "Sakoda Test" page.
+#[doc(alias("T_803FDAF8"))]
+pub static SAKODA_MENU: Table = Table {
     addr: 0x803FDAF8,
     entries: &[
         Entry {
@@ -3407,8 +3438,9 @@ pub static T_803FDAF8: Table = Table {
     ],
 };
 
-/// `un_803FDB9C`.
-pub static T_803FDB9C: Table = Table {
+/// `un_803FDB9C`: the "Sugano Test" page.
+#[doc(alias("T_803FDB9C"))]
+pub static SUGANO_MENU: Table = Table {
     addr: 0x803FDB9C,
     entries: &[
         Entry {
@@ -3462,8 +3494,9 @@ pub static T_803FDB9C: Table = Table {
     ],
 };
 
-/// `un_803F9FA4`.
-pub static T_803F9FA4: Table = Table {
+/// `un_803F9FA4`: the "Sound Test Menu" page.
+#[doc(alias("T_803F9FA4"))]
+pub static SOUND_TEST_MENU: Table = Table {
     addr: 0x803F9FA4,
     entries: &[
         Entry {
@@ -3667,37 +3700,37 @@ pub const WORDS: [(u32, u32); 30] = [
 
 /// Every table, by address.
 pub static TABLES: [&Table; 33] = [
-    &T_803FA4E0,
-    &T_803FA658,
-    &T_803FA790,
-    &T_803FA8E8,
-    &T_803FAA44,
-    &T_803FB168,
-    &T_803FB60C,
-    &T_803FB728,
-    &T_803FB870,
-    &T_803FB98C,
-    &T_803FBA9C,
-    &T_803FBB98,
-    &T_803FBCAC,
-    &T_803FBDC0,
-    &T_803FBFFC,
-    &T_803FC0FC,
-    &T_803FC22C,
-    &T_803FC4CC,
-    &T_803FC63C,
-    &T_803FC70C,
-    &T_803FC828,
-    &T_803FC8C8,
-    &T_803FCA40,
-    &T_803FCC38,
-    &T_803FCD34,
-    &T_803FCE4C,
-    &T_803FD064,
-    &T_803FD310,
-    &T_803FD58C,
-    &T_803FD864,
-    &T_803FDAF8,
-    &T_803FDB9C,
-    &T_803F9FA4,
+    &TOP_MENU,
+    &GLOBAL_DATA_MENU,
+    &VERSUS_MENU,
+    &RULE_MENU,
+    &RUMBLE_MENU,
+    &MELEE_MENU,
+    &CHARACTER_MENU,
+    &SCALE_MENU,
+    &PLAYER_KIND_MENU,
+    &COLOR_MENU,
+    &SUB_COLOR_MENU,
+    &DAMAGE_MENU,
+    &OFFENSE_RATIO_MENU,
+    &DEFENSE_RATIO_MENU,
+    &CPU_TYPE_MENU,
+    &CPU_LEVEL_MENU,
+    &TEAM_MENU,
+    &TEST_MODE_MENU,
+    &HANYU_MENU,
+    &MELEE_COUNT_MENU,
+    &TARGET_CLEAR_MENU,
+    &HOME_RUN_RECORD_MENU,
+    &OTOGURO_MENU,
+    &TANIGUTI_MENU,
+    &REGULAR_ENDING_MENU,
+    &NAGASIMA_MENU,
+    &KIM_MENU,
+    &YOSHIKI_MENU,
+    &INTRO_EASY_MENU,
+    &RESULT_TEST_MENU,
+    &SAKODA_MENU,
+    &SUGANO_MENU,
+    &SOUND_TEST_MENU,
 ];

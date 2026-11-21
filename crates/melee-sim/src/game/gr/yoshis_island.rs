@@ -225,7 +225,7 @@ pub fn block_hit(
         && super::super::it::item::is_fighter(r.game, Some(f))
     {
         let lag = fp::frsp(f64::from(param(r.game).i(r.data, HIT_HITLAG))) as f32;
-        r.game.ft_80086a4c(f, lag);
+        r.game.ft_set_pending_hitlag(f, lag);
     }
     let blocks = &mut r.game.grounds[g.0].u.yorster().blocks;
     if let Some(b) = blocks.iter_mut().find(|b| b.item == Some(item)) {
@@ -281,7 +281,7 @@ impl Landing {
             return;
         };
         if super::super::it::item::is_fighter(game, Some(g)) {
-            game.ft_80086a4c(g, lag);
+            game.ft_set_pending_hitlag(g, lag);
         } else {
             super::super::it::lib26b1::set_hitlag(game, g, lag);
         }

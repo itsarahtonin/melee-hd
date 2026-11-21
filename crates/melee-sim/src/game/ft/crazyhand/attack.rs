@@ -90,7 +90,7 @@ impl Running<'_> {
     #[doc(alias = "ftCh_Init_8015764C")]
     pub fn ch_slap_enter(&mut self, gobj: GObjId) {
         self.hand_enter(gobj, ms::SLAP);
-        self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::FN_801577B4));
+        self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::SLAP_WATCH));
     }
 
     /// `ftCh_Slap_Anim`: the slap's animation again when it ends.
@@ -129,7 +129,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms::FINGER_BEAM_START, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         fp.cmd_vars[..4].fill(0);
-        fp.accessory4_cb = Some(CodeRef(addr::FN_801588B8));
+        fp.accessory4_cb = Some(CodeRef(addr::BOMBS));
     }
 
     /// A bomb from each finger whose flag the script set, `fn_801588B8` (the bombs' throw's
@@ -170,42 +170,42 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use addr::*;
     match a {
-        FN_80156F6C => g.ch_rise_enter(gobj),
-        FN_80157080 => g.hand_enter(gobj, ms::DAMAGE),
+        RISE_ENTER => g.ch_rise_enter(gobj),
+        SLIDE_WINDUP_ENTER => g.hand_enter(gobj, ms::DAMAGE),
         DAMAGE_ANIM => g.ch_slide_windup_anim(gobj),
-        INIT_80157170 => g.ch_slide_enter(gobj),
+        SLIDE_ENTER => g.ch_slide_enter(gobj),
         DAMAGE2_ANIM => g.ch_slide_anim(gobj),
         DAMAGE2_PHYS => g.hand_glide_motion(gobj, &super::HAND),
-        INIT_8015737C => g.hand_enter(gobj, ms::WAIT_SWEEP),
-        FN_8015746C => g.hand_enter(gobj, ms::SWEEP_LOOP),
-        FN_8015755C => g.hand_enter(gobj, ms::SWEEP_WAIT),
+        WAIT_SWEEP_ENTER => g.hand_enter(gobj, ms::WAIT_SWEEP),
+        SWEEP_LOOP_ENTER => g.hand_enter(gobj, ms::SWEEP_LOOP),
+        SLAP_WINDUP_ENTER => g.hand_enter(gobj, ms::SWEEP_WAIT),
         SWEEP_WAIT_ANIM => g.ch_slap_windup_anim(gobj),
-        INIT_8015764C => g.ch_slap_enter(gobj),
+        SLAP_ENTER => g.ch_slap_enter(gobj),
         SLAP_ANIM => g.ch_slap_anim(gobj),
         SLAP_PHYS => g.ch_slap_phys(gobj),
-        FN_801577B4 => g.ch_slap_watch(gobj),
-        INIT_801577F8 => g.hand_enter(gobj, ms::WALK2),
-        FN_801578E8 => g.hand_enter(gobj, ms::WALK_LOOP),
+        SLAP_WATCH => g.ch_slap_watch(gobj),
+        WALK2_ENTER => g.hand_enter(gobj, ms::WALK2),
+        HOLD_START_ENTER => g.hand_enter(gobj, ms::WALK_LOOP),
         WALK_LOOP_ANIM => g.hand_hold_start_anim(gobj, &HAND),
-        INIT_801579F4 => g.hand_enter(gobj, ms::WALK_WAIT),
+        HOLD_ENTER => g.hand_enter(gobj, ms::WALK_WAIT),
         WALK_WAIT_ANIM => g.hand_hold_anim(gobj, &HAND),
         WALK_WAIT_PHYS => g.hand_hold_phys(gobj, &HAND),
-        INIT_80157B58 => g.hand_hold_end_enter(gobj, &HAND),
-        FN_80157C50 => g.hand_window_enter(gobj, &HAND),
+        HOLD_END_ENTER => g.hand_hold_end_enter(gobj, &HAND),
+        WINDOW_ENTER => g.hand_window_enter(gobj, &HAND),
         DRILL_PHYS => g.hand_window_phys(gobj, &HAND),
-        INIT_80157DF8 => g.hand_chases_enter(gobj, &HAND),
+        CHASES_ENTER => g.hand_chases_enter(gobj, &HAND),
         ROCK_CRUSH_UP_ANIM => g.hand_chases_anim(gobj, &HAND),
         ROCK_CRUSH_UP_PHYS => g.hand_chases_phys(gobj, &HAND),
-        FN_80158144 => g.hand_countdown_enter(gobj, &HAND),
+        COUNTDOWN_ENTER => g.hand_countdown_enter(gobj, &HAND),
         ROCK_CRUSH_DOWN_PHYS => g.hand_countdown_phys(gobj, &HAND),
-        FN_801582D8 => g.hand_beams_windup_enter(gobj, &HAND),
+        BEAMS_WINDUP_ENTER => g.hand_beams_windup_enter(gobj, &HAND),
         PAPER_CRUSH_ANIM => g.hand_beams_windup_anim(gobj, &HAND),
-        INIT_801583E4 => g.hand_beams_enter(gobj, &HAND),
+        BEAMS_ENTER => g.hand_beams_enter(gobj, &HAND),
         POKE1_ANIM => g.hand_beams_anim(gobj, &HAND),
-        FN_80158534 => g.hand_beams_lasers(gobj, &HAND),
-        INIT_8015868C => g.hand_beams_end_enter(gobj, &HAND),
-        FN_801587B0 => g.ch_bombs_enter(gobj),
-        FN_801588B8 => g.ch_bombs(gobj),
+        BEAMS_LASERS => g.hand_beams_lasers(gobj, &HAND),
+        BEAMS_END_ENTER => g.hand_beams_end_enter(gobj, &HAND),
+        BOMBS_ENTER => g.ch_bombs_enter(gobj),
+        BOMBS => g.ch_bombs(gobj),
         _ => return false,
     }
     true

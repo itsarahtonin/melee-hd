@@ -405,7 +405,7 @@ impl Running<'_> {
             match_item_kind(kind) != -1
                 && super::super::it::lib26b1::use_kind(game, self.data, it) != 5
         });
-        let changed = game.ft_80087aec(g);
+        let changed = game.ft_is_altered(g);
         let p = self.game.player_mut(slot);
         inc(p, 0xD08);
         if p.ext_u32(0xD08) > p.ext_u32(0xD04) {
@@ -594,7 +594,7 @@ impl Running<'_> {
         }
         let (x, y) = (reg(pos.x), reg(pos.y));
         let (px, py) = (reg(prev.x), reg(prev.y));
-        match self.game.ft_80087b34(g) {
+        match self.game.ft_strongest_motion(g) {
             1 => {
                 let dx = fp::fsubs(px, x);
                 let dy = fp::fsubs(py, y);

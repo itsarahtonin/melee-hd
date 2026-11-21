@@ -93,11 +93,16 @@ pub mod addr {
     pub const SPECIAL_LW_COLL: u32 = 0x8011_D3D4;
     pub const SPECIAL_AIR_LW_COLL: u32 = 0x8011_D3FC;
 
-    pub const SPECIAL_HI_8011D424: u32 = 0x8011_D424;
-    pub const PARASOL_8011D518: u32 = 0x8011_D518;
-    pub const PARASOL_8011D598: u32 = 0x8011_D598;
-    pub const SPECIAL_HI_8011D620: u32 = 0x8011_D620;
-    pub const SPECIAL_HI_8011D650: u32 = 0x8011_D650;
+    #[doc(alias("SPECIAL_HI_8011D424"))]
+    pub const PARASOL_OUT: u32 = 0x8011_D424;
+    #[doc(alias("PARASOL_8011D518"))]
+    pub const PARASOL_GONE: u32 = 0x8011_D518;
+    #[doc(alias("PARASOL_8011D598"))]
+    pub const PARASOL_PUT_AWAY: u32 = 0x8011_D598;
+    #[doc(alias("SPECIAL_HI_8011D620"))]
+    pub const PARASOL_HITLAG_START: u32 = 0x8011_D620;
+    #[doc(alias("SPECIAL_HI_8011D650"))]
+    pub const PARASOL_HITLAG_END: u32 = 0x8011_D650;
     pub const SPECIAL_HI_ENTER: u32 = 0x8011_D72C;
     pub const SPECIAL_AIR_HI_ENTER: u32 = 0x8011_D7F0;
     pub const SPECIAL_HI_START_ANIM: u32 = 0x8011_D8D0;
@@ -106,7 +111,8 @@ pub mod addr {
     pub const SPECIAL_AIR_HI_START_IASA: u32 = 0x8011_DB78;
     pub const SPECIAL_HI_START_PHYS: u32 = 0x8011_DCC0;
     pub const SPECIAL_AIR_HI_START_PHYS: u32 = 0x8011_DCF8;
-    pub const SPECIAL_HI_8011DD8C: u32 = 0x8011_DD8C;
+    #[doc(alias("SPECIAL_HI_8011DD8C"))]
+    pub const SPECIAL_HI_START_LAND: u32 = 0x8011_DD8C;
     pub const SPECIAL_HI_START_COLL: u32 = 0x8011_DDBC;
     pub const SPECIAL_AIR_HI_START_COLL: u32 = 0x8011_DE2C;
     pub const SPECIAL_HI_END_ANIM: u32 = 0x8011_DE9C;
@@ -115,7 +121,8 @@ pub mod addr {
     pub const SPECIAL_AIR_HI_END_IASA: u32 = 0x8011_DF60;
     pub const SPECIAL_HI_END_PHYS: u32 = 0x8011_DF64;
     pub const SPECIAL_AIR_HI_END_PHYS: u32 = 0x8011_DFD0;
-    pub const SPECIAL_HI_8011E064: u32 = 0x8011_E064;
+    #[doc(alias("SPECIAL_HI_8011E064"))]
+    pub const SPECIAL_HI_END_LAND: u32 = 0x8011_E064;
     pub const SPECIAL_HI_END_COLL: u32 = 0x8011_E094;
     pub const SPECIAL_AIR_HI_END_COLL: u32 = 0x8011_E104;
 

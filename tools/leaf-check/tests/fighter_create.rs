@@ -339,7 +339,7 @@ fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode, first_init: bool
                 data: &archives,
             };
             if s < 0 {
-                r.player_80036da4();
+                r.player_lib_init();
             } else {
                 r.player_create_fighters(s);
             }
@@ -449,7 +449,7 @@ fn check(first_init: bool) {
 /// fighters' joints set few of them.
 #[test]
 fn part_flags() {
-    use melee_sim::game::ft::parts::{bone_from_joint, set_bone_xd};
+    use melee_sim::game::ft::parts::{bone_from_joint, set_bone_last_dobj};
     use melee_sim::game::structs::FighterBone;
     let Some(ctx) = leaf_check::reference() else {
         return;
@@ -491,7 +491,7 @@ fn part_flags() {
         bone_from_joint(&mut ours, flags, depth);
         // No DObjs: the last DObj index from the count so far, and no DObjs of its own.
         let count = (i % 3) as u8;
-        set_bone_xd(&mut ours, if count != 0 { count - 1 } else { 0 });
+        set_bone_last_dobj(&mut ours, if count != 0 { count - 1 } else { 0 });
         melee_sim::game::ft::parts::set_bone_bit(&mut ours, 1, 6, false);
         let theirs = [
             ctx.read_u8(bone + 8),

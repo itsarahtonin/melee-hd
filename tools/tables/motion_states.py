@@ -75,7 +75,7 @@ def main():
             out.append('    MotionState {')
             out.append(f'        anim_id: {w[0] if w[0] < 0x80000000 else w[0] - (1 << 32)},')
             out.append(f'        flags: {w[1]:#x},')
-            out.append(f'        x8: {w[2]:#x},')
+            out.append(f'        move_bits: {w[2]:#x},')
             for field, cb in zip(['anim_cb', 'input_cb', 'phys_cb', 'coll_cb', 'cam_cb'], cbs):
                 out.append(f'        {field}: {cb},')
             out.append('    },')

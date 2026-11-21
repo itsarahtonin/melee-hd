@@ -153,11 +153,11 @@ impl Running<'_> {
         let jobjs = &mut self.game.objs.jobjs;
         let second = reg(self.game.toys.gallery.pitch) >= reg(10.0) || reg(eye.y) < 0.0;
         if second {
-            self.game.toys.anim.x0e = 1;
+            self.game.toys.anim.stand = 1;
             jobj::clear_flags_all(jobjs, j1, jobj::HIDDEN);
             jobj::set_flags_all(jobjs, j0, jobj::HIDDEN);
         } else {
-            self.game.toys.anim.x0e = 0;
+            self.game.toys.anim.stand = 0;
             jobj::clear_flags_all(jobjs, j0, jobj::HIDDEN);
             jobj::set_flags_all(jobjs, j1, jobj::HIDDEN);
         }
@@ -224,7 +224,7 @@ impl Running<'_> {
             cobj::left(cobjs, Some(c)),
         );
         let g = &self.game.toys.gallery;
-        let ten = int_f(g.x5c) < reg(10.0);
+        let ten = int_f(g.timer) < reg(10.0);
         let [st, sb, sr, sl] = super::gallery::FRUSTUM_STEP;
         if g.state as u8 == 1 {
             if ten {
@@ -244,7 +244,7 @@ impl Running<'_> {
                 set(self, 1, sb, bottom, Some(CLOSE_FRUSTUM[1]), 1);
                 set(self, 2, sr, right, Some(CLOSE_FRUSTUM[3]), 2);
                 set(self, 3, sl, left, None, 3);
-                self.game.toys.gallery.x5c += 1;
+                self.game.toys.gallery.timer += 1;
             } else {
                 let cobjs = &mut self.game.objs.cobjs;
                 set_side(cobjs, c, 0, CLOSE_FRUSTUM[0]);
@@ -259,7 +259,7 @@ impl Running<'_> {
                 self.toy_info_flags(flags);
                 let g = &mut self.game.toys.gallery;
                 g.state = 2;
-                g.x5c = 0;
+                g.timer = 0;
                 g.cooldown = 4;
                 self.pads_renew_status();
             }
@@ -295,7 +295,7 @@ impl Running<'_> {
             set(self, 1, sb, bottom, Some(VIEW_FRUSTUM[1]), 1);
             set(self, 2, sr, right, Some(VIEW_FRUSTUM[3]), 2);
             set(self, 3, sl, left, None, 3);
-            self.game.toys.gallery.x5c += 1;
+            self.game.toys.gallery.timer += 1;
         } else {
             self.game.toys.gallery.state = 0;
             self.toy_view_reset(true);
@@ -306,7 +306,7 @@ impl Running<'_> {
             set_side(cobjs, c, 3, VIEW_FRUSTUM[2]);
             self.toy_axes_hidden(1);
             let g = &mut self.game.toys.gallery;
-            g.x5c = 0;
+            g.timer = 0;
             g.idle = 0x95E;
             g.cooldown = 4;
             self.pads_renew_status();
@@ -406,7 +406,7 @@ impl Running<'_> {
                 if t & (PAD_A | PAD_X | PAD_Y) != 0 {
                     self.lb_audio_call(1);
                     self.toy_keep_frustum(c);
-                    self.game.toys.gallery.x5c = 0;
+                    self.game.toys.gallery.timer = 0;
                     self.toy_close_links(true);
                     self.game.toys.gallery.state = 1;
                     self.toy_view_place(0.0, 0.0);
@@ -425,12 +425,12 @@ impl Running<'_> {
                     self.toy_info_flags(flags);
                 }
                 let t = self.toy_triggered();
-                if t & PAD_B != 0 || int_f(self.game.toys.gallery.x5c) > reg(7200.0) {
+                if t & PAD_B != 0 || int_f(self.game.toys.gallery.timer) > reg(7200.0) {
                     self.lb_audio_call(0);
                     self.toy_keep_frustum(c);
                     self.toy_close_links(false);
                     self.toy_info_flags(9);
-                    self.game.toys.gallery.x5c = 0;
+                    self.game.toys.gallery.timer = 0;
                     let o = &mut self.game.objs;
                     let _ = cobj::eye_position(o, data, c);
                     let eye = Vec3::new(0.0, 8.0, 0.0);
@@ -453,9 +453,9 @@ impl Running<'_> {
                 );
                 let tf = fp::frsp(f64::from(t));
                 if fp::fadds(sum, tf) == 0.0 {
-                    self.game.toys.gallery.x5c += 1;
+                    self.game.toys.gallery.timer += 1;
                 } else {
-                    self.game.toys.gallery.x5c = 0;
+                    self.game.toys.gallery.timer = 0;
                 }
                 let scale = fp::fdivs(reg(dist), reg(38.0));
                 let pan = |k: f32| mem(fp::fmuls(reg(k), scale));
@@ -570,10 +570,10 @@ impl Running<'_> {
                 self.toy_set_light(0);
                 self.toy_back(0);
                 let a = &mut self.game.toys.anim;
-                a.x11 = 2;
-                a.x10 = 2;
-                a.x0f = 0;
-                a.x0e = 0;
+                a.look_asked = 2;
+                a.look = 2;
+                a.stand_frames = 0;
+                a.stand = 0;
                 self.toy_stand_look(2, false);
             }
             self.toy_stand_by_view(c);

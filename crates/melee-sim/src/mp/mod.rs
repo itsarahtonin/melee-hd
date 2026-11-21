@@ -353,7 +353,7 @@ impl<K: Kinds> Geometry<K> {
     /// attribute areas first (`grDynamicAttr_801CA0B4`), as the original does here.
     pub fn load(data: &Archives, coll_data: Option<DataRef>, scale: f32, grkind: i32) -> Self {
         // The vertices', lines' and joints' arrays, for 2048, 1536 and 256 of them.
-        let (vertices_addr, lines_addr, joints_addr) = crate::hsd::heap::with(|h| {
+        let (vertices_addr, lines_addr, joints_addr) = crate::hsd::heap::mirror(|h| {
             (
                 h.mem_alloc(2048 * 0x18),
                 h.mem_alloc(1536 * 8),

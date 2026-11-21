@@ -562,7 +562,7 @@ fn evaluate(objs: &mut Objects, data: &Archives, r: RObjId, ty: u32, j: JObjId) 
     let buf = match objs.robjs.arg_buf {
         Some(a) => a,
         None => {
-            let a = crate::hsd::heap::with(|h| h.mem_alloc_unclaimed(100 * 4)).unwrap_or(0);
+            let a = crate::hsd::heap::mirror(|h| h.mem_alloc_unclaimed(100 * 4)).unwrap_or(0);
             objs.robjs.arg_buf = Some(a);
             a
         }

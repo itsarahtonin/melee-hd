@@ -193,7 +193,7 @@ impl Running<'_> {
         self.game.fighters[dst_id.0].x221E_b4 = b4;
         // `dst->ft_data->x8`'s parts: the head's (`x12`) for what's worn, the hand's (`x10`).
         let (head, hand) = {
-            let x8 = self.ft_data_x8(&self.game.fighters[dst_id.0]);
+            let x8 = self.ft_model_desc(&self.game.fighters[dst_id.0]);
             (
                 i32::from(self.data.u8(x8.at(0x12))),
                 i32::from(self.data.u8(x8.at(0x10))),

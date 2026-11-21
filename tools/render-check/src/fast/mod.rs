@@ -14,7 +14,7 @@
 //!
 //! ```text
 //! melee-render-check fast DISC REPLAY [--renderer exact|f2|f3|fast] [--mutate NAME] [--scale N]
-//!     [--threaded] [--out DIR] FRAME...
+//!     [--threaded] [--interpolate T | --extrapolate T] [--out DIR] FRAME...
 //! melee-render-check bench DISC REPLAY [--renderer exact|f2|f3|fast] [--scale N] [--from A] [--to B]
 //!     [--one-thread] [--adapter NAME|fallback] [--warm-list FILE]
 //! ```
@@ -28,6 +28,7 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use melee_gpu::{Frame, Renderer};
+use melee_render::blend::{Blend, Capture};
 use melee_sim::game::state::Cosmetic;
 use melee_sim::hsd::display::Draw as DisplayDraw;
 
@@ -46,6 +47,9 @@ pub struct Rendered {
     /// it (the exact renderer's stream run and drawn, the GPU's work submitted).
     pub build: Duration,
     pub submit: Duration,
+    /// Of the build, a frame run as it's built: the game thread's time running its stream's
+    /// pieces (through melee-gx to the renderer's threads), beside building them.
+    pub stream: Duration,
 }
 
 /// A renderer the harness compares or measures.
@@ -227,16 +231,27 @@ pub struct Renderers<'a> {
     pub test: &'a mut dyn FrameRenderer,
 }
 
+/// Frames between two ticks, drawn in place of the ticks' own (the player's High refresh): `t`
+/// of the way from the tick before to the tick drawn (Interpolate), or from the tick drawn to
+/// the next, its prediction made exactly from the replay's inputs (Extrapolate).
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Blending {
+    Interpolate(f32),
+    Extrapolate(f32),
+}
+
 /// Draws the replay's native frames `at` with the reference, its spreads and the renderer
 /// under test, each with the frames before whose copies it may sample, and compares them;
 /// calls `each` with each frame's number, its replay frame, the comparison and the display
-/// draws.
+/// draws. With `blending`, every renderer draws each tick's frame blended so.
+#[allow(clippy::too_many_arguments)]
 pub fn run(
     disc: &str,
     replay: &str,
     at: &[u32],
     scale: u32,
     r: Renderers<'_>,
+    blending: Option<Blending>,
     out: Option<&std::path::Path>,
     mut each: impl FnMut(u32, i32, &FrameReport, &[DisplayDraw]),
 ) {
@@ -247,7 +262,26 @@ pub fn run(
     } = r;
     let last = at.iter().copied().max().unwrap_or(0);
     let mut seen = 0;
-    native::drive(disc, replay, last, Cosmetic::default(), |t| {
+    // As the player keeps them: the tick before's display pass and the tick drawn's.
+    let (mut before, mut after) = (Capture::default(), Capture::default());
+    let predict = |n: u32| {
+        matches!(blending, Some(Blending::Extrapolate(_)))
+            && at.iter().any(|&a| native::drawn_for(n, a, native::WARM_UP))
+    };
+    native::drive_predicting(disc, replay, last, Cosmetic::default(), &predict, |t| {
+        let blend = match blending {
+            None => None,
+            Some(Blending::Interpolate(x)) => {
+                std::mem::swap(&mut before, &mut after);
+                after.fill(t.game, t.draws);
+                Some(Blend {
+                    from: &before,
+                    t: x,
+                })
+            }
+            Some(Blending::Extrapolate(x)) => t.predicted.map(|from| Blend { from, t: 1.0 - x }),
+        };
+        let t = &native::Tick { blend, ..*t };
         let draw = at
             .iter()
             .any(|&a| native::drawn_for(t.n, a, native::WARM_UP));
@@ -280,7 +314,9 @@ pub enum Which {
     F2,
     /// F3: F2's meshes transformed on the GPU, each draw's state built from the registers.
     F3,
-    /// The fast renderer as far as it goes: F4, F3 with materials as records.
+    /// F4: F3 with materials as records, each frame built before it runs.
+    F4,
+    /// The fast renderer as far as it goes: F5, F4 with the frame run as it's built.
     Fast,
 }
 
@@ -290,9 +326,22 @@ impl Which {
             "exact" => Which::Exact,
             "f2" => Which::F2,
             "f3" => Which::F3,
-            "fast" | "f4" => Which::Fast,
-            _ => panic!("--renderer {s}: exact, f2, f3 or fast (f4)"),
+            "f4" => Which::F4,
+            "fast" | "f5" => Which::Fast,
+            _ => panic!("--renderer {s}: exact, f2, f3, f4 or fast (f5)"),
         }
+    }
+
+    /// The renderer under test this names on `r`, on its threads with `threaded`; none for the
+    /// exact renderer.
+    pub fn fast(self, r: Renderer, threaded: bool) -> Option<Exact> {
+        Some(match self {
+            Which::Exact => return None,
+            Which::F2 => Exact::f2(r, threaded),
+            Which::F3 => Exact::f3(r, threaded),
+            Which::F4 => Exact::f4(r, threaded),
+            Which::Fast => Exact::fast(r, threaded),
+        })
     }
 }
 
@@ -304,6 +353,7 @@ pub fn cli(args: &[String]) -> ExitCode {
     let mut which = Which::Exact;
     let mut scale = 1;
     let mut threaded = false;
+    let mut blending = None;
     let mut out = None;
     let mut at = Vec::new();
     let mut rest = args[3..].iter();
@@ -319,6 +369,18 @@ pub fn cli(args: &[String]) -> ExitCode {
             }
             "--scale" => scale = rest.next().and_then(|s| s.parse().ok()).expect("--scale N"),
             "--threaded" => threaded = true,
+            "--interpolate" | "--extrapolate" => {
+                let x: f32 = rest
+                    .next()
+                    .and_then(|s| s.parse().ok())
+                    .filter(|x| (0.0..=1.0).contains(x))
+                    .expect("--interpolate T or --extrapolate T, T from 0 to 1");
+                blending = Some(if a == "--interpolate" {
+                    Blending::Interpolate(x)
+                } else {
+                    Blending::Extrapolate(x)
+                });
+            }
             "--out" => {
                 let d = std::path::PathBuf::from(rest.next().expect("--out DIR"));
                 std::fs::create_dir_all(&d).expect("making the output directory");
@@ -336,31 +398,29 @@ pub fn cli(args: &[String]) -> ExitCode {
     let mut reference = Exact::new(renderer(&device, &queue, view), false);
     let mut right = Mutated::new(renderer(&device, &queue, view), Mutation::Spread(true));
     let mut left = Mutated::new(renderer(&device, &queue, view), Mutation::Spread(false));
-    let mut test: Box<dyn FrameRenderer> = match which {
-        Which::Fast | Which::F3 | Which::F2 => {
+    let mut r = renderer(&device, &queue, view);
+    // F4 onward draw as after their warm-up: every draw with its specialized shader, made as
+    // the draw first needs it.
+    if matches!(which, Which::F4 | Which::Fast) {
+        r.set_tev_mode(melee_gpu::TevMode::Sync);
+    }
+    let mut test: Box<dyn FrameRenderer> = match which.fast(r, threaded) {
+        Some(fast) => {
+            let fast = fast.always_streamed();
             assert_eq!(
                 mutation,
                 Mutation::None,
                 "--mutate changes the exact renderer"
             );
-            let mut r = renderer(&device, &queue, view);
-            Box::new(match which {
-                // F4 draws as it does after its warm-up: every draw with its specialized
-                // shader, made as the draw first needs it.
-                Which::Fast => {
-                    r.set_tev_mode(melee_gpu::TevMode::Sync);
-                    Exact::fast(r, threaded)
-                }
-                Which::F3 => Exact::f3(r, threaded),
-                _ => Exact::f2(r, threaded),
-            })
+            Box::new(fast)
         }
-        Which::Exact => Box::new(Mutated::new(renderer(&device, &queue, view), mutation)),
+        None => Box::new(Mutated::new(renderer(&device, &queue, view), mutation)),
     };
     println!(
-        "{replay}: {} against {} at {scale}x on {adapter}",
+        "{replay}: {} against {} at {scale}x on {adapter}{}",
         test.name(),
-        reference.name()
+        reference.name(),
+        blending.map_or(String::new(), |b| format!(", frames blended: {b:?}"))
     );
     let mut failed = 0;
     run(
@@ -373,6 +433,7 @@ pub fn cli(args: &[String]) -> ExitCode {
             spreads: vec![&mut right, &mut left],
             test: &mut *test,
         },
+        blending,
         out.as_deref(),
         |n, replay_frame, report, draws| {
             let ok = report.within();

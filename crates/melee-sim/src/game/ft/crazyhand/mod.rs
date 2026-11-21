@@ -44,187 +44,232 @@ pub mod addr {
     pub const INIT_ON_DEATH: u32 = 0x8015_5E18;
     pub const INIT_ON_LOAD: u32 = 0x8015_5E1C;
     pub const INIT_LOAD_SPECIAL_ATTRS: u32 = 0x8015_5F8C;
-    pub const INIT_80155FCC: u32 = 0x8015_5FCC;
-    pub const INIT_80156014: u32 = 0x8015_6014;
-    pub const INIT_80156018: u32 = 0x8015_6018;
-    pub const INIT_801560D8: u32 = 0x8015_60D8;
-    pub const INIT_80156198: u32 = 0x8015_6198;
-    pub const INIT_80156310: u32 = 0x8015_6310;
+    #[doc(alias("INIT_80155FCC"))]
+    pub const START: u32 = 0x8015_5FCC;
+    #[doc(alias("INIT_80156014"))]
+    pub const NOTHING: u32 = 0x8015_6014;
+    #[doc(alias("INIT_80156018"))]
+    pub const WAIT1_ENTER: u32 = 0x8015_6018;
+    #[doc(alias("INIT_801560D8"))]
+    pub const WAIT2_ENTER: u32 = 0x8015_60D8;
+    #[doc(alias("INIT_80156198"))]
+    pub const WAIT_ENTER: u32 = 0x8015_6198;
+    #[doc(alias("INIT_80156310"))]
+    pub const START_IN_PLACE: u32 = 0x8015_6310;
     pub const WAIT1_0_ANIM: u32 = 0x8015_6404;
     pub const WAIT1_0_IASA: u32 = 0x8015_6A70;
     pub const WAIT1_0_PHYS: u32 = 0x8015_6AB4;
     pub const WAIT1_0_COLL: u32 = 0x8015_6AD4;
-    pub const INIT_80156AD8: u32 = 0x8015_6AD8;
-    pub const FN_80156F6C: u32 = 0x8015_6F6C;
+    #[doc(alias("INIT_80156AD8"))]
+    pub const HUMAN_ATTACK: u32 = 0x8015_6AD8;
+    #[doc(alias("FN_80156F6C"))]
+    pub const RISE_ENTER: u32 = 0x8015_6F6C;
     pub const ENTRY_ANIM: u32 = 0x8015_6FDC;
     pub const ENTRY_IASA: u32 = 0x8015_7018;
     pub const ENTRY_PHYS: u32 = 0x8015_705C;
     pub const ENTRY_COLL: u32 = 0x8015_707C;
-    pub const FN_80157080: u32 = 0x8015_7080;
+    #[doc(alias("FN_80157080"))]
+    pub const SLIDE_WINDUP_ENTER: u32 = 0x8015_7080;
     pub const DAMAGE_ANIM: u32 = 0x8015_70CC;
     pub const DAMAGE_IASA: u32 = 0x8015_7108;
     pub const DAMAGE_PHYS: u32 = 0x8015_714C;
     pub const DAMAGE_COLL: u32 = 0x8015_716C;
-    pub const INIT_80157170: u32 = 0x8015_7170;
+    #[doc(alias("INIT_80157170"))]
+    pub const SLIDE_ENTER: u32 = 0x8015_7170;
     pub const DAMAGE2_ANIM: u32 = 0x8015_7204;
     pub const DAMAGE2_IASA: u32 = 0x8015_72D4;
     pub const DAMAGE2_PHYS: u32 = 0x8015_7318;
     pub const DAMAGE2_COLL: u32 = 0x8015_7378;
-    pub const INIT_8015737C: u32 = 0x8015_737C;
+    #[doc(alias("INIT_8015737C"))]
+    pub const WAIT_SWEEP_ENTER: u32 = 0x8015_737C;
     pub const WAIT_SWEEP_ANIM: u32 = 0x8015_73C8;
     pub const WAIT_SWEEP_PHYS: u32 = 0x8015_7404;
     pub const WAIT_SWEEP_IASA: u32 = 0x8015_7424;
     pub const WAIT_SWEEP_COLL: u32 = 0x8015_7468;
-    pub const FN_8015746C: u32 = 0x8015_746C;
+    #[doc(alias("FN_8015746C"))]
+    pub const SWEEP_LOOP_ENTER: u32 = 0x8015_746C;
     pub const SWEEP_LOOP_ANIM: u32 = 0x8015_74B8;
     pub const SWEEP_LOOP_IASA: u32 = 0x8015_74F4;
     pub const SWEEP_LOOP_PHYS: u32 = 0x8015_7538;
     pub const SWEEP_LOOP_COLL: u32 = 0x8015_7558;
-    pub const FN_8015755C: u32 = 0x8015_755C;
+    #[doc(alias("FN_8015755C"))]
+    pub const SLAP_WINDUP_ENTER: u32 = 0x8015_755C;
     pub const SWEEP_WAIT_ANIM: u32 = 0x8015_75A8;
     pub const SWEEP_WAIT_IASA: u32 = 0x8015_75E4;
     pub const SWEEP_WAIT_PHYS: u32 = 0x8015_7628;
     pub const SWEEP_WAIT_COLL: u32 = 0x8015_7648;
-    pub const INIT_8015764C: u32 = 0x8015_764C;
+    #[doc(alias("INIT_8015764C"))]
+    pub const SLAP_ENTER: u32 = 0x8015_764C;
     pub const SLAP_ANIM: u32 = 0x8015_76B0;
     pub const SLAP_IASA: u32 = 0x8015_7724;
     pub const SLAP_PHYS: u32 = 0x8015_7768;
-    pub const FN_801577B4: u32 = 0x8015_77B4;
-    pub const INIT_801577F8: u32 = 0x8015_77F8;
+    #[doc(alias("FN_801577B4"))]
+    pub const SLAP_WATCH: u32 = 0x8015_77B4;
+    #[doc(alias("INIT_801577F8"))]
+    pub const WALK2_ENTER: u32 = 0x8015_77F8;
     pub const WALK2_ANIM: u32 = 0x8015_7844;
     pub const WALK2_IASA: u32 = 0x8015_7880;
     pub const WALK2_PHYS: u32 = 0x8015_78C4;
     pub const SLAP_COLL: u32 = 0x8015_78E4;
-    pub const FN_801578E8: u32 = 0x8015_78E8;
+    #[doc(alias("FN_801578E8"))]
+    pub const HOLD_START_ENTER: u32 = 0x8015_78E8;
     pub const WALK_LOOP_ANIM: u32 = 0x8015_7934;
     pub const WALK_LOOP_IASA: u32 = 0x8015_798C;
     pub const WALK_LOOP_PHYS: u32 = 0x8015_79D0;
     pub const WALK_LOOP_COLL: u32 = 0x8015_79F0;
-    pub const INIT_801579F4: u32 = 0x8015_79F4;
+    #[doc(alias("INIT_801579F4"))]
+    pub const HOLD_ENTER: u32 = 0x8015_79F4;
     pub const WALK_WAIT_ANIM: u32 = 0x8015_7A40;
     pub const WALK_WAIT_IASA: u32 = 0x8015_7ABC;
     pub const WALK_WAIT_PHYS: u32 = 0x8015_7B00;
     pub const WALK_WAIT_COLL: u32 = 0x8015_7B54;
-    pub const INIT_80157B58: u32 = 0x8015_7B58;
+    #[doc(alias("INIT_80157B58"))]
+    pub const HOLD_END_ENTER: u32 = 0x8015_7B58;
     pub const WALK_SHOOT_ANIM: u32 = 0x8015_7BAC;
     pub const WALK_SHOOT_IASA: u32 = 0x8015_7BE8;
     pub const WALK_SHOOT_PHYS: u32 = 0x8015_7C2C;
     pub const WALK_SHOOT_COLL: u32 = 0x8015_7C4C;
-    pub const FN_80157C50: u32 = 0x8015_7C50;
+    #[doc(alias("FN_80157C50"))]
+    pub const WINDOW_ENTER: u32 = 0x8015_7C50;
     pub const DRILL_ANIM: u32 = 0x8015_7CB0;
     pub const DRILL_IASA: u32 = 0x8015_7CEC;
     pub const DRILL_PHYS: u32 = 0x8015_7D30;
     pub const DRILL_COLL: u32 = 0x8015_7DF4;
-    pub const INIT_80157DF8: u32 = 0x8015_7DF8;
+    #[doc(alias("INIT_80157DF8"))]
+    pub const CHASES_ENTER: u32 = 0x8015_7DF8;
     pub const ROCK_CRUSH_UP_ANIM: u32 = 0x8015_7EA0;
     pub const ROCK_CRUSH_WAIT_ANIM: u32 = 0x8015_7F48;
     pub const ROCK_CRUSH_UP_IASA: u32 = 0x8015_7F84;
     pub const ROCK_CRUSH_UP_PHYS: u32 = 0x8015_7FC8;
     pub const ROCK_CRUSH_UP_COLL: u32 = 0x8015_8140;
-    pub const FN_80158144: u32 = 0x8015_8144;
+    #[doc(alias("FN_80158144"))]
+    pub const COUNTDOWN_ENTER: u32 = 0x8015_8144;
     pub const ROCK_CRUSH_DOWN_ANIM: u32 = 0x8015_81A4;
     pub const ROCK_CRUSH_DOWN_IASA: u32 = 0x8015_81E0;
     pub const ROCK_CRUSH_DOWN_PHYS: u32 = 0x8015_8224;
     pub const ROCK_CRUSH_DOWN_COLL: u32 = 0x8015_82D4;
-    pub const FN_801582D8: u32 = 0x8015_82D8;
+    #[doc(alias("FN_801582D8"))]
+    pub const BEAMS_WINDUP_ENTER: u32 = 0x8015_82D8;
     pub const PAPER_CRUSH_ANIM: u32 = 0x8015_8340;
     pub const PAPER_CRUSH_IASA: u32 = 0x8015_837C;
     pub const PAPER_CRUSH_PHYS: u32 = 0x8015_83C0;
     pub const PAPER_CRUSH_COLL: u32 = 0x8015_83E0;
-    pub const INIT_801583E4: u32 = 0x8015_83E4;
+    #[doc(alias("INIT_801583E4"))]
+    pub const BEAMS_ENTER: u32 = 0x8015_83E4;
     pub const POKE1_ANIM: u32 = 0x8015_8450;
     pub const POKE1_IASA: u32 = 0x8015_84CC;
     pub const POKE1_PHYS: u32 = 0x8015_8510;
     pub const POKE1_COLL: u32 = 0x8015_8530;
-    pub const FN_80158534: u32 = 0x8015_8534;
-    pub const INIT_8015868C: u32 = 0x8015_868C;
+    #[doc(alias("FN_80158534"))]
+    pub const BEAMS_LASERS: u32 = 0x8015_8534;
+    #[doc(alias("INIT_8015868C"))]
+    pub const BEAMS_END_ENTER: u32 = 0x8015_868C;
     pub const POKE2_ANIM: u32 = 0x8015_870C;
     pub const POKE2_IASA: u32 = 0x8015_8748;
     pub const POKE2_PHYS: u32 = 0x8015_878C;
     pub const POKE2_COLL: u32 = 0x8015_87AC;
-    pub const FN_801587B0: u32 = 0x8015_87B0;
+    #[doc(alias("FN_801587B0"))]
+    pub const BOMBS_ENTER: u32 = 0x8015_87B0;
     pub const FINGER_BEAM_START_ANIM: u32 = 0x8015_8814;
     pub const FINGER_BEAM_START_IASA: u32 = 0x8015_8850;
     pub const FINGER_BEAM_START_PHYS: u32 = 0x8015_8894;
     pub const FINGER_BEAM_START_COLL: u32 = 0x8015_88B4;
-    pub const FN_801588B8: u32 = 0x8015_88B8;
-    pub const INIT_80158B3C: u32 = 0x8015_8B3C;
+    #[doc(alias("FN_801588B8"))]
+    pub const BOMBS: u32 = 0x8015_88B8;
+    #[doc(alias("INIT_80158B3C"))]
+    pub const REACH_ENTER: u32 = 0x8015_8B3C;
     pub const FINGER_BEAM_LOOP_ANIM: u32 = 0x8015_8BBC;
     pub const FINGER_BEAM_LOOP_IASA: u32 = 0x8015_8C44;
     pub const FINGER_BEAM_LOOP_PHYS: u32 = 0x8015_8C88;
     pub const FINGER_BEAM_LOOP_COLL: u32 = 0x8015_8DF8;
-    pub const INIT_80158DFC: u32 = 0x8015_8DFC;
+    #[doc(alias("INIT_80158DFC"))]
+    pub const GRAB_ENTER: u32 = 0x8015_8DFC;
     pub const FINGER_BEAM_END_ANIM: u32 = 0x8015_8E7C;
     pub const FINGER_BEAM_END_IASA: u32 = 0x8015_8ECC;
     pub const FINGER_BEAM_END_PHYS: u32 = 0x8015_8F10;
     pub const FINGER_BEAM_END_COLL: u32 = 0x8015_8F30;
-    pub const INIT_80158F34: u32 = 0x8015_8F34;
+    #[doc(alias("INIT_80158F34"))]
+    pub const MISS_ENTER: u32 = 0x8015_8F34;
     pub const BACK_PUNCH_ANIM: u32 = 0x8015_8FB4;
     pub const BACK_PUNCH_IASA: u32 = 0x8015_8FF0;
     pub const BACK_PUNCH_PHYS: u32 = 0x8015_9034;
     pub const BACK_PUNCH_COLL: u32 = 0x8015_9094;
-    pub const INIT_80159098: u32 = 0x8015_9098;
+    #[doc(alias("INIT_80159098"))]
+    pub const LET_GO_ENTER: u32 = 0x8015_9098;
     pub const FINGER_GUN1_ANIM: u32 = 0x8015_9134;
     pub const FINGER_GUN1_IASA: u32 = 0x8015_91C0;
     pub const FINGER_GUN1_PHYS: u32 = 0x8015_9204;
     pub const FINGER_GUN1_COLL: u32 = 0x8015_9264;
-    pub const FN_80159288: u32 = 0x8015_9288;
-    pub const INIT_801592D4: u32 = 0x8015_92D4;
+    #[doc(alias("FN_80159288"))]
+    pub const CAUGHT: u32 = 0x8015_9288;
+    #[doc(alias("INIT_801592D4"))]
+    pub const SQUEEZE_ENTER: u32 = 0x8015_92D4;
     pub const BACK_AIRPLANE1_ANIM: u32 = 0x8015_9388;
     pub const BACK_AIRPLANE1_IASA: u32 = 0x8015_940C;
     pub const BACK_AIRPLANE1_PHYS: u32 = 0x8015_9450;
     pub const BACK_AIRPLANE1_COLL: u32 = 0x8015_94B0;
-    pub const INIT_801594D4: u32 = 0x8015_94D4;
+    #[doc(alias("INIT_801594D4"))]
+    pub const THROW1_ENTER: u32 = 0x8015_94D4;
     pub const BACK_AIRPLANE2_ANIM: u32 = 0x8015_9534;
     pub const BACK_AIRPLANE2_IASA: u32 = 0x8015_9608;
     pub const BACK_AIRPLANE2_PHYS: u32 = 0x8015_964C;
     pub const BACK_AIRPLANE2_COLL: u32 = 0x8015_966C;
-    pub const INIT_80159670: u32 = 0x8015_9670;
+    #[doc(alias("INIT_80159670"))]
+    pub const THROW2_ENTER: u32 = 0x8015_9670;
     pub const BACK_AIRPLANE3_ANIM: u32 = 0x8015_96D0;
     pub const BACK_AIRPLANE3_IASA: u32 = 0x8015_9788;
     pub const BACK_AIRPLANE3_PHYS: u32 = 0x8015_97CC;
     pub const BACK_AIRPLANE3_COLL: u32 = 0x8015_97EC;
-    pub const INIT_801597F0: u32 = 0x8015_97F0;
+    #[doc(alias("INIT_801597F0"))]
+    pub const VANISH_ENTER: u32 = 0x8015_97F0;
     pub const BACK_CRUSH_ANIM: u32 = 0x8015_9858;
     pub const BACK_CRUSH_IASA: u32 = 0x8015_98A0;
     pub const BACK_CRUSH_PHYS: u32 = 0x8015_98E4;
     pub const BACK_CRUSH_COLL: u32 = 0x8015_9904;
-    pub const FN_80159908: u32 = 0x8015_9908;
+    #[doc(alias("FN_80159908"))]
+    pub const RAM_ENTER: u32 = 0x8015_9908;
     pub const BACK_DISAPPEAR_ANIM: u32 = 0x8015_99C0;
     pub const BACK_DISAPPEAR_IASA: u32 = 0x8015_9A08;
     pub const BACK_DISAPPEAR_PHYS: u32 = 0x8015_9A4C;
     pub const BACK_DISAPPEAR_COLL: u32 = 0x8015_9AA0;
-    pub const FN_80159AA4: u32 = 0x8015_9AA4;
+    #[doc(alias("FN_80159AA4"))]
+    pub const SHRINK_ENTER: u32 = 0x8015_9AA4;
     pub const WAIT1_1_ANIM: u32 = 0x8015_9D04;
     pub const WAIT1_1_IASA: u32 = 0x8015_9E8C;
     pub const WAIT1_1_PHYS: u32 = 0x8015_9ED0;
     pub const WAIT1_1_COLL: u32 = 0x8015_9F3C;
-    pub const INIT_80159F40: u32 = 0x8015_9F40;
+    #[doc(alias("INIT_80159F40"))]
+    pub const PASS_RISE_ENTER: u32 = 0x8015_9F40;
     pub const GRAB_ANIM: u32 = 0x8015_9F8C;
     pub const GRAB_IASA: u32 = 0x8015_9FC8;
     pub const GRAB_PHYS: u32 = 0x8015_A00C;
     pub const GRAB_COLL: u32 = 0x8015_A02C;
-    pub const INIT_8015A030: u32 = 0x8015_A030;
+    #[doc(alias("INIT_8015A030"))]
+    pub const PASS_ENTER: u32 = 0x8015_A030;
     pub const CANCEL_ANIM: u32 = 0x8015_A0C4;
     pub const CANCEL_IASA: u32 = 0x8015_A10C;
     pub const CANCEL_PHYS: u32 = 0x8015_A150;
     pub const CANCEL_COLL: u32 = 0x8015_A180;
-    pub const INIT_8015A184: u32 = 0x8015_A184;
+    #[doc(alias("INIT_8015A184"))]
+    pub const PASS_BACK_ENTER: u32 = 0x8015_A184;
     pub const SQUEEZING0_ANIM: u32 = 0x8015_A20C;
     pub const SQUEEZING0_IASA: u32 = 0x8015_A248;
     pub const SQUEEZING0_PHYS: u32 = 0x8015_A28C;
     pub const SQUEEZING0_COLL: u32 = 0x8015_A2AC;
-    pub const INIT_8015A2B0: u32 = 0x8015_A2B0;
+    #[doc(alias("INIT_8015A2B0"))]
+    pub const TAG_HALF_CRUSH_ENTER: u32 = 0x8015_A2B0;
     pub const SQUEEZING1_ANIM: u32 = 0x8015_A318;
     pub const SQUEEZING1_IASA: u32 = 0x8015_A38C;
     pub const SQUEEZING1_PHYS: u32 = 0x8015_A3D0;
     pub const SQUEEZING1_COLL: u32 = 0x8015_A3F0;
-    pub const INIT_8015A3F4: u32 = 0x8015_A3F4;
+    #[doc(alias("INIT_8015A3F4"))]
+    pub const TAG_HALF_APPLAUD_ENTER: u32 = 0x8015_A3F4;
     pub const SQUEEZE_ANIM: u32 = 0x8015_A464;
     pub const SQUEEZE_IASA: u32 = 0x8015_A4F8;
     pub const SQUEEZE_PHYS: u32 = 0x8015_A53C;
     pub const SQUEEZE_COLL: u32 = 0x8015_A55C;
-    pub const INIT_8015A560: u32 = 0x8015_A560;
+    #[doc(alias("INIT_8015A560"))]
+    pub const TAG_HALF_ROCK_PAPER_ENTER: u32 = 0x8015_A560;
     pub const THROW_ANIM: u32 = 0x8015_A5D0;
     pub const THROW_IASA: u32 = 0x8015_A664;
     pub const THROW_PHYS: u32 = 0x8015_A6A8;
@@ -237,7 +282,8 @@ pub mod addr {
     pub const FAIL_IASA: u32 = 0x8015_A820;
     pub const FAIL_PHYS: u32 = 0x8015_A864;
     pub const FAIL_COLL: u32 = 0x8015_A884;
-    pub const GRAB_UNK1_8015A888: u32 = 0x8015_A888;
+    #[doc(alias("GRAB_UNK1_8015A888"))]
+    pub const TAG_CRUSH_ENTER: u32 = 0x8015_A888;
     pub const TAG_CRUSH_ANIM: u32 = 0x8015_A8D4;
     pub const TAG_CRUSH_IASA: u32 = 0x8015_A910;
     pub const TAG_CRUSH_PHYS: u32 = 0x8015_A954;
@@ -246,58 +292,74 @@ pub mod addr {
     pub const TAG_APPLAUD_IASA: u32 = 0x8015_AA00;
     pub const TAG_APPLAUD_PHYS: u32 = 0x8015_AA44;
     pub const TAG_APPLAUD_COLL: u32 = 0x8015_AAA4;
-    pub const FN_8015AAC8: u32 = 0x8015_AAC8;
+    #[doc(alias("FN_8015AAC8"))]
+    pub const TAG_WAIT_ENTER: u32 = 0x8015_AAC8;
     pub const TAG_ROCK_PAPER_ANIM: u32 = 0x8015_AB04;
     pub const TAG_ROCK_PAPER_IASA: u32 = 0x8015_AB84;
     pub const TAG_ROCK_PAPER_PHYS: u32 = 0x8015_ABC8;
     pub const TAG_ROCK_PAPER_COLL: u32 = 0x8015_ABCC;
-    pub const GRAB_UNK1_8015ABD0: u32 = 0x8015_ABD0;
-    pub const GRAB_UNK1_8015AC50: u32 = 0x8015_AC50;
+    #[doc(alias("GRAB_UNK1_8015ABD0"))]
+    pub const CLOSE_CAUGHT_ENTER: u32 = 0x8015_ABD0;
+    #[doc(alias("GRAB_UNK1_8015AC50"))]
+    pub const CLOSE_EMPTY_ENTER: u32 = 0x8015_AC50;
     pub const FINGER_GUN2_ANIM: u32 = 0x8015_ACD0;
     pub const FINGER_GUN2_IASA: u32 = 0x8015_AD28;
     pub const FINGER_GUN2_PHYS: u32 = 0x8015_AD6C;
     pub const FINGER_GUN2_COLL: u32 = 0x8015_ADCC;
-    pub const GRAB_UNK1_8015ADD0: u32 = 0x8015_ADD0;
+    #[doc(alias("GRAB_UNK1_8015ADD0"))]
+    pub const BEATEN_ENTER: u32 = 0x8015_ADD0;
     pub const TAG_GRAB_ANIM: u32 = 0x8015_AF04;
     pub const TAG_SQUEEZE_ANIM: u32 = 0x8015_B000;
     pub const TAG_GRAB_IASA: u32 = 0x8015_B0FC;
     pub const TAG_GRAB_PHYS: u32 = 0x8015_B140;
     pub const TAG_GRAB_COLL: u32 = 0x8015_B170;
-    pub const GRAB_UNK1_8015B174: u32 = 0x8015_B174;
+    #[doc(alias("GRAB_UNK1_8015B174"))]
+    pub const ENTRY_ENTER: u32 = 0x8015_B174;
     pub const TAG_FAIL_ANIM: u32 = 0x8015_B22C;
     pub const TAG_FAIL_IASA: u32 = 0x8015_B274;
     pub const TAG_FAIL_PHYS: u32 = 0x8015_B2B8;
     pub const TAG_FAIL_COLL: u32 = 0x8015_B2BC;
-    pub const FN_8015B2C0: u32 = 0x8015_B2C0;
-    pub const FN_8015B4EC: u32 = 0x8015_B4EC;
-    pub const FN_8015B548: u32 = 0x8015_B548;
+    #[doc(alias("FN_8015B2C0"))]
+    pub const ENTRY_CAMERA: u32 = 0x8015_B2C0;
+    #[doc(alias("FN_8015B4EC"))]
+    pub const WAIST_POINT: u32 = 0x8015_B4EC;
+    #[doc(alias("FN_8015B548"))]
+    pub const CAPTURE_ENTER: u32 = 0x8015_B548;
     pub const CAPTURE_CRAZY_HAND_ANIM: u32 = 0x8015_B660;
     pub const CAPTURE_CRAZY_HAND_IASA: u32 = 0x8015_B664;
     pub const CAPTURE_CRAZY_HAND_PHYS: u32 = 0x8015_B668;
     pub const CAPTURE_CRAZY_HAND_COLL: u32 = 0x8015_B66C;
-    pub const GRAB_UNK1_8015B670: u32 = 0x8015_B670;
+    #[doc(alias("GRAB_UNK1_8015B670"))]
+    pub const CAPTURE_DAMAGE_ENTER: u32 = 0x8015_B670;
     pub const CAPTURE_DAMAGE_CRAZY_HAND_ANIM: u32 = 0x8015_B704;
     pub const CAPTURE_DAMAGE_CRAZY_HAND_IASA: u32 = 0x8015_B76C;
     pub const CAPTURE_DAMAGE_CRAZY_HAND_PHYS: u32 = 0x8015_B770;
     pub const CAPTURE_DAMAGE_CRAZY_HAND_COLL: u32 = 0x8015_B774;
-    pub const GRAB_UNK1_8015B778: u32 = 0x8015_B778;
-    pub const GRAB_UNK1_8015B800: u32 = 0x8015_B800;
+    #[doc(alias("GRAB_UNK1_8015B778"))]
+    pub const CAPTURE_WAIT_ENTER: u32 = 0x8015_B778;
+    #[doc(alias("GRAB_UNK1_8015B800"))]
+    pub const CAPTURE_CUT: u32 = 0x8015_B800;
     pub const CAPTURE_WAIT_CRAZY_HAND_ANIM: u32 = 0x8015_B840;
     pub const CAPTURE_WAIT_CRAZY_HAND_IASA: u32 = 0x8015_B844;
     pub const CAPTURE_WAIT_CRAZY_HAND_PHYS: u32 = 0x8015_B848;
     pub const CAPTURE_WAIT_CRAZY_HAND_COLL: u32 = 0x8015_B84C;
-    pub const GRAB_UNK1_8015B850: u32 = 0x8015_B850;
+    #[doc(alias("GRAB_UNK1_8015B850"))]
+    pub const THROWN_ENTER: u32 = 0x8015_B850;
     pub const THROWN_CRAZY_HAND_ANIM: u32 = 0x8015_B8EC;
     pub const THROWN_CRAZY_HAND_IASA: u32 = 0x8015_B8F0;
     pub const THROWN_CRAZY_HAND_PHYS: u32 = 0x8015_B8F4;
     pub const THROWN_CRAZY_HAND_COLL: u32 = 0x8015_B8F8;
-    pub const GRAB_UNK1_8015B8FC: u32 = 0x8015_B8FC;
-    pub const GRAB_UNK1_8015B998: u32 = 0x8015_B998;
-    pub const GRAB_UNK1_8015BA34: u32 = 0x8015_BA34;
+    #[doc(alias("GRAB_UNK1_8015B8FC"))]
+    pub const GLIDE1_ENTER: u32 = 0x8015_B8FC;
+    #[doc(alias("GRAB_UNK1_8015B998"))]
+    pub const GLIDE2_ENTER: u32 = 0x8015_B998;
+    #[doc(alias("GRAB_UNK1_8015BA34"))]
+    pub const GLIDE_TO: u32 = 0x8015_BA34;
     pub const TAG_CANCEL_ANIM: u32 = 0x8015_BB70;
     pub const TAG_CANCEL_PHYS: u32 = 0x8015_BBD8;
     pub const TAG_CANCEL_COLL: u32 = 0x8015_BC38;
-    pub const GRAB_UNK1_8015BC88: u32 = 0x8015_BC88;
+    #[doc(alias("GRAB_UNK1_8015BC88"))]
+    pub const RETURN: u32 = 0x8015_BC88;
 }
 
 /// His action states (Master Hand's numbers and the decomp's names).
@@ -453,7 +515,7 @@ pub const HAND: Hand = Hand {
     wait2: ms::WAIT2_0,
     glide1: ms::TAG_CANCEL,
     glide2: ms::WAIT2_1,
-    back_to_wait: addr::INIT_80156198,
+    back_to_wait: addr::WAIT_ENTER,
     return_mark: ms::TAG_CANCEL,
     attacks: &wait::ATTACKS,
     rows: &wait::ROWS,
@@ -461,8 +523,8 @@ pub const HAND: Hand = Hand {
     start_attack: |r, g, a| r.ch_attack(g, a),
     human_attack: |r, g| r.ch_human_attack(g),
     entry: ms::TAG_FAIL,
-    entry_camera: addr::FN_8015B2C0,
-    waist: addr::FN_8015B4EC,
+    entry_camera: addr::ENTRY_CAMERA,
+    waist: addr::WAIST_POINT,
     entry_sfx: 320002,
     entry_facing: 1.0,
     items: &ITEMS,
@@ -484,8 +546,8 @@ pub const HAND: Hand = Hand {
         squeeze_at: attr::XD0,
         let_go_frames: attr::XD8,
         box_size: 0x100,
-        caught: addr::FN_80159288,
-        victim: addr::FN_8015B548,
+        caught: addr::CAUGHT,
+        victim: addr::CAPTURE_ENTER,
         capture: co_ms::CAPTURE_CRAZY_HAND,
         capture_damage: co_ms::CAPTURE_DAMAGE_CRAZY_HAND,
         capture_wait: co_ms::CAPTURE_WAIT_CRAZY_HAND,
@@ -537,7 +599,7 @@ pub const HAND: Hand = Hand {
     },
     beams: Beams {
         states: [ms::PAPER_CRUSH, ms::POKE1, ms::POKE2],
-        lasers: addr::FN_80158534,
+        lasers: addr::BEAMS_LASERS,
         partners_lasers: true,
     },
     vanish: ms::BACK_CRUSH,
@@ -563,7 +625,7 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// `addr` is one.
 pub fn run_with(g: &mut Running, gobj: GObjId, addr: u32, cb: u32) -> bool {
     match addr {
-        addr::INIT_801597F0 => g.hand_vanish_enter(gobj, &HAND, cb),
+        addr::VANISH_ENTER => g.hand_vanish_enter(gobj, &HAND, cb),
         _ => return false,
     }
     true

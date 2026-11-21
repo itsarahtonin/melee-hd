@@ -165,7 +165,7 @@ pub fn init_platform(r: &mut Running, gobj: GObjId) {
     let m = map_id(r, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     for i in 0..param(r, 0) {
-        if r.game.one_player.allstar.x90[i as usize] != 0 {
+        if r.game.one_player.allstar.hearts[i as usize] != 0 {
             drop_heart(r, ItKind::HeartContainer.id(), HEART_JOINTS[i as usize], i);
         }
     }
@@ -225,7 +225,7 @@ pub fn init_stand(r: &mut Running, gobj: GObjId) {
     let m = map_id(r, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let a = r.game.one_player.allstar;
-    if i32::from(a.x94[0]) % param(r, 4) == 0 {
+    if i32::from(a.rest_counts[0]) % param(r, 4) == 0 {
         // The coin at stage point 220 (else 40 up), holding the stage's trophy.
         let pos = super::ground::point(r.game, r.data, 220)
             .unwrap_or(crate::vec::Vec3::new(0.0, 40.0, 0.0));
@@ -235,13 +235,13 @@ pub fn init_stand(r: &mut Running, gobj: GObjId) {
             r.toy_unmark(trophy);
         }
     }
-    let next = usize::from(a.x94[1]);
+    let next = usize::from(a.rest_counts[1]);
     let joints = [58, 59, 60].map(|d| nth_joint(r.game, gobj, d));
-    for (k, &ckind) in a.x96[..next].iter().enumerate() {
+    for (k, &ckind) in a.next_chars[..next].iter().enumerate() {
         place_trophy(r, 4, trophy_frame(i32::from(ckind)), joints[k], true);
     }
     let met = MET_JOINTS.map(|d| nth_joint(r.game, gobj, d));
-    for (k, &ckind) in a.x76.iter().enumerate() {
+    for (k, &ckind) in a.fought.iter().enumerate() {
         if i32::from(ckind) != i32::from(CharacterKind::NONE) {
             place_trophy(r, 2, trophy_frame(i32::from(ckind)), met[k], false);
         }

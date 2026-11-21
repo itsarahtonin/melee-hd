@@ -30,7 +30,7 @@ pub(crate) const YS_ROLL_ANIM: u32 = 0x8009_9644;
 impl Running<'_> {
     /// The shield joint's index among the parts (`ftData::x8->x11`).
     fn ys_shield_part(&self, f: FighterId) -> i32 {
-        let x8 = self.ft_data_x8(&self.game.fighters[f.0]);
+        let x8 = self.ft_model_desc(&self.game.fighters[f.0]);
         i32::from(self.data.u8(x8.at(0x11)))
     }
 

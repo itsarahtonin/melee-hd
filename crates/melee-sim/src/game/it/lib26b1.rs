@@ -469,7 +469,7 @@ pub fn hold_flags_on(game: &mut Game, gobj: GObjId) {
 pub fn drop_by_kind(r: &mut Running, kind: i32, pos: Vec3, hold: bool) -> Option<GObjId> {
     use super::kinds::{fflower, kusudama, rabbitc, sscope, sword};
     use super::lib2725::hold_still;
-    if r.game.vs_x6() != 0 && kind != ItKind::BobOmb {
+    if r.game.vs_sudden_death() != 0 && kind != ItKind::BobOmb {
         return None;
     }
     let gobj = match ItKind::of(kind) {
@@ -518,7 +518,7 @@ pub fn drop_food(
     hold: bool,
 ) -> Option<GObjId> {
     let _ = owner;
-    if r.game.vs_x6() != 0 && kind != ItKind::BobOmb {
+    if r.game.vs_sudden_death() != 0 && kind != ItKind::BobOmb {
         return None;
     }
     if kind != ItKind::HeartContainer {
@@ -547,7 +547,7 @@ pub fn drop_flipper(
     jobj: crate::hsd::jobj::JObjId,
     hold: bool,
 ) -> Option<GObjId> {
-    if r.game.vs_x6() != 0 && kind != ItKind::BobOmb {
+    if r.game.vs_sudden_death() != 0 && kind != ItKind::BobOmb {
         return None;
     }
     let gobj = super::kinds::flipper::spawn(r, Some(jobj))?;

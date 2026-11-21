@@ -33,8 +33,10 @@ pub struct BossStage {
     pub hp: i32,
     /// `x10`, `x14`: the player's and Master Hand's `x1988` kept through Crazy Hand's
     /// arrival.
-    pub player_x1988: i32,
-    pub master_x1988: i32,
+    #[doc(alias("player_x1988"))]
+    pub player_hurt_state: i32,
+    #[doc(alias("master_x1988"))]
+    pub master_hurt_state: i32,
 }
 
 impl Running<'_> {
@@ -68,7 +70,7 @@ impl Running<'_> {
         p.cpu_level = self.game.player_cpu_level(SLOT_MASTER) as u8;
         p.cpu_kind = self.game.player_cpu_type(SLOT_MASTER) as u8;
         p.attack_ratio = self.game.player_attack_ratio(SLOT_MASTER);
-        p.defense_ratio = self.game.player_unk50(SLOT_MASTER);
+        p.defense_ratio = self.game.player_unset_ratio(SLOT_MASTER);
         p.color = 0;
         p.ckind = CharacterKind::CrazyHand as i8;
         p.team = 4;
@@ -112,13 +114,13 @@ impl Running<'_> {
                     self.game.set_player_more_flags_bit4(SLOT_PLAYER, 1);
                     self.game.set_player_more_flags_bit3(SLOT_PLAYER, 1);
                     let e = self.player_gobj(SLOT_PLAYER);
-                    let x = self.game.ft_80087c58(e);
-                    self.game.one_player.boss.player_x1988 = x;
-                    self.game.ft_80087c64(e, 2);
+                    let x = self.game.ft_invincibility(e);
+                    self.game.one_player.boss.player_hurt_state = x;
+                    self.game.ft_set_invincibility(e, 2);
                     let e = self.player_gobj(SLOT_MASTER);
-                    let x = self.game.ft_80087c58(e);
-                    self.game.one_player.boss.master_x1988 = x;
-                    self.game.ft_80087c64(e, 2);
+                    let x = self.game.ft_invincibility(e);
+                    self.game.one_player.boss.master_hurt_state = x;
+                    self.game.ft_set_invincibility(e, 2);
                     self.game.one_player.boss.timer = 1;
                 } else if b.timer == 1 {
                     self.sfx_play(0x81651, 127, 64);
@@ -130,9 +132,9 @@ impl Running<'_> {
                     self.game.set_player_more_flags_bit4(SLOT_PLAYER, 0);
                     self.game.set_player_more_flags_bit3(SLOT_PLAYER, 0);
                     let e = self.player_gobj(SLOT_PLAYER);
-                    self.game.ft_80087c64(e, b.player_x1988);
+                    self.game.ft_set_invincibility(e, b.player_hurt_state);
                     let e = self.player_gobj(SLOT_MASTER);
-                    self.game.ft_80087c64(e, b.master_x1988);
+                    self.game.ft_set_invincibility(e, b.master_hurt_state);
                     self.boss_camera_standard();
                     self.game.one_player.boss.state = 4;
                 }
@@ -214,7 +216,7 @@ impl Running<'_> {
                     self.boss_camera_on_player(focus);
                     self.game.set_db_pause_flag(6);
                     self.player_disable_input(SLOT_PLAYER);
-                    self.player_80036844(SLOT_PLAYER, 1);
+                    self.set_player_unkillable(SLOT_PLAYER, 1);
                     self.game.vs.start.timer_enabled = false;
                 } else if t == w164 {
                     self.sfx_play_cheer(0x4E200);
@@ -271,6 +273,6 @@ impl Running<'_> {
             return false;
         }
         let run = &self.game.one_player.classic.base;
-        run.xc[1] == 0 && run.player.cpu_level >= 2 && run.x20 < 0x5208
+        run.counters[1] == 0 && run.player.cpu_level >= 2 && run.frames < 0x5208
     }
 }

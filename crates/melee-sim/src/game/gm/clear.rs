@@ -83,44 +83,75 @@ pub struct Clear {
     /// frames it has shown; `xDC` to `xE4`: the damage bonus's; `xE8`: the bonuses' points;
     /// `xEC`: never read; `xF0`: the bonuses' total, `xF4` the one shown, `xF8` the frames
     /// it has; `xFC`: the score shown, `x100` the one drawn; `x104`: the new score.
-    pub xCC: i32,
-    pub xD0: i32,
-    pub xD4: i32,
-    pub xD8: i32,
-    pub xDC: i32,
-    pub xE0: i32,
-    pub xE4: i32,
-    pub xE8: i32,
-    pub xEC: i32,
-    pub xF0: i32,
-    pub xF4: i32,
-    pub xF8: i32,
-    pub xFC: i32,
-    pub x100: i32,
-    pub x104: i32,
+    #[doc(alias("xCC"))]
+    pub match_points: i32,
+    #[doc(alias("xD0"))]
+    pub time_bonus: i32,
+    #[doc(alias("xD4"))]
+    pub time_bonus_shown: i32,
+    #[doc(alias("xD8"))]
+    pub time_bonus_frames: i32,
+    #[doc(alias("xDC"))]
+    pub damage_bonus: i32,
+    #[doc(alias("xE0"))]
+    pub damage_bonus_shown: i32,
+    #[doc(alias("xE4"))]
+    pub damage_bonus_frames: i32,
+    #[doc(alias("xE8"))]
+    pub bonus_points: i32,
+    #[doc(alias("xEC"))]
+    pub unused: i32,
+    #[doc(alias("xF0"))]
+    pub bonus_total: i32,
+    #[doc(alias("xF4"))]
+    pub bonus_total_shown: i32,
+    #[doc(alias("xF8"))]
+    pub bonus_total_frames: i32,
+    #[doc(alias("xFC"))]
+    pub score_shown: i32,
+    #[doc(alias("x100"))]
+    pub score_drawn: i32,
+    #[doc(alias("x104"))]
+    pub new_score: i32,
     /// `x108`, `x10A`: the time and damage bonuses' multipliers; `x10C`: the blur's growth;
     /// `x110`: the frames shown.
-    pub x108: i16,
-    pub x10A: i16,
-    pub x10C: f32,
-    pub x110: u32,
+    #[doc(alias("x108"))]
+    pub time_multiplier: i16,
+    #[doc(alias("x10A"))]
+    pub damage_multiplier: i16,
+    #[doc(alias("x10C"))]
+    pub blur_growth: f32,
+    #[doc(alias("x110"))]
+    pub frames_shown: u32,
     /// `x114`: the match's continue flag (the plate's texture frame); `x115`: the score's
     /// count done; `x116`: ended with Start; `x117`: a bonus list; `x118`: the race to the
     /// finish's (no time bonus); `x119`: a boss's; `x11A`: a targets stage's; `x11B`: every
     /// target broken... none left (`sp60 == 0`); `x11C`: the targets broken; `x11D`: the
     /// targets' icons shown; `x11E`, `x11F`: the list's up and down arrows hidden.
-    pub x114: u8,
-    pub x115: u8,
-    pub x116: u8,
-    pub x117: u8,
-    pub x118: u8,
-    pub x119: u8,
-    pub x11A: u8,
-    pub x11B: u8,
-    pub x11C: u8,
-    pub x11D: u8,
-    pub x11E: u8,
-    pub x11F: u8,
+    #[doc(alias("x114"))]
+    pub continue_frame: u8,
+    #[doc(alias("x115"))]
+    pub counted: u8,
+    #[doc(alias("x116"))]
+    pub ended_with_start: u8,
+    #[doc(alias("x117"))]
+    pub has_bonus_list: u8,
+    #[doc(alias("x118"))]
+    pub race_to_finish: u8,
+    #[doc(alias("x119"))]
+    pub boss_stage: u8,
+    #[doc(alias("x11A"))]
+    pub targets_stage: u8,
+    #[doc(alias("x11B"))]
+    pub all_targets_broken: u8,
+    #[doc(alias("x11C"))]
+    pub targets_broken: u8,
+    #[doc(alias("x11D"))]
+    pub target_icons_shown: u8,
+    #[doc(alias("x11E"))]
+    pub up_arrow_hidden: u8,
+    #[doc(alias("x11F"))]
+    pub down_arrow_hidden: u8,
     /// `lbl_804D65C0`: the score's step a frame.
     pub step: i32,
 }
@@ -164,7 +195,9 @@ impl Running<'_> {
     /// targets left, or a timer counting up), inline in `fn_8017F09C` and `fn_8017F608`.
     fn clear_time_shown(&self) -> bool {
         let c = self.clear();
-        !(c.x118 != 0 || (c.x11A != 0 && c.x11B == 0) || self.game.vs.start.timer_counts_up)
+        !(c.race_to_finish != 0
+            || (c.targets_stage != 0 && c.all_targets_broken == 0)
+            || self.game.vs.start.timer_counts_up)
     }
 
     /// The time bonus, `fn_8017F09C`: the seconds left by the multiplier, in a match whose
@@ -174,8 +207,8 @@ impl Running<'_> {
         if !self.game.vs.start.x4_6 || !self.clear_time_shown() {
             return 0;
         }
-        let p =
-            (self.game.vs.state.timer_seconds as i32).wrapping_mul(i32::from(self.clear().x108));
+        let p = (self.game.vs.state.timer_seconds as i32)
+            .wrapping_mul(i32::from(self.clear().time_multiplier));
         p.max(0)
     }
 
@@ -188,7 +221,8 @@ impl Running<'_> {
         }
         // `x98`: the first player's damage dealt (`player_standings[0].x40`).
         let v = r.player_standings[0].x40 as i32;
-        v.min(9999).wrapping_mul(i32::from(self.clear().x10A))
+        v.min(9999)
+            .wrapping_mul(i32::from(self.clear().damage_multiplier))
     }
 
     /// Whether decision `i` counts for player `player` under `mask`: in the match kinds
@@ -412,21 +446,29 @@ impl Running<'_> {
         if self.clear().texts[1].is_none() {
             let t = self.create_text(0, 0, Vec3::new(0.0, 0.0, 0.0), 6.0, 300.0);
             self.clear_mut().texts[1] = Some(t);
-            let msg = if self.clear().x11A != 0 { 4 } else { 3 };
+            let msg = if self.clear().targets_stage != 0 {
+                4
+            } else {
+                3
+            };
             self.game.sis.reset_text(data, t, msg);
         }
         let c = self.clear();
-        if c.xD0 != c.xD4 {
-            self.clear_mut().xD8 += 1;
+        if c.time_bonus != c.time_bonus_shown {
+            self.clear_mut().time_bonus_frames += 1;
             let t = self.clear_value_text(self.clear().texts[2]);
             self.clear_mut().texts[2] = Some(t);
             self.game.sis.text_mut(t).pos.z = -10.0;
             let c = self.clear();
-            let (xd0, xd8, x108) = (c.xD0, c.xD8, i32::from(c.x108));
+            let (xd0, xd8, x108) = (
+                c.time_bonus,
+                c.time_bonus_frames,
+                i32::from(c.time_multiplier),
+            );
             if !self.clear_time_shown() {
                 let s = self.game.sis.add_string(t, 0.0, 0.0, Some(MINUS));
                 self.game.sis.set_scale(data, t, s, reg(0.1), reg(0.065));
-                self.clear_mut().xD4 = xd0;
+                self.clear_mut().time_bonus_shown = xd0;
             } else if xd8 < 0x3C {
                 self.game.sis.text_mut(t).default_kerning = 1;
                 let v = [int(xd0 / x108), TIMES.to_vec(), int(x108)].concat();
@@ -437,16 +479,20 @@ impl Running<'_> {
             } else {
                 let s = self.game.sis.add_string(t, 0.0, 0.0, Some(&int(xd0)));
                 self.game.sis.set_scale(data, t, s, reg(0.1), reg(0.065));
-                self.clear_mut().xD4 = xd0;
+                self.clear_mut().time_bonus_shown = xd0;
             }
         }
         let c = self.clear();
-        if c.x11A == 0 && c.xDC != c.xE0 {
-            self.clear_mut().xE4 += 1;
+        if c.targets_stage == 0 && c.damage_bonus != c.damage_bonus_shown {
+            self.clear_mut().damage_bonus_frames += 1;
             let t = self.clear_value_text(self.clear().texts[3]);
             self.clear_mut().texts[3] = Some(t);
             let c = self.clear();
-            let (xdc, xe4, x10a) = (c.xDC, c.xE4, i32::from(c.x10A));
+            let (xdc, xe4, x10a) = (
+                c.damage_bonus,
+                c.damage_bonus_frames,
+                i32::from(c.damage_multiplier),
+            );
             if xe4 < 0x3C {
                 self.game.sis.text_mut(t).default_kerning = 1;
                 let v = [int(xdc / x10a), TIMES.to_vec(), int(x10a)].concat();
@@ -455,7 +501,7 @@ impl Running<'_> {
             } else {
                 let s = self.game.sis.add_string(t, 0.0, 0.0, Some(&int(xdc)));
                 self.game.sis.set_scale(data, t, s, reg(0.1), reg(0.065));
-                self.clear_mut().xE0 = xdc;
+                self.clear_mut().damage_bonus_shown = xdc;
             }
         }
         let j = self.clear().joints[3];
@@ -486,27 +532,27 @@ impl Running<'_> {
                 self.destroy_text(t);
             }
             let c = self.clear_mut();
-            c.x100 = c.xFC.wrapping_sub(1);
+            c.score_drawn = c.score_shown.wrapping_sub(1);
             return 0;
         }
         let c = self.clear_mut();
-        let target = c.x104;
+        let target = c.new_score;
         let step = c.step;
-        let diff = target.wrapping_sub(c.xFC).wrapping_abs();
+        let diff = target.wrapping_sub(c.score_shown).wrapping_abs();
         if diff <= step.wrapping_abs() {
-            c.xFC = target;
-            c.x115 = 1;
+            c.score_shown = target;
+            c.counted = 1;
         } else {
-            c.xFC = c.xFC.wrapping_add(step);
-            c.x115 = 0;
+            c.score_shown = c.score_shown.wrapping_add(step);
+            c.counted = 0;
         }
-        if c.xFC != c.x100 {
+        if c.score_shown != c.score_drawn {
             let t = self.clear_value_text(self.clear().texts[5]);
             self.clear_mut().texts[5] = Some(t);
-            let v = self.clear().xFC;
+            let v = self.clear().score_shown;
             let s = self.game.sis.add_string(t, 0.0, 0.0, Some(&int(v)));
             self.game.sis.set_scale(data, t, s, reg(0.1), reg(0.08));
-            self.clear_mut().x100 = v;
+            self.clear_mut().score_drawn = v;
         }
         if self.clear().texts[5].is_some() {
             let p = crate::lb::joint::world_position(&mut self.game.objs, data, Some(j), None);
@@ -530,21 +576,21 @@ impl Running<'_> {
                 self.destroy_text(t);
             }
             let c = self.clear_mut();
-            c.xF4 = c.xF0.wrapping_sub(1);
+            c.bonus_total_shown = c.bonus_total.wrapping_sub(1);
             return;
         }
         let c = self.clear();
-        if c.xF0 != c.xF4 {
+        if c.bonus_total != c.bonus_total_shown {
             let old = c.texts[4];
             if let Some(t) = old {
                 self.destroy_text(t);
             }
             let t = self.create_text_buffer(0, 0);
             self.clear_mut().texts[4] = Some(t);
-            let v = self.clear().xF0;
+            let v = self.clear().bonus_total;
             let s = self.game.sis.add_string(t, 0.0, 0.0, Some(&int(v)));
             self.game.sis.set_scale(data, t, s, reg(0.1), reg(0.065));
-            self.clear_mut().xF4 = v;
+            self.clear_mut().bonus_total_shown = v;
         }
         let parent = self.game.objs.jobjs[j].parent.expect("jobj.h: jobj");
         let (sx, sy) = {
@@ -554,8 +600,13 @@ impl Running<'_> {
         let t = self.clear_value_text(self.clear().texts[4]);
         self.clear_mut().texts[4] = Some(t);
         let c = self.clear_mut();
-        c.xF8 = c.xF8.wrapping_add(1);
-        let (xf8, xcc, sum, xf0) = (c.xF8, c.xCC, c.xDC.wrapping_add(c.xD0), c.xF0);
+        c.bonus_total_frames = c.bonus_total_frames.wrapping_add(1);
+        let (xf8, xcc, sum, xf0) = (
+            c.bonus_total_frames,
+            c.match_points,
+            c.damage_bonus.wrapping_add(c.time_bonus),
+            c.bonus_total,
+        );
         let plus = |v: i32| [PLUS, b" ", &int(v)].concat();
         let s = if xf8 < 0xC {
             plus(xcc)
@@ -593,8 +644,8 @@ impl Running<'_> {
             });
         }
         let c = self.clear();
-        let size = fp::fctiwz(fp::fmuls(120.0, reg(c.x10C))).wrapping_add(1) as i8;
-        let tint = fp::fmsubs(reg(0.0225), fp::frsp(f64::from(c.x110)), reg(0.175));
+        let size = fp::fctiwz(fp::fmuls(120.0, reg(c.blur_growth))).wrapping_add(1) as i8;
+        let tint = fp::fmsubs(reg(0.0225), fp::frsp(f64::from(c.frames_shown)), reg(0.175));
         let b = self.game.blur.as_mut().expect("the blur's data");
         b.mode = 1;
         b.blur_size = size as u8;
@@ -621,28 +672,28 @@ impl Running<'_> {
             other => panic!("the clear screen's model holds {other:?}"),
         };
         jobj::anim_all(&mut self.game.objs, data, &mut ParticleHooks, Some(j));
-        if self.clear().x118 == 0 {
+        if self.clear().race_to_finish == 0 {
             self.clear_bonus_texts();
         }
         let result = self.clear_score_text();
         self.clear_total_text();
         let r = self.game.vs.state.x24C.clone();
-        if self.clear().x117 != 0 && self.clear().x110 > 0x29 {
+        if self.clear().has_bonus_list != 0 && self.clear().frames_shown > 0x29 {
             let first = self.clear_list(self.clear().first);
             self.clear_mut().first = first;
             let mask = self.clear_mask();
             let below = self.bonuses_from(&r, first, mask, 0) > 7;
-            self.clear_mut().x11F = u8::from(!below);
+            self.clear_mut().down_arrow_hidden = u8::from(!below);
             let above = self.bonus_before(&r, first, mask, 0) < 0;
-            self.clear_mut().x11E = u8::from(above);
+            self.clear_mut().up_arrow_hidden = u8::from(above);
             let c = self.clear();
-            if c.x110.is_multiple_of(30) && c.moved == 0 {
+            if c.frames_shown.is_multiple_of(30) && c.moved == 0 {
                 if self.bonuses_from(&r, c.first, mask, 0) > 7 {
                     self.clear_mut().first = c.first.wrapping_add(1);
                 } else {
                     let c = self.clear_mut();
                     c.moved = 1;
-                    c.moved_at = c.x110;
+                    c.moved_at = c.frames_shown;
                 }
             }
             let port = self.game.player_port(0) as u8;
@@ -656,29 +707,34 @@ impl Running<'_> {
                     let c = self.clear_mut();
                     c.first = next;
                     c.moved = 1;
-                    c.moved_at = c.x110;
+                    c.moved_at = c.frames_shown;
                 }
             } else if pressed & UP != 0 && self.bonus_before(&r, first, mask, 0) >= 0 {
                 let prev = self.bonus_before(&r, first, mask, 0) as u16;
                 let c = self.clear_mut();
                 c.first = prev;
                 c.moved = 1;
-                c.moved_at = c.x110;
+                c.moved_at = c.frames_shown;
             }
         }
         let c = self.clear();
-        if c.x11A != 0
-            && c.x110 > 0x14
-            && c.x11D < c.x11C
-            && fp::fctiwz(fp::fmuls(reg(0.5), fp::frsp(f64::from(c.x110 - 0x14))))
-                > i32::from(c.x11D)
+        if c.targets_stage != 0
+            && c.frames_shown > 0x14
+            && c.target_icons_shown < c.targets_broken
+            && fp::fctiwz(fp::fmuls(
+                reg(0.5),
+                fp::frsp(f64::from(c.frames_shown - 0x14)),
+            )) > i32::from(c.target_icons_shown)
         {
-            let [icon] =
-                super::pause::tree_nodes(&self.game.objs.jobjs, Some(j), &[i32::from(c.x11D) + 7]);
+            let [icon] = super::pause::tree_nodes(
+                &self.game.objs.jobjs,
+                Some(j),
+                &[i32::from(c.target_icons_shown) + 7],
+            );
             jobj::clear_flags_all(&mut self.game.objs.jobjs, icon, HIDDEN);
-            self.clear_mut().x11D += 1;
+            self.clear_mut().target_icons_shown += 1;
         }
-        if self.clear().x115 == 0 && result != 0 {
+        if self.clear().counted == 0 && result != 0 {
             self.count_tick();
         }
         let human = |r: &Running, i: i32| r.game.player_pkind(i) == PKIND_HUMAN;
@@ -689,17 +745,17 @@ impl Running<'_> {
         for i in 0..6 {
             if human(self, i) && trigger(self, i) & PAD_A != 0 {
                 let c = self.clear_mut();
-                c.xFC = c.x104;
-                c.x115 = 1;
+                c.score_shown = c.new_score;
+                c.counted = 1;
                 break;
             }
         }
-        if self.clear().x110 > 0x3E {
+        if self.clear().frames_shown > 0x3E {
             for i in 0..6 {
                 if human(self, i) && trigger(self, i) & PAD_START != 0 {
                     let c = self.clear_mut();
-                    c.xFC = c.x104;
-                    c.x116 = 1;
+                    c.score_shown = c.new_score;
+                    c.ended_with_start = 1;
                     self.lb_audio_call(1);
                     break;
                 }
@@ -707,7 +763,7 @@ impl Running<'_> {
         }
         let c = self.clear();
         let (up, down) = (c.joints[7], c.joints[8]);
-        let (hide_up, hide_down) = (c.x11E != 0, c.x11F != 0);
+        let (hide_up, hide_down) = (c.up_arrow_hidden != 0, c.down_arrow_hidden != 0);
         let jobjs = &mut self.game.objs.jobjs;
         for (j, hide) in [(up, hide_up), (down, hide_down)] {
             if hide {
@@ -717,13 +773,13 @@ impl Running<'_> {
             }
         }
         let c = self.clear_mut();
-        if reg(c.x10C) < 1.0 {
-            c.x10C = mem(fp::fadds(reg(c.x10C), reg(0.05)));
+        if reg(c.blur_growth) < 1.0 {
+            c.blur_growth = mem(fp::fadds(reg(c.blur_growth), reg(0.05)));
         } else {
-            c.x10C = 1.0;
+            c.blur_growth = 1.0;
         }
-        if c.x110.wrapping_add(0x1_0000) != 0xFFFF {
-            c.x110 = c.x110.wrapping_add(1);
+        if c.frames_shown.wrapping_add(0x1_0000) != 0xFFFF {
+            c.frames_shown = c.frames_shown.wrapping_add(1);
         }
     }
 
@@ -774,12 +830,12 @@ impl Running<'_> {
         let c = &mut gm.one_player.clear;
         c.joints = joints;
         let jobjs = &mut gm.objs.jobjs;
-        if c.x117 == 0 {
+        if c.has_bonus_list == 0 {
             for k in [4, 7, 8] {
                 jobj::set_flags_all(jobjs, joints[k], HIDDEN);
             }
         }
-        if c.x11A != 0 {
+        if c.targets_stage != 0 {
             for i in 0..10 {
                 let [icon] = super::pause::tree_nodes(jobjs, Some(j), &[i + 7]);
                 jobj::set_flags_all(jobjs, icon, HIDDEN);
@@ -787,11 +843,11 @@ impl Running<'_> {
             jobj::set_flags_all(jobjs, joints[3], HIDDEN);
         } else {
             jobj::set_flags_all(jobjs, joints[6], HIDDEN);
-            if c.x118 != 0 {
+            if c.race_to_finish != 0 {
                 jobj::set_flags_all(jobjs, joints[5], HIDDEN);
             }
         }
-        let frame = if c.x114 != 0 { 1.0 } else { 0.0 };
+        let frame = if c.continue_frame != 0 { 1.0 } else { 0.0 };
         let plate = joints[0].expect("the plate's joint");
         let objs = &mut gm.objs;
         let d = objs.jobjs[plate].dobj().expect("the plate's dobj");
@@ -800,7 +856,7 @@ impl Running<'_> {
         let a = objs.tobjs[t].aobj;
         crate::hsd::aobj::set_current_frame(&mut objs.aobjs, &mut objs.fobjs, a, frame);
         crate::hsd::aobj::set_rate(&mut objs.aobjs, a, 0.0);
-        if self.clear().x118 == 0 {
+        if self.clear().race_to_finish == 0 {
             self.clear_bonus_texts();
         }
         self.clear_total_text();
@@ -819,16 +875,16 @@ impl Running<'_> {
         let mut special = 0;
         let mut coins = self.game.vs.state.x24C.player_standings[0].xE;
         self.game.one_player.clear = Clear {
-            xD4: -1,
-            xE0: -1,
-            xEC: -1,
-            xF4: -1,
-            x100: -1,
-            x11E: 1,
-            x11F: 1,
-            x108: 100,
-            x10A: 100,
-            x114: u8::from(cont),
+            time_bonus_shown: -1,
+            damage_bonus_shown: -1,
+            unused: -1,
+            bonus_total_shown: -1,
+            score_drawn: -1,
+            up_arrow_hidden: 1,
+            down_arrow_hidden: 1,
+            time_multiplier: 100,
+            damage_multiplier: 100,
+            continue_frame: u8::from(cont),
             ..Clear::default()
         };
         match kind {
@@ -839,15 +895,15 @@ impl Running<'_> {
                     i32::from(self.game.stage_info.x6D2),
                 );
                 let c = self.clear_mut();
-                c.x11A = 1;
-                c.x11C = total.wrapping_sub(left) as u8;
-                c.x108 = 200;
+                c.targets_stage = 1;
+                c.targets_broken = total.wrapping_sub(left) as u8;
+                c.time_multiplier = 200;
                 if left == 0 {
-                    c.x11B = 1;
+                    c.all_targets_broken = 1;
                 }
             }
             3 => {
-                self.clear_mut().x118 = 1;
+                self.clear_mut().race_to_finish = 1;
                 if self.game.vs.state.match_result == OUTCOME_1P_BONUS_STAGE_END {
                     // The goal reached (`Ground_801C1DD4`): its special score and coins.
                     let point = crate::game::gr::ground::goal_point(self.game);
@@ -856,41 +912,45 @@ impl Running<'_> {
                     );
                     special = score;
                     coins = n as u16;
-                    self.clear_mut().x108 = 500;
+                    self.clear_mut().time_multiplier = 500;
                 }
             }
-            2 => self.clear_mut().x119 = 1,
+            2 => self.clear_mut().boss_stage = 1,
             _ => {}
         }
         self.tally_all_bonuses();
         let r = self.game.vs.state.x24C.clone();
         let c = self.clear();
-        let list = c.x11A == 0
-            && c.x118 == 0
-            && c.x119 == 0
+        let list = c.targets_stage == 0
+            && c.race_to_finish == 0
+            && c.boss_stage == 0
             && self.bonuses_from(&r, 0, self.clear_mask(), 0) != 0;
         let c = self.clear_mut();
-        c.x117 = u8::from(list);
+        c.has_bonus_list = u8::from(list);
         c.moved = u8::from(!list);
-        if c.x118 == 0 {
+        if c.race_to_finish == 0 {
             let d0 = self.clear_time_bonus();
-            self.clear_mut().xD0 = d0;
+            self.clear_mut().time_bonus = d0;
             let dc = self.clear_damage_bonus(&r);
-            self.clear_mut().xDC = dc;
+            self.clear_mut().damage_bonus = dc;
         }
-        if self.clear().x117 != 0 {
+        if self.clear().has_bonus_list != 0 {
             let e8 = self.clear_bonus_points();
-            self.clear_mut().xE8 = e8;
+            self.clear_mut().bonus_points = e8;
         }
         let c = self.clear_mut();
-        c.xF0 = c
-            .xE8
-            .wrapping_add(c.xDC.wrapping_add(c.xD0).wrapping_add(special));
-        c.xFC = score.wrapping_add(points);
-        c.xCC = points;
-        let total = score.wrapping_add(c.xCC).wrapping_add(c.xF0);
-        c.x104 = total.clamp(0, 999_999_999);
-        c.step = c.x104.wrapping_sub(score.wrapping_add(points)) / 10;
+        c.bonus_total = c.bonus_points.wrapping_add(
+            c.damage_bonus
+                .wrapping_add(c.time_bonus)
+                .wrapping_add(special),
+        );
+        c.score_shown = score.wrapping_add(points);
+        c.match_points = points;
+        let total = score
+            .wrapping_add(c.match_points)
+            .wrapping_add(c.bonus_total);
+        c.new_score = total.clamp(0, 999_999_999);
+        c.step = c.new_score.wrapping_sub(score.wrapping_add(points)) / 10;
         // The scene's archive and its description (`fn_80180630`'s, `fn_80168A6C`'s copy).
         let (a, file, block) = self.load_archive_blocks("GmRegClr.dat");
         let scene = self
@@ -972,7 +1032,7 @@ impl Running<'_> {
         b.blur_size = 1;
         b.callback = Some(CodeRef(BLUR_CALLBACK));
         if self.game.vs.start.x1_1 && coins != 0 {
-            if self.clear().x118 == 0 {
+            if self.clear().race_to_finish == 0 {
                 self.game
                     .start_coin_counter(0x5A, 0x1AE, i32::from(coins), 5);
             } else {
@@ -987,7 +1047,7 @@ impl Running<'_> {
     /// Whether Start ended the screen, `fn_80180AC0`.
     #[doc(alias = "fn_80180AC0")]
     pub fn clear_done(&self) -> bool {
-        self.clear().x116 == 1
+        self.clear().ended_with_start == 1
     }
 
     /// The clear's start in `fn_8016D634`, once a 1P stage is won: the hazard sign paused,

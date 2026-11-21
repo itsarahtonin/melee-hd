@@ -767,7 +767,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
                 "melee/it/kinds/itklap",
                 "melee/ft/kinds/ftCommon/ftCo_BarrelWait",
             ],
-            modules: &["gr/kongo_jungle", "it/kinds/klap"],
+            modules: &["gr/kongo_jungle", "it/kinds/klap_trap"],
             unreached: &[],
             missing: &[],
         }),
@@ -821,7 +821,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["gb", "great-bay"],
         audit: Some(Audit {
             units: &["melee/gr/grgreatbay", "melee/it/kinds/ittincle"],
-            modules: &["gr/great_bay", "it/kinds/tincle"],
+            modules: &["gr/great_bay", "it/kinds/tingle"],
             unreached: &[],
             missing: &[],
         }),
@@ -925,7 +925,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["ys", "yoshis-story"],
         audit: Some(Audit {
             units: &["melee/gr/grstory", "melee/it/kinds/itheiho"],
-            modules: &["gr/yoshis_story", "it/kinds/heiho"],
+            modules: &["gr/yoshis_story", "it/kinds/shy_guy"],
             unreached: &[],
             missing: &[],
         }),
@@ -1354,8 +1354,8 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
             ],
             modules: &[
                 "gr/mushroom_kingdom_2",
-                "it/kinds/kyasarin",
-                "it/kinds/kyasarinegg",
+                "it/kinds/birdo",
+                "it/kinds/birdo_egg",
             ],
             unreached: &[],
             missing: &[],

@@ -9,7 +9,7 @@ use crate::hsd::gobj::GObjId;
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::INIT_ON_DEATH | addr::INIT_80156014 => g.hand_nothing(gobj),
+        addr::INIT_ON_DEATH | addr::NOTHING => g.hand_nothing(gobj),
         _ => return false,
     }
     true

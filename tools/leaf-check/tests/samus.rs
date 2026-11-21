@@ -37,7 +37,8 @@ use melee_capture::import::Maps;
 use melee_sim::game::ft::fox::ext as fox_ext;
 use melee_sim::game::ft::samus::special_n::SAMUS;
 use melee_sim::game::it::CLASS_ITEM;
-use melee_sim::game::it::kinds::{samusbomb, samuschargeshot, samusgrapple, samusmissile};
+use melee_sim::game::it::kinds::samusgrapple::GRAPPLE;
+use melee_sim::game::it::kinds::{chargedshot, samusbomb, samuschargeshot, samusmissile, tether};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::capture::Call;
@@ -66,9 +67,9 @@ fn dirs() -> Vec<String> {
 /// a question answer `yes`.
 fn stubs(yes: bool) -> Vec<Stub> {
     let mut v: Vec<Stub> = [
-        fox_ext::FTANIM_80070FB4,
-        fox_ext::FTANIM_80070C48,
-        fox_ext::FTANIM_80070CC4,
+        fox_ext::FTANIM_SET_PART_ANIM_POSE,
+        fox_ext::FTANIM_SHOW_PART_ANIM_POSE,
+        fox_ext::FTANIM_END_PART_ANIM,
     ]
     .iter()
     .map(|&a| (a, StubRet::Nothing))
@@ -242,9 +243,9 @@ fn run_samus(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
                 panic!("{SKIP}{} takes the fighter, not the item", name_of(a));
             }
             match a {
-                0x802B_AC3C => samusgrapple::ft_death(g, gobj),
-                0x802B_AC80 => samusgrapple::ft_frame(g, gobj),
-                _ => samusgrapple::ft_line_up(g, gobj),
+                0x802B_AC3C => tether::ft_death(g, gobj, &GRAPPLE),
+                0x802B_AC80 => tether::ft_frame(g, gobj, &GRAPPLE),
+                _ => tether::ft_line_up(g, gobj, &GRAPPLE),
             }
         }
         _ => return run_callback(g, gobj, a),
@@ -272,7 +273,7 @@ fn run_callback(g: &mut Running, gobj: GObjId, a: u32) -> Ret {
         }
         "it_802B5CBC" => {
             item_helper(g, gobj);
-            samuschargeshot::fired(g, gobj);
+            chargedshot::fired(g, gobj, &samuschargeshot::CHARGE_SHOT);
             return Ret::Nothing;
         }
         "it_802B63F8" => {

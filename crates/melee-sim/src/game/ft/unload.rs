@@ -76,7 +76,7 @@ impl Running<'_> {
         crate::hsd::lobj::remove_all(&mut self.game.objs, lights);
         let fp = &self.game.fighters[f.0];
         let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
-        self.game.player_80031fb0(slot, sub);
+        self.game.player_fighter_gone(slot, sub);
         self.free_fighter_blocks(f);
     }
 
@@ -95,13 +95,14 @@ impl Running<'_> {
         crate::hsd::jobj::remove_all(&mut self.game.objs, Some(hat));
         self.game.fighters[f.0].u.set_jobj_at(u::HAT, None);
         if let Some(list) = self.game.fighters[f.0].u.dobj_list_at(LIST) {
-            self.free_x2040_list(list);
+            self.free_dobj_list(list);
         }
         self.game.fighters[f.0].u.set_dobj_list_at(LIST, None);
     }
 
     /// A DObj list back to `fighter_x2040_alloc_data` (`HSD_ObjFree`), holding its entries.
-    fn free_x2040_list(&mut self, list: super::super::handles::DObjListId) {
+    #[doc(alias("free_x2040_list"))]
+    fn free_dobj_list(&mut self, list: super::super::handles::DObjListId) {
         let g = &*self.game;
         let data = self.data;
         crate::hsd::export::with_image(|img| super::super::export::x2040_list(g, data, img, list));
@@ -149,7 +150,7 @@ impl Running<'_> {
                 return;
             }
         }
-        self.game.ft.data.slot_words[x61c as usize].x6 &= !0x80;
+        self.game.ft.data.slot_words[x61c as usize].flags &= !0x80;
     }
 
     /// The unload's `HSD_ObjFree`s: the two animation buffers, the parts table, the DObj
@@ -198,7 +199,7 @@ impl Running<'_> {
             self.game.fighter_dobj_lists.free(l.0);
         }
         if let Some(l) = second {
-            self.free_x2040_list(l);
+            self.free_dobj_list(l);
         }
         if let Some(a) = attrs {
             self.game.fighter_attrs.free(a.0);

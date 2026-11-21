@@ -126,7 +126,8 @@ impl Game {
 
     /// Whether the fighter is resized, metal or otherwise changed, `ft_80087AEC`.
     #[doc(alias = "ft_80087AEC")]
-    pub fn ft_80087aec(&self, gobj: GObjId) -> bool {
+    #[doc(alias("ft_80087aec"))]
+    pub fn ft_is_altered(&self, gobj: GObjId) -> bool {
         let fp = self.fighter(gobj);
         fp.x34_scale.y != fp.x34_scale.x || fp.x2226_b4 || fp.is_metal || fp.x197C.is_some()
     }
@@ -134,7 +135,8 @@ impl Game {
     /// What moves the fighter most, `ft_80087B34`: 0 its own velocity, 1 knockback, 2 a
     /// shield's push.
     #[doc(alias = "ft_80087B34")]
-    pub fn ft_80087b34(&self, gobj: GObjId) -> i32 {
+    #[doc(alias("ft_80087b34"))]
+    pub fn ft_strongest_motion(&self, gobj: GObjId) -> i32 {
         use crate::fpu::reg;
         use gekko_fp as fp;
         let f = self.fighter(gobj);
@@ -181,8 +183,11 @@ impl Game {
         self.fighter(gobj).dmg.x18c4_source_ply
     }
 
+    /// Whether the fighter asks for its name tag, `ftLib_80086F4C`: not cloaked (`x221F_b2`),
+    /// not dead (`x221F_b1`) and its tag countdown (`x209A`) down to 1. The HUD's tags read it.
     #[doc(alias = "ftLib_80086F4C")]
-    pub fn ft_80086f4c(&self, gobj: GObjId) -> bool {
+    #[doc(alias("ft_80086f4c"))]
+    pub fn ft_shows_name_tag(&self, gobj: GObjId) -> bool {
         let fp = self.fighter(gobj);
         !fp.x221F_b2 && !fp.x221F_b1 && fp.x209A == 1
     }
@@ -230,31 +235,39 @@ impl Game {
         n
     }
 
+    /// Hitlag the fighter takes at its next hit check (`dmg.x1958`), `ftLib_80086A4C`: a
+    /// hammer's or a stage switch's.
     #[doc(alias = "ftLib_80086A4C")]
-    pub fn ft_80086a4c(&mut self, gobj: GObjId, v: f32) {
+    #[doc(alias("ft_80086a4c"))]
+    pub fn ft_set_pending_hitlag(&mut self, gobj: GObjId, v: f32) {
         self.fighter_mut(gobj).dmg.x1958 = v;
     }
 
     /// `ft_80087AC0`: the fighter turns invisible when the argument is zero.
     #[doc(alias = "ft_80087AC0")]
-    pub fn ft_80087ac0(&mut self, gobj: GObjId, arg: i32) {
+    #[doc(alias("ft_80087ac0"))]
+    pub fn ft_set_visible(&mut self, gobj: GObjId, arg: i32) {
         self.fighter_mut(gobj).invisible = arg == 0;
     }
 
-    /// The fighter's `x1988`, `ft_80087C58`.
+    /// The fighter's invincibility (`x1988`: 1 invincible, 2 intangible), `ft_80087C58`.
     #[doc(alias = "ft_80087C58")]
-    pub fn ft_80087c58(&self, gobj: GObjId) -> i32 {
+    #[doc(alias("ft_80087c58"))]
+    pub fn ft_invincibility(&self, gobj: GObjId) -> i32 {
         self.fighter(gobj).x1988
     }
 
-    /// Sets the fighter's `x1988`, `ft_80087C64`.
+    /// Sets the fighter's invincibility (`x1988`), `ft_80087C64`.
     #[doc(alias = "ft_80087C64")]
-    pub fn ft_80087c64(&mut self, gobj: GObjId, v: i32) {
+    #[doc(alias("ft_80087c64"))]
+    pub fn ft_set_invincibility(&mut self, gobj: GObjId, v: i32) {
         self.fighter_mut(gobj).x1988 = v;
     }
 
+    /// Whether the blast zones leave the fighter alone (`x2228_b5`), `ft_80087BAC`.
     #[doc(alias = "ft_80087BAC")]
-    pub fn ft_80087bac(&mut self, gobj: GObjId, arg: i32) {
+    #[doc(alias("ft_80087bac"))]
+    pub fn ft_set_blast_immune(&mut self, gobj: GObjId, arg: i32) {
         self.fighter_mut(gobj).x2228_b5 = arg & 1 != 0;
     }
 

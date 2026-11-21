@@ -69,7 +69,7 @@ impl Running<'_> {
         crate::game::ef::queue_clear(self.game, &mut head);
         self.game.fighters[f.0].x60C = head;
         self.init_thrown_hitbox(gobj);
-        self.init_x1614(f);
+        self.init_stamina_markers(f);
     }
 
     /// Resets the fighter for a spawn at its player's position, `Fighter_UnkInitReset_80067C98`.
@@ -751,7 +751,8 @@ impl Running<'_> {
 
     /// The fighter's two `x1614` points on their bones, `ft_8007C630`.
     #[doc(alias = "ft_8007C630")]
-    fn init_x1614(&mut self, f: FighterId) {
+    #[doc(alias("init_x1614"))]
+    fn init_stamina_markers(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
         let x38 = self
             .data
@@ -785,7 +786,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let root = self.root_jobj(gobj);
         let slot = i32::from(self.game.fighters[f.0].player_idx);
-        let timer = self.game.player_unk4c(slot);
+        let timer = self.game.player_entry_delay(slot);
         let height = self.common().f32(0x6C4);
         let scale = self.game.objs.jobjs[root].scale;
         let fp = &mut self.game.fighters[f.0];

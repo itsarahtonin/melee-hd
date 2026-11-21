@@ -81,7 +81,7 @@ impl<'a> Comparer<'a> {
                 c.port,
                 c.state,
                 c.held,
-                c.x7,
+                c.unused,
                 c.hover,
                 c.b_timer,
                 c.x.to_bits(),
@@ -213,7 +213,11 @@ impl<'a> Comparer<'a> {
         self.check(
             "gmVsMelee_CssData",
             "port, match type, pending, KO counts",
-            (v.css.unk_0x0, v.css.match_type, v.css.pending_scene_change),
+            (
+                v.css.first_port,
+                v.css.match_type,
+                v.css.pending_scene_change,
+            ),
             (
                 self.u16(CSS_DATA),
                 self.u8(CSS_DATA + 2),
@@ -235,7 +239,13 @@ impl<'a> Comparer<'a> {
         self.check(
             "gmVsMelee_SssData",
             "stage, x1, no LRAS, forced, start",
-            (s.unk_stage, s.x1, s.no_lras, s.force_stage_id, s.start_game),
+            (
+                s.cursor_port,
+                s.no_b,
+                s.no_lras,
+                s.force_stage_id,
+                s.start_game,
+            ),
             (
                 self.u8(SSS_DATA),
                 self.u8(SSS_DATA + 1),
@@ -267,7 +277,7 @@ impl<'a> Comparer<'a> {
             "gm_8049BEE8",
             "port, match type, pending, KO counts' pointer",
             (
-                d.hanyu_css.unk_0x0,
+                d.hanyu_css.first_port,
                 d.hanyu_css.match_type,
                 d.hanyu_css.pending_scene_change,
                 if d.hanyu_css.ko_counts_null {
@@ -288,7 +298,13 @@ impl<'a> Comparer<'a> {
         self.check(
             "gm_8049C030",
             "stage, x1, no LRAS, forced, start",
-            (s.unk_stage, s.x1, s.no_lras, s.force_stage_id, s.start_game),
+            (
+                s.cursor_port,
+                s.no_b,
+                s.no_lras,
+                s.force_stage_id,
+                s.start_game,
+            ),
             (
                 self.u8(hs),
                 self.u8(hs + 1),
@@ -311,7 +327,7 @@ impl<'a> Comparer<'a> {
         self.check(
             name,
             "x0, x4, x8",
-            (e.x0, e.x4, e.x8),
+            (e.run_value, e.timer_seconds, e.stage_flag),
             (self.u32(at), self.u32(at + 4), self.u32(at + 8)),
         );
         e.match_end

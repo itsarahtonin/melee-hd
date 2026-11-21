@@ -75,7 +75,7 @@ impl Running<'_> {
         if let Some(t) = m.text {
             self.destroy_text(t);
         }
-        let id = if m.unk2 == Some(0) { 0xBB } else { 0xBC };
+        let id = if m.state == Some(0) { 0xBB } else { 0xBC };
         let t = self.menu_center_text(1, id);
         self.sound_menu_mut().text = Some(t);
     }
@@ -130,9 +130,9 @@ impl Running<'_> {
         }
         let ev = self.list_inputs();
         let m = self.sound_menu();
-        let row = m.unk2.expect("the sound screen's row");
-        let mode = m.unk1.expect("the sound screen's mix");
-        let mix = m.unk3.expect("the sound screen's balance");
+        let row = m.state.expect("the sound screen's row");
+        let mode = m.setting.expect("the sound screen's mix");
+        let mix = m.balance.expect("the sound screen's balance");
         if ev & IN_BACK != 0 {
             self.lb_audio_call(SFX_BACK);
             self.game.menu.flow.entering_menu = 0;
@@ -143,7 +143,7 @@ impl Running<'_> {
         }
         if ev & (IN_UP | IN_DOWN) != 0 {
             self.lb_audio_call(SFX_MOVE);
-            self.sound_menu_mut().unk2 = Some(u8::from(row == 0));
+            self.sound_menu_mut().state = Some(u8::from(row == 0));
             self.sound_center_text();
             return;
         }
@@ -160,14 +160,14 @@ impl Running<'_> {
             let to = u8::from(dir > 0);
             if mode == to ^ 1 {
                 self.lb_audio_call(SFX_MOVE);
-                self.sound_menu_mut().unk1 = Some(to);
+                self.sound_menu_mut().setting = Some(to);
                 self.sound_channel_anim(j, to);
                 self.lb_set_sound_mode(i32::from(to));
             }
         } else if (dir < 0 && (mix as i8) > -100) || (dir > 0 && (mix as i8) < 100) {
             self.lb_audio_call(SFX_MOVE);
             let mix = (i32::from(mix) + 5 * dir) as u8;
-            self.sound_menu_mut().unk3 = Some(mix);
+            self.sound_menu_mut().balance = Some(mix);
             self.sound_volume_anim(j, mix, dir);
             self.set_sound_balance(mix as i8);
         }
@@ -200,8 +200,8 @@ impl Running<'_> {
             }
             return;
         }
-        let row = m.unk2.expect("the sound screen's row");
-        let mode = m.unk1.expect("the sound screen's mix");
+        let row = m.state.expect("the sound screen's row");
+        let mode = m.setting.expect("the sound screen's mix");
         if row == 0 {
             let lamp = self.options_node(Some(j), if mode == 0 { 0xA } else { 9 });
             self.anim_loop_stopped(lamp.expect("a mix's lamp"), LOOPS[0], MOBJ_MASK);
@@ -239,9 +239,9 @@ impl Running<'_> {
         let mode = self.lb_get_sound_mode();
         let menu = OptionMenu {
             cursor: 0x14,
-            unk1: Some(mode),
-            unk2: Some(0),
-            unk3: Some(self.sound_balance()),
+            setting: Some(mode),
+            state: Some(0),
+            balance: Some(self.sound_balance()),
             text: None,
         }
         .with_leftovers(self.data, addr);
@@ -254,7 +254,7 @@ impl Running<'_> {
         self.sound_channel_anim(j, mode);
         let c = self.options_node(Some(j), 6);
         self.options_set_frame(c, VOLUME_LEFT.end);
-        self.sound_volume_anim(j, menu.unk3.expect("the balance"), 0);
+        self.sound_volume_anim(j, menu.balance.expect("the balance"), 0);
         let s = self.options_node(Some(j), 0xE).expect("the rows' cursor");
         self.anim_loop(s, LOOPS[1]);
         let s = self.options_node(Some(j), 0xB);

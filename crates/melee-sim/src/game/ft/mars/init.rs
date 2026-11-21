@@ -33,12 +33,15 @@ impl Running<'_> {
         };
         if let Some(p) = pose {
             self.ext(
-                ext::FTANIM_80070FB4,
+                ext::FTANIM_SET_PART_ANIM_POSE,
                 &[Val::GObj(Some(gobj)), Val::Int(0), Val::Int(p)],
             );
         }
         if flag {
-            self.ext(ext::FTANIM_80070C48, &[Val::GObj(Some(gobj)), Val::Int(1)]);
+            self.ext(
+                ext::FTANIM_SHOW_PART_ANIM_POSE,
+                &[Val::GObj(Some(gobj)), Val::Int(1)],
+            );
         }
     }
 
@@ -48,7 +51,10 @@ impl Running<'_> {
     pub fn mars_on_item_invisible(&mut self, gobj: GObjId) {
         let item = self.game.fighter(gobj).item_gobj.expect("hiding no item");
         if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            self.ext(ext::FTANIM_80070CC4, &[Val::GObj(Some(gobj)), Val::Int(0)]);
+            self.ext(
+                ext::FTANIM_END_PART_ANIM,
+                &[Val::GObj(Some(gobj)), Val::Int(0)],
+            );
         }
     }
 
@@ -58,7 +64,10 @@ impl Running<'_> {
     pub fn mars_on_item_visible(&mut self, gobj: GObjId) {
         let item = self.game.fighter(gobj).item_gobj.expect("showing no item");
         if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
-            self.ext(ext::FTANIM_80070C48, &[Val::GObj(Some(gobj)), Val::Int(0)]);
+            self.ext(
+                ext::FTANIM_SHOW_PART_ANIM_POSE,
+                &[Val::GObj(Some(gobj)), Val::Int(0)],
+            );
         }
     }
 
@@ -66,11 +75,14 @@ impl Running<'_> {
     #[doc(alias = "ftMs_Init_OnItemDrop")]
     pub fn mars_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.ext(
-            ext::FTANIM_80070FB4,
+            ext::FTANIM_SET_PART_ANIM_POSE,
             &[Val::GObj(Some(gobj)), Val::Int(0), Val::Int(-1)],
         );
         if flag {
-            self.ext(ext::FTANIM_80070CC4, &[Val::GObj(Some(gobj)), Val::Int(1)]);
+            self.ext(
+                ext::FTANIM_END_PART_ANIM,
+                &[Val::GObj(Some(gobj)), Val::Int(1)],
+            );
         }
     }
 

@@ -54,7 +54,7 @@ impl Running<'_> {
         let me = self.results_end().clone();
         let d = &self.game.results.data;
         let frames = d.frames as u32;
-        if frames == 0 && d.x0_4 {
+        if frames == 0 && d.pause_first {
             self.game.set_db_pause_flag(0);
         }
         let cancel = canceled(me.outcome);
@@ -76,7 +76,7 @@ impl Running<'_> {
                 if cancel {
                     self.sfx_play(0xC350, 0x7F, 0x40);
                 } else {
-                    let w = &me.player_standings[usize::from(self.game.results.data.x6)];
+                    let w = &me.player_standings[usize::from(self.game.results.data.team_best)];
                     let (ck, fk, team) = (w.ckind, w.ftkind, w.team);
                     self.announce_winner(
                         i32::from(ck),
@@ -101,9 +101,9 @@ impl Running<'_> {
             match self.game.results.data.state {
                 1 => {
                     let frame = crate::lb::anim::current_frame(&self.game.objs, Some(j));
-                    if fp::frsp(f64::from(frame)) >= 10.0 && !self.game.results.data.x0_1 {
+                    if fp::frsp(f64::from(frame)) >= 10.0 && !self.game.results.data.rows_shown {
                         self.results_rows();
-                        self.game.results.data.x0_1 = true;
+                        self.game.results.data.rows_shown = true;
                     }
                     if fp::frsp(f64::from(frame)) >= 40.0 {
                         crate::lb::anim::set_framerate(&mut self.game.objs, Some(j), 0.0);
@@ -114,8 +114,8 @@ impl Running<'_> {
                 3 => self.results_stats_frame(gobj),
                 4 => {
                     let d = &mut self.game.results.data;
-                    if d.x3 != 0 {
-                        d.x3 -= 1;
+                    if d.end_frames != 0 {
+                        d.end_frames -= 1;
                     } else {
                         self.game.end_scene();
                     }

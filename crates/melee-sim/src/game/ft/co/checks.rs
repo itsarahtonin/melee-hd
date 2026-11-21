@@ -194,7 +194,7 @@ impl Running<'_> {
     /// What A does with the held item, `it_8026B30C` (the items' port).
     pub(crate) fn item_a_kind(&mut self, gobj: GObjId) -> i32 {
         let item = self.game.fighter(gobj).item_gobj;
-        code::call(self, IT_8026B30C, &[Val::GObj(item)]).int()
+        code::call(self, IT_USE_KIND, &[Val::GObj(item)]).int()
     }
 
     /// A grab, `ftCo_Catch_CheckInput`: the held item thrown first, else a shoulder and A
@@ -729,6 +729,7 @@ impl Running<'_> {
 /// The item P-link.
 const ITEM_P_LINK: u8 = 9;
 /// `it_8026B30C`, `itGetKind`, `itGetHoldKind`: the items' port.
-const IT_8026B30C: u32 = 0x8026_B30C;
+#[doc(alias("IT_8026B30C"))]
+const IT_USE_KIND: u32 = 0x8026_B30C;
 const IT_GET_KIND: u32 = 0x8026_B300;
 const IT_GET_HOLD_KIND: u32 = 0x8026_B320;

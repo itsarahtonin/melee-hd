@@ -18,12 +18,16 @@ use crate::vec::Vec3;
 #[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct DisplayState {
     /// `x0_0`, `x0_4`, `x0_6`.
-    pub x0_0: u8,
-    pub x0_4: u8,
-    pub x0_6: u8,
+    #[doc(alias("x0_0"))]
+    pub set_up: u8,
+    #[doc(alias("x0_4"))]
+    pub columns: u8,
+    #[doc(alias("x0_6"))]
+    pub flames_away: u8,
     /// `player_flags`: a loser's image taken once its pose's frames ran out.
     pub player_flags: [u8; 4],
-    pub x6: [u16; 4],
+    #[doc(alias("x6"))]
+    pub unused: [u16; 4],
     /// The pose each player took (0 to 2 a winner's, 4 a loser's).
     pub variant: [u8; 4],
     pub char_kind: [i32; 4],
@@ -38,7 +42,8 @@ pub struct DisplayState {
     pub dim_h1: [u16; 4],
     pub dim_h2: [u16; 4],
     pub score_tbl: [[i16; 4]; 4],
-    pub x22f4: [[i16; 4]; 4],
+    #[doc(alias("x22f4"))]
+    pub camera_steps: [[i16; 4]; 4],
 }
 
 /// The fighters' screen's statics (`lbl_8046E1B0`, `lbl_8046E38C`, `lbl_8046E39C`,
@@ -243,9 +248,9 @@ impl Running<'_> {
         let me = self.results_end().clone();
         let f = &mut self.game.results.fighters;
         f.state.match_end = me;
-        f.state.x0_0 = 1;
-        f.state.x0_4 = 0;
-        f.state.x0_6 = 0;
+        f.state.set_up = 1;
+        f.state.columns = 0;
+        f.state.flames_away = 0;
         f.state.dim_w1 = DIM_W1;
         f.state.dim_h1 = DIM_H1;
         f.state.dim_w2 = DIM_W2;
@@ -261,9 +266,9 @@ impl Running<'_> {
                 let team = usize::from(s.match_end.player_standings[i].team);
                 s.match_end.team_standings[team].is_big_loser = 1;
             }
-            s.x6[i] = 0;
+            s.unused[i] = 0;
             s.score_tbl[i] = SCORE_TBL[i];
-            s.x22f4[i] = X22F4[i];
+            s.camera_steps[i] = X22F4[i];
         }
     }
 
@@ -399,7 +404,7 @@ impl Running<'_> {
         let y = 0xF4 - (h / 2) * 2;
         let second = 4 + slot as u8;
         if k != 0 {
-            let columns = s.x0_4 != 0;
+            let columns = s.columns != 0;
             self.results_erase_color(slot);
             self.game.objs.display.push(Draw::Erase);
             self.camera_fighters(gobj, 0);
@@ -424,7 +429,7 @@ impl Running<'_> {
             let fighter = self.game.player_entity(slot as i32);
             let done = fighter.is_some_and(|g| !self.anim_frames_remaining(g));
             let s = &self.game.results.fighters.state;
-            if done && s.player_flags[slot] == 0 && s.x0_6 != 0 {
+            if done && s.player_flags[slot] == 0 && s.flames_away != 0 {
                 self.results_erase_color(slot);
                 self.game.objs.display.push(Draw::Erase);
                 self.camera_fighters(gobj, 0);
@@ -672,7 +677,7 @@ impl Running<'_> {
             self.game.results.fighters.jobjs[i] = child;
             child = child.and_then(|c| self.game.objs.jobjs[c].next);
         }
-        self.game.results.fighters.state.x0_4 = 1;
+        self.game.results.fighters.state.columns = 1;
     }
 
     /// The losers' flames hidden off to the left, and the background fading to dark, as
@@ -704,7 +709,7 @@ impl Running<'_> {
                     t.x = -300.0;
                     crate::hsd::jobj::set_translate(&mut self.game.objs.jobjs, j, t);
                 }
-                self.game.results.fighters.state.x0_6 = 1;
+                self.game.results.fighters.state.flames_away = 1;
             }
         }
     }

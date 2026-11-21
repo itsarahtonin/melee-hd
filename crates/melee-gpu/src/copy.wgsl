@@ -51,13 +51,16 @@ fn pixel(i: u32, jx: u32, jy: u32) -> vec4<u32> {
     let left = ex * w / cols;
     let n = max((ex + 1u) * w / cols, left + 1u) - left;
     let at = vec2<u32>(left, i / EFB_WIDTH * s + jy * rows);
-    var sum = vec4<f32>(0.0);
+    // Summed as integers, exact in any order: in floats a tie's rounding followed the sum's
+    // order, which a compiler's fast maths (Metal's) may change.
+    var sum = vec4<u32>(0u);
     for (var y = 0u; y < rows; y++) {
         for (var x = 0u; x < n; x++) {
-            sum += textureLoad(efb, at + vec2<u32>(x, y), 0);
+            sum += vec4<u32>(round(textureLoad(efb, at + vec2<u32>(x, y), 0) * 255.0));
         }
     }
-    let c = vec4<u32>(round(sum / f32(n * rows) * 255.0));
+    let count = n * rows;
+    let c = (2u * sum + count) / (2u * count);
     return vec4<u32>(c.rgb, select(255u, c.a, p.six != 0u));
 }
 

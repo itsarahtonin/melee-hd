@@ -143,7 +143,7 @@ pub fn drop_monster(
 /// Drops a random item at `pos` (none while bob-ombs rain), `it_8026F7C8`.
 #[doc(alias = "it_8026F7C8")]
 pub fn drop_random(r: &mut Running, pos: Vec3, vel: Option<Vec3>) -> Option<GObjId> {
-    if r.game.vs_x6() != 0 {
+    if r.game.vs_sudden_death() != 0 {
         return None;
     }
     let kind = pick(r.game);

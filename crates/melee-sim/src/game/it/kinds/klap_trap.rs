@@ -8,7 +8,7 @@
 
 use gekko_fp as fp;
 
-use super::super::item::{attr_of, change, change_state};
+use super::super::item::{change, change_state};
 use super::super::{item, item_mut, jobj_of, zako};
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
@@ -148,29 +148,12 @@ fn vars(game: &mut Game, gobj: GObjId) -> &mut KlapVars {
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM1 | ANIM2 | ANIM3 | ANIM4 | COLL2 | COLL3 | COLL4 => answers_false(r, gobj),
+        ANIM1 | ANIM2 | ANIM3 | ANIM4 | COLL2 | COLL3 | COLL4 => zako::answers_false(r, gobj),
         COLL1 => coll1(r, gobj),
         DMG_RECEIVED => damaged(r, gobj),
         _ => return None,
     })
 }
-
-/// The states' animation callbacks and the falling, held and spinning states' collision
-/// callbacks: they answer false.
-#[doc(alias = "itKlap_UnkMotion1_Anim")]
-#[doc(alias = "itKlap_UnkMotion2_Anim")]
-#[doc(alias = "itKlap_UnkMotion3_Anim")]
-#[doc(alias = "itKlap_UnkMotion4_Anim")]
-#[doc(alias = "itKlap_UnkMotion2_Coll")]
-#[doc(alias = "itKlap_UnkMotion3_Coll")]
-#[doc(alias = "itKlap_UnkMotion4_Coll")]
-pub fn answers_false(_r: &mut Running, _gobj: GObjId) -> bool {
-    false
-}
-
-/// The held state's physics, `itKlap_UnkMotion3_Phys`: nothing.
-#[doc(alias = "itKlap_UnkMotion3_Phys")]
-pub fn phys3(_r: &mut Running, _gobj: GObjId) {}
 
 /// Runs one of the Klap Trap's events, if `addr` is one.
 #[melee_callbacks::callbacks(Proc)]
@@ -180,7 +163,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         DESTROYED => destroyed(r, gobj),
         PHYS1 => phys1(r, gobj),
         PHYS2 => phys2(r, gobj),
-        PHYS3 => phys3(r, gobj),
+        PHYS3 => zako::still(r, gobj),
         PHYS4 => phys4(r, gobj),
         IN_BARREL => in_barrel(r, gobj),
         _ => return false,
@@ -298,13 +281,11 @@ pub fn fall(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 2, change::ANIM_UPDATE);
 }
 
-/// Falling's physics, `itKlap_UnkMotion2_Phys`: gravity, and its x rotation turning toward
-/// π/2 by 2° a tick.
+/// Falling's physics, `itKlap_UnkMotion2_Phys`: its fall speed off the vertical velocity
+/// ([`zako::flight_physics`]), and its x rotation turning toward π/2 by 2° a tick.
 #[doc(alias = "itKlap_UnkMotion2_Phys")]
 pub fn phys2(r: &mut Running, gobj: GObjId) {
-    let fall = attr_of(item(r.game, gobj)).f32(r.data, super::super::data::attr::FALL_SPEED);
-    let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), reg(fall)));
+    zako::flight_physics(r, gobj);
     let model = jobj_of(r.game, gobj).expect("a Klap Trap without a model");
     let mut rot = reg(r.game.objs.jobjs[model].rotate.x);
     let diff = fp::fsubs(reg(HALF_PI), rot);
@@ -351,13 +332,11 @@ fn spin_away(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 4, change::ANIM_UPDATE);
 }
 
-/// Knocked away's physics, `itKlap_UnkMotion4_Phys`: gravity, and its spin about y and z, each
-/// angle kept within a turn.
+/// Knocked away's physics, `itKlap_UnkMotion4_Phys`: its fall speed off the vertical velocity
+/// ([`zako::flight_physics`]), and its spin about y and z, each angle kept within a turn.
 #[doc(alias = "itKlap_UnkMotion4_Phys")]
 pub fn phys4(r: &mut Running, gobj: GObjId) {
-    let fall = attr_of(item(r.game, gobj)).f32(r.data, super::super::data::attr::FALL_SPEED);
-    let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), reg(fall)));
+    zako::flight_physics(r, gobj);
     let model = jobj_of(r.game, gobj).expect("a Klap Trap without a model");
     let mut q = r.game.objs.jobjs[model].rotate;
     let tau = 2.0 * std::f64::consts::PI;

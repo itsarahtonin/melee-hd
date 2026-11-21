@@ -44,8 +44,8 @@ pub const ZELDA: NayrusLove = NayrusLove {
     attrs: 0,
     reflect: 0,
     gfx: (1268, 1269),
-    gfx_cb: (addr::N_8013A830, addr::N_8013A8AC),
-    reflected: addr::N_8013ADB0,
+    gfx_cb: (addr::SPECIAL_N_GFX, addr::SPECIAL_AIR_N_GFX),
+    reflected: addr::SPECIAL_N_REFLECTED,
     hooks_on_change: false,
 };
 
@@ -254,13 +254,13 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     let z = &ZELDA;
     match a {
-        addr::N_8013A830 => g.zelda_special_n_gfx_ground(gobj, z),
-        addr::N_8013A8AC => g.zelda_special_n_gfx_air(gobj, z),
+        addr::SPECIAL_N_GFX => g.zelda_special_n_gfx_ground(gobj, z),
+        addr::SPECIAL_AIR_N_GFX => g.zelda_special_n_gfx_air(gobj, z),
         addr::SPECIAL_N_ENTER => g.zelda_special_n_enter(gobj, z),
         addr::SPECIAL_AIR_N_ENTER => g.zelda_special_air_n_enter(gobj, z),
         0x8013_AA38 => g.zelda_special_n_anim(gobj, z),
         0x8013_AACC => g.zelda_special_air_n_anim(gobj, z),
-        0x8013_AB60 | 0x8013_AB64 | addr::N_8013ADB0 => g.zelda_special_n_nothing(gobj),
+        0x8013_AB60 | 0x8013_AB64 | addr::SPECIAL_N_REFLECTED => g.zelda_special_n_nothing(gobj),
         0x8013_AB68 => g.zelda_special_n_phys(gobj),
         0x8013_AB9C => g.zelda_special_air_n_phys(gobj, z),
         0x8013_AC10 => g.zelda_special_n_coll(gobj, z),

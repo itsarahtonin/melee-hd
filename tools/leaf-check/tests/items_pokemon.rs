@@ -32,8 +32,8 @@ use melee_sim::game::gm::Unlocks;
 use melee_sim::game::it::ItKind;
 use melee_sim::game::it::kinds::{
     chicorita, entei, fire, freezer, fushigibana, hassam, hinoarashi, hitodeman, houou, kabigon,
-    kamex, kireihana, lizardon, lucky, lugia, maril, marumine, matadogas, mew, pippi, porygon2,
-    raikou, sonans, suikun, thunder, togepy, tosakinto, unknown,
+    kamex, kireihana, legendary, lizardon, lucky, lugia, maril, marumine, matadogas, mew, pippi,
+    porygon2, raikou, sonans, suikun, thunder, togepy, tosakinto, unknown,
 };
 use melee_sim::game::it::{self, CLASS_ITEM, pokemon};
 use melee_sim::game::state::Running;
@@ -293,20 +293,24 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802CF744", entei::enter_air),
     ("it_802C9E44", kabigon::out_landed),
     ("it_802CF470", entei::out_landed),
-    ("it_802D14D0", lugia::landed_nothing),
-    ("it_802D1580", lugia::take_off),
-    ("it_802D16D4", lugia::come_back),
+    ("it_802D14D0", legendary::landed_nothing),
+    ("it_802D1580", |r, g| {
+        legendary::take_off(r, g, &lugia::LUGIA)
+    }),
+    ("it_802D16D4", legendary::come_back),
     ("it_802D1830", lugia::sink),
     ("it_802D1A44", lugia::fire),
-    ("it_802D1D40", lugia::enter_air),
+    ("it_802D1D40", legendary::enter_air),
     ("it_802D208C", lugia::next_target),
-    ("it_802D23F4", lugia::blast_fly),
-    ("it_802D25B8", houou::landed_nothing),
-    ("it_802D2668", houou::take_off),
-    ("it_802D27B0", houou::come_back),
+    ("it_802D23F4", legendary::shot_out),
+    ("it_802D25B8", legendary::landed_nothing),
+    ("it_802D2668", |r, g| {
+        legendary::take_off(r, g, &houou::HO_OH)
+    }),
+    ("it_802D27B0", legendary::come_back),
     ("it_802D290C", houou::sink),
     ("it_802D2A58", houou::call_fire),
-    ("it_802D2BE0", houou::enter_air),
+    ("it_802D2BE0", legendary::enter_air),
     ("it_802D2D2C", houou::sacred_fire),
     ("it_802D2EF0", houou::burn),
     ("itFreezer_802CD12C", freezer::fly_up),
@@ -542,8 +546,9 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802CC1CC" => lizardon::flame(g, gobj, r(4) as i32),
         "it_802C9E24" => kabigon::forget(g, gobj, maybe(4)),
         "it_802CF450" => entei::forget(g, gobj, maybe(4)),
-        "itLugia_Logic17_EvtUnk" | "it_802D23D4" => lugia::forget(g, gobj, maybe(4)),
-        "it_802D25BC" | "it_802D2ED0" => houou::forget(g, gobj, maybe(4)),
+        "itLugia_Logic17_EvtUnk" | "it_802D23D4" | "it_802D25BC" | "it_802D2ED0" => {
+            legendary::forget(g, gobj, maybe(4))
+        }
         "itFreezer_802CD000" => freezer::forget(g, gobj, maybe(4)),
         "it_802CF884" => raikou::forget(g, gobj, maybe(4)),
         "it_802CFCB8" => suikun::forget(g, gobj, maybe(4)),

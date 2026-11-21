@@ -23,13 +23,18 @@ pub struct ResultsPlayerData {
     pub done: bool,
     /// `x0_1` to `x0_4`: the page's arrows (more above, more below, a page before, a
     /// page after).
-    pub x0_1: bool,
-    pub x0_2: bool,
-    pub x0_3: bool,
-    pub x0_4: bool,
+    #[doc(alias("x0_1"))]
+    pub more_above: bool,
+    #[doc(alias("x0_2"))]
+    pub more_below: bool,
+    #[doc(alias("x0_3"))]
+    pub page_before: bool,
+    #[doc(alias("x0_4"))]
+    pub page_after: bool,
     pub page: u8,
     /// `x2`: a computer's frames on its page.
-    pub x2: u16,
+    #[doc(alias("x2"))]
+    pub cpu_page_frames: u16,
     pub scroll_offset: f32,
     pub fighter_gobj: Option<GObjId>,
     /// `camera`: what `fn_8017A318` leaves in r3 (its C returns nothing), the last
@@ -45,29 +50,40 @@ pub struct ResultsPlayerData {
 /// `ResultsData` (`lbl_8046DBE8`).
 #[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct ResultsData {
-    pub x0_0: bool,
+    #[doc(alias("x0_0"))]
+    pub started: bool,
     /// `x0_1`: the panel's players' rows shown.
-    pub x0_1: bool,
+    #[doc(alias("x0_1"))]
+    pub rows_shown: bool,
     /// `x0_23`: the statistics' phase (0 idle, 1 set up, 2 active).
     pub phase: u8,
     /// `x0_4`, `x0_5`: the enter data's two flags (pause on the first frame; the panel's
     /// camera drawing only link 0).
-    pub x0_4: bool,
-    pub x0_5: bool,
-    pub x0_6: bool,
-    pub x0_7: bool,
+    #[doc(alias("x0_4"))]
+    pub pause_first: bool,
+    #[doc(alias("x0_5"))]
+    pub link0_only: bool,
+    #[doc(alias("x0_6"))]
+    pub unused_a: bool,
+    #[doc(alias("x0_7"))]
+    pub unused_b: bool,
     /// `x1`: the screen's state.
     pub state: u8,
     pub num_pages: u8,
     /// `x3`: the frames left before the screen ends.
-    pub x3: u8,
+    #[doc(alias("x3"))]
+    pub end_frames: u8,
     /// `x4`, `x5`, `x6`: the winner, the winning team, the team's best player.
-    pub x4: u8,
-    pub x5: u8,
-    pub x6: u8,
+    #[doc(alias("x4"))]
+    pub winner: u8,
+    #[doc(alias("x5"))]
+    pub winning_team: u8,
+    #[doc(alias("x6"))]
+    pub team_best: u8,
     /// `x8`: the screen's frames.
     pub frames: i32,
-    pub xc: f32,
+    #[doc(alias("xc"))]
+    pub rows_offset: f32,
     /// `pnlsce`, `flmsce`: the archive's two scenes.
     pub pnlsce: Option<DataRef>,
     pub flmsce: Option<DataRef>,
@@ -76,20 +92,28 @@ pub struct ResultsData {
     pub cobj: Option<crate::hsd::cobj::CObjId>,
     /// `x20`: the winner's emblem.
     pub emblem: Option<JObjId>,
-    pub x24: Option<JObjId>,
-    pub x28: Option<JObjId>,
-    pub x2c: Option<TextId>,
-    pub x30: Option<JObjId>,
-    pub x34: [Option<JObjId>; 6],
-    pub x4c: [Vec3; 6],
+    #[doc(alias("x24"))]
+    pub rows_anchor: Option<JObjId>,
+    #[doc(alias("x28"))]
+    pub title_anchor: Option<JObjId>,
+    #[doc(alias("x2c"))]
+    pub title_text: Option<TextId>,
+    #[doc(alias("x30"))]
+    pub title: Option<JObjId>,
+    #[doc(alias("x34"))]
+    pub row_anchors: [Option<JObjId>; 6],
+    #[doc(alias("x4c"))]
+    pub row_positions: [Vec3; 6],
     pub players: [ResultsPlayerData; 6],
 }
 
 /// `ResultsStatsInfo` (`lbl_8046E190`): the bonuses' page of a player (mode 2, its count).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct StatsInfo {
-    pub x0: u8,
-    pub x1: u8,
+    #[doc(alias("x0"))]
+    pub mode: u8,
+    #[doc(alias("x1"))]
+    pub count: u8,
 }
 
 /// The results screen's statics.
@@ -286,10 +310,10 @@ impl Running<'_> {
             x6 = Some(x4);
         }
         let d = &mut self.game.results.data;
-        d.x4 = x4;
-        d.x5 = x5;
+        d.winner = x4;
+        d.winning_team = x5;
         if let Some(x6) = x6 {
-            d.x6 = x6;
+            d.team_best = x6;
         }
     }
 
@@ -301,12 +325,12 @@ impl Running<'_> {
     #[doc(alias = "gm_Scene_Results_OnEnter")]
     pub fn results_on_enter(&mut self) {
         let enter = self.results_enter();
-        let (f0, f1) = (enter.x0_0, enter.x0_1);
+        let (f0, f1) = (enter.pause_first, enter.link0_only);
         let me = enter.match_end.clone();
         let r = &mut self.game.results;
         r.data = ResultsData {
-            x0_4: f0,
-            x0_5: f1,
+            pause_first: f0,
+            link0_only: f1,
             ..Default::default()
         };
         if canceled(me.outcome) {
@@ -323,18 +347,18 @@ impl Running<'_> {
             for i in 0..4u8 {
                 let n = self.results_bonus_count(i);
                 self.game.results.stats_info[usize::from(i)] = StatsInfo {
-                    x0: 2,
-                    x1: n.wrapping_mul(2).wrapping_add(2) as u8,
+                    mode: 2,
+                    count: n.wrapping_mul(2).wrapping_add(2) as u8,
                 };
             }
         } else {
             self.game
                 .results
                 .stats_info
-                .fill(StatsInfo { x0: 2, x1: 0 });
+                .fill(StatsInfo { mode: 2, count: 0 });
         }
         self.results_winners();
-        let x6 = usize::from(self.game.results.data.x6);
+        let x6 = usize::from(self.game.results.data.team_best);
         let w = &me.player_standings[x6];
         if w.pkind == PKIND_HUMAN && !canceled(me.outcome) && w.x3_u[0] & 0x02 != 0 {
             self.alarm_rumble_catch_up();
@@ -431,7 +455,7 @@ impl Running<'_> {
             8,
             false,
         );
-        g.world.gobj_mut(gobj).gxlink_prios = if g.results.data.x0_5 { 1 } else { 0x4D81 };
+        g.world.gobj_mut(gobj).gxlink_prios = if g.results.data.link0_only { 1 } else { 0x4D81 };
         self.add_canvas(0, Some(gobj), 9, 0xD, 0, 0xE, 0, 0x13);
         let name = if self.saved_us() {
             "SdRst.usd"
@@ -483,8 +507,8 @@ impl Running<'_> {
         let data = self.data;
         let me = self.results_end().clone();
         let (x4, x6) = (
-            usize::from(self.game.results.data.x4),
-            self.game.results.data.x6,
+            usize::from(self.game.results.data.winner),
+            self.game.results.data.team_best,
         );
         let flm = self.game.results.data.flmsce.expect("the flames' scene");
         let models = data.ptr(flm).expect("the flames' models");
@@ -608,24 +632,30 @@ impl Running<'_> {
 /// the padding after it and `x4`'s top byte.
 fn enter_byte(e: &ResultsMatchInfo, off: usize) -> u8 {
     match off {
-        1 => e.x1,
-        2 => e.x2,
-        3 => e.x3,
-        _ => (e.x4 >> 24) as u8,
+        1 => e.pose_p1,
+        2 => e.pose_p2,
+        3 => e.pose_p3,
+        _ => (e.pose_p4 >> 24) as u8,
     }
 }
 
 /// `ResultsMatchInfo` (`gmVsMelee_ResultsEnterData`): the results screen's enter data.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct ResultsMatchInfo {
-    pub x0_0: bool,
-    pub x0_1: bool,
-    pub x1: u8,
+    #[doc(alias("x0_0"))]
+    pub pause_first: bool,
+    #[doc(alias("x0_1"))]
+    pub link0_only: bool,
+    #[doc(alias("x1"))]
+    pub pose_p1: u8,
     /// The padding bytes a VS mode's clear leaves zero, which the debug mode's Result Test
     /// sets (`DebugResultsData`'s `x2` and `x3`).
-    pub x2: u8,
-    pub x3: u8,
-    pub x4: i32,
+    #[doc(alias("x2"))]
+    pub pose_p2: u8,
+    #[doc(alias("x3"))]
+    pub pose_p3: u8,
+    #[doc(alias("x4"))]
+    pub pose_p4: i32,
     pub match_end: MatchEnd,
 }
 

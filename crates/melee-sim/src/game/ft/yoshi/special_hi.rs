@@ -254,8 +254,8 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_HI_PHYS => g.air_physics_no_drift(gobj),
         addr::SPECIAL_HI_COLL => g.ys_special_hi_coll(gobj),
         addr::SPECIAL_AIR_HI_COLL => g.ys_special_air_hi_coll(gobj),
-        addr::S_8012DF18 => g.ys_release_tongue_item(gobj),
-        addr::S_8012E270 => g.ys_drop_egg(gobj),
+        addr::RELEASE_TONGUE_ITEM => g.ys_release_tongue_item(gobj),
+        addr::DROP_EGG => g.ys_drop_egg(gobj),
         _ => return false,
     }
     true

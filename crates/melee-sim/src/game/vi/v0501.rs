@@ -63,7 +63,7 @@ impl Running<'_> {
                 v.archive.file,
                 6,
             );
-            self.player_80031da8(i32::from(count), kirby_costume);
+            self.player_kirby_copy(i32::from(count), kirby_costume);
             self.game.set_player_flags_bit1(slot);
             self.game.set_player_ckind(slot, CharacterKind::Kirby.id());
             self.game.set_player_costume(slot, kirby_costume);
@@ -72,7 +72,7 @@ impl Running<'_> {
                 .set_player_pkind(slot, super::super::pl::player::PKIND_DEMO);
             self.game.set_player_facing(slot, 1.0);
             self.game.set_player_pos(slot, Vec3::ZERO);
-            self.game.set_player_unk4d(slot, count as i8);
+            self.game.set_player_kirby_copy_kind(slot, count as i8);
             self.player_create_demo(slot, slot + 0xA);
             let g = self.game.player_entity(slot);
             self.game.vi.v0501.kirbys[i - 1] = g;
