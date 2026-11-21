@@ -351,7 +351,9 @@ pub fn run_config(
     let c = config(r.game, addr);
     let (descs, count) = (c.descs, c.count);
     let lines = match c.callback.0 {
-        super::zebes::STAGE_BUBBLES | super::zebes::ISLAND_BUBBLES => super::zebes::lines(descs),
+        super::brinstar::STAGE_BUBBLES | super::brinstar::ISLAND_BUBBLES => {
+            super::brinstar::lines(descs)
+        }
         super::corneria::SPLASH_FRONT | super::corneria::SPLASH_BACK => {
             super::corneria::lines(descs)
         }
@@ -394,7 +396,7 @@ pub fn run_config(
                     super::corneria::SPLASH_FRONT | super::corneria::SPLASH_BACK => {
                         super::corneria::splash(r, cb.0, pos)
                     }
-                    _ => super::zebes::lava_bubble(r, cb.0, pos, i),
+                    _ => super::brinstar::lava_bubble(r, cb.0, pos, i),
                 }
                 spawned += 1;
             }

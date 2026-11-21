@@ -9,7 +9,7 @@
 //!
 //! Its kind (`x4`) is 0 for a trophy; Snag the Trophies' coins (2 and 3, `grfigureget.c`'s,
 //! with their stage object in `x14`) fall at their own speeds and show the question mark
-//! only until the stand's coins are all snagged or gone (`gr::figureget`).
+//! only until the stand's coins are all snagged or gone (`gr::snag_the_trophies`).
 
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
@@ -187,7 +187,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let v = ip.xDD4_itemVar.trophy_coin();
     if v.x4.get() != 0 {
         let stand = v.x14.get();
-        crate::game::gr::figureget::coin_gone(r.game, stand);
+        crate::game::gr::snag_the_trophies::coin_gone(r.game, stand);
     } else if held {
         let trophy = v.x0.get();
         r.count_match_trophy(trophy as u16, 1);
@@ -459,7 +459,7 @@ impl Running<'_> {
                 .get();
             let zoom = reg(self.game.camera.zoom());
             (self.game.db_pause_flag(1) || zoom < x48)
-                && !crate::game::gr::figureget::done(self.game, stand)
+                && !crate::game::gr::snag_the_trophies::done(self.game, stand)
         } else {
             let zoom = reg(self.game.camera.zoom());
             (self.game.db_pause_flag(1) && crate::game::gr::ground::flags(self.game, 0x330) == 0)

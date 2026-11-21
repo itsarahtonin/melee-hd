@@ -403,7 +403,7 @@ impl Importer<'_> {
         self.game.gr.pushon_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRZEBESROUTE_YAKUMONO);
         self.game.gr.zebesroute_yakumono = self.data_or_unhandled(yaku);
-        for (i, at) in gr::target::YAKUMONO_STATICS.into_iter().enumerate() {
+        for (i, at) in gr::target_test::YAKUMONO_STATICS.into_iter().enumerate() {
             let yaku = cap.u32(at);
             self.game.gr.target_yakumono[i] = self.data_or_unhandled(yaku);
         }
@@ -491,12 +491,12 @@ impl Importer<'_> {
         let yaku = cap.u32(GRCASTLE_YAKUMONO);
         self.game.gr.castle_yakumono = self.data_or_unhandled(yaku);
         let (pool, w) = (cap.u32(gr::vars::WIND_POOL), cap.u32(GRCASTLE_WIND));
-        self.game.gr.castle = gr::castle::Globals {
+        self.game.gr.castle = gr::peachs_castle::Globals {
             wind: (w != 0).then(|| (w.wrapping_sub(pool) / gr::vars::WIND_SIZE) as u8),
             step: self.f32_at(GRCASTLE_STEP),
             gusts: self.u8_at(GRCASTLE_GUSTS),
         };
-        let n = gr::pura::VTX_COUNT as u32;
+        let n = gr::poke_floats::VTX_COUNT as u32;
         let vtx: Vec<u32> = (0..n).map(|i| cap.u32(GRPURA_VTX + 0xC * i + 8)).collect();
         self.game.gr.pura_vtx_jobjs.clear();
         if vtx.iter().any(|&p| p != 0) {
@@ -1272,7 +1272,7 @@ impl Comparer<'_> {
             use melee_sim::game::mirror::Cx;
             self.compare_data(&format!("{name} data"), ours, self.u32(at));
         }
-        for (i, at) in gr::target::YAKUMONO_STATICS.into_iter().enumerate() {
+        for (i, at) in gr::target_test::YAKUMONO_STATICS.into_iter().enumerate() {
             use melee_sim::game::mirror::Cx;
             let ours = game.gr.target_yakumono[i];
             self.compare_data(&format!("grT yakumono_param {i} data"), ours, self.u32(at));
@@ -1463,7 +1463,7 @@ impl Comparer<'_> {
                 ],
             );
         }
-        for i in 0..gr::pura::VTX_COUNT {
+        for i in 0..gr::poke_floats::VTX_COUNT {
             if !on(gr::GrKind::Pura) {
                 break;
             }
@@ -2151,7 +2151,7 @@ impl Importer<'_> {
         let w = |s: &Self, a: u32| s.cap.u32(a);
         let z = {
             let mem = |a: u32| w(self, a);
-            let mut z = melee_sim::game::gr::zebes::Globals {
+            let mut z = melee_sim::game::gr::brinstar::Globals {
                 bounds: [
                     vec3_at(&mem, GRZEBES_BOUNDS),
                     vec3_at(&mem, GRZEBES_BOUNDS + 0xC),
@@ -2425,13 +2425,13 @@ impl Importer<'_> {
         let m = &mut self.game.gr.mutecity;
         m.track_live = mem(GRMUTECITY_TRACK_LIVE) as i32;
         m.order_before = mem(GRMUTECITY_ORDER - 4) as i32;
-        for i in 0..gr::mutecity::CARS as u32 {
+        for i in 0..gr::mute_city::CARS as u32 {
             m.order[i as usize] = mem(GRMUTECITY_ORDER + 4 * i) as i32;
         }
-        for i in 0..gr::mutecity::CARS as u32 {
+        for i in 0..gr::mute_city::CARS as u32 {
             let b = GRMUTECITY_CARS + 0x2C * i;
             let f = |o: u32| f32::from_bits(self.cap.u32(b + o));
-            let c = gr::mutecity::Car {
+            let c = gr::mute_city::Car {
                 distance: f(0),
                 spline_pos: f(4),
                 speed: f(8),
@@ -2445,7 +2445,7 @@ impl Importer<'_> {
             };
             let item = self.cap.u32(b + 0x24);
             let item = self.import_handle_gobj(item);
-            self.game.gr.mutecity.cars[i as usize] = gr::mutecity::Car { item, ..c };
+            self.game.gr.mutecity.cars[i as usize] = gr::mute_city::Car { item, ..c };
         }
     }
 }

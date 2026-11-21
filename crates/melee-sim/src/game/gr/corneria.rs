@@ -690,7 +690,7 @@ pub fn init_ship(r: &mut Running, gobj: GObjId) {
     }
     r.game.grounds[gid.0].x10_flags.b5 = true;
     anime::start_map(r.game, r.data, gobj, m, 0);
-    super::izumi::check_archive(r.game, r.data, 3);
+    super::fountain_of_dreams::check_archive(r.game, r.data, 3);
     let copy = create(r, 0, COPY_FRAME);
     let v = r.game.grounds[gid.0].u.corneria();
     v.copy = copy;

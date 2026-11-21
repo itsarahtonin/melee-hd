@@ -826,17 +826,17 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Final Destination's background compares green twice
 
-- **Where:** `grLast_8021B2E8` (the background's cycle), `crates/melee-sim/src/game/gr/last.rs` (`advance`).
+- **Where:** `grLast_8021B2E8` (the background's cycle), `crates/melee-sim/src/game/gr/final_destination.rs` (`advance`).
 - **Defect:** picking the next background color, it redraws until the color is neither gray nor the current one, but the test against the current color compares green twice and never blue.
 - **Effect:** a color that differs from the current one only in blue counts as the same and is drawn again, which takes more random numbers. Slippi 3.19's code saves and restores the seed around this call, and 3.16's never runs the timer, so only vanilla play feels it.
 - **melee-hd:** modeled.
 - **Fix:** compare blue.
 - **Fix impact:** changes the random sequence in vanilla play on Final Destination, so gameplay after it; breaks vanilla replay compatibility (not Slippi's, whose codes keep this off the seed).
-- **Source:** `crates/melee-sim/src/game/gr/last.rs:277`; [the oracle](oracle.md) (line 139).
+- **Source:** `crates/melee-sim/src/game/gr/final_destination.rs:277`; [the oracle](oracle.md) (line 139).
 
 ### Final Destination's fog alpha from the stack
 
-- **Where:** `grLast_8021C500` (the fog blend) handing `Ground_801C205C` a color, `crates/melee-sim/src/game/gr/last.rs` and `crates/melee-sim/src/game/gr/ground.rs`.
+- **Where:** `grLast_8021C500` (the fog blend) handing `Ground_801C205C` a color, `crates/melee-sim/src/game/gr/final_destination.rs` and `crates/melee-sim/src/game/gr/ground.rs`.
 - **Defect:** the stack color it hands the fog has an alpha it never set: the low byte of whatever the frame's earlier calls left in the slot.
 - **Effect:** none observable: nothing reads a fog's alpha.
 - **melee-hd:** stale (`Fog::stale_alpha`).
@@ -846,7 +846,7 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Pokémon Stadium's return zeroes a file's header
 
-- **Where:** Pokémon Stadium's return to the default stage, handing `grAnime_801C65B0` a buffer, `crates/melee-sim/src/game/gr/stadium.rs`.
+- **Where:** Pokémon Stadium's return to the default stage, handing `grAnime_801C65B0` a buffer, `crates/melee-sim/src/game/gr/pokemon_stadium.rs`.
 - **Defect:** it hands `grAnime_801C65B0` the transformation file's buffer instead of its archive, which zeroes the first words of that file's header.
 - **Effect:** not recorded (melee-hd's importer finds such a file through the header copy in the stage's `HSD_Archive`).
 - **melee-hd:** not recorded beyond the importer's handling.
@@ -856,13 +856,13 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Final Destination's swaying piece follows its generator after the generator dies
 
-- **Where:** `grLast_8021ADD0` (the swaying piece's process), `crates/melee-sim/src/game/gr/last.rs` (`proc_sway`).
+- **Where:** `grLast_8021ADD0` (the swaying piece's process), `crates/melee-sim/src/game/gr/final_destination.rs` (`proc_sway`).
 - **Defect:** the piece keeps its generator (`xE0`) after the generator's life ends, and each tick reads the generator's app-SRT through the freed block.
 - **Effect:** none observable in the matches checked: the generator's removal cleared its app-SRT pointer, so the process stops there; had the block gone to a new generator first, the piece would move that generator's particles.
 - **melee-hd:** modeled: the freed generator's slot is read as the original reads the block (slots are reused as the original reuses addresses), and a captured state imports the pointer as a freed slot.
 - **Fix:** clear `xE0` when the generator's life ends.
 - **Fix impact:** none in play.
-- **Source:** [engine notes, effects](engine.md#effects); `crates/melee-sim/src/game/gr/last.rs` (`proc_sway`).
+- **Source:** [engine notes, effects](engine.md#effects); `crates/melee-sim/src/game/gr/final_destination.rs` (`proc_sway`).
 
 ### A random pick between two entries draws below one
 
@@ -876,7 +876,7 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Mushroom Kingdom: a block's item drops its upward speed
 
-- **Where:** `grInishie1_801FBA34` and `grInishie1_801FBCEC` (an item out of a brick block), `crates/melee-sim/src/game/gr/inishie1.rs` (`pop_item`, `break_block`).
+- **Where:** `grInishie1_801FBA34` and `grInishie1_801FBCEC` (an item out of a brick block), `crates/melee-sim/src/game/gr/mushroom_kingdom.rs` (`pop_item`, `break_block`).
 - **Defect:** each copies the stage's item speed (`grI1_803B8268`, straight up at 5) into the velocity it hands `it_8026F7C8`, but passes 0 for its last argument, which tells `it_8026F7C8` to replace the velocity with a random sideways pop (`HSD_Randf`) and the item's own upward speed (`xCC_item_attr->x18`). The copied speed is computed and dropped; Peach's Castle's blocks pass 1 and keep theirs.
 - **Effect:** a ? block's item pops out sideways at random, at its kind's own upward speed, instead of straight up at 5, and the pop takes a random number.
 - **melee-hd:** modeled (`drop_random` with no velocity). Until 2026-10-27 melee-hd gave the item the stage's speed and drew nothing: `2026-10-07_23-52-34`'s match on Mushroom Kingdom differed at tick 2767: its block's next wait (`xC6`) took the pop's random number, and the seed fell behind (ssbm-rs's probe of the tick's draws, `$SSBM_RS_LOCAL/research/card-chain/vs-23-52-34-2767.draws.txt`).
@@ -886,27 +886,27 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Rainbow Cruise's planks, blocks and vanishing parts keep fields as the heap held them
 
-- **Where:** `grRCruise_801FF5B4` (the ship's setup: the planks' `Map_Chikuwa` block from `HSD_MemAlloc`), `grRCruise_80200B48` (the planks), `grRCruise_80201410` (the vanishing parts' block) and `grRCruise_80200074` (the falling blocks, in the stage object's `Ground`), `crates/melee-sim/src/game/gr/rcruise.rs` (`init_ship`, `init_vanish`, `init_blocks`).
+- **Where:** `grRCruise_801FF5B4` (the ship's setup: the planks' `Map_Chikuwa` block from `HSD_MemAlloc`), `grRCruise_80200B48` (the planks), `grRCruise_80201410` (the vanishing parts' block) and `grRCruise_80200074` (the falling blocks, in the stage object's `Ground`), `crates/melee-sim/src/game/gr/rainbow_cruise.rs` (`init_ship`, `init_vanish`, `init_blocks`).
 - **Defect:** none of them clears its block: a plank's second byte (`pad_01`, whose `b0` is its blink flag) and its fall speed (`x10`), a vanishing part's `x2`, and a falling block's second byte (`x1`, whose `b0` is its blink flag) stay as the heap held them; and `grRCruise_801FF168` sets only the second course copy's `anim_gobj` (`u.scroll`, the copy it follows), so the first copy's, in a `Ground` its creation doesn't clear, stays as the heap held it too.
 - **Effect:** none observable: each read of them comes after a write. A plank's `x10` is set to 0 as it starts to fall (state 2 into 3) before the fall reads it, its `b0` cleared as it comes back (state 4 into 5) before the blink toggles it, and its other bits never read; a falling block's `b0` is cleared in state 3, the only way into state 4, which toggles it, and its other bits never read; nothing reads a vanishing part's `x2`, nor the first course copy's `anim_gobj`: its process returns while the copy is frozen (`xC4`'s 0x80), which it is from its setup. In `2026-10-10_12-54-40`'s match on Rainbow Cruise (tick 17809) the planks held the menus' words (`0x80c6b688`, `0x1e0000`), the parts' halfwords and the third block's byte 0xBD, the high byte of a free cell's link the stage select's last free left there.
-- **melee-hd:** modeled: a session from power-on takes them from the heap's image (`game::gr::rcruise`'s `leftover_bytes`, the blocks' through the `Ground` read from it), a replay has them 0, as a fresh heap and Slippi's zeroed `Ground`; the first course copy's `anim_gobj` comes from the image as the `Ground`'s other fields do, and where the image knows no bytes there it's none: `player-sessions/stage-rules` stops at Rainbow Cruise's first tick (6938) on its 0x88888888 (2026-10-29, open).
+- **melee-hd:** modeled: a session from power-on takes them from the heap's image (`game::gr::rainbow_cruise`'s `leftover_bytes`, the blocks' through the `Ground` read from it), a replay has them 0, as a fresh heap and Slippi's zeroed `Ground`; the first course copy's `anim_gobj` comes from the image as the `Ground`'s other fields do, and where the image knows no bytes there it's none: `player-sessions/stage-rules` stops at Rainbow Cruise's first tick (6938) on its 0x88888888 (2026-10-29, open).
 - **Fix:** clear the blocks (or the fields) in the setups.
 - **Fix impact:** none in play.
 - **Source:** [engine notes, a session's heap leftovers](engine.md#uninitialized-values); the decompilation's `grrcruise.c`.
 
 ### Brinstar Depths: a debugging button steps Kraid's haze's animation
 
-- **Where:** `grKraid_801FE2D0` (the process of Kraid's "copy", map 1: a translucent smoky haze drawn behind him that follows him), `crates/melee-sim/src/game/gr/kraid.rs` (`proc_copy`).
+- **Where:** `grKraid_801FE2D0` (the process of Kraid's "copy", map 1: a translucent smoky haze drawn behind him that follows him), `crates/melee-sim/src/game/gr/brinstar_depths.rs` (`proc_copy`).
 - **Defect:** a debugging leftover: each time A is pressed on the second controller (the pad library's master status, `HSD_PadMasterStatus[1]`, whoever plays that port), it steps a counter (`grKr_804D6A0C`) through the haze's seven animations, starts that one on the haze and reports it to the debugger (`*** Req Effect Anime`).
 - **Effect:** in play, every new press of A on port 2 swaps the haze to the next animation, which visibly changes the haze behind Kraid, or removes it, while he's up; mashing A cycles through all seven during one of his animations. The haze is hidden while Kraid is down, and each of his state changes restarts it on the animation that state sets, though the counter keeps its place. Rendered on 2026-10-17 (ssbm-rs's GX render of the Brinstar Depths recording with the pads it was made with, against its playback, which never presses): the haze differs from 02:25.39 on. The haze's animations draw random numbers, so the presses shift the random sequence, which changes untracked cosmetic effects (hit sparks, the damage digits' shake) for long stretches; gameplay is unchanged. Under Slippi's playback the inputs reach the fighters, not the master statuses, so a replay never reproduces it: the oracle's Brinstar Depths recording parts from ssbm-rs's playback in the random seed on seven frames ([the oracle](oracle.md)).
 - **melee-hd:** modeled: it reads the master status as the original does. Under Slippi's rules a step puts the haze off the course a replay's playback takes, and the ticks whose logic draws around the haze's process are noted in the recording's metadata (`live::Haze`, [Slippi's own defects](slippi-bugs.md#playbacks-inputs-never-reach-the-controllers-brinstar-depths-haze)).
 - **Fix:** drop the button.
 - **Fix impact:** changes the copy's animation and the random sequence wherever port 2 presses A on Brinstar Depths in vanilla play; Slippi replays and online play (whose inputs don't go through the master statuses for this) would match a fixed game better, not worse.
-- **Source:** `crates/melee-sim/src/game/gr/kraid.rs` (`proc_copy`); the decompilation's `grkraid.c`.
+- **Source:** `crates/melee-sim/src/game/gr/brinstar_depths.rs` (`proc_copy`); the decompilation's `grkraid.c`.
 
 ### Brinstar Depths: the turn's speed bound stored back into itself
 
-- **Where:** `grKraid_801FE6D8` (a landing swipe turning the rock), `crates/melee-sim/src/game/gr/kraid.rs` (`swipe_hit`).
+- **Where:** `grKraid_801FE6D8` (a landing swipe turning the rock), `crates/melee-sim/src/game/gr/brinstar_depths.rs` (`swipe_hit`).
 - **Defect:** it writes the parameters' lowest turning speed (`map_rot_spd_min`) back into itself, a store into the stage's loaded data that changes nothing.
 - **Effect:** none observable.
 - **melee-hd:** left out (the value doesn't change).
@@ -957,36 +957,36 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Green Greens links a broken block's last corner through the wrong neighbour
 
-- **Where:** `grGreens_802150C4` (linking the collision of the blocks around a place that broke), `crates/melee-sim/src/game/gr/greens.rs` (`link_corners`).
+- **Where:** `grGreens_802150C4` (linking the collision of the blocks around a place that broke), `crates/melee-sim/src/game/gr/green_greens.rs` (`link_corners`).
 - **Defect:** of the four diagonal corners, the last (up and right) tests whether the block to the left of the broken place rests where the other three test the block on the corner's own side, then links the corner with the block to the right; at the grid's first place (row 0, column 0) that test reads the 32 bytes before the blocks' array, the heap cell's header.
 - **Effect:** the corner's collision is linked to its right-hand neighbour when the left one rests, and left unlinked when only the right one does; what that changes in play is not recorded. The header's first word is a link (an address or null), whose top four bits are never a resting block's 3.
 - **melee-hd:** modeled; the read before the array answers "not resting".
 - **Fix:** test the block to the right, as the other corners do.
 - **Fix impact:** changes Green Greens' block collision where it happens; breaks replay compatibility there.
-- **Source:** `crates/melee-sim/src/game/gr/greens.rs` (`link_corners`, `status_at`).
+- **Source:** `crates/melee-sim/src/game/gr/green_greens.rs` (`link_corners`, `status_at`).
 
 ### Flat Zone's oil panic frees its slick only when it has none
 
-- **Where:** `grFlatzone_802176BC`, `crates/melee-sim/src/game/gr/flatzone.rs` (`proc_oil`).
+- **Where:** `grFlatzone_802176BC`, `crates/melee-sim/src/game/gr/flat_zone.rs` (`proc_oil`).
 - **Defect:** when the controller starts the oil panic again while the last slick still lasts (state 3), the man's process hides him and means to free the slick's dynamic attribute area, but tests `xCC == NULL` instead of `!= NULL`: it calls `grDynamicAttr_801CA1C0` only with a null area, which returns at once, and otherwise keeps the pointer, which the new pour overwrites.
 - **Effect:** the old slick stays slippery until its own timer runs out instead of going when the man comes back. No oracle match restarts the oil panic during its slick.
 - **melee-hd:** modeled.
 - **Fix:** test `xCC != NULL`.
 - **Fix impact:** changes gameplay (the old slick's floor terrain) and breaks replay and Slippi compatibility.
-- **Source:** the decompilation's `grflatzone.c` (`grFlatzone_802176BC`); `crates/melee-sim/src/game/gr/flatzone.rs`, the comment in `proc_oil`.
+- **Source:** the decompilation's `grflatzone.c` (`grFlatzone_802176BC`); `crates/melee-sim/src/game/gr/flat_zone.rs`, the comment in `proc_oil`.
 ### Mute City's race order reaches the word before it
 
-- **Where:** `grMuteCity_801F1328` (the race), `crates/melee-sim/src/game/gr/mutecity.rs` (`steer_cars`).
+- **Where:** `grMuteCity_801F1328` (the race), `crates/melee-sim/src/game/gr/mute_city.rs` (`steer_cars`).
 - **Defect:** the insertion sort of the cars' order runs its inner loop down to `j == 0` and compares `arr[j]` with `arr[j - 1]`, so it reads and swaps `grMc_8049F440[-1]`, the last word of Brinstar's bubbles (`grZe_8049F170[19].x20`, a GObj pointer on Brinstar, zero from boot otherwise).
 - **Effect:** once a car other than car 0 leads the order and has gone further than the car that word names (car 0 for the zero word), the two swap: the word takes the leader's index and the order holds car 0 twice, so the leader drops out of the race's closeness and pack flags until the word comes back. On a console that played Brinstar earlier in the session the word is a pointer and the sort reads a car far past the table.
-- **melee-hd:** modeled: the word is `mutecity::Globals::order_before`, zero at a match's start as after boot; the comparer checks it against the trace on Mute City.
+- **melee-hd:** modeled: the word is `mute_city::Globals::order_before`, zero at a match's start as after boot; the comparer checks it against the trace on Mute City.
 - **Fix:** stop the inner loop at `j >= 1`.
 - **Fix impact:** changes the cars' flags, speeds and lanes, so their positions and their hits on fighters; breaks Mute City replays.
 - **Source:** the port's `steer_cars` and `Globals::order_before`; ssbm-rs's port (`Handle::add(arr, j - 1)` at `j == 0`).
 
 ### Mute City's car generator returns a stale register
 
-- **Where:** `grMuteCity_801F2AB0` (a car's smoke), stored by `grMuteCity_801F1A34`, `crates/melee-sim/src/game/gr/mutecity.rs` (`car_generator`, `Car::generator`).
+- **Where:** `grMuteCity_801F2AB0` (a car's smoke), stored by `grMuteCity_801F1A34`, `crates/melee-sim/src/game/gr/mute_city.rs` (`car_generator`, `Car::generator`).
 - **Defect:** the function never returns its generator: r3 holds what its last call left, `Ground_801C0498`'s load of `stage_info.x6B0`, the stage parameters' address (0 when the generator can't be made).
 - **Effect:** none observable: the car's `gen` word is only compared with null and cleared, and the parameters always exist, so it is non-null exactly when a generator was made.
 - **melee-hd:** modeled: `Car::generator` says whether the word holds the parameters' address, which the comparer checks.
@@ -996,7 +996,7 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Big Blue's Falcon Flyer looks for the road from a stack vector it never set
 
-- **Where:** `grBigBlue_801E8D64` (the Falcon Flyer's setup), `crates/melee-sim/src/game/gr/bigblue.rs` (`init_flyer`, `flyer_stale_pos`).
+- **Where:** `grBigBlue_801E8D64` (the Falcon Flyer's setup), `crates/melee-sim/src/game/gr/big_blue.rs` (`init_flyer`, `flyer_stale_pos`).
 - **Defect:** it searches for the road's height below `pos` (`grBigBlue_801EC58C`) before anything writes `pos`, a vector in its frame (`r1 + 0x3C`), so the search runs from the words the stage's setup left there.
 - **Effect:** the Falcon Flyer's starting height, and with it the players' start points, follow those words: where they put the search within 500 above or below the road, the Flyer starts at the road's height there plus its parameter's height; elsewhere at the parameter's height alone. On the console (ssbm-rs's interpreter, probed with `WATCH_ADDR`) the setup's hiding of the flying platforms (`HSD_JObjSetFlagsAll` on map 32's tree, just before map 35 is made) leaves two of its joints' addresses in x and y (the registers its calls four levels down save) and `Ground_GetStageGObj` leaves 0 in z: `0x80EF6860`, `0x80EF6900`, 0 under Slippi's playback of `stage-big-blue`. As floats the addresses are tiny negatives, so the search runs at the origin, where the road lies 0.00005 high, and finds it. ssbm-rs's port mode leaves other words there (its ports save no registers), tiny negatives too, so the Flyer starts at the same height in every run.
 - **melee-hd:** modeled: `flyer_stale_pos` gives the two joints' addresses from the allocator model, and without it the playback's, which the search can't tell from any other arena word.
@@ -1006,7 +1006,7 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Big Blue's relay platform check reads the flying platforms' object
 
-- **Where:** `grBigBlue_801EAB50` (whether the relay platform is near a point), `crates/melee-sim/src/game/gr/bigblue.rs` (`near_relay`).
+- **Where:** `grBigBlue_801EAB50` (whether the relay platform is near a point), `crates/melee-sim/src/game/gr/big_blue.rs` (`near_relay`).
 - **Defect:** it takes map 32's object (the flying platforms) where the relay platform is map 36, and tests the first byte of its variables for the relay platform's flying state (2): that byte is the top byte of the flying platforms' count of placed platforms, which the Falcon Flyer resets.
 - **Effect:** the check never finds the relay platform, so the flying platforms and the Falcon Flyer come in, and the Falcon Flyer keeps its speed, without regard to it (the platforms' height still avoids it through `grBigBlue_801EACE8`, which reads map 36).
 - **melee-hd:** modeled: `near_relay` reads the flying platforms' count, as the original does.
@@ -1016,7 +1016,7 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Big Blue's cars start their engines in their collision slot's sound slot
 
-- **Where:** `grBigBlue_801EE398` cases 5 and 6 (a car brought in from a side), `crates/melee-sim/src/game/gr/bigblue.rs` (`bring_car`).
+- **Where:** `grBigBlue_801EE398` cases 5 and 6 (a car brought in from a side), `crates/melee-sim/src/game/gr/big_blue.rs` (`bring_car`).
 - **Defect:** the engine sound starts in the stage object's sound slot numbered by the car's collision slot (0 to 29), while the volume and every later volume change go to the slot numbered by the car (0 to 3). The stage object has eight sound slots, so a car in a slot past 7 starts no sound.
 - **Effect:** a car brought in may drive silently, or its engine plays in another car's slot while the volume changes go to its own; the first cars, placed by `grBigBlue_801EC6C0`, use their car's slot.
 - **melee-hd:** modeled: `bring_car` starts the sound in the collision slot.
@@ -1026,7 +1026,7 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Big Blue's road marks its previous piece 0xFFFF in a seven-bit field
 
-- **Where:** `grBigBlue_801EB004` (the road's layout), `crates/melee-sim/src/game/gr/bigblue.rs` (`lay_road`).
+- **Where:** `grBigBlue_801EB004` (the road's layout), `crates/melee-sim/src/game/gr/big_blue.rs` (`lay_road`).
 - **Defect:** it stores 0xFFFF, meaning no piece, into the road's previous piece, a seven-bit field, which keeps 127.
 - **Effect:** none observable: nothing reads the previous piece.
 - **melee-hd:** modeled: the field holds 127, which the comparer checks.
@@ -1036,7 +1036,7 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Big Blue's platforms, Falcon Flyer and relay platform turn a point behind them and drop it
 
-- **Where:** `grBigBlue_801E6C60` (the flying platforms), `grBigBlue_801E93D8` (the Falcon Flyer), `grBigBlue_801EA05C` (the relay platform), `crates/melee-sim/src/game/gr/bigblue.rs` (`fly_platform`, `proc_flyer`, `proc_relay`).
+- **Where:** `grBigBlue_801E6C60` (the flying platforms), `grBigBlue_801E93D8` (the Falcon Flyer), `grBigBlue_801EA05C` (the relay platform), `crates/melee-sim/src/game/gr/big_blue.rs` (`fly_platform`, `proc_flyer`, `proc_relay`).
 - **Defect:** each turns a point ahead and a point behind by the road's slope (`lbVector_ApplyEulerRotation`) and adds its place to both, then uses only the point ahead.
 - **Effect:** none observable: the point behind is computed and dropped.
 - **melee-hd:** modeled (computed and dropped).
@@ -1046,7 +1046,7 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Big Blue's flying platforms keep their items' GObjs, which nothing reads or clears
 
-- **Where:** `grBigBlue_801E8A1C` (a flying platform's item), `grBigBlue_801E6C60` (its placing), `crates/melee-sim/src/game/gr/bigblue.rs` (`platform_item`, `place_platform`).
+- **Where:** `grBigBlue_801E8A1C` (a flying platform's item), `grBigBlue_801E6C60` (its placing), `crates/melee-sim/src/game/gr/big_blue.rs` (`platform_item`, `place_platform`).
 - **Defect:** the platform stores the item `it_8026BE84` made in its `x50` (an `Item_GObj*` as an integer), which no code reads; it's cleared only when the platform is placed again, so once the item is picked up, used up or gone it holds a freed GObj's address, which a later object may take.
 - **Effect:** none observable: nothing reads `x50`.
 - **melee-hd:** modeled: `x50` holds the item's handle, which the comparer pairs with the original's address.
@@ -1086,17 +1086,17 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Princess Peach's Castle: a Bullet Bill keeps pointing at its freed blaster
 
-- **Where:** `grCastle_801CE578` (a Bullet Bill's process), `crates/melee-sim/src/game/gr/castle.rs` (`proc_bill`).
+- **Where:** `grCastle_801CE578` (a Bullet Bill's process), `crates/melee-sim/src/game/gr/peachs_castle.rs` (`proc_bill`).
 - **Defect:** when the Bullet Bill's flight ends it destroys its blaster (`Ground_801C4A08(gp->u.castle11.xCC)`) but leaves `xCC` holding the freed GObj's address, and every later tick reads it, comparing it with null to decide whether a blaster is still due.
 - **Effect:** none observable: the dangling pointer is only compared with null, never followed, and being non-null it keeps the blaster from coming back, as a cleared field with a done flag would; the Bullet Bill goes once it has lingered.
 - **melee-hd:** modeled: the Bullet Bill keeps the freed blaster's handle, and the comparer pairs it by the freed slot.
 - **Fix:** clear `xCC` after destroying the blaster (the flight's done flag already keeps it from being made again).
 - **Fix impact:** none in play.
-- **Source:** `crates/melee-sim/src/game/gr/castle.rs` (`proc_bill`, "The blaster goes, but the Bullet Bill keeps pointing at it").
+- **Source:** `crates/melee-sim/src/game/gr/peachs_castle.rs` (`proc_bill`, "The blaster goes, but the Bullet Bill keeps pointing at it").
 
 ### Brinstar's bubbles' timer starts from the heap
 
-- **Where:** `grZebes_801D881C` (the stage's process) and its setup (`grZebes_801D8644`, which writes `grZebes_GroundVars5`'s other fields), `crates/melee-sim/src/game/gr/zebes.rs`.
+- **Where:** `grZebes_801D881C` (the stage's process) and its setup (`grZebes_801D8644`, which writes `grZebes_GroundVars5`'s other fields), `crates/melee-sim/src/game/gr/brinstar.rs`.
 - **Defect:** the setup never writes the timer (`*(s16*) &xF8`), which the process counts down from the first tick, calling `grZebes_801DAA08` and drawing `HSD_Randf` for the next period once it passes zero; the first period is whatever the stage object's block held.
 - **Effect:** on a console the first bubbles' time, and every random draw after it, depend on the heap's history: the main menu's attract match on Brinstar starts the timer from 2093 (the menus' bytes), where a fresh heap's 0 (and Slippi's zeroed block) draws on the match's second tick.
 - **melee-hd:** modeled: a session from power-on starts it from the heap's image (`game::leftovers`, the `Ground` read from it: 2093 in the main menu's attract match, as the console's), a replay from 0, as Slippi's playback does.
@@ -1126,27 +1126,27 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### The race's added lights read their falloff past a lone float
 
-- **Where:** `grPushOn_80218ED4` and `grPushOn_80218FC0` (`grpushon.c`), loading `grPushOn_803E7B74` and `grPushOn_803E7B90` through `HSD_LObjLoadDesc` (`LObjLoad`'s point case); in melee-hd `gr::pushon::add_light` (`FOLLOWER`, `SECOND`) and `hsd::lobj::load_static_point`.
+- **Where:** `grPushOn_80218ED4` and `grPushOn_80218FC0` (`grpushon.c`), loading `grPushOn_803E7B74` and `grPushOn_803E7B90` through `HSD_LObjLoadDesc` (`LObjLoad`'s point case); in melee-hd `gr::race_to_the_finish::add_light` (`FOLLOWER`, `SECOND`) and `hsd::lobj::load_static_point`.
 - **Defect:** each descriptor is a point light (flags 6 and 0xA) whose parameters point at one float, 16 (`grPushOn_804D4934`, `grPushOn_804D4948`, a value a shininess would take), but `LObjLoad` reads a point light's parameters as an `HSD_LightPointDesc` there: the float as the reference brightness, then the next two words of the small data as the reference distance and the distance function. Those words are the assertion strings that follow: the hidden follower gets the distance 0x6C6F626A (`"lobj"`, about 1.2e27) and the function 0x2E680000 (`".h"`), the specular light the distance 0 and the function 0x6A6F626A (`"jobj"`).
 - **Effect:** none observable: `GXInitLightDistAttn` turns distance attenuation off for a reference brightness of 1 or more, so both lights have none whatever the other two words hold, and the follower is never shown ([Unsure](#unsure)). The specular light keeps its allocation's shininess.
 - **melee-hd:** modeled: the two lights load the words the original reads (`AddedLight`), and the session comparer checks each light's parameters.
 - **Fix:** give each descriptor an `HSD_LightPointDesc` (or set its `attnflags` with raw coefficients), and the shininess where it was meant.
 - **Fix impact:** none on gameplay; the race's lighting could change with a real falloff.
-- **Source:** `grpushon.c:180` and `:516` (the descriptors), `lobj.c:961` (`LObjLoad`'s point case), the executable's small data at 0x804D4930 to 0x804D4950; `crates/melee-sim/src/game/gr/pushon.rs` (`AddedLight`).
+- **Source:** `grpushon.c:180` and `:516` (the descriptors), `lobj.c:961` (`LObjLoad`'s point case), the executable's small data at 0x804D4930 to 0x804D4950; `crates/melee-sim/src/game/gr/race_to_the_finish.rs` (`AddedLight`).
 
 ### The Underground Maze's added lights read their falloff past a lone float
 
-- **Where:** `grShrineRoute_8020AB58` and `grShrineRoute_8020AC44` (`grshrineroute.c`), loading `lobj0` and `lobj1` through `HSD_LObjLoadDesc` (`LObjLoad`'s point case); in melee-hd the race's shared `gr::pushon::add_light` (the maze's `shrineroute::FOLLOWER` and `SECOND`, its `LIGHTS`) and `hsd::lobj::load_static_point`.
+- **Where:** `grShrineRoute_8020AB58` and `grShrineRoute_8020AC44` (`grshrineroute.c`), loading `lobj0` and `lobj1` through `HSD_LObjLoadDesc` (`LObjLoad`'s point case); in melee-hd the race's shared `gr::race_to_the_finish::add_light` (the maze's `underground_maze::FOLLOWER` and `SECOND`, its `LIGHTS`) and `hsd::lobj::load_static_point`.
 - **Defect:** the race's ([above](#the-races-added-lights-read-their-falloff-past-a-lone-float)), in the maze's own copy: each descriptor is a point light (flags 6 and 0xA) whose parameters point at one float, 16 (`lobj0_shininess` at 0x804D4824, `lobj1_shininess` at 0x804D4838), which `LObjLoad` reads as an `HSD_LightPointDesc`: the float as the reference brightness, then the next two words of the small data as the reference distance and the distance function. The hidden follower gets the distance 0x6C6F626A (`"lobj"`, from the assertion string `"lobj.h"`) and the function 0x2E680000 (`".h"`), the specular light the distance 0 (the padding before `"gobj"`) and the function 0x676F626A (`"gobj"`).
 - **Effect:** none observable, as the race's: `GXInitLightDistAttn` turns distance attenuation off for a reference brightness of 1 or more, so both lights have none whatever the other two words hold, and the follower is never shown. The specular light keeps its allocation's shininess.
 - **melee-hd:** modeled: the two lights load the words the original reads (`AddedLight`), and the session comparer checks each light's parameters (`m6-oracle/meikyu` and the maze's sessions, [the oracle](oracle.md#sessions)).
 - **Fix:** give each descriptor an `HSD_LightPointDesc` (or set its `attnflags` with raw coefficients), and the shininess where it was meant.
 - **Fix impact:** none on gameplay; the maze's lighting could change with a real falloff.
-- **Source:** `grshrineroute.c:1344` to `:1408` (the descriptors and their loads), `lobj.c:961` (`LObjLoad`'s point case), the executable's small data at 0x804D4824 to 0x804D4844; `crates/melee-sim/src/game/gr/shrineroute.rs` (`FOLLOWER`, `SECOND`; their type is the race's `pushon::AddedLight`).
+- **Source:** `grshrineroute.c:1344` to `:1408` (the descriptors and their loads), `lobj.c:961` (`LObjLoad`'s point case), the executable's small data at 0x804D4824 to 0x804D4844; `crates/melee-sim/src/game/gr/underground_maze.rs` (`FOLLOWER`, `SECOND`; their type is the race's `race_to_the_finish::AddedLight`).
 
 ### Icicle Mountain: the adventure's climb's end tests a result its braking skips
 
-- **Where:** `stageGObj10_GObjProc` (`gricemt.c`, the adventure's Icicle Mountain's climb, map 10), `crates/melee-sim/src/game/gr/icemt.rs` (`proc_climb10`).
+- **Where:** `stageGObj10_GObjProc` (`gricemt.c`, the adventure's Icicle Mountain's climb, map 10), `crates/melee-sim/src/game/gr/icicle_mountain.rs` (`proc_climb10`).
 - **Defect:** the climb's end is tested as `var_r30 != 0 && x1A == xA6`, where `var_r30` is the speed step's answer (`grIceMt_801FA364`, whether no speed change is under way); the process takes the step only while climbing, so once the fields' list has run out (`x14_b2`, braking) the test reads a variable its C never set: the machine code compares r30 as the process loop left it (ssbm-rs transliterates the function for it).
 - **Effect:** none observed. The braking takes no speed step, so the speeds' cursor (`x1A`) stops where it was; r30 decides only when that cursor is at `xA6` with the end not yet reached, which needs the fields to run out within the last speed's change (the 60 ticks after the speeds' list's eleventh entry, about 2,900 ticks into the climb, with all 13 fields after the first two passed). Otherwise the test fails whatever r30 holds, and a climb that runs out of fields before its last speed never ends.
 - **melee-hd:** modeled where the result doesn't depend on r30; stops (a stale read, named) where it would.
@@ -1158,13 +1158,13 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### Brinstar's bubbles play their sound through the stage's object as if it were its `Ground`
 
-- **Where:** `grZebes_801DB088` (a bubble's tick), which `grZebes_801DB3CC` calls with the stage's GObj where `Ground_801C5440` wants the stage object's `Ground`, `crates/melee-sim/src/game/gr/zebes.rs` (`pop_sound`).
+- **Where:** `grZebes_801DB088` (a bubble's tick), which `grZebes_801DB3CC` calls with the stage's GObj where `Ground_801C5440` wants the stage object's `Ground`, `crates/melee-sim/src/game/gr/brinstar.rs` (`pop_sound`).
 - **Defect:** a bubble falling apart plays its sound in "slot 0" of what it takes for the stage object's sounds, which is the GObj's word at 0x20: the high half of its GX link mask (`gxlink_prios`). The old word is stopped as a sound handle unless it's -1, and the new sound's handle is written there.
 - **Effect:** a non-camera object's link mask is read by nothing, so the slot works as one, with one exception: the word starts at 0, not -1, so the first bubble to fall apart stops whatever sound holds handle 0. What that cuts off in play isn't recorded.
 - **melee-hd:** modeled: the handle lives in the stage GObj's mask's high half.
 - **Fix:** pass the stage object's `Ground`.
 - **Fix impact:** changes which sound the first falling bubble stops; nothing else.
-- **Source:** `crates/melee-sim/src/game/gr/zebes.rs` (`pop_sound`, `tick_bubble`); the decompilation's `grzebes.c`.
+- **Source:** `crates/melee-sim/src/game/gr/brinstar.rs` (`pop_sound`, `tick_bubble`); the decompilation's `grzebes.c`.
 
 ### The cutscene camera's orbit reads unwritten stack slots
 
@@ -2218,10 +2218,10 @@ The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so abou
 
 ### Pokémon Stadium's monitor tests a render-pass camera
 
-- **Where:** `grStadium_801D32D0` (the monitor's close-up), reading the game camera's CObj that only `Camera_8002A4AC` in the display pass writes; `crates/melee-sim/src/game/gr/stadium.rs`.
+- **Where:** `grStadium_801D32D0` (the monitor's close-up), reading the game camera's CObj that only `Camera_8002A4AC` in the display pass writes; `crates/melee-sim/src/game/gr/pokemon_stadium.rs`.
 - **Defect:** the close-up asks whether its player's box stays in the camera's view, which logic sees a tick late (two on a doubled round's second tick); when it leaves, the monitor draws random numbers for its next mode.
 - **Effect:** a doubled round as the box crosses the view's margin moves the mode change by a tick, and the random seed with it.
-- **melee-hd:** modeled against the camera the display pass brought up to date; the Slippi ruleset's PSCameraIndependentMonitor tests fixed bounds (`gr::stadium::zoom_keeps_player`), but still takes where the close-up copies from (`copy_x`, `copy_y`, what the monitor shows) through the same CObj, so a doubled round moves that by a tick under Slippi's rules too (watched by the display-phase tripwire since 2026-11-18: also taken through the other phase's view, a different origin counted into the playback note; after a pause and in the settling window each such read is counted, [the engine notes](engine.md#the-cameras-readers-after-a-pause)).
+- **melee-hd:** modeled against the camera the display pass brought up to date; the Slippi ruleset's PSCameraIndependentMonitor tests fixed bounds (`gr::pokemon_stadium::zoom_keeps_player`), but still takes where the close-up copies from (`copy_x`, `copy_y`, what the monitor shows) through the same CObj, so a doubled round moves that by a tick under Slippi's rules too (watched by the display-phase tripwire since 2026-11-18: also taken through the other phase's view, a different origin counted into the playback note; after a pause and in the settling window each such read is counted, [the engine notes](engine.md#the-cameras-readers-after-a-pause)).
 - **Fix:** test fixed bounds in logic.
 - **Fix impact:** changes the random sequence in vanilla play on Pokémon Stadium; Slippi's ruleset already has it.
 - **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes) (line 140).
@@ -2258,7 +2258,7 @@ The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so abou
 
 ### Kongo Jungle 64's birds start from the render-pass camera
 
-- **Where:** `stageGObj2_GObjProc@802100FC` (the birds' process, groldkongo.c:482) reading the CObj through `Camera_800307D0`, `crates/melee-sim/src/game/gr/oldkongo.rs` (`proc_birds`).
+- **Where:** `stageGObj2_GObjProc@802100FC` (the birds' process, groldkongo.c:482) reading the CObj through `Camera_800307D0`, `crates/melee-sim/src/game/gr/kongo_jungle_64.rs` (`proc_birds`).
 - **Defect:** the birds' flight starts at the camera's view edge (where it lies past 200 from the stage's centre) taken from the CObj the display pass writes, not from the camera's logic state.
 - **Effect:** a doubled round as the birds set off with the camera far back starts them at the edge of the view a tick older: the background's birds fly a little to one side. Nothing gameplay reads them (the random draws around the read are made whichever view, and only the display pass reads the joint), but a whole-state comparison between peers or with a replay's playback sees the joint differ.
 - **melee-hd:** modeled: the birds read the CObj the display pass keeps (`camera::ground_span`). Under Slippi's rules each start is also made with the view of the display pass's other phase and a different start noted in the recording's metadata (`playbackNote`), the match playing on as the original's (design call 9 of [the Slippi ruleset](slippi-ruleset.md), `live::DisplayPhase`); after a pause every start is noted, as the camera is off playback's course ([Slippi's defects](slippi-bugs.md#a-paused-matchs-recording)).
@@ -2268,7 +2268,7 @@ The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so abou
 
 ### Dream Land 64's clouds and stars start from the render-pass camera
 
-- **Where:** `grOldPupupu_80210D10` (the flights' process, groldpupupu.c:388) reading the CObj through `Camera_800307D0`, `crates/melee-sim/src/game/gr/oldpupupu.rs` (`proc_flights`).
+- **Where:** `grOldPupupu_80210D10` (the flights' process, groldpupupu.c:388) reading the CObj through `Camera_800307D0`, `crates/melee-sim/src/game/gr/dream_land.rs` (`proc_flights`).
 - **Defect:** a flight of one or three clouds or stars starts 50 past the camera's view edge (or past 200 from the stage's centre where the edge is nearer), the edge taken from the CObj the display pass writes.
 - **Effect:** a doubled round as a flight sets off with the camera far back starts it from the edge of the view a tick older, a little to one side. Nothing gameplay reads the flyers (the flight's random draws are made whichever view, and only the display pass reads their joints), but a whole-state comparison between peers or with a replay's playback sees them differ. Dream Land is a tournament stage.
 - **melee-hd:** modeled: the flights read the CObj the display pass keeps (`camera::ground_span`). Under Slippi's rules each start is also made with the view of the display pass's other phase and a different start noted in the recording's metadata (`playbackNote`), the match playing on as the original's (design call 9 of [the Slippi ruleset](slippi-ruleset.md), `live::DisplayPhase`); after a pause every start is noted, as the camera is off playback's course ([Slippi's defects](slippi-bugs.md#a-paused-matchs-recording)).
@@ -2314,10 +2314,10 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | IK with the effector on the chain's root | `resolveIKJoint1`, `hsd/jobj.rs` | Reads two registers and two stack vectors it never set; no joint on the disc has an IK role | [engine notes](engine.md#uninitialized-values) (line 52); `crates/melee-sim/src/hsd/jobj.rs:1573` |
 | A cutscene motion file another motion names | `ftMr_Init_GetMotionFileString`, `ftLg_Init_GetMotionFileString`, `ftKb_Init_GetMotionFileString`, `ftGk_Init_GetMotionFileString`, `game/ft/demo.rs` (`motion_symbol`) | Their switches set the table's index only for their cutscenes' motions (9 and 10, 11 and 14, 15), and index the table with the unset register otherwise; `ftDemo_SetArchiveData` asks only for those (`Player_80036E20`'s 4 to 8) | `crates/melee-sim/src/game/ft/demo.rs` (`motion_symbol` panics) |
 | A demo pose a kind's callback doesn't know | `ftMr_Init_UnkDemoCallbacks0`, `ftLg_Init_UnkDemoCallbacks0`, `ftKb_Init_UnkDemoCallbacks0`, `ftGk_Init_UnkDemoCallbacks0`, `game/ft/demo.rs` (`cutscene_anims`) | Each sets the demo animations' range only for its cutscene poses, and `ftDemo_CreateFighter` reads the range from its unset stack slots otherwise; the cutscenes make each kind only in its poses | `crates/melee-sim/src/game/ft/demo.rs` (`cutscene_anims` panics) |
-| The race's lights without a position, or fewer than three | `grPushOn_80218888`, `gr/pushon.rs` (`proc_lights`) | Measures each kept light's distance from `HSD_LObjGetPosition` without its answer, so a non-ambient light without a position WObj would leave the stack vector it never set; and reads the second and third nearest lights whatever the count, past the counted entries with fewer than three. The race's fighter lights all have positions, and there are ten | `crates/melee-sim/src/game/gr/pushon.rs` (`position_of`, the count's assertion) |
-| The Home-Run Contest's labels' camera off a non-perspective game camera | `fn_8021EB10` (grhomerun.c), `game/gr/homerun.rs` (`homerun_text_camera_render`) | Copies the game camera's field of view and aspect with `HSD_CObjGetPerspective`, which writes nothing for a camera of another projection, then sets its own perspective from the two stack floats it never set; the game camera is always a perspective | `crates/melee-sim/src/game/gr/homerun.rs` (`homerun_text_camera_render` stops) |
+| The race's lights without a position, or fewer than three | `grPushOn_80218888`, `gr/race_to_the_finish.rs` (`proc_lights`) | Measures each kept light's distance from `HSD_LObjGetPosition` without its answer, so a non-ambient light without a position WObj would leave the stack vector it never set; and reads the second and third nearest lights whatever the count, past the counted entries with fewer than three. The race's fighter lights all have positions, and there are ten | `crates/melee-sim/src/game/gr/race_to_the_finish.rs` (`position_of`, the count's assertion) |
+| The Home-Run Contest's labels' camera off a non-perspective game camera | `fn_8021EB10` (grhomerun.c), `game/gr/home_run_contest.rs` (`homerun_text_camera_render`) | Copies the game camera's field of view and aspect with `HSD_CObjGetPerspective`, which writes nothing for a camera of another projection, then sets its own perspective from the two stack floats it never set; the game camera is always a perspective | `crates/melee-sim/src/game/gr/home_run_contest.rs` (`homerun_text_camera_render` stops) |
 | A trophy field past the last | `Toy_803060BC` (toy.c), `game/ty/mod.rs` (`toy_param`), `game/gm/trophies.rs` | Its switch on the field has no default, so a field past 8 returns whatever its caller left in `f1`; every caller passes 0 to 8 (the Bowser cutscenes and the game over 0 to 5 for the stand's placement, the trophy screens 6 to 8) | `crates/melee-sim/src/game/ty/mod.rs` (`toy_param` asserts its fields); ssbm-rs ports the cutscenes' entries (`vi1201v1_Scene_OnEnter`, `vi1201v2_Scene_OnEnter`, `vi1202_Scene_OnEnter`) from their machine code for it |
-| The adventure's Icicle Mountain's fields' ids and indices | `grIceMt_801F686C`, `gr/icemt.rs` (`on_init`, `field_id_at`) | The setup picks the three fields after its list's first two by comparing the list's entries, which are indices into `icemt_field`, with the table's map ids, and then indexes `icemt_field` with the ids it picked; an id of 6 would read past the table into `grIm_803E40B0`. With the disc's list (indices 0 to 4 in turn) the picks are ids 2, 3 and 4, which index the table within it and happen to give the heights of the fields the list puts third to fifth | `crates/melee-sim/src/game/gr/icemt.rs` (`field_id_at` panics past the table) |
+| The adventure's Icicle Mountain's fields' ids and indices | `grIceMt_801F686C`, `gr/icicle_mountain.rs` (`on_init`, `field_id_at`) | The setup picks the three fields after its list's first two by comparing the list's entries, which are indices into `icemt_field`, with the table's map ids, and then indexes `icemt_field` with the ids it picked; an id of 6 would read past the table into `grIm_803E40B0`. With the disc's list (indices 0 to 4 in turn) the picks are ids 2, 3 and 4, which index the table within it and happen to give the heights of the fields the list puts third to fifth | `crates/melee-sim/src/game/gr/icicle_mountain.rs` (`field_id_at` panics past the table) |
 | Event 21's sleeping count with a partner gone | `gm_801BD46C` (gmevent.c), `game/gm/event.rs` (`event_asleep_proc`) | Counts the two computer Ice Climbers asleep by each one's second fighter (`Player_GetEntityAtIndex(i, 1)`) and tests `ftLib_IsSleeping_8008731C`'s answer only where there is one, but adds to the count by the answer's register (`var_r30`) either way: with Nana gone for the first, it reads what the register held before the loop; with her gone for the second, the first's answer counts again. The process is called straight from `HSD_GObj_RunProcs` (`blrl`), and r30 there is the low word of the scheduler's skip mask, which it loads at its start (`lwz r30, 0x4(r3)` from `HSD_GObjLibInitData`'s mask pointer, 0 with none) and keeps through the pass | `gmevent.c`'s `gm_801BD46C`; melee-hd starts the count's answer at the low word of the skip mask the pass read (`World::skip_links`, set just before `run_procs` and unchanged through it); `ck03-ev21` (task 25's session of Event 21, stood through) compares clean to its end, and whether a Nana is out in it isn't probed |
 | A score cap that can't apply | `gm_801BC4F4` (gmevent.c), `game/gm/event.rs` (`event_success`) | Caps a KO event's score with `if (score > -1) score = -1`, an unsigned compare with 0xFFFFFFFF that never holds, so the cap does nothing; the count is at most the KOs of five players | `crates/melee-sim/src/game/gm/event.rs` (`event_success`), the cap left out with this comment |
 | Quakes of another kind | `Camera_RequestQuake`, `game/camera.rs` | Never sets the length and stores the epicenter argument's register (its address); no caller passes such a kind | [engine notes](engine.md#uninitialized-values) (line 53); `crates/melee-sim/src/game/camera.rs:1382` |
@@ -2344,10 +2344,10 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | Venom's Arwings held still | `grVenom_80205F30`, `game/gr/venom.rs` | Tests a flag (`grVe_804D6A3C`) nothing writes, so the Arwings never hold; Corneria's counterpart holds them before the start | `crates/melee-sim/src/game/gr/venom.rs` (`FROZEN`, read through `ARWINGS.frozen` by the shared `corneria::proc_arwing`) |
 | Dancing Blade's switch from another state | Marth's side special switches, `game/ft/mars/special_s.rs` | Leaves the state it changes to unset | `crates/melee-sim/src/game/ft/mars/special_s.rs:219` |
 | No surface touched | `it_80276CEC`, `game/it/maplib.rs` | Stores an unset register as the surface | `crates/melee-sim/src/game/it/maplib.rs:365` |
-| Stadium's screen without its texture | `grStadium_801D1290`, `game/gr/stadium.rs` | Leaves its stack slot as it was when no texture is found; one always is | `crates/melee-sim/src/game/gr/stadium.rs:309` |
-| Stadium's monitor weights leaving no mode | `grStadium_801D2A60`, `game/gr/stadium.rs` | Draws until the mode differs from the current and last ones, forever if the weights leave none that can | `crates/melee-sim/src/game/gr/stadium.rs:1004`; [engine notes](engine.md#players-codes) (line 273) |
+| Stadium's screen without its texture | `grStadium_801D1290`, `game/gr/pokemon_stadium.rs` | Leaves its stack slot as it was when no texture is found; one always is | `crates/melee-sim/src/game/gr/pokemon_stadium.rs:309` |
+| Stadium's monitor weights leaving no mode | `grStadium_801D2A60`, `game/gr/pokemon_stadium.rs` | Draws until the mode differs from the current and last ones, forever if the weights leave none that can | `crates/melee-sim/src/game/gr/pokemon_stadium.rs:1004`; [engine notes](engine.md#players-codes) (line 273) |
 | A damage display that isn't one | `ifStatus_802F4EDC`, `game/hud/status.rs` | Reads a null display | `crates/melee-sim/src/game/hud/status.rs:342` |
-| Peach's Castle's path draw with no path left | `grCastle_801CE054`, `game/gr/castle.rs` | Takes the first entry of a stack array it never filled when all nine Bullet Bill paths are among the last three flown; only three are ever recorded | `crates/melee-sim/src/game/gr/castle.rs` (`pick_path`) |
+| Peach's Castle's path draw with no path left | `grCastle_801CE054`, `game/gr/peachs_castle.rs` | Takes the first entry of a stack array it never filled when all nine Bullet Bill paths are among the last three flown; only three are ever recorded | `crates/melee-sim/src/game/gr/peachs_castle.rs` (`pick_path`) |
 | A sound command's pan direction past 3 | `ftAction_80072320`, `game/ft/commands.rs` | Passes what `f31` holds | `crates/melee-sim/src/game/ft/commands.rs:973` |
 | PK Flash of another kind | `it_802AAA80`, `game/it/kinds/nesspkflash.rs` | Reads a register it never set | `crates/melee-sim/src/game/it/kinds/nesspkflash.rs:243` |
 | The main menu's light color for a list past the table | `mn_8022C010`, `mn_8022BFBC` (inlined in `fn_8022C128`, `mn_8022C304`), `game/mn/main.rs` (`light_color`) | A list kind past 0x21 falls out of the switch and returns its own number as the color group, and a group past 4 returns its own number as the color's address (inlined, a callee-saved register its caller left); every list the menu reaches is in the table | `crates/melee-sim/src/game/mn/main.rs` (`light_color`) |
@@ -2362,8 +2362,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | Particle commands past their tables | `hsd_8039930C` and the bank lookups, `hsd/particle.rs` | A texture group past the bank's table takes an unrelocated word for an address; a point joint past the table reads the particle links as joints; a callback index faults on the null `psCallback` | `crates/melee-sim/src/hsd/particle.rs:236`, `:850`, `:1602` |
 | A tornado particle without a generator | `calcTornadoLastPos`, `melee-render/src/hsd/psdisp.rs` | Reads a null generator's position | `crates/melee-render/src/hsd/psdisp.rs:181` |
 | Shape weights out of range | `PObjUpdateFunc`, `hsd/pobj.rs` | Writes past the weights for a channel out of their range | `crates/melee-sim/src/hsd/pobj.rs:582` |
-| A Big Blue platform callback on another joint | `fn_801E8560`, `game/gr/bigblue.rs` | Reads the joint's index, which it never set, for a joint other than 0 to 2, and pushes the platform past the three when none has that index; only joints 0 to 2 take the callback, and the platforms' indices are 0 to 2 | `crates/melee-sim/src/game/gr/bigblue.rs:1308` |
-| A Big Blue road piece without its joints | `grBigBlue_801EB004`, `game/gr/bigblue.rs` | Its asserts read the start and end joints it hasn't looked up when an earlier joint is missing; every piece's joints exist | `crates/melee-sim/src/game/gr/bigblue.rs:1827` |
+| A Big Blue platform callback on another joint | `fn_801E8560`, `game/gr/big_blue.rs` | Reads the joint's index, which it never set, for a joint other than 0 to 2, and pushes the platform past the three when none has that index; only joints 0 to 2 take the callback, and the platforms' indices are 0 to 2 | `crates/melee-sim/src/game/gr/big_blue.rs:1308` |
+| A Big Blue road piece without its joints | `grBigBlue_801EB004`, `game/gr/big_blue.rs` | Its asserts read the start and end joints it hasn't looked up when an earlier joint is missing; every piece's joints exist | `crates/melee-sim/src/game/gr/big_blue.rs:1827` |
 | A texture's LOD bias animated | `TObjUpdateFunc`, `hsd/tobj.rs` | Writes the bias into the loaded LOD descriptor every TObj from it shares; no animation has the channel | `crates/melee-sim/src/hsd/tobj.rs:538` |
 | Cameras without their parts | `makeProjectionMtx`, `HSD_CObjSetupViewingMtx`, `HSD_CObjSetRoll`, `hsd/cobj.rs` | Another projection type returns the caller's `r31`; a dirty view without an eye or interest builds from uninitialized stack and writes through a null WObj; a roll without an eye vector sets the up vector from uninitialized stack | `crates/melee-sim/src/hsd/cobj.rs:337`, `:358`, `:613` |
 | A light id that isn't one | `HSD_LightID2Index`, `hsd/lobj.rs` | Asserts and returns an uninitialized index | `crates/melee-sim/src/hsd/lobj.rs:257` |
@@ -2371,8 +2371,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | Waiting for banks nothing loads | `lbAudioAx_80027648`, `lb/audio.rs`; `HSD_SynthSFXBankDeflagSync`, `audio/bank.rs` | Waits, or spins with no wait point, forever | `crates/melee-sim/src/lb/audio.rs:1372`; `crates/melee-sim/src/audio/bank.rs:490` |
 | The background flash's color commands | `fn_80021C80` with `fn_80021C18`, `lb/bgflash.rs` | `fn_80021C18` takes the owner's commands and does nothing, so a script with one would stay on it forever | `crates/melee-sim/src/lb/bgflash.rs:363` |
 | `expf` and `powf` on large or NaN inputs | `expf`, `math.rs` | The series never settles for NaN or where the terms overflow (\|x\| about 12.7 to 14.7), and loops forever | `tools/leaf-check/tests/math.rs:154` |
-| Kongo Jungle N64's barrel holding no one | `stageGObj1_GObjProc` (groldkongo.c), `game/gr/oldkongo.rs` | A hold (state 1) with no fighter clears the state but falls into the shot's start all the same (no `break`), and eleven ticks later reads the null fighter's `p_link`; nothing leaves a held barrel without its fighter (`grOldKongo_802105C8` clears both together) | `crates/melee-sim/src/game/gr/oldkongo.rs` (`proc_barrel`, its hold after the shared `kongo::turn_and_swing`) |
-| Kongo Jungle's barrel holding nothing | `grKongo_801D577C` (grkongo.c), `game/gr/kongo.rs` | The same fall-through as Kongo Jungle N64's: a hold (state 1) with nothing held clears the state, falls into the shot and reads the null object's `p_link` in the same tick; nothing leaves a held barrel empty (`grKongo_801D828C` clears both together, and a held Klap Trap can't be hit) | `crates/melee-sim/src/game/gr/kongo.rs` (`proc_barrel`) |
+| Kongo Jungle N64's barrel holding no one | `stageGObj1_GObjProc` (groldkongo.c), `game/gr/kongo_jungle_64.rs` | A hold (state 1) with no fighter clears the state but falls into the shot's start all the same (no `break`), and eleven ticks later reads the null fighter's `p_link`; nothing leaves a held barrel without its fighter (`grOldKongo_802105C8` clears both together) | `crates/melee-sim/src/game/gr/kongo_jungle_64.rs` (`proc_barrel`, its hold after the shared `kongo_jungle::turn_and_swing`) |
+| Kongo Jungle's barrel holding nothing | `grKongo_801D577C` (grkongo.c), `game/gr/kongo_jungle.rs` | The same fall-through as Kongo Jungle N64's: a hold (state 1) with nothing held clears the state, falls into the shot and reads the null object's `p_link` in the same tick; nothing leaves a held barrel empty (`grKongo_801D828C` clears both together, and a held Klap Trap can't be hit) | `crates/melee-sim/src/game/gr/kongo_jungle.rs` (`proc_barrel`) |
 | A results pose's fighter writes its lengths into the shared attributes | `ftDk_Init_OnLoad`, `ftPe_Init_OnLoad` from `ftDemo_CreateFighter`, `game/ft/donkey/init.rs`, `game/ft/peach/init.rs` | A demo fighter's `x58C` is its demo animations' count (`ftData_80085B98`), so `ftData_80085E50` finds none of Donkey Kong's cargo walks (296 to 298) or Peach's float falls (18, 19) and the lengths come out 0.0, which the creation writes over the character's loaded attributes: the preload cache's copy the next match takes. Every creation writes them again before copying, and a pose never enters those states | `crates/melee-sim/src/game/ft/donkey/init.rs` (`dk_anim_frames`); `layout-sessions/dk-pe-ys`, tick 2395 on |
 | A parasol state without an animation | `it_8028B08C`, `game/it/kinds/parasol.rs` | Indexes its lengths by the state's animation, -1 for states 0 and 3, and reads the word before the table; its callers ask only for the held states, 4 to 10 | `crates/melee-sim/src/game/it/kinds/parasol.rs` (`anim_frames`) |
 | A sticking item's slope with no surface touched | `it_8027649C`, `game/it/maplib.rs` | Takes its angle from a stack vector it never set when the item touches no surface (`it_80276408` writes nothing then); the motion-sensor bomb sticks only after touching one | `crates/melee-sim/src/game/it/maplib.rs:291` |
@@ -2390,22 +2390,22 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A name list button past Erase | `mnName_80238964` (`mnname.c`), `game/mn/names.rs` | Returns `f1` unset for an index other than New, Sort and Erase; its only caller passes those three (melee-hd stops) | `crates/melee-sim/src/game/mn/names.rs` (`name_button_frame`) |
 | The item switch left neither forward nor back | `fn_80234C24` (`mnitemsw.c`), `game/mn/item_switch.rs` | Takes its way out from an uninitialized pointer when the flow leaves it with neither the entering flag nor B; only B and the scene's end leave it (melee-hd stops) | `crates/melee-sim/src/game/mn/item_switch.rs` (`item_switch_proc`) |
 | The keyboard's OK set twice | `mnNameNew_8023E0D8` (`mnnamenew.c`), `game/mn/names.rs` | Sets the OK button's joint (`jobjs[5]`) for the hovered key being OK, then again for it being back (`0x32`), whose joint is `jobjs[3]`; the keyboard opens on a key, so both are 0 | `crates/melee-sim/src/game/mn/names.rs` (`keys_first_frames`) |
-| Brinstar's platform's columns no bubble reaches | `grZebes_801D881C`, `game/gr/zebes.rs` | Leaves an inner column's x from an uninitialized stack array when no bubble's edge reaches it; while the platform is whole its bubbles have reached every column on every tick checked (melee-hd counts a stale read) | `crates/melee-sim/src/game/gr/zebes.rs:607` |
+| Brinstar's platform's columns no bubble reaches | `grZebes_801D881C`, `game/gr/brinstar.rs` | Leaves an inner column's x from an uninitialized stack array when no bubble's edge reaches it; while the platform is whole its bubbles have reached every column on every tick checked (melee-hd counts a stale read) | `crates/melee-sim/src/game/gr/brinstar.rs:607` |
 | The album's dialog's answer | `mnSnap_8025441C` (`mnsnap.c`), `game/mn/snap.rs` (`album_dialog_input`) | Declared to return a value its code never sets: it returns whatever `r3` holds at its end (its buttons' high word, or what its last call left there; ssbm-rs transliterates it from its machine code for that); its only caller, the album's think, drops the result | `crates/melee-sim/src/game/mn/snap.rs` (`album_dialog_input`) |
 | A swap that fails as it starts | `fn_802545C4` (`mnsnap.c`, state 11), `game/mn/snap.rs` (`album_state_moving`) | Tests the swap's start for 8 instead of busy, so a list that fails at its start with another result (a mount that finds no card, the card pulled since the pad alarm's last probe) is still stepped until it isn't busy, the queue's next call running none; nothing pulls a card between the alarm's probe and the move's A in any session (melee-hd stops) | `crates/melee-sim/src/lb/snap_read.rs` (`snap_task_step`) |
 | A broken snapshot's stream | `hsd_803B5EA0`, `hsd_803B5D70`, `hsd_803B5C4C`, `hsd_803B6BE4` (`hsd_3B5C.c`), `hsd/jpeg_decode.rs` | A run of zeros past a block's end writes coefficients past its 64, taking places from the DC tables that follow the zigzag order: into the last DCs, then past the work area; a value size of 0 (no code in 16 bits) reads bits until the stream ends; the bit reader looks at the byte after a 0xFF, and the markers' scan at the halfword on the stream's last byte, before testing the stream's end. The card's checksums keep a snapshot's bytes as HAL's encoder wrote them, so only a hand-made file reaches it (melee-hd models the DCs and stops past them) | `crates/melee-sim/src/hsd/jpeg_decode.rs` (`set_coef`, `bits`); `tools/leaf-check/tests/jpeg_decode.rs` |
 | The results' places in a match neither free for all nor team | `fn_80177748`, `game/gm/results_panel.rs` (`results_rows`) | Takes a player's place picture from `r24`, which only the free for all's and the team battle's branches set, so another `is_teams` carries the caller's register over; `is_teams` is always 0 or 1 (melee-hd stops) | `crates/melee-sim/src/game/gm/results_panel.rs` (`results_rows`) |
-| A race car out with all thirty out | `grBigBlueRoute_8020C530` and `grBigBlueRoute_8020C85C`'s inline `grBigBlueRoute_SpawnRoute`, `game/gr/bigblueroute.rs` (`spawn_due`) | The pick returns -1 when every one of the thirty cars is out, and the spawn then clears a flag of entry -1, writes its speeds, lane and roll into the 44 bytes before the cars' heap block, and shows the first car with a second hurtbox item; the parameters' count (`x40`) lets out 30 after the sign's car, exactly the thirty, so the pick always finds one (melee-hd stops) | `grbigblueroute.c` (`grBigBlueRoute_SpawnRoute`'s `route_idx != -1` test comes after the flag's write); `m6-fzero-race/fz-run`'s 30 picks |
+| A race car out with all thirty out | `grBigBlueRoute_8020C530` and `grBigBlueRoute_8020C85C`'s inline `grBigBlueRoute_SpawnRoute`, `game/gr/fzero_race.rs` (`spawn_due`) | The pick returns -1 when every one of the thirty cars is out, and the spawn then clears a flag of entry -1, writes its speeds, lane and roll into the 44 bytes before the cars' heap block, and shows the first car with a second hurtbox item; the parameters' count (`x40`) lets out 30 after the sign's car, exactly the thirty, so the pick always finds one (melee-hd stops) | `grbigblueroute.c` (`grBigBlueRoute_SpawnRoute`'s `route_idx != -1` test comes after the flag's write); `m6-fzero-race/fz-run`'s 30 picks |
 | A character's target stage past its table | `gm_801647F8` (gm_1601.c), `gm::one_player::target_stage` | The lookup's end test compares the table's stage kinds, bytes, with 0x148, which no byte equals: a character the table lacks would read past `lbl_803D5168` into the data after it. Every caller passes a character the one-door select offers, all of which the table lists (the Ice Climbers as Popo, turned back into 0xE first), so the loop always finds one | `crates/melee-sim/src/game/gm/one_player.rs` (stops by name past the table; `menus_audit::STOPS`) |
-| The Underground Maze's arena ending without its portal | `grShrineRoute_80208F70` (grshrineroute.c, the maze's state 4), `game/gr/shrineroute.rs` (`proc_maze`) | Once the portal's overlay is done, or when there's no portal (`xD4` 0), the state reads the portal's joint (`((HSD_GObj*) xD4)->hsd_obj`) for `grLib_801C9908` before its own null check guards the destroy, so with no portal it reads through a null GObj; the portal (map 5) is made as the arena opens (state 1, `grShrineRoute_80209AF0`) and taken only here, so state 4 always has one | `crates/melee-sim/src/game/gr/shrineroute.rs` (`proc_maze` stops: "Melee crashes: the Underground Maze's arena ends without its portal") |
-| The Underground Maze's lights without a position, or fewer than three | `grShrineRoute_8020A21C` (grshrineroute.c), `gr/pushon.rs` (`proc_lights`, the race's, shared over `shrineroute::LIGHTS`) | The race's: measures each kept light's distance from `HSD_LObjGetPosition` without its answer, so a non-ambient light without a position WObj would leave the stack vector it never set; and reads the second and third nearest lights whatever the count, past the counted entries with fewer than three. The maze's fighter lights all have positions, and there are fifteen | `crates/melee-sim/src/game/gr/pushon.rs` (`position_of`, the count's assertion) |
+| The Underground Maze's arena ending without its portal | `grShrineRoute_80208F70` (grshrineroute.c, the maze's state 4), `game/gr/underground_maze.rs` (`proc_maze`) | Once the portal's overlay is done, or when there's no portal (`xD4` 0), the state reads the portal's joint (`((HSD_GObj*) xD4)->hsd_obj`) for `grLib_801C9908` before its own null check guards the destroy, so with no portal it reads through a null GObj; the portal (map 5) is made as the arena opens (state 1, `grShrineRoute_80209AF0`) and taken only here, so state 4 always has one | `crates/melee-sim/src/game/gr/underground_maze.rs` (`proc_maze` stops: "Melee crashes: the Underground Maze's arena ends without its portal") |
+| The Underground Maze's lights without a position, or fewer than three | `grShrineRoute_8020A21C` (grshrineroute.c), `gr/race_to_the_finish.rs` (`proc_lights`, the race's, shared over `underground_maze::LIGHTS`) | The race's: measures each kept light's distance from `HSD_LObjGetPosition` without its answer, so a non-ambient light without a position WObj would leave the stack vector it never set; and reads the second and third nearest lights whatever the count, past the counted entries with fewer than three. The maze's fighter lights all have positions, and there are fifteen | `crates/melee-sim/src/game/gr/race_to_the_finish.rs` (`position_of`, the count's assertion) |
 | The characters-left tally's placement hides one icon | `fn_802FA8C0` (`ifstock.c`) | Past the list's -2, the loop meant to push each later icon off the screen indexes `x10C[i]` (the -2's own slot, which has no icon) instead of `x10C[j]`, so it moves nothing; no later icon exists either (the first frame makes them only up to the -2) | `ifstock.c` `fn_802FA8C0` (ported: `stock.rs`'s `tally_place_proc`) |
 | The joiners' tally's placement pushes off one icon only | `fn_802F8E08` (`ifstock.c`) | The same loop as `fn_802FA8C0`'s: past the costumes' -2, it indexes `x10C[i + 1]` (the -2's own slot, which has no icon, since the first frame `fn_802FA6C4` makes icons only up to the -2) instead of `x10C[j + 1]`, so it moves nothing; no later icon exists either, and the loop already stops at the first missing icon before it | `ifstock.c` `fn_802F8E08` (ported: `stock.rs`'s `joiners_place_proc`) |
 | The HUD's camera and light freed, their pointers kept | `ifAll_802F3A64` (`ifall.c`), `game/hud/all.rs` (`free_hud`) | Frees `ifAll_804A0FD8.gobj` and `gobj_2` without clearing them, so `ifAll_GetHUDGObj` would answer a freed GObj; nothing asks after a single-player stage's end frees the HUD (the clear screen, then the scene's end) | `crates/melee-sim/src/game/hud/all.rs` (`free_hud` keeps the handles, as the comparer's dangling-pointer check sees) |
 
 ## Unsure
 
-- **The race's follower light is hidden for good.** `grPushOn_80218ED4` adds a diffuse point light hidden (`HSD_LObjSetFlags(new_lobj, 0x20)`), and the lights' process (`grPushOn_80218888`) moves it 20 from the first fighter toward the nearer lights, points it at him and sets 0x400 every frame, but nothing clears its hidden flag, so it never lights anything; it may be a light HAL turned off on purpose. melee-hd models it (`gr::pushon::proc_lights`). Source: `grpushon.c:447` and `:509`.
+- **The race's follower light is hidden for good.** `grPushOn_80218ED4` adds a diffuse point light hidden (`HSD_LObjSetFlags(new_lobj, 0x20)`), and the lights' process (`grPushOn_80218888`) moves it 20 from the first fighter toward the nearer lights, points it at him and sets 0x400 every frame, but nothing clears its hidden flag, so it never lights anything; it may be a light HAL turned off on purpose. melee-hd models it (`gr::race_to_the_finish::proc_lights`). Source: `grpushon.c:447` and `:509`.
 - **Master Hand's grab takes its escape time from the hand.** A fighter caught by Master Hand (`ftMh_MS_388_80155A58`) gets its mash timer from `ftCo_800DA824` of the grabber, so it grows with his damage, rank and handicap rather than the victim's, as every other grab's does; it may be intended (the more he's hurt, the longer he holds). melee-hd models it for both hands (`hand_capture_enter`; Crazy Hand's `fn_8015B548` is the same code). Source: ssbm-rs's `ftMh_MS_388_80155A58` (`ftCommon_InitGrab(ft_1, 0, ftCo_800DA824(ft_2))`); `crates/melee-sim/src/game/ft/masterhand/grab.rs`.
 - **The size classes' old array goes back as a piece.** When the memory pieces' size classes outgrow their array, `GetMemoryEntry` (class.c) copies it into a new `HSD_MemAlloc` block and gives the old one back with `hsdFreeMemPiece`, its size rounded down to 32, not `HSD_Free`: a block of the main heap joins a size class's free list (and the class counts one more allocated, so its books balance), and the heap never gets it back. It may be intended, recycling the array's memory as a piece. melee-hd models it (`Heap::memory_entry`), and the heap's image lays the old array out as it goes (the classes' addresses). Source: the decompilation's `GetMemoryEntry`; `crates/melee-sim/src/hsd/heap.rs` (`memory_entry`).
 - **Yoshi's egg and Koopa Klaw's union words.** Yoshi's egg (`ftCo_800BBED4`) sets its shrink's frames left from `mv.co.walk.fast_anim_frame`, the same word as the frames it just set, and clears the Captain's up special's `vel.y`, the same word as its mash timer; Koopa Klaw's victim tests its struggle's frames as the Captain's `vel.y` and Whirling Fortress counts frames in a word its start clears under another name. These may be the decompilation's union names for the same intended fields rather than slips in the game's code. Source: [engine notes](engine.md#uninitialized-values) (lines 87 and 88).

@@ -554,7 +554,7 @@ impl Match {
         .kind
             == super::gr::GrKind::PStadium
         {
-            super::gr::stadium::FILES
+            super::gr::pokemon_stadium::FILES
                 .iter()
                 .map(|&name| (name, data.add(archive(name))))
                 .collect()
@@ -711,7 +711,7 @@ impl Match {
                 m.game.stage_info.ground_kind(),
                 super::gr::GrKind::Inishie1 | super::gr::GrKind::Inishie2
             )
-            && let Some(fast) = super::gr::inishie1::fast_song(m.game.stage_info.x98)
+            && let Some(fast) = super::gr::mushroom_kingdom::fast_song(m.game.stage_info.x98)
         {
             let name = crate::lb::audio::HPS_NAMES[fast as usize];
             let file = load(&format!("audio/{name}"));

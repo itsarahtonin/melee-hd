@@ -1,5 +1,5 @@
 //! Target Test's targets, `melee/it/kinds/itmato.c` (`It_Kind_Mato`): an enemy item the target
-//! stages put at their target points (`Ground_801C4210`, `gr::target`), which follows its
+//! stages put at their target points (`Ground_801C4210`, `gr::target_test`), which follows its
 //! point's joint and breaks at the first hit, counting the stage's targets down
 //! (`Ground_801C4338`; the last ends the match).
 //!

@@ -603,12 +603,12 @@ fn fighter_dead(game: &Game, gobj: GObjId) -> bool {
 fn eye_floor(game: &Game) -> f64 {
     let s = &game.stage_info;
     match s.grkind {
-        2 => reg(super::gr::castle::camera_floor(game)),
+        2 => reg(super::gr::peachs_castle::camera_floor(game)),
         14 => super::gr::corneria::camera_floor(game),
-        8 => reg(super::gr::zebes::camera_floor(s)),
-        5 => reg(super::gr::garden::camera_floor()),
-        31 => reg(super::gr::kinokoroute::camera_floor()),
-        67 => super::gr::homerun::camera_floor(game),
+        8 => reg(super::gr::brinstar::camera_floor(s)),
+        5 => reg(super::gr::jungle_japes::camera_floor()),
+        31 => reg(super::gr::mushroom_kingdom_route::camera_floor()),
+        67 => super::gr::home_run_contest::camera_floor(game),
         _ => fp::fneg(f64::from(f32::MAX)),
     }
 }

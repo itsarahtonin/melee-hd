@@ -573,17 +573,17 @@ impl Running<'_> {
                 continue;
             }
             let wind = match cb.map(|c| c.0) {
-                Some(crate::game::gr::oldpupupu::WIND_PUSH) => {
-                    crate::game::gr::oldpupupu::wind_push(self, ground, gobj)
+                Some(crate::game::gr::dream_land::WIND_PUSH) => {
+                    crate::game::gr::dream_land::wind_push(self, ground, gobj)
                 }
-                Some(crate::game::gr::greens::WIND_PUSH) => {
-                    crate::game::gr::greens::wind_push(self, ground, gobj)
+                Some(crate::game::gr::green_greens::WIND_PUSH) => {
+                    crate::game::gr::green_greens::wind_push(self, ground, gobj)
                 }
-                Some(crate::game::gr::garden::RIVER) => {
-                    crate::game::gr::garden::river(self, ground, gobj)
+                Some(crate::game::gr::jungle_japes::RIVER) => {
+                    crate::game::gr::jungle_japes::river(self, ground, gobj)
                 }
-                Some(crate::game::gr::castle::MOAT) => {
-                    crate::game::gr::castle::moat(self, ground, gobj)
+                Some(crate::game::gr::peachs_castle::MOAT) => {
+                    crate::game::gr::peachs_castle::moat(self, ground, gobj)
                 }
                 Some(other) => unported_call(&format!("a wind device's callback {other:#010x}")),
                 None => panic!("a wind device without a callback"),

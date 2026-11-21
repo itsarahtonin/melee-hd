@@ -515,9 +515,9 @@ fn search_points(
 /// Underground Maze's symbol check.
 fn point_check(r: &mut Running, cb: CodeRef, _pos: Vec3, _point: i32) -> bool {
     match cb.0 {
-        super::pushon::GOAL_CHECK => super::pushon::goal_check(r.game),
-        super::shrineroute::SYMBOL_CHECK => super::shrineroute::symbol_check(r.game),
-        super::heal::PORTAL_CHECK => super::heal::portal_check(r.game),
+        super::race_to_the_finish::GOAL_CHECK => super::race_to_the_finish::goal_check(r.game),
+        super::underground_maze::SYMBOL_CHECK => super::underground_maze::symbol_check(r.game),
+        super::rest_area::PORTAL_CHECK => super::rest_area::portal_check(r.game),
         _ => super::super::code::unported_call(&format!("a stage's point check {:#x}", cb.0)),
     }
 }

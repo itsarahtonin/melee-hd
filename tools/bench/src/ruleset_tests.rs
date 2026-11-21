@@ -1046,7 +1046,7 @@ fn slippi_dream_land_64_flights_note_a_doubled_round() {
 /// the benchmark match notes as it plays, on a real doubled round, copies from elsewhere.
 #[test]
 fn slippi_stadium_close_up_notes_a_doubled_round() {
-    use melee_sim::game::gr::stadium::SCREEN_ZOOM;
+    use melee_sim::game::gr::pokemon_stadium::SCREEN_ZOOM;
     doubled_round_notes(
         &melee_local_data::bench_replay("fox-marth-ps"),
         "Pokémon Stadium's close-up",

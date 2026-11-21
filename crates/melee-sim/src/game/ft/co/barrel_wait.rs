@@ -3,7 +3,7 @@
 //! intangible, where the barrel is, until the barrel shoots it out along the way it points; A
 //! or B asks the barrel to shoot at once.
 
-use super::super::super::gr::{ground, kongo, oldkongo};
+use super::super::super::gr::{ground, kongo_jungle, kongo_jungle_64};
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::ids::ms;
@@ -45,8 +45,8 @@ fn barrel_gobj(g: &Running) -> GObjId {
 #[doc(alias = "Ground_801C4DD0")]
 pub fn barrel_release(g: &mut Running) -> bool {
     match g.game.stage_info.ground_kind() {
-        GrKind::Kongo => kongo::barrel_release(g.game, barrel_gobj(g)),
-        GrKind::OldKongo => oldkongo::barrel_release(g.game, barrel_gobj(g)),
+        GrKind::Kongo => kongo_jungle::barrel_release(g.game, barrel_gobj(g)),
+        GrKind::OldKongo => kongo_jungle_64::barrel_release(g.game, barrel_gobj(g)),
         _ => {}
     }
     true
@@ -56,8 +56,8 @@ pub fn barrel_release(g: &mut Running) -> bool {
 #[doc(alias = "Ground_801C4E20")]
 pub fn barrel_letgo(g: &mut Running) -> bool {
     match g.game.stage_info.ground_kind() {
-        GrKind::Kongo => kongo::barrel_drop(g.game, barrel_gobj(g)),
-        GrKind::OldKongo => oldkongo::barrel_drop(g.game, barrel_gobj(g)),
+        GrKind::Kongo => kongo_jungle::barrel_drop(g.game, barrel_gobj(g)),
+        GrKind::OldKongo => kongo_jungle_64::barrel_drop(g.game, barrel_gobj(g)),
         _ => {}
     }
     true

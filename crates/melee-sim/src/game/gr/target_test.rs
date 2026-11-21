@@ -453,7 +453,7 @@ pub fn mario_water(r: &mut Running, fighter: GObjId) {
 /// effect 0x7530 scaled by `size`).
 #[doc(alias = "grTMario_8021FBE8")]
 pub fn mario_splash(r: &mut Running, pos: Vec3, size: f32) {
-    super::kinokoroute::splash(r, pos, size);
+    super::mushroom_kingdom_route::splash(r, pos, size);
 }
 
 /// The Ice Climbers' stage's map 2's setup, `stageGObj2_OnInit`: as [`init_coll`], then its

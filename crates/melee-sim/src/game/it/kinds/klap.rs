@@ -1,5 +1,5 @@
 //! Kongo Jungle's Klap Trap, `melee/it/kinds/itklap.c` (`It_Kind_Klap`): an enemy item the
-//! stage sends along the river on a path (`gr::kongo`'s map 11), snapping at random; it falls
+//! stage sends along the river on a path (`gr::kongo_jungle`'s map 11), snapping at random; it falls
 //! away when its path's object ends or it reaches the front, when hit (spinning off), and the
 //! stage's barrel can catch and shoot it.
 //!
@@ -205,7 +205,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itKlap_Logic10_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     if let Some(path) = vars(r.game, gobj).path_object.get() {
-        crate::game::gr::kongo::destroy_path(r, path);
+        crate::game::gr::kongo_jungle::destroy_path(r, path);
         vars(r.game, gobj).path_object.set(None);
     }
 }

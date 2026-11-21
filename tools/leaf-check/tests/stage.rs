@@ -212,12 +212,18 @@ fn stage_collision_proc() {
 
 #[test]
 fn last_proc_main() {
-    check_proc("grLast_8021AAB0", melee_sim::game::gr::last::proc_main);
+    check_proc(
+        "grLast_8021AAB0",
+        melee_sim::game::gr::final_destination::proc_main,
+    );
 }
 
 #[test]
 fn last_proc_sway() {
-    check_proc("grLast_8021ADD0", melee_sim::game::gr::last::proc_sway);
+    check_proc(
+        "grLast_8021ADD0",
+        melee_sim::game::gr::final_destination::proc_sway,
+    );
 }
 
 #[test]
@@ -452,7 +458,7 @@ fn pair_grkind(cap: &Capture) -> i32 {
     cap.u32(int_arg(cap, 0)) as i32
 }
 
-use melee_sim::game::gr::{last, setup};
+use melee_sim::game::gr::{final_destination, setup};
 
 /// Captures from the other tournament stages (Pokémon Stadium, Yoshi's Story, Fountain of Dreams,
 /// Dream Land) and Final Destination's quake, one directory each: see
@@ -612,34 +618,34 @@ fn collision_gobj() {
 
 #[test]
 fn last_on_init() {
-    check("grLast_OnInit", &|r, _, _| last::on_init(r));
+    check("grLast_OnInit", &|r, _, _| final_destination::on_init(r));
 }
 
 #[test]
 fn last_on_start() {
-    check("grLast_OnStart", &|r, _, _| last::on_start(r));
+    check("grLast_OnStart", &|r, _, _| final_destination::on_start(r));
 }
 
 #[test]
 fn last_create() {
     check("grLast_8021A7F4", &|r, cap, _| {
-        last::create(r, int_arg(cap, 0) as i32, setup::SETUP_FRAME);
+        final_destination::create(r, int_arg(cap, 0) as i32, setup::SETUP_FRAME);
     });
 }
 
 #[test]
 fn last_init_main() {
-    check_proc("grLast_8021A9C4", last::init_main);
+    check_proc("grLast_8021A9C4", final_destination::init_main);
 }
 
 #[test]
 fn last_set_phase() {
     check("grLast_8021B920", &|r, cap, maps| {
-        last::set_phase(
+        final_destination::set_phase(
             r,
             gobj_arg(cap, maps),
             int_arg(cap, 1) as i32,
-            last::CYCLE_PIECES_FRAME,
+            final_destination::CYCLE_PIECES_FRAME,
         )
     });
 }
@@ -907,18 +913,18 @@ fn ground_colors() {
                         b: 0x1E,
                         a: 0x28,
                     };
-                    last::blend_to(r.game, our_map(r, 3), c, 45.0)
+                    final_destination::blend_to(r.game, our_map(r, 3), c, 45.0)
                 },
             ),
             (
                 "grLast_8021C6AC",
                 &|ctx, _| invoke(ctx, 0x8021_C6AC, &[], &[]),
-                &|r, _| last::bright_colors(r.game),
+                &|r, _| final_destination::bright_colors(r.game),
             ),
             (
                 "grLast_8021C640",
                 &|ctx, _| invoke(ctx, 0x8021_C640, &[], &[]),
-                &|r, _| last::dark_colors(r.game),
+                &|r, _| final_destination::dark_colors(r.game),
             ),
         ],
     );
@@ -954,7 +960,7 @@ fn ground_destroy_and_create() {
                 "grLast_8021A7F4(9)",
                 &|ctx, _| invoke(ctx, 0x8021_A7F4, &[9], &[]),
                 &|r, _| {
-                    last::create(r, 9, last::CYCLE_PIECES_FRAME);
+                    final_destination::create(r, 9, final_destination::CYCLE_PIECES_FRAME);
                 },
             ),
             ("destroy map 9", &t[9], &o[9]),
@@ -1197,50 +1203,50 @@ thread_local! {
     static ENTRY: std::cell::Cell<[u32; 3]> = const { std::cell::Cell::new([0; 3]) };
 }
 
-use melee_sim::game::gr::battle;
+use melee_sim::game::gr::battlefield;
 
 /// Battlefield's setup: its backgrounds' animations spawn particles from the stage's bank.
 #[test]
 fn battle_on_init() {
-    check("grBattle_OnInit", &|r, _, _| battle::on_init(r));
+    check("grBattle_OnInit", &|r, _, _| battlefield::on_init(r));
 }
 
 #[test]
 fn battle_on_load() {
-    check("grBattle_OnLoad", &|r, _, _| battle::on_load(r));
+    check("grBattle_OnLoad", &|r, _, _| battlefield::on_load(r));
 }
 
 #[test]
 fn battle_on_start() {
-    check("grBattle_OnStart", &|r, _, _| battle::on_start(r));
+    check("grBattle_OnStart", &|r, _, _| battlefield::on_start(r));
 }
 
 #[test]
 fn battle_create() {
     check("grBattle_80219D84", &|r, cap, _| {
-        battle::create(r, int_arg(cap, 0) as i32, setup::SETUP_FRAME);
+        battlefield::create(r, int_arg(cap, 0) as i32, setup::SETUP_FRAME);
     });
 }
 
 #[test]
 fn battle_init_main() {
-    check_proc("grBattle_GObj0_Callback0", battle::init_main);
+    check_proc("grBattle_GObj0_Callback0", battlefield::init_main);
 }
 
 #[test]
 fn battle_init_floor() {
-    check_proc("grBattle_GObj6_Callback0", battle::init_floor);
+    check_proc("grBattle_GObj6_Callback0", battlefield::init_floor);
 }
 
 #[test]
 fn battle_proc_floor() {
-    check_proc("grBattle_GObj6_Callback2", battle::proc_floor);
+    check_proc("grBattle_GObj6_Callback2", battlefield::proc_floor);
 }
 
 #[test]
 fn battle_init_background() {
-    check_proc("grBattle_GObj1_Callback0", battle::init_background);
-    check_proc("grBattle_GObj2_Callback0", battle::init_background);
+    check_proc("grBattle_GObj1_Callback0", battlefield::init_background);
+    check_proc("grBattle_GObj2_Callback0", battlefield::init_background);
 }
 
 #[test]
@@ -1250,18 +1256,18 @@ fn battle_empty_procs() {
         "grBattle_GObj1_Callback2",
         "grBattle_GObj2_Callback2",
     ] {
-        check_proc(f, battle::empty);
+        check_proc(f, battlefield::empty);
     }
 }
 
 #[test]
 fn battle_init_sky() {
-    check_proc("grBattle_BG_Callback0", battle::init_sky);
+    check_proc("grBattle_BG_Callback0", battlefield::init_sky);
 }
 
 #[test]
 fn battle_proc_sky() {
-    check_proc("grBattle_BG_Callback2", battle::proc_sky);
+    check_proc("grBattle_BG_Callback2", battlefield::proc_sky);
 }
 
 #[test]
@@ -1493,7 +1499,7 @@ fn start_points_and_demo() {
             (
                 "grBattle_OnDemoInit",
                 &|ctx, _| invoke(ctx, 0x8021_9C98, &[0], &[]),
-                &|r, _| battle::on_demo_init(r.game),
+                &|r, _| battlefield::on_demo_init(r.game),
             ),
         ],
     );
@@ -1541,7 +1547,7 @@ fn battle_empty_callbacks_and_demo() {
         "grBattle_BG_Callback3",
     ];
     let theirs: Vec<_> = names.iter().map(|&n| call(n)).collect();
-    let ours = |r: &mut Running, _: &Maps| battle::empty(r, our_map(r, 0));
+    let ours = |r: &mut Running, _: &Maps| battlefield::empty(r, our_map(r, 0));
     let mut steps: Vec<Step> = names
         .iter()
         .zip(&theirs)
@@ -1555,9 +1561,9 @@ fn battle_empty_callbacks_and_demo() {
         .collect();
     let demo_theirs =
         |ctx: &Ctx, _: &Maps| invoke(ctx, leaf_check::sym("grBattle_OnDemoInit"), &[], &[]);
-    let demo_ours = |r: &mut Running, _: &Maps| battle::on_demo_init(r.game);
+    let demo_ours = |r: &mut Running, _: &Maps| battlefield::on_demo_init(r.game);
     let main_theirs = call("grBattle_GObj0_Callback0");
-    let main_ours = |r: &mut Running, _: &Maps| battle::init_main(r, our_map(r, 0));
+    let main_ours = |r: &mut Running, _: &Maps| battlefield::init_main(r, our_map(r, 0));
     steps.push(("grBattle_OnDemoInit", &demo_theirs, &demo_ours));
     steps.push(("grBattle_GObj0_Callback0", &main_theirs, &main_ours));
     on_state(&path, &steps);
@@ -1568,7 +1574,7 @@ fn battle_empty_callbacks_and_demo() {
 /// transformation cycle (`local/calls/stage-more/ps1`).
 #[test]
 fn stadium_unreached_entries() {
-    use melee_sim::game::gr::stadium;
+    use melee_sim::game::gr::pokemon_stadium;
     let dir = std::env::var("STAGE_MORE_CALLS").unwrap_or_else(|_| ssbm_rs_local(MORE_CALLS));
     let path = PathBuf::from(dir).join("ps1/grStadium_801D4548-call10.call");
     if !melee_capture::pack::exists(&path) {
@@ -1580,7 +1586,7 @@ fn stadium_unreached_entries() {
             move |ctx: &Ctx, _: &Maps| answer(fns::grStadium_801D4FF8(ctx, slot) as u32),
             move |r: &mut Running, _: &Maps| {
                 assert_eq!(
-                    u32::from(stadium::zoomed_on(r.game, slot)),
+                    u32::from(pokemon_stadium::zoomed_on(r.game, slot)),
                     answered(),
                     "grStadium_801D4FF8({slot})"
                 );
@@ -1599,7 +1605,7 @@ fn stadium_unreached_entries() {
         })
         .collect();
     let demo_theirs = |ctx: &Ctx, _: &Maps| fns::grStadium_OnDemoInit(ctx, 0);
-    let demo_ours = |r: &mut Running, _: &Maps| stadium::on_demo_init(r);
+    let demo_ours = |r: &mut Running, _: &Maps| pokemon_stadium::on_demo_init(r);
     let ready_theirs = |ctx: &Ctx, _: &Maps| fns::grStadium_801D410C(ctx);
     let ready_ours = |r: &mut Running, _: &Maps| r.stadium_ready(false);
     let game_theirs = |ctx: &Ctx, _: &Maps| fns::grStadium_801D40C8(ctx);
@@ -2732,7 +2738,7 @@ fn stage_ground_kinds() {
 /// so the joints they take out are there to take.
 #[test]
 fn stadium_piece_destroys() {
-    use melee_sim::game::gr::stadium;
+    use melee_sim::game::gr::pokemon_stadium;
     let more = std::env::var("STAGE_MORE_CALLS").unwrap_or_else(|_| ssbm_rs_local(MORE_CALLS));
     let mut paths: Vec<PathBuf> = melee_capture::pack::call_files(format!("{more}/ps1"))
         .into_iter()
@@ -2747,11 +2753,11 @@ fn stadium_piece_destroys() {
         return;
     };
     let init_t = |c: &Ctx, _: &Maps| invoke(c, 0x801D_1648, &[map_addr(c, 5)], &[]);
-    let init_o = |r: &mut Running, _: &Maps| stadium::init_grass(r, our_map(r, 5));
+    let init_o = |r: &mut Running, _: &Maps| pokemon_stadium::init_grass(r, our_map(r, 5));
     let grass_t = |c: &Ctx, _: &Maps| invoke(c, 0x801D_16FC, &[map_addr(c, 5)], &[]);
-    let grass_o = |r: &mut Running, _: &Maps| stadium::destroy_grass(r, our_map(r, 5));
+    let grass_o = |r: &mut Running, _: &Maps| pokemon_stadium::destroy_grass(r, our_map(r, 5));
     let default_t = |c: &Ctx, _: &Maps| invoke(c, 0x801D_1624, &[map_addr(c, 5)], &[]);
-    let default_o = |r: &mut Running, _: &Maps| stadium::destroy_default(r, our_map(r, 5));
+    let default_o = |r: &mut Running, _: &Maps| pokemon_stadium::destroy_default(r, our_map(r, 5));
     on_state(
         path,
         &[

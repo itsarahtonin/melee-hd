@@ -2,7 +2,7 @@
 //! original allocates with `HSD_MemAlloc` and frees with `HSD_Free`, its parameters' pointer
 //! and the transformation files loaded.
 
-use melee_sim::game::gr::stadium::{SCREEN_FEED, SCREEN_TEXT, SCREEN_ZOOM, Screen};
+use melee_sim::game::gr::pokemon_stadium::{SCREEN_FEED, SCREEN_TEXT, SCREEN_ZOOM, Screen};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::UserData;
 use melee_sim::game::structs::HSD_ImageDesc;
@@ -145,7 +145,10 @@ pub(crate) fn compare_screen(cmp: &mut Comparer, path: &str, which: u8, t: u32) 
 pub(crate) fn import_statics(imp: &mut Importer) {
     let yaku = imp.cap.u32(YAKUMONO);
     imp.game.gr.stadium.yakumono = imp.data_or_unhandled(yaku);
-    for (i, name) in melee_sim::game::gr::stadium::FILES.iter().enumerate() {
+    for (i, name) in melee_sim::game::gr::pokemon_stadium::FILES
+        .iter()
+        .enumerate()
+    {
         imp.game.gr.stadium.files[i] = imp.data.archive_named(name);
     }
     // The transformation buffer's address, as map 2 holds it.

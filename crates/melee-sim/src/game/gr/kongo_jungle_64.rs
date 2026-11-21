@@ -16,7 +16,7 @@ use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Running};
 use super::data::{OLDKONGO_CALLBACKS, StageCallbacks};
 use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, update_map_coll};
-use super::kongo::{
+use super::kongo_jungle::{
     Barrel, BarrelView, catch_fighter, drop_fighter, init_barrel, let_go, turn_and_swing,
 };
 use super::{anime, grlib, material, setup, zako};
@@ -192,7 +192,7 @@ pub fn proc_stage(r: &mut Running, gobj: GObjId) {
 }
 
 /// The barrel's process (map 1), `stageGObj1_GObjProc`: its turn and swing (Kongo Jungle's,
-/// `kongo::turn_and_swing`), then a fighter caught: held while its countdown runs (1, or let go when gone), the shot's animation (2),
+/// `kongo_jungle::turn_and_swing`), then a fighter caught: held while its countdown runs (1, or let go when gone), the shot's animation (2),
 /// and the shot ten ticks later (3), then clear (4).
 #[doc(alias = "stageGObj1_GObjProc@8020F888")]
 pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
@@ -246,7 +246,7 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
                 }
                 let a = mem(fp::fmuls(reg(57.295_78), a));
                 if r.game.world.gobj(keep).p_link == 8 {
-                    r.shoot_from_stage_barrel(keep, pos, &super::kongo::shot_hit(words), a);
+                    r.shoot_from_stage_barrel(keep, pos, &super::kongo_jungle::shot_hit(words), a);
                 }
                 r.game.grounds[g.0].u.oldkongo().hold = 4;
                 r.object_sound(Some(g), 0, 0x12A);
@@ -280,7 +280,7 @@ fn yakumono(game: &Game) -> DataRef {
     param(game).0
 }
 
-/// Kongo Jungle N64's barrel (Kongo Jungle's, `kongo::Barrel`): its swing's stop and interval
+/// Kongo Jungle N64's barrel (Kongo Jungle's, `kongo_jungle::Barrel`): its swing's stop and interval
 /// are Kongo Jungle's run and pause, its shot's bounds its hold's.
 pub const BARREL: Barrel = Barrel {
     vars: barrel_vars,
@@ -306,17 +306,17 @@ pub const BARREL: Barrel = Barrel {
 };
 
 /// The barrel's catch test for a fighter, as the fighter code calls it
-/// (`kongo::catch_fighter`).
+/// (`kongo_jungle::catch_fighter`).
 pub fn barrel_catch(r: &mut Running, gobj: GObjId, fighter: GObjId) -> bool {
     catch_fighter(r, gobj, fighter, &BARREL)
 }
 
-/// The barrel lets its fighter go early, as the fighter code asks it (`kongo::let_go`).
+/// The barrel lets its fighter go early, as the fighter code asks it (`kongo_jungle::let_go`).
 pub fn barrel_release(game: &mut Game, gobj: GObjId) {
     let_go(game, gobj, &BARREL)
 }
 
-/// The barrel drops its fighter, as the fighter code asks it (`kongo::drop_fighter`).
+/// The barrel drops its fighter, as the fighter code asks it (`kongo_jungle::drop_fighter`).
 pub fn barrel_drop(game: &mut Game, gobj: GObjId) {
     drop_fighter(game, gobj, &BARREL)
 }

@@ -31,7 +31,7 @@ pub fn with_stage_coll<R>(
     data: &Archives,
     f: impl FnOnce(&mut Coll<'_, StageColl, ObjCollHooks<'_>>) -> R,
 ) -> R {
-    let landing = crate::game::gr::yorster::Landing::of(game);
+    let landing = crate::game::gr::yoshis_island::Landing::of(game);
     let mut hooks = ObjCollHooks {
         objs: &mut game.objs,
         data,

@@ -916,7 +916,7 @@ impl Session {
             names.push(name.trim_start_matches('/'));
         }
         if grkind == super::gr::GrKind::PStadium {
-            names.extend(super::gr::stadium::FILES);
+            names.extend(super::gr::pokemon_stadium::FILES);
         }
         for name in names {
             let files = &self.game.ft.data.files;
@@ -934,7 +934,7 @@ impl Session {
                 .push((name.to_owned(), file.entrynum, file.bytes.len() as u32));
         }
         if grkind == super::gr::GrKind::PStadium {
-            for (i, name) in super::gr::stadium::FILES.iter().enumerate() {
+            for (i, name) in super::gr::pokemon_stadium::FILES.iter().enumerate() {
                 self.game.gr.stadium.files[i] = Some(self.game.ft.data.files.archive(name));
             }
         }

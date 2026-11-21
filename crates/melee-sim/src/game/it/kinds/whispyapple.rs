@@ -1,5 +1,5 @@
 //! Whispy's apples, `melee/it/kinds/itwhispyapple.c`: the apples Green Greens' Whispy Woods
-//! drops (`gr::greens`), plain (`It_Kind_WhispyApple`) or healing (`It_Kind_WhispyHealApple`)
+//! drops (`gr::green_greens`), plain (`It_Kind_WhispyApple`) or healing (`It_Kind_WhispyHealApple`)
 //! when healing items are on. Each falls from behind the tree toward the stage, bounces with a
 //! sound and lies there until its life runs out; some can't be picked up and burst where they
 //! land (state 7). Picked up, a healing apple heals (the fighter's side, `ftpickupitem`).

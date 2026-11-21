@@ -241,7 +241,7 @@ pub fn on_load(_r: &mut Running) {}
 #[doc(alias = "grKongo_801D52FC")]
 pub fn on_start(r: &mut Running) {
     let barrel = map_gobj(r.game, 5).expect("grkongo.c: the barrel");
-    super::oldkongo::register_catch(r.game, barrel, DEVICE_BARREL, CodeRef(BARREL_CATCH));
+    super::kongo_jungle_64::register_catch(r.game, barrel, DEVICE_BARREL, CodeRef(BARREL_CATCH));
     zako::start(r.game, r.data, None);
 }
 
@@ -740,7 +740,7 @@ pub struct BarrelView<'a> {
 /// directions and catch are one implementation over it (`grkongo.c`'s and `groldkongo.c`'s
 /// copies, both originals' aliases on each shared function); each stage keeps its own process's
 /// end (what the barrel holds and its shot) and its constant ([`BARREL`] here,
-/// `oldkongo::BARREL`).
+/// `kongo_jungle_64::BARREL`).
 pub struct Barrel {
     /// The barrel's variables.
     pub vars: for<'a> fn(&'a mut Game, GroundId) -> BarrelView<'a>,

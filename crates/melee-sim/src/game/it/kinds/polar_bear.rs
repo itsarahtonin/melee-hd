@@ -401,7 +401,7 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
     play_sfx(r, gobj, 0x46, 127, 64);
     play_sfx(r, gobj, 0x13C, 127, 64);
     change_state(r, gobj, 7, change::ANIM_UPDATE);
-    crate::game::gr::icemt::bear_landed(r.game, r.data);
+    crate::game::gr::icicle_mountain::bear_landed(r.game, r.data);
 }
 
 /// Landing's animation, `itWhitebea_UnkMotion7_Anim`: when it ends, a walk's frame left, a

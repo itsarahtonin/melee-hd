@@ -105,7 +105,7 @@ pub enum ImageRef {
     /// Refraction's copy of the screen (`imagedesc0` in lbrefract.c).
     RefractFrame,
     /// An image descriptor game code made on the heap for a render copied into it: Pokémon
-    /// Stadium's screens, by index (`game::gr::stadium::SCREEN_TEXT` and its siblings).
+    /// Stadium's screens, by index (`game::gr::pokemon_stadium::SCREEN_TEXT` and its siblings).
     Screen(u8),
     /// A shadow's texture's image (`HSD_ShadowAlloc`'s `HSD_ImageDescAlloc`), which the shadow
     /// keeps ([`super::shadow::Shadow::image`]).

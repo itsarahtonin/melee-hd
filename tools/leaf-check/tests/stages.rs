@@ -28,8 +28,9 @@ use melee_capture::import::Maps;
 use melee_sim::game::code::{run_demo_init, run_event, run_fighter_cb, run_proc};
 use melee_sim::game::ft::co::barrel_wait;
 use melee_sim::game::gr::{
-    castle, garden, icemt, inishie1, inishie2, kongo, oldkongo, oldyoshi, pura, rcruise, shrine,
-    yorster,
+    hyrule_temple, icicle_mountain, jungle_japes, kongo_jungle, kongo_jungle_64, mushroom_kingdom,
+    mushroom_kingdom_2, peachs_castle, poke_floats, rainbow_cruise, yoshis_island,
+    yoshis_island_64,
 };
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::kinds::{kyasarin, kyasarinegg};
@@ -102,7 +103,7 @@ fn oldyoshi_clouds() {
     let d = dir(YI64);
     let f = "grOldYoshi_8020EC10";
     let ours = |r: &mut Running, maps: &Maps, call: &Call| {
-        oldyoshi::proc_clouds(r, gobj_arg(maps, call));
+        yoshis_island_64::proc_clouds(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     let prepares: [&Prepare; 9] = [
@@ -130,7 +131,7 @@ fn oldyoshi_guest() {
     let d = dir(YI64);
     let f = "grOldYoshi_8020F088";
     let ours = |r: &mut Running, maps: &Maps, call: &Call| {
-        oldyoshi::proc_guest(r, gobj_arg(maps, call));
+        yoshis_island_64::proc_guest(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     let set = |c: &mut Call, wait: i16, part: i16| {
@@ -158,7 +159,7 @@ fn oldyoshi_stage_and_touch() {
     let touch = |r: &mut Running, maps: &Maps, call: &Call| {
         let kind = peek_u32(call, call.regs.gpr[5] + 0x34) >> 27 & 0xF;
         let cloud = maps.grounds.get(&call.regs.gpr[3]).copied();
-        oldyoshi::cloud_touched(r.game, cloud, call.regs.gpr[4] as i32, kind);
+        yoshis_island_64::cloud_touched(r.game, cloud, call.regs.gpr[4] as i32, kind);
         Ret::Nothing
     };
     let prepares: [&Prepare; 3] = [
@@ -182,7 +183,7 @@ fn oldyoshi_shadow_and_approach() {
         let p = call.regs.gpr[3];
         let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
         let j = maps.jobjs.get(&call.regs.gpr[5]).copied();
-        Ret::Int(u32::from(oldyoshi::check_shadow_render(
+        Ret::Int(u32::from(yoshis_island_64::check_shadow_render(
             r.game, r.data, pos, j,
         )))
     };
@@ -199,7 +200,14 @@ fn oldyoshi_shadow_and_approach() {
     }
     let approach = |_: &mut Running, _: &Maps, call: &Call| {
         let f = |i: usize| call.regs.fpr[i].ps0;
-        Ret::Float(oldyoshi::approach(f(1), f(2), f(3), f(4), f(5), f(6)))
+        Ret::Float(yoshis_island_64::approach(
+            f(1),
+            f(2),
+            f(3),
+            f(4),
+            f(5),
+            f(6),
+        ))
     };
     check_calls_with(&d, "grOldYoshi_8020F31C", 1, &as_saved, &approach);
 }
@@ -245,7 +253,7 @@ fn oldyoshi_approach_inputs() {
             arg(v[4]),
             arg(v[5]),
         ));
-        let ours = bits(oldyoshi::approach(
+        let ours = bits(yoshis_island_64::approach(
             arg(v[0]),
             arg(v[1]),
             arg(v[2]),
@@ -268,7 +276,7 @@ fn oldyoshi_setup() {
     check_calls_with(&d, "grOldYoshi_8020E828", 1, &as_saved, &event);
     // Each object made from the setup's first creation.
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        let g = oldyoshi::create(
+        let g = yoshis_island_64::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -418,12 +426,12 @@ const KRAID: &str = "oracle-stage-brinstar-depths";
 
 #[test]
 fn kraid_setup() {
-    use melee_sim::game::gr::kraid;
+    use melee_sim::game::gr::brinstar_depths;
     let d = hazard_dir(KRAID);
     check_hazard(&d, "grKraid_OnInit", 1, &as_saved, &by_event);
     check_hazard(&d, "grKraid_OnStart", 1, &as_saved, &by_event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        let _ = kraid::create(
+        let _ = brinstar_depths::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -548,11 +556,11 @@ fn kraid_kraid() {
 
 #[test]
 fn kraid_helpers() {
-    use melee_sim::game::gr::kraid;
+    use melee_sim::game::gr::brinstar_depths;
     let d = hazard_dir(KRAID);
     // Where he rises: after a turn (any place but the last), else the furthest left or right.
     let place = |r: &mut Running, maps: &Maps, call: &Call| {
-        kraid::place(r, gobj_arg(maps, call));
+        brinstar_depths::place(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     let prepares: [&Prepare; 3] = [
@@ -568,7 +576,7 @@ fn kraid_helpers() {
         check_hazard(&d, "grKraid_801FEE54", 1, p, &place);
     }
     let set_anim = |r: &mut Running, maps: &Maps, call: &Call| {
-        kraid::set_anim(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        brinstar_depths::set_anim(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
         Ret::Nothing
     };
     for p in [&as_saved as &Prepare, &|c, k| {
@@ -577,7 +585,7 @@ fn kraid_helpers() {
         check_hazard(&d, "grKraid_801FF068", 1, p, &set_anim);
     }
     let reached = |r: &mut Running, maps: &Maps, call: &Call| {
-        let hit = kraid::swipe_reached(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        let hit = brinstar_depths::swipe_reached(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
         Ret::Int(u32::from(hit))
     };
     let prepares: [&Prepare; 5] = [
@@ -600,7 +608,7 @@ fn kraid_helpers() {
     // where the speed falls between its bounds (the saved swipes all reach one).
     let hit = |r: &mut Running, maps: &Maps, call: &Call| {
         let hand = maps.jobjs.get(&call.regs.gpr[3]).copied();
-        kraid::swipe_hit(r, hand, call.regs.fpr[1].ps0);
+        brinstar_depths::swipe_hit(r, hand, call.regs.fpr[1].ps0);
         Ret::Nothing
     };
     // The hand put where the speed falls between the bounds (its matrix's x).
@@ -665,7 +673,7 @@ fn kraid_copy_button() {
 /// callbacks, the load and demo hooks, and the shadow check (every joint takes shadows).
 #[test]
 fn kraid_unreached_callbacks() {
-    use melee_sim::game::gr::kraid;
+    use melee_sim::game::gr::brinstar_depths;
     let d = hazard_dir(KRAID);
     let from = "grKraid_801FE440";
     for name in [
@@ -684,8 +692,9 @@ fn kraid_unreached_callbacks() {
     check_hazard(&d, from, 1, &load, &by_event);
     let demo = retarget(leaf_check::sym("grKraid_OnDemoInit"));
     check_hazard(&d, from, 1, &demo, &by_demo);
-    let shadow =
-        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(kraid::check_shadow_render()));
+    let shadow = |_: &mut Running, _: &Maps, _: &Call| {
+        Ret::Int(u32::from(brinstar_depths::check_shadow_render()))
+    };
     let to_shadow = retarget(leaf_check::sym("grKraid_OnCheckShadowRender"));
     check_hazard(&d, from, 1, &to_shadow, &shadow);
 }
@@ -1076,12 +1085,12 @@ const GREATBAY: &str = "oracle-stage-great-bay";
 
 #[test]
 fn greatbay_setup() {
-    use melee_sim::game::gr::greatbay;
+    use melee_sim::game::gr::great_bay;
     let d = hazard_dir(GREATBAY);
     check_hazard(&d, "grGreatBay_801F4240", 1, &as_saved, &by_event);
     check_hazard(&d, "grGreatBay_801F42D4", 1, &as_saved, &by_event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        let _ = greatbay::create(
+        let _ = great_bay::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -1102,7 +1111,7 @@ fn greatbay_setup() {
         check_hazard(&d, f, 1, &as_saved, &by_address);
     }
     let platform = |r: &mut Running, maps: &Maps, call: &Call| {
-        greatbay::init_platform(r, gobj_arg(maps, call));
+        great_bay::init_platform(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     check_hazard(&d, "grGreatBay_801F5D4C", 1, &as_saved, &platform);
@@ -1151,22 +1160,24 @@ fn greatbay_turtle() {
         );
     }
     let dir = |r: &mut Running, _: &Maps, call: &Call| {
-        Ret::Int(melee_sim::game::gr::greatbay::turtle_dir(r, call.regs.gpr[3] as i32) as u32)
+        Ret::Int(melee_sim::game::gr::great_bay::turtle_dir(r, call.regs.gpr[3] as i32) as u32)
     };
     check_hazard(&d, "grGreatBay_801F62F8", 0, &as_saved, &dir);
     let item = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = gobj_arg(maps, call);
-        Ret::Int(u32::from(melee_sim::game::gr::greatbay::turtle_item(r, g)))
+        Ret::Int(u32::from(melee_sim::game::gr::great_bay::turtle_item(r, g)))
     };
     check_hazard(&d, "grGreatBay_801F63F4", 0, &as_saved, &item);
     let verts = |r: &mut Running, maps: &Maps, call: &Call| {
-        melee_sim::game::gr::greatbay::follow_vertices(r, gobj_arg(maps, call));
+        melee_sim::game::gr::great_bay::follow_vertices(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     check_hazard(&d, "grGreatBay_801F660C", 1, &as_saved, &verts);
     // Whether the turtle is out (a CPU's question), from its process's calls, each state.
     let out = |r: &mut Running, _: &Maps, _: &Call| {
-        Ret::Int(u32::from(melee_sim::game::gr::greatbay::turtle_out(r.game)))
+        Ret::Int(u32::from(melee_sim::game::gr::great_bay::turtle_out(
+            r.game,
+        )))
     };
     for state in 0..4u8 {
         check_hazard(
@@ -1197,7 +1208,7 @@ fn platform(c: &mut Call, push: [f32; 3], at: [f32; 3]) {
 fn greatbay_platform() {
     let d = hazard_dir(GREATBAY);
     let step = |r: &mut Running, maps: &Maps, call: &Call| {
-        melee_sim::game::gr::greatbay::proc_platform(r, gobj_arg(maps, call));
+        melee_sim::game::gr::great_bay::proc_platform(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     let prepares: [&Prepare; 5] = [
@@ -1221,7 +1232,7 @@ fn greatbay_platform() {
             .copied()
             .expect("the island");
         let cd = coll_arg(r, maps, call);
-        melee_sim::game::gr::greatbay::platform_touched(
+        melee_sim::game::gr::great_bay::platform_touched(
             &mut r.game.objs,
             r.data,
             &mut r.game.grounds,
@@ -1332,7 +1343,7 @@ fn greatbay_tingle() {
             .copied()
             .expect("Tingle");
         let cd = coll_arg(r, maps, call);
-        melee_sim::game::gr::greatbay::balloon_touched(
+        melee_sim::game::gr::great_bay::balloon_touched(
             &mut r.game.grounds[g.0],
             &cd,
             call.regs.gpr[6] as i32,
@@ -1392,7 +1403,7 @@ fn greatbay_moon_and_sea() {
     // The sea: a fighter crossing y = -5 downward or not, or hidden.
     let sea = |r: &mut Running, maps: &Maps, call: &Call| {
         let fighter = *maps.gobjs.get(&call.regs.gpr[4]).expect("a fighter");
-        Ret::Int(u32::from(melee_sim::game::gr::greatbay::sea_device(
+        Ret::Int(u32::from(melee_sim::game::gr::great_bay::sea_device(
             r, fighter,
         )))
     };
@@ -1417,7 +1428,7 @@ fn greatbay_moon_and_sea() {
         let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
         let j = maps.jobjs.get(&call.regs.gpr[5]).copied();
         Ret::Int(u32::from(
-            melee_sim::game::gr::greatbay::check_shadow_render(r.game, r.data, pos, j),
+            melee_sim::game::gr::great_bay::check_shadow_render(r.game, r.data, pos, j),
         ))
     };
     let around = |c: &mut Call, k: usize| {
@@ -2000,7 +2011,10 @@ fn oldkongo_birds() {
 fn oldkongo_direction() {
     let d = dir(OK64);
     let ours = |r: &mut Running, _: &Maps, _: &Call| {
-        Ret::Float(f64::from(kongo::direction(r, &oldkongo::BARREL)))
+        Ret::Float(f64::from(kongo_jungle::direction(
+            r,
+            &kongo_jungle_64::BARREL,
+        )))
     };
     check_calls_with(&d, "grOldKongo_80210650", 1, &as_saved, &ours);
     // Seeds spread so every direction with a weight comes out.
@@ -2037,7 +2051,7 @@ fn oldkongo_catch() {
             .gobjs
             .get(&call.regs.gpr[4])
             .expect("the fighter's GObj");
-        Ret::Int(u32::from(oldkongo::barrel_catch(r, ground, ft)))
+        Ret::Int(u32::from(kongo_jungle_64::barrel_catch(r, ground, ft)))
     };
     // The fighter at the barrel, just inside and outside the radius either side, and at the
     // barrel while it holds someone.
@@ -2129,7 +2143,7 @@ fn oldkongo_setup() {
     check_calls_with(&d, "grOldKongo_8020F46C", 1, &as_saved, &event);
     check_calls_with(&d, "grOldKongo_8020F4E8", 1, &as_saved, &event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        oldkongo::create(
+        kongo_jungle_64::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -2157,7 +2171,7 @@ fn oldkongo_setup() {
     // The barrel registered as a device: as saved, and with its first slot taken.
     let register = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = gobj_arg(maps, call);
-        oldkongo::register_catch(r.game, g, call.regs.gpr[4], CodeRef(call.regs.gpr[5]));
+        kongo_jungle_64::register_catch(r.game, g, call.regs.gpr[4], CodeRef(call.regs.gpr[5]));
         Ret::Nothing
     };
     let taken = |c: &mut Call, _: usize| {
@@ -2165,7 +2179,7 @@ fn oldkongo_setup() {
         let g = c.regs.gpr[3];
         poke_u32(c, at, g);
         poke_u32(c, at + 4, 3);
-        poke_u32(c, at + 8, oldkongo::BARREL_CATCH);
+        poke_u32(c, at + 8, kongo_jungle_64::BARREL_CATCH);
         poke_u32(c, leaf_check::sym("ftDevice_BuryThingCount"), 1);
     };
     for p in [&as_saved as &Prepare, &taken] {
@@ -2178,7 +2192,7 @@ fn oldkongo_shadow() {
     let d = dir(OK64);
     fn ours(r: &mut Running, maps: &Maps, call: &Call) -> bool {
         let (pos, j) = shadow_args(maps, call);
-        oldkongo::check_shadow_render(r.game, r.data, pos, j)
+        kongo_jungle_64::check_shadow_render(r.game, r.data, pos, j)
     }
     check_shadow(&d, "grOldKongo_80210788", ours, 0.0);
 }
@@ -2226,11 +2240,11 @@ fn oldkongo_unreached_callbacks() {
         poke_u32(c, v + TARU_KEEP, keep);
     };
     let release = |r: &mut Running, maps: &Maps, call: &Call| {
-        oldkongo::barrel_release(r.game, gobj_arg(maps, call));
+        kongo_jungle_64::barrel_release(r.game, gobj_arg(maps, call));
         Ret::Nothing
     };
     let drop = |r: &mut Running, maps: &Maps, call: &Call| {
-        oldkongo::barrel_drop(r.game, gobj_arg(maps, call));
+        kongo_jungle_64::barrel_drop(r.game, gobj_arg(maps, call));
         Ret::Nothing
     };
     let t = leaf_check::sym("grOldKongo_802105AC");
@@ -2287,7 +2301,7 @@ fn pura_setup() {
     // Each of the setup's objects made from its first creation (the floats come with the
     // stage's).
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        pura::create(
+        poke_floats::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -2316,9 +2330,9 @@ fn pura_setup() {
         "grPura_80212CD4",
         1,
         &as_saved,
-        &of_gobj(pura::init_subjects),
+        &of_gobj(poke_floats::init_subjects),
     );
-    let floats = of_gobj(pura::make_floats);
+    let floats = of_gobj(poke_floats::make_floats);
     check_calls_with(&d, "grPura_802125F0", 1, &as_saved, &floats);
     // The stage's joints scaled 2 or more, which a float's factor leaves alone.
     let big = |c: &mut Call, _: usize| {
@@ -2337,7 +2351,7 @@ fn pura_setup() {
     };
     check_calls_with(&d, "grPura_802125F0", 1, &big, &floats);
     let vtx = |r: &mut Running, _: &Maps, _: &Call| {
-        pura::find_vtx_joints(r);
+        poke_floats::find_vtx_joints(r);
         Ret::Nothing
     };
     check_calls_with(&d, "grPura_80212FC0", 1, &as_saved, &vtx);
@@ -2371,13 +2385,13 @@ fn by_address_tev(r: &mut Running, maps: &Maps, call: &Call) -> Ret {
     match call.addr {
         0x8021_3250 => {
             let j = *maps.jobjs.get(&a).expect("a joint");
-            pura::compile_tree(r, j);
+            poke_floats::compile_tree(r, j);
         }
         0x8021_3128 => {
             let d = *maps.dobjs.get(&a).expect("a display object");
-            pura::compile_dobjs(r, d);
+            poke_floats::compile_dobjs(r, d);
         }
-        _ => pura::compile_one(r, maps.dobjs.get(&a).copied()),
+        _ => poke_floats::compile_one(r, maps.dobjs.get(&a).copied()),
     }
     Ret::Nothing
 }
@@ -2407,10 +2421,16 @@ fn pura_stage() {
     };
     for p in [&as_saved as &Prepare, &flip] {
         check_calls_with(&d, "stageGObj4_GObjProc", 1, p, &by_address);
-        check_calls_with(&d, "grPura_80212EF4", 1, p, &of_gobj(pura::update_subjects));
+        check_calls_with(
+            &d,
+            "grPura_80212EF4",
+            1,
+            p,
+            &of_gobj(poke_floats::update_subjects),
+        );
     }
     let mv = |r: &mut Running, _: &Maps, _: &Call| {
-        pura::move_vertices(r);
+        poke_floats::move_vertices(r);
         Ret::Nothing
     };
     check_calls_with(&d, "grPura_80213030", 1, &as_saved, &mv);
@@ -2457,7 +2477,7 @@ fn pura_float() {
 fn pura_render() {
     let d = dir(PF);
     let render = |r: &mut Running, maps: &Maps, call: &Call| {
-        pura::render_float(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        poke_floats::render_float(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
         Ret::Nothing
     };
     let setup = leaf_check::calls::Setup {
@@ -2491,8 +2511,9 @@ fn pura_unreached_callbacks() {
         let t = sym_at(name, PF_LO, PF_HI);
         check_calls_with(&d, from, 1, &retarget(t), &by_address);
     }
-    let shadow =
-        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(pura::check_shadow_render()));
+    let shadow = |_: &mut Running, _: &Maps, _: &Call| {
+        Ret::Int(u32::from(poke_floats::check_shadow_render()))
+    };
     let t = leaf_check::sym("grPura_802130C8");
     check_calls_with(&d, from, 1, &retarget(t), &shadow);
     let t = leaf_check::sym("grPura_80211DD8");
@@ -2540,7 +2561,7 @@ fn rcruise_setup() {
     check_calls_with(&d, "grRCruise_801FF168", 1, &as_saved, &event);
     check_calls_with(&d, "grRCruise_801FF29C", 1, &as_saved, &event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        rcruise::create(
+        rainbow_cruise::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -2574,21 +2595,21 @@ fn rcruise_setup() {
         "grRCruise_80200540",
         1,
         &as_saved,
-        &of(rcruise::reset_tilt),
+        &of(rainbow_cruise::reset_tilt),
     );
     check_calls_with(
         &d,
         "grRCruise_80200B48",
         1,
         &as_saved,
-        &of(rcruise::init_planks),
+        &of(rainbow_cruise::init_planks),
     );
     check_calls_with(
         &d,
         "grRCruise_80201410",
         1,
         &as_saved,
-        &of(rcruise::init_vanish),
+        &of(rainbow_cruise::init_vanish),
     );
     let settle = |r: &mut Running, _: &Maps, call: &Call| {
         let map = call.regs.gpr[3] as i32;
@@ -2608,12 +2629,12 @@ fn rcruise_setup() {
             .public("dynamicsdata_shipflag")
             .expect("the flag's dynamics");
         let src = melee_data::archive::DataRef { archive, offset };
-        rcruise::chain(r, root, src, rc_ground(maps, call.regs.gpr[5]));
+        rainbow_cruise::chain(r, root, src, rc_ground(maps, call.regs.gpr[5]));
         Ret::Nothing
     };
     check_calls_with(&d, "grLib_801C9B20", 1, &as_saved, &chain);
     let swing = |r: &mut Running, maps: &Maps, call: &Call| {
-        rcruise::swing(r, rc_ground(maps, call.regs.gpr[3]));
+        rainbow_cruise::swing(r, rc_ground(maps, call.regs.gpr[3]));
         Ret::Nothing
     };
     check_calls_with(&d, "grLib_801C9B8C", 1, &as_saved, &swing);
@@ -2640,7 +2661,7 @@ fn rcruise_ship() {
         }
     };
     // The tilt: each state, with riders on either side and none, still swinging and level.
-    let tilt = of(rcruise::tilt);
+    let tilt = of(rainbow_cruise::tilt);
     check_calls_with(&d, "grRCruise_8020071C", 1, &as_saved, &tilt);
     for state in [0u32, 1] {
         for (riders, left, right, ease, rot) in [
@@ -2670,7 +2691,7 @@ fn rcruise_ship() {
     }
     // The planks: every plank in each state, at a count of 0, 1 and past every wait, touched
     // and not.
-    let planks = of(rcruise::update_planks);
+    let planks = of(rainbow_cruise::update_planks);
     check_calls_with(&d, "grRCruise_80200C04", 1, &as_saved, &planks);
     for state in 0..6u32 {
         for (count, touched) in [(0u32, 0u32), (1, 1), (1, 0), (5000, 1)] {
@@ -2694,7 +2715,7 @@ fn rcruise_ship() {
         }
     }
     // The parts that appear with the camera: every part in each state.
-    let vanish = of(rcruise::update_vanish);
+    let vanish = of(rainbow_cruise::update_vanish);
     check_calls_with(&d, "grRCruise_80201588", 1, &as_saved, &vanish);
     for state in 0..4u32 {
         let set = move |c: &mut Call, _: usize| {
@@ -2708,7 +2729,7 @@ fn rcruise_ship() {
     }
     // The wind's steering: on and past its turns and gusts, with gusts on and off, near its
     // limits.
-    let steer = of(rcruise::steer_wind);
+    let steer = of(rainbow_cruise::steer_wind);
     check_calls_with(&d, "grRCruise_80201110", 1, &as_saved, &steer);
     for (age, gust, x) in [
         (0u32, 0u32, 1.0f32),
@@ -2730,7 +2751,7 @@ fn rcruise_ship() {
     // The display objects' flags: a part's, and a tree's as the walk sets and clears them.
     let show = |r: &mut Running, maps: &Maps, call: &Call| {
         let j = maps.jobjs.get(&call.regs.gpr[3]).copied();
-        rcruise::show_dobjs(&mut r.game.objs, j, call.regs.gpr[4] != 0);
+        rainbow_cruise::show_dobjs(&mut r.game.objs, j, call.regs.gpr[4] != 0);
         Ret::Nothing
     };
     for p in [&as_saved as &Prepare, &|c: &mut Call, _: usize| {
@@ -2741,7 +2762,7 @@ fn rcruise_ship() {
     let tree = |r: &mut Running, maps: &Maps, call: &Call| {
         let j = maps.jobjs.get(&call.regs.gpr[3]).copied();
         let set = call.regs.gpr[4] == leaf_check::sym("HSD_DObjSetFlags");
-        rcruise::tree_dobj_flags(&mut r.game.objs, j, set, call.regs.gpr[5]);
+        rainbow_cruise::tree_dobj_flags(&mut r.game.objs, j, set, call.regs.gpr[5]);
         Ret::Nothing
     };
     let other = |c: &mut Call, _: usize| {
@@ -2782,7 +2803,7 @@ fn rcruise_blocks() {
         let (g, root) = rc_object(r, maps, call);
         let kind = peek_u32(call, call.regs.gpr[5] + 0x34) >> 27 & 0xF;
         let joint = call.regs.gpr[4] as i32;
-        rcruise::block_touched(&mut r.game.objs, &mut r.game.grounds, root, g, joint, kind);
+        rainbow_cruise::block_touched(&mut r.game.objs, &mut r.game.grounds, root, g, joint, kind);
         Ret::Nothing
     };
     check_calls_with(&d, "fn_80200460", 1, &as_saved, &touch);
@@ -2807,7 +2828,7 @@ fn rcruise_touches() {
         let cd = coll_arg(r, maps, call);
         let x50 = call.regs.gpr[6] as i32;
         let (objs, grounds) = (&mut r.game.objs, &mut r.game.grounds);
-        rcruise::deck_touched(objs, r.data, grounds, root, g, &cd, x50);
+        rainbow_cruise::deck_touched(objs, r.data, grounds, root, g, &cd, x50);
         Ret::Nothing
     };
     let prepares: [&Prepare; 4] = [
@@ -2837,7 +2858,7 @@ fn rcruise_touches() {
     let plank = |r: &mut Running, maps: &Maps, call: &Call| {
         let (g, _) = rc_object(r, maps, call);
         let kind = peek_u32(call, call.regs.gpr[5] + 0x34) >> 27 & 0xF;
-        rcruise::plank_touched(&mut r.game.grounds, g, call.regs.gpr[4] as i32, kind);
+        rainbow_cruise::plank_touched(&mut r.game.grounds, g, call.regs.gpr[4] as i32, kind);
         Ret::Nothing
     };
     check_calls_with(&d, "grRCruise_802010A4", 1, &as_saved, &plank);
@@ -2868,7 +2889,7 @@ fn rcruise_course() {
         check_calls_with(&d, "grRCruise_801FFADC", 1, p, &by_address);
     }
     let render = |r: &mut Running, maps: &Maps, call: &Call| {
-        rcruise::render_course(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        rainbow_cruise::render_course(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
         Ret::Nothing
     };
     let setup = leaf_check::calls::Setup {
@@ -2903,8 +2924,9 @@ fn rcruise_unreached_callbacks() {
     ] {
         check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
     }
-    let shadow =
-        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(rcruise::check_shadow_render()));
+    let shadow = |_: &mut Running, _: &Maps, _: &Call| {
+        Ret::Int(u32::from(rainbow_cruise::check_shadow_render()))
+    };
     let t = leaf_check::sym("grRCruise_80201C58");
     check_calls_with(&d, from, 1, &retarget(t), &shadow);
     let t = leaf_check::sym("grRCruise_801FF298");
@@ -2919,7 +2941,7 @@ fn rcruise_unreached_callbacks() {
         c.regs.gpr[3] = to;
     };
     let wind = |r: &mut Running, maps: &Maps, call: &Call| {
-        let w = rcruise::wind(r.game);
+        let w = rainbow_cruise::wind(r.game);
         let g = rc_ground(maps, call.regs.gpr[3] - 0x10);
         r.game.grounds[g.0].u.scroll().offset = w;
         Ret::Nothing
@@ -2928,7 +2950,7 @@ fn rcruise_unreached_callbacks() {
     // The planks' line test on lines across the stage.
     let t = leaf_check::sym("grRCruise_80201988");
     let line = |r: &mut Running, _: &Maps, call: &Call| {
-        Ret::Int(u32::from(rcruise::plank_line(
+        Ret::Int(u32::from(rainbow_cruise::plank_line(
             r.game,
             call.regs.gpr[3] as i32,
         )))
@@ -2979,7 +3001,7 @@ fn shrine_setup() {
     check_calls_with(&d, "grShrine_80201C64", 1, &as_saved, &event);
     check_calls_with(&d, "grShrine_UnkStage0_OnStart", 1, &as_saved, &event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        shrine::create(
+        hyrule_temple::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -3010,7 +3032,7 @@ fn shrine_shadow() {
     let d = dir(HT);
     fn ours(r: &mut Running, maps: &Maps, call: &Call) -> bool {
         let (pos, j) = shadow_args(maps, call);
-        shrine::check_shadow_render(r.game, r.data, pos, j)
+        hyrule_temple::check_shadow_render(r.game, r.data, pos, j)
     }
     check_shadow(&d, "grShrine_80201F4C", ours, 0.0);
 }
@@ -3132,7 +3154,7 @@ fn yorster_blocks() {
     let d = dir(YT);
     let f = "grYorster_8020266C";
     let ours = |r: &mut Running, maps: &Maps, call: &Call| {
-        yorster::proc_blocks(r, gobj_arg(maps, call));
+        yoshis_island::proc_blocks(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     let p = |c: &Call, off: u32| f32::from_bits(yt_param(c, off));
@@ -3194,7 +3216,7 @@ fn yorster_setup() {
     check_calls_with(&d, "grYorster_80201FA4", 1, &as_saved, &event);
     check_calls_with(&d, "grYorster_80202010", 1, &as_saved, &event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        yorster::create(
+        yoshis_island::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -3218,7 +3240,7 @@ fn yorster_setup() {
         check_calls_with(&d, f, 1, &as_saved, &by_address);
     }
     let blocks_setup = |r: &mut Running, maps: &Maps, call: &Call| {
-        yorster::init_blocks(r, gobj_arg(maps, call));
+        yoshis_island::init_blocks(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     check_calls_with(&d, "grYorster_802022A4", 1, &as_saved, &blocks_setup);
@@ -3245,7 +3267,7 @@ fn yorster_hit_and_landing() {
         let p = call.regs.gpr[5];
         let dir = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
         let fighter = maps.gobjs.get(&call.regs.gpr[6]).copied();
-        yorster::block_hit(r, item, g, dir, fighter, call.regs.fpr[1].ps0 as f32);
+        yoshis_island::block_hit(r, item, g, dir, fighter, call.regs.fpr[1].ps0 as f32);
         Ret::Nothing
     };
     let not_fighter = |c: &mut Call, _: usize| c.regs.gpr[6] = c.regs.gpr[3];
@@ -3261,7 +3283,7 @@ fn yorster_hit_and_landing() {
             .expect("the blocks' stage");
         let coll = coll_at(r, maps, call, call.regs.gpr[5]);
         let dy = call.regs.fpr[1].ps0 as f32;
-        yorster::block_landed_now(r, g, call.regs.gpr[4] as i32, &coll, dy);
+        yoshis_island::block_landed_now(r, g, call.regs.gpr[4] as i32, &coll, dy);
         Ret::Nothing
     };
     let prepares: [&Prepare; 4] = [
@@ -3534,7 +3556,7 @@ fn garden_setup() {
     check_calls_with(&d, "grGarden_80202C24", 1, &as_saved, &event);
     check_calls_with(&d, "grGarden_80202C4C", 1, &as_saved, &event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        garden::create(
+        jungle_japes::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -3620,7 +3642,7 @@ fn garden_river() {
             .gobjs
             .get(&call.regs.gpr[4])
             .expect("the fighter's GObj");
-        let pull = garden::river(r, ground, fighter);
+        let pull = jungle_japes::river(r, ground, fighter);
         if let Some(v) = pull {
             r.game.stage_info.x730 = v;
         }
@@ -3652,7 +3674,7 @@ fn garden_shadow() {
     let d = dir(GD);
     fn ours(r: &mut Running, maps: &Maps, call: &Call) -> bool {
         let (pos, j) = shadow_args(maps, call);
-        garden::check_shadow_render(r.game, r.data, pos, j)
+        jungle_japes::check_shadow_render(r.game, r.data, pos, j)
     }
     check_shadow(&d, "grGarden_802035D0", ours, 0.0);
 }
@@ -3688,7 +3710,7 @@ fn garden_unreached_callbacks() {
     );
     let bit = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = melee_sim::game::gr::ground::ground_of(r.game, gobj_arg(maps, call));
-        garden::klaptrap_bit(r, gobj_arg(maps, call), g);
+        jungle_japes::klaptrap_bit(r, gobj_arg(maps, call), g);
         Ret::Nothing
     };
     check_calls_with(
@@ -3701,7 +3723,7 @@ fn garden_unreached_callbacks() {
     let splash = |r: &mut Running, _: &Maps, call: &Call| {
         let at = call.regs.gpr[3];
         let pos = Vec3::new(f32_at(call, at), f32_at(call, at + 4), f32_at(call, at + 8));
-        garden::splash(r, call.regs.fpr[1].ps0 as f32, pos);
+        jungle_japes::splash(r, call.regs.fpr[1].ps0 as f32, pos);
         Ret::Nothing
     };
     let t = leaf_check::sym("grGarden_80203560");
@@ -3716,7 +3738,8 @@ fn garden_unreached_callbacks() {
         c.regs.gpr[3] = at;
     };
     check_calls_with(&d, from, 1, &prep, &splash);
-    let floor = |_: &mut Running, _: &Maps, _: &Call| Ret::Float(f64::from(garden::camera_floor()));
+    let floor =
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Float(f64::from(jungle_japes::camera_floor()));
     check_calls_with(
         &d,
         from,
@@ -3818,7 +3841,7 @@ fn kongo_setup() {
     check_calls_with(&d, "grKongo_801D523C", 1, &as_saved, &event);
     check_calls_with(&d, "grKongo_801D52FC", 1, &as_saved, &event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        kongo::create(
+        kongo_jungle::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -3848,7 +3871,7 @@ fn kongo_setup() {
         check_calls_with(&d, f, 1, &as_saved, &by_address);
     }
     let bridge = |r: &mut Running, maps: &Maps, call: &Call| {
-        kongo::init_bridge(r, gobj_arg(maps, call));
+        kongo_jungle::init_bridge(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     check_calls_with(&d, "grKongo_801D69B0", 1, &as_saved, &bridge);
@@ -3883,7 +3906,7 @@ fn kongo_stage() {
         check_calls_with(&d, "grKongo_801D557C", 1, p, &by_address);
     }
     let events = |r: &mut Running, maps: &Maps, call: &Call| {
-        kongo::events(r, gobj_arg(maps, call));
+        kongo_jungle::events(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     check_calls_with(&d, "grKongo_801D7BBC", 1, &as_saved, &events);
@@ -3915,11 +3938,11 @@ fn kongo_bridge() {
         &move |c, k| kg_planks(c, [8.0f32, -8.0][k % 2] * rad, [-3.0f32, 3.0][k % 2] * rad),
     ];
     let swing = |r: &mut Running, _: &Maps, _: &Call| {
-        kongo::swing_planks(r.game, r.data);
+        kongo_jungle::swing_planks(r.game, r.data);
         Ret::Nothing
     };
     let bridge = |r: &mut Running, maps: &Maps, call: &Call| {
-        kongo::bridge(r, gobj_arg(maps, call), call.regs.gpr[4] != 0);
+        kongo_jungle::bridge(r, gobj_arg(maps, call), call.regs.gpr[4] != 0);
         Ret::Nothing
     };
     for p in prepares {
@@ -3927,7 +3950,7 @@ fn kongo_bridge() {
         check_calls_with(&d, "grKongo_801D7134", 1, p, &bridge);
     }
     let sway = |r: &mut Running, maps: &Maps, call: &Call| {
-        kongo::sway(r, gobj_arg(maps, call), call.regs.gpr[4] != 0);
+        kongo_jungle::sway(r, gobj_arg(maps, call), call.regs.gpr[4] != 0);
         Ret::Nothing
     };
     let posts = |c: &mut Call, a: f32, s: f32| {
@@ -3956,7 +3979,7 @@ fn kongo_bridge_landing() {
     let ours = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = &call.regs.gpr;
         let coll = coll_at(r, maps, call, g[5]);
-        let mut kicks = kongo::Kicks::default();
+        let mut kicks = kongo_jungle::Kicks::default();
         kicks.landed(r.game.geometry_mut(), &coll, g[7] as i32);
         kicks.apply(r.game, r.data);
         Ret::Nothing
@@ -4091,7 +4114,7 @@ fn kongo_barrel() {
         check_calls_with(&d, f, 1, p, &by_address);
     }
     let ours = |r: &mut Running, _: &Maps, _: &Call| {
-        Ret::Float(f64::from(kongo::direction(r, &kongo::BARREL)))
+        Ret::Float(f64::from(kongo_jungle::direction(r, &kongo_jungle::BARREL)))
     };
     for s in 0..24u32 {
         check_calls_with(
@@ -4113,7 +4136,7 @@ fn kongo_catch() {
             .gobjs
             .get(&call.regs.gpr[4])
             .expect("the fighter's GObj");
-        Ret::Int(u32::from(kongo::barrel_catch(r, ground, ft)))
+        Ret::Int(u32::from(kongo_jungle::barrel_catch(r, ground, ft)))
     };
     let prepares: [&Prepare; 4] = [
         &as_saved,
@@ -4141,11 +4164,11 @@ fn kongo_catch() {
     // The barrel letting go and dropping, from the barrel's calls: holding a fighter, holding
     // something else, and not holding.
     let release = |r: &mut Running, maps: &Maps, call: &Call| {
-        kongo::barrel_release(r.game, gobj_arg(maps, call));
+        kongo_jungle::barrel_release(r.game, gobj_arg(maps, call));
         Ret::Nothing
     };
     let drop = |r: &mut Running, maps: &Maps, call: &Call| {
-        kongo::barrel_drop(r.game, gobj_arg(maps, call));
+        kongo_jungle::barrel_drop(r.game, gobj_arg(maps, call));
         Ret::Nothing
     };
     for (target, ours) in [
@@ -4213,7 +4236,7 @@ fn kongo_platforms_and_logs() {
         check_calls_with(&d, "grKongo_801D6198", 1, p, &by_address);
     }
     let behind = |r: &mut Running, maps: &Maps, call: &Call| {
-        Ret::Int(u32::from(kongo::log_behind(r, gobj_arg(maps, call))))
+        Ret::Int(u32::from(kongo_jungle::log_behind(r, gobj_arg(maps, call))))
     };
     check_calls_with(&d, "grKongo_801D7F78", 1, &as_saved, &behind);
     check_calls_with(&d, "grKongo_801D64BC", 1, &as_saved, &by_address);
@@ -4223,7 +4246,7 @@ fn kongo_platforms_and_logs() {
             .grounds
             .get(&call.regs.gpr[3])
             .expect("the platform's Ground");
-        kongo::platform_landed(&mut r.game.grounds[g.0], call.regs.gpr[7] as i32);
+        kongo_jungle::platform_landed(&mut r.game.grounds[g.0], call.regs.gpr[7] as i32);
         Ret::Nothing
     };
     let t = leaf_check::sym("fn_801D7E60");
@@ -4313,7 +4336,7 @@ fn kongo_shadow() {
     let d = dir(KG);
     fn ours(r: &mut Running, maps: &Maps, call: &Call) -> bool {
         let (pos, j) = shadow_args(maps, call);
-        kongo::check_shadow_render(r.game, r.data, pos, j)
+        kongo_jungle::check_shadow_render(r.game, r.data, pos, j)
     }
     check_shadow(&d, "grKongo_801D844C", ours, 0.0);
 }
@@ -4717,13 +4740,13 @@ fn greens_param(c: &Call, off: u32) -> u32 {
 
 #[test]
 fn greens_setup() {
-    use melee_sim::game::gr::greens;
+    use melee_sim::game::gr::green_greens;
     let d = hazard_dir(GREENS);
     check_hazard(&d, "grGreens_Init", 1, &as_saved, &by_event);
     check_hazard(&d, "grGreens_802134F8", 1, &as_saved, &by_event);
     // The block objects the blocks' tick makes, and every map's object from the same calls.
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        let _ = greens::create(r, call.regs.gpr[3] as i32, greens::PROC_BLOCK_FRAME);
+        let _ = green_greens::create(r, call.regs.gpr[3] as i32, green_greens::PROC_BLOCK_FRAME);
         Ret::Nothing
     };
     check_hazard(&d, "grGreens_80213524", 1, &as_saved, &create);
@@ -4754,12 +4777,12 @@ fn greens_setup() {
     // The blocks' setup after a demo's keeps the last layout.
     check_hazard(&d, "grGreens_80214674", 1, &demo, &by_address);
     let grid = |r: &mut Running, maps: &Maps, call: &Call| {
-        greens::measure_grid(r, gobj_arg(maps, call));
+        green_greens::measure_grid(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     check_hazard(&d, "grGreens_8021483C", 1, &as_saved, &grid);
     let lay_out = |r: &mut Running, _: &Maps, _: &Call| {
-        greens::lay_out(r);
+        green_greens::lay_out(r);
         Ret::Nothing
     };
     let seeds = |c: &mut Call, k: usize| set_seed(c, 0x1234_5679u32.wrapping_mul(k as u32 + 1));
@@ -4767,7 +4790,7 @@ fn greens_setup() {
         check_hazard(&d, "grGreens_80214B58", 1, p, &lay_out);
     }
     let place = |r: &mut Running, maps: &Maps, call: &Call| {
-        greens::place_blocks(r, gobj_arg(maps, call));
+        green_greens::place_blocks(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     check_hazard(&d, "grGreens_80214FA8", 1, &as_saved, &place);
@@ -4841,7 +4864,7 @@ fn greens_whispy() {
 
 #[test]
 fn greens_wind() {
-    use melee_sim::game::gr::greens;
+    use melee_sim::game::gr::green_greens;
     let d = hazard_dir(GREENS);
     // The push goes where the prepares point the callback's vector: the stage's barrel place,
     // compared state that nothing on Green Greens uses.
@@ -4851,7 +4874,7 @@ fn greens_wind() {
             .gobjs
             .get(&call.regs.gpr[4])
             .expect("the fighter's GObj");
-        let push = greens::wind_push(r, ground, fighter);
+        let push = green_greens::wind_push(r, ground, fighter);
         r.game.stage_info.x730 = push.unwrap_or(Vec3::ZERO);
         Ret::Int(u32::from(push.is_some()))
     };
@@ -4885,7 +4908,7 @@ fn greens_wind() {
         let v = call.regs.gpr[3];
         let pos = Vec3::new(f32_at(call, v), f32_at(call, v + 4), f32_at(call, v + 8));
         let f = |i: usize| call.regs.fpr[i].ps0 as f32;
-        Ret::Int(u32::from(greens::in_box(pos, f(1), f(2), f(3), f(4))))
+        Ret::Int(u32::from(green_greens::in_box(pos, f(1), f(2), f(3), f(4))))
     };
     // The bounds in either order, and the point inside, outside and on an edge.
     let bounds = |c: &mut Call, k: usize| {
@@ -4943,7 +4966,7 @@ fn greens_blocks() {
     let d = hazard_dir(GREENS);
     let f = "grGreens_802166C4";
     let tick = |r: &mut Running, maps: &Maps, call: &Call| {
-        melee_sim::game::gr::greens::proc_blocks(r, gobj_arg(maps, call));
+        melee_sim::game::gr::green_greens::proc_blocks(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     // A new block due now (from several seeds), with a side full (a block at the top of its
@@ -4999,11 +5022,11 @@ fn falling(c: &mut Call, row: u32, col: u32, status: u32, speed: f32, dy: f32) {
 
 #[test]
 fn greens_block_moves() {
-    use melee_sim::game::gr::greens;
+    use melee_sim::game::gr::green_greens;
     let d = hazard_dir(GREENS);
     let update = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = &call.regs.gpr;
-        greens::update_block(r, gobj_arg(maps, call), g[4] as i32, g[5] as i32);
+        green_greens::update_block(r, gobj_arg(maps, call), g[4] as i32, g[5] as i32);
         Ret::Nothing
     };
     let here = |c: &Call| (c.regs.gpr[5], c.regs.gpr[4]);
@@ -5083,14 +5106,14 @@ fn greens_block_moves() {
     // A block added: as saved, the other kind, and at rest or falling.
     let add = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = &call.regs.gpr;
-        greens::add_block(
+        green_greens::add_block(
             r,
             gobj_arg(maps, call),
             g[4] as i32,
             g[5] as i32,
             g[6] as i32,
             g[7],
-            greens::PROC_BLOCK_FRAME,
+            green_greens::PROC_BLOCK_FRAME,
         );
         Ret::Nothing
     };
@@ -5106,7 +5129,7 @@ fn greens_block_moves() {
     // A column settling, as saved and with falling blocks over an empty place.
     let settle = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = &call.regs.gpr;
-        greens::settle_column(r, gobj_arg(maps, call), g[4] as i32, g[5] as i32);
+        green_greens::settle_column(r, gobj_arg(maps, call), g[4] as i32, g[5] as i32);
         Ret::Nothing
     };
     let gap = |c: &mut Call, k: usize| {
@@ -5126,11 +5149,11 @@ fn greens_block_moves() {
 
 #[test]
 fn greens_block_links() {
-    use melee_sim::game::gr::greens;
+    use melee_sim::game::gr::green_greens;
     let d = hazard_dir(GREENS);
     let corners = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = &call.regs.gpr;
-        greens::link_corners(r, gobj_arg(maps, call), g[4] as i32, g[5] as i32);
+        green_greens::link_corners(r, gobj_arg(maps, call), g[4] as i32, g[5] as i32);
         Ret::Nothing
     };
     // Every neighbour resting, only the diagonals, only the sides, and the grid's first place
@@ -5168,7 +5191,7 @@ fn greens_block_links() {
         check_hazard(&d, "grGreens_802150C4", 1, p, &corners);
     }
     let links = |r: &mut Running, maps: &Maps, call: &Call| {
-        greens::link_blocks(r, gobj_arg(maps, call));
+        green_greens::link_blocks(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     // Every resting block to link, and every empty place's neighbours.
@@ -5189,13 +5212,13 @@ fn greens_block_links() {
 
 #[test]
 fn greens_block_hits() {
-    use melee_sim::game::gr::greens;
+    use melee_sim::game::gr::green_greens;
     let d = hazard_dir(GREENS);
     let ground = |maps: &Maps, a: u32| *maps.grounds.get(&a).expect("the stage's object");
     let brk = move |r: &mut Running, maps: &Maps, call: &Call| {
         let g = &call.regs.gpr;
         let by = maps.gobjs.get(&g[6]).copied();
-        greens::break_block(r, ground(maps, g[3]), g[4] as i32, g[5] as i32, by);
+        green_greens::break_block(r, ground(maps, g[3]), g[4] as i32, g[5] as i32, by);
         Ret::Nothing
     };
     // As saved, the other kind of block, and one already broken.
@@ -5217,13 +5240,13 @@ fn greens_block_hits() {
     let hit = move |r: &mut Running, maps: &Maps, call: &Call| {
         let g = &call.regs.gpr;
         let by = maps.gobjs.get(&g[6]).copied();
-        greens::block_hit(r, gobj_arg(maps, call), ground(maps, g[4]), by);
+        green_greens::block_hit(r, gobj_arg(maps, call), ground(maps, g[4]), by);
         Ret::Nothing
     };
     check_hazard(&d, "fn_80215B84", 1, &as_saved, &hit);
     let landed = move |r: &mut Running, maps: &Maps, call: &Call| {
         let g = ground(maps, call.regs.gpr[3]);
-        greens::block_landed(&mut r.game.grounds[g.0], call.regs.gpr[4] as i32);
+        green_greens::block_landed(&mut r.game.grounds[g.0], call.regs.gpr[4] as i32);
         Ret::Nothing
     };
     // On its own joint, another block's, and a joint no block has.
@@ -5233,7 +5256,7 @@ fn greens_block_hits() {
     }
     // The items' callbacks that do nothing, from the hits' calls.
     let nothing = move |r: &mut Running, maps: &Maps, call: &Call| {
-        greens::block_item_nothing(r, gobj_arg(maps, call), ground(maps, call.regs.gpr[4]));
+        green_greens::block_item_nothing(r, gobj_arg(maps, call), ground(maps, call.regs.gpr[4]));
         Ret::Nothing
     };
     for name in ["fn_802159B4", "fn_80215D50"] {
@@ -5270,7 +5293,7 @@ fn greens_block_hits() {
 
 #[test]
 fn greens_unreached_callbacks() {
-    use melee_sim::game::gr::greens;
+    use melee_sim::game::gr::green_greens;
     let d = hazard_dir(GREENS);
     let from = "grGreens_8021479C";
     for name in [
@@ -5293,8 +5316,9 @@ fn greens_unreached_callbacks() {
     check_hazard(&d, from, 1, &load, &by_event);
     let demo = retarget(leaf_check::sym("grGreens_80213458"));
     check_hazard(&d, from, 1, &demo, &by_demo);
-    let shadow =
-        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(greens::check_shadow_render()));
+    let shadow = |_: &mut Running, _: &Maps, _: &Call| {
+        Ret::Int(u32::from(green_greens::check_shadow_render()))
+    };
     let to_shadow = retarget(leaf_check::sym("grGreens_80216E6C"));
     check_hazard(&d, from, 1, &to_shadow, &shadow);
 }
@@ -5449,12 +5473,12 @@ fn zebes_param(c: &Call, off: u32) -> u32 {
 
 #[test]
 fn zebes_setup() {
-    use melee_sim::game::gr::zebes;
+    use melee_sim::game::gr::brinstar;
     let d = hazard_dir(ZEBES);
     check_hazard(&d, "grZebes_801D84A4", 1, &as_saved, &by_event);
     check_hazard(&d, "grZebes_801D852C", 1, &as_saved, &by_event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        let _ = zebes::create(r, call.regs.gpr[3] as i32, zebes::GROW_BUBBLE_FRAME);
+        let _ = brinstar::create(r, call.regs.gpr[3] as i32, brinstar::GROW_BUBBLE_FRAME);
         Ret::Nothing
     };
     check_hazard(&d, "grZebes_801D8558", 1, &as_saved, &create);
@@ -5481,18 +5505,18 @@ fn zebes_setup() {
     }
     let reset = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = *maps.gobjs.get(&call.regs.gpr[3]).expect("the stage's GObj");
-        zebes::reset_bubbles(r, g);
+        brinstar::reset_bubbles(r, g);
         Ret::Nothing
     };
     check_hazard(&d, "grZebes_801DC9DC", 1, &as_saved, &reset);
     let start = |r: &mut Running, _: &Maps, call: &Call| {
         let g = &call.regs.gpr;
-        zebes::start_bubbles(r, g[3] as i32, g[4] as u8, zebes::SETUP_BUBBLE_FRAME);
+        brinstar::start_bubbles(r, g[3] as i32, g[4] as u8, brinstar::SETUP_BUBBLE_FRAME);
         Ret::Nothing
     };
     check_hazard(&d, "grZebes_801DC744", 1, &as_saved, &start);
     let splashes = |r: &mut Running, _: &Maps, _: &Call| {
-        zebes::reset_splashes(r.game);
+        brinstar::reset_splashes(r.game);
         Ret::Nothing
     };
     check_hazard(&d, "grZebes_801DA3E8", 1, &as_saved, &splashes);
@@ -5511,7 +5535,7 @@ fn lava(c: &mut Call, entry: i16, wait: i16, state: u32, top: f32, v: f32, to: f
 
 #[test]
 fn zebes_lava() {
-    use melee_sim::game::gr::zebes;
+    use melee_sim::game::gr::brinstar;
     let d = hazard_dir(ZEBES);
     let f = "grZebes_801D99E0";
     check_hazard(&d, f, 1, &as_saved, &by_address);
@@ -5536,7 +5560,7 @@ fn zebes_lava() {
         check_hazard(&d, f, 1, p.as_ref(), &by_address);
     }
     let fog = |r: &mut Running, _: &Maps, call: &Call| {
-        zebes::fog_color(r.game, call.regs.fpr[1].ps0 as f32);
+        brinstar::fog_color(r.game, call.regs.fpr[1].ps0 as f32);
         Ret::Nothing
     };
     let levels = |c: &mut Call, k: usize| {
@@ -5546,7 +5570,7 @@ fn zebes_lava() {
         check_hazard(&d, "grZebes_801DA0C4", 1, p, &fog);
     }
     let light = |r: &mut Running, maps: &Maps, call: &Call| {
-        zebes::light_color(r, gobj_arg(maps, call), call.regs.fpr[1].ps0 as f32);
+        brinstar::light_color(r, gobj_arg(maps, call), call.regs.fpr[1].ps0 as f32);
         Ret::Nothing
     };
     let forget = |c: &mut Call, k: usize| {
@@ -5563,7 +5587,7 @@ fn zebes_lava() {
             .gobjs
             .get(&call.regs.gpr[4])
             .expect("the fighter's GObj");
-        let hit = zebes::lava_device(r, fighter);
+        let hit = brinstar::lava_device(r, fighter);
         // The hit it hands back is the parameters' (their word at 0x2C), which the original
         // stores through r5.
         if let Some(h) = hit {
@@ -5594,7 +5618,7 @@ fn zebes_lava() {
         check_hazard(&d, "grZebes_801DCBFC", 1, p, &device);
     }
     let floor = |r: &mut Running, _: &Maps, _: &Call| {
-        Ret::Float(f64::from(zebes::camera_floor(&r.game.stage_info)))
+        Ret::Float(f64::from(brinstar::camera_floor(&r.game.stage_info)))
     };
     check_hazard(&d, "grZebes_801DCCC8", 1, &as_saved, &floor);
 }
@@ -5616,7 +5640,7 @@ fn acid(c: &mut Call, a: u32, state: u8, next: u8, t: i16, swing: f32, v: f32, d
 
 #[test]
 fn zebes_shaking() {
-    use melee_sim::game::gr::zebes;
+    use melee_sim::game::gr::brinstar;
     let d = hazard_dir(ZEBES);
     let shake = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = gobj_arg(maps, call);
@@ -5626,11 +5650,11 @@ fn zebes_shaking() {
             .expect("ground");
         let st = call.regs.gpr[4] - peek_u32(call, call.regs.gpr[3] + 0x2C);
         let which = if st == 0xC4 + 4 {
-            zebes::Acid::Stage
+            brinstar::Acid::Stage
         } else {
-            zebes::Acid::Island
+            brinstar::Acid::Island
         };
-        let res = zebes::shake(
+        let res = brinstar::shake(
             r,
             g,
             ground,
@@ -5708,7 +5732,7 @@ fn zebes_shaking() {
             f32_at(call, g[5] + 4),
             f32_at(call, g[5] + 8),
         );
-        zebes::pillar_hit(r, ground, dir, call.regs.fpr[1].ps0 as f32);
+        brinstar::pillar_hit(r, ground, dir, call.regs.fpr[1].ps0 as f32);
         Ret::Nothing
     };
     check_hazard(&d, "fn_801DA9D8", 1, &as_saved, &pillar);
@@ -5720,7 +5744,7 @@ fn zebes_shaking() {
             f32_at(call, g[5] + 4),
             f32_at(call, g[5] + 8),
         );
-        zebes::island_hit(r, ground, dir, call.regs.fpr[1].ps0 as f32);
+        brinstar::island_hit(r, ground, dir, call.regs.fpr[1].ps0 as f32);
         Ret::Nothing
     };
     check_hazard(&d, "fn_801DA9F0", 1, &as_saved, &island);
@@ -5783,10 +5807,10 @@ fn bubble(c: &mut Call, i: u32, state: u8, t: i16) {
 
 #[test]
 fn zebes_bubbles() {
-    use melee_sim::game::gr::zebes;
+    use melee_sim::game::gr::brinstar;
     let d = hazard_dir(ZEBES);
     let moves = |r: &mut Running, maps: &Maps, call: &Call| {
-        Ret::Int(u32::from(zebes::move_bubbles(r, gobj_arg(maps, call))))
+        Ret::Int(u32::from(brinstar::move_bubbles(r, gobj_arg(maps, call))))
     };
     // As saved, a top bubble popped (one below to take its place or not), and one falling apart
     // at its count's end.
@@ -5797,7 +5821,7 @@ fn zebes_bubbles() {
     }
     let tick = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = *maps.gobjs.get(&call.regs.gpr[3]).expect("the stage's GObj");
-        Ret::Int(u32::from(zebes::tick_bubble(
+        Ret::Int(u32::from(brinstar::tick_bubble(
             r,
             g,
             call.regs.gpr[4] as usize,
@@ -5817,7 +5841,7 @@ fn zebes_bubbles() {
         check_hazard(&d, "grZebes_801DB088", 1, p, &tick);
     }
     let span = |r: &mut Running, maps: &Maps, call: &Call| {
-        Ret::Int(u32::from(zebes::span_bubbles(r, gobj_arg(maps, call))))
+        Ret::Int(u32::from(brinstar::span_bubbles(r, gobj_arg(maps, call))))
     };
     // None, one or two of the top in place.
     let keep = |c: &mut Call, n: usize| {
@@ -5842,12 +5866,12 @@ fn zebes_bubbles() {
         check_hazard(&d, "grZebes_801DBB60", 1, p, &span);
     }
     let place = |r: &mut Running, _: &Maps, _: &Call| {
-        zebes::place_bubbles(r);
+        brinstar::place_bubbles(r);
         Ret::Nothing
     };
     check_hazard(&d, "grZebes_801DC260", 1, &as_saved, &place);
     let grow = |r: &mut Running, maps: &Maps, call: &Call| {
-        zebes::grow_bubbles(r, gobj_arg(maps, call));
+        brinstar::grow_bubbles(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     // After a pop's wait, due (from several seeds), and with 15 bubbles.
@@ -5876,25 +5900,25 @@ fn zebes_bubbles() {
     let add = |r: &mut Running, _: &Maps, call: &Call| {
         let f = |i: usize| call.regs.fpr[i].ps0 as f32;
         let g = &call.regs.gpr;
-        zebes::add_bubble(
+        brinstar::add_bubble(
             r,
             g[3] as i32,
             g[4] as u8,
             f(1),
             f(2),
             f(3),
-            zebes::GROW_BUBBLE_FRAME,
+            brinstar::GROW_BUBBLE_FRAME,
         );
         Ret::Nothing
     };
     check_hazard(&d, "grZebes_801DAE70", 1, &as_saved, &add);
-    let pop = |r: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(zebes::show_pop(r)));
+    let pop = |r: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(brinstar::show_pop(r)));
     let seeds = |c: &mut Call, k: usize| set_seed(c, 0x2468_1357u32.wrapping_mul(k as u32 + 1));
     for p in [&as_saved as &Prepare, &seeds] {
         check_hazard(&d, "grZebes_801DAA08", 1, p, &pop);
     }
     let hit = |r: &mut Running, _: &Maps, _: &Call| {
-        zebes::bubbles_hit(r);
+        brinstar::bubbles_hit(r);
         Ret::Nothing
     };
     check_hazard(&d, "fn_801DAC90", 1, &as_saved, &hit);
@@ -5902,7 +5926,7 @@ fn zebes_bubbles() {
 
 #[test]
 fn zebes_creatures_and_splashes() {
-    use melee_sim::game::gr::zebes;
+    use melee_sim::game::gr::brinstar;
     let d = hazard_dir(ZEBES);
     let creature = |c: &mut Call, waiting: bool, next: i16, t: i16| {
         let v = map_vars(c, 4);
@@ -5941,7 +5965,7 @@ fn zebes_creatures_and_splashes() {
     check_hazard(&d, "grZebes_801D9410", 1, &as_saved, &by_address);
     let splash = |r: &mut Running, _: &Maps, call: &Call| {
         let a = call.regs.gpr[3];
-        zebes::add_splash(
+        brinstar::add_splash(
             r,
             Vec3::new(f32_at(call, a), f32_at(call, a + 4), f32_at(call, a + 8)),
         );
@@ -5952,7 +5976,7 @@ fn zebes_creatures_and_splashes() {
         check_hazard(&d, "grZebes_801DA3F4", 1, p, &splash);
     }
     let remove = |r: &mut Running, maps: &Maps, call: &Call| {
-        zebes::remove_splash(r, gobj_arg(maps, call));
+        brinstar::remove_splash(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     check_hazard(&d, "grZebes_801DA4FC", 1, &as_saved, &remove);
@@ -5960,12 +5984,12 @@ fn zebes_creatures_and_splashes() {
 
 #[test]
 fn zebes_lava_bubbles() {
-    use melee_sim::game::gr::{zako, zebes};
+    use melee_sim::game::gr::{brinstar, zako};
     let d = hazard_dir(ZEBES);
     let cb = |r: &mut Running, _: &Maps, call: &Call| {
         let a = call.regs.gpr[3];
         let pos = Vec3::new(f32_at(call, a), f32_at(call, a + 4), f32_at(call, a + 8));
-        zebes::lava_bubble(r, call.addr, pos, call.regs.gpr[4] as i32);
+        brinstar::lava_bubble(r, call.addr, pos, call.regs.gpr[4] as i32);
         Ret::Int(0)
     };
     let lines = |c: &mut Call, k: usize| c.regs.gpr[4] = (k % 11) as u32;
@@ -6010,7 +6034,7 @@ fn zebes_lava_bubbles() {
 
 #[test]
 fn zebes_unreached_callbacks() {
-    use melee_sim::game::gr::zebes;
+    use melee_sim::game::gr::brinstar;
     let d = hazard_dir(ZEBES);
     let from = "grZebes_801D925C";
     for name in [
@@ -6028,7 +6052,7 @@ fn zebes_unreached_callbacks() {
     let demo = retarget(leaf_check::sym("grZebes_801D84A0"));
     check_hazard(&d, from, 1, &demo, &by_demo);
     let shadow =
-        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(zebes::check_shadow_render()));
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(brinstar::check_shadow_render()));
     let to_shadow = retarget(leaf_check::sym("grZebes_801DCCC0"));
     check_hazard(&d, from, 1, &to_shadow, &shadow);
 }
@@ -6477,12 +6501,12 @@ fn fz_seeds(c: &mut Call, k: usize) {
 
 #[test]
 fn flatzone_setup() {
-    use melee_sim::game::gr::flatzone;
+    use melee_sim::game::gr::flat_zone;
     let d = dir(FZ);
     check_calls_with(&d, "grFlatzone_80216E78", 1, &as_saved, &event);
     check_calls_with(&d, "grFlatzone_80216E78", 1, &fz_seeds, &event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        let _ = flatzone::create(
+        let _ = flat_zone::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -6512,7 +6536,7 @@ fn flatzone_setup() {
     // The platforms' next set: the setup's and drawn, as saved and from several seeds, with
     // the hidden set before or another.
     let next = |r: &mut Running, _: &Maps, call: &Call| {
-        flatzone::next_platforms(r, call.regs.gpr[3] != 0);
+        flat_zone::next_platforms(r, call.regs.gpr[3] != 0);
         Ret::Nothing
     };
     check_calls_with(&d, "grFlatzone_80218060", 1, &as_saved, &next);
@@ -6528,7 +6552,7 @@ fn flatzone_setup() {
     }
     // The pose for an event and the hidden set, from the next set's calls.
     let pose = |r: &mut Running, _: &Maps, _: &Call| {
-        flatzone::pose_platforms(r);
+        flat_zone::pose_platforms(r);
         Ret::Nothing
     };
     let to_pose = leaf_check::sym("grFlatzone_802181B4");
@@ -6541,7 +6565,7 @@ fn flatzone_setup() {
         check_calls_with(&d, "grFlatzone_80218060", 1, &set, &pose);
     }
     let hide = |r: &mut Running, _: &Maps, _: &Call| {
-        flatzone::hide_platforms(r.game);
+        flat_zone::hide_platforms(r.game);
         Ret::Nothing
     };
     let to_hide = retarget(leaf_check::sym("grFlatzone_80218260"));
@@ -6918,7 +6942,7 @@ fn flatzone_tools() {
 /// hooks.
 #[test]
 fn flatzone_unreached_callbacks() {
-    use melee_sim::game::gr::flatzone;
+    use melee_sim::game::gr::flat_zone;
     let d = dir(FZ);
     let from = "grFlatzone_802171D4";
     for name in [
@@ -6939,7 +6963,7 @@ fn flatzone_unreached_callbacks() {
         check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
     }
     let shadow =
-        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(flatzone::check_shadow_render()));
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(flat_zone::check_shadow_render()));
     let t = leaf_check::sym("grFlatzone_802182BC");
     check_calls_with(&d, from, 1, &retarget(t), &shadow);
     for name in [
@@ -7003,7 +7027,7 @@ fn inishie1_setup() {
     check_calls_with(&d, "grInishie1_801FA90C", 1, &as_saved, &event);
     check_calls_with(&d, "grInishie1_801FA988", 1, &as_saved, &event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        inishie1::create(
+        mushroom_kingdom::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -7018,13 +7042,13 @@ fn inishie1_setup() {
         check_calls_with(&d, f, 1, &as_saved, &by_address);
     }
     // The blocks, with items off as saved, and on: two blocks under ? blocks.
-    let blocks = mk_of(inishie1::init_blocks);
+    let blocks = mk_of(mushroom_kingdom::init_blocks);
     for p in [&as_saved as &Prepare, &|c: &mut Call, _: usize| {
         mk_items_on(c)
     }] {
         check_calls_with(&d, "grInishie1_801FAD84", 1, p, &blocks);
     }
-    let lifts = mk_of(inishie1::init_lifts);
+    let lifts = mk_of(mushroom_kingdom::init_lifts);
     check_calls_with(&d, "grInishie1_801FC018", 1, &as_saved, &lifts);
 }
 
@@ -7036,7 +7060,7 @@ fn inishie1_setup() {
 fn inishie1_blocks() {
     let d = dir(MK);
     check_calls_with(&d, "grInishie1_801FAB68", 1, &as_saved, &by_address);
-    let update = mk_of(inishie1::update_blocks);
+    let update = mk_of(mushroom_kingdom::update_blocks);
     check_calls_with(&d, "grInishie1_801FB3F0", 1, &as_saved, &update);
     for x2 in 0..6u16 {
         for (x4, x20, x22) in [(0u16, 0u16, 0u16), (3, 1, 2), (0, 0, 5)] {
@@ -7084,7 +7108,7 @@ fn inishie1_blocks() {
 fn inishie1_breaks() {
     let d = dir(MK);
     let bumped = |r: &mut Running, _: &Maps, call: &Call| {
-        let mut b = inishie1::Bumps::default();
+        let mut b = mushroom_kingdom::Bumps::default();
         b.bumped(call.regs.gpr[4] as i32, call.regs.fpr[1].ps0 as f32);
         b.apply(r);
         Ret::Nothing
@@ -7102,7 +7126,7 @@ fn inishie1_breaks() {
     }
     let ground = |maps: &Maps, a: u32| *maps.grounds.get(&a).expect("the stage's object");
     let hit = move |r: &mut Running, maps: &Maps, call: &Call| {
-        inishie1::block_hit(r, gobj_arg(maps, call), ground(maps, call.regs.gpr[4]));
+        mushroom_kingdom::block_hit(r, gobj_arg(maps, call), ground(maps, call.regs.gpr[4]));
         Ret::Nothing
     };
     for status in [None, Some(1u16), Some(2), Some(3)] {
@@ -7114,11 +7138,11 @@ fn inishie1_breaks() {
         check_calls_with(&d, "fn_801FBF6C", 1, &set, &hit);
     }
     let give_up = |r: &mut Running, maps: &Maps, call: &Call| {
-        inishie1::give_up(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
+        mushroom_kingdom::give_up(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
         Ret::Nothing
     };
     let brk = |r: &mut Running, maps: &Maps, call: &Call| {
-        inishie1::break_block(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
+        mushroom_kingdom::break_block(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
         Ret::Nothing
     };
     for status in [None, Some(0u16), Some(1), Some(2), Some(3)] {
@@ -7145,7 +7169,7 @@ fn inishie1_hatena() {
     let add = |r: &mut Running, maps: &Maps, call: &Call| {
         let gobj = gobj_arg(maps, call);
         let ix = call.regs.gpr[4] as usize;
-        inishie1::add_hatena(r, gobj, ix, inishie1::PROC_HATENA_FRAME);
+        mushroom_kingdom::add_hatena(r, gobj, ix, mushroom_kingdom::PROC_HATENA_FRAME);
         Ret::Nothing
     };
     let t = leaf_check::sym("grInishie1_801FBAA0");
@@ -7158,7 +7182,7 @@ fn inishie1_hatena() {
         check_calls_with(&d, from, 1, &set, &add);
     }
     let remove = |r: &mut Running, maps: &Maps, call: &Call| {
-        inishie1::remove_hatena(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
+        mushroom_kingdom::remove_hatena(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
         Ret::Nothing
     };
     let t = leaf_check::sym("grInishie1_801FBC4C");
@@ -7168,7 +7192,7 @@ fn inishie1_hatena() {
     };
     check_calls_with(&d, from, 1, &set, &remove);
     let pop = |r: &mut Running, maps: &Maps, call: &Call| {
-        inishie1::pop_item(r, maps.jobjs.get(&call.regs.gpr[4]).copied());
+        mushroom_kingdom::pop_item(r, maps.jobjs.get(&call.regs.gpr[4]).copied());
         Ret::Nothing
     };
     let t = leaf_check::sym("grInishie1_801FBA34");
@@ -7198,7 +7222,7 @@ fn inishie1_hatena() {
                 hidden: peek_u32(call, v + 8) as i32,
             },
         );
-        inishie1::proc_hatena(r, gobj);
+        mushroom_kingdom::proc_hatena(r, gobj);
         Ret::Nothing
     };
     let t = leaf_check::sym("grInishie1_801FAC58");
@@ -7234,7 +7258,7 @@ fn inishie1_hatena() {
 #[test]
 fn inishie1_lifts() {
     let d = dir(MK);
-    let lifts = mk_of(inishie1::update_lifts);
+    let lifts = mk_of(mushroom_kingdom::update_lifts);
     check_calls_with(&d, "grInishie1_801FC664", 1, &as_saved, &lifts);
     let set_lifts = |c: &mut Call, ee: u16, e0: f32, e4: f32, f0: f32, f4: f32, ec: u16| {
         let v = mk_vars(c);
@@ -7277,13 +7301,13 @@ fn inishie1_lifts() {
         }
     };
     check_calls_with(&d, "grInishie1_801FC664", 1, &below, &lifts);
-    let balance = mk_of(inishie1::balance);
+    let balance = mk_of(mushroom_kingdom::balance);
     check_calls_with(&d, "grInishie1_801FC110", 1, &as_saved, &balance);
     for (_, e0, e4, f0, f4, _) in cases.iter().copied().filter(|c| c.0 == 0) {
         let set = move |c: &mut Call, _: usize| set_lifts(c, 0, e0, e4, f0, f4, 0);
         check_calls_with(&d, "grInishie1_801FC110", 1, &set, &balance);
     }
-    let level = mk_of(inishie1::level_out);
+    let level = mk_of(mushroom_kingdom::level_out);
     let t = leaf_check::sym("grInishie1_801FC4A0");
     for f0 in [0.0f32, 0.1, -0.1, 50.0, -50.0] {
         let set = move |c: &mut Call, _: usize| {
@@ -7300,7 +7324,7 @@ fn inishie1_lifts() {
         let param = r.game.gr.inishie1_yakumono;
         let a = &call.regs.gpr;
         let (joint, x50, kind) = (a[4] as i32, a[6] as i32, a[7] as i32);
-        inishie1::lift_touched(&mut r.game.grounds, param, r.data, g, joint, x50, kind);
+        mushroom_kingdom::lift_touched(&mut r.game.grounds, param, r.data, g, joint, x50, kind);
         Ret::Nothing
     };
     let prepares: [&Prepare; 5] = [
@@ -7324,7 +7348,7 @@ fn inishie1_unreached_callbacks() {
     // The song's change itself (`lbAudioAx_80023F28`) is stood in for on the reference's side:
     // a captured state's audio has no timeline to start a stream on, so ours tells the
     // frontend instead. The oracle's match plays the change (its fast song from tick 13,326).
-    let music = mk_of(inishie1::music);
+    let music = mk_of(mushroom_kingdom::music);
     let stubs = [(leaf_check::sym("lbAudioAx_80023F28"), None)];
     let setup = leaf_check::calls::Setup {
         stubs: &stubs,
@@ -7349,8 +7373,9 @@ fn inishie1_unreached_callbacks() {
     ] {
         check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
     }
-    let shadow =
-        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(inishie1::check_shadow_render()));
+    let shadow = |_: &mut Running, _: &Maps, _: &Call| {
+        Ret::Int(u32::from(mushroom_kingdom::check_shadow_render()))
+    };
     let t = leaf_check::sym("grInishie1_801FCBB8");
     check_calls_with(&d, from, 1, &retarget(t), &shadow);
     let t = leaf_check::sym("grInishie1_801FA984");
@@ -7391,7 +7416,7 @@ fn inishie2_setup() {
     check_calls_with(&d, "grInishie2_801FCBC4", 1, &as_saved, &event);
     check_calls_with(&d, "grInishie2_801FCCB0", 1, &as_saved, &event);
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        inishie2::create(
+        mushroom_kingdom_2::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -7414,11 +7439,11 @@ fn inishie2_setup() {
     for (f, port) in [
         (
             "grInishie2_801FD018",
-            inishie2::init_logs as fn(&mut Running, _),
+            mushroom_kingdom_2::init_logs as fn(&mut Running, _),
         ),
-        ("grInishie2_801FD368", inishie2::init_birdo_wait),
-        ("grInishie2_801FD744", inishie2::init_pidgit_wait),
-        ("grInishie2_801FD824", inishie2::pidgit_in),
+        ("grInishie2_801FD368", mushroom_kingdom_2::init_birdo_wait),
+        ("grInishie2_801FD744", mushroom_kingdom_2::init_pidgit_wait),
+        ("grInishie2_801FD824", mushroom_kingdom_2::pidgit_in),
     ] {
         check_calls_with(&d, f, 1, &as_saved, &mk_of(port));
     }
@@ -7434,13 +7459,28 @@ fn inishie2_stage() {
     for (f, port, k, flag) in [
         (
             "grInishie2_801FD0B4",
-            inishie2::send_logs as fn(&mut Running, _),
+            mushroom_kingdom_2::send_logs as fn(&mut Running, _),
             0u32,
             0x40u8,
         ),
-        ("grInishie2_801FD0B4", inishie2::send_logs, 1, 0x20),
-        ("grInishie2_801FD3CC", inishie2::send_birdo, 2, 0x10),
-        ("grInishie2_801FD7A8", inishie2::send_pidgit, 3, 0x08),
+        (
+            "grInishie2_801FD0B4",
+            mushroom_kingdom_2::send_logs,
+            1,
+            0x20,
+        ),
+        (
+            "grInishie2_801FD3CC",
+            mushroom_kingdom_2::send_birdo,
+            2,
+            0x10,
+        ),
+        (
+            "grInishie2_801FD7A8",
+            mushroom_kingdom_2::send_pidgit,
+            3,
+            0x08,
+        ),
     ] {
         let ours = mk_of(port);
         check_calls_with(&d, f, 1, &as_saved, &ours);
@@ -7455,7 +7495,7 @@ fn inishie2_stage() {
             check_calls_with(&d, f, 1, &set, &ours);
         }
     }
-    let music = mk_of(inishie2::music);
+    let music = mk_of(mushroom_kingdom_2::music);
     let stubs = [(leaf_check::sym("lbAudioAx_80023F28"), None)];
     let setup = leaf_check::calls::Setup {
         stubs: &stubs,
@@ -7503,12 +7543,12 @@ fn inishie2_birdo_platform() {
     let gone = |c: &mut Call, _: usize| poke_u32(c, vars(c), 0);
     check_calls_with(&d, "grInishie2_801FD654", 1, &gone, &by_address);
     let birdo_gone = |r: &mut Running, maps: &Maps, call: &Call| {
-        inishie2::birdo_gone(r, gobj_arg(maps, call));
+        mushroom_kingdom_2::birdo_gone(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     check_calls_with(&d, "grInishie2_801FD448", 1, &as_saved, &birdo_gone);
     let down = |r: &mut Running, maps: &Maps, call: &Call| {
-        inishie2::birdo_down(r, gobj_arg(maps, call));
+        mushroom_kingdom_2::birdo_down(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     let t = leaf_check::sym("grInishie2_801FD4CC");
@@ -7522,9 +7562,9 @@ fn inishie2_pidgit() {
     let d = dir(MK2);
     for f in ["grInishie2_801FDED8", "grInishie2_801FD9EC"] {
         let ours = if f == "grInishie2_801FDED8" {
-            mk_of(inishie2::proc_pidgit)
+            mk_of(mushroom_kingdom_2::proc_pidgit)
         } else {
-            mk_of(inishie2::pidgit_fly)
+            mk_of(mushroom_kingdom_2::pidgit_fly)
         };
         check_calls_with(&d, f, 1, &as_saved, &ours);
         for (flags, turns) in [
@@ -7547,7 +7587,7 @@ fn inishie2_pidgit() {
         }
     }
     let draw = |r: &mut Running, _: &Maps, call: &Call| {
-        Ret::Int(inishie2::random_below(r, call.regs.gpr[3] as i32) as u32)
+        Ret::Int(mushroom_kingdom_2::random_below(r, call.regs.gpr[3] as i32) as u32)
     };
     for p in [
         &as_saved as &Prepare,
@@ -7575,8 +7615,9 @@ fn inishie2_unreached_callbacks() {
     ] {
         check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
     }
-    let shadow =
-        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(inishie2::check_shadow_render()));
+    let shadow = |_: &mut Running, _: &Maps, _: &Call| {
+        Ret::Int(u32::from(mushroom_kingdom_2::check_shadow_render()))
+    };
     let t = leaf_check::sym("grInishie2_801FDFF0");
     check_calls_with(&d, from, 1, &retarget(t), &shadow);
     let none = |_: &mut Running, _: &Maps, _: &Call| Ret::Int(0);
@@ -7906,11 +7947,11 @@ fn icemt_setup() {
         }
         // The setup's call, or the climb's process's (whose r1 is lower).
         let frame = if call.regs.gpr[1] < 0x804E_E9A0 {
-            icemt::CLIMB_PROC_FRAME
+            icicle_mountain::CLIMB_PROC_FRAME
         } else {
-            icemt::SETUP_FRAME
+            icicle_mountain::SETUP_FRAME
         };
-        icemt::create(r, call.regs.gpr[3] as i32, frame);
+        icicle_mountain::create(r, call.regs.gpr[3] as i32, frame);
         Ret::Nothing
     };
     check_calls_with(&d, "setupStageCallbacks", 1, &as_saved, &create);
@@ -7920,7 +7961,7 @@ fn icemt_setup() {
     }
     // The climb's first two fields, as saved and as each other pair.
     let place = |r: &mut Running, maps: &Maps, call: &Call| {
-        icemt::place_fields(r, rc_ground(maps, call.regs.gpr[3]));
+        icicle_mountain::place_fields(r, rc_ground(maps, call.regs.gpr[3]));
         Ret::Nothing
     };
     check_calls_with(&d, "grIceMt_801FA0BC", 1, &as_saved, &place);
@@ -7937,7 +7978,7 @@ fn icemt_setup() {
         let parts: Vec<i32> = (0..call.regs.gpr[5])
             .map(|i| i32::from(peek_h(call, call.regs.gpr[4] + 2 * i)))
             .collect();
-        icemt::make_blocks(r, gobj_arg(maps, call), &parts);
+        icicle_mountain::make_blocks(r, gobj_arg(maps, call), &parts);
         Ret::Nothing
     };
     check_calls_with(&d, "grIceMt_801F8CDC", 1, &as_saved, &blocks);
@@ -7946,13 +7987,13 @@ fn icemt_setup() {
         let at = call.regs.gpr[4] - vars(call);
         let s = usize::from(at == 0x4A);
         let g = call.regs.gpr.map(|v| v as i32);
-        icemt::ice_slot(r, gobj, s, g[5], g[6], g[7], g[8], g[9], call.regs.gpr[10]);
+        icicle_mountain::ice_slot(r, gobj, s, g[5], g[6], g[7], g[8], g[9], call.regs.gpr[10]);
         Ret::Nothing
     };
     check_calls_with(&d, "grIceMt_801F91EC", 1, &as_saved, &slot);
     let index = |r: &mut Running, maps: &Maps, call: &Call| {
         let part = maps.jobjs.get(&call.regs.gpr[4]).copied();
-        Ret::Int(icemt::part_index(r.game, gobj_arg(maps, call), part) as u32)
+        Ret::Int(icicle_mountain::part_index(r.game, gobj_arg(maps, call), part) as u32)
     };
     for p in [&as_saved as &Prepare, &|c: &mut Call, _: usize| {
         c.regs.gpr[4] = 0x8000_0000
@@ -7960,7 +8001,7 @@ fn icemt_setup() {
         check_calls_with(&d, "grIceMt_801FA500", 1, p, &index);
     }
     let scenery = |r: &mut Running, _: &Maps, _: &Call| {
-        icemt::scenery_points(r.game);
+        icicle_mountain::scenery_points(r.game);
         Ret::Nothing
     };
     check_calls_with(&d, "grIceMt_801FA854", 1, &as_saved, &scenery);
@@ -7998,7 +8039,7 @@ fn icemt_climb() {
         check_calls_with(&d, "stageGObj9_GObjProc", 1, p, &by_address);
     }
     let speed = |r: &mut Running, maps: &Maps, call: &Call| {
-        let (_, ret) = icemt::speed_step(r, rc_ground(maps, call.regs.gpr[3] - 4));
+        let (_, ret) = icicle_mountain::speed_step(r, rc_ground(maps, call.regs.gpr[3] - 4));
         Ret::Int(u32::from(ret))
     };
     let st: [&Prepare; 6] = [
@@ -8015,7 +8056,7 @@ fn icemt_climb() {
     // The next speed: as saved, and with rest counts left on some.
     let draw = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = rc_ground(maps, vars(call));
-        Ret::Int(icemt::draw_speed(r, g).0 as u32)
+        Ret::Int(icicle_mountain::draw_speed(r, g).0 as u32)
     };
     let rests: [&Prepare; 3] = [
         &as_saved,
@@ -8036,7 +8077,7 @@ fn icemt_climb() {
     }
     let next = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = rc_ground(maps, vars(call));
-        Ret::Int(icemt::next_field(r, g) as u32)
+        Ret::Int(icicle_mountain::next_field(r, g) as u32)
     };
     // One field not shown left with no rest count, the others resting (the draw loops until
     // it finds one, as the original does).
@@ -8069,7 +8110,7 @@ fn icemt_climb() {
     }
     // The field change, as saved and with the upper field moved to each side.
     let change = |r: &mut Running, maps: &Maps, call: &Call| {
-        Ret::Int(u32::from(icemt::change_field(
+        Ret::Int(u32::from(icicle_mountain::change_field(
             r,
             rc_ground(maps, call.regs.gpr[3]),
         )))
@@ -8090,18 +8131,18 @@ fn icemt_climb() {
     let moved = |r: &mut Running, _: &Maps, call: &Call| {
         let ids = call.regs.gpr[3];
         let (under, upper) = (peek_h(call, ids), peek_h(call, ids + 2));
-        icemt::move_fields(r, under, upper, call.regs.fpr[1].ps0 as f32);
+        icicle_mountain::move_fields(r, under, upper, call.regs.fpr[1].ps0 as f32);
         Ret::Nothing
     };
     check_calls_with(&d, "grIceMt_801F96E0", 1, &as_saved, &moved);
     let bg = |r: &mut Running, _: &Maps, call: &Call| {
-        icemt::tell_bg(r.game, call.regs.fpr[1].ps0 as f32);
+        icicle_mountain::tell_bg(r.game, call.regs.fpr[1].ps0 as f32);
         Ret::Nothing
     };
     check_calls_with(&d, "grIceMt_801F9668", 1, &as_saved, &bg);
     let gap = |r: &mut Running, _: &Maps, call: &Call| {
         let (a, b) = (call.regs.gpr[3] as i32, call.regs.gpr[4] as i32);
-        Ret::Float(f64::from(icemt::field_gap(r.game, r.data, a, b)))
+        Ret::Float(f64::from(icicle_mountain::field_gap(r.game, r.data, a, b)))
     };
     check_calls_with(&d, "grIceMt_801F993C", 1, &as_saved, &gap);
     for (a, b) in [(1u32, 2u32), (2, 3), (3, 4), (4, 5), (5, 6), (6, 1), (2, 1)] {
@@ -8140,7 +8181,7 @@ fn icemt_fields() {
     let ice = |r: &mut Running, maps: &Maps, call: &Call| {
         let gobj = gobj_arg(maps, call);
         let s = usize::from(call.regs.gpr[4] - vars(call) == 0x4A);
-        icemt::run_ice(r, gobj, s);
+        icicle_mountain::run_ice(r, gobj, s);
         Ret::Nothing
     };
     check_calls_with(&d, "grIceMt_801F929C", 1, &as_saved, &ice);
@@ -8153,7 +8194,7 @@ fn icemt_fields() {
         check_calls_with(&d, "grIceMt_801F929C", 1, &set, &ice);
     }
     let points = |r: &mut Running, maps: &Maps, call: &Call| {
-        icemt::update_points(r, gobj_arg(maps, call));
+        icicle_mountain::update_points(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     let due = |c: &mut Call, _: usize| {
@@ -8202,13 +8243,17 @@ fn icemt_touches() {
     let touched = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = rc_ground(maps, call.regs.gpr[3] + 0xC4);
         let cb = call.addr;
-        let map = if cb == icemt::ICE_C_TOUCHED { 4 } else { 2 };
+        let map = if cb == icicle_mountain::ICE_C_TOUCHED {
+            4
+        } else {
+            2
+        };
         let root = melee_sim::game::gr::ground::map_gobj(r.game, map)
             .and_then(|go| melee_sim::game::gr::ground::jobj_of(r.game, go));
         let cd = coll_arg(r, maps, call);
         let (objs, grounds) = (&mut r.game.objs, &mut r.game.grounds);
-        icemt::ice_touched(objs, grounds, root, g, cb, &cd);
-        let mut touch = icemt::ClimbTouch::default();
+        icicle_mountain::ice_touched(objs, grounds, root, g, cb, &cd);
+        let mut touch = icicle_mountain::ClimbTouch::default();
         touch.touched(cd.x0_gobj);
         touch.apply(r.game);
         Ret::Nothing
@@ -8235,7 +8280,7 @@ fn icemt_touches() {
     }
     let adventure = |r: &mut Running, maps: &Maps, call: &Call| {
         let cd = coll_arg(r, maps, call);
-        let mut touch = icemt::ClimbTouch::default();
+        let mut touch = icicle_mountain::ClimbTouch::default();
         touch.touched(cd.x0_gobj);
         touch.apply(r.game);
         Ret::Nothing
@@ -8247,7 +8292,7 @@ fn icemt_touches() {
             .grounds
             .get(&call.regs.gpr[4])
             .expect("the block's field");
-        icemt::block_hit(r, item, g);
+        icicle_mountain::block_hit(r, item, g);
         Ret::Nothing
     };
     check_calls_with(&d, "fn_801F8C64", 0, &as_saved, &hit);
@@ -8262,8 +8307,9 @@ fn icemt_unreached_callbacks() {
     for addr in [0x801F_75E4u32, 0x801F_75E8, 0x801F_77AC, 0x801F_8C60] {
         check_calls_with(&d, from, 1, &retarget(addr), &by_address);
     }
-    let shadow =
-        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(icemt::check_shadow_render()));
+    let shadow = |_: &mut Running, _: &Maps, _: &Call| {
+        Ret::Int(u32::from(icicle_mountain::check_shadow_render()))
+    };
     check_calls_with(&d, from, 1, &retarget(0x801F_A900), &shadow);
     check_calls_with(&d, from, 1, &retarget(0x801F_6868), &demo);
     // The wind, into the climb's first six rest counts (from its process's calls, r3 its
@@ -8274,7 +8320,7 @@ fn icemt_unreached_callbacks() {
         c.regs.gpr[3] = to;
     };
     let wind = |r: &mut Running, maps: &Maps, call: &Call| {
-        let w = icemt::wind(r.game);
+        let w = icicle_mountain::wind(r.game);
         let g = rc_ground(maps, call.regs.gpr[3] - 0x18);
         let v = r.game.grounds[g.0].u.icemt_scroll();
         for (k, c) in [w.x, w.y, w.z].into_iter().enumerate() {
@@ -9815,7 +9861,7 @@ fn castle_setup() {
         each(f, &|| check_calls_with(&d, f, 1, &cs_saved, &event));
     }
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        castle::create(r, call.regs.gpr[3] as i32, cs_frame(call));
+        peachs_castle::create(r, call.regs.gpr[3] as i32, cs_frame(call));
         Ret::Nothing
     };
     each("grCastle_801CD4D0", &|| {
@@ -9841,7 +9887,7 @@ fn castle_setup() {
             "grCastle_801CF7B0",
             1,
             &cs_saved,
-            &cs_of(castle::init_switches),
+            &cs_of(peachs_castle::init_switches),
         )
     });
     each("grCastle_801CDFD8", &|| {
@@ -9850,7 +9896,7 @@ fn castle_setup() {
             "grCastle_801CDFD8",
             1,
             &cs_saved,
-            &cs_of(castle::reset_bill_wait),
+            &cs_of(peachs_castle::reset_bill_wait),
         )
     });
     // The flags' chains from the archive's description, their swing and their release.
@@ -9862,7 +9908,7 @@ fn castle_setup() {
             .expect("the flags' dynamics");
         let src = melee_data::archive::DataRef { archive, offset };
         let (g, i) = cs_flag(maps, call.regs.gpr[5]);
-        castle::chain(r, root, src, g, i);
+        peachs_castle::chain(r, root, src, g, i);
         Ret::Nothing
     };
     each("grLib_801C9B20", &|| {
@@ -9870,7 +9916,7 @@ fn castle_setup() {
     });
     let swing = |r: &mut Running, maps: &Maps, call: &Call| {
         let (g, i) = cs_flag(maps, call.regs.gpr[3]);
-        castle::swing(r, g, i);
+        peachs_castle::swing(r, g, i);
         Ret::Nothing
     };
     each("grLib_801C9B8C", &|| {
@@ -9899,7 +9945,7 @@ fn castle_stage() {
     check_calls_with(&d, "grCastle_801CD8A8", 1, &cs_saved, &by_address);
     // The switches' timer: none out and one out at rest or not, the wait running out, the
     // last switch's weight divided.
-    let timer = cs_of(castle::switch_timer);
+    let timer = cs_of(peachs_castle::switch_timer);
     check_calls_with(&d, "grCastle_801CF868", 1, &cs_saved, &timer);
     for (slot, wait, state) in [
         (-1i32, 0u32, 0u32),
@@ -9933,7 +9979,7 @@ fn castle_stage() {
         check_calls_with(&d, "grCastle_801CF868", 1, &set, &timer);
     }
     // The Bullet Bills' timer, due and not, as the wait runs out.
-    let bills = cs_of(castle::bill_timer);
+    let bills = cs_of(peachs_castle::bill_timer);
     check_calls_with(&d, "grCastle_801CE19C", 1, &cs_saved, &bills);
     for (due, wait) in [(true, 0u16), (true, 0xFFFF), (false, 0xFFFF), (true, 7)] {
         let set = move |c: &mut Call, k: usize| {
@@ -9947,7 +9993,7 @@ fn castle_stage() {
     // A path's draw with the last three paths each way, none flown and the ring's turn at
     // each place.
     let pick = |r: &mut Running, maps: &Maps, call: &Call| {
-        Ret::Int(castle::pick_path(r, gobj_arg(maps, call)) as u32)
+        Ret::Int(peachs_castle::pick_path(r, gobj_arg(maps, call)) as u32)
     };
     let t = leaf_check::sym("grCastle_801CE054");
     for (recent, at) in [
@@ -9971,7 +10017,7 @@ fn castle_stage() {
     // The wind's steering: on and past its turns and gusts, with gusts on and off, near its
     // limits.
     let steer = |r: &mut Running, _: &Maps, _: &Call| {
-        castle::steer_wind(r);
+        peachs_castle::steer_wind(r);
         Ret::Nothing
     };
     check_calls_with(&d, "grCastle_801D0BBC", 1, &cs_saved, &steer);
@@ -9994,7 +10040,7 @@ fn castle_stage() {
         check_calls_with(&d, "grCastle_801D0BBC", 1, &set, &steer);
     }
     let rescale = |r: &mut Running, _: &Maps, _: &Call| {
-        castle::rescale_wind(r);
+        peachs_castle::rescale_wind(r);
         Ret::Nothing
     };
     for gust in [None, Some(0u8), Some(1)] {
@@ -10009,7 +10055,7 @@ fn castle_stage() {
     // A flag's turn into the wind, as saved and from poles turned every way, a half turn and
     // past it.
     let turn = |r: &mut Running, maps: &Maps, call: &Call| {
-        castle::turn_to_wind(r, maps.jobjs.get(&call.regs.gpr[3]).copied());
+        peachs_castle::turn_to_wind(r, maps.jobjs.get(&call.regs.gpr[3]).copied());
         Ret::Nothing
     };
     check_calls_with(&d, "grCastle_801D0D84", 1, &cs_saved, &turn);
@@ -10064,7 +10110,7 @@ fn castle_lifts() {
                 .expect("the lifts' Ground");
             let kind = peek_u32(call, call.regs.gpr[5] + 0x34) >> 27 & 0xF;
             let (joint, x50) = (call.regs.gpr[4] as i32, call.regs.gpr[6] as i32);
-            castle::lift_touched(&mut r.game.grounds[g.0], joint, kind, x50);
+            peachs_castle::lift_touched(&mut r.game.grounds[g.0], joint, kind, x50);
             Ret::Nothing
         };
         let prepares: [&Prepare; 4] = [
@@ -10117,7 +10163,7 @@ fn castle_bills() {
         "grCastle_801CE3AC",
         1,
         &cs_saved,
-        &cs_of(castle::place_blaster),
+        &cs_of(peachs_castle::place_blaster),
     );
     check_calls_with(&d, "grCastle_801CE860", 1, &cs_saved, &by_address);
     for anim in 0..5u32 {
@@ -10133,7 +10179,7 @@ fn castle_bills() {
     }
     check_calls_with(&d, "grCastle_801CE9E8", 1, &cs_saved, &by_address);
     let at = |r: &mut Running, _: &Maps, _: &Call| {
-        let found = castle::bill_position(r.game, r.data);
+        let found = peachs_castle::bill_position(r.game, r.data);
         if let Some(v) = found {
             r.game.stage_info.x730 = v;
         }
@@ -10165,7 +10211,7 @@ fn castle_blocks() {
         }
     }
     let grow = |r: &mut Running, maps: &Maps, call: &Call| {
-        let done = castle::grow(r, gobj_arg(maps, call), call.regs.gpr[4] != 0);
+        let done = peachs_castle::grow(r, gobj_arg(maps, call), call.regs.gpr[4] != 0);
         Ret::Int(u32::from(done))
     };
     // Items on (frequency 1) and off, with the bob-omb rain on and off.
@@ -10194,7 +10240,7 @@ fn castle_blocks() {
     ] {
         check_calls_with(&d, "grCastle_801CFBD4", 1, p, &grow);
     }
-    let bump = cs_of(castle::bump);
+    let bump = cs_of(peachs_castle::bump);
     check_calls_with(&d, "grCastle_801D02B8", 1, &cs_saved, &bump);
     for state in 0..5u16 {
         for step in 0..6u8 {
@@ -10215,7 +10261,7 @@ fn castle_blocks() {
         }
     }
     let render = |r: &mut Running, maps: &Maps, call: &Call| {
-        castle::render_blocks(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        peachs_castle::render_blocks(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
         Ret::Nothing
     };
     let setup = leaf_check::calls::Setup {
@@ -10305,7 +10351,7 @@ fn castle_block_hits() {
                 .grounds
                 .get(&call.regs.gpr[4])
                 .expect("the blocks' Ground");
-            castle::block_hit(r, g, i);
+            peachs_castle::block_hit(r, g, i);
             Ret::Nothing
         };
         check_calls_with(&d, from, 1, &move |c, _| to(c, i, ht, false), &hit_port);
@@ -10319,7 +10365,7 @@ fn castle_block_hits() {
                 .get(&call.regs.gpr[4])
                 .expect("the blocks' Ground");
             let by = maps.gobjs.get(&call.regs.gpr[5]).copied();
-            castle::block_touched(r, g, by, i);
+            peachs_castle::block_touched(r, g, by, i);
             Ret::Nothing
         };
         for fighter in [true, false] {
@@ -10380,7 +10426,7 @@ fn castle_switches() {
             .get(&call.regs.gpr[3])
             .expect("the switch's item");
         let by = maps.gobjs.get(&call.regs.gpr[6]).copied();
-        castle::switch_hit(r, item, g, Vec3::ZERO, by);
+        peachs_castle::switch_hit(r, item, g, Vec3::ZERO, by);
         Ret::Nothing
     };
     let touched = |r: &mut Running, maps: &Maps, call: &Call| {
@@ -10393,7 +10439,7 @@ fn castle_switches() {
             .get(&call.regs.gpr[3])
             .expect("the switch's item");
         let by = maps.gobjs.get(&call.regs.gpr[5]).copied();
-        castle::switch_touched(r, item, g, by);
+        peachs_castle::switch_touched(r, item, g, by);
         Ret::Nothing
     };
     check_calls_with(&d, "fn_801CFAFC", 0, &cs_saved, &hit);
@@ -10421,7 +10467,7 @@ fn castle_moat() {
                 .gobjs
                 .get(&call.regs.gpr[4])
                 .expect("the fighter's GObj");
-            let push = castle::moat(r, ground, fighter);
+            let push = peachs_castle::moat(r, ground, fighter);
             if let Some(v) = push {
                 r.game.stage_info.x730 = v;
             }
@@ -10452,7 +10498,7 @@ fn castle_moat() {
     let splash = |r: &mut Running, _: &Maps, call: &Call| {
         let at = call.regs.gpr[3];
         let pos = Vec3::new(f32_at(call, at), f32_at(call, at + 4), f32_at(call, at + 8));
-        castle::splash(r, pos, call.regs.fpr[1].ps0 as f32);
+        peachs_castle::splash(r, pos, call.regs.fpr[1].ps0 as f32);
         Ret::Nothing
     };
     check_calls_with(&dir(CSW), "grCastle_801D0A9C", 1, &cs_saved, &splash);
@@ -10463,7 +10509,7 @@ fn castle_shadow() {
     let d = dir(CS);
     fn ours(r: &mut Running, maps: &Maps, call: &Call) -> bool {
         let (pos, j) = shadow_args(maps, call);
-        castle::check_shadow_render(r.game, r.data, pos, j)
+        peachs_castle::check_shadow_render(r.game, r.data, pos, j)
     }
     check_shadow(&d, "grCastle_801D0B0C", ours, -1.0);
     // Right of 192 below 137 (in the stage's scale), and on either edge.
@@ -10513,14 +10559,14 @@ fn castle_unreached_callbacks() {
     check_calls_with(&d, from, 1, &retarget(t), &demo);
     let nothing = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = melee_sim::game::gr::ground::ground_of(r.game, gobj_arg(maps, call));
-        castle::item_nothing(r, gobj_arg(maps, call), g);
+        peachs_castle::item_nothing(r, gobj_arg(maps, call), g);
         Ret::Nothing
     };
     for name in ["fn_801CE3A0", "fn_801CE9DC"] {
         check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &nothing);
     }
     let render = |r: &mut Running, maps: &Maps, call: &Call| {
-        castle::render_stage(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        peachs_castle::render_stage(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
         Ret::Nothing
     };
     let setup = leaf_check::calls::Setup {
@@ -10539,7 +10585,7 @@ fn castle_unreached_callbacks() {
     let splash = |r: &mut Running, _: &Maps, call: &Call| {
         let at = call.regs.gpr[3];
         let pos = Vec3::new(f32_at(call, at), f32_at(call, at + 4), f32_at(call, at + 8));
-        castle::splash(r, pos, call.regs.fpr[1].ps0 as f32);
+        peachs_castle::splash(r, pos, call.regs.fpr[1].ps0 as f32);
         Ret::Nothing
     };
     let t = leaf_check::sym("grCastle_801D0A9C");
@@ -10553,8 +10599,9 @@ fn castle_unreached_callbacks() {
         c.regs.gpr[3] = at;
     };
     check_calls_with(&d, from, 1, &prep, &splash);
-    let floor =
-        |r: &mut Running, _: &Maps, _: &Call| Ret::Float(f64::from(castle::camera_floor(r.game)));
+    let floor = |r: &mut Running, _: &Maps, _: &Call| {
+        Ret::Float(f64::from(peachs_castle::camera_floor(r.game)))
+    };
     let t = leaf_check::sym("grCastle_801D0FF0");
     check_calls_with(&d, from, 1, &retarget(t), &floor);
 }
@@ -10597,7 +10644,7 @@ fn mc_set_state(c: &mut Call, i: u32, state: u8) {
 
 #[test]
 fn mutecity_setup() {
-    use melee_sim::game::gr::mutecity;
+    use melee_sim::game::gr::mute_city;
     let d = dir(MC);
     for f in [
         "grMuteCity_801EFC6C",
@@ -10607,7 +10654,7 @@ fn mutecity_setup() {
         check_calls_with(&d, f, 1, &as_saved, &event);
     }
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        let _ = mutecity::create(
+        let _ = mute_city::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -10646,7 +10693,7 @@ fn mutecity_setup() {
     let apart = |c: &mut Call, _: usize| c.regs.gpr[6] = 1;
     check_calls_with(&d, "grFZeroCar_801CAFBC", 1, &apart, &build);
     let place = |r: &mut Running, _: &Maps, _: &Call| {
-        mutecity::place_cars(r.game);
+        mute_city::place_cars(r.game);
         Ret::Nothing
     };
     check_calls_with(&d, "grMuteCity_801F0F4C", 1, &as_saved, &place);
@@ -10675,7 +10722,7 @@ fn mutecity_script() {
     let d = dir(MC);
     let f = "grMuteCity_801F04B8";
     let by_address = |r: &mut Running, maps: &Maps, call: &Call| {
-        melee_sim::game::gr::mutecity::run_script(r, gobj_arg(maps, call));
+        melee_sim::game::gr::mute_city::run_script(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     check_calls_with(&d, f, 1, &as_saved, &by_address);
@@ -10700,11 +10747,11 @@ fn mutecity_script() {
 /// lines in each of the ends' shapes.
 #[test]
 fn mutecity_track() {
-    use melee_sim::game::gr::mutecity;
+    use melee_sim::game::gr::mute_city;
     let d = dir(MC);
     let find = |r: &mut Running, maps: &Maps, call: &Call| {
         let j = maps.jobjs.get(&call.regs.gpr[3]).copied();
-        let (t, _) = mutecity::find_track_end(r, j, call.regs.fpr[1].ps0 as f32);
+        let (t, _) = mute_city::find_track_end(r, j, call.regs.fpr[1].ps0 as f32);
         Ret::Float(gekko_fp::lfs(t.to_bits()))
     };
     check_calls_with(&d, "grMuteCity_801F094C", 1, &as_saved, &find);
@@ -10716,7 +10763,7 @@ fn mutecity_track() {
     }
     let f = "grMuteCity_801F0D20";
     let by_address = |r: &mut Running, maps: &Maps, call: &Call| {
-        mutecity::follow_track(r, gobj_arg(maps, call));
+        mute_city::follow_track(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     check_calls_with(&d, f, 1, &as_saved, &by_address);
@@ -10735,10 +10782,10 @@ fn mutecity_track() {
 /// several seeds.
 #[test]
 fn mutecity_race() {
-    use melee_sim::game::gr::mutecity;
+    use melee_sim::game::gr::mute_city;
     let d = dir(MC);
     let race = |r: &mut Running, _: &Maps, _: &Call| {
-        mutecity::steer_cars(r);
+        mute_city::steer_cars(r);
         Ret::Nothing
     };
     check_calls_with(&d, "grMuteCity_801F1328", 1, &as_saved, &race);
@@ -10774,7 +10821,7 @@ fn mutecity_race() {
         check_calls_with(&d, "grMuteCity_801F1328", 1, p, &race);
     }
     let steer = |r: &mut Running, _: &Maps, call: &Call| {
-        mutecity::steer_car(r.game, r.data, call.regs.gpr[3] as usize);
+        mute_city::steer_car(r.game, r.data, call.regs.gpr[3] as usize);
         Ret::Nothing
     };
     let f = "grMuteCity_801F106C";
@@ -10824,7 +10871,7 @@ fn mutecity_cars() {
     let by_address = |r: &mut Running, maps: &Maps, call: &Call| {
         let cars = *maps.gobjs.get(&call.regs.gpr[3]).expect("the cars");
         let course = *maps.gobjs.get(&call.regs.gpr[4]).expect("the course");
-        melee_sim::game::gr::mutecity::move_cars(r, cars, course);
+        melee_sim::game::gr::mute_city::move_cars(r, cars, course);
         Ret::Nothing
     };
     check_calls_with(&d, f, 1, &as_saved, &by_address);
@@ -10924,7 +10971,7 @@ fn mutecity_platform() {
         check_calls_with(&d, f, 1, &set, &by_address);
     }
     let lights = |r: &mut Running, maps: &Maps, call: &Call| {
-        melee_sim::game::gr::mutecity::platform_lights(r, gobj_arg(maps, call));
+        melee_sim::game::gr::mute_city::platform_lights(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     let g = "grMuteCity_801F290C";
@@ -10966,14 +11013,14 @@ fn mc_coll_mut<'a>(
 /// from states set to each branch.
 #[test]
 fn mutecity_callbacks() {
-    use melee_sim::game::gr::mutecity;
+    use melee_sim::game::gr::mute_city;
     let d = dir(MC);
     let touched = |r: &mut Running, maps: &Maps, call: &Call| {
         let live = r.game.gr.mutecity.track_live;
         let kind = call.regs.gpr[7] as i32;
         let owner = mc_coll_mut(r, maps, call).x0_gobj;
         let item = owner.is_some_and(|o| r.game.world.gobjs[o.0].p_link == 9);
-        mutecity::track_touched(live, mc_coll_mut(r, maps, call), kind, item);
+        mute_city::track_touched(live, mc_coll_mut(r, maps, call), kind, item);
         Ret::Nothing
     };
     check_calls_with(&d, "fn_801F2B58", 1, &as_saved, &touched);
@@ -11005,7 +11052,7 @@ fn mutecity_callbacks() {
         }
     }
     let hazard = |r: &mut Running, _: &Maps, call: &Call| {
-        let desc = mutecity::line_hazard(r.game, r.data, call.regs.gpr[3] as i32);
+        let desc = mute_city::line_hazard(r.game, r.data, call.regs.gpr[3] as i32);
         // Its address from the parameters' (both in the stage's archive).
         let p = r.game.gr.mutecity_yakumono.expect("the parameters");
         let base = peek_u32(call, MC_PARAM);
@@ -11023,7 +11070,7 @@ fn mutecity_callbacks() {
     }
     let shadow = |r: &mut Running, maps: &Maps, call: &Call| {
         let (pos, j) = shadow_args(maps, call);
-        Ret::Int(u32::from(mutecity::check_shadow_render(r.game, pos, j)))
+        Ret::Int(u32::from(mute_city::check_shadow_render(r.game, pos, j)))
     };
     check_calls_with(&d, "grMuteCity_801F2C10", 1, &as_saved, &shadow);
     // On each joint the track can cover, inside and outside its ends, above and below it.
@@ -11048,19 +11095,19 @@ fn mutecity_callbacks() {
         }
     }
     let dealt = |r: &mut Running, _: &Maps, _: &Call| {
-        mutecity::car_dealt(r);
+        mute_city::car_dealt(r);
         Ret::Nothing
     };
     check_calls_with(&d, "grMuteCity_801F1A0C", 1, &as_saved, &dealt);
     // Each car's hit taken, from the hits dealt's calls.
     for car in 0..30u32 {
-        let target = mutecity::CAR_HIT + 0x18 * car;
+        let target = mute_city::CAR_HIT + 0x18 * car;
         let set = move |c: &mut Call, _: usize| {
             c.addr = target;
             c.regs.fpr[1].ps0 = leaf_check::arg(7.5);
         };
         let hit = move |r: &mut Running, _: &Maps, call: &Call| {
-            mutecity::car_hit(r.game, car as usize, call.regs.fpr[1].ps0 as f32);
+            mute_city::car_hit(r.game, car as usize, call.regs.fpr[1].ps0 as f32);
             Ret::Nothing
         };
         check_calls_with(&d, "grMuteCity_801F1A0C", 1, &set, &hit);
@@ -11155,7 +11202,7 @@ fn bb_cars_ground(maps: &Maps, call: &Call) -> melee_sim::game::handles::GroundI
 
 #[test]
 fn bigblue_setup() {
-    use melee_sim::game::gr::bigblue;
+    use melee_sim::game::gr::big_blue;
     let d = dir(BB);
     for f in [
         "grBigBlue_801E57C0",
@@ -11165,7 +11212,7 @@ fn bigblue_setup() {
         check_calls_with(&d, f, 1, &as_saved, &event);
     }
     let create = |r: &mut Running, _: &Maps, call: &Call| {
-        let _ = bigblue::create(
+        let _ = big_blue::create(
             r,
             call.regs.gpr[3] as i32,
             melee_sim::game::gr::setup::SETUP_FRAME,
@@ -11218,7 +11265,7 @@ fn bigblue_setup() {
 /// either way), on the loop in each of its stages, falling away and not.
 #[test]
 fn bigblue_road() {
-    use melee_sim::game::gr::bigblue;
+    use melee_sim::game::gr::big_blue;
     let d = dir(BB);
     let of = |f: fn(&mut Running, melee_sim::hsd::gobj::GObjId)| {
         move |r: &mut Running, maps: &Maps, call: &Call| {
@@ -11231,10 +11278,10 @@ fn bigblue_road() {
         "grBigBlue_801EB004",
         1,
         &as_saved,
-        &of(bigblue::lay_road),
+        &of(big_blue::lay_road),
     );
     check_calls_with(&d, "grBigBlue_801E61C4", 1, &as_saved, &by_address);
-    let next = of(bigblue::next_piece);
+    let next = of(big_blue::next_piece);
     let f = "grBigBlue_801EB4AC";
     check_calls_with(&d, f, 1, &as_saved, &next);
     for dir in [0u16, 1, 0xFFFF] {
@@ -11254,7 +11301,7 @@ fn bigblue_road() {
             }
         }
     }
-    let road = of(bigblue::move_road);
+    let road = of(big_blue::move_road);
     let f = "grBigBlue_801EBAF8";
     check_calls_with(&d, f, 1, &as_saved, &road);
     for rot in [
@@ -11289,7 +11336,7 @@ fn bigblue_road() {
     let height = |r: &mut Running, _: &Maps, call: &Call| {
         let p = call.regs.gpr[3];
         let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
-        let (y, _) = bigblue::road_height(r.game, pos, call.regs.fpr[1].ps0 as f32);
+        let (y, _) = big_blue::road_height(r.game, pos, call.regs.fpr[1].ps0 as f32);
         Ret::Float(gekko_fp::lfs(y.to_bits()))
     };
     let f = "grBigBlue_801EC58C";
@@ -11308,18 +11355,18 @@ fn bigblue_road() {
 /// acceleration and drive in each state, in the air and on the road; the cars pushed apart.
 #[test]
 fn bigblue_cars() {
-    use melee_sim::game::gr::bigblue;
+    use melee_sim::game::gr::big_blue;
     let d = dir(BB);
     check_calls_with(&d, "grBigBlue_801E6884", 1, &as_saved, &by_address);
     let first = |r: &mut Running, maps: &Maps, call: &Call| {
-        bigblue::first_cars(r, gobj_arg(maps, call));
+        big_blue::first_cars(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     check_calls_with(&d, "grBigBlue_801EC6C0", 1, &as_saved, &first);
     let seeded = |c: &mut Call, k: usize| set_seed(c, 0x7F4A_7C15u32.wrapping_mul(k as u32 + 3));
     check_calls_with(&d, "grBigBlue_801EC6C0", 1, &seeded, &first);
     let manage = |r: &mut Running, maps: &Maps, call: &Call| {
-        bigblue::manage_cars(r, gobj_arg(maps, call));
+        big_blue::manage_cars(r, gobj_arg(maps, call));
         Ret::Nothing
     };
     let f = "grBigBlue_801ECB50";
@@ -11377,7 +11424,7 @@ fn bigblue_cars() {
     }
     // Each car's decision, in each state and with its wait run out, from several seeds.
     let decide = |r: &mut Running, maps: &Maps, call: &Call| {
-        let n = bigblue::decide_car(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
+        let n = big_blue::decide_car(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
         Ret::Int(n)
     };
     let f = "grBigBlue_801EDF44";
@@ -11437,7 +11484,7 @@ fn bigblue_cars() {
     let change = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = gobj_arg(maps, call);
         let (car, state) = (call.regs.gpr[4] as usize, call.regs.gpr[5]);
-        Ret::Int(u32::from(bigblue::change_car(r, g, car, state)))
+        Ret::Int(u32::from(big_blue::change_car(r, g, car, state)))
     };
     let f = "grBigBlue_801EE398";
     check_calls_with(&d, f, 1, &as_saved, &change);
@@ -11464,7 +11511,7 @@ fn bigblue_cars() {
     // Each state's acceleration, at speeds and waits either side of its braking point.
     let accel = |r: &mut Running, maps: &Maps, call: &Call| {
         let g = gobj_arg(maps, call);
-        Ret::Int(u32::from(bigblue::accelerate_car(
+        Ret::Int(u32::from(big_blue::accelerate_car(
             r,
             g,
             call.regs.gpr[4] as usize,
@@ -11498,7 +11545,7 @@ fn bigblue_cars() {
     // Each car's drive: on the road and in the air, rising and falling, fast either way,
     // driving out, with its fall and bob in each state.
     let drive = |r: &mut Running, maps: &Maps, call: &Call| {
-        bigblue::drive_car(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
+        big_blue::drive_car(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
         Ret::Nothing
     };
     let f = "grBigBlue_801ED694";
@@ -11577,9 +11624,9 @@ fn bigblue_cars() {
     check_calls_with(&d, f, 1, &one_off, &by_address_cars);
 }
 
-/// [`melee_sim::game::gr::bigblue::drive_cars`] on the cars' object in r3.
+/// [`melee_sim::game::gr::big_blue::drive_cars`] on the cars' object in r3.
 fn by_address_cars(r: &mut Running, maps: &Maps, call: &Call) -> Ret {
-    melee_sim::game::gr::bigblue::drive_cars(r, gobj_arg(maps, call));
+    melee_sim::game::gr::big_blue::drive_cars(r, gobj_arg(maps, call));
     Ret::Nothing
 }
 
@@ -11587,11 +11634,11 @@ fn by_address_cars(r: &mut Running, maps: &Maps, call: &Call) -> Ret {
 /// the platforms and the relay platform near points, the obstacle in boxes, the events.
 #[test]
 fn bigblue_searches() {
-    use melee_sim::game::gr::bigblue;
+    use melee_sim::game::gr::big_blue;
     let d = dir(BB);
     let height = |r: &mut Running, _: &Maps, call: &Call| {
         let f = |k: usize| call.regs.fpr[k].ps0 as f32;
-        let y = bigblue::car_height(r.game, f(1), f(2), f(3), f(4));
+        let y = big_blue::car_height(r.game, f(1), f(2), f(3), f(4));
         Ret::Float(gekko_fp::lfs(y.to_bits()))
     };
     let f = "grBigBlue_801E8B84";
@@ -11611,7 +11658,7 @@ fn bigblue_searches() {
         check_calls_with(&d, f, 1, &set, &height);
     }
     let in_view = |r: &mut Running, _: &Maps, _: &Call| {
-        let y = bigblue::car_height_in_view(r.game);
+        let y = big_blue::car_height_in_view(r.game);
         Ret::Float(gekko_fp::lfs(y.to_bits()))
     };
     check_calls_with(&d, "grBigBlue_801E8D04", 1, &as_saved, &in_view);
@@ -11626,7 +11673,7 @@ fn bigblue_searches() {
         let p = call.regs.gpr[4];
         let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
         let exclude = maps.jobjs.get(&call.regs.gpr[3]).copied();
-        let hit = bigblue::near_platform(
+        let hit = big_blue::near_platform(
             r.game,
             exclude,
             pos,
@@ -11662,7 +11709,7 @@ fn bigblue_searches() {
     let relay = |r: &mut Running, _: &Maps, call: &Call| {
         let p = call.regs.gpr[3];
         let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
-        let hit = bigblue::near_relay(
+        let hit = big_blue::near_relay(
             r.game,
             pos,
             call.regs.gpr[4] != 0,
@@ -11695,7 +11742,7 @@ fn bigblue_searches() {
         let p = call.regs.gpr[4];
         let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
         let exclude = maps.jobjs.get(&call.regs.gpr[3]).copied();
-        let (n, y) = bigblue::obstacle(
+        let (n, y) = big_blue::obstacle(
             r.game,
             exclude,
             pos,
@@ -11746,19 +11793,19 @@ fn bigblue_searches() {
     }
     let post = |r: &mut Running, maps: &Maps, call: &Call| {
         let extra = maps.jobjs.get(&call.regs.gpr[5]).copied();
-        bigblue::post_event(r.game, call.regs.gpr[3] as usize, call.regs.gpr[4], extra);
+        big_blue::post_event(r.game, call.regs.gpr[3] as usize, call.regs.gpr[4], extra);
         Ret::Nothing
     };
     check_calls_with(&d, "grBigBlue_801E8978", 1, &as_saved, &post);
     let event = |r: &mut Running, _: &Maps, call: &Call| {
-        Ret::Int(bigblue::event(r.game, call.regs.gpr[3] as usize))
+        Ret::Int(big_blue::event(r.game, call.regs.gpr[3] as usize))
     };
     for i in [0u32, 1, 2] {
         let set = move |c: &mut Call, _: usize| c.regs.gpr[3] = i;
         check_calls_with(&d, "grBigBlue_801E89DC", 1, &set, &event);
     }
     let item = |r: &mut Running, _: &Maps, call: &Call| {
-        bigblue::platform_item(r, call.regs.gpr[3] as usize);
+        big_blue::platform_item(r, call.regs.gpr[3] as usize);
         Ret::Nothing
     };
     check_calls_with(&d, "grBigBlue_801E8A1C", 1, &as_saved, &item);
@@ -11777,12 +11824,12 @@ const BB_ITEMS: [&str; 2] = [
 /// seeds.
 #[test]
 fn bigblue_platform_items() {
-    use melee_sim::game::gr::bigblue;
+    use melee_sim::game::gr::big_blue;
     // `StartMeleeRules` (`x6`, sudden death; `item_freq`) and the spawner's mask's low word.
     const RULES: u32 = 0x8046_DB68;
     let mask = leaf_check::sym("it_804A0E30") + 0x1C;
     let item = |r: &mut Running, _: &Maps, call: &Call| {
-        bigblue::platform_item(r, call.regs.gpr[3] as usize);
+        big_blue::platform_item(r, call.regs.gpr[3] as usize);
         Ret::Nothing
     };
     for set in BB_ITEMS {
@@ -11931,7 +11978,7 @@ fn bigblue_platforms() {
             .grounds
             .get(&call.regs.gpr[3])
             .expect("the platforms' Ground");
-        melee_sim::game::gr::bigblue::platform_touched(
+        melee_sim::game::gr::big_blue::platform_touched(
             &r.game.objs,
             &mut r.game.grounds[g.0],
             call.regs.gpr[4] as i32,
@@ -12035,13 +12082,13 @@ fn bigblue_flyer_and_relay() {
 /// callbacks, the cars' destroy callback, the demo hook).
 #[test]
 fn bigblue_callbacks() {
-    use melee_sim::game::gr::bigblue;
+    use melee_sim::game::gr::big_blue;
     let d = dir(BB);
     let touched = |r: &mut Running, maps: &Maps, call: &Call| {
         let coll = coll_arg(r, maps, call);
         let g = bb_cars_ground(maps, call);
         let param = r.game.gr.bigblue_yakumono;
-        bigblue::car_touched(
+        big_blue::car_touched(
             &mut r.game.grounds[g.0],
             param,
             r.data,
@@ -12082,14 +12129,14 @@ fn bigblue_callbacks() {
     }
     fn shadow(r: &mut Running, maps: &Maps, call: &Call) -> bool {
         let (pos, j) = shadow_args(maps, call);
-        bigblue::check_shadow_render(r.game, r.data, pos, j)
+        big_blue::check_shadow_render(r.game, r.data, pos, j)
     }
     check_shadow(&d, "grBigBlue_801EFC14", shadow, 0.0);
     let hazard =
-        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(bigblue::line_hazard().map_or(0, |_| 1));
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(big_blue::line_hazard().map_or(0, |_| 1));
     check_calls_with(&d, "grBigBlue_801EFC0C", 1, &as_saved, &hazard);
     let render = |r: &mut Running, maps: &Maps, call: &Call| {
-        bigblue::render_background(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        big_blue::render_background(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
         Ret::Nothing
     };
     let setup = leaf_check::calls::Setup {
@@ -12110,7 +12157,7 @@ fn bigblue_callbacks() {
         c.regs.gpr[3] = to;
     };
     let wind = |r: &mut Running, maps: &Maps, call: &Call| {
-        let w = bigblue::wind(r.game);
+        let w = big_blue::wind(r.game);
         let g = *maps
             .grounds
             .get(&(call.regs.gpr[3] - 4 - 0xC4))

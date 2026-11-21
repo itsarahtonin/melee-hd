@@ -1017,7 +1017,7 @@ impl GroundVars {
             GroundVars::FlatzoneOil(v) => {
                 l.put_u8(a, v.started);
                 f(l, a + 4, v.side);
-                l.put_u32(a + 8, super::super::flatzone::area_addr(v.area));
+                l.put_u32(a + 8, super::super::flat_zone::area_addr(v.area));
                 w32(l, a + 0xC, &[v.state, v.timer]);
             }
             GroundVars::FlatzonePlatforms(v) => {

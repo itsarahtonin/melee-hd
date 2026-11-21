@@ -1,5 +1,5 @@
 //! Great Bay's Tingle on his balloon, `melee/it/kinds/ittincle.c`: an enemy item
-//! (`It_Kind_Tincle`) the stage makes (`gr::greatbay`) and reads back. He waits, drops in
+//! (`It_Kind_Tincle`) the stage makes (`gr::great_bay`) and reads back. He waits, drops in
 //! (state 1) to a random height, floats there bobbing (state 2), now and then drifting
 //! sideways; stood on, the balloon sinks (state 3), sits (state 4) and rises back (state 5).
 //! Hit, it pops (states 6 and 7) and he falls (8), lands (9), lies a while (10), gets up (11)

@@ -307,7 +307,7 @@ const KNOWN: &[Known] = &[
     // game's own asynchronous load (`Common/Preload Stadium Transformations`, in
     // `grStadium_801D13E0` and `grStadium_801D4548`), and the stage frozen (`801D4578`,
     // `Online/Core/PreventFileAlarms/FreezeStadium`), which skips the whole cycle and so the
-    // preload but for its setup's line (`gr::stadium::frozen`).
+    // preload but for its setup's line (`gr::pokemon_stadium::frozen`).
     only(
         V3_16 | V3_14,
         code(

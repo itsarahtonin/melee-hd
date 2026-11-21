@@ -1,6 +1,6 @@
 //! Flat Zone's falling tools, `melee/it/kinds/ittools.c` (`It_Kind_Tools`): the hammers,
 //! wrenches and the rest that the stage's helmet event drops from the top of the screen
-//! (`gr::flatzone`). A tool falls spinning in its own way (states 0 to 4, by its tool) until it
+//! (`gr::flat_zone`). A tool falls spinning in its own way (states 0 to 4, by its tool) until it
 //! hits the ground, a fighter, a shield or another hitbox, then lies there blinking until it
 //! goes (states 5 to 9). A fighter's hit knocks a falling tool back up and away, harder the
 //! more it has taken.

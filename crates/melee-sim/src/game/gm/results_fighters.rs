@@ -287,7 +287,7 @@ impl Running<'_> {
         let size = crate::hsd::heap::tex_buffer_size(u32::from(w), u32::from(h), 5);
         let size = size.next_multiple_of(32);
         let at = crate::hsd::heap::mem_alloc_unclaimed(size);
-        let d = super::super::gr::stadium::screen_image(w, h, GX_TF_RGB5A3);
+        let d = super::super::gr::pokemon_stadium::screen_image(w, h, GX_TF_RGB5A3);
         let f = &mut self.game.results.fighters;
         let n = match which {
             Image::Shared => {

@@ -175,7 +175,7 @@ pub struct DevCom {
     /// first scenes wait for. Not memory of the original's.
     pub preloaded: u32,
     /// `fn_801D4220` ran: Pokémon Stadium's transformation file loaded, and the game clears
-    /// its mark (`game::gr::stadium::take_load_end`) before anything reads it. Not memory of
+    /// its mark (`game::gr::pokemon_stadium::take_load_end`) before anything reads it. Not memory of
     /// the original's.
     pub stadium_loaded: bool,
 }

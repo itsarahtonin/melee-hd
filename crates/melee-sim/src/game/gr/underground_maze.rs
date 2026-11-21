@@ -29,7 +29,7 @@ use super::data::{SHRINEROUTE_CALLBACKS, StageCallbacks};
 use super::ground::{
     ground_of, jobj_of, map_gobj, nth_joint, p1_fighter, point, point_joint, scale, set_cam_offset,
 };
-use super::pushon::{AddedLight, Lights, first_lobj, init_lights, proc_lights};
+use super::race_to_the_finish::{AddedLight, Lights, first_lobj, init_lights, proc_lights};
 use super::{CollUser, anime, grlib, material, setup, stage, zako};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -770,7 +770,7 @@ fn classified_lights(game: &Game) -> Option<GObjId> {
     lg
 }
 
-/// The maze's lights (the race's, `pushon::Lights`).
+/// The maze's lights (the race's, `race_to_the_finish::Lights`).
 pub const LIGHTS: Lights = Lights {
     find: classified_lights,
     set_up: set_up_lights,

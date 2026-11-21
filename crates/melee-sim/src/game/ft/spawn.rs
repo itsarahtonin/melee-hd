@@ -515,7 +515,7 @@ impl Running<'_> {
         fp.ecb_lock = 0;
         fp.coll_data.cur_pos = fp.cur_pos;
         fp.coll_data.last_pos = fp.coll_data.cur_pos;
-        let landing = crate::game::gr::yorster::Landing::of(game);
+        let landing = crate::game::gr::yoshis_island::Landing::of(game);
         let geometry = game.geometry.as_mut().expect("no collision geometry");
         let mut hooks = super::coll::ObjCollHooks {
             objs: &mut game.objs,
@@ -572,7 +572,7 @@ impl Running<'_> {
     #[doc(alias = "ft_80082A68")]
     fn land_on_spawn(&mut self, f: FighterId) -> bool {
         let game = &mut *self.game;
-        let landing = crate::game::gr::yorster::Landing::of(game);
+        let landing = crate::game::gr::yoshis_island::Landing::of(game);
         let geometry = game.geometry.as_mut().expect("no collision geometry");
         let mut hooks = super::coll::ObjCollHooks {
             objs: &mut game.objs,

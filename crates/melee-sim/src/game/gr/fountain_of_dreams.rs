@@ -255,7 +255,7 @@ pub fn find_tobj(
     image: Option<DataRef>,
 ) -> Option<crate::hsd::tobj::TObjId> {
     let image = image.map(crate::hsd::tobj::ImageRef::Data);
-    super::stadium::find_tobj(game, gobj, image).map(|(t, _)| t)
+    super::pokemon_stadium::find_tobj(game, gobj, image).map(|(t, _)| t)
 }
 
 /// The stars (`GrdIzumiStar_TopN_joint`), `grIzumi_801CCB18`: a stage object of their own in
@@ -669,7 +669,7 @@ pub fn create_reflection(r: &mut Running) -> GObjId {
         Some(b) => b,
         None => crate::hsd::heap::mem_alloc(buffer_len),
     };
-    let desc = super::stadium::screen_image(w, h, 4);
+    let desc = super::pokemon_stadium::screen_image(w, h, 4);
     image_reflection_desc(image.expect("the mirror image desc"), &desc, buffer);
     r.game.gr.izumi.reflection = Some(Reflection {
         texture_matrix: None,

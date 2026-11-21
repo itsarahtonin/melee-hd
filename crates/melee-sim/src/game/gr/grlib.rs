@@ -55,15 +55,15 @@ pub fn start_point(game: &Game, i: i32) -> crate::vec::Vec3 {
 pub fn item_wind(game: &Game, v: &mut crate::vec::Vec3) -> bool {
     match game.stage_info.grkind {
         0x03 => {
-            *v = super::rcruise::wind(game);
+            *v = super::rainbow_cruise::wind(game);
             return true;
         }
         0x13 => {
-            *v = super::bigblue::wind(game);
+            *v = super::big_blue::wind(game);
             return true;
         }
         0x16 => {
-            *v = super::icemt::wind(game);
+            *v = super::icicle_mountain::wind(game);
             return true;
         }
         _ => {}

@@ -168,7 +168,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itBox_Logic1_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     if let Some(path) = vars(r.game, gobj).spawned_gobj.get() {
-        crate::game::gr::kongo::destroy_path(r, path);
+        crate::game::gr::kongo_jungle::destroy_path(r, path);
         vars(r.game, gobj).spawned_gobj.set(None);
     }
 }

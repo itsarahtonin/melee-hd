@@ -605,7 +605,7 @@ impl Rules {
         self.fixes().stadium_monitor_fixed
     }
 
-    /// Pokémon Stadium frozen (`gr::stadium::frozen`).
+    /// Pokémon Stadium frozen (`gr::pokemon_stadium::frozen`).
     #[inline]
     pub fn stadium_frozen(&self) -> bool {
         self.fixes().stadium_frozen

@@ -248,12 +248,12 @@ pub fn tick_polls(r: &mut Running, polls: &mut dyn FnMut() -> PadData) -> bool {
     close_sound_log(r);
     r.game.audio.tick_start(r.data);
     r.card_writer_take();
-    crate::game::gr::stadium::take_load_end(r.game);
+    crate::game::gr::pokemon_stadium::take_load_end(r.game);
     queue_alarm_polls(r, 1, polls);
     begin_tick(r);
     let ended = finish_tick(r, Resume::ButtonMaps);
     r.game.audio.tick_end(r.data);
-    crate::game::gr::stadium::take_load_end(r.game);
+    crate::game::gr::pokemon_stadium::take_load_end(r.game);
     queue_alarm_polls(r, 0, polls);
     ended
 }

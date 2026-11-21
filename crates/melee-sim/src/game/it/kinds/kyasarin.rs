@@ -1,5 +1,5 @@
 //! Mushroom Kingdom II's Birdo, `melee/it/kinds/itkyasarin.c` (`It_Kind_Kyasarin`): an enemy
-//! item the stage sends in on its platform (`gr::inishie2`'s map 15). She walks in from her
+//! item the stage sends in on its platform (`gr::mushroom_kingdom_2`'s map 15). She walks in from her
 //! side (state 0) to her mark, waits (1), backs off (2) to her far mark, waits (3) and walks in
 //! again (4); at her mark she stands (6) for a random while, spitting eggs
 //! (`it::kinds::kyasarinegg`) now and then (7), until she turns away (5) and walks off. Hit,
@@ -286,7 +286,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "itKyasarin_Logic25_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     if let Some(platform) = vars(r.game, gobj).platform.get() {
-        crate::game::gr::inishie2::birdo_gone(r, platform);
+        crate::game::gr::mushroom_kingdom_2::birdo_gone(r, platform);
     }
     vars(r.game, gobj).platform.set(None);
 }
@@ -709,7 +709,7 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
         turn_around(r, gobj);
     } else {
         if let Some(platform) = vars(r.game, gobj).platform.get() {
-            crate::game::gr::inishie2::birdo_down(r, platform);
+            crate::game::gr::mushroom_kingdom_2::birdo_down(r, platform);
         }
         item_mut(r.game, gobj).xDCC_flag.b3 = true;
         let zako = r.game.it.zako.expect("no enemies' common data");

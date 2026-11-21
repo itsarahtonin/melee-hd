@@ -7,7 +7,7 @@
 use gekko_fp as fp;
 
 use super::super::code::unported_call;
-use super::super::gr::{GrKind, greatbay, grlib, ground, stage};
+use super::super::gr::{GrKind, great_bay, grlib, ground, stage};
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
@@ -137,12 +137,14 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A229C")]
     fn cpu_off_screen(&mut self, f: FighterId) -> Option<(i32, Vec3)> {
         let pos = self.game.fighters[f.0].cur_pos;
-        if greatbay::turtle_out(self.game) && reg(pos.x) > -5.0 {
+        if great_bay::turtle_out(self.game) && reg(pos.x) > -5.0 {
             return Some((2, pos));
         }
         match self.game.stage_info.ground_kind() {
             GrKind::Castle => {
-                if let Some(at) = super::super::gr::castle::bill_position(self.game, self.data) {
+                if let Some(at) =
+                    super::super::gr::peachs_castle::bill_position(self.game, self.data)
+                {
                     return Some((1, at));
                 }
             }
@@ -401,7 +403,7 @@ impl Running<'_> {
             let Some(hit) = hit.filter(|h| !self.excluded_floor(h.line)) else {
                 continue;
             };
-            if super::super::gr::rcruise::plank_line(self.game, hit.line) {
+            if super::super::gr::rainbow_cruise::plank_line(self.game, hit.line) {
                 continue;
             }
             let (x, y) = (hit.pos.x, hit.pos.y);

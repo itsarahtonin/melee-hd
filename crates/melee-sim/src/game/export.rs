@@ -886,7 +886,7 @@ pub fn bg_flash_fields(img: &Image, l: &mut Lay, u: &super::structs::BgFlashUser
 /// zoomed view's copy place (`x1A`, `x1C`, which the stage's setup writes). The feed's block
 /// ends at 0x1C.
 pub fn stadium_screen(game: &Game, data: &Archives, img: &mut Image, which: u8) {
-    use super::gr::stadium::{SCREEN_FEED, SCREEN_TEXT, SCREEN_ZOOM};
+    use super::gr::pokemon_stadium::{SCREEN_FEED, SCREEN_TEXT, SCREEN_ZOOM};
     let Some(s) = &game.gr.stadium.screens[usize::from(which)] else {
         return;
     };

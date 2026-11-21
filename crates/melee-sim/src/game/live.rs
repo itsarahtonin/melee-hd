@@ -619,10 +619,10 @@ const PLACED: usize = 8;
 /// set, a doubled round's second tick the one before. On those stages the view a pass would
 /// give is kept at each tick's end ([`Game::display_phase_tick_end`]), and each such read is
 /// also made through the other phase's view ([`DisplayPhase::other_view`]), a different
-/// outcome counted the same way (`gr::onett::proc_cars`, `gr::oldkongo::proc_birds`,
-/// `gr::oldpupupu::proc_flights`). Pokémon Stadium's close-up reads the CObj whole (where its
+/// outcome counted the same way (`gr::onett::proc_cars`, `gr::kongo_jungle_64::proc_birds`,
+/// `gr::dream_land::proc_flights`). Pokémon Stadium's close-up reads the CObj whole (where its
 /// player's camera bone falls on the screen, which decides where the monitor copies from,
-/// `gr::stadium::zoom_origin`): on Stadium the views are kept too, and where it copies from is
+/// `gr::pokemon_stadium::zoom_origin`): on Stadium the views are kept too, and where it copies from is
 /// also taken through the other phase's view ([`Game::other_phase_screen`]), a different origin
 /// counted.
 ///
@@ -1099,14 +1099,14 @@ impl Running<'_> {
 
 /// Brinstar Depths' haze off playback's course, under Slippi's rules (`docs/slippi-bugs.md`,
 /// "Playback's inputs never reach the controllers"): A on the second controller steps Kraid's
-/// haze (`gr::kraid::proc_copy`, from the pad library's master status), which a replay's
+/// haze (`gr::brinstar_depths::proc_copy`, from the pad library's master status), which a replay's
 /// playback never does, and the animations the haze then plays draw random numbers in the
 /// logic: in its first process (priority 1, the animation's particle keys) and in the step
 /// itself (priority 4), before the fighters' and items' processes at those priorities and
 /// after. Playback puts the recorded seed back only at the frame's start, so a draw the logic
 /// makes after the haze's process in such a tick can come out differently in playback.
 ///
-/// From a step until Kraid restarts the haze (`gr::kraid::set_anim`, which starts the same
+/// From a step until Kraid restarts the haze (`gr::brinstar_depths::set_anim`, which starts the same
 /// animation either way; the particles left behind draw at priority 15, after the logic's
 /// draws), each tick in which the seed moves between the frame's start and the haze's step, or
 /// between the step and the particles' priority (the recording codes' item process, the first

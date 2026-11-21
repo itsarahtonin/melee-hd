@@ -775,11 +775,11 @@ fn catches(
     gobj: GObjId,
 ) -> bool {
     match cb.map(|c| c.0) {
-        Some(super::super::gr::oldkongo::BARREL_CATCH) => {
-            super::super::gr::oldkongo::barrel_catch(g, ground, gobj)
+        Some(super::super::gr::kongo_jungle_64::BARREL_CATCH) => {
+            super::super::gr::kongo_jungle_64::barrel_catch(g, ground, gobj)
         }
-        Some(super::super::gr::kongo::BARREL_CATCH) => {
-            super::super::gr::kongo::barrel_catch(g, ground, gobj)
+        Some(super::super::gr::kongo_jungle::BARREL_CATCH) => {
+            super::super::gr::kongo_jungle::barrel_catch(g, ground, gobj)
         }
         other => unported_call(&format!("a stage device's catch test {other:x?}")),
     }

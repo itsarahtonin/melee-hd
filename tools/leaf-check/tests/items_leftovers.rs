@@ -207,8 +207,8 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_80286088" => {
             crate_box::spawn_floating(g, Some(gobj));
         }
-        "grKongo_801D7BBC" => gr::kongo::events(g, gobj),
-        "grKongo_801D8058" => gr::kongo::destroy_path(g, gobj),
+        "grKongo_801D7BBC" => gr::kongo_jungle::events(g, gobj),
+        "grKongo_801D8058" => gr::kongo_jungle::destroy_path(g, gobj),
         "ftCo_80090780" => g.enter_damage_fall(gobj),
         "ftCo_800CF4DC" => g.enter_parasol_damage_fall(gobj),
         "ftCommon_8007E83C" => g.parasol_step(gobj, r(4) as i32, f1()),

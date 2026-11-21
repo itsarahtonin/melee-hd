@@ -2,7 +2,7 @@
 //! (`IzumiReflection`, which the original allocates with `HSD_MemAlloc` and frees with
 //! `HSD_Free`), and the stage archive's image descriptor it rewrites.
 
-use melee_sim::game::gr::izumi::{RENDER_REFLECTION, Reflection};
+use melee_sim::game::gr::fountain_of_dreams::{RENDER_REFLECTION, Reflection};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::state::UserData;
 use melee_sim::game::structs::HSD_ImageDesc;

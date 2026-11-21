@@ -293,7 +293,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
 /// switches, and the first wait for a Bullet Bill.
 #[doc(alias = "grCastle_801CD610")]
 pub fn start_stage(r: &mut Running, gobj: GObjId) {
-    super::oldpupupu::register_wind(r.game, gobj, 6, CodeRef(MOAT));
+    super::dream_land::register_wind(r.game, gobj, 6, CodeRef(MOAT));
     init_switches(r, gobj);
     reset_bill_wait(r, gobj);
 }

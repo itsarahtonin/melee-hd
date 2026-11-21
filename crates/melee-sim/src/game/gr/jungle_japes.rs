@@ -163,7 +163,7 @@ pub fn init_sky(r: &mut Running, gobj: GObjId) {
 /// device.
 #[doc(alias = "grGarden_80202D9C")]
 pub fn start_river(r: &mut Running, gobj: GObjId) {
-    super::oldpupupu::register_wind(r.game, gobj, DEVICE_RIVER, CodeRef(RIVER));
+    super::dream_land::register_wind(r.game, gobj, DEVICE_RIVER, CodeRef(RIVER));
 }
 
 /// The stage's setup (map 2), `grGarden_80202DC8`: its animation, no overlay callbacks, the

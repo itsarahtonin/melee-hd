@@ -285,7 +285,7 @@ fn randrange(r: &mut Running, min: i32, max: i32) -> i32 {
 #[doc(alias = "grGreens_802139C4")]
 pub fn init_whispy(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    super::oldpupupu::register_wind(r.game, gobj, WIND_DEVICE, CodeRef(WIND_PUSH));
+    super::dream_land::register_wind(r.game, gobj, WIND_DEVICE, CodeRef(WIND_PUSH));
     let p = param(r.game);
     let (max, min) = (p.i(r.data, WIND_TIMER_MAX), p.i(r.data, WIND_TIMER_MIN));
     let v = r.game.grounds[g.0].u.greens2();
@@ -306,10 +306,10 @@ pub fn init_whispy(r: &mut Running, gobj: GObjId) {
 }
 
 /// Whether `pos` lies strictly inside the box the two x and two y bounds make, in either
-/// order, `grGreens_80213AB4` (Dream Land's [`super::oldpupupu::in_box`]).
+/// order, `grGreens_80213AB4` (Dream Land's [`super::dream_land::in_box`]).
 #[doc(alias = "grGreens_80213AB4")]
 pub fn in_box(pos: Vec3, max_x: f32, min_x: f32, max_y: f32, min_y: f32) -> bool {
-    super::oldpupupu::in_box(pos, max_x, min_x, max_y, min_y)
+    super::dream_land::in_box(pos, max_x, min_x, max_y, min_y)
 }
 
 /// Whispy's wind on a fighter, `fn_80213B1C`: while he blows (`x18` 1 to the left, 2 to the

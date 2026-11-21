@@ -19,7 +19,7 @@ pub const CAMERA_PROC: u32 = 0x8031_EFE4;
 
 /// Where the scene's entry makes the race's cars' object (`grBigBlueRoute_8020DAB4`): its scale
 /// joint's descriptor on the stack, an ID table key that only has to be one no other build uses
-/// ([`START_FRAME`](super::super::gr::bigblueroute::START_FRAME)).
+/// ([`START_FRAME`](super::super::gr::fzero_race::START_FRAME)).
 const CARS_FRAME: u32 = super::super::gr::setup::SETUP_FRAME - 0x40;
 
 /// `un_80400128`: each car's model and the pre-order index of its joint there.
@@ -135,7 +135,7 @@ impl Running<'_> {
         self.game.vi.v0801.erase = erase;
         self.vi_lights(scene);
         let cars = self.game.vi.v0801.cars;
-        super::super::gr::bigblueroute::cars_on_joints(self, &cars, 0.5, 0x17, CARS_FRAME);
+        super::super::gr::fzero_race::cars_on_joints(self, &cars, 0.5, 0x17, CARS_FRAME);
         self.game.init_all_players();
         self.lb_audio_pause(false);
     }

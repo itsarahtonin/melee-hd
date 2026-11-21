@@ -115,7 +115,8 @@ impl Running<'_> {
     #[doc(alias = "grPushOn_80219230")]
     pub fn one_player_race_start(&mut self) {
         let ckind = self.game.one_player_run().map_or(0, |r| r.player.ckind);
-        let t = crate::game::gr::pushon::race_time(self.game, self.data, i32::from(ckind));
+        let t =
+            crate::game::gr::race_to_the_finish::race_time(self.game, self.data, i32::from(ckind));
         self.game.vs.state.timer_seconds = t as u32;
     }
 

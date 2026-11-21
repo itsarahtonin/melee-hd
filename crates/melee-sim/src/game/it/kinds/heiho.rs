@@ -1,5 +1,5 @@
 //! Yoshi's Story's Shy Guys, `melee/it/kinds/itheiho.c`: an enemy item (`It_Kind_Heiho`) the
-//! stage sends across in flights (`gr::story`), which flies on at one of three speeds, turns
+//! stage sends across in flights (`gr::yoshis_story`), which flies on at one of three speeds, turns
 //! back at walls, sinks after a while, and leaves past the blast zones. A hit knocks it back
 //! (state 3) and walks it on afterwards (state 4), or, past most of its health, sends it
 //! spinning away (state 2). With food on, each carries a piece (`It_Kind_Foods`) it drops when

@@ -4033,7 +4033,7 @@ impl GroundVars {
             VarsKind::FlatzoneOil => GroundVars::FlatzoneOil(FlatzoneOilVars {
                 started: m.u8(at),
                 side: f(at + 4),
-                area: super::flatzone::area_index(m.u32(at + 8)),
+                area: super::flat_zone::area_index(m.u32(at + 8)),
                 state: m.u32(at + 0xC) as i32,
                 timer: m.u32(at + 0x10) as i32,
             }),
@@ -9480,7 +9480,7 @@ impl Mirror for GroundVars {
                 let ours = (
                     v.started,
                     v.side.to_bits(),
-                    super::flatzone::area_addr(v.area),
+                    super::flat_zone::area_addr(v.area),
                     v.state,
                     v.timer,
                 );

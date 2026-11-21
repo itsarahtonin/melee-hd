@@ -11,7 +11,7 @@
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
-use melee_sim::game::gr::{izumi, stadium};
+use melee_sim::game::gr::{fountain_of_dreams, pokemon_stadium};
 use melee_sim::game::state::Game;
 use melee_sim::hsd::cobj::{self, CObjId};
 use melee_sim::hsd::display::{CameraView, Draw, Quad};
@@ -37,18 +37,19 @@ fn corner_camera(w: u16, h: u16) -> CameraView {
 /// as the stages make them (`grIzumi_801CCD98`, `grStadium_801D2BEC`).
 fn game() -> Game {
     let mut game = Game::default();
-    game.gr.izumi.reflection = Some(izumi::Reflection {
+    game.gr.izumi.reflection = Some(fountain_of_dreams::Reflection {
         image: Some(DataRef {
             archive: ArchiveId(0),
             offset: 0,
         }),
-        desc: stadium::screen_image(80, 60, 4),
+        desc: pokemon_stadium::screen_image(80, 60, 4),
         ..Default::default()
     });
-    game.gr.stadium.screens[stadium::SCREEN_TEXT as usize] = Some(stadium::Screen {
-        desc: stadium::screen_image(250, 160, 4),
-        ..Default::default()
-    });
+    game.gr.stadium.screens[pokemon_stadium::SCREEN_TEXT as usize] =
+        Some(pokemon_stadium::Screen {
+            desc: pokemon_stadium::screen_image(250, 160, 4),
+            ..Default::default()
+        });
     game
 }
 
@@ -138,7 +139,7 @@ fn the_reflection_copy_clears_its_corner() {
 #[test]
 fn the_text_screen_copy_clears_its_corner() {
     let copy = Draw::ScreenCopy {
-        screen: stadium::SCREEN_TEXT,
+        screen: pokemon_stadium::SCREEN_TEXT,
         x: 0,
         y: 0,
         clear: true,
@@ -159,7 +160,7 @@ fn the_text_screen_copy_clears_its_corner() {
 #[test]
 fn a_copy_without_the_clear_bit_keeps_its_corner() {
     let copy = Draw::ScreenCopy {
-        screen: stadium::SCREEN_TEXT,
+        screen: pokemon_stadium::SCREEN_TEXT,
         x: 0,
         y: 0,
         clear: false,

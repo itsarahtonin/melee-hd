@@ -2,7 +2,7 @@
 //! she faces, and the notes' effect. On Pokémon Stadium's screen zoomed in on her player its
 //! hitbox takes the sleep element itself.
 
-use super::super::super::gr::stadium;
+use super::super::super::gr::pokemon_stadium;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::{addr, ms, mv};
@@ -29,7 +29,7 @@ impl Running<'_> {
         fp.cmd_vars[0] = 0;
         fp.accessory4_cb = Some(CodeRef(addr::SING_GFX));
         let slot = i32::from(fp.player_idx);
-        let zoomed = self.game.vs_x5_3() && stadium::zoomed_on(self.game, slot);
+        let zoomed = self.game.vs_x5_3() && pokemon_stadium::zoomed_on(self.game, slot);
         self.game
             .fighter_mut(gobj)
             .set_mv_i32(mv::HI_SLEEP, i32::from(zoomed));

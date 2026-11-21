@@ -2007,25 +2007,25 @@ impl Running<'_> {
                 continue;
             }
             let desc = match cb.map(|c| c.0) {
-                Some(super::super::gr::greatbay::SEA_DEVICE) => {
-                    let _ = super::super::gr::greatbay::sea_device(self, gobj);
+                Some(super::super::gr::great_bay::SEA_DEVICE) => {
+                    let _ = super::super::gr::great_bay::sea_device(self, gobj);
                     None
                 }
-                Some(super::super::gr::zebes::LAVA_DEVICE) => {
-                    super::super::gr::zebes::lava_device(self, gobj)
+                Some(super::super::gr::brinstar::LAVA_DEVICE) => {
+                    super::super::gr::brinstar::lava_device(self, gobj)
                 }
-                Some(super::super::gr::kinokoroute::WATER_DEVICE) => {
-                    super::super::gr::kinokoroute::water_device(self, gobj);
+                Some(super::super::gr::mushroom_kingdom_route::WATER_DEVICE) => {
+                    super::super::gr::mushroom_kingdom_route::water_device(self, gobj);
                     None
                 }
-                Some(super::super::gr::shrineroute::PIT_DEVICE) => {
-                    super::super::gr::shrineroute::pit_device(self, gobj)
+                Some(super::super::gr::underground_maze::PIT_DEVICE) => {
+                    super::super::gr::underground_maze::pit_device(self, gobj)
                 }
-                Some(super::super::gr::pushon::SPIKES_DEVICE) => {
-                    super::super::gr::pushon::spikes_device(self, gobj)
+                Some(super::super::gr::race_to_the_finish::SPIKES_DEVICE) => {
+                    super::super::gr::race_to_the_finish::spikes_device(self, gobj)
                 }
-                Some(super::super::gr::target::MARIO_WATER) => {
-                    super::super::gr::target::mario_water(self, gobj);
+                Some(super::super::gr::target_test::MARIO_WATER) => {
+                    super::super::gr::target_test::mario_water(self, gobj);
                     None
                 }
                 Some(other) => {

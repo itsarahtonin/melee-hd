@@ -5,7 +5,7 @@
 
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
-use melee_sim::game::gr::{izumi, stage};
+use melee_sim::game::gr::{fountain_of_dreams, stage};
 use melee_sim::game::state::UserData;
 use melee_sim::game::structs::_GXColor;
 use melee_sim::hsd::tobj::ImageRef;
@@ -278,7 +278,7 @@ impl Ctx<'_> {
         while let Some(id) = g {
             let o = world.gobj(id);
             if o.obj == Some(Obj::CObj(c)) {
-                return o.render == Some(CodeRef(izumi::RENDER_REFLECTION));
+                return o.render == Some(CodeRef(fountain_of_dreams::RENDER_REFLECTION));
             }
             g = o.next;
         }
@@ -397,9 +397,9 @@ impl Ctx<'_> {
     /// 73:60 picture takes in the widened frame ([`widened_x`]), into an image as much
     /// narrower ([`narrowed`]), which the screen's texture stretches back over its quad.
     pub fn screen_widening(&self, n: u8) -> Option<f32> {
-        use melee_sim::game::gr::stadium;
+        use melee_sim::game::gr::pokemon_stadium;
         let aspect = self.hsd.widescreen?;
-        (n != stadium::SCREEN_TEXT).then_some(aspect / crate::frame::GAME_ASPECT)
+        (n != pokemon_stadium::SCREEN_TEXT).then_some(aspect / crate::frame::GAME_ASPECT)
     }
 
     /// `HSD_ImageDescCopyFromEFB(idesc, x, y, clear, true)`: the EFB from (`x`, `y`) copied

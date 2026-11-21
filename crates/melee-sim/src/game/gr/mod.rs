@@ -5,60 +5,96 @@
 //! collision geometry, and the rest of the stage code's globals in [`Globals`].
 
 pub mod anime;
-pub mod battle;
-pub mod bigblue;
-pub mod bigblueroute;
-pub mod castle;
+#[doc(alias("battle"))]
+pub mod battlefield;
+#[doc(alias("bigblue"))]
+pub mod big_blue;
+#[doc(alias("zebes"))]
+pub mod brinstar;
+#[doc(alias("kraid"))]
+pub mod brinstar_depths;
+#[doc(alias("zebesroute"))]
+pub mod brinstar_escape;
 pub mod corneria;
 pub mod data;
 pub mod datfiles;
 pub mod display;
+#[doc(alias("oldpupupu"))]
+pub mod dream_land;
 pub mod dynamic_attr;
 pub mod exe_data;
-pub mod figure;
-pub mod figureget;
-pub mod flatzone;
+#[doc(alias("last"))]
+pub mod final_destination;
+#[doc(alias("flatzone"))]
+pub mod flat_zone;
+#[doc(alias("izumi"))]
+pub mod fountain_of_dreams;
 pub mod fourside;
+#[doc(alias("bigblueroute"))]
+pub mod fzero_race;
 pub mod fzerocar;
-pub mod garden;
-pub mod greatbay;
-pub mod greens;
+#[doc(alias("greatbay"))]
+pub mod great_bay;
+#[doc(alias("greens"))]
+pub mod green_greens;
 pub mod grlib;
 pub mod ground;
-pub mod heal;
-pub mod homerun;
-pub mod icemt;
-pub mod inishie1;
-pub mod inishie2;
-pub mod izumi;
-pub mod kinokoroute;
-pub mod kongo;
-pub mod kraid;
-pub mod last;
+#[doc(alias("homerun"))]
+pub mod home_run_contest;
+#[doc(alias("shrine"))]
+pub mod hyrule_temple;
+#[doc(alias("icemt"))]
+pub mod icicle_mountain;
+#[doc(alias("garden"))]
+pub mod jungle_japes;
+#[doc(alias("kongo"))]
+pub mod kongo_jungle;
+#[doc(alias("oldkongo"))]
+pub mod kongo_jungle_64;
 pub mod material;
-pub mod mutecity;
-pub mod oldkongo;
-pub mod oldpupupu;
-pub mod oldyoshi;
+#[doc(alias("inishie1"))]
+pub mod mushroom_kingdom;
+#[doc(alias("inishie2"))]
+pub mod mushroom_kingdom_2;
+#[doc(alias("kinokoroute"))]
+pub mod mushroom_kingdom_route;
+#[doc(alias("mutecity"))]
+pub mod mute_city;
 pub mod onett;
-pub mod pura;
-pub mod pushon;
-pub mod rcruise;
+#[doc(alias("castle"))]
+pub mod peachs_castle;
+#[doc(alias("pura"))]
+pub mod poke_floats;
+#[doc(alias("stadium"))]
+pub mod pokemon_stadium;
+#[doc(alias("pushon"))]
+pub mod race_to_the_finish;
+#[doc(alias("rcruise"))]
+pub mod rainbow_cruise;
 pub mod registry;
+#[doc(alias("heal"))]
+pub mod rest_area;
 pub mod setup;
-pub mod shrine;
-pub mod shrineroute;
-pub mod stadium;
+#[doc(alias("figureget"))]
+pub mod snag_the_trophies;
 pub mod stage;
-pub mod story;
-pub mod target;
-pub mod teststage;
+#[doc(alias("target"))]
+pub mod target_test;
+#[doc(alias("teststage"))]
+pub mod test_stage;
+#[doc(alias("figure"))]
+pub mod trophy_stages;
+#[doc(alias("shrineroute"))]
+pub mod underground_maze;
 pub mod vars;
 pub mod venom;
-pub mod yorster;
+#[doc(alias("yorster"))]
+pub mod yoshis_island;
+#[doc(alias("oldyoshi"))]
+pub mod yoshis_island_64;
+#[doc(alias("story"))]
+pub mod yoshis_story;
 pub mod zako;
-pub mod zebes;
-pub mod zebesroute;
 
 pub use registry::{GrKind, StKind, Stage, vars_kind};
 pub use vars::{
@@ -184,7 +220,7 @@ pub struct Globals {
     /// Fountain of Dreams' `yakumono_param` (`grIzumi_YakumonoParam`).
     pub izumi_yakumono: Option<DataRef>,
     /// Fountain of Dreams' state besides its objects'.
-    pub izumi: izumi::Globals,
+    pub izumi: fountain_of_dreams::Globals,
     /// Dream Land's `yakumono_param` (`grOldpupupu_YakumonoParam`).
     pub oldpupupu_yakumono: Option<DataRef>,
     /// Yoshi's Island N64's `yakumono_param` (`groldyoshi_yakumono_param_t`).
@@ -204,7 +240,7 @@ pub struct Globals {
     /// Kongo Jungle N64's `yakumono_param` (`grOldKongo_YakumonoParam`).
     pub oldkongo_yakumono: Option<DataRef>,
     /// The Home-Run Contest's stage's statics (`grhomerun.c`).
-    pub homerun: homerun::Globals,
+    pub homerun: home_run_contest::Globals,
     /// Mushroom Kingdom's adventure route's `yakumono_param` (`grkinokoroute.c`): the trophy
     /// slot's odds and the enemy spawner's table.
     pub kinokoroute_yakumono: Option<DataRef>,
@@ -225,7 +261,7 @@ pub struct Globals {
     /// timer and the trophy slot's odds.
     pub zebesroute_yakumono: Option<DataRef>,
     /// The `yakumono_param` statics of the five target stages that read theirs (Falco's,
-    /// Fox's, Mewtwo's, Jigglypuff's and Ganondorf's, `target::YAKUMONO_STATICS`): their
+    /// Fox's, Mewtwo's, Jigglypuff's and Ganondorf's, `target_test::YAKUMONO_STATICS`): their
     /// lines' hits.
     pub target_yakumono: [Option<DataRef>; 5],
     /// The events' trophy stages' `yakumono_param`s (`grfigure1.c` to `grfigure3.c`), which
@@ -243,15 +279,15 @@ pub struct Globals {
     /// Kongo Jungle's `yakumono_param` (`grKongo_YakumonoParam`).
     pub kongo_yakumono: Option<DataRef>,
     /// Kongo Jungle's bridge (`grkongo.c`'s statics).
-    pub kongo: kongo::Globals,
+    pub kongo: kongo_jungle::Globals,
     /// Green Greens' `yakumono_param` (`grGreens_YakumonoParam`).
     pub greens_yakumono: Option<DataRef>,
     /// Green Greens' statics besides it.
-    pub greens: greens::Globals,
+    pub greens: green_greens::Globals,
     /// Brinstar's `yakumono_param` (`grZe_YakumonoParam`).
     pub zebes_yakumono: Option<DataRef>,
     /// Brinstar's statics besides it.
-    pub zebes: zebes::Globals,
+    pub zebes: brinstar::Globals,
     /// Onett's `yakumono_param` (`grOnett_StageParam`).
     pub onett_yakumono: Option<DataRef>,
     /// `grOt_804D69C4`, which Onett's cars' setup clears and nothing reads.
@@ -270,10 +306,10 @@ pub struct Globals {
     /// Princess Peach's Castle's `yakumono_param` (`grCastle_YakumonoParam`).
     pub castle_yakumono: Option<DataRef>,
     /// Princess Peach's Castle's statics besides it.
-    pub castle: castle::Globals,
+    pub castle: peachs_castle::Globals,
     /// The joints Poké Floats' collision vertices follow (`grPu_803E6C0C[i].jobj`, written
     /// into the executable's table at the stage's setup): empty, all null, until a Poké Floats
-    /// setup first writes it, then [`pura::VTX_COUNT`] entries.
+    /// setup first writes it, then [`poke_floats::VTX_COUNT`] entries.
     pub pura_vtx_jobjs: Vec<Option<JObjId>>,
     /// Icicle Mountain's `yakumono_param` (`grIceMt_YakumonoParam`).
     pub icemt_yakumono: Option<DataRef>,
@@ -293,11 +329,11 @@ pub struct Globals {
     /// Mute City's `yakumono_param` (`grMc_YakumonoParam`).
     pub mutecity_yakumono: Option<DataRef>,
     /// Mute City's statics besides it.
-    pub mutecity: mutecity::Globals,
+    pub mutecity: mute_city::Globals,
     /// Big Blue's `yakumono_param` (`grBb_YakumonoParam`).
     pub bigblue_yakumono: Option<DataRef>,
     /// Big Blue's statics besides it.
-    pub bigblue: bigblue::Globals,
+    pub bigblue: big_blue::Globals,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
     pub game_mode: u8,
     /// The players' start points as `grLib_801C9A10` last measured them (`grLib_8049EF58`).
@@ -327,7 +363,7 @@ pub struct Globals {
     /// them.
     pub winds: crate::lb::wind::Winds,
     /// Pokémon Stadium's state besides its objects'.
-    pub stadium: stadium::Globals,
+    pub stadium: pokemon_stadium::Globals,
     /// Whether wind blows (`lb_804D63B4`): 1 when it starts, 2 while it lasts, -1 when it
     /// stops, 0 otherwise.
     pub wind_level: i32,
@@ -380,13 +416,15 @@ impl FtDevices {
 /// A stage's callback for a hit its hurtbox item dealt (`itYaku_ItemVars::x14`), by address.
 pub fn yaku_dealt(r: &mut super::state::Running, cb: CodeRef, item: GObjId, g: GroundId) {
     match cb.0 {
-        garden::KLAPTRAP_BIT => garden::klaptrap_bit(r, item, g),
-        greens::BLOCK_DEALT => greens::block_item_nothing(r, item, g),
+        jungle_japes::KLAPTRAP_BIT => jungle_japes::klaptrap_bit(r, item, g),
+        green_greens::BLOCK_DEALT => green_greens::block_item_nothing(r, item, g),
         onett::CAR_HIT => onett::car_hit(r, item, g),
         corneria::GUN_DEALT => corneria::gun_dealt(r, item, g),
-        castle::BILL_DEALT | castle::BLAST_DEALT => castle::item_nothing(r, item, g),
-        mutecity::CAR_DEALT => mutecity::car_dealt(r),
-        bigblueroute::CAR_DEALT => bigblueroute::car_dealt(r),
+        peachs_castle::BILL_DEALT | peachs_castle::BLAST_DEALT => {
+            peachs_castle::item_nothing(r, item, g)
+        }
+        mute_city::CAR_DEALT => mute_city::car_dealt(r),
+        fzero_race::CAR_DEALT => fzero_race::car_dealt(r),
         other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
     }
 }
@@ -403,23 +441,23 @@ pub fn yaku_received(
     damage: f32,
 ) {
     match cb.0 {
-        yorster::BLOCK_HIT => yorster::block_hit(r, item, g, dir, fighter, damage),
-        greens::BLOCK_HIT => greens::block_hit(r, item, g, fighter),
-        zebes::PILLAR_HIT => zebes::pillar_hit(r, g, dir, damage),
-        zebes::ISLAND_HIT => zebes::island_hit(r, g, dir, damage),
-        zebes::BUBBLES_HIT => zebes::bubbles_hit(r),
-        inishie1::BLOCK_HIT => inishie1::block_hit(r, item, g),
-        kinokoroute::BLOCK_HIT => kinokoroute::block_hit(r, item, g),
-        target::ICE_HIT => target::ice_hit(r, item, g),
-        icemt::BLOCK_HIT => icemt::block_hit(r, item, g),
+        yoshis_island::BLOCK_HIT => yoshis_island::block_hit(r, item, g, dir, fighter, damage),
+        green_greens::BLOCK_HIT => green_greens::block_hit(r, item, g, fighter),
+        brinstar::PILLAR_HIT => brinstar::pillar_hit(r, g, dir, damage),
+        brinstar::ISLAND_HIT => brinstar::island_hit(r, g, dir, damage),
+        brinstar::BUBBLES_HIT => brinstar::bubbles_hit(r),
+        mushroom_kingdom::BLOCK_HIT => mushroom_kingdom::block_hit(r, item, g),
+        mushroom_kingdom_route::BLOCK_HIT => mushroom_kingdom_route::block_hit(r, item, g),
+        target_test::ICE_HIT => target_test::ice_hit(r, item, g),
+        icicle_mountain::BLOCK_HIT => icicle_mountain::block_hit(r, item, g),
         corneria::GUN_HIT => corneria::gun_hit(r, g, damage),
-        castle::SWITCH_HIT => castle::switch_hit(r, item, g, dir, fighter),
-        a if castle::block_hit_index(a).is_some() => {
-            castle::block_hit(r, g, castle::block_hit_index(a).expect("a block"))
+        peachs_castle::SWITCH_HIT => peachs_castle::switch_hit(r, item, g, dir, fighter),
+        a if peachs_castle::block_hit_index(a).is_some() => {
+            peachs_castle::block_hit(r, g, peachs_castle::block_hit_index(a).expect("a block"))
         }
-        cb if mutecity::hit_car(cb).is_some() => {
-            let car = mutecity::hit_car(cb).expect("a car");
-            mutecity::car_hit(r.game, car, damage);
+        cb if mute_city::hit_car(cb).is_some() => {
+            let car = mute_city::hit_car(cb).expect("a car");
+            mute_city::car_hit(r.game, car, damage);
         }
         other => {
             super::code::unported_call(&format!("a stage item's damage callback {other:#010x}"))
@@ -436,13 +474,13 @@ pub fn yaku_touched(
     toucher: Option<GObjId>,
 ) {
     match cb.0 {
-        greens::BLOCK_TOUCHED => greens::block_item_nothing(r, item, g),
-        castle::SWITCH_TOUCHED => castle::switch_touched(r, item, g, toucher),
-        a if castle::block_touched_index(a).is_some() => castle::block_touched(
+        green_greens::BLOCK_TOUCHED => green_greens::block_item_nothing(r, item, g),
+        peachs_castle::SWITCH_TOUCHED => peachs_castle::switch_touched(r, item, g, toucher),
+        a if peachs_castle::block_touched_index(a).is_some() => peachs_castle::block_touched(
             r,
             g,
             toucher,
-            castle::block_touched_index(a).expect("a block"),
+            peachs_castle::block_touched_index(a).expect("a block"),
         ),
         other => {
             super::code::unported_call(&format!("a stage item's touch callback {other:#010x}"))

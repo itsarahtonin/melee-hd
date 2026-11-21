@@ -58,19 +58,19 @@ pub struct ObjCollHooks<'a> {
     pub objs: &'a mut Objects,
     pub data: &'a Archives,
     /// What a landing on Yoshi's Island's blocks reads and gives.
-    pub landing: crate::game::gr::yorster::Landing,
+    pub landing: crate::game::gr::yoshis_island::Landing,
     /// The planks Kongo Jungle's bridge's landings kicked.
-    pub kicks: crate::game::gr::kongo::Kicks,
+    pub kicks: crate::game::gr::kongo_jungle::Kicks,
     /// The brick blocks Mushroom Kingdom's ceilings' touches broke.
-    pub bumps: crate::game::gr::inishie1::Bumps,
+    pub bumps: crate::game::gr::mushroom_kingdom::Bumps,
     /// Whose collision touched Brinstar's escape's way out.
-    pub escape: crate::game::gr::zebesroute::EndTouch,
+    pub escape: crate::game::gr::brinstar_escape::EndTouch,
     /// Whose collision touched Icicle Mountain's lines, for the adventure's climb.
-    pub climb: crate::game::gr::icemt::ClimbTouch,
+    pub climb: crate::game::gr::icicle_mountain::ClimbTouch,
     /// Whose collisions stood on the Underground Maze's symbols' floors.
-    pub maze: crate::game::gr::shrineroute::SymbolTouch,
+    pub maze: crate::game::gr::underground_maze::SymbolTouch,
     /// The coins that touched Snag the Trophies' stand.
-    pub coins: crate::game::gr::figureget::CoinTouch,
+    pub coins: crate::game::gr::snag_the_trophies::CoinTouch,
     /// The stage objects, which the stage's collision joints' callbacks write.
     pub grounds: &'a mut crate::hsd::pool::Pool<super::super::structs::Ground>,
     /// The stage objects by map id (`Ground_GetMapGObj`), for callbacks that write another
@@ -169,20 +169,20 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
         dy: f32,
     ) {
         match callback.0 {
-            super::super::gr::kongo::BRIDGE_LANDED => self.kicks.landed(g, coll, kind),
-            super::super::gr::kongo::PLATFORM_LANDED => {
+            super::super::gr::kongo_jungle::BRIDGE_LANDED => self.kicks.landed(g, coll, kind),
+            super::super::gr::kongo_jungle::PLATFORM_LANDED => {
                 if let Some(super::super::gr::CollUser::Ground(gr)) = user_data {
-                    super::super::gr::kongo::platform_landed(&mut self.grounds[gr.0], kind);
+                    super::super::gr::kongo_jungle::platform_landed(&mut self.grounds[gr.0], kind);
                 }
             }
-            super::super::gr::yorster::BLOCK_LANDED => {
+            super::super::gr::yoshis_island::BLOCK_LANDED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     let (gr, grkind, data) =
                         (self.stage_maps.gr, self.stage_maps.grkind(), self.data);
                     let part_joint = |m: i32, p: i32| {
                         super::super::gr::setup::coll_joint_id_in(gr, grkind, data, m, p)
                     };
-                    super::super::gr::yorster::block_landed(
+                    super::super::gr::yoshis_island::block_landed(
                         &mut self.grounds[g.0],
                         gr.yorster_yakumono,
                         data,
@@ -194,30 +194,32 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
-            super::super::gr::oldyoshi::CLOUD_TOUCHED => {
+            super::super::gr::yoshis_island_64::CLOUD_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    super::super::gr::oldyoshi::touch(
+                    super::super::gr::yoshis_island_64::touch(
                         &mut self.grounds[g.0],
                         joint_id,
                         coll.x34_flags.b1234.into(),
                     );
                 }
             }
-            super::super::gr::homerun::FIELD_TOUCHED => super::super::gr::homerun::field_touched(
-                self.grounds,
-                self.stage_maps.ground(10),
-                coll,
-                kind,
-                self.stage_maps.players[1].entity(0),
-            ),
+            super::super::gr::home_run_contest::FIELD_TOUCHED => {
+                super::super::gr::home_run_contest::field_touched(
+                    self.grounds,
+                    self.stage_maps.ground(10),
+                    coll,
+                    kind,
+                    self.stage_maps.players[1].entity(0),
+                )
+            }
             super::super::gr::fourside::ROOF_TOUCHED => super::super::gr::fourside::touch(
                 self.grounds,
                 self.stage_maps.ground(5),
                 coll.x34_flags.b1234.into(),
             ),
-            super::super::gr::greatbay::PLATFORM_TOUCHED => {
+            super::super::gr::great_bay::PLATFORM_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    super::super::gr::greatbay::platform_touched(
+                    super::super::gr::great_bay::platform_touched(
                         self.objs,
                         self.data,
                         self.grounds,
@@ -229,14 +231,14 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
-            super::super::gr::greatbay::BALLOON_TOUCHED => {
+            super::super::gr::great_bay::BALLOON_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    super::super::gr::greatbay::balloon_touched(&mut self.grounds[g.0], coll, x50);
+                    super::super::gr::great_bay::balloon_touched(&mut self.grounds[g.0], coll, x50);
                 }
             }
-            super::super::gr::castle::LIFT_TOUCHED => {
+            super::super::gr::peachs_castle::LIFT_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    super::super::gr::castle::lift_touched(
+                    super::super::gr::peachs_castle::lift_touched(
                         &mut self.grounds[g.0],
                         joint_id,
                         coll.x34_flags.b1234.into(),
@@ -244,9 +246,9 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
-            super::super::gr::greens::BLOCK_LANDED => {
+            super::super::gr::green_greens::BLOCK_LANDED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    super::super::gr::greens::block_landed(&mut self.grounds[g.0], joint_id);
+                    super::super::gr::green_greens::block_landed(&mut self.grounds[g.0], joint_id);
                 }
             }
             super::super::gr::onett::ROOF_LANDED => {
@@ -273,11 +275,11 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
-            super::super::gr::rcruise::BLOCK_TOUCHED => {
+            super::super::gr::rainbow_cruise::BLOCK_TOUCHED => {
                 if let Some(super::super::gr::CollUser::GObj(go)) = user_data {
                     let (g, root) = (self.stage_maps.ground_of(go), self.stage_maps.jobj(go));
                     let kind = coll.x34_flags.b1234.into();
-                    super::super::gr::rcruise::block_touched(
+                    super::super::gr::rainbow_cruise::block_touched(
                         self.objs,
                         self.grounds,
                         root,
@@ -287,10 +289,10 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
-            super::super::gr::rcruise::DECK_TOUCHED => {
+            super::super::gr::rainbow_cruise::DECK_TOUCHED => {
                 if let Some(super::super::gr::CollUser::GObj(go)) = user_data {
                     let (g, root) = (self.stage_maps.ground_of(go), self.stage_maps.jobj(go));
-                    super::super::gr::rcruise::deck_touched(
+                    super::super::gr::rainbow_cruise::deck_touched(
                         self.objs,
                         self.data,
                         self.grounds,
@@ -301,18 +303,23 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
-            super::super::gr::rcruise::PLANK_TOUCHED => {
+            super::super::gr::rainbow_cruise::PLANK_TOUCHED => {
                 if let Some(super::super::gr::CollUser::GObj(go)) = user_data {
                     let g = self.stage_maps.ground_of(go);
                     let kind = coll.x34_flags.b1234.into();
-                    super::super::gr::rcruise::plank_touched(self.grounds, g, joint_id, kind);
+                    super::super::gr::rainbow_cruise::plank_touched(
+                        self.grounds,
+                        g,
+                        joint_id,
+                        kind,
+                    );
                 }
             }
-            super::super::gr::inishie1::BLOCK_BUMPED => self.bumps.bumped(joint_id, dy),
-            super::super::gr::inishie1::LIFT_TOUCHED => {
+            super::super::gr::mushroom_kingdom::BLOCK_BUMPED => self.bumps.bumped(joint_id, dy),
+            super::super::gr::mushroom_kingdom::LIFT_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     let param = self.stage_maps.gr.inishie1_yakumono;
-                    super::super::gr::inishie1::lift_touched(
+                    super::super::gr::mushroom_kingdom::lift_touched(
                         self.grounds,
                         param,
                         self.data,
@@ -323,9 +330,9 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
-            super::super::gr::bigblue::PLATFORM_TOUCHED => {
+            super::super::gr::big_blue::PLATFORM_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    super::super::gr::bigblue::platform_touched(
+                    super::super::gr::big_blue::platform_touched(
                         self.objs,
                         &mut self.grounds[g.0],
                         joint_id,
@@ -334,10 +341,10 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
-            super::super::gr::bigblue::CAR_TOUCHED => {
+            super::super::gr::big_blue::CAR_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     let param = self.stage_maps.gr.bigblue_yakumono;
-                    super::super::gr::bigblue::car_touched(
+                    super::super::gr::big_blue::car_touched(
                         &mut self.grounds[g.0],
                         param,
                         self.data,
@@ -347,11 +354,11 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
-            super::super::gr::icemt::ICE_A_TOUCHED
-            | super::super::gr::icemt::ICE_B_TOUCHED
-            | super::super::gr::icemt::ICE_C_TOUCHED => {
+            super::super::gr::icicle_mountain::ICE_A_TOUCHED
+            | super::super::gr::icicle_mountain::ICE_B_TOUCHED
+            | super::super::gr::icicle_mountain::ICE_C_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    let map = if callback.0 == super::super::gr::icemt::ICE_C_TOUCHED {
+                    let map = if callback.0 == super::super::gr::icicle_mountain::ICE_C_TOUCHED {
                         4
                     } else {
                         2
@@ -360,7 +367,7 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         .stage_maps
                         .gobj(map)
                         .and_then(|go| self.stage_maps.jobj(go));
-                    super::super::gr::icemt::ice_touched(
+                    super::super::gr::icicle_mountain::ice_touched(
                         self.objs,
                         self.grounds,
                         root,
@@ -371,17 +378,17 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                 }
                 self.climb.touched(coll.x0_gobj);
             }
-            super::super::gr::icemt::ON_JOINT => self.climb.touched(coll.x0_gobj),
-            super::super::gr::heal::ON_JOINT => {
+            super::super::gr::icicle_mountain::ON_JOINT => self.climb.touched(coll.x0_gobj),
+            super::super::gr::rest_area::ON_JOINT => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    super::super::gr::heal::portal_touched(
+                    super::super::gr::rest_area::portal_touched(
                         &mut self.grounds[g.0],
                         coll.x34_flags.b1234.into(),
                         kind,
                     );
                 }
             }
-            super::super::gr::figureget::COIN_TOUCHED => {
+            super::super::gr::snag_the_trophies::COIN_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     let item = coll
                         .x0_gobj
@@ -390,33 +397,35 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         .touched(g, coll.x34_flags.b1234, coll.x0_gobj, item, coll.cur_pos.x);
                 }
             }
-            super::super::gr::pushon::GOAL_TOUCHED => {
+            super::super::gr::race_to_the_finish::GOAL_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
-                    super::super::gr::pushon::goal_touched(
+                    super::super::gr::race_to_the_finish::goal_touched(
                         &mut self.grounds[g.0],
                         coll.x34_flags.b1234.into(),
                         kind,
                     );
                 }
             }
-            super::super::gr::shrineroute::SYMBOL_TOUCHED => {
+            super::super::gr::underground_maze::SYMBOL_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     self.maze
                         .touched(g, coll.x34_flags.b1234, coll.x0_gobj, kind);
                 }
             }
-            super::super::gr::zebesroute::END_TOUCHED => super::super::gr::zebesroute::end_touched(
-                &mut self.escape,
-                coll.x34_flags.b1234,
-                coll.x0_gobj,
-                kind,
-            ),
-            super::super::gr::mutecity::TRACK_TOUCHED => {
+            super::super::gr::brinstar_escape::END_TOUCHED => {
+                super::super::gr::brinstar_escape::end_touched(
+                    &mut self.escape,
+                    coll.x34_flags.b1234,
+                    coll.x0_gobj,
+                    kind,
+                )
+            }
+            super::super::gr::mute_city::TRACK_TOUCHED => {
                 let live = self.stage_maps.gr.mutecity.track_live;
                 let item = coll
                     .x0_gobj
                     .is_some_and(|o| self.stage_maps.p_link(o) == ITEM_P_LINK);
-                super::super::gr::mutecity::track_touched(live, coll, kind, item);
+                super::super::gr::mute_city::track_touched(live, coll, kind, item);
             }
             _ => unported_call(&format!("stage joint callback {:#010x}", callback.0)),
         }
@@ -531,7 +540,7 @@ impl Running<'_> {
             0.0
         };
         let game = &mut *self.game;
-        let landing = crate::game::gr::yorster::Landing::of(game);
+        let landing = crate::game::gr::yoshis_island::Landing::of(game);
         let geometry = game.geometry.as_mut().expect("no collision geometry");
         let platforms = &mut game.ft.platforms;
         platforms.clear();

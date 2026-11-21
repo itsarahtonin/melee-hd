@@ -225,7 +225,7 @@ pub fn goal_touched(gp: &mut super::super::structs::Ground, b1234: u32, kind: i3
 /// What the race's and the Underground Maze's lights differ in. The two stages light the
 /// fighters themselves with one implementation over it (`grpushon.c`'s and `grshrineroute.c`'s
 /// copies, both originals' aliases on each shared function); each keeps its own table of lights
-/// and its constant ([`LIGHTS`] here, `shrineroute::LIGHTS`).
+/// and its constant ([`LIGHTS`] here, `underground_maze::LIGHTS`).
 pub struct Lights {
     /// The fighters' lights' GObj: the race's the first object on render link 4 (the fighters'
     /// lights, `HSD_GObjGXLinkHead` read as a GObj, whose `next_gx` is link 4's head), the
