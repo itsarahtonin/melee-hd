@@ -62,6 +62,7 @@
 // No console window for the release build on Windows (`console` attaches to a terminal's).
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
+mod bench_frames;
 mod capture;
 mod channel;
 mod console;
@@ -3343,8 +3344,11 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
     let mut parts = [Duration::ZERO; 3];
     let mut drawing: Vec<Duration> = Vec::with_capacity((ticks * per_tick) as usize);
     let mut presented: Vec<Duration> = Vec::with_capacity((ticks * per_tick) as usize);
+    let mut rows = bench_frames::Frames::with_capacity((ticks * per_tick) as usize);
     let mut last = None;
     let mut rendered = 0u32;
+    // Times read back from before the first frame aren't its.
+    let _ = gpu.gpu_times();
     for tick in 0..ticks {
         let t0 = Instant::now();
         let pads = args.holds.as_ref().map_or(rest, |h| h.at(u64::from(tick)));
@@ -3409,8 +3413,9 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                     (renderer.run(&frames.space, data, &fifo, None), tb)
                 };
                 let tc = Instant::now();
+                let mut submitted = tc;
                 if let Some(frame) = images.into_iter().last() {
-                    target.present(&gpu, &frame);
+                    submitted = target.present(&gpu, &frame);
                     last = Some(frame);
                 }
                 let td = Instant::now();
@@ -3419,6 +3424,15 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                 parts[2] += td - tc;
                 drawing.push(tc - ta);
                 presented.push(td - ta);
+                rows.push(bench_frames::Row {
+                    tick,
+                    k,
+                    draw: tc - ta,
+                    submit: submitted - tc,
+                    wait: td - submitted,
+                    gpu: None,
+                });
+                rows.gpu(&gpu.gpu_times());
             }
         }
         session.recycle(f);
@@ -3481,6 +3495,10 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
             pct(&mut ticked, 0.99),
             pct(&mut ticked, 1.0)
         );
+    }
+    print!("{}", rows.report(bench_frames::INTERVAL));
+    if let Ok(path) = std::env::var("MELEE_BENCH_FRAMES") {
+        std::fs::write(&path, rows.csv()).unwrap_or_else(|e| eprintln!("{path}: {e}"));
     }
     if let (Some(path), Some(f)) = (&args.shot, &last) {
         f.save_png(std::path::Path::new(path))

@@ -748,16 +748,19 @@ impl Offscreen {
         }
     }
 
-    /// Draws a frame into the target and waits for the GPU to finish it.
-    pub fn present(&mut self, gpu: &Gpu, frame: &melee_gpu::Frame) {
+    /// Draws a frame into the target and waits for the GPU to finish it. Returns when the
+    /// present was submitted, before the wait.
+    pub fn present(&mut self, gpu: &Gpu, frame: &melee_gpu::Frame) -> std::time::Instant {
         let Some(texture) = &frame.texture else {
-            return;
+            return std::time::Instant::now();
         };
         let view = self.texture.create_view(&Default::default());
         self.blit
             .draw(gpu, Some(texture), &view, self.width, self.height);
         gpu.end_frame();
+        let submitted = std::time::Instant::now();
         let _ = gpu.device.poll(wgpu::PollType::wait_indefinitely());
+        submitted
     }
 }
 
