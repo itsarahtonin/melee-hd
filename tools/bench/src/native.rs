@@ -634,6 +634,160 @@ pub fn alloc_sites(args: &[String]) {
     });
 }
 
+/// `melee-bench rollback-split [--dir DIR] [--at TICK] [--runs N] [MATCH]`: one state's
+/// rollback window taken apart. Plays the match (default `fox-marth-ps`) to tick `TICK` (default
+/// 12,500), keeps its state, then `N` times (default 200) restores it and plays 8 ticks as
+/// `snapshot-match` does, timing the restore and each tick's engine part and display pass
+/// apart, and prints their medians. With `PERF_CTL_FIFO` and `PERF_ACK_FIFO` set (Linux: `perf
+/// record --control fifo:CTL,ACK -D -1`), a profile covers only the timed windows.
+pub fn rollback_split(args: &[String]) {
+    let mut at = 12_500u64;
+    let mut rest = Vec::new();
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--at" => at = it.next().and_then(|n| n.parse().ok()).expect("--at TICK"),
+            _ => rest.push(a.clone()),
+        }
+    }
+    let runs = if rest.iter().any(|a| a == "--runs") {
+        args_dir(&rest).1
+    } else {
+        200
+    };
+    let (dir, _, names, _) = args_dir(&rest);
+    let name = names
+        .first()
+        .cloned()
+        .unwrap_or_else(|| "fox-marth-ps".into());
+    println!("{}", crate::machine());
+    println!("{}", version());
+    on_sim_thread(move || {
+        let mut files = files();
+        let b = Bench::open(&dir, &name).unwrap_or_else(|e| panic!("{name}: {e}"));
+        let mut m = b.start(&mut files);
+        let mut device = Device(&b.replay);
+        for _ in 0..at {
+            let f = m.step_replay(&mut device);
+            m.recycle(f);
+        }
+        let kept = m.game.clone();
+        println!(
+            "{name}: tick {at} (frame {}), {runs} restores and {ROLLBACK_TICKS} ticks, the display passes building their draws as snapshot-match's do",
+            frame(&m)
+        );
+        let mut ctl = PerfCtl::open();
+        // Per run: the restore, then each tick's engine part and display pass.
+        let mut restore = Vec::with_capacity(runs);
+        let mut ticks = vec![Vec::with_capacity(runs); ROLLBACK_TICKS];
+        let mut passes = vec![Vec::with_capacity(runs); ROLLBACK_TICKS];
+        let mut total = Vec::with_capacity(runs);
+        let mut frames = [0i32; ROLLBACK_TICKS];
+        for run in 0..runs + 2 {
+            if let Some(c) = ctl.as_mut() {
+                c.send("enable");
+            }
+            let (r, split, all) = rollback_window(&mut m, &kept, &mut device, &mut frames);
+            if let Some(c) = ctl.as_mut() {
+                c.send("disable");
+            }
+            // Two warm-up runs.
+            if run < 2 {
+                continue;
+            }
+            restore.push(r);
+            for (i, (t, p)) in split.into_iter().enumerate() {
+                ticks[i].push(t);
+                passes[i].push(p);
+            }
+            total.push(all);
+        }
+        let med = |v: &mut Vec<f64>| {
+            v.sort_by(f64::total_cmp);
+            v[v.len() / 2] * 1e6
+        };
+        println!("| part | median µs |");
+        println!("| --- | --- |");
+        println!("| restore | {:.1} |", med(&mut restore));
+        for i in 0..ROLLBACK_TICKS {
+            println!(
+                "| tick {} (frame {}): engine, display | {:.1}, {:.1} |",
+                at + i as u64 + 1,
+                frames[i],
+                med(&mut ticks[i]),
+                med(&mut passes[i])
+            );
+        }
+        let (mut t, mut p): (f64, f64) = (0.0, 0.0);
+        for i in 0..ROLLBACK_TICKS {
+            t += med(&mut ticks[i]);
+            p += med(&mut passes[i]);
+        }
+        println!("| engine ticks, display passes (medians summed) | {t:.1}, {p:.1} |");
+        println!(
+            "| restore and {ROLLBACK_TICKS} ticks | {:.1} |",
+            med(&mut total)
+        );
+    });
+}
+
+/// One rollback window: `kept` restored into `m`, then [`ROLLBACK_TICKS`] ticks with their display
+/// passes; the restore's time, each tick's engine part's and display pass's, and the whole's, in
+/// seconds. A function of its own, so a sampled profile can keep the windows' samples alone.
+#[inline(never)]
+fn rollback_window(
+    m: &mut Match,
+    kept: &Game,
+    device: &mut Device<'_>,
+    frames: &mut [i32; ROLLBACK_TICKS],
+) -> (f64, [(f64, f64); ROLLBACK_TICKS], f64) {
+    let t0 = Instant::now();
+    (*m.game).clone_from(kept);
+    let r = t0.elapsed().as_secs_f64();
+    let mut split = [(0.0, 0.0); ROLLBACK_TICKS];
+    for (s, fr) in split.iter_mut().zip(frames) {
+        let a = Instant::now();
+        let (mut f, render) = m.step_replay_tick(device);
+        let b = Instant::now();
+        if render {
+            f.draws = m.render();
+        }
+        let c = Instant::now();
+        m.recycle(std::hint::black_box(f));
+        *s = ((b - a).as_secs_f64(), (c - b).as_secs_f64());
+        *fr = frame(m);
+    }
+    (r, split, t0.elapsed().as_secs_f64())
+}
+
+/// `perf record --control`'s FIFOs, from `PERF_CTL_FIFO` and `PERF_ACK_FIFO`.
+struct PerfCtl {
+    ctl: std::fs::File,
+    ack: std::io::BufReader<std::fs::File>,
+}
+
+impl PerfCtl {
+    fn open() -> Option<PerfCtl> {
+        let c = std::env::var("PERF_CTL_FIFO").ok()?;
+        let a = std::env::var("PERF_ACK_FIFO").ok()?;
+        Some(PerfCtl {
+            ctl: std::fs::OpenOptions::new()
+                .write(true)
+                .open(c)
+                .expect("PERF_CTL_FIFO"),
+            ack: std::io::BufReader::new(std::fs::File::open(a).expect("PERF_ACK_FIFO")),
+        })
+    }
+
+    fn send(&mut self, cmd: &str) {
+        use std::io::{BufRead, Write};
+        writeln!(self.ctl, "{cmd}").expect("perf's control FIFO");
+        self.ctl.flush().expect("perf's control FIFO");
+        let mut l = String::new();
+        self.ack.read_line(&mut l).expect("perf's ack FIFO");
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
