@@ -288,6 +288,7 @@ impl Gpu {
     pub fn fast(mut renderer: Renderer, threaded: bool) -> Gpu {
         renderer.gpu_transforms = true;
         renderer.material_records = true;
+        renderer.make_ahead();
         let gpu = if threaded {
             Gpu::threaded(renderer)
         } else {

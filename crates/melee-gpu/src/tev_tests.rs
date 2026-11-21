@@ -248,7 +248,7 @@ fn draw(
     r.pipeline(key);
     r.bind_group(ids);
     let tev = r.specialized(s, key, draw_mode);
-    assert_eq!(tev != tev::UBER, tev_mode == TevMode::Sync);
+    assert_eq!(tev != tev::UBER, tev_mode != TevMode::Off);
     r.push_command(crate::Command {
         pipeline: key,
         tev,
@@ -409,4 +409,228 @@ fn the_saved_list_keeps_the_order_first_asked_for() {
     assert!(made <= of && of == asked.len());
     b.finish_specialized();
     assert_eq!(b.tev.made_of(), (asked.len(), asked.len()));
+}
+
+/// A draw whose uber pipeline isn't made yet never waits for it (on the worker's NVIDIA driver
+/// one took 1.4 to 2.8 s): the flush makes the draw's specialized pipeline on the spot (here
+/// with the shader threads paused, so it makes it itself) and draws with it, the uber pipeline
+/// still on the threads, and the frame is the uber shader's. A clear drawn as a rectangle the
+/// same, with a clear's specialized pipeline. Then the threads make the uber pipelines.
+#[test]
+fn a_draw_whose_uber_pipeline_isnt_made_draws_with_its_specialized_one_made_on_the_spot() {
+    let Some(mut r) = renderer() else {
+        eprintln!("skipped: no hardware GPU adapter");
+        return;
+    };
+    let mut uber = Renderer::with_device(r.device.clone(), r.queue().clone());
+    let seed = 0x6A09_E667_F3BC_C908;
+    let (ids, levels) = textures(&mut r, &mut Rng(seed));
+    let (uber_ids, _) = textures(&mut uber, &mut Rng(seed));
+    r.tev.mode = TevMode::Async;
+    r.tev.pause(true);
+    let mut rng = Rng(seed ^ 1);
+    let s = state(&mut rng);
+    let vs = quad(&mut rng);
+    let drawn = draw(&mut r, &s, &vs, ids, levels, MODE_DRAW, TevMode::Async);
+    let key = PipelineKey {
+        blend: None,
+        const_alpha: false,
+        write_color: true,
+        write_alpha: true,
+        depth_compare: Some(7),
+        depth_write: true,
+        early_z: false,
+        vertices: Default::default(),
+    };
+    assert!(
+        r.tev.uber(key).is_none(),
+        "the uber pipeline was made at the draw"
+    );
+    let st = r.tev.stats;
+    assert_eq!(
+        (
+            st.on_the_spot,
+            st.specialized_calls,
+            st.uber_calls,
+            st.uber_waited
+        ),
+        (1, 1, 0, 0),
+        "drawn with its specialized pipeline made on the spot"
+    );
+    let expected = draw(
+        &mut uber,
+        &s,
+        &vs,
+        uber_ids,
+        levels,
+        MODE_DRAW,
+        TevMode::Off,
+    );
+    assert!(
+        drawn == expected,
+        "drawn otherwise than the uber shader draws it"
+    );
+
+    // A clear of part of the EFB, drawn as a rectangle.
+    let mut c = State::new();
+    c.bp[0x40] = 0x17;
+    c.bp[0x41] = 1 << 3 | 1 << 4;
+    c.bp[0x43] = 1;
+    c.bp[0x4F] = 0x80FF;
+    c.bp[0x50] = 0x4012;
+    c.bp[0x51] = 0x34_5678;
+    let rect = [24, 40, 200, 120];
+    let clear_key = PipelineKey {
+        depth_compare: Some(7),
+        ..Renderer::pipeline_key(&c)
+    };
+    for x in [&mut r, &mut uber] {
+        x.rect_clears = true;
+        x.clear(&c, rect);
+        x.flush();
+    }
+    assert!(r.tev.uber(clear_key).is_none());
+    assert_eq!(r.tev.stats.on_the_spot, 2, "the clear's made on the spot");
+    assert_eq!(r.tev.stats.uber_waited, 0);
+    assert!(
+        (r.read_efb(), read_depth(&r)) == (uber.read_efb(), read_depth(&uber)),
+        "the clear drawn otherwise than the uber shader draws it"
+    );
+
+    // The threads make the uber pipelines.
+    r.tev.pause(false);
+    r.finish_specialized();
+    assert!(r.tev.uber(key).is_some() && r.tev.uber(clear_key).is_some());
+    assert_eq!(r.tev.stats.uber_waited, 0);
+}
+
+/// Warming a list's uber pipelines doesn't make them before the first frame: they're made on
+/// the threads, after the specialized ones, and the run's keys hold them all the same.
+#[test]
+fn a_list_s_uber_pipelines_are_made_on_the_threads() {
+    let Some(mut r) = renderer() else {
+        eprintln!("skipped: no hardware GPU adapter");
+        return;
+    };
+    r.tev.mode = TevMode::Async;
+    r.tev.pause(true);
+    let mut rng = Rng(0xBB67_AE85);
+    let mut keys = Vec::new();
+    for _ in 0..4 {
+        let key = PipelineKey {
+            early_z: false,
+            ..Renderer::pipeline_key(&state(&mut rng))
+        };
+        keys.push(key.pack());
+    }
+    keys.sort_unstable();
+    keys.dedup();
+    r.warm(&keys);
+    assert_eq!(r.tev.stats.uber_made, 0, "made before the first frame");
+    assert_eq!(r.pipeline_keys(), keys);
+    r.tev.pause(false);
+    r.finish_specialized();
+    assert_eq!(r.tev.stats.uber_made as usize, keys.len());
+    assert_eq!(r.tev.stats.uber_waited, 0);
+}
+
+/// A list's entries are taken only where this build reads them: one whose key's mark or
+/// configuration isn't this build's, or cut short, is left out, and one made for early z is made
+/// without it where the renderer's draws can't test depth early (this test's device has no
+/// `SHADER_EARLY_DEPTH_TEST`). The shipped list's are made, but kept out of the saved list until
+/// a draw asks for one.
+#[test]
+fn a_list_s_entries_are_taken_where_this_build_reads_them() {
+    let Some(mut r) = renderer() else {
+        eprintln!("skipped: no hardware GPU adapter");
+        return;
+    };
+    assert!(!r.early_z());
+    r.tev.mode = TevMode::Async;
+    r.tev.pause(true);
+    let entry = |k: PipelineKey, u: &tev::Uid| {
+        let mut v = k.pack().to_vec();
+        v.extend_from_slice(&u.0);
+        v
+    };
+    let mut rng = Rng(0x3C6E_F372);
+    let mut config = || {
+        let s = state(&mut rng);
+        (Renderer::pipeline_key(&s), tev::Uid::of(&s.bp, MODE_DRAW))
+    };
+    let (a, ua) = config();
+    let (b, ub) = config();
+    let (c, uc) = config();
+    let early = |k: PipelineKey| PipelineKey { early_z: true, ..k };
+    let mut bad_mark = entry(a, &ua);
+    bad_mark[7] ^= 1;
+    let mut silhouettes = entry(a, &ua);
+    *silhouettes.last_mut().unwrap() = 3;
+    let mut unmasked = entry(a, &ua);
+    // A bit of the configuration's words no draw's has (a stage the stage count leaves out).
+    let at = 8
+        + (0..ua.0.len())
+            .find(|&i| {
+                let mut w = ua.0;
+                w[i] ^= 1 << 31;
+                tev::Uid::from_words(&w).is_none()
+            })
+            .expect("a bit no configuration has");
+    unmasked[at] ^= 1 << 31;
+    let mut short = entry(a, &ua);
+    short.pop();
+    let list = [
+        entry(a, &ua),
+        entry(early(a), &ua),
+        entry(early(b), &ub),
+        bad_mark,
+        silhouettes,
+        unmasked,
+        short,
+    ];
+    assert_eq!(r.warm_specialized(&list), 2);
+    assert_eq!(r.specialized_keys(), vec![entry(a, &ua), entry(b, &ub)]);
+    assert_eq!(r.warm_shipped(&[entry(c, &uc), entry(a, &ua)]), 1);
+    assert_eq!(
+        r.specialized_keys().len(),
+        2,
+        "a shipped one listed before a draw asked"
+    );
+    r.tev.request(c, uc, true);
+    assert_eq!(
+        r.specialized_keys(),
+        vec![entry(a, &ua), entry(b, &ub), entry(c, &uc)]
+    );
+    r.tev.pause(false);
+    r.finish_specialized();
+    assert_eq!(r.tev.made_of(), (3, 3));
+}
+
+/// A match's renderer makes what its first frame would otherwise make: the transforms'
+/// pipelines on a thread of their own from when the fast renderer is set up
+/// (`Renderer::make_ahead`), taken at the first mesh drawn, and the copy to the XFB's with the
+/// textures prepared before the match.
+#[test]
+fn a_match_s_first_frame_finds_its_renderer_s_own_pipelines_made() {
+    let Some(mut r) = renderer() else {
+        eprintln!("skipped: no hardware GPU adapter");
+        return;
+    };
+    r.make_ahead();
+    assert!(
+        r.making.0.is_none(),
+        "made ahead without the GPU's transforms"
+    );
+    r.gpu_transforms = true;
+    r.make_ahead();
+    assert!(r.making.0.is_some(), "the transforms not made ahead");
+    r.gpu_meshes();
+    assert!(r.making.0.is_none() && r.gpu_meshes.is_some());
+    r.xfb_on_gpu = true;
+    assert!(r.gpu_xfb.is_none());
+    r.prepare_textures(&[]);
+    assert!(
+        r.gpu_xfb.is_some(),
+        "the copy to the XFB's pipelines not made before the match"
+    );
 }

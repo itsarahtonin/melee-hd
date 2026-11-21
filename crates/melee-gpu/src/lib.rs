@@ -588,16 +588,10 @@ pub struct Renderer {
     efb_msaa: Option<wgpu::TextureView>,
     samples: u32,
     depth_view: wgpu::TextureView,
-    module: wgpu::ShaderModule,
-    /// gx.wgsl with its fragment shader promising depth_greater, for the early z pipelines:
-    /// where the device has `SHADER_EARLY_DEPTH_TEST` (Vulkan), the EFB has one sample a pixel
-    /// and `MELEE_EARLY_Z` isn't 0.
-    early_module: Option<wgpu::ShaderModule>,
-    layout: wgpu::PipelineLayout,
     uniform_layout: wgpu::BindGroupLayout,
     texture_layout: wgpu::BindGroupLayout,
-    pipelines: FxHashMap<PipelineKey, wgpu::RenderPipeline>,
-    /// Pipelines with shaders specialized to the draws' TEV configurations.
+    /// The pipelines: the uber shader's (gx.wgsl's, by what each is made for) and those with
+    /// shaders specialized to the draws' TEV configurations.
     tev: tev::Specializer,
     /// The vertices' words (`GpuVertex::write`).
     vertices: Vec<u32>,
@@ -701,8 +695,10 @@ pub struct Renderer {
     /// default: the exact renderer's, and F2's, whose meshes are transformed on the CPU as the
     /// exact renderer's draws are.
     pub gpu_transforms: bool,
-    /// The meshes on the GPU and the transforms, made at the first mesh drawn.
+    /// The meshes on the GPU and the transforms, made at the first mesh drawn, or ahead on a
+    /// thread of their own ([`Renderer::make_ahead`]).
     gpu_meshes: Option<gpu_mesh::GpuMeshes>,
+    making: Making,
     mesh_runs: Vec<(mesh::Kind, std::ops::Range<u32>)>,
     mesh_geometry: Vec<Geometry>,
     checks: wgpu::ShaderRuntimeChecks,
@@ -831,6 +827,47 @@ fn iround(x: f32) -> f32 {
 /// centers sample where the GameCube's rasterizer does (9/16 into a pixel, as Dolphin's has it).
 fn snap(v: f32) -> f32 {
     (iround(16.0 * v) - 1.0) / 16.0
+}
+
+/// Makes sure every command has a pipeline to draw with: where its uber pipeline isn't made
+/// yet (it's made on the shader threads), its specialized one made on the spot, the commands'
+/// together on every shader thread and this one; a command only the uber shader draws waits for
+/// its own. Nothing to do once every uber pipeline asked for is made.
+fn ready(commands: &[Command], tev: &mut tev::Specializer) {
+    if !tev.uber_pending() {
+        return;
+    }
+    let mut wanted = Vec::new();
+    let mut uber = Vec::new();
+    for c in commands {
+        if tev.uber(c.pipeline).is_some() || tev.pipeline(c.pipeline, c.tev).is_some() {
+            continue;
+        }
+        if c.tev == tev::UBER {
+            uber.push(c.pipeline);
+        } else {
+            wanted.push((c.pipeline, c.tev));
+        }
+    }
+    if !wanted.is_empty() {
+        tev.make_now(&wanted);
+    }
+    for key in uber {
+        tev.uber_now(key);
+    }
+}
+
+/// The transforms being made ahead on a thread ([`Renderer::make_ahead`]), joined if the renderer
+/// goes first: the thread holds the device, which mustn't be dropped last by a thread the
+/// process's exit races (see `tev::Workers`).
+struct Making(Option<std::thread::JoinHandle<gpu_mesh::GpuMeshes>>);
+
+impl Drop for Making {
+    fn drop(&mut self) {
+        if let Some(h) = self.0.take() {
+            let _ = h.join();
+        }
+    }
 }
 
 /// A pipeline drawing with `module`'s `vs_main` and `fs_main` for what `key` says.
@@ -1131,10 +1168,12 @@ impl Renderer {
             tev::TevMode::from_env(),
             tev::Maker {
                 device: device.clone(),
-                layout: layout.clone(),
+                layout,
                 cache: None,
                 samples,
                 checks,
+                uber: module,
+                uber_early: early_module,
             },
         );
         let mut r = Renderer {
@@ -1145,12 +1184,8 @@ impl Renderer {
             efb: targets.efb,
             device,
             queue: submit::Ordered::new(queue),
-            module,
-            early_module,
-            layout,
             uniform_layout,
             texture_layout,
-            pipelines: FxHashMap::default(),
             tev,
             vertices: Vec::new(),
             indices: Vec::new(),
@@ -1211,6 +1246,7 @@ impl Renderer {
             timer: None,
             gpu_transforms: false,
             gpu_meshes: None,
+            making: Making(None),
             mesh_runs: Vec::new(),
             mesh_geometry: Vec::new(),
             checks,
@@ -1255,19 +1291,26 @@ impl Renderer {
     /// The pipelines made so far, by what they're made for, to make again at the next run's
     /// start ([`Renderer::warm`]): a frame never waits for a pipeline it has needed before.
     pub fn pipeline_keys(&self) -> Vec<[u32; 8]> {
-        let mut keys: Vec<[u32; 8]> = self.pipelines.keys().map(|k| k.pack()).collect();
+        let mut keys: Vec<[u32; 8]> = self.tev.uber_keys().map(|k| k.pack()).collect();
         keys.sort_unstable();
         keys
     }
 
-    /// Makes the pipelines `keys` name, as [`Renderer::pipeline_keys`] gave them.
+    /// Makes the pipelines `keys` name, as [`Renderer::pipeline_keys`] gave them, on the shader
+    /// threads after the specialized ones (at once with `MELEE_TEV=0` or `sync`): a draw whose
+    /// uber pipeline isn't made yet has its specialized one made on the spot instead.
     pub fn warm(&mut self, keys: &[[u32; 8]]) {
         for k in keys {
             if let Some(mut key) = PipelineKey::unpack(*k) {
-                key.early_z &= self.early_module.is_some();
-                self.pipeline(key);
+                key.early_z &= self.early_z();
+                self.tev.ask_uber(key, false);
             }
         }
+    }
+
+    /// Whether this renderer's draws test depth before their shaders where they can.
+    fn early_z(&self) -> bool {
+        self.tev.maker.uber_early.is_some()
     }
 
     /// The pipelines with specialized shaders asked for so far, each what it's made for
@@ -1284,21 +1327,56 @@ impl Renderer {
     }
 
     /// Makes the pipelines `keys` name, as [`Renderer::specialized_keys`] gave them, on the
-    /// shader threads behind any a draw needs (at once with `MELEE_TEV=sync`).
-    pub fn warm_specialized(&mut self, keys: &[Vec<u32>]) {
+    /// shader threads behind any a draw needs (at once with `MELEE_TEV=sync`). An entry that
+    /// isn't one this build reads is left out; one made for early z, on a renderer whose draws
+    /// can't test depth early (no `SHADER_EARLY_DEPTH_TEST`, or samples), is made without it, as
+    /// its draws ask for it there. Returns how many pipelines it asked for that weren't before.
+    pub fn warm_specialized(&mut self, keys: &[Vec<u32>]) -> usize {
+        self.warm_list(keys, false)
+    }
+
+    /// [`Renderer::warm_specialized`] for the shipped list (`data/pipelines`): made after the
+    /// saved list's, and kept out of [`Renderer::specialized_keys`] until a draw asks for one.
+    pub fn warm_shipped(&mut self, keys: &[Vec<u32>]) -> usize {
+        self.warm_list(keys, true)
+    }
+
+    fn warm_list(&mut self, keys: &[Vec<u32>], shipped: bool) -> usize {
+        let early_z = self.early_z();
+        let before = self.tev.asked();
         for k in keys {
-            let (Some(key), Some(uid)) = (
-                k.get(..8)
-                    .and_then(|k| PipelineKey::unpack(k.try_into().unwrap())),
-                k.get(8..).and_then(tev::Uid::from_words),
-            ) else {
+            let Some((mut key, uid)) = Self::specialized_entry(k) else {
                 continue;
             };
-            if key.early_z && self.early_module.is_none() {
-                continue;
+            key.early_z &= early_z;
+            if shipped {
+                self.tev.request_shipped(key, uid);
+            } else {
+                self.tev.request(key, uid, false);
             }
-            self.tev.request(key, uid, false);
         }
+        self.tev.asked() - before
+    }
+
+    /// A saved list's entry, if it's one this build reads: what its pipeline is made for and its
+    /// TEV configuration.
+    fn specialized_entry(k: &[u32]) -> Option<(PipelineKey, tev::Uid)> {
+        let (n, _) = Self::specialized_key_format();
+        if k.len() != n {
+            return None;
+        }
+        let key = PipelineKey::unpack(k[..8].try_into().unwrap())?;
+        Some((key, tev::Uid::from_words(&k[8..])?))
+    }
+
+    /// Whether `k` is a saved list's entry this build reads ([`Renderer::warm_specialized`]).
+    pub fn reads_specialized_entry(k: &[u32]) -> bool {
+        Self::specialized_entry(k).is_some()
+    }
+
+    /// Whether `k` is an uber pipeline's key this build reads ([`Renderer::warm`]).
+    pub fn reads_pipeline_key(k: &[u32; 8]) -> bool {
+        PipelineKey::unpack(*k).is_some()
     }
 
     /// What the specialized shaders have done.
@@ -1429,7 +1507,26 @@ impl Renderer {
     /// Makes the textures `preps` describe that aren't made yet, before anything draws them: a
     /// draw of the same bytes takes the one made ([`Content`]) rather than decoding its own.
     /// They're decoded on several threads. Returns how many were made.
+    /// Makes the copy to the XFB on the GPU's pipelines and buffers, if they aren't (2.5 ms on
+    /// this PC's driver): at the first copy, or ahead of a match's first frame
+    /// ([`Renderer::prepare_textures`]).
+    fn make_xfb(&mut self) {
+        if self.gpu_xfb.is_none() {
+            let start = std::time::Instant::now();
+            let mut x = xfb::GpuXfb::new(&self.device, &self.queue, &self.efb_view);
+            x.timer = self.timer.clone();
+            self.gpu_xfb = Some(x);
+            made::add(made::What::Setup, start);
+        }
+    }
+
+    /// The textures `preps` describe, made before a match's first frame (see
+    /// [`TexturePrep`]); with the copy to the XFB on the GPU, its pipelines too, which the
+    /// first frame would make. Returns how many textures were made.
     pub fn prepare_textures(&mut self, preps: &[TexturePrep]) -> usize {
+        if self.xfb_on_gpu {
+            self.make_xfb();
+        }
         let mut todo: Vec<(&TexturePrep, Content)> = Vec::new();
         for p in preps {
             if let Some((c, _)) = p.content()
@@ -1904,25 +2001,11 @@ impl Renderer {
         test && (!ztex || early) && vp.z_range == 16_777_215.0 && vp.far_z == 16_777_215.0
     }
 
+    /// Asks for the draw's uber pipeline: made on the shader threads, the draw waiting for it
+    /// only where nothing else can draw it (`MELEE_TEV=0` or `sync`); until it's made, a draw
+    /// is drawn with its specialized pipeline, made on the spot if it isn't (`ready`).
     fn pipeline(&mut self, key: PipelineKey) {
-        if self.pipelines.contains_key(&key) {
-            return;
-        }
-        let made = std::time::Instant::now();
-        let module = match &self.early_module {
-            Some(m) if key.early_z => m,
-            _ => &self.module,
-        };
-        let pipeline = make_pipeline(
-            &self.device,
-            &self.layout,
-            self.cache.as_ref(),
-            self.samples,
-            key,
-            module,
-        );
-        self.pipelines.insert(key, pipeline);
-        made::add(made::What::Pipeline, made);
+        self.tev.ask_uber(key, true);
     }
 
     /// The draw's specialized shader (`tev::UBER` for none), asked for if it hasn't been.
@@ -2038,9 +2121,19 @@ impl Renderer {
         let uniform = self.push_uniforms(&u);
         self.pipeline(key);
         self.bind_group([0; 8]);
+        // The uber shader draws it, or where its pipeline isn't made yet a clear's specialized
+        // one (the clear reads no register).
+        if self.tev.uber(key).is_none() {
+            self.tev.collect();
+        }
+        let tev = if self.tev.uber(key).is_none() && mode[0] == MODE_CLEAR {
+            self.tev.request(key, tev::clear_uid(), true)
+        } else {
+            tev::UBER
+        };
         self.push_command(Command {
             pipeline: key,
-            tev: tev::UBER,
+            tev,
             texgens: 0,
             uniform,
             textures: [0; 8],
@@ -2227,7 +2320,9 @@ impl Renderer {
         let (ubuf, ugroup) = self.uniform_buffer.as_ref().unwrap();
         self.queue.write_bytes(ubuf, 0, &mut self.uniforms);
         self.tev.collect();
+        ready(&self.commands, &mut self.tev);
         let mut changes = [0u64; 4];
+        let (mut specialized_calls, mut uber_calls) = (0, 0);
         {
             let mut pass = self.efb_pass(&mut encoder, clear);
             pass.set_bind_group(2, vgroup, &[]);
@@ -2238,26 +2333,24 @@ impl Renderer {
             let mut textures = None;
             let mut scissor = None;
             for c in &self.commands {
-                // The specialized shader where it's made, else the uber shader, which draws the same.
-                let tev = match self.tev.pipeline(c.pipeline, c.tev) {
-                    Some(_) => {
-                        self.tev.stats.specialized_calls += 1;
-                        c.tev
+                // The specialized shader where it's made, else the uber shader, which draws the
+                // same (`ready` made one of them).
+                let (tev, pipeline) = match self.tev.pipeline(c.pipeline, c.tev) {
+                    Some(p) => {
+                        specialized_calls += 1;
+                        (c.tev, p)
                     }
                     None => {
                         if c.tev != tev::UBER {
-                            self.tev.stats.uber_calls += 1;
+                            uber_calls += 1;
                             made::count(made::What::UberDraw);
                         }
-                        tev::UBER
+                        let p = self.tev.uber(c.pipeline).expect("a pipeline made");
+                        (tev::UBER, p)
                     }
                 };
                 if last != Some((c.pipeline, tev)) {
-                    pass.set_pipeline(
-                        self.tev
-                            .pipeline(c.pipeline, tev)
-                            .unwrap_or(&self.pipelines[&c.pipeline]),
-                    );
+                    pass.set_pipeline(pipeline);
                     last = Some((c.pipeline, tev));
                     changes[0] += 1;
                 }
@@ -2289,6 +2382,8 @@ impl Renderer {
                 pass.draw_indexed(first..first + c.count, base, c.texgens..c.texgens + 1);
             }
         }
+        self.tev.stats.specialized_calls += specialized_calls;
+        self.tev.stats.uber_calls += uber_calls;
         if let Some(p) = &mut self.profile {
             for (n, c) in p.changes.iter_mut().zip(changes) {
                 *n += c;
@@ -3045,9 +3140,35 @@ impl Renderer {
     }
 
     fn gpu_meshes(&mut self) -> &mut gpu_mesh::GpuMeshes {
+        self.take_made_ahead();
         let (device, checks) = (&self.device, self.checks);
         self.gpu_meshes
             .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks))
+    }
+
+    /// Starts making what the fast renderer's first frame would otherwise make: the transforms'
+    /// compute pipelines (`xform.wgsl`, 10 ms on this PC's driver), on a thread of their own, so
+    /// a match's renderer has them by its first frame. Call once `gpu_transforms` is set.
+    pub fn make_ahead(&mut self) {
+        if !self.gpu_transforms || self.gpu_meshes.is_some() || self.making.0.is_some() {
+            return;
+        }
+        let (device, checks) = (self.device.clone(), self.checks);
+        self.making.0 = std::thread::Builder::new()
+            .name("transforms' pipelines".to_owned())
+            .spawn(move || gpu_mesh::GpuMeshes::new(&device, checks))
+            .ok();
+    }
+
+    /// Takes the transforms made ahead, waiting for them if they're still being made.
+    fn take_made_ahead(&mut self) {
+        if let Some(h) = self.making.0.take() {
+            let start = std::time::Instant::now();
+            if let Ok(m) = h.join() {
+                self.gpu_meshes.get_or_insert(m);
+            }
+            made::add(made::What::Setup, start);
+        }
     }
 
     /// Draws a mesh with its vertices transformed on the GPU (docs/fast-renderer.md, F3): the
@@ -3090,10 +3211,14 @@ impl Renderer {
         let tg = texgens(state) as u32;
         let frame = self.frame;
         let mut runs = std::mem::take(&mut self.mesh_runs);
+        self.take_made_ahead();
         let (device, checks) = (&self.device, self.checks);
-        let meshes = self
-            .gpu_meshes
-            .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks));
+        let meshes = self.gpu_meshes.get_or_insert_with(|| {
+            let start = std::time::Instant::now();
+            let m = gpu_mesh::GpuMeshes::new(device, checks);
+            made::add(made::What::Setup, start);
+            m
+        });
         meshes.draw(
             device,
             &self.queue,
@@ -3138,6 +3263,7 @@ impl Renderer {
     /// harness's geometry, read back from the GPU at once.
     pub fn mesh_clips(&mut self, state: &State, mesh: &Arc<mesh::Mesh>) -> Vec<[f32; 4]> {
         let (frame, normals) = (self.frame, self.scratch.normals);
+        self.take_made_ahead();
         let (device, checks) = (&self.device, self.checks);
         self.gpu_meshes
             .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks))
@@ -3269,7 +3395,7 @@ impl Renderer {
         self.bind_group(ids);
 
         let mut key = Self::pipeline_key(state);
-        key.early_z = self.early_module.is_some() && Self::depth_follows_raster(state);
+        key.early_z = self.early_z() && Self::depth_follows_raster(state);
         if self.opaque {
             key.blend = None;
         }
@@ -3301,7 +3427,7 @@ impl Renderer {
             let uniform = self.push_uniforms(&u);
             for g in geometry {
                 let c = call(key, tev::UBER, uniform, g);
-                self.pipeline(c.pipeline);
+                self.tev.uber_now(c.pipeline);
                 self.push_command(c);
             }
             return;
@@ -3386,11 +3512,8 @@ impl Renderer {
             }
             let rect = [left, top, right, bottom];
             let (frame, t2) = if self.xfb_on_gpu {
-                let gpu = self.gpu_xfb.get_or_insert_with(|| {
-                    let mut x = xfb::GpuXfb::new(&self.device, &self.queue, &self.efb_view);
-                    x.timer = self.timer.clone();
-                    x
-                });
+                self.make_xfb();
+                let gpu = self.gpu_xfb.as_mut().expect("the XFB copy");
                 let (texture, width, height) = gpu.copy(
                     &self.device,
                     &self.queue,

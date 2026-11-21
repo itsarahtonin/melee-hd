@@ -22,8 +22,15 @@ pub enum What {
     BindGroup,
     /// A buffer made larger.
     Buffer,
-    /// A pipeline made at a draw (the uber shader's, not in the saved list).
+    /// The uber shader's pipeline made at a draw that waited for it (only where nothing else can
+    /// draw it: `MELEE_TEV=0` or `sync`, the debugging silhouettes).
     Pipeline,
+    /// Specialized pipelines made at their draw, which waited for them, because the draw's uber
+    /// pipeline wasn't made yet either (counted one a pipeline, timed by the wait).
+    OnTheSpot,
+    /// The renderer's own pipelines made, or waited for, at a draw: the transforms' (F3) and the
+    /// copy to the XFB's.
+    Setup,
     /// A copy from the EFB's texture made.
     CopyTexture,
     /// A material's record made (F4).
@@ -33,7 +40,7 @@ pub enum What {
 }
 
 impl What {
-    pub const ALL: [What; 10] = [
+    pub const ALL: [What; 12] = [
         What::Texture,
         What::Mesh,
         What::Upload,
@@ -41,6 +48,8 @@ impl What {
         What::BindGroup,
         What::Buffer,
         What::Pipeline,
+        What::OnTheSpot,
+        What::Setup,
         What::CopyTexture,
         What::Material,
         What::UberDraw,
@@ -55,6 +64,8 @@ impl What {
             What::BindGroup => "bind_groups",
             What::Buffer => "buffers",
             What::Pipeline => "pipelines",
+            What::OnTheSpot => "on_the_spot",
+            What::Setup => "setup",
             What::CopyTexture => "copy_textures",
             What::Material => "materials",
             What::UberDraw => "uber_draws",
@@ -70,6 +81,12 @@ static NANOS: [AtomicU64; N] = [const { AtomicU64::new(0) }; N];
 /// Counts one of `what`, made since `start`.
 pub fn add(what: What, start: Instant) {
     COUNTS[what as usize].fetch_add(1, Relaxed);
+    NANOS[what as usize].fetch_add(start.elapsed().as_nanos() as u64, Relaxed);
+}
+
+/// Counts `n` of `what`, made together since `start`.
+pub fn add_n(what: What, n: u64, start: Instant) {
+    COUNTS[what as usize].fetch_add(n, Relaxed);
     NANOS[what as usize].fetch_add(start.elapsed().as_nanos() as u64, Relaxed);
 }
 

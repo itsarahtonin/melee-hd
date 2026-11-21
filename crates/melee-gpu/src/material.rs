@@ -313,9 +313,7 @@ impl Renderer {
                 };
                 if p.asked & bit == 0 {
                     p.asked |= bit;
-                    if !self.pipelines.contains_key(&key) {
-                        self.pipeline(key);
-                    }
+                    self.pipeline(key);
                     if let Some(uid) = uid {
                         p.tev = self.tev.request(key, *uid, true);
                     }
@@ -347,7 +345,7 @@ impl Renderer {
         self.materials.stats.made += 1;
         let made = std::time::Instant::now();
         let mut base = Self::pipeline_key(state);
-        base.early_z = self.early_module.is_some() && Self::depth_follows_raster(state);
+        base.early_z = self.early_z() && Self::depth_follows_raster(state);
         let mut notes: Vec<&'static str> = Vec::new();
         if bits(state.bp[0x00], 16, 3) != 0 {
             notes.push("indirect texturing");
