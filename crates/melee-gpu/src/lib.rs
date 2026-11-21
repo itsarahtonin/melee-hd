@@ -351,6 +351,55 @@ fn to_evict(entries: &[(usize, u64, u64)], frame: u64, budget: u64) -> Vec<usize
     gone
 }
 
+/// A texture by what it's decoded from: its size, format and levels, the palette's format (0
+/// without a palette) and the hash of its bytes and palette's, as [`TexKey`] has them.
+type Content = (u32, u32, u32, u32, u32, u64);
+
+/// A texture to make before it's drawn ([`Renderer::prepare_textures`]): an image's bytes (its
+/// levels) and, for a palette format, its palette as texture memory holds it once loaded.
+#[derive(Clone, Debug)]
+pub struct TexturePrep {
+    pub width: u32,
+    pub height: u32,
+    pub format: u32,
+    pub levels: u32,
+    pub tlut_format: u32,
+    pub tlut: Vec<u8>,
+    pub bytes: Arc<[u8]>,
+}
+
+impl TexturePrep {
+    /// What it's decoded from as a draw's texture would key it ([`Content`]), the bytes its
+    /// levels take; None when its bytes or palette are short of what a draw reads.
+    fn content(&self) -> Option<(Content, usize)> {
+        let max_levels = 32 - self.width.max(self.height).leading_zeros();
+        let image = Image {
+            address: 0,
+            width: self.width,
+            height: self.height,
+            format: self.format,
+            levels: self.levels.clamp(1, max_levels),
+        };
+        let size = image.size() as usize;
+        let mut hash = hash_bytes(self.bytes.get(..size)?);
+        let mut tlut_format = 0;
+        if let Some(entries) = texture::palette_entries(self.format) {
+            let len = entries as usize * 2;
+            hash ^= hash_bytes(self.tlut.get(..len)?).rotate_left(17);
+            tlut_format = self.tlut_format;
+        }
+        let c = (
+            image.width,
+            image.height,
+            image.format,
+            image.levels,
+            tlut_format,
+            hash,
+        );
+        Some((c, size))
+    }
+}
+
 /// A texture as the cache keys it: its image, its palette, and a hash of their bytes.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct TexKey {
@@ -571,6 +620,9 @@ pub struct Renderer {
     uniform_buffer: Option<(wgpu::Buffer, wgpu::BindGroup)>,
     textures: Vec<Option<TexEntry>>,
     texture_ids: FxHashMap<TexKey, u32>,
+    /// Each texture by what it's decoded from, wherever it is ([`Content`]): a texture prepared
+    /// before it's drawn ([`Renderer::prepare_textures`]), or one at another address.
+    by_content: FxHashMap<Content, u32>,
     bind_groups: FxHashMap<[u32; 8], wgpu::BindGroup>,
     /// Hashes of memory ranges this frame, so a texture's bytes hash once a frame.
     hashes: FxHashMap<(u32, u32), u64>,
@@ -1115,6 +1167,7 @@ impl Renderer {
             uniform_buffer: None,
             textures: Vec::new(),
             texture_ids: FxHashMap::default(),
+            by_content: FxHashMap::default(),
             bind_groups: FxHashMap::default(),
             hashes: FxHashMap::default(),
             stable_hashes: FxHashMap::default(),
@@ -1373,6 +1426,49 @@ impl Renderer {
         self.insert_texture(texture, mip_count, decoded)
     }
 
+    /// Makes the textures `preps` describe that aren't made yet, before anything draws them: a
+    /// draw of the same bytes takes the one made ([`Content`]) rather than decoding its own.
+    /// They're decoded on several threads. Returns how many were made.
+    pub fn prepare_textures(&mut self, preps: &[TexturePrep]) -> usize {
+        let mut todo: Vec<(&TexturePrep, Content)> = Vec::new();
+        for p in preps {
+            if let Some((c, _)) = p.content()
+                && !self.by_content.contains_key(&c)
+                && !todo.iter().any(|t| t.1 == c)
+            {
+                todo.push((p, c));
+            }
+        }
+        let threads = std::thread::available_parallelism()
+            .map_or(1, |n| n.get())
+            .min(8);
+        let chunk = todo.len().div_ceil(threads).max(1);
+        let decoded: Vec<Vec<Vec<u8>>> = std::thread::scope(|scope| {
+            let jobs: Vec<_> = todo
+                .chunks(chunk)
+                .map(|part| {
+                    scope.spawn(move || {
+                        part.iter()
+                            .map(|(p, c)| {
+                                texture::decode(
+                                    &p.bytes, p.width, p.height, c.3, p.format, &p.tlut, c.4,
+                                )
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .collect();
+            jobs.into_iter()
+                .flat_map(|j| j.join().expect("a texture decoded"))
+                .collect()
+        });
+        for ((p, c), levels) in todo.iter().zip(&decoded) {
+            let id = self.add_texture(p.width, p.height, levels);
+            self.by_content.insert(*c, id);
+        }
+        todo.len()
+    }
+
     /// Gives `texture` an id, reusing a free one.
     fn insert_texture(&mut self, texture: wgpu::Texture, levels: u32, decoded: u64) -> u32 {
         let entry = TexEntry {
@@ -1534,6 +1630,23 @@ impl Renderer {
             entry.last_used = self.frame;
             return (id, entry.levels, per_frame);
         }
+        // Made already from the same bytes: prepared, or at another address.
+        let content = (
+            image.width,
+            image.height,
+            image.format,
+            image.levels,
+            tlut_format,
+            hash,
+        );
+        if let Some(&id) = self.by_content.get(&content)
+            && let Some(Some(entry)) = self.textures.get_mut(id as usize)
+        {
+            entry.last_used = self.frame;
+            let levels = entry.levels;
+            self.texture_ids.insert(key, id);
+            return (id, levels, per_frame);
+        }
         let made = std::time::Instant::now();
         let read;
         let data = match stable {
@@ -1554,6 +1667,7 @@ impl Renderer {
         );
         let id = self.add_texture(image.width, image.height, &levels);
         self.texture_ids.insert(key, id);
+        self.by_content.insert(content, id);
         made::add(made::What::Texture, made);
         (id, image.levels, per_frame)
     }
@@ -2502,6 +2616,8 @@ impl Renderer {
         let textures = &self.textures;
         self.texture_ids
             .retain(|_, id| textures[*id as usize].is_some());
+        self.by_content
+            .retain(|_, id| textures[*id as usize].is_some());
         self.bind_groups
             .retain(|ids, _| ids.iter().all(|&id| textures[id as usize].is_some()));
         self.copies.clear();
@@ -2531,6 +2647,8 @@ impl Renderer {
                     && c.scaled.is_none_or(|(s, _)| textures[s as usize].is_some())
             });
             self.texture_ids
+                .retain(|_, id| textures[*id as usize].is_some());
+            self.by_content
                 .retain(|_, id| textures[*id as usize].is_some());
             self.bind_groups
                 .retain(|ids, _| ids.iter().all(|&id| textures[id as usize].is_some()));

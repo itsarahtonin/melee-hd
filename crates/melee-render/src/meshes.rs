@@ -85,6 +85,37 @@ pub struct Meshes {
     pub stats: Stats,
 }
 
+/// A prepared shape's arrays as the GPU reads them ([`Meshes::prepare`]): each array at an
+/// address of its own, `SPAN` bytes apart, read from its archive.
+struct Arrays<'a> {
+    data: &'a Archives,
+    arrays: &'a [Option<(DataRef, u8)>; 12],
+}
+
+impl Arrays<'_> {
+    const SPAN: u32 = 4 << 20;
+
+    fn base(a: usize) -> u32 {
+        (a as u32 + 1) * Self::SPAN
+    }
+}
+
+impl Memory for Arrays<'_> {
+    fn read(&self, phys: u32, out: &mut [u8]) {
+        out.fill(0);
+        let a = (phys / Self::SPAN) as usize;
+        let Some(Some((at, _))) = a.checked_sub(1).and_then(|a| self.arrays.get(a)) else {
+            return;
+        };
+        let bytes = self.data.get(at.archive).data();
+        let from = at.offset as usize + (phys % Self::SPAN) as usize;
+        if let Some(src) = bytes.get(from..) {
+            let n = src.len().min(out.len());
+            out[..n].copy_from_slice(&src[..n]);
+        }
+    }
+}
+
 /// Whether an attribute's VCD kind is an index into its array.
 fn indexed(kind: u32) -> bool {
     kind >= 2
@@ -101,8 +132,8 @@ fn kinds(cp: &[u32; 256]) -> [u32; 12] {
 }
 
 /// The vertex descriptor and format 0 as a key holds them: the format's fields for the
-/// attributes the descriptor sends, and its two flags (`BYTEDEQUANT`, `NORMALINDEX3`), with every
-/// other field cleared. The game leaves an attribute's format as the last shape that sent it set
+/// attributes the descriptor sends (`NORMALINDEX3` with the normals), with every other field
+/// cleared (`BYTEDEQUANT` and `VCACHE_ENHANCE` too, which decoding doesn't read). The game leaves an attribute's format as the last shape that sent it set
 /// it, and the GPU reads only those it sends ([`Mesh::decode`] likewise), so a list drawn after
 /// shapes that left different formats for attributes it doesn't send is the same mesh.
 fn format_key(cp: &[u32; 256]) -> [u32; 5] {
@@ -110,14 +141,12 @@ fn format_key(cp: &[u32; 256]) -> [u32; 5] {
     let hi = cp[vertex::VCD_HI as usize];
     let sent = |on: bool, mask: u32| if on { mask } else { 0 };
     let tex = |n: u32| hi >> (2 * n) & 3 != 0;
-    let a = 0xC000_0000
-        | sent(lo >> 9 & 3 != 0, 0x0000_01FF)
-        | sent(lo >> 11 & 3 != 0, 0x0000_1E00)
+    let a = sent(lo >> 9 & 3 != 0, 0x0000_01FF)
+        | sent(lo >> 11 & 3 != 0, 0x8000_1E00)
         | sent(lo >> 13 & 3 != 0, 0x0001_E000)
         | sent(lo >> 15 & 3 != 0, 0x001E_0000)
         | sent(tex(0), 0x3FE0_0000);
-    let b = 0x8000_0000
-        | sent(tex(1), 0x0000_01FF)
+    let b = sent(tex(1), 0x0000_01FF)
         | sent(tex(2), 0x0003_FE00)
         | sent(tex(3), 0x07FC_0000)
         | sent(tex(4), 0x7800_0000);
@@ -170,6 +199,142 @@ impl Meshes {
         }
         self.entries.retain(|_, e| frame.wrapping_sub(e.used) < age);
         self.bytes = self.entries.values().map(|e| e.bytes).sum();
+    }
+
+    /// Decodes the mesh of every shape the game holds (`game.objs.pobjs`: the stage's, the
+    /// fighters', the interface's, shown or not yet) before anything draws it, keyed as its
+    /// draw will key it: its list and arrays, and the formats its vertex descriptions set
+    /// (`setupVtxDesc`'s), on several threads. A shape whose draw keys it otherwise (a
+    /// rewritten list, a shape animation's vertices) is decoded as before when drawn. Returns
+    /// how many were decoded.
+    pub fn prepare(
+        &mut self,
+        space: &Space,
+        data: &Archives,
+        pobjs: &melee_sim::hsd::pobj::PObjs,
+    ) -> usize {
+        use crate::gx::enums::{
+            GX_DIRECT, GX_VA_NBT, GX_VA_NRM, GX_VA_NULL, GX_VA_PNMTXIDX, GX_VA_POS,
+            GX_VA_TEX7MTXIDX, GX_VTXFMT0,
+        };
+        type Todo = (Key, Box<[u32; 256]>, Vec<u8>, [Option<(DataRef, u8)>; 12]);
+        let pool = &pobjs.pool;
+        let mut todo: Vec<Todo> = Vec::new();
+        for h in pool.handles() {
+            let Some(p) = pool.get(h).filter(|_| !pool.is_free(h)) else {
+                continue;
+            };
+            let (Some(verts), Some(display)) = (p.verts, p.display) else {
+                continue;
+            };
+            if p.ty() == melee_sim::hsd::pobj::SHAPEANIM || space.patch(display).is_some() {
+                continue;
+            }
+            let mut gx = crate::gx::Gx::new();
+            gx.clear_vtx_desc();
+            let mut arrays = [None; 12];
+            let mut d = verts;
+            loop {
+                let attr = data.u32(d);
+                if attr == GX_VA_NULL {
+                    break;
+                }
+                gx.set_vtx_desc(attr, data.u32(d.at(4)));
+                if !(GX_VA_PNMTXIDX..=GX_VA_TEX7MTXIDX).contains(&attr) {
+                    gx.set_vtx_attr_fmt(
+                        GX_VTXFMT0,
+                        attr,
+                        data.u32(d.at(8)),
+                        data.u32(d.at(0xC)),
+                        data.u8(d.at(0x10)),
+                    );
+                }
+                if data.u32(d.at(4)) != GX_DIRECT {
+                    let a = if attr == GX_VA_NBT { GX_VA_NRM } else { attr };
+                    let slot = a.wrapping_sub(GX_VA_POS) as usize;
+                    if let (Some(s), Some(base)) = (arrays.get_mut(slot), data.ptr(d.at(0x14))) {
+                        *s = Some((base, data.u16(d.at(0x12)) as u8));
+                    }
+                }
+                d = d.at(0x18);
+            }
+            let mut cp = Box::new([0u32; 256]);
+            let g = &gx.data;
+            cp[vertex::VCD_LO as usize] = g.vcd_lo;
+            cp[vertex::VCD_HI as usize] = g.vcd_hi;
+            cp[vertex::VAT_A as usize] = g.vat_a[0];
+            cp[vertex::VAT_B as usize] = g.vat_b[0];
+            cp[vertex::VAT_C as usize] = g.vat_c[0];
+            let kinds = kinds(&cp);
+            if (0..12).any(|a| indexed(kinds[a]) && arrays[a].is_none()) {
+                continue;
+            }
+            // The arrays the descriptor indexes, each at an address of its own (`Arrays`).
+            for (a, slot) in arrays.iter().enumerate() {
+                if let Some((_, stride)) = slot {
+                    cp[vertex::ARRAY_BASE as usize + a] = Arrays::base(a);
+                    cp[vertex::ARRAY_STRIDE as usize + a] = u32::from(*stride);
+                }
+            }
+            let size = u32::from(p.n_display) * 32;
+            let key = Key {
+                list: display,
+                size,
+                patch: None,
+                format: format_key(&cp),
+                arrays: std::array::from_fn(|a| arrays[a].filter(|_| indexed(kinds[a]))),
+            };
+            if self.entries.contains_key(&key) || todo.iter().any(|t| t.0 == key) {
+                continue;
+            }
+            let at = display.offset as usize;
+            let Some(list) = data.get(display.archive).data().get(at..at + size as usize) else {
+                continue;
+            };
+            todo.push((key, cp, list.to_vec(), arrays));
+        }
+        let part = if self.split { PART } else { usize::MAX };
+        let threads = std::thread::available_parallelism()
+            .map_or(1, |n| n.get())
+            .min(8);
+        let chunk = todo.len().div_ceil(threads).max(1);
+        let decoded: Vec<Option<Parts>> = std::thread::scope(|scope| {
+            let jobs: Vec<_> = todo
+                .chunks(chunk)
+                .map(|some| {
+                    scope.spawn(move || {
+                        some.iter()
+                            .map(|(_, cp, list, arrays)| {
+                                let mem = Arrays { data, arrays };
+                                Mesh::decode(cp, list, &mem).map(|m| {
+                                    m.split(part).into_iter().map(Arc::new).collect::<Parts>()
+                                })
+                            })
+                            .collect::<Vec<_>>()
+                    })
+                })
+                .collect();
+            jobs.into_iter()
+                .flat_map(|j| j.join().expect("a mesh decoded"))
+                .collect()
+        });
+        let n = todo.len();
+        for ((key, _, list, _), mesh) in todo.into_iter().zip(decoded) {
+            let bytes = mesh
+                .as_ref()
+                .map_or(0, |p| p.iter().map(|m| m.bytes()).sum())
+                + list.len();
+            self.bytes += bytes;
+            self.entries.insert(
+                key,
+                Entry {
+                    mesh,
+                    used: self.frame,
+                    bytes,
+                },
+            );
+        }
+        n
     }
 
     /// Meshes kept, and their bytes.

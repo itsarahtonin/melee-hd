@@ -67,3 +67,43 @@ fn the_palette_format_keys_only_a_palette_texture() {
     let palette = id(&mut r, 8, 0);
     assert_ne!(id(&mut r, 8, 2), palette, "a palette texture with another");
 }
+
+/// A texture prepared from its bytes before it's drawn is the one a draw of those bytes takes,
+/// wherever they are; other bytes make their own.
+#[test]
+fn a_draw_takes_the_texture_prepared_from_its_bytes() {
+    use melee_gx::State;
+    use melee_gx::texture::{SETIMAGE0, SETIMAGE3, reg};
+    let Some(mut r) = crate::testing::renderer() else {
+        return;
+    };
+    let bytes: Vec<u8> = (0..4096).map(|i| (i * 13) as u8).collect();
+    // An 8 by 8 RGB565 image (128 bytes) at 0x400.
+    let prep = crate::TexturePrep {
+        width: 8,
+        height: 8,
+        format: 4,
+        levels: 1,
+        tlut_format: 0,
+        tlut: Vec::new(),
+        bytes: bytes[0x400..0x480].into(),
+    };
+    assert_eq!(r.prepare_textures(std::slice::from_ref(&prep)), 1);
+    assert_eq!(r.prepare_textures(&[prep]), 0, "made once");
+    let made = r.textures.iter().flatten().count();
+    let mem = crate::mesh_tests::Flat(bytes);
+    let id = |r: &mut crate::Renderer, at: u32| {
+        let mut s = State::new();
+        s.bp[reg(SETIMAGE0, 0)] = 7 | 7 << 10 | 4 << 20;
+        s.bp[reg(SETIMAGE3, 0)] = at >> 5;
+        r.texture_resolved(&s, 0, &mem).0
+    };
+    id(&mut r, 0x400);
+    assert_eq!(
+        r.textures.iter().flatten().count(),
+        made,
+        "the prepared one"
+    );
+    id(&mut r, 0x480);
+    assert_eq!(r.textures.iter().flatten().count(), made + 1, "other bytes");
+}

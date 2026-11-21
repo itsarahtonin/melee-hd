@@ -189,6 +189,61 @@ fn clear_new(renderer: &mut Renderer) {
     renderer.clear_efb(&s);
 }
 
+/// The texture an image description (`HSD_ImageDesc` at `d`) and palette (`HSD_TlutDesc` at
+/// `tlut`) make, as `HSD_TObjSetup` sets it up: its levels from its largest level of detail when
+/// it's mipmapped, its palette as `GXLoadTlut` leaves it in texture memory.
+fn prep(
+    data: &Archives,
+    d: melee_data::archive::DataRef,
+    tlut: Option<melee_data::archive::DataRef>,
+) -> Option<melee_gpu::TexturePrep> {
+    let (width, height) = (u32::from(data.u16(d.at(4))), u32::from(data.u16(d.at(6))));
+    let format = data.u32(d.at(8));
+    let levels = if data.u32(d.at(0xC)) != 0 {
+        // `GXInitTexObjLOD`'s largest level of detail, in sixteenths.
+        let max = (data.f32(d.at(0x14)).clamp(0.0, 10.0) * 16.0) as u32;
+        max.div_ceil(16) + 1
+    } else {
+        1
+    };
+    let image = melee_gx::texture::Image {
+        address: 0,
+        width,
+        height,
+        format,
+        levels,
+    };
+    let at = data.ptr(d)?;
+    let bytes = data
+        .get(at.archive)
+        .data()
+        .get(at.offset as usize..)?
+        .get(..image.size() as usize)?;
+    let (tlut_format, tlut) = match (melee_gx::texture::palette_entries(format), tlut) {
+        (None, _) => (0, Vec::new()),
+        (Some(_), None) => return None,
+        (Some(_), Some(t)) => {
+            let n = usize::from(data.u16(t.at(0xC)));
+            let lut = data.ptr(t)?;
+            let palette = data
+                .get(lut.archive)
+                .data()
+                .get(lut.offset as usize..)?
+                .get(..2 * n)?;
+            (data.u32(t.at(4)), palette.to_vec())
+        }
+    };
+    Some(melee_gpu::TexturePrep {
+        width,
+        height,
+        format,
+        levels,
+        tlut_format,
+        tlut,
+        bytes: bytes.into(),
+    })
+}
+
 impl Gpu {
     /// Runs a frame's stream through the GPU's state without drawing it: for frames nobody
     /// looks at, which the frames after still depend on for the registers they set.
@@ -316,6 +371,55 @@ impl Gpu {
         match self.renderer.get_mut() {
             Backend::Here(r) => r.finish_specialized(),
             Backend::Threaded(t) => t.finish_specialized(),
+        }
+    }
+
+    /// Decodes the meshes of every shape the game holds before anything draws them
+    /// ([`Meshes::prepare`]), with the fast renderer's mesh cache: how many.
+    pub fn prepare_meshes(
+        &mut self,
+        space: &Space,
+        game: &melee_sim::game::state::Game,
+        data: &Archives,
+    ) -> usize {
+        match &mut self.meshes {
+            Some(m) => m.get_mut().prepare(space, data, &game.objs.pobjs),
+            None => 0,
+        }
+    }
+
+    /// Makes the textures of every texture object the game holds (`game.objs.tobjs`: the
+    /// stage's, the fighters', the interface's, shown or not yet) before anything draws them
+    /// (`melee_gpu::Renderer::prepare_textures`): a match's start, whose first frames would
+    /// otherwise decode a hundred or more. Each is keyed by its bytes, so a draw of it takes it
+    /// wherever its image is; one whose drawing sets it up otherwise (another level count, a
+    /// palette not loaded whole) is made as before when drawn. Returns how many were made.
+    pub fn prepare_textures(
+        &mut self,
+        game: &melee_sim::game::state::Game,
+        data: &Archives,
+    ) -> usize {
+        use melee_sim::hsd::tobj::ImageRef;
+        let tobjs = &game.objs.tobjs.pool;
+        let mut preps = Vec::new();
+        let mut seen = std::collections::HashSet::new();
+        for h in tobjs.handles() {
+            let Some(o) = tobjs.get(h).filter(|_| !tobjs.is_free(h)) else {
+                continue;
+            };
+            let Some(ImageRef::Data(d)) = o.imagedesc else {
+                continue;
+            };
+            if !seen.insert((d, o.tlut)) {
+                continue;
+            }
+            if let Some(p) = prep(data, d, o.tlut) {
+                preps.push(p);
+            }
+        }
+        match self.renderer.get_mut() {
+            Backend::Here(r) => r.prepare_textures(&preps),
+            Backend::Threaded(t) => t.prepare_textures(preps),
         }
     }
 
