@@ -124,7 +124,9 @@ const GNW: TerrainSounds = t(
     NONE,
     set(seq(0x40), [0, -1, 0]),
 );
-const UNK17: TerrainSounds = t(
+/// Terrain 17 (`mp_Terrain_Unk17`, the test stage's): slippery, with its own sounds.
+#[doc(alias("UNK17"))]
+const SLICK: TerrainSounds = t(
     0.1,
     set([0x15E; 4], [1, -1, 0]),
     NONE,
@@ -156,7 +158,7 @@ const BASE: [TerrainSounds; 20] = [
     SNOW,
     ICE,
     GNW,
-    UNK17,
+    SLICK,
     CHECKERED,
     SILENT,
 ];

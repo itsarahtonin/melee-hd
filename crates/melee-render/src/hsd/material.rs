@@ -256,7 +256,7 @@ impl Ctx<'_> {
         if !overlay.x7C_flag2
             || !overlay.x7C_light_enable
             || rendermode & RENDER_XLU != 0
-            || flags.x2223_b2
+            || flags.outline
         {
             return None;
         }
@@ -279,14 +279,14 @@ impl Ctx<'_> {
     ) {
         let overlay = active_overlay_ft(fp);
         let mut sub = fp.sub_color;
-        if flags.x2228_b0 && fp.x2224_b0 {
+        if flags.low_models && fp.x2224_b0 {
             if fp.is_metal {
                 sub = 4;
             } else if fp.x2227_b3 {
                 sub = 5;
             }
         }
-        let tint = if flags.x2223_b2 {
+        let tint = if flags.outline {
             Some(color(&fp.x610_color_rgba[1]))
         } else if sub != 0 {
             if overlay.x7C_color_enable {
@@ -328,14 +328,14 @@ impl Ctx<'_> {
                 self.hsd
                     .note_once("a fighter material before its draw flags were named");
                 melee_sim::hsd::display::FighterFlags {
-                    x2223_b2: fp.x2223_b2,
-                    x2223_b3: fp.x2223_b3,
-                    x2228_b0: fp.x2228_b0,
+                    outline: fp.x2223_b2,
+                    silhouette: fp.x2223_b3,
+                    low_models: fp.x2228_b0,
                 }
             }
         };
         let mut m = m;
-        if !flags.x2223_b2 && (!flags.x2228_b0 || !fp.x2224_b0) {
+        if !flags.outline && (!flags.low_models || !fp.x2224_b0) {
             if fp.is_metal {
                 match game.ft.metal_mobj {
                     Some(metal) => m = metal,
@@ -362,14 +362,14 @@ impl Ctx<'_> {
         // render mode's channels take them.
         let overlay = active_overlay_ft(fp);
         let without_alpha = overlay.x7C_flag2 && overlay.x7C_light_enable && light_reg.is_none();
-        if !flags.x2223_b3 {
+        if !flags.silhouette {
             self.fighter_color_overlay(&desc, fp, light_reg, &flags);
         }
 
-        if flags.x2223_b2 && !flags.x2223_b3 {
+        if flags.outline && !flags.silhouette {
             rendermode |= RENDER_NO_ZUPDATE;
         }
-        let pe = if flags.x2223_b3 && fp.x61D == 0xFF {
+        let pe = if flags.silhouette && fp.x61D == 0xFF {
             Some(SILHOUETTE_PE)
         } else {
             game.objs.mobjs[m].pe

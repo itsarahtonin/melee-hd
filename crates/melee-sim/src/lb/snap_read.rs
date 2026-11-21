@@ -336,7 +336,7 @@ impl Running<'_> {
         // The mount's probe found the card: a list that takes the card game's status clears
         // it (`*_p(status) = 0`).
         if kind == ListKind::DeleteSave {
-            self.game.card_game.unk_status = false;
+            self.game.card_game.card_swapped = false;
         }
         let mut format_step = None;
         // `OSGetFontEncode` reads the video interface's register for a format when no mount
@@ -654,16 +654,16 @@ impl Running<'_> {
             let be32 = |at: usize| i32::from_be_bytes(d[at..at + 4].try_into().unwrap());
             let be16 = |at: usize| u16::from_be_bytes([d[at], d[at + 1]]);
             let header = SnapHeader {
-                x0: be32(0),
+                kind: be32(0),
                 width: be16(4),
                 height: be16(6),
-                x8: d[8],
-                xc: be32(0xC),
+                quality: d[8],
+                data_size: be32(0xC),
                 stkind: be16(0x10),
                 items: std::array::from_fn(|i| be32(0x14 + 4 * i)),
                 fighters: be32(0x34),
             };
-            let end = (HEADER as usize + header.xc.max(0) as usize).min(d.len());
+            let end = (HEADER as usize + header.data_size.max(0) as usize).min(d.len());
             let w = &mut self.game.snap_write;
             w.header = Some(header);
             w.image = d[HEADER as usize..end].to_vec();

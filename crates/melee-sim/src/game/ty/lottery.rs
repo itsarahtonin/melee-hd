@@ -1288,7 +1288,7 @@ impl Running<'_> {
         let name = self.create_text(0, n, Vec3::new(5.2, 5.2, 17.2), 448.0, 64.0);
         let us = self.saved_us();
         let tx = self.game.sis.text_mut(name);
-        tx.x34 = if us { [1.6, 0.7] } else { [2.0, 1.0] };
+        tx.default_scale = if us { [1.6, 0.7] } else { [2.0, 1.0] };
         tx.font_size = [0.0235, 0.0715];
         tx.default_alignment = 1;
         if us {
@@ -1303,7 +1303,7 @@ impl Running<'_> {
         tx.font_size = [0.027, 0.028];
         tx.default_kerning = 1;
         if us {
-            tx.x34 = [0.8, 0.8];
+            tx.default_scale = [0.8, 0.8];
             tx.pos.x = -13.599_999;
             tx.pos.y = 9.599_999;
         }

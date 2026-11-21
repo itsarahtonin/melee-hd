@@ -87,7 +87,9 @@ pub struct Tex {
 /// `HSD_SObj`.
 #[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct SObj {
-    pub x0: u32,
+    /// `x0`: no code writes or reads it.
+    #[doc(alias("x0"))]
+    pub unused_head: u32,
     pub next: Option<SObjId>,
     pub prev: Option<SObjId>,
     pub gobj: Option<GObjId>,
@@ -112,7 +114,9 @@ pub struct SObj {
     /// the movie's YUV planes.
     pub flags: u32,
     pub priority: u8,
-    pub x48: u32,
+    /// `x48`: a word for the sprite's user (the horde intro's wait, `fn_801859C8`).
+    #[doc(alias("x48"))]
+    pub user_word: u32,
     pub callback: Option<CodeRef>,
     pub image: Image,
     pub tex: Tex,

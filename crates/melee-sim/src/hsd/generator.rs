@@ -1097,7 +1097,7 @@ pub fn spawn(
     if objs.generators[g].kind & 0x20000 != 0 {
         objs.generators[g].ty |= JOINT_APP_TRANSLATE;
         if let Some(s) = appsrt::add_to_generator(objs, g, 0) {
-            objs.app_srts[s].xa2 = 1;
+            objs.app_srts[s].unrotated = 1;
             objs.app_srts[s].gp = Some(g);
         }
     }

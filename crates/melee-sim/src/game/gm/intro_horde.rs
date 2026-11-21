@@ -363,7 +363,7 @@ impl Running<'_> {
             let o = &mut self.game.objs.sobjs[s.0];
             o.x = mem(x);
             o.y = mem(y);
-            o.x48 = delay;
+            o.user_word = delay;
             delay += 8;
             o.flags |= 9;
         }
@@ -379,9 +379,9 @@ impl Running<'_> {
         };
         while let Some(s) = cur {
             let o = &mut self.game.objs.sobjs[s.0];
-            if o.x48 != 0 {
-                o.x48 -= 1;
-                if o.x48 == 0 {
+            if o.user_word != 0 {
+                o.user_word -= 1;
+                if o.user_word == 0 {
                     o.flags &= !1;
                 }
             }

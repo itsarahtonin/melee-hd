@@ -1592,8 +1592,8 @@ impl Comparer<'_> {
                     &ours.entries[usize::from(i)],
                     &mut theirs.entries[usize::from(i)],
                 );
-                t.x2 = o.x2;
-                t.x3 = o.x3;
+                t.pad_a = o.pad_a;
+                t.pad_b = o.pad_b;
                 if !blowing.contains(&i) {
                     *t = *o;
                 }
@@ -2031,13 +2031,13 @@ fn winds(word: impl Fn(u32) -> u32) -> melee_sim::lb::wind::Winds {
         w.entries[i] = Wind {
             kind: (head >> 24) as u8,
             priority: (head >> 16) as u8,
-            x2: (head >> 8) as i8,
-            x3: head as i8,
+            pad_a: (head >> 8) as i8,
+            pad_b: head as i8,
             pos: melee_sim::vec::Vec3::new(f(e + 4), f(e + 8), f(e + 0xC)),
-            x10: f(e + 0x10),
-            x14: f(e + 0x14),
-            x18: f(e + 0x18),
-            x1c: f(e + 0x1C),
+            left: f(e + 0x10),
+            top: f(e + 0x14),
+            right: f(e + 0x18),
+            bottom: f(e + 0x1C),
             scale: f(e + 0x20),
             decay: f(e + 0x24),
             frames: word(e + 0x28) as i32,
@@ -2056,14 +2056,14 @@ fn wind_bits(w: &melee_sim::lb::wind::Winds) -> Vec<u32> {
     let mut out = Vec::new();
     for (e, next) in w.entries.iter().zip(&w.next) {
         out.extend([
-            u32::from_be_bytes([e.kind, e.priority, e.x2 as u8, e.x3 as u8]),
+            u32::from_be_bytes([e.kind, e.priority, e.pad_a as u8, e.pad_b as u8]),
             e.pos.x.to_bits(),
             e.pos.y.to_bits(),
             e.pos.z.to_bits(),
-            e.x10.to_bits(),
-            e.x14.to_bits(),
-            e.x18.to_bits(),
-            e.x1c.to_bits(),
+            e.left.to_bits(),
+            e.top.to_bits(),
+            e.right.to_bits(),
+            e.bottom.to_bits(),
             e.scale.to_bits(),
             e.decay.to_bits(),
             e.frames as u32,

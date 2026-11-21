@@ -37,11 +37,17 @@ const SNAP_FLAGS: i32 = 3;
 /// (`it_8026C47C`) and which fighter kinds (`ft_GetFtKindMask`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct SnapHeader {
-    pub x0: i32,
+    /// `x0`: the header's kind (4).
+    #[doc(alias("x0"))]
+    pub kind: i32,
     pub width: u16,
     pub height: u16,
-    pub x8: u8,
-    pub xc: i32,
+    /// `x8`: the quality the image was compressed at.
+    #[doc(alias("x8"))]
+    pub quality: u8,
+    /// `xC`: the compressed image's bytes.
+    #[doc(alias("xc"))]
+    pub data_size: i32,
     pub stkind: u16,
     pub items: [i32; 8],
     pub fighters: i32,
@@ -56,11 +62,11 @@ impl SnapHeader {
             items.extend_from_slice(&w.to_be_bytes());
         }
         vec![
-            (0, self.x0.to_be_bytes().to_vec()),
+            (0, self.kind.to_be_bytes().to_vec()),
             (4, self.width.to_be_bytes().to_vec()),
             (6, self.height.to_be_bytes().to_vec()),
-            (8, vec![self.x8]),
-            (0xC, self.xc.to_be_bytes().to_vec()),
+            (8, vec![self.quality]),
+            (0xC, self.data_size.to_be_bytes().to_vec()),
             (0x10, self.stkind.to_be_bytes().to_vec()),
             (0x14, items),
             (0x34, self.fighters.to_be_bytes().to_vec()),
@@ -249,11 +255,11 @@ impl Running<'_> {
         );
         w.jpeg = Some(work);
         let header = SnapHeader {
-            x0: 4,
+            kind: 4,
             width: WIDTH,
             height: HEIGHT,
-            x8: 3,
-            xc: size as i32,
+            quality: 3,
+            data_size: size as i32,
             stkind,
             items,
             fighters,
@@ -358,7 +364,7 @@ impl Running<'_> {
     /// (`lbSnap_GetSaveDataOffset`).
     fn snap_file_size(&self) -> i32 {
         let h = self.game.snap_write.header.expect("the snapshot's header");
-        h.xc + HEADER as i32
+        h.data_size + HEADER as i32
     }
 
     /// `lbSnap_8001D4A4`: slot `chan`'s new snapshot's name: the clock's seconds, one more for

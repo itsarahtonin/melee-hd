@@ -70,9 +70,12 @@ pub struct LbAudio {
     pub paused: i32,
     /// `lbl_804D641C`: the queued sounds play at the next tick, all at once.
     pub flush_queue: i32,
-    /// `lbl_804D6414`, `lbl_804D6418`: only ever cleared.
-    pub x6414: i32,
-    pub x6418: i32,
+    /// `lbl_804D6414`, `lbl_804D6418`: only ever cleared, nothing reads them.
+    #[doc(alias("x6414"))]
+    pub unused_cleared: i32,
+    /// `lbl_804D6418`: cleared with the music's stop too (`lbAudioAx_800236DC`).
+    #[doc(alias("x6418"))]
+    pub unused_music: i32,
     /// `lbl_804D6420`, `lbl_804D6424`: how many want each of the crowd's loops (sounds 0x84
     /// and 0x85, on tracks 5 and 6); `lbl_804D6430`, `lbl_804D6434`: ticks until each stops
     /// unless wanted again; `lbl_804D6428`, `lbl_804D642C`: their volumes; `lbl_804D38F0`,
@@ -158,8 +161,8 @@ impl Default for LbAudio {
             held: 0,
             paused: 0,
             flush_queue: 0,
-            x6414: 0,
-            x6418: 0,
+            unused_cleared: 0,
+            unused_music: 0,
             crowd: [0; 2],
             crowd_timer: [0; 2],
             crowd_volume: [0; 2],
@@ -716,7 +719,7 @@ impl Running<'_> {
     pub fn lb_audio_music_stop(&mut self) -> i32 {
         self.game.audio.driver_stop();
         let lb = &mut self.game.audio.lb;
-        lb.x6418 = 0;
+        lb.unused_music = 0;
         lb.stem[0] = 0;
         -1
     }
@@ -732,8 +735,8 @@ impl Running<'_> {
         lb.duck = 1.0;
         lb.voice_duck = 1.0;
         lb.crowd_duck = 1.0;
-        lb.x6414 = 0;
-        lb.x6418 = 0;
+        lb.unused_cleared = 0;
+        lb.unused_music = 0;
         lb.crowd = [0; 2];
         lb.crowd_volume = [0; 2];
         lb.crowd_handle = [-1; 2];

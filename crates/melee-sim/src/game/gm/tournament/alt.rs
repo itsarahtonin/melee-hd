@@ -290,7 +290,7 @@ impl Running<'_> {
             let t = self.create_text_buffer(0, canvas);
             let tx = self.game.sis.text_mut(t);
             tx.default_kerning = 1;
-            tx.x4c = 1;
+            tx.depth_test = 1;
             tx.font_size = [0.1, 0.1];
             tx.default_alignment = 1;
             self.game.tou.tm.name_texts[7 + i] = Some(t);

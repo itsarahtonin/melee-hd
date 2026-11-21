@@ -110,10 +110,10 @@ impl Running<'_> {
                 t.pos = Vec3::new(-0.5, 9.0, 0.0);
                 t.box_size = [248.0, 32.0];
                 t.font_size = [0.08, 0.09];
-                t.x4e = 1;
+                t.clips = 1;
                 t.default_kerning = 1;
                 t.default_alignment = 1;
-                t.x4c = 1;
+                t.depth_test = 1;
                 for (i, name) in LEVEL_NAMES.iter().enumerate() {
                     self.game.sis.add_string(text, 0.0, 0.0, Some(name));
                     self.game

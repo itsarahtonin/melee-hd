@@ -268,7 +268,7 @@ pub fn collide(r: &mut Running, gobj: GObjId) -> bool {
         .lgunbeam()
         .angle0
         .update(clamp_angle);
-    match &mut item_mut(r.game, gobj).x378_itemColl.ecb_source.x4 {
+    match &mut item_mut(r.game, gobj).x378_itemColl.ecb_source.shape {
         EcbShape::Box {
             up,
             down,

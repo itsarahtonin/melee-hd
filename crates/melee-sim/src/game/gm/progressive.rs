@@ -85,7 +85,7 @@ impl Running<'_> {
             640.0,
             480.0,
         );
-        self.game.sis.text_mut(t).x34 = [1.0, 1.0];
+        self.game.sis.text_mut(t).default_scale = [1.0, 1.0];
         self.game.prog_scan.text = Some(t);
         let data = self.data;
         let g = &mut *self.game;

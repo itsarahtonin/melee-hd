@@ -357,7 +357,7 @@ impl Running<'_> {
         let t = self.create_text_buffer(3, canvas);
         let tx = self.game.sis.text_mut(t);
         tx.default_kerning = 1;
-        tx.x34 = [0.56, 0.6];
+        tx.default_scale = [0.56, 0.6];
         tx.default_alignment = 2;
         self.clear_mut().points = Some(t);
         let x_end = fp::fadds(281.0, reg(x));
@@ -365,7 +365,7 @@ impl Running<'_> {
             let row_y = fp::fmadds(reg(0.6), fp::fmuls(32.0, fp::frsp(f64::from(i))), reg(y));
             let row = self.create_text(3, 0, Vec3::new(x, mem(row_y), 0.0), 2.0, 2.0);
             let rx = self.game.sis.text_mut(row);
-            rx.x34 = [0.56, 0.6];
+            rx.default_scale = [0.56, 0.6];
             rx.default_kerning = 1;
             self.clear_mut().rows[i as usize] = Some(row);
             let at = fp::fadds(fp::fneg(12.0), row_y);

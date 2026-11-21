@@ -549,8 +549,8 @@ impl Running<'_> {
         cd.set_ledge_snap(sx, sy, sh);
         cd.x50 = weight;
         if cd.ecb_source.kind == crate::mp::coll::ECB_SOURCE_JOBJ {
-            cd.ecb_source.x128 = x128;
-            cd.ecb_source.x12C = x128;
+            cd.ecb_source.min_height = x128;
+            cd.ecb_source.min_width = x128;
         }
     }
 

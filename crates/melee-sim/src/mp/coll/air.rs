@@ -924,7 +924,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         cd.last_pos.y = mem(fp::fadds(-3.0, reg(pos.y)));
         cd.last_pos.z = pos.z;
         cd.cur_pos = pos;
-        cd.x130_flags |= super::X130_CLEAR;
+        cd.x130_flags |= super::CLEAR_ECB;
         self.prev(&mut cd);
         self.load_ecb(&mut cd, 6);
         self.run(&mut cd, Pass::Air, 0, true);

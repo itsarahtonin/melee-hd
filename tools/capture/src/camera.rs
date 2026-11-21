@@ -155,7 +155,7 @@ impl Comparer<'_> {
             self.check(
                 "lbSnap_80433380.snap",
                 "kind, size, quality, image's bytes, stage",
-                (h.x0, h.width, h.height, h.x8, h.xc, h.stkind),
+                (h.kind, h.width, h.height, h.quality, h.data_size, h.stkind),
                 (
                     self.u32(at) as i32,
                     self.u16(at + 4),

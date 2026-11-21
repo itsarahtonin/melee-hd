@@ -38,8 +38,9 @@ pub const REFLECT: ([u8; 4], [u8; 4]) = ([0x00, 0xFF, 0x80, 0x80], [0x00, 0x80, 
 pub const ABSORB: ([u8; 4], [u8; 4]) = ([0x00, 0x80, 0xFF, 0x80], [0x00, 0x40, 0x80, 0x80]);
 /// A thrown fighter's hit (`lbColl_804D36E8`, `804D36EC`).
 const THROWN: ([u8; 4], [u8; 4]) = ([0xFF, 0xFF, 0xFF, 0x80], [0x80, 0x80, 0x80, 0x80]);
-/// The fighter's `x1614` capsules (`lbColl_804D36F0`, `804D36F4`).
-const X1614: ([u8; 4], [u8; 4]) = ([0xFF, 0xFF, 0x00, 0x80], [0x80, 0x80, 0x00, 0x80]);
+/// The fighter's coin capsules, `x1614` (`lbColl_804D36F0`, `804D36F4`).
+#[doc(alias("X1614"))]
+const COIN_CAPSULES: ([u8; 4], [u8; 4]) = ([0xFF, 0xFF, 0x00, 0x80], [0x80, 0x80, 0x00, 0x80]);
 /// The fighter's ledge points (`x1670`: `lbColl_804D36E0`, `804D36E4`).
 const LEDGE: ([u8; 4], [u8; 4]) = ([0xFF, 0x80, 0x00, 0x80], [0x80, 0x40, 0x00, 0x80]);
 /// A coin's range (`lbColl_804D36F8`, `804D36FC`).
@@ -189,13 +190,14 @@ fn hit_capsule(
 /// One of the fighter's `x1614` capsules, `lbColl_8000A1A8`: from `x14` to `x8`, `x0` times
 /// `scale_y` wide: the coins it picks up, in a coin match.
 #[doc(alias = "lbColl_8000A1A8")]
-pub fn x1614(
+#[doc(alias("x1614"))]
+pub fn coin_capsule(
     objs: &mut Objects,
     c: &crate::game::structs::Fighter_x1614_t,
     pass: i32,
     scale_y: f32,
 ) -> bool {
-    let (color, amb) = X1614;
+    let (color, amb) = COIN_CAPSULES;
     if pass_of(color) != pass {
         return false;
     }

@@ -727,7 +727,7 @@ fn wind_sources(game: &Game, data: &Archives, img: &mut Image) {
             l.f32s(
                 at + 4,
                 &[
-                    e.pos.x, e.pos.y, e.pos.z, e.x10, e.x14, e.x18, e.x1c, e.scale, e.decay,
+                    e.pos.x, e.pos.y, e.pos.z, e.left, e.top, e.right, e.bottom, e.scale, e.decay,
                 ],
             );
             l.u32(at + 0x28, e.frames as u32);
@@ -1332,7 +1332,7 @@ pub fn item_link(game: &Game, data: &Archives, img: &mut Image, k: super::handle
     let link = &game.it.links[k.0];
     link.lay(&mut l, at, &cx);
     let s = &link.coll_data.ecb_source;
-    if matches!(s.x4, crate::mp::coll::EcbShape::Box { .. }) && !s.tail_zeroed {
+    if matches!(s.shape, crate::mp::coll::EcbShape::Box { .. }) && !s.tail_zeroed {
         l.restore(tail);
     }
     if let Some(runs) = game.it.link_render_leftovers.get(&k.0) {
@@ -1381,7 +1381,7 @@ pub fn sound_obj(
         Some(d) => Lay::leftover(img, d, at, 0x48),
         None => Lay::new(at, 0x48),
     };
-    if let Some(x0) = o.x0 {
+    if let Some(x0) = o.leftover {
         l.u32(0, x0);
     }
     {
@@ -1410,7 +1410,7 @@ pub fn sound_obj(
     }
     l.f32(0x3C, o.direction);
     l.u32(0x40, o.track as u32);
-    l.u32(0x44, u32::from(o.x44));
+    l.u32(0x44, u32::from(o.pan_set));
     l.put(img);
 }
 
@@ -1438,7 +1438,7 @@ pub fn sobj(
     let mut l = Lay::new(at, 0x9C);
     let cx = Addrs { game, img };
     let sa = |x: Option<crate::hsd::sobj::SObjId>| x.map_or(0, |x| game.objs.sobjs.addr(x.0));
-    l.u32(0, o.x0);
+    l.u32(0, o.unused_head);
     if freed {
         l.u32(4, 0);
         l.u32(8, 0);
@@ -1459,7 +1459,7 @@ pub fn sobj(
     l.bytes(0x3C, &o.color1);
     l.u32(0x40, o.flags);
     l.u8(0x44, o.priority);
-    l.u32(0x48, o.x48);
+    l.u32(0x48, o.user_word);
     l.u32(0x4C, o.callback.map_or(0, |c| c.0));
     // A texture object at `off`, unknown where its image's address is.
     let tex = |l: &mut Lay, off: u32, t: GxTexObj, image: Option<u32>| {

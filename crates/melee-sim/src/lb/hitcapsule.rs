@@ -271,9 +271,15 @@ impl Mirror for HitJObj {
 /// `HitCapsuleState`.
 pub const DISABLED: i32 = 0;
 pub const ENABLED: i32 = 1;
-pub const UNK2: i32 = 2;
-pub const UNK3: i32 = 3;
-pub const UNK4: i32 = 4;
+/// On, its place taken from its joint once (`HitCapsule_Unk2`): the next update starts sweeping.
+#[doc(alias("UNK2"))]
+pub const PLACED: i32 = 2;
+/// On, sweeping from its last place to where its joint is now (`HitCapsule_Unk3`).
+#[doc(alias("UNK3"))]
+pub const MOVING: i32 = 3;
+/// On, its place no longer brought up to date (`HitCapsule_Unk4`: an item's `it_80275788`).
+#[doc(alias("UNK4"))]
+pub const STOPPED: i32 = 4;
 
 /// Turns a hitbox off, `lbColl_80008428`.
 #[doc(alias = "lbColl_80008428")]

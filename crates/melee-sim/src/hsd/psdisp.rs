@@ -86,7 +86,7 @@ fn update_app_srt(objs: &mut Objects, s: super::appsrt::AppSrtId, vmtx: &Mtx34, 
             len(m[0][0], m[1][0], m[2][0]),
             len(m[0][1], m[1][1], m[2][1]),
         ];
-        if o.xa2 != 0 {
+        if o.unrotated != 0 {
             let mut d = Mtx34::IDENTITY;
             d.m[0][3] = o.translate.x;
             d.m[1][3] = o.translate.y;

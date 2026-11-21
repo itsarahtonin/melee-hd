@@ -1180,7 +1180,7 @@ impl Running<'_> {
         // The mount's probe found the card: the lists that take the card game's status clear
         // it (`*_p(status) = 0`); the others pass none.
         if card_in && status {
-            self.game.card_game.unk_status = false;
+            self.game.card_game.card_swapped = false;
         }
         let r = with_device(|dev| {
             // The library's `OSTicksToSeconds(OSGetTime())`, as the list started.
@@ -1318,7 +1318,7 @@ impl Running<'_> {
             return r;
         }
         // The mount found the card: `*_p(status) = 0`.
-        self.game.card_game.unk_status = false;
+        self.game.card_game.card_swapped = false;
         let mut times = Vec::new();
         for (k, &w) in list.steps.iter().enumerate() {
             for &(at, file, e) in &list.results {
@@ -1437,7 +1437,7 @@ impl Running<'_> {
         for p in times {
             let g = &mut self.game.card_game;
             if p.card != g.probe_status {
-                g.unk_status = true;
+                g.card_swapped = true;
             }
             g.probe_status = p.card;
             for (chan, card) in [p.card, p.card_b].into_iter().enumerate() {

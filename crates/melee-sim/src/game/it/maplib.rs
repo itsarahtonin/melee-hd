@@ -227,7 +227,7 @@ pub fn turn_box(game: &mut Game, data: &Archives, gobj: GObjId) {
 pub fn set_box_angle(cd: &mut CollData, angle: f32) {
     const TAU: f64 = std::f64::consts::TAU;
     let mut a = reg(angle);
-    match &mut cd.ecb_source.x4 {
+    match &mut cd.ecb_source.shape {
         EcbShape::Box { angle, .. } if cd.ecb_source.kind == ECB_SOURCE_FIXED => {
             if a > TAU {
                 a = fp::frsp(fp::fsub(a, TAU));

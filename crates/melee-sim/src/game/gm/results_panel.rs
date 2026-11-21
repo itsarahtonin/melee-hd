@@ -912,7 +912,7 @@ impl Running<'_> {
             let t0 = self.create_text(0, 0, Vec3::new(pos.x, -pos.y, pos.z), 11.0, 10.0);
             let tx = self.game.sis.text_mut(t0);
             tx.default_fitting = 1;
-            tx.x34 = [0.05, 0.054_687_5];
+            tx.default_scale = [0.05, 0.054_687_5];
             tx.render_callback = Some(STATS_TEXT_RENDER);
             let t1 = self.create_text_buffer(0, 0);
             let tx = self.game.sis.text_mut(t1);

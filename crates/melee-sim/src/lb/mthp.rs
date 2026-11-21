@@ -101,23 +101,29 @@ pub struct MoviePlayer {
     pub plane_u: u32,
     pub plane_v: u32,
     pub work: u32,
-    /// 0x64.
-    pub x64: u32,
+    /// 0x64: cleared as the buffer is set up; nothing reads it.
+    #[doc(alias("x64"))]
+    pub unused_ring: u32,
     /// 0x68: the movie loops.
     pub looping: i32,
-    /// 0x6C, 0x11C: set at open.
-    pub x6c: i32,
-    pub x11c: i32,
+    /// 0x6C, 0x11C: set at open: the shown frame moves on only with a frame buffered, and the
+    /// ring is filled as the buffer is set up.
+    #[doc(alias("x6c"))]
+    pub waits_for_reads: i32,
+    #[doc(alias("x11c"))]
+    pub fills_ring: i32,
     /// 0x70: reads may go on (cleared to close).
     pub reading: i32,
     /// 0x74: frames asked of the disc (the next frame's number, mod the frame count).
     pub requested: u32,
     /// 0x78: the frame the alarm has shown; 0x7C, 0x84: the game's copies of it and of 0x80.
     pub shown: u32,
-    pub x7c: u32,
+    #[doc(alias("x7c"))]
+    pub taken_frame: u32,
     /// 0x80: the alarm's 60ths since the start, the movie's clock.
     pub clock: u32,
-    pub x84: u32,
+    #[doc(alias("x84"))]
+    pub taken_clock: u32,
     /// 0x88: the ring slot of the shown frame; 0x8C: the slot the next read fills; 0x90: the
     /// slot the game takes to decode; 0x94: the slot last decoded (-1 none).
     pub shown_slot: u32,
@@ -128,7 +134,9 @@ pub struct MoviePlayer {
     pub desc: crate::thp::ImageDesc,
     pub x_size: u16,
     pub y_size: u16,
-    pub xac: u8,
+    /// 0xAC: cleared with the decode's header; nothing reads it.
+    #[doc(alias("xac"))]
+    pub unused_header: u8,
     /// 0x100: a slot's size; 0x104: the slots.
     pub buf_size: u32,
     pub slots: u32,
@@ -143,10 +151,13 @@ pub struct MoviePlayer {
     /// 0x12C: the rate table.
     pub rate: Rate,
     /// 0x130, 0x134: the last read's time (its sign, and the time base's ticks since its
-    /// request); 0x138; 0x13C: when the read in flight was asked for.
-    pub x130: i32,
+    /// request); 0x138: a read was asked for (cleared with each request, `did_request`); 0x13C:
+    /// when the read in flight was asked for.
+    #[doc(alias("x130"))]
+    pub read_time_sign: i32,
     pub read_time: i32,
-    pub x138: u32,
+    #[doc(alias("x138"))]
+    pub did_request: u32,
     pub requested_at: u32,
     /// 0x140: the buffer the player allocated (0 when the caller gave one).
     pub alloc: u32,
@@ -172,7 +183,7 @@ impl MoviePlayer {
     /// `lbMthp_8001F5C4`: the movie's clock as the game last took it.
     #[doc(alias = "lbMthp_8001F5C4")]
     pub fn game_clock(&self) -> u32 {
-        self.x84
+        self.taken_clock
     }
 
     /// `lbMthp_8001F604`: whether the movie has ended.
@@ -191,8 +202,8 @@ impl MoviePlayer {
     #[doc(alias = "lbMthp_8001F578")]
     pub fn take_frame(&mut self) {
         self.decode_slot = self.shown_slot;
-        self.x7c = self.shown;
-        self.x84 = self.clock;
+        self.taken_frame = self.shown;
+        self.taken_clock = self.clock;
     }
 
     /// `lbMthp_GetFrame`: the frame due at `clock` 60ths of a second by the rate table.
@@ -217,7 +228,7 @@ impl MoviePlayer {
     /// `fn_8001F06C`: the shown frame moves on when one is buffered.
     #[doc(alias = "fn_8001F06C")]
     fn advance(&mut self) {
-        if self.buffered > 0 || self.x6c == 0 {
+        if self.buffered > 0 || self.waits_for_reads == 0 {
             self.shown = self.shown.wrapping_add(1);
             if self.shown == self.num_frames {
                 if self.looping != 0 {
@@ -360,9 +371,9 @@ fn memory_required(m: &mut MoviePlayer) -> u32 {
     size = size.wrapping_add(wh >> 2);
     size = size.wrapping_add(wh >> 2);
     size = size.wrapping_add(crate::thp::work_size(&m.desc, m.height as u16) as u32);
-    m.x7c = 0;
+    m.taken_frame = 0;
     m.shown = 0;
-    m.x84 = 0;
+    m.taken_clock = 0;
     m.clock = 0;
     m.decode_slot = 0;
     m.shown_slot = 0;
@@ -370,7 +381,7 @@ fn memory_required(m: &mut MoviePlayer) -> u32 {
     m.looping = 0;
     m.x_size = m.width as u16;
     m.y_size = m.height as u16;
-    m.xac = 0;
+    m.unused_header = 0;
     size = size.wrapping_add((m.slots * 4).next_multiple_of(32));
     size.wrapping_add((m.num_frames * 4).next_multiple_of(32))
 }
@@ -429,12 +440,12 @@ impl Audio {
         // "Warning : frame offsets not supported", "Warning : file format is newer than
         // player": reports only.
         let _ = (header.frame_offsets(), header.version());
-        m.x11c = 1;
-        m.x6c = 1;
+        m.fills_ring = 1;
+        m.waits_for_reads = 1;
         m.in_flight = 0;
         m.reading = 1;
         m.read_time = 0;
-        m.x130 = 0;
+        m.read_time_sign = 0;
         m.rate = rate;
         let size = memory_required(m);
         let buf = match given {
@@ -470,10 +481,10 @@ impl Audio {
     fn mthp_setup_buffer(&mut self, data: &Archives, buf: u32) {
         let m = &mut self.movie;
         m.ring_table = buf;
-        m.x64 = 0;
+        m.unused_ring = 0;
         let mut at = buf + (m.slots * 4).next_multiple_of(32);
         m.ring = vec![(0, 0); m.slots as usize];
-        if m.x6c != 0 && m.x11c != 0 {
+        if m.waits_for_reads != 0 && m.fills_ring != 0 {
             let mut size = m.header.first_frame_size();
             m.file_offset = m.header.first_frame();
             let mut i = 0;
@@ -537,7 +548,7 @@ impl Audio {
             let t = self.os_get_tick();
             let m = &mut self.movie;
             m.requested_at = t;
-            m.x138 = 0;
+            m.did_request = 0;
             if m.requested != m.num_frames {
                 self.mthp_read_next(data);
             }
@@ -594,7 +605,7 @@ impl Audio {
         let m = &mut self.movie;
         let diff = t.wrapping_sub(m.requested_at) as i32;
         m.read_time = diff;
-        m.x130 = diff >> 31;
+        m.read_time_sign = diff >> 31;
         m.buffered += 1;
         if m.requested != 0 {
             m.file_offset = m.file_offset.wrapping_add(m.packed_size);
@@ -612,7 +623,7 @@ impl Audio {
             let t = self.os_get_tick();
             let m = &mut self.movie;
             m.requested_at = t;
-            m.x138 = 0;
+            m.did_request = 0;
             if m.requested != m.num_frames {
                 self.mthp_read_next(data);
             } else {

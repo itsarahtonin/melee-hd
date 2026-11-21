@@ -376,7 +376,7 @@ impl Running<'_> {
             .reset_text(self.data, t, i32::from(ITEMS[0].1));
         let tx = self.game.sis.text_mut(t);
         tx.default_fitting = 1;
-        tx.x34 = [0.7, 0.6];
+        tx.default_scale = [0.7, 0.6];
         tx.default_alignment = 2;
     }
 

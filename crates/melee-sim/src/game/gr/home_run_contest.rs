@@ -659,11 +659,11 @@ pub fn label_text(r: &mut Running, n: i32) -> TextId {
     text.pos.z = 0.0;
     text.box_size = [w, h];
     text.default_kerning = 0;
-    text.x34 = [sx, sy];
+    text.default_scale = [sx, sy];
     text.text_color = [0xFF; 4];
     text.default_alignment = 1;
     text.default_fitting = 1;
-    text.x4c = 1;
+    text.depth_test = 1;
     let mut s = [0u8; 0x200];
     let v = fp::fctiwz(fp::frsp(f64::from(n)));
     let len = crate::hsd::sis::printf(b"%d\0", &[crate::hsd::sis::FmtArg::Int(v)], &mut s);

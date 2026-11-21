@@ -301,7 +301,7 @@ pub fn statics_theirs(ctx: &Ctx) -> CollStatics {
         ecb_tiny: r("mpColl_IsEcbTiny") != 0,
         floor_filter: code(r("mpColl_804D64A0")),
         floor_filter_gobj: (r("mpColl_804D64A4") != 0).then(|| GObjId(r("mpColl_804D64A4"))),
-        x64a8: code(r("mpColl_804D64A8")),
+        unused_filter: code(r("mpColl_804D64A8")),
         stale_reads: 0,
         watchdog: None,
     }
@@ -323,7 +323,7 @@ fn statics_key(s: &CollStatics) -> String {
         s.ecb_tiny,
         s.floor_filter,
         s.floor_filter_gobj,
-        s.x64a8
+        s.unused_filter
     )
 }
 

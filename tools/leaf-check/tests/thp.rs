@@ -61,23 +61,23 @@ fn theirs(ctx: &Ctx) -> FileInfo {
         scan_start: rec(w(0x6C)),
         x_pixel_size: h(0x70),
         y_pixel_size: h(0x72),
-        x74: h(0x74),
+        decompressed_x: h(0x74),
         decompressed_y: h(0x76),
         valid_huffman_tabs: b(0x78),
         valid_quant_tabs: b(0x79),
         sampling_h_max: b(0x7A),
         sampling_v_max: b(0x7B),
         n_components: b(0x7C),
-        x7d: b(0x7D),
+        unused_a: b(0x7D),
         mcus_per_row: h(0x8CC),
-        x8ce: h(0x8CE),
-        x8d0: h(0x8D0),
-        x8d2: h(0x8D2),
-        x8d4: h(0x8D4),
-        x8e8: h(0x8E8),
-        x8ea: h(0x8EA),
-        x8ec: h(0x8EC),
-        x8ee: h(0x8EE),
+        blocks_in_mcu: h(0x8CE),
+        mcus_per_column: h(0x8D0),
+        unused_b: h(0x8D2),
+        rows_per_mcu: h(0x8D4),
+        unused_c: h(0x8E8),
+        first_row: h(0x8EA),
+        unused_d: h(0x8EC),
+        rows_done: h(0x8EE),
         tile: [
             w(0x8F0).wrapping_sub(PY),
             w(0x8F4).wrapping_sub(PU),
@@ -123,18 +123,18 @@ fn theirs(ctx: &Ctx) -> FileInfo {
         c.dc_selector = b(o + 4);
         c.ac_selector = b(o + 5);
         c.pred_dc = h(o + 6) as i16;
-        c.x08 = w(o + 8);
-        c.x0c = w(o + 0xC);
-        c.x10 = work(w(o + 0x10));
-        c.x14 = w(o + 0x14) as i32;
-        c.x18 = w(o + 0x18) as i32;
-        c.x1c = w(o + 0x1C) as i32;
-        c.x20 = w(o + 0x20) as i32;
-        c.x24 = w(o + 0x24) as i32;
-        c.x28 = w(o + 0x28) as i32;
+        c.width_in_blocks = w(o + 8);
+        c.height_in_blocks = w(o + 0xC);
+        c.work_at = work(w(o + 0x10));
+        c.mcu_width = w(o + 0x14) as i32;
+        c.mcu_height = w(o + 0x18) as i32;
+        c.mcu_blocks = w(o + 0x1C) as i32;
+        c.mcu_sample_width = w(o + 0x20) as i32;
+        c.downsampled_height = w(o + 0x24) as i32;
+        c.downsampled_width = w(o + 0x28) as i32;
     }
     for i in 0..16 {
-        info.x8bc[i] = b(0x8BC + i as u32);
+        info.mcu_membership[i] = b(0x8BC + i as u32);
     }
     info
 }

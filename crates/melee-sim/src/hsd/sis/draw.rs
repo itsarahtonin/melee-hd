@@ -3,7 +3,7 @@
 //! types itself out, stops at the next glyph or line due and counts the delay down.
 //!
 //! What it changes is state: the typing state (`x60`, `x94`, `x98`, `x4B`), the layout it
-//! leaves (`current_width`, `current_height`, `x88`), the state stack it pushes and pops
+//! leaves (`current_width`, `current_height`, `line_scale`), the state stack it pushes and pops
 //! in the arena (and grows), and the string's start, which a page break moves. Its glyph
 //! and background quads are the presentation's ([`TextDraw`]).
 
@@ -436,9 +436,9 @@ impl SisLib {
                 self.stack_room(t, 5);
                 let tx = self.text(t);
                 let v = if flags & 0x7F == SCALE {
-                    known(tx.x78, "spacing")
+                    known(tx.spacing, "spacing")
                 } else {
-                    known(tx.x80, "scale")
+                    known(tx.scale, "scale")
                 };
                 for c in v {
                     self.stack_push(t, (fixed(c) >> 8) as u8);
@@ -523,9 +523,9 @@ impl SisLib {
                         };
                         let tx = self.text_mut(t);
                         if kind == SCALE {
-                            tx.x78 = Some(v);
+                            tx.spacing = Some(v);
                         } else {
-                            tx.x80 = Some(v);
+                            tx.scale = Some(v);
                         }
                         Some(5)
                     } else {
@@ -611,7 +611,7 @@ impl SisLib {
     #[doc(alias = "HSD_SisLib_803A8134")]
     pub fn measure_line(&mut self, data: &Archives, t: TextId, cursor: SisPtr) -> (f32, f32) {
         let tx = self.text(t);
-        let (saved_scale, saved_spacing) = (known(tx.x80, "scale"), known(tx.x78, "spacing"));
+        let (saved_scale, saved_spacing) = (known(tx.scale, "scale"), known(tx.spacing, "spacing"));
         let mut kerning = known(tx.kerning, "kerning") != 0;
         let saved_used = tx.state_stack_used;
         let font = tx.font;
@@ -641,7 +641,7 @@ impl SisLib {
                     let x = self.sis_u16(data, add(c, 1));
                     let y = self.sis_u16(data, add(c, 3));
                     let s = [x, y].map(|v| mem(fp::fmuls(to_f(i32::from(v)), 1.0 / 256.0)));
-                    self.text_mut(t).x80 = Some(s);
+                    self.text_mut(t).scale = Some(s);
                     c = add(c, 4);
                 }
                 15 => {
@@ -653,9 +653,9 @@ impl SisLib {
                         self.push_state(t, c, 0x81);
                         let x = self.sis_u16(data, add(c, 1)) as i16;
                         let tx = self.text_mut(t);
-                        let mut sp = known(tx.x78, "spacing");
+                        let mut sp = known(tx.spacing, "spacing");
                         sp[0] = mem(fp::fmuls(to_f(i32::from(x)), 1.0 / 256.0));
-                        tx.x78 = Some(sp);
+                        tx.spacing = Some(sp);
                     }
                     c = add(c, 4);
                 }
@@ -670,7 +670,7 @@ impl SisLib {
                 23 => kerning = false,
                 26 | 0x20.. => {
                     let tx = self.text(t);
-                    let (scale, spacing) = (known(tx.x80, "scale"), known(tx.x78, "spacing"));
+                    let (scale, spacing) = (known(tx.scale, "scale"), known(tx.spacing, "spacing"));
                     let advance = if op == 26 { 16.0 } else { 32.0 };
                     w = mem(fp::fmadds(
                         reg(scale[0]),
@@ -695,12 +695,12 @@ impl SisLib {
             c = add(c, 1);
         }
         let tx = self.text(t);
-        w = mem(fp::fsubs(reg(w), reg(known(tx.x78, "spacing")[0])));
+        w = mem(fp::fsubs(reg(w), reg(known(tx.spacing, "spacing")[0])));
         let tx = self.text_mut(t);
-        tx.x80 = Some(saved_scale);
-        let mut sp = known(tx.x78, "spacing");
+        tx.scale = Some(saved_scale);
+        let mut sp = known(tx.spacing, "spacing");
         sp[0] = saved_spacing[0];
-        tx.x78 = Some(sp);
+        tx.spacing = Some(sp);
         tx.state_stack_used = saved_used;
         self.clear_stack_above(t);
         (w, h)
@@ -713,9 +713,9 @@ impl SisLib {
         let bx = tx.box_size[0];
         if known(tx.fitting, "fitting") == 1 && reg(bx) < reg(width) {
             tx.current_width = Some(0.0);
-            tx.x88 = Some(mem(fp::fdivs(reg(bx), reg(width))));
+            tx.line_scale = Some(mem(fp::fdivs(reg(bx), reg(width))));
         } else {
-            tx.x88 = Some(1.0);
+            tx.line_scale = Some(1.0);
             let rest = fp::fsubs(reg(bx), reg(width));
             tx.current_width = Some(match known(tx.alignment, "alignment") {
                 1 => mem(fp::fmuls(0.5, rest)),
@@ -746,18 +746,18 @@ impl SisLib {
             let bottom = mem(fp::fmadds(by, fy, py));
             out.background = Some(([tx.pos.x, tx.pos.y, right, bottom], tx.bg_color));
         }
-        let clip = (tx.x4e != 0).then(|| {
-            let x14 = tx.x14.map(reg);
+        let clip = (tx.clips != 0).then(|| {
+            let margins = tx.clip_margins.map(reg);
             [
-                fp::fmadds(x14[2], fx, px),
-                fp::fmadds(x14[0], fy, py),
-                fp::fmadds(fx, fp::fsubs(bx, x14[3]), px),
-                fp::fmadds(fy, fp::fsubs(by, x14[1]), py),
+                fp::fmadds(margins[2], fx, px),
+                fp::fmadds(margins[0], fy, py),
+                fp::fmadds(fx, fp::fsubs(bx, margins[3]), px),
+                fp::fmadds(fy, fp::fsubs(by, margins[1]), py),
             ]
         });
         if tx.alloc_data.is_some() {
             let tx = self.text_mut(t);
-            tx.x78 = Some(tx.x3c);
+            tx.spacing = Some(tx.default_spacing);
             tx.alignment = Some(tx.default_alignment);
             tx.kerning = Some(tx.default_kerning);
             tx.fitting = Some(tx.default_fitting);
@@ -770,25 +770,25 @@ impl SisLib {
             let tx = self.text_mut(t);
             tx.current_height = Some(0.0);
             let mut line_started = false;
-            let saved_scale = known(tx.x80, "scale");
+            let saved_scale = known(tx.scale, "scale");
             let saved_color = known(tx.active_color, "color");
-            let saved_spacing = known(tx.x78, "spacing");
+            let saved_spacing = known(tx.spacing, "spacing");
             let saved_alignment = known(tx.alignment, "alignment");
             let saved_fitting = known(tx.fitting, "fitting");
             let saved_kerning = known(tx.kerning, "kerning");
-            let mut line_delay = known(tx.x90, "line delay");
-            let mut char_delay = known(tx.x92, "character delay");
-            let mut skip = known(tx.x98, "typed count");
+            let mut line_delay = known(tx.line_delay, "line delay");
+            let mut char_delay = known(tx.char_delay, "character delay");
+            let mut skip = known(tx.typed_count, "typed count");
             let saved_used = tx.state_stack_used;
             loop {
                 let tx = self.text(t);
-                let at_typed = known(tx.x60, "typing cursor") == Some(c);
-                if at_typed && known(tx.x4b, "typing stop") != 0 {
+                let at_typed = known(tx.typing_cursor, "typing cursor") == Some(c);
+                if at_typed && known(tx.typing_stop, "typing stop") != 0 {
                     break;
                 }
-                if at_typed && known(tx.x94, "typing delay") != 0 {
+                if at_typed && known(tx.typing_delay, "typing delay") != 0 {
                     let tx = self.text_mut(t);
-                    tx.x94 = Some(known(tx.x94, "typing delay") - 1);
+                    tx.typing_delay = Some(known(tx.typing_delay, "typing delay") - 1);
                     break;
                 }
                 // A glyph or line typed, unless it was before: the typing stops after it.
@@ -797,12 +797,12 @@ impl SisLib {
                         skip -= 1;
                     } else {
                         let tx = s.text_mut(t);
-                        tx.x98 = Some(known(tx.x98, "typed count").wrapping_add(1));
+                        tx.typed_count = Some(known(tx.typed_count, "typed count").wrapping_add(1));
                         match delay {
-                            Some(d) => tx.x94 = Some(d),
-                            None => tx.x4b = Some(1),
+                            Some(d) => tx.typing_delay = Some(d),
+                            None => tx.typing_stop = Some(1),
                         }
-                        tx.x60 = Some(Some(next));
+                        tx.typing_cursor = Some(Some(next));
                     }
                 };
                 let op = self.sis_u8(data, c);
@@ -814,29 +814,30 @@ impl SisLib {
                     1 | 2 => {
                         if op == 1 {
                             let tx = self.text_mut(t);
-                            tx.x60 = Some(None);
+                            tx.typing_cursor = Some(None);
                             tx.active_color = Some(tx.text_color);
-                            tx.x80 = Some(tx.x34);
-                            tx.x78 = Some(tx.x3c);
-                            tx.x90 = Some(tx.x44);
-                            tx.x92 = Some(tx.x46);
+                            tx.scale = Some(tx.default_scale);
+                            tx.spacing = Some(tx.default_spacing);
+                            tx.line_delay = Some(tx.default_line_delay);
+                            tx.char_delay = Some(tx.default_char_delay);
                             tx.alignment = Some(tx.default_alignment);
                             tx.kerning = Some(tx.default_kerning);
                             tx.fitting = Some(tx.default_fitting);
-                            tx.x94 = Some(0);
-                            tx.x4b = Some(0);
+                            tx.typing_delay = Some(0);
+                            tx.typing_stop = Some(0);
                             tx.state_stack_used = 0;
                             self.clear_stack_above(t);
                         }
                         c = add(c, 1);
                         let tx = self.text_mut(t);
-                        tx.x98 = Some(0);
+                        tx.typed_count = Some(0);
                         tx.sis_buffer = Some(c);
                         continue 'restart;
                     }
                     3 => {
                         let tx = self.text(t);
-                        let (scale, spacing) = (known(tx.x80, "scale"), known(tx.x78, "spacing"));
+                        let (scale, spacing) =
+                            (known(tx.scale, "scale"), known(tx.spacing, "spacing"));
                         if !line_started {
                             lh = mem(fp::fmuls(32.0, reg(scale[1])));
                         }
@@ -865,15 +866,15 @@ impl SisLib {
                         let xo = to_f(i32::from(self.sis_u16(data, add(c, 1)) as i16));
                         let y = self.sis_u16(data, add(c, 3)) as i16;
                         let tx = self.text_mut(t);
-                        let x88 = if known(tx.fitting, "fitting") == 1 && bx < reg(w) {
+                        let line_scale = if known(tx.fitting, "fitting") == 1 && bx < reg(w) {
                             mem(fp::fdivs(bx, reg(w)))
                         } else {
                             1.0
                         };
-                        tx.x88 = Some(x88);
+                        tx.line_scale = Some(line_scale);
                         tx.current_width = Some(match known(tx.alignment, "alignment") {
-                            1 => mem(fp::fnmsubs(0.5, fp::fmuls(reg(w), reg(x88)), xo)),
-                            2 => mem(fp::fnmsubs(reg(w), reg(x88), xo)),
+                            1 => mem(fp::fnmsubs(0.5, fp::fmuls(reg(w), reg(line_scale)), xo)),
+                            2 => mem(fp::fnmsubs(reg(w), reg(line_scale), xo)),
                             _ => mem(xo),
                         });
                         tx.current_height = Some(mem(fp::fmuls(to_f(i32::from(y)), fy)));
@@ -892,7 +893,7 @@ impl SisLib {
                             let x = self.sis_u16(data, add(c, 1)) as i16;
                             let y = self.sis_u16(data, add(c, 3)) as i16;
                             let s = [x, y].map(|v| mem(fp::fmuls(to_f(i32::from(v)), 1.0 / 256.0)));
-                            self.text_mut(t).x78 = Some(s);
+                            self.text_mut(t).spacing = Some(s);
                         }
                         c = add(c, 4);
                     }
@@ -918,7 +919,7 @@ impl SisLib {
                         let x = self.sis_u16(data, add(c, 1));
                         let y = self.sis_u16(data, add(c, 3));
                         let s = [x, y].map(|v| mem(fp::fmuls(to_f(i32::from(v)), 1.0 / 256.0)));
-                        self.text_mut(t).x80 = Some(s);
+                        self.text_mut(t).scale = Some(s);
                         c = add(c, 4);
                     }
                     15 => {
@@ -947,13 +948,14 @@ impl SisLib {
                             self.fit_line(t, w);
                         }
                         let tx = self.text_mut(t);
-                        let (scale, spacing) = (known(tx.x80, "scale"), known(tx.x78, "spacing"));
+                        let (scale, spacing) =
+                            (known(tx.scale, "scale"), known(tx.spacing, "spacing"));
                         let cw = known(tx.current_width, "width");
                         let step =
                             fp::fmul(f64::from(scale[0]), fp::fadd(16.0, f64::from(spacing[0])));
-                        let x88 = known(tx.x88, "line scale");
+                        let line_scale = known(tx.line_scale, "line scale");
                         tx.current_width = Some(mem(fp::frsp(fp::fmadd(
-                            f64::from(x88),
+                            f64::from(line_scale),
                             step,
                             f64::from(cw),
                         ))));
@@ -983,8 +985,8 @@ impl SisLib {
             let mut col = known(tx.active_color, "color");
             col[..3].copy_from_slice(&saved_color[..3]);
             tx.active_color = Some(col);
-            tx.x80 = Some(saved_scale);
-            tx.x78 = Some(saved_spacing);
+            tx.scale = Some(saved_scale);
+            tx.spacing = Some(saved_spacing);
             tx.alignment = Some(saved_alignment);
             tx.kerning = Some(saved_kerning);
             tx.fitting = Some(saved_fitting);
@@ -1005,11 +1007,11 @@ impl SisLib {
         clip: Option<[f64; 4]>,
     ) -> Option<Glyph> {
         let tx: &Text = self.text(t);
-        let (scale, spacing) = (known(tx.x80, "scale"), known(tx.x78, "spacing"));
+        let (scale, spacing) = (known(tx.scale, "scale"), known(tx.spacing, "spacing"));
         let kerning = known(tx.kerning, "kerning") != 0;
         let cw = known(tx.current_width, "width");
         let ch = known(tx.current_height, "height");
-        let x88 = known(tx.x88, "line scale");
+        let line_scale = known(tx.line_scale, "line scale");
         let (fx, fy) = (reg(tx.font_size[0]), reg(tx.font_size[1]));
         let color = known(tx.active_color, "color");
         let font = tx.font;
@@ -1020,7 +1022,7 @@ impl SisLib {
         }
         let size = fp::fmuls(32.0, reg(scale[1]));
         let wide = fp::fmuls(fp::fmuls(32.0, reg(scale[0])), fx);
-        let mut right = fp::fmadds(reg(x88), wide, gx);
+        let mut right = fp::fmadds(reg(line_scale), wide, gx);
         let mut top = fp::fmadds(
             fy,
             fp::fsubs(reg(lh), size),
@@ -1064,12 +1066,16 @@ impl SisLib {
         });
         // `glyph_draw_done`.
         let mut cw = fp::fmadds(
-            reg(x88),
+            reg(line_scale),
             fp::fmuls(reg(scale[0]), fp::fadds(32.0, reg(spacing[0]))),
             reg(cw),
         );
         if let Some((l, r)) = bearings {
-            cw = fp::fnmsubs(reg(x88), fp::fmuls(reg(scale[0]), to_f(l + r - 2)), cw);
+            cw = fp::fnmsubs(
+                reg(line_scale),
+                fp::fmuls(reg(scale[0]), to_f(l + r - 2)),
+                cw,
+            );
         }
         self.text_mut(t).current_width = Some(mem(cw));
         quad

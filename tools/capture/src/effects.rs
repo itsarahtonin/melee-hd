@@ -484,7 +484,7 @@ impl Importer<'_> {
             view: mtx(self, a + 0x64),
             view_scale: [self.hf32(a + 0x94), self.hf32(a + 0x98)],
             idnum: self.h16(a + 0xA0),
-            xa2: self.h8(a + 0xA2),
+            unrotated: self.h8(a + 0xA2),
         };
         self.game.objs.app_srts[id] = s;
         Some(id)
@@ -1029,7 +1029,7 @@ impl Comparer<'_> {
             ours.extend(o.mmtx.m.as_flattened().iter().map(|v| v.to_bits()));
             ours.extend(o.view.m.as_flattened().iter().map(|v| v.to_bits()));
             ours.extend(o.view_scale.map(f32::to_bits));
-            ours.extend([u32::from(o.idnum), u32::from(o.xa2), 0, 0]);
+            ours.extend([u32::from(o.idnum), u32::from(o.unrotated), 0, 0]);
             let mut theirs = vec![gt(self.u32(t + 4))];
             theirs.extend((0..10).map(|k| self.u32(t + 8 + 4 * k)));
             theirs.extend([

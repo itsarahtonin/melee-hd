@@ -30,7 +30,7 @@ impl Comparer<'_> {
             self.check(
                 &p,
                 "x0 and back link",
-                (o.x0, prev),
+                (o.unused_head, prev),
                 (self.u32(at), self.u32(at + 8)),
             );
             let gobj = o.gobj.map(|g| g.0);
@@ -50,7 +50,13 @@ impl Comparer<'_> {
                 &p,
                 "size, colors, flags, priority",
                 (
-                    o.width, o.height, o.color0, o.color1, o.flags, o.priority, o.x48,
+                    o.width,
+                    o.height,
+                    o.color0,
+                    o.color1,
+                    o.flags,
+                    o.priority,
+                    o.user_word,
                 ),
                 (
                     self.u16(at + 0x34),
@@ -257,15 +263,15 @@ impl Comparer<'_> {
             "MoviePlayer",
             "x64, loop, x6C, reading, requested, shown, x7C, clock, x84",
             (
-                m.x64,
+                m.unused_ring,
                 m.looping,
-                m.x6c,
+                m.waits_for_reads,
                 m.reading,
                 m.requested,
                 m.shown,
-                m.x7c,
+                m.taken_frame,
                 m.clock,
-                m.x84,
+                m.taken_clock,
             ),
             (
                 w(self, 0x64),
@@ -300,7 +306,7 @@ impl Comparer<'_> {
                 m.desc.format,
                 m.x_size,
                 m.y_size,
-                m.xac,
+                m.unused_header,
             ),
             (
                 w(self, 0x9C) as i32,
@@ -321,7 +327,7 @@ impl Comparer<'_> {
                 m.buffered,
                 m.min_buffered,
                 m.in_flight,
-                m.x11c,
+                m.fills_ring,
             ),
             (
                 w(self, 0x100),
@@ -346,7 +352,7 @@ impl Comparer<'_> {
         self.check(
             "MoviePlayer",
             "read times",
-            (m.x130, m.read_time, m.x138, m.requested_at),
+            (m.read_time_sign, m.read_time, m.did_request, m.requested_at),
             (
                 w(self, 0x130) as i32,
                 w(self, 0x134) as i32,

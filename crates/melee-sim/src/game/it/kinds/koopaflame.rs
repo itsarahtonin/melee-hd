@@ -368,7 +368,7 @@ pub fn update_angle(r: &mut Running, gobj: GObjId, flags: i32) {
 #[doc(alias = "itKoopaFlame_UnkMotion0_Coll")]
 fn collide(r: &mut Running, gobj: GObjId) -> bool {
     clamp_own_angle(r, gobj);
-    match &mut item_mut(r.game, gobj).x378_itemColl.ecb_source.x4 {
+    match &mut item_mut(r.game, gobj).x378_itemColl.ecb_source.shape {
         EcbShape::Box {
             up,
             down,
