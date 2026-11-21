@@ -329,7 +329,7 @@ fn version() -> String {
 }
 
 /// The profile this executable was built with, its folder's name in the target folder
-/// (`release`, or `bench-dist`, the player's settings, for the numbers that decide).
+/// (`release`, which the speed targets are measured on, or `bench-dist`, the player's settings).
 fn build_profile() -> String {
     std::env::current_exe()
         .ok()

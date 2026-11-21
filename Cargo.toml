@@ -30,7 +30,8 @@ inherits = "release"
 lto = "fat"
 codegen-units = 1
 
-# The speed numbers that decide anything (docs/performance.md, "Which build"): `dist`'s settings
+# The player's settings for the bench, to report how far they are from release, which stays the
+# build speed targets are measured on (docs/performance.md, "Which build"): `dist`'s settings
 # exactly, in a folder of its own so the bench and the player don't rebuild each other's output.
 # `cargo build --locked --profile bench-dist -p melee-bench`.
 [profile.bench-dist]
