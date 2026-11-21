@@ -309,7 +309,7 @@ pub fn line_intersection_v(
 }
 
 /// Which kind of surface a search looks for, with what differs between them.
-#[derive(Clone, Copy, PartialEq, melee_derive::StateEq)]
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
 enum Surface {
     Floor,
     Ceiling,
@@ -409,6 +409,71 @@ impl Surface {
     }
 }
 
+/// [`Geometry::extended_ends`] of a line from `a` to `b`, extended where it has a line before
+/// (`has_prev`) or after (`has_next`).
+fn extend_ends(
+    a: (f32, f32),
+    b: (f32, f32),
+    has_prev: bool,
+    has_next: bool,
+) -> (f32, f32, f32, f32) {
+    let (mut x0, mut y0, mut x1, mut y1) = (reg(a.0), reg(a.1), reg(b.0), reg(b.1));
+    let length = |x0: f64, y0: f64, x1: f64, y1: f64| {
+        let dx = fp::fsubs(x0, x1);
+        let dy = fp::fsubs(y0, y1);
+        reg(math::sqrt(mem(fp::fadds(
+            fp::fmuls(dx, dx),
+            fp::fmuls(dy, dy),
+        ))))
+    };
+    let mut distance = None;
+    if has_prev {
+        let d = length(x0, y0, x1, y1);
+        let (dx, dy) = (fp::fsubs(x0, x1), fp::fsubs(y0, y1));
+        if d > f64::from(0.001_f32) {
+            x0 = fp::fadds(x0, fp::fdivs(dx, d));
+            y0 = fp::fadds(y0, fp::fdivs(dy, d));
+        }
+        distance = Some(d);
+    }
+    if has_next {
+        let d = distance.unwrap_or_else(|| length(x0, y0, x1, y1));
+        if d > f64::from(0.001_f32) {
+            x1 = fp::fadds(x1, fp::fdivs(fp::fsubs(x1, x0), d));
+            y1 = fp::fadds(y1, fp::fdivs(fp::fsubs(y1, y0), d));
+        }
+    }
+    (mem(x0), mem(y0), mem(x1), mem(y1))
+}
+
+/// Whether a floor or ceiling from (`x0`, `y0`) to (`x1`, `y1`) (its vertices; a floor raised
+/// by `y_offset`) lies too far from the segment's box `seg` (left, right, bottom, top) to be
+/// crossed: [`Surface::cross_r5`] of its extended ends finds nothing then. Both of
+/// `cross_r5`'s tests reject a line wholly beside the segment on either axis (by more than
+/// 0.0001 for a level line's height). The extension moves the first end by a unit and the
+/// second by (length + 1) / length units (its direction measured from the first end already
+/// moved: up to a thousand units for the shortest lines), so only lines at least a unit long
+/// are passed over, by a box four units wider each way, safe whatever the rounding. Never
+/// true for coordinates that aren't finite.
+fn misses_box(x0: f32, y0: f32, x1: f32, y1: f32, y_offset: f32, seg: [f64; 4]) -> bool {
+    const MARGIN: f64 = 4.0;
+    let v = [x0, y0, x1, y1, y_offset].map(f64::from);
+    if !v.iter().chain(&seg).all(|x| x.is_finite()) {
+        return false;
+    }
+    let [x0, y0, x1, y1, yo] = v;
+    let (dx, dy) = (x1 - x0, y1 - y0);
+    if dx * dx + dy * dy < 1.0 {
+        return false;
+    }
+    let (lo_x, hi_x) = if x0 < x1 { (x0, x1) } else { (x1, x0) };
+    let (lo_y, hi_y) = if y0 < y1 { (y0, y1) } else { (y1, y0) };
+    hi_x + MARGIN < seg[0]
+        || lo_x - MARGIN > seg[1]
+        || hi_y + yo + MARGIN < seg[2]
+        || lo_y + yo - MARGIN > seg[3]
+}
+
 /// What `mpCheckFloor` leaves in r5, which a computer player's DI with no knockback reads
 /// (the stale-register rule, docs/engine.md). The last line it tests (one its joint, skip,
 /// filter and flag checks let through) decides it: the pointer it passed `mpLib_8004ED5C`
@@ -460,33 +525,26 @@ impl<K: Kinds> Geometry<K> {
             self.vertices[line.v0 as usize].pos,
             self.vertices[line.v1 as usize].pos,
         );
-        let (mut x0, mut y0, mut x1, mut y1) = (reg(a.x), reg(a.y), reg(b.x), reg(b.y));
-        let length = |x0: f64, y0: f64, x1: f64, y1: f64| {
-            let dx = fp::fsubs(x0, x1);
-            let dy = fp::fsubs(y0, y1);
-            reg(math::sqrt(mem(fp::fadds(
-                fp::fmuls(dx, dx),
-                fp::fmuls(dy, dy),
-            ))))
-        };
-        let mut distance = None;
-        if self.prev_of(line) != -1 {
-            let d = length(x0, y0, x1, y1);
-            let (dx, dy) = (fp::fsubs(x0, x1), fp::fsubs(y0, y1));
-            if d > f64::from(0.001_f32) {
-                x0 = fp::fadds(x0, fp::fdivs(dx, d));
-                y0 = fp::fadds(y0, fp::fdivs(dy, d));
+        extend_ends(
+            (a.x, a.y),
+            (b.x, b.y),
+            self.prev_of(line) != -1,
+            self.next_of(line) != -1,
+        )
+    }
+
+    /// A floor's or ceiling's ends as [`Self::search_r5`] tests them: extended, a floor's
+    /// raised by `y_offset`.
+    fn tested_ends(&self, surface: Surface, id: i32, y_offset: f32) -> (f64, f64, f64, f64) {
+        let (x0, y0, x1, y1) = self.extended_ends(id);
+        match surface {
+            Surface::Floor => {
+                let y0 = mem(fp::fadds(reg(y0), reg(y_offset)));
+                let y1 = mem(fp::fadds(reg(y1), reg(y_offset)));
+                (reg(x0), reg(y0), reg(x1), reg(y1))
             }
-            distance = Some(d);
+            _ => (reg(x0), reg(y0), reg(x1), reg(y1)),
         }
-        if self.next_of(line) != -1 {
-            let d = distance.unwrap_or_else(|| length(x0, y0, x1, y1));
-            if d > f64::from(0.001_f32) {
-                x1 = fp::fadds(x1, fp::fdivs(fp::fsubs(x1, x0), d));
-                y1 = fp::fadds(y1, fp::fdivs(fp::fsubs(y1, y0), d));
-            }
-        }
-        (mem(x0), mem(y0), mem(x1), mem(y1))
     }
 
     /// The search all four static surface checks share: the hit nearest the segment's start
@@ -527,9 +585,14 @@ impl<K: Kinds> Geometry<K> {
         if !already_checked {
             self.check_bounding_segment(ax, ay, bx, by);
         }
+        // The segment's box, to pass over the floors and ceilings it can't cross without
+        // extending their ends ([`misses_box`]).
+        let seg = [ax.min(bx), ax.max(bx), ay.min(by), ay.max(by)].map(f64::from);
         let (ax, ay, bx, by) = (reg(ax), reg(ay), reg(bx), reg(by));
         let mut min_dist2 = f64::from(f32::MAX);
         let mut best = None;
+        // The last line tested, when it was passed over: r5 is its test's, worked out after.
+        let mut passed = None;
         for joint in self.searched_joints(joint_skip, joint_only) {
             for l in self.group_then_dynamic(joint, surface.group()) {
                 let id = l as i32;
@@ -542,18 +605,26 @@ impl<K: Kinds> Geometry<K> {
                     continue;
                 }
                 let (x0, y0, x1, y1) = match surface {
-                    Surface::Floor => {
-                        let (x0, y0, x1, y1) = self.extended_ends(id);
-                        let y0 = mem(fp::fadds(reg(y0), reg(y_offset)));
-                        let y1 = mem(fp::fadds(reg(y1), reg(y_offset)));
-                        (reg(x0), reg(y0), reg(x1), reg(y1))
-                    }
-                    Surface::Ceiling => {
-                        let (x0, y0, x1, y1) = self.extended_ends(id);
-                        (reg(x0), reg(y0), reg(x1), reg(y1))
+                    Surface::Floor | Surface::Ceiling => {
+                        let line = &self.lines[l];
+                        let (a, b) = (
+                            self.vertices[line.v0 as usize].pos,
+                            self.vertices[line.v1 as usize].pos,
+                        );
+                        let yo = if surface == Surface::Floor {
+                            y_offset
+                        } else {
+                            0.0
+                        };
+                        if misses_box(a.x, a.y, b.x, b.y, yo, seg) {
+                            passed = Some(id);
+                            continue;
+                        }
+                        self.tested_ends(surface, id, y_offset)
                     }
                     Surface::LeftWall | Surface::RightWall => self.line_ends(id),
                 };
+                passed = None;
                 let (crossed, flag) = surface.cross_r5(x0, y0, x1, y1, ax, ay, bx, by);
                 r5 = flag.map_or(FloorR5::OwnSlot, FloorR5::Flag);
                 let Some((ix, iy, sloped)) = crossed else {
@@ -576,6 +647,11 @@ impl<K: Kinds> Geometry<K> {
                     });
                 }
             }
+        }
+        if let Some(id) = passed {
+            let (x0, y0, x1, y1) = self.tested_ends(surface, id, y_offset);
+            let flag = surface.cross_r5(x0, y0, x1, y1, ax, ay, bx, by).1;
+            r5 = flag.map_or(FloorR5::OwnSlot, FloorR5::Flag);
         }
         if !already_checked {
             self.uncheck_bounding();
@@ -1232,6 +1308,72 @@ impl<K: Kinds> Geometry<K> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// [`misses_box`] is safe: a floor or ceiling it passes over is one the full test, its
+    /// ends extended (and a floor's raised), finds no crossing on. Random lines and segments
+    /// near each other (within a few units, where the margin matters) and far apart, every
+    /// extension and both surfaces.
+    #[test]
+    fn a_line_passed_over_is_never_crossed() {
+        let mut x = 0x2545_F491_4F6C_DD1Du64;
+        let mut next = move || {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            x
+        };
+        let mut coord = |scale: f32| (next() % 2_000_001) as f32 / 1_000_000.0 * scale - scale;
+        let (mut passed, mut crossed_near) = (0, 0);
+        for i in 0..400_000 {
+            let scale = [3.0, 8.0, 40.0][i % 3];
+            let a = Vec3::new(coord(scale), coord(scale), 0.0);
+            let b = if i % 5 == 0 {
+                Vec3::new(coord(scale), a.y, 0.0)
+            } else {
+                Vec3::new(coord(scale), coord(scale), 0.0)
+            };
+            let (has_prev, has_next) = (i % 2 == 0, i % 4 < 2);
+            let y_offset = [0.0, 1.5, -2.5][i % 7 % 3];
+            let (sx0, sy0, sx1, sy1) = (coord(scale), coord(scale), coord(scale), coord(scale));
+            let seg = [sx0.min(sx1), sx0.max(sx1), sy0.min(sy1), sy0.max(sy1)].map(f64::from);
+            for surface in [Surface::Floor, Surface::Ceiling] {
+                let yo = if surface == Surface::Floor {
+                    y_offset
+                } else {
+                    0.0
+                };
+                let (x0, y0, x1, y1) = extend_ends((a.x, a.y), (b.x, b.y), has_prev, has_next);
+                let (y0, y1) = (
+                    mem(fp::fadds(reg(y0), reg(yo))),
+                    mem(fp::fadds(reg(y1), reg(yo))),
+                );
+                let (hit, _) = surface.cross_r5(
+                    reg(x0),
+                    reg(y0),
+                    reg(x1),
+                    reg(y1),
+                    reg(sx0),
+                    reg(sy0),
+                    reg(sx1),
+                    reg(sy1),
+                );
+                if misses_box(a.x, a.y, b.x, b.y, yo, seg) {
+                    passed += 1;
+                    assert!(
+                        hit.is_none(),
+                        "{surface:?} {a:?} {b:?} {yo} {seg:?}: {hit:?}"
+                    );
+                } else if hit.is_some() {
+                    crossed_near += 1;
+                }
+            }
+        }
+        // Both outcomes are common, so the test exercises the margin.
+        assert!(
+            passed > 100_000 && crossed_near > 10_000,
+            "{passed} {crossed_near}"
+        );
+    }
 
     /// `intersect_r5` leaves r5 set only when b ends just above a (within 0.1) and its end
     /// was measured: a crossing ending below the line, an end too far above (rejected after
