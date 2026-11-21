@@ -260,7 +260,7 @@ pub fn set_attack_flags(r: &mut Running, gobj: GObjId, flags: u32) {
     let owner = item(r.game, gobj).owner;
     if super::super::item::is_fighter(r.game, owner) {
         let f = super::super::owner::fighter_of(r.game, owner.expect("an owner"));
-        let rec = r.game.fighters[f.0].x2074.clone();
+        let rec = r.game.fighters[f.0].attack_record.clone();
         let ip = item_mut(r.game, gobj);
         ip.xD94 = rec.x2074_vec;
         ip.xD9C = rec.x207C;

@@ -95,7 +95,7 @@ impl Running<'_> {
         let sword = self.data.ptr(copy.at(0xC)).expect("the copy's sword");
         self.set_accessory(gobj, sword);
         let s = mem(Self::model_scale(self.game.fighter(gobj)));
-        let acc = self.game.fighter(gobj).x20A0_accessory.expect("the sword");
+        let acc = self.game.fighter(gobj).accessory.expect("the sword");
         jobj::set_scale(&mut self.game.objs.jobjs, acc, Vec3::new(s, s, s));
         let hand = self.part_joint(gobj, PART_R_THUMB_NB);
         crate::lb::anim::attach(&mut self.game.objs, Some(acc), hand);

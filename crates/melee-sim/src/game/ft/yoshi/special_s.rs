@@ -187,10 +187,10 @@ impl Running<'_> {
             if egg {
                 self.ys_shield_mend(gobj);
                 self.set_item_visible(gobj, false);
-                self.game.fighters[f.0].x221E_b4 = false;
+                self.game.fighters[f.0].articles_visible = false;
             } else {
                 self.set_item_visible(gobj, true);
-                self.game.fighters[f.0].x221E_b4 = true;
+                self.game.fighters[f.0].articles_visible = true;
             }
             if self.game.fighters[f.0].cmd_vars[0] == 2 {
                 self.ys_set_mvi(gobj, mv::X4, -1);
@@ -219,7 +219,7 @@ impl Running<'_> {
         }
         self.ys_set_mvf(gobj, mv::X24, 0.0);
         self.set_item_visible(gobj, true);
-        self.game.fighters[f.0].x221E_b4 = true;
+        self.game.fighters[f.0].articles_visible = true;
     }
 
     /// Out of the egg when KO'd, `fn_8012EC7C` (the roll's `death2_cb`).
@@ -300,7 +300,7 @@ impl Running<'_> {
         fp.death2_cb = Some(CodeRef(addr::SPECIAL_S_ON_DEATH));
         fp.take_dmg_cb = Some(CodeRef(addr::SPECIAL_S_ON_HIT));
         fp.deal_dmg_cb = Some(CodeRef(addr::SPECIAL_S_ON_DEAL_DAMAGE));
-        fp.x21F8 = Some(CodeRef(addr::SPECIAL_S_TURNED));
+        fp.turn_cb = Some(CodeRef(addr::SPECIAL_S_TURNED));
     }
 
     /// The roll's end, `ftYs_SpecialS_8012F0DC`: no hitboxes, the ground's end (slowed by
@@ -315,7 +315,7 @@ impl Running<'_> {
             self.change_motion_state(gobj, ms::SPECIAL_AIR_S_END, flags, frame, 1.0, 0.0, None);
             let fp = &mut self.game.fighters[f.0];
             fp.gr_vel = mem(fp::fmuls(reg(fp.gr_vel), xd0));
-            fp.x74_self_accel.y = 0.0;
+            fp.anim_vel.y = 0.0;
             fp.self_vel.y = 0.0;
         } else {
             self.change_motion_state(
@@ -331,7 +331,7 @@ impl Running<'_> {
             let fp = &mut self.game.fighters[f.0];
             fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), xd0));
             fp.self_vel.y = mem(fp::fmuls(reg(fp.self_vel.y), xd4));
-            fp.xE4_ground_accel_1 = 0.0;
+            fp.ground_accel_1 = 0.0;
             fp.gr_vel = 0.0;
         }
         self.ys_s_set_cbs(gobj);
@@ -377,7 +377,7 @@ impl Running<'_> {
         fp.set_mv_i32(mv::X2C, 0);
         fp.set_mv_i32(mv::X30, 0);
         fp.deal_dmg_cb = Some(CodeRef(addr::SPECIAL_S_ON_DEAL_DAMAGE));
-        fp.x21F8 = Some(CodeRef(addr::SPECIAL_S_TURNED));
+        fp.turn_cb = Some(CodeRef(addr::SPECIAL_S_TURNED));
     }
 
     /// Whether the stick was smashed sideways (`ftYs_SpecialS_CheckButtonPressure`: its timer
@@ -421,9 +421,9 @@ impl Running<'_> {
         let x1c = self.ys_mvf(gobj, mv::X1C);
         let fp = self.game.fighter_mut(gobj);
         fp.self_vel.x = mem(fp::fmuls(x1c, reg(fp.facing_dir)));
-        fp.x74_self_accel.x = 0.0;
+        fp.anim_vel.x = 0.0;
         fp.self_vel.y = mem(x5c);
-        fp.x74_self_accel.y = mem(g);
+        fp.anim_vel.y = mem(g);
     }
 
     /// `ftYs_SpecialS_Enter`.
@@ -466,10 +466,10 @@ impl Running<'_> {
             let v = mem(fp::fmuls(x1c, reg(fp.facing_dir)));
             fp.self_vel.x = v;
             fp.gr_vel = v;
-            fp.x74_self_accel.x = 0.0;
-            fp.xE4_ground_accel_1 = 0.0;
+            fp.anim_vel.x = 0.0;
+            fp.ground_accel_1 = 0.0;
             fp.self_vel.y = mem(x5c);
-            fp.x74_self_accel.y = mem(g);
+            fp.anim_vel.y = mem(g);
         }
     }
 
@@ -516,11 +516,11 @@ impl Running<'_> {
         let xc = self.ys_mvi(gobj, mv::XC).wrapping_add(1);
         self.ys_set_mvi(gobj, mv::XC, xc);
         let fp = &mut self.game.fighters[f.0];
-        if xc >= xdc && fp.x914[0].state != 0 {
-            fp.x914[0].x4 = fp.x914[0].x4.wrapping_add(1) & 1;
+        if xc >= xdc && fp.hitboxes[0].state != 0 {
+            fp.hitboxes[0].x4 = fp.hitboxes[0].x4.wrapping_add(1) & 1;
             fp.set_mv_i32(mv::XC, 0);
         }
-        if self.game.fighters[f.0].x914[0].state == 0 {
+        if self.game.fighters[f.0].hitboxes[0].state == 0 {
             return;
         }
         let (xc0, xc4) = (
@@ -842,12 +842,12 @@ impl Running<'_> {
     #[doc(alias = "ftYs_SpecialAirSStart_0_Phys")]
     pub fn ys_special_s_start_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.xE4_ground_accel_1 = 0.0;
+        fp.ground_accel_1 = 0.0;
         fp.gr_vel = 0.0;
         fp.self_vel.y = 0.0;
         fp.self_vel.x = 0.0;
-        fp.x74_self_accel.y = 0.0;
-        fp.x74_self_accel.x = 0.0;
+        fp.anim_vel.y = 0.0;
+        fp.anim_vel.x = 0.0;
     }
 
     /// `ftYs_SpecialAirSLoop_0_Phys`: rolling on the ground, speeding up toward its target
@@ -921,7 +921,7 @@ impl Running<'_> {
         }
         let g = reg(fp.gr_vel);
         fp.set_mv_f32(mv::X1C, abs(g));
-        fp.x74_self_accel.y = 0.0;
+        fp.anim_vel.y = 0.0;
         fp.self_vel.y = 0.0;
         self.self_movement_from_ground(gobj);
     }
@@ -940,7 +940,7 @@ impl Running<'_> {
         ));
         let fp = &mut self.game.fighters[f.0];
         fp.gr_vel = mem(fp::fmadds(x20, friction, reg(fp.gr_vel)));
-        fp.x74_self_accel.y = 0.0;
+        fp.anim_vel.y = 0.0;
         fp.self_vel.y = 0.0;
         self.self_movement_from_ground(gobj);
         let x10 = self.ys_mvf(gobj, mv::X10);
@@ -950,7 +950,7 @@ impl Running<'_> {
         if !reversed || !past {
             return;
         }
-        self.game.fighters[f.0].x21EC = Some(CodeRef(addr::SPECIAL_S_RENEW_ATTACK));
+        self.game.fighters[f.0].motion_change_cb = Some(CodeRef(addr::SPECIAL_S_RENEW_ATTACK));
         let frame = self.game.fighters[f.0].cur_anim_frame;
         self.change_motion_state(
             gobj,
@@ -1301,7 +1301,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.self_vel.x = mem(fp::fneg(reg(fp.self_vel.x)));
         fp.gr_vel = mem(fp::fneg(reg(fp.gr_vel)));
-        fp.xE4_ground_accel_1 = mem(fp::fneg(reg(fp.xE4_ground_accel_1)));
+        fp.ground_accel_1 = mem(fp::fneg(reg(fp.ground_accel_1)));
         for off in [mv::X10, mv::X14, mv::X18, mv::X1C, mv::X20, mv::X24] {
             let v = fp::fneg(reg(fp.mv_f32(off)));
             fp.set_mv_f32(off, v);

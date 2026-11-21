@@ -93,7 +93,7 @@ impl Running<'_> {
             return;
         }
         let Some(victim) = fp.victim_gobj else { return };
-        self.game.fighter_mut(gobj).x1A6A = 0;
+        self.game.fighter_mut(gobj).grab_immune = 0;
         self.throw_hit(gobj, victim, true);
         self.thrown_launch(victim, None, false);
         self.game.fighter_mut(gobj).cmd_vars[0] = 0;
@@ -103,11 +103,11 @@ impl Running<'_> {
     /// (`ftCommon_8007E2D0(fp, 8, grab, NULL, capture)`), and its variables (`x0`, `x8`).
     fn kp_s_grab_cbs(&mut self, gobj: GObjId, grab: u32, capture: u32) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x221E_b6 = true;
-        fp.x1A68 = 8;
+        fp.grab_coll_off = true;
+        fp.grab_kinds = 8;
         fp.grab_cb = Some(CodeRef(grab));
         fp.grabbed_cb = Some(CodeRef(capture));
-        fp.x2194 = None;
+        fp.grab_item_cb = None;
         fp.set_mv_i32(mv::S_X0, 0);
         fp.set_mv_i32(mv::S_X8, 0);
     }
@@ -116,7 +116,7 @@ impl Running<'_> {
     /// no throw flags, script variable or bite.
     fn kp_s_reset(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.cmd_vars[0] = 0;
         fp.set_mv_i32(mv::S_X4, 0);
         fp.set_mv_i32(mv::S_XC, 0);
@@ -149,8 +149,8 @@ impl Running<'_> {
             self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         }
         let fp = self.game.fighter_mut(gobj);
-        fp.x2222_b2 = true;
-        fp.x1A6A = 0x1FF;
+        fp.no_turn = true;
+        fp.grab_immune = 0x1FF;
         self.stop_dead(gobj);
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(mv::S_X0, 0);
@@ -206,7 +206,7 @@ impl Running<'_> {
     #[doc(alias = "ftKp_SpecialS_80133324")]
     pub fn kp_air_s_hit_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_S_HIT0_0, SWITCH);
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
         self.stop_dead(gobj);
     }
 
@@ -214,7 +214,7 @@ impl Running<'_> {
     #[doc(alias = "ftKp_SpecialS_801333F8")]
     pub fn kp_air_s_wait_to_ground(&mut self, gobj: GObjId) {
         self.fox_air_to_ground(gobj, ms::SPECIAL_S_HIT0_1, WAIT_LAND);
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
         self.stop_dead(gobj);
         self.set_anim_rate(gobj, 0.0);
         let fp = self.game.fighter_mut(gobj);
@@ -245,7 +245,7 @@ impl Running<'_> {
         if let Some(v) = self.game.fighter(gobj).victim_gobj {
             self.kp_victim_thrown_switch(v, victim_msid);
         }
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
         self.stop_dead(gobj);
     }
 
@@ -298,7 +298,7 @@ impl Running<'_> {
             let fp = &mut self.game.fighters[f.0];
             fp.set_mv_i32(mv::S_X0, 0);
             fp.cmd_vars[0] = 0;
-            fp.x1A6A = 0x1FF;
+            fp.grab_immune = 0x1FF;
         }
     }
 
@@ -346,7 +346,7 @@ impl Running<'_> {
     /// into the matching thrown state.
     fn kp_s_throw(&mut self, gobj: GObjId, kp: [i32; 2], victim: [i32; 2]) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.cmd_vars[0] = 0;
         let i = usize::from(fp.mv_i32(mv::S_X8) != 1);
         self.change_motion_state(gobj, kp[i], UNK_19, 0.0, 1.0, 0.0, None);

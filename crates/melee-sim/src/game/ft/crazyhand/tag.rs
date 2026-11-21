@@ -45,7 +45,7 @@ impl Running<'_> {
             self.game.fighter_mut(gobj).cmd_vars[1] = 0;
         }
         let mh = self.boss_gobj(FighterKind::MasterHand.id());
-        self.game.fighter_mut(gobj).x1A5C = mh;
+        self.game.fighter_mut(gobj).partner = mh;
         self.hand_enter(gobj, msid);
     }
 }

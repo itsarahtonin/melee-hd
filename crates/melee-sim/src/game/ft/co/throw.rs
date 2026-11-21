@@ -75,17 +75,17 @@ impl Running<'_> {
         }
         let fp = self.game.fighter_mut(gobj);
         fp.cmd_vars[0] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.set_mv_i32(THROW_FROZEN, 0);
         fp.set_mv_i32(THROW_RELEASED, 0);
         self.change_motion_state(gobj, msid, 0, 0.0, mem(speed), 0.0, None);
         self.anim_update(gobj);
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
         self.enter_thrown(victim, victim_msid, mem(speed));
         match FighterKind::from_id(kind) {
             Some(FighterKind::Kirby) if msid == ms::THROW_HI => {
-                self.game.fighter_mut(gobj).x2219_b2 = true;
-                self.game.fighter_mut(victim).x2219_b2 = true;
+                self.game.fighter_mut(gobj).blast_immune_state = true;
+                self.game.fighter_mut(victim).blast_immune_state = true;
             }
             Some(FighterKind::Samus) => self.samus_throw_beam(gobj, msid, mem(speed)),
             _ => {}
@@ -107,7 +107,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         if fp.throw_flag(3) {
             fp.set_throw_flag(3, false);
-            fp.x1A6A = 0;
+            fp.grab_immune = 0;
             if let Some(victim) = fp.victim_gobj {
                 let (slot, timer) = (
                     i32::from(fp.player_idx),
@@ -123,7 +123,7 @@ impl Running<'_> {
         if fp.cmd_vars[0] != 0 && fp.mv_i32(THROW_FROZEN) == 0 {
             fp.set_mv_i32(THROW_FROZEN, 1);
             fp.cmd_vars[0] = 0;
-            let t = fp.x6A4_transNOffset;
+            let t = fp.trans_n_offset;
             fp.set_mv_f32(THROW_VICTIM, reg(t.x));
             fp.set_mv_f32(THROW_MOTION_Y, reg(t.y));
             fp.set_mv_f32(THROW_MOTION_Z, reg(t.z));
@@ -136,9 +136,9 @@ impl Running<'_> {
             let fp = self.game.fighter(gobj);
             if fp.kind == FighterKind::Kirby && fp.motion_id == ms::THROW_HI {
                 let victim = fp.victim_gobj;
-                self.game.fighter_mut(gobj).x2219_b2 = false;
+                self.game.fighter_mut(gobj).blast_immune_state = false;
                 if let Some(v) = victim {
-                    self.game.fighter_mut(v).x2219_b2 = false;
+                    self.game.fighter_mut(v).blast_immune_state = false;
                 }
             }
         }
@@ -151,7 +151,7 @@ impl Running<'_> {
         self.mt_n_shoot(gobj);
         self.throw_progress(gobj);
         if !self.anim_frames_remaining(gobj) {
-            if self.game.fighter(gobj).x2222_b0 {
+            if self.game.fighter(gobj).has_cargo {
                 self.enter_cargo_start(gobj);
             } else {
                 self.fall_or_wait(gobj);
@@ -225,20 +225,20 @@ impl Running<'_> {
     #[doc(alias = "ftColl_80078710")]
     #[doc(alias = "ftCommon_8007EE0C")]
     pub(crate) fn throw_hit(&mut self, gobj: GObjId, victim: GObjId, place: bool) {
-        let (holder, held) = if self.game.fighter(gobj).x221B.x221B_b7 {
+        let (holder, held) = if self.game.fighter(gobj).state_flags.x221B_b7 {
             (victim, gobj)
         } else {
             (gobj, victim)
         };
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A5C = None;
+        fp.partner = None;
         fp.victim_gobj = None;
-        fp.x221B.x221B_b5 = false;
-        fp.x221B.x221B_b7 = false;
-        let hit = self.game.fighter(gobj).xDF4[0].clone();
+        fp.state_flags.x221B_b5 = false;
+        fp.state_flags.x221B_b7 = false;
+        let hit = self.game.fighter(gobj).throw_hitboxes[0].clone();
         self.record_fighter_hit(gobj, victim, reg(hit.damage));
         let v = self.game.fighter_id(victim);
-        if self.game.fighters[v.0].x1988 != 0 {
+        if self.game.fighters[v.0].hit_status != 0 {
             self.set_hit_status(victim, 0);
         }
         let tj = self.part_joint(holder, TRANS_N2);
@@ -251,14 +251,14 @@ impl Running<'_> {
         // `ftColl_80076640`: the damage taken, or the armor's.
         let count = super::super::attack::whole_damage(dmg);
         let vf = &mut self.game.fighters[v.0];
-        if vf.x221C_b4 {
+        if vf.armor {
             vf.dmg.x1834 = mem(fp::fsubs(reg(vf.dmg.x1834), dmg));
             if vf.dmg.x1834 < 0.0 {
                 dmg = fp::fneg(reg(vf.dmg.x1834));
-                vf.x221C_b4 = false;
+                vf.armor = false;
             }
         }
-        if !vf.x221C_b4 {
+        if !vf.armor {
             // NaN passes, as the original's `!(dmg > 500.0)` does.
             assert!(
                 dmg.partial_cmp(&500.0) != Some(std::cmp::Ordering::Greater),
@@ -300,7 +300,11 @@ impl Running<'_> {
         vf.dmg.x1860_element = hit.element;
         // `ftColl_80078710`: the attack's record, the facing word as the keep flag.
         let af = self.game.fighter(gobj);
-        let (akind, x2070, instance) = (af.kind, u32::from_be_bytes(af.x2070), af.x2074.x2088);
+        let (akind, x2070, instance) = (
+            af.kind,
+            u32::from_be_bytes(af.attack_flags),
+            af.attack_record.x2088,
+        );
         self.attack_landed(
             Some(gobj),
             victim,
@@ -326,21 +330,25 @@ impl Running<'_> {
         self.calc_knockback(v);
         let h = self.game.fighter_id(held);
         self.go_airborne(h);
-        if self.game.fighters[h.0].x2226_b2 {
+        if self.game.fighters[h.0].held_in_model {
             let xj = self.part_joint(held, X_ROT_N).expect("XRotN");
             unconstrain(&mut self.game.objs, xj);
             let fp = &mut self.game.fighters[h.0];
-            fp.x2226_b2 = false;
-            let x2174 = fp.x2174;
+            fp.held_in_model = false;
+            let x2174 = fp.thrown_trans;
             jobj::set_translate(&mut self.game.objs.jobjs, xj, x2174);
             let fp = &self.game.fighters[h.0];
             if place {
                 pos.x = mem(fp::fmadds(
                     reg(fp.facing_dir),
-                    fp::fmuls(reg(fp.x1A70.z), reg(fp.x34_scale.y)),
+                    fp::fmuls(reg(fp.throw_offset.z), reg(fp.scale.y)),
                     reg(pos.x),
                 ));
-                pos.y = mem(fp::fmadds(reg(fp.x1A70.y), reg(fp.x34_scale.y), reg(pos.y)));
+                pos.y = mem(fp::fmadds(
+                    reg(fp.throw_offset.y),
+                    reg(fp.scale.y),
+                    reg(pos.y),
+                ));
                 pos.z = 0.0;
             }
             let hp = &self.game.fighter(holder);
@@ -361,9 +369,9 @@ impl Running<'_> {
             jobj::set_translate(&mut self.game.objs.jobjs, root, p);
         }
         let vf = &mut self.game.fighters[v.0];
-        vf.x1A5C = None;
+        vf.partner = None;
         vf.victim_gobj = None;
-        vf.x221B.x221B_b7 = false;
+        vf.state_flags.x221B_b7 = false;
     }
 
     /// A slow throw's quick release counts toward a bonus, `pl_80040614`: a victim the
@@ -404,11 +412,11 @@ impl Running<'_> {
         }
         let fp = self.game.fighter_mut(gobj);
         fp.accessory1_cb = Some(CodeRef(THROWN_FOLLOW));
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
         // `ftCommon_8007E358`: the hip's translation as it is now.
         let hj = self.part_joint(gobj, HIP_N).expect("HipN");
         let t = self.game.objs.jobjs[hj].translate;
-        self.game.fighter_mut(gobj).x1A7C = t;
+        self.game.fighter_mut(gobj).hip_pos = t;
         self.anim_update(gobj);
     }
 
@@ -418,7 +426,7 @@ impl Running<'_> {
     #[doc(alias = "ftParts_JObjSetRotation")]
     pub(crate) fn attach_to_thrower(&mut self, thrower: GObjId, gobj: GObjId) {
         let target = self.part_joint(thrower, TRANS_N2).expect("TransN2");
-        if self.game.fighter(gobj).x2226_b2 {
+        if self.game.fighter(gobj).held_in_model {
             return;
         }
         let j = self.part_joint(gobj, X_ROT_N).expect("XRotN");
@@ -434,9 +442,9 @@ impl Running<'_> {
         );
         self.game.objs.jobjs[j].flags &= !jobj::USE_QUATERNION;
         let t = self.game.objs.jobjs[j].translate;
-        self.game.fighter_mut(gobj).x2174 = t;
+        self.game.fighter_mut(gobj).thrown_trans = t;
         super::super::super::ef::constrain(&mut self.game.objs, j, target, 0x9000_0001);
-        self.game.fighter_mut(gobj).x2226_b2 = true;
+        self.game.fighter_mut(gobj).held_in_model = true;
     }
 
     /// The thrown fighter at its throw point, `ftCo_800DE508`: its XRotN's place offset by
@@ -448,10 +456,14 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         pos.x = mem(fp::fmadds(
             reg(fp.facing_dir),
-            fp::fmuls(reg(fp.x1A70.z), reg(fp.x34_scale.y)),
+            fp::fmuls(reg(fp.throw_offset.z), reg(fp.scale.y)),
             reg(pos.x),
         ));
-        pos.y = mem(fp::fmadds(reg(fp.x1A70.y), reg(fp.x34_scale.y), reg(pos.y)));
+        pos.y = mem(fp::fmadds(
+            reg(fp.throw_offset.y),
+            reg(fp.scale.y),
+            reg(pos.y),
+        ));
         pos.z = 0.0;
         fp.cur_pos = pos;
     }
@@ -504,8 +516,8 @@ impl Running<'_> {
         }
         let t = self.game.objs.jobjs[j].translate;
         let fp = self.game.fighter_mut(gobj);
-        let k = reg(fp.x1A6C);
-        let p = &mut fp.x1A7C;
+        let k = reg(fp.hip_follow_rate);
+        let p = &mut fp.hip_pos;
         let d = (
             fp::fsubs(reg(t.x), reg(p.x)),
             fp::fsubs(reg(t.y), reg(p.y)),
@@ -525,7 +537,7 @@ impl Running<'_> {
     pub(crate) fn thrown_launch(&mut self, gobj: GObjId, thrower: Option<GObjId>, upward: bool) {
         if let Some(t) = thrower {
             let fp = self.game.fighter_mut(gobj);
-            fp.x21EC = Some(CodeRef(THROWN_ON_CHANGE));
+            fp.motion_change_cb = Some(CodeRef(THROWN_ON_CHANGE));
             fp.mv.set_gobj_at(THROW_VICTIM, Some(t));
         }
         let fp = self.game.fighter(gobj);

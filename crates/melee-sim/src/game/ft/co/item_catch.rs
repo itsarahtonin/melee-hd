@@ -27,7 +27,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
         if fp.item_gobj.is_some() {
-            fp.x1978 = Some(it);
+            fp.second_item = Some(it);
         } else {
             fp.item_gobj = Some(it);
         }
@@ -50,7 +50,7 @@ impl Running<'_> {
         super::super::super::it::item::pick_up(self, it, gobj, part);
         self.item_pickup_effect(gobj, it);
         let j = self.bone_joint(gobj, hand);
-        let mut head = self.game.fighters[f.0].x60C;
+        let mut head = self.game.fighters[f.0].effect_queue;
         ef::queue(
             self,
             Some(gobj),
@@ -60,8 +60,8 @@ impl Running<'_> {
             j,
             &[],
         );
-        self.game.fighters[f.0].x60C = head;
-        self.game.fighters[f.0].x2224_b1 = true;
+        self.game.fighters[f.0].effect_queue = head;
+        self.game.fighters[f.0].air_item_caught = true;
     }
 
     /// The item's own pickup, `ftpickupitem_8009447C`, for an item used as it's picked up

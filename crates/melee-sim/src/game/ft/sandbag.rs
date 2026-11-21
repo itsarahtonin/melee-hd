@@ -60,7 +60,7 @@ impl Running<'_> {
         self.push_attrs(f, ATTRS_SIZE);
         let fp = &mut self.game.fighters[f.0];
         fp.is_sandbag = true;
-        fp.x2226_b0 = true;
+        fp.lies_on_z = true;
         self.sb_constrain(gobj);
     }
 
@@ -145,7 +145,7 @@ impl Running<'_> {
         }
         self.change_motion_state(gobj, MS_WAIT_REVERSE, 0, 0.0, 1.0, 0.0, None);
         let x5f0 = self.common().u32(0x5F0) as u16;
-        self.game.fighter_mut(gobj).x209A = x5f0;
+        self.game.fighter_mut(gobj).name_tag_timer = x5f0;
     }
 }
 

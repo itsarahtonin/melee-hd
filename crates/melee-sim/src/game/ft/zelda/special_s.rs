@@ -169,7 +169,7 @@ impl Running<'_> {
         if !self.anim_frames_remaining(gobj) {
             self.change_motion_state(gobj, next, 0, 0.0, 1.0, 0.0, None);
             let fp = self.game.fighter_mut(gobj);
-            fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+            fp.jumps_used = fp.co_attrs.max_jumps as u8;
         }
     }
 

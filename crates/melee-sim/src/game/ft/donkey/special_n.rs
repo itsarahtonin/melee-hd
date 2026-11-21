@@ -273,7 +273,7 @@ impl Running<'_> {
         for (i, off) in [(0, mv::N_DAMAGE0), (1, mv::N_DAMAGE1)] {
             let fp = &mut self.game.fighters[f.0];
             if fp.mv_i32(off) == -1 {
-                let d = fp.x914[i].damage as i32;
+                let d = fp.hitboxes[i].damage as i32;
                 fp.set_mv_i32(off, d);
             }
             let fp = &self.game.fighters[f.0];
@@ -328,7 +328,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_DkSpecialN_Anim")]
     pub fn dk_special_n_anim(&mut self, gobj: GObjId, p: &GiantPunch) {
         self.dk_special_n_effect(gobj, p);
-        if self.game.fighter(gobj).x914[0].state != hitcapsule::DISABLED {
+        if self.game.fighter(gobj).hitboxes[0].state != hitcapsule::DISABLED {
             let fp = self.game.fighter_mut(gobj);
             if fp.mv_i32(mv::N_LUNGE) == 0 {
                 fp.set_mv_i32(mv::N_LUNGE, 1);
@@ -346,7 +346,7 @@ impl Running<'_> {
     pub fn dk_special_n_full_anim(&mut self, gobj: GObjId, p: &GiantPunch) {
         self.dk_special_n_effect(gobj, p);
         let fp = self.game.fighter_mut(gobj);
-        if fp.x914[0].state != hitcapsule::DISABLED && fp.mv_i32(mv::N_LUNGE) == 0 {
+        if fp.hitboxes[0].state != hitcapsule::DISABLED && fp.mv_i32(mv::N_LUNGE) == 0 {
             fp.set_mv_i32(mv::N_LUNGE, 1);
         }
         self.dk_special_n_lunge(gobj, p);
@@ -359,7 +359,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_DkSpecialAirN_Anim")]
     pub fn dk_special_air_n_anim(&mut self, gobj: GObjId, p: &GiantPunch) {
         self.dk_special_n_effect(gobj, p);
-        if self.game.fighter(gobj).x914[0].state != hitcapsule::DISABLED {
+        if self.game.fighter(gobj).hitboxes[0].state != hitcapsule::DISABLED {
             self.dk_special_n_damage(gobj, p);
         }
         self.dk_special_n_end(gobj, p, true);

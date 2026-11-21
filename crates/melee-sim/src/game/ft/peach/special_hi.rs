@@ -173,9 +173,9 @@ impl Running<'_> {
         fp.cmd_vars[0] = 0;
         fp.cmd_vars[1] = 0;
         fp.cmd_vars[2] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.set_mv_i32(mv::HI_KIND, ItKind::Capsule.id());
-        fp.x2222_b2 = true;
+        fp.no_turn = true;
         if let Some(item) = fp.item_gobj {
             let kind = lib26b1::kind(self.game, item);
             if kind == ItKind::Parasol || kind == ItKind::PeachParasol {

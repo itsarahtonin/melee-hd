@@ -98,10 +98,10 @@ impl Running<'_> {
         if fp.smash_attrs.state == SMASH_CHARGING {
             fp.dmg.kb_applied = mem(fp::fmuls(reg(fp.dmg.kb_applied), reg(charge)));
         }
-        if reg(fp.x34_scale.y) != 1.0 {
+        if reg(fp.scale.y) != 1.0 {
             fp.dmg.kb_applied = mem(super::super::coll::scaled_by_height(
                 reg(fp.dmg.kb_applied),
-                reg(fp.x34_scale.y),
+                reg(fp.scale.y),
                 reg(k),
             ));
         }
@@ -123,7 +123,7 @@ impl Running<'_> {
         let x140 = reg(self.common().f32(0x140));
         let fp = &self.game.fighters[f.0];
         let kb = reg(fp.dmg.kb_applied);
-        kb == 0.0 || (fp.allow_sdi && fp.x221A_b3 && kb < fp::fadds(reg(fp.dmg.x18A8), x140))
+        kb == 0.0 || (fp.allow_sdi && fp.in_hitstun_sdi && kb < fp::fadds(reg(fp.dmg.x18A8), x140))
     }
 
     /// A holder hit in the same frame as the victim it holds fast, the victim resolved first
@@ -147,12 +147,12 @@ impl Running<'_> {
         let hold = fp
             .item_gobj
             .is_some_and(|i| !lib26b1::is_heavy(self.game, self.data, i));
-        let keep = !(fp.x2220_b3 || fp.x2220_b4 || self.hit_too_light(f));
+        let keep = !(fp.buried || fp.turn_spin || self.hit_too_light(f));
         let fp = &self.game.fighters[f.0];
         if fp.motion_id != ms::DAMAGE_ICE
             && (fp.motion_id as u32).wrapping_sub(0x122) > 1
             && fp.dmg.x1860_element != ELEMENT_CAPE
-            && !fp.x2226_b2
+            && !fp.held_in_model
         {
             if hold && keep {
                 let (x418, x41c) = (self.common().i32(0x418), self.common().i32(0x41C));
@@ -167,14 +167,14 @@ impl Running<'_> {
                 };
                 if drop {
                     let zero = crate::vec::Vec3::new(0.0, 0.0, 0.0);
-                    if let Some(second) = self.game.fighters[f.0].x1978 {
+                    if let Some(second) = self.game.fighters[f.0].second_item {
                         crate::game::it::release::drop(self, second, zero, 1.0);
                     }
                     let item = self.game.fighters[f.0].item_gobj.expect("an item");
                     crate::game::it::release::drop(self, item, zero, 1.0);
                 }
             }
-            if let Some(hood) = self.game.fighters[f.0].x197C {
+            if let Some(hood) = self.game.fighters[f.0].bunny_hood {
                 let x418 = self.common().i32(0x418);
                 if self.game.objs.rng.below(x418) < dmg {
                     let gobj = self.game.fighters[f.0]
@@ -228,20 +228,20 @@ impl Running<'_> {
         let abs = super::checks::abs;
         let fp = &mut self.game.fighters[f.0];
         if fp.dmg.x18ac_time_since_hit < xfc {
-            fp.x8c_kb_vel.x = mem(x);
-            fp.x8c_kb_vel.y = mem(y);
+            fp.kb_vel.x = mem(x);
+            fp.kb_vel.y = mem(y);
             return;
         }
-        let (cx, cy) = (reg(fp.x8c_kb_vel.x), reg(fp.x8c_kb_vel.y));
+        let (cx, cy) = (reg(fp.kb_vel.x), reg(fp.kb_vel.y));
         if fp::fmuls(cx, x) < 0.0 {
-            fp.x8c_kb_vel.x = mem(fp::fadds(cx, x));
+            fp.kb_vel.x = mem(fp::fadds(cx, x));
         } else if abs(x) > abs(cx) {
-            fp.x8c_kb_vel.x = mem(x);
+            fp.kb_vel.x = mem(x);
         }
         if fp::fmuls(cy, y) < 0.0 {
-            fp.x8c_kb_vel.y = mem(fp::fadds(cy, y));
+            fp.kb_vel.y = mem(fp::fadds(cy, y));
         } else if abs(y) > abs(cy) {
-            fp.x8c_kb_vel.y = mem(y);
+            fp.kb_vel.y = mem(y);
         }
     }
 
@@ -255,7 +255,8 @@ impl Running<'_> {
             return false;
         }
         let c = self.common();
-        i32::from(fp.x680) <= c.i32(0x18C) && i32::from(fp.x684) >= c.i32(0x1C)
+        i32::from(fp.frames_since_tech_shoulder) <= c.i32(0x18C)
+            && i32::from(fp.frames_since_tech_window) >= c.i32(0x1C)
     }
 
     /// The color animation a damaging hit starts, `ftCo_8008DA4C`: the element's (fire,
@@ -331,7 +332,7 @@ impl Running<'_> {
             }
             let facing_dir = reg(self.game.fighters[f.0].facing_dir);
             self.damage_vel(f, fp::fmuls(fp::fneg(x), facing_dir), y);
-            self.game.fighters[f.0].xF0_ground_kb_vel = 0.0;
+            self.game.fighters[f.0].ground_kb_vel = 0.0;
         } else {
             let normal = fp.coll_data.floor.normal;
             let pos = Vec3 {
@@ -344,7 +345,7 @@ impl Running<'_> {
             if !(floor_angle >= reg(HALF_PI)) {
                 self.go_airborne(f);
                 self.damage_vel(f, reg(pos.x), reg(pos.y));
-                self.game.fighters[f.0].xF0_ground_kb_vel = 0.0;
+                self.game.fighters[f.0].ground_kb_vel = 0.0;
             } else if level == 3 {
                 self.go_airborne(f);
                 let limit = std::f64::consts::FRAC_PI_2 + reg(c.f32(0x1E8));
@@ -352,19 +353,19 @@ impl Running<'_> {
                     let y = fp::fmuls(fp::fneg(reg(pos.y)), reg(c.f32(0x1EC)));
                     self.damage_vel(f, reg(pos.x), y);
                     sounds = false;
-                    self.game.fighters[f.0].xF0_ground_kb_vel = 0.0;
+                    self.game.fighters[f.0].ground_kb_vel = 0.0;
                     let a = math::atan2(mem(fp::fneg(reg(normal.x))), normal.y);
                     let joint = self.bones(f)[TOP_N as usize].joint;
                     let args = [ef::Arg::Float(a)];
                     self.fighter_effect(gobj, ef::SpawnKind::PosParam, 0x406, joint, &args);
                 } else {
                     self.damage_vel(f, reg(pos.x), reg(pos.y));
-                    self.game.fighters[f.0].xF0_ground_kb_vel = 0.0;
+                    self.game.fighters[f.0].ground_kb_vel = 0.0;
                 }
             } else {
                 let fp = &mut self.game.fighters[f.0];
-                fp.xF0_ground_kb_vel = pos.x;
-                let v = reg(fp.xF0_ground_kb_vel);
+                fp.ground_kb_vel = pos.x;
+                let v = reg(fp.ground_kb_vel);
                 let (vx, vy) = (
                     fp::fmuls(reg(normal.y), v),
                     fp::fmuls(fp::fneg(reg(normal.x)), v),
@@ -393,7 +394,7 @@ impl Running<'_> {
         let mag = self.crowd_angle_scale(kb, angle);
         let fp = &mut self.game.fighters[f.0];
         fp.dmg.x18A4_knockbackMagnitude = mem(mag);
-        let (source, spawn) = (fp.dmg.x18C0 as u32, fp.x8_spawnNum as u32);
+        let (source, spawn) = (fp.dmg.x18C0 as u32, fp.spawn_num as u32);
         self.crowd_knockback(source, spawn);
         if reg(facing) != 0.0 {
             self.game.fighters[f.0].facing_dir = facing;
@@ -405,7 +406,7 @@ impl Running<'_> {
         self.anim_update(gobj);
         if self.game.single_player_alone() {
             self.warp_star_intangible(gobj);
-            self.game.fighters[f.0].x2221_b1 = true;
+            self.game.fighters[f.0].damage_col_anim = true;
         }
         let fp = &mut self.game.fighters[f.0];
         let collide = !(kb <= reg(c.f32(0x12C)));
@@ -416,12 +417,12 @@ impl Running<'_> {
         fp.active_timer.lstick.y = 0xFE;
         fp.post_hitlag_cb = Some(ON_EXIT_HITLAG);
         fp.dmg.x18A8 = fp.dmg.kb_applied;
-        fp.x221C_b6 = true;
+        fp.in_hitstun = true;
         fp.dmg.x18ac_time_since_hit = 0;
         if msid == ms::DAMAGE_FLY_ROLL {
             self.fly_roll(gobj);
         }
-        self.game.fighters[f.0].x67F = 0xFF;
+        self.game.fighters[f.0].frames_since_shoulder = 0xFF;
         self.set_smoke_timer(gobj);
         let fp = &mut self.game.fighters[f.0];
         if fp.mv_i32(DAMAGE_X8) != 0 {
@@ -429,7 +430,7 @@ impl Running<'_> {
         }
         if level == 3 && scaled >= reg(c.f32(0x5E8)) {
             // `ftCommon_8007EFC0`.
-            fp.x209A = c.u32(0x5EC) as u16;
+            fp.name_tag_timer = c.u32(0x5EC) as u16;
         }
         if sounds {
             let sfx = |g: &Self, off: u32| {
@@ -530,12 +531,12 @@ impl Running<'_> {
         let Some(holder) = fp.victim_gobj else {
             return false;
         };
-        if !self.game.fighter(holder).x2222_b5 {
+        if !self.game.fighter(holder).is_popo {
             return false;
         }
         let source = fp.dmg.x1868_source;
         let instance = if source == Some(holder) {
-            self.game.fighter(holder).x2074.x2088
+            self.game.fighter(holder).attack_record.x2088
         } else {
             let Some(src) = source.filter(|&s| crate::game::it::is_item(self.game, Some(s))) else {
                 return false;
@@ -562,7 +563,7 @@ impl Running<'_> {
             return true;
         };
         let p = self.game.fighter(partner);
-        if p.x221F_b1 || p.x2219_b5 || p.x2070[1] >> 4 == 13 {
+        if p.dead || p.in_hitlag || p.attack_flags[1] >> 4 == 13 {
             return true;
         }
         if p.ground_or_air == GA_GROUND {
@@ -588,8 +589,8 @@ impl Running<'_> {
     pub fn damage_reaction(&mut self, gobj: GObjId, facing: f32) {
         let cooldown = self.common().i32(0x498);
         let fp = self.game.fighter_mut(gobj);
-        if fp.x221D_b7 {
-            fp.x2064_ledgeCooldown = cooldown;
+        if fp.hanging {
+            fp.ledge_cooldown = cooldown;
         }
         let e = fp.dmg.x1860_element;
         if (e == ELEMENT_NAP || e == ELEMENT_SLEEP) && !fp.is_sandbag {
@@ -657,7 +658,7 @@ impl Running<'_> {
     pub fn damage_pick_reaction(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        if fp.x2220_b3 || fp.x2220_b4 || reg(fp.dmg.kb_applied) == 0.0 {
+        if fp.buried || fp.turn_spin || reg(fp.dmg.kb_applied) == 0.0 {
             self.damage_no_reaction(gobj);
             return;
         }
@@ -685,7 +686,7 @@ impl Running<'_> {
         }
         let fp = &self.game.fighters[f.0];
         if let Some(other) = fp.victim_gobj {
-            if fp.x221B.x221B_b5 {
+            if fp.state_flags.x221B_b5 {
                 self.holder_hit(gobj, other, facing);
             } else {
                 self.held_hit(gobj, other, cape.is_some(), facing);
@@ -694,7 +695,7 @@ impl Running<'_> {
         }
         if let Some(item) = fp.item_gobj
             && lib26b1::is_heavy(self.game, self.data, item)
-            && fp.x2222_b0
+            && fp.has_cargo
         {
             self.dk_heavy_hit(gobj);
             return;
@@ -720,7 +721,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C3538")]
     fn cape_hit(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        if fp.x2222_b2 || matches!(fp.x2070[1] >> 4, 9..=11) {
+        if fp.no_turn || matches!(fp.attack_flags[1] >> 4, 9..=11) {
             return false;
         }
         self.cape_turn(gobj);
@@ -748,11 +749,11 @@ impl Running<'_> {
         let facing = reg(fp.dmg.facing_dir_1);
         if air {
             self.damage_vel(f, fp::fmuls(x, facing), y);
-            self.game.fighters[f.0].xF0_ground_kb_vel = 0.0;
+            self.game.fighters[f.0].ground_kb_vel = 0.0;
         } else {
             let fp = &mut self.game.fighters[f.0];
-            fp.xF0_ground_kb_vel = mem(fp::fmuls(x, facing));
-            let v = reg(fp.xF0_ground_kb_vel);
+            fp.ground_kb_vel = mem(fp::fmuls(x, facing));
+            let v = reg(fp.ground_kb_vel);
             let n = fp.coll_data.floor.normal;
             let (vx, vy) = (fp::fmuls(reg(n.y), v), fp::fmuls(fp::fneg(reg(n.x)), v));
             self.damage_vel(f, vx, vy);
@@ -771,7 +772,7 @@ impl Running<'_> {
         if turn > reg(fp.dmg.x1954) {
             fp.dmg.x1954 = mem(turn);
         }
-        fp.x2220_b4 = true;
+        fp.turn_spin = true;
         self.start_hitlag(gobj);
     }
 
@@ -784,8 +785,8 @@ impl Running<'_> {
         self.turn_spin_start(gobj);
         let push = reg(self.common().f32(0x654));
         let fp = &mut self.game.fighters[f.0];
-        fp.xF0_ground_kb_vel = mem(fp::fmuls(push, fp::fneg(reg(fp.specialn_facing_dir))));
-        let v = reg(fp.xF0_ground_kb_vel);
+        fp.ground_kb_vel = mem(fp::fmuls(push, fp::fneg(reg(fp.specialn_facing_dir))));
+        let v = reg(fp.ground_kb_vel);
         let n = fp.coll_data.floor.normal;
         let (vx, vy) = (fp::fmuls(reg(n.y), v), fp::fmuls(fp::fneg(reg(n.x)), v));
         self.damage_vel(f, vx, vy);
@@ -795,7 +796,8 @@ impl Running<'_> {
     /// frame to break free.
     fn held_fast(&self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        fp.x221C_b0 || reg(fp.dmg.x1838_percentTemp) < fp::frsp(f64::from(self.common().i32(0x3C0)))
+        fp.held_hit_light
+            || reg(fp.dmg.x1838_percentTemp) < fp::frsp(f64::from(self.common().i32(0x3C0)))
     }
 
     /// A held fighter's hit, `ftCo_8008EC90` with `x221B_b5` clear. Held fast and not
@@ -813,33 +815,33 @@ impl Running<'_> {
                     self.damage_no_reaction(gobj);
                     let (applied, mul) = {
                         let o = &self.game.fighters[of.0];
-                        (o.dmg.x183C_applied, o.x1960_vibrateMult)
+                        (o.dmg.x183C_applied, o.hitlag_vibrate_mul)
                     };
                     let fp = &mut self.game.fighters[ff.0];
                     fp.dmg.x183C_applied = applied;
-                    fp.x1960_vibrateMult = mul;
-                    self.game.fighters[of.0].x1828 = 3;
+                    fp.hitlag_vibrate_mul = mul;
+                    self.game.fighters[of.0].hit_reaction = 3;
                     return;
                 }
                 self.thrown_off(gobj);
                 self.grab_break(other, gobj);
                 self.damage_hooks(gobj);
                 self.damage_reaction(gobj, facing);
-                self.game.fighters[of.0].x1828 = 1;
+                self.game.fighters[of.0].hit_reaction = 1;
                 return;
             }
             let applied = self.game.fighters[ff.0].dmg.x183C_applied;
             if applied != 0 {
                 let o = &self.game.fighters[of.0];
-                let lag = self.hitlag(applied, o.motion_id, o.x1960_vibrateMult);
+                let lag = self.hitlag(applied, o.motion_id, o.hitlag_vibrate_mul);
                 let o = &mut self.game.fighters[of.0];
                 o.dmg.x195c_hitlag_frames = mem(lag);
                 o.allow_sdi = true;
-                if !o.x2219_b5 {
+                if !o.in_hitlag {
                     if let Some(cb) = o.pre_hitlag_cb {
                         run_fighter_cb(self, gobj, cb);
                     }
-                    self.game.fighters[of.0].x2219_b5 = true;
+                    self.game.fighters[of.0].in_hitlag = true;
                 }
             }
             let fp = &mut self.game.fighters[ff.0];
@@ -852,7 +854,7 @@ impl Running<'_> {
         self.damage_hooks(gobj);
         self.damage_reaction(gobj, facing);
         if self.game.fighters[of.0].dmg.kb_applied != 0.0 {
-            self.game.fighters[of.0].x1828 = 1;
+            self.game.fighters[of.0].hit_reaction = 1;
         } else {
             self.damage_hooks(other);
             self.holder_knocked_back(other);
@@ -922,21 +924,21 @@ impl Running<'_> {
                 if self.held_fast(other) {
                     let (applied, mul) = {
                         let fp = &self.game.fighters[ff.0];
-                        (fp.dmg.x183C_applied, fp.x1960_vibrateMult)
+                        (fp.dmg.x183C_applied, fp.hitlag_vibrate_mul)
                     };
                     let o = &mut self.game.fighters[of.0];
                     o.dmg.x183C_applied = applied;
-                    o.x1960_vibrateMult = mul;
+                    o.hitlag_vibrate_mul = mul;
                     if self.hit_too_light(ff) {
                         self.damage_no_reaction(gobj);
                     }
-                    self.game.fighters[of.0].x1828 = 2;
+                    self.game.fighters[of.0].hit_reaction = 2;
                     return;
                 }
                 self.grab_break(gobj, other);
                 self.damage_hooks(gobj);
                 self.damage_reaction(gobj, facing);
-                self.game.fighters[of.0].x1828 = 1;
+                self.game.fighters[of.0].hit_reaction = 1;
                 return;
             }
             if self.hit_too_light(ff) {
@@ -951,7 +953,7 @@ impl Running<'_> {
             self.grab_break(gobj, other);
             self.damage_hooks(gobj);
             self.damage_reaction(gobj, facing);
-            self.game.fighters[of.0].x1828 = 1;
+            self.game.fighters[of.0].hit_reaction = 1;
             return;
         }
         self.damage_hooks(other);
@@ -971,7 +973,7 @@ impl Running<'_> {
             .victim_gobj
             .expect("a held fighter without its holder");
         let h = self.game.fighter_id(holder);
-        let hit = self.game.fighters[h.0].xDF4[1].clone();
+        let hit = self.game.fighters[h.0].throw_hitboxes[1].clone();
         let j = self.part_joint(gobj, X_ROT_N);
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
         let kb = self.fighter_knockback(
@@ -1005,7 +1007,11 @@ impl Running<'_> {
     /// an address, keeps the last attacker's player).
     fn thrower_attack_landed(&mut self, holder: GObjId, gobj: GObjId) {
         let hp = self.game.fighter(holder);
-        let (akind, x2070, instance) = (hp.kind, u32::from_be_bytes(hp.x2070), hp.x2074.x2088);
+        let (akind, x2070, instance) = (
+            hp.kind,
+            u32::from_be_bytes(hp.attack_flags),
+            hp.attack_record.x2088,
+        );
         self.attack_landed(
             Some(holder),
             gobj,
@@ -1032,7 +1038,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800DCFD4")]
     pub fn knocked_away(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].x1988 != 0 {
+        if self.game.fighters[f.0].hit_status != 0 {
             self.set_hit_status(gobj, 0);
         }
         self.go_airborne(f);
@@ -1040,7 +1046,7 @@ impl Running<'_> {
             .victim_gobj
             .expect("a held fighter without its holder");
         let h = self.game.fighter_id(holder);
-        let damage = reg(self.game.fighters[h.0].xDF4[1].damage);
+        let damage = reg(self.game.fighters[h.0].throw_hitboxes[1].damage);
         self.record_fighter_hit(holder, gobj, damage);
         self.hit_by_holder(gobj, true);
         self.calc_knockback(f);
@@ -1052,7 +1058,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800DCE34")]
     fn grab_break(&mut self, a: GObjId, b: GObjId) {
         self.grab_release(a, b);
-        let g = if self.game.fighter(b).x221B.x221B_b7 {
+        let g = if self.game.fighter(b).state_flags.x221B_b7 {
             a
         } else {
             b
@@ -1068,7 +1074,7 @@ impl Running<'_> {
     fn bind_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
         if fp.dmg.x1860_element == ELEMENT_DISABLE && !fp.is_sandbag {
-            if matches!(fp.x2070[1] >> 4, 5 | 9 | 11 | 12) {
+            if matches!(fp.attack_flags[1] >> 4, 5 | 9 | 11 | 12) {
                 return false;
             }
             self.enter_damage_bind(gobj);
@@ -1083,7 +1089,7 @@ impl Running<'_> {
     pub fn screw_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
         if fp.dmg.x1860_element == ELEMENT_SCBALL {
-            if matches!(fp.x2070[1] >> 4, 11 | 12) {
+            if matches!(fp.attack_flags[1] >> 4, 11 | 12) {
                 return false;
             }
             self.enter_damage_screw(gobj);
@@ -1148,7 +1154,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C0CB8")]
     fn bury_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        if fp.dmg.x1860_element == ELEMENT_GROUND && fp.ground_or_air == GA_GROUND && !fp.x2227_b6 {
+        if fp.dmg.x1860_element == ELEMENT_GROUND
+            && fp.ground_or_air == GA_GROUND
+            && !fp.held_in_ice
+        {
             self.enter_bury(gobj);
             return true;
         }
@@ -1269,14 +1278,14 @@ impl Running<'_> {
         self.directional_influence(gobj);
         let fp = self.game.fighter(gobj);
         if fp.input.held_buttons[0] & PAD_LR != 0 {
-            let (kx, ky) = (fp.x8c_kb_vel.x, fp.x8c_kb_vel.y);
+            let (kx, ky) = (fp.kb_vel.x, fp.kb_vel.y);
             if reg(kx) != 0.0 || reg(ky) != 0.0 {
                 let angle = math::atan2(ky, kx);
                 let len = sqrt_reg(fp::fmadds(reg(kx), reg(kx), fp::fmuls(reg(ky), reg(ky))));
                 let len = fp::fmuls(reg(c.f32(0x1AC)), len);
                 let fp = self.game.fighter_mut(gobj);
-                fp.x8c_kb_vel.x = mem(fp::fmuls(len, reg(math::cos(angle))));
-                fp.x8c_kb_vel.y = mem(fp::fmuls(len, reg(math::sin(angle))));
+                fp.kb_vel.x = mem(fp::fmuls(len, reg(math::cos(angle))));
+                fp.kb_vel.y = mem(fp::fmuls(len, reg(math::sin(angle))));
             }
         }
     }
@@ -1286,10 +1295,10 @@ impl Running<'_> {
     // Ports `ftColl_8007B7A4`; aliased once a check reaches it.
     pub(crate) fn knockback_hitbox(&mut self, gobj: GObjId, frames: i32) {
         let fp = self.game.fighter_mut(gobj);
-        if frames > fp.x1994 {
-            fp.x1994 = frames;
+        if frames > fp.invincible_frames {
+            fp.invincible_frames = frames;
         }
-        fp.x198C = if fp.x1990 != 0 { 2 } else { 1 };
+        fp.timed_hit_status = if fp.intangible_frames != 0 { 2 } else { 1 };
         self.start_color_anim(gobj, 9, 0);
     }
 
@@ -1303,7 +1312,7 @@ impl Running<'_> {
         if sx == 0.0 && sy == 0.0 {
             return;
         }
-        let (kx, ky) = (reg(fp.x8c_kb_vel.x), reg(fp.x8c_kb_vel.y));
+        let (kx, ky) = (reg(fp.kb_vel.x), reg(fp.kb_vel.y));
         let nx = fp::fneg(kx);
         let mag = fp::fmadds(nx, nx, fp::fmuls(ky, ky));
         if mag < f64::from(0.00001_f32) {
@@ -1312,14 +1321,14 @@ impl Running<'_> {
         let f3 = fp::fmadds(ky, sx, fp::fmuls(nx, sy));
         let mut f30 = fp::fdivs(fp::fmuls(f3, f3), mag);
         let stick = Vec3::new(mem(sx), mem(sy), 0.0);
-        if reg(fp.x8c_kb_vel.sdk_cross(stick).z) < 0.0 {
+        if reg(fp.kb_vel.sdk_cross(stick).z) < 0.0 {
             f30 = fp::fneg(f30);
         }
         let angle = math::atan2(mem(ky), mem(kx));
         let len = sqrt_reg(fp::fmadds(kx, kx, fp::fmuls(ky, ky)));
         let angle = mem(fp::fmadds(deg_to_rad(x1a8), f30, reg(angle)));
-        fp.x8c_kb_vel.x = mem(fp::fmuls(len, reg(math::cos(angle))));
-        fp.x8c_kb_vel.y = mem(fp::fmuls(len, reg(math::sin(angle))));
+        fp.kb_vel.x = mem(fp::fmuls(len, reg(math::cos(angle))));
+        fp.kb_vel.y = mem(fp::fmuls(len, reg(math::sin(angle))));
     }
 }
 

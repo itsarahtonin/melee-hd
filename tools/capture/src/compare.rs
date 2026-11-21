@@ -929,7 +929,11 @@ impl<'a> Comparer<'a> {
         // The DObj lists' first `count` entries, and the fighter's light.
         for (field, list, at) in [
             ("dobj_list", fighter.dobj_list.data, t + 0x5EC),
-            ("x203C", fighter.x203C.data, t + 0x203C),
+            (
+                "second_dobjs (x203C)",
+                fighter.second_dobjs.data,
+                t + 0x203C,
+            ),
         ] {
             let (count, data) = (self.u32(at), self.u32(at + 4));
             if let Some(l) = list
@@ -944,14 +948,14 @@ impl<'a> Comparer<'a> {
             }
         }
         let shadow = self.u32(t + 0x20A4 + 4);
-        if let Some(s) = fighter.x20A4.shadow
+        if let Some(s) = fighter.shadow.shadow
             && shadow != 0
         {
-            self.shadow(&format!("{path}.x20A4.shadow"), s, shadow);
+            self.shadow(&format!("{path}.shadow (x20A4).shadow"), s, shadow);
         }
         let light = self.u32(t + 0x588);
-        if fighter.x588.is_some() && light != 0 {
-            self.lobjs(&format!("{path}.x588"), fighter.x588, light);
+        if fighter.light.is_some() && light != 0 {
+            self.lobjs(&format!("{path}.light (x588)"), fighter.light, light);
         }
         // Each chain link, where both sides have one (the handles compare as the fighter
         // does).
@@ -2284,7 +2288,7 @@ fn render_target_view(
         // (`ftData_800859A8`) never runs for such a fighter (docs/engine.md).
         return demo.then(|| {
             let mut block = mem[lo..lo + size as usize].to_vec();
-            block[0x61C] = o.x61C as u8;
+            block[0x61C] = o.slot_word as u8;
             block
         });
     };
@@ -2296,7 +2300,7 @@ fn render_target_view(
     o.dynamic_bone_sets.lay_counted(&mut l, at + 0x2F0, &cx, n);
     let mut block = mem[lo..lo + size as usize].to_vec();
     if demo {
-        block[0x61C] = o.x61C as u8;
+        block[0x61C] = o.slot_word as u8;
     }
     // Bit by bit (a bitfield's byte can be written in part): each bit ours still holds as
     // the fill's takes ours.

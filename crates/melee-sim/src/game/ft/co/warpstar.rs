@@ -89,7 +89,7 @@ impl Running<'_> {
         let root = self.root_jobj(gobj);
         let fp = &self.game.fighters[f.0];
         let star = fp.item_gobj.expect("no Warp Star held");
-        let (height, hit) = (fp.x2C4.y, fp.co_attrs.warp_star_hitbox_scale);
+        let (height, hit) = (fp.push_size.y, fp.co_attrs.warp_star_hitbox_scale);
         wstar::size_for_rider(self, star, height, hit);
         let fp = &mut self.game.fighters[f.0];
         let facing = fp.facing_dir;
@@ -105,9 +105,9 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.take_dmg_cb = Some(CodeRef(addr::ON_HIT));
         fp.death2_cb = Some(CodeRef(addr::ON_DEATH));
-        fp.x2219_b2 = true;
-        fp.x2222_b7 = true;
-        fp.x221E_b2 = true;
+        fp.blast_immune_state = true;
+        fp.follows_holder = true;
+        fp.entering = true;
         self.stop_dead(gobj);
         let anim = wstar::ride_anim(self, star);
         jobj::add_anim(&mut self.game.objs, self.data, Some(root), anim, None, None);
@@ -124,9 +124,9 @@ impl Running<'_> {
     #[doc(alias = "ftColl_8007B6A0")]
     pub fn warp_star_intangible(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2221_b0 = true;
-        fp.x1990 = 0;
-        fp.x198C = 2;
+        fp.warp_star_intangible = true;
+        fp.intangible_frames = 0;
+        fp.timed_hit_status = 2;
         self.start_color_anim(gobj, 9, 0);
     }
 
@@ -135,9 +135,9 @@ impl Running<'_> {
     #[doc(alias = "ftColl_8007B6EC")]
     pub fn warp_star_tangible(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2221_b0 = false;
-        if fp.x1990 == 0 {
-            fp.x198C = i32::from(fp.x1994 != 0);
+        fp.warp_star_intangible = false;
+        if fp.intangible_frames == 0 {
+            fp.timed_hit_status = i32::from(fp.invincible_frames != 0);
             if self.color_anim_id(gobj) == 9 {
                 self.end_color_anim(gobj, 9);
             }
@@ -198,10 +198,10 @@ impl Running<'_> {
         set_mv_box(&mut self.game.fighters[f.0], mv::ECB, &b);
         self.change_motion_state(gobj, ms::WARP_STAR_FALL, 0, 0.0, 1.0, 0.0, None);
         let fp = &mut self.game.fighters[f.0];
-        fp.x2222_b7 = true;
+        fp.follows_holder = true;
         fp.take_dmg_cb = Some(CodeRef(addr::ON_HIT));
         fp.death2_cb = Some(CodeRef(addr::ON_DEATH));
-        fp.x221E_b2 = true;
+        fp.entering = true;
         self.stop_dead(gobj);
         let top = stage::blast_top(self.game);
         let fp = &mut self.game.fighters[f.0];

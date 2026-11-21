@@ -135,16 +135,16 @@ impl Running<'_> {
             self.set_model_variant(f, 1, 0);
             self.set_item_visible(gobj, true);
             let fp = &mut self.game.fighters[f.0];
-            fp.x221E_b4 = true;
-            fp.x2225_b2 = true;
+            fp.articles_visible = true;
+            fp.hat_hidden = true;
         } else {
             let n = self.game.fighters[f.0].mv_i32(mv::NUMBER);
             self.set_model_variant(f, 0, STONE_VARIANTS[n as usize]);
             self.set_model_variant(f, 1, -1);
             self.set_item_visible(gobj, false);
             let fp = &mut self.game.fighters[f.0];
-            fp.x221E_b4 = false;
-            fp.x2225_b2 = false;
+            fp.articles_visible = false;
+            fp.hat_hidden = false;
         }
     }
 
@@ -216,7 +216,7 @@ impl Running<'_> {
         if stop {
             set_mv_vec(fp, mv::NORMAL, UP);
             fp.set_mv_f32(mv::SLOPE, 0.0);
-            fp.xE4_ground_accel_1 = 0.0;
+            fp.ground_accel_1 = 0.0;
             fp.gr_vel = 0.0;
         }
     }
@@ -355,23 +355,23 @@ impl Running<'_> {
             add = fp::fmuls(fp::fadds(1.0, fp::fsubs(1.0, mul)), fp::fmuls(nx, accel));
         }
         let share = slope(fp, 8);
-        fp.xE4_ground_accel_1 = mem(fp::fmuls(share, fp::fadds(add, brake)));
+        fp.ground_accel_1 = mem(fp::fmuls(share, fp::fadds(add, brake)));
         fp.gr_vel = mem(fp::fmuls(reg(fp.gr_vel), share));
         if reg(fp.gr_vel) < fp::fneg(max) {
             fp.gr_vel = mem(fp::fneg(max));
         } else if reg(fp.gr_vel) > max {
             fp.gr_vel = mem(max);
         }
-        let sum = fp::fadds(reg(fp.gr_vel), reg(fp.xE4_ground_accel_1));
+        let sum = fp::fadds(reg(fp.gr_vel), reg(fp.ground_accel_1));
         if sum < fp::fneg(max) {
-            fp.xE4_ground_accel_1 = mem(fp::fsubs(fp::fneg(max), reg(fp.gr_vel)));
-        } else if fp::fadds(reg(fp.gr_vel), reg(fp.xE4_ground_accel_1)) > max {
-            fp.xE4_ground_accel_1 = mem(fp::fsubs(max, reg(fp.gr_vel)));
+            fp.ground_accel_1 = mem(fp::fsubs(fp::fneg(max), reg(fp.gr_vel)));
+        } else if fp::fadds(reg(fp.gr_vel), reg(fp.ground_accel_1)) > max {
+            fp.ground_accel_1 = mem(fp::fsubs(max, reg(fp.gr_vel)));
         }
-        let a = reg(fp.xE4_ground_accel_1);
-        fp.x74_self_accel.x = mem(fp::fmuls(ny, a));
-        fp.x74_self_accel.y = mem(fp::fmuls(fp::fneg(nx), a));
-        fp.x74_self_accel.z = 0.0;
+        let a = reg(fp.ground_accel_1);
+        fp.anim_vel.x = mem(fp::fmuls(ny, a));
+        fp.anim_vel.y = mem(fp::fmuls(fp::fneg(nx), a));
+        fp.anim_vel.z = 0.0;
         let v = reg(fp.gr_vel);
         fp.self_vel.x = mem(fp::fmuls(ny, v));
         fp.self_vel.y = mem(fp::fmuls(fp::fneg(nx), v));
@@ -396,10 +396,10 @@ impl Running<'_> {
         self.kb_lw_clear_slopes(gobj);
         let fp = &mut self.game.fighters[f.0];
         fp.dmg.x1834 = 0.0;
-        fp.x221C_b4 = false;
-        let keep = fp.x221C_b4;
+        fp.armor = false;
+        let keep = fp.armor;
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
-        self.game.fighters[f.0].x221C_b4 = keep;
+        self.game.fighters[f.0].armor = keep;
         self.kb_lw_set_cbs(gobj);
         self.anim_update(gobj);
         ef::spawn(self, 0x49B, Some(gobj), &[Arg::JObj(j)]);
@@ -419,7 +419,7 @@ impl Running<'_> {
 
     /// The script's change a frame on, the flag `b4` set to `val` first (`ftKbUnkInline`).
     fn kb_lw_step(&mut self, gobj: GObjId, val: bool) {
-        self.game.fighter_mut(gobj).x221C_b4 = val;
+        self.game.fighter_mut(gobj).armor = val;
         self.kb_lw_script(gobj);
         self.kb_lw_show_stone(gobj);
     }
@@ -428,9 +428,9 @@ impl Running<'_> {
     fn kb_lw_start_anim(&mut self, gobj: GObjId, msid: i32) {
         self.kb_lw_step(gobj, false);
         if !self.anim_frames_remaining(gobj) {
-            let keep = self.game.fighter(gobj).x221C_b4;
+            let keep = self.game.fighter(gobj).armor;
             self.change_motion_state(gobj, msid, STONE_FLAGS, 0.0, 0.0, 0.0, None);
-            self.game.fighter_mut(gobj).x221C_b4 = keep;
+            self.game.fighter_mut(gobj).armor = keep;
             self.set_anim_rate(gobj, 0.0);
         }
     }
@@ -465,7 +465,7 @@ impl Running<'_> {
         if !self.anim_frames_remaining(gobj) {
             let fp = &mut self.game.fighters[f.0];
             fp.dmg.x1834 = 0.0;
-            fp.x221C_b4 = false;
+            fp.armor = false;
             if toggle == 0.0 {
                 self.enter_fall(gobj);
                 return;
@@ -504,9 +504,9 @@ impl Running<'_> {
     /// Leaving the stone into `msid`.
     fn kb_lw_leave(&mut self, gobj: GObjId, msid: i32) {
         let j = self.bone_joint(gobj, PART_Y_ROT_N);
-        let keep = self.game.fighter(gobj).x221C_b4;
+        let keep = self.game.fighter(gobj).armor;
         self.change_motion_state(gobj, msid, STONE_FLAGS, 0.0, 1.0, 0.0, None);
-        self.game.fighter_mut(gobj).x221C_b4 = keep;
+        self.game.fighter_mut(gobj).armor = keep;
         self.kb_lw_set_cbs(gobj);
         ef::spawn(self, 0x49C, Some(gobj), &[Arg::JObj(j)]);
     }
@@ -569,14 +569,14 @@ impl Running<'_> {
         self.game.fighters[f.0].self_vel.x = 0.0;
         self.go_airborne(f);
         let fp = &self.game.fighters[f.0];
-        let keep = fp.x221C_b4;
+        let keep = fp.armor;
         if from_frame {
             let frame = fp.cur_anim_frame;
             self.change_motion_state(gobj, msid, flags, frame, 1.0, 0.0, None);
-            self.game.fighters[f.0].x221C_b4 = keep;
+            self.game.fighters[f.0].armor = keep;
         } else {
             self.change_motion_state(gobj, msid, flags, 0.0, 0.0, 0.0, None);
-            self.game.fighters[f.0].x221C_b4 = keep;
+            self.game.fighters[f.0].armor = keep;
             self.set_anim_rate(gobj, 0.0);
         }
         self.kb_lw_set_cbs(gobj);
@@ -648,15 +648,15 @@ impl Running<'_> {
         self.game.fighters[f.0].self_vel.y = 0.0;
         self.land(gobj);
         let fp = &self.game.fighters[f.0];
-        let keep = fp.x221C_b4;
+        let keep = fp.armor;
         if hold {
             self.change_motion_state(gobj, msid, LAND_FLAGS, 0.0, 0.0, 0.0, None);
-            self.game.fighters[f.0].x221C_b4 = keep;
+            self.game.fighters[f.0].armor = keep;
             self.set_anim_rate(gobj, 0.0);
         } else {
             let frame = fp.cur_anim_frame;
             self.change_motion_state(gobj, msid, LAND_FLAGS, frame, 1.0, 0.0, None);
-            self.game.fighters[f.0].x221C_b4 = keep;
+            self.game.fighters[f.0].armor = keep;
         }
         self.kb_lw_set_cbs(gobj);
         self.fighter_play_sfx(f, 0x222E7, 0x7F, 0x40);
@@ -698,10 +698,10 @@ impl Running<'_> {
     pub fn kb_stone_cleanup(&mut self, gobj: GObjId) {
         self.set_item_visible(gobj, true);
         let fp = self.game.fighter_mut(gobj);
-        fp.x221E_b4 = true;
-        fp.x2225_b2 = true;
+        fp.articles_visible = true;
+        fp.hat_hidden = true;
         fp.dmg.x1834 = 0.0;
-        fp.x221C_b4 = false;
+        fp.armor = false;
         let f = self.game.fighter_id(gobj);
         self.game.part_set_rot_x(f, 0, 0.0);
         eflib::destroy_all(self, gobj);

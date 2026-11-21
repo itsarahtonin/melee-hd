@@ -30,43 +30,43 @@ pub fn proc_hitlag(g: &mut Running, gobj: GObjId) {
         fp.dmg.x1954 = mem(fp::fsubs(reg(fp.dmg.x1954), 1.0));
         if fp.dmg.x1954 <= 0.0 {
             fp.dmg.x1954 = 0.0;
-            if !fp.allow_sdi && !fp.x2219_b7 {
+            if !fp.allow_sdi && !fp.hitlag_held {
                 end_hitlag(g, gobj);
             }
         }
     }
-    if g.game.fighters[f.0].x221A_b1 {
+    if g.game.fighters[f.0].thaw_size {
         end_hitlag_if_held(g, gobj);
-        g.game.fighters[f.0].x221A_b1 = false;
+        g.game.fighters[f.0].thaw_size = false;
     }
     let fp = &mut g.game.fighters[f.0];
     if fp.dmg.x195c_hitlag_frames > 0.0 {
         fp.dmg.x195c_hitlag_frames = mem(fp::fsubs(reg(fp.dmg.x195c_hitlag_frames), 1.0));
         if fp.dmg.x195c_hitlag_frames <= 0.0 {
             fp.dmg.x195c_hitlag_frames = 0.0;
-            if fp.x221A_b3 {
+            if fp.in_hitstun_sdi {
                 g.queued_sounds(f);
-                g.game.fighters[f.0].x221A_b3 = false;
+                g.game.fighters[f.0].in_hitstun_sdi = false;
             }
             let fp = &mut g.game.fighters[f.0];
-            if fp.dmg.x1954 == 0.0 && !fp.x2219_b7 {
+            if fp.dmg.x1954 == 0.0 && !fp.hitlag_held {
                 end_hitlag(g, gobj);
             }
             g.game.fighters[f.0].allow_sdi = false;
         }
     }
     g.turn_around_tick(gobj);
-    while g.game.fighters[f.0].x200C != 0 {
+    while g.game.fighters[f.0].queued_grows != 0 {
         g.apply_super_mushroom(gobj);
-        g.game.fighters[f.0].x200C -= 1;
+        g.game.fighters[f.0].queued_grows -= 1;
     }
-    while g.game.fighters[f.0].x2010 != 0 {
+    while g.game.fighters[f.0].queued_shrinks != 0 {
         g.apply_poison_mushroom(gobj);
-        g.game.fighters[f.0].x2010 -= 1;
+        g.game.fighters[f.0].queued_shrinks -= 1;
     }
     g.update_item_pickup_bounds(gobj);
     let fp = &mut g.game.fighters[f.0];
-    fp.x2219_b6 = fp.x2219_b5;
+    fp.was_in_hitlag = fp.in_hitlag;
 }
 
 /// `Fighter_8006D10C`: hitlag ends; the fighter it froze with (`x1A5C`) ends its own if it
@@ -78,28 +78,28 @@ pub fn end_hitlag(g: &mut Running, gobj: GObjId) {
         run_fighter_cb(g, gobj, cb);
     }
     let fp = &mut g.game.fighters[f.0];
-    fp.x2219_b5 = false;
-    if let Some(other) = fp.x1A5C
-        && !fp.x2219_b7
+    fp.in_hitlag = false;
+    if let Some(other) = fp.partner
+        && !fp.hitlag_held
     {
         // `Fighter_8006D10C_Inline1`.
         let o = g.game.fighter_id(other);
-        if g.game.fighters[o.0].x2219_b7 {
+        if g.game.fighters[o.0].hitlag_held {
             let ofp = &g.game.fighters[o.0];
             if !ofp.allow_sdi && ofp.dmg.x1954 == 0.0 {
                 if let Some(cb) = ofp.post_hitlag_cb {
                     run_fighter_cb(g, other, cb);
                 }
                 let ofp = &mut g.game.fighters[o.0];
-                ofp.x2219_b5 = false;
+                ofp.in_hitlag = false;
                 // `Fighter_8006D10C_Inline2`.
-                if let Some(third) = ofp.x1A5C
-                    && !ofp.x2219_b7
+                if let Some(third) = ofp.partner
+                    && !ofp.hitlag_held
                 {
                     end_hitlag_if_held(g, third);
                 }
             }
-            g.game.fighters[o.0].x2219_b7 = false;
+            g.game.fighters[o.0].hitlag_held = false;
         }
     }
 }
@@ -109,11 +109,11 @@ pub fn end_hitlag(g: &mut Running, gobj: GObjId) {
 pub fn end_hitlag_if_held(g: &mut Running, gobj: GObjId) {
     let f = g.game.fighter_id(gobj);
     let fp = &g.game.fighters[f.0];
-    if fp.x2219_b7 {
+    if fp.hitlag_held {
         if !fp.allow_sdi && fp.dmg.x1954 == 0.0 {
             end_hitlag(g, gobj);
         }
-        g.game.fighters[f.0].x2219_b7 = false;
+        g.game.fighters[f.0].hitlag_held = false;
     }
 }
 
@@ -139,49 +139,53 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
             fp.dmg.x18D0 = -10;
         }
     }
-    if fp.x1990 != 0 {
-        fp.x1990 = fp.x1990.wrapping_sub(1);
-        if fp.x1990 == 0 && !fp.x2221_b0 {
-            fp.x198C = i32::from(fp.x1994 != 0);
+    if fp.intangible_frames != 0 {
+        fp.intangible_frames = fp.intangible_frames.wrapping_sub(1);
+        if fp.intangible_frames == 0 && !fp.warp_star_intangible {
+            fp.timed_hit_status = i32::from(fp.invincible_frames != 0);
             if g.color_anim_id(gobj) == 9 {
                 g.end_color_anim(gobj, 9);
             }
         }
     }
     let fp = &mut g.game.fighters[f.0];
-    if fp.x1994 != 0 {
-        fp.x1994 = fp.x1994.wrapping_sub(1);
-        if fp.x1994 == 0 {
-            fp.x198C = if fp.x2221_b0 || fp.x1990 != 0 { 2 } else { 0 };
+    if fp.invincible_frames != 0 {
+        fp.invincible_frames = fp.invincible_frames.wrapping_sub(1);
+        if fp.invincible_frames == 0 {
+            fp.timed_hit_status = if fp.warp_star_intangible || fp.intangible_frames != 0 {
+                2
+            } else {
+                0
+            };
             if g.color_anim_id(gobj) == 9 {
                 g.end_color_anim(gobj, 9);
             }
         }
     }
     let fp = &mut g.game.fighters[f.0];
-    if fp.x221D_b6 && fp.x2004 != 0 {
-        fp.x2004 -= 1;
-        let left = fp.x2004;
+    if fp.starman && fp.star_frames != 0 {
+        fp.star_frames -= 1;
+        let left = fp.star_frames;
         if left == 0 {
-            fp.x221D_b6 = false;
+            fp.starman = false;
             if g.color_anim_id(gobj) == super::powerup::STAR_COLANIM {
                 g.end_color_anim(gobj, super::powerup::STAR_COLANIM);
             }
         } else if left == g.star_cue() {
             // `ft_800880D8`.
             let fp = &mut g.game.fighters[f.0];
-            let n = fp.x2164;
-            fp.x2164 = 0;
+            let n = fp.star_cheer;
+            fp.star_cheer = 0;
             g.lb_audio_crowd_a_less(n);
         }
     }
     let fp = &mut g.game.fighters[f.0];
-    if fp.x2220_b5 || fp.x2220_b6 {
-        if fp.x2008 != 0 {
-            fp.x2008 -= 1;
+    if fp.giant || fp.tiny {
+        if fp.mushroom_frames != 0 {
+            fp.mushroom_frames -= 1;
         }
-        if fp.x2008 == 0 {
-            let (giant, small) = (fp.x2220_b5, fp.x2220_b6);
+        if fp.mushroom_frames == 0 {
+            let (giant, small) = (fp.giant, fp.tiny);
             if giant {
                 g.super_mushroom_end(gobj);
             } else if small {
@@ -190,11 +194,11 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         }
     }
     let fp = &mut g.game.fighters[f.0];
-    if let Some(hood) = fp.x197C
-        && fp.x2014 != 0
+    if let Some(hood) = fp.bunny_hood
+        && fp.bunny_hood_frames != 0
     {
-        fp.x2014 -= 1;
-        if fp.x2014 == 0 {
+        fp.bunny_hood_frames -= 1;
+        if fp.bunny_hood_frames == 0 {
             g.worn_item_off(gobj);
             crate::game::it::item::destroy(g, hood);
             g.take_off_hood(gobj);
@@ -208,49 +212,52 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         }
     }
     let fp = &mut g.game.fighters[f.0];
-    if fp.x2227_b3 && fp.x2034 != 0 {
-        fp.x2034 -= 1;
-        if fp.x2034 == 0 || fp.x2038 <= 0 {
+    if fp.alt_metal && fp.alt_metal_timer != 0 {
+        fp.alt_metal_timer -= 1;
+        if fp.alt_metal_timer == 0 || fp.alt_metal_health <= 0 {
             // `ftCo_800C9034`: dead, nothing sets `x2227_b3` (ledger/dead.txt).
             unported_call("ftCo_800C9034");
         }
     }
-    if fp.x1980.is_some() {
-        fp.x2018 = fp.x2018.wrapping_sub(1);
-        fp.x201C = fp.x201C.wrapping_sub(1);
-        if fp.x201C == 0 {
+    if fp.flower.is_some() {
+        fp.flower_frames = fp.flower_frames.wrapping_sub(1);
+        fp.flower_damage_timer = fp.flower_damage_timer.wrapping_sub(1);
+        if fp.flower_damage_timer == 0 {
             let c = g.common();
             let (damage, reset) = (c.i32(0x6F4), c.i32(0x6F8));
             g.take_damage(f, fp::frsp(f64::from(damage)));
-            g.game.fighters[f.0].x201C = reset;
+            g.game.fighters[f.0].flower_damage_timer = reset;
         }
-        if g.game.fighters[f.0].x2018 <= 0 {
+        if g.game.fighters[f.0].flower_frames <= 0 {
             g.flower_falls(gobj);
         }
     }
     let fp = &mut g.game.fighters[f.0];
-    if fp.x2226_b4 && fp.x2030 != 0 {
-        fp.x2030 -= 1;
-        if fp.x2030 == 0 {
+    if fp.cloak && fp.cloak_frames != 0 {
+        fp.cloak_frames -= 1;
+        if fp.cloak_frames == 0 {
             g.end_cloak(gobj);
             return;
         }
         let x7d0 = g.common().i32(0x7D0);
         let fp = &g.game.fighters[f.0];
-        if !fp.x2226_b3 && fp.x2030 == x7d0 && g.start_color_anim_unless_held(gobj, 0x7D) {
-            g.game.fighters[f.0].x2226_b7 = true;
+        if !fp.takes_damage_cloaked
+            && fp.cloak_frames == x7d0
+            && g.start_color_anim_unless_held(gobj, 0x7D)
+        {
+            g.game.fighters[f.0].cloak_look = true;
         }
     }
     let fp = &mut g.game.fighters[f.0];
-    if fp.x2221_b4 && fp.x2104 != 0 {
-        fp.x2104 -= 1;
-        if fp.x2104 == 0 {
-            fp.x2221_b4 = false;
+    if fp.parasol_open && fp.parasol_frames != 0 {
+        fp.parasol_frames -= 1;
+        if fp.parasol_frames == 0 {
+            fp.parasol_open = false;
             let item = fp.item_gobj;
             let parasol = item
                 .is_some_and(|i| crate::game::it::lib26b1::kind(g.game, i) == ItKind::PeachParasol);
             if parasol {
-                g.game.fighters[f.0].x2221_b5 = true;
+                g.game.fighters[f.0].parasol_checked = true;
                 g.enter_fall_special_basic(gobj);
             } else {
                 g.item_drop_from_hand(gobj);
@@ -329,15 +336,15 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         _ => {}
     }
     let fp = &mut g.game.fighters[f.0];
-    if let Some(cb) = fp.x21CC {
+    if let Some(cb) = fp.anim_end_cb {
         run_fighter_cb(g, gobj, cb);
     }
     let fp = &mut g.game.fighters[f.0];
-    if !fp.x2219_b5 {
-        if fp.x209A > 1 && !fp.input_disabled {
-            fp.x209A -= 1;
+    if !fp.in_hitlag {
+        if fp.name_tag_timer > 1 && !fp.input_disabled {
+            fp.name_tag_timer -= 1;
         }
-        if fp.x2223_b0 {
+        if fp.anim_frozen {
             unported_call("ftAnim_8006F0FC");
         }
         if fp.smash_attrs.x2138_smashSinceHitbox != -1.0 {
@@ -351,7 +358,7 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         g.item_pickup_tick(gobj);
         g.combo_tick(gobj);
         let fp = &g.game.fighters[f.0];
-        if !fp.x221C_b6 {
+        if !fp.in_hitstun {
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
             g.end_frame_counters(slot, sub);
         }
@@ -373,10 +380,10 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
         return;
     }
     let mut wind = Vec3::default();
-    if !g.game.fighters[f.0].x2219_b5 {
+    if !g.game.fighters[f.0].in_hitlag {
         let fp = &mut g.game.fighters[f.0];
-        if fp.x2064_ledgeCooldown != 0 {
-            fp.x2064_ledgeCooldown -= 1;
+        if fp.ledge_cooldown != 0 {
+            fp.ledge_cooldown -= 1;
         }
         if fp.capture_timer != 0 {
             fp.capture_timer -= 1;
@@ -394,10 +401,10 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
         );
         let fp = &g.game.fighters[f.0];
         let grounded_push = fp.ground_or_air != GA_AIR
-            && (fp.x8c_kb_vel.x != 0.0
-                || fp.x8c_kb_vel.y != 0.0
-                || fp.x98_atk_shield_kb.x != 0.0
-                || fp.x98_atk_shield_kb.y != 0.0);
+            && (fp.kb_vel.x != 0.0
+                || fp.kb_vel.y != 0.0
+                || fp.atk_shield_kb_vel.x != 0.0
+                || fp.atk_shield_kb_vel.y != 0.0);
         let mul = if grounded_push {
             g.ground_friction_mul(fp)
         } else {
@@ -407,77 +414,77 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
             .is_sandbag
             .then(|| g.sb_kb_deaccel(gobj));
         let fp = &mut g.game.fighters[f.0];
-        let kb_x = fp.x8c_kb_vel.x;
-        if kb_x != 0.0 || fp.x8c_kb_vel.y != 0.0 {
+        let kb_x = fp.kb_vel.x;
+        if kb_x != 0.0 || fp.kb_vel.y != 0.0 {
             if fp.ground_or_air == GA_AIR {
-                let (x, y) = (fp.x8c_kb_vel.x, fp.x8c_kb_vel.y);
+                let (x, y) = (fp.kb_vel.x, fp.kb_vel.y);
                 if let Some((dx, dy)) = sandbag {
-                    fp.x8c_kb_vel.x = super::sandbag::kb_deaccel(x, dx);
-                    fp.x8c_kb_vel.y = super::sandbag::kb_deaccel(y, dy);
+                    fp.kb_vel.x = super::sandbag::kb_deaccel(x, dx);
+                    fp.kb_vel.y = super::sandbag::kb_deaccel(y, dy);
                 } else {
                     let angle = math::atan2(y, x);
                     if sqrt_reg(fp::fmadds(reg(x), reg(x), fp::fmuls(reg(y), reg(y)))) < kb_decay {
-                        fp.x8c_kb_vel.y = 0.0;
-                        fp.x8c_kb_vel.x = 0.0;
+                        fp.kb_vel.y = 0.0;
+                        fp.kb_vel.x = 0.0;
                     } else {
-                        fp.x8c_kb_vel.x = mem(fp::fnmsubs(kb_decay, reg(math::cos(angle)), reg(x)));
-                        fp.x8c_kb_vel.y = mem(fp::fnmsubs(kb_decay, reg(math::sin(angle)), reg(y)));
+                        fp.kb_vel.x = mem(fp::fnmsubs(kb_decay, reg(math::cos(angle)), reg(x)));
+                        fp.kb_vel.y = mem(fp::fnmsubs(kb_decay, reg(math::sin(angle)), reg(y)));
                     }
                 }
-                fp.xF0_ground_kb_vel = 0.0;
+                fp.ground_kb_vel = 0.0;
             } else {
                 let n = fp.coll_data.floor.normal;
-                if fp.xF0_ground_kb_vel == 0.0 {
-                    fp.xF0_ground_kb_vel = kb_x;
+                if fp.ground_kb_vel == 0.0 {
+                    fp.ground_kb_vel = kb_x;
                 }
                 let friction =
                     fp::fmuls(ground_kb, fp::fmuls(reg(fp.co_attrs.ground_friction), mul));
                 Running::grounded_knockback_friction(fp, friction);
-                let v = reg(fp.xF0_ground_kb_vel);
-                fp.x8c_kb_vel.x = mem(fp::fmuls(reg(n.y), v));
-                fp.x8c_kb_vel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), v));
+                let v = reg(fp.ground_kb_vel);
+                fp.kb_vel.x = mem(fp::fmuls(reg(n.y), v));
+                fp.kb_vel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), v));
             }
         }
-        let shield_x = fp.x98_atk_shield_kb.x;
-        if shield_x != 0.0 || fp.x98_atk_shield_kb.y != 0.0 {
+        let shield_x = fp.atk_shield_kb_vel.x;
+        if shield_x != 0.0 || fp.atk_shield_kb_vel.y != 0.0 {
             if fp.ground_or_air == GA_AIR {
-                let (x, y) = (fp.x98_atk_shield_kb.x, fp.x98_atk_shield_kb.y);
+                let (x, y) = (fp.atk_shield_kb_vel.x, fp.atk_shield_kb_vel.y);
                 let angle = math::atan2(y, x);
                 if sqrt_reg(fp::fmadds(reg(x), reg(x), fp::fmuls(reg(y), reg(y)))) < shield_decay {
                     // The invisible ceiling glitch: the original clears the knockback's y,
                     // not the pushback's.
-                    fp.x8c_kb_vel.y = 0.0;
-                    fp.x98_atk_shield_kb.x = 0.0;
+                    fp.kb_vel.y = 0.0;
+                    fp.atk_shield_kb_vel.x = 0.0;
                 } else {
-                    fp.x98_atk_shield_kb.x =
+                    fp.atk_shield_kb_vel.x =
                         mem(fp::fnmsubs(shield_decay, reg(math::cos(angle)), reg(x)));
-                    fp.x98_atk_shield_kb.y =
+                    fp.atk_shield_kb_vel.y =
                         mem(fp::fnmsubs(shield_decay, reg(math::sin(angle)), reg(y)));
                 }
-                fp.xF4_ground_attacker_shield_kb_vel = 0.0;
+                fp.ground_attacker_shield_kb_vel = 0.0;
             } else {
                 let n = fp.coll_data.floor.normal;
-                if fp.xF4_ground_attacker_shield_kb_vel == 0.0 {
-                    fp.xF4_ground_attacker_shield_kb_vel = shield_x;
+                if fp.ground_attacker_shield_kb_vel == 0.0 {
+                    fp.ground_attacker_shield_kb_vel = shield_x;
                 }
                 let friction = fp::fmuls(
                     shield_ground,
                     fp::fmuls(reg(fp.co_attrs.ground_friction), mul),
                 );
                 Running::shield_knockback_friction(fp, friction);
-                let v = reg(fp.xF4_ground_attacker_shield_kb_vel);
-                fp.x98_atk_shield_kb.x = mem(fp::fmuls(reg(n.y), v));
-                fp.x98_atk_shield_kb.y = mem(fp::fmuls(fp::fneg(reg(n.x)), v));
+                let v = reg(fp.ground_attacker_shield_kb_vel);
+                fp.atk_shield_kb_vel.x = mem(fp::fmuls(reg(n.y), v));
+                fp.atk_shield_kb_vel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), v));
             }
         }
         fp.gr_vel = mem(fp::fadds(
             reg(fp.gr_vel),
-            fp::fadds(reg(fp.xE4_ground_accel_1), reg(fp.xE8_ground_accel_2)),
+            fp::fadds(reg(fp.ground_accel_1), reg(fp.ground_accel_2)),
         ));
-        fp.xE8_ground_accel_2 = 0.0;
-        fp.xE4_ground_accel_1 = 0.0;
-        fp.self_vel = fp.self_vel.sdk_add(fp.x74_self_accel);
-        fp.x74_self_accel = Vec3::default();
+        fp.ground_accel_2 = 0.0;
+        fp.ground_accel_1 = 0.0;
+        fp.self_vel = fp.self_vel.sdk_add(fp.anim_vel);
+        fp.anim_vel = Vec3::default();
         let mut self_vel = fp.self_vel;
         if fp.dmg.x1948 != 0 {
             let c2 = fp::fsubs(
@@ -488,33 +495,33 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
                 ),
             );
             let lerp = |v: f32, u: f32| mem(fp::fmadds(c2, fp::fsubs(reg(v), reg(u)), reg(u)));
-            self_vel.x = lerp(fp.self_vel.x, fp.xA4_unk_vel.x);
-            self_vel.y = lerp(fp.self_vel.y, fp.xA4_unk_vel.y);
+            self_vel.x = lerp(fp.self_vel.x, fp.item_bounce_vel.x);
+            self_vel.y = lerp(fp.self_vel.y, fp.item_bounce_vel.y);
             fp.dmg.x194C = fp.dmg.x194C.wrapping_sub(1);
             if fp.dmg.x194C == 0 {
                 fp.dmg.x1948 = 0;
             }
         }
-        fp.cur_pos.x = mem(fp::fadds(reg(fp.cur_pos.x), reg(fp.xF8_playerNudgeVel.x)));
-        fp.cur_pos.z = mem(fp::fadds(reg(fp.cur_pos.z), reg(fp.xF8_playerNudgeVel.y)));
-        if fp.x2222_b6 && !fp.x2222_b7 {
-            fp.xD4_unk_vel = fp.xD4_unk_vel.sdk_add(self_vel);
-            fp.xD4_unk_vel.x = mem(fp::fadds(reg(fp.xD4_unk_vel.x), reg(fp.x8c_kb_vel.x)));
-            fp.xD4_unk_vel.y = mem(fp::fadds(reg(fp.xD4_unk_vel.y), reg(fp.x8c_kb_vel.y)));
+        fp.cur_pos.x = mem(fp::fadds(reg(fp.cur_pos.x), reg(fp.nudge_vel.x)));
+        fp.cur_pos.z = mem(fp::fadds(reg(fp.cur_pos.z), reg(fp.nudge_vel.y)));
+        if fp.frozen_with_holder && !fp.follows_holder {
+            fp.frame_vel = fp.frame_vel.sdk_add(self_vel);
+            fp.frame_vel.x = mem(fp::fadds(reg(fp.frame_vel.x), reg(fp.kb_vel.x)));
+            fp.frame_vel.y = mem(fp::fadds(reg(fp.frame_vel.y), reg(fp.kb_vel.y)));
             let bit = fp.throw_flag(2);
             fp.set_throw_flag(2, false);
             if bit || g.part_35_rot_x_changed(f) || x594_bit(&g.game.fighters[f.0], 7) {
                 let fp = &mut g.game.fighters[f.0];
-                fp.cur_pos = fp.cur_pos.sdk_add(fp.xD4_unk_vel);
-                fp.xD4_unk_vel = Vec3::default();
+                fp.cur_pos = fp.cur_pos.sdk_add(fp.frame_vel);
+                fp.frame_vel = Vec3::default();
             }
             let fp = &mut g.game.fighters[f.0];
-            fp.cur_pos = fp.cur_pos.sdk_add(fp.x98_atk_shield_kb);
+            fp.cur_pos = fp.cur_pos.sdk_add(fp.atk_shield_kb_vel);
         } else {
             fp.cur_pos = fp.cur_pos.sdk_add(self_vel);
-            fp.cur_pos.x = mem(fp::fadds(reg(fp.cur_pos.x), reg(fp.x8c_kb_vel.x)));
-            fp.cur_pos.y = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.x8c_kb_vel.y)));
-            fp.cur_pos = fp.cur_pos.sdk_add(fp.x98_atk_shield_kb);
+            fp.cur_pos.x = mem(fp::fadds(reg(fp.cur_pos.x), reg(fp.kb_vel.x)));
+            fp.cur_pos.y = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.kb_vel.y)));
+            fp.cur_pos = fp.cur_pos.sdk_add(fp.atk_shield_kb_vel);
         }
         wind = g.wind_offset(gobj);
     }
@@ -542,7 +549,7 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
         reg(si.blast_zone.bottom),
     );
     let fp = &mut g.game.fighters[f.0];
-    if fp.x2225_b0 {
+    if fp.map_coll_done {
         // `Stage_CalcUnkCamYBounds`, inline.
         let cam = fp::fadds(bottom, y_off);
         let mid = fp::fmuls(
@@ -551,9 +558,9 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
         );
         let line = fp::fmuls(0.5, fp::fadds(cam, mid));
         if reg(fp.prev_pos.y) <= line && reg(fp.cur_pos.y) > line {
-            fp.x2225_b0 = false;
+            fp.map_coll_done = false;
         }
-    } else if !fp.x222A_b1 && !fp.x2228_b5 {
+    } else if !fp.blast_zone_off && !fp.blast_immune {
         // `Stage_CalcUnkCamY`, inline.
         let line = fp::fmuls(
             0.5,
@@ -562,11 +569,11 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
         if reg(fp.prev_pos.y) >= line && reg(fp.cur_pos.y) < line {
             // The warning near the bottom blast zone.
             g.fighter_play_sfx(f, 96, 127, 64);
-            g.game.fighters[f.0].x2225_b0 = true;
+            g.game.fighters[f.0].map_coll_done = true;
         }
     }
     let fp = &mut g.game.fighters[f.0];
-    if fp.dmg.x18A4_knockbackMagnitude != 0.0 && !fp.x221C_b6 {
+    if fp.dmg.x18A4_knockbackMagnitude != 0.0 && !fp.in_hitstun {
         let x = fp.cur_pos.x;
         if !g.near_side_blast_zone(x) {
             g.game.fighters[f.0].dmg.x18A4_knockbackMagnitude = 0.0;
@@ -606,7 +613,7 @@ pub fn proc_map(g: &mut Running, gobj: GObjId) {
             unlock_ecb(fp);
         }
     }
-    fp.x2223_b5 = false;
+    fp.stepped_on_item = false;
     crate::game::record::reset_lcancel(g.game, gobj);
     let root = g.root_jobj(gobj);
     let pos = g.game.fighters[f.0].cur_pos;
@@ -645,7 +652,7 @@ pub fn proc_accessory(g: &mut Running, gobj: GObjId) {
     if fp.is_sleeping {
         return;
     }
-    if fp.x2219_b5 {
+    if fp.in_hitlag {
         if let Some(cb) = fp.accessory3_cb {
             run_fighter_cb(g, gobj, cb);
         }
@@ -695,7 +702,7 @@ pub fn proc_player(g: &mut Running, gobj: GObjId) {
 #[doc(alias = "Fighter_procDynamics")]
 pub fn proc_dynamics(g: &mut Running, gobj: GObjId) {
     let fp = g.game.fighter(gobj);
-    if fp.is_sleeping || fp.x2219_b5 {
+    if fp.is_sleeping || fp.in_hitlag {
         return;
     }
     g.swing_chains(gobj);
@@ -710,13 +717,13 @@ pub fn proc_grab_coll(g: &mut Running, gobj: GObjId) {
         return;
     }
     catch_devices(g, gobj);
-    if !g.game.fighter(gobj).x221E_b6 {
+    if !g.game.fighter(gobj).grab_coll_off {
         return;
     }
     g.grab_fighters(gobj);
     if let Some(victim) = g.game.fighter(gobj).victim_gobj {
         let f = g.game.fighter_id(gobj);
-        if !g.game.fighters[f.0].x2225_b1 {
+        if !g.game.fighters[f.0].inhale_catch {
             let sfx = g.ft_data_sfx(f, 0x30);
             g.fighter_play_sfx(f, sfx, 0x7F, 0x40);
         }
@@ -734,12 +741,12 @@ pub fn proc_grab_coll(g: &mut Running, gobj: GObjId) {
     g.grab_items(gobj);
     if let Some(it) = g.game.fighter(gobj).target_item_gobj {
         let f = g.game.fighter_id(gobj);
-        if !g.game.fighters[f.0].x2225_b1 {
+        if !g.game.fighters[f.0].inhale_catch {
             let sfx = g.ft_data_sfx(f, 0x30);
             g.fighter_play_sfx(f, sfx, 0x7F, 0x40);
         }
         super::super::it::coll::enemy_hit_by_fighter(g, gobj, it);
-        if let Some(cb) = g.game.fighter(gobj).x2194 {
+        if let Some(cb) = g.game.fighter(gobj).grab_item_cb {
             run_fighter_cb(g, gobj, cb);
         }
     }
@@ -749,7 +756,7 @@ pub fn proc_grab_coll(g: &mut Running, gobj: GObjId) {
 /// on the fighter asks its stage whether it catches it.
 #[doc(alias = "ftColl_8007BA0C")]
 pub fn catch_devices(g: &mut Running, gobj: GObjId) {
-    if g.game.fighter(gobj).x2219_b1 {
+    if g.game.fighter(gobj).out_of_play {
         return;
     }
     let mut i = 0;
@@ -802,14 +809,14 @@ pub fn proc_coll_pos(g: &mut Running, gobj: GObjId) {
         return;
     }
     // `efAsync_QueueFlush`: effects queued while the fighter was busy.
-    if g.game.fighters[f.0].x60C.is_some() {
-        let mut head = g.game.fighters[f.0].x60C;
+    if g.game.fighters[f.0].effect_queue.is_some() {
+        let mut head = g.game.fighters[f.0].effect_queue;
         crate::game::ef::flush(g, Some(gobj), &mut head);
-        g.game.fighters[f.0].x60C = head;
+        g.game.fighters[f.0].effect_queue = head;
     }
     g.depth_scale_matrix(gobj);
     let fp = &g.game.fighters[f.0];
-    if !fp.x2219_b5
+    if !fp.in_hitlag
         && let Some(cb) = fp.accessory4_cb
     {
         run_fighter_cb(g, gobj, cb);
@@ -817,7 +824,7 @@ pub fn proc_coll_pos(g: &mut Running, gobj: GObjId) {
     g.hitboxes_follow(gobj);
     g.thrown_hitbox_follow(gobj);
     g.stamina_markers_follow(gobj);
-    if let Some(acc) = g.game.fighters[f.0].x20A0_accessory {
+    if let Some(acc) = g.game.fighters[f.0].accessory {
         jobj::anim_all(
             &mut g.game.objs,
             g.data,
@@ -837,8 +844,8 @@ pub fn proc_coll_pos(g: &mut Running, gobj: GObjId) {
             let _ = x_off;
             let fp = &mut g.game.fighters[f.0];
             let low = fp::fadds(reg(fp.cur_pos.y), reg(y_off));
-            if low < reg(fp.x2140) {
-                fp.x2140 = mem(low);
+            if low < reg(fp.lowest_y) {
+                fp.lowest_y = mem(low);
             }
         }
     }

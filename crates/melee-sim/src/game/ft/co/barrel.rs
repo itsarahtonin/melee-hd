@@ -79,17 +79,17 @@ impl Running<'_> {
         fp.death2_cb = Some(CodeRef(DEATH2));
         fp.accessory1_cb = Some(CodeRef(ACCESSORY1));
         fp.take_dmg_cb = Some(CodeRef(TAKE_DMG));
-        fp.x221D_b5 = true;
+        fp.nudge_off = true;
         fp.set_mv_i32(MV_RIDE, ride);
         fp.set_mv_i32(MV_LOCK, lock);
         fp.mv.set_gobj_at(MV_BARREL, Some(barrel));
         self.go_airborne(f);
         self.stop_dead(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.x1988 = 2;
+        fp.hit_status = 2;
         fp.invisible = true;
-        fp.x1A6A = 0x1FF;
-        fp.x209A = 1;
+        fp.grab_immune = 0x1FF;
+        fp.name_tag_timer = 1;
         self.item_attack_landed(barrel, gobj, false);
     }
 
@@ -181,7 +181,7 @@ impl Running<'_> {
         self.barrel_knockback(gobj, hit, kb_angle);
         let barrel = self.barrel_of(gobj);
         self.item_attack_landed(barrel, gobj, false);
-        self.game.fighter_mut(gobj).x21EC = Some(CodeRef(LAUNCHED));
+        self.game.fighter_mut(gobj).motion_change_cb = Some(CodeRef(LAUNCHED));
         self.enter_damage(gobj, ms::DAMAGE_FLY_ROLL, 0.0);
     }
 

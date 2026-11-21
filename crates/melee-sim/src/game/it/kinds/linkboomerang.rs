@@ -768,7 +768,7 @@ fn phys_homing(r: &mut Running, gobj: GObjId) {
     let x2c = attr_f32(r, gobj, attr::X2C);
     if item(r.game, gobj).msid == 3 && dist < x2c {
         if let Some(t) = vars(r.game, gobj).xF98.get() {
-            if !r.link_attack_id_1_to_13(t) && !r.game.fighter(t).x2219_b5 {
+            if !r.link_attack_id_1_to_13(t) && !r.game.fighter(t).in_hitlag {
                 r.link_special_s2_enter(t);
                 let part = r.link_left_thumb_bone(t);
                 pick_up(r, gobj, t, part);

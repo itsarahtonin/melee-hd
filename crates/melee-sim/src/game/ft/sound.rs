@@ -56,13 +56,13 @@ impl Running<'_> {
     fn track_slot(&mut self, f: FighterId, t: Track) -> &mut i32 {
         let fp = &mut self.game.fighters[f.0];
         match t {
-            Track::Voice => &mut fp.x2144,
-            Track::Voice2 => &mut fp.x2148,
-            Track::Effect => &mut fp.x214C,
-            Track::Effect2 => &mut fp.x2150,
-            Track::Effect3 => &mut fp.x2154,
-            Track::Effect4 => &mut fp.x2158,
-            Track::Effect5 => &mut fp.x215C,
+            Track::Voice => &mut fp.voice_handle,
+            Track::Voice2 => &mut fp.sound_handle_2,
+            Track::Effect => &mut fp.sound_handle_3,
+            Track::Effect2 => &mut fp.sound_handle_4,
+            Track::Effect3 => &mut fp.sound_handle_5,
+            Track::Effect4 => &mut fp.sound_handle_6,
+            Track::Effect5 => &mut fp.track_handle,
         }
     }
 
@@ -70,13 +70,13 @@ impl Running<'_> {
     pub(crate) fn track_handle(&self, f: FighterId, t: Track) -> i32 {
         let fp = &self.game.fighters[f.0];
         match t {
-            Track::Voice => fp.x2144,
-            Track::Voice2 => fp.x2148,
-            Track::Effect => fp.x214C,
-            Track::Effect2 => fp.x2150,
-            Track::Effect3 => fp.x2154,
-            Track::Effect4 => fp.x2158,
-            Track::Effect5 => fp.x215C,
+            Track::Voice => fp.voice_handle,
+            Track::Voice2 => fp.sound_handle_2,
+            Track::Effect => fp.sound_handle_3,
+            Track::Effect2 => fp.sound_handle_4,
+            Track::Effect3 => fp.sound_handle_5,
+            Track::Effect4 => fp.sound_handle_6,
+            Track::Effect5 => fp.track_handle,
         }
     }
 
@@ -98,8 +98,8 @@ impl Running<'_> {
     #[doc(alias = "ft_80087C70")]
     pub fn sized_sfx(&self, f: FighterId, id: i32) -> i32 {
         let fp = &self.game.fighters[f.0];
-        let (b5, b6) = (fp.x2220_b5, fp.x2220_b6);
-        match fp.x2228_b3 {
+        let (b5, b6) = (fp.giant, fp.tiny);
+        match fp.sfx_size {
             0 if b5 => id + 1,
             0 if b6 => id + 2,
             1 if !b5 => id + 2,
@@ -156,7 +156,7 @@ impl Running<'_> {
     pub fn fighter_play_sfx(&mut self, f: FighterId, id: i32, vol: u8, pan: u8) {
         let id = self.fighter_sfx(f, id);
         let handle = self.sfx_play(id, vol.into(), pan.into());
-        self.game.fighters[f.0].x2160 = handle;
+        self.game.fighters[f.0].sfx_handle = handle;
         let bend = if (332..=370).contains(&id) {
             self.game.objs.rng.below(200) - 100
         } else {
@@ -197,7 +197,7 @@ impl Running<'_> {
         let voice = matches!(t, Track::Voice | Track::Voice2);
         if voice {
             let fp = &self.game.fighters[f.0];
-            if fp.x2225_b6 && fp.kind != GAME_WATCH && fp.kind != SAMUS {
+            if fp.voice_muted && fp.kind != GAME_WATCH && fp.kind != SAMUS {
                 return;
             }
         }

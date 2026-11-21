@@ -89,7 +89,7 @@ impl Running<'_> {
         let health = reg(fp.shield_health);
         let length = reg(self.ys_attr_f32(f, attr::XC));
         let frame = mem(fp::fmuls(length, fp::fsubs(1.0, fp::fdivs(health, start))));
-        let xc = self.game.fighters[f.0].x5AC.xC;
+        let xc = self.game.fighters[f.0].parts_vis.xC;
         self.ys_shield_anim_frame(f, xc[0], frame);
         self.ys_shield_anim_frame(f, xc[1], frame);
     }
@@ -98,7 +98,7 @@ impl Running<'_> {
     #[doc(alias = "ftYs_Init_8012B918")]
     pub fn ys_shield_mend(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let xc = self.game.fighters[f.0].x5AC.xC;
+        let xc = self.game.fighters[f.0].parts_vis.xC;
         self.ys_shield_anim_frame(f, xc[0], 0.0);
         self.ys_shield_anim_frame(f, xc[1], 0.0);
     }
@@ -117,7 +117,7 @@ impl Running<'_> {
     #[doc(alias = "ftYs_Init_OnLoad")]
     pub fn ys_on_load(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let xc = self.game.fighters[f.0].x5AC.xC;
+        let xc = self.game.fighters[f.0].parts_vis.xC;
         assert!(
             xc[0].is_some(),
             "the original's assertion failed: yoshi parts_model NULL!!"
@@ -136,7 +136,7 @@ impl Running<'_> {
             let article = self.data.ptr(items.at(4 * i as u32));
             super::super::super::it::item::set_char_article(self.game, article, kind);
         }
-        self.game.fighters[f.0].x2226_b1 = true;
+        self.game.fighters[f.0].heavy_down_bound = true;
     }
 
     /// The egg shield's texture length in the fighter's attributes' `xC`, where the original's
@@ -152,7 +152,7 @@ impl Running<'_> {
     /// The egg shield's texture length his creation found (`ext_attr->xC`), from his loaded
     /// attributes' first DObj named for the shield.
     fn ys_shield_length(&self, f: FighterId) -> f32 {
-        let lookup = self.game.fighters[f.0].x5AC.xC[0].expect("yoshi parts_model NULL!!");
+        let lookup = self.game.fighters[f.0].parts_vis.xC[0].expect("yoshi parts_model NULL!!");
         assert!(self.ys_shield_count(lookup) > 0, "no egg shield DObjs");
         let m = self.ys_shield_mobj(f, lookup, 0);
         let a = self.game.objs.mobjs[m].aobj.expect("an AObj");

@@ -26,17 +26,17 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007E2D0")]
     pub fn enter_catch(&mut self, gobj: GObjId, msid: i32) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x74_self_accel.z = 0.0;
-        fp.x74_self_accel.y = 0.0;
-        fp.x74_self_accel.x = 0.0;
+        fp.anim_vel.z = 0.0;
+        fp.anim_vel.y = 0.0;
+        fp.anim_vel.x = 0.0;
         fp.set_mv_f32(CATCH_X0, 0.0);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x221E_b6 = true;
-        fp.x1A68 = 1;
+        fp.grab_coll_off = true;
+        fp.grab_kinds = 1;
         fp.grab_cb = Some(CodeRef(ON_GRAB));
         fp.grabbed_cb = Some(CodeRef(ON_GRABBED));
-        fp.x2194 = Some(CodeRef(ON_GRAB_ITEM));
+        fp.grab_item_cb = Some(CodeRef(ON_GRAB_ITEM));
     }
 
     /// A grab that caught an item, `fn_800D8BFC`: the item taken into the hand, the target
@@ -50,7 +50,7 @@ impl Running<'_> {
             .expect("a grab's catch without an item");
         self.take_item(gobj, it);
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A64 = None;
+        fp.caught_item = None;
         fp.target_item_gobj = None;
         self.enter_item_get(gobj, super::item_get::MS_HEAVY_GET, true);
     }
@@ -121,7 +121,7 @@ impl Running<'_> {
         let me = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[me.0];
         fp.victim_gobj = None;
-        fp.unk_grab_val = f32::MAX;
+        fp.grab_distance = f32::MAX;
         let mut cur = self
             .game
             .world
@@ -134,20 +134,20 @@ impl Running<'_> {
             let vf_id = self.game.fighter_id(v);
             let (mf, vf) = (&self.game.fighters[me.0], &self.game.fighters[vf_id.0]);
             let teams = self.game.vs_is_teams() && !self.game.vs_friendly_fire();
-            if vf.x2219_b1
-                || vf.x222A_b0
+            if vf.out_of_play
+                || vf.ungrabbable
                 || (teams && vf.team == mf.team)
-                || vf.x1988 != 0
-                || vf.x198C != 0
-                || vf.x221D_b6
-                || vf.x1A6A & mf.x1A68 != 0
+                || vf.hit_status != 0
+                || vf.timed_hit_status != 0
+                || vf.starman
+                || vf.grab_immune & mf.grab_kinds != 0
                 || vf.stamina_dead
             {
                 continue;
             }
             'boxes: for i in 0..4 {
                 let (mf, vf) = (&self.game.fighters[me.0], &self.game.fighters[vf_id.0]);
-                let h = &mf.x914[i];
+                let h = &mf.hitboxes[i];
                 if h.state == hitcapsule::DISABLED
                     || h.element != ELEMENT_CATCH
                     || !((h.x40_b2 && vf.ground_or_air == super::super::common::GA_AIR)
@@ -177,10 +177,10 @@ impl Running<'_> {
     /// (`lbColl_80007ECC`).
     fn grab_box_touches(&mut self, me: FighterId, i: usize, v: FighterId, j: usize) -> bool {
         let mtx = self.own_matrix(v);
-        let mut hit = self.game.fighters[me.0].x914[i].clone();
-        let hit_scale = self.game.fighters[me.0].x34_scale.y;
+        let mut hit = self.game.fighters[me.0].hitboxes[i].clone();
+        let hit_scale = self.game.fighters[me.0].scale.y;
         let vf = &mut self.game.fighters[v.0];
-        let (scale, z) = (vf.x34_scale.y, vf.cur_pos.z);
+        let (scale, z) = (vf.scale.y, vf.cur_pos.z);
         let touch = crate::lb::hitcapsule::grabs_hurtbox(
             &mut self.game.objs,
             self.data,
@@ -191,7 +191,7 @@ impl Running<'_> {
             scale,
             z,
         );
-        let h = &mut self.game.fighters[me.0].x914[i];
+        let h = &mut self.game.fighters[me.0].hitboxes[i];
         h.hurt_coll_pos = hit.hurt_coll_pos;
         h.coll_distance = hit.coll_distance;
         touch
@@ -231,11 +231,11 @@ impl Running<'_> {
         let d = if d < 0.0 { fp::fneg(d) } else { d };
         let vg = self.game.fighters[v.0].gobj;
         let fp = &mut self.game.fighters[me.0];
-        if d < reg(fp.unk_grab_val) {
-            fp.x1A5C = vg;
+        if d < reg(fp.grab_distance) {
+            fp.partner = vg;
             fp.victim_gobj = vg;
-            fp.x221B.x221B_b5 = true;
-            fp.unk_grab_val = mem(d);
+            fp.state_flags.x221B_b5 = true;
+            fp.grab_distance = mem(d);
         }
     }
 
@@ -252,11 +252,11 @@ impl Running<'_> {
         let d = fp::fsubs(ix, mx);
         let d = if d < 0.0 { fp::fneg(d) } else { d };
         let fp = &mut self.game.fighters[me.0];
-        if d < reg(fp.unk_grab_val) {
-            fp.x1A64 = Some(it);
+        if d < reg(fp.grab_distance) {
+            fp.caught_item = Some(it);
             fp.target_item_gobj = Some(it);
-            fp.x221B.x221B_b6 = true;
-            fp.unk_grab_val = mem(d);
+            fp.state_flags.x221B_b6 = true;
+            fp.grab_distance = mem(d);
         }
     }
 
@@ -270,7 +270,7 @@ impl Running<'_> {
         let me = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[me.0];
         fp.target_item_gobj = None;
-        fp.unk_grab_val = f32::MAX;
+        fp.grab_distance = f32::MAX;
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(g) = cur {
             cur = self.game.world.gobjs[g.0].next;
@@ -281,7 +281,7 @@ impl Running<'_> {
             let ii = it::item_of(self.game, g);
             'boxes: for i in 0..4 {
                 let ip = it::item(self.game, g);
-                let h = &self.game.fighters[me.0].x914[i];
+                let h = &self.game.fighters[me.0].hitboxes[i];
                 if h.state == hitcapsule::DISABLED || h.element != ELEMENT_CATCH {
                     continue;
                 }
@@ -294,8 +294,8 @@ impl Running<'_> {
                     continue;
                 }
                 for j in 0..usize::from(ip.xAC8_hurtboxNum) {
-                    let mut hit = self.game.fighters[me.0].x914[i].clone();
-                    let scale = self.game.fighters[me.0].x34_scale.y;
+                    let mut hit = self.game.fighters[me.0].hitboxes[i].clone();
+                    let scale = self.game.fighters[me.0].scale.y;
                     let ip = it::item(self.game, g);
                     let (iscl, mut hurt) = (ip.scl, ip.xACC_itemHurtbox[j].clone());
                     let touch = hitcapsule::grabs_hurtbox(
@@ -309,7 +309,7 @@ impl Running<'_> {
                         0.0,
                     );
                     it::item_mut(self.game, g).xACC_itemHurtbox[j] = hurt;
-                    let h = &mut self.game.fighters[me.0].x914[i];
+                    let h = &mut self.game.fighters[me.0].hitboxes[i];
                     h.hurt_coll_pos = hit.hurt_coll_pos;
                     h.coll_distance = hit.coll_distance;
                     if touch {
@@ -343,7 +343,11 @@ impl Running<'_> {
     #[doc(alias = "ftColl_80078754")]
     pub fn grab_landed(&mut self, gobj: GObjId, victim: GObjId) {
         let fp = self.game.fighter(gobj);
-        let (kind, x2070, instance) = (fp.kind, u32::from_be_bytes(fp.x2070), fp.x2074.x2088);
+        let (kind, x2070, instance) = (
+            fp.kind,
+            u32::from_be_bytes(fp.attack_flags),
+            fp.attack_record.x2088,
+        );
         self.attack_landed(
             Some(gobj),
             victim,

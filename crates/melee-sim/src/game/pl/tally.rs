@@ -858,10 +858,10 @@ impl Running<'_> {
             }
         }
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].x1980.is_some() {
+        if self.game.fighters[f.0].flower.is_some() {
             self.game.set_bonus_flag(player, 0xA9);
         }
-        if self.game.fighters[f.0].x221D_b6 {
+        if self.game.fighters[f.0].starman {
             self.game.set_bonus_flag(player, 0xBE);
         }
         let dmg = self.game.player_damage(player);
@@ -881,7 +881,7 @@ impl Running<'_> {
     #[doc(alias = "ft_800898C0")]
     fn taunted_last(&mut self, gobj: crate::hsd::gobj::GObjId) -> bool {
         let f = self.game.fighter_id(gobj);
-        let k = self.game.fighters[f.0].x2070[3];
+        let k = self.game.fighters[f.0].attack_flags[3];
         matches!(k, 113 | 114 | 99) || self.fox_appeal_s_used(f)
     }
 

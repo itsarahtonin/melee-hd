@@ -69,18 +69,18 @@ impl Running<'_> {
     /// The grab's catch flags (`ftCommon_8007E2F4`).
     #[doc(alias("kb_set_x1a6a"))]
     fn kb_set_catch_flags(&mut self, gobj: GObjId, v: u16) {
-        self.game.fighter_mut(gobj).x1A6A = v;
+        self.game.fighter_mut(gobj).grab_immune = v;
     }
 
     /// The inhale's catch callbacks (`ftCommon_8007E2D0` with mask 16), and `x2225_b1`.
     fn kb_n_set_catch(&mut self, gobj: GObjId, grab: u32, item: u32) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x221E_b6 = true;
-        fp.x1A68 = 0x10;
+        fp.grab_coll_off = true;
+        fp.grab_kinds = 0x10;
         fp.grab_cb = Some(CodeRef(grab));
         fp.grabbed_cb = Some(CodeRef(CAPTURE_KIRBY));
-        fp.x2194 = Some(CodeRef(item));
-        fp.x2225_b1 = true;
+        fp.grab_item_cb = Some(CodeRef(item));
+        fp.inhale_catch = true;
     }
 
     /// The velocity a spat fighter's star leaves at, `ftKb_SpecialN_800F58AC`: ahead of him
@@ -311,7 +311,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let unk = self.kb_attr_i16(f, attr::JUMP_UNK);
         let fp = &mut self.game.fighters[f.0];
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.cmd_vars[0] = 0;
         fp.cmd_vars[1] = 0;
         fp.set_u_i32(u::N_XE0, 4);
@@ -326,7 +326,7 @@ impl Running<'_> {
             self.game.fighters[f.0].set_u_f32(off, frames);
         }
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
-        self.game.fighters[f.0].x2222_b2 = true;
+        self.game.fighters[f.0].no_turn = true;
         self.anim_update(gobj);
         self.kb_n_set_catch(gobj, grab, item);
     }
@@ -362,7 +362,7 @@ impl Running<'_> {
         kirbyinhale::catch(self, it, gobj, facing);
         self.change_motion_state(gobj, msid, 0x212, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2222_b2 = true;
+        fp.no_turn = true;
         fp.u[u::N_XF4] |= 0x80;
         self.kb_set_death_cbs(gobj);
         self.kb_set_catch_flags(gobj, 0x1FF);
@@ -373,7 +373,7 @@ impl Running<'_> {
     pub fn kb_n_catch(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, ms::SPECIAL_N_CAPTURE0, 0x212, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2222_b2 = true;
+        fp.no_turn = true;
         fp.u[u::N_XF4] &= 0x7F;
         self.kb_set_catch_flags(gobj, 0x1FF);
     }
@@ -389,7 +389,7 @@ impl Running<'_> {
     pub fn kb_n_air_catch(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, ms::SPECIAL_AIR_N_CAPTURE0, 0x212, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2222_b2 = true;
+        fp.no_turn = true;
         fp.u[u::N_XF4] &= 0x7F;
         self.kb_set_catch_flags(gobj, 0x1FF);
     }
@@ -698,13 +698,13 @@ impl Running<'_> {
                 j,
                 &[Arg::Float(facing)],
             );
-            self.game.fighters[f.0].x2219_b0 = true;
+            self.game.fighters[f.0].effect_once = true;
             self.set_effect_hitlag_cbs(gobj);
             self.game.fighters[f.0].cmd_vars[0] = 0;
         }
         if !self.anim_frames_remaining(gobj) {
             self.change_motion_state(gobj, loop_msid, 0x212, 0.0, 1.0, 0.0, None);
-            self.game.fighters[f.0].x2222_b2 = true;
+            self.game.fighters[f.0].no_turn = true;
             self.set_effect_hitlag_cbs(gobj);
             self.kb_n_set_catch(gobj, grab, item);
         }
@@ -809,7 +809,7 @@ impl Running<'_> {
             let damage = kirbyspitstar::spawn(self, gobj, pos, vel, life, decel);
             kirbyspitstar::release(self, it, false, damage);
             let fp = self.game.fighter_mut(gobj);
-            fp.x1A64 = None;
+            fp.caught_item = None;
             fp.target_item_gobj = None;
             fp.cmd_vars[0] = 0;
         }
@@ -860,7 +860,7 @@ impl Running<'_> {
             self.fighter_play_sfx(f, 0x222F6, 0x7F, 0x40);
             kirbyspitstar::release(self, it, false, 0.0);
             let fp = self.game.fighter_mut(gobj);
-            fp.x1A64 = None;
+            fp.caught_item = None;
             fp.target_item_gobj = None;
             fp.cmd_vars[0] = 0;
         }
@@ -963,7 +963,7 @@ impl Running<'_> {
     fn kb_n_held_action(&mut self, gobj: GObjId, msid: i32, flags: u32, x2222: bool) {
         self.change_motion_state(gobj, msid, flags, 0.0, 1.0, 0.0, None);
         if x2222 {
-            self.game.fighter_mut(gobj).x2222_b2 = true;
+            self.game.fighter_mut(gobj).no_turn = true;
         }
         self.kb_set_death_cbs(gobj);
         self.anim_update(gobj);

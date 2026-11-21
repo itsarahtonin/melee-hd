@@ -32,7 +32,7 @@ impl Running<'_> {
             return;
         }
         fp.set_throw_flag(1, false);
-        if fp.x2219_b0 {
+        if fp.effect_once {
             self.destroy_effects(gobj);
             return;
         }
@@ -50,7 +50,7 @@ impl Running<'_> {
         let bone = self.bone_index(&self.game.fighters[f.0], foot);
         if let Some(id) = self.ca_effect_id(gobj, 0x490, 0x50C) {
             let j = self.bone_joint(gobj, bone);
-            let mut head = self.game.fighters[f.0].x60C;
+            let mut head = self.game.fighters[f.0].effect_queue;
             ef::queue(
                 self,
                 Some(gobj),
@@ -60,9 +60,9 @@ impl Running<'_> {
                 j,
                 &[Arg::Float(angle)],
             );
-            self.game.fighters[f.0].x60C = head;
+            self.game.fighters[f.0].effect_queue = head;
         }
-        self.game.fighters[f.0].x2219_b0 = true;
+        self.game.fighters[f.0].effect_once = true;
     }
 
     /// The kick hit someone (`ftCa_SpecialHi_800E400C`, `deal_dmg_cb`): up to

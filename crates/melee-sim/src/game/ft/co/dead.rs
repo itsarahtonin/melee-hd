@@ -84,10 +84,10 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
         if let Some(v) = fp.victim_gobj {
-            if fp.x221B.x221B_b5 {
+            if fp.state_flags.x221B_b5 {
                 let vf = self.game.fighter_mut(v);
                 if !vf.is_sub_fighter {
-                    vf.x2180 = slot;
+                    vf.dead_holder_slot = slot;
                 }
             } else if !sub {
                 let vf = self.game.fighter(v);
@@ -97,7 +97,7 @@ impl Running<'_> {
                 }
             }
         }
-        let holder = self.game.fighters[f.0].x2180;
+        let holder = self.game.fighters[f.0].dead_holder_slot;
         if holder != NO_SLOT {
             self.count_bonus(holder, 0x78);
         }
@@ -112,7 +112,7 @@ impl Running<'_> {
         }
         // `ftCo_800DD100`: a grab ends, and the other fighter waits or falls.
         if let Some(v) = self.game.fighters[f.0].victim_gobj {
-            if self.game.fighters[f.0].x221B.x221B_b5 {
+            if self.game.fighters[f.0].state_flags.x221B_b5 {
                 self.grab_release(gobj, v);
             } else {
                 self.grab_release(v, gobj);
@@ -128,12 +128,12 @@ impl Running<'_> {
                 self.game.player_mut(slot).set_ext_u32(0xD44, 0);
             }
         }
-        if let Some(hood) = self.game.fighters[f.0].x197C {
+        if let Some(hood) = self.game.fighters[f.0].bunny_hood {
             self.worn_item_off(gobj);
             item::destroy(self, hood);
             self.take_off_hood(gobj);
         }
-        if let Some(flower) = self.game.fighters[f.0].x1980 {
+        if let Some(flower) = self.game.fighters[f.0].flower {
             self.worn_item_off(gobj);
             item::destroy(self, flower);
             self.flower_gone(gobj);
@@ -141,12 +141,12 @@ impl Running<'_> {
         if self.game.fighters[f.0].is_metal {
             self.end_metal(gobj);
         }
-        if self.game.fighters[f.0].x2226_b4 {
+        if self.game.fighters[f.0].cloak {
             self.end_cloak(gobj);
         }
         self.destroy_effects(gobj);
         let fp = &mut self.game.fighters[f.0];
-        let (m, attack) = (fp.motion_id, i32::from(fp.x2070[3]));
+        let (m, attack) = (fp.motion_id, i32::from(fp.attack_flags[3]));
         fp.set_mv_i32(DEAD_MOTION, m);
         fp.set_mv_i32(DEAD_ATTACK, attack);
     }
@@ -154,22 +154,22 @@ impl Running<'_> {
     /// The flags of a fighter out of play (`setDeadFlags`): a Starman's crowd cheer stops
     /// ([`Self::star_cheer_stop`]), and it can't be hit or grabbed.
     fn set_dead_flags(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).x221D_b6 {
+        if self.game.fighter(gobj).starman {
             self.star_cheer_stop(gobj);
-            self.game.fighter_mut(gobj).x2004 = 0;
+            self.game.fighter_mut(gobj).star_frames = 0;
         }
         let fp = self.game.fighter_mut(gobj);
-        fp.x2219_b1 = true;
-        fp.x221E_b1 = true;
-        fp.x221E_b2 = true;
+        fp.out_of_play = true;
+        fp.dead_flag = true;
+        fp.entering = true;
     }
 
     /// The crowd's cheers the fighter asked for taken back, `ft_800880D8`.
     #[doc(alias = "ft_800880D8")]
     pub fn star_cheer_stop(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        let n = fp.x2164;
-        fp.x2164 = 0;
+        let n = fp.star_cheer;
+        fp.star_cheer = 0;
         self.lb_audio_crowd_a_less(n);
     }
 
@@ -179,10 +179,10 @@ impl Running<'_> {
     pub fn stop_fighter_sounds(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.lb_stop_owned_sound_objects(gobj);
-        let last = self.game.fighters[f.0].x2160;
+        let last = self.game.fighters[f.0].sfx_handle;
         if last != -1 {
             self.lb_stop_owned_sound_object(gobj, last);
-            self.game.fighters[f.0].x2160 = -1;
+            self.game.fighters[f.0].sfx_handle = -1;
         }
         for t in TRACKS {
             let h = self.track_handle(f, t);
@@ -210,7 +210,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800D41C4")]
     pub fn enter_dead_up_star_ice(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.game.fighters[f.0].x2227_b6 = true;
+        self.game.fighters[f.0].held_in_ice = true;
         self.dead_up_star(gobj, ms::DEAD_UP_STAR_ICE);
         self.ice_effect_again(gobj);
         self.start_rumble(f, 1, 0);
@@ -230,7 +230,7 @@ impl Running<'_> {
         self.set_dead_flags(gobj);
         self.stop_fighter_sounds(gobj);
         // `ftCommon_8007EFC0`.
-        self.game.fighters[f.0].x209A = 1;
+        self.game.fighters[f.0].name_tag_timer = 1;
         let scream = self.character_sfx(gobj, 0xC);
         self.fighter_play_track(f, Track::Voice, scream, 127, 64);
         let fp = &self.game.fighters[f.0];
@@ -281,7 +281,7 @@ impl Running<'_> {
                 self.spawn_effect_at(gobj, 0x42D, pos);
                 self.drop_coins(gobj, pos, 0, std::f32::consts::FRAC_PI_2);
                 let fp = &mut self.game.fighters[f.0];
-                fp.x221F_b1 = true;
+                fp.dead = true;
                 fp.invisible = true;
                 self.stop_fighter_sounds(gobj);
                 self.play_sfx(gobj, 0x83, 0x7F, 0x40);
@@ -314,7 +314,7 @@ impl Running<'_> {
         let b = self
             .game
             .fighter(gobj)
-            .x890_cameraBox
+            .camera_box
             .expect("a fighter without a camera box");
         let cb = self.game.camera.subject_mut(b);
         cb.pos.x = mem(fp::fdivs(fp::fmuls(reg(cb.pos.x), c), d));
@@ -382,7 +382,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800BFD9C")]
     pub fn out_of_play(&mut self, gobj: GObjId) {
         self.sleep(gobj);
-        if self.game.fighter(gobj).x2222_b5 {
+        if self.game.fighter(gobj).is_popo {
             let slot = i32::from(self.game.fighter(gobj).player_idx);
             if let Some(nana) = self.game.player_entity_at(slot, 1) {
                 self.remove_with_partner(nana, true);
@@ -409,7 +409,7 @@ impl Running<'_> {
             let attrs = self.data.ptr(ft_data).expect("ftData's attributes");
             let size = mem(fp::fmuls(
                 reg(self.data.f32(attrs.at(0x168))),
-                reg(fp.x34_scale.y),
+                reg(fp.scale.y),
             ));
             let pos = fp.cur_pos;
             super::super::super::ef::spawn(self, 0x43F, None, &[Arg::Vec(pos), Arg::Float(size)]);
@@ -537,7 +537,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
         fp.invisible = true;
-        fp.x221F_b1 = true;
+        fp.dead = true;
         let pos = fp.cur_pos;
         super::super::super::camera::request_quake(self, QUAKE_LARGE, Some(pos));
         let c = self.common();
@@ -556,7 +556,7 @@ impl Running<'_> {
         for off in [0x4, 0x8] {
             let id = self.character_sfx(gobj, off);
             self.fighter_play_track(f, Track::Voice, id, 0x7F, 0x40);
-            if !self.game.fighters[f.0].x2225_b6 {
+            if !self.game.fighters[f.0].voice_muted {
                 let id = self.fighter_sfx(f, id);
                 self.lb_audio_queue(id);
             }
@@ -627,7 +627,7 @@ impl Running<'_> {
     /// comes.
     #[doc(alias = "ftCo_800D47B8")]
     pub fn enter_dead_up_fall_ice(&mut self, gobj: GObjId) {
-        self.game.fighter_mut(gobj).x2227_b6 = true;
+        self.game.fighter_mut(gobj).held_in_ice = true;
         self.enter_dead_up_screen(gobj, ms::DEAD_UP_FALL_ICE);
         self.ice_effect_again(gobj);
         let f = self.game.fighter_id(gobj);
@@ -659,7 +659,7 @@ impl Running<'_> {
     /// The fighter turned to face the screen, unless its depth is scaled.
     fn face_screen(&mut self, gobj: GObjId) {
         let root = self.root_jobj(gobj);
-        if self.game.fighter(gobj).x34_scale.z == 1.0 {
+        if self.game.fighter(gobj).scale.z == 1.0 {
             crate::hsd::jobj::set_rotation(&mut self.game.objs.jobjs, root, FACE_SCREEN);
         }
     }
@@ -682,12 +682,12 @@ impl Running<'_> {
         fp.set_mv_f32(DEAD_VIEW_VEL + 4, 0.0);
         fp.set_mv_f32(DEAD_VIEW_VEL, 0.0);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
-        self.game.fighter_mut(gobj).x2220_b7 = true;
+        self.game.fighter_mut(gobj).camera_placed = true;
         self.face_screen(gobj);
         self.set_dead_flags(gobj);
         self.stop_fighter_sounds(gobj);
         // `ftCommon_8007EFC0`.
-        self.game.fighter_mut(gobj).x209A = 1;
+        self.game.fighter_mut(gobj).name_tag_timer = 1;
         self.start_color_anim(gobj, 0x2B, 0);
         let fp = self.game.fighter(gobj);
         let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
@@ -701,12 +701,12 @@ impl Running<'_> {
     fn dead_up_hit_camera(&mut self, gobj: GObjId, msid: i32) {
         use super::super::motion::flags::{SKIP_COL_ANIM, SKIP_RUMBLE};
         self.change_motion_state(gobj, msid, SKIP_RUMBLE | SKIP_COL_ANIM, 0.0, 1.0, 0.0, None);
-        self.game.fighter_mut(gobj).x2220_b7 = true;
+        self.game.fighter_mut(gobj).camera_placed = true;
         self.face_screen(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2219_b1 = true;
-        fp.x221E_b1 = true;
-        fp.x221E_b2 = true;
+        fp.out_of_play = true;
+        fp.dead_flag = true;
+        fp.entering = true;
         let c = self.common();
         let (mine, others) = (c.u32(0x4F8), c.u32(0x4FC));
         let f = self.game.fighter_id(gobj);
@@ -780,7 +780,7 @@ impl Running<'_> {
                     self.ice_effect_again(gobj);
                 } else {
                     let fp = &self.game.fighters[f.0];
-                    let msid = if fp.x34_scale.z != 1.0 {
+                    let msid = if fp.scale.z != 1.0 {
                         ms::DEAD_UP_FALL_HIT_CAMERA_FLAT
                     } else {
                         ms::DEAD_UP_FALL_HIT_CAMERA
@@ -812,7 +812,7 @@ impl Running<'_> {
                     self.destroy_effects(gobj);
                 }
                 let fp = &mut self.game.fighters[f.0];
-                fp.x221F_b1 = true;
+                fp.dead = true;
                 fp.invisible = true;
                 self.count_ko(gobj);
                 self.stop_fighter_sounds(gobj);
@@ -841,7 +841,7 @@ impl Running<'_> {
         let c = self.common();
         match self.game.fighters[f.0].mv_i32(DEAD_PHASE) {
             1 => {
-                if self.game.fighters[f.0].x2222_b6 && !self.part_35_rot_x_changed(f) {
+                if self.game.fighters[f.0].frozen_with_holder && !self.part_35_rot_x_changed(f) {
                     return;
                 }
                 let a = crate::vec::Vec3::new(c.f32(0x538), c.f32(0x53C), c.f32(0x540));
@@ -881,7 +881,7 @@ impl Running<'_> {
                     self.set_dead_vec(gobj, DEAD_VIEW_VEL, v);
                     v
                 };
-                if self.game.fighters[f.0].x2222_b6 && !self.part_35_rot_x_changed(f) {
+                if self.game.fighters[f.0].frozen_with_holder && !self.part_35_rot_x_changed(f) {
                     return;
                 }
                 let p = self.dead_vec(gobj, DEAD_VIEW_POS) + v;

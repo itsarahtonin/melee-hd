@@ -96,7 +96,7 @@ impl Running<'_> {
                     if b.x8[0] & 0x80 != 0 {
                         b.x8[0] &= !0x80;
                         self.game.fighters[f.0].dynamic_bone_sets[i].bone_id = BoneSlot::Id(j + 1);
-                        if self.game.fighters[f.0].x590.is_some() {
+                        if self.game.fighters[f.0].action_tree.is_some() {
                             let speed = self.game.fighters[f.0].frame_speed_mul;
                             self.restart_part_anim(f, part, frame, speed);
                         }
@@ -104,7 +104,7 @@ impl Running<'_> {
                         b.x8[0] |= 0x80;
                         self.game.fighters[f.0].dynamic_bone_sets[i].bone_id = BoneSlot::Id(j);
                         let root = super::super::gr::ground::jobj_of(self.game, gobj);
-                        let skel = self.game.fighters[f.0].x8AC_animSkeleton;
+                        let skel = self.game.fighters[f.0].anim_skeleton;
                         let twin = twin_joint(&self.game.objs.jobjs, root, skel, part_j);
                         self.remove_anim(part_j);
                         self.remove_anim(twin);
@@ -230,8 +230,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_8009E7B4")]
     pub fn dynamics_for_anim(&mut self, f: FighterId, pair: DataRef) {
         let fp = &self.game.fighters[f.0];
-        if fp.anim_id == -1 || fp.x2227_b6 {
-            if fp.x2227_b6 {
+        if fp.anim_id == -1 || fp.held_in_ice {
+            if fp.held_in_ice {
                 self.set_dynamics(f, false);
             }
             return;
@@ -318,12 +318,12 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
         let n = fp.dynamics_num;
-        let flat_floor = fp.x2228_b1;
+        let flat_floor = fp.flat_floor_chains;
         let flatzone = n != 0 && self.game.stage_info.grkind == GrKind::Flatzone;
         let root = self.root_jobj(gobj);
         let mut scale_x = 0.0;
         if flatzone {
-            let sy = self.game.fighters[f.0].x34_scale.y;
+            let sy = self.game.fighters[f.0].scale.y;
             let o = &mut self.game.objs.jobjs[root];
             scale_x = o.scale.x;
             o.scale.x = sy;
@@ -333,7 +333,7 @@ impl Running<'_> {
         }
         let fp = &self.game.fighters[f.0];
         // Only at exactly normal size (a NaN size takes the original's other branch).
-        let ground = if reg(fp.x34_scale.y) == 1.0 {
+        let ground = if reg(fp.scale.y) == 1.0 {
             if fp.kind == FighterKind::Mewtwo && (0xDF..=0xE8).contains(&fp.motion_id) {
                 true
             } else {
@@ -347,9 +347,9 @@ impl Running<'_> {
         self.place_colliders(gobj);
         self.capes_in_wind(f);
         let fp = &self.game.fighters[f.0];
-        let count = usize::from(fp.x166C);
+        let count = usize::from(fp.ledge_point_count);
         assert!(
-            count <= fp.x1670.len(),
+            count <= fp.ledge_points.len(),
             "more dynamics colliders than a fighter holds"
         );
         // On the stack: a fighter holds at most `x1670.len()` colliders.
@@ -357,7 +357,7 @@ impl Running<'_> {
             radius: 0.0,
             center: crate::vec::Vec3::ZERO,
         }; 1];
-        for (dst, c) in held.iter_mut().zip(&fp.x1670[..count]) {
+        for (dst, c) in held.iter_mut().zip(&fp.ledge_points[..count]) {
             *dst = Collider {
                 radius: c.v2,
                 center: c.x18,
@@ -427,11 +427,11 @@ impl Running<'_> {
     #[doc(alias = "ftColl_8007AF60")]
     fn place_colliders(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        for i in 0..usize::from(self.game.fighters[f.0].x166C) {
-            let c = &self.game.fighters[f.0].x1670[i];
+        for i in 0..usize::from(self.game.fighters[f.0].ledge_point_count) {
+            let c = &self.game.fighters[f.0].ledge_points[i];
             let (j, off) = (c.jobj, c.v1);
             let at = world_position(&mut self.game.objs, self.data, j, Some(off));
-            self.game.fighters[f.0].x1670[i].x18 = at;
+            self.game.fighters[f.0].ledge_points[i].x18 = at;
         }
     }
 
@@ -440,7 +440,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_8009E614")]
     fn capes_in_wind(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
-        if !matches!(fp.fighter_kind(), FighterKind::Mars | FighterKind::Emblem) || fp.x2227_b6 {
+        if !matches!(fp.fighter_kind(), FighterKind::Mars | FighterKind::Emblem) || fp.held_in_ice {
             return;
         }
         match self.game.wind_level() {
@@ -453,7 +453,7 @@ impl Running<'_> {
                     for i in 0..n {
                         self.set_bone_dynamics(f, i as usize, true, BoneSlot::Id(0));
                     }
-                    if self.game.fighters[f.0].x590.is_some() {
+                    if self.game.fighters[f.0].action_tree.is_some() {
                         let gobj = self.game.fighters[f.0].gobj.expect("a fighter's GObj");
                         self.start_anim(gobj, reg(frame), reg(speed), 0.0);
                         self.anim_joints(gobj);
@@ -479,7 +479,7 @@ impl Running<'_> {
             r.data.u32(array.at(0x18 * i as u32)) as i32
         };
         let restart = |r: &mut Self, i: i32| {
-            if r.game.fighters[f.0].x590.is_some() {
+            if r.game.fighters[f.0].action_tree.is_some() {
                 let bone = bones(r, i);
                 r.restart_part_anim(f, bone, frame, speed);
             }
@@ -487,7 +487,7 @@ impl Running<'_> {
         if x594_bit(fp, 4) {
             let anim = u32::try_from(fp.anim_id).expect("an animation's trees without one");
             let pair = fp
-                .x28
+                .anim_flags
                 .expect("a fighter without animation pairs")
                 .at(2 * anim);
             let slot = u32::from(self.data.u8(pair.at(1)));

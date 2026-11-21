@@ -709,7 +709,7 @@ impl Running<'_> {
         self.game.set_player_entity_pos(slot, which, pos);
         self.update_camera_box(gobj);
         let fp = &self.game.fighters[f.0];
-        let b = fp.x890_cameraBox.expect("a fighter's camera box");
+        let b = fp.camera_box.expect("a fighter's camera box");
         self.game.camera.fit_horizontal_extents(b);
         super::camera::snap(self);
     }

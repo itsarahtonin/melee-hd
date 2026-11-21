@@ -133,11 +133,11 @@ impl Running<'_> {
     pub fn hand_grab_enter(&mut self, gobj: GObjId, h: &Hand) {
         self.hand_enter(gobj, h.grab.grab);
         let fp = self.game.fighter_mut(gobj);
-        fp.x221E_b6 = true;
-        fp.x1A68 = h.grab.box_size;
+        fp.grab_coll_off = true;
+        fp.grab_kinds = h.grab.box_size;
         fp.grab_cb = Some(CodeRef(h.grab.caught));
         fp.grabbed_cb = Some(CodeRef(h.grab.victim));
-        fp.x2194 = None;
+        fp.grab_item_cb = None;
         fp.set_mv_i32(mv::HOLDING, 0);
     }
 
@@ -218,7 +218,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.self_vel = Vec3::new(0.0, 0.0, 0.0);
         fp.set_mv_i32(mv::HOLDING, 1);
-        fp.x221E_b6 = false;
+        fp.grab_coll_off = false;
         self.hand_close_caught_enter(gobj, h);
     }
 
@@ -264,8 +264,8 @@ impl Running<'_> {
         self.game.fighters[f.0].cmd_vars[1] = 0;
         self.hand_enter(gobj, h.grab.squeeze);
         let fp = &mut self.game.fighters[f.0];
-        fp.x2222_b2 = true;
-        fp.x1A6A = 511;
+        fp.no_turn = true;
+        fp.grab_immune = 511;
         self.stop_dead(gobj);
         let victim = self.game.fighters[f.0]
             .victim_gobj
@@ -320,7 +320,7 @@ impl Running<'_> {
             let victim = self.game.fighters[f.0].victim_gobj;
             self.hand_thrown_enter(victim.expect("a hand throws no one"), h);
             if let Some(v) = self.game.fighters[f.0].victim_gobj {
-                self.game.fighters[f.0].x1A6A = 0;
+                self.game.fighters[f.0].grab_immune = 0;
                 self.throw_hit(gobj, v, true);
                 if turn {
                     let vf = self.game.fighter_mut(v);
@@ -346,17 +346,17 @@ impl Running<'_> {
         self.release_victim(gobj);
         let hf = self.game.fighter(hand).facing_dir;
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A5C = Some(hand);
+        fp.partner = Some(hand);
         fp.victim_gobj = Some(hand);
-        fp.x221B.x221B_b5 = false;
-        fp.x221B.x221B_b7 = false;
+        fp.state_flags.x221B_b5 = false;
+        fp.state_flags.x221B_b7 = false;
         fp.facing_dir = hf;
         let timer = mem(self.grab_escape_time(hand));
         let fp = self.game.fighter_mut(gobj);
         fp.grab_timer = timer;
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = false;
+        fp.mash_stick_y = 0;
+        fp.mash_stick_x = 0;
+        fp.can_mash = false;
         self.attach_to_thrower(hand, gobj);
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].accessory1_cb = Some(CodeRef(HELD_FOLLOW));
@@ -364,8 +364,8 @@ impl Running<'_> {
         self.change_motion_state(gobj, h.grab.capture, 0, 0.0, 1.0, 0.0, None);
         let fp = &mut self.game.fighters[f.0];
         fp.invisible = true;
-        fp.x2220_b3 = true;
-        fp.x1A6A = 511;
+        fp.buried = true;
+        fp.grab_immune = 511;
         self.anim_update(gobj);
         self.stop_dead(gobj);
     }
@@ -377,9 +377,9 @@ impl Running<'_> {
         self.change_motion_state(gobj, h.grab.capture_damage, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         fp.invisible = true;
-        fp.x2220_b3 = true;
+        fp.buried = true;
         fp.accessory1_cb = Some(CodeRef(HELD_FOLLOW));
-        fp.x1A6A = 511;
+        fp.grab_immune = 511;
         self.anim_update(gobj);
     }
 
@@ -406,8 +406,8 @@ impl Running<'_> {
         self.change_motion_state(gobj, h.grab.capture_wait, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         fp.invisible = true;
-        fp.x1A6A = 511;
-        fp.x2220_b3 = true;
+        fp.grab_immune = 511;
+        fp.buried = true;
         self.anim_update(gobj);
     }
 
@@ -441,7 +441,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.invisible = false;
         fp.accessory1_cb = Some(CodeRef(THROWN_FOLLOW));
-        fp.x1A6A = 511;
+        fp.grab_immune = 511;
         self.anim_update(gobj);
     }
 }

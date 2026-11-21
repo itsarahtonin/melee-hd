@@ -821,7 +821,7 @@ pub fn debug_owner_bubbles(game: &mut Game, gobj: GObjId, owner: Option<GObjId>)
         return;
     }
     let f = super::owner::fighter_of(game, owner.unwrap());
-    let x = game.fighters[f.0].x21FC_flag[0];
+    let x = game.fighters[f.0].debug_draw_flags[0];
     let ip = item_mut(game, gobj);
     ip.xDAA[0] &= 0xFC;
     if x != 0 {

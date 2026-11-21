@@ -63,32 +63,32 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let c = &mut fp.cpu;
         if fp.kind == FighterKind::Nana {
-            c.xF9_b2 = true;
+            c.acts_alone = true;
             c.kind = CpuKind::Nana.id();
-            c.x3C = 15.0;
+            c.walk_far = 15.0;
         } else {
             c.kind = kind;
-            c.x3C = 40.0;
+            c.walk_far = 40.0;
         }
         c.level = level;
-        c.x14 = x14;
-        (c.x18, c.x1C, c.x20) = match CpuKind::from_id(c.kind) {
+        c.spawn_arg = x14;
+        (c.behavior, c.default_behavior, c.alt_behavior) = match CpuKind::from_id(c.kind) {
             Some(CpuKind::Walk | CpuKind::EnemyAgain) => (12, 12, 0),
             Some(CpuKind::Jump) => (1, 1, 11),
             Some(CpuKind::NoAct) => (0, 0, 0),
             _ => (1, 1, 10),
         };
-        c.x24 = 0x12C;
-        c.x28 = 0;
-        c.x2C = 5;
-        c.x30 = 0;
-        c.xF9_b0 = false;
-        c.x38 = 5.0;
-        c.x40 = 50.0;
-        c.x44 = None;
-        c.x48 = Default::default();
-        c.x50 = None;
-        c.x98 = fp.cur_pos;
+        c.unread_24 = 0x12C;
+        c.unread_28 = 0;
+        c.item_worth_min = 5;
+        c.retarget_timer = 0;
+        c.keeps_target = false;
+        c.destination_reach = 5.0;
+        c.keep_away_distance = 50.0;
+        c.target = None;
+        c.last_target = Default::default();
+        c.enemy_item = None;
+        c.spawn_pos = fp.cur_pos;
         let pos = fp.cur_pos;
         // `ftCo_800A0FB0`: the floor below, up to 1000 down, unless `ftCo_800A1B38` excludes it.
         let ay = mem(fp::fadds(10.0, reg(pos.y)));
@@ -110,30 +110,30 @@ impl Running<'_> {
         let rand = self.game.objs.rng.draw_f32();
         let fp = &mut self.game.fighters[f.0];
         let c = &mut fp.cpu;
-        c.x54 = at.clone();
-        c.x64 = at;
-        c.x60 = 0;
-        c.x74 = Vec2 { x: 0.0, y: 0.0 };
-        c.x6C = Vec2 { x: 0.0, y: 0.0 };
-        c.xF8_b0 = false;
-        c.xF8_b12 = 0;
+        c.destination = at.clone();
+        c.home = at;
+        c.destination_timer = 0;
+        c.attack_reach_1 = Vec2 { x: 0.0, y: 0.0 };
+        c.attack_reach_0 = Vec2 { x: 0.0, y: 0.0 };
+        c.fear_target = false;
+        c.threat_kind = 0;
         let t = fp::fctiwz(fp::fmul(10.0, reg(rand)));
-        c.x7C = t;
-        c.x80 = t;
-        c.x84 = 0;
-        c.x90 = 0;
-        c.x88 = 0;
-        c.x8C = 0;
-        c.csP = Default::default();
+        c.frame_counter = t;
+        c.hold_back_counter = t;
+        c.stage_read_count = 0;
+        c.ranged_count = 0;
+        c.stand_timer = 0;
+        c.stand_kind = 0;
+        c.script_cursor = Default::default();
         c.command_duration = 0;
         c.write_pos = SelfRef(Some(0));
-        c.xA4 = 0;
-        c.xC8 = 0;
-        c.xEC = 0;
-        c.xF8_b5 = false;
-        c.xF8_b6 = false;
-        c.xF8_b7 = false;
-        c.xF9_b1 = false;
+        c.command = 0;
+        c.allowed_count = 0;
+        c.ruled_out_count = 0;
+        c.coin_flip = false;
+        c.near_target = false;
+        c.attacking = false;
+        c.fleeing = false;
         c.buttons = 0;
         c.lstick.x = 0;
         c.lstick.y = 0;
@@ -141,26 +141,29 @@ impl Running<'_> {
         c.cstick.y = 0;
         c.rtrigger = 0;
         c.ltrigger = 0;
-        c.xF9_b2 = false;
-        c.xF9_b3 = false;
-        c.xF9_b4 = false;
-        c.xF9_b6 = false;
-        c.xF9_b5 = false;
-        c.xF9_b7 = false;
-        c.xFA_b7 = false;
-        c.xFB_b0 = false;
-        c.x94 = 0;
-        c.xFA_b1 = false;
-        c.xFA_b2 = false;
-        c.xFA_b34 = 1;
-        c.xFA_b5 = false;
-        c.xFA_b6 = false;
-        c.x55C = 1.0;
-        c.x560 = 1.0;
-        c.x564 = mem(fp::fmuls(0.5, fp::fadds(reg(c.x55C), reg(c.x560))));
-        c.x568 = 2.0;
-        c.x444 = SelfRef(Some(5 * INPUT_SIZE));
-        c.x448 = SelfRef(Some(0));
+        c.acts_alone = false;
+        c.may_jump_attack = false;
+        c.may_air_attack = false;
+        c.may_shield = false;
+        c.may_ranged_attack = false;
+        c.may_pick_up = false;
+        c.follows_popo = false;
+        c.nana_recovering = false;
+        c.hold_choice = 0;
+        c.tech_shield = false;
+        c.ledge_picked = false;
+        c.human_target_rule = 1;
+        c.drifting_back = false;
+        c.off_stage = false;
+        c.hurt_behind = 1.0;
+        c.hurt_ahead = 1.0;
+        c.hurt_middle = mem(fp::fmuls(
+            0.5,
+            fp::fadds(reg(c.hurt_behind), reg(c.hurt_ahead)),
+        ));
+        c.hurt_top = 2.0;
+        c.partner_input_write = SelfRef(Some(5 * INPUT_SIZE));
+        c.partner_input_read = SelfRef(Some(0));
         // Nana's recorded inputs start where Popo stands, facing his way.
         let (pos, facing) = if fp.kind == FighterKind::Nana {
             let popo = self
@@ -173,7 +176,7 @@ impl Running<'_> {
         };
         let fp = &mut self.game.fighters[f.0];
         let c = &mut fp.cpu;
-        for i in &mut c.xFC {
+        for i in &mut c.partner_inputs {
             i.x0 = 0;
             i.lstick.x = 0;
             i.lstick.y = 0;
@@ -189,17 +192,17 @@ impl Running<'_> {
         );
         let tiny = reg(1e-5);
         let c = &mut fp.cpu;
-        c.x558 = if gravity < tiny && gravity > fp::fneg(tiny) {
+        c.jump_height = if gravity < tiny && gravity > fp::fneg(tiny) {
             10.0
         } else {
             mem(fp::frsp(fp::fdiv(fp::fmuls(v, v), fp::fmul(2.0, gravity))))
         };
         c.half_width = 10.0;
         c.half_height = 10.0;
-        c.x570 = 1.0;
+        c.reach_scale = 1.0;
         self.cpu_attack_timer(f);
         let fp = &mut self.game.fighters[f.0];
-        fp.cpu.x56C = match fp.fighter_kind() {
+        fp.cpu.reach = match fp.fighter_kind() {
             FighterKind::Donkey | FighterKind::Koopa => 8.5,
             FighterKind::GKoopa => 17.0,
             FighterKind::Nana => 1.0,
@@ -214,9 +217,9 @@ impl Running<'_> {
         let rand = self.game.objs.rng.draw_f32();
         let c = &mut self.game.fighters[f.0].cpu;
         let level = fp::frsp(f64::from(10i32.wrapping_sub(c.level)));
-        c.x34 = fp::fctiwz(fp::fmadds(level, fp::fmadds(15.0, reg(rand), 15.0), 10.0));
+        c.ranged_delay = fp::fctiwz(fp::fmadds(level, fp::fmadds(15.0, reg(rand), 15.0), 10.0));
         if c.kind == CpuKind::Defensive {
-            c.x34 /= 2;
+            c.ranged_delay /= 2;
         }
     }
 

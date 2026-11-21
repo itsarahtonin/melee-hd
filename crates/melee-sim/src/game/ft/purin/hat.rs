@@ -79,7 +79,7 @@ impl Running<'_> {
         let hat = jobj::load_joint(&mut self.game.objs, self.data, joint);
         let fp = &mut self.game.fighters[f.0];
         fp.u.set_jobj_at(u::HAT, hat);
-        fp.x2225_b2 = true;
+        fp.hat_hidden = true;
         pobj::set_default_class(&mut self.game.objs.pobjs, PObjClass::Hsd);
         self.purin_list_hat_dobjs(hat, list);
         self.purin_hat_vis_init(f, shifted.at(4));
@@ -274,7 +274,7 @@ impl Running<'_> {
         let Some(hat) = fp.u.jobj_at(u::HAT) else {
             return;
         };
-        if !fp.x2225_b2 {
+        if !fp.hat_hidden {
             return;
         }
         // `HSD_JObjGetMtxPtr`, then `HSD_JObjCopyMtx`.

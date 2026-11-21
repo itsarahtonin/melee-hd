@@ -122,7 +122,7 @@ impl Running<'_> {
     /// flags, the script's flag cleared, no ice yet.
     fn popo_special_n_start(&mut self, gobj: GObjId, p: &IceShot) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.cmd_vars[0] = 0;
         fp.u.set_gobj_at(p.u_ice + var::ITEM, None);
     }

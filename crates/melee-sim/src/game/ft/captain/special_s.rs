@@ -97,7 +97,7 @@ impl Running<'_> {
         if fp.cmd_vars[0] == 0 {
             return;
         }
-        let detected = fp.unk_gobj.expect("a detection without what it detected");
+        let detected = fp.hit_by.expect("a detection without what it detected");
         let lunge = match self.game.world.gobjs[detected.0].classifier {
             CLASS_FIGHTER => true,
             CLASS_ITEM => {

@@ -51,12 +51,12 @@ impl Running<'_> {
     pub fn plant_legs(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        if fp.x2219_b5 || fp.ground_or_air != GA_GROUND {
+        if fp.in_hitlag || fp.ground_or_air != GA_GROUND {
             return;
         }
-        let flags = fp.x221C_u16_y;
+        let flags = fp.leg_reach;
         // `db_804D4AF8`, which turns the legs' reach on, is 1 on a retail disc.
-        let scale_y = reg(fp.x34_scale.y);
+        let scale_y = reg(fp.scale.y);
         let ft_data = fp.ft_data.expect("a fighter without data");
         let x58 = self.data.ptr(ft_data.at(0x58)).expect("ftData::x58");
         // The legs share one `IKState`: the second starts from the lengths the first's reach

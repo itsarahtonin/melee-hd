@@ -73,15 +73,15 @@ impl Running<'_> {
         let timer = fp::fmadds(reg(fp.dmg.x1830_percent), x730, t);
         // `ftCommon_InitGrab(fp, 1, timer)`.
         fp.grab_timer = mem(timer);
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = true;
-        fp.x1A52 = 0;
-        fp.x1A53 = shake_rows;
+        fp.mash_stick_y = 0;
+        fp.mash_stick_x = 0;
+        fp.can_mash = true;
+        fp.mash_shake_row = 0;
+        fp.mash_shake_rows = shake_rows;
         // `ftCommon_8007E2F4`.
-        fp.x1A6A = 0x1FF;
-        fp.x221D_b5 = true;
-        fp.x2220_b3 = true;
+        fp.grab_immune = 0x1FF;
+        fp.nudge_off = true;
+        fp.buried = true;
         let redead = fp
             .mv
             .gobj_at(LEADEAD)

@@ -54,7 +54,7 @@ impl Running<'_> {
         let flame = reg(self.common().f32(CD_FLAME_FRAMES));
         let puff = reg(self.common().f32(CD_PUFF_FRAMES));
         let fp = self.game.fighter_mut(gobj);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.set_mv_f32(MV_NEXT_FLAME, flame);
         fp.set_mv_f32(MV_NEXT_PUFF, puff);
         fp.set_mv_i32(MV_FLAMES, 0);

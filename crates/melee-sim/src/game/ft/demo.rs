@@ -272,7 +272,7 @@ impl Running<'_> {
         let p = self.game.player(slot);
         let g = p.player_entity[p.entity_index(0)].expect("Player_80032BB0: a fighter");
         let fp = self.game.fighter(g);
-        let size = fp::fmuls(reg(fp.x34_scale.x), reg(fp.co_attrs.model_scaling));
+        let size = fp::fmuls(reg(fp.scale.x), reg(fp.co_attrs.model_scaling));
         mem(fp::fdivs(size, reg(p.model_scale)))
     }
 
@@ -352,11 +352,11 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let kind = fp.kind;
         let ft_data = fp.ft_data.expect("a fighter kind without data");
-        fp.x18 = DEMO_STATES;
-        fp.x1C_actionStateList = super::super::handles::RawPtr(DEMO_STATE_LIST);
-        fp.x20_actionStateList = super::super::handles::RawPtr(demo_kind_states(kind));
-        fp.x24 = self.data.ptr(ft_data.at(0x14));
-        fp.x28 = self.data.ptr(ft_data.at(0x18));
+        fp.own_msid_start = DEMO_STATES;
+        fp.common_motion_states = super::super::handles::RawPtr(DEMO_STATE_LIST);
+        fp.own_motion_states = super::super::handles::RawPtr(demo_kind_states(kind));
+        fp.anim_table = self.data.ptr(ft_data.at(0x14));
+        fp.anim_flags = self.data.ptr(ft_data.at(0x18));
         let effects = kind_tables(kind).effect_file;
         super::super::code::call(
             self,
@@ -390,7 +390,7 @@ impl Running<'_> {
         self.on_load(gobj, super::create_model::Creator::Demo);
         self.init_hurt_capsules(f);
         let cam_box = self.game.camera.alloc_box(0);
-        self.game.fighters[f.0].x890_cameraBox = Some(cam_box);
+        self.game.fighters[f.0].camera_box = Some(cam_box);
         let root = self.root_jobj(gobj);
         self.create_shadow(f, root);
         for (proc, priority) in DEMO_PROCS {
@@ -413,15 +413,15 @@ impl Running<'_> {
         self.alloc_anim_buffers(f);
         let count = demo_anim_count(kind);
         let fp = &mut self.game.fighters[f.0];
-        fp.x5A4 = 0;
-        fp.x5A8 = 0;
-        fp.x58C = count;
+        fp.main_anim_aram = 0;
+        fp.second_anim_aram = 0;
+        fp.anim_count = count;
         assert!(
             (hi as u32) < count,
             "the original's assertion failed: Demo Status error! {hi}"
         );
         if base != 0 {
-            let list = fp.x24.expect("a fighter without demo animations");
+            let list = fp.anim_table.expect("a fighter without demo animations");
             for i in lo..=hi {
                 let e = list.at(0x18 * i as u32);
                 let size = self.data.u32(e.at(8));
@@ -455,8 +455,8 @@ impl Running<'_> {
                 // `ftCo_800BEFD4`: `ftCo_MS_DeadUpFallIce`.
                 self.change_motion_state(gobj, 9, 0, 0.0, 1.0, 0.0, None);
                 let fp = self.game.fighter_mut(gobj);
-                fp.x2219_b2 = true;
-                fp.x2219_b1 = true;
+                fp.blast_immune_state = true;
+                fp.out_of_play = true;
             }
             7 => self.demo_rebirth(gobj),
             5 => self.demo_intro_pose(gobj, super::co::ids::ms::DEAD_UP_FALL_HIT_CAMERA_ICE),
@@ -500,8 +500,8 @@ impl Running<'_> {
     fn demo_intro_pose(&mut self, gobj: GObjId, msid: i32) {
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2219_b2 = true;
-        fp.x2219_b1 = true;
+        fp.blast_immune_state = true;
+        fp.out_of_play = true;
         let kind = fp.fighter_kind();
         let f = self.game.fighter_id(gobj);
         match kind {
@@ -552,8 +552,8 @@ impl Running<'_> {
     fn demo_cutscene_state(&mut self, gobj: GObjId, msid: i32) {
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2219_b2 = true;
-        fp.x2219_b1 = true;
+        fp.blast_immune_state = true;
+        fp.out_of_play = true;
     }
 
     /// Pose 7's first state, the trophy fall's (`ftCo_800C6150`): `ftCo_MS_Rebirth`, the demo
@@ -597,11 +597,11 @@ impl Running<'_> {
     fn demo_win(&mut self, gobj: GObjId, msid: i32) {
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2219_b2 = true;
-        fp.x2219_b1 = true;
-        fp.x2228_b1 = true;
+        fp.blast_immune_state = true;
+        fp.out_of_play = true;
+        fp.flat_floor_chains = true;
         fp.item_gobj = None;
-        fp.x1984_heldItemSpec = None;
+        fp.special_item = None;
         let kind = fp.kind;
         match (msid, kind) {
             // Fox's blaster (the first two poses), at his right thumb, his size.
@@ -613,10 +613,7 @@ impl Running<'_> {
                 let item = super::super::it::kinds::foxblaster::spawn_demo(self, gobj, part, kind);
                 self.game.fighters[f.0].item_gobj = item;
                 let fp = &self.game.fighters[f.0];
-                let s = mem(fp::fmuls(
-                    reg(fp.x34_scale.y),
-                    reg(fp.co_attrs.model_scaling),
-                ));
+                let s = mem(fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.model_scaling)));
                 if let Some(i) = item {
                     super::super::it::lib26b1::set_scale(self.game, self.data, i, s);
                 }
@@ -641,12 +638,12 @@ impl Running<'_> {
                     );
                     let fp = &mut self.game.fighters[f.0];
                     if held {
-                        fp.x1984_heldItemSpec = pill;
+                        fp.special_item = pill;
                     } else {
                         fp.item_gobj = pill;
                     }
                     let fp = &self.game.fighters[f.0];
-                    let s = fp::fmuls(reg(fp.x34_scale.y), reg(fp.co_attrs.model_scaling));
+                    let s = fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.model_scaling));
                     let s = mem(fp::fmuls(f64::from(0.71428_f32), s));
                     if let Some(i) = pill {
                         super::super::it::lib26b1::set_scale(self.game, self.data, i, s);
@@ -661,7 +658,7 @@ impl Running<'_> {
                 let item = super::super::it::kinds::nessbat::spawn_demo(self, gobj, part);
                 self.game.fighters[f.0].item_gobj = item;
                 let fp = &self.game.fighters[f.0];
-                let s = fp::fmuls(reg(fp.x34_scale.y), reg(fp.co_attrs.model_scaling));
+                let s = fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.model_scaling));
                 let s = mem(fp::fmuls(f64::from(0.8_f32), s));
                 if let Some(i) = item {
                     super::super::it::lib26b1::set_scale(self.game, self.data, i, s);
@@ -675,7 +672,7 @@ impl Running<'_> {
 impl Fighter {
     /// Whether the fighter is a demo's (its action states the demo table's).
     pub fn is_demo(&self) -> bool {
-        self.x1C_actionStateList.0 == DEMO_STATE_LIST
+        self.common_motion_states.0 == DEMO_STATE_LIST
     }
 }
 

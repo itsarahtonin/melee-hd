@@ -186,7 +186,7 @@ impl Running<'_> {
             pos.y = mem(fp::fadds(reg(pos.y), fp::fmsubs(width, reg(r), half)));
         }
         spawn(self, 0x3F4, Some(gobj), &[Arg::Vec(pos)]);
-        self.game.fighter_mut(gobj).x2219_b0 = true;
+        self.game.fighter_mut(gobj).effect_once = true;
         self.set_effect_hitlag_cbs(gobj);
     }
 
@@ -270,11 +270,11 @@ impl Running<'_> {
         self.stop_dead(gobj);
         let fp = &mut self.game.fighters[f.0];
         fp.self_vel = vel;
-        fp.x68C_transNPos = Vec3::new(0.0, 0.0, 0.0);
-        fp.x6A4_transNOffset = Vec3::new(0.0, 0.0, 0.0);
+        fp.trans_n_pos = Vec3::new(0.0, 0.0, 0.0);
+        fp.trans_n_offset = Vec3::new(0.0, 0.0, 0.0);
         fp.lstick_angle = 0.0;
-        fp.x6C0 = Vec3::new(0.0, 0.0, 0.0);
-        fp.x6D8 = Vec3::new(0.0, 0.0, 0.0);
+        fp.part_35_pos = Vec3::new(0.0, 0.0, 0.0);
+        fp.part_35_offset = Vec3::new(0.0, 0.0, 0.0);
     }
 
     /// `ftPk_SpecialHiStart1_Coll`: off the floor, the aerial end if a wall stopped it, else
@@ -316,7 +316,7 @@ impl Running<'_> {
             0.0,
             None,
         );
-        self.game.fighters[f.0].x2223_b4 = true;
+        self.game.fighters[f.0].no_item_bounce = true;
         self.pk_special_hi_air_zip_pose(gobj);
     }
 
@@ -402,8 +402,8 @@ impl Running<'_> {
         self.anim_update(gobj);
         self.set_anim_rate(gobj, 0.0);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2223_b4 = true;
-        fp.x21F8 = Some(CodeRef(addr::SPECIAL_HI_UPDATE_VEL));
+        fp.no_item_bounce = true;
+        fp.turn_cb = Some(CodeRef(addr::SPECIAL_HI_UPDATE_VEL));
     }
 
     /// The zip's frames and the jumps used up.
@@ -412,7 +412,7 @@ impl Running<'_> {
         let frames = self.pk_attr_i32(f, attr::X60);
         let fp = &mut self.game.fighters[f.0];
         fp.set_mv_i32(mv::HI_FRAMES, frames);
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
     }
 
     /// `ftPk_SpecialHi_80126C0C`: a grounded zip toward the stick when it's tilted past `x8C`
@@ -654,7 +654,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.gr_vel = mem(fp::fmuls(reg(fp.mv_f32(mv::HI_END_GR_VEL)), xa4));
         self.change_motion_state(gobj, ms::SPECIAL_HI_END, 2, 0.0, 1.0, 0.0, None);
-        self.game.fighters[f.0].x21F8 = Some(CodeRef(addr::SPECIAL_HI_UPDATE_VEL));
+        self.game.fighters[f.0].turn_cb = Some(CodeRef(addr::SPECIAL_HI_UPDATE_VEL));
     }
 
     /// `ftPk_SpecialHi_MotionChangeUpdateVel_Unk1`: the aerial end, at `xA4` of the zip's
@@ -668,7 +668,7 @@ impl Running<'_> {
         fp.self_vel.x = mem(fp::fmuls(reg(fp.mv_f32(mv::HI_END_VEL_X)), xa4));
         fp.self_vel.y = mem(fp::fmuls(reg(fp.mv_f32(mv::HI_END_VEL_Y)), xa4));
         self.change_motion_state(gobj, ms::SPECIAL_AIR_HI_END, 2, 0.0, 1.0, 0.0, None);
-        self.game.fighters[f.0].x21F8 = Some(CodeRef(addr::SPECIAL_HI_UPDATE_VEL));
+        self.game.fighters[f.0].turn_cb = Some(CodeRef(addr::SPECIAL_HI_UPDATE_VEL));
     }
 }
 

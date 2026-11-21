@@ -52,7 +52,7 @@ impl Running<'_> {
         );
         yoshitongue::release(self, item, clear);
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A64 = Default::default();
+        fp.caught_item = Default::default();
         fp.target_item_gobj = None;
     }
 
@@ -106,7 +106,7 @@ impl Running<'_> {
             let egg = yoshieggthrow::spawn(self, gobj, pos, EGG_PART, facing);
             let fp = &mut self.game.fighters[f.0];
             fp.u.set_gobj_at(u::EGG, egg);
-            fp.x1984_heldItemSpec = egg;
+            fp.special_item = egg;
             self.ys_hi_damage_cbs(gobj);
         }
         let fp = &self.game.fighters[f.0];
@@ -156,7 +156,7 @@ impl Running<'_> {
         fp.set_mv_i32(mv::HI_THROWN, 0);
         fp.set_mv_i32(mv::HI_HELD, 0);
         fp.u.set_gobj_at(u::EGG, None);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.cmd_vars[0] = 0;
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::HI_THROW));

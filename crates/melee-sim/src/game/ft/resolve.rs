@@ -35,19 +35,19 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         (c.f32(0x284), c.f32(0x288), c.f32(0x2DC), c.f32(0x2E0));
     let mut shield_broke = false;
     let fp = &mut g.game.fighters[f.0];
-    if !fp.x221A_b7 && !(reg(fp.shield_health) >= reg(full)) {
+    if !fp.shield_was_hit && !(reg(fp.shield_health) >= reg(full)) {
         fp.shield_health = mem(fp::fadds(reg(fp.shield_health), reg(regen)));
         if !(reg(fp.shield_health) <= reg(full)) {
             fp.shield_health = full;
         }
     }
-    if fp.x221A_b7 {
+    if fp.shield_was_hit {
         let light = fp::fmadds(
             reg(fp.lightshield_amount),
             fp::fsubs(reg(light_hi), reg(light_lo)),
             reg(light_lo),
         );
-        let taken = fp::frsp(f64::from(fp.x19A0_shieldDamageTaken));
+        let taken = fp::frsp(f64::from(fp.shield_damage_taken));
         let wear = fp::fmadds(
             reg(wear_mul),
             fp::fmuls(taken, fp::fsubs(1.0, light)),
@@ -57,7 +57,7 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         if !(reg(fp.shield_health) >= 0.0) {
             fp.shield_health = broken;
             shield_broke = true;
-            let (by, slot) = (fp.x19BC_shieldDamageTaken3, i32::from(fp.player_idx));
+            let (by, slot) = (fp.shield_hit_slot, i32::from(fp.player_idx));
             g.record_shield_broken_by(by, slot);
         }
     }
@@ -94,7 +94,7 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
             }
             g.damage_no_reaction(gobj);
         } else {
-            match g.game.fighters[f.0].x1828 {
+            match g.game.fighters[f.0].hit_reaction {
                 0 => g.damage_pick_reaction(gobj),
                 1 => {
                     g.damage_hooks(gobj);
@@ -114,7 +114,7 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
             let (element, applied, mul) = (
                 fp.dmg.x1860_element,
                 fp.dmg.x183C_applied,
-                fp.x1960_vibrateMult,
+                fp.hitlag_vibrate_mul,
             );
             knocked = true;
             g.start_hit_shake(f, element, applied, msid, ga, mul);
@@ -125,14 +125,14 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
     } else if reg(fp.dmg.x18a0) != 0.0 {
         strength = fp.dmg.x1840;
         tip = true;
-    } else if fp.x19A4 != 0 {
+    } else if fp.shield_hit_damage != 0 {
         if shield_broke {
             g.enter_shield_break(gobj);
             g.fighter_play_sfx(f, 0x82, 0x7F, 0x40);
         } else if let Some(cb) = fp.shield_hit_cb {
             run_fighter_cb(g, gobj, cb);
         }
-        strength = g.game.fighters[f.0].x19A4;
+        strength = g.game.fighters[f.0].shield_hit_damage;
     } else if fp.dmg.int_value != 0 {
         if reg(fp.dmg.x191C) != 0.0 && fp.victim_gobj.is_none() && fp.target_item_gobj.is_none() {
             g.damage_hooks(gobj);
@@ -145,28 +145,28 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         }
         let fp = &g.game.fighters[f.0];
         strength = fp.dmg.x1914;
-        if fp.x2070[3] == 0x46 {
+        if fp.attack_flags[3] == 0x46 {
             g.start_rumble(f, 0xE, 0);
         } else {
             g.hit_rumble(f, strength);
         }
     } else if fp.dmg.x1924 != 0 {
         strength = fp.dmg.x1924;
-    } else if fp.ReflectAttr.x1A3C_damageOver != 0 {
+    } else if fp.reflect.x1A3C_damageOver != 0 {
         // A reflector overpowered breaks like a shield (`ftCo_80098C9C`).
         g.enter_shield_break(gobj);
-    } else if reg(fp.ReflectAttr.x1A2C_reflectHitDirection) != 0.0 {
+    } else if reg(fp.reflect.x1A2C_reflectHitDirection) != 0.0 {
         if let Some(cb) = fp.reflect_hit_cb {
             run_fighter_cb(g, gobj, cb);
         }
-    } else if reg(fp.AbsorbAttr.x1A40_absorbHitDirection) != 0.0 {
+    } else if reg(fp.absorb.x1A40_absorbHitDirection) != 0.0 {
         // `ftData_OnAbsorb`: Ness's and Mr. Game & Watch's.
         match fp.fighter_kind() {
             FighterKind::Ness => g.ness_on_absorb(gobj),
             FighterKind::GameWatch => g.gw_on_absorb(gobj),
             _ => {}
         }
-    } else if fp.unk_gobj.is_some()
+    } else if fp.hit_by.is_some()
         && let Some(cb) = fp.hurtbox_detect_cb
     {
         run_fighter_cb(g, gobj, cb);
@@ -179,12 +179,12 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
     }
     g.stamina_out(gobj);
     if strength != 0 {
-        let mul = g.game.fighters[f.0].x1960_vibrateMult;
+        let mul = g.game.fighters[f.0].hitlag_vibrate_mul;
         let lag = g.hitlag(strength, msid, mul);
         let fp = &mut g.game.fighters[f.0];
         fp.dmg.x195c_hitlag_frames = mem(lag);
-        if !(reg(fp.dmg.x195c_hitlag_frames) >= reg(fp.x1964)) {
-            fp.dmg.x195c_hitlag_frames = fp.x1964;
+        if !(reg(fp.dmg.x195c_hitlag_frames) >= reg(fp.min_hitlag)) {
+            fp.dmg.x195c_hitlag_frames = fp.min_hitlag;
         }
         let lag = reg(fp.dmg.x195c_hitlag_frames);
         if !(lag <= 0.0) {
@@ -195,12 +195,12 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
             }
             fp.allow_sdi = true;
             if knocked {
-                fp.x221A_b3 = true;
+                fp.in_hitstun_sdi = true;
             }
             if tip {
                 fp.dmg.x189C_unk_num_frames = fp.dmg.x195c_hitlag_frames;
             }
-            if !fp.x2219_b5 {
+            if !fp.in_hitlag {
                 g.start_hitlag(gobj);
             }
         }
@@ -208,14 +208,14 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
         g.queued_sounds(f);
     }
     let fp = &g.game.fighters[f.0];
-    if fp.x221A_b0 || reg(fp.dmg.x1958) != 0.0 {
-        if !fp.x2219_b5 {
+    if fp.pending_hitlag || reg(fp.dmg.x1958) != 0.0 {
+        if !fp.in_hitlag {
             g.start_hitlag(gobj);
         }
         let fp = &mut g.game.fighters[f.0];
-        if fp.x221A_b0 {
-            fp.x2219_b7 = true;
-            fp.x221A_b0 = false;
+        if fp.pending_hitlag {
+            fp.hitlag_held = true;
+            fp.pending_hitlag = false;
         } else {
             if !(reg(fp.dmg.x1958) <= reg(fp.dmg.x1954)) {
                 fp.dmg.x1954 = fp.dmg.x1958;
@@ -228,7 +228,7 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
     let fp = &mut g.game.fighters[f.0];
     if reg(fp.dmg.x1928) != 0.0 {
         let push = fp::fmadds(reg(fp.dmg.x1928), reg(push_mul), reg(push_add));
-        fp.xF4_ground_attacker_shield_kb_vel = mem(if !(reg(fp.dmg.x192c) >= 0.0) {
+        fp.ground_attacker_shield_kb_vel = mem(if !(reg(fp.dmg.x192c) >= 0.0) {
             push
         } else {
             fp::fneg(push)
@@ -238,29 +238,29 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
     let fp = &mut g.game.fighters[f.0];
     fp.dmg.x1838_percentTemp = 0.0;
     fp.dmg.x183C_applied = 0;
-    fp.x1828 = 0;
+    fp.hit_reaction = 0;
     fp.dmg.kb_applied = 0.0;
     fp.dmg.x18a0 = 0.0;
     fp.dmg.x1840 = 0;
     fp.dmg.x1914 = 0;
     fp.dmg.int_value = 0;
     fp.dmg.x191C = 0.0;
-    fp.unk_gobj = None;
-    fp.x221C_b5 = false;
+    fp.hit_by = None;
+    fp.hit_this_frame = false;
     fp.dmg.x1924 = 0;
     fp.dmg.x1928 = 0.0;
-    fp.x19A0_shieldDamageTaken = 0;
-    fp.x19A4 = 0;
-    fp.x19A8 = None;
-    fp.ReflectAttr.x1A3C_damageOver = 0;
-    fp.ReflectAttr.x1A2C_reflectHitDirection = 0.0;
-    fp.AbsorbAttr.x1A40_absorbHitDirection = 0.0;
-    fp.AbsorbAttr.x1A44_damageTaken = 0;
-    fp.AbsorbAttr.x1A48_hitsTaken = 0;
-    fp.x1960_vibrateMult = 1.0;
-    fp.x1964 = 0.0;
+    fp.shield_damage_taken = 0;
+    fp.shield_hit_damage = 0;
+    fp.shield_hit_by = None;
+    fp.reflect.x1A3C_damageOver = 0;
+    fp.reflect.x1A2C_reflectHitDirection = 0.0;
+    fp.absorb.x1A40_absorbHitDirection = 0.0;
+    fp.absorb.x1A44_damageTaken = 0;
+    fp.absorb.x1A48_hitsTaken = 0;
+    fp.hitlag_vibrate_mul = 1.0;
+    fp.min_hitlag = 0.0;
     fp.dmg.x1950 = 0;
-    if !fp.x2219_b6 || fp.dmg.x18F4 != 0 {
+    if !fp.was_in_hitlag || fp.dmg.x18F4 != 0 {
         g.afterimage(f);
     }
     g.cpu_hurt_bounds(f);
@@ -296,11 +296,11 @@ impl Running<'_> {
             run_fighter_cb(self, gobj, cb);
         }
         let fp = &mut self.game.fighters[f.0];
-        fp.x2219_b5 = true;
-        if let Some(partner) = fp.x1A5C
-            && !fp.x2219_b7
+        fp.in_hitlag = true;
+        if let Some(partner) = fp.partner
+            && !fp.hitlag_held
         {
-            self.game.fighter_mut(partner).x2219_b7 = true;
+            self.game.fighter_mut(partner).hitlag_held = true;
             self.start_hitlag(partner);
         }
     }
@@ -329,10 +329,10 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         let (n, v) = (
             fp.coll_data.floor.normal,
-            reg(fp.xF4_ground_attacker_shield_kb_vel),
+            reg(fp.ground_attacker_shield_kb_vel),
         );
-        fp.x98_atk_shield_kb.x = mem(fp::fmuls(reg(n.y), v));
-        fp.x98_atk_shield_kb.y = mem(fp::fmuls(fp::fneg(reg(n.x)), v));
+        fp.atk_shield_kb_vel.x = mem(fp::fmuls(reg(n.y), v));
+        fp.atk_shield_kb_vel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), v));
     }
 
     /// A sword's afterimage follows it, `ftCo_800C2FD8`: while one is on (`x2100` not -1),
@@ -344,13 +344,13 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C2FD8")]
     fn afterimage(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
-        if fp.x2100 == -1 {
+        if fp.afterimage_mode == -1 {
             return;
         }
-        let at = usize::from(fp.x2101_bits_0to6);
-        let (joint, axis) = if fp.x2101_bits_8 {
+        let at = usize::from(fp.afterimage_slot);
+        let (joint, axis) = if fp.item_afterimage {
             let Some(item) = fp.item_gobj else {
-                self.game.fighters[f.0].x2100 = -1;
+                self.game.fighters[f.0].afterimage_mode = -1;
                 return;
             };
             let kind = crate::game::it::lib26b1::kind(self.game, item);
@@ -360,8 +360,8 @@ impl Running<'_> {
             );
             let (w0, w1) = crate::game::it::kinds::sword::trail_widths(self.game, item);
             let fp = &mut self.game.fighters[f.0];
-            fp.x20F8 = w0;
-            fp.x20FC = w1;
+            fp.afterimage_width_a = w0;
+            fp.afterimage_width_b = w1;
             (
                 crate::game::it::kinds::sword::trail_joint(self.game, self.data, item),
                 1,
@@ -386,8 +386,8 @@ impl Running<'_> {
             let parts = fp.parts.expect("a fighter without parts");
             let joint = self.game.fighter_parts[parts.0][bone as usize].joint;
             let fp = &mut self.game.fighters[f.0];
-            fp.x20F8 = width0;
-            fp.x20FC = width1;
+            fp.afterimage_width_a = width0;
+            fp.afterimage_width_b = width1;
             (joint, 0)
         };
         let pos = world_position(&mut self.game.objs, self.data, joint, None);
@@ -395,11 +395,11 @@ impl Running<'_> {
             .mtx
             .m;
         let fp = &mut self.game.fighters[f.0];
-        fp.x20B0[at].x0 = pos;
-        fp.x20B0[at].xC = crate::vec::Vec3::new(m[0][axis], m[1][axis], m[2][axis]);
-        fp.x2101_bits_0to6 = if at == 2 { 0 } else { at as u8 + 1 };
-        if fp.x2100 < 3 {
-            fp.x2100 += 1;
+        fp.afterimage_ring[at].x0 = pos;
+        fp.afterimage_ring[at].xC = crate::vec::Vec3::new(m[0][axis], m[1][axis], m[2][axis]);
+        fp.afterimage_slot = if at == 2 { 0 } else { at as u8 + 1 };
+        if fp.afterimage_mode < 3 {
+            fp.afterimage_mode += 1;
         }
     }
 
@@ -413,7 +413,7 @@ impl Running<'_> {
             self.update_hurtbox(f, i);
             let fp = &self.game.fighters[f.0];
             let h = &fp.hurt_capsules[i].capsule;
-            let scale = fp::fmuls(reg(h.scale), reg(fp.x34_scale.y));
+            let scale = fp::fmuls(reg(h.scale), reg(fp.scale.y));
             for end in [h.a_pos, h.b_pos] {
                 let dx = fp::fsubs(reg(end.x), reg(fp.cur_pos.x));
                 let dy = fp::fsubs(reg(end.y), reg(fp.cur_pos.y));
@@ -431,14 +431,17 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let c = &mut fp.cpu;
         if reg(fp.facing_dir) > 0.0 {
-            c.x55C = mem(front);
-            c.x560 = mem(fp::fneg(back));
+            c.hurt_behind = mem(front);
+            c.hurt_ahead = mem(fp::fneg(back));
         } else {
-            c.x55C = mem(fp::fneg(back));
-            c.x560 = mem(front);
+            c.hurt_behind = mem(fp::fneg(back));
+            c.hurt_ahead = mem(front);
         }
-        c.x564 = mem(fp::frsp(fp::fmul(0.5, fp::fadds(reg(c.x55C), reg(c.x560)))));
-        c.x568 = mem(top);
+        c.hurt_middle = mem(fp::frsp(fp::fmul(
+            0.5,
+            fp::fadds(reg(c.hurt_behind), reg(c.hurt_ahead)),
+        )));
+        c.hurt_top = mem(top);
     }
 
     /// Brings a hurtbox's ends up to date once a frame, `lbColl_800083C4`.

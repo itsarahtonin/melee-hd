@@ -87,7 +87,7 @@ impl Running<'_> {
     /// The headbutt in the air from the same frame, its effects' hitlag hooks kept.
     fn dk_special_s_to_air(&mut self, gobj: GObjId) {
         self.fox_ground_to_air(gobj, ms::SPECIAL_AIR_S, COLL_FLAGS);
-        if self.game.fighter(gobj).x2219_b0 {
+        if self.game.fighter(gobj).effect_once {
             self.set_effect_hitlag_cbs(gobj);
         }
     }
@@ -114,7 +114,7 @@ impl Running<'_> {
     pub fn dk_special_air_s_coll(&mut self, gobj: GObjId) {
         if self.air_coll_land(gobj) {
             self.fox_air_to_ground(gobj, ms::SPECIAL_S, COLL_FLAGS);
-            if self.game.fighter(gobj).x2219_b0 {
+            if self.game.fighter(gobj).effect_once {
                 self.set_effect_hitlag_cbs(gobj);
             }
         }
@@ -123,7 +123,7 @@ impl Running<'_> {
     /// The headbutt's effect on the TransN joint, once (`x2219_b0`), then the hitlag hooks and
     /// no more accessory.
     fn dk_special_s_effect(&mut self, gobj: GObjId, id: i32) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let j = self.bone_joint(gobj, part::TRANS_N);
             super::super::super::ef::spawn(
                 self,
@@ -131,7 +131,7 @@ impl Running<'_> {
                 Some(gobj),
                 &[super::super::super::ef::Arg::JObj(j)],
             );
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;

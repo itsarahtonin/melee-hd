@@ -42,7 +42,7 @@ impl Running<'_> {
             let h = kirbyhammer::spawn(self, gobj, pos, PART_R3RD_NA, ga, dir);
             let fp = &mut self.game.fighters[f.0];
             fp.u.set_gobj_at(u::HAT_ITEM, h);
-            fp.x1984_heldItemSpec = h;
+            fp.special_item = h;
             fp.cmd_vars[0] = 0;
             if h.is_some() {
                 if let Some(cb) = fp.death2_cb
@@ -56,7 +56,7 @@ impl Running<'_> {
                 let facing = fp.facing_dir;
                 let hip = self.bone_joint(gobj, PART_HIP_N);
                 ef::spawn(self, id, Some(gobj), &[Arg::JObj(hip), Arg::Float(facing)]);
-                self.game.fighters[f.0].x2219_b0 = true;
+                self.game.fighters[f.0].effect_once = true;
                 self.set_effect_hitlag_cbs(gobj);
             }
         }

@@ -376,7 +376,7 @@ pub fn proc_field(r: &mut Running, gobj: GObjId) {
     };
     // `ftLib_GetCameraSubject`: the fighter's camera box, made inactive.
     let inactive = |game: &mut Game, f: GObjId| {
-        if let Some(b) = game.fighter(f).x890_cameraBox {
+        if let Some(b) = game.fighter(f).camera_box {
             let s = game.camera.subject_mut(b);
             s.state = super::super::camera::INACTIVE;
             s.force_inactive = true;

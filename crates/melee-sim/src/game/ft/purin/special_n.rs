@@ -241,7 +241,7 @@ impl Running<'_> {
         fp.death2_cb = Some(CodeRef(r.on_death));
         fp.take_dmg_cb = Some(CodeRef(r.on_damage));
         fp.deal_dmg_cb = Some(CodeRef(r.on_hit));
-        fp.x21F8 = Some(CodeRef(r.on_mirror));
+        fp.turn_cb = Some(CodeRef(r.on_mirror));
     }
 
     /// The roll's sound at each turn of the roll (`playRollSFX`).
@@ -279,8 +279,8 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let n = fp.mv_i32(mv::N_HIT_TOGGLE).wrapping_add(1);
         fp.set_mv_i32(mv::N_HIT_TOGGLE, n);
-        if n >= every && fp.x914[0].state != hitcapsule::DISABLED {
-            fp.x914[0].x4 = fp.x914[0].x4.wrapping_add(1) & 1;
+        if n >= every && fp.hitboxes[0].state != hitcapsule::DISABLED {
+            fp.hitboxes[0].x4 = fp.hitboxes[0].x4.wrapping_add(1) & 1;
             fp.set_mv_i32(mv::N_HIT_TOGGLE, 0);
         }
     }
@@ -337,9 +337,9 @@ impl Running<'_> {
         }
         let fp = &mut self.game.fighters[f.0];
         fp.self_vel.y = vy;
-        fp.x74_self_accel.y = 0.0;
-        fp.x74_self_accel.x = 0.0;
-        fp.xE4_ground_accel_1 = 0.0;
+        fp.anim_vel.y = 0.0;
+        fp.anim_vel.x = 0.0;
+        fp.ground_accel_1 = 0.0;
         fp.gr_vel = 0.0;
         fp.set_mv_f32(mv::N_FACING_DIR, 0.0);
         self.ro_top_side_on(f);
@@ -374,15 +374,15 @@ impl Running<'_> {
             if v < 0.0 { fp::fneg(v) } else { v }
         };
         let fp = &mut self.game.fighters[f.0];
-        let state = fp.x914[0].state;
+        let state = fp.hitboxes[0].state;
         if speed(fp) < min {
-            fp.x914[0].state = hitcapsule::DISABLED;
-            crate::lb::colanim::clear(&mut fp.x488);
+            fp.hitboxes[0].state = hitcapsule::DISABLED;
+            crate::lb::colanim::clear(&mut fp.secondary_overlay);
         } else if state == hitcapsule::DISABLED {
-            fp.x914[0].state = hitcapsule::ENABLED;
+            fp.hitboxes[0].state = hitcapsule::ENABLED;
         }
         let fp = &self.game.fighters[f.0];
-        if fp.x914[0].state != hitcapsule::DISABLED {
+        if fp.hitboxes[0].state != hitcapsule::DISABLED {
             let damage = fp::fctiwz(fp::fmuls(mul, fp::fadds(base, speed(fp)))).max(1);
             self.hitbox_damage(f, 0, false, damage as u32);
         }
@@ -407,7 +407,7 @@ impl Running<'_> {
             self.change_motion_state(gobj, msid, flags, start, 1.0, 0.0, None);
             let fp = &mut self.game.fighters[f.0];
             fp.gr_vel = mem(fp::fmuls(reg(fp.gr_vel), vx));
-            fp.x74_self_accel.y = 0.0;
+            fp.anim_vel.y = 0.0;
             fp.self_vel.y = 0.0;
         } else {
             let msid = if right {
@@ -419,7 +419,7 @@ impl Running<'_> {
             let fp = &mut self.game.fighters[f.0];
             fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), vx));
             fp.self_vel.y = mem(fp::fmuls(reg(fp.self_vel.y), vy));
-            fp.xE4_ground_accel_1 = 0.0;
+            fp.ground_accel_1 = 0.0;
             fp.gr_vel = 0.0;
         }
         self.ro_roll_cbs(f, r);
@@ -456,7 +456,7 @@ impl Running<'_> {
         fp.set_mv_i32(mv::N_CHARGE, charge);
         fp.set_mv_i32(mv::N_FULL, 0);
         fp.deal_dmg_cb = Some(CodeRef(r.on_hit));
-        fp.x21F8 = Some(CodeRef(r.on_mirror));
+        fp.turn_cb = Some(CodeRef(r.on_mirror));
     }
 
     /// The roll's sound each time the roll angle comes round, `ftPr_SpecialS_8013DD54` and
@@ -499,7 +499,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let x44 = self.ro_f32(f, r, attr::N_X44);
         let fp = &mut self.game.fighters[f.0];
-        fp.x74_self_accel.y = 0.0;
+        fp.anim_vel.y = 0.0;
         fp.self_vel.y = 0.0;
         fp.set_mv_f32(mv::N_X1C, reg(x44));
     }
@@ -515,7 +515,7 @@ impl Running<'_> {
             self.ro_f32(f, r, attr::N_X54),
         );
         let fp = &mut self.game.fighters[f.0];
-        fp.x74_self_accel.y = g;
+        fp.anim_vel.y = g;
         fp.set_mv_f32(mv::N_X1C, reg(x54));
     }
 
@@ -543,9 +543,9 @@ impl Running<'_> {
         }
         fp.self_vel.x = v;
         if !air {
-            fp.xE4_ground_accel_1 = 0.0;
+            fp.ground_accel_1 = 0.0;
         }
-        fp.x74_self_accel.x = 0.0;
+        fp.anim_vel.x = 0.0;
         self.game.part_set_rot_y(f, PART_TOP_N, mem(fp::frsp(PI_2)));
     }
 
@@ -856,12 +856,12 @@ impl Running<'_> {
     #[doc(alias = "ftKb_PrSpecialNFull_Phys")]
     pub fn rollout_start_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.xE4_ground_accel_1 = 0.0;
+        fp.ground_accel_1 = 0.0;
         fp.gr_vel = 0.0;
         fp.self_vel.x = mem(fp::fmuls(NUDGE, reg(fp.facing_dir)));
         fp.self_vel.y = 0.0;
-        fp.x74_self_accel.y = 0.0;
-        fp.x74_self_accel.x = 0.0;
+        fp.anim_vel.y = 0.0;
+        fp.anim_vel.x = 0.0;
     }
 
     /// `ftPr_SpecialNRelease_Phys`: the roll's speed from the charge, more downhill and less
@@ -905,7 +905,7 @@ impl Running<'_> {
         }
         let v = reg(fp.gr_vel);
         fp.set_mv_f32(mv::N_SPEED, if v < 0.0 { fp::fneg(v) } else { v });
-        fp.x74_self_accel.y = 0.0;
+        fp.anim_vel.y = 0.0;
         fp.self_vel.y = 0.0;
         self.self_movement_from_ground(gobj);
         let c = fp::fctiwz(fp::fsubs(
@@ -955,7 +955,7 @@ impl Running<'_> {
             fp::fsubs(x1c, influence)
         };
         fp.gr_vel = mem(fp::fmadds(scale, push, reg(fp.gr_vel)));
-        fp.x74_self_accel.y = 0.0;
+        fp.anim_vel.y = 0.0;
         fp.self_vel.y = 0.0;
         self.self_movement_from_ground(gobj);
         let fp = &self.game.fighters[f.0];
@@ -968,7 +968,7 @@ impl Running<'_> {
             } else {
                 flags::TURNED_RIGHT
             };
-            self.game.fighters[f.0].x21EC = Some(CodeRef(r.on_turned));
+            self.game.fighters[f.0].motion_change_cb = Some(CodeRef(r.on_turned));
             let frame = self.game.fighters[f.0].cur_anim_frame;
             self.change_motion_state(gobj, r.ms.release, flags, frame, 0.0, 0.0, None);
             self.ro_roll_cbs(f, r);
@@ -1440,7 +1440,7 @@ impl Running<'_> {
         let neg = |v: f32| mem(fp::fneg(reg(v)));
         fp.self_vel.x = neg(fp.self_vel.x);
         fp.gr_vel = neg(fp.gr_vel);
-        fp.xE4_ground_accel_1 = neg(fp.xE4_ground_accel_1);
+        fp.ground_accel_1 = neg(fp.ground_accel_1);
         for off in [
             mv::N_TURN_VEL,
             mv::N_ROLL,

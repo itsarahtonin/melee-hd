@@ -33,7 +33,7 @@ impl Running<'_> {
     /// A shot on the ground, `ftCo_800CDF5C`.
     #[doc(alias = "ftCo_800CDF5C")]
     pub fn enter_lgun_shoot(&mut self, gobj: GObjId) {
-        self.game.fighter_mut(gobj).x2210 = [0; 4];
+        self.game.fighter_mut(gobj).throw_flags = [0; 4];
         let msid = if self.lgun_empty(gobj) {
             ms::L_GUN_SHOOT_EMPTY
         } else {
@@ -47,7 +47,7 @@ impl Running<'_> {
     /// A shot in the air, `ftCo_800CE010`.
     #[doc(alias = "ftCo_800CE010")]
     pub fn enter_lgun_shoot_air(&mut self, gobj: GObjId) {
-        self.game.fighter_mut(gobj).x2210 = [0; 4];
+        self.game.fighter_mut(gobj).throw_flags = [0; 4];
         let msid = if self.lgun_empty(gobj) {
             ms::L_GUN_SHOOT_AIR_EMPTY
         } else {

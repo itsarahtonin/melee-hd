@@ -99,16 +99,16 @@ impl Running<'_> {
             .expect("a fighter without data");
         let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
         let fp = &mut self.game.fighters[f.0];
-        fp.x2222_b6 = false;
-        fp.x2223_b1 = true;
-        fp.x2224_b0 = true;
+        fp.frozen_with_holder = false;
+        fp.is_flat = true;
+        fp.low_models_own_material = true;
         self.push_attrs(f, attr::SIZE);
         self.game.fighters[f.0].set_u_i32(u::PANIC_CHARGE, panic::EMPTY);
         let width = self.gw_attr_f32(f, attr::WIDTH);
         let outline = self.gw_attr_color(f, attr::OUTLINE);
         let fp = &mut self.game.fighters[f.0];
-        fp.x34_scale.z = width;
-        fp.x610_color_rgba[1] = outline;
+        fp.scale.z = width;
+        fp.overlay_colors[1] = outline;
         let c = self.gw_color(gobj);
         let root = self.root_jobj(gobj);
         set_diffuse_all(
@@ -122,7 +122,7 @@ impl Running<'_> {
             },
         );
         let bucket = self.data.ptr(items.at(4 * 10));
-        self.game.fighters[f.0].x5AC.xC[4] = bucket;
+        self.game.fighters[f.0].parts_vis.xC[4] = bucket;
         for (i, kind) in ITEMS.into_iter().enumerate() {
             let article = self.data.ptr(items.at(4 * i as u32));
             super::super::super::it::item::set_char_article(self.game, article, kind);

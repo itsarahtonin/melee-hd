@@ -75,11 +75,11 @@ impl Running<'_> {
     /// can still be thrown out of it (`mv` x0).
     #[doc(alias = "ftCo_80099314")]
     pub fn enter_escape_common(&mut self, gobj: GObjId, msid: i32, item_window: i32) {
-        self.game.fighter_mut(gobj).x2210 = [0; 4];
+        self.game.fighter_mut(gobj).throw_flags = [0; 4];
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x221D_b5 = true;
+        fp.nudge_off = true;
         fp.set_mv_i32(ESCAPE_X0, item_window);
     }
 
@@ -216,7 +216,7 @@ impl Running<'_> {
     pub fn enter_escape_n_common(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, ms::ESCAPE_N, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
-        self.game.fighter_mut(gobj).x221D_b5 = true;
+        self.game.fighter_mut(gobj).nudge_off = true;
     }
 
     /// `ftCo_Escape_Coll`, `ftCo_EscapeN_Coll`: `ft_80084104`.

@@ -115,11 +115,11 @@ impl Running<'_> {
         let instance = fp.dmg.x18ec_instancehitby;
         let hit = fp.dmg.x18d8.clone();
         let last = self.game.ft_last_attacker(gobj);
-        let last_sub = fp.x221F_b5;
+        let last_sub = fp.last_hit_by_sub;
         // `ft_80087858`, `ft_80087878`.
-        let x2227_b1 = fp.x2227_b1;
+        let x2227_b1 = fp.ledge_jumped;
         let grounded_jump =
-            fp.x1968_jumpsUsed <= 1 && fp.motion_id == 0 && !matches!(motion, 0x23..=0x25);
+            fp.jumps_used <= 1 && fp.motion_id == 0 && !matches!(motion, 0x23..=0x25);
         if sub {
             return;
         }
@@ -327,7 +327,8 @@ impl Running<'_> {
             return;
         }
         let fp = self.game.fighter(gobj);
-        let (kb, special_fall, jumps) = (fp.dmg.x18d8.kb_applied1, fp.x2227_b5, fp.x1968_jumpsUsed);
+        let (kb, special_fall, jumps) =
+            (fp.dmg.x18d8.kb_applied1, fp.special_air_used, fp.jumps_used);
         if reg(kb) >= reg(self.bonus_param_f32(0x98)) {
             let t = &mut self.game.player_mut(slot).stale_moves;
             t.xCE8 = t.xCE8.wrapping_add(1);

@@ -51,7 +51,7 @@ impl Running<'_> {
     /// the state's variables cleared.
     fn popo_special_lw_start(&mut self, gobj: GObjId, msid: i32) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.cmd_vars[0] = 0;
         fp.cmd_vars[3] = 0;
         fp.set_mv_i32(mv::PUFF_TIMER, 0);

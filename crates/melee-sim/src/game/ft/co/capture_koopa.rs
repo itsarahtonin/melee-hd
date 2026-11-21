@@ -91,8 +91,8 @@ impl Running<'_> {
             let j = self.part_joint(gobj, YROT_N).expect("YRotN");
             let fp = self.game.fighter(gobj);
             let k = reg(fp.mv_f32(SHAKE));
-            let dz = fp::fmuls(fp::frsp(f64::from(fp.x1A50)), k);
-            let dy = fp::fmuls(fp::frsp(f64::from(fp.x1A51)), k);
+            let dz = fp::fmuls(fp::frsp(f64::from(fp.mash_stick_x)), k);
+            let dy = fp::fmuls(fp::frsp(f64::from(fp.mash_stick_y)), k);
             let max = reg(fp.mv_f32(SHAKE_MAX));
             let abs = |v: f64| if v < 0.0 { fp::fneg(v) } else { v };
             let t = self.game.objs.jobjs[j].translate;
@@ -140,16 +140,16 @@ impl Running<'_> {
         let facing = self.game.fighter(koopa).facing_dir;
         let timer = self.kp_s_grab_timer(Some(koopa));
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A5C = Some(koopa);
+        fp.partner = Some(koopa);
         fp.victim_gobj = Some(koopa);
-        fp.x221B.x221B_b5 = false;
-        fp.x221B.x221B_b7 = false;
+        fp.state_flags.x221B_b5 = false;
+        fp.state_flags.x221B_b7 = false;
         fp.facing_dir = facing;
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = timer;
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = false;
+        fp.mash_stick_y = 0;
+        fp.mash_stick_x = 0;
+        fp.can_mash = false;
         fp.set_mv_f32(STRUGGLE, 0.0);
         self.attach_to_thrower(koopa, gobj);
         if air {
@@ -173,14 +173,18 @@ impl Running<'_> {
         self.change_motion_state(gobj, msid, flags, 0.0, 1.0, 0.0, holder);
         let fp = self.game.fighter_mut(gobj);
         fp.accessory1_cb = Some(CodeRef(HELD_FOLLOW));
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
     }
 
     /// Flinching at a bite, `ftCo_800BC9C8` (frozen with its holder when `x2222_b6`).
     #[doc(alias = "ftCo_800BC9C8")]
     pub fn kp_victim_capture_damage(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        let flags = if fp.x2222_b6 { FREEZE_STATE } else { 0 };
+        let flags = if fp.frozen_with_holder {
+            FREEZE_STATE
+        } else {
+            0
+        };
         let holder = fp.victim_gobj;
         self.kp_victim_hold(gobj, ms::CAPTURE_DAMAGE_KOOPA, flags, holder);
         self.anim_update(gobj);
@@ -190,7 +194,11 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800BCAF4")]
     pub fn kp_victim_capture_damage_air(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        let flags = if fp.x2222_b6 { FREEZE_STATE } else { 0 };
+        let flags = if fp.frozen_with_holder {
+            FREEZE_STATE
+        } else {
+            0
+        };
         let holder = fp.victim_gobj;
         self.kp_victim_hold(gobj, ms::CAPTURE_DAMAGE_KOOPA_AIR, flags, holder);
         self.anim_update(gobj);
@@ -276,7 +284,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, msid, flags, frame, 1.0, 0.0, koopa);
         let fp = self.game.fighter_mut(gobj);
         fp.accessory1_cb = Some(CodeRef(THROWN_FOLLOW));
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
     }
 }
 

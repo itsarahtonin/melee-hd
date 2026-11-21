@@ -40,7 +40,7 @@ impl Running<'_> {
             .parts
             .expect("a fighter without parts");
         self.game.fighter_parts[parts.0][PART_TRANS_N as usize].x8[0] |= 0x08;
-        self.game.fighters[f.0].x2221_b2 = true;
+        self.game.fighters[f.0].hip_offset = true;
         for (i, kind) in ITEMS.into_iter().enumerate() {
             let article = self.data.ptr(items.at(4 * i as u32));
             super::super::super::it::item::set_char_article(self.game, article, kind);
@@ -80,7 +80,7 @@ impl Running<'_> {
     pub fn mt_load_special_attrs(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.copy_attrs(f, attr::SIZE);
-        let scale = self.game.fighters[f.0].x34_scale.y;
+        let scale = self.game.fighters[f.0].scale.y;
         if scale != 1.0 {
             for off in [attr::LW_OFFSET_X, attr::LW_OFFSET_Y] {
                 let v = mem(fp::fmuls(reg(self.mt_attr_f32(f, off)), reg(scale)));

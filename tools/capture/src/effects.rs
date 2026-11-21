@@ -843,8 +843,12 @@ impl Comparer<'_> {
         let fighters: Vec<(u32, melee_sim::game::handles::FighterId)> =
             self.maps.fighters.iter().map(|(&a, &f)| (a, f)).collect();
         for (a, f) in fighters {
-            let ours = game.fighters[f.0].x60C;
-            self.queue(&format!("fighter {a:#x} x60C"), ours, self.u32(a + 0x60C));
+            let ours = game.fighters[f.0].effect_queue;
+            self.queue(
+                &format!("fighter {a:#x} effect_queue (x60C)"),
+                ours,
+                self.u32(a + 0x60C),
+            );
         }
         self.particles();
     }

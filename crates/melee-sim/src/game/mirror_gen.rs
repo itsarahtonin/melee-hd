@@ -3213,96 +3213,98 @@ impl Mirror for CpuFighter {
             rtrigger: m.u8(at + 0x9),
             kind: m.u32(at + 0xc) as i32,
             level: m.u32(at + 0x10) as i32,
-            x14: m.u32(at + 0x14) as i32,
-            x18: m.u32(at + 0x18) as i32,
-            x1C: m.u32(at + 0x1c) as i32,
-            x20: m.u32(at + 0x20) as i32,
-            x24: m.u32(at + 0x24) as i32,
-            x28: m.u32(at + 0x28) as i32,
-            x2C: m.u32(at + 0x2c) as i32,
-            x30: m.u32(at + 0x30) as i32,
-            x34: m.u32(at + 0x34) as i32,
-            x38: f32::from_bits(m.u32(at + 0x38)),
-            x3C: f32::from_bits(m.u32(at + 0x3c)),
-            x40: f32::from_bits(m.u32(at + 0x40)),
-            x44: cx
+            spawn_arg: m.u32(at + 0x14) as i32,
+            behavior: m.u32(at + 0x18) as i32,
+            default_behavior: m.u32(at + 0x1c) as i32,
+            alt_behavior: m.u32(at + 0x20) as i32,
+            unread_24: m.u32(at + 0x24) as i32,
+            unread_28: m.u32(at + 0x28) as i32,
+            item_worth_min: m.u32(at + 0x2c) as i32,
+            retarget_timer: m.u32(at + 0x30) as i32,
+            ranged_delay: m.u32(at + 0x34) as i32,
+            destination_reach: f32::from_bits(m.u32(at + 0x38)),
+            walk_far: f32::from_bits(m.u32(at + 0x3c)),
+            keep_away_distance: f32::from_bits(m.u32(at + 0x40)),
+            target: cx
                 .import_handle("FighterId", m.u32(at + 0x44))
                 .map(FighterId),
-            x48: cx
+            last_target: cx
                 .import_handle("FighterId", m.u32(at + 0x48))
                 .map(FighterId),
-            x4C: cx.import_handle("ItemId", m.u32(at + 0x4c)).map(ItemId),
-            x50: cx.import_handle("ItemId", m.u32(at + 0x50)).map(ItemId),
-            x54: Vec2::import(m, at + 0x54, cx),
-            x5C: f32::from_bits(m.u32(at + 0x5c)),
-            x60: m.u32(at + 0x60) as i32,
-            x64: Vec2::import(m, at + 0x64, cx),
-            x6C: Vec2::import(m, at + 0x6c, cx),
-            x74: Vec2::import(m, at + 0x74, cx),
-            x7C: m.u32(at + 0x7c) as i32,
-            x80: m.u32(at + 0x80) as i32,
-            x84: m.u32(at + 0x84) as i32,
-            x88: m.u32(at + 0x88) as i32,
-            x8C: m.u32(at + 0x8c) as i32,
-            x90: m.u32(at + 0x90) as i32,
-            x94: m.u32(at + 0x94) as i32,
-            x98: Vec3::import(m, at + 0x98, cx),
-            xA4: m.u32(at + 0xa4) as i32,
-            xA8_array: core::array::from_fn(|i0| m.u32(at + 0xa8 + i0 as u32 * 0x4) as i32),
-            xC8: m.u8(at + 0xc8),
-            pad_xC9: core::array::from_fn(|i0| m.u8(at + 0xc9 + i0 as u32 * 0x1)),
-            xCC_array: core::array::from_fn(|i0| m.u32(at + 0xcc + i0 as u32 * 0x4) as i32),
-            xEC: m.u8(at + 0xec),
-            pad_xED: core::array::from_fn(|i0| m.u8(at + 0xed + i0 as u32 * 0x1)),
-            xF0: cx
+            item_target: cx.import_handle("ItemId", m.u32(at + 0x4c)).map(ItemId),
+            enemy_item: cx.import_handle("ItemId", m.u32(at + 0x50)).map(ItemId),
+            destination: Vec2::import(m, at + 0x54, cx),
+            destination_distance: f32::from_bits(m.u32(at + 0x5c)),
+            destination_timer: m.u32(at + 0x60) as i32,
+            home: Vec2::import(m, at + 0x64, cx),
+            attack_reach_0: Vec2::import(m, at + 0x6c, cx),
+            attack_reach_1: Vec2::import(m, at + 0x74, cx),
+            frame_counter: m.u32(at + 0x7c) as i32,
+            hold_back_counter: m.u32(at + 0x80) as i32,
+            stage_read_count: m.u32(at + 0x84) as i32,
+            stand_timer: m.u32(at + 0x88) as i32,
+            stand_kind: m.u32(at + 0x8c) as i32,
+            ranged_count: m.u32(at + 0x90) as i32,
+            hold_choice: m.u32(at + 0x94) as i32,
+            spawn_pos: Vec3::import(m, at + 0x98, cx),
+            command: m.u32(at + 0xa4) as i32,
+            allowed_commands: core::array::from_fn(|i0| m.u32(at + 0xa8 + i0 as u32 * 0x4) as i32),
+            allowed_count: m.u8(at + 0xc8),
+            pad_c9: core::array::from_fn(|i0| m.u8(at + 0xc9 + i0 as u32 * 0x1)),
+            ruled_out_commands: core::array::from_fn(|i0| {
+                m.u32(at + 0xcc + i0 as u32 * 0x4) as i32
+            }),
+            ruled_out_count: m.u8(at + 0xec),
+            pad_ed: core::array::from_fn(|i0| m.u8(at + 0xed + i0 as u32 * 0x1)),
+            threat_fighter: cx
                 .import_handle("FighterId", m.u32(at + 0xf0))
                 .map(FighterId),
-            xF4: cx.import_handle("ItemId", m.u32(at + 0xf4)).map(ItemId),
-            xF8_b0: m.bits(at, 1984, 1) != 0,
-            xF8_b12: m.bits(at, 1985, 2) as u8,
-            xF8_b34: m.bits(at, 1987, 2) as u8,
-            xF8_b5: m.bits(at, 1989, 1) != 0,
-            xF8_b6: m.bits(at, 1990, 1) != 0,
-            xF8_b7: m.bits(at, 1991, 1) != 0,
-            xF9_b0: m.bits(at, 1992, 1) != 0,
-            xF9_b1: m.bits(at, 1993, 1) != 0,
-            xF9_b2: m.bits(at, 1994, 1) != 0,
-            xF9_b3: m.bits(at, 1995, 1) != 0,
-            xF9_b4: m.bits(at, 1996, 1) != 0,
-            xF9_b5: m.bits(at, 1997, 1) != 0,
-            xF9_b6: m.bits(at, 1998, 1) != 0,
-            xF9_b7: m.bits(at, 1999, 1) != 0,
-            xFA_b0: m.bits(at, 2000, 1) != 0,
-            xFA_b1: m.bits(at, 2001, 1) != 0,
-            xFA_b2: m.bits(at, 2002, 1) != 0,
-            xFA_b34: m.bits(at, 2003, 2) as u8,
-            xFA_b5: m.bits(at, 2005, 1) != 0,
-            xFA_b6: m.bits(at, 2006, 1) != 0,
-            xFA_b7: m.bits(at, 2007, 1) != 0,
-            xFB_b0: m.bits(at, 2008, 1) != 0,
-            xFB_b1: m.bits(at, 2009, 1) != 0,
-            xFB_b2: m.bits(at, 2010, 1) != 0,
-            xFB_b3: m.bits(at, 2011, 1) != 0,
-            xFB_b4: m.bits(at, 2012, 1) != 0,
-            xFB_b5: m.bits(at, 2013, 1) != 0,
-            xFB_b6: m.bits(at, 2014, 1) != 0,
-            xFB_b7: m.bits(at, 2015, 1) != 0,
-            xFC: core::array::from_fn(|i0| {
+            threat_item: cx.import_handle("ItemId", m.u32(at + 0xf4)).map(ItemId),
+            fear_target: m.bits(at, 1984, 1) != 0,
+            threat_kind: m.bits(at, 1985, 2) as u8,
+            jump_kind: m.bits(at, 1987, 2) as u8,
+            coin_flip: m.bits(at, 1989, 1) != 0,
+            near_target: m.bits(at, 1990, 1) != 0,
+            attacking: m.bits(at, 1991, 1) != 0,
+            keeps_target: m.bits(at, 1992, 1) != 0,
+            fleeing: m.bits(at, 1993, 1) != 0,
+            acts_alone: m.bits(at, 1994, 1) != 0,
+            may_jump_attack: m.bits(at, 1995, 1) != 0,
+            may_air_attack: m.bits(at, 1996, 1) != 0,
+            may_ranged_attack: m.bits(at, 1997, 1) != 0,
+            may_shield: m.bits(at, 1998, 1) != 0,
+            may_pick_up: m.bits(at, 1999, 1) != 0,
+            unused_fa_b0: m.bits(at, 2000, 1) != 0,
+            tech_shield: m.bits(at, 2001, 1) != 0,
+            ledge_picked: m.bits(at, 2002, 1) != 0,
+            human_target_rule: m.bits(at, 2003, 2) as u8,
+            drifting_back: m.bits(at, 2005, 1) != 0,
+            off_stage: m.bits(at, 2006, 1) != 0,
+            follows_popo: m.bits(at, 2007, 1) != 0,
+            nana_recovering: m.bits(at, 2008, 1) != 0,
+            unused_fb_b1: m.bits(at, 2009, 1) != 0,
+            unused_fb_b2: m.bits(at, 2010, 1) != 0,
+            unused_fb_b3: m.bits(at, 2011, 1) != 0,
+            unused_fb_b4: m.bits(at, 2012, 1) != 0,
+            unused_fb_b5: m.bits(at, 2013, 1) != 0,
+            unused_fb_b6: m.bits(at, 2014, 1) != 0,
+            unused_fb_b7: m.bits(at, 2015, 1) != 0,
+            partner_inputs: core::array::from_fn(|i0| {
                 Fighter_x1A88_xFC_t::import(m, at + 0xfc + i0 as u32 * 0x1c, cx)
             }),
-            x444: CpuInputRef444::import(m, at + 0x444, cx),
-            x448: CpuInputRef448::import(m, at + 0x448, cx),
+            partner_input_write: CpuInputRef444::import(m, at + 0x444, cx),
+            partner_input_read: CpuInputRef448::import(m, at + 0x448, cx),
             command_duration: m.u32(at + 0x44c),
-            csP: CpuCsP::import(m, at + 0x450, cx),
+            script_cursor: CpuCsP::import(m, at + 0x450, cx),
             buffer: core::array::from_fn(|i0| m.u8(at + 0x454 + i0 as u32 * 0x1) as i8),
             write_pos: CpuWritePos::import(m, at + 0x554, cx),
-            x558: f32::from_bits(m.u32(at + 0x558)),
-            x55C: f32::from_bits(m.u32(at + 0x55c)),
-            x560: f32::from_bits(m.u32(at + 0x560)),
-            x564: f32::from_bits(m.u32(at + 0x564)),
-            x568: f32::from_bits(m.u32(at + 0x568)),
-            x56C: f32::from_bits(m.u32(at + 0x56c)),
-            x570: f32::from_bits(m.u32(at + 0x570)),
+            jump_height: f32::from_bits(m.u32(at + 0x558)),
+            hurt_behind: f32::from_bits(m.u32(at + 0x55c)),
+            hurt_ahead: f32::from_bits(m.u32(at + 0x560)),
+            hurt_middle: f32::from_bits(m.u32(at + 0x564)),
+            hurt_top: f32::from_bits(m.u32(at + 0x568)),
+            reach: f32::from_bits(m.u32(at + 0x56c)),
+            reach_scale: f32::from_bits(m.u32(at + 0x570)),
             half_width: f32::from_bits(m.u32(at + 0x574)),
             half_height: f32::from_bits(m.u32(at + 0x578)),
         }
@@ -3349,466 +3351,483 @@ impl Mirror for CpuFighter {
                 format!("{:?}", m.u32(at + 0x10) as i32),
             );
         }
-        if self.x14 != m.u32(at + 0x14) as i32 {
+        if self.spawn_arg != m.u32(at + 0x14) as i32 {
             cx.mismatch(
-                &format!("{path}.x14"),
-                format!("{:?}", self.x14),
+                &format!("{path}.spawn_arg (x14)"),
+                format!("{:?}", self.spawn_arg),
                 format!("{:?}", m.u32(at + 0x14) as i32),
             );
         }
-        if self.x18 != m.u32(at + 0x18) as i32 {
+        if self.behavior != m.u32(at + 0x18) as i32 {
             cx.mismatch(
-                &format!("{path}.x18"),
-                format!("{:?}", self.x18),
+                &format!("{path}.behavior (x18)"),
+                format!("{:?}", self.behavior),
                 format!("{:?}", m.u32(at + 0x18) as i32),
             );
         }
-        if self.x1C != m.u32(at + 0x1c) as i32 {
+        if self.default_behavior != m.u32(at + 0x1c) as i32 {
             cx.mismatch(
-                &format!("{path}.x1C"),
-                format!("{:?}", self.x1C),
+                &format!("{path}.default_behavior (x1C)"),
+                format!("{:?}", self.default_behavior),
                 format!("{:?}", m.u32(at + 0x1c) as i32),
             );
         }
-        if self.x20 != m.u32(at + 0x20) as i32 {
+        if self.alt_behavior != m.u32(at + 0x20) as i32 {
             cx.mismatch(
-                &format!("{path}.x20"),
-                format!("{:?}", self.x20),
+                &format!("{path}.alt_behavior (x20)"),
+                format!("{:?}", self.alt_behavior),
                 format!("{:?}", m.u32(at + 0x20) as i32),
             );
         }
-        if self.x24 != m.u32(at + 0x24) as i32 {
+        if self.unread_24 != m.u32(at + 0x24) as i32 {
             cx.mismatch(
-                &format!("{path}.x24"),
-                format!("{:?}", self.x24),
+                &format!("{path}.unread_24 (x24)"),
+                format!("{:?}", self.unread_24),
                 format!("{:?}", m.u32(at + 0x24) as i32),
             );
         }
-        if self.x28 != m.u32(at + 0x28) as i32 {
+        if self.unread_28 != m.u32(at + 0x28) as i32 {
             cx.mismatch(
-                &format!("{path}.x28"),
-                format!("{:?}", self.x28),
+                &format!("{path}.unread_28 (x28)"),
+                format!("{:?}", self.unread_28),
                 format!("{:?}", m.u32(at + 0x28) as i32),
             );
         }
-        if self.x2C != m.u32(at + 0x2c) as i32 {
+        if self.item_worth_min != m.u32(at + 0x2c) as i32 {
             cx.mismatch(
-                &format!("{path}.x2C"),
-                format!("{:?}", self.x2C),
+                &format!("{path}.item_worth_min (x2C)"),
+                format!("{:?}", self.item_worth_min),
                 format!("{:?}", m.u32(at + 0x2c) as i32),
             );
         }
-        if self.x30 != m.u32(at + 0x30) as i32 {
+        if self.retarget_timer != m.u32(at + 0x30) as i32 {
             cx.mismatch(
-                &format!("{path}.x30"),
-                format!("{:?}", self.x30),
+                &format!("{path}.retarget_timer (x30)"),
+                format!("{:?}", self.retarget_timer),
                 format!("{:?}", m.u32(at + 0x30) as i32),
             );
         }
-        if self.x34 != m.u32(at + 0x34) as i32 {
+        if self.ranged_delay != m.u32(at + 0x34) as i32 {
             cx.mismatch(
-                &format!("{path}.x34"),
-                format!("{:?}", self.x34),
+                &format!("{path}.ranged_delay (x34)"),
+                format!("{:?}", self.ranged_delay),
                 format!("{:?}", m.u32(at + 0x34) as i32),
             );
         }
-        if self.x38.to_bits() != m.u32(at + 0x38) {
+        if self.destination_reach.to_bits() != m.u32(at + 0x38) {
             cx.mismatch(
-                &format!("{path}.x38"),
-                format!("{:?}", self.x38),
+                &format!("{path}.destination_reach (x38)"),
+                format!("{:?}", self.destination_reach),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x38))),
             );
         }
-        if self.x3C.to_bits() != m.u32(at + 0x3c) {
+        if self.walk_far.to_bits() != m.u32(at + 0x3c) {
             cx.mismatch(
-                &format!("{path}.x3C"),
-                format!("{:?}", self.x3C),
+                &format!("{path}.walk_far (x3C)"),
+                format!("{:?}", self.walk_far),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x3c))),
             );
         }
-        if self.x40.to_bits() != m.u32(at + 0x40) {
+        if self.keep_away_distance.to_bits() != m.u32(at + 0x40) {
             cx.mismatch(
-                &format!("{path}.x40"),
-                format!("{:?}", self.x40),
+                &format!("{path}.keep_away_distance (x40)"),
+                format!("{:?}", self.keep_away_distance),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x40))),
             );
         }
         cx.compare_handle(
-            &format!("{path}.x44"),
+            &format!("{path}.target (x44)"),
             "FighterId",
-            self.x44.map(|h| h.0),
+            self.target.map(|h| h.0),
             m.u32(at + 0x44),
         );
         cx.compare_handle(
-            &format!("{path}.x48"),
+            &format!("{path}.last_target (x48)"),
             "FighterId",
-            self.x48.map(|h| h.0),
+            self.last_target.map(|h| h.0),
             m.u32(at + 0x48),
         );
         cx.compare_handle(
-            &format!("{path}.x4C"),
+            &format!("{path}.item_target (x4C)"),
             "ItemId",
-            self.x4C.map(|h| h.0),
+            self.item_target.map(|h| h.0),
             m.u32(at + 0x4c),
         );
         cx.compare_handle(
-            &format!("{path}.x50"),
+            &format!("{path}.enemy_item (x50)"),
             "ItemId",
-            self.x50.map(|h| h.0),
+            self.enemy_item.map(|h| h.0),
             m.u32(at + 0x50),
         );
-        self.x54.compare(m, at + 0x54, &format!("{path}.x54"), cx);
-        if self.x5C.to_bits() != m.u32(at + 0x5c) {
+        self.destination
+            .compare(m, at + 0x54, &format!("{path}.destination (x54)"), cx);
+        if self.destination_distance.to_bits() != m.u32(at + 0x5c) {
             cx.mismatch(
-                &format!("{path}.x5C"),
-                format!("{:?}", self.x5C),
+                &format!("{path}.destination_distance (x5C)"),
+                format!("{:?}", self.destination_distance),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x5c))),
             );
         }
-        if self.x60 != m.u32(at + 0x60) as i32 {
+        if self.destination_timer != m.u32(at + 0x60) as i32 {
             cx.mismatch(
-                &format!("{path}.x60"),
-                format!("{:?}", self.x60),
+                &format!("{path}.destination_timer (x60)"),
+                format!("{:?}", self.destination_timer),
                 format!("{:?}", m.u32(at + 0x60) as i32),
             );
         }
-        self.x64.compare(m, at + 0x64, &format!("{path}.x64"), cx);
-        self.x6C.compare(m, at + 0x6c, &format!("{path}.x6C"), cx);
-        self.x74.compare(m, at + 0x74, &format!("{path}.x74"), cx);
-        if self.x7C != m.u32(at + 0x7c) as i32 {
+        self.home
+            .compare(m, at + 0x64, &format!("{path}.home (x64)"), cx);
+        self.attack_reach_0
+            .compare(m, at + 0x6c, &format!("{path}.attack_reach_0 (x6C)"), cx);
+        self.attack_reach_1
+            .compare(m, at + 0x74, &format!("{path}.attack_reach_1 (x74)"), cx);
+        if self.frame_counter != m.u32(at + 0x7c) as i32 {
             cx.mismatch(
-                &format!("{path}.x7C"),
-                format!("{:?}", self.x7C),
+                &format!("{path}.frame_counter (x7C)"),
+                format!("{:?}", self.frame_counter),
                 format!("{:?}", m.u32(at + 0x7c) as i32),
             );
         }
-        if self.x80 != m.u32(at + 0x80) as i32 {
+        if self.hold_back_counter != m.u32(at + 0x80) as i32 {
             cx.mismatch(
-                &format!("{path}.x80"),
-                format!("{:?}", self.x80),
+                &format!("{path}.hold_back_counter (x80)"),
+                format!("{:?}", self.hold_back_counter),
                 format!("{:?}", m.u32(at + 0x80) as i32),
             );
         }
-        if self.x84 != m.u32(at + 0x84) as i32 {
+        if self.stage_read_count != m.u32(at + 0x84) as i32 {
             cx.mismatch(
-                &format!("{path}.x84"),
-                format!("{:?}", self.x84),
+                &format!("{path}.stage_read_count (x84)"),
+                format!("{:?}", self.stage_read_count),
                 format!("{:?}", m.u32(at + 0x84) as i32),
             );
         }
-        if self.x88 != m.u32(at + 0x88) as i32 {
+        if self.stand_timer != m.u32(at + 0x88) as i32 {
             cx.mismatch(
-                &format!("{path}.x88"),
-                format!("{:?}", self.x88),
+                &format!("{path}.stand_timer (x88)"),
+                format!("{:?}", self.stand_timer),
                 format!("{:?}", m.u32(at + 0x88) as i32),
             );
         }
-        if self.x8C != m.u32(at + 0x8c) as i32 {
+        if self.stand_kind != m.u32(at + 0x8c) as i32 {
             cx.mismatch(
-                &format!("{path}.x8C"),
-                format!("{:?}", self.x8C),
+                &format!("{path}.stand_kind (x8C)"),
+                format!("{:?}", self.stand_kind),
                 format!("{:?}", m.u32(at + 0x8c) as i32),
             );
         }
-        if self.x90 != m.u32(at + 0x90) as i32 {
+        if self.ranged_count != m.u32(at + 0x90) as i32 {
             cx.mismatch(
-                &format!("{path}.x90"),
-                format!("{:?}", self.x90),
+                &format!("{path}.ranged_count (x90)"),
+                format!("{:?}", self.ranged_count),
                 format!("{:?}", m.u32(at + 0x90) as i32),
             );
         }
-        if self.x94 != m.u32(at + 0x94) as i32 {
+        if self.hold_choice != m.u32(at + 0x94) as i32 {
             cx.mismatch(
-                &format!("{path}.x94"),
-                format!("{:?}", self.x94),
+                &format!("{path}.hold_choice (x94)"),
+                format!("{:?}", self.hold_choice),
                 format!("{:?}", m.u32(at + 0x94) as i32),
             );
         }
-        self.x98.compare(m, at + 0x98, &format!("{path}.x98"), cx);
-        if self.xA4 != m.u32(at + 0xa4) as i32 {
+        self.spawn_pos
+            .compare(m, at + 0x98, &format!("{path}.spawn_pos (x98)"), cx);
+        if self.command != m.u32(at + 0xa4) as i32 {
             cx.mismatch(
-                &format!("{path}.xA4"),
-                format!("{:?}", self.xA4),
+                &format!("{path}.command (xA4)"),
+                format!("{:?}", self.command),
                 format!("{:?}", m.u32(at + 0xa4) as i32),
             );
         }
         for i0 in 0..8 {
-            if self.xA8_array[i0] != m.u32(at + 0xa8 + i0 as u32 * 0x4) as i32 {
+            if self.allowed_commands[i0] != m.u32(at + 0xa8 + i0 as u32 * 0x4) as i32 {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.xA8_array"), i0),
-                    format!("{:?}", self.xA8_array[i0]),
+                    &format!("{}[{}]", format!("{path}.allowed_commands (xA8_array)"), i0),
+                    format!("{:?}", self.allowed_commands[i0]),
                     format!("{:?}", m.u32(at + 0xa8 + i0 as u32 * 0x4) as i32),
                 );
             }
         }
-        if self.xC8 != m.u8(at + 0xc8) {
+        if self.allowed_count != m.u8(at + 0xc8) {
             cx.mismatch(
-                &format!("{path}.xC8"),
-                format!("{:?}", self.xC8),
+                &format!("{path}.allowed_count (xC8)"),
+                format!("{:?}", self.allowed_count),
                 format!("{:?}", m.u8(at + 0xc8)),
             );
         }
         for i0 in 0..3 {
-            if self.pad_xC9[i0] != m.u8(at + 0xc9 + i0 as u32 * 0x1) {
+            if self.pad_c9[i0] != m.u8(at + 0xc9 + i0 as u32 * 0x1) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.pad_xC9"), i0),
-                    format!("{:?}", self.pad_xC9[i0]),
+                    &format!("{}[{}]", format!("{path}.pad_c9 (pad_xC9)"), i0),
+                    format!("{:?}", self.pad_c9[i0]),
                     format!("{:?}", m.u8(at + 0xc9 + i0 as u32 * 0x1)),
                 );
             }
         }
         for i0 in 0..8 {
-            if self.xCC_array[i0] != m.u32(at + 0xcc + i0 as u32 * 0x4) as i32 {
+            if self.ruled_out_commands[i0] != m.u32(at + 0xcc + i0 as u32 * 0x4) as i32 {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.xCC_array"), i0),
-                    format!("{:?}", self.xCC_array[i0]),
+                    &format!(
+                        "{}[{}]",
+                        format!("{path}.ruled_out_commands (xCC_array)"),
+                        i0
+                    ),
+                    format!("{:?}", self.ruled_out_commands[i0]),
                     format!("{:?}", m.u32(at + 0xcc + i0 as u32 * 0x4) as i32),
                 );
             }
         }
-        if self.xEC != m.u8(at + 0xec) {
+        if self.ruled_out_count != m.u8(at + 0xec) {
             cx.mismatch(
-                &format!("{path}.xEC"),
-                format!("{:?}", self.xEC),
+                &format!("{path}.ruled_out_count (xEC)"),
+                format!("{:?}", self.ruled_out_count),
                 format!("{:?}", m.u8(at + 0xec)),
             );
         }
         for i0 in 0..3 {
-            if self.pad_xED[i0] != m.u8(at + 0xed + i0 as u32 * 0x1) {
+            if self.pad_ed[i0] != m.u8(at + 0xed + i0 as u32 * 0x1) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.pad_xED"), i0),
-                    format!("{:?}", self.pad_xED[i0]),
+                    &format!("{}[{}]", format!("{path}.pad_ed (pad_xED)"), i0),
+                    format!("{:?}", self.pad_ed[i0]),
                     format!("{:?}", m.u8(at + 0xed + i0 as u32 * 0x1)),
                 );
             }
         }
         cx.compare_handle(
-            &format!("{path}.xF0"),
+            &format!("{path}.threat_fighter (xF0)"),
             "FighterId",
-            self.xF0.map(|h| h.0),
+            self.threat_fighter.map(|h| h.0),
             m.u32(at + 0xf0),
         );
         cx.compare_handle(
-            &format!("{path}.xF4"),
+            &format!("{path}.threat_item (xF4)"),
             "ItemId",
-            self.xF4.map(|h| h.0),
+            self.threat_item.map(|h| h.0),
             m.u32(at + 0xf4),
         );
-        if (self.xF8_b0 as u32) != m.bits(at, 1984, 1) {
+        if (self.fear_target as u32) != m.bits(at, 1984, 1) {
             cx.mismatch(
-                &format!("{path}.xF8_b0"),
-                format!("{:?}", self.xF8_b0),
+                &format!("{path}.fear_target (xF8_b0)"),
+                format!("{:?}", self.fear_target),
                 format!("{:?}", m.bits(at, 1984, 1)),
             );
         }
-        if (self.xF8_b12 as u32) != m.bits(at, 1985, 2) {
+        if (self.threat_kind as u32) != m.bits(at, 1985, 2) {
             cx.mismatch(
-                &format!("{path}.xF8_b12"),
-                format!("{:?}", self.xF8_b12),
+                &format!("{path}.threat_kind (xF8_b12)"),
+                format!("{:?}", self.threat_kind),
                 format!("{:?}", m.bits(at, 1985, 2)),
             );
         }
-        if (self.xF8_b34 as u32) != m.bits(at, 1987, 2) {
+        if (self.jump_kind as u32) != m.bits(at, 1987, 2) {
             cx.mismatch(
-                &format!("{path}.xF8_b34"),
-                format!("{:?}", self.xF8_b34),
+                &format!("{path}.jump_kind (xF8_b34)"),
+                format!("{:?}", self.jump_kind),
                 format!("{:?}", m.bits(at, 1987, 2)),
             );
         }
-        if (self.xF8_b5 as u32) != m.bits(at, 1989, 1) {
+        if (self.coin_flip as u32) != m.bits(at, 1989, 1) {
             cx.mismatch(
-                &format!("{path}.xF8_b5"),
-                format!("{:?}", self.xF8_b5),
+                &format!("{path}.coin_flip (xF8_b5)"),
+                format!("{:?}", self.coin_flip),
                 format!("{:?}", m.bits(at, 1989, 1)),
             );
         }
-        if (self.xF8_b6 as u32) != m.bits(at, 1990, 1) {
+        if (self.near_target as u32) != m.bits(at, 1990, 1) {
             cx.mismatch(
-                &format!("{path}.xF8_b6"),
-                format!("{:?}", self.xF8_b6),
+                &format!("{path}.near_target (xF8_b6)"),
+                format!("{:?}", self.near_target),
                 format!("{:?}", m.bits(at, 1990, 1)),
             );
         }
-        if (self.xF8_b7 as u32) != m.bits(at, 1991, 1) {
+        if (self.attacking as u32) != m.bits(at, 1991, 1) {
             cx.mismatch(
-                &format!("{path}.xF8_b7"),
-                format!("{:?}", self.xF8_b7),
+                &format!("{path}.attacking (xF8_b7)"),
+                format!("{:?}", self.attacking),
                 format!("{:?}", m.bits(at, 1991, 1)),
             );
         }
-        if (self.xF9_b0 as u32) != m.bits(at, 1992, 1) {
+        if (self.keeps_target as u32) != m.bits(at, 1992, 1) {
             cx.mismatch(
-                &format!("{path}.xF9_b0"),
-                format!("{:?}", self.xF9_b0),
+                &format!("{path}.keeps_target (xF9_b0)"),
+                format!("{:?}", self.keeps_target),
                 format!("{:?}", m.bits(at, 1992, 1)),
             );
         }
-        if (self.xF9_b1 as u32) != m.bits(at, 1993, 1) {
+        if (self.fleeing as u32) != m.bits(at, 1993, 1) {
             cx.mismatch(
-                &format!("{path}.xF9_b1"),
-                format!("{:?}", self.xF9_b1),
+                &format!("{path}.fleeing (xF9_b1)"),
+                format!("{:?}", self.fleeing),
                 format!("{:?}", m.bits(at, 1993, 1)),
             );
         }
-        if (self.xF9_b2 as u32) != m.bits(at, 1994, 1) {
+        if (self.acts_alone as u32) != m.bits(at, 1994, 1) {
             cx.mismatch(
-                &format!("{path}.xF9_b2"),
-                format!("{:?}", self.xF9_b2),
+                &format!("{path}.acts_alone (xF9_b2)"),
+                format!("{:?}", self.acts_alone),
                 format!("{:?}", m.bits(at, 1994, 1)),
             );
         }
-        if (self.xF9_b3 as u32) != m.bits(at, 1995, 1) {
+        if (self.may_jump_attack as u32) != m.bits(at, 1995, 1) {
             cx.mismatch(
-                &format!("{path}.xF9_b3"),
-                format!("{:?}", self.xF9_b3),
+                &format!("{path}.may_jump_attack (xF9_b3)"),
+                format!("{:?}", self.may_jump_attack),
                 format!("{:?}", m.bits(at, 1995, 1)),
             );
         }
-        if (self.xF9_b4 as u32) != m.bits(at, 1996, 1) {
+        if (self.may_air_attack as u32) != m.bits(at, 1996, 1) {
             cx.mismatch(
-                &format!("{path}.xF9_b4"),
-                format!("{:?}", self.xF9_b4),
+                &format!("{path}.may_air_attack (xF9_b4)"),
+                format!("{:?}", self.may_air_attack),
                 format!("{:?}", m.bits(at, 1996, 1)),
             );
         }
-        if (self.xF9_b5 as u32) != m.bits(at, 1997, 1) {
+        if (self.may_ranged_attack as u32) != m.bits(at, 1997, 1) {
             cx.mismatch(
-                &format!("{path}.xF9_b5"),
-                format!("{:?}", self.xF9_b5),
+                &format!("{path}.may_ranged_attack (xF9_b5)"),
+                format!("{:?}", self.may_ranged_attack),
                 format!("{:?}", m.bits(at, 1997, 1)),
             );
         }
-        if (self.xF9_b6 as u32) != m.bits(at, 1998, 1) {
+        if (self.may_shield as u32) != m.bits(at, 1998, 1) {
             cx.mismatch(
-                &format!("{path}.xF9_b6"),
-                format!("{:?}", self.xF9_b6),
+                &format!("{path}.may_shield (xF9_b6)"),
+                format!("{:?}", self.may_shield),
                 format!("{:?}", m.bits(at, 1998, 1)),
             );
         }
-        if (self.xF9_b7 as u32) != m.bits(at, 1999, 1) {
+        if (self.may_pick_up as u32) != m.bits(at, 1999, 1) {
             cx.mismatch(
-                &format!("{path}.xF9_b7"),
-                format!("{:?}", self.xF9_b7),
+                &format!("{path}.may_pick_up (xF9_b7)"),
+                format!("{:?}", self.may_pick_up),
                 format!("{:?}", m.bits(at, 1999, 1)),
             );
         }
-        if (self.xFA_b0 as u32) != m.bits(at, 2000, 1) {
+        if (self.unused_fa_b0 as u32) != m.bits(at, 2000, 1) {
             cx.mismatch(
-                &format!("{path}.xFA_b0"),
-                format!("{:?}", self.xFA_b0),
+                &format!("{path}.unused_fa_b0 (xFA_b0)"),
+                format!("{:?}", self.unused_fa_b0),
                 format!("{:?}", m.bits(at, 2000, 1)),
             );
         }
-        if (self.xFA_b1 as u32) != m.bits(at, 2001, 1) {
+        if (self.tech_shield as u32) != m.bits(at, 2001, 1) {
             cx.mismatch(
-                &format!("{path}.xFA_b1"),
-                format!("{:?}", self.xFA_b1),
+                &format!("{path}.tech_shield (xFA_b1)"),
+                format!("{:?}", self.tech_shield),
                 format!("{:?}", m.bits(at, 2001, 1)),
             );
         }
-        if (self.xFA_b2 as u32) != m.bits(at, 2002, 1) {
+        if (self.ledge_picked as u32) != m.bits(at, 2002, 1) {
             cx.mismatch(
-                &format!("{path}.xFA_b2"),
-                format!("{:?}", self.xFA_b2),
+                &format!("{path}.ledge_picked (xFA_b2)"),
+                format!("{:?}", self.ledge_picked),
                 format!("{:?}", m.bits(at, 2002, 1)),
             );
         }
-        if (self.xFA_b34 as u32) != m.bits(at, 2003, 2) {
+        if (self.human_target_rule as u32) != m.bits(at, 2003, 2) {
             cx.mismatch(
-                &format!("{path}.xFA_b34"),
-                format!("{:?}", self.xFA_b34),
+                &format!("{path}.human_target_rule (xFA_b34)"),
+                format!("{:?}", self.human_target_rule),
                 format!("{:?}", m.bits(at, 2003, 2)),
             );
         }
-        if (self.xFA_b5 as u32) != m.bits(at, 2005, 1) {
+        if (self.drifting_back as u32) != m.bits(at, 2005, 1) {
             cx.mismatch(
-                &format!("{path}.xFA_b5"),
-                format!("{:?}", self.xFA_b5),
+                &format!("{path}.drifting_back (xFA_b5)"),
+                format!("{:?}", self.drifting_back),
                 format!("{:?}", m.bits(at, 2005, 1)),
             );
         }
-        if (self.xFA_b6 as u32) != m.bits(at, 2006, 1) {
+        if (self.off_stage as u32) != m.bits(at, 2006, 1) {
             cx.mismatch(
-                &format!("{path}.xFA_b6"),
-                format!("{:?}", self.xFA_b6),
+                &format!("{path}.off_stage (xFA_b6)"),
+                format!("{:?}", self.off_stage),
                 format!("{:?}", m.bits(at, 2006, 1)),
             );
         }
-        if (self.xFA_b7 as u32) != m.bits(at, 2007, 1) {
+        if (self.follows_popo as u32) != m.bits(at, 2007, 1) {
             cx.mismatch(
-                &format!("{path}.xFA_b7"),
-                format!("{:?}", self.xFA_b7),
+                &format!("{path}.follows_popo (xFA_b7)"),
+                format!("{:?}", self.follows_popo),
                 format!("{:?}", m.bits(at, 2007, 1)),
             );
         }
-        if (self.xFB_b0 as u32) != m.bits(at, 2008, 1) {
+        if (self.nana_recovering as u32) != m.bits(at, 2008, 1) {
             cx.mismatch(
-                &format!("{path}.xFB_b0"),
-                format!("{:?}", self.xFB_b0),
+                &format!("{path}.nana_recovering (xFB_b0)"),
+                format!("{:?}", self.nana_recovering),
                 format!("{:?}", m.bits(at, 2008, 1)),
             );
         }
-        if (self.xFB_b1 as u32) != m.bits(at, 2009, 1) {
+        if (self.unused_fb_b1 as u32) != m.bits(at, 2009, 1) {
             cx.mismatch(
-                &format!("{path}.xFB_b1"),
-                format!("{:?}", self.xFB_b1),
+                &format!("{path}.unused_fb_b1 (xFB_b1)"),
+                format!("{:?}", self.unused_fb_b1),
                 format!("{:?}", m.bits(at, 2009, 1)),
             );
         }
-        if (self.xFB_b2 as u32) != m.bits(at, 2010, 1) {
+        if (self.unused_fb_b2 as u32) != m.bits(at, 2010, 1) {
             cx.mismatch(
-                &format!("{path}.xFB_b2"),
-                format!("{:?}", self.xFB_b2),
+                &format!("{path}.unused_fb_b2 (xFB_b2)"),
+                format!("{:?}", self.unused_fb_b2),
                 format!("{:?}", m.bits(at, 2010, 1)),
             );
         }
-        if (self.xFB_b3 as u32) != m.bits(at, 2011, 1) {
+        if (self.unused_fb_b3 as u32) != m.bits(at, 2011, 1) {
             cx.mismatch(
-                &format!("{path}.xFB_b3"),
-                format!("{:?}", self.xFB_b3),
+                &format!("{path}.unused_fb_b3 (xFB_b3)"),
+                format!("{:?}", self.unused_fb_b3),
                 format!("{:?}", m.bits(at, 2011, 1)),
             );
         }
-        if (self.xFB_b4 as u32) != m.bits(at, 2012, 1) {
+        if (self.unused_fb_b4 as u32) != m.bits(at, 2012, 1) {
             cx.mismatch(
-                &format!("{path}.xFB_b4"),
-                format!("{:?}", self.xFB_b4),
+                &format!("{path}.unused_fb_b4 (xFB_b4)"),
+                format!("{:?}", self.unused_fb_b4),
                 format!("{:?}", m.bits(at, 2012, 1)),
             );
         }
-        if (self.xFB_b5 as u32) != m.bits(at, 2013, 1) {
+        if (self.unused_fb_b5 as u32) != m.bits(at, 2013, 1) {
             cx.mismatch(
-                &format!("{path}.xFB_b5"),
-                format!("{:?}", self.xFB_b5),
+                &format!("{path}.unused_fb_b5 (xFB_b5)"),
+                format!("{:?}", self.unused_fb_b5),
                 format!("{:?}", m.bits(at, 2013, 1)),
             );
         }
-        if (self.xFB_b6 as u32) != m.bits(at, 2014, 1) {
+        if (self.unused_fb_b6 as u32) != m.bits(at, 2014, 1) {
             cx.mismatch(
-                &format!("{path}.xFB_b6"),
-                format!("{:?}", self.xFB_b6),
+                &format!("{path}.unused_fb_b6 (xFB_b6)"),
+                format!("{:?}", self.unused_fb_b6),
                 format!("{:?}", m.bits(at, 2014, 1)),
             );
         }
-        if (self.xFB_b7 as u32) != m.bits(at, 2015, 1) {
+        if (self.unused_fb_b7 as u32) != m.bits(at, 2015, 1) {
             cx.mismatch(
-                &format!("{path}.xFB_b7"),
-                format!("{:?}", self.xFB_b7),
+                &format!("{path}.unused_fb_b7 (xFB_b7)"),
+                format!("{:?}", self.unused_fb_b7),
                 format!("{:?}", m.bits(at, 2015, 1)),
             );
         }
         for i0 in 0..30 {
-            self.xFC[i0].compare(
+            self.partner_inputs[i0].compare(
                 m,
                 at + 0xfc + i0 as u32 * 0x1c,
-                &format!("{}[{}]", format!("{path}.xFC"), i0),
+                &format!("{}[{}]", format!("{path}.partner_inputs (xFC)"), i0),
                 cx,
             );
         }
-        self.x444
-            .compare(m, at + 0x444, &format!("{path}.x444"), cx);
-        self.x448
-            .compare(m, at + 0x448, &format!("{path}.x448"), cx);
+        self.partner_input_write.compare(
+            m,
+            at + 0x444,
+            &format!("{path}.partner_input_write (x444)"),
+            cx,
+        );
+        self.partner_input_read.compare(
+            m,
+            at + 0x448,
+            &format!("{path}.partner_input_read (x448)"),
+            cx,
+        );
         if self.command_duration != m.u32(at + 0x44c) {
             cx.mismatch(
                 &format!("{path}.command_duration"),
@@ -3816,7 +3835,8 @@ impl Mirror for CpuFighter {
                 format!("{:?}", m.u32(at + 0x44c)),
             );
         }
-        self.csP.compare(m, at + 0x450, &format!("{path}.csP"), cx);
+        self.script_cursor
+            .compare(m, at + 0x450, &format!("{path}.script_cursor (csP)"), cx);
         for i0 in 0..256 {
             if self.buffer[i0] != m.u8(at + 0x454 + i0 as u32 * 0x1) as i8 {
                 cx.mismatch(
@@ -3828,52 +3848,52 @@ impl Mirror for CpuFighter {
         }
         self.write_pos
             .compare(m, at + 0x554, &format!("{path}.write_pos"), cx);
-        if self.x558.to_bits() != m.u32(at + 0x558) {
+        if self.jump_height.to_bits() != m.u32(at + 0x558) {
             cx.mismatch(
-                &format!("{path}.x558"),
-                format!("{:?}", self.x558),
+                &format!("{path}.jump_height (x558)"),
+                format!("{:?}", self.jump_height),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x558))),
             );
         }
-        if self.x55C.to_bits() != m.u32(at + 0x55c) {
+        if self.hurt_behind.to_bits() != m.u32(at + 0x55c) {
             cx.mismatch(
-                &format!("{path}.x55C"),
-                format!("{:?}", self.x55C),
+                &format!("{path}.hurt_behind (x55C)"),
+                format!("{:?}", self.hurt_behind),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x55c))),
             );
         }
-        if self.x560.to_bits() != m.u32(at + 0x560) {
+        if self.hurt_ahead.to_bits() != m.u32(at + 0x560) {
             cx.mismatch(
-                &format!("{path}.x560"),
-                format!("{:?}", self.x560),
+                &format!("{path}.hurt_ahead (x560)"),
+                format!("{:?}", self.hurt_ahead),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x560))),
             );
         }
-        if self.x564.to_bits() != m.u32(at + 0x564) {
+        if self.hurt_middle.to_bits() != m.u32(at + 0x564) {
             cx.mismatch(
-                &format!("{path}.x564"),
-                format!("{:?}", self.x564),
+                &format!("{path}.hurt_middle (x564)"),
+                format!("{:?}", self.hurt_middle),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x564))),
             );
         }
-        if self.x568.to_bits() != m.u32(at + 0x568) {
+        if self.hurt_top.to_bits() != m.u32(at + 0x568) {
             cx.mismatch(
-                &format!("{path}.x568"),
-                format!("{:?}", self.x568),
+                &format!("{path}.hurt_top (x568)"),
+                format!("{:?}", self.hurt_top),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x568))),
             );
         }
-        if self.x56C.to_bits() != m.u32(at + 0x56c) {
+        if self.reach.to_bits() != m.u32(at + 0x56c) {
             cx.mismatch(
-                &format!("{path}.x56C"),
-                format!("{:?}", self.x56C),
+                &format!("{path}.reach (x56C)"),
+                format!("{:?}", self.reach),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x56c))),
             );
         }
-        if self.x570.to_bits() != m.u32(at + 0x570) {
+        if self.reach_scale.to_bits() != m.u32(at + 0x570) {
             cx.mismatch(
-                &format!("{path}.x570"),
-                format!("{:?}", self.x570),
+                &format!("{path}.reach_scale (x570)"),
+                format!("{:?}", self.reach_scale),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x570))),
             );
         }
@@ -4351,283 +4371,283 @@ impl Mirror for Fighter {
         Fighter {
             gobj: cx.import_handle("GObjId", m.u32(at + 0x0)).map(GObjId),
             kind: m.u32(at + 0x4) as i32,
-            x8_spawnNum: m.u32(at + 0x8) as i32,
+            spawn_num: m.u32(at + 0x8) as i32,
             player_idx: m.u8(at + 0xc),
             motion_id: m.u32(at + 0x10) as i32,
             anim_id: m.u32(at + 0x14) as i32,
-            x18: m.u32(at + 0x18) as i32,
-            x1C_actionStateList: RawPtr(m.u32(at + 0x1c)),
-            x20_actionStateList: RawPtr(m.u32(at + 0x20)),
-            x24: cx.import_data(m.u32(at + 0x24)),
-            x28: cx.import_data(m.u32(at + 0x28)),
+            own_msid_start: m.u32(at + 0x18) as i32,
+            common_motion_states: RawPtr(m.u32(at + 0x1c)),
+            own_motion_states: RawPtr(m.u32(at + 0x20)),
+            anim_table: cx.import_data(m.u32(at + 0x24)),
+            anim_flags: cx.import_data(m.u32(at + 0x28)),
             facing_dir: f32::from_bits(m.u32(at + 0x2c)),
             facing_dir1: f32::from_bits(m.u32(at + 0x30)),
-            x34_scale: Vec3::import(m, at + 0x34, cx),
-            x40: f32::from_bits(m.u32(at + 0x40)),
-            x44_mtx: core::array::from_fn(|i0| {
+            scale: Vec3::import(m, at + 0x34, cx),
+            platform_offset: f32::from_bits(m.u32(at + 0x40)),
+            depth_scale_mtx: core::array::from_fn(|i0| {
                 core::array::from_fn(|i1| {
                     f32::from_bits(m.u32(at + 0x44 + i0 as u32 * 0x10 + i1 as u32 * 0x4))
                 })
             }),
-            x74_self_accel: Vec3::import(m, at + 0x74, cx),
+            anim_vel: Vec3::import(m, at + 0x74, cx),
             self_vel: Vec3::import(m, at + 0x80, cx),
-            x8c_kb_vel: Vec3::import(m, at + 0x8c, cx),
-            x98_atk_shield_kb: Vec3::import(m, at + 0x98, cx),
-            xA4_unk_vel: Vec3::import(m, at + 0xa4, cx),
+            kb_vel: Vec3::import(m, at + 0x8c, cx),
+            atk_shield_kb_vel: Vec3::import(m, at + 0x98, cx),
+            item_bounce_vel: Vec3::import(m, at + 0xa4, cx),
             cur_pos: Vec3::import(m, at + 0xb0, cx),
             prev_pos: Vec3::import(m, at + 0xbc, cx),
             pos_delta: Vec3::import(m, at + 0xc8, cx),
-            xD4_unk_vel: Vec3::import(m, at + 0xd4, cx),
+            frame_vel: Vec3::import(m, at + 0xd4, cx),
             ground_or_air: m.u32(at + 0xe0) as i32,
-            xE4_ground_accel_1: f32::from_bits(m.u32(at + 0xe4)),
-            xE8_ground_accel_2: f32::from_bits(m.u32(at + 0xe8)),
+            ground_accel_1: f32::from_bits(m.u32(at + 0xe4)),
+            ground_accel_2: f32::from_bits(m.u32(at + 0xe8)),
             gr_vel: f32::from_bits(m.u32(at + 0xec)),
-            xF0_ground_kb_vel: f32::from_bits(m.u32(at + 0xf0)),
-            xF4_ground_attacker_shield_kb_vel: f32::from_bits(m.u32(at + 0xf4)),
-            xF8_playerNudgeVel: Vec2::import(m, at + 0xf8, cx),
-            x100: f32::from_bits(m.u32(at + 0x100)),
-            x104: m.u8(at + 0x104),
-            x105: m.u8(at + 0x105) as i8,
-            x106: m.u8(at + 0x106) as i8,
-            x107: m.u8(at + 0x107) as i8,
-            x108_costume_joint: cx.import_data(m.u32(at + 0x108)),
+            ground_kb_vel: f32::from_bits(m.u32(at + 0xf0)),
+            ground_attacker_shield_kb_vel: f32::from_bits(m.u32(at + 0xf4)),
+            nudge_vel: Vec2::import(m, at + 0xf8, cx),
+            part_35_rot_x: f32::from_bits(m.u32(at + 0x100)),
+            freeze_step_timer: m.u8(at + 0x104),
+            pad_105: m.u8(at + 0x105) as i8,
+            pad_106: m.u8(at + 0x106) as i8,
+            pad_107: m.u8(at + 0x107) as i8,
+            costume_joint: cx.import_data(m.u32(at + 0x108)),
             ft_data: cx.import_data(m.u32(at + 0x10c)),
             co_attrs: ftCo_DatAttrs::import(m, at + 0x110, cx),
-            x294_itPickup: itPickup::import(m, at + 0x294, cx),
-            x2C4: Vec2::import(m, at + 0x2c4, cx),
-            x2CC: cx.import_handle("AttrsId", m.u32(at + 0x2cc)).map(AttrsId),
-            x2D0: cx.import_handle("AttrsId", m.u32(at + 0x2d0)).map(AttrsId),
+            item_pickup: itPickup::import(m, at + 0x294, cx),
+            push_size: Vec2::import(m, at + 0x2c4, cx),
+            cargo_attrs: cx.import_handle("AttrsId", m.u32(at + 0x2cc)).map(AttrsId),
+            multi_jump_attrs: cx.import_handle("AttrsId", m.u32(at + 0x2d0)).map(AttrsId),
             dat_attrs: cx.import_handle("AttrsId", m.u32(at + 0x2d4)).map(AttrsId),
             dat_attrs_backup: cx.import_handle("AttrsId", m.u32(at + 0x2d8)).map(AttrsId),
-            x2DC: f32::from_bits(m.u32(at + 0x2dc)),
-            x2E0: f32::from_bits(m.u32(at + 0x2e0)),
-            x2E4: f32::from_bits(m.u32(at + 0x2e4)),
-            x2E8: f32::from_bits(m.u32(at + 0x2e8)),
-            x2EC: f32::from_bits(m.u32(at + 0x2ec)),
+            walk_slow_frames: f32::from_bits(m.u32(at + 0x2dc)),
+            walk_middle_frames: f32::from_bits(m.u32(at + 0x2e0)),
+            walk_fast_frames: f32::from_bits(m.u32(at + 0x2e4)),
+            guard_on_frames: f32::from_bits(m.u32(at + 0x2e8)),
+            landing_fall_special_frames: f32::from_bits(m.u32(at + 0x2ec)),
             dynamic_bone_sets: DynamicBoneSets::import(m, at + 0x2f0, cx),
             dynamics_num: m.u32(at + 0x3e0) as i32,
-            x3E4_fighterCmdScript: CommandInfo::import(m, at + 0x3e4, cx),
-            x408: ColorOverlay::import(m, at + 0x408, cx),
-            x488: ColorOverlay::import(m, at + 0x488, cx),
-            x508: ColorOverlay::import(m, at + 0x508, cx),
-            x588: cx.import_handle("LObjId", m.u32(at + 0x588)).map(LObjId),
-            x58C: m.u32(at + 0x58c),
-            x590: ActionTree::import(m, at + 0x590, cx),
-            x594: m.bytes(at + 0x594),
-            x598: SecondTree::import(m, at + 0x598, cx),
-            x59C: cx
+            cmd_script: CommandInfo::import(m, at + 0x3e4, cx),
+            main_overlay: ColorOverlay::import(m, at + 0x408, cx),
+            secondary_overlay: ColorOverlay::import(m, at + 0x488, cx),
+            spycloak_overlay: ColorOverlay::import(m, at + 0x508, cx),
+            light: cx.import_handle("LObjId", m.u32(at + 0x588)).map(LObjId),
+            anim_count: m.u32(at + 0x58c),
+            action_tree: ActionTree::import(m, at + 0x590, cx),
+            anim_bits: m.bytes(at + 0x594),
+            second_tree: SecondTree::import(m, at + 0x598, cx),
+            main_anim_buf: cx
                 .import_handle("AnimBufId", m.u32(at + 0x59c))
                 .map(AnimBufId),
-            x5A0: cx
+            second_anim_buf: cx
                 .import_handle("AnimBufId", m.u32(at + 0x5a0))
                 .map(AnimBufId),
-            x5A4: m.u32(at + 0x5a4),
-            x5A8: m.u32(at + 0x5a8),
-            x5AC: FtPartsVis::import(m, at + 0x5ac, cx),
+            main_anim_aram: m.u32(at + 0x5a4),
+            second_anim_aram: m.u32(at + 0x5a8),
+            parts_vis: FtPartsVis::import(m, at + 0x5ac, cx),
             tobj_list: CostumeTObjList::import(m, at + 0x5cc, cx),
             parts: cx.import_handle("PartsId", m.u32(at + 0x5e8)).map(PartsId),
             dobj_list: DObjList::import(m, at + 0x5ec, cx),
-            x5F4_arr: core::array::from_fn(|i0| {
+            model_variants: core::array::from_fn(|i0| {
                 Fighter_x5F4_arr::import(m, at + 0x5f4 + i0 as u32 * 0x2, cx)
             }),
-            x60C: cx
+            effect_queue: cx
                 .import_handle("QueuedId", m.u32(at + 0x60c))
                 .map(QueuedId),
-            x610_color_rgba: core::array::from_fn(|i0| {
+            overlay_colors: core::array::from_fn(|i0| {
                 _GXColor::import(m, at + 0x610 + i0 as u32 * 0x4, cx)
             }),
             pad_port: m.u8(at + 0x618),
             costume_id: m.u8(at + 0x619),
             sub_color: m.u8(at + 0x61a),
             team: m.u8(at + 0x61b),
-            x61C: m.u8(at + 0x61c) as i8,
-            x61D: m.u8(at + 0x61d),
-            filler_x61E: core::array::from_fn(|i0| m.u8(at + 0x61e + i0 as u32 * 0x1)),
+            slot_word: m.u8(at + 0x61c) as i8,
+            alpha: m.u8(at + 0x61d),
+            pad_61e: core::array::from_fn(|i0| m.u8(at + 0x61e + i0 as u32 * 0x1)),
             input: Fighter_input::import(m, at + 0x620, cx),
             active_timer: FtInputTimers::import(m, at + 0x670, cx),
             active_sticky: FtInputTimers::import(m, at + 0x673, cx),
             active_duration: FtInputTimers::import(m, at + 0x676, cx),
             activity_timer: FtInputTimers::import(m, at + 0x679, cx),
-            x67C: m.u8(at + 0x67c),
-            x67D: m.u8(at + 0x67d),
-            x67E: m.u8(at + 0x67e),
-            x67F: m.u8(at + 0x67f),
-            x680: m.u8(at + 0x680),
-            x681: m.u8(at + 0x681),
-            x682: m.u8(at + 0x682),
-            x683: m.u8(at + 0x683),
-            x684: m.u8(at + 0x684),
-            x685: m.u8(at + 0x685),
-            x686: m.u8(at + 0x686),
-            x687: m.u8(at + 0x687),
-            x688: m.u8(at + 0x688),
-            x689: m.u8(at + 0x689),
-            x68A: m.u8(at + 0x68a),
-            x68B: m.u8(at + 0x68b),
-            x68C_transNPos: Vec3::import(m, at + 0x68c, cx),
-            x698: Vec3::import(m, at + 0x698, cx),
-            x6A4_transNOffset: Vec3::import(m, at + 0x6a4, cx),
-            x6B0: Vec3::import(m, at + 0x6b0, cx),
+            frames_since_smash_x: m.u8(at + 0x67c),
+            frames_since_smash_up: m.u8(at + 0x67d),
+            frames_since_tap_up: m.u8(at + 0x67e),
+            frames_since_shoulder: m.u8(at + 0x67f),
+            frames_since_tech_shoulder: m.u8(at + 0x680),
+            frames_since_pad_up: m.u8(at + 0x681),
+            frames_since_pad_down: m.u8(at + 0x682),
+            frames_since_z: m.u8(at + 0x683),
+            frames_since_tech_window: m.u8(at + 0x684),
+            frames_since_special_s: m.u8(at + 0x685),
+            frames_since_special_hi: m.u8(at + 0x686),
+            frames_since_special_lw: m.u8(at + 0x687),
+            frames_since_special_s_dir: m.u8(at + 0x688),
+            frames_since_special_n: m.u8(at + 0x689),
+            frames_since_jump: m.u8(at + 0x68a),
+            frames_since_special_hi_air: m.u8(at + 0x68b),
+            trans_n_pos: Vec3::import(m, at + 0x68c, cx),
+            prev_trans_n_pos: Vec3::import(m, at + 0x698, cx),
+            trans_n_offset: Vec3::import(m, at + 0x6a4, cx),
+            prev_trans_n_offset: Vec3::import(m, at + 0x6b0, cx),
             lstick_angle: f32::from_bits(m.u32(at + 0x6bc)),
-            x6C0: Vec3::import(m, at + 0x6c0, cx),
-            x6CC: Vec3::import(m, at + 0x6cc, cx),
-            x6D8: Vec3::import(m, at + 0x6d8, cx),
-            x6E4: Vec3::import(m, at + 0x6e4, cx),
+            part_35_pos: Vec3::import(m, at + 0x6c0, cx),
+            prev_part_35_pos: Vec3::import(m, at + 0x6cc, cx),
+            part_35_offset: Vec3::import(m, at + 0x6d8, cx),
+            prev_part_35_offset: Vec3::import(m, at + 0x6e4, cx),
             coll_data: CollData::import(m, at + 0x6f0, cx),
             ecb_lock: m.u32(at + 0x88c) as i32,
-            x890_cameraBox: cx
+            camera_box: cx
                 .import_handle("CameraBoxId", m.u32(at + 0x890))
                 .map(CameraBoxId),
             cur_anim_frame: f32::from_bits(m.u32(at + 0x894)),
-            x898_unk: f32::from_bits(m.u32(at + 0x898)),
+            cmd_frame_offset: f32::from_bits(m.u32(at + 0x898)),
             frame_speed_mul: f32::from_bits(m.u32(at + 0x89c)),
-            x8A0_unk: f32::from_bits(m.u32(at + 0x8a0)),
-            x8A4_animBlendFrames: f32::from_bits(m.u32(at + 0x8a4)),
-            x8A8_anim_frame: f32::from_bits(m.u32(at + 0x8a8)),
-            x8AC_animSkeleton: cx.import_handle("JObjId", m.u32(at + 0x8ac)).map(JObjId),
-            x8B0: core::array::from_fn(|i0| {
+            freeze_rate_step: f32::from_bits(m.u32(at + 0x8a0)),
+            anim_blend_frames: f32::from_bits(m.u32(at + 0x8a4)),
+            anim_blend_frame: f32::from_bits(m.u32(at + 0x8a8)),
+            anim_skeleton: cx.import_handle("JObjId", m.u32(at + 0x8ac)).map(JObjId),
+            part_anims: core::array::from_fn(|i0| {
                 Fighter_x8B0_t::import(m, at + 0x8b0 + i0 as u32 * 0x14, cx)
             }),
-            x914: core::array::from_fn(|i0| {
+            hitboxes: core::array::from_fn(|i0| {
                 HitCapsule::import(m, at + 0x914 + i0 as u32 * 0x138, cx)
             }),
-            xDF4: core::array::from_fn(|i0| {
+            throw_hitboxes: core::array::from_fn(|i0| {
                 HitCapsule::import(m, at + 0xdf4 + i0 as u32 * 0x138, cx)
             }),
-            x1064_thrownHitbox: HitCapsule::import(m, at + 0x1064, cx),
-            x119C_teamUnk: m.u8(at + 0x119c),
-            grabber_unk1: m.u8(at + 0x119d),
+            thrown_hitbox: HitCapsule::import(m, at + 0x1064, cx),
+            thrown_team: m.u8(at + 0x119c),
+            thrower_slot: m.u8(at + 0x119d),
             hurt_capsules_len: m.u8(at + 0x119e),
-            x119F: m.u8(at + 0x119f),
+            pad_119f: m.u8(at + 0x119f),
             hurt_capsules: core::array::from_fn(|i0| {
                 FighterHurtCapsule::import(m, at + 0x11a0 + i0 as u32 * 0x4c, cx)
             }),
-            x1614: core::array::from_fn(|i0| {
+            stamina_markers: core::array::from_fn(|i0| {
                 Fighter_x1614_t::import(m, at + 0x1614 + i0 as u32 * 0x2c, cx)
             }),
-            x166C: m.u8(at + 0x166c),
-            x1670: core::array::from_fn(|i0| {
+            ledge_point_count: m.u8(at + 0x166c),
+            ledge_points: core::array::from_fn(|i0| {
                 Fighter_x1670_t::import(m, at + 0x1670 + i0 as u32 * 0x28, cx)
             }),
-            filler_x1674: core::array::from_fn(|i0| m.u8(at + 0x1698 + i0 as u32 * 0x1)),
-            x1828: m.u32(at + 0x1828) as i32,
+            pad_1674: core::array::from_fn(|i0| m.u8(at + 0x1698 + i0 as u32 * 0x1)),
+            hit_reaction: m.u32(at + 0x1828) as i32,
             dmg: dmg::import(m, at + 0x182c, cx),
-            x1960_vibrateMult: f32::from_bits(m.u32(at + 0x1960)),
-            x1964: f32::from_bits(m.u32(at + 0x1964)),
-            x1968_jumpsUsed: m.u8(at + 0x1968),
-            x1969_walljumpUsed: m.u8(at + 0x1969),
+            hitlag_vibrate_mul: f32::from_bits(m.u32(at + 0x1960)),
+            min_hitlag: f32::from_bits(m.u32(at + 0x1964)),
+            jumps_used: m.u8(at + 0x1968),
+            walljumps_used: m.u8(at + 0x1969),
             hitlag_mul: f32::from_bits(m.u32(at + 0x196c)),
-            unk_msid: m.u32(at + 0x1970) as i32,
+            jab_msid: m.u32(at + 0x1970) as i32,
             item_gobj: cx.import_handle("GObjId", m.u32(at + 0x1974)).map(GObjId),
-            x1978: cx.import_handle("GObjId", m.u32(at + 0x1978)).map(GObjId),
-            x197C: cx.import_handle("GObjId", m.u32(at + 0x197c)).map(GObjId),
-            x1980: cx.import_handle("GObjId", m.u32(at + 0x1980)).map(GObjId),
-            x1984_heldItemSpec: cx.import_handle("GObjId", m.u32(at + 0x1984)).map(GObjId),
-            x1988: m.u32(at + 0x1988) as i32,
-            x198C: m.u32(at + 0x198c) as i32,
-            x1990: m.u32(at + 0x1990) as i32,
-            x1994: m.u32(at + 0x1994) as i32,
+            second_item: cx.import_handle("GObjId", m.u32(at + 0x1978)).map(GObjId),
+            bunny_hood: cx.import_handle("GObjId", m.u32(at + 0x197c)).map(GObjId),
+            flower: cx.import_handle("GObjId", m.u32(at + 0x1980)).map(GObjId),
+            special_item: cx.import_handle("GObjId", m.u32(at + 0x1984)).map(GObjId),
+            hit_status: m.u32(at + 0x1988) as i32,
+            timed_hit_status: m.u32(at + 0x198c) as i32,
+            intangible_frames: m.u32(at + 0x1990) as i32,
+            invincible_frames: m.u32(at + 0x1994) as i32,
             shield_health: f32::from_bits(m.u32(at + 0x1998)),
             lightshield_amount: f32::from_bits(m.u32(at + 0x199c)),
-            x19A0_shieldDamageTaken: m.u32(at + 0x19a0) as i32,
-            x19A4: m.u32(at + 0x19a4) as i32,
-            x19A8: cx.import_handle("GObjId", m.u32(at + 0x19a8)).map(GObjId),
+            shield_damage_taken: m.u32(at + 0x19a0) as i32,
+            shield_hit_damage: m.u32(at + 0x19a4) as i32,
+            shield_hit_by: cx.import_handle("GObjId", m.u32(at + 0x19a8)).map(GObjId),
             specialn_facing_dir: f32::from_bits(m.u32(at + 0x19ac)),
-            x19B0: m.u32(at + 0x19b0) as i32,
-            shield_unk0: f32::from_bits(m.u32(at + 0x19b4)),
-            shield_unk1: f32::from_bits(m.u32(at + 0x19b8)),
-            x19BC_shieldDamageTaken3: m.u32(at + 0x19bc) as i32,
+            shield_hit_element: m.u32(at + 0x19b0) as i32,
+            counter_min_hitlag: f32::from_bits(m.u32(at + 0x19b4)),
+            counter_item_min_hitlag: f32::from_bits(m.u32(at + 0x19b8)),
+            shield_hit_slot: m.u32(at + 0x19bc) as i32,
             shield_hit: HitResult::import(m, at + 0x19c0, cx),
             reflect_hit: HitResult::import(m, at + 0x19e4, cx),
             absorb_hit: HitResult::import(m, at + 0x1a08, cx),
-            ReflectAttr: Fighter_ReflectAttr::import(m, at + 0x1a2c, cx),
-            AbsorbAttr: Fighter_AbsorbAttr::import(m, at + 0x1a40, cx),
+            reflect: Fighter_ReflectAttr::import(m, at + 0x1a2c, cx),
+            absorb: Fighter_AbsorbAttr::import(m, at + 0x1a40, cx),
             grab_timer: f32::from_bits(m.u32(at + 0x1a4c)),
-            x1A50: m.u8(at + 0x1a50) as i8,
-            x1A51: m.u8(at + 0x1a51) as i8,
-            x1A52: m.u8(at + 0x1a52),
-            x1A53: m.u8(at + 0x1a53),
-            x1A54: m.u32(at + 0x1a54) as i32,
+            mash_stick_x: m.u8(at + 0x1a50) as i8,
+            mash_stick_y: m.u8(at + 0x1a51) as i8,
+            mash_shake_row: m.u8(at + 0x1a52),
+            mash_shake_rows: m.u8(at + 0x1a53),
+            jab_mashes: m.u32(at + 0x1a54) as i32,
             victim_gobj: cx.import_handle("GObjId", m.u32(at + 0x1a58)).map(GObjId),
-            x1A5C: cx.import_handle("GObjId", m.u32(at + 0x1a5c)).map(GObjId),
+            partner: cx.import_handle("GObjId", m.u32(at + 0x1a5c)).map(GObjId),
             target_item_gobj: cx.import_handle("GObjId", m.u32(at + 0x1a60)).map(GObjId),
-            x1A64: cx.import_handle("GObjId", m.u32(at + 0x1a64)).map(GObjId),
-            x1A68: m.u16(at + 0x1a68),
-            x1A6A: m.u16(at + 0x1a6a),
-            x1A6C: f32::from_bits(m.u32(at + 0x1a6c)),
-            x1A70: Vec3::import(m, at + 0x1a70, cx),
-            x1A7C: Vec3::import(m, at + 0x1a7c, cx),
+            caught_item: cx.import_handle("GObjId", m.u32(at + 0x1a64)).map(GObjId),
+            grab_kinds: m.u16(at + 0x1a68),
+            grab_immune: m.u16(at + 0x1a6a),
+            hip_follow_rate: f32::from_bits(m.u32(at + 0x1a6c)),
+            throw_offset: Vec3::import(m, at + 0x1a70, cx),
+            hip_pos: Vec3::import(m, at + 0x1a7c, cx),
             cpu: CpuFighter::import(m, at + 0x1a88, cx),
-            x2004: m.u32(at + 0x2004) as i32,
-            x2008: m.u32(at + 0x2008) as i32,
-            x200C: m.u32(at + 0x200c) as i32,
-            x2010: m.u32(at + 0x2010) as i32,
-            x2014: m.u32(at + 0x2014) as i32,
-            x2018: m.u32(at + 0x2018) as i32,
-            x201C: m.u32(at + 0x201c) as i32,
-            x2020: m.u8(at + 0x2020) as i8,
-            x2021: m.u8(at + 0x2021) as i8,
-            x2022: m.u8(at + 0x2022) as i8,
-            x2024: m.u32(at + 0x2024) as i32,
+            star_frames: m.u32(at + 0x2004) as i32,
+            mushroom_frames: m.u32(at + 0x2008) as i32,
+            queued_grows: m.u32(at + 0x200c) as i32,
+            queued_shrinks: m.u32(at + 0x2010) as i32,
+            bunny_hood_frames: m.u32(at + 0x2014) as i32,
+            flower_frames: m.u32(at + 0x2018) as i32,
+            flower_damage_timer: m.u32(at + 0x201c) as i32,
+            flower_stick_x: m.u8(at + 0x2020) as i8,
+            flower_stick_y: m.u8(at + 0x2021) as i8,
+            unused_2022: m.u8(at + 0x2022) as i8,
+            flower_growth: m.u32(at + 0x2024) as i32,
             metal_timer: m.u32(at + 0x2028) as i32,
             metal_health: m.u32(at + 0x202c) as i32,
-            x2030: m.u32(at + 0x2030) as i32,
-            x2034: m.u32(at + 0x2034) as i32,
-            x2038: m.u32(at + 0x2038) as i32,
-            x203C: DObjList::import(m, at + 0x203c, cx),
-            filler_x2044: core::array::from_fn(|i0| m.u8(at + 0x2044 + i0 as u32 * 0x1)),
-            x2064_ledgeCooldown: m.u32(at + 0x2064) as i32,
-            x2068_attackID: m.u32(at + 0x2068) as i32,
-            x206C_attack_instance: m.u16(at + 0x206c),
-            x206E: m.u16(at + 0x206e) as i16,
-            x2070: m.bytes(at + 0x2070),
-            x2074: Struct2074::import(m, at + 0x2074, cx),
-            x208C: m.u32(at + 0x208c) as i32,
-            x2090: m.u16(at + 0x2090),
-            x2092: m.u16(at + 0x2092),
-            x2094: cx.import_handle("GObjId", m.u32(at + 0x2094)).map(GObjId),
-            x2098: m.u16(at + 0x2098),
-            x209A: m.u16(at + 0x209a),
-            x209C: m.u16(at + 0x209c),
-            x20A0_accessory: cx.import_handle("JObjId", m.u32(at + 0x20a0)).map(JObjId),
-            x20A4: LbShadow::import(m, at + 0x20a4, cx),
-            unk_gobj: cx.import_handle("GObjId", m.u32(at + 0x20ac)).map(GObjId),
-            x20B0: core::array::from_fn(|i0| {
+            cloak_frames: m.u32(at + 0x2030) as i32,
+            alt_metal_timer: m.u32(at + 0x2034) as i32,
+            alt_metal_health: m.u32(at + 0x2038) as i32,
+            second_dobjs: DObjList::import(m, at + 0x203c, cx),
+            pad_2044: core::array::from_fn(|i0| m.u8(at + 0x2044 + i0 as u32 * 0x1)),
+            ledge_cooldown: m.u32(at + 0x2064) as i32,
+            attack_id: m.u32(at + 0x2068) as i32,
+            attack_instance: m.u16(at + 0x206c),
+            pad_206e: m.u16(at + 0x206e) as i16,
+            attack_flags: m.bytes(at + 0x2070),
+            attack_record: Struct2074::import(m, at + 0x2074, cx),
+            combo_attack_id: m.u32(at + 0x208c) as i32,
+            combo_count: m.u16(at + 0x2090),
+            combo_push_frames: m.u16(at + 0x2092),
+            combo_victim: cx.import_handle("GObjId", m.u32(at + 0x2094)).map(GObjId),
+            combo_window: m.u16(at + 0x2098),
+            name_tag_timer: m.u16(at + 0x209a),
+            air_grab_timer: m.u16(at + 0x209c),
+            accessory: cx.import_handle("JObjId", m.u32(at + 0x20a0)).map(JObjId),
+            shadow: LbShadow::import(m, at + 0x20a4, cx),
+            hit_by: cx.import_handle("GObjId", m.u32(at + 0x20ac)).map(GObjId),
+            afterimage_ring: core::array::from_fn(|i0| {
                 Fighter_x20B0_t::import(m, at + 0x20b0 + i0 as u32 * 0x18, cx)
             }),
-            x20F8: f32::from_bits(m.u32(at + 0x20f8)),
-            x20FC: f32::from_bits(m.u32(at + 0x20fc)),
-            x2100: m.u8(at + 0x2100) as i8,
-            x2101_bits_0to6: m.bits(at, 67592, 7) as u8,
-            x2101_bits_8: m.bits(at, 67599, 1) != 0,
-            x2102: m.u8(at + 0x2102) as i8,
-            x2103: m.u8(at + 0x2103) as i8,
-            x2104: m.u32(at + 0x2104) as i32,
+            afterimage_width_a: f32::from_bits(m.u32(at + 0x20f8)),
+            afterimage_width_b: f32::from_bits(m.u32(at + 0x20fc)),
+            afterimage_mode: m.u8(at + 0x2100) as i8,
+            afterimage_slot: m.bits(at, 67592, 7) as u8,
+            item_afterimage: m.bits(at, 67599, 1) != 0,
+            pad_2102: m.u8(at + 0x2102) as i8,
+            pad_2103: m.u8(at + 0x2103) as i8,
+            parasol_frames: m.u32(at + 0x2104) as i32,
             capture_timer: m.u32(at + 0x2108) as i32,
             wall_jump_input_timer: m.u8(at + 0x210c),
-            filler_x210C: core::array::from_fn(|i0| m.u8(at + 0x210d + i0 as u32 * 0x1)),
-            x2110_walljumpWallSide: f32::from_bits(m.u32(at + 0x2110)),
+            pad_210d: core::array::from_fn(|i0| m.u8(at + 0x210d + i0 as u32 * 0x1)),
+            walljump_wall_side: f32::from_bits(m.u32(at + 0x2110)),
             smash_attrs: _SmashAttr::import(m, at + 0x2114, cx),
-            x213C: m.u32(at + 0x213c) as i32,
-            x2140: f32::from_bits(m.u32(at + 0x2140)),
-            x2144: m.u32(at + 0x2144) as i32,
-            x2148: m.u32(at + 0x2148) as i32,
-            x214C: m.u32(at + 0x214c) as i32,
-            x2150: m.u32(at + 0x2150) as i32,
-            x2154: m.u32(at + 0x2154) as i32,
-            x2158: m.u32(at + 0x2158) as i32,
-            x215C: m.u32(at + 0x215c) as i32,
-            x2160: m.u32(at + 0x2160) as i32,
-            x2164: m.u32(at + 0x2164) as i32,
-            x2168: m.u32(at + 0x2168) as i32,
-            unk_grab_val: f32::from_bits(m.u32(at + 0x216c)),
-            x2170: f32::from_bits(m.u32(at + 0x2170)),
-            x2174: Vec3::import(m, at + 0x2174, cx),
-            x2180: m.u32(at + 0x2180) as i32,
-            x2184: cx.import_handle("JObjId", m.u32(at + 0x2184)).map(JObjId),
-            x2188: S32Vec2::import(m, at + 0x2188, cx),
+            ledge_caught: m.u32(at + 0x213c) as i32,
+            lowest_y: f32::from_bits(m.u32(at + 0x2140)),
+            voice_handle: m.u32(at + 0x2144) as i32,
+            sound_handle_2: m.u32(at + 0x2148) as i32,
+            sound_handle_3: m.u32(at + 0x214c) as i32,
+            sound_handle_4: m.u32(at + 0x2150) as i32,
+            sound_handle_5: m.u32(at + 0x2154) as i32,
+            sound_handle_6: m.u32(at + 0x2158) as i32,
+            track_handle: m.u32(at + 0x215c) as i32,
+            sfx_handle: m.u32(at + 0x2160) as i32,
+            star_cheer: m.u32(at + 0x2164) as i32,
+            hammer_music: m.u32(at + 0x2168) as i32,
+            grab_distance: f32::from_bits(m.u32(at + 0x216c)),
+            hold_dy: f32::from_bits(m.u32(at + 0x2170)),
+            thrown_trans: Vec3::import(m, at + 0x2174, cx),
+            dead_holder_slot: m.u32(at + 0x2180) as i32,
+            mushroom_scale_joint: cx.import_handle("JObjId", m.u32(at + 0x2184)).map(JObjId),
+            screen_pos: S32Vec2::import(m, at + 0x2188, cx),
             grab_cb: code(m.u32(at + 0x2190)),
-            x2194: code(m.u32(at + 0x2194)),
+            grab_item_cb: code(m.u32(at + 0x2194)),
             grabbed_cb: code(m.u32(at + 0x2198)),
             input_cb: code(m.u32(at + 0x219c)),
             anim_cb: code(m.u32(at + 0x21a0)),
@@ -4641,7 +4661,7 @@ impl Mirror for Fighter {
             deal_dmg_cb: code(m.u32(at + 0x21c0)),
             shield_hit_cb: code(m.u32(at + 0x21c4)),
             reflect_hit_cb: code(m.u32(at + 0x21c8)),
-            x21CC: code(m.u32(at + 0x21cc)),
+            anim_end_cb: code(m.u32(at + 0x21cc)),
             hitlag_cb: code(m.u32(at + 0x21d0)),
             pre_hitlag_cb: code(m.u32(at + 0x21d4)),
             post_hitlag_cb: code(m.u32(at + 0x21d8)),
@@ -4649,160 +4669,160 @@ impl Mirror for Fighter {
             death1_cb: code(m.u32(at + 0x21e0)),
             death2_cb: code(m.u32(at + 0x21e4)),
             death3_cb: code(m.u32(at + 0x21e8)),
-            x21EC: code(m.u32(at + 0x21ec)),
+            motion_change_cb: code(m.u32(at + 0x21ec)),
             take_dmg_2_cb: code(m.u32(at + 0x21f0)),
             hurtbox_detect_cb: code(m.u32(at + 0x21f4)),
-            x21F8: code(m.u32(at + 0x21f8)),
-            x21FC_flag: m.bytes(at + 0x21fc),
-            filler_x21FC: core::array::from_fn(|i0| m.u8(at + 0x21fd + i0 as u32 * 0x1)),
+            turn_cb: code(m.u32(at + 0x21f8)),
+            debug_draw_flags: m.bytes(at + 0x21fc),
+            pad_21fd: core::array::from_fn(|i0| m.u8(at + 0x21fd + i0 as u32 * 0x1)),
             cmd_vars: core::array::from_fn(|i0| m.u32(at + 0x2200 + i0 as u32 * 0x4)),
-            x2210: m.bytes(at + 0x2210),
+            throw_flags: m.bytes(at + 0x2210),
             cmd_timer: f32::from_bits(m.u32(at + 0x2214)),
             allow_interrupt: m.bits(at, 69824, 1) != 0,
-            x2218_b1: m.bits(at, 69825, 1) != 0,
-            x2218_b2: m.bits(at, 69826, 1) != 0,
+            jab_continue: m.bits(at, 69825, 1) != 0,
+            jab_rapid: m.bits(at, 69826, 1) != 0,
             reflecting: m.bits(at, 69827, 1) != 0,
-            x2218_b4: m.bits(at, 69828, 1) != 0,
-            x2218_b5: m.bits(at, 69829, 1) != 0,
-            x2218_b6: m.bits(at, 69830, 1) != 0,
-            x2218_b7: m.bits(at, 69831, 1) != 0,
-            x2219_b0: m.bits(at, 69832, 1) != 0,
-            x2219_b1: m.bits(at, 69833, 1) != 0,
-            x2219_b2: m.bits(at, 69834, 1) != 0,
-            x2219_b3: m.bits(at, 69835, 1) != 0,
-            x2219_b4: m.bits(at, 69836, 1) != 0,
-            x2219_b5: m.bits(at, 69837, 1) != 0,
-            x2219_b6: m.bits(at, 69838, 1) != 0,
-            x2219_b7: m.bits(at, 69839, 1) != 0,
-            x221A_b0: m.bits(at, 69840, 1) != 0,
-            x221A_b1: m.bits(at, 69841, 1) != 0,
+            reflect_kept: m.bits(at, 69828, 1) != 0,
+            reflect_behavior: m.bits(at, 69829, 1) != 0,
+            absorbing: m.bits(at, 69830, 1) != 0,
+            absorb_any: m.bits(at, 69831, 1) != 0,
+            effect_once: m.bits(at, 69832, 1) != 0,
+            out_of_play: m.bits(at, 69833, 1) != 0,
+            blast_immune_state: m.bits(at, 69834, 1) != 0,
+            hitboxes_set: m.bits(at, 69835, 1) != 0,
+            hammer_hits_held: m.bits(at, 69836, 1) != 0,
+            in_hitlag: m.bits(at, 69837, 1) != 0,
+            was_in_hitlag: m.bits(at, 69838, 1) != 0,
+            hitlag_held: m.bits(at, 69839, 1) != 0,
+            pending_hitlag: m.bits(at, 69840, 1) != 0,
+            thaw_size: m.bits(at, 69841, 1) != 0,
             allow_sdi: m.bits(at, 69842, 1) != 0,
-            x221A_b3: m.bits(at, 69843, 1) != 0,
+            in_hitstun_sdi: m.bits(at, 69843, 1) != 0,
             fall_fast: m.bits(at, 69844, 1) != 0,
-            x221A_b5: m.bits(at, 69845, 1) != 0,
-            x221A_b6: m.bits(at, 69846, 1) != 0,
-            x221A_b7: m.bits(at, 69847, 1) != 0,
-            x221B: Fighter_x221B::import(m, at + 0x221b, cx),
-            x221C_b0: m.bits(at, 69856, 1) != 0,
-            x221C_b1: m.bits(at, 69857, 1) != 0,
-            x221C_b2: m.bits(at, 69858, 1) != 0,
-            x221C_b3: m.bits(at, 69859, 1) != 0,
-            x221C_b4: m.bits(at, 69860, 1) != 0,
-            x221C_b5: m.bits(at, 69861, 1) != 0,
-            x221C_b6: m.bits(at, 69862, 1) != 0,
-            x221C_u16_y: m.bits(at, 69863, 3) as u8,
-            x221D_b2: m.bits(at, 69866, 1) != 0,
+            hurtboxes_set: m.bits(at, 69845, 1) != 0,
+            hurtboxes_custom: m.bits(at, 69846, 1) != 0,
+            shield_was_hit: m.bits(at, 69847, 1) != 0,
+            state_flags: Fighter_x221B::import(m, at + 0x221b, cx),
+            held_hit_light: m.bits(at, 69856, 1) != 0,
+            powershield_late: m.bits(at, 69857, 1) != 0,
+            powershield: m.bits(at, 69858, 1) != 0,
+            powershield_early: m.bits(at, 69859, 1) != 0,
+            armor: m.bits(at, 69860, 1) != 0,
+            hit_this_frame: m.bits(at, 69861, 1) != 0,
+            in_hitstun: m.bits(at, 69862, 1) != 0,
+            leg_reach: m.bits(at, 69863, 3) as u8,
+            variants_hidden: m.bits(at, 69866, 1) != 0,
             has_prev_input: m.bits(at, 69867, 1) != 0,
             input_disabled: m.bits(at, 69868, 1) != 0,
-            x221D_b5: m.bits(at, 69869, 1) != 0,
-            x221D_b6: m.bits(at, 69870, 1) != 0,
-            x221D_b7: m.bits(at, 69871, 1) != 0,
+            nudge_off: m.bits(at, 69869, 1) != 0,
+            starman: m.bits(at, 69870, 1) != 0,
+            hanging: m.bits(at, 69871, 1) != 0,
             invisible: m.bits(at, 69872, 1) != 0,
-            x221E_b1: m.bits(at, 69873, 1) != 0,
-            x221E_b2: m.bits(at, 69874, 1) != 0,
-            x221E_b3: m.bits(at, 69875, 1) != 0,
-            x221E_b4: m.bits(at, 69876, 1) != 0,
-            x221E_b5: m.bits(at, 69877, 1) != 0,
-            x221E_b6: m.bits(at, 69878, 1) != 0,
-            x221E_b7: m.bits(at, 69879, 1) != 0,
-            x221F_b0: m.bits(at, 69880, 1) != 0,
-            x221F_b1: m.bits(at, 69881, 1) != 0,
-            x221F_b2: m.bits(at, 69882, 1) != 0,
+            dead_flag: m.bits(at, 69873, 1) != 0,
+            entering: m.bits(at, 69874, 1) != 0,
+            item_visible: m.bits(at, 69875, 1) != 0,
+            articles_visible: m.bits(at, 69876, 1) != 0,
+            visible: m.bits(at, 69877, 1) != 0,
+            grab_coll_off: m.bits(at, 69878, 1) != 0,
+            costume_anim_set: m.bits(at, 69879, 1) != 0,
+            off_screen: m.bits(at, 69880, 1) != 0,
+            dead: m.bits(at, 69881, 1) != 0,
+            cloaked: m.bits(at, 69882, 1) != 0,
             is_sleeping: m.bits(at, 69883, 1) != 0,
             is_sub_fighter: m.bits(at, 69884, 1) != 0,
-            x221F_b5: m.bits(at, 69885, 1) != 0,
-            x221F_b6: m.bits(at, 69886, 1) != 0,
-            x221F_b7: m.bits(at, 69887, 1) != 0,
-            x2220_b0: m.bits(at, 69888, 3) as u8,
-            x2220_b3: m.bits(at, 69891, 1) != 0,
-            x2220_b4: m.bits(at, 69892, 1) != 0,
-            x2220_b5: m.bits(at, 69893, 1) != 0,
-            x2220_b6: m.bits(at, 69894, 1) != 0,
-            x2220_b7: m.bits(at, 69895, 1) != 0,
-            x2221_b0: m.bits(at, 69896, 1) != 0,
-            x2221_b1: m.bits(at, 69897, 1) != 0,
-            x2221_b2: m.bits(at, 69898, 1) != 0,
-            x2221_b3: m.bits(at, 69899, 1) != 0,
-            x2221_b4: m.bits(at, 69900, 1) != 0,
-            x2221_b5: m.bits(at, 69901, 1) != 0,
-            x2221_b6: m.bits(at, 69902, 1) != 0,
-            x2221_b7: m.bits(at, 69903, 1) != 0,
-            x2222_b0: m.bits(at, 69904, 1) != 0,
+            last_hit_by_sub: m.bits(at, 69885, 1) != 0,
+            shield_hit_by_sub: m.bits(at, 69886, 1) != 0,
+            unused_221f_b7: m.bits(at, 69887, 1) != 0,
+            footstep_part: m.bits(at, 69888, 3) as u8,
+            buried: m.bits(at, 69891, 1) != 0,
+            turn_spin: m.bits(at, 69892, 1) != 0,
+            giant: m.bits(at, 69893, 1) != 0,
+            tiny: m.bits(at, 69894, 1) != 0,
+            camera_placed: m.bits(at, 69895, 1) != 0,
+            warp_star_intangible: m.bits(at, 69896, 1) != 0,
+            damage_col_anim: m.bits(at, 69897, 1) != 0,
+            hip_offset: m.bits(at, 69898, 1) != 0,
+            light_changed: m.bits(at, 69899, 1) != 0,
+            parasol_open: m.bits(at, 69900, 1) != 0,
+            parasol_checked: m.bits(at, 69901, 1) != 0,
+            parasol_blend: m.bits(at, 69902, 1) != 0,
+            parasol_from_jump: m.bits(at, 69903, 1) != 0,
+            has_cargo: m.bits(at, 69904, 1) != 0,
             can_multijump: m.bits(at, 69905, 1) != 0,
-            x2222_b2: m.bits(at, 69906, 1) != 0,
-            x2222_b3: m.bits(at, 69907, 1) != 0,
-            x2222_b4: m.bits(at, 69908, 1) != 0,
-            x2222_b5: m.bits(at, 69909, 1) != 0,
-            x2222_b6: m.bits(at, 69910, 1) != 0,
-            x2222_b7: m.bits(at, 69911, 1) != 0,
-            x2223_b0: m.bits(at, 69912, 1) != 0,
-            x2223_b1: m.bits(at, 69913, 1) != 0,
-            x2223_b2: m.bits(at, 69914, 1) != 0,
-            x2223_b3: m.bits(at, 69915, 1) != 0,
-            x2223_b4: m.bits(at, 69916, 1) != 0,
-            x2223_b5: m.bits(at, 69917, 1) != 0,
+            no_turn: m.bits(at, 69906, 1) != 0,
+            no_blast_rise: m.bits(at, 69907, 1) != 0,
+            pickup_limited: m.bits(at, 69908, 1) != 0,
+            is_popo: m.bits(at, 69909, 1) != 0,
+            frozen_with_holder: m.bits(at, 69910, 1) != 0,
+            follows_holder: m.bits(at, 69911, 1) != 0,
+            anim_frozen: m.bits(at, 69912, 1) != 0,
+            is_flat: m.bits(at, 69913, 1) != 0,
+            outline: m.bits(at, 69914, 1) != 0,
+            silhouette: m.bits(at, 69915, 1) != 0,
+            no_item_bounce: m.bits(at, 69916, 1) != 0,
+            stepped_on_item: m.bits(at, 69917, 1) != 0,
             is_always_metal: m.bits(at, 69918, 1) != 0,
             is_metal: m.bits(at, 69919, 1) != 0,
-            x2224_b0: m.bits(at, 69920, 1) != 0,
-            x2224_b1: m.bits(at, 69921, 1) != 0,
+            low_models_own_material: m.bits(at, 69920, 1) != 0,
+            air_item_caught: m.bits(at, 69921, 1) != 0,
             stamina_dead: m.bits(at, 69922, 1) != 0,
-            x2224_b3: m.bits(at, 69923, 1) != 0,
-            x2224_b4: m.bits(at, 69924, 1) != 0,
-            x2224_b5: m.bits(at, 69925, 1) != 0,
-            x2224_b6: m.bits(at, 69926, 1) != 0,
+            stamina_out: m.bits(at, 69923, 1) != 0,
+            wind_immune: m.bits(at, 69924, 1) != 0,
+            mash_shaking: m.bits(at, 69925, 1) != 0,
+            can_mash: m.bits(at, 69926, 1) != 0,
             can_walljump: m.bits(at, 69927, 1) != 0,
-            x2225_b0: m.bits(at, 69928, 1) != 0,
-            x2225_b1: m.bits(at, 69929, 1) != 0,
-            x2225_b2: m.bits(at, 69930, 1) != 0,
-            x2225_b3: m.bits(at, 69931, 1) != 0,
-            x2225_b4: m.bits(at, 69932, 1) != 0,
-            x2225_b5: m.bits(at, 69933, 1) != 0,
-            x2225_b6: m.bits(at, 69934, 1) != 0,
-            x2225_b7: m.bits(at, 69935, 1) != 0,
-            x2226_b0: m.bits(at, 69936, 1) != 0,
-            x2226_b1: m.bits(at, 69937, 1) != 0,
-            x2226_b2: m.bits(at, 69938, 1) != 0,
-            x2226_b3: m.bits(at, 69939, 1) != 0,
-            x2226_b4: m.bits(at, 69940, 1) != 0,
-            x2226_b5: m.bits(at, 69941, 1) != 0,
-            x2226_b6: m.bits(at, 69942, 1) != 0,
-            x2226_b7: m.bits(at, 69943, 1) != 0,
-            x2227_b0: m.bits(at, 69944, 1) != 0,
-            x2227_b1: m.bits(at, 69945, 1) != 0,
-            x2227_b2: m.bits(at, 69946, 1) != 0,
-            x2227_b3: m.bits(at, 69947, 1) != 0,
-            x2227_b4: m.bits(at, 69948, 1) != 0,
-            x2227_b5: m.bits(at, 69949, 1) != 0,
-            x2227_b6: m.bits(at, 69950, 1) != 0,
-            x2227_b7: m.bits(at, 69951, 1) != 0,
-            x2228_b0: m.bits(at, 69952, 1) != 0,
-            x2228_b1: m.bits(at, 69953, 1) != 0,
+            map_coll_done: m.bits(at, 69928, 1) != 0,
+            inhale_catch: m.bits(at, 69929, 1) != 0,
+            hat_hidden: m.bits(at, 69930, 1) != 0,
+            nana_follows: m.bits(at, 69931, 1) != 0,
+            hits_others_team: m.bits(at, 69932, 1) != 0,
+            rules_voice_muted: m.bits(at, 69933, 1) != 0,
+            voice_muted: m.bits(at, 69934, 1) != 0,
+            is_stamina: m.bits(at, 69935, 1) != 0,
+            lies_on_z: m.bits(at, 69936, 1) != 0,
+            heavy_down_bound: m.bits(at, 69937, 1) != 0,
+            held_in_model: m.bits(at, 69938, 1) != 0,
+            takes_damage_cloaked: m.bits(at, 69939, 1) != 0,
+            cloak: m.bits(at, 69940, 1) != 0,
+            refracted: m.bits(at, 69941, 1) != 0,
+            no_color_anims: m.bits(at, 69942, 1) != 0,
+            cloak_look: m.bits(at, 69943, 1) != 0,
+            jumped_from_ground: m.bits(at, 69944, 1) != 0,
+            ledge_jumped: m.bits(at, 69945, 1) != 0,
+            thrown_hitbox_live: m.bits(at, 69946, 1) != 0,
+            alt_metal: m.bits(at, 69947, 1) != 0,
+            tumble_early: m.bits(at, 69948, 1) != 0,
+            special_air_used: m.bits(at, 69949, 1) != 0,
+            held_in_ice: m.bits(at, 69950, 1) != 0,
+            drew_low_models: m.bits(at, 69951, 1) != 0,
+            low_models: m.bits(at, 69952, 1) != 0,
+            flat_floor_chains: m.bits(at, 69953, 1) != 0,
             is_sandbag: m.bits(at, 69954, 1) != 0,
-            x2228_b3: m.bits(at, 69955, 2) as u8,
-            x2228_b5: m.bits(at, 69957, 1) != 0,
+            sfx_size: m.bits(at, 69955, 2) as u8,
+            blast_immune: m.bits(at, 69957, 1) != 0,
             used_tether: m.bits(at, 69958, 1) != 0,
-            x2228_b7: m.bits(at, 69959, 1) != 0,
-            x2229_b0: m.bits(at, 69960, 1) != 0,
-            x2229_b1: m.bits(at, 69961, 1) != 0,
-            x2229_b2: m.bits(at, 69962, 1) != 0,
-            x2229_b3: m.bits(at, 69963, 1) != 0,
-            x2229_b4: m.bits(at, 69964, 1) != 0,
+            stick_right: m.bits(at, 69959, 1) != 0,
+            stick_left: m.bits(at, 69960, 1) != 0,
+            attrs_scaled: m.bits(at, 69961, 1) != 0,
+            unused_2229_b2: m.bits(at, 69962, 1) != 0,
+            no_magnifier: m.bits(at, 69963, 1) != 0,
+            coin_odd_frame: m.bits(at, 69964, 1) != 0,
             no_normal_motion: m.bits(at, 69965, 1) != 0,
-            x2229_b6: m.bits(at, 69966, 1) != 0,
+            spawn_in_air: m.bits(at, 69966, 1) != 0,
             no_kb: m.bits(at, 69967, 1) != 0,
-            x222A_b0: m.bits(at, 69968, 1) != 0,
-            x222A_b1: m.bits(at, 69969, 1) != 0,
-            x222A_b2: m.bits(at, 69970, 1) != 0,
-            x222A_b3: m.bits(at, 69971, 2) as u8,
-            x222A_b5: m.bits(at, 69973, 1) != 0,
-            x222A_b6: m.bits(at, 69974, 1) != 0,
-            x222A_b7: m.bits(at, 69975, 1) != 0,
+            ungrabbable: m.bits(at, 69968, 1) != 0,
+            blast_zone_off: m.bits(at, 69969, 1) != 0,
+            unused_222a_b2: m.bits(at, 69970, 1) != 0,
+            unused_222a_b3: m.bits(at, 69971, 2) as u8,
+            unused_222a_b5: m.bits(at, 69973, 1) != 0,
+            unused_222a_b6: m.bits(at, 69974, 1) != 0,
+            unused_222a_b7: m.bits(at, 69975, 1) != 0,
             u: FighterVars::import(m, at + 0x222c, cx),
             bury_grkind: m.u32(at + 0x2324) as i32,
             bury_timer_1: m.u32(at + 0x2328),
             bury_timer_2: m.u32(at + 0x232c),
-            x2330: IntVec2::import(m, at + 0x2330, cx),
-            x2338: IntVec2::import(m, at + 0x2338, cx),
+            hammer_frames: IntVec2::import(m, at + 0x2330, cx),
+            hammer_timers: IntVec2::import(m, at + 0x2338, cx),
             mv: MotionVars::import(m, at + 0x2340, cx),
         }
     }
@@ -4822,10 +4842,10 @@ impl Mirror for Fighter {
                 format!("{:?}", m.u32(at + 0x4) as i32),
             );
         }
-        if self.x8_spawnNum != m.u32(at + 0x8) as i32 {
+        if self.spawn_num != m.u32(at + 0x8) as i32 {
             cx.mismatch(
-                &format!("{path}.x8_spawnNum"),
-                format!("{:?}", self.x8_spawnNum),
+                &format!("{path}.spawn_num (x8_spawnNum)"),
+                format!("{:?}", self.spawn_num),
                 format!("{:?}", m.u32(at + 0x8) as i32),
             );
         }
@@ -4850,29 +4870,37 @@ impl Mirror for Fighter {
                 format!("{:?}", m.u32(at + 0x14) as i32),
             );
         }
-        if self.x18 != m.u32(at + 0x18) as i32 {
+        if self.own_msid_start != m.u32(at + 0x18) as i32 {
             cx.mismatch(
-                &format!("{path}.x18"),
-                format!("{:?}", self.x18),
+                &format!("{path}.own_msid_start (x18)"),
+                format!("{:?}", self.own_msid_start),
                 format!("{:?}", m.u32(at + 0x18) as i32),
             );
         }
-        if self.x1C_actionStateList.0 != m.u32(at + 0x1c) {
+        if self.common_motion_states.0 != m.u32(at + 0x1c) {
             cx.mismatch(
-                &format!("{path}.x1C_actionStateList"),
-                format!("{:#x}", self.x1C_actionStateList.0),
+                &format!("{path}.common_motion_states (x1C_actionStateList)"),
+                format!("{:#x}", self.common_motion_states.0),
                 format!("{:#x}", m.u32(at + 0x1c)),
             );
         }
-        if self.x20_actionStateList.0 != m.u32(at + 0x20) {
+        if self.own_motion_states.0 != m.u32(at + 0x20) {
             cx.mismatch(
-                &format!("{path}.x20_actionStateList"),
-                format!("{:#x}", self.x20_actionStateList.0),
+                &format!("{path}.own_motion_states (x20_actionStateList)"),
+                format!("{:#x}", self.own_motion_states.0),
                 format!("{:#x}", m.u32(at + 0x20)),
             );
         }
-        cx.compare_data(&format!("{path}.x24"), self.x24, m.u32(at + 0x24));
-        cx.compare_data(&format!("{path}.x28"), self.x28, m.u32(at + 0x28));
+        cx.compare_data(
+            &format!("{path}.anim_table (x24)"),
+            self.anim_table,
+            m.u32(at + 0x24),
+        );
+        cx.compare_data(
+            &format!("{path}.anim_flags (x28)"),
+            self.anim_flags,
+            m.u32(at + 0x28),
+        );
         if self.facing_dir.to_bits() != m.u32(at + 0x2c) {
             cx.mismatch(
                 &format!("{path}.facing_dir"),
@@ -4887,27 +4915,27 @@ impl Mirror for Fighter {
                 format!("{:?}", f32::from_bits(m.u32(at + 0x30))),
             );
         }
-        self.x34_scale
-            .compare(m, at + 0x34, &format!("{path}.x34_scale"), cx);
-        if self.x40.to_bits() != m.u32(at + 0x40) {
+        self.scale
+            .compare(m, at + 0x34, &format!("{path}.scale (x34_scale)"), cx);
+        if self.platform_offset.to_bits() != m.u32(at + 0x40) {
             cx.mismatch(
-                &format!("{path}.x40"),
-                format!("{:?}", self.x40),
+                &format!("{path}.platform_offset (x40)"),
+                format!("{:?}", self.platform_offset),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x40))),
             );
         }
         for i0 in 0..3 {
             for i1 in 0..4 {
-                if self.x44_mtx[i0][i1].to_bits()
+                if self.depth_scale_mtx[i0][i1].to_bits()
                     != m.u32(at + 0x44 + i0 as u32 * 0x10 + i1 as u32 * 0x4)
                 {
                     cx.mismatch(
                         &format!(
                             "{}[{}]",
-                            format!("{}[{}]", format!("{path}.x44_mtx"), i0),
+                            format!("{}[{}]", format!("{path}.depth_scale_mtx (x44_mtx)"), i0),
                             i1
                         ),
-                        format!("{:?}", self.x44_mtx[i0][i1]),
+                        format!("{:?}", self.depth_scale_mtx[i0][i1]),
                         format!(
                             "{:?}",
                             f32::from_bits(m.u32(at + 0x44 + i0 as u32 * 0x10 + i1 as u32 * 0x4))
@@ -4916,24 +4944,36 @@ impl Mirror for Fighter {
                 }
             }
         }
-        self.x74_self_accel
-            .compare(m, at + 0x74, &format!("{path}.x74_self_accel"), cx);
+        self.anim_vel.compare(
+            m,
+            at + 0x74,
+            &format!("{path}.anim_vel (x74_self_accel)"),
+            cx,
+        );
         self.self_vel
             .compare(m, at + 0x80, &format!("{path}.self_vel"), cx);
-        self.x8c_kb_vel
-            .compare(m, at + 0x8c, &format!("{path}.x8c_kb_vel"), cx);
-        self.x98_atk_shield_kb
-            .compare(m, at + 0x98, &format!("{path}.x98_atk_shield_kb"), cx);
-        self.xA4_unk_vel
-            .compare(m, at + 0xa4, &format!("{path}.xA4_unk_vel"), cx);
+        self.kb_vel
+            .compare(m, at + 0x8c, &format!("{path}.kb_vel (x8c_kb_vel)"), cx);
+        self.atk_shield_kb_vel.compare(
+            m,
+            at + 0x98,
+            &format!("{path}.atk_shield_kb_vel (x98_atk_shield_kb)"),
+            cx,
+        );
+        self.item_bounce_vel.compare(
+            m,
+            at + 0xa4,
+            &format!("{path}.item_bounce_vel (xA4_unk_vel)"),
+            cx,
+        );
         self.cur_pos
             .compare(m, at + 0xb0, &format!("{path}.cur_pos"), cx);
         self.prev_pos
             .compare(m, at + 0xbc, &format!("{path}.prev_pos"), cx);
         self.pos_delta
             .compare(m, at + 0xc8, &format!("{path}.pos_delta"), cx);
-        self.xD4_unk_vel
-            .compare(m, at + 0xd4, &format!("{path}.xD4_unk_vel"), cx);
+        self.frame_vel
+            .compare(m, at + 0xd4, &format!("{path}.frame_vel (xD4_unk_vel)"), cx);
         if self.ground_or_air != m.u32(at + 0xe0) as i32 {
             cx.mismatch(
                 &format!("{path}.ground_or_air"),
@@ -4941,17 +4981,17 @@ impl Mirror for Fighter {
                 format!("{:?}", m.u32(at + 0xe0) as i32),
             );
         }
-        if self.xE4_ground_accel_1.to_bits() != m.u32(at + 0xe4) {
+        if self.ground_accel_1.to_bits() != m.u32(at + 0xe4) {
             cx.mismatch(
-                &format!("{path}.xE4_ground_accel_1"),
-                format!("{:?}", self.xE4_ground_accel_1),
+                &format!("{path}.ground_accel_1 (xE4_ground_accel_1)"),
+                format!("{:?}", self.ground_accel_1),
                 format!("{:?}", f32::from_bits(m.u32(at + 0xe4))),
             );
         }
-        if self.xE8_ground_accel_2.to_bits() != m.u32(at + 0xe8) {
+        if self.ground_accel_2.to_bits() != m.u32(at + 0xe8) {
             cx.mismatch(
-                &format!("{path}.xE8_ground_accel_2"),
-                format!("{:?}", self.xE8_ground_accel_2),
+                &format!("{path}.ground_accel_2 (xE8_ground_accel_2)"),
+                format!("{:?}", self.ground_accel_2),
                 format!("{:?}", f32::from_bits(m.u32(at + 0xe8))),
             );
         }
@@ -4962,79 +5002,89 @@ impl Mirror for Fighter {
                 format!("{:?}", f32::from_bits(m.u32(at + 0xec))),
             );
         }
-        if self.xF0_ground_kb_vel.to_bits() != m.u32(at + 0xf0) {
+        if self.ground_kb_vel.to_bits() != m.u32(at + 0xf0) {
             cx.mismatch(
-                &format!("{path}.xF0_ground_kb_vel"),
-                format!("{:?}", self.xF0_ground_kb_vel),
+                &format!("{path}.ground_kb_vel (xF0_ground_kb_vel)"),
+                format!("{:?}", self.ground_kb_vel),
                 format!("{:?}", f32::from_bits(m.u32(at + 0xf0))),
             );
         }
-        if self.xF4_ground_attacker_shield_kb_vel.to_bits() != m.u32(at + 0xf4) {
+        if self.ground_attacker_shield_kb_vel.to_bits() != m.u32(at + 0xf4) {
             cx.mismatch(
-                &format!("{path}.xF4_ground_attacker_shield_kb_vel"),
-                format!("{:?}", self.xF4_ground_attacker_shield_kb_vel),
+                &format!(
+                    "{path}.ground_attacker_shield_kb_vel (xF4_ground_attacker_shield_kb_vel)"
+                ),
+                format!("{:?}", self.ground_attacker_shield_kb_vel),
                 format!("{:?}", f32::from_bits(m.u32(at + 0xf4))),
             );
         }
-        self.xF8_playerNudgeVel
-            .compare(m, at + 0xf8, &format!("{path}.xF8_playerNudgeVel"), cx);
-        if self.x100.to_bits() != m.u32(at + 0x100) {
+        self.nudge_vel.compare(
+            m,
+            at + 0xf8,
+            &format!("{path}.nudge_vel (xF8_playerNudgeVel)"),
+            cx,
+        );
+        if self.part_35_rot_x.to_bits() != m.u32(at + 0x100) {
             cx.mismatch(
-                &format!("{path}.x100"),
-                format!("{:?}", self.x100),
+                &format!("{path}.part_35_rot_x (x100)"),
+                format!("{:?}", self.part_35_rot_x),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x100))),
             );
         }
-        if self.x104 != m.u8(at + 0x104) {
+        if self.freeze_step_timer != m.u8(at + 0x104) {
             cx.mismatch(
-                &format!("{path}.x104"),
-                format!("{:?}", self.x104),
+                &format!("{path}.freeze_step_timer (x104)"),
+                format!("{:?}", self.freeze_step_timer),
                 format!("{:?}", m.u8(at + 0x104)),
             );
         }
-        if self.x105 != m.u8(at + 0x105) as i8 {
+        if self.pad_105 != m.u8(at + 0x105) as i8 {
             cx.mismatch(
-                &format!("{path}.x105"),
-                format!("{:?}", self.x105),
+                &format!("{path}.pad_105 (x105)"),
+                format!("{:?}", self.pad_105),
                 format!("{:?}", m.u8(at + 0x105) as i8),
             );
         }
-        if self.x106 != m.u8(at + 0x106) as i8 {
+        if self.pad_106 != m.u8(at + 0x106) as i8 {
             cx.mismatch(
-                &format!("{path}.x106"),
-                format!("{:?}", self.x106),
+                &format!("{path}.pad_106 (x106)"),
+                format!("{:?}", self.pad_106),
                 format!("{:?}", m.u8(at + 0x106) as i8),
             );
         }
-        if self.x107 != m.u8(at + 0x107) as i8 {
+        if self.pad_107 != m.u8(at + 0x107) as i8 {
             cx.mismatch(
-                &format!("{path}.x107"),
-                format!("{:?}", self.x107),
+                &format!("{path}.pad_107 (x107)"),
+                format!("{:?}", self.pad_107),
                 format!("{:?}", m.u8(at + 0x107) as i8),
             );
         }
         cx.compare_data(
-            &format!("{path}.x108_costume_joint"),
-            self.x108_costume_joint,
+            &format!("{path}.costume_joint (x108_costume_joint)"),
+            self.costume_joint,
             m.u32(at + 0x108),
         );
         cx.compare_data(&format!("{path}.ft_data"), self.ft_data, m.u32(at + 0x10c));
         self.co_attrs
             .compare(m, at + 0x110, &format!("{path}.co_attrs"), cx);
-        self.x294_itPickup
-            .compare(m, at + 0x294, &format!("{path}.x294_itPickup"), cx);
-        self.x2C4
-            .compare(m, at + 0x2c4, &format!("{path}.x2C4"), cx);
+        self.item_pickup.compare(
+            m,
+            at + 0x294,
+            &format!("{path}.item_pickup (x294_itPickup)"),
+            cx,
+        );
+        self.push_size
+            .compare(m, at + 0x2c4, &format!("{path}.push_size (x2C4)"), cx);
         cx.compare_handle(
-            &format!("{path}.x2CC"),
+            &format!("{path}.cargo_attrs (x2CC)"),
             "AttrsId",
-            self.x2CC.map(|h| h.0),
+            self.cargo_attrs.map(|h| h.0),
             m.u32(at + 0x2cc),
         );
         cx.compare_handle(
-            &format!("{path}.x2D0"),
+            &format!("{path}.multi_jump_attrs (x2D0)"),
             "AttrsId",
-            self.x2D0.map(|h| h.0),
+            self.multi_jump_attrs.map(|h| h.0),
             m.u32(at + 0x2d0),
         );
         cx.compare_handle(
@@ -5049,38 +5099,38 @@ impl Mirror for Fighter {
             self.dat_attrs_backup.map(|h| h.0),
             m.u32(at + 0x2d8),
         );
-        if self.x2DC.to_bits() != m.u32(at + 0x2dc) {
+        if self.walk_slow_frames.to_bits() != m.u32(at + 0x2dc) {
             cx.mismatch(
-                &format!("{path}.x2DC"),
-                format!("{:?}", self.x2DC),
+                &format!("{path}.walk_slow_frames (x2DC)"),
+                format!("{:?}", self.walk_slow_frames),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x2dc))),
             );
         }
-        if self.x2E0.to_bits() != m.u32(at + 0x2e0) {
+        if self.walk_middle_frames.to_bits() != m.u32(at + 0x2e0) {
             cx.mismatch(
-                &format!("{path}.x2E0"),
-                format!("{:?}", self.x2E0),
+                &format!("{path}.walk_middle_frames (x2E0)"),
+                format!("{:?}", self.walk_middle_frames),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x2e0))),
             );
         }
-        if self.x2E4.to_bits() != m.u32(at + 0x2e4) {
+        if self.walk_fast_frames.to_bits() != m.u32(at + 0x2e4) {
             cx.mismatch(
-                &format!("{path}.x2E4"),
-                format!("{:?}", self.x2E4),
+                &format!("{path}.walk_fast_frames (x2E4)"),
+                format!("{:?}", self.walk_fast_frames),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x2e4))),
             );
         }
-        if self.x2E8.to_bits() != m.u32(at + 0x2e8) {
+        if self.guard_on_frames.to_bits() != m.u32(at + 0x2e8) {
             cx.mismatch(
-                &format!("{path}.x2E8"),
-                format!("{:?}", self.x2E8),
+                &format!("{path}.guard_on_frames (x2E8)"),
+                format!("{:?}", self.guard_on_frames),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x2e8))),
             );
         }
-        if self.x2EC.to_bits() != m.u32(at + 0x2ec) {
+        if self.landing_fall_special_frames.to_bits() != m.u32(at + 0x2ec) {
             cx.mismatch(
-                &format!("{path}.x2EC"),
-                format!("{:?}", self.x2EC),
+                &format!("{path}.landing_fall_special_frames (x2EC)"),
+                format!("{:?}", self.landing_fall_special_frames),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x2ec))),
             );
         }
@@ -5093,70 +5143,78 @@ impl Mirror for Fighter {
                 format!("{:?}", m.u32(at + 0x3e0) as i32),
             );
         }
-        self.x3E4_fighterCmdScript.compare(
+        self.cmd_script.compare(
             m,
             at + 0x3e4,
-            &format!("{path}.x3E4_fighterCmdScript"),
+            &format!("{path}.cmd_script (x3E4_fighterCmdScript)"),
             cx,
         );
-        self.x408
-            .compare(m, at + 0x408, &format!("{path}.x408"), cx);
-        self.x488
-            .compare(m, at + 0x488, &format!("{path}.x488"), cx);
-        self.x508
-            .compare(m, at + 0x508, &format!("{path}.x508"), cx);
+        self.main_overlay
+            .compare(m, at + 0x408, &format!("{path}.main_overlay (x408)"), cx);
+        self.secondary_overlay.compare(
+            m,
+            at + 0x488,
+            &format!("{path}.secondary_overlay (x488)"),
+            cx,
+        );
+        self.spycloak_overlay.compare(
+            m,
+            at + 0x508,
+            &format!("{path}.spycloak_overlay (x508)"),
+            cx,
+        );
         cx.compare_handle(
-            &format!("{path}.x588"),
+            &format!("{path}.light (x588)"),
             "LObjId",
-            self.x588.map(|h| h.0),
+            self.light.map(|h| h.0),
             m.u32(at + 0x588),
         );
-        if self.x58C != m.u32(at + 0x58c) {
+        if self.anim_count != m.u32(at + 0x58c) {
             cx.mismatch(
-                &format!("{path}.x58C"),
-                format!("{:?}", self.x58C),
+                &format!("{path}.anim_count (x58C)"),
+                format!("{:?}", self.anim_count),
                 format!("{:?}", m.u32(at + 0x58c)),
             );
         }
-        self.x590
-            .compare(m, at + 0x590, &format!("{path}.x590"), cx);
-        if self.x594 != m.bytes::<4>(at + 0x594) {
+        self.action_tree
+            .compare(m, at + 0x590, &format!("{path}.action_tree (x590)"), cx);
+        if self.anim_bits != m.bytes::<4>(at + 0x594) {
             cx.mismatch(
-                &format!("{path}.x594"),
-                format!("{:02x?}", self.x594),
+                &format!("{path}.anim_bits (x594)"),
+                format!("{:02x?}", self.anim_bits),
                 format!("{:02x?}", m.bytes::<4>(at + 0x594)),
             );
         }
-        self.x598
-            .compare(m, at + 0x598, &format!("{path}.x598"), cx);
+        self.second_tree
+            .compare(m, at + 0x598, &format!("{path}.second_tree (x598)"), cx);
         cx.compare_handle(
-            &format!("{path}.x59C"),
+            &format!("{path}.main_anim_buf (x59C)"),
             "AnimBufId",
-            self.x59C.map(|h| h.0),
+            self.main_anim_buf.map(|h| h.0),
             m.u32(at + 0x59c),
         );
         cx.compare_handle(
-            &format!("{path}.x5A0"),
+            &format!("{path}.second_anim_buf (x5A0)"),
             "AnimBufId",
-            self.x5A0.map(|h| h.0),
+            self.second_anim_buf.map(|h| h.0),
             m.u32(at + 0x5a0),
         );
-        if self.x5A4 != m.u32(at + 0x5a4) {
+        if self.main_anim_aram != m.u32(at + 0x5a4) {
             cx.mismatch(
-                &format!("{path}.x5A4"),
-                format!("{:?}", self.x5A4),
+                &format!("{path}.main_anim_aram (x5A4)"),
+                format!("{:?}", self.main_anim_aram),
                 format!("{:?}", m.u32(at + 0x5a4)),
             );
         }
-        if self.x5A8 != m.u32(at + 0x5a8) {
+        if self.second_anim_aram != m.u32(at + 0x5a8) {
             cx.mismatch(
-                &format!("{path}.x5A8"),
-                format!("{:?}", self.x5A8),
+                &format!("{path}.second_anim_aram (x5A8)"),
+                format!("{:?}", self.second_anim_aram),
                 format!("{:?}", m.u32(at + 0x5a8)),
             );
         }
-        self.x5AC
-            .compare(m, at + 0x5ac, &format!("{path}.x5AC"), cx);
+        self.parts_vis
+            .compare(m, at + 0x5ac, &format!("{path}.parts_vis (x5AC)"), cx);
         self.tobj_list
             .compare(m, at + 0x5cc, &format!("{path}.tobj_list"), cx);
         cx.compare_handle(
@@ -5168,24 +5226,28 @@ impl Mirror for Fighter {
         self.dobj_list
             .compare(m, at + 0x5ec, &format!("{path}.dobj_list"), cx);
         for i0 in 0..12 {
-            self.x5F4_arr[i0].compare(
+            self.model_variants[i0].compare(
                 m,
                 at + 0x5f4 + i0 as u32 * 0x2,
-                &format!("{}[{}]", format!("{path}.x5F4_arr"), i0),
+                &format!("{}[{}]", format!("{path}.model_variants (x5F4_arr)"), i0),
                 cx,
             );
         }
         cx.compare_handle(
-            &format!("{path}.x60C"),
+            &format!("{path}.effect_queue (x60C)"),
             "QueuedId",
-            self.x60C.map(|h| h.0),
+            self.effect_queue.map(|h| h.0),
             m.u32(at + 0x60c),
         );
         for i0 in 0..2 {
-            self.x610_color_rgba[i0].compare(
+            self.overlay_colors[i0].compare(
                 m,
                 at + 0x610 + i0 as u32 * 0x4,
-                &format!("{}[{}]", format!("{path}.x610_color_rgba"), i0),
+                &format!(
+                    "{}[{}]",
+                    format!("{path}.overlay_colors (x610_color_rgba)"),
+                    i0
+                ),
                 cx,
             );
         }
@@ -5217,25 +5279,25 @@ impl Mirror for Fighter {
                 format!("{:?}", m.u8(at + 0x61b)),
             );
         }
-        if self.x61C != m.u8(at + 0x61c) as i8 {
+        if self.slot_word != m.u8(at + 0x61c) as i8 {
             cx.mismatch(
-                &format!("{path}.x61C"),
-                format!("{:?}", self.x61C),
+                &format!("{path}.slot_word (x61C)"),
+                format!("{:?}", self.slot_word),
                 format!("{:?}", m.u8(at + 0x61c) as i8),
             );
         }
-        if self.x61D != m.u8(at + 0x61d) {
+        if self.alpha != m.u8(at + 0x61d) {
             cx.mismatch(
-                &format!("{path}.x61D"),
-                format!("{:?}", self.x61D),
+                &format!("{path}.alpha (x61D)"),
+                format!("{:?}", self.alpha),
                 format!("{:?}", m.u8(at + 0x61d)),
             );
         }
         for i0 in 0..2 {
-            if self.filler_x61E[i0] != m.u8(at + 0x61e + i0 as u32 * 0x1) {
+            if self.pad_61e[i0] != m.u8(at + 0x61e + i0 as u32 * 0x1) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.filler_x61E"), i0),
-                    format!("{:?}", self.filler_x61E[i0]),
+                    &format!("{}[{}]", format!("{path}.pad_61e (filler_x61E)"), i0),
+                    format!("{:?}", self.pad_61e[i0]),
                     format!("{:?}", m.u8(at + 0x61e + i0 as u32 * 0x1)),
                 );
             }
@@ -5250,126 +5312,142 @@ impl Mirror for Fighter {
             .compare(m, at + 0x676, &format!("{path}.active_duration"), cx);
         self.activity_timer
             .compare(m, at + 0x679, &format!("{path}.activity_timer"), cx);
-        if self.x67C != m.u8(at + 0x67c) {
+        if self.frames_since_smash_x != m.u8(at + 0x67c) {
             cx.mismatch(
-                &format!("{path}.x67C"),
-                format!("{:?}", self.x67C),
+                &format!("{path}.frames_since_smash_x (x67C)"),
+                format!("{:?}", self.frames_since_smash_x),
                 format!("{:?}", m.u8(at + 0x67c)),
             );
         }
-        if self.x67D != m.u8(at + 0x67d) {
+        if self.frames_since_smash_up != m.u8(at + 0x67d) {
             cx.mismatch(
-                &format!("{path}.x67D"),
-                format!("{:?}", self.x67D),
+                &format!("{path}.frames_since_smash_up (x67D)"),
+                format!("{:?}", self.frames_since_smash_up),
                 format!("{:?}", m.u8(at + 0x67d)),
             );
         }
-        if self.x67E != m.u8(at + 0x67e) {
+        if self.frames_since_tap_up != m.u8(at + 0x67e) {
             cx.mismatch(
-                &format!("{path}.x67E"),
-                format!("{:?}", self.x67E),
+                &format!("{path}.frames_since_tap_up (x67E)"),
+                format!("{:?}", self.frames_since_tap_up),
                 format!("{:?}", m.u8(at + 0x67e)),
             );
         }
-        if self.x67F != m.u8(at + 0x67f) {
+        if self.frames_since_shoulder != m.u8(at + 0x67f) {
             cx.mismatch(
-                &format!("{path}.x67F"),
-                format!("{:?}", self.x67F),
+                &format!("{path}.frames_since_shoulder (x67F)"),
+                format!("{:?}", self.frames_since_shoulder),
                 format!("{:?}", m.u8(at + 0x67f)),
             );
         }
-        if self.x680 != m.u8(at + 0x680) {
+        if self.frames_since_tech_shoulder != m.u8(at + 0x680) {
             cx.mismatch(
-                &format!("{path}.x680"),
-                format!("{:?}", self.x680),
+                &format!("{path}.frames_since_tech_shoulder (x680)"),
+                format!("{:?}", self.frames_since_tech_shoulder),
                 format!("{:?}", m.u8(at + 0x680)),
             );
         }
-        if self.x681 != m.u8(at + 0x681) {
+        if self.frames_since_pad_up != m.u8(at + 0x681) {
             cx.mismatch(
-                &format!("{path}.x681"),
-                format!("{:?}", self.x681),
+                &format!("{path}.frames_since_pad_up (x681)"),
+                format!("{:?}", self.frames_since_pad_up),
                 format!("{:?}", m.u8(at + 0x681)),
             );
         }
-        if self.x682 != m.u8(at + 0x682) {
+        if self.frames_since_pad_down != m.u8(at + 0x682) {
             cx.mismatch(
-                &format!("{path}.x682"),
-                format!("{:?}", self.x682),
+                &format!("{path}.frames_since_pad_down (x682)"),
+                format!("{:?}", self.frames_since_pad_down),
                 format!("{:?}", m.u8(at + 0x682)),
             );
         }
-        if self.x683 != m.u8(at + 0x683) {
+        if self.frames_since_z != m.u8(at + 0x683) {
             cx.mismatch(
-                &format!("{path}.x683"),
-                format!("{:?}", self.x683),
+                &format!("{path}.frames_since_z (x683)"),
+                format!("{:?}", self.frames_since_z),
                 format!("{:?}", m.u8(at + 0x683)),
             );
         }
-        if self.x684 != m.u8(at + 0x684) {
+        if self.frames_since_tech_window != m.u8(at + 0x684) {
             cx.mismatch(
-                &format!("{path}.x684"),
-                format!("{:?}", self.x684),
+                &format!("{path}.frames_since_tech_window (x684)"),
+                format!("{:?}", self.frames_since_tech_window),
                 format!("{:?}", m.u8(at + 0x684)),
             );
         }
-        if self.x685 != m.u8(at + 0x685) {
+        if self.frames_since_special_s != m.u8(at + 0x685) {
             cx.mismatch(
-                &format!("{path}.x685"),
-                format!("{:?}", self.x685),
+                &format!("{path}.frames_since_special_s (x685)"),
+                format!("{:?}", self.frames_since_special_s),
                 format!("{:?}", m.u8(at + 0x685)),
             );
         }
-        if self.x686 != m.u8(at + 0x686) {
+        if self.frames_since_special_hi != m.u8(at + 0x686) {
             cx.mismatch(
-                &format!("{path}.x686"),
-                format!("{:?}", self.x686),
+                &format!("{path}.frames_since_special_hi (x686)"),
+                format!("{:?}", self.frames_since_special_hi),
                 format!("{:?}", m.u8(at + 0x686)),
             );
         }
-        if self.x687 != m.u8(at + 0x687) {
+        if self.frames_since_special_lw != m.u8(at + 0x687) {
             cx.mismatch(
-                &format!("{path}.x687"),
-                format!("{:?}", self.x687),
+                &format!("{path}.frames_since_special_lw (x687)"),
+                format!("{:?}", self.frames_since_special_lw),
                 format!("{:?}", m.u8(at + 0x687)),
             );
         }
-        if self.x688 != m.u8(at + 0x688) {
+        if self.frames_since_special_s_dir != m.u8(at + 0x688) {
             cx.mismatch(
-                &format!("{path}.x688"),
-                format!("{:?}", self.x688),
+                &format!("{path}.frames_since_special_s_dir (x688)"),
+                format!("{:?}", self.frames_since_special_s_dir),
                 format!("{:?}", m.u8(at + 0x688)),
             );
         }
-        if self.x689 != m.u8(at + 0x689) {
+        if self.frames_since_special_n != m.u8(at + 0x689) {
             cx.mismatch(
-                &format!("{path}.x689"),
-                format!("{:?}", self.x689),
+                &format!("{path}.frames_since_special_n (x689)"),
+                format!("{:?}", self.frames_since_special_n),
                 format!("{:?}", m.u8(at + 0x689)),
             );
         }
-        if self.x68A != m.u8(at + 0x68a) {
+        if self.frames_since_jump != m.u8(at + 0x68a) {
             cx.mismatch(
-                &format!("{path}.x68A"),
-                format!("{:?}", self.x68A),
+                &format!("{path}.frames_since_jump (x68A)"),
+                format!("{:?}", self.frames_since_jump),
                 format!("{:?}", m.u8(at + 0x68a)),
             );
         }
-        if self.x68B != m.u8(at + 0x68b) {
+        if self.frames_since_special_hi_air != m.u8(at + 0x68b) {
             cx.mismatch(
-                &format!("{path}.x68B"),
-                format!("{:?}", self.x68B),
+                &format!("{path}.frames_since_special_hi_air (x68B)"),
+                format!("{:?}", self.frames_since_special_hi_air),
                 format!("{:?}", m.u8(at + 0x68b)),
             );
         }
-        self.x68C_transNPos
-            .compare(m, at + 0x68c, &format!("{path}.x68C_transNPos"), cx);
-        self.x698
-            .compare(m, at + 0x698, &format!("{path}.x698"), cx);
-        self.x6A4_transNOffset
-            .compare(m, at + 0x6a4, &format!("{path}.x6A4_transNOffset"), cx);
-        self.x6B0
-            .compare(m, at + 0x6b0, &format!("{path}.x6B0"), cx);
+        self.trans_n_pos.compare(
+            m,
+            at + 0x68c,
+            &format!("{path}.trans_n_pos (x68C_transNPos)"),
+            cx,
+        );
+        self.prev_trans_n_pos.compare(
+            m,
+            at + 0x698,
+            &format!("{path}.prev_trans_n_pos (x698)"),
+            cx,
+        );
+        self.trans_n_offset.compare(
+            m,
+            at + 0x6a4,
+            &format!("{path}.trans_n_offset (x6A4_transNOffset)"),
+            cx,
+        );
+        self.prev_trans_n_offset.compare(
+            m,
+            at + 0x6b0,
+            &format!("{path}.prev_trans_n_offset (x6B0)"),
+            cx,
+        );
         if self.lstick_angle.to_bits() != m.u32(at + 0x6bc) {
             cx.mismatch(
                 &format!("{path}.lstick_angle"),
@@ -5377,14 +5455,22 @@ impl Mirror for Fighter {
                 format!("{:?}", f32::from_bits(m.u32(at + 0x6bc))),
             );
         }
-        self.x6C0
-            .compare(m, at + 0x6c0, &format!("{path}.x6C0"), cx);
-        self.x6CC
-            .compare(m, at + 0x6cc, &format!("{path}.x6CC"), cx);
-        self.x6D8
-            .compare(m, at + 0x6d8, &format!("{path}.x6D8"), cx);
-        self.x6E4
-            .compare(m, at + 0x6e4, &format!("{path}.x6E4"), cx);
+        self.part_35_pos
+            .compare(m, at + 0x6c0, &format!("{path}.part_35_pos (x6C0)"), cx);
+        self.prev_part_35_pos.compare(
+            m,
+            at + 0x6cc,
+            &format!("{path}.prev_part_35_pos (x6CC)"),
+            cx,
+        );
+        self.part_35_offset
+            .compare(m, at + 0x6d8, &format!("{path}.part_35_offset (x6D8)"), cx);
+        self.prev_part_35_offset.compare(
+            m,
+            at + 0x6e4,
+            &format!("{path}.prev_part_35_offset (x6E4)"),
+            cx,
+        );
         self.coll_data
             .compare(m, at + 0x6f0, &format!("{path}.coll_data"), cx);
         if self.ecb_lock != m.u32(at + 0x88c) as i32 {
@@ -5395,9 +5481,9 @@ impl Mirror for Fighter {
             );
         }
         cx.compare_handle(
-            &format!("{path}.x890_cameraBox"),
+            &format!("{path}.camera_box (x890_cameraBox)"),
             "CameraBoxId",
-            self.x890_cameraBox.map(|h| h.0),
+            self.camera_box.map(|h| h.0),
             m.u32(at + 0x890),
         );
         if self.cur_anim_frame.to_bits() != m.u32(at + 0x894) {
@@ -5407,10 +5493,10 @@ impl Mirror for Fighter {
                 format!("{:?}", f32::from_bits(m.u32(at + 0x894))),
             );
         }
-        if self.x898_unk.to_bits() != m.u32(at + 0x898) {
+        if self.cmd_frame_offset.to_bits() != m.u32(at + 0x898) {
             cx.mismatch(
-                &format!("{path}.x898_unk"),
-                format!("{:?}", self.x898_unk),
+                &format!("{path}.cmd_frame_offset (x898_unk)"),
+                format!("{:?}", self.cmd_frame_offset),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x898))),
             );
         }
@@ -5421,70 +5507,74 @@ impl Mirror for Fighter {
                 format!("{:?}", f32::from_bits(m.u32(at + 0x89c))),
             );
         }
-        if self.x8A0_unk.to_bits() != m.u32(at + 0x8a0) {
+        if self.freeze_rate_step.to_bits() != m.u32(at + 0x8a0) {
             cx.mismatch(
-                &format!("{path}.x8A0_unk"),
-                format!("{:?}", self.x8A0_unk),
+                &format!("{path}.freeze_rate_step (x8A0_unk)"),
+                format!("{:?}", self.freeze_rate_step),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x8a0))),
             );
         }
-        if self.x8A4_animBlendFrames.to_bits() != m.u32(at + 0x8a4) {
+        if self.anim_blend_frames.to_bits() != m.u32(at + 0x8a4) {
             cx.mismatch(
-                &format!("{path}.x8A4_animBlendFrames"),
-                format!("{:?}", self.x8A4_animBlendFrames),
+                &format!("{path}.anim_blend_frames (x8A4_animBlendFrames)"),
+                format!("{:?}", self.anim_blend_frames),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x8a4))),
             );
         }
-        if self.x8A8_anim_frame.to_bits() != m.u32(at + 0x8a8) {
+        if self.anim_blend_frame.to_bits() != m.u32(at + 0x8a8) {
             cx.mismatch(
-                &format!("{path}.x8A8_anim_frame"),
-                format!("{:?}", self.x8A8_anim_frame),
+                &format!("{path}.anim_blend_frame (x8A8_anim_frame)"),
+                format!("{:?}", self.anim_blend_frame),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x8a8))),
             );
         }
         cx.compare_handle(
-            &format!("{path}.x8AC_animSkeleton"),
+            &format!("{path}.anim_skeleton (x8AC_animSkeleton)"),
             "JObjId",
-            self.x8AC_animSkeleton.map(|h| h.0),
+            self.anim_skeleton.map(|h| h.0),
             m.u32(at + 0x8ac),
         );
         for i0 in 0..5 {
-            self.x8B0[i0].compare(
+            self.part_anims[i0].compare(
                 m,
                 at + 0x8b0 + i0 as u32 * 0x14,
-                &format!("{}[{}]", format!("{path}.x8B0"), i0),
+                &format!("{}[{}]", format!("{path}.part_anims (x8B0)"), i0),
                 cx,
             );
         }
         for i0 in 0..4 {
-            self.x914[i0].compare(
+            self.hitboxes[i0].compare(
                 m,
                 at + 0x914 + i0 as u32 * 0x138,
-                &format!("{}[{}]", format!("{path}.x914"), i0),
+                &format!("{}[{}]", format!("{path}.hitboxes (x914)"), i0),
                 cx,
             );
         }
         for i0 in 0..2 {
-            self.xDF4[i0].compare(
+            self.throw_hitboxes[i0].compare(
                 m,
                 at + 0xdf4 + i0 as u32 * 0x138,
-                &format!("{}[{}]", format!("{path}.xDF4"), i0),
+                &format!("{}[{}]", format!("{path}.throw_hitboxes (xDF4)"), i0),
                 cx,
             );
         }
-        self.x1064_thrownHitbox
-            .compare(m, at + 0x1064, &format!("{path}.x1064_thrownHitbox"), cx);
-        if self.x119C_teamUnk != m.u8(at + 0x119c) {
+        self.thrown_hitbox.compare(
+            m,
+            at + 0x1064,
+            &format!("{path}.thrown_hitbox (x1064_thrownHitbox)"),
+            cx,
+        );
+        if self.thrown_team != m.u8(at + 0x119c) {
             cx.mismatch(
-                &format!("{path}.x119C_teamUnk"),
-                format!("{:?}", self.x119C_teamUnk),
+                &format!("{path}.thrown_team (x119C_teamUnk)"),
+                format!("{:?}", self.thrown_team),
                 format!("{:?}", m.u8(at + 0x119c)),
             );
         }
-        if self.grabber_unk1 != m.u8(at + 0x119d) {
+        if self.thrower_slot != m.u8(at + 0x119d) {
             cx.mismatch(
-                &format!("{path}.grabber_unk1"),
-                format!("{:?}", self.grabber_unk1),
+                &format!("{path}.thrower_slot (grabber_unk1)"),
+                format!("{:?}", self.thrower_slot),
                 format!("{:?}", m.u8(at + 0x119d)),
             );
         }
@@ -5495,10 +5585,10 @@ impl Mirror for Fighter {
                 format!("{:?}", m.u8(at + 0x119e)),
             );
         }
-        if self.x119F != m.u8(at + 0x119f) {
+        if self.pad_119f != m.u8(at + 0x119f) {
             cx.mismatch(
-                &format!("{path}.x119F"),
-                format!("{:?}", self.x119F),
+                &format!("{path}.pad_119f (x119F)"),
+                format!("{:?}", self.pad_119f),
                 format!("{:?}", m.u8(at + 0x119f)),
             );
         }
@@ -5511,70 +5601,70 @@ impl Mirror for Fighter {
             );
         }
         for i0 in 0..2 {
-            self.x1614[i0].compare(
+            self.stamina_markers[i0].compare(
                 m,
                 at + 0x1614 + i0 as u32 * 0x2c,
-                &format!("{}[{}]", format!("{path}.x1614"), i0),
+                &format!("{}[{}]", format!("{path}.stamina_markers (x1614)"), i0),
                 cx,
             );
         }
-        if self.x166C != m.u8(at + 0x166c) {
+        if self.ledge_point_count != m.u8(at + 0x166c) {
             cx.mismatch(
-                &format!("{path}.x166C"),
-                format!("{:?}", self.x166C),
+                &format!("{path}.ledge_point_count (x166C)"),
+                format!("{:?}", self.ledge_point_count),
                 format!("{:?}", m.u8(at + 0x166c)),
             );
         }
         for i0 in 0..1 {
-            self.x1670[i0].compare(
+            self.ledge_points[i0].compare(
                 m,
                 at + 0x1670 + i0 as u32 * 0x28,
-                &format!("{}[{}]", format!("{path}.x1670"), i0),
+                &format!("{}[{}]", format!("{path}.ledge_points (x1670)"), i0),
                 cx,
             );
         }
         for i0 in 0..400 {
-            if self.filler_x1674[i0] != m.u8(at + 0x1698 + i0 as u32 * 0x1) {
+            if self.pad_1674[i0] != m.u8(at + 0x1698 + i0 as u32 * 0x1) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.filler_x1674"), i0),
-                    format!("{:?}", self.filler_x1674[i0]),
+                    &format!("{}[{}]", format!("{path}.pad_1674 (filler_x1674)"), i0),
+                    format!("{:?}", self.pad_1674[i0]),
                     format!("{:?}", m.u8(at + 0x1698 + i0 as u32 * 0x1)),
                 );
             }
         }
-        if self.x1828 != m.u32(at + 0x1828) as i32 {
+        if self.hit_reaction != m.u32(at + 0x1828) as i32 {
             cx.mismatch(
-                &format!("{path}.x1828"),
-                format!("{:?}", self.x1828),
+                &format!("{path}.hit_reaction (x1828)"),
+                format!("{:?}", self.hit_reaction),
                 format!("{:?}", m.u32(at + 0x1828) as i32),
             );
         }
         self.dmg.compare(m, at + 0x182c, &format!("{path}.dmg"), cx);
-        if self.x1960_vibrateMult.to_bits() != m.u32(at + 0x1960) {
+        if self.hitlag_vibrate_mul.to_bits() != m.u32(at + 0x1960) {
             cx.mismatch(
-                &format!("{path}.x1960_vibrateMult"),
-                format!("{:?}", self.x1960_vibrateMult),
+                &format!("{path}.hitlag_vibrate_mul (x1960_vibrateMult)"),
+                format!("{:?}", self.hitlag_vibrate_mul),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x1960))),
             );
         }
-        if self.x1964.to_bits() != m.u32(at + 0x1964) {
+        if self.min_hitlag.to_bits() != m.u32(at + 0x1964) {
             cx.mismatch(
-                &format!("{path}.x1964"),
-                format!("{:?}", self.x1964),
+                &format!("{path}.min_hitlag (x1964)"),
+                format!("{:?}", self.min_hitlag),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x1964))),
             );
         }
-        if self.x1968_jumpsUsed != m.u8(at + 0x1968) {
+        if self.jumps_used != m.u8(at + 0x1968) {
             cx.mismatch(
-                &format!("{path}.x1968_jumpsUsed"),
-                format!("{:?}", self.x1968_jumpsUsed),
+                &format!("{path}.jumps_used (x1968_jumpsUsed)"),
+                format!("{:?}", self.jumps_used),
                 format!("{:?}", m.u8(at + 0x1968)),
             );
         }
-        if self.x1969_walljumpUsed != m.u8(at + 0x1969) {
+        if self.walljumps_used != m.u8(at + 0x1969) {
             cx.mismatch(
-                &format!("{path}.x1969_walljumpUsed"),
-                format!("{:?}", self.x1969_walljumpUsed),
+                &format!("{path}.walljumps_used (x1969_walljumpUsed)"),
+                format!("{:?}", self.walljumps_used),
                 format!("{:?}", m.u8(at + 0x1969)),
             );
         }
@@ -5585,10 +5675,10 @@ impl Mirror for Fighter {
                 format!("{:?}", f32::from_bits(m.u32(at + 0x196c))),
             );
         }
-        if self.unk_msid != m.u32(at + 0x1970) as i32 {
+        if self.jab_msid != m.u32(at + 0x1970) as i32 {
             cx.mismatch(
-                &format!("{path}.unk_msid"),
-                format!("{:?}", self.unk_msid),
+                &format!("{path}.jab_msid (unk_msid)"),
+                format!("{:?}", self.jab_msid),
                 format!("{:?}", m.u32(at + 0x1970) as i32),
             );
         }
@@ -5599,54 +5689,54 @@ impl Mirror for Fighter {
             m.u32(at + 0x1974),
         );
         cx.compare_handle(
-            &format!("{path}.x1978"),
+            &format!("{path}.second_item (x1978)"),
             "GObjId",
-            self.x1978.map(|h| h.0),
+            self.second_item.map(|h| h.0),
             m.u32(at + 0x1978),
         );
         cx.compare_handle(
-            &format!("{path}.x197C"),
+            &format!("{path}.bunny_hood (x197C)"),
             "GObjId",
-            self.x197C.map(|h| h.0),
+            self.bunny_hood.map(|h| h.0),
             m.u32(at + 0x197c),
         );
         cx.compare_handle(
-            &format!("{path}.x1980"),
+            &format!("{path}.flower (x1980)"),
             "GObjId",
-            self.x1980.map(|h| h.0),
+            self.flower.map(|h| h.0),
             m.u32(at + 0x1980),
         );
         cx.compare_handle(
-            &format!("{path}.x1984_heldItemSpec"),
+            &format!("{path}.special_item (x1984_heldItemSpec)"),
             "GObjId",
-            self.x1984_heldItemSpec.map(|h| h.0),
+            self.special_item.map(|h| h.0),
             m.u32(at + 0x1984),
         );
-        if self.x1988 != m.u32(at + 0x1988) as i32 {
+        if self.hit_status != m.u32(at + 0x1988) as i32 {
             cx.mismatch(
-                &format!("{path}.x1988"),
-                format!("{:?}", self.x1988),
+                &format!("{path}.hit_status (x1988)"),
+                format!("{:?}", self.hit_status),
                 format!("{:?}", m.u32(at + 0x1988) as i32),
             );
         }
-        if self.x198C != m.u32(at + 0x198c) as i32 {
+        if self.timed_hit_status != m.u32(at + 0x198c) as i32 {
             cx.mismatch(
-                &format!("{path}.x198C"),
-                format!("{:?}", self.x198C),
+                &format!("{path}.timed_hit_status (x198C)"),
+                format!("{:?}", self.timed_hit_status),
                 format!("{:?}", m.u32(at + 0x198c) as i32),
             );
         }
-        if self.x1990 != m.u32(at + 0x1990) as i32 {
+        if self.intangible_frames != m.u32(at + 0x1990) as i32 {
             cx.mismatch(
-                &format!("{path}.x1990"),
-                format!("{:?}", self.x1990),
+                &format!("{path}.intangible_frames (x1990)"),
+                format!("{:?}", self.intangible_frames),
                 format!("{:?}", m.u32(at + 0x1990) as i32),
             );
         }
-        if self.x1994 != m.u32(at + 0x1994) as i32 {
+        if self.invincible_frames != m.u32(at + 0x1994) as i32 {
             cx.mismatch(
-                &format!("{path}.x1994"),
-                format!("{:?}", self.x1994),
+                &format!("{path}.invincible_frames (x1994)"),
+                format!("{:?}", self.invincible_frames),
                 format!("{:?}", m.u32(at + 0x1994) as i32),
             );
         }
@@ -5664,24 +5754,24 @@ impl Mirror for Fighter {
                 format!("{:?}", f32::from_bits(m.u32(at + 0x199c))),
             );
         }
-        if self.x19A0_shieldDamageTaken != m.u32(at + 0x19a0) as i32 {
+        if self.shield_damage_taken != m.u32(at + 0x19a0) as i32 {
             cx.mismatch(
-                &format!("{path}.x19A0_shieldDamageTaken"),
-                format!("{:?}", self.x19A0_shieldDamageTaken),
+                &format!("{path}.shield_damage_taken (x19A0_shieldDamageTaken)"),
+                format!("{:?}", self.shield_damage_taken),
                 format!("{:?}", m.u32(at + 0x19a0) as i32),
             );
         }
-        if self.x19A4 != m.u32(at + 0x19a4) as i32 {
+        if self.shield_hit_damage != m.u32(at + 0x19a4) as i32 {
             cx.mismatch(
-                &format!("{path}.x19A4"),
-                format!("{:?}", self.x19A4),
+                &format!("{path}.shield_hit_damage (x19A4)"),
+                format!("{:?}", self.shield_hit_damage),
                 format!("{:?}", m.u32(at + 0x19a4) as i32),
             );
         }
         cx.compare_handle(
-            &format!("{path}.x19A8"),
+            &format!("{path}.shield_hit_by (x19A8)"),
             "GObjId",
-            self.x19A8.map(|h| h.0),
+            self.shield_hit_by.map(|h| h.0),
             m.u32(at + 0x19a8),
         );
         if self.specialn_facing_dir.to_bits() != m.u32(at + 0x19ac) {
@@ -5691,31 +5781,31 @@ impl Mirror for Fighter {
                 format!("{:?}", f32::from_bits(m.u32(at + 0x19ac))),
             );
         }
-        if self.x19B0 != m.u32(at + 0x19b0) as i32 {
+        if self.shield_hit_element != m.u32(at + 0x19b0) as i32 {
             cx.mismatch(
-                &format!("{path}.x19B0"),
-                format!("{:?}", self.x19B0),
+                &format!("{path}.shield_hit_element (x19B0)"),
+                format!("{:?}", self.shield_hit_element),
                 format!("{:?}", m.u32(at + 0x19b0) as i32),
             );
         }
-        if self.shield_unk0.to_bits() != m.u32(at + 0x19b4) {
+        if self.counter_min_hitlag.to_bits() != m.u32(at + 0x19b4) {
             cx.mismatch(
-                &format!("{path}.shield_unk0"),
-                format!("{:?}", self.shield_unk0),
+                &format!("{path}.counter_min_hitlag (shield_unk0)"),
+                format!("{:?}", self.counter_min_hitlag),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x19b4))),
             );
         }
-        if self.shield_unk1.to_bits() != m.u32(at + 0x19b8) {
+        if self.counter_item_min_hitlag.to_bits() != m.u32(at + 0x19b8) {
             cx.mismatch(
-                &format!("{path}.shield_unk1"),
-                format!("{:?}", self.shield_unk1),
+                &format!("{path}.counter_item_min_hitlag (shield_unk1)"),
+                format!("{:?}", self.counter_item_min_hitlag),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x19b8))),
             );
         }
-        if self.x19BC_shieldDamageTaken3 != m.u32(at + 0x19bc) as i32 {
+        if self.shield_hit_slot != m.u32(at + 0x19bc) as i32 {
             cx.mismatch(
-                &format!("{path}.x19BC_shieldDamageTaken3"),
-                format!("{:?}", self.x19BC_shieldDamageTaken3),
+                &format!("{path}.shield_hit_slot (x19BC_shieldDamageTaken3)"),
+                format!("{:?}", self.shield_hit_slot),
                 format!("{:?}", m.u32(at + 0x19bc) as i32),
             );
         }
@@ -5725,10 +5815,10 @@ impl Mirror for Fighter {
             .compare(m, at + 0x19e4, &format!("{path}.reflect_hit"), cx);
         self.absorb_hit
             .compare(m, at + 0x1a08, &format!("{path}.absorb_hit"), cx);
-        self.ReflectAttr
-            .compare(m, at + 0x1a2c, &format!("{path}.ReflectAttr"), cx);
-        self.AbsorbAttr
-            .compare(m, at + 0x1a40, &format!("{path}.AbsorbAttr"), cx);
+        self.reflect
+            .compare(m, at + 0x1a2c, &format!("{path}.reflect (ReflectAttr)"), cx);
+        self.absorb
+            .compare(m, at + 0x1a40, &format!("{path}.absorb (AbsorbAttr)"), cx);
         if self.grab_timer.to_bits() != m.u32(at + 0x1a4c) {
             cx.mismatch(
                 &format!("{path}.grab_timer"),
@@ -5736,38 +5826,38 @@ impl Mirror for Fighter {
                 format!("{:?}", f32::from_bits(m.u32(at + 0x1a4c))),
             );
         }
-        if self.x1A50 != m.u8(at + 0x1a50) as i8 {
+        if self.mash_stick_x != m.u8(at + 0x1a50) as i8 {
             cx.mismatch(
-                &format!("{path}.x1A50"),
-                format!("{:?}", self.x1A50),
+                &format!("{path}.mash_stick_x (x1A50)"),
+                format!("{:?}", self.mash_stick_x),
                 format!("{:?}", m.u8(at + 0x1a50) as i8),
             );
         }
-        if self.x1A51 != m.u8(at + 0x1a51) as i8 {
+        if self.mash_stick_y != m.u8(at + 0x1a51) as i8 {
             cx.mismatch(
-                &format!("{path}.x1A51"),
-                format!("{:?}", self.x1A51),
+                &format!("{path}.mash_stick_y (x1A51)"),
+                format!("{:?}", self.mash_stick_y),
                 format!("{:?}", m.u8(at + 0x1a51) as i8),
             );
         }
-        if self.x1A52 != m.u8(at + 0x1a52) {
+        if self.mash_shake_row != m.u8(at + 0x1a52) {
             cx.mismatch(
-                &format!("{path}.x1A52"),
-                format!("{:?}", self.x1A52),
+                &format!("{path}.mash_shake_row (x1A52)"),
+                format!("{:?}", self.mash_shake_row),
                 format!("{:?}", m.u8(at + 0x1a52)),
             );
         }
-        if self.x1A53 != m.u8(at + 0x1a53) {
+        if self.mash_shake_rows != m.u8(at + 0x1a53) {
             cx.mismatch(
-                &format!("{path}.x1A53"),
-                format!("{:?}", self.x1A53),
+                &format!("{path}.mash_shake_rows (x1A53)"),
+                format!("{:?}", self.mash_shake_rows),
                 format!("{:?}", m.u8(at + 0x1a53)),
             );
         }
-        if self.x1A54 != m.u32(at + 0x1a54) as i32 {
+        if self.jab_mashes != m.u32(at + 0x1a54) as i32 {
             cx.mismatch(
-                &format!("{path}.x1A54"),
-                format!("{:?}", self.x1A54),
+                &format!("{path}.jab_mashes (x1A54)"),
+                format!("{:?}", self.jab_mashes),
                 format!("{:?}", m.u32(at + 0x1a54) as i32),
             );
         }
@@ -5778,9 +5868,9 @@ impl Mirror for Fighter {
             m.u32(at + 0x1a58),
         );
         cx.compare_handle(
-            &format!("{path}.x1A5C"),
+            &format!("{path}.partner (x1A5C)"),
             "GObjId",
-            self.x1A5C.map(|h| h.0),
+            self.partner.map(|h| h.0),
             m.u32(at + 0x1a5c),
         );
         cx.compare_handle(
@@ -5790,111 +5880,111 @@ impl Mirror for Fighter {
             m.u32(at + 0x1a60),
         );
         cx.compare_handle(
-            &format!("{path}.x1A64"),
+            &format!("{path}.caught_item (x1A64)"),
             "GObjId",
-            self.x1A64.map(|h| h.0),
+            self.caught_item.map(|h| h.0),
             m.u32(at + 0x1a64),
         );
-        if self.x1A68 != m.u16(at + 0x1a68) {
+        if self.grab_kinds != m.u16(at + 0x1a68) {
             cx.mismatch(
-                &format!("{path}.x1A68"),
-                format!("{:?}", self.x1A68),
+                &format!("{path}.grab_kinds (x1A68)"),
+                format!("{:?}", self.grab_kinds),
                 format!("{:?}", m.u16(at + 0x1a68)),
             );
         }
-        if self.x1A6A != m.u16(at + 0x1a6a) {
+        if self.grab_immune != m.u16(at + 0x1a6a) {
             cx.mismatch(
-                &format!("{path}.x1A6A"),
-                format!("{:?}", self.x1A6A),
+                &format!("{path}.grab_immune (x1A6A)"),
+                format!("{:?}", self.grab_immune),
                 format!("{:?}", m.u16(at + 0x1a6a)),
             );
         }
-        if self.x1A6C.to_bits() != m.u32(at + 0x1a6c) {
+        if self.hip_follow_rate.to_bits() != m.u32(at + 0x1a6c) {
             cx.mismatch(
-                &format!("{path}.x1A6C"),
-                format!("{:?}", self.x1A6C),
+                &format!("{path}.hip_follow_rate (x1A6C)"),
+                format!("{:?}", self.hip_follow_rate),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x1a6c))),
             );
         }
-        self.x1A70
-            .compare(m, at + 0x1a70, &format!("{path}.x1A70"), cx);
-        self.x1A7C
-            .compare(m, at + 0x1a7c, &format!("{path}.x1A7C"), cx);
+        self.throw_offset
+            .compare(m, at + 0x1a70, &format!("{path}.throw_offset (x1A70)"), cx);
+        self.hip_pos
+            .compare(m, at + 0x1a7c, &format!("{path}.hip_pos (x1A7C)"), cx);
         self.cpu.compare(m, at + 0x1a88, &format!("{path}.cpu"), cx);
-        if self.x2004 != m.u32(at + 0x2004) as i32 {
+        if self.star_frames != m.u32(at + 0x2004) as i32 {
             cx.mismatch(
-                &format!("{path}.x2004"),
-                format!("{:?}", self.x2004),
+                &format!("{path}.star_frames (x2004)"),
+                format!("{:?}", self.star_frames),
                 format!("{:?}", m.u32(at + 0x2004) as i32),
             );
         }
-        if self.x2008 != m.u32(at + 0x2008) as i32 {
+        if self.mushroom_frames != m.u32(at + 0x2008) as i32 {
             cx.mismatch(
-                &format!("{path}.x2008"),
-                format!("{:?}", self.x2008),
+                &format!("{path}.mushroom_frames (x2008)"),
+                format!("{:?}", self.mushroom_frames),
                 format!("{:?}", m.u32(at + 0x2008) as i32),
             );
         }
-        if self.x200C != m.u32(at + 0x200c) as i32 {
+        if self.queued_grows != m.u32(at + 0x200c) as i32 {
             cx.mismatch(
-                &format!("{path}.x200C"),
-                format!("{:?}", self.x200C),
+                &format!("{path}.queued_grows (x200C)"),
+                format!("{:?}", self.queued_grows),
                 format!("{:?}", m.u32(at + 0x200c) as i32),
             );
         }
-        if self.x2010 != m.u32(at + 0x2010) as i32 {
+        if self.queued_shrinks != m.u32(at + 0x2010) as i32 {
             cx.mismatch(
-                &format!("{path}.x2010"),
-                format!("{:?}", self.x2010),
+                &format!("{path}.queued_shrinks (x2010)"),
+                format!("{:?}", self.queued_shrinks),
                 format!("{:?}", m.u32(at + 0x2010) as i32),
             );
         }
-        if self.x2014 != m.u32(at + 0x2014) as i32 {
+        if self.bunny_hood_frames != m.u32(at + 0x2014) as i32 {
             cx.mismatch(
-                &format!("{path}.x2014"),
-                format!("{:?}", self.x2014),
+                &format!("{path}.bunny_hood_frames (x2014)"),
+                format!("{:?}", self.bunny_hood_frames),
                 format!("{:?}", m.u32(at + 0x2014) as i32),
             );
         }
-        if self.x2018 != m.u32(at + 0x2018) as i32 {
+        if self.flower_frames != m.u32(at + 0x2018) as i32 {
             cx.mismatch(
-                &format!("{path}.x2018"),
-                format!("{:?}", self.x2018),
+                &format!("{path}.flower_frames (x2018)"),
+                format!("{:?}", self.flower_frames),
                 format!("{:?}", m.u32(at + 0x2018) as i32),
             );
         }
-        if self.x201C != m.u32(at + 0x201c) as i32 {
+        if self.flower_damage_timer != m.u32(at + 0x201c) as i32 {
             cx.mismatch(
-                &format!("{path}.x201C"),
-                format!("{:?}", self.x201C),
+                &format!("{path}.flower_damage_timer (x201C)"),
+                format!("{:?}", self.flower_damage_timer),
                 format!("{:?}", m.u32(at + 0x201c) as i32),
             );
         }
-        if self.x2020 != m.u8(at + 0x2020) as i8 {
+        if self.flower_stick_x != m.u8(at + 0x2020) as i8 {
             cx.mismatch(
-                &format!("{path}.x2020"),
-                format!("{:?}", self.x2020),
+                &format!("{path}.flower_stick_x (x2020)"),
+                format!("{:?}", self.flower_stick_x),
                 format!("{:?}", m.u8(at + 0x2020) as i8),
             );
         }
-        if self.x2021 != m.u8(at + 0x2021) as i8 {
+        if self.flower_stick_y != m.u8(at + 0x2021) as i8 {
             cx.mismatch(
-                &format!("{path}.x2021"),
-                format!("{:?}", self.x2021),
+                &format!("{path}.flower_stick_y (x2021)"),
+                format!("{:?}", self.flower_stick_y),
                 format!("{:?}", m.u8(at + 0x2021) as i8),
             );
         }
-        if self.x2022 != m.u8(at + 0x2022) as i8 {
+        if self.unused_2022 != m.u8(at + 0x2022) as i8 {
             cx.mismatch(
-                &format!("{path}.x2022"),
-                format!("{:?}", self.x2022),
+                &format!("{path}.unused_2022 (x2022)"),
+                format!("{:?}", self.unused_2022),
                 format!("{:?}", m.u8(at + 0x2022) as i8),
             );
         }
-        if self.x2024 != m.u32(at + 0x2024) as i32 {
+        if self.flower_growth != m.u32(at + 0x2024) as i32 {
             cx.mismatch(
-                &format!("{path}.x2024"),
-                format!("{:?}", self.x2024),
+                &format!("{path}.flower_growth (x2024)"),
+                format!("{:?}", self.flower_growth),
                 format!("{:?}", m.u32(at + 0x2024) as i32),
             );
         }
@@ -5912,198 +6002,198 @@ impl Mirror for Fighter {
                 format!("{:?}", m.u32(at + 0x202c) as i32),
             );
         }
-        if self.x2030 != m.u32(at + 0x2030) as i32 {
+        if self.cloak_frames != m.u32(at + 0x2030) as i32 {
             cx.mismatch(
-                &format!("{path}.x2030"),
-                format!("{:?}", self.x2030),
+                &format!("{path}.cloak_frames (x2030)"),
+                format!("{:?}", self.cloak_frames),
                 format!("{:?}", m.u32(at + 0x2030) as i32),
             );
         }
-        if self.x2034 != m.u32(at + 0x2034) as i32 {
+        if self.alt_metal_timer != m.u32(at + 0x2034) as i32 {
             cx.mismatch(
-                &format!("{path}.x2034"),
-                format!("{:?}", self.x2034),
+                &format!("{path}.alt_metal_timer (x2034)"),
+                format!("{:?}", self.alt_metal_timer),
                 format!("{:?}", m.u32(at + 0x2034) as i32),
             );
         }
-        if self.x2038 != m.u32(at + 0x2038) as i32 {
+        if self.alt_metal_health != m.u32(at + 0x2038) as i32 {
             cx.mismatch(
-                &format!("{path}.x2038"),
-                format!("{:?}", self.x2038),
+                &format!("{path}.alt_metal_health (x2038)"),
+                format!("{:?}", self.alt_metal_health),
                 format!("{:?}", m.u32(at + 0x2038) as i32),
             );
         }
-        self.x203C
-            .compare(m, at + 0x203c, &format!("{path}.x203C"), cx);
+        self.second_dobjs
+            .compare(m, at + 0x203c, &format!("{path}.second_dobjs (x203C)"), cx);
         for i0 in 0..32 {
-            if self.filler_x2044[i0] != m.u8(at + 0x2044 + i0 as u32 * 0x1) {
+            if self.pad_2044[i0] != m.u8(at + 0x2044 + i0 as u32 * 0x1) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.filler_x2044"), i0),
-                    format!("{:?}", self.filler_x2044[i0]),
+                    &format!("{}[{}]", format!("{path}.pad_2044 (filler_x2044)"), i0),
+                    format!("{:?}", self.pad_2044[i0]),
                     format!("{:?}", m.u8(at + 0x2044 + i0 as u32 * 0x1)),
                 );
             }
         }
-        if self.x2064_ledgeCooldown != m.u32(at + 0x2064) as i32 {
+        if self.ledge_cooldown != m.u32(at + 0x2064) as i32 {
             cx.mismatch(
-                &format!("{path}.x2064_ledgeCooldown"),
-                format!("{:?}", self.x2064_ledgeCooldown),
+                &format!("{path}.ledge_cooldown (x2064_ledgeCooldown)"),
+                format!("{:?}", self.ledge_cooldown),
                 format!("{:?}", m.u32(at + 0x2064) as i32),
             );
         }
-        if self.x2068_attackID != m.u32(at + 0x2068) as i32 {
+        if self.attack_id != m.u32(at + 0x2068) as i32 {
             cx.mismatch(
-                &format!("{path}.x2068_attackID"),
-                format!("{:?}", self.x2068_attackID),
+                &format!("{path}.attack_id (x2068_attackID)"),
+                format!("{:?}", self.attack_id),
                 format!("{:?}", m.u32(at + 0x2068) as i32),
             );
         }
-        if self.x206C_attack_instance != m.u16(at + 0x206c) {
+        if self.attack_instance != m.u16(at + 0x206c) {
             cx.mismatch(
-                &format!("{path}.x206C_attack_instance"),
-                format!("{:?}", self.x206C_attack_instance),
+                &format!("{path}.attack_instance (x206C_attack_instance)"),
+                format!("{:?}", self.attack_instance),
                 format!("{:?}", m.u16(at + 0x206c)),
             );
         }
-        if self.x206E != m.u16(at + 0x206e) as i16 {
+        if self.pad_206e != m.u16(at + 0x206e) as i16 {
             cx.mismatch(
-                &format!("{path}.x206E"),
-                format!("{:?}", self.x206E),
+                &format!("{path}.pad_206e (x206E)"),
+                format!("{:?}", self.pad_206e),
                 format!("{:?}", m.u16(at + 0x206e) as i16),
             );
         }
-        if self.x2070 != m.bytes::<4>(at + 0x2070) {
+        if self.attack_flags != m.bytes::<4>(at + 0x2070) {
             cx.mismatch(
-                &format!("{path}.x2070"),
-                format!("{:02x?}", self.x2070),
+                &format!("{path}.attack_flags (x2070)"),
+                format!("{:02x?}", self.attack_flags),
                 format!("{:02x?}", m.bytes::<4>(at + 0x2070)),
             );
         }
-        self.x2074
-            .compare(m, at + 0x2074, &format!("{path}.x2074"), cx);
-        if self.x208C != m.u32(at + 0x208c) as i32 {
+        self.attack_record
+            .compare(m, at + 0x2074, &format!("{path}.attack_record (x2074)"), cx);
+        if self.combo_attack_id != m.u32(at + 0x208c) as i32 {
             cx.mismatch(
-                &format!("{path}.x208C"),
-                format!("{:?}", self.x208C),
+                &format!("{path}.combo_attack_id (x208C)"),
+                format!("{:?}", self.combo_attack_id),
                 format!("{:?}", m.u32(at + 0x208c) as i32),
             );
         }
-        if self.x2090 != m.u16(at + 0x2090) {
+        if self.combo_count != m.u16(at + 0x2090) {
             cx.mismatch(
-                &format!("{path}.x2090"),
-                format!("{:?}", self.x2090),
+                &format!("{path}.combo_count (x2090)"),
+                format!("{:?}", self.combo_count),
                 format!("{:?}", m.u16(at + 0x2090)),
             );
         }
-        if self.x2092 != m.u16(at + 0x2092) {
+        if self.combo_push_frames != m.u16(at + 0x2092) {
             cx.mismatch(
-                &format!("{path}.x2092"),
-                format!("{:?}", self.x2092),
+                &format!("{path}.combo_push_frames (x2092)"),
+                format!("{:?}", self.combo_push_frames),
                 format!("{:?}", m.u16(at + 0x2092)),
             );
         }
         cx.compare_handle(
-            &format!("{path}.x2094"),
+            &format!("{path}.combo_victim (x2094)"),
             "GObjId",
-            self.x2094.map(|h| h.0),
+            self.combo_victim.map(|h| h.0),
             m.u32(at + 0x2094),
         );
-        if self.x2098 != m.u16(at + 0x2098) {
+        if self.combo_window != m.u16(at + 0x2098) {
             cx.mismatch(
-                &format!("{path}.x2098"),
-                format!("{:?}", self.x2098),
+                &format!("{path}.combo_window (x2098)"),
+                format!("{:?}", self.combo_window),
                 format!("{:?}", m.u16(at + 0x2098)),
             );
         }
-        if self.x209A != m.u16(at + 0x209a) {
+        if self.name_tag_timer != m.u16(at + 0x209a) {
             cx.mismatch(
-                &format!("{path}.x209A"),
-                format!("{:?}", self.x209A),
+                &format!("{path}.name_tag_timer (x209A)"),
+                format!("{:?}", self.name_tag_timer),
                 format!("{:?}", m.u16(at + 0x209a)),
             );
         }
-        if self.x209C != m.u16(at + 0x209c) {
+        if self.air_grab_timer != m.u16(at + 0x209c) {
             cx.mismatch(
-                &format!("{path}.x209C"),
-                format!("{:?}", self.x209C),
+                &format!("{path}.air_grab_timer (x209C)"),
+                format!("{:?}", self.air_grab_timer),
                 format!("{:?}", m.u16(at + 0x209c)),
             );
         }
         cx.compare_handle(
-            &format!("{path}.x20A0_accessory"),
+            &format!("{path}.accessory (x20A0_accessory)"),
             "JObjId",
-            self.x20A0_accessory.map(|h| h.0),
+            self.accessory.map(|h| h.0),
             m.u32(at + 0x20a0),
         );
-        self.x20A4
-            .compare(m, at + 0x20a4, &format!("{path}.x20A4"), cx);
+        self.shadow
+            .compare(m, at + 0x20a4, &format!("{path}.shadow (x20A4)"), cx);
         cx.compare_handle(
-            &format!("{path}.unk_gobj"),
+            &format!("{path}.hit_by (unk_gobj)"),
             "GObjId",
-            self.unk_gobj.map(|h| h.0),
+            self.hit_by.map(|h| h.0),
             m.u32(at + 0x20ac),
         );
         for i0 in 0..3 {
-            self.x20B0[i0].compare(
+            self.afterimage_ring[i0].compare(
                 m,
                 at + 0x20b0 + i0 as u32 * 0x18,
-                &format!("{}[{}]", format!("{path}.x20B0"), i0),
+                &format!("{}[{}]", format!("{path}.afterimage_ring (x20B0)"), i0),
                 cx,
             );
         }
-        if self.x20F8.to_bits() != m.u32(at + 0x20f8) {
+        if self.afterimage_width_a.to_bits() != m.u32(at + 0x20f8) {
             cx.mismatch(
-                &format!("{path}.x20F8"),
-                format!("{:?}", self.x20F8),
+                &format!("{path}.afterimage_width_a (x20F8)"),
+                format!("{:?}", self.afterimage_width_a),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x20f8))),
             );
         }
-        if self.x20FC.to_bits() != m.u32(at + 0x20fc) {
+        if self.afterimage_width_b.to_bits() != m.u32(at + 0x20fc) {
             cx.mismatch(
-                &format!("{path}.x20FC"),
-                format!("{:?}", self.x20FC),
+                &format!("{path}.afterimage_width_b (x20FC)"),
+                format!("{:?}", self.afterimage_width_b),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x20fc))),
             );
         }
-        if self.x2100 != m.u8(at + 0x2100) as i8 {
+        if self.afterimage_mode != m.u8(at + 0x2100) as i8 {
             cx.mismatch(
-                &format!("{path}.x2100"),
-                format!("{:?}", self.x2100),
+                &format!("{path}.afterimage_mode (x2100)"),
+                format!("{:?}", self.afterimage_mode),
                 format!("{:?}", m.u8(at + 0x2100) as i8),
             );
         }
-        if (self.x2101_bits_0to6 as u32) != m.bits(at, 67592, 7) {
+        if (self.afterimage_slot as u32) != m.bits(at, 67592, 7) {
             cx.mismatch(
-                &format!("{path}.x2101_bits_0to6"),
-                format!("{:?}", self.x2101_bits_0to6),
+                &format!("{path}.afterimage_slot (x2101_bits_0to6)"),
+                format!("{:?}", self.afterimage_slot),
                 format!("{:?}", m.bits(at, 67592, 7)),
             );
         }
-        if (self.x2101_bits_8 as u32) != m.bits(at, 67599, 1) {
+        if (self.item_afterimage as u32) != m.bits(at, 67599, 1) {
             cx.mismatch(
-                &format!("{path}.x2101_bits_8"),
-                format!("{:?}", self.x2101_bits_8),
+                &format!("{path}.item_afterimage (x2101_bits_8)"),
+                format!("{:?}", self.item_afterimage),
                 format!("{:?}", m.bits(at, 67599, 1)),
             );
         }
-        if self.x2102 != m.u8(at + 0x2102) as i8 {
+        if self.pad_2102 != m.u8(at + 0x2102) as i8 {
             cx.mismatch(
-                &format!("{path}.x2102"),
-                format!("{:?}", self.x2102),
+                &format!("{path}.pad_2102 (x2102)"),
+                format!("{:?}", self.pad_2102),
                 format!("{:?}", m.u8(at + 0x2102) as i8),
             );
         }
-        if self.x2103 != m.u8(at + 0x2103) as i8 {
+        if self.pad_2103 != m.u8(at + 0x2103) as i8 {
             cx.mismatch(
-                &format!("{path}.x2103"),
-                format!("{:?}", self.x2103),
+                &format!("{path}.pad_2103 (x2103)"),
+                format!("{:?}", self.pad_2103),
                 format!("{:?}", m.u8(at + 0x2103) as i8),
             );
         }
-        if self.x2104 != m.u32(at + 0x2104) as i32 {
+        if self.parasol_frames != m.u32(at + 0x2104) as i32 {
             cx.mismatch(
-                &format!("{path}.x2104"),
-                format!("{:?}", self.x2104),
+                &format!("{path}.parasol_frames (x2104)"),
+                format!("{:?}", self.parasol_frames),
                 format!("{:?}", m.u32(at + 0x2104) as i32),
             );
         }
@@ -6122,138 +6212,138 @@ impl Mirror for Fighter {
             );
         }
         for i0 in 0..3 {
-            if self.filler_x210C[i0] != m.u8(at + 0x210d + i0 as u32 * 0x1) {
+            if self.pad_210d[i0] != m.u8(at + 0x210d + i0 as u32 * 0x1) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.filler_x210C"), i0),
-                    format!("{:?}", self.filler_x210C[i0]),
+                    &format!("{}[{}]", format!("{path}.pad_210d (filler_x210C)"), i0),
+                    format!("{:?}", self.pad_210d[i0]),
                     format!("{:?}", m.u8(at + 0x210d + i0 as u32 * 0x1)),
                 );
             }
         }
-        if self.x2110_walljumpWallSide.to_bits() != m.u32(at + 0x2110) {
+        if self.walljump_wall_side.to_bits() != m.u32(at + 0x2110) {
             cx.mismatch(
-                &format!("{path}.x2110_walljumpWallSide"),
-                format!("{:?}", self.x2110_walljumpWallSide),
+                &format!("{path}.walljump_wall_side (x2110_walljumpWallSide)"),
+                format!("{:?}", self.walljump_wall_side),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x2110))),
             );
         }
         self.smash_attrs
             .compare(m, at + 0x2114, &format!("{path}.smash_attrs"), cx);
-        if self.x213C != m.u32(at + 0x213c) as i32 {
+        if self.ledge_caught != m.u32(at + 0x213c) as i32 {
             cx.mismatch(
-                &format!("{path}.x213C"),
-                format!("{:?}", self.x213C),
+                &format!("{path}.ledge_caught (x213C)"),
+                format!("{:?}", self.ledge_caught),
                 format!("{:?}", m.u32(at + 0x213c) as i32),
             );
         }
-        if self.x2140.to_bits() != m.u32(at + 0x2140) {
+        if self.lowest_y.to_bits() != m.u32(at + 0x2140) {
             cx.mismatch(
-                &format!("{path}.x2140"),
-                format!("{:?}", self.x2140),
+                &format!("{path}.lowest_y (x2140)"),
+                format!("{:?}", self.lowest_y),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x2140))),
             );
         }
-        if self.x2144 != m.u32(at + 0x2144) as i32 {
+        if self.voice_handle != m.u32(at + 0x2144) as i32 {
             cx.mismatch(
-                &format!("{path}.x2144"),
-                format!("{:?}", self.x2144),
+                &format!("{path}.voice_handle (x2144)"),
+                format!("{:?}", self.voice_handle),
                 format!("{:?}", m.u32(at + 0x2144) as i32),
             );
         }
-        if self.x2148 != m.u32(at + 0x2148) as i32 {
+        if self.sound_handle_2 != m.u32(at + 0x2148) as i32 {
             cx.mismatch(
-                &format!("{path}.x2148"),
-                format!("{:?}", self.x2148),
+                &format!("{path}.sound_handle_2 (x2148)"),
+                format!("{:?}", self.sound_handle_2),
                 format!("{:?}", m.u32(at + 0x2148) as i32),
             );
         }
-        if self.x214C != m.u32(at + 0x214c) as i32 {
+        if self.sound_handle_3 != m.u32(at + 0x214c) as i32 {
             cx.mismatch(
-                &format!("{path}.x214C"),
-                format!("{:?}", self.x214C),
+                &format!("{path}.sound_handle_3 (x214C)"),
+                format!("{:?}", self.sound_handle_3),
                 format!("{:?}", m.u32(at + 0x214c) as i32),
             );
         }
-        if self.x2150 != m.u32(at + 0x2150) as i32 {
+        if self.sound_handle_4 != m.u32(at + 0x2150) as i32 {
             cx.mismatch(
-                &format!("{path}.x2150"),
-                format!("{:?}", self.x2150),
+                &format!("{path}.sound_handle_4 (x2150)"),
+                format!("{:?}", self.sound_handle_4),
                 format!("{:?}", m.u32(at + 0x2150) as i32),
             );
         }
-        if self.x2154 != m.u32(at + 0x2154) as i32 {
+        if self.sound_handle_5 != m.u32(at + 0x2154) as i32 {
             cx.mismatch(
-                &format!("{path}.x2154"),
-                format!("{:?}", self.x2154),
+                &format!("{path}.sound_handle_5 (x2154)"),
+                format!("{:?}", self.sound_handle_5),
                 format!("{:?}", m.u32(at + 0x2154) as i32),
             );
         }
-        if self.x2158 != m.u32(at + 0x2158) as i32 {
+        if self.sound_handle_6 != m.u32(at + 0x2158) as i32 {
             cx.mismatch(
-                &format!("{path}.x2158"),
-                format!("{:?}", self.x2158),
+                &format!("{path}.sound_handle_6 (x2158)"),
+                format!("{:?}", self.sound_handle_6),
                 format!("{:?}", m.u32(at + 0x2158) as i32),
             );
         }
-        if self.x215C != m.u32(at + 0x215c) as i32 {
+        if self.track_handle != m.u32(at + 0x215c) as i32 {
             cx.mismatch(
-                &format!("{path}.x215C"),
-                format!("{:?}", self.x215C),
+                &format!("{path}.track_handle (x215C)"),
+                format!("{:?}", self.track_handle),
                 format!("{:?}", m.u32(at + 0x215c) as i32),
             );
         }
-        if self.x2160 != m.u32(at + 0x2160) as i32 {
+        if self.sfx_handle != m.u32(at + 0x2160) as i32 {
             cx.mismatch(
-                &format!("{path}.x2160"),
-                format!("{:?}", self.x2160),
+                &format!("{path}.sfx_handle (x2160)"),
+                format!("{:?}", self.sfx_handle),
                 format!("{:?}", m.u32(at + 0x2160) as i32),
             );
         }
-        if self.x2164 != m.u32(at + 0x2164) as i32 {
+        if self.star_cheer != m.u32(at + 0x2164) as i32 {
             cx.mismatch(
-                &format!("{path}.x2164"),
-                format!("{:?}", self.x2164),
+                &format!("{path}.star_cheer (x2164)"),
+                format!("{:?}", self.star_cheer),
                 format!("{:?}", m.u32(at + 0x2164) as i32),
             );
         }
-        if self.x2168 != m.u32(at + 0x2168) as i32 {
+        if self.hammer_music != m.u32(at + 0x2168) as i32 {
             cx.mismatch(
-                &format!("{path}.x2168"),
-                format!("{:?}", self.x2168),
+                &format!("{path}.hammer_music (x2168)"),
+                format!("{:?}", self.hammer_music),
                 format!("{:?}", m.u32(at + 0x2168) as i32),
             );
         }
-        if self.unk_grab_val.to_bits() != m.u32(at + 0x216c) {
+        if self.grab_distance.to_bits() != m.u32(at + 0x216c) {
             cx.mismatch(
-                &format!("{path}.unk_grab_val"),
-                format!("{:?}", self.unk_grab_val),
+                &format!("{path}.grab_distance (unk_grab_val)"),
+                format!("{:?}", self.grab_distance),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x216c))),
             );
         }
-        if self.x2170.to_bits() != m.u32(at + 0x2170) {
+        if self.hold_dy.to_bits() != m.u32(at + 0x2170) {
             cx.mismatch(
-                &format!("{path}.x2170"),
-                format!("{:?}", self.x2170),
+                &format!("{path}.hold_dy (x2170)"),
+                format!("{:?}", self.hold_dy),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x2170))),
             );
         }
-        self.x2174
-            .compare(m, at + 0x2174, &format!("{path}.x2174"), cx);
-        if self.x2180 != m.u32(at + 0x2180) as i32 {
+        self.thrown_trans
+            .compare(m, at + 0x2174, &format!("{path}.thrown_trans (x2174)"), cx);
+        if self.dead_holder_slot != m.u32(at + 0x2180) as i32 {
             cx.mismatch(
-                &format!("{path}.x2180"),
-                format!("{:?}", self.x2180),
+                &format!("{path}.dead_holder_slot (x2180)"),
+                format!("{:?}", self.dead_holder_slot),
                 format!("{:?}", m.u32(at + 0x2180) as i32),
             );
         }
         cx.compare_handle(
-            &format!("{path}.x2184"),
+            &format!("{path}.mushroom_scale_joint (x2184)"),
             "JObjId",
-            self.x2184.map(|h| h.0),
+            self.mushroom_scale_joint.map(|h| h.0),
             m.u32(at + 0x2184),
         );
-        self.x2188
-            .compare(m, at + 0x2188, &format!("{path}.x2188"), cx);
+        self.screen_pos
+            .compare(m, at + 0x2188, &format!("{path}.screen_pos (x2188)"), cx);
         if self.grab_cb.map_or(0, |c| c.0) != m.u32(at + 0x2190) {
             cx.mismatch(
                 &format!("{path}.grab_cb"),
@@ -6261,10 +6351,10 @@ impl Mirror for Fighter {
                 format!("{:#x}", m.u32(at + 0x2190)),
             );
         }
-        if self.x2194.map_or(0, |c| c.0) != m.u32(at + 0x2194) {
+        if self.grab_item_cb.map_or(0, |c| c.0) != m.u32(at + 0x2194) {
             cx.mismatch(
-                &format!("{path}.x2194"),
-                format!("{:?}", self.x2194),
+                &format!("{path}.grab_item_cb (x2194)"),
+                format!("{:?}", self.grab_item_cb),
                 format!("{:#x}", m.u32(at + 0x2194)),
             );
         }
@@ -6359,10 +6449,10 @@ impl Mirror for Fighter {
                 format!("{:#x}", m.u32(at + 0x21c8)),
             );
         }
-        if self.x21CC.map_or(0, |c| c.0) != m.u32(at + 0x21cc) {
+        if self.anim_end_cb.map_or(0, |c| c.0) != m.u32(at + 0x21cc) {
             cx.mismatch(
-                &format!("{path}.x21CC"),
-                format!("{:?}", self.x21CC),
+                &format!("{path}.anim_end_cb (x21CC)"),
+                format!("{:?}", self.anim_end_cb),
                 format!("{:#x}", m.u32(at + 0x21cc)),
             );
         }
@@ -6415,10 +6505,10 @@ impl Mirror for Fighter {
                 format!("{:#x}", m.u32(at + 0x21e8)),
             );
         }
-        if self.x21EC.map_or(0, |c| c.0) != m.u32(at + 0x21ec) {
+        if self.motion_change_cb.map_or(0, |c| c.0) != m.u32(at + 0x21ec) {
             cx.mismatch(
-                &format!("{path}.x21EC"),
-                format!("{:?}", self.x21EC),
+                &format!("{path}.motion_change_cb (x21EC)"),
+                format!("{:?}", self.motion_change_cb),
                 format!("{:#x}", m.u32(at + 0x21ec)),
             );
         }
@@ -6436,25 +6526,25 @@ impl Mirror for Fighter {
                 format!("{:#x}", m.u32(at + 0x21f4)),
             );
         }
-        if self.x21F8.map_or(0, |c| c.0) != m.u32(at + 0x21f8) {
+        if self.turn_cb.map_or(0, |c| c.0) != m.u32(at + 0x21f8) {
             cx.mismatch(
-                &format!("{path}.x21F8"),
-                format!("{:?}", self.x21F8),
+                &format!("{path}.turn_cb (x21F8)"),
+                format!("{:?}", self.turn_cb),
                 format!("{:#x}", m.u32(at + 0x21f8)),
             );
         }
-        if self.x21FC_flag != m.bytes::<1>(at + 0x21fc) {
+        if self.debug_draw_flags != m.bytes::<1>(at + 0x21fc) {
             cx.mismatch(
-                &format!("{path}.x21FC_flag"),
-                format!("{:02x?}", self.x21FC_flag),
+                &format!("{path}.debug_draw_flags (x21FC_flag)"),
+                format!("{:02x?}", self.debug_draw_flags),
                 format!("{:02x?}", m.bytes::<1>(at + 0x21fc)),
             );
         }
         for i0 in 0..3 {
-            if self.filler_x21FC[i0] != m.u8(at + 0x21fd + i0 as u32 * 0x1) {
+            if self.pad_21fd[i0] != m.u8(at + 0x21fd + i0 as u32 * 0x1) {
                 cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.filler_x21FC"), i0),
-                    format!("{:?}", self.filler_x21FC[i0]),
+                    &format!("{}[{}]", format!("{path}.pad_21fd (filler_x21FC)"), i0),
+                    format!("{:?}", self.pad_21fd[i0]),
                     format!("{:?}", m.u8(at + 0x21fd + i0 as u32 * 0x1)),
                 );
             }
@@ -6468,10 +6558,10 @@ impl Mirror for Fighter {
                 );
             }
         }
-        if self.x2210 != m.bytes::<4>(at + 0x2210) {
+        if self.throw_flags != m.bytes::<4>(at + 0x2210) {
             cx.mismatch(
-                &format!("{path}.x2210"),
-                format!("{:02x?}", self.x2210),
+                &format!("{path}.throw_flags (x2210)"),
+                format!("{:02x?}", self.throw_flags),
                 format!("{:02x?}", m.bytes::<4>(at + 0x2210)),
             );
         }
@@ -6489,17 +6579,17 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69824, 1)),
             );
         }
-        if (self.x2218_b1 as u32) != m.bits(at, 69825, 1) {
+        if (self.jab_continue as u32) != m.bits(at, 69825, 1) {
             cx.mismatch(
-                &format!("{path}.x2218_b1"),
-                format!("{:?}", self.x2218_b1),
+                &format!("{path}.jab_continue (x2218_b1)"),
+                format!("{:?}", self.jab_continue),
                 format!("{:?}", m.bits(at, 69825, 1)),
             );
         }
-        if (self.x2218_b2 as u32) != m.bits(at, 69826, 1) {
+        if (self.jab_rapid as u32) != m.bits(at, 69826, 1) {
             cx.mismatch(
-                &format!("{path}.x2218_b2"),
-                format!("{:?}", self.x2218_b2),
+                &format!("{path}.jab_rapid (x2218_b2)"),
+                format!("{:?}", self.jab_rapid),
                 format!("{:?}", m.bits(at, 69826, 1)),
             );
         }
@@ -6510,101 +6600,101 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69827, 1)),
             );
         }
-        if (self.x2218_b4 as u32) != m.bits(at, 69828, 1) {
+        if (self.reflect_kept as u32) != m.bits(at, 69828, 1) {
             cx.mismatch(
-                &format!("{path}.x2218_b4"),
-                format!("{:?}", self.x2218_b4),
+                &format!("{path}.reflect_kept (x2218_b4)"),
+                format!("{:?}", self.reflect_kept),
                 format!("{:?}", m.bits(at, 69828, 1)),
             );
         }
-        if (self.x2218_b5 as u32) != m.bits(at, 69829, 1) {
+        if (self.reflect_behavior as u32) != m.bits(at, 69829, 1) {
             cx.mismatch(
-                &format!("{path}.x2218_b5"),
-                format!("{:?}", self.x2218_b5),
+                &format!("{path}.reflect_behavior (x2218_b5)"),
+                format!("{:?}", self.reflect_behavior),
                 format!("{:?}", m.bits(at, 69829, 1)),
             );
         }
-        if (self.x2218_b6 as u32) != m.bits(at, 69830, 1) {
+        if (self.absorbing as u32) != m.bits(at, 69830, 1) {
             cx.mismatch(
-                &format!("{path}.x2218_b6"),
-                format!("{:?}", self.x2218_b6),
+                &format!("{path}.absorbing (x2218_b6)"),
+                format!("{:?}", self.absorbing),
                 format!("{:?}", m.bits(at, 69830, 1)),
             );
         }
-        if (self.x2218_b7 as u32) != m.bits(at, 69831, 1) {
+        if (self.absorb_any as u32) != m.bits(at, 69831, 1) {
             cx.mismatch(
-                &format!("{path}.x2218_b7"),
-                format!("{:?}", self.x2218_b7),
+                &format!("{path}.absorb_any (x2218_b7)"),
+                format!("{:?}", self.absorb_any),
                 format!("{:?}", m.bits(at, 69831, 1)),
             );
         }
-        if (self.x2219_b0 as u32) != m.bits(at, 69832, 1) {
+        if (self.effect_once as u32) != m.bits(at, 69832, 1) {
             cx.mismatch(
-                &format!("{path}.x2219_b0"),
-                format!("{:?}", self.x2219_b0),
+                &format!("{path}.effect_once (x2219_b0)"),
+                format!("{:?}", self.effect_once),
                 format!("{:?}", m.bits(at, 69832, 1)),
             );
         }
-        if (self.x2219_b1 as u32) != m.bits(at, 69833, 1) {
+        if (self.out_of_play as u32) != m.bits(at, 69833, 1) {
             cx.mismatch(
-                &format!("{path}.x2219_b1"),
-                format!("{:?}", self.x2219_b1),
+                &format!("{path}.out_of_play (x2219_b1)"),
+                format!("{:?}", self.out_of_play),
                 format!("{:?}", m.bits(at, 69833, 1)),
             );
         }
-        if (self.x2219_b2 as u32) != m.bits(at, 69834, 1) {
+        if (self.blast_immune_state as u32) != m.bits(at, 69834, 1) {
             cx.mismatch(
-                &format!("{path}.x2219_b2"),
-                format!("{:?}", self.x2219_b2),
+                &format!("{path}.blast_immune_state (x2219_b2)"),
+                format!("{:?}", self.blast_immune_state),
                 format!("{:?}", m.bits(at, 69834, 1)),
             );
         }
-        if (self.x2219_b3 as u32) != m.bits(at, 69835, 1) {
+        if (self.hitboxes_set as u32) != m.bits(at, 69835, 1) {
             cx.mismatch(
-                &format!("{path}.x2219_b3"),
-                format!("{:?}", self.x2219_b3),
+                &format!("{path}.hitboxes_set (x2219_b3)"),
+                format!("{:?}", self.hitboxes_set),
                 format!("{:?}", m.bits(at, 69835, 1)),
             );
         }
-        if (self.x2219_b4 as u32) != m.bits(at, 69836, 1) {
+        if (self.hammer_hits_held as u32) != m.bits(at, 69836, 1) {
             cx.mismatch(
-                &format!("{path}.x2219_b4"),
-                format!("{:?}", self.x2219_b4),
+                &format!("{path}.hammer_hits_held (x2219_b4)"),
+                format!("{:?}", self.hammer_hits_held),
                 format!("{:?}", m.bits(at, 69836, 1)),
             );
         }
-        if (self.x2219_b5 as u32) != m.bits(at, 69837, 1) {
+        if (self.in_hitlag as u32) != m.bits(at, 69837, 1) {
             cx.mismatch(
-                &format!("{path}.x2219_b5"),
-                format!("{:?}", self.x2219_b5),
+                &format!("{path}.in_hitlag (x2219_b5)"),
+                format!("{:?}", self.in_hitlag),
                 format!("{:?}", m.bits(at, 69837, 1)),
             );
         }
-        if (self.x2219_b6 as u32) != m.bits(at, 69838, 1) {
+        if (self.was_in_hitlag as u32) != m.bits(at, 69838, 1) {
             cx.mismatch(
-                &format!("{path}.x2219_b6"),
-                format!("{:?}", self.x2219_b6),
+                &format!("{path}.was_in_hitlag (x2219_b6)"),
+                format!("{:?}", self.was_in_hitlag),
                 format!("{:?}", m.bits(at, 69838, 1)),
             );
         }
-        if (self.x2219_b7 as u32) != m.bits(at, 69839, 1) {
+        if (self.hitlag_held as u32) != m.bits(at, 69839, 1) {
             cx.mismatch(
-                &format!("{path}.x2219_b7"),
-                format!("{:?}", self.x2219_b7),
+                &format!("{path}.hitlag_held (x2219_b7)"),
+                format!("{:?}", self.hitlag_held),
                 format!("{:?}", m.bits(at, 69839, 1)),
             );
         }
-        if (self.x221A_b0 as u32) != m.bits(at, 69840, 1) {
+        if (self.pending_hitlag as u32) != m.bits(at, 69840, 1) {
             cx.mismatch(
-                &format!("{path}.x221A_b0"),
-                format!("{:?}", self.x221A_b0),
+                &format!("{path}.pending_hitlag (x221A_b0)"),
+                format!("{:?}", self.pending_hitlag),
                 format!("{:?}", m.bits(at, 69840, 1)),
             );
         }
-        if (self.x221A_b1 as u32) != m.bits(at, 69841, 1) {
+        if (self.thaw_size as u32) != m.bits(at, 69841, 1) {
             cx.mismatch(
-                &format!("{path}.x221A_b1"),
-                format!("{:?}", self.x221A_b1),
+                &format!("{path}.thaw_size (x221A_b1)"),
+                format!("{:?}", self.thaw_size),
                 format!("{:?}", m.bits(at, 69841, 1)),
             );
         }
@@ -6615,10 +6705,10 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69842, 1)),
             );
         }
-        if (self.x221A_b3 as u32) != m.bits(at, 69843, 1) {
+        if (self.in_hitstun_sdi as u32) != m.bits(at, 69843, 1) {
             cx.mismatch(
-                &format!("{path}.x221A_b3"),
-                format!("{:?}", self.x221A_b3),
+                &format!("{path}.in_hitstun_sdi (x221A_b3)"),
+                format!("{:?}", self.in_hitstun_sdi),
                 format!("{:?}", m.bits(at, 69843, 1)),
             );
         }
@@ -6629,89 +6719,89 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69844, 1)),
             );
         }
-        if (self.x221A_b5 as u32) != m.bits(at, 69845, 1) {
+        if (self.hurtboxes_set as u32) != m.bits(at, 69845, 1) {
             cx.mismatch(
-                &format!("{path}.x221A_b5"),
-                format!("{:?}", self.x221A_b5),
+                &format!("{path}.hurtboxes_set (x221A_b5)"),
+                format!("{:?}", self.hurtboxes_set),
                 format!("{:?}", m.bits(at, 69845, 1)),
             );
         }
-        if (self.x221A_b6 as u32) != m.bits(at, 69846, 1) {
+        if (self.hurtboxes_custom as u32) != m.bits(at, 69846, 1) {
             cx.mismatch(
-                &format!("{path}.x221A_b6"),
-                format!("{:?}", self.x221A_b6),
+                &format!("{path}.hurtboxes_custom (x221A_b6)"),
+                format!("{:?}", self.hurtboxes_custom),
                 format!("{:?}", m.bits(at, 69846, 1)),
             );
         }
-        if (self.x221A_b7 as u32) != m.bits(at, 69847, 1) {
+        if (self.shield_was_hit as u32) != m.bits(at, 69847, 1) {
             cx.mismatch(
-                &format!("{path}.x221A_b7"),
-                format!("{:?}", self.x221A_b7),
+                &format!("{path}.shield_was_hit (x221A_b7)"),
+                format!("{:?}", self.shield_was_hit),
                 format!("{:?}", m.bits(at, 69847, 1)),
             );
         }
-        self.x221B
-            .compare(m, at + 0x221b, &format!("{path}.x221B"), cx);
-        if (self.x221C_b0 as u32) != m.bits(at, 69856, 1) {
+        self.state_flags
+            .compare(m, at + 0x221b, &format!("{path}.state_flags (x221B)"), cx);
+        if (self.held_hit_light as u32) != m.bits(at, 69856, 1) {
             cx.mismatch(
-                &format!("{path}.x221C_b0"),
-                format!("{:?}", self.x221C_b0),
+                &format!("{path}.held_hit_light (x221C_b0)"),
+                format!("{:?}", self.held_hit_light),
                 format!("{:?}", m.bits(at, 69856, 1)),
             );
         }
-        if (self.x221C_b1 as u32) != m.bits(at, 69857, 1) {
+        if (self.powershield_late as u32) != m.bits(at, 69857, 1) {
             cx.mismatch(
-                &format!("{path}.x221C_b1"),
-                format!("{:?}", self.x221C_b1),
+                &format!("{path}.powershield_late (x221C_b1)"),
+                format!("{:?}", self.powershield_late),
                 format!("{:?}", m.bits(at, 69857, 1)),
             );
         }
-        if (self.x221C_b2 as u32) != m.bits(at, 69858, 1) {
+        if (self.powershield as u32) != m.bits(at, 69858, 1) {
             cx.mismatch(
-                &format!("{path}.x221C_b2"),
-                format!("{:?}", self.x221C_b2),
+                &format!("{path}.powershield (x221C_b2)"),
+                format!("{:?}", self.powershield),
                 format!("{:?}", m.bits(at, 69858, 1)),
             );
         }
-        if (self.x221C_b3 as u32) != m.bits(at, 69859, 1) {
+        if (self.powershield_early as u32) != m.bits(at, 69859, 1) {
             cx.mismatch(
-                &format!("{path}.x221C_b3"),
-                format!("{:?}", self.x221C_b3),
+                &format!("{path}.powershield_early (x221C_b3)"),
+                format!("{:?}", self.powershield_early),
                 format!("{:?}", m.bits(at, 69859, 1)),
             );
         }
-        if (self.x221C_b4 as u32) != m.bits(at, 69860, 1) {
+        if (self.armor as u32) != m.bits(at, 69860, 1) {
             cx.mismatch(
-                &format!("{path}.x221C_b4"),
-                format!("{:?}", self.x221C_b4),
+                &format!("{path}.armor (x221C_b4)"),
+                format!("{:?}", self.armor),
                 format!("{:?}", m.bits(at, 69860, 1)),
             );
         }
-        if (self.x221C_b5 as u32) != m.bits(at, 69861, 1) {
+        if (self.hit_this_frame as u32) != m.bits(at, 69861, 1) {
             cx.mismatch(
-                &format!("{path}.x221C_b5"),
-                format!("{:?}", self.x221C_b5),
+                &format!("{path}.hit_this_frame (x221C_b5)"),
+                format!("{:?}", self.hit_this_frame),
                 format!("{:?}", m.bits(at, 69861, 1)),
             );
         }
-        if (self.x221C_b6 as u32) != m.bits(at, 69862, 1) {
+        if (self.in_hitstun as u32) != m.bits(at, 69862, 1) {
             cx.mismatch(
-                &format!("{path}.x221C_b6"),
-                format!("{:?}", self.x221C_b6),
+                &format!("{path}.in_hitstun (x221C_b6)"),
+                format!("{:?}", self.in_hitstun),
                 format!("{:?}", m.bits(at, 69862, 1)),
             );
         }
-        if (self.x221C_u16_y as u32) != m.bits(at, 69863, 3) {
+        if (self.leg_reach as u32) != m.bits(at, 69863, 3) {
             cx.mismatch(
-                &format!("{path}.x221C_u16_y"),
-                format!("{:?}", self.x221C_u16_y),
+                &format!("{path}.leg_reach (x221C_u16_y)"),
+                format!("{:?}", self.leg_reach),
                 format!("{:?}", m.bits(at, 69863, 3)),
             );
         }
-        if (self.x221D_b2 as u32) != m.bits(at, 69866, 1) {
+        if (self.variants_hidden as u32) != m.bits(at, 69866, 1) {
             cx.mismatch(
-                &format!("{path}.x221D_b2"),
-                format!("{:?}", self.x221D_b2),
+                &format!("{path}.variants_hidden (x221D_b2)"),
+                format!("{:?}", self.variants_hidden),
                 format!("{:?}", m.bits(at, 69866, 1)),
             );
         }
@@ -6729,24 +6819,24 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69868, 1)),
             );
         }
-        if (self.x221D_b5 as u32) != m.bits(at, 69869, 1) {
+        if (self.nudge_off as u32) != m.bits(at, 69869, 1) {
             cx.mismatch(
-                &format!("{path}.x221D_b5"),
-                format!("{:?}", self.x221D_b5),
+                &format!("{path}.nudge_off (x221D_b5)"),
+                format!("{:?}", self.nudge_off),
                 format!("{:?}", m.bits(at, 69869, 1)),
             );
         }
-        if (self.x221D_b6 as u32) != m.bits(at, 69870, 1) {
+        if (self.starman as u32) != m.bits(at, 69870, 1) {
             cx.mismatch(
-                &format!("{path}.x221D_b6"),
-                format!("{:?}", self.x221D_b6),
+                &format!("{path}.starman (x221D_b6)"),
+                format!("{:?}", self.starman),
                 format!("{:?}", m.bits(at, 69870, 1)),
             );
         }
-        if (self.x221D_b7 as u32) != m.bits(at, 69871, 1) {
+        if (self.hanging as u32) != m.bits(at, 69871, 1) {
             cx.mismatch(
-                &format!("{path}.x221D_b7"),
-                format!("{:?}", self.x221D_b7),
+                &format!("{path}.hanging (x221D_b7)"),
+                format!("{:?}", self.hanging),
                 format!("{:?}", m.bits(at, 69871, 1)),
             );
         }
@@ -6757,73 +6847,73 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69872, 1)),
             );
         }
-        if (self.x221E_b1 as u32) != m.bits(at, 69873, 1) {
+        if (self.dead_flag as u32) != m.bits(at, 69873, 1) {
             cx.mismatch(
-                &format!("{path}.x221E_b1"),
-                format!("{:?}", self.x221E_b1),
+                &format!("{path}.dead_flag (x221E_b1)"),
+                format!("{:?}", self.dead_flag),
                 format!("{:?}", m.bits(at, 69873, 1)),
             );
         }
-        if (self.x221E_b2 as u32) != m.bits(at, 69874, 1) {
+        if (self.entering as u32) != m.bits(at, 69874, 1) {
             cx.mismatch(
-                &format!("{path}.x221E_b2"),
-                format!("{:?}", self.x221E_b2),
+                &format!("{path}.entering (x221E_b2)"),
+                format!("{:?}", self.entering),
                 format!("{:?}", m.bits(at, 69874, 1)),
             );
         }
-        if (self.x221E_b3 as u32) != m.bits(at, 69875, 1) {
+        if (self.item_visible as u32) != m.bits(at, 69875, 1) {
             cx.mismatch(
-                &format!("{path}.x221E_b3"),
-                format!("{:?}", self.x221E_b3),
+                &format!("{path}.item_visible (x221E_b3)"),
+                format!("{:?}", self.item_visible),
                 format!("{:?}", m.bits(at, 69875, 1)),
             );
         }
-        if (self.x221E_b4 as u32) != m.bits(at, 69876, 1) {
+        if (self.articles_visible as u32) != m.bits(at, 69876, 1) {
             cx.mismatch(
-                &format!("{path}.x221E_b4"),
-                format!("{:?}", self.x221E_b4),
+                &format!("{path}.articles_visible (x221E_b4)"),
+                format!("{:?}", self.articles_visible),
                 format!("{:?}", m.bits(at, 69876, 1)),
             );
         }
-        if (self.x221E_b5 as u32) != m.bits(at, 69877, 1) {
+        if (self.visible as u32) != m.bits(at, 69877, 1) {
             cx.mismatch(
-                &format!("{path}.x221E_b5"),
-                format!("{:?}", self.x221E_b5),
+                &format!("{path}.visible (x221E_b5)"),
+                format!("{:?}", self.visible),
                 format!("{:?}", m.bits(at, 69877, 1)),
             );
         }
-        if (self.x221E_b6 as u32) != m.bits(at, 69878, 1) {
+        if (self.grab_coll_off as u32) != m.bits(at, 69878, 1) {
             cx.mismatch(
-                &format!("{path}.x221E_b6"),
-                format!("{:?}", self.x221E_b6),
+                &format!("{path}.grab_coll_off (x221E_b6)"),
+                format!("{:?}", self.grab_coll_off),
                 format!("{:?}", m.bits(at, 69878, 1)),
             );
         }
-        if (self.x221E_b7 as u32) != m.bits(at, 69879, 1) {
+        if (self.costume_anim_set as u32) != m.bits(at, 69879, 1) {
             cx.mismatch(
-                &format!("{path}.x221E_b7"),
-                format!("{:?}", self.x221E_b7),
+                &format!("{path}.costume_anim_set (x221E_b7)"),
+                format!("{:?}", self.costume_anim_set),
                 format!("{:?}", m.bits(at, 69879, 1)),
             );
         }
-        if (self.x221F_b0 as u32) != m.bits(at, 69880, 1) {
+        if (self.off_screen as u32) != m.bits(at, 69880, 1) {
             cx.mismatch(
-                &format!("{path}.x221F_b0"),
-                format!("{:?}", self.x221F_b0),
+                &format!("{path}.off_screen (x221F_b0)"),
+                format!("{:?}", self.off_screen),
                 format!("{:?}", m.bits(at, 69880, 1)),
             );
         }
-        if (self.x221F_b1 as u32) != m.bits(at, 69881, 1) {
+        if (self.dead as u32) != m.bits(at, 69881, 1) {
             cx.mismatch(
-                &format!("{path}.x221F_b1"),
-                format!("{:?}", self.x221F_b1),
+                &format!("{path}.dead (x221F_b1)"),
+                format!("{:?}", self.dead),
                 format!("{:?}", m.bits(at, 69881, 1)),
             );
         }
-        if (self.x221F_b2 as u32) != m.bits(at, 69882, 1) {
+        if (self.cloaked as u32) != m.bits(at, 69882, 1) {
             cx.mismatch(
-                &format!("{path}.x221F_b2"),
-                format!("{:?}", self.x221F_b2),
+                &format!("{path}.cloaked (x221F_b2)"),
+                format!("{:?}", self.cloaked),
                 format!("{:?}", m.bits(at, 69882, 1)),
             );
         }
@@ -6841,129 +6931,129 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69884, 1)),
             );
         }
-        if (self.x221F_b5 as u32) != m.bits(at, 69885, 1) {
+        if (self.last_hit_by_sub as u32) != m.bits(at, 69885, 1) {
             cx.mismatch(
-                &format!("{path}.x221F_b5"),
-                format!("{:?}", self.x221F_b5),
+                &format!("{path}.last_hit_by_sub (x221F_b5)"),
+                format!("{:?}", self.last_hit_by_sub),
                 format!("{:?}", m.bits(at, 69885, 1)),
             );
         }
-        if (self.x221F_b6 as u32) != m.bits(at, 69886, 1) {
+        if (self.shield_hit_by_sub as u32) != m.bits(at, 69886, 1) {
             cx.mismatch(
-                &format!("{path}.x221F_b6"),
-                format!("{:?}", self.x221F_b6),
+                &format!("{path}.shield_hit_by_sub (x221F_b6)"),
+                format!("{:?}", self.shield_hit_by_sub),
                 format!("{:?}", m.bits(at, 69886, 1)),
             );
         }
-        if (self.x221F_b7 as u32) != m.bits(at, 69887, 1) {
+        if (self.unused_221f_b7 as u32) != m.bits(at, 69887, 1) {
             cx.mismatch(
-                &format!("{path}.x221F_b7"),
-                format!("{:?}", self.x221F_b7),
+                &format!("{path}.unused_221f_b7 (x221F_b7)"),
+                format!("{:?}", self.unused_221f_b7),
                 format!("{:?}", m.bits(at, 69887, 1)),
             );
         }
-        if (self.x2220_b0 as u32) != m.bits(at, 69888, 3) {
+        if (self.footstep_part as u32) != m.bits(at, 69888, 3) {
             cx.mismatch(
-                &format!("{path}.x2220_b0"),
-                format!("{:?}", self.x2220_b0),
+                &format!("{path}.footstep_part (x2220_b0)"),
+                format!("{:?}", self.footstep_part),
                 format!("{:?}", m.bits(at, 69888, 3)),
             );
         }
-        if (self.x2220_b3 as u32) != m.bits(at, 69891, 1) {
+        if (self.buried as u32) != m.bits(at, 69891, 1) {
             cx.mismatch(
-                &format!("{path}.x2220_b3"),
-                format!("{:?}", self.x2220_b3),
+                &format!("{path}.buried (x2220_b3)"),
+                format!("{:?}", self.buried),
                 format!("{:?}", m.bits(at, 69891, 1)),
             );
         }
-        if (self.x2220_b4 as u32) != m.bits(at, 69892, 1) {
+        if (self.turn_spin as u32) != m.bits(at, 69892, 1) {
             cx.mismatch(
-                &format!("{path}.x2220_b4"),
-                format!("{:?}", self.x2220_b4),
+                &format!("{path}.turn_spin (x2220_b4)"),
+                format!("{:?}", self.turn_spin),
                 format!("{:?}", m.bits(at, 69892, 1)),
             );
         }
-        if (self.x2220_b5 as u32) != m.bits(at, 69893, 1) {
+        if (self.giant as u32) != m.bits(at, 69893, 1) {
             cx.mismatch(
-                &format!("{path}.x2220_b5"),
-                format!("{:?}", self.x2220_b5),
+                &format!("{path}.giant (x2220_b5)"),
+                format!("{:?}", self.giant),
                 format!("{:?}", m.bits(at, 69893, 1)),
             );
         }
-        if (self.x2220_b6 as u32) != m.bits(at, 69894, 1) {
+        if (self.tiny as u32) != m.bits(at, 69894, 1) {
             cx.mismatch(
-                &format!("{path}.x2220_b6"),
-                format!("{:?}", self.x2220_b6),
+                &format!("{path}.tiny (x2220_b6)"),
+                format!("{:?}", self.tiny),
                 format!("{:?}", m.bits(at, 69894, 1)),
             );
         }
-        if (self.x2220_b7 as u32) != m.bits(at, 69895, 1) {
+        if (self.camera_placed as u32) != m.bits(at, 69895, 1) {
             cx.mismatch(
-                &format!("{path}.x2220_b7"),
-                format!("{:?}", self.x2220_b7),
+                &format!("{path}.camera_placed (x2220_b7)"),
+                format!("{:?}", self.camera_placed),
                 format!("{:?}", m.bits(at, 69895, 1)),
             );
         }
-        if (self.x2221_b0 as u32) != m.bits(at, 69896, 1) {
+        if (self.warp_star_intangible as u32) != m.bits(at, 69896, 1) {
             cx.mismatch(
-                &format!("{path}.x2221_b0"),
-                format!("{:?}", self.x2221_b0),
+                &format!("{path}.warp_star_intangible (x2221_b0)"),
+                format!("{:?}", self.warp_star_intangible),
                 format!("{:?}", m.bits(at, 69896, 1)),
             );
         }
-        if (self.x2221_b1 as u32) != m.bits(at, 69897, 1) {
+        if (self.damage_col_anim as u32) != m.bits(at, 69897, 1) {
             cx.mismatch(
-                &format!("{path}.x2221_b1"),
-                format!("{:?}", self.x2221_b1),
+                &format!("{path}.damage_col_anim (x2221_b1)"),
+                format!("{:?}", self.damage_col_anim),
                 format!("{:?}", m.bits(at, 69897, 1)),
             );
         }
-        if (self.x2221_b2 as u32) != m.bits(at, 69898, 1) {
+        if (self.hip_offset as u32) != m.bits(at, 69898, 1) {
             cx.mismatch(
-                &format!("{path}.x2221_b2"),
-                format!("{:?}", self.x2221_b2),
+                &format!("{path}.hip_offset (x2221_b2)"),
+                format!("{:?}", self.hip_offset),
                 format!("{:?}", m.bits(at, 69898, 1)),
             );
         }
-        if (self.x2221_b3 as u32) != m.bits(at, 69899, 1) {
+        if (self.light_changed as u32) != m.bits(at, 69899, 1) {
             cx.mismatch(
-                &format!("{path}.x2221_b3"),
-                format!("{:?}", self.x2221_b3),
+                &format!("{path}.light_changed (x2221_b3)"),
+                format!("{:?}", self.light_changed),
                 format!("{:?}", m.bits(at, 69899, 1)),
             );
         }
-        if (self.x2221_b4 as u32) != m.bits(at, 69900, 1) {
+        if (self.parasol_open as u32) != m.bits(at, 69900, 1) {
             cx.mismatch(
-                &format!("{path}.x2221_b4"),
-                format!("{:?}", self.x2221_b4),
+                &format!("{path}.parasol_open (x2221_b4)"),
+                format!("{:?}", self.parasol_open),
                 format!("{:?}", m.bits(at, 69900, 1)),
             );
         }
-        if (self.x2221_b5 as u32) != m.bits(at, 69901, 1) {
+        if (self.parasol_checked as u32) != m.bits(at, 69901, 1) {
             cx.mismatch(
-                &format!("{path}.x2221_b5"),
-                format!("{:?}", self.x2221_b5),
+                &format!("{path}.parasol_checked (x2221_b5)"),
+                format!("{:?}", self.parasol_checked),
                 format!("{:?}", m.bits(at, 69901, 1)),
             );
         }
-        if (self.x2221_b6 as u32) != m.bits(at, 69902, 1) {
+        if (self.parasol_blend as u32) != m.bits(at, 69902, 1) {
             cx.mismatch(
-                &format!("{path}.x2221_b6"),
-                format!("{:?}", self.x2221_b6),
+                &format!("{path}.parasol_blend (x2221_b6)"),
+                format!("{:?}", self.parasol_blend),
                 format!("{:?}", m.bits(at, 69902, 1)),
             );
         }
-        if (self.x2221_b7 as u32) != m.bits(at, 69903, 1) {
+        if (self.parasol_from_jump as u32) != m.bits(at, 69903, 1) {
             cx.mismatch(
-                &format!("{path}.x2221_b7"),
-                format!("{:?}", self.x2221_b7),
+                &format!("{path}.parasol_from_jump (x2221_b7)"),
+                format!("{:?}", self.parasol_from_jump),
                 format!("{:?}", m.bits(at, 69903, 1)),
             );
         }
-        if (self.x2222_b0 as u32) != m.bits(at, 69904, 1) {
+        if (self.has_cargo as u32) != m.bits(at, 69904, 1) {
             cx.mismatch(
-                &format!("{path}.x2222_b0"),
-                format!("{:?}", self.x2222_b0),
+                &format!("{path}.has_cargo (x2222_b0)"),
+                format!("{:?}", self.has_cargo),
                 format!("{:?}", m.bits(at, 69904, 1)),
             );
         }
@@ -6974,87 +7064,87 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69905, 1)),
             );
         }
-        if (self.x2222_b2 as u32) != m.bits(at, 69906, 1) {
+        if (self.no_turn as u32) != m.bits(at, 69906, 1) {
             cx.mismatch(
-                &format!("{path}.x2222_b2"),
-                format!("{:?}", self.x2222_b2),
+                &format!("{path}.no_turn (x2222_b2)"),
+                format!("{:?}", self.no_turn),
                 format!("{:?}", m.bits(at, 69906, 1)),
             );
         }
-        if (self.x2222_b3 as u32) != m.bits(at, 69907, 1) {
+        if (self.no_blast_rise as u32) != m.bits(at, 69907, 1) {
             cx.mismatch(
-                &format!("{path}.x2222_b3"),
-                format!("{:?}", self.x2222_b3),
+                &format!("{path}.no_blast_rise (x2222_b3)"),
+                format!("{:?}", self.no_blast_rise),
                 format!("{:?}", m.bits(at, 69907, 1)),
             );
         }
-        if (self.x2222_b4 as u32) != m.bits(at, 69908, 1) {
+        if (self.pickup_limited as u32) != m.bits(at, 69908, 1) {
             cx.mismatch(
-                &format!("{path}.x2222_b4"),
-                format!("{:?}", self.x2222_b4),
+                &format!("{path}.pickup_limited (x2222_b4)"),
+                format!("{:?}", self.pickup_limited),
                 format!("{:?}", m.bits(at, 69908, 1)),
             );
         }
-        if (self.x2222_b5 as u32) != m.bits(at, 69909, 1) {
+        if (self.is_popo as u32) != m.bits(at, 69909, 1) {
             cx.mismatch(
-                &format!("{path}.x2222_b5"),
-                format!("{:?}", self.x2222_b5),
+                &format!("{path}.is_popo (x2222_b5)"),
+                format!("{:?}", self.is_popo),
                 format!("{:?}", m.bits(at, 69909, 1)),
             );
         }
-        if (self.x2222_b6 as u32) != m.bits(at, 69910, 1) {
+        if (self.frozen_with_holder as u32) != m.bits(at, 69910, 1) {
             cx.mismatch(
-                &format!("{path}.x2222_b6"),
-                format!("{:?}", self.x2222_b6),
+                &format!("{path}.frozen_with_holder (x2222_b6)"),
+                format!("{:?}", self.frozen_with_holder),
                 format!("{:?}", m.bits(at, 69910, 1)),
             );
         }
-        if (self.x2222_b7 as u32) != m.bits(at, 69911, 1) {
+        if (self.follows_holder as u32) != m.bits(at, 69911, 1) {
             cx.mismatch(
-                &format!("{path}.x2222_b7"),
-                format!("{:?}", self.x2222_b7),
+                &format!("{path}.follows_holder (x2222_b7)"),
+                format!("{:?}", self.follows_holder),
                 format!("{:?}", m.bits(at, 69911, 1)),
             );
         }
-        if (self.x2223_b0 as u32) != m.bits(at, 69912, 1) {
+        if (self.anim_frozen as u32) != m.bits(at, 69912, 1) {
             cx.mismatch(
-                &format!("{path}.x2223_b0"),
-                format!("{:?}", self.x2223_b0),
+                &format!("{path}.anim_frozen (x2223_b0)"),
+                format!("{:?}", self.anim_frozen),
                 format!("{:?}", m.bits(at, 69912, 1)),
             );
         }
-        if (self.x2223_b1 as u32) != m.bits(at, 69913, 1) {
+        if (self.is_flat as u32) != m.bits(at, 69913, 1) {
             cx.mismatch(
-                &format!("{path}.x2223_b1"),
-                format!("{:?}", self.x2223_b1),
+                &format!("{path}.is_flat (x2223_b1)"),
+                format!("{:?}", self.is_flat),
                 format!("{:?}", m.bits(at, 69913, 1)),
             );
         }
-        if (self.x2223_b2 as u32) != m.bits(at, 69914, 1) {
+        if (self.outline as u32) != m.bits(at, 69914, 1) {
             cx.mismatch(
-                &format!("{path}.x2223_b2"),
-                format!("{:?}", self.x2223_b2),
+                &format!("{path}.outline (x2223_b2)"),
+                format!("{:?}", self.outline),
                 format!("{:?}", m.bits(at, 69914, 1)),
             );
         }
-        if (self.x2223_b3 as u32) != m.bits(at, 69915, 1) {
+        if (self.silhouette as u32) != m.bits(at, 69915, 1) {
             cx.mismatch(
-                &format!("{path}.x2223_b3"),
-                format!("{:?}", self.x2223_b3),
+                &format!("{path}.silhouette (x2223_b3)"),
+                format!("{:?}", self.silhouette),
                 format!("{:?}", m.bits(at, 69915, 1)),
             );
         }
-        if (self.x2223_b4 as u32) != m.bits(at, 69916, 1) {
+        if (self.no_item_bounce as u32) != m.bits(at, 69916, 1) {
             cx.mismatch(
-                &format!("{path}.x2223_b4"),
-                format!("{:?}", self.x2223_b4),
+                &format!("{path}.no_item_bounce (x2223_b4)"),
+                format!("{:?}", self.no_item_bounce),
                 format!("{:?}", m.bits(at, 69916, 1)),
             );
         }
-        if (self.x2223_b5 as u32) != m.bits(at, 69917, 1) {
+        if (self.stepped_on_item as u32) != m.bits(at, 69917, 1) {
             cx.mismatch(
-                &format!("{path}.x2223_b5"),
-                format!("{:?}", self.x2223_b5),
+                &format!("{path}.stepped_on_item (x2223_b5)"),
+                format!("{:?}", self.stepped_on_item),
                 format!("{:?}", m.bits(at, 69917, 1)),
             );
         }
@@ -7072,17 +7162,17 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69919, 1)),
             );
         }
-        if (self.x2224_b0 as u32) != m.bits(at, 69920, 1) {
+        if (self.low_models_own_material as u32) != m.bits(at, 69920, 1) {
             cx.mismatch(
-                &format!("{path}.x2224_b0"),
-                format!("{:?}", self.x2224_b0),
+                &format!("{path}.low_models_own_material (x2224_b0)"),
+                format!("{:?}", self.low_models_own_material),
                 format!("{:?}", m.bits(at, 69920, 1)),
             );
         }
-        if (self.x2224_b1 as u32) != m.bits(at, 69921, 1) {
+        if (self.air_item_caught as u32) != m.bits(at, 69921, 1) {
             cx.mismatch(
-                &format!("{path}.x2224_b1"),
-                format!("{:?}", self.x2224_b1),
+                &format!("{path}.air_item_caught (x2224_b1)"),
+                format!("{:?}", self.air_item_caught),
                 format!("{:?}", m.bits(at, 69921, 1)),
             );
         }
@@ -7093,31 +7183,31 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69922, 1)),
             );
         }
-        if (self.x2224_b3 as u32) != m.bits(at, 69923, 1) {
+        if (self.stamina_out as u32) != m.bits(at, 69923, 1) {
             cx.mismatch(
-                &format!("{path}.x2224_b3"),
-                format!("{:?}", self.x2224_b3),
+                &format!("{path}.stamina_out (x2224_b3)"),
+                format!("{:?}", self.stamina_out),
                 format!("{:?}", m.bits(at, 69923, 1)),
             );
         }
-        if (self.x2224_b4 as u32) != m.bits(at, 69924, 1) {
+        if (self.wind_immune as u32) != m.bits(at, 69924, 1) {
             cx.mismatch(
-                &format!("{path}.x2224_b4"),
-                format!("{:?}", self.x2224_b4),
+                &format!("{path}.wind_immune (x2224_b4)"),
+                format!("{:?}", self.wind_immune),
                 format!("{:?}", m.bits(at, 69924, 1)),
             );
         }
-        if (self.x2224_b5 as u32) != m.bits(at, 69925, 1) {
+        if (self.mash_shaking as u32) != m.bits(at, 69925, 1) {
             cx.mismatch(
-                &format!("{path}.x2224_b5"),
-                format!("{:?}", self.x2224_b5),
+                &format!("{path}.mash_shaking (x2224_b5)"),
+                format!("{:?}", self.mash_shaking),
                 format!("{:?}", m.bits(at, 69925, 1)),
             );
         }
-        if (self.x2224_b6 as u32) != m.bits(at, 69926, 1) {
+        if (self.can_mash as u32) != m.bits(at, 69926, 1) {
             cx.mismatch(
-                &format!("{path}.x2224_b6"),
-                format!("{:?}", self.x2224_b6),
+                &format!("{path}.can_mash (x2224_b6)"),
+                format!("{:?}", self.can_mash),
                 format!("{:?}", m.bits(at, 69926, 1)),
             );
         }
@@ -7128,185 +7218,185 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69927, 1)),
             );
         }
-        if (self.x2225_b0 as u32) != m.bits(at, 69928, 1) {
+        if (self.map_coll_done as u32) != m.bits(at, 69928, 1) {
             cx.mismatch(
-                &format!("{path}.x2225_b0"),
-                format!("{:?}", self.x2225_b0),
+                &format!("{path}.map_coll_done (x2225_b0)"),
+                format!("{:?}", self.map_coll_done),
                 format!("{:?}", m.bits(at, 69928, 1)),
             );
         }
-        if (self.x2225_b1 as u32) != m.bits(at, 69929, 1) {
+        if (self.inhale_catch as u32) != m.bits(at, 69929, 1) {
             cx.mismatch(
-                &format!("{path}.x2225_b1"),
-                format!("{:?}", self.x2225_b1),
+                &format!("{path}.inhale_catch (x2225_b1)"),
+                format!("{:?}", self.inhale_catch),
                 format!("{:?}", m.bits(at, 69929, 1)),
             );
         }
-        if (self.x2225_b2 as u32) != m.bits(at, 69930, 1) {
+        if (self.hat_hidden as u32) != m.bits(at, 69930, 1) {
             cx.mismatch(
-                &format!("{path}.x2225_b2"),
-                format!("{:?}", self.x2225_b2),
+                &format!("{path}.hat_hidden (x2225_b2)"),
+                format!("{:?}", self.hat_hidden),
                 format!("{:?}", m.bits(at, 69930, 1)),
             );
         }
-        if (self.x2225_b3 as u32) != m.bits(at, 69931, 1) {
+        if (self.nana_follows as u32) != m.bits(at, 69931, 1) {
             cx.mismatch(
-                &format!("{path}.x2225_b3"),
-                format!("{:?}", self.x2225_b3),
+                &format!("{path}.nana_follows (x2225_b3)"),
+                format!("{:?}", self.nana_follows),
                 format!("{:?}", m.bits(at, 69931, 1)),
             );
         }
-        if (self.x2225_b4 as u32) != m.bits(at, 69932, 1) {
+        if (self.hits_others_team as u32) != m.bits(at, 69932, 1) {
             cx.mismatch(
-                &format!("{path}.x2225_b4"),
-                format!("{:?}", self.x2225_b4),
+                &format!("{path}.hits_others_team (x2225_b4)"),
+                format!("{:?}", self.hits_others_team),
                 format!("{:?}", m.bits(at, 69932, 1)),
             );
         }
-        if (self.x2225_b5 as u32) != m.bits(at, 69933, 1) {
+        if (self.rules_voice_muted as u32) != m.bits(at, 69933, 1) {
             cx.mismatch(
-                &format!("{path}.x2225_b5"),
-                format!("{:?}", self.x2225_b5),
+                &format!("{path}.rules_voice_muted (x2225_b5)"),
+                format!("{:?}", self.rules_voice_muted),
                 format!("{:?}", m.bits(at, 69933, 1)),
             );
         }
-        if (self.x2225_b6 as u32) != m.bits(at, 69934, 1) {
+        if (self.voice_muted as u32) != m.bits(at, 69934, 1) {
             cx.mismatch(
-                &format!("{path}.x2225_b6"),
-                format!("{:?}", self.x2225_b6),
+                &format!("{path}.voice_muted (x2225_b6)"),
+                format!("{:?}", self.voice_muted),
                 format!("{:?}", m.bits(at, 69934, 1)),
             );
         }
-        if (self.x2225_b7 as u32) != m.bits(at, 69935, 1) {
+        if (self.is_stamina as u32) != m.bits(at, 69935, 1) {
             cx.mismatch(
-                &format!("{path}.x2225_b7"),
-                format!("{:?}", self.x2225_b7),
+                &format!("{path}.is_stamina (x2225_b7)"),
+                format!("{:?}", self.is_stamina),
                 format!("{:?}", m.bits(at, 69935, 1)),
             );
         }
-        if (self.x2226_b0 as u32) != m.bits(at, 69936, 1) {
+        if (self.lies_on_z as u32) != m.bits(at, 69936, 1) {
             cx.mismatch(
-                &format!("{path}.x2226_b0"),
-                format!("{:?}", self.x2226_b0),
+                &format!("{path}.lies_on_z (x2226_b0)"),
+                format!("{:?}", self.lies_on_z),
                 format!("{:?}", m.bits(at, 69936, 1)),
             );
         }
-        if (self.x2226_b1 as u32) != m.bits(at, 69937, 1) {
+        if (self.heavy_down_bound as u32) != m.bits(at, 69937, 1) {
             cx.mismatch(
-                &format!("{path}.x2226_b1"),
-                format!("{:?}", self.x2226_b1),
+                &format!("{path}.heavy_down_bound (x2226_b1)"),
+                format!("{:?}", self.heavy_down_bound),
                 format!("{:?}", m.bits(at, 69937, 1)),
             );
         }
-        if (self.x2226_b2 as u32) != m.bits(at, 69938, 1) {
+        if (self.held_in_model as u32) != m.bits(at, 69938, 1) {
             cx.mismatch(
-                &format!("{path}.x2226_b2"),
-                format!("{:?}", self.x2226_b2),
+                &format!("{path}.held_in_model (x2226_b2)"),
+                format!("{:?}", self.held_in_model),
                 format!("{:?}", m.bits(at, 69938, 1)),
             );
         }
-        if (self.x2226_b3 as u32) != m.bits(at, 69939, 1) {
+        if (self.takes_damage_cloaked as u32) != m.bits(at, 69939, 1) {
             cx.mismatch(
-                &format!("{path}.x2226_b3"),
-                format!("{:?}", self.x2226_b3),
+                &format!("{path}.takes_damage_cloaked (x2226_b3)"),
+                format!("{:?}", self.takes_damage_cloaked),
                 format!("{:?}", m.bits(at, 69939, 1)),
             );
         }
-        if (self.x2226_b4 as u32) != m.bits(at, 69940, 1) {
+        if (self.cloak as u32) != m.bits(at, 69940, 1) {
             cx.mismatch(
-                &format!("{path}.x2226_b4"),
-                format!("{:?}", self.x2226_b4),
+                &format!("{path}.cloak (x2226_b4)"),
+                format!("{:?}", self.cloak),
                 format!("{:?}", m.bits(at, 69940, 1)),
             );
         }
-        if (self.x2226_b5 as u32) != m.bits(at, 69941, 1) {
+        if (self.refracted as u32) != m.bits(at, 69941, 1) {
             cx.mismatch(
-                &format!("{path}.x2226_b5"),
-                format!("{:?}", self.x2226_b5),
+                &format!("{path}.refracted (x2226_b5)"),
+                format!("{:?}", self.refracted),
                 format!("{:?}", m.bits(at, 69941, 1)),
             );
         }
-        if (self.x2226_b6 as u32) != m.bits(at, 69942, 1) {
+        if (self.no_color_anims as u32) != m.bits(at, 69942, 1) {
             cx.mismatch(
-                &format!("{path}.x2226_b6"),
-                format!("{:?}", self.x2226_b6),
+                &format!("{path}.no_color_anims (x2226_b6)"),
+                format!("{:?}", self.no_color_anims),
                 format!("{:?}", m.bits(at, 69942, 1)),
             );
         }
-        if (self.x2226_b7 as u32) != m.bits(at, 69943, 1) {
+        if (self.cloak_look as u32) != m.bits(at, 69943, 1) {
             cx.mismatch(
-                &format!("{path}.x2226_b7"),
-                format!("{:?}", self.x2226_b7),
+                &format!("{path}.cloak_look (x2226_b7)"),
+                format!("{:?}", self.cloak_look),
                 format!("{:?}", m.bits(at, 69943, 1)),
             );
         }
-        if (self.x2227_b0 as u32) != m.bits(at, 69944, 1) {
+        if (self.jumped_from_ground as u32) != m.bits(at, 69944, 1) {
             cx.mismatch(
-                &format!("{path}.x2227_b0"),
-                format!("{:?}", self.x2227_b0),
+                &format!("{path}.jumped_from_ground (x2227_b0)"),
+                format!("{:?}", self.jumped_from_ground),
                 format!("{:?}", m.bits(at, 69944, 1)),
             );
         }
-        if (self.x2227_b1 as u32) != m.bits(at, 69945, 1) {
+        if (self.ledge_jumped as u32) != m.bits(at, 69945, 1) {
             cx.mismatch(
-                &format!("{path}.x2227_b1"),
-                format!("{:?}", self.x2227_b1),
+                &format!("{path}.ledge_jumped (x2227_b1)"),
+                format!("{:?}", self.ledge_jumped),
                 format!("{:?}", m.bits(at, 69945, 1)),
             );
         }
-        if (self.x2227_b2 as u32) != m.bits(at, 69946, 1) {
+        if (self.thrown_hitbox_live as u32) != m.bits(at, 69946, 1) {
             cx.mismatch(
-                &format!("{path}.x2227_b2"),
-                format!("{:?}", self.x2227_b2),
+                &format!("{path}.thrown_hitbox_live (x2227_b2)"),
+                format!("{:?}", self.thrown_hitbox_live),
                 format!("{:?}", m.bits(at, 69946, 1)),
             );
         }
-        if (self.x2227_b3 as u32) != m.bits(at, 69947, 1) {
+        if (self.alt_metal as u32) != m.bits(at, 69947, 1) {
             cx.mismatch(
-                &format!("{path}.x2227_b3"),
-                format!("{:?}", self.x2227_b3),
+                &format!("{path}.alt_metal (x2227_b3)"),
+                format!("{:?}", self.alt_metal),
                 format!("{:?}", m.bits(at, 69947, 1)),
             );
         }
-        if (self.x2227_b4 as u32) != m.bits(at, 69948, 1) {
+        if (self.tumble_early as u32) != m.bits(at, 69948, 1) {
             cx.mismatch(
-                &format!("{path}.x2227_b4"),
-                format!("{:?}", self.x2227_b4),
+                &format!("{path}.tumble_early (x2227_b4)"),
+                format!("{:?}", self.tumble_early),
                 format!("{:?}", m.bits(at, 69948, 1)),
             );
         }
-        if (self.x2227_b5 as u32) != m.bits(at, 69949, 1) {
+        if (self.special_air_used as u32) != m.bits(at, 69949, 1) {
             cx.mismatch(
-                &format!("{path}.x2227_b5"),
-                format!("{:?}", self.x2227_b5),
+                &format!("{path}.special_air_used (x2227_b5)"),
+                format!("{:?}", self.special_air_used),
                 format!("{:?}", m.bits(at, 69949, 1)),
             );
         }
-        if (self.x2227_b6 as u32) != m.bits(at, 69950, 1) {
+        if (self.held_in_ice as u32) != m.bits(at, 69950, 1) {
             cx.mismatch(
-                &format!("{path}.x2227_b6"),
-                format!("{:?}", self.x2227_b6),
+                &format!("{path}.held_in_ice (x2227_b6)"),
+                format!("{:?}", self.held_in_ice),
                 format!("{:?}", m.bits(at, 69950, 1)),
             );
         }
-        if (self.x2227_b7 as u32) != m.bits(at, 69951, 1) {
+        if (self.drew_low_models as u32) != m.bits(at, 69951, 1) {
             cx.mismatch(
-                &format!("{path}.x2227_b7"),
-                format!("{:?}", self.x2227_b7),
+                &format!("{path}.drew_low_models (x2227_b7)"),
+                format!("{:?}", self.drew_low_models),
                 format!("{:?}", m.bits(at, 69951, 1)),
             );
         }
-        if (self.x2228_b0 as u32) != m.bits(at, 69952, 1) {
+        if (self.low_models as u32) != m.bits(at, 69952, 1) {
             cx.mismatch(
-                &format!("{path}.x2228_b0"),
-                format!("{:?}", self.x2228_b0),
+                &format!("{path}.low_models (x2228_b0)"),
+                format!("{:?}", self.low_models),
                 format!("{:?}", m.bits(at, 69952, 1)),
             );
         }
-        if (self.x2228_b1 as u32) != m.bits(at, 69953, 1) {
+        if (self.flat_floor_chains as u32) != m.bits(at, 69953, 1) {
             cx.mismatch(
-                &format!("{path}.x2228_b1"),
-                format!("{:?}", self.x2228_b1),
+                &format!("{path}.flat_floor_chains (x2228_b1)"),
+                format!("{:?}", self.flat_floor_chains),
                 format!("{:?}", m.bits(at, 69953, 1)),
             );
         }
@@ -7317,17 +7407,17 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69954, 1)),
             );
         }
-        if (self.x2228_b3 as u32) != m.bits(at, 69955, 2) {
+        if (self.sfx_size as u32) != m.bits(at, 69955, 2) {
             cx.mismatch(
-                &format!("{path}.x2228_b3"),
-                format!("{:?}", self.x2228_b3),
+                &format!("{path}.sfx_size (x2228_b3)"),
+                format!("{:?}", self.sfx_size),
                 format!("{:?}", m.bits(at, 69955, 2)),
             );
         }
-        if (self.x2228_b5 as u32) != m.bits(at, 69957, 1) {
+        if (self.blast_immune as u32) != m.bits(at, 69957, 1) {
             cx.mismatch(
-                &format!("{path}.x2228_b5"),
-                format!("{:?}", self.x2228_b5),
+                &format!("{path}.blast_immune (x2228_b5)"),
+                format!("{:?}", self.blast_immune),
                 format!("{:?}", m.bits(at, 69957, 1)),
             );
         }
@@ -7338,45 +7428,45 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69958, 1)),
             );
         }
-        if (self.x2228_b7 as u32) != m.bits(at, 69959, 1) {
+        if (self.stick_right as u32) != m.bits(at, 69959, 1) {
             cx.mismatch(
-                &format!("{path}.x2228_b7"),
-                format!("{:?}", self.x2228_b7),
+                &format!("{path}.stick_right (x2228_b7)"),
+                format!("{:?}", self.stick_right),
                 format!("{:?}", m.bits(at, 69959, 1)),
             );
         }
-        if (self.x2229_b0 as u32) != m.bits(at, 69960, 1) {
+        if (self.stick_left as u32) != m.bits(at, 69960, 1) {
             cx.mismatch(
-                &format!("{path}.x2229_b0"),
-                format!("{:?}", self.x2229_b0),
+                &format!("{path}.stick_left (x2229_b0)"),
+                format!("{:?}", self.stick_left),
                 format!("{:?}", m.bits(at, 69960, 1)),
             );
         }
-        if (self.x2229_b1 as u32) != m.bits(at, 69961, 1) {
+        if (self.attrs_scaled as u32) != m.bits(at, 69961, 1) {
             cx.mismatch(
-                &format!("{path}.x2229_b1"),
-                format!("{:?}", self.x2229_b1),
+                &format!("{path}.attrs_scaled (x2229_b1)"),
+                format!("{:?}", self.attrs_scaled),
                 format!("{:?}", m.bits(at, 69961, 1)),
             );
         }
-        if (self.x2229_b2 as u32) != m.bits(at, 69962, 1) {
+        if (self.unused_2229_b2 as u32) != m.bits(at, 69962, 1) {
             cx.mismatch(
-                &format!("{path}.x2229_b2"),
-                format!("{:?}", self.x2229_b2),
+                &format!("{path}.unused_2229_b2 (x2229_b2)"),
+                format!("{:?}", self.unused_2229_b2),
                 format!("{:?}", m.bits(at, 69962, 1)),
             );
         }
-        if (self.x2229_b3 as u32) != m.bits(at, 69963, 1) {
+        if (self.no_magnifier as u32) != m.bits(at, 69963, 1) {
             cx.mismatch(
-                &format!("{path}.x2229_b3"),
-                format!("{:?}", self.x2229_b3),
+                &format!("{path}.no_magnifier (x2229_b3)"),
+                format!("{:?}", self.no_magnifier),
                 format!("{:?}", m.bits(at, 69963, 1)),
             );
         }
-        if (self.x2229_b4 as u32) != m.bits(at, 69964, 1) {
+        if (self.coin_odd_frame as u32) != m.bits(at, 69964, 1) {
             cx.mismatch(
-                &format!("{path}.x2229_b4"),
-                format!("{:?}", self.x2229_b4),
+                &format!("{path}.coin_odd_frame (x2229_b4)"),
+                format!("{:?}", self.coin_odd_frame),
                 format!("{:?}", m.bits(at, 69964, 1)),
             );
         }
@@ -7387,10 +7477,10 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69965, 1)),
             );
         }
-        if (self.x2229_b6 as u32) != m.bits(at, 69966, 1) {
+        if (self.spawn_in_air as u32) != m.bits(at, 69966, 1) {
             cx.mismatch(
-                &format!("{path}.x2229_b6"),
-                format!("{:?}", self.x2229_b6),
+                &format!("{path}.spawn_in_air (x2229_b6)"),
+                format!("{:?}", self.spawn_in_air),
                 format!("{:?}", m.bits(at, 69966, 1)),
             );
         }
@@ -7401,52 +7491,52 @@ impl Mirror for Fighter {
                 format!("{:?}", m.bits(at, 69967, 1)),
             );
         }
-        if (self.x222A_b0 as u32) != m.bits(at, 69968, 1) {
+        if (self.ungrabbable as u32) != m.bits(at, 69968, 1) {
             cx.mismatch(
-                &format!("{path}.x222A_b0"),
-                format!("{:?}", self.x222A_b0),
+                &format!("{path}.ungrabbable (x222A_b0)"),
+                format!("{:?}", self.ungrabbable),
                 format!("{:?}", m.bits(at, 69968, 1)),
             );
         }
-        if (self.x222A_b1 as u32) != m.bits(at, 69969, 1) {
+        if (self.blast_zone_off as u32) != m.bits(at, 69969, 1) {
             cx.mismatch(
-                &format!("{path}.x222A_b1"),
-                format!("{:?}", self.x222A_b1),
+                &format!("{path}.blast_zone_off (x222A_b1)"),
+                format!("{:?}", self.blast_zone_off),
                 format!("{:?}", m.bits(at, 69969, 1)),
             );
         }
-        if (self.x222A_b2 as u32) != m.bits(at, 69970, 1) {
+        if (self.unused_222a_b2 as u32) != m.bits(at, 69970, 1) {
             cx.mismatch(
-                &format!("{path}.x222A_b2"),
-                format!("{:?}", self.x222A_b2),
+                &format!("{path}.unused_222a_b2 (x222A_b2)"),
+                format!("{:?}", self.unused_222a_b2),
                 format!("{:?}", m.bits(at, 69970, 1)),
             );
         }
-        if (self.x222A_b3 as u32) != m.bits(at, 69971, 2) {
+        if (self.unused_222a_b3 as u32) != m.bits(at, 69971, 2) {
             cx.mismatch(
-                &format!("{path}.x222A_b3"),
-                format!("{:?}", self.x222A_b3),
+                &format!("{path}.unused_222a_b3 (x222A_b3)"),
+                format!("{:?}", self.unused_222a_b3),
                 format!("{:?}", m.bits(at, 69971, 2)),
             );
         }
-        if (self.x222A_b5 as u32) != m.bits(at, 69973, 1) {
+        if (self.unused_222a_b5 as u32) != m.bits(at, 69973, 1) {
             cx.mismatch(
-                &format!("{path}.x222A_b5"),
-                format!("{:?}", self.x222A_b5),
+                &format!("{path}.unused_222a_b5 (x222A_b5)"),
+                format!("{:?}", self.unused_222a_b5),
                 format!("{:?}", m.bits(at, 69973, 1)),
             );
         }
-        if (self.x222A_b6 as u32) != m.bits(at, 69974, 1) {
+        if (self.unused_222a_b6 as u32) != m.bits(at, 69974, 1) {
             cx.mismatch(
-                &format!("{path}.x222A_b6"),
-                format!("{:?}", self.x222A_b6),
+                &format!("{path}.unused_222a_b6 (x222A_b6)"),
+                format!("{:?}", self.unused_222a_b6),
                 format!("{:?}", m.bits(at, 69974, 1)),
             );
         }
-        if (self.x222A_b7 as u32) != m.bits(at, 69975, 1) {
+        if (self.unused_222a_b7 as u32) != m.bits(at, 69975, 1) {
             cx.mismatch(
-                &format!("{path}.x222A_b7"),
-                format!("{:?}", self.x222A_b7),
+                &format!("{path}.unused_222a_b7 (x222A_b7)"),
+                format!("{:?}", self.unused_222a_b7),
                 format!("{:?}", m.bits(at, 69975, 1)),
             );
         }
@@ -7472,10 +7562,10 @@ impl Mirror for Fighter {
                 format!("{:?}", m.u32(at + 0x232c)),
             );
         }
-        self.x2330
-            .compare(m, at + 0x2330, &format!("{path}.x2330"), cx);
-        self.x2338
-            .compare(m, at + 0x2338, &format!("{path}.x2338"), cx);
+        self.hammer_frames
+            .compare(m, at + 0x2330, &format!("{path}.hammer_frames (x2330)"), cx);
+        self.hammer_timers
+            .compare(m, at + 0x2338, &format!("{path}.hammer_timers (x2338)"), cx);
         self.mv.compare(m, at + 0x2340, &format!("{path}.mv"), cx);
     }
 }
@@ -27166,100 +27256,118 @@ impl LayOut for CpuFighter {
         l.put_u8(at + 0x9, self.rtrigger as u8);
         l.put_u32(at + 0xc, self.kind as u32);
         l.put_u32(at + 0x10, self.level as u32);
-        l.put_u32(at + 0x14, self.x14 as u32);
-        l.put_u32(at + 0x18, self.x18 as u32);
-        l.put_u32(at + 0x1c, self.x1C as u32);
-        l.put_u32(at + 0x20, self.x20 as u32);
-        l.put_u32(at + 0x24, self.x24 as u32);
-        l.put_u32(at + 0x28, self.x28 as u32);
-        l.put_u32(at + 0x2c, self.x2C as u32);
-        l.put_u32(at + 0x30, self.x30 as u32);
-        l.put_u32(at + 0x34, self.x34 as u32);
-        l.put_u32(at + 0x38, self.x38.to_bits());
-        l.put_u32(at + 0x3c, self.x3C.to_bits());
-        l.put_u32(at + 0x40, self.x40.to_bits());
-        l.put_word(at + 0x44, cx.handle("FighterId", self.x44.map(|h| h.0)));
-        l.put_word(at + 0x48, cx.handle("FighterId", (self.x48).map(|h| h.0)));
-        l.put_word(at + 0x4c, cx.handle("ItemId", self.x4C.map(|h| h.0)));
-        l.put_word(at + 0x50, cx.handle("ItemId", self.x50.map(|h| h.0)));
-        self.x54.lay(l, at + 0x54, cx);
-        l.put_u32(at + 0x5c, self.x5C.to_bits());
-        l.put_u32(at + 0x60, self.x60 as u32);
-        self.x64.lay(l, at + 0x64, cx);
-        self.x6C.lay(l, at + 0x6c, cx);
-        self.x74.lay(l, at + 0x74, cx);
-        l.put_u32(at + 0x7c, self.x7C as u32);
-        l.put_u32(at + 0x80, self.x80 as u32);
-        l.put_u32(at + 0x84, self.x84 as u32);
-        l.put_u32(at + 0x88, self.x88 as u32);
-        l.put_u32(at + 0x8c, self.x8C as u32);
-        l.put_u32(at + 0x90, self.x90 as u32);
-        l.put_u32(at + 0x94, self.x94 as u32);
-        self.x98.lay(l, at + 0x98, cx);
-        l.put_u32(at + 0xa4, self.xA4 as u32);
+        l.put_u32(at + 0x14, self.spawn_arg as u32);
+        l.put_u32(at + 0x18, self.behavior as u32);
+        l.put_u32(at + 0x1c, self.default_behavior as u32);
+        l.put_u32(at + 0x20, self.alt_behavior as u32);
+        l.put_u32(at + 0x24, self.unread_24 as u32);
+        l.put_u32(at + 0x28, self.unread_28 as u32);
+        l.put_u32(at + 0x2c, self.item_worth_min as u32);
+        l.put_u32(at + 0x30, self.retarget_timer as u32);
+        l.put_u32(at + 0x34, self.ranged_delay as u32);
+        l.put_u32(at + 0x38, self.destination_reach.to_bits());
+        l.put_u32(at + 0x3c, self.walk_far.to_bits());
+        l.put_u32(at + 0x40, self.keep_away_distance.to_bits());
+        l.put_word(at + 0x44, cx.handle("FighterId", self.target.map(|h| h.0)));
+        l.put_word(
+            at + 0x48,
+            cx.handle("FighterId", (self.last_target).map(|h| h.0)),
+        );
+        l.put_word(
+            at + 0x4c,
+            cx.handle("ItemId", self.item_target.map(|h| h.0)),
+        );
+        l.put_word(at + 0x50, cx.handle("ItemId", self.enemy_item.map(|h| h.0)));
+        self.destination.lay(l, at + 0x54, cx);
+        l.put_u32(at + 0x5c, self.destination_distance.to_bits());
+        l.put_u32(at + 0x60, self.destination_timer as u32);
+        self.home.lay(l, at + 0x64, cx);
+        self.attack_reach_0.lay(l, at + 0x6c, cx);
+        self.attack_reach_1.lay(l, at + 0x74, cx);
+        l.put_u32(at + 0x7c, self.frame_counter as u32);
+        l.put_u32(at + 0x80, self.hold_back_counter as u32);
+        l.put_u32(at + 0x84, self.stage_read_count as u32);
+        l.put_u32(at + 0x88, self.stand_timer as u32);
+        l.put_u32(at + 0x8c, self.stand_kind as u32);
+        l.put_u32(at + 0x90, self.ranged_count as u32);
+        l.put_u32(at + 0x94, self.hold_choice as u32);
+        self.spawn_pos.lay(l, at + 0x98, cx);
+        l.put_u32(at + 0xa4, self.command as u32);
         for i0 in 0..8 {
-            l.put_u32(at + 0xa8 + i0 as u32 * 0x4, self.xA8_array[i0] as u32);
+            l.put_u32(
+                at + 0xa8 + i0 as u32 * 0x4,
+                self.allowed_commands[i0] as u32,
+            );
         }
-        l.put_u8(at + 0xc8, self.xC8 as u8);
+        l.put_u8(at + 0xc8, self.allowed_count as u8);
         for i0 in 0..3 {
-            l.put_u8(at + 0xc9 + i0 as u32 * 0x1, self.pad_xC9[i0] as u8);
+            l.put_u8(at + 0xc9 + i0 as u32 * 0x1, self.pad_c9[i0] as u8);
         }
         for i0 in 0..8 {
-            l.put_u32(at + 0xcc + i0 as u32 * 0x4, self.xCC_array[i0] as u32);
+            l.put_u32(
+                at + 0xcc + i0 as u32 * 0x4,
+                self.ruled_out_commands[i0] as u32,
+            );
         }
-        l.put_u8(at + 0xec, self.xEC as u8);
+        l.put_u8(at + 0xec, self.ruled_out_count as u8);
         for i0 in 0..3 {
-            l.put_u8(at + 0xed + i0 as u32 * 0x1, self.pad_xED[i0] as u8);
+            l.put_u8(at + 0xed + i0 as u32 * 0x1, self.pad_ed[i0] as u8);
         }
-        l.put_word(at + 0xf0, cx.handle("FighterId", self.xF0.map(|h| h.0)));
-        l.put_word(at + 0xf4, cx.handle("ItemId", self.xF4.map(|h| h.0)));
-        l.put_bits(at, 1984, 1, (self.xF8_b0) as u32);
-        l.put_bits(at, 1985, 2, (self.xF8_b12) as u32);
-        l.put_bits(at, 1987, 2, (self.xF8_b34) as u32);
-        l.put_bits(at, 1989, 1, (self.xF8_b5) as u32);
-        l.put_bits(at, 1990, 1, (self.xF8_b6) as u32);
-        l.put_bits(at, 1991, 1, (self.xF8_b7) as u32);
-        l.put_bits(at, 1992, 1, (self.xF9_b0) as u32);
-        l.put_bits(at, 1993, 1, (self.xF9_b1) as u32);
-        l.put_bits(at, 1994, 1, (self.xF9_b2) as u32);
-        l.put_bits(at, 1995, 1, (self.xF9_b3) as u32);
-        l.put_bits(at, 1996, 1, (self.xF9_b4) as u32);
-        l.put_bits(at, 1997, 1, (self.xF9_b5) as u32);
-        l.put_bits(at, 1998, 1, (self.xF9_b6) as u32);
-        l.put_bits(at, 1999, 1, (self.xF9_b7) as u32);
-        l.put_bits(at, 2000, 1, (self.xFA_b0) as u32);
-        l.put_bits(at, 2001, 1, (self.xFA_b1) as u32);
-        l.put_bits(at, 2002, 1, (self.xFA_b2) as u32);
-        l.put_bits(at, 2003, 2, (self.xFA_b34) as u32);
-        l.put_bits(at, 2005, 1, (self.xFA_b5) as u32);
-        l.put_bits(at, 2006, 1, (self.xFA_b6) as u32);
-        l.put_bits(at, 2007, 1, (self.xFA_b7) as u32);
-        l.put_bits(at, 2008, 1, (self.xFB_b0) as u32);
-        l.put_bits(at, 2009, 1, (self.xFB_b1) as u32);
-        l.put_bits(at, 2010, 1, (self.xFB_b2) as u32);
-        l.put_bits(at, 2011, 1, (self.xFB_b3) as u32);
-        l.put_bits(at, 2012, 1, (self.xFB_b4) as u32);
-        l.put_bits(at, 2013, 1, (self.xFB_b5) as u32);
-        l.put_bits(at, 2014, 1, (self.xFB_b6) as u32);
-        l.put_bits(at, 2015, 1, (self.xFB_b7) as u32);
+        l.put_word(
+            at + 0xf0,
+            cx.handle("FighterId", self.threat_fighter.map(|h| h.0)),
+        );
+        l.put_word(
+            at + 0xf4,
+            cx.handle("ItemId", self.threat_item.map(|h| h.0)),
+        );
+        l.put_bits(at, 1984, 1, (self.fear_target) as u32);
+        l.put_bits(at, 1985, 2, (self.threat_kind) as u32);
+        l.put_bits(at, 1987, 2, (self.jump_kind) as u32);
+        l.put_bits(at, 1989, 1, (self.coin_flip) as u32);
+        l.put_bits(at, 1990, 1, (self.near_target) as u32);
+        l.put_bits(at, 1991, 1, (self.attacking) as u32);
+        l.put_bits(at, 1992, 1, (self.keeps_target) as u32);
+        l.put_bits(at, 1993, 1, (self.fleeing) as u32);
+        l.put_bits(at, 1994, 1, (self.acts_alone) as u32);
+        l.put_bits(at, 1995, 1, (self.may_jump_attack) as u32);
+        l.put_bits(at, 1996, 1, (self.may_air_attack) as u32);
+        l.put_bits(at, 1997, 1, (self.may_ranged_attack) as u32);
+        l.put_bits(at, 1998, 1, (self.may_shield) as u32);
+        l.put_bits(at, 1999, 1, (self.may_pick_up) as u32);
+        l.put_bits(at, 2000, 1, (self.unused_fa_b0) as u32);
+        l.put_bits(at, 2001, 1, (self.tech_shield) as u32);
+        l.put_bits(at, 2002, 1, (self.ledge_picked) as u32);
+        l.put_bits(at, 2003, 2, (self.human_target_rule) as u32);
+        l.put_bits(at, 2005, 1, (self.drifting_back) as u32);
+        l.put_bits(at, 2006, 1, (self.off_stage) as u32);
+        l.put_bits(at, 2007, 1, (self.follows_popo) as u32);
+        l.put_bits(at, 2008, 1, (self.nana_recovering) as u32);
+        l.put_bits(at, 2009, 1, (self.unused_fb_b1) as u32);
+        l.put_bits(at, 2010, 1, (self.unused_fb_b2) as u32);
+        l.put_bits(at, 2011, 1, (self.unused_fb_b3) as u32);
+        l.put_bits(at, 2012, 1, (self.unused_fb_b4) as u32);
+        l.put_bits(at, 2013, 1, (self.unused_fb_b5) as u32);
+        l.put_bits(at, 2014, 1, (self.unused_fb_b6) as u32);
+        l.put_bits(at, 2015, 1, (self.unused_fb_b7) as u32);
         for i0 in 0..30 {
-            self.xFC[i0].lay(l, at + 0xfc + i0 as u32 * 0x1c, cx);
+            self.partner_inputs[i0].lay(l, at + 0xfc + i0 as u32 * 0x1c, cx);
         }
-        self.x444.lay(l, at + 0x444, cx);
-        self.x448.lay(l, at + 0x448, cx);
+        self.partner_input_write.lay(l, at + 0x444, cx);
+        self.partner_input_read.lay(l, at + 0x448, cx);
         l.put_u32(at + 0x44c, self.command_duration as u32);
-        self.csP.lay(l, at + 0x450, cx);
+        self.script_cursor.lay(l, at + 0x450, cx);
         for i0 in 0..256 {
             l.put_u8(at + 0x454 + i0 as u32 * 0x1, self.buffer[i0] as u8);
         }
         self.write_pos.lay(l, at + 0x554, cx);
-        l.put_u32(at + 0x558, self.x558.to_bits());
-        l.put_u32(at + 0x55c, self.x55C.to_bits());
-        l.put_u32(at + 0x560, self.x560.to_bits());
-        l.put_u32(at + 0x564, self.x564.to_bits());
-        l.put_u32(at + 0x568, self.x568.to_bits());
-        l.put_u32(at + 0x56c, self.x56C.to_bits());
-        l.put_u32(at + 0x570, self.x570.to_bits());
+        l.put_u32(at + 0x558, self.jump_height.to_bits());
+        l.put_u32(at + 0x55c, self.hurt_behind.to_bits());
+        l.put_u32(at + 0x560, self.hurt_ahead.to_bits());
+        l.put_u32(at + 0x564, self.hurt_middle.to_bits());
+        l.put_u32(at + 0x568, self.hurt_top.to_bits());
+        l.put_u32(at + 0x56c, self.reach.to_bits());
+        l.put_u32(at + 0x570, self.reach_scale.to_bits());
         l.put_u32(at + 0x574, self.half_width.to_bits());
         l.put_u32(at + 0x578, self.half_height.to_bits());
     }
@@ -27363,55 +27471,61 @@ impl LayOut for Fighter {
         let _ = (&l, at, &cx);
         l.put_word(at + 0x0, cx.handle("GObjId", self.gobj.map(|h| h.0)));
         l.put_u32(at + 0x4, self.kind as u32);
-        l.put_u32(at + 0x8, self.x8_spawnNum as u32);
+        l.put_u32(at + 0x8, self.spawn_num as u32);
         l.put_u8(at + 0xc, self.player_idx as u8);
         l.put_u32(at + 0x10, self.motion_id as u32);
         l.put_u32(at + 0x14, self.anim_id as u32);
-        l.put_u32(at + 0x18, self.x18 as u32);
-        l.put_u32(at + 0x1c, self.x1C_actionStateList.0);
-        l.put_u32(at + 0x20, self.x20_actionStateList.0);
-        l.put_word(at + 0x24, cx.data(self.x24));
-        l.put_word(at + 0x28, cx.data(self.x28));
+        l.put_u32(at + 0x18, self.own_msid_start as u32);
+        l.put_u32(at + 0x1c, self.common_motion_states.0);
+        l.put_u32(at + 0x20, self.own_motion_states.0);
+        l.put_word(at + 0x24, cx.data(self.anim_table));
+        l.put_word(at + 0x28, cx.data(self.anim_flags));
         l.put_u32(at + 0x2c, self.facing_dir.to_bits());
         l.put_u32(at + 0x30, self.facing_dir1.to_bits());
-        self.x34_scale.lay(l, at + 0x34, cx);
-        l.put_u32(at + 0x40, self.x40.to_bits());
+        self.scale.lay(l, at + 0x34, cx);
+        l.put_u32(at + 0x40, self.platform_offset.to_bits());
         for i0 in 0..3 {
             for i1 in 0..4 {
                 l.put_u32(
                     at + 0x44 + i0 as u32 * 0x10 + i1 as u32 * 0x4,
-                    self.x44_mtx[i0][i1].to_bits(),
+                    self.depth_scale_mtx[i0][i1].to_bits(),
                 );
             }
         }
-        self.x74_self_accel.lay(l, at + 0x74, cx);
+        self.anim_vel.lay(l, at + 0x74, cx);
         self.self_vel.lay(l, at + 0x80, cx);
-        self.x8c_kb_vel.lay(l, at + 0x8c, cx);
-        self.x98_atk_shield_kb.lay(l, at + 0x98, cx);
-        self.xA4_unk_vel.lay(l, at + 0xa4, cx);
+        self.kb_vel.lay(l, at + 0x8c, cx);
+        self.atk_shield_kb_vel.lay(l, at + 0x98, cx);
+        self.item_bounce_vel.lay(l, at + 0xa4, cx);
         self.cur_pos.lay(l, at + 0xb0, cx);
         self.prev_pos.lay(l, at + 0xbc, cx);
         self.pos_delta.lay(l, at + 0xc8, cx);
-        self.xD4_unk_vel.lay(l, at + 0xd4, cx);
+        self.frame_vel.lay(l, at + 0xd4, cx);
         l.put_u32(at + 0xe0, self.ground_or_air as u32);
-        l.put_u32(at + 0xe4, self.xE4_ground_accel_1.to_bits());
-        l.put_u32(at + 0xe8, self.xE8_ground_accel_2.to_bits());
+        l.put_u32(at + 0xe4, self.ground_accel_1.to_bits());
+        l.put_u32(at + 0xe8, self.ground_accel_2.to_bits());
         l.put_u32(at + 0xec, self.gr_vel.to_bits());
-        l.put_u32(at + 0xf0, self.xF0_ground_kb_vel.to_bits());
-        l.put_u32(at + 0xf4, self.xF4_ground_attacker_shield_kb_vel.to_bits());
-        self.xF8_playerNudgeVel.lay(l, at + 0xf8, cx);
-        l.put_u32(at + 0x100, self.x100.to_bits());
-        l.put_u8(at + 0x104, self.x104 as u8);
-        l.put_u8(at + 0x105, self.x105 as u8);
-        l.put_u8(at + 0x106, self.x106 as u8);
-        l.put_u8(at + 0x107, self.x107 as u8);
-        l.put_word(at + 0x108, cx.data(self.x108_costume_joint));
+        l.put_u32(at + 0xf0, self.ground_kb_vel.to_bits());
+        l.put_u32(at + 0xf4, self.ground_attacker_shield_kb_vel.to_bits());
+        self.nudge_vel.lay(l, at + 0xf8, cx);
+        l.put_u32(at + 0x100, self.part_35_rot_x.to_bits());
+        l.put_u8(at + 0x104, self.freeze_step_timer as u8);
+        l.put_u8(at + 0x105, self.pad_105 as u8);
+        l.put_u8(at + 0x106, self.pad_106 as u8);
+        l.put_u8(at + 0x107, self.pad_107 as u8);
+        l.put_word(at + 0x108, cx.data(self.costume_joint));
         l.put_word(at + 0x10c, cx.data(self.ft_data));
         self.co_attrs.lay(l, at + 0x110, cx);
-        self.x294_itPickup.lay(l, at + 0x294, cx);
-        self.x2C4.lay(l, at + 0x2c4, cx);
-        l.put_word(at + 0x2cc, cx.handle("AttrsId", (self.x2CC).map(|h| h.0)));
-        l.put_word(at + 0x2d0, cx.handle("AttrsId", (self.x2D0).map(|h| h.0)));
+        self.item_pickup.lay(l, at + 0x294, cx);
+        self.push_size.lay(l, at + 0x2c4, cx);
+        l.put_word(
+            at + 0x2cc,
+            cx.handle("AttrsId", (self.cargo_attrs).map(|h| h.0)),
+        );
+        l.put_word(
+            at + 0x2d0,
+            cx.handle("AttrsId", (self.multi_jump_attrs).map(|h| h.0)),
+        );
         l.put_word(
             at + 0x2d4,
             cx.handle("AttrsId", (self.dat_attrs).map(|h| h.0)),
@@ -27420,256 +27534,283 @@ impl LayOut for Fighter {
             at + 0x2d8,
             cx.handle("AttrsId", (self.dat_attrs_backup).map(|h| h.0)),
         );
-        l.put_u32(at + 0x2dc, self.x2DC.to_bits());
-        l.put_u32(at + 0x2e0, self.x2E0.to_bits());
-        l.put_u32(at + 0x2e4, self.x2E4.to_bits());
-        l.put_u32(at + 0x2e8, self.x2E8.to_bits());
-        l.put_u32(at + 0x2ec, self.x2EC.to_bits());
+        l.put_u32(at + 0x2dc, self.walk_slow_frames.to_bits());
+        l.put_u32(at + 0x2e0, self.walk_middle_frames.to_bits());
+        l.put_u32(at + 0x2e4, self.walk_fast_frames.to_bits());
+        l.put_u32(at + 0x2e8, self.guard_on_frames.to_bits());
+        l.put_u32(at + 0x2ec, self.landing_fall_special_frames.to_bits());
         self.dynamic_bone_sets.lay(l, at + 0x2f0, cx);
         l.put_u32(at + 0x3e0, self.dynamics_num as u32);
-        self.x3E4_fighterCmdScript.lay(l, at + 0x3e4, cx);
-        self.x408.lay(l, at + 0x408, cx);
-        self.x488.lay(l, at + 0x488, cx);
-        self.x508.lay(l, at + 0x508, cx);
-        l.put_word(at + 0x588, cx.handle("LObjId", (self.x588).map(|h| h.0)));
-        l.put_u32(at + 0x58c, self.x58C as u32);
-        self.x590.lay(l, at + 0x590, cx);
-        l.put_bytes(at + 0x594, &self.x594);
-        self.x598.lay(l, at + 0x598, cx);
-        l.put_word(at + 0x59c, cx.handle("AnimBufId", (self.x59C).map(|h| h.0)));
-        l.put_word(at + 0x5a0, cx.handle("AnimBufId", (self.x5A0).map(|h| h.0)));
-        l.put_u32(at + 0x5a4, self.x5A4 as u32);
-        l.put_u32(at + 0x5a8, self.x5A8 as u32);
-        self.x5AC.lay(l, at + 0x5ac, cx);
+        self.cmd_script.lay(l, at + 0x3e4, cx);
+        self.main_overlay.lay(l, at + 0x408, cx);
+        self.secondary_overlay.lay(l, at + 0x488, cx);
+        self.spycloak_overlay.lay(l, at + 0x508, cx);
+        l.put_word(at + 0x588, cx.handle("LObjId", (self.light).map(|h| h.0)));
+        l.put_u32(at + 0x58c, self.anim_count as u32);
+        self.action_tree.lay(l, at + 0x590, cx);
+        l.put_bytes(at + 0x594, &self.anim_bits);
+        self.second_tree.lay(l, at + 0x598, cx);
+        l.put_word(
+            at + 0x59c,
+            cx.handle("AnimBufId", (self.main_anim_buf).map(|h| h.0)),
+        );
+        l.put_word(
+            at + 0x5a0,
+            cx.handle("AnimBufId", (self.second_anim_buf).map(|h| h.0)),
+        );
+        l.put_u32(at + 0x5a4, self.main_anim_aram as u32);
+        l.put_u32(at + 0x5a8, self.second_anim_aram as u32);
+        self.parts_vis.lay(l, at + 0x5ac, cx);
         self.tobj_list.lay(l, at + 0x5cc, cx);
         l.put_word(at + 0x5e8, cx.handle("PartsId", self.parts.map(|h| h.0)));
         self.dobj_list.lay(l, at + 0x5ec, cx);
         for i0 in 0..12 {
-            self.x5F4_arr[i0].lay(l, at + 0x5f4 + i0 as u32 * 0x2, cx);
+            self.model_variants[i0].lay(l, at + 0x5f4 + i0 as u32 * 0x2, cx);
         }
-        l.put_word(at + 0x60c, cx.handle("QueuedId", self.x60C.map(|h| h.0)));
+        l.put_word(
+            at + 0x60c,
+            cx.handle("QueuedId", self.effect_queue.map(|h| h.0)),
+        );
         for i0 in 0..2 {
-            self.x610_color_rgba[i0].lay(l, at + 0x610 + i0 as u32 * 0x4, cx);
+            self.overlay_colors[i0].lay(l, at + 0x610 + i0 as u32 * 0x4, cx);
         }
         l.put_u8(at + 0x618, self.pad_port as u8);
         l.put_u8(at + 0x619, self.costume_id as u8);
         l.put_u8(at + 0x61a, self.sub_color as u8);
         l.put_u8(at + 0x61b, self.team as u8);
-        l.put_u8(at + 0x61c, self.x61C as u8);
-        l.put_u8(at + 0x61d, self.x61D as u8);
+        l.put_u8(at + 0x61c, self.slot_word as u8);
+        l.put_u8(at + 0x61d, self.alpha as u8);
         for i0 in 0..2 {
-            l.put_u8(at + 0x61e + i0 as u32 * 0x1, self.filler_x61E[i0] as u8);
+            l.put_u8(at + 0x61e + i0 as u32 * 0x1, self.pad_61e[i0] as u8);
         }
         self.input.lay(l, at + 0x620, cx);
         self.active_timer.lay(l, at + 0x670, cx);
         self.active_sticky.lay(l, at + 0x673, cx);
         self.active_duration.lay(l, at + 0x676, cx);
         self.activity_timer.lay(l, at + 0x679, cx);
-        l.put_u8(at + 0x67c, self.x67C as u8);
-        l.put_u8(at + 0x67d, self.x67D as u8);
-        l.put_u8(at + 0x67e, self.x67E as u8);
-        l.put_u8(at + 0x67f, self.x67F as u8);
-        l.put_u8(at + 0x680, self.x680 as u8);
-        l.put_u8(at + 0x681, self.x681 as u8);
-        l.put_u8(at + 0x682, self.x682 as u8);
-        l.put_u8(at + 0x683, self.x683 as u8);
-        l.put_u8(at + 0x684, self.x684 as u8);
-        l.put_u8(at + 0x685, self.x685 as u8);
-        l.put_u8(at + 0x686, self.x686 as u8);
-        l.put_u8(at + 0x687, self.x687 as u8);
-        l.put_u8(at + 0x688, self.x688 as u8);
-        l.put_u8(at + 0x689, self.x689 as u8);
-        l.put_u8(at + 0x68a, self.x68A as u8);
-        l.put_u8(at + 0x68b, self.x68B as u8);
-        self.x68C_transNPos.lay(l, at + 0x68c, cx);
-        self.x698.lay(l, at + 0x698, cx);
-        self.x6A4_transNOffset.lay(l, at + 0x6a4, cx);
-        self.x6B0.lay(l, at + 0x6b0, cx);
+        l.put_u8(at + 0x67c, self.frames_since_smash_x as u8);
+        l.put_u8(at + 0x67d, self.frames_since_smash_up as u8);
+        l.put_u8(at + 0x67e, self.frames_since_tap_up as u8);
+        l.put_u8(at + 0x67f, self.frames_since_shoulder as u8);
+        l.put_u8(at + 0x680, self.frames_since_tech_shoulder as u8);
+        l.put_u8(at + 0x681, self.frames_since_pad_up as u8);
+        l.put_u8(at + 0x682, self.frames_since_pad_down as u8);
+        l.put_u8(at + 0x683, self.frames_since_z as u8);
+        l.put_u8(at + 0x684, self.frames_since_tech_window as u8);
+        l.put_u8(at + 0x685, self.frames_since_special_s as u8);
+        l.put_u8(at + 0x686, self.frames_since_special_hi as u8);
+        l.put_u8(at + 0x687, self.frames_since_special_lw as u8);
+        l.put_u8(at + 0x688, self.frames_since_special_s_dir as u8);
+        l.put_u8(at + 0x689, self.frames_since_special_n as u8);
+        l.put_u8(at + 0x68a, self.frames_since_jump as u8);
+        l.put_u8(at + 0x68b, self.frames_since_special_hi_air as u8);
+        self.trans_n_pos.lay(l, at + 0x68c, cx);
+        self.prev_trans_n_pos.lay(l, at + 0x698, cx);
+        self.trans_n_offset.lay(l, at + 0x6a4, cx);
+        self.prev_trans_n_offset.lay(l, at + 0x6b0, cx);
         l.put_u32(at + 0x6bc, self.lstick_angle.to_bits());
-        self.x6C0.lay(l, at + 0x6c0, cx);
-        self.x6CC.lay(l, at + 0x6cc, cx);
-        self.x6D8.lay(l, at + 0x6d8, cx);
-        self.x6E4.lay(l, at + 0x6e4, cx);
+        self.part_35_pos.lay(l, at + 0x6c0, cx);
+        self.prev_part_35_pos.lay(l, at + 0x6cc, cx);
+        self.part_35_offset.lay(l, at + 0x6d8, cx);
+        self.prev_part_35_offset.lay(l, at + 0x6e4, cx);
         self.coll_data.lay(l, at + 0x6f0, cx);
         l.put_u32(at + 0x88c, self.ecb_lock as u32);
         l.put_word(
             at + 0x890,
-            cx.handle("CameraBoxId", self.x890_cameraBox.map(|h| h.0)),
+            cx.handle("CameraBoxId", self.camera_box.map(|h| h.0)),
         );
         l.put_u32(at + 0x894, self.cur_anim_frame.to_bits());
-        l.put_u32(at + 0x898, self.x898_unk.to_bits());
+        l.put_u32(at + 0x898, self.cmd_frame_offset.to_bits());
         l.put_u32(at + 0x89c, self.frame_speed_mul.to_bits());
-        l.put_u32(at + 0x8a0, self.x8A0_unk.to_bits());
-        l.put_u32(at + 0x8a4, self.x8A4_animBlendFrames.to_bits());
-        l.put_u32(at + 0x8a8, self.x8A8_anim_frame.to_bits());
+        l.put_u32(at + 0x8a0, self.freeze_rate_step.to_bits());
+        l.put_u32(at + 0x8a4, self.anim_blend_frames.to_bits());
+        l.put_u32(at + 0x8a8, self.anim_blend_frame.to_bits());
         l.put_word(
             at + 0x8ac,
-            cx.handle("JObjId", self.x8AC_animSkeleton.map(|h| h.0)),
+            cx.handle("JObjId", self.anim_skeleton.map(|h| h.0)),
         );
         for i0 in 0..5 {
-            self.x8B0[i0].lay(l, at + 0x8b0 + i0 as u32 * 0x14, cx);
+            self.part_anims[i0].lay(l, at + 0x8b0 + i0 as u32 * 0x14, cx);
         }
         for i0 in 0..4 {
-            self.x914[i0].lay(l, at + 0x914 + i0 as u32 * 0x138, cx);
+            self.hitboxes[i0].lay(l, at + 0x914 + i0 as u32 * 0x138, cx);
         }
         for i0 in 0..2 {
-            self.xDF4[i0].lay(l, at + 0xdf4 + i0 as u32 * 0x138, cx);
+            self.throw_hitboxes[i0].lay(l, at + 0xdf4 + i0 as u32 * 0x138, cx);
         }
-        self.x1064_thrownHitbox.lay(l, at + 0x1064, cx);
-        l.put_u8(at + 0x119c, self.x119C_teamUnk as u8);
-        l.put_u8(at + 0x119d, self.grabber_unk1 as u8);
+        self.thrown_hitbox.lay(l, at + 0x1064, cx);
+        l.put_u8(at + 0x119c, self.thrown_team as u8);
+        l.put_u8(at + 0x119d, self.thrower_slot as u8);
         l.put_u8(at + 0x119e, self.hurt_capsules_len as u8);
-        l.put_u8(at + 0x119f, self.x119F as u8);
+        l.put_u8(at + 0x119f, self.pad_119f as u8);
         for i0 in 0..15 {
             self.hurt_capsules[i0].lay(l, at + 0x11a0 + i0 as u32 * 0x4c, cx);
         }
         for i0 in 0..2 {
-            self.x1614[i0].lay(l, at + 0x1614 + i0 as u32 * 0x2c, cx);
+            self.stamina_markers[i0].lay(l, at + 0x1614 + i0 as u32 * 0x2c, cx);
         }
-        l.put_u8(at + 0x166c, self.x166C as u8);
+        l.put_u8(at + 0x166c, self.ledge_point_count as u8);
         for i0 in 0..1 {
-            self.x1670[i0].lay(l, at + 0x1670 + i0 as u32 * 0x28, cx);
+            self.ledge_points[i0].lay(l, at + 0x1670 + i0 as u32 * 0x28, cx);
         }
         for i0 in 0..400 {
-            l.put_u8(at + 0x1698 + i0 as u32 * 0x1, self.filler_x1674[i0] as u8);
+            l.put_u8(at + 0x1698 + i0 as u32 * 0x1, self.pad_1674[i0] as u8);
         }
-        l.put_u32(at + 0x1828, self.x1828 as u32);
+        l.put_u32(at + 0x1828, self.hit_reaction as u32);
         self.dmg.lay(l, at + 0x182c, cx);
-        l.put_u32(at + 0x1960, self.x1960_vibrateMult.to_bits());
-        l.put_u32(at + 0x1964, self.x1964.to_bits());
-        l.put_u8(at + 0x1968, self.x1968_jumpsUsed as u8);
-        l.put_u8(at + 0x1969, self.x1969_walljumpUsed as u8);
+        l.put_u32(at + 0x1960, self.hitlag_vibrate_mul.to_bits());
+        l.put_u32(at + 0x1964, self.min_hitlag.to_bits());
+        l.put_u8(at + 0x1968, self.jumps_used as u8);
+        l.put_u8(at + 0x1969, self.walljumps_used as u8);
         l.put_u32(at + 0x196c, self.hitlag_mul.to_bits());
-        l.put_u32(at + 0x1970, self.unk_msid as u32);
+        l.put_u32(at + 0x1970, self.jab_msid as u32);
         l.put_word(
             at + 0x1974,
             cx.handle("GObjId", self.item_gobj.map(|h| h.0)),
         );
-        l.put_word(at + 0x1978, cx.handle("GObjId", self.x1978.map(|h| h.0)));
-        l.put_word(at + 0x197c, cx.handle("GObjId", self.x197C.map(|h| h.0)));
-        l.put_word(at + 0x1980, cx.handle("GObjId", self.x1980.map(|h| h.0)));
+        l.put_word(
+            at + 0x1978,
+            cx.handle("GObjId", self.second_item.map(|h| h.0)),
+        );
+        l.put_word(
+            at + 0x197c,
+            cx.handle("GObjId", self.bunny_hood.map(|h| h.0)),
+        );
+        l.put_word(at + 0x1980, cx.handle("GObjId", self.flower.map(|h| h.0)));
         l.put_word(
             at + 0x1984,
-            cx.handle("GObjId", self.x1984_heldItemSpec.map(|h| h.0)),
+            cx.handle("GObjId", self.special_item.map(|h| h.0)),
         );
-        l.put_u32(at + 0x1988, self.x1988 as u32);
-        l.put_u32(at + 0x198c, self.x198C as u32);
-        l.put_u32(at + 0x1990, self.x1990 as u32);
-        l.put_u32(at + 0x1994, self.x1994 as u32);
+        l.put_u32(at + 0x1988, self.hit_status as u32);
+        l.put_u32(at + 0x198c, self.timed_hit_status as u32);
+        l.put_u32(at + 0x1990, self.intangible_frames as u32);
+        l.put_u32(at + 0x1994, self.invincible_frames as u32);
         l.put_u32(at + 0x1998, self.shield_health.to_bits());
         l.put_u32(at + 0x199c, self.lightshield_amount.to_bits());
-        l.put_u32(at + 0x19a0, self.x19A0_shieldDamageTaken as u32);
-        l.put_u32(at + 0x19a4, self.x19A4 as u32);
-        l.put_word(at + 0x19a8, cx.handle("GObjId", self.x19A8.map(|h| h.0)));
+        l.put_u32(at + 0x19a0, self.shield_damage_taken as u32);
+        l.put_u32(at + 0x19a4, self.shield_hit_damage as u32);
+        l.put_word(
+            at + 0x19a8,
+            cx.handle("GObjId", self.shield_hit_by.map(|h| h.0)),
+        );
         l.put_u32(at + 0x19ac, self.specialn_facing_dir.to_bits());
-        l.put_u32(at + 0x19b0, self.x19B0 as u32);
-        l.put_u32(at + 0x19b4, self.shield_unk0.to_bits());
-        l.put_u32(at + 0x19b8, self.shield_unk1.to_bits());
-        l.put_u32(at + 0x19bc, self.x19BC_shieldDamageTaken3 as u32);
+        l.put_u32(at + 0x19b0, self.shield_hit_element as u32);
+        l.put_u32(at + 0x19b4, self.counter_min_hitlag.to_bits());
+        l.put_u32(at + 0x19b8, self.counter_item_min_hitlag.to_bits());
+        l.put_u32(at + 0x19bc, self.shield_hit_slot as u32);
         self.shield_hit.lay(l, at + 0x19c0, cx);
         self.reflect_hit.lay(l, at + 0x19e4, cx);
         self.absorb_hit.lay(l, at + 0x1a08, cx);
-        self.ReflectAttr.lay(l, at + 0x1a2c, cx);
-        self.AbsorbAttr.lay(l, at + 0x1a40, cx);
+        self.reflect.lay(l, at + 0x1a2c, cx);
+        self.absorb.lay(l, at + 0x1a40, cx);
         l.put_u32(at + 0x1a4c, self.grab_timer.to_bits());
-        l.put_u8(at + 0x1a50, self.x1A50 as u8);
-        l.put_u8(at + 0x1a51, self.x1A51 as u8);
-        l.put_u8(at + 0x1a52, self.x1A52 as u8);
-        l.put_u8(at + 0x1a53, self.x1A53 as u8);
-        l.put_u32(at + 0x1a54, self.x1A54 as u32);
+        l.put_u8(at + 0x1a50, self.mash_stick_x as u8);
+        l.put_u8(at + 0x1a51, self.mash_stick_y as u8);
+        l.put_u8(at + 0x1a52, self.mash_shake_row as u8);
+        l.put_u8(at + 0x1a53, self.mash_shake_rows as u8);
+        l.put_u32(at + 0x1a54, self.jab_mashes as u32);
         l.put_word(
             at + 0x1a58,
             cx.handle("GObjId", self.victim_gobj.map(|h| h.0)),
         );
-        l.put_word(at + 0x1a5c, cx.handle("GObjId", self.x1A5C.map(|h| h.0)));
+        l.put_word(at + 0x1a5c, cx.handle("GObjId", self.partner.map(|h| h.0)));
         l.put_word(
             at + 0x1a60,
             cx.handle("GObjId", self.target_item_gobj.map(|h| h.0)),
         );
-        l.put_word(at + 0x1a64, cx.handle("GObjId", (self.x1A64).map(|h| h.0)));
-        l.put_u16(at + 0x1a68, self.x1A68 as u16);
-        l.put_u16(at + 0x1a6a, self.x1A6A as u16);
-        l.put_u32(at + 0x1a6c, self.x1A6C.to_bits());
-        self.x1A70.lay(l, at + 0x1a70, cx);
-        self.x1A7C.lay(l, at + 0x1a7c, cx);
+        l.put_word(
+            at + 0x1a64,
+            cx.handle("GObjId", (self.caught_item).map(|h| h.0)),
+        );
+        l.put_u16(at + 0x1a68, self.grab_kinds as u16);
+        l.put_u16(at + 0x1a6a, self.grab_immune as u16);
+        l.put_u32(at + 0x1a6c, self.hip_follow_rate.to_bits());
+        self.throw_offset.lay(l, at + 0x1a70, cx);
+        self.hip_pos.lay(l, at + 0x1a7c, cx);
         self.cpu.lay(l, at + 0x1a88, cx);
-        l.put_u32(at + 0x2004, self.x2004 as u32);
-        l.put_u32(at + 0x2008, self.x2008 as u32);
-        l.put_u32(at + 0x200c, self.x200C as u32);
-        l.put_u32(at + 0x2010, self.x2010 as u32);
-        l.put_u32(at + 0x2014, self.x2014 as u32);
-        l.put_u32(at + 0x2018, self.x2018 as u32);
-        l.put_u32(at + 0x201c, self.x201C as u32);
-        l.put_u8(at + 0x2020, self.x2020 as u8);
-        l.put_u8(at + 0x2021, self.x2021 as u8);
-        l.put_u8(at + 0x2022, self.x2022 as u8);
-        l.put_u32(at + 0x2024, self.x2024 as u32);
+        l.put_u32(at + 0x2004, self.star_frames as u32);
+        l.put_u32(at + 0x2008, self.mushroom_frames as u32);
+        l.put_u32(at + 0x200c, self.queued_grows as u32);
+        l.put_u32(at + 0x2010, self.queued_shrinks as u32);
+        l.put_u32(at + 0x2014, self.bunny_hood_frames as u32);
+        l.put_u32(at + 0x2018, self.flower_frames as u32);
+        l.put_u32(at + 0x201c, self.flower_damage_timer as u32);
+        l.put_u8(at + 0x2020, self.flower_stick_x as u8);
+        l.put_u8(at + 0x2021, self.flower_stick_y as u8);
+        l.put_u8(at + 0x2022, self.unused_2022 as u8);
+        l.put_u32(at + 0x2024, self.flower_growth as u32);
         l.put_u32(at + 0x2028, self.metal_timer as u32);
         l.put_u32(at + 0x202c, self.metal_health as u32);
-        l.put_u32(at + 0x2030, self.x2030 as u32);
-        l.put_u32(at + 0x2034, self.x2034 as u32);
-        l.put_u32(at + 0x2038, self.x2038 as u32);
-        self.x203C.lay(l, at + 0x203c, cx);
+        l.put_u32(at + 0x2030, self.cloak_frames as u32);
+        l.put_u32(at + 0x2034, self.alt_metal_timer as u32);
+        l.put_u32(at + 0x2038, self.alt_metal_health as u32);
+        self.second_dobjs.lay(l, at + 0x203c, cx);
         for i0 in 0..32 {
-            l.put_u8(at + 0x2044 + i0 as u32 * 0x1, self.filler_x2044[i0] as u8);
+            l.put_u8(at + 0x2044 + i0 as u32 * 0x1, self.pad_2044[i0] as u8);
         }
-        l.put_u32(at + 0x2064, self.x2064_ledgeCooldown as u32);
-        l.put_u32(at + 0x2068, self.x2068_attackID as u32);
-        l.put_u16(at + 0x206c, self.x206C_attack_instance as u16);
-        l.put_u16(at + 0x206e, self.x206E as u16);
-        l.put_bytes(at + 0x2070, &self.x2070);
-        self.x2074.lay(l, at + 0x2074, cx);
-        l.put_u32(at + 0x208c, self.x208C as u32);
-        l.put_u16(at + 0x2090, self.x2090 as u16);
-        l.put_u16(at + 0x2092, self.x2092 as u16);
-        l.put_word(at + 0x2094, cx.handle("GObjId", self.x2094.map(|h| h.0)));
-        l.put_u16(at + 0x2098, self.x2098 as u16);
-        l.put_u16(at + 0x209a, self.x209A as u16);
-        l.put_u16(at + 0x209c, self.x209C as u16);
+        l.put_u32(at + 0x2064, self.ledge_cooldown as u32);
+        l.put_u32(at + 0x2068, self.attack_id as u32);
+        l.put_u16(at + 0x206c, self.attack_instance as u16);
+        l.put_u16(at + 0x206e, self.pad_206e as u16);
+        l.put_bytes(at + 0x2070, &self.attack_flags);
+        self.attack_record.lay(l, at + 0x2074, cx);
+        l.put_u32(at + 0x208c, self.combo_attack_id as u32);
+        l.put_u16(at + 0x2090, self.combo_count as u16);
+        l.put_u16(at + 0x2092, self.combo_push_frames as u16);
+        l.put_word(
+            at + 0x2094,
+            cx.handle("GObjId", self.combo_victim.map(|h| h.0)),
+        );
+        l.put_u16(at + 0x2098, self.combo_window as u16);
+        l.put_u16(at + 0x209a, self.name_tag_timer as u16);
+        l.put_u16(at + 0x209c, self.air_grab_timer as u16);
         l.put_word(
             at + 0x20a0,
-            cx.handle("JObjId", self.x20A0_accessory.map(|h| h.0)),
+            cx.handle("JObjId", self.accessory.map(|h| h.0)),
         );
-        self.x20A4.lay(l, at + 0x20a4, cx);
-        l.put_word(at + 0x20ac, cx.handle("GObjId", self.unk_gobj.map(|h| h.0)));
+        self.shadow.lay(l, at + 0x20a4, cx);
+        l.put_word(at + 0x20ac, cx.handle("GObjId", self.hit_by.map(|h| h.0)));
         for i0 in 0..3 {
-            self.x20B0[i0].lay(l, at + 0x20b0 + i0 as u32 * 0x18, cx);
+            self.afterimage_ring[i0].lay(l, at + 0x20b0 + i0 as u32 * 0x18, cx);
         }
-        l.put_u32(at + 0x20f8, self.x20F8.to_bits());
-        l.put_u32(at + 0x20fc, self.x20FC.to_bits());
-        l.put_u8(at + 0x2100, self.x2100 as u8);
-        l.put_bits(at, 67592, 7, (self.x2101_bits_0to6) as u32);
-        l.put_bits(at, 67599, 1, (self.x2101_bits_8) as u32);
-        l.put_u8(at + 0x2102, self.x2102 as u8);
-        l.put_u8(at + 0x2103, self.x2103 as u8);
-        l.put_u32(at + 0x2104, self.x2104 as u32);
+        l.put_u32(at + 0x20f8, self.afterimage_width_a.to_bits());
+        l.put_u32(at + 0x20fc, self.afterimage_width_b.to_bits());
+        l.put_u8(at + 0x2100, self.afterimage_mode as u8);
+        l.put_bits(at, 67592, 7, (self.afterimage_slot) as u32);
+        l.put_bits(at, 67599, 1, (self.item_afterimage) as u32);
+        l.put_u8(at + 0x2102, self.pad_2102 as u8);
+        l.put_u8(at + 0x2103, self.pad_2103 as u8);
+        l.put_u32(at + 0x2104, self.parasol_frames as u32);
         l.put_u32(at + 0x2108, self.capture_timer as u32);
         l.put_u8(at + 0x210c, self.wall_jump_input_timer as u8);
         for i0 in 0..3 {
-            l.put_u8(at + 0x210d + i0 as u32 * 0x1, self.filler_x210C[i0] as u8);
+            l.put_u8(at + 0x210d + i0 as u32 * 0x1, self.pad_210d[i0] as u8);
         }
-        l.put_u32(at + 0x2110, self.x2110_walljumpWallSide.to_bits());
+        l.put_u32(at + 0x2110, self.walljump_wall_side.to_bits());
         self.smash_attrs.lay(l, at + 0x2114, cx);
-        l.put_u32(at + 0x213c, self.x213C as u32);
-        l.put_u32(at + 0x2140, self.x2140.to_bits());
-        l.put_u32(at + 0x2144, self.x2144 as u32);
-        l.put_u32(at + 0x2148, self.x2148 as u32);
-        l.put_u32(at + 0x214c, self.x214C as u32);
-        l.put_u32(at + 0x2150, self.x2150 as u32);
-        l.put_u32(at + 0x2154, self.x2154 as u32);
-        l.put_u32(at + 0x2158, self.x2158 as u32);
-        l.put_u32(at + 0x215c, self.x215C as u32);
-        l.put_u32(at + 0x2160, self.x2160 as u32);
-        l.put_u32(at + 0x2164, self.x2164 as u32);
-        l.put_u32(at + 0x2168, self.x2168 as u32);
-        l.put_u32(at + 0x216c, self.unk_grab_val.to_bits());
-        l.put_u32(at + 0x2170, self.x2170.to_bits());
-        self.x2174.lay(l, at + 0x2174, cx);
-        l.put_u32(at + 0x2180, self.x2180 as u32);
-        l.put_word(at + 0x2184, cx.handle("JObjId", self.x2184.map(|h| h.0)));
-        self.x2188.lay(l, at + 0x2188, cx);
+        l.put_u32(at + 0x213c, self.ledge_caught as u32);
+        l.put_u32(at + 0x2140, self.lowest_y.to_bits());
+        l.put_u32(at + 0x2144, self.voice_handle as u32);
+        l.put_u32(at + 0x2148, self.sound_handle_2 as u32);
+        l.put_u32(at + 0x214c, self.sound_handle_3 as u32);
+        l.put_u32(at + 0x2150, self.sound_handle_4 as u32);
+        l.put_u32(at + 0x2154, self.sound_handle_5 as u32);
+        l.put_u32(at + 0x2158, self.sound_handle_6 as u32);
+        l.put_u32(at + 0x215c, self.track_handle as u32);
+        l.put_u32(at + 0x2160, self.sfx_handle as u32);
+        l.put_u32(at + 0x2164, self.star_cheer as u32);
+        l.put_u32(at + 0x2168, self.hammer_music as u32);
+        l.put_u32(at + 0x216c, self.grab_distance.to_bits());
+        l.put_u32(at + 0x2170, self.hold_dy.to_bits());
+        self.thrown_trans.lay(l, at + 0x2174, cx);
+        l.put_u32(at + 0x2180, self.dead_holder_slot as u32);
+        l.put_word(
+            at + 0x2184,
+            cx.handle("JObjId", self.mushroom_scale_joint.map(|h| h.0)),
+        );
+        self.screen_pos.lay(l, at + 0x2188, cx);
         l.put_u32(at + 0x2190, self.grab_cb.map_or(0, |c| c.0));
-        l.put_u32(at + 0x2194, self.x2194.map_or(0, |c| c.0));
+        l.put_u32(at + 0x2194, self.grab_item_cb.map_or(0, |c| c.0));
         l.put_u32(at + 0x2198, self.grabbed_cb.map_or(0, |c| c.0));
         l.put_u32(at + 0x219c, self.input_cb.map_or(0, |c| c.0));
         l.put_u32(at + 0x21a0, self.anim_cb.map_or(0, |c| c.0));
@@ -27683,7 +27824,7 @@ impl LayOut for Fighter {
         l.put_u32(at + 0x21c0, self.deal_dmg_cb.map_or(0, |c| c.0));
         l.put_u32(at + 0x21c4, self.shield_hit_cb.map_or(0, |c| c.0));
         l.put_u32(at + 0x21c8, self.reflect_hit_cb.map_or(0, |c| c.0));
-        l.put_u32(at + 0x21cc, self.x21CC.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21cc, self.anim_end_cb.map_or(0, |c| c.0));
         l.put_u32(at + 0x21d0, self.hitlag_cb.map_or(0, |c| c.0));
         l.put_u32(at + 0x21d4, self.pre_hitlag_cb.map_or(0, |c| c.0));
         l.put_u32(at + 0x21d8, self.post_hitlag_cb.map_or(0, |c| c.0));
@@ -27691,164 +27832,164 @@ impl LayOut for Fighter {
         l.put_u32(at + 0x21e0, self.death1_cb.map_or(0, |c| c.0));
         l.put_u32(at + 0x21e4, self.death2_cb.map_or(0, |c| c.0));
         l.put_u32(at + 0x21e8, self.death3_cb.map_or(0, |c| c.0));
-        l.put_u32(at + 0x21ec, self.x21EC.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21ec, self.motion_change_cb.map_or(0, |c| c.0));
         l.put_u32(at + 0x21f0, self.take_dmg_2_cb.map_or(0, |c| c.0));
         l.put_u32(at + 0x21f4, self.hurtbox_detect_cb.map_or(0, |c| c.0));
-        l.put_u32(at + 0x21f8, self.x21F8.map_or(0, |c| c.0));
-        l.put_bytes(at + 0x21fc, &self.x21FC_flag);
+        l.put_u32(at + 0x21f8, self.turn_cb.map_or(0, |c| c.0));
+        l.put_bytes(at + 0x21fc, &self.debug_draw_flags);
         for i0 in 0..3 {
-            l.put_u8(at + 0x21fd + i0 as u32 * 0x1, self.filler_x21FC[i0] as u8);
+            l.put_u8(at + 0x21fd + i0 as u32 * 0x1, self.pad_21fd[i0] as u8);
         }
         for i0 in 0..4 {
             l.put_u32(at + 0x2200 + i0 as u32 * 0x4, self.cmd_vars[i0] as u32);
         }
-        l.put_bytes(at + 0x2210, &self.x2210);
+        l.put_bytes(at + 0x2210, &self.throw_flags);
         l.put_u32(at + 0x2214, self.cmd_timer.to_bits());
         l.put_bits(at, 69824, 1, (self.allow_interrupt) as u32);
-        l.put_bits(at, 69825, 1, (self.x2218_b1) as u32);
-        l.put_bits(at, 69826, 1, (self.x2218_b2) as u32);
+        l.put_bits(at, 69825, 1, (self.jab_continue) as u32);
+        l.put_bits(at, 69826, 1, (self.jab_rapid) as u32);
         l.put_bits(at, 69827, 1, (self.reflecting) as u32);
-        l.put_bits(at, 69828, 1, (self.x2218_b4) as u32);
-        l.put_bits(at, 69829, 1, (self.x2218_b5) as u32);
-        l.put_bits(at, 69830, 1, (self.x2218_b6) as u32);
-        l.put_bits(at, 69831, 1, (self.x2218_b7) as u32);
-        l.put_bits(at, 69832, 1, (self.x2219_b0) as u32);
-        l.put_bits(at, 69833, 1, (self.x2219_b1) as u32);
-        l.put_bits(at, 69834, 1, (self.x2219_b2) as u32);
-        l.put_bits(at, 69835, 1, (self.x2219_b3) as u32);
-        l.put_bits(at, 69836, 1, (self.x2219_b4) as u32);
-        l.put_bits(at, 69837, 1, (self.x2219_b5) as u32);
-        l.put_bits(at, 69838, 1, (self.x2219_b6) as u32);
-        l.put_bits(at, 69839, 1, (self.x2219_b7) as u32);
-        l.put_bits(at, 69840, 1, (self.x221A_b0) as u32);
-        l.put_bits(at, 69841, 1, (self.x221A_b1) as u32);
+        l.put_bits(at, 69828, 1, (self.reflect_kept) as u32);
+        l.put_bits(at, 69829, 1, (self.reflect_behavior) as u32);
+        l.put_bits(at, 69830, 1, (self.absorbing) as u32);
+        l.put_bits(at, 69831, 1, (self.absorb_any) as u32);
+        l.put_bits(at, 69832, 1, (self.effect_once) as u32);
+        l.put_bits(at, 69833, 1, (self.out_of_play) as u32);
+        l.put_bits(at, 69834, 1, (self.blast_immune_state) as u32);
+        l.put_bits(at, 69835, 1, (self.hitboxes_set) as u32);
+        l.put_bits(at, 69836, 1, (self.hammer_hits_held) as u32);
+        l.put_bits(at, 69837, 1, (self.in_hitlag) as u32);
+        l.put_bits(at, 69838, 1, (self.was_in_hitlag) as u32);
+        l.put_bits(at, 69839, 1, (self.hitlag_held) as u32);
+        l.put_bits(at, 69840, 1, (self.pending_hitlag) as u32);
+        l.put_bits(at, 69841, 1, (self.thaw_size) as u32);
         l.put_bits(at, 69842, 1, (self.allow_sdi) as u32);
-        l.put_bits(at, 69843, 1, (self.x221A_b3) as u32);
+        l.put_bits(at, 69843, 1, (self.in_hitstun_sdi) as u32);
         l.put_bits(at, 69844, 1, (self.fall_fast) as u32);
-        l.put_bits(at, 69845, 1, (self.x221A_b5) as u32);
-        l.put_bits(at, 69846, 1, (self.x221A_b6) as u32);
-        l.put_bits(at, 69847, 1, (self.x221A_b7) as u32);
-        self.x221B.lay(l, at + 0x221b, cx);
-        l.put_bits(at, 69856, 1, (self.x221C_b0) as u32);
-        l.put_bits(at, 69857, 1, (self.x221C_b1) as u32);
-        l.put_bits(at, 69858, 1, (self.x221C_b2) as u32);
-        l.put_bits(at, 69859, 1, (self.x221C_b3) as u32);
-        l.put_bits(at, 69860, 1, (self.x221C_b4) as u32);
-        l.put_bits(at, 69861, 1, (self.x221C_b5) as u32);
-        l.put_bits(at, 69862, 1, (self.x221C_b6) as u32);
-        l.put_bits(at, 69863, 3, (self.x221C_u16_y) as u32);
-        l.put_bits(at, 69866, 1, (self.x221D_b2) as u32);
+        l.put_bits(at, 69845, 1, (self.hurtboxes_set) as u32);
+        l.put_bits(at, 69846, 1, (self.hurtboxes_custom) as u32);
+        l.put_bits(at, 69847, 1, (self.shield_was_hit) as u32);
+        self.state_flags.lay(l, at + 0x221b, cx);
+        l.put_bits(at, 69856, 1, (self.held_hit_light) as u32);
+        l.put_bits(at, 69857, 1, (self.powershield_late) as u32);
+        l.put_bits(at, 69858, 1, (self.powershield) as u32);
+        l.put_bits(at, 69859, 1, (self.powershield_early) as u32);
+        l.put_bits(at, 69860, 1, (self.armor) as u32);
+        l.put_bits(at, 69861, 1, (self.hit_this_frame) as u32);
+        l.put_bits(at, 69862, 1, (self.in_hitstun) as u32);
+        l.put_bits(at, 69863, 3, (self.leg_reach) as u32);
+        l.put_bits(at, 69866, 1, (self.variants_hidden) as u32);
         l.put_bits(at, 69867, 1, (self.has_prev_input) as u32);
         l.put_bits(at, 69868, 1, (self.input_disabled) as u32);
-        l.put_bits(at, 69869, 1, (self.x221D_b5) as u32);
-        l.put_bits(at, 69870, 1, (self.x221D_b6) as u32);
-        l.put_bits(at, 69871, 1, (self.x221D_b7) as u32);
+        l.put_bits(at, 69869, 1, (self.nudge_off) as u32);
+        l.put_bits(at, 69870, 1, (self.starman) as u32);
+        l.put_bits(at, 69871, 1, (self.hanging) as u32);
         l.put_bits(at, 69872, 1, (self.invisible) as u32);
-        l.put_bits(at, 69873, 1, (self.x221E_b1) as u32);
-        l.put_bits(at, 69874, 1, (self.x221E_b2) as u32);
-        l.put_bits(at, 69875, 1, (self.x221E_b3) as u32);
-        l.put_bits(at, 69876, 1, (self.x221E_b4) as u32);
-        l.put_bits(at, 69877, 1, (self.x221E_b5) as u32);
-        l.put_bits(at, 69878, 1, (self.x221E_b6) as u32);
-        l.put_bits(at, 69879, 1, (self.x221E_b7) as u32);
-        l.put_bits(at, 69880, 1, (self.x221F_b0) as u32);
-        l.put_bits(at, 69881, 1, (self.x221F_b1) as u32);
-        l.put_bits(at, 69882, 1, (self.x221F_b2) as u32);
+        l.put_bits(at, 69873, 1, (self.dead_flag) as u32);
+        l.put_bits(at, 69874, 1, (self.entering) as u32);
+        l.put_bits(at, 69875, 1, (self.item_visible) as u32);
+        l.put_bits(at, 69876, 1, (self.articles_visible) as u32);
+        l.put_bits(at, 69877, 1, (self.visible) as u32);
+        l.put_bits(at, 69878, 1, (self.grab_coll_off) as u32);
+        l.put_bits(at, 69879, 1, (self.costume_anim_set) as u32);
+        l.put_bits(at, 69880, 1, (self.off_screen) as u32);
+        l.put_bits(at, 69881, 1, (self.dead) as u32);
+        l.put_bits(at, 69882, 1, (self.cloaked) as u32);
         l.put_bits(at, 69883, 1, (self.is_sleeping) as u32);
         l.put_bits(at, 69884, 1, (self.is_sub_fighter) as u32);
-        l.put_bits(at, 69885, 1, (self.x221F_b5) as u32);
-        l.put_bits(at, 69886, 1, (self.x221F_b6) as u32);
-        l.put_bits(at, 69887, 1, (self.x221F_b7) as u32);
-        l.put_bits(at, 69888, 3, (self.x2220_b0) as u32);
-        l.put_bits(at, 69891, 1, (self.x2220_b3) as u32);
-        l.put_bits(at, 69892, 1, (self.x2220_b4) as u32);
-        l.put_bits(at, 69893, 1, (self.x2220_b5) as u32);
-        l.put_bits(at, 69894, 1, (self.x2220_b6) as u32);
-        l.put_bits(at, 69895, 1, (self.x2220_b7) as u32);
-        l.put_bits(at, 69896, 1, (self.x2221_b0) as u32);
-        l.put_bits(at, 69897, 1, (self.x2221_b1) as u32);
-        l.put_bits(at, 69898, 1, (self.x2221_b2) as u32);
-        l.put_bits(at, 69899, 1, (self.x2221_b3) as u32);
-        l.put_bits(at, 69900, 1, (self.x2221_b4) as u32);
-        l.put_bits(at, 69901, 1, (self.x2221_b5) as u32);
-        l.put_bits(at, 69902, 1, (self.x2221_b6) as u32);
-        l.put_bits(at, 69903, 1, (self.x2221_b7) as u32);
-        l.put_bits(at, 69904, 1, (self.x2222_b0) as u32);
+        l.put_bits(at, 69885, 1, (self.last_hit_by_sub) as u32);
+        l.put_bits(at, 69886, 1, (self.shield_hit_by_sub) as u32);
+        l.put_bits(at, 69887, 1, (self.unused_221f_b7) as u32);
+        l.put_bits(at, 69888, 3, (self.footstep_part) as u32);
+        l.put_bits(at, 69891, 1, (self.buried) as u32);
+        l.put_bits(at, 69892, 1, (self.turn_spin) as u32);
+        l.put_bits(at, 69893, 1, (self.giant) as u32);
+        l.put_bits(at, 69894, 1, (self.tiny) as u32);
+        l.put_bits(at, 69895, 1, (self.camera_placed) as u32);
+        l.put_bits(at, 69896, 1, (self.warp_star_intangible) as u32);
+        l.put_bits(at, 69897, 1, (self.damage_col_anim) as u32);
+        l.put_bits(at, 69898, 1, (self.hip_offset) as u32);
+        l.put_bits(at, 69899, 1, (self.light_changed) as u32);
+        l.put_bits(at, 69900, 1, (self.parasol_open) as u32);
+        l.put_bits(at, 69901, 1, (self.parasol_checked) as u32);
+        l.put_bits(at, 69902, 1, (self.parasol_blend) as u32);
+        l.put_bits(at, 69903, 1, (self.parasol_from_jump) as u32);
+        l.put_bits(at, 69904, 1, (self.has_cargo) as u32);
         l.put_bits(at, 69905, 1, (self.can_multijump) as u32);
-        l.put_bits(at, 69906, 1, (self.x2222_b2) as u32);
-        l.put_bits(at, 69907, 1, (self.x2222_b3) as u32);
-        l.put_bits(at, 69908, 1, (self.x2222_b4) as u32);
-        l.put_bits(at, 69909, 1, (self.x2222_b5) as u32);
-        l.put_bits(at, 69910, 1, (self.x2222_b6) as u32);
-        l.put_bits(at, 69911, 1, (self.x2222_b7) as u32);
-        l.put_bits(at, 69912, 1, (self.x2223_b0) as u32);
-        l.put_bits(at, 69913, 1, (self.x2223_b1) as u32);
-        l.put_bits(at, 69914, 1, (self.x2223_b2) as u32);
-        l.put_bits(at, 69915, 1, (self.x2223_b3) as u32);
-        l.put_bits(at, 69916, 1, (self.x2223_b4) as u32);
-        l.put_bits(at, 69917, 1, (self.x2223_b5) as u32);
+        l.put_bits(at, 69906, 1, (self.no_turn) as u32);
+        l.put_bits(at, 69907, 1, (self.no_blast_rise) as u32);
+        l.put_bits(at, 69908, 1, (self.pickup_limited) as u32);
+        l.put_bits(at, 69909, 1, (self.is_popo) as u32);
+        l.put_bits(at, 69910, 1, (self.frozen_with_holder) as u32);
+        l.put_bits(at, 69911, 1, (self.follows_holder) as u32);
+        l.put_bits(at, 69912, 1, (self.anim_frozen) as u32);
+        l.put_bits(at, 69913, 1, (self.is_flat) as u32);
+        l.put_bits(at, 69914, 1, (self.outline) as u32);
+        l.put_bits(at, 69915, 1, (self.silhouette) as u32);
+        l.put_bits(at, 69916, 1, (self.no_item_bounce) as u32);
+        l.put_bits(at, 69917, 1, (self.stepped_on_item) as u32);
         l.put_bits(at, 69918, 1, (self.is_always_metal) as u32);
         l.put_bits(at, 69919, 1, (self.is_metal) as u32);
-        l.put_bits(at, 69920, 1, (self.x2224_b0) as u32);
-        l.put_bits(at, 69921, 1, (self.x2224_b1) as u32);
+        l.put_bits(at, 69920, 1, (self.low_models_own_material) as u32);
+        l.put_bits(at, 69921, 1, (self.air_item_caught) as u32);
         l.put_bits(at, 69922, 1, (self.stamina_dead) as u32);
-        l.put_bits(at, 69923, 1, (self.x2224_b3) as u32);
-        l.put_bits(at, 69924, 1, (self.x2224_b4) as u32);
-        l.put_bits(at, 69925, 1, (self.x2224_b5) as u32);
-        l.put_bits(at, 69926, 1, (self.x2224_b6) as u32);
+        l.put_bits(at, 69923, 1, (self.stamina_out) as u32);
+        l.put_bits(at, 69924, 1, (self.wind_immune) as u32);
+        l.put_bits(at, 69925, 1, (self.mash_shaking) as u32);
+        l.put_bits(at, 69926, 1, (self.can_mash) as u32);
         l.put_bits(at, 69927, 1, (self.can_walljump) as u32);
-        l.put_bits(at, 69928, 1, (self.x2225_b0) as u32);
-        l.put_bits(at, 69929, 1, (self.x2225_b1) as u32);
-        l.put_bits(at, 69930, 1, (self.x2225_b2) as u32);
-        l.put_bits(at, 69931, 1, (self.x2225_b3) as u32);
-        l.put_bits(at, 69932, 1, (self.x2225_b4) as u32);
-        l.put_bits(at, 69933, 1, (self.x2225_b5) as u32);
-        l.put_bits(at, 69934, 1, (self.x2225_b6) as u32);
-        l.put_bits(at, 69935, 1, (self.x2225_b7) as u32);
-        l.put_bits(at, 69936, 1, (self.x2226_b0) as u32);
-        l.put_bits(at, 69937, 1, (self.x2226_b1) as u32);
-        l.put_bits(at, 69938, 1, (self.x2226_b2) as u32);
-        l.put_bits(at, 69939, 1, (self.x2226_b3) as u32);
-        l.put_bits(at, 69940, 1, (self.x2226_b4) as u32);
-        l.put_bits(at, 69941, 1, (self.x2226_b5) as u32);
-        l.put_bits(at, 69942, 1, (self.x2226_b6) as u32);
-        l.put_bits(at, 69943, 1, (self.x2226_b7) as u32);
-        l.put_bits(at, 69944, 1, (self.x2227_b0) as u32);
-        l.put_bits(at, 69945, 1, (self.x2227_b1) as u32);
-        l.put_bits(at, 69946, 1, (self.x2227_b2) as u32);
-        l.put_bits(at, 69947, 1, (self.x2227_b3) as u32);
-        l.put_bits(at, 69948, 1, (self.x2227_b4) as u32);
-        l.put_bits(at, 69949, 1, (self.x2227_b5) as u32);
-        l.put_bits(at, 69950, 1, (self.x2227_b6) as u32);
-        l.put_bits(at, 69951, 1, (self.x2227_b7) as u32);
-        l.put_bits(at, 69952, 1, (self.x2228_b0) as u32);
-        l.put_bits(at, 69953, 1, (self.x2228_b1) as u32);
+        l.put_bits(at, 69928, 1, (self.map_coll_done) as u32);
+        l.put_bits(at, 69929, 1, (self.inhale_catch) as u32);
+        l.put_bits(at, 69930, 1, (self.hat_hidden) as u32);
+        l.put_bits(at, 69931, 1, (self.nana_follows) as u32);
+        l.put_bits(at, 69932, 1, (self.hits_others_team) as u32);
+        l.put_bits(at, 69933, 1, (self.rules_voice_muted) as u32);
+        l.put_bits(at, 69934, 1, (self.voice_muted) as u32);
+        l.put_bits(at, 69935, 1, (self.is_stamina) as u32);
+        l.put_bits(at, 69936, 1, (self.lies_on_z) as u32);
+        l.put_bits(at, 69937, 1, (self.heavy_down_bound) as u32);
+        l.put_bits(at, 69938, 1, (self.held_in_model) as u32);
+        l.put_bits(at, 69939, 1, (self.takes_damage_cloaked) as u32);
+        l.put_bits(at, 69940, 1, (self.cloak) as u32);
+        l.put_bits(at, 69941, 1, (self.refracted) as u32);
+        l.put_bits(at, 69942, 1, (self.no_color_anims) as u32);
+        l.put_bits(at, 69943, 1, (self.cloak_look) as u32);
+        l.put_bits(at, 69944, 1, (self.jumped_from_ground) as u32);
+        l.put_bits(at, 69945, 1, (self.ledge_jumped) as u32);
+        l.put_bits(at, 69946, 1, (self.thrown_hitbox_live) as u32);
+        l.put_bits(at, 69947, 1, (self.alt_metal) as u32);
+        l.put_bits(at, 69948, 1, (self.tumble_early) as u32);
+        l.put_bits(at, 69949, 1, (self.special_air_used) as u32);
+        l.put_bits(at, 69950, 1, (self.held_in_ice) as u32);
+        l.put_bits(at, 69951, 1, (self.drew_low_models) as u32);
+        l.put_bits(at, 69952, 1, (self.low_models) as u32);
+        l.put_bits(at, 69953, 1, (self.flat_floor_chains) as u32);
         l.put_bits(at, 69954, 1, (self.is_sandbag) as u32);
-        l.put_bits(at, 69955, 2, (self.x2228_b3) as u32);
-        l.put_bits(at, 69957, 1, (self.x2228_b5) as u32);
+        l.put_bits(at, 69955, 2, (self.sfx_size) as u32);
+        l.put_bits(at, 69957, 1, (self.blast_immune) as u32);
         l.put_bits(at, 69958, 1, (self.used_tether) as u32);
-        l.put_bits(at, 69959, 1, (self.x2228_b7) as u32);
-        l.put_bits(at, 69960, 1, (self.x2229_b0) as u32);
-        l.put_bits(at, 69961, 1, (self.x2229_b1) as u32);
-        l.put_bits(at, 69962, 1, (self.x2229_b2) as u32);
-        l.put_bits(at, 69963, 1, (self.x2229_b3) as u32);
-        l.put_bits(at, 69964, 1, (self.x2229_b4) as u32);
+        l.put_bits(at, 69959, 1, (self.stick_right) as u32);
+        l.put_bits(at, 69960, 1, (self.stick_left) as u32);
+        l.put_bits(at, 69961, 1, (self.attrs_scaled) as u32);
+        l.put_bits(at, 69962, 1, (self.unused_2229_b2) as u32);
+        l.put_bits(at, 69963, 1, (self.no_magnifier) as u32);
+        l.put_bits(at, 69964, 1, (self.coin_odd_frame) as u32);
         l.put_bits(at, 69965, 1, (self.no_normal_motion) as u32);
-        l.put_bits(at, 69966, 1, (self.x2229_b6) as u32);
+        l.put_bits(at, 69966, 1, (self.spawn_in_air) as u32);
         l.put_bits(at, 69967, 1, (self.no_kb) as u32);
-        l.put_bits(at, 69968, 1, (self.x222A_b0) as u32);
-        l.put_bits(at, 69969, 1, (self.x222A_b1) as u32);
-        l.put_bits(at, 69970, 1, (self.x222A_b2) as u32);
-        l.put_bits(at, 69971, 2, (self.x222A_b3) as u32);
-        l.put_bits(at, 69973, 1, (self.x222A_b5) as u32);
-        l.put_bits(at, 69974, 1, (self.x222A_b6) as u32);
-        l.put_bits(at, 69975, 1, (self.x222A_b7) as u32);
+        l.put_bits(at, 69968, 1, (self.ungrabbable) as u32);
+        l.put_bits(at, 69969, 1, (self.blast_zone_off) as u32);
+        l.put_bits(at, 69970, 1, (self.unused_222a_b2) as u32);
+        l.put_bits(at, 69971, 2, (self.unused_222a_b3) as u32);
+        l.put_bits(at, 69973, 1, (self.unused_222a_b5) as u32);
+        l.put_bits(at, 69974, 1, (self.unused_222a_b6) as u32);
+        l.put_bits(at, 69975, 1, (self.unused_222a_b7) as u32);
         self.u.lay(l, at + 0x222c, cx);
         l.put_u32(at + 0x2324, self.bury_grkind as u32);
         l.put_u32(at + 0x2328, self.bury_timer_1 as u32);
         l.put_u32(at + 0x232c, self.bury_timer_2 as u32);
-        self.x2330.lay(l, at + 0x2330, cx);
-        self.x2338.lay(l, at + 0x2338, cx);
+        self.hammer_frames.lay(l, at + 0x2330, cx);
+        self.hammer_timers.lay(l, at + 0x2338, cx);
         self.mv.lay(l, at + 0x2340, cx);
     }
 }

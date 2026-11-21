@@ -83,7 +83,7 @@ impl Running<'_> {
     pub fn co_damage_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if fp.ground_or_air == GA_AIR {
-            if !fp.x221C_b6 {
+            if !fp.in_hitstun {
                 self.air_physics(gobj);
             } else {
                 self.air_physics_no_drift(gobj);
@@ -102,16 +102,16 @@ impl Running<'_> {
             // `doFlyRoll`.
             let f = self.game.fighter_id(gobj);
             let fp = &self.game.fighters[f.0];
-            let x = mem(fp::fadds(reg(fp.self_vel.x), reg(fp.x8c_kb_vel.x)));
-            let y = mem(fp::fadds(reg(fp.self_vel.y), reg(fp.x8c_kb_vel.y)));
+            let x = mem(fp::fadds(reg(fp.self_vel.x), reg(fp.kb_vel.x)));
+            let y = mem(fp::fadds(reg(fp.self_vel.y), reg(fp.kb_vel.y)));
             let rot = mem(fp::fmuls(reg(fp.facing_dir), reg(math::atan2(x, y))));
             let part = self.bone_index(fp, X_ROT_N);
             self.game.part_set_rot_x(f, part, rot);
         }
         let slow = reg(self.common().f32(0x1C8));
         let fp = self.game.fighter(gobj);
-        if fp.x1064_thrownHitbox.x134.is_set() {
-            let k = fp.x8c_kb_vel;
+        if fp.thrown_hitbox.x134.is_set() {
+            let k = fp.kb_vel;
             let sq = |v: f32| fp::fmuls(reg(v), reg(v));
             let speed = sqrt_reg(fp::fadds(sq(k.z), fp::fadds(sq(k.x), sq(k.y))));
             if speed < slow {

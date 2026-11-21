@@ -257,7 +257,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.cmd_vars[1] = 0;
         fp.cmd_vars[0] = 0;
-        fp.x21EC = Some(CodeRef(addr::SPECIAL_S_NEW_ATTACK));
+        fp.motion_change_cb = Some(CodeRef(addr::SPECIAL_S_NEW_ATTACK));
         let y = reg(fp.input.lstick[0].y);
         let (g, a) = if y > t {
             states[0]

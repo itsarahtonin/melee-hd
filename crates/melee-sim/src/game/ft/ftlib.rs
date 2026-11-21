@@ -63,7 +63,7 @@ impl Game {
     /// Whether the fighter is in hitstun (`x221C_b6`), `ftLib_IsInHitstun`.
     #[doc(alias = "ftLib_IsInHitstun")]
     pub fn ft_is_in_hitstun(&self, gobj: GObjId) -> bool {
-        self.fighter(gobj).x221C_b6
+        self.fighter(gobj).in_hitstun
     }
 
     /// Whether the fighter is on its respawn platform, `ftLib_IsRebirth`.
@@ -99,7 +99,7 @@ impl Game {
     /// Whether another fighter pushes this one, `ftLib_IsBeingNudged`.
     #[doc(alias = "ftLib_IsBeingNudged")]
     pub fn ft_is_being_nudged(&self, gobj: GObjId) -> bool {
-        self.fighter(gobj).xF8_playerNudgeVel.x != 0.0
+        self.fighter(gobj).nudge_vel.x != 0.0
     }
 
     /// Whether the fighter holds any of `buttons`, `ft_800877F8`.
@@ -130,7 +130,7 @@ impl Game {
     #[doc(alias("ft_80087aec"))]
     pub fn ft_is_altered(&self, gobj: GObjId) -> bool {
         let fp = self.fighter(gobj);
-        fp.x34_scale.y != fp.x34_scale.x || fp.x2226_b4 || fp.is_metal || fp.x197C.is_some()
+        fp.scale.y != fp.scale.x || fp.cloak || fp.is_metal || fp.bunny_hood.is_some()
     }
 
     /// What moves the fighter most, `ft_80087B34`: 0 its own velocity, 1 knockback, 2 a
@@ -143,8 +143,8 @@ impl Game {
         let f = self.fighter(gobj);
         let sq = |x: f32, y: f32| fp::fadds(fp::fmuls(reg(x), reg(x)), fp::fmuls(reg(y), reg(y)));
         let own = sq(f.self_vel.x, f.self_vel.y);
-        let shield = sq(f.x98_atk_shield_kb.x, f.x98_atk_shield_kb.y);
-        let kb = sq(f.x8c_kb_vel.x, f.x8c_kb_vel.y);
+        let shield = sq(f.atk_shield_kb_vel.x, f.atk_shield_kb_vel.y);
+        let kb = sq(f.kb_vel.x, f.kb_vel.y);
         if own > kb {
             if own > shield {
                 return 0;
@@ -168,7 +168,7 @@ impl Game {
     pub fn ft_camera_depth(&self, gobj: GObjId) -> f32 {
         let b = self
             .fighter(gobj)
-            .x890_cameraBox
+            .camera_box
             .expect("a fighter without a camera box");
         self.camera.subject(b).target_ext.v.z
     }
@@ -190,7 +190,7 @@ impl Game {
     #[doc(alias("ft_80086f4c"))]
     pub fn ft_shows_name_tag(&self, gobj: GObjId) -> bool {
         let fp = self.fighter(gobj);
-        !fp.x221F_b2 && !fp.x221F_b1 && fp.x209A == 1
+        !fp.cloaked && !fp.dead && fp.name_tag_timer == 1
     }
 
     /// `ftLib_SetPercent`: the integer converted to the fighter's float percent (`frsp`).
@@ -255,21 +255,21 @@ impl Game {
     #[doc(alias = "ft_80087C58")]
     #[doc(alias("ft_80087c58"))]
     pub fn ft_invincibility(&self, gobj: GObjId) -> i32 {
-        self.fighter(gobj).x1988
+        self.fighter(gobj).hit_status
     }
 
     /// Sets the fighter's invincibility (`x1988`), `ft_80087C64`.
     #[doc(alias = "ft_80087C64")]
     #[doc(alias("ft_80087c64"))]
     pub fn ft_set_invincibility(&mut self, gobj: GObjId, v: i32) {
-        self.fighter_mut(gobj).x1988 = v;
+        self.fighter_mut(gobj).hit_status = v;
     }
 
     /// Whether the blast zones leave the fighter alone (`x2228_b5`), `ft_80087BAC`.
     #[doc(alias = "ft_80087BAC")]
     #[doc(alias("ft_80087bac"))]
     pub fn ft_set_blast_immune(&mut self, gobj: GObjId, arg: i32) {
-        self.fighter_mut(gobj).x2228_b5 = arg & 1 != 0;
+        self.fighter_mut(gobj).blast_immune = arg & 1 != 0;
     }
 
     /// The fighter's stick, `ftLib_GetLStick`.
@@ -306,7 +306,7 @@ impl Game {
     /// The fighter's height scale, `ftLib_GetScale`.
     #[doc(alias = "ftLib_GetScale")]
     pub fn ft_scale(&self, gobj: GObjId) -> f32 {
-        self.fighter(gobj).x34_scale.y
+        self.fighter(gobj).scale.y
     }
 }
 
@@ -322,7 +322,7 @@ impl Running<'_> {
     pub fn ft_set_cpu_level(&mut self, gobj: GObjId, level: i32) {
         let f = self.game.fighter_id(gobj);
         let c = &self.game.fighters[f.0].cpu;
-        let (kind, x14) = (c.kind, c.x14);
+        let (kind, x14) = (c.kind, c.spawn_arg);
         self.init_cpu(f, kind, level, x14);
     }
 
@@ -331,7 +331,7 @@ impl Running<'_> {
     pub fn ft_set_cpu_type(&mut self, gobj: GObjId, kind: i32) {
         let f = self.game.fighter_id(gobj);
         let c = &self.game.fighters[f.0].cpu;
-        let (level, x14) = (c.level, c.x14);
+        let (level, x14) = (c.level, c.spawn_arg);
         self.init_cpu(f, kind, level, x14);
     }
 

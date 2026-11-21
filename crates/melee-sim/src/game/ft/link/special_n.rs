@@ -204,7 +204,7 @@ impl Running<'_> {
             return true;
         };
         if (first..first + 6).contains(&fp.motion_id) {
-            return fp.x2070[1] & 0x02 != 0;
+            return fp.attack_flags[1] & 0x02 != 0;
         }
         true
     }
@@ -418,7 +418,7 @@ impl Running<'_> {
         }
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        if fp.x221E_b3 && fp.mv_i32(MV_PARTS) == 0 {
+        if fp.item_visible && fp.mv_i32(MV_PARTS) == 0 {
             let v = fp.mv_i32(MV_PARTS) + 1;
             self.game.fighters[f.0].set_mv_i32(MV_PARTS, v);
             let on = i32::from(self.game.fighters[f.0].item_gobj.is_some());

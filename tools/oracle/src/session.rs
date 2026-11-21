@@ -2003,8 +2003,8 @@ fn past_named(d: &str, live: bool) -> Option<&'static str> {
     }
     if live
         && (d.starts_with("ft: anim file ")
-            || d.contains(" fighter.x5A4: ")
-            || d.contains(" fighter.x5A8: "))
+            || d.contains(" fighter.main_anim_aram (x5A4): ")
+            || d.contains(" fighter.second_anim_aram (x5A8): "))
     {
         return Some(PAST_PLAYBACK_CACHES);
     }

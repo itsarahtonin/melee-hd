@@ -76,7 +76,7 @@ impl Running<'_> {
         let joint = self.bone_joint(gobj, bone);
         let fp = &mut self.game.fighters[f.0];
         set_shield_hit(fp, CodeRef(addr::SPECIAL_LW_COUNTER), joint, size, offset);
-        fp.x221B.x221B_b1 = true;
+        fp.state_flags.x221B_b1 = true;
     }
 
     /// The stance (`ftMs_SpecialLw_Anim`, `ftMs_SpecialAirLw_Anim`): the bubble once the
@@ -89,10 +89,10 @@ impl Running<'_> {
                 self.mars_counter_bubble(gobj);
                 let push = self.mars_attr_f32(f, attr::X60);
                 let fp = &mut self.game.fighters[f.0];
-                fp.shield_unk0 = push;
-                fp.shield_unk1 = push;
+                fp.counter_min_hitlag = push;
+                fp.counter_item_min_hitlag = push;
             }
-            0 => self.game.fighters[f.0].x221B.x221B_b0 = false,
+            0 => self.game.fighters[f.0].state_flags.x221B_b0 = false,
             _ => {}
         }
         if !self.anim_frames_remaining(gobj) {
@@ -180,7 +180,7 @@ impl Running<'_> {
         let n = self.game.fighters[f.0].mv_i32(mv::LW_X0);
         if n > 0 && self.game.ft_kind(gobj) == FighterKind::Emblem {
             for i in 0..4 {
-                if self.game.fighters[f.0].x914[i].state == hitcapsule::ENABLED {
+                if self.game.fighters[f.0].hitboxes[i].state == hitcapsule::ENABLED {
                     let n = self.game.fighters[f.0].mv_i32(mv::LW_X0);
                     self.hitbox_damage(f, i, false, n as u32);
                 }
@@ -244,7 +244,7 @@ impl Running<'_> {
         let x5c = reg(self.mars_attr_f32(f, attr::X5C));
         let fp = &mut self.game.fighters[f.0];
         fp.facing_dir = fp.specialn_facing_dir;
-        let dmg = fp.x19A4;
+        let dmg = fp.shield_hit_damage;
         if dmg > 0 {
             let n = fp::fctiwz(fp::fmuls(fp::frsp(f64::from(dmg)), x5c));
             fp.set_mv_i32(mv::LW_X0, n);
@@ -257,7 +257,7 @@ impl Running<'_> {
             ms::SPECIAL_AIR_LW_HIT
         };
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
-        if !self.game.fighters[f.0].x2219_b0 {
+        if !self.game.fighters[f.0].effect_once {
             let id = match FighterKind::from_id(self.game.ft_kind(gobj)) {
                 Some(FighterKind::Mars) => Some(1265),
                 Some(FighterKind::Emblem) => Some(1296),
@@ -268,7 +268,7 @@ impl Running<'_> {
                 let facing = self.game.fighters[f.0].facing_dir;
                 spawn(self, id, Some(gobj), &[Arg::JObj(j), Arg::Float(facing)]);
             }
-            self.game.fighters[f.0].x2219_b0 = true;
+            self.game.fighters[f.0].effect_once = true;
         }
         let fp = &mut self.game.fighters[f.0];
         fp.pre_hitlag_cb = None;

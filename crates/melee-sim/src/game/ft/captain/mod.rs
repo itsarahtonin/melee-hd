@@ -251,7 +251,7 @@ impl Running<'_> {
         fp.cmd_vars[2] = 0;
         fp.cmd_vars[1] = 0;
         fp.cmd_vars[0] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
     }
 }
 

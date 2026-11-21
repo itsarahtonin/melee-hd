@@ -37,7 +37,7 @@ impl Running<'_> {
         let air_var = self.ca_attr_i32(f, attr::SPECIALHI_AIR_VAR);
         let unk2 = reg(self.ca_attr_f32(f, attr::SPECIALHI_UNK2));
         let fp = &mut self.game.fighters[f.0];
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
         fp.mv[mv::HI_X0..mv::HI_X0 + 2].copy_from_slice(&(air_var as u16).to_be_bytes());
         fp.cmd_vars[0] = 0;
         fp.cmd_vars[1] = cvt_fp2unsigned(unk2);
@@ -50,14 +50,14 @@ impl Running<'_> {
     /// The rise's start: its state, and a grab (`ftCommon_8007E2D0`) whose catch takes the
     /// fighter it catches (`ftCa_SpecialLw_800E5128`, the victim's `ftCo_8009CA0C`).
     fn ca_special_hi_start(&mut self, gobj: GObjId, msid: i32) {
-        self.game.fighter_mut(gobj).x21EC = Some(CodeRef(addr::HI_ON_CHANGE));
+        self.game.fighter_mut(gobj).motion_change_cb = Some(CodeRef(addr::HI_ON_CHANGE));
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x221E_b6 = true;
-        fp.x1A68 = 2;
+        fp.grab_coll_off = true;
+        fp.grab_kinds = 2;
         fp.grab_cb = Some(CodeRef(addr::HI_ON_GRAB));
         fp.grabbed_cb = Some(CodeRef(addr::CAPTURE_CAPTAIN));
-        fp.x2194 = None;
+        fp.grab_item_cb = None;
         self.anim_update(gobj);
     }
 
@@ -132,14 +132,14 @@ impl Running<'_> {
                 fp::fmuls(max, horz),
             );
         }
-        let vx = fp::fadds(reg(fp.x74_self_accel.x), reg(fp.self_vel.x));
+        let vx = fp::fadds(reg(fp.anim_vel.x), reg(fp.self_vel.x));
         fp.set_mv_f32(mv::HI_VEL_X, vx);
-        let vy = fp::fadds(reg(fp.x74_self_accel.y), reg(fp.self_vel.y));
+        let vy = fp::fadds(reg(fp.anim_vel.y), reg(fp.self_vel.y));
         fp.set_mv_f32(mv::HI_VEL_Y, vy);
         self.air_anim_motion(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.x74_self_accel.y = 0.0;
-        fp.x74_self_accel.x = 0.0;
+        fp.anim_vel.y = 0.0;
+        fp.anim_vel.x = 0.0;
         fp.self_vel.x = mem(fp::fadds(reg(fp.self_vel.x), reg(fp.mv_f32(mv::HI_VEL_X))));
         fp.self_vel.y = mem(fp::fadds(reg(fp.self_vel.y), reg(fp.mv_f32(mv::HI_VEL_Y))));
     }
@@ -193,16 +193,16 @@ impl Running<'_> {
             .expect("a catch without a victim");
         self.change_motion_state(gobj, ms::SPECIAL_HI_CATCH, 2, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2222_b2 = true;
-        fp.x1A6A = 0x1FF;
+        fp.no_turn = true;
+        fp.grab_immune = 0x1FF;
         self.stop_dead(gobj);
         if self.game.fighter(victim).ground_or_air == super::super::common::GA_AIR {
-            self.game.fighter_mut(gobj).x221B.x221B_b7 = false;
+            self.game.fighter_mut(gobj).state_flags.x221B_b7 = false;
         } else {
             // The catcher holds on to the grounded victim's throw bone.
             self.attach_to_thrower(victim, gobj);
             let fp = self.game.fighter_mut(gobj);
-            fp.x221B.x221B_b7 = true;
+            fp.state_flags.x221B_b7 = true;
             fp.accessory4_cb = Some(CodeRef(addr::HI_FOLLOW_VICTIM));
         }
     }
@@ -230,7 +230,7 @@ impl Running<'_> {
         fp.set_mv_f32(mv::HI_VEL_Y, 0.0);
         self.ca_set_hi_flag(gobj, HI_B0, false);
         self.change_motion_state(gobj, ms::SPECIAL_HI_THROW0, 0x8_0002, 0.0, 1.0, 0.0, None);
-        self.game.fighter_mut(gobj).x1A6A = 0;
+        self.game.fighter_mut(gobj).grab_immune = 0;
         self.throw_hit(gobj, victim, true);
         self.thrown_launch(victim, None, false);
     }
@@ -246,7 +246,7 @@ impl Running<'_> {
     /// collision.
     #[doc(alias = "ftCa_SpecialHiCatch_Coll")]
     pub fn ca_special_hi_catch_coll(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x221B.x221B_b7 {
+        if !self.game.fighter(gobj).state_flags.x221B_b7 {
             self.air_coll_stay(gobj);
         }
     }
@@ -318,15 +318,15 @@ impl Running<'_> {
         self.release_victim(gobj);
         let cfacing = self.game.fighter(catcher).facing_dir;
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A5C = Some(catcher);
+        fp.partner = Some(catcher);
         fp.victim_gobj = Some(catcher);
-        fp.x221B.x221B_b5 = false;
+        fp.state_flags.x221B_b5 = false;
         fp.facing_dir = -cfacing;
         if fp.ground_or_air == super::super::common::GA_AIR {
             self.attach_to_thrower(catcher, gobj);
-            self.game.fighter_mut(gobj).x221B.x221B_b7 = false;
+            self.game.fighter_mut(gobj).state_flags.x221B_b7 = false;
         } else {
-            self.game.fighter_mut(gobj).x221B.x221B_b7 = true;
+            self.game.fighter_mut(gobj).state_flags.x221B_b7 = true;
         }
         self.change_motion_state(
             gobj,
@@ -337,10 +337,10 @@ impl Running<'_> {
             0.0,
             Some(catcher),
         );
-        if !self.game.fighter(gobj).x221B.x221B_b7 {
+        if !self.game.fighter(gobj).state_flags.x221B_b7 {
             self.game.fighter_mut(gobj).accessory1_cb = Some(CodeRef(addr::HELD_FOLLOW));
         }
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
         self.anim_update(gobj);
         self.stop_dead(gobj);
     }
@@ -352,13 +352,13 @@ impl Running<'_> {
         let j = self.part_joint(gobj, part::X_ROT_N);
         let mut pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
         let fp = self.game.fighter_mut(gobj);
-        let scale = reg(fp.x34_scale.y);
+        let scale = reg(fp.scale.y);
         pos.x = mem(fp::fmadds(
             reg(fp.facing_dir),
-            fp::fmuls(reg(fp.x1A70.z), scale),
+            fp::fmuls(reg(fp.throw_offset.z), scale),
             reg(pos.x),
         ));
-        pos.y = mem(fp::fmadds(reg(fp.x1A70.y), scale, reg(pos.y)));
+        pos.y = mem(fp::fmadds(reg(fp.throw_offset.y), scale, reg(pos.y)));
         pos.z = 0.0;
         fp.cur_pos = pos;
     }
@@ -373,7 +373,7 @@ impl Running<'_> {
     /// `ftCo_CaptureCaptain_Coll`: unless held in place (`x2226_b2`), the air's collision.
     #[doc(alias = "ftCo_CaptureCaptain_Coll")]
     pub fn co_capture_captain_coll(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2226_b2 {
+        if !self.game.fighter(gobj).held_in_model {
             self.air_coll_stay(gobj);
         }
     }

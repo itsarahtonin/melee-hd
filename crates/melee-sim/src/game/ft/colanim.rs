@@ -27,9 +27,9 @@ impl Running<'_> {
     fn overlay(&mut self, gobj: GObjId, which: Overlay) -> &mut ColorOverlay {
         let fp = self.game.fighter_mut(gobj);
         match which {
-            Overlay::Main => &mut fp.x408,
-            Overlay::Secondary => &mut fp.x488,
-            Overlay::Spycloak => &mut fp.x508,
+            Overlay::Main => &mut fp.main_overlay,
+            Overlay::Secondary => &mut fp.secondary_overlay,
+            Overlay::Spycloak => &mut fp.spycloak_overlay,
         }
     }
 
@@ -42,18 +42,18 @@ impl Running<'_> {
         while self.color_overlay_step(gobj, Overlay::Spycloak, false) {
             // `ft_800C0098`.
             clear(self.overlay(gobj, Overlay::Spycloak));
-            if self.game.fighter(gobj).x2226_b4 {
+            if self.game.fighter(gobj).cloak {
                 self.start_color_anim(gobj, 0x80, 0);
             }
         }
         while self.color_overlay_step(gobj, Overlay::Main, false) {
             self.reset_main_overlay(gobj);
         }
-        let alt = i32::from_be_bytes(self.game.fighter(gobj).x408.x28_colanim) != 0;
+        let alt = i32::from_be_bytes(self.game.fighter(gobj).main_overlay.x28_colanim) != 0;
         while self.color_overlay_step(gobj, Overlay::Secondary, alt) {
             self.reset_secondary_overlay(gobj);
         }
-        self.game.fighter_mut(gobj).x2221_b3 = true;
+        self.game.fighter_mut(gobj).light_changed = true;
     }
 
     /// `resetColAnimX408`: back to whichever lasting state's color applies.
@@ -61,8 +61,8 @@ impl Running<'_> {
     fn reset_main_overlay(&mut self, gobj: GObjId) {
         clear(self.overlay(gobj, Overlay::Main));
         let fp = self.game.fighter(gobj);
-        let (dead, healing, b6) = (fp.stamina_dead, fp.dmg.x18F0 != 0, fp.x221D_b6);
-        let x9 = fp.x1994 != 0 || fp.x1990 != 0 || fp.x2221_b0;
+        let (dead, healing, b6) = (fp.stamina_dead, fp.dmg.x18F0 != 0, fp.starman);
+        let x9 = fp.invincible_frames != 0 || fp.intangible_frames != 0 || fp.warp_star_intangible;
         if dead {
             self.start_color_anim(gobj, 0x7A, 0);
         }
@@ -148,11 +148,11 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C0694")]
     pub fn color_anim_id(&self, gobj: GObjId) -> i32 {
         let fp = self.game.fighter(gobj);
-        let x408 = i32::from_be_bytes(fp.x408.x28_colanim);
+        let x408 = i32::from_be_bytes(fp.main_overlay.x28_colanim);
         if x408 != 0 {
             x408
         } else {
-            i32::from_be_bytes(fp.x488.x28_colanim)
+            i32::from_be_bytes(fp.secondary_overlay.x28_colanim)
         }
     }
 
@@ -180,9 +180,9 @@ impl Running<'_> {
             .get_disjoint_mut([s.0, d.0])
             .expect("two fighters");
         if x488 {
-            dp.x488.clone_from(&sp.x488);
+            dp.secondary_overlay.clone_from(&sp.secondary_overlay);
         } else {
-            dp.x408.clone_from(&sp.x408);
+            dp.main_overlay.clone_from(&sp.main_overlay);
         }
     }
 

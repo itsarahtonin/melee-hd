@@ -74,9 +74,9 @@ impl Running<'_> {
     ) {
         let f = self.game.fighter_id(gobj);
         let j = self.bone_joint(gobj, part);
-        let mut head = self.game.fighters[f.0].x60C;
+        let mut head = self.game.fighters[f.0].effect_queue;
         ef::queue(self, Some(gobj), &mut head, kind, gfx_id, j, args);
-        self.game.fighters[f.0].x60C = head;
+        self.game.fighters[f.0].effect_queue = head;
     }
 
     /// Spawns effect `gfx_id` on the fighter's `part` for its script, `ftCo_8009F834`: at
@@ -97,7 +97,7 @@ impl Running<'_> {
     ) {
         let f = self.game.fighter_id(gobj);
         if on_state {
-            self.game.fighters[f.0].x2219_b0 = true;
+            self.game.fighters[f.0].effect_once = true;
         }
         let ft_data = self.game.fighters[f.0]
             .ft_data
@@ -108,10 +108,10 @@ impl Running<'_> {
                 .ptr(ft_data.at(0x54))
                 .expect("ftData's footstep parts");
             let fp = &mut self.game.fighters[f.0];
-            let p = self.data.u32(parts.at(4 * u32::from(fp.x2220_b0))) as i32;
-            fp.x2220_b0 = fp.x2220_b0.wrapping_add(1);
-            if fp.x2220_b0 >= 5 {
-                fp.x2220_b0 = 0;
+            let p = self.data.u32(parts.at(4 * u32::from(fp.footstep_part))) as i32;
+            fp.footstep_part = fp.footstep_part.wrapping_add(1);
+            if fp.footstep_part >= 5 {
+                fp.footstep_part = 0;
             }
             p
         } else if part == PART_DATA {
@@ -177,7 +177,7 @@ impl Running<'_> {
             }
             0x438 | 0x439 => {
                 let fp = &self.game.fighters[f.0];
-                let size = mem(fp::fmuls(reg(fp.x34_scale.y), reg(fp.co_attrs.x144)));
+                let size = mem(fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.x144)));
                 self.queue_effect(
                     gobj,
                     SpawnKind::AttachParam,

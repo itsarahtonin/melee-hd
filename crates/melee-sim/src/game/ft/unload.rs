@@ -51,22 +51,26 @@ impl Running<'_> {
             self.purin_on_user_data_remove(f);
         }
         self.forget_thrower(gobj, f);
-        let mut head = self.game.fighters[f.0].x60C.take();
+        let mut head = self.game.fighters[f.0].effect_queue.take();
         super::super::ef::queue_clear(self.game, &mut head);
-        self.game.fighters[f.0].x60C = head;
+        self.game.fighters[f.0].effect_queue = head;
         super::super::it::forget::fighter_unloaded(self, gobj);
-        if let Some(b) = self.game.fighters[f.0].x890_cameraBox {
+        if let Some(b) = self.game.fighters[f.0].camera_box {
             self.game.camera.free_box(b);
         }
         self.unload_dynamic_bones(f);
         self.forget_grabber(gobj, f);
         self.stop_fighter_sounds(gobj);
         // `lbShadow_8000EE8C`: `HSD_ShadowRemove` when it has one.
-        let shadow = self.game.fighters[f.0].x20A4.shadow;
+        let shadow = self.game.fighters[f.0].shadow.shadow;
         crate::hsd::shadow::remove(&mut self.game.objs, shadow);
         let fp = &self.game.fighters[f.0];
-        let (accessory, skeleton, x2184, lights) =
-            (fp.x20A0_accessory, fp.x8AC_animSkeleton, fp.x2184, fp.x588);
+        let (accessory, skeleton, x2184, lights) = (
+            fp.accessory,
+            fp.anim_skeleton,
+            fp.mushroom_scale_joint,
+            fp.light,
+        );
         if accessory.is_some() {
             crate::hsd::jobj::remove_all(&mut self.game.objs, accessory);
         }
@@ -118,7 +122,7 @@ impl Running<'_> {
             if g == gobj {
                 continue;
             }
-            let hit = &mut self.game.fighters[id.0].x1064_thrownHitbox;
+            let hit = &mut self.game.fighters[id.0].thrown_hitbox;
             if hit.x134 == HitOwner::Thrower(gobj) {
                 hit.x134 = HitOwner::default();
             }
@@ -131,8 +135,8 @@ impl Running<'_> {
     fn forget_grabber(&mut self, gobj: GObjId, f: FighterId) {
         for (_, id) in self.fighters_with(gobj, f) {
             let fp = &mut self.game.fighters[id.0];
-            if fp.x2094 == Some(gobj) {
-                fp.x2094 = None;
+            if fp.combo_victim == Some(gobj) {
+                fp.combo_victim = None;
             }
         }
     }
@@ -141,12 +145,12 @@ impl Running<'_> {
     /// shares its `x61C`, `ftData_800859A8`.
     #[doc(alias = "ftData_800859A8")]
     fn forget_kind_flag(&mut self, gobj: GObjId, f: FighterId) {
-        let x61c = self.game.fighters[f.0].x61C;
+        let x61c = self.game.fighters[f.0].slot_word;
         if x61c == -1 {
             return;
         }
         for (_, id) in self.fighters_with(gobj, f) {
-            if id != f && self.game.fighters[id.0].x61C == x61c {
+            if id != f && self.game.fighters[id.0].slot_word == x61c {
                 return;
             }
         }
@@ -166,11 +170,11 @@ impl Running<'_> {
         super::super::export::keep_fighter_arrays(self.game, f);
         let fp = &self.game.fighters[f.0];
         let (b1, b2, parts, list, second, attrs) = (
-            fp.x59C,
-            fp.x5A0,
+            fp.main_anim_buf,
+            fp.second_anim_buf,
             fp.parts,
             fp.dobj_list.data,
-            fp.x203C.data,
+            fp.second_dobjs.data,
             fp.dat_attrs_backup,
         );
         for b in [b1, b2].into_iter().flatten() {

@@ -155,7 +155,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.allow_interrupt = false;
         fp.cmd_vars[0] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         self.change_motion_state(
             gobj,
             msid,
@@ -212,7 +212,7 @@ impl Running<'_> {
                 _ => None,
             };
             if let Some((msid, lag)) = landing {
-                let cancelled = i32::from(fp.x67F) < window;
+                let cancelled = i32::from(fp.frames_since_shoulder) < window;
                 crate::game::record::lcancel(self.game, gobj, cancelled);
                 if cancelled {
                     let mut n = fp::fctiwz(fp::fdivs(reg(lag), div));
@@ -246,7 +246,7 @@ impl Running<'_> {
         if self.is_airborne(gobj) {
             self.crowd_landing(gobj);
             let fp = self.game.fighter(gobj);
-            if fp.x2227_b0 && fp.x1968_jumpsUsed <= 1 {
+            if fp.jumped_from_ground && fp.jumps_used <= 1 {
                 let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
                 self.game.record_jump_left(slot, sub);
             }
@@ -259,7 +259,7 @@ impl Running<'_> {
     fn crowd_landing(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         let args = [
-            Val::Int(fp.x8_spawnNum),
+            Val::Int(fp.spawn_num),
             Val::Float(reg(fp.cur_pos.x)),
             Val::Float(reg(fp.dmg.x18A4_knockbackMagnitude)),
         ];
@@ -276,7 +276,7 @@ impl Running<'_> {
         }
         self.crowd_landing(gobj);
         let fp = self.game.fighter(gobj);
-        if fp.x2227_b0 && fp.x1968_jumpsUsed <= 1 {
+        if fp.jumped_from_ground && fp.jumps_used <= 1 {
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
             self.game.record_jump_left(slot, sub);
         }
@@ -288,7 +288,7 @@ impl Running<'_> {
     pub fn touch_ground(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if super::super::anim::x594_bit(fp, 0) {
-            fp.self_vel.x = mem(fp::fmuls(reg(fp.x6A4_transNOffset.z), reg(fp.facing_dir)));
+            fp.self_vel.x = mem(fp::fmuls(reg(fp.trans_n_offset.z), reg(fp.facing_dir)));
         }
         // `ftCommon_ClampGroundVel`.
         let max = reg(fp.co_attrs.ground_max_horizontal_velocity);
@@ -299,9 +299,9 @@ impl Running<'_> {
         }
         fp.ground_or_air = super::super::common::GA_GROUND;
         fp.gr_vel = fp.self_vel.x;
-        fp.x1968_jumpsUsed = 0;
-        fp.x1969_walljumpUsed = 0;
-        fp.x2227_b0 = false;
+        fp.jumps_used = 0;
+        fp.walljumps_used = 0;
+        fp.jumped_from_ground = false;
         super::super::fighter::unlock_ecb(fp);
         assert!(
             self.on_live_floor(gobj),
@@ -385,7 +385,10 @@ impl Running<'_> {
             return;
         }
         let fp = self.game.fighter(gobj);
-        let rate = fp::fdivs(fp::fadds(reg(0.1f32), reg(fp.x2EC)), reg(landing_lag));
+        let rate = fp::fdivs(
+            fp::fadds(reg(0.1f32), reg(fp.landing_fall_special_frames)),
+            reg(landing_lag),
+        );
         self.enter_landing(
             gobj,
             ms::LANDING_FALL_SPECIAL,
@@ -499,17 +502,17 @@ impl Running<'_> {
             let f = self.game.fighter_id(gobj);
             self.go_airborne_jumped(f);
         } else if use_jumps {
-            fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+            fp.jumps_used = fp.co_attrs.max_jumps as u8;
         }
         let fp = self.game.fighter(gobj);
-        let args = [Val::Int(fp.x8_spawnNum), Val::Float(reg(fp.cur_pos.y))];
+        let args = [Val::Int(fp.spawn_num), Val::Float(reg(fp.cur_pos.y))];
         code::call(self, UN_CROWD_RECOVERY, &args);
     }
 
     /// Falling helpless after a move with full drift, `ftCo_800968C8`.
     #[doc(alias = "ftCo_800968C8")]
     pub fn enter_fall_special_basic(&mut self, gobj: GObjId) {
-        let lag = self.game.fighter(gobj).x2EC;
+        let lag = self.game.fighter(gobj).landing_fall_special_frames;
         self.enter_fall_special(gobj, 1, 0, 1, 1.0, lag, 0.0, true);
     }
 
@@ -603,7 +606,7 @@ impl Running<'_> {
         let lean = self.game.fighter(gobj).mv_f32(4);
         if lean != 0.0 {
             let f = self.game.fighter_id(gobj);
-            let skel = self.game.fighters[f.0].x8AC_animSkeleton;
+            let skel = self.game.fighters[f.0].anim_skeleton;
             crate::hsd::jobj::anim_all(
                 &mut self.game.objs,
                 self.data,

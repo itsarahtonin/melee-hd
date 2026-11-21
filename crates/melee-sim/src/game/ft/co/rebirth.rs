@@ -32,7 +32,7 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_800804EC")]
     fn platform_offset(&self, gobj: GObjId) -> f32 {
         let fp = self.game.fighter(gobj);
-        mem(fp::fmuls(reg(fp.x40), reg(fp.x34_scale.x)))
+        mem(fp::fmuls(reg(fp.platform_offset), reg(fp.scale.x)))
     }
 
     /// Where the platform stops for a fighter on a stage's own respawn point: the point,
@@ -77,11 +77,11 @@ impl Running<'_> {
         self.game.fighters[f.0].set_mv_i32(FRAMES, frames);
         self.change_motion_state(gobj, ms::REBIRTH, 0x1002, 0.0, 1.0, -1.0, None);
         let fp = &mut self.game.fighters[f.0];
-        fp.x221E_b2 = true;
-        fp.x2219_b1 = true;
-        fp.x221E_b1 = true;
-        fp.x2222_b7 = true;
-        fp.x221D_b5 = true;
+        fp.entering = true;
+        fp.out_of_play = true;
+        fp.dead_flag = true;
+        fp.follows_holder = true;
+        fp.nudge_off = true;
         self.start_color_anim(gobj, COLANIM_REBIRTH, 0);
         if !self.game.fighters[f.0].is_sub_fighter {
             let models = self.common_ptr(PLATFORM_MODEL);
@@ -89,10 +89,10 @@ impl Running<'_> {
             self.set_accessory(gobj, model);
             let fp = &self.game.fighters[f.0];
             let s = mem(fp::fmuls(
-                reg(fp.x34_scale.y),
+                reg(fp.scale.y),
                 reg(fp.co_attrs.respawn_platform_scale),
             ));
-            let acc = fp.x20A0_accessory.expect("fp->x20A0_accessory");
+            let acc = fp.accessory.expect("fp->x20A0_accessory");
             jobj::set_scale(&mut self.game.objs.jobjs, acc, Vec3::new(s, s, s));
             // `ftCommon_8007E690`.
             let anim = self.data.ptr(models.at(4));
@@ -104,7 +104,7 @@ impl Running<'_> {
             self.game.fighters[f.0].accessory1_cb = Some(CodeRef(PLATFORM_FOLLOW_SUB));
         }
         // `ftCommon_8007EFC0`.
-        self.game.fighters[f.0].x209A = 1;
+        self.game.fighters[f.0].name_tag_timer = 1;
     }
 
     /// The platform under the fighter: at its position less the platform's offset toward
@@ -114,7 +114,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let x = mem(fp::fnmsubs(reg(fp.facing_dir), reg(o), reg(fp.cur_pos.x)));
         let at = Vec3::new(x, fp.cur_pos.y, fp.cur_pos.z);
-        let acc = fp.x20A0_accessory.expect("fp->x20A0_accessory");
+        let acc = fp.accessory.expect("fp->x20A0_accessory");
         jobj::set_translate(&mut self.game.objs.jobjs, acc, at);
     }
 
@@ -190,8 +190,8 @@ impl Running<'_> {
         }
         let fp = self.game.fighter_mut(gobj);
         let cur = (
-            fp::fadds(reg(fp.cur_pos.x), reg(fp.xD4_unk_vel.x)),
-            fp::fadds(reg(fp.cur_pos.y), reg(fp.xD4_unk_vel.y)),
+            fp::fadds(reg(fp.cur_pos.x), reg(fp.frame_vel.x)),
+            fp::fadds(reg(fp.cur_pos.y), reg(fp.frame_vel.y)),
         );
         let inv = fp::fdivs(1.0, fp::frsp(f64::from(fp.mv_i32(FRAMES))));
         let rebirth = fp.motion_id == ms::REBIRTH;
@@ -227,9 +227,9 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         let ft_data = fp.ft_data.expect("a fighter without ftData");
         let cam = self.data.ptr(ft_data.at(0x3C)).expect("ftData::x3C");
-        let lift = mem(fp::fmuls(reg(self.data.f32(cam)), reg(fp.x34_scale.y)));
+        let lift = mem(fp::fmuls(reg(self.data.f32(cam)), reg(fp.scale.y)));
         let (x, y) = (fp.mv_f32(TARGET), fp.mv_f32(TARGET + 4));
-        let b = fp.x890_cameraBox.expect("a fighter without a camera box");
+        let b = fp.camera_box.expect("a fighter without a camera box");
         let cb = self.game.camera.subject_mut(b);
         cb.pos.x = x;
         cb.pos.y = mem(fp::fadds(reg(y), reg(lift)));
@@ -258,10 +258,10 @@ impl Running<'_> {
             None,
         );
         let fp = &mut self.game.fighters[f.0];
-        fp.x221E_b2 = true;
-        fp.x2219_b1 = true;
-        fp.x221E_b1 = true;
-        fp.x221D_b5 = true;
+        fp.entering = true;
+        fp.out_of_play = true;
+        fp.dead_flag = true;
+        fp.nudge_off = true;
         fp.accessory1_cb = Some(CodeRef(if fp.is_sub_fighter {
             PLATFORM_FOLLOW_SUB
         } else {
@@ -291,10 +291,10 @@ impl Running<'_> {
     #[doc(alias = "ftColl_8007B7A4")]
     pub fn respawn_invincibility(&mut self, gobj: GObjId, frames: i32) {
         let fp = self.game.fighter_mut(gobj);
-        if frames > fp.x1994 {
-            fp.x1994 = frames;
+        if frames > fp.invincible_frames {
+            fp.invincible_frames = frames;
         }
-        fp.x198C = if fp.x1990 != 0 { 2 } else { 1 };
+        fp.timed_hit_status = if fp.intangible_frames != 0 { 2 } else { 1 };
         self.start_color_anim(gobj, 9, 0);
     }
 

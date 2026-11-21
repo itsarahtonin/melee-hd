@@ -60,7 +60,7 @@ impl Running<'_> {
     /// `lbAnim_8001E8F8` find it, without loading it.
     fn peach_anim_frames(&self, f: FighterId, anim: i32) -> f32 {
         let fp = &self.game.fighters[f.0];
-        if anim as u32 >= fp.x58C {
+        if anim as u32 >= fp.anim_count {
             return 0.0;
         }
         let entry = self.anim_entry(f, anim);

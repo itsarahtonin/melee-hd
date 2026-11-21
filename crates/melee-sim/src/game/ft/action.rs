@@ -20,19 +20,19 @@ impl Running<'_> {
     pub fn run_commands(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
-        let frame = fp::fadds(reg(fp.cur_anim_frame), reg(fp.x898_unk));
-        fp.x3E4_fighterCmdScript.script.frame_count = fp::stfs(frame);
-        if fp.x3E4_fighterCmdScript.script.cursor.is_none() {
+        let frame = fp::fadds(reg(fp.cur_anim_frame), reg(fp.cmd_frame_offset));
+        fp.cmd_script.script.frame_count = fp::stfs(frame);
+        if fp.cmd_script.script.cursor.is_none() {
             return;
         }
-        let s = &mut fp.x3E4_fighterCmdScript.script;
+        let s = &mut fp.cmd_script.script;
         if s.timer_f32() != WAIT_FOR_FRAME {
             s.timer = fp::stfs(fp::fsubs(reg(s.timer_f32()), reg(fp.frame_speed_mul)));
         }
         loop {
             let fp = &mut self.game.fighters[f.0];
             let fsm = fp.frame_speed_mul;
-            let s = &mut fp.x3E4_fighterCmdScript.script;
+            let s = &mut fp.cmd_script.script;
             if s.cursor.is_none() {
                 break;
             }
@@ -48,12 +48,7 @@ impl Running<'_> {
             if !command::execute(s, self.data, code) {
                 self.fighter_command(gobj, code - 10);
             }
-            if self.game.fighters[f.0]
-                .x3E4_fighterCmdScript
-                .script
-                .timer_f32()
-                == WAIT_FOR_FRAME
-            {
+            if self.game.fighters[f.0].cmd_script.script.timer_f32() == WAIT_FOR_FRAME {
                 break;
             }
         }
@@ -66,20 +61,20 @@ impl Running<'_> {
     pub fn catch_up_commands(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
-        let frame = fp::fadds(reg(fp.cur_anim_frame), reg(fp.x898_unk));
-        fp.x3E4_fighterCmdScript.script.frame_count = fp::stfs(frame);
-        fp.x2210 = [0; 4];
-        if fp.x3E4_fighterCmdScript.script.cursor.is_none() {
+        let frame = fp::fadds(reg(fp.cur_anim_frame), reg(fp.cmd_frame_offset));
+        fp.cmd_script.script.frame_count = fp::stfs(frame);
+        fp.throw_flags = [0; 4];
+        if fp.cmd_script.script.cursor.is_none() {
             return;
         }
-        let s = &mut fp.x3E4_fighterCmdScript.script;
+        let s = &mut fp.cmd_script.script;
         if s.timer_f32() != WAIT_FOR_FRAME {
             s.timer = fp::stfs(fp::fsubs(reg(s.timer_f32()), reg(fp.frame_speed_mul)));
         }
         loop {
             let fp = &mut self.game.fighters[f.0];
             let fsm = fp.frame_speed_mul;
-            let s = &mut fp.x3E4_fighterCmdScript.script;
+            let s = &mut fp.cmd_script.script;
             if s.cursor.is_none() {
                 break;
             }
@@ -97,9 +92,9 @@ impl Running<'_> {
                 self.catch_up_command(gobj, code - 10);
             }
             let fp = &mut self.game.fighters[f.0];
-            let now = fp.x3E4_fighterCmdScript.script.timer_f32();
+            let now = fp.cmd_script.script.timer_f32();
             if now != timer && now <= 0.0 {
-                fp.x2210 = [0; 4];
+                fp.throw_flags = [0; 4];
             }
             if now == WAIT_FOR_FRAME {
                 break;
@@ -113,13 +108,13 @@ impl Running<'_> {
     pub fn skip_commands(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
-        let frame = fp::fadds(reg(fp.cur_anim_frame), reg(fp.x898_unk));
-        fp.x3E4_fighterCmdScript.script.frame_count = fp::stfs(frame);
-        if fp.x3E4_fighterCmdScript.script.cursor.is_none() {
+        let frame = fp::fadds(reg(fp.cur_anim_frame), reg(fp.cmd_frame_offset));
+        fp.cmd_script.script.frame_count = fp::stfs(frame);
+        if fp.cmd_script.script.cursor.is_none() {
             return;
         }
         let fsm = fp.frame_speed_mul;
-        let s = &mut fp.x3E4_fighterCmdScript.script;
+        let s = &mut fp.cmd_script.script;
         if s.timer_f32() != WAIT_FOR_FRAME {
             s.timer = fp::stfs(fp::fsubs(reg(s.timer_f32()), reg(fsm)));
         }

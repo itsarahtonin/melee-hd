@@ -81,7 +81,7 @@ impl Running<'_> {
         let j = self.bones(f)[part as usize].joint;
         jobj::setup_matrix(&mut self.game.objs, self.data, j);
         let m = &self.game.objs.jobjs[j.expect("a hip joint")].mtx.m;
-        let v = if self.game.fighters[f.0].x2226_b0 {
+        let v = if self.game.fighters[f.0].lies_on_z {
             m[1][2]
         } else {
             m[1][1]
@@ -109,8 +109,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800976A4")]
     pub fn knockdown_impact(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        let vx = fp::fadds(reg(fp.self_vel.x), reg(fp.x8c_kb_vel.x));
-        let vy = fp::fadds(reg(fp.self_vel.y), reg(fp.x8c_kb_vel.y));
+        let vx = fp::fadds(reg(fp.self_vel.x), reg(fp.kb_vel.x));
+        let vy = fp::fadds(reg(fp.self_vel.y), reg(fp.kb_vel.y));
         let d = mem(sqrt_reg(fp::fmadds(vx, vx, fp::fmuls(vy, vy))));
         let dist = mem(fp::fmuls(reg(d), reg(fp.co_attrs.weight)));
         let mut effect = 0x407;
@@ -182,7 +182,7 @@ impl Running<'_> {
         let j = self.bones(f)[part as usize].joint;
         jobj::setup_matrix(&mut self.game.objs, self.data, j);
         let m = &self.game.objs.jobjs[j.expect("a hip joint")].mtx.m;
-        let col = if self.game.fighters[f.0].x2226_b0 {
+        let col = if self.game.fighters[f.0].lies_on_z {
             2
         } else {
             1
@@ -193,7 +193,7 @@ impl Running<'_> {
                 self.land(gobj);
             }
             let mut up = self.hips_up(gobj);
-            if self.game.fighter(gobj).x2226_b1 {
+            if self.game.fighter(gobj).heavy_down_bound {
                 up = !up;
             }
             let msid = if up {
@@ -205,9 +205,9 @@ impl Running<'_> {
             self.knockdown_dust(gobj);
             let max = reg(self.common().f32(0x164));
             let fp = self.game.fighter_mut(gobj);
-            fp.x67C = 255;
-            fp.x67D = 255;
-            fp.x1A6A = 511;
+            fp.frames_since_smash_x = 255;
+            fp.frames_since_smash_up = 255;
+            fp.grab_immune = 511;
             Self::grounded_knockback_if_landed(fp, max);
         } else {
             self.knockdown_dust(gobj);
@@ -232,7 +232,7 @@ impl Running<'_> {
             self.land(gobj);
         }
         let mut up = self.hips_up(gobj);
-        if self.game.fighter(gobj).x2226_b1 {
+        if self.game.fighter(gobj).heavy_down_bound {
             up = !up;
         }
         let msid = if up {
@@ -244,9 +244,9 @@ impl Running<'_> {
         self.knockdown_dust(gobj);
         let max = reg(self.common().f32(0x164));
         let fp = self.game.fighter_mut(gobj);
-        fp.x67C = 255;
-        fp.x67D = 255;
-        fp.x1A6A = 511;
+        fp.frames_since_smash_x = 255;
+        fp.frames_since_smash_up = 255;
+        fp.grab_immune = 511;
         Self::grounded_knockback_if_landed(fp, max);
     }
 
@@ -254,20 +254,20 @@ impl Running<'_> {
     /// capped at `ftCommonData` x164, along the floor.
     #[doc(alias = "ftCommon_SetGroundedKnockbackIfLanded")]
     pub fn grounded_knockback_if_landed(fp: &mut crate::game::structs::Fighter, max: f64) {
-        if fp.ground_or_air != GA_GROUND || fp.xF0_ground_kb_vel != 0.0 {
+        if fp.ground_or_air != GA_GROUND || fp.ground_kb_vel != 0.0 {
             return;
         }
         let n = fp.coll_data.floor.normal;
-        fp.xF0_ground_kb_vel = fp.x8c_kb_vel.x;
-        if reg(fp.xF0_ground_kb_vel) > max {
-            fp.xF0_ground_kb_vel = mem(max);
+        fp.ground_kb_vel = fp.kb_vel.x;
+        if reg(fp.ground_kb_vel) > max {
+            fp.ground_kb_vel = mem(max);
         }
-        if reg(fp.xF0_ground_kb_vel) < fp::fneg(max) {
-            fp.xF0_ground_kb_vel = mem(fp::fneg(max));
+        if reg(fp.ground_kb_vel) < fp::fneg(max) {
+            fp.ground_kb_vel = mem(fp::fneg(max));
         }
-        let v = reg(fp.xF0_ground_kb_vel);
-        fp.x8c_kb_vel.x = mem(fp::fmuls(reg(n.y), v));
-        fp.x8c_kb_vel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), v));
+        let v = reg(fp.ground_kb_vel);
+        fp.kb_vel.x = mem(fp::fmuls(reg(n.y), v));
+        fp.kb_vel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), v));
     }
 
     /// `ftCo_DownBound_Anim`: once it plays out, an attack or roll, else lying there.
@@ -298,7 +298,7 @@ impl Running<'_> {
     pub fn down_reflect_check(&mut self, gobj: GObjId) -> bool {
         let t = reg(self.common().f32(0x1B0));
         let fp = self.game.fighter(gobj);
-        let v = reg(fp.x8c_kb_vel.x);
+        let v = reg(fp.kb_vel.x);
         let c = &fp.coll_data;
         if v < fp::fneg(t) && c.env_flags & RIGHT_WALL_HUG != 0 && fp.mv[DOWN_X4] != 1 {
             let offset = Vec3::new(c.ecb.left.x, c.ecb.left.y, 0.0);
@@ -350,7 +350,7 @@ impl Running<'_> {
         camera::request_quake(self, QUAKE_SMALL, Some(pos));
         let mul = reg(self.common().f32(0x1BC));
         let fp = &mut self.game.fighters[f.0];
-        let mag = reg(fp.xF0_ground_kb_vel);
+        let mag = reg(fp.ground_kb_vel);
         let mut v = Vec3::new(
             mem(fp::fmuls(reg(normal.x), mag)),
             mem(fp::fmuls(reg(normal.y), mag)),
@@ -358,27 +358,23 @@ impl Running<'_> {
         );
         v.x = mem(fp::fmuls(reg(v.x), mul));
         v.y = mem(fp::fmuls(reg(v.y), mul));
-        fp.x8c_kb_vel = v;
+        fp.kb_vel = v;
         fp.self_vel.z = 0.0;
         fp.self_vel.y = 0.0;
         fp.self_vel.x = 0.0;
-        fp.facing_dir = if reg(fp.x8c_kb_vel.x) < 0.0 {
-            -1.0
-        } else {
-            1.0
-        };
+        fp.facing_dir = if reg(fp.kb_vel.x) < 0.0 { -1.0 } else { 1.0 };
         self.change_motion_state(gobj, msid, DOWN_REFLECT_FLAGS, 0.0, 1.0, 0.0, None);
         let fp = &mut self.game.fighters[f.0];
         if fp.coll_data.env_flags & RIGHT_WALL_HUG != 0 {
             let x = fp::fadds(reg(fp.cur_pos.x), reg(offset.x));
             fp.cur_pos.x = mem(fp::fnmsubs(
-                reg(fp.x68C_transNPos.z),
+                reg(fp.trans_n_pos.z),
                 fp::fneg(reg(fp.facing_dir)),
                 x,
             ));
         } else {
             let y = fp::fadds(reg(fp.cur_pos.y), reg(offset.y));
-            fp.cur_pos.y = mem(fp::fadds(reg(fp.x68C_transNPos.y), y));
+            fp.cur_pos.y = mem(fp::fadds(reg(fp.trans_n_pos.y), y));
         }
         // `ftCo_80090574`.
         self.air_coll_ledges_snap(gobj);
@@ -421,7 +417,7 @@ impl Running<'_> {
         self.game.fighter_mut(gobj).set_mv_f32(DOWN_X0, reg(frames));
         self.change_motion_state(gobj, msid, DOWN_WAIT_FLAGS, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
-        self.game.fighter_mut(gobj).x1A6A = 1;
+        self.game.fighter_mut(gobj).grab_immune = 1;
     }
 
     /// Lying on the floor again after being hit there, `ftCo_80097F38`.
@@ -434,7 +430,7 @@ impl Running<'_> {
         };
         self.change_motion_state(gobj, msid, DOWN_WAIT_FLAGS, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
-        self.game.fighter_mut(gobj).x1A6A = 1;
+        self.game.fighter_mut(gobj).grab_immune = 1;
     }
 
     /// `ftCo_DownWait_Anim`: the wait counts down (not while out of stamina); then standing.
@@ -517,8 +513,8 @@ impl Running<'_> {
     pub fn down_attack_buffered_check(&mut self, gobj: GObjId) -> bool {
         let window = reg(self.common().f32(0x24C));
         let fp = self.game.fighter(gobj);
-        if f64::from(fp.x67C) < window
-            || f64::from(fp.x67D) < window
+        if f64::from(fp.frames_since_smash_x) < window
+            || f64::from(fp.frames_since_smash_up) < window
             || self.cstick_up_flick_down(gobj)
         {
             let msid = if fp.motion_id == ms::DOWN_BOUND_U {
@@ -606,7 +602,7 @@ impl Running<'_> {
             };
             let facing = fp.facing_dir;
             self.enter_damage(gobj, msid, facing);
-            self.game.fighter_mut(gobj).x1A6A = 1;
+            self.game.fighter_mut(gobj).grab_immune = 1;
             return true;
         }
         false
@@ -683,7 +679,8 @@ impl Running<'_> {
         let c = self.common();
         let (window, again) = (reg(c.f32(0x250)), c.u32(0x1C));
         let fp = self.game.fighter(gobj);
-        f64::from(fp.x680) < window && u32::from(fp.x684) >= again
+        f64::from(fp.frames_since_tech_shoulder) < window
+            && u32::from(fp.frames_since_tech_window) >= again
     }
 
     /// A tech in place on landing, `ftCo_8009872C`.

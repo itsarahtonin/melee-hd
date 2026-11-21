@@ -43,7 +43,7 @@ impl Running<'_> {
             let ch = ch.expect("ftCh_Init_8015A2B0 and its kin read a null Crazy Hand");
             self.ch_tag_enter(ch, ch_msid);
         }
-        self.game.fighter_mut(gobj).x1A5C = ch;
+        self.game.fighter_mut(gobj).partner = ch;
         self.hand_enter(gobj, msid);
     }
 
@@ -71,7 +71,7 @@ impl Running<'_> {
         }
         if self.boss_hand_partner_gone(h) || !self.anim_frames_remaining(gobj) {
             self.ic_thaw(gobj);
-            self.game.fighters[f.0].x1A5C = None;
+            self.game.fighters[f.0].partner = None;
             self.hand_return(gobj, h);
         }
     }

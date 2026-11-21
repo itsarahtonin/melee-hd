@@ -92,12 +92,12 @@ impl Running<'_> {
     #[doc(alias = "doAnim@8010DE88")]
     fn dk_special_lw_loop(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x21EC = Some(CodeRef(addr::SPECIAL_LW_ON_CHANGE));
-        fp.x2210 = [0; 4];
+        fp.motion_change_cb = Some(CodeRef(addr::SPECIAL_LW_ON_CHANGE));
+        fp.throw_flags = [0; 4];
         self.change_motion_state(gobj, ms::SPECIAL_LW_LOOP, 0, 0.0, 1.0, 0.0, None);
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let top = self.bone_joint(gobj, part::TOP_N);
-            let mut head = self.game.fighter(gobj).x60C;
+            let mut head = self.game.fighter(gobj).effect_queue;
             ef::queue(
                 self,
                 Some(gobj),
@@ -108,8 +108,8 @@ impl Running<'_> {
                 &[],
             );
             let fp = self.game.fighter_mut(gobj);
-            fp.x60C = head;
-            fp.x2219_b0 = true;
+            fp.effect_queue = head;
+            fp.effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::HAND_SLAP_HITS));

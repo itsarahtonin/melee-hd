@@ -172,15 +172,19 @@ impl Running<'_> {
         if fp.is_metal {
             mul = reg(self.data.f32(self.common_ptr(0x38)));
         }
-        if fp.x34_scale.y != 1.0 {
+        if fp.scale.y != 1.0 {
             let k = reg(self.data.f32(self.common_ptr(0x30).at(0xC)));
-            mul = scaled_by_height(mul, reg(fp.x34_scale.y), k);
+            mul = scaled_by_height(mul, reg(fp.scale.y), k);
         }
-        if fp.x197C.is_some() {
+        if fp.bunny_hood.is_some() {
             mul = fp::fmuls(mul, reg(self.data.f32(self.common_ptr(0x34))));
         }
         let a = &fp.co_attrs;
-        let frames = [fp.x2DC, fp.x2E0, fp.x2E4];
+        let frames = [
+            fp.walk_slow_frames,
+            fp.walk_middle_frames,
+            fp.walk_fast_frames,
+        ];
         let rates = [a.slow_walk_max, a.mid_walk_point, a.fast_walk_min];
         self.enter_walk_common(gobj, ms::WALK_SLOW, 0, anim_start, frames, rates, mem(mul));
     }
@@ -302,10 +306,10 @@ impl Running<'_> {
     #[doc(alias = "ftAnim_8006F484")]
     pub fn anim_end_frame(&self, gobj: GObjId) -> f32 {
         let fp = self.game.fighter(gobj);
-        let j = if fp.x8A4_animBlendFrames == 0.0 {
+        let j = if fp.anim_blend_frames == 0.0 {
             Some(self.root_jobj(gobj))
         } else {
-            fp.x8AC_animSkeleton
+            fp.anim_skeleton
         };
         crate::lb::anim::end_frame(&self.game.objs, j)
     }
@@ -403,7 +407,7 @@ impl Running<'_> {
                 }
             }
         }
-        fp.xE4_ground_accel_1 = mem(accel);
+        fp.ground_accel_1 = mem(accel);
     }
 
     /// The dash's and run's acceleration and target speed from the stick (`getAccelAndTarget`),
@@ -467,7 +471,7 @@ impl Running<'_> {
         self.ground_push(gobj, push);
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(DASH_X4, smashed);
-        if fp.x197C.is_some() {
+        if fp.bunny_hood.is_some() {
             self.play_sfx(gobj, 0x118, 0x7F, 0x40);
         }
     }
@@ -481,7 +485,7 @@ impl Running<'_> {
         if friction < 1.0 {
             v = fp::fmuls(v, friction);
         }
-        self.game.fighter_mut(gobj).xE8_ground_accel_2 = mem(v);
+        self.game.fighter_mut(gobj).ground_accel_2 = mem(v);
     }
 
     /// `ftCo_Dash_Anim`, `ftCo_RunBrake_Anim`'s end and the other states that end in waiting.
@@ -760,7 +764,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(RUN_BRAKE_X0, 0);
         fp.set_mv_f32(RUN_BRAKE_FRAMES, reg(fp.co_attrs.max_run_brake_frames));
-        if fp.x197C.is_some() {
+        if fp.bunny_hood.is_some() {
             self.play_sfx(gobj, 0x119, 0x7F, 0x40);
         }
     }
@@ -983,7 +987,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms::TURN_RUN, 1 << 5, anim_start, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(TURN_RUN_X14, 0);
-        if fp.x197C.is_some() {
+        if fp.bunny_hood.is_some() {
             self.play_sfx(gobj, 0x119, 0x7F, 0x40);
         }
     }
@@ -1042,7 +1046,7 @@ impl Running<'_> {
                     accel = mem_r(fp::fsubs(target, v));
                 }
             }
-            fp.xE4_ground_accel_1 = mem(accel);
+            fp.ground_accel_1 = mem(accel);
         } else {
             Self::ground_accel_deaccel(fp, fp::fmuls(friction, mul));
         }
@@ -1066,26 +1070,26 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007E2FC")]
     pub fn stop_dead(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.xE4_ground_accel_1 = 0.0;
-        fp.xE8_ground_accel_2 = 0.0;
-        fp.x74_self_accel.z = 0.0;
-        fp.x74_self_accel.y = 0.0;
-        fp.x74_self_accel.x = 0.0;
+        fp.ground_accel_1 = 0.0;
+        fp.ground_accel_2 = 0.0;
+        fp.anim_vel.z = 0.0;
+        fp.anim_vel.y = 0.0;
+        fp.anim_vel.x = 0.0;
         fp.gr_vel = 0.0;
         fp.self_vel.z = 0.0;
         fp.self_vel.y = 0.0;
         fp.self_vel.x = 0.0;
-        fp.xF0_ground_kb_vel = 0.0;
-        fp.x8c_kb_vel.z = 0.0;
-        fp.x8c_kb_vel.y = 0.0;
-        fp.x8c_kb_vel.x = 0.0;
-        fp.xF4_ground_attacker_shield_kb_vel = 0.0;
-        fp.x98_atk_shield_kb.z = 0.0;
-        fp.x98_atk_shield_kb.y = 0.0;
-        fp.x98_atk_shield_kb.x = 0.0;
-        fp.xD4_unk_vel.z = 0.0;
-        fp.xD4_unk_vel.y = 0.0;
-        fp.xD4_unk_vel.x = 0.0;
+        fp.ground_kb_vel = 0.0;
+        fp.kb_vel.z = 0.0;
+        fp.kb_vel.y = 0.0;
+        fp.kb_vel.x = 0.0;
+        fp.ground_attacker_shield_kb_vel = 0.0;
+        fp.atk_shield_kb_vel.z = 0.0;
+        fp.atk_shield_kb_vel.y = 0.0;
+        fp.atk_shield_kb_vel.x = 0.0;
+        fp.frame_vel.z = 0.0;
+        fp.frame_vel.y = 0.0;
+        fp.frame_vel.x = 0.0;
     }
 }
 

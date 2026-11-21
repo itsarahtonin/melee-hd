@@ -58,7 +58,7 @@ impl Running<'_> {
     pub fn samus_load_special_attrs(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.copy_attrs(f, attr::SIZE);
-        let scale = self.game.fighters[f.0].x34_scale.y;
+        let scale = self.game.fighters[f.0].scale.y;
         if scale == 1.0 {
             return;
         }
@@ -195,9 +195,9 @@ impl Running<'_> {
             .expect("the grapple beam's model");
         let joint = self.data.ptr(beam).expect("the beam's joint");
         self.set_accessory(gobj, joint);
-        let s = self.game.fighters[f.0].x34_scale.y;
+        let s = self.game.fighters[f.0].scale.y;
         let acc = self.game.fighters[f.0]
-            .x20A0_accessory
+            .accessory
             .expect("fp->x20A0_accessory");
         jobj::set_scale(&mut self.game.objs.jobjs, acc, Vec3::new(s, s, s));
         let anim = self.data.ptr(beam.at(8));

@@ -203,7 +203,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let left = fp::fsubs(reg(fp.mv_f32(MV_TURN_LEFT)), 1.0);
         fp.set_mv_f32(MV_TURN_LEFT, left);
-        if !fp.x2222_b6 {
+        if !fp.frozen_with_holder {
             let rot = reg(self.game.part_rot_y(f, part));
             let angle = mem(fp::fmadds(
                 0.01745329238474369,

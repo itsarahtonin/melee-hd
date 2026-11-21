@@ -51,9 +51,9 @@ impl Running<'_> {
     pub fn shadow_update(&mut self, g: GObjId) {
         let f = self.game.fighter_id(g);
         let fp = &self.game.fighters[f.0];
-        let ls = &fp.x20A4;
+        let ls = &fp.shadow;
         let any = ls.x0_b0 || ls.x0_b1 || ls.x0_b2 || ls.x0_b3 || ls.x0_b4 || ls.x0_b5;
-        let casts = !fp.x221E_b1 && !fp.x2226_b4 && !fp.is_sub_fighter;
+        let casts = !fp.dead_flag && !fp.cloak && !fp.is_sub_fighter;
         let s = ls.shadow.expect("a fighter without a shadow");
         crate::hsd::shadow::set_active(&mut self.game.objs, s, !any && casts);
     }
@@ -64,14 +64,14 @@ impl Running<'_> {
     pub fn shadow_limit(&mut self) {
         let mut f = self.first_fighter();
         while let Some(g) = f {
-            self.game.fighter_mut(g).x20A4.x0_b2 = false;
+            self.game.fighter_mut(g).shadow.x0_b2 = false;
             f = self.game.world.gobj(g).next;
         }
         let mut count = 0;
         let mut f = self.first_fighter();
         while let Some(g) = f {
             f = self.game.world.gobj(g).next;
-            let ls = &mut self.game.fighter_mut(g).x20A4;
+            let ls = &mut self.game.fighter_mut(g).shadow;
             let any = ls.x0_b0 || ls.x0_b1 || ls.x0_b2 || ls.x0_b3 || ls.x0_b4 || ls.x0_b5;
             if !any {
                 count += 1;
@@ -110,7 +110,7 @@ impl Running<'_> {
             let mut f = self.first_fighter();
             while let Some(g) = f {
                 let casts = self.game.camera.shadows() || self.stage_receives_shadow(g, j);
-                self.game.fighter_mut(g).x20A4.x0_b4 = !casts;
+                self.game.fighter_mut(g).shadow.x0_b4 = !casts;
                 f = self.game.world.gobj(g).next;
             }
             self.shadow_limit();
@@ -202,7 +202,7 @@ impl Running<'_> {
             let mut f = self.first_fighter();
             while let Some(g) = f {
                 f = self.game.world.gobj(g).next;
-                self.game.fighter_mut(g).x20A4.x0_b4 = false;
+                self.game.fighter_mut(g).shadow.x0_b4 = false;
                 self.shadow_update(g);
             }
             self.render_jobj(gobj, pass);

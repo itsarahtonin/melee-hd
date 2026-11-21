@@ -36,7 +36,7 @@ impl Running<'_> {
         let threshold = reg(self.common().f32(0x1B0));
         let fp = self.game.fighter(gobj);
         let c = &fp.coll_data;
-        let kb_x = reg(fp.x8c_kb_vel.x);
+        let kb_x = reg(fp.kb_vel.x);
         let last = fp.mv[DAMAGE_X19];
         if kb_x < fp::fneg(threshold)
             && c.env_flags & RIGHT_WALL_HUG != 0
@@ -69,7 +69,7 @@ impl Running<'_> {
         let threshold = reg(self.common().f32(0x1B0));
         let fp = self.game.fighter(gobj);
         let c = &fp.coll_data;
-        if reg(fp.x8c_kb_vel.y) > threshold
+        if reg(fp.kb_vel.y) > threshold
             && c.env_flags & CEILING_HUG != 0
             && fp.mv[DAMAGE_X19] != SURFACE_CEILING
         {
@@ -115,19 +115,15 @@ impl Running<'_> {
         camera::request_quake(self, QUAKE_SMALL, Some(pos));
         let slow = reg(self.common().f32(0x1BC));
         let fp = &mut self.game.fighters[f.0];
-        let mut v = fp.self_vel.add_xy(fp.x8c_kb_vel);
+        let mut v = fp.self_vel.add_xy(fp.kb_vel);
         v.mirror_xy(normal);
         v.x = mem(fp::fmuls(reg(v.x), slow));
         v.y = mem(fp::fmuls(reg(v.y), slow));
-        fp.x8c_kb_vel = v;
+        fp.kb_vel = v;
         fp.self_vel.z = 0.0;
         fp.self_vel.y = 0.0;
         fp.self_vel.x = 0.0;
-        fp.facing_dir = if reg(fp.x8c_kb_vel.x) < 0.0 {
-            -1.0
-        } else {
-            1.0
-        };
+        fp.facing_dir = if reg(fp.kb_vel.x) < 0.0 { -1.0 } else { 1.0 };
         self.change_motion_state(
             gobj,
             msid,
@@ -141,14 +137,14 @@ impl Running<'_> {
         if msid == ms::FLY_REFLECT_WALL {
             let x = fp::fadds(reg(fp.cur_pos.x), reg(offset.x));
             fp.cur_pos.x = mem(fp::fnmsubs(
-                reg(fp.x68C_transNPos.z),
+                reg(fp.trans_n_pos.z),
                 fp::fneg(reg(fp.facing_dir)),
                 x,
             ));
             self.air_coll_ledges_snap_low(gobj);
         } else {
             let y = fp::fadds(reg(fp.cur_pos.y), reg(offset.y));
-            fp.cur_pos.y = mem(fp::fadds(reg(fp.x68C_transNPos.y), y));
+            fp.cur_pos.y = mem(fp::fadds(reg(fp.trans_n_pos.y), y));
             self.air_coll_ledges_snap_unlocked(gobj);
         }
         let wait = fp::fctiwz(reg(self.common().f32(0x1C0))) as u8;
@@ -157,8 +153,8 @@ impl Running<'_> {
         let frames = self.common().i32(0x1B8);
         self.set_intangible(gobj, frames);
         let fp = &self.game.fighters[f.0];
-        let vx = fp::fadds(reg(fp.self_vel.x), reg(fp.x8c_kb_vel.x));
-        let vy = fp::fadds(reg(fp.self_vel.y), reg(fp.x8c_kb_vel.y));
+        let vx = fp::fadds(reg(fp.self_vel.x), reg(fp.kb_vel.x));
+        let vy = fp::fadds(reg(fp.self_vel.y), reg(fp.kb_vel.y));
         let mag = sqrt_reg(fp::fmadds(vx, vx, fp::fmuls(vy, vy)));
         let dist = mem(fp::fmuls(mag, reg(fp.co_attrs.weight)));
         self.impact_sfx(gobj, &DOWN_BOUND_SFX, dist);

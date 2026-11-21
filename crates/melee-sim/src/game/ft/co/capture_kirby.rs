@@ -113,9 +113,9 @@ impl Running<'_> {
     fn init_grab(&mut self, gobj: GObjId, timer: f32) {
         let fp = self.game.fighter_mut(gobj);
         fp.grab_timer = timer;
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = false;
+        fp.mash_stick_y = 0;
+        fp.mash_stick_x = 0;
+        fp.can_mash = false;
     }
 
     /// Caught by Kirby's inhale, `ftCo_800BD1DC` (the catch's `grabbed_cb`): it lets go of
@@ -128,10 +128,10 @@ impl Running<'_> {
         self.release_victim(gobj);
         let facing = self.game.fighter(kirby).facing_dir;
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A5C = Some(kirby);
+        fp.partner = Some(kirby);
         fp.victim_gobj = Some(kirby);
-        fp.x221B.x221B_b5 = false;
-        fp.x221B.x221B_b7 = false;
+        fp.state_flags.x221B_b5 = false;
+        fp.state_flags.x221B_b7 = false;
         fp.facing_dir = mem(fp::fneg(reg(facing)));
         self.change_motion_state(gobj, ms::CAPTURE_KIRBY, 0, 0.0, 1.0, 0.0, None);
         let f = self.game.fighter_id(gobj);
@@ -151,10 +151,10 @@ impl Running<'_> {
         fp.set_mv_f32(cap::SPEED_X, reg(outer));
         fp.set_mv_f32(cap::SPEED_Y, reg(inner));
         set_mv_vec(fp, cap::SCALE, scale);
-        fp.x2226_b2 = true;
+        fp.held_in_model = true;
         let time = self.kb_hold_time(kirby);
         self.init_grab(gobj, time);
-        self.game.fighters[f.0].x1A6A = 0x1FF;
+        self.game.fighters[f.0].grab_immune = 0x1FF;
         self.anim_update(gobj);
         self.start_rumble(f, 1, 0);
         self.stop_dead(gobj);
@@ -234,7 +234,7 @@ impl Running<'_> {
             .fighter(gobj)
             .victim_gobj
             .expect("inhaled by no one");
-        self.game.fighter_mut(gobj).x2226_b2 = false;
+        self.game.fighter_mut(gobj).held_in_model = false;
         self.attach_to_thrower(kirby, gobj);
         self.change_motion_state(gobj, ms::CAPTURE_WAIT_KIRBY, 0x90, 0.0, 1.0, 0.0, None);
         self.update_model_scale(gobj);
@@ -244,7 +244,7 @@ impl Running<'_> {
         self.set_hit_status(gobj, 2);
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);
-        self.game.fighters[f.0].x1A6A = 0x1FF;
+        self.game.fighters[f.0].grab_immune = 0x1FF;
         self.anim_update(gobj);
         self.stop_dead(gobj);
     }
@@ -400,10 +400,10 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.take_dmg_2_cb = Some(CodeRef(addr::REFRESH_SCALE));
         fp.take_dmg_cb = Some(CodeRef(addr::REFRESH_SCALE));
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
         fp.invisible = true;
         self.set_hit_status(gobj, 2);
-        self.game.fighter_mut(gobj).x209A = 1;
+        self.game.fighter_mut(gobj).name_tag_timer = 1;
         let time = if swallowed {
             self.kb_swallow_star_time(kirby)
         } else {
@@ -419,7 +419,7 @@ impl Running<'_> {
         self.set_accessory(gobj, star);
         let s = self.game.fighter(gobj).co_attrs.xDC;
         let scale = Vec3::new(s, s, s);
-        let acc = self.game.fighter(gobj).x20A0_accessory.expect("the star");
+        let acc = self.game.fighter(gobj).accessory.expect("the star");
         jobj::set_scale(&mut self.game.objs.jobjs, acc, scale);
         let y = self.part_joint(gobj, PART_Y_ROT_N);
         crate::lb::anim::attach(&mut self.game.objs, Some(acc), y);
@@ -517,7 +517,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.take_dmg_2_cb = Some(CodeRef(addr::REFRESH_SCALE));
         fp.take_dmg_cb = Some(CodeRef(addr::REFRESH_SCALE));
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
         fp.invisible = false;
         self.set_hit_status(gobj, 0);
         let fp = self.game.fighter(gobj);

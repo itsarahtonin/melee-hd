@@ -216,7 +216,7 @@ impl Running<'_> {
         if play {
             let sfx = self.character_sfx(gobj, 0x10);
             self.play_track(gobj, PLAY_VOICE, sfx);
-            if self.game.fighter(gobj).x197C.is_some() {
+            if self.game.fighter(gobj).bunny_hood.is_some() {
                 self.play_sfx(gobj, 0x11A, 0x7F, 0x40);
             }
         }
@@ -236,7 +236,7 @@ impl Running<'_> {
         };
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.jump_take_off(gobj, true, 1.0);
-        self.game.fighter_mut(gobj).x2227_b0 = true;
+        self.game.fighter_mut(gobj).jumped_from_ground = true;
     }
 
     /// The screw attack's jump from the ground, `ftCo_ItemScrew_Enter`: the jump at
@@ -248,7 +248,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms::ITEM_SCREW, 0, 0.0, 1.0, 0.0, None);
         let mul = self.common().f32(0x800);
         self.jump_take_off(gobj, false, mul);
-        self.game.fighter_mut(gobj).x2227_b0 = true;
+        self.game.fighter_mut(gobj).jumped_from_ground = true;
     }
 
     /// The airborne states' interrupts, `ftCo_Jump_IASA`: specials, item throws and catches,
@@ -318,10 +318,10 @@ impl Running<'_> {
         let c = self.common();
         let (t, window, z) = (c.f32(0x70), c.i32(0x74), c.u32(0x1C));
         let fp = self.game.fighter(gobj);
-        i32::from(fp.x1968_jumpsUsed) < fp.co_attrs.max_jumps
+        i32::from(fp.jumps_used) < fp.co_attrs.max_jumps
             && ((fp.input.lstick[0].y >= t && i32::from(fp.active_timer.lstick.y) < window)
                 || fp.input.pressed_buttons & PAD_XY != 0)
-            && !(after_z && u32::from(fp.x68A) < z)
+            && !(after_z && u32::from(fp.frames_since_jump) < z)
     }
 
     /// A double jump when the input asks, `ftCo_JumpAerial_CheckInput`: Ness, Yoshi, Peach
@@ -427,14 +427,14 @@ impl Running<'_> {
         // `Ft_MF_SkipNametagVis`.
         self.change_motion_state(gobj, msid, 1 << 15, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2221_b7 = true;
+        fp.parasol_from_jump = true;
         fp.self_vel.x = vel[0];
         fp.self_vel.y = vel[1];
         fp.self_vel.z = vel[2];
         if tapped {
             fp.active_timer.lstick.y = 0xFE;
         }
-        fp.x1968_jumpsUsed = fp.x1968_jumpsUsed.wrapping_add(1);
+        fp.jumps_used = fp.jumps_used.wrapping_add(1);
         self.stop_track(gobj, STOP_VOICE);
         let sfx = self.character_sfx(gobj, 0x14);
         self.play_track(gobj, PLAY_VOICE2, sfx);
@@ -443,7 +443,7 @@ impl Running<'_> {
         let kind = fp.kind;
         if kind != FighterKind::Mewtwo
             && (kind >= FighterKind::Mewtwo.id() || kind != FighterKind::Ness)
-            && fp.x197C.is_some()
+            && fp.bunny_hood.is_some()
         {
             self.play_sfx(gobj, 0x11B, 0x7F, 0x40);
         }
@@ -516,10 +516,10 @@ impl Running<'_> {
     pub fn anim_rise(&mut self, gobj: GObjId) {
         let hood = reg(self.data.f32(self.common_ptr(0x34).at(0x14)));
         let fp = self.game.fighter_mut(gobj);
-        fp.self_vel.y = if fp.x197C.is_some() {
-            mem(fp::fmuls(reg(fp.x6A4_transNOffset.y), hood))
+        fp.self_vel.y = if fp.bunny_hood.is_some() {
+            mem(fp::fmuls(reg(fp.trans_n_offset.y), hood))
         } else {
-            fp.x6A4_transNOffset.y
+            fp.trans_n_offset.y
         };
     }
 

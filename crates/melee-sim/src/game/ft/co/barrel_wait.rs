@@ -95,16 +95,16 @@ impl Running<'_> {
         let h = (c.f32(0x4DC), c.f32(0x4E0));
         let v = (c.f32(0x4E4), c.f32(0x4E8), c.f32(0x4EC));
         let fp = self.game.fighter_mut(gobj);
-        fp.x1988 = 2;
+        fp.hit_status = 2;
         fp.invisible = true;
         // `ftCommon_8007E2F4`.
-        fp.x1A6A = 0x1FF;
-        let b = fp.x890_cameraBox.expect("a fighter without a camera box");
+        fp.grab_immune = 0x1FF;
+        let b = fp.camera_box.expect("a fighter without a camera box");
         let cb = self.game.camera.subject_mut(b);
         (cb.target_ext.h.x, cb.target_ext.h.y) = h;
         (cb.target_ext.v.x, cb.target_ext.v.y, cb.target_ext.v.z) = v;
         // `ftCommon_8007EFC0`.
-        self.game.fighter_mut(gobj).x209A = 1;
+        self.game.fighter_mut(gobj).name_tag_timer = 1;
     }
 
     /// `ftCo_BarrelWait_IASA`: A or B asks the barrel to shoot.

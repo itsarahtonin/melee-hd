@@ -71,7 +71,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.cmd_vars[1] = 0;
         fp.cmd_vars[0] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         let msid = self.ca_special_n_state(gobj, p, air);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.set_effect_hitlag_cbs(gobj);
@@ -195,7 +195,7 @@ impl Running<'_> {
             return;
         }
         fp.set_throw_flag(1, false);
-        if fp.x2219_b0 {
+        if fp.effect_once {
             self.destroy_effects(gobj);
             return;
         }
@@ -215,7 +215,7 @@ impl Running<'_> {
             let fist = self.bone_joint(gobj, bone);
             spawn(self, id, Some(gobj), &[Arg::JObj(top), Arg::JObj(fist)]);
         }
-        self.game.fighter_mut(gobj).x2219_b0 = true;
+        self.game.fighter_mut(gobj).effect_once = true;
     }
 
     /// `ftCa_SpecialN_Phys`: the effect, then friction or the animation's motion.

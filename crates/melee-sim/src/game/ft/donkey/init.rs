@@ -37,8 +37,8 @@ impl Running<'_> {
         let c = attr::CARGO_WALK_FRAMES;
         self.image_ext_attrs(f, &[c, c + 4, c + 8]);
         let fp = &mut self.game.fighters[f.0];
-        fp.x2222_b0 = true;
-        fp.x2CC = fp.dat_attrs;
+        fp.has_cargo = true;
+        fp.cargo_attrs = fp.dat_attrs;
     }
 
     /// The cargo walks' animation lengths his creation writes over his loaded attributes'
@@ -61,7 +61,7 @@ impl Running<'_> {
     /// `lbAnim_8001E8F8` find it, without loading it.
     fn dk_anim_frames(&self, f: FighterId, anim: i32) -> f32 {
         let fp = &self.game.fighters[f.0];
-        if anim as u32 >= fp.x58C {
+        if anim as u32 >= fp.anim_count {
             return 0.0;
         }
         let entry = self.anim_entry(f, anim);
@@ -84,12 +84,12 @@ impl Running<'_> {
     /// The cargo walks' speed scales grown with the fighter (`ftCo_800D105C`'s end, for a
     /// fighter whose cargo attributes are its own, `x2222_b0`).
     pub(crate) fn dk_scale_cargo_walk_rates(&mut self, f: FighterId) {
-        let scale = self.game.fighters[f.0].x34_scale.y;
+        let scale = self.game.fighters[f.0].scale.y;
         if scale == 1.0 {
             return;
         }
         let a = self.game.fighters[f.0]
-            .x2CC
+            .cargo_attrs
             .expect("a cargo fighter without cargo attributes");
         for i in 0..3 {
             let off = attr::CARGO_WALK_RATES + 4 * i;
@@ -196,7 +196,7 @@ impl Running<'_> {
                 _ => pos,
             };
             v.y = mem(fp::fadds(reg(v.y), 2.0));
-            super::super::seak::special_s::hit_at(&mut self.game.fighters[f.0].x914[i], v);
+            super::super::seak::special_s::hit_at(&mut self.game.fighters[f.0].hitboxes[i], v);
         }
     }
 }

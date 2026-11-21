@@ -13,9 +13,9 @@ impl Running<'_> {
     #[doc(alias = "ftPp_Init_OnLoad")]
     pub fn popo_on_load(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.game.fighters[f.0].x2222_b5 = true;
+        self.game.fighters[f.0].is_popo = true;
         self.push_attrs(f, attr::SIZE);
-        self.game.fighters[f.0].x40 = self.ic_attr_f32(f, attr::POPO_X40);
+        self.game.fighters[f.0].platform_offset = self.ic_attr_f32(f, attr::POPO_X40);
         let d = self.game.fighters[f.0]
             .ft_data
             .expect("a fighter without data");
@@ -38,9 +38,9 @@ impl Running<'_> {
     #[doc(alias = "ftNn_Init_OnLoad")]
     pub fn nana_on_load(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.game.fighters[f.0].x2222_b4 = true;
+        self.game.fighters[f.0].pickup_limited = true;
         self.popo_on_load_for_nana(f);
-        self.game.fighters[f.0].x40 = self.ic_attr_f32(f, attr::NANA_X40);
+        self.game.fighters[f.0].platform_offset = self.ic_attr_f32(f, attr::NANA_X40);
     }
 
     /// Nana's attributes, `ftPp_Init_OnLoadForNana` (`PUSH_ATTRS` with Popo's layout).

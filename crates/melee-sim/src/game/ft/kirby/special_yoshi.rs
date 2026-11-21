@@ -121,11 +121,11 @@ impl Running<'_> {
     /// `grab`, an item `item`, and the fighter's side his copy's capture.
     fn kb_ys_grab_cbs(&mut self, gobj: GObjId, grab: u32, item: u32) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x221E_b6 = true;
-        fp.x1A68 = 4;
+        fp.grab_coll_off = true;
+        fp.grab_kinds = 4;
         fp.grab_cb = Some(CodeRef(grab));
         fp.grabbed_cb = Some(CodeRef(KB_CAPTURE));
-        fp.x2194 = Some(CodeRef(item));
+        fp.grab_item_cb = Some(CodeRef(item));
     }
 
     /// The hat's tongue back at its rest (`ftKb_SpecialNYs_801093B4`, with the copy's
@@ -177,8 +177,8 @@ impl Running<'_> {
         let frame = self.game.fighter(gobj).cur_anim_frame;
         self.change_motion_state(gobj, msid, FLAGS1, frame, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2222_b2 = true;
-        fp.x1A6A = 0x1FF;
+        fp.no_turn = true;
+        fp.grab_immune = 0x1FF;
         self.stop_dead(gobj);
         self.kb_set_cleanup_cbs(gobj);
     }
@@ -296,7 +296,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, msid, FLAGS0, 0.0, 1.0, 0.0, None);
         self.kb_ys_hat_anim(gobj, anim, false);
         self.kb_set_cleanup_cbs(gobj);
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
     }
 
     /// Waiting or falling once the swallow plays out.
@@ -324,12 +324,12 @@ impl Running<'_> {
         {
             yoshitongue::release(self, item, false);
             let fp = &mut self.game.fighters[f.0];
-            fp.x1A64 = Default::default();
+            fp.caught_item = Default::default();
             fp.target_item_gobj = None;
             fp.cmd_vars[1] = 0;
         }
         if self.game.fighters[f.0].cmd_vars[0] != 0 {
-            self.game.fighters[f.0].x1A6A = 0;
+            self.game.fighters[f.0].grab_immune = 0;
             let tip = {
                 let fp = &self.game.fighters[f.0];
                 self.bone_index(fp, TRANS_N2)
@@ -374,7 +374,7 @@ impl Running<'_> {
         if self.game.fighters[f.0].cmd_vars[0] != 0
             && let Some(victim) = self.game.fighters[f.0].victim_gobj
         {
-            self.game.fighters[f.0].x1A6A = 0;
+            self.game.fighters[f.0].grab_immune = 0;
             self.throw_hit(gobj, victim, false);
             self.enter_kirby_yoshi_egg(victim, gobj);
             self.game.fighters[f.0].cmd_vars[0] = 0;
@@ -399,7 +399,7 @@ impl Running<'_> {
         );
         yoshitongue::release(self, item, clear);
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A64 = Default::default();
+        fp.caught_item = Default::default();
         fp.target_item_gobj = None;
     }
 

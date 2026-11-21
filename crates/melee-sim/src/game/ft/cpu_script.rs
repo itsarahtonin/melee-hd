@@ -99,7 +99,9 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800B3E04")]
     pub fn cpu_run_script(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
-        let Some(start) = fp.cpu.csP.0 else { return };
+        let Some(start) = fp.cpu.script_cursor.0 else {
+            return;
+        };
         if fp.cpu.command_duration == 0 {
             return;
         }
@@ -187,13 +189,13 @@ impl Running<'_> {
                 cmd::RELEASE_ALL => d.buttons = 0,
                 cmd::LSTICK_TOWARD_DESTINATION => {
                     let m = i32::from(arg(fp));
-                    let angle = toward(fp.cpu.x54.y, fp.cpu.x54.x, fp);
+                    let angle = toward(fp.cpu.destination.y, fp.cpu.destination.x, fp);
                     fp.cpu.lstick.x = scaled(m, math::cos(mem(angle))) as i8;
                     fp.cpu.lstick.y = scaled(m, math::sin(mem(angle))) as i8;
                 }
                 cmd::LSTICK_X_TOWARD_DESTINATION => {
                     let v = arg(fp);
-                    fp.cpu.lstick.x = if fp.cpu.x54.x > fp.cur_pos.x {
+                    fp.cpu.lstick.x = if fp.cpu.destination.x > fp.cur_pos.x {
                         v
                     } else {
                         (-i32::from(v)) as i8
@@ -201,7 +203,7 @@ impl Running<'_> {
                 }
                 cmd::LSTICK_TOWARD_FIGHTER => {
                     let m = i32::from(arg(fp));
-                    if let Some(t) = fp.cpu.x44 {
+                    if let Some(t) = fp.cpu.target {
                         let tp = self.game.fighters[t.0].cur_pos;
                         let fp = &mut self.game.fighters[f.0];
                         let angle = toward(tp.y, tp.x, fp);
@@ -211,7 +213,7 @@ impl Running<'_> {
                 }
                 cmd::LSTICK_X_TOWARD_FIGHTER => {
                     let mut v = arg(fp);
-                    if let Some(t) = fp.cpu.x44 {
+                    if let Some(t) = fp.cpu.target {
                         let tx = self.game.fighters[t.0].cur_pos.x;
                         let fp = &mut self.game.fighters[f.0];
                         if tx < fp.cur_pos.x {
@@ -236,11 +238,11 @@ impl Running<'_> {
                         return;
                     }
                 }
-                cmd::SET_X18 => fp.cpu.x18 = i32::from(arg(fp) as u8),
+                cmd::SET_X18 => fp.cpu.behavior = i32::from(arg(fp) as u8),
                 cmd::LSTICK_TOWARD_DESTINATION_CLAMPED => {
                     let step = i32::from(arg(fp));
                     let clamp = i32::from(arg(fp));
-                    let angle = toward(fp.cpu.x54.y, fp.cpu.x54.x, fp);
+                    let angle = toward(fp.cpu.destination.y, fp.cpu.destination.x, fp);
                     let cos = math::cos(mem(angle));
                     let mut x = i32::from(fp.cpu.lstick.x) + scaled(step, cos);
                     let cx = scaled(clamp, cos);
@@ -267,7 +269,7 @@ impl Running<'_> {
                     let toward_plus = if c == cmd::LSTICK_FORWARD_CLAMPED {
                         f64::from(fp.facing_dir) > 0.0
                     } else {
-                        fp.cpu.x54.x > fp.cur_pos.x
+                        fp.cpu.destination.x > fp.cur_pos.x
                     };
                     let mut x = if toward_plus {
                         i32::from(fp.cpu.lstick.x) + dx
@@ -283,13 +285,13 @@ impl Running<'_> {
                 }
                 cmd::DONE => {
                     fp.cpu.command_duration = 0;
-                    fp.cpu.csP.0 = None;
+                    fp.cpu.script_cursor.0 = None;
                     return;
                 }
                 _ => {}
             }
         }
-        self.game.fighters[f.0].cpu.csP.0 = Some(cur);
+        self.game.fighters[f.0].cpu.script_cursor.0 = Some(cur);
     }
 
     /// Starts writing the fighter's script from the buffer's start, `ftCo_800B462C`.
@@ -334,7 +336,7 @@ impl Running<'_> {
     pub fn cpu_script_start(&mut self, f: FighterId) {
         self.cpu_cmd(f, cmd::DONE);
         let d = &mut self.game.fighters[f.0].cpu;
-        d.csP.0 = Some(0);
+        d.script_cursor.0 = Some(0);
         d.command_duration = 1;
     }
 
@@ -349,7 +351,7 @@ impl Running<'_> {
         d.cstick.y = 0;
         d.rtrigger = 0;
         d.ltrigger = 0;
-        d.csP.0 = None;
+        d.script_cursor.0 = None;
         d.command_duration = 0;
         self.cpu_script_reset(f);
     }

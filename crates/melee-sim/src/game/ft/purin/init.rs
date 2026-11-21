@@ -17,7 +17,7 @@ impl Running<'_> {
         self.push_attrs(f, attr::SIZE);
         let fp = &mut self.game.fighters[f.0];
         fp.can_multijump = true;
-        fp.x2D0 = fp.dat_attrs;
+        fp.multi_jump_attrs = fp.dat_attrs;
         self.purin_load_hat(gobj);
     }
 
@@ -132,10 +132,10 @@ impl Running<'_> {
     /// (`x2219_b0`), the hitlag hooks, and no more accessory.
     #[doc(alias = "ftPr_Init_8013C94C")]
     pub fn purin_sing_gfx(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let j = self.bone_joint(gobj, PART_WAIST_N);
             spawn(self, 1238, Some(gobj), &[Arg::JObj(j)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;

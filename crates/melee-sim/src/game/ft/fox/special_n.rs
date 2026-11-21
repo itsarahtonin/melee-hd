@@ -191,7 +191,8 @@ impl Running<'_> {
 
     /// `ftFox_SpecialN_BeginLoopTransition`: the loop again.
     fn fox_special_n_loop_again(&mut self, gobj: GObjId, loop_msid: i32) {
-        self.game.fighter_mut(gobj).x21EC = Some(code_ref(addr::SPECIAL_N_ON_CHANGE_ACTION));
+        self.game.fighter_mut(gobj).motion_change_cb =
+            Some(code_ref(addr::SPECIAL_N_ON_CHANGE_ACTION));
         self.change_motion_state(
             gobj,
             loop_msid,
@@ -369,7 +370,7 @@ impl Running<'_> {
                         let fp = &self.game.fighters[f.0];
                         let scale = fp::fmuls(
                             0.850_000_023_841_857_9,
-                            fp::fmuls(reg(fp.x34_scale.y), reg(fp.co_attrs.model_scaling)),
+                            fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.model_scaling)),
                         );
                         let data = self.data;
                         crate::game::it::lib26b1::set_scale(self.game, data, b, mem(scale));

@@ -246,14 +246,14 @@ impl Running<'_> {
     /// (`x1A88.x444`, an entry of its inputs, `xFC`), the entry's facing and its stick's x byte.
     fn turn_partner_cpu_stick(&mut self, other: GObjId, facing: f32, x: u8) {
         let o = self.game.fighter_mut(other);
-        let Some(at) = o.cpu.x444.0 else {
+        let Some(at) = o.cpu.partner_input_write.0 else {
             super::code::unported_call("UCF's dashback through a null CPU input pointer")
         };
         assert!(
             at % 0x1C == 0 && at / 0x1C < 30,
             "UCF's dashback: the CPU input pointer is off its entries"
         );
-        let e = &mut o.cpu.xFC[(at / 0x1C) as usize];
+        let e = &mut o.cpu.partner_inputs[(at / 0x1C) as usize];
         e.facing_dir = facing;
         e.lstick.x = x as i8;
     }

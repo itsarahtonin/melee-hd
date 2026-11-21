@@ -52,7 +52,7 @@ impl Running<'_> {
         h.capsule.a_offset = Vec3::default();
         h.capsule.b_offset = Vec3::default();
         h.capsule.scale = 1.0;
-        fp.x221A_b6 = true;
+        fp.hurtboxes_custom = true;
     }
 
     /// Out of the egg, `ftYs_Init_8012BE3C`: his first model variant, his hurtboxes back, and
@@ -153,13 +153,13 @@ impl Running<'_> {
     pub fn ys_enter_guard(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.change_motion_state(gobj, ms::GUARD_HOLD, 0, 0.0, 1.0, 0.0, None);
-        let costume = self.game.fighters[f.0].x108_costume_joint;
+        let costume = self.game.fighters[f.0].costume_joint;
         let child = costume.and_then(|c| self.data.ptr(c.at(8)));
         self.reset_parts(f, TRANS_N, child, false);
         self.set_model_variant(f, 0, 1);
         self.ys_shield_hurtbox(gobj);
         self.shield_hit_shape(gobj);
-        self.game.fighters[f.0].x221E_b4 = false;
+        self.game.fighters[f.0].articles_visible = false;
         self.ys_shield_crack(gobj);
         self.scale_shield(gobj);
     }
@@ -171,7 +171,7 @@ impl Running<'_> {
             return;
         }
         let fp = self.game.fighter(gobj);
-        if fp.mv_i32(mv::GUARD_XC) != 0 || (!fp.x221B.x221B_b0 && !fp.reflecting) {
+        if fp.mv_i32(mv::GUARD_XC) != 0 || (!fp.state_flags.x221B_b0 && !fp.reflecting) {
             self.enter_guard_off(gobj);
         } else {
             self.ys_shield_crack(gobj);
@@ -218,7 +218,7 @@ impl Running<'_> {
         fp.hitlag_cb = Some(super::super::co::guard::GUARD_SET_OFF_HITLAG);
         fp.active_timer.lstick.x = 0xFE;
         fp.post_hitlag_cb = Some(super::super::co::guard::GUARD_SET_OFF_POST_HITLAG);
-        if !fp.x221C_b2 {
+        if !fp.powershield {
             self.set_model_variant(f, 0, 1);
         }
         self.ys_shield_hurtbox(gobj);
@@ -228,7 +228,7 @@ impl Running<'_> {
         let stun = fp::fmadds(
             x28c,
             fp::fmuls(
-                fp::frsp(f64::from(fp.x19A4)),
+                fp::frsp(f64::from(fp.shield_hit_damage)),
                 fp::fsubs(1.0, reg(fp.lightshield_amount)),
             ),
             x290,
@@ -267,9 +267,9 @@ impl Running<'_> {
         let (x2a4, x2b4) = (c.f32(0x2A4), c.f32(0x2B4));
         let fp = self.game.fighter_mut(gobj);
         fp.active_timer.trigger = 0xFE;
-        fp.x221C_b3 = true;
-        fp.x221C_b1 = true;
-        fp.x221C_b2 = true;
+        fp.powershield_early = true;
+        fp.powershield_late = true;
+        fp.powershield = true;
         fp.set_mv_f32(mv::GUARD_X14, reg(x2a4));
         fp.set_mv_f32(mv::GUARD_X18, reg(x2b4));
         self.powershield_reflect_shape(gobj, CodeRef(addr::SHIELD_REFLECT_CB));
@@ -282,8 +282,8 @@ impl Running<'_> {
         let frame = self.game.fighter(gobj).cur_anim_frame;
         self.change_motion_state(gobj, ms::GUARD_ON_1, SKIP_MODEL, frame, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x221A_b7 = false;
-        fp.x221B.x221B_b0 = false;
+        fp.shield_was_hit = false;
+        fp.state_flags.x221B_b0 = false;
         self.ys_powershield_start_late(gobj);
     }
 
@@ -348,7 +348,7 @@ impl Running<'_> {
     /// in it, then the common one.
     #[doc(alias = "ftCo_80099954")]
     pub fn ys_enter_escape_n(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).x5F4_arr[0].idx == 1 {
+        if self.game.fighter(gobj).model_variants[0].idx == 1 {
             self.ys_shield_out(gobj);
         }
         self.enter_escape_n_common(gobj);

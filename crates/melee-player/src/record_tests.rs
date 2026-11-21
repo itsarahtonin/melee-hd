@@ -615,8 +615,28 @@ fn live_equals_playback(
                 let ids: Vec<u32> = ours.fighters.iter().map(|(i, _)| i).collect();
                 for i in ids {
                     let (p, f) = (&play.game.fighters[i], &mut ours.fighters[i]);
-                    (f.x2144, f.x2148, f.x214C, f.x2150) = (p.x2144, p.x2148, p.x214C, p.x2150);
-                    (f.x2154, f.x2158, f.x215C, f.x2160) = (p.x2154, p.x2158, p.x215C, p.x2160);
+                    (
+                        f.voice_handle,
+                        f.sound_handle_2,
+                        f.sound_handle_3,
+                        f.sound_handle_4,
+                    ) = (
+                        p.voice_handle,
+                        p.sound_handle_2,
+                        p.sound_handle_3,
+                        p.sound_handle_4,
+                    );
+                    (
+                        f.sound_handle_5,
+                        f.sound_handle_6,
+                        f.track_handle,
+                        f.sfx_handle,
+                    ) = (
+                        p.sound_handle_5,
+                        p.sound_handle_6,
+                        p.track_handle,
+                        p.sfx_handle,
+                    );
                 }
                 let ids: Vec<u32> = ours.items.iter().map(|(i, _)| i).collect();
                 for i in ids {
@@ -797,7 +817,7 @@ fn a_paused_live_match_records_the_pause_as_slippi_does() {
                 paused += 1;
                 // The marks the pause camera's view leaves when the pause ends.
                 marked = (m.game.fighters.iter())
-                    .map(|(_, f)| f.x221F_b0)
+                    .map(|(_, f)| f.off_screen)
                     .collect::<Vec<_>>();
             }
         });

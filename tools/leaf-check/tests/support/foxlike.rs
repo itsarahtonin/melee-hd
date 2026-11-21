@@ -180,7 +180,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
                 g.fox_grip(gobj)
             };
             let f = g.game.fighter_id(gobj);
-            g.game.fighters[f.0].x6C0 = v;
+            g.game.fighters[f.0].part_35_pos = v;
             Ret::Nothing
         }
         "ftFx_SpecialS_CheckGhostRemove" => {
@@ -193,7 +193,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             let gobj = gobj_arg(maps, call);
             let v = g.fox_special_s_ghost_pos(gobj, r(1) as i32);
             let f = g.game.fighter_id(gobj);
-            g.game.fighters[f.0].x6C0 = v;
+            g.game.fighters[f.0].part_35_pos = v;
             Ret::Nothing
         }
         "ftFx_SpecialS_ReturnFloatVarIndexed" => Ret::Float(leaf_check::fp::lfs(

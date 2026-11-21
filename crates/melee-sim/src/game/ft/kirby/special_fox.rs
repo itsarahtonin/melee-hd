@@ -144,7 +144,7 @@ impl Running<'_> {
         let m = fp.motion_id;
         let first = first_state(kind);
         if (first..first + 6).contains(&m) || (co_ms::THROW_B..=co_ms::THROW_LW).contains(&m) {
-            fp.x2070[1] & 0x02 != 0
+            fp.attack_flags[1] & 0x02 != 0
         } else {
             true
         }
@@ -309,7 +309,8 @@ impl Running<'_> {
         self.kb_fx_update_blaster(gobj);
         if !self.anim_frames_remaining(gobj) {
             if self.game.fighter(gobj).mv_i32(MV_LOOP) == 1 {
-                self.game.fighter_mut(gobj).x21EC = Some(CodeRef(addr::ON_CHANGE_ACTION));
+                self.game.fighter_mut(gobj).motion_change_cb =
+                    Some(CodeRef(addr::ON_CHANGE_ACTION));
                 self.change_motion_state(
                     gobj,
                     start + 1,

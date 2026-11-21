@@ -31,7 +31,7 @@ impl Running<'_> {
             });
             let fp = self.game.fighter_mut(gobj);
             fp.coll_data = cd;
-            let b = fp.x890_cameraBox.expect("a fighter without a camera box");
+            let b = fp.camera_box.expect("a fighter without a camera box");
             self.game.camera.subject_mut(b).on_ledge = true;
         }
     }
@@ -48,8 +48,8 @@ impl Running<'_> {
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A6A = 32;
-        fp.x221D_b7 = true;
+        fp.grab_immune = 32;
+        fp.hanging = true;
     }
 
     /// A ledge attack with A or B, or the C-stick up, `ftCo_8009AE38`.
@@ -62,7 +62,7 @@ impl Running<'_> {
         let c = &fp.input.cstick;
         if fp.input.pressed_buttons & (PAD_A | PAD_B) != 0 || (c[1].y < t && c[0].y >= t) {
             self.enter_cliff_state(gobj, ms::CLIFF_ATTACK_QUICK, ms::CLIFF_ATTACK_SLOW);
-            self.game.fighter_mut(gobj).x221D_b5 = true;
+            self.game.fighter_mut(gobj).nudge_off = true;
             self.co_cliff_catch_phys(gobj);
             return true;
         }
@@ -83,7 +83,7 @@ impl Running<'_> {
             !single && fp::fmuls(facing, reg(c[1].x)) < t && fp::fmuls(facing, reg(c[0].x)) >= t;
         if fp.input.pressed_buttons & PAD_LR != 0 || cstick {
             self.enter_cliff_state(gobj, ms::CLIFF_ESCAPE_QUICK, ms::CLIFF_ESCAPE_SLOW);
-            self.game.fighter_mut(gobj).x221D_b5 = true;
+            self.game.fighter_mut(gobj).nudge_off = true;
             self.co_cliff_catch_phys(gobj);
             return true;
         }
@@ -134,7 +134,7 @@ impl Running<'_> {
             if lstick && ready {
                 // `ftCo_8009AB9C`.
                 self.enter_cliff_state(gobj, ms::CLIFF_CLIMB_QUICK, ms::CLIFF_CLIMB_SLOW);
-                self.game.fighter_mut(gobj).x221D_b5 = true;
+                self.game.fighter_mut(gobj).nudge_off = true;
                 self.co_cliff_catch_phys(gobj);
                 return true;
             }
@@ -142,7 +142,7 @@ impl Running<'_> {
         }
         if ready {
             let cooldown = self.common().i32(0x498);
-            self.game.fighter_mut(gobj).x2064_ledgeCooldown = cooldown;
+            self.game.fighter_mut(gobj).ledge_cooldown = cooldown;
             self.enter_fall(gobj);
             return true;
         }
@@ -195,12 +195,12 @@ impl Running<'_> {
         };
         let fp = self.game.fighter_mut(gobj);
         fp.cur_pos.x = mem(fp::fmadds(
-            reg(fp.x68C_transNPos.z),
+            reg(fp.trans_n_pos.z),
             reg(fp.facing_dir),
             reg(v.x),
         ));
-        fp.cur_pos.y = mem(fp::fadds(reg(v.y), reg(fp.x68C_transNPos.y)));
-        if fp.ground_or_air == GA_AIR && fp.x68C_transNPos.z >= 0.0 && fp.x68C_transNPos.y >= 0.0 {
+        fp.cur_pos.y = mem(fp::fadds(reg(v.y), reg(fp.trans_n_pos.y)));
+        if fp.ground_or_air == GA_AIR && fp.trans_n_pos.z >= 0.0 && fp.trans_n_pos.y >= 0.0 {
             fp.coll_data.floor.index = ledge;
             self.land(gobj);
         }

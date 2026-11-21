@@ -123,7 +123,7 @@ impl Running<'_> {
         let oy = reg(self.pk_attr_f32(f, at + offset_y));
         let kind = self.pk_attr_i32(f, at + attr::SPECIALN_ITKIND);
         let fp = &self.game.fighters[f.0];
-        let scale = reg(fp.x34_scale.y);
+        let scale = reg(fp.scale.y);
         let pos = Vec3::new(
             mem(fp::fmadds(
                 scale,
@@ -198,10 +198,10 @@ impl Running<'_> {
 
     /// The Skull Bash's spark on the hip, once per state, its effects paused in hitlag.
     fn pk_special_n_spark(&mut self, gobj: GObjId, id: i32) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let hip = self.part_joint(gobj, part::HIP_N);
             spawn(self, id, Some(gobj), &[Arg::JObj(hip)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;

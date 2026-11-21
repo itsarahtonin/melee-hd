@@ -105,7 +105,7 @@ impl Running<'_> {
                 return Some(true);
             }
             let changed = self.item_drop_from_hand(gobj);
-            self.game.fighter_mut(gobj).x2224_b1 = true;
+            self.game.fighter_mut(gobj).air_item_caught = true;
             return Some(changed);
         }
         let c = self.common();
@@ -180,7 +180,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.cmd_vars[0] = 0;
         fp.cmd_vars[1] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.set_mv_f32(MV_ANIM_SPD, speed);
         // `ftCo_80095700`.
         let facing = match msid {
@@ -384,7 +384,7 @@ impl Running<'_> {
                 .game
                 .player_entity_at(slot, sub)
                 .expect("a thrower without a fighter");
-            self.game.fighter_mut(g).x2074.x207C.y = who;
+            self.game.fighter_mut(g).attack_record.x207C.y = who;
         }
     }
 
@@ -556,7 +556,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.cmd_vars[0] = 0;
         fp.cmd_vars[1] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         let facing = match msid {
             95 | 101 | 105 | 109 | 113 | 117 => fp::fneg(reg(fp.facing_dir)),
             _ => reg(fp.facing_dir),
@@ -567,7 +567,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.accessory4_cb = Some(CodeRef(ITEM_THROW_HAND));
         fp.take_dmg_cb = Some(CodeRef(super::lift::TAKE_DMG));
-        if fp.x2222_b0 {
+        if fp.has_cargo {
             fp.phys_cb = Some(CodeRef(CARGO_THROW_PHYS));
             fp.coll_cb = Some(CodeRef(CARGO_THROW_COLL));
         }

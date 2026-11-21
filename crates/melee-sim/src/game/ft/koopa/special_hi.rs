@@ -20,12 +20,12 @@ impl Running<'_> {
     /// top joint, and his effects paused in hitlag.
     fn kp_hi_start(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
         fp.set_mv_f32(mv::HI_FRAMES, 0.0);
         fp.set_mv_i32(mv::HI_GROUNDED, 0);
         let top = self.bone_joint(gobj, 0);
         ef::spawn(self, 0x4DA, Some(gobj), &[ef::Arg::JObj(top)]);
-        self.game.fighter_mut(gobj).x2219_b0 = true;
+        self.game.fighter_mut(gobj).effect_once = true;
         self.set_effect_hitlag_cbs(gobj);
         self.anim_update(gobj);
     }
@@ -97,7 +97,7 @@ impl Running<'_> {
                 self.go_airborne_jumped(f);
                 ef::eflib::destroy_all(self, gobj);
                 let fp = &mut self.game.fighters[f.0];
-                fp.x2219_b0 = false;
+                fp.effect_once = false;
                 fp.pre_hitlag_cb = None;
                 fp.post_hitlag_cb = None;
                 self.kp_hi_fall(gobj);

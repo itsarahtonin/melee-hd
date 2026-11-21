@@ -40,10 +40,10 @@ impl Running<'_> {
     /// The wind-up's effect at his waist, once (`x2219_b0`), `ftMt_SpecialHi_SetStartGFX`.
     #[doc(alias = "ftMt_SpecialHi_SetStartGFX")]
     pub fn mt_hi_start_gfx(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let pos = self.teleport_part_pos(gobj, PART_WAIST_N);
             spawn(self, GFX_START, Some(gobj), &[Arg::Vec(pos)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
     }

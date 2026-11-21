@@ -25,7 +25,7 @@ impl Running<'_> {
         fp.cmd_vars[2] = 0;
         fp.cmd_vars[1] = 0;
         fp.cmd_vars[0] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         self.change_motion_state(gobj, ms::SPECIAL_HI, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
     }
@@ -39,7 +39,7 @@ impl Running<'_> {
         fp.cmd_vars[2] = 0;
         fp.cmd_vars[1] = 0;
         fp.cmd_vars[0] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.self_vel.y = 0.0;
         fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), x3c));
         self.change_motion_state(gobj, ms::SPECIAL_AIR_HI, 0, 0.0, 1.0, 0.0, None);
@@ -114,7 +114,7 @@ impl Running<'_> {
         if reg(fp.facing_dir) != fp::frsp(f64::from(num)) {
             fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), fp::fneg(1.0)));
         }
-        if fp.x6A4_transNOffset.y < 0.0 {
+        if fp.trans_n_offset.y < 0.0 {
             fp.cmd_vars[2] = 1;
         }
     }

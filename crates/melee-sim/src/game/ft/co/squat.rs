@@ -46,7 +46,7 @@ impl Running<'_> {
         let x5f0 = self.common().u32(0x5F0);
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(SQUAT_X0, 0);
-        fp.x209A = x5f0 as u16;
+        fp.name_tag_timer = x5f0 as u16;
     }
 
     /// `ftCo_Squat_Anim`: the crouch settles into its wait.
@@ -119,7 +119,7 @@ impl Running<'_> {
         }
         if nametag {
             let x5f0 = self.common().u32(0x5F0);
-            self.game.fighter_mut(gobj).x209A = x5f0 as u16;
+            self.game.fighter_mut(gobj).name_tag_timer = x5f0 as u16;
         }
         match self.game.fighter(gobj).fighter_kind() {
             FighterKind::Link => self.link_shield_absorb(gobj),

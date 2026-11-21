@@ -27,10 +27,10 @@ pub fn copy_fighter_attack(game: &mut Game, gobj: GObjId, fighter: GObjId) {
     let f = super::owner::fighter_of(game, fighter);
     let fp = &game.fighters[f.0];
     let (id, instance, x2070, x2074) = (
-        fp.x2068_attackID,
-        fp.x206C_attack_instance,
-        fp.x2070,
-        fp.x2074.clone(),
+        fp.attack_id,
+        fp.attack_instance,
+        fp.attack_flags,
+        fp.attack_record.clone(),
     );
     let ip = item_mut(game, gobj);
     ip.xD88_attackID = id;
@@ -111,7 +111,7 @@ pub fn restart_attack(game: &mut Game, gobj: GObjId) {
     let owner = ip.owner;
     if is_fighter(game, owner) {
         let f = super::owner::fighter_of(game, owner.unwrap());
-        let rec = game.fighters[f.0].x2074.clone();
+        let rec = game.fighters[f.0].attack_record.clone();
         let ip = item_mut(game, gobj);
         ip.xD94 = rec.x2074_vec;
         ip.xD9C = rec.x207C;

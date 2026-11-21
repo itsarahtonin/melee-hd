@@ -102,7 +102,7 @@ impl Running<'_> {
     pub(crate) fn plumber_hi_enter(&mut self, gobj: GObjId, p: &SuperJump) {
         let fp = self.game.fighter_mut(gobj);
         fp.cmd_vars[0] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         self.change_motion_state(gobj, p.ms_hi, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
     }
@@ -113,7 +113,7 @@ impl Running<'_> {
         let vel_x = reg(self.char_attr_f32(f, p.base + HI_VEL_X));
         let fp = &mut self.game.fighters[f.0];
         fp.cmd_vars[0] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.self_vel.y = 0.0;
         fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), vel_x));
         self.change_motion_state(gobj, p.ms_air_hi, 0, 0.0, 1.0, 0.0, None);
@@ -266,7 +266,7 @@ impl Running<'_> {
         self.set_damage_cb(gobj, Some(p.on_damage));
         let root = Some(self.root_jobj(gobj));
         spawn(self, p.effect, Some(gobj), &[Arg::JObj(root)]);
-        self.game.fighter_mut(gobj).x2219_b0 = true;
+        self.game.fighter_mut(gobj).effect_once = true;
         self.set_effect_hitlag_cbs(gobj);
         self.set_effect_hitlag_cbs(gobj);
     }

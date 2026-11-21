@@ -51,9 +51,36 @@ def rust_type_name(rid):
     return config.RENAME_TYPES.get(rec_name(rid), rec_name(rid))
 
 
-def field_name(name):
-    n = config.RENAME_FIELDS.get(name, name)
+def renamed(rid, name):
+    """The port's name for field `name` of record `rid` from `config.FIELD_NAMES`, or None."""
+    return config.FIELD_NAMES.get(rec_name(rid), {}).get(name)
+
+
+def field_name(rid, name):
+    n = renamed(rid, name) or config.RENAME_FIELDS.get(name, name)
     return f"r#{n}" if n in RUST_KEYWORDS else n
+
+
+def label(rid, name):
+    """A field's name in the comparer's output: a renamed field's name with the original's
+    beside it (`hitlag_frames (x2114)`), as ssbm-rs's traces and the docs cite offsets."""
+    new = renamed(rid, name)
+    return f"{new} ({name})" if new else name
+
+
+def check_names(g):
+    """Every name in `config.FIELD_NAMES` names a field of its struct, and the new names are
+    identifiers that collide with no other field."""
+    by_name = {rec_name(rid): rid for rid in g.recs}
+    for struct, names in config.FIELD_NAMES.items():
+        rid = by_name[struct]
+        olds = [f["name"] for f in g.fields(rid)]
+        for old, new in names.items():
+            assert old in olds, f"{struct}.{old}: no such field"
+            assert re.fullmatch(r"[a-z][a-z0-9_]*", new) and new not in RUST_KEYWORDS, f"{struct}.{old}: {new} isn't a field name"
+        final = [field_name(rid, o) for o in olds]
+        dups = {n for n in final if final.count(n) > 1}
+        assert not dups, f"{struct}: names used twice: {sorted(dups)}"
 
 
 def bit_type(bits):
@@ -193,7 +220,9 @@ class Gen:
             else:
                 t = bit_type(f["bits"]) if "bits" in f else self.handle_array(rid, f) or self.field_override(rid, f) or self.ty(f["type"])
             out.append(f"    /// +{off:#x}{bits}")
-            out.append(f"    pub {field_name(f['name'])}: {t},")
+            if renamed(rid, f["name"]):
+                out.append(f"    #[doc(alias(\"{f['name']}\"))]")
+            out.append(f"    pub {field_name(rid, f['name'])}: {t},")
         out.append("}")
         out.append("")
         out.append(f"impl Default for {name} {{")
@@ -209,7 +238,7 @@ class Gen:
             else:
                 ha = self.handle_array(rid, f)
                 d = f"[None; {f['type']['n']}]" if ha else "None" if self.field_override(rid, f) else self.default(f)
-            out.append(f"            {field_name(f['name'])}: {d},")
+            out.append(f"            {field_name(rid, f['name'])}: {d},")
         out.append("        }")
         out.append("    }")
         out.append("}")
@@ -219,7 +248,7 @@ class Gen:
             out.append("    /// Marks every field stale, as a new item finds its variables.")
             out.append("    pub fn mark_stale(&mut self) {")
             for f in self.fields(rid):
-                fname = field_name(f["name"])
+                fname = field_name(rid, f["name"])
                 t = f.get("type", {"k": "splice"})
                 if "bits" not in f and t["k"] == "arr":
                     assert t["of"]["k"] != "arr", f"a nested array in tracked {name}"
@@ -404,10 +433,10 @@ class Gen:
         cmp = []
         tracked = self.is_tracked(rid)
         for f in self.fields(rid):
-            fname = field_name(f["name"])
+            fname = field_name(rid, f["name"])
             off = f["offset_bits"] // 8
             at = f"at + {off:#x}"
-            path = f"format!(\"{{path}}.{f['name']}\")"
+            path = f"format!(\"{{path}}.{label(rid, f['name'])}\")"
             if tracked:
                 self.tracked_mirror(rid, f, fname, at, path, imp, cmp)
                 continue
@@ -441,7 +470,7 @@ class Gen:
                 n = f["type"]["n"]
                 imp.append(f'            {fname}: core::array::from_fn(|i| cx.import_handle("{h}", m.u32({at} + 4 * i as u32)).map({h})),')
                 cmp.append(f"        for i in 0..{n} {{")
-                cmp.append(f'            cx.compare_handle(&format!("{{path}}.{f["name"]}[{{i}}]"), "{h}", self.{fname}[i].map(|h| h.0), m.u32({at} + 4 * i as u32));')
+                cmp.append(f'            cx.compare_handle(&format!("{{path}}.{label(rid, f["name"])}[{{i}}]"), "{h}", self.{fname}[i].map(|h| h.0), m.u32({at} + 4 * i as u32));')
                 cmp.append("        }")
                 continue
             over = self.field_override(rid, f)
@@ -516,7 +545,7 @@ class Gen:
         name = rust_type_name(rid)
         out = [f"impl Export for {name} {{", "    fn export(&self, m: &mut MemMut, at: u32) {", "        let _ = (&m, at);"]
         for f in self.fields(rid):
-            fname = field_name(f["name"])
+            fname = field_name(rid, f["name"])
             off = f["offset_bits"] // 8
             if "bits" in f:
                 out.append(f"        m.put_bits(at, {f['offset_bits']}, {f['bits']}, self.{fname} as u32);")
@@ -597,7 +626,7 @@ class Gen:
         tracked = self.is_tracked(rid)
         out = [f"impl LayOut for {name} {{", "    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {", "        let _ = (&l, at, &cx);"]
         for f in self.fields(rid):
-            fname = field_name(f["name"])
+            fname = field_name(rid, f["name"])
             off = f["offset_bits"] // 8
             at = f"at + {off:#x}"
             ours = f"self.{fname}"
@@ -668,7 +697,7 @@ class Gen:
             n = f["type"]["n"]
             imp.append(f'            {fname}: core::array::from_fn(|i| Var::new(cx.import_handle("{h}", m.u32({at} + 4 * i as u32)).map({h}))),')
             cmp.append(f"        for i in 0..{n} {{")
-            cmp.append(f'            let p = format!("{{path}}.{f["name"]}[{{i}}]");')
+            cmp.append(f'            let p = format!("{{path}}.{label(rid, f["name"])}[{{i}}]");')
             cmp.append(f"            if self.{fname}[i].live(&p, cx) {{")
             cmp.append(f'                cx.compare_handle(&p, "{h}", self.{fname}[i].peek().map(|h| h.0), m.u32({at} + 4 * i as u32));')
             cmp.append("            }")
@@ -698,6 +727,7 @@ def main():
     for root in config.ROOTS:
         g.want(by_name[root])
     g.check_tracked()
+    check_names(g)
     structs = HEADER + [
         "#![allow(non_snake_case, non_camel_case_types, unused_imports, clippy::all)]",
         "",

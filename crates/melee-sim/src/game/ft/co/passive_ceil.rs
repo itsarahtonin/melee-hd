@@ -38,7 +38,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         self.stop_dead(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         let offset = Vec3::new(0.0, fp.coll_data.ecb.top.y, 0.0);
         self.kirby_bump_effect(gobj, offset);
         self.change_motion_state(gobj, ms::PASSIVE_CEIL, 0, 0.0, 1.0, 0.0, None);
@@ -53,7 +53,7 @@ impl Running<'_> {
             &[ef::Arg::Vec(pos)],
         );
         let fp = &mut self.game.fighters[f.0];
-        fp.cur_pos.y = mem(fp::fadds(y, reg(fp.x68C_transNPos.y)));
+        fp.cur_pos.y = mem(fp::fadds(y, reg(fp.trans_n_pos.y)));
         // `ftCo_80090574`.
         self.air_coll_ledges_snap(gobj);
         let sfx = self.character_sfx(gobj, 0x24);

@@ -49,12 +49,12 @@ pub fn grab_fighters(r: &mut Running, gobj: GObjId) {
         let friendly = r.game.vs_friendly_fire();
         let may = (!same_player || ip.xDCD_flag.x0.b5)
             && (!teams || friendly || ip.xDCD_flag.x0.b6 || ip.x20_team_id != fp.team)
-            && !fp.x2219_b1
-            && !fp.x222A_b0
-            && fp.x1988 == 0
-            && fp.x198C == 0
-            && !fp.x221D_b6
-            && fp.x1A6A & u16::from(ip.xD08) == 0;
+            && !fp.out_of_play
+            && !fp.ungrabbable
+            && fp.hit_status == 0
+            && fp.timed_hit_status == 0
+            && !fp.starman
+            && fp.grab_immune & u16::from(ip.xD08) == 0;
         if !may {
             continue;
         }
@@ -78,7 +78,7 @@ pub fn grab_fighters(r: &mut Running, gobj: GObjId) {
                 let mut hit = item(r.game, gobj).x5D4_hitboxes[hi].hit.clone();
                 let scale = item(r.game, gobj).scl;
                 let fp = &mut r.game.fighters[f.0];
-                let (fscale, z) = (fp.x34_scale.y, fp.cur_pos.z);
+                let (fscale, z) = (fp.scale.y, fp.cur_pos.z);
                 let touch = hitcapsule::grabs_hurtbox(
                     &mut r.game.objs,
                     r.data,
@@ -275,7 +275,7 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
             continue;
         }
         let f = game.fighter_id(fg);
-        let x134 = game.fighters[f.0].x1064_thrownHitbox.x134;
+        let x134 = game.fighters[f.0].thrown_hitbox.x134;
         if x134.is_set() && x134.thrower().is_none() {
             code::unported_call("a thrown fighter's hitbox word that isn't a thrower");
         }
@@ -296,7 +296,7 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
         }
         for hi in 0..4 {
             let me = item(r.game, gobj);
-            let h = &r.game.fighters[f.0].x914[hi];
+            let h = &r.game.fighters[f.0].hitboxes[hi];
             if h.state == hitcapsule::DISABLED
                 || h.element == ELEMENT_CATCH
                 || !h.x42_b7
@@ -308,8 +308,8 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
                 continue;
             }
             for n in 0..usize::from(me.xAC8_hurtboxNum) {
-                let mut hit = r.game.fighters[f.0].x914[hi].clone();
-                let hs = r.game.fighters[f.0].x34_scale.y;
+                let mut hit = r.game.fighters[f.0].hitboxes[hi].clone();
+                let hs = r.game.fighters[f.0].scale.y;
                 let ms = item(r.game, gobj).scl;
                 let mut hurt = item(r.game, gobj).xACC_itemHurtbox[n].clone();
                 let touch = hitcapsule::hits_hurtbox(
@@ -324,16 +324,16 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
                     0.0,
                 );
                 item_mut(r.game, gobj).xACC_itemHurtbox[n] = hurt;
-                let h = &mut r.game.fighters[f.0].x914[hi];
+                let h = &mut r.game.fighters[f.0].hitboxes[hi];
                 h.hurt_coll_pos = hit.hurt_coll_pos;
                 h.coll_distance = hit.coll_distance;
                 if !touch {
                     continue;
                 }
-                if r.game.fighters[f.0].x914[hi].element != ELEMENT_INERT {
+                if r.game.fighters[f.0].hitboxes[hi].element != ELEMENT_INERT {
                     fighter_hits_item(r, fg, hi, gobj);
                 } else {
-                    r.game.fighters[f.0].unk_gobj = Some(gobj);
+                    r.game.fighters[f.0].hit_by = Some(gobj);
                 }
                 break;
             }
@@ -363,7 +363,7 @@ pub fn enemy_hit_by_fighter(r: &mut Running, fg: GObjId, me: GObjId) {
     if !is_enemy(r.game, me) {
         return;
     }
-    let id = r.game.fighter(fg).x2070[3];
+    let id = r.game.fighter(fg).attack_flags[3];
     r.record_enemy_hit(fg, id, crate::game::pl::trick::AttackRecord::Fighter(fg));
 }
 
@@ -390,7 +390,7 @@ pub fn enemy_hit_stats(r: &mut Running, fg: GObjId, me: GObjId, dmg: f64) {
         return;
     }
     let fp = r.game.fighter(fg);
-    let kind = i32::from(fp.x2070[3]);
+    let kind = i32::from(fp.attack_flags[3]);
     let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
     r.count_damage(dmg, slot, sub, 6, 0, kind);
 }
@@ -403,7 +403,7 @@ fn fighter_hits_item(r: &mut Running, fg: GObjId, hi: usize, me: GObjId) {
     let f = r.game.fighter_id(fg);
     let me_id = super::item_of(r.game, me);
     r.hit_group(f, hi, 0, Victim::Item(me_id), false);
-    let hit = &r.game.fighters[f.0].x914[hi];
+    let hit = &r.game.fighters[f.0].hitboxes[hi];
     let dmg = fp::fctiwz(reg(hit.damage));
     let (sfx_kind, sfx_severity) = (hit.sfx_kind, hit.sfx_severity);
     r.game.fighters[f.0].dmg.x1914 = dmg;
@@ -446,7 +446,7 @@ fn random_kind_hit_sound(r: &mut Running, me: GObjId, sfx_kind: i32, sfx_severit
 /// The hitbox a damage log entry names: an item's or a fighter's.
 fn logged_hit(game: &Game, e: &DamageLogEntry) -> crate::game::structs::HitCapsule {
     if e.kind == 1 {
-        game.fighter(e.source).x914[e.hit].clone()
+        game.fighter(e.source).hitboxes[e.hit].clone()
     } else {
         item(game, e.source).x5D4_hitboxes[e.hit].hit.clone()
     }
@@ -1206,7 +1206,7 @@ pub fn set_hit_damage(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize
     let owner = item(game, gobj).owner;
     if is_fighter(game, owner) {
         let f = super::owner::fighter_of(game, owner.unwrap());
-        let scale_y = game.fighters[f.0].x34_scale.y;
+        let scale_y = game.fighters[f.0].scale.y;
         if reg(scale_y) != 1.0 {
             // `Fighter_804D6524`'s `x4` scales an item's damage by its owner's height.
             let p = crate::game::ft::common_ptr(game, data, crate::game::ft::SCALE_PARAMS)

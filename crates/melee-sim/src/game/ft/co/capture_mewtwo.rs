@@ -31,16 +31,16 @@ impl Running<'_> {
         self.release_victim(gobj);
         let facing = self.game.fighter(mewtwo).facing_dir;
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A5C = Some(mewtwo);
+        fp.partner = Some(mewtwo);
         fp.victim_gobj = Some(mewtwo);
-        fp.x221B.x221B_b5 = false;
-        fp.x221B.x221B_b7 = false;
+        fp.state_flags.x221B_b5 = false;
+        fp.state_flags.x221B_b7 = false;
         fp.facing_dir = facing;
         self.attach_to_thrower(mewtwo, gobj);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, Some(mewtwo));
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);
-        self.game.fighters[f.0].x1A6A = 0x1FF;
+        self.game.fighters[f.0].grab_immune = 0x1FF;
         self.anim_update(gobj);
         self.stop_dead(gobj);
         self.enter_thrown_mewtwo(gobj, thrown);
@@ -59,11 +59,15 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.facing_dir = facing;
         fp.set_mv_i32(0, 0);
-        let flags = if fp.x2222_b6 { FREEZE_STATE } else { 0 };
+        let flags = if fp.frozen_with_holder {
+            FREEZE_STATE
+        } else {
+            0
+        };
         self.change_motion_state(gobj, msid, flags, 0.0, 1.0, 0.0, Some(thrower));
         let fp = self.game.fighter_mut(gobj);
         fp.accessory1_cb = Some(CodeRef(THROWN_FOLLOW));
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
         self.anim_update(gobj);
     }
 

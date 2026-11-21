@@ -35,7 +35,7 @@ impl Running<'_> {
     /// behind, its effect and sound.
     #[doc(alias = "fn_80112ED8")]
     pub fn seak_special_hi_vanish(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             self.seak_special_hi_spawn_flash(gobj);
             self.seak_special_hi_vanish_gfx(gobj);
             let f = self.game.fighter_id(gobj);
@@ -57,9 +57,9 @@ impl Running<'_> {
     #[doc(alias = "ftSk_SpecialHi_80112FA8")]
     pub fn seak_special_hi_vanish_gfx(&mut self, gobj: GObjId) {
         let pos = self.teleport_part_pos(gobj, PART_HIP_N);
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             spawn(self, GFX_VANISH, Some(gobj), &[Arg::Vec(pos)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
     }

@@ -529,7 +529,7 @@ impl Running<'_> {
         let n = self.game.player_code_state.sdi_count(f.0 as usize);
         *n = n.wrapping_add(1);
         let n = *n;
-        let o = &mut self.game.fighters[f.0].x488;
+        let o = &mut self.game.fighters[f.0].secondary_overlay;
         let (r, g, b) = match n {
             1 => (255.0, 255.0, 0.0),
             2 => (0.0, 0.0, 255.0),
@@ -560,7 +560,7 @@ impl Running<'_> {
         if fp.motion_id != 0xD6 && fp.motion_id != 0xD7 {
             return;
         }
-        let o = &mut fp.x488;
+        let o = &mut fp.secondary_overlay;
         o.x30_color_red = 255.0;
         o.x3C_color_alpha = 255.0;
         o.x34_color_green = 0.0;

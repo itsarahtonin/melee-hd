@@ -34,13 +34,15 @@ impl Running<'_> {
         self.game.clear_velocities(f);
         self.key_off_all(f);
         let fp = &mut self.game.fighters[f.0];
-        fp.x2068_attackID = 1;
-        fp.x206C_attack_instance = 0;
+        fp.attack_id = 1;
+        fp.attack_instance = 0;
         clear_hit_records(fp);
         self.init_coll(gobj);
         self.init_x1930(f);
         let fp = &self.game.fighters[f.0];
-        if fp.smash_attrs.x2135 == -1 && self.land_on_spawn(f) && !self.game.fighters[f.0].x2229_b6
+        if fp.smash_attrs.x2135 == -1
+            && self.land_on_spawn(f)
+            && !self.game.fighters[f.0].spawn_in_air
         {
             self.touch_ground(gobj);
         } else {
@@ -52,8 +54,8 @@ impl Running<'_> {
         self.depth_scale_matrix(gobj);
         self.update_model_scale(gobj);
         let fp = &mut self.game.fighters[f.0];
-        crate::lb::colanim::clear(&mut fp.x488);
-        crate::lb::colanim::clear(&mut fp.x408);
+        crate::lb::colanim::clear(&mut fp.secondary_overlay);
+        crate::lb::colanim::clear(&mut fp.main_overlay);
         self.init_metal(gobj);
         self.init_clear(gobj);
         self.init_x2034(gobj);
@@ -66,9 +68,9 @@ impl Running<'_> {
             self.game.player_cpu_level(slot),
         );
         self.init_cpu(f, kind, level, 0);
-        let mut head = self.game.fighters[f.0].x60C;
+        let mut head = self.game.fighters[f.0].effect_queue;
         crate::game::ef::queue_clear(self.game, &mut head);
-        self.game.fighters[f.0].x60C = head;
+        self.game.fighters[f.0].effect_queue = head;
         self.init_thrown_hitbox(gobj);
         self.init_stamina_markers(f);
     }
@@ -84,54 +86,54 @@ impl Running<'_> {
         let damage = self.game.player_damage(slot);
         let shield = self.common().f32(0x260);
         let fp = &mut self.game.fighters[f.0];
-        fp.x8_spawnNum = spawn as i32;
+        fp.spawn_num = spawn as i32;
         fp.facing_dir = facing;
         // `ftCommon_800804EC`: `x40` in the model's scale.
-        let offset = fp::fmuls(reg(fp.x40), reg(fp.x34_scale.x));
+        let offset = fp::fmuls(reg(fp.platform_offset), reg(fp.scale.x));
         let x = mem(fp::fmadds(reg(fp.facing_dir), offset, reg(coords.x)));
         fp.cur_pos = Vec3::new(x, coords.y, coords.z);
         fp.prev_pos = fp.cur_pos;
         fp.facing_dir1 = fp.facing_dir;
-        fp.x34_scale.y = fp.x34_scale.x;
-        fp.x2220_b5 = false;
-        fp.x2220_b6 = false;
-        fp.x200C = 0;
-        fp.x2010 = 0;
-        fp.x2008 = 0;
-        fp.x2219_b1 = false;
-        fp.x2219_b2 = false;
-        fp.x2219_b3 = false;
-        fp.x2219_b4 = false;
-        fp.x221A_b5 = false;
-        fp.x221A_b6 = false;
-        fp.x221D_b2 = false;
-        fp.x221E_b7 = false;
-        fp.x2220_b7 = false;
-        fp.x2221_b4 = false;
-        fp.x2221_b5 = false;
-        fp.x2221_b6 = true;
-        fp.x2221_b7 = false;
-        fp.x61D = 255;
+        fp.scale.y = fp.scale.x;
+        fp.giant = false;
+        fp.tiny = false;
+        fp.queued_grows = 0;
+        fp.queued_shrinks = 0;
+        fp.mushroom_frames = 0;
+        fp.out_of_play = false;
+        fp.blast_immune_state = false;
+        fp.hitboxes_set = false;
+        fp.hammer_hits_held = false;
+        fp.hurtboxes_set = false;
+        fp.hurtboxes_custom = false;
+        fp.variants_hidden = false;
+        fp.costume_anim_set = false;
+        fp.camera_placed = false;
+        fp.parasol_open = false;
+        fp.parasol_checked = false;
+        fp.parasol_blend = true;
+        fp.parasol_from_jump = false;
+        fp.alpha = 255;
         fp.pos_delta.z = 0.0;
         fp.pos_delta.y = 0.0;
         fp.pos_delta.x = 0.0;
         fp.cur_anim_frame = 0.0;
-        fp.x898_unk = 0.0;
+        fp.cmd_frame_offset = 0.0;
         fp.frame_speed_mul = 1.0;
-        fp.x8A0_unk = 1.0;
+        fp.freeze_rate_step = 1.0;
         fp.dmg.kb_applied = 0.0;
         fp.dmg.x18A4_knockbackMagnitude = 0.0;
         fp.dmg.x18A8 = 0.0;
         fp.dmg.x18ac_time_since_hit = -1;
         fp.dmg.armor0 = 0.0;
         fp.dmg.armor1 = 0.0;
-        fp.x1828 = 0;
-        fp.x221C_b6 = false;
+        fp.hit_reaction = 0;
+        fp.in_hitstun = false;
         fp.dmg.x18a0 = 0.0;
-        fp.x1968_jumpsUsed = 0;
-        fp.x1969_walljumpUsed = 0;
+        fp.jumps_used = 0;
+        fp.walljumps_used = 0;
         fp.hitlag_mul = 0.0;
-        fp.x2064_ledgeCooldown = 0;
+        fp.ledge_cooldown = 0;
         fp.dmg.x1838_percentTemp = 0.0;
         fp.dmg.x183C_applied = 0;
         fp.dmg.x18C0 = 0;
@@ -140,172 +142,172 @@ impl Running<'_> {
         fp.dmg.x18F0 = 0;
         fp.dmg.x18CC = 0;
         fp.dmg.x18D0 = -10;
-        fp.x221F_b5 = false;
-        fp.x2221_b1 = false;
+        fp.last_hit_by_sub = false;
+        fp.damage_col_anim = false;
         fp.dmg.x18F4 = 0;
         fp.dmg.x18F8 = 1;
         fp.dmg.x18fa_model_shift_frames = 0;
         fp.dmg.x18FD = 0;
         fp.dmg.x18FC = 0;
         fp.dmg.x1834 = 0.0;
-        fp.x2222_b2 = false;
+        fp.no_turn = false;
         fp.dmg.x1840 = 0;
-        fp.x2219_b5 = false;
-        fp.x2219_b6 = false;
-        fp.x2219_b7 = false;
-        fp.x221A_b0 = false;
-        fp.x221A_b1 = false;
+        fp.in_hitlag = false;
+        fp.was_in_hitlag = false;
+        fp.hitlag_held = false;
+        fp.pending_hitlag = false;
+        fp.thaw_size = false;
         fp.dmg.x1954 = 0.0;
         fp.dmg.x1958 = 0.0;
         fp.allow_sdi = false;
         fp.dmg.x195c_hitlag_frames = 0.0;
-        fp.x221A_b3 = false;
-        fp.x1960_vibrateMult = 1.0;
-        fp.x1964 = 0.0;
+        fp.in_hitstun_sdi = false;
+        fp.hitlag_vibrate_mul = 1.0;
+        fp.min_hitlag = 0.0;
         fp.dmg.x189C_unk_num_frames = 0.0;
-        fp.x2220_b3 = false;
-        fp.x2220_b4 = false;
+        fp.buried = false;
+        fp.turn_spin = false;
         fp.dmg.x1914 = 0;
         fp.dmg.int_value = 0;
         fp.dmg.x191C = 0.0;
         fp.dmg.x1924 = 0;
         fp.dmg.x1928 = 0.0;
-        fp.x2223_b5 = false;
+        fp.stepped_on_item = false;
         fp.dmg.x1950 = 0;
         fp.dmg.x1948 = 0;
-        fp.x2223_b4 = false;
-        fp.xF8_playerNudgeVel.y = 0.0;
-        fp.xF8_playerNudgeVel.x = 0.0;
-        fp.x2222_b7 = false;
-        fp.x2223_b0 = false;
+        fp.no_item_bounce = false;
+        fp.nudge_vel.y = 0.0;
+        fp.nudge_vel.x = 0.0;
+        fp.follows_holder = false;
+        fp.anim_frozen = false;
         fp.fall_fast = false;
-        fp.x2219_b0 = false;
-        fp.x20A0_accessory = None;
+        fp.effect_once = false;
+        fp.accessory = None;
         fp.cmd_timer = 0.0;
         fp.item_gobj = None;
-        fp.x1978 = None;
-        fp.x221E_b3 = true;
-        fp.x1984_heldItemSpec = None;
-        fp.x1988 = 0;
-        fp.x198C = 0;
-        fp.x2221_b0 = false;
-        fp.x1990 = 0;
-        fp.x1994 = 0;
-        fp.x221D_b6 = false;
-        fp.x221B.x221B_b5 = false;
+        fp.second_item = None;
+        fp.item_visible = true;
+        fp.special_item = None;
+        fp.hit_status = 0;
+        fp.timed_hit_status = 0;
+        fp.warp_star_intangible = false;
+        fp.intangible_frames = 0;
+        fp.invincible_frames = 0;
+        fp.starman = false;
+        fp.state_flags.x221B_b5 = false;
         fp.victim_gobj = None;
-        fp.x1A5C = None;
-        fp.x221B.x221B_b6 = false;
+        fp.partner = None;
+        fp.state_flags.x221B_b6 = false;
         fp.target_item_gobj = None;
-        fp.x1A64 = Default::default();
-        fp.x221B.x221B_b7 = false;
-        fp.x221C_b0 = false;
-        fp.x221C_u16_y = 0;
-        fp.unk_gobj = None;
-        fp.x221C_b5 = false;
-        fp.x2168 = 0;
-        fp.x2164 = 0;
-        fp.x208C = 0;
-        fp.x2090 = 0;
-        fp.x2098 = 0;
-        fp.x2092 = 0;
-        fp.x2094 = None;
-        fp.x221A_b7 = false;
-        fp.x221B.x221B_b0 = false;
-        fp.x221B.x221B_b1 = false;
-        fp.x221B.x221B_b3 = false;
-        fp.x221B.x221B_b4 = false;
-        fp.x221C_b3 = false;
-        fp.x221C_b1 = false;
-        fp.x221C_b2 = false;
-        fp.x19A0_shieldDamageTaken = 0;
-        fp.x19A4 = 0;
+        fp.caught_item = Default::default();
+        fp.state_flags.x221B_b7 = false;
+        fp.held_hit_light = false;
+        fp.leg_reach = 0;
+        fp.hit_by = None;
+        fp.hit_this_frame = false;
+        fp.hammer_music = 0;
+        fp.star_cheer = 0;
+        fp.combo_attack_id = 0;
+        fp.combo_count = 0;
+        fp.combo_window = 0;
+        fp.combo_push_frames = 0;
+        fp.combo_victim = None;
+        fp.shield_was_hit = false;
+        fp.state_flags.x221B_b0 = false;
+        fp.state_flags.x221B_b1 = false;
+        fp.state_flags.x221B_b3 = false;
+        fp.state_flags.x221B_b4 = false;
+        fp.powershield_early = false;
+        fp.powershield_late = false;
+        fp.powershield = false;
+        fp.shield_damage_taken = 0;
+        fp.shield_hit_damage = 0;
         fp.lightshield_amount = 0.0;
-        fp.x19A8 = None;
-        fp.shield_unk0 = 0.0;
-        fp.shield_unk1 = 0.0;
-        fp.x19BC_shieldDamageTaken3 = 6;
-        fp.x221F_b6 = false;
+        fp.shield_hit_by = None;
+        fp.counter_min_hitlag = 0.0;
+        fp.counter_item_min_hitlag = 0.0;
+        fp.shield_hit_slot = 6;
+        fp.shield_hit_by_sub = false;
         fp.reflecting = false;
-        fp.x2218_b4 = false;
-        fp.ReflectAttr.x1A3C_damageOver = 0;
-        fp.ReflectAttr.x1A2C_reflectHitDirection = 0.0;
-        fp.x2218_b6 = false;
-        fp.x2218_b7 = false;
-        fp.AbsorbAttr.x1A40_absorbHitDirection = 0.0;
-        fp.AbsorbAttr.x1A44_damageTaken = 0;
-        fp.AbsorbAttr.x1A48_hitsTaken = 0;
+        fp.reflect_kept = false;
+        fp.reflect.x1A3C_damageOver = 0;
+        fp.reflect.x1A2C_reflectHitDirection = 0.0;
+        fp.absorbing = false;
+        fp.absorb_any = false;
+        fp.absorb.x1A40_absorbHitDirection = 0.0;
+        fp.absorb.x1A44_damageTaken = 0;
+        fp.absorb.x1A48_hitsTaken = 0;
         fp.lstick_angle = 0.0;
-        fp.x209C = 0;
-        fp.x2224_b1 = false;
+        fp.air_grab_timer = 0;
+        fp.air_item_caught = false;
         fp.death2_cb = None;
-        fp.x2100 = -1;
-        fp.x2101_bits_0to6 = 0;
+        fp.afterimage_mode = -1;
+        fp.afterimage_slot = 0;
         fp.accessory2_cb = None;
         fp.accessory3_cb = None;
         fp.death1_cb = None;
         fp.death3_cb = None;
-        fp.x221E_b4 = true;
-        fp.x197C = None;
+        fp.articles_visible = true;
+        fp.bunny_hood = None;
         fp.is_metal = false;
         fp.metal_timer = 0;
         fp.metal_health = 0;
-        fp.x2227_b3 = false;
-        fp.x2034 = 0;
-        fp.x2038 = 0;
-        fp.x1980 = None;
-        fp.x2224_b4 = false;
+        fp.alt_metal = false;
+        fp.alt_metal_timer = 0;
+        fp.alt_metal_health = 0;
+        fp.flower = None;
+        fp.wind_immune = false;
         fp.capture_timer = 0;
-        fp.x2224_b5 = false;
-        fp.x1A53 = 0;
-        fp.x1A52 = 0;
+        fp.mash_shaking = false;
+        fp.mash_shake_rows = 0;
+        fp.mash_shake_row = 0;
         fp.wall_jump_input_timer = 254;
         fp.dmg.x1910 = 0;
-        fp.x2225_b0 = false;
-        fp.x2225_b2 = true;
-        fp.x2225_b4 = false;
+        fp.map_coll_done = false;
+        fp.hat_hidden = true;
+        fp.hits_others_team = false;
         fp.dmg.x18BC = 0.0;
         fp.dmg.x18B8 = 0.0;
-        fp.x2226_b2 = false;
-        fp.x2170 = 0.0;
+        fp.held_in_model = false;
+        fp.hold_dy = 0.0;
         fp.dmg.x1908 = -1;
         fp.dmg.x190C = None;
-        fp.x2227_b4 = false;
-        fp.x213C = -1;
-        fp.x2227_b5 = false;
-        fp.x2228_b1 = false;
-        fp.x2140 = 0.0;
-        fp.x2227_b6 = false;
-        fp.x2180 = 6;
-        fp.x2229_b4 = true;
+        fp.tumble_early = false;
+        fp.ledge_caught = -1;
+        fp.special_air_used = false;
+        fp.flat_floor_chains = false;
+        fp.lowest_y = 0.0;
+        fp.held_in_ice = false;
+        fp.dead_holder_slot = 6;
+        fp.coin_odd_frame = true;
         fp.dmg.x1830_percent = mem(fp::frsp(f64::from(damage)));
-        fp.x100 = -1.0;
-        fp.x2210 = [0; 4];
-        fp.x1064_thrownHitbox.x134 = Default::default();
-        fp.x2150 = -1;
-        fp.x2154 = -1;
-        fp.x2158 = -1;
-        fp.x215C = -1;
-        fp.x2160 = -1;
-        fp.x2144 = -1;
-        fp.x2148 = -1;
-        fp.x214C = -1;
+        fp.part_35_rot_x = -1.0;
+        fp.throw_flags = [0; 4];
+        fp.thrown_hitbox.x134 = Default::default();
+        fp.sound_handle_4 = -1;
+        fp.sound_handle_5 = -1;
+        fp.sound_handle_6 = -1;
+        fp.track_handle = -1;
+        fp.sfx_handle = -1;
+        fp.voice_handle = -1;
+        fp.sound_handle_2 = -1;
+        fp.sound_handle_3 = -1;
         fp.shield_health = shield;
-        fp.x68C_transNPos = Vec3::new(0.0, 0.0, 0.0);
-        fp.x6A4_transNOffset = Vec3::new(0.0, 0.0, 0.0);
-        fp.x6C0 = Vec3::new(0.0, 0.0, 0.0);
-        fp.x6D8 = Vec3::new(0.0, 0.0, 0.0);
+        fp.trans_n_pos = Vec3::new(0.0, 0.0, 0.0);
+        fp.trans_n_offset = Vec3::new(0.0, 0.0, 0.0);
+        fp.part_35_pos = Vec3::new(0.0, 0.0, 0.0);
+        fp.part_35_offset = Vec3::new(0.0, 0.0, 0.0);
         // `ftCo_800C88A0`.
-        fp.x2226_b4 = false;
-        fp.x2226_b5 = false;
+        fp.cloak = false;
+        fp.refracted = false;
         fp.smash_attrs.x2134_vibrateFrame = 0;
-        fp.x2030 = 0;
-        fp.x2226_b7 = false;
+        fp.cloak_frames = 0;
+        fp.cloak_look = false;
         fp.stamina_dead = false;
-        fp.x2224_b3 = false;
+        fp.stamina_out = false;
         // `ftCo_800DEEA8`: no smash attack charging.
         fp.smash_attrs.state = 0;
-        fp.x2225_b6 = fp.x2225_b5;
+        fp.voice_muted = fp.rules_voice_muted;
         fp.smash_attrs.x2138_smashSinceHitbox = -1.0;
     }
 
@@ -314,21 +316,23 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800D0CBC")]
     pub fn scale_multi_jumps(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
-        let attrs = fp.x2D0.expect("multi-jumps without their attributes");
+        let attrs = fp
+            .multi_jump_attrs
+            .expect("multi-jumps without their attributes");
         let word = |s: &Self, off: usize| {
             let b = &s.game.fighter_attrs[attrs.0][off..off + 4];
             u32::from_be_bytes([b[0], b[1], b[2], b[3]])
         };
         let count = word(self, 0x28) as i32;
         let mut scale = 1.0;
-        let scale_y = reg(fp.x34_scale.y);
+        let scale_y = reg(fp.scale.y);
         if scale != scale_y {
             let p = super::common_ptr(self.game, self.data, super::SCALE_PARAMS)
                 .expect("no fighter scale parameters");
             let k = reg(self.data.f32(p.at(0x28)));
             scale = fp::fmuls(scale, super::super::it::owner::y_scaled(1.0, scale_y, k));
         }
-        if fp.x197C.is_some() {
+        if fp.bunny_hood.is_some() {
             let t = super::common_ptr(self.game, self.data, super::powerup::BUNNY_PARAMS)
                 .expect("no Bunny Hood parameters");
             scale = fp::fmuls(scale, reg(self.data.f32(t.at(0x14))));
@@ -353,10 +357,10 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         self.copy_attributes(f);
         let fp = &self.game.fighters[f.0];
-        if reg(fp.x34_scale.y) != 1.0 {
+        if reg(fp.scale.y) != 1.0 {
             self.scale_attributes(f);
         }
-        if self.game.fighters[f.0].x197C.is_some() {
+        if self.game.fighters[f.0].bunny_hood.is_some() {
             let data = self.data;
             let t = super::common_ptr(self.game, data, super::powerup::BUNNY_PARAMS)
                 .expect("no Bunny Hood parameters");
@@ -420,7 +424,7 @@ impl Running<'_> {
             mul(&mut a.ledge_jump_vertical_velocity, k1c);
             mul(&mut a.wall_jump_vertical_velocity, k20);
         }
-        if self.game.fighters[f.0].x2229_b1 {
+        if self.game.fighters[f.0].attrs_scaled {
             let t = self.load_common(0x3C);
             let (g, w) = (reg(self.data.f32(t)), reg(self.data.f32(t.at(4))));
             let a = &mut self.game.fighters[f.0].co_attrs;
@@ -428,10 +432,10 @@ impl Running<'_> {
             a.weight = mem(fp::fmuls(reg(a.weight), w));
         }
         self.load_special_attrs(gobj);
-        if self.game.fighters[f.0].x2D0.is_some() {
+        if self.game.fighters[f.0].multi_jump_attrs.is_some() {
             self.scale_multi_jumps(f);
         }
-        if self.game.fighters[f.0].x2222_b0 {
+        if self.game.fighters[f.0].has_cargo {
             self.dk_scale_cargo_walk_rates(f);
         }
     }
@@ -477,24 +481,24 @@ impl Running<'_> {
             }
             let fp = &mut self.game.fighters[f.0];
             match field {
-                0x214C => fp.x214C = -1,
-                0x2144 => fp.x2144 = -1,
-                0x2148 => fp.x2148 = -1,
-                0x2150 => fp.x2150 = -1,
-                0x2154 => fp.x2154 = -1,
-                0x2158 => fp.x2158 = -1,
-                _ => fp.x215C = -1,
+                0x214C => fp.sound_handle_3 = -1,
+                0x2144 => fp.voice_handle = -1,
+                0x2148 => fp.sound_handle_2 = -1,
+                0x2150 => fp.sound_handle_4 = -1,
+                0x2154 => fp.sound_handle_5 = -1,
+                0x2158 => fp.sound_handle_6 = -1,
+                _ => fp.track_handle = -1,
             }
         }
         let fp = &mut self.game.fighters[f.0];
-        fp.x2160 = -1;
-        let (a, b) = (fp.x2164, fp.x2168);
+        fp.sfx_handle = -1;
+        let (a, b) = (fp.star_cheer, fp.hammer_music);
         self.lb_audio_crowd_a_less(a);
-        self.game.fighters[f.0].x2164 = 0;
+        self.game.fighters[f.0].star_cheer = 0;
         self.lb_audio_crowd_b_less(b);
         let fp = &mut self.game.fighters[f.0];
-        fp.x2168 = 0;
-        fp.x2164 = 0;
+        fp.hammer_music = 0;
+        fp.star_cheer = 0;
     }
 
     /// The fighter's collision data, its ECB fitted around its bones and its ledge snap in
@@ -514,7 +518,7 @@ impl Running<'_> {
         };
         let joints = [joint(0), joint(1), joint(2), joint(3), joint(4), joint(5)];
         let root = self.game.fighter_parts[parts][0].joint;
-        let scale = reg(fp.x34_scale.y);
+        let scale = reg(fp.scale.y);
         let x124 = mem(fp::fmuls(reg(self.data.f32(x44.at(0xC))), scale));
         let snap = |o: u32| mem(fp::fmuls(reg(self.data.f32(x44.at(o))), scale));
         let (sx, sy, sh) = (snap(0x10), snap(0x14), snap(0x18));
@@ -639,12 +643,12 @@ impl Running<'_> {
     #[doc(alias = "ftCamera_80076064")]
     pub(crate) fn init_camera_box(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
-        let b = fp.x890_cameraBox.expect("a fighter without a camera box");
+        let b = fp.camera_box.expect("a fighter without a camera box");
         let x3c = self
             .data
             .ptr(fp.ft_data.expect("a fighter without data").at(0x3C))
             .expect("ftData::x3C");
-        let s = reg(fp.x34_scale.y);
+        let s = reg(fp.scale.y);
         let v = |o: u32| mem(fp::fmuls(reg(self.data.f32(x3c.at(o))), s));
         let (x0, y0, z0) = (v(0), v(4), v(8));
         let (xc, yc, zc) = (v(0xC), v(0x10), v(0x14));
@@ -678,8 +682,8 @@ impl Running<'_> {
         let root = self.root_jobj(gobj);
         let fp = self.game.fighter(gobj);
         let model = mem(Running::model_scale(fp));
-        let x = if reg(fp.x34_scale.z) != 1.0 {
-            fp.x34_scale.z
+        let x = if reg(fp.scale.z) != 1.0 {
+            fp.scale.z
         } else {
             model
         };
@@ -697,7 +701,7 @@ impl Running<'_> {
             let f = self.game.fighter_id(gobj);
             self.shine_parts_metal(f);
             self.calc_attributes(gobj);
-            let scale = self.game.fighters[f.0].x34_scale.y;
+            let scale = self.game.fighters[f.0].scale.y;
             self.scale_ledge_snap(gobj, scale);
         }
     }
@@ -708,8 +712,8 @@ impl Running<'_> {
     fn init_clear(&mut self, gobj: GObjId) {
         self.clear_cloak(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2226_b4 = fp.x2226_b3;
-        if fp.x2226_b4 {
+        fp.cloak = fp.takes_damage_cloaked;
+        if fp.cloak {
             self.start_cloak_look(gobj);
         }
         self.reset_cloak_overlay(gobj);
@@ -738,7 +742,7 @@ impl Running<'_> {
         let scale = copy(self.data.f32(x34.at(4)));
         let joint = self.bone(f, bone).joint;
         let fp = &mut self.game.fighters[f.0];
-        let h = &mut fp.x1064_thrownHitbox;
+        let h = &mut fp.thrown_hitbox;
         h.x4 = 0;
         h.state = 1;
         // `lbColl_80008440`.
@@ -755,7 +759,7 @@ impl Running<'_> {
         h.b_offset = Vec3::new(0.0, 0.0, 0.0);
         h.x43_b1 = false;
         h.x43_b2 = false;
-        fp.x2227_b2 = false;
+        fp.thrown_hitbox_live = false;
         self.thrown_hitbox_follow(gobj);
     }
 
@@ -780,7 +784,7 @@ impl Running<'_> {
                 joint,
                 Some(offset),
             );
-            let p = &mut self.game.fighters[f.0].x1614[i as usize];
+            let p = &mut self.game.fighters[f.0].stamina_markers[i as usize];
             p.x4 = joint;
             p.x0 = x0;
             p.x8 = Vec3::new(v.x, v.y, 0.0);
@@ -811,10 +815,10 @@ impl Running<'_> {
         self.change_motion_state(gobj, MS_ENTRY, 0, 0.0, 1.0, 0.0, None);
         let fp = &mut self.game.fighters[f.0];
         fp.invisible = true;
-        fp.x2219_b1 = true;
-        fp.x221E_b1 = true;
-        fp.x221E_b2 = true;
-        fp.x221F_b1 = true;
+        fp.out_of_play = true;
+        fp.dead_flag = true;
+        fp.entering = true;
+        fp.dead = true;
         // `ft_80084CB0`: the ECB's box now.
         let e = &fp.coll_data.ecb;
         let b = ftCollisionBox {
@@ -854,8 +858,8 @@ fn set_mv_box(fp: &mut Fighter, off: usize, b: &ftCollisionBox) {
 #[doc(alias = "ft_800892D4")]
 fn clear_hit_records(fp: &mut Fighter) {
     fp.dmg.x18d4 = [0; 4];
-    fp.x2070 = fp.dmg.x18d4;
-    let r = &mut fp.x2074;
+    fp.attack_flags = fp.dmg.x18d4;
+    let r = &mut fp.attack_record;
     r.x2074_vec.x = 0;
     r.x2074_vec.y = 0;
     r.x207C.x = 0.0;
@@ -890,15 +894,15 @@ impl super::super::state::Game {
     #[doc(alias = "ftCommon_8007E2FC")]
     pub fn clear_velocities(&mut self, f: FighterId) {
         let fp = &mut self.fighters[f.0];
-        fp.xE4_ground_accel_1 = 0.0;
-        fp.xE8_ground_accel_2 = 0.0;
-        fp.x74_self_accel = Vec3::new(0.0, 0.0, 0.0);
+        fp.ground_accel_1 = 0.0;
+        fp.ground_accel_2 = 0.0;
+        fp.anim_vel = Vec3::new(0.0, 0.0, 0.0);
         fp.gr_vel = 0.0;
         fp.self_vel = Vec3::new(0.0, 0.0, 0.0);
-        fp.xF0_ground_kb_vel = 0.0;
-        fp.x8c_kb_vel = Vec3::new(0.0, 0.0, 0.0);
-        fp.xF4_ground_attacker_shield_kb_vel = 0.0;
-        fp.x98_atk_shield_kb = Vec3::new(0.0, 0.0, 0.0);
-        fp.xD4_unk_vel = Vec3::new(0.0, 0.0, 0.0);
+        fp.ground_kb_vel = 0.0;
+        fp.kb_vel = Vec3::new(0.0, 0.0, 0.0);
+        fp.ground_attacker_shield_kb_vel = 0.0;
+        fp.atk_shield_kb_vel = Vec3::new(0.0, 0.0, 0.0);
+        fp.frame_vel = Vec3::new(0.0, 0.0, 0.0);
     }
 }

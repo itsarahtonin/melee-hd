@@ -81,9 +81,9 @@ impl Running<'_> {
     /// The bubble's effect on the hand, once (`x2219_b0`), and the effects paused in hitlag.
     fn ness_special_lw_bubble_gfx(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if !self.game.fighters[f.0].x2219_b0 {
+        if !self.game.fighters[f.0].effect_once {
             let j = self.bone_joint(gobj, PART_L1ST_NB);
-            let mut head = self.game.fighters[f.0].x60C;
+            let mut head = self.game.fighters[f.0].effect_queue;
             ef::queue(
                 self,
                 Some(gobj),
@@ -94,8 +94,8 @@ impl Running<'_> {
                 &[],
             );
             let fp = &mut self.game.fighters[f.0];
-            fp.x60C = head;
-            fp.x2219_b0 = true;
+            fp.effect_queue = head;
+            fp.effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
     }
@@ -338,7 +338,7 @@ impl Running<'_> {
         let heal_mul = reg(self.ness_absorb_heal(gobj));
         let unk2 = self.ness_attr_f32(f, attr::PSI_MAGNET_UNK2);
         let fp = &mut self.game.fighters[f.0];
-        let taken = fp::frsp(f64::from(fp.AbsorbAttr.x1A44_damageTaken));
+        let taken = fp::frsp(f64::from(fp.absorb.x1A44_damageTaken));
         let mut heal = fp::frsp(f64::from(fp::fctiwz(fp::fmuls(taken, heal_mul))));
         fp.dmg.x1830_percent = mem(fp::fsubs(reg(fp.dmg.x1830_percent), heal));
         let cur = reg(fp.dmg.x1830_percent);
@@ -351,7 +351,7 @@ impl Running<'_> {
         self.game.set_player_damage_at(slot, sub, percent);
         self.game.add_healed(slot, sub, fp::fctiwz(heal));
         let fp = &mut self.game.fighters[f.0];
-        fp.facing_dir = fp.AbsorbAttr.x1A40_absorbHitDirection;
+        fp.facing_dir = fp.absorb.x1A40_absorbHitDirection;
         let id = fp.motion_id;
         if (id != ms::SPECIAL_LW_HIT && id != ms::SPECIAL_AIR_LW_HIT)
             || !(fp.cur_anim_frame <= unk2)

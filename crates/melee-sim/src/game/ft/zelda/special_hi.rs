@@ -178,7 +178,7 @@ impl Running<'_> {
     /// the hip's position is taken first (and not used).
     #[doc(alias = "ftZd_SpecialHi_801396E0")]
     pub fn zelda_special_hi_start_gfx(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let _ = self.teleport_part_pos(gobj, PART_HIP_N);
             let gfx = if self.game.fighter(gobj).ground_or_air == GA_GROUND {
                 GFX_START_GROUND
@@ -187,7 +187,7 @@ impl Running<'_> {
             };
             let j = self.bone_joint(gobj, PART_TOP_N);
             spawn(self, gfx, Some(gobj), &[Arg::JObj(j)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
     }
@@ -202,7 +202,7 @@ impl Running<'_> {
         let first = t
             .appear_pos_first
             .then(|| self.teleport_part_pos(gobj, t.appear_part));
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let pos = match first {
                 Some(p) => p,
                 None => self.teleport_part_pos(gobj, t.appear_part),
@@ -210,7 +210,7 @@ impl Running<'_> {
             if let Some(gfx) = t.appear_gfx {
                 spawn(self, gfx, Some(gobj), &[Arg::Vec(pos)]);
             }
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;
@@ -551,7 +551,7 @@ impl Running<'_> {
             None,
         );
         let fp = &mut self.game.fighters[f.0];
-        fp.x2223_b4 = true;
+        fp.no_item_bounce = true;
         fp.invisible = true;
     }
 
@@ -592,8 +592,8 @@ impl Running<'_> {
         let frames = self.char_attr_word(f, t.attrs + DURATION) as i32;
         let fp = &mut self.game.fighters[f.0];
         fp.set_mv_i32(mv::FRAMES, frames);
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
-        fp.x2223_b4 = true;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
+        fp.no_item_bounce = true;
         self.set_hit_status(gobj, 2);
         let fp = &mut self.game.fighters[f.0];
         fp.invisible = true;

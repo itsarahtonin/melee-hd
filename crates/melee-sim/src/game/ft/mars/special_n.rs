@@ -145,7 +145,7 @@ impl Running<'_> {
     #[doc(alias = "ftMs_SpecialN_8013666C")]
     #[doc(alias = "fn_8010B1F4")]
     pub(crate) fn mars_special_n_flash(&mut self, gobj: GObjId, p: &ShieldBreaker, air: bool) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let row = match FighterKind::from_id(self.special_kind(gobj, p.kind)) {
                 Some(FighterKind::Mars) => Some(0),
                 Some(FighterKind::Emblem) => Some(1),
@@ -166,7 +166,7 @@ impl Running<'_> {
                     &[Arg::JObj(j)],
                 );
             }
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;
@@ -189,7 +189,7 @@ impl Running<'_> {
     pub fn mars_special_n_enter(&mut self, gobj: GObjId, p: &ShieldBreaker) {
         let friction = reg(self.mars_n_attr_f32(gobj, p, attr::SPECIALN_FRICTION));
         let fp = self.game.fighter_mut(gobj);
-        fp.x21EC = Some(CodeRef(p.reset));
+        fp.motion_change_cb = Some(CodeRef(p.reset));
         fp.gr_vel = mem(fp::fdivs(reg(fp.gr_vel), friction));
         let msid = self.mars_n_state(gobj, p, ms::SPECIAL_N_START);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
@@ -206,7 +206,7 @@ impl Running<'_> {
     pub fn mars_special_air_n_enter(&mut self, gobj: GObjId, p: &ShieldBreaker) {
         let friction = reg(self.mars_n_attr_f32(gobj, p, attr::SPECIALN_FRICTION));
         let fp = self.game.fighter_mut(gobj);
-        fp.x21EC = Some(CodeRef(p.reset));
+        fp.motion_change_cb = Some(CodeRef(p.reset));
         fp.self_vel.x = mem(fp::fdivs(reg(fp.self_vel.x), friction));
         if fp.self_vel.y <= 0.0 {
             fp.self_vel.y = 0.0;
@@ -420,7 +420,7 @@ impl Running<'_> {
             let x4 = self.mars_n_attr_i32(gobj, p, attr::X4);
             let x8 = self.mars_n_attr_i32(gobj, p, attr::X8);
             for i in 0..4 {
-                if self.game.fighters[f.0].x914[i].state == hitcapsule::ENABLED {
+                if self.game.fighters[f.0].hitboxes[i].state == hitcapsule::ENABLED {
                     let n = self.game.fighters[f.0].mv_i32(mv::N_CUR_FRAME);
                     let d = x4.wrapping_add((n / 30).wrapping_mul(x8));
                     let d = crate::ppc::cvt_fp2unsigned(fp::frsp(f64::from(d)));
@@ -480,7 +480,7 @@ impl Running<'_> {
     pub fn mars_special_n_end_ground_to_air(&mut self, gobj: GObjId, p: &ShieldBreaker) {
         let msid = self.mars_swing_state(gobj, p, true);
         self.fox_ground_to_air(gobj, msid, END_FLAGS | p.keep);
-        if self.game.fighter(gobj).x2219_b0 {
+        if self.game.fighter(gobj).effect_once {
             self.set_effect_hitlag_cbs(gobj);
         }
     }
@@ -491,7 +491,7 @@ impl Running<'_> {
     pub fn mars_special_n_end_air_to_ground(&mut self, gobj: GObjId, p: &ShieldBreaker) {
         let msid = self.mars_swing_state(gobj, p, false);
         self.fox_air_to_ground(gobj, msid, END_FLAGS | p.keep);
-        if self.game.fighter(gobj).x2219_b0 {
+        if self.game.fighter(gobj).effect_once {
             self.set_effect_hitlag_cbs(gobj);
         }
     }

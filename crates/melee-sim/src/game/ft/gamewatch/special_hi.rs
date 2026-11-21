@@ -97,7 +97,7 @@ impl Running<'_> {
     pub fn gw_special_hi_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.x74_self_accel.y = 0.0;
+        fp.anim_vel.y = 0.0;
         fp.self_vel.y = 0.0;
         self.go_airborne_jumped(f);
         self.change_motion_state(gobj, ms::SPECIAL_HI, 0, 0.0, 1.0, 0.0, None);

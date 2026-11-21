@@ -25,10 +25,10 @@ const DEG_TO_RAD: f64 = 0.017_453_292_384_743_69;
 impl Running<'_> {
     /// One of the reflector's effects on the hip, once (`x2219_b0`).
     fn fox_lw_gfx(&mut self, gobj: GObjId, gfx: i32) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let j = self.bone_joint(gobj, PART_HIP_N);
             spawn(self, gfx, Some(gobj), &[Arg::JObj(j)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;
@@ -501,7 +501,7 @@ impl Running<'_> {
     #[doc(alias = "ftFx_SpecialLwHit_Enter")]
     pub fn fox_special_lw_hit_enter(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.facing_dir = fp.ReflectAttr.x1A2C_reflectHitDirection;
+        fp.facing_dir = fp.reflect.x1A2C_reflectHitDirection;
         let j = self.part_joint(gobj, PART_HIP_N);
         let at = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
         let third = mem(fp::frsp(fp::fdiv(std::f64::consts::PI, 3.0)));

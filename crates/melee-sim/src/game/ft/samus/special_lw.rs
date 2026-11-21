@@ -61,13 +61,13 @@ impl Running<'_> {
             return;
         }
         let fp = &self.game.fighters[f.0];
-        if !matches!(fp.x2070[1] >> 4, 0 | 2 | 3 | 4) {
+        if !matches!(fp.attack_flags[1] >> 4, 0 | 2 | 3 | 4) {
             return;
         }
-        if fp.x2070[3] != 0x14 && fp.x2070[1] & 0x04 != 0 {
+        if fp.attack_flags[3] != 0x14 && fp.attack_flags[1] & 0x04 != 0 {
             return;
         }
-        let start = if fp.x5F4_arr[0].idx == 2 {
+        let start = if fp.model_variants[0].idx == 2 {
             self.samus_attr_f32(f, attr::BOMB_JUMP_FRAME)
         } else {
             0.0
@@ -87,7 +87,7 @@ impl Running<'_> {
         let mut touch = false;
         for i in 0..self.game.fighters[f.0].hurt_capsules_len as usize {
             let fp = &mut self.game.fighters[f.0];
-            let (owner_scale, z) = (fp.x34_scale.y, fp.cur_pos.z);
+            let (owner_scale, z) = (fp.scale.y, fp.cur_pos.z);
             if hitcapsule::touches_hurtbox(
                 &mut self.game.objs,
                 self.data,
@@ -332,7 +332,7 @@ impl Running<'_> {
         h.capsule.a_offset = Vec3::default();
         h.capsule.b_offset = Vec3::default();
         h.capsule.scale = 3.0;
-        fp.x221A_b6 = true;
+        fp.hurtboxes_custom = true;
     }
 
     /// The ball's hurtboxes back, `ftSs_SpecialLw_8012AF38`.

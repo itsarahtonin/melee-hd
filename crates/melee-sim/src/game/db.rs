@@ -509,7 +509,7 @@ impl Running<'_> {
         let v = self.game.db.fighter_visuals;
         for g in self.game.fighter_gobjs() {
             let f = self.game.fighter_id(g);
-            let b = &mut self.game.fighters[f.0].x21FC_flag[0];
+            let b = &mut self.game.fighters[f.0].debug_draw_flags[0];
             *b = (*b & 3) | ((v << 2) & !3);
         }
         if v & 2 != 0 {
@@ -559,7 +559,7 @@ impl Running<'_> {
                     motion,
                     anim,
                     frame: reg(fp.cur_anim_frame),
-                    flags: fp.x221C_u16_y,
+                    flags: fp.leg_reach,
                     motion_name: if motion < 0x155 {
                         self.db_name(states, motion)
                     } else {
@@ -634,7 +634,7 @@ impl Running<'_> {
                 let b = self.game.db.fighter_bubbles;
                 for g in self.game.fighter_gobjs() {
                     let f = self.game.fighter_id(g);
-                    self.game.fighters[f.0].x21FC_flag[0] = b;
+                    self.game.fighters[f.0].debug_draw_flags[0] = b;
                 }
             }
             if self.game.db_pressed(port) & u32::from(BUTTON_RIGHT) != 0
@@ -642,7 +642,7 @@ impl Running<'_> {
             {
                 let g = self.game.player_entity(port).expect("the port's fighter");
                 let f = self.game.fighter_id(g);
-                let b = &mut self.game.fighters[f.0].x21FC_flag[0];
+                let b = &mut self.game.fighters[f.0].debug_draw_flags[0];
                 let x = (*b & 3) + 1;
                 *b = if x > 3 { 1 } else { x };
                 self.db_owned_items_bubbles(g);
@@ -715,8 +715,8 @@ impl Running<'_> {
     fn db_fighter_shadows(&mut self, on: bool) {
         for g in self.game.fighter_gobjs() {
             let f = self.game.fighter_id(g);
-            if self.game.fighters[f.0].x20A4.shadow.is_some() {
-                self.game.fighters[f.0].x20A4.x0_b5 = !on;
+            if self.game.fighters[f.0].shadow.shadow.is_some() {
+                self.game.fighters[f.0].shadow.x0_b5 = !on;
                 self.shadow_update(g);
             }
         }

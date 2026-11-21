@@ -92,8 +92,8 @@ impl Running<'_> {
     /// `Fighter_UnkSetFlag_8006CFBC`'s body: a frozen fighter thaws.
     pub(crate) fn ic_thaw(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        if fp.x2219_b7 {
-            fp.x221A_b1 = true;
+        if fp.hitlag_held {
+            fp.thaw_size = true;
         }
     }
 
@@ -113,7 +113,7 @@ impl Running<'_> {
         fp.death2_cb = None;
         fp.pre_hitlag_cb = None;
         fp.post_hitlag_cb = None;
-        fp.x1A5C = None;
+        fp.partner = None;
     }
 
     /// The body upright and the fighter it froze with let go, `ftPp_SpecialS_8011F68C`
@@ -123,11 +123,11 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         self.game.part_set_rot_x(f, 0, 0.0);
         self.ic_thaw(gobj);
-        if let Some(other) = self.game.fighters[f.0].x1A5C {
+        if let Some(other) = self.game.fighters[f.0].partner {
             self.ic_thaw(other);
-            self.game.fighter_mut(other).x1A5C = None;
+            self.game.fighter_mut(other).partner = None;
         }
-        self.game.fighters[f.0].x1A5C = None;
+        self.game.fighters[f.0].partner = None;
     }
 
     /// Whether Popo's script has said Nana may go (`cmd_vars[1]`), `ftPp_SpecialS_8011F6FC`:
@@ -176,10 +176,10 @@ impl Running<'_> {
         let lone = self.nana_join_special_s(nana, ga);
         if lone {
             self.change_motion_state(gobj, alone, 0, 0.0, 1.0, 0.0, None);
-            self.game.fighters[f.0].x1A5C = None;
+            self.game.fighters[f.0].partner = None;
         } else {
             self.change_motion_state(gobj, with, 0, 0.0, 1.0, 0.0, None);
-            self.game.fighters[f.0].x1A5C = self.ic_partner(gobj, 1);
+            self.game.fighters[f.0].partner = self.ic_partner(gobj, 1);
         }
         lone
     }
@@ -190,7 +190,7 @@ impl Running<'_> {
         self.anim_update(gobj);
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(mv::X8, 0);
-        fp.x2219_b0 = true;
+        fp.effect_once = true;
         self.set_effect_hitlag_cbs(gobj);
         self.popo_special_s_hooks(gobj);
     }
@@ -302,10 +302,10 @@ impl Running<'_> {
         if fp.cmd_vars[0] == 0 && accel != 0.0 {
             let target = if accel > 0.0 { max } else { fp::fneg(max) };
             Self::ground_accel_to_vel(fp, reg(accel), target);
-            fp.xE4_ground_accel_1 = mem(fp::fmadds(
+            fp.ground_accel_1 = mem(fp::fmadds(
                 slope,
                 reg(fp.coll_data.floor.normal.x),
-                reg(fp.xE4_ground_accel_1),
+                reg(fp.ground_accel_1),
             ));
         } else {
             let friction = reg(fp.co_attrs.ground_friction);
@@ -318,7 +318,7 @@ impl Running<'_> {
             let lift = reg(self.ic_attr_f32(f, lift));
             self.go_airborne(f);
             let fp = &mut self.game.fighters[f.0];
-            fp.x74_self_accel.x = fp.xE4_ground_accel_1;
+            fp.anim_vel.x = fp.ground_accel_1;
             let frame = fp.cur_anim_frame;
             self.change_motion_state(gobj, air, SWITCH_FLAGS, frame, 1.0, 0.0, None);
             self.popo_special_s_hooks(gobj);
@@ -434,7 +434,7 @@ impl Running<'_> {
             let max = reg(self.ic_attr_f32(f, attr::AIR_MAX));
             self.go_airborne(f);
             let fp = &mut self.game.fighters[f.0];
-            fp.x74_self_accel.x = fp.xE4_ground_accel_1;
+            fp.anim_vel.x = fp.ground_accel_1;
             let frame = fp.cur_anim_frame;
             self.change_motion_state(gobj, air, SWITCH_FLAGS, frame, 1.0, 0.0, None);
             self.popo_special_s_hooks(gobj);
@@ -465,7 +465,7 @@ impl Running<'_> {
             self.change_motion_state(gobj, ground, SWITCH_FLAGS, frame, 1.0, 0.0, None);
             self.popo_special_s_hooks(gobj);
             let fp = &mut self.game.fighters[f.0];
-            fp.x74_self_accel.y = 0.0;
+            fp.anim_vel.y = 0.0;
             fp.self_vel.y = 0.0;
             Self::clamp_ground_vel(fp, max);
             fp.set_mv_i32(mv::ON_GROUND, 1);

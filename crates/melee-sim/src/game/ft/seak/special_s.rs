@@ -169,13 +169,13 @@ impl Running<'_> {
         ));
         let t = reg(t);
         if reg(fp.mv_f32(mv::S_X14)) != 0.0 {
-            let skel = fp.x8AC_animSkeleton;
+            let skel = fp.anim_skeleton;
             let tree = self.second_figatree(f, anim);
             let tree = tree.expect("ftAnim_8006F4C8 reads a missing figatree at address 0");
             let buf = self.game.fighters[f.0].second_tree_buf();
             self.in_anim_buf(buf, |r| r.bind_own_figatree(f, true, tree));
             self.request_anim(skel, frame);
-            let costume = self.game.fighters[f.0].x108_costume_joint;
+            let costume = self.game.fighters[f.0].costume_joint;
             let child = costume.and_then(|c| self.data.ptr(c.at(8)));
             self.reset_parts(f, TRANS_N, child, true);
             jobj::anim_all(
@@ -281,7 +281,7 @@ impl Running<'_> {
         let id = id as usize;
         set_u_vec(fp, u::HIT_POS + 12 * id, pos);
         if reg(pos.x) != 0.0 || reg(pos.y) != 0.0 {
-            let hit = &mut fp.x914[id];
+            let hit = &mut fp.hitboxes[id];
             hit_at(hit, pos);
             hit.x4C = pos;
             if reg(hit.x58.x) == 0.0 && reg(hit.x58.y) == 0.0 && reg(hit.x58.z) == 0.0 {
@@ -294,7 +294,7 @@ impl Running<'_> {
     #[doc(alias = "ftSk_SpecialS_ZeroHitboxPositions")]
     pub fn seak_special_s_zero_hitbox_positions(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        for hit in &mut fp.x914 {
+        for hit in &mut fp.hitboxes {
             hit.x58 = Vec3::new(0.0, 0.0, 0.0);
             hit.x4C = Vec3::new(0.0, 0.0, 0.0);
         }
@@ -304,17 +304,17 @@ impl Running<'_> {
     #[doc(alias = "ftSk_SpecialS_80110AEC")]
     pub fn seak_special_s_hitboxes_on(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        for hit in &mut fp.x914 {
+        for hit in &mut fp.hitboxes {
             hitcapsule::enable(hit);
         }
         self.seak_special_s_zero_hitbox_positions(gobj);
-        self.game.fighter_mut(gobj).x2219_b3 = true;
+        self.game.fighter_mut(gobj).hitboxes_set = true;
     }
 
     /// `ftSeakSpecialS_LoopChainHitCollisions`: the hitboxes off, their victims forgotten.
     fn seak_special_s_hitboxes_off(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        for hit in &mut fp.x914 {
+        for hit in &mut fp.hitboxes {
             hitcapsule::clear_victims(hit);
             hitcapsule::disable(hit);
         }
@@ -462,7 +462,7 @@ impl Running<'_> {
             set_u_vec(fp, u::HIT_POS_PREV + 12 * i, Vec3::new(0.0, 0.0, 0.0));
         }
         set_u_vec(fp, u::LSTICK_DELTA, Vec3::new(0.0, 0.0, 0.0));
-        fp.x2222_b2 = true;
+        fp.no_turn = true;
         fp.accessory4_cb = Some(CodeRef(addr::SPECIAL_S_NOTHING));
     }
 
@@ -504,7 +504,7 @@ impl Running<'_> {
         let chain = seakchain::spawn(self, gobj, pos, facing);
         self.set_seak_chain(gobj, chain);
         let fp = self.game.fighter_mut(gobj);
-        fp.x1984_heldItemSpec = chain;
+        fp.special_item = chain;
         if chain.is_some() {
             fp.death2_cb = Some(CodeRef(addr::DAMAGE_CB));
             fp.take_dmg_cb = Some(CodeRef(addr::DAMAGE_CB));
@@ -733,7 +733,7 @@ impl Running<'_> {
         self.game.fighter_mut(gobj).set_mv_i32(mv::S_X0, 0);
         self.seak_special_s_hitboxes_on(gobj);
         self.seak_special_s_hooks(gobj);
-        self.game.fighter_mut(gobj).x2222_b2 = true;
+        self.game.fighter_mut(gobj).no_turn = true;
     }
 
     /// The retraction's frames, `ftSk_SpecialSEnd_Anim` and `ftSk_SpecialAirSEnd_Anim`: the
@@ -818,7 +818,7 @@ impl Running<'_> {
             self.seak_special_s_hitboxes_on(gobj);
         }
         self.seak_special_s_hooks(gobj);
-        self.game.fighter_mut(gobj).x2222_b2 = true;
+        self.game.fighter_mut(gobj).no_turn = true;
     }
 
     #[doc(alias = "ftSk_SpecialS_80111DF8")]

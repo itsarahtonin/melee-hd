@@ -106,7 +106,7 @@ pub fn blaster_not_needed(game: &Game, owner: Option<GObjId>) -> bool {
     let fp = super::super::owner::fighter(game, o);
     let m = fp.motion_id;
     if (SPECIAL_N_START..SPECIAL_N_START + 6).contains(&m) || (THROW_B..=THROW_LW).contains(&m) {
-        fp.x2070[1] & 0x02 != 0
+        fp.attack_flags[1] & 0x02 != 0
     } else {
         true
     }

@@ -153,7 +153,7 @@ impl Running<'_> {
         let lean = self.game.fighter(gobj).mv_f32(4);
         if lean != 0.0 {
             let f = self.game.fighter_id(gobj);
-            let skel = self.game.fighters[f.0].x8AC_animSkeleton;
+            let skel = self.game.fighters[f.0].anim_skeleton;
             jobj::anim_all(
                 &mut self.game.objs,
                 self.data,
@@ -198,7 +198,7 @@ impl Running<'_> {
             let frame = fp.cur_anim_frame;
             let f = self.game.fighter_id(gobj);
             self.play_second_anim(f, smid, frame, 1.0);
-            let skel = self.game.fighters[f.0].x8AC_animSkeleton;
+            let skel = self.game.fighters[f.0].anim_skeleton;
             jobj::anim_all(
                 &mut self.game.objs,
                 self.data,
@@ -220,7 +220,7 @@ impl Running<'_> {
     pub fn co_damage_anim(&mut self, gobj: GObjId) {
         self.damage_tick(gobj);
         let fp = self.game.fighter(gobj);
-        if !self.anim_frames_remaining(gobj) && !fp.x221C_b6 {
+        if !self.anim_frames_remaining(gobj) && !fp.in_hitstun {
             if fp.ground_or_air == GA_AIR {
                 if fp.stamina_dead {
                     self.enter_damage_fall(gobj);
@@ -239,7 +239,7 @@ impl Running<'_> {
         self.knockback_smoke(gobj);
         self.damage_tick(gobj);
         let fp = self.game.fighter(gobj);
-        if !self.anim_frames_remaining(gobj) && !fp.x221C_b6 && !self.damage_tech(gobj) {
+        if !self.anim_frames_remaining(gobj) && !fp.in_hitstun && !self.damage_tech(gobj) {
             self.enter_damage_fall(gobj);
         }
     }
@@ -265,11 +265,11 @@ impl Running<'_> {
         if fp.mv_f32(0) > 0.0 {
             fp.set_mv_f32(0, fp::fsubs(reg(fp.mv_f32(0)), 1.0));
         }
-        if fp.x221C_b6 && fp.mv_f32(0) <= 0.0 {
+        if fp.in_hitstun && fp.mv_f32(0) <= 0.0 {
             let combo = self.common().i32(0x4CC);
             let fp = self.game.fighter_mut(gobj);
-            fp.x221C_b6 = false;
-            fp.x2098 = combo as u16;
+            fp.in_hitstun = false;
+            fp.combo_window = combo as u16;
             self.knockback_exit(gobj);
             if self.holding_hammer(gobj) {
                 self.open_hammer_drop(gobj);

@@ -95,7 +95,7 @@ impl Ctx<'_> {
         // attributes in the character's (Link's and Young Link's at x64, Marth's and Roy's at
         // x78).
         let held;
-        let b: &[u8] = if fp.x2101_bits_8 {
+        let b: &[u8] = if fp.item_afterimage {
             let item = fp
                 .item_gobj
                 .expect("a held item's afterimage without an item");
@@ -129,16 +129,16 @@ impl Ctx<'_> {
             outer_rgb: [b[0xE], b[0xF], b[0x10]],
         };
 
-        let (w0, w1) = (fp.x20F8, fp.x20FC);
-        let n = i32::from(fp.x2100);
-        let start = prev_slot(usize::from(fp.x2101_bits_0to6));
+        let (w0, w1) = (fp.afterimage_width_a, fp.afterimage_width_b);
+        let n = i32::from(fp.afterimage_mode);
+        let start = prev_slot(usize::from(fp.afterimage_slot));
         // The distances along the sword's outer end, newest first, summed.
         let mut cum = vec![0.0f32];
         let mut total = 0.0f32;
         let mut prev = Vec3::new(0.0, 0.0, 0.0);
         let mut cur = start;
         for i in (0..n).rev() {
-            let e = &fp.x20B0[cur];
+            let e = &fp.afterimage_ring[cur];
             let d = Vec3::new(
                 madd(e.xC.x, w1, e.x0.x) - prev.x,
                 madd(e.xC.y, w1, e.x0.y) - prev.y,
@@ -184,7 +184,7 @@ impl Ctx<'_> {
         let mut cur = start;
         let mut dist = 0;
         for remaining in (0..n).rev() {
-            let e = &fp.x20B0[cur];
+            let e = &fp.afterimage_ring[cur];
             let mut outer = madd(interp, outer_diff, outer0);
             let mut inner = madd(interp, inner_diff, inner0);
             dist += 1;
@@ -194,7 +194,7 @@ impl Ctx<'_> {
                 break;
             }
             let next = prev_slot(cur);
-            let ne = &fp.x20B0[next];
+            let ne = &fp.afterimage_ring[next];
             // `lbVector_CrossprodNormalized` never returns null.
             let axis = e.xC.cross_normalized(ne.xC);
             let mut angle = e.xC.angle(ne.xC);

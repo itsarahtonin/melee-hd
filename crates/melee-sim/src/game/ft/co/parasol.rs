@@ -136,11 +136,11 @@ impl Running<'_> {
         self.anim_update(gobj);
         let window = fp::fctiwz(reg(self.common().f32(cd::X59C)));
         let fp = self.game.fighter_mut(gobj);
-        fp.x2221_b7 = false;
-        fp.x2221_b4 = true;
-        if fp.x2221_b6 {
-            fp.x2104 = window;
-            fp.x2221_b6 = false;
+        fp.parasol_from_jump = false;
+        fp.parasol_open = true;
+        if fp.parasol_blend {
+            fp.parasol_frames = window;
+            fp.parasol_blend = false;
         }
     }
 
@@ -338,12 +338,12 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800CEE70")]
     pub fn parasol_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        if fp.x2221_b5 {
+        if fp.parasol_checked {
             return false;
         }
         let t = self.common().f32(cd::OPEN_PARASOL_THRESHOLD);
         let fp = self.game.fighter(gobj);
-        if (fp.x2221_b7 || fp.input.lstick[0].y >= t)
+        if (fp.parasol_from_jump || fp.input.lstick[0].y >= t)
             && fp.self_vel.y <= 0.0
             && self.parasol_status(gobj) == 6
         {

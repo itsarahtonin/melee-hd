@@ -1176,7 +1176,7 @@ impl Ctx<'_> {
             .is_some_and(|b| self.hsd.motion.camera_blends && b.has_joint(self.objs(), j));
         let pmtx = self.joint_position_mtx(j, &vmtx);
         self.hsd.motion.joints = false;
-        if self.game.fighters[f.0].x34_scale.z != 1.0 {
+        if self.game.fighters[f.0].scale.z != 1.0 {
             let s = self.game.objs.jobjs[j].scale;
             let inv = |v: f32| crate::gx::mem(fp::fdivs(1.0, crate::gx::reg(v)));
             let unscale = Mtx34::scale(inv(s.x), inv(s.y), inv(s.z));

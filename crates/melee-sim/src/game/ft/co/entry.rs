@@ -90,17 +90,14 @@ impl Running<'_> {
         self.game.fighter_mut(gobj).set_mv_i32(TIMER, frames);
         self.change_motion_state(gobj, MS_ENTRY_START, 0, 0.0, 1.0, 0.0, None);
         let f = self.game.fighter_id(gobj);
-        self.game.fighters[f.0].x2219_b1 = true;
+        self.game.fighters[f.0].out_of_play = true;
         if !self.game.fighters[f.0].is_sub_fighter {
             let model = self.common_ptr(0x40);
             self.set_accessory(gobj, model);
             let fp = &mut self.game.fighters[f.0];
-            let s = mem(fp::fmuls(
-                reg(fp.x34_scale.y),
-                reg(fp.co_attrs.trophy_scale),
-            ));
+            let s = mem(fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.trophy_scale)));
             fp.set_mv_f32(X24, reg(s));
-            let acc = fp.x20A0_accessory.expect("fp->x20A0_accessory");
+            let acc = fp.accessory.expect("fp->x20A0_accessory");
             let yaw = mem(fp::frsp(fp::fmul(HALF_PI, reg(fp.facing_dir))));
             let height = fp::frsp(fp::fmul(PLATFORM_HEIGHT, reg(s)));
             fp.set_mv_f32(X28, height);
@@ -113,7 +110,7 @@ impl Running<'_> {
         self.game.fighters[f.0].accessory1_cb = Some(CodeRef(PLATFORM_FOLLOW_START));
         let root = self.root_jobj(gobj);
         let scale = copy(self.game.fighters[f.0].mv_f32(X8));
-        let mut head = self.game.fighters[f.0].x60C;
+        let mut head = self.game.fighters[f.0].effect_queue;
         ef::queue(
             self,
             Some(gobj),
@@ -123,7 +120,7 @@ impl Running<'_> {
             Some(root),
             &[Arg::Float(scale)],
         );
-        self.game.fighters[f.0].x60C = head;
+        self.game.fighters[f.0].effect_queue = head;
         self.sfx_play_entry(SFX_ENTRY);
         self.start_color_anim(gobj, COLANIM_ENTRY, 0);
     }
@@ -133,21 +130,21 @@ impl Running<'_> {
     pub fn set_accessory(&mut self, gobj: GObjId, joint: melee_data::archive::DataRef) {
         let f = self.game.fighter_id(gobj);
         assert!(
-            self.game.fighters[f.0].x20A0_accessory.is_none(),
+            self.game.fighters[f.0].accessory.is_none(),
             "the original's assertion failed: ftcommon.c:1158"
         );
         let j = jobj::load_joint(&mut self.game.objs, self.data, Some(joint));
-        self.game.fighters[f.0].x20A0_accessory = j;
+        self.game.fighters[f.0].accessory = j;
     }
 
     /// The platform under the fighter's feet: at its position less `ftCommon_800804EC`
     /// toward its facing.
     fn platform_at_feet(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        let offset = fp::fmuls(reg(fp.x40), reg(fp.x34_scale.x));
+        let offset = fp::fmuls(reg(fp.platform_offset), reg(fp.scale.x));
         let x = mem(fp::fnmsubs(reg(fp.facing_dir), offset, reg(fp.cur_pos.x)));
         let at = Vec3::new(x, fp.cur_pos.y, fp.cur_pos.z);
-        let acc = fp.x20A0_accessory.expect("jobj");
+        let acc = fp.accessory.expect("jobj");
         jobj::set_translate(&mut self.game.objs.jobjs, acc, at);
     }
 
@@ -204,7 +201,7 @@ impl Running<'_> {
         }
         let s = fp.mv_f32(X24);
         let scale = Vec3::new(s, mem(fp::fmuls(reg(s), t)), s);
-        let acc = fp.x20A0_accessory.expect("jobj");
+        let acc = fp.accessory.expect("jobj");
         jobj::set_scale(&mut self.game.objs.jobjs, acc, scale);
         let fp = self.game.fighter_mut(gobj);
         let h = fp::fmuls(reg(fp.mv_f32(X20)), t);
@@ -287,7 +284,7 @@ impl Running<'_> {
         let keep = SKIP_COL_ANIM | KEEP_ACCESSORY;
         self.change_motion_state(gobj, MS_ENTRY_END, keep, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2219_b1 = true;
+        fp.out_of_play = true;
         fp.accessory1_cb = Some(CodeRef(PLATFORM_FOLLOW_END));
     }
 

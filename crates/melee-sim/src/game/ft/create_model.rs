@@ -79,7 +79,7 @@ impl Running<'_> {
         // The original's list comes from a pool of its own (`fighter_x2040_alloc_data`).
         let addr = crate::hsd::heap::obj_alloc(crate::hsd::heap::Kind::FighterX2040);
         self.game.fighter_dobj_lists.set_addr(list.0, addr);
-        self.game.fighters[f.0].x203C.data = Some(list);
+        self.game.fighters[f.0].second_dobjs.data = Some(list);
         pobj::set_default_class(&mut self.game.objs.pobjs, PObjClass::Fighter);
         let fp = &self.game.fighters[f.0];
         let kind = fp.kind;
@@ -160,7 +160,7 @@ impl Running<'_> {
             part += 1;
             joint = next_joint(self.data, j, &mut stack);
         }
-        self.game.fighters[f.0].x203C.count = count as u32;
+        self.game.fighters[f.0].second_dobjs.count = count as u32;
         pobj::set_default_class(&mut self.game.objs.pobjs, PObjClass::Hsd);
     }
 
@@ -201,13 +201,13 @@ impl Running<'_> {
             m <= 11,
             "the original's assertion failed: fighter dynamics hit num over!"
         );
-        self.game.fighters[f.0].x166C = m as u8;
+        self.game.fighters[f.0].ledge_point_count = m as u8;
         let points = self.data.ptr(dynamics.at(0xC));
         for i in 0..m.max(0) as u32 {
             let init = points.expect("ftDynamics::x8").at(0x14 * i);
             let bone = self.data.u32(init) as i32;
             let joint = self.game.fighter_parts[parts][bone as usize].joint;
-            let p = &mut self.game.fighters[f.0].x1670[i as usize];
+            let p = &mut self.game.fighters[f.0].ledge_points[i as usize];
             p.x24 = bone;
             p.jobj = joint;
             p.v1 = raw3(init.at(4));
@@ -338,7 +338,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_8009F578")]
     pub fn create_own_light(&mut self, f: FighterId) {
         let l = lobj::load_static(&mut self.game.objs, &FIGHTER_LIGHT);
-        self.game.fighters[f.0].x588 = Some(l);
+        self.game.fighters[f.0].light = Some(l);
     }
 
     /// The character's creation callback (`ftData_OnLoad`), from `by`: its registry entry's.

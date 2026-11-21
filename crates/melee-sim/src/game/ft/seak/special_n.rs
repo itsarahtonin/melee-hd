@@ -143,7 +143,7 @@ impl Running<'_> {
                     self.seak_n_attr_f32(gobj, p, attr::XC)
                 };
                 let fp = &self.game.fighters[f.0];
-                pos.y = mem(fp::fmadds(reg(fp.x34_scale.y), reg(y), reg(pos.y)));
+                pos.y = mem(fp::fmadds(reg(fp.scale.y), reg(y), reg(pos.y)));
                 pos.z = 0.0;
                 let facing = fp.facing_dir;
                 let item = seakneedlethrown::spawn(self, gobj, pos, p.thrown_kind, facing);
@@ -504,7 +504,7 @@ impl Running<'_> {
         let ay = reg(self.seak_n_attr_f32(gobj, p, ay));
         let fp = &self.game.fighters[f.0];
         let mut pos = fp.cur_pos;
-        let scale = reg(fp.x34_scale.y);
+        let scale = reg(fp.scale.y);
         let x = fp::fmuls(ax, reg(fp.facing_dir));
         pos.x = mem(fp::fmadds(scale, x, reg(pos.x)));
         let step = reg(NEEDLE_Y[self.game.objs.rng.below(9) as usize]);

@@ -46,7 +46,7 @@ impl Running<'_> {
             article,
             ItKind::BowserFlame.id(),
         );
-        self.game.fighters[f.0].x2226_b1 = true;
+        self.game.fighters[f.0].heavy_down_bound = true;
     }
 
     /// The up special's damage and death hook, `ftKp_Init_80132B38`: nothing.

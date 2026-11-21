@@ -111,11 +111,11 @@ impl Running<'_> {
     /// caught runs `grab`, an item `item`, and the fighter's side the capture.
     fn ys_n_grab_cbs(&mut self, gobj: GObjId, grab: u32, item: u32) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x221E_b6 = true;
-        fp.x1A68 = 4;
+        fp.grab_coll_off = true;
+        fp.grab_kinds = 4;
         fp.grab_cb = Some(CodeRef(grab));
         fp.grabbed_cb = Some(CodeRef(CAPTURE_YOSHI));
-        fp.x2194 = Some(CodeRef(item));
+        fp.grab_item_cb = Some(CodeRef(item));
     }
 
     /// `ftYs_SpecialN_Enter`.
@@ -142,12 +142,12 @@ impl Running<'_> {
         let frame = self.game.fighter(gobj).cur_anim_frame;
         self.change_motion_state(gobj, msid, FLAGS1, frame, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2222_b2 = true;
+        fp.no_turn = true;
         set_n_item(fp, item);
         if item {
             self.ys_set_damage_cb(gobj);
         }
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
         self.stop_dead(gobj);
     }
 
@@ -288,7 +288,7 @@ impl Running<'_> {
         if item {
             self.ys_set_damage_cb(gobj);
         }
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
     }
 
     /// `ftYs_SpecialN1_1_Anim`.
@@ -326,13 +326,13 @@ impl Running<'_> {
         {
             yoshitongue::release(self, item, false);
             let fp = &mut self.game.fighters[f.0];
-            fp.x1A64 = Default::default();
+            fp.caught_item = Default::default();
             fp.target_item_gobj = None;
             fp.cmd_vars[1] = 0;
         }
         let fp = &self.game.fighters[f.0];
         if fp.cmd_vars[0] != 0 && n_item(fp) {
-            self.game.fighters[f.0].x1A6A = 0;
+            self.game.fighters[f.0].grab_immune = 0;
             let tip = self.ys_n_tip(gobj);
             let j = self.bone_joint(gobj, tip);
             let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
@@ -373,7 +373,7 @@ impl Running<'_> {
         if self.game.fighters[f.0].cmd_vars[0] != 0
             && let Some(victim) = self.game.fighters[f.0].victim_gobj
         {
-            self.game.fighters[f.0].x1A6A = 0;
+            self.game.fighters[f.0].grab_immune = 0;
             self.throw_hit(gobj, victim, false);
             self.enter_yoshi_egg(victim, gobj);
             self.game.fighters[f.0].cmd_vars[0] = 0;

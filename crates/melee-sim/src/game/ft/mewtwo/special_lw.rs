@@ -52,7 +52,7 @@ impl Running<'_> {
     #[doc(alias = "ftMt_SpecialLw_Enter")]
     pub fn mt_special_lw_enter(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.cmd_vars[0] = 0;
         fp.u.set_gobj_at(u::DISABLE, None);
         self.change_motion_state(gobj, ms::SPECIAL_LW, 0, 0.0, 1.0, 0.0, None);
@@ -64,7 +64,7 @@ impl Running<'_> {
     #[doc(alias = "ftMt_SpecialAirLw_Enter")]
     pub fn mt_special_air_lw_enter(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.cmd_vars[0] = 0;
         fp.u.set_gobj_at(u::DISABLE, None);
         fp.self_vel.y = 0.0;

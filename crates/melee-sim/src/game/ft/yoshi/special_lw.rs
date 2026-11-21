@@ -47,8 +47,8 @@ impl Running<'_> {
         fp.set_throw_flag(0, false);
         fp.self_vel.y = 0.0;
         fp.self_vel.x = 0.0;
-        fp.x6A4_transNOffset.y = 0.0;
-        fp.x2223_b4 = true;
+        fp.trans_n_offset.y = 0.0;
+        fp.no_item_bounce = true;
     }
 
     /// `ftYs_SpecialLw_Enter`: the hop starts in the air.

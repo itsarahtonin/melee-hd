@@ -162,7 +162,7 @@ fn main() {
                                                     f.ground_or_air,
                                                     f.cur_pos.x,
                                                     f.cur_pos.y,
-                                                    f.cpu.x18
+                                                    f.cpu.behavior
                                                 )
                                             })
                                             .collect();

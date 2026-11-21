@@ -157,7 +157,7 @@ pub fn track_fighters(game: &mut Game) {
 /// The fighter's held special item, `ftLib_GetHeldSpecialItem`.
 #[doc(alias = "ftLib_GetHeldSpecialItem")]
 pub fn held_special_item(game: &Game, gobj: GObjId) -> Option<GObjId> {
-    fighter(game, gobj).x1984_heldItemSpec
+    fighter(game, gobj).special_item
 }
 
 /// The fighter lets go of its held special item, `ftLib_ClearHeldSpecialItem` (with
@@ -167,8 +167,8 @@ pub fn held_special_item(game: &Game, gobj: GObjId) -> Option<GObjId> {
 pub fn clear_held_special_item(game: &mut Game, gobj: GObjId) {
     let f = fighter_of(game, gobj);
     let fp = &mut game.fighters[f.0];
-    if fp.x1984_heldItemSpec.is_some() {
-        fp.x1984_heldItemSpec = None;
+    if fp.special_item.is_some() {
+        fp.special_item = None;
     }
 }
 
@@ -176,7 +176,7 @@ pub fn clear_held_special_item(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "ftLib_IsHoldingItem")]
 pub fn is_holding(game: &Game, gobj: GObjId, item: GObjId) -> bool {
     let fp = fighter(game, gobj);
-    fp.item_gobj == Some(item) || fp.x1978 == Some(item)
+    fp.item_gobj == Some(item) || fp.second_item == Some(item)
 }
 
 /// Lets go of an item from a fighter's hand: its held special item (`ftLib_ClearHeldSpecialItem`)
@@ -190,7 +190,7 @@ pub fn release(r: &mut Running, gobj: GObjId, fighter_gobj: GObjId, special: boo
     } else if is_holding(r.game, fighter_gobj, gobj) {
         // `ftLib_ReleaseItem`.
         let fp = fighter(r.game, fighter_gobj);
-        if fp.item_gobj.is_some() || fp.x1978.is_some() {
+        if fp.item_gobj.is_some() || fp.second_item.is_some() {
             r.release_item(fighter_gobj, gobj, true);
         }
     }
@@ -299,7 +299,7 @@ fn nearest_by_bone(
         for i in 0..n {
             let (g, v) = bones[i];
             let fp = fighter(game, g);
-            if !fp.x2220_b7 {
+            if !fp.camera_placed {
                 continue;
             }
             let f = fighter_of(game, g);

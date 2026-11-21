@@ -145,7 +145,7 @@ impl Running<'_> {
             .expect("an attract match's fighter");
         let f = self.game.fighter_id(g);
         let b = self.game.fighters[f.0]
-            .x890_cameraBox
+            .camera_box
             .expect("a fighter without a camera box");
         camera::in_bounds(&self.game.stage_info, self.game.camera.subject(b).pos)
     }

@@ -217,3 +217,61 @@ impl Mirror for Quat {
 pub fn read_vec3(data: &melee_data::archive::Archives, at: DataRef) -> Vec3 {
     Vec3::new(data.f32(at), data.f32(at.at(4)), data.f32(at.at(8)))
 }
+
+#[cfg(test)]
+mod label_tests {
+    use super::*;
+    use crate::game::structs::Fighter;
+
+    /// Collects the comparer's labels.
+    #[derive(Default)]
+    struct Labels(Vec<String>);
+
+    impl Cx for Labels {
+        fn import_handle(&mut self, _: &'static str, a: u32) -> Option<u32> {
+            (a != 0).then_some(a)
+        }
+        fn import_data(&mut self, _: u32) -> Option<DataRef> {
+            None
+        }
+        fn compare_handle(&mut self, p: &str, _: &'static str, o: Option<u32>, t: u32) {
+            if o.unwrap_or(0) != t {
+                self.0.push(p.to_owned());
+            }
+        }
+        fn compare_data(&mut self, _: &str, _: Option<DataRef>, _: u32) {}
+        fn mismatch(&mut self, p: &str, _: String, _: String) {
+            self.0.push(p.to_owned());
+        }
+    }
+
+    /// A renamed field's label is its name with the original's beside it (design call 11):
+    /// ssbm-rs's traces, the engine notes and Melee's bugs cite offsets.
+    #[test]
+    fn a_renamed_fields_label_gives_the_originals_name() {
+        let block = vec![0u8; Fighter::SIZE as usize];
+        let m = Mem {
+            bytes: &block,
+            base: 0x8000_0000,
+        };
+        let mut fp = Fighter::import(&m, 0x8000_0000, &mut Labels::default());
+        let mut l = Labels::default();
+        fp.compare(&m, 0x8000_0000, "fighter", &mut l);
+        assert!(l.0.is_empty(), "{:?}", l.0);
+        fp.min_hitlag = 1.0;
+        fp.in_hitstun = true;
+        fp.cpu.spawn_arg = 2;
+        fp.cur_pos.x = 3.0;
+        let mut l = Labels::default();
+        fp.compare(&m, 0x8000_0000, "fighter", &mut l);
+        assert_eq!(
+            l.0,
+            [
+                "fighter.cur_pos",
+                "fighter.min_hitlag (x1964)",
+                "fighter.cpu.spawn_arg (x14)",
+                "fighter.in_hitstun (x221C_b6)",
+            ]
+        );
+    }
+}

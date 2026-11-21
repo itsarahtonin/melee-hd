@@ -1009,7 +1009,7 @@ fn screen_outs(game: &mut Game, a: &Args, res: Option<([i32; 2], bool)>, out: u3
             .find(|(addr, _)| *addr + 0x2188 == out);
         match fighter {
             Some((_, f)) => {
-                let p = &mut game.fighters[f.0].x2188;
+                let p = &mut game.fighters[f.0].screen_pos;
                 (p.x, p.y) = (x, y);
             }
             None => v.push(Out::Words(out, vec![x as u32, y as u32])),

@@ -385,7 +385,7 @@ impl Running<'_> {
         swing: i32,
         speed: f32,
     ) {
-        self.game.fighter_mut(gobj).x2210 = [0; 4];
+        self.game.fighter_mut(gobj).throw_flags = [0; 4];
         self.change_motion_state(gobj, msid, flags, 0.0, speed, 0.0, None);
         self.anim_update(gobj);
         let fp = self.game.fighter_mut(gobj);

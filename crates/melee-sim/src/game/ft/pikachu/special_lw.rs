@@ -34,7 +34,7 @@ impl Running<'_> {
     /// bolt (the 4 bits at `x2071` among 1, 2 and 4 to 13).
     #[doc(alias = "ftPk_SpecialLw_CheckProperty")]
     pub fn pk_special_lw_check_property(&self, gobj: GObjId) -> bool {
-        matches!(self.game.fighter(gobj).x2070[1] >> 4, 1 | 2 | 4..=13)
+        matches!(self.game.fighter(gobj).attack_flags[1] >> 4, 1 | 2 | 4..=13)
     }
 
     /// `ftPk_SpecialLw_80127608`: the bolt reached the ground: a small quake and a rumble.
@@ -121,7 +121,7 @@ impl Running<'_> {
     fn pk_special_lw_start(&mut self, gobj: GObjId, msid: i32) {
         let fp = self.game.fighter_mut(gobj);
         fp.cmd_vars[0] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.set_mv_i32(mv::LW_STATE, WAITING);
         fp.set_mv_i32(mv::LW_THUNDER, 0);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
@@ -211,7 +211,7 @@ impl Running<'_> {
             return;
         }
         self.change_motion_state(gobj, msid, 0x800, 0.0, 1.0, 0.0, None);
-        self.game.fighter_mut(gobj).x2210 = [0; 4];
+        self.game.fighter_mut(gobj).throw_flags = [0; 4];
         self.pk_special_lw_loop_cbs(gobj);
     }
 

@@ -52,11 +52,11 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         self.game.part_set_rot_x(f, 0, 0.0);
         self.ic_thaw(gobj);
-        if let Some(other) = self.game.fighters[f.0].x1A5C {
+        if let Some(other) = self.game.fighters[f.0].partner {
             self.ic_thaw(other);
-            self.game.fighter_mut(other).x1A5C = None;
+            self.game.fighter_mut(other).partner = None;
         }
-        self.game.fighters[f.0].x1A5C = None;
+        self.game.fighters[f.0].partner = None;
     }
 
     /// Whether Nana stays out of Popo's Squall Hammer, `ftNn_Init_80123954` (`pp_ga` is
@@ -79,9 +79,9 @@ impl Running<'_> {
             .player_entity_at(slot, 0)
             .expect("Nana without a Popo");
         let p = self.game.fighter_id(popo_gobj);
-        if matches!(self.game.fighters[n.0].x2070[1] >> 4, 1..=13) {
+        if matches!(self.game.fighters[n.0].attack_flags[1] >> 4, 1..=13) {
             if !self.game.rules.fixes_freeze_glitch() {
-                self.game.fighters[n.0].x1A5C = None;
+                self.game.fighters[n.0].partner = None;
             }
             return true;
         }
@@ -93,10 +93,10 @@ impl Running<'_> {
         let dx = fp::fsubs(reg(np.x), reg(pp.x));
         let dy = fp::fsubs(reg(np.y), reg(pp.y));
         let d2 = fp::fadds(fp::fmuls(dx, dx), fp::fmuls(dy, dy));
-        let scale = reg(self.game.fighters[p.0].x34_scale.y);
+        let scale = reg(self.game.fighters[p.0].scale.y);
         let reach = fp::frsp(f64::from(fp::fctiwz(fp::fmuls(scale, fp::fmuls(dd, dd)))));
         if !(d2 < reach) {
-            self.game.fighters[n.0].x1A5C = None;
+            self.game.fighters[n.0].partner = None;
             return true;
         }
         let ga = self.game.fighters[n.0].ground_or_air;
@@ -125,7 +125,7 @@ impl Running<'_> {
             reg(fp.facing_dir),
         )));
         self.game.part_set_rot_y(n, 0, rot);
-        self.game.fighters[n.0].x1A5C = Some(popo_gobj);
+        self.game.fighters[n.0].partner = Some(popo_gobj);
         false
     }
 
@@ -146,7 +146,7 @@ impl Running<'_> {
         self.nana_special_s_hooks(gobj);
         self.anim_update(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x74_self_accel.y = 0.0;
+        fp.anim_vel.y = 0.0;
         fp.self_vel.y = 0.0;
     }
 
@@ -165,7 +165,7 @@ impl Running<'_> {
         fp.death2_cb = None;
         fp.pre_hitlag_cb = None;
         fp.post_hitlag_cb = None;
-        fp.x1A5C = None;
+        fp.partner = None;
         true
     }
 
@@ -186,17 +186,17 @@ impl Running<'_> {
         let p = self.game.fighter(popo);
         let (vel, accel, gr, gr_accel, facing) = (
             p.self_vel,
-            p.x74_self_accel,
+            p.anim_vel,
             p.gr_vel,
-            p.xE4_ground_accel_1,
+            p.ground_accel_1,
             p.facing_dir,
         );
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
         fp.self_vel = vel;
-        fp.x74_self_accel = accel;
+        fp.anim_vel = accel;
         fp.gr_vel = gr;
-        fp.xE4_ground_accel_1 = gr_accel;
+        fp.ground_accel_1 = gr_accel;
         fp.facing_dir = facing;
         let rot = mem(fp::frsp(fp::fmul(std::f64::consts::FRAC_PI_2, reg(facing))));
         self.game.part_set_rot_y(f, 0, rot);

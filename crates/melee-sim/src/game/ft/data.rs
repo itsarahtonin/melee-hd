@@ -363,10 +363,10 @@ impl Running<'_> {
     pub fn init_anim_buffers(&mut self, f: FighterId) {
         self.alloc_anim_buffers(f);
         let fp = &mut self.game.fighters[f.0];
-        fp.x5A4 = 0;
-        fp.x5A8 = 0;
+        fp.main_anim_aram = 0;
+        fp.second_anim_aram = 0;
         let kind = fp.kind;
-        fp.x58C = kind_tables(kind).anim_count;
+        fp.anim_count = kind_tables(kind).anim_count;
         self.put_anim_file(kind);
     }
 
@@ -505,8 +505,8 @@ impl Running<'_> {
         let a = alloc();
         let b = alloc();
         let fp = &mut self.game.fighters[f.0];
-        fp.x59C = Some(a);
-        fp.x5A0 = Some(b);
+        fp.main_anim_buf = Some(a);
+        fp.second_anim_buf = Some(b);
     }
 
     /// A fighter file's synchronous disc load (`lbFile_8001668C`), where the original loads

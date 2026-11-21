@@ -64,7 +64,7 @@ impl Running<'_> {
         let mut next = self.first_fighter_gobj();
         while let Some(g) = next {
             next = self.game.world.gobj(g).next;
-            self.game.fighter_mut(g).x20A4.x0_b2 = false;
+            self.game.fighter_mut(g).shadow.x0_b2 = false;
         }
         let l = self.shadow_light();
         let mut light_pos = lobj::position(&mut self.game.objs, self.data, Some(l))
@@ -104,15 +104,15 @@ impl Running<'_> {
         while let Some(g) = next {
             next = self.game.world.gobj(g).next;
             let f = self.game.fighter_id(g);
-            self.game.fighters[f.0].x20A4.x0_b0 = no_light;
-            if let Some(s) = self.game.fighters[f.0].x20A4.shadow {
+            self.game.fighters[f.0].shadow.x0_b0 = no_light;
+            if let Some(s) = self.game.fighters[f.0].shadow.shadow {
                 shadow::delete_object(&mut self.game.objs, Some(s), None);
                 let fp = &self.game.fighters[f.0];
                 let mut added = false;
-                if fp.x21FC_flag[0] & 1 != 0 {
+                if fp.debug_draw_flags[0] & 1 != 0 {
                     let (shown, accessory) = (
-                        !fp.invisible && !fp.x221E_b5 && fp.x5AC.xC[1].is_some(),
-                        fp.x20A0_accessory,
+                        !fp.invisible && !fp.visible && fp.parts_vis.xC[1].is_some(),
+                        fp.accessory,
                     );
                     if shown {
                         let root = match self.game.world.gobj(g).obj {
@@ -127,16 +127,16 @@ impl Running<'_> {
                         added = true;
                     }
                 }
-                self.game.fighters[f.0].x20A4.x0_b3 = !added;
+                self.game.fighters[f.0].shadow.x0_b3 = !added;
             }
             let fp = &self.game.fighters[f.0];
-            let ls = &fp.x20A4;
+            let ls = &fp.shadow;
             let any = ls.x0_b0 || ls.x0_b1 || ls.x0_b2 || ls.x0_b3 || ls.x0_b4 || ls.x0_b5;
-            let casts = !fp.x221E_b1 && !fp.x2226_b4 && !fp.is_sub_fighter;
+            let casts = !fp.dead_flag && !fp.cloak && !fp.is_sub_fighter;
             let s = ls.shadow.expect("a fighter without a shadow");
             shadow::set_active(&mut self.game.objs, s, !any && casts);
             let fp = &self.game.fighters[f.0];
-            let (Some(cm), false) = (fp.x890_cameraBox, fp.x20A4.x0_b3) else {
+            let (Some(cm), false) = (fp.camera_box, fp.shadow.x0_b3) else {
                 continue;
             };
             let intensity = self.game.gr.param.as_ref().map_or(128, |p| i32::from(p.x4)) as u8;

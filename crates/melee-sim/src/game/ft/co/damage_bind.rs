@@ -52,9 +52,9 @@ impl Running<'_> {
         let timer = fp::fmadds(reg(fp.dmg.x1830_percent), x66c, t);
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = mem(timer);
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = false;
+        fp.mash_stick_y = 0;
+        fp.mash_stick_x = 0;
+        fp.can_mash = false;
     }
 
     /// `ftCo_DamageBind_Anim`: the timer runs down by x670 a frame and by x674 a mash

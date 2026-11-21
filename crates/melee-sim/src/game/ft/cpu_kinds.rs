@@ -35,14 +35,14 @@ impl Running<'_> {
             let it = super::super::it::item_of(self.game, g);
             !self.cpu_item_heals(it)
         });
-        let item = if holds_other || fpp.x2168 != 0 {
+        let item = if holds_other || fpp.hammer_music != 0 {
             None
         } else {
             self.cpu_healing_item_target(f)
         };
-        self.game.fighters[f.0].cpu.x4C = item;
+        self.game.fighters[f.0].cpu.item_target = item;
         let x50 = self.cpu_enemy_item_target(f);
-        self.game.fighters[f.0].cpu.x50 = x50;
+        self.game.fighters[f.0].cpu.enemy_item = x50;
     }
 
     /// Computer kind 9, `ftCo_800B00F8` (Classic's Very Easy opponents; Events 4, 15, 25, 27
@@ -58,14 +58,14 @@ impl Running<'_> {
             return r5;
         }
         let target = self.cpu_find_target(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_healing_item_targets(f);
         if self.cpu_should_act(f) {
-            if self.game.fighters[f.0].cpu.x4C.is_some() {
+            if self.game.fighters[f.0].cpu.item_target.is_some() {
                 self.cpu_toward_item(f);
             } else if self.game.fighters[f.0]
                 .cpu
-                .x7C
+                .frame_counter
                 .wrapping_rem(60)
                 .wrapping_mul(5)
                 == 0
@@ -74,21 +74,21 @@ impl Running<'_> {
                     self.cpu_to_other_island(f);
                 }
                 let b0 = self.randf() > 0.5;
-                self.game.fighters[f.0].cpu.xF8_b0 = b0;
+                self.game.fighters[f.0].cpu.fear_target = b0;
                 let b2 = self.randf() > 0.5;
-                self.game.fighters[f.0].cpu.xF9_b2 = b2;
+                self.game.fighters[f.0].cpu.acts_alone = b2;
                 let b4 = self.randf() > 0.5;
-                self.game.fighters[f.0].cpu.xF9_b4 = b4;
+                self.game.fighters[f.0].cpu.may_air_attack = b4;
                 let b3 = self.randf() > 0.5;
-                self.game.fighters[f.0].cpu.xF9_b3 = b3;
+                self.game.fighters[f.0].cpu.may_jump_attack = b3;
                 let b5 = self.randf() > 0.5;
-                self.game.fighters[f.0].cpu.xF9_b5 = b5;
+                self.game.fighters[f.0].cpu.may_ranged_attack = b5;
                 let b6 = self.randf() > 0.5;
-                self.game.fighters[f.0].cpu.xF9_b6 = b6;
+                self.game.fighters[f.0].cpu.may_shield = b6;
                 let b7 = self.randf() > 0.5;
                 let c = &mut self.game.fighters[f.0].cpu;
-                c.xF9_b7 = b7;
-                c.xF9_b1 = false;
+                c.may_pick_up = b7;
+                c.fleeing = false;
             }
         }
         self.cpu_choose_behavior_r5(f, true, Some(sp)).1
@@ -99,14 +99,14 @@ impl Running<'_> {
     /// (`ftCo_CpuInitNoTarget` and its copies).
     fn cpu_fear_flags(&mut self, f: FighterId, b0: bool, flags: [bool; 6]) {
         let c = &mut self.game.fighters[f.0].cpu;
-        c.xF8_b0 = b0;
-        c.xF9_b2 = flags[0];
-        c.xF9_b4 = flags[1];
-        c.xF9_b3 = flags[2];
-        c.xF9_b5 = flags[3];
-        c.xF9_b6 = flags[4];
-        c.xF9_b7 = flags[5];
-        c.xF9_b1 = false;
+        c.fear_target = b0;
+        c.acts_alone = flags[0];
+        c.may_air_attack = flags[1];
+        c.may_jump_attack = flags[2];
+        c.may_ranged_attack = flags[3];
+        c.may_shield = flags[4];
+        c.may_pick_up = flags[5];
+        c.fleeing = false;
     }
 
     /// Heads for `target` (`ftCo_800A75DC`) from a decision whose stack pointer is `sp` and
@@ -140,13 +140,13 @@ impl Running<'_> {
         }
         self.cpu_fear_flags(f, false, [true; 6]);
         let (target, lr) = self.cpu_find_target_lr(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_item_targets(f);
         if self.cpu_should_act(f) {
-            if self.game.fighters[f.0].cpu.x4C.is_some() {
+            if self.game.fighters[f.0].cpu.item_target.is_some() {
                 self.cpu_toward_item(f);
             } else {
-                let target = self.game.fighters[f.0].cpu.x44;
+                let target = self.game.fighters[f.0].cpu.target;
                 self.cpu_toward_from(f, target, sp, lr);
             }
         }
@@ -161,7 +161,7 @@ impl Running<'_> {
             false
         } else {
             let fpp = &self.game.fighters[f.0];
-            match fpp.cpu.x44 {
+            match fpp.cpu.target {
                 Some(t) if fpp.ground_or_air == GA_GROUND => {
                     let limit = reg(self.cpu_distance_threshold(fpp.kind));
                     self.cpu_distance(f, t) < limit
@@ -169,14 +169,14 @@ impl Running<'_> {
                 _ => false,
             }
         };
-        self.game.fighters[f.0].cpu.xF8_b6 = near;
+        self.game.fighters[f.0].cpu.near_target = near;
     }
 
     /// Whether the fighter has a Starman (`x221D_b6`) or a hammer out of a ride (`x2168`
     /// with no `x2338.x`): computer kinds 7, 10 and 18 then decide as kind 8.
     fn cpu_powered_up(&self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
-        fpp.x221D_b6 || (fpp.x2168 != 0 && fpp.x2338.x == 0)
+        fpp.starman || (fpp.hammer_music != 0 && fpp.hammer_timers.x == 0)
     }
 
     /// The first fighter of player `player` in the fighters' list other than this one, in
@@ -223,12 +223,12 @@ impl Running<'_> {
         }
         self.cpu_fear_flags(f, false, [true; 6]);
         let (target, lr) = self.cpu_find_target_lr(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_item_targets(f);
         if self.cpu_should_act(f) {
             let to = self
                 .cpu_player_fighter(f, player)
-                .or(self.game.fighters[f.0].cpu.x44);
+                .or(self.game.fighters[f.0].cpu.target);
             self.cpu_toward_from(f, to, sp, lr);
         }
         self.cpu_choose_behavior_r5(f, true, Some(sp)).1
@@ -254,19 +254,19 @@ impl Running<'_> {
         }
         self.cpu_fear_flags(f, true, [true, true, false, true, true, true]);
         let target = self.cpu_find_target(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_item_targets(f);
         self.cpu_near_target_kind(f);
         if stand
-            && let Some(t) = self.game.fighters[f.0].cpu.x44
-            && self.cpu_distance(f, t) > reg(self.game.fighters[f.0].cpu.x40)
+            && let Some(t) = self.game.fighters[f.0].cpu.target
+            && self.cpu_distance(f, t) > reg(self.game.fighters[f.0].cpu.keep_away_distance)
         {
             return self.cpu_stand_ground(f, sp);
         }
         if self.cpu_should_act(f) {
-            if self.game.fighters[f.0].cpu.x4C.is_some() {
+            if self.game.fighters[f.0].cpu.item_target.is_some() {
                 self.cpu_toward_item(f);
-            } else if let Some(t) = self.game.fighters[f.0].cpu.x44
+            } else if let Some(t) = self.game.fighters[f.0].cpu.target
                 && self.game.fighters[f.0].ground_or_air != GA_AIR
             {
                 let (me, them) = (
@@ -294,7 +294,7 @@ impl Running<'_> {
         let sp = caller - 0x68;
         self.cpu_fear_flags(f, false, [true, true, false, true, true, true]);
         let target = self.cpu_find_target(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_item_targets(f);
         if self.cpu_should_act(f) {
             let at = self.game.fighters[f.0].cur_pos;
@@ -316,15 +316,17 @@ impl Running<'_> {
     pub(super) fn cpu_decide_roamer(&mut self, f: FighterId) -> Leftover {
         let sp = kind_sp(0x38);
         self.cpu_fear_flags(f, true, [false, false, false, true, true, true]);
-        self.game.fighters[f.0].cpu.x2C = 1;
+        self.game.fighters[f.0].cpu.item_worth_min = 1;
         let target = self.cpu_find_target(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_item_targets(f);
         if self.cpu_should_act(f) {
             let fpp = &self.game.fighters[f.0];
-            if fpp.cpu.x4C.is_some() && fpp.item_gobj.is_none() {
+            if fpp.cpu.item_target.is_some() && fpp.item_gobj.is_none() {
                 self.cpu_toward_item(f);
-            } else if fpp.cpu.x7C.wrapping_rem(60).wrapping_mul(5) == 0 && self.randf() < 0.5 {
+            } else if fpp.cpu.frame_counter.wrapping_rem(60).wrapping_mul(5) == 0
+                && self.randf() < 0.5
+            {
                 self.cpu_to_other_island(f);
             }
         }
@@ -339,13 +341,13 @@ impl Running<'_> {
             return;
         }
         let fpp = &self.game.fighters[f.0];
-        if fpp.cpu.x4C.is_some() && !(hands_free && fpp.item_gobj.is_some()) {
+        if fpp.cpu.item_target.is_some() && !(hands_free && fpp.item_gobj.is_some()) {
             self.cpu_toward_item(f);
             return;
         }
         let to = self
             .cpu_best_human_enemy(f)
-            .or(self.game.fighters[f.0].cpu.x44);
+            .or(self.game.fighters[f.0].cpu.target);
         self.cpu_toward_from(f, to, sp, lr);
     }
 
@@ -425,11 +427,11 @@ impl Running<'_> {
         }
         self.cpu_fear_flags(f, true, [true, true, true, true, true, false]);
         let (target, lr) = self.cpu_find_target_lr(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_item_targets(f);
         if self.cpu_should_act(f) {
             let (ally, slots) = self.cpu_nearest_ally(f);
-            let to = ally.or(self.game.fighters[f.0].cpu.x44);
+            let to = ally.or(self.game.fighters[f.0].cpu.target);
             match slots {
                 None => self.cpu_toward_from(f, to, sp, lr),
                 Some((Leftover::Word(x), Leftover::Word(y))) => {
@@ -454,7 +456,7 @@ impl Running<'_> {
         }
         self.cpu_fear_flags(f, true, [true; 6]);
         let (target, lr) = self.cpu_find_target_lr(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_item_targets(f);
         self.cpu_near_target_kind(f);
         self.cpu_go_for_enemy(f, sp, lr, false);
@@ -471,9 +473,9 @@ impl Running<'_> {
             return r5;
         }
         self.cpu_fear_flags(f, false, [true; 6]);
-        self.game.fighters[f.0].cpu.x2C = 1;
+        self.game.fighters[f.0].cpu.item_worth_min = 1;
         let (target, lr) = self.cpu_find_target_lr(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_item_targets(f);
         self.cpu_go_for_enemy(f, sp, lr, true);
         self.cpu_choose_behavior_r5(f, true, Some(sp)).1
@@ -492,14 +494,14 @@ impl Running<'_> {
         }
         self.cpu_fear_flags(f, false, [true, true, true, true, true, false]);
         let (target, lr) = self.cpu_find_target_lr(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         let x50 = self.cpu_enemy_item_target(f);
-        self.game.fighters[f.0].cpu.x50 = x50;
+        self.game.fighters[f.0].cpu.enemy_item = x50;
         self.cpu_near_target_kind(f);
         if self.cpu_should_act(f) {
             let to = self
                 .cpu_best_human_enemy(f)
-                .or(self.game.fighters[f.0].cpu.x44);
+                .or(self.game.fighters[f.0].cpu.target);
             self.cpu_toward_from(f, to, sp, lr);
         }
         self.cpu_choose_behavior_r5(f, false, Some(sp)).1
@@ -517,17 +519,17 @@ impl Running<'_> {
         }
         self.cpu_fear_flags(f, false, [true, true, false, true, false, true]);
         let (target, lr) = self.cpu_find_target_lr(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_item_targets(f);
         // `ftCo_CpuActOnNoTarget`.
         if self.cpu_should_act(f) {
-            if self.game.fighters[f.0].cpu.x4C.is_some() {
+            if self.game.fighters[f.0].cpu.item_target.is_some() {
                 self.cpu_toward_item(f);
                 return self.cpu_choose_behavior_r5(f, true, Some(sp)).1;
             }
             let to = self
                 .cpu_best_human_enemy(f)
-                .or(self.game.fighters[f.0].cpu.x44);
+                .or(self.game.fighters[f.0].cpu.target);
             self.cpu_toward_from(f, to, sp, lr);
         }
         self.cpu_choose_behavior_r5(f, true, Some(sp)).1
@@ -544,18 +546,18 @@ impl Running<'_> {
             return r5;
         }
         self.cpu_fear_flags(f, false, [true, true, true, false, true, true]);
-        self.game.fighters[f.0].cpu.x2C = 1;
+        self.game.fighters[f.0].cpu.item_worth_min = 1;
         let (target, lr) = self.cpu_find_target_lr(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_item_targets(f);
         if self.cpu_should_act(f) {
             let fpp = &self.game.fighters[f.0];
-            if fpp.cpu.x4C.is_some() && fpp.item_gobj.is_none() {
+            if fpp.cpu.item_target.is_some() && fpp.item_gobj.is_none() {
                 self.cpu_toward_item(f);
             } else {
                 let to = self
                     .cpu_best_human_enemy(f)
-                    .or(self.game.fighters[f.0].cpu.x44);
+                    .or(self.game.fighters[f.0].cpu.target);
                 self.cpu_toward_from(f, to, sp, lr);
             }
         }

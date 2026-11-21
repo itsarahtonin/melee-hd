@@ -802,7 +802,7 @@ pub fn show_tree(game: &mut Game, j: Option<JObjId>) {
 #[doc(alias = "it_80274594")]
 pub fn scale_by_owner(r: &mut Running, gobj: GObjId) {
     let owner = item(r.game, gobj).owner.expect("an item without an owner");
-    let scale = super::owner::fighter(r.game, owner).x34_scale.y;
+    let scale = super::owner::fighter(r.game, owner).scale.y;
     let ip = item_mut(r.game, gobj);
     ip.scl = mem(fp::fmuls(reg(ip.scl), reg(scale)));
     let scl = ip.scl;

@@ -19,10 +19,10 @@ impl Running<'_> {
     /// The landing's effect at his feet, once (`fn_80134518`, the landing's accessory).
     #[doc(alias = "fn_80134518")]
     pub fn kp_lw_landing_effect(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let pos = self.game.fighter(gobj).cur_pos;
             ef::spawn(self, 0x4D8, Some(gobj), &[ef::Arg::Vec(pos)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;
@@ -31,10 +31,10 @@ impl Running<'_> {
     /// The fall's effect on his top joint, once (`fn_80134590`, the fall's accessory).
     #[doc(alias = "fn_80134590")]
     pub fn kp_lw_fall_effect(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let top = self.bone_joint(gobj, 0);
             ef::spawn(self, 0x4DF, Some(gobj), &[ef::Arg::JObj(top)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;
@@ -47,8 +47,8 @@ impl Running<'_> {
         fp.cmd_vars[1] = 0;
         fp.cmd_vars[0] = 0;
         fp.set_throw_flag(0, false);
-        fp.x6A4_transNOffset.y = 0.0;
-        fp.x2223_b4 = true;
+        fp.trans_n_offset.y = 0.0;
+        fp.no_item_bounce = true;
     }
 
     /// `ftKp_SpecialLw_Enter`: still, the hop starts in the air.
@@ -124,7 +124,7 @@ impl Running<'_> {
         }
         if fp.cmd_vars[1] != 0 {
             fp.self_vel.x = 0.0;
-            if !fp.x2219_b0 {
+            if !fp.effect_once {
                 fp.accessory4_cb = Some(CodeRef(addr::LW_FALL_EFFECT));
             }
         }

@@ -1182,14 +1182,18 @@ pub fn fighter(game: &Game, data: &Archives, img: &mut Image, f: FighterId) {
         let base = game.fighter_anim_bufs.addr(b.0);
         (base != 0).then(|| base + super::ft::anim_buf::ARCHIVE_HEADER + t.offset)
     };
-    if let Some(t) = o.x590.tree() {
-        l.put_word(at + 0x590, in_buf(o.x59C, Some(t)));
+    if let Some(t) = o.action_tree.tree() {
+        l.put_word(at + 0x590, in_buf(o.main_anim_buf, Some(t)));
     }
-    if o.x598.addr.is_some() {
-        l.put_word(at + 0x598, o.x598.addr);
-    } else if o.x598.tree.is_some() {
-        let b = if o.x598.in_main { o.x59C } else { o.x5A0 };
-        l.put_word(at + 0x598, in_buf(b, o.x598.tree));
+    if o.second_tree.addr.is_some() {
+        l.put_word(at + 0x598, o.second_tree.addr);
+    } else if o.second_tree.tree.is_some() {
+        let b = if o.second_tree.in_main {
+            o.main_anim_buf
+        } else {
+            o.second_anim_buf
+        };
+        l.put_word(at + 0x598, in_buf(b, o.second_tree.tree));
     }
     if let Some(runs) = game.ft.render_leftovers.get(&f.0) {
         l.keep_render_target(runs, img.render_fill);

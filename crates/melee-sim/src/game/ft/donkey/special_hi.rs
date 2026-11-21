@@ -49,7 +49,7 @@ impl Running<'_> {
         Self::clamp_ground_vel(fp, max);
         fp.self_vel.x = fp.gr_vel;
         fp.self_vel.y = 0.0;
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
         self.anim_update(gobj);
         self.dk_special_hi_effect(gobj);
     }
@@ -67,7 +67,7 @@ impl Running<'_> {
         fp.cmd_vars = [0; 4];
         Self::clamp_self_vel_x(fp, max);
         fp.self_vel.y = rise;
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
         self.anim_update(gobj);
         self.dk_special_hi_effect(gobj);
     }

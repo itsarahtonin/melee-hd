@@ -49,7 +49,7 @@ impl Running<'_> {
         let cape = mariocape::spawn(self, gobj, facing, pos, bone, kind);
         let fp = &mut self.game.fighters[f.0];
         fp.u.set_gobj_at(MARIO_CAPE, cape);
-        fp.x1984_heldItemSpec = cape;
+        fp.special_item = cape;
         self.mr_cape_callbacks(gobj);
         self.game.fighters[f.0].accessory4_cb = None;
     }

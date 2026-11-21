@@ -22,12 +22,15 @@ impl Running<'_> {
         let fp = self.game.fighter(owner);
         let (held, other) = (
             fp.item_gobj == Some(it),
-            fp.x197C == Some(it) || fp.x1980 == Some(it),
+            fp.bunny_hood == Some(it) || fp.flower == Some(it),
         );
         if !held && !other {
             return true;
         }
-        !(fp.invisible || fp.x221E_b5 || (!fp.x221E_b3 && held) || (!fp.x221E_b4 && other))
+        !(fp.invisible
+            || fp.visible
+            || (!fp.item_visible && held)
+            || (!fp.articles_visible && other))
     }
 
     /// The item's tree drawn for the pass, through the view shifted by `shake`,

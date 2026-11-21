@@ -623,10 +623,10 @@ impl Running<'_> {
     #[doc(alias = "ft_80081A00")]
     pub fn stepped_on_item(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter_mut(gobj);
-        if fp.x2219_b1 || fp.x2223_b4 {
+        if fp.out_of_play || fp.no_item_bounce {
             return false;
         }
-        fp.x2223_b5 = true;
+        fp.stepped_on_item = true;
         let p = fp.coll_data.cur_pos;
         let (lx, rx) = (reg(fp.coll_data.ecb.left.x), reg(fp.coll_data.ecb.right.x));
         fp.dmg.x1930.xC.x = mem(fp::fadds(lx, reg(p.x)));
@@ -667,9 +667,9 @@ impl Running<'_> {
         let c = self.common();
         let (y, frames) = (c.f32(0x6D0), c.i32(0x6CC));
         let fp = self.game.fighter_mut(gobj);
-        fp.xA4_unk_vel.x = fp.self_vel.x;
-        fp.xA4_unk_vel.y = y;
-        fp.xA4_unk_vel.z = 0.0;
+        fp.item_bounce_vel.x = fp.self_vel.x;
+        fp.item_bounce_vel.y = y;
+        fp.item_bounce_vel.z = 0.0;
         fp.dmg.x194C = frames;
         fp.dmg.x1948 = frames;
     }
@@ -694,7 +694,7 @@ impl Running<'_> {
     /// Whether a fighter that can't catch ledges now (on cooldown, or out of stamina).
     fn no_ledges(&self, f: FighterId) -> bool {
         let fp = &self.game.fighters[f.0];
-        fp.x2064_ledgeCooldown != 0 || fp.stamina_dead
+        fp.ledge_cooldown != 0 || fp.stamina_dead
     }
 
     /// The airborne pass, landing on any floor, `ft_80081D0C`: true when the fighter landed.
@@ -744,7 +744,7 @@ impl Running<'_> {
         }
         let x44 = self.ft_ecb_desc(f);
         let snap = reg(self.data.f32(x44.at(0x18)));
-        let scale = reg(fp.x34_scale.y);
+        let scale = reg(fp.scale.y);
         let mul = reg(self.common().f32(0x1CC));
         let scaled = mem(fp::fmuls(mul, fp::fmuls(snap, scale)));
         let plain = mem(fp::fmuls(snap, scale));
@@ -947,7 +947,7 @@ impl Running<'_> {
                 continue;
             }
             let other = self.game.fighter(o);
-            if !other.x221D_b7 {
+            if !other.hanging {
                 continue;
             }
             let floor = other.mv_i32(0);
@@ -1213,7 +1213,7 @@ impl Running<'_> {
     pub fn ground_coll_teeter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        let nudge = reg(fp.xF8_playerNudgeVel.x);
+        let nudge = reg(fp.nudge_vel.x);
         let grounded = if nudge != 0.0 && fp::fmuls(nudge, reg(fp.facing_dir)) < 0.0 {
             self.ground_coll_slide(gobj)
         } else {
@@ -1375,7 +1375,7 @@ impl Running<'_> {
                 let (os, osub) = (i32::from(o.player_idx), i32::from(o.is_sub_fighter));
                 let (ms, msub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
                 self.record_ledge_steal(os, osub, ms, msub, ledge);
-                self.game.fighter_mut(gobj).x213C = ledge;
+                self.game.fighter_mut(gobj).ledge_caught = ledge;
                 false
             }
         }
@@ -1387,7 +1387,7 @@ impl Running<'_> {
     pub fn landing_threshold(&self, f: FighterId) -> f64 {
         let x310 = reg(self.common().f32(0x310));
         let k = reg(self.data.f32(self.common_ptr(0x30).at(0x30)));
-        let scale = reg(self.game.fighters[f.0].x34_scale.y);
+        let scale = reg(self.game.fighters[f.0].scale.y);
         fp::fneg(scaled_by_height(x310, scale, k))
     }
 

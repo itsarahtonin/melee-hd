@@ -114,11 +114,11 @@ impl Running<'_> {
         };
         let fp = self.game.fighter_mut(gobj);
         fp.mv.set_jobj_at(HOLD_JOINT, j);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         self.change_motion_state(gobj, next, UPDATE_CMD, frame, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         fp.accessory1_cb = Some(CodeRef(PULL_FOLLOW));
-        fp.x221B.x221B_b7 = false;
+        fp.state_flags.x221B_b7 = false;
     }
 
     /// `ftCo_CatchPull_Anim`: holding once the pull's frames run out or the script marks it.
@@ -226,7 +226,7 @@ impl Running<'_> {
             return;
         }
         let victim = self.game.fighter(gobj).victim_gobj.expect("holding no one");
-        if self.game.fighter(victim).x2226_b2 {
+        if self.game.fighter(victim).held_in_model {
             return;
         }
         let hold = self.game.fighter(gobj).mv.jobj_at(HOLD_JOINT);
@@ -236,7 +236,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let facing = reg(fp.facing_dir);
         let dx = fp::fsubs(reg(them.x), reg(me.x));
-        let mut dy = fp::fadds(fp::fsubs(reg(them.y), reg(me.y)), reg(fp.x2170));
+        let mut dy = fp::fadds(fp::fsubs(reg(them.y), reg(me.y)), reg(fp.hold_dy));
         let c = self.common();
         let (ahead, above) = (reg(c.f32(0x34C)), reg(c.f32(0x350)));
         if fp::fmuls(dx, facing) > ahead {
@@ -269,12 +269,12 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.accessory1_cb = Some(CodeRef(WAIT_FOLLOW));
         fp.take_dmg_cb = Some(CodeRef(WAIT_ON_DAMAGE));
-        fp.x221B.x221B_b7 = false;
+        fp.state_flags.x221B_b7 = false;
         fp.mv.set_jobj_at(HOLD_JOINT, j);
         self.fighter_effect(gobj, ef::SpawnKind::Pos, 0x41D, j, &[]);
         let f = self.game.fighter_id(gobj);
         self.start_rumble(f, 3, 0);
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
         let victim = self.game.fighter(gobj).victim_gobj.expect("holding no one");
         self.enter_capture_wait(victim);
     }
@@ -286,7 +286,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.accessory1_cb = Some(CodeRef(WAIT_FOLLOW));
         fp.take_dmg_cb = Some(CodeRef(WAIT_ON_DAMAGE));
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
     }
 
     /// `ftCo_CatchWait_IASA`: a pummel with A (`fn_800DA4C0`), else a throw.
@@ -328,7 +328,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.accessory1_cb = Some(CodeRef(ATTACK_FOLLOW));
         fp.take_dmg_cb = Some(CodeRef(ATTACK_ON_DAMAGE));
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
     }
 
     /// `ftCo_CatchAttack_Anim`: holding again once the pummel's frames run out.
@@ -449,28 +449,28 @@ impl Running<'_> {
     pub fn grab_release(&mut self, a: GObjId, b: GObjId) {
         for g in [a, b] {
             let fp = self.game.fighter_mut(g);
-            if fp.x2219_b7 {
-                fp.x221A_b1 = true;
+            if fp.hitlag_held {
+                fp.thaw_size = true;
             }
         }
-        let (holder, held) = if self.game.fighter(a).x221B.x221B_b7 {
+        let (holder, held) = if self.game.fighter(a).state_flags.x221B_b7 {
             (b, a)
         } else {
             (a, b)
         };
         let fp = self.game.fighter_mut(holder);
-        fp.x1A5C = None;
+        fp.partner = None;
         fp.victim_gobj = None;
-        fp.x221B.x221B_b5 = false;
-        fp.x221B.x221B_b7 = false;
-        if self.game.fighter(held).x2226_b2 {
+        fp.state_flags.x221B_b5 = false;
+        fp.state_flags.x221B_b7 = false;
+        if self.game.fighter(held).held_in_model {
             self.release_from_model(holder, held);
         }
         let fp = self.game.fighter_mut(held);
-        fp.x1A5C = None;
+        fp.partner = None;
         fp.victim_gobj = None;
-        fp.x221B.x221B_b5 = false;
-        fp.x221B.x221B_b7 = false;
+        fp.state_flags.x221B_b5 = false;
+        fp.state_flags.x221B_b7 = false;
     }
 
     /// [`Self::grab_release`]'s part for a victim inside its grabber's model (`x2226_b2`).
@@ -484,7 +484,7 @@ impl Running<'_> {
             // Inside Kirby's mouth while he swallows: its own size again, from where it is.
             self.update_model_scale(held);
             let fp = self.game.fighter_mut(held);
-            fp.x2226_b2 = false;
+            fp.held_in_model = false;
             fp.cur_pos
         } else {
             let xj = self.part_joint(held, X_ROT_N).expect("no XRotN");
@@ -492,15 +492,19 @@ impl Running<'_> {
             let fp = self.game.fighter(held);
             pos.x = mem(fp::fmadds(
                 reg(fp.facing_dir),
-                fp::fmuls(reg(fp.x1A70.z), reg(fp.x34_scale.y)),
+                fp::fmuls(reg(fp.throw_offset.z), reg(fp.scale.y)),
                 reg(pos.x),
             ));
-            pos.y = mem(fp::fmadds(reg(fp.x1A70.y), reg(fp.x34_scale.y), reg(pos.y)));
+            pos.y = mem(fp::fmadds(
+                reg(fp.throw_offset.y),
+                reg(fp.scale.y),
+                reg(pos.y),
+            ));
             pos.z = 0.0;
             super::throw::unconstrain(&mut self.game.objs, xj);
             let fp = self.game.fighter_mut(held);
-            fp.x2226_b2 = false;
-            let x2174 = fp.x2174;
+            fp.held_in_model = false;
+            let x2174 = fp.thrown_trans;
             jobj::set_translate(&mut self.game.objs.jobjs, xj, x2174);
             pos
         };
@@ -596,9 +600,9 @@ impl Running<'_> {
         if fp.ground_or_air == GA_GROUND {
             let y = reg(fp.cur_pos.y);
             let g = self.game.fighter_mut(grabber);
-            g.x2170 = mem(fp::fsubs(fp::fadds(dy, y), reg(g.cur_pos.y)));
+            g.hold_dy = mem(fp::fsubs(fp::fadds(dy, y), reg(g.cur_pos.y)));
         } else {
-            self.game.fighter_mut(grabber).x2170 = 0.0;
+            self.game.fighter_mut(grabber).hold_dy = 0.0;
             let fp = self.game.fighter_mut(gobj);
             fp.cur_pos.x = mem(fp::fadds(reg(fp.cur_pos.x), dx));
             fp.cur_pos.y = mem(fp::fadds(reg(fp.cur_pos.y), dy));
@@ -634,7 +638,7 @@ impl Running<'_> {
         let (dx, dy, dz) = self.hold_offset(gobj);
         let lift = reg(self.common().f32(0x3C4));
         let fp = self.game.fighter_mut(gobj);
-        let up = dy > fp::fmuls(lift, reg(fp.x34_scale.y));
+        let up = dy > fp::fmuls(lift, reg(fp.scale.y));
         fp.cur_pos.x = mem(fp::fadds(reg(fp.cur_pos.x), dx));
         fp.cur_pos.y = mem(fp::fadds(reg(fp.cur_pos.y), dy));
         fp.cur_pos.z = mem(fp::fadds(reg(fp.cur_pos.z), dz));
@@ -658,18 +662,18 @@ impl Running<'_> {
         self.release_victim(victim);
         let gf = self.game.fighter(grabber).facing_dir;
         let fp = self.game.fighter_mut(victim);
-        fp.x1A5C = Some(grabber);
+        fp.partner = Some(grabber);
         fp.victim_gobj = Some(grabber);
-        fp.x221B.x221B_b5 = false;
-        fp.x221B.x221B_b7 = false;
+        fp.state_flags.x221B_b5 = false;
+        fp.state_flags.x221B_b7 = false;
         fp.facing_dir = mem(fp::fneg(reg(gf)));
         let timer = self.grab_escape_time(victim);
         let fp = self.game.fighter_mut(victim);
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = mem(timer);
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = false;
+        fp.mash_stick_y = 0;
+        fp.mash_stick_x = 0;
+        fp.can_mash = false;
         fp.set_mv_f32(WAIT_FRAMES, 0.0);
         fp.mv[0xC] = 0;
         fp.set_mv_f32(WAIT_MASH_TIMER, 0.0);
@@ -677,7 +681,7 @@ impl Running<'_> {
         self.change_motion_state(victim, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(victim);
         self.stop_dead(victim);
-        self.game.fighter_mut(victim).x1A6A = 0x1FF;
+        self.game.fighter_mut(victim).grab_immune = 0x1FF;
         self.follow_hold(victim, grabber);
         let cb = self
             .game
@@ -699,7 +703,7 @@ impl Running<'_> {
         let Some(victim) = fp.victim_gobj else {
             return;
         };
-        if fp.x221B.x221B_b5 {
+        if fp.state_flags.x221B_b5 {
             self.knocked_away(victim);
             self.grab_release(gobj, victim);
         } else {
@@ -712,7 +716,7 @@ impl Running<'_> {
     /// (`fn_800DAEEC`) or hold (`fn_800DBBF8`).
     #[doc(alias = "ftCo_CapturePulledHi_Coll")]
     pub fn co_capture_pulled_hi_coll(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2226_b2 {
+        if !self.game.fighter(gobj).held_in_model {
             self.air_coll_touch_then(gobj, |g, gobj| g.capture_land(gobj, ms::CAPTURE_PULLED_LW));
         }
     }
@@ -720,7 +724,7 @@ impl Running<'_> {
     /// `ftCo_CaptureWaitHi_Coll`.
     #[doc(alias = "ftCo_CaptureWaitHi_Coll")]
     pub fn co_capture_wait_hi_coll(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2226_b2 {
+        if !self.game.fighter(gobj).held_in_model {
             self.air_coll_touch_then(gobj, |g, gobj| g.capture_land(gobj, ms::CAPTURE_WAIT_LW));
         }
     }
@@ -737,7 +741,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, msid, UPDATE_CMD, frame, 1.0, 0.0, None);
         if msid == ms::CAPTURE_WAIT_LW {
             self.capture_yoshi_check(gobj);
-            self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+            self.game.fighter_mut(gobj).grab_immune = 0x1FF;
         }
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
         self.follow_hold(gobj, grabber);
@@ -763,7 +767,7 @@ impl Running<'_> {
     /// `ftCo_CapturePulledLw_Coll` (`ftCo_CaptureWaitLw_Coll`): off a ledge, the high state.
     #[doc(alias = "ftCo_CapturePulledLw_Coll")]
     pub fn co_capture_pulled_lw_coll(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2226_b2 {
+        if !self.game.fighter(gobj).held_in_model {
             self.ground_coll_fall_off_then(gobj, |g, gobj| {
                 g.capture_lift(gobj, ms::CAPTURE_PULLED_HI)
             });
@@ -773,7 +777,7 @@ impl Running<'_> {
     /// `ftCo_CaptureWaitLw_Coll`.
     #[doc(alias = "ftCo_CaptureWaitLw_Coll")]
     pub fn co_capture_wait_lw_coll(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2226_b2 {
+        if !self.game.fighter(gobj).held_in_model {
             self.ground_coll_fall_off_then(gobj, |g, gobj| {
                 g.capture_lift(gobj, ms::CAPTURE_WAIT_HI)
             });
@@ -796,7 +800,7 @@ impl Running<'_> {
         }
         let grabber = self.game.fighter(gobj).victim_gobj.expect("held by no one");
         self.follow_hold(gobj, grabber);
-        if !self.game.fighter(gobj).x2226_b2 {
+        if !self.game.fighter(gobj).held_in_model {
             if msid == ms::CAPTURE_WAIT_HI {
                 self.co_capture_wait_hi_coll(gobj);
             } else {
@@ -813,7 +817,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800DB5D8")]
     fn capture_wait_hooks(&mut self, gobj: GObjId) {
         self.capture_yoshi_check(gobj);
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
     }
 
     /// Held still, high or low, `fn_800DB790` (`fn_800DBAE4`): the state, in Yoshi's mouth
@@ -824,7 +828,7 @@ impl Running<'_> {
         self.capture_yoshi_check(gobj);
         let wobbling = self.game.rules.prevents_wobbling();
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
         if wobbling {
             fp.mv[0x44] = 0;
             fp.mv[0x46..0x48].copy_from_slice(&[0xFF, 0xFF]);
@@ -891,7 +895,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_CaptureDamageHi_Coll")]
     #[doc(alias = "fn_800DC384")]
     pub fn co_capture_damage_hi_coll(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2226_b2 {
+        if !self.game.fighter(gobj).held_in_model {
             self.air_coll_touch_then(gobj, |g, gobj| g.capture_damage_switch(gobj, false));
         }
     }
@@ -932,7 +936,7 @@ impl Running<'_> {
     /// `ftCo_CaptureDamageLw_Coll`: off a ledge, the high flinch.
     #[doc(alias = "ftCo_CaptureDamageLw_Coll")]
     pub fn co_capture_damage_lw_coll(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2226_b2 {
+        if !self.game.fighter(gobj).held_in_model {
             self.ground_coll_fall_off_then(gobj, |g, gobj| g.capture_damage_switch(gobj, true));
         }
     }
@@ -997,7 +1001,7 @@ impl Running<'_> {
         h.capsule.a_offset = crate::vec::Vec3::default();
         h.capsule.b_offset = crate::vec::Vec3::default();
         h.capsule.scale = scale;
-        fp.x221A_b6 = true;
+        fp.hurtboxes_custom = true;
     }
 
     /// `ftCo_CaptureWaitHi_Anim` (`ftCo_CaptureWaitLw_Anim`): the hold counts down, faster
@@ -1062,32 +1066,32 @@ impl Running<'_> {
             fp.grab_timer = mem(fp::fsubs(reg(fp.grab_timer), reg(amount)));
             mashed = true;
         }
-        let (r5, r6) = (fp.x1A50, fp.x1A51);
+        let (r5, r6) = (fp.mash_stick_x, fp.mash_stick_y);
         let (sx, sy) = (reg(fp.input.lstick[0].x), reg(fp.input.lstick[0].y));
         if sx < fp::fneg(push) {
-            fp.x1A50 = -1;
+            fp.mash_stick_x = -1;
         }
         if sx > push {
-            fp.x1A50 = 1;
+            fp.mash_stick_x = 1;
         }
         if sy < fp::fneg(push) {
-            fp.x1A51 = -1;
+            fp.mash_stick_y = -1;
         }
         if sy > push {
-            fp.x1A51 = 1;
+            fp.mash_stick_y = 1;
         }
-        if r5 != fp.x1A50 || r6 != fp.x1A51 {
+        if r5 != fp.mash_stick_x || r6 != fp.mash_stick_y {
             fp.grab_timer = mem(fp::fsubs(reg(fp.grab_timer), reg(amount)));
             mashed = true;
         }
-        if mashed && fp.x2224_b6 {
-            fp.x2224_b5 = true;
-            fp.x1A52 = fp.x1A52.wrapping_add(1);
-            if fp.x1A52 >= fp.x1A53 {
-                fp.x1A52 = 0;
+        if mashed && fp.can_mash {
+            fp.mash_shaking = true;
+            fp.mash_shake_row = fp.mash_shake_row.wrapping_add(1);
+            if fp.mash_shake_row >= fp.mash_shake_rows {
+                fp.mash_shake_row = 0;
             }
         } else {
-            fp.x2224_b5 = false;
+            fp.mash_shaking = false;
         }
         if !fp.is_sub_fighter {
             let slot = i32::from(fp.player_idx);

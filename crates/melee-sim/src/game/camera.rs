@@ -587,7 +587,7 @@ fn fighter_of(game: &Game, gobj: GObjId) -> FighterId {
 /// `ftLib_GetCameraSubject`.
 #[doc(alias = "ftLib_GetCameraSubject")]
 fn fighter_box(game: &Game, gobj: GObjId) -> Option<CameraBoxId> {
-    game.fighters[fighter_of(game, gobj).0].x890_cameraBox
+    game.fighters[fighter_of(game, gobj).0].camera_box
 }
 
 /// A player's camera box, when the slot has a fighter with one.

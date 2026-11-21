@@ -57,7 +57,7 @@ impl Running<'_> {
         fp.accessory1_cb = Some(CodeRef(FOLLOW));
         fp.death2_cb = Some(CodeRef(DEATH));
         fp.take_dmg_cb = Some(CodeRef(HIT));
-        fp.x221D_b5 = true;
+        fp.nudge_off = true;
         fp.mv.set_gobj_at(LIKELIKE, Some(owner));
         fp.set_mv_i32(SPAT, 0);
         self.stop_dead(gobj);
@@ -80,13 +80,13 @@ impl Running<'_> {
         let timer = fp::fmadds(reg(fp.dmg.x1830_percent), x754, t);
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = mem(timer);
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = false;
-        fp.x1988 = 2;
+        fp.mash_stick_y = 0;
+        fp.mash_stick_x = 0;
+        fp.can_mash = false;
+        fp.hit_status = 2;
         fp.invisible = true;
         // `ftCommon_8007E2F4`.
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
     }
 
     /// The held fighter's damage hooks, `ftCo_800C7A30` (its `take_dmg_cb`): the Like Like lets

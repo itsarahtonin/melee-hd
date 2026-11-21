@@ -686,7 +686,7 @@ fn figatree_binding() {
             let f = fighter_arg(maps, call);
             let blend = call.regs.gpr[4] != 0;
             if call.addr == own {
-                let tree = g.game.fighters[f.0].x590.expect("a figatree");
+                let tree = g.game.fighters[f.0].action_tree.expect("a figatree");
                 g.bind_own_figatree(f, blend, tree);
             } else {
                 g.bind_figatree_remapped(f, blend);
@@ -1184,7 +1184,7 @@ fn dynamics_library() {
                     _ => {
                         let fid = maps.fighters[&r[5]];
                         let (dir, len) = wind::force_at(&g.game.gr.winds, v(r[3]));
-                        g.game.fighters[fid.0].x1670[0].x18 = dir;
+                        g.game.fighters[fid.0].ledge_points[0].x18 = dir;
                         return Ret::Float(f64::from(len));
                     }
                 }

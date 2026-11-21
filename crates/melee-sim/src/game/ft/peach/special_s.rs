@@ -92,9 +92,9 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.cmd_vars = [0; 4];
         fp.self_vel.x = 0.0;
-        fp.x6A4_transNOffset.x = 0.0;
+        fp.trans_n_offset.x = 0.0;
         if i32::from(fp.active_sticky.lstick.x) < window {
-            fp.x2070[2] |= 0x08;
+            fp.attack_flags[2] |= 0x08;
             fp.set_mv_i32(mv::S_SMASH, 1);
         } else {
             fp.set_mv_i32(mv::S_SMASH, 0);
@@ -107,7 +107,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let x34 = self.peach_attr_f32(f, attr::S_X34);
         let fp = &mut self.game.fighters[f.0];
-        fp.x21EC = Some(CodeRef(addr::S_RESET));
+        fp.motion_change_cb = Some(CodeRef(addr::S_RESET));
         fp.self_vel.y = 0.0;
         fp.gr_vel = mem(fp::fmuls(reg(x34), reg(fp.facing_dir)));
         self.change_motion_state(gobj, ms::SPECIAL_S_START, 0, 0.0, 1.0, 0.0, None);
@@ -120,7 +120,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let x40 = self.peach_attr_f32(f, attr::S_X40);
         let fp = &mut self.game.fighters[f.0];
-        fp.x21EC = Some(CodeRef(addr::S_RESET));
+        fp.motion_change_cb = Some(CodeRef(addr::S_RESET));
         fp.self_vel.y = x40;
         self.change_motion_state(gobj, ms::SPECIAL_AIR_S_START, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
@@ -132,8 +132,8 @@ impl Running<'_> {
     #[doc(alias = "doAirEnd0")]
     pub fn peach_special_s_air_end0(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if fp.x221C_b5 {
-            let other = fp.unk_gobj.expect("a hit by no one");
+        if fp.hit_this_frame {
+            let other = fp.hit_by.expect("a hit by no one");
             let ofp = self.game.fighter(other);
             match ofp.fighter_kind() {
                 FighterKind::Mars | FighterKind::Emblem => {
@@ -171,7 +171,7 @@ impl Running<'_> {
         } else {
             self.go_airborne(f);
             let fp = &mut self.game.fighters[f.0];
-            let s = reg(fp.x34_scale.y);
+            let s = reg(fp.scale.y);
             fp.cur_pos.x = mem(fp::fmadds(
                 fp::fmuls(-4.0, reg(fp.facing_dir)),
                 s,
@@ -337,7 +337,7 @@ impl Running<'_> {
         fp.self_vel.y = vy;
         self.change_motion_state(gobj, ms::SPECIAL_AIR_S_JUMP, 0, 0.0, 1.0, 0.0, None);
         let fp = &mut self.game.fighters[f.0];
-        fp.x21F8 = Some(CodeRef(FACE_FORWARD));
+        fp.turn_cb = Some(CodeRef(FACE_FORWARD));
         fp.hurtbox_detect_cb = Some(CodeRef(addr::S_AIR_END0));
     }
 
@@ -411,7 +411,7 @@ impl Running<'_> {
             fp.self_vel.x = mem(fp::fmuls(reg(vx), reg(fp.facing_dir)));
             fp.self_vel.y = vy;
         }
-        self.game.fighters[f.0].x21F8 = Some(CodeRef(FACE_BACK));
+        self.game.fighters[f.0].turn_cb = Some(CodeRef(FACE_BACK));
     }
 
     /// The ground's end (`enterEndSmash`).

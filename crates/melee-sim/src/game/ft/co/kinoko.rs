@@ -208,12 +208,12 @@ impl Running<'_> {
         let frames = self.common().i32(cd::FRAMES);
         let fp = self.game.fighter_mut(gobj);
         let (same, other) = if giant {
-            (fp.x2220_b5, fp.x2220_b6)
+            (fp.giant, fp.tiny)
         } else {
-            (fp.x2220_b6, fp.x2220_b5)
+            (fp.tiny, fp.giant)
         };
         if same {
-            fp.x2008 = frames;
+            fp.mushroom_frames = frames;
             return false;
         }
         let state = match (other, giant) {
@@ -260,7 +260,7 @@ impl Running<'_> {
         if fp.motion_id == ms::DAMAGE_ICE {
             return false;
         }
-        !matches!(fp.x2070[1] >> 4, 12 | 13)
+        !matches!(fp.attack_flags[1] >> 4, 12 | 13)
     }
 
     /// Whether the mushroom's end can start now, `fn_800D2818`: not frozen, not in a mushroom
@@ -271,8 +271,8 @@ impl Running<'_> {
         if fp.motion_id == ms::DAMAGE_ICE || self.in_kinoko_state(gobj) {
             return false;
         }
-        let kind = fp.x2070[1] >> 4;
-        kind == 5 || (kind < 5 && kind == 0) || fp.x2070[1] & 0x08 != 0
+        let kind = fp.attack_flags[1] >> 4;
+        kind == 5 || (kind < 5 && kind == 0) || fp.attack_flags[1] & 0x08 != 0
     }
 
     /// Growing on the ground, `ftCo_800D170C`.
@@ -336,17 +336,17 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let giant = k.end == addr::GIANT_START_DONE;
         let target = if giant {
-            if reg(fp.x34_scale.x) > 1.0 {
+            if reg(fp.scale.x) > 1.0 {
                 c.f32(cd::GIANT_FROM_SMALL)
             } else {
                 c.f32(cd::GIANT)
             }
-        } else if reg(fp.x34_scale.x) < 1.0 {
+        } else if reg(fp.scale.x) < 1.0 {
             c.f32(cd::SMALL_FROM_GIANT)
         } else {
             c.f32(cd::SMALL)
         };
-        let from = fp.x34_scale.y;
+        let from = fp.scale.y;
         let to = mem(fp::fmuls(reg(from), reg(target)));
         self.start_kinoko_scale(gobj, 0, from, to);
         let f = self.game.fighter_id(gobj);
@@ -371,7 +371,7 @@ impl Running<'_> {
         self.set_kinoko_fall(gobj, prev);
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(MV_X8, i32::from(x8));
-        let (from, to) = (fp.x34_scale.y, fp.x34_scale.x);
+        let (from, to) = (fp.scale.y, fp.scale.x);
         let giant = k.end == addr::GIANT_END_DONE;
         self.start_kinoko_scale(gobj, i32::from(giant), from, to);
         let f = self.game.fighter_id(gobj);
@@ -411,15 +411,16 @@ impl Running<'_> {
             fp::frsp(f64::from(c.i32(cd::PERCENT_MAX))),
         );
         let fp = self.game.fighter_mut(gobj);
-        fp.x2220_b5 = true;
-        fp.x2008 = frames;
+        fp.giant = true;
+        fp.mushroom_frames = frames;
         let mut percent = reg(fp.dmg.x1830_percent);
         if percent > from {
             percent = fp::fsubs(percent, from);
             if percent >= max {
                 percent = max;
             }
-            fp.x2008 = fp::fctiwz(fp::fadds(fp::frsp(f64::from(fp.x2008)), percent));
+            fp.mushroom_frames =
+                fp::fctiwz(fp::fadds(fp::frsp(f64::from(fp.mushroom_frames)), percent));
         }
         let to = fp.mv_f32(MV_SCALE_TO);
         self.kinoko_done(gobj, to, false);
@@ -431,8 +432,8 @@ impl Running<'_> {
         self.restore_kinoko_speeds(gobj);
         let frames = self.common().i32(cd::FRAMES);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2220_b6 = true;
-        fp.x2008 = frames;
+        fp.tiny = true;
+        fp.mushroom_frames = frames;
         let to = fp.mv_f32(MV_SCALE_TO);
         self.kinoko_done(gobj, to, false);
     }
@@ -442,8 +443,8 @@ impl Running<'_> {
     pub fn giant_end_done(&mut self, gobj: GObjId) {
         self.restore_kinoko_speeds(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2220_b5 = false;
-        let to = fp.x34_scale.x;
+        fp.giant = false;
+        let to = fp.scale.x;
         self.kinoko_done(gobj, to, true);
     }
 
@@ -452,8 +453,8 @@ impl Running<'_> {
     pub fn small_end_done(&mut self, gobj: GObjId) {
         self.restore_kinoko_speeds(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2220_b6 = false;
-        let to = fp.x34_scale.x;
+        fp.tiny = false;
+        let to = fp.scale.x;
         self.kinoko_done(gobj, to, true);
     }
 
@@ -483,7 +484,7 @@ impl Running<'_> {
         self.calc_attributes(gobj);
         let f = self.game.fighter_id(gobj);
         self.init_camera_box(f);
-        let s = self.game.fighters[f.0].x34_scale.y;
+        let s = self.game.fighters[f.0].scale.y;
         self.scale_ledge_snap(gobj, s);
     }
 
@@ -516,7 +517,7 @@ impl Running<'_> {
         let Some(victim) = fp.victim_gobj else {
             return;
         };
-        if fp.x221B.x221B_b5 {
+        if fp.state_flags.x221B_b5 {
             self.enter_capture_cut(victim);
         } else {
             self.enter_capture_cut(gobj);
@@ -530,14 +531,14 @@ impl Running<'_> {
     #[doc(alias = "fn_800D299C")]
     pub fn start_kinoko_scale(&mut self, gobj: GObjId, idx: i32, from: f32, to: f32) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].x2184.is_none() {
+        if self.game.fighters[f.0].mushroom_scale_joint.is_none() {
             let j = self.load_kinoko_scale_joint();
-            self.game.fighters[f.0].x2184 = Some(j);
+            self.game.fighters[f.0].mushroom_scale_joint = Some(j);
         }
         let fp = &mut self.game.fighters[f.0];
         fp.set_mv_f32(MV_SCALE_FROM, reg(from));
         fp.set_mv_f32(MV_SCALE_TO, reg(to));
-        let j = fp.x2184;
+        let j = fp.mushroom_scale_joint;
         let anim = self.kinoko_scale_anim(idx);
         jobj::add_anim(&mut self.game.objs, self.data, j, anim, None, None);
         self.req_joint_anim(j, 0.0);
@@ -593,7 +594,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800D2A3C")]
     pub fn kinoko_scale_frame(&mut self, gobj: GObjId) -> bool {
         let f = self.game.fighter_id(gobj);
-        let j = self.game.fighters[f.0].x2184;
+        let j = self.game.fighters[f.0].mushroom_scale_joint;
         jobj::anim(
             &mut self.game.objs,
             self.data,
@@ -717,26 +718,26 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         let w = |v: f32| v.to_bits() as i32;
         let (a1, a2, gv, gkb, gsk) = (
-            fp.xE4_ground_accel_1,
-            fp.xE8_ground_accel_2,
+            fp.ground_accel_1,
+            fp.ground_accel_2,
             fp.gr_vel,
-            fp.xF0_ground_kb_vel,
-            fp.xF4_ground_attacker_shield_kb_vel,
+            fp.ground_kb_vel,
+            fp.ground_attacker_shield_kb_vel,
         );
         fp.set_mv_i32(mvc::GR_ACCEL_1, w(a1));
         fp.set_mv_i32(mvc::GR_ACCEL_2, w(a2));
-        let sa = fp.x74_self_accel;
+        let sa = fp.anim_vel;
         set_mv_vec(fp, mvc::SELF_ACCEL, sa);
         fp.set_mv_i32(mvc::GR_VEL, w(gv));
         let sv = fp.self_vel;
         set_mv_vec(fp, mvc::SELF_VEL, sv);
         fp.set_mv_i32(mvc::GR_KB_VEL, w(gkb));
-        let kb = fp.x8c_kb_vel;
+        let kb = fp.kb_vel;
         set_mv_vec(fp, mvc::KB_VEL, kb);
         fp.set_mv_i32(mvc::GR_SHIELD_KB_VEL, w(gsk));
-        let sk = fp.x98_atk_shield_kb;
+        let sk = fp.atk_shield_kb_vel;
         set_mv_vec(fp, mvc::SHIELD_KB, sk);
-        let uv = fp.xD4_unk_vel;
+        let uv = fp.frame_vel;
         set_mv_vec(fp, mvc::UNK_VEL, uv);
         self.stop_dead(gobj);
     }
@@ -747,16 +748,16 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         let r =
             |fp: &super::super::super::structs::Fighter, off| f32::from_bits(fp.mv_i32(off) as u32);
-        fp.xE4_ground_accel_1 = r(fp, mvc::GR_ACCEL_1);
-        fp.xE8_ground_accel_2 = r(fp, mvc::GR_ACCEL_2);
-        fp.x74_self_accel = mv_vec(fp, mvc::SELF_ACCEL);
+        fp.ground_accel_1 = r(fp, mvc::GR_ACCEL_1);
+        fp.ground_accel_2 = r(fp, mvc::GR_ACCEL_2);
+        fp.anim_vel = mv_vec(fp, mvc::SELF_ACCEL);
         fp.gr_vel = r(fp, mvc::GR_VEL);
         fp.self_vel = mv_vec(fp, mvc::SELF_VEL);
-        fp.xF0_ground_kb_vel = r(fp, mvc::GR_KB_VEL);
-        fp.x8c_kb_vel = mv_vec(fp, mvc::KB_VEL);
-        fp.xF4_ground_attacker_shield_kb_vel = r(fp, mvc::GR_SHIELD_KB_VEL);
-        fp.x98_atk_shield_kb = mv_vec(fp, mvc::SHIELD_KB);
-        fp.xD4_unk_vel = mv_vec(fp, mvc::UNK_VEL);
+        fp.ground_kb_vel = r(fp, mvc::GR_KB_VEL);
+        fp.kb_vel = mv_vec(fp, mvc::KB_VEL);
+        fp.ground_attacker_shield_kb_vel = r(fp, mvc::GR_SHIELD_KB_VEL);
+        fp.atk_shield_kb_vel = mv_vec(fp, mvc::SHIELD_KB);
+        fp.frame_vel = mv_vec(fp, mvc::UNK_VEL);
     }
 }
 

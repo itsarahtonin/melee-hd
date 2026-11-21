@@ -41,9 +41,9 @@ impl Running<'_> {
         }
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = mem(timer);
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = false;
+        fp.mash_stick_y = 0;
+        fp.mash_stick_x = 0;
+        fp.can_mash = false;
     }
 
     /// The timer runs down by `ftCommonData` x63C and mashing (x640) takes more off; once

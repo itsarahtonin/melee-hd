@@ -128,7 +128,7 @@ impl Fighter {
 
     /// `x2210.throw_flags_b(bit)`.
     pub fn throw_flag(&self, bit: u32) -> bool {
-        self.x2210[0] & (0x80 >> bit) != 0
+        self.throw_flags[0] & (0x80 >> bit) != 0
     }
 
     /// `ftCheckThrowB{bit}`: whether the flag is set, clearing it.
@@ -143,9 +143,9 @@ impl Fighter {
     pub fn set_throw_flag(&mut self, bit: u32, v: bool) {
         let m = 0x80u8 >> bit;
         if v {
-            self.x2210[0] |= m;
+            self.throw_flags[0] |= m;
         } else {
-            self.x2210[0] &= !m;
+            self.throw_flags[0] &= !m;
         }
     }
 }

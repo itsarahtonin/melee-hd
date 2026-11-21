@@ -152,7 +152,7 @@ pub(super) fn victim(f: FighterId) -> Victim {
 #[doc(alias = "Fighter_procAttackColl")]
 pub fn proc_attack_coll(r: &mut Running, gobj: GObjId) {
     let fp = r.game.fighter(gobj);
-    if fp.is_sleeping || fp.x2219_b1 {
+    if fp.is_sleeping || fp.out_of_play {
         return;
     }
     r.clear_hit_logs();
@@ -195,12 +195,14 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007F804")]
     pub fn own_matrix(&self, f: FighterId) -> Option<Mtx34> {
         let fp = &self.game.fighters[f.0];
-        (reg(fp.x34_scale.z) != 1.0).then_some(Mtx34 { m: fp.x44_mtx })
+        (reg(fp.scale.z) != 1.0).then_some(Mtx34 {
+            m: fp.depth_scale_mtx,
+        })
     }
 
     /// A thrown fighter's thrower (`x1064_thrownHitbox.x134.owner`, `Fighter::x1198`).
     fn thrower(&self, f: FighterId) -> Option<GObjId> {
-        let x134 = self.game.fighters[f.0].x1064_thrownHitbox.x134;
+        let x134 = self.game.fighters[f.0].thrown_hitbox.x134;
         if x134.is_set() && x134.thrower().is_none() {
             unported_call("a thrown fighter's hitbox word that isn't a thrower");
         }
@@ -212,7 +214,9 @@ impl Running<'_> {
     #[doc(alias = "ftColl_8007B868")]
     pub fn hit_status(&self, f: FighterId) -> i32 {
         let fp = &self.game.fighters[f.0];
-        i32::from(fp.x221D_b6).max(fp.x1988).max(fp.x198C)
+        i32::from(fp.starman)
+            .max(fp.hit_status)
+            .max(fp.timed_hit_status)
     }
 
     /// The other fighters' hitboxes against this one, `ftColl_80078C70`: each other fighter
@@ -242,15 +246,15 @@ impl Running<'_> {
         let thrown = self.thrower(v).is_some();
         let (mf, vf) = (&self.game.fighters[me.0], &self.game.fighters[v.0]);
         if thrown {
-            if mf.player_idx == vf.grabber_unk1 {
+            if mf.player_idx == vf.thrower_slot {
                 return;
             }
         } else if mf.player_idx == vf.player_idx {
             return;
         }
-        let other_team = if thrown { vf.x119C_teamUnk } else { vf.team };
+        let other_team = if thrown { vf.thrown_team } else { vf.team };
         let my_team = mf.team;
-        let other_b4 = vf.x2225_b4;
+        let other_b4 = vf.hits_others_team;
         if self.game.vs_is_teams()
             && !self.game.vs_friendly_fire()
             && !other_b4
@@ -263,10 +267,10 @@ impl Running<'_> {
             return;
         }
         let mut count = 0;
-        if passed && !self.game.fighters[me.0].x221B.x221B_b5 {
+        if passed && !self.game.fighters[me.0].state_flags.x221B_b5 {
             let other_ga = self.game.fighters[v.0].ground_or_air;
             for i in 0..4 {
-                let h = &self.game.fighters[me.0].x914[i];
+                let h = &self.game.fighters[me.0].hitboxes[i];
                 let can = h.state != hitcapsule::DISABLED
                     && !h.x43_b2
                     && h.element != ELEMENT_CATCH
@@ -299,7 +303,7 @@ impl Running<'_> {
         count: i32,
     ) {
         let (mf, vf) = (&self.game.fighters[me.0], &self.game.fighters[v.0]);
-        let h0 = &vf.x914[j];
+        let h0 = &vf.hitboxes[j];
         if h0.state == hitcapsule::DISABLED || h0.element == ELEMENT_CATCH || !h0.x42_b5 {
             return;
         }
@@ -311,7 +315,7 @@ impl Running<'_> {
         // A box that only hits its owner's grab victim.
         if h0.x134.grabbed_victim_only()
             && vf.victim_gobj.is_some()
-            && vf.x221B.x221B_b5
+            && vf.state_flags.x221B_b5
             && vf.victim_gobj != Some(gobj)
         {
             return;
@@ -326,7 +330,7 @@ impl Running<'_> {
             && vf.victim_gobj != Some(gobj)
             && mf.ground_or_air == GA_GROUND
             && vf.ground_or_air == GA_GROUND
-            && !mf.x221B.x221B_b5
+            && !mf.state_flags.x221B_b5
             && element != ELEMENT_INERT
             && h0.x40_b0
             && count != 0
@@ -343,10 +347,10 @@ impl Running<'_> {
         let _ = other;
         let mf = &self.game.fighters[me.0];
         let mut bubble_hit = false;
-        if mf.x221B.x221B_b0 {
+        if mf.state_flags.x221B_b0 {
             let vx = self.game.fighters[v.0].cur_pos.x;
             let mut facing = true;
-            if mf.x221B.x221B_b3 {
+            if mf.state_flags.x221B_b3 {
                 if -1.0 == reg(mf.facing_dir) {
                     if reg(mf.cur_pos.x) < reg(vx) {
                         facing = false;
@@ -355,7 +359,7 @@ impl Running<'_> {
                     facing = false;
                 }
             }
-            if mf.x221B.x221B_b4 && !self.game.fighters[v.0].x914[j].x42_b4 {
+            if mf.state_flags.x221B_b4 && !self.game.fighters[v.0].hitboxes[j].x42_b4 {
                 facing = false;
             }
             bubble_hit = facing && self.box_hits_shield(v, j, me, phantom);
@@ -366,18 +370,18 @@ impl Running<'_> {
                 return;
             }
             let vf = &mut self.game.fighters[v.0];
-            vf.x221C_b5 = true;
-            vf.unk_gobj = Some(gobj);
+            vf.hit_this_frame = true;
+            vf.hit_by = Some(gobj);
         }
         let mf = &self.game.fighters[me.0];
-        if mf.x1988 == 2 || mf.x198C == 2 {
+        if mf.hit_status == 2 || mf.timed_hit_status == 2 {
             return;
         }
         let mut n = 0;
         while n < usize::from(self.game.fighters[me.0].hurt_capsules_len) {
             if self.box_hits_hurtbox(v, j, me, n, phantom) {
                 if element == ELEMENT_INERT {
-                    self.game.fighters[v.0].unk_gobj = Some(gobj);
+                    self.game.fighters[v.0].hit_by = Some(gobj);
                 } else if self.take_hit(v, j, me, n) {
                     self.hit_sound(v, j, me, n);
                 }
@@ -390,25 +394,25 @@ impl Running<'_> {
     /// Whether the other fighter's box `j` and this fighter's box `m` touch
     /// (`lbColl_80007AFC`), each keeping where it met the other.
     fn boxes_touch(&mut self, v: FighterId, j: usize, me: FighterId, m: usize) -> bool {
-        let mut a = hitcapsule::shape(&self.game.fighters[v.0].x914[j]);
-        let mut b = hitcapsule::shape(&self.game.fighters[me.0].x914[m]);
+        let mut a = hitcapsule::shape(&self.game.fighters[v.0].hitboxes[j]);
+        let mut b = hitcapsule::shape(&self.game.fighters[me.0].hitboxes[m]);
         let (sa, sb) = (
-            self.game.fighters[v.0].x34_scale.y,
-            self.game.fighters[me.0].x34_scale.y,
+            self.game.fighters[v.0].scale.y,
+            self.game.fighters[me.0].scale.y,
         );
         let touch = hitboxes_touch(&mut a, &mut b, sa, sb);
-        self.game.fighters[v.0].x914[j].hurt_coll_pos = a.contact;
-        self.game.fighters[me.0].x914[m].hurt_coll_pos = b.contact;
+        self.game.fighters[v.0].hitboxes[j].hurt_coll_pos = a.contact;
+        self.game.fighters[me.0].hitboxes[m].hurt_coll_pos = b.contact;
         touch
     }
 
     /// Whether the other fighter's box `j` touches this fighter's shield (`lbColl_80007BCC`).
     fn box_hits_shield(&mut self, v: FighterId, j: usize, me: FighterId, phantom: bool) -> bool {
         let mtx = self.own_matrix(me);
-        let mut hit = self.game.fighters[v.0].x914[j].clone();
-        let hit_scale = self.game.fighters[v.0].x34_scale.y;
+        let mut hit = self.game.fighters[v.0].hitboxes[j].clone();
+        let hit_scale = self.game.fighters[v.0].scale.y;
         let fp = &mut self.game.fighters[me.0];
-        let (scale, z) = (fp.x34_scale.y, fp.cur_pos.z);
+        let (scale, z) = (fp.scale.y, fp.cur_pos.z);
         let touch = hitcapsule::hits_bubble(
             &mut self.game.objs,
             self.data,
@@ -420,7 +424,7 @@ impl Running<'_> {
             scale,
             z,
         );
-        let h = &mut self.game.fighters[v.0].x914[j];
+        let h = &mut self.game.fighters[v.0].hitboxes[j];
         h.hurt_coll_pos = hit.hurt_coll_pos;
         h.coll_distance = hit.coll_distance;
         touch
@@ -437,10 +441,10 @@ impl Running<'_> {
         phantom: bool,
     ) -> bool {
         let mtx = self.own_matrix(me);
-        let mut hit = self.game.fighters[v.0].x914[j].clone();
-        let hit_scale = self.game.fighters[v.0].x34_scale.y;
+        let mut hit = self.game.fighters[v.0].hitboxes[j].clone();
+        let hit_scale = self.game.fighters[v.0].scale.y;
         let fp = &mut self.game.fighters[me.0];
-        let (scale, z) = (fp.x34_scale.y, fp.cur_pos.z);
+        let (scale, z) = (fp.scale.y, fp.cur_pos.z);
         let touch = hitcapsule::hits_hurtbox(
             &mut self.game.objs,
             self.data,
@@ -452,7 +456,7 @@ impl Running<'_> {
             scale,
             z,
         );
-        let h = &mut self.game.fighters[v.0].x914[j];
+        let h = &mut self.game.fighters[v.0].hitboxes[j];
         h.hurt_coll_pos = hit.hurt_coll_pos;
         h.coll_distance = hit.coll_distance;
         touch
@@ -462,9 +466,9 @@ impl Running<'_> {
     /// with `clear`, a box that newly hits it can't clank this frame.
     #[doc(alias = "ftColl_80076808")]
     pub(crate) fn hit_group(&mut self, f: FighterId, i: usize, kind: i32, v: Victim, clear: bool) {
-        let group = self.game.fighters[f.0].x914[i].x4;
+        let group = self.game.fighters[f.0].hitboxes[i].x4;
         for k in 0..4 {
-            let cur = &mut self.game.fighters[f.0].x914[k];
+            let cur = &mut self.game.fighters[f.0].hitboxes[k];
             if cur.state != hitcapsule::DISABLED
                 && cur.x4 == group
                 && hitcapsule::add_victim(cur, kind, v)
@@ -477,9 +481,9 @@ impl Running<'_> {
 
     /// Remembers a phantom hit's victim in each live box of the group.
     fn tip_group(&mut self, f: FighterId, i: usize, kind: i32, v: Victim) {
-        let group = self.game.fighters[f.0].x914[i].x4;
+        let group = self.game.fighters[f.0].hitboxes[i].x4;
         for k in 0..4 {
-            let cur = &mut self.game.fighters[f.0].x914[k];
+            let cur = &mut self.game.fighters[f.0].hitboxes[k];
             if cur.state != hitcapsule::DISABLED && cur.x4 == group {
                 hitcapsule::add_victim2(cur, kind, v);
             }
@@ -494,7 +498,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         if dmg > fp.dmg.int_value {
             fp.dmg.int_value = dmg;
-            if fp.x914[i].x40_b1 && fp.ground_or_air == GA_GROUND {
+            if fp.hitboxes[i].x40_b1 && fp.ground_or_air == GA_GROUND {
                 fp.dmg.x191C = mem(fp::fmadds(fp::frsp(f64::from(dmg)), reg(mul), reg(add)));
                 // Toward the other (the original compares either way round, which agrees
                 // for NaN too).
@@ -511,8 +515,8 @@ impl Running<'_> {
     fn clank(&mut self, v: FighterId, j: usize, me: FighterId, m: usize) -> bool {
         let range = self.common().i32(0x3CC);
         let (h0, h1) = (
-            &self.game.fighters[v.0].x914[j],
-            &self.game.fighters[me.0].x914[m],
+            &self.game.fighters[v.0].hitboxes[j],
+            &self.game.fighters[me.0].hitboxes[m],
         );
         let mid = |a: f32, b: f32| mem(fp::fmuls(0.5, fp::fadds(reg(a), reg(b))));
         let midpoint = Vec3::new(
@@ -550,7 +554,7 @@ impl Running<'_> {
         let range = self.common().i32(0x3CC);
         let (h1, h2) = (
             &it::item(self.game, g).x5D4_hitboxes[j].hit,
-            &self.game.fighters[me.0].x914[m],
+            &self.game.fighters[me.0].hitboxes[m],
         );
         let mid = |a: f32, b: f32| mem(fp::fmuls(fp::fadds(reg(a), reg(b)), 0.5));
         let midpoint = Vec3::new(
@@ -619,10 +623,10 @@ impl Running<'_> {
         ip.xC90_absorbGObj = fg;
         let dir = if reg(fx) > reg(ip.pos.x) { -1.0 } else { 1.0 };
         let fp = &mut self.game.fighters[me.0];
-        fp.AbsorbAttr.x1A40_absorbHitDirection = dir;
+        fp.absorb.x1A40_absorbHitDirection = dir;
         if absorbable {
-            fp.AbsorbAttr.x1A44_damageTaken = fp.AbsorbAttr.x1A44_damageTaken.wrapping_add(damage);
-            fp.AbsorbAttr.x1A48_hitsTaken = fp.AbsorbAttr.x1A48_hitsTaken.wrapping_add(1);
+            fp.absorb.x1A44_damageTaken = fp.absorb.x1A44_damageTaken.wrapping_add(damage);
+            fp.absorb.x1A48_hitsTaken = fp.absorb.x1A48_hitsTaken.wrapping_add(1);
         }
     }
 
@@ -634,14 +638,14 @@ impl Running<'_> {
         let second = h.x41_b5;
         let fp = &self.game.fighters[me.0];
         let (fx, fg) = (fp.cur_pos.x, fp.gobj);
-        let over = damage > fp.ReflectAttr.x1A30_maxDamage;
+        let over = damage > fp.reflect.x1A30_maxDamage;
         let (x2070, rec, dmg_mul, speed_mul) = (
-            i32::from_be_bytes(fp.x2070),
-            fp.x2074.clone(),
-            fp.ReflectAttr.x1A34_damageMul,
-            fp.ReflectAttr.x1A38_speedMul,
+            i32::from_be_bytes(fp.attack_flags),
+            fp.attack_record.clone(),
+            fp.reflect.x1A34_damageMul,
+            fp.reflect.x1A38_speedMul,
         );
-        let (b5, b4) = (fp.x2218_b5, fp.x2218_b4);
+        let (b5, b4) = (fp.reflect_behavior, fp.reflect_kept);
         let ip = it::item_mut(self.game, g);
         if over {
             if second {
@@ -691,16 +695,16 @@ impl Running<'_> {
         };
         let fp = &mut self.game.fighters[me.0];
         if over {
-            fp.ReflectAttr.x1A3C_damageOver = damage;
+            fp.reflect.x1A3C_damageOver = damage;
         }
-        fp.ReflectAttr.x1A2C_reflectHitDirection = dir;
+        fp.reflect.x1A2C_reflectHitDirection = dir;
     }
 
     /// The clank's sound, `ftColl_800784B4`: a random sword clash between two slashes.
     #[doc(alias = "ftColl_800784B4")]
     fn clank_sound(&mut self, me: FighterId, v: FighterId, j: usize, m: usize) {
-        let e0 = self.game.fighters[v.0].x914[j].element;
-        let e1 = self.game.fighters[me.0].x914[m].element;
+        let e0 = self.game.fighters[v.0].hitboxes[j].element;
+        let e1 = self.game.fighters[me.0].hitboxes[m].element;
         let id = if e0 == ELEMENT_SLASH && e1 == ELEMENT_SLASH {
             SLASH_CLANK_SFX[self.game.objs.rng.below(3) as usize]
         } else {
@@ -715,7 +719,7 @@ impl Running<'_> {
     #[doc(alias = "ftColl_80076CBC")]
     fn shield_hit(&mut self, v: FighterId, j: usize, me: FighterId) {
         self.hit_group(v, j, 1, victim(me), false);
-        let h0 = &self.game.fighters[v.0].x914[j];
+        let h0 = &self.game.fighters[v.0].hitboxes[j];
         let (dmg, element, x34, pos) = (
             whole_damage(reg(h0.damage)),
             h0.element,
@@ -744,17 +748,17 @@ impl Running<'_> {
         }
         let vx = vf.cur_pos.x;
         let mf = &mut self.game.fighters[me.0];
-        if dmg > mf.x19A4 {
-            mf.x19A4 = dmg;
+        if dmg > mf.shield_hit_damage {
+            mf.shield_hit_damage = dmg;
             mf.specialn_facing_dir = if reg(mf.cur_pos.x) > reg(vx) {
                 -1.0
             } else {
                 1.0
             };
-            mf.x19B0 = element as i32;
-            mf.x19A8 = other_gobj;
+            mf.shield_hit_element = element as i32;
+            mf.shield_hit_by = other_gobj;
         }
-        if mf.x221C_b2 {
+        if mf.powershield {
             // A powershield: no damage, the release window, a flash and its sound.
             let (gobj, slot) = (
                 mf.gobj.expect("a fighter without a GObj"),
@@ -767,15 +771,15 @@ impl Running<'_> {
             self.spawn_effect(27, pos, None);
         } else {
             let total = dmg.wrapping_add(x34);
-            mf.x19A0_shieldDamageTaken = mf.x19A0_shieldDamageTaken.wrapping_add(total.max(0));
-            mf.x19BC_shieldDamageTaken3 = i32::from(other_player);
-            mf.x221F_b6 = other_sub;
+            mf.shield_damage_taken = mf.shield_damage_taken.wrapping_add(total.max(0));
+            mf.shield_hit_slot = i32::from(other_player);
+            mf.shield_hit_by_sub = other_sub;
             self.spawn_effect(1052, pos, None);
         }
-        let push = self.game.fighters[me.0].shield_unk0;
+        let push = self.game.fighters[me.0].counter_min_hitlag;
         if push != 0.0 {
-            self.game.fighters[v.0].x1964 = push;
-            self.game.fighters[me.0].x1964 = push;
+            self.game.fighters[v.0].min_hitlag = push;
+            self.game.fighters[me.0].min_hitlag = push;
         }
     }
 
@@ -784,8 +788,8 @@ impl Running<'_> {
     fn scaled_damage(&self, v: FighterId, j: usize, me: FighterId) -> f64 {
         let c = self.common();
         let (vf, mf) = (&self.game.fighters[v.0], &self.game.fighters[me.0]);
-        let mut d = reg(vf.x914[j].damage);
-        if mf.victim_gobj.is_some() && !mf.x221B.x221B_b5 && mf.victim_gobj != vf.gobj {
+        let mut d = reg(vf.hitboxes[j].damage);
+        if mf.victim_gobj.is_some() && !mf.state_flags.x221B_b5 && mf.victim_gobj != vf.gobj {
             d = fp::fmuls(d, reg(c.f32(0x128)));
         }
         if mf.motion_id == MS_DAMAGE_ICE {
@@ -812,7 +816,7 @@ impl Running<'_> {
     fn take_hit(&mut self, v: FighterId, j: usize, me: FighterId, n: usize) -> bool {
         let mut dmg = self.scaled_damage(v, j, me);
         let tip = self.common().f32(0x7A8);
-        let h0 = &self.game.fighters[v.0].x914[j];
+        let h0 = &self.game.fighters[v.0].hitboxes[j];
         if reg(h0.coll_distance) < reg(tip) {
             let mf = &self.game.fighters[me.0];
             if !self.game.ft.hit_logs.hits.is_empty() || mf.dmg.x189C_unk_num_frames != 0.0 {
@@ -827,12 +831,12 @@ impl Running<'_> {
             }
             self.tip_group(v, j, 0, victim(me));
             let mf = &self.game.fighters[me.0];
-            if mf.x1988 == 0
-                && mf.x198C == 0
-                && !mf.x221D_b6
+            if mf.hit_status == 0
+                && mf.timed_hit_status == 0
+                && !mf.starman
                 && mf.hurt_capsules[n].capsule.state == HURT_ENABLED
             {
-                let h0 = &self.game.fighters[v.0].x914[j];
+                let h0 = &self.game.fighters[v.0].hitboxes[j];
                 let count = h0.unk_count;
                 let mut len = count >> 1;
                 if len == 0 && count != 0 {
@@ -868,9 +872,9 @@ impl Running<'_> {
         let whole = whole_damage(dmg);
         self.game.ft.hit_logs.tips.clear();
         let mut logged = false;
-        let group = self.game.fighters[v.0].x914[j].x4;
+        let group = self.game.fighters[v.0].hitboxes[j].x4;
         for k in 0..4 {
-            let cur = &mut self.game.fighters[v.0].x914[k];
+            let cur = &mut self.game.fighters[v.0].hitboxes[k];
             if cur.state != hitcapsule::DISABLED && cur.x4 == group {
                 hitcapsule::add_victim(cur, 0, victim(me));
             }
@@ -880,21 +884,21 @@ impl Running<'_> {
             vf.dmg.x1914 = whole;
         }
         let mf = &self.game.fighters[me.0];
-        if mf.x1988 == 0
-            && mf.x198C == 0
-            && !mf.x221D_b6
+        if mf.hit_status == 0
+            && mf.timed_hit_status == 0
+            && !mf.starman
             && mf.hurt_capsules[n].capsule.state == HURT_ENABLED
         {
             let count = whole_damage(dmg);
             let mf = &mut self.game.fighters[me.0];
-            if mf.x221C_b4 {
+            if mf.armor {
                 mf.dmg.x1834 = mem(fp::fsubs(reg(mf.dmg.x1834), dmg));
                 if mf.dmg.x1834 < 0.0 {
                     dmg = fp::fneg(reg(mf.dmg.x1834));
-                    mf.x221C_b4 = false;
+                    mf.armor = false;
                 }
             }
-            if !mf.x221C_b4 {
+            if !mf.armor {
                 assert!(!(dmg > 500.0), "attack power over 500!! {dmg}");
                 mf.dmg.x1838_percentTemp = mem(fp::fadds(reg(mf.dmg.x1838_percentTemp), dmg));
                 if count > mf.dmg.x183C_applied {
@@ -902,7 +906,7 @@ impl Running<'_> {
                 }
                 let a = self.attacker(v);
                 let af = &self.game.fighters[a.0];
-                let h0 = &self.game.fighters[v.0].x914[j];
+                let h0 = &self.game.fighters[v.0].hitboxes[j];
                 let entry = LogEntry {
                     kind: af.kind,
                     gobj: af.gobj,
@@ -931,7 +935,7 @@ impl Running<'_> {
             self.record_fighter_hit(ag, vg, dmg);
         }
         if !logged {
-            let pos = self.game.fighters[v.0].x914[j].hurt_coll_pos;
+            let pos = self.game.fighters[v.0].hitboxes[j].hurt_coll_pos;
             self.spawn_effect(1052, pos, None);
         }
         true
@@ -940,7 +944,7 @@ impl Running<'_> {
     /// The hit's sound: the plain hit sound by severity when the hurtbox is invincible
     /// (`ftColl_80078384`'s check), else the hitbox's own by kind and severity.
     fn hit_sound(&mut self, v: FighterId, j: usize, me: FighterId, n: usize) {
-        let h0 = &self.game.fighters[v.0].x914[j];
+        let h0 = &self.game.fighters[v.0].hitboxes[j];
         let (severity, kind) = (h0.sfx_severity, h0.sfx_kind);
         self.hit_sound_of(me, n, kind, severity);
     }
@@ -949,9 +953,9 @@ impl Running<'_> {
     #[doc(alias = "ftColl_80078384")]
     fn hit_sound_of(&mut self, me: FighterId, n: usize, kind: i32, severity: i32) {
         let mf = &self.game.fighters[me.0];
-        if mf.x1988 != 0
-            || mf.x198C != 0
-            || mf.x221D_b6
+        if mf.hit_status != 0
+            || mf.timed_hit_status != 0
+            || mf.starman
             || mf.hurt_capsules[n].capsule.state != HURT_ENABLED
         {
             self.fighter_play_sfx(me, HIT_SFX[severity as usize], 0x7F, 0x40);
@@ -960,10 +964,10 @@ impl Running<'_> {
         let slot = i32::from(mf.player_idx) * 2 + i32::from(mf.is_sub_fighter);
         if kind == 13 && severity == 2 {
             let h = self.hit_kind_sound(kind, severity, 0x72 + slot);
-            self.game.fighters[me.0].x215C = h;
+            self.game.fighters[me.0].track_handle = h;
         } else {
             let h = self.hit_kind_sound(kind, severity, 0x7E + slot);
-            self.game.fighters[me.0].x2160 = h;
+            self.game.fighters[me.0].sfx_handle = h;
         }
     }
 
@@ -986,11 +990,11 @@ impl Running<'_> {
     pub(crate) fn record_fighter_hit(&mut self, attacker: GObjId, victim_gobj: GObjId, dmg: f64) {
         self.stale_move_from_fighter(attacker, victim_gobj);
         let a = self.game.fighter_id(attacker);
-        let attack_id = self.game.fighters[a.0].x2068_attackID;
+        let attack_id = self.game.fighters[a.0].attack_id;
         self.count_combo(attacker, victim_gobj, attack_id);
         let v = self.game.fighter_id(victim_gobj);
         let (af, vf) = (&self.game.fighters[a.0], &self.game.fighters[v.0]);
-        let kind = i32::from(af.x2070[3]);
+        let kind = i32::from(af.attack_flags[3]);
         let (ap, asub, vp, vsub) = (
             i32::from(af.player_idx),
             i32::from(af.is_sub_fighter),
@@ -1008,11 +1012,8 @@ impl Running<'_> {
             return;
         }
         let fp = self.game.fighter(attacker);
-        let (instance, attack_id, slot) = (
-            fp.x206C_attack_instance,
-            fp.x2068_attackID,
-            i32::from(fp.player_idx),
-        );
+        let (instance, attack_id, slot) =
+            (fp.attack_instance, fp.attack_id, i32::from(fp.player_idx));
         if attack_id == 1 {
             return;
         }
@@ -1046,19 +1047,19 @@ impl Running<'_> {
         let c = self.common();
         let (limit, timer) = (c.i32(0x4C4), c.u32(0x4D8));
         let fp = self.game.fighter_mut(attacker);
-        if fp.x2094.is_none() {
-            fp.x208C = attack_id;
-            fp.x2090 = 1;
-            fp.x2094 = Some(victim_gobj);
-        } else if fp.x2094 == Some(victim_gobj) {
-            if attack_id != 1 && fp.x208C == attack_id {
-                fp.x2090 = fp.x2090.wrapping_add(1);
-                if i32::from(fp.x2090) >= limit {
-                    fp.x2092 = timer as u16;
+        if fp.combo_victim.is_none() {
+            fp.combo_attack_id = attack_id;
+            fp.combo_count = 1;
+            fp.combo_victim = Some(victim_gobj);
+        } else if fp.combo_victim == Some(victim_gobj) {
+            if attack_id != 1 && fp.combo_attack_id == attack_id {
+                fp.combo_count = fp.combo_count.wrapping_add(1);
+                if i32::from(fp.combo_count) >= limit {
+                    fp.combo_push_frames = timer as u16;
                 }
             } else {
-                fp.x2090 = 0;
-                fp.x208C = attack_id;
+                fp.combo_count = 0;
+                fp.combo_attack_id = attack_id;
             }
         }
     }
@@ -1144,8 +1145,8 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let odd = self.game.scene_game_ticks() & 1;
         let fp = &mut self.game.fighters[f.0];
-        fp.x2229_b4 = odd != u32::from(fp.player_idx) & 1;
-        if fp.x2229_b4 || self.hit_status(f) == 2 {
+        fp.coin_odd_frame = odd != u32::from(fp.player_idx) & 1;
+        if fp.coin_odd_frame || self.hit_status(f) == 2 {
             return;
         }
         let mut cur = self.game.world.first_in(it::P_LINK_ITEM);
@@ -1174,16 +1175,16 @@ impl Running<'_> {
                     contact: Default::default(),
                 };
                 let fp = &self.game.fighters[f.0];
-                let e = &fp.x1614[i];
+                let e = &fp.stamina_markers[i];
                 let mut mine = SweptCircle {
                     radius: e.x0,
                     pos: e.x8,
                     prev_pos: e.x14,
                     contact: e.x20,
                 };
-                let scale = fp.x34_scale.y;
+                let scale = fp.scale.y;
                 let touch = swept_circles_touch(&mut coin, &mut mine, scl, scale);
-                self.game.fighters[f.0].x1614[i].x20 = mine.contact;
+                self.game.fighters[f.0].stamina_markers[i].x20 = mine.contact;
                 if touch.is_some() {
                     // Past the coin's variables (`coin::CoinVars`).
                     let v = it::item_mut(self.game, g).xDD4_itemVar.coin();
@@ -1246,10 +1247,10 @@ impl Running<'_> {
             // The fighter's own boxes that could clank with the item's (`ftColl_804D6560`),
             // unless a thrower holds the fighter.
             let mut clanks = 0;
-            if !self.game.fighters[me.0].x221B.x221B_b5 && self.thrower(me).is_none() {
+            if !self.game.fighters[me.0].state_flags.x221B_b5 && self.thrower(me).is_none() {
                 let item_ga = it::item(self.game, g).ground_or_air;
                 for i in 0..4 {
-                    let h = &self.game.fighters[me.0].x914[i];
+                    let h = &self.game.fighters[me.0].hitboxes[i];
                     let can = h.state != hitcapsule::DISABLED
                         && !h.x43_b2
                         && h.element != ELEMENT_CATCH
@@ -1303,20 +1304,20 @@ impl Running<'_> {
             }
             let mf = &self.game.fighters[me.0];
             let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
-            if mf.x2218_b6
-                && (h.x42_b0 || (mf.x2218_b7 && h.x41_b7))
+            if mf.absorbing
+                && (h.x42_b0 || (mf.absorb_any && h.x41_b7))
                 && self.item_box_hits_bubble(g, j, me, Bubble::Absorb, false)
             {
                 self.absorb_item(g, j, me);
                 return;
             }
         }
-        if !self.game.fighters[me.0].x221B.x221B_b5 && !phantom && clanks != 0 {
+        if !self.game.fighters[me.0].state_flags.x221B_b5 && !phantom && clanks != 0 {
             for m in 0..4 {
                 if !self.game.ft.hit_logs.clank[m] {
                     continue;
                 }
-                let theirs = &self.game.fighters[me.0].x914[m];
+                let theirs = &self.game.fighters[me.0].hitboxes[m];
                 let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
                 if element == ELEMENT_INERT || theirs.element == ELEMENT_INERT {
                     if element == theirs.element {
@@ -1342,10 +1343,10 @@ impl Running<'_> {
         }
         let mf = &self.game.fighters[me.0];
         let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
-        if element != ELEMENT_INERT && mf.x221B.x221B_b0 && h.x42_b1 {
+        if element != ELEMENT_INERT && mf.state_flags.x221B_b0 && h.x42_b1 {
             let ix = it::item(self.game, g).pos.x;
             let mut facing = true;
-            if mf.x221B.x221B_b3 {
+            if mf.state_flags.x221B_b3 {
                 if -1.0 == reg(mf.facing_dir) {
                     if reg(mf.cur_pos.x) < reg(ix) {
                         facing = false;
@@ -1354,7 +1355,7 @@ impl Running<'_> {
                     facing = false;
                 }
             }
-            if mf.x221B.x221B_b4 && !h.x42_b4 {
+            if mf.state_flags.x221B_b4 && !h.x42_b4 {
                 facing = false;
             }
             if facing && self.item_box_hits_bubble(g, j, me, Bubble::Shield, phantom) {
@@ -1363,7 +1364,7 @@ impl Running<'_> {
                 // otherwise, and `item_shield_hit` reads them only in those cases.
                 let mf = &self.game.fighters[me.0];
                 let bounce = it::item(self.game, g).x5D4_hitboxes[j].hit.x42_b3;
-                let entry = if !mf.x221B.x221B_b2 && (bounce || mf.x221B.x221B_b1) {
+                let entry = if !mf.state_flags.x221B_b2 && (bounce || mf.state_flags.x221B_b1) {
                     Some(self.item_box_shield_entry(g, j, me))
                 } else {
                     None
@@ -1380,7 +1381,7 @@ impl Running<'_> {
                 let mut hit = ip.x5D4_hitboxes[j].hit.clone();
                 let hit_scale = ip.scl;
                 let fp = &mut self.game.fighters[me.0];
-                let (scale, z) = (fp.x34_scale.y, fp.cur_pos.z);
+                let (scale, z) = (fp.scale.y, fp.cur_pos.z);
                 let touch = hitcapsule::touches_hurtbox(
                     &mut self.game.objs,
                     self.data,
@@ -1404,7 +1405,7 @@ impl Running<'_> {
             return;
         }
         let mf = &self.game.fighters[me.0];
-        if mf.x1988 == 2 || mf.x198C == 2 {
+        if mf.hit_status == 2 || mf.timed_hit_status == 2 {
             return;
         }
         let grab_only = it::item(self.game, g).x5D4_hitboxes[j].hit.x42_b6;
@@ -1428,8 +1429,10 @@ impl Running<'_> {
     /// The hitbox a logged hit names.
     fn logged_capsule(&self, hit: LoggedHit) -> &super::super::structs::HitCapsule {
         match hit {
-            LoggedHit::Fighter { fighter, index } => &self.game.fighters[fighter.0].x914[index],
-            LoggedHit::Throw { fighter, index } => &self.game.fighters[fighter.0].xDF4[index],
+            LoggedHit::Fighter { fighter, index } => &self.game.fighters[fighter.0].hitboxes[index],
+            LoggedHit::Throw { fighter, index } => {
+                &self.game.fighters[fighter.0].throw_hitboxes[index]
+            }
             LoggedHit::Item { item, index } => {
                 &super::super::it::item(self.game, item).x5D4_hitboxes[index].hit
             }
@@ -1468,13 +1471,13 @@ impl Running<'_> {
     fn item_box_touches(&mut self, g: GObjId, j: usize, me: FighterId, m: usize) -> bool {
         let ip = super::super::it::item(self.game, g);
         let mut a = hitcapsule::shape(&ip.x5D4_hitboxes[j].hit);
-        let mut b = hitcapsule::shape(&self.game.fighters[me.0].x914[m]);
-        let (sa, sb) = (ip.scl, self.game.fighters[me.0].x34_scale.y);
+        let mut b = hitcapsule::shape(&self.game.fighters[me.0].hitboxes[m]);
+        let (sa, sb) = (ip.scl, self.game.fighters[me.0].scale.y);
         let touch = hitboxes_touch(&mut a, &mut b, sa, sb);
         super::super::it::item_mut(self.game, g).x5D4_hitboxes[j]
             .hit
             .hurt_coll_pos = a.contact;
-        self.game.fighters[me.0].x914[m].hurt_coll_pos = b.contact;
+        self.game.fighters[me.0].hitboxes[m].hurt_coll_pos = b.contact;
         touch
     }
 
@@ -1492,7 +1495,7 @@ impl Running<'_> {
         let mut hit = ip.x5D4_hitboxes[j].hit.clone();
         let hit_scale = ip.scl;
         let fp = &mut self.game.fighters[me.0];
-        let (scale, z) = (fp.x34_scale.y, fp.cur_pos.z);
+        let (scale, z) = (fp.scale.y, fp.cur_pos.z);
         let bubble = match which {
             Bubble::Shield => &mut fp.shield_hit,
             Bubble::Reflect => &mut fp.reflect_hit,
@@ -1574,11 +1577,11 @@ impl Running<'_> {
             let angle = self.common().f32(0x2D0);
             let mf = &self.game.fighters[me.0];
             let (deflects, deflect_off, mx, mg, unk1) = (
-                mf.x221B.x221B_b1,
-                mf.x221B.x221B_b2,
+                mf.state_flags.x221B_b1,
+                mf.state_flags.x221B_b2,
                 mf.cur_pos.x,
                 mf.gobj,
-                mf.shield_unk1,
+                mf.counter_item_min_hitlag,
             );
             let ip = it::item_mut(self.game, g);
             ip.xC50 = dmg;
@@ -1628,28 +1631,28 @@ impl Running<'_> {
             (ip.pos.x, ip.entity)
         };
         let mf = &mut self.game.fighters[me.0];
-        mf.x19A0_shieldDamageTaken = mf
-            .x19A0_shieldDamageTaken
+        mf.shield_damage_taken = mf
+            .shield_damage_taken
             .wrapping_add(dmg.wrapping_add(x34).max(0));
         match owner_fighter {
             Some((player, sub)) => {
-                mf.x19BC_shieldDamageTaken3 = i32::from(player);
-                mf.x221F_b6 = sub;
+                mf.shield_hit_slot = i32::from(player);
+                mf.shield_hit_by_sub = sub;
             }
-            None => mf.x19BC_shieldDamageTaken3 = 6,
+            None => mf.shield_hit_slot = 6,
         }
-        if dmg > mf.x19A4 {
-            mf.x19A4 = dmg;
+        if dmg > mf.shield_hit_damage {
+            mf.shield_hit_damage = dmg;
             mf.specialn_facing_dir = if reg(mf.cur_pos.x) > reg(ix) {
                 -1.0
             } else {
                 1.0
             };
-            mf.x19B0 = element as i32;
-            mf.x19A8 = entity;
+            mf.shield_hit_element = element as i32;
+            mf.shield_hit_by = entity;
         }
-        if mf.shield_unk1 != 0.0 && x42_b4 {
-            mf.x1964 = mf.shield_unk1;
+        if mf.counter_item_min_hitlag != 0.0 && x42_b4 {
+            mf.min_hitlag = mf.counter_item_min_hitlag;
         }
         self.spawn_effect(0x41C, pos, None);
     }
@@ -1668,7 +1671,7 @@ impl Running<'_> {
         let mut hit = ip.x5D4_hitboxes[j].hit.clone();
         let hit_scale = ip.scl;
         let fp = &mut self.game.fighters[me.0];
-        let (scale, z) = (fp.x34_scale.y, fp.cur_pos.z);
+        let (scale, z) = (fp.scale.y, fp.cur_pos.z);
         let touch = hitcapsule::hits_hurtbox(
             &mut self.game.objs,
             self.data,
@@ -1806,7 +1809,7 @@ impl Running<'_> {
         let raw = self.item_damage(g, j);
         let mut f3 = raw;
         let mf = &self.game.fighters[me.0];
-        if mf.victim_gobj.is_some() && !mf.x221B.x221B_b5 {
+        if mf.victim_gobj.is_some() && !mf.state_flags.x221B_b5 {
             f3 = fp::fmuls(f3, reg(self.common().f32(0x128)));
         }
         if mf.motion_id == MS_DAMAGE_ICE {
@@ -1826,9 +1829,9 @@ impl Running<'_> {
             let mode = if h.x41_b5 { 5 } else { 0 };
             self.item_tip_group(g, j, mode, victim(me));
             let mf = &self.game.fighters[me.0];
-            if mf.x1988 == 0
-                && mf.x198C == 0
-                && !mf.x221D_b6
+            if mf.hit_status == 0
+                && mf.timed_hit_status == 0
+                && !mf.starman
                 && mf.hurt_capsules[n].capsule.state == HURT_ENABLED
             {
                 // Half the damage, from the damage taken whole (at least 1), and half the raw
@@ -1891,21 +1894,21 @@ impl Running<'_> {
         }
         let mut logged = false;
         let mf = &self.game.fighters[me.0];
-        if mf.x1988 == 0
-            && mf.x198C == 0
-            && !mf.x221D_b6
+        if mf.hit_status == 0
+            && mf.timed_hit_status == 0
+            && !mf.starman
             && mf.hurt_capsules[n].capsule.state == HURT_ENABLED
         {
             let count = whole_damage(dmg);
             let mf = &mut self.game.fighters[me.0];
-            if mf.x221C_b4 {
+            if mf.armor {
                 mf.dmg.x1834 = mem(fp::fsubs(reg(mf.dmg.x1834), dmg));
                 if mf.dmg.x1834 < 0.0 {
                     dmg = fp::fneg(reg(mf.dmg.x1834));
-                    mf.x221C_b4 = false;
+                    mf.armor = false;
                 }
             }
-            if !mf.x221C_b4 {
+            if !mf.armor {
                 assert!(!(dmg > 500.0), "attack power over 500!! {dmg}");
                 mf.dmg.x1838_percentTemp = mem(fp::fadds(reg(mf.dmg.x1838_percentTemp), dmg));
                 if count > mf.dmg.x183C_applied {
@@ -2066,7 +2069,7 @@ impl Running<'_> {
         let c = self.common();
         let fp = &self.game.fighters[me.0];
         let mut d = fp::frsp(f64::from(count));
-        if fp.victim_gobj.is_some() && !fp.x221B.x221B_b5 {
+        if fp.victim_gobj.is_some() && !fp.state_flags.x221B_b5 {
             d = fp::fmuls(d, reg(c.f32(0x128)));
         }
         if fp.motion_id == MS_DAMAGE_ICE {
@@ -2188,12 +2191,12 @@ impl Running<'_> {
     pub fn thrown_hits(&mut self, gobj: GObjId) {
         let me = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[me.0];
-        if !fp.x2227_b2 || self.hit_status(me) == 2 || fp.is_sub_fighter {
+        if !fp.thrown_hitbox_live || self.hit_status(me) == 2 || fp.is_sub_fighter {
             return;
         }
         let holder = if fp.victim_gobj.is_some() {
             fp.victim_gobj
-        } else if fp.x221C_b6 {
+        } else if fp.in_hitstun {
             fp.dmg.x1868_source
         } else {
             None
@@ -2211,37 +2214,31 @@ impl Running<'_> {
             }
             let o = self.game.fighter_id(g);
             let of = &self.game.fighters[o.0];
-            if of.x2219_b1
-                || !of.x2227_b2
+            if of.out_of_play
+                || !of.thrown_hitbox_live
                 || self.hit_status(o) == 2
                 || of.is_sub_fighter
-                || (of.x221C_b6 && of.dmg.x1868_source == Some(gobj))
+                || (of.in_hitstun && of.dmg.x1868_source == Some(gobj))
             {
                 continue;
             }
-            if of.x1064_thrownHitbox.state == hitcapsule::DISABLED || !seen {
+            if of.thrown_hitbox.state == hitcapsule::DISABLED || !seen {
                 continue;
             }
-            let mut a = hitcapsule::shape(&self.game.fighters[o.0].x1064_thrownHitbox);
-            let mut b = hitcapsule::shape(&self.game.fighters[me.0].x1064_thrownHitbox);
+            let mut a = hitcapsule::shape(&self.game.fighters[o.0].thrown_hitbox);
+            let mut b = hitcapsule::shape(&self.game.fighters[me.0].thrown_hitbox);
             let (sa, sb) = (
-                self.game.fighters[o.0].x34_scale.y,
-                self.game.fighters[me.0].x34_scale.y,
+                self.game.fighters[o.0].scale.y,
+                self.game.fighters[me.0].scale.y,
             );
             let touch = hitboxes_touch(&mut a, &mut b, sa, sb);
-            self.game.fighters[o.0].x1064_thrownHitbox.hurt_coll_pos = a.contact;
-            self.game.fighters[me.0].x1064_thrownHitbox.hurt_coll_pos = b.contact;
+            self.game.fighters[o.0].thrown_hitbox.hurt_coll_pos = a.contact;
+            self.game.fighters[me.0].thrown_hitbox.hurt_coll_pos = b.contact;
             if touch {
                 self.thrown_clash(o, me);
             } else {
-                hitcapsule::remove_victim(
-                    &mut self.game.fighters[me.0].x1064_thrownHitbox,
-                    victim(o),
-                );
-                hitcapsule::remove_victim(
-                    &mut self.game.fighters[o.0].x1064_thrownHitbox,
-                    victim(me),
-                );
+                hitcapsule::remove_victim(&mut self.game.fighters[me.0].thrown_hitbox, victim(o));
+                hitcapsule::remove_victim(&mut self.game.fighters[o.0].thrown_hitbox, victim(me));
             }
         }
     }
@@ -2250,16 +2247,12 @@ impl Running<'_> {
     /// air, takes some of the other's motion, by their weights.
     #[doc(alias = "ft_8007C2E0")]
     fn thrown_clash(&mut self, f0: FighterId, f1: FighterId) {
-        if hitcapsule::has_victim(&self.game.fighters[f0.0].x1064_thrownHitbox, victim(f1)) {
+        if hitcapsule::has_victim(&self.game.fighters[f0.0].thrown_hitbox, victim(f1)) {
             return;
         }
         let mul = reg(self.common().f32(0x7D4));
         let push = |r: &mut Running, from: FighterId, to: FighterId| {
-            hitcapsule::add_victim(
-                &mut r.game.fighters[to.0].x1064_thrownHitbox,
-                3,
-                victim(from),
-            );
+            hitcapsule::add_victim(&mut r.game.fighters[to.0].thrown_hitbox, 3, victim(from));
             let (pf, pt) = (
                 r.game.fighters[f0.0].pos_delta,
                 r.game.fighters[f1.0].pos_delta,
@@ -2290,8 +2283,8 @@ impl Running<'_> {
             };
             let same_x = fp::fmuls(reg(pf.x), reg(pt.x)) >= 0.0;
             let same_y = fp::fmuls(reg(pf.y), reg(pt.y)) >= 0.0;
-            t.x98_atk_shield_kb.x = axis(same_x, df.x, dt.x, t.x98_atk_shield_kb.x);
-            t.x98_atk_shield_kb.y = axis(same_y, df.y, dt.y, t.x98_atk_shield_kb.y);
+            t.atk_shield_kb_vel.x = axis(same_x, df.x, dt.x, t.atk_shield_kb_vel.x);
+            t.atk_shield_kb_vel.y = axis(same_y, df.y, dt.y, t.atk_shield_kb_vel.y);
         };
         push(self, f0, f1);
         push(self, f1, f0);
@@ -2389,7 +2382,7 @@ impl Running<'_> {
                 fp::fmuls(f(0x114), fp::fmuls(x118, fp::frsp(f64::from(h.x28)))),
             )
         } else {
-            let damage = if fp.x2225_b7 {
+            let damage = if fp.is_stamina {
                 if fp.stamina_dead {
                     c.i32(0x6D8)
                 } else {
@@ -2456,9 +2449,9 @@ impl Running<'_> {
                 let fp = &self.game.fighters[me.0];
                 let held = matches!(e.hit, LoggedHit::Fighter { .. })
                     && fp.victim_gobj.is_some()
-                    && !fp.x221B.x221B_b5
+                    && !fp.state_flags.x221B_b5
                     && fp.victim_gobj == e.gobj;
-                self.game.fighters[me.0].x221C_b0 = held;
+                self.game.fighters[me.0].held_hit_light = held;
                 best = kb;
                 best_at = Some(i);
             }
@@ -2570,8 +2563,8 @@ impl Running<'_> {
                 let (a_gobj, kind, x2070, instance) = (
                     af.gobj.expect("a fighter without its GObj"),
                     af.kind,
-                    u32::from_be_bytes(af.x2070),
-                    af.x2074.x2088,
+                    u32::from_be_bytes(af.attack_flags),
+                    af.attack_record.x2088,
                 );
                 self.attack_landed(
                     Some(a_gobj),
@@ -2598,7 +2591,7 @@ impl Running<'_> {
         }
         if element == ELEMENT_ELECTRIC {
             let v = self.common().f32(0x1A4);
-            self.game.fighters[me.0].x1960_vibrateMult = v;
+            self.game.fighters[me.0].hitlag_vibrate_mul = v;
         }
     }
 
@@ -2644,14 +2637,14 @@ impl Running<'_> {
     fn take_damage_or_armor(&mut self, f: FighterId, dmg: &mut f32) -> bool {
         let count = whole_damage(reg(*dmg));
         let fp = &mut self.game.fighters[f.0];
-        if fp.x221C_b4 {
+        if fp.armor {
             fp.dmg.x1834 = mem(fp::fsubs(reg(fp.dmg.x1834), reg(*dmg)));
             if fp.dmg.x1834 < 0.0 {
                 *dmg = mem(fp::fneg(reg(fp.dmg.x1834)));
-                fp.x221C_b4 = false;
+                fp.armor = false;
             }
         }
-        if fp.x221C_b4 {
+        if fp.armor {
             return false;
         }
         // NaN passes, as the original's `!(dmg > 500.0)` does.
@@ -2743,12 +2736,12 @@ impl Running<'_> {
         match a {
             Some(a) => {
                 let af = &self.game.fighters[a.0];
-                let (spawn, player, sub) = (af.x8_spawnNum, af.player_idx, af.is_sub_fighter);
+                let (spawn, player, sub) = (af.spawn_num, af.player_idx, af.is_sub_fighter);
                 let fp = &mut self.game.fighters[me.0];
                 fp.dmg.x18C0 = if a == me { 0 } else { spawn };
                 fp.dmg.x18c4_source_ply = i32::from(player);
                 fp.dmg.x18C8 = -1;
-                fp.x221F_b5 = sub;
+                fp.last_hit_by_sub = sub;
             }
             None => {
                 let fp = &mut self.game.fighters[me.0];

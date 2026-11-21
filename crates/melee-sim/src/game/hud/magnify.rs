@@ -293,12 +293,12 @@ impl Running<'_> {
                 continue;
             };
             if self.game.magnify.player[i].state.ignore_offscreen
-                || !self.game.fighter(fg).x221F_b0
+                || !self.game.fighter(fg).off_screen
                 || !self.can_be_magnified(fg)
             {
                 continue;
             }
-            let b = self.game.fighter(fg).x890_cameraBox.expect("a camera box");
+            let b = self.game.fighter(fg).camera_box.expect("a camera box");
             let b = self.game.camera.subject(b);
             let (ext, bone) = (b.target_ext.v.z, b.bone_pos);
             let scale = fp::fdivs(reg(ext), 8.0);
@@ -339,11 +339,11 @@ impl Running<'_> {
     fn can_be_magnified(&self, g: GObjId) -> bool {
         let fp = self.game.fighter(g);
         !(fp.invisible
-            || fp.x221E_b2
+            || fp.entering
             || self.game.player_more_flags_bit4(i32::from(fp.player_idx))
             || fp.is_sandbag
-            || fp.x2229_b3
-            || fp.x2220_b7)
+            || fp.no_magnifier
+            || fp.camera_placed)
     }
 
     /// A player's bubble's render callback, `ifMagnify_802FB8C0`: in the first pass, for a
@@ -369,10 +369,10 @@ impl Running<'_> {
             let fp = self.game.fighter(fg);
             // `ftLib_GetScreenPos` leaves the position unwritten for these.
             assert!(
-                !fp.x2229_b3 && !fp.x2220_b7,
+                !fp.no_magnifier && !fp.camera_placed,
                 "ifMagnify_802FB8C0: a screen position ftLib_GetScreenPos doesn't write"
             );
-            let sp = &fp.x2188;
+            let sp = &fp.screen_pos;
             let dx = mem(fp::fsubs(fp::frsp(f64::from(sp.x)), 320.0));
             let dy = mem(fp::fneg(fp::fsubs(fp::frsp(f64::from(sp.y)), 240.0)));
             let p = &self.game.magnify.player[i];

@@ -241,24 +241,24 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         if !fp.no_normal_motion {
             let tree = self.second_figatree(f, 0x23);
-            self.game.fighters[f.0].x2EC = figatree_frames(self.data, tree);
+            self.game.fighters[f.0].landing_fall_special_frames = figatree_frames(self.data, tree);
             if !self.game.fighters[f.0].is_sandbag {
                 for (anim, slot) in [(7, 0), (8, 1), (9, 2), (0x25, 3)] {
                     let tree = self.second_figatree(f, anim);
                     let frames = figatree_frames(self.data, tree);
                     let fp = &mut self.game.fighters[f.0];
                     match slot {
-                        0 => fp.x2DC = frames,
-                        1 => fp.x2E0 = frames,
-                        2 => fp.x2E4 = frames,
-                        _ => fp.x2E8 = frames,
+                        0 => fp.walk_slow_frames = frames,
+                        1 => fp.walk_middle_frames = frames,
+                        2 => fp.walk_fast_frames = frames,
+                        _ => fp.guard_on_frames = frames,
                     }
                 }
             }
         }
         self.init_hurt_capsules(f);
         let cam_box = self.game.camera.alloc_box(0);
-        self.game.fighters[f.0].x890_cameraBox = Some(cam_box);
+        self.game.fighters[f.0].camera_box = Some(cam_box);
         let root = self.root_jobj(gobj);
         self.create_shadow(f, root);
         for (proc, priority) in PROCS {
@@ -302,17 +302,17 @@ impl Running<'_> {
         fp.kind = info.kind;
         fp.player_idx = info.slot;
         fp.is_sub_fighter = info.sub;
-        fp.x34_scale.x = scale;
-        fp.x61C = info.slot_word;
+        fp.scale.x = scale;
+        fp.slot_word = info.slot_word;
         fp.pad_port = port;
         fp.sub_color = sub_color;
         fp.is_always_metal = always_metal;
-        fp.x2226_b3 = flags_bit6;
-        fp.x2226_b6 = flags_bit7;
-        fp.x2225_b5 = more_bit1;
-        fp.x2225_b7 = more_bit2;
-        fp.x2228_b3 = more_bit6;
-        fp.x2229_b1 = ae_bit0;
+        fp.takes_damage_cloaked = flags_bit6;
+        fp.no_color_anims = flags_bit7;
+        fp.rules_voice_muted = more_bit1;
+        fp.is_stamina = more_bit2;
+        fp.sfx_size = more_bit6;
+        fp.attrs_scaled = ae_bit0;
         assert!(
             sub_color <= 4,
             "the original's assertion failed: fighter sub color num over!"
@@ -326,7 +326,7 @@ impl Running<'_> {
                 self.data.u8(at.at(3)),
             ];
             let mul = |v: u8| (i32::from(v) * i32::from(c[3]) / 255) as u8;
-            let rgba = &mut self.game.fighters[f.0].x610_color_rgba[0];
+            let rgba = &mut self.game.fighters[f.0].overlay_colors[0];
             rgba.r = mul(c[0]);
             rgba.g = mul(c[1]);
             rgba.b = mul(c[2]);
@@ -348,13 +348,13 @@ impl Running<'_> {
         let anims = self.data.ptr(ft_data.at(0xC));
         let anim_flags = self.data.ptr(ft_data.at(0x10));
         let fp = &mut self.game.fighters[f.0];
-        fp.x2CC = Default::default();
-        fp.x2D0 = Default::default();
-        fp.x18 = 0x155;
-        fp.x1C_actionStateList = super::super::handles::RawPtr(MOTION_STATE_LIST);
-        fp.x20_actionStateList = super::super::handles::RawPtr(kind_tables(info.kind).state_table);
-        fp.x24 = anims;
-        fp.x28 = anim_flags;
+        fp.cargo_attrs = Default::default();
+        fp.multi_jump_attrs = Default::default();
+        fp.own_msid_start = 0x155;
+        fp.common_motion_states = super::super::handles::RawPtr(MOTION_STATE_LIST);
+        fp.own_motion_states = super::super::handles::RawPtr(kind_tables(info.kind).state_table);
+        fp.anim_table = anims;
+        fp.anim_flags = anim_flags;
         fp.input.lstick[2].y = 0.0;
         fp.input.lstick[2].x = 0.0;
         fp.input.cstick[2].y = 0.0;
@@ -362,48 +362,48 @@ impl Running<'_> {
         fp.input.triggers[2] = 0.0;
         fp.input.held_buttons[2] = 0;
         reset_inputs(fp);
-        fp.x594 = [0; 4];
-        fp.x21FC_flag[0] = 1;
+        fp.anim_bits = [0; 4];
+        fp.debug_draw_flags[0] = 1;
         fp.invisible = false;
-        fp.x221E_b1 = false;
-        fp.x221E_b2 = false;
-        fp.x221F_b1 = false;
-        fp.x221F_b2 = false;
-        fp.x209A = 0;
-        fp.x221E_b5 = false;
-        fp.x221F_b0 = false;
-        fp.x21EC = None;
+        fp.dead_flag = false;
+        fp.entering = false;
+        fp.dead = false;
+        fp.cloaked = false;
+        fp.name_tag_timer = 0;
+        fp.visible = false;
+        fp.off_screen = false;
+        fp.motion_change_cb = None;
         fp.has_prev_input = false;
         fp.input_disabled = false;
         fp.is_sleeping = false;
-        fp.x2220_b0 = 0;
-        fp.x2221_b2 = false;
+        fp.footstep_part = 0;
+        fp.hip_offset = false;
         fp.no_normal_motion = false;
-        fp.x2229_b6 = false;
+        fp.spawn_in_air = false;
         fp.no_kb = false;
-        fp.x222A_b0 = false;
-        fp.x222A_b1 = false;
-        fp.x2228_b5 = false;
+        fp.ungrabbable = false;
+        fp.blast_zone_off = false;
+        fp.blast_immune = false;
         fp.used_tether = false;
-        fp.x2221_b3 = false;
-        fp.x2222_b0 = false;
+        fp.light_changed = false;
+        fp.has_cargo = false;
         fp.can_multijump = false;
-        fp.x2222_b4 = false;
-        fp.x2222_b5 = false;
-        fp.x2222_b6 = false;
-        fp.x2223_b1 = false;
-        fp.x40 = 0.0;
+        fp.pickup_limited = false;
+        fp.is_popo = false;
+        fp.frozen_with_holder = false;
+        fp.is_flat = false;
+        fp.platform_offset = 0.0;
         fp.can_walljump = false;
-        fp.x60C = Default::default();
-        fp.x2225_b3 = false;
+        fp.effect_queue = Default::default();
+        fp.nana_follows = false;
         fp.is_sandbag = false;
-        fp.x2226_b0 = false;
-        fp.x2226_b1 = false;
-        fp.x2227_b0 = false;
-        fp.x2224_b0 = false;
+        fp.lies_on_z = false;
+        fp.heavy_down_bound = false;
+        fp.jumped_from_ground = false;
+        fp.low_models_own_material = false;
         fp.smash_attrs.x2135 = -1;
-        fp.x2184 = None;
-        fp.x2229_b3 = false;
+        fp.mushroom_scale_joint = None;
+        fp.no_magnifier = false;
     }
 
     /// The fighter's attributes, item pickup offsets and `x2C4` from its character's data,
@@ -418,8 +418,8 @@ impl Running<'_> {
         let x2c4 = self.data.ptr(d.at(0x50)).expect("ftData::x50");
         let fp = &mut self.game.fighters[f.0];
         fp.co_attrs = super::data::copy_from_data(self.data, attrs);
-        fp.x294_itPickup = super::data::copy_from_data(self.data, pickup);
-        fp.x2C4 = super::data::copy_from_data(self.data, x2c4);
+        fp.item_pickup = super::data::copy_from_data(self.data, pickup);
+        fp.push_size = super::data::copy_from_data(self.data, x2c4);
     }
 
     /// Loads the fighter's costume model as its GObj's joint tree,
@@ -434,7 +434,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
         let joint = self.game.ft.data.costumes[fp.kind as usize][usize::from(fp.costume_id)].joint;
-        self.game.fighters[f.0].x108_costume_joint = joint;
+        self.game.fighters[f.0].costume_joint = joint;
         pobj::set_default_class(&mut self.game.objs.pobjs, PObjClass::Fighter);
         let j = jobj::load_joint(&mut self.game.objs, self.data, joint);
         pobj::set_default_class(&mut self.game.objs.pobjs, PObjClass::Hsd);
@@ -458,7 +458,7 @@ impl Running<'_> {
         } else {
             1.0
         };
-        self.game.fighters[f.0].x34_scale.z = z;
+        self.game.fighters[f.0].scale.z = z;
     }
 
     /// The fighter's height ratio and its bone 2 to bone 1 offset,
@@ -473,13 +473,13 @@ impl Running<'_> {
             .joint;
         let j2 = b2.expect("a fighter without part 2");
         let t = self.game.objs.jobjs[j2].translate;
-        self.game.fighters[f.0].x1A6C = mem(fp::fdivs(reg(t.y), reg(8.55)));
+        self.game.fighters[f.0].hip_follow_rate = mem(fp::fdivs(reg(t.y), reg(8.55)));
         let v = crate::lb::joint::world_position(&mut self.game.objs, self.data, b2, None);
         let v2 = crate::lb::joint::world_position(&mut self.game.objs, self.data, b1, None);
         let fp = &mut self.game.fighters[f.0];
-        fp.x1A70.x = mem(fp::fsubs(reg(v2.x), reg(v.x)));
-        fp.x1A70.y = mem(fp::fsubs(reg(v2.y), reg(v.y)));
-        fp.x1A70.z = mem(fp::fsubs(reg(v2.z), reg(v.z)));
+        fp.throw_offset.x = mem(fp::fsubs(reg(v2.x), reg(v.x)));
+        fp.throw_offset.y = mem(fp::fsubs(reg(v2.y), reg(v.y)));
+        fp.throw_offset.z = mem(fp::fsubs(reg(v2.z), reg(v.z)));
     }
 
     /// The fighter's shadow, cast from its model, `lbShadow_8000ED54`.
@@ -499,7 +499,7 @@ impl Running<'_> {
         sh.scale_t = -0.45;
         shadow::add_object(objs, Some(s), Some(root));
         shadow::set_active(objs, s, true);
-        let ls = &mut self.game.fighters[f.0].x20A4;
+        let ls = &mut self.game.fighters[f.0].shadow;
         ls.x0_b0 = false;
         ls.x0_b1 = false;
         ls.x0_b3 = false;
@@ -539,22 +539,22 @@ fn reset_inputs(fp: &mut Fighter) {
         t.lstick.y = 254;
         t.trigger = 254;
     }
-    fp.x67C = 255;
-    fp.x67D = 255;
-    fp.x67E = 255;
-    fp.x67F = 255;
-    fp.x680 = 255;
-    fp.x681 = 255;
-    fp.x682 = 255;
-    fp.x683 = 255;
-    fp.x684 = 255;
-    fp.x685 = 255;
-    fp.x686 = 255;
-    fp.x687 = 255;
-    fp.x688 = 255;
-    fp.x689 = 255;
-    fp.x68A = 255;
-    fp.x68B = 255;
+    fp.frames_since_smash_x = 255;
+    fp.frames_since_smash_up = 255;
+    fp.frames_since_tap_up = 255;
+    fp.frames_since_shoulder = 255;
+    fp.frames_since_tech_shoulder = 255;
+    fp.frames_since_pad_up = 255;
+    fp.frames_since_pad_down = 255;
+    fp.frames_since_z = 255;
+    fp.frames_since_tech_window = 255;
+    fp.frames_since_special_s = 255;
+    fp.frames_since_special_hi = 255;
+    fp.frames_since_special_lw = 255;
+    fp.frames_since_special_s_dir = 255;
+    fp.frames_since_special_n = 255;
+    fp.frames_since_jump = 255;
+    fp.frames_since_special_hi_air = 255;
 }
 
 impl Game {
@@ -604,12 +604,12 @@ impl Running<'_> {
         self.change_motion_state(gobj, super::co::ids::ms::SLEEP, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         fp.invisible = true;
-        fp.x221E_b1 = true;
-        fp.x221E_b2 = true;
-        fp.x2219_b1 = true;
-        let b = fp.x890_cameraBox.expect("a fighter without a camera box");
+        fp.dead_flag = true;
+        fp.entering = true;
+        fp.out_of_play = true;
+        let b = fp.camera_box.expect("a fighter without a camera box");
         fp.is_sleeping = true;
-        fp.x221F_b1 = true;
+        fp.dead = true;
         self.game.camera.subject_mut(b).state = super::super::camera::INACTIVE;
     }
 }

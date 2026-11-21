@@ -94,13 +94,13 @@ impl Running<'_> {
         let timer = fp::fmadds(reg(fp.dmg.x1830_percent), reg(c.f32(0x60C)), base);
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = mem(timer);
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = false;
-        fp.x1A6A = 0x1FF;
-        fp.x221D_b5 = true;
-        fp.x2220_b3 = true;
-        fp.x2224_b4 = true;
+        fp.mash_stick_y = 0;
+        fp.mash_stick_x = 0;
+        fp.can_mash = false;
+        fp.grab_immune = 0x1FF;
+        fp.nudge_off = true;
+        fp.buried = true;
+        fp.wind_immune = true;
         fp.set_mv_i32(BURY_FRAMES, frames);
         let floor = fp.coll_data.floor.index;
         fp.set_mv_i32(BURY_FLOOR, floor);
@@ -131,7 +131,7 @@ impl Running<'_> {
         fp.set_mv_f32(BURY_SINK, sink);
         let pos = fp.cur_pos;
         set_mv_vec(fp, BURY_TRANSLATE, pos);
-        let scale = fp.x34_scale.y;
+        let scale = fp.scale.y;
         super::super::super::ef::spawn(
             self,
             EFFECT,
@@ -141,7 +141,7 @@ impl Running<'_> {
                 super::super::super::ef::Arg::Float(scale),
             ],
         );
-        self.game.fighters[f.0].x2219_b0 = true;
+        self.game.fighters[f.0].effect_once = true;
     }
 
     /// The mash out of the floor (`ftCo_Bury_Anim`, `ftCo_BuryWait_Anim`): the timer runs
@@ -240,10 +240,10 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms::BURY_WAIT, 0x1082, 0.0, 1.0, 0.0, None);
         self.stop_dead(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A6A = 0x1FF;
-        fp.x221D_b5 = true;
-        fp.x2220_b3 = true;
-        fp.x2224_b4 = true;
+        fp.grab_immune = 0x1FF;
+        fp.nudge_off = true;
+        fp.buried = true;
+        fp.wind_immune = true;
     }
 
     /// `ftCo_BuryWait_Anim`: the mash.
@@ -269,7 +269,7 @@ impl Running<'_> {
         fp.self_vel.y = up;
         fp.set_mv_f32(BURY_JUMP_FRAMES, 0.0);
         self.change_motion_state(gobj, ms::BURY_JUMP, 0, 0.0, 1.0, 0.0, None);
-        self.game.fighters[f.0].x1A6A = 0x1FF;
+        self.game.fighters[f.0].grab_immune = 0x1FF;
         self.respawn_invincibility(gobj, frames);
     }
 

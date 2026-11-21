@@ -38,7 +38,7 @@ impl Running<'_> {
         let abs = if x < 0.0 { fp::fneg(x) } else { x };
         let timer = fp::frsp(f64::from(i32::from(fp.active_sticky.lstick.x)));
         if abs >= t && timer < fp::fadds(fp::frsp(f64::from(window)), x44) {
-            fp.x2070[2] |= 0x08;
+            fp.attack_flags[2] |= 0x08;
             fp.set_u_i32(u::X4, 1);
         } else {
             fp.set_u_i32(u::X4, 0);
@@ -49,12 +49,12 @@ impl Running<'_> {
     #[doc(alias = "ftLk_SepcialS_Get2219b5")]
     #[doc(alias("link_x2219_b5"))]
     pub fn link_in_hitlag(&self, gobj: GObjId) -> bool {
-        self.game.fighter(gobj).x2219_b5
+        self.game.fighter(gobj).in_hitlag
     }
 
     /// The attack id's top nibble (`x2071_b0_3`).
     fn link_attack_nibble(&self, gobj: GObjId) -> u8 {
-        self.game.fighter(gobj).x2070[1] >> 4
+        self.game.fighter(gobj).attack_flags[1] >> 4
     }
 
     /// `ftLk_SpecialS_Is2071b0_5to13`.
@@ -155,7 +155,7 @@ impl Running<'_> {
             let facing = self.game.fighters[f.0].facing_dir;
             let b = linkboomerang::spawn(self, facing, gobj, pos, part, kind);
             let fp = &mut self.game.fighters[f.0];
-            fp.x1984_heldItemSpec = b;
+            fp.special_item = b;
             fp.u.set_gobj_at(u::BOOMERANG, b);
             if b.is_some() {
                 fp.set_u_i32(u::USED_BOOMERANG, 1);
@@ -188,9 +188,9 @@ impl Running<'_> {
     #[doc(alias = "ftLk_SpecialAirS_Enter")]
     pub fn link_special_s_enter(&mut self, gobj: GObjId, air: bool) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.cmd_vars[CMD_THROW] = 0;
-        fp.x21EC = Some(CodeRef(addr::SPECIAL_S_ON_CHANGE));
+        fp.motion_change_cb = Some(CodeRef(addr::SPECIAL_S_ON_CHANGE));
         let used = fp.u_i32(u::USED_BOOMERANG) != 0;
         let msid = match (air, used) {
             (false, true) => ms::SPECIAL_S1_EMPTY,

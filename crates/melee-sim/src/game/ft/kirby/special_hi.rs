@@ -80,7 +80,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         ef::spawn(self, 0x494, Some(gobj), &[]);
-        self.game.fighter_mut(gobj).x2219_b0 = true;
+        self.game.fighter_mut(gobj).effect_once = true;
         self.set_effect_hitlag_cbs(gobj);
     }
 

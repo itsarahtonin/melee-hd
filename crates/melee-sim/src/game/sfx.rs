@@ -168,7 +168,7 @@ impl Running<'_> {
     fn fighter_by_spawn(&self, spawn: u32) -> Option<GObjId> {
         let mut cur = self.game.world.first_in(P_LINK_FIGHTER);
         while let Some(g) = cur {
-            if self.game.fighter(g).x8_spawnNum as u32 == spawn {
+            if self.game.fighter(g).spawn_num as u32 == spawn {
                 return Some(g);
             }
             cur = self.game.world.gobj(g).next;
@@ -283,7 +283,7 @@ impl Running<'_> {
             if !MS_DEAD.contains(&fp.motion_id) && !fp.is_sleeping {
                 if reg(fp.cur_pos.y) < line {
                     self.game.crowd.near_bottom += 1;
-                } else if self.game.crowd.focus == fp.x8_spawnNum as u32 {
+                } else if self.game.crowd.focus == fp.spawn_num as u32 {
                     followed = true;
                 }
             }

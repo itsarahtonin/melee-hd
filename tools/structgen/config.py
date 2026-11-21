@@ -408,6 +408,11 @@ DEFAULT_POINTER = "RawPtr"
 RENAME_TYPES = {"controller_map": "ControllerMap", "gm_controller_map": "GmControllerMap"}
 RENAME_FIELDS = {}
 
+# The port's names for the fields the decomp names by offset, by struct (C name to Rust name):
+# `names.py`. The generated field keeps the C name as a `#[doc(alias)]`, the comparer's labels
+# give both (`hitlag_frames (x2114)`), and `rename_readers.py` renames the uses.
+from names import FIELD_NAMES  # noqa: E402
+
 PRELUDE = """use melee_data::archive::DataRef;
 
 use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};

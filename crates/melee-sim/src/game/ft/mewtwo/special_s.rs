@@ -27,11 +27,11 @@ impl Running<'_> {
     /// no more grabbing, `x2222_b2`.
     #[doc(alias = "ftMt_SpecialS_SetFlags")]
     pub fn mt_s_grabbed(&mut self, gobj: GObjId) {
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
         self.stop_dead(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x221E_b6 = false;
-        fp.x2222_b2 = true;
+        fp.grab_coll_off = false;
+        fp.no_turn = true;
     }
 
     /// The grab, while he holds no one (`ftMewtwo_SpecialS_SetGrab`, `_SpecialAirS_SetGrab`):
@@ -39,8 +39,8 @@ impl Running<'_> {
     fn mt_s_set_grab(&mut self, gobj: GObjId, air: bool) {
         let fp = self.game.fighter_mut(gobj);
         if fp.victim_gobj.is_none() {
-            fp.x221E_b6 = true;
-            fp.x1A68 = 0x40;
+            fp.grab_coll_off = true;
+            fp.grab_kinds = 0x40;
             fp.grab_cb = Some(CodeRef(addr::S_SET_FLAGS));
             let cb = if air {
                 capture_mewtwo::CAPTURE_AIR
@@ -48,9 +48,9 @@ impl Running<'_> {
                 capture_mewtwo::CAPTURE
             };
             fp.grabbed_cb = Some(CodeRef(cb));
-            fp.x2194 = None;
+            fp.grab_item_cb = None;
         } else {
-            fp.x1A6A = 0x1FF;
+            fp.grab_immune = 0x1FF;
         }
     }
 
@@ -60,7 +60,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         if fp.mv[mv::S_FLAGS] & 0x80 != 0 {
             fp.reflecting = true;
-            fp.x2218_b4 = true;
+            fp.reflect_kept = true;
             fp.reflect_hit_cb = Some(CodeRef(addr::S_ON_REFLECT));
         }
     }
@@ -68,7 +68,7 @@ impl Running<'_> {
     /// The state's start: the throw flags, the script's and the reflector cleared.
     fn mt_s_clear(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.cmd_vars[0] = 0;
         fp.cmd_vars[1] = 0;
         fp.mv[mv::S_FLAGS] &= !0x80;
@@ -109,7 +109,7 @@ impl Running<'_> {
             return;
         }
         let Some(victim) = fp.victim_gobj else { return };
-        fp.x1A6A = 0;
+        fp.grab_immune = 0;
         self.throw_hit(gobj, victim, true);
         self.enter_damage_fall(victim);
         self.game.fighter_mut(gobj).cmd_vars[0] = 0;
@@ -207,7 +207,7 @@ impl Running<'_> {
                 };
                 self.create_reflect_hit(gobj, &d, Some(CodeRef(addr::S_ON_REFLECT)));
                 let fp = &mut self.game.fighters[f.0];
-                fp.x2218_b4 = true;
+                fp.reflect_kept = true;
                 fp.mv[mv::S_FLAGS] |= 0x80;
                 fp.cmd_vars[1] = 0;
             }
@@ -215,7 +215,7 @@ impl Running<'_> {
                 let fp = &mut self.game.fighters[f.0];
                 if fp.mv[mv::S_FLAGS] & 0x80 != 0 {
                     fp.reflecting = false;
-                    fp.x2218_b4 = false;
+                    fp.reflect_kept = false;
                     fp.reflect_hit_cb = None;
                     fp.mv[mv::S_FLAGS] &= !0x80;
                 }

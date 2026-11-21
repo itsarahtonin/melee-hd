@@ -61,7 +61,7 @@ impl Running<'_> {
         } else {
             friction
         };
-        fp.xE4_ground_accel_1 = mem(f);
+        fp.ground_accel_1 = mem(f);
     }
 
     /// The ground speed and its acceleration as velocities along the floor,
@@ -72,12 +72,12 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         let n = fp.coll_data.floor.normal;
         if mul < 1.0 {
-            fp.xE4_ground_accel_1 = mem(fp::fmuls(reg(fp.xE4_ground_accel_1), mul));
+            fp.ground_accel_1 = mem(fp::fmuls(reg(fp.ground_accel_1), mul));
         }
-        let a = reg(fp.xE4_ground_accel_1);
-        fp.x74_self_accel.x = mem(fp::fmuls(reg(n.y), a));
-        fp.x74_self_accel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), a));
-        fp.x74_self_accel.z = 0.0;
+        let a = reg(fp.ground_accel_1);
+        fp.anim_vel.x = mem(fp::fmuls(reg(n.y), a));
+        fp.anim_vel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), a));
+        fp.anim_vel.z = 0.0;
         let g = reg(fp.gr_vel);
         fp.self_vel.x = mem(fp::fmuls(reg(n.y), g));
         fp.self_vel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), g));
@@ -89,10 +89,10 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_SetSelfMovementFromGroundedMovement_NoFriction")]
     pub fn self_movement_from_ground_no_friction(fp: &mut Fighter) {
         let n = fp.coll_data.floor.normal;
-        let a = reg(fp.xE4_ground_accel_1);
-        fp.x74_self_accel.x = mem(fp::fmuls(reg(n.y), a));
-        fp.x74_self_accel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), a));
-        fp.x74_self_accel.z = 0.0;
+        let a = reg(fp.ground_accel_1);
+        fp.anim_vel.x = mem(fp::fmuls(reg(n.y), a));
+        fp.anim_vel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), a));
+        fp.anim_vel.z = 0.0;
         let g = reg(fp.gr_vel);
         fp.self_vel.x = mem(fp::fmuls(reg(n.y), g));
         fp.self_vel.y = mem(fp::fmuls(fp::fneg(reg(n.x)), g));
@@ -230,7 +230,7 @@ impl Running<'_> {
                 }
             }
         }
-        fp.x74_self_accel.x = mem(accel);
+        fp.anim_vel.x = mem(accel);
     }
 
     /// Friction against the horizontal velocity, stopping at 0,
@@ -245,7 +245,7 @@ impl Running<'_> {
         } else {
             friction
         };
-        fp.x74_self_accel.x = mem(f);
+        fp.anim_vel.x = mem(f);
     }
 
     /// Air friction against the horizontal velocity, `ftCommon_CalcSelfAccel_DeaccelAir`
@@ -292,7 +292,7 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_CalcSelfAccel_AccelToVel")]
     pub fn accel_to_vel(fp: &mut Fighter, accel: f64, target_vel: f64) {
         let vel = reg(fp.self_vel.x);
-        fp.x74_self_accel.x = mem(toward_target(vel, accel, target_vel));
+        fp.anim_vel.x = mem(toward_target(vel, accel, target_vel));
     }
 
     /// Air drift toward the stick's share of `target_max`, `accel_max` at a time, once the
@@ -367,14 +367,13 @@ impl Running<'_> {
     /// Ground friction on knockback, `ftCommon_ApplyGroundedKnockbackFriction`.
     #[doc(alias = "ftCommon_ApplyGroundedKnockbackFriction")]
     pub fn grounded_knockback_friction(fp: &mut Fighter, friction: f64) {
-        fp.xF0_ground_kb_vel = toward_zero(fp.xF0_ground_kb_vel, friction);
+        fp.ground_kb_vel = toward_zero(fp.ground_kb_vel, friction);
     }
 
     /// Ground friction on shield pushback, `ftCommon_ApplyShieldKnockbackFriction`.
     #[doc(alias = "ftCommon_ApplyShieldKnockbackFriction")]
     pub fn shield_knockback_friction(fp: &mut Fighter, friction: f64) {
-        fp.xF4_ground_attacker_shield_kb_vel =
-            toward_zero(fp.xF4_ground_attacker_shield_kb_vel, friction);
+        fp.ground_attacker_shield_kb_vel = toward_zero(fp.ground_attacker_shield_kb_vel, friction);
     }
 
     /// Ground friction, or the animation's own motion when TransN drives it, `ft_80084FA8`.
@@ -397,11 +396,7 @@ impl Running<'_> {
     pub fn ground_anim_motion(&mut self, gobj: GObjId, friction: f64, facing: f64) {
         let fp = self.game.fighter_mut(gobj);
         if super::anim::x594_bit(fp, 0) {
-            fp.xE4_ground_accel_1 = mem(fp::fmsubs(
-                reg(fp.x6A4_transNOffset.z),
-                facing,
-                reg(fp.gr_vel),
-            ));
+            fp.ground_accel_1 = mem(fp::fmsubs(reg(fp.trans_n_offset.z), facing, reg(fp.gr_vel)));
         } else {
             Self::ground_accel_deaccel(fp, friction);
         }
@@ -422,7 +417,7 @@ impl Running<'_> {
     pub fn ground_anim_speed(&mut self, gobj: GObjId, friction: f64, facing: f64) {
         let fp = self.game.fighter_mut(gobj);
         if super::anim::x594_bit(fp, 0) {
-            fp.gr_vel = mem(fp::fmuls(reg(fp.x6A4_transNOffset.z), facing));
+            fp.gr_vel = mem(fp::fmuls(reg(fp.trans_n_offset.z), facing));
         } else {
             Self::ground_accel_deaccel(fp, friction);
         }
@@ -451,7 +446,7 @@ impl Running<'_> {
     #[doc(alias = "ft_800851C0")]
     pub fn air_anim_rise(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.self_vel.y = fp.x6A4_transNOffset.y;
+        fp.self_vel.y = fp.trans_n_offset.y;
     }
 
     /// `ftCommon_8007F76C`: the ground speed and horizontal velocity turned the way the
@@ -468,15 +463,15 @@ impl Running<'_> {
     #[doc(alias = "ft_80085134")]
     pub fn air_anim_motion(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.self_vel.x = mem(fp::fmuls(reg(fp.x6A4_transNOffset.z), reg(fp.facing_dir)));
-        fp.self_vel.y = fp.x6A4_transNOffset.y;
+        fp.self_vel.x = mem(fp::fmuls(reg(fp.trans_n_offset.z), reg(fp.facing_dir)));
+        fp.self_vel.y = fp.trans_n_offset.y;
     }
 
     /// `ft_80085204`: the animation's forward TransN motion as the horizontal velocity.
     #[doc(alias = "ft_80085204")]
     pub fn air_anim_motion_x(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.self_vel.x = mem(fp::fmuls(reg(fp.x6A4_transNOffset.z), reg(fp.facing_dir)));
+        fp.self_vel.x = mem(fp::fmuls(reg(fp.trans_n_offset.z), reg(fp.facing_dir)));
     }
 
     /// `ft_80085154`: the animation's TransN motion turned by the stick's angle
@@ -486,8 +481,8 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         let c = reg(crate::math::cos(fp.lstick_angle));
         let s = reg(crate::math::sin(fp.lstick_angle));
-        let y = reg(fp.x6A4_transNOffset.y);
-        let z = fp::fmuls(reg(fp.x6A4_transNOffset.z), reg(fp.facing_dir));
+        let y = reg(fp.trans_n_offset.y);
+        let z = fp::fmuls(reg(fp.trans_n_offset.z), reg(fp.facing_dir));
         fp.self_vel.x = mem(fp::fmsubs(z, c, fp::fmuls(y, s)));
         fp.self_vel.y = mem(fp::fmadds(z, s, fp::fmuls(y, c)));
     }
@@ -536,7 +531,7 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_CalcGroundAccel_AccelToVel")]
     pub fn ground_accel_to_vel(fp: &mut Fighter, accel: f64, target_vel: f64) {
         let vel = reg(fp.gr_vel);
-        fp.xE4_ground_accel_1 = mem(toward_target(vel, accel, target_vel));
+        fp.ground_accel_1 = mem(toward_target(vel, accel, target_vel));
     }
 }
 

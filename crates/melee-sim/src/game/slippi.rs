@@ -886,7 +886,7 @@ impl super::state::Game {
         use crate::fpu::reg;
         let fp = &self.fighters[f.0];
         if (self.game_mode, self.gm.scene_index) == (0x20, 1)
-            || fp.x221F_b1
+            || fp.dead
             || fp.motion_id == 4
             || fp.motion_id == 6
         {

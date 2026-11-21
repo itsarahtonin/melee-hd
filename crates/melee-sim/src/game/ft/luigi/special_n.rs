@@ -44,7 +44,7 @@ impl Running<'_> {
     fn lg_special_n_start(&mut self, gobj: GObjId, f: &Fireball, msid: i32) {
         let fp = self.game.fighter_mut(gobj);
         fp.cmd_vars[0] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(f.throw));

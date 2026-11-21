@@ -23,7 +23,7 @@ impl Running<'_> {
 
     /// The shield's absorb box, Link's or Young Link's, whose hits run `cb`.
     pub(in super::super) fn shield_absorb_with(&mut self, gobj: GObjId, cb: u32) {
-        if self.game.fighter(gobj).x5F4_arr[2].prev != 0 {
+        if self.game.fighter(gobj).model_variants[2].prev != 0 {
             return;
         }
         let f = self.game.fighter_id(gobj);
@@ -37,9 +37,9 @@ impl Running<'_> {
         let joint = self.bone_joint(gobj, bone);
         let fp = &mut self.game.fighters[f.0];
         set_shield_hit(fp, CodeRef(cb), joint, radius, pos);
-        fp.x221B.x221B_b3 = true;
-        fp.x221B.x221B_b4 = true;
-        fp.x221B.x221B_b2 = true;
+        fp.state_flags.x221B_b3 = true;
+        fp.state_flags.x221B_b4 = true;
+        fp.state_flags.x221B_b2 = true;
     }
 
     /// His aerials, `ftLk_AttackAir_Enter`: the one the sticks ask for; the down aerial bounces
@@ -103,10 +103,10 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let damage = self.link_attr_word(f, attr::ATTACK_AIR_LW_ANIM_FLAGS + 4 * i);
         let fp = &mut self.game.fighters[f.0];
-        let h = &mut fp.x914[i];
+        let h = &mut fp.hitboxes[i];
         crate::lb::hitcapsule::enable(h);
         crate::lb::hitcapsule::clear_victims(h);
-        fp.x2219_b3 = true;
+        fp.hitboxes_set = true;
         self.hitbox_damage(f, i, false, damage);
     }
 

@@ -36,12 +36,12 @@ impl Running<'_> {
     #[doc(alias = "ftAnim_8006F0FC")]
     pub fn set_anim_rate(&mut self, gobj: GObjId, rate: f32) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].x2223_b0 {
-            self.game.fighters[f.0].x8A0_unk = rate;
+        if self.game.fighters[f.0].anim_frozen {
+            self.game.fighters[f.0].freeze_rate_step = rate;
             return;
         }
         let root = self.root_jobj(gobj);
-        let skel = self.game.fighters[f.0].x8AC_animSkeleton;
+        let skel = self.game.fighters[f.0].anim_skeleton;
         for j in [Some(root), skel].into_iter().flatten() {
             jobj::foreach_anim(&mut self.game.objs, j, ANIM_MASK, &mut |objs, a| {
                 aobj::set_rate(&mut objs.aobjs, Some(a), rate)
@@ -100,7 +100,7 @@ impl Running<'_> {
             self.play_anim(gobj, ANIM_WAIT_ITEM);
         }
         let x5f0 = self.common().u32(0x5F0) as u16;
-        self.game.fighters[f.0].x209A = x5f0;
+        self.game.fighters[f.0].name_tag_timer = x5f0;
         match self.game.fighters[f.0].fighter_kind() {
             FighterKind::Link => self.link_shield_absorb(gobj),
             FighterKind::Clink => self.clink_shield_absorb(gobj),
@@ -180,7 +180,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
         fp.mv[4] = 0;
     }
 
@@ -194,29 +194,26 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
         let entry = fp
-            .x24
+            .anim_table
             .expect("a fighter without animations")
             .at(0x18 * anim as u32);
         let pair = fp
-            .x28
+            .anim_flags
             .expect("a fighter without animation pairs")
             .at(2 * anim as u32);
         self.load_anim(f, f, anim);
         self.game.fighters[f.0].anim_id = anim;
         self.dynamics_for_anim(f, pair);
         let script = self.data.ptr(entry.at(0xC));
-        let s = &mut self.game.fighters[f.0].x3E4_fighterCmdScript.script;
+        let s = &mut self.game.fighters[f.0].cmd_script.script;
         s.cursor = script;
         s.loop_count = 0;
-        if self.game.fighters[f.0].x590.is_some() {
-            self.game.fighters[f.0].x594 = self.data.u32(entry.at(0x10)).to_be_bytes();
+        if self.game.fighters[f.0].action_tree.is_some() {
+            self.game.fighters[f.0].anim_bits = self.data.u32(entry.at(0x10)).to_be_bytes();
             let blend = fp::frsp(f64::from(self.data.u8(pair)));
             self.start_anim(gobj, 0.0, 1.0, blend);
         }
-        self.game.fighters[f.0]
-            .x3E4_fighterCmdScript
-            .script
-            .set_timer_f32(0.0);
+        self.game.fighters[f.0].cmd_script.script.set_timer_f32(0.0);
         self.anim_update(gobj);
     }
 }

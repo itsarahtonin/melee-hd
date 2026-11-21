@@ -157,7 +157,7 @@ impl Running<'_> {
             .game
             .player_entity_at(other, other_sub)
             .expect("a ledge steal without the other fighter");
-        if slot != other && ledge != self.game.fighter(g).x213C {
+        if slot != other && ledge != self.game.fighter(g).ledge_caught {
             self.count_bonus(slot, 0x46);
         }
     }
@@ -395,7 +395,7 @@ impl Running<'_> {
         let game = &*self.game;
         let fp = game.fighter(g);
         let airborne = fp.ground_or_air == super::super::ft::common::GA_AIR;
-        let (x2072_b1, x2073) = (fp.x2070[2] & 0x40 != 0, fp.x2070[3]);
+        let (x2072_b1, x2073) = (fp.attack_flags[2] & 0x40 != 0, fp.attack_flags[3]);
         let slope = (!airborne).then(|| reg(game.ft_ground_slope_angle(g)));
         let nudged = game.ft_is_being_nudged(g);
         let scball = game.ft_holds_item_kind(g, ItKind::ScrewAttack.id());

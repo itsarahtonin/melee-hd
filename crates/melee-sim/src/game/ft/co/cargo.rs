@@ -68,7 +68,7 @@ impl Running<'_> {
     /// A float of the fighter's cargo attributes (`x2CC`).
     pub(crate) fn cargo_attr_f32(&self, f: FighterId, off: usize) -> f32 {
         let a = self.game.fighters[f.0]
-            .x2CC
+            .cargo_attrs
             .expect("a cargo fighter without cargo attributes");
         let b = &self.game.fighter_attrs[a.0];
         f32::from_be_bytes(b[off..off + 4].try_into().unwrap())
@@ -78,7 +78,7 @@ impl Running<'_> {
     pub(crate) fn cargo_state(&self, gobj: GObjId, step: i32) -> i32 {
         let f = self.game.fighter_id(gobj);
         let a = self.game.fighters[f.0]
-            .x2CC
+            .cargo_attrs
             .expect("a cargo fighter without cargo attributes");
         let b = &self.game.fighter_attrs[a.0];
         i32::from_be_bytes(b[X4_MOTION_STATE..X4_MOTION_STATE + 4].try_into().unwrap())
@@ -419,7 +419,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_CargoWait2_Anim")]
     pub fn co_cargo_wait2_anim(&mut self, gobj: GObjId) {
         self.damage_tick(gobj);
-        if !self.game.fighter(gobj).x221C_b6 {
+        if !self.game.fighter(gobj).in_hitstun {
             if self.is_airborne(gobj) {
                 self.enter_cargo_fall(gobj);
             } else {
@@ -500,7 +500,7 @@ impl Running<'_> {
         };
         self.change_motion_state(gobj, state, flags, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
         let first = self.cargo_state(gobj, THROW_F);
         let thrown = msid.wrapping_sub(first).wrapping_add(ms::THROWN_FF);
         let v = self.cargo_victim(gobj);
@@ -539,7 +539,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, msid, THROW_COLL_FLAGS, frame, 1.0, 0.0, None);
         let fp = &mut self.game.fighters[f.0];
         fp.facing_dir = facing;
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
     }
 
     /// `ftCo_8009C170`.
@@ -577,12 +577,16 @@ impl Running<'_> {
         if fp.motion_id == msid && msid == ms::SHOULDERED_WAIT {
             return;
         }
-        let flags = if fp.x2222_b6 { MF_FREEZE_STATE } else { 0 };
+        let flags = if fp.frozen_with_holder {
+            MF_FREEZE_STATE
+        } else {
+            0
+        };
         let holder = fp.victim_gobj;
         self.change_motion_state(gobj, msid, flags, 0.0, 1.0, 0.0, holder);
         self.stop_dead(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
         fp.accessory1_cb = Some(CodeRef(HELD_FOLLOW));
     }
 
@@ -597,9 +601,9 @@ impl Running<'_> {
         let timer = fp::fctiwz(fp::fmadds(reg(fp.dmg.x1830_percent), per, base));
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = mem(fp::frsp(f64::from(timer)));
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = false;
+        fp.mash_stick_y = 0;
+        fp.mash_stick_x = 0;
+        fp.can_mash = false;
         fp.set_mv_f32(SHOULDERED_TIMER, 0.0);
         fp.set_mv_i32(SHOULDERED_MASHED, 0);
         self.enter_shouldered(gobj, msid);
@@ -642,7 +646,7 @@ impl Running<'_> {
         (holder, held): (GObjId, GObjId),
     ) {
         let (m, a) = (self.game.fighter_id(me), self.game.fighter_id(attacker));
-        let hit = self.game.fighters[a.0].xDF4[1].clone();
+        let hit = self.game.fighters[a.0].throw_hitboxes[1].clone();
         let j = self.part_joint(me, joint);
         let pos = world_position(&mut self.game.objs, self.data, j, None);
         let kb = self.shouldered_knockback(m, a, &hit);
@@ -655,7 +659,11 @@ impl Running<'_> {
         fp.dmg.x1860_element = hit.element;
         // `ftColl_80078710(holder, held, &facing_dir_1)`.
         let af = self.game.fighter(holder);
-        let (akind, x2070, instance) = (af.kind, u32::from_be_bytes(af.x2070), af.x2074.x2088);
+        let (akind, x2070, instance) = (
+            af.kind,
+            u32::from_be_bytes(af.attack_flags),
+            af.attack_record.x2088,
+        );
         self.attack_landed(
             Some(holder),
             held,

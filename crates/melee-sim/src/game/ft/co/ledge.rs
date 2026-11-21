@@ -29,9 +29,9 @@ impl Running<'_> {
         args: &[ef::Arg],
     ) {
         let f = self.game.fighter_id(gobj);
-        let mut head = self.game.fighters[f.0].x60C;
+        let mut head = self.game.fighters[f.0].effect_queue;
         ef::queue(self, Some(gobj), &mut head, kind, id, joint, args);
-        self.game.fighters[f.0].x60C = head;
+        self.game.fighters[f.0].effect_queue = head;
     }
 
     /// Spawns an effect at a place, with no joint: `efAsync_Spawn(gobj, &fp->x60C, 2, id,
@@ -131,7 +131,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_8009F39C")]
     pub fn enter_miss_foot(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.game.fighters[f.0].x8c_kb_vel.y = 0.0;
+        self.game.fighters[f.0].kb_vel.y = 0.0;
         self.change_motion_state(gobj, ms::MISS_FOOT, 0, 0.0, 1.0, 0.0, None);
         self.clamp_air_drift(f);
         if self.game.fighters[f.0].ground_or_air == super::super::common::GA_GROUND {
@@ -166,7 +166,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         let x = fp::fadds(reg(fp.cur_pos.x), reg(v.x));
         let back = fp::fneg(reg(fp.facing_dir));
-        fp.cur_pos.x = mem(fp::fnmsubs(reg(fp.x68C_transNPos.z), back, x));
+        fp.cur_pos.x = mem(fp::fnmsubs(reg(fp.trans_n_pos.z), back, x));
         self.ground_coll_teeter_low(gobj);
         self.stop_dead(gobj);
     }
@@ -181,13 +181,13 @@ impl Running<'_> {
     #[doc(alias = "ftCo_8009EFA4")]
     pub fn enter_stop_ceil(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         let v = Vec3::new(0.0, fp.coll_data.ecb.top.y, 0.0);
         self.kirby_bump_effect(gobj, v);
         self.change_motion_state(gobj, ms::STOP_CEIL, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         let y = reg(fp.cur_pos.y);
-        fp.cur_pos.y = mem(fp::fadds(reg(fp.x68C_transNPos.y), fp::fadds(y, reg(v.y))));
+        fp.cur_pos.y = mem(fp::fadds(reg(fp.trans_n_pos.y), fp::fadds(y, reg(v.y))));
         self.air_coll_unlocked_land(gobj);
         let fp = self.game.fighter_mut(gobj);
         fp.self_vel.z = 0.0;
@@ -233,10 +233,10 @@ impl Running<'_> {
         self.anim_update(gobj);
         self.go_airborne(f);
         let x5f0 = self.common().u32(0x5F0);
-        self.game.fighters[f.0].x209A = x5f0 as u16;
+        self.game.fighters[f.0].name_tag_timer = x5f0 as u16;
         self.stop_dead(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.x221D_b7 = true;
+        fp.hanging = true;
         let ledge = if fp.facing_dir > 0.0 {
             fp.coll_data.ledge_id_left
         } else {
@@ -247,7 +247,7 @@ impl Running<'_> {
         let sfx = self.character_sfx(gobj, 0x28);
         self.play_track(gobj, PLAY_VOICE, sfx);
         let fp = &mut self.game.fighters[f.0];
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
         self.start_rumble(f, 12, 0);
         let fp = &self.game.fighters[f.0];
         let ledge = fp.mv_i32(CLIFF_LEDGE_ID);
@@ -289,11 +289,11 @@ impl Running<'_> {
         };
         let fp = self.game.fighter_mut(gobj);
         fp.cur_pos.x = mem(fp::fmadds(
-            reg(fp.x68C_transNPos.z),
+            reg(fp.trans_n_pos.z),
             reg(fp.facing_dir),
             reg(v.x),
         ));
-        fp.cur_pos.y = mem(fp::fadds(reg(v.y), reg(fp.x68C_transNPos.y)));
+        fp.cur_pos.y = mem(fp::fadds(reg(v.y), reg(fp.trans_n_pos.y)));
     }
 
     /// `ftCo_CliffCatch_Coll` (and `ftCo_CliffWait_Coll`): landing normally; a ceiling
@@ -307,7 +307,7 @@ impl Running<'_> {
         }
         if self.stop_at_ceiling_check(gobj) {
             let cooldown = self.common().i32(0x498);
-            self.game.fighter_mut(gobj).x2064_ledgeCooldown = cooldown;
+            self.game.fighter_mut(gobj).ledge_cooldown = cooldown;
         }
     }
 
@@ -325,8 +325,8 @@ impl Running<'_> {
             c.i32(0x49C),
         );
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A6A = 0x1FF;
-        fp.x221D_b7 = true;
+        fp.grab_immune = 0x1FF;
+        fp.hanging = true;
         fp.set_mv_i32(CLIFF_X8, 0);
         let x4 = if reg(fp.dmg.x1830_percent) < pct {
             low
@@ -335,17 +335,17 @@ impl Running<'_> {
         };
         fp.set_mv_f32(CLIFF_X4, reg(x4));
         self.set_intangible(gobj, intangible);
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
     }
 
     /// Intangibility for `frames` frames at least, `ftColl_8007B760`.
     #[doc(alias = "ftColl_8007B760")]
     pub fn set_intangible(&mut self, gobj: GObjId, frames: i32) {
         let fp = self.game.fighter_mut(gobj);
-        if frames > fp.x1990 {
-            fp.x1990 = frames;
+        if frames > fp.intangible_frames {
+            fp.intangible_frames = frames;
         }
-        fp.x198C = 2;
+        fp.timed_hit_status = 2;
         self.start_color_anim(gobj, 9, 0);
     }
 
@@ -365,8 +365,8 @@ impl Running<'_> {
         if self.game.fighter(gobj).mv_f32(CLIFF_X4) <= 0.0 {
             let cooldown = self.common().i32(0x498);
             let fp = self.game.fighter_mut(gobj);
-            fp.x2064_ledgeCooldown = cooldown;
-            fp.x2227_b1 = true;
+            fp.ledge_cooldown = cooldown;
+            fp.ledge_jumped = true;
             self.enter_damage_fall(gobj);
         }
     }

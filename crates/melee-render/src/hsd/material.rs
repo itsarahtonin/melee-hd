@@ -279,18 +279,18 @@ impl Ctx<'_> {
     ) {
         let overlay = active_overlay_ft(fp);
         let mut sub = fp.sub_color;
-        if flags.low_models && fp.x2224_b0 {
+        if flags.low_models && fp.low_models_own_material {
             if fp.is_metal {
                 sub = 4;
-            } else if fp.x2227_b3 {
+            } else if fp.alt_metal {
                 sub = 5;
             }
         }
         let tint = if flags.outline {
-            Some(color(&fp.x610_color_rgba[1]))
+            Some(color(&fp.overlay_colors[1]))
         } else if sub != 0 {
             if overlay.x7C_color_enable {
-                Some(blend_tint(&fp.x610_color_rgba[0], &overlay.x2C_hex))
+                Some(blend_tint(&fp.overlay_colors[0], &overlay.x2C_hex))
             } else {
                 Some(self.sub_color(sub))
             }
@@ -303,7 +303,7 @@ impl Ctx<'_> {
             if crate::mutation::on("ftMaterial_800BF6BC") {
                 tint.r ^= 0x10;
             }
-            let alpha = (fp.x61D != 0xFF).then_some(fp.x61D);
+            let alpha = (fp.alpha != 0xFF).then_some(fp.alpha);
             self.color_overlay_stage(desc, light_reg, tint, alpha, GX_ENABLE);
         }
     }
@@ -317,7 +317,7 @@ impl Ctx<'_> {
         };
         let game = self.game;
         let fp = &game.fighters[f.0];
-        if fp.x2226_b5 {
+        if fp.refracted {
             let rendermode = game.objs.mobjs[m].rendermode;
             return self.refract_setup(rendermode, usize::from(fp.smash_attrs.x2134_vibrateFrame));
         }
@@ -328,14 +328,14 @@ impl Ctx<'_> {
                 self.hsd
                     .note_once("a fighter material before its draw flags were named");
                 melee_sim::hsd::display::FighterFlags {
-                    outline: fp.x2223_b2,
-                    silhouette: fp.x2223_b3,
-                    low_models: fp.x2228_b0,
+                    outline: fp.outline,
+                    silhouette: fp.silhouette,
+                    low_models: fp.low_models,
                 }
             }
         };
         let mut m = m;
-        if !flags.outline && (!flags.low_models || !fp.x2224_b0) {
+        if !flags.outline && (!flags.low_models || !fp.low_models_own_material) {
             if fp.is_metal {
                 match game.ft.metal_mobj {
                     Some(metal) => m = metal,
@@ -343,7 +343,7 @@ impl Ctx<'_> {
                         .hsd
                         .note("a metal fighter without the metal material".into()),
                 }
-            } else if fp.x2227_b3 {
+            } else if fp.alt_metal {
                 match game.ft.clear_mobj {
                     Some(clear) => m = clear,
                     None => self
@@ -353,7 +353,7 @@ impl Ctx<'_> {
             }
         }
         let (desc, mut rendermode) = self.mobj_setup_tev_part(m);
-        if fp.x61D != 0xFF {
+        if fp.alpha != 0xFF {
             rendermode |= RENDER_NO_ZUPDATE | RENDER_XLU;
         }
         let light_reg = self.fighter_light_overlay(&desc, fp, rendermode, &flags);
@@ -369,7 +369,7 @@ impl Ctx<'_> {
         if flags.outline && !flags.silhouette {
             rendermode |= RENDER_NO_ZUPDATE;
         }
-        let pe = if flags.silhouette && fp.x61D == 0xFF {
+        let pe = if flags.silhouette && fp.alpha == 0xFF {
             Some(SILHOUETTE_PE)
         } else {
             game.objs.mobjs[m].pe
@@ -700,10 +700,10 @@ impl Ctx<'_> {
 /// second's.
 #[doc(alias = "ftCo_800C0658")]
 fn active_overlay_ft(fp: &melee_sim::game::structs::Fighter) -> &ColorOverlay {
-    if fp.x408.x28_colanim != [0; 4] {
-        &fp.x408
+    if fp.main_overlay.x28_colanim != [0; 4] {
+        &fp.main_overlay
     } else {
-        &fp.x488
+        &fp.secondary_overlay
     }
 }
 

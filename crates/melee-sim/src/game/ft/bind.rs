@@ -202,10 +202,10 @@ impl Running<'_> {
     #[doc(alias = "ftAnim_8006FE08")]
     fn bind_figatree(&mut self, f: FighterId, blend: bool) {
         let fp = &self.game.fighters[f.0];
-        if fp.kind as u32 != x594_word(fp.x594) & 0x3F {
+        if fp.kind as u32 != x594_word(fp.anim_bits) & 0x3F {
             self.bind_figatree_remapped(f, blend);
         } else {
-            let tree = fp.x590.expect("no figatree");
+            let tree = fp.action_tree.expect("no figatree");
             self.bind_own_figatree(f, blend, tree);
         }
     }
@@ -216,7 +216,7 @@ impl Running<'_> {
     pub fn bind_own_figatree(&mut self, f: FighterId, blend: bool, tree: DataRef) {
         let data = self.data;
         let kind = self.game.fighters[f.0].kind;
-        let flags = (x594_word(self.game.fighters[f.0].x594) >> 9) & 0x1FFF;
+        let flags = (x594_word(self.game.fighters[f.0].anim_bits) >> 9) & 0x1FFF;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
         let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
         let mut i = 0;
@@ -257,8 +257,8 @@ impl Running<'_> {
     pub fn bind_figatree_remapped(&mut self, f: FighterId, blend: bool) {
         let data = self.data;
         let fp = &self.game.fighters[f.0];
-        let tree = fp.x590.expect("no figatree");
-        let word = x594_word(fp.x594);
+        let tree = fp.action_tree.expect("no figatree");
+        let word = x594_word(fp.anim_bits);
         let (bits, from) = ((word >> 9) & 0x1FFF, (word & 0x3F) as i32);
         let to = fp.kind;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
@@ -335,10 +335,10 @@ impl Running<'_> {
     #[doc(alias = "ftAnim_8006F954")]
     fn bind_part_figatree(&mut self, f: FighterId, part: i32, blend: bool) {
         let fp = &self.game.fighters[f.0];
-        if fp.kind as u32 != x594_word(fp.x594) & 0x3F {
+        if fp.kind as u32 != x594_word(fp.anim_bits) & 0x3F {
             self.bind_part_figatree_remapped(f, part, blend);
         } else {
-            let tree = fp.x590.expect("no figatree");
+            let tree = fp.action_tree.expect("no figatree");
             self.bind_part_own_figatree(f, part, blend, tree);
         }
     }
@@ -349,9 +349,9 @@ impl Running<'_> {
     fn bind_part_own_figatree(&mut self, f: FighterId, part: i32, blend: bool, tree: DataRef) {
         let data = self.data;
         let kind = self.game.fighters[f.0].kind;
-        let bits = (x594_word(self.game.fighters[f.0].x594) >> 9) & 0x1FFF;
+        let bits = (x594_word(self.game.fighters[f.0].anim_bits) >> 9) & 0x1FFF;
         let depth = self.bone(f, part).xC_u[0];
-        let buf = self.game.fighters[f.0].x59C;
+        let buf = self.game.fighters[f.0].main_anim_buf;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
         let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
         let mut i = 0;
@@ -399,12 +399,12 @@ impl Running<'_> {
     fn bind_part_figatree_remapped(&mut self, f: FighterId, part: i32, blend: bool) {
         let data = self.data;
         let fp = &self.game.fighters[f.0];
-        let tree = fp.x590.expect("no figatree");
-        let word = x594_word(fp.x594);
+        let tree = fp.action_tree.expect("no figatree");
+        let word = x594_word(fp.anim_bits);
         let (bits, from) = ((word >> 9) & 0x1FFF, (word & 0x3F) as i32);
         let to = fp.kind;
         let depth = self.bone(f, part).xC_u[0];
-        let buf = fp.x59C;
+        let buf = fp.main_anim_buf;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
         let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
         let mut i = 0;
@@ -466,7 +466,7 @@ impl Running<'_> {
     pub fn restart_part_anim(&mut self, f: FighterId, part: i32, frame: f32, speed: f32) {
         let bone = self.bone(f, part);
         let j = bone.joint;
-        let costume = self.game.fighters[f.0].x108_costume_joint;
+        let costume = self.game.fighters[f.0].costume_joint;
         let desc = self.part_joint_desc(f, j, costume);
         let set_rate = |r: &mut Self, t: Option<JObjId>| {
             r.tree_anims(t, |aobjs, a| aobj::set_rate(aobjs, Some(a), speed));
@@ -474,9 +474,9 @@ impl Running<'_> {
         let set_loop = |r: &mut Self, t: Option<JObjId>| {
             r.tree_anims(t, |aobjs, a| aobj::set_flags(aobjs, Some(a), aobj::LOOP));
         };
-        if self.game.fighters[f.0].x8A4_animBlendFrames == 0.0 {
+        if self.game.fighters[f.0].anim_blend_frames == 0.0 {
             self.reset_parts(f, part, desc, false);
-            let buf = self.game.fighters[f.0].x59C;
+            let buf = self.game.fighters[f.0].main_anim_buf;
             self.in_anim_buf(buf, |r| r.bind_part_figatree(f, part, false));
             self.request_anim(j, frame);
             let anim = self.game.fighters[f.0].anim_id;
@@ -490,11 +490,11 @@ impl Running<'_> {
         }
         let j2 = bone.x4_jobj2;
         self.reset_parts(f, part, desc, true);
-        let buf = self.game.fighters[f.0].x59C;
+        let buf = self.game.fighters[f.0].main_anim_buf;
         self.in_anim_buf(buf, |r| r.bind_part_figatree(f, part, true));
         self.request_anim(j2, frame);
         self.request_anim(j, frame);
-        if self.game.fighters[f.0].x594[0] & 0x40 != 0 {
+        if self.game.fighters[f.0].anim_bits[0] & 0x40 != 0 {
             set_loop(self, j2);
             set_loop(self, j);
         }
@@ -536,24 +536,24 @@ impl Running<'_> {
     pub fn start_anim(&mut self, gobj: GObjId, start: f64, rate: f64, blend: f64) {
         let f = self.game.fighter_id(gobj);
         let root = Some(self.root_jobj(gobj));
-        let skel = self.game.fighters[f.0].x8AC_animSkeleton;
+        let skel = self.game.fighters[f.0].anim_skeleton;
         self.remove_anim(root);
         self.remove_anim(skel);
         let costume = self.game.fighters[f.0]
-            .x108_costume_joint
+            .costume_joint
             .expect("a fighter without a costume");
         let first = self.data.ptr(costume.at(8));
         let (start, rate32) = (mem(start), mem(rate));
-        let looping = self.game.fighters[f.0].x594[0] & 0x40 != 0;
+        let looping = self.game.fighters[f.0].anim_bits[0] & 0x40 != 0;
 
         let trees: &[Option<JObjId>] = if blend == 0.0 {
             self.reset_parts(f, TRANS_N, first, false);
-            let buf = self.game.fighters[f.0].x59C;
+            let buf = self.game.fighters[f.0].main_anim_buf;
             self.in_anim_buf(buf, |r| r.bind_figatree(f, false));
             &[root]
         } else {
             self.reset_parts(f, TRANS_N, first, true);
-            let buf = self.game.fighters[f.0].x59C;
+            let buf = self.game.fighters[f.0].main_anim_buf;
             self.in_anim_buf(buf, |r| r.bind_figatree(f, true));
             &[skel, root]
         };
@@ -569,7 +569,7 @@ impl Running<'_> {
             self.tree_anims(t, |aobjs, a| aobj::set_rate(aobjs, Some(a), rate32));
         }
         let fp = &mut self.game.fighters[f.0];
-        fp.x8A4_animBlendFrames = mem(blend);
-        fp.x8A8_anim_frame = 0.0;
+        fp.anim_blend_frames = mem(blend);
+        fp.anim_blend_frame = 0.0;
     }
 }

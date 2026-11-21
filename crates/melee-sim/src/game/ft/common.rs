@@ -40,7 +40,7 @@ impl Running<'_> {
             i32::from(fp.is_sub_fighter),
             fp.kind,
         );
-        if let Some(second) = fp.x1978 {
+        if let Some(second) = fp.second_item {
             self.item_pickup_stat(slot, sub, second);
         } else if let Some(item) = fp.item_gobj {
             let hook = crate::game::ft::registry::character(kind)
@@ -67,8 +67,8 @@ impl Running<'_> {
     #[doc(alias = "pl_8003EA08")]
     pub fn release_item(&mut self, gobj: GObjId, item: GObjId, flag: bool) {
         let fp = self.game.fighter_mut(gobj);
-        if fp.x1978 == Some(item) {
-            fp.x1978 = None;
+        if fp.second_item == Some(item) {
+            fp.second_item = None;
             return;
         }
         if self.holding_hammer(gobj) {
@@ -161,13 +161,13 @@ impl Running<'_> {
         jobj::set_rotation_y(&mut self.game.objs.jobjs, jobj, rot_y);
         let fp = &mut self.game.fighters[f.0];
         if fp.dmg.x18F4 == 0 {
-            fp.x2220_b4 = false;
+            fp.turn_spin = false;
             fp.facing_dir = mem(fp::fneg(reg(fp.facing_dir)));
             let top = mem(fp::frsp(fp::fmul(fp::fdiv(PI, 2.0), reg(fp.facing_dir))));
             self.game.part_set_rot_y(f, TOP_N, top);
             self.game.part_set_rot_y(f, part, 0.0);
             jobj::set_rotation_y(&mut self.game.objs.jobjs, jobj, 0.0);
-            if let Some(cb) = self.game.fighters[f.0].x21F8 {
+            if let Some(cb) = self.game.fighters[f.0].turn_cb {
                 run_fighter_cb(self, gobj, cb);
             }
         }
@@ -200,15 +200,16 @@ impl Running<'_> {
     #[doc(alias = "Fighter_TakeDamage_8006CC7C")]
     pub fn take_damage(&mut self, f: FighterId, amount: f64) {
         let fp = &mut self.game.fighters[f.0];
-        if fp.x2226_b4 && !fp.x2226_b3 {
+        if fp.cloak && !fp.takes_damage_cloaked {
             return;
         }
         fp.dmg.x1830_percent = mem(fp::fadds(reg(fp.dmg.x1830_percent), amount));
         if fp.metal_timer != 0 {
             fp.metal_health = fp::fctiwz(fp::fsubs(fp::frsp(f64::from(fp.metal_health)), amount));
         }
-        if fp.x2034 != 0 {
-            fp.x2038 = fp::fctiwz(fp::fsubs(fp::frsp(f64::from(fp.x2038)), amount));
+        if fp.alt_metal_timer != 0 {
+            fp.alt_metal_health =
+                fp::fctiwz(fp::fsubs(fp::frsp(f64::from(fp.alt_metal_health)), amount));
         }
         if reg(fp.dmg.x1830_percent) > 999.0 {
             fp.dmg.x1830_percent = 999.0;
@@ -299,18 +300,18 @@ impl Running<'_> {
     /// lasts.
     #[doc(alias = "ftCo_800D71D8")]
     pub fn item_pickup_tick(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).x209C == 0 {
+        if self.game.fighter(gobj).air_grab_timer == 0 {
             return;
         }
         let found = self.item_in_reach(gobj, 1);
         let fp = self.game.fighter_mut(gobj);
-        fp.x209C -= 1;
-        if fp.x209C == 0 {
-            fp.x2224_b1 = true;
+        fp.air_grab_timer -= 1;
+        if fp.air_grab_timer == 0 {
+            fp.air_item_caught = true;
         }
         if let Some(it) = found {
             self.catch_item_in_air(gobj, it);
-            self.game.fighter_mut(gobj).x209C = 0;
+            self.game.fighter_mut(gobj).air_grab_timer = 0;
         }
     }
 
@@ -319,13 +320,13 @@ impl Running<'_> {
     #[doc(alias = "ftColl_800764DC")]
     pub fn combo_tick(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        if fp.x2098 != 0 {
-            fp.x2098 -= 1;
+        if fp.combo_window != 0 {
+            fp.combo_window -= 1;
         }
-        if let Some(other) = fp.x2094 {
+        if let Some(other) = fp.combo_victim {
             let o = self.game.fighter(other);
-            if !o.x221C_b6 && o.x2098 == 0 {
-                self.game.fighter_mut(gobj).x2094 = None;
+            if !o.in_hitstun && o.combo_window == 0 {
+                self.game.fighter_mut(gobj).combo_victim = None;
             }
         }
     }
@@ -367,9 +368,9 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007F8B4")]
     pub fn pending_pos(fp: &Fighter) -> Vec3 {
         Vec3::new(
-            mem(fp::fadds(reg(fp.cur_pos.x), reg(fp.xD4_unk_vel.x))),
-            mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.xD4_unk_vel.y))),
-            mem(fp::fadds(reg(fp.cur_pos.z), reg(fp.xD4_unk_vel.z))),
+            mem(fp::fadds(reg(fp.cur_pos.x), reg(fp.frame_vel.x))),
+            mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.frame_vel.y))),
+            mem(fp::fadds(reg(fp.cur_pos.z), reg(fp.frame_vel.z))),
         )
     }
 
@@ -377,9 +378,9 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007E0E4")]
     pub fn nudge(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.xF8_playerNudgeVel.y = 0.0;
-        fp.xF8_playerNudgeVel.x = 0.0;
-        if fp.x2219_b1 || fp.x2219_b5 || fp.ground_or_air != GA_GROUND {
+        fp.nudge_vel.y = 0.0;
+        fp.nudge_vel.x = 0.0;
+        if fp.out_of_play || fp.in_hitlag || fp.ground_or_air != GA_GROUND {
             return;
         }
         let c = self.common();
@@ -390,7 +391,7 @@ impl Running<'_> {
             (reg(c.f32(0x45C)), reg(c.f32(0x460)))
         };
         let mut v = Self::pending_pos(fp);
-        if !fp.x221D_b5 {
+        if !fp.nudge_off {
             if !fp.is_sub_fighter {
                 self.nudge_from_others(gobj, v);
             } else {
@@ -398,7 +399,7 @@ impl Running<'_> {
             }
         }
         let fp = self.game.fighter_mut(gobj);
-        let nv = &mut fp.xF8_playerNudgeVel;
+        let nv = &mut fp.nudge_vel;
         if nv.y == 0.0 && v.z != 0.0 {
             nv.y = mem(if v.z < 0.0 { f30 } else { fp::fneg(f30) });
         }
@@ -415,7 +416,7 @@ impl Running<'_> {
             nv.y = mem(fp::fsubs(fp::fneg(f31), reg(v.z)));
         }
         if fp.is_sub_fighter {
-            fp.xF8_playerNudgeVel.x = 0.0;
+            fp.nudge_vel.x = 0.0;
         }
     }
 
@@ -466,7 +467,7 @@ impl Running<'_> {
                 continue;
             }
             let p = Self::pending_pos(other);
-            let (mine, theirs) = (me.x2C4.clone(), other.x2C4.clone());
+            let (mine, theirs) = (me.push_size.clone(), other.push_size.clone());
             let d = fp::fsubs(
                 fp::fmadds(reg(mine.x), reg(me.facing_dir), reg(v.x)),
                 fp::fmadds(reg(other.facing_dir), reg(theirs.x), reg(p.x)),
@@ -478,7 +479,7 @@ impl Running<'_> {
                 continue;
             }
             let signed = |neg: bool, v: f64| if neg { fp::fneg(v) } else { v };
-            let nv = &mut self.game.fighter_mut(gobj).xF8_playerNudgeVel;
+            let nv = &mut self.game.fighter_mut(gobj).nudge_vel;
             let dx = if d != 0.0 {
                 signed(d < 0.0, x450)
             } else {
@@ -511,7 +512,7 @@ impl Running<'_> {
             let me = self.game.fighter(gobj);
             if self.floors_meet(me.coll_data.floor.index, other.coll_data.floor.index) {
                 let p = Self::pending_pos(other);
-                let (mine, theirs) = (me.x2C4.clone(), other.x2C4.clone());
+                let (mine, theirs) = (me.push_size.clone(), other.push_size.clone());
                 let d = fp::fsubs(
                     fp::fmadds(reg(mine.x), reg(me.facing_dir), reg(v.x)),
                     fp::fmadds(reg(other.facing_dir), reg(theirs.x), reg(p.x)),
@@ -519,7 +520,7 @@ impl Running<'_> {
                 let abs = if d < 0.0 { fp::fneg(d) } else { d };
                 if abs < fp::fadds(reg(mine.y), reg(theirs.y)) {
                     let x45c = reg(self.common().f32(0x45C));
-                    let nv = &mut self.game.fighter_mut(gobj).xF8_playerNudgeVel;
+                    let nv = &mut self.game.fighter_mut(gobj).nudge_vel;
                     nv.y = mem(fp::fsubs(reg(nv.y), x45c));
                 }
             }
@@ -557,8 +558,8 @@ impl Running<'_> {
         let part = self.bone_index(&self.game.fighters[f.0], 0x35);
         let rot = self.game.part_rot_x(f, part);
         let fp = &mut self.game.fighters[f.0];
-        if fp.x100 != rot {
-            fp.x100 = rot;
+        if fp.part_35_rot_x != rot {
+            fp.part_35_rot_x = rot;
             return true;
         }
         false
@@ -570,7 +571,7 @@ impl Running<'_> {
     #[doc(alias = "ftColl_GetWindOffsetVec")]
     pub fn wind_offset(&mut self, gobj: GObjId) -> Vec3 {
         let mut out = Vec3::default();
-        if self.game.fighter(gobj).x2224_b4 {
+        if self.game.fighter(gobj).wind_immune {
             return out;
         }
         for i in 0..self.game.gr.devices.wind_count {
@@ -619,7 +620,7 @@ impl Running<'_> {
             2 => {
                 !(fp.bury_timer_2 != 0
                     || fp.motion_id == super::co::ids::ms::BARREL_WAIT
-                    || fp.x1A6A & 0x20 != 0
+                    || fp.grab_immune & 0x20 != 0
                     || fp.stamina_dead)
             }
             3 => fp.bury_timer_2 == 0,
@@ -634,13 +635,13 @@ impl Running<'_> {
         let c = self.common();
         let (limit, near, far) = (c.i32(0x4C8), reg(c.f32(0x4D0)), reg(c.f32(0x4D4)));
         let fp = self.game.fighter_mut(gobj);
-        if fp.x2092 == 0 {
+        if fp.combo_push_frames == 0 {
             return;
         }
-        fp.x2092 -= 1;
+        fp.combo_push_frames -= 1;
         if fp.victim_gobj.is_none() && fp.ground_or_air == GA_GROUND {
             let n = fp.coll_data.floor.normal;
-            let push = if i32::from(fp.x2090) < limit {
+            let push = if i32::from(fp.combo_count) < limit {
                 near
             } else {
                 far
@@ -664,7 +665,12 @@ impl Running<'_> {
         let top = fp::fadds(reg(b.top), y_off);
         let bottom = fp::fadds(reg(b.bottom), y_off);
         let fp = self.game.fighter(gobj);
-        if fp.x222A_b1 || fp.x2228_b5 || fp.is_sandbag || fp.x2219_b2 || fp.x2219_b1 {
+        if fp.blast_zone_off
+            || fp.blast_immune
+            || fp.is_sandbag
+            || fp.blast_immune_state
+            || fp.out_of_play
+        {
             return false;
         }
         let (x, y) = (reg(fp.cur_pos.x), reg(fp.cur_pos.y));
@@ -677,7 +683,7 @@ impl Running<'_> {
             return true;
         }
         if y > top
-            && (fp.ground_or_air == GA_GROUND || fp.x2222_b3 || reg(fp.x8c_kb_vel.y) > kb_limit)
+            && (fp.ground_or_air == GA_GROUND || fp.no_blast_rise || reg(fp.kb_vel.y) > kb_limit)
         {
             let (slot, ice) = (
                 i32::from(fp.player_idx),
@@ -730,7 +736,7 @@ impl Running<'_> {
     /// joint's transform with the model's scale, `Fighter_UnkApplyTransformation_8006C0F0`.
     #[doc(alias = "Fighter_UnkApplyTransformation_8006C0F0")]
     pub fn depth_scale_matrix(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).x34_scale.z == 1.0 {
+        if self.game.fighter(gobj).scale.z == 1.0 {
             return;
         }
         let root = self.root_jobj(gobj);
@@ -741,7 +747,7 @@ impl Running<'_> {
         let (rot, trans) = (j.rotate, j.translate);
         scale.x = mem(Self::model_scale(self.game.fighter(gobj)));
         let srt = crate::mtx::Mtx34::srt(scale, Vec3::new(rot.x, rot.y, rot.z), trans, None);
-        self.game.fighter_mut(gobj).x44_mtx = srt.concat(&inv).m;
+        self.game.fighter_mut(gobj).depth_scale_mtx = srt.concat(&inv).m;
     }
 
     /// `ftColl_8007AE80`: each hitbox follows its bone.
@@ -757,13 +763,13 @@ impl Running<'_> {
     #[doc(alias = "ftColl_8007AD18")]
     pub fn hitbox_follow(&mut self, gobj: GObjId, i: usize) {
         let fp = self.game.fighter(gobj);
-        let h = &fp.x914[i];
+        let h = &fp.hitboxes[i];
         let state = h.state;
         if !(1..=3).contains(&state) {
             return;
         }
         let offset = if h.x43_b1 {
-            let inv = fp::fdivs(1.0, reg(fp.x34_scale.y));
+            let inv = fp::fdivs(1.0, reg(fp.scale.y));
             let b = h.b_offset;
             Vec3::new(
                 mem(fp::fmuls(reg(b.x), inv)),
@@ -776,43 +782,43 @@ impl Running<'_> {
         let j = h.jobj.get("ftColl_8007AD18");
         if state == 1 {
             let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
-            let h = &mut self.game.fighter_mut(gobj).x914[i];
+            let h = &mut self.game.fighter_mut(gobj).hitboxes[i];
             h.x4C = p;
             h.x58 = p;
             h.state = 2;
             return;
         }
-        let h = &mut self.game.fighter_mut(gobj).x914[i];
+        let h = &mut self.game.fighter_mut(gobj).hitboxes[i];
         if state == 2 {
             h.state = 3;
         }
         h.x58 = h.x4C;
         let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
-        self.game.fighter_mut(gobj).x914[i].x4C = p;
+        self.game.fighter_mut(gobj).hitboxes[i].x4C = p;
     }
 
     /// `ft_8007C224`: the thrown fighter's hitbox follows its bone, as `ftColl_8007AD18`
     /// does without the scale correction.
     #[doc(alias = "ft_8007C224")]
     pub fn thrown_hitbox_follow(&mut self, gobj: GObjId) {
-        let h = &self.game.fighter(gobj).x1064_thrownHitbox;
+        let h = &self.game.fighter(gobj).thrown_hitbox;
         let (state, j, offset) = (h.state, h.jobj.get("ft_8007C224"), h.b_offset);
         match state {
             1 => {
                 let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
-                let h = &mut self.game.fighter_mut(gobj).x1064_thrownHitbox;
+                let h = &mut self.game.fighter_mut(gobj).thrown_hitbox;
                 h.x4C = p;
                 h.x58 = p;
                 h.state = 2;
             }
             2 | 3 => {
-                let h = &mut self.game.fighter_mut(gobj).x1064_thrownHitbox;
+                let h = &mut self.game.fighter_mut(gobj).thrown_hitbox;
                 if state == 2 {
                     h.state = 3;
                 }
                 h.x58 = h.x4C;
                 let p = world_position(&mut self.game.objs, self.data, j, Some(offset));
-                self.game.fighter_mut(gobj).x1064_thrownHitbox.x4C = p;
+                self.game.fighter_mut(gobj).thrown_hitbox.x4C = p;
             }
             _ => {}
         }
@@ -834,11 +840,11 @@ impl Running<'_> {
         for i in 0..2 {
             let off = crate::game::mirror::read_vec3(self.data, table.at(0x14 * i as u32 + 4));
             let fp = self.game.fighter_mut(gobj);
-            let e = &mut fp.x1614[i];
+            let e = &mut fp.stamina_markers[i];
             e.x14 = e.x8;
             let j = e.x4;
             let p = world_position(&mut self.game.objs, self.data, j, Some(off));
-            let e = &mut self.game.fighter_mut(gobj).x1614[i];
+            let e = &mut self.game.fighter_mut(gobj).stamina_markers[i];
             e.x8 = p;
             e.x8.z = 0.0;
         }

@@ -961,7 +961,7 @@ pub fn zoom_origin(r: &mut Running, gobj: GObjId) -> bool {
     }
     let fid = r.game.fighter_id(f);
     let b = r.game.fighters[fid.0]
-        .x890_cameraBox
+        .camera_box
         .expect("ftLib_GetCameraSubject: a fighter without a camera box");
     let bone = r.game.camera.subject(b).bone_pos;
     // Under Slippi's rules, where the close-up copies from is also taken through the views

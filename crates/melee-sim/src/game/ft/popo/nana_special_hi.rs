@@ -60,10 +60,10 @@ impl Running<'_> {
     #[doc(alias = "ftNn_Init_8012300C")]
     pub fn nana_try_belay(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
-        if fp.is_sleeping || fp.x2219_b5 {
+        if fp.is_sleeping || fp.in_hitlag {
             return false;
         }
-        let held = matches!(fp.x2070[1] >> 4, 1 | 3..=8 | 10..=13);
+        let held = matches!(fp.attack_flags[1] >> 4, 1 | 3..=8 | 10..=13);
         if held {
             return false;
         }
@@ -109,7 +109,7 @@ impl Running<'_> {
         fp.cur_pos.y = mem(fp::fadds(reg(hand.y), y));
         fp.cur_pos.z = mem(fp::fadds(reg(hand.z), z));
         let p = self.game.fighter(popo);
-        let (frozen, rate) = (p.x2219_b5, p.frame_speed_mul);
+        let (frozen, rate) = (p.in_hitlag, p.frame_speed_mul);
         if frozen {
             self.set_anim_rate(gobj, 0.0);
         } else if self.game.fighters[f.0].frame_speed_mul != rate {
@@ -141,12 +141,12 @@ impl Running<'_> {
             self.go_airborne_jumped(f);
         } else {
             let fp = &mut self.game.fighters[f.0];
-            fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+            fp.jumps_used = fp.co_attrs.max_jumps as u8;
         }
         self.nana_enter_hold(gobj);
         let fp = &mut self.game.fighters[f.0];
         fp.cmd_vars[0] = 0;
-        fp.x2222_b2 = true;
+        fp.no_turn = true;
     }
 
     /// Riding Popo's hand, `ftNn_Init_801233F8`.
@@ -184,7 +184,7 @@ impl Running<'_> {
         let c = fp::fmuls(speed, reg(math::cos(angle)));
         fp.self_vel.x = mem(fp::fmuls(reg(fp.facing_dir), c));
         fp.self_vel.y = mem(fp::fmuls(speed, reg(math::sin(angle))));
-        let s = reg(fp.x34_scale.y);
+        let s = reg(fp.scale.y);
         fp.cur_pos.x = mem(fp::fmadds(
             fp::fmuls(4.0, reg(fp.facing_dir)),
             s,

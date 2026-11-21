@@ -94,7 +94,7 @@ impl Running<'_> {
     fn mr_special_n_start(&mut self, gobj: GObjId, f: &Fireball, air: bool) {
         let fp = self.game.fighter_mut(gobj);
         fp.cmd_vars[0] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         let msid = self.mr_special_n_state(gobj, f, air);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);

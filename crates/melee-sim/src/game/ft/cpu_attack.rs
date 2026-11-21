@@ -87,18 +87,18 @@ impl Running<'_> {
     /// Rules out an attack command for this decision (`xCC_array`), up to eight.
     fn cpu_rule_out(&mut self, f: FighterId, c: i32) {
         let d = &mut self.game.fighters[f.0].cpu;
-        if d.xEC < 8 {
-            d.xCC_array[usize::from(d.xEC)] = c;
-            d.xEC += 1;
+        if d.ruled_out_count < 8 {
+            d.ruled_out_commands[usize::from(d.ruled_out_count)] = c;
+            d.ruled_out_count += 1;
         }
     }
 
     /// Restricts the attack to a command (`xA8_array`), up to eight.
     fn cpu_only(&mut self, f: FighterId, c: i32) {
         let d = &mut self.game.fighters[f.0].cpu;
-        if d.xC8 < 8 {
-            d.xA8_array[usize::from(d.xC8)] = c;
-            d.xC8 += 1;
+        if d.allowed_count < 8 {
+            d.allowed_commands[usize::from(d.allowed_count)] = c;
+            d.allowed_count += 1;
         }
     }
 
@@ -127,7 +127,7 @@ impl Running<'_> {
         let g = self.game.fighters[f.0].item_gobj.expect("a held item");
         let fuse = reg(super::super::it::lib26b1::fuse_left(self.game, g));
         if fuse < 60.0 && fuse > 0.0 {
-            self.game.fighters[f.0].cpu.xA4 = 2;
+            self.game.fighters[f.0].cpu.command = 2;
             return true;
         }
         let kind = self.game.items[it.0].kind;
@@ -137,7 +137,7 @@ impl Running<'_> {
                 self.game, g,
             )));
             if left < 9.999_999_747_378_752e-6 && left > -9.999_999_747_378_752e-6 {
-                self.game.fighters[f.0].cpu.xA4 = 0x28;
+                self.game.fighters[f.0].cpu.command = 0x28;
                 return true;
             }
             if !self.cpu_target_ahead(f) {
@@ -151,7 +151,7 @@ impl Running<'_> {
             } else {
                 0x2A
             };
-            self.game.fighters[f.0].cpu.xA4 = a;
+            self.game.fighters[f.0].cpu.command = a;
             return true;
         }
         // `ftCo_800A5A5C`: a container.
@@ -159,7 +159,7 @@ impl Running<'_> {
             ItKind::of(kind),
             ItKind::Crate | ItKind::Barrel | ItKind::PartyBall | ItKind::BarrelCannon
         ) {
-            self.game.fighters[f.0].cpu.xA4 = 2;
+            self.game.fighters[f.0].cpu.command = 2;
             return true;
         }
         // `ftCo_800A5A28`: an item thrown at the target.
@@ -188,14 +188,14 @@ impl Running<'_> {
             } else {
                 return false;
             };
-            self.game.fighters[f.0].cpu.xA4 = a;
+            self.game.fighters[f.0].cpu.command = a;
             return true;
         }
         if self.cpu_item_swung(it) {
             return false;
         }
         if dist > 30.0 && angle < 0.261_799_385_771_155_36 && angle > -0.261_799_385_771_155_36 {
-            self.game.fighters[f.0].cpu.xA4 = 0x2A;
+            self.game.fighters[f.0].cpu.command = 0x2A;
             return true;
         }
         false
@@ -228,12 +228,12 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800B9CBC")]
     pub(super) fn cpu_ranged_attack(&mut self, f: FighterId) -> bool {
         let c = &mut self.game.fighters[f.0].cpu;
-        c.xA4 = 0;
-        if c.x44.is_none() || !c.xF9_b5 {
+        c.command = 0;
+        if c.target.is_none() || !c.may_ranged_attack {
             return false;
         }
-        if c.x34 > 0 {
-            c.x34 -= 1;
+        if c.ranged_delay > 0 {
+            c.ranged_delay -= 1;
             return false;
         }
         self.cpu_attack_timer(f);
@@ -241,7 +241,7 @@ impl Running<'_> {
             return false;
         }
         let fpp = &self.game.fighters[f.0];
-        let t = fpp.cpu.x44.expect("checked above");
+        let t = fpp.cpu.target.expect("checked above");
         let dist = self.cpu_distance(f, t);
         let (me, tp) = (fpp.cur_pos, self.game.fighters[t.0].cur_pos);
         let dx = abs(fp::fsubs(reg(tp.x), reg(me.x)));
@@ -264,7 +264,7 @@ impl Running<'_> {
                 if fpp.ground_or_air == super::common::GA_GROUND {
                     false
                 } else if angle < -0.785_398_157_313_466_1 {
-                    self.game.fighters[f.0].cpu.xA4 = 0x26;
+                    self.game.fighters[f.0].cpu.command = 0x26;
                     true
                 } else {
                     false
@@ -281,7 +281,7 @@ impl Running<'_> {
         if angle < 0.087_266_461_923_718_45 && angle > -0.087_266_461_923_718_45 {
             let kind = self.game.fighters[f.0].kind;
             let a = self.cpu_pick_entry(table::RANGED, kind);
-            self.game.fighters[f.0].cpu.xA4 = a;
+            self.game.fighters[f.0].cpu.command = a;
             return a != 0;
         }
         false
@@ -292,7 +292,9 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A1BA8")]
     fn cpu_wall_before_target(&mut self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
-        let Some(t) = fpp.cpu.x44 else { return false };
+        let Some(t) = fpp.cpu.target else {
+            return false;
+        };
         let (me, tp) = (fpp.cur_pos, self.game.fighters[t.0].cur_pos);
         let right = fpp.facing_dir > 0.0;
         let geo = self.game.geometry.as_mut().expect("no collision geometry");
@@ -329,7 +331,7 @@ impl Running<'_> {
                 && dist < 53.0
                 && self.cpu_target_ahead(f)
             {
-                self.game.fighters[f.0].cpu.xA4 = 0x1B;
+                self.game.fighters[f.0].cpu.command = 0x1B;
                 return true;
             }
             return false;
@@ -339,18 +341,18 @@ impl Running<'_> {
             && dist < 53.0
             && self.cpu_target_ahead(f)
         {
-            self.game.fighters[f.0].cpu.xA4 = 0x1B;
+            self.game.fighters[f.0].cpu.command = 0x1B;
             return true;
         }
         let fpp = &self.game.fighters[f.0];
-        let t = fpp.cpu.x44.expect("ftCo_800B9790 without a target");
+        let t = fpp.cpu.target.expect("ftCo_800B9790 without a target");
         if fpp.cur_pos.y >= self.game.fighters[t.0].cur_pos.y {
             return false;
         }
         if angle > 1.047_197_543_084_621_4 {
-            self.game.fighters[f.0].cpu.xA4 = 0x14;
+            self.game.fighters[f.0].cpu.command = 0x14;
         } else if reg(self.game.objs.rng.draw_f32()) < 0.1 {
-            self.game.fighters[f.0].cpu.xA4 = 0x1F;
+            self.game.fighters[f.0].cpu.command = 0x1F;
         }
         true
     }
@@ -371,7 +373,7 @@ impl Running<'_> {
         }
         let t = self.game.fighters[f.0]
             .cpu
-            .x44
+            .target
             .expect("ftCo_800B98C8 without a target");
         let a = if angle < 0.087_266_461_923_718_45 && angle > -0.087_266_461_923_718_45 {
             if self.game.fighters[t.0].ground_or_air == GA_AIR || !self.cpu_same_island(f, t) {
@@ -387,7 +389,7 @@ impl Running<'_> {
         } else {
             0x33
         };
-        self.game.fighters[f.0].cpu.xA4 = a;
+        self.game.fighters[f.0].cpu.command = a;
         true
     }
 
@@ -441,7 +443,7 @@ impl Running<'_> {
             4 => (240, 60),
             _ => return false,
         };
-        c.x80 % period <= limit
+        c.hold_back_counter % period <= limit
     }
 
     /// The character's own rules on attacks for this decision, `ftCo_800B77E8`: an out-of-
@@ -457,7 +459,7 @@ impl Running<'_> {
         }
         let fpp = &self.game.fighters[f.0];
         let ground = fpp.ground_or_air == super::common::GA_GROUND;
-        let off_stage = !fpp.cpu.xFA_b5;
+        let off_stage = !fpp.cpu.drifting_back;
         // Each rule: the command it rules out and the reach it tests.
         match fpp.fighter_kind() {
             FighterKind::Mario => {
@@ -522,10 +524,10 @@ impl Running<'_> {
                 ) {
                     self.cpu_rule_out(f, 0x11);
                 } else {
-                    let (scale, t) = (fpp.x34_scale.y, fpp.cpu.x44);
+                    let (scale, t) = (fpp.scale.y, fpp.cpu.target);
                     self.cpu_rule_out(f, 0x12);
                     let t = t.expect("ftCo_800B77E8 for Kirby without a target");
-                    if scale < self.game.fighters[t.0].x34_scale.y {
+                    if scale < self.game.fighters[t.0].scale.y {
                         self.cpu_rule_out(f, 0x11);
                     }
                 }
@@ -541,7 +543,7 @@ impl Running<'_> {
         let fpp = &self.game.fighters[f.0];
         let me = fpp.cur_pos;
         let right = fpp.facing_dir > 0.0;
-        if let Some(t) = fpp.cpu.x44 {
+        if let Some(t) = fpp.cpu.target {
             let tp = self.game.fighters[t.0].cur_pos;
             let geo = self.game.geometry.as_mut().expect("no collision geometry");
             if geo.check_all(-1, -1, me.x, me.y, tp.x, tp.y).is_some() {
@@ -570,16 +572,16 @@ impl Running<'_> {
         {
             return false;
         }
-        let target = fpp.cpu.x44.expect("ftCo_800B89CC without a target");
+        let target = fpp.cpu.target.expect("ftCo_800B89CC without a target");
         if self.cpu_on_ledge(target) != 0 {
             return true;
         }
         let c = &fpp.cpu;
-        if !c.xF9_b4 {
+        if !c.may_air_attack {
             return false;
         }
         // Ft_Kind_Koopa.
-        if !c.xFA_b5 && fpp.kind == FighterKind::Koopa {
+        if !c.drifting_back && fpp.kind == FighterKind::Koopa {
             return false;
         }
         c.level >= 4
@@ -592,13 +594,13 @@ impl Running<'_> {
     /// The chosen command goes in `xA4`.
     #[doc(alias = "ftCo_800B8A9C")]
     pub(super) fn cpu_attack(&mut self, f: FighterId) -> bool {
-        if !self.game.fighters[f.0].cpu.xF9_b2 {
+        if !self.game.fighters[f.0].cpu.acts_alone {
             return false;
         }
         let c = &mut self.game.fighters[f.0].cpu;
-        let target = c.x44;
-        c.xEC = 0;
-        c.xC8 = 0;
+        let target = c.target;
+        c.ruled_out_count = 0;
+        c.allowed_count = 0;
         // `ftCo_MS_Pass`.
         let out = match target {
             None => true,
@@ -606,11 +608,11 @@ impl Running<'_> {
                 self.game.fighters[f.0].motion_id == 244
                     || self.cpu_untargetable(t)
                     || self.cpu_holds_back(f)
-                    || self.game.fighters[f.0].x2168 != 0
+                    || self.game.fighters[f.0].hammer_music != 0
             }
         };
         if out {
-            self.game.fighters[f.0].cpu.xA4 = 0;
+            self.game.fighters[f.0].cpu.command = 0;
             return false;
         }
         let target = target.unwrap();
@@ -619,7 +621,7 @@ impl Running<'_> {
         if (212..=236).contains(&tms) {
             self.cpu_rule_out(f, cmd::DOWN_SMASH);
             self.cpu_rule_out(f, cmd::DOWN_SMASH_2);
-        } else if self.game.fighters[target.0].x34_scale.y > self.game.fighters[f.0].x34_scale.y {
+        } else if self.game.fighters[target.0].scale.y > self.game.fighters[f.0].scale.y {
             self.cpu_rule_out(f, cmd::DOWN_SMASH);
             self.cpu_rule_out(f, cmd::DOWN_SMASH_2);
             // Ft_Kind_Kirby.
@@ -694,7 +696,7 @@ impl Running<'_> {
             if edge {
                 let r = self.cpu_pick_attack(f, target, self.cpu_table(table::EDGE_GUARD, kind));
                 if r != 0 {
-                    self.game.fighters[f.0].cpu.xF8_b7 = true;
+                    self.game.fighters[f.0].cpu.attacking = true;
                     break 'done r;
                 }
             }
@@ -702,7 +704,7 @@ impl Running<'_> {
             if r != 0 {
                 break 'done r;
             }
-            if let Some(item) = self.game.fighters[f.0].cpu.x50 {
+            if let Some(item) = self.game.fighters[f.0].cpu.enemy_item {
                 let list = self.cpu_table(table::ENEMY_ITEM, kind);
                 let r = self.cpu_pick_enemy_item_attack(f, item, list);
                 if r != 0 {
@@ -711,7 +713,7 @@ impl Running<'_> {
             }
             0
         };
-        self.game.fighters[f.0].cpu.xA4 = result;
+        self.game.fighters[f.0].cpu.command = result;
         result != 0
     }
 
@@ -749,11 +751,11 @@ impl Running<'_> {
         reach: Option<f64>,
     ) -> i32 {
         let c = &mut self.game.fighters[f.0].cpu;
-        c.x74.y = 0.0;
-        c.x74.x = 0.0;
-        c.x6C.y = 0.0;
-        c.x6C.x = 0.0;
-        let half_range = fp::frsp(fp::fmadd(0.5, reg(c.x570), 0.5));
+        c.attack_reach_1.y = 0.0;
+        c.attack_reach_1.x = 0.0;
+        c.attack_reach_0.y = 0.0;
+        c.attack_reach_0.x = 0.0;
+        let half_range = fp::frsp(fp::fmadd(0.5, reg(c.reach_scale), 0.5));
         let Some(mut list) = list else { return 0 };
         let me = &self.game.fighters[f.0];
         let tg = &self.game.fighters[target.0];
@@ -766,13 +768,13 @@ impl Running<'_> {
         let (tgt_vx, tgt_vy) = (reg(tg.pos_delta.x), reg(tg.pos_delta.y));
         let tgt_grav = reg(tg.co_attrs.gravity);
         let (range_f, range_b) = if f64::from(tg.facing_dir) > 0.0 {
-            (reg(tg.cpu.x55C), reg(tg.cpu.x560))
+            (reg(tg.cpu.hurt_behind), reg(tg.cpu.hurt_ahead))
         } else {
-            (reg(tg.cpu.x560), reg(tg.cpu.x55C))
+            (reg(tg.cpu.hurt_ahead), reg(tg.cpu.hurt_behind))
         };
-        let x568 = reg(tg.cpu.x568);
+        let x568 = reg(tg.cpu.hurt_top);
         let target_air = tg.ground_or_air == GA_AIR;
-        let scale = reg(me.x34_scale.y);
+        let scale = reg(me.scale.y);
         let facing_right = f64::from(me.facing_dir) > 0.0;
         let tiny = reg(1e-5);
         let mut picks: [Option<DataRef>; 32] = [None; 32];
@@ -788,7 +790,7 @@ impl Running<'_> {
             if (self.data.u32(entry.at(0x20)) as i32) > c.level {
                 continue;
             }
-            if c.xCC_array[..usize::from(c.xEC)].contains(&ecmd) {
+            if c.ruled_out_commands[..usize::from(c.ruled_out_count)].contains(&ecmd) {
                 continue;
             }
             let t = fp::frsp(f64::from(self.data.u32(entry.at(4)) as i32));
@@ -884,14 +886,14 @@ impl Running<'_> {
                 && diry > fp::fsubs(relx, range_b)
             {
                 let c = &self.game.fighters[f.0].cpu;
-                if c.xC8 != 0 {
-                    for j in 0..usize::from(c.xC8) {
-                        if c.xA8_array[j] == ecmd {
+                if c.allowed_count != 0 {
+                    for j in 0..usize::from(c.allowed_count) {
+                        if c.allowed_commands[j] == ecmd {
                             picks[count] = Some(entry);
                             count += 1;
                         }
                     }
-                } else if c.x80 % (self.data.u32(entry.at(0x1C)) as i32) == 0 {
+                } else if c.hold_back_counter % (self.data.u32(entry.at(0x1C)) as i32) == 0 {
                     picks[count] = Some(entry);
                     count += 1;
                 }
@@ -916,14 +918,14 @@ impl Running<'_> {
             if fp::fmuls(acc, inv) >= r {
                 // `ftCo_CpuSelectAttack`.
                 let e = p.unwrap();
-                let scale = reg(self.game.fighters[f.0].x34_scale.y);
+                let scale = reg(self.game.fighters[f.0].scale.y);
                 let (x08, x0c) = (self.data.f32(e.at(8)), self.data.f32(e.at(0xC)));
                 let (x10, x14) = (self.data.f32(e.at(0x10)), self.data.f32(e.at(0x14)));
                 let c = &mut self.game.fighters[f.0].cpu;
-                c.x6C.x = mem(fp::fmuls(scale, reg(x08)));
-                c.x6C.y = mem(fp::fmuls(scale, reg(x10)));
-                c.x74.x = mem(fp::fmuls(scale, reg(x0c)));
-                c.x74.y = mem(fp::fmuls(scale, reg(x14)));
+                c.attack_reach_0.x = mem(fp::fmuls(scale, reg(x08)));
+                c.attack_reach_0.y = mem(fp::fmuls(scale, reg(x10)));
+                c.attack_reach_1.x = mem(fp::fmuls(scale, reg(x0c)));
+                c.attack_reach_1.y = mem(fp::fmuls(scale, reg(x14)));
                 return self.data.u32(e) as i32;
             }
         }
@@ -977,7 +979,7 @@ impl Running<'_> {
             if (self.data.u32(entry.at(0x20)) as i32) > c.level {
                 continue;
             }
-            if c.xCC_array[..usize::from(c.xEC)].contains(&ecmd) {
+            if c.ruled_out_commands[..usize::from(c.ruled_out_count)].contains(&ecmd) {
                 continue;
             }
             let t = fp::frsp(f64::from(self.data.u32(entry.at(4)) as i32));
@@ -1038,7 +1040,7 @@ impl Running<'_> {
                 fp::fsubs(fp::fmadds(it_vy, t, it_y), fp_pred_y)
             };
             let me = &self.game.fighters[f.0];
-            let scale = reg(me.x34_scale.y);
+            let scale = reg(me.scale.y);
             let (x08, x0c) = (
                 reg(self.data.f32(entry.at(8))),
                 reg(self.data.f32(entry.at(0xC))),
@@ -1059,14 +1061,14 @@ impl Running<'_> {
                 && diry > fp::fsubs(relx, size_half)
             {
                 let c = &self.game.fighters[f.0].cpu;
-                if c.xC8 != 0 {
-                    for j in 0..usize::from(c.xC8) {
-                        if c.xA8_array[j] == ecmd {
+                if c.allowed_count != 0 {
+                    for j in 0..usize::from(c.allowed_count) {
+                        if c.allowed_commands[j] == ecmd {
                             picks[count] = Some(entry);
                             count += 1;
                         }
                     }
-                } else if c.x80 % (self.data.u32(entry.at(0x1C)) as i32) == 0 {
+                } else if c.hold_back_counter % (self.data.u32(entry.at(0x1C)) as i32) == 0 {
                     picks[count] = Some(entry);
                     count += 1;
                 }
@@ -1150,8 +1152,8 @@ impl Running<'_> {
     /// (`ftCo_CpuClearTargetAndFinish`).
     fn cpu_drop_target(&mut self, f: FighterId) {
         let c = &mut self.game.fighters[f.0].cpu;
-        c.x44 = None;
-        c.x18 = c.x1C;
+        c.target = None;
+        c.behavior = c.default_behavior;
         self.cpu_cmd(f, super::cpu_script::cmd::DONE);
     }
 
@@ -1160,16 +1162,16 @@ impl Running<'_> {
     /// if none, facing the target first on the ground) after a pause.
     #[doc(alias = "ftCo_800B658C")]
     pub(super) fn cpu_attack_behavior(&mut self, f: FighterId) {
-        let Some(target) = self.game.fighters[f.0].cpu.x44 else {
+        let Some(target) = self.game.fighters[f.0].cpu.target else {
             self.cpu_drop_target(f);
             return;
         };
         let fpp = &self.game.fighters[f.0];
-        if fpp.cpu.xF8_b6 && fpp.ground_or_air == super::common::GA_GROUND {
+        if fpp.cpu.near_target && fpp.ground_or_air == super::common::GA_GROUND {
             let r = reg(self.game.objs.rng.draw_f32());
             let level = fp::frsp(f64::from(self.game.fighters[f.0].cpu.level));
             if r < fp::fmuls(0.050_000_000_745_058_06, level) {
-                self.game.fighters[f.0].cpu.xF8_b6 = false;
+                self.game.fighters[f.0].cpu.near_target = false;
                 if self.cpu_roll_away(f, target) {
                     return;
                 }
@@ -1180,10 +1182,10 @@ impl Running<'_> {
         }
         if self.cpu_attacking(f) {
             self.cpu_cmd(f, super::cpu_script::cmd::DONE);
-            self.game.fighters[f.0].cpu.xA4 = 0;
+            self.game.fighters[f.0].cpu.command = 0;
             return;
         }
-        if self.game.fighters[f.0].cpu.xA4 == 0 {
+        if self.game.fighters[f.0].cpu.command == 0 {
             if self.game.fighters[f.0].ground_or_air == super::common::GA_GROUND
                 && !self.cpu_target_ahead(f)
             {
@@ -1196,9 +1198,9 @@ impl Running<'_> {
             }
         }
         self.cpu_attack_delay(f);
-        let cmd = self.game.fighters[f.0].cpu.xA4;
+        let cmd = self.game.fighters[f.0].cpu.command;
         self.cpu_data_script(f, cmd as u32);
-        self.game.fighters[f.0].cpu.xA4 = 0;
+        self.game.fighters[f.0].cpu.command = 0;
     }
 
     /// The characters' follow-ups to a special under way, shared by the attack
@@ -1259,7 +1261,7 @@ impl Running<'_> {
         };
         if ranged && counted {
             let c = &mut self.game.fighters[f.0].cpu;
-            c.x90 = c.x90.wrapping_add(1);
+            c.ranged_count = c.ranged_count.wrapping_add(1);
         }
         true
     }
@@ -1270,7 +1272,7 @@ impl Running<'_> {
     fn cpu_steer_pk_flash(&mut self, f: FighterId) {
         use super::cpu_script::cmd as c;
         let fpp = &self.game.fighters[f.0];
-        let Some(t) = fpp.cpu.x44 else {
+        let Some(t) = fpp.cpu.target else {
             self.cpu_drop_target(f);
             return;
         };
@@ -1292,7 +1294,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800B92D4")]
     fn cpu_steer_pk_thunder(&mut self, f: FighterId) {
         use super::cpu_script::cmd as c;
-        if self.game.fighters[f.0].cpu.x44.is_none() {
+        if self.game.fighters[f.0].cpu.target.is_none() {
             self.cpu_drop_target(f);
         } else {
             self.cpu_cmd1(f, c::LSTICK_TOWARD_FIGHTER, 0x7F);
@@ -1307,7 +1309,7 @@ impl Running<'_> {
     fn cpu_steer_egg_roll(&mut self, f: FighterId) {
         use super::cpu_script::cmd as c;
         let fpp = &self.game.fighters[f.0];
-        let (pos, target) = (fpp.cur_pos, fpp.cpu.x44);
+        let (pos, target) = (fpp.cur_pos, fpp.cpu.target);
         let geo = self.game.geometry.as_mut().expect("no collision geometry");
         let island = geo.island_below(pos, -100.0).filter(|&i| {
             target.is_some_and(|t| {
@@ -1318,8 +1320,8 @@ impl Running<'_> {
         });
         let Some(island) = island else {
             let cpu = &mut self.game.fighters[f.0].cpu;
-            cpu.x44 = None;
-            cpu.x18 = cpu.x1C;
+            cpu.target = None;
+            cpu.behavior = cpu.default_behavior;
             self.cpu_cmd(f, c::RELEASE_B);
             self.cpu_cmd1(f, c::WAIT_FOR, 1);
             self.cpu_cmd(f, c::PRESS_B);
@@ -1443,7 +1445,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800B9020")]
     pub(super) fn cpu_ranged(&mut self, f: FighterId) {
         use super::cpu_script::cmd as c;
-        if self.game.fighters[f.0].cpu.x44.is_none() {
+        if self.game.fighters[f.0].cpu.target.is_none() {
             self.cpu_drop_target(f);
             return;
         }
@@ -1454,17 +1456,17 @@ impl Running<'_> {
             self.cpu_cmd1(f, c::SET_LSTICK_X, 0);
             self.cpu_cmd1(f, c::SET_LSTICK_Y, 0);
             self.cpu_cmd(f, c::DONE);
-            self.game.fighters[f.0].cpu.xA4 = 0;
-        } else if self.game.fighters[f.0].cpu.xA4 != 0 {
-            let a = self.game.fighters[f.0].cpu.xA4;
+            self.game.fighters[f.0].cpu.command = 0;
+        } else if self.game.fighters[f.0].cpu.command != 0 {
+            let a = self.game.fighters[f.0].cpu.command;
             self.cpu_data_script(f, a as u32);
-            self.game.fighters[f.0].cpu.xA4 = 0;
-        } else if self.cpu_ranged_attack(f) && self.game.fighters[f.0].cpu.xA4 != 0 {
-            let a = self.game.fighters[f.0].cpu.xA4;
+            self.game.fighters[f.0].cpu.command = 0;
+        } else if self.cpu_ranged_attack(f) && self.game.fighters[f.0].cpu.command != 0 {
+            let a = self.game.fighters[f.0].cpu.command;
             self.cpu_data_script(f, a as u32);
             let cpu = &mut self.game.fighters[f.0].cpu;
-            cpu.xA4 = 0;
-            cpu.x90 = cpu.x90.wrapping_add(1);
+            cpu.command = 0;
+            cpu.ranged_count = cpu.ranged_count.wrapping_add(1);
         } else {
             self.cpu_drop_target(f);
         }
@@ -1477,14 +1479,14 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800BB9B4")]
     pub(super) fn cpu_shield_threat(&mut self, f: FighterId) -> u8 {
         let c = &mut self.game.fighters[f.0].cpu;
-        c.xF8_b12 = 0;
-        c.xF0 = None;
-        c.xF4 = None;
+        c.threat_kind = 0;
+        c.threat_fighter = None;
+        c.threat_item = None;
         if self.cpu_untargetable(f) || self.game.fighters[f.0].kind == FighterKind::GKoopa {
             return 0;
         }
         let fpp = &self.game.fighters[f.0];
-        let radius = mem(fp::fmuls(0.5, reg(fpp.cpu.x568)));
+        let radius = mem(fp::fmuls(0.5, reg(fpp.cpu.hurt_top)));
         let middle = Vec3::new(
             fpp.cur_pos.x,
             mem(fp::fadds(reg(fpp.cur_pos.y), reg(radius))),
@@ -1502,15 +1504,15 @@ impl Running<'_> {
                 continue;
             }
             let threat = u8::from(self.cpu_hitbox_coming(f, o, middle, radius));
-            self.game.fighters[f.0].cpu.xF8_b12 = threat;
+            self.game.fighters[f.0].cpu.threat_kind = threat;
             if threat != 0 {
-                self.game.fighters[f.0].cpu.xF0 = Some(o);
+                self.game.fighters[f.0].cpu.threat_fighter = Some(o);
                 return threat;
             }
             let threat = u8::from(self.cpu_move_coming(f, o));
-            self.game.fighters[f.0].cpu.xF8_b12 = threat;
+            self.game.fighters[f.0].cpu.threat_kind = threat;
             if threat != 0 {
-                self.game.fighters[f.0].cpu.xF0 = Some(o);
+                self.game.fighters[f.0].cpu.threat_fighter = Some(o);
                 return threat;
             }
         }
@@ -1528,13 +1530,13 @@ impl Running<'_> {
                 continue;
             }
             let threat = self.cpu_item_coming(f, it, middle, radius);
-            self.game.fighters[f.0].cpu.xF8_b12 = threat;
+            self.game.fighters[f.0].cpu.threat_kind = threat;
             if threat != 0 {
-                self.game.fighters[f.0].cpu.xF4 = Some(it);
+                self.game.fighters[f.0].cpu.threat_item = Some(it);
                 return threat;
             }
         }
-        self.game.fighters[f.0].cpu.xF8_b12
+        self.game.fighters[f.0].cpu.threat_kind
     }
 
     /// Whether one of an enemy's hitboxes, live and not a grab's, that hasn't hit the
@@ -1542,7 +1544,7 @@ impl Running<'_> {
     /// movement, `ftCo_800BB104`.
     #[doc(alias = "ftCo_800BB104")]
     fn cpu_hitbox_coming(&self, f: FighterId, o: FighterId, middle: Vec3, radius: f32) -> bool {
-        self.game.fighters[o.0].x914.iter().any(|h| {
+        self.game.fighters[o.0].hitboxes.iter().any(|h| {
             if h.state == hitcapsule::DISABLED
                 || h.state == hitcapsule::ENABLED
                 || h.x43_b2
@@ -1573,8 +1575,8 @@ impl Running<'_> {
         let (me, other) = (&self.game.fighters[f.0], &self.game.fighters[o.0]);
         let (mp, op, ms) = (me.cur_pos, other.cur_pos, other.motion_id);
         let within = |g: &Self| {
-            let (x, w) = (reg(op.x), reg(g.game.fighters[o.0].cpu.x564));
-            let mine = reg(g.game.fighters[f.0].cpu.x564);
+            let (x, w) = (reg(op.x), reg(g.game.fighters[o.0].cpu.hurt_middle));
+            let mine = reg(g.game.fighters[f.0].cpu.hurt_middle);
             fp::fadds(mine, fp::fadds(x, w)) > reg(mp.x)
                 && fp::fsubs(fp::fsubs(x, w), mine) < reg(mp.x)
         };
@@ -1711,10 +1713,10 @@ impl Running<'_> {
             self.cpu_hold_shield(f);
             return;
         }
-        let threat = fpp.cpu.xF8_b12;
+        let threat = fpp.cpu.threat_kind;
         if threat == 0 {
             let cpu = &mut self.game.fighters[f.0].cpu;
-            cpu.x18 = cpu.x1C;
+            cpu.behavior = cpu.default_behavior;
             self.cpu_cmd1(f, c::SET_LSTICK_X, 0);
             self.cpu_cmd1(f, c::SET_LSTICK_Y, 0);
             self.cpu_cmd(f, c::RELEASE_R);
@@ -1732,7 +1734,10 @@ impl Running<'_> {
                 self.cpu_retap_r(f);
             }
         } else if threat == 2 {
-            let item = fpp.cpu.xF4.expect("an item threat without its item");
+            let item = fpp
+                .cpu
+                .threat_item
+                .expect("an item threat without its item");
             let ip = &self.game.items[item.0];
             let side = fp::fsubs(reg(fpp.cur_pos.x), reg(ip.pos.x)) > 0.0;
             match ItKind::of(ip.kind) {
@@ -1763,7 +1768,7 @@ impl Running<'_> {
                 }
             }
         } else {
-            match fpp.cpu.xF0 {
+            match fpp.cpu.threat_fighter {
                 None => self.cpu_hold_shield(f),
                 Some(o) => {
                     // `inline2`: away from a far enemy, through a near one.
@@ -1921,7 +1926,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800B732C")]
     pub(super) fn cpu_jump_attack(&mut self, f: FighterId) -> i32 {
         let fpp = &self.game.fighters[f.0];
-        let Some(t) = fpp.cpu.x44 else { return 0 };
+        let Some(t) = fpp.cpu.target else { return 0 };
         if fpp.ground_or_air == GA_AIR {
             return 0;
         }
@@ -1940,7 +1945,7 @@ impl Running<'_> {
             let dx = if dx < 0.0 { fp::fneg(dx) } else { dx };
             return i32::from(super::co::guard::stick_angle(dy, dx) > 1.308_996_915_817_260_7);
         }
-        if !self.game.fighters[f.0].cpu.xF9_b3 {
+        if !self.game.fighters[f.0].cpu.may_jump_attack {
             return 0;
         }
         if self.game.fighters[f.0].cpu.kind == CpuKind::Air {
@@ -1975,7 +1980,7 @@ impl Running<'_> {
             let d = self.cpu_distance(f, t);
             return i32::from(angle() > 0.785_398_157_313_466_1 && d < 30.0);
         }
-        if self.game.fighters[f.0].cpu.x7C % 60 != 0 {
+        if self.game.fighters[f.0].cpu.frame_counter % 60 != 0 {
             return 0;
         }
         if reg(self.game.objs.rng.draw_f32()) > 0.1 {
@@ -1997,9 +2002,9 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800B7638")]
     fn cpu_jump_attack_16(&mut self, f: FighterId) -> i32 {
         let fpp = &self.game.fighters[f.0];
-        let Some(t) = fpp.cpu.x44 else { return 0 };
+        let Some(t) = fpp.cpu.target else { return 0 };
         if fpp.ground_or_air == GA_AIR {
-            if fpp.co_attrs.max_jumps <= i32::from(fpp.x1968_jumpsUsed) {
+            if fpp.co_attrs.max_jumps <= i32::from(fpp.jumps_used) {
                 return 0;
             }
             if fpp.pos_delta.y > 0.0 {
@@ -2119,7 +2124,7 @@ impl Running<'_> {
             // Ft_Kind_Popo, Ft_Kind_Fox, Ft_Kind_Captain above level 4.
             FighterKind::Popo | FighterKind::Fox | FighterKind::Captain => {
                 let cpu = &self.game.fighters[f.0].cpu;
-                if cpu.x94 == 0 && cpu.level > 4 && chance(self, f) {
+                if cpu.hold_choice == 0 && cpu.level > 4 && chance(self, f) {
                     let script = match kind {
                         FighterKind::Popo => 0x3B,
                         FighterKind::Fox => 0x3D,
@@ -2133,7 +2138,7 @@ impl Running<'_> {
             // Ft_Kind_Mario below level 5.
             FighterKind::Mario => {
                 let cpu = &self.game.fighters[f.0].cpu;
-                if cpu.x94 == 0 && cpu.level < 5 && chance(self, f) {
+                if cpu.hold_choice == 0 && cpu.level < 5 && chance(self, f) {
                     self.cpu_data_script(f, 0x35);
                     return;
                 }
@@ -2146,11 +2151,11 @@ impl Running<'_> {
             return;
         }
         let r = reg(self.game.objs.rng.draw_f32());
-        let x94 = self.game.fighters[f.0].cpu.x94;
+        let x94 = self.game.fighters[f.0].cpu.hold_choice;
         if fp::frsp(fp::fmul(r, fp::fadd(1.0, f64::from(x94)))) < 0.5 {
             self.cpu_data_script(f, if klaw { 0x11 } else { 2 });
             let cpu = &mut self.game.fighters[f.0].cpu;
-            cpu.x94 = cpu.x94.wrapping_add(1);
+            cpu.hold_choice = cpu.hold_choice.wrapping_add(1);
             return;
         }
         let pos = self.game.fighters[f.0].cur_pos;

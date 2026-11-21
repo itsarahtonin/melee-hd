@@ -20,7 +20,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms::ATTACK_LW4, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2222_b2 = true;
+        fp.no_turn = true;
         fp.deal_dmg_cb = Some(crate::game::handles::CodeRef(
             addr::ATTACK_HI4_YOYO_START_TIMED_REHIT,
         ));

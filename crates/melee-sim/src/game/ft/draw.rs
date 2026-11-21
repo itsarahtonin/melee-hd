@@ -38,7 +38,7 @@ impl Running<'_> {
         while let Some(g) = next {
             next = self.game.world.gobj(g).next;
             let f = self.game.fighter_id(g);
-            if self.game.fighters[f.0].x5AC.xC[1].is_some() {
+            if self.game.fighters[f.0].parts_vis.xC[1].is_some() {
                 for h in hide {
                     self.set_parts_vis(f, h, false);
                 }
@@ -71,8 +71,8 @@ impl Running<'_> {
     pub fn update_screen_visibility(&mut self, g: GObjId) -> bool {
         let f = self.game.fighter_id(g);
         let fp = &self.game.fighters[f.0];
-        if !fp.x2229_b3
-            && !fp.x2220_b7
+        if !fp.no_magnifier
+            && !fp.camera_placed
             && let Some(cg) = self.game.camera.gobj()
         {
             let c = match self.game.world.gobj(cg).obj {
@@ -80,25 +80,25 @@ impl Running<'_> {
                 _ => None,
             };
             if c == self.game.objs.cobjs.current {
-                let b = fp.x890_cameraBox.expect("a fighter without a camera box");
+                let b = fp.camera_box.expect("a fighter without a camera box");
                 let shown = match camera::box_to_screen(self.game, self.data, b) {
                     Some((p, inside)) => {
                         let fp = &mut self.game.fighters[f.0];
-                        fp.x2188.x = p[0];
-                        fp.x2188.y = p[1];
+                        fp.screen_pos.x = p[0];
+                        fp.screen_pos.y = p[1];
                         inside
                     }
                     None => false,
                 };
                 if shown {
-                    self.game.fighters[f.0].x221F_b0 = false;
+                    self.game.fighters[f.0].off_screen = false;
                     return true;
                 }
-                self.game.fighters[f.0].x221F_b0 = true;
+                self.game.fighters[f.0].off_screen = true;
                 return camera::box_on_screen(self.game, self.data, b, 15.0);
             }
         }
-        self.game.fighters[f.0].x221F_b0 = false;
+        self.game.fighters[f.0].off_screen = false;
         true
     }
 
@@ -124,11 +124,11 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         let o = self.active_overlay(f);
         FighterMaterial {
-            refract: fp.x2226_b5.then(|| {
+            refract: fp.refracted.then(|| {
                 let i = usize::from(fp.smash_attrs.x2134_vibrateFrame);
                 *self.game.refract.tobjs.get(i).expect("refraction's chain")
             }),
-            swapped: if !fp.x2223_b2 && (!fp.x2228_b0 || !fp.x2224_b0) {
+            swapped: if !fp.outline && (!fp.low_models || !fp.low_models_own_material) {
                 if fp.is_metal {
                     Some(
                         self.game
@@ -136,7 +136,7 @@ impl Running<'_> {
                             .metal_mobj
                             .expect("ft_804D6580: no metal material"),
                     )
-                } else if fp.x2227_b3 {
+                } else if fp.alt_metal {
                     Some(
                         self.game
                             .ft
@@ -149,14 +149,14 @@ impl Running<'_> {
             } else {
                 None
             },
-            translucent: fp.x61D != 0xFF,
+            translucent: fp.alpha != 0xFF,
             flags: FighterFlags {
-                outline: fp.x2223_b2,
-                silhouette: fp.x2223_b3,
-                low_models: fp.x2228_b0,
+                outline: fp.outline,
+                silhouette: fp.silhouette,
+                low_models: fp.low_models,
             },
             overlay_light: o.x7C_flag2 && o.x7C_light_enable,
-            light: fp.x588,
+            light: fp.light,
             lights: self.game.ft.lobj0,
             ambient: self.game.ft.lobj1,
         }
@@ -204,19 +204,19 @@ impl Running<'_> {
     #[doc(alias = "ftDrawCommon_800805C8")]
     fn draw_fighter(&mut self, g: GObjId, pass: i32, main: bool) {
         let f = self.game.fighter_id(g);
-        if self.game.fighters[f.0].x21FC_flag[0] & 0xFE != 0 {
+        if self.game.fighters[f.0].debug_draw_flags[0] & 0xFE != 0 {
             self.fighter_debug_drawings(g, pass);
         }
-        if self.game.fighters[f.0].x21FC_flag[0] & 1 == 0 {
+        if self.game.fighters[f.0].debug_draw_flags[0] & 1 == 0 {
             return;
         }
         let hidden = self.game.tech_hidden(f);
         let fp = &self.game.fighters[f.0];
-        if !fp.invisible && !hidden && !fp.x221E_b5 && main {
+        if !fp.invisible && !hidden && !fp.visible && main {
             self.set_parts_vis(f, 1, false);
             self.set_parts_vis(f, 4, false);
             let fp = &self.game.fighters[f.0];
-            if fp.is_metal || fp.x2226_b5 || fp.x2227_b3 {
+            if fp.is_metal || fp.refracted || fp.alt_metal {
                 self.set_parts_vis(f, 0, false);
                 self.set_parts_vis(f, 2, true);
             } else {
@@ -225,9 +225,9 @@ impl Running<'_> {
             }
             self.fighter_light(f);
             let fp = &mut self.game.fighters[f.0];
-            fp.x2223_b2 = false;
-            fp.x2227_b7 = true;
-            fp.x2228_b0 = false;
+            fp.outline = false;
+            fp.drew_low_models = true;
+            fp.low_models = false;
             let vmtx = self.shake_view(f);
             let root = self.fighter_root(g);
             self.draw_fighter_tree(f, root, vmtx, pass);
@@ -235,7 +235,7 @@ impl Running<'_> {
             self.end_refraction(f);
             self.fighter_light_reset(f);
         }
-        if let Some(a) = self.game.fighters[f.0].x20A0_accessory {
+        if let Some(a) = self.game.fighters[f.0].accessory {
             self.draw_fighter_tree(f, Some(a), None, pass);
         }
         self.draw_afterimage(f, pass);
@@ -250,26 +250,28 @@ impl Running<'_> {
     fn fighter_debug_drawings(&mut self, g: GObjId, pass: i32) {
         use crate::lb::coll_draw;
         let f = self.game.fighter_id(g);
-        let flags = self.game.fighters[f.0].x21FC_flag[0];
+        let flags = self.game.fighters[f.0].debug_draw_flags[0];
         let mut drew = false;
         let data = self.data;
         let game = &mut *self.game;
         let fp = &mut game.fighters[f.0];
         let objs = &mut game.objs;
-        let scale_y = fp.x34_scale.y;
+        let scale_y = fp.scale.y;
         // `ftCommon_8007F804`: the fighter's depth-scale matrix when it has one.
-        let mtx = (reg(fp.x34_scale.z) != 1.0).then_some(Mtx34 { m: fp.x44_mtx });
+        let mtx = (reg(fp.scale.z) != 1.0).then_some(Mtx34 {
+            m: fp.depth_scale_mtx,
+        });
         let z = fp.cur_pos.z;
         if flags & 0x02 != 0 {
-            for h in &fp.x914 {
+            for h in &fp.hitboxes {
                 drew |= coll_draw::hit(objs, h, pass, scale_y);
             }
             let n = usize::from(fp.hurt_capsules_len);
-            let state = if fp.x221D_b6 {
+            let state = if fp.starman {
                 Some(1)
-            } else if fp.x1988 == 0 && fp.x198C == 0 {
+            } else if fp.hit_status == 0 && fp.timed_hit_status == 0 {
                 None
-            } else if fp.x198C == 2 || fp.x1988 == 2 {
+            } else if fp.timed_hit_status == 2 || fp.hit_status == 2 {
                 Some(2)
             } else {
                 Some(1)
@@ -288,7 +290,7 @@ impl Running<'_> {
                     z,
                 );
             }
-            if fp.x2218_b6 {
+            if fp.absorbing {
                 drew |= coll_draw::hit_result(
                     objs,
                     data,
@@ -299,7 +301,7 @@ impl Running<'_> {
                     z,
                 );
             }
-            if fp.x221B.x221B_b0 {
+            if fp.state_flags.x221B_b0 {
                 drew |= coll_draw::hit_result(
                     objs,
                     data,
@@ -312,8 +314,8 @@ impl Running<'_> {
             }
         }
         if flags & 0x04 != 0 {
-            let n = usize::from(fp.x166C);
-            for p in &fp.x1670[..n] {
+            let n = usize::from(fp.ledge_point_count);
+            for p in &fp.ledge_points[..n] {
                 drew |= coll_draw::ledge(objs, data, p, pass);
             }
             for i in 0..fp.dynamics_num.max(0) as usize {
@@ -347,13 +349,13 @@ impl Running<'_> {
         let fp = &mut game.fighters[f.0];
         let objs = &mut game.objs;
         if flags & 0x08 != 0
-            && fp.x2223_b5
+            && fp.stepped_on_item
             && coll_draw::damage(objs, [fp.dmg.x1930.x0, fp.dmg.x1930.xC], pass)
         {
             drew = true;
         }
         if flags & 0x20 != 0 {
-            let p = &fp.x294_itPickup;
+            let p = &fp.item_pickup;
             let (pos, facing) = (fp.cur_pos, fp.facing_dir);
             if fp.ground_or_air == 0 {
                 drew |= coll_draw::range(objs, p.gr_light_offset, pos, LIGHT_RANGE, pass, facing);
@@ -362,11 +364,11 @@ impl Running<'_> {
                 drew |= coll_draw::range(objs, p.air_light_offset, pos, AIR_RANGE, pass, facing);
             }
         }
-        if flags & 0x40 != 0 && !fp.x2227_b2 {
-            drew |= coll_draw::thrown_hit(objs, &fp.x1064_thrownHitbox, pass, scale_y);
+        if flags & 0x40 != 0 && !fp.thrown_hitbox_live {
+            drew |= coll_draw::thrown_hit(objs, &fp.thrown_hitbox, pass, scale_y);
         }
-        if flags & 0x80 != 0 && !fp.x2229_b4 {
-            for c in &fp.x1614 {
+        if flags & 0x80 != 0 && !fp.coin_odd_frame {
+            for c in &fp.stamina_markers {
                 drew |= coll_draw::coin_capsule(objs, c, pass, scale_y);
             }
         }
@@ -392,7 +394,7 @@ impl Running<'_> {
             return false;
         }
         let cpu = &fp.cpu;
-        let c = match cpu.x18 {
+        let c = match cpu.behavior {
             2 | 3 => [0xFF, 0, 0, 0x60],
             7 => [0, 0, 0xFF, 0x60],
             4 => [0xFF, 0xFF, 0xFF, 0xFF],
@@ -401,11 +403,11 @@ impl Running<'_> {
             18 => [0, 0, 0, 0x60],
             _ => [0xFF, 0xFF, 0, 0x60],
         };
-        let target = Vec3::new(cpu.x54.x, cpu.x54.y, 0.0);
+        let target = Vec3::new(cpu.destination.x, cpu.destination.y, 0.0);
         let (pos, facing) = (fp.cur_pos, fp.facing_dir);
-        let (x55c, x560, x568) = (reg(cpu.x55C), reg(cpu.x560), reg(cpu.x568));
-        let (x6c, x74) = (cpu.x6C.clone(), cpu.x74.clone());
-        let (flash, x7c, plan) = (cpu.xF8_b7, cpu.x7C, cpu.x18);
+        let (x55c, x560, x568) = (reg(cpu.hurt_behind), reg(cpu.hurt_ahead), reg(cpu.hurt_top));
+        let (x6c, x74) = (cpu.attack_reach_0.clone(), cpu.attack_reach_1.clone());
+        let (flash, x7c, plan) = (cpu.attacking, cpu.frame_counter, cpu.behavior);
         let (px, py) = (reg(pos.x), reg(pos.y));
         let objs = &mut self.game.objs;
         coll_draw::push(
@@ -476,7 +478,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C8AF0")]
     #[doc(alias = "lbRefract_800225D4")]
     fn end_refraction(&mut self, f: FighterId) {
-        if self.game.fighters[f.0].x2226_b5 {
+        if self.game.fighters[f.0].refracted {
             self.game.objs.display.push(display::Draw::RefractEnd);
         }
     }
@@ -488,10 +490,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C2600")]
     fn draw_afterimage(&mut self, f: FighterId, pass: i32) {
         let fp = &self.game.fighters[f.0];
-        if pass != 2 || fp.x2100 <= 1 {
+        if pass != 2 || fp.afterimage_mode <= 1 {
             return;
         }
-        if fp.x2101_bits_8 {
+        if fp.item_afterimage {
             let item = fp
                 .item_gobj
                 .expect("ftCo_800C2600: a held item's afterimage without an item");
@@ -519,23 +521,23 @@ impl Running<'_> {
     #[doc(alias = "ftDrawCommon_80080C28")]
     pub fn draw_magnified(&mut self, g: GObjId, pass: i32) {
         let f = self.game.fighter_id(g);
-        if self.game.fighters[f.0].x21FC_flag[0] & 1 == 0 {
+        if self.game.fighters[f.0].debug_draw_flags[0] & 1 == 0 {
             return;
         }
         let fp = &self.game.fighters[f.0];
-        if !fp.invisible && !fp.x221E_b5 && !fp.x2226_b5 {
+        if !fp.invisible && !fp.visible && !fp.refracted {
             self.fighter_light(f);
-            if self.game.fighters[f.0].x5AC.xC[1].is_some() {
+            if self.game.fighters[f.0].parts_vis.xC[1].is_some() {
                 self.set_parts_vis(f, 0, false);
                 self.set_parts_vis(f, 2, false);
                 self.set_parts_vis(f, 4, false);
                 self.set_parts_vis(f, 1, true);
             }
             let fp = &mut self.game.fighters[f.0];
-            fp.x2223_b2 = false;
-            fp.x2223_b3 = false;
-            fp.x2227_b7 = false;
-            fp.x2228_b0 = true;
+            fp.outline = false;
+            fp.silhouette = false;
+            fp.drew_low_models = false;
+            fp.low_models = true;
             let vmtx = self.shake_view(f);
             let root = self.fighter_root(g);
             self.draw_fighter_tree(f, root, vmtx, pass);
@@ -543,7 +545,7 @@ impl Running<'_> {
             // `ftCo_800C8AF0` stops refraction only for `x2226_b5`, which doesn't draw here.
             self.fighter_light_reset(f);
         }
-        if let Some(a) = self.game.fighters[f.0].x20A0_accessory {
+        if let Some(a) = self.game.fighters[f.0].accessory {
             self.draw_fighter_tree(f, Some(a), None, pass);
         }
     }
@@ -553,7 +555,7 @@ impl Running<'_> {
     fn draw_outline(&mut self, g: GObjId, pass: i32, second: bool) {
         let f = self.game.fighter_id(g);
         let fp = &self.game.fighters[f.0];
-        if fp.x21FC_flag[0] & 1 == 0 || fp.invisible || fp.x221E_b5 || fp.x2226_b5 {
+        if fp.debug_draw_flags[0] & 1 == 0 || fp.invisible || fp.visible || fp.refracted {
             return;
         }
         self.set_parts_vis(f, 0, false);
@@ -561,8 +563,8 @@ impl Running<'_> {
         self.set_parts_vis(f, 2, false);
         self.set_parts_vis(f, 4, true);
         let fp = &mut self.game.fighters[f.0];
-        fp.x2223_b2 = true;
-        fp.x2223_b3 = second;
+        fp.outline = true;
+        fp.silhouette = second;
         let vmtx = self.shake_view(f);
         let root = self.fighter_root(g);
         self.draw_fighter_tree(f, root, vmtx, pass);
@@ -600,18 +602,18 @@ impl Running<'_> {
         let f = self.game.fighter_id(g);
         match self.game.camera.pass() {
             1 => {
-                if self.game.fighters[f.0].x2220_b7 {
+                if self.game.fighters[f.0].camera_placed {
                     self.place_by_camera(g);
                 }
-                if self.game.fighters[f.0].x5AC.xC[4].is_some() {
+                if self.game.fighters[f.0].parts_vis.xC[4].is_some() {
                     self.draw_outline(g, pass, false);
                     self.draw_fighter(g, pass, true);
                     self.draw_outline(g, pass, true);
                 }
             }
             0 => {
-                self.game.fighters[f.0].x2223_b3 = false;
-                let main = self.game.fighters[f.0].x5AC.xC[4].is_none();
+                self.game.fighters[f.0].silhouette = false;
+                let main = self.game.fighters[f.0].parts_vis.xC[4].is_none();
                 self.draw_fighter(g, pass, main);
             }
             _ => {}

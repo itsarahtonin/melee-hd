@@ -42,10 +42,10 @@ impl Running<'_> {
         fp.self_vel.x = 0.0;
         fp.self_vel.y = fp.co_attrs.shield_break_initial_velocity;
         if fp.kind == FighterKind::Purin {
-            fp.x2222_b3 = true;
+            fp.no_blast_rise = true;
         }
         let joint = self.shield_joint(gobj);
-        let mut head = self.game.fighters[f.0].x60C;
+        let mut head = self.game.fighters[f.0].effect_queue;
         ef::queue(
             self,
             Some(gobj),
@@ -55,7 +55,7 @@ impl Running<'_> {
             joint,
             &[],
         );
-        self.game.fighters[f.0].x60C = head;
+        self.game.fighters[f.0].effect_queue = head;
         self.fighter_play_sfx(f, SFX_SHIELD_BREAK, 127, 64);
         self.start_rumble(f, 24, 0);
         self.set_hit_status(gobj, 2);
@@ -170,9 +170,9 @@ impl Running<'_> {
             percent = 0.0;
         }
         fp.grab_timer = mem(fp::fadds(percent, add));
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = false;
+        fp.mash_stick_y = 0;
+        fp.mash_stick_x = 0;
+        fp.can_mash = false;
         self.start_rumble(f, 25, 0);
         self.fighter_play_track(f, Track::Effect3, SFX_FURAFURA, 127, 64);
     }

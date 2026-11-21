@@ -84,10 +84,10 @@ impl ActionTree {
 impl crate::game::structs::Fighter {
     /// The buffer the second figatree (`x598`) is in: the main one or the second.
     pub fn second_tree_buf(&self) -> Option<crate::game::handles::AnimBufId> {
-        if self.x598.in_main {
-            self.x59C
+        if self.second_tree.in_main {
+            self.main_anim_buf
         } else {
-            self.x5A0
+            self.second_anim_buf
         }
     }
 }
@@ -237,25 +237,25 @@ impl Running<'_> {
     #[doc(alias = "ftData_80085E50")]
     pub fn second_figatree(&mut self, f: FighterId, msid: i32) -> Option<DataRef> {
         let fp = &self.game.fighters[f.0];
-        if msid as u32 >= fp.x58C {
+        if msid as u32 >= fp.anim_count {
             return None;
         }
         let entry = self.anim_entry(f, msid);
         let aram = self.anim_aram(fp, entry);
-        if aram != fp.x5A8 {
+        if aram != fp.second_anim_aram {
             let second = if aram != 0 {
                 // Nana copies the archive from Popo's animation buffer when it holds it
                 // (untimed), into her main buffer.
                 let kind = self.anim_entry_kind(fp.kind, entry);
                 let shared = self
                     .anim_share_source(f)
-                    .is_some_and(|p| self.game.fighters[p.0].x5A4 == aram);
+                    .is_some_and(|p| self.game.fighters[p.0].main_anim_aram == aram);
                 let size = self.data.u32(entry.at(8));
                 let tree = self.anim_tree(kind, entry);
                 let fp = &self.game.fighters[f.0];
                 if shared {
                     // `memcpy` copies the file's own size, into the main buffer.
-                    self.anim_buf_load(fp.x59C, tree.archive, size);
+                    self.anim_buf_load(fp.main_anim_buf, tree.archive, size);
                     self.overwrite_main_buffer(f, tree.archive);
                 } else {
                     if aram >= 0x8000_0000 {
@@ -264,7 +264,7 @@ impl Running<'_> {
                     // `lbArq_80014BD0`'s copy out of ARAM, rounded up to 32 bytes, takes time
                     // on ssbm-rs's timeline.
                     let len = (size + 31) & !31;
-                    self.anim_buf_load(fp.x5A0, tree.archive, len);
+                    self.anim_buf_load(fp.second_anim_buf, tree.archive, len);
                     self.game.audio.aram_load(self.data, len);
                 }
                 SecondTree {
@@ -276,10 +276,10 @@ impl Running<'_> {
                 SecondTree::default()
             };
             let fp = &mut self.game.fighters[f.0];
-            fp.x598 = second;
-            fp.x5A8 = aram;
+            fp.second_tree = second;
+            fp.second_anim_aram = aram;
         }
-        self.game.fighters[f.0].x598.tree
+        self.game.fighters[f.0].second_tree.tree
     }
 
     /// The fighter's main animation buffer now holds `archive`: the figatrees that point into
@@ -287,11 +287,11 @@ impl Running<'_> {
     /// same offsets.
     pub(super) fn overwrite_main_buffer(&mut self, f: FighterId, archive: ArchiveId) {
         let fp = &mut self.game.fighters[f.0];
-        if let Some(t) = fp.x590.tree_mut() {
+        if let Some(t) = fp.action_tree.tree_mut() {
             t.archive = archive;
         }
-        if fp.x598.in_main
-            && let Some(t) = &mut fp.x598.tree
+        if fp.second_tree.in_main
+            && let Some(t) = &mut fp.second_tree.tree
         {
             t.archive = archive;
         }
@@ -305,11 +305,15 @@ impl Running<'_> {
         let data = self.data;
         let fp = &self.game.fighters[f.0];
         let kind = fp.kind;
-        let flags = (super::bind::x594_word(fp.x594) >> 9) & 0x1FFF;
+        let flags = (super::bind::x594_word(fp.anim_bits) >> 9) & 0x1FFF;
         let mut node = data.ptr(tree.at(0xC)).expect("figatree nodes");
         let mut track = data.ptr(tree.at(0x10)).expect("figatree tracks");
         let depth = self.bone(f, part).xC_u[0];
-        let buf = if fp.x598.in_main { fp.x59C } else { fp.x5A0 };
+        let buf = if fp.second_tree.in_main {
+            fp.main_anim_buf
+        } else {
+            fp.second_anim_buf
+        };
         let mut i = 0;
         // As in `ftAnim_8006F7C8`, past the node list's end the skip reads on in the buffer.
         while i < part {
@@ -369,9 +373,9 @@ impl Running<'_> {
     /// the figatree bound from TopN on, looping if the animation says.
     #[doc(alias = "ftAnim_8006EDD0")]
     pub fn play_second_anim(&mut self, f: FighterId, msid: i32, frame: f32, rate: f32) {
-        let skel = self.game.fighters[f.0].x8AC_animSkeleton;
+        let skel = self.game.fighters[f.0].anim_skeleton;
         self.remove_anim(skel);
-        let costume = self.game.fighters[f.0].x108_costume_joint;
+        let costume = self.game.fighters[f.0].costume_joint;
         let child = costume.and_then(|c| self.data.ptr(c.at(0x8)));
         self.reset_parts(f, TRANS_N, child, true);
         let tree = self

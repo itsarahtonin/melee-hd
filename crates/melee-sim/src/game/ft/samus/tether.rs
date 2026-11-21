@@ -181,11 +181,7 @@ impl Running<'_> {
         let m = self.game.objs.jobjs[hand.expect("his hand's joint")].mtx;
         let fp = self.game.fighter(gobj);
         let reach = fp::fmul(g.reach, reg(fp.facing_dir));
-        let x1 = mem(fp::frsp(fp::fmadd(
-            reach,
-            reg(fp.x34_scale.y),
-            reg(m.m[0][3]),
-        )));
+        let x1 = mem(fp::frsp(fp::fmadd(reach, reg(fp.scale.y), reg(m.m[0][3]))));
         let x0 = fp.coll_data.cur_pos.x;
         let y = m.m[1][3];
         let g = self.game.geometry.as_mut().expect("no collision geometry");
@@ -350,7 +346,7 @@ impl Running<'_> {
             return;
         }
         fp.set_mv_f32(MV_FRAME, 0.0);
-        fp.x74_self_accel = Vec3::new(0.0, 0.0, 0.0);
+        fp.anim_vel = Vec3::new(0.0, 0.0, 0.0);
         match fp.fighter_kind() {
             FighterKind::Samus => {
                 self.change_motion_state(gobj, ms::AIR_CATCH, 0, 0.0, 1.0, 0.0, None);
@@ -360,7 +356,7 @@ impl Running<'_> {
                 self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
             }
         }
-        self.game.fighter_mut(gobj).x1A6A = 0x1FF;
+        self.game.fighter_mut(gobj).grab_immune = 0x1FF;
     }
 
     /// The air grab latched on, `ftCo_800C3CC0`: the latch state keeping a fast fall, her drift

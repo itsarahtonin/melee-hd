@@ -56,7 +56,7 @@ impl Running<'_> {
     /// PK Fire's entry: the throw flags and the first script flag cleared, the spawn hooked.
     fn ness_special_s_start(&mut self, gobj: GObjId, msid: i32) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2210[..4].copy_from_slice(&[0; 4]);
+        fp.throw_flags[..4].copy_from_slice(&[0; 4]);
         fp.cmd_vars[0] = 0;
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);

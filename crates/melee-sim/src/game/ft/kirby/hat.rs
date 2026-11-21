@@ -69,7 +69,7 @@ impl Running<'_> {
         let hat = jobj::load_joint(&mut self.game.objs, self.data, joint);
         let fp = &mut self.game.fighters[f.0];
         fp.u.set_jobj_at(u::HAT_JOBJ, hat);
-        fp.x2225_b2 = true;
+        fp.hat_hidden = true;
         pobj::set_default_class(&mut self.game.objs.pobjs, PObjClass::Hsd);
         self.purin_list_hat_dobjs(hat, list);
         self.kb_hat_vis_init(f, copy.at(4), 0, u::HAT_DOBJS, u::HAT_DOBJS);
@@ -647,7 +647,7 @@ impl Running<'_> {
         if let Some(l) = self.game.fighters[f.0].u.dobj_list_at(u::HAT_DOBJS) {
             let fp = &self.game.fighters[f.0];
             let parts = fp.parts.expect("a fighter without parts").0;
-            let (main, second) = (fp.dobj_list.data, fp.x203C.data);
+            let (main, second) = (fp.dobj_list.data, fp.second_dobjs.data);
             for i in 0..self.parts_table(FighterKind::Kirby.id()).len() as usize {
                 let bone = &self.game.fighter_parts[parts][i];
                 let Some(j) = bone.joint else { continue };
@@ -879,7 +879,7 @@ impl Running<'_> {
         self.game.fighters[f.0]
             .u
             .set_data_at(VIS_LOOKUPS + 16, lookup);
-        self.game.fighters[f.0].x5AC.xC[4] = lookup;
+        self.game.fighters[f.0].parts_vis.xC[4] = lookup;
         self.kb_hat_lookup(f, 4, false, u::HAT_DOBJS);
         let c = self.kb_gw_color(4);
         let list = self.game.fighters[f.0]
@@ -912,7 +912,7 @@ impl Running<'_> {
                 }
             }
         }
-        self.game.fighters[f.0].x610_color_rgba[1] = self.kb_gw_color(8);
+        self.game.fighters[f.0].overlay_colors[1] = self.kb_gw_color(8);
         self.update_model_scale(gobj);
     }
 
@@ -921,7 +921,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F15D8")]
     pub fn kb_gamewatch_hat_off(&mut self, gobj: GObjId) {
         self.kb_unload_hat_parts(gobj, 24);
-        self.game.fighter_mut(gobj).x5AC.xC[4] = None;
+        self.game.fighter_mut(gobj).parts_vis.xC[4] = None;
         self.update_model_scale(gobj);
     }
 
@@ -1053,7 +1053,7 @@ impl Running<'_> {
                 self.kb_hat_lookup(f, idx, true, u::HAT_DOBJS);
                 return;
             }
-            if (2..=6).contains(&fp.x5F4_arr[0].idx) {
+            if (2..=6).contains(&fp.model_variants[0].idx) {
                 self.kb_hat_lookup(f, idx, false, u::HAT_DOBJS);
                 return;
             }
@@ -1062,7 +1062,7 @@ impl Running<'_> {
                     fp.u.dobj_list_at(u::HAT_DOBJS2)
                         .expect("a hat's second list");
                 if self.game.fighter_dobj_lists[low.0][0].is_some() {
-                    let second = self.game.fighters[f.0].x203C.data;
+                    let second = self.game.fighters[f.0].second_dobjs.data;
                     self.hide_parts_vis(f, 2, second);
                     self.kb_hat_lookup(f, 2, true, u::HAT_DOBJS2);
                 }

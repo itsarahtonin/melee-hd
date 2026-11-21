@@ -14,7 +14,7 @@ impl Running<'_> {
     pub(crate) fn stamina_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
         if !fp.stamina_dead
-            && fp.x2225_b7
+            && fp.is_stamina
             && fp.dmg.x18F0 == 0
             && self
                 .game
@@ -41,7 +41,7 @@ impl Running<'_> {
             return;
         }
         let fp = self.game.fighter_mut(gobj);
-        fp.x2224_b3 = true;
+        fp.stamina_out = true;
         if fp.dmg.kb_applied != 0.0 {
             self.stamina_down(gobj);
         }
@@ -55,7 +55,7 @@ impl Running<'_> {
         self.game.ft_reset_input(gobj);
         self.start_color_anim(gobj, 0x7A, 0);
         self.stamina_cry(gobj);
-        self.game.fighters[f.0].x2225_b6 = true;
+        self.game.fighters[f.0].voice_muted = true;
         self.game.bg_flash_anim(self.data, 0xE, 0);
         let fp = &self.game.fighters[f.0];
         let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
@@ -75,7 +75,7 @@ impl Running<'_> {
     /// dropped, a grab broken, then lying where it is on the ground or tumbling in the air.
     #[doc(alias = "ftCo_800C8D00")]
     pub(crate) fn stamina_out(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2224_b3 {
+        if !self.game.fighter(gobj).stamina_out {
             return;
         }
         if !self.game.fighter(gobj).stamina_dead {
@@ -84,7 +84,7 @@ impl Running<'_> {
         self.damage_hooks(gobj);
         self.drop_heavy_item(gobj);
         if let Some(victim) = self.game.fighter(gobj).victim_gobj {
-            if self.game.fighter(gobj).x221B.x221B_b5 {
+            if self.game.fighter(gobj).state_flags.x221B_b5 {
                 self.enter_capture_cut(victim);
             } else {
                 self.enter_capture_cut(gobj);
@@ -97,6 +97,6 @@ impl Running<'_> {
         } else {
             self.enter_down_spot(gobj);
         }
-        self.game.fighter_mut(gobj).x2224_b3 = false;
+        self.game.fighter_mut(gobj).stamina_out = false;
     }
 }

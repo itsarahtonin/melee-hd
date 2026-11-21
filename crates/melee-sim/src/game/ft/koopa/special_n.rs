@@ -165,7 +165,7 @@ impl Running<'_> {
         let x24 = reg(self.kp_n_attr_f32(gobj, p, attr::X24));
         let x28 = reg(self.kp_n_attr_f32(gobj, p, attr::X28));
         let fp = &self.game.fighters[f.0];
-        let scale = reg(fp.x34_scale.y);
+        let scale = reg(fp.scale.y);
         v.x = mem(fp::fmadds(
             scale,
             fp::fmuls(x24, reg(fp.facing_dir)),
@@ -495,12 +495,12 @@ impl Running<'_> {
                 self.set_bone_hurtbox_state(f, b, 2);
             }
             self.set_item_visible(gobj, false);
-            self.game.fighters[f.0].x221E_b4 = false;
+            self.game.fighters[f.0].articles_visible = false;
         } else {
             self.set_model_variant(f, 0, 0);
             self.set_hurtbox_state(f, 0);
             self.set_item_visible(gobj, true);
-            self.game.fighters[f.0].x221E_b4 = true;
+            self.game.fighters[f.0].articles_visible = true;
         }
     }
 }

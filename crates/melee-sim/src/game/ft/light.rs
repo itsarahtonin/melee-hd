@@ -26,10 +26,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C0658")]
     pub fn active_overlay(&self, f: FighterId) -> &ColorOverlay {
         let fp = &self.game.fighters[f.0];
-        if fp.x408.x28_colanim != [0; 4] {
-            &fp.x408
+        if fp.main_overlay.x28_colanim != [0; 4] {
+            &fp.main_overlay
         } else {
-            &fp.x488
+            &fp.secondary_overlay
         }
     }
 
@@ -44,9 +44,9 @@ impl Running<'_> {
             return;
         }
         let light = self.game.fighters[f.0]
-            .x588
+            .light
             .expect("a fighter without its light");
-        if self.game.fighters[f.0].x2221_b3 {
+        if self.game.fighters[f.0].light_changed {
             let root = match self
                 .game
                 .world
@@ -85,7 +85,7 @@ impl Running<'_> {
                 lobj::set_color(&mut self.game.objs.lobjs, light, [c.r, c.g, c.b, c.a]);
                 lobj::clear_flags(&mut self.game.objs.lobjs, Some(light), ALPHA);
             }
-            self.game.fighters[f.0].x2221_b3 = false;
+            self.game.fighters[f.0].light_changed = false;
         }
         let (lobj0, lobj1) = (self.game.ft.lobj0, self.game.ft.lobj1);
         if o.x7C_light_enable {
@@ -105,7 +105,7 @@ impl Running<'_> {
         if !(o.x7C_flag2 && o.x7C_light_enable) {
             return;
         }
-        let light = self.game.fighters[f.0].x588;
+        let light = self.game.fighters[f.0].light;
         let ls = &mut self.game.objs.lobjs;
         if alpha {
             lobj::set_flags(ls, light, ALPHA);

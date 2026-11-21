@@ -55,10 +55,10 @@ impl Running<'_> {
     /// An effect on a part's joint, once (`x2219_b0`), then the hitlag hooks and no more
     /// accessory: the charge's and launch's effects.
     fn fox_part_gfx(&mut self, gobj: GObjId, gfx: i32, part: i32) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let j = self.part_joint(gobj, part);
             spawn(self, gfx, Some(gobj), &[Arg::JObj(j)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;
@@ -345,7 +345,7 @@ impl Running<'_> {
             None,
         );
         let fp = self.game.fighter_mut(gobj);
-        fp.x2223_b4 = true;
+        fp.no_item_bounce = true;
         fp.accessory4_cb = Some(CodeRef(addr::SPECIAL_HI_CREATE_LAUNCH_GFX));
     }
 
@@ -354,7 +354,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let frames = fp::fctiwz(reg(self.fox_attr_f32(f, attr::FIREFOX_DURATION)));
         let fp = &mut self.game.fighters[f.0];
-        fp.x2223_b4 = true;
+        fp.no_item_bounce = true;
         fp.set_mv_i32(mv::HI_TRAVEL_FRAMES, frames);
         fp.set_mv_i32(mv::HI_UNK, 0);
         fp.set_mv_i32(mv::HI_UNK2, 0);
@@ -392,7 +392,7 @@ impl Running<'_> {
                 self.fox_special_hi_rotate_model(gobj);
                 let fp = &mut self.game.fighters[f.0];
                 fp.accessory4_cb = Some(CodeRef(addr::SPECIAL_HI_CREATE_LAUNCH_GFX));
-                fp.x21F8 = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
+                fp.turn_cb = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
                 return;
             }
         }
@@ -436,9 +436,9 @@ impl Running<'_> {
         fp.self_vel.y = mem(fp::fmuls(speed, s));
         self.fox_special_hi_rotate_model(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.x21F8 = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
+        fp.turn_cb = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
         fp.accessory4_cb = Some(CodeRef(addr::SPECIAL_HI_CREATE_LAUNCH_GFX));
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
     }
 
     /// `ftFx_SpecialHiFall_Anim`: falling helplessly when it ends.
@@ -511,7 +511,8 @@ impl Running<'_> {
             self.land(gobj);
         }
         self.change_motion_state(gobj, ms::SPECIAL_HI_LANDING, 0, 0.0, 1.0, 0.0, None);
-        self.game.fighter_mut(gobj).x21F8 = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
+        self.game.fighter_mut(gobj).turn_cb =
+            Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
     }
 
     /// The aerial flight's end, `ftFx_SpecialHiLanding_GroundToAir`.
@@ -519,7 +520,8 @@ impl Running<'_> {
     pub fn fox_special_hi_landing_ground_to_air(&mut self, gobj: GObjId) {
         self.destroy_effects(gobj);
         self.change_motion_state(gobj, ms::SPECIAL_HI_FALL, 0, 0.0, 1.0, 0.0, None);
-        self.game.fighter_mut(gobj).x21F8 = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
+        self.game.fighter_mut(gobj).turn_cb =
+            Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
     }
 
     /// The bounce, `ftFx_SpecialHiBound_Anim`: falling helplessly once the script says or
@@ -532,14 +534,14 @@ impl Running<'_> {
         if fp.cmd_vars[0] != 0 && fp.ground_or_air == GA_AIR {
             self.fall_special(gobj, m, l);
             let fp = &mut self.game.fighters[f.0];
-            fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+            fp.jumps_used = fp.co_attrs.max_jumps as u8;
             return;
         }
         if !self.anim_frames_remaining(gobj) {
             if self.game.fighters[f.0].ground_or_air == GA_AIR {
                 self.fall_special(gobj, m, l);
                 let fp = &mut self.game.fighters[f.0];
-                fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+                fp.jumps_used = fp.co_attrs.max_jumps as u8;
                 return;
             }
             self.enter_wait(gobj);
@@ -580,7 +582,7 @@ impl Running<'_> {
         self.anim_update(gobj);
         let v = reg(self.fox_attr_f32(f, attr::FIREFOX_BOUND_VEL_X));
         let fp = &mut self.game.fighters[f.0];
-        fp.x21F8 = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
+        fp.turn_cb = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
         fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), v));
         fp.cmd_vars[0] = 0;
         // `ftFox_SpecialHiBound_SetVars`.
@@ -592,7 +594,7 @@ impl Running<'_> {
         };
         let pos = fp.cur_pos;
         spawn(self, 1030, Some(gobj), &[Arg::Vec(pos), Arg::Float(angle)]);
-        self.game.fighters[f.0].x2219_b0 = true;
+        self.game.fighters[f.0].effect_once = true;
         self.set_effect_hitlag_cbs(gobj);
     }
 }

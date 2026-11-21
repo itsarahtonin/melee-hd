@@ -54,11 +54,11 @@ pub(crate) fn set_shield_hit(
     radius: f32,
     offset: Vec3,
 ) {
-    fp.x221B.x221B_b0 = true;
-    fp.x221B.x221B_b1 = false;
-    fp.x221B.x221B_b2 = false;
-    fp.x221B.x221B_b3 = false;
-    fp.x221B.x221B_b4 = false;
+    fp.state_flags.x221B_b0 = true;
+    fp.state_flags.x221B_b1 = false;
+    fp.state_flags.x221B_b2 = false;
+    fp.state_flags.x221B_b3 = false;
+    fp.state_flags.x221B_b4 = false;
     fp.shield_hit_cb = Some(cb);
     fp.shield_hit.bone = joint;
     fp.shield_hit.size = radius;
@@ -127,7 +127,7 @@ impl Running<'_> {
         let joint = self.shield_joint(gobj);
         let fp = self.game.fighter_mut(gobj);
         set_shield_hit(fp, ON_SHIELD_HIT, joint, 1.0, Vec3::new(0.0, 0.0, 0.0));
-        fp.x221A_b7 = true;
+        fp.shield_was_hit = true;
     }
 
     /// The shield's size, `inlineB0`: Yoshi's egg is fixed; the others shrink with health and
@@ -206,7 +206,7 @@ impl Running<'_> {
     pub fn shield_pose(&mut self, gobj: GObjId, t: f32) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        if !(fp.reflecting || fp.x221B.x221B_b0) {
+        if !(fp.reflecting || fp.state_flags.x221B_b0) {
             return;
         }
         self.shield_tilt(gobj);
@@ -219,14 +219,14 @@ impl Running<'_> {
         let hold = self.data.ptr(poses.at(8));
         let t = reg(t);
         if self.game.fighters[f.0].mv_f32(GUARD_X4) != 0.0 {
-            let skel = self.game.fighters[f.0].x8AC_animSkeleton;
+            let skel = self.game.fighters[f.0].anim_skeleton;
             let tree = self.second_figatree(f, 38);
             let tree = tree.expect("ftAnim_8006F4C8 reads a missing figatree at address 0");
             let buf = self.game.fighters[f.0].second_tree_buf();
             self.in_anim_buf(buf, |r| r.bind_own_figatree(f, true, tree));
             let angle = self.game.fighters[f.0].mv_f32(GUARD_X8);
             self.request_anim(skel, angle);
-            let costume = self.game.fighters[f.0].x108_costume_joint;
+            let costume = self.game.fighters[f.0].costume_joint;
             let child = costume.and_then(|c| self.data.ptr(c.at(8)));
             self.reset_parts(f, TRANS_N, child, true);
             jobj::anim_all(
@@ -283,7 +283,7 @@ impl Running<'_> {
         self.shield_effect(gobj, 1047);
         let x268 = self.common().f32(0x268);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2219_b0 = true;
+        fp.effect_once = true;
         fp.set_mv_i32(GUARD_XC, 0);
         fp.set_mv_f32(GUARD_X0, 0.0);
         fp.set_mv_f32(GUARD_X10, reg(x268));
@@ -330,9 +330,9 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms::GUARD_ON, SKIP_ANIM, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x221C_b3 = false;
-        fp.x221C_b1 = false;
-        fp.x221C_b2 = false;
+        fp.powershield_early = false;
+        fp.powershield_late = false;
+        fp.powershield = false;
         fp.set_mv_i32(GUARD_X1C, 0);
         fp.set_mv_f32(GUARD_X14, 0.0);
         fp.set_mv_f32(GUARD_X18, 0.0);
@@ -344,7 +344,7 @@ impl Running<'_> {
     /// health drains by it, and at nothing the shield breaks (true).
     #[doc(alias = "ftCo_800925A4")]
     pub fn shield_drain(&mut self, gobj: GObjId) -> bool {
-        if !self.game.fighter(gobj).x221B.x221B_b0 {
+        if !self.game.fighter(gobj).state_flags.x221B_b0 {
             return false;
         }
         let c = self.common();
@@ -358,8 +358,8 @@ impl Running<'_> {
         fp.shield_health = mem(fp::fsubs(reg(fp.shield_health), drain));
         if fp.shield_health < 0.0 {
             fp.shield_health = 0.0;
-            fp.x221A_b7 = false;
-            fp.x221B.x221B_b0 = false;
+            fp.shield_was_hit = false;
+            fp.state_flags.x221B_b0 = false;
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
             self.record_shield_break(slot, sub);
             self.enter_shield_break(gobj);
@@ -385,7 +385,7 @@ impl Running<'_> {
             return;
         }
         let fp = self.game.fighter(gobj);
-        let (x0, frames) = (fp.mv_f32(GUARD_X0), fp.x2E8);
+        let (x0, frames) = (fp.mv_f32(GUARD_X0), fp.guard_on_frames);
         if x0 >= frames {
             self.enter_guard(gobj);
         } else {
@@ -408,7 +408,7 @@ impl Running<'_> {
         self.guard_note_release(gobj);
         let fp = self.game.fighter_mut(gobj);
         if (fp.mv_i32(GUARD_XC) != 0 && fp.mv_f32(GUARD_X10) == 0.0)
-            || (!fp.x221B.x221B_b0 && !fp.reflecting)
+            || (!fp.state_flags.x221B_b0 && !fp.reflecting)
         {
             self.enter_guard_off(gobj);
             return true;
@@ -483,7 +483,7 @@ impl Running<'_> {
     pub fn enter_guard_common(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, ms::GUARD, SKIP_ANIM, 0.0, 1.0, 0.0, None);
         self.shield_effect(gobj, 1048);
-        self.game.fighter_mut(gobj).x2219_b0 = true;
+        self.game.fighter_mut(gobj).effect_once = true;
         self.shield_hit_shape(gobj);
         self.shield_pose(gobj, 1.0);
     }
@@ -555,7 +555,7 @@ impl Running<'_> {
     /// (Yoshi has his own), and a cape's hit (element 10, `x19B0`) turns the fighter around.
     #[doc(alias = "ftCo_80092E50")]
     pub fn on_shield_hit(&mut self, gobj: GObjId) {
-        let cape = self.game.fighter(gobj).x19B0 == 10;
+        let cape = self.game.fighter(gobj).shield_hit_element == 10;
         if self.game.fighter(gobj).kind == FighterKind::Yoshi {
             self.ys_on_shield_hit(gobj, cape);
         } else {
@@ -594,12 +594,12 @@ impl Running<'_> {
         fp.hitlag_cb = Some(GUARD_SET_OFF_HITLAG);
         fp.active_timer.lstick.x = 0xFE;
         fp.post_hitlag_cb = Some(GUARD_SET_OFF_POST_HITLAG);
-        if !fp.x221C_b2 {
+        if !fp.powershield {
             self.shield_effect(gobj, 1049);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         let fp = self.game.fighter(gobj);
-        let len = self.shield_stun_frames(fp.x19A4, fp.lightshield_amount);
+        let len = self.shield_stun_frames(fp.shield_hit_damage, fp.lightshield_amount);
         let root = self.root_jobj(gobj);
         let end = reg(crate::lb::anim::end_frame(&self.game.objs, Some(root)));
         self.set_anim_rate(gobj, mem(fp::fdivs(fp::fadds(reg(0.1f32), end), len)));
@@ -608,7 +608,7 @@ impl Running<'_> {
             let (x294, x298, x2bc) = (reg(c.f32(0x294)), reg(c.f32(0x298)), reg(c.f32(0x2BC)));
             let fp = self.game.fighter_mut(gobj);
             let mut v = fp::fmuls(len, x294);
-            if !fp.x221C_b2 {
+            if !fp.powershield {
                 v = fp::fmuls(v, x2bc);
             }
             if v > x298 {
@@ -739,12 +739,12 @@ impl Running<'_> {
         let joint = self.bones(f)[d.bone as usize].joint;
         let fp = &mut self.game.fighters[f.0];
         fp.reflecting = true;
-        fp.x2218_b4 = false;
+        fp.reflect_kept = false;
         fp.reflect_hit_cb = cb;
-        fp.ReflectAttr.x1A30_maxDamage = d.max_damage;
-        fp.ReflectAttr.x1A34_damageMul = d.damage_mul;
-        fp.ReflectAttr.x1A38_speedMul = d.speed_mul;
-        fp.x2218_b5 = d.behavior & 1 != 0;
+        fp.reflect.x1A30_maxDamage = d.max_damage;
+        fp.reflect.x1A34_damageMul = d.damage_mul;
+        fp.reflect.x1A38_speedMul = d.speed_mul;
+        fp.reflect_behavior = d.behavior & 1 != 0;
         fp.reflect_hit.bone = joint;
         fp.reflect_hit.size = d.size;
         fp.reflect_hit.offset = d.offset;
@@ -757,8 +757,8 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let joint = self.bones(f)[bone as usize].joint;
         let fp = &mut self.game.fighters[f.0];
-        fp.x2218_b6 = true;
-        fp.x2218_b7 = false;
+        fp.absorbing = true;
+        fp.absorb_any = false;
         fp.absorb_hit.bone = joint;
         fp.absorb_hit.size = size;
         fp.absorb_hit.offset = offset;
@@ -767,7 +767,7 @@ impl Running<'_> {
     /// The fighter's effects removed, `ftCommon_8007DB24`.
     #[doc(alias = "ftCommon_8007DB24")]
     pub fn destroy_effects(&mut self, gobj: GObjId) {
-        self.game.fighter_mut(gobj).x2219_b0 = false;
+        self.game.fighter_mut(gobj).effect_once = false;
         ef::destroy_all(self, gobj);
     }
 
@@ -777,7 +777,7 @@ impl Running<'_> {
     pub fn on_powershield_reflect(&mut self, gobj: GObjId) {
         self.destroy_effects(gobj);
         self.shield_effect(gobj, 1050);
-        self.game.fighter_mut(gobj).x2219_b0 = true;
+        self.game.fighter_mut(gobj).effect_once = true;
         self.play_sfx(gobj, 128, 127, 64);
     }
 
@@ -799,8 +799,8 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms::GUARD_REFLECT, flags, frame, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         fp.active_timer.trigger = 0xFE;
-        fp.x221A_b7 = false;
-        fp.x221B.x221B_b0 = false;
+        fp.shield_was_hit = false;
+        fp.state_flags.x221B_b0 = false;
         self.powershield_timers(gobj);
         self.powershield_reflect_shape(gobj, ON_POWERSHIELD_REFLECT);
     }
@@ -810,9 +810,9 @@ impl Running<'_> {
         let c = self.common();
         let (x2a4, x2b4) = (c.f32(0x2A4), c.f32(0x2B4));
         let fp = self.game.fighter_mut(gobj);
-        fp.x221C_b3 = true;
-        fp.x221C_b1 = true;
-        fp.x221C_b2 = true;
+        fp.powershield_early = true;
+        fp.powershield_late = true;
+        fp.powershield = true;
         fp.set_mv_i32(GUARD_X1C, 0);
         fp.set_mv_f32(GUARD_X14, reg(x2a4));
         fp.set_mv_f32(GUARD_X18, reg(x2b4));
@@ -857,22 +857,22 @@ impl Running<'_> {
     pub fn powershield_tick(&mut self, gobj: GObjId) {
         let less_one = |x: f32| fp::fsubs(reg(x), 1.0);
         let fp = self.game.fighter_mut(gobj);
-        if fp.x221C_b3 {
-            fp.x221C_b3 = false;
+        if fp.powershield_early {
+            fp.powershield_early = false;
         }
-        if fp.x221C_b1 {
+        if fp.powershield_late {
             fp.set_mv_f32(GUARD_X14, fp.mv.f32_through(GUARD_X14, less_one));
             if fp.mv_f32(GUARD_X14) < 0.0 {
-                fp.x221C_b1 = false;
+                fp.powershield_late = false;
                 fp.reflecting = false;
                 self.shield_hit_shape(gobj);
             }
         }
         let fp = self.game.fighter_mut(gobj);
-        if fp.x221C_b2 {
+        if fp.powershield {
             fp.set_mv_f32(GUARD_X18, fp.mv.f32_through(GUARD_X18, less_one));
             if fp.mv_f32(GUARD_X18) < 0.0 {
-                fp.x221C_b2 = false;
+                fp.powershield = false;
             }
         }
     }

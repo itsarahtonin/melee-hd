@@ -80,7 +80,7 @@ impl Running<'_> {
         let thunder = self.game.fighter(gobj).u.gobj_at(u::PKTHUNDER);
         let fp = self.game.fighter(gobj);
         let mut pos = fp.cur_pos;
-        pos.y = mem(fp::fmadds(5.0, reg(fp.x34_scale.y), reg(pos.y)));
+        pos.y = mem(fp::fmadds(5.0, reg(fp.scale.y), reg(pos.y)));
         let pair = nesspkthunder::trail_pos(self, thunder.expect("no PK Thunder"), 0);
         (pos, pair)
     }
@@ -301,7 +301,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.death2_cb = None;
         fp.take_dmg_cb = None;
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
     }
 
     /// PK Thunder 2 on the ground, `ftNs_SpecialHi_Enter`: off a platform or when the ball
@@ -316,7 +316,7 @@ impl Running<'_> {
             let d = Vec3::new(
                 mem(fp::fsubs(reg(fp.cur_pos.x), reg(p1.x))),
                 mem(fp::fsubs(
-                    fp::fmadds(5.0, reg(fp.x34_scale.y), reg(fp.cur_pos.y)),
+                    fp::fmadds(5.0, reg(fp.scale.y), reg(fp.cur_pos.y)),
                     reg(p1.y),
                 )),
                 0.0,
@@ -345,7 +345,7 @@ impl Running<'_> {
             }
         }
         let fp = &mut self.game.fighters[f.0];
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
         self.go_airborne_jumped(f);
         self.ness_special_air_hi_enter(gobj);
     }
@@ -359,7 +359,7 @@ impl Running<'_> {
         let p1 = mv_vec(fp, mv::HI_COLL_POS1);
         let dx = fp::fsubs(reg(fp.cur_pos.x), reg(p1.x));
         let dy = fp::fsubs(
-            fp::fmadds(5.0, reg(fp.x34_scale.y), reg(fp.cur_pos.y)),
+            fp::fmadds(5.0, reg(fp.scale.y), reg(fp.cur_pos.y)),
             reg(p1.y),
         );
         fp.facing_dir = sign(dx);
@@ -401,7 +401,7 @@ impl Running<'_> {
             }
         }
         let fp = self.game.fighter_mut(gobj);
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
         self.ness_special_hi_start_gfx(gobj, GFX_AURA);
     }
 
@@ -519,7 +519,7 @@ impl Running<'_> {
     pub fn ness_special_air_hi_end_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             let fp = self.game.fighter_mut(gobj);
-            fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+            fp.jumps_used = fp.co_attrs.max_jumps as u8;
             self.ness_special_hi_fall(gobj);
         }
     }

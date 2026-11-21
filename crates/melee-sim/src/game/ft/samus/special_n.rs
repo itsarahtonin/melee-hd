@@ -463,7 +463,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         match fp.motion_id {
             m if (p.ms.special_n_start..=p.ms.special_air_n).contains(&m) => {
-                fp.x2070[1] & 0x02 != 0
+                fp.attack_flags[1] & 0x02 != 0
             }
             _ => true,
         }

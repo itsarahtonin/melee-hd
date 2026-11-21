@@ -109,15 +109,15 @@ impl Running<'_> {
         }
         let fp = self.game.fighter_mut(gobj);
         fp.allow_interrupt = false;
-        fp.x2218_b1 = false;
+        fp.jab_continue = false;
         self.change_motion_state(gobj, ms::ATTACK11, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         let fp = self.game.fighter_mut(gobj);
         fp.hitlag_mul = fp.co_attrs.jab_2_input_window;
-        fp.unk_msid = CO_ATTACK11;
-        fp.x2218_b2 = false;
+        fp.jab_msid = CO_ATTACK11;
+        fp.jab_rapid = false;
         fp.set_mv_i32(mv::ATTACK11_UNK, 0);
-        fp.x1A54 = 0;
+        fp.jab_mashes = 0;
         self.gw_set_accessory(gobj, Some(addr::ATTACK11_ITEM_GREENHOUSE_SETUP));
     }
 

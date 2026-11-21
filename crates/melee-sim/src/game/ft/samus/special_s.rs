@@ -54,9 +54,9 @@ impl Running<'_> {
     /// `ftSs_SpecialS_8012A168`.
     #[doc(alias = "ftSs_SpecialS_8012A168")]
     pub fn samus_missile_launch_gfx(&mut self, gobj: GObjId, pos: Vec3) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             ef::spawn(self, GFX_LAUNCH, Some(gobj), &[Arg::Vec(pos)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
     }
@@ -76,7 +76,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         let fp = self.game.fighter_mut(gobj);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         fp.accessory4_cb = Some(CodeRef(addr::MISSILE_LAUNCH));
     }
 

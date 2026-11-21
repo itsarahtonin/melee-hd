@@ -564,8 +564,8 @@ impl Recorder {
         w.f32(fp.facing_dir);
         w.f32(fp.dmg.x1830_percent);
         w.f32(fp.shield_health);
-        w.u8(fp.x208C as u8);
-        w.u8(fp.x2090 as u8);
+        w.u8(fp.combo_attack_id as u8);
+        w.u8(fp.combo_count as u8);
         w.u8(fp.dmg.x18c4_source_ply as u8);
         w.u8(g.player_stocks(i32::from(fp.player_idx)) as u8);
         w.f32(fp.cur_anim_frame);
@@ -575,19 +575,23 @@ impl Recorder {
         w.bytes(&misc_as(g, fp));
         w.u8(fp.ground_or_air as u8);
         w.u16(fp.coll_data.floor.index as u16);
-        w.u8((fp.co_attrs.max_jumps as u8).wrapping_sub(fp.x1968_jumpsUsed));
+        w.u8((fp.co_attrs.max_jumps as u8).wrapping_sub(fp.jumps_used));
         w.u8(self.lcancel.get(f.0 as usize).copied().unwrap_or(0));
         // Move-induced intangibility before the game's.
-        w.u8(if fp.x1988 != 0 { fp.x1988 } else { fp.x198C } as u8);
+        w.u8(if fp.hit_status != 0 {
+            fp.hit_status
+        } else {
+            fp.timed_hit_status
+        } as u8);
         w.f32(fp.self_vel.x);
         w.f32(fp.self_vel.y);
-        w.f32(fp.x8c_kb_vel.x);
-        w.f32(fp.x8c_kb_vel.y);
+        w.f32(fp.kb_vel.x);
+        w.f32(fp.kb_vel.y);
         w.f32(fp.gr_vel);
         w.f32(fp.dmg.x195c_hitlag_frames);
         w.u32(fp.anim_id as u32);
         w.u16(fp.dmg.x18ec_instancehitby);
-        w.u16(fp.x2074.x2088);
+        w.u16(fp.attack_record.x2088);
         self.frame_buf = w.0;
         self.last_frame = Some(self.frame);
         if !follower {
@@ -860,52 +864,52 @@ fn byte(bits: [bool; 8]) -> u8 {
 /// The state flag bytes the post-frame update copies: `Fighter`'s 0x2218, 0x221A, 0x221B,
 /// 0x221C and 0x221F.
 fn flag_bytes(fp: &super::structs::Fighter) -> [u8; 5] {
-    let b = &fp.x221B;
+    let b = &fp.state_flags;
     [
         byte([
             fp.allow_interrupt,
-            fp.x2218_b1,
-            fp.x2218_b2,
+            fp.jab_continue,
+            fp.jab_rapid,
             fp.reflecting,
-            fp.x2218_b4,
-            fp.x2218_b5,
-            fp.x2218_b6,
-            fp.x2218_b7,
+            fp.reflect_kept,
+            fp.reflect_behavior,
+            fp.absorbing,
+            fp.absorb_any,
         ]),
         byte([
-            fp.x221A_b0,
-            fp.x221A_b1,
+            fp.pending_hitlag,
+            fp.thaw_size,
             fp.allow_sdi,
-            fp.x221A_b3,
+            fp.in_hitstun_sdi,
             fp.fall_fast,
-            fp.x221A_b5,
-            fp.x221A_b6,
-            fp.x221A_b7,
+            fp.hurtboxes_set,
+            fp.hurtboxes_custom,
+            fp.shield_was_hit,
         ]),
         byte([
             b.x221B_b0, b.x221B_b1, b.x221B_b2, b.x221B_b3, b.x221B_b4, b.x221B_b5, b.x221B_b6,
             b.x221B_b7,
         ]),
         byte([
-            fp.x221C_b0,
-            fp.x221C_b1,
-            fp.x221C_b2,
-            fp.x221C_b3,
-            fp.x221C_b4,
-            fp.x221C_b5,
-            fp.x221C_b6,
+            fp.held_hit_light,
+            fp.powershield_late,
+            fp.powershield,
+            fp.powershield_early,
+            fp.armor,
+            fp.hit_this_frame,
+            fp.in_hitstun,
             // The three-bit field's top bit; the rest is 0x221D's.
-            fp.x221C_u16_y & 4 != 0,
+            fp.leg_reach & 4 != 0,
         ]),
         byte([
-            fp.x221F_b0,
-            fp.x221F_b1,
-            fp.x221F_b2,
+            fp.off_screen,
+            fp.dead,
+            fp.cloaked,
             fp.is_sleeping,
             fp.is_sub_fighter,
-            fp.x221F_b5,
-            fp.x221F_b6,
-            fp.x221F_b7,
+            fp.last_hit_by_sub,
+            fp.shield_hit_by_sub,
+            fp.unused_221f_b7,
         ]),
     ]
 }

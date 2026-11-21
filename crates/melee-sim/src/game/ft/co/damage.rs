@@ -58,17 +58,17 @@ impl Running<'_> {
             }
             if fp.mv[DAMAGE_X1B] == 0
                 && fp.ground_or_air == GA_AIR
-                && fp.x8c_kb_vel.y < 0.0
+                && fp.kb_vel.y < 0.0
                 && (self.special_hi_air_out_check(gobj) || self.jump_aerial_check_z(gobj))
             {
                 let fp = self.game.fighter_mut(gobj);
-                fp.x8c_kb_vel.z = 0.0;
-                fp.x8c_kb_vel.y = 0.0;
-                fp.x8c_kb_vel.x = 0.0;
+                fp.kb_vel.z = 0.0;
+                fp.kb_vel.y = 0.0;
+                fp.kb_vel.x = 0.0;
                 let f = self.game.fighter_id(gobj);
                 self.start_rumble(f, 12, 0);
                 self.start_color_anim(gobj, 121, 0);
-                self.game.fighter_mut(gobj).x2227_b4 = true;
+                self.game.fighter_mut(gobj).tumble_early = true;
                 return true;
             }
         }
@@ -91,7 +91,7 @@ impl Running<'_> {
             return false;
         }
         let window = self.common().u32(0x1C);
-        if fp.x686 == 0 && u32::from(fp.x68B) >= window {
+        if fp.frames_since_special_hi == 0 && u32::from(fp.frames_since_special_hi_air) >= window {
             let entry = kinds::KINDS[kind].special_air_hi;
             self.call_kind_fn(entry, gobj);
             return true;
@@ -104,7 +104,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Damage_IASA")]
     #[doc(alias = "doIasa")]
     pub fn co_damage_iasa(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).x221C_b6 {
+        if self.game.fighter(gobj).in_hitstun {
             self.damage_early_out(gobj);
             return;
         }
@@ -146,7 +146,7 @@ impl Running<'_> {
         }
         let c = self.common();
         let (hard, land) = (reg(c.f32(0x1E0)), reg(c.f32(0x1E4)));
-        let k = self.game.fighter(gobj).x8c_kb_vel;
+        let k = self.game.fighter(gobj).kb_vel;
         let sq = |v: f32| fp::fmuls(reg(v), reg(v));
         let mag = sqrt_reg(fp::fadds(sq(k.x), sq(k.y)));
         if mag >= hard {
@@ -170,7 +170,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_DamageFly_IASA")]
     #[doc(alias = "ftCo_DamageFlyRoll_IASA")]
     pub fn co_damage_fly_iasa(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x221C_b6 {
+        if !self.game.fighter(gobj).in_hitstun {
             self.co_damage_fall_iasa(gobj);
         } else {
             self.damage_early_out(gobj);
@@ -217,9 +217,9 @@ impl Running<'_> {
             return;
         }
         let (x, y) = if fp.ground_or_air == GA_AIR {
-            (reg(fp.x8c_kb_vel.y), reg(fp.x8c_kb_vel.x))
+            (reg(fp.kb_vel.y), reg(fp.kb_vel.x))
         } else {
-            let kb = reg(fp.xF0_ground_kb_vel);
+            let kb = reg(fp.ground_kb_vel);
             let n = &fp.coll_data.floor.normal;
             (fp::fmuls(fp::fneg(reg(n.x)), kb), fp::fmuls(reg(n.y), kb))
         };
@@ -239,14 +239,14 @@ impl Running<'_> {
         let t = |off: u32| reg(c.f32(off));
         let fp = self.game.fighter(gobj);
         let kb = if fp.ground_or_air == GA_AIR {
-            let k = &fp.x8c_kb_vel;
+            let k = &fp.kb_vel;
             let sq = |v: f32| fp::fmuls(reg(v), reg(v));
             reg(crate::math::sqrt(mem(fp::fadds(
                 sq(k.z),
                 fp::fadds(sq(k.x), sq(k.y)),
             ))))
         } else {
-            abs(reg(fp.xF0_ground_kb_vel))
+            abs(reg(fp.ground_kb_vel))
         };
         let value = if kb < t(0x568) {
             0
@@ -267,7 +267,7 @@ impl Running<'_> {
     pub fn co_damage_fly_roll_anim(&mut self, gobj: GObjId) {
         self.knockback_smoke(gobj);
         self.damage_tick(gobj);
-        if !self.game.fighter(gobj).x221C_b6 {
+        if !self.game.fighter(gobj).in_hitstun {
             self.enter_damage_fall(gobj);
         }
     }
@@ -334,8 +334,8 @@ impl Running<'_> {
     pub(super) fn fly_roll(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        let x = mem(fp::fadds(reg(fp.self_vel.x), reg(fp.x8c_kb_vel.x)));
-        let y = mem(fp::fadds(reg(fp.self_vel.y), reg(fp.x8c_kb_vel.y)));
+        let x = mem(fp::fadds(reg(fp.self_vel.x), reg(fp.kb_vel.x)));
+        let y = mem(fp::fadds(reg(fp.self_vel.y), reg(fp.kb_vel.y)));
         let rot = mem(fp::fmuls(reg(fp.facing_dir), reg(crate::math::atan2(x, y))));
         let part = self.bone_index(fp, X_ROT_N);
         self.game.part_set_rot_x(f, part, rot);
@@ -351,8 +351,8 @@ impl Running<'_> {
         }
         let slow = self.common().f32(0x1C8);
         let fp = self.game.fighter(gobj);
-        if fp.x1064_thrownHitbox.x134.is_set() {
-            let k = fp.x8c_kb_vel;
+        if fp.thrown_hitbox.x134.is_set() {
+            let k = fp.kb_vel;
             let sq = |v: f32| fp::fmuls(reg(v), reg(v));
             let speed = crate::math::sqrt(mem(fp::fadds(sq(k.z), fp::fadds(sq(k.x), sq(k.y)))));
             if speed < slow {

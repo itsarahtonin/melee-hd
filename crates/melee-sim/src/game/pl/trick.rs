@@ -84,7 +84,7 @@ impl Running<'_> {
     fn attack_record(&self, r: AttackRecord) -> ft_800898B4_t {
         let (x0, x4, kb, xc, flags) = match r {
             AttackRecord::Fighter(g) => {
-                let a = &self.game.fighter(g).x2074;
+                let a = &self.game.fighter(g).attack_record;
                 (
                     a.x2074_vec.x,
                     a.x2074_vec.y,
@@ -126,7 +126,7 @@ impl Running<'_> {
     fn attack_record_pad(&self, r: AttackRecord) -> [u8; 3] {
         match r {
             AttackRecord::Fighter(g) => {
-                let x = self.game.fighter(g).x2074.x10;
+                let x = self.game.fighter(g).attack_record.x10;
                 [x[1], x[2], x[3]]
             }
             AttackRecord::Item(g) => {
@@ -139,7 +139,7 @@ impl Running<'_> {
     /// Marks the attack's record as one that landed (`x10_b7`).
     fn mark_record_landed(&mut self, r: AttackRecord) {
         match r {
-            AttackRecord::Fighter(g) => self.game.fighter_mut(g).x2074.x10[0] |= 0x01,
+            AttackRecord::Fighter(g) => self.game.fighter_mut(g).attack_record.x10[0] |= 0x01,
             AttackRecord::Item(g) => {
                 super::super::it::item_mut(self.game, g).xDA4_word |= 0x0100_0000;
             }
@@ -223,7 +223,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(victim);
         fp.dmg.x18d4 = [0; 4];
         fp.dmg.x18ec_instancehitby = 0;
-        let prev_kb = if fp.x221C_b6 {
+        let prev_kb = if fp.in_hitstun {
             reg(fp.dmg.x18d8.kb_applied1)
         } else {
             0.0
@@ -521,7 +521,7 @@ impl Running<'_> {
         let slot = i32::from(self.game.fighter(victim).player_idx);
         let edge = self.magnify_edge(slot);
         let fp = self.game.fighter_mut(victim);
-        let prev_kb = if fp.x221C_b6 {
+        let prev_kb = if fp.in_hitstun {
             reg(fp.dmg.x18d8.kb_applied1)
         } else {
             0.0

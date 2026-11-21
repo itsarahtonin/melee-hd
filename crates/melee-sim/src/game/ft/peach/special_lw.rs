@@ -156,7 +156,7 @@ impl Running<'_> {
         if self.peach_throw_veg_if_held(gobj, co_ms::LIGHT_THROW_F4) {
             return;
         }
-        self.game.fighter_mut(gobj).x2210 = [0; 4];
+        self.game.fighter_mut(gobj).throw_flags = [0; 4];
         self.change_motion_state(gobj, ms::SPECIAL_LW, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::SPAWN_VEG));

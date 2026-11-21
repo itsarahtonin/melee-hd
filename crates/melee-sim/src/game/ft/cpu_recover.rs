@@ -45,9 +45,9 @@ impl Running<'_> {
                 return;
             }
             let c = &mut self.game.fighters[f.0].cpu;
-            c.x18 = c.x1C;
+            c.behavior = c.default_behavior;
             self.cpu_cmd(f, cmd::DONE);
-            self.game.fighters[f.0].cpu.xFA_b2 = false;
+            self.game.fighters[f.0].cpu.ledge_picked = false;
             return;
         }
         self.cpu_recover_air(f);
@@ -58,11 +58,11 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A8DE4")]
     pub(super) fn cpu_pick_ledge(&mut self, f: FighterId) {
         let c = &mut self.game.fighters[f.0].cpu;
-        if c.xFA_b2 {
+        if c.ledge_picked {
             return;
         }
-        c.xFA_b2 = true;
-        c.x5C = 10000.0;
+        c.ledge_picked = true;
+        c.destination_distance = 10000.0;
         if self.game.fighters[f.0].facing_dir > 0.0 {
             if !self.cpu_ledge_target(f, Edge::Left, true)
                 && !self.cpu_ledge_target(f, Edge::Right, true)
@@ -159,7 +159,7 @@ impl Running<'_> {
                 Edge::Right => fp::frsp(fp::fsub(reg(ex), 5.0)),
             });
             if reachable {
-                if fp::fadds(dist, reg(fpp.cpu.x558)) < reg(ey) {
+                if fp::fadds(dist, reg(fpp.cpu.jump_height)) < reg(ey) {
                     continue;
                 }
                 if self.cpu_ledge_floor(px, ey) && !self.cpu_out_of_bounds(f, px, ey) {
@@ -173,7 +173,7 @@ impl Running<'_> {
                 let ddy = fp::fsubs(reg(ey), reg(fpp.cur_pos.y));
                 if self.cpu_ledge_floor(px, ey) && !self.cpu_out_of_bounds(f, px, ey) {
                     let dist = math::sqrt_reg(fp::fmadds(ddx, ddx, fp::fmuls(ddy, ddy)));
-                    if reg(self.game.fighters[f.0].cpu.x5C) > dist {
+                    if reg(self.game.fighters[f.0].cpu.destination_distance) > dist {
                         self.cpu_set_destination(f, px, ey, 5.0);
                         self.cpu_destination_distance(f);
                     }
@@ -202,10 +202,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A49B4")]
     fn cpu_destination_distance(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
-        let dx = fp::fsubs(reg(fpp.cur_pos.x), reg(fpp.cpu.x54.x));
-        let dy = fp::fsubs(reg(fpp.cur_pos.y), reg(fpp.cpu.x54.y));
+        let dx = fp::fsubs(reg(fpp.cur_pos.x), reg(fpp.cpu.destination.x));
+        let dy = fp::fsubs(reg(fpp.cur_pos.y), reg(fpp.cpu.destination.y));
         let d = math::sqrt(mem(fp::fmadds(dx, dx, fp::fmuls(dy, dy))));
-        self.game.fighters[f.0].cpu.x5C = d;
+        self.game.fighters[f.0].cpu.destination_distance = d;
     }
 
     /// Jumping off a stage piece that doesn't count as ground, `ftCo_800A0148`: nothing above
@@ -216,18 +216,18 @@ impl Running<'_> {
     pub(super) fn cpu_jump_off_piece(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
         let top = reg(stage::blast_top(self.game));
-        if fp::fadds(reg(fpp.cur_pos.y), reg(fpp.cpu.x558)) > top {
+        if fp::fadds(reg(fpp.cur_pos.y), reg(fpp.cpu.jump_height)) > top {
             self.cpu_finish_neutral(f);
             return;
         }
-        if fpp.x2168 != 0 {
+        if fpp.hammer_music != 0 {
             // `ftCo_CpuDoubleJumpAfterDelay`.
             self.cpu_neutral_stick(f);
             self.cpu_cmd1(f, cmd::WAIT_FOR, 10);
             self.cpu_jump_tap(f);
             return;
         }
-        let d = fp::fsubs(reg(fpp.cpu.x54.x), reg(fpp.cur_pos.x));
+        let d = fp::fsubs(reg(fpp.cpu.destination.x), reg(fpp.cur_pos.x));
         let d = if d < 0.0 { fp::fneg(d) } else { d };
         self.cpu_cmd(f, cmd::RELEASE_Y);
         if d > 30.0 {
@@ -263,7 +263,7 @@ impl Running<'_> {
     fn cpu_recover_air(&mut self, f: FighterId) {
         if self.cpu_should_recover(f) {
             let fpp = &self.game.fighters[f.0];
-            if fpp.co_attrs.max_jumps > i32::from(fpp.x1968_jumpsUsed) {
+            if fpp.co_attrs.max_jumps > i32::from(fpp.jumps_used) {
                 self.cpu_cmd1(f, cmd::LSTICK_TOWARD_DESTINATION, 0x7F);
                 self.cpu_cmd(f, cmd::PRESS_Y);
                 self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
@@ -276,8 +276,8 @@ impl Running<'_> {
         }
         let fpp = &self.game.fighters[f.0];
         let c = &fpp.cpu;
-        if c.xFA_b5 {
-            let dx = fp::fsubs(reg(c.x54.x), reg(fpp.cur_pos.x));
+        if c.drifting_back {
+            let dx = fp::fsubs(reg(c.destination.x), reg(fpp.cur_pos.x));
             let x_time = if nearly_zero(reg(fpp.pos_delta.x)) {
                 1000.0
             } else {
@@ -323,7 +323,7 @@ impl Running<'_> {
                 fp::frsp(f64::from(c.level.wrapping_add(1))),
                 80.0,
             ));
-            if x_time < 0.0 || predicted_y < reg(c.x54.y) {
+            if x_time < 0.0 || predicted_y < reg(c.destination.y) {
                 self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, stick as u8);
             } else {
                 self.cpu_cmd1(f, cmd::SET_LSTICK_X, 0);
@@ -331,7 +331,7 @@ impl Running<'_> {
             self.cpu_finish_neutral_y(f);
             return;
         }
-        let (pos, dest) = (fpp.cur_pos, (c.x54.x, c.x54.y));
+        let (pos, dest) = (fpp.cur_pos, (c.destination.x, c.destination.y));
         let ceiling = self
             .game
             .geometry
@@ -350,7 +350,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A3498")]
     fn cpu_should_recover(&self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
-        if fpp.cpu.xFA_b5 || fpp.ground_or_air != super::common::GA_AIR {
+        if fpp.cpu.drifting_back || fpp.ground_or_air != super::common::GA_AIR {
             return false;
         }
         if fpp.pos_delta.y > 0.0 {
@@ -366,7 +366,7 @@ impl Running<'_> {
             reg(fpp.coll_data.cur_pos.y),
             reg(fpp.coll_data.ecb.bottom.y),
         );
-        reg(fpp.cpu.x54.y) > fp::fadds(reg(fpp.cpu.x568), feet)
+        reg(fpp.cpu.destination.y) > fp::fadds(reg(fpp.cpu.hurt_top), feet)
     }
 
     /// Hanging from a ledge, `ftCo_800ACB44` (behavior 6): still catching it, the stick
@@ -397,7 +397,7 @@ impl Running<'_> {
             return;
         };
         let d = self.cpu_distance(f, target);
-        if self.game.fighters[f.0].cpu.xF9_b2 && d < 30.0 {
+        if self.game.fighters[f.0].cpu.acts_alone && d < 30.0 {
             let r = reg(self.game.objs.rng.draw_f32());
             let level = self.game.fighters[f.0].cpu.level;
             if fp::fmuls(reg(0.1), fp::frsp(f64::from(level))) > r {

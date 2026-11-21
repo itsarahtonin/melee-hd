@@ -152,14 +152,14 @@ fn queue_owner(maps: &Maps, head: u32) -> QueueOwner {
 impl QueueOwner {
     fn head(self, r: &Running) -> Option<ef::QueuedId> {
         match self {
-            QueueOwner::Fighter(f) => r.game.fighters[f.0].x60C,
+            QueueOwner::Fighter(f) => r.game.fighters[f.0].effect_queue,
             QueueOwner::Item(i) => r.game.items[i.0].xBC0,
         }
     }
 
     fn set_head(self, r: &mut Running, head: Option<ef::QueuedId>) {
         match self {
-            QueueOwner::Fighter(f) => r.game.fighters[f.0].x60C = head,
+            QueueOwner::Fighter(f) => r.game.fighters[f.0].effect_queue = head,
             QueueOwner::Item(i) => r.game.items[i.0].xBC0 = head,
         }
     }

@@ -265,8 +265,8 @@ fn slippi_off_screen_damage_ignores_the_display_pass() {
             let slots: Vec<u32> = g.fighters.iter().map(|(i, _)| i).collect();
             for i in slots {
                 let f = &mut g.fighters[i];
-                f.x221F_b0 = junk.bool();
-                f.x2188 = S32Vec2 {
+                f.off_screen = junk.bool();
+                f.screen_pos = S32Vec2 {
                     x: junk.next() as i32 % 700,
                     y: junk.next() as i32 % 500,
                 };

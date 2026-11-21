@@ -146,8 +146,8 @@ impl Running<'_> {
     #[doc(alias = "ftLg_SpecialS_SetGFX")]
     pub fn lg_special_s_set_gfx(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        if !fp.x2219_b0 {
-            fp.x2219_b0 = true;
+        if !fp.effect_once {
+            fp.effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
     }
@@ -166,7 +166,7 @@ impl Running<'_> {
         let timer = fp::frsp(f64::from(i32::from(fp.active_sticky.lstick.x)));
         if timer < smash {
             fp.set_mv_i32(mv::CHARGE, fp::fctiwz(charge));
-            fp.x2070[2] |= 0x08;
+            fp.attack_flags[2] |= 0x08;
         } else {
             fp.set_mv_i32(mv::CHARGE, 0);
         }
@@ -185,7 +185,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let cut = reg(self.missile_attr(f, m, at::SPEED_CUT));
         let fp = &mut self.game.fighters[f.0];
-        fp.x21EC = Some(CodeRef(m.set_vars));
+        fp.motion_change_cb = Some(CodeRef(m.set_vars));
         fp.gr_vel = mem(fp::fdivs(reg(fp.gr_vel), cut));
         self.change_motion_state(gobj, m.start[0], 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
@@ -199,7 +199,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let cut = reg(self.missile_attr(f, m, at::SPEED_CUT));
         let fp = &mut self.game.fighters[f.0];
-        fp.x21EC = Some(CodeRef(m.set_vars));
+        fp.motion_change_cb = Some(CodeRef(m.set_vars));
         fp.self_vel.x = mem(fp::fdivs(reg(fp.self_vel.x), cut));
         fp.self_vel.y = 0.0;
         self.change_motion_state(gobj, m.start[1], 0, 0.0, 1.0, 0.0, None);
@@ -427,7 +427,7 @@ impl Running<'_> {
     fn missile_launch_tick(&mut self, gobj: GObjId, m: &Missile, grounded: bool) {
         let f = self.game.fighter_id(gobj);
         if !self.missile_misfires(gobj, m)
-            && self.game.fighters[f.0].x914[0].state == hitcapsule::ENABLED
+            && self.game.fighters[f.0].hitboxes[0].state == hitcapsule::ENABLED
         {
             let charge = fp::frsp(f64::from(self.game.fighters[f.0].mv_i32(mv::CHARGE)));
             let slope = reg(self.missile_attr(f, m, at::DAMAGE_SLOPE));
@@ -513,10 +513,10 @@ impl Running<'_> {
         self.destroy_effects(gobj);
         match m.launch_gfx {
             LaunchGfx::Spawn { effect, bone } => {
-                if !self.game.fighter(gobj).x2219_b0 {
+                if !self.game.fighter(gobj).effect_once {
                     let j = self.bone_joint(gobj, bone);
                     spawn(self, effect, Some(gobj), &[Arg::JObj(j)]);
-                    self.game.fighter_mut(gobj).x2219_b0 = true;
+                    self.game.fighter_mut(gobj).effect_once = true;
                 }
                 self.set_effect_hitlag_cbs(gobj);
                 self.game.fighter_mut(gobj).accessory4_cb = None;
@@ -689,7 +689,7 @@ impl Running<'_> {
         let frame = fp.cur_anim_frame;
         self.change_motion_state(gobj, m.fly, m.fly_flags, frame, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
-        fp.x21F8 = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
+        fp.turn_cb = Some(CodeRef(super::super::phys::SPEED_TOWARD_FACING));
         fp.deal_dmg_cb = Some(CodeRef(m.on_give_damage));
     }
 

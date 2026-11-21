@@ -118,7 +118,7 @@ impl Running<'_> {
         let a = self
             .game
             .fighter(gobj)
-            .x2CC
+            .cargo_attrs
             .expect("a heavy carrier without cargo attributes");
         let b = &self.game.fighter_attrs[a.0];
         i32::from_be_bytes(b[0..4].try_into().unwrap()).wrapping_add(step)
@@ -471,7 +471,7 @@ impl Running<'_> {
     #[doc(alias = "ftDk_HeavyWait2_Anim")]
     pub fn dk_heavy_wait2_anim(&mut self, gobj: GObjId) {
         self.damage_tick(gobj);
-        if !self.game.fighter(gobj).x221C_b6 {
+        if !self.game.fighter(gobj).in_hitstun {
             if self.is_airborne(gobj) {
                 self.enter_dk_heavy_fall(gobj);
             } else {

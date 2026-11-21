@@ -971,7 +971,10 @@ impl Importer<'_> {
         // (`game::player_codes`).
         *self.game.player_code_state.sdi_count(id.0 as usize) = mem.u8(a + SDI_COUNT);
         // Its DObj lists: the main model's and the second model's first `count` DObjs.
-        for (list, at) in [(f.dobj_list.data, a + 0x5EC), (f.x203C.data, a + 0x203C)] {
+        for (list, at) in [
+            (f.dobj_list.data, a + 0x5EC),
+            (f.second_dobjs.data, a + 0x203C),
+        ] {
             if let Some(l) = list {
                 let (count, data) = (self.u32(at), self.u32(at + 4));
                 let dobjs = (0..count)
@@ -1081,7 +1084,7 @@ impl Importer<'_> {
         if f.motion_id == 0x14D {
             f.mv.import_gobj(0x0, &mem, mv, self);
         }
-        if f.x21EC == Some(melee_sim::game::handles::CodeRef(0x800D_E798)) {
+        if f.motion_change_cb == Some(melee_sim::game::handles::CodeRef(0x800D_E798)) {
             f.mv.import_gobj(0xC, &mem, mv, self);
         }
         self.game.fighters[id.0] = f;

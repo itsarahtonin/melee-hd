@@ -87,7 +87,7 @@ impl Running<'_> {
             return false;
         }
         let fp = self.game.fighter(gobj);
-        if fp.input.held_buttons[0] & PAD_DPAD_DOWN != 0 || fp.x682 != 1 {
+        if fp.input.held_buttons[0] & PAD_DPAD_DOWN != 0 || fp.frames_since_pad_down != 1 {
             return false;
         }
         for i in 0..6 {
@@ -116,7 +116,7 @@ impl Running<'_> {
         fp.set_mv_i32(mv::APPEAL_COUNT, 0);
         let left = i32::from(fp.facing_dir != 1.0);
         fp.set_mv_i32(mv::APPEAL_FACING, left);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         let msid = STATES[left as usize][0];
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
     }

@@ -1558,169 +1558,248 @@ pub struct CpuFighter {
     /// +0x10
     pub level: i32,
     /// +0x14
-    pub x14: i32,
+    #[doc(alias("x14"))]
+    pub spawn_arg: i32,
     /// +0x18
-    pub x18: i32,
+    #[doc(alias("x18"))]
+    pub behavior: i32,
     /// +0x1c
-    pub x1C: i32,
+    #[doc(alias("x1C"))]
+    pub default_behavior: i32,
     /// +0x20
-    pub x20: i32,
+    #[doc(alias("x20"))]
+    pub alt_behavior: i32,
     /// +0x24
-    pub x24: i32,
+    #[doc(alias("x24"))]
+    pub unread_24: i32,
     /// +0x28
-    pub x28: i32,
+    #[doc(alias("x28"))]
+    pub unread_28: i32,
     /// +0x2c
-    pub x2C: i32,
+    #[doc(alias("x2C"))]
+    pub item_worth_min: i32,
     /// +0x30
-    pub x30: i32,
+    #[doc(alias("x30"))]
+    pub retarget_timer: i32,
     /// +0x34
-    pub x34: i32,
+    #[doc(alias("x34"))]
+    pub ranged_delay: i32,
     /// +0x38
-    pub x38: f32,
+    #[doc(alias("x38"))]
+    pub destination_reach: f32,
     /// +0x3c
-    pub x3C: f32,
+    #[doc(alias("x3C"))]
+    pub walk_far: f32,
     /// +0x40
-    pub x40: f32,
+    #[doc(alias("x40"))]
+    pub keep_away_distance: f32,
     /// +0x44
-    pub x44: Option<FighterId>,
+    #[doc(alias("x44"))]
+    pub target: Option<FighterId>,
     /// +0x48
-    pub x48: Option<FighterId>,
+    #[doc(alias("x48"))]
+    pub last_target: Option<FighterId>,
     /// +0x4c
-    pub x4C: Option<ItemId>,
+    #[doc(alias("x4C"))]
+    pub item_target: Option<ItemId>,
     /// +0x50
-    pub x50: Option<ItemId>,
+    #[doc(alias("x50"))]
+    pub enemy_item: Option<ItemId>,
     /// +0x54
-    pub x54: Vec2,
+    #[doc(alias("x54"))]
+    pub destination: Vec2,
     /// +0x5c
-    pub x5C: f32,
+    #[doc(alias("x5C"))]
+    pub destination_distance: f32,
     /// +0x60
-    pub x60: i32,
+    #[doc(alias("x60"))]
+    pub destination_timer: i32,
     /// +0x64
-    pub x64: Vec2,
+    #[doc(alias("x64"))]
+    pub home: Vec2,
     /// +0x6c
-    pub x6C: Vec2,
+    #[doc(alias("x6C"))]
+    pub attack_reach_0: Vec2,
     /// +0x74
-    pub x74: Vec2,
+    #[doc(alias("x74"))]
+    pub attack_reach_1: Vec2,
     /// +0x7c
-    pub x7C: i32,
+    #[doc(alias("x7C"))]
+    pub frame_counter: i32,
     /// +0x80
-    pub x80: i32,
+    #[doc(alias("x80"))]
+    pub hold_back_counter: i32,
     /// +0x84
-    pub x84: i32,
+    #[doc(alias("x84"))]
+    pub stage_read_count: i32,
     /// +0x88
-    pub x88: i32,
+    #[doc(alias("x88"))]
+    pub stand_timer: i32,
     /// +0x8c
-    pub x8C: i32,
+    #[doc(alias("x8C"))]
+    pub stand_kind: i32,
     /// +0x90
-    pub x90: i32,
+    #[doc(alias("x90"))]
+    pub ranged_count: i32,
     /// +0x94
-    pub x94: i32,
+    #[doc(alias("x94"))]
+    pub hold_choice: i32,
     /// +0x98
-    pub x98: Vec3,
+    #[doc(alias("x98"))]
+    pub spawn_pos: Vec3,
     /// +0xa4
-    pub xA4: i32,
+    #[doc(alias("xA4"))]
+    pub command: i32,
     /// +0xa8
-    pub xA8_array: [i32; 8],
+    #[doc(alias("xA8_array"))]
+    pub allowed_commands: [i32; 8],
     /// +0xc8
-    pub xC8: u8,
+    #[doc(alias("xC8"))]
+    pub allowed_count: u8,
     /// +0xc9
-    pub pad_xC9: [u8; 3],
+    #[doc(alias("pad_xC9"))]
+    pub pad_c9: [u8; 3],
     /// +0xcc
-    pub xCC_array: [i32; 8],
+    #[doc(alias("xCC_array"))]
+    pub ruled_out_commands: [i32; 8],
     /// +0xec
-    pub xEC: u8,
+    #[doc(alias("xEC"))]
+    pub ruled_out_count: u8,
     /// +0xed
-    pub pad_xED: [u8; 3],
+    #[doc(alias("pad_xED"))]
+    pub pad_ed: [u8; 3],
     /// +0xf0
-    pub xF0: Option<FighterId>,
+    #[doc(alias("xF0"))]
+    pub threat_fighter: Option<FighterId>,
     /// +0xf4
-    pub xF4: Option<ItemId>,
+    #[doc(alias("xF4"))]
+    pub threat_item: Option<ItemId>,
     /// +0xf8 (bits 0..+1)
-    pub xF8_b0: bool,
+    #[doc(alias("xF8_b0"))]
+    pub fear_target: bool,
     /// +0xf8 (bits 1..+2)
-    pub xF8_b12: u8,
+    #[doc(alias("xF8_b12"))]
+    pub threat_kind: u8,
     /// +0xf8 (bits 3..+2)
-    pub xF8_b34: u8,
+    #[doc(alias("xF8_b34"))]
+    pub jump_kind: u8,
     /// +0xf8 (bits 5..+1)
-    pub xF8_b5: bool,
+    #[doc(alias("xF8_b5"))]
+    pub coin_flip: bool,
     /// +0xf8 (bits 6..+1)
-    pub xF8_b6: bool,
+    #[doc(alias("xF8_b6"))]
+    pub near_target: bool,
     /// +0xf8 (bits 7..+1)
-    pub xF8_b7: bool,
+    #[doc(alias("xF8_b7"))]
+    pub attacking: bool,
     /// +0xf9 (bits 0..+1)
-    pub xF9_b0: bool,
+    #[doc(alias("xF9_b0"))]
+    pub keeps_target: bool,
     /// +0xf9 (bits 1..+1)
-    pub xF9_b1: bool,
+    #[doc(alias("xF9_b1"))]
+    pub fleeing: bool,
     /// +0xf9 (bits 2..+1)
-    pub xF9_b2: bool,
+    #[doc(alias("xF9_b2"))]
+    pub acts_alone: bool,
     /// +0xf9 (bits 3..+1)
-    pub xF9_b3: bool,
+    #[doc(alias("xF9_b3"))]
+    pub may_jump_attack: bool,
     /// +0xf9 (bits 4..+1)
-    pub xF9_b4: bool,
+    #[doc(alias("xF9_b4"))]
+    pub may_air_attack: bool,
     /// +0xf9 (bits 5..+1)
-    pub xF9_b5: bool,
+    #[doc(alias("xF9_b5"))]
+    pub may_ranged_attack: bool,
     /// +0xf9 (bits 6..+1)
-    pub xF9_b6: bool,
+    #[doc(alias("xF9_b6"))]
+    pub may_shield: bool,
     /// +0xf9 (bits 7..+1)
-    pub xF9_b7: bool,
+    #[doc(alias("xF9_b7"))]
+    pub may_pick_up: bool,
     /// +0xfa (bits 0..+1)
-    pub xFA_b0: bool,
+    #[doc(alias("xFA_b0"))]
+    pub unused_fa_b0: bool,
     /// +0xfa (bits 1..+1)
-    pub xFA_b1: bool,
+    #[doc(alias("xFA_b1"))]
+    pub tech_shield: bool,
     /// +0xfa (bits 2..+1)
-    pub xFA_b2: bool,
+    #[doc(alias("xFA_b2"))]
+    pub ledge_picked: bool,
     /// +0xfa (bits 3..+2)
-    pub xFA_b34: u8,
+    #[doc(alias("xFA_b34"))]
+    pub human_target_rule: u8,
     /// +0xfa (bits 5..+1)
-    pub xFA_b5: bool,
+    #[doc(alias("xFA_b5"))]
+    pub drifting_back: bool,
     /// +0xfa (bits 6..+1)
-    pub xFA_b6: bool,
+    #[doc(alias("xFA_b6"))]
+    pub off_stage: bool,
     /// +0xfa (bits 7..+1)
-    pub xFA_b7: bool,
+    #[doc(alias("xFA_b7"))]
+    pub follows_popo: bool,
     /// +0xfb (bits 0..+1)
-    pub xFB_b0: bool,
+    #[doc(alias("xFB_b0"))]
+    pub nana_recovering: bool,
     /// +0xfb (bits 1..+1)
-    pub xFB_b1: bool,
+    #[doc(alias("xFB_b1"))]
+    pub unused_fb_b1: bool,
     /// +0xfb (bits 2..+1)
-    pub xFB_b2: bool,
+    #[doc(alias("xFB_b2"))]
+    pub unused_fb_b2: bool,
     /// +0xfb (bits 3..+1)
-    pub xFB_b3: bool,
+    #[doc(alias("xFB_b3"))]
+    pub unused_fb_b3: bool,
     /// +0xfb (bits 4..+1)
-    pub xFB_b4: bool,
+    #[doc(alias("xFB_b4"))]
+    pub unused_fb_b4: bool,
     /// +0xfb (bits 5..+1)
-    pub xFB_b5: bool,
+    #[doc(alias("xFB_b5"))]
+    pub unused_fb_b5: bool,
     /// +0xfb (bits 6..+1)
-    pub xFB_b6: bool,
+    #[doc(alias("xFB_b6"))]
+    pub unused_fb_b6: bool,
     /// +0xfb (bits 7..+1)
-    pub xFB_b7: bool,
+    #[doc(alias("xFB_b7"))]
+    pub unused_fb_b7: bool,
     /// +0xfc
-    pub xFC: [Fighter_x1A88_xFC_t; 30],
+    #[doc(alias("xFC"))]
+    pub partner_inputs: [Fighter_x1A88_xFC_t; 30],
     /// +0x444
-    pub x444: CpuInputRef444,
+    #[doc(alias("x444"))]
+    pub partner_input_write: CpuInputRef444,
     /// +0x448
-    pub x448: CpuInputRef448,
+    #[doc(alias("x448"))]
+    pub partner_input_read: CpuInputRef448,
     /// +0x44c
     pub command_duration: u32,
     /// +0x450
-    pub csP: CpuCsP,
+    #[doc(alias("csP"))]
+    pub script_cursor: CpuCsP,
     /// +0x454
     pub buffer: [i8; 256],
     /// +0x554
     pub write_pos: CpuWritePos,
     /// +0x558
-    pub x558: f32,
+    #[doc(alias("x558"))]
+    pub jump_height: f32,
     /// +0x55c
-    pub x55C: f32,
+    #[doc(alias("x55C"))]
+    pub hurt_behind: f32,
     /// +0x560
-    pub x560: f32,
+    #[doc(alias("x560"))]
+    pub hurt_ahead: f32,
     /// +0x564
-    pub x564: f32,
+    #[doc(alias("x564"))]
+    pub hurt_middle: f32,
     /// +0x568
-    pub x568: f32,
+    #[doc(alias("x568"))]
+    pub hurt_top: f32,
     /// +0x56c
-    pub x56C: f32,
+    #[doc(alias("x56C"))]
+    pub reach: f32,
     /// +0x570
-    pub x570: f32,
+    #[doc(alias("x570"))]
+    pub reach_scale: f32,
     /// +0x574
     pub half_width: f32,
     /// +0x578
@@ -1737,88 +1816,88 @@ impl Default for CpuFighter {
             rtrigger: 0,
             kind: 0,
             level: 0,
-            x14: 0,
-            x18: 0,
-            x1C: 0,
-            x20: 0,
-            x24: 0,
-            x28: 0,
-            x2C: 0,
-            x30: 0,
-            x34: 0,
-            x38: 0.0,
-            x3C: 0.0,
-            x40: 0.0,
-            x44: None,
-            x48: None,
-            x4C: None,
-            x50: None,
-            x54: Default::default(),
-            x5C: 0.0,
-            x60: 0,
-            x64: Default::default(),
-            x6C: Default::default(),
-            x74: Default::default(),
-            x7C: 0,
-            x80: 0,
-            x84: 0,
-            x88: 0,
-            x8C: 0,
-            x90: 0,
-            x94: 0,
-            x98: Default::default(),
-            xA4: 0,
-            xA8_array: [0; 8],
-            xC8: 0,
-            pad_xC9: [0; 3],
-            xCC_array: [0; 8],
-            xEC: 0,
-            pad_xED: [0; 3],
-            xF0: None,
-            xF4: None,
-            xF8_b0: false,
-            xF8_b12: 0,
-            xF8_b34: 0,
-            xF8_b5: false,
-            xF8_b6: false,
-            xF8_b7: false,
-            xF9_b0: false,
-            xF9_b1: false,
-            xF9_b2: false,
-            xF9_b3: false,
-            xF9_b4: false,
-            xF9_b5: false,
-            xF9_b6: false,
-            xF9_b7: false,
-            xFA_b0: false,
-            xFA_b1: false,
-            xFA_b2: false,
-            xFA_b34: 0,
-            xFA_b5: false,
-            xFA_b6: false,
-            xFA_b7: false,
-            xFB_b0: false,
-            xFB_b1: false,
-            xFB_b2: false,
-            xFB_b3: false,
-            xFB_b4: false,
-            xFB_b5: false,
-            xFB_b6: false,
-            xFB_b7: false,
-            xFC: core::array::from_fn(|_| Default::default()),
-            x444: Default::default(),
-            x448: Default::default(),
+            spawn_arg: 0,
+            behavior: 0,
+            default_behavior: 0,
+            alt_behavior: 0,
+            unread_24: 0,
+            unread_28: 0,
+            item_worth_min: 0,
+            retarget_timer: 0,
+            ranged_delay: 0,
+            destination_reach: 0.0,
+            walk_far: 0.0,
+            keep_away_distance: 0.0,
+            target: None,
+            last_target: None,
+            item_target: None,
+            enemy_item: None,
+            destination: Default::default(),
+            destination_distance: 0.0,
+            destination_timer: 0,
+            home: Default::default(),
+            attack_reach_0: Default::default(),
+            attack_reach_1: Default::default(),
+            frame_counter: 0,
+            hold_back_counter: 0,
+            stage_read_count: 0,
+            stand_timer: 0,
+            stand_kind: 0,
+            ranged_count: 0,
+            hold_choice: 0,
+            spawn_pos: Default::default(),
+            command: 0,
+            allowed_commands: [0; 8],
+            allowed_count: 0,
+            pad_c9: [0; 3],
+            ruled_out_commands: [0; 8],
+            ruled_out_count: 0,
+            pad_ed: [0; 3],
+            threat_fighter: None,
+            threat_item: None,
+            fear_target: false,
+            threat_kind: 0,
+            jump_kind: 0,
+            coin_flip: false,
+            near_target: false,
+            attacking: false,
+            keeps_target: false,
+            fleeing: false,
+            acts_alone: false,
+            may_jump_attack: false,
+            may_air_attack: false,
+            may_ranged_attack: false,
+            may_shield: false,
+            may_pick_up: false,
+            unused_fa_b0: false,
+            tech_shield: false,
+            ledge_picked: false,
+            human_target_rule: 0,
+            drifting_back: false,
+            off_stage: false,
+            follows_popo: false,
+            nana_recovering: false,
+            unused_fb_b1: false,
+            unused_fb_b2: false,
+            unused_fb_b3: false,
+            unused_fb_b4: false,
+            unused_fb_b5: false,
+            unused_fb_b6: false,
+            unused_fb_b7: false,
+            partner_inputs: core::array::from_fn(|_| Default::default()),
+            partner_input_write: Default::default(),
+            partner_input_read: Default::default(),
             command_duration: 0,
-            csP: Default::default(),
+            script_cursor: Default::default(),
             buffer: [0; 256],
             write_pos: Default::default(),
-            x558: 0.0,
-            x55C: 0.0,
-            x560: 0.0,
-            x564: 0.0,
-            x568: 0.0,
-            x56C: 0.0,
-            x570: 0.0,
+            jump_height: 0.0,
+            hurt_behind: 0.0,
+            hurt_ahead: 0.0,
+            hurt_middle: 0.0,
+            hurt_top: 0.0,
+            reach: 0.0,
+            reach_scale: 0.0,
             half_width: 0.0,
             half_height: 0.0,
         }
@@ -2055,7 +2134,8 @@ pub struct Fighter {
     /// +0x4
     pub kind: i32,
     /// +0x8
-    pub x8_spawnNum: i32,
+    #[doc(alias("x8_spawnNum"))]
+    pub spawn_num: i32,
     /// +0xc
     pub player_idx: u8,
     /// +0x10
@@ -2063,35 +2143,47 @@ pub struct Fighter {
     /// +0x14
     pub anim_id: i32,
     /// +0x18
-    pub x18: i32,
+    #[doc(alias("x18"))]
+    pub own_msid_start: i32,
     /// +0x1c
-    pub x1C_actionStateList: RawPtr,
+    #[doc(alias("x1C_actionStateList"))]
+    pub common_motion_states: RawPtr,
     /// +0x20
-    pub x20_actionStateList: RawPtr,
+    #[doc(alias("x20_actionStateList"))]
+    pub own_motion_states: RawPtr,
     /// +0x24
-    pub x24: Option<DataRef>,
+    #[doc(alias("x24"))]
+    pub anim_table: Option<DataRef>,
     /// +0x28
-    pub x28: Option<DataRef>,
+    #[doc(alias("x28"))]
+    pub anim_flags: Option<DataRef>,
     /// +0x2c
     pub facing_dir: f32,
     /// +0x30
     pub facing_dir1: f32,
     /// +0x34
-    pub x34_scale: Vec3,
+    #[doc(alias("x34_scale"))]
+    pub scale: Vec3,
     /// +0x40
-    pub x40: f32,
+    #[doc(alias("x40"))]
+    pub platform_offset: f32,
     /// +0x44
-    pub x44_mtx: [[f32; 4]; 3],
+    #[doc(alias("x44_mtx"))]
+    pub depth_scale_mtx: [[f32; 4]; 3],
     /// +0x74
-    pub x74_self_accel: Vec3,
+    #[doc(alias("x74_self_accel"))]
+    pub anim_vel: Vec3,
     /// +0x80
     pub self_vel: Vec3,
     /// +0x8c
-    pub x8c_kb_vel: Vec3,
+    #[doc(alias("x8c_kb_vel"))]
+    pub kb_vel: Vec3,
     /// +0x98
-    pub x98_atk_shield_kb: Vec3,
+    #[doc(alias("x98_atk_shield_kb"))]
+    pub atk_shield_kb_vel: Vec3,
     /// +0xa4
-    pub xA4_unk_vel: Vec3,
+    #[doc(alias("xA4_unk_vel"))]
+    pub item_bounce_vel: Vec3,
     /// +0xb0
     pub cur_pos: Vec3,
     /// +0xbc
@@ -2099,91 +2191,126 @@ pub struct Fighter {
     /// +0xc8
     pub pos_delta: Vec3,
     /// +0xd4
-    pub xD4_unk_vel: Vec3,
+    #[doc(alias("xD4_unk_vel"))]
+    pub frame_vel: Vec3,
     /// +0xe0
     pub ground_or_air: i32,
     /// +0xe4
-    pub xE4_ground_accel_1: f32,
+    #[doc(alias("xE4_ground_accel_1"))]
+    pub ground_accel_1: f32,
     /// +0xe8
-    pub xE8_ground_accel_2: f32,
+    #[doc(alias("xE8_ground_accel_2"))]
+    pub ground_accel_2: f32,
     /// +0xec
     pub gr_vel: f32,
     /// +0xf0
-    pub xF0_ground_kb_vel: f32,
+    #[doc(alias("xF0_ground_kb_vel"))]
+    pub ground_kb_vel: f32,
     /// +0xf4
-    pub xF4_ground_attacker_shield_kb_vel: f32,
+    #[doc(alias("xF4_ground_attacker_shield_kb_vel"))]
+    pub ground_attacker_shield_kb_vel: f32,
     /// +0xf8
-    pub xF8_playerNudgeVel: Vec2,
+    #[doc(alias("xF8_playerNudgeVel"))]
+    pub nudge_vel: Vec2,
     /// +0x100
-    pub x100: f32,
+    #[doc(alias("x100"))]
+    pub part_35_rot_x: f32,
     /// +0x104
-    pub x104: u8,
+    #[doc(alias("x104"))]
+    pub freeze_step_timer: u8,
     /// +0x105
-    pub x105: i8,
+    #[doc(alias("x105"))]
+    pub pad_105: i8,
     /// +0x106
-    pub x106: i8,
+    #[doc(alias("x106"))]
+    pub pad_106: i8,
     /// +0x107
-    pub x107: i8,
+    #[doc(alias("x107"))]
+    pub pad_107: i8,
     /// +0x108
-    pub x108_costume_joint: Option<DataRef>,
+    #[doc(alias("x108_costume_joint"))]
+    pub costume_joint: Option<DataRef>,
     /// +0x10c
     pub ft_data: Option<DataRef>,
     /// +0x110
     pub co_attrs: ftCo_DatAttrs,
     /// +0x294
-    pub x294_itPickup: itPickup,
+    #[doc(alias("x294_itPickup"))]
+    pub item_pickup: itPickup,
     /// +0x2c4
-    pub x2C4: Vec2,
+    #[doc(alias("x2C4"))]
+    pub push_size: Vec2,
     /// +0x2cc
-    pub x2CC: Option<AttrsId>,
+    #[doc(alias("x2CC"))]
+    pub cargo_attrs: Option<AttrsId>,
     /// +0x2d0
-    pub x2D0: Option<AttrsId>,
+    #[doc(alias("x2D0"))]
+    pub multi_jump_attrs: Option<AttrsId>,
     /// +0x2d4
     pub dat_attrs: Option<AttrsId>,
     /// +0x2d8
     pub dat_attrs_backup: Option<AttrsId>,
     /// +0x2dc
-    pub x2DC: f32,
+    #[doc(alias("x2DC"))]
+    pub walk_slow_frames: f32,
     /// +0x2e0
-    pub x2E0: f32,
+    #[doc(alias("x2E0"))]
+    pub walk_middle_frames: f32,
     /// +0x2e4
-    pub x2E4: f32,
+    #[doc(alias("x2E4"))]
+    pub walk_fast_frames: f32,
     /// +0x2e8
-    pub x2E8: f32,
+    #[doc(alias("x2E8"))]
+    pub guard_on_frames: f32,
     /// +0x2ec
-    pub x2EC: f32,
+    #[doc(alias("x2EC"))]
+    pub landing_fall_special_frames: f32,
     /// +0x2f0
     pub dynamic_bone_sets: DynamicBoneSets,
     /// +0x3e0
     pub dynamics_num: i32,
     /// +0x3e4
-    pub x3E4_fighterCmdScript: CommandInfo,
+    #[doc(alias("x3E4_fighterCmdScript"))]
+    pub cmd_script: CommandInfo,
     /// +0x408
-    pub x408: ColorOverlay,
+    #[doc(alias("x408"))]
+    pub main_overlay: ColorOverlay,
     /// +0x488
-    pub x488: ColorOverlay,
+    #[doc(alias("x488"))]
+    pub secondary_overlay: ColorOverlay,
     /// +0x508
-    pub x508: ColorOverlay,
+    #[doc(alias("x508"))]
+    pub spycloak_overlay: ColorOverlay,
     /// +0x588
-    pub x588: Option<LObjId>,
+    #[doc(alias("x588"))]
+    pub light: Option<LObjId>,
     /// +0x58c
-    pub x58C: u32,
+    #[doc(alias("x58C"))]
+    pub anim_count: u32,
     /// +0x590
-    pub x590: ActionTree,
+    #[doc(alias("x590"))]
+    pub action_tree: ActionTree,
     /// +0x594
-    pub x594: [u8; 4],
+    #[doc(alias("x594"))]
+    pub anim_bits: [u8; 4],
     /// +0x598
-    pub x598: SecondTree,
+    #[doc(alias("x598"))]
+    pub second_tree: SecondTree,
     /// +0x59c
-    pub x59C: Option<AnimBufId>,
+    #[doc(alias("x59C"))]
+    pub main_anim_buf: Option<AnimBufId>,
     /// +0x5a0
-    pub x5A0: Option<AnimBufId>,
+    #[doc(alias("x5A0"))]
+    pub second_anim_buf: Option<AnimBufId>,
     /// +0x5a4
-    pub x5A4: u32,
+    #[doc(alias("x5A4"))]
+    pub main_anim_aram: u32,
     /// +0x5a8
-    pub x5A8: u32,
+    #[doc(alias("x5A8"))]
+    pub second_anim_aram: u32,
     /// +0x5ac
-    pub x5AC: FtPartsVis,
+    #[doc(alias("x5AC"))]
+    pub parts_vis: FtPartsVis,
     /// +0x5cc
     pub tobj_list: CostumeTObjList,
     /// +0x5e8
@@ -2191,11 +2318,14 @@ pub struct Fighter {
     /// +0x5ec
     pub dobj_list: DObjList,
     /// +0x5f4
-    pub x5F4_arr: [Fighter_x5F4_arr; 12],
+    #[doc(alias("x5F4_arr"))]
+    pub model_variants: [Fighter_x5F4_arr; 12],
     /// +0x60c
-    pub x60C: Option<QueuedId>,
+    #[doc(alias("x60C"))]
+    pub effect_queue: Option<QueuedId>,
     /// +0x610
-    pub x610_color_rgba: [_GXColor; 2],
+    #[doc(alias("x610_color_rgba"))]
+    pub overlay_colors: [_GXColor; 2],
     /// +0x618
     pub pad_port: u8,
     /// +0x619
@@ -2205,11 +2335,14 @@ pub struct Fighter {
     /// +0x61b
     pub team: u8,
     /// +0x61c
-    pub x61C: i8,
+    #[doc(alias("x61C"))]
+    pub slot_word: i8,
     /// +0x61d
-    pub x61D: u8,
+    #[doc(alias("x61D"))]
+    pub alpha: u8,
     /// +0x61e
-    pub filler_x61E: [u8; 2],
+    #[doc(alias("filler_x61E"))]
+    pub pad_61e: [u8; 2],
     /// +0x620
     pub input: Fighter_input,
     /// +0x670
@@ -2221,155 +2354,217 @@ pub struct Fighter {
     /// +0x679
     pub activity_timer: FtInputTimers,
     /// +0x67c
-    pub x67C: u8,
+    #[doc(alias("x67C"))]
+    pub frames_since_smash_x: u8,
     /// +0x67d
-    pub x67D: u8,
+    #[doc(alias("x67D"))]
+    pub frames_since_smash_up: u8,
     /// +0x67e
-    pub x67E: u8,
+    #[doc(alias("x67E"))]
+    pub frames_since_tap_up: u8,
     /// +0x67f
-    pub x67F: u8,
+    #[doc(alias("x67F"))]
+    pub frames_since_shoulder: u8,
     /// +0x680
-    pub x680: u8,
+    #[doc(alias("x680"))]
+    pub frames_since_tech_shoulder: u8,
     /// +0x681
-    pub x681: u8,
+    #[doc(alias("x681"))]
+    pub frames_since_pad_up: u8,
     /// +0x682
-    pub x682: u8,
+    #[doc(alias("x682"))]
+    pub frames_since_pad_down: u8,
     /// +0x683
-    pub x683: u8,
+    #[doc(alias("x683"))]
+    pub frames_since_z: u8,
     /// +0x684
-    pub x684: u8,
+    #[doc(alias("x684"))]
+    pub frames_since_tech_window: u8,
     /// +0x685
-    pub x685: u8,
+    #[doc(alias("x685"))]
+    pub frames_since_special_s: u8,
     /// +0x686
-    pub x686: u8,
+    #[doc(alias("x686"))]
+    pub frames_since_special_hi: u8,
     /// +0x687
-    pub x687: u8,
+    #[doc(alias("x687"))]
+    pub frames_since_special_lw: u8,
     /// +0x688
-    pub x688: u8,
+    #[doc(alias("x688"))]
+    pub frames_since_special_s_dir: u8,
     /// +0x689
-    pub x689: u8,
+    #[doc(alias("x689"))]
+    pub frames_since_special_n: u8,
     /// +0x68a
-    pub x68A: u8,
+    #[doc(alias("x68A"))]
+    pub frames_since_jump: u8,
     /// +0x68b
-    pub x68B: u8,
+    #[doc(alias("x68B"))]
+    pub frames_since_special_hi_air: u8,
     /// +0x68c
-    pub x68C_transNPos: Vec3,
+    #[doc(alias("x68C_transNPos"))]
+    pub trans_n_pos: Vec3,
     /// +0x698
-    pub x698: Vec3,
+    #[doc(alias("x698"))]
+    pub prev_trans_n_pos: Vec3,
     /// +0x6a4
-    pub x6A4_transNOffset: Vec3,
+    #[doc(alias("x6A4_transNOffset"))]
+    pub trans_n_offset: Vec3,
     /// +0x6b0
-    pub x6B0: Vec3,
+    #[doc(alias("x6B0"))]
+    pub prev_trans_n_offset: Vec3,
     /// +0x6bc
     pub lstick_angle: f32,
     /// +0x6c0
-    pub x6C0: Vec3,
+    #[doc(alias("x6C0"))]
+    pub part_35_pos: Vec3,
     /// +0x6cc
-    pub x6CC: Vec3,
+    #[doc(alias("x6CC"))]
+    pub prev_part_35_pos: Vec3,
     /// +0x6d8
-    pub x6D8: Vec3,
+    #[doc(alias("x6D8"))]
+    pub part_35_offset: Vec3,
     /// +0x6e4
-    pub x6E4: Vec3,
+    #[doc(alias("x6E4"))]
+    pub prev_part_35_offset: Vec3,
     /// +0x6f0
     pub coll_data: CollData,
     /// +0x88c
     pub ecb_lock: i32,
     /// +0x890
-    pub x890_cameraBox: Option<CameraBoxId>,
+    #[doc(alias("x890_cameraBox"))]
+    pub camera_box: Option<CameraBoxId>,
     /// +0x894
     pub cur_anim_frame: f32,
     /// +0x898
-    pub x898_unk: f32,
+    #[doc(alias("x898_unk"))]
+    pub cmd_frame_offset: f32,
     /// +0x89c
     pub frame_speed_mul: f32,
     /// +0x8a0
-    pub x8A0_unk: f32,
+    #[doc(alias("x8A0_unk"))]
+    pub freeze_rate_step: f32,
     /// +0x8a4
-    pub x8A4_animBlendFrames: f32,
+    #[doc(alias("x8A4_animBlendFrames"))]
+    pub anim_blend_frames: f32,
     /// +0x8a8
-    pub x8A8_anim_frame: f32,
+    #[doc(alias("x8A8_anim_frame"))]
+    pub anim_blend_frame: f32,
     /// +0x8ac
-    pub x8AC_animSkeleton: Option<JObjId>,
+    #[doc(alias("x8AC_animSkeleton"))]
+    pub anim_skeleton: Option<JObjId>,
     /// +0x8b0
-    pub x8B0: [Fighter_x8B0_t; 5],
+    #[doc(alias("x8B0"))]
+    pub part_anims: [Fighter_x8B0_t; 5],
     /// +0x914
-    pub x914: [HitCapsule; 4],
+    #[doc(alias("x914"))]
+    pub hitboxes: [HitCapsule; 4],
     /// +0xdf4
-    pub xDF4: [HitCapsule; 2],
+    #[doc(alias("xDF4"))]
+    pub throw_hitboxes: [HitCapsule; 2],
     /// +0x1064
-    pub x1064_thrownHitbox: HitCapsule,
+    #[doc(alias("x1064_thrownHitbox"))]
+    pub thrown_hitbox: HitCapsule,
     /// +0x119c
-    pub x119C_teamUnk: u8,
+    #[doc(alias("x119C_teamUnk"))]
+    pub thrown_team: u8,
     /// +0x119d
-    pub grabber_unk1: u8,
+    #[doc(alias("grabber_unk1"))]
+    pub thrower_slot: u8,
     /// +0x119e
     pub hurt_capsules_len: u8,
     /// +0x119f
-    pub x119F: u8,
+    #[doc(alias("x119F"))]
+    pub pad_119f: u8,
     /// +0x11a0
     pub hurt_capsules: [FighterHurtCapsule; 15],
     /// +0x1614
-    pub x1614: [Fighter_x1614_t; 2],
+    #[doc(alias("x1614"))]
+    pub stamina_markers: [Fighter_x1614_t; 2],
     /// +0x166c
-    pub x166C: u8,
+    #[doc(alias("x166C"))]
+    pub ledge_point_count: u8,
     /// +0x1670
-    pub x1670: [Fighter_x1670_t; 1],
+    #[doc(alias("x1670"))]
+    pub ledge_points: [Fighter_x1670_t; 1],
     /// +0x1698
-    pub filler_x1674: [u8; 400],
+    #[doc(alias("filler_x1674"))]
+    pub pad_1674: [u8; 400],
     /// +0x1828
-    pub x1828: i32,
+    #[doc(alias("x1828"))]
+    pub hit_reaction: i32,
     /// +0x182c
     pub dmg: dmg,
     /// +0x1960
-    pub x1960_vibrateMult: f32,
+    #[doc(alias("x1960_vibrateMult"))]
+    pub hitlag_vibrate_mul: f32,
     /// +0x1964
-    pub x1964: f32,
+    #[doc(alias("x1964"))]
+    pub min_hitlag: f32,
     /// +0x1968
-    pub x1968_jumpsUsed: u8,
+    #[doc(alias("x1968_jumpsUsed"))]
+    pub jumps_used: u8,
     /// +0x1969
-    pub x1969_walljumpUsed: u8,
+    #[doc(alias("x1969_walljumpUsed"))]
+    pub walljumps_used: u8,
     /// +0x196c
     pub hitlag_mul: f32,
     /// +0x1970
-    pub unk_msid: i32,
+    #[doc(alias("unk_msid"))]
+    pub jab_msid: i32,
     /// +0x1974
     pub item_gobj: Option<GObjId>,
     /// +0x1978
-    pub x1978: Option<GObjId>,
+    #[doc(alias("x1978"))]
+    pub second_item: Option<GObjId>,
     /// +0x197c
-    pub x197C: Option<GObjId>,
+    #[doc(alias("x197C"))]
+    pub bunny_hood: Option<GObjId>,
     /// +0x1980
-    pub x1980: Option<GObjId>,
+    #[doc(alias("x1980"))]
+    pub flower: Option<GObjId>,
     /// +0x1984
-    pub x1984_heldItemSpec: Option<GObjId>,
+    #[doc(alias("x1984_heldItemSpec"))]
+    pub special_item: Option<GObjId>,
     /// +0x1988
-    pub x1988: i32,
+    #[doc(alias("x1988"))]
+    pub hit_status: i32,
     /// +0x198c
-    pub x198C: i32,
+    #[doc(alias("x198C"))]
+    pub timed_hit_status: i32,
     /// +0x1990
-    pub x1990: i32,
+    #[doc(alias("x1990"))]
+    pub intangible_frames: i32,
     /// +0x1994
-    pub x1994: i32,
+    #[doc(alias("x1994"))]
+    pub invincible_frames: i32,
     /// +0x1998
     pub shield_health: f32,
     /// +0x199c
     pub lightshield_amount: f32,
     /// +0x19a0
-    pub x19A0_shieldDamageTaken: i32,
+    #[doc(alias("x19A0_shieldDamageTaken"))]
+    pub shield_damage_taken: i32,
     /// +0x19a4
-    pub x19A4: i32,
+    #[doc(alias("x19A4"))]
+    pub shield_hit_damage: i32,
     /// +0x19a8
-    pub x19A8: Option<GObjId>,
+    #[doc(alias("x19A8"))]
+    pub shield_hit_by: Option<GObjId>,
     /// +0x19ac
     pub specialn_facing_dir: f32,
     /// +0x19b0
-    pub x19B0: i32,
+    #[doc(alias("x19B0"))]
+    pub shield_hit_element: i32,
     /// +0x19b4
-    pub shield_unk0: f32,
+    #[doc(alias("shield_unk0"))]
+    pub counter_min_hitlag: f32,
     /// +0x19b8
-    pub shield_unk1: f32,
+    #[doc(alias("shield_unk1"))]
+    pub counter_item_min_hitlag: f32,
     /// +0x19bc
-    pub x19BC_shieldDamageTaken3: i32,
+    #[doc(alias("x19BC_shieldDamageTaken3"))]
+    pub shield_hit_slot: i32,
     /// +0x19c0
     pub shield_hit: HitResult,
     /// +0x19e4
@@ -2377,177 +2572,253 @@ pub struct Fighter {
     /// +0x1a08
     pub absorb_hit: HitResult,
     /// +0x1a2c
-    pub ReflectAttr: Fighter_ReflectAttr,
+    #[doc(alias("ReflectAttr"))]
+    pub reflect: Fighter_ReflectAttr,
     /// +0x1a40
-    pub AbsorbAttr: Fighter_AbsorbAttr,
+    #[doc(alias("AbsorbAttr"))]
+    pub absorb: Fighter_AbsorbAttr,
     /// +0x1a4c
     pub grab_timer: f32,
     /// +0x1a50
-    pub x1A50: i8,
+    #[doc(alias("x1A50"))]
+    pub mash_stick_x: i8,
     /// +0x1a51
-    pub x1A51: i8,
+    #[doc(alias("x1A51"))]
+    pub mash_stick_y: i8,
     /// +0x1a52
-    pub x1A52: u8,
+    #[doc(alias("x1A52"))]
+    pub mash_shake_row: u8,
     /// +0x1a53
-    pub x1A53: u8,
+    #[doc(alias("x1A53"))]
+    pub mash_shake_rows: u8,
     /// +0x1a54
-    pub x1A54: i32,
+    #[doc(alias("x1A54"))]
+    pub jab_mashes: i32,
     /// +0x1a58
     pub victim_gobj: Option<GObjId>,
     /// +0x1a5c
-    pub x1A5C: Option<GObjId>,
+    #[doc(alias("x1A5C"))]
+    pub partner: Option<GObjId>,
     /// +0x1a60
     pub target_item_gobj: Option<GObjId>,
     /// +0x1a64
-    pub x1A64: Option<GObjId>,
+    #[doc(alias("x1A64"))]
+    pub caught_item: Option<GObjId>,
     /// +0x1a68
-    pub x1A68: u16,
+    #[doc(alias("x1A68"))]
+    pub grab_kinds: u16,
     /// +0x1a6a
-    pub x1A6A: u16,
+    #[doc(alias("x1A6A"))]
+    pub grab_immune: u16,
     /// +0x1a6c
-    pub x1A6C: f32,
+    #[doc(alias("x1A6C"))]
+    pub hip_follow_rate: f32,
     /// +0x1a70
-    pub x1A70: Vec3,
+    #[doc(alias("x1A70"))]
+    pub throw_offset: Vec3,
     /// +0x1a7c
-    pub x1A7C: Vec3,
+    #[doc(alias("x1A7C"))]
+    pub hip_pos: Vec3,
     /// +0x1a88
     pub cpu: CpuFighter,
     /// +0x2004
-    pub x2004: i32,
+    #[doc(alias("x2004"))]
+    pub star_frames: i32,
     /// +0x2008
-    pub x2008: i32,
+    #[doc(alias("x2008"))]
+    pub mushroom_frames: i32,
     /// +0x200c
-    pub x200C: i32,
+    #[doc(alias("x200C"))]
+    pub queued_grows: i32,
     /// +0x2010
-    pub x2010: i32,
+    #[doc(alias("x2010"))]
+    pub queued_shrinks: i32,
     /// +0x2014
-    pub x2014: i32,
+    #[doc(alias("x2014"))]
+    pub bunny_hood_frames: i32,
     /// +0x2018
-    pub x2018: i32,
+    #[doc(alias("x2018"))]
+    pub flower_frames: i32,
     /// +0x201c
-    pub x201C: i32,
+    #[doc(alias("x201C"))]
+    pub flower_damage_timer: i32,
     /// +0x2020
-    pub x2020: i8,
+    #[doc(alias("x2020"))]
+    pub flower_stick_x: i8,
     /// +0x2021
-    pub x2021: i8,
+    #[doc(alias("x2021"))]
+    pub flower_stick_y: i8,
     /// +0x2022
-    pub x2022: i8,
+    #[doc(alias("x2022"))]
+    pub unused_2022: i8,
     /// +0x2024
-    pub x2024: i32,
+    #[doc(alias("x2024"))]
+    pub flower_growth: i32,
     /// +0x2028
     pub metal_timer: i32,
     /// +0x202c
     pub metal_health: i32,
     /// +0x2030
-    pub x2030: i32,
+    #[doc(alias("x2030"))]
+    pub cloak_frames: i32,
     /// +0x2034
-    pub x2034: i32,
+    #[doc(alias("x2034"))]
+    pub alt_metal_timer: i32,
     /// +0x2038
-    pub x2038: i32,
+    #[doc(alias("x2038"))]
+    pub alt_metal_health: i32,
     /// +0x203c
-    pub x203C: DObjList,
+    #[doc(alias("x203C"))]
+    pub second_dobjs: DObjList,
     /// +0x2044
-    pub filler_x2044: [u8; 32],
+    #[doc(alias("filler_x2044"))]
+    pub pad_2044: [u8; 32],
     /// +0x2064
-    pub x2064_ledgeCooldown: i32,
+    #[doc(alias("x2064_ledgeCooldown"))]
+    pub ledge_cooldown: i32,
     /// +0x2068
-    pub x2068_attackID: i32,
+    #[doc(alias("x2068_attackID"))]
+    pub attack_id: i32,
     /// +0x206c
-    pub x206C_attack_instance: u16,
+    #[doc(alias("x206C_attack_instance"))]
+    pub attack_instance: u16,
     /// +0x206e
-    pub x206E: i16,
+    #[doc(alias("x206E"))]
+    pub pad_206e: i16,
     /// +0x2070
-    pub x2070: [u8; 4],
+    #[doc(alias("x2070"))]
+    pub attack_flags: [u8; 4],
     /// +0x2074
-    pub x2074: Struct2074,
+    #[doc(alias("x2074"))]
+    pub attack_record: Struct2074,
     /// +0x208c
-    pub x208C: i32,
+    #[doc(alias("x208C"))]
+    pub combo_attack_id: i32,
     /// +0x2090
-    pub x2090: u16,
+    #[doc(alias("x2090"))]
+    pub combo_count: u16,
     /// +0x2092
-    pub x2092: u16,
+    #[doc(alias("x2092"))]
+    pub combo_push_frames: u16,
     /// +0x2094
-    pub x2094: Option<GObjId>,
+    #[doc(alias("x2094"))]
+    pub combo_victim: Option<GObjId>,
     /// +0x2098
-    pub x2098: u16,
+    #[doc(alias("x2098"))]
+    pub combo_window: u16,
     /// +0x209a
-    pub x209A: u16,
+    #[doc(alias("x209A"))]
+    pub name_tag_timer: u16,
     /// +0x209c
-    pub x209C: u16,
+    #[doc(alias("x209C"))]
+    pub air_grab_timer: u16,
     /// +0x20a0
-    pub x20A0_accessory: Option<JObjId>,
+    #[doc(alias("x20A0_accessory"))]
+    pub accessory: Option<JObjId>,
     /// +0x20a4
-    pub x20A4: LbShadow,
+    #[doc(alias("x20A4"))]
+    pub shadow: LbShadow,
     /// +0x20ac
-    pub unk_gobj: Option<GObjId>,
+    #[doc(alias("unk_gobj"))]
+    pub hit_by: Option<GObjId>,
     /// +0x20b0
-    pub x20B0: [Fighter_x20B0_t; 3],
+    #[doc(alias("x20B0"))]
+    pub afterimage_ring: [Fighter_x20B0_t; 3],
     /// +0x20f8
-    pub x20F8: f32,
+    #[doc(alias("x20F8"))]
+    pub afterimage_width_a: f32,
     /// +0x20fc
-    pub x20FC: f32,
+    #[doc(alias("x20FC"))]
+    pub afterimage_width_b: f32,
     /// +0x2100
-    pub x2100: i8,
+    #[doc(alias("x2100"))]
+    pub afterimage_mode: i8,
     /// +0x2101 (bits 0..+7)
-    pub x2101_bits_0to6: u8,
+    #[doc(alias("x2101_bits_0to6"))]
+    pub afterimage_slot: u8,
     /// +0x2101 (bits 7..+1)
-    pub x2101_bits_8: bool,
+    #[doc(alias("x2101_bits_8"))]
+    pub item_afterimage: bool,
     /// +0x2102
-    pub x2102: i8,
+    #[doc(alias("x2102"))]
+    pub pad_2102: i8,
     /// +0x2103
-    pub x2103: i8,
+    #[doc(alias("x2103"))]
+    pub pad_2103: i8,
     /// +0x2104
-    pub x2104: i32,
+    #[doc(alias("x2104"))]
+    pub parasol_frames: i32,
     /// +0x2108
     pub capture_timer: i32,
     /// +0x210c
     pub wall_jump_input_timer: u8,
     /// +0x210d
-    pub filler_x210C: [u8; 3],
+    #[doc(alias("filler_x210C"))]
+    pub pad_210d: [u8; 3],
     /// +0x2110
-    pub x2110_walljumpWallSide: f32,
+    #[doc(alias("x2110_walljumpWallSide"))]
+    pub walljump_wall_side: f32,
     /// +0x2114
     pub smash_attrs: _SmashAttr,
     /// +0x213c
-    pub x213C: i32,
+    #[doc(alias("x213C"))]
+    pub ledge_caught: i32,
     /// +0x2140
-    pub x2140: f32,
+    #[doc(alias("x2140"))]
+    pub lowest_y: f32,
     /// +0x2144
-    pub x2144: i32,
+    #[doc(alias("x2144"))]
+    pub voice_handle: i32,
     /// +0x2148
-    pub x2148: i32,
+    #[doc(alias("x2148"))]
+    pub sound_handle_2: i32,
     /// +0x214c
-    pub x214C: i32,
+    #[doc(alias("x214C"))]
+    pub sound_handle_3: i32,
     /// +0x2150
-    pub x2150: i32,
+    #[doc(alias("x2150"))]
+    pub sound_handle_4: i32,
     /// +0x2154
-    pub x2154: i32,
+    #[doc(alias("x2154"))]
+    pub sound_handle_5: i32,
     /// +0x2158
-    pub x2158: i32,
+    #[doc(alias("x2158"))]
+    pub sound_handle_6: i32,
     /// +0x215c
-    pub x215C: i32,
+    #[doc(alias("x215C"))]
+    pub track_handle: i32,
     /// +0x2160
-    pub x2160: i32,
+    #[doc(alias("x2160"))]
+    pub sfx_handle: i32,
     /// +0x2164
-    pub x2164: i32,
+    #[doc(alias("x2164"))]
+    pub star_cheer: i32,
     /// +0x2168
-    pub x2168: i32,
+    #[doc(alias("x2168"))]
+    pub hammer_music: i32,
     /// +0x216c
-    pub unk_grab_val: f32,
+    #[doc(alias("unk_grab_val"))]
+    pub grab_distance: f32,
     /// +0x2170
-    pub x2170: f32,
+    #[doc(alias("x2170"))]
+    pub hold_dy: f32,
     /// +0x2174
-    pub x2174: Vec3,
+    #[doc(alias("x2174"))]
+    pub thrown_trans: Vec3,
     /// +0x2180
-    pub x2180: i32,
+    #[doc(alias("x2180"))]
+    pub dead_holder_slot: i32,
     /// +0x2184
-    pub x2184: Option<JObjId>,
+    #[doc(alias("x2184"))]
+    pub mushroom_scale_joint: Option<JObjId>,
     /// +0x2188
-    pub x2188: S32Vec2,
+    #[doc(alias("x2188"))]
+    pub screen_pos: S32Vec2,
     /// +0x2190
     pub grab_cb: Option<CodeRef>,
     /// +0x2194
-    pub x2194: Option<CodeRef>,
+    #[doc(alias("x2194"))]
+    pub grab_item_cb: Option<CodeRef>,
     /// +0x2198
     pub grabbed_cb: Option<CodeRef>,
     /// +0x219c
@@ -2575,7 +2846,8 @@ pub struct Fighter {
     /// +0x21c8
     pub reflect_hit_cb: Option<CodeRef>,
     /// +0x21cc
-    pub x21CC: Option<CodeRef>,
+    #[doc(alias("x21CC"))]
+    pub anim_end_cb: Option<CodeRef>,
     /// +0x21d0
     pub hitlag_cb: Option<CodeRef>,
     /// +0x21d4
@@ -2591,301 +2863,427 @@ pub struct Fighter {
     /// +0x21e8
     pub death3_cb: Option<CodeRef>,
     /// +0x21ec
-    pub x21EC: Option<CodeRef>,
+    #[doc(alias("x21EC"))]
+    pub motion_change_cb: Option<CodeRef>,
     /// +0x21f0
     pub take_dmg_2_cb: Option<CodeRef>,
     /// +0x21f4
     pub hurtbox_detect_cb: Option<CodeRef>,
     /// +0x21f8
-    pub x21F8: Option<CodeRef>,
+    #[doc(alias("x21F8"))]
+    pub turn_cb: Option<CodeRef>,
     /// +0x21fc
-    pub x21FC_flag: [u8; 1],
+    #[doc(alias("x21FC_flag"))]
+    pub debug_draw_flags: [u8; 1],
     /// +0x21fd
-    pub filler_x21FC: [u8; 3],
+    #[doc(alias("filler_x21FC"))]
+    pub pad_21fd: [u8; 3],
     /// +0x2200
     pub cmd_vars: [u32; 4],
     /// +0x2210
-    pub x2210: [u8; 4],
+    #[doc(alias("x2210"))]
+    pub throw_flags: [u8; 4],
     /// +0x2214
     pub cmd_timer: f32,
     /// +0x2218 (bits 0..+1)
     pub allow_interrupt: bool,
     /// +0x2218 (bits 1..+1)
-    pub x2218_b1: bool,
+    #[doc(alias("x2218_b1"))]
+    pub jab_continue: bool,
     /// +0x2218 (bits 2..+1)
-    pub x2218_b2: bool,
+    #[doc(alias("x2218_b2"))]
+    pub jab_rapid: bool,
     /// +0x2218 (bits 3..+1)
     pub reflecting: bool,
     /// +0x2218 (bits 4..+1)
-    pub x2218_b4: bool,
+    #[doc(alias("x2218_b4"))]
+    pub reflect_kept: bool,
     /// +0x2218 (bits 5..+1)
-    pub x2218_b5: bool,
+    #[doc(alias("x2218_b5"))]
+    pub reflect_behavior: bool,
     /// +0x2218 (bits 6..+1)
-    pub x2218_b6: bool,
+    #[doc(alias("x2218_b6"))]
+    pub absorbing: bool,
     /// +0x2218 (bits 7..+1)
-    pub x2218_b7: bool,
+    #[doc(alias("x2218_b7"))]
+    pub absorb_any: bool,
     /// +0x2219 (bits 0..+1)
-    pub x2219_b0: bool,
+    #[doc(alias("x2219_b0"))]
+    pub effect_once: bool,
     /// +0x2219 (bits 1..+1)
-    pub x2219_b1: bool,
+    #[doc(alias("x2219_b1"))]
+    pub out_of_play: bool,
     /// +0x2219 (bits 2..+1)
-    pub x2219_b2: bool,
+    #[doc(alias("x2219_b2"))]
+    pub blast_immune_state: bool,
     /// +0x2219 (bits 3..+1)
-    pub x2219_b3: bool,
+    #[doc(alias("x2219_b3"))]
+    pub hitboxes_set: bool,
     /// +0x2219 (bits 4..+1)
-    pub x2219_b4: bool,
+    #[doc(alias("x2219_b4"))]
+    pub hammer_hits_held: bool,
     /// +0x2219 (bits 5..+1)
-    pub x2219_b5: bool,
+    #[doc(alias("x2219_b5"))]
+    pub in_hitlag: bool,
     /// +0x2219 (bits 6..+1)
-    pub x2219_b6: bool,
+    #[doc(alias("x2219_b6"))]
+    pub was_in_hitlag: bool,
     /// +0x2219 (bits 7..+1)
-    pub x2219_b7: bool,
+    #[doc(alias("x2219_b7"))]
+    pub hitlag_held: bool,
     /// +0x221a (bits 0..+1)
-    pub x221A_b0: bool,
+    #[doc(alias("x221A_b0"))]
+    pub pending_hitlag: bool,
     /// +0x221a (bits 1..+1)
-    pub x221A_b1: bool,
+    #[doc(alias("x221A_b1"))]
+    pub thaw_size: bool,
     /// +0x221a (bits 2..+1)
     pub allow_sdi: bool,
     /// +0x221a (bits 3..+1)
-    pub x221A_b3: bool,
+    #[doc(alias("x221A_b3"))]
+    pub in_hitstun_sdi: bool,
     /// +0x221a (bits 4..+1)
     pub fall_fast: bool,
     /// +0x221a (bits 5..+1)
-    pub x221A_b5: bool,
+    #[doc(alias("x221A_b5"))]
+    pub hurtboxes_set: bool,
     /// +0x221a (bits 6..+1)
-    pub x221A_b6: bool,
+    #[doc(alias("x221A_b6"))]
+    pub hurtboxes_custom: bool,
     /// +0x221a (bits 7..+1)
-    pub x221A_b7: bool,
+    #[doc(alias("x221A_b7"))]
+    pub shield_was_hit: bool,
     /// +0x221b
-    pub x221B: Fighter_x221B,
+    #[doc(alias("x221B"))]
+    pub state_flags: Fighter_x221B,
     /// +0x221c (bits 0..+1)
-    pub x221C_b0: bool,
+    #[doc(alias("x221C_b0"))]
+    pub held_hit_light: bool,
     /// +0x221c (bits 1..+1)
-    pub x221C_b1: bool,
+    #[doc(alias("x221C_b1"))]
+    pub powershield_late: bool,
     /// +0x221c (bits 2..+1)
-    pub x221C_b2: bool,
+    #[doc(alias("x221C_b2"))]
+    pub powershield: bool,
     /// +0x221c (bits 3..+1)
-    pub x221C_b3: bool,
+    #[doc(alias("x221C_b3"))]
+    pub powershield_early: bool,
     /// +0x221c (bits 4..+1)
-    pub x221C_b4: bool,
+    #[doc(alias("x221C_b4"))]
+    pub armor: bool,
     /// +0x221c (bits 5..+1)
-    pub x221C_b5: bool,
+    #[doc(alias("x221C_b5"))]
+    pub hit_this_frame: bool,
     /// +0x221c (bits 6..+1)
-    pub x221C_b6: bool,
+    #[doc(alias("x221C_b6"))]
+    pub in_hitstun: bool,
     /// +0x221c (bits 7..+3)
-    pub x221C_u16_y: u8,
+    #[doc(alias("x221C_u16_y"))]
+    pub leg_reach: u8,
     /// +0x221d (bits 2..+1)
-    pub x221D_b2: bool,
+    #[doc(alias("x221D_b2"))]
+    pub variants_hidden: bool,
     /// +0x221d (bits 3..+1)
     pub has_prev_input: bool,
     /// +0x221d (bits 4..+1)
     pub input_disabled: bool,
     /// +0x221d (bits 5..+1)
-    pub x221D_b5: bool,
+    #[doc(alias("x221D_b5"))]
+    pub nudge_off: bool,
     /// +0x221d (bits 6..+1)
-    pub x221D_b6: bool,
+    #[doc(alias("x221D_b6"))]
+    pub starman: bool,
     /// +0x221d (bits 7..+1)
-    pub x221D_b7: bool,
+    #[doc(alias("x221D_b7"))]
+    pub hanging: bool,
     /// +0x221e (bits 0..+1)
     pub invisible: bool,
     /// +0x221e (bits 1..+1)
-    pub x221E_b1: bool,
+    #[doc(alias("x221E_b1"))]
+    pub dead_flag: bool,
     /// +0x221e (bits 2..+1)
-    pub x221E_b2: bool,
+    #[doc(alias("x221E_b2"))]
+    pub entering: bool,
     /// +0x221e (bits 3..+1)
-    pub x221E_b3: bool,
+    #[doc(alias("x221E_b3"))]
+    pub item_visible: bool,
     /// +0x221e (bits 4..+1)
-    pub x221E_b4: bool,
+    #[doc(alias("x221E_b4"))]
+    pub articles_visible: bool,
     /// +0x221e (bits 5..+1)
-    pub x221E_b5: bool,
+    #[doc(alias("x221E_b5"))]
+    pub visible: bool,
     /// +0x221e (bits 6..+1)
-    pub x221E_b6: bool,
+    #[doc(alias("x221E_b6"))]
+    pub grab_coll_off: bool,
     /// +0x221e (bits 7..+1)
-    pub x221E_b7: bool,
+    #[doc(alias("x221E_b7"))]
+    pub costume_anim_set: bool,
     /// +0x221f (bits 0..+1)
-    pub x221F_b0: bool,
+    #[doc(alias("x221F_b0"))]
+    pub off_screen: bool,
     /// +0x221f (bits 1..+1)
-    pub x221F_b1: bool,
+    #[doc(alias("x221F_b1"))]
+    pub dead: bool,
     /// +0x221f (bits 2..+1)
-    pub x221F_b2: bool,
+    #[doc(alias("x221F_b2"))]
+    pub cloaked: bool,
     /// +0x221f (bits 3..+1)
     pub is_sleeping: bool,
     /// +0x221f (bits 4..+1)
     pub is_sub_fighter: bool,
     /// +0x221f (bits 5..+1)
-    pub x221F_b5: bool,
+    #[doc(alias("x221F_b5"))]
+    pub last_hit_by_sub: bool,
     /// +0x221f (bits 6..+1)
-    pub x221F_b6: bool,
+    #[doc(alias("x221F_b6"))]
+    pub shield_hit_by_sub: bool,
     /// +0x221f (bits 7..+1)
-    pub x221F_b7: bool,
+    #[doc(alias("x221F_b7"))]
+    pub unused_221f_b7: bool,
     /// +0x2220 (bits 0..+3)
-    pub x2220_b0: u8,
+    #[doc(alias("x2220_b0"))]
+    pub footstep_part: u8,
     /// +0x2220 (bits 3..+1)
-    pub x2220_b3: bool,
+    #[doc(alias("x2220_b3"))]
+    pub buried: bool,
     /// +0x2220 (bits 4..+1)
-    pub x2220_b4: bool,
+    #[doc(alias("x2220_b4"))]
+    pub turn_spin: bool,
     /// +0x2220 (bits 5..+1)
-    pub x2220_b5: bool,
+    #[doc(alias("x2220_b5"))]
+    pub giant: bool,
     /// +0x2220 (bits 6..+1)
-    pub x2220_b6: bool,
+    #[doc(alias("x2220_b6"))]
+    pub tiny: bool,
     /// +0x2220 (bits 7..+1)
-    pub x2220_b7: bool,
+    #[doc(alias("x2220_b7"))]
+    pub camera_placed: bool,
     /// +0x2221 (bits 0..+1)
-    pub x2221_b0: bool,
+    #[doc(alias("x2221_b0"))]
+    pub warp_star_intangible: bool,
     /// +0x2221 (bits 1..+1)
-    pub x2221_b1: bool,
+    #[doc(alias("x2221_b1"))]
+    pub damage_col_anim: bool,
     /// +0x2221 (bits 2..+1)
-    pub x2221_b2: bool,
+    #[doc(alias("x2221_b2"))]
+    pub hip_offset: bool,
     /// +0x2221 (bits 3..+1)
-    pub x2221_b3: bool,
+    #[doc(alias("x2221_b3"))]
+    pub light_changed: bool,
     /// +0x2221 (bits 4..+1)
-    pub x2221_b4: bool,
+    #[doc(alias("x2221_b4"))]
+    pub parasol_open: bool,
     /// +0x2221 (bits 5..+1)
-    pub x2221_b5: bool,
+    #[doc(alias("x2221_b5"))]
+    pub parasol_checked: bool,
     /// +0x2221 (bits 6..+1)
-    pub x2221_b6: bool,
+    #[doc(alias("x2221_b6"))]
+    pub parasol_blend: bool,
     /// +0x2221 (bits 7..+1)
-    pub x2221_b7: bool,
+    #[doc(alias("x2221_b7"))]
+    pub parasol_from_jump: bool,
     /// +0x2222 (bits 0..+1)
-    pub x2222_b0: bool,
+    #[doc(alias("x2222_b0"))]
+    pub has_cargo: bool,
     /// +0x2222 (bits 1..+1)
     pub can_multijump: bool,
     /// +0x2222 (bits 2..+1)
-    pub x2222_b2: bool,
+    #[doc(alias("x2222_b2"))]
+    pub no_turn: bool,
     /// +0x2222 (bits 3..+1)
-    pub x2222_b3: bool,
+    #[doc(alias("x2222_b3"))]
+    pub no_blast_rise: bool,
     /// +0x2222 (bits 4..+1)
-    pub x2222_b4: bool,
+    #[doc(alias("x2222_b4"))]
+    pub pickup_limited: bool,
     /// +0x2222 (bits 5..+1)
-    pub x2222_b5: bool,
+    #[doc(alias("x2222_b5"))]
+    pub is_popo: bool,
     /// +0x2222 (bits 6..+1)
-    pub x2222_b6: bool,
+    #[doc(alias("x2222_b6"))]
+    pub frozen_with_holder: bool,
     /// +0x2222 (bits 7..+1)
-    pub x2222_b7: bool,
+    #[doc(alias("x2222_b7"))]
+    pub follows_holder: bool,
     /// +0x2223 (bits 0..+1)
-    pub x2223_b0: bool,
+    #[doc(alias("x2223_b0"))]
+    pub anim_frozen: bool,
     /// +0x2223 (bits 1..+1)
-    pub x2223_b1: bool,
+    #[doc(alias("x2223_b1"))]
+    pub is_flat: bool,
     /// +0x2223 (bits 2..+1)
-    pub x2223_b2: bool,
+    #[doc(alias("x2223_b2"))]
+    pub outline: bool,
     /// +0x2223 (bits 3..+1)
-    pub x2223_b3: bool,
+    #[doc(alias("x2223_b3"))]
+    pub silhouette: bool,
     /// +0x2223 (bits 4..+1)
-    pub x2223_b4: bool,
+    #[doc(alias("x2223_b4"))]
+    pub no_item_bounce: bool,
     /// +0x2223 (bits 5..+1)
-    pub x2223_b5: bool,
+    #[doc(alias("x2223_b5"))]
+    pub stepped_on_item: bool,
     /// +0x2223 (bits 6..+1)
     pub is_always_metal: bool,
     /// +0x2223 (bits 7..+1)
     pub is_metal: bool,
     /// +0x2224 (bits 0..+1)
-    pub x2224_b0: bool,
+    #[doc(alias("x2224_b0"))]
+    pub low_models_own_material: bool,
     /// +0x2224 (bits 1..+1)
-    pub x2224_b1: bool,
+    #[doc(alias("x2224_b1"))]
+    pub air_item_caught: bool,
     /// +0x2224 (bits 2..+1)
     pub stamina_dead: bool,
     /// +0x2224 (bits 3..+1)
-    pub x2224_b3: bool,
+    #[doc(alias("x2224_b3"))]
+    pub stamina_out: bool,
     /// +0x2224 (bits 4..+1)
-    pub x2224_b4: bool,
+    #[doc(alias("x2224_b4"))]
+    pub wind_immune: bool,
     /// +0x2224 (bits 5..+1)
-    pub x2224_b5: bool,
+    #[doc(alias("x2224_b5"))]
+    pub mash_shaking: bool,
     /// +0x2224 (bits 6..+1)
-    pub x2224_b6: bool,
+    #[doc(alias("x2224_b6"))]
+    pub can_mash: bool,
     /// +0x2224 (bits 7..+1)
     pub can_walljump: bool,
     /// +0x2225 (bits 0..+1)
-    pub x2225_b0: bool,
+    #[doc(alias("x2225_b0"))]
+    pub map_coll_done: bool,
     /// +0x2225 (bits 1..+1)
-    pub x2225_b1: bool,
+    #[doc(alias("x2225_b1"))]
+    pub inhale_catch: bool,
     /// +0x2225 (bits 2..+1)
-    pub x2225_b2: bool,
+    #[doc(alias("x2225_b2"))]
+    pub hat_hidden: bool,
     /// +0x2225 (bits 3..+1)
-    pub x2225_b3: bool,
+    #[doc(alias("x2225_b3"))]
+    pub nana_follows: bool,
     /// +0x2225 (bits 4..+1)
-    pub x2225_b4: bool,
+    #[doc(alias("x2225_b4"))]
+    pub hits_others_team: bool,
     /// +0x2225 (bits 5..+1)
-    pub x2225_b5: bool,
+    #[doc(alias("x2225_b5"))]
+    pub rules_voice_muted: bool,
     /// +0x2225 (bits 6..+1)
-    pub x2225_b6: bool,
+    #[doc(alias("x2225_b6"))]
+    pub voice_muted: bool,
     /// +0x2225 (bits 7..+1)
-    pub x2225_b7: bool,
+    #[doc(alias("x2225_b7"))]
+    pub is_stamina: bool,
     /// +0x2226 (bits 0..+1)
-    pub x2226_b0: bool,
+    #[doc(alias("x2226_b0"))]
+    pub lies_on_z: bool,
     /// +0x2226 (bits 1..+1)
-    pub x2226_b1: bool,
+    #[doc(alias("x2226_b1"))]
+    pub heavy_down_bound: bool,
     /// +0x2226 (bits 2..+1)
-    pub x2226_b2: bool,
+    #[doc(alias("x2226_b2"))]
+    pub held_in_model: bool,
     /// +0x2226 (bits 3..+1)
-    pub x2226_b3: bool,
+    #[doc(alias("x2226_b3"))]
+    pub takes_damage_cloaked: bool,
     /// +0x2226 (bits 4..+1)
-    pub x2226_b4: bool,
+    #[doc(alias("x2226_b4"))]
+    pub cloak: bool,
     /// +0x2226 (bits 5..+1)
-    pub x2226_b5: bool,
+    #[doc(alias("x2226_b5"))]
+    pub refracted: bool,
     /// +0x2226 (bits 6..+1)
-    pub x2226_b6: bool,
+    #[doc(alias("x2226_b6"))]
+    pub no_color_anims: bool,
     /// +0x2226 (bits 7..+1)
-    pub x2226_b7: bool,
+    #[doc(alias("x2226_b7"))]
+    pub cloak_look: bool,
     /// +0x2227 (bits 0..+1)
-    pub x2227_b0: bool,
+    #[doc(alias("x2227_b0"))]
+    pub jumped_from_ground: bool,
     /// +0x2227 (bits 1..+1)
-    pub x2227_b1: bool,
+    #[doc(alias("x2227_b1"))]
+    pub ledge_jumped: bool,
     /// +0x2227 (bits 2..+1)
-    pub x2227_b2: bool,
+    #[doc(alias("x2227_b2"))]
+    pub thrown_hitbox_live: bool,
     /// +0x2227 (bits 3..+1)
-    pub x2227_b3: bool,
+    #[doc(alias("x2227_b3"))]
+    pub alt_metal: bool,
     /// +0x2227 (bits 4..+1)
-    pub x2227_b4: bool,
+    #[doc(alias("x2227_b4"))]
+    pub tumble_early: bool,
     /// +0x2227 (bits 5..+1)
-    pub x2227_b5: bool,
+    #[doc(alias("x2227_b5"))]
+    pub special_air_used: bool,
     /// +0x2227 (bits 6..+1)
-    pub x2227_b6: bool,
+    #[doc(alias("x2227_b6"))]
+    pub held_in_ice: bool,
     /// +0x2227 (bits 7..+1)
-    pub x2227_b7: bool,
+    #[doc(alias("x2227_b7"))]
+    pub drew_low_models: bool,
     /// +0x2228 (bits 0..+1)
-    pub x2228_b0: bool,
+    #[doc(alias("x2228_b0"))]
+    pub low_models: bool,
     /// +0x2228 (bits 1..+1)
-    pub x2228_b1: bool,
+    #[doc(alias("x2228_b1"))]
+    pub flat_floor_chains: bool,
     /// +0x2228 (bits 2..+1)
     pub is_sandbag: bool,
     /// +0x2228 (bits 3..+2)
-    pub x2228_b3: u8,
+    #[doc(alias("x2228_b3"))]
+    pub sfx_size: u8,
     /// +0x2228 (bits 5..+1)
-    pub x2228_b5: bool,
+    #[doc(alias("x2228_b5"))]
+    pub blast_immune: bool,
     /// +0x2228 (bits 6..+1)
     pub used_tether: bool,
     /// +0x2228 (bits 7..+1)
-    pub x2228_b7: bool,
+    #[doc(alias("x2228_b7"))]
+    pub stick_right: bool,
     /// +0x2229 (bits 0..+1)
-    pub x2229_b0: bool,
+    #[doc(alias("x2229_b0"))]
+    pub stick_left: bool,
     /// +0x2229 (bits 1..+1)
-    pub x2229_b1: bool,
+    #[doc(alias("x2229_b1"))]
+    pub attrs_scaled: bool,
     /// +0x2229 (bits 2..+1)
-    pub x2229_b2: bool,
+    #[doc(alias("x2229_b2"))]
+    pub unused_2229_b2: bool,
     /// +0x2229 (bits 3..+1)
-    pub x2229_b3: bool,
+    #[doc(alias("x2229_b3"))]
+    pub no_magnifier: bool,
     /// +0x2229 (bits 4..+1)
-    pub x2229_b4: bool,
+    #[doc(alias("x2229_b4"))]
+    pub coin_odd_frame: bool,
     /// +0x2229 (bits 5..+1)
     pub no_normal_motion: bool,
     /// +0x2229 (bits 6..+1)
-    pub x2229_b6: bool,
+    #[doc(alias("x2229_b6"))]
+    pub spawn_in_air: bool,
     /// +0x2229 (bits 7..+1)
     pub no_kb: bool,
     /// +0x222a (bits 0..+1)
-    pub x222A_b0: bool,
+    #[doc(alias("x222A_b0"))]
+    pub ungrabbable: bool,
     /// +0x222a (bits 1..+1)
-    pub x222A_b1: bool,
+    #[doc(alias("x222A_b1"))]
+    pub blast_zone_off: bool,
     /// +0x222a (bits 2..+1)
-    pub x222A_b2: bool,
+    #[doc(alias("x222A_b2"))]
+    pub unused_222a_b2: bool,
     /// +0x222a (bits 3..+2)
-    pub x222A_b3: u8,
+    #[doc(alias("x222A_b3"))]
+    pub unused_222a_b3: u8,
     /// +0x222a (bits 5..+1)
-    pub x222A_b5: bool,
+    #[doc(alias("x222A_b5"))]
+    pub unused_222a_b5: bool,
     /// +0x222a (bits 6..+1)
-    pub x222A_b6: bool,
+    #[doc(alias("x222A_b6"))]
+    pub unused_222a_b6: bool,
     /// +0x222a (bits 7..+1)
-    pub x222A_b7: bool,
+    #[doc(alias("x222A_b7"))]
+    pub unused_222a_b7: bool,
     /// +0x222c
     pub u: FighterVars,
     /// +0x2324
@@ -2895,9 +3293,11 @@ pub struct Fighter {
     /// +0x232c
     pub bury_timer_2: u32,
     /// +0x2330
-    pub x2330: IntVec2,
+    #[doc(alias("x2330"))]
+    pub hammer_frames: IntVec2,
     /// +0x2338
-    pub x2338: IntVec2,
+    #[doc(alias("x2338"))]
+    pub hammer_timers: IntVec2,
     /// +0x2340
     pub mv: MotionVars,
 }
@@ -2907,253 +3307,253 @@ impl Default for Fighter {
         Fighter {
             gobj: None,
             kind: 0,
-            x8_spawnNum: 0,
+            spawn_num: 0,
             player_idx: 0,
             motion_id: 0,
             anim_id: 0,
-            x18: 0,
-            x1C_actionStateList: Default::default(),
-            x20_actionStateList: Default::default(),
-            x24: None,
-            x28: None,
+            own_msid_start: 0,
+            common_motion_states: Default::default(),
+            own_motion_states: Default::default(),
+            anim_table: None,
+            anim_flags: None,
             facing_dir: 0.0,
             facing_dir1: 0.0,
-            x34_scale: Default::default(),
-            x40: 0.0,
-            x44_mtx: core::array::from_fn(|_| [0.0; 4]),
-            x74_self_accel: Default::default(),
+            scale: Default::default(),
+            platform_offset: 0.0,
+            depth_scale_mtx: core::array::from_fn(|_| [0.0; 4]),
+            anim_vel: Default::default(),
             self_vel: Default::default(),
-            x8c_kb_vel: Default::default(),
-            x98_atk_shield_kb: Default::default(),
-            xA4_unk_vel: Default::default(),
+            kb_vel: Default::default(),
+            atk_shield_kb_vel: Default::default(),
+            item_bounce_vel: Default::default(),
             cur_pos: Default::default(),
             prev_pos: Default::default(),
             pos_delta: Default::default(),
-            xD4_unk_vel: Default::default(),
+            frame_vel: Default::default(),
             ground_or_air: 0,
-            xE4_ground_accel_1: 0.0,
-            xE8_ground_accel_2: 0.0,
+            ground_accel_1: 0.0,
+            ground_accel_2: 0.0,
             gr_vel: 0.0,
-            xF0_ground_kb_vel: 0.0,
-            xF4_ground_attacker_shield_kb_vel: 0.0,
-            xF8_playerNudgeVel: Default::default(),
-            x100: 0.0,
-            x104: 0,
-            x105: 0,
-            x106: 0,
-            x107: 0,
-            x108_costume_joint: None,
+            ground_kb_vel: 0.0,
+            ground_attacker_shield_kb_vel: 0.0,
+            nudge_vel: Default::default(),
+            part_35_rot_x: 0.0,
+            freeze_step_timer: 0,
+            pad_105: 0,
+            pad_106: 0,
+            pad_107: 0,
+            costume_joint: None,
             ft_data: None,
             co_attrs: Default::default(),
-            x294_itPickup: Default::default(),
-            x2C4: Default::default(),
-            x2CC: None,
-            x2D0: None,
+            item_pickup: Default::default(),
+            push_size: Default::default(),
+            cargo_attrs: None,
+            multi_jump_attrs: None,
             dat_attrs: None,
             dat_attrs_backup: None,
-            x2DC: 0.0,
-            x2E0: 0.0,
-            x2E4: 0.0,
-            x2E8: 0.0,
-            x2EC: 0.0,
+            walk_slow_frames: 0.0,
+            walk_middle_frames: 0.0,
+            walk_fast_frames: 0.0,
+            guard_on_frames: 0.0,
+            landing_fall_special_frames: 0.0,
             dynamic_bone_sets: Default::default(),
             dynamics_num: 0,
-            x3E4_fighterCmdScript: Default::default(),
-            x408: Default::default(),
-            x488: Default::default(),
-            x508: Default::default(),
-            x588: None,
-            x58C: 0,
-            x590: Default::default(),
-            x594: [0; 4],
-            x598: Default::default(),
-            x59C: None,
-            x5A0: None,
-            x5A4: 0,
-            x5A8: 0,
-            x5AC: Default::default(),
+            cmd_script: Default::default(),
+            main_overlay: Default::default(),
+            secondary_overlay: Default::default(),
+            spycloak_overlay: Default::default(),
+            light: None,
+            anim_count: 0,
+            action_tree: Default::default(),
+            anim_bits: [0; 4],
+            second_tree: Default::default(),
+            main_anim_buf: None,
+            second_anim_buf: None,
+            main_anim_aram: 0,
+            second_anim_aram: 0,
+            parts_vis: Default::default(),
             tobj_list: Default::default(),
             parts: None,
             dobj_list: Default::default(),
-            x5F4_arr: core::array::from_fn(|_| Default::default()),
-            x60C: None,
-            x610_color_rgba: core::array::from_fn(|_| Default::default()),
+            model_variants: core::array::from_fn(|_| Default::default()),
+            effect_queue: None,
+            overlay_colors: core::array::from_fn(|_| Default::default()),
             pad_port: 0,
             costume_id: 0,
             sub_color: 0,
             team: 0,
-            x61C: 0,
-            x61D: 0,
-            filler_x61E: [0; 2],
+            slot_word: 0,
+            alpha: 0,
+            pad_61e: [0; 2],
             input: Default::default(),
             active_timer: Default::default(),
             active_sticky: Default::default(),
             active_duration: Default::default(),
             activity_timer: Default::default(),
-            x67C: 0,
-            x67D: 0,
-            x67E: 0,
-            x67F: 0,
-            x680: 0,
-            x681: 0,
-            x682: 0,
-            x683: 0,
-            x684: 0,
-            x685: 0,
-            x686: 0,
-            x687: 0,
-            x688: 0,
-            x689: 0,
-            x68A: 0,
-            x68B: 0,
-            x68C_transNPos: Default::default(),
-            x698: Default::default(),
-            x6A4_transNOffset: Default::default(),
-            x6B0: Default::default(),
+            frames_since_smash_x: 0,
+            frames_since_smash_up: 0,
+            frames_since_tap_up: 0,
+            frames_since_shoulder: 0,
+            frames_since_tech_shoulder: 0,
+            frames_since_pad_up: 0,
+            frames_since_pad_down: 0,
+            frames_since_z: 0,
+            frames_since_tech_window: 0,
+            frames_since_special_s: 0,
+            frames_since_special_hi: 0,
+            frames_since_special_lw: 0,
+            frames_since_special_s_dir: 0,
+            frames_since_special_n: 0,
+            frames_since_jump: 0,
+            frames_since_special_hi_air: 0,
+            trans_n_pos: Default::default(),
+            prev_trans_n_pos: Default::default(),
+            trans_n_offset: Default::default(),
+            prev_trans_n_offset: Default::default(),
             lstick_angle: 0.0,
-            x6C0: Default::default(),
-            x6CC: Default::default(),
-            x6D8: Default::default(),
-            x6E4: Default::default(),
+            part_35_pos: Default::default(),
+            prev_part_35_pos: Default::default(),
+            part_35_offset: Default::default(),
+            prev_part_35_offset: Default::default(),
             coll_data: Default::default(),
             ecb_lock: 0,
-            x890_cameraBox: None,
+            camera_box: None,
             cur_anim_frame: 0.0,
-            x898_unk: 0.0,
+            cmd_frame_offset: 0.0,
             frame_speed_mul: 0.0,
-            x8A0_unk: 0.0,
-            x8A4_animBlendFrames: 0.0,
-            x8A8_anim_frame: 0.0,
-            x8AC_animSkeleton: None,
-            x8B0: core::array::from_fn(|_| Default::default()),
-            x914: core::array::from_fn(|_| Default::default()),
-            xDF4: core::array::from_fn(|_| Default::default()),
-            x1064_thrownHitbox: Default::default(),
-            x119C_teamUnk: 0,
-            grabber_unk1: 0,
+            freeze_rate_step: 0.0,
+            anim_blend_frames: 0.0,
+            anim_blend_frame: 0.0,
+            anim_skeleton: None,
+            part_anims: core::array::from_fn(|_| Default::default()),
+            hitboxes: core::array::from_fn(|_| Default::default()),
+            throw_hitboxes: core::array::from_fn(|_| Default::default()),
+            thrown_hitbox: Default::default(),
+            thrown_team: 0,
+            thrower_slot: 0,
             hurt_capsules_len: 0,
-            x119F: 0,
+            pad_119f: 0,
             hurt_capsules: core::array::from_fn(|_| Default::default()),
-            x1614: core::array::from_fn(|_| Default::default()),
-            x166C: 0,
-            x1670: core::array::from_fn(|_| Default::default()),
-            filler_x1674: [0; 400],
-            x1828: 0,
+            stamina_markers: core::array::from_fn(|_| Default::default()),
+            ledge_point_count: 0,
+            ledge_points: core::array::from_fn(|_| Default::default()),
+            pad_1674: [0; 400],
+            hit_reaction: 0,
             dmg: Default::default(),
-            x1960_vibrateMult: 0.0,
-            x1964: 0.0,
-            x1968_jumpsUsed: 0,
-            x1969_walljumpUsed: 0,
+            hitlag_vibrate_mul: 0.0,
+            min_hitlag: 0.0,
+            jumps_used: 0,
+            walljumps_used: 0,
             hitlag_mul: 0.0,
-            unk_msid: 0,
+            jab_msid: 0,
             item_gobj: None,
-            x1978: None,
-            x197C: None,
-            x1980: None,
-            x1984_heldItemSpec: None,
-            x1988: 0,
-            x198C: 0,
-            x1990: 0,
-            x1994: 0,
+            second_item: None,
+            bunny_hood: None,
+            flower: None,
+            special_item: None,
+            hit_status: 0,
+            timed_hit_status: 0,
+            intangible_frames: 0,
+            invincible_frames: 0,
             shield_health: 0.0,
             lightshield_amount: 0.0,
-            x19A0_shieldDamageTaken: 0,
-            x19A4: 0,
-            x19A8: None,
+            shield_damage_taken: 0,
+            shield_hit_damage: 0,
+            shield_hit_by: None,
             specialn_facing_dir: 0.0,
-            x19B0: 0,
-            shield_unk0: 0.0,
-            shield_unk1: 0.0,
-            x19BC_shieldDamageTaken3: 0,
+            shield_hit_element: 0,
+            counter_min_hitlag: 0.0,
+            counter_item_min_hitlag: 0.0,
+            shield_hit_slot: 0,
             shield_hit: Default::default(),
             reflect_hit: Default::default(),
             absorb_hit: Default::default(),
-            ReflectAttr: Default::default(),
-            AbsorbAttr: Default::default(),
+            reflect: Default::default(),
+            absorb: Default::default(),
             grab_timer: 0.0,
-            x1A50: 0,
-            x1A51: 0,
-            x1A52: 0,
-            x1A53: 0,
-            x1A54: 0,
+            mash_stick_x: 0,
+            mash_stick_y: 0,
+            mash_shake_row: 0,
+            mash_shake_rows: 0,
+            jab_mashes: 0,
             victim_gobj: None,
-            x1A5C: None,
+            partner: None,
             target_item_gobj: None,
-            x1A64: None,
-            x1A68: 0,
-            x1A6A: 0,
-            x1A6C: 0.0,
-            x1A70: Default::default(),
-            x1A7C: Default::default(),
+            caught_item: None,
+            grab_kinds: 0,
+            grab_immune: 0,
+            hip_follow_rate: 0.0,
+            throw_offset: Default::default(),
+            hip_pos: Default::default(),
             cpu: Default::default(),
-            x2004: 0,
-            x2008: 0,
-            x200C: 0,
-            x2010: 0,
-            x2014: 0,
-            x2018: 0,
-            x201C: 0,
-            x2020: 0,
-            x2021: 0,
-            x2022: 0,
-            x2024: 0,
+            star_frames: 0,
+            mushroom_frames: 0,
+            queued_grows: 0,
+            queued_shrinks: 0,
+            bunny_hood_frames: 0,
+            flower_frames: 0,
+            flower_damage_timer: 0,
+            flower_stick_x: 0,
+            flower_stick_y: 0,
+            unused_2022: 0,
+            flower_growth: 0,
             metal_timer: 0,
             metal_health: 0,
-            x2030: 0,
-            x2034: 0,
-            x2038: 0,
-            x203C: Default::default(),
-            filler_x2044: [0; 32],
-            x2064_ledgeCooldown: 0,
-            x2068_attackID: 0,
-            x206C_attack_instance: 0,
-            x206E: 0,
-            x2070: [0; 4],
-            x2074: Default::default(),
-            x208C: 0,
-            x2090: 0,
-            x2092: 0,
-            x2094: None,
-            x2098: 0,
-            x209A: 0,
-            x209C: 0,
-            x20A0_accessory: None,
-            x20A4: Default::default(),
-            unk_gobj: None,
-            x20B0: core::array::from_fn(|_| Default::default()),
-            x20F8: 0.0,
-            x20FC: 0.0,
-            x2100: 0,
-            x2101_bits_0to6: 0,
-            x2101_bits_8: false,
-            x2102: 0,
-            x2103: 0,
-            x2104: 0,
+            cloak_frames: 0,
+            alt_metal_timer: 0,
+            alt_metal_health: 0,
+            second_dobjs: Default::default(),
+            pad_2044: [0; 32],
+            ledge_cooldown: 0,
+            attack_id: 0,
+            attack_instance: 0,
+            pad_206e: 0,
+            attack_flags: [0; 4],
+            attack_record: Default::default(),
+            combo_attack_id: 0,
+            combo_count: 0,
+            combo_push_frames: 0,
+            combo_victim: None,
+            combo_window: 0,
+            name_tag_timer: 0,
+            air_grab_timer: 0,
+            accessory: None,
+            shadow: Default::default(),
+            hit_by: None,
+            afterimage_ring: core::array::from_fn(|_| Default::default()),
+            afterimage_width_a: 0.0,
+            afterimage_width_b: 0.0,
+            afterimage_mode: 0,
+            afterimage_slot: 0,
+            item_afterimage: false,
+            pad_2102: 0,
+            pad_2103: 0,
+            parasol_frames: 0,
             capture_timer: 0,
             wall_jump_input_timer: 0,
-            filler_x210C: [0; 3],
-            x2110_walljumpWallSide: 0.0,
+            pad_210d: [0; 3],
+            walljump_wall_side: 0.0,
             smash_attrs: Default::default(),
-            x213C: 0,
-            x2140: 0.0,
-            x2144: 0,
-            x2148: 0,
-            x214C: 0,
-            x2150: 0,
-            x2154: 0,
-            x2158: 0,
-            x215C: 0,
-            x2160: 0,
-            x2164: 0,
-            x2168: 0,
-            unk_grab_val: 0.0,
-            x2170: 0.0,
-            x2174: Default::default(),
-            x2180: 0,
-            x2184: None,
-            x2188: Default::default(),
+            ledge_caught: 0,
+            lowest_y: 0.0,
+            voice_handle: 0,
+            sound_handle_2: 0,
+            sound_handle_3: 0,
+            sound_handle_4: 0,
+            sound_handle_5: 0,
+            sound_handle_6: 0,
+            track_handle: 0,
+            sfx_handle: 0,
+            star_cheer: 0,
+            hammer_music: 0,
+            grab_distance: 0.0,
+            hold_dy: 0.0,
+            thrown_trans: Default::default(),
+            dead_holder_slot: 0,
+            mushroom_scale_joint: None,
+            screen_pos: Default::default(),
             grab_cb: None,
-            x2194: None,
+            grab_item_cb: None,
             grabbed_cb: None,
             input_cb: None,
             anim_cb: None,
@@ -3167,7 +3567,7 @@ impl Default for Fighter {
             deal_dmg_cb: None,
             shield_hit_cb: None,
             reflect_hit_cb: None,
-            x21CC: None,
+            anim_end_cb: None,
             hitlag_cb: None,
             pre_hitlag_cb: None,
             post_hitlag_cb: None,
@@ -3175,160 +3575,160 @@ impl Default for Fighter {
             death1_cb: None,
             death2_cb: None,
             death3_cb: None,
-            x21EC: None,
+            motion_change_cb: None,
             take_dmg_2_cb: None,
             hurtbox_detect_cb: None,
-            x21F8: None,
-            x21FC_flag: [0; 1],
-            filler_x21FC: [0; 3],
+            turn_cb: None,
+            debug_draw_flags: [0; 1],
+            pad_21fd: [0; 3],
             cmd_vars: [0; 4],
-            x2210: [0; 4],
+            throw_flags: [0; 4],
             cmd_timer: 0.0,
             allow_interrupt: false,
-            x2218_b1: false,
-            x2218_b2: false,
+            jab_continue: false,
+            jab_rapid: false,
             reflecting: false,
-            x2218_b4: false,
-            x2218_b5: false,
-            x2218_b6: false,
-            x2218_b7: false,
-            x2219_b0: false,
-            x2219_b1: false,
-            x2219_b2: false,
-            x2219_b3: false,
-            x2219_b4: false,
-            x2219_b5: false,
-            x2219_b6: false,
-            x2219_b7: false,
-            x221A_b0: false,
-            x221A_b1: false,
+            reflect_kept: false,
+            reflect_behavior: false,
+            absorbing: false,
+            absorb_any: false,
+            effect_once: false,
+            out_of_play: false,
+            blast_immune_state: false,
+            hitboxes_set: false,
+            hammer_hits_held: false,
+            in_hitlag: false,
+            was_in_hitlag: false,
+            hitlag_held: false,
+            pending_hitlag: false,
+            thaw_size: false,
             allow_sdi: false,
-            x221A_b3: false,
+            in_hitstun_sdi: false,
             fall_fast: false,
-            x221A_b5: false,
-            x221A_b6: false,
-            x221A_b7: false,
-            x221B: Default::default(),
-            x221C_b0: false,
-            x221C_b1: false,
-            x221C_b2: false,
-            x221C_b3: false,
-            x221C_b4: false,
-            x221C_b5: false,
-            x221C_b6: false,
-            x221C_u16_y: 0,
-            x221D_b2: false,
+            hurtboxes_set: false,
+            hurtboxes_custom: false,
+            shield_was_hit: false,
+            state_flags: Default::default(),
+            held_hit_light: false,
+            powershield_late: false,
+            powershield: false,
+            powershield_early: false,
+            armor: false,
+            hit_this_frame: false,
+            in_hitstun: false,
+            leg_reach: 0,
+            variants_hidden: false,
             has_prev_input: false,
             input_disabled: false,
-            x221D_b5: false,
-            x221D_b6: false,
-            x221D_b7: false,
+            nudge_off: false,
+            starman: false,
+            hanging: false,
             invisible: false,
-            x221E_b1: false,
-            x221E_b2: false,
-            x221E_b3: false,
-            x221E_b4: false,
-            x221E_b5: false,
-            x221E_b6: false,
-            x221E_b7: false,
-            x221F_b0: false,
-            x221F_b1: false,
-            x221F_b2: false,
+            dead_flag: false,
+            entering: false,
+            item_visible: false,
+            articles_visible: false,
+            visible: false,
+            grab_coll_off: false,
+            costume_anim_set: false,
+            off_screen: false,
+            dead: false,
+            cloaked: false,
             is_sleeping: false,
             is_sub_fighter: false,
-            x221F_b5: false,
-            x221F_b6: false,
-            x221F_b7: false,
-            x2220_b0: 0,
-            x2220_b3: false,
-            x2220_b4: false,
-            x2220_b5: false,
-            x2220_b6: false,
-            x2220_b7: false,
-            x2221_b0: false,
-            x2221_b1: false,
-            x2221_b2: false,
-            x2221_b3: false,
-            x2221_b4: false,
-            x2221_b5: false,
-            x2221_b6: false,
-            x2221_b7: false,
-            x2222_b0: false,
+            last_hit_by_sub: false,
+            shield_hit_by_sub: false,
+            unused_221f_b7: false,
+            footstep_part: 0,
+            buried: false,
+            turn_spin: false,
+            giant: false,
+            tiny: false,
+            camera_placed: false,
+            warp_star_intangible: false,
+            damage_col_anim: false,
+            hip_offset: false,
+            light_changed: false,
+            parasol_open: false,
+            parasol_checked: false,
+            parasol_blend: false,
+            parasol_from_jump: false,
+            has_cargo: false,
             can_multijump: false,
-            x2222_b2: false,
-            x2222_b3: false,
-            x2222_b4: false,
-            x2222_b5: false,
-            x2222_b6: false,
-            x2222_b7: false,
-            x2223_b0: false,
-            x2223_b1: false,
-            x2223_b2: false,
-            x2223_b3: false,
-            x2223_b4: false,
-            x2223_b5: false,
+            no_turn: false,
+            no_blast_rise: false,
+            pickup_limited: false,
+            is_popo: false,
+            frozen_with_holder: false,
+            follows_holder: false,
+            anim_frozen: false,
+            is_flat: false,
+            outline: false,
+            silhouette: false,
+            no_item_bounce: false,
+            stepped_on_item: false,
             is_always_metal: false,
             is_metal: false,
-            x2224_b0: false,
-            x2224_b1: false,
+            low_models_own_material: false,
+            air_item_caught: false,
             stamina_dead: false,
-            x2224_b3: false,
-            x2224_b4: false,
-            x2224_b5: false,
-            x2224_b6: false,
+            stamina_out: false,
+            wind_immune: false,
+            mash_shaking: false,
+            can_mash: false,
             can_walljump: false,
-            x2225_b0: false,
-            x2225_b1: false,
-            x2225_b2: false,
-            x2225_b3: false,
-            x2225_b4: false,
-            x2225_b5: false,
-            x2225_b6: false,
-            x2225_b7: false,
-            x2226_b0: false,
-            x2226_b1: false,
-            x2226_b2: false,
-            x2226_b3: false,
-            x2226_b4: false,
-            x2226_b5: false,
-            x2226_b6: false,
-            x2226_b7: false,
-            x2227_b0: false,
-            x2227_b1: false,
-            x2227_b2: false,
-            x2227_b3: false,
-            x2227_b4: false,
-            x2227_b5: false,
-            x2227_b6: false,
-            x2227_b7: false,
-            x2228_b0: false,
-            x2228_b1: false,
+            map_coll_done: false,
+            inhale_catch: false,
+            hat_hidden: false,
+            nana_follows: false,
+            hits_others_team: false,
+            rules_voice_muted: false,
+            voice_muted: false,
+            is_stamina: false,
+            lies_on_z: false,
+            heavy_down_bound: false,
+            held_in_model: false,
+            takes_damage_cloaked: false,
+            cloak: false,
+            refracted: false,
+            no_color_anims: false,
+            cloak_look: false,
+            jumped_from_ground: false,
+            ledge_jumped: false,
+            thrown_hitbox_live: false,
+            alt_metal: false,
+            tumble_early: false,
+            special_air_used: false,
+            held_in_ice: false,
+            drew_low_models: false,
+            low_models: false,
+            flat_floor_chains: false,
             is_sandbag: false,
-            x2228_b3: 0,
-            x2228_b5: false,
+            sfx_size: 0,
+            blast_immune: false,
             used_tether: false,
-            x2228_b7: false,
-            x2229_b0: false,
-            x2229_b1: false,
-            x2229_b2: false,
-            x2229_b3: false,
-            x2229_b4: false,
+            stick_right: false,
+            stick_left: false,
+            attrs_scaled: false,
+            unused_2229_b2: false,
+            no_magnifier: false,
+            coin_odd_frame: false,
             no_normal_motion: false,
-            x2229_b6: false,
+            spawn_in_air: false,
             no_kb: false,
-            x222A_b0: false,
-            x222A_b1: false,
-            x222A_b2: false,
-            x222A_b3: 0,
-            x222A_b5: false,
-            x222A_b6: false,
-            x222A_b7: false,
+            ungrabbable: false,
+            blast_zone_off: false,
+            unused_222a_b2: false,
+            unused_222a_b3: 0,
+            unused_222a_b5: false,
+            unused_222a_b6: false,
+            unused_222a_b7: false,
             u: Default::default(),
             bury_grkind: 0,
             bury_timer_1: 0,
             bury_timer_2: 0,
-            x2330: Default::default(),
-            x2338: Default::default(),
+            hammer_frames: Default::default(),
+            hammer_timers: Default::default(),
             mv: Default::default(),
         }
     }

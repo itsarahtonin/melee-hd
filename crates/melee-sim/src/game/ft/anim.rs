@@ -24,7 +24,7 @@ const X_ROT_N: i32 = 2;
 
 /// The fighter's `x594` bits, most significant first.
 pub fn x594_bit(fp: &Fighter, bit: u32) -> bool {
-    fp.x594[0] & (0x80 >> bit) != 0
+    fp.anim_bits[0] & (0x80 >> bit) != 0
 }
 
 /// A part's bone flags (`x8.x0`), most significant first.
@@ -42,7 +42,7 @@ impl Running<'_> {
     /// `ftCommon_GetModelScale`, in a register.
     #[doc(alias = "ftCommon_GetModelScale")]
     pub fn model_scale(fp: &Fighter) -> f64 {
-        fp::fmuls(reg(fp.x34_scale.y), reg(fp.co_attrs.model_scaling))
+        fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.model_scaling))
     }
 
     pub(super) fn bones(&self, f: FighterId) -> &[FighterBone] {
@@ -98,7 +98,7 @@ impl Running<'_> {
         let root = self.root_jobj(gobj);
         // `lfs f1, @422`: the register the frame below falls back on starts at 0.
         self.game.objs.aobj_f1 = Some(0.0);
-        if self.game.fighters[f.0].x8A4_animBlendFrames == 0.0 {
+        if self.game.fighters[f.0].anim_blend_frames == 0.0 {
             jobj::clear_flags_all(&mut self.game.objs.jobjs, Some(root), USE_QUATERNION);
             if x594_bit(&self.game.fighters[f.0], 0) {
                 let fp = &self.game.fighters[f.0];
@@ -109,17 +109,17 @@ impl Running<'_> {
                 self.anim_part_tree(f, 0);
             }
         } else {
-            let skel = self.game.fighters[f.0].x8AC_animSkeleton;
+            let skel = self.game.fighters[f.0].anim_skeleton;
             let rate = reg(framerate(&self.game.objs, skel));
             let fp = &mut self.game.fighters[f.0];
-            fp.x8A8_anim_frame = mem(fp::fadds(reg(fp.x8A8_anim_frame), rate));
+            fp.anim_blend_frame = mem(fp::fadds(reg(fp.anim_blend_frame), rate));
             let (t, t_inv);
-            if fp.x8A4_animBlendFrames <= fp.x8A8_anim_frame {
-                fp.x8A8_anim_frame = fp.x8A4_animBlendFrames;
+            if fp.anim_blend_frames <= fp.anim_blend_frame {
+                fp.anim_blend_frame = fp.anim_blend_frames;
                 t = 1.0;
                 t_inv = 0.0;
             } else {
-                let remaining = fp::fsubs(reg(fp.x8A4_animBlendFrames), reg(fp.x8A8_anim_frame));
+                let remaining = fp::fsubs(reg(fp.anim_blend_frames), reg(fp.anim_blend_frame));
                 t = fp::fdivs(rate, fp::fadds(rate, remaining));
                 t_inv = fp::fsubs(1.0, t);
             }
@@ -148,8 +148,8 @@ impl Running<'_> {
                 Some(frame) => {
                     let fp = &mut self.game.fighters[f.0];
                     if frame < fp.cur_anim_frame {
-                        fp.x898_unk = mem(fp::fadds(
-                            reg(fp.x898_unk),
+                        fp.cmd_frame_offset = mem(fp::fadds(
+                            reg(fp.cmd_frame_offset),
                             fp::fadds(reg(fp.cur_anim_frame), reg(fp.frame_speed_mul)),
                         ));
                     }
@@ -160,8 +160,8 @@ impl Running<'_> {
                     Some(v) => {
                         let fp = &mut self.game.fighters[f.0];
                         if v < fp.cur_anim_frame {
-                            let old = fp.x898_unk;
-                            fp.x898_unk = mem(fp::fadds(
+                            let old = fp.cmd_frame_offset;
+                            fp.cmd_frame_offset = mem(fp::fadds(
                                 reg(old),
                                 fp::fadds(reg(fp.cur_anim_frame), reg(fp.frame_speed_mul)),
                             ));
@@ -227,12 +227,12 @@ impl Running<'_> {
                 );
                 let t = self.game.objs.jobjs[j].translate;
                 let fp = &mut self.game.fighters[f.0];
-                fp.x698 = fp.x68C_transNPos;
-                fp.x68C_transNPos = t;
+                fp.prev_trans_n_pos = fp.trans_n_pos;
+                fp.trans_n_pos = t;
                 let s = scale_of(fp);
-                fp.x68C_transNPos = scaled(fp.x68C_transNPos, s);
-                fp.x6B0 = fp.x6A4_transNOffset;
-                fp.x6A4_transNOffset = fp.x68C_transNPos - fp.x698;
+                fp.trans_n_pos = scaled(fp.trans_n_pos, s);
+                fp.prev_trans_n_offset = fp.trans_n_offset;
+                fp.trans_n_offset = fp.trans_n_pos - fp.prev_trans_n_pos;
                 jobj::set_translate(&mut self.game.objs.jobjs, j, Vec3::default());
             } else if x594_bit(&self.game.fighters[f.0], 5) && jobj == p35 {
                 jobj::anim(
@@ -243,12 +243,12 @@ impl Running<'_> {
                 );
                 let t = self.game.objs.jobjs[j].translate;
                 let fp = &mut self.game.fighters[f.0];
-                fp.x6CC = fp.x6C0;
-                fp.x6C0 = t;
+                fp.prev_part_35_pos = fp.part_35_pos;
+                fp.part_35_pos = t;
                 let s = scale_of(fp);
-                fp.x6C0 = scaled(fp.x6C0, s);
-                fp.x6E4 = fp.x6D8;
-                fp.x6D8 = fp.x6C0 - fp.x6CC;
+                fp.part_35_pos = scaled(fp.part_35_pos, s);
+                fp.prev_part_35_offset = fp.part_35_offset;
+                fp.part_35_offset = fp.part_35_pos - fp.prev_part_35_pos;
                 jobj::set_translate(&mut self.game.objs.jobjs, j, Vec3::default());
             } else {
                 jobj::anim(
@@ -262,11 +262,11 @@ impl Running<'_> {
         }
         let fp = &mut self.game.fighters[f.0];
         if x594_bit(fp, 5) {
-            let d = fp.x68C_transNPos - fp.x6C0;
-            fp.x68C_transNPos = fp.x6C0;
-            fp.x698 = fp.x6CC;
-            fp.x6A4_transNOffset = fp.x6D8;
-            fp.x6B0 = fp.x6E4;
+            let d = fp.trans_n_pos - fp.part_35_pos;
+            fp.trans_n_pos = fp.part_35_pos;
+            fp.prev_trans_n_pos = fp.prev_part_35_pos;
+            fp.trans_n_offset = fp.part_35_offset;
+            fp.prev_trans_n_offset = fp.prev_part_35_offset;
             jobj::set_translate(
                 &mut self.game.objs.jobjs,
                 trans.expect("HSD_JObjSetTranslate on a null joint"),
@@ -274,13 +274,13 @@ impl Running<'_> {
             );
         }
         let fp = &self.game.fighters[f.0];
-        if !fp.x2226_b2 && fp.x2221_b2 {
+        if !fp.held_in_model && fp.hip_offset {
             let bone = self.data.u8(self.ft_model_desc(fp).at(0x10));
             let j = self.bone(f, i32::from(bone)).joint.expect("a joint");
             let t = self.game.objs.jobjs[j].translate;
             let s = scale_of(fp);
             let inv = fp::fdivs(1.0, s);
-            let p = scaled(fp.x68C_transNPos, inv);
+            let p = scaled(fp.trans_n_pos, inv);
             jobj::set_translate(&mut self.game.objs.jobjs, j, t - p);
         }
         aobj::invoke_end_callbacks(&self.game.objs.aobjs);
@@ -332,8 +332,8 @@ impl Running<'_> {
     pub fn anim_frame(&self, gobj: GObjId) -> Option<f32> {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        if fp.x8A4_animBlendFrames != 0.0 {
-            return Some(current_frame(&self.game.objs, fp.x8AC_animSkeleton));
+        if fp.anim_blend_frames != 0.0 {
+            return Some(current_frame(&self.game.objs, fp.anim_skeleton));
         }
         let n = self.parts_num(f) as usize;
         self.bones(f)[..n]
@@ -351,7 +351,7 @@ impl Running<'_> {
     #[doc(alias = "ftAnim_8006F368")]
     pub fn part_is_animated(&self, f: FighterId, part: i32) -> bool {
         let bone = self.bone(f, part);
-        let j = if self.game.fighters[f.0].x8A4_animBlendFrames == 0.0 {
+        let j = if self.game.fighters[f.0].anim_blend_frames == 0.0 {
             bone.joint
         } else {
             bone.x4_jobj2
@@ -363,7 +363,7 @@ impl Running<'_> {
     #[doc(alias = "ftAnim_IsFramesRemaining")]
     pub fn anim_frames_remaining(&self, gobj: GObjId) -> bool {
         let f = self.game.fighter_id(gobj);
-        let blending = self.game.fighters[f.0].x8A4_animBlendFrames != 0.0;
+        let blending = self.game.fighters[f.0].anim_blend_frames != 0.0;
         let n = self.parts_num(f) as usize;
         self.bones(f)[..n]
             .iter()
@@ -428,7 +428,7 @@ impl Running<'_> {
         } else {
             0.0
         };
-        let e = &mut self.game.fighters[f.0].x8B0[slot as usize];
+        let e = &mut self.game.fighters[f.0].part_anims[slot as usize];
         e.x11 = anim as i8;
         e.x4 = frames;
         e.x8 = 0.0;
@@ -471,13 +471,13 @@ impl Running<'_> {
     /// hand's hold pose for an item.
     #[doc(alias = "ftAnim_80070FB4")]
     pub fn set_part_anim_pose(&mut self, gobj: GObjId, slot: i32, anim: i32) {
-        self.game.fighter_mut(gobj).x8B0[slot as usize].x10 = anim as i8;
+        self.game.fighter_mut(gobj).part_anims[slot as usize].x10 = anim as i8;
     }
 
     /// Plays set `slot`'s pose at once, if it has one, `ftAnim_80070C48`.
     #[doc(alias = "ftAnim_80070C48")]
     pub fn show_part_anim_pose(&mut self, gobj: GObjId, slot: i32) {
-        let anim = self.game.fighter(gobj).x8B0[slot as usize].x10;
+        let anim = self.game.fighter(gobj).part_anims[slot as usize].x10;
         if anim != -1 {
             self.apply_part_anim(gobj, slot, i32::from(anim), 0.0);
         }
@@ -490,7 +490,7 @@ impl Running<'_> {
     pub fn end_part_anim(&mut self, gobj: GObjId, slot: i32) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        let anim = fp.x8B0[slot as usize].x11;
+        let anim = fp.part_anims[slot as usize].x11;
         if anim == -1 {
             return;
         }
@@ -515,14 +515,14 @@ impl Running<'_> {
             cur = next_anim_joint(self.data, a, &mut stack);
         }
         let fp = &mut self.game.fighters[f.0];
-        fp.x8B0[slot as usize].x11 = -1;
-        if fp.x590.is_some() {
+        fp.part_anims[slot as usize].x11 = -1;
+        if fp.action_tree.is_some() {
             let (frame, speed) = (fp.cur_anim_frame, fp.frame_speed_mul);
             self.restart_part_anim(f, start, frame, speed);
             return;
         }
         let j = self.bone(f, start).joint;
-        let costume = self.game.fighters[f.0].x108_costume_joint;
+        let costume = self.game.fighters[f.0].costume_joint;
         let desc = self.part_joint_desc(f, j, costume);
         self.reset_parts(f, start, desc, false);
     }
@@ -533,7 +533,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         for i in 0..5 {
             let fp = &self.game.fighters[f.0];
-            if fp.x8B0[i].x11 == -1 {
+            if fp.part_anims[i].x11 == -1 {
                 continue;
             }
             let ft_data = fp.ft_data.expect("a fighter without data");
@@ -545,7 +545,7 @@ impl Running<'_> {
             let count = self.data.u16(entry.at(2));
             let bones = self.data.ptr(entry.at(4));
             let fp = &mut self.game.fighters[f.0];
-            let e = &mut fp.x8B0[i];
+            let e = &mut fp.part_anims[i];
             e.x8 = mem(fp::fadds(reg(e.x8), reg(e.xC)));
             let (t, t_inv);
             if e.x4 <= e.x8 {
@@ -581,14 +581,14 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800DB500")]
     pub fn throw_offset_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].x2226_b2 {
+        if self.game.fighters[f.0].held_in_model {
             let part = self.bone_index(&self.game.fighters[f.0], X_ROT_N);
             if self.part_is_animated(f, part) {
                 let j = self.bone(f, part).joint.expect("XRotN");
-                self.game.fighters[f.0].x2174 = self.game.objs.jobjs[j].translate;
+                self.game.fighters[f.0].thrown_trans = self.game.objs.jobjs[j].translate;
             }
         }
-        if self.game.fighters[f.0].x2226_b2 {
+        if self.game.fighters[f.0].held_in_model {
             self.hip_to_root(f);
         }
     }
@@ -599,7 +599,7 @@ impl Running<'_> {
     #[doc(alias = "ftAnim_8006DF0C")]
     fn hip_to_root(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
-        if !fp.x2221_b2 {
+        if !fp.hip_offset {
             return;
         }
         let top = self.bone(f, 0).joint;
@@ -752,14 +752,14 @@ impl Running<'_> {
     #[doc(alias = "ftParts_8007482C")]
     pub fn load_blend_skeleton(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        let joint = self.game.fighters[f.0].x108_costume_joint;
+        let joint = self.game.fighters[f.0].costume_joint;
         jobj::set_default_class(&mut self.game.objs, jobj::JObjClass::FighterIntp);
         let skeleton = jobj::load_joint(&mut self.game.objs, self.data, joint);
         jobj::set_default_class(&mut self.game.objs, jobj::JObjClass::Hsd);
         let fp = &mut self.game.fighters[f.0];
-        fp.x8AC_animSkeleton = skeleton;
-        fp.x8A4_animBlendFrames = 0.0;
-        fp.x8A8_anim_frame = 0.0;
+        fp.anim_skeleton = skeleton;
+        fp.anim_blend_frames = 0.0;
+        fp.anim_blend_frame = 0.0;
         self.setup_blend_parts(gobj);
     }
 }
@@ -768,7 +768,7 @@ impl Game {
     /// Clears the fighter's part animations' slots, `ftAnim_8007077C`.
     #[doc(alias = "ftAnim_8007077C")]
     pub fn reset_part_anims(&mut self, f: FighterId) {
-        for a in &mut self.fighters[f.0].x8B0 {
+        for a in &mut self.fighters[f.0].part_anims {
             a.x11 = -1;
             a.x10 = -1;
         }

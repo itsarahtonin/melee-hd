@@ -33,13 +33,13 @@ impl Running<'_> {
             let k = reg(self.data.f32(self.common_ptr(SCALE_PARAMS).at(0x8)));
             mem(scaled_by_height(
                 1.0,
-                reg(self.game.fighter(gobj).x34_scale.y),
+                reg(self.game.fighter(gobj).scale.y),
                 k,
             ))
         } else {
             1.0
         };
-        self.game.fighter_mut(gobj).x2210 = [0; 4];
+        self.game.fighter_mut(gobj).throw_flags = [0; 4];
         self.change_motion_state(gobj, msid, 0, 0.0, speed, 0.0, None);
         if looped {
             while !self.game.fighter_mut(gobj).take_throw_flag(3) {
@@ -66,7 +66,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
         if fp.item_gobj.is_some() {
-            fp.x1978 = Some(it);
+            fp.second_item = Some(it);
         } else {
             fp.item_gobj = Some(it);
         }
@@ -116,13 +116,13 @@ impl Running<'_> {
             return;
         }
         let fp = &self.game.fighters[f.0];
-        if let Some(it) = fp.x1978.or(fp.item_gobj) {
+        if let Some(it) = fp.second_item.or(fp.item_gobj) {
             if fp.motion_id == MS_LIGHT_GET {
                 if self.item_pickup_effect(gobj, it) {
                     return;
                 }
             } else {
-                if fp.x2222_b0 {
+                if fp.has_cargo {
                     self.enter_dk_heavy_wait(gobj);
                 } else {
                     self.enter_lift_wait(gobj);
@@ -139,7 +139,7 @@ impl Running<'_> {
         if let Some(it) = self.game.fighter(gobj).item_gobj {
             self.item_pickup_hit(gobj, it);
         }
-        if let Some(it) = self.game.fighter(gobj).x1978 {
+        if let Some(it) = self.game.fighter(gobj).second_item {
             self.item_pickup_hit(gobj, it);
         }
     }

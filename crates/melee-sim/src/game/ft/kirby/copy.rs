@@ -232,7 +232,7 @@ impl Running<'_> {
             );
             crate::game::it::kinds::kirbyspitstar::release(self, it, capturing, 0.0);
             let fp = self.game.fighter_mut(gobj);
-            fp.x1A64 = None;
+            fp.caught_item = None;
             fp.target_item_gobj = None;
         }
     }

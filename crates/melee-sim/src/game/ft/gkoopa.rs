@@ -63,8 +63,8 @@ impl Running<'_> {
         let article = self.data.ptr(items.at(0));
         super::super::it::item::set_char_article(self.game, article, ItKind::BowserFlame.id());
         let fp = &mut self.game.fighters[f.0];
-        fp.x2226_b1 = true;
-        fp.x222A_b0 = true;
+        fp.heavy_down_bound = true;
+        fp.ungrabbable = true;
     }
 
     /// Picking up an item, `ftGk_Init_OnItemPickup` (`Fighter_OnItemPickup(gobj, flag, 1,

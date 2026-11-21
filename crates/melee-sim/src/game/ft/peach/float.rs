@@ -82,10 +82,10 @@ impl Running<'_> {
             set_float_time(fp, time);
         }
         fp.self_vel.y = 0.0;
-        fp.x2219_b0 = true;
+        fp.effect_once = true;
         let bone = self.bone_index(&self.game.fighters[f.0], TRANS_N);
         let j = self.bone_joint(gobj, bone);
-        let mut head = self.game.fighters[f.0].x60C;
+        let mut head = self.game.fighters[f.0].effect_queue;
         ef::queue(
             self,
             Some(gobj),
@@ -95,7 +95,7 @@ impl Running<'_> {
             j,
             &[],
         );
-        self.game.fighters[f.0].x60C = head;
+        self.game.fighters[f.0].effect_queue = head;
     }
 
     /// `ftPe_Float_Anim`: her time counts down; when it's out she falls.

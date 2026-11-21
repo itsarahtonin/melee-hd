@@ -179,7 +179,7 @@ impl Running<'_> {
     pub fn hammer_hits_held(&mut self, gobj: GObjId) {
         let it = self.game.fighter(gobj).item_gobj.expect("no hammer held");
         hammer_hits_on(self, it, true);
-        self.game.fighter_mut(gobj).x2219_b4 = true;
+        self.game.fighter_mut(gobj).hammer_hits_held = true;
     }
 
     /// The hammer's hitboxes off as a state change takes the hits, `ftCo_800C555C`.
@@ -217,7 +217,7 @@ impl Running<'_> {
     pub fn hammer_swing(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        if fp.x2338.x != 0 {
+        if fp.hammer_timers.x != 0 {
             self.clear_hitboxes(f);
         } else if fp.cur_anim_frame >= 0.0 && fp.cur_anim_frame < fp.frame_speed_mul {
             self.renew_attack_instance(gobj);
@@ -272,20 +272,20 @@ impl Running<'_> {
             return;
         }
         let fp = &mut self.game.fighters[f.0];
-        if fp.x2330.x != 0 {
-            fp.x2330.x -= 1;
+        if fp.hammer_frames.x != 0 {
+            fp.hammer_frames.x -= 1;
         }
-        if self.game.fighters[f.0].x2330.y != 0 && self.in_hammer_state(gobj) {
+        if self.game.fighters[f.0].hammer_frames.y != 0 && self.in_hammer_state(gobj) {
             let fp = &mut self.game.fighters[f.0];
-            fp.x2330.y -= 1;
-            if fp.x2330.y == 0 {
-                fp.x2338.x = 1;
+            fp.hammer_frames.y -= 1;
+            if fp.hammer_frames.y == 0 {
+                fp.hammer_timers.x = 1;
                 let it = fp.item_gobj.expect("no hammer held");
                 kinds::hammer::lose_head(self, it);
                 self.stop_rumble(f, 1);
             }
         }
-        if self.game.fighters[f.0].x2330.x == 0 {
+        if self.game.fighters[f.0].hammer_frames.x == 0 {
             let it = self.game.fighters[f.0].item_gobj.expect("no hammer held");
             it::item::destroy(self, it);
             self.hammer_crowd_less(f);
@@ -298,8 +298,8 @@ impl Running<'_> {
             }
         }
         let fp = &mut self.game.fighters[f.0];
-        if fp.x2338.y != 0 {
-            fp.x2338.y -= 1;
+        if fp.hammer_timers.y != 0 {
+            fp.hammer_timers.y -= 1;
         }
     }
 
@@ -307,8 +307,8 @@ impl Running<'_> {
     #[doc(alias = "ft_80088110")]
     pub fn hammer_crowd_less(&mut self, f: super::super::FighterId) {
         let fp = &mut self.game.fighters[f.0];
-        let n = fp.x2168;
-        fp.x2168 = 0;
+        let n = fp.hammer_music;
+        fp.hammer_music = 0;
         self.lb_audio_crowd_b_less(n);
     }
 
@@ -322,11 +322,11 @@ impl Running<'_> {
         let it = self.game.fighters[f.0].item_gobj.expect("no hammer held");
         let swings = kinds::hammer::swings_to_lose_head(self, it);
         let fp = &mut self.game.fighters[f.0];
-        fp.x2330.x = held;
-        fp.x2330.y = swings;
-        fp.x2338.x = 0;
-        fp.x2338.y = 0;
-        if fp.x2330.y != 0 {
+        fp.hammer_frames.x = held;
+        fp.hammer_frames.y = swings;
+        fp.hammer_timers.x = 0;
+        fp.hammer_timers.y = 0;
+        if fp.hammer_frames.y != 0 {
             let slot = i32::from(fp.player_idx);
             self.count_headless_hammer(slot);
         }
@@ -336,7 +336,7 @@ impl Running<'_> {
     /// The crowd's second loop wanted once more for the fighter, `ft_800880AC`.
     #[doc(alias = "ft_800880AC")]
     pub fn hammer_crowd(&mut self, f: super::super::FighterId) {
-        self.game.fighters[f.0].x2168 += 1;
+        self.game.fighters[f.0].hammer_music += 1;
         self.lb_audio_crowd_b();
     }
 
@@ -376,7 +376,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C554C")]
     pub fn open_hammer_drop(&mut self, gobj: GObjId) {
         let w = self.common().i32(DROP_WINDOW);
-        self.game.fighter_mut(gobj).x2338.y = w;
+        self.game.fighter_mut(gobj).hammer_timers.y = w;
     }
 
     /// A walk, `ftCo_800C55CC`.
@@ -395,7 +395,7 @@ impl Running<'_> {
     pub fn enter_hammer_walk(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         let mut accel = 1.0;
-        let scale = reg(fp.x34_scale.y);
+        let scale = reg(fp.scale.y);
         if scale != 1.0 {
             let t = super::super::common_ptr(self.game, self.data, super::super::SCALE_PARAMS)
                 .expect("no fighter scale parameters");
@@ -453,7 +453,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let left = fp::fsubs(reg(fp.mv_f32(MV_TURN_LEFT)), 1.0);
         fp.set_mv_f32(MV_TURN_LEFT, left);
-        if !fp.x2222_b6 {
+        if !fp.frozen_with_holder {
             let frames = fp::frsp(f64::from(self.common().i32(TURN_FRAMES)));
             let left = reg(self.game.fighters[f.0].mv_f32(MV_TURN_LEFT));
             let rot = mem(fp::frsp(fp::fmul(
@@ -551,10 +551,10 @@ impl Running<'_> {
     pub fn hammer_drop_check(&mut self, gobj: GObjId) -> bool {
         let window = self.common().u32(0x1C);
         let fp = self.game.fighter(gobj);
-        if !(fp.x2338.y != 0
+        if !(fp.hammer_timers.y != 0
             && fp.input.pressed_buttons & PAD_A != 0
             && fp.input.held_buttons[0] & PAD_LR != 0
-            && u32::from(fp.x683) >= window)
+            && u32::from(fp.frames_since_z) >= window)
         {
             return false;
         }

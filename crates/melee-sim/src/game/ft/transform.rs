@@ -67,10 +67,10 @@ impl Running<'_> {
             dst.self_vel = src.self_vel;
             dst.ground_or_air = src.ground_or_air;
             dst.gr_vel = src.gr_vel;
-            dst.xF0_ground_kb_vel = src.xF0_ground_kb_vel;
-            dst.xF4_ground_attacker_shield_kb_vel = src.xF4_ground_attacker_shield_kb_vel;
-            dst.xF8_playerNudgeVel.x = src.xF8_playerNudgeVel.x;
-            dst.xF8_playerNudgeVel.y = src.xF8_playerNudgeVel.y;
+            dst.ground_kb_vel = src.ground_kb_vel;
+            dst.ground_attacker_shield_kb_vel = src.ground_attacker_shield_kb_vel;
+            dst.nudge_vel.x = src.nudge_vel.x;
+            dst.nudge_vel.y = src.nudge_vel.y;
             dst.input.clone_from(&src.input);
             dst.active_timer.lstick.x = src.active_timer.lstick.x;
             dst.active_timer.lstick.y = src.active_timer.lstick.y;
@@ -81,42 +81,42 @@ impl Running<'_> {
             dst.activity_timer.lstick.x = src.activity_timer.lstick.x;
             dst.activity_timer.lstick.y = src.activity_timer.lstick.y;
             dst.activity_timer.trigger = src.activity_timer.trigger;
-            dst.x685 = src.x685;
-            dst.x686 = src.x686;
-            dst.x687 = src.x687;
-            dst.x688 = src.x688;
-            dst.x689 = src.x689;
-            dst.x68A = src.x68A;
-            dst.x68B = src.x68B;
-            dst.x67C = src.x67C;
-            dst.x67D = src.x67D;
-            dst.x67E = src.x67E;
-            dst.x681 = src.x681;
-            dst.x682 = src.x682;
-            dst.x67F = src.x67F;
-            dst.x680 = src.x680;
-            dst.x683 = src.x683;
-            dst.x684 = src.x684;
+            dst.frames_since_special_s = src.frames_since_special_s;
+            dst.frames_since_special_hi = src.frames_since_special_hi;
+            dst.frames_since_special_lw = src.frames_since_special_lw;
+            dst.frames_since_special_s_dir = src.frames_since_special_s_dir;
+            dst.frames_since_special_n = src.frames_since_special_n;
+            dst.frames_since_jump = src.frames_since_jump;
+            dst.frames_since_special_hi_air = src.frames_since_special_hi_air;
+            dst.frames_since_smash_x = src.frames_since_smash_x;
+            dst.frames_since_smash_up = src.frames_since_smash_up;
+            dst.frames_since_tap_up = src.frames_since_tap_up;
+            dst.frames_since_pad_up = src.frames_since_pad_up;
+            dst.frames_since_pad_down = src.frames_since_pad_down;
+            dst.frames_since_shoulder = src.frames_since_shoulder;
+            dst.frames_since_tech_shoulder = src.frames_since_tech_shoulder;
+            dst.frames_since_z = src.frames_since_z;
+            dst.frames_since_tech_window = src.frames_since_tech_window;
             dst.dmg.x18c4_source_ply = src.dmg.x18c4_source_ply;
             dst.dmg.x18C8 = src.dmg.x18C8;
-            dst.x221F_b5 = src.x221F_b5;
+            dst.last_hit_by_sub = src.last_hit_by_sub;
             dst.dmg.x18CC = src.dmg.x18CC;
             dst.dmg.x18D0 = src.dmg.x18D0;
             dst.dmg.x18d4 = src.dmg.x18d4;
             dst.dmg.x18ec_instancehitby = src.dmg.x18ec_instancehitby;
-            dst.x21FC_flag = src.x21FC_flag;
-            dst.x2221_b7 = src.x2221_b7;
-            dst.x2221_b6 = src.x2221_b6;
-            dst.x2221_b4 = src.x2221_b4;
-            dst.x2221_b5 = src.x2221_b5;
-            dst.x2104 = src.x2104;
+            dst.debug_draw_flags = src.debug_draw_flags;
+            dst.parasol_from_jump = src.parasol_from_jump;
+            dst.parasol_blend = src.parasol_blend;
+            dst.parasol_open = src.parasol_open;
+            dst.parasol_checked = src.parasol_checked;
+            dst.parasol_frames = src.parasol_frames;
             dst.dmg.x1910 = src.dmg.x1910;
-            dst.x1968_jumpsUsed = src.x1968_jumpsUsed;
-            dst.x1969_walljumpUsed = src.x1969_walljumpUsed;
+            dst.jumps_used = src.jumps_used;
+            dst.walljumps_used = src.walljumps_used;
             dst.shield_health = src.shield_health;
             dst.bury_timer_2 = src.bury_timer_2;
-            dst.x2330 = src.x2330.clone();
-            dst.x2338 = src.x2338.clone();
+            dst.hammer_frames = src.hammer_frames.clone();
+            dst.hammer_timers = src.hammer_timers.clone();
             dst.stamina_dead = src.stamina_dead;
         }
         // The copies carry the GPU's pixels where the source's block held them unwritten (its
@@ -149,8 +149,8 @@ impl Running<'_> {
         // The rest reads the source as each step finds it: ending its metal recomputes its
         // attributes and collision, which the hood's fit and the collision copy then read.
         let src = &self.game.fighters[src_id.0];
-        if src.x221D_b6 {
-            let frames = src.x2004;
+        if src.starman {
+            let frames = src.star_frames;
             self.start_star(dst_id, frames);
             self.copy_color_anim(gobj, dst_gobj, STAR_COLANIM);
             self.star_cheer_stop(gobj);
@@ -158,8 +158,8 @@ impl Running<'_> {
             self.end_color_anim(dst_gobj, 9);
         }
         // The original assigns rather than compares here, so the intangibility always carries.
-        self.game.fighters[src_id.0].x198C = 2;
-        let intangible = self.game.fighters[src_id.0].x1990;
+        self.game.fighters[src_id.0].timed_hit_status = 2;
+        let intangible = self.game.fighters[src_id.0].intangible_frames;
         if intangible != 0 {
             self.set_intangible(dst_gobj, intangible);
         }
@@ -169,11 +169,11 @@ impl Running<'_> {
                 .fighters
                 .get_disjoint_mut(pair)
                 .expect("the transformation's two fighters");
-            dst.x2220_b5 = src.x2220_b5;
-            dst.x2220_b6 = src.x2220_b6;
-            dst.x2008 = src.x2008;
+            dst.giant = src.giant;
+            dst.tiny = src.tiny;
+            dst.mushroom_frames = src.mushroom_frames;
         }
-        let scale_y = self.game.fighters[src_id.0].x34_scale.y;
+        let scale_y = self.game.fighters[src_id.0].scale.y;
         self.set_scale_y(dst_gobj, scale_y);
         let src = &self.game.fighters[src_id.0];
         if src.is_metal {
@@ -182,15 +182,15 @@ impl Running<'_> {
             self.end_metal(gobj);
         }
         let src = &self.game.fighters[src_id.0];
-        if src.x2226_b4 {
-            if !src.x2226_b7 {
-                let frames = src.x2030;
+        if src.cloak {
+            if !src.cloak_look {
+                let frames = src.cloak_frames;
                 self.start_cloak(dst_gobj, frames, false);
             }
             self.end_cloak(gobj);
         }
-        let b4 = self.game.fighters[src_id.0].x221E_b4;
-        self.game.fighters[dst_id.0].x221E_b4 = b4;
+        let b4 = self.game.fighters[src_id.0].articles_visible;
+        self.game.fighters[dst_id.0].articles_visible = b4;
         // `dst->ft_data->x8`'s parts: the head's (`x12`) for what's worn, the hand's (`x10`).
         let (head, hand) = {
             let x8 = self.ft_model_desc(&self.game.fighters[dst_id.0]);
@@ -200,25 +200,25 @@ impl Running<'_> {
             )
         };
         let src = &self.game.fighters[src_id.0];
-        if let Some(hood) = src.x197C {
-            let frames = src.x2014;
+        if let Some(hood) = src.bunny_hood {
+            let frames = src.bunny_hood_frames;
             lib26b1::hand_over(self, hood, dst_gobj, head);
             rabbitc::show_shine(self, hood, false);
             self.wear_hood(dst_gobj, hood, frames);
             // The source's attributes and height fit it, the original's.
             self.fit_hood(gobj);
         } else {
-            self.game.fighters[dst_id.0].x197C = None;
+            self.game.fighters[dst_id.0].bunny_hood = None;
         }
         let src = &self.game.fighters[src_id.0];
-        if let Some(flower) = src.x1980 {
-            let (frames, grown) = (src.x2018, src.x2024);
+        if let Some(flower) = src.flower {
+            let (frames, grown) = (src.flower_frames, src.flower_growth);
             lib26b1::hand_over(self, flower, dst_gobj, head);
             self.flower_planted(dst_gobj, flower, frames, f64::from(grown));
             // Shaped by the source's growth, attributes and height, the original's.
             self.flower_shape(gobj);
         } else {
-            self.game.fighters[dst_id.0].x1980 = None;
+            self.game.fighters[dst_id.0].flower = None;
         }
         self.calc_attributes(dst_gobj);
         self.init_camera_box(dst_id);
@@ -231,14 +231,14 @@ impl Running<'_> {
                 .expect("the transformation's two fighters");
             dst.coll_data.copy_from(&src.coll_data, 2);
         }
-        let scale_y = self.game.fighters[src_id.0].x34_scale.y;
+        let scale_y = self.game.fighters[src_id.0].scale.y;
         self.scale_ledge_snap(dst_gobj, scale_y);
         let src = &self.game.fighters[src_id.0];
         if let Some(item) = src.item_gobj {
-            let b3 = src.x221E_b3;
+            let b3 = src.item_visible;
             let dst = &mut self.game.fighters[dst_id.0];
             dst.item_gobj = Some(item);
-            dst.x221E_b3 = b3;
+            dst.item_visible = b3;
             self.retake_held_item(dst_gobj, true);
             lib26b1::hand_over(self, item, dst_gobj, hand);
         }
@@ -251,7 +251,7 @@ impl Running<'_> {
     /// scale sizes (`ftCommon_80080174`).
     #[doc(alias = "ftLib_SetScale")]
     pub fn set_scale_y(&mut self, gobj: GObjId, v: f32) {
-        self.game.fighter_mut(gobj).x34_scale.y = v;
+        self.game.fighter_mut(gobj).scale.y = v;
         self.update_model_scale(gobj);
         self.scale_worn_items(gobj);
     }
@@ -261,15 +261,15 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_80080174")]
     pub fn scale_worn_items(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if let Some(hood) = fp.x197C {
-            let s = mem(fp::fmuls(reg(fp.x34_scale.y), reg(fp.co_attrs.x12C)));
+        if let Some(hood) = fp.bunny_hood {
+            let s = mem(fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.x12C)));
             rabbitc::scale_ears(self, hood, s);
         }
-        if let Some(flower) = self.game.fighter(gobj).x1980 {
+        if let Some(flower) = self.game.fighter(gobj).flower {
             let size = self.flower_size(gobj);
             let fp = self.game.fighter(gobj);
             let petals = mem(fp::fmuls(
-                reg(fp.x34_scale.y),
+                reg(fp.scale.y),
                 fp::fmuls(size, reg(fp.co_attrs.x13C)),
             ));
             flower::set_size(self, flower, petals);
@@ -289,7 +289,7 @@ impl Running<'_> {
         let at = |o: u32| mem(fp::fmuls(reg(self.data.f32(x44.at(o))), scale));
         let (x124, sh, sy, sx) = (at(0xC), at(0x18), at(0x14), at(0x10));
         let weight = fp.co_attrs.weight;
-        let ten = mem(fp::fmuls(10.0, reg(fp.x34_scale.y)));
+        let ten = mem(fp::fmuls(10.0, reg(fp.scale.y)));
         let cd = &mut self.game.fighters[f.0].coll_data;
         let joints = cd.ecb_source.kind == ECB_SOURCE_JOBJ;
         if joints {

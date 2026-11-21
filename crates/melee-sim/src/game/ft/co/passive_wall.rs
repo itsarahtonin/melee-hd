@@ -53,7 +53,7 @@ impl Running<'_> {
         let right = flags & RIGHT_WALL_HUG != 0;
         let wall_dir: f32 = if right { -1.0 } else { 1.0 };
         let fp = &self.game.fighters[f.0];
-        if fp.wall_jump_input_timer < MAX_INPUT_FRAMES && wall_dir == fp.x2110_walljumpWallSide {
+        if fp.wall_jump_input_timer < MAX_INPUT_FRAMES && wall_dir == fp.walljump_wall_side {
             let fp = &mut self.game.fighters[f.0];
             fp.wall_jump_input_timer += 1;
         } else {
@@ -74,7 +74,7 @@ impl Running<'_> {
             let rel = fp::fsubs(reg(fp.pos_delta.x), reg(wall_x));
             let rel = if rel < 0.0 { fp::fneg(rel) } else { rel };
             if rel > reg(fp.co_attrs.wall_jump_min_approach_speed) {
-                fp.x2110_walljumpWallSide = wall_dir;
+                fp.walljump_wall_side = wall_dir;
                 fp.wall_jump_input_timer = 0;
             }
         }
@@ -86,18 +86,18 @@ impl Running<'_> {
             c.i32(0x774),
         );
         let fp = &self.game.fighters[f.0];
-        let side = fp.x2110_walljumpWallSide;
+        let side = fp.walljump_wall_side;
         let x = reg(fp.input.lstick[0].x);
         let away = (side == -1.0 && x >= flick) || (side == 1.0 && x <= fp::fneg(flick));
         if f64::from(fp.wall_jump_input_timer) < window
             && away
             && f64::from(fp.active_timer.lstick.x) < tilt
         {
-            let used = i32::from(fp.x1969_walljumpUsed);
+            let used = i32::from(fp.walljumps_used);
             self.cling_to_wall(gobj, ms::PASSIVE_WALL_JUMP, timer, used, side);
             let fp = &mut self.game.fighters[f.0];
             fp.wall_jump_input_timer = MAX_INPUT_FRAMES;
-            fp.x1969_walljumpUsed = fp.x1969_walljumpUsed.saturating_add(1);
+            fp.walljumps_used = fp.walljumps_used.saturating_add(1);
             return true;
         }
         false
@@ -133,7 +133,7 @@ impl Running<'_> {
     pub fn wall_jump_asked(&self, gobj: GObjId) -> bool {
         let c = self.common();
         let fp = self.game.fighter(gobj);
-        fp::frsp(f64::from(fp.x67E)) < reg(c.f32(0x250))
+        fp::frsp(f64::from(fp.frames_since_tap_up)) < reg(c.f32(0x250))
             || reg(fp.input.lstick[0].y) >= reg(c.f32(0x70))
     }
 
@@ -188,7 +188,7 @@ impl Running<'_> {
             &[ef::Arg::Vec(pos)],
         );
         let fp = &mut self.game.fighters[f.0];
-        let toward = fp::fmuls(reg(fp.x68C_transNPos.z), fp::fneg(reg(fp.facing_dir)));
+        let toward = fp::fmuls(reg(fp.trans_n_pos.z), fp::fneg(reg(fp.facing_dir)));
         fp.cur_pos.x = mem(fp::fneg(fp::fsubs(toward, reg(x))));
         self.air_coll_ledges_snap_low(gobj);
         let sfx = self.character_sfx(gobj, 0x24);
@@ -241,7 +241,7 @@ impl Running<'_> {
                         reg(fp.co_attrs.wall_jump_horizontal_velocity),
                     ));
                     fp.self_vel.y = fp.co_attrs.wall_jump_vertical_velocity;
-                    if fp.x1969_walljumpUsed != 0 {
+                    if fp.walljumps_used != 0 {
                         let e = fp.mv_i32(PW_VEL_Y_EXPONENT);
                         let k = math::pow(base, mem(fp::frsp(f64::from(e))));
                         fp.self_vel.y = mem(fp::fmuls(reg(fp.self_vel.y), reg(k)));

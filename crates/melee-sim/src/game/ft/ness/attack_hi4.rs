@@ -50,10 +50,10 @@ impl Running<'_> {
     #[doc(alias = "ftNs_AttackHi4_YoyoUpdateHitPos")]
     pub fn ness_yoyo_update_hit_pos(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        if fp.x914[0].state != hitcapsule::DISABLED {
+        if fp.hitboxes[0].state != hitcapsule::DISABLED {
             let p = u_vec(fp, u::YOYO_HITBOX_POS);
             if p.x != 0.0 || p.y != 0.0 {
-                super::super::seak::special_s::hit_at(&mut fp.x914[0], p);
+                super::super::seak::special_s::hit_at(&mut fp.hitboxes[0], p);
             }
         }
     }
@@ -68,8 +68,8 @@ impl Running<'_> {
             if t > 0 {
                 fp.set_mv_i32(mv::YOYO_REHIT_TIMER, t - 1);
                 if t - 1 == 0 {
-                    hitcapsule::clear_victims(&mut fp.x914[0]);
-                    hitcapsule::enable(&mut fp.x914[0]);
+                    hitcapsule::clear_victims(&mut fp.hitboxes[0]);
+                    hitcapsule::enable(&mut fp.hitboxes[0]);
                 }
             }
         }
@@ -82,7 +82,7 @@ impl Running<'_> {
             return;
         }
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].x914[0].state != hitcapsule::ENABLED {
+        if self.game.fighters[f.0].hitboxes[0].state != hitcapsule::ENABLED {
             return;
         }
         let duration = reg(self.ness_attr_f32(f, attr::YOYO_CHARGE_DURATION));
@@ -90,7 +90,7 @@ impl Running<'_> {
         let t = fp::fdivs(reg(charge), duration);
         let m = fp::fmsubs(mul, reg(DAMAGE_SCALE), 1.0);
         let dmg = fp::fmuls(
-            reg(self.game.fighters[f.0].x914[0].damage),
+            reg(self.game.fighters[f.0].hitboxes[0].damage),
             fp::fmadds(m, t, 1.0),
         );
         self.hitbox_damage(f, 0, false, crate::ppc::cvt_fp2unsigned(dmg));
@@ -109,7 +109,7 @@ impl Running<'_> {
         to: Vec3,
         size: f64,
     ) -> i32 {
-        let y = mem(fp::fmuls(size, reg(self.game.fighter(gobj).x34_scale.y)));
+        let y = mem(fp::fmuls(size, reg(self.game.fighter(gobj).scale.y)));
         let ny = mem(fp::fneg(reg(y)));
         let ecb = ftCollisionBox {
             top: y,
@@ -207,8 +207,8 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let mut above = u_vec(fp, u::YOYO_HITBOX_POS);
         let mut below = above;
-        above.y = mem(fp::fadds(reg(above.y), reg(fp.x34_scale.y)));
-        below.y = mem(fp::fmadds(fp::fneg(1.0), reg(fp.x34_scale.y), reg(below.y)));
+        above.y = mem(fp::fadds(reg(above.y), reg(fp.scale.y)));
+        below.y = mem(fp::fmadds(fp::fneg(1.0), reg(fp.scale.y), reg(below.y)));
         self.ness_yoyo_check_env_coll(gobj, above, below, 1.5) & 0x8000 != 0
     }
 
@@ -383,7 +383,7 @@ impl Running<'_> {
         let yoyo = nessyoyo::spawn(self, gobj, facing, pos, msid);
         let fp = self.game.fighter_mut(gobj);
         fp.u.set_gobj_at(u::YOYO, yoyo);
-        fp.x1984_heldItemSpec = yoyo;
+        fp.special_item = yoyo;
         if yoyo.is_some() {
             if fp.death2_cb.is_none() {
                 fp.death2_cb = Some(CodeRef(addr::ON_DAMAGE));
@@ -432,7 +432,7 @@ impl Running<'_> {
     /// The smashes' hooks: the timed rehit after a hit, the hitbox following the yo-yo.
     fn ness_yoyo_hooks(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2222_b2 = true;
+        fp.no_turn = true;
         fp.deal_dmg_cb = Some(CodeRef(addr::ATTACK_HI4_YOYO_START_TIMED_REHIT));
         fp.accessory4_cb = Some(CodeRef(addr::ATTACK_HI4_YOYO_UPDATE_HIT_POS));
     }

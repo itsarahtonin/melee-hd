@@ -337,7 +337,7 @@ pub fn spawn(
     let air = motion == t.states[AIR_CATCH];
     let bone = hand_bone(r, owner, t);
     let hand_joint = r.bone_joint(owner, bone);
-    let scale = r.game.fighter(owner).x34_scale.y;
+    let scale = r.game.fighter(owner).scale.y;
     if (t.make_links)(r, hs, hand_joint, air, scale).is_none() {
         super::super::item::destroy(r, hs);
         return None;
@@ -369,7 +369,7 @@ const PART_TIP: usize = 0x8B;
 #[doc(alias = "it_802A2428")]
 pub fn stop_anim(r: &mut Running, gobj: GObjId) {
     let owner = owner_of(r, gobj);
-    let height = reg(r.game.fighter(owner).x34_scale.y);
+    let height = reg(r.game.fighter(owner).scale.y);
     let a = super::super::item::attr_of(item(r.game, gobj));
     let s = mem(fp::fmuls(
         height,
@@ -483,20 +483,20 @@ pub fn shot(r: &mut Running, gobj: GObjId, t: &Tether) {
             }
             bounce_off_wall(r, gobj, t, l);
             to_bounce(r, gobj, t);
-            r.game.fighter_mut(f).x1A6A = 0;
+            r.game.fighter_mut(f).grab_immune = 0;
         }
         Lead::Surface if t.bounces_off_surfaces => {
             bounce_off_floor(r, gobj, t, l);
             to_bounce(r, gobj, t);
-            r.game.fighter_mut(f).x1A6A = 0;
+            r.game.fighter_mut(f).grab_immune = 0;
         }
         Lead::AllOut => {
             to_fall(r, gobj, t);
-            r.game.fighter_mut(f).x1A6A = 0;
+            r.game.fighter_mut(f).grab_immune = 0;
         }
         _ => {}
     }
-    let scale = r.game.fighter(f).x34_scale.y;
+    let scale = r.game.fighter(f).scale.y;
     line_up_out(r, gobj, t, pos, scale);
 }
 
@@ -539,7 +539,7 @@ pub fn bounced(r: &mut Running, gobj: GObjId, t: &Tether) {
         Lead::AllOut => to_fall(r, gobj, t),
         _ => {}
     }
-    let scale = r.game.fighter(f).x34_scale.y;
+    let scale = r.game.fighter(f).scale.y;
     line_up_out(r, gobj, t, pos, scale);
 }
 
@@ -550,7 +550,7 @@ pub fn bounced(r: &mut Running, gobj: GObjId, t: &Tether) {
 pub fn falling(r: &mut Running, gobj: GObjId, t: &Tether) {
     let f = owner_of(r, gobj);
     let pos = (t.fall)(r, gobj, f);
-    let scale = r.game.fighter(f).x34_scale.y;
+    let scale = r.game.fighter(f).scale.y;
     line_up_out(r, gobj, t, pos, scale);
     if !holds(t, r.game.fighter(f).motion_id) {
         to_retract(r, gobj);
@@ -579,7 +579,7 @@ pub fn retract(r: &mut Running, gobj: GObjId, t: &Tether) {
         }
         picked_up(r, gobj);
     }
-    let scale = r.game.fighter(f).x34_scale.y;
+    let scale = r.game.fighter(f).scale.y;
     line_up_out(r, gobj, t, pos, scale);
 }
 
@@ -601,7 +601,7 @@ pub fn retract_caught(r: &mut Running, gobj: GObjId, t: &Tether) {
         vars(r, gobj, t).done.set(1);
         return;
     }
-    let scale = r.game.fighter(f).x34_scale.y;
+    let scale = r.game.fighter(f).scale.y;
     line_up_out(r, gobj, t, pos, scale);
 }
 
@@ -635,12 +635,12 @@ pub fn latched(r: &mut Running, gobj: GObjId, t: &Tether) {
     if (t.pay_out)(r, gobj, l, &mut pos) {
         to_hang(r, gobj, t);
         if t.lines_up_on_hang {
-            let scale = r.game.fighter(f).x34_scale.y;
+            let scale = r.game.fighter(f).scale.y;
             line_up(r, gobj, t, pos, scale);
         }
         return;
     }
-    let scale = r.game.fighter(f).x34_scale.y;
+    let scale = r.game.fighter(f).scale.y;
     line_up_held(r, gobj, t, pos, scale);
     if r.game.fighter(f).ground_or_air != GA_AIR {
         to_retract(r, gobj);
@@ -686,7 +686,7 @@ pub fn pull(r: &mut Running, gobj: GObjId, t: &Tether) {
         put_away(r, gobj, t);
         return;
     }
-    let scale = r.game.fighter(f).x34_scale.y;
+    let scale = r.game.fighter(f).scale.y;
     line_up_held(r, gobj, t, pos, scale);
     if r.game.fighter(f).ground_or_air != GA_AIR {
         to_retract(r, gobj);
@@ -732,7 +732,7 @@ pub fn hang(r: &mut Running, gobj: GObjId, t: &Tether) {
     ));
     fp_.self_vel.y = vy;
     fp_.pos_delta.y = vy;
-    let scale = fp_.x34_scale.y;
+    let scale = fp_.scale.y;
     line_up_held(r, gobj, t, pos, scale);
     if let Some(on_hang) = t.on_hang {
         on_hang(r, gobj, f);
@@ -893,7 +893,7 @@ pub fn ft_line_up(r: &mut Running, owner: GObjId, t: &Tether) {
     if (t.follow)(r, hs, l, &mut pos, owner) {
         place_tip(r, hs, t);
     } else {
-        let scale = r.game.fighter(owner).x34_scale.y;
+        let scale = r.game.fighter(owner).scale.y;
         line_up(r, hs, t, pos, scale);
     }
 }

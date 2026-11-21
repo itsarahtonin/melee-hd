@@ -45,11 +45,11 @@ impl Running<'_> {
         let v = reg(self.game.fighter(gobj).mv_f32(MV_INIT_H_VEL));
         self.air_drift_from(gobj, v);
         let fp = self.game.fighter_mut(gobj);
-        let v = fp::fadds(reg(fp.mv_f32(MV_INIT_H_VEL)), reg(fp.x74_self_accel.x));
+        let v = fp::fadds(reg(fp.mv_f32(MV_INIT_H_VEL)), reg(fp.anim_vel.x));
         fp.set_mv_f32(MV_INIT_H_VEL, v);
-        fp.x74_self_accel.x = 0.0;
+        fp.anim_vel.x = 0.0;
         fp.self_vel.x = mem(fp::fmadds(
-            reg(fp.x6A4_transNOffset.z),
+            reg(fp.trans_n_offset.z),
             reg(fp.facing_dir),
             reg(fp.mv_f32(MV_INIT_H_VEL)),
         ));

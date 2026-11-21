@@ -333,7 +333,7 @@ pub fn proc_route(r: &mut Running, gobj: GObjId) {
     let mut fighter_pos = r.game.ft_pos(fighter);
     let cam_target;
     if r.game.grounds[g.0].u.kinokoroute2().phase != 2 {
-        if r.game.fighter(fighter).x221C_b6 {
+        if r.game.fighter(fighter).in_hitstun {
             cam_target = stage::cam_center(r.game);
             r.game.grounds[g.0].u.kinokoroute2().cam_timer = 0x3C;
         } else if r.game.ft_is_dead(fighter) {

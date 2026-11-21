@@ -102,7 +102,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let bone = usize::from(self.data.u8(self.ft_model_desc(fp).at(0x10)));
         let parts = fp.parts.expect("a fighter without parts").0;
-        let scale = reg(fp.x34_scale.y);
+        let scale = reg(fp.scale.y);
         let j = self.game.fighter_parts[parts][bone]
             .joint
             .expect("an item hand without a joint");
@@ -418,7 +418,7 @@ impl Running<'_> {
     /// The charged shot on the ground, `fn_800D8140`.
     #[doc(alias = "fn_800D8140")]
     pub fn enter_scope_fire(&mut self, gobj: GObjId, level: i32) {
-        self.game.fighter_mut(gobj).x2210 = [0; 4];
+        self.game.fighter_mut(gobj).throw_flags = [0; 4];
         let msid = self.scope_motion(gobj, ms::ITEM_SCOPE_FIRE);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.game.fighter_mut(gobj).set_mv_i32(MV_TIMER, level);
@@ -428,7 +428,7 @@ impl Running<'_> {
     /// The charged shot in the air, `fn_800D81D0`.
     #[doc(alias = "fn_800D81D0")]
     pub fn enter_scope_air_fire(&mut self, gobj: GObjId, level: i32) {
-        self.game.fighter_mut(gobj).x2210 = [0; 4];
+        self.game.fighter_mut(gobj).throw_flags = [0; 4];
         let msid = self.scope_motion(gobj, ms::ITEM_SCOPE_AIR_FIRE);
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         let f = self.game.fighter_id(gobj);

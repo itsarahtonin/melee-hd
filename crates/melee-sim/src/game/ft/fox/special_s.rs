@@ -26,12 +26,12 @@ impl Running<'_> {
     /// The afterimage effect, once (`x2219_b0`), `ftFx_SpecialS_CreateGFX` (accessory 4).
     #[doc(alias = "ftFx_SpecialS_CreateGFX")]
     pub fn fox_special_s_create_gfx(&mut self, gobj: GObjId) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let j = self.bone_joint(gobj, PART_TOP_N as i32);
             let facing = self.game.fighter(gobj).facing_dir;
             use super::super::super::ef::{Arg, spawn};
             spawn(self, 0x48D, Some(gobj), &[Arg::JObj(j), Arg::Float(facing)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;
@@ -102,7 +102,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms::SPECIAL_AIR_S_START, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
     }
 
     /// `ftFx_SpecialSStart_Anim`: the dash when the wind-up ends.
@@ -232,7 +232,7 @@ impl Running<'_> {
         if let Some(g) = ghost {
             let fp = &mut self.game.fighters[f.0];
             fp.mv.set_gobj_at(mv::S_GHOST_GOBJ, Some(g));
-            fp.x2222_b2 = true;
+            fp.no_turn = true;
         }
     }
 
@@ -439,7 +439,7 @@ impl Running<'_> {
         let delay = fp::fctiwz(reg(self.fox_attr_f32(f, attr::ILLUSION_FALL_ACCEL)));
         let fp = &mut self.game.fighters[f.0];
         fp.set_mv_i32(mv::S_GRAVITY_DELAY, delay);
-        fp.x2222_b2 = true;
+        fp.no_turn = true;
     }
 
     /// The grounded end, `ftFx_SpecialSEnd_Enter`.

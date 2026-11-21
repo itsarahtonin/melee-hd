@@ -40,8 +40,8 @@ const DISPLAY_ONLY: &[&str] = &[
     ".cosmetic.draw_offscreen_fighters",
     // Which of its models the render callback drew last (`ftDrawCommon_80080E18`), read only by
     // its material setup.
-    ".fighters.slots[].x2227_b7",
-    ".fighters.slots[].x2228_b0",
+    ".fighters.slots[].drew_low_models",
+    ".fighters.slots[].low_models",
     // The joint traversal brings world matrices up to date and clears their dirty flag (logic
     // that reads a dirty matrix computes the same one itself, `HSD_JObjGetMtxPtr`), and sets up
     // texture matrices.

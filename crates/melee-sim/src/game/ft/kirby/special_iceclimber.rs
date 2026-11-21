@@ -55,7 +55,7 @@ impl Running<'_> {
             self.game.ft.kirby.copies[FighterKind::Popo.index()].expect("a copy without its data");
         let hammer = self.data.ptr(copy.at(0x10)).expect("the copy's hammer");
         self.set_accessory(gobj, hammer);
-        let acc = self.game.fighter(gobj).x20A0_accessory;
+        let acc = self.game.fighter(gobj).accessory;
         let hand = self.part_joint(gobj, PART_L_THUMB_NB);
         crate::lb::anim::attach(&mut self.game.objs, acc, hand);
     }

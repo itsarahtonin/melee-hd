@@ -40,14 +40,14 @@ impl Running<'_> {
             PART_L3RD_NA
         };
         let to = self.bone_joint(gobj, to_part);
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let id = if self.game.fighter(gobj).ground_or_air == GA_GROUND {
                 GFX_SPIN
             } else {
                 GFX_SPIN_AIR
             };
             ef::spawn(self, id, Some(gobj), &[Arg::JObj(from), Arg::JObj(to)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;
@@ -72,7 +72,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.self_vel.x = mem(fp::fmuls(reg(fp.self_vel.x), reg(x34)));
         fp.self_vel.y = x40;
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
         fp.accessory4_cb = Some(CodeRef(addr::SPECIAL_HI_ON_ACCESSORY4));
     }
 

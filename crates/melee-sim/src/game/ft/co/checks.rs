@@ -74,7 +74,7 @@ impl Running<'_> {
     #[doc(alias = "doEnter@800965DC")]
     pub fn special_s_check(&mut self, gobj: GObjId) -> bool {
         let entry = self.kind_entry(gobj, |c| c.special_s);
-        if entry == 0 || self.game.fighter(gobj).x688 != 0 {
+        if entry == 0 || self.game.fighter(gobj).frames_since_special_s_dir != 0 {
             return false;
         }
         let back = fp::fneg(reg(self.common().f32(0x220)));
@@ -128,7 +128,7 @@ impl Running<'_> {
             }
             let facing = fp.facing_dir;
             if i32::from(fp.active_duration.lstick.x) < window
-                && ((facing == -1.0 && fp.x2228_b7) || (facing == 1.0 && !fp.x2228_b7))
+                && ((facing == -1.0 && fp.stick_right) || (facing == 1.0 && !fp.stick_right))
             {
                 let fp = self.game.fighter_mut(gobj);
                 fp.facing_dir = mem(fp::fneg(reg(fp.facing_dir)));
@@ -139,7 +139,7 @@ impl Running<'_> {
             return false;
         }
         self.call_kind_fn(entry, gobj);
-        self.game.fighter_mut(gobj).x2227_b5 = true;
+        self.game.fighter_mut(gobj).special_air_used = true;
         true
     }
 
@@ -163,21 +163,21 @@ impl Running<'_> {
     /// `ftCo_800D6824`: a neutral special.
     #[doc(alias = "ftCo_800D6824")]
     pub fn special_n_check(&mut self, gobj: GObjId) -> bool {
-        let c = self.game.fighter(gobj).x689;
+        let c = self.game.fighter(gobj).frames_since_special_n;
         self.special_check(gobj, |c| c.special_n, c)
     }
 
     /// `ftCo_800D68C0`: a down special.
     #[doc(alias = "ftCo_800D68C0")]
     pub fn special_lw_check(&mut self, gobj: GObjId) -> bool {
-        let c = self.game.fighter(gobj).x687;
+        let c = self.game.fighter(gobj).frames_since_special_lw;
         self.special_check(gobj, |c| c.special_lw, c)
     }
 
     /// `ftCo_Attack100_CheckInput`: an up special.
     #[doc(alias = "ftCo_Attack100_CheckInput")]
     pub fn special_hi_check(&mut self, gobj: GObjId) -> bool {
-        let c = self.game.fighter(gobj).x686;
+        let c = self.game.fighter(gobj).frames_since_special_hi;
         self.special_check(gobj, |c| c.special_hi, c)
     }
 
@@ -396,7 +396,7 @@ impl Running<'_> {
     /// when not holding a second one.
     #[doc(alias = "ftpickupitem_80094790")]
     pub fn pick_up_item_check(&mut self, gobj: GObjId) -> bool {
-        if self.game.fighter(gobj).x1978.is_some() {
+        if self.game.fighter(gobj).second_item.is_some() {
             return false;
         }
         if let Some(it) = self.item_in_reach(gobj, 3) {
@@ -420,7 +420,7 @@ impl Running<'_> {
     pub fn item_in_reach(&mut self, gobj: GObjId, flags: u32) -> Option<GObjId> {
         use crate::game::it::{self, lib26b1};
         let fp = self.game.fighter(gobj);
-        let p = &fp.x294_itPickup.clone();
+        let p = &fp.item_pickup.clone();
         let light = if fp.ground_or_air == super::super::common::GA_GROUND {
             &p.gr_light_offset
         } else {
@@ -450,7 +450,7 @@ impl Running<'_> {
                 continue;
             }
             let heavy = lib26b1::is_heavy(self.game, self.data, g);
-            if self.game.fighter(gobj).x2222_b4 && lib26b1::heal_amount(self.game, g) != 0 {
+            if self.game.fighter(gobj).pickup_limited && lib26b1::heal_amount(self.game, g) != 0 {
                 continue;
             }
             let fp = self.game.fighter(gobj);
@@ -505,7 +505,7 @@ impl Running<'_> {
         if !it::item::is_grabbable(self.game, item) {
             return false;
         }
-        if self.game.fighter(gobj).x2222_b4 && lib26b1::heal_amount(self.game, item) != 0 {
+        if self.game.fighter(gobj).pickup_limited && lib26b1::heal_amount(self.game, item) != 0 {
             return false;
         }
         let k = it::item(self.game, item).kind;
@@ -522,7 +522,7 @@ impl Running<'_> {
             return false;
         }
         let fp = self.game.fighter(gobj);
-        let p = &fp.x294_itPickup;
+        let p = &fp.item_pickup;
         let light = if fp.ground_or_air == super::super::common::GA_GROUND {
             &p.gr_light_offset
         } else {
@@ -699,10 +699,10 @@ impl Running<'_> {
         if fp.item_gobj.is_none()
             && fp.input.held_buttons[0] & PAD_LR != 0
             && fp.input.pressed_buttons & PAD_A != 0
-            && !fp.x2224_b1
-            && u32::from(fp.x683) >= window
+            && !fp.air_item_caught
+            && u32::from(fp.frames_since_z) >= window
         {
-            fp.x209C = timer as u16;
+            fp.air_grab_timer = timer as u16;
             return true;
         }
         false
@@ -716,8 +716,8 @@ impl Running<'_> {
         if fp.item_gobj.is_none()
             && fp.input.held_buttons[0] & PAD_LR != 0
             && fp.input.pressed_buttons & PAD_A != 0
-            && !fp.x2224_b1
-            && u32::from(fp.x683) >= window
+            && !fp.air_item_caught
+            && u32::from(fp.frames_since_z) >= window
             && let Some(it) = self.item_in_reach(gobj, 1)
         {
             self.catch_item_in_air(gobj, it);

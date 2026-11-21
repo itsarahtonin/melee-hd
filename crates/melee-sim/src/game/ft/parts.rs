@@ -298,7 +298,7 @@ impl Running<'_> {
             .parts
             .expect("a fighter without parts")
             .0;
-        let mut j = self.game.fighters[f.0].x8AC_animSkeleton;
+        let mut j = self.game.fighters[f.0].anim_skeleton;
         let mut i = 0u32;
         while let Some(cur) = j {
             if self.part_mask(kind, i as i32) != 0 {
@@ -338,16 +338,16 @@ impl Running<'_> {
             xc[k as usize] = mine.or_else(|| self.data.ptr(table.at(4 * k)));
         }
         let fp = &mut self.game.fighters[f.0];
-        fp.x5AC.model_num = model_num;
-        fp.x5AC.xC = xc;
-        fp.x5AC.cleared = [1; 5];
-        let (main, second) = (fp.dobj_list.data, fp.x203C.data);
+        fp.parts_vis.model_num = model_num;
+        fp.parts_vis.xC = xc;
+        fp.parts_vis.cleared = [1; 5];
+        let (main, second) = (fp.dobj_list.data, fp.second_dobjs.data);
         for (idx, list) in [(0, main), (1, main), (2, second), (3, main), (4, main)] {
             self.hide_parts_vis(f, idx, list);
         }
         let fp = &mut self.game.fighters[f.0];
-        for i in 0..fp.x5AC.model_num as usize {
-            fp.x5F4_arr[i].prev = -1;
+        for i in 0..fp.parts_vis.model_num as usize {
+            fp.model_variants[i].prev = -1;
         }
         self.game.clear_part_vis(gobj);
     }
@@ -357,14 +357,14 @@ impl Running<'_> {
     /// the group loop, so a lookup with no groups stays unshown.
     #[doc(alias = "ftParts_80074B6C")]
     pub fn show_parts_vis(&mut self, f: FighterId, idx: usize, list: Option<DObjListId>) {
-        let vis = &self.game.fighters[f.0].x5AC;
+        let vis = &self.game.fighters[f.0].parts_vis;
         let Some(lookup) = vis.xC[idx] else { return };
         if vis.cleared[idx] != 0 {
             return;
         }
         let model_num = vis.model_num;
         for i in 0..model_num {
-            let chosen = i32::from(self.game.fighters[f.0].x5F4_arr[i as usize].idx);
+            let chosen = i32::from(self.game.fighters[f.0].model_variants[i as usize].idx);
             let entry = lookup.at(8 * i);
             let n = self.vis_lookup_len(entry);
             for j in 0..n {
@@ -388,7 +388,7 @@ impl Running<'_> {
                     }
                 }
             }
-            self.game.fighters[f.0].x5AC.cleared[idx] = 1;
+            self.game.fighters[f.0].parts_vis.cleared[idx] = 1;
         }
     }
 
@@ -399,7 +399,7 @@ impl Running<'_> {
     pub fn set_parts_vis(&mut self, f: FighterId, group: usize, show: bool) {
         let (main, second) = {
             let fp = &self.game.fighters[f.0];
-            (fp.dobj_list.data, fp.x203C.data)
+            (fp.dobj_list.data, fp.second_dobjs.data)
         };
         let lists: &[(usize, Option<DObjListId>)] = if group == 2 {
             &[(2, second), (3, main)]
@@ -435,7 +435,7 @@ impl Running<'_> {
     /// Hides every DObj a visibility lookup names unless it has, `ftParts_80074D7C`.
     #[doc(alias = "ftParts_80074D7C")]
     pub fn hide_parts_vis(&mut self, f: FighterId, idx: usize, list: Option<DObjListId>) {
-        let vis = &self.game.fighters[f.0].x5AC;
+        let vis = &self.game.fighters[f.0].parts_vis;
         let Some(lookup) = vis.xC[idx] else { return };
         if vis.cleared[idx] == 0 {
             return;
@@ -461,7 +461,7 @@ impl Running<'_> {
                 }
             }
         }
-        self.game.fighters[f.0].x5AC.cleared[idx] = 0;
+        self.game.fighters[f.0].parts_vis.cleared[idx] = 0;
     }
 
     /// The TObj `n` (counted across the DObjs' materials in order) of a DObj list,
@@ -495,23 +495,23 @@ impl Game {
     #[doc(alias = "ftParts_80074A4C")]
     pub fn set_part_vis(&mut self, gobj: GObjId, model: usize, val: i32) {
         let fp = self.fighter_mut(gobj);
-        fp.x5F4_arr[model].prev = val as i8;
-        fp.x221D_b2 = true;
+        fp.model_variants[model].prev = val as i8;
+        fp.variants_hidden = true;
     }
 
     /// The model variant chosen, `ftParts_80074A74`.
     #[doc(alias = "ftParts_80074A74")]
     pub fn part_vis(&self, gobj: GObjId, model: usize) -> i32 {
-        i32::from(self.fighter(gobj).x5F4_arr[model].prev)
+        i32::from(self.fighter(gobj).model_variants[model].prev)
     }
 
     /// Chooses no model variant, `ftParts_80074ACC`.
     #[doc(alias = "ftParts_80074ACC")]
     pub fn clear_part_vis(&mut self, gobj: GObjId) {
         let fp = self.fighter_mut(gobj);
-        for i in 0..fp.x5AC.model_num as usize {
-            fp.x5F4_arr[i].idx = -1;
+        for i in 0..fp.parts_vis.model_num as usize {
+            fp.model_variants[i].idx = -1;
         }
-        fp.x221D_b2 = false;
+        fp.variants_hidden = false;
     }
 }

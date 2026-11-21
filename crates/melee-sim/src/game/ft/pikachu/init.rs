@@ -56,7 +56,7 @@ impl Running<'_> {
     pub fn pk_load_special_attrs(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.copy_attrs(f, attr::SIZE);
-        let scale = self.game.fighters[f.0].x34_scale.y;
+        let scale = self.game.fighters[f.0].scale.y;
         if reg(scale) != 1.0 {
             let a = self.game.fighters[f.0]
                 .dat_attrs

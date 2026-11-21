@@ -61,26 +61,26 @@ impl Running<'_> {
         }
         // `ftCo_CpuInitNoTarget` with the fear flags set.
         let c = &mut self.game.fighters[f.0].cpu;
-        c.xF8_b0 = false;
-        c.xF9_b2 = true;
-        c.xF9_b4 = true;
-        c.xF9_b3 = true;
-        c.xF9_b5 = true;
-        c.xF9_b6 = true;
-        c.xF9_b7 = true;
-        c.xF9_b1 = false;
+        c.fear_target = false;
+        c.acts_alone = true;
+        c.may_air_attack = true;
+        c.may_jump_attack = true;
+        c.may_ranged_attack = true;
+        c.may_shield = true;
+        c.may_pick_up = true;
+        c.fleeing = false;
         let (target, lr) = self.cpu_find_target_lr(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_item_targets(f);
         // `ftCo_CpuActOnNoTarget`.
         if self.cpu_should_act(f) {
-            if self.game.fighters[f.0].cpu.x4C.is_some() {
+            if self.game.fighters[f.0].cpu.item_target.is_some() {
                 self.cpu_toward_item(f);
                 return self.cpu_choose_behavior_r5(f, true, Some(sp)).1;
             }
             let target = self
                 .cpu_best_human_enemy(f)
-                .or(self.game.fighters[f.0].cpu.x44);
+                .or(self.game.fighters[f.0].cpu.target);
             // What `ftCo_800A75DC`'s vector at `r1 + 0x18` holds before anything writes it:
             // its x the back chain `ftCo_800A4BEC`'s frame left there (the VS decision's
             // stack pointer), its y the word that frame's link register slot was left. The
@@ -110,17 +110,17 @@ impl Running<'_> {
     /// with a Starman or a hammer its target to close in on.
     pub(super) fn cpu_decide_entering(&mut self, f: FighterId, sp: u32) -> Option<Leftover> {
         let target = self.cpu_entering_enemy(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         target?;
         let c = &mut self.game.fighters[f.0].cpu;
-        c.xF8_b0 = true;
-        c.xF9_b2 = false;
-        c.xF9_b4 = false;
-        c.xF9_b3 = false;
-        c.xF9_b5 = false;
-        c.xF9_b6 = false;
-        c.xF9_b7 = false;
-        c.xF9_b1 = true;
+        c.fear_target = true;
+        c.acts_alone = false;
+        c.may_air_attack = false;
+        c.may_jump_attack = false;
+        c.may_ranged_attack = false;
+        c.may_shield = false;
+        c.may_pick_up = false;
+        c.fleeing = true;
         self.cpu_near_target(f);
         if self.cpu_should_act(f) {
             self.cpu_beside_target(f);
@@ -264,17 +264,17 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800AE7AC")]
     fn cpu_back_on_screen(&mut self, f: FighterId, at: Vec3, cmd: i32, sp: u32) -> Leftover {
         let c = &mut self.game.fighters[f.0].cpu;
-        c.xF8_b0 = true;
-        c.xF9_b3 = false;
-        c.xF9_b5 = false;
-        c.xF9_b7 = false;
-        c.xF9_b1 = false;
+        c.fear_target = true;
+        c.may_jump_attack = false;
+        c.may_ranged_attack = false;
+        c.may_pick_up = false;
+        c.fleeing = false;
         let mark = cmd <= 1;
-        c.xF9_b2 = mark;
-        c.xF9_b4 = mark;
-        c.xF9_b6 = mark;
+        c.acts_alone = mark;
+        c.may_air_attack = mark;
+        c.may_shield = mark;
         let target = self.cpu_find_target(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_item_targets(f);
         if self.cpu_should_act(f) {
             if cmd >= 0 {
@@ -300,7 +300,7 @@ impl Running<'_> {
                         f32::from_bits((f20 >> 32) as u32),
                         f32::from_bits(f20 as u32),
                     );
-                    let target = self.game.fighters[f.0].cpu.x44;
+                    let target = self.game.fighters[f.0].cpu.target;
                     self.cpu_toward(f, target, Some(unset));
                 }
             }
@@ -462,7 +462,7 @@ impl Running<'_> {
                 continue;
             }
             let fpp = &self.game.fighters[f.0];
-            if reg(y) < fp::fadds(reg(fpp.cur_pos.y), reg(fpp.cpu.x568))
+            if reg(y) < fp::fadds(reg(fpp.cur_pos.y), reg(fpp.cpu.hurt_top))
                 || self.cpu_out_of_bounds(f, x, y)
             {
                 continue;
@@ -501,7 +501,7 @@ impl Running<'_> {
                 continue;
             };
             let fpp = &self.game.fighters[f.0];
-            if reg(y) >= fp::fsubs(reg(fpp.cur_pos.y), reg(fpp.cpu.x558))
+            if reg(y) >= fp::fsubs(reg(fpp.cur_pos.y), reg(fpp.cpu.jump_height))
                 || self.cpu_out_of_bounds(f, x, y)
             {
                 continue;
@@ -564,14 +564,14 @@ impl Running<'_> {
             let it = super::super::it::item_of(self.game, g);
             !self.cpu_item_heals(it)
         });
-        let item = if holds_other || fpp.x2168 != 0 {
+        let item = if holds_other || fpp.hammer_music != 0 {
             None
         } else {
             self.cpu_common_item_target(f, ItKind::COMMON_END.id())
         };
-        self.game.fighters[f.0].cpu.x4C = item;
+        self.game.fighters[f.0].cpu.item_target = item;
         let x50 = self.cpu_enemy_item_target(f);
-        self.game.fighters[f.0].cpu.x50 = x50;
+        self.game.fighters[f.0].cpu.enemy_item = x50;
     }
 
     /// The character's distance threshold (`Fighter_804D64FC->x20[kind]`).
@@ -589,14 +589,14 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A20A0")]
     fn cpu_near_target(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
-        let near = match fpp.cpu.x44 {
+        let near = match fpp.cpu.target {
             Some(t) if fpp.ground_or_air == GA_GROUND => {
                 let limit = fp::fmuls(2.0, reg(self.cpu_distance_threshold(fpp.kind)));
                 self.cpu_distance(f, t) < limit
             }
             _ => false,
         };
-        self.game.fighters[f.0].cpu.xF8_b6 = near;
+        self.game.fighters[f.0].cpu.near_target = near;
     }
 
     /// Heads for the island end farthest from its target when that target is within 50 and
@@ -604,7 +604,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A80E4")]
     fn cpu_beside_target(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
-        let Some(t) = fpp.cpu.x44 else { return };
+        let Some(t) = fpp.cpu.target else { return };
         if fpp.ground_or_air == GA_AIR {
             return;
         }
@@ -625,7 +625,7 @@ impl Running<'_> {
     /// with none) the best standing enemy of any kind.
     #[doc(alias = "ftCo_800A53DC")]
     pub(super) fn cpu_best_human_enemy(&mut self, f: FighterId) -> Option<FighterId> {
-        if self.game.fighters[f.0].cpu.xFA_b34 != 0
+        if self.game.fighters[f.0].cpu.human_target_rule != 0
             && let Some(o) = self.cpu_best_enemy(f, true)
         {
             return Some(o);
@@ -703,8 +703,8 @@ impl Running<'_> {
         let p = &self.game.fighters[t.0];
         let ppos = p.cur_pos;
         let reach = mem(fp::fadds(
-            reg(self.game.fighters[f.0].cpu.x56C),
-            reg(p.cpu.x564),
+            reg(self.game.fighters[f.0].cpu.reach),
+            reg(p.cpu.hurt_middle),
         ));
         if p.ground_or_air == GA_AIR {
             let below = mem(fp::fsubs(reg(ppos.y), 1000.0));
@@ -733,7 +733,7 @@ impl Running<'_> {
                 .as_ref()
                 .expect("no collision geometry")
                 .island(island);
-            let dx = reg(self.game.fighters[f.0].cpu.x54.x);
+            let dx = reg(self.game.fighters[f.0].cpu.destination.x);
             let mut d = fp::fsubs(reg(isl.right.x), dx);
             if d < 0.0 {
                 d = fp::fneg(d);
@@ -775,10 +775,10 @@ impl Running<'_> {
         };
         let isl = *geo.island(island);
         let c = &me.cpu;
-        if fp::fsubs(reg(c.x54.y), reg(me.cur_pos.y)) <= 0.0 {
+        if fp::fsubs(reg(c.destination.y), reg(me.cur_pos.y)) <= 0.0 {
             return;
         }
-        if fp::fsubs(reg(c.x54.x), reg(me.cur_pos.x)) > 0.0 {
+        if fp::fsubs(reg(c.destination.x), reg(me.cur_pos.x)) > 0.0 {
             if me.cur_pos.x < isl.left.x {
                 let x = mem(fp::frsp(fp::fadd(5.0, reg(isl.left.x))));
                 self.cpu_set_destination(f, x, isl.left.y, reach);
@@ -794,7 +794,7 @@ impl Running<'_> {
     /// from below when the fighter stands elsewhere.
     #[doc(alias = "ftCo_800A866C")]
     pub(super) fn cpu_toward_item(&mut self, f: FighterId) {
-        let Some(item) = self.game.fighters[f.0].cpu.x4C else {
+        let Some(item) = self.game.fighters[f.0].cpu.item_target else {
             return;
         };
         let ip = &self.game.items[item.0];
@@ -828,12 +828,12 @@ impl Running<'_> {
         let Some(island) = island else { return };
         // Not above, NaN included.
         #[allow(clippy::neg_cmp_op_on_partial_ord)]
-        let below = !(fp::fsubs(reg(me.cpu.x54.y), reg(me.cur_pos.y)) > 0.0);
+        let below = !(fp::fsubs(reg(me.cpu.destination.y), reg(me.cur_pos.y)) > 0.0);
         if same_island || below {
             return;
         }
         let isl = *geo.island(island);
-        if fp::fsubs(reg(me.cpu.x54.x), reg(me.cur_pos.x)) > 0.0 {
+        if fp::fsubs(reg(me.cpu.destination.x), reg(me.cur_pos.x)) > 0.0 {
             if me.cur_pos.x < isl.left.x {
                 let x = mem(fp::frsp(fp::fadd(5.0, reg(isl.left.x))));
                 self.cpu_set_destination(f, x, isl.left.y, 1.0);

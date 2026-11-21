@@ -47,10 +47,10 @@ impl Running<'_> {
             shakes[0] = Some(s);
         }
         let fp = &self.game.fighters[f.0];
-        if fp.x2224_b5 {
+        if fp.mash_shaking {
             let table = self.load_common(0x28);
             let row = self.data.ptr(table).expect("the grab-mash shake table");
-            shakes[1] = Some(self.vec2(row, u32::from(fp.x1A52)));
+            shakes[1] = Some(self.vec2(row, u32::from(fp.mash_shake_row)));
         }
         let s = &fp.smash_attrs;
         if s.state == SMASH_CHARGING || s.state == SMASH_HELD {
@@ -115,10 +115,10 @@ impl Running<'_> {
     pub fn camera_box_fit(&self, gobj: GObjId) -> (CameraBoxId, BoxFit) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        let b = fp.x890_cameraBox.expect("a fighter without a camera box");
+        let b = fp.camera_box.expect("a fighter without a camera box");
         let ft_data = fp.ft_data.expect("a fighter without data");
         let x3c = self.data.ptr(ft_data.at(0x3C)).expect("ftData::x3C");
-        let s = reg(fp.x34_scale.y);
+        let s = reg(fp.scale.y);
         let v = |o: u32| mem(fp::fmuls(reg(self.data.f32(x3c.at(o))), s));
         let (x0, y0, z0) = (v(0), v(4), v(8));
         let zoom = reg(self.game.stage_info.cam_info.cam_fixed_zoom);
@@ -143,7 +143,7 @@ impl Running<'_> {
     pub fn update_camera_bone(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let b = self.game.fighters[f.0]
-            .x890_cameraBox
+            .camera_box
             .expect("a fighter without a camera box");
         let bone_pos = self.camera_bone_pos(f);
         self.game.camera.subject_mut(b).bone_pos = bone_pos;

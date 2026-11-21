@@ -108,8 +108,8 @@ impl Running<'_> {
             fp.has_prev_input = false;
             Self::clear_inputs(fp);
         }
-        if !self.game.fighters[f.0].x2219_b5 {
-            if self.game.fighters[f.0].x1980.is_some() {
+        if !self.game.fighters[f.0].in_hitlag {
+            if self.game.fighters[f.0].flower.is_some() {
                 let amount = self.flower_mash_amount();
                 self.flower_mash(gobj, amount);
             }
@@ -257,9 +257,9 @@ impl Running<'_> {
                 *timer(&mut fp.active_sticky, axis) = 0;
                 *timer(&mut fp.active_timer, axis) = 0;
                 if axis == 0 {
-                    fp.x2228_b7 = positive;
+                    fp.stick_right = positive;
                 } else {
-                    fp.x2229_b0 = !positive;
+                    fp.stick_left = !positive;
                 }
             };
             if now >= smash {
@@ -316,17 +316,17 @@ impl Running<'_> {
         }
         let pressed = fp.input.pressed_buttons;
         if pressed & PAD_A != 0 {
-            fp.x683 = fp.x67C;
-            fp.x67C = 0;
+            fp.frames_since_z = fp.frames_since_smash_x;
+            fp.frames_since_smash_x = 0;
         } else {
-            tick255(&mut fp.x67C);
+            tick255(&mut fp.frames_since_smash_x);
         }
         for (mask, v) in [
-            (PAD_B, &mut fp.x67D),
-            (PAD_XY, &mut fp.x67E),
-            (PAD_UP, &mut fp.x681),
-            (PAD_DOWN, &mut fp.x682),
-            (PAD_LR, &mut fp.x67F),
+            (PAD_B, &mut fp.frames_since_smash_up),
+            (PAD_XY, &mut fp.frames_since_tap_up),
+            (PAD_UP, &mut fp.frames_since_pad_up),
+            (PAD_DOWN, &mut fp.frames_since_pad_down),
+            (PAD_LR, &mut fp.frames_since_shoulder),
         ] {
             if pressed & mask != 0 {
                 *v = 0;
@@ -335,10 +335,10 @@ impl Running<'_> {
             }
         }
         if pressed & PAD_L_R != 0 {
-            fp.x684 = fp.x680;
-            fp.x680 = 0;
+            fp.frames_since_tech_window = fp.frames_since_tech_shoulder;
+            fp.frames_since_tech_shoulder = 0;
         } else {
-            tick255(&mut fp.x680);
+            tick255(&mut fp.frames_since_tech_shoulder);
         }
     }
 
@@ -348,7 +348,7 @@ impl Running<'_> {
         let (now, before) = (fp.input.held_buttons[0], fp.input.held_buttons[1]);
         let pressed = now & (before ^ now);
         let released = before & (before ^ now);
-        if fp.x2219_b5 {
+        if fp.in_hitlag {
             fp.input.pressed_buttons |= pressed;
             fp.input.released_buttons |= released;
         } else {
@@ -385,22 +385,22 @@ impl Running<'_> {
             t.trigger = 254;
         }
         for v in [
-            &mut fp.x67C,
-            &mut fp.x67D,
-            &mut fp.x67E,
-            &mut fp.x67F,
-            &mut fp.x680,
-            &mut fp.x681,
-            &mut fp.x682,
-            &mut fp.x683,
-            &mut fp.x684,
-            &mut fp.x685,
-            &mut fp.x686,
-            &mut fp.x687,
-            &mut fp.x688,
-            &mut fp.x689,
-            &mut fp.x68A,
-            &mut fp.x68B,
+            &mut fp.frames_since_smash_x,
+            &mut fp.frames_since_smash_up,
+            &mut fp.frames_since_tap_up,
+            &mut fp.frames_since_shoulder,
+            &mut fp.frames_since_tech_shoulder,
+            &mut fp.frames_since_pad_up,
+            &mut fp.frames_since_pad_down,
+            &mut fp.frames_since_z,
+            &mut fp.frames_since_tech_window,
+            &mut fp.frames_since_special_s,
+            &mut fp.frames_since_special_hi,
+            &mut fp.frames_since_special_lw,
+            &mut fp.frames_since_special_s_dir,
+            &mut fp.frames_since_special_n,
+            &mut fp.frames_since_jump,
+            &mut fp.frames_since_special_hi_air,
         ] {
             *v = 255;
         }
@@ -492,37 +492,37 @@ impl Running<'_> {
         let (side, up) = (reg(c.f32(0x218)), reg(c.f32(0x21C)));
         let fp = self.game.fighter_mut(gobj);
         if jump {
-            fp.x68A = fp.x685;
-            fp.x685 = 0;
+            fp.frames_since_jump = fp.frames_since_special_s;
+            fp.frames_since_special_s = 0;
         } else {
-            tick255(&mut fp.x685);
+            tick255(&mut fp.frames_since_special_s);
         }
         let b = fp.input.pressed_buttons & PAD_B != 0;
         let (x, y) = (reg(fp.input.lstick[0].x), reg(fp.input.lstick[0].y));
         // `ftCo_800D6928`: B up.
         if b && y >= up {
-            fp.x68B = fp.x686;
-            fp.x686 = 0;
+            fp.frames_since_special_hi_air = fp.frames_since_special_hi;
+            fp.frames_since_special_hi = 0;
         } else {
-            tick255(&mut fp.x686);
+            tick255(&mut fp.frames_since_special_hi);
         }
         // `ftCo_800D688C`: B down.
         if b && y < fp::fneg(up) {
-            fp.x687 = 0;
+            fp.frames_since_special_lw = 0;
         } else {
-            tick255(&mut fp.x687);
+            tick255(&mut fp.frames_since_special_lw);
         }
         // `ftCo_SpecialS_HasInput`: B to the side.
         if b && abs(x) >= side {
-            fp.x688 = 0;
+            fp.frames_since_special_s_dir = 0;
         } else {
-            tick255(&mut fp.x688);
+            tick255(&mut fp.frames_since_special_s_dir);
         }
         // `ftCo_800D67C4`: neutral B.
         if b && abs(x) < side && abs(y) < up {
-            fp.x689 = 0;
+            fp.frames_since_special_n = 0;
         } else {
-            tick255(&mut fp.x689);
+            tick255(&mut fp.frames_since_special_n);
         }
     }
 

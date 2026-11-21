@@ -178,7 +178,7 @@ impl Running<'_> {
                 fp.cmd_vars[0] = 2;
                 self.gw_bucket_absorber(gobj);
             }
-            0 => fp.x2218_b6 = false,
+            0 => fp.absorbing = false,
             _ => {}
         }
         if self.game.fighter(gobj).cmd_vars[0] != 0 {
@@ -288,7 +288,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         match fp.cmd_vars[0] {
             2 => self.gw_bucket_absorber(gobj),
-            0 => fp.x2218_b6 = false,
+            0 => fp.absorbing = false,
             _ => {}
         }
         if self.game.fighter(gobj).cmd_vars[0] != 0 {
@@ -430,11 +430,11 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         let charge = fp
             .u_i32(u::PANIC_CHARGE)
-            .wrapping_add(fp.AbsorbAttr.x1A48_hitsTaken);
+            .wrapping_add(fp.absorb.x1A48_hitsTaken);
         fp.set_u_i32(u::PANIC_CHARGE, charge);
         let damage = fp
             .u_i32(u::PANIC_DAMAGE)
-            .wrapping_add(fp.AbsorbAttr.x1A44_damageTaken);
+            .wrapping_add(fp.absorb.x1A44_damageTaken);
         fp.set_u_i32(u::PANIC_DAMAGE, damage);
         if charge >= panic::FULL {
             self.start_color_anim(gobj, 5, 0);
@@ -453,7 +453,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         for i in 0..4 {
             let fp = &self.game.fighters[f.0];
-            if fp.x914[i].state == crate::lb::hitcapsule::ENABLED {
+            if fp.hitboxes[i].state == crate::lb::hitcapsule::ENABLED {
                 let damage = fp.cmd_vars[1];
                 self.hitbox_damage(f, i, false, damage);
             }

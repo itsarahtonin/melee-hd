@@ -131,7 +131,7 @@ impl Running<'_> {
         let mut pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
         pos.z = 0.0;
         let fp = self.game.fighter(gobj);
-        pos.y = mem(fp::fmadds(3.0, reg(fp.x34_scale.y), reg(pos.y)));
+        pos.y = mem(fp::fmadds(3.0, reg(fp.scale.y), reg(pos.y)));
         let facing = fp.facing_dir;
         let flash = nesspkflash::spawn(self, gobj, pos, p.flash_kind, facing);
         let fp = self.game.fighter_mut(gobj);
@@ -196,7 +196,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, hold, 0, 0.0, 1.0, 0.0, None);
         self.ness_pkflash_init(gobj, p);
         let fp = self.game.fighter_mut(gobj);
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
     }
 
     /// The charge (the hold and release states', `air` the aerial ones'): the timers run;

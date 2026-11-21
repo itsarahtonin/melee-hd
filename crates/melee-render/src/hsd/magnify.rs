@@ -57,10 +57,7 @@ impl Ctx<'_> {
         let Some(UserData::Fighter(f)) = game.world.gobj(fg).user_data else {
             return None;
         };
-        let mut pos = game
-            .camera
-            .subject(game.fighters[f.0].x890_cameraBox?)
-            .bone_pos;
+        let mut pos = game.camera.subject(game.fighters[f.0].camera_box?).bone_pos;
         if crate::mutation::on("Player_80036978") {
             pos.x = -pos.x;
             pos.y = -pos.y;

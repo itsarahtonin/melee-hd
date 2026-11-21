@@ -99,7 +99,7 @@ impl Running<'_> {
     /// `lbAnim_8001E8F8` find it, without loading it.
     fn link_anim_frames(&self, f: FighterId, anim: i32) -> f32 {
         let fp = &self.game.fighters[f.0];
-        if anim as u32 >= fp.x58C {
+        if anim as u32 >= fp.anim_count {
             return 0.0;
         }
         let entry = self.anim_entry(f, anim);
@@ -200,7 +200,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         self.copy_attrs(f, attr::SIZE);
         self.link_patch_attack_air_lw_end(f);
-        let scale = self.game.fighters[f.0].x34_scale.y;
+        let scale = self.game.fighters[f.0].scale.y;
         if scale != 1.0 {
             let off = attr::SPECIAL_HI_POS_Y_OFFSET;
             let v = self.link_attr_f32(f, off);
@@ -332,7 +332,7 @@ impl Running<'_> {
             let ext = self.data.ptr(d.at(4)).expect("ftData::ext_attr");
             self.data.f32(ext.at(attr::XD8 as u32))
         };
-        let x19a4 = self.game.fighters[f.0].x19A4;
+        let x19a4 = self.game.fighters[f.0].shield_hit_damage;
         let stun = self.shield_stun_frames(x19a4, xd8);
         let mul = self.common().f32(0x294);
         let fp = &mut self.game.fighters[f.0];

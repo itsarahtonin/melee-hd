@@ -26,11 +26,11 @@ impl Running<'_> {
         let pos = h.point(self, f, h.home);
         let fp = &mut self.game.fighters[f.0];
         fp.no_normal_motion = true;
-        fp.x2229_b6 = true;
+        fp.spawn_in_air = true;
         fp.no_kb = true;
-        fp.x222A_b0 = true;
-        fp.x222A_b1 = true;
-        fp.x2229_b3 = true;
+        fp.ungrabbable = true;
+        fp.blast_zone_off = true;
+        fp.no_magnifier = true;
         fp.cur_pos = pos;
         for off in h.lasers {
             fp.set_mv_i32(off, 0);

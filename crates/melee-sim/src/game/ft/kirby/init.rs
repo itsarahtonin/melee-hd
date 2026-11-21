@@ -103,7 +103,7 @@ impl Running<'_> {
         let flag = self.game.player_flags_ae_bit1(slot);
         let fp = &mut self.game.fighters[f.0];
         fp.can_multijump = true;
-        fp.x2D0 = fp.dat_attrs;
+        fp.multi_jump_attrs = fp.dat_attrs;
         fp.u[u::HAT_FLAGS] = (fp.u[u::HAT_FLAGS] & 0x7F) | (u8::from(flag) << 7);
         for (i, kind) in ITEMS.into_iter().enumerate() {
             let article = self.data.ptr(items.at(4 * i as u32));
@@ -405,7 +405,7 @@ impl Running<'_> {
         let Some(hat) = fp.u.jobj_at(u::HAT_JOBJ) else {
             return;
         };
-        if !fp.x2225_b2 {
+        if !fp.hat_hidden {
             return;
         }
         // `HSD_JObjGetMtxPtr`, then `HSD_JObjCopyMtx`.

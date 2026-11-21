@@ -34,13 +34,13 @@ impl Running<'_> {
         let frames = fp::fctiwz(fp::fmuls(damage, reg(c.f32(cd::FRAMES_PER_DAMAGE))));
         let longest = c.i32(cd::LONGEST);
         let fp = &mut self.game.fighters[f.0];
-        if fp.x1980.is_some() {
-            fp.x2018 = fp.x2018.wrapping_add(frames);
-            if fp.x2018 > longest {
-                fp.x2018 = longest;
+        if fp.flower.is_some() {
+            fp.flower_frames = fp.flower_frames.wrapping_add(frames);
+            if fp.flower_frames > longest {
+                fp.flower_frames = longest;
             }
-            let grown = fp.x2024;
-            fp.x2024 = fp::fctiwz(fp::fadds(fp::frsp(f64::from(grown)), damage));
+            let grown = fp.flower_growth;
+            fp.flower_growth = fp::fctiwz(fp::fadds(fp::frsp(f64::from(grown)), damage));
             self.flower_shape(gobj);
         } else {
             let (pos, facing) = (fp.cur_pos, fp.facing_dir);
@@ -68,11 +68,11 @@ impl Running<'_> {
             mem(fp::fmuls(reg(o.z), inv)),
         );
         let petals = mem(fp::fmuls(
-            reg(fp.x34_scale.y),
+            reg(fp.scale.y),
             fp::fmuls(size, reg(fp.co_attrs.x13C)),
         ));
         // `it_8029A8F4` and `it_8029A89C` do nothing without a flower.
-        if let Some(it) = fp.x1980 {
+        if let Some(it) = fp.flower {
             flower::set_offset(self, it, offset);
             flower::set_size(self, it, petals);
         }
@@ -85,7 +85,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         let grown = fp::fmadds(
             reg(c.f32(cd::SIZE_PER_DAMAGE)),
-            fp::frsp(f64::from(fp.x2024)),
+            fp::frsp(f64::from(fp.flower_growth)),
             reg(c.f32(cd::SIZE_BASE)),
         );
         let max = reg(c.f32(cd::SIZE_MAX));
@@ -99,12 +99,12 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let tick = self.common().i32(cd::TICK);
         let fp = &mut self.game.fighters[f.0];
-        fp.x1980 = Some(it);
-        fp.x2018 = frames;
-        fp.x201C = tick;
-        fp.x2024 = fp::fctiwz(damage);
-        fp.x2021 = 0;
-        fp.x2020 = 0;
+        fp.flower = Some(it);
+        fp.flower_frames = frames;
+        fp.flower_damage_timer = tick;
+        fp.flower_growth = fp::fctiwz(damage);
+        fp.flower_stick_y = 0;
+        fp.flower_stick_x = 0;
         self.start_rumble(f, 2, 0);
         self.worn_item_on(gobj);
     }
@@ -114,7 +114,7 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007FF74")]
     pub fn flower_gone(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.game.fighters[f.0].x1980 = None;
+        self.game.fighters[f.0].flower = None;
         self.stop_rumble(f, 2);
         let fp = &self.game.fighters[f.0];
         let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
@@ -136,7 +136,7 @@ impl Running<'_> {
         let it = self
             .game
             .fighter(gobj)
-            .x1980
+            .flower
             .expect("a falling flower with no flower");
         release::drop(self, it, Vec3::new(0.0, 0.0, 0.0), 0.0);
         self.flower_gone(gobj);
@@ -152,25 +152,31 @@ impl Running<'_> {
         let mut mashed = false;
         let buttons = PAD_A | PAD_B | PAD_XY | PAD_LR;
         if fp.input.pressed_buttons & buttons != 0 {
-            fp.x2018 = fp::fctiwz(fp::fsubs(fp::frsp(f64::from(fp.x2018)), reg(amount)));
+            fp.flower_frames = fp::fctiwz(fp::fsubs(
+                fp::frsp(f64::from(fp.flower_frames)),
+                reg(amount),
+            ));
             mashed = true;
         }
-        let (b0, b1) = (fp.x2020, fp.x2021);
+        let (b0, b1) = (fp.flower_stick_x, fp.flower_stick_y);
         let (sx, sy) = (reg(fp.input.lstick[0].x), reg(fp.input.lstick[0].y));
         if sx < fp::fneg(push) {
-            fp.x2020 = -1;
+            fp.flower_stick_x = -1;
         }
         if sx > push {
-            fp.x2020 = 1;
+            fp.flower_stick_x = 1;
         }
         if sy < fp::fneg(push) {
-            fp.x2021 = -1;
+            fp.flower_stick_y = -1;
         }
         if sy > push {
-            fp.x2021 = 1;
+            fp.flower_stick_y = 1;
         }
-        if b0 != fp.x2020 || b1 != fp.x2021 {
-            fp.x2018 = fp::fctiwz(fp::fsubs(fp::frsp(f64::from(fp.x2018)), reg(amount)));
+        if b0 != fp.flower_stick_x || b1 != fp.flower_stick_y {
+            fp.flower_frames = fp::fctiwz(fp::fsubs(
+                fp::frsp(f64::from(fp.flower_frames)),
+                reg(amount),
+            ));
             mashed = true;
         }
         if !fp.is_sub_fighter {

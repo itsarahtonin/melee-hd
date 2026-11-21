@@ -190,7 +190,7 @@ impl Running<'_> {
         let first = p.states + ms::SPECIAL_N_START;
         let last = p.states + ms::SPECIAL_AIR_N_END;
         match fp.motion_id {
-            m if (first..=last).contains(&m) => fp.x2070[1] & 0x02 != 0,
+            m if (first..=last).contains(&m) => fp.attack_flags[1] & 0x02 != 0,
             _ => true,
         }
     }

@@ -32,7 +32,7 @@ impl Running<'_> {
         let id = self
             .game
             .fighter(gobj)
-            .x2D0
+            .multi_jump_attrs
             .expect("a multi-jump without x2D0");
         let b = &self.game.fighter_attrs[id.0][off as usize..off as usize + 4];
         u32::from_be_bytes([b[0], b[1], b[2], b[3]])
@@ -80,7 +80,7 @@ impl Running<'_> {
             }
             return false;
         }
-        if fp.x1968_jumpsUsed == 1 {
+        if fp.jumps_used == 1 {
             if self.did_jump(gobj, after_z) {
                 if self.holding_screw(gobj) {
                     let x = reg(self.game.fighter(gobj).input.lstick[0].x);
@@ -100,7 +100,7 @@ impl Running<'_> {
             return false;
         }
         let t = self.common().f32(0x70);
-        let can = i32::from(fp.x1968_jumpsUsed) < fp.co_attrs.max_jumps;
+        let can = i32::from(fp.jumps_used) < fp.co_attrs.max_jumps;
         let held = fp.input.lstick[0].y >= t || fp.input.held_buttons[0] & 0xC00 != 0;
         let allowed = !(self.in_multi_jump(gobj) && self.game.fighter(gobj).cmd_vars[0] == 0);
         if can && allowed && held {
@@ -117,7 +117,7 @@ impl Running<'_> {
         self.game.fighter_mut(gobj).cmd_vars[0] = 0;
         let set = self.multi_jump_set(gobj) as u32;
         let start = self.mj_i32(gobj, MJ_START_STATE.wrapping_add(set.wrapping_mul(4)));
-        let jumps = i32::from(self.game.fighter(gobj).x1968_jumpsUsed);
+        let jumps = i32::from(self.game.fighter(gobj).jumps_used);
         let msid = jumps.wrapping_add(start).wrapping_sub(1);
         let x = reg(self.game.fighter(gobj).input.lstick[0].x);
         let vx = mem(fp::fmuls(x, self.mj_f32(gobj, MJ_X_IMPULSE)));
@@ -188,7 +188,7 @@ impl Running<'_> {
         self.jump_turn(gobj, turn);
         if !self.anim_frames_remaining(gobj) {
             let fp = self.game.fighter(gobj);
-            if i32::from(fp.x1968_jumpsUsed) >= fp.co_attrs.max_jumps {
+            if i32::from(fp.jumps_used) >= fp.co_attrs.max_jumps {
                 self.enter_fall_aerial(gobj);
             } else {
                 self.enter_fall(gobj);

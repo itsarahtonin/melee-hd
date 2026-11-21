@@ -70,10 +70,10 @@ impl Running<'_> {
     /// An effect on a part's joint, once (`x2219_b0`), then the hitlag hooks and no more
     /// accessory.
     fn transform_part_gfx(&mut self, gobj: GObjId, gfx: i32, part: i32) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let j = self.bone_joint(gobj, part);
             spawn(self, gfx, Some(gobj), &[Arg::JObj(j)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;

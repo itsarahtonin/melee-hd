@@ -58,10 +58,10 @@ const COLL_FLAGS: u32 = 0x0C4C_508E;
 impl Running<'_> {
     /// The spin's effect, once (`x2219_b0`), then the hitlag hooks and no more accessory.
     fn zelda_special_n_gfx(&mut self, gobj: GObjId, gfx: i32) {
-        if !self.game.fighter(gobj).x2219_b0 {
+        if !self.game.fighter(gobj).effect_once {
             let j = self.bone_joint(gobj, PART_TRANS_N);
             spawn(self, gfx, Some(gobj), &[Arg::JObj(j)]);
-            self.game.fighter_mut(gobj).x2219_b0 = true;
+            self.game.fighter_mut(gobj).effect_once = true;
         }
         self.set_effect_hitlag_cbs(gobj);
         self.game.fighter_mut(gobj).accessory4_cb = None;
@@ -220,7 +220,7 @@ impl Running<'_> {
     /// the effect's accessory armed again (`accessory`), or for Kirby the hitlag hooks at
     /// once if the effect is out ([`NayrusLove::hooks_on_change`]).
     fn zelda_special_n_changed(&mut self, gobj: GObjId, z: &NayrusLove, accessory: u32) {
-        if z.hooks_on_change && self.game.fighter(gobj).x2219_b0 {
+        if z.hooks_on_change && self.game.fighter(gobj).effect_once {
             self.set_effect_hitlag_cbs(gobj);
         }
         if self.game.fighter(gobj).cmd_vars[0] == 2 {

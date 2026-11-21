@@ -162,7 +162,7 @@ impl Running<'_> {
     #[doc(alias = "Player_GetActionStats")]
     pub fn count_attack(&mut self, gobj: crate::hsd::gobj::GObjId, prev: [u8; 4]) {
         let fp = self.game.fighter(gobj);
-        let (slot, sub, cur) = (fp.player_idx as usize, fp.is_sub_fighter, fp.x2070);
+        let (slot, sub, cur) = (fp.player_idx as usize, fp.is_sub_fighter, fp.attack_flags);
         assert!(slot < 6, "player slot {slot}");
         let acp = &mut self.game.players[slot]
             .stale_moves

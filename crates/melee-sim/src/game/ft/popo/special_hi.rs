@@ -181,7 +181,7 @@ impl Running<'_> {
         let s = climbersstring::spawn(self, gobj, pos, facing);
         let fp = self.game.fighter_mut(gobj);
         fp.u.set_gobj_at(var::ITEM2, s);
-        fp.x1984_heldItemSpec = s;
+        fp.special_item = s;
         if s.is_some() {
             fp.death3_cb = Some(CodeRef(addr::PP_REMOVE_ITEMS));
             fp.take_dmg_cb = Some(CodeRef(addr::PP_REMOVE_ITEMS));
@@ -242,7 +242,7 @@ impl Running<'_> {
         fp.self_vel.y = mem(fp::fdivs(reg(fp.self_vel.y), dy));
         self.popo_enter_air_start_0(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
         self.popo_special_hi_start(gobj);
     }
 
@@ -278,7 +278,7 @@ impl Running<'_> {
                 lone(self, gobj);
                 return;
             }
-            self.game.fighters[f.0].x2222_b2 = true;
+            self.game.fighters[f.0].no_turn = true;
         }
         if !self.anim_frames_remaining(gobj) {
             throw(self, gobj);
@@ -546,11 +546,11 @@ impl Running<'_> {
             self.go_airborne_jumped(f);
         } else {
             let fp = &mut self.game.fighters[f.0];
-            fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+            fp.jumps_used = fp.co_attrs.max_jumps as u8;
         }
         self.popo_special_hi_aim(gobj);
         self.change_motion_state(gobj, MS_AIR_THROW2, 0, 0.0, 1.0, 0.0, None);
-        self.game.fighters[f.0].x21F8 = Some(CodeRef(SPEED_TOWARD_FACING));
+        self.game.fighters[f.0].turn_cb = Some(CodeRef(SPEED_TOWARD_FACING));
     }
 }
 

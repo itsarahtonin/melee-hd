@@ -213,7 +213,7 @@ impl Running<'_> {
         self.cpu_run_script(f);
         self.nana_follow_inputs(f);
         let c = &mut self.game.fighters[f.0].cpu;
-        c.x7C = c.x7C.wrapping_add(1);
+        c.frame_counter = c.frame_counter.wrapping_add(1);
     }
 
     /// The floor below `(x, y)` (from 10 above to 1000 below) unless it is one computer
@@ -236,7 +236,7 @@ impl Running<'_> {
     /// under Corneria's ceiling.
     #[doc(alias = "ftCo_800B33B0")]
     fn cpu_read_stage(&mut self, f: FighterId) {
-        let timer = self.game.fighters[f.0].cpu.x7C;
+        let timer = self.game.fighters[f.0].cpu.frame_counter;
         if timer % 300 == 0 {
             let r = self.randf();
             let c = &mut self.game.fighters[f.0].cpu;
@@ -245,7 +245,7 @@ impl Running<'_> {
                 fp::frsp(f64::from(c.level)),
                 0.300_000_011_920_928_96,
             );
-            c.xFA_b34 = u8::from(r < p);
+            c.human_target_rule = u8::from(r < p);
         }
         let pos = self.game.fighters[f.0].cur_pos;
         let in_bounds = match self.cpu_floor_below(pos.x, pos.y) {
@@ -264,38 +264,38 @@ impl Running<'_> {
             None => false,
         };
         let fpp = &mut self.game.fighters[f.0];
-        fpp.cpu.xFA_b5 = in_bounds;
+        fpp.cpu.drifting_back = in_bounds;
         let coll = &fpp.coll_data;
         let vy = fp::fsubs(reg(coll.cur_pos.y), reg(coll.last_pos.y));
         let vx = fp::fsubs(reg(coll.cur_pos.x), reg(coll.last_pos.x));
         let vmag = math::sqrt_reg(fp::fmadds(vx, vx, fp::fmuls(vy, vy)));
         let c = &mut fpp.cpu;
         if vmag < 0.01 {
-            c.x84 = c.x84.wrapping_add(1);
+            c.stage_read_count = c.stage_read_count.wrapping_add(1);
         } else {
-            c.x84 = 0;
+            c.stage_read_count = 0;
         }
-        if c.xF9_b0 {
-            if c.x30 != 0 {
-                c.x30 -= 1;
+        if c.keeps_target {
+            if c.retarget_timer != 0 {
+                c.retarget_timer -= 1;
             } else {
-                c.xF9_b0 = false;
+                c.keeps_target = false;
             }
         } else {
             let r = self.randf();
-            self.game.fighters[f.0].cpu.x30 =
+            self.game.fighters[f.0].cpu.retarget_timer =
                 fp::fctiwz(fp::fmuls(120.0, fp::fmuls(0.5, fp::fmuls(0.5, r))));
         }
         let c = &mut self.game.fighters[f.0].cpu;
-        if c.x60 != 0 {
-            c.x60 -= 1;
-            if c.x60 == 0 {
-                c.x54.x = c.x64.x;
-                c.x54.y = c.x64.y;
+        if c.destination_timer != 0 {
+            c.destination_timer -= 1;
+            if c.destination_timer == 0 {
+                c.destination.x = c.home.x;
+                c.destination.y = c.home.y;
             }
         }
         // The destination rides its floor (or the stage's wind).
-        let (sx, sy) = (c.x54.x, c.x54.y);
+        let (sx, sy) = (c.destination.x, c.destination.y);
         let below = mem(fp::frsp(fp::fsub(reg(sy), 2.0)));
         let above = mem(fp::frsp(fp::fadd(2.0, reg(sy))));
         let hit = self
@@ -321,14 +321,14 @@ impl Running<'_> {
         };
         if let Some(v) = vel {
             let c = &mut self.game.fighters[f.0].cpu;
-            c.x54.x = mem(fp::fadds(reg(c.x54.x), reg(v.x)));
-            c.x54.y = mem(fp::fadds(reg(c.x54.y), reg(v.y)));
+            c.destination.x = mem(fp::fadds(reg(c.destination.x), reg(v.x)));
+            c.destination.y = mem(fp::fadds(reg(c.destination.y), reg(v.y)));
         }
         // `ftCo_CpuUpdateRecoveryScale`.
         if timer % 30 == 0 {
             let r = self.randf();
             let c = &mut self.game.fighters[f.0].cpu;
-            c.x570 = mem(fp::frsp(fp::fmadd(
+            c.reach_scale = mem(fp::frsp(fp::fmadd(
                 0.05,
                 f64::from(c.level.wrapping_add(1)),
                 fp::fmul(0.05, r),
@@ -336,7 +336,7 @@ impl Running<'_> {
         }
         self.cpu_reach_scale(f);
         let fpp = &self.game.fighters[f.0];
-        if fpp.cpu.xFA_b6 {
+        if fpp.cpu.off_stage {
             let (x, y) = (fpp.cur_pos.x, fpp.cur_pos.y);
             let top = mem(fp::fadds(1000.0, reg(y)));
             let ceiling = self
@@ -346,12 +346,12 @@ impl Running<'_> {
                 .expect("no collision geometry")
                 .check_ceiling(x, y, x, top, -1, -1);
             if ceiling.is_none() {
-                self.game.fighters[f.0].cpu.xFA_b6 = false;
+                self.game.fighters[f.0].cpu.off_stage = false;
             }
         } else if fpp.ground_or_air == GA_GROUND
             && self.corneria_ceiling_floor(fpp.coll_data.floor.index)
         {
-            self.game.fighters[f.0].cpu.xFA_b6 = true;
+            self.game.fighters[f.0].cpu.off_stage = true;
         }
     }
 
@@ -374,14 +374,14 @@ impl Running<'_> {
     /// `ftCo_800A0CB0`.
     #[doc(alias = "ftCo_800A0CB0")]
     fn cpu_reach_scale(&mut self, f: FighterId) {
-        if self.game.fighters[f.0].cpu.x7C % 600 != 0 {
+        if self.game.fighters[f.0].cpu.frame_counter % 600 != 0 {
             return;
         }
         let x = self.randf();
         let x = fp::fmuls(x, fp::fmuls(x, x));
         let r = fp::fsubs(1.0, x);
         let fpp = &mut self.game.fighters[f.0];
-        fpp.cpu.x56C = mem(match fpp.fighter_kind() {
+        fpp.cpu.reach = mem(match fpp.fighter_kind() {
             FighterKind::Donkey | FighterKind::Koopa => fp::frsp(fp::fmul(9.0, r)),
             FighterKind::GKoopa => fp::frsp(fp::fmul(18.0, r)),
             FighterKind::Nana => fp::frsp(r),
@@ -405,7 +405,7 @@ impl Running<'_> {
             // The VS kind, two others and the two the switch doesn't list.
             K::Normal | K::SpLwLink | K::SpLwSamus | K::Manual | K::Air => self.cpu_decide_vs(f),
             K::NoAct => {
-                self.game.fighters[f.0].cpu.x18 = 0;
+                self.game.fighters[f.0].cpu.behavior = 0;
                 Leftover::Unknown("ftCo_800B2AFC")
             }
             // Training's: stop where it stands, walk to its spot or jump, the jump and the
@@ -442,28 +442,28 @@ impl Running<'_> {
     /// the target; then the behavior pick, whose r5 it leaves.
     fn cpu_decide_enemy(&mut self, f: FighterId) -> Leftover {
         let c = &mut self.game.fighters[f.0].cpu;
-        c.xF8_b0 = false;
-        c.xF9_b2 = true;
-        c.xF9_b4 = true;
-        c.xF9_b3 = false;
-        c.xF9_b5 = false;
-        c.xF9_b6 = false;
-        c.xF9_b7 = false;
-        c.xF9_b1 = false;
+        c.fear_target = false;
+        c.acts_alone = true;
+        c.may_air_attack = true;
+        c.may_jump_attack = false;
+        c.may_ranged_attack = false;
+        c.may_shield = false;
+        c.may_pick_up = false;
+        c.fleeing = false;
         let (target, lr) = self.cpu_find_target_lr(f);
         let c = &mut self.game.fighters[f.0].cpu;
-        c.x44 = target;
-        if c.x18 != c.x20 && c.x18 != c.x1C {
-            c.x60 = 0;
+        c.target = target;
+        if c.behavior != c.alt_behavior && c.behavior != c.default_behavior {
+            c.destination_timer = 0;
         }
         let sp = CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME;
-        if c.x18 != 4 {
-            c.xFA_b2 = false;
+        if c.behavior != 4 {
+            c.ledge_picked = false;
             // `ftCo_800A75DC`'s vector at `r1 + 0x18` as `ftCo_800A4BEC`'s frame left it, as
             // in the VS decision: the back chain (this frame's stack pointer) and the word its
             // link register slot holds.
             let unset = lr.map(|y| (f32::from_bits(sp), f32::from_bits(y)));
-            let t = self.game.fighters[f.0].cpu.x44;
+            let t = self.game.fighters[f.0].cpu.target;
             self.cpu_toward(f, t, unset);
         }
         self.cpu_choose_behavior_r5(f, true, Some(sp)).1
@@ -477,20 +477,20 @@ impl Running<'_> {
         /// `ftCo_800B1DA0`'s frame, below the decision's.
         const WANDER_FRAME: u32 = 0x38;
         let c = &mut self.game.fighters[f.0].cpu;
-        c.xF8_b0 = false;
-        c.xF9_b2 = true;
-        c.xF9_b4 = true;
-        c.xF9_b3 = false;
-        c.xF9_b5 = false;
-        c.xF9_b6 = false;
-        c.xF9_b7 = false;
-        c.xF9_b1 = false;
+        c.fear_target = false;
+        c.acts_alone = true;
+        c.may_air_attack = true;
+        c.may_jump_attack = false;
+        c.may_ranged_attack = false;
+        c.may_shield = false;
+        c.may_pick_up = false;
+        c.fleeing = false;
         let (target, _) = self.cpu_find_target_lr(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         if self.cpu_should_act(f)
             && self.game.fighters[f.0]
                 .cpu
-                .x7C
+                .frame_counter
                 .wrapping_rem(60)
                 .wrapping_mul(5)
                 == 0
@@ -588,22 +588,22 @@ impl Running<'_> {
     /// where it is when there's none), then the behavior pick, whose r5 it leaves.
     fn cpu_decide_training(&mut self, f: FighterId, walk: bool) -> Leftover {
         let c = &mut self.game.fighters[f.0].cpu;
-        c.xF8_b0 = false;
+        c.fear_target = false;
         // `ftCo_CpuClearTargetModes`.
-        c.xF9_b2 = false;
-        c.xF9_b4 = false;
-        c.xF9_b3 = false;
-        c.xF9_b5 = false;
-        c.xF9_b6 = false;
-        c.xF9_b7 = false;
-        c.xF9_b1 = false;
-        if c.x18 != c.x20 && c.x18 != c.x1C {
-            c.x60 = 0;
+        c.acts_alone = false;
+        c.may_air_attack = false;
+        c.may_jump_attack = false;
+        c.may_ranged_attack = false;
+        c.may_shield = false;
+        c.may_pick_up = false;
+        c.fleeing = false;
+        if c.behavior != c.alt_behavior && c.behavior != c.default_behavior {
+            c.destination_timer = 0;
         }
-        if c.x18 != 4 {
-            c.xFA_b2 = false;
+        if c.behavior != 4 {
+            c.ledge_picked = false;
             let fpp = &self.game.fighters[f.0];
-            let at = if walk { fpp.cpu.x98 } else { fpp.cur_pos };
+            let at = if walk { fpp.cpu.spawn_pos } else { fpp.cur_pos };
             let below = mem(fp::fsubs(reg(at.y), 1000.0));
             let above = mem(fp::fadds(10.0, reg(at.y)));
             match self.cpu_floor(at.x, above, at.x, below) {
@@ -627,19 +627,19 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800B04DC")]
     fn cpu_decide_evade(&mut self, f: FighterId) -> Leftover {
         let c = &mut self.game.fighters[f.0].cpu;
-        c.xF8_b0 = true;
-        c.xF9_b2 = false;
-        c.xF9_b4 = false;
-        c.xF9_b3 = false;
-        c.xF9_b5 = false;
-        c.xF9_b6 = false;
-        c.xF9_b7 = false;
-        c.xF9_b1 = true;
+        c.fear_target = true;
+        c.acts_alone = false;
+        c.may_air_attack = false;
+        c.may_jump_attack = false;
+        c.may_ranged_attack = false;
+        c.may_shield = false;
+        c.may_pick_up = false;
+        c.fleeing = true;
         let target = self.cpu_find_target(f);
-        self.game.fighters[f.0].cpu.x44 = target;
+        self.game.fighters[f.0].cpu.target = target;
         self.cpu_healing_item_targets(f);
         if self.cpu_should_act(f)
-            && let Some(t) = self.game.fighters[f.0].cpu.x44
+            && let Some(t) = self.game.fighters[f.0].cpu.target
             && self.game.fighters[f.0].ground_or_air != GA_AIR
         {
             let (me, them) = (
@@ -666,8 +666,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800B101C")]
     fn nana_decide(&mut self, f: FighterId) -> Leftover {
         let c = &mut self.game.fighters[f.0].cpu;
-        c.xF9_b2 = true;
-        c.xF9_b4 = true;
+        c.acts_alone = true;
+        c.may_air_attack = true;
         let Some(popo) = self.cpu_partner(f) else {
             return self.nana_decide_alone(f);
         };
@@ -680,7 +680,7 @@ impl Running<'_> {
             fp::fctiwz(level)
         };
         self.game.fighters[f.0].cpu.level = level;
-        if self.game.fighters[f.0].cpu.xFA_b7 {
+        if self.game.fighters[f.0].cpu.follows_popo {
             self.cpu_toward_partner(f);
             // What `ftCo_800A7AAC` leaves (or passes on from `ftCo_800B0918`, Popo's x) depends
             // on the stack and the collision code's registers, which aren't followed: the
@@ -689,8 +689,8 @@ impl Running<'_> {
             r5 = left;
             if lost {
                 let c = &mut self.game.fighters[f.0].cpu;
-                c.xFA_b7 = false;
-                c.x18 = c.x1C;
+                c.follows_popo = false;
+                c.behavior = c.default_behavior;
                 c.lstick.x = 0;
                 c.lstick.y = 0;
                 c.buttons = 0;
@@ -704,15 +704,15 @@ impl Running<'_> {
             r5 = left;
             if follow {
                 let c = &mut self.game.fighters[f.0].cpu;
-                c.x18 = 0;
-                c.xFA_b7 = true;
-                c.xF9_b2 = false;
-                c.xF9_b4 = false;
+                c.behavior = 0;
+                c.follows_popo = true;
+                c.acts_alone = false;
+                c.may_air_attack = false;
             }
         }
         let fpp = &mut self.game.fighters[f.0];
         if fpp.ground_or_air == GA_GROUND {
-            fpp.cpu.xFB_b0 = false;
+            fpp.cpu.nana_recovering = false;
         }
         r5
     }
@@ -723,7 +723,7 @@ impl Running<'_> {
     fn nana_lost_popo(&mut self, f: FighterId, popo: FighterId, r5: Leftover) -> (bool, Leftover) {
         let ms = self.game.fighters[f.0].motion_id;
         if (MS_PP_SPECIAL_HI_0..=MS_PP_SPECIAL_HI_5).contains(&ms) {
-            self.game.fighters[f.0].cpu.xFB_b0 = true;
+            self.game.fighters[f.0].cpu.nana_recovering = true;
             return (true, r5);
         }
         let (me, other) = (
@@ -758,7 +758,9 @@ impl Running<'_> {
         if other.ground_or_air != GA_GROUND || me.ground_or_air != GA_GROUND {
             return false;
         }
-        if me.cpu.xFB_b0 || (MS_PP_SPECIAL_HI_0..=MS_PP_SPECIAL_HI_5).contains(&me.motion_id) {
+        if me.cpu.nana_recovering
+            || (MS_PP_SPECIAL_HI_0..=MS_PP_SPECIAL_HI_5).contains(&me.motion_id)
+        {
             return false;
         }
         if !self.cpu_should_act(f) && self.game.fighters[f.0].motion_id != MS_WAIT {
@@ -781,13 +783,13 @@ impl Running<'_> {
     /// clears its destination's timer, and acting clears `xFA_b2`.
     pub(super) fn cpu_should_act(&mut self, f: FighterId) -> bool {
         let c = &mut self.game.fighters[f.0].cpu;
-        if c.x18 != c.x20 && c.x18 != c.x1C {
-            c.x60 = 0;
+        if c.behavior != c.alt_behavior && c.behavior != c.default_behavior {
+            c.destination_timer = 0;
         }
-        if c.x18 == 4 {
+        if c.behavior == 4 {
             false
         } else {
-            c.xFA_b2 = false;
+            c.ledge_picked = false;
             true
         }
     }
@@ -850,7 +852,7 @@ impl Running<'_> {
         {
             return (false, r5);
         }
-        if me.x2225_b3 {
+        if me.nana_follows {
             return (true, r5);
         }
         let landing = matches!(
@@ -895,9 +897,9 @@ impl Running<'_> {
         let buttons = p.input.held_buttons[0];
         let (pos, facing) = (p.cur_pos, p.facing_dir);
         let c = &mut self.game.fighters[nana.0].cpu;
-        c.x444.0 = Some(step(c.x444.0));
-        c.x448.0 = Some(step(c.x448.0));
-        let i = &mut c.xFC[(c.x444.0.unwrap() / INPUT_SIZE) as usize];
+        c.partner_input_write.0 = Some(step(c.partner_input_write.0));
+        c.partner_input_read.0 = Some(step(c.partner_input_read.0));
+        let i = &mut c.partner_inputs[(c.partner_input_write.0.unwrap() / INPUT_SIZE) as usize];
         i.lstick.x = lx;
         i.lstick.y = ly;
         i.cstick.x = cx;
@@ -917,7 +919,7 @@ impl Running<'_> {
         let Some(popo) = self.cpu_partner(f) else {
             return;
         };
-        if !self.game.fighters[f.0].cpu.xFA_b7 {
+        if !self.game.fighters[f.0].cpu.follows_popo {
             return;
         }
         let me = self.game.fighters[f.0].motion_id;
@@ -936,10 +938,10 @@ impl Running<'_> {
         let fpp = &mut self.game.fighters[f.0];
         let at = fpp
             .cpu
-            .x448
+            .partner_input_read
             .0
             .expect("Nana's input history without a read position");
-        let rec = fpp.cpu.xFC[(at / INPUT_SIZE) as usize].clone();
+        let rec = fpp.cpu.partner_inputs[(at / INPUT_SIZE) as usize].clone();
         let c = &mut fpp.cpu;
         c.lstick.x = rec.lstick.x;
         c.lstick.y = rec.lstick.y;
@@ -948,7 +950,7 @@ impl Running<'_> {
         c.buttons = rec.x0;
         c.ltrigger = rec.x4;
         c.rtrigger = rec.x5;
-        if fpp.x2225_b3 {
+        if fpp.nana_follows {
             fpp.cur_pos.x = mem(fp::frsp(fp::fmadd(
                 0.95,
                 reg(fpp.cur_pos.x),
@@ -971,16 +973,16 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800B2790")]
     fn cpu_behave(&mut self, f: FighterId, r5: Leftover) {
         let c = &self.game.fighters[f.0].cpu;
-        if c.csP.0.is_some() || c.command_duration != 0 {
+        if c.script_cursor.0.is_some() || c.command_duration != 0 {
             return;
         }
         let c = &mut self.game.fighters[f.0].cpu;
-        c.x80 = c.x80.wrapping_add(1);
-        c.xF8_b7 = false;
+        c.hold_back_counter = c.hold_back_counter.wrapping_add(1);
+        c.attacking = false;
         self.cpu_script_reset(f);
         let r5 = self.cpu_charge_release(f).unwrap_or(r5);
         use super::cpu_script::cmd;
-        match self.game.fighters[f.0].cpu.x18 {
+        match self.game.fighters[f.0].cpu.behavior {
             0 => {
                 self.cpu_script_clear(f);
                 self.cpu_cmd(f, cmd::DONE);
@@ -1000,7 +1002,7 @@ impl Running<'_> {
             13 => {
                 if self.game.fighters[f.0].item_gobj.is_some() {
                     let c = &mut self.game.fighters[f.0].cpu;
-                    c.x18 = c.x1C;
+                    c.behavior = c.default_behavior;
                     self.cpu_cmd(f, cmd::DONE);
                 } else {
                     // `ftCo_CpuSetNeutralStick` and `ftCo_CpuRetapA`.
@@ -1013,7 +1015,7 @@ impl Running<'_> {
                     self.cpu_cmd(f, cmd::RELEASE_A);
                     self.cpu_cmd(f, cmd::DONE);
                     let c = &mut self.game.fighters[f.0].cpu;
-                    c.x18 = c.x1C;
+                    c.behavior = c.default_behavior;
                 }
             }
             14 => self.cpu_throw_item(f),
@@ -1025,7 +1027,7 @@ impl Running<'_> {
                 let ms = self.game.fighters[f.0].motion_id;
                 if ms != 0x131 && ms != 0x132 {
                     let c = &mut self.game.fighters[f.0].cpu;
-                    c.x18 = c.x1C;
+                    c.behavior = c.default_behavior;
                     self.cpu_cmd(f, cmd::DONE);
                 } else {
                     // `ftCo_CpuFinishWithNeutralStick`.
@@ -1059,7 +1061,8 @@ impl Running<'_> {
                 if period == 0 {
                     unported_call("ftCo_800AC434 at level 10");
                 }
-                c.x7C.wrapping_rem(period) == 0 && reg(self.game.objs.rng.draw_f32()) < 0.5
+                c.frame_counter.wrapping_rem(period) == 0
+                    && reg(self.game.objs.rng.draw_f32()) < 0.5
             }
             _ => {
                 self.cpu_back_to_usual(f);
@@ -1085,7 +1088,7 @@ impl Running<'_> {
     fn cpu_charge_release(&mut self, f: FighterId) -> Option<Leftover> {
         use super::cpu_script::cmd;
         let fpp = &self.game.fighters[f.0];
-        if fpp.cpu.x18 == 10 {
+        if fpp.cpu.behavior == 10 {
             return None;
         }
         let ms = fpp.motion_id;

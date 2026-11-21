@@ -129,17 +129,17 @@ impl Running<'_> {
         self.release_victim(gobj);
         let yfacing = self.game.fighter(yoshi).facing_dir;
         let fp = self.game.fighter_mut(gobj);
-        fp.x1A5C = Some(yoshi);
+        fp.partner = Some(yoshi);
         fp.victim_gobj = Some(yoshi);
-        fp.x221B.x221B_b5 = false;
-        fp.x221B.x221B_b7 = false;
+        fp.state_flags.x221B_b5 = false;
+        fp.state_flags.x221B_b7 = false;
         fp.facing_dir = mem(fp::fneg(reg(yfacing)));
         self.attach_to_thrower(yoshi, gobj);
         self.change_motion_state(gobj, state, 0, 0.0, 1.0, 0.0, None);
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].accessory1_cb = Some(CodeRef(HELD_FOLLOW));
         self.go_airborne(f);
-        self.game.fighters[f.0].x1A6A = 0x1FF;
+        self.game.fighters[f.0].grab_immune = 0x1FF;
         self.anim_update(gobj);
         self.stop_dead(gobj);
     }
@@ -197,7 +197,7 @@ impl Running<'_> {
             mem(fp::fmuls(s, reg(e.y))),
             mem(fp::fmuls(s, reg(e.z))),
         );
-        let acc = fp.x20A0_accessory.expect("jobj.h: jobj");
+        let acc = fp.accessory.expect("jobj.h: jobj");
         jobj::set_scale(&mut self.game.objs.jobjs, root, model);
         jobj::set_scale(&mut self.game.objs.jobjs, acc, egg);
     }
@@ -273,7 +273,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, state, flags, 0.0, 1.0, 0.0, Some(yoshi));
         let fp = &mut self.game.fighters[f.0];
         fp.take_dmg_cb = Some(CodeRef(damage_cb));
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
         fp.invisible = true;
         let size = fp.co_attrs.xBC.size;
         let scale = Vec3::new(size, size, size);
@@ -285,9 +285,7 @@ impl Running<'_> {
             }
         };
         self.set_accessory(gobj, model);
-        let acc = self.game.fighters[f.0]
-            .x20A0_accessory
-            .expect("jobj.h: jobj");
+        let acc = self.game.fighters[f.0].accessory.expect("jobj.h: jobj");
         jobj::set_scale(&mut self.game.objs.jobjs, acc, scale);
         self.game.fighters[f.0].set_mv_vec3(EGG_SCALE, scale);
         let child = self.game.objs.jobjs[acc].child;
@@ -304,16 +302,16 @@ impl Running<'_> {
         fp.mv.set_gobj_at(EGG_YOSHI, Some(yoshi));
         fp.take_dmg_2_cb = Some(CodeRef(damage2_cb));
         // `ftCommon_8007EFC0(fp, 1)`.
-        fp.x209A = 1;
+        fp.name_tag_timer = 1;
         fp.set_mv_f32(EGG_FRAMES, reg(frames));
         // `mv.co.walk.fast_anim_frame`, the word just written.
         fp.set_mv_f32(EGG_LEFT, reg(fp.mv_f32(EGG_FRAMES)));
         fp.set_mv_f32(EGG_SHRINK, reg(shrink));
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = timer;
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = false;
+        fp.mash_stick_y = 0;
+        fp.mash_stick_x = 0;
+        fp.can_mash = false;
         let s = self.game.objs.jobjs[root].scale;
         let fp = &mut self.game.fighters[f.0];
         fp.set_mv_vec3(EGG_MODEL_SCALE, s);
@@ -339,7 +337,7 @@ impl Running<'_> {
         h.capsule.a_offset = a;
         h.capsule.b_offset = b;
         h.capsule.scale = scale;
-        fp.x221A_b6 = true;
+        fp.hurtboxes_custom = true;
     }
 
     /// `ftCo_YoshiEgg_Anim`: the hold counts down (Yoshi's `x28` a frame), faster for mashing
@@ -505,7 +503,7 @@ impl Running<'_> {
         if fp.dmg.x18CC == 3 && bury_holds(fp.dmg.x18D0) {
             fp.grab_timer = 0.0;
         }
-        fp.x1828 = 4;
+        fp.hit_reaction = 4;
     }
 
     /// The egg's damage hook, `ftCo_800BC438` (Kirby's copy's `fn_8010B1D4`): the model's scale

@@ -38,13 +38,13 @@ impl Running<'_> {
             ItKind::SuperMushroom => {
                 let ip = it::item_mut(self.game, g);
                 ip.x5D4_hitboxes[j].hit.state = hitcapsule::DISABLED;
-                self.game.fighters[me.0].x200C += 1;
+                self.game.fighters[me.0].queued_grows += 1;
                 it::item_mut(self.game, g).xC34_damageDealt = 1;
             }
             ItKind::PoisonMushroom => {
                 let ip = it::item_mut(self.game, g);
                 ip.x5D4_hitboxes[j].hit.state = hitcapsule::DISABLED;
-                self.game.fighters[me.0].x2010 += 1;
+                self.game.fighters[me.0].queued_shrinks += 1;
                 it::item_mut(self.game, g).xC34_damageDealt = 1;
             }
             _ => {}
@@ -59,8 +59,8 @@ impl Running<'_> {
     #[doc(alias = "ftColl_8007B7FC")]
     pub fn start_star(&mut self, f: FighterId, frames: i32) {
         let fp = &mut self.game.fighters[f.0];
-        fp.x221D_b6 = true;
-        fp.x2004 = frames;
+        fp.starman = true;
+        fp.star_frames = frames;
         let gobj = fp.gobj.expect("a fighter without its GObj");
         self.start_color_anim(gobj, STAR_COLANIM, 0);
         if frames > self.star_cue() {
@@ -71,7 +71,7 @@ impl Running<'_> {
     /// The crowd's first loop wanted once more for the fighter, `ft_80088080`.
     #[doc(alias = "ft_80088080")]
     pub fn star_cheer(&mut self, f: FighterId) {
-        self.game.fighters[f.0].x2164 += 1;
+        self.game.fighters[f.0].star_cheer += 1;
         self.lb_audio_crowd_a();
     }
 
@@ -211,14 +211,14 @@ impl Running<'_> {
     /// `x2225_b6` set, `ftCommon_80080460`.
     #[doc(alias = "ftCommon_80080460")]
     pub fn metal_flag_on(&mut self, f: FighterId) {
-        self.game.fighters[f.0].x2225_b6 = true;
+        self.game.fighters[f.0].voice_muted = true;
     }
 
     /// `x2225_b6` back to the player's rules' `x2225_b5`, `ftCommon_80080474`.
     #[doc(alias = "ftCommon_80080474")]
     pub fn metal_flag_off(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
-        fp.x2225_b6 = fp.x2225_b5;
+        fp.voice_muted = fp.rules_voice_muted;
     }
 
     /// The Metal Box taken, `ftLib_ApplyMetalBox`: metal for the box's frames and health
@@ -240,7 +240,7 @@ impl Running<'_> {
         self.set_metal(gobj, timer, health);
         self.calc_attributes(gobj);
         let f = self.game.fighter_id(gobj);
-        let scale = self.game.fighters[f.0].x34_scale.y;
+        let scale = self.game.fighters[f.0].scale.y;
         self.scale_ledge_snap(gobj, scale);
         self.start_rumble(f, 0xC, 0);
         let pos = self.game.fighters[f.0].cur_pos;
@@ -262,7 +262,7 @@ impl Running<'_> {
         }
         fp.is_metal = false;
         self.calc_attributes(gobj);
-        let scale = self.game.fighters[f.0].x34_scale.y;
+        let scale = self.game.fighters[f.0].scale.y;
         self.scale_ledge_snap(gobj, scale);
         self.restore_parts_look(f);
         self.metal_flag_off(f);
@@ -281,11 +281,11 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C88A0")]
     pub fn clear_cloak(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2226_b4 = false;
-        fp.x2226_b5 = false;
+        fp.cloak = false;
+        fp.refracted = false;
         fp.smash_attrs.x2134_vibrateFrame = 0;
-        fp.x2030 = 0;
-        fp.x2226_b7 = false;
+        fp.cloak_frames = 0;
+        fp.cloak_look = false;
     }
 
     /// The cloak's vibration back to its first frame, `fn_800C8B1C`.
@@ -299,12 +299,12 @@ impl Running<'_> {
     pub fn start_cloak_look(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.x2226_b5 = true;
-        fp.x2226_b7 = false;
+        fp.refracted = true;
+        fp.cloak_look = false;
         self.reset_cloak_vibration(gobj);
         self.shine_parts_for_cloak(f);
         self.game.refract_use();
-        self.game.fighters[f.0].x221F_b2 = true;
+        self.game.fighters[f.0].cloaked = true;
     }
 
     /// Cloaked for `frames` frames, `ftCo_800C88D4`: unless it already is and isn't flashing
@@ -313,11 +313,11 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C88D4")]
     pub fn start_cloak(&mut self, gobj: GObjId, frames: i32, flash: bool) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x2030 = frames;
-        if fp.x2226_b4 && !fp.x2226_b7 {
+        fp.cloak_frames = frames;
+        if fp.cloak && !fp.cloak_look {
             return;
         }
-        fp.x2226_b4 = true;
+        fp.cloak = true;
         self.start_cloak_look(gobj);
         if flash {
             self.start_color_anim_unless_held(gobj, CLOAK_COLANIM);
@@ -331,8 +331,8 @@ impl Running<'_> {
     #[doc(alias = "ft_800C0098")]
     pub fn reset_cloak_overlay(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        crate::lb::colanim::clear(&mut fp.x508);
-        if fp.x2226_b4 {
+        crate::lb::colanim::clear(&mut fp.spycloak_overlay);
+        if fp.cloak {
             self.start_color_anim(gobj, CLOAK_ON_COLANIM, 0);
         }
     }
@@ -343,15 +343,15 @@ impl Running<'_> {
     pub fn end_cloak(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.x2030 = 0;
-        if fp.x2226_b3 {
+        fp.cloak_frames = 0;
+        if fp.takes_damage_cloaked {
             return;
         }
         self.clear_cloak(gobj);
         self.reset_cloak_overlay(gobj);
         self.restore_parts_look(f);
         self.game.refract_unuse();
-        self.game.fighters[f.0].x221F_b2 = false;
+        self.game.fighters[f.0].cloaked = false;
     }
 }
 
@@ -362,7 +362,7 @@ impl Running<'_> {
     #[doc(alias = "ftPk_Init_UnkMotionStates1")]
     pub(super) fn worn_item_on(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if (fp.x197C.is_none() || fp.x1980.is_none()) && fp.kind == FighterKind::Pikachu {
+        if (fp.bunny_hood.is_none() || fp.flower.is_none()) && fp.kind == FighterKind::Pikachu {
             let f = self.game.fighter_id(gobj);
             self.game.set_part_vis(gobj, 1, -1);
             self.set_model_variant(f, 1, 0);
@@ -376,7 +376,7 @@ impl Running<'_> {
     #[doc(alias = "ftPk_Init_UnkMotionStates2")]
     pub fn worn_item_off(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if (fp.x197C.is_none() || fp.x1980.is_none()) && fp.kind == FighterKind::Pikachu {
+        if (fp.bunny_hood.is_none() || fp.flower.is_none()) && fp.kind == FighterKind::Pikachu {
             let f = self.game.fighter_id(gobj);
             self.game.set_part_vis(gobj, 1, 0);
             self.set_model_variant(f, 1, 0);
@@ -387,17 +387,17 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007F948")]
     pub fn wear_hood(&mut self, gobj: GObjId, hood: GObjId, frames: i32) {
         let fp = self.game.fighter_mut(gobj);
-        fp.x197C = Some(hood);
-        fp.x2014 = frames;
+        fp.bunny_hood = Some(hood);
+        fp.bunny_hood_frames = frames;
         self.worn_item_on(gobj);
     }
 
     /// The Bunny Hood taken off, `ftCommon_8007F9B4`: the attributes and the ledge snap back.
     #[doc(alias = "ftCommon_8007F9B4")]
     pub fn take_off_hood(&mut self, gobj: GObjId) {
-        self.game.fighter_mut(gobj).x197C = None;
+        self.game.fighter_mut(gobj).bunny_hood = None;
         self.calc_attributes(gobj);
-        let scale = self.game.fighter(gobj).x34_scale.y;
+        let scale = self.game.fighter(gobj).scale.y;
         self.scale_ledge_snap(gobj, scale);
     }
 
@@ -407,10 +407,10 @@ impl Running<'_> {
     pub fn fit_hood(&mut self, gobj: GObjId) {
         use gekko_fp as fp;
         let f = self.game.fighter(gobj);
-        let hood = f.x197C.expect("no Bunny Hood worn");
+        let hood = f.bunny_hood.expect("no Bunny Hood worn");
         let (a, b) = (f.co_attrs.x120, f.co_attrs.x114);
         let scale = crate::fpu::mem(fp::fmuls(
-            crate::fpu::reg(f.x34_scale.y),
+            crate::fpu::reg(f.scale.y),
             crate::fpu::reg(f.co_attrs.x12C),
         ));
         kinds::rabbitc::shift_parts(self, hood, a, b);
@@ -428,8 +428,8 @@ impl Running<'_> {
         let frames = fp::fctiwz(crate::fpu::reg(it::lib26b1::bunny_hood_frames(
             self.game, self.data, hood,
         )));
-        if self.game.fighters[f.0].x197C.is_some() {
-            self.game.fighters[f.0].x2014 = frames;
+        if self.game.fighters[f.0].bunny_hood.is_some() {
+            self.game.fighters[f.0].bunny_hood_frames = frames;
             self.fighter_play_sfx(f, 0x117, 0x7F, 0x40);
             self.start_rumble(f, 0x10, 0);
             it::item::destroy(self, hood);
@@ -444,7 +444,7 @@ impl Running<'_> {
         it::item::pick_up(self, hood, gobj, head);
         self.wear_hood(gobj, hood, frames);
         self.calc_attributes(gobj);
-        let scale = self.game.fighters[f.0].x34_scale.y;
+        let scale = self.game.fighters[f.0].scale.y;
         self.scale_ledge_snap(gobj, scale);
         self.fighter_play_sfx(f, 0x117, 0x7F, 0x40);
         self.start_rumble(f, 0x10, 0);
@@ -466,7 +466,7 @@ impl Running<'_> {
         let data = self.data;
         let k = |o: u32| reg(data.f32(t.at(o)));
         let fpr = &mut self.game.fighters[f.0];
-        let scale = reg(fpr.x34_scale.y);
+        let scale = reg(fpr.scale.y);
         let a = &mut fpr.co_attrs;
         if scale != 1.0 {
             let y = |v: &mut f32, o: u32| *v = mem(it::owner::y_scaled(reg(*v), scale, k(o)));
@@ -510,7 +510,7 @@ impl Running<'_> {
         }
         let s = scale;
         let mul = |v: &mut f32| *v = mem(fp::fmuls(reg(*v), s));
-        let p = &mut fpr.x294_itPickup;
+        let p = &mut fpr.item_pickup;
         for q in [
             &mut p.gr_light_offset,
             &mut p.gr_heavy_offset,
@@ -521,7 +521,7 @@ impl Running<'_> {
             mul(&mut q.z);
             mul(&mut q.w);
         }
-        mul(&mut fpr.x2C4.x);
-        mul(&mut fpr.x2C4.y);
+        mul(&mut fpr.push_size.x);
+        mul(&mut fpr.push_size.y);
     }
 }

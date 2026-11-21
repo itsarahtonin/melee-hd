@@ -79,8 +79,8 @@ impl Running<'_> {
                 return true;
             }
             let fp = self.game.fighter(gobj);
-            if fp.hitlag_mul > 0.0 && fp.x2218_b1 {
-                match fp.unk_msid {
+            if fp.hitlag_mul > 0.0 && fp.jab_continue {
+                match fp.jab_msid {
                     ms::ATTACK11 => {
                         self.do_attack12(gobj);
                         return true;
@@ -121,10 +121,10 @@ impl Running<'_> {
         }
         let fp = self.game.fighter_mut(gobj);
         fp.allow_interrupt = false;
-        fp.x2218_b1 = false;
+        fp.jab_continue = false;
         // `getMotionFlags`: Pikachu's and Pichu's jab counts each hit.
         let flags = if fp.kind == FighterKind::Pikachu || fp.kind == FighterKind::Pichu {
-            fp.x21EC = Some(ON_PK_PC_21EC);
+            fp.motion_change_cb = Some(ON_PK_PC_21EC);
             super::super::motion::flags::SKIP_ATTACK_COUNT
         } else {
             0
@@ -133,10 +133,10 @@ impl Running<'_> {
         self.anim_update(gobj);
         let fp = self.game.fighter_mut(gobj);
         fp.hitlag_mul = fp.co_attrs.jab_2_input_window;
-        fp.unk_msid = ms::ATTACK11;
-        fp.x2218_b2 = false;
+        fp.jab_msid = ms::ATTACK11;
+        fp.jab_rapid = false;
         fp.set_mv_i32(ATTACK_X0, 0);
-        fp.x1A54 = 0;
+        fp.jab_mashes = 0;
     }
 
     /// `doAttack12`: Pikachu and Pichu jab again from the first.
@@ -153,11 +153,11 @@ impl Running<'_> {
         }
         let fp = self.game.fighter_mut(gobj);
         fp.allow_interrupt = false;
-        fp.x2218_b1 = false;
+        fp.jab_continue = false;
         self.change_motion_state(gobj, ms::ATTACK12, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
         fp.hitlag_mul = fp.co_attrs.jab_3_input_window;
-        fp.unk_msid = ms::ATTACK12;
+        fp.jab_msid = ms::ATTACK12;
         fp.set_mv_i32(ATTACK_X0, 0);
     }
 
@@ -173,7 +173,7 @@ impl Running<'_> {
         }
         let fp = self.game.fighter_mut(gobj);
         fp.allow_interrupt = false;
-        fp.x2218_b1 = false;
+        fp.jab_continue = false;
         self.change_motion_state(gobj, ms::ATTACK13, 0, 0.0, 1.0, 0.0, None);
     }
 
@@ -187,7 +187,7 @@ impl Running<'_> {
                 fp.set_mv_i32(ATTACK_X0, 1);
             }
         }
-        if fp.mv_i32(ATTACK_X0) != 0 && fp.x2218_b1 {
+        if fp.mv_i32(ATTACK_X0) != 0 && fp.jab_continue {
             if third {
                 self.do_attack13(gobj);
             } else {
@@ -203,9 +203,9 @@ impl Running<'_> {
     pub fn rapid_jab_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter_mut(gobj);
         if fp.input.pressed_buttons & PAD_A != 0 || fp.input.released_buttons & PAD_A != 0 {
-            fp.x1A54 = fp.x1A54.wrapping_add(1);
+            fp.jab_mashes = fp.jab_mashes.wrapping_add(1);
         }
-        if fp.x1A54 >= fp.co_attrs.rapid_jab_window && fp.x2218_b2 {
+        if fp.jab_mashes >= fp.co_attrs.rapid_jab_window && fp.jab_rapid {
             self.enter_attack100(gobj);
             return true;
         }
@@ -231,7 +231,7 @@ impl Running<'_> {
             return;
         }
         let fp = self.game.fighter_mut(gobj);
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
         let fp = self.game.fighter_mut(gobj);
@@ -551,7 +551,7 @@ impl Running<'_> {
         fp.cmd_vars[0] = 0;
         fp.allow_interrupt = false;
         fp.set_mv_i32(ATTACK_X0, 0);
-        fp.x21EC = Some(ATTACK_LW3_CALL_UNK);
+        fp.motion_change_cb = Some(ATTACK_LW3_CALL_UNK);
         let flags = super::super::motion::flags::SKIP_ATTACK_COUNT;
         self.change_motion_state(gobj, ms::ATTACK_LW3, flags, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
@@ -735,7 +735,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.allow_interrupt = false;
         fp.cmd_vars[0] = 0;
-        fp.x2210 = [0; 4];
+        fp.throw_flags = [0; 4];
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
     }

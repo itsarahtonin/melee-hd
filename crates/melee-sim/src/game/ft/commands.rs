@@ -105,10 +105,10 @@ impl Running<'_> {
     pub(super) fn cmd_script(&mut self, f: FighterId, which: Option<Overlay>) -> &mut Script {
         let fp = &mut self.game.fighters[f.0];
         match which {
-            None => &mut fp.x3E4_fighterCmdScript.script,
-            Some(Overlay::Main) => &mut fp.x408.script,
-            Some(Overlay::Secondary) => &mut fp.x488.script,
-            Some(Overlay::Spycloak) => &mut fp.x508.script,
+            None => &mut fp.cmd_script.script,
+            Some(Overlay::Main) => &mut fp.main_overlay.script,
+            Some(Overlay::Secondary) => &mut fp.secondary_overlay.script,
+            Some(Overlay::Spycloak) => &mut fp.spycloak_overlay.script,
         }
     }
 
@@ -119,10 +119,10 @@ impl Running<'_> {
     pub(super) fn cmd_word_in(&self, f: FighterId, which: Option<Overlay>, n: u32) -> u32 {
         let fp = &self.game.fighters[f.0];
         let s = match which {
-            None => &fp.x3E4_fighterCmdScript.script,
-            Some(Overlay::Main) => &fp.x408.script,
-            Some(Overlay::Secondary) => &fp.x488.script,
-            Some(Overlay::Spycloak) => &fp.x508.script,
+            None => &fp.cmd_script.script,
+            Some(Overlay::Main) => &fp.main_overlay.script,
+            Some(Overlay::Secondary) => &fp.secondary_overlay.script,
+            Some(Overlay::Spycloak) => &fp.spycloak_overlay.script,
         };
         s.word_at(self.data, n)
     }
@@ -135,7 +135,7 @@ impl Running<'_> {
     /// The hitbox a command names; the original indexes past the four with no check.
     fn cmd_hitbox(&mut self, f: FighterId, i: u32) -> &mut super::super::structs::HitCapsule {
         assert!(i < 4, "hitbox {i} of a command");
-        &mut self.game.fighters[f.0].x914[i as usize]
+        &mut self.game.fighters[f.0].hitboxes[i as usize]
     }
 
     /// Runs fighter command `index` (opcode `index + 10`, `ftAction_803C06E8`).
@@ -222,7 +222,7 @@ impl Running<'_> {
     #[doc(alias = "ftAction_8007121C")]
     fn cmd_create_hitbox(&mut self, gobj: GObjId, f: FighterId) {
         let w: [u32; 6] = std::array::from_fn(|i| self.cmd_word(f, i as u32));
-        let thrown = self.game.fighters[f.0].x1064_thrownHitbox.x134.is_set();
+        let thrown = self.game.fighters[f.0].thrown_hitbox.x134.is_set();
         if bits(w[3], 28, 1) != 0 && !thrown {
             self.cmd_skip(f, 5);
             self.smash_since_hitbox(f);
@@ -251,25 +251,27 @@ impl Running<'_> {
         let id = bits(w[0], 6, 3) as usize;
         let group = bits(w[0], 9, 3);
         let fp = &mut self.game.fighters[f.0];
-        let h = &fp.x914[id];
+        let h = &fp.hitboxes[id];
         if h.state == hitcapsule::DISABLED || h.x4 != group {
-            fp.x914[id].x4 = group;
-            fp.x914[id].state = hitcapsule::ENABLED;
-            fp.x2219_b3 = true;
+            fp.hitboxes[id].x4 = group;
+            fp.hitboxes[id].state = hitcapsule::ENABLED;
+            fp.hitboxes_set = true;
             // `ftColl_800768A0`: a box of a group already out shares its victims.
             let src = (0..4).find(|&i| {
-                i != id && fp.x914[i].state != hitcapsule::DISABLED && fp.x914[i].x4 == group
+                i != id
+                    && fp.hitboxes[i].state != hitcapsule::DISABLED
+                    && fp.hitboxes[i].x4 == group
             });
             match src {
                 Some(i) => {
-                    let s = fp.x914[i].clone();
-                    hitcapsule::copy_victims(&s, &mut fp.x914[id]);
+                    let s = fp.hitboxes[i].clone();
+                    hitcapsule::copy_victims(&s, &mut fp.hitboxes[id]);
                     // What the source's block held there comes along (the GPU's pixels).
                     let hit = |k: usize| 0x914 + 0x138 * k as u32;
                     let me = RenderOf::Fighter(f);
                     carry_victims(self.game, me, hit(i), me, hit(id));
                 }
-                None => hitcapsule::clear_victims(&mut fp.x914[id]),
+                None => hitcapsule::clear_victims(&mut fp.hitboxes[id]),
             }
         }
         let bone = bits(w[0], 13, 8) as i32;
@@ -285,16 +287,16 @@ impl Running<'_> {
         if j.is_some_and(|j| self.game.objs.jobjs.pool.is_free(j.0)) {
             self.game.objs.stale_reads += 1;
         }
-        self.game.fighters[f.0].x914[id].jobj.set(j);
+        self.game.fighters[f.0].hitboxes[id].jobj.set(j);
         self.hitbox_damage(f, id, false, bits(w[0], 22, 10));
         let fixed = |v: f64| mem(fp::fmuls(reg(FIXED), v));
-        let h = &mut self.game.fighters[f.0].x914[id];
+        let h = &mut self.game.fighters[f.0].hitboxes[id];
         h.scale = fixed(ufloat(bits(w[1], 0, 16)));
         h.b_offset.x = fixed(sfloat(sbits(w[1], 16, 16)));
         h.b_offset.y = fixed(sfloat(sbits(w[2], 0, 16)));
         h.b_offset.z = fixed(sfloat(sbits(w[2], 16, 16)));
         self.hitbox_angle(gobj, f, id, false, bits(w[3], 0, 9) as i32);
-        let h = &mut self.game.fighters[f.0].x914[id];
+        let h = &mut self.game.fighters[f.0].hitboxes[id];
         h.x24 = bits(w[3], 9, 9);
         h.x28 = bits(w[3], 18, 9);
         h.x43_b0 = bits(w[3], 27, 1) != 0;
@@ -333,24 +335,21 @@ impl Running<'_> {
     pub(crate) fn hitbox_damage(&mut self, f: FighterId, id: usize, throw: bool, damage: u32) {
         let fp = &self.game.fighters[f.0];
         let mut dmg = fp::frsp(f64::from(damage));
-        if fp.x34_scale.y != 1.0 {
+        if fp.scale.y != 1.0 {
             let p = super::common_ptr(self.game, self.data, super::SCALE_PARAMS)
                 .expect("no fighter scale parameters");
-            dmg = crate::game::it::owner::y_scaled(
-                dmg,
-                reg(fp.x34_scale.y),
-                reg(self.data.f32(p.at(4))),
-            );
+            dmg =
+                crate::game::it::owner::y_scaled(dmg, reg(fp.scale.y), reg(self.data.f32(p.at(4))));
         }
         let dmg = Self::smash_damage(&self.game.fighters[f.0], dmg);
         let fp = &self.game.fighters[f.0];
-        let attack = fp.x2068_attackID;
+        let attack = fp.attack_id;
         let stale = crate::game::it::owner::stale_damage(self.game, self.data, f, attack, dmg);
         let fp = &mut self.game.fighters[f.0];
         let h = if throw {
-            &mut fp.xDF4[id]
+            &mut fp.throw_hitboxes[id]
         } else {
-            &mut fp.x914[id]
+            &mut fp.hitboxes[id]
         };
         h.unk_count = fp::fctiwz(dmg) as u32;
         h.damage = mem(stale);
@@ -366,7 +365,7 @@ impl Running<'_> {
         assert!(id < 2, "throw hitbox {id} of a command");
         self.hitbox_damage(f, id, true, bits(w[0], 9, 23));
         self.hitbox_angle(gobj, f, id, true, bits(w[1], 0, 9) as i32);
-        let h = &mut self.game.fighters[f.0].xDF4[id];
+        let h = &mut self.game.fighters[f.0].throw_hitboxes[id];
         h.x24 = bits(w[1], 9, 9);
         h.x28 = bits(w[1], 18, 9);
         h.x2C = bits(w[2], 0, 9);
@@ -401,17 +400,17 @@ impl Running<'_> {
     fn hitbox_angle(&mut self, _gobj: GObjId, f: FighterId, id: usize, throw: bool, angle: i32) {
         let fp = &mut self.game.fighters[f.0];
         if throw {
-            fp.xDF4[id].kb_angle = angle;
+            fp.throw_hitboxes[id].kb_angle = angle;
         } else {
-            fp.x914[id].kb_angle = angle;
+            fp.hitboxes[id].kb_angle = angle;
         }
         let a = angle as u32;
         let c = self.common();
         let (lo, hi) = (c.u32(0x7E8), c.u32(0x7EC));
         if a != 361 && lo <= a && a <= hi {
             let fp = &mut self.game.fighters[f.0];
-            if fp.x2074.x10[0] & 0x80 == 0 {
-                fp.x2074.x10[0] |= 0x80;
+            if fp.attack_record.x10[0] & 0x80 == 0 {
+                fp.attack_record.x10[0] |= 0x80;
                 let slot = i32::from(fp.player_idx);
                 let stats = self.game.player_action_stats(slot);
                 stats.attacks.x1A8 = stats.attacks.x1A8.wrapping_add(1);
@@ -494,10 +493,10 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         match bits(w, 6, 26) {
             0 => {
-                fp.x2210[0] |= 0x10;
-                fp.cmd_timer = fp.x3E4_fighterCmdScript.script.timer_f32();
+                fp.throw_flags[0] |= 0x10;
+                fp.cmd_timer = fp.cmd_script.script.timer_f32();
             }
-            1 => fp.x2210[0] |= 0x08,
+            1 => fp.throw_flags[0] |= 0x08,
             _ => {}
         }
     }
@@ -505,14 +504,14 @@ impl Running<'_> {
     /// Throw flag 1.
     #[doc(alias = "ftAction_80071908")]
     fn cmd_throw_flag_1(&mut self, _gobj: GObjId, f: FighterId, _w: u32) {
-        self.game.fighters[f.0].x2210[0] |= 0x40;
+        self.game.fighters[f.0].throw_flags[0] |= 0x40;
     }
 
     /// Throw flag 2.
     /// `ftAction_8007192C`: dead, no fighter script on the disc holds its opcode
     /// (ledger/dead.txt).
     fn cmd_throw_flag_2(&mut self, _gobj: GObjId, f: FighterId, _w: u32) {
-        self.game.fighters[f.0].x2210[0] |= 0x20;
+        self.game.fighters[f.0].throw_flags[0] |= 0x20;
     }
 
     /// The action may be interrupted.
@@ -524,7 +523,7 @@ impl Running<'_> {
     /// Throw flag 0.
     #[doc(alias = "ftAction_80071974")]
     fn cmd_throw_flag_0(&mut self, _gobj: GObjId, f: FighterId, _w: u32) {
-        self.game.fighters[f.0].x2210[0] |= 0x80;
+        self.game.fighters[f.0].throw_flags[0] |= 0x80;
     }
 
     /// Lands, or leaves the ground as falling or as jumped.
@@ -560,15 +559,15 @@ impl Running<'_> {
     #[doc(alias = "ftAction_80071AE8")]
     fn cmd_jab_combo(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let fp = &mut self.game.fighters[f.0];
-        if bits(w, 6, 26) == 0 || fp.x197C.is_some() {
-            fp.x2218_b1 = true;
+        if bits(w, 6, 26) == 0 || fp.bunny_hood.is_some() {
+            fp.jab_continue = true;
         }
     }
 
     /// The jab may turn rapid.
     #[doc(alias = "ftAction_80071B28")]
     fn cmd_jab_rapid(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
-        self.game.fighters[f.0].x2218_b2 = bits(w, 6, 26) & 1 != 0;
+        self.game.fighters[f.0].jab_rapid = bits(w, 6, 26) & 1 != 0;
     }
 
     /// Shows one of a model's variants.
@@ -583,9 +582,9 @@ impl Running<'_> {
     #[doc(alias = "ftParts_80074B0C")]
     pub(crate) fn set_model_variant(&mut self, f: FighterId, i: usize, v: i32) {
         let fp = &mut self.game.fighters[f.0];
-        if v != i32::from(fp.x5F4_arr[i].idx) {
-            fp.x5F4_arr[i].idx = v as i8;
-            fp.x221D_b2 = true;
+        if v != i32::from(fp.model_variants[i].idx) {
+            fp.model_variants[i].idx = v as i8;
+            fp.variants_hidden = true;
             let list = fp.dobj_list.data;
             self.hide_parts_vis(f, 0, list);
         }
@@ -632,7 +631,7 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007F5CC")]
     pub fn set_item_visible(&mut self, gobj: GObjId, v: bool) {
         let fp = self.game.fighter(gobj);
-        if fp.item_gobj.is_some() && fp.x221E_b3 != v {
+        if fp.item_gobj.is_some() && fp.item_visible != v {
             if v {
                 let cb = crate::game::ft::registry::character(fp.kind)
                     .callbacks
@@ -648,7 +647,7 @@ impl Running<'_> {
                 self.item_invisible_hook(gobj);
             }
         }
-        self.game.fighter_mut(gobj).x221E_b3 = v;
+        self.game.fighter_mut(gobj).item_visible = v;
     }
 
     /// The character's hook for hiding a held item (`ftData_OnItemInvisible`), if it holds one,
@@ -670,13 +669,13 @@ impl Running<'_> {
     /// The character's articles' visibility (`x221E_b4`).
     #[doc(alias = "ftAction_80071F78")]
     fn cmd_article_visible(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
-        self.game.fighters[f.0].x221E_b4 = bits(w, 6, 26) & 1 != 0;
+        self.game.fighters[f.0].articles_visible = bits(w, 6, 26) & 1 != 0;
     }
 
     /// The fighter's visibility (`x221E_b5`).
     #[doc(alias = "ftAction_80071FA0")]
     fn cmd_fighter_visible(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
-        self.game.fighters[f.0].x221E_b5 = bits(w, 6, 26) & 1 != 0;
+        self.game.fighters[f.0].visible = bits(w, 6, 26) & 1 != 0;
     }
 
     /// One or two costume textures' animation frame.
@@ -792,15 +791,15 @@ impl Running<'_> {
     /// `ftAction_80072B14`: dead, no fighter script on the disc holds its opcode
     /// (ledger/dead.txt).
     fn cmd_x221e_b1(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
-        self.game.fighters[f.0].x221E_b1 = bits(w, 6, 26) & 1 != 0;
+        self.game.fighters[f.0].dead_flag = bits(w, 6, 26) & 1 != 0;
     }
 
     /// The sword trail's setting (`x2100`, `x2101_bits_8`).
     #[doc(alias = "ftAction_80072B3C")]
     fn cmd_sword_trail(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let fp = &mut self.game.fighters[f.0];
-        fp.x2100 = sbits(w, 7, 25) as i8;
-        fp.x2101_bits_8 = sbits(w, 6, 1) & 1 != 0;
+        fp.afterimage_mode = sbits(w, 7, 25) as i8;
+        fp.item_afterimage = sbits(w, 6, 1) & 1 != 0;
     }
 
     /// Flags `x221C_u16_y`, the root's lean kept unless bit 2 (`ft_8008A1B8`).
@@ -808,7 +807,7 @@ impl Running<'_> {
     #[doc(alias = "ftAction_80072C6C")]
     fn cmd_x221c_flags(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let flags = bits(w, 6, 26);
-        self.game.fighters[f.0].x221C_u16_y = (flags & 7) as u8;
+        self.game.fighters[f.0].leg_reach = (flags & 7) as u8;
         if flags & 4 == 0 {
             self.game.part_set_rot_x(f, 0, 0.0);
         }
@@ -817,7 +816,7 @@ impl Running<'_> {
     /// Flag `x2225_b2`.
     #[doc(alias = "ftAction_80072CB0")]
     fn cmd_x2225_b2(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
-        self.game.fighters[f.0].x2225_b2 = bits(w, 6, 26) & 1 != 0;
+        self.game.fighters[f.0].hat_hidden = bits(w, 6, 26) & 1 != 0;
     }
 
     /// A smash attack's charge window (`ftCo_800DEE84`): its frames, damage scale and color.
@@ -842,7 +841,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C8B60")]
     fn cmd_vibrate(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let fp = &mut self.game.fighters[f.0];
-        fp.x2226_b5 = bits(w, 6, 1) != 0;
+        fp.refracted = bits(w, 6, 1) != 0;
         fp.smash_attrs.x2134_vibrateFrame = bits(w, 7, 8) as u8;
     }
 
@@ -1089,7 +1088,7 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         let slot = i32::from(fp.player_idx) + i32::from(fp.is_sub_fighter);
         let voice_ok =
-            !fp.x2225_b6 || fp.kind == FighterKind::GameWatch || fp.kind == FighterKind::Samus;
+            !fp.voice_muted || fp.kind == FighterKind::GameWatch || fp.kind == FighterKind::Samus;
         let base = match kind {
             0 => 0,
             1 => 0x36,
@@ -1117,13 +1116,13 @@ impl Running<'_> {
         let voice = crate::lb::sound_obj::voice_of(self.game, o);
         let fp = &mut self.game.fighters[f.0];
         match kind {
-            0 => fp.x2160 = voice,
-            1 => fp.x214C = voice,
-            2 => fp.x2144 = voice,
-            3 => fp.x2150 = voice,
-            4 => fp.x2154 = voice,
-            5 => fp.x2158 = voice,
-            _ => fp.x2148 = voice,
+            0 => fp.sfx_handle = voice,
+            1 => fp.sound_handle_3 = voice,
+            2 => fp.voice_handle = voice,
+            3 => fp.sound_handle_4 = voice,
+            4 => fp.sound_handle_5 = voice,
+            5 => fp.sound_handle_6 = voice,
+            _ => fp.sound_handle_2 = voice,
         }
     }
 
@@ -1157,12 +1156,12 @@ impl Running<'_> {
             10..=15 => {
                 let fp = &mut self.game.fighters[f.0];
                 let (base, slot) = match behavior {
-                    10 => (0x36, &mut fp.x214C),
-                    11 => (0x1E, &mut fp.x2144),
-                    12 => (0x42, &mut fp.x2150),
-                    13 => (0x4E, &mut fp.x2154),
-                    14 => (0x5A, &mut fp.x2158),
-                    _ => (0x2A, &mut fp.x2148),
+                    10 => (0x36, &mut fp.sound_handle_3),
+                    11 => (0x1E, &mut fp.voice_handle),
+                    12 => (0x42, &mut fp.sound_handle_4),
+                    13 => (0x4E, &mut fp.sound_handle_5),
+                    14 => (0x5A, &mut fp.sound_handle_6),
+                    _ => (0x2A, &mut fp.sound_handle_2),
                 };
                 *slot = -1;
                 self.key_off(f, base);
@@ -1197,7 +1196,7 @@ impl Running<'_> {
                 // `ftAction_800730B8`.
                 let w = self.cmd_word_in(f, Some(which), 0);
                 let fp = &mut self.game.fighters[f.0];
-                fp.x2226_b5 = bits(w, 6, 1) != 0;
+                fp.refracted = bits(w, 6, 1) != 0;
                 fp.smash_attrs.x2134_vibrateFrame = bits(w, 7, 8) as u8;
                 self.cmd_script(f, Some(which)).skip(1);
             }
@@ -1249,10 +1248,10 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.ground_or_air = GA_AIR;
         fp.gr_vel = 0.0;
-        fp.x98_atk_shield_kb.z = 0.0;
+        fp.atk_shield_kb_vel.z = 0.0;
         fp.cur_pos.z = 0.0;
-        fp.x74_self_accel.y = 0.0;
-        fp.x1968_jumpsUsed = 1;
+        fp.anim_vel.y = 0.0;
+        fp.jumps_used = 1;
         fp.ecb_lock = 10;
         fp.coll_data.x130_flags |= COLL_LOCKED;
     }
@@ -1261,15 +1260,15 @@ impl Running<'_> {
     #[doc(alias = "ftCommon_8007D60C")]
     pub(super) fn go_airborne_jumped(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
-        if fp.x2227_b0 && fp.x1968_jumpsUsed <= 1 {
+        if fp.jumped_from_ground && fp.jumps_used <= 1 {
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
             self.game.record_jump_left(slot, sub);
         }
         let fp = &mut self.game.fighters[f.0];
         fp.ground_or_air = GA_AIR;
         fp.gr_vel = 0.0;
-        fp.x74_self_accel.y = 0.0;
-        fp.x1968_jumpsUsed = fp.co_attrs.max_jumps as u8;
+        fp.anim_vel.y = 0.0;
+        fp.jumps_used = fp.co_attrs.max_jumps as u8;
         fp.ecb_lock = 5;
         fp.coll_data.x130_flags |= COLL_LOCKED;
     }
@@ -1282,7 +1281,7 @@ impl Running<'_> {
             if fp.hurt_capsules[i].capsule.bone_idx == bone {
                 fp.hurt_capsules[i].capsule.state = state;
                 if state != 0 {
-                    fp.x221A_b5 = true;
+                    fp.hurtboxes_set = true;
                 }
                 return;
             }
@@ -1293,10 +1292,10 @@ impl Running<'_> {
     /// Hides every model variant, `ftParts_80074ACC`.
     fn hide_models(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
-        for i in 0..fp.x5AC.model_num as usize {
-            fp.x5F4_arr[i].idx = -1;
+        for i in 0..fp.parts_vis.model_num as usize {
+            fp.model_variants[i].idx = -1;
         }
-        fp.x221D_b2 = false;
+        fp.variants_hidden = false;
     }
 
     /// Sets a costume texture's animation to `frame` and steps it, `ftAnim_800704F0`
@@ -1319,7 +1318,7 @@ impl Running<'_> {
         if self.game.fighters[f.0].kind == FighterKind::Kirby {
             self.kb_hat_texture_anim(gobj, i, frame);
         }
-        self.game.fighters[f.0].x221E_b7 = true;
+        self.game.fighters[f.0].costume_anim_set = true;
     }
 }
 

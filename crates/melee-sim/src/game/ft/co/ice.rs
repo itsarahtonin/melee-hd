@@ -56,7 +56,7 @@ impl Running<'_> {
     fn ice_effect_size(&self, f: FighterId) -> f32 {
         let common = reg(self.common().f32(0x7A0));
         let fp = &self.game.fighters[f.0];
-        let size = fp::fmuls(reg(fp.x34_scale.y), reg(fp.co_attrs.damageice_ice_size));
+        let size = fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.damageice_ice_size));
         mem(fp::fdivs(size, common))
     }
 
@@ -85,7 +85,7 @@ impl Running<'_> {
     pub fn ice_coll_setup(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
-        let radius = fp::fmuls(reg(fp.x34_scale.y), reg(fp.co_attrs.damageice_ice_size));
+        let radius = fp::fmuls(reg(fp.scale.y), reg(fp.co_attrs.damageice_ice_size));
         let top = self.bone(f, TOP_N).joint;
         let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, top, None);
         let xrot = self.x_rot_joint(f);
@@ -115,14 +115,14 @@ impl Running<'_> {
         let size = self.ice_effect_size(f);
         let args = [ef::Arg::Float(size)];
         self.fighter_effect(gobj, ef::SpawnKind::AttachParam, GFX_ICE, joint, &args);
-        self.game.fighters[f.0].x2219_b0 = true;
+        self.game.fighters[f.0].effect_once = true;
     }
 
     /// The frozen state's damage hook, `ftCo_DamageIce_OnHit`: a hit leaves the fighter no
     /// longer held in the ice (`x2227_b6`).
     #[doc(alias = "ftCo_DamageIce_OnHit")]
     pub fn co_damage_ice_on_hit(&mut self, gobj: GObjId) {
-        self.game.fighter_mut(gobj).x2227_b6 = false;
+        self.game.fighter_mut(gobj).held_in_ice = false;
     }
 
     /// Frozen by a hit, `ftCo_DamageIce_Init`: the held item and victim let go, the state
@@ -134,15 +134,15 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         self.drop_heavy_item(gobj);
         self.release_victim(gobj);
-        self.game.fighters[f.0].x2227_b6 = true;
+        self.game.fighters[f.0].held_in_ice = true;
         self.change_motion_state(gobj, ms::DAMAGE_ICE, 0x40, 0.0, 1.0, 0.0, None);
         let x790 = reg(self.common().f32(0x790));
         let fp = &mut self.game.fighters[f.0];
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = mem(fp::fmuls(reg(fp.dmg.x1838_percentTemp), x790));
-        fp.x1A51 = 0;
-        fp.x1A50 = 0;
-        fp.x2224_b6 = false;
+        fp.mash_stick_y = 0;
+        fp.mash_stick_x = 0;
+        fp.can_mash = false;
         let fp = &self.game.fighters[f.0];
         let (xi, yi) = (self.bone_index(fp, XROT_N), self.bone_index(fp, YROT_N));
         let (y, z) = (
@@ -184,7 +184,7 @@ impl Running<'_> {
         self.damage_hooks(gobj);
         self.drop_heavy_item(gobj);
         self.release_victim(gobj);
-        self.game.fighter_mut(gobj).x2227_b6 = true;
+        self.game.fighter_mut(gobj).held_in_ice = true;
         self.change_motion_state(gobj, ms::DAMAGE_ICE, 2 | 0x40, 0.0, 1.0, 0.0, None);
         self.freeze(gobj);
     }
@@ -199,18 +199,18 @@ impl Running<'_> {
         self.set_dynamics(f, false);
         self.knockback_enter(gobj);
         let fp = &mut self.game.fighters[f.0];
-        fp.x2222_b3 = true;
+        fp.no_blast_rise = true;
         if fp.ground_or_air == GA_AIR {
-            fp.self_vel = fp.x8c_kb_vel;
-            fp.x8c_kb_vel.z = 0.0;
-            fp.x8c_kb_vel.y = 0.0;
-            fp.x8c_kb_vel.x = 0.0;
+            fp.self_vel = fp.kb_vel;
+            fp.kb_vel.z = 0.0;
+            fp.kb_vel.y = 0.0;
+            fp.kb_vel.x = 0.0;
         } else {
-            fp.gr_vel = fp.xF0_ground_kb_vel;
-            fp.xF0_ground_kb_vel = 0.0;
+            fp.gr_vel = fp.ground_kb_vel;
+            fp.ground_kb_vel = 0.0;
         }
         // `ftCommon_8007E2F4`.
-        fp.x1A6A = 0x1FF;
+        fp.grab_immune = 0x1FF;
         fp.mv[ICE_WALL_HIT_DIR] = 0;
         let r = reg(self.game.objs.rng.draw_f32());
         let c = self.common();
@@ -222,7 +222,7 @@ impl Running<'_> {
         let size = self.ice_effect_size(f);
         let args = [ef::Arg::Float(size)];
         self.fighter_effect(gobj, ef::SpawnKind::AttachParam, GFX_ICE, joint, &args);
-        self.game.fighters[f.0].x2219_b0 = true;
+        self.game.fighters[f.0].effect_once = true;
         self.set_hurtbox_state(f, HURT_INTANGIBLE);
         let fp = &self.game.fighters[f.0];
         let bone_idx = self.bone_index(fp, XROT_N);
@@ -239,7 +239,7 @@ impl Running<'_> {
         h.capsule.a_offset = Vec3::default();
         h.capsule.b_offset = Vec3::default();
         h.capsule.scale = scale;
-        fp.x221A_b6 = true;
+        fp.hurtboxes_custom = true;
         self.start_rumble(f, 1, 0);
         let fp = &mut self.game.fighters[f.0];
         fp.take_dmg_2_cb = Some(CodeRef(ON_HIT2));
@@ -402,7 +402,7 @@ impl Running<'_> {
             self.fighter_play_sfx(f, SFX_ICE_HIT, 127, 64);
             let fp = &mut self.game.fighters[f.0];
             fp.cur_pos = next;
-            fp.x2227_b6 = false;
+            fp.held_in_ice = false;
             self.enter_damage_fall(gobj);
             return;
         }
@@ -414,13 +414,13 @@ impl Running<'_> {
         if fp.coll_data.env_flags & RIGHT_WALL_HUG != 0 {
             let x = fp::fadds(reg(fp.cur_pos.x), reg(v.x));
             fp.cur_pos.x = mem(fp::fnmsubs(
-                reg(fp.x68C_transNPos.z),
+                reg(fp.trans_n_pos.z),
                 fp::fneg(reg(fp.facing_dir)),
                 x,
             ));
         } else {
             let y = fp::fadds(reg(fp.cur_pos.y), reg(v.y));
-            fp.cur_pos.y = mem(fp::fadds(reg(fp.x68C_transNPos.y), y));
+            fp.cur_pos.y = mem(fp::fadds(reg(fp.trans_n_pos.y), y));
         }
         if self.air_coll_land(gobj) {
             self.land(gobj);
@@ -439,7 +439,7 @@ impl Running<'_> {
         }
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);
-        self.game.fighters[f.0].x2227_b6 = false;
+        self.game.fighters[f.0].held_in_ice = false;
         self.change_motion_state(gobj, ms::DAMAGE_ICE_JUMP, 0x40, 0.0, 0.0, 0.0, None);
         self.fighter_play_sfx(f, SFX_ICE_HIT, 127, 64);
         let joint = self.x_rot_joint(f);
