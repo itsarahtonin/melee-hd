@@ -146,8 +146,9 @@ pub struct Opponent {
 /// `Unk1PData`: a 1P run's state (`gm_17C0`'s): its player, its counters (`xC` to `x23`),
 /// the next match's opponents, and the mode's tables' getters (`x48` to `x70`, function
 /// pointers: their addresses).
+#[doc(alias("Unk1PData"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
-pub struct Unk1PData {
+pub struct OnePlayerRun {
     pub player: GmPlayerData,
     #[doc(alias("x8"))]
     pub stage: [u8; 4],
@@ -170,7 +171,7 @@ pub struct Unk1PData {
 /// `UnkAllstarData` (`lbl_80472CB0`, Classic's; `gm_80473A18`, All-Star's).
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct AllStarData {
-    pub base: Unk1PData,
+    pub base: OnePlayerRun,
     #[doc(alias("x74"))]
     pub damage: u16,
     #[doc(alias("x76"))]
@@ -188,7 +189,7 @@ pub struct AllStarData {
 /// `UnkAdventureData` (`lbl_80472C30`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct AdventureData {
-    pub base: Unk1PData,
+    pub base: OnePlayerRun,
     /// `x74` to `x78`.
     #[doc(alias("x74"))]
     pub feats: [u8; 5],
@@ -630,8 +631,8 @@ impl Running<'_> {
     /// opponents' characters none (`gm_8017DB58`), the 1P port and the getters.
     #[doc(alias = "gm_8017C984")]
     #[doc(alias = "gm_8017DB58")]
-    fn one_player_run_start(run: &mut Unk1PData, slot: u8) {
-        *run = Unk1PData::default();
+    fn one_player_run_start(run: &mut OnePlayerRun, slot: u8) {
+        *run = OnePlayerRun::default();
         for o in &mut run.opponents {
             o.ckind = CharacterKind::NONE as i8;
         }

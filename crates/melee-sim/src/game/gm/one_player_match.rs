@@ -9,7 +9,7 @@ use gekko_fp as fp;
 use super::super::handles::CodeRef;
 use super::super::state::Running;
 use super::super::structs::StartMeleeData;
-use super::one_player::{GM_ALLSTAR, Unk1PData};
+use super::one_player::{GM_ALLSTAR, OnePlayerRun};
 use super::opponents::NONE;
 
 /// `lbl_8046B668`'s address, which the rules' `x58` holds while it's the characters left.
@@ -202,7 +202,7 @@ impl Running<'_> {
     pub fn one_player_stage_start(
         &mut self,
         start: &mut StartMeleeData,
-        run: &mut Unk1PData,
+        run: &mut OnePlayerRun,
         chars: &[i8; 3],
         arg3: u8,
         arg4: u8,
@@ -615,7 +615,7 @@ impl Running<'_> {
     #[doc(alias = "gm_8017D7AC")]
     #[doc(alias = "fn_8016B510")]
     #[doc(alias = "fn_8016B4BC")]
-    pub fn one_player_match_exit(&mut self, run: &mut Unk1PData, game_over: u8) -> bool {
+    pub fn one_player_match_exit(&mut self, run: &mut OnePlayerRun, game_over: u8) -> bool {
         use super::results_exit::add_u32_saturating as add;
         let e = &self.game.one_player.match_exit;
         let (end, x0) = (e.match_end.clone(), e.run_value);
@@ -862,7 +862,7 @@ impl Running<'_> {
     #[doc(alias = "fn_80162BFC")]
     #[doc(alias = "fn_80162DF8")]
     #[doc(alias = "fn_80162FF4")]
-    pub fn one_player_game_over_exit(&mut self, run: &mut Unk1PData, stocks: u8) {
+    pub fn one_player_game_over_exit(&mut self, run: &mut OnePlayerRun, stocks: u8) {
         let d = self.game.one_player.game_over;
         run.coins = d.coins;
         self.game.game_data.set_score(u32::from(run.coins));
@@ -927,7 +927,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015D134")]
     #[doc(alias = "gmMainLib_8015D1C8")]
     #[doc(alias = "gmMainLib_8015D2F0")]
-    pub fn one_player_clear(&mut self, run: &Unk1PData, stocks: u8, mode: u8) {
+    pub fn one_player_clear(&mut self, run: &OnePlayerRun, stocks: u8, mode: u8) {
         let p = run.player;
         let sel = super::match_exit::selkind(p.ckind as u8);
         self.toy_table_sync(true);
@@ -989,7 +989,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015D384")]
     #[doc(alias = "gmMainLib_8015D3FC")]
     #[doc(alias = "gmMainLib_8015D418")]
-    fn allstar_clear_records(&mut self, run: &Unk1PData, sel: u8, stocks: u8) {
+    fn allstar_clear_records(&mut self, run: &OnePlayerRun, sel: u8, stocks: u8) {
         let p = run.player;
         let s = &mut self.game.game_data.thing.save_data;
         s.x1F2C[usize::from(sel)].x7C.b6 = true;
@@ -1029,7 +1029,7 @@ impl Running<'_> {
     /// the character, slot and name tag, the coins held and a continue's cost by the kind and
     /// level (`lbl_803B7C08`).
     #[doc(alias = "gm_8017C9A8")]
-    fn one_player_enter_game_over(&mut self, run: &Unk1PData, kind: u8) {
+    fn one_player_enter_game_over(&mut self, run: &OnePlayerRun, kind: u8) {
         const COSTS: [[u16; 5]; 3] = [[1, 2, 3, 5, 10], [1, 2, 3, 5, 10], [10; 5]];
         // `gm_801623D8`: the save's coins.
         let coins = self.game.game_data.thing.save_data.x1A48 as u16;

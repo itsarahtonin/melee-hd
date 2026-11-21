@@ -4,7 +4,7 @@
 
 use super::super::handles::CodeRef;
 use super::super::state::Running;
-use super::one_player::{CLASSIC_STAGES, Opponent, Unk1PData, matchup};
+use super::one_player::{CLASSIC_STAGES, OnePlayerRun, Opponent, matchup};
 use crate::game::ft::CharacterKind;
 
 /// `ChKind_None`, `CKind_Zelda`, `CKind_Seak`, `CKind_Kirby`.
@@ -719,7 +719,7 @@ impl Running<'_> {
     #[doc(alias = "gm_8017DB88")]
     fn classic_allies(
         &mut self,
-        run: &mut Unk1PData,
+        run: &mut OnePlayerRun,
         flags: u8,
         chars: &[i8; 3],
         round: u8,

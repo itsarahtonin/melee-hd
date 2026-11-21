@@ -971,7 +971,7 @@ impl Game {
 
     /// The running 1P run's state, `fn_8017DF28`: Classic's, Adventure's or All-Star's.
     #[doc(alias = "fn_8017DF28")]
-    pub fn one_player_run(&self) -> Option<&super::super::gm::one_player::Unk1PData> {
+    pub fn one_player_run(&self) -> Option<&super::super::gm::one_player::OnePlayerRun> {
         use super::super::gm::{GM_ADVENTURE, GM_ALLSTAR, GM_CLASSIC};
         let o = &self.one_player;
         match self.game_mode {

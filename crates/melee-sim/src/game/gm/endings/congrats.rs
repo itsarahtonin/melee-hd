@@ -422,7 +422,7 @@ impl Running<'_> {
 }
 
 /// The game over modes' run (`fn_8017DEC8`): 0 Adventure's, 1 Classic's, 2 All-Star's.
-fn run_data<'a>(r: &'a Running, n: u8) -> Option<&'a super::super::one_player::Unk1PData> {
+fn run_data<'a>(r: &'a Running, n: u8) -> Option<&'a super::super::one_player::OnePlayerRun> {
     let o = &r.game.one_player;
     match n {
         0 => Some(&o.adventure.base),

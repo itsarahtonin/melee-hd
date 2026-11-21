@@ -2,7 +2,7 @@
 //! the 1P runs' state and the tables their loads write, compared with memory.
 
 use melee_sim::game::gm::one_player::{
-    self as op, AllStarData, ClassicStage, MatchupRef, Unk1PData,
+    self as op, AllStarData, ClassicStage, MatchupRef, OnePlayerRun,
 };
 use melee_sim::game::gm::vs_melee::{CssData, SssData};
 use melee_sim::game::mirror::{Cx, Mirror};
@@ -115,7 +115,7 @@ impl Comparer<'_> {
     }
 
     /// A 1P run's state (`Unk1PData`) at `at`.
-    fn one_player_run(&mut self, name: &str, r: &Unk1PData, at: u32) {
+    fn one_player_run(&mut self, name: &str, r: &OnePlayerRun, at: u32) {
         let p = r.player;
         let ours: Vec<u8> = [
             p.ckind as u8,
