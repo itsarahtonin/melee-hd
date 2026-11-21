@@ -1999,7 +1999,9 @@ fn oldkongo_birds() {
 #[test]
 fn oldkongo_direction() {
     let d = dir(OK64);
-    let ours = |r: &mut Running, _: &Maps, _: &Call| Ret::Float(f64::from(oldkongo::direction(r)));
+    let ours = |r: &mut Running, _: &Maps, _: &Call| {
+        Ret::Float(f64::from(kongo::direction(r, &oldkongo::BARREL)))
+    };
     check_calls_with(&d, "grOldKongo_80210650", 1, &as_saved, &ours);
     // Seeds spread so every direction with a weight comes out.
     for s in 0..24u32 {
@@ -4088,7 +4090,9 @@ fn kongo_barrel() {
     for p in prepares {
         check_calls_with(&d, f, 1, p, &by_address);
     }
-    let ours = |r: &mut Running, _: &Maps, _: &Call| Ret::Float(f64::from(kongo::direction(r)));
+    let ours = |r: &mut Running, _: &Maps, _: &Call| {
+        Ret::Float(f64::from(kongo::direction(r, &kongo::BARREL)))
+    };
     for s in 0..24u32 {
         check_calls_with(
             &d,
@@ -8659,7 +8663,7 @@ fn corneria_paths() {
             poke_u32(c, CN_ARWINGS + 4 * slot, 0);
         };
         check_calls_with(&d, "grCorneria_801DE024", 1, &taken, &by_address);
-        let near = of_ground(corneria::path_sound_near);
+        let near = of_ground(|r, g| corneria::path_sound_near(r, g, &corneria::ARWINGS));
         for sound in [None, Some(0u32), Some(1), Some(2), Some(3)] {
             let p = move |c: &mut Call, _: usize| {
                 if let Some(s) = sound {
@@ -8758,7 +8762,8 @@ fn corneria_arwings() {
     };
     let near = |r: &mut Running, _: &Maps, call: &Call| {
         let pos = vec_arg(call, 3);
-        Ret::Int(melee_sim::game::gr::corneria::near_blast_zones(r.game, pos) as u32)
+        use melee_sim::game::gr::corneria::{ARWINGS, near_blast_zones};
+        Ret::Int(u32::from(near_blast_zones(r.game, pos, &ARWINGS)))
     };
     for p in [
         (0.0f32, 50.0f32, 0.0f32),
@@ -9529,13 +9534,15 @@ fn venom_paths() {
         };
         check_calls_with(&d, "grVenom_802052E0", 1, &as_saved, &pos);
         let outside = |r: &mut Running, _: &Maps, call: &Call| {
-            Ret::Int(u32::from(venom::outside_blast_zones(
-                r.game,
-                vec_arg(call, 3),
-            )))
+            Ret::Int(u32::from(
+                melee_sim::game::gr::corneria::outside_blast_zones(r.game, vec_arg(call, 3)),
+            ))
         };
         let near = |r: &mut Running, _: &Maps, call: &Call| {
-            Ret::Int(u32::from(venom::near_blast_zones(r.game, vec_arg(call, 3))))
+            let pos = vec_arg(call, 3);
+            let near =
+                melee_sim::game::gr::corneria::near_blast_zones(r.game, pos, &venom::ARWINGS);
+            Ret::Int(u32::from(near))
         };
         for p in [
             (0.0f32, 50.0f32),
