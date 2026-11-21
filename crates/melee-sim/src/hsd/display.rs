@@ -385,6 +385,12 @@ pub struct Display {
     /// it off.
     #[clone_from(keep)]
     pub state_only: bool,
+    /// Text draws' storage to lay the next texts out into ([`Draw::SisText`]): the boxes a
+    /// state-only pass drops and those the frontend gives back with its frame
+    /// (`vs_match::Match::recycle`). Not state: a restore keeps the target's, a clone starts
+    /// it empty.
+    #[clone_from(keep)]
+    pub spare_texts: Vec<Box<super::sis::TextDraw>>,
 }
 
 impl Display {

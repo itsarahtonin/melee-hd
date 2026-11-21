@@ -18,6 +18,8 @@ pub use draw::{Glyph, TextDraw};
 
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 
+use crate::flat_map::FlatMap;
+
 use super::cobj::StaticDesc;
 use crate::vec::Vec3;
 
@@ -191,15 +193,15 @@ pub struct SisLib {
     pub free_head: Option<u32>,
     pub used_head: Option<u32>,
     /// Every header written, by offset; only those the lists reach are meaningful.
-    #[clone_from(if_changed)]
-    pub blocks: BTreeMap<u32, Block>,
+    ///
+    /// These maps are flat ([`FlatMap`]): a scene's texts change every frame (their typing
+    /// and layout), so a restore copies them into the storage the target holds, where a
+    /// `BTreeMap` was built anew (Pokémon Stadium's screen restored allocated).
+    pub blocks: FlatMap<u32, Block>,
     /// The objects in live blocks, by data offset.
-    #[clone_from(if_changed)]
-    pub texts: BTreeMap<u32, Text>,
-    #[clone_from(if_changed)]
-    pub canvases: BTreeMap<u32, Canvas>,
-    #[clone_from(if_changed)]
-    pub buffers: BTreeMap<u32, Buffer>,
+    pub texts: FlatMap<u32, Text>,
+    pub canvases: FlatMap<u32, Canvas>,
+    pub buffers: FlatMap<u32, Buffer>,
     /// `HSD_SisLib_804D7978`: the first text.
     pub first_text: Option<TextId>,
     /// `HSD_SisLib_804D797C`: the first canvas.
@@ -218,7 +220,7 @@ pub struct SisLib {
     pub table_overrides: Vec<(u8, u32, SisPtr)>,
     /// The strings in the executable's data that game code builds ([`STATIC_STRINGS`]):
     /// their buffers' bytes, from each buffer's start. Static data outlives scenes.
-    pub statics: Vec<(u32, Vec<u8>)>,
+    pub statics: Vec<StaticString>,
     /// Bytes game code wrote into a font's loaded strings (the select screen's rules line,
     /// `mnCharSel_8025BD30`), by place: the archive's own bytes elsewhere. A font loaded
     /// afresh forgets its archive's.
@@ -229,6 +231,14 @@ pub struct SisLib {
     /// Each font's archive's two blocks of the scene's heap, where its load recorded them
     /// (`HSD_SisLib_803A945C`), for `HSD_SisLib_803A947C` to free.
     pub font_blocks: [Option<(u32, u32)>; FONTS],
+}
+
+/// A string buffer in the executable's data ([`STATIC_STRINGS`]): its address and bytes. A
+/// struct rather than a pair, so a restore copies the bytes into the target's buffer.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub struct StaticString {
+    pub base: u32,
+    pub bytes: Vec<u8>,
 }
 
 /// The executable's string buffers game code writes SIS strings into: their addresses and
@@ -605,12 +615,12 @@ impl SisLib {
 
     /// The byte of a static string buffer at `a`.
     fn static_byte(&self, a: u32) -> u8 {
-        let (base, bytes) = self
+        let s = self
             .statics
             .iter()
-            .find(|(base, b)| a.wrapping_sub(*base) < b.len() as u32)
+            .find(|s| a.wrapping_sub(s.base) < s.bytes.len() as u32)
             .unwrap_or_else(|| panic!("reading the static string at {a:#x}, which no port models"));
-        bytes[(a - base) as usize]
+        s.bytes[(a - s.base) as usize]
     }
 
     /// A byte of a string anywhere.
@@ -627,10 +637,10 @@ impl SisLib {
         match p {
             SisPtr::Arena(a) => self.set_byte(a, v),
             SisPtr::Static(a) => {
-                let entry = match self.statics.iter().position(|(base, _)| {
+                let entry = match self.statics.iter().position(|s| {
                     STATIC_STRINGS
                         .iter()
-                        .any(|&(b, n)| b == *base && a.wrapping_sub(b) < n)
+                        .any(|&(b, n)| b == s.base && a.wrapping_sub(b) < n)
                 }) {
                     Some(i) => i,
                     None => {
@@ -641,12 +651,15 @@ impl SisLib {
                                 panic!("writing the static string at {a:#x}, which no port models")
                             });
                         // The buffers are zeroed static data until written.
-                        self.statics.push((b, vec![0; n as usize]));
+                        self.statics.push(StaticString {
+                            base: b,
+                            bytes: vec![0; n as usize],
+                        });
                         self.statics.len() - 1
                     }
                 };
-                let (base, bytes) = &mut self.statics[entry];
-                bytes[(a - *base) as usize] = v;
+                let s = &mut self.statics[entry];
+                s.bytes[(a - s.base) as usize] = v;
             }
             SisPtr::Data(d) => {
                 self.written.insert(d, v);

@@ -327,6 +327,19 @@ pub struct TextDraw {
     pub view: Option<crate::mtx::Mtx34>,
 }
 
+impl TextDraw {
+    /// No text's draw yet: storage for [`SisLib::layout_text_into`].
+    pub fn empty() -> TextDraw {
+        TextDraw {
+            text: TextId(0),
+            background: None,
+            glyphs: Vec::new(),
+            z: 0.0,
+            view: None,
+        }
+    }
+}
+
 /// A glyph's quad: its code (below 0x4000 the default font's, else the text's font's), its
 /// corners (top and bottom down the screen), texture coordinates and color.
 #[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
@@ -730,14 +743,19 @@ impl SisLib {
     /// runs its render callback); returns its quads.
     #[doc(alias = "HSD_SisLib_803A84BC")]
     pub fn layout_text(&mut self, data: &Archives, t: TextId) -> TextDraw {
+        let mut out = TextDraw::empty();
+        self.layout_text_into(data, t, &mut out);
+        out
+    }
+
+    /// [`SisLib::layout_text`] into `out`, whose glyph list's storage it reuses.
+    pub fn layout_text_into(&mut self, data: &Archives, t: TextId, out: &mut TextDraw) {
         let tx = self.text(t).clone();
-        let mut out = TextDraw {
-            text: t,
-            background: None,
-            glyphs: Vec::new(),
-            z: tx.pos.z,
-            view: None,
-        };
+        out.text = t;
+        out.background = None;
+        out.glyphs.clear();
+        out.z = tx.pos.z;
+        out.view = None;
         let (px, py) = (reg(tx.pos.x), reg(tx.pos.y));
         let (fx, fy) = (reg(tx.font_size[0]), reg(tx.font_size[1]));
         let (bx, by) = (reg(tx.box_size[0]), reg(tx.box_size[1]));
@@ -990,7 +1008,7 @@ impl SisLib {
             tx.fitting = Some(saved_fitting);
             tx.state_stack_used = saved_used;
             self.clear_stack_above(t);
-            return out;
+            return;
         }
     }
 

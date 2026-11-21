@@ -331,13 +331,18 @@ impl Running<'_> {
         }
         // The layout writes the text's state (its typing, its line's width and height), so a
         // state-only pass runs it too and drops the quads.
-        let d = self.game.sis.layout_text(self.data, t);
-        if self.game.objs.display.drawing() {
-            self.game
-                .objs
-                .display
-                .draws
-                .push(display::Draw::SisText(Box::new(d)));
+        // Into a spare draw's storage, which a state-only pass gives back.
+        let display = &mut self.game.objs.display;
+        let mut d = display
+            .spare_texts
+            .pop()
+            .unwrap_or_else(|| Box::new(crate::hsd::sis::TextDraw::empty()));
+        self.game.sis.layout_text_into(self.data, t, &mut d);
+        let display = &mut self.game.objs.display;
+        if display.drawing() {
+            display.draws.push(display::Draw::SisText(d));
+        } else {
+            display.spare_texts.push(d);
         }
     }
 

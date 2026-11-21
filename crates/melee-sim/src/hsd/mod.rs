@@ -75,6 +75,8 @@ pub struct Objects {
     pub display: display::Display,
     /// Bits the game has ORed into loaded MObjDescs' `rendermode` (a stage marks some of its
     /// materials, `grDatFiles_801C6228`): the loader reads the descriptor as the game left it.
+    /// Refilled on a restore, so a transformation's marks after one don't allocate.
+    #[clone_from(refill)]
     pub rendermode_patches: std::collections::HashMap<DataRef, u32>,
     /// The random number generator's state (`HSD_Rand`'s seed).
     pub rng: crate::rng::Rng,

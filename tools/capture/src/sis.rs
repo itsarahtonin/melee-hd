@@ -192,7 +192,10 @@ impl Importer<'_> {
         // The executable's string buffers (Pokémon Stadium's screen text), as memory holds
         // them: code appends to what an earlier frame wrote there.
         for &(b, n) in &melee_sim::hsd::sis::STATIC_STRINGS {
-            s.statics.push((b, (0..n).map(|i| mem.b(b + i)).collect()));
+            s.statics.push(melee_sim::hsd::sis::StaticString {
+                base: b,
+                bytes: (0..n).map(|i| mem.b(b + i)).collect(),
+            });
         }
         let Some((base, size)) = arena(mem) else {
             self.game.sis = s;

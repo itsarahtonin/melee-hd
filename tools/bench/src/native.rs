@@ -875,12 +875,13 @@ mod tests {
         }
     }
 
-    /// The matches the check replays: the benchmark matches but Pokémon Stadium's, whose
-    /// transformations and screens' text still allocate (`docs/performance.md`).
-    const MATCHES: [&str; 4] = [
+    /// The matches the check replays: the benchmark matches that play to their ends.
+    /// Pokémon Stadium's stretch has a transformation load (tick 3810) and its screen's text.
+    const MATCHES: [&str; 5] = [
         "fox-fox-fd",
         "fox-marth-fd",
         "fox-marth-bf",
+        "fox-marth-ps",
         "ganon-captain-fd",
     ];
 
@@ -998,7 +999,8 @@ mod tests {
 
     /// The "no allocations" target (`docs/performance.md`): each match played to `TO`, its
     /// state at `FROM` restored (a rollback), and every engine tick from there to `TO` played
-    /// again, counting allocations: the restore and each tick make none.
+    /// again with its display pass, its draws built and the frame given back as the player
+    /// does, counting allocations: the restore, each tick and each pass make none.
     #[test]
     fn ticks_and_restores_dont_allocate() {
         // The matches are the repository's (`BENCH_DIR` overrides); their start traces are
@@ -1026,7 +1028,7 @@ mod tests {
     }
 
     /// The match played to `TO`, its state at `FROM` restored and the ticks from there played
-    /// again: the restore and each tick that allocated.
+    /// again: the restore and each tick or display pass that allocated.
     fn rollback_allocations(dir: &Path, name: &str) -> Vec<String> {
         let mut files = files();
         let b = Bench::open(dir, name).expect("a benchmark match");
@@ -1052,7 +1054,13 @@ mod tests {
                 failures.push(format!("{name}: tick {t} made {n} allocations"));
             }
             if render {
-                f.draws = m.render();
+                let (draws, n, _) = counted(|| m.render());
+                if n != 0 {
+                    failures.push(format!(
+                        "{name}: tick {t}'s display pass made {n} allocations"
+                    ));
+                }
+                f.draws = draws;
             }
             m.recycle(f);
         }
