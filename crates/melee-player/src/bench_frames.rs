@@ -50,12 +50,14 @@ impl Frames {
         self.rows.push(row);
     }
 
-    /// The GPU times read back after the last frame's present. The bench waits for each frame,
-    /// so its readback has landed by then: one time, the last frame's. Anything else (a frame not
-    /// timed, or times from before) is left off rather than put on the wrong frame.
-    pub fn gpu(&mut self, times: &[FrameGpu]) {
-        if let ([t], Some(last)) = (times, self.rows.last_mut()) {
-            last.gpu = Some(*t);
+    /// The GPU times read back after the last frame's present, which are the frame's `back`
+    /// frames before the last: the last's (0) when the bench waits for each frame, the one
+    /// before (1) when it leaves one in flight. One time is that frame's; anything else (a
+    /// frame not timed, or times from before) is left off rather than put on the wrong frame.
+    pub fn gpu(&mut self, times: &[FrameGpu], back: usize) {
+        let at = self.rows.len().checked_sub(back + 1);
+        if let ([t], Some(row)) = (times, at.and_then(|i| self.rows.get_mut(i))) {
+            row.gpu = Some(*t);
         }
     }
 
@@ -226,18 +228,28 @@ mod tests {
     #[test]
     fn gpu_times_go_on_the_frame_just_presented_or_on_none() {
         let mut f = Frames::default();
-        f.gpu(&[gpu(1)]);
+        f.gpu(&[gpu(1)], 0);
         assert!(f.rows.is_empty());
         f.push(Row::default());
         f.push(Row::default());
-        f.gpu(&[gpu(5)]);
+        f.gpu(&[gpu(5)], 0);
         assert!(f.rows[0].gpu.is_none());
         assert_eq!(f.rows[1].gpu.unwrap().busy(), Duration::from_micros(5));
         // Two at once (one left from before), or none: the frame stays untimed.
         f.push(Row::default());
-        f.gpu(&[gpu(2), gpu(3)]);
-        f.gpu(&[]);
+        f.gpu(&[gpu(2), gpu(3)], 0);
+        f.gpu(&[], 0);
         assert!(f.rows[2].gpu.is_none());
+        // One frame in flight: the times are the frame before's, and the first frame has none
+        // before it.
+        f.push(Row::default());
+        f.gpu(&[gpu(7)], 1);
+        assert_eq!(f.rows[2].gpu.unwrap().busy(), Duration::from_micros(7));
+        assert!(f.rows[3].gpu.is_none());
+        let mut g = Frames::default();
+        g.push(Row::default());
+        g.gpu(&[gpu(7)], 1);
+        assert!(g.rows[0].gpu.is_none());
     }
 
     #[test]

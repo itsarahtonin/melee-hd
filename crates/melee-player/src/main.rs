@@ -3359,6 +3359,12 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
     let mut rendered = 0u32;
     // Times read back from before the first frame aren't its.
     let _ = gpu.gpu_times();
+    // MELEE_BENCH_IN_FLIGHT=1: each frame's present is left in flight while the next is drawn,
+    // and waited for after the next's present, as a window's swap chain with one frame of
+    // latency has it; a frame's wait is then for the frame before, and its drawing, present
+    // and wait are the time between frames.
+    let in_flight = std::env::var("MELEE_BENCH_IN_FLIGHT").is_ok_and(|v| v == "1");
+    let mut flying: Option<wgpu::SubmissionIndex> = None;
     for tick in 0..ticks {
         let t0 = Instant::now();
         let pads = args.holds.as_ref().map_or(rest, |h| h.at(u64::from(tick)));
@@ -3425,7 +3431,18 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                 let tc = Instant::now();
                 let mut submitted = tc;
                 if let Some(frame) = images.into_iter().last() {
-                    submitted = target.present(&gpu, &frame);
+                    if in_flight {
+                        let now = target.present_queued(&gpu, &frame);
+                        submitted = Instant::now();
+                        if let Some(before) = std::mem::replace(&mut flying, now) {
+                            let _ = gpu.device.poll(wgpu::PollType::Wait {
+                                submission_index: Some(before),
+                                timeout: None,
+                            });
+                        }
+                    } else {
+                        submitted = target.present(&gpu, &frame);
+                    }
                     last = Some(frame);
                 }
                 let td = Instant::now();
@@ -3442,7 +3459,7 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                     wait: td - submitted,
                     gpu: None,
                 });
-                rows.gpu(&gpu.gpu_times());
+                rows.gpu(&gpu.gpu_times(), usize::from(in_flight));
             }
         }
         session.recycle(f);
@@ -3504,6 +3521,11 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
             pct(&mut ticked, 0.5),
             pct(&mut ticked, 0.99),
             pct(&mut ticked, 1.0)
+        );
+    }
+    if in_flight {
+        println!(
+            "each frame left in flight while the next is drawn (MELEE_BENCH_IN_FLIGHT=1): a frame's wait is for the frame before"
         );
     }
     print!("{}", rows.report(bench_frames::INTERVAL));
