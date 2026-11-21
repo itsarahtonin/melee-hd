@@ -6,7 +6,7 @@ use gekko_fp as fp;
 use super::super::super::ef;
 use super::super::super::state::Running;
 use super::ids::ms;
-use super::jump::{FT_800881D8, FT_800887CC, FT_80088328, FT_80088770};
+use super::jump::{PLAY_VOICE, PLAY_VOICE2, STOP_VOICE, STOP_VOICE2};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -69,10 +69,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_8009A6B8")]
     pub fn enter_ottotto_wait(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, ms::OTTOTTO_WAIT, 0, 0.0, 1.0, 0.0, None);
-        self.stop_track(gobj, FT_80088770);
-        self.stop_track(gobj, FT_800887CC);
+        self.stop_track(gobj, STOP_VOICE);
+        self.stop_track(gobj, STOP_VOICE2);
         let sfx = self.character_sfx(gobj, 0x18);
-        self.play_track(gobj, FT_80088328, sfx);
+        self.play_track(gobj, PLAY_VOICE2, sfx);
     }
 
     /// `ftCo_Ottotto_IASA` (and `ftCo_OttottoWait_IASA`): anything standing allows, walking
@@ -245,7 +245,7 @@ impl Running<'_> {
         fp.set_mv_i32(CLIFF_LEDGE_ID, ledge);
         self.co_cliff_catch_phys(gobj);
         let sfx = self.character_sfx(gobj, 0x28);
-        self.play_track(gobj, FT_800881D8, sfx);
+        self.play_track(gobj, PLAY_VOICE, sfx);
         let fp = &mut self.game.fighters[f.0];
         fp.x1A6A = 0x1FF;
         self.start_rumble(f, 12, 0);

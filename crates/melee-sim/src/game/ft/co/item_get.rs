@@ -93,7 +93,7 @@ impl Running<'_> {
         super::super::super::it::item::pick_up(self, it, gobj, part);
         if lib26b1::is_heavy(self.game, self.data, it) {
             let sfx = self.character_sfx(gobj, 0x2C);
-            self.play_track(gobj, super::jump::FT_800881D8, sfx);
+            self.play_track(gobj, super::jump::PLAY_VOICE, sfx);
         }
     }
 

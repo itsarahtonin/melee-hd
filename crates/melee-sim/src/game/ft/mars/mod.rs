@@ -59,9 +59,12 @@ pub mod ms {
 
 /// The functions other parts of the port own that Marth's code calls, by address.
 pub mod ext {
-    pub const FTANIM_80070FB4: u32 = 0x8007_0FB4;
-    pub const FTANIM_80070C48: u32 = 0x8007_0C48;
-    pub const FTANIM_80070CC4: u32 = 0x8007_0CC4;
+    #[doc(alias("FTANIM_80070FB4"))]
+    pub const FTANIM_SET_PART_ANIM_POSE: u32 = 0x8007_0FB4;
+    #[doc(alias("FTANIM_80070C48"))]
+    pub const FTANIM_SHOW_PART_ANIM_POSE: u32 = 0x8007_0C48;
+    #[doc(alias("FTANIM_80070CC4"))]
+    pub const FTANIM_END_PART_ANIM: u32 = 0x8007_0CC4;
     pub const IT_GET_HOLD_KIND: u32 = 0x8026_B320;
 }
 

@@ -11,7 +11,7 @@ use super::super::super::ef;
 use super::super::super::state::Running;
 use super::super::coll::PLATFORM_FILTER;
 use super::ids::ms;
-use super::jump::FT_800881D8;
+use super::jump::PLAY_VOICE;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::math;
@@ -192,7 +192,7 @@ impl Running<'_> {
         fp.cur_pos.x = mem(fp::fneg(fp::fsubs(toward, reg(x))));
         self.air_coll_ledges_snap_low(gobj);
         let sfx = self.character_sfx(gobj, 0x24);
-        self.play_track(gobj, FT_800881D8, sfx);
+        self.play_track(gobj, PLAY_VOICE, sfx);
         self.start_rumble(f, RUMBLE, 0);
         if timer == 0 {
             self.fighter_play_sfx(f, SFX_CLING, 0x7F, 0x40);

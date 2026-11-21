@@ -66,9 +66,9 @@ fn dirs() -> Vec<String> {
 /// a question answer `yes`.
 fn stubs(yes: bool) -> Vec<Stub> {
     let mut v: Vec<Stub> = [
-        fox_ext::FTANIM_80070FB4,
-        fox_ext::FTANIM_80070C48,
-        fox_ext::FTANIM_80070CC4,
+        fox_ext::FTANIM_SET_PART_ANIM_POSE,
+        fox_ext::FTANIM_SHOW_PART_ANIM_POSE,
+        fox_ext::FTANIM_END_PART_ANIM,
     ]
     .iter()
     .map(|&a| (a, StubRet::Nothing))
