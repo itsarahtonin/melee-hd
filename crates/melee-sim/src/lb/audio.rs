@@ -11,6 +11,7 @@ use crate::game::state::{Event, Running};
 mod boot;
 mod sound_test;
 
+use crate::game::ft::CharacterKind;
 pub use boot::{AUX_DELAY, AUX_REVERB_STD, SavedSound, SoundBank, balance_fx, balance_voice};
 pub use sound_test::{character_song, song_flag};
 
@@ -1563,9 +1564,9 @@ impl crate::game::state::Running<'_> {
             // (`gm_80169370`), Kirby's copies' with Kirby's.
             result = character_banks(self.game.player_ckind(0));
             for k in (0..3).map(|i| self.game.gm.opponents.kind(i)) {
-                if k != 0x21 {
+                if k != CharacterKind::NONE as i8 {
                     result |= character_banks(i32::from(k));
-                    if k == 4 {
+                    if k == CharacterKind::Kirby {
                         result |= 0x2_0000_4000;
                     }
                 }

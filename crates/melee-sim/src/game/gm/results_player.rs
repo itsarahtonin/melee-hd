@@ -8,6 +8,8 @@ use gekko_fp as fp;
 
 use super::super::state::{Obj, Running};
 use super::results_scene::{PKIND_HUMAN, canceled};
+use crate::game::ft::CharacterKind;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
@@ -143,9 +145,9 @@ impl Running<'_> {
                 _ => 0,
             };
         } else {
-            let k = if ckind == 0x12 && ftkind == 7 {
+            let k = if ckind == CharacterKind::Zelda && ftkind == FighterKind::Seak {
                 0x13
-            } else if ckind == 0x13 && ftkind == 0x13 {
+            } else if ckind == CharacterKind::Seak && ftkind == FighterKind::Zelda {
                 0x12
             } else {
                 ckind

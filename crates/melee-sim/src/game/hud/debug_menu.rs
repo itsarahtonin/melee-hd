@@ -14,6 +14,7 @@ use gekko_fp as fp;
 use super::debug_tables::{SETTINGS_INIT, TABLES, WORDS};
 use super::devtext::Link;
 use crate::fpu::{mem, reg};
+use crate::game::ft::CharacterKind;
 use crate::game::handles::CodeRef;
 use crate::game::state::{Game, OBJ_CAMERA, OBJ_LIGHT, Obj, Running};
 use crate::hsd::cobj::{self, StaticDesc};
@@ -1493,14 +1494,14 @@ impl Running<'_> {
             let err = self.game.pads.master[i].err;
             let p = &mut me.player_standings[i];
             p.x30 = p.x30.wrapping_add(6 - i as u32);
-            p.pkind = if i32::from(p.ckind) == 0x21 {
+            p.pkind = if p.ckind == CharacterKind::NONE as i8 {
                 3
             } else if err == 0 {
                 0
             } else {
                 1
             };
-            if p.ckind == 0x13 {
+            if p.ckind == CharacterKind::Seak {
                 p.ckind = 0x12;
                 p.ftkind = 7;
             }

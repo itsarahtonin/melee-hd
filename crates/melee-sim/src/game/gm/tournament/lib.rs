@@ -12,6 +12,7 @@ use super::super::super::state::{OBJ_CAMERA, OBJ_JOBJ, OBJ_LIGHT, Obj, Running, 
 use super::super::super::structs::{MatchEnd, StartMeleeData};
 use super::{GM_TOURNAMENT, TmData};
 use crate::fpu::{mem, reg};
+use crate::game::ft::CharacterKind;
 use crate::hsd::cobj;
 use crate::hsd::display::{Draw, Quad};
 use crate::hsd::gobj::{self, GObjId};
@@ -178,7 +179,7 @@ pub fn step_towards_int(x: &mut i32, target: i32, dx: i32) -> i32 {
 #[doc(alias = "fn_8018F6DC")]
 pub fn icon_of(ckind: i32) -> i32 {
     if ckind >= 0x13 {
-        if ckind == 0x1D {
+        if ckind == CharacterKind::GKoopa {
             return 5;
         }
         return ckind - 1;

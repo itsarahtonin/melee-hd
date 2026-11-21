@@ -9,6 +9,7 @@ use super::super::gm::decisions::{DEC_FLAG, decision_type};
 use super::super::state::{Game, Running};
 use super::super::structs::plActionStats;
 use crate::fpu::reg;
+use crate::game::ft::CharacterKind;
 
 /// `pl_803BCE70`: the animation each normal attack needs for its own count (-1 none), by
 /// attack from 1.
@@ -944,7 +945,10 @@ impl Game {
     #[doc(alias = "fn_8017E160")]
     pub fn bonus_teams(&self) -> bool {
         if let Some(run) = self.one_player_run() {
-            return run.opponents.iter().any(|a| a.ckind != 0x21);
+            return run
+                .opponents
+                .iter()
+                .any(|a| a.ckind != CharacterKind::NONE as i8);
         }
         self.vs.start.is_teams == 1
     }

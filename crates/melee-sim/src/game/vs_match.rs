@@ -1341,7 +1341,7 @@ pub fn load_results_files(
             continue;
         }
         let ck = i32::from(p.ckind);
-        let cks: &[i32] = if ck == 0x12 || ck == 0x13 {
+        let cks: &[i32] = if ck == CharacterKind::Zelda || ck == CharacterKind::Seak {
             &[0x12, 0x13]
         } else {
             &[ck]

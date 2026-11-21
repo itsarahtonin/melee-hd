@@ -14,6 +14,7 @@ use super::super::super::render::{CAMERA_CALLBACK, FOG_CALLBACK, JOBJ_CALLBACK, 
 use super::super::super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
 use super::super::super::vi::Loaded;
 use crate::fpu::{mem, reg};
+use crate::game::ft::CharacterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sobj::{self, OBJ_SOBJ};
@@ -916,7 +917,9 @@ impl Running<'_> {
         let mut count = 0;
         for i in 0..0x1A_u8 {
             let take = if i.wrapping_sub(0x12) <= 1 {
-                self.toy_fall_held(i) && ckind != 0x12 && ckind != 0x13
+                self.toy_fall_held(i)
+                    && ckind != CharacterKind::Zelda
+                    && ckind != CharacterKind::Seak
             } else {
                 self.toy_fall_held(i) && i != ckind
             };
@@ -956,7 +959,7 @@ impl Running<'_> {
             .expect("the mode's stands");
         for i in (0..26).rev() {
             let ck = order[i];
-            if ck == 0x1A {
+            if ck == CharacterKind::MasterHand {
                 continue;
             }
             let dsp = self.coll_entry(self.toy_fall_trophy(ck as u8));

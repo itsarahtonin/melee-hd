@@ -12,6 +12,7 @@ pub mod staff_roll;
 pub mod toy_fall;
 
 use super::super::state::Running;
+use crate::game::ft::CharacterKind;
 
 /// The game over modes: Classic's, Adventure's and All-Star's after a run's end, and the
 /// debug menu's (the trophy fall and congratulations alone).
@@ -260,7 +261,7 @@ impl Running<'_> {
             _ => o.allstar.base,
         };
         let p = run.player;
-        let ckind = if p.ckind == 0x12 && run.xc[6] != 0 {
+        let ckind = if p.ckind == CharacterKind::Zelda && run.xc[6] != 0 {
             0x13
         } else {
             p.ckind as u8

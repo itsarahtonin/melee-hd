@@ -70,7 +70,11 @@ const TARGET_STAGES: [(u8, u8); 28] = [
 /// would read past it, which no select allows.
 #[doc(alias = "gm_801647F8")]
 pub fn target_stage(ckind: u8) -> u16 {
-    let ckind = if ckind == 0x20 { 0xE } else { ckind };
+    let ckind = if ckind == CharacterKind::Popo {
+        CharacterKind::IceClimbers.byte()
+    } else {
+        ckind
+    };
     match TARGET_STAGES.iter().find(|e| e.1 == ckind) {
         Some(e) => u16::from(e.0),
         None => crate::game::code::unported_call(&format!(

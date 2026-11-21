@@ -94,6 +94,7 @@ impl super::super::state::Game {
 use super::vs_mode::{player_defaults, rules_defaults};
 use crate::fpu::mem;
 use crate::game::ft::CharacterKind;
+use crate::game::ft::FighterKind;
 
 /// `gm_80165290`, the boss stages' pause override; `fn_8017C7EC`, `fn_8017C7A0` and
 /// `fn_8017C71C`, the bonus stages' and the bosses' hooks.
@@ -625,7 +626,7 @@ impl Running<'_> {
         if run.x8[0] & 0x80 == 0 {
             run.x20 = add(run.x20, end.frame_count);
         }
-        run.xc[6] = u8::from(p.ftkind == 7);
+        run.xc[6] = u8::from(p.ftkind == FighterKind::Seak);
         let g = &*self.game;
         if g.vs.start.x9 == 2 && super::super::gr::ground::flags(g, 0x20) != 0 {
             run.xc[3] = 1;

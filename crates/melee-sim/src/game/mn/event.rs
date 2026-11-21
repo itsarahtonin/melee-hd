@@ -17,6 +17,7 @@ use super::common::{self, al};
 use super::data::digits;
 use super::main::{IN_BACK, IN_CONFIRM, IN_DOWN, IN_UP, IN_X, IN_Y};
 use crate::fpu::{mem, reg};
+use crate::game::ft::CharacterKind;
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj;
 use crate::hsd::sis::TextId;
@@ -174,7 +175,7 @@ impl Running<'_> {
     /// none).
     #[doc(alias = "mnEvent_8024D0CC")]
     fn event_list_character(&mut self, gobj: GObjId, ckind: i32) {
-        let frame = if ckind == 0x21 {
+        let frame = if ckind == i32::from(CharacterKind::NONE) {
             25.0
         } else {
             f32::from(super::super::gm::match_exit::selkind(ckind as u8))
