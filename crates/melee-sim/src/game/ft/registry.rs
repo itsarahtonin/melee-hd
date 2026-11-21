@@ -39,7 +39,7 @@ use crate::hsd::gobj::GObjId;
 
 /// Declares a kind enum with the game's numbers: `ALL`, `COUNT`, `from_id`, `id`, and
 /// comparisons with the numbers the state holds.
-macro_rules! kinds {
+macro_rules! kind_enum {
     ($(#[$m:meta])* $name:ident: $($(#[$vm:meta])* $v:ident = $n:expr,)*) => {
         $(#[$m])*
         #[repr(u8)]
@@ -100,8 +100,9 @@ macro_rules! kinds {
         }
     };
 }
+pub(crate) use kind_enum;
 
-kinds! {
+kind_enum! {
     /// A fighter kind (`FighterKind`, `Ft_Kind_*`): which fighter's code and files run, the
     /// index of the executable's per-kind tables and of this registry ([`CHARACTERS`]). The
     /// game's own numbers.
@@ -174,7 +175,7 @@ kinds! {
     Sandbag = 32,
 }
 
-kinds! {
+kind_enum! {
     /// A character kind (`CharacterKind`, `CKind_*`): which character a player chose, as the
     /// character select, the rules, the replays and the save number it; the game's
     /// `ftMapping_list` takes it to its [`FighterKind`]s. The game's own numbers.
@@ -483,8 +484,12 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
             special_air_n: |r, g| r.dk_special_air_n_enter(g, &kirby::special_donkey::KIRBY),
             hat_on: Some(|r, g| r.kb_donkey_hat_on(g)),
             hat_off: Some(|r, g| r.kb_donkey_hat_off(g)),
-            cleanup: Some(|r, g| r.dk_special_n_destroy_effects_plus(g, &kirby::special_donkey::KIRBY)),
-            hit_cleanup: Some(|r, g| r.dk_special_n_destroy_effects_plus(g, &kirby::special_donkey::KIRBY)),
+            cleanup: Some(|r, g| {
+                r.dk_special_n_destroy_effects_plus(g, &kirby::special_donkey::KIRBY)
+            }),
+            hit_cleanup: Some(|r, g| {
+                r.dk_special_n_destroy_effects_plus(g, &kirby::special_donkey::KIRBY)
+            }),
             items: &[],
             hat_jumps: false,
         },
@@ -580,7 +585,10 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
             hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
             cleanup: Some(|r, g| r.seak_drop_needles(g, &kirby::special_seak::KIRBY)),
             hit_cleanup: Some(|r, g| r.seak_drop_needles(g, &kirby::special_seak::KIRBY)),
-            items: &[(0, ItKind::KirbySheikNeedleThrown), (1, ItKind::KirbySheikNeedleHeld)],
+            items: &[
+                (0, ItKind::KirbySheikNeedleThrown),
+                (1, ItKind::KirbySheikNeedleHeld),
+            ],
             hat_jumps: true,
         },
         item_words: &[vars::SEAK_NEEDLES, vars::SEAK_CHAIN],
@@ -606,7 +614,10 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
             hat_off: Some(|r, g| r.kb_head_hat_off(g)),
             cleanup: Some(|r, g| r.ness_pkflash_set_null(g, &kirby::special_ness::KIRBY)),
             hit_cleanup: Some(|r, g| r.ness_pkflash_set_null(g, &kirby::special_ness::KIRBY)),
-            items: &[(0, ItKind::KirbyNessPKFlash), (1, ItKind::KirbyNessPKFlashExplosion)],
+            items: &[
+                (0, ItKind::KirbyNessPKFlash),
+                (1, ItKind::KirbyNessPKFlashExplosion),
+            ],
             hat_jumps: false,
         },
         item_words: &vars::NESS_ITEMS,
@@ -632,7 +643,10 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
             hat_off: Some(|r, g| r.kb_head_hat_off(g)),
             cleanup: Some(|r, g| r.peach_toad_on_death2(g, &kirby::special_peach::KIRBY)),
             hit_cleanup: Some(|r, g| r.peach_toad_on_death2(g, &kirby::special_peach::KIRBY)),
-            items: &[(0, ItKind::KirbyPeachToad), (1, ItKind::KirbyPeachToadSpore)],
+            items: &[
+                (0, ItKind::KirbyPeachToad),
+                (1, ItKind::KirbyPeachToadSpore),
+            ],
             hat_jumps: false,
         },
         item_words: &vars::PEACH_ITEMS,
@@ -704,7 +718,10 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
             hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
             cleanup: None,
             hit_cleanup: None,
-            items: &[(0, ItKind::KirbyPikachuThunderJoltGround), (1, ItKind::KirbyPikachuThunderJoltAir)],
+            items: &[
+                (0, ItKind::KirbyPikachuThunderJoltGround),
+                (1, ItKind::KirbyPikachuThunderJoltAir),
+            ],
             hat_jumps: false,
         },
         item_words: &[],
@@ -912,7 +929,10 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
             hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
             cleanup: Some(|r, g| r.kb_lk_cleanup(g)),
             hit_cleanup: Some(|r, g| r.kb_lk_cleanup(g)),
-            items: &[(0, ItKind::KirbyYoungLinkFireArrow), (1, ItKind::KirbyYoungLinkBow)],
+            items: &[
+                (0, ItKind::KirbyYoungLinkFireArrow),
+                (1, ItKind::KirbyYoungLinkBow),
+            ],
             hat_jumps: false,
         },
         item_words: &vars::LINK_ITEMS,
@@ -990,7 +1010,10 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
             hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
             cleanup: None,
             hit_cleanup: None,
-            items: &[(0, ItKind::KirbyPichuThunderJoltGround), (1, ItKind::KirbyPichuThunderJoltAir)],
+            items: &[
+                (0, ItKind::KirbyPichuThunderJoltGround),
+                (1, ItKind::KirbyPichuThunderJoltAir),
+            ],
             hat_jumps: false,
         },
         item_words: &[],
@@ -1016,7 +1039,10 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
             hat_off: Some(|r, g| r.kb_gamewatch_hat_off(g)),
             cleanup: Some(|r, g| r.kb_gw_cleanup(g)),
             hit_cleanup: Some(|r, g| r.kb_gw_cleanup(g)),
-            items: &[(5, ItKind::KirbyGameAndWatchSausage), (6, ItKind::KirbyGameAndWatchPan)],
+            items: &[
+                (5, ItKind::KirbyGameAndWatchSausage),
+                (6, ItKind::KirbyGameAndWatchPan),
+            ],
             hat_jumps: false,
         },
         item_words: &gamewatch::u::ITEMS,

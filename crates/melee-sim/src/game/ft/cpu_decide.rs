@@ -11,6 +11,7 @@ use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use crate::fpu::{mem, reg};
+use crate::game::ft::CpuKind;
 use crate::game::it::ItKind;
 use crate::math;
 use crate::mp::FloorR5;
@@ -608,7 +609,7 @@ impl Running<'_> {
             self.game.fighters[f.0].cpu.x8C = again as i32;
         }
         let c = &self.game.fighters[f.0].cpu;
-        let period = if c.kind == 0xE { 120 } else { 400 };
+        let period = if c.kind == CpuKind::EvZelda { 120 } else { 400 };
         if c.x7C % period == 0 {
             r5 = Leftover::Word(SEED_PTR);
             let r = reg(self.game.objs.rng.draw_f32());
@@ -622,18 +623,21 @@ impl Running<'_> {
         if fpp.cpu.x18 == behavior::DI {
             return (true, r5);
         }
-        let switch =
-            if fpp.kind == 0x1F || fpp.cpu.kind == 0xF || fpp.cpu.kind == 0 || !fpp.x221A_b3 {
-                false
-            } else {
-                fpp.cpu.xF9_b0 = false;
-                r5 = Leftover::Word(SEED_PTR);
-                let r = reg(self.game.objs.rng.draw_f32());
-                let c = &mut self.game.fighters[f.0].cpu;
-                let level = fp::fsubs(f64::from(c.level), 0.0);
-                c.xFA_b1 = fp::fmuls(0.100_000_001_490_116_12, level) > r;
-                di_switch
-            };
+        let switch = if fpp.kind == 0x1F
+            || fpp.cpu.kind == CpuKind::NoAct
+            || fpp.cpu.kind == CpuKind::Stay
+            || !fpp.x221A_b3
+        {
+            false
+        } else {
+            fpp.cpu.xF9_b0 = false;
+            r5 = Leftover::Word(SEED_PTR);
+            let r = reg(self.game.objs.rng.draw_f32());
+            let c = &mut self.game.fighters[f.0].cpu;
+            let level = fp::fsubs(f64::from(c.level), 0.0);
+            c.xFA_b1 = fp::fmuls(0.100_000_001_490_116_12, level) > r;
+            di_switch
+        };
         if switch {
             // `ftCo_800B4A78` leaves r5 alone.
             self.cpu_script_clear(f);
@@ -776,7 +780,7 @@ impl Running<'_> {
         let Some(g) = fpp.item_gobj else {
             return false;
         };
-        if fpp.cpu.kind == 0x1D {
+        if fpp.cpu.kind == CpuKind::ItemLover {
             return true;
         }
         let kind = self.game.items[super::super::it::item_of(self.game, g).0].kind;
@@ -819,7 +823,10 @@ impl Running<'_> {
         };
         let fpp = &self.game.fighters[f.0];
         let c = &fpp.cpu;
-        if c.x60 != 0 || c.kind == 0 || fpp.ground_or_air == GA_AIR || self.cpu_destination_here(f)
+        if c.x60 != 0
+            || c.kind == CpuKind::Stay
+            || fpp.ground_or_air == GA_AIR
+            || self.cpu_destination_here(f)
         {
             return;
         }

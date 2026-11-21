@@ -11,6 +11,7 @@ use super::ids::ms;
 use super::kind_callbacks::KindCallbacks;
 use super::{PAD_A, PAD_B, PAD_DPAD_UP, PAD_L_R, PAD_LR};
 use crate::fpu::{mem, reg};
+use crate::game::ft::CpuKind;
 use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
 use crate::game::it::ItKind;
@@ -425,7 +426,7 @@ impl Running<'_> {
         } else {
             &p.air_light_offset
         };
-        if self.is_cpu_controlled(fp) && fp.cpu.kind == 28 {
+        if self.is_cpu_controlled(fp) && fp.cpu.kind == CpuKind::Fighter {
             return None;
         }
         // `it_8026B47C`: a healing item's heal; `it_8026B4F0`: what can be taken while holding

@@ -14,6 +14,7 @@ use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{CPU_FRAME, CPU_FRAME_SP, DECIDE_FRAME, Leftover, P_LINK_FIGHTER};
 use super::cpu_move::LINE_FLAG_PLATFORM;
 use crate::fpu::{mem, reg};
+use crate::game::ft::CpuKind;
 use crate::game::it::ItKind;
 use crate::hsd;
 use crate::math;
@@ -664,7 +665,7 @@ impl Running<'_> {
                 let pkind = self
                     .game
                     .player_kind(i32::from(other.player_idx), i32::from(other.is_sub_fighter));
-                if pkind == PKIND_CPU && other.cpu.kind != 5 {
+                if pkind == PKIND_CPU && other.cpu.kind != CpuKind::Manual {
                     continue;
                 }
             }

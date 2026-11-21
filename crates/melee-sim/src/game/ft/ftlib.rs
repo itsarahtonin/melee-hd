@@ -1,6 +1,7 @@
 //! What other code asks of fighters (`ftlib.c`).
 
 use super::super::state::{Game, Running};
+use crate::game::ft::CpuKind;
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
@@ -36,7 +37,7 @@ impl Running<'_> {
         let kind = self
             .game
             .player_kind(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
-        kind == GM_PKIND_CPU && fp.cpu.kind != 5
+        kind == GM_PKIND_CPU && fp.cpu.kind != CpuKind::Manual
     }
 }
 

@@ -86,6 +86,7 @@ pub mod yoshi;
 pub mod zako;
 pub mod zelda;
 
+pub use cpu_ai::CpuKind;
 pub use registry::{Character, CharacterKind, FighterKind};
 
 use melee_data::archive::{ArchiveId, Archives, DataRef};

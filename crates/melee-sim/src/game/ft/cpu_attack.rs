@@ -11,6 +11,7 @@ use super::super::handles::{FighterId, ItemId};
 use super::super::state::Running;
 use super::common::GA_AIR;
 use crate::fpu::{mem, reg};
+use crate::game::ft::CpuKind;
 use crate::game::ft::FighterKind;
 use crate::game::it::ItKind;
 use crate::lb::{collision, hitcapsule};
@@ -450,7 +451,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A0FB0")]
     #[doc(alias = "ftCo_800B77E8")]
     fn cpu_character_rules(&mut self, f: FighterId) {
-        if self.game.fighters[f.0].cpu.kind == 7 || self.cpu_untargetable(f) {
+        if self.game.fighters[f.0].cpu.kind == CpuKind::Defensive || self.cpu_untargetable(f) {
             self.cpu_rule_out(f, cmd::ANY_ATTACK);
         }
         let fpp = &self.game.fighters[f.0];
@@ -1940,7 +1941,7 @@ impl Running<'_> {
         if !self.game.fighters[f.0].cpu.xF9_b3 {
             return 0;
         }
-        if self.game.fighters[f.0].cpu.kind == 0x10 {
+        if self.game.fighters[f.0].cpu.kind == CpuKind::Air {
             return self.cpu_jump_attack_16(f);
         }
         if !self.cpu_facing_destination(f) {

@@ -188,7 +188,8 @@ impl Running<'_> {
     /// His copy's own cleanup when KO'd, `ftKb_SpecialN_800F19AC`.
     #[doc(alias = "ftKb_SpecialN_800F19AC")]
     pub fn kb_copy_cleanup(&mut self, gobj: GObjId) {
-        if let Some(f) = copy_of(self.game.fighter(gobj).u_i32(u::HAT_KIND)).and_then(|c| c.cleanup) {
+        if let Some(f) = copy_of(self.game.fighter(gobj).u_i32(u::HAT_KIND)).and_then(|c| c.cleanup)
+        {
             f(self, gobj);
         }
     }
@@ -196,7 +197,9 @@ impl Running<'_> {
     /// His copy's own cleanup when hit, `ftKb_SpecialN_800F1A8C`.
     #[doc(alias = "ftKb_SpecialN_800F1A8C")]
     pub fn kb_copy_hit_cleanup(&mut self, gobj: GObjId) {
-        if let Some(f) = copy_of(self.game.fighter(gobj).u_i32(u::HAT_KIND)).and_then(|c| c.hit_cleanup) {
+        if let Some(f) =
+            copy_of(self.game.fighter(gobj).u_i32(u::HAT_KIND)).and_then(|c| c.hit_cleanup)
+        {
             f(self, gobj);
         }
     }

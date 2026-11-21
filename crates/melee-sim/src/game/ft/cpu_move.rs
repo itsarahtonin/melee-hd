@@ -12,6 +12,7 @@ use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use super::cpu_script::cmd;
 use crate::fpu::{mem, reg};
+use crate::game::ft::CpuKind;
 use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
 use crate::math;
@@ -199,20 +200,20 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800ABA34")]
     pub(super) fn cpu_walk(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
-        match fpp.cpu.kind {
-            11 => {
+        match CpuKind::from_id(fpp.cpu.kind) {
+            Some(CpuKind::SpLwLink) => {
                 if fpp.item_gobj.is_none() {
                     self.cpu_data_script(f, 38);
                     return;
                 }
             }
-            12 => {
+            Some(CpuKind::SpLwSamus) => {
                 if fpp.cpu.x7C % 30 == 0 {
                     self.cpu_data_script(f, 38);
                     return;
                 }
             }
-            16 if fpp.ground_or_air == GA_GROUND && fpp.cpu.x7C % 0x12C == 0 => {
+            Some(CpuKind::Air) if fpp.ground_or_air == GA_GROUND && fpp.cpu.x7C % 0x12C == 0 => {
                 self.cpu_jump_toward_target(f);
                 return;
             }
@@ -1104,7 +1105,7 @@ impl Running<'_> {
             _ => {}
         }
         let kind = self.game.fighters[f.0].cpu.kind;
-        if kind == 15 || kind == 0 {
+        if kind == CpuKind::NoAct || kind == CpuKind::Stay {
             self.cpu_hold_up(f);
             return;
         }
@@ -1394,7 +1395,7 @@ impl Running<'_> {
             return;
         }
         let fpp = &self.game.fighters[f.0];
-        if fpp.cpu.kind == 11 && fpp.item_gobj.is_none() {
+        if fpp.cpu.kind == CpuKind::SpLwLink && fpp.item_gobj.is_none() {
             self.cpu_data_script(f, 38);
             return;
         }
@@ -1656,7 +1657,7 @@ impl Running<'_> {
         const STEEP: f64 = 1.308_996_928_855_776_8;
         const LEVEL: f64 = 0.261_799_385_771_155_36;
         match enemy {
-            Some(e) if fpp.cpu.kind == 0x1D => {
+            Some(e) if fpp.cpu.kind == CpuKind::ItemLover => {
                 if !self.cpu_target_ahead(f) {
                     self.cpu_turn_around(f);
                     return;

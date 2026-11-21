@@ -20,8 +20,76 @@ use crate::math;
 /// `HSD_GOBJ_PLINK_FIGHTER`.
 pub(super) const P_LINK_FIGHTER: u8 = 8;
 
-/// `CpuKind_Nana`.
-const CPU_KIND_NANA: i32 = 6;
+super::registry::kind_enum! {
+    /// A computer player's kind (`CpuKind`, the players' `cpu_type`, `CpuFighter::kind`), which
+    /// picks its decision (`ftCo_800B2AFC`'s switch). The game's own numbers; the names are the
+    /// debug menu's for 0 to 17 (`CpTp_*`) and the decisions' for the single-player modes'.
+    CpuKind:
+    /// `CpTp_Stay`: Training's, standing where it is.
+    Stay = 0,
+    /// `CpTp_Walk`: Training's, walking to its spot.
+    Walk = 1,
+    /// `CpTp_Escape`: Training's evading one (`ftCo_800B04DC`).
+    Escape = 2,
+    /// `CpTp_Jump`: Training's, jumping.
+    Jump = 3,
+    /// `CpTp_Normal`: the VS kind.
+    Normal = 4,
+    /// `CpTp_Manual`.
+    Manual = 5,
+    /// `CpTp_Nana`, `CpuKind_Nana`: Nana following Popo.
+    Nana = 6,
+    /// `CpTp_Defensive` (`ftCo_800AF290`).
+    Defensive = 7,
+    /// `CpTp_Struggle` (`ftCo_800AECF0`).
+    Struggle = 8,
+    /// `CpTp_Freak` (`ftCo_800B00F8`): Classic's Very Easy opponents.
+    Freak = 9,
+    /// `CpTp_Cooperate` (`ftCo_800AFC40`): toward its nearest ally.
+    Cooperate = 10,
+    /// `CpTp_SpLwLink`.
+    SpLwLink = 11,
+    /// `CpTp_SpLwSamus`.
+    SpLwSamus = 12,
+    /// `CpTp_OnlyItem` (`ftCo_800B126C`).
+    OnlyItem = 13,
+    /// `CpTp_EvZelda` (`ftCo_800B1478`).
+    EvZelda = 14,
+    /// `CpTp_NoAct`: the Home-Run Contest's.
+    NoAct = 15,
+    /// `CpTp_Air`: jumping at its target.
+    Air = 16,
+    /// `CpTp_Item` (`ftCo_800B17D0`): any item worth going for.
+    Item = 17,
+    /// Kind 7's decision standing its ground (`ftCo_800AF78C`, Events 6 and 26).
+    KeepAway = 18,
+    /// Toward player 1's to player 4's fighter (`ftCo_800AFE3C`, Events 17, 19 and 25).
+    TowardP1 = 19,
+    TowardP2 = 20,
+    TowardP3 = 21,
+    TowardP4 = 22,
+    /// The single-player opponents': toward the nearest enemy.
+    Enemy = 23,
+    /// Multi-Man's Wire Frames' (`ftCo_800B1DA0`): to another island now and then.
+    Wander = 24,
+    /// Kind 23's decision again (Multi-Man's Wire Frames).
+    EnemyAgain = 25,
+    /// Kind 23's target, Training's floor under it: nothing gives it (`cpu_audit`'s `KIND_26`).
+    Unused26 = 26,
+    /// A metal or giant single-player opponent's (`ftCo_800B1EF0`, Adventure's giant Kirby).
+    Unafraid = 27,
+    /// Toward the human enemy standing best (`ftCo_800B21C8`, Event 37).
+    Fighter = 28,
+    /// Items worth going for (`ftCo_800B1AB8`, Adventure's Nesses on Onett).
+    ItemLover = 29,
+}
+
+impl CpuKind {
+    /// Its number as a byte, as the players and a match's start data hold it.
+    pub const fn byte(self) -> u8 {
+        self as u8
+    }
+}
 
 /// `ftPp_MS_SpecialLw`, `ftPp_MS_SpecialAirLw`, and the Ice Climbers' up special's states
 /// (`ftPp_MS_SpecialHi_0` to `_5`).
@@ -326,38 +394,44 @@ impl Running<'_> {
     /// leaves, which `ftCo_800B2AFC` passes on unchanged.
     #[doc(alias = "ftCo_800B2AFC")]
     fn cpu_decide(&mut self, f: FighterId) -> Leftover {
-        match self.game.fighters[f.0].cpu.kind {
-            CPU_KIND_NANA => self.nana_decide(f),
-            // The VS kind, two others and every kind the switch doesn't list.
-            4 | 11 | 12 => self.cpu_decide_vs(f),
-            15 => {
+        use CpuKind as K;
+        let Some(kind) = CpuKind::from_id(self.game.fighters[f.0].cpu.kind) else {
+            // Every kind the switch doesn't list.
+            return self.cpu_decide_vs(f);
+        };
+        match kind {
+            K::Nana => self.nana_decide(f),
+            // The VS kind, two others and the two the switch doesn't list.
+            K::Normal | K::SpLwLink | K::SpLwSamus | K::Manual | K::Air => self.cpu_decide_vs(f),
+            K::NoAct => {
                 self.game.fighters[f.0].cpu.x18 = 0;
                 Leftover::Unknown("ftCo_800B2AFC")
             }
-            // Training's: stop where it stands (0), walk to its spot (1) or jump (3), the
-            // jump and the walk the behavior pick's.
-            k @ (0 | 1 | 3) => self.cpu_decide_training(f, k == 1),
-            2 => self.cpu_decide_evade(f),
+            // Training's: stop where it stands, walk to its spot or jump, the jump and the
+            // walk the behavior pick's.
+            K::Stay | K::Walk | K::Jump => self.cpu_decide_training(f, kind == K::Walk),
+            K::Escape => self.cpu_decide_evade(f),
             // The single-player modes' kinds (`super::cpu_kinds`).
-            7 => self.cpu_decide_keep_away(f, true),
-            8 => self.cpu_decide_no_human(f, CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME),
-            9 => self.cpu_decide_wanderer(f),
-            10 => self.cpu_decide_follower(f),
-            13 => self.cpu_decide_roamer(f),
-            14 => self.cpu_decide_bold(f),
-            17 => self.cpu_decide_collector(f),
-            18 => self.cpu_decide_keep_away(f, false),
-            k @ 19..=22 => self.cpu_decide_player(f, k - 19),
-            28 => self.cpu_decide_fighter(f),
+            K::Defensive => self.cpu_decide_keep_away(f, true),
+            K::Struggle => self.cpu_decide_no_human(f, CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME),
+            K::Freak => self.cpu_decide_wanderer(f),
+            K::Cooperate => self.cpu_decide_follower(f),
+            K::OnlyItem => self.cpu_decide_roamer(f),
+            K::EvZelda => self.cpu_decide_bold(f),
+            K::Item => self.cpu_decide_collector(f),
+            K::KeepAway => self.cpu_decide_keep_away(f, false),
+            K::TowardP1 | K::TowardP2 | K::TowardP3 | K::TowardP4 => {
+                self.cpu_decide_player(f, kind.id() - K::TowardP1.id())
+            }
+            K::Fighter => self.cpu_decide_fighter(f),
             // Kind 25 is kind 23's code again (Multi-Man's Wire Frames).
-            23 | 25 => self.cpu_decide_enemy(f),
-            24 => self.cpu_decide_wander(f),
-            27 => self.cpu_decide_unafraid(f),
-            29 => self.cpu_decide_item_lover(f),
+            K::Enemy | K::EnemyAgain => self.cpu_decide_enemy(f),
+            K::Wander => self.cpu_decide_wander(f),
+            K::Unafraid => self.cpu_decide_unafraid(f),
+            K::ItemLover => self.cpu_decide_item_lover(f),
             // Kind 26 (kind 23's target, training's floor under it): no table, setter or
             // debug choice gives it (`cpu_audit`'s `KIND_26`).
-            26 => unported_call("ftCo_800B2AFC for computer kind 26"),
-            _ => self.cpu_decide_vs(f),
+            K::Unused26 => unported_call("ftCo_800B2AFC for computer kind 26"),
         }
     }
 
