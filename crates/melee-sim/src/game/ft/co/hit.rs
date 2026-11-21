@@ -1167,7 +1167,7 @@ impl Running<'_> {
                 .dmg
                 .x1868_source
                 .expect("a ReDead's hit without its source");
-            if crate::game::it::kinds::leadead::held(self, source).is_none() {
+            if crate::game::it::kinds::redead::held(self, source).is_none() {
                 self.enter_capture_leadead(gobj);
                 return true;
             }
