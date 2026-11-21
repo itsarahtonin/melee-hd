@@ -343,7 +343,7 @@ pub fn setup(r: &mut Running) {
     let mask = game.vs.start.x20;
     game.it.spawn.spawner.mask = mask;
     let counts = stage_counts(game);
-    let weight = game.vs_unk34();
+    let weight = game.vs_item_weight();
     if mask == 0 || game.vs_item_freq() == -1 {
         return;
     }

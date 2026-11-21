@@ -809,7 +809,10 @@ fn gm_step(ctx: &Ctx, game: &mut Game, rand: &mut Rand) -> (String, Got, Got) {
     let name = format!("op {op} slot {slot} bit {bit} port {port}");
     let (ours, theirs) = match op {
         0 => (i(game.vs_item_freq()), i(fns::gm_8016AE80(ctx))),
-        1 => (f(game.vs_unk34()), Got::F(fns::gm_8016AE94(ctx).to_bits())),
+        1 => (
+            f(game.vs_item_weight()),
+            Got::F(fns::gm_8016AE94(ctx).to_bits()),
+        ),
         2 => (u(game.vs_timer_seconds()), u(fns::gm_8016AEEC(ctx))),
         3 => (u(game.vs_frame_count()), u(fns::gm_GetFrameCount(ctx))),
         4 => (u(game.vs_stkind().into()), u(fns::gm_GetStKind(ctx).into())),

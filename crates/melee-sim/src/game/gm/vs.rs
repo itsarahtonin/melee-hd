@@ -124,9 +124,11 @@ impl Game {
         i32::from(self.vs.start.item_freq)
     }
 
-    /// `gm_8016AE94`.
+    /// The weight on each item kind's count in the random items' table (`state.unk_34`,
+    /// [`item_weight`]), `gm_8016AE94`.
+    #[doc(alias("vs_unk34"))]
     #[doc(alias = "gm_8016AE94")]
-    pub fn vs_unk34(&self) -> f32 {
+    pub fn vs_item_weight(&self) -> f32 {
         self.vs.state.unk_34
     }
 
@@ -2000,7 +2002,7 @@ impl Running<'_> {
         self.game.coll.reset();
         super::super::gr::setup::prepare(self.game);
         super::super::gr::setup::select(self, i32::from(d.rules.stkind), files.stage);
-        self.game.vs.state.unk_34 = vs_speed_scale(self.game);
+        self.game.vs.state.unk_34 = item_weight(self.game);
         // `Item_80266F70`'s `lbArchive_80017040`: the common items from the preload cache.
         let kept = self.take_cached_named("ItCo.usd");
         super::super::it::item::load_common_data(self.game, self.data, files.it_co, kept);
@@ -2110,9 +2112,12 @@ impl Running<'_> {
     }
 }
 
-/// The match's speed scale (the inline `get_unk_float`): 1 in single-player modes, else
-/// by how many play.
-fn vs_speed_scale(g: &Game) -> f32 {
+/// The weight the random items' table gives each kind's count on the stage (the inline
+/// `get_unk_float`, kept in `state.unk_34`, which `it::spawn::setup` reads through
+/// `gm_8016AE94`): 1 in single-player modes, else by how many play, 1.1 with three and 1.2
+/// with four. Nothing else reads it; it was named a speed scale before (wave 5).
+#[doc(alias("vs_speed_scale"))]
+fn item_weight(g: &Game) -> f32 {
     if super::is_1p_mode(g) {
         return 1.0;
     }
@@ -2128,7 +2133,7 @@ mod c_stick_rule_tests {
     use super::super::super::camera::{self, Bounds, Which};
     use super::super::super::state::Game;
     use super::super::{GM_CLASSIC, GM_VS, is_1p_mode_for_c_stick};
-    use super::vs_speed_scale;
+    use super::item_weight;
 
     /// Classic (or `mode`) with three players, the camera's zoom allowed, the first player's
     /// C-stick held up and a quake pending, under the Slippi ruleset's C-stick rule or not.
@@ -2195,10 +2200,10 @@ mod c_stick_rule_tests {
             "the quake tells the modes apart"
         );
 
-        assert_eq!(vs_speed_scale(&game(GM_CLASSIC, false)), 1.0);
-        assert_eq!(vs_speed_scale(&game(GM_CLASSIC, true)), 1.0);
+        assert_eq!(item_weight(&game(GM_CLASSIC, false)), 1.0);
+        assert_eq!(item_weight(&game(GM_CLASSIC, true)), 1.0);
         assert_eq!(
-            vs_speed_scale(&game(GM_VS, true)),
+            item_weight(&game(GM_VS, true)),
             1.1,
             "three players weigh the table outside 1P"
         );
