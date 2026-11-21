@@ -850,31 +850,31 @@ impl Running<'_> {
     pub(super) fn catch_up_command(&mut self, gobj: GObjId, index: u32) {
         let f = self.game.fighter_id(gobj);
         match index {
-            0 => self.skip_800711dc(f),
-            1 => self.skip_800715ec(f),
-            2 => self.skip_8007168c(f),
-            3 => self.skip_800716f8(f),
-            4 => self.skip_80071774(f),
-            5 => self.skip_800717c8(f),
-            6 => self.skip_80071810(f),
-            7 => self.skip_80071ca4(f),
-            8 => self.skip_80071d30(f),
-            24 => self.skip_80071f0c(f),
-            28 => self.skip_800722c8(f),
-            29 => self.skip_800726c0(f),
-            33 => self.skip_8007296c(f),
-            34 => self.skip_800729c4(f),
-            35 => self.skip_80072a4c(f),
-            36 => self.skip_80072aac(f),
-            37 => self.skip_80072b04(f),
-            39 => self.skip_80072b84(f),
-            40 => self.skip_80072be4(f),
-            41 => self.skip_80072c5c(f),
-            44 => self.skip_80072e24(f),
-            45 => self.skip_80072fe0(f),
-            46 => self.skip_8007309c(f),
-            47 => self.skip_80073108(f),
-            48 => self.skip_8007320c(f),
+            0 => self.skip_effect(f),
+            1 => self.skip_create_hitbox(f),
+            2 => self.skip_hitbox_damage(f),
+            3 => self.skip_hitbox_scale(f),
+            4 => self.skip_hitbox_flags(f),
+            5 => self.skip_clear_hitbox(f),
+            6 => self.skip_clear_hitboxes(f),
+            7 => self.skip_sound(f),
+            8 => self.skip_smash_sound(f),
+            24 => self.skip_throw_hitbox(f),
+            28 => self.skip_random_sfx(f),
+            29 => self.skip_positional_sound(f),
+            33 => self.skip_rumble(f),
+            34 => self.skip_stop_rumble(f),
+            35 => self.skip_sword(f),
+            36 => self.skip_color_anim(f),
+            37 => self.skip_end_color_anim(f),
+            39 => self.skip_sword_trail(f),
+            40 => self.skip_part_dynamics(f),
+            41 => self.skip_self_damage(f),
+            44 => self.skip_floor_sound(f),
+            45 => self.skip_footstep(f),
+            46 => self.skip_smash_charge(f),
+            47 => self.skip_vibrate(f),
+            48 => self.skip_wind(f),
             31 => {
                 let w = self.cmd_word(f, 0);
                 self.cmd_part_anim(gobj, w, false);
@@ -885,130 +885,155 @@ impl Running<'_> {
         }
     }
 
-    fn skip_800711dc(&mut self, f: FighterId) {
+    #[doc(alias("skip_800711dc"))]
+    fn skip_effect(&mut self, f: FighterId) {
         self.cmd_skip(f, 5);
     }
 
     #[doc(alias = "ftAction_800715EC")]
-    fn skip_800715ec(&mut self, f: FighterId) {
+    #[doc(alias("skip_800715ec"))]
+    fn skip_create_hitbox(&mut self, f: FighterId) {
         self.cmd_skip(f, 5);
     }
 
     /// Command 12 stepped over in a state entered partway (Link's down air restarted at frame
     /// 60 by its hit, past the command's frame 16).
     #[doc(alias = "ftAction_8007168C")]
-    fn skip_8007168c(&mut self, f: FighterId) {
+    #[doc(alias("skip_8007168c"))]
+    fn skip_hitbox_damage(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     // `ftAction_800716F8`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
-    fn skip_800716f8(&mut self, f: FighterId) {
+    #[doc(alias("skip_800716f8"))]
+    fn skip_hitbox_scale(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     // `ftAction_80071774`: dead, the states whose scripts hold command 14 are entered partway
     // only at a frozen frame 0 (ledger/dead.txt).
-    fn skip_80071774(&mut self, f: FighterId) {
+    #[doc(alias("skip_80071774"))]
+    fn skip_hitbox_flags(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     // `ftAction_800717C8`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
-    fn skip_800717c8(&mut self, f: FighterId) {
+    #[doc(alias("skip_800717c8"))]
+    fn skip_clear_hitbox(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     #[doc(alias = "ftAction_80071810")]
-    fn skip_80071810(&mut self, f: FighterId) {
+    #[doc(alias("skip_80071810"))]
+    fn skip_clear_hitboxes(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     #[doc(alias = "ftAction_80071CA4")]
-    fn skip_80071ca4(&mut self, f: FighterId) {
+    #[doc(alias("skip_80071ca4"))]
+    fn skip_sound(&mut self, f: FighterId) {
         self.cmd_skip(f, 3);
     }
 
     // `ftAction_80071D30`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
-    fn skip_80071d30(&mut self, f: FighterId) {
+    #[doc(alias("skip_80071d30"))]
+    fn skip_smash_sound(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     #[doc(alias = "ftAction_80071F0C")]
-    fn skip_80071f0c(&mut self, f: FighterId) {
+    #[doc(alias("skip_80071f0c"))]
+    fn skip_throw_hitbox(&mut self, f: FighterId) {
         self.cmd_skip(f, 3);
     }
 
     // `ftAction_800722C8`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
-    fn skip_800722c8(&mut self, f: FighterId) {
+    #[doc(alias("skip_800722c8"))]
+    fn skip_random_sfx(&mut self, f: FighterId) {
         self.cmd_skip(f, 7);
     }
 
     // `ftAction_800726C0`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
-    fn skip_800726c0(&mut self, f: FighterId) {
+    #[doc(alias("skip_800726c0"))]
+    fn skip_positional_sound(&mut self, f: FighterId) {
         self.cmd_skip(f, 4);
     }
 
     #[doc(alias = "ftAction_8007296C")]
-    fn skip_8007296c(&mut self, f: FighterId) {
+    #[doc(alias("skip_8007296c"))]
+    fn skip_rumble(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     // `ftAction_800729C4`: dead, no fighter script on the disc holds its opcode (ledger/dead.txt).
-    fn skip_800729c4(&mut self, f: FighterId) {
+    #[doc(alias("skip_800729c4"))]
+    fn skip_stop_rumble(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     // `ftAction_80072A4C`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
-    fn skip_80072a4c(&mut self, f: FighterId) {
+    #[doc(alias("skip_80072a4c"))]
+    fn skip_sword(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     #[doc(alias = "ftAction_80072AAC")]
-    fn skip_80072aac(&mut self, f: FighterId) {
+    #[doc(alias("skip_80072aac"))]
+    fn skip_color_anim(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     // `ftAction_80072B04`: dead, no fighter script on the disc holds its opcode (ledger/dead.txt).
-    fn skip_80072b04(&mut self, f: FighterId) {
+    #[doc(alias("skip_80072b04"))]
+    fn skip_end_color_anim(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     // `ftAction_80072B84`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
-    fn skip_80072b84(&mut self, f: FighterId) {
+    #[doc(alias("skip_80072b84"))]
+    fn skip_sword_trail(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     // `ftAction_80072BE4`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
-    fn skip_80072be4(&mut self, f: FighterId) {
+    #[doc(alias("skip_80072be4"))]
+    fn skip_part_dynamics(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     #[doc(alias = "ftAction_80072C5C")]
-    fn skip_80072c5c(&mut self, f: FighterId) {
+    #[doc(alias("skip_80072c5c"))]
+    fn skip_self_damage(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     #[doc(alias = "ftAction_80072E24")]
-    fn skip_80072e24(&mut self, f: FighterId) {
+    #[doc(alias("skip_80072e24"))]
+    fn skip_floor_sound(&mut self, f: FighterId) {
         self.cmd_skip(f, 3);
     }
 
     // `ftAction_80072FE0`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
-    fn skip_80072fe0(&mut self, f: FighterId) {
+    #[doc(alias("skip_80072fe0"))]
+    fn skip_footstep(&mut self, f: FighterId) {
         self.cmd_skip(f, 3);
     }
 
     // `ftAction_8007309C`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
-    fn skip_8007309c(&mut self, f: FighterId) {
+    #[doc(alias("skip_8007309c"))]
+    fn skip_smash_charge(&mut self, f: FighterId) {
         self.cmd_skip(f, 2);
     }
 
     // `ftAction_80073108`: dead, no fighter script on the disc holds its opcode (ledger/dead.txt).
-    fn skip_80073108(&mut self, f: FighterId) {
+    #[doc(alias("skip_80073108"))]
+    fn skip_vibrate(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
     // `ftAction_8007320C`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
-    fn skip_8007320c(&mut self, f: FighterId) {
+    #[doc(alias("skip_8007320c"))]
+    fn skip_wind(&mut self, f: FighterId) {
         self.cmd_skip(f, 4);
     }
 
