@@ -346,8 +346,8 @@ fn run_yoshi(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         }
         "ftYs_SpecialS_8012F35C" => g.ys_s_setup(gobj),
         "it_802B2890" => yoshieggthrow::remove(g, gobj),
-        "it_802B2FA8" => yoshieggthrow::evt_unk(g, gobj, other()),
-        "it_802B3348" => yoshistar::evt_unk(g, gobj, other()),
+        "it_802B2FA8" => yoshieggthrow::forget(g, gobj, other()),
+        "it_802B3348" => yoshistar::forget(g, gobj, other()),
         "it_802F3290" => yoshiegglay::crack(g, gobj),
         _ => return run_callback(g, gobj, a),
     }

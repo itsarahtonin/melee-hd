@@ -12,7 +12,8 @@ pub mod data;
 pub mod draw;
 pub mod drop;
 pub mod effect;
-pub mod evt_unk;
+#[doc(alias("evt_unk"))]
+pub mod forget;
 pub mod ground;
 pub mod hitbox;
 pub mod item;
@@ -60,7 +61,7 @@ pub const BONE_TABLE_LEN: usize = 100;
 
 /// The character items' kinds (`It_Kind_Kuriboh` to `It_PKind_Random`), which index
 /// `it_804D6D38`.
-pub const CHAR_ARTICLES: usize = (ItKind::FIRST_POKEMON.id() - ItKind::Kuriboh.id()) as usize;
+pub const CHAR_ARTICLES: usize = (ItKind::FIRST_POKEMON.id() - ItKind::Goomba.id()) as usize;
 
 /// An item's table of its model's joints in depth-first order (`DynamicBoneTable`). The
 /// original's block comes uncleared from `HSD_ObjAlloc` and only the model's joints are
@@ -144,13 +145,15 @@ pub struct Globals {
     /// The Poké Balls' last Pokémon and whether a rare one came out (`Item_804A0E24`).
     pub pokemon: PokemonSelectionState,
     /// `it_804D6D00`, set to -1 for each match.
-    pub x6d00: i8,
+    #[doc(alias("x6d00"))]
+    pub warp_star_last_anim: i8,
     /// The last Ditto out of a ball (`it_804D6D50`), never read.
     pub last_metamon: Option<crate::hsd::gobj::GObjId>,
     /// Items that appeared on their own (`it_804D6D0C`) and `it_804D6D08`, counted for the
     /// match's records.
     pub spawned: i32,
-    pub x6d08: i32,
+    #[doc(alias("x6d08"))]
+    pub foods_spawned: i32,
     /// How many entries a hit check's damage log holds (`it_804D6D18`), and the entries
     /// (`it_804A0E70`): what hit the item this check, which [`coll::take_hits`] reads in the
     /// same process (the original's entries are pointers, compared through the count only).

@@ -77,7 +77,7 @@ impl Running<'_> {
                 self.data
                     .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x11)),
             )
-        } else if lib26b1::kind(self.game, it) == ItKind::WStar {
+        } else if lib26b1::kind(self.game, it) == ItKind::WarpStar {
             0
         } else {
             i32::from(

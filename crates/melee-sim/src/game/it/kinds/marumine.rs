@@ -18,7 +18,8 @@ use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802D_0A0C;
 pub const LANDED_NOTHING: u32 = 0x802D_0AAC;
-pub const EVT_UNK: u32 = 0x802D_0AB0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_0AB0;
 pub const DMG_DEALT: u32 = 0x802D_0AD0;
 pub const LANDED: u32 = 0x802D_0B04;
 pub const ANIM1: u32 = 0x802D_0B74;
@@ -133,7 +134,8 @@ pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 
 /// Forgets a GObj going away, `it_802D0AB0` (`it_8026B894`).
 #[doc(alias = "it_802D0AB0")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
@@ -341,7 +343,7 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     }
     lib26b1::disable_pickup(r.game, gobj);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     lib2725::clear_velocity(r.game, gobj);
     hitbox::start_blink(r.game, gobj);

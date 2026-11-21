@@ -20,7 +20,8 @@ pub const ANIM: u32 = 0x802A_A5B0;
 pub const PHYS: u32 = 0x802A_A6D4;
 pub const COLL: u32 = 0x802A_A714;
 pub const DMG_RECEIVED: u32 = 0x802A_A75C;
-pub const EVT_UNK: u32 = 0x802A_A7C4;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_A7C4;
 
 /// `itNessPKFirepillarAttributes`: the lifetime, the life each point of damage burns, and the
 /// smallest scale.
@@ -75,7 +76,7 @@ fn item_attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "itNesspkfirepillar_802AA494")]
 pub fn spawn(r: &mut Running, bolt: GObjId, owner: Option<GObjId>, pos: Vec3, facing_dir: f32) {
     let mut spawn = SpawnItem {
-        kind: ItKind::NessPKFireFlame.id(),
+        kind: ItKind::NessPKFirePillar.id(),
         ..Default::default()
     };
     spawn.prev_pos = pos;

@@ -11,7 +11,8 @@ use crate::hsd::gobj::GObjId;
 
 pub const SPAWNED: u32 = 0x802D_3008;
 pub const LANDED_NOTHING: u32 = 0x802D_306C;
-pub const EVT_UNK: u32 = 0x802D_3070;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_3070;
 pub const LANDED: u32 = 0x802D_3090;
 pub const ANIM0: u32 = 0x802D_30EC;
 pub const PHYS0: u32 = 0x802D_3120;
@@ -149,7 +150,7 @@ mod tests {
     #[test]
     fn dittos_first_landing_does_nothing() {
         assert_eq!(LANDED_NOTHING, 0x802D_306C);
-        assert_eq!(LANDED_NOTHING + 4, EVT_UNK);
+        assert_eq!(LANDED_NOTHING + 4, FORGET);
         let mut game = crate::game::state::Game::default();
         let data = melee_data::archive::Archives::default();
         let mut before = crate::game::state::Game::default();

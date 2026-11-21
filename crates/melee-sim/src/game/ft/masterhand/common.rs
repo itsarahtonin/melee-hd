@@ -1,12 +1,13 @@
-//! The callbacks his states share: empty ones, a human's input, the air motion, and the
-//! return once an animation ends.
+//! The callbacks both hands' states share: empty ones, a human's input, the air motion, the
+//! return once an animation ends, and entering a state from its first frame.
 
 use super::super::super::state::Running;
-use super::addr;
+use super::{HAND, Hand, addr};
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
-    /// A human-played hand has nothing to do (`ftBossLib_8015BD20`), a computer's nothing either: the states' input callbacks.
+    /// A human-played hand has nothing to do (`ftBossLib_8015BD20`), a computer's nothing
+    /// either: the states' input callbacks.
     #[doc(alias = "ftMh_Poke1_IASA")]
     #[doc(alias = "ftMh_BackDisappear_IASA")]
     #[doc(alias = "ftMh_Grab_IASA")]
@@ -47,7 +48,46 @@ impl Running<'_> {
     #[doc(alias = "ftMh_WalkShoot_IASA")]
     #[doc(alias = "ftMh_Walk2_IASA")]
     #[doc(alias = "ftMh_WalkLoop_IASA")]
-    pub fn mh_human_nop(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftCh_Wait1_0_IASA")]
+    #[doc(alias = "ftCh_Entry_IASA")]
+    #[doc(alias = "ftCh_Damage_IASA")]
+    #[doc(alias = "ftCh_Damage2_IASA")]
+    #[doc(alias = "ftCh_WaitSweep_IASA")]
+    #[doc(alias = "ftCh_SweepLoop_IASA")]
+    #[doc(alias = "ftCh_SweepWait_IASA")]
+    #[doc(alias = "ftCh_Slap_IASA")]
+    #[doc(alias = "ftCh_Walk2_IASA")]
+    #[doc(alias = "ftCh_WalkLoop_IASA")]
+    #[doc(alias = "ftCh_WalkWait_IASA")]
+    #[doc(alias = "ftCh_WalkShoot_IASA")]
+    #[doc(alias = "ftCh_Drill_IASA")]
+    #[doc(alias = "ftCh_RockCrushUp_IASA")]
+    #[doc(alias = "ftCh_RockCrushDown_IASA")]
+    #[doc(alias = "ftCh_PaperCrush_IASA")]
+    #[doc(alias = "ftCh_Poke1_IASA")]
+    #[doc(alias = "ftCh_Poke2_IASA")]
+    #[doc(alias = "ftCh_FingerBeamStart_IASA")]
+    #[doc(alias = "ftCh_FingerBeamLoop_IASA")]
+    #[doc(alias = "ftCh_FingerBeamEnd_IASA")]
+    #[doc(alias = "ftCh_BackPunch_IASA")]
+    #[doc(alias = "ftCh_FingerGun1_IASA")]
+    #[doc(alias = "ftCh_BackAirplane1_IASA")]
+    #[doc(alias = "ftCh_BackAirplane2_IASA")]
+    #[doc(alias = "ftCh_BackAirplane3_IASA")]
+    #[doc(alias = "ftCh_BackCrush_IASA")]
+    #[doc(alias = "ftCh_BackDisappear_IASA")]
+    #[doc(alias = "ftCh_Wait1_1_IASA")]
+    #[doc(alias = "ftCh_Grab_IASA")]
+    #[doc(alias = "ftCh_Cancel_IASA")]
+    #[doc(alias = "ftCh_Squeezing0_IASA")]
+    #[doc(alias = "ftCh_Squeezing1_IASA")]
+    #[doc(alias = "ftCh_Squeeze_IASA")]
+    #[doc(alias = "ftCh_Throw_IASA")]
+    #[doc(alias = "ftCh_TagRockPaper_IASA")]
+    #[doc(alias = "ftCh_FingerGun2_IASA")]
+    #[doc(alias = "ftCh_TagGrab_IASA")]
+    #[doc(alias = "ftCh_TagFail_IASA")]
+    pub fn hand_human_nop(&mut self, gobj: GObjId) {
         let slot = i32::from(self.game.fighter(gobj).player_idx);
         if self.game.player_pkind(slot) == 0 {
             self.boss_nop(gobj);
@@ -78,11 +118,34 @@ impl Running<'_> {
     #[doc(alias = "ftMh_Wait1_0_Phys")]
     #[doc(alias = "ftMh_WalkShoot_Phys")]
     #[doc(alias = "ftMh_Walk2_Phys")]
-    pub fn mh_air_motion(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftCh_Wait1_0_Phys")]
+    #[doc(alias = "ftCh_Entry_Phys")]
+    #[doc(alias = "ftCh_Damage_Phys")]
+    #[doc(alias = "ftCh_WaitSweep_Phys")]
+    #[doc(alias = "ftCh_SweepLoop_Phys")]
+    #[doc(alias = "ftCh_SweepWait_Phys")]
+    #[doc(alias = "ftCh_Walk2_Phys")]
+    #[doc(alias = "ftCh_WalkLoop_Phys")]
+    #[doc(alias = "ftCh_WalkShoot_Phys")]
+    #[doc(alias = "ftCh_PaperCrush_Phys")]
+    #[doc(alias = "ftCh_Poke1_Phys")]
+    #[doc(alias = "ftCh_Poke2_Phys")]
+    #[doc(alias = "ftCh_FingerBeamStart_Phys")]
+    #[doc(alias = "ftCh_FingerBeamEnd_Phys")]
+    #[doc(alias = "ftCh_BackAirplane2_Phys")]
+    #[doc(alias = "ftCh_BackAirplane3_Phys")]
+    #[doc(alias = "ftCh_BackCrush_Phys")]
+    #[doc(alias = "ftCh_Grab_Phys")]
+    #[doc(alias = "ftCh_Squeezing0_Phys")]
+    #[doc(alias = "ftCh_Squeezing1_Phys")]
+    #[doc(alias = "ftCh_Squeeze_Phys")]
+    #[doc(alias = "ftCh_Throw_Phys")]
+    pub fn hand_air_motion(&mut self, gobj: GObjId) {
         self.air_anim_motion(gobj);
     }
 
-    /// Nothing: the states' empty callbacks.
+    /// Nothing: the states' empty callbacks, the spawn hooks (`OnDeath`), Master Hand's
+    /// `ftMh_MS_341_8014FE58` and Crazy Hand's hit hook.
     #[doc(alias = "ftMh_BackAirplane1_Coll")]
     #[doc(alias = "ftMh_BackAirplane2_Coll")]
     #[doc(alias = "ftMh_BackAirplane3_Coll")]
@@ -135,9 +198,65 @@ impl Running<'_> {
     #[doc(alias = "ftMh_WalkShoot_Coll")]
     #[doc(alias = "ftMh_Walk2_Coll")]
     #[doc(alias = "ftMh_WalkLoop_Coll")]
-    pub fn mh_nothing(&mut self, _gobj: GObjId) {}
+    #[doc(alias = "ftCh_Wait1_0_Coll")]
+    #[doc(alias = "ftCh_Entry_Coll")]
+    #[doc(alias = "ftCh_Damage_Coll")]
+    #[doc(alias = "ftCh_Damage2_Coll")]
+    #[doc(alias = "ftCh_WaitSweep_Coll")]
+    #[doc(alias = "ftCh_SweepLoop_Coll")]
+    #[doc(alias = "ftCh_SweepWait_Coll")]
+    #[doc(alias = "ftCh_Slap_Coll")]
+    #[doc(alias = "ftCh_WalkLoop_Coll")]
+    #[doc(alias = "ftCh_WalkWait_Coll")]
+    #[doc(alias = "ftCh_WalkShoot_Coll")]
+    #[doc(alias = "ftCh_Drill_Coll")]
+    #[doc(alias = "ftCh_RockCrushUp_Coll")]
+    #[doc(alias = "ftCh_RockCrushDown_Coll")]
+    #[doc(alias = "ftCh_PaperCrush_Coll")]
+    #[doc(alias = "ftCh_Poke1_Coll")]
+    #[doc(alias = "ftCh_Poke2_Coll")]
+    #[doc(alias = "ftCh_FingerBeamStart_Coll")]
+    #[doc(alias = "ftCh_FingerBeamLoop_Coll")]
+    #[doc(alias = "ftCh_FingerBeamEnd_Coll")]
+    #[doc(alias = "ftCh_BackPunch_Coll")]
+    #[doc(alias = "ftCh_BackAirplane2_Coll")]
+    #[doc(alias = "ftCh_BackAirplane3_Coll")]
+    #[doc(alias = "ftCh_BackCrush_Coll")]
+    #[doc(alias = "ftCh_BackDisappear_Coll")]
+    #[doc(alias = "ftCh_Wait1_1_Coll")]
+    #[doc(alias = "ftCh_Grab_Coll")]
+    #[doc(alias = "ftCh_Cancel_Coll")]
+    #[doc(alias = "ftCh_Squeezing0_Coll")]
+    #[doc(alias = "ftCh_Squeezing1_Coll")]
+    #[doc(alias = "ftCh_Squeeze_Coll")]
+    #[doc(alias = "ftCh_Throw_Coll")]
+    #[doc(alias = "ftCh_TagRockPaper_Phys")]
+    #[doc(alias = "ftCh_TagRockPaper_Coll")]
+    #[doc(alias = "ftCh_FingerGun2_Coll")]
+    #[doc(alias = "ftCh_TagGrab_Coll")]
+    #[doc(alias = "ftCh_TagFail_Phys")]
+    #[doc(alias = "ftCh_TagFail_Coll")]
+    #[doc(alias = "ftCo_CaptureCrazyHand_Anim")]
+    #[doc(alias = "ftCo_CaptureCrazyHand_IASA")]
+    #[doc(alias = "ftCo_CaptureCrazyHand_Phys")]
+    #[doc(alias = "ftCo_CaptureCrazyHand_Coll")]
+    #[doc(alias = "ftCo_CaptureDamageCrazyHand_IASA")]
+    #[doc(alias = "ftCo_CaptureDamageCrazyHand_Phys")]
+    #[doc(alias = "ftCo_CaptureDamageCrazyHand_Coll")]
+    #[doc(alias = "ftCo_CaptureWaitCrazyHand_Anim")]
+    #[doc(alias = "ftCo_CaptureWaitCrazyHand_IASA")]
+    #[doc(alias = "ftCo_CaptureWaitCrazyHand_Phys")]
+    #[doc(alias = "ftCo_CaptureWaitCrazyHand_Coll")]
+    // `ftCo_ThrownCrazyHand_*` run here too, but never: the victim leaves the state in the
+    // call that enters it (ledger/dead.txt).
+    #[doc(alias = "ftMh_MS_341_8014FE58")]
+    #[doc(alias = "ftCh_Init_80156014")]
+    #[doc(alias = "ftMh_Init_OnDeath")]
+    #[doc(alias = "ftCh_Init_OnDeath")]
+    pub fn hand_nothing(&mut self, _gobj: GObjId) {}
 
-    /// Back to his place and the wait once the animation ends (`ftMh_MS_389_80151018`).
+    /// Back to his place and the wait once the animation ends (`ftMh_MS_389_80151018`,
+    /// `ftCh_GrabUnk1_8015BC88`).
     #[doc(alias = "ftMh_BackAirplane3_Anim")]
     #[doc(alias = "ftMh_Fail_Anim")]
     #[doc(alias = "ftMh_WalkWait_Anim")]
@@ -149,10 +268,50 @@ impl Running<'_> {
     #[doc(alias = "ftMh_Slap_Anim")]
     #[doc(alias = "ftMh_SweepWait_Anim")]
     #[doc(alias = "ftMh_WalkShoot_Anim")]
-    pub fn mh_anim_return(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftCh_Entry_Anim")]
+    #[doc(alias = "ftCh_WaitSweep_Anim")]
+    #[doc(alias = "ftCh_SweepLoop_Anim")]
+    #[doc(alias = "ftCh_Walk2_Anim")]
+    #[doc(alias = "ftCh_WalkShoot_Anim")]
+    #[doc(alias = "ftCh_Drill_Anim")]
+    #[doc(alias = "ftCh_RockCrushWait_Anim")]
+    #[doc(alias = "ftCh_RockCrushDown_Anim")]
+    #[doc(alias = "ftCh_Poke2_Anim")]
+    #[doc(alias = "ftCh_FingerBeamStart_Anim")]
+    #[doc(alias = "ftCh_BackPunch_Anim")]
+    #[doc(alias = "ftCh_Squeezing0_Anim")]
+    #[doc(alias = "ftMh_Poke2_Anim")]
+    pub fn hand_anim_return(&mut self, gobj: GObjId, h: &Hand) {
         if !self.anim_frames_remaining(gobj) {
-            self.mh_return(gobj);
+            self.hand_return(gobj, h);
         }
+    }
+
+    /// Enters one of his states from its first frame (`Fighter_ChangeMotionState` and
+    /// `ftAnim_8006EBA4`): `ftMh_MS_344_80151828` (the sweep's wind-up),
+    /// `ftMh_MS_347_80151AC8` (its end), `ftMh_MS_348_80151BB8` (the slap),
+    /// `ftMh_MS_353_80151DC4` and `ftMh_MS_350_80151EB4` (the walk), `ftMh_MS_354_80152370` and
+    /// `ftMh_MS_355_8015247C` (the punch), and Crazy Hand's like them.
+    #[doc(alias = "ftMh_MS_344_80151828")]
+    #[doc(alias = "ftMh_MS_347_80151AC8")]
+    #[doc(alias = "ftMh_MS_348_80151BB8")]
+    #[doc(alias = "ftMh_MS_353_80151DC4")]
+    #[doc(alias = "ftMh_MS_350_80151EB4")]
+    #[doc(alias = "ftMh_MS_354_80152370")]
+    #[doc(alias = "ftMh_MS_355_8015247C")]
+    #[doc(alias = "ftMh_MS_366_80153820")]
+    #[doc(alias = "ftMh_MS_365_80153730")]
+    #[doc(alias = "fn_80157080")]
+    #[doc(alias = "ftCh_Init_8015737C")]
+    #[doc(alias = "fn_8015746C")]
+    #[doc(alias = "fn_8015755C")]
+    #[doc(alias = "ftCh_Init_801577F8")]
+    #[doc(alias = "fn_801578E8")]
+    #[doc(alias = "ftCh_Init_801579F4")]
+    #[doc(alias = "ftCh_Init_80159F40")]
+    pub fn hand_enter(&mut self, gobj: GObjId, msid: i32) {
+        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
+        self.anim_update(gobj);
     }
 }
 
@@ -195,7 +354,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | addr::WAIT1_0_IASA
         | addr::WALK_SHOOT_IASA
         | addr::WALK2_IASA
-        | addr::WALK_LOOP_IASA => g.mh_human_nop(gobj),
+        | addr::WALK_LOOP_IASA => g.hand_human_nop(gobj),
         addr::BACK_AIRPLANE1_PHYS
         | addr::BACK_AIRPLANE3_PHYS
         | addr::BACK_DISAPPEAR_PHYS
@@ -218,7 +377,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | addr::THROW_PHYS
         | addr::WAIT1_0_PHYS
         | addr::WALK_SHOOT_PHYS
-        | addr::WALK2_PHYS => g.mh_air_motion(gobj),
+        | addr::WALK2_PHYS => g.hand_air_motion(gobj),
         addr::BACK_AIRPLANE1_COLL
         | addr::BACK_AIRPLANE2_COLL
         | addr::BACK_AIRPLANE3_COLL
@@ -272,7 +431,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | addr::WAIT1_0_COLL
         | addr::WALK_SHOOT_COLL
         | addr::WALK2_COLL
-        | addr::WALK_LOOP_COLL => g.mh_nothing(gobj),
+        | addr::WALK_LOOP_COLL => g.hand_nothing(gobj),
         addr::BACK_AIRPLANE3_ANIM
         | addr::FAIL_ANIM
         | addr::WALK_WAIT_ANIM
@@ -283,7 +442,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | addr::PAPER_CRUSH_ANIM
         | addr::SLAP_ANIM
         | addr::SWEEP_WAIT_ANIM
-        | addr::WALK_SHOOT_ANIM => g.mh_anim_return(gobj),
+        | addr::WALK_SHOOT_ANIM => g.hand_anim_return(gobj, &HAND),
         _ => return false,
     }
     true

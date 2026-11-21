@@ -770,7 +770,7 @@ impl Running<'_> {
             self.game.world.gobj(item).user_data,
             Some(crate::game::state::UserData::Item(_))
         );
-        (is_item && crate::game::it::lib26b1::kind(self.game, item) == ItKind::Sword)
+        (is_item && crate::game::it::lib26b1::kind(self.game, item) == ItKind::BeamSword)
             .then_some(item)
     }
 

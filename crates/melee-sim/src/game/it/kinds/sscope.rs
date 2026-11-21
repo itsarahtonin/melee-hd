@@ -142,7 +142,7 @@ fn gobj_address(r: &Running, gobj: GObjId) -> i32 {
         return addr as i32;
     }
     assert!(
-        r.game.rules.slippi,
+        r.game.rules.sscope_stand_in(),
         "a Super Scope's GObj address reached gameplay in a Vanilla match without the allocator model"
     );
     ADDRESS_STAND_IN as i32
@@ -226,7 +226,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId, pos: Vec3, level: i32, facing: f32) 
 /// A Super Scope standing at `pos`, `it_80291BE0`.
 #[doc(alias = "it_80291BE0")]
 pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
-    let mut spawn = super::super::item::drop_spawn(ItKind::SScope.id(), pos, false);
+    let mut spawn = super::super::item::drop_spawn(ItKind::SuperScope.id(), pos, false);
     let gobj = super::super::item::spawn_ground(r, &mut spawn)?;
     landed(r, gobj);
     Some(gobj)

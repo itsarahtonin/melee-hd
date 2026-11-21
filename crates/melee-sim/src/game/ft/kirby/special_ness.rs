@@ -52,7 +52,7 @@ pub const KIRBY: PkFlash = PkFlash {
     attrs: 0x1A0,
     u: 0x68,
     bone: 5,
-    flash_kind: ItKind::KirbyNessPKFlush.id(),
+    flash_kind: ItKind::KirbyNessPKFlash.id(),
     on_death: super::addr::DEATH3,
     on_damage: super::addr::DEATH1,
     clears_hooks: false,

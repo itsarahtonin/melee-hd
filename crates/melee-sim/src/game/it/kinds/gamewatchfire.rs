@@ -12,7 +12,8 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802C_69FC;
 pub const PICKED_UP: u32 = 0x802C_6AB8;
 pub const ANIM: u32 = 0x802C_6B20;
-pub const EVT_UNK: u32 = 0x802C_6C18;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_6C18;
 
 /// Runs one of the torch's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -43,7 +44,14 @@ pub fn spawn(
     part: i32,
     facing_dir: f32,
 ) -> Option<GObjId> {
-    gamewatch::spawn_held(r, ItKind::GameWatchFire.id(), parent, pos, part, facing_dir)
+    gamewatch::spawn_held(
+        r,
+        ItKind::GameAndWatchTorch.id(),
+        parent,
+        pos,
+        part,
+        facing_dir,
+    )
 }
 
 /// Gone, `itGamewatchFire_Destroyed`: its owner forgets it.
@@ -119,6 +127,7 @@ pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `itGamewatchFire_EvtUnk`.
 // Ports `itGamewatchFire_EvtUnk`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

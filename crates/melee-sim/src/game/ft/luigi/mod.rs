@@ -14,7 +14,6 @@ pub mod special_n;
 pub mod special_s;
 
 use super::super::code::Val;
-use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
@@ -164,37 +163,11 @@ pub mod addr {
 /// `ftLuigiAttributes`' offsets.
 pub(crate) mod attr {
     pub const SIZE: usize = 0x98;
-    pub const GREENMISSILE_SMASH: usize = 0x4;
-    pub const GREENMISSILE_CHARGE_RATE: usize = 0x8;
-    pub const GREENMISSILE_MAX_CHARGE_FRAMES: usize = 0xC;
-    pub const GREENMISSILE_DAMAGE_TILT: usize = 0x10;
-    pub const GREENMISSILE_DAMAGE_SLOPE: usize = 0x14;
-    pub const GREENMISSILE_TRACTION: usize = 0x18;
-    pub const GREENMISSILE_UNK2: usize = 0x1C;
-    pub const GREENMISSILE_FALLING_SPEED: usize = 0x20;
-    pub const GREENMISSILE_VEL_X: usize = 0x24;
-    pub const GREENMISSILE_MUL_X: usize = 0x28;
-    pub const GREENMISSILE_VEL_Y: usize = 0x2C;
-    pub const GREENMISSILE_MUL_Y: usize = 0x30;
-    pub const GREENMISSILE_GRAVITY_START: usize = 0x34;
-    pub const GREENMISSILE_FRICTION_END: usize = 0x38;
-    pub const GREENMISSILE_X_DECEL: usize = 0x3C;
-    pub const GREENMISSILE_GRAVITY_MUL: usize = 0x40;
-    pub const GREENMISSILE_MISFIRE_CHANCE: usize = 0x44;
-    pub const GREENMISSILE_MISFIRE_VEL_X: usize = 0x48;
-    pub const GREENMISSILE_MISFIRE_VEL_Y: usize = 0x4C;
+    // The Green Missile's attributes, from x4: the shared `special_s::Missile` layout.
     /// The Super Jump Punch's attributes, in Mario's layout (`plumber::SuperJump`).
     pub const SUPERJUMP_FREEFALL_MOBILITY: usize = 0x50;
     /// The Cyclone's attributes, in Mario's Tornado's layout (`plumber::Tornado`).
     pub const CYCLONE_TAP_MOMENTUM: usize = 0x70;
-}
-
-/// The `mv` offsets of `ftLuigi_MotionVars`' Green Missile members (the Cyclone's are
-/// `plumber`'s).
-pub(crate) mod mv {
-    /// `SpecialS.chargeFrames` and `isMisfire`.
-    pub const S_CHARGE_FRAMES: usize = 0;
-    pub const S_IS_MISFIRE: usize = 4;
 }
 
 /// The `u` offsets of `ftLuigi_FighterVars`: whether the Cyclone has risen in the air this
@@ -208,21 +181,6 @@ pub(crate) mod u {
 pub(crate) mod part {
     pub const HIP_N: i32 = 4;
     pub const L_1ST_NB: i32 = 23;
-}
-
-impl Running<'_> {
-    /// A float of the fighter's `ftLuigiAttributes`, `off` bytes in.
-    pub(crate) fn lg_attr_f32(&self, f: FighterId, off: usize) -> f32 {
-        f32::from_bits(self.lg_attr_word(f, off))
-    }
-
-    fn lg_attr_word(&self, f: FighterId, off: usize) -> u32 {
-        let a = self.game.fighters[f.0]
-            .dat_attrs
-            .expect("a fighter without attributes");
-        let b = &self.game.fighter_attrs[a.0];
-        u32::from_be_bytes(b[off..off + 4].try_into().unwrap())
-    }
 }
 
 /// Runs one of Luigi's callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr` is one.

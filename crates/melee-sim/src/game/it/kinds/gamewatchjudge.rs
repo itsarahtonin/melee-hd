@@ -13,7 +13,8 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802C_7A54;
 pub const PICKED_UP: u32 = 0x802C_7B10;
 pub const ANIM: u32 = 0x802C_7B54;
-pub const EVT_UNK: u32 = 0x802C_7D40;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_7D40;
 
 /// Runs one of the hammer's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -47,7 +48,7 @@ pub fn spawn(
     number: u32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::GameWatchJudge.id(),
+        kind: ItKind::GameAndWatchJudge.id(),
         ..Default::default()
     };
     gamewatch::spawn_position(&mut spawn, pos, false);
@@ -136,6 +137,7 @@ pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `itGameWatchJudge_Logic77_EvtUnk`.
 // Ports `itGameWatchJudge_Logic77_EvtUnk`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

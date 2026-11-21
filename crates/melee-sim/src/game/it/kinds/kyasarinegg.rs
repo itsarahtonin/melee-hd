@@ -59,11 +59,14 @@ pub struct KyasarinEggVars {
     /// +0x4, `zako.idx`.
     pub idx: Var<i32>,
     /// +0x8, `zako.x8`.
-    pub x8: Var<Vec3>,
+    #[doc(alias("x8"))]
+    pub normal: Var<Vec3>,
     /// +0x14, `zako.x14`.
-    pub x14: [Var<i32>; 3],
+    #[doc(alias("x14"))]
+    pub words: [Var<i32>; 3],
     /// +0x20: whether it is broken empty.
-    pub x20: Var<i32>,
+    #[doc(alias("x20"))]
+    pub broken: Var<i32>,
 }
 
 impl KyasarinEggVars {
@@ -71,11 +74,11 @@ impl KyasarinEggVars {
     pub fn mark_stale(&mut self) {
         self.jobj.mark_stale();
         self.idx.mark_stale();
-        self.x8.mark_stale();
-        for v in &mut self.x14 {
+        self.normal.mark_stale();
+        for v in &mut self.words {
             v.mark_stale();
         }
-        self.x20.mark_stale();
+        self.broken.mark_stale();
     }
 }
 
@@ -88,9 +91,9 @@ impl Mirror for KyasarinEggVars {
         KyasarinEggVars {
             jobj: Var::new(cx.import_handle("JObjId", m.u32(at)).map(JObjId)),
             idx: i(at + 4),
-            x8: Var::new(Vec3::new(f(at + 8), f(at + 0xC), f(at + 0x10))),
-            x14: std::array::from_fn(|k| i(at + 0x14 + 4 * k as u32)),
-            x20: i(at + 0x20),
+            normal: Var::new(Vec3::new(f(at + 8), f(at + 0xC), f(at + 0x10))),
+            words: std::array::from_fn(|k| i(at + 0x14 + 4 * k as u32)),
+            broken: i(at + 0x20),
         }
     }
 
@@ -102,10 +105,10 @@ impl Mirror for KyasarinEggVars {
         }
         let ints: [(&str, &Var<i32>, u32); 5] = [
             ("idx", &self.idx, 4),
-            ("x14.x", &self.x14[0], 0x14),
-            ("x14.y", &self.x14[1], 0x18),
-            ("x14.z", &self.x14[2], 0x1C),
-            ("x20", &self.x20, 0x20),
+            ("x14.x", &self.words[0], 0x14),
+            ("x14.y", &self.words[1], 0x18),
+            ("x14.z", &self.words[2], 0x1C),
+            ("x20", &self.broken, 0x20),
         ];
         for (name, v, off) in ints {
             if v.live(&p(name), cx) && *v.peek() != m.u32(at + off) as i32 {
@@ -116,7 +119,7 @@ impl Mirror for KyasarinEggVars {
                 );
             }
         }
-        self.x8.compare(m, at + 8, &p("x8"), cx);
+        self.normal.compare(m, at + 8, &p("x8"), cx);
     }
 }
 
@@ -166,7 +169,7 @@ pub fn spawn(r: &mut Running, parent: Option<GObjId>, pos: Vec3, dir: f32) {
         return;
     }
     let Some(egg) =
-        super::super::zako::spawn(r, ItKind::KyasarinEgg.id(), Some(pos), None, None, true)
+        super::super::zako::spawn(r, ItKind::BirdoEgg.id(), Some(pos), None, None, true)
     else {
         return;
     };
@@ -176,7 +179,7 @@ pub fn spawn(r: &mut Running, parent: Option<GObjId>, pos: Vec3, dir: f32) {
     ip.x378_itemColl.set_facing_dir(facing);
     set_flag(&mut ip.xDD0_flag, 6, false);
     ip.xD40 = 0.0;
-    vars(r.game, egg).x20.set(0);
+    vars(r.game, egg).broken.set(0);
     let ip = item_mut(r.game, egg);
     super::super::anim::clear_overlay(ip);
     if !super::super::flag(ip.xDD0_flag, 7) {
@@ -262,12 +265,12 @@ pub fn break_empty(r: &mut Running, gobj: GObjId) {
     lib2725::blast_effect(r, gobj);
     hitbox::start_blink(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
     ip.x40_vel.x = 0.0;
     ip.x40_vel.y = 0.0;
-    vars(r.game, gobj).x20.set(1);
+    vars(r.game, gobj).broken.set(1);
     change_state(r, gobj, 4, change::ANIM_UPDATE);
 }
 
@@ -289,7 +292,7 @@ pub fn anim4(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_2725_Logic28_Reflected")]
 #[doc(alias = "it_802F022C")]
 pub fn broken(r: &mut Running, gobj: GObjId) -> bool {
-    if vars(r.game, gobj).x20.get() != 0 {
+    if vars(r.game, gobj).broken.get() != 0 {
         return false;
     }
     if item(r.game, gobj).msid != 3 {

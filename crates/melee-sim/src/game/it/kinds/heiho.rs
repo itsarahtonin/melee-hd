@@ -26,7 +26,8 @@ use crate::game::it::ItKind;
 
 pub const SPAWNED: u32 = 0x802D_8688;
 pub const DMG_RECEIVED: u32 = 0x802D_8EC8;
-pub const EVT_UNK: u32 = 0x802D_9A0C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_9A0C;
 pub const ANIM0: u32 = 0x802D_88CC;
 pub const PHYS0: u32 = 0x802D_88D4;
 pub const COLL0: u32 = 0x802D_8910;
@@ -92,23 +93,32 @@ pub struct HeihoVars {
     /// +0x4, `zako.idx`: its slot in the stage's enemy spawner, or -1.
     pub idx: Var<i32>,
     /// +0x8, `zako.x8`.
-    pub x8: Var<Vec3>,
+    #[doc(alias("x8"))]
+    pub normal: Var<Vec3>,
     /// +0x14, `zako.x14`.
-    pub x14: [Var<i32>; 3],
+    #[doc(alias("x14"))]
+    pub words: [Var<i32>; 3],
     /// +0x20: its place in the flight.
-    pub x20: Var<i8>,
+    #[doc(alias("x20"))]
+    pub flight_place: Var<i8>,
     /// +0x21: its speed's index in the attributes.
-    pub x21: Var<i8>,
+    #[doc(alias("x21"))]
+    pub speed_index: Var<i8>,
     /// +0x22: whether it has come inside the blast zones.
-    pub x22: Var<i8>,
+    #[doc(alias("x22"))]
+    pub inside_blast_zones: Var<i8>,
     /// +0x24: a countdown: the ticks before it starts, or those of a turn or a knockback.
-    pub x24: Var<i32>,
+    #[doc(alias("x24"))]
+    pub countdown: Var<i32>,
     /// +0x2C: past 960 it sinks and its animation stops; nothing in its own code counts it.
-    pub x2c: Var<i32>,
+    #[doc(alias("x2c"))]
+    pub sink_count: Var<i32>,
     /// +0x3C: the moving bone's last translation (`itUpdateVelocityFromBone`).
-    pub x3c: Var<Vec3>,
+    #[doc(alias("x3c"))]
+    pub last_bone_translation: Var<Vec3>,
     /// +0x54: the food it carries.
-    pub x54: Var<Option<GObjId>>,
+    #[doc(alias("x54"))]
+    pub food: Var<Option<GObjId>>,
 }
 
 impl HeihoVars {
@@ -116,17 +126,17 @@ impl HeihoVars {
     pub fn mark_stale(&mut self) {
         self.jobj.mark_stale();
         self.idx.mark_stale();
-        self.x8.mark_stale();
-        for v in &mut self.x14 {
+        self.normal.mark_stale();
+        for v in &mut self.words {
             v.mark_stale();
         }
-        self.x20.mark_stale();
-        self.x21.mark_stale();
-        self.x22.mark_stale();
-        self.x24.mark_stale();
-        self.x2c.mark_stale();
-        self.x3c.mark_stale();
-        self.x54.mark_stale();
+        self.flight_place.mark_stale();
+        self.speed_index.mark_stale();
+        self.inside_blast_zones.mark_stale();
+        self.countdown.mark_stale();
+        self.sink_count.mark_stale();
+        self.last_bone_translation.mark_stale();
+        self.food.mark_stale();
     }
 }
 
@@ -144,15 +154,15 @@ impl Mirror for HeihoVars {
         HeihoVars {
             jobj: Var::new(cx.import_handle("JObjId", m.u32(at)).map(JObjId)),
             idx: Var::new(m.u32(at + 4) as i32),
-            x8: Var::new(v3(at + 8)),
-            x14: std::array::from_fn(|i| Var::new(m.u32(at + 0x14 + 4 * i as u32) as i32)),
-            x20: Var::new(m.u8(at + 0x20) as i8),
-            x21: Var::new(m.u8(at + 0x21) as i8),
-            x22: Var::new(m.u8(at + 0x22) as i8),
-            x24: Var::new(m.u32(at + 0x24) as i32),
-            x2c: Var::new(m.u32(at + 0x2C) as i32),
-            x3c: Var::new(v3(at + 0x3C)),
-            x54: Var::new(cx.import_handle("GObjId", m.u32(at + 0x54)).map(GObjId)),
+            normal: Var::new(v3(at + 8)),
+            words: std::array::from_fn(|i| Var::new(m.u32(at + 0x14 + 4 * i as u32) as i32)),
+            flight_place: Var::new(m.u8(at + 0x20) as i8),
+            speed_index: Var::new(m.u8(at + 0x21) as i8),
+            inside_blast_zones: Var::new(m.u8(at + 0x22) as i8),
+            countdown: Var::new(m.u32(at + 0x24) as i32),
+            sink_count: Var::new(m.u32(at + 0x2C) as i32),
+            last_bone_translation: Var::new(v3(at + 0x3C)),
+            food: Var::new(cx.import_handle("GObjId", m.u32(at + 0x54)).map(GObjId)),
         }
     }
 
@@ -164,11 +174,11 @@ impl Mirror for HeihoVars {
         }
         let ints: [(&str, &Var<i32>, u32); 6] = [
             ("idx", &self.idx, 4),
-            ("x14.x", &self.x14[0], 0x14),
-            ("x14.y", &self.x14[1], 0x18),
-            ("x14.z", &self.x14[2], 0x1C),
-            ("x24", &self.x24, 0x24),
-            ("x2C", &self.x2c, 0x2C),
+            ("x14.x", &self.words[0], 0x14),
+            ("x14.y", &self.words[1], 0x18),
+            ("x14.z", &self.words[2], 0x1C),
+            ("x24", &self.countdown, 0x24),
+            ("x2C", &self.sink_count, 0x2C),
         ];
         for (name, v, off) in ints {
             if v.live(&p(name), cx) && *v.peek() != m.u32(at + off) as i32 {
@@ -180,9 +190,9 @@ impl Mirror for HeihoVars {
             }
         }
         let bytes: [(&str, &Var<i8>, u32); 3] = [
-            ("x20", &self.x20, 0x20),
-            ("x21", &self.x21, 0x21),
-            ("x22", &self.x22, 0x22),
+            ("x20", &self.flight_place, 0x20),
+            ("x21", &self.speed_index, 0x21),
+            ("x22", &self.inside_blast_zones, 0x22),
         ];
         for (name, v, off) in bytes {
             if v.live(&p(name), cx) && *v.peek() != m.u8(at + off) as i8 {
@@ -193,10 +203,11 @@ impl Mirror for HeihoVars {
                 );
             }
         }
-        self.x8.compare(m, at + 8, &p("x8"), cx);
-        self.x3c.compare(m, at + 0x3C, &p("x3C"), cx);
-        if self.x54.live(&p("x54"), cx) {
-            let ours = self.x54.peek().map(|g| g.0);
+        self.normal.compare(m, at + 8, &p("x8"), cx);
+        self.last_bone_translation
+            .compare(m, at + 0x3C, &p("x3C"), cx);
+        if self.food.live(&p("x54"), cx) {
+            let ours = self.food.peek().map(|g| g.0);
             cx.compare_handle(&p("x54"), "GObjId", ours, m.u32(at + 0x54));
         }
     }
@@ -235,12 +246,12 @@ fn face_model(game: &mut Game, gobj: GObjId) {
 /// and the ticks before it starts.
 #[doc(alias = "it_802D8618")]
 pub fn spawn(r: &mut Running, i: i32, pos: Vec3, speed: i32, delay: i32) {
-    let gobj = zako::spawn(r, ItKind::Heiho.id(), Some(pos), None, None, true)
+    let gobj = zako::spawn(r, ItKind::ShyGuy.id(), Some(pos), None, None, true)
         .expect("it_802D8618: no Shy Guy");
     let v = vars(r.game, gobj);
-    v.x20.set(i as i8);
-    v.x21.set(speed as i8);
-    v.x24.set(delay);
+    v.flight_place.set(i as i8);
+    v.speed_index.set(speed as i8);
+    v.countdown.set(delay);
     wait(r, gobj);
 }
 
@@ -254,7 +265,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     ip.xDCC_flag.b3 = false;
     let pos = ip.pos;
     let food = super::foods::spawn(r, None, pos);
-    vars(r.game, gobj).x54.set(food);
+    vars(r.game, gobj).food.set(food);
     if let Some(food) = food {
         super::foods::carried(r, food);
         let pos = item(r.game, gobj).pos;
@@ -262,8 +273,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
         super::foods::picked_up(r, food);
     }
     let v = vars(r.game, gobj);
-    v.x2c.set(0);
-    v.x22.set(0);
+    v.sink_count.set(0);
+    v.inside_blast_zones.set(0);
     let ip = item_mut(r.game, gobj);
     ip.pos.z = 2.0;
     maplib::enter_air(ip);
@@ -300,11 +311,11 @@ pub fn still(_: &mut Running, _: GObjId) -> bool {
 /// The wait's countdown, `itHeiho_UnkMotion0_Phys`: then it flies.
 #[doc(alias = "itHeiho_UnkMotion0_Phys")]
 pub fn phys0(r: &mut Running, gobj: GObjId) {
-    if vars(r.game, gobj).x24.get() == 0 {
+    if vars(r.game, gobj).countdown.get() == 0 {
         fly(r, gobj);
         return;
     }
-    vars(r.game, gobj).x24.update(|t| t.wrapping_sub(1));
+    vars(r.game, gobj).countdown.update(|t| t.wrapping_sub(1));
 }
 
 /// The moving bone's translation since last time becomes the velocity, and the bone stays put
@@ -320,12 +331,16 @@ pub fn follow_bone(r: &mut Running, gobj: GObjId) {
     let pos = r.game.objs.jobjs[j].translate;
     let facing = reg(item(r.game, gobj).facing_dir);
     let v = vars(r.game, gobj);
-    let prev = Vec3::new(v.x3c.x(), v.x3c.y(), v.x3c.z());
+    let prev = Vec3::new(
+        v.last_bone_translation.x(),
+        v.last_bone_translation.y(),
+        v.last_bone_translation.z(),
+    );
     let vx = mem(fp::fmuls(facing, fp::fsubs(reg(pos.z), reg(prev.z))));
     let vy = mem(fp::fsubs(reg(pos.y), reg(prev.y)));
     let vz = mem(fp::fsubs(reg(pos.x), reg(prev.x)));
     let v = vars(r.game, gobj);
-    v.x3c.set(pos);
+    v.last_bone_translation.set(pos);
     let ip = item_mut(r.game, gobj);
     ip.x40_vel = Vec3::new(vx, vy, vz);
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
@@ -336,13 +351,15 @@ pub fn follow_bone(r: &mut Running, gobj: GObjId) {
 /// Forgets the moving bone's last translation, `it_802D98AC`.
 #[doc(alias = "it_802D98AC")]
 pub fn reset_bone(game: &mut Game, gobj: GObjId) {
-    vars(game, gobj).x3c.set(Vec3::new(0.0, 0.0, 0.0));
+    vars(game, gobj)
+        .last_bone_translation
+        .set(Vec3::new(0.0, 0.0, 0.0));
 }
 
 /// Enters a moving state `msid` (1 flying, 4 walking on after a hit): the countdown over, the
 /// bone followed, and the food carried along (the inline in `itHeiho_UnkMotion1_Anim`).
 fn enter_moving(r: &mut Running, gobj: GObjId, msid: i32) {
-    vars(r.game, gobj).x24.set(0);
+    vars(r.game, gobj).countdown.set(0);
     change_state(r, gobj, msid, change::ANIM_UPDATE);
     follow_bone(r, gobj);
     item_mut(r.game, gobj).on_accessory = Some(CodeRef(CARRY));
@@ -351,7 +368,7 @@ fn enter_moving(r: &mut Running, gobj: GObjId, msid: i32) {
 /// Flies, `it_802D8918`.
 #[doc(alias = "it_802D8918")]
 pub fn fly(r: &mut Running, gobj: GObjId) {
-    vars(r.game, gobj).x24.set(0);
+    vars(r.game, gobj).countdown.set(0);
     reset_bone(r.game, gobj);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     follow_bone(r, gobj);
@@ -362,7 +379,7 @@ pub fn fly(r: &mut Running, gobj: GObjId) {
 fn stop_when_sinking(r: &mut Running, gobj: GObjId) -> Option<JObjId> {
     let j = jobj_of(r.game, gobj);
     let child = j.and_then(|j| r.game.objs.jobjs[j].child);
-    if vars(r.game, gobj).x2c.get() > 0x3C0 {
+    if vars(r.game, gobj).sink_count.get() > 0x3C0 {
         let a = child.and_then(|c| r.game.objs.jobjs[c].aobj);
         aobj::set_flags(&mut r.game.objs.aobjs, a, AOBJ_NO_ANIM);
     }
@@ -383,7 +400,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Sinks once `x2c` is past 960: the vertical velocity grows by a 25th of the horizontal speed.
 fn sink(r: &mut Running, gobj: GObjId) {
-    if vars(r.game, gobj).x2c.get() > 960 {
+    if vars(r.game, gobj).sink_count.get() > 960 {
         let ip = item_mut(r.game, gobj);
         let vx = reg(ip.x40_vel.x);
         let abs = if vx < fp::frsp(0.0) { fp::fneg(vx) } else { vx };
@@ -394,12 +411,12 @@ fn sink(r: &mut Running, gobj: GObjId) {
 /// Turns the model while a turn's countdown runs, else faces it, (the end of
 /// `itHeiho_UnkMotion1_Phys` and `itHeiho_UnkMotion4_Phys`).
 fn turn(r: &mut Running, gobj: GObjId) {
-    if vars(r.game, gobj).x24.get() != 0 {
+    if vars(r.game, gobj).countdown.get() != 0 {
         let j = jobj_of(r.game, gobj).expect("a Shy Guy without a model");
         jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
             o.rotate.y = mem(fp::fadds(reg(o.rotate.y), reg(0.157_079_64)))
         });
-        vars(r.game, gobj).x24.update(|t| t.wrapping_sub(1));
+        vars(r.game, gobj).countdown.update(|t| t.wrapping_sub(1));
         return;
     }
     face_model(r.game, gobj);
@@ -409,7 +426,7 @@ fn turn(r: &mut Running, gobj: GObjId) {
 /// zones, and the turn.
 #[doc(alias = "itHeiho_UnkMotion1_Phys")]
 pub fn phys1(r: &mut Running, gobj: GObjId) {
-    let speed = i32::from(vars(r.game, gobj).x21.get()) + 1;
+    let speed = i32::from(vars(r.game, gobj).speed_index.get()) + 1;
     let s = attr_f32(r, gobj, speed);
     let ip = item_mut(r.game, gobj);
     ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), reg(s)));
@@ -422,13 +439,13 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
 /// leaving the floor flies again (or walks again).
 fn coll_moving(r: &mut Running, gobj: GObjId, on_leave: fn(&mut Running, GObjId)) {
     let left = super::super::ground::air_probe(r, gobj);
-    if vars(r.game, gobj).x24.get() == 0 && maplib::touched_wall(r.game, gobj) != 0 {
-        let speed = i32::from(vars(r.game, gobj).x21.get()) + 1;
+    if vars(r.game, gobj).countdown.get() == 0 && maplib::touched_wall(r.game, gobj) != 0 {
+        let speed = i32::from(vars(r.game, gobj).speed_index.get()) + 1;
         let s = attr_f32(r, gobj, speed);
         let ip = item_mut(r.game, gobj);
         ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
         ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), reg(s)));
-        vars(r.game, gobj).x24.set(20);
+        vars(r.game, gobj).countdown.set(20);
     } else if left {
         on_leave(r, gobj);
     }
@@ -462,8 +479,8 @@ pub fn phys3(r: &mut Running, gobj: GObjId) {
     let accel = a.f32(r.data, super::super::data::attr::FALL_SPEED);
     let ip = item_mut(r.game, gobj);
     ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), reg(accel)));
-    if vars(r.game, gobj).x24.get() != 0 {
-        vars(r.game, gobj).x24.update(|t| t.wrapping_sub(1));
+    if vars(r.game, gobj).countdown.get() != 0 {
+        vars(r.game, gobj).countdown.update(|t| t.wrapping_sub(1));
         return;
     }
     walk_on(r, gobj);
@@ -480,10 +497,10 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
 /// spinning away (and counted as an enemy KO), else knocked back for 12 ticks.
 #[doc(alias = "it_802D8EC8")]
 pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
-    if let Some(food) = vars(r.game, gobj).x54.get() {
+    if let Some(food) = vars(r.game, gobj).food.get() {
         super::foods::let_fall(r, food);
         super::foods::fell(r, food);
-        vars(r.game, gobj).x54.set(None);
+        vars(r.game, gobj).food.set(None);
     }
     item_mut(r.game, gobj).xDCC_flag.b3 = true;
     let a = article(item(r.game, gobj))
@@ -511,7 +528,7 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
         if along {
             maplib::enter_air(item_mut(r.game, gobj));
         }
-        vars(r.game, gobj).x24.set(12);
+        vars(r.game, gobj).countdown.set(12);
         reset_bone(r.game, gobj);
         change_state(r, gobj, 3, change::ANIM_UPDATE);
     }
@@ -522,18 +539,18 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
 /// it faces the wrong way.
 #[doc(alias = "it_802D9168")]
 pub fn walk_on(r: &mut Running, gobj: GObjId) {
-    vars(r.game, gobj).x24.set(0);
+    vars(r.game, gobj).countdown.set(0);
     let center = crate::game::gr::stage::cam_center(r.game);
     let j = jobj_of(r.game, gobj).expect("a Shy Guy without a model");
     let x = reg(item(r.game, gobj).pos.x);
     if x < reg(center.x) {
         if reg(r.game.objs.jobjs[j].rotate.y) == 0.0 {
-            vars(r.game, gobj).x24.set(20);
+            vars(r.game, gobj).countdown.set(20);
         }
         item_mut(r.game, gobj).facing_dir = -1.0;
     } else if x > reg(center.x) {
         if reg(r.game.objs.jobjs[j].rotate.y) != 0.0 {
-            vars(r.game, gobj).x24.set(20);
+            vars(r.game, gobj).countdown.set(20);
         }
         item_mut(r.game, gobj).facing_dir = 1.0;
     }
@@ -553,7 +570,7 @@ pub fn anim4(r: &mut Running, gobj: GObjId) -> bool {
     }
     let child = stop_when_sinking(r, gobj);
     let a = child.and_then(|c| r.game.objs.jobjs[c].aobj);
-    if vars(r.game, gobj).x2c.get() > 0x3C0 {
+    if vars(r.game, gobj).sink_count.get() > 0x3C0 {
         aobj::set_flags(&mut r.game.objs.aobjs, a, AOBJ_NO_ANIM);
     } else {
         aobj::set_rate(&mut r.game.objs.aobjs, a, 2.0);
@@ -571,7 +588,7 @@ pub fn anim4(r: &mut Running, gobj: GObjId) -> bool {
 /// and the turn.
 #[doc(alias = "itHeiho_UnkMotion4_Phys")]
 pub fn phys4(r: &mut Running, gobj: GObjId) {
-    let speed = i32::from(vars(r.game, gobj).x21.get()) + 1;
+    let speed = i32::from(vars(r.game, gobj).speed_index.get()) + 1;
     let s = attr_f32(r, gobj, speed);
     let ip = item_mut(r.game, gobj);
     ip.x40_vel.x = mem(fp::fmuls(1.5, fp::fmuls(reg(ip.facing_dir), reg(s))));
@@ -589,7 +606,7 @@ pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
 /// Carries the food along, `it_802D96B0`.
 #[doc(alias = "it_802D96B0")]
 pub fn carry(r: &mut Running, gobj: GObjId) {
-    if let Some(food) = vars(r.game, gobj).x54.get() {
+    if let Some(food) = vars(r.game, gobj).food.get() {
         let ip = item(r.game, gobj);
         let (mut pos, dir) = (ip.pos, ip.facing_dir);
         pos.z = mem(fp::fmuls(-2.0, reg(dir)));
@@ -604,11 +621,11 @@ pub fn blast_zones(r: &mut Running, gobj: GObjId) {
     use crate::game::gr::stage;
     let x = reg(item(r.game, gobj).pos.x);
     let y = reg(item(r.game, gobj).pos.y);
-    let leave = if vars(r.game, gobj).x22.get() == 0 {
+    let leave = if vars(r.game, gobj).inside_blast_zones.get() == 0 {
         if x > fp::fadds(20.0, reg(stage::blast_left(r.game)))
             && x < fp::fsubs(reg(stage::blast_right(r.game)), 20.0)
         {
-            vars(r.game, gobj).x22.set(1);
+            vars(r.game, gobj).inside_blast_zones.set(1);
         }
         false
     } else {
@@ -619,9 +636,9 @@ pub fn blast_zones(r: &mut Running, gobj: GObjId) {
     };
     if leave {
         item_mut(r.game, gobj).xDCC_flag.b3 = true;
-        if let Some(food) = vars(r.game, gobj).x54.get() {
+        if let Some(food) = vars(r.game, gobj).food.get() {
             super::foods::gone(r, food);
-            vars(r.game, gobj).x54.set(None);
+            vars(r.game, gobj).food.set(None);
         }
     }
 }

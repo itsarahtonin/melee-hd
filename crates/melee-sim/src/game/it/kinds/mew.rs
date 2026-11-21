@@ -13,7 +13,8 @@ use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 
 pub const SPAWNED: u32 = 0x802D_3B18;
-pub const EVT_UNK: u32 = 0x802D_3B6C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_3B6C;
 pub const OUT_LANDED: u32 = 0x802D_3B8C;
 pub const ANIM1: u32 = 0x802D_3C50;
 pub const PHYS1: u32 = 0x802D_3C90;
@@ -68,7 +69,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 
 /// Forgets a GObj going away, `it_802D3B6C` (`it_8026B894`).
 #[doc(alias = "it_802D3B6C")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

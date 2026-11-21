@@ -180,7 +180,7 @@ pub const MODULES: &[&str] = &[
     "it/draw",
     "it/drop",
     "it/effect",
-    "it/evt_unk",
+    "it/forget",
     "it/ground",
     "it/hitbox",
     "it/item",
@@ -223,6 +223,7 @@ pub const MODULES: &[&str] = &[
     "it/kinds/gamewatchparachute",
     "it/kinds/gamewatchrescue",
     "it/kinds/gamewatchturtle",
+    "it/kinds/goomba",
     "it/kinds/greatfoxlaser",
     "it/kinds/gshell",
     "it/kinds/hammer",
@@ -249,11 +250,10 @@ pub const MODULES: &[&str] = &[
     "it/kinds/kusudama",
     "it/kinds/kyasarin",
     "it/kinds/kyasarinegg",
-    "it/kinds/leadead",
     "it/kinds/lgun",
     "it/kinds/lgunbeam",
     "it/kinds/lgunray",
-    "it/kinds/likelike",
+    "it/kinds/like_like",
     "it/kinds/linkarrow",
     "it/kinds/linkbomb",
     "it/kinds/linkboomerang",
@@ -290,11 +290,11 @@ pub const MODULES: &[&str] = &[
     "it/kinds/nesspkthunder",
     "it/kinds/nesspkthundertrail",
     "it/kinds/nessyoyo",
-    "it/kinds/octarock",
     "it/kinds/octarockstone",
     "it/kinds/nokonoko",
-    "it/kinds/oldkuri",
-    "it/kinds/oldottosea",
+    "it/kinds/octorok",
+    "it/kinds/polar_bear",
+    "it/kinds/redead",
     "it/kinds/parasol",
     "it/kinds/patapata",
     "it/kinds/peachexplode",
@@ -336,11 +336,11 @@ pub const MODULES: &[&str] = &[
     "it/kinds/togepy",
     "it/kinds/tomato",
     "it/kinds/tools",
+    "it/kinds/topi",
     "it/kinds/tosakinto",
     "it/kinds/trophycoin",
     "it/kinds/unknown",
     "it/kinds/whispyapple",
-    "it/kinds/whitebea",
     "it/kinds/wstar",
     "it/kinds/yaku",
     "it/kinds/yoshiegglay",
@@ -434,7 +434,7 @@ pub const MISSING: &[ItemGap] = &[ItemGap {
     // from before it the image doesn't know.
     what: "a dropped fan whose block held the GPU's pixels of a copy not known nonzero",
     covers: &["a dropped fan's landing reading its unset xD4C over the GPU's pixels"],
-    kinds: &[ItKind::Harisen.id()],
+    kinds: &[ItKind::Fan.id()],
     with: &[],
     stages: &[],
 }];
@@ -538,9 +538,9 @@ mod tests {
     #[test]
     fn items_gaps_follow_the_match() {
         assert!(missing_with(&[], &[2, 9], 31).is_empty());
-        let balls = missing_with(&[ItKind::MBall.id()], &[2, 9], 31);
+        let balls = missing_with(&[ItKind::PokeBall.id()], &[2, 9], 31);
         assert!(
-            (balls.iter()).all(|g| g.kinds.is_empty() || g.kinds.contains(&ItKind::MBall.id())),
+            (balls.iter()).all(|g| g.kinds.is_empty() || g.kinds.contains(&ItKind::PokeBall.id())),
             "a Poké Ball match reaches only its own gaps and every match's"
         );
         // The Ice Climbers' Nana reaches nothing unported with items.
@@ -568,10 +568,10 @@ mod tests {
     fn the_switch_brings_its_containers() {
         assert_eq!(
             unswitched_kinds(),
-            [ItKind::Capsule, ItKind::Box, ItKind::Taru, ItKind::Egg].map(ItKind::id)
+            [ItKind::Capsule, ItKind::Crate, ItKind::Barrel, ItKind::Egg].map(ItKind::id)
         );
         assert!(missing_with_switch(&[], &[2, 9], 31).is_empty());
-        for kind in [ItKind::BombHei.id(), ItKind::MBall.id()] {
+        for kind in [ItKind::BobOmb.id(), ItKind::PokeBall.id()] {
             let gaps = missing_with_switch(&[kind], &[2, 9], 31);
             for g in MISSING {
                 let reached = (g.kinds.is_empty()

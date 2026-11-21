@@ -97,14 +97,15 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct WhispyAppleVars {
     pub heal: Var<i32>,
-    pub xdd8: Var<i32>,
+    #[doc(alias("xdd8"))]
+    pub bursts: Var<i32>,
 }
 
 impl WhispyAppleVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
         self.heal.mark_stale();
-        self.xdd8.mark_stale();
+        self.bursts.mark_stale();
     }
 }
 
@@ -114,12 +115,12 @@ impl Mirror for WhispyAppleVars {
     fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
         WhispyAppleVars {
             heal: Var::new(m.u32(at) as i32),
-            xdd8: Var::new(m.u32(at + 4) as i32),
+            bursts: Var::new(m.u32(at + 4) as i32),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        for (name, v, off) in [("xDD4_heal", &self.heal, 0), ("xDD8", &self.xdd8, 4)] {
+        for (name, v, off) in [("xDD4_heal", &self.heal, 0), ("xDD8", &self.bursts, 4)] {
             let p = format!("{path}.{name}");
             if v.live(&p, cx) && *v.peek() != m.u32(at + off) as i32 {
                 cx.mismatch(
@@ -139,7 +140,7 @@ fn vars<'r>(r: &'r mut Running, gobj: GObjId) -> &'r mut WhispyAppleVars {
 /// Whether the apple bursts where it lands (`xDD8`, 1), which also keeps it from being picked
 /// up.
 fn bursts(r: &mut Running, gobj: GObjId) -> bool {
-    vars(r, gobj).xdd8.get() == 1
+    vars(r, gobj).bursts.get() == 1
 }
 
 /// An apple from Whispy at `pos`, `it_802EE200`: facing either way at random; a healing one
@@ -186,9 +187,9 @@ pub fn spawn(
     lib2725::count_spawned(r.game);
     start(r, gobj);
     if rand < fp::fadds(reg(keep), heal) {
-        vars(r, gobj).xdd8.set(0);
+        vars(r, gobj).bursts.set(0);
     } else {
-        vars(r, gobj).xdd8.set(1);
+        vars(r, gobj).bursts.set(1);
         lib26b1::disable_pickup(r.game, gobj);
     }
     lib2725::first_frame(r, gobj);
@@ -412,7 +413,7 @@ pub fn burst(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::set_lifetime(r.game, r.data, gobj, 20.0);
     lib26b1::stop_keeping_clear(r.game, gobj);
     let ip = item_mut(r.game, gobj);

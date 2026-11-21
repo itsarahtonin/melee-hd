@@ -25,7 +25,8 @@ pub const HIT_SHIELD: u32 = 0x802C_8940;
 pub const ABSORBED: u32 = 0x802C_899C;
 pub const SHIELD_BOUNCED: u32 = 0x802C_8A08;
 pub const REFLECTED: u32 = 0x802C_8A28;
-pub const EVT_UNK: u32 = 0x802C_8B08;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_8B08;
 
 /// `itGamewatchchefAttributes`: the wall's bounce (`x4`), the lifetime thrown (`x8`) and
 /// stopped (`xC`), then an entry of five floats per sausage from `x10`: its speed ahead and
@@ -76,7 +77,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 
 /// A float of the sausage's entry.
 fn entry_f32(r: &mut Running, gobj: GObjId, off: u32) -> f32 {
-    let i = gamewatch::vars(r, gobj).x4.get();
+    let i = gamewatch::vars(r, gobj).sausage.get();
     attr_f32(r, gobj, attr::ENTRIES + attr::ENTRY_SIZE * i as u32 + off)
 }
 
@@ -125,7 +126,7 @@ pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
 /// pickup, and its first state.
 #[doc(alias = "it_802C84A0")]
 pub fn throw(r: &mut Running, gobj: GObjId, index: i32) {
-    gamewatch::vars(r, gobj).x4.set(index);
+    gamewatch::vars(r, gobj).sausage.set(index);
     let life = attr_f32(r, gobj, attr::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
     item_mut(r.game, gobj).xD5C = 0;
@@ -259,6 +260,7 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `itGameWatchChef_Logic112_EvtUnk`.
 // Ports `itGameWatchChef_Logic112_EvtUnk`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

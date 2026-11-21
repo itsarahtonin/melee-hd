@@ -32,7 +32,8 @@ pub const HIT_SHIELD: u32 = 0x8029_BA68;
 pub const ABSORBED: u32 = 0x8029_BA70;
 #[doc(alias = "itMarioFireball_Logic87_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x8029_BA78;
-pub const EVT_UNK: u32 = 0x8029_BA98;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x8029_BA98;
 
 /// `itUnkAttributes`: the speed, the angle, the lifetime and the slowest speed a bounce keeps
 /// it.
@@ -144,7 +145,7 @@ fn collide(r: &mut Running, gobj: GObjId) -> bool {
     if reg(crate::math::sqrt_accurate(mem(sq))) < reg(min) {
         return true;
     }
-    if item(r.game, gobj).kind == ItKind::MarioFire {
+    if item(r.game, gobj).kind == ItKind::MarioFireball {
         play_sfx(r, gobj, BOUNCE_SFX, 0x7F, 0x40);
         queue(r, gobj, SpawnKind::Pos, 0x47B, j, &[]);
     } else {

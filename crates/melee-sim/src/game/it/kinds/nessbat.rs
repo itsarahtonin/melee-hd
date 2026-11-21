@@ -23,7 +23,8 @@ pub const COLL_1: u32 = 0x802A_D9F4;
 pub const PHYS_0: u32 = 0x802A_D8D0;
 #[doc(alias = "itNessbat_UnkMotion0_Coll")]
 pub const COLL_0: u32 = 0x802A_D8D4;
-pub const EVT_UNK: u32 = 0x802A_D9FC;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_D9FC;
 
 /// `JOBJ_HIDDEN`.
 const HIDDEN: u32 = 1 << 4;

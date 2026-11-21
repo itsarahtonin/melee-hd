@@ -11,10 +11,10 @@
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use gekko_fp as fp;
-use melee_data::archive::DataRef;
 
-use super::super::item::{article, attr_of, change, change_state, play_sfx};
-use super::super::{data, ground, hitbox, item, item_mut, lib26b1, lib2725, maplib, owner, zako};
+use super::super::item::{change, change_state, play_sfx};
+use super::super::zako::{self, GA_AIR, Knock, QUAKE_SMALL, attr};
+use super::super::{ground, hitbox, item, item_mut, lib26b1, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
 use crate::game::camera;
 use crate::game::handles::CodeRef;
@@ -66,10 +66,9 @@ pub const ANIM11: u32 = 0x802D_8408;
 pub const PHYS11: u32 = 0x802D_8450;
 pub const COLL11: u32 = 0x802D_846C;
 
-/// Its variables' offsets in the union (`itOldkuri_ItemVars`).
+/// Its variables' offsets in the union (`itOldkuri_ItemVars`; its `xDEC` is the common `x14.y`,
+/// [`zako::BOUNCES`]).
 pub mod off {
-    /// `xDEC`, the common `x14.y`, cleared as it's flung away.
-    pub const XDEC: usize = 0x18;
     /// `xDF4`: its walking velocity.
     pub const SPEED: usize = 0x20;
     /// `xDF8`: the frames it stands.
@@ -78,45 +77,39 @@ pub mod off {
     pub const TURN: usize = 0x28;
 }
 
-/// Its special attributes (`itOldkuriAttributes`), `off` bytes in.
-fn attr(r: &Running, gobj: GObjId, off: u32) -> DataRef {
-    article(item(r.game, gobj))
-        .special(r.data)
-        .expect("a Goomba without attributes")
-        .at(off)
-}
-
-/// `attr->x0`: its health (`[0]`, an integer) and walking speed (`[1]`).
-fn health(r: &Running, gobj: GObjId) -> i32 {
-    let p = r.data.ptr(attr(r, gobj, 0)).expect("a Goomba's health");
-    r.data.u32(p) as i32
-}
-
-fn walk_speed(r: &Running, gobj: GObjId) -> f32 {
-    let p = r.data.ptr(attr(r, gobj, 0)).expect("a Goomba's speed");
-    r.data.f32(p.at(4))
-}
-
 fn get(r: &mut Running, gobj: GObjId, off: usize) -> i32 {
-    zako::bytes(r.game, gobj).i32(off)
+    zako::var(r.game, gobj, off)
 }
 
 fn set(r: &mut Running, gobj: GObjId, off: usize, v: i32) {
-    zako::bytes(r.game, gobj).set_i32(off, v);
+    zako::set_var(r.game, gobj, off, v);
 }
 
-/// `GA_Air`.
-const GA_AIR: i32 = 1;
-/// `QuakeKind_Small`.
-const QUAKE_SMALL: i32 = 2;
+/// The Goomba's settings for the enemies' shared code (its attributes are
+/// `itOldkuriAttributes`, through [`zako::attr`]; the Old Goomba's are its own, through the
+/// same code).
+pub const GOOMBA: zako::Enemy = zako::Enemy {
+    thrown: 6,
+    flung: (0xA, change::ANIM_UPDATE),
+    to_screen: (0xB, change::ANIM_UPDATE),
+    on_hit: None,
+    keeps_facing: false,
+    on_beaten: None,
+    stompable: true,
+    clears_hits: true,
+    knocked: knocked_back,
+    flung_keeps_facing: false,
+    flung_upright: true,
+    flung_checks_blast_zones: false,
+};
 
 /// Runs one of the Goomba's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        DMG_RECEIVED => damaged(r, gobj),
+        DMG_RECEIVED => zako::damaged(r, gobj, &GOOMBA),
         STOMPED => stomped(r, gobj),
-        ANIM0 => answers_false(r, gobj),
+        ANIM0 => zako::answers_false(r, gobj),
         COLL0 => coll0(r, gobj),
         ANIM1 => anim1(r, gobj),
         COLL1 => coll1(r, gobj),
@@ -126,17 +119,17 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         COLL3 | COLL4 => coll_falling(r, gobj),
         ANIM4 => anim4(r, gobj),
         ANIM5 => anim5(r, gobj),
-        ANIM6 => anim6(r, gobj),
-        COLL6 => coll6(r, gobj),
-        ANIM9 => anim9(r, gobj),
-        COLL9 => coll9(r, gobj),
+        ANIM6 => zako::looped(r, gobj, 6, change::ANIM_UPDATE),
+        COLL6 => zako::flight_lands(r, gobj, None),
+        ANIM9 => zako::knocked_anim(r, gobj, 9, stand),
+        COLL9 => zako::knocked_coll(r, gobj, stand, fall),
         ANIM7 => anim7(r, gobj),
-        COLL7 | COLL11 => coll_still(r, gobj),
+        COLL7 | COLL11 => zako::answers_false(r, gobj),
         ANIM8 => anim8(r, gobj),
         COLL8 => coll8(r, gobj),
-        ANIM10 => anim10(r, gobj),
-        COLL10 => coll10(r, gobj),
-        ANIM11 => anim11(r, gobj),
+        ANIM10 => zako::looped(r, gobj, 0xA, change::ANIM_UPDATE),
+        COLL10 => zako::bounce(r, gobj),
+        ANIM11 => zako::looped(r, gobj, 0xB, change::ANIM_UPDATE),
         _ => return None,
     })
 }
@@ -154,10 +147,10 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         PHYS0 => phys0(r, gobj),
         PHYS1 => phys1(r, gobj),
         PHYS2 => phys2(r, gobj),
-        PHYS3 | PHYS4 | PHYS6 | PHYS8 => phys_fall(r, gobj),
-        PHYS5 | PHYS7 | PHYS10 => still(r, gobj),
-        PHYS9 => phys9(r, gobj),
-        PHYS11 => phys_gravity(r, gobj),
+        PHYS3 | PHYS4 | PHYS6 | PHYS8 => zako::fall_physics(r, gobj),
+        PHYS5 | PHYS7 | PHYS10 => zako::still(r, gobj),
+        PHYS9 => zako::knocked_physics(r, gobj),
+        PHYS11 => zako::flight_physics(r, gobj),
         _ => return false,
     }
     true
@@ -170,12 +163,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::reset(r.game, gobj);
     let pos = item(r.game, gobj).pos;
     let facing = owner::facing_for(r.game, r.data, pos);
-    let ip = item_mut(r.game, gobj);
-    ip.facing_dir = facing;
-    ip.xD5C = 0;
-    ip.xDC8_word.flags.x15 = false;
-    hitbox::clear_dcd_b7(r.game, gobj);
-    zako::set_dd0_b4(r.game, gobj);
+    item_mut(r.game, gobj).facing_dir = facing;
+    zako::init_collision(r.game, gobj);
     lib2725::stop_spin(r.game, r.data, gobj);
     set(r, gobj, off::TIMER, 0);
     zako::bytes(r.game, gobj).set_f32(off::SPEED, 0.0);
@@ -190,18 +179,6 @@ pub fn stand(r: &mut Running, gobj: GObjId) {
     hitbox::end_blink(r.game, gobj);
     enter(r, gobj, 0, change::ANIM_UPDATE);
 }
-
-/// The states' animation that answers false, `itOldkuri_UnkMotion0_Anim`.
-#[doc(alias = "itOldkuri_UnkMotion0_Anim")]
-pub fn answers_false(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states' physics that do nothing (`itOldkuri_UnkMotion5_Phys` and its like).
-#[doc(alias = "itOldkuri_UnkMotion5_Phys")]
-#[doc(alias = "itOldkuri_UnkMotion7_Phys")]
-#[doc(alias = "itOldkuri_UnkMotion10_Phys")]
-pub fn still(_: &mut Running, _: GObjId) {}
 
 /// Standing's physics, `itOldkuri_UnkMotion0_Phys`: its timer done, it walks the way it faces;
 /// its model turned to the floor.
@@ -229,13 +206,8 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Its walk's speed the way it faces (`xDF4`), stopped otherwise.
 fn start_walk(r: &mut Running, gobj: GObjId) {
-    let speed = reg(walk_speed(r, gobj));
-    let v = mem(fp::fmuls(reg(item(r.game, gobj).facing_dir), speed));
+    let v = zako::walk_velocity(r, gobj);
     zako::bytes(r.game, gobj).set_f32(off::SPEED, v);
-    let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = v;
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
 }
 
 /// Walks left, `it_802D758C` (and its inline copies): its speed from its facing, facing left,
@@ -267,7 +239,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 /// turn, it walks right; along the floor.
 #[doc(alias = "itOldkuri_UnkMotion1_Phys")]
 pub fn phys1(r: &mut Running, gobj: GObjId) {
-    if get(r, gobj, off::TURN) != 0 && lib2725::xdc0_has(r.game, gobj, 2) {
+    if get(r, gobj, off::TURN) != 0 && lib2725::script_flags_have(r.game, gobj, 2) {
         walk_right(r, gobj);
     }
     along_floor(r, gobj);
@@ -275,9 +247,7 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
 
 /// Along the floor, its model turned to it.
 fn along_floor(r: &mut Running, gobj: GObjId) {
-    let ip = item_mut(r.game, gobj);
-    let (normal, facing) = (ip.x378_itemColl.floor.normal, ip.facing_dir);
-    zako::along_surface(&mut ip.x40_vel, normal, facing);
+    zako::along_floor(r.game, gobj);
     zako::align_floor(r, gobj, 0.0, 5.0);
 }
 
@@ -320,7 +290,7 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
 /// it walks left; its walking speed again, along the floor.
 #[doc(alias = "itOldkuri_UnkMotion2_Phys")]
 pub fn phys2(r: &mut Running, gobj: GObjId) {
-    if get(r, gobj, off::TURN) != 0 && lib2725::xdc0_has(r.game, gobj, 2) {
+    if get(r, gobj, off::TURN) != 0 && lib2725::script_flags_have(r.game, gobj, 2) {
         walk_left(r, gobj);
     }
     let v = zako::bytes(r.game, gobj).f32(off::SPEED);
@@ -346,18 +316,6 @@ pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
         enter(r, gobj, 3, change::ANIM_UPDATE | change::HIT_PRESERVE);
     }
     false
-}
-
-/// The falling states' physics (`itOldkuri_UnkMotion3_Phys` and its like): gravity.
-#[doc(alias = "itOldkuri_UnkMotion3_Phys")]
-#[doc(alias = "itOldkuri_UnkMotion4_Phys")]
-#[doc(alias = "itOldkuri_UnkMotion6_Phys")]
-#[doc(alias = "itOldkuri_UnkMotion8_Phys")]
-pub fn phys_fall(r: &mut Running, gobj: GObjId) {
-    let a = attr_of(item(r.game, gobj));
-    let accel = a.f32(r.data, data::attr::FALL_SPEED);
-    let max = a.f32(r.data, data::attr::FALL_SPEED_MAX);
-    lib2725::fall(r.game, gobj, accel, max);
 }
 
 /// Falling's collision (`itOldkuri_UnkMotion3_Coll`, `_4_Coll`): its standing frames from
@@ -425,99 +383,13 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
     zako::face(r, gobj, 0.0);
 }
 
-/// Thrown's animation, `itOldkuri_UnkMotion6_Anim`: looped.
-#[doc(alias = "itOldkuri_UnkMotion6_Anim")]
-pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
-    if !lib2725::is_animating(r.game, gobj) {
-        change_state(r, gobj, 6, change::ANIM_UPDATE);
-    }
-    false
-}
-
-/// Thrown's collision, `itOldkuri_UnkMotion6_Coll`: touching the stage ends the flight as a KO.
-#[doc(alias = "itOldkuri_UnkMotion6_Coll")]
-pub fn coll6(r: &mut Running, gobj: GObjId) -> bool {
-    zako::flight_lands(r, gobj, None)
-}
-
-/// Knocked back's animation, `itOldkuri_UnkMotion9_Anim`: when it ends, in the air again, on
-/// the ground it stands (settled, turned to the floor, no blink).
-#[doc(alias = "itOldkuri_UnkMotion9_Anim")]
-pub fn anim9(r: &mut Running, gobj: GObjId) -> bool {
-    if !lib2725::is_animating(r.game, gobj) {
-        if item(r.game, gobj).ground_or_air == GA_AIR {
-            change_state(r, gobj, 9, change::ANIM_UPDATE);
-        } else {
-            stand(r, gobj);
-        }
-    }
-    false
-}
-
-/// Knocked back's physics, `itOldkuri_UnkMotion9_Phys`: in the air its fall speed off the
-/// vertical velocity.
-#[doc(alias = "itOldkuri_UnkMotion9_Phys")]
-pub fn phys9(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
-        phys_gravity(r, gobj);
-    }
-}
-
-/// Knocked back's collision, `itOldkuri_UnkMotion9_Coll`: in the air it lands and stands, on
-/// the ground off the floor it falls.
-#[doc(alias = "itOldkuri_UnkMotion9_Coll")]
-pub fn coll9(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
-        ground::fall_to_floor(r, gobj, stand);
-    } else {
-        ground::ground_or_fall(r, gobj, fall);
-    }
-    zako::answers_false(r, gobj)
-}
-
-/// Takes a hit, `it_2725_Logic0_DmgReceived`: the hit's element adds to the damage; past its
-/// health (or hit while thrown, 6), a hurt sound, no stomping, blinking, its hit records
-/// cleared, an enemy KO, a small quake, and flung away (toward the screen at random); else
-/// knocked back along the hit (up at least a little if off the floor), state 9.
-#[doc(alias = "it_2725_Logic0_DmgReceived")]
-pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
-    let extra = reg(zako::element_damage(r, gobj));
-    let ip = item_mut(r.game, gobj);
-    ip.xC9C = fp::fctiwz(fp::fadds(fp::frsp(f64::from(ip.xC9C)), extra));
-    let (damage, msid) = (ip.xC9C, ip.msid);
-    if damage > health(r, gobj) || msid == 6 {
-        zako::hurt_sound(r, gobj);
-        lib2725::clear_stomp(r.game, gobj);
-        hitbox::start_blink(r.game, gobj);
-        hitbox::clear_hit_ids(r.game, gobj);
-        zako::ko(r, gobj);
-        let pos = item(r.game, gobj).pos;
-        camera::request_quake(r, QUAKE_SMALL, Some(pos));
-        let f = reg(r.game.objs.rng.draw_f32());
-        let z = r.game.it.zako.expect("no enemies' common data");
-        if f < reg(r.data.f32(z.at(8))) {
-            fling_to_screen(r, gobj);
-        } else {
-            fling(r, gobj);
-        }
-    } else {
-        let mut v = item(r.game, gobj).x40_vel;
-        let up = zako::knockback_vel(r, gobj, &mut v);
-        let ip = item_mut(r.game, gobj);
-        ip.x40_vel = v;
-        if up {
-            // A double 0.2 in the comparison, as the C writes it.
-            if reg(ip.x40_vel.y) <= 0.2 {
-                ip.x40_vel.y = 0.2;
-            }
-            maplib::enter_air(ip);
-        } else {
-            maplib::enter_ground(ip);
-        }
-        set(r, gobj, off::TIMER, 0);
-        change_state(r, gobj, 9, change::ANIM_UPDATE);
-    }
-    false
+/// Knocked back (the damage callback's, `it_2725_Logic0_DmgReceived`'s, own branch, its
+/// [`GOOMBA`]'s `knocked`): along the hit's knockback (up at least a little if off the floor), no
+/// timer, state 9.
+fn knocked_back(r: &mut Running, gobj: GObjId) {
+    zako::knock_back(r, gobj, Knock::AtLeast(0.2));
+    set(r, gobj, off::TIMER, 0);
+    change_state(r, gobj, 9, change::ANIM_UPDATE);
 }
 
 /// Landed on by a fighter, `it_802D8098`: blinking, no stomping, its hit records cleared, an
@@ -566,23 +438,10 @@ pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
     false
 }
 
-/// The collisions that answer false (`itOldkuri_UnkMotion7_Coll`, `_11_Coll`).
-#[doc(alias = "itOldkuri_UnkMotion7_Coll")]
-#[doc(alias = "itOldkuri_UnkMotion11_Coll")]
-pub fn coll_still(r: &mut Running, gobj: GObjId) -> bool {
-    zako::answers_false(r, gobj)
-}
-
 /// Knocked down's collision, `itOldkuri_UnkMotion8_Coll`: whether it touched the stage.
 #[doc(alias = "itOldkuri_UnkMotion8_Coll")]
 pub fn coll8(r: &mut Running, gobj: GObjId) -> bool {
     ground::air_touched_any(r, gobj)
-}
-
-/// Flung away's collision, `itOldkuri_UnkMotion10_Coll`: bounces off the stage.
-#[doc(alias = "itOldkuri_UnkMotion10_Coll")]
-pub fn coll10(r: &mut Running, gobj: GObjId) -> bool {
-    zako::bounce(r, gobj)
 }
 
 /// Knocked down from the air, `it_802D81FC`: slowed by `x8`, state 8.
@@ -598,56 +457,6 @@ pub fn knock_down(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itOldkuri_UnkMotion8_Anim")]
 pub fn anim8(r: &mut Running, gobj: GObjId) -> bool {
     !lib2725::is_animating(r.game, gobj)
-}
-
-/// Flung away, `it_802D82C4`: in the air, launched along its knockback, `xDEC` cleared, upright
-/// facing nowhere, state 10.
-#[doc(alias = "it_802D82C4")]
-pub fn fling(r: &mut Running, gobj: GObjId) {
-    maplib::enter_air(item_mut(r.game, gobj));
-    zako::launch(r, gobj, false);
-    set(r, gobj, off::XDEC, 0);
-    zako::face(r, gobj, 0.0);
-    change_state(r, gobj, 0xA, change::ANIM_UPDATE);
-}
-
-/// Flung away's animation, `itOldkuri_UnkMotion10_Anim`: looped.
-#[doc(alias = "itOldkuri_UnkMotion10_Anim")]
-pub fn anim10(r: &mut Running, gobj: GObjId) -> bool {
-    if !lib2725::is_animating(r.game, gobj) {
-        change_state(r, gobj, 0xA, change::ANIM_UPDATE);
-    }
-    false
-}
-
-/// Flung toward the screen, `it_802D839C` (the inline `Item_UpdateZakoVelocity`): upright facing
-/// nowhere, state 11.
-#[doc(alias = "it_802D839C")]
-pub fn fling_to_screen(r: &mut Running, gobj: GObjId) {
-    maplib::enter_air(item_mut(r.game, gobj));
-    let v = zako::toward_camera(r, gobj);
-    item_mut(r.game, gobj).x40_vel = v;
-    maplib::enter_air(item_mut(r.game, gobj));
-    zako::face(r, gobj, 0.0);
-    change_state(r, gobj, 0xB, change::ANIM_UPDATE);
-}
-
-/// Flung toward the screen's animation, `itOldkuri_UnkMotion11_Anim`: looped.
-#[doc(alias = "itOldkuri_UnkMotion11_Anim")]
-pub fn anim11(r: &mut Running, gobj: GObjId) -> bool {
-    if !lib2725::is_animating(r.game, gobj) {
-        change_state(r, gobj, 0xB, change::ANIM_UPDATE);
-    }
-    false
-}
-
-/// Flung toward the screen's physics, `itOldkuri_UnkMotion11_Phys`: its fall speed off the
-/// vertical velocity.
-#[doc(alias = "itOldkuri_UnkMotion11_Phys")]
-pub fn phys_gravity(r: &mut Running, gobj: GObjId) {
-    let accel = reg(attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED));
-    let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), accel));
 }
 
 /// Enters a state it can be landed on in, `it_802D848C`: stompable, its jumped-on callback

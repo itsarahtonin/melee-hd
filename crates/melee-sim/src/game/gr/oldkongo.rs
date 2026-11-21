@@ -12,10 +12,13 @@
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
-use super::super::handles::CodeRef;
+use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Running};
 use super::data::{OLDKONGO_CALLBACKS, StageCallbacks};
 use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, update_map_coll};
+use super::kongo::{
+    Barrel, BarrelView, catch_fighter, drop_fighter, init_barrel, let_go, turn_and_swing,
+};
 use super::{anime, grlib, material, setup, zako};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -30,9 +33,6 @@ pub const BARREL_CATCH: u32 = 0x8021_0454;
 /// The catch's device type (`ftCo_800C0764`'s second argument): a barrel.
 const DEVICE_BARREL: u32 = 2;
 
-/// `MTXDegToRad`'s factor as the code loads it (a single).
-const DEG_TO_RAD: f32 = 0.017_453_292;
-
 /// The fields of `grOldKongo_YakumonoParam` the code reads, by offset.
 #[derive(Clone, Copy)]
 struct Param(DataRef);
@@ -40,9 +40,6 @@ struct Param(DataRef);
 impl Param {
     fn h(self, data: &Archives, off: u32) -> i32 {
         i32::from(data.u16(self.0.at(off)) as i16)
-    }
-    fn i(self, data: &Archives, off: u32) -> i32 {
-        data.u32(self.0.at(off)) as i32
     }
     fn f(self, data: &Archives, off: u32) -> f32 {
         data.f32(self.0.at(off))
@@ -89,7 +86,7 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         0x8020_F618 => init_back(r, gobj),
         0x8020_F654 => init_stage(r, gobj),
         0x8020_F6BC => proc_stage(r, gobj),
-        0x8020_F6E4 => init_barrel(r, gobj),
+        0x8020_F6E4 => init_barrel(r, gobj, &BARREL),
         0x8020_F888 => proc_barrel(r, gobj),
         0x8021_005C => init_birds(r, gobj),
         0x8021_00FC => proc_birds(r, gobj),
@@ -194,189 +191,14 @@ pub fn proc_stage(r: &mut Running, gobj: GObjId) {
     r.game.gr.wind_level = crate::lb::wind::tick(&mut r.game.gr.winds, level);
 }
 
-/// The barrel's setup (map 1), `stageGObj1_OnInit`: its animation and materials, at rest
-/// facing up with a random wait, swinging at full speed for a random while, and its place
-/// given to the stage.
-#[doc(alias = "stageGObj1_OnInit@8020F6E4")]
-pub fn init_barrel(r: &mut Running, gobj: GObjId) {
-    let g = ground_of(r.game, gobj);
-    let j = jobj_of(r.game, gobj);
-    let m = map_id(r.game, gobj);
-    anime::start_map(r.game, r.data, gobj, m, 0);
-    material::model_to_stage_class(r.game, j);
-    let p = param(r.game);
-    let v = r.game.grounds[g.0].u.oldkongo();
-    v.xE8 = 1.0;
-    v.xEC = 1.0;
-    v.xD8 = 0.0;
-    v.xDC = 0.0;
-    v.xC4 = 0;
-    v.xC6 = 0;
-    v.xC8 = 2;
-    v.keep = None;
-    v.xE0 = 0.0;
-    v.xE4 = 0.0;
-    v.xEC = p.f(r.data, MOVE_MAX);
-    let (wb, wa) = (
-        fp::fctiwz(reg(p.f(r.data, WAIT_B))),
-        fp::fctiwz(reg(p.f(r.data, WAIT_A))),
-    );
-    let wait = grlib::rand_range(&mut r.game.objs.rng, wb, wa);
-    r.game.grounds[g.0].u.oldkongo().xCC = wait as i16;
-    let (sb, sa) = (p.i(r.data, STOP_B), p.i(r.data, STOP_A));
-    let stop = grlib::rand_range(&mut r.game.objs.rng, sb, sa);
-    r.game.grounds[g.0].u.oldkongo().xCE = stop as i16;
-    let part = nth_joint(r.game, gobj, 1);
-    let pos = world_position(&mut r.game.objs, r.data, part, None);
-    let angle = r.game.grounds[g.0].u.oldkongo().xDC;
-    super::ground::set_barrel(r.game, Some(gobj), pos, angle);
-}
-
-/// The barrel's turning acceleration in radians.
-fn rot_accel(data: &Archives, p: Param) -> f64 {
-    fp::fmuls(reg(DEG_TO_RAD), reg(p.f(data, ROT_ACCEL)))
-}
-
-/// The barrel's process (map 1), `stageGObj1_GObjProc`. Its turn: at rest (0) it slows to a
-/// stop, its angle snapping to where it was headed, and after its wait starts turning (1) one
-/// way or the other, speeding up for a while; then it heads for one of the eight directions
-/// drawn by weight (2), coasting until a stop at its rate would overshoot (3), then at rest
-/// again once that much is left. Then the angle turns by the speed, wrapped, the model and the
-/// stage's barrel place follow, and the swing's speed runs its own cycle: waiting (0),
-/// speeding up to its top speed (1), holding it (2), slowing to a stop (3). Last, a fighter
-/// caught: held while its countdown runs (1, or let go when gone), the shot's animation (2),
+/// The barrel's process (map 1), `stageGObj1_GObjProc`: its turn and swing (Kongo Jungle's,
+/// `kongo::turn_and_swing`), then a fighter caught: held while its countdown runs (1, or let go when gone), the shot's animation (2),
 /// and the shot ten ticks later (3), then clear (4).
 #[doc(alias = "stageGObj1_GObjProc@8020F888")]
 pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
+    let pos = turn_and_swing(r, gobj, &BARREL);
     let g = ground_of(r.game, gobj);
     let p = param(r.game);
-    let part = nth_joint(r.game, gobj, 1);
-    let accel = rot_accel(r.data, p);
-    let v = r.game.grounds[g.0].u.oldkongo();
-    match v.xC4 {
-        2 | 3 => {
-            let speed = reg(v.xE4);
-            let limit = fp::fmuls(0.5, fp::fmuls(speed, fp::fdivs(speed, accel)));
-            let mut delta = if speed > 0.0 {
-                fp::fsubs(reg(v.xD8), reg(v.xDC))
-            } else if speed < 0.0 {
-                fp::fsubs(reg(v.xDC), reg(v.xD8))
-            } else {
-                panic!("groldkongo.c:396: 0");
-            };
-            if delta < 0.0 {
-                delta = fp::frsp(fp::fadd(delta, std::f64::consts::TAU));
-            }
-            let abs = if speed < 0.0 { fp::fneg(speed) } else { speed };
-            if delta < limit || delta < abs {
-                if v.xC4 == 3 {
-                    v.xC4 = 0;
-                }
-            } else if v.xC4 == 2 {
-                v.xC4 = 3;
-            }
-        }
-        0 => {
-            slow_down(v, accel);
-            v.xCC = v.xCC.wrapping_sub(1);
-            if v.xCC < 0 {
-                v.xC4 = 1;
-                let speed = if r.game.objs.rng.below(2) != 0 {
-                    accel
-                } else {
-                    fp::fneg(accel)
-                };
-                let (rb, ra) = (
-                    fp::fctiwz(reg(p.f(r.data, ROLL_B))),
-                    fp::fctiwz(reg(p.f(r.data, ROLL_A))),
-                );
-                let roll = grlib::rand_range(&mut r.game.objs.rng, rb, ra);
-                let v = r.game.grounds[g.0].u.oldkongo();
-                v.xE0 = mem(speed);
-                v.xCC = roll as i16;
-            }
-        }
-        1 => {
-            let max = fp::fmuls(reg(DEG_TO_RAD), reg(p.f(r.data, ROT_MAX)));
-            v.xE4 = mem(fp::fadds(reg(v.xE4), reg(v.xE0)));
-            if reg(v.xE4) > max {
-                v.xE4 = mem(max);
-            } else if reg(v.xE4) < fp::fneg(max) {
-                v.xE4 = mem(fp::fneg(max));
-            }
-            let left = v.xCC;
-            v.xCC = left.wrapping_sub(1);
-            if left < 0 {
-                v.xC4 = 2;
-                let (wb, wa) = (
-                    fp::fctiwz(reg(p.f(r.data, WAIT_B))),
-                    fp::fctiwz(reg(p.f(r.data, WAIT_A))),
-                );
-                let wait = grlib::rand_range(&mut r.game.objs.rng, wb, wa);
-                r.game.grounds[g.0].u.oldkongo().xCC = wait as i16;
-                let to = direction(r);
-                r.game.grounds[g.0].u.oldkongo().xD8 = to;
-            }
-        }
-        _ => {}
-    }
-    let v = r.game.grounds[g.0].u.oldkongo();
-    v.xDC = mem(fp::fadds(reg(v.xDC), reg(v.xE4)));
-    if reg(v.xDC) > std::f64::consts::TAU {
-        v.xDC = mem(fp::frsp(fp::fsub(reg(v.xDC), std::f64::consts::TAU)));
-    } else if reg(v.xDC) < fp::fneg(std::f64::consts::TAU) {
-        v.xDC = mem(fp::frsp(fp::fadd(reg(v.xDC), std::f64::consts::TAU)));
-    }
-    let angle = v.xDC;
-    let j = part.expect("groldkongo.c: the barrel's part");
-    jobj::set_angle(&mut r.game.objs.jobjs, j, |q| q.z = angle);
-    let pos = world_position(&mut r.game.objs, r.data, part, None);
-    super::ground::set_barrel(r.game, Some(gobj), pos, angle);
-
-    let v = r.game.grounds[g.0].u.oldkongo();
-    match v.xC8 {
-        0 => {
-            let left = v.xCE;
-            v.xCE = left.wrapping_sub(1);
-            if left < 0 {
-                v.xC8 = 1;
-            }
-        }
-        1 => {
-            v.xEC = mem(fp::fadds(reg(v.xEC), reg(p.f(r.data, MOVE_ACCEL))));
-            let max = p.f(r.data, MOVE_MAX);
-            if reg(v.xEC) > reg(max) {
-                v.xEC = max;
-                let (sb, sa) = (p.i(r.data, STOP_B), p.i(r.data, STOP_A));
-                let stop = grlib::rand_range(&mut r.game.objs.rng, sb, sa);
-                let v = r.game.grounds[g.0].u.oldkongo();
-                v.xCE = stop as i16;
-                v.xC8 = 2;
-            }
-        }
-        2 => {
-            let left = v.xCE;
-            v.xCE = left.wrapping_sub(1);
-            if left < 0 {
-                v.xC8 = 3;
-            }
-        }
-        3 => {
-            v.xEC = mem(fp::fsubs(reg(v.xEC), reg(p.f(r.data, MOVE_ACCEL))));
-            if reg(v.xEC) < 0.0 {
-                v.xEC = 0.0;
-                let (ib, ia) = (p.i(r.data, INTERVAL_B), p.i(r.data, INTERVAL_A));
-                let wait = grlib::rand_range(&mut r.game.objs.rng, ib, ia);
-                let v = r.game.grounds[g.0].u.oldkongo();
-                v.xCE = wait as i16;
-                v.xC8 = 0;
-            }
-        }
-        _ => {}
-    }
-    let rate = r.game.grounds[g.0].u.oldkongo().xEC;
-    anime::set_rate(r.game, gobj, 0, 7, rate, true);
-
     let mut state = r.game.grounds[g.0].u.oldkongo().xC6;
     if state == 1 {
         // With no fighter the state clears, and falls into the shot's start all the same
@@ -435,124 +257,68 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
     }
 }
 
-/// The barrel's turning slows by its acceleration, stopping (its angle snapped to its heading)
-/// once less than a step is left: `grOldKongo_8020F888_inline`.
-fn slow_down(v: &mut super::OldKongoVars, accel: f64) {
-    let speed = reg(v.xE4);
-    if speed > 0.0 {
-        if speed < accel {
-            v.xE4 = 0.0;
-            v.xDC = v.xD8;
-        } else {
-            v.xE4 = mem(fp::fsubs(speed, accel));
-        }
-    } else if speed < 0.0 {
-        if speed > fp::fneg(accel) {
-            v.xE4 = 0.0;
-            v.xDC = v.xD8;
-        } else {
-            v.xE4 = mem(fp::fadds(speed, accel));
-        }
+fn barrel_vars(game: &mut Game, g: GroundId) -> BarrelView<'_> {
+    let v = game.grounds[g.0].u.oldkongo();
+    BarrelView {
+        turn: &mut v.xC4,
+        hold: &mut v.xC6,
+        swing: &mut v.xC8,
+        held_for: &mut v.xCA,
+        turn_timer: &mut v.xCC,
+        swing_timer: &mut v.xCE,
+        keep: &mut v.keep,
+        heading: &mut v.xD8,
+        angle: &mut v.xDC,
+        step: &mut v.xE0,
+        speed: &mut v.xE4,
+        one: &mut v.xE8,
+        rate: &mut v.xEC,
     }
 }
 
-/// One of the barrel's eight directions drawn by the parameters' weights, `grOldKongo_80210650`:
-/// from down-left (3π/4) round through up (0) to down (-π).
-#[doc(alias = "grOldKongo_80210650")]
-pub fn direction(r: &mut Running) -> f32 {
-    const ANGLES: [f32; 8] = [
-        2.356_194_5,
-        1.570_796_4,
-        std::f32::consts::FRAC_PI_4,
-        0.0,
-        -std::f32::consts::FRAC_PI_4,
-        -1.570_796_4,
-        -2.356_194_5,
-        -std::f32::consts::PI,
-    ];
-    let p = param(r.game);
-    let rates: [i32; 8] = std::array::from_fn(|i| p.h(r.data, RATES + 2 * i as u32));
-    let total = rates.iter().fold(0i32, |a, &b| a.wrapping_add(b));
-    let mut left = if total != 0 {
-        r.game.objs.rng.below(total)
-    } else {
-        0
-    };
-    for (rate, angle) in rates.into_iter().zip(ANGLES) {
-        left = left.wrapping_sub(rate);
-        if left < 0 {
-            return angle;
-        }
-    }
-    panic!("groldkongo.c:786: 0");
+fn yakumono(game: &Game) -> DataRef {
+    param(game).0
 }
 
-/// The barrel's catch test, `grOldKongo_80210454`: while it holds no one, a fighter whose
-/// position lies within the parameters' radius of the barrel is caught, held for a random
-/// while, with the barrel's sound, animation and flash, an effect where the fighter is, and
-/// its controller's rumble.
-#[doc(alias = "grOldKongo_80210454")]
+/// Kongo Jungle N64's barrel (Kongo Jungle's, `kongo::Barrel`): its swing's stop and interval
+/// are Kongo Jungle's run and pause, its shot's bounds its hold's.
+pub const BARREL: Barrel = Barrel {
+    vars: barrel_vars,
+    param: yakumono,
+    hold_a: SHOOT_A,
+    hold_b: SHOOT_B,
+    reach: BARREL_IN,
+    wait_a: WAIT_A,
+    wait_b: WAIT_B,
+    rot_accel: ROT_ACCEL,
+    rot_max: ROT_MAX,
+    roll_a: ROLL_A,
+    roll_b: ROLL_B,
+    rates: RATES,
+    pause_a: INTERVAL_A,
+    pause_b: INTERVAL_B,
+    move_accel: MOVE_ACCEL,
+    move_max: MOVE_MAX,
+    run_a: STOP_A,
+    run_b: STOP_B,
+    color_script: COLOR_SCRIPT,
+    catch_anim: true,
+};
+
+/// The barrel's catch test for a fighter, as the fighter code calls it
+/// (`kongo::catch_fighter`).
 pub fn barrel_catch(r: &mut Running, gobj: GObjId, fighter: GObjId) -> bool {
-    let g = ground_of(r.game, gobj);
-    if r.game.grounds[g.0].u.oldkongo().xC6 != 0 {
-        return false;
-    }
-    let p = param(r.game);
-    let (at, _) = super::ground::barrel(r.game);
-    let pos = r.game.ft_pos(fighter);
-    let d = |a: f32, b: f32| fp::fsubs(reg(a), reg(b));
-    let (dx, dy, dz) = (d(at.x, pos.x), d(at.y, pos.y), d(at.z, pos.z));
-    let dist = fp::fadds(
-        fp::fmuls(dz, dz),
-        fp::fadds(fp::fmuls(dx, dx), fp::fmuls(dy, dy)),
-    );
-    let radius = reg(p.f(r.data, BARREL_IN));
-    if !(dist < fp::fmuls(radius, radius)) {
-        return false;
-    }
-    let f = reg(r.game.objs.rng.draw_f32());
-    let (a, b) = (reg(p.f(r.data, SHOOT_A)), reg(p.f(r.data, SHOOT_B)));
-    let hold = fp::fctiwz(fp::fmadds(fp::fsubs(b, a), f, a));
-    let v = r.game.grounds[g.0].u.oldkongo();
-    v.xCA = hold as i16;
-    v.keep = Some(fighter);
-    v.xC6 = 1;
-    r.object_sound(Some(g), 0, 0x129);
-    anime::start(r.game, r.data, gobj, 2, 7, 1, 0.0, 1.0, true);
-    let script = r.data.ptr(p.0.at(COLOR_SCRIPT));
-    material::start_script(r.game, r.data, gobj, script, 0);
-    super::super::ef::spawn(r, 0x405, Some(gobj), &[super::super::ef::Arg::Vec(pos)]);
-    crate::game::ft::ftlib::start_rumble(r, fighter, 13, 30);
-    true
+    catch_fighter(r, gobj, fighter, &BARREL)
 }
 
-/// The barrel lets its fighter go when the fighter asks, `grOldKongo_802105AC`: a held
-/// fighter's countdown ends early.
-#[doc(alias = "grOldKongo_802105AC")]
+/// The barrel lets its fighter go early, as the fighter code asks it (`kongo::let_go`).
 pub fn barrel_release(game: &mut Game, gobj: GObjId) {
-    let g = ground_of(game, gobj);
-    let v = game.grounds[g.0].u.oldkongo();
-    if v.xC6 == 1 {
-        v.xC6 = 2;
-    }
+    let_go(game, gobj, &BARREL)
 }
 
-/// The barrel drops its fighter, `grOldKongo_802105C8`: a held fighter that is still a fighter
-/// (its GObj's `p_link` is 8) is let go and the barrel's flash ends.
-#[doc(alias = "grOldKongo_802105C8")]
+/// The barrel drops its fighter, as the fighter code asks it (`kongo::drop_fighter`).
 pub fn barrel_drop(game: &mut Game, gobj: GObjId) {
-    let g = ground_of(game, gobj);
-    let v = game.grounds[g.0].u.oldkongo();
-    if v.xC6 != 1 {
-        return;
-    }
-    let keep = v.keep.expect("groldkongo.c:751: gp->u.taru.keep");
-    if game.world.gobj(keep).p_link == 8 {
-        let v = game.grounds[g.0].u.oldkongo();
-        v.xC6 = 0;
-        v.keep = None;
-        material::reset_overlay(game, gobj);
-    }
+    drop_fighter(game, gobj, &BARREL)
 }
 
 /// The birds' setup (map 2), `stageGObj2_OnInit`: hidden, a random wait.
@@ -605,7 +371,7 @@ pub fn proc_birds(r: &mut Running, gobj: GObjId) {
         let part = if from_right { 3 } else { 1 };
         // Under Slippi's rules, where they'd start through the views playback's run can leave
         // the camera's CObj (`Game::playback_spans`, design call 9).
-        if r.game.rules.slippi
+        if r.game.rules.notes_playback()
             && r.game.playback_spans(r.data).is_none_or(|spans| {
                 (spans.into_iter().flatten()).any(|[left, _, right]| {
                     birds_x(from_right, left, right).to_bits() != x.to_bits()

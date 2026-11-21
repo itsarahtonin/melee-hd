@@ -15,7 +15,8 @@ use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 
 pub const SPAWNED: u32 = 0x802D_3EF8;
-pub const EVT_UNK: u32 = 0x802D_3F4C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_3F4C;
 pub const OUT_LANDED: u32 = 0x802D_3F6C;
 pub const ANIM1: u32 = 0x802D_4024;
 pub const PHYS1: u32 = 0x802D_4064;
@@ -71,7 +72,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// Forgets a GObj going away, `it_802D3F4C` (`it_8026B894`): only a fighter's unload at the
 /// scene's end runs it (`it_8026B7F8`), which no match reaches.
 // Ports `it_802D3F4C`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

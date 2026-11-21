@@ -22,7 +22,8 @@ use crate::vec::Vec3;
 pub const SPAWNED: u32 = 0x802C_9D40;
 pub const LANDED_NOTHING: u32 = 0x802C_9DFC;
 pub const DESTROYED: u32 = 0x802C_9E00;
-pub const EVT_UNK: u32 = 0x802C_9E24;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_9E24;
 pub const OUT_LANDED: u32 = 0x802C_9E44;
 pub const ANIM0: u32 = 0x802C_9EF0;
 pub const PHYS0: u32 = 0x802C_9F74;
@@ -124,7 +125,8 @@ pub fn destroyed(r: &mut Running, _gobj: GObjId) {
 
 /// Forgets a GObj going away, `it_802C9E24` (`it_8026B894`).
 #[doc(alias = "it_802C9E24")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

@@ -11,7 +11,8 @@ use crate::vec::Vec3;
 
 pub const DMG_DEALT: u32 = 0x802B_D240;
 pub const MOTION1_ANIM: u32 = 0x802B_D2EC;
-pub const EVT_UNK: u32 = 0x802B_D30C;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_D30C;
 
 /// Runs one of the explosion's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -39,7 +40,7 @@ pub fn spawn(
     facing_dir: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::PeachExplode.id(),
+        kind: ItKind::PeachBomberExplosion.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition`, keeping its depth.
@@ -77,7 +78,7 @@ pub fn setup(r: &mut Running, gobj: GObjId, owner: GObjId, smash: bool) {
     lib26b1::hide(r.game, gobj);
     lib2725::blast_effect(r, gobj);
     lib26b1::disable_pickup(r.game, gobj);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     change_state(r, gobj, i32::from(smash), change::ANIM_UPDATE);
     // `it_80274574`.
@@ -92,6 +93,7 @@ fn animated(r: &mut Running, gobj: GObjId) -> bool {
 
 /// `itPeachExplode_Logic55_EvtUnk`: forgets `other`.
 #[doc(alias = "itPeachExplode_Logic55_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

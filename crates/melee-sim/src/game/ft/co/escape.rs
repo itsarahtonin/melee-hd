@@ -145,7 +145,7 @@ impl Running<'_> {
     /// false when UCF's shield drop takes the input instead.
     #[doc(alias = "ftCo_80099894")]
     pub fn enter_escape_n(&mut self, gobj: GObjId) -> bool {
-        let drop = match self.game.rules.ucf {
+        let drop = match self.game.rules.ucf_shield_drop() {
             Ucf::Off => false,
             Ucf::V0_8 => self.ucf08_shield_drop(gobj),
             Ucf::V0_84 => self.ucf084_shield_drop(gobj),

@@ -123,7 +123,7 @@ pub fn spawn_floating(r: &mut Running, parent: Option<GObjId>) -> Option<GObjId>
     let pj = parent.and_then(|p| jobj_of(r.game, p))?;
     let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, Some(pj), None);
     let mut spawn = SpawnItem {
-        kind: ItKind::Box.id(),
+        kind: ItKind::Crate.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition`.
@@ -412,7 +412,7 @@ pub fn open_empty(r: &mut Running, gobj: GObjId) {
     lib2725::blast_effect(r, gobj);
     hitbox::start_blink(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
     ip.x40_vel.x = 0.0;

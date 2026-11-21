@@ -138,7 +138,7 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     lib2725::blast_effect(r, gobj);
     hitbox::set_hit_ids(r.game, gobj);
     hitbox::start_blink(r.game, gobj);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     let pos = item(r.game, gobj).pos;
     let angle = mem(fp::frsp(60.0 * std::f64::consts::PI / 180.0));

@@ -348,7 +348,7 @@ impl Running<'_> {
                 vel: Vec3::new(vx, self.kb_attr_f32(f, VEL_Y), 0.0),
                 facing_dir: facing,
                 lifetime: self.kb_attr_f32(f, LIFETIME),
-                x24: self.kb_attr_f32(f, BEHAVIOR),
+                damage_behavior: self.kb_attr_f32(f, BEHAVIOR),
                 damage_mul: mem(fp::fdivs(reg(a), reg(b))),
             };
             yoshiegglay::spawn(self, &laid);

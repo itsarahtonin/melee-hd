@@ -18,15 +18,18 @@
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
-use super::super::handles::CodeRef;
-use super::super::it::kinds::arwinglaser;
+use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Running};
-use super::corneria::{Stage, update_sequence, update_wing_visibility};
+use super::corneria::{
+    Arwings, FarPath, PathScale, Slots, Stage, demo_type, init_arwing, init_far_arwing, init_path,
+    init_wing, pick_group, proc_arwing, proc_far_arwing, proc_path, proc_wing, send_arwing,
+    update_sequence,
+};
 use super::data::{StageCallbacks, VENOM_CALLBACKS};
 use super::ground::{
-    ParamColor, ground_of, jobj_of, map_gobj, nth_joint, scale, set_param_color, update_map_coll,
+    ParamColor, ground_of, jobj_of, map_gobj, nth_joint, set_param_color, update_map_coll,
 };
-use super::{anime, grlib, material, setup, stage, zako};
+use super::{anime, grlib, setup, stage, zako};
 use crate::fpu::{mem, reg};
 use crate::game::structs::_GXColor;
 use crate::hsd::gobj::GObjId;
@@ -140,14 +143,14 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         0x8020_4DB0 => talk_destroyed(r, gobj),
         0x8020_4DD4 => init_coll(r, gobj),
         0x8020_4EFC => proc_coll(r, gobj),
-        0x8020_4F20 => init_path(r, gobj),
-        0x8020_53B0 => proc_path(r, gobj),
-        0x8020_56B0 => init_wing(r, gobj),
-        0x8020_5758 => proc_wing(r, gobj),
-        0x8020_5AD4 => init_arwing(r, gobj),
-        0x8020_5F30 => proc_arwing(r, gobj),
-        0x8020_6874 => init_far_arwing(r, gobj),
-        0x8020_6B70 => proc_far_arwing(r, gobj),
+        0x8020_4F20 => init_path(r, gobj, &ARWINGS),
+        0x8020_53B0 => proc_path(r, gobj, &ARWINGS),
+        0x8020_56B0 => init_wing(r, gobj, &ARWINGS),
+        0x8020_5758 => proc_wing(r, gobj, &ARWINGS),
+        0x8020_5AD4 => init_arwing(r, gobj, &ARWINGS),
+        0x8020_5F30 => proc_arwing(r, gobj, &ARWINGS),
+        0x8020_6874 => init_far_arwing(r, gobj, &ARWINGS),
+        0x8020_6B70 => proc_far_arwing(r, gobj, &ARWINGS),
         0x8020_6B94 => init_window(r, gobj),
         0x8020_6BC4 => proc_window(r, gobj),
         _ => return false,
@@ -611,6 +614,88 @@ pub const ARWING_FRAME: u32 = PATH_FRAME - 0x38 - 0x20;
 /// A wing's, below its Arwing's by the Arwing's setup's frame (0x48) and the create function's.
 pub const WING_FRAME: u32 = ARWING_FRAME - 0x48 - 0x20;
 
+fn slots(game: &mut Game) -> Slots<'_> {
+    let c = &mut game.gr.venom;
+    Slots {
+        arwings: &mut c.arwings,
+        types: &mut c.types,
+        groups: &mut c.groups,
+        slot: &mut c.slot,
+    }
+}
+
+fn yakumono(game: &Game) -> DataRef {
+    param(game).0
+}
+
+fn frozen(_game: &Game) -> bool {
+    FROZEN
+}
+
+/// Whether a far Arwing fires this tick: every eighth tick of its flight with odds of one in
+/// eight, inside its type's window of ticks flown.
+fn fires(r: &mut Running, gid: GroundId, ty: i32) -> i32 {
+    let flown = r.game.grounds[gid.0].u.arwing().xF0;
+    if flown & 7 == 0 && r.game.objs.rng.below(8) == 0 {
+        let (lo, hi) = match ty {
+            8 => (0x3C, 0xE6),
+            9 => (0x32, 0xE6),
+            10 => (0x5A, 0x104),
+            _ => (0x46, 0xF0),
+        };
+        i32::from(flown > lo && flown < hi)
+    } else {
+        0
+    }
+}
+
+/// A far Arwing fires while it is between 100 and 2000 deep.
+fn far_window(pos: Vec3) -> bool {
+    let z = reg(pos.z);
+    -100.0 > z && z > -2000.0
+}
+
+/// Venom's Arwings ([`Arwings`]).
+pub const ARWINGS: Arwings = Arwings {
+    slots,
+    param: yakumono,
+    far_chance: p::ARWING_FAR,
+    roll_wait: p::ROLL_WAIT,
+    scale: p::ARWING_SCALE,
+    fire_script: p::FIRE_SCRIPT,
+    frozen,
+    create,
+    path_map: 2,
+    path_frame: PATH_FRAME,
+    arwing_frame: ARWING_FRAME,
+    wing_frame: WING_FRAME,
+    last_close: 7,
+    group_arwings: GROUP_MAPS,
+    group_wings: GROUP_WINGS,
+    group_joints: GROUP_JOINTS,
+    group_parts: &GROUP_PARTS,
+    type_anims: &TYPE_ANIMS,
+    roll_anims: &ROLL_ANIMS,
+    rolls: 4,
+    path_joint: 5,
+    wing_depth: 50.0,
+    pos: path_pos,
+    path_scale: PathScale::CloseAlongZ,
+    rides_ship: false,
+    far_path: FarPath::FaceOn,
+    margin: 20.0,
+    front: None,
+    fly_in: 0x6B6C0,
+    fly_off: 0x6B6C2,
+    close_turn: 0.0,
+    close_fire: None,
+    fires,
+    far_window,
+    same_side: true,
+    far_sound: 0x6B6C9,
+    aim_joint: 0,
+};
+
 /// The Great Fox's flags that hold the Arwings back: 1 for the close group's (0 to 2), 2 for
 /// the far group's (3 to 5).
 fn held_groups(game: &mut Game) -> i32 {
@@ -620,29 +705,6 @@ fn held_groups(game: &mut Game) -> i32 {
     let near = v.flag(0) || v.flag(1) || v.flag(2);
     let far = v.flag(3) || v.flag(4) || v.flag(5);
     i32::from(near) | if far { 2 } else { 0 }
-}
-
-/// The far group's chance (or the close one after it), as a match picks it.
-fn pick_group(r: &mut Running) -> i32 {
-    if g(r.game).groups[0] == 4 {
-        return 1;
-    }
-    let chance = reg(param(r.game).f(r.data, p::ARWING_FAR));
-    if reg(r.game.objs.rng.draw_f32()) > chance {
-        1
-    } else {
-        4
-    }
-}
-
-fn send_arwing(r: &mut Running, slot: usize, type_id: i32, group: i32) {
-    let c = g(r.game);
-    c.slot = slot as u32;
-    c.types[slot] = type_id;
-    c.groups[slot] = group;
-    let a = create(r, 2, PATH_FRAME);
-    let c = g(r.game);
-    c.arwings[c.slot as usize] = a;
 }
 
 /// Sends the next Arwing, `grVenom_8020362C`. In a match one at a time, once the last has gone
@@ -666,8 +728,8 @@ pub fn spawn_arwings(r: &mut Running) {
                 while type_id == g(r.game).types[0] {
                     type_id = r.game.objs.rng.below(n).wrapping_add(1);
                 }
-                let group = pick_group(r);
-                send_arwing(r, 0, type_id, group);
+                let group = pick_group(r, &ARWINGS);
+                send_arwing(r, &ARWINGS, 0, type_id, group);
             }
         } else {
             g(r.game).wait = rand_range(r, p::ARWING_WAIT_MIN, p::ARWING_WAIT_MAX);
@@ -690,63 +752,19 @@ pub fn spawn_arwings(r: &mut Running) {
         let c = &r.game.gr.venom;
         i != count && (1..=7).contains(&c.types[i]) && c.arwings[i].is_some()
     });
-    let pick = |r: &mut Running, n: i32, add: i32| {
-        let mut type_id = g(r.game).types[count];
-        while g(r.game).types.contains(&type_id) {
-            type_id = r.game.objs.rng.below(n).wrapping_add(add);
-        }
-        type_id
-    };
     if !has_near {
-        let type_id = pick(r, 11, 1);
-        send_arwing(r, count, type_id, count as i32 + 1);
+        let type_id = demo_type(r, &ARWINGS, count, 11, 1);
+        send_arwing(r, &ARWINGS, count, type_id, count as i32 + 1);
     } else if held_groups(r.game) == 0 {
-        let type_id = pick(r, 4, 8);
-        send_arwing(r, count, type_id, count as i32 + 1);
+        let type_id = demo_type(r, &ARWINGS, count, 4, 8);
+        send_arwing(r, &ARWINGS, count, type_id, count as i32 + 1);
     }
-}
-
-/// An Arwing's flight path's setup (map 2), `grVenom_80204F20`: it takes its slot, makes its
-/// group's Arwing (map 3 or 6) with the same slot, and is scaled (a close type's depth by the
-/// Arwings' scale); its animation starts on its first tick.
-#[doc(alias = "grVenom_80204F20")]
-pub fn init_path(r: &mut Running, gobj: GObjId) {
-    let gid = ground_of(r.game, gobj);
-    let j = jobj_of(r.game, gobj).expect("grvenom.c: jobj");
-    let slot = g(r.game).slot;
-    r.game.grounds[gid.0].u.arwing_path().xC8 = slot;
-    g(r.game).arwings[slot as usize] = Some(gobj);
-    let group = g(r.game).groups[slot as usize];
-    if let Some(a) = create(r, GROUP_MAPS[group as usize], ARWING_FRAME) {
-        let ag = ground_of(r.game, a);
-        r.game.grounds[ag.0].x10_flags.b2 = false;
-        r.game.grounds[ag.0].u.arwing().xC8 = slot as i32;
-    }
-    let s = reg(scale(r.game));
-    match g(r.game).types[slot as usize] {
-        1..=7 => {
-            let k = reg(param(r.game).f(r.data, p::ARWING_SCALE));
-            jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.x = mem(s));
-            jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.y = mem(s));
-            jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
-                o.scale.z = mem(fp::fmuls(s, k))
-            });
-        }
-        8..=11 => {
-            jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.x = mem(s));
-            jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.y = mem(s));
-            jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.z = mem(s));
-        }
-        _ => {}
-    }
-    let v = r.game.grounds[gid.0].u.arwing_path();
-    v.xD4 = 1;
-    v.xD8 = 0;
 }
 
 /// Where a flight path's Arwing is (its joint 5 in the stage, with its type's offset), or the
-/// origin without a path: the body of `grVenom_802052E0` and its inline copies.
-fn arwing_pos(r: &mut Running, path: Option<GObjId>) -> Vec3 {
+/// origin without a path, `grVenom_802052E0` (and its inline copies).
+#[doc(alias = "grVenom_802052E0")]
+pub fn path_pos(r: &mut Running, path: Option<GObjId>) -> Vec3 {
     let Some(path) = path else {
         return Vec3::new(0.0, 0.0, 0.0);
     };
@@ -762,345 +780,6 @@ fn arwing_pos(r: &mut Running, path: Option<GObjId>) -> Vec3 {
         mem(fp::fadds(reg(pos.y), reg(o.y))),
         mem(fp::fadds(reg(pos.z), reg(o.z))),
     )
-}
-
-/// Where a flight path's Arwing is, `grVenom_802052E0`.
-#[doc(alias = "grVenom_802052E0")]
-pub fn path_pos(r: &mut Running, path: Option<GObjId>) -> Vec3 {
-    arwing_pos(r, path)
-}
-
-/// Whether a point is outside the blast zones, `grVenom_80205DF8` (`Stage_IsOutsideBlastZone`).
-#[doc(alias = "grVenom_80205DF8")]
-pub fn outside_blast_zones(game: &Game, pos: Vec3) -> bool {
-    super::corneria::outside_blast_zones(game, pos)
-}
-
-/// Whether a point is within 20 of the blast zones or past them, `grVenom_80205E84`
-/// (`Stage_IsOutsideBlastZoneWithMargin`).
-#[doc(alias = "grVenom_80205E84")]
-pub fn near_blast_zones(game: &Game, pos: Vec3) -> bool {
-    let (x, y) = (reg(pos.x), reg(pos.y));
-    x > fp::fsubs(reg(stage::blast_right(game)), 20.0)
-        || x < fp::fadds(reg(stage::blast_left(game)), 20.0)
-        || y > fp::fsubs(reg(stage::blast_top(game)), 20.0)
-        || y < fp::fadds(reg(stage::blast_bottom(game)), 20.0)
-}
-
-/// A flight path's process (map 2), `grVenom_802053B0`: on its first tick its type's animation
-/// starts; then its sounds (its fly-in once inside the blast zones, its fly-off once it nears
-/// them again; a far one also turned face on) until its animation ends and it frees its slot
-/// and goes. A path whose slot another holds goes at once.
-#[doc(alias = "grVenom_802053B0")]
-pub fn proc_path(r: &mut Running, gobj: GObjId) {
-    let gid = ground_of(r.game, gobj);
-    let j = jobj_of(r.game, gobj).expect("grvenom.c: jobj");
-    let slot = r.game.grounds[gid.0].u.arwing_path().xC8 as usize;
-    if g(r.game).arwings[slot] != Some(gobj) {
-        setup::destroy(r, Some(gobj));
-        return;
-    }
-    if r.game.grounds[gid.0].u.arwing_path().xD4 == 1 {
-        r.game.grounds[gid.0].u.arwing_path().xD4 = 0;
-        let anim = TYPE_ANIMS[g(r.game).types[slot] as usize];
-        let m = gp_map(r.game, gobj);
-        anime::start_map(r.game, r.data, gobj, m, anim);
-        return;
-    }
-    let ty = g(r.game).types[slot];
-    if (1..=11).contains(&ty) {
-        if ty >= 8 {
-            jobj::set_rotation_y(&mut r.game.objs.jobjs, j, 0.0);
-        }
-        let pos = arwing_pos(r, Some(gobj));
-        let sound = r.game.grounds[gid.0].u.arwing_path().xD8;
-        match sound {
-            0 => {
-                if !outside_blast_zones(r.game, pos) {
-                    r.sfx_play(0x6B6C0, 0x7F, 0x40);
-                    r.game.grounds[gid.0].u.arwing_path().xD8 = 1;
-                }
-            }
-            1 => {
-                if !near_blast_zones(r.game, pos) {
-                    r.game.grounds[gid.0].u.arwing_path().xD8 = 2;
-                }
-            }
-            2 if near_blast_zones(r.game, pos) => {
-                r.sfx_play(0x6B6C2, 0x7F, 0x40);
-                r.game.grounds[gid.0].u.arwing_path().xD8 = 3;
-            }
-            _ => {}
-        }
-    }
-    if anime::finished(r.game, gobj, 0, 7) {
-        g(r.game).arwings[slot] = None;
-        setup::destroy(r, Some(gobj));
-    }
-}
-
-/// An Arwing's wing's setup (maps 10 to 15), `grVenom_802056B0`: its slot, no roll, at the
-/// origin, and its group's collision joint on.
-#[doc(alias = "grVenom_802056B0")]
-pub fn init_wing(r: &mut Running, gobj: GObjId) {
-    let gid = ground_of(r.game, gobj);
-    let j = jobj_of(r.game, gobj);
-    let m = gp_map(r.game, gobj);
-    setup::init_map_coll(r.game, r.data, j, m);
-    let slot = g(r.game).slot;
-    {
-        let v = r.game.grounds[gid.0].u.arwing_coll();
-        v.xC8 = slot;
-        v.xD0 = 0;
-        v.xDC = 0.0;
-        v.xE0 = Vec3::new(0.0, 0.0, 0.0);
-    }
-    let group = g(r.game).groups[slot as usize];
-    r.game
-        .geometry_mut()
-        .enable_joint(GROUP_JOINTS[group as usize]);
-    setup::init_map_coll(r.game, r.data, j, m);
-}
-
-/// An Arwing's wing's process (maps 10 to 15), `grVenom_80205758`: while its slot's path lives,
-/// it shows only near the stage's plane and level enough
-/// (`Ground_UpdateStarFoxArwingVisibility`, within 50), at its Arwing's place and scale; then its
-/// joint goes off and it goes.
-#[doc(alias = "grVenom_80205758")]
-pub fn proc_wing(r: &mut Running, gobj: GObjId) {
-    let gid = ground_of(r.game, gobj);
-    let j = jobj_of(r.game, gobj);
-    let slot = r.game.grounds[gid.0].u.arwing_coll().xC8 as usize;
-    if g(r.game).arwings[slot].is_some() {
-        update_wing_visibility(r.game, gid, j, 50.0);
-        let s = reg(scale(r.game));
-        let k = reg(param(r.game).f(r.data, p::ARWING_SCALE));
-        let jj = j.expect("grvenom.c: jobj");
-        let v = mem(fp::fmuls(s, k));
-        jobj::set_srt(&mut r.game.objs.jobjs, jj, |o| o.scale.x = v);
-        jobj::set_srt(&mut r.game.objs.jobjs, jj, |o| o.scale.y = v);
-        jobj::set_srt(&mut r.game.objs.jobjs, jj, |o| o.scale.z = v);
-        update_map_coll(r.game, r.data, gobj);
-    } else {
-        let group = g(r.game).groups[slot];
-        r.game
-            .geometry_mut()
-            .disable_joint(GROUP_JOINTS[group as usize]);
-        setup::destroy(r, Some(gobj));
-    }
-}
-
-/// Sets a flying Arwing up (`grVenom_80205AD4` and `grVenom_80206874`): its slot, its
-/// animations, and for a close type its group's wing (linked, its slot the same), for a far one
-/// its model pinned to its path's joint 5; scaled, its roll at rest.
-fn init_flying(r: &mut Running, gobj: GObjId, with_background: bool) {
-    let gid = ground_of(r.game, gobj);
-    let j = jobj_of(r.game, gobj).expect("grvenom.c: jobj");
-    let s = reg(scale(r.game));
-    let slot = g(r.game).slot as i32;
-    {
-        let v = r.game.grounds[gid.0].u.arwing();
-        v.xC8 = slot;
-        v.xE0 = [None; 4];
-    }
-    if with_background {
-        anime::start(r.game, r.data, gobj, 7, 7, 0, 0.0, 1.0, true);
-        anime::start(r.game, r.data, gobj, 8, 7, 0, 0.0, 1.0, true);
-        anime::start(r.game, r.data, gobj, 2, 7, 3, 0.0, 1.0, false);
-    } else {
-        anime::start(r.game, r.data, gobj, 0, 7, 1, 0.0, 1.0, true);
-        anime::start(r.game, r.data, gobj, 2, 7, 3, 0.0, 1.0, false);
-    }
-    match g(r.game).types[slot as usize] {
-        1..=7 => {
-            let group = g(r.game).groups[slot as usize];
-            let wing = create(r, GROUP_WINGS[group as usize], WING_FRAME);
-            r.game.grounds[gid.0].u.arwing().xDC = wing;
-            if let Some(w) = wing {
-                let wg = ground_of(r.game, w);
-                r.game.grounds[wg.0].u.arwing_coll().xC8 = slot as u32;
-            }
-        }
-        8..=11 => {
-            let path = g(r.game).arwings[slot as usize].expect("grvenom.c: a path");
-            let a = nth_joint(r.game, gobj, 0);
-            let b = nth_joint(r.game, path, 5);
-            crate::lb::anim::attach(&mut r.game.objs, a, b);
-            r.game.grounds[gid.0].u.arwing().xDC = None;
-        }
-        // `Ground_DisableStarFoxArwingGObjs`: no type reaches it.
-        other => unreachable!("an Arwing of type {other}"),
-    }
-    let k = reg(param(r.game).f(r.data, p::ARWING_SCALE));
-    let v = mem(fp::fmuls(s, k));
-    jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.x = v);
-    jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.y = v);
-    jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.z = v);
-    let wait = param(r.game).i(r.data, p::ROLL_WAIT);
-    let v = r.game.grounds[gid.0].u.arwing();
-    v.b0 = false;
-    v.xD4 = 0;
-    v.xF0 = 0;
-    v.xF4 = 0;
-    v.xF8 = wait;
-    v.xFC = 0;
-}
-
-/// A close group's Arwing's setup (map 3), `grVenom_80205AD4`: as [`init_flying`] with its
-/// background animations, and which gun fires first.
-#[doc(alias = "grVenom_80205AD4")]
-pub fn init_arwing(r: &mut Running, gobj: GObjId) {
-    init_flying(r, gobj, true);
-    let gun = r.game.objs.rng.below(2);
-    let gid = ground_of(r.game, gobj);
-    r.game.grounds[gid.0].u.arwing().x100 = Some(gun);
-}
-
-/// The far group's Arwing's setup (map 6), `grVenom_80206874`: as [`init_flying`].
-#[doc(alias = "grVenom_80206874")]
-pub fn init_far_arwing(r: &mut Running, gobj: GObjId) {
-    init_flying(r, gobj, false);
-}
-
-/// The fire kind of an Arwing's group: -1 for none, 0 for the close groups, 1 for the far one.
-fn fire_kind(game: &Game, slot: usize) -> i32 {
-    match game.gr.venom.groups[slot] {
-        1..=3 => 0,
-        4 => 1,
-        _ => -1,
-    }
-}
-
-/// A flying Arwing's process (maps 3 and 6), `grVenom_80205F30`: nothing while the Arwings are
-/// held. While its path lives: a close one faces the stage and now and then rolls (its rolling
-/// part flat between rolls), follows its path's place with its wing at its rolling part's place
-/// and roll; a far one, every eighth tick of its flight's window (by type) with odds of one in
-/// eight, fires at a random player's fighter on its side of the stage while it is between 100
-/// and 2000 deep, from alternating guns. Once its path is gone, it and its articles go.
-#[doc(alias = "grVenom_80205F30")]
-pub fn proc_arwing(r: &mut Running, gobj: GObjId) {
-    if FROZEN {
-        return;
-    }
-    let gid = ground_of(r.game, gobj);
-    let j = jobj_of(r.game, gobj).expect("grvenom.c: jobj");
-    let slot = r.game.grounds[gid.0].u.arwing().xC8 as usize;
-    let path = g(r.game).arwings[slot];
-    if path.is_none() {
-        let articles = r.game.grounds[gid.0].u.arwing().xE0;
-        for a in articles.into_iter().flatten() {
-            setup::destroy(r, Some(a));
-        }
-        setup::destroy(r, Some(gobj));
-        return;
-    }
-    let group = g(r.game).groups[slot];
-    if group == 4 {
-        let a = nth_joint(r.game, gobj, 1).expect("grvenom.c: jobj");
-        jobj::set_rotation_z(&mut r.game.objs.jobjs, a, 0.0);
-    }
-    let part = GROUP_PARTS[group as usize];
-    match g(r.game).types[slot] {
-        1..=7 => {
-            jobj::set_rotation_y(&mut r.game.objs.jobjs, j, 0.0);
-            let roll_state = r.game.grounds[gid.0].u.arwing().xF4;
-            match roll_state {
-                0 => {
-                    if r.game.grounds[gid.0].u.arwing().xF8 <= 0 {
-                        let roll = r.game.objs.rng.below(4).wrapping_add(1);
-                        r.game.grounds[gid.0].u.arwing().xF4 = roll;
-                        let k = fire_kind(r.game, slot);
-                        let anim = ROLL_ANIMS[(roll * 2 + k) as usize];
-                        anime::start(r.game, r.data, gobj, part, 7, anim, 0.0, 1.0, false);
-                    } else {
-                        let pj = nth_joint(r.game, gobj, part).expect("grvenom.c: jobj");
-                        jobj::set_rotation_z(&mut r.game.objs.jobjs, pj, 0.0);
-                    }
-                    let v = r.game.grounds[gid.0].u.arwing();
-                    v.xF8 = v.xF8.wrapping_sub(1);
-                }
-                1..=4 if anime::finished(r.game, gobj, 0, 7) => {
-                    let wait = param(r.game).i(r.data, p::ROLL_WAIT);
-                    let v = r.game.grounds[gid.0].u.arwing();
-                    v.xF4 = 0;
-                    v.xF8 = wait;
-                }
-                _ => {}
-            }
-            let pos = arwing_pos(r, path);
-            jobj::set_translate(&mut r.game.objs.jobjs, j, pos);
-            let pj = nth_joint(r.game, gobj, part);
-            let pos = world_position(&mut r.game.objs, r.data, pj, None);
-            let wing = r.game.grounds[gid.0].u.arwing().xDC;
-            if let Some(w) = wing {
-                let wg = ground_of(r.game, w);
-                r.game.grounds[wg.0].u.arwing_coll().xE0 = pos;
-            }
-            let rot_z = r.game.objs.jobjs[pj.expect("grvenom.c: jobj")].rotate.z;
-            if let Some(w) = wing {
-                let wg = ground_of(r.game, w);
-                r.game.grounds[wg.0].u.arwing_coll().xDC = rot_z;
-            }
-        }
-        ty @ 8..=11 => {
-            let flown = r.game.grounds[gid.0].u.arwing().xF0;
-            let fires = if flown & 7 == 0 && r.game.objs.rng.below(8) == 0 {
-                let (lo, hi) = match ty {
-                    8 => (0x3C, 0xE6),
-                    9 => (0x32, 0xE6),
-                    10 => (0x5A, 0x104),
-                    _ => (0x46, 0xF0),
-                };
-                i32::from(flown > lo && flown < hi)
-            } else {
-                0
-            };
-            r.game.grounds[gid.0].u.arwing().xFC = fires;
-            let pos = arwing_pos(r, path);
-            let z = reg(pos.z);
-            if -100.0 > z && z > -2000.0 && r.game.grounds[gid.0].u.arwing().xFC != 0 {
-                r.game.grounds[gid.0].u.arwing().xFC = 0;
-                let mut player = r.game.objs.rng.below(4);
-                for tries in 0..4 {
-                    player = player.wrapping_add(tries) & 3;
-                    // Gm_PKind_NA.
-                    if r.game.player_pkind(player) != 3 {
-                        break;
-                    }
-                }
-                let mut target = r.game.player_pos(player);
-                let (tx, px) = (reg(target.x), reg(pos.x));
-                if (tx > 0.0 && px > 0.0) || (tx < 0.0 && px < 0.0) {
-                    target.y = mem(fp::fadds(reg(target.y), 5.0));
-                    r.sfx_play(0x6B6C9, 0x7F, 0x40);
-                    let k = param(r.game).f(r.data, p::ARWING_SCALE);
-                    if fire_kind(r.game, slot) == 1 {
-                        let b = nth_joint(r.game, gobj, 7);
-                        arwinglaser::spawn_aimed(r, gobj, b, target, 3, 0, k, 0x6B6C9);
-                    } else {
-                        let gun =
-                            r.game.grounds[gid.0].u.arwing().x100.expect(
-                                "grvenom.c: an Arwing's gun read before its setup wrote it",
-                            );
-                        let b = nth_joint(r.game, gobj, if gun != 0 { 5 } else { 6 });
-                        arwinglaser::spawn_aimed(r, gobj, b, target, 1, 0, k, 0x6B6C9);
-                        r.game.grounds[gid.0].u.arwing().x100 = Some(gun.wrapping_add(1) & 1);
-                    }
-                    let script = r.data.ptr(param(r.game).0.at(p::FIRE_SCRIPT));
-                    material::start_script(r.game, r.data, gobj, script, 0);
-                }
-            }
-        }
-        _ => {}
-    }
-    let v = r.game.grounds[gid.0].u.arwing();
-    v.xF0 = v.xF0.wrapping_add(1);
-}
-
-/// The far group's Arwing's process (map 6), `grVenom_80206B70`: a flying Arwing's.
-#[doc(alias = "grVenom_80206B70")]
-pub fn proc_far_arwing(r: &mut Running, gobj: GObjId) {
-    proc_arwing(r, gobj);
 }
 
 /// The talk window's setup (map 1), `grVenom_80206B94`.

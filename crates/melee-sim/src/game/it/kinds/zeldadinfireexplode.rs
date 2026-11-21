@@ -29,7 +29,8 @@ pub const ABSORBED: u32 = 0x802C_49A8;
 pub const SHIELD_BOUNCED: u32 = 0x802C_49B0;
 #[doc(alias = "itZeldaDinFireExplode_Logic66_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802C_49B8;
-pub const EVT_UNK: u32 = 0x802C_49C0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_49C0;
 
 /// `itZeldaDinFireExplodeAttributes`: the fire's size it scales by, the smallest and largest
 /// scale, and the damage's base and growth.
@@ -88,7 +89,7 @@ pub fn spawn(
     size: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::ZeldaDinFireExplode.id(),
+        kind: ItKind::ZeldaDinsFireExplosion.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPosition`, on the plane.

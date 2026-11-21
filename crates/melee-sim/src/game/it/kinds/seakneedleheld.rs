@@ -21,7 +21,8 @@ pub const PICKED_UP: u32 = 0x802B_1AAC;
 pub const ANIM: u32 = 0x802B_1AD4;
 pub const PHYS: u32 = 0x802B_1C34;
 pub const COLL: u32 = 0x802B_1C38;
-pub const EVT_UNK: u32 = 0x802B_1C40;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_1C40;
 
 /// Runs one of the needles' predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -63,8 +64,8 @@ pub fn show_needles(r: &mut Running, gobj: GObjId) {
         return;
     }
     let count = match ItKind::of(item(r.game, gobj).kind) {
-        ItKind::SeakNeedleHeld => r.seak_held_count(Some(owner), &SEAK),
-        ItKind::KirbySeakNeedleHeld => r.seak_held_count(Some(owner), &SK_KIRBY),
+        ItKind::SheikNeedleHeld => r.seak_held_count(Some(owner), &SEAK),
+        ItKind::KirbySheikNeedleHeld => r.seak_held_count(Some(owner), &SK_KIRBY),
         k => panic!("it_802B18B0 with kind {k:?}: the original reads a count it never set"),
     };
     let root = jobj_of(r.game, gobj);
@@ -138,8 +139,8 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
         return false;
     }
     let let_go = match ItKind::of(item(r.game, gobj).kind) {
-        ItKind::SeakNeedleHeld => r.seak_lets_go(Some(owner), &SEAK),
-        ItKind::KirbySeakNeedleHeld => r.seak_lets_go(Some(owner), &SK_KIRBY),
+        ItKind::SheikNeedleHeld => r.seak_lets_go(Some(owner), &SEAK),
+        ItKind::KirbySheikNeedleHeld => r.seak_lets_go(Some(owner), &SK_KIRBY),
         _ => false,
     };
     if let_go {

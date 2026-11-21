@@ -20,15 +20,10 @@ use crate::vec::Vec3;
 
 /// `ftCo_MS_DeadDown`: what [`Running::boss_motion_id`] gives for a hand that isn't there.
 const MS_DEAD_DOWN: i32 = 0;
-/// `ftMh_MS_Entry`, `ftMh_MS_Damage` and `ftMh_MS_Damage2`.
+/// `ftMh_MS_Entry`.
 const MH_MS_ENTRY: i32 = 343;
-const MH_MS_DAMAGE: i32 = 0x158;
-const MH_MS_DAMAGE2: i32 = 0x159;
-/// Crazy Hand's states `ftBossLib_8015C2A8` and `ftBossLib_8015C31C` test (`0x183`,
-/// `0x181`, `0x182`).
+/// Crazy Hand's state `ftBossLib_8015C2A8` tests.
 const CH_MS_183: i32 = 0x183;
-const CH_MS_181: i32 = 0x181;
-const CH_MS_182: i32 = 0x182;
 /// `Gm_PKind_Boss`.
 const PKIND_BOSS: i32 = 4;
 
@@ -211,32 +206,29 @@ impl Running<'_> {
         self.boss_motion_id(FighterKind::CrazyHand.id()) == CH_MS_183
     }
 
-    /// Whether Master Hand is beaten (`ftMh_MS_Damage`, `Damage2`), `ftBossLib_8015C2E0`.
+    /// Whether a hand is beaten (in either fall of his defeat), `ftBossLib_8015C2E0` (Master
+    /// Hand's `ftMh_MS_Damage`, `Damage2`) and `ftBossLib_8015C31C` (Crazy Hand's 0x181,
+    /// 0x182).
     #[doc(alias = "ftBossLib_8015C2E0")]
-    pub fn boss_mh_beaten(&self) -> bool {
-        let ms = self.boss_motion_id(FighterKind::MasterHand.id());
-        ms == MH_MS_DAMAGE || ms == MH_MS_DAMAGE2
-    }
-
-    /// Whether Crazy Hand is beaten, `ftBossLib_8015C31C`.
     #[doc(alias = "ftBossLib_8015C31C")]
-    pub fn boss_ch_beaten(&self) -> bool {
-        let ms = self.boss_motion_id(FighterKind::CrazyHand.id());
-        ms == CH_MS_181 || ms == CH_MS_182
+    pub fn boss_hand_beaten(&self, h: &super::masterhand::Hand) -> bool {
+        let ms = self.boss_motion_id(h.kind.id());
+        ms == h.beaten.states[0] || ms == h.beaten.states[1]
     }
 
-    /// Whether Master Hand is out (sleeping), `ftBossLib_8015C358`.
+    /// Whether a hand is out (sleeping), `ftBossLib_8015C358` (Master Hand) and
+    /// `ftBossLib_8015C3A0` (Crazy Hand).
     #[doc(alias = "ftBossLib_8015C358")]
-    pub fn boss_mh_sleeping(&self) -> bool {
-        self.boss_gobj(FighterKind::MasterHand.id())
+    #[doc(alias = "ftBossLib_8015C3A0")]
+    pub fn boss_hand_out(&self, h: &super::masterhand::Hand) -> bool {
+        self.boss_gobj(h.kind.id())
             .is_some_and(|g| self.game.fighter(g).is_sleeping)
     }
 
-    /// Whether Crazy Hand is out, `ftBossLib_8015C3A0`.
-    #[doc(alias = "ftBossLib_8015C3A0")]
-    pub fn boss_ch_sleeping(&self) -> bool {
-        self.boss_gobj(FighterKind::CrazyHand.id())
-            .is_some_and(|g| self.game.fighter(g).is_sleeping)
+    /// Whether a hand's partner is beaten or out: his tag attacks' end.
+    pub(crate) fn boss_hand_partner_gone(&self, h: &super::masterhand::Hand) -> bool {
+        let p = super::masterhand::Hand::of(h.partner);
+        self.boss_hand_beaten(p) || self.boss_hand_out(p)
     }
 
     /// Crazy Hand's next attack (`u.mh.x2250`, 0 with no Crazy Hand), `ftBossLib_8015C4C4`.
@@ -263,7 +255,7 @@ impl Running<'_> {
             0..=4 => 4 * level as usize,
             _ => 0x14,
         };
-        self.mh_da_i32(f, off)
+        super::masterhand::HAND.i32(self, f, off)
     }
 
     /// One of four cries, `ftBossLib_8015C5F8`.
@@ -293,7 +285,7 @@ impl Running<'_> {
     #[doc(alias = "ftBossLib_8015C9CC")]
     pub fn boss_mh_word(&self, off: usize) -> i32 {
         match self.boss_mh_attrs() {
-            Some(f) => self.mh_da_i32(f, off),
+            Some(f) => super::masterhand::HAND.i32(self, f, off),
             None => -1,
         }
     }
@@ -309,13 +301,13 @@ impl Running<'_> {
                 self.game.ft_80086a4c(g, v);
             }
         }
-        super::super::it::item::flag_all_x3(self.game);
+        super::super::it::item::pause_all(self.game);
     }
 
     /// `ftBossLib_8015CB7C`: the items' rates back (`it_8026C42C`).
     #[doc(alias = "ftBossLib_8015CB7C")]
     pub fn boss_reset_item_rate(&mut self) {
-        super::super::it::item::unflag_all_x3(self.game);
+        super::super::it::item::resume_all(self.game);
     }
 
     /// The cutscene camera looks at a player from `x178` in front, over 10 frames,
@@ -325,7 +317,7 @@ impl Running<'_> {
         let mut v = self.game.player_pos(slot);
         camera::script_look_at(self, v);
         let dz = match self.boss_mh_attrs() {
-            Some(f) => reg(self.mh_da_f32(f, attr::CAMERA_Z)),
+            Some(f) => reg(super::masterhand::HAND.f32(self, f, attr::CAMERA_Z)),
             None => fp::frsp(-1.0),
         };
         v.z = mem(fp::fadds(reg(v.z), dz));

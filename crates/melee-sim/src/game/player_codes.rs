@@ -91,6 +91,26 @@ pub struct PlayerCodes {
     pub stadium_weights: bool,
 }
 
+impl PlayerCodes {
+    /// No player code.
+    pub const NONE: PlayerCodes = PlayerCodes {
+        swap_xz: false,
+        invisible_techs: false,
+        fall_fast_spark: false,
+        quiet_announcer: false,
+        camera: false,
+        start_rules: None,
+        end_rules: None,
+        sdi_colors: false,
+        sdi_colors_reset: false,
+        dash_grab_color: false,
+        izumi_reflection_size: false,
+        izumi_reflection_callbacks: false,
+        marth_trail: false,
+        stadium_weights: false,
+    };
+}
+
 /// What `C2 8016E750` writes into the match's `StartMeleeData`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum StartRules {
@@ -453,7 +473,7 @@ fn scene(g: &Game) -> Scene {
 impl Running<'_> {
     /// `C2 8016E750`: the match's `StartMeleeData` as the code leaves it.
     pub fn player_start_rules(&self, d: &mut StartMeleeData) {
-        let Some(rules) = self.game.rules.player.start_rules else {
+        let Some(rules) = self.game.rules.start_rules() else {
             return;
         };
         let at = scene(self.game);
@@ -471,7 +491,7 @@ impl Running<'_> {
 
     /// `C2 8016E91C`, at the end of the scene's entry: every slot's stocks.
     pub fn player_end_rules(&mut self) {
-        let Some(rules) = self.game.rules.player.end_rules else {
+        let Some(rules) = self.game.rules.end_rules() else {
             return;
         };
         let at = scene(self.game);
@@ -582,7 +602,7 @@ const CAMERA: [u32; 9] = [
 impl Game {
     /// `C2 801C0A50`: the camera's values after the stage's setup.
     pub fn player_camera(&mut self) {
-        if !self.rules.player.camera {
+        if !self.rules.player_camera() {
             return;
         }
         let c = &mut self.stage_info.cam_info;
@@ -601,7 +621,7 @@ impl Game {
     /// Whether the invisible techs code hides the fighter now.
     pub fn tech_hidden(&self, f: super::handles::FighterId) -> bool {
         let fp = &self.fighters[f.0];
-        self.rules.player.invisible_techs
+        self.rules.hides_techs()
             && (199..=201).contains(&fp.motion_id)
             && (0x40A0..0x41A0).contains(&(fp.cur_anim_frame.to_bits() >> 16))
     }

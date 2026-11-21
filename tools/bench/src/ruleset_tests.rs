@@ -412,8 +412,7 @@ fn slippi_cpu_di_reads_neither_register() {
         let frame = before.game.playback.as_ref().unwrap().frame_index;
         let run = |slippi: bool, codes: CodeSet| {
             let mut m = before.clone();
-            m.game.rules.slippi = slippi;
-            m.game.rules.codes = codes;
+            m.game.rules = m.game.rules.clone().with_fixes(slippi.then_some(codes));
             let mut device = Device(&bench.replay);
             // The device answers by the frame playback asks for, so it picks up where the
             // match is.
@@ -616,7 +615,7 @@ fn slippi_super_scope_stand_in_matches_the_model() {
                     panic!("{name}: tick {t}'s events differ without the allocator model: {d}");
                 }
                 for (i, it) in on.game.items.iter() {
-                    if it.kind != ItKind::SScope {
+                    if it.kind != ItKind::SuperScope {
                         continue;
                     }
                     let addr = it.entity.map_or(0, |g| on.game.world.gobjs.addr(g.0)) as i32;

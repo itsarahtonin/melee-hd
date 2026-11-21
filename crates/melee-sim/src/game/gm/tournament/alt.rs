@@ -9,7 +9,7 @@
 use gekko_fp as fp;
 
 use super::STATE_SETUP;
-use super::bracket::player_x;
+use super::bracket::{Counters, Screen, player_x};
 use super::lib::{ckind_of, f, icon_frame, icon_of, scene_model};
 use crate::fpu::{mem, reg};
 use crate::game::state::Running;
@@ -31,16 +31,6 @@ pub const PROC_ROW: u32 = 0x8019_CDBC;
 pub const PROC_COUNTS: u32 = 0x8019_CFA4;
 pub const PROC_HANDICAP: u32 = 0x8019_D074;
 
-/// `lbl_803B7D18`: the players' models' frames by state (start, end, loop).
-const PLAYER_ANIMS: [(u8, u8, u8); 6] = [
-    (0, 30, 0),
-    (50, 59, 0),
-    (60, 70, 1),
-    (90, 100, 0),
-    (110, 130, 0),
-    (150, 160, 0),
-];
-
 const PAD_A: u32 = 0x100;
 const PAD_B: u32 = 0x200;
 const PAD_X: u32 = 0x400;
@@ -51,6 +41,32 @@ const PAD_L: u32 = 0x40;
 const PAD_LEFT: u32 = 0x0004_0001;
 const PAD_RIGHT: u32 = 0x0008_0002;
 const GM_MENU: u8 = 1;
+
+fn match_up_counters(t: &mut super::Tournament) -> Counters<'_> {
+    let a = &mut t.alt;
+    Counters {
+        bg: &mut a.x4,
+        panel: &mut a.xe,
+        title: &mut a.xf,
+        bounce: &mut a.x10,
+        bounce_ys: &t.alt_bounce,
+        bar: &mut a.x1c,
+        anims: &mut a.x1d,
+        choice: &mut a.x38,
+    }
+}
+
+/// The match-up screen's processes it shares with the bracket's players' screen.
+pub const MATCH_UP: Screen = Screen {
+    step_only: false,
+    counters: match_up_counters,
+    icon_y: 3.0,
+    icon_each_frame: true,
+    title_by_type: true,
+    tag_y: 10.1,
+    bar_first: 0x14,
+    handicap_hides_out: false,
+};
 
 impl Running<'_> {
     fn alt(&mut self) -> &mut super::Alt {
@@ -67,7 +83,7 @@ impl Running<'_> {
     /// `fn_8019BA08`: a player's icons' model showing their character's (none for a random
     /// one).
     #[doc(alias = "fn_8019BA08")]
-    fn alt_icon_model(&mut self, p: usize, j: JObjId) {
+    pub(super) fn alt_icon_model(&mut self, p: usize, j: JObjId) {
         let m = self.game.tou.tm.x4b8[p];
         let first = self.tou_child(Some(j));
         if m.x2 != 0 {
@@ -80,161 +96,6 @@ impl Running<'_> {
             return;
         }
         self.tou_icon_model(first, super::bracket::ICON_MODELS[usize::from(m.x1)]);
-    }
-
-    /// `fn_8019BF18`: the background's loop.
-    #[doc(alias = "fn_8019BF18")]
-    fn alt_bg_proc(&mut self, gobj: GObjId) {
-        let j = self.tou_jobj(gobj);
-        if self.alt().x4 > 800 {
-            self.alt().x4 = 0;
-        }
-        let c = self.alt().x4;
-        self.tou_frame(Some(j), mem(f(i32::from(c))));
-        self.alt().x4 = c.wrapping_add(1);
-    }
-
-    /// `fn_8019BF8C`: the panel's loops.
-    #[doc(alias = "fn_8019BF8C")]
-    fn alt_panel_proc(&mut self, gobj: GObjId) {
-        let cur = self.game.tou.tm.cur_option;
-        let j = self.tou_jobj(gobj);
-        if cur <= 0x1A || cur >= 0x1F {
-            if self.alt().xe > 0x77 {
-                self.alt().xe = 0x5A;
-            }
-        } else if cur <= 0x1E && self.alt().xe > 0x9F {
-            self.alt().xe = 0x82;
-        }
-        let c = self.alt().xe;
-        self.tou_frame(Some(j), mem(f(i32::from(c))));
-        self.alt().xe = c.wrapping_add(1);
-    }
-
-    /// `fn_8019C048`: a player's character model, as the bracket's (`fn_80196FFC`) but for
-    /// unplugged controllers whatever the slot.
-    #[doc(alias = "fn_8019C048")]
-    fn alt_player_proc(&mut self, gobj: GObjId) {
-        let p = self.tou_index(gobj) as usize;
-        let j = self.tou_jobj(gobj);
-        let t = self.game.tou.tm.x524(2).expect("the players' names");
-        if self.tou_pad_err(p) != 0 {
-            self.tou_hide(Some(j));
-            self.game.sis.set_scale(self.data, t, p as i32, 0.0, 0.0);
-            return;
-        }
-        self.tou_show(Some(j));
-        let s = if self.alt().x1d[p].state == 4 {
-            0.0
-        } else {
-            1.0
-        };
-        self.game.sis.set_scale(self.data, t, p as i32, s, s);
-        let x = player_x(self.game.tou.tm.x30, p as i32);
-        self.tou_set_tx(Some(j), mem(x));
-        self.game.sis.text_mut(t).hidden = 0;
-        let mut a = self.alt().x1d[p];
-        let (start, end, lp) = PLAYER_ANIMS[usize::from(a.state)];
-        a.start = start;
-        a.end = end;
-        a.loop_ = lp;
-        if a.cur < a.start {
-            a.cur = a.start;
-        }
-        if a.cur < a.end {
-            a.cur += 1;
-        } else {
-            a.done = 1;
-            a.cur = if a.loop_ != 0 { a.start } else { a.end };
-        }
-        if a.state == 0 && self.alt().x38[p] == 6 && a.done != 0 && self.game.tou.tm.x4b8[p].x0 != 0
-        {
-            a.state = 1;
-            a.done = 0;
-        }
-        if a.state == 1 && a.done != 0 {
-            a.state = 2;
-            a.done = 0;
-        }
-        self.alt().x1d[p] = a;
-        self.tou_frame(Some(j), mem(f(i32::from(a.cur))));
-    }
-
-    /// `fn_8019C3EC`: a player's character icon.
-    #[doc(alias = "fn_8019C3EC")]
-    fn alt_icon_proc(&mut self, gobj: GObjId) {
-        let p = self.tou_index(gobj) as usize;
-        let j = self.tou_jobj(gobj);
-        if self.tou_pad_err(p) != 0 {
-            self.tou_hide(Some(j));
-            return;
-        }
-        self.tou_show(Some(j));
-        let x = player_x(self.game.tou.tm.x30, p as i32);
-        self.tou_move(j, fp::fadds(4.5, x), 3.0, 666.0);
-        if self.alt().x1d[p].state == 4 {
-            self.tou_hide(Some(j));
-        }
-        self.alt_icon_model(p, j);
-    }
-
-    /// `fn_8019C570`: a player's base with their character's icon and color.
-    #[doc(alias = "fn_8019C570")]
-    fn alt_base_proc(&mut self, gobj: GObjId) {
-        let p = self.tou_index(gobj) as usize;
-        let j = self.tou_jobj(gobj);
-        if self.tou_pad_err(p) != 0 {
-            self.tou_hide(Some(j));
-            return;
-        }
-        self.tou_show(Some(j));
-        if self.alt().x1d[p].state == 4 {
-            self.tou_hide(Some(j));
-        }
-        let m = self.game.tou.tm.x4b8[p];
-        let c = self.tou_child(Some(j));
-        let c = self.tou_next(c);
-        if m.x2 != 0 {
-            self.tou_frame(c, 201.0);
-            return;
-        }
-        self.tou_frame(c, icon_frame(i32::from(m.x1), i32::from(m.x3)));
-    }
-
-    /// `fn_8019C6AC`: the title coming in (winner-out's or loser-out's).
-    #[doc(alias = "fn_8019C6AC")]
-    fn alt_title_proc(&mut self, gobj: GObjId) {
-        let j = self.tou_jobj(gobj);
-        if self.alt().xf > 60 {
-            self.alt().xf = 60;
-        }
-        let c = i32::from(self.alt().xf);
-        let mt = self.game.tou.tm.match_type();
-        self.tou_frame(Some(j), mem(f(c + mt * 100 + 100)));
-        self.alt().xf = self.alt().xf.wrapping_add(1);
-    }
-
-    /// `fn_8019C744`: a player's name tag, bouncing once out.
-    #[doc(alias = "fn_8019C744")]
-    fn alt_tag_proc(&mut self, gobj: GObjId) {
-        let p = self.tou_index(gobj) as usize;
-        let j = self.tou_jobj(gobj);
-        let x = player_x(self.game.tou.tm.x30, p as i32);
-        self.tou_move(j, fp::fadds(reg(0.3), x), reg(10.1), 666.0);
-        if self.alt().x1d[p].state == 4 {
-            if self.alt().x10[p] < 0x28 {
-                self.alt().x10[p] += 1;
-            }
-            let y = self.game.tou.alt_bounce[usize::from(self.alt().x10[p])];
-            self.tou_set_ty(Some(j), y);
-        } else {
-            self.alt().x10[p] = 0;
-        }
-        if self.tou_pad_err(p) != 0 && self.game.tou.tm.x4b8[p].x0 != 1 {
-            self.tou_show(Some(j));
-            let x = player_x(self.game.tou.tm.x30, p as i32);
-            self.tou_move(j, fp::fadds(reg(0.3), x), reg(10.1), 666.0);
-        }
     }
 
     /// `fn_8019CA38`: a player's "ready" marker, looping until they're ready.
@@ -259,31 +120,6 @@ impl Running<'_> {
         }
         let c = self.alt().x6[p];
         self.tou_frame(Some(j), mem(f(i32::from(c))));
-    }
-
-    /// `fn_8019CBFC`: the players' bar coming in.
-    #[doc(alias = "fn_8019CBFC")]
-    fn alt_bar_proc(&mut self, gobj: GObjId) {
-        let j = self.tou_jobj(gobj);
-        let c = i32::from(self.alt().x1c);
-        self.tou_frame(Some(j), mem(f(c + 0x14)));
-        if self.alt().x1c < 0xA {
-            self.alt().x1c += 1;
-        }
-    }
-
-    /// `fn_8019CC74`: "no controller" over an unplugged player.
-    #[doc(alias = "fn_8019CC74")]
-    fn alt_unplugged_proc(&mut self, gobj: GObjId) {
-        let p = self.tou_index(gobj) as usize;
-        let j = self.tou_jobj(gobj);
-        if self.tou_pad_err(p) == 0 {
-            self.tou_hide(Some(j));
-            return;
-        }
-        self.tou_show(Some(j));
-        let x = player_x(self.game.tou.tm.x30, p as i32);
-        self.tou_move(j, x, 666.0, reg(0.01));
     }
 
     /// `fn_8019CDBC`: a waiting entrant's icon sliding to its seat across the top (in front
@@ -330,20 +166,6 @@ impl Running<'_> {
         self.tou_frame(c, mem(f(i32::from(x2e))));
         let c = self.tou_next(c);
         self.tou_frame(c, mem(f(i32::from(x30))));
-    }
-
-    /// `fn_8019D074`: a player's handicap.
-    #[doc(alias = "fn_8019D074")]
-    fn alt_handicap_proc(&mut self, gobj: GObjId) {
-        let p = self.tou_index(gobj) as usize;
-        let j = self.tou_jobj(gobj);
-        if self.tou_pad_err(p) != 0 {
-            self.tou_hide(Some(j));
-            return;
-        }
-        self.tou_show(Some(j));
-        let x = player_x(self.game.tou.tm.x30, p as i32);
-        self.tou_move(j, x, 666.0, 666.0);
     }
 
     /// `fn_8019D1BC`: the screen's models: for each player their character model, name,
@@ -839,19 +661,19 @@ impl Running<'_> {
     #[melee_callbacks::callbacks(Proc)]
     pub(crate) fn tou_alt_run(&mut self, gobj: GObjId, addr: u32) -> bool {
         match addr {
-            PROC_BG => self.alt_bg_proc(gobj),
-            PROC_PANEL => self.alt_panel_proc(gobj),
-            PROC_PLAYER => self.alt_player_proc(gobj),
-            PROC_ICON => self.alt_icon_proc(gobj),
-            PROC_BASE => self.alt_base_proc(gobj),
-            PROC_TITLE => self.alt_title_proc(gobj),
-            PROC_TAG => self.alt_tag_proc(gobj),
+            PROC_BG => self.screen_bg_proc(gobj, &MATCH_UP),
+            PROC_PANEL => self.screen_panel_proc(gobj, &MATCH_UP),
+            PROC_PLAYER => self.screen_player_proc(gobj, &MATCH_UP),
+            PROC_ICON => self.screen_icon_proc(gobj, &MATCH_UP),
+            PROC_BASE => self.screen_base_proc(gobj, &MATCH_UP),
+            PROC_TITLE => self.screen_title_proc(gobj, &MATCH_UP),
+            PROC_TAG => self.screen_tag_proc(gobj, &MATCH_UP),
             PROC_READY => self.alt_ready_proc(gobj),
-            PROC_BAR => self.alt_bar_proc(gobj),
-            PROC_UNPLUGGED => self.alt_unplugged_proc(gobj),
+            PROC_BAR => self.screen_bar_proc(gobj, &MATCH_UP),
+            PROC_UNPLUGGED => self.screen_unplugged_proc(gobj, &MATCH_UP),
             PROC_ROW => self.alt_row_proc(gobj),
             PROC_COUNTS => self.alt_counts_proc(gobj),
-            PROC_HANDICAP => self.alt_handicap_proc(gobj),
+            PROC_HANDICAP => self.screen_handicap_proc(gobj, &MATCH_UP),
             _ => return false,
         }
         true

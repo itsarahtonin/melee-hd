@@ -615,7 +615,8 @@ impl Running<'_> {
     fn damage_no_reaction_at(&mut self, gobj: GObjId, wobble_site: bool) {
         let f = self.game.fighter_id(gobj);
         self.stamina_out(gobj);
-        let broke_free = wobble_site && self.game.rules.prevent_wobbling && self.wobble_count(gobj);
+        let broke_free =
+            wobble_site && self.game.rules.prevents_wobbling() && self.wobble_count(gobj);
         if !broke_free {
             let m = self.game.fighters[f.0].motion_id;
             if m == ms::CAPTURE_WAIT_HI || m == ms::CAPTURE_DAMAGE_HI {
@@ -1166,7 +1167,7 @@ impl Running<'_> {
                 .dmg
                 .x1868_source
                 .expect("a ReDead's hit without its source");
-            if crate::game::it::kinds::leadead::held(self, source).is_none() {
+            if crate::game::it::kinds::redead::held(self, source).is_none() {
                 self.enter_capture_leadead(gobj);
                 return true;
             }
@@ -1241,7 +1242,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_Damage_OnExitHitlag")]
     #[doc(alias = "ftCo_800DF608")]
     pub fn co_damage_exit_hitlag(&mut self, gobj: GObjId) {
-        if self.game.rules.player.sdi_colors_reset {
+        if self.game.rules.sdi_colors_reset() {
             self.sdi_colors_reset(gobj);
         }
         let c = self.common();

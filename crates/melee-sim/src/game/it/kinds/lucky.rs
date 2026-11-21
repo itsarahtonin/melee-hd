@@ -38,7 +38,8 @@ pub const ANIM0: u32 = 0x802D_55DC;
 pub const PHYS0: u32 = 0x802D_5600;
 pub const COLL0: u32 = 0x802D_5620;
 pub const DMG_RECEIVED: u32 = 0x802D_5648;
-pub const EVT_UNK: u32 = 0x802D_56F0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_56F0;
 pub const EGG_SPAWNED: u32 = 0x802D_57D0;
 pub const EGG_LANDED: u32 = 0x802D_582C;
 pub const EGG_ANIM0: u32 = 0x802D_5884;
@@ -56,7 +57,8 @@ pub const EGG_ENTERED_AIR: u32 = 0x802D_5A04;
 pub const EGG_ANIM4: u32 = 0x802D_5A2C;
 pub const EGG_PHYS4: u32 = 0x802D_5A64;
 pub const EGG_COLL4: u32 = 0x802D_5A68;
-pub const EGG_EVT_UNK: u32 = 0x802D_5A9C;
+#[doc(alias("EGG_EVT_UNK"))]
+pub const EGG_FORGET: u32 = 0x802D_5A9C;
 
 /// Its variables past the release's (`itLucky_ItemVars`): the state it's in or goes to next
 /// (`x60`: 2 starting to lay, 3 laying, 4 done), the eggs left to lay (`x64`), and whether
@@ -235,7 +237,7 @@ pub fn out(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     hitbox::end_blink(r.game, gobj);
     hitbox::set_hit_ids2(r.game, gobj);
-    hitbox::clear_xdce_b2(r.game, gobj);
+    hitbox::clear_hit_by_own_items(r.game, gobj);
 }
 
 /// Falls off the floor, `it_802D546C`.
@@ -321,7 +323,8 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
 /// (`it_8026B894`).
 #[doc(alias = "it_802D56F0")]
 // Ports `itLucky_Logic44_EvtUnk`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
@@ -338,7 +341,7 @@ pub fn spawn_egg(
     let parent = parent?;
     let owner = item(r.game, parent).owner;
     let mut spawn = SpawnItem {
-        kind: ItKind::LuckyEgg.id(),
+        kind: ItKind::ChanseyEgg.id(),
         ..Default::default()
     };
     spawn.prev_pos = Vec3::new(pos.x, pos.y, 0.0);

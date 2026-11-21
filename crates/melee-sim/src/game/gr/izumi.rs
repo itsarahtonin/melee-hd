@@ -624,7 +624,7 @@ const HIGH_RES: (u16, u16) = (640, 480);
 #[doc(alias = "grIzumi_801CCD98")]
 pub fn create_reflection(r: &mut Running) -> GObjId {
     use super::super::state::{OBJ_CAMERA, Obj, UserData};
-    let high = r.game.rules.player.izumi_reflection_size;
+    let high = r.game.rules.izumi_reflection_size();
     let (w, h) = if high { HIGH_RES } else { (80, 60) };
     let gobj = r.game.world.create(0x11, 0x12, 0);
     let mut desc = REFLECT_CAMERA;
@@ -722,7 +722,7 @@ pub fn render_reflection(r: &mut Running, gobj: GObjId) {
         panic!("the reflection camera holds no camera");
     };
     // The reflection callbacks code (`game::player_codes`) skips both callback swaps.
-    let swap = !r.game.rules.player.izumi_reflection_callbacks;
+    let swap = !r.game.rules.izumi_reflection_callbacks();
     if swap {
         fighters_draw_magnified(r.game);
     }

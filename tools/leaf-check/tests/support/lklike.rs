@@ -433,11 +433,11 @@ fn run_link(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         }
         "it_8029FD84" => {
             item();
-            linkbomb::evt_unk(g, gobj, other());
+            linkbomb::forget(g, gobj, other());
         }
         "it_802A23CC" => {
             item();
-            linkboomerang::evt_unk(g, gobj, other());
+            linkboomerang::forget(g, gobj, other());
         }
         "it_802A7D40" => {
             item();
@@ -445,11 +445,11 @@ fn run_link(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         }
         "itLinkArrow_Logic98_EvtUnk" => {
             item();
-            linkarrow::evt_unk(g, gobj, other());
+            linkarrow::forget(g, gobj, other());
         }
         "itLinkBow_Logic100_EvtUnk" => {
             item();
-            linkbow::evt_unk(g, gobj, other());
+            linkbow::forget(g, gobj, other());
         }
         "it_802C8C34" => {
             item();
@@ -457,7 +457,7 @@ fn run_link(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         }
         "itCLinkMilk_Logic80_EvtUnk" => {
             item();
-            clinkmilk::evt_unk(g, gobj, other());
+            clinkmilk::forget(g, gobj, other());
         }
         _ => return run_callback(g, gobj, a),
     }

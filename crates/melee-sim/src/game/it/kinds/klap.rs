@@ -24,7 +24,8 @@ use crate::game::it::ItKind;
 pub const SPAWNED: u32 = 0x802E_1820;
 pub const DESTROYED: u32 = 0x802E_1874;
 pub const DMG_RECEIVED: u32 = 0x802E_1E5C;
-pub const EVT_UNK: u32 = 0x802E_2450;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802E_2450;
 pub const ANIM1: u32 = 0x802E_1968;
 pub const PHYS1: u32 = 0x802E_1970;
 pub const COLL1: u32 = 0x802E_19FC;
@@ -55,14 +56,19 @@ pub struct KlapVars {
     /// +0x4, `zako.idx`: its slot in the stage's enemy spawner, or -1.
     pub idx: Var<i32>,
     /// +0x8, `zako.x8`.
-    pub x8: Var<Vec3>,
+    #[doc(alias("x8"))]
+    pub normal: Var<Vec3>,
     /// +0x14, `zako.x14`.
-    pub x14: [Var<i32>; 3],
+    #[doc(alias("x14"))]
+    pub words: [Var<i32>; 3],
     /// +0x20: the stage object it rides (map 11's path).
-    pub x20: Var<Option<GObjId>>,
+    #[doc(alias("x20"))]
+    pub path_object: Var<Option<GObjId>>,
     /// +0x24, +0x28: its spin's steps about y and z after a hit.
-    pub x24: Var<f32>,
-    pub x28: Var<f32>,
+    #[doc(alias("x24"))]
+    pub spin_y: Var<f32>,
+    #[doc(alias("x28"))]
+    pub spin_z: Var<f32>,
 }
 
 impl KlapVars {
@@ -70,13 +76,13 @@ impl KlapVars {
     pub fn mark_stale(&mut self) {
         self.jobj.mark_stale();
         self.idx.mark_stale();
-        self.x8.mark_stale();
-        for v in &mut self.x14 {
+        self.normal.mark_stale();
+        for v in &mut self.words {
             v.mark_stale();
         }
-        self.x20.mark_stale();
-        self.x24.mark_stale();
-        self.x28.mark_stale();
+        self.path_object.mark_stale();
+        self.spin_y.mark_stale();
+        self.spin_z.mark_stale();
     }
 }
 
@@ -88,11 +94,11 @@ impl Mirror for KlapVars {
         KlapVars {
             jobj: Var::new(cx.import_handle("JObjId", m.u32(at)).map(JObjId)),
             idx: Var::new(m.u32(at + 4) as i32),
-            x8: Var::new(Vec3::new(f(at + 8), f(at + 0xC), f(at + 0x10))),
-            x14: std::array::from_fn(|i| Var::new(m.u32(at + 0x14 + 4 * i as u32) as i32)),
-            x20: Var::new(cx.import_handle("GObjId", m.u32(at + 0x20)).map(GObjId)),
-            x24: Var::new(f(at + 0x24)),
-            x28: Var::new(f(at + 0x28)),
+            normal: Var::new(Vec3::new(f(at + 8), f(at + 0xC), f(at + 0x10))),
+            words: std::array::from_fn(|i| Var::new(m.u32(at + 0x14 + 4 * i as u32) as i32)),
+            path_object: Var::new(cx.import_handle("GObjId", m.u32(at + 0x20)).map(GObjId)),
+            spin_y: Var::new(f(at + 0x24)),
+            spin_z: Var::new(f(at + 0x28)),
         }
     }
 
@@ -104,9 +110,9 @@ impl Mirror for KlapVars {
         }
         let ints: [(&str, &Var<i32>, u32); 4] = [
             ("idx", &self.idx, 4),
-            ("x14.x", &self.x14[0], 0x14),
-            ("x14.y", &self.x14[1], 0x18),
-            ("x14.z", &self.x14[2], 0x1C),
+            ("x14.x", &self.words[0], 0x14),
+            ("x14.y", &self.words[1], 0x18),
+            ("x14.z", &self.words[2], 0x1C),
         ];
         for (name, v, off) in ints {
             if v.live(&p(name), cx) && *v.peek() != m.u32(at + off) as i32 {
@@ -117,12 +123,12 @@ impl Mirror for KlapVars {
                 );
             }
         }
-        self.x8.compare(m, at + 8, &p("x8"), cx);
-        if self.x20.live(&p("x20"), cx) {
-            let ours = self.x20.peek().map(|g| g.0);
+        self.normal.compare(m, at + 8, &p("x8"), cx);
+        if self.path_object.live(&p("x20"), cx) {
+            let ours = self.path_object.peek().map(|g| g.0);
             cx.compare_handle(&p("x20"), "GObjId", ours, m.u32(at + 0x20));
         }
-        for (name, v, off) in [("x24", &self.x24, 0x24), ("x28", &self.x28, 0x28)] {
+        for (name, v, off) in [("x24", &self.spin_y, 0x24), ("x28", &self.spin_z, 0x28)] {
             if v.live(&p(name), cx) && v.peek().to_bits() != m.u32(at + off) {
                 cx.mismatch(
                     &p(name),
@@ -190,7 +196,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
     ip.xD5C = 0;
-    vars(r.game, gobj).x20.set(None);
+    vars(r.game, gobj).path_object.set(None);
     swim(r, gobj);
 }
 
@@ -198,9 +204,9 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// (`grKongo_801D8058`).
 #[doc(alias = "itKlap_Logic10_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
-    if let Some(path) = vars(r.game, gobj).x20.get() {
+    if let Some(path) = vars(r.game, gobj).path_object.get() {
         crate::game::gr::kongo::destroy_path(r, path);
-        vars(r.game, gobj).x20.set(None);
+        vars(r.game, gobj).path_object.set(None);
     }
 }
 
@@ -211,8 +217,8 @@ pub fn spawn(r: &mut Running, path: Option<GObjId>) -> Option<GObjId> {
     let path = path?;
     let j = jobj_of(r.game, path);
     let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, j, None);
-    let gobj = zako::spawn(r, ItKind::Klap.id(), Some(pos), None, None, true)?;
-    vars(r.game, gobj).x20.set(Some(path));
+    let gobj = zako::spawn(r, ItKind::KlapTrap.id(), Some(pos), None, None, true)?;
+    vars(r.game, gobj).path_object.set(Some(path));
     super::super::lib26b1::stop_keeping_clear(r.game, gobj);
     Some(gobj)
 }
@@ -255,7 +261,7 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itKlap_UnkMotion1_Coll")]
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
     let model = jobj_of(r.game, gobj).expect("a Klap Trap without a model");
-    match vars(r.game, gobj).x20.get() {
+    match vars(r.game, gobj).path_object.get() {
         Some(path) => {
             let pj = jobj_of(r.game, path).expect("the Klap Trap's path's model");
             let (mut pos, rot) = {
@@ -338,10 +344,10 @@ pub fn knocked(r: &mut Running, gobj: GObjId) {
 fn spin_away(r: &mut Running, gobj: GObjId) {
     let f = reg(r.game.objs.rng.draw_f32());
     let y = mem(fp::fmuls(fp::fsubs(f, 0.5), reg(SPIN)));
-    vars(r.game, gobj).x24.set(y);
+    vars(r.game, gobj).spin_y.set(y);
     let f = reg(r.game.objs.rng.draw_f32());
     let z = mem(fp::fmuls(fp::fsubs(f, 0.5), reg(SPIN)));
-    vars(r.game, gobj).x28.set(z);
+    vars(r.game, gobj).spin_z.set(z);
     change_state(r, gobj, 4, change::ANIM_UPDATE);
 }
 
@@ -366,7 +372,7 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
     };
     let (dy, dz) = {
         let v = vars(r.game, gobj);
-        (v.x24.get(), v.x28.get())
+        (v.spin_y.get(), v.spin_z.get())
     };
     q.y = mem(wrap(fp::fadds(reg(q.y), reg(dy))));
     q.z = mem(wrap(fp::fadds(reg(q.z), reg(dz))));
@@ -443,6 +449,7 @@ pub fn shot(
 
 /// Forgets a GObj the Klap Trap points to, `it_802E2450` (`it_8026B894`).
 #[doc(alias = "it_802E2450")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     let _ = super::super::lib26b1::forget(r.game, gobj, other);
 }

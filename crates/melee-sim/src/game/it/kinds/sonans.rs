@@ -15,7 +15,8 @@ use crate::hsd::jobj;
 
 pub const SPAWNED: u32 = 0x802C_D44C;
 pub const LANDED: u32 = 0x802C_D4D8;
-pub const EVT_UNK: u32 = 0x802C_D4DC;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_D4DC;
 pub const SWING: u32 = 0x802C_D4FC;
 pub const DMG_DEALT: u32 = 0x802C_D7B8;
 pub const DMG_RECEIVED: u32 = 0x802C_D7D4;
@@ -96,7 +97,8 @@ pub fn landed(_: &mut Running, _: GObjId) {}
 
 /// Forgets a GObj going away, `it_802CD4DC` (`it_8026B894`).
 #[doc(alias = "it_802CD4DC")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
@@ -288,7 +290,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
         lib2725::clear_velocity(r.game, gobj);
         hitbox::end_blink(r.game, gobj);
         hitbox::set_hit_ids2(r.game, gobj);
-        hitbox::clear_xdce_b2(r.game, gobj);
+        hitbox::clear_hit_by_own_items(r.game, gobj);
         change_state(r, gobj, 0, change::ANIM_UPDATE);
         effect_hitlag(r.game, gobj);
     }

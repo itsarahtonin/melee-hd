@@ -36,6 +36,7 @@
 // NaN takes the original's branches, which negated comparisons spell out.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
+use super::ruleset::Toggles;
 use super::state::Rules;
 use super::ucf::Ucf;
 
@@ -516,21 +517,6 @@ impl std::fmt::Display for CodeError {
 impl std::error::Error for CodeError {}
 
 impl Rules {
-    /// The Slippi ruleset as Slippi's online play runs it.
-    pub fn slippi_online() -> Rules {
-        Rules {
-            slippi: true,
-            ucf: Ucf::V0_84,
-            neutral_spawn: true,
-            prevent_wobbling: true,
-            offscreen_limits: true,
-            freeze_glitch_fix: true,
-            codes: CodeSet::V3_19,
-            player: Default::default(),
-            c_stick_1p: false,
-        }
-    }
-
     /// The rules a replay's gameplay codes make (its code list as Slippi's playback applies
     /// it, without the codes playback leaves out).
     pub fn from_codes(codes: &[Code]) -> Result<Rules, CodeError> {
@@ -572,7 +558,7 @@ impl Rules {
         let mut first = None;
         for set in CodeSet::ALL.into_iter().filter(|s| sets & s.bit() != 0) {
             match Rules::from_rules(&seen, set) {
-                Ok(rules) => return Ok(Rules { player, ..rules }),
+                Ok(rules) => return Ok(rules.with_player(player)),
                 Err(e) => {
                     first.get_or_insert(e);
                 }
@@ -583,38 +569,31 @@ impl Rules {
 
     /// The rules `seen` (one per code) make in version `set`, each rule needing all its codes.
     fn from_rules(seen: &[Rule], set: CodeSet) -> Result<Rules, CodeError> {
-        let mut rules = Rules {
-            codes: set,
-            ..Rules::default()
-        };
+        let mut on = Toggles::default();
         let (mut ucf084, mut ucf08) = (false, false);
         for (rule, name, flag) in [
             (Rule::Ucf084, "UCF 0.84", &mut ucf084),
             (Rule::Ucf08, "UCF 0.8", &mut ucf08),
-            (
-                Rule::NeutralSpawn,
-                "neutral spawns",
-                &mut rules.neutral_spawn,
-            ),
+            (Rule::NeutralSpawn, "neutral spawns", &mut on.neutral_spawn),
             (
                 Rule::PreventWobbling,
                 "wobbling prevention",
-                &mut rules.prevent_wobbling,
+                &mut on.prevent_wobbling,
             ),
             (
                 Rule::OffscreenLimits,
                 "off-screen damage limits",
-                &mut rules.offscreen_limits,
+                &mut on.offscreen_limits,
             ),
             (
                 Rule::Determinism,
                 "the determinism fixes",
-                &mut rules.slippi,
+                &mut on.determinism,
             ),
             (
                 Rule::FreezeGlitchFix,
                 "the freeze glitch fix",
-                &mut rules.freeze_glitch_fix,
+                &mut on.freeze_glitch_fix,
             ),
         ] {
             let all = KNOWN
@@ -628,13 +607,13 @@ impl Rules {
                 _ => return Err(CodeError::Partial { rule: name }),
             }
         }
-        rules.ucf = match (ucf084, ucf08) {
+        on.ucf = match (ucf084, ucf08) {
             (false, false) => Ucf::Off,
             (true, false) => Ucf::V0_84,
             (false, true) => Ucf::V0_8,
             (true, true) => return Err(CodeError::Mixed),
         };
-        Ok(rules)
+        Ok(Rules::from_toggles(on, set))
     }
 }
 
@@ -687,13 +666,13 @@ impl Rules {
             codes.push(code);
         }
         codes.extend(super::player_codes::in_memory(read));
-        let mut rules = Rules::from_codes(&codes)?;
+        let rules = Rules::from_codes(&codes)?;
         // The Slippi ruleset's C-stick rule: `li r3, 0` at its three calls.
         let patched = C_STICK_1P_SITES
             .iter()
             .filter(|&&a| read(a) == LI_R3_0)
             .count();
-        rules.c_stick_1p = match patched {
+        let c_stick_1p = match patched {
             0 => false,
             3 => true,
             _ => {
@@ -702,7 +681,7 @@ impl Rules {
                 });
             }
         };
-        Ok(rules)
+        Ok(rules.with_c_stick_1p(c_stick_1p))
     }
 }
 
@@ -896,15 +875,6 @@ impl super::state::Running<'_> {
 }
 
 impl super::state::Game {
-    /// Whether the GPU's copies from the EFB reach memory. A console's do. Slippi's Dolphin
-    /// keeps them on the GPU ("Store EFB Copies to Texture Only", its default), so memory keeps
-    /// what it held before them: melee-hd follows it under the Slippi ruleset and in a
-    /// replay's playback (Sarah, 2026-11-07), the console elsewhere (docs/engine.md, "The GPU's
-    /// pixels").
-    pub fn copies_reach_memory(&self) -> bool {
-        !(self.rules.slippi || self.playback.is_some())
-    }
-
     /// Off-screen damage from the stage's limits (`Fighter_procAnim+0x520`,
     /// `Online/Core/BrawlOffscreenDamage`), in place of the magnifier's check: a fighter is
     /// off screen past the stage's camera limits, except in the scene 0x0120, while

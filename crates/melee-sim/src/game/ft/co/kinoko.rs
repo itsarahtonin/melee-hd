@@ -553,7 +553,7 @@ impl Running<'_> {
     /// attributes' entry `idx + 2`.
     #[doc(alias = "it_80293660")]
     pub fn kinoko_scale_anim(&self, idx: i32) -> Option<melee_data::archive::DataRef> {
-        let art = it::item::article_of(self.game, self.data, ItKind::Kinoko.id())
+        let art = it::item::article_of(self.game, self.data, ItKind::SuperMushroom.id())
             .expect("the Super Mushroom's article");
         let attrs = it::data::Article(art)
             .special(self.data)

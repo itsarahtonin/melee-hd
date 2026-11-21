@@ -97,7 +97,7 @@ const FRAMES: [[usize; 4]; 3] = [
 /// Samus's grapple beam grabs: two units of reach, the beam's sparks, no sounds.
 pub static SAMUS: TetherGrab = TetherGrab {
     item: &GRAPPLE,
-    kind: TetherKind::Item(ItKind::SamusGBeam),
+    kind: TetherKind::Item(ItKind::SamusGrappleBeam),
     frames: FRAMES,
     reach: 2.0,
     sparks: [6, 4],
@@ -208,6 +208,7 @@ impl Running<'_> {
     #[doc(alias = "fn_800D9228")]
     #[doc(alias = "fn_800D9558")]
     #[doc(alias = "fn_800D9930")]
+    #[doc(alias("link_catch_tether", "samus_catch_tether"))]
     pub fn catch_tether(&mut self, gobj: GObjId, dash: bool) -> bool {
         let Some(g) = self.tether_grab(gobj) else {
             return false;
@@ -313,6 +314,7 @@ impl Running<'_> {
     /// tether comes out passes none, which the put-away ignores.
     #[doc(alias = "fn_800D949C")]
     #[doc(alias = "fn_800D9C64")]
+    #[doc(alias("link_catch_off_ground", "samus_catch_off_ground"))]
     pub fn tether_off_ground(&mut self, gobj: GObjId) {
         if let Some(g) = self.tether_grab(gobj)
             && let Some(hs) = self.game.fighter(gobj).u.gobj_at(g.item.slot)

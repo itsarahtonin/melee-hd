@@ -67,7 +67,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> melee_data::archive::DataRef {
 /// A spore item from `owner` at `pos`, facing `facing`, of kind `kind` (`xDD4`).
 fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing: f32, kind: i32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::LipStickSpore.id(),
+        kind: ItKind::LipsStickSpore.id(),
         ..Default::default()
     };
     // `Item_InitSpawnPositionFromParent`.

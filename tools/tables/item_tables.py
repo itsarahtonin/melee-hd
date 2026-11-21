@@ -4,8 +4,11 @@ render function (`it_803F1418` and its siblings), each kind's logic table (`it_8
 its siblings: its states and its callbacks), and every state table those name (each state's
 animation and three callbacks). Functions are their addresses, which melee-sim dispatches on.
 
-Each kind is named by its `ItKind` variant (melee-sim's `game::it::registry`), which spells the
-decomp's `ItemKind` names (`It_Kind_G_Shell` is `GShell`).
+Each kind is named by its `ItKind` variant (melee-sim's `game::it::registry`): the decomp's
+`ItemKind` name spelled as a variant (`It_Kind_Hammer_Head` is `HammerHead`), or the name
+players know it by where `RENAME_KINDS` gives one (`It_Kind_BombHei` is `BobOmb`). Each state
+table is named by the first kind whose logic table names it (`STATES_BOB_OMB`), its symbol and
+its old name kept as `#[doc(alias)]`.
 
 Usage: item_tables.py MAIN_DOL SYMBOLS_TXT FORWARD_H OUT_RS
   MAIN_DOL is the disc's main.dol (the decomp extracts it to orig/GALE01/sys/main.dol);
@@ -25,14 +28,23 @@ GROUPS = [
     ("STAGE", 208, "it_803F4CA8", "it_803F4D20"),
 ]
 
-# State tables code sets itself rather than through a logic table: an item Kirby's inhale holds
-# (`it_802F23EC`), and one Yoshi's tongue or Kirby's copy of it holds (`it_802F2BFC`,
-# `it_802F2D98`).
-EXTRA_STATES = ["it_803F9450", "it_803F9480", "it_803F9490"]
+# State tables code sets itself rather than through a logic table, and their names: an item
+# Kirby's inhale holds (`it_802F23EC`), and one Yoshi's tongue or Kirby's copy of it holds
+# (`it_802F2BFC`, `it_802F2D98`).
+EXTRA_STATES = {
+    "it_803F9450": ("KIRBY_INHALED", "an item Kirby's inhale holds"),
+    "it_803F9480": ("YOSHI_TONGUED", "an item Yoshi's tongue holds"),
+    "it_803F9490": ("KIRBY_TONGUED", "an item Kirby's copy of Yoshi's tongue holds"),
+}
+
+
+def snake(variant):
+    """`NessPKFire` as `NESS_PK_FIRE`."""
+    return re.sub(r'(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])', '_', variant).upper()
 
 CALLBACKS = [
     "spawned", "destroyed", "picked_up", "dropped", "thrown", "dmg_dealt", "dmg_received",
-    "entered_air", "reflected", "clanked", "absorbed", "shield_bounced", "hit_shield", "evt_unk",
+    "entered_air", "reflected", "clanked", "absorbed", "shield_bounced", "hit_shield", "forget",
 ]
 
 
@@ -51,9 +63,176 @@ def load_dol(path):
     return read
 
 
-# The decomp's markers that share a kind's number, and the one name melee-hd changes.
+# The decomp's markers that share a kind's number, and the names melee-hd changes: the names
+# players know the kinds by, where they differ from the decomp's.
 SKIP_KINDS = {'It_PKind_Start', 'It_PKind_Terminate', 'It_Kind_Unselected', 'It_Kind_None'}
-RENAME_KINDS = {'It_PKind_Random': 'StageHurtbox'}
+RENAME_KINDS = {
+    'It_Kind_Box': 'Crate',
+    'It_Kind_Taru': 'Barrel',
+    'It_Kind_Kusudama': 'PartyBall',
+    'It_Kind_TaruCann': 'BarrelCannon',
+    'It_Kind_BombHei': 'BobOmb',
+    'It_Kind_Dosei': 'MrSaturn',
+    'It_Kind_Heart': 'HeartContainer',
+    'It_Kind_Tomato': 'MaximTomato',
+    'It_Kind_Star': 'Starman',
+    'It_Kind_Bat': 'HomeRunBat',
+    'It_Kind_Sword': 'BeamSword',
+    'It_Kind_G_Shell': 'GreenShell',
+    'It_Kind_R_Shell': 'RedShell',
+    'It_Kind_L_Gun': 'RayGun',
+    'It_Kind_Freeze': 'Freezie',
+    'It_Kind_Foods': 'Food',
+    'It_Kind_MSBomb': 'MotionSensorBomb',
+    'It_Kind_S_Scope': 'SuperScope',
+    'It_Kind_LipStick': 'LipsStick',
+    'It_Kind_Harisen': 'Fan',
+    'It_Kind_F_Flower': 'FireFlower',
+    'It_Kind_Kinoko': 'SuperMushroom',
+    'It_Kind_DKinoko': 'PoisonMushroom',
+    'It_Kind_WStar': 'WarpStar',
+    'It_Kind_ScBall': 'ScrewAttack',
+    'It_Kind_RabbitC': 'BunnyHood',
+    'It_Kind_MetalB': 'MetalBox',
+    'It_Kind_Spycloak': 'CloakingDevice',
+    'It_Kind_M_Ball': 'PokeBall',
+    'It_Kind_L_Gun_Ray': 'RayGunShot',
+    'It_Kind_LipStick_Spore': 'LipsStickSpore',
+    'It_Kind_S_Scope_Beam': 'SuperScopeShot',
+    'It_Kind_L_Gun_Beam': 'FireFlowerFlame',
+    'It_Kind_F_Flower_Flame': 'LipsStickFlower',
+    'It_Kind_EvYoshiEgg': 'EventYoshiEgg',
+    'It_Kind_Kuriboh': 'Goomba',
+    'It_Kind_Leadead': 'ReDead',
+    'It_Kind_Octarock': 'Octorok',
+    'It_Kind_Ottosea': 'Topi',
+    'It_Kind_Octarock_Stone': 'OctorokStone',
+    'It_Kind_Mario_Fire': 'MarioFireball',
+    'It_Kind_DrMario_Vitamin': 'DrMarioMegavitamin',
+    'It_Kind_Kirby_CBeam': 'KirbyFinalCutterWave',
+    'It_Kind_Unk1': 'KirbyCopyStar',
+    'It_Kind_Unk2': 'KirbySpitStar',
+    'It_Kind_CLink_Bomb': 'YoungLinkBomb',
+    'It_Kind_CLink_Boomerang': 'YoungLinkBoomerang',
+    'It_Kind_Link_HShot': 'LinkHookshot',
+    'It_Kind_CLink_HShot': 'YoungLinkHookshot',
+    'It_Kind_CLink_Arrow': 'YoungLinkFireArrow',
+    'It_Kind_Ness_PKFire_Flame': 'NessPKFirePillar',
+    'It_Kind_Ness_PKFlush': 'NessPKFlash',
+    'It_Kind_Ness_PKThunder1': 'NessPKThunderTrail1',
+    'It_Kind_Ness_PKThunder2': 'NessPKThunderTrail2',
+    'It_Kind_Ness_PKThunder3': 'NessPKThunderTrail3',
+    'It_Kind_Ness_PKThunder4': 'NessPKThunderTrail4',
+    'It_Kind_CLink_Bow': 'YoungLinkBow',
+    'It_Kind_Ness_PKFlush_Explode': 'NessPKFlashExplosion',
+    'It_Kind_Seak_NeedleThrow': 'SheikNeedleThrown',
+    'It_Kind_Seak_NeedleHeld': 'SheikNeedleHeld',
+    'It_Kind_DrMario_Sheet': 'DrMarioSuperSheet',
+    'It_Kind_Seak_Vanish': 'SheikVanish',
+    'It_Kind_Pikachu_TJolt_Ground': 'PikachuThunderJoltGround',
+    'It_Kind_Pikachu_TJolt_Air': 'PikachuThunderJoltAir',
+    'It_Kind_Pichu_TJolt_Ground': 'PichuThunderJoltGround',
+    'It_Kind_Pichu_TJolt_Air': 'PichuThunderJoltAir',
+    'It_Kind_Samus_Charge': 'SamusChargeShot',
+    'It_Kind_Samus_GBeam': 'SamusGrappleBeam',
+    'It_Kind_Seak_Chain': 'SheikChain',
+    'It_Kind_Peach_Explode': 'PeachBomberExplosion',
+    'It_Kind_Koopa_Flame': 'BowserFlame',
+    'It_Kind_Luigi_Fire': 'LuigiFireball',
+    'It_Kind_IceClimber_Ice': 'IceClimbersIceShot',
+    'It_Kind_IceClimber_Blizzard': 'IceClimbersBlizzard',
+    'It_Kind_Zelda_DinFire': 'ZeldaDinsFire',
+    'It_Kind_Zelda_DinFire_Explode': 'ZeldaDinsFireExplosion',
+    'It_Kind_IceClimber_GumStrings': 'IceClimbersBelayRope',
+    'It_Kind_GameWatch_Greenhouse': 'GameAndWatchSprayer',
+    'It_Kind_GameWatch_Manhole': 'GameAndWatchManhole',
+    'It_Kind_GameWatch_Fire': 'GameAndWatchTorch',
+    'It_Kind_GameWatch_Parachute': 'GameAndWatchParachute',
+    'It_Kind_GameWatch_Turtle': 'GameAndWatchTurtle',
+    'It_Kind_GameWatch_Breath': 'GameAndWatchSparky',
+    'It_Kind_GameWatch_Judge': 'GameAndWatchJudge',
+    'It_Kind_GameWatch_Panic': 'GameAndWatchOil',
+    'It_Kind_GameWatch_Chef': 'GameAndWatchSausage',
+    'It_Kind_CLink_Milk': 'YoungLinkMilk',
+    'It_Kind_GameWatch_Rescue': 'GameAndWatchTrampoline',
+    'It_Kind_Kirby_MarioFire': 'KirbyMarioFireball',
+    'It_Kind_Kirby_DrMarioVitamin': 'KirbyDrMarioMegavitamin',
+    'It_Kind_Kirby_LuigiFire': 'KirbyLuigiFireball',
+    'It_Kind_Kirby_IceClimberIce': 'KirbyIceClimbersIceShot',
+    'It_Kind_Kirby_CLinkArrow': 'KirbyYoungLinkFireArrow',
+    'It_Kind_Kirby_CLinkBow': 'KirbyYoungLinkBow',
+    'It_Kind_Kirby_NessPKFlush': 'KirbyNessPKFlash',
+    'It_Kind_Kirby_NessPKFlush_Explode': 'KirbyNessPKFlashExplosion',
+    'It_Kind_Kirby_PikachuTJolt_Ground': 'KirbyPikachuThunderJoltGround',
+    'It_Kind_Kirby_PikachuTJolt_Air': 'KirbyPikachuThunderJoltAir',
+    'It_Kind_Kirby_PichuTJolt_Ground': 'KirbyPichuThunderJoltGround',
+    'It_Kind_Kirby_PichuTJolt_Air': 'KirbyPichuThunderJoltAir',
+    'It_Kind_Kirby_SamusCharge': 'KirbySamusChargeShot',
+    'It_Kind_Kirby_SeakNeedleThrow': 'KirbySheikNeedleThrown',
+    'It_Kind_Kirby_SeakNeedleHeld': 'KirbySheikNeedleHeld',
+    'It_Kind_Kirby_KoopaFlame': 'KirbyBowserFlame',
+    'It_Kind_Kirby_GameWatchChef': 'KirbyGameAndWatchSausage',
+    'It_Kind_Kirby_GameWatchChefPan': 'KirbyGameAndWatchPan',
+    'It_Kind_Unk4': 'VsCoin',
+    'It_Kind_Coin': 'Trophy',
+    'It_PKind_Random': 'StageHurtbox',
+    'It_PKind_Tosakinto': 'Goldeen',
+    'It_PKind_Chicorita': 'Chikorita',
+    'It_PKind_Kabigon': 'Snorlax',
+    'It_PKind_Kamex': 'Blastoise',
+    'It_PKind_Matadogas': 'Weezing',
+    'It_PKind_Lizardon': 'Charizard',
+    'It_PKind_Fire': 'Moltres',
+    'It_PKind_Thunder': 'Zapdos',
+    'It_PKind_Freezer': 'Articuno',
+    'It_PKind_Sonans': 'Wobbuffet',
+    'It_PKind_Hassam': 'Scizor',
+    'It_PKind_Unknown': 'Unown',
+    'It_PKind_Suikun': 'Suicune',
+    'It_PKind_Kireihana': 'Bellossom',
+    'It_PKind_Marumine': 'Electrode',
+    'It_PKind_Houou': 'HoOh',
+    'It_PKind_Metamon': 'Ditto',
+    'It_PKind_Pippi': 'Clefairy',
+    'It_PKind_Togepy': 'Togepi',
+    'It_PKind_Cerebi': 'Celebi',
+    'It_PKind_Hitodeman': 'Staryu',
+    'It_PKind_Lucky': 'Chansey',
+    'It_PKind_Hinoarashi': 'Cyndaquil',
+    'It_PKind_Maril': 'Marill',
+    'It_PKind_Fushigibana': 'Venusaur',
+    'It_Kind_Chicorita_Leaf': 'ChikoritaLeaf',
+    'It_Kind_Kamex_HydroPump': 'BlastoiseHydroPump',
+    'It_Kind_Matadogas_Gas1': 'WeezingGas1',
+    'It_Kind_Matadogas_Gas2': 'WeezingGas2',
+    'It_Kind_Lizardon_Flame1': 'CharizardFlame1',
+    'It_Kind_Lizardon_Flame2': 'CharizardFlame2',
+    'It_Kind_Lizardon_Flame3': 'CharizardFlame3',
+    'It_Kind_Lizardon_Flame4': 'CharizardFlame4',
+    'It_Kind_Unknown_Swarm': 'UnownSwarm',
+    'It_Kind_Houou_SacredFire': 'HoOhSacredFire',
+    'It_Kind_Hitodeman_Star': 'StaryuStar',
+    'It_Kind_Lucky_Egg': 'ChanseyEgg',
+    'It_Kind_Hinoarashi_Flame': 'CyndaquilFlame',
+    'It_Kind_Pokemon_Unk': 'PokemonUnused',
+    'It_Kind_Old_Kuri': 'OldGoomba',
+    'It_Kind_Mato': 'Target',
+    'It_Kind_Heiho': 'ShyGuy',
+    'It_Kind_Nokonoko': 'KoopaTroopa',
+    'It_Kind_Patapata': 'KoopaParatroopa',
+    'It_Kind_Likelike': 'LikeLike',
+    'It_Kind_Old_Lead': 'OldReDead',
+    'It_Kind_Old_Octa': 'OldOctorok',
+    'It_Kind_Old_Otto': 'OldTopi',
+    'It_Kind_Whitebea': 'PolarBear',
+    'It_Kind_Klap': 'KlapTrap',
+    'It_Kind_ZGShell': 'KoopaGreenShell',
+    'It_Kind_ZRShell': 'KoopaRedShell',
+    'It_Kind_Tincle': 'Tingle',
+    'It_Kind_Tools': 'FlatZoneTool',
+    'It_Kind_Kyasarin': 'Birdo',
+    'It_Kind_Kyasarin_Egg': 'BirdoEgg',
+}
 
 
 def kind_names(path):
@@ -104,6 +283,7 @@ def main():
         '',
     ]
     state_tables = set()
+    owners = {}  # a state table's address: the kinds whose logic tables name it
     for group, first, render, logic in GROUPS:
         raddr, rsize = by_name[render]
         n = rsize // 4
@@ -125,13 +305,16 @@ def main():
             out.append(f'        states: {w[0]:#x},')
             if w[0]:
                 state_tables.add(w[0])
+                owners.setdefault(w[0], []).append(first + i)
             for field, a in zip(CALLBACKS, w[1:]):
                 out.append(f'        {field}: {code(a)},')
             out.append('    },')
         out.append('];')
         out.append('')
-    for name in EXTRA_STATES:
+    extra = {}
+    for name, (const, what) in EXTRA_STATES.items():
         state_tables.add(by_name[name][0])
+        extra[by_name[name][0]] = (const, what)
     entries = []
     for addr in sorted(state_tables):
         # A table can start inside a symbol's object (several kinds share its later states).
@@ -141,8 +324,22 @@ def main():
         n = (base + size - addr) // 0x10
         if base != addr:
             name = f'{name}+{addr - base:#x}'
-        const = 'STATES_' + name.upper().replace('+0X', '_')
-        out.append(f'/// `{name}`.')
+        # Named by the first kind whose logic table names it (or the code that sets it), the
+        # symbol (and the name it had) kept as aliases.
+        old = 'STATES_' + name.upper().replace('+0X', '_')
+        if addr in owners:
+            ks = owners[addr]
+            const = 'STATES_' + snake(kinds[ks[0]])
+            what = ', '.join(f'`ItKind::{kinds[k]}`' for k in ks)
+            what = f'the states of {what}'
+        else:
+            const, what = extra[addr]
+            const = 'STATES_' + const
+            what = f'the states of {what}'
+        assert all(const != c for _, c in entries), const
+        aliases = f'"{old}", "{name}"' if base == addr else f'"{old}"'
+        out.append(f'/// `{name}`: {what}.')
+        out.append(f'#[doc(alias({aliases}))]')
         out.append(f'pub static {const}: [ItemState; {n}] = [')
         for i in range(n):
             w = struct.unpack('>4I', read(addr + 0x10 * i, 0x10))

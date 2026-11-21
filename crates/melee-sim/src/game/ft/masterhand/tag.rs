@@ -10,9 +10,16 @@
 
 use super::super::super::state::Running;
 use super::super::crazyhand::ms as ch_ms;
-use super::{addr, ms};
+use super::{HAND, Hand, addr, ms};
 use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
+
+/// Which of a hand's tag attack states cry on the script's flag: Master Hand's clap alone,
+/// all of Crazy Hand's but the crush.
+pub enum TagCry {
+    Only(i32),
+    AllBut(i32),
+}
 
 impl Running<'_> {
     /// A tag attack's start, `ftMh_MS_380_80155194` (the crush with Crazy Hand's 0x179),
@@ -32,32 +39,40 @@ impl Running<'_> {
             _ => ch_ms::THROW,
         };
         let ch = self.boss_gobj(FighterKind::CrazyHand.id());
-        if !self.boss_ch_beaten() {
+        if !self.boss_hand_beaten(&super::super::crazyhand::HAND) {
             let ch = ch.expect("ftCh_Init_8015A2B0 and its kin read a null Crazy Hand");
             self.ch_tag_enter(ch, ch_msid);
         }
         self.game.fighter_mut(gobj).x1A5C = ch;
-        self.mh_enter(gobj, msid);
+        self.hand_enter(gobj, msid);
     }
 
-    /// `ftMh_TagCrush_Anim`, `ftMh_TagApplaud_Anim` and `ftMh_TagRockPaper_Anim`: a cry on the
-    /// script's flag (the clap); back to his place once it ends or Crazy Hand is beaten or out,
-    /// his partner forgotten.
+    /// A tag attack's half, `ftMh_TagCrush_Anim`, `ftMh_TagApplaud_Anim`,
+    /// `ftMh_TagRockPaper_Anim` (Master Hand's), `ftCh_Squeezing1_Anim`, `ftCh_Squeeze_Anim`
+    /// and `ftCh_Throw_Anim` (Crazy Hand's): a cry on the script's flag in the states that
+    /// cry; back to his place once it ends or his partner is beaten or out, his partner
+    /// forgotten.
     #[doc(alias = "ftMh_TagCrush_Anim")]
     #[doc(alias = "ftMh_TagApplaud_Anim")]
     #[doc(alias = "ftMh_TagRockPaper_Anim")]
-    pub fn mh_tag_anim(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftCh_Squeezing1_Anim")]
+    #[doc(alias = "ftCh_Squeeze_Anim")]
+    #[doc(alias = "ftCh_Throw_Anim")]
+    pub fn hand_tag_anim(&mut self, gobj: GObjId, h: &Hand) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].motion_id == ms::TAG_APPLAUD
-            && self.game.fighters[f.0].cmd_vars[1] != 0
-        {
+        let m = self.game.fighters[f.0].motion_id;
+        let cries = match h.tag_cry {
+            TagCry::Only(s) => m == s,
+            TagCry::AllBut(s) => m != s,
+        };
+        if cries && self.game.fighters[f.0].cmd_vars[1] != 0 {
             self.boss_cry(gobj);
             self.game.fighters[f.0].cmd_vars[1] = 0;
         }
-        if self.boss_ch_beaten() || self.boss_ch_sleeping() || !self.anim_frames_remaining(gobj) {
+        if self.boss_hand_partner_gone(h) || !self.anim_frames_remaining(gobj) {
             self.ic_thaw(gobj);
             self.game.fighters[f.0].x1A5C = None;
-            self.mh_return(gobj);
+            self.hand_return(gobj, h);
         }
     }
 }
@@ -69,7 +84,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::MS_382_801552F8 => g.mh_tag_enter(gobj, ms::TAG_APPLAUD),
         addr::MS_383_80155484 => g.mh_tag_enter(gobj, ms::TAG_ROCK_PAPER),
         addr::TAG_CRUSH_ANIM | addr::TAG_APPLAUD_ANIM | addr::TAG_ROCK_PAPER_ANIM => {
-            g.mh_tag_anim(gobj)
+            g.hand_tag_anim(gobj, &HAND)
         }
         _ => return false,
     }

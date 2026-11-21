@@ -41,6 +41,8 @@ pub mod gamewatchpanic;
 pub mod gamewatchparachute;
 pub mod gamewatchrescue;
 pub mod gamewatchturtle;
+#[doc(alias("oldkuri"))]
+pub mod goomba;
 pub mod greatfoxlaser;
 pub mod gshell;
 pub mod hammer;
@@ -67,11 +69,11 @@ pub mod koopaflame;
 pub mod kusudama;
 pub mod kyasarin;
 pub mod kyasarinegg;
-pub mod leadead;
 pub mod lgun;
 pub mod lgunbeam;
 pub mod lgunray;
-pub mod likelike;
+#[doc(alias("likelike"))]
+pub mod like_like;
 pub mod linkarrow;
 pub mod linkbomb;
 pub mod linkboomerang;
@@ -107,10 +109,9 @@ pub mod nesspkthunder;
 pub mod nesspkthundertrail;
 pub mod nessyoyo;
 pub mod nokonoko;
-pub mod octarock;
 pub mod octarockstone;
-pub mod oldkuri;
-pub mod oldottosea;
+#[doc(alias("octarock"))]
+pub mod octorok;
 pub mod parasol;
 pub mod patapata;
 pub mod peachexplode;
@@ -122,9 +123,13 @@ pub mod pikachuthunder;
 pub mod pikachutjoltair;
 pub mod pikachutjoltground;
 pub mod pippi;
+#[doc(alias("whitebea"))]
+pub mod polar_bear;
 pub mod porygon2;
 pub mod rabbitc;
 pub mod raikou;
+#[doc(alias("leadead"))]
+pub mod redead;
 pub mod rshell;
 pub mod samusbomb;
 pub mod samuschargeshot;
@@ -152,11 +157,12 @@ pub mod tincle;
 pub mod togepy;
 pub mod tomato;
 pub mod tools;
+#[doc(alias("oldottosea"))]
+pub mod topi;
 pub mod tosakinto;
 pub mod trophycoin;
 pub mod unknown;
 pub mod whispyapple;
-pub mod whitebea;
 pub mod wstar;
 pub mod yaku;
 pub mod yoshiegglay;

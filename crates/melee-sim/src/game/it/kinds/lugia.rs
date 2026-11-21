@@ -24,7 +24,8 @@ use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802D_1438;
 pub const LANDED_NOTHING: u32 = 0x802D_14D0;
-pub const EVT_UNK: u32 = 0x802D_14D4;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802D_14D4;
 pub const ANIM1: u32 = 0x802D_14F4;
 pub const PHYS1: u32 = 0x802D_1558;
 pub const COLL1: u32 = 0x802D_1578;
@@ -47,7 +48,8 @@ pub const COLL0: u32 = 0x802D_1E64;
 pub const BLAST1_SPAWNED: u32 = 0x802D_2308;
 pub const BLAST2_SPAWNED: u32 = 0x802D_234C;
 pub const BLAST3_SPAWNED: u32 = 0x802D_2390;
-pub const BLAST_EVT_UNK: u32 = 0x802D_23D4;
+#[doc(alias("BLAST_EVT_UNK"))]
+pub const BLAST_FORGET: u32 = 0x802D_23D4;
 pub const BLAST_ANIM: u32 = 0x802D_246C;
 pub const BLAST_PHYS: u32 = 0x802D_24A0;
 pub const BLAST_COLL: u32 = 0x802D_24FC;
@@ -145,7 +147,8 @@ pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 /// (`it_8026B894`).
 #[doc(alias = "itLugia_Logic17_EvtUnk")]
 #[doc(alias = "it_802D23D4")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

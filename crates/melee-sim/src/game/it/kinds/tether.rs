@@ -587,6 +587,7 @@ pub fn retract(r: &mut Running, gobj: GObjId, t: &Tether) {
 /// ([`Vars::done`]); else the links reel in at the attributes' speed after a catch.
 #[doc(alias = "it_802A3500")]
 #[doc(alias = "fn_802B8814")]
+#[doc(alias("retract_fast"))]
 pub fn retract_caught(r: &mut Running, gobj: GObjId, t: &Tether) {
     if vars(r, gobj, t).done.get() != 0 {
         put_away(r, gobj, t);
@@ -797,6 +798,7 @@ pub fn to_retract(r: &mut Running, gobj: GObjId) {
 /// Drawn back in after a catch, `it_802A7840` (state 5): the fighter's hitboxes cleared.
 #[doc(alias = "it_802A7840")]
 #[doc(alias = "it_802BAA94")]
+#[doc(alias("to_retract_fast"))]
 pub fn to_retract_caught(r: &mut Running, gobj: GObjId, t: &Tether) {
     to_state_clearing(r, gobj, t, 5);
 }
@@ -899,6 +901,7 @@ pub fn ft_line_up(r: &mut Running, owner: GObjId, t: &Tether) {
 /// Forgets `other`, its fighter among them, `it_802A7D40`.
 #[doc(alias = "it_802A7D40")]
 #[doc(alias = "itSamusGrapple_Logic53_EvtUnk")]
+#[doc(alias("evt_unk"))]
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>, t: &Tether) {
     super::super::lib26b1::forget(r.game, gobj, other);
     let v = vars(r, gobj, t);

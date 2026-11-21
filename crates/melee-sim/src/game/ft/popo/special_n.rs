@@ -53,7 +53,7 @@ pub const POPO: IceShot = IceShot {
     attrs: 0,
     u_ice: 0,
     u_air: 0,
-    ice_kind: ItKind::IceClimberIce.id(),
+    ice_kind: ItKind::IceClimbersIceShot.id(),
     on_death: addr::PP_REMOVE_ITEMS,
     on_damage: addr::PP_REMOVE_ITEMS,
     ice_cb: addr::PP_SPECIAL_N_ICE,

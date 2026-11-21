@@ -838,9 +838,10 @@ fn is_stomp() {
 }
 
 #[test]
-fn set_xdcd_b3() {
+#[doc(alias("set_xdcd_b3"))]
+fn set_quiet() {
     leaf_check::shard_test!();
-    check_game("it_8026BD6C", lib26b1::set_xdcd_b3);
+    check_game("it_8026BD6C", lib26b1::set_quiet);
 }
 
 #[test]
@@ -999,15 +1000,17 @@ fn keep_clear() {
 }
 
 #[test]
-fn clear_x1b() {
+#[doc(alias("clear_x1b"))]
+fn clear_random_push() {
     leaf_check::shard_test!();
-    check_game("it_80272280", coll::clear_x1b);
+    check_game("it_80272280", coll::clear_random_push);
 }
 
 #[test]
-fn set_x1b() {
+#[doc(alias("set_x1b"))]
+fn set_random_push() {
     leaf_check::shard_test!();
-    check_game("it_80272298", coll::set_x1b);
+    check_game("it_80272298", coll::set_random_push);
 }
 
 #[test]
@@ -1128,15 +1131,17 @@ fn play_sfx_unless_quiet() {
 }
 
 #[test]
-fn clear_x64() {
+#[doc(alias("clear_x64"))]
+fn clear_floor_motion() {
     leaf_check::shard_test!();
-    check_game("it_8027346C", lib2725::clear_x64);
+    check_game("it_8027346C", lib2725::clear_floor_motion);
 }
 
 #[test]
-fn clear_x58() {
+#[doc(alias("clear_x58"))]
+fn clear_displacement() {
     leaf_check::shard_test!();
-    check_game("it_80273484", lib2725::clear_x58);
+    check_game("it_80273484", lib2725::clear_displacement);
 }
 
 #[test]
@@ -2988,7 +2993,7 @@ fn item_lib_small() {
             },
         );
     };
-    on("it_8026BD24", |r, g| lib26b1::set_xdd0_b3(r.game, g));
+    on("it_8026BD24", |r, g| lib26b1::freeze_lifetime(r.game, g));
     on("it_8026BDB4", |r, g| lib26b1::stop_keeping_clear(r.game, g));
     on("it_8027518C", |r, g| {
         lib2725::start_vanishing(r.game, r.data, g)
@@ -3223,7 +3228,7 @@ fn bat() {
     // Thrown (state 3), a hit bounces it back.
     let thrown = |c: &mut Call| {
         set32(c, item_ptr(c) + 0x24, 3);
-        item_kind(c) == ItKind::Bat
+        item_kind(c) == ItKind::HomeRunBat
     };
     check_on(
         "itBat_UnkMotion0_Anim",
@@ -3318,7 +3323,7 @@ fn sword() {
             c.regs.gpr[5] = if w1 { sp - 0x2FFC } else { 0 };
             set32(c, sp - 0x3000, 0xDEAD_BEEF);
             set32(c, sp - 0x2FFC, 0xDEAD_BEEF);
-            item_kind(c) == ItKind::Sword
+            item_kind(c) == ItKind::BeamSword
         };
         for src in ["itSword_UnkMotion0_Anim", "itSword_UnkMotion2_Anim"] {
             check_on(src, "it_802852B8", &prep, &move |r, a| {
@@ -3333,13 +3338,13 @@ fn sword() {
         check_on(
             src,
             "it_80285300",
-            &|c| item_kind(c) == ItKind::Sword,
+            &|c| item_kind(c) == ItKind::BeamSword,
             &|r, a| Ret::Int(a.data.addr(s::trail_params(r.game, r.data, a.gobj(0)))),
         );
         check_on(
             src,
             "it_80285314",
-            &|c| item_kind(c) == ItKind::Sword,
+            &|c| item_kind(c) == ItKind::BeamSword,
             &|r, a| Ret::JObj(s::trail_joint(r.game, r.data, a.gobj(0))),
         );
     }
@@ -3723,7 +3728,7 @@ fn red_shell() {
     // chasing shells only: a resting shell's hitboxes still hold a freed item's joints).
     let prep = |c: &mut Call| {
         set32(c, item_ptr(c) + 0xDD4 + 0x10, 0);
-        item_kind(c) == ItKind::RShell
+        item_kind(c) == ItKind::RedShell
     };
     check_on(
         "itRshell_UnkMotion5_Anim",
@@ -3826,7 +3831,7 @@ fn bob_omb() {
         let prep = move |c: &mut Call| {
             set32(c, item_ptr(c) + 0xDD4 + 0x1C, fuse.to_bits());
             set32(c, item_ptr(c) + 0xDD4 + 0xC, 1);
-            item_kind(c) == ItKind::BombHei
+            item_kind(c) == ItKind::BobOmb
         };
         check_on(
             "itBombhei_UnkMotion2_Anim",
@@ -3841,7 +3846,7 @@ fn bob_omb() {
     // Thrown at another size.
     let prep = |c: &mut Call| {
         set32(c, item_ptr(c) + 0xDD4 + 0x14, 1.5f32.to_bits());
-        item_kind(c) == ItKind::BombHei
+        item_kind(c) == ItKind::BobOmb
     };
     check_on(
         "itBombhei_UnkMotion2_Anim",
@@ -3901,7 +3906,7 @@ fn shell_paths() {
         check_on(source, target, &prep, ours);
     }
     // A red shell landing from a throw, and taking to the air chasing.
-    let prep = |c: &mut Call| item_kind(c) == ItKind::RShell;
+    let prep = |c: &mut Call| item_kind(c) == ItKind::RedShell;
     check_on("itRshell_UnkMotion5_Coll", "it_8028D090", &prep, &|r, a| {
         s::landed(r, a.gobj(0));
         Ret::None
@@ -4000,7 +4005,7 @@ fn crate_box() {
     // Enough damage taken to break it.
     let prep = |c: &mut Call| {
         set32(c, item_ptr(c) + 0xC9C, 500);
-        item_kind(c) == ItKind::Box
+        item_kind(c) == ItKind::Crate
     };
     check_on(
         "itBox_UnkMotion0_Anim",
@@ -4013,7 +4018,7 @@ fn crate_box() {
         let prep = move |c: &mut Call| {
             only_capsules(c, seed);
             c.regs.gpr[4..8].copy_from_slice(&[3, 2, 1, 4]);
-            item_kind(c) == ItKind::Box
+            item_kind(c) == ItKind::Crate
         };
         check_on("itBox_UnkMotion0_Anim", "it_80286340", &prep, &|r, a| {
             Ret::Bool(b::has_items(
@@ -4037,7 +4042,7 @@ fn crate_box() {
         });
     }
     // A box floating with a barrel (here, the box itself).
-    let prep = |c: &mut Call| item_kind(c) == ItKind::Box;
+    let prep = |c: &mut Call| item_kind(c) == ItKind::Crate;
     check_on("itBox_UnkMotion0_Anim", "it_80286088", &prep, &|r, a| {
         Ret::GObj(b::spawn_floating(r, a.opt_gobj(0)))
     });
@@ -4115,7 +4120,7 @@ fn barrel() {
             set32(c, ip + 0xDD4 + 0x10, speed.to_bits());
             set32(c, ip + 0xDD4 + 0x14, slope.to_bits());
             set32(c, ip + 0xDB0, carried);
-            item_kind(c) == ItKind::Taru
+            item_kind(c) == ItKind::Barrel
         };
         for (target, f) in [
             ("it_802874F0", t::roll as fn(&mut Running, GObjId)),
@@ -4143,7 +4148,7 @@ fn barrel() {
             set32(c, ip + 0xC9C, 0);
             set32(c, ip + 0xCA0, 12);
             set_seed(c, seeds().nth(seed as usize).unwrap());
-            item_kind(c) == ItKind::Taru
+            item_kind(c) == ItKind::Barrel
         };
         check_on(
             "itTaru_UnkMotion0_Anim",
@@ -4269,7 +4274,7 @@ fn party_ball() {
     for angle in [0.0f32, 1.5707964, 4.0] {
         let prep = move |c: &mut Call| {
             set_f(c, 1, angle);
-            item_kind(c) == ItKind::Kusudama
+            item_kind(c) == ItKind::PartyBall
         };
         check_on(
             "itKusudama_UnkMotion0_Anim",
@@ -4305,7 +4310,7 @@ fn party_ball() {
             set32(c, item_ptr(c) + 0x518, 0);
             c.regs.gpr[4..7].copy_from_slice(&w);
             c.regs.gpr[7] = 2;
-            item_kind(c) == ItKind::Kusudama
+            item_kind(c) == ItKind::PartyBall
         };
         check_on(
             "itKusudama_UnkMotion0_Anim",

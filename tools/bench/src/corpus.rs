@@ -28,7 +28,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
 use melee_data::disc::Disc;
-use melee_sim::game::slippi::{CodeSet, parse_codes};
+use melee_sim::game::slippi::parse_codes;
 use melee_sim::game::state::Rules;
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
 use melee_sim::gekko_fp::{FpMode, set_fp_mode};
@@ -129,24 +129,7 @@ fn replays_in(path: &Path, out: &mut Vec<PathBuf>) {
 
 /// A short name for a replay's own rules.
 fn rules_name(r: &Rules) -> String {
-    if *r == Rules::default() {
-        return "vanilla".into();
-    }
-    let mut s = if r.slippi {
-        match r.codes {
-            CodeSet::V3_19 => "3.19",
-            CodeSet::V3_16 => "3.16",
-            CodeSet::V3_14 => "3.14",
-        }
-        .to_owned()
-    } else {
-        "codes".to_owned()
-    };
-    s.push_str(&format!(" {:?}", r.ucf));
-    if r.player != Default::default() {
-        s.push_str(" +players' codes");
-    }
-    s
+    r.short_name()
 }
 
 /// What happened to one replay.

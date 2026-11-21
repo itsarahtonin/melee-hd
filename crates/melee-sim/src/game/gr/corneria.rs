@@ -17,7 +17,7 @@
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
-use super::super::handles::CodeRef;
+use super::super::handles::{CodeRef, GroundId};
 use super::super::it::kinds::{arwinglaser, greatfoxlaser};
 use super::super::state::{Game, Running};
 use super::data::{CORNERIA_CALLBACKS, StageCallbacks};
@@ -92,8 +92,9 @@ const TYPE_OFFSETS: [Vec3; 14] = [
 ];
 /// The Arwing's map by its group (`grCn_803E2110`).
 const GROUP_ARWINGS: [i32; 5] = [2, 2, 2, 2, 10];
-/// A roll's animation by its state and the group's offset (`grCn_803E214C`).
-const ROLL_ANIMS: [[i32; 2]; 6] = [[-1, -1], [1, 0], [2, 2], [4, 4], [5, 5], [-1, -1]];
+/// A roll's animation by its state and the group's offset (`grCn_803E214C`, its pairs
+/// flattened).
+const ROLL_ANIMS: [i32; 12] = [-1, -1, 1, 0, 2, 2, 4, 4, 5, 5, -1, -1];
 /// The collision object's map by group (`grCn_803E217C`).
 const GROUP_COLLS: [i32; 5] = [0xD, 0xD, 0xE, 0xF, 0x10];
 /// The collision joint by group (`grCn_803E2190`).
@@ -364,14 +365,14 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         SHIP_START => start_ship(r, gobj),
         0x801D_D674 => init_ship(r, gobj),
         0x801D_D9A8 => proc_ship(r, gobj),
-        0x801D_DAC4 => init_path(r, gobj),
-        0x801D_E024 => proc_path(r, gobj),
-        0x801D_E4C0 => init_wing(r, gobj),
-        0x801D_E568 => proc_wing(r, gobj),
-        0x801D_E8E4 => init_arwing(r, gobj),
-        0x801D_ED50 => proc_arwing(r, gobj),
-        0x801D_F8D0 => init_far_arwing(r, gobj),
-        0x801D_FBCC => proc_far_arwing(r, gobj),
+        0x801D_DAC4 => init_path(r, gobj, &ARWINGS),
+        0x801D_E024 => proc_path(r, gobj, &ARWINGS),
+        0x801D_E4C0 => init_wing(r, gobj, &ARWINGS),
+        0x801D_E568 => proc_wing(r, gobj, &ARWINGS),
+        0x801D_E8E4 => init_arwing(r, gobj, &ARWINGS),
+        0x801D_ED50 => proc_arwing(r, gobj, &ARWINGS),
+        0x801D_F8D0 => init_far_arwing(r, gobj, &ARWINGS),
+        0x801D_FBCC => proc_far_arwing(r, gobj, &ARWINGS),
         0x801D_FBF0 => init_map6(r, gobj),
         0x801D_FC2C => init_city_middle(r, gobj),
         0x801D_FC98 => proc_city_middle(r, gobj),
@@ -470,23 +471,8 @@ pub fn spawn_arwings(r: &mut Running) {
                     let n = if far == 1 { 9 } else { 13 };
                     type_id = r.game.objs.rng.below(n).wrapping_add(1);
                 }
-                let group = if g(r.game).groups[0] == 4 {
-                    1
-                } else {
-                    let chance = reg(param(r.game).f(r.data, p::ARWING_FAR));
-                    if reg(r.game.objs.rng.draw_f32()) > chance {
-                        1
-                    } else {
-                        4
-                    }
-                };
-                let c = g(r.game);
-                c.slot = 0;
-                c.types[0] = type_id;
-                c.groups[0] = group;
-                let a = create(r, 1, ARWING_FRAME);
-                let c = g(r.game);
-                c.arwings[c.slot as usize] = a;
+                let group = pick_group(r, &ARWINGS);
+                send_arwing(r, &ARWINGS, 0, type_id, group);
             }
         } else {
             let p = param(r.game);
@@ -512,33 +498,16 @@ pub fn spawn_arwings(r: &mut Running) {
         let c = &r.game.gr.corneria;
         i != count && (1..=9).contains(&c.types[i]) && c.arwings[i].is_some()
     });
-    let pick = |r: &mut Running, n: i32, add: i32| {
-        let mut type_id = g(r.game).types[count];
-        while g(r.game).types.contains(&type_id) {
-            type_id = r.game.objs.rng.below(n).wrapping_add(add);
-        }
-        type_id
-    };
     if !has_near {
-        let type_id = pick(r, 13, 1);
-        demo_arwing(r, count, type_id);
+        let type_id = demo_type(r, &ARWINGS, count, 13, 1);
+        send_arwing(r, &ARWINGS, count, type_id, count as i32 + 1);
     } else {
         let mut pos = ship_pos(r.game);
         if check_far(r, &mut pos) == 0 {
-            let type_id = pick(r, 4, 10);
-            demo_arwing(r, count, type_id);
+            let type_id = demo_type(r, &ARWINGS, count, 4, 10);
+            send_arwing(r, &ARWINGS, count, type_id, count as i32 + 1);
         }
     }
-}
-
-fn demo_arwing(r: &mut Running, count: usize, type_id: i32) {
-    let c = g(r.game);
-    c.slot = count as u32;
-    c.types[count] = type_id;
-    c.groups[count] = count as i32 + 1;
-    let a = create(r, 1, ARWING_FRAME);
-    let c = g(r.game);
-    c.arwings[c.slot as usize] = a;
 }
 
 /// The demo's setup (`grCorneria_801DD2C0`), which only the Star Fox cutscene (`vi0601`)
@@ -828,30 +797,249 @@ pub fn proc_ship(r: &mut Running, gobj: GObjId) {
     r.game.gr.wind_level = crate::lb::wind::tick(&mut r.game.gr.winds, level);
 }
 
-/// An Arwing's flight path's setup (map 1), `grCorneria_801DDAC4`: it takes its slot, makes
-/// its group's Arwing (map 2 or 10) with the same slot, and is scaled; its animation starts on
-/// its first tick.
+/// The Arwing slots of a stage's statics (Corneria's and Venom's `Globals`).
+pub struct Slots<'a> {
+    pub arwings: &'a mut [Option<GObjId>; 3],
+    pub types: &'a mut [i32; 3],
+    pub groups: &'a mut [i32; 3],
+    pub slot: &'a mut u32,
+}
+
+/// What Corneria's and Venom's Arwings differ in. Their flight paths, Arwings and wings are one
+/// implementation over it (`grcorneria.c`'s and `grvenom.c`'s copies, both originals' aliases on
+/// each shared function); each stage keeps its own addresses in its `run` and its constant
+/// ([`ARWINGS`] here, `venom::ARWINGS`).
+pub struct Arwings {
+    /// The stage's statics' Arwing slots.
+    pub slots: for<'a> fn(&'a mut Game) -> Slots<'a>,
+    /// The stage's `yakumono_param`, and in it the chance of the far group, an Arwing's wait
+    /// between rolls, the Arwings' scale and the color script a shot flashes an Arwing with.
+    pub param: fn(&Game) -> DataRef,
+    pub far_chance: u32,
+    pub roll_wait: u32,
+    pub scale: u32,
+    pub fire_script: u32,
+    /// Whether the Arwings hold still (Corneria's before the match starts; Venom's never).
+    pub frozen: fn(&Game) -> bool,
+    /// The stage's create function, the flight path's map and the stack frames of a path's, an
+    /// Arwing's and a wing's scale joints' descriptors.
+    pub create: fn(&mut Running, i32, u32) -> Option<GObjId>,
+    pub path_map: i32,
+    pub path_frame: u32,
+    pub arwing_frame: u32,
+    pub wing_frame: u32,
+    /// The last close type (Corneria 9, Venom 7); the four after it are the far ones.
+    pub last_close: i32,
+    /// By group: its Arwing's map, its wing's map, the wing's collision joint and the part an
+    /// Arwing rolls.
+    pub group_arwings: [i32; 5],
+    pub group_wings: [i32; 5],
+    pub group_joints: [i32; 5],
+    pub group_parts: &'static [i32],
+    /// Each type's flight animation.
+    pub type_anims: &'static [i32],
+    /// The roll animations, by the roll's state and the group's fire kind plus one (the
+    /// original's pairs, flattened), and the rolls drawn from (Corneria 5, Venom 4).
+    pub roll_anims: &'static [i32],
+    pub rolls: i32,
+    /// The path's joint a far Arwing's model is pinned to (Corneria 4, Venom 5).
+    pub path_joint: i32,
+    /// How far off the stage's plane a wing still shows (Corneria 10, Venom 50).
+    pub wing_depth: f64,
+    /// Where a path's Arwing is in the stage (each stage's `path_pos`).
+    pub pos: fn(&mut Running, Option<GObjId>) -> Vec3,
+    pub path_scale: PathScale,
+    /// Corneria's paths ride at the Great Fox's height (its process's first lines).
+    pub rides_ship: bool,
+    pub far_path: FarPath,
+    /// The fly-off sound's margin inside the blast zones (Corneria 30, Venom 20), and the depth
+    /// in front of which it counts (Corneria's -30; Venom's at any depth).
+    pub margin: f32,
+    pub front: Option<f32>,
+    /// A path's fly-in and fly-off sounds.
+    pub fly_in: i32,
+    pub fly_off: i32,
+    /// A close Arwing's turn about y (Corneria's side on, Venom's face on).
+    pub close_turn: f32,
+    /// Corneria's close Arwings fire straight ahead, with this sound; Venom's don't fire.
+    pub close_fire: Option<i32>,
+    /// Whether an Arwing fires this tick (by its type), the window in which a far one does,
+    /// whether its target must be on its side of the stage (Venom's), its sound and the aimed
+    /// laser's joint argument.
+    pub fires: fn(&mut Running, GroundId, i32) -> i32,
+    pub far_window: fn(Vec3) -> bool,
+    pub same_side: bool,
+    pub far_sound: i32,
+    pub aim_joint: i32,
+}
+
+/// How a flight path is scaled at its setup.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum PathScale {
+    /// Corneria's: every path's x (the depth, its paths lying side on) by the Arwings' scale.
+    AllAlongX,
+    /// Venom's: a close path's z by the Arwings' scale, a far one's not, none of another type.
+    CloseAlongZ,
+}
+
+/// What a far Arwing's path does each tick.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum FarPath {
+    /// Corneria's: turned side on, its own fly-by sounds ([`path_sound_far`]), and lowered
+    /// with the sinking Great Fox.
+    SideOn,
+    /// Venom's: turned face on, with the close paths' sounds.
+    FaceOn,
+}
+
+fn slots(game: &mut Game) -> Slots<'_> {
+    let c = &mut game.gr.corneria;
+    Slots {
+        arwings: &mut c.arwings,
+        types: &mut c.types,
+        groups: &mut c.groups,
+        slot: &mut c.slot,
+    }
+}
+
+fn yakumono(game: &Game) -> DataRef {
+    param(game).0
+}
+
+fn frozen(game: &Game) -> bool {
+    game.gr.corneria.frozen
+}
+
+fn far_window(pos: Vec3) -> bool {
+    let x = reg(pos.x);
+    500.0 < x && x < reg(ARWING_MAX_X)
+}
+
+/// Corneria's Arwings.
+pub const ARWINGS: Arwings = Arwings {
+    slots,
+    param: yakumono,
+    far_chance: p::ARWING_FAR,
+    roll_wait: p::ROLL_WAIT,
+    scale: p::ARWING_SCALE,
+    fire_script: p::FIRE_SCRIPT,
+    frozen,
+    create,
+    path_map: 1,
+    path_frame: ARWING_FRAME,
+    arwing_frame: ARWING_PLANE_FRAME,
+    wing_frame: WING_FRAME,
+    last_close: 9,
+    group_arwings: GROUP_ARWINGS,
+    group_wings: GROUP_COLLS,
+    group_joints: GROUP_JOINTS,
+    group_parts: &GROUP_PARTS,
+    type_anims: &TYPE_ANIMS,
+    roll_anims: &ROLL_ANIMS,
+    rolls: 5,
+    path_joint: 4,
+    wing_depth: 10.0,
+    pos: path_pos,
+    path_scale: PathScale::AllAlongX,
+    rides_ship: true,
+    far_path: FarPath::SideOn,
+    margin: 30.0,
+    front: Some(-30.0),
+    fly_in: 0x55730,
+    fly_off: 0x55732,
+    close_turn: -std::f32::consts::FRAC_PI_2,
+    close_fire: Some(0x55733),
+    fires: |r, gid, _| fires(r, gid),
+    far_window,
+    same_side: false,
+    far_sound: 0x55734,
+    aim_joint: 3,
+};
+
+impl Arwings {
+    fn f(&self, r: &Running, off: u32) -> f32 {
+        r.data.f32((self.param)(r.game).at(off))
+    }
+    fn i(&self, r: &Running, off: u32) -> i32 {
+        fp::fctiwz(reg(self.f(r, off)))
+    }
+    fn is_close(&self, ty: i32) -> bool {
+        (1..=self.last_close).contains(&ty)
+    }
+    fn is_far(&self, ty: i32) -> bool {
+        (self.last_close + 1..=self.last_close + 4).contains(&ty)
+    }
+}
+
+/// Makes the next Arwing's flight path in a slot with its type and group (the Arwing spawns'
+/// shared tail).
+pub fn send_arwing(r: &mut Running, d: &Arwings, slot: usize, type_id: i32, group: i32) {
+    let s = (d.slots)(r.game);
+    *s.slot = slot as u32;
+    s.types[slot] = type_id;
+    s.groups[slot] = group;
+    let a = (d.create)(r, d.path_map, d.path_frame);
+    let s = (d.slots)(r.game);
+    let at = *s.slot as usize;
+    s.arwings[at] = a;
+}
+
+/// The next Arwing's group in a match: the close group 1 after the far one, else by chance the
+/// far group 4.
+pub fn pick_group(r: &mut Running, d: &Arwings) -> i32 {
+    if (d.slots)(r.game).groups[0] == 4 {
+        return 1;
+    }
+    let chance = reg(d.f(r, d.far_chance));
+    if reg(r.game.objs.rng.draw_f32()) > chance {
+        1
+    } else {
+        4
+    }
+}
+
+/// A demo Arwing's type: one of `n` from `add` that no slot has.
+pub fn demo_type(r: &mut Running, d: &Arwings, count: usize, n: i32, add: i32) -> i32 {
+    let mut type_id = (d.slots)(r.game).types[count];
+    while (d.slots)(r.game).types.contains(&type_id) {
+        type_id = r.game.objs.rng.below(n).wrapping_add(add);
+    }
+    type_id
+}
+
+/// An Arwing's flight path's setup (Corneria's map 1, Venom's map 2), `grCorneria_801DDAC4` and
+/// `grVenom_80204F20`: it takes its slot, makes its group's Arwing with the same slot, and is
+/// scaled ([`PathScale`]); its animation starts on its first tick.
 #[doc(alias = "grCorneria_801DDAC4")]
-pub fn init_path(r: &mut Running, gobj: GObjId) {
+#[doc(alias = "grVenom_80204F20")]
+pub fn init_path(r: &mut Running, gobj: GObjId, d: &Arwings) {
     let gid = ground_of(r.game, gobj);
-    let j = jobj_of(r.game, gobj).expect("grcorneria.c: jobj");
-    let slot = g(r.game).slot;
+    let j = jobj_of(r.game, gobj).expect("an Arwing's path's jobj");
+    let slot = *(d.slots)(r.game).slot;
     r.game.grounds[gid.0].u.arwing_path().xC8 = slot;
-    g(r.game).arwings[slot as usize] = Some(gobj);
-    let group = g(r.game).groups[slot as usize];
-    let arwing = create(r, GROUP_ARWINGS[group as usize], ARWING_PLANE_FRAME);
+    (d.slots)(r.game).arwings[slot as usize] = Some(gobj);
+    let group = (d.slots)(r.game).groups[slot as usize];
+    let arwing = (d.create)(r, d.group_arwings[group as usize], d.arwing_frame);
     if let Some(a) = arwing {
         let ag = ground_of(r.game, a);
         r.game.grounds[ag.0].x10_flags.b2 = false;
         r.game.grounds[ag.0].u.arwing().xC8 = slot as i32;
     }
     let s = reg(scale(r.game));
-    let k = reg(param(r.game).f(r.data, p::ARWING_SCALE));
-    jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
-        o.scale.x = mem(fp::fmuls(s, k))
-    });
-    jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.y = mem(s));
-    jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.z = mem(s));
+    let k = reg(d.f(r, d.scale));
+    let ty = (d.slots)(r.game).types[slot as usize];
+    let scaled = match d.path_scale {
+        PathScale::AllAlongX => Some((fp::fmuls(s, k), s)),
+        PathScale::CloseAlongZ if d.is_close(ty) => Some((s, fp::fmuls(s, k))),
+        PathScale::CloseAlongZ if d.is_far(ty) => Some((s, s)),
+        PathScale::CloseAlongZ => None,
+    };
+    if let Some((x, z)) = scaled {
+        let jobjs = &mut r.game.objs.jobjs;
+        jobj::set_srt(jobjs, j, |o| o.scale.x = mem(x));
+        jobj::set_srt(jobjs, j, |o| o.scale.y = mem(s));
+        jobj::set_srt(jobjs, j, |o| o.scale.z = mem(z));
+    }
     let v = r.game.grounds[gid.0].u.arwing_path();
     v.xD4 = 1;
     v.xD8 = 0;
@@ -888,9 +1076,10 @@ pub fn ship_pos(game: &mut Game) -> Vec3 {
 }
 
 /// Where a flight path's Arwing is in the stage (its joint 4 seen from the side, by the Great
-/// Fox's drift and its type's offset), at least 100 high: the body of `grCorneria_801DDDA8` and
-/// its inline copies.
-fn arwing_pos(r: &mut Running, path: Option<GObjId>) -> Vec3 {
+/// Fox's drift and its type's offset), at least 100 high, `grCorneria_801DDDA8` (and its inline
+/// copies).
+#[doc(alias = "grCorneria_801DDDA8")]
+pub fn path_pos(r: &mut Running, path: Option<GObjId>) -> Vec3 {
     let mut v = match path {
         Some(path) => {
             let slot = {
@@ -920,33 +1109,27 @@ fn arwing_pos(r: &mut Running, path: Option<GObjId>) -> Vec3 {
     v
 }
 
-/// Where a flight path's Arwing is, `grCorneria_801DDDA8`.
-#[doc(alias = "grCorneria_801DDDA8")]
-pub fn path_pos(r: &mut Running, path: Option<GObjId>) -> Vec3 {
-    arwing_pos(r, path)
-}
-
-/// A close Arwing's sounds, `grCorneria_801DDE88`: its fly-in once it is inside the blast
-/// zones, then its fly-off once it nears them in front.
+/// A path's sounds, `grCorneria_801DDE88` (Venom's inline in its path's process): its fly-in
+/// once its Arwing is inside the blast zones, then its fly-off once it nears them again.
 #[doc(alias = "grCorneria_801DDE88")]
-pub fn path_sound_near(r: &mut Running, gobj: GObjId) {
+pub fn path_sound_near(r: &mut Running, gobj: GObjId, d: &Arwings) {
     let gid = ground_of(r.game, gobj);
-    let pos = arwing_pos(r, Some(gobj));
+    let pos = (d.pos)(r, Some(gobj));
     let sound = r.game.grounds[gid.0].u.arwing_path().xD8;
     match sound {
         0 => {
             if !outside_blast_zones(r.game, pos) {
-                r.sfx_play(0x55730, 0x7F, 0x40);
+                r.sfx_play(d.fly_in, 0x7F, 0x40);
                 r.game.grounds[gid.0].u.arwing_path().xD8 = 1;
             }
         }
         1 => {
-            if near_blast_zones(r.game, pos) == 0 {
+            if !near_blast_zones(r.game, pos, d) {
                 r.game.grounds[gid.0].u.arwing_path().xD8 = 2;
             }
         }
-        2 if near_blast_zones(r.game, pos) == 1 => {
-            r.sfx_play(0x55732, 0x7F, 0x40);
+        2 if near_blast_zones(r.game, pos, d) => {
+            r.sfx_play(d.fly_off, 0x7F, 0x40);
             r.game.grounds[gid.0].u.arwing_path().xD8 = 3;
         }
         _ => {}
@@ -957,8 +1140,8 @@ pub fn path_sound_near(r: &mut Running, gobj: GObjId) {
 const ARWING_MIN_X: f32 = -10.0;
 const ARWING_MAX_X: f32 = 2000.0;
 
-/// A far Arwing's sounds (`grCorneria_801DE024_inline`): its fly-by once it is between
-/// [`ARWING_MIN_X`] and [`ARWING_MAX_X`], its fly-off once it leaves.
+/// A far Arwing's sounds on Corneria (`grCorneria_801DE024_inline`): its fly-by once it is
+/// between [`ARWING_MIN_X`] and [`ARWING_MAX_X`], its fly-off once it leaves.
 fn path_sound_far(r: &mut Running, gobj: GObjId) {
     let gid = ground_of(r.game, gobj);
     let pos = path_pos(r, Some(gobj));
@@ -978,16 +1161,20 @@ fn path_sound_far(r: &mut Running, gobj: GObjId) {
     }
 }
 
-/// A flight path's process (map 1), `grCorneria_801DE024`: it rides at the Great Fox's height
-/// (its joint 1 349 lower); on its first tick its type's animation starts; then its sounds (a
-/// far one also turned side on and lowered with the sinking Great Fox) until its animation ends
-/// and it frees its slot and goes. A path whose slot another holds goes at once.
+/// A flight path's process (Corneria's map 1, Venom's map 2), `grCorneria_801DE024` and
+/// `grVenom_802053B0`: on Corneria it rides at the Great Fox's height (its joint 1 349 lower);
+/// on its first tick its type's animation starts; then its sounds ([`path_sound_near`]; a far
+/// one turned, and on Corneria with its own sounds and lowered with the sinking Great Fox,
+/// [`FarPath`]) until its animation ends and it frees its slot and goes. A path whose slot
+/// another holds goes at once.
 #[doc(alias = "grCorneria_801DE024")]
-pub fn proc_path(r: &mut Running, gobj: GObjId) {
+#[doc(alias = "grVenom_802053B0")]
+pub fn proc_path(r: &mut Running, gobj: GObjId, d: &Arwings) {
     let gid = ground_of(r.game, gobj);
-    let j = jobj_of(r.game, gobj).expect("grcorneria.c: jobj");
-    let ship = map_gobj(r.game, 3);
-    if let Some(sj) = ship.and_then(|s| jobj_of(r.game, s)) {
+    let j = jobj_of(r.game, gobj).expect("an Arwing's path's jobj");
+    if d.rides_ship
+        && let Some(sj) = map_gobj(r.game, 3).and_then(|s| jobj_of(r.game, s))
+    {
         let y = r.game.objs.jobjs[sj].translate.y;
         jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = y);
         let j1 = nth_joint(r.game, gobj, 1).expect("grcorneria.c: jobj");
@@ -995,45 +1182,54 @@ pub fn proc_path(r: &mut Running, gobj: GObjId) {
         jobj::set_srt(&mut r.game.objs.jobjs, j1, |o| o.translate.y = y1);
     }
     let slot = r.game.grounds[gid.0].u.arwing_path().xC8 as usize;
-    if g(r.game).arwings[slot] != Some(gobj) {
+    if (d.slots)(r.game).arwings[slot] != Some(gobj) {
         setup::destroy(r, Some(gobj));
         return;
     }
     if r.game.grounds[gid.0].u.arwing_path().xD4 == 1 {
         r.game.grounds[gid.0].u.arwing_path().xD4 = 0;
-        let anim = TYPE_ANIMS[g(r.game).types[slot] as usize];
+        let anim = d.type_anims[(d.slots)(r.game).types[slot] as usize];
         let m = gp_map(r.game, gobj);
         anime::start_map(r.game, r.data, gobj, m, anim);
         return;
     }
-    match g(r.game).types[slot] {
-        1..=9 => path_sound_near(r, gobj),
-        10..=13 => {
-            jobj::set_rotation_y(&mut r.game.objs.jobjs, j, -std::f32::consts::FRAC_PI_2);
-            path_sound_far(r, gobj);
-            let vf = reg(sink_depth(r.game)).clamp(-150.0, 0.0);
-            let j0 = nth_joint(r.game, gobj, 0).expect("grcorneria.c: jobj");
-            let mut t = r.game.objs.jobjs[j0].translate;
-            t.y = mem(if vf < 0.0 { fp::fneg(vf) } else { vf });
-            jobj::set_translate(&mut r.game.objs.jobjs, j0, t);
+    let ty = (d.slots)(r.game).types[slot];
+    if d.is_close(ty) {
+        path_sound_near(r, gobj, d);
+    } else if d.is_far(ty) {
+        match d.far_path {
+            FarPath::SideOn => {
+                jobj::set_rotation_y(&mut r.game.objs.jobjs, j, -std::f32::consts::FRAC_PI_2);
+                path_sound_far(r, gobj);
+                let vf = reg(sink_depth(r.game)).clamp(-150.0, 0.0);
+                let j0 = nth_joint(r.game, gobj, 0).expect("grcorneria.c: jobj");
+                let mut t = r.game.objs.jobjs[j0].translate;
+                t.y = mem(if vf < 0.0 { fp::fneg(vf) } else { vf });
+                jobj::set_translate(&mut r.game.objs.jobjs, j0, t);
+            }
+            FarPath::FaceOn => {
+                jobj::set_rotation_y(&mut r.game.objs.jobjs, j, 0.0);
+                path_sound_near(r, gobj, d);
+            }
         }
-        _ => {}
     }
     if anime::finished(r.game, gobj, 0, 7) {
-        g(r.game).arwings[slot] = None;
+        (d.slots)(r.game).arwings[slot] = None;
         setup::destroy(r, Some(gobj));
     }
 }
 
-/// An Arwing's collision's setup (maps 13 to 18), `grCorneria_Arwing_801DE4C0`: its slot, no
-/// roll, at the origin, and its group's collision joint on.
+/// An Arwing's wing's setup (Corneria's maps 13 to 18, Venom's 10 to 15),
+/// `grCorneria_Arwing_801DE4C0` and `grVenom_802056B0`: its slot, no roll, at the origin, and
+/// its group's collision joint on.
 #[doc(alias = "grCorneria_Arwing_801DE4C0")]
-pub fn init_wing(r: &mut Running, gobj: GObjId) {
+#[doc(alias = "grVenom_802056B0")]
+pub fn init_wing(r: &mut Running, gobj: GObjId, d: &Arwings) {
     let gid = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj);
     let m = gp_map(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
-    let slot = g(r.game).slot;
+    let slot = *(d.slots)(r.game).slot;
     {
         let v = r.game.grounds[gid.0].u.arwing_coll();
         v.xC8 = slot;
@@ -1041,37 +1237,38 @@ pub fn init_wing(r: &mut Running, gobj: GObjId) {
         v.xDC = 0.0;
         v.xE0 = Vec3::new(0.0, 0.0, 0.0);
     }
-    let group = g(r.game).groups[slot as usize];
+    let group = (d.slots)(r.game).groups[slot as usize];
     r.game
         .geometry_mut()
-        .enable_joint(GROUP_JOINTS[group as usize]);
+        .enable_joint(d.group_joints[group as usize]);
     setup::init_map_coll(r.game, r.data, j, m);
 }
 
-/// An Arwing's collision's process (maps 13 to 18), `grCorneria_801DE568`: while its slot's
-/// path lives, it shows only near the stage's plane and level enough
-/// (`Ground_UpdateStarFoxArwingVisibility`), at its Arwing's place and scale; then its joint goes
-/// off and it goes.
+/// An Arwing's wing's process (Corneria's maps 13 to 18, Venom's 10 to 15),
+/// `grCorneria_801DE568` and `grVenom_80205758`: while its slot's path lives, it shows only near
+/// the stage's plane and level enough ([`update_wing_visibility`]), at its Arwing's place and
+/// scale; then its joint goes off and it goes.
 #[doc(alias = "grCorneria_801DE568")]
-pub fn proc_wing(r: &mut Running, gobj: GObjId) {
+#[doc(alias = "grVenom_80205758")]
+pub fn proc_wing(r: &mut Running, gobj: GObjId, d: &Arwings) {
     let gid = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj);
     let slot = r.game.grounds[gid.0].u.arwing_coll().xC8 as usize;
-    if g(r.game).arwings[slot].is_some() {
-        update_wing_visibility(r.game, gid, j, 10.0);
+    if (d.slots)(r.game).arwings[slot].is_some() {
+        update_wing_visibility(r.game, gid, j, d.wing_depth);
         let s = reg(scale(r.game));
-        let k = reg(param(r.game).f(r.data, p::ARWING_SCALE));
-        let jj = j.expect("grcorneria.c: jobj");
+        let k = reg(d.f(r, d.scale));
+        let jj = j.expect("an Arwing's wing's jobj");
         let v = mem(fp::fmuls(s, k));
         jobj::set_srt(&mut r.game.objs.jobjs, jj, |o| o.scale.x = v);
         jobj::set_srt(&mut r.game.objs.jobjs, jj, |o| o.scale.y = v);
         jobj::set_srt(&mut r.game.objs.jobjs, jj, |o| o.scale.z = v);
         update_map_coll(r.game, r.data, gobj);
     } else {
-        let group = g(r.game).groups[slot];
+        let group = (d.slots)(r.game).groups[slot];
         r.game
             .geometry_mut()
-            .disable_joint(GROUP_JOINTS[group as usize]);
+            .disable_joint(d.group_joints[group as usize]);
         setup::destroy(r, Some(gobj));
     }
 }
@@ -1079,12 +1276,7 @@ pub fn proc_wing(r: &mut Running, gobj: GObjId) {
 /// `Ground_UpdateStarFoxArwingVisibility`: an Arwing's collision shows only within `depth` of
 /// the stage's plane (then flattened onto it) and with its roll within 60 degrees of level,
 /// and moves to its place.
-pub fn update_wing_visibility(
-    game: &mut Game,
-    gid: super::super::handles::GroundId,
-    j: Option<JObjId>,
-    depth: f64,
-) {
+pub fn update_wing_visibility(game: &mut Game, gid: GroundId, j: Option<JObjId>, depth: f64) {
     let v = game.grounds[gid.0].u.arwing_coll();
     let z = reg(v.xE0.z);
     let angle = if z < 0.0 { fp::fneg(z) } else { z };
@@ -1113,14 +1305,15 @@ pub fn update_wing_visibility(
     jobj::set_translate(&mut game.objs.jobjs, j.expect("a wing's jobj"), t);
 }
 
-/// Sets a flying Arwing up (`grCorneria_801DE8E4` and `grCorneria_801DF8D0`): its slot, its
-/// animations, and for a close type its group's collision object (linked, its slot the same),
-/// for a far one its model pinned to its path's joint 4; scaled, its roll at rest.
-fn init_flying(r: &mut Running, gobj: GObjId, with_background: bool) {
+/// Sets a flying Arwing up: its slot, its animations, and for a close type its group's wing
+/// (linked, its slot the same), for a far one its model pinned to its path's joint; scaled, its
+/// roll at rest. Another type (the Star Fox cutscene's Arwing) is disabled
+/// (`Ground_DisableStarFoxArwingGObjs`).
+fn init_flying(r: &mut Running, gobj: GObjId, d: &Arwings, with_background: bool) {
     let gid = ground_of(r.game, gobj);
-    let j = jobj_of(r.game, gobj).expect("grcorneria.c: jobj");
+    let j = jobj_of(r.game, gobj).expect("an Arwing's jobj");
     let s = reg(scale(r.game));
-    let slot = g(r.game).slot as i32;
+    let slot = *(d.slots)(r.game).slot as i32;
     {
         let v = r.game.grounds[gid.0].u.arwing();
         v.xC8 = slot;
@@ -1134,32 +1327,30 @@ fn init_flying(r: &mut Running, gobj: GObjId, with_background: bool) {
         anime::start(r.game, r.data, gobj, 0, 7, 1, 0.0, 1.0, true);
         anime::start(r.game, r.data, gobj, 2, 7, 3, 0.0, 1.0, false);
     }
-    match g(r.game).types[slot as usize] {
-        1..=9 => {
-            let group = g(r.game).groups[slot as usize];
-            let coll = create(r, GROUP_COLLS[group as usize], WING_FRAME);
-            r.game.grounds[gid.0].u.arwing().xDC = coll;
-            if let Some(c) = coll {
-                let cg = ground_of(r.game, c);
-                r.game.grounds[cg.0].u.arwing_coll().xC8 = slot as u32;
-            }
+    let ty = (d.slots)(r.game).types[slot as usize];
+    if d.is_close(ty) {
+        let group = (d.slots)(r.game).groups[slot as usize];
+        let wing = (d.create)(r, d.group_wings[group as usize], d.wing_frame);
+        r.game.grounds[gid.0].u.arwing().xDC = wing;
+        if let Some(w) = wing {
+            let wg = ground_of(r.game, w);
+            r.game.grounds[wg.0].u.arwing_coll().xC8 = slot as u32;
         }
-        10..=13 => {
-            let path = g(r.game).arwings[slot as usize].expect("grcorneria.c: a path");
-            let a = nth_joint(r.game, gobj, 0);
-            let b = nth_joint(r.game, path, 4);
-            crate::lb::anim::attach(&mut r.game.objs, a, b);
-            r.game.grounds[gid.0].u.arwing().xDC = None;
-        }
-        // `Ground_DisableStarFoxArwingGObjs`: the Star Fox cutscene's Arwings, of no type.
-        _ => r.game.grounds[gid.0].u.arwing().disabled = true,
+    } else if d.is_far(ty) {
+        let path = (d.slots)(r.game).arwings[slot as usize].expect("a far Arwing's path");
+        let a = nth_joint(r.game, gobj, 0);
+        let b = nth_joint(r.game, path, d.path_joint);
+        crate::lb::anim::attach(&mut r.game.objs, a, b);
+        r.game.grounds[gid.0].u.arwing().xDC = None;
+    } else {
+        r.game.grounds[gid.0].u.arwing().disabled = true;
     }
-    let k = reg(param(r.game).f(r.data, p::ARWING_SCALE));
+    let k = reg(d.f(r, d.scale));
     let v = mem(fp::fmuls(s, k));
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.x = v);
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.y = v);
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.scale.z = v);
-    let wait = param(r.game).i(r.data, p::ROLL_WAIT);
+    let wait = d.i(r, d.roll_wait);
     let v = r.game.grounds[gid.0].u.arwing();
     v.b0 = false;
     v.xD4 = 0;
@@ -1173,18 +1364,30 @@ fn init_flying(r: &mut Running, gobj: GObjId, with_background: bool) {
 /// setup's frame (0x48) and the create function's.
 pub const WING_FRAME: u32 = ARWING_PLANE_FRAME - 0x48 - 0x20;
 
-/// A close group's Arwing's setup (map 2), `grCorneria_801DE8E4`: as [`init_flying`] with its
-/// background animations, and which gun fires first.
+/// A close group's Arwing's setup (Corneria's map 2, Venom's map 3), `grCorneria_801DE8E4` and
+/// `grVenom_80205AD4`: as [`init_flying`] with its background animations, and which gun fires
+/// first.
 #[doc(alias = "grCorneria_801DE8E4")]
-pub fn init_arwing(r: &mut Running, gobj: GObjId) {
-    init_flying(r, gobj, true);
+#[doc(alias = "grVenom_80205AD4")]
+pub fn init_arwing(r: &mut Running, gobj: GObjId, d: &Arwings) {
+    init_flying(r, gobj, d, true);
     let gun = r.game.objs.rng.below(2);
     let gid = ground_of(r.game, gobj);
     r.game.grounds[gid.0].u.arwing().x100 = Some(gun);
 }
 
-/// Whether a point is outside the blast zones, `grCorneria_801DEC08`.
+/// The far group's Arwing's setup (Corneria's map 10, Venom's map 6), `grCorneria_801DF8D0`
+/// and `grVenom_80206874`: as [`init_flying`].
+#[doc(alias = "grCorneria_801DF8D0")]
+#[doc(alias = "grVenom_80206874")]
+pub fn init_far_arwing(r: &mut Running, gobj: GObjId, d: &Arwings) {
+    init_flying(r, gobj, d, false);
+}
+
+/// Whether a point is outside the blast zones, `grCorneria_801DEC08` and `grVenom_80205DF8`
+/// (`Stage_IsOutsideBlastZone`).
 #[doc(alias = "grCorneria_801DEC08")]
+#[doc(alias = "grVenom_80205DF8")]
 pub fn outside_blast_zones(game: &Game, pos: Vec3) -> bool {
     let (x, y) = (reg(pos.x), reg(pos.y));
     x > reg(stage::blast_right(game))
@@ -1193,37 +1396,37 @@ pub fn outside_blast_zones(game: &Game, pos: Vec3) -> bool {
         || y < reg(stage::blast_bottom(game))
 }
 
-/// Whether a point in front of the stage (z above -30) is within 30 of the blast zones or past
-/// them, `grCorneria_801DEC94`.
+/// Whether a point is within the stage's margin of the blast zones or past them (on Corneria
+/// only in front of the stage, z above -30), `grCorneria_801DEC94` and `grVenom_80205E84`
+/// (`Stage_IsOutsideBlastZoneWithMargin`).
 #[doc(alias = "grCorneria_801DEC94")]
-pub fn near_blast_zones(game: &Game, pos: Vec3) -> i32 {
-    if reg(pos.z) > -30.0 {
-        let (x, y) = (reg(pos.x), reg(pos.y));
-        if x > fp::fsubs(reg(stage::blast_right(game)), 30.0)
-            || x < fp::fadds(30.0, reg(stage::blast_left(game)))
-            || y > fp::fsubs(reg(stage::blast_top(game)), 30.0)
-            || y < fp::fadds(30.0, reg(stage::blast_bottom(game)))
-        {
-            return 1;
-        }
+#[doc(alias = "grVenom_80205E84")]
+pub fn near_blast_zones(game: &Game, pos: Vec3, d: &Arwings) -> bool {
+    if let Some(front) = d.front
+        && !(reg(pos.z) > reg(front))
+    {
+        return false;
     }
-    0
+    let (x, y, m) = (reg(pos.x), reg(pos.y), reg(d.margin));
+    x > fp::fsubs(reg(stage::blast_right(game)), m)
+        || x < fp::fadds(m, reg(stage::blast_left(game)))
+        || y > fp::fsubs(reg(stage::blast_top(game)), m)
+        || y < fp::fadds(m, reg(stage::blast_bottom(game)))
 }
 
-/// The group's offset into the roll animations (`get_grp_off`): 0 for groups 1 to 3, 1 for the
-/// far group 4, -1 for none.
-fn group_offset(game: &mut Game, gid: super::super::handles::GroundId) -> i32 {
-    let slot = game.grounds[gid.0].u.arwing().xC8 as usize;
-    match game.gr.corneria.groups[slot] {
+/// An Arwing's group's fire kind (`get_grp_off`): 0 for groups 1 to 3, 1 for the far group 4,
+/// -1 for none.
+fn fire_kind(game: &mut Game, d: &Arwings, slot: usize) -> i32 {
+    match (d.slots)(game).groups[slot] {
         1..=3 => 0,
         4 => 1,
         _ => -1,
     }
 }
 
-/// Whether an Arwing fires this tick: every `period` ticks flown, with odds of one in `odds`
-/// (the match's or the demo's).
-fn fires(r: &mut Running, gid: super::super::handles::GroundId) -> i32 {
+/// Whether a Corneria Arwing fires this tick: every `period` ticks flown, with odds of one in
+/// `odds` (the match's or the demo's).
+fn fires(r: &mut Running, gid: GroundId) -> i32 {
     let p = param(r.game);
     let (period, odds) = if g(r.game).demo == 0 {
         (p.word(r.data, p::FIRE_PERIOD), p.word(r.data, p::FIRE_ODDS))
@@ -1242,21 +1445,24 @@ fn fires(r: &mut Running, gid: super::super::handles::GroundId) -> i32 {
     }
 }
 
-/// A flying Arwing's process (maps 2 and 10), `grCorneria_801DED50`: nothing while the
-/// Arwings are held. While its path lives: a close one turns side on and now and then rolls
-/// (its rolling part flat between rolls), follows its path's place with its collision object
-/// at its rolling part's place and roll, and, inside the blast zones and level, now and then
-/// fires a laser straight ahead with a flash; a far one fires at a random player's fighter,
-/// over the stage's right, from alternating guns. Once its path is gone, it and its articles go.
+/// A flying Arwing's process (Corneria's maps 2 and 10, Venom's 3 and 6),
+/// `grCorneria_801DED50` and `grVenom_80205F30`: nothing while the Arwings are held. While its
+/// path lives: a close one turns ([`Arwings::close_turn`]) and now and then rolls (its rolling
+/// part flat between rolls), follows its path's place with its wing at its rolling part's
+/// place and roll, and on Corneria, inside the blast zones and level, now and then fires a
+/// laser straight ahead with a flash; a far one, when it fires inside its window, fires at a
+/// random player's fighter (on Venom one on its side of the stage) from alternating guns. Once
+/// its path is gone, it and its articles go.
 #[doc(alias = "grCorneria_801DED50")]
-pub fn proc_arwing(r: &mut Running, gobj: GObjId) {
-    if g(r.game).frozen {
+#[doc(alias = "grVenom_80205F30")]
+pub fn proc_arwing(r: &mut Running, gobj: GObjId, d: &Arwings) {
+    if (d.frozen)(r.game) {
         return;
     }
     let gid = ground_of(r.game, gobj);
-    let j = jobj_of(r.game, gobj).expect("grcorneria.c: jobj");
+    let j = jobj_of(r.game, gobj).expect("an Arwing's jobj");
     let slot = r.game.grounds[gid.0].u.arwing().xC8 as usize;
-    let path = g(r.game).arwings[slot];
+    let path = (d.slots)(r.game).arwings[slot];
     if path.is_none() {
         let articles = r.game.grounds[gid.0].u.arwing().xE0;
         for a in articles.into_iter().flatten() {
@@ -1265,61 +1471,61 @@ pub fn proc_arwing(r: &mut Running, gobj: GObjId) {
         setup::destroy(r, Some(gobj));
         return;
     }
-    let group = g(r.game).groups[slot];
+    let group = (d.slots)(r.game).groups[slot];
     if group == 4 {
-        let a = nth_joint(r.game, gobj, 1).expect("grcorneria.c: jobj");
+        let a = nth_joint(r.game, gobj, 1).expect("an Arwing's jobj");
         jobj::set_rotation_z(&mut r.game.objs.jobjs, a, 0.0);
     }
-    let part = GROUP_PARTS[group as usize];
-    match g(r.game).types[slot] {
-        1..=9 => {
-            jobj::set_rotation_y(&mut r.game.objs.jobjs, j, -std::f32::consts::FRAC_PI_2);
-            let roll = r.game.grounds[gid.0].u.arwing().xF4;
-            match roll {
-                0 => {
-                    if r.game.grounds[gid.0].u.arwing().xF8 <= 0 {
-                        let state = r.game.objs.rng.below(5).wrapping_add(1);
-                        r.game.grounds[gid.0].u.arwing().xF4 = state;
-                        let off = group_offset(r.game, gid);
-                        // An offset of -1 (no group) reads the row before's second entry.
-                        let flat = 2 * state + off;
-                        let anim = ROLL_ANIMS[(flat / 2) as usize][(flat % 2) as usize];
-                        anime::start(r.game, r.data, gobj, part, 7, anim, 0.0, 1.0, false);
-                    } else {
-                        let pj = nth_joint(r.game, gobj, part).expect("grcorneria.c: jobj");
-                        jobj::set_rotation_z(&mut r.game.objs.jobjs, pj, 0.0);
-                    }
-                    let v = r.game.grounds[gid.0].u.arwing();
-                    v.xF8 = v.xF8.wrapping_sub(1);
+    let part = d.group_parts[group as usize];
+    let ty = (d.slots)(r.game).types[slot];
+    if d.is_close(ty) {
+        jobj::set_rotation_y(&mut r.game.objs.jobjs, j, d.close_turn);
+        let roll = r.game.grounds[gid.0].u.arwing().xF4;
+        match roll {
+            0 => {
+                if r.game.grounds[gid.0].u.arwing().xF8 <= 0 {
+                    let state = r.game.objs.rng.below(d.rolls).wrapping_add(1);
+                    r.game.grounds[gid.0].u.arwing().xF4 = state;
+                    let off = fire_kind(r.game, d, slot);
+                    // An offset of -1 (no group) reads the pair before's second entry.
+                    let anim = d.roll_anims[(2 * state + off) as usize];
+                    anime::start(r.game, r.data, gobj, part, 7, anim, 0.0, 1.0, false);
+                } else {
+                    let pj = nth_joint(r.game, gobj, part).expect("an Arwing's jobj");
+                    jobj::set_rotation_z(&mut r.game.objs.jobjs, pj, 0.0);
                 }
-                1..=4 if anime::finished(r.game, gobj, 0, 7) => {
-                    let wait = param(r.game).i(r.data, p::ROLL_WAIT);
-                    let v = r.game.grounds[gid.0].u.arwing();
-                    v.xF4 = 0;
-                    v.xF8 = wait;
-                }
-                _ => {}
+                let v = r.game.grounds[gid.0].u.arwing();
+                v.xF8 = v.xF8.wrapping_sub(1);
             }
-            let mut pos = arwing_pos(r, path);
-            jobj::set_translate(&mut r.game.objs.jobjs, j, pos);
-            let pj = nth_joint(r.game, gobj, part);
-            pos = world_position(&mut r.game.objs, r.data, pj, None);
-            let coll = r.game.grounds[gid.0].u.arwing().xDC;
-            if let Some(c) = coll {
-                let cg = ground_of(r.game, c);
-                r.game.grounds[cg.0].u.arwing_coll().xE0 = pos;
+            1..=4 if anime::finished(r.game, gobj, 0, 7) => {
+                let wait = d.i(r, d.roll_wait);
+                let v = r.game.grounds[gid.0].u.arwing();
+                v.xF4 = 0;
+                v.xF8 = wait;
             }
-            let rot_z = r.game.objs.jobjs[pj.expect("grcorneria.c: jobj")].rotate.z;
-            let mut angle = reg(rot_z);
-            if let Some(c) = coll {
-                let cg = ground_of(r.game, c);
-                r.game.grounds[cg.0].u.arwing_coll().xDC = rot_z;
-            }
-            let f = fires(r, gid);
+            _ => {}
+        }
+        let mut pos = (d.pos)(r, path);
+        jobj::set_translate(&mut r.game.objs.jobjs, j, pos);
+        let pj = nth_joint(r.game, gobj, part);
+        pos = world_position(&mut r.game.objs, r.data, pj, None);
+        let wing = r.game.grounds[gid.0].u.arwing().xDC;
+        if let Some(w) = wing {
+            let wg = ground_of(r.game, w);
+            r.game.grounds[wg.0].u.arwing_coll().xE0 = pos;
+        }
+        let rot_z = r.game.objs.jobjs[pj.expect("an Arwing's jobj")].rotate.z;
+        if let Some(w) = wing {
+            let wg = ground_of(r.game, w);
+            r.game.grounds[wg.0].u.arwing_coll().xDC = rot_z;
+        }
+        if let Some(sound) = d.close_fire {
+            let f = (d.fires)(r, gid, ty);
             r.game.grounds[gid.0].u.arwing().xFC = f;
             if r.game.grounds[gid.0].u.arwing().xFC != 0 {
                 r.game.grounds[gid.0].u.arwing().xFC = 0;
                 if !outside_blast_zones(r.game, pos) {
+                    let mut angle = reg(rot_z);
                     let pi = std::f64::consts::PI;
                     let tau = std::f64::consts::TAU;
                     while angle < -pi {
@@ -1330,73 +1536,69 @@ pub fn proc_arwing(r: &mut Running, gobj: GObjId) {
                     }
                     let abs = if angle < 0.0 { fp::fneg(angle) } else { angle };
                     if abs < reg(0.052_359_88) || abs > reg(3.089_232_7) {
-                        r.sfx_play(0x55733, 0x7F, 0x40);
-                        let k = param(r.game).f(r.data, p::ARWING_SCALE);
-                        if group_offset(r.game, gid) == 1 {
+                        r.sfx_play(sound, 0x7F, 0x40);
+                        let k = d.f(r, d.scale);
+                        if fire_kind(r.game, d, slot) == 1 {
                             let b = nth_joint(r.game, gobj, 7);
                             arwinglaser::spawn_straight(r, gobj, b, 2, -1.0, k);
                         } else {
                             let b = nth_joint(r.game, gobj, 5);
                             arwinglaser::spawn_straight(r, gobj, b, 0, -1.0, k);
                         }
-                        let script = r.data.ptr(param(r.game).0.at(p::FIRE_SCRIPT));
+                        let script = r.data.ptr((d.param)(r.game).at(d.fire_script));
                         material::start_script(r.game, r.data, gobj, script, 0);
                     }
                 }
             }
         }
-        10..=13 => {
-            let f = fires(r, gid);
-            r.game.grounds[gid.0].u.arwing().xFC = f;
-            let mut pos = arwing_pos(r, path);
-            let x = reg(pos.x);
-            if 500.0 < x && x < reg(ARWING_MAX_X) && r.game.grounds[gid.0].u.arwing().xFC != 0 {
-                r.game.grounds[gid.0].u.arwing().xFC = 0;
-                let mut player = r.game.objs.rng.below(4);
-                for tries in 0..4 {
-                    player = player.wrapping_add(tries) & 3;
-                    // Gm_PKind_NA.
-                    if r.game.player_pkind(player) != 3 {
-                        break;
-                    }
+    } else if d.is_far(ty) {
+        let f = (d.fires)(r, gid, ty);
+        r.game.grounds[gid.0].u.arwing().xFC = f;
+        let pos = (d.pos)(r, path);
+        if (d.far_window)(pos) && r.game.grounds[gid.0].u.arwing().xFC != 0 {
+            r.game.grounds[gid.0].u.arwing().xFC = 0;
+            let mut player = r.game.objs.rng.below(4);
+            for tries in 0..4 {
+                player = player.wrapping_add(tries) & 3;
+                // Gm_PKind_NA.
+                if r.game.player_pkind(player) != 3 {
+                    break;
                 }
-                pos = r.game.player_pos(player);
-                pos.y = mem(fp::fadds(reg(pos.y), 5.0));
-                r.sfx_play(0x55734, 0x7F, 0x40);
-                let k = param(r.game).f(r.data, p::ARWING_SCALE);
-                if group_offset(r.game, gid) == 1 {
+            }
+            let mut target = r.game.player_pos(player);
+            let (tx, px) = (reg(target.x), reg(pos.x));
+            if !d.same_side || (tx > 0.0 && px > 0.0) || (tx < 0.0 && px < 0.0) {
+                target.y = mem(fp::fadds(reg(target.y), 5.0));
+                r.sfx_play(d.far_sound, 0x7F, 0x40);
+                let k = d.f(r, d.scale);
+                if fire_kind(r.game, d, slot) == 1 {
                     let b = nth_joint(r.game, gobj, 7);
-                    arwinglaser::spawn_aimed(r, gobj, b, pos, 3, 3, k, 0x55734);
+                    arwinglaser::spawn_aimed(r, gobj, b, target, 3, d.aim_joint, k, d.far_sound);
                 } else {
                     let gun = r.game.grounds[gid.0]
                         .u
                         .arwing()
                         .x100
-                        .expect("grcorneria.c: an Arwing's gun read before its setup wrote it");
+                        .expect("an Arwing's gun read before its setup wrote it");
                     let b = nth_joint(r.game, gobj, if gun != 0 { 5 } else { 6 });
-                    arwinglaser::spawn_aimed(r, gobj, b, pos, 1, 3, k, 0x55734);
+                    arwinglaser::spawn_aimed(r, gobj, b, target, 1, d.aim_joint, k, d.far_sound);
                     r.game.grounds[gid.0].u.arwing().x100 = Some(gun.wrapping_add(1) & 1);
                 }
-                let script = r.data.ptr(param(r.game).0.at(p::FIRE_SCRIPT));
+                let script = r.data.ptr((d.param)(r.game).at(d.fire_script));
                 material::start_script(r.game, r.data, gobj, script, 0);
             }
         }
-        _ => {}
     }
     let v = r.game.grounds[gid.0].u.arwing();
     v.xF0 = v.xF0.wrapping_add(1);
 }
 
-/// The far group's Arwing's setup (map 10), `grCorneria_801DF8D0`: as [`init_flying`].
-#[doc(alias = "grCorneria_801DF8D0")]
-pub fn init_far_arwing(r: &mut Running, gobj: GObjId) {
-    init_flying(r, gobj, false);
-}
-
-/// The far group's Arwing's process (map 10), `grCorneria_801DFBCC`: a flying Arwing's.
+/// The far group's Arwing's process (Corneria's map 10, Venom's map 6), `grCorneria_801DFBCC`
+/// and `grVenom_80206B70`: a flying Arwing's.
 #[doc(alias = "grCorneria_801DFBCC")]
-pub fn proc_far_arwing(r: &mut Running, gobj: GObjId) {
-    proc_arwing(r, gobj);
+#[doc(alias = "grVenom_80206B70")]
+pub fn proc_far_arwing(r: &mut Running, gobj: GObjId, d: &Arwings) {
+    proc_arwing(r, gobj, d);
 }
 
 /// Map 6's setup, `stageGObj6_OnInit` (`Ground_StartMapAnim`): its animation.

@@ -1247,7 +1247,7 @@ impl Running<'_> {
     fn db_setup_item_menu(&mut self) {
         let m = &mut self.game.it.db_menu;
         m.DisplayStatus = 0;
-        m.CurrentlySelectedItem = ItKind::MBall.id();
+        m.CurrentlySelectedItem = ItKind::PokeBall.id();
         m.LastSelectedItem = m.CurrentlySelectedItem;
         m.CurrentlySelectedPokemon = 0;
         m.LastSelectedPokemon = m.CurrentlySelectedPokemon;
@@ -1281,7 +1281,7 @@ impl Running<'_> {
                 (1, false) => *flags &= !0x08,
                 // `b0`, for a coin.
                 (2, on) => {
-                    if ip.kind == ItKind::Unk4 {
+                    if ip.kind == ItKind::VsCoin {
                         if on {
                             ip.xDAA[0] |= 0x80;
                         } else {
@@ -1329,26 +1329,26 @@ impl Running<'_> {
             if *item < ItKind::COMMON_END {
                 *item += 1;
                 if *item == ItKind::COMMON_END {
-                    *item = ItKind::Kuriboh.id();
+                    *item = ItKind::Goomba.id();
                 }
-            } else if *item < ItKind::OctarockStone {
+            } else if *item < ItKind::OctorokStone {
                 *item += 1;
-                if *item == ItKind::OctarockStone {
-                    *item = ItKind::OldKuri.id();
+                if *item == ItKind::OctorokStone {
+                    *item = ItKind::OldGoomba.id();
                 }
             } else if *item < ItKind::ArwingLaser.id() - 1 {
                 *item += 1;
             }
         }
         if l && rep & u32::from(BUTTON_DOWN) != 0 {
-            if *item >= ItKind::OldKuri {
+            if *item >= ItKind::OldGoomba {
                 *item -= 1;
-                if *item < ItKind::OldKuri {
-                    *item = ItKind::OctarockStone.id() - 1;
+                if *item < ItKind::OldGoomba {
+                    *item = ItKind::OctorokStone.id() - 1;
                 }
-            } else if *item >= ItKind::Kuriboh {
+            } else if *item >= ItKind::Goomba {
                 *item -= 1;
-                if *item < ItKind::Kuriboh {
+                if *item < ItKind::Goomba {
                     *item = ItKind::COMMON_END.id() - 1;
                 }
             } else if *item > 0 {
@@ -1408,11 +1408,11 @@ impl Running<'_> {
         let i = m.CurrentlySelectedItem;
         let item: &[u8] = if i < ItKind::COMMON_END {
             ITEM_NAMES[i as usize]
-        } else if i < ItKind::OctarockStone {
-            BARREL_ENEMIES[(i - ItKind::Kuriboh.id()) as usize]
+        } else if i < ItKind::OctorokStone {
+            BARREL_ENEMIES[(i - ItKind::Goomba.id()) as usize]
         } else if i < ItKind::ArwingLaser {
             ADVENTURE_ENEMIES
-                .get((i - ItKind::OldKuri.id()) as usize)
+                .get((i - ItKind::OldGoomba.id()) as usize)
                 .copied()
                 .unwrap_or(b"")
         } else {
@@ -1477,17 +1477,17 @@ impl Running<'_> {
             // "Item Max Over."
             return;
         }
-        if kind < ItKind::OctarockStone && counts.x2C as u32 >= common.u32(self.data, 0x14) {
+        if kind < ItKind::OctorokStone && counts.x2C as u32 >= common.u32(self.data, 0x14) {
             // "couldn't get Item struct.(CZako)"
             return;
         }
         // An adventure enemy only when the stage loaded its article (`it_804A0F60`).
-        if (ItKind::OldKuri.id()..ItKind::ArwingLaser.id()).contains(&kind)
-            && self.game.gr.stage_articles[(kind - ItKind::OldKuri.id()) as usize].is_none()
+        if (ItKind::OldGoomba.id()..ItKind::ArwingLaser.id()).contains(&kind)
+            && self.game.gr.stage_articles[(kind - ItKind::OldGoomba.id()) as usize].is_none()
         {
             return;
         }
-        if kind == ItKind::MBall && super::it::spawn::poke_balls_full(self.game) {
+        if kind == ItKind::PokeBall && super::it::spawn::poke_balls_full(self.game) {
             return;
         }
         if let Some(g) = super::it::item::spawn_air(self, &mut spawn) {

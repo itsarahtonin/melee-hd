@@ -38,6 +38,7 @@ pub mod player_codes;
 pub mod record;
 pub mod render;
 pub mod roster;
+pub mod ruleset;
 pub mod session;
 pub mod sfx;
 pub mod single_player_audit;

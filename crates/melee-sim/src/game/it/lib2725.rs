@@ -180,13 +180,15 @@ pub fn play_sfx(r: &mut Running, gobj: GObjId, sfx: i32) {
 
 /// Clears the floor's motion, `it_8027346C`.
 #[doc(alias = "it_8027346C")]
-pub fn clear_x64(game: &mut Game, gobj: GObjId) {
+#[doc(alias("clear_x64"))]
+pub fn clear_floor_motion(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).x64_vec_unk2 = Vec3::new(0.0, 0.0, 0.0);
 }
 
-/// Clears `x58`, `it_80273484`.
+/// Clears the tick's displacement (`x58`: the wind's push, added to the position), `it_80273484`.
 #[doc(alias = "it_80273484")]
-pub fn clear_x58(game: &mut Game, gobj: GObjId) {
+#[doc(alias("clear_x58"))]
+pub fn clear_displacement(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).x58_vec_unk = Vec3::new(0.0, 0.0, 0.0);
 }
 
@@ -213,8 +215,8 @@ pub fn clear_knockback(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_80273500")]
 pub fn set_velocity(game: &mut Game, gobj: GObjId, v: Vec3) {
     item_mut(game, gobj).x40_vel = v;
-    clear_x64(game, gobj);
-    clear_x58(game, gobj);
+    clear_floor_motion(game, gobj);
+    clear_displacement(game, gobj);
     clear_nudge(game, gobj);
     clear_knockback(game, gobj);
 }
@@ -413,7 +415,7 @@ pub fn bounce_sfx(r: &mut Running, gobj: GObjId) {
         return;
     }
     let sfx = ip.xD84;
-    if ip.kind == ItKind::Unk4 {
+    if ip.kind == ItKind::VsCoin {
         r.sfx_play_track(sfx, 127, 64, 154);
         return;
     }
@@ -457,8 +459,8 @@ pub fn set_model(r: &mut Running, gobj: GObjId, joint: Option<melee_data::archiv
 #[doc(alias = "it_80273408")]
 pub fn stop_all(game: &mut Game, gobj: GObjId) {
     clear_velocity(game, gobj);
-    clear_x64(game, gobj);
-    clear_x58(game, gobj);
+    clear_floor_motion(game, gobj);
+    clear_displacement(game, gobj);
     clear_nudge(game, gobj);
     clear_knockback(game, gobj);
 }
@@ -692,7 +694,7 @@ pub fn count_spawned(game: &mut Game) {
 /// Counts a food in (hold kind 2), `it_80274EE8`.
 #[doc(alias = "it_80274EE8")]
 pub fn count_food(game: &mut Game) {
-    game.it.x6d08 = game.it.x6d08.wrapping_add(1);
+    game.it.foods_spawned = game.it.foods_spawned.wrapping_add(1);
 }
 
 /// A small blast, `it_80272B40`: its effect (0x40C), its sound, and its hits counted afresh.
@@ -846,6 +848,7 @@ pub fn unbind_bone(r: &mut Running, gobj: GObjId, bone_id: i32) {
 
 /// Whether the item's script flags (`xDC0`) share a bit with `mask`, `it_802750E8`.
 #[doc(alias = "it_802750E8")]
-pub fn xdc0_has(game: &Game, gobj: GObjId, mask: u32) -> bool {
+#[doc(alias("xdc0_has"))]
+pub fn script_flags_have(game: &Game, gobj: GObjId, mask: u32) -> bool {
     item(game, gobj).xDC0 & mask != 0
 }

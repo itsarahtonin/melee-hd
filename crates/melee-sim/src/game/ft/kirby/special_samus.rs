@@ -66,7 +66,7 @@ pub const KIRBY: ChargeShot = ChargeShot {
         y: 0.0,
         z: 0.0,
     }),
-    shot_kind: ItKind::KirbySamusCharge.id(),
+    shot_kind: ItKind::KirbySamusChargeShot.id(),
     flash: 0x4A4,
     full_glow: 0x36,
     on_death: super::addr::DEATH3,

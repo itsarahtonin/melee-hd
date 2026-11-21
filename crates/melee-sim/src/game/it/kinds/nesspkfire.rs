@@ -28,7 +28,8 @@ pub const HIT_SHIELD: u32 = 0x802A_A354;
 #[doc(alias = "itNessPKFire_Logic23_Reflected")]
 pub const REFLECTED: u32 = 0x802A_A35C;
 pub const SHIELD_BOUNCED: u32 = 0x802A_A37C;
-pub const EVT_UNK: u32 = 0x802A_A474;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_A474;
 
 /// `itNessPKFirepillarAttributes` (the bolt reads its own as this layout): the lifetime and
 /// how far above the bolt the pillar rises.

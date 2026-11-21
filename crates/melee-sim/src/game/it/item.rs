@@ -116,27 +116,27 @@ pub fn apply_facing(game: &mut Game, gobj: GObjId, j: Option<JObjId>) {
 /// The hold kind `Item_802674AC` gives an item kind.
 #[doc(alias = "Item_802674AC")]
 pub fn hold_kind_of(kind: i32) -> i32 {
-    if kind == ItKind::Foods {
+    if kind == ItKind::Food {
         2
     } else if kind == ItKind::StageHurtbox {
         3
     } else if kind < ItKind::COMMON_END {
         0
-    } else if kind < ItKind::Kuriboh {
+    } else if kind < ItKind::Goomba {
         1
-    } else if kind < ItKind::OctarockStone {
+    } else if kind < ItKind::OctorokStone {
         6
-    } else if kind < ItKind::MarioFire {
+    } else if kind < ItKind::MarioFireball {
         7
-    } else if kind < ItKind::Unk4 {
+    } else if kind < ItKind::VsCoin {
         8
-    } else if kind == ItKind::Unk4 {
+    } else if kind == ItKind::VsCoin {
         12
     } else if kind < ItKind::StageHurtbox {
         11
     } else if kind < ItKind::POKEMON_END {
         9
-    } else if kind < ItKind::OldKuri {
+    } else if kind < ItKind::OldGoomba {
         10
     } else if kind < ItKind::ArwingLaser {
         4
@@ -191,7 +191,7 @@ pub fn count(game: &mut Game, gobj: GObjId) {
         bump_count(&mut game.it.counts, hold_kind, 1);
     }
     match hold_kind {
-        0 if kind == ItKind::MBall => game.it.counts.x1C = game.it.counts.x1C.wrapping_add(1),
+        0 if kind == ItKind::PokeBall => game.it.counts.x1C = game.it.counts.x1C.wrapping_add(1),
         2 => super::lib2725::count_food(game),
         _ => {}
     }
@@ -230,7 +230,7 @@ pub fn at_limit(game: &mut Game, hold_kind: i32) -> bool {
 /// Registers a character item's article as its character loads, `it_8026B3F8`.
 #[doc(alias = "it_8026B3F8")]
 pub fn set_char_article(game: &mut Game, article: Option<DataRef>, kind: i32) {
-    game.it.char_articles[(kind - ItKind::Kuriboh.id()) as usize] = article;
+    game.it.char_articles[(kind - ItKind::Goomba.id()) as usize] = article;
     // The entry is a word of `ItCo.dat`'s data, which the heap's image takes where it holds
     // the file (the preload cache's copy a later scene's heap reuses).
     if let Some(t) = game.it.char_table
@@ -240,7 +240,7 @@ pub fn set_char_article(game: &mut Game, article: Option<DataRef>, kind: i32) {
             let w = article.map_or(Some(0), |a| h.image.data_addr(a));
             if let Some(w) = w {
                 h.image
-                    .file_word(t.at(4 * (kind - ItKind::Kuriboh.id()) as u32), w);
+                    .file_word(t.at(4 * (kind - ItKind::Goomba.id()) as u32), w);
             }
         });
     }
@@ -249,17 +249,17 @@ pub fn set_char_article(game: &mut Game, article: Option<DataRef>, kind: i32) {
 /// An item kind's article (`it_804D6D24` and friends, by `Item_80267978`'s split).
 pub fn article_of(game: &Game, data: &Archives, kind: i32) -> Option<DataRef> {
     let g = &game.it;
-    if kind < ItKind::Kuriboh {
+    if kind < ItKind::Goomba {
         data.ptr(g.common_articles?.at(4 * kind as u32))
     } else if kind < ItKind::FIRST_POKEMON {
-        g.char_articles[(kind - ItKind::Kuriboh.id()) as usize]
-    } else if kind < ItKind::OldKuri {
+        g.char_articles[(kind - ItKind::Goomba.id()) as usize]
+    } else if kind < ItKind::OldGoomba {
         data.ptr(
             g.pokemon_articles?
                 .at(4 * (kind - ItKind::FIRST_POKEMON.id()) as u32),
         )
     } else {
-        let a = game.gr.stage_articles[(kind - ItKind::OldKuri.id()) as usize];
+        let a = game.gr.stage_articles[(kind - ItKind::OldGoomba.id()) as usize];
         assert!(
             a.is_some(),
             "not found zako model data! check ground dat file!"
@@ -365,8 +365,8 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     let a = attr_of(ip);
     set_flag(&mut ip.xDD0_flag, 3, false);
     ip.spin_spd = a.f32(data, attr::SPIN_SPEED);
-    ip.xDC8_word.flags.x19 = a.x1_3(data);
-    ip.xDC8_word.flags.x17 = a.x1_1(data);
+    ip.xDC8_word.flags.x19 = a.turns_to_face(data);
+    ip.xDC8_word.flags.x17 = a.spin_axis(data);
     ip.xBCC_unk = a.vec2(data, attr::X30);
     ip.xBD4_grabRange = a.vec2(data, attr::GRAB_RANGE);
     ip.xDC8_word.flags.x1A = a.x1_4(data);
@@ -378,7 +378,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     ip.xC1C = a.ecb(data, attr::X40);
     ip.xC0C = ip.xC1C.clone();
     ip.xBFC = ip.xC0C.clone();
-    ip.xDC8_word.flags.xC = a.x1_5(data);
+    ip.xDC8_word.flags.xC = a.hits_counted(data);
     ip.xDC8_word.flags.xD = true;
     ip.xDCD_flag.x0.b01 = a.cam_kind(data);
     set_flag(&mut ip.xDCE_flag, 3, false);
@@ -695,7 +695,9 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
         let ip = super::item(r.game, gobj);
         (ip.kind, ip.owner)
     };
-    if (ItKind::MarioFire.id()..ItKind::Unk4.id()).contains(&kind) && is_fighter(r.game, owner) {
+    if (ItKind::MarioFireball.id()..ItKind::VsCoin.id()).contains(&kind)
+        && is_fighter(r.game, owner)
+    {
         let f = super::owner::fighter_of(r.game, owner.unwrap());
         let fkind = r.game.fighters[f.0].kind;
         let ip = item_mut(r.game, gobj);
@@ -769,7 +771,7 @@ pub fn init_position(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     lib2725::clamp_fall(r.game, gobj, x6c);
     lib2725::clear_hitboxes(r.game, r.data, gobj);
     coll::set_hurtbox_state(r.game, gobj, coll::HURT_ENABLED);
-    coll::clear_x1b(r.game, gobj);
+    coll::clear_random_push(r.game, gobj);
     {
         let ip = item_mut(r.game, gobj);
         ip.on_accessory = None;
@@ -1197,7 +1199,7 @@ pub fn proc_anim(r: &mut Running, gobj: GObjId) {
         }
     }
     coll::keep_clear(r.game, r.data, gobj);
-    coll::set_x1b(r.game, gobj);
+    coll::set_random_push(r.game, gobj);
     super::anim::run_overlay(r, gobj);
 }
 
@@ -1260,7 +1262,7 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
     }
     let ip = item_mut(r.game, gobj);
     ip.pos = vec_add(ip.pos, ip.x58_vec_unk);
-    lib2725::clear_x58(r.game, gobj);
+    lib2725::clear_displacement(r.game, gobj);
     let ip = super::item(r.game, gobj);
     if ip.ground_or_air == 0 {
         let line = if flag(ip.xDCE_flag, 3) && super::ground::on_line(r.game, gobj) {
@@ -1275,7 +1277,7 @@ pub fn proc_phys(r: &mut Running, gobj: GObjId) {
     }
     let ip = item_mut(r.game, gobj);
     ip.pos = vec_add(ip.pos, ip.x64_vec_unk2);
-    lib2725::clear_x64(r.game, gobj);
+    lib2725::clear_floor_motion(r.game, gobj);
     coll::refresh_hurtboxes(r.game, gobj);
 }
 
@@ -1317,7 +1319,7 @@ pub fn proc_accessory(r: &mut Running, gobj: GObjId) {
         cb.bone_pos = pos;
     }
     coll::update_ecb(r.game, r.data, gobj);
-    coll::clear_x1b(r.game, gobj);
+    coll::clear_random_push(r.game, gobj);
     coll::track_fighters(r.game, gobj);
 }
 
@@ -1360,7 +1362,7 @@ pub fn proc_grab(r: &mut Running, gobj: GObjId) {
     );
     match cb.0 {
         super::kinds::tarucann::FT_BARREL_ENTER => r.enter_barrel(victim, gobj),
-        super::kinds::likelike::FT_CAPTURE => r.enter_capture_likelike(victim, gobj),
+        super::kinds::like_like::FT_CAPTURE => r.enter_capture_likelike(victim, gobj),
         a => code::unported_call(&format!("{a:#010x} (a grabbed fighter's callback)")),
     }
 }
@@ -1480,7 +1482,7 @@ pub fn react_shield(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "Item_80269F14")]
 pub fn react_reflect(r: &mut Running, gobj: GObjId) -> bool {
     let ip = super::item(r.game, gobj);
-    if !ip.xDCC_flag.b1 && (ip.kind != ItKind::MBall || !ip.xDCC_flag.b2) {
+    if !ip.xDCC_flag.b1 && (ip.kind != ItKind::PokeBall || !ip.xDCC_flag.b2) {
         let reflector = ip.xC64_reflectGObj;
         let team = super::owner::team(r.game, reflector);
         let ip = item_mut(r.game, gobj);
@@ -1611,10 +1613,11 @@ pub fn proc_react(r: &mut Running, gobj: GObjId) {
     clear_hit_record(item_mut(r.game, gobj));
 }
 
-/// Every item's `xDC8` flag 3 set (`it_8026B724` on each), `it_8026C3FC`: the hands'
+/// Every item paused (`xDC8`'s flag 3 set, `it_8026B724` on each), `it_8026C3FC`: the hands'
 /// slowdown for Crazy Hand's arrival.
 #[doc(alias = "it_8026C3FC")]
-pub fn flag_all_x3(game: &mut Game) {
+#[doc(alias("flag_all_x3"))]
+pub fn pause_all(game: &mut Game) {
     let mut cur = game.world.first_in(super::P_LINK_ITEM);
     while let Some(g) = cur {
         item_mut(game, g).xDC8_word.flags.x3 = true;
@@ -1622,9 +1625,10 @@ pub fn flag_all_x3(game: &mut Game) {
     }
 }
 
-/// Every item's `xDC8` flag 3 cleared, `it_8026C42C`, and flag 5 set where flag 7 is.
+/// Every item resumed (`xDC8`'s flag 3 cleared), `it_8026C42C`, and flag 5 set where flag 7 is.
 #[doc(alias = "it_8026C42C")]
-pub fn unflag_all_x3(game: &mut Game) {
+#[doc(alias("unflag_all_x3"))]
+pub fn resume_all(game: &mut Game) {
     let mut cur = game.world.first_in(super::P_LINK_ITEM);
     while let Some(g) = cur {
         let f = &mut item_mut(game, g).xDC8_word.flags;
@@ -1724,7 +1728,7 @@ pub fn exit_hitlag(r: &mut Running, gobj: GObjId) {
 pub fn is_special_held(ip: &Item) -> bool {
     ip.hold_kind == 8
         && ip.kind != ItKind::LinkBomb
-        && ip.kind != ItKind::CLinkBomb
+        && ip.kind != ItKind::YoungLinkBomb
         && ip.kind != ItKind::PeachTurnip
         && ip.kind != ItKind::PeachParasol
 }
@@ -2090,11 +2094,11 @@ pub fn init_globals(game: &mut Game, data: &Archives) {
     game.it.pokemon.last_kind = UNSELECTED;
     game.it.pokemon.previous_kind = UNSELECTED;
     game.it.pokemon.rare_spawned = 0;
-    game.it.x6d00 = -1;
+    game.it.warp_star_last_anim = -1;
     game.it.next_attack_id = 1;
     game.it.made = 0;
     game.it.spawned = 0;
-    game.it.x6d08 = 0;
+    game.it.foods_spawned = 0;
     let s = &mut game.it.spawn;
     for t in [&mut s.monsters, &mut s.no_containers, &mut s.spawner.table] {
         t.total = 0;

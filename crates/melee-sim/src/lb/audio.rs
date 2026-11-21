@@ -309,7 +309,7 @@ impl Running<'_> {
         }
         let frame = self.game.scene.unk_8 as i32;
         let logs = id != SFX_NONE
-            && self.game.playback.as_ref().is_some_and(|p| p.sound_codes())
+            && self.game.runs_sound_codes()
             && self.game.audio.sfx_known(self.data, id);
         if logs
             && let Some(p) = self.game.playback.as_mut()
@@ -550,7 +550,7 @@ impl Running<'_> {
     /// The channels' volumes from the settings, each handed to the synth when it changed
     /// (`fn_80024654(0)`, [`crate::audio::Audio::lb_volumes`]).
     pub fn lb_audio_volumes(&mut self) {
-        let quiet = self.game.rules.player.quiet_announcer;
+        let quiet = self.game.rules.quiet_announcer();
         self.game.audio.lb_volumes(false, quiet);
     }
 

@@ -102,11 +102,11 @@ pub fn gone(r: &mut Running, gobj: GObjId) {
 /// center (`it_8026BB68`) or `pos`, facing left.
 #[doc(alias = "it_8028FAF4")]
 pub fn spawn(r: &mut Running, parent: Option<GObjId>, pos: Vec3) -> Option<GObjId> {
-    if !super::super::spawn::kind_on(r.game, ItKind::Foods.id()) {
+    if !super::super::spawn::kind_on(r.game, ItKind::Food.id()) {
         return None;
     }
     let mut spawn = SpawnItem {
-        kind: ItKind::Foods.id(),
+        kind: ItKind::Food.id(),
         prev_pos: pos,
         ..Default::default()
     };

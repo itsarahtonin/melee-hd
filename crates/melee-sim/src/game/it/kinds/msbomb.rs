@@ -292,7 +292,7 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
 pub fn blast(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     super::wstar::set_attack_flags(r, gobj, ATTACK_FLAGS);
     super::super::lib279c::count_owner_attack(r, gobj);

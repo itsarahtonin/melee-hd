@@ -48,7 +48,7 @@ pub const KIRBY: Chef = Chef {
     states: [ms::GW_SPECIAL_N, ms::GW_SPECIAL_AIR_N],
     attrs: 0x3CC,
     u: 0xC0,
-    sausage_kind: ItKind::KirbyGameWatchChef.id(),
+    sausage_kind: ItKind::KirbyGameAndWatchSausage.id(),
     sausage_cb: addr::SAUSAGE,
     start_cb: addr::PAN,
     keep: KEEP_FLAGS & !SKIP_MODEL,

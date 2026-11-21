@@ -3,11 +3,14 @@
 //! its KO.
 
 use gekko_fp as fp;
+use melee_data::archive::DataRef;
 
-use super::item::{spawn_air, spawn_ground};
+use super::ground::Event;
+use super::item::{article, attr_of, change, change_state, spawn_air, spawn_ground};
 use super::pokemon::PokemonVars;
-use super::{item, item_mut, jobj_of, owner};
+use super::{data, hitbox, item, item_mut, jobj_of, lib2725, maplib, owner};
 use crate::fpu::{mem, reg};
+use crate::game::camera;
 use crate::game::code;
 use crate::game::it::ItKind;
 use crate::game::state::{Game, Running};
@@ -73,7 +76,7 @@ pub fn spawn(
     let mut v = common(r.game, gobj);
     v.set_jobj(jobj);
     v.set_idx(-1);
-    v.set_x14(2, 0);
+    v.set_word(2, 0);
     item_mut(r.game, gobj).x378_itemColl.x34_flags.b1234 = 3;
     Some(gobj)
 }
@@ -85,20 +88,24 @@ pub fn reset(game: &mut Game, gobj: GObjId) {
     let mut v = common(game, gobj);
     v.set_jobj(None);
     v.set_idx(-1);
-    v.set_x8(Vec3::new(0.0, 1.0, 0.0));
+    v.set_normal(Vec3::new(0.0, 1.0, 0.0));
     for i in 0..3 {
-        v.set_x14(i, 0);
+        v.set_word(i, 0);
     }
     clear_x1c(game, gobj);
     clear_x1e(game, gobj);
 }
 
-/// An enemy's common variables (`itZako_ItemVars`), the first words of its kind's member.
+/// An enemy's common variables (`itZako_ItemVars`), the first words of its kind's member: its
+/// joint and spawner slot, the surface normal its model turns toward (`x8`), and three words
+/// (`x14`): the turn's frames left, its bounces in a KO's flight and its last hurt sound.
 pub struct Common<'a> {
     pub jobj: &'a mut super::Var<Option<JObjId>>,
     pub idx: &'a mut super::Var<i32>,
-    pub x8: &'a mut super::Var<Vec3>,
-    pub x14: &'a mut [super::Var<i32>; 3],
+    #[doc(alias("x8"))]
+    pub normal: &'a mut super::Var<Vec3>,
+    #[doc(alias("x14"))]
+    pub words: &'a mut [super::Var<i32>; 3],
 }
 
 /// The enemy's common variables: typed in the Shy Guys', Tingle's and the Klap Trap's members,
@@ -112,8 +119,8 @@ pub enum CommonVars<'a> {
 pub mod off {
     pub const JOBJ: usize = 0;
     pub const IDX: usize = 4;
-    pub const X8: usize = 8;
-    pub const X14: usize = 0x14;
+    pub const NORMAL: usize = 8;
+    pub const WORDS: usize = 0x14;
 }
 
 impl CommonVars<'_> {
@@ -138,31 +145,35 @@ impl CommonVars<'_> {
         }
     }
 
-    pub fn x8(&mut self) -> Vec3 {
+    #[doc(alias("x8"))]
+    pub fn normal(&mut self) -> Vec3 {
         match self {
-            CommonVars::Typed(v) => v.x8.get(),
-            CommonVars::Bytes(b) => b.vec(off::X8),
+            CommonVars::Typed(v) => v.normal.get(),
+            CommonVars::Bytes(b) => b.vec(off::NORMAL),
         }
     }
 
-    pub fn set_x8(&mut self, x: Vec3) {
+    #[doc(alias("set_x8"))]
+    pub fn set_normal(&mut self, x: Vec3) {
         match self {
-            CommonVars::Typed(v) => v.x8.set(x),
-            CommonVars::Bytes(b) => b.set_vec(off::X8, x),
+            CommonVars::Typed(v) => v.normal.set(x),
+            CommonVars::Bytes(b) => b.set_vec(off::NORMAL, x),
         }
     }
 
-    pub fn x14(&mut self, i: usize) -> i32 {
+    #[doc(alias("x14"))]
+    pub fn word(&mut self, i: usize) -> i32 {
         match self {
-            CommonVars::Typed(v) => v.x14[i].get(),
-            CommonVars::Bytes(b) => b.i32(off::X14 + 4 * i),
+            CommonVars::Typed(v) => v.words[i].get(),
+            CommonVars::Bytes(b) => b.i32(off::WORDS + 4 * i),
         }
     }
 
-    pub fn set_x14(&mut self, i: usize, x: i32) {
+    #[doc(alias("set_x14"))]
+    pub fn set_word(&mut self, i: usize, x: i32) {
         match self {
-            CommonVars::Typed(v) => v.x14[i].set(x),
-            CommonVars::Bytes(b) => b.set_i32(off::X14 + 4 * i, x),
+            CommonVars::Typed(v) => v.words[i].set(x),
+            CommonVars::Bytes(b) => b.set_i32(off::WORDS + 4 * i, x),
         }
     }
 }
@@ -177,30 +188,30 @@ pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
             CommonVars::Typed(Common {
                 jobj: &mut v.jobj,
                 idx: &mut v.idx,
-                x8: &mut v.x8,
-                x14: &mut v.x14,
+                normal: &mut v.normal,
+                words: &mut v.words,
             })
         }};
     }
     match ItKind::of(kind) {
-        ItKind::Heiho => of!(vars.heiho()),
-        ItKind::Tincle => of!(vars.tincle()),
-        ItKind::Klap => of!(vars.klap()),
-        ItKind::Kyasarin => of!(vars.kyasarin()),
-        ItKind::KyasarinEgg => of!(vars.kyasarin_egg()),
+        ItKind::ShyGuy => of!(vars.heiho()),
+        ItKind::Tingle => of!(vars.tincle()),
+        ItKind::KlapTrap => of!(vars.klap()),
+        ItKind::Birdo => of!(vars.kyasarin()),
+        ItKind::BirdoEgg => of!(vars.kyasarin_egg()),
         ItKind::GreatFoxLaser => of!(vars.greatfox_laser()),
-        ItKind::Kuriboh
-        | ItKind::Leadead
-        | ItKind::Octarock
-        | ItKind::Ottosea
-        | ItKind::OctarockStone
-        | ItKind::Nokonoko
-        | ItKind::Patapata
-        | ItKind::Likelike
-        | ItKind::Whitebea
-        | ItKind::ZGShell
-        | ItKind::ZRShell
-        | ItKind::Mato => CommonVars::Bytes(vars.zako()),
+        ItKind::Goomba
+        | ItKind::ReDead
+        | ItKind::Octorok
+        | ItKind::Topi
+        | ItKind::OctorokStone
+        | ItKind::KoopaTroopa
+        | ItKind::KoopaParatroopa
+        | ItKind::LikeLike
+        | ItKind::PolarBear
+        | ItKind::KoopaGreenShell
+        | ItKind::KoopaRedShell
+        | ItKind::Target => CommonVars::Bytes(vars.zako()),
         k => code::unported_call(&format!("it_8027B5B0 (an enemy of kind {})", k.id())),
     }
 }
@@ -234,7 +245,7 @@ pub fn clear_x1e(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "grZakoGenerator_801CAC14")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let kind = item(r.game, gobj).kind;
-    if kind == ItKind::Coin {
+    if kind == ItKind::Trophy {
         // A trophy point's slot (the last) forgets the coin it made.
         let slots = r
             .game
@@ -287,8 +298,9 @@ fn launch_angle(r: &Running, ground_or_air: i32, angle: i32, kb: f64) -> f64 {
     if t > deg(max) { deg(max) } else { t }
 }
 
-/// `GA_Air`.
-const GA_AIR: i32 = 1;
+/// `GA_Ground` and `GA_Air`.
+pub const GA_GROUND: i32 = 0;
+pub const GA_AIR: i32 = 1;
 
 /// An enemy's knockback velocity, `it_8027B798`: the knockback scaled by `ftCommonData`'s
 /// `x100` along its angle, away from the hit; on the ground, along the floor if it points
@@ -418,7 +430,7 @@ const FLOOR_MASK: i32 = FLOOR_PUSH | FLOOR_HUG;
 const CEILING_MASK: i32 = CEILING_PUSH | CEILING_HUG;
 
 /// Turns the model toward the surface normal `normal` over `frames` frames (the turn's count in
-/// `x14.x`, restarted when the surface changes), facing `facing` about y (`it_8027BBF4` and
+/// word 0, `x14.x`, restarted when the surface changes), facing `facing` about y (`it_8027BBF4` and
 /// `it_8027C0F0` once they have their normal).
 fn align(r: &mut Running, gobj: GObjId, normal: Vec3, facing: f64, frames: f64) {
     let j = jobj_of(r.game, gobj).expect("an enemy without a model");
@@ -427,18 +439,18 @@ fn align(r: &mut Running, gobj: GObjId, normal: Vec3, facing: f64, frames: f64) 
     let mut up = Vec3::new(0.0, 1.0, 0.0);
     rotate_euler(&mut up, angles);
     let mut v = common(r.game, gobj);
-    if reg(v.x8().angle_xy(normal)) > reg(NEW_SURFACE) {
-        v.set_x8(normal);
-        v.set_x14(0, fp::fctiwz(frames));
+    if reg(v.normal().angle_xy(normal)) > reg(NEW_SURFACE) {
+        v.set_normal(normal);
+        v.set_word(0, fp::fctiwz(frames));
     }
-    let x8 = v.x8();
+    let x8 = v.normal();
     let turn = reg(up.angle_xy(x8));
-    let (x, y) = if turn < reg(NEW_SURFACE) || v.x14(0) < 2 {
+    let (x, y) = if turn < reg(NEW_SURFACE) || v.word(0) < 2 {
         (reg(normal.x), reg(normal.y))
     } else {
-        let left = v.x14(0);
+        let left = v.word(0);
         let mut step = fp::fdivs(turn, fp::frsp(f64::from(left)));
-        v.set_x14(0, left.wrapping_sub(1));
+        v.set_word(0, left.wrapping_sub(1));
         let cross = fp::fmsubs(
             reg(up.x),
             reg(normal.y),
@@ -526,27 +538,61 @@ pub fn face(r: &mut Running, gobj: GObjId, y_rot: f32) {
     jobj::set_rotation_y(jobjs, j, y);
     jobj::set_rotation_z(jobjs, j, 0.0);
     let mut v = common(r.game, gobj);
-    v.set_x8(Vec3::new(0.0, 1.0, 0.0));
-    v.set_x14(0, 0);
+    v.set_normal(Vec3::new(0.0, 1.0, 0.0));
+    v.set_word(0, 0);
 }
 
-/// A collision callback that answers false, `it_8027C794`.
+/// A collision callback that answers false, `it_8027C794`, and the enemies' animation and
+/// collision callbacks that do nothing else.
 #[doc(alias = "it_8027C794")]
+#[doc(alias = "itOctarock_UnkMotion2_Anim")]
+#[doc(alias = "itOctarock_UnkMotion8_Anim")]
+#[doc(alias = "itOctarock_UnkMotion8_Coll")]
+#[doc(alias = "itWhitebea_UnkMotion3_Anim")]
+#[doc(alias = "itWhitebea_UnkMotion6_Anim")]
+#[doc(alias = "itWhitebea_UnkMotion11_Anim")]
+#[doc(alias = "itWhitebea_UnkMotion11_Coll")]
+#[doc(alias = "itOldottosea_UnkMotion4_Anim")]
+#[doc(alias = "itOldottosea_UnkMotion11_Anim")]
+#[doc(alias = "itOldkuri_UnkMotion0_Anim")]
+#[doc(alias = "itOldkuri_UnkMotion7_Coll")]
+#[doc(alias = "itOldkuri_UnkMotion11_Coll")]
+#[doc(alias = "itLikelike_UnkMotion5_Anim")]
+#[doc(alias = "itLikelike_UnkMotion3_Anim")]
+#[doc(alias = "itLikelike_UnkMotion6_Anim")]
+// Ports itLikelike_UnkMotion19_Anim; aliased once a check reaches it.
+#[doc(alias = "itLikelike_UnkMotion21_Anim")]
+#[doc(alias = "itLikelike_UnkMotion21_Coll")]
+#[doc(alias = "itLeadead_UnkMotion1_Anim")]
+#[doc(alias = "itLeadead_UnkMotion4_Anim")]
+#[doc(alias = "itLeadead_UnkMotion5_Coll")]
+#[doc(alias = "itLeadead_UnkMotion8_Anim")]
+#[doc(alias = "itLeadead_UnkMotion10_Anim")]
+#[doc(alias = "itLeadead_UnkMotion15_Anim")]
+#[doc(alias = "itLeadead_UnkMotion16_Anim")]
+#[doc(alias = "itLeadead_UnkMotion17_Anim")]
+#[doc(alias = "itLeadead_UnkMotion16_Coll")]
 pub fn answers_false(_: &mut Running, _: GObjId) -> bool {
     false
 }
 
 /// Bounces off what it touches in the air, `it_8027C79C`: a hurt sound, the launch off the
-/// surfaces, and past the common data's count of bounces (`x14.y`), a 1P mode's trophy roll;
-/// true then.
+/// surfaces, and past the common data's count of bounces (word 1, `x14.y`), a 1P mode's trophy roll;
+/// true then. The enemies' flung-away states' collision.
 #[doc(alias = "it_8027C79C")]
+#[doc(alias = "itOctarock_UnkMotion7_Coll")]
+#[doc(alias = "itWhitebea_UnkMotion10_Coll")]
+#[doc(alias = "itOldottosea_UnkMotion10_Coll")]
+#[doc(alias = "itOldkuri_UnkMotion10_Coll")]
+#[doc(alias = "itLikelike_UnkMotion20_Coll")]
+#[doc(alias = "itLeadead_UnkMotion15_Coll")]
 pub fn bounce(r: &mut Running, gobj: GObjId) -> bool {
     if super::ground::air_touches(r, gobj) & 0xF != 0 {
         hurt_sound(r, gobj);
         launch(r, gobj, true);
         let mut v = common(r.game, gobj);
-        let n = v.x14(1).wrapping_add(1);
-        v.set_x14(1, n);
+        let n = v.word(1).wrapping_add(1);
+        v.set_word(1, n);
         let zako = r.game.it.zako.expect("no enemies' common data");
         if n > r.data.u32(zako) as i32 {
             trophy_roll(r, gobj);
@@ -561,8 +607,14 @@ pub type Check = fn(&mut Running, GObjId) -> bool;
 
 /// Ends a KO'd enemy's flight once it touches the stage, `it_8027C824`: a 1P mode's trophy
 /// roll, then `check`'s answer (counting the KO when it says so), or the KO counted and true
-/// without one.
+/// without one. With no check, the enemies' thrown states' collision.
 #[doc(alias = "it_8027C824")]
+#[doc(alias = "itOctarock_UnkMotion6_Coll")]
+// Ports itWhitebea_UnkMotion9_Coll; aliased once a check reaches it.
+#[doc(alias = "itOldottosea_UnkMotion9_Coll")]
+#[doc(alias = "itOldkuri_UnkMotion6_Coll")]
+// Ports itLikelike_UnkMotion19_Coll; aliased once a check reaches it.
+#[doc(alias = "itLeadead_UnkMotion14_Coll")]
 pub fn flight_lands(r: &mut Running, gobj: GObjId, check: Option<Check>) -> bool {
     if super::ground::air_touches(r, gobj) & 0xF != 0 {
         trophy_roll(r, gobj);
@@ -616,12 +668,12 @@ pub fn along_surface(v: &mut Vec3, normal: Vec3, facing: f32) {
 pub fn hurt_sound(r: &mut Running, gobj: GObjId) {
     const SOUNDS: [i32; 4] = [0x131, 0x132, 0x133, 0x134];
     let mut s = SOUNDS[r.game.objs.rng.below(4) as usize];
-    while s == common(r.game, gobj).x14(2) {
+    while s == common(r.game, gobj).word(2) {
         s = SOUNDS[r.game.objs.rng.below(4) as usize];
     }
     let mut v = common(r.game, gobj);
-    v.set_x14(2, s);
-    let s = v.x14(2);
+    v.set_word(2, s);
+    let s = v.word(2);
     super::item::play_sfx(r, gobj, s, 127, 64);
 }
 
@@ -778,7 +830,7 @@ pub fn set_source_player(game: &mut Game, gobj: GObjId, fighter: GObjId) {
 pub fn ko(r: &mut Running, gobj: GObjId) {
     let kind = item(r.game, gobj).kind;
     ko_bonus(r, gobj);
-    if kind == ItKind::Coin {
+    if kind == ItKind::Trophy {
         // A trophy point's slot (the last) frees, the coin it made taken.
         let slots = r
             .game
@@ -829,22 +881,22 @@ impl Running<'_> {
             "zako ko player illegal ! :{player}"
         );
         let bonus = match ItKind::of(kind) {
-            ItKind::Kuriboh | ItKind::OldKuri => 0xCE,
-            ItKind::Heiho => 0xD6,
-            ItKind::Leadead => 0xD1,
-            ItKind::Octarock => 0xD3,
-            ItKind::Ottosea => 0xD4,
-            ItKind::Nokonoko => 0xCF,
-            ItKind::Patapata => 0xD0,
-            ItKind::Likelike => 0xD2,
-            ItKind::Whitebea => 0xD5,
+            ItKind::Goomba | ItKind::OldGoomba => 0xCE,
+            ItKind::ShyGuy => 0xD6,
+            ItKind::ReDead => 0xD1,
+            ItKind::Octorok => 0xD3,
+            ItKind::Topi => 0xD4,
+            ItKind::KoopaTroopa => 0xCF,
+            ItKind::KoopaParatroopa => 0xD0,
+            ItKind::LikeLike => 0xD2,
+            ItKind::PolarBear => 0xD5,
             // No bonus (the switch's default).
-            ItKind::Klap
-            | ItKind::Kyasarin
-            | ItKind::KyasarinEgg
-            | ItKind::ZGShell
-            | ItKind::ZRShell
-            | ItKind::Coin => return,
+            ItKind::KlapTrap
+            | ItKind::Birdo
+            | ItKind::BirdoEgg
+            | ItKind::KoopaGreenShell
+            | ItKind::KoopaRedShell
+            | ItKind::Trophy => return,
             _ => code::unported_call(&format!("pl_8004049C (an enemy of kind {kind})")),
         };
         let points = bonus_points(bonus);
@@ -885,3 +937,462 @@ pub fn time_add(a: u32, b: i32) -> u32 {
         0
     }
 }
+
+// ---- The enemies' shared states ---------------------------------------------------------------
+//
+// The Goomba, ReDead, Octorok, Topi, Polar Bear and Like Like (`it::kinds`) are near-copies of
+// one another where they're hit, beaten, flung and fall: one implementation each here, every
+// enemy's differences named in its [`Enemy`] (design call 7, docs/refactor.md's task 11).
+
+/// `QuakeKind_Small`.
+pub const QUAKE_SMALL: i32 = 2;
+/// `ITEM_UNK_0x1`, a state change's first flag.
+pub const UNK_0X1: u32 = 1;
+
+/// The bounces' word in the union's bytes (the common `x14.y`, which the enemies' own variables
+/// call `xDEC` or `x18`), which a fling clears.
+pub const BOUNCES: usize = off::WORDS + 4;
+
+/// How one enemy's copy of the enemies' shared code differs (design call 7): a `const` beside
+/// each enemy's port, passed to the shared functions.
+pub struct Enemy {
+    /// The state it's thrown in: any hit then beats it.
+    pub thrown: i32,
+    /// Flung away along its knockback ([`fling`]): the state and its change's flags.
+    pub flung: (i32, u32),
+    /// Flung toward the screen ([`fling_to_screen`]): the state and its change's flags.
+    pub to_screen: (i32, u32),
+    /// A hit's first step: the Like Like spits out what it swallowed.
+    pub on_hit: Option<Event>,
+    /// Hit, it keeps the way it faced (`init_facing_dir`), which its knockback turns back to: all
+    /// but the Goomba.
+    pub keeps_facing: bool,
+    /// A beating's first step: Topi lets its Freezie go.
+    pub on_beaten: Option<Event>,
+    /// Beaten, it can no longer be landed on (its stomp cleared): the Goomba.
+    pub stompable: bool,
+    /// Beaten, its hit records are cleared: all but the ReDead.
+    pub clears_hits: bool,
+    /// A hit short of beating it: its knockback.
+    pub knocked: Event,
+    /// Flung away, it faces as before the hit: the ReDead.
+    pub flung_keeps_facing: bool,
+    /// Flung either way, its model stands upright facing nowhere: the Goomba.
+    pub flung_upright: bool,
+    /// Flung away, the item engine removes it past the blast zones (`xDCC_flag.b3`): Topi.
+    pub flung_checks_blast_zones: bool,
+}
+
+/// How a hit enemy's knockback ([`knock_back`]) is floored when it points off the floor.
+#[derive(Clone, Copy)]
+pub enum Knock {
+    /// Up at least 0.2 when its vertical speed is at most `.0`: 0.2 as a double in the Goomba's
+    /// comparison, as a single in the ReDead's and the Octorok's.
+    AtLeast(f64),
+    /// In the air before the knockback is read, and not floored: Topi.
+    ///
+    /// In the air [`knockback_vel`] never answers that the knockback points off the floor, so
+    /// Topi's and the Polar Bear's knockbacks always put them on the ground (Melee's bugs,
+    /// docs/melee-bugs.md).
+    Free,
+    /// In the air before the knockback is read; up at least 0.2, else a fifth of its vertical
+    /// speed; kept to the floor, a fifth of its sideways speed: the Polar Bear. Only the floor's
+    /// branch runs ([`Knock::Free`]'s note).
+    Fifth,
+}
+
+/// The enemy's special attributes (its article's), `off` bytes in.
+pub fn attr(r: &Running, gobj: GObjId, off: u32) -> DataRef {
+    article(item(r.game, gobj))
+        .special(r.data)
+        .expect("an enemy without attributes")
+        .at(off)
+}
+
+pub fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
+    r.data.f32(attr(r, gobj, off))
+}
+
+pub fn attr_i32(r: &Running, gobj: GObjId, off: u32) -> i32 {
+    r.data.u32(attr(r, gobj, off)) as i32
+}
+
+pub fn attr_s16(r: &Running, gobj: GObjId, off: u32) -> i32 {
+    i32::from(r.data.u16(attr(r, gobj, off)) as i16)
+}
+
+pub fn attr_s8(r: &Running, gobj: GObjId, off: u32) -> i32 {
+    i32::from(r.data.u8(attr(r, gobj, off)) as i8)
+}
+
+/// Its health, the integer `attr->x0` points to.
+pub fn health(r: &Running, gobj: GObjId) -> i32 {
+    let p = r.data.ptr(attr(r, gobj, 0)).expect("an enemy's health");
+    r.data.u32(p) as i32
+}
+
+/// Its walking speed, the float after its health.
+pub fn walk_speed(r: &Running, gobj: GObjId) -> f32 {
+    let p = r.data.ptr(attr(r, gobj, 0)).expect("an enemy's speed");
+    r.data.f32(p.at(4))
+}
+
+/// One of its own words in the union's bytes, `off` bytes in.
+pub fn var(game: &mut Game, gobj: GObjId, off: usize) -> i32 {
+    bytes(game, gobj).i32(off)
+}
+
+pub fn set_var(game: &mut Game, gobj: GObjId, off: usize, v: i32) {
+    bytes(game, gobj).set_i32(off, v);
+}
+
+/// The collision's facing from the item's (`mpCollSetFacingDir`, inline in each enemy).
+pub fn set_coll_facing(game: &mut Game, gobj: GObjId) {
+    let ip = item_mut(game, gobj);
+    let f = if reg(ip.facing_dir) == fp::fneg(1.0) {
+        -1
+    } else {
+        1
+    };
+    ip.x378_itemColl.set_facing_dir(f);
+}
+
+/// Stops (the inline `itResetVelocity`): z, then y, then x.
+pub fn stop(game: &mut Game, gobj: GObjId) {
+    let v = &mut item_mut(game, gobj).x40_vel;
+    v.z = 0.0;
+    v.y = 0.0;
+    v.x = 0.0;
+}
+
+/// Its collision an enemy's (the inline `Item_InitZakoCollision`): `xD5C` cleared, not
+/// pickable (`x15`), `xDCD`'s bit 7 cleared and `xDD0`'s bit 4 set.
+pub fn init_collision(game: &mut Game, gobj: GObjId) {
+    let ip = item_mut(game, gobj);
+    ip.xD5C = 0;
+    ip.xDC8_word.flags.x15 = false;
+    hitbox::clear_dcd_b7(game, gobj);
+    set_dd0_b4(game, gobj);
+}
+
+/// Along the floor: its velocity's speed turned along the floor's normal, the way it faces.
+pub fn along_floor(game: &mut Game, gobj: GObjId) {
+    let ip = item_mut(game, gobj);
+    let (normal, facing) = (ip.x378_itemColl.floor.normal, ip.facing_dir);
+    along_surface(&mut ip.x40_vel, normal, facing);
+}
+
+/// A hit's element added to the damage it has taken (`xC9C`), which it answers.
+pub fn add_hit_damage(r: &mut Running, gobj: GObjId) -> i32 {
+    let extra = reg(element_damage(r, gobj));
+    let ip = item_mut(r.game, gobj);
+    ip.xC9C = fp::fctiwz(fp::fadds(fp::frsp(f64::from(ip.xC9C)), extra));
+    ip.xC9C
+}
+
+/// An enemy's damage callback: its first step ([`Enemy::on_hit`]), its facing kept
+/// ([`Enemy::keeps_facing`]), the hit's element added to the damage; past its health (or hit
+/// while thrown) it's beaten ([`defeat`], after [`Enemy::on_beaten`]), else knocked back
+/// ([`Enemy::knocked`]).
+#[doc(alias = "it_802E4B00")]
+#[doc(alias = "it_802E3884")]
+#[doc(alias = "it_2725_Logic8_DmgReceived")]
+#[doc(alias = "it_2725_Logic0_DmgReceived")]
+#[doc(alias = "it_2725_Logic5_DmgReceived")]
+pub fn damaged(r: &mut Running, gobj: GObjId, e: &Enemy) -> bool {
+    if let Some(f) = e.on_hit {
+        f(r, gobj);
+    }
+    if e.keeps_facing {
+        let ip = item_mut(r.game, gobj);
+        ip.init_facing_dir = ip.facing_dir;
+    }
+    let damage = add_hit_damage(r, gobj);
+    let msid = item(r.game, gobj).msid;
+    if damage > health(r, gobj) || msid == e.thrown {
+        if let Some(f) = e.on_beaten {
+            f(r, gobj);
+        }
+        defeat(r, gobj, e);
+    } else {
+        (e.knocked)(r, gobj);
+    }
+    false
+}
+
+/// Beaten (the inline `Item_ZakoDefeat`): a hurt sound, no stomping ([`Enemy::stompable`]),
+/// blinking, its hit records cleared ([`Enemy::clears_hits`]), an enemy KO, a small quake, and
+/// flung away ([`fling_away`]).
+pub fn defeat(r: &mut Running, gobj: GObjId, e: &Enemy) {
+    hurt_sound(r, gobj);
+    if e.stompable {
+        lib2725::clear_stomp(r.game, gobj);
+    }
+    hitbox::start_blink(r.game, gobj);
+    if e.clears_hits {
+        hitbox::clear_hit_ids(r.game, gobj);
+    }
+    ko(r, gobj);
+    let pos = item(r.game, gobj).pos;
+    camera::request_quake(r, QUAKE_SMALL, Some(pos));
+    fling_away(r, gobj, e);
+}
+
+/// Flung toward the screen by the common data's odds (`x8`, one draw), else along its
+/// knockback.
+pub fn fling_away(r: &mut Running, gobj: GObjId, e: &Enemy) {
+    let f = reg(r.game.objs.rng.draw_f32());
+    let z = r.game.it.zako.expect("no enemies' common data");
+    if f < reg(r.data.f32(z.at(8))) {
+        fling_to_screen(r, gobj, e);
+    } else {
+        fling(r, gobj, e);
+    }
+}
+
+/// Flung away: removed past the blast zones ([`Enemy::flung_checks_blast_zones`]), in the air,
+/// launched along its knockback, facing as before the hit ([`Enemy::flung_keeps_facing`]), its
+/// bounces cleared, upright ([`Enemy::flung_upright`]), its flung state.
+#[doc(alias = "it_802E57D4")]
+#[doc(alias = "it_802E48B4")]
+#[doc(alias = "it_802E3400")]
+#[doc(alias = "it_802D82C4")]
+#[doc(alias = "it_802DC310")]
+#[doc(alias = "it_802EA2A0")]
+pub fn fling(r: &mut Running, gobj: GObjId, e: &Enemy) {
+    if e.flung_checks_blast_zones {
+        item_mut(r.game, gobj).xDCC_flag.b3 = true;
+    }
+    maplib::enter_air(item_mut(r.game, gobj));
+    launch(r, gobj, false);
+    if e.flung_keeps_facing {
+        let ip = item_mut(r.game, gobj);
+        ip.facing_dir = ip.init_facing_dir;
+    }
+    set_var(r.game, gobj, BOUNCES, 0);
+    if e.flung_upright {
+        face(r, gobj, 0.0);
+    }
+    change_state(r, gobj, e.flung.0, e.flung.1);
+}
+
+/// Flung toward the screen (the inline `Item_UpdateZakoVelocity`): in the air at
+/// [`toward_camera`]'s velocity, upright ([`Enemy::flung_upright`]), its state toward the
+/// screen.
+#[doc(alias = "it_802E58A0")]
+#[doc(alias = "it_802E4980")]
+#[doc(alias = "it_802E3528")]
+#[doc(alias = "it_802D839C")]
+#[doc(alias = "it_802DC3DC")]
+#[doc(alias = "it_802EA334")]
+pub fn fling_to_screen(r: &mut Running, gobj: GObjId, e: &Enemy) {
+    maplib::enter_air(item_mut(r.game, gobj));
+    let v = toward_camera(r, gobj);
+    item_mut(r.game, gobj).x40_vel = v;
+    maplib::enter_air(item_mut(r.game, gobj));
+    if e.flung_upright {
+        face(r, gobj, 0.0);
+    }
+    change_state(r, gobj, e.to_screen.0, e.to_screen.1);
+}
+
+/// A hit enemy's knockback velocity, the start of its knockback: along the hit's knockback
+/// ([`knockback_vel`]), in the air if it points off the floor (floored as `knock` says), else on
+/// the ground.
+pub fn knock_back(r: &mut Running, gobj: GObjId, knock: Knock) {
+    if !matches!(knock, Knock::AtLeast(_)) {
+        maplib::enter_air(item_mut(r.game, gobj));
+    }
+    let mut v = item(r.game, gobj).x40_vel;
+    let up = knockback_vel(r, gobj, &mut v);
+    let ip = item_mut(r.game, gobj);
+    ip.x40_vel = v;
+    if up {
+        match knock {
+            Knock::AtLeast(min) => {
+                if reg(ip.x40_vel.y) <= min {
+                    ip.x40_vel.y = 0.2;
+                }
+            }
+            // A double 0.2 in the comparison, as the C writes it.
+            Knock::Fifth => {
+                if reg(ip.x40_vel.y) <= 0.2 {
+                    ip.x40_vel.y = mem(fp::frsp(0.2));
+                } else {
+                    ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), fp::frsp(0.2)));
+                }
+            }
+            Knock::Free => {}
+        }
+        maplib::enter_air(ip);
+    } else {
+        maplib::enter_ground(ip);
+        if matches!(knock, Knock::Fifth) {
+            ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), fp::frsp(0.2)));
+        }
+    }
+}
+
+/// An animation callback that loops its state: when the animation ends, `msid` again with
+/// `flags`.
+#[doc(alias = "itOctarock_UnkMotion0_Anim")]
+#[doc(alias = "itOctarock_UnkMotion5_Anim")]
+#[doc(alias = "itOctarock_UnkMotion6_Anim")]
+#[doc(alias = "itOctarock_UnkMotion7_Anim")]
+#[doc(alias = "itWhitebea_UnkMotion0_Anim")]
+// Ports itWhitebea_UnkMotion8_Anim; aliased once a check reaches it.
+// Ports itWhitebea_UnkMotion9_Anim; aliased once a check reaches it.
+#[doc(alias = "itWhitebea_UnkMotion10_Anim")]
+#[doc(alias = "itOldottosea_UnkMotion0_Anim")]
+#[doc(alias = "itOldottosea_UnkMotion9_Anim")]
+#[doc(alias = "itOldottosea_UnkMotion10_Anim")]
+#[doc(alias = "itOldkuri_UnkMotion6_Anim")]
+#[doc(alias = "itOldkuri_UnkMotion10_Anim")]
+#[doc(alias = "itOldkuri_UnkMotion11_Anim")]
+#[doc(alias = "itLikelike_UnkMotion0_Anim")]
+#[doc(alias = "itLikelike_UnkMotion1_Anim")]
+#[doc(alias = "itLikelike_UnkMotion2_Anim")]
+#[doc(alias = "itLikelike_UnkMotion8_Anim")]
+#[doc(alias = "itLikelike_UnkMotion13_Anim")]
+#[doc(alias = "itLikelike_UnkMotion20_Anim")]
+#[doc(alias = "itLeadead_UnkMotion13_Anim")]
+#[doc(alias = "itLeadead_UnkMotion14_Anim")]
+pub fn looped(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) -> bool {
+    if !lib2725::is_animating(r.game, gobj) {
+        change_state(r, gobj, msid, flags);
+    }
+    false
+}
+
+/// Knocked back's animation: when it ends, in the air the state (`msid`) again, on the ground
+/// `landed`.
+#[doc(alias = "itOctarock_UnkMotion3_Anim")]
+#[doc(alias = "itWhitebea_UnkMotion4_Anim")]
+#[doc(alias = "itOldottosea_UnkMotion5_Anim")]
+#[doc(alias = "itOldkuri_UnkMotion9_Anim")]
+pub fn knocked_anim(r: &mut Running, gobj: GObjId, msid: i32, landed: Event) -> bool {
+    if !lib2725::is_animating(r.game, gobj) {
+        if item(r.game, gobj).ground_or_air == GA_AIR {
+            change_state(r, gobj, msid, change::ANIM_UPDATE);
+        } else {
+            landed(r, gobj);
+        }
+    }
+    false
+}
+
+/// Knocked back's collision: in the air, landing `landed`; on the ground, off the floor `fell`.
+#[doc(alias = "itOctarock_UnkMotion3_Coll")]
+#[doc(alias = "itWhitebea_UnkMotion4_Coll")]
+#[doc(alias = "itOldkuri_UnkMotion9_Coll")]
+pub fn knocked_coll(r: &mut Running, gobj: GObjId, landed: Event, fell: Event) -> bool {
+    if item(r.game, gobj).ground_or_air == GA_AIR {
+        super::ground::fall_to_floor(r, gobj, landed);
+    } else {
+        super::ground::ground_or_fall(r, gobj, fell);
+    }
+    answers_false(r, gobj)
+}
+
+/// The falling states' physics: gravity, up to the item's fall speed.
+#[doc(alias = "itOctarock_UnkMotion2_Phys")]
+#[doc(alias = "itOctarock_UnkMotion6_Phys")]
+#[doc(alias = "itWhitebea_UnkMotion3_Phys")]
+#[doc(alias = "itWhitebea_UnkMotion6_Phys")]
+// Ports itWhitebea_UnkMotion9_Phys; aliased once a check reaches it.
+#[doc(alias = "itOldottosea_UnkMotion4_Phys")]
+#[doc(alias = "itOldottosea_UnkMotion9_Phys")]
+#[doc(alias = "itOldkuri_UnkMotion3_Phys")]
+#[doc(alias = "itOldkuri_UnkMotion4_Phys")]
+#[doc(alias = "itOldkuri_UnkMotion6_Phys")]
+#[doc(alias = "itOldkuri_UnkMotion8_Phys")]
+// Ports itLikelike_UnkMotion19_Phys; aliased once a check reaches it.
+#[doc(alias = "itLeadead_UnkMotion10_Phys")]
+#[doc(alias = "itLeadead_UnkMotion14_Phys")]
+pub fn fall_physics(r: &mut Running, gobj: GObjId) {
+    let a = attr_of(item(r.game, gobj));
+    let accel = a.f32(r.data, data::attr::FALL_SPEED);
+    let max = a.f32(r.data, data::attr::FALL_SPEED_MAX);
+    lib2725::fall(r.game, gobj, accel, max);
+}
+
+/// The flights' physics: its fall speed off the vertical velocity, uncapped.
+#[doc(alias = "itOctarock_UnkMotion8_Phys")]
+#[doc(alias = "itWhitebea_UnkMotion11_Phys")]
+#[doc(alias = "itOldottosea_UnkMotion11_Phys")]
+#[doc(alias = "itOldkuri_UnkMotion11_Phys")]
+#[doc(alias = "itLikelike_UnkMotion21_Phys")]
+#[doc(alias = "itLeadead_UnkMotion16_Phys")]
+#[doc(alias = "itLeadead_UnkMotion17_Phys")]
+pub fn flight_physics(r: &mut Running, gobj: GObjId) {
+    let accel = reg(attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED));
+    let ip = item_mut(r.game, gobj);
+    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), accel));
+}
+
+/// Knocked back's physics: in the air, [`flight_physics`].
+#[doc(alias = "itOctarock_UnkMotion3_Phys")]
+#[doc(alias = "itWhitebea_UnkMotion4_Phys")]
+#[doc(alias = "itOldottosea_UnkMotion5_Phys")]
+#[doc(alias = "itOldkuri_UnkMotion9_Phys")]
+#[doc(alias = "itLeadead_UnkMotion12_Phys")]
+pub fn knocked_physics(r: &mut Running, gobj: GObjId) {
+    if item(r.game, gobj).ground_or_air == GA_AIR {
+        flight_physics(r, gobj);
+    }
+}
+
+/// Its walking speed the way it faces as its velocity, z and y stopped (the walks of the Goomba,
+/// ReDead and Polar Bear): the speed, which it answers.
+pub fn walk_velocity(r: &mut Running, gobj: GObjId) -> f32 {
+    let speed = reg(walk_speed(r, gobj));
+    let ip = item_mut(r.game, gobj);
+    let v = mem(fp::fmuls(reg(ip.facing_dir), speed));
+    ip.x40_vel.x = v;
+    ip.x40_vel.z = 0.0;
+    ip.x40_vel.y = 0.0;
+    v
+}
+
+/// A turn's animation step (the ReDead's, Topi's and the Polar Bear's turning animations): at
+/// its timer's end (the word `timer` bytes in) it faces the other way, its collision too; the
+/// timer counts down; whether the animation has ended.
+pub fn turning(r: &mut Running, gobj: GObjId, timer: usize) -> bool {
+    if var(r.game, gobj, timer) == 0 {
+        let ip = item_mut(r.game, gobj);
+        ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
+        set_coll_facing(r.game, gobj);
+    }
+    let t = var(r.game, gobj, timer).wrapping_sub(1);
+    set_var(r.game, gobj, timer, t);
+    !lib2725::is_animating(r.game, gobj)
+}
+
+/// The states' physics that do nothing.
+#[doc(alias = "itOctarock_UnkMotion5_Phys")]
+#[doc(alias = "itOctarock_UnkMotion7_Phys")]
+#[doc(alias = "itWhitebea_UnkMotion2_Phys")]
+#[doc(alias = "itWhitebea_UnkMotion5_Phys")]
+#[doc(alias = "itWhitebea_UnkMotion7_Phys")]
+// Ports itWhitebea_UnkMotion8_Phys; aliased once a check reaches it.
+#[doc(alias = "itWhitebea_UnkMotion10_Phys")]
+#[doc(alias = "itOldottosea_UnkMotion3_Phys")]
+#[doc(alias = "itOldottosea_UnkMotion8_Phys")]
+#[doc(alias = "itOldottosea_UnkMotion10_Phys")]
+#[doc(alias = "itOldkuri_UnkMotion5_Phys")]
+#[doc(alias = "itOldkuri_UnkMotion7_Phys")]
+#[doc(alias = "itOldkuri_UnkMotion10_Phys")]
+#[doc(alias = "itLikelike_UnkMotion16_Phys")]
+#[doc(alias = "itLikelike_UnkMotion9_Phys")]
+#[doc(alias = "itLikelike_UnkMotion10_Phys")]
+#[doc(alias = "itLikelike_UnkMotion14_Phys")]
+#[doc(alias = "itLikelike_UnkMotion15_Phys")]
+// Ports itLikelike_UnkMotion18_Phys; aliased once a check reaches it.
+#[doc(alias = "itLikelike_UnkMotion20_Phys")]
+#[doc(alias = "itLeadead_UnkMotion3_Phys")]
+#[doc(alias = "itLeadead_UnkMotion5_Phys")]
+#[doc(alias = "itLeadead_UnkMotion6_Phys")]
+#[doc(alias = "itLeadead_UnkMotion9_Phys")]
+#[doc(alias = "itLeadead_UnkMotion13_Phys")]
+#[doc(alias = "itLeadead_UnkMotion15_Phys")]
+pub fn still(_: &mut Running, _: GObjId) {}

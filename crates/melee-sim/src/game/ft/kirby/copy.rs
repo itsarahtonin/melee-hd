@@ -108,9 +108,9 @@ impl Running<'_> {
     pub fn kb_register_copy_items(&mut self, kind: i32) {
         // The copy data's entries and their item kinds, by copied kind.
         let items: &[(u32, i32)] = match kind {
-            0 => &[(0, ItKind::KirbyMarioFire.id())],
-            17 => &[(0, ItKind::KirbyLuigiFire.id())],
-            10 => &[(0, ItKind::KirbyIceClimberIce.id())],
+            0 => &[(0, ItKind::KirbyMarioFireball.id())],
+            17 => &[(0, ItKind::KirbyLuigiFireball.id())],
+            10 => &[(0, ItKind::KirbyIceClimbersIceShot.id())],
             9 => &[
                 (0, ItKind::KirbyPeachToad.id()),
                 (1, ItKind::KirbyPeachToadSpore.id()),
@@ -128,32 +128,32 @@ impl Running<'_> {
                 (1, ItKind::KirbyLinkBow.id()),
             ],
             20 => &[
-                (0, ItKind::KirbyCLinkArrow.id()),
-                (1, ItKind::KirbyCLinkBow.id()),
+                (0, ItKind::KirbyYoungLinkFireArrow.id()),
+                (1, ItKind::KirbyYoungLinkBow.id()),
             ],
             16 => &[(3, ItKind::KirbyMewtwoShadowBall.id())],
             8 => &[
-                (0, ItKind::KirbyNessPKFlush.id()),
-                (1, ItKind::KirbyNessPKFlushExplode.id()),
+                (0, ItKind::KirbyNessPKFlash.id()),
+                (1, ItKind::KirbyNessPKFlashExplosion.id()),
             ],
             12 => &[
-                (0, ItKind::KirbyPikachuTJoltGround.id()),
-                (1, ItKind::KirbyPikachuTJoltAir.id()),
+                (0, ItKind::KirbyPikachuThunderJoltGround.id()),
+                (1, ItKind::KirbyPikachuThunderJoltAir.id()),
             ],
             23 => &[
-                (0, ItKind::KirbyPichuTJoltGround.id()),
-                (1, ItKind::KirbyPichuTJoltAir.id()),
+                (0, ItKind::KirbyPichuThunderJoltGround.id()),
+                (1, ItKind::KirbyPichuThunderJoltAir.id()),
             ],
-            13 => &[(0, ItKind::KirbySamusCharge.id())],
-            5 | 31 => &[(0, ItKind::KirbyKoopaFlame.id())],
+            13 => &[(0, ItKind::KirbySamusChargeShot.id())],
+            5 | 31 => &[(0, ItKind::KirbyBowserFlame.id())],
             7 => &[
-                (0, ItKind::KirbySeakNeedleThrow.id()),
-                (1, ItKind::KirbySeakNeedleHeld.id()),
+                (0, ItKind::KirbySheikNeedleThrown.id()),
+                (1, ItKind::KirbySheikNeedleHeld.id()),
             ],
-            21 => &[(0, ItKind::KirbyDrMarioVitamin.id())],
+            21 => &[(0, ItKind::KirbyDrMarioMegavitamin.id())],
             24 => &[
-                (5, ItKind::KirbyGameWatchChef.id()),
-                (6, ItKind::KirbyGameWatchChefPan.id()),
+                (5, ItKind::KirbyGameAndWatchSausage.id()),
+                (6, ItKind::KirbyGameAndWatchPan.id()),
             ],
             14 => &[(5, ItKind::KirbyYoshiEggLay.id())],
             _ => &[],

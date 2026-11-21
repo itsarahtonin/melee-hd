@@ -154,7 +154,7 @@ impl Running<'_> {
         // what it left (the slot's), a fresh heap's is zero (see `docs/engine.md`).
         let f = FighterId(self.game.fighters.alloc_stale(Fighter::default()));
         let fresh = crate::game::leftovers::pool_grew();
-        let zeroed = fighter_create && self.game.rules.slippi;
+        let zeroed = fighter_create && self.game.rules.inits_player_data();
         if zeroed {
             // Slippi's Init Player Data (`80068EEC`) zeroes the whole block.
             let fp = &mut self.game.fighters[f.0];
@@ -263,8 +263,8 @@ impl Running<'_> {
         self.fighter_spawn(gobj);
         match kind {
             // ftMh_MS_341_8014FE10, ftCh_Init_80155FCC: the hands' entrances.
-            0x1B => self.mh_start(gobj),
-            0x1C => self.ch_start(gobj),
+            0x1B => self.hand_start(gobj, &super::masterhand::HAND),
+            0x1C => self.hand_start(gobj, &super::crazyhand::HAND),
             _ if info.transformation => self.sleep(gobj),
             _ if self.game.player_flags_bit3(i32::from(info.slot)) => self.enter_entry(gobj),
             _ => {

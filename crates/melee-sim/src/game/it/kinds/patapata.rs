@@ -334,7 +334,7 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
 /// middle, the acceleration flipping at its end) and its bob, 2 its bob.
 #[doc(alias = "itPatapata_UnkMotion3_Phys")]
 pub fn phys3(r: &mut Running, gobj: GObjId) {
-    if lib2725::xdc0_has(r.game, gobj, 2) && item(r.game, gobj).msid == 2 {
+    if lib2725::script_flags_have(r.game, gobj, 2) && item(r.game, gobj).msid == 2 {
         turn(r, gobj);
     }
     match get(r, gobj, off::KIND) {
@@ -750,7 +750,7 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 pub fn spawn(r: &mut Running, kind: i32, pos: Vec3, facing: i32) -> Option<GObjId> {
     let gobj = zako::spawn(
         r,
-        ItKind::Patapata.id(),
+        ItKind::KoopaParatroopa.id(),
         Some(pos),
         None,
         Some(Vec3::new(0.0, 0.0, 0.0)),

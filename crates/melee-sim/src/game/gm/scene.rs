@@ -434,7 +434,7 @@ pub fn step(r: &mut Running, poll: PadData, reset_pressed: bool) -> Tick {
 /// original: whether the pass is due ([`render_screen`]).
 pub fn step_tick(r: &mut Running, poll: PadData, reset_pressed: bool) -> (Tick, bool) {
     let mut poll = poll;
-    if r.game.rules.player.swap_xz {
+    if r.game.rules.swaps_xz() {
         poll.iter_mut().for_each(|p| p.swap_xz());
     }
     step_tick_polls(r, &mut || poll, &mut at_rest, reset_pressed)

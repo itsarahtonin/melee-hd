@@ -96,7 +96,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 fn release_pusher(r: &mut Running, gobj: GObjId) {
     let v = item_mut(r.game, gobj).xDD4_itemVar.freeze();
     if let Some(topi) = v.unk_1C.get() {
-        super::oldottosea::forget_freezie(r, topi);
+        super::topi::forget_freezie(r, topi);
         item_mut(r.game, gobj)
             .xDD4_itemVar
             .freeze()
@@ -117,7 +117,7 @@ pub fn spawn_pushed(
     decel: f32,
 ) -> Option<GObjId> {
     let mut spawn = SpawnItem {
-        kind: ItKind::Freeze.id(),
+        kind: ItKind::Freezie.id(),
         ..SpawnItem::default()
     };
     spawn.prev_pos = pos;

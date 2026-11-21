@@ -17,7 +17,8 @@ use crate::hsd::gobj::GObjId;
 
 pub const SPAWNED: u32 = 0x802C_CAB4;
 pub const LANDED_NOTHING: u32 = 0x802C_CB10;
-pub const EVT_UNK: u32 = 0x802C_CB14;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_CB14;
 pub const ANIM1: u32 = 0x802C_CB34;
 pub const PHYS1: u32 = 0x802C_CBAC;
 pub const COLL1: u32 = 0x802C_CBCC;
@@ -82,7 +83,8 @@ pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 
 /// Forgets a GObj going away, `it_802CCB14` (`it_8026B894`).
 #[doc(alias = "it_802CCB14")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

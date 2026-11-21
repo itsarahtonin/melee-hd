@@ -30,7 +30,8 @@ pub const ABSORBED: u32 = 0x802B_4680;
 pub const REFLECTED: u32 = 0x802B_46C8;
 pub const HIT_SHIELD: u32 = 0x802B_4A18;
 pub const SHIELD_BOUNCED: u32 = 0x802B_4A60;
-pub const EVT_UNK: u32 = 0x802B_4AA8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_4AA8;
 
 /// The frames the running jolt lasts past its last surface.
 const MAX_FRAMES: i32 = 24;

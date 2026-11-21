@@ -175,11 +175,11 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> melee_data::archive::DataRef {
 #[doc(alias = "it_80294364")]
 pub fn ride_anim(r: &mut Running, gobj: GObjId) -> Option<melee_data::archive::DataRef> {
     let count = r.data.u32(attr(r, gobj, 0x24)) as i32;
-    let last = i32::from(r.game.it.x6d00);
+    let last = i32::from(r.game.it.warp_star_last_anim);
     let candidates: Vec<i32> = (0..count).filter(|&i| i != last).collect();
     let n = candidates.len() as i32;
     let picked = candidates[r.game.objs.rng.below(n) as usize];
-    r.game.it.x6d00 = picked as i8;
+    r.game.it.warp_star_last_anim = picked as i8;
     item_mut(r.game, gobj).xDD4_itemVar.wstar().xDDC.set(picked);
     let i = item_mut(r.game, gobj).xDD4_itemVar.wstar().xDDC.get();
     let entries = attr(r, gobj, 0x28);
@@ -309,7 +309,7 @@ pub fn crash(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3) {
     let j = super::super::jobj_of(r.game, gobj).expect("a Warp Star without a model");
     super::super::item::set_translate(r.game, j, pos);
     crate::hsd::jobj::set_flags_all(&mut r.game.objs.jobjs, Some(j), crate::hsd::jobj::HIDDEN);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     eflib::destroy_all(r, gobj);
     let p = item(r.game, gobj).pos;

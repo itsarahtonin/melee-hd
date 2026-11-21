@@ -24,10 +24,17 @@ pub mod init;
 pub mod tag;
 pub mod wait;
 
-use super::super::handles::FighterId;
 use super::super::state::Running;
+use super::FighterKind;
+use super::co::ids::ms as co_ms;
+use super::masterhand::Hand;
+use super::masterhand::airplane::{Pass, Ram};
+use super::masterhand::crush::{Chases, Countdown, Hold, Window};
+use super::masterhand::damage::Beaten;
+use super::masterhand::finger::Beams;
+use super::masterhand::grab::Grab;
+use super::masterhand::tag::TagCry;
 use crate::hsd::gobj::GObjId;
-use crate::vec::Vec3;
 
 /// `It_Kind_CrazyHand_Laser`, `_Bullet` and `_Bomb`, his articles in his `ftData`'s order.
 pub const ITEMS: [i32; 3] = [127, 128, 129];
@@ -346,33 +353,18 @@ pub mod ms {
     pub const WAIT2_1: i32 = 0x185;
 }
 
-/// `ftMasterHand_MotionVars`' offsets in `mv` as he uses them (`fp->mv.ch`).
+/// `ftMasterHand_MotionVars`' offsets in `mv` as he uses them (`fp->mv.ch`) where they aren't
+/// the hands' shared words (`ft::masterhand::mv`).
 pub(crate) mod mv {
-    /// A float count (`unk0.x0`), the entrance's camera step (`unk4.x0`), or the rises left
-    /// before the crush (`unk13.x0`, a float).
-    pub const X0: usize = 0x0;
-    /// The callback once he's at `TARGET` (`unk0.x4`), or whether the rise follows its target
-    /// (`unk13.x4`, a float).
-    pub const X4: usize = 0x4;
-    /// A frame count (`unk0.x8`, `unk4.x8`).
-    pub const X8: usize = 0x8;
-    /// Where he's gliding (`unk0.xC`) and how far it is (`x18`).
+    /// Where he's gliding (`unk0.xC`).
     pub const TARGET: usize = 0xC;
-    pub const DISTANCE: usize = 0x18;
-    pub const X1C: usize = 0x1C;
-    /// Whether he holds a fighter (`unk0.x20`).
-    pub const HOLDING: usize = 0x20;
-    /// The frames until he lets a held fighter go (`unk0.x24`, a float).
-    pub const X24: usize = 0x24;
     /// The poke's lasers (`grab.x28` to `x34`).
     pub const LASERS: [usize; 4] = [0x28, 0x2C, 0x30, 0x34];
     /// The poke's hums (`unk0.x38` to `x40`).
     pub const HUMS: [usize; 3] = [0x38, 0x3C, 0x40];
-    /// The shrink's scale step, his scale before it and its frames left (`ch_backcrush.x44`,
-    /// `x50`, `x5C`).
+    /// The shrink's growth (`ch_backcrush.x44`: its step, then his full scale at `x50` and
+    /// its count at `x5C`).
     pub const SCALE_STEP: usize = 0x44;
-    pub const SCALE: usize = 0x50;
-    pub const SCALE_FRAMES: usize = 0x5C;
     /// The defeat's cheers so far (`ch_dmg.x60`, `x64`).
     pub const CHEERS: usize = 0x60;
     pub const CHEERS2: usize = 0x64;
@@ -392,39 +384,28 @@ pub(crate) mod attr {
     pub const X14: usize = 0x14;
     /// His place (`x18`, `x1C`).
     pub const X18: usize = 0x18;
-    pub const X1C: usize = 0x1C;
     pub const X20: usize = 0x20;
     pub const X24: usize = 0x24;
     pub const X28: usize = 0x28;
     pub const X2C: usize = 0x2C;
-    pub const X30: usize = 0x30;
     pub const X34: usize = 0x34;
-    pub const X38: usize = 0x38;
     pub const X3C: usize = 0x3C;
     pub const X40: usize = 0x40;
     pub const X44: usize = 0x44;
     pub const X48: usize = 0x48;
     pub const X4C: usize = 0x4C;
-    pub const X50: usize = 0x50;
     pub const X54: usize = 0x54;
-    pub const X58: usize = 0x58;
     pub const X5C: usize = 0x5C;
-    pub const X60: usize = 0x60;
     pub const X64: usize = 0x64;
     pub const X68: usize = 0x68;
     pub const X6C: usize = 0x6C;
-    pub const X70: usize = 0x70;
     pub const X74: usize = 0x74;
     pub const X78: usize = 0x78;
     pub const X7C: usize = 0x7C;
     pub const X80: usize = 0x80;
-    pub const X84: usize = 0x84;
     pub const X88: usize = 0x88;
-    pub const X8C: usize = 0x8C;
     pub const X90: usize = 0x90;
-    pub const X94: usize = 0x94;
     pub const X98: usize = 0x98;
-    pub const X9C: usize = 0x9C;
     pub const XA0: usize = 0xA0;
     pub const XA4: usize = 0xA4;
     pub const XA8: usize = 0xA8;
@@ -434,16 +415,12 @@ pub(crate) mod attr {
     pub const XB8: usize = 0xB8;
     pub const XBC: usize = 0xBC;
     pub const XC0: usize = 0xC0;
-    pub const XC4: usize = 0xC4;
     pub const XC8: usize = 0xC8;
-    pub const XCC: usize = 0xCC;
     pub const XD0: usize = 0xD0;
-    pub const XD4: usize = 0xD4;
     pub const XD8: usize = 0xD8;
     pub const XDC: usize = 0xDC;
     pub const XE0: usize = 0xE0;
     pub const XE4: usize = 0xE4;
-    pub const XE8: usize = 0xE8;
     pub const XEC: usize = 0xEC;
     pub const XF0: usize = 0xF0;
     pub const XF4: usize = 0xF4;
@@ -451,13 +428,9 @@ pub(crate) mod attr {
     pub const XFC: usize = 0xFC;
     pub const X100: usize = 0x100;
     pub const X104: usize = 0x104;
-    pub const X108: usize = 0x108;
     pub const X10C: usize = 0x10C;
-    pub const X110: usize = 0x110;
     pub const X114: usize = 0x114;
-    pub const X118: usize = 0x118;
     pub const X11C: usize = 0x11C;
-    pub const X120: usize = 0x120;
     pub const X124: usize = 0x124;
     pub const X128: usize = 0x128;
     pub const X12C: usize = 0x12C;
@@ -467,24 +440,111 @@ pub(crate) mod attr {
     pub const X13C: usize = 0x13C;
 }
 
-impl Running<'_> {
-    /// A float of his attributes (`ftData::ext_attr`), `off` bytes in.
-    pub(crate) fn ch_da_f32(&self, f: FighterId, off: usize) -> f32 {
-        let b = self.ext_attrs(f, attr::SIZE);
-        f32::from_be_bytes(b[off..off + 4].try_into().unwrap())
-    }
-
-    /// A word of his attributes.
-    pub(crate) fn ch_da_i32(&self, f: FighterId, off: usize) -> i32 {
-        let b = self.ext_attrs(f, attr::SIZE);
-        i32::from_be_bytes(b[off..off + 4].try_into().unwrap())
-    }
-
-    /// Two floats of his attributes as a point, z 0.
-    pub(crate) fn ch_da_point(&self, f: FighterId, x: usize, y: usize) -> Vec3 {
-        Vec3::new(self.ch_da_f32(f, x), self.ch_da_f32(f, y), 0.0)
-    }
-}
+/// Crazy Hand's settings of the hands' shared code (`ft::masterhand::Hand`).
+pub const HAND: Hand = Hand {
+    kind: FighterKind::CrazyHand,
+    attrs_size: attr::SIZE,
+    home: attr::X18,
+    glide_near: attr::X14,
+    glide_rate: attr::X10,
+    timer: [attr::X0, attr::X8, attr::X4],
+    walk_every: attr::XC,
+    wait1: ms::WAIT1_0,
+    wait2: ms::WAIT2_0,
+    glide1: ms::TAG_CANCEL,
+    glide2: ms::WAIT2_1,
+    back_to_wait: addr::INIT_80156198,
+    return_mark: ms::TAG_CANCEL,
+    attacks: &wait::ATTACKS,
+    rows: &wait::ROWS,
+    next_rows: &wait::NEXT_ROWS,
+    start_attack: |r, g, a| r.ch_attack(g, a),
+    human_attack: |r, g| r.ch_human_attack(g),
+    entry: ms::TAG_FAIL,
+    entry_camera: addr::FN_8015B2C0,
+    waist: addr::FN_8015B4EC,
+    entry_sfx: 320002,
+    entry_facing: 1.0,
+    items: &ITEMS,
+    first_attack: ms::DAMAGE2,
+    lasers: mv::LASERS,
+    hums: mv::HUMS,
+    partner: FighterKind::MasterHand,
+    grab: Grab {
+        reach: ms::FINGER_BEAM_LOOP,
+        grab: ms::FINGER_BEAM_END,
+        close_caught: ms::FINGER_GUN2,
+        close_empty: ms::FINGER_GUN3,
+        miss: ms::BACK_PUNCH,
+        let_go: ms::FINGER_GUN1,
+        squeeze: ms::BACK_AIRPLANE1,
+        throws: [ms::BACK_AIRPLANE2, ms::BACK_AIRPLANE3],
+        reach_frames: attr::XC8,
+        reach_chase: attr::XC0,
+        squeeze_at: attr::XD0,
+        let_go_frames: attr::XD8,
+        box_size: 0x100,
+        caught: addr::FN_80159288,
+        victim: addr::FN_8015B548,
+        capture: co_ms::CAPTURE_CRAZY_HAND,
+        capture_damage: co_ms::CAPTURE_DAMAGE_CRAZY_HAND,
+        capture_wait: co_ms::CAPTURE_WAIT_CRAZY_HAND,
+        thrown: co_ms::THROWN_CRAZY_HAND,
+    },
+    beaten: Beaten {
+        states: [ms::TAG_GRAB, ms::TAG_SQUEEZE],
+        fall: [attr::X12C, attr::X134, attr::X13C],
+        accel: [attr::X130, attr::X138],
+        cheer_counts: [attr::X124, attr::X128],
+        cheers: [mv::CHEERS, mv::CHEERS2],
+        sfx: 0x4E219,
+    },
+    tag_cry: TagCry::AllBut(ms::SQUEEZING1),
+    hold: Hold {
+        states: [ms::WALK_WAIT, ms::WALK_SHOOT],
+        frames: attr::X64,
+        follow: attr::X68,
+    },
+    window: Window {
+        state: ms::DRILL,
+        frames: [attr::X74, attr::X78],
+        follow: attr::X7C,
+    },
+    countdown: Countdown {
+        state: ms::ROCK_CRUSH_DOWN,
+        late: attr::X48,
+        follow: attr::X44,
+    },
+    chases: Chases {
+        states: [ms::ROCK_CRUSH_UP, ms::ROCK_CRUSH_WAIT],
+        count: attr::X54,
+        point: attr::X5C,
+    },
+    pass: Pass {
+        states: [ms::CANCEL, ms::SQUEEZING0],
+        over: attr::XE0,
+        follow: attr::XDC,
+        back: attr::XE4,
+    },
+    ram: Ram {
+        states: [ms::BACK_DISAPPEAR, ms::WAIT1_1],
+        over: [attr::XEC, attr::XF4],
+        frames: [attr::XF0, attr::XF8],
+        follow: attr::XDC,
+        small: attr::XFC,
+        grow: attr::X100,
+        growth: mv::SCALE_STEP,
+    },
+    beams: Beams {
+        states: [ms::PAPER_CRUSH, ms::POKE1, ms::POKE2],
+        lasers: addr::FN_80158534,
+        partners_lasers: true,
+    },
+    vanish: ms::BACK_CRUSH,
+    cries_waiting: true,
+    tags_from_wait: false,
+    fewer_rows_alone: true,
+};
 
 /// Runs one of Crazy Hand's callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr` is
 /// one.
@@ -503,7 +563,7 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// `addr` is one.
 pub fn run_with(g: &mut Running, gobj: GObjId, addr: u32, cb: u32) -> bool {
     match addr {
-        addr::INIT_801597F0 => g.ch_back_crush_enter(gobj, cb),
+        addr::INIT_801597F0 => g.hand_vanish_enter(gobj, &HAND, cb),
         _ => return false,
     }
     true

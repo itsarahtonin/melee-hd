@@ -54,7 +54,8 @@ pub const DMG_DEALT: u32 = 0x802A_9A80;
 pub const HIT_SHIELD: u32 = 0x802A_9B08;
 pub const CLANKED: u32 = 0x802A_9CE0;
 pub const REFLECTED: u32 = 0x802A_9D4C;
-pub const EVT_UNK: u32 = 0x802A_A034;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802A_A034;
 
 /// `itLinkArrowAttributes` offsets.
 mod attr {
@@ -123,7 +124,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 fn is_kirbys(r: &Running, gobj: GObjId) -> bool {
     matches!(
         ItKind::of(item(r.game, gobj).kind),
-        ItKind::KirbyLinkArrow | ItKind::KirbyCLinkArrow
+        ItKind::KirbyLinkArrow | ItKind::KirbyYoungLinkFireArrow
     )
 }
 
@@ -589,7 +590,7 @@ fn stick(r: &mut Running, gobj: GObjId) {
     remove_trails(r, gobj);
     if matches!(
         ItKind::of(item(r.game, gobj).kind),
-        ItKind::CLinkArrow | ItKind::KirbyCLinkArrow
+        ItKind::YoungLinkFireArrow | ItKind::KirbyYoungLinkFireArrow
     ) {
         play_sfx(r, gobj, SFX_STICK_CLINK, 0x7F, 0x40);
         let at = Vec3::new(0.0, 0.0, 5.0);
@@ -822,7 +823,8 @@ fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 
 /// `itLinkArrow_Logic98_EvtUnk`: forgets `other`.
 #[doc(alias = "itLinkArrow_Logic98_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

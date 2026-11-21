@@ -31,7 +31,7 @@ pub const KIRBY: Fireball = Fireball {
     air: ms::LG_SPECIAL_AIR_N,
     throw: addr::THROW,
     hand: 21,
-    item_kind: ItKind::KirbyLuigiFire.id(),
+    item_kind: ItKind::KirbyLuigiFireball.id(),
     flash: 0x4B1,
 };
 

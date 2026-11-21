@@ -23,7 +23,8 @@ use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802C_AFD4;
 pub const LANDED_NOTHING: u32 = 0x802C_B0F4;
-pub const EVT_UNK: u32 = 0x802C_B0F8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_B0F8;
 pub const ANIM0: u32 = 0x802C_B118;
 pub const PHYS0: u32 = 0x802C_B14C;
 pub const COLL0: u32 = 0x802C_B150;
@@ -36,7 +37,8 @@ pub const PHYS2: u32 = 0x802C_B3D8;
 pub const COLL2: u32 = 0x802C_B4C8;
 pub const GAS1_SPAWNED: u32 = 0x802C_B690;
 pub const GAS2_SPAWNED: u32 = 0x802C_B704;
-pub const GAS_EVT_UNK: u32 = 0x802C_B778;
+#[doc(alias("GAS_EVT_UNK"))]
+pub const GAS_FORGET: u32 = 0x802C_B778;
 pub const GAS_ANIM: u32 = 0x802C_B810;
 pub const GAS_PHYS: u32 = 0x802C_B844;
 pub const GAS_COLL: u32 = 0x802C_B8A4;
@@ -102,7 +104,8 @@ pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 /// (`it_8026B894`).
 #[doc(alias = "it_802CB0F8")]
 #[doc(alias = "itMatadogas_Logic33_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
@@ -154,10 +157,10 @@ pub fn puff_when_told(r: &mut Running, gobj: GObjId) {
     pokemon::vars(r.game, gobj).set_i32(PUFF_FRAMES, fp::fctiwz(reg(frames)));
     if r.game.objs.rng.below(2) == 0 {
         let speed = attr_f32(r, gobj, 8);
-        puff(r, gobj, ItKind::MatadogasGas1.id(), speed);
+        puff(r, gobj, ItKind::WeezingGas1.id(), speed);
     } else {
         let speed = attr_f32(r, gobj, 0xC);
-        puff(r, gobj, ItKind::MatadogasGas2.id(), speed);
+        puff(r, gobj, ItKind::WeezingGas2.id(), speed);
     }
 }
 
@@ -287,8 +290,8 @@ pub fn gas_anim(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802CB844")]
 pub fn gas_phys(r: &mut Running, gobj: GObjId) {
     let scale = match ItKind::of(item(r.game, gobj).kind) {
-        ItKind::MatadogasGas1 => attr_f32(r, gobj, 4),
-        ItKind::MatadogasGas2 => attr_f32(r, gobj, 8),
+        ItKind::WeezingGas1 => attr_f32(r, gobj, 4),
+        ItKind::WeezingGas2 => attr_f32(r, gobj, 8),
         _ => 0.0,
     };
     let ip = item_mut(r.game, gobj);

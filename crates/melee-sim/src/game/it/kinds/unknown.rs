@@ -21,7 +21,8 @@ use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802C_E710;
 pub const LANDED: u32 = 0x802C_E7CC;
-pub const EVT_UNK: u32 = 0x802C_E7D0;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_E7D0;
 pub const ANIM0: u32 = 0x802C_E7F0;
 pub const PHYS0: u32 = 0x802C_E870;
 pub const COLL0: u32 = 0x802C_E8C8;
@@ -32,7 +33,8 @@ pub const ANIM2: u32 = 0x802C_EC88;
 pub const PHYS2: u32 = 0x802C_ECAC;
 pub const COLL2: u32 = 0x802C_ED2C;
 pub const SWARM_SPAWNED: u32 = 0x802C_EEC8;
-pub const SWARM_EVT_UNK: u32 = 0x802C_F0B4;
+#[doc(alias("SWARM_EVT_UNK"))]
+pub const SWARM_FORGET: u32 = 0x802C_F0B4;
 pub const SWARM_ANIM: u32 = 0x802C_F120;
 pub const SWARM_PHYS: u32 = 0x802C_F154;
 pub const SWARM_COLL: u32 = 0x802C_F3D8;
@@ -127,7 +129,8 @@ pub fn landed(_r: &mut Running, _gobj: GObjId) {}
 
 /// Forgets a GObj going away, `it_802CE7D0` (`it_8026B894`).
 #[doc(alias = "it_802CE7D0")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 
@@ -346,7 +349,7 @@ pub fn spawn_swarm(r: &mut Running, gobj: GObjId) {
         x3C_damage: 0,
         vel: pokemon::vars(r.game, gobj).vec(SWARM_VEL),
         x40: 0,
-        kind: ItKind::UnknownSwarm.id(),
+        kind: ItKind::UnownSwarm.id(),
         x0_parent_gobj: owner,
         x4_parent_gobj2: Some(gobj),
         ..Default::default()
@@ -396,7 +399,8 @@ pub fn swarm_spawned(r: &mut Running, gobj: GObjId) {
 
 /// Forgets a GObj going away, `itUnknown_Logic38_EvtUnk` (`it_8026B894`).
 #[doc(alias = "itUnknown_Logic38_EvtUnk")]
-pub fn swarm_evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("swarm_evt_unk"))]
+pub fn swarm_forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

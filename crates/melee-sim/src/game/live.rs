@@ -14,7 +14,7 @@ use melee_data::archive::Archives;
 use super::gm::machine::{self, GS_SUDDEN_DEATH, GS_VS, Phase};
 use super::gm::match_exit::MatchExitInfo;
 use super::gm::vs_mode::Special;
-use super::state::{Game, Ruleset, Running};
+use super::state::{Game, Running};
 
 /// Why the VS-scene match about to enter in `r` can't be built from its game start, as
 /// Slippi's playback builds a replay's match (design call 6 of `docs/slippi-ruleset.md`), or
@@ -24,7 +24,7 @@ use super::state::{Game, Ruleset, Running};
 /// Only a session under the Slippi ruleset builds live matches.
 pub fn rebuild_refusal(r: &Running) -> Option<&'static str> {
     let g = &*r.game;
-    if g.ruleset != Ruleset::Slippi {
+    if !g.ruleset.builds_live_matches() {
         return Some("Vanilla's matches run in the menus' session");
     }
     let Phase::Entering {
@@ -822,7 +822,7 @@ impl Game {
     /// whose close-up reads where its player falls on the screen.
     pub fn keeps_display_views(&self) -> bool {
         use super::gr::GrKind;
-        self.rules.slippi
+        self.rules.notes_playback()
             && matches!(
                 self.stage_info.ground_kind(),
                 GrKind::Onett | GrKind::OldKongo | GrKind::OldPupupu | GrKind::PStadium
@@ -846,7 +846,7 @@ impl Game {
                 d.followed_views = [due, d.followed_views[0]];
             }
         }
-        if self.rules.slippi && paused {
+        if self.rules.notes_playback() && paused {
             self.display_phase.paused = true;
         }
         let playback_model = self.display_phase.playback.quake_model;
@@ -870,7 +870,7 @@ impl Game {
     /// pause, which doesn't stop the models' process, its animation goes on where playback's,
     /// which never pauses, doesn't ([`DisplayPhase::shake`]).
     pub fn quake_model_shook(&mut self) {
-        if self.rules.slippi && self.camera.is_following() {
+        if self.rules.notes_playback() && self.camera.is_following() {
             self.display_phase.shook = true;
         }
     }
@@ -888,10 +888,10 @@ impl Game {
     /// matches, which record nothing) it's lost ([`DisplayPhase::lost`]), and every camera read
     /// from then on is counted.
     pub fn pause_leaves_course(&mut self) {
-        if !self.rules.slippi || self.camera.is_following() || self.display_phase.lost {
+        if !self.rules.notes_playback() || self.camera.is_following() || self.display_phase.lost {
             return;
         }
-        if self.playback.is_some() && self.follow_playback_camera {
+        if self.runs_playback_codes() && self.follow_playback_camera {
             self.start_following();
         } else {
             self.display_phase.lost = true;
@@ -922,7 +922,7 @@ impl Game {
         ours: &T,
         theirs: impl FnOnce(&Game, &super::structs::CameraTransformState) -> T,
     ) {
-        if !self.rules.slippi {
+        if !self.rules.notes_playback() {
             return;
         }
         let g: &Game = self;
@@ -948,7 +948,7 @@ impl Game {
         &mut self,
         data: &melee_data::archive::Archives,
     ) -> Option<[Option<super::camera::View>; 2]> {
-        if !self.rules.slippi {
+        if !self.rules.notes_playback() {
             return Some([None; 2]);
         }
         let following = self.camera.is_following();
@@ -1065,7 +1065,7 @@ impl Running<'_> {
         let Some(p) = g.playback.as_ref() else {
             return;
         };
-        if !g.rules.slippi
+        if !g.rules.notes_playback()
             || p.frame_index != super::playback::FIRST_FRAME
             || !(p.live || p.no_settling)
             || !g.playback_injects(gobj)
@@ -1146,7 +1146,7 @@ impl Game {
 
     /// The haze's process is done, `stepped` when it stepped the haze ([`Haze`]).
     pub fn haze_process_end(&mut self, stepped: bool) {
-        if stepped && self.rules.slippi {
+        if stepped && self.rules.notes_playback() {
             self.haze.off = true;
             self.haze.restarted = false;
         }
@@ -1199,6 +1199,7 @@ mod tests {
     use crate::game::gm::one_player::{GM_CLASSIC, GM_HOME_RUN};
     use crate::game::gm::tournament::GM_TOURNAMENT;
     use crate::game::handles::CodeRef;
+    use crate::game::state::Ruleset;
     use melee_data::archive::Archives;
 
     /// What [`rebuild_refusal`] says of mode `mode`'s first state entering scene `scene`, in a
@@ -1316,7 +1317,8 @@ mod tests {
     #[test]
     fn a_camera_read_is_counted_where_playbacks_camera_decides_otherwise() {
         let mut g = Box::<Game>::default();
-        g.rules.slippi = true;
+        g.rules = crate::game::state::Rules::VANILLA
+            .with_fixes(Some(crate::game::slippi::CodeSet::V3_19));
         let part = |_: &Game, t: &crate::game::structs::CameraTransformState| t.interest.x > 0.0;
         g.decide_camera_read(&true, part);
         assert_eq!(g.display_phase.differing, 0, "none followed");
@@ -1345,7 +1347,8 @@ mod tests {
     #[test]
     fn the_haze_off_course_counts_draws_around_it() {
         let mut g = Box::<Game>::default();
-        g.rules.slippi = true;
+        g.rules = crate::game::state::Rules::VANILLA
+            .with_fixes(Some(crate::game::slippi::CodeSet::V3_19));
         let tick = |g: &mut Game, t: u32, before: u32, step: bool, during: u32, after: u32| {
             g.scene.unk_8 = t;
             g.haze_frame_start();

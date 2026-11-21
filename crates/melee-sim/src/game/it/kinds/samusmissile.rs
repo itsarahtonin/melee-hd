@@ -40,7 +40,8 @@ pub const BURST_HOMING: u32 = 0x802B_701C;
 #[doc(alias = "itSamusmissile_UnkMotion3_Anim")]
 pub const ANIM_BURST: u32 = 0x802B_7080;
 pub const BURST_SUPER: u32 = 0x802B_70A0;
-pub const EVT_UNK: u32 = 0x802B_7104;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_7104;
 
 /// `itSamusMissileAttributes`.
 mod attr {
@@ -463,7 +464,7 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 /// The burst's common start: its model hidden, `xDD0` bit 3, vanishing, still, no effects.
 fn burst_start(r: &mut Running, gobj: GObjId) {
     lib26b1::hide(r.game, gobj);
-    lib26b1::set_xdd0_b3(r.game, gobj);
+    lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     lib2725::clear_velocity(r.game, gobj);
     ef::eflib::destroy_all(r, gobj);

@@ -17,7 +17,8 @@ pub const HITLAG_END: u32 = 0x802B_DC18;
 pub const PICKED_UP: u32 = 0x802B_DC74;
 pub const MOTION2_ANIM: u32 = 0x802B_DCC0;
 pub const ACCESSORY: u32 = 0x802B_DD3C;
-pub const EVT_UNK: u32 = 0x802B_DDF8;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802B_DDF8;
 
 /// Runs one of the parasol's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -166,6 +167,7 @@ pub fn open(r: &mut Running, gobj: GObjId, speed: f32) {
 
 /// `itPeachParasol_Logic60_EvtUnk`: forgets `other`.
 #[doc(alias = "itPeachParasol_Logic60_EvtUnk")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

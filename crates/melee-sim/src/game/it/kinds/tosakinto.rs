@@ -17,7 +17,8 @@ use crate::lb::sound_obj::SoundParams;
 use crate::vec::Vec3;
 
 pub const SPAWNED: u32 = 0x802C_8F4C;
-pub const EVT_UNK: u32 = 0x802C_8FC4;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_8FC4;
 pub const LANDED: u32 = 0x802C_8FE4;
 pub const FLOP: u32 = 0x802C_90E8;
 pub const ANIM2: u32 = 0x802C_9190;
@@ -86,7 +87,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 
 /// Forgets a GObj going away, `it_802C8FC4` (`it_8026B894`).
 #[doc(alias = "it_802C8FC4")]
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
 

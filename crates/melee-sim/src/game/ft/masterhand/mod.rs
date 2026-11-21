@@ -26,7 +26,10 @@ pub mod wait;
 
 use super::super::handles::FighterId;
 use super::super::state::Running;
+use super::FighterKind;
+use super::co::ids::ms as co_ms;
 use crate::hsd::gobj::GObjId;
+use crate::vec::Vec3;
 
 /// `It_Kind_MasterHand_Laser` and `_Bullet`, his articles in his `ftData`'s order.
 pub const ITEMS: [i32; 2] = [125, 126];
@@ -397,8 +400,6 @@ pub(crate) mod mv {
     pub const X50: usize = 0x50;
     pub const X54: usize = 0x54;
     pub const X58: usize = 0x58;
-    pub const X64: usize = 0x64;
-    pub const X70: usize = 0x70;
     pub const X74: usize = 0x74;
     pub const X78: usize = 0x78;
 }
@@ -421,7 +422,6 @@ pub(crate) mod attr {
     pub const X58: usize = 0x58;
     pub const X5C: usize = 0x5C;
     pub const X60: usize = 0x60;
-    pub const X64: usize = 0x64;
     pub const X68: usize = 0x68;
     pub const X6C: usize = 0x6C;
     pub const X70: usize = 0x70;
@@ -432,9 +432,7 @@ pub(crate) mod attr {
     pub const X84: usize = 0x84;
     pub const X88: usize = 0x88;
     pub const X90: usize = 0x90;
-    pub const X94: usize = 0x94;
     pub const X98: usize = 0x98;
-    pub const X9C: usize = 0x9C;
     pub const XA0: usize = 0xA0;
     pub const XA4: usize = 0xA4;
     pub const XA8: usize = 0xA8;
@@ -447,7 +445,6 @@ pub(crate) mod attr {
     pub const XD4: usize = 0xD4;
     pub const XD8: usize = 0xD8;
     pub const XDC: usize = 0xDC;
-    pub const XE0: usize = 0xE0;
     pub const XE4: usize = 0xE4;
     pub const XE8: usize = 0xE8;
     pub const XEC: usize = 0xEC;
@@ -458,7 +455,6 @@ pub(crate) mod attr {
     pub const X100: usize = 0x100;
     pub const X104: usize = 0x104;
     pub const X108: usize = 0x108;
-    pub const X10C: usize = 0x10C;
     pub const X110: usize = 0x110;
     pub const X118: usize = 0x118;
     pub const X120: usize = 0x120;
@@ -476,24 +472,221 @@ pub(crate) mod attr {
     pub const CAMERA_Z: usize = 0x178;
 }
 
-impl Running<'_> {
+/// What tells Master Hand's and Crazy Hand's shared code apart (task 11, design call 7): the
+/// original's Crazy Hand is a copy of Master Hand's code (his states keep Master Hand's
+/// numbers and names) over his own attributes, states and functions. Each hand's `HAND` is
+/// passed to the code both run, which lives here in Master Hand's module; what only one of
+/// them has is a named branch.
+pub struct Hand {
+    pub kind: FighterKind,
+    /// His attributes' size (`ftData::ext_attr`, read from his data, not the fighter's copy).
+    pub attrs_size: usize,
+    /// The attributes of his place (a point), and of the glide toward a point: within `near`
+    /// it ends, else it covers `rate` of the distance a frame (`ftBossLib_8015BE40`).
+    pub home: usize,
+    pub glide_near: usize,
+    pub glide_rate: usize,
+    /// The attack timer's attributes (`ftBossLib_8015BD24`'s base, high and low), and the
+    /// attacks between forced walks.
+    pub timer: [usize; 3],
+    pub walk_every: usize,
+    /// His still waits (`Wait1_0`, `Wait2_0`) and their moving forms, the glides.
+    pub wait1: i32,
+    pub wait2: i32,
+    pub glide1: i32,
+    pub glide2: i32,
+    /// The function a return to his place glides to (the wait his last glide matches), and
+    /// the glide it marks him as in first (`u.x2258`): Master Hand's second, so the return
+    /// starts its glide from the first frame; Crazy Hand's first, so his keeps the frame.
+    pub back_to_wait: u32,
+    pub return_mark: i32,
+    /// The attack table (`ftMh_Init_803D40D0`, `ftCh_Init_803D4878`): the attacks (states
+    /// standing for them), each row as a run of them (the first and how many), and each row's
+    /// five next rows.
+    pub attacks: &'static [i32],
+    pub rows: &'static [(u8, u8)],
+    pub next_rows: &'static [u8],
+    /// Starting the attack the table drew (the states standing for his attacks), and a
+    /// human's choice from his port's buttons.
+    pub start_attack: fn(&mut Running<'_>, GObjId, i32),
+    pub human_attack: fn(&mut Running<'_>, GObjId),
+    /// The entrance's state, its camera script (his accessory), the camera's point on his
+    /// waist, its roar and the way he faces.
+    pub entry: i32,
+    pub entry_camera: u32,
+    pub waist: u32,
+    pub entry_sfx: i32,
+    pub entry_facing: f32,
+    /// His articles in his `ftData`'s order (`It_Kind_*`), his first attack (`u.x2250`), and
+    /// his lasers' and their hums' words in `mv` (a union laid out differently for each).
+    pub items: &'static [i32],
+    pub first_attack: i32,
+    pub lasers: [usize; 4],
+    pub hums: [usize; 3],
+    /// The other hand, his tag attacks' partner.
+    pub partner: FighterKind,
+    /// The grab.
+    pub grab: grab::Grab,
+    /// The defeat.
+    pub beaten: damage::Beaten,
+    /// Which tag attack states cry.
+    pub tag_cry: tag::TagCry,
+    /// The attacks both hands make, each in his own states over his own attributes.
+    pub hold: crush::Hold,
+    pub window: crush::Window,
+    pub countdown: crush::Countdown,
+    pub chases: crush::Chases,
+    pub pass: airplane::Pass,
+    pub ram: airplane::Ram,
+    pub beams: finger::Beams,
+    /// The vanishing wind-up's state.
+    pub vanish: i32,
+    /// Crazy Hand cries on the script's flag while waiting, and clears it as a wait starts.
+    pub cries_waiting: bool,
+    /// Master Hand's timer joins Crazy Hand's tag attack when Crazy Hand waits at one.
+    pub tags_from_wait: bool,
+    /// Crazy Hand draws the next row from four, not five, once Master Hand is beaten: the
+    /// tag attacks' row is left out.
+    pub fewer_rows_alone: bool,
+}
+
+impl Hand {
+    /// The hand of fighter kind `kind`.
+    pub fn of(kind: FighterKind) -> &'static Hand {
+        match kind {
+            FighterKind::MasterHand => &HAND,
+            FighterKind::CrazyHand => &super::crazyhand::HAND,
+            k => panic!("{k:?} is no hand"),
+        }
+    }
+
     /// A float of his attributes (`ftData::ext_attr`), `off` bytes in.
-    pub(crate) fn mh_da_f32(&self, f: FighterId, off: usize) -> f32 {
-        let b = self.ext_attrs(f, attr::SIZE);
+    pub(crate) fn f32(&self, r: &Running, f: FighterId, off: usize) -> f32 {
+        let b = r.ext_attrs(f, self.attrs_size);
         f32::from_be_bytes(b[off..off + 4].try_into().unwrap())
     }
 
     /// A word of his attributes.
-    pub(crate) fn mh_da_i32(&self, f: FighterId, off: usize) -> i32 {
-        let b = self.ext_attrs(f, attr::SIZE);
+    pub(crate) fn i32(&self, r: &Running, f: FighterId, off: usize) -> i32 {
+        let b = r.ext_attrs(f, self.attrs_size);
         i32::from_be_bytes(b[off..off + 4].try_into().unwrap())
     }
 
     /// A point of his attributes (`Vec2`, z 0).
-    pub(crate) fn mh_da_vec2(&self, f: FighterId, off: usize) -> crate::vec::Vec3 {
-        crate::vec::Vec3::new(self.mh_da_f32(f, off), self.mh_da_f32(f, off + 4), 0.0)
+    pub(crate) fn point(&self, r: &Running, f: FighterId, off: usize) -> Vec3 {
+        Vec3::new(self.f32(r, f, off), self.f32(r, f, off + 4), 0.0)
     }
 }
+
+/// Master Hand's settings of the hands' shared code.
+pub const HAND: Hand = Hand {
+    kind: FighterKind::MasterHand,
+    attrs_size: attr::SIZE,
+    home: attr::X30,
+    glide_near: attr::X2C,
+    glide_rate: attr::X28,
+    timer: [attr::X18, attr::X20, attr::X1C],
+    walk_every: attr::X24,
+    wait1: ms::WAIT1_0,
+    wait2: ms::WAIT2_0,
+    glide1: ms::WAIT1_2,
+    glide2: ms::WAIT2_1,
+    back_to_wait: addr::MS_341_8014FFDC,
+    return_mark: ms::WAIT2_1,
+    attacks: &wait::ATTACKS,
+    rows: &wait::ROWS,
+    next_rows: &wait::NEXT_ROWS,
+    start_attack: |r, g, a| r.mh_start_attack(g, a),
+    human_attack: |r, g| r.mh_human_attack(g),
+    entry: ms::ENTRY,
+    entry_camera: addr::MS_343_801511FC,
+    waist: addr::MS_343_80151428,
+    entry_sfx: 320001,
+    entry_facing: -1.0,
+    items: &ITEMS,
+    first_attack: ms::SWEEP_LOOP,
+    lasers: [mv::X34, mv::X38, mv::X3C, mv::X40],
+    hums: [mv::X28, mv::X2C, mv::X30],
+    partner: FighterKind::CrazyHand,
+    grab: grab::Grab {
+        reach: ms::WAIT1_1,
+        grab: ms::GRAB,
+        close_caught: ms::SQUEEZING0,
+        close_empty: ms::SQUEEZING1,
+        miss: ms::FAIL,
+        let_go: ms::CANCEL,
+        squeeze: ms::SQUEEZE,
+        throws: [ms::THROW, ms::SLAM],
+        reach_frames: attr::X110,
+        reach_chase: attr::X108,
+        squeeze_at: attr::X118,
+        let_go_frames: attr::X120,
+        box_size: 128,
+        caught: addr::MS_375_80154A2C,
+        victim: addr::MS_388_80155A58,
+        capture: co_ms::CAPTURE_MASTER_HAND,
+        capture_damage: co_ms::CAPTURE_DAMAGE_MASTER_HAND,
+        capture_wait: co_ms::CAPTURE_WAIT_MASTER_HAND,
+        thrown: co_ms::THROWN_MASTER_HAND,
+    },
+    beaten: damage::Beaten {
+        states: [ms::DAMAGE, ms::DAMAGE2],
+        fall: [attr::X14C, attr::X154, attr::X15C],
+        accel: [attr::X150, attr::X158],
+        cheer_counts: [attr::X144, attr::X148],
+        cheers: [mv::X74, mv::X78],
+        sfx: 320024,
+    },
+    tag_cry: tag::TagCry::Only(ms::TAG_APPLAUD),
+    hold: crush::Hold {
+        states: [ms::ROCK_CRUSH_WAIT, ms::ROCK_CRUSH_DOWN],
+        frames: attr::XA0,
+        follow: attr::XA4,
+    },
+    window: crush::Window {
+        state: ms::PAPER_CRUSH,
+        frames: [attr::XB0, attr::XB4],
+        follow: attr::XB8,
+    },
+    countdown: crush::Countdown {
+        state: ms::DRILL,
+        late: attr::X84,
+        follow: attr::X80,
+    },
+    chases: crush::Chases {
+        states: [ms::POKE1, ms::POKE2],
+        count: attr::X90,
+        point: attr::X98,
+    },
+    pass: airplane::Pass {
+        states: [ms::BACK_AIRPLANE2, ms::BACK_AIRPLANE3],
+        over: attr::X5C,
+        follow: attr::X58,
+        back: attr::X60,
+    },
+    ram: airplane::Ram {
+        states: [ms::BACK_PUNCH, ms::BACK_CRUSH],
+        over: [attr::X68, attr::X70],
+        frames: [attr::X6C, attr::X74],
+        follow: attr::X58,
+        small: attr::X78,
+        grow: attr::X7C,
+        growth: mv::X58,
+    },
+    beams: finger::Beams {
+        states: [
+            ms::FINGER_BEAM_START,
+            ms::FINGER_BEAM_LOOP,
+            ms::FINGER_BEAM_END,
+        ],
+        lasers: addr::MS_362_80152E28,
+        partners_lasers: false,
+    },
+    vanish: ms::BACK_DISAPPEAR,
+    cries_waiting: false,
+    tags_from_wait: true,
+    fewer_rows_alone: false,
+};
 
 /// Runs one of Master Hand's callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr`
 /// is one.
@@ -516,7 +709,7 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// if `addr` is one.
 pub fn run_with(g: &mut Running, gobj: GObjId, addr: u32, cb: u32) -> bool {
     match addr {
-        addr::MS_371_801541C8 => g.mh_back_disappear_enter(gobj, cb),
+        addr::MS_371_801541C8 => g.hand_vanish_enter(gobj, &HAND, cb),
         _ => return false,
     }
     true

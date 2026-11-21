@@ -45,7 +45,7 @@ impl Running<'_> {
         let items = self.data.ptr(d.at(0x48)).expect("ftData::x48_items");
         let sheet = self.char_attr_word(f, attr::SPECIALS_CAPE_KIND) as i32;
         let pill = self.data.ptr(items.at(4));
-        super::super::it::item::set_char_article(self.game, pill, ItKind::DrMarioVitamin.id());
+        super::super::it::item::set_char_article(self.game, pill, ItKind::DrMarioMegavitamin.id());
         let sheet_article = self.data.ptr(items.at(12));
         super::super::it::item::set_char_article(self.game, sheet_article, sheet);
     }
@@ -139,7 +139,7 @@ impl Running<'_> {
                 gobj,
                 pos,
                 color,
-                ItKind::DrMarioVitamin.id(),
+                ItKind::DrMarioMegavitamin.id(),
                 facing,
             );
             let fp = self.game.fighter_mut(gobj);

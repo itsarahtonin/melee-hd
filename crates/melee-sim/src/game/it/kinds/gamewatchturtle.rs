@@ -11,7 +11,8 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802C_7044;
 pub const PICKED_UP: u32 = 0x802C_7100;
 pub const ANIM: u32 = 0x802C_7180;
-pub const EVT_UNK: u32 = 0x802C_71EC;
+#[doc(alias("EVT_UNK"))]
+pub const FORGET: u32 = 0x802C_71EC;
 
 /// Runs one of the turtle's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -44,7 +45,7 @@ pub fn spawn(
 ) -> Option<GObjId> {
     gamewatch::spawn_held(
         r,
-        ItKind::GameWatchTurtle.id(),
+        ItKind::GameAndWatchTurtle.id(),
         parent,
         pos,
         part,
@@ -110,6 +111,7 @@ pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj, `itGameWatchTurtle_Logic75_EvtUnk`.
 // Ports `itGameWatchTurtle_Logic75_EvtUnk`; aliased once a check reaches it.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
+#[doc(alias("evt_unk"))]
+pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

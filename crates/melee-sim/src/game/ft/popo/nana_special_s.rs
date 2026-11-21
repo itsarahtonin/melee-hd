@@ -5,7 +5,7 @@
 //!
 //! [`Running::nana_join_special_s`] hosts the Slippi ruleset's freeze glitch fix
 //! (`External/FreezeGlitchFix`), which keeps her `x1A5C` when she's in hitstun
-//! ([`crate::game::state::Rules::freeze_glitch_fix`]).
+//! ([`crate::game::state::Rules::fixes_freeze_glitch`]).
 
 use gekko_fp as fp;
 
@@ -80,7 +80,7 @@ impl Running<'_> {
             .expect("Nana without a Popo");
         let p = self.game.fighter_id(popo_gobj);
         if matches!(self.game.fighters[n.0].x2070[1] >> 4, 1..=13) {
-            if !self.game.rules.freeze_glitch_fix {
+            if !self.game.rules.fixes_freeze_glitch() {
                 self.game.fighters[n.0].x1A5C = None;
             }
             return true;

@@ -86,11 +86,10 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
             run_fighter_cb(g, gobj, cb);
         }
         if g.game.fighters[f.0].no_kb {
-            // A hand takes no reaction: its kind's hook (Master Hand's is empty), then
+            // A hand takes no reaction: its kind's hook (both hands' are empty), then
             // `ftCo_8008E9D0`; the original asserts on any other kind.
             match g.game.fighters[f.0].fighter_kind() {
-                FighterKind::MasterHand => g.mh_nop(gobj),
-                FighterKind::CrazyHand => g.ch_hit_nop(gobj),
+                FighterKind::MasterHand | FighterKind::CrazyHand => g.hand_nothing(gobj),
                 _ => panic!("the original's assertion failed: ellegal flag fp->no_reaction_always"),
             }
             g.damage_no_reaction(gobj);
@@ -355,7 +354,10 @@ impl Running<'_> {
                 return;
             };
             let kind = crate::game::it::lib26b1::kind(self.game, item);
-            assert!(kind == ItKind::Sword, "ftCo_800C2FD8: no afterimage item!");
+            assert!(
+                kind == ItKind::BeamSword,
+                "ftCo_800C2FD8: no afterimage item!"
+            );
             let (w0, w1) = crate::game::it::kinds::sword::trail_widths(self.game, item);
             let fp = &mut self.game.fighters[f.0];
             fp.x20F8 = w0;

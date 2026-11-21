@@ -1,4 +1,4 @@
-//! Swallowed by a Like Like (`ftCo_800C78B0.c`): the Like Like's grab (`it::kinds::likelike`)
+//! Swallowed by a Like Like (`ftCo_800C78B0.c`): the Like Like's grab (`it::kinds::like_like`)
 //! takes a fighter inside, invisible and following it, which mashes against a timer that grows
 //! with its percent and its player's handicap and standing; the timer out, the Like Like spits
 //! it back out, else it chews on it (its damage a bite at a time) and spits it out when its
@@ -7,7 +7,7 @@
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
-use super::super::super::it::{self, kinds::likelike};
+use super::super::super::it::{self, kinds::like_like};
 use super::super::super::state::Running;
 use super::ids::ms;
 use crate::fpu::{mem, reg};
@@ -94,7 +94,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C7A30")]
     pub fn capture_likelike_hit(&mut self, gobj: GObjId) {
         let ll = self.likelike_of(gobj);
-        likelike::let_go(self, ll);
+        like_like::let_go(self, ll);
     }
 
     /// The held fighter KO'd, `fn_800C7890` (its `death2_cb`): as [`Self::capture_likelike_hit`].
@@ -116,7 +116,7 @@ impl Running<'_> {
         let _ = self.grab_mash(gobj, mash);
         if self.game.fighters[f.0].mv_i32(SPAT) == 0 && self.game.fighters[f.0].grab_timer <= 0.0 {
             let ll = self.likelike_of(gobj);
-            likelike::spit(self, ll);
+            like_like::spit(self, ll);
             self.game.fighters[f.0].set_mv_i32(SPAT, 1);
         }
     }

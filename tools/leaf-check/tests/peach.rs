@@ -294,7 +294,7 @@ fn run_peach(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         }
         "itPeachExplode_Logic55_EvtUnk" => {
             item(g);
-            peachexplode::evt_unk(g, gobj, other());
+            peachexplode::forget(g, gobj, other());
         }
         "ftPe_Init_OnItemInvisible" => g.peach_on_item_invisible(gobj),
         "ftPe_Init_OnItemVisible" => g.peach_on_item_visible(gobj),
@@ -347,11 +347,11 @@ fn run_peach(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         }
         "itPeachParasol_Logic60_EvtUnk" => {
             item(g);
-            peachparasol::evt_unk(g, gobj, other());
+            peachparasol::forget(g, gobj, other());
         }
         "itPeachTurnip_Logic56_EvtUnk" => {
             item(g);
-            peachturnip::evt_unk(g, gobj, other());
+            peachturnip::forget(g, gobj, other());
         }
         "ftPe_SpecialN_IsActive" => return b(g.peach_toad_done(gobj, &PEACH)),
         "it_802BDF40" => {
@@ -372,11 +372,11 @@ fn run_peach(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         }
         "itPeachToad_Logic91_EvtUnk" => {
             item(g);
-            peachtoad::evt_unk(g, gobj, other());
+            peachtoad::forget(g, gobj, other());
         }
         "itPeachToadSpore_Logic92_EvtUnk" => {
             item(g);
-            peachtoadspore::evt_unk(g, gobj, other());
+            peachtoadspore::forget(g, gobj, other());
         }
         _ => return run_callback(g, gobj, a),
     }
