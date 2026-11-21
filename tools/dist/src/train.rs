@@ -7,12 +7,14 @@
 //! and MSAA, and the sound's mix (a headless run mixes it, with no device to play it on);
 //! docs/performance.md ("PGO for releases") measures it.
 //!
-//! Every run is fixed by the repository and the disc, and plays the same on any machine (nothing
-//! from the host reaches a tick): the benchmark matches' replays in `data/bench`, and from
-//! power-on the menus and a VS match driven by scripted controllers (`--holds`): under each
-//! ruleset, port 1's Fox (pressing what [`monkey`] says) against a level 9 computer Yoshi, two
-//! minutes, the Slippi ruleset's match saved as a replay and played back by the next run. Each
-//! run's settings, caches, save and replays go to the training's own folder, never the player's.
+//! Every run comes from the repository and the disc: the benchmark matches' replays in
+//! `data/bench`, and from power-on the menus and a VS match driven by scripted controllers
+//! (`--holds`): under each ruleset, port 1's Fox (pressing what [`monkey`] says) against a level
+//! 9 computer Yoshi, two minutes, the Slippi ruleset's match saved as a replay and played back by
+//! the next run. The power-on runs start from the host's clock (the console's real-time clock,
+//! which Melee seeds its random numbers from), so their matches play out differently each time;
+//! the menus' steps don't depend on it. Each run's settings, caches, save and replays go to the
+//! training's own folder, never the player's.
 //!
 //! What it leaves out, being host glue rather than per-tick work: the window and its event loop,
 //! presenting to a display, the just-in-time tick timing and the sound device.
@@ -306,7 +308,7 @@ pub fn runs(root: &Path, work: &Path) -> Vec<Run> {
         name: "vanilla-menus-and-match",
         args,
         replay_in: None,
-        limit: minutes(20),
+        limit: minutes(40),
     });
     // The same under the Slippi ruleset (no card, everything unlocked) on Battlefield, its
     // match saved as a replay.
@@ -331,7 +333,7 @@ pub fn runs(root: &Path, work: &Path) -> Vec<Run> {
         name: "slippi-menus-and-match",
         args,
         replay_in: None,
-        limit: minutes(20),
+        limit: minutes(40),
     });
     // That replay played back: the Slippi ruleset's rules and Slippi Dolphin's floating point.
     v.push(Run {
@@ -356,13 +358,12 @@ pub fn runs(root: &Path, work: &Path) -> Vec<Run> {
                 "16:9",
             ],
         ),
-        ("fox-marth-fd", &["--renderer", "exact"]),
+        // The exact renderer, the first 6,000 ticks (it draws on the processor: a whole match
+        // took the instrumented build 7.5 minutes on the worker).
+        ("fox-marth-fd", &["--renderer", "exact", "--bench", "6000"]),
         ("fox-marth-ps", &[]),
         ("ics-peach-ps", &["--msaa", "4"]),
-        (
-            "ganon-captain-fd",
-            &["--renderer", "exact", "--aspect", "16:9"],
-        ),
+        ("ganon-captain-fd", &["--aspect", "16:9"]),
     ];
     for (name, extra) in matches {
         let mut args = os(&["--bench", "100000", "--disc-speed", "fast", "--replay"]);
