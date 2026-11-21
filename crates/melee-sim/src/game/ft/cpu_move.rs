@@ -15,6 +15,7 @@ use crate::fpu::{mem, reg};
 use crate::game::ft::CpuKind;
 use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
+use crate::game::it::ItKind;
 use crate::math;
 
 /// `ftLoadCommonData::x58`: the computer players' data, whose first word is its scripts.
@@ -1645,7 +1646,10 @@ impl Running<'_> {
         };
         let kind = self.game.items[super::super::it::item_of(self.game, g).0].kind;
         // `It_Kind_Capsule`, `_Egg`, `_M_Ball`.
-        let drop = matches!(kind, 0 | 3 | 0x22);
+        let drop = matches!(
+            ItKind::from_id(kind),
+            Some(ItKind::Capsule | ItKind::Egg | ItKind::PokeBall)
+        );
         let enemy = fpp.cpu.x44;
         // `lb_8000D008(enemy.y - pos.y, ABS(enemy.x - pos.x))`.
         let angle = |r: &Self, e: FighterId| {

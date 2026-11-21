@@ -15,6 +15,7 @@ use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::math;
 
@@ -836,7 +837,10 @@ impl Running<'_> {
         if let Some(item) = me.item_gobj {
             let kind = self.game.items[super::super::it::item_of(self.game, item).0].kind;
             // `It_Kind_Box`, `_Taru`, `_Kusudama`, `_TaruCann`.
-            if matches!(kind, 1 | 2 | 4 | 5) {
+            if matches!(
+                ItKind::from_id(kind),
+                Some(ItKind::Crate | ItKind::Barrel | ItKind::PartyBall | ItKind::BarrelCannon)
+            ) {
                 return (false, r5);
             }
         }

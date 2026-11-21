@@ -416,11 +416,11 @@ pub fn check_burst(r: &mut Running, gobj: GObjId) {
     if !ip.x378_itemColl.x34_flags.b7 {
         return;
     }
-    match ip.kind {
-        6 => super::kinds::bombhei::detonate(r, gobj),
-        19 => super::kinds::msbomb::detonate(r, gobj),
-        58 | 59 => super::kinds::linkbomb::set_off(r, gobj),
-        177 => super::kinds::marumine::burst(r, gobj),
+    match ip.item_kind() {
+        ItKind::BobOmb => super::kinds::bombhei::detonate(r, gobj),
+        ItKind::MotionSensorBomb => super::kinds::msbomb::detonate(r, gobj),
+        ItKind::LinkBomb | ItKind::YoungLinkBomb => super::kinds::linkbomb::set_off(r, gobj),
+        ItKind::Electrode => super::kinds::marumine::burst(r, gobj),
         _ => {
             item_mut(r.game, gobj).destroy_type = 0;
             destroy(r, gobj);

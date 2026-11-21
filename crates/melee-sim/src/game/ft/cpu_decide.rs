@@ -381,7 +381,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A5908")]
     pub(super) fn cpu_item_heals(&self, item: ItemId) -> bool {
         // `It_Kind_Heart`, `_Tomato`, `_Foods`.
-        matches!(self.game.items[item.0].kind, 8 | 9 | 0x12)
+        matches!(
+            ItKind::from_id(self.game.items[item.0].kind),
+            Some(ItKind::HeartContainer | ItKind::MaximTomato | ItKind::Food)
+        )
     }
 
     /// The common item of `kind` (any for `It_Kind_L_Gun_Ray`) the fighter goes for,

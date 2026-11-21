@@ -103,13 +103,13 @@ const CD_X420: u32 = 0x420;
 /// star rod and the lip's stick.
 #[doc(alias = "fn_800CCEC4")]
 pub fn swing_type(kind: i32) -> i32 {
-    match kind {
-        12 => 0,
-        11 => 1,
-        13 => 2,
-        24 => 3,
-        22 => 4,
-        23 => 5,
+    match ItKind::from_id(kind) {
+        Some(ItKind::BeamSword) => 0,
+        Some(ItKind::HomeRunBat) => 1,
+        Some(ItKind::Parasol) => 2,
+        Some(ItKind::Fan) => 3,
+        Some(ItKind::StarRod) => 4,
+        Some(ItKind::LipsStick) => 5,
         _ => panic!("ftswing.c:82: ellegal swing item!!!"),
     }
 }
