@@ -223,6 +223,13 @@ pub fn files(target: &str) -> (String, String) {
     )
 }
 
+/// Whether a line of the build's output is LLVM's warning that a function's code differs from
+/// the profile's (rustc 1.98: "function control flow change detected (hash mismatch)"): its
+/// counts are dropped, so that function isn't profile-guided.
+pub fn is_mismatch(line: &str) -> bool {
+    line.to_ascii_lowercase().contains("hash mismatch")
+}
+
 /// `-C metadata` of the player's binary crate (`melee_hd`) in cargo's `-v` output.
 pub fn player_metadata(cargo_stderr: &str) -> Option<String> {
     cargo_stderr
@@ -378,6 +385,15 @@ mod tests {
         let log = "       Fresh cfg-if v1.0.4\n     Running `/rustc --crate-name melee_hd --edition=2024 crates/melee-player/src/lib.rs --crate-type lib -C metadata=1111aaaa -C extra-filename=-x`\n     Running `/rustc --crate-name melee_hd --edition=2024 crates/melee-player/src/main.rs --error-format=json --crate-type bin --emit=link -C opt-level=3 -C metadata=9f3a0c21bd7e44e1 -C extra-filename=-0e6f`\n";
         assert_eq!(player_metadata(log).as_deref(), Some("9f3a0c21bd7e44e1"));
         assert_eq!(player_metadata("   Fresh melee-hd v0.1.0\n"), None);
+    }
+
+    #[test]
+    fn sees_llvm_s_hash_mismatch() {
+        // As rustc 1.98.1 printed it for a function changed after its profile was made.
+        let warning = "warning: t.383f3e580b52e4ef-cgu.0: function control flow change detected (hash mismatch) _RNvCs4PoU8zQlhil_1t1f Hash = 1124680653747245318 up to 1000000 count discarded";
+        assert!(is_mismatch(warning));
+        assert!(!is_mismatch("warning: 1 warning emitted"));
+        assert!(!is_mismatch("   Compiling melee-sim v0.1.1"));
     }
 
     #[test]

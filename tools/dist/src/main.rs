@@ -391,7 +391,7 @@ fn build(
     let stderr = child.stderr.take().expect("piped");
     for line in std::io::BufReader::new(stderr).lines() {
         let line = line.map_err(|e| format!("{cargo}: {e}"))?;
-        if line.to_ascii_lowercase().contains("hash mismatch") {
+        if pgo::is_mismatch(&line) {
             mismatches += 1;
         }
         let shown = line.trim_start();

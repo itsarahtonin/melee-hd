@@ -30,7 +30,9 @@ pub struct Run {
     pub args: Vec<OsString>,
     /// Plays the one replay in this folder (`--replay`), which an earlier run saved.
     pub replay_in: Option<PathBuf>,
-    /// The longest it may take, instrumented, before the training stops as failed.
+    /// The longest it may take, instrumented, before the training stops as failed: a guard against
+    /// a hang or a software renderer, generous for a busy machine (the Vanilla run took 29 minutes
+    /// on a loaded 9800X3D, 4 to 7 alone).
     pub limit: Duration,
 }
 
@@ -308,7 +310,7 @@ pub fn runs(root: &Path, work: &Path) -> Vec<Run> {
         name: "vanilla-menus-and-match",
         args,
         replay_in: None,
-        limit: minutes(40),
+        limit: minutes(90),
     });
     // The same under the Slippi ruleset (no card, everything unlocked) on Battlefield, its
     // match saved as a replay.
@@ -333,14 +335,14 @@ pub fn runs(root: &Path, work: &Path) -> Vec<Run> {
         name: "slippi-menus-and-match",
         args,
         replay_in: None,
-        limit: minutes(40),
+        limit: minutes(90),
     });
     // That replay played back: the Slippi ruleset's rules and Slippi Dolphin's floating point.
     v.push(Run {
         name: "slippi-replay",
         args: os(&["--bench", "100000"]),
         replay_in: Some(replays),
-        limit: minutes(20),
+        limit: minutes(45),
     });
     // The benchmark matches: Vanilla's rules in the console's floating point, at the disc's
     // fast speed (the pace they were recorded at, so they play to their ends), each with
@@ -373,7 +375,7 @@ pub fn runs(root: &Path, work: &Path) -> Vec<Run> {
             name,
             args,
             replay_in: None,
-            limit: minutes(20),
+            limit: minutes(45),
         });
     }
     v
