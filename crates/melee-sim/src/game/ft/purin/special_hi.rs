@@ -29,7 +29,7 @@ impl Running<'_> {
         fp.cmd_vars[0] = 0;
         fp.accessory4_cb = Some(CodeRef(addr::SING_GFX));
         let slot = i32::from(fp.player_idx);
-        let zoomed = self.game.vs_x5_3() && stadium::zoomed_on(self.game, slot);
+        let zoomed = self.game.vs_stadium_zoom() && stadium::zoomed_on(self.game, slot);
         self.game
             .fighter_mut(gobj)
             .set_mv_i32(mv::HI_SLEEP, i32::from(zoomed));

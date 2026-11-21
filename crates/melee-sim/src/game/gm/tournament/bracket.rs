@@ -374,7 +374,7 @@ impl Running<'_> {
         if !self.screen_step(s, j) {
             return;
         }
-        let t = self.game.tou.tm.x524(2).expect("the players' names");
+        let t = self.game.tou.tm.screen_text(2).expect("the players' names");
         if self.screen_unplugged(s, p) {
             self.tou_hide(Some(j));
             self.game.sis.set_scale(self.data, t, p as i32, 0.0, 0.0);
@@ -843,7 +843,7 @@ impl Running<'_> {
             let m = self.game.tou.tm.x4b8[i];
             let x = fp::fmsubs(reg(0.99), fp::fsubs(pos, 320.0), 261.0);
             self.tou_add_name(i32::from(m.x6), i32::from(m.x0), 5, x, -42.0, 5);
-            let t = self.game.tou.tm.x524(2);
+            let t = self.game.tou.tm.screen_text(2);
             self.set_text_hidden(t, 1);
             let mm = self.br_m4(10);
             let g = self.tou_model(false, mm, 0, 0x1A, 2, true, Some(PROC_ICON), rate);
@@ -1393,7 +1393,12 @@ impl Running<'_> {
         }
         let port = if self.br().x4d != 1 { self.br().x4c } else { 4 };
         let buttons = self.game.buttons_triggered(port) as u32;
-        let tm_text = self.game.tou.tm.x524(3).expect("the winner's name's text");
+        let tm_text = self
+            .game
+            .tou
+            .tm
+            .screen_text(3)
+            .expect("the winner's name's text");
         if self.game.tou.bracket[idx.min(63)].x18 != 0 {
             if self.br().x0 < 0xFA {
                 self.br().x0 += 1;

@@ -113,7 +113,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80092158")]
     fn shield_effect(&mut self, gobj: GObjId, id: i32) {
         let slot = i32::from(self.game.fighter(gobj).player_idx);
-        let off = self.game.player_unk45(slot) << 2;
+        let off = self.game.player_effect_color(slot) << 2;
         let colors = self.common_ptr(0x48);
         let c = |i: u32| u32::from(self.data.u8(colors.at(off + i)));
         let rgb = (c(0) << 16) | (c(1) << 8) | c(2);

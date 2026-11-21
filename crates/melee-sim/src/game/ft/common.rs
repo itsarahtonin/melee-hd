@@ -289,8 +289,8 @@ impl Running<'_> {
             super::super::it::kinds::coin::drop_from(self, gobj, pos, n, 1, mem(angle), mem(speed));
         let src = self.game.fighters[f.0].dmg.x18c4_source_ply;
         if src != 6 {
-            let v = worth.wrapping_add(self.game.player_unk98(src));
-            self.game.set_player_unk98(src, v);
+            let v = worth.wrapping_add(self.game.player_coins_knocked(src));
+            self.game.set_player_coins_knocked(src, v);
         }
     }
 

@@ -484,7 +484,7 @@ impl Running<'_> {
         let g = &mut *self.game;
         g.hud.arrows.x31 = -1;
         g.hud.arrows.x32 = 0;
-        g.hud.arrows.x30 = u8::from(g.vs_x2_1());
+        g.hud.arrows.x30 = u8::from(g.vs_arrows_flag());
     }
 
     /// Frees the arrows, `un_802FE390`.

@@ -238,13 +238,17 @@ impl Game {
         self.player_mut(slot).set_pose(3, pos);
     }
 
+    /// The stage point the slot respawns at (`unk4E`, -1 for none).
+    #[doc(alias("player_unk4e"))]
     #[doc(alias = "Player_80032F30")]
-    pub fn player_unk4e(&self, slot: i32) -> i32 {
+    pub fn player_spawn_point(&self, slot: i32) -> i32 {
         i32::from(self.player(slot).unk4E)
     }
 
+    /// Sets the slot's respawn point (`unk4E`).
+    #[doc(alias("set_player_unk4e"))]
     #[doc(alias = "Player_80032FA4")]
-    pub fn set_player_unk4e(&mut self, slot: i32, v: i32) {
+    pub fn set_player_spawn_point(&mut self, slot: i32, v: i32) {
         self.player_mut(slot).unk4E = v as i8;
     }
 
@@ -327,8 +331,11 @@ impl Game {
         self.player_mut(slot).handicap = v as u8;
     }
 
+    /// The block's `unk50`, a ratio nothing sets (1 from the reset): Master Hand's defense
+    /// ratio copies it, and the debug display shows it.
+    #[doc(alias("player_unk50"))]
     #[doc(alias = "Player_GetUnk50")]
-    pub fn player_unk50(&self, slot: i32) -> f32 {
+    pub fn player_unset_ratio(&self, slot: i32) -> f32 {
         self.player(slot).unk50
     }
 
@@ -405,23 +412,31 @@ impl Game {
         self.player_mut(slot).total_coins = v;
     }
 
+    /// The coins the slot's hits knocked out of others (`unk98`).
+    #[doc(alias("player_unk98"))]
     #[doc(alias = "Player_GetUnk98")]
-    pub fn player_unk98(&self, slot: i32) -> i32 {
+    pub fn player_coins_knocked(&self, slot: i32) -> i32 {
         self.player(slot).unk98
     }
 
+    /// Sets the coins the slot knocked out (`unk98`).
+    #[doc(alias("set_player_unk98"))]
     #[doc(alias = "Player_SetUnk98")]
-    pub fn set_player_unk98(&mut self, slot: i32, v: i32) {
+    pub fn set_player_coins_knocked(&mut self, slot: i32, v: i32) {
         self.player_mut(slot).unk98 = v;
     }
 
+    /// The coins the slot lost falling (`unk9C`).
+    #[doc(alias("player_unk9c"))]
     #[doc(alias = "Player_GetUnk9C")]
-    pub fn player_unk9c(&self, slot: i32) -> i32 {
+    pub fn player_coins_lost(&self, slot: i32) -> i32 {
         self.player(slot).unk9C
     }
 
+    /// Sets the coins the slot lost (`unk9C`).
+    #[doc(alias("set_player_unk9c"))]
     #[doc(alias = "Player_SetUnk9C")]
-    pub fn set_player_unk9c(&mut self, slot: i32, v: i32) {
+    pub fn set_player_coins_lost(&mut self, slot: i32, v: i32) {
         self.player_mut(slot).unk9C = v;
     }
 
@@ -726,23 +741,31 @@ impl Game {
         self.player_mut(slot).flags.b7 = v & 1 != 0;
     }
 
+    /// The fighter kind Kirby's copy starts as (`unk4D`; Kirby's own kind for none).
+    #[doc(alias("player_unk4d"))]
     #[doc(alias = "Player_GetUnk4D")]
-    pub fn player_unk4d(&self, slot: i32) -> i32 {
+    pub fn player_kirby_copy_kind(&self, slot: i32) -> i32 {
         i32::from(self.player(slot).unk4D as u8)
     }
 
+    /// Sets the kind Kirby's copy starts as (`unk4D`).
+    #[doc(alias("set_player_unk4d"))]
     #[doc(alias = "Player_SetUnk4D")]
-    pub fn set_player_unk4d(&mut self, slot: i32, v: i8) {
+    pub fn set_player_kirby_copy_kind(&mut self, slot: i32, v: i8) {
         self.player_mut(slot).unk4D = v;
     }
 
+    /// The frames the slot's entry waits (`unk4C`).
+    #[doc(alias("player_unk4c"))]
     #[doc(alias = "Player_GetUnk4C")]
-    pub fn player_unk4c(&self, slot: i32) -> i32 {
+    pub fn player_entry_delay(&self, slot: i32) -> i32 {
         i32::from(self.player(slot).unk4C as u8)
     }
 
+    /// Sets the frames the slot's entry waits (`unk4C`).
+    #[doc(alias("set_player_unk4c"))]
     #[doc(alias = "Player_SetUnk4C")]
-    pub fn set_player_unk4c(&mut self, slot: i32, v: u8) {
+    pub fn set_player_entry_delay(&mut self, slot: i32, v: u8) {
         self.player_mut(slot).unk4C = v as i8;
     }
 
@@ -766,8 +789,11 @@ impl Game {
         &mut self.player_mut(slot).stale_moves
     }
 
+    /// The slot's combo counters (`stale_moves.x5EC`): who last hit it, and its hits and
+    /// damage on each other slot.
+    #[doc(alias("player_unk6a8"))]
     #[doc(alias = "Player_GetUnk6A8Ptr")]
-    pub fn player_unk6a8(&mut self, slot: i32) -> &mut pl_x5EC_t {
+    pub fn player_combos(&mut self, slot: i32) -> &mut pl_x5EC_t {
         &mut self.player_mut(slot).stale_moves.x5EC
     }
 
@@ -790,14 +816,18 @@ impl Game {
         }
     }
 
+    /// Sets the color the slot's shield and KO effects take (`unk45`).
+    #[doc(alias("set_player_unk45"))]
     #[doc(alias = "Player_SetUnk45")]
-    pub fn set_player_unk45(&mut self, slot: i32, v: i32) {
+    pub fn set_player_effect_color(&mut self, slot: i32, v: i32) {
         self.player_mut(slot).unk45 = v as u8;
     }
 
-    /// `Player_GetUnk45`: 4 for anyone but a human.
+    /// The color the slot's shield and KO effects take (`unk45`), `Player_GetUnk45`: 4 for
+    /// anyone but a human.
+    #[doc(alias("player_unk45"))]
     #[doc(alias = "Player_GetUnk45")]
-    pub fn player_unk45(&self, slot: i32) -> u32 {
+    pub fn player_effect_color(&self, slot: i32) -> u32 {
         let p = self.player(slot);
         if p.pkind == PKIND_HUMAN {
             u32::from(p.unk45)

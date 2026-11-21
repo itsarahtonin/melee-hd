@@ -59,7 +59,7 @@ impl Running<'_> {
     pub fn enter_rebirth(&mut self, gobj: GObjId) {
         self.fighter_spawn(gobj);
         let slot = i32::from(self.game.fighter(gobj).player_idx);
-        let point = self.game.player_unk4e(slot) as i8;
+        let point = self.game.player_spawn_point(slot) as i8;
         self.game.fighter_mut(gobj).smash_attrs.x2135 = point;
         if point == -1 {
             let at = self.game.player_spawn_platform_pos(slot);

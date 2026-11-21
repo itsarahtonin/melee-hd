@@ -1501,7 +1501,7 @@ fn reset_frame_counters() {
 #[test]
 fn reset_x8c0() {
     check("pl_80041524", |r, a| {
-        r.game.reset_x8c0(a.i(3));
+        r.game.reset_ko_ring(a.i(3));
         vec![]
     });
 }
@@ -1509,7 +1509,7 @@ fn reset_x8c0() {
 #[test]
 fn reset_x8d8() {
     check("pl_800418F4", |r, a| {
-        r.game.reset_x8d8(a.i(3));
+        r.game.reset_bob_omb_ring(a.i(3));
         vec![]
     });
 }

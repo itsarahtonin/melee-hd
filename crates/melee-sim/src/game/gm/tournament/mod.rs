@@ -220,13 +220,15 @@ impl TmData {
         }
     }
 
-    /// `x524[k]`.
-    pub fn x524(&self, k: usize) -> Option<TextId> {
+    /// The scenes' texts from `x524` on (`x524[k]`: the players' names 2, the winner's 3).
+    #[doc(alias("x524"))]
+    pub fn screen_text(&self, k: usize) -> Option<TextId> {
         self.x518[3 + k]
     }
 
-    /// `x534[k]`.
-    pub fn x534(&self, k: usize) -> Option<TextId> {
+    /// Each entrant's name's text on the match-up screen (`x534[k]`).
+    #[doc(alias("x534"))]
+    pub fn entrant_text(&self, k: usize) -> Option<TextId> {
         self.x518[7 + k]
     }
 }

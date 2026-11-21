@@ -787,7 +787,7 @@ impl Running<'_> {
             }
             self.game.fighters[f.0].x2227_b5 = false;
             let x2140 = self.game.fighters[f.0].x2140;
-            self.lower_xcf8(slot, sub, x2140);
+            self.keep_lowest_dip(slot, sub, x2140);
             let fp = &mut self.game.fighters[f.0];
             fp.x2140 = 0.0;
             fp.used_tether = false;

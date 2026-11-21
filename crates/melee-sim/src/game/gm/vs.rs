@@ -188,8 +188,10 @@ impl Game {
         self.vs.start.friendly_fire
     }
 
+    /// Whether the rules are a single-player run's or Target Test's (`rules.x4_2`).
+    #[doc(alias("vs_x4_2"))]
     #[doc(alias = "gm_8016B0E8")]
-    pub fn vs_x4_2(&self) -> bool {
+    pub fn vs_single_player_rules(&self) -> bool {
         self.vs.start.x4_2
     }
 
@@ -213,8 +215,10 @@ impl Game {
         self.vs.start.timer_counts_up
     }
 
+    /// The rules' `x2_1`, which the HUD's offscreen arrows keep (`arrows.x30`).
+    #[doc(alias("vs_x2_1"))]
     #[doc(alias = "gm_8016B124")]
-    pub fn vs_x2_1(&self) -> bool {
+    pub fn vs_arrows_flag(&self) -> bool {
         self.vs.start.x2_1
     }
 
@@ -234,18 +238,26 @@ impl Game {
         self.vs.state.is_singleplayer == 1
     }
 
+    /// Whether the match is a Target Test stage (`rules.x9` 1: the target icons, the
+    /// targets' bonus).
+    #[doc(alias("vs_x9_is_1"))]
     #[doc(alias = "gm_8016B1A8")]
-    pub fn vs_x9_is_1(&self) -> bool {
+    pub fn vs_target_test(&self) -> bool {
         self.vs.start.x9 == 1
     }
 
+    /// Whether fighters' hitboxes hit no fighters (`rules.x5_2`, an event's).
+    #[doc(alias("vs_x5_2"))]
     #[doc(alias = "gm_8016B1C4")]
-    pub fn vs_x5_2(&self) -> bool {
+    pub fn vs_no_fighter_hits(&self) -> bool {
         self.vs.start.x5_2
     }
 
+    /// Whether Jigglypuff's Rest asks if the Stadium's screen shows her (`rules.x5_3`, an
+    /// event's).
+    #[doc(alias("vs_x5_3"))]
     #[doc(alias = "gm_8016B1D8")]
-    pub fn vs_x5_3(&self) -> bool {
+    pub fn vs_stadium_zoom(&self) -> bool {
         self.vs.start.x5_3
     }
 
@@ -261,8 +273,10 @@ impl Game {
         self.vs.start.time_limit == 0 || !self.vs.start.timer_enabled
     }
 
+    /// Whether the match is a Sudden Death (`rules.x6`): no items but the Bob-ombs' rain.
+    #[doc(alias("vs_x6"))]
     #[doc(alias = "gm_8016B238")]
-    pub fn vs_x6(&self) -> u8 {
+    pub fn vs_sudden_death(&self) -> u8 {
         self.vs.start.x6
     }
 
@@ -272,8 +286,10 @@ impl Game {
         self.vs.start.x30
     }
 
+    /// Whether the slot's fighter shows hearts for its team (`fighters[slot].x4`'s 0x10).
+    #[doc(alias("vs_fighter_x4_b3"))]
     #[doc(alias = "gm_8016B258")]
-    pub fn vs_fighter_x4_b3(&self, slot: i32) -> bool {
+    pub fn vs_fighter_shows_hearts(&self, slot: i32) -> bool {
         self.vs.state.fighters[slot as usize].x4[0] & 0x10 != 0
     }
 
@@ -325,14 +341,17 @@ impl Game {
             .count() as i32
     }
 
+    /// How many opponents joined the match (`state.unk_C`), for the results.
+    #[doc(alias("vs_unk_c"))]
     #[doc(alias = "fn_8016B728")]
-    pub fn vs_unk_c(&self) -> u8 {
+    pub fn vs_joiners(&self) -> u8 {
         self.vs.state.unk_C
     }
 
     /// Whether the rules come with a challenger's record (`x58`), `gm_8016A944`.
+    #[doc(alias("vs_has_x58"))]
     #[doc(alias = "gm_8016A944")]
-    pub fn vs_has_x58(&self) -> bool {
+    pub fn vs_has_challenger_record(&self) -> bool {
         self.vs.start.x58.0 != 0
     }
 
@@ -1282,7 +1301,9 @@ impl Running<'_> {
                 "gm_80167320's joiners' leaving (Player_80031EBC) as the first player falls",
             );
         }
-        if (self.game.vs_is_stock() || self.game.vs_x4_2()) && self.game.player_stocks(slot) == 0 {
+        if (self.game.vs_is_stock() || self.game.vs_single_player_rules())
+            && self.game.player_stocks(slot) == 0
+        {
             let (ckind, costume) = (self.game.player_ckind(slot), self.game.player_costume(slot));
             self.out_of_stocks(ckind as i8, costume as i8);
             return;
@@ -1296,7 +1317,7 @@ impl Running<'_> {
     /// does nothing. Whether one was marked.
     #[doc(alias = "gm_8016AC44")]
     pub fn out_of_stocks(&mut self, ckind: i8, costume: i8) -> bool {
-        if !self.game.vs_has_x58() {
+        if !self.game.vs_has_challenger_record() {
             return false;
         }
         let list = &mut self.game.gm.left;
@@ -1334,7 +1355,7 @@ impl Running<'_> {
         let g = &mut *self.game;
         g.set_player_spawn_platform_pos(slot, pos);
         if !g.stage_info.unk8C.b5 {
-            g.set_player_unk4e(slot, point);
+            g.set_player_spawn_point(slot, point);
             g.set_player_some_pos(slot, off);
         }
         pos.y = super::super::gr::stage::cam_top(g);
@@ -1595,7 +1616,7 @@ impl Running<'_> {
             teams,
             g.player_pkind(0) as u8,
         );
-        g.set_player_unk45(0, i32::from(cap_color(color as u8)));
+        g.set_player_effect_color(0, i32::from(cap_color(color as u8)));
         self.player_create_fighters(0);
         if self.game.vs.state.fighters[0].x4[0] & 0x08 != 0 {
             self.sfx_play(0x41F4E, 0x7F, 0x40);
@@ -1752,7 +1773,7 @@ impl Running<'_> {
                 teams,
                 g.player_pkind(i) as u8,
             );
-            g.set_player_unk45(i, i32::from(cap_color(color as u8)));
+            g.set_player_effect_color(i, i32::from(cap_color(color as u8)));
             self.player_create_fighters(i);
             if self.game.vs.state.fighters[i as usize].x4[0] & 0x08 != 0 {
                 self.sfx_play(0x41F4E, 0x7F, 0x40);
@@ -1800,7 +1821,7 @@ impl Game {
             self.vs.state.unk_A = self.vs.state.unk_A.wrapping_add(5);
             self.set_player_flags_bit3(slot, 1);
             let a = self.vs.state.unk_A;
-            self.set_player_unk4c(slot, a);
+            self.set_player_entry_delay(slot, a);
         }
         // `Player_SetPlayerAndEntityCpuType` and `...CpuLevel`: the slot has no fighters yet.
         assert!(self.player_entity(slot).is_none() && self.player_entity_at(slot, 1).is_none());

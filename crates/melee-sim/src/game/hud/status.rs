@@ -592,7 +592,7 @@ impl Running<'_> {
         self.create_damage_mark(i, i as i32);
         self.create_damage_digits(i, i as i32);
         let rules = self.game.vs.start.clone();
-        if rules.x3_0 && self.game.vs_x6() == 0 {
+        if rules.x3_0 && self.game.vs_sudden_death() == 0 {
             self.create_score(slot);
         }
         let mode = if rules.match_kind == 1 || rules.x4_2 {

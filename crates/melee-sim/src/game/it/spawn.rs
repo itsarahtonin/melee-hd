@@ -337,7 +337,7 @@ pub fn stage_counts(game: &Game) -> [i32; 35] {
 #[doc(alias = "it_8026D018")]
 pub fn setup(r: &mut Running) {
     let game = &mut *r.game;
-    if game.vs_x6() != 0 || game.vs_item_freq() == -1 {
+    if game.vs_sudden_death() != 0 || game.vs_item_freq() == -1 {
         return;
     }
     let mask = game.vs.start.x20;

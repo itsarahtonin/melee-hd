@@ -333,7 +333,7 @@ impl Running<'_> {
         self.game
             .set_player_falls_at(slot, which, falls.wrapping_add(1));
         self.game.reset_stale_moves(slot);
-        if (self.game.vs_is_stock() || self.game.vs_x4_2())
+        if (self.game.vs_is_stock() || self.game.vs_single_player_rules())
             && self.game.player_entity(slot) == Some(gobj)
         {
             self.game.player_lose_stock(slot);
@@ -365,8 +365,8 @@ impl Running<'_> {
         let coins = self.game.player_coins(slot);
         let mut lost = coins / 2;
         self.game.set_player_coins(slot, coins.wrapping_sub(lost));
-        let n = lost.wrapping_add(self.game.player_unk9c(slot));
-        self.game.set_player_unk9c(slot, n);
+        let n = lost.wrapping_add(self.game.player_coins_lost(slot));
+        self.game.set_player_coins_lost(slot, n);
         let max = self.common().i32(0x5C8);
         if lost > max {
             lost = max;
@@ -568,7 +568,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801693BC")]
     fn spawn_dead_effect(&mut self, gobj: GObjId, pos: crate::vec::Vec3, angle: f32) {
         let slot = i32::from(self.game.fighter(gobj).player_idx);
-        let i = self.game.player_unk45(slot) * 4;
+        let i = self.game.player_effect_color(slot) * 4;
         let rgb = |g: &Self, off: u32| {
             let t = g.common_ptr(off);
             let b = |k: u32| u32::from(g.data.u8(t.at(i + k)));

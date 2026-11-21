@@ -39,7 +39,10 @@ impl Entry {
         r.data.u8(self.0.at(1)) >> 5 & 7
     }
 
-    pub fn x4(self, r: &Running) -> Option<DataRef> {
+    /// The event's parameters (its word at 4): the characters, coins or places its code
+    /// reads.
+    #[doc(alias("x4"))]
+    pub fn params(self, r: &Running) -> Option<DataRef> {
         r.data.ptr(self.0.at(4))
     }
 
@@ -363,7 +366,7 @@ impl Running<'_> {
         n: usize,
     ) -> u8 {
         let e = self.event_entry(self.event()).expect("the event's entry");
-        let list = e.x4(self).expect("the event's characters");
+        let list = e.params(self).expect("the event's characters");
         let mut chars = [0u8; crate::game::ft::CharacterKind::COUNT];
         let mut count = 0;
         for i in 0..crate::game::ft::CharacterKind::COUNT as u32 {
@@ -489,7 +492,7 @@ impl Running<'_> {
                 }
             }
             43 => {
-                let x4 = e.x4(self).expect("the event's parameters");
+                let x4 = e.params(self).expect("the event's parameters");
                 let p = self.data.ptr(x4.at(4)).expect("the event's third player");
                 let (c, col) = (self.data.u8(p) as i8, self.data.u8(p.at(3)));
                 let ev = &mut self.game.game_data.vs.unk_530;
@@ -1046,7 +1049,7 @@ impl Running<'_> {
                 }
             }
             43 => {
-                let x4 = e.x4(self).expect("the event's parameters");
+                let x4 = e.params(self).expect("the event's parameters");
                 let p = self.data.ptr(x4.at(4)).expect("the event's third player");
                 let kind =
                     super::super::pl::player::ckind_ftkind(i32::from(self.data.u8(p) as i8), 0);
@@ -1135,7 +1138,7 @@ impl Running<'_> {
                 )
             }
             43 => {
-                let x4 = e.x4(self).expect("the event's parameters");
+                let x4 = e.params(self).expect("the event's parameters");
                 let p = d.ptr(x4.at(4)).expect("the event's third player");
                 (vec![with(p)], false)
             }
@@ -1358,7 +1361,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801BC9E8")]
     fn event_coins_proc(&mut self, gobj: GObjId) {
         let e = self.event_entry(self.event()).expect("the event's entry");
-        let x4 = e.x4(self).expect("the event's coins");
+        let x4 = e.params(self).expect("the event's coins");
         let target = self.data.u32(x4);
         if self.game.player_coins(0) as u32 >= target {
             self.event_success(gobj);
@@ -1505,7 +1508,7 @@ impl Running<'_> {
     fn event_egg_proc(&mut self, gobj: GObjId) {
         if self.game.game_data.vs.unk_530.x10 == 0 {
             let e = self.event_entry(self.event()).expect("the event's entry");
-            let x4 = e.x4(self).expect("the egg's place");
+            let x4 = e.params(self).expect("the egg's place");
             let d = self.data;
             let pos = crate::vec::Vec3::new(d.f32(x4), d.f32(x4.at(4)), d.f32(x4.at(8)));
             super::super::it::kinds::evyoshiegg::spawn(self, pos);
@@ -1581,7 +1584,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801BC670")]
     fn event_round_won(&mut self) {
         let e0 = self.event_entry(0).expect("the first event's entry");
-        let x4 = e0.x4(self).expect("the first event's parameters");
+        let x4 = e0.params(self).expect("the first event's parameters");
         let (min, wait) = (self.data.u32(x4) as i32, self.data.u32(x4.at(4)) as i32);
         let secs = self.game.vs_timer_seconds() as i32;
         let frames = i32::from(self.game.vs_timer_frames());
@@ -1625,7 +1628,7 @@ impl Running<'_> {
         ev.x10 -= 1;
         if ev.x10 < 0 {
             let e0 = self.event_entry(0).expect("the first event's entry");
-            let x4 = e0.x4(self).expect("the first event's parameters");
+            let x4 = e0.params(self).expect("the first event's parameters");
             let frames = self.data.u32(x4.at(4)) as i32;
             self.game.bgflash.fade_to_black(frames);
             gobj::free(self, gobj);
@@ -1759,7 +1762,7 @@ impl Running<'_> {
     fn event_joiner_proc(&mut self, gobj: GObjId) {
         let idx = self.event();
         let e = self.event_entry(idx).expect("the event's entry");
-        let x4 = e.x4(self).expect("the event's parameters");
+        let x4 = e.params(self).expect("the event's parameters");
         let joiner = self.data.ptr(x4.at(4)).expect("the event's third player");
         let p1 = e.player(self, 1).expect("the event's second player");
         let kinds = [

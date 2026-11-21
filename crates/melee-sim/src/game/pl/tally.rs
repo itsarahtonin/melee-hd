@@ -66,13 +66,15 @@ fn bit(b: u8, n: u8) -> bool {
 }
 
 /// A word of the `x358_hits` statistics, which the mirror keeps as bytes.
-fn x358_word(s: &plActionStats, off: usize) -> u32 {
+#[doc(alias("x358_word"))]
+fn hits_word(s: &plActionStats, off: usize) -> u32 {
     u32::from_be_bytes(s.x358[off..off + 4].try_into().unwrap())
 }
 
 /// `x358_hits.by_attack_counts[i]`.
-fn x358_count(s: &plActionStats, i: usize) -> u32 {
-    x358_word(s, 4 + 4 * i)
+#[doc(alias("x358_count"))]
+fn hits_count(s: &plActionStats, i: usize) -> u32 {
+    hits_word(s, 4 + 4 * i)
 }
 
 /// A count of attacks by id from 100 on, as `pl_800386D8` reads it (see
@@ -123,9 +125,10 @@ impl Game {
         (from..=to).fold(0u32, |s, i| s.wrapping_add(counts(i)))
     }
 
-    /// The player's average ... (`x5EC`'s `x8` over `xC`), `pl_800414C0`.
+    /// The player's combo average (the combo counters' `x8` over `xC`), `pl_800414C0`.
+    #[doc(alias("x5ec_average"))]
     #[doc(alias = "pl_800414C0")]
-    fn x5ec_average(&self, player: i32) -> f64 {
+    fn combo_average(&self, player: i32) -> f64 {
         let t = &self.player(player).stale_moves.x5EC;
         if t.xC != 0 {
             return fp::fdivs(single(t.x8), single(t.xC));
@@ -247,11 +250,11 @@ impl Running<'_> {
         let hit_specials = stats.hits.specials_count;
         let hit_x1a0 = stats.hits.x1A0_count;
         let hit_x1a8 = stats.hits.x1A8;
-        let x358_x1a8 = x358_word(stats, 0x1A8);
+        let x358_x1a8 = hits_word(stats, 0x1A8);
         let attacks_total = stats.attacks.total;
         let hits_total = stats.hits.total;
-        let x358_total = x358_word(stats, 0);
-        let x358_counts: [u32; 100] = core::array::from_fn(|i| x358_count(stats, i));
+        let x358_total = hits_word(stats, 0);
+        let x358_counts: [u32; 100] = core::array::from_fn(|i| hits_count(stats, i));
         let (x56c, x574) = (stats.x56C, stats.x574);
         let (xc60, xc64, xc74, xc94) = (t.xC60, t.xC64, t.xC74, t.xC94);
         let (xd04, xd0c, xdc8, dd1) = (
@@ -451,7 +454,7 @@ impl Running<'_> {
         if reg(xc74) >= self.plco_f32(0x160) {
             self.game.set_bonus_flag(player, 0xAA);
         }
-        if self.game.x5ec_average(player) >= self.plco_f32(0x0) {
+        if self.game.combo_average(player) >= self.plco_f32(0x0) {
             self.game.set_bonus_flag(player, 1);
         }
         if self.has_normal_attack(gobj, 2) {
@@ -811,9 +814,9 @@ impl Running<'_> {
         }
         let gobj = self.game.player_entity(player);
         self.count_streaks(player);
-        self.game.reset_x8c0(player);
+        self.game.reset_ko_ring(player);
         self.count_bombhei_misses(player);
-        self.game.reset_x8d8(player);
+        self.game.reset_bob_omb_ring(player);
         if !self.game.player_awake(player) {
             return;
         }

@@ -633,7 +633,7 @@ impl Running<'_> {
         if g.vs.start.x9 == 2 && super::super::gr::ground::flags(g, 0x20) != 0 {
             run.xc[3] = 1;
         }
-        if g.vs_x9_is_1() && g.stage_info.x6D4 == 0 {
+        if g.vs_target_test() && g.stage_info.x6D4 == 0 {
             run.xc[2] = 1;
         }
         let o = end.outcome;

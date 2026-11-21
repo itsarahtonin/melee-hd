@@ -364,7 +364,7 @@ impl Running<'_> {
             return;
         }
         let limit = self.bonus_param(0x17C) as i32;
-        let e = &mut self.game.player_unk6a8(vslot).x10[aslot as usize];
+        let e = &mut self.game.player_combos(vslot).x10[aslot as usize];
         if e.xC != 0 && e.xC == id {
             e.x8 = e.x8.wrapping_add(1);
             if e.xC == 90 && i32::from(e.x8) >= limit {
@@ -385,7 +385,7 @@ impl Running<'_> {
         }
         let shielding = self.game.player_mut(vslot).ext_u32(0xD50) != 0;
         let limit = self.bonus_param(4) as i32;
-        let e = &mut self.game.player_unk6a8(vslot).x10[aslot as usize];
+        let e = &mut self.game.player_combos(vslot).x10[aslot as usize];
         if id == 1 && shielding {
             e.x12_b0 = true;
         }

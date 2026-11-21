@@ -44,12 +44,12 @@ impl Running<'_> {
         }
         self.count_dominant_input(slot, sub);
         for i in 0..6 {
-            let e = &self.game.player_unk6a8(slot).x10[i];
+            let e = &self.game.player_combos(slot).x10[i];
             // Bonus 0x4C goes to the player the entry is for.
             if e.x12_b0 && e.x4 == 1 {
                 self.count_bonus(i as i32, 0x4C);
             }
-            let e = &mut self.game.player_unk6a8(slot).x10[i];
+            let e = &mut self.game.player_combos(slot).x10[i];
             e.x0 = 0.0;
             e.x4 = 0;
             e.x8 = 0;
@@ -64,7 +64,7 @@ impl Running<'_> {
         if sub == 1 {
             return;
         }
-        for e in &mut self.game.player_unk6a8(slot).x10 {
+        for e in &mut self.game.player_combos(slot).x10 {
             e.x10 = 0;
         }
     }
@@ -78,7 +78,7 @@ impl Running<'_> {
         }
         let (mut total, mut best) = (0.0, 0.0);
         for i in 0..6 {
-            let v = crate::fpu::reg(self.game.player_unk6a8(slot).x10[i].x0);
+            let v = crate::fpu::reg(self.game.player_combos(slot).x10[i].x0);
             if best < v {
                 best = v;
             }
@@ -112,8 +112,9 @@ impl Running<'_> {
 
     /// Keeps the lowest of a value per player (`pl_StaleMoveTableExt_t::xCF8`, the word after
     /// the stale-move table), `pl_80040330`; Nana's don't count.
+    #[doc(alias("lower_xcf8"))]
     #[doc(alias = "pl_80040330")]
-    pub fn lower_xcf8(&mut self, slot: i32, sub: i32, v: f32) {
+    pub fn keep_lowest_dip(&mut self, slot: i32, sub: i32, v: f32) {
         if sub != 0 {
             return;
         }

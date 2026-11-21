@@ -133,7 +133,12 @@ impl Running<'_> {
         let seat = self.game.tou.tm.x37[idx].xe;
         let target = mem(fp::fmsubs(reg(5.999_997), f(i32::from(seat)), 21.5));
         super::lib::step_towards(&mut x, target, 0.4);
-        let t = self.game.tou.tm.x534(idx).expect("an entrant's name");
+        let t = self
+            .game
+            .tou
+            .tm
+            .entrant_text(idx)
+            .expect("an entrant's name");
         let (y, ty, z) = match super::lib::step_towards(&mut x, target, 0.2) {
             1 => (19.5, -197.0, -6.0),
             -1 => (15.0, -152.0, 6.0),
@@ -197,7 +202,7 @@ impl Running<'_> {
             let pm = self.game.tou.tm.x4b8[i];
             let x = fp::fmsubs(reg(0.99), fp::fsubs(pos, 320.0), 261.0);
             self.tou_add_name(i32::from(pm.x6), i32::from(pm.x0), 5, x, -11.0, 5);
-            let t = self.game.tou.tm.x524(2).expect("the players' names");
+            let t = self.game.tou.tm.screen_text(2).expect("the players' names");
             self.game.sis.text_mut(t).hidden = 1;
             let posf = mem(pos);
             let m = self.alt_m4(10);

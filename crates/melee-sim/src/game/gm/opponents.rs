@@ -713,7 +713,7 @@ impl Running<'_> {
         self.game
             .set_player_more_flags_bit5(slot, u8::from(o.total > 1));
         if self.game.player_ckind(slot) == CharacterKind::Kirby && o.copy_mode != 0 {
-            self.game.set_player_unk4d(slot, at(&o.copies, i));
+            self.game.set_player_kirby_copy_kind(slot, at(&o.copies, i));
             self.game.set_player_flags_ae_bit1(slot, 1);
         }
         if let Some(f) = o.on_join {

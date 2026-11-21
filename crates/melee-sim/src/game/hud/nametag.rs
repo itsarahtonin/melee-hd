@@ -91,7 +91,7 @@ impl Game {
             if pkind == 0 {
                 return row(port);
             }
-            if (self.vs_fighter_x4_b3(port as i32) || self.vs_x4_2())
+            if (self.vs_fighter_shows_hearts(port as i32) || self.vs_single_player_rules())
                 && i32::from(team) == self.player_team(0)
             {
                 return HEARTS[self.player_port(0) as usize];
@@ -221,7 +221,7 @@ impl Running<'_> {
             && (g.hud.nametags.shown[usize::from(slot)] != 0
                 || g.player_nametag(s) != NO_NAMETAG
                 || g.player_tag_due(s)
-                || g.vs_fighter_x4_b3(s));
+                || g.vs_fighter_shows_hearts(s));
         if !show {
             jobj::set_flags(&mut self.game.objs.jobjs, child, HIDDEN);
             if self.game.has_nametag(s) {

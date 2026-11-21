@@ -68,7 +68,7 @@ impl Running<'_> {
         p.cpu_level = self.game.player_cpu_level(SLOT_MASTER) as u8;
         p.cpu_kind = self.game.player_cpu_type(SLOT_MASTER) as u8;
         p.attack_ratio = self.game.player_attack_ratio(SLOT_MASTER);
-        p.defense_ratio = self.game.player_unk50(SLOT_MASTER);
+        p.defense_ratio = self.game.player_unset_ratio(SLOT_MASTER);
         p.color = 0;
         p.ckind = CharacterKind::CrazyHand as i8;
         p.team = 4;

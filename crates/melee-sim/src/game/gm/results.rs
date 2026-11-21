@@ -155,7 +155,7 @@ impl Game {
         }
         r._x448 = [0; 4];
         r.frame_count = self.vs_frame_count();
-        r.x7 = self.vs_unk_c();
+        r.x7 = self.vs_joiners();
         // `kills` holds four; the fifth and sixth land in `x18` and the padding after it.
         let mut kills = [[0u16; 6]; 6];
         for (i, row) in kills.iter_mut().enumerate() {
@@ -206,8 +206,8 @@ impl Game {
             p.x58 = to_u32(pl.ext_f32(0xD7C)).wrapping_mul(10);
             p.x5C = to_u32(pl.ext_f32(0xD80)).wrapping_mul(10);
             p.x60 = self.player_total_coins(s) as u32;
-            p.x64 = self.player_unk98(s) as u32;
-            p.x68 = self.player_unk9c(s) as u32;
+            p.x64 = self.player_coins_knocked(s) as u32;
+            p.x68 = self.player_coins_lost(s) as u32;
             let pl = self.player(s);
             p.x6C = pl.ext_u32(0xD24) / 60;
             p.x70 = pl.ext_u32(0xD20) / 60;
