@@ -305,20 +305,11 @@ pub(crate) fn scene_enter_data(
     game: &mut crate::game::state::Game,
     scene_mode: u8,
 ) -> &mut crate::game::structs::StartMeleeData {
-    match GameMode::of(scene_mode) {
-        GameMode::Opening => &mut game.attract.start,
-        m if super::machine::uses_vs_melee(m.id()) => &mut game.vs_melee.start,
-        GameMode::Tournament => &mut game.tou.start,
-        GameMode::Debug => &mut game.debug_mode.vs_enter,
-        GameMode::Event => &mut game.event.start,
-        GameMode::TargetTest => &mut game.one_player.target_start,
-        GameMode::Training => &mut game.training.enter,
-        GameMode::Classic | GameMode::Adventure | GameMode::AllStar => {
-            &mut game.one_player.match_start
-        }
-        m if super::multi_man::is_multi_man(m.id()) => &mut game.multi_man.start,
-        m => crate::game::code::unported_call(&format!(
-            "the VS scene's enter data in game mode {m:?}"
+    let mode = GameMode::of(scene_mode);
+    match mode.mode().start {
+        Some(d) => (d.get_mut)(game),
+        None => crate::game::code::unported_call(&format!(
+            "the VS scene's enter data in game mode {mode:?}"
         )),
     }
 }
