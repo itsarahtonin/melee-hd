@@ -372,6 +372,53 @@ fn slippi_opponents_side_ignores_the_display_pass() {
     );
 }
 
+/// Under 3.19's rules a replay's match models no memory (docs/refactor.md, task 6): the rules
+/// leave the allocator model off (`Settings::playback_needs_model`, no Samus here), every
+/// step lends nothing, and a path that reached the model would stop by name. `ics-peach-ps`
+/// (the Ice Climbers and a computer player, whose DI and frame are where Vanilla reads the
+/// model's addresses) plays to its end so, its state holding no model after any tick.
+#[test]
+fn a_slippi_match_models_no_memory() {
+    let Some(disc) = disc() else { return };
+    let mut bench = Bench::open(disc, "ics-peach-ps");
+    let bench = &mut bench;
+    on_sim_thread(FpMode::Slippi, move || {
+        let mut settings =
+            Settings::from_replay(&melee_slippi::start(&bench.replay)).expect("its settings");
+        settings.rules = Rules::slippi_online();
+        settings.heap = Settings::playback_needs_model(&settings.rules, &settings.start)
+            .then(melee_sim::hsd::heap::Layout::slippi_playback);
+        assert_eq!(settings.heap, None, "3.19's rules leave the model off");
+        let (disc, files) = (&bench.disc, &mut bench.files);
+        let mut m = Match::start(&settings, &mut |name| {
+            let (entrynum, bytes) = files
+                .entry(name.to_owned())
+                .or_insert_with(|| (disc.entrynum(name).unwrap(), disc.read_file(name).unwrap()));
+            DiscFile {
+                entrynum: *entrynum,
+                bytes: bytes.clone(),
+            }
+        });
+        assert!(!m.game.models_memory());
+        let mut device = Device(&bench.replay);
+        let mut ticks = 0u64;
+        loop {
+            let (_, ended) = tick(&mut m, &mut device);
+            ticks += 1;
+            assert_eq!(
+                m.game.objs.heap,
+                melee_sim::hsd::heap::Heap::default(),
+                "the model's state in tick {ticks}"
+            );
+            if ended {
+                break;
+            }
+        }
+        // Under these rules the match ends at frame 3,736, ahead of its recording.
+        assert!(ticks > 3_000, "ics-peach-ps played {ticks} ticks");
+    });
+}
+
 /// The computer player's DI with no knockback (`ftCo_800AC5A0`) pushes the stick by r5 and
 /// r30, registers it never set: the allocator model gives r30's fighter address, and the
 /// frame's register bookkeeping follows r5 (`cpu_ai::Leftover`). Under 3.19's NanaDeterminism
