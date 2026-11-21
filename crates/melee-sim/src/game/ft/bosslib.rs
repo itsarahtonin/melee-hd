@@ -298,7 +298,7 @@ impl Running<'_> {
         self.player_80036790(0, v);
         for kind in [FighterKind::MasterHand.id(), FighterKind::CrazyHand.id()] {
             if let Some(g) = self.boss_gobj(kind) {
-                self.game.ft_80086a4c(g, v);
+                self.game.ft_set_pending_hitlag(g, v);
             }
         }
         super::super::it::item::pause_all(self.game);

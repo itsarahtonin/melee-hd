@@ -1493,7 +1493,7 @@ fn press(r: &mut Running, g: GroundId, by: Option<GObjId>) {
     r.game.grounds[g.0].u.castle_switch().state = 4;
     if super::super::it::item::is_fighter(r.game, by) {
         let lag = fp::frsp(f64::from(param(r.game).h(r.data, 4))) as f32;
-        r.game.ft_80086a4c(by.expect("a fighter"), lag);
+        r.game.ft_set_pending_hitlag(by.expect("a fighter"), lag);
     }
 }
 

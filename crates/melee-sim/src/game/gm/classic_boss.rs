@@ -112,13 +112,13 @@ impl Running<'_> {
                     self.game.set_player_more_flags_bit4(SLOT_PLAYER, 1);
                     self.game.set_player_more_flags_bit3(SLOT_PLAYER, 1);
                     let e = self.player_gobj(SLOT_PLAYER);
-                    let x = self.game.ft_80087c58(e);
+                    let x = self.game.ft_invincibility(e);
                     self.game.one_player.boss.player_x1988 = x;
-                    self.game.ft_80087c64(e, 2);
+                    self.game.ft_set_invincibility(e, 2);
                     let e = self.player_gobj(SLOT_MASTER);
-                    let x = self.game.ft_80087c58(e);
+                    let x = self.game.ft_invincibility(e);
                     self.game.one_player.boss.master_x1988 = x;
-                    self.game.ft_80087c64(e, 2);
+                    self.game.ft_set_invincibility(e, 2);
                     self.game.one_player.boss.timer = 1;
                 } else if b.timer == 1 {
                     self.sfx_play(0x81651, 127, 64);
@@ -130,9 +130,9 @@ impl Running<'_> {
                     self.game.set_player_more_flags_bit4(SLOT_PLAYER, 0);
                     self.game.set_player_more_flags_bit3(SLOT_PLAYER, 0);
                     let e = self.player_gobj(SLOT_PLAYER);
-                    self.game.ft_80087c64(e, b.player_x1988);
+                    self.game.ft_set_invincibility(e, b.player_x1988);
                     let e = self.player_gobj(SLOT_MASTER);
-                    self.game.ft_80087c64(e, b.master_x1988);
+                    self.game.ft_set_invincibility(e, b.master_x1988);
                     self.boss_camera_standard();
                     self.game.one_player.boss.state = 4;
                 }

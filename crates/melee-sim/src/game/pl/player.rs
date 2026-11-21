@@ -828,7 +828,7 @@ impl Game {
     #[doc(alias = "Player_80036058")]
     pub fn player_80036058(&self, slot: i32) -> bool {
         let g = self.player(slot).entity(0).expect("a fighter");
-        self.ft_80086f4c(g)
+        self.ft_shows_name_tag(g)
     }
 
     /// Clears a slot for a new match, `Player_InitOrResetPlayer`. The original zeroes the
@@ -1164,7 +1164,7 @@ impl Running<'_> {
     pub fn player_800366dc(&mut self, slot: i32, arg: i32) {
         for i in 0..2 {
             if let Some(g) = self.game.player(slot).entity(i) {
-                self.game.ft_80087ac0(g, arg);
+                self.game.ft_set_visible(g, arg);
             }
         }
     }
@@ -1174,7 +1174,7 @@ impl Running<'_> {
     pub fn player_80036790(&mut self, slot: i32, v: f32) {
         for i in 0..2 {
             if let Some(g) = self.game.player(slot).entity(i) {
-                self.game.ft_80086a4c(g, v);
+                self.game.ft_set_pending_hitlag(g, v);
             }
         }
     }
@@ -1184,7 +1184,7 @@ impl Running<'_> {
     pub fn player_80036844(&mut self, slot: i32, arg: i32) {
         for i in 0..2 {
             if let Some(g) = self.game.player(slot).entity(i) {
-                self.game.ft_80087bac(g, arg);
+                self.game.ft_set_blast_immune(g, arg);
             }
         }
     }
