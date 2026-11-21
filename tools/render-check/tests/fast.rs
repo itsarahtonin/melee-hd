@@ -100,7 +100,12 @@ fn identical(game: &Game, frames: &[u32]) {
 
 /// The fast renderer draws every frame within the tolerance; prints each frame's report.
 fn within(game: &Game, frames: &[u32]) {
-    let (ok, text) = fast(game, frames, &["--renderer", "fast"]);
+    within_with(game, frames, &["--renderer", "fast"]);
+}
+
+/// [`within`] with `args`.
+fn within_with(game: &Game, frames: &[u32], args: &[&str]) {
+    let (ok, text) = fast(game, frames, args);
     let each = frames_of(&text);
     println!("{text}");
     assert!(ok && each.len() == frames.len(), "{}: {text}", game.name);
@@ -132,6 +137,22 @@ macro_rules! identical {
                 #[ignore = "needs the disc, ssbm-rs's local data and the Slippi replays"]
                 fn $name() {
                     within(&$game, &[$($frame),*]);
+                }
+            )*
+        }
+
+        /// The fast renderer on its threads (`--threaded`), as the player draws: each frame's
+        /// stream run on a thread of its own as it's built, and the flushes encoded and
+        /// submitted on another (its geometry is the CPU's transforms of the meshes, its image
+        /// the GPU's).
+        mod the_fast_renderer_threaded {
+            use super::*;
+
+            $(
+                #[test]
+                #[ignore = "needs the disc, ssbm-rs's local data and the Slippi replays"]
+                fn $name() {
+                    within_with(&$game, &[$($frame),*], &["--renderer", "fast", "--threaded"]);
                 }
             )*
         }
@@ -351,4 +372,33 @@ fn an_ulp_in_the_matrices_passes() {
 #[ignore = "needs the disc, ssbm-rs's local data and the Slippi replays"]
 fn a_sixteenth_of_a_pixel_passes() {
     noise("snap");
+}
+
+/// The matches the blended frames are drawn on: a match of four fighters, Fox's ditto with its
+/// lasers and shines (particles), and Fountain of Dreams (its reflection's copy).
+const BLEND_SAMPLE: &[(Game, &[u32])] = &[
+    (FOUR_FD, &[600]),
+    (FOX_FOX_FD, &[600, 2600]),
+    (SHEIK_FOX_FOD, &[600]),
+];
+
+/// The fast renderer's frames between ticks, as the player's High refresh draws them, within
+/// tolerance of the exact renderer's: interpolated (from the tick before) and extrapolated
+/// (toward the next tick, predicted exactly), a quarter, half and three quarters of the way,
+/// on one thread, and halfway on its threads.
+#[test]
+#[ignore = "needs the disc, ssbm-rs's local data and the Slippi replays"]
+fn the_fast_renderer_draws_blended_frames() {
+    for (game, frames) in BLEND_SAMPLE {
+        for mode in ["--interpolate", "--extrapolate"] {
+            for t in ["0.25", "0.5", "0.75"] {
+                within_with(game, frames, &["--renderer", "fast", mode, t]);
+            }
+            within_with(
+                game,
+                frames,
+                &["--renderer", "fast", "--threaded", mode, "0.5"],
+            );
+        }
+    }
 }

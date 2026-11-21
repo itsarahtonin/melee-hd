@@ -30,6 +30,7 @@ pub mod mesh;
 mod mesh_tests;
 #[cfg(test)]
 mod scaled_copy_tests;
+mod submit;
 pub mod testing;
 mod tev;
 #[cfg(test)]
@@ -369,6 +370,10 @@ struct Profile {
     /// XFB).
     flush_all: std::time::Duration,
     flushes: u64,
+    /// The frame's wait at its end for the submission thread (`submit`) to submit it, and
+    /// that thread's time writing, finishing encoders and submitting them.
+    drain: std::time::Duration,
+    submit: [u64; 5],
     /// The state set between calls: pipelines, uniforms, textures, scissors.
     changes: [u64; 4],
 }
@@ -396,15 +401,27 @@ impl Profile {
             self.calls / n
         );
         eprintln!(
-            "render per frame: draws' state {:.3} ms, flushes {:.3} ms ({:.1} of them); set between calls: {:.0} pipelines, {:.0} uniforms, {:.0} textures, {:.0} scissors",
+            "render per frame: draws' state {:.3} ms, flushes {:.3} ms ({:.1} of them), the wait for their submission {:.3} ms; set between calls: {:.0} pipelines, {:.0} uniforms, {:.0} textures, {:.0} scissors",
             ms(self.state),
             ms(self.flush_all),
             self.flushes as f64 / n as f64,
+            ms(self.drain),
             self.changes[0] as f64 / n as f64,
             self.changes[1] as f64 / n as f64,
             self.changes[2] as f64 / n as f64,
             self.changes[3] as f64 / n as f64,
         );
+        if self.submit.iter().any(|&d| d != 0) {
+            let ns = |d: u64| ms(std::time::Duration::from_nanos(d));
+            eprintln!(
+                "submission thread per frame: writes {:.3} ms ({} of them, {} KB), finishing encoders {:.3} ms, submitting {:.3} ms",
+                ns(self.submit[0]),
+                self.submit[3] / n,
+                self.submit[4] / n / 1024,
+                ns(self.submit[1]),
+                ns(self.submit[2]),
+            );
+        }
         *self = Profile::default();
     }
 }
@@ -471,7 +488,9 @@ pub type Unsupported = HashMap<&'static str, u64>;
 
 pub struct Renderer {
     device: wgpu::Device,
-    queue: wgpu::Queue,
+    /// The queue, its writes to buffers and its submissions in order (on a thread of their
+    /// own on the render thread: `submit`).
+    queue: submit::Ordered,
     efb: wgpu::Texture,
     efb_view: wgpu::TextureView,
     /// The multisampled EFB the draws go to, with `samples` above 1, resolved into `efb`.
@@ -1031,7 +1050,7 @@ impl Renderer {
             depth_view: targets.depth_view,
             efb: targets.efb,
             device,
-            queue,
+            queue: submit::Ordered::new(queue),
             module,
             early_module,
             layout,
@@ -1230,7 +1249,7 @@ impl Renderer {
     }
 
     pub fn queue(&self) -> &wgpu::Queue {
-        &self.queue
+        self.queue.raw()
     }
 
     /// Hands each frame to `f` as it's finished, instead of keeping it for `take_frames`.
@@ -1273,7 +1292,7 @@ impl Renderer {
                 let start = (row * ow * 4) as usize;
                 data.extend_from_slice(&rgba[start..start + (w * 4) as usize]);
             }
-            self.queue.write_texture(
+            self.queue.raw().write_texture(
                 wgpu::TexelCopyTextureInfo {
                     texture: &texture,
                     mip_level: level as u32,
@@ -1914,7 +1933,7 @@ impl Renderer {
             if clear.color.is_some() || clear.depth.is_some() {
                 let mut encoder = self.device.create_command_encoder(&Default::default());
                 drop(self.efb_pass(&mut encoder, clear));
-                self.queue.submit([encoder.finish()]);
+                self.queue.submit(encoder);
             }
             return;
         }
@@ -1932,8 +1951,8 @@ impl Renderer {
                 &self.queue,
                 &self.vertex_layout,
                 &mut encoder,
-                &self.vertices,
-                &self.indices,
+                &mut self.vertices,
+                &mut self.indices,
             )
         });
         let vbytes: &[u8] = bytemuck::cast_slice(&self.vertices);
@@ -2014,7 +2033,7 @@ impl Renderer {
             }
         };
         let (ubuf, ugroup) = self.uniform_buffer.as_ref().unwrap();
-        self.queue.write_buffer(ubuf, 0, &self.uniforms);
+        self.queue.write_bytes(ubuf, 0, &mut self.uniforms);
         self.tev.collect();
         let mut changes = [0u64; 4];
         {
@@ -2083,7 +2102,7 @@ impl Renderer {
             }
             p.flushes += 1;
         }
-        self.queue.submit([encoder.finish()]);
+        self.queue.submit(encoder);
         self.vertices.clear();
         self.indices.clear();
         self.uniforms.clear();
@@ -2130,7 +2149,8 @@ impl Renderer {
                 depth_or_array_layers: 1,
             },
         );
-        self.queue.submit([encoder.finish()]);
+        self.queue.submit(encoder);
+        self.queue.drain();
         let slice = buffer.slice(..);
         slice.map_async(wgpu::MapMode::Read, |_| {});
         self.device
@@ -2345,7 +2365,8 @@ impl Renderer {
             },
             texture.size(),
         );
-        self.queue.submit([encoder.finish()]);
+        self.queue.submit(encoder);
+        self.queue.drain();
         let slice = buffer.slice(..);
         slice.map_async(wgpu::MapMode::Read, |_| {});
         self.device
@@ -2864,11 +2885,15 @@ impl Renderer {
             self.flush();
         }
         let tg = texgens(state) as u32;
-        let (device, queue, frame) = (self.device.clone(), self.queue.clone(), self.frame);
+        let frame = self.frame;
         let mut runs = std::mem::take(&mut self.mesh_runs);
-        self.gpu_meshes().draw(
-            &device,
-            &queue,
+        let (device, checks) = (&self.device, self.checks);
+        let meshes = self
+            .gpu_meshes
+            .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks));
+        meshes.draw(
+            device,
+            &self.queue,
             state,
             mesh,
             normals,
@@ -2909,10 +2934,11 @@ impl Renderer {
     /// with the state as it stands and the normals the draws before left: for the comparison
     /// harness's geometry, read back from the GPU at once.
     pub fn mesh_clips(&mut self, state: &State, mesh: &Arc<mesh::Mesh>) -> Vec<[f32; 4]> {
-        let (device, queue, frame) = (self.device.clone(), self.queue.clone(), self.frame);
-        let normals = self.scratch.normals;
-        self.gpu_meshes()
-            .clips(&device, &queue, state, mesh, &normals, frame)
+        let (frame, normals) = (self.frame, self.scratch.normals);
+        let (device, checks) = (&self.device, self.checks);
+        self.gpu_meshes
+            .get_or_insert_with(|| gpu_mesh::GpuMeshes::new(device, checks))
+            .clips(device, &self.queue, state, mesh, &normals, frame)
     }
 
     /// The rest of a draw, from its built vertices.
@@ -3188,10 +3214,19 @@ impl Renderer {
                 let t2 = std::time::Instant::now();
                 (xfb::copy(state, value, &efb, rect), t2)
             };
+            // The frame goes on once everything that draws it is submitted.
+            let t3 = std::time::Instant::now();
+            self.queue.drain();
             if let Some(p) = &mut self.profile {
+                p.drain += t3.elapsed();
+                if let Some(times) = self.queue.take_times() {
+                    for (a, b) in p.submit.iter_mut().zip(times) {
+                        *a += b;
+                    }
+                }
                 p.flush += t1 - t;
                 p.readback += t2 - t1;
-                p.xfb += t2.elapsed();
+                p.xfb += t3 - t2;
                 p.report();
                 if p.frames == 0 && self.material_records {
                     let s = std::mem::take(&mut self.materials.stats);

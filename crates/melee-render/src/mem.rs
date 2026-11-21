@@ -10,7 +10,8 @@
 //! what the renderers kept of the old range by address goes ([`Space::reclaimed_since`],
 //! `Gpu::run`). Until the space first fills, every archive keeps the range it was given.
 
-use std::cell::RefCell;
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 
@@ -213,8 +214,11 @@ pub struct Patch {
 }
 
 /// The GPU's view of memory.
+///
+/// Shared with the thread that runs a piped frame's stream (`Frames::frame_piped`) while the
+/// game thread builds it, so what changes is behind locks.
 pub struct Space {
-    ranges: RefCell<Ranges>,
+    ranges: Mutex<Ranges>,
     /// Display lists the game rewrote in place (refraction's matrix indices): each list, its
     /// length, and the vertex stride and the offsets of the two indices, as
     /// `PObjs::refract_patches` holds them, in order ([`Space::set_patches`]).
@@ -226,13 +230,15 @@ pub struct Space {
     /// such as the default font's glyphs).
     dol: Vec<(u32, Vec<u8>)>,
     /// Bytes copies from the EFB wrote over loaded data, by address.
-    overlay: RefCell<Vec<(u32, Vec<u8>)>>,
+    overlay: Mutex<Vec<(u32, Vec<u8>)>>,
+    /// Whether `overlay` has ever held any, so reads skip its lock until it has.
+    overlaid: AtomicBool,
 }
 
 impl Default for Space {
     fn default() -> Self {
         Space {
-            ranges: RefCell::new(Ranges {
+            ranges: Mutex::new(Ranges {
                 next: ARCHIVE_BASE,
                 next_dynamic: DYNAMIC_BASE,
                 ..Ranges::default()
@@ -241,7 +247,8 @@ impl Default for Space {
             patch_len: 0,
             patched_archives: Vec::new(),
             dol: Vec::new(),
-            overlay: RefCell::new(Vec::new()),
+            overlay: Mutex::new(Vec::new()),
+            overlaid: AtomicBool::new(false),
         }
     }
 }
@@ -276,7 +283,7 @@ impl Space {
     /// Starts building a frame: the archives `keep` names (those whose addresses HSD's caches
     /// hold from the frames before, `prev_array`'s) count as drawn in it.
     pub fn begin_frame(&self, keep: &[Option<ArchiveId>]) {
-        let mut ranges = self.ranges.borrow_mut();
+        let mut ranges = self.ranges.lock().unwrap();
         ranges.frame = ranges.frame.wrapping_add(1);
         let frame = ranges.frame;
         for a in keep.iter().flatten() {
@@ -288,7 +295,7 @@ impl Space {
 
     /// The address of a place in an archive, giving the archive its range if it has none.
     pub fn addr(&self, data: &Archives, r: DataRef) -> u32 {
-        let mut ranges = self.ranges.borrow_mut();
+        let mut ranges = self.ranges.lock().unwrap();
         let frame = ranges.frame;
         if let Some(Some(slot)) = ranges.slots.get_mut(usize::from(r.archive.0)) {
             slot.used = frame;
@@ -326,14 +333,14 @@ impl Space {
 
     /// How many ranges have gone back so far.
     pub fn reclaims(&self) -> u64 {
-        self.ranges.borrow().reclaims
+        self.ranges.lock().unwrap().reclaims
     }
 
     /// The ranges (start, end) that went back since there had been `seen` ([`Space::reclaims`]),
     /// whose addresses may now hold another archive's bytes; `None` when that's more than the
     /// space remembers, so everything kept by an archive's address must go.
     pub fn reclaimed_since(&self, seen: u64) -> Option<Vec<(u32, u32)>> {
-        let ranges = self.ranges.borrow();
+        let ranges = self.ranges.lock().unwrap();
         let n = usize::try_from(ranges.reclaims.checked_sub(seen)?).ok()?;
         let log = &ranges.reclaimed;
         (n <= log.len()).then(|| log.iter().skip(log.len() - n).copied().collect())
@@ -343,7 +350,7 @@ impl Space {
     /// EFB went there.
     pub fn pin_at(&self, phys: u32) {
         let phys = phys & 0x03FF_FFFF;
-        let mut ranges = self.ranges.borrow_mut();
+        let mut ranges = self.ranges.lock().unwrap();
         let i = ranges.archives.partition_point(|a| a.0 <= phys);
         let Some(&(_, end, archive)) = i.checked_sub(1).and_then(|i| ranges.archives.get(i)) else {
             return;
@@ -361,7 +368,7 @@ impl Space {
     /// their block's leftovers), as do the old addresses of images made again larger, and the
     /// new image takes the lowest gap that holds it.
     pub fn dynamic(&self, what: Dynamic, size: u32) -> u32 {
-        let mut ranges = self.ranges.borrow_mut();
+        let mut ranges = self.ranges.lock().unwrap();
         let frame = ranges.frame;
         if let Some(d) = ranges.dynamic.iter_mut().find(|d| d.what == what) {
             if d.size >= size {
@@ -400,7 +407,7 @@ impl Space {
     /// new block the game took for it.
     pub fn seed(&self, what: Dynamic, at: u32, seed: &Seed) {
         {
-            let mut ranges = self.ranges.borrow_mut();
+            let mut ranges = self.ranges.lock().unwrap();
             if ranges
                 .seeds
                 .iter()
@@ -416,7 +423,7 @@ impl Space {
 
     /// Marks image `what` copied into since its seed.
     pub fn seed_copied(&self, what: Dynamic) {
-        for s in &mut self.ranges.borrow_mut().seeds {
+        for s in &mut self.ranges.lock().unwrap().seeds {
             if s.0 == what {
                 s.2 = true;
             }
@@ -426,7 +433,8 @@ impl Space {
     /// Whether image `what` still shows its seed's bytes and the game didn't know them all.
     pub fn seed_unknown(&self, what: Dynamic) -> bool {
         self.ranges
-            .borrow()
+            .lock()
+            .unwrap()
             .seeds
             .iter()
             .any(|s| s.0 == what && !s.2 && !s.1.known)
@@ -438,14 +446,15 @@ impl Space {
         let addr = addr & 0x03FF_FFFF;
         if addr < DYNAMIC_BASE {
             self.pin_at(addr);
-            let mut o = self.overlay.borrow_mut();
+            let mut o = self.overlay.lock().unwrap();
             o.retain(|(a, b)| {
                 !(*a >= addr && *a as usize + b.len() <= addr as usize + bytes.len())
             });
             o.push((addr, bytes.to_vec()));
+            self.overlaid.store(true, Ordering::Release);
             return;
         }
-        let mut ranges = self.ranges.borrow_mut();
+        let mut ranges = self.ranges.lock().unwrap();
         let frame = ranges.frame;
         for d in &mut ranges.dynamic {
             if addr >= d.start && addr < d.start + d.size {
@@ -490,7 +499,7 @@ impl Space {
             return None;
         }
         let (start, end, archive) = {
-            let ranges = self.ranges.borrow();
+            let ranges = self.ranges.lock().unwrap();
             let i = ranges.archives.partition_point(|a| a.0 <= phys);
             *ranges.archives.get(i.checked_sub(1)?)?
         };
@@ -503,7 +512,14 @@ impl Space {
         let out = bytes.get(at..at + len)?;
         let over =
             |a: u32, n: usize| u64::from(a) < hi && u64::from(a) + n as u64 > u64::from(phys);
-        if self.overlay.borrow().iter().any(|(a, b)| over(*a, b.len())) {
+        if self.overlaid.load(Ordering::Acquire)
+            && self
+                .overlay
+                .lock()
+                .unwrap()
+                .iter()
+                .any(|(a, b)| over(*a, b.len()))
+        {
             return None;
         }
         if self.patched(archive, at as u32, hi - u64::from(start)) {
@@ -520,7 +536,7 @@ impl Space {
             return None;
         }
         let (start, end, archive) = {
-            let ranges = self.ranges.borrow();
+            let ranges = self.ranges.lock().unwrap();
             let i = ranges.archives.partition_point(|a| a.0 <= phys);
             *ranges.archives.get(i.checked_sub(1)?)?
         };
@@ -528,8 +544,8 @@ impl Space {
         if hi > u64::from(end) {
             return None;
         }
-        let over =
-            self.overlay.borrow().iter().any(|(a, b)| {
+        let over = self.overlaid.load(Ordering::Acquire)
+            && self.overlay.lock().unwrap().iter().any(|(a, b)| {
                 u64::from(*a) < hi && u64::from(*a) + b.len() as u64 > u64::from(phys)
             });
         let at = DataRef {
@@ -552,7 +568,7 @@ impl Space {
     /// rewrites applied) or an image the presentation made; zeros elsewhere.
     pub fn read(&self, data: &Archives, phys: u32, out: &mut [u8]) {
         out.fill(0);
-        let ranges = self.ranges.borrow();
+        let ranges = self.ranges.lock().unwrap();
         let phys = phys & 0x03FF_FFFF;
         if phys >= DYNAMIC_BASE {
             for d in &ranges.dynamic {
@@ -586,11 +602,13 @@ impl Space {
         let at = (phys - start) as usize;
         let n = out.len().min(bytes.len() - at);
         out[..n].copy_from_slice(&bytes[at..at + n]);
-        for (a, b) in self.overlay.borrow().iter() {
-            let (lo, hi) = (*a.max(&phys), (*a + b.len() as u32).min(phys + n as u32));
-            if lo < hi {
-                out[(lo - phys) as usize..(hi - phys) as usize]
-                    .copy_from_slice(&b[(lo - a) as usize..(hi - a) as usize]);
+        if self.overlaid.load(Ordering::Acquire) {
+            for (a, b) in self.overlay.lock().unwrap().iter() {
+                let (lo, hi) = (*a.max(&phys), (*a + b.len() as u32).min(phys + n as u32));
+                if lo < hi {
+                    out[(lo - phys) as usize..(hi - phys) as usize]
+                        .copy_from_slice(&b[(lo - a) as usize..(hi - a) as usize]);
+                }
             }
         }
         // The game's rewrites of refracting shapes' display lists.

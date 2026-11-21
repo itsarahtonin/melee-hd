@@ -56,6 +56,7 @@ pub struct Given {
     pub jit_margin: bool,
     pub scale: bool,
     pub msaa: bool,
+    pub renderer: bool,
     pub record: bool,
     pub replays: bool,
     pub record_sessions: bool,
@@ -75,6 +76,8 @@ pub struct Settings {
     pub scale: u32,
     /// Four samples a pixel.
     pub msaa: bool,
+    /// Draws with the fast renderer (docs/fast-renderer.md) rather than the exact one.
+    pub fast_renderer: bool,
     /// High refresh: on is Extrapolate (the panel's toggle); the command line can give
     /// Interpolate, which the file keeps as on.
     pub high_refresh: Mode,
@@ -125,10 +128,31 @@ pub const DEBUG_LEVELS: [(i32, &str, &str); 3] = [
 pub const DEBUG_HELP: &str = "Raises Melee's debug level, as an Action Replay code does. Applies from Melee's next start (Restart Melee\u{2026}), and never to a replay.";
 /// The warning while the debug level isn't Off.
 pub const DEBUG_WARNING: &str = "The debug menu switches your save's language to Japanese as it opens (Melee's own bug), and its entries can change unlocks and records, which Melee saves to your card. Its Yoshiki Test page can erase your save and your Camera Mode snapshots; melee-hd keeps a copy of each in the backups folder. Some debug tools aren't in melee-hd yet and stop the game.";
-/// The "Save replays" help line while Melee runs under Vanilla, whose box is off and greyed:
-/// only the Slippi ruleset saves replays (Sarah, 2026-11-19: "Slippi only"; this line proposed
-/// 2026-11-19, awaiting her word).
+/// The "Save replays" help line while the chosen ruleset is Vanilla, whose box is off and
+/// greyed: only the Slippi ruleset saves replays (Sarah, 2026-11-19: "Slippi only"; this line
+/// signed off 2026-11-20).
 pub const REPLAYS_VANILLA: &str = "Slippi ruleset only: Slippi Dolphin can't play Vanilla's matches back exactly. Record sessions, below, keeps every session exactly.";
+/// The note under Save replays while the chosen ruleset isn't the one Melee runs (proposed
+/// 2026-11-20, awaiting Sarah's word).
+pub const REPLAYS_NEXT_START: &str = "Applies from Melee's next start (Restart Melee\u{2026}).";
+
+/// How the Recording section shows Save replays: it follows the ruleset chosen (the Game
+/// section's, which Melee's next start runs), as the other next-start settings do, while what
+/// saves follows the one Melee runs (`crate::saves_replays`). Whether the box can be changed,
+/// its help line, and the note while the two differ.
+fn replays_box(chosen: Ruleset, running: Ruleset) -> (bool, &'static str, Option<&'static str>) {
+    let saves = crate::saves_replays(chosen);
+    let help = if saves {
+        REPLAYS_SLIPPI_HELP
+    } else {
+        REPLAYS_VANILLA
+    };
+    (
+        saves,
+        help,
+        (chosen != running).then_some(REPLAYS_NEXT_START),
+    )
+}
 /// The "Save replays" help line while Melee runs under the Slippi ruleset (approved 2026-11-18;
 /// Slo-Mo Melee dropped from it as it became a live match, proposed the same day, awaiting
 /// Sarah's word): the matches design call 6 of `docs/slippi-ruleset.md` leaves unrecorded,
@@ -168,6 +192,14 @@ pub const STOP_TEXT: &str = "Melee reached something melee-hd can't play yet, or
 /// Report a bug's button and help line (proposed 2026-11-14, awaiting Sarah's word).
 pub const REPORT_BUTTON: &str = "Report a bug";
 pub const REPORT_HELP: &str = "Saves a zip in the settings folder with this session's recording, the log, your latest captures and your settings, and opens the folder. Nothing is sent anywhere: attach the zip to your report yourself.";
+
+/// The Renderer setting's choices and help lines (Sarah, 2026-11-20: signed off, Fast's line
+/// with "giving high performance" for "for low-end PCs").
+fn renderer_name(fast: bool) -> &'static str {
+    if fast { "Fast" } else { "Exact" }
+}
+pub const RENDERER_FAST_HELP: &str = "Draws the same picture with far less of the processor's time, giving high performance and the lowest latency.";
+pub const RENDERER_EXACT_HELP: &str = "Draws every frame step by step as the console's graphics chip does: the reference the fast renderer is checked against.";
 
 /// A debug level's line of [`DEBUG_LEVELS`] (Off's for one not offered).
 fn debug_level(level: i32) -> (i32, &'static str, &'static str) {
@@ -209,6 +241,8 @@ impl Default for Settings {
             fullscreen: false,
             scale: 0,
             msaa: false,
+            // The fast renderer by default since 2026-11-20 (Sarah).
+            fast_renderer: true,
             // Both on by default since 2026-11-14 (Sarah).
             high_refresh: Mode::Extrapolate,
             present: Present::Mailbox,
@@ -266,9 +300,10 @@ impl Settings {
             self.audio_device,
             on(self.audio_exclusive),
         ) + &format!(
-            "recordings = {}\nruleset = {}\nsettings-version = {SETTINGS_VERSION}\n",
+            "recordings = {}\nruleset = {}\nrenderer = {}\nsettings-version = {SETTINGS_VERSION}\n",
             self.recordings,
-            ruleset_key(self.ruleset)
+            ruleset_key(self.ruleset),
+            if self.fast_renderer { "fast" } else { "exact" }
         )
     }
 
@@ -316,6 +351,11 @@ impl Settings {
                 "msaa" if !given.msaa => match v {
                     "4" => self.msaa = true,
                     "off" | "1" => self.msaa = false,
+                    _ => {}
+                },
+                "renderer" if !given.renderer => match v {
+                    "fast" => self.fast_renderer = true,
+                    "exact" => self.fast_renderer = false,
                     _ => {}
                 },
                 "high-refresh" if !given.high_refresh => {
@@ -735,6 +775,18 @@ impl Panel {
                 ui.label("");
                 ui.checkbox(&mut s.msaa, "Antialiasing (MSAA 4x)");
                 ui.end_row();
+                ui.label("Renderer");
+                let fast = &mut s.fast_renderer;
+                egui::ComboBox::from_id_salt("renderer")
+                    .selected_text(renderer_name(*fast))
+                    .width(220.0)
+                    .show_ui(ui, |ui| {
+                        for f in [true, false] {
+                            ui.selectable_value(fast, f, renderer_name(f));
+                        }
+                    });
+                ui.end_row();
+                help(ui, if s.fast_renderer { RENDERER_FAST_HELP } else { RENDERER_EXACT_HELP });
                 ui.label("Aspect ratio");
                 let aspect = &mut s.aspect;
                 egui::ComboBox::from_id_salt("aspect")
@@ -873,9 +925,9 @@ impl Panel {
         if self.unlocked == Some(true) {
             ui.weak("Everything is unlocked.");
         }
-        // Replays are saved under the Slippi ruleset only: under Vanilla the box shows off and
-        // greyed, and the setting stays kept for the Slippi ruleset.
-        let saves = crate::saves_replays(self.running);
+        // Replays are saved under the Slippi ruleset only: with Vanilla chosen the box shows off
+        // and greyed, and the setting stays kept for the Slippi ruleset.
+        let (saves, replays_help, replays_note) = replays_box(self.settings.ruleset, self.running);
         let s = &mut self.settings;
         section(ui, "Recording");
         egui::Grid::new("recording")
@@ -889,14 +941,10 @@ impl Panel {
                     ui.add_enabled(false, egui::Checkbox::new(&mut false, "Save replays"));
                 }
                 ui.end_row();
-                help(
-                    ui,
-                    if saves {
-                        REPLAYS_SLIPPI_HELP
-                    } else {
-                        REPLAYS_VANILLA
-                    },
-                );
+                help(ui, replays_help);
+                if let Some(note) = replays_note {
+                    help(ui, note);
+                }
                 ui.label("Replays folder");
                 ui.add_enabled(
                     saves && s.record,
@@ -1064,6 +1112,7 @@ mod tests {
             fullscreen: true,
             scale: 3,
             msaa: true,
+            fast_renderer: false,
             high_refresh: Mode::Off,
             present: Present::Immediate,
             added_delay: 2,
@@ -1112,6 +1161,19 @@ mod tests {
         s.restore(&picked().save(), &given);
         assert_eq!((s.scale, s.aspect), (2, Aspect::STRETCHED));
         assert!(s.msaa && !s.record_sessions);
+    }
+
+    /// The fast renderer is the default (Sarah, 2026-11-20); a file that names the exact one
+    /// keeps it, and one that names neither takes the default.
+    #[test]
+    fn the_fast_renderer_is_the_default() {
+        assert!(Settings::default().fast_renderer);
+        let mut s = Settings::default();
+        s.restore("renderer = exact\n", &Given::default());
+        assert!(!s.fast_renderer);
+        let mut s = Settings::default();
+        s.restore("msaa = 4\n", &Given::default());
+        assert!(s.fast_renderer);
     }
 
     /// High refresh and just-in-time ticks are on by default; an older file's Interpolate reads
@@ -1275,6 +1337,24 @@ mod tests {
         back.restore(&s.save(), &Given::default());
         assert_eq!(back, s);
         assert!(s.save().contains("\nrecord = on\n"), "{}", s.save());
+    }
+
+    /// Save replays follows the ruleset chosen, not the one Melee runs: chosen Slippi, it can be
+    /// changed while Vanilla still runs; chosen Vanilla, it's off and greyed while Slippi still
+    /// runs; either way with the note that it applies from the next start.
+    #[test]
+    fn save_replays_follows_the_chosen_ruleset() {
+        let (v, s) = (Ruleset::Vanilla, Ruleset::Slippi);
+        assert_eq!(
+            replays_box(s, v),
+            (true, REPLAYS_SLIPPI_HELP, Some(REPLAYS_NEXT_START))
+        );
+        assert_eq!(
+            replays_box(v, s),
+            (false, REPLAYS_VANILLA, Some(REPLAYS_NEXT_START))
+        );
+        assert_eq!(replays_box(s, s), (true, REPLAYS_SLIPPI_HELP, None));
+        assert_eq!(replays_box(v, v), (false, REPLAYS_VANILLA, None));
     }
 
     /// The audio settings come back, and the command line's exclusive mode wins; no device is

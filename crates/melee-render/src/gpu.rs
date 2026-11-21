@@ -26,6 +26,10 @@ pub struct Gpu {
     /// The fast renderer's mesh cache ([`Gpu::with_meshes`]): display lists drawn from meshes
     /// decoded once.
     meshes: Option<RefCell<Meshes>>,
+    /// Each frame run as it's built ([`Gpu::fast`]).
+    streamed: bool,
+    /// The last streamed frame's time running its pieces ([`Gpu::fed`]).
+    fed: std::time::Duration,
 }
 
 /// Where the renderer runs: on the game's thread, or on threads of its own that work on a frame
@@ -64,6 +68,12 @@ pub trait Observer {
     /// its vertices' clip-space positions as the GPU's transforms made them, where they ran on
     /// this thread (F3).
     fn mesh(&self, _state: &State, _mesh: &Mesh, _clips: Option<&[[f32; 4]]>) {}
+}
+
+/// An observer of a streamed frame ([`Gpu::run_streamed`]), told the frame's marks so far
+/// (`Frames::marks`) before each piece runs.
+pub trait StreamObserver: Observer {
+    fn marks(&self, marks: &[(u32, u32)]);
 }
 
 impl Memory for Host<'_> {
@@ -142,6 +152,18 @@ impl Memory for Host<'_> {
     }
 }
 
+/// Whether a streamed frame's pieces run on a thread of their own (`Frames::frame_piped`):
+/// where the processor runs four threads or more at once (on two cores the thread costs more
+/// than it takes off the game thread); `MELEE_RENDER_PIPE` 1 or 0 says so either way.
+fn piped() -> bool {
+    static PIPED: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *PIPED.get_or_init(|| match std::env::var("MELEE_RENDER_PIPE").as_deref() {
+        Ok("0") => false,
+        Ok("1") => true,
+        _ => std::thread::available_parallelism().is_ok_and(|n| n.get() >= 4),
+    })
+}
+
 /// Memory for a stream run without drawing: the GPU's state follows it, nothing draws.
 struct Quiet<'a> {
     space: &'a Space,
@@ -185,6 +207,8 @@ impl Gpu {
             produced: Vec::new(),
             reclaims: 0,
             meshes: None,
+            streamed: false,
+            fed: std::time::Duration::ZERO,
         }
     }
 
@@ -201,6 +225,48 @@ impl Gpu {
         };
         self.meshes = Some(RefCell::new(Meshes::new(split)));
         self
+    }
+
+    /// The fast renderer (docs/fast-renderer.md): the meshes ([`Gpu::with_meshes`]) transformed
+    /// on the GPU and each draw's state from its material's record, on the renderer's own
+    /// threads unless `threaded` is false, where each frame runs as it's built ([`Gpu::draw`]).
+    pub fn fast(mut renderer: Renderer, threaded: bool) -> Gpu {
+        renderer.gpu_transforms = true;
+        renderer.material_records = true;
+        let gpu = if threaded {
+            Gpu::threaded(renderer)
+        } else {
+            Gpu::new(renderer)
+        };
+        let mut gpu = gpu.with_meshes();
+        gpu.streamed = true;
+        gpu
+    }
+
+    /// Whether this is the fast renderer ([`Gpu::fast`]).
+    pub fn is_fast(&self) -> bool {
+        self.streamed
+    }
+
+    /// Builds and draws a frame with `frames`: the fast renderer on its threads runs it as it's
+    /// built ([`Gpu::run_streamed`]), the exact one and the fast one on one thread once `Frames::frame_blended` has built it. Returns
+    /// the frames it copied to the XFB.
+    pub fn draw(
+        &mut self,
+        frames: &mut crate::frame::Frames,
+        game: &melee_sim::game::state::Game,
+        data: &Archives,
+        draws: &[melee_sim::hsd::display::Draw],
+        blend: Option<crate::blend::Blend<'_>>,
+    ) -> Vec<Frame> {
+        // On one thread nothing draws beside the build: the stream in pieces only costs.
+        let threaded = matches!(*self.renderer.borrow(), Backend::Threaded(_));
+        if self.streamed && threaded {
+            self.run_streamed(frames, game, data, draws, blend, None)
+        } else {
+            let fifo = frames.frame_blended(game, data, draws, blend);
+            self.run(&frames.space, data, &fifo, None)
+        }
     }
 
     /// The mesh cache, with [`Gpu::with_meshes`].
@@ -222,6 +288,8 @@ impl Gpu {
             produced: Vec::new(),
             reclaims: 0,
             meshes: None,
+            streamed: false,
+            fed: std::time::Duration::ZERO,
         }
     }
 
@@ -295,6 +363,20 @@ impl Gpu {
         self.reclaims = now;
     }
 
+    /// How long the last streamed frame's game thread spent running its stream's pieces
+    /// (through melee-gx to the renderer), beside building them.
+    pub fn fed(&self) -> std::time::Duration {
+        self.fed
+    }
+
+    /// How long the last frame's end waited for the renderer's threads (zero on one thread).
+    pub fn waited(&self) -> std::time::Duration {
+        match &*self.renderer.borrow() {
+            Backend::Threaded(t) => t.waited(),
+            Backend::Here(_) => std::time::Duration::ZERO,
+        }
+    }
+
     /// Runs a frame's stream; returns the frames it copied to the XFB.
     pub fn run(
         &mut self,
@@ -303,10 +385,106 @@ impl Gpu {
         fifo: &[u8],
         observer: Option<&dyn Observer>,
     ) -> Vec<Frame> {
+        self.begin(space);
+        self.feed(space, data, fifo, observer);
+        self.end(space)
+    }
+
+    /// Builds a frame with `frames` and runs its stream in pieces as it's built
+    /// (`Frames::frame_streamed`), so the renderer's threads draw its first draws while the
+    /// rest are built; returns the frames it copied to the XFB. The frame is the one
+    /// [`Gpu::run`] draws from `Frames::frame_blended`'s stream.
+    pub fn run_streamed(
+        &mut self,
+        frames: &mut crate::frame::Frames,
+        game: &melee_sim::game::state::Game,
+        data: &Archives,
+        draws: &[melee_sim::hsd::display::Draw],
+        blend: Option<crate::blend::Blend<'_>>,
+        observer: Option<&(dyn StreamObserver + Sync)>,
+    ) -> Vec<Frame> {
+        struct To<'a, 'g> {
+            gpu: &'g mut Gpu,
+            data: &'a Archives,
+            observer: Option<&'a (dyn StreamObserver + Sync)>,
+        }
+        impl crate::frame::Stream for To<'_, '_> {
+            fn start(&mut self, space: &Space) {
+                self.gpu.begin(space);
+            }
+            fn piece(&mut self, space: &Space, bytes: &[u8], marks: &[(u32, u32)]) {
+                if let Some(o) = self.observer {
+                    o.marks(marks);
+                }
+                let o = self.observer.map(|o| o as &dyn Observer);
+                let t = std::time::Instant::now();
+                self.gpu.feed(space, self.data, bytes, o);
+                self.gpu.fed += t.elapsed();
+            }
+        }
+        self.fed = std::time::Duration::ZERO;
+        // On the renderer's threads its pieces run on a thread of their own
+        // (`MELEE_RENDER_PIPE=0` runs them on the game thread).
+        let threaded = matches!(*self.renderer.borrow(), Backend::Threaded(_));
+        if threaded && piped() {
+            struct Run<'a, 'g> {
+                gpu: &'g mut Gpu,
+                data: &'a Archives,
+                observer: Option<&'a (dyn StreamObserver + Sync)>,
+            }
+            impl crate::frame::Stream for Run<'_, '_> {
+                fn start(&mut self, space: &Space) {
+                    self.gpu.begin(space);
+                }
+                fn piece(&mut self, space: &Space, bytes: &[u8], marks: &[(u32, u32)]) {
+                    if let Some(o) = self.observer {
+                        o.marks(marks);
+                    }
+                    let o = self.observer.map(|o| o as &dyn Observer);
+                    let t = std::time::Instant::now();
+                    self.gpu.feed(space, self.data, bytes, o);
+                    self.gpu.fed += t.elapsed();
+                }
+            }
+            let mut run = Run {
+                gpu: self,
+                data,
+                observer,
+            };
+            frames.frame_piped(game, data, draws, blend, &mut run);
+            return self.end(&frames.space);
+        }
+        frames.frame_streamed(
+            game,
+            data,
+            draws,
+            blend,
+            &mut To {
+                gpu: self,
+                data,
+                observer,
+            },
+        );
+        self.end(&frames.space)
+    }
+
+    /// A frame's run starts: the renderer forgets the ranges the address space gave back, the
+    /// mesh cache starts its frame.
+    fn begin(&mut self, space: &Space) {
         self.forget_reclaimed(space);
         if let Some(m) = &mut self.meshes {
             m.get_mut().begin_frame();
         }
+    }
+
+    /// Runs the frame's stream's next bytes.
+    fn feed(
+        &mut self,
+        space: &Space,
+        data: &Archives,
+        fifo: &[u8],
+        observer: Option<&dyn Observer>,
+    ) {
         let host = Host {
             space,
             data,
@@ -316,6 +494,11 @@ impl Gpu {
         };
         self.state.feed(&host, fifo, &mut self.produced, false);
         self.produced.clear();
+    }
+
+    /// The frame's run ends: what its copies wrote goes to memory, and the frames it copied to
+    /// the XFB are handed back.
+    fn end(&mut self, space: &Space) -> Vec<Frame> {
         let mut r = self.renderer.borrow_mut();
         for w in r.sink().take_written() {
             space.write(w.address, &w.bytes);

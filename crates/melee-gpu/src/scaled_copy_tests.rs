@@ -88,7 +88,7 @@ fn fill(r: &Renderer, rng: &mut Rng, block: u32) {
             rgba.extend_from_slice(&v.to_le_bytes());
         }
     }
-    r.queue.write_texture(
+    r.queue.raw().write_texture(
         r.efb.as_image_copy(),
         &rgba,
         wgpu::TexelCopyBufferLayout {

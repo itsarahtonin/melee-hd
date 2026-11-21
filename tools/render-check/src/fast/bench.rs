@@ -38,6 +38,8 @@ fn read_warm_list(path: &std::path::Path) -> Vec<Vec<u32>> {
 pub struct Times {
     pub build: Duration,
     pub submit: Duration,
+    /// Of the build, running the stream as it's built (`Rendered::stream`).
+    pub stream: Duration,
     /// Waiting for the GPU after the submit.
     pub gpu: Duration,
 }
@@ -89,6 +91,7 @@ pub fn measure(
             out.push(Times {
                 build: s.build,
                 submit: s.submit,
+                stream: s.stream,
                 gpu,
             });
         }
@@ -176,9 +179,7 @@ pub fn cli(args: &[String]) -> ExitCode {
     r.warm_specialized(&listed);
     let mut exact = match which {
         Which::Exact => Exact::new(r, threaded),
-        Which::F2 => Exact::f2(r, threaded),
-        Which::F3 => Exact::f3(r, threaded),
-        Which::Fast => Exact::fast(r, threaded),
+        w => w.fast(r, threaded).expect("a fast renderer"),
     };
     let times = measure(disc, replay, from, to, &mut exact);
     if let Some((s, (n, bytes))) = exact.meshes() {
@@ -215,6 +216,12 @@ pub fn cli(args: &[String]) -> ExitCode {
         );
     };
     line("build", build);
+    if times.iter().any(|t| !t.stream.is_zero()) {
+        line(
+            "  running the stream",
+            stats(times.iter().map(|t| t.stream).collect()),
+        );
+    }
     line("submit", submit);
     line("cpu", cpu);
     line("gpu wait", gpu);
