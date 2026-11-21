@@ -6,7 +6,7 @@ use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
 use super::super::handles::CodeRef;
-use super::super::state::{OBJ_CAMERA, OBJ_JOBJ, Obj, Ruleset, Running};
+use super::super::state::{OBJ_CAMERA, OBJ_JOBJ, Obj, Running};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::TextId;
@@ -200,7 +200,7 @@ impl Running<'_> {
                 let r = self.card_game_load();
                 self.after_card_load(r);
                 let m = &mut self.game.memcard;
-                if self.game.ruleset == Ruleset::Slippi
+                if self.game.ruleset.skips_memcard_prompt()
                     && (r == result::DEVICE_ERROR || r == result::INVALID)
                 {
                     // Slippi's Skip Memcard Prompt (`C21AF6F4`, at the `cmpwi r29, 0` after the

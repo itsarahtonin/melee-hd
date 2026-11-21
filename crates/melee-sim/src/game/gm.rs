@@ -248,7 +248,7 @@ pub fn is_1p_mode(game: &Game) -> bool {
 /// ([`Rules::c_stick_1p`](super::state::Rules::c_stick_1p)), so the C-stick works as in VS.
 /// The function's other callers keep [`is_1p_mode`].
 pub fn is_1p_mode_for_c_stick(game: &Game) -> bool {
-    !game.rules.c_stick_1p && is_1p_mode(game)
+    !game.rules.c_stick_1p() && is_1p_mode(game)
 }
 
 /// Whether the game is in training mode, `gm_8018841C`.

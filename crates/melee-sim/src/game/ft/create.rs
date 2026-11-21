@@ -154,7 +154,7 @@ impl Running<'_> {
         // what it left (the slot's), a fresh heap's is zero (see `docs/engine.md`).
         let f = FighterId(self.game.fighters.alloc_stale(Fighter::default()));
         let fresh = crate::game::leftovers::pool_grew();
-        let zeroed = fighter_create && self.game.rules.slippi;
+        let zeroed = fighter_create && self.game.rules.inits_player_data();
         if zeroed {
             // Slippi's Init Player Data (`80068EEC`) zeroes the whole block.
             let fp = &mut self.game.fighters[f.0];

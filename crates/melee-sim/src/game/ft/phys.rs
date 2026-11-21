@@ -147,7 +147,7 @@ impl Running<'_> {
             fp.active_timer.lstick.y = 254;
             let f = self.game.fighter_id(gobj);
             self.fighter_play_sfx(f, 0x96, 0x7F, 0x40);
-            if self.game.rules.player.fall_fast_spark {
+            if self.game.rules.fall_fast_spark() {
                 let fp = &self.game.fighters[f.0];
                 let word = if attrs {
                     fp.co_attrs.run_animation_scaling

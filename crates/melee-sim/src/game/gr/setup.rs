@@ -615,7 +615,7 @@ fn new_ground(game: &mut Game, data: &Archives, gobj: GObjId, init_stage_data: b
     // After the menus the block holds what they left, where Slippi's Init Stage Data
     // (`801C154C`) doesn't zero it (docs/engine.md, a session's heap leftovers).
     game.gr.render_leftovers.remove(&id.0);
-    if init_stage_data && game.rules.slippi {
+    if init_stage_data && game.rules.inits_stage_data() {
         let g = &mut game.grounds[id.0];
         g.x11_flags.rest = Some(0);
         g.u.left = Some([0; super::vars::SIZE]);

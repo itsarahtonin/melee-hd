@@ -1,7 +1,6 @@
 //! Shielding (`ftCo_Guard.c`): raising the shield, holding it (tilted by the stick, shrinking
 //! as it weakens), dropping it, the stun of a hit on it, and powershields.
 
-use crate::game::ucf::Ucf;
 use gekko_fp as fp;
 
 use super::super::super::ef::{self, Arg};
@@ -646,7 +645,7 @@ impl Running<'_> {
         }
         // UCF's shield SDI lets a fast flick count past the window.
         let held = i32::from(fp.active_timer.lstick.x) >= window;
-        if held && !(self.game.rules.ucf == Ucf::V0_84 && self.ucf_shield_sdi(gobj, min)) {
+        if held && !(self.game.rules.ucf_shield_sdi() && self.ucf_shield_sdi(gobj, min)) {
             return;
         }
         let fp = self.game.fighter_mut(gobj);

@@ -308,7 +308,7 @@ impl Running<'_> {
             let fp = self.game.fighter(gobj);
             // UCF's tumble code replaces the window: a flick this frame, or last frame from
             // inside the dead zone and fast enough.
-            let flicked = if self.game.rules.ucf != Ucf::Off {
+            let flicked = if self.game.rules.ucf_tumble() != Ucf::Off {
                 self.ucf_tumble(gobj, t)
             } else {
                 i32::from(fp.active_timer.lstick.x) < window

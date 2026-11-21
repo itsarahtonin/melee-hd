@@ -8,7 +8,7 @@
 //! phase 1. Map 7 sways in its `Last_GroundVars`.
 
 use super::super::camera;
-use super::super::slippi::CodeSet;
+use super::super::ruleset::FdBackground;
 use super::super::state::{Game, Running};
 use super::super::structs::_GXColor;
 use super::anime;
@@ -210,13 +210,14 @@ pub fn proc_main(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.map();
     if !v.b1 && !v.b0 {
-        let rules = &r.game.rules;
-        if !rules.slippi {
-            advance(r, gobj);
-        } else if rules.codes == CodeSet::V3_19 {
-            let seed = r.game.objs.rng;
-            advance(r, gobj);
-            r.game.objs.rng = seed;
+        match r.game.rules.fd_background() {
+            FdBackground::DrawsFromTheSeed => advance(r, gobj),
+            FdBackground::KeepsTheSeed => {
+                let seed = r.game.objs.rng;
+                advance(r, gobj);
+                r.game.objs.rng = seed;
+            }
+            FdBackground::Skipped => {}
         }
         if r.game.grounds[g.0].u.map().b26 {
             let next = next_phase(r, gobj);

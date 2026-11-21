@@ -142,7 +142,7 @@ fn gobj_address(r: &Running, gobj: GObjId) -> i32 {
         return addr as i32;
     }
     assert!(
-        r.game.rules.slippi,
+        r.game.rules.sscope_stand_in(),
         "a Super Scope's GObj address reached gameplay in a Vanilla match without the allocator model"
     );
     ADDRESS_STAND_IN as i32

@@ -183,7 +183,7 @@ pub fn record(args: &[&str]) -> ExitCode {
     if let Some(why) = &stopped {
         println!("{why}");
     }
-    if m.game.rules.slippi {
+    if m.game.rules.notes_playback() {
         // What the playback note would say (design call 9), and how long playback's camera was
         // followed beside this one (from the first frame without the settling, and a pause).
         let d = &m.game.display_phase;

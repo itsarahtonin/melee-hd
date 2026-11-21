@@ -1426,7 +1426,7 @@ impl CameraState {
 pub fn update_quakes(r: &mut Running) {
     // Under Slippi's rules, playback's camera's (`live::PlaybackCamera`): the same update but
     // in the pause, and once more for each settling update of playback's first frame.
-    let follows = r.game.rules.slippi;
+    let follows = r.game.rules.notes_playback();
     if follows {
         let g = &mut *r.game;
         let p = &mut g.display_phase.playback;
@@ -1507,7 +1507,7 @@ pub fn request_quake(r: &mut Running, kind: i32, pos: Option<Vec3>) {
     use super::gr::grlib::quake_model;
     // Under Slippi's rules, the same request to playback's camera (`live::PlaybackCamera`):
     // the looping quake's model made where it has none, and the count set.
-    if r.game.rules.slippi {
+    if r.game.rules.notes_playback() {
         let g = &mut *r.game;
         let p = &mut g.display_phase.playback;
         p.take(&g.camera);
@@ -1550,7 +1550,7 @@ pub fn request_quake(r: &mut Running, kind: i32, pos: Option<Vec3>) {
             q.epicenter = pos.unwrap_or(Vec3::ZERO);
         }
     }
-    if r.game.rules.slippi && kind == QUAKE_LOOP {
+    if r.game.rules.notes_playback() && kind == QUAKE_LOOP {
         note_quake_model(r.game);
     }
 }
@@ -1568,7 +1568,7 @@ fn quake_length(kind: i32) -> i32 {
 /// `Camera_StopQuake` (and, under Slippi's rules, playback's camera's, `live::PlaybackCamera`).
 #[doc(alias = "Camera_StopQuake")]
 pub fn stop_quake(game: &mut Game, kind: i32) {
-    if game.rules.slippi {
+    if game.rules.notes_playback() {
         let p = &mut game.display_phase.playback;
         p.take(&game.camera);
         p.quake_frames[kind as usize] = 0;
@@ -1744,7 +1744,7 @@ fn update_average_width(game: &mut Game) {
     let width = fp::fsubs(cam_right(s), left);
     // Under Slippi's rules, playback's camera's (`live::PlaybackCamera`): the same update but
     // in the pause, and once more for each settling update of playback's first frame.
-    if game.rules.slippi {
+    if game.rules.notes_playback() {
         let c = &game.camera;
         let p = &mut game.display_phase.playback;
         p.take(c);
@@ -4026,7 +4026,8 @@ mod playback_camera_tests {
     fn playback_camera_takes_the_width_but_the_pause() {
         let run = |slippi: bool| {
             let mut g = Box::<Game>::default();
-            g.rules.slippi = slippi;
+            g.rules = crate::game::state::Rules::VANILLA
+                .with_fixes(slippi.then_some(crate::game::slippi::CodeSet::V3_19));
             g.stage_info.cam_info.cam_bounds.left = -170.0;
             g.stage_info.cam_info.cam_bounds.right = 173.3;
             let mut live = Vec::new();
@@ -4066,7 +4067,8 @@ mod playback_camera_tests {
     fn playback_camera_keeps_the_quakes_the_pause_counts_down() {
         let data = Archives::default();
         let mut g = Box::<Game>::default();
-        g.rules.slippi = true;
+        g.rules = crate::game::state::Rules::VANILLA
+            .with_fixes(Some(crate::game::slippi::CodeSet::V3_19));
         let model = g.world.create(3, 18, 1);
         g.camera.cam.quake_gobj = Some(model);
         g.camera.cam.quake_frames_left[QUAKE_LOOP as usize] = 4;

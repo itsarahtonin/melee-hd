@@ -9,6 +9,7 @@ use gekko_fp as fp;
 use super::super::code::unported_call;
 use super::super::gr::stage;
 use super::super::handles::FighterId;
+use super::super::ruleset::NanaDeterminism;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
@@ -93,8 +94,7 @@ impl Running<'_> {
     /// Whether the rules run Slippi 3.19's NanaDeterminism (`800AC5B8`), which clears r5 as
     /// well as r30 before the DI with no knockback reads them; 3.16's clears r30 alone.
     pub(super) fn nana_determinism_clears_r5(&self) -> bool {
-        let rules = &self.game.rules;
-        rules.slippi && rules.codes == super::super::slippi::CodeSet::V3_19
+        self.game.rules.nana_determinism() == NanaDeterminism::ClearsR30AndR5
     }
 
     /// The other fighter of the same player (Nana's Popo, Popo's Nana), `ftCo_800A589C`: the

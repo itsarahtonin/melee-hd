@@ -1,7 +1,6 @@
 //! Crouching and dropping through platforms (`ftCo_Squat.c`, `ftCo_SquatWait.c`,
 //! `ftCo_SquatRv.c`, `ftCo_Pass.c`).
 
-use crate::game::ucf::Ucf;
 use gekko_fp as fp;
 
 use super::super::super::state::Running;
@@ -176,7 +175,7 @@ impl Running<'_> {
     pub fn squat_rv_check(&mut self, gobj: GObjId) -> bool {
         let mut t = reg(self.common().f32(0x94));
         let fp = self.game.fighter(gobj);
-        if self.game.rules.ucf == Ucf::V0_84 && fp.active_timer.lstick.x < 1 {
+        if self.game.rules.ucf_crouch_fix() && fp.active_timer.lstick.x < 1 {
             let sq = |v: f32| {
                 let u = crate::game::ucf::units(v).wrapping_add(2);
                 u.wrapping_mul(u)
@@ -257,7 +256,7 @@ impl Running<'_> {
         let c = self.common();
         let (t, window) = (fp::fneg(reg(c.f32(0x464))), reg(c.f32(0x468)));
         let down = reg(fp.input.lstick[0].y) <= t
-            || (self.game.rules.ucf == Ucf::V0_84
+            || (self.game.rules.ucf_shield_drop_extended()
                 && self.game.ucf.0[usize::from(fp.pad_port)].flicked > 1);
         if down && f64::from(fp.active_timer.lstick.y) < window && self.on_platform(gobj) {
             self.enter_pass(gobj);

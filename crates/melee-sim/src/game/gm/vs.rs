@@ -1055,7 +1055,7 @@ impl Running<'_> {
             let o = self.game.match_outcome();
             self.game.vs.state.match_result = o;
             super::super::record::count_frame(self.game);
-            if self.game.playback.is_some() {
+            if self.game.runs_playback_codes() {
                 self.game.playback_count_frame();
                 if o == OUTCOME_NONE {
                     self.game.playback_read_frame();
@@ -1729,7 +1729,7 @@ impl Running<'_> {
                 g.set_player_facing(i, dir);
             }
             g.set_player_pos(i, pos);
-            if g.rules.neutral_spawn {
+            if g.rules.neutral_spawns() {
                 self.neutral_spawn(i);
             }
             let g = &mut *self.game;
@@ -1895,7 +1895,7 @@ impl Game {
                 }
             }
         }
-        if self.playback.is_some() {
+        if self.runs_playback_codes() {
             self.playback_settle_costumes();
         }
     }
@@ -2126,7 +2126,7 @@ mod c_stick_rule_tests {
     fn game(mode: u8, c_stick: bool) -> Box<Game> {
         let mut g = Box::<Game>::default();
         g.game_mode = mode;
-        g.rules.c_stick_1p = c_stick;
+        g.rules = g.rules.clone().with_c_stick_1p(c_stick);
         for p in &mut g.players[3..] {
             p.pkind = crate::game::pl::player::PKIND_NONE;
         }

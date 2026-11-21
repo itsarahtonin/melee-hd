@@ -6,6 +6,7 @@ use gekko_fp as fp;
 
 use super::super::code::unported_call;
 use super::super::handles::FighterId;
+use super::super::ruleset::NanaDeterminism;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
@@ -1578,7 +1579,7 @@ impl Running<'_> {
     /// frame left in r5, and the fighter's own address in r30, unless Slippi's NanaDeterminism
     /// code cleared them (r30 in both versions, r5 in 3.19's).
     fn di_leftover_stick(&self, f: FighterId, r5: Leftover) -> (u8, u8) {
-        let (r5, r30) = if self.game.rules.slippi {
+        let (r5, r30) = if self.game.rules.nana_determinism() != NanaDeterminism::Leftovers {
             let r5 = if self.nana_determinism_clears_r5() {
                 Leftover::Word(0)
             } else {

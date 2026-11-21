@@ -219,7 +219,7 @@ fn the_slippi_ruleset_boots_past_the_card() {
         let (slippi, mode, decisions) = run(Ruleset::Slippi, 600);
         assert_eq!(mode, melee_sim::gekko_fp::FpMode::Slippi);
         assert_eq!(slippi.game.gm.unlocks.codes, melee_sim::game::gm::code::ALL);
-        assert!(slippi.game.rules.slippi && slippi.game.rules.c_stick_1p);
+        assert_eq!(slippi.game.rules, Ruleset::Slippi.rules());
         assert_eq!(decisions[0], 20, "Skip Memcard Prompt goes on at once");
         assert_eq!(slippi.game.memcard.answer, 0, "without saving");
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);

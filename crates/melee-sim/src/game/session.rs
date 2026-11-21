@@ -471,7 +471,7 @@ impl Session {
     /// The console at power-on: nothing of the game has run, and memory holds what the
     /// executable's data holds.
     pub fn new(setup: Setup) -> Session {
-        if setup.ruleset == Ruleset::Slippi {
+        if !setup.ruleset.allows_card_and_develop() {
             assert!(
                 setup.card.is_none() && setup.card_b.is_none(),
                 "the Slippi ruleset runs with no memory card"
@@ -488,7 +488,7 @@ impl Session {
             rules: setup.ruleset.rules(),
             ..Game::default()
         };
-        if setup.ruleset == Ruleset::Slippi {
+        if setup.ruleset.runs_general_codes() {
             game.gm.unlocks.codes = super::gm::code::ALL;
         }
         game.gm.db_level = DB_NO_DEBUG_ROM;

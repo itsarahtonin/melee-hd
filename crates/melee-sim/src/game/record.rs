@@ -235,7 +235,7 @@ pub fn live_start(g: &Game, d: &StartMeleeData) -> (super::vs_match::ReplayStart
     let mut response = vec![1u8];
     response.extend_from_slice(&seed.to_be_bytes());
     response.extend_from_slice(&info);
-    let ucf = u32::from(g.rules.ucf != super::ucf::Ucf::Off);
+    let ucf = u32::from(g.rules.ucf_on());
     for _ in 0..8 {
         response.extend_from_slice(&ucf.to_be_bytes());
     }
@@ -431,7 +431,7 @@ impl Recorder {
         w.bytes(&info);
         w.u32(g.objs.rng.seed);
         // Dashback and shield drop fixes for each port, both UCF while it runs.
-        let ucf = u32::from(g.rules.ucf != super::ucf::Ucf::Off);
+        let ucf = u32::from(g.rules.ucf_on());
         for _ in 0..8 {
             w.u32(ucf);
         }
@@ -766,7 +766,7 @@ pub(crate) fn items_proc(g: &mut Game) {
 /// frame start and items where the codes' processes would run, on link 7 at priorities 0 and
 /// 15, made at the match's start before any other GObj on that link.
 pub(crate) fn before_proc(g: &mut Game, gobj: GObjId) {
-    if g.playback.is_some() {
+    if g.runs_playback_codes() {
         return;
     }
     let s_link = g.world.current_s_link;
@@ -778,7 +778,7 @@ pub(crate) fn before_proc(g: &mut Game, gobj: GObjId) {
 /// of the player's own), then the frame's events go out with its bookend
 /// (`FlushFrameBuffer.asm`).
 pub(crate) fn end_of_procs(g: &mut Game) {
-    let playback = g.playback.is_some();
+    let playback = g.runs_playback_codes();
     g.record(|r, g| {
         if !playback {
             r.virtual_procs(g, usize::MAX, true);

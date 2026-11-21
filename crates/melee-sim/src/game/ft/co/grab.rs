@@ -822,7 +822,7 @@ impl Running<'_> {
     fn capture_wait_state(&mut self, gobj: GObjId, msid: i32) {
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.capture_yoshi_check(gobj);
-        let wobbling = self.game.rules.prevent_wobbling;
+        let wobbling = self.game.rules.prevents_wobbling();
         let fp = self.game.fighter_mut(gobj);
         fp.x1A6A = 0x1FF;
         if wobbling {

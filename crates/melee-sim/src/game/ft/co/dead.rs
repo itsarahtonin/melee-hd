@@ -797,7 +797,7 @@ impl Running<'_> {
                 fp.self_vel.z = c.f32(0x55C);
                 fp.set_mv_i32(DEAD_FRAMES, c.i32(0x530));
                 fp.set_mv_i32(DEAD_PHASE, 3);
-                if self.game.rules.slippi {
+                if self.game.rules.freezes_dead_up_fall() {
                     // Slippi's FreezeDeadUpFallPhysics (`800D4C1C`): the slide's speed is
                     // kept in the state's variables, not the fighter's.
                     let fp = &mut self.game.fighters[f.0];
@@ -851,7 +851,7 @@ impl Running<'_> {
             }
             3 => {
                 let (g, term) = (reg(c.f32(0x554)), reg(c.f32(0x558)));
-                let v = if self.game.rules.slippi {
+                let v = if self.game.rules.freezes_dead_up_fall() {
                     // Slippi's FreezeDeadUpFallPhysics (`800D4D68`): the fall acts on the
                     // speed the state keeps, without `ftCommon_Fall`.
                     let fp = &mut self.game.fighters[f.0];
@@ -918,12 +918,12 @@ impl Running<'_> {
         let pos = m.transform(local);
         // Slippi's FreezeDeadUpFallPhysics (`80080E80`) places only the model, leaving the
         // fighter's position where it was.
-        if !self.game.rules.slippi {
+        if !self.game.rules.freezes_dead_up_fall() {
             self.game.fighter_mut(gobj).cur_pos = pos;
         }
         let j = self.root_jobj(gobj);
         crate::hsd::jobj::set_translate(&mut self.game.objs.jobjs, j, pos);
-        if self.game.rules.slippi {
+        if self.game.rules.freezes_dead_up_fall() {
             // And where it would place it through playback's followed camera (design call 9).
             let followed = self.game.followed_placement(self.data, local);
             let f = self.game.fighter_id(gobj);
