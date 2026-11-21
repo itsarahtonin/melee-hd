@@ -322,9 +322,19 @@ fn version() -> String {
         "draws built"
     };
     format!(
-        "melee-hd {rev} (optimized, one core, {:?}, {pass})",
+        "melee-hd {rev} ({} build, one core, {:?}, {pass})",
+        build_profile(),
         bench_fp()
     )
+}
+
+/// The profile this executable was built with, its folder's name in the target folder
+/// (`release`, or `bench-dist`, the player's settings, for the numbers that decide).
+fn build_profile() -> String {
+    std::env::current_exe()
+        .ok()
+        .and_then(|exe| Some(exe.parent()?.file_name()?.to_str()?.to_owned()))
+        .unwrap_or_else(|| "unknown".into())
 }
 
 pub fn main(args: &[String]) {

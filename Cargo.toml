@@ -23,10 +23,15 @@ ssbm-ppc = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-ba
 ssbm-disc = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
 ssbm-types = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
 
-# The release build optimized as one program, for timing and shipping: about 8% faster than
-# release on the native benchmark (docs/performance.md), and slower to build, so checks and
-# tests stay on release. `cargo build --profile dist -p melee-bench`.
+# The player's build (`cargo run -p dist`): the release build optimized as one program. Slower to
+# build, so checks and tests stay on release.
 [profile.dist]
 inherits = "release"
 lto = "fat"
 codegen-units = 1
+
+# The speed numbers that decide anything (docs/performance.md, "Which build"): `dist`'s settings
+# exactly, in a folder of its own so the bench and the player don't rebuild each other's output.
+# `cargo build --locked --profile bench-dist -p melee-bench`.
+[profile.bench-dist]
+inherits = "dist"
