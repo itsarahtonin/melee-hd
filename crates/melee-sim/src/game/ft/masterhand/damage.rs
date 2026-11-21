@@ -133,7 +133,7 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        super::addr::MS_343_80151484 => g.hand_beaten_enter(gobj, &HAND),
+        super::addr::BEATEN_ENTER => g.hand_beaten_enter(gobj, &HAND),
         super::addr::DAMAGE_ANIM | super::addr::MS_345_ANIM => g.hand_beaten_anim(gobj, &HAND),
         super::addr::DAMAGE_PHYS => g.hand_beaten_phys(gobj, &HAND),
         _ => return false,

@@ -59,9 +59,12 @@ pub mod ms {
 
 /// The functions other parts of the port own that Marth's code calls, by address.
 pub mod ext {
-    pub const FTANIM_80070FB4: u32 = 0x8007_0FB4;
-    pub const FTANIM_80070C48: u32 = 0x8007_0C48;
-    pub const FTANIM_80070CC4: u32 = 0x8007_0CC4;
+    #[doc(alias("FTANIM_80070FB4"))]
+    pub const FTANIM_SET_PART_ANIM_POSE: u32 = 0x8007_0FB4;
+    #[doc(alias("FTANIM_80070C48"))]
+    pub const FTANIM_SHOW_PART_ANIM_POSE: u32 = 0x8007_0C48;
+    #[doc(alias("FTANIM_80070CC4"))]
+    pub const FTANIM_END_PART_ANIM: u32 = 0x8007_0CC4;
     pub const IT_GET_HOLD_KIND: u32 = 0x8026_B320;
 }
 
@@ -79,9 +82,12 @@ pub mod addr {
     pub const ON_KNOCKBACK_ENTER: u32 = 0x8013_6520;
     pub const ON_KNOCKBACK_EXIT: u32 = 0x8013_6564;
     // The neutral special.
-    pub const N_801365A8: u32 = 0x8013_65A8;
-    pub const N_8013666C: u32 = 0x8013_666C;
-    pub const N_80136730: u32 = 0x8013_6730;
+    #[doc(alias("N_801365A8"))]
+    pub const SPECIAL_N_FLASH: u32 = 0x8013_65A8;
+    #[doc(alias("N_8013666C"))]
+    pub const SPECIAL_AIR_N_FLASH: u32 = 0x8013_666C;
+    #[doc(alias("N_80136730"))]
+    pub const SPECIAL_N_RESET: u32 = 0x8013_6730;
     pub const SPECIAL_N_ENTER: u32 = 0x8013_6744;
     pub const SPECIAL_AIR_N_ENTER: u32 = 0x8013_67B8;
     pub const SPECIAL_N_START_ANIM: u32 = 0x8013_6844;
@@ -92,8 +98,10 @@ pub mod addr {
     pub const SPECIAL_AIR_N_START_PHYS: u32 = 0x8013_695C;
     pub const SPECIAL_N_START_COLL: u32 = 0x8013_69A4;
     pub const SPECIAL_AIR_N_START_COLL: u32 = 0x8013_69E0;
-    pub const N_80136A1C: u32 = 0x8013_6A1C;
-    pub const N_80136A7C: u32 = 0x8013_6A7C;
+    #[doc(alias("N_80136A1C"))]
+    pub const SPECIAL_N_START_TO_AIR: u32 = 0x8013_6A1C;
+    #[doc(alias("N_80136A7C"))]
+    pub const SPECIAL_AIR_N_START_TO_GROUND: u32 = 0x8013_6A7C;
     pub const SPECIAL_N_LOOP_ANIM: u32 = 0x8013_6ADC;
     pub const SPECIAL_AIR_N_LOOP_ANIM: u32 = 0x8013_6BB4;
     pub const SPECIAL_N_LOOP_IASA: u32 = 0x8013_6C8C;
@@ -102,10 +110,14 @@ pub mod addr {
     pub const SPECIAL_AIR_N_LOOP_PHYS: u32 = 0x8013_6D1C;
     pub const SPECIAL_N_LOOP_COLL: u32 = 0x8013_6D3C;
     pub const SPECIAL_AIR_N_LOOP_COLL: u32 = 0x8013_6D78;
-    pub const N_80136DB4: u32 = 0x8013_6DB4;
-    pub const N_80136E14: u32 = 0x8013_6E14;
-    pub const N_80136E74: u32 = 0x8013_6E74;
-    pub const N_80136EAC: u32 = 0x8013_6EAC;
+    #[doc(alias("N_80136DB4"))]
+    pub const SPECIAL_N_LOOP_TO_AIR: u32 = 0x8013_6DB4;
+    #[doc(alias("N_80136E14"))]
+    pub const SPECIAL_AIR_N_LOOP_TO_GROUND: u32 = 0x8013_6E14;
+    #[doc(alias("N_80136E74"))]
+    pub const SPECIAL_N_LOOP: u32 = 0x8013_6E74;
+    #[doc(alias("N_80136EAC"))]
+    pub const SPECIAL_AIR_N_LOOP: u32 = 0x8013_6EAC;
     pub const SPECIAL_N_END_ANIM: u32 = 0x8013_6EE4;
     pub const SPECIAL_AIR_N_END_ANIM: u32 = 0x8013_7010;
     pub const SPECIAL_N_END_IASA: u32 = 0x8013_713C;
@@ -114,10 +126,14 @@ pub mod addr {
     pub const SPECIAL_AIR_N_END_PHYS: u32 = 0x8013_7164;
     pub const SPECIAL_N_END_COLL: u32 = 0x8013_7184;
     pub const SPECIAL_AIR_N_END_COLL: u32 = 0x8013_71C0;
-    pub const N_801371FC: u32 = 0x8013_71FC;
-    pub const N_801372A8: u32 = 0x8013_72A8;
-    pub const N_80137354: u32 = 0x8013_7354;
-    pub const N_801373B8: u32 = 0x8013_73B8;
+    #[doc(alias("N_801371FC"))]
+    pub const SPECIAL_N_END_TO_AIR: u32 = 0x8013_71FC;
+    #[doc(alias("N_801372A8"))]
+    pub const SPECIAL_AIR_N_END_TO_GROUND: u32 = 0x8013_72A8;
+    #[doc(alias("N_80137354"))]
+    pub const SPECIAL_N_SWING: u32 = 0x8013_7354;
+    #[doc(alias("N_801373B8"))]
+    pub const SPECIAL_AIR_N_SWING: u32 = 0x8013_73B8;
     // The side special.
     pub const SPECIAL_S_ENTER: u32 = 0x8013_741C;
     pub const SPECIAL_AIR_S_ENTER: u32 = 0x8013_74A0;
@@ -125,30 +141,42 @@ pub mod addr {
     pub const SPECIAL_AIR_S1_IASA: u32 = 0x8013_75B8;
     pub const SPECIAL_AIR_S1_PHYS: u32 = 0x8013_7618;
     pub const SPECIAL_AIR_S1_COLL: u32 = 0x8013_767C;
-    pub const S_801376E8: u32 = 0x8013_76E8;
-    pub const S_80137748: u32 = 0x8013_7748;
+    #[doc(alias("S_801376E8"))]
+    pub const SPECIAL_S1_TO_AIR: u32 = 0x8013_76E8;
+    #[doc(alias("S_80137748"))]
+    pub const SPECIAL_S1_LAND: u32 = 0x8013_7748;
     pub const SPECIAL_S2_ANIM: u32 = 0x8013_77B0;
     pub const SPECIAL_S2_IASA: u32 = 0x8013_7810;
     pub const SPECIAL_S2_PHYS: u32 = 0x8013_7870;
     pub const SPECIAL_S2_COLL: u32 = 0x8013_78D4;
-    pub const S_80137940: u32 = 0x8013_7940;
-    pub const S_801379D0: u32 = 0x8013_79D0;
-    pub const S_80137A68: u32 = 0x8013_7A68;
-    pub const S_80137A9C: u32 = 0x8013_7A9C;
+    #[doc(alias("S_80137940"))]
+    pub const SPECIAL_S2_TO_AIR: u32 = 0x8013_7940;
+    #[doc(alias("S_801379D0"))]
+    pub const SPECIAL_S2_LAND: u32 = 0x8013_79D0;
+    #[doc(alias("S_80137A68"))]
+    pub const SPECIAL_S_NEW_ATTACK: u32 = 0x8013_7A68;
+    #[doc(alias("S_80137A9C"))]
+    pub const SPECIAL_S2_START: u32 = 0x8013_7A9C;
     pub const SPECIAL_S3_ANIM: u32 = 0x8013_7B34;
     pub const SPECIAL_S3_IASA: u32 = 0x8013_7B94;
     pub const SPECIAL_S3_PHYS: u32 = 0x8013_7BF4;
     pub const SPECIAL_S3_COLL: u32 = 0x8013_7C50;
-    pub const S_80137CBC: u32 = 0x8013_7CBC;
-    pub const S_80137D60: u32 = 0x8013_7D60;
-    pub const S_80137E0C: u32 = 0x8013_7E0C;
+    #[doc(alias("S_80137CBC"))]
+    pub const SPECIAL_S3_TO_AIR: u32 = 0x8013_7CBC;
+    #[doc(alias("S_80137D60"))]
+    pub const SPECIAL_S3_LAND: u32 = 0x8013_7D60;
+    #[doc(alias("S_80137E0C"))]
+    pub const SPECIAL_S3_START: u32 = 0x8013_7E0C;
     pub const SPECIAL_S4_ANIM: u32 = 0x8013_7ECC;
     pub const SPECIAL_S4_IASA: u32 = 0x8013_7F2C;
     pub const SPECIAL_S4_PHYS: u32 = 0x8013_7F30;
     pub const SPECIAL_S4_COLL: u32 = 0x8013_7F8C;
-    pub const S_80137FF8: u32 = 0x8013_7FF8;
-    pub const S_8013809C: u32 = 0x8013_809C;
-    pub const S_80138148: u32 = 0x8013_8148;
+    #[doc(alias("S_80137FF8"))]
+    pub const SPECIAL_S4_TO_AIR: u32 = 0x8013_7FF8;
+    #[doc(alias("S_8013809C"))]
+    pub const SPECIAL_S4_LAND: u32 = 0x8013_809C;
+    #[doc(alias("S_80138148"))]
+    pub const SPECIAL_S4_START: u32 = 0x8013_8148;
     // The up special.
     pub const SPECIAL_HI_ENTER: u32 = 0x8013_8208;
     pub const SPECIAL_AIR_HI_ENTER: u32 = 0x8013_826C;
@@ -158,7 +186,8 @@ pub mod addr {
     pub const SPECIAL_AIR_HI_IASA: u32 = 0x8013_84F0;
     pub const SPECIAL_HI_PHYS: u32 = 0x8013_8638;
     pub const SPECIAL_AIR_HI_PHYS: u32 = 0x8013_873C;
-    pub const HI_80138884: u32 = 0x8013_8884;
+    #[doc(alias("HI_80138884"))]
+    pub const SPECIAL_HI_LAND: u32 = 0x8013_8884;
     pub const SPECIAL_HI_COLL: u32 = 0x8013_88B4;
     pub const SPECIAL_AIR_HI_COLL: u32 = 0x8013_8940;
     // The down special.
@@ -172,8 +201,10 @@ pub mod addr {
     pub const SPECIAL_AIR_LW_PHYS: u32 = 0x8013_8C5C;
     pub const SPECIAL_LW_COLL: u32 = 0x8013_8CC0;
     pub const SPECIAL_AIR_LW_COLL: u32 = 0x8013_8CFC;
-    pub const LW_80138D38: u32 = 0x8013_8D38;
-    pub const LW_80138DD0: u32 = 0x8013_8DD0;
+    #[doc(alias("LW_80138D38"))]
+    pub const SPECIAL_LW_TO_AIR: u32 = 0x8013_8D38;
+    #[doc(alias("LW_80138DD0"))]
+    pub const SPECIAL_LW_LAND: u32 = 0x8013_8DD0;
     pub const SPECIAL_LW_HIT_ANIM: u32 = 0x8013_8E68;
     pub const SPECIAL_AIR_LW_HIT_ANIM: u32 = 0x8013_8F14;
     pub const SPECIAL_LW_HIT_IASA: u32 = 0x8013_8FC0;
@@ -182,9 +213,12 @@ pub mod addr {
     pub const SPECIAL_AIR_LW_HIT_PHYS: u32 = 0x8013_8FE8;
     pub const SPECIAL_LW_HIT_COLL: u32 = 0x8013_9008;
     pub const SPECIAL_AIR_LW_HIT_COLL: u32 = 0x8013_9044;
-    pub const LW_80139080: u32 = 0x8013_9080;
-    pub const LW_801390E0: u32 = 0x8013_90E0;
-    pub const LW_80139140: u32 = 0x8013_9140;
+    #[doc(alias("LW_80139080"))]
+    pub const SPECIAL_LW_HIT_TO_AIR: u32 = 0x8013_9080;
+    #[doc(alias("LW_801390E0"))]
+    pub const SPECIAL_LW_HIT_LAND: u32 = 0x8013_90E0;
+    #[doc(alias("LW_80139140"))]
+    pub const SPECIAL_LW_COUNTER: u32 = 0x8013_9140;
 }
 
 /// The `u` offset of `ftMars_FighterVars::x222C`: whether the side special has lifted him

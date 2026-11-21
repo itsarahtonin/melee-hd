@@ -502,7 +502,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_N2_0_COLL => g.ground_coll_fall_off_then(gobj, |r, g| r.ys_n2_0_to_air(g)),
         addr::SPECIAL_AIR_N2_1_COLL => g.air_coll_then(gobj, |r, g| r.ys_air_n2_1_to_ground(g)),
         addr::SPECIAL_AIR_N2_0_COLL => g.air_coll_then(gobj, |r, g| r.ys_air_n2_0_to_ground(g)),
-        addr::S_8012DF00 => g.ys_set_damage_cb(gobj),
+        addr::SET_DAMAGE_CBS => g.ys_set_damage_cb(gobj),
         _ => return false,
     }
     true

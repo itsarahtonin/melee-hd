@@ -503,7 +503,7 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
             fp.xD4_unk_vel.y = mem(fp::fadds(reg(fp.xD4_unk_vel.y), reg(fp.x8c_kb_vel.y)));
             let bit = fp.throw_flag(2);
             fp.set_throw_flag(2, false);
-            if bit || g.x100_rot_changed(f) || x594_bit(&g.game.fighters[f.0], 7) {
+            if bit || g.part_35_rot_x_changed(f) || x594_bit(&g.game.fighters[f.0], 7) {
                 let fp = &mut g.game.fighters[f.0];
                 fp.cur_pos = fp.cur_pos.sdk_add(fp.xD4_unk_vel);
                 fp.xD4_unk_vel = Vec3::default();
@@ -816,7 +816,7 @@ pub fn proc_coll_pos(g: &mut Running, gobj: GObjId) {
     }
     g.hitboxes_follow(gobj);
     g.thrown_hitbox_follow(gobj);
-    g.x1614_follow(gobj);
+    g.stamina_markers_follow(gobj);
     if let Some(acc) = g.game.fighters[f.0].x20A0_accessory {
         jobj::anim_all(
             &mut g.game.objs,

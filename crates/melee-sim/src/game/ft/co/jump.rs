@@ -32,18 +32,22 @@ const JUMP_X4: usize = 0x4;
 const JUMP_MUL: usize = 0x8;
 
 /// `ft_800881D8`, `ft_80088328`, `ft_80088770`: the fighter's voice tracks (the audio port).
-pub(super) const FT_800881D8: u32 = 0x8008_81D8;
-pub(super) const FT_80088328: u32 = 0x8008_8328;
-pub(super) const FT_80088770: u32 = 0x8008_8770;
-pub(super) const FT_800887CC: u32 = 0x8008_87CC;
+#[doc(alias("FT_800881D8"))]
+pub(super) const PLAY_VOICE: u32 = 0x8008_81D8;
+#[doc(alias("FT_80088328"))]
+pub(super) const PLAY_VOICE2: u32 = 0x8008_8328;
+#[doc(alias("FT_80088770"))]
+pub(super) const STOP_VOICE: u32 = 0x8008_8770;
+#[doc(alias("FT_800887CC"))]
+pub(super) const STOP_VOICE2: u32 = 0x8008_87CC;
 
 impl Running<'_> {
     /// Plays a sound on one of the fighter's voice tracks: `ft_800881D8`, `ft_80088328`.
     pub(super) fn play_track(&mut self, gobj: GObjId, func: u32, id: i32) {
         let f = self.game.fighter_id(gobj);
         let t = match func {
-            FT_800881D8 => Track::Voice,
-            FT_80088328 => Track::Voice2,
+            PLAY_VOICE => Track::Voice,
+            PLAY_VOICE2 => Track::Voice2,
             _ => unreachable!("not a voice track: {func:#x}"),
         };
         self.fighter_play_track(f, t, id, 0x7F, 0x40);
@@ -53,8 +57,8 @@ impl Running<'_> {
     pub(super) fn stop_track(&mut self, gobj: GObjId, func: u32) {
         let f = self.game.fighter_id(gobj);
         let t = match func {
-            FT_80088770 => Track::Voice,
-            FT_800887CC => Track::Voice2,
+            STOP_VOICE => Track::Voice,
+            STOP_VOICE2 => Track::Voice2,
             _ => unreachable!("not a voice track: {func:#x}"),
         };
         self.fighter_stop_track(f, t);
@@ -211,7 +215,7 @@ impl Running<'_> {
         fp.active_timer.lstick.y = 0xFE;
         if play {
             let sfx = self.character_sfx(gobj, 0x10);
-            self.play_track(gobj, FT_800881D8, sfx);
+            self.play_track(gobj, PLAY_VOICE, sfx);
             if self.game.fighter(gobj).x197C.is_some() {
                 self.play_sfx(gobj, 0x11A, 0x7F, 0x40);
             }
@@ -431,9 +435,9 @@ impl Running<'_> {
             fp.active_timer.lstick.y = 0xFE;
         }
         fp.x1968_jumpsUsed = fp.x1968_jumpsUsed.wrapping_add(1);
-        self.stop_track(gobj, FT_80088770);
+        self.stop_track(gobj, STOP_VOICE);
         let sfx = self.character_sfx(gobj, 0x14);
-        self.play_track(gobj, FT_80088328, sfx);
+        self.play_track(gobj, PLAY_VOICE2, sfx);
         // `ft_JumpAerial_Sound`.
         let fp = self.game.fighter(gobj);
         let kind = fp.kind;

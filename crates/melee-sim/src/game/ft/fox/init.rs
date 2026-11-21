@@ -51,13 +51,13 @@ impl Running<'_> {
         };
         if let Some(p) = pose {
             self.ext(
-                ext::FTANIM_80070FB4,
+                ext::FTANIM_SET_PART_ANIM_POSE,
                 &[Val::GObj(Some(gobj)), Val::Int(hand), Val::Int(p)],
             );
         }
         if flag {
             self.ext(
-                ext::FTANIM_80070C48,
+                ext::FTANIM_SHOW_PART_ANIM_POSE,
                 &[Val::GObj(Some(gobj)), Val::Int(hand)],
             );
         }
@@ -75,7 +75,7 @@ impl Running<'_> {
         let item = self.game.fighter(gobj).item_gobj.expect("hiding no item");
         if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
             self.ext(
-                ext::FTANIM_80070CC4,
+                ext::FTANIM_END_PART_ANIM,
                 &[Val::GObj(Some(gobj)), Val::Int(hand)],
             );
         }
@@ -92,7 +92,7 @@ impl Running<'_> {
         let item = self.game.fighter(gobj).item_gobj.expect("showing no item");
         if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
             self.ext(
-                ext::FTANIM_80070C48,
+                ext::FTANIM_SHOW_PART_ANIM_POSE,
                 &[Val::GObj(Some(gobj)), Val::Int(hand)],
             );
         }
@@ -108,12 +108,12 @@ impl Running<'_> {
     /// `Fighter_OnItemDrop(gobj, flag, hand, hand)`.
     pub(crate) fn item_drop_hand(&mut self, gobj: GObjId, flag: bool, hand: i32) {
         self.ext(
-            ext::FTANIM_80070FB4,
+            ext::FTANIM_SET_PART_ANIM_POSE,
             &[Val::GObj(Some(gobj)), Val::Int(hand), Val::Int(-1)],
         );
         if flag {
             self.ext(
-                ext::FTANIM_80070CC4,
+                ext::FTANIM_END_PART_ANIM,
                 &[Val::GObj(Some(gobj)), Val::Int(hand)],
             );
         }

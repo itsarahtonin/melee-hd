@@ -90,21 +90,21 @@ impl Character {
 fn stubs(yes: bool) -> Vec<Stub> {
     let b = StubRet::Int(i32::from(yes));
     let mut v: Vec<Stub> = [
-        ext::FTANIM_80070FB4,
-        ext::FTANIM_80070C48,
-        ext::FTANIM_80070CC4,
-        ext::PL_80040120,
-        ext::GRCORNERIA_801E2AF4,
-        ext::FT_8008A324,
+        ext::FTANIM_SET_PART_ANIM_POSE,
+        ext::FTANIM_SHOW_PART_ANIM_POSE,
+        ext::FTANIM_END_PART_ANIM,
+        ext::PL_TAUNT_STATS,
+        ext::GRCORNERIA_TAUNT_INTERRUPTED,
+        ext::FT_ENTER_WAIT_NEUTRAL,
     ]
     .iter()
     .map(|&a| (a, StubRet::Nothing))
     .collect();
     for a in [
-        ext::PL_800386D8,
-        ext::GRCORNERIA_801E2D14,
-        ext::GRCORNERIA_801E2C34,
-        ext::GRCORNERIA_801E2B80,
+        ext::PL_ATTACK_COUNT,
+        ext::GRCORNERIA_TALKING,
+        ext::GRCORNERIA_FALCO_TALK,
+        ext::GRCORNERIA_FOX_TALK,
     ] {
         v.push((a, b));
     }

@@ -205,7 +205,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use super::addr;
     match a {
         addr::INIT_ON_DAMAGE => g.gw_on_damage(gobj),
-        addr::INIT_8014A538 => g.gw_drop_items_in_air(gobj),
+        addr::DROP_ITEMS_IN_AIR => g.gw_drop_items_in_air(gobj),
         addr::INIT_ON_ITEM_INVISIBLE => g.gw_on_item_invisible(gobj),
         addr::INIT_ON_ITEM_VISIBLE => g.gw_on_item_visible(gobj),
         addr::INIT_UNK_MOTION_STATES4 => g.gw_unk_motion_states4(gobj),

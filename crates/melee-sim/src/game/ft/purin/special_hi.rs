@@ -141,9 +141,9 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_HI_PHYS => g.air_physics_no_drift(gobj),
         addr::SPECIAL_HI_COLL => g.purin_special_hi_coll(gobj),
         addr::SPECIAL_AIR_HI_COLL => g.purin_special_air_hi_coll(gobj),
-        addr::SPECIAL_HI_8013CD34 => g.purin_special_hi_to_air(gobj),
-        addr::SPECIAL_HI_8013CDD8 => g.purin_special_air_hi_to_ground(gobj),
-        addr::SPECIAL_HI_8013CE7C => g.purin_clear_accessory(gobj),
+        addr::SPECIAL_HI_TO_AIR => g.purin_special_hi_to_air(gobj),
+        addr::SPECIAL_AIR_HI_TO_GROUND => g.purin_special_air_hi_to_ground(gobj),
+        addr::CLEAR_ACCESSORY => g.purin_clear_accessory(gobj),
         _ => return false,
     }
     true

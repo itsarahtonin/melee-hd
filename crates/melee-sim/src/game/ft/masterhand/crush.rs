@@ -218,17 +218,17 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::MS_354_80152370 => g.hand_enter(gobj, ms::ROCK_CRUSH_UP),
+        addr::ROCK_CRUSH_UP_ENTER => g.hand_enter(gobj, ms::ROCK_CRUSH_UP),
         addr::ROCK_CRUSH_UP_ANIM => g.hand_hold_start_anim(gobj, &HAND),
-        addr::MS_355_8015247C => g.hand_enter(gobj, ms::ROCK_CRUSH_WAIT),
+        addr::ROCK_CRUSH_WAIT_ENTER => g.hand_enter(gobj, ms::ROCK_CRUSH_WAIT),
         addr::ROCK_CRUSH_WAIT_ANIM => g.hand_hold_anim(gobj, &HAND),
         addr::ROCK_CRUSH_WAIT_PHYS => g.hand_hold_phys(gobj, &HAND),
-        addr::MS_356_801525E0 => g.hand_hold_end_enter(gobj, &HAND),
-        addr::MS_357_801526D8 => g.hand_window_enter(gobj, &HAND),
+        addr::HOLD_END_ENTER => g.hand_hold_end_enter(gobj, &HAND),
+        addr::WINDOW_ENTER => g.hand_window_enter(gobj, &HAND),
         addr::PAPER_CRUSH_PHYS => g.hand_window_phys(gobj, &HAND),
-        addr::MS_352_801521DC => g.hand_countdown_enter(gobj, &HAND),
+        addr::COUNTDOWN_ENTER => g.hand_countdown_enter(gobj, &HAND),
         addr::DRILL_PHYS => g.hand_countdown_phys(gobj, &HAND),
-        addr::MS_358_80152880 => g.hand_chases_enter(gobj, &HAND),
+        addr::CHASES_ENTER => g.hand_chases_enter(gobj, &HAND),
         addr::POKE1_ANIM => g.hand_chases_anim(gobj, &HAND),
         addr::POKE2_ANIM => g.hand_anim_return(gobj, &HAND),
         addr::POKE1_IASA => g.hand_human_nop(gobj),

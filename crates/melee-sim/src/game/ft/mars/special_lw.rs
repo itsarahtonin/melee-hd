@@ -63,7 +63,7 @@ impl Running<'_> {
     }
 
     /// The counter's bubble, `ftColl_8007B1B8` with the attributes' absorb shape: hits on it
-    /// call [`addr::LW_80139140`].
+    /// call [`addr::SPECIAL_LW_COUNTER`].
     fn mars_counter_bubble(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let bone = self.mars_attr_i32(f, attr::COUNTER_BONE);
@@ -75,7 +75,7 @@ impl Running<'_> {
         let size = self.mars_attr_f32(f, attr::COUNTER_SIZE);
         let joint = self.bone_joint(gobj, bone);
         let fp = &mut self.game.fighters[f.0];
-        set_shield_hit(fp, CodeRef(addr::LW_80139140), joint, size, offset);
+        set_shield_hit(fp, CodeRef(addr::SPECIAL_LW_COUNTER), joint, size, offset);
         fp.x221B.x221B_b1 = true;
     }
 
@@ -292,17 +292,17 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_LW_PHYS => g.mars_special_air_lw_phys(gobj),
         addr::SPECIAL_LW_COLL => g.mars_special_lw_coll(gobj),
         addr::SPECIAL_AIR_LW_COLL => g.mars_special_air_lw_coll(gobj),
-        addr::LW_80138D38 => g.mars_special_lw_to_air(gobj),
-        addr::LW_80138DD0 => g.mars_special_lw_land(gobj),
+        addr::SPECIAL_LW_TO_AIR => g.mars_special_lw_to_air(gobj),
+        addr::SPECIAL_LW_LAND => g.mars_special_lw_land(gobj),
         addr::SPECIAL_LW_HIT_ANIM => g.mars_special_lw_hit_anim(gobj),
         addr::SPECIAL_AIR_LW_HIT_ANIM => g.mars_special_air_lw_hit_anim(gobj),
         addr::SPECIAL_LW_HIT_PHYS => g.mars_ground_phys(gobj),
         addr::SPECIAL_AIR_LW_HIT_PHYS => g.mars_air_phys(gobj),
         addr::SPECIAL_LW_HIT_COLL => g.mars_special_lw_hit_coll(gobj),
         addr::SPECIAL_AIR_LW_HIT_COLL => g.mars_special_air_lw_hit_coll(gobj),
-        addr::LW_80139080 => g.mars_special_lw_hit_to_air(gobj),
-        addr::LW_801390E0 => g.mars_special_lw_hit_land(gobj),
-        addr::LW_80139140 => g.mars_special_lw_counter(gobj),
+        addr::SPECIAL_LW_HIT_TO_AIR => g.mars_special_lw_hit_to_air(gobj),
+        addr::SPECIAL_LW_HIT_LAND => g.mars_special_lw_hit_land(gobj),
+        addr::SPECIAL_LW_COUNTER => g.mars_special_lw_counter(gobj),
         _ => return false,
     }
     true

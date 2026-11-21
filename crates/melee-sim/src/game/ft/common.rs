@@ -541,7 +541,8 @@ impl Running<'_> {
     /// Whether part 0x35's X rotation changed since it was last noted (`x100`),
     /// `ftAnim_80070FD0`.
     #[doc(alias = "ftAnim_80070FD0")]
-    pub fn x100_rot_changed(&mut self, f: FighterId) -> bool {
+    #[doc(alias("x100_rot_changed"))]
+    pub fn part_35_rot_x_changed(&mut self, f: FighterId) -> bool {
         let part = self.bone_index(&self.game.fighters[f.0], 0x35);
         let rot = self.game.part_rot_x(f, part);
         let fp = &mut self.game.fighters[f.0];
@@ -809,7 +810,8 @@ impl Running<'_> {
     /// `ft_8007C6DC`: in team-less stamina matches (`gm_8016B0B4`), the two stamina markers
     /// (`x1614`) follow their bones in the plane.
     #[doc(alias = "ft_8007C6DC")]
-    pub fn x1614_follow(&mut self, gobj: GObjId) {
+    #[doc(alias("x1614_follow"))]
+    pub fn stamina_markers_follow(&mut self, gobj: GObjId) {
         if self.game.vs.start.match_kind != 2 {
             return;
         }

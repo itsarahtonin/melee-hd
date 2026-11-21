@@ -70,8 +70,8 @@ pub enum Windup {
 const ZELDA: Teleport = Teleport {
     states: ms::SPECIAL_HI_START_0,
     attrs: 0x38,
-    start_cb: addr::HI_801396AC,
-    end_cb: addr::HI_8013979C,
+    start_cb: addr::SPECIAL_HI_START_GFX_ONCE,
+    end_cb: addr::SPECIAL_HI_APPEAR_GFX,
     windup: Windup::Slowed,
     wind: true,
     vanish_at_travel: false,
@@ -835,9 +835,9 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     let t = &ZELDA;
     match a {
-        addr::HI_801396AC => g.zelda_special_hi_start_gfx_once(gobj),
+        addr::SPECIAL_HI_START_GFX_ONCE => g.zelda_special_hi_start_gfx_once(gobj),
         0x8013_96E0 => g.zelda_special_hi_start_gfx(gobj),
-        addr::HI_8013979C => g.teleport_appear_gfx(gobj, t),
+        addr::SPECIAL_HI_APPEAR_GFX => g.teleport_appear_gfx(gobj, t),
         addr::SPECIAL_HI_ENTER => g.teleport_enter(gobj, t),
         addr::SPECIAL_AIR_HI_ENTER => g.teleport_air_enter(gobj, t),
         0x8013_99B4 => g.teleport_start_anim(gobj, t),

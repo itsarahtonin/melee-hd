@@ -9,7 +9,7 @@ use super::super::super::handles::FighterId;
 use super::super::super::state::Running;
 use super::super::bind::{JointStack, next_joint};
 use super::super::create_model::Creator;
-use super::super::parts::{bone_from_joint, set_bone_bit, set_bone_xd};
+use super::super::parts::{bone_from_joint, set_bone_bit, set_bone_last_dobj};
 use super::{addr, attr, u};
 use crate::fpu::{mem, reg};
 use crate::game::it::ItKind;
@@ -168,7 +168,7 @@ impl Running<'_> {
         let bone = &mut self.game.fighter_parts[parts][part];
         bone.joint = Some(model);
         bone_from_joint(bone, flags, tree_depth);
-        set_bone_xd(bone, 0);
+        set_bone_last_dobj(bone, 0);
         set_bone_bit(bone, 1, 6, false);
         bone.x4_jobj2 = Some(blend);
         set_bone_bit(bone, 0, 2, true);

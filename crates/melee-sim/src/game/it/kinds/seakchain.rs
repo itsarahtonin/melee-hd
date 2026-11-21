@@ -655,7 +655,7 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
     } else {
         0.0
     };
-    let x1c_state = r.seak_special_s_x1c(parent_gobj);
+    let x1c_state = r.seak_special_s_hitbox_frames(parent_gobj);
     let v = item_mut(r.game, gobj).xDD4_itemVar.seak_chain();
     v.history[0].set_x(hx);
     v.history[0].set_y(hy);

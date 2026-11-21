@@ -30,16 +30,16 @@ const MS_CO_PARASOL_FALL_SPECIAL: i32 = 146;
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     use super::addr::*;
     match a {
-        SPECIAL_HI_8011D424 => g.peach_parasol_out(gobj),
-        SPECIAL_HI_8011D620 => g.peach_parasol_hitlag_start(gobj),
-        SPECIAL_HI_8011D650 => g.peach_parasol_hitlag_end(gobj),
+        PARASOL_OUT => g.peach_parasol_out(gobj),
+        PARASOL_HITLAG_START => g.peach_parasol_hitlag_start(gobj),
+        PARASOL_HITLAG_END => g.peach_parasol_hitlag_end(gobj),
         SPECIAL_HI_ENTER => g.peach_special_hi_enter(gobj),
         SPECIAL_AIR_HI_ENTER => g.peach_special_air_hi_enter(gobj),
         SPECIAL_HI_START_ANIM | SPECIAL_AIR_HI_START_ANIM => g.peach_special_hi_start_anim(gobj),
         SPECIAL_HI_START_IASA | SPECIAL_AIR_HI_START_IASA => g.peach_special_hi_start_iasa(gobj),
         SPECIAL_HI_START_PHYS => g.peach_special_hi_start_phys(gobj),
         SPECIAL_AIR_HI_START_PHYS => g.peach_special_air_hi_start_phys(gobj),
-        SPECIAL_HI_8011DD8C | SPECIAL_HI_8011E064 => g.peach_special_hi_land(gobj),
+        SPECIAL_HI_START_LAND | SPECIAL_HI_END_LAND => g.peach_special_hi_land(gobj),
         SPECIAL_HI_START_COLL
         | SPECIAL_AIR_HI_START_COLL
         | SPECIAL_HI_END_COLL
@@ -161,8 +161,8 @@ impl Running<'_> {
         }
         let fp = &mut self.game.fighters[f.0];
         fp.accessory4_cb = None;
-        fp.pre_hitlag_cb = Some(CodeRef(addr::SPECIAL_HI_8011D620));
-        fp.post_hitlag_cb = Some(CodeRef(addr::SPECIAL_HI_8011D650));
+        fp.pre_hitlag_cb = Some(CodeRef(addr::PARASOL_HITLAG_START));
+        fp.post_hitlag_cb = Some(CodeRef(addr::PARASOL_HITLAG_END));
     }
 
     /// The move's start (`doEnter`): the script's variables and throw flags cleared, and
@@ -183,7 +183,7 @@ impl Running<'_> {
                 return;
             }
         }
-        self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::SPECIAL_HI_8011D424));
+        self.game.fighter_mut(gobj).accessory4_cb = Some(CodeRef(addr::PARASOL_OUT));
     }
 
     /// `ftPe_SpecialHi_Enter`.

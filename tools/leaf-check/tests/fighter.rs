@@ -358,7 +358,7 @@ fn phys_helpers() {
         },
         &|g, maps, call| {
             let f = fighter_arg(maps, call);
-            Ret::Int(u32::from(g.x100_rot_changed(f)))
+            Ret::Int(u32::from(g.part_35_rot_x_changed(f)))
         },
     );
     // `ft_80085134`: the animation's motion as air velocity.

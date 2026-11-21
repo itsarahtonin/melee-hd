@@ -64,39 +64,55 @@ pub mod addr {
     pub const ON_KNOCKBACK_ENTER: u32 = 0x8011_0408;
     pub const ON_KNOCKBACK_EXIT: u32 = 0x8011_044C;
     // The side special.
-    pub const S_8011097C: u32 = 0x8011_097C;
+    #[doc(alias("S_8011097C"))]
+    pub const SPECIAL_S_NOTHING: u32 = 0x8011_097C;
     pub const S_UPDATE_HITBOXES: u32 = 0x8011_0980;
     pub const S_ZERO_HITBOX_POSITIONS: u32 = 0x8011_0A80;
-    pub const S_80110E4C: u32 = 0x8011_0E4C;
+    #[doc(alias("S_80110E4C"))]
+    pub const SPECIAL_S_CHAIN_GONE: u32 = 0x8011_0E4C;
     pub const S_CHECK_AND_DESTROY_CHAIN: u32 = 0x8011_0E88;
-    pub const S_80110EE8: u32 = 0x8011_0EE8;
+    #[doc(alias("S_80110EE8"))]
+    pub const SPECIAL_S_CHAIN_PAUSE: u32 = 0x8011_0EE8;
     pub const S_CHAIN_SOMETHING: u32 = 0x8011_0F18;
-    pub const S_80110F58: u32 = 0x8011_0F58;
-    pub const S_80110F64: u32 = 0x8011_0F64;
-    pub const S_80110F70: u32 = 0x8011_0F70;
+    #[doc(alias("S_80110F58"))]
+    pub const STICK_X: u32 = 0x8011_0F58;
+    #[doc(alias("S_80110F64"))]
+    pub const STICK_Y: u32 = 0x8011_0F64;
+    #[doc(alias("S_80110F70"))]
+    pub const SPECIAL_S_INIT: u32 = 0x8011_0F70;
     pub const SPECIAL_S_ENTER: u32 = 0x8011_1038;
     pub const SPECIAL_AIR_S_ENTER: u32 = 0x8011_108C;
     pub const S_CHECK_INIT_CHAIN: u32 = 0x8011_10E8;
-    pub const S_80111F70: u32 = 0x8011_1F70;
-    pub const S_80111FA0: u32 = 0x8011_1FA0;
+    #[doc(alias("S_80111F70"))]
+    pub const LETS_GO: u32 = 0x8011_1F70;
+    #[doc(alias("S_80111FA0"))]
+    pub const HELD_COUNT: u32 = 0x8011_1FA0;
     // The neutral special.
-    pub const N_80111FBC: u32 = 0x8011_1FBC;
-    pub const N_801120D4: u32 = 0x8011_20D4;
+    #[doc(alias("N_80111FBC"))]
+    pub const DROP_NEEDLES: u32 = 0x8011_1FBC;
+    #[doc(alias("N_801120D4"))]
+    pub const CLEAR_DAMAGE_CB: u32 = 0x8011_20D4;
     pub const SPECIAL_N_ENTER: u32 = 0x8011_20E8;
     pub const SPECIAL_AIR_N_ENTER: u32 = 0x8011_2198;
     pub const SHOOT_NEEDLES: u32 = 0x8011_2D44;
     // The up special.
-    pub const HI_FN_80112ED8: u32 = 0x8011_2ED8;
-    pub const HI_FN_80113038: u32 = 0x8011_3038;
+    #[doc(alias("HI_FN_80112ED8"))]
+    pub const SPECIAL_HI_VANISH: u32 = 0x8011_2ED8;
+    #[doc(alias("HI_FN_80113038"))]
+    pub const SPECIAL_HI_APPEAR_GFX: u32 = 0x8011_3038;
     pub const SPECIAL_HI_ENTER: u32 = 0x8011_30D0;
     pub const SPECIAL_AIR_HI_ENTER: u32 = 0x8011_312C;
     // The down special.
-    pub const LW_FN_80114034: u32 = 0x8011_4034;
-    pub const LW_FN_801140B0: u32 = 0x8011_40B0;
-    pub const LW_FN_8011412C: u32 = 0x8011_412C;
+    #[doc(alias("LW_FN_80114034"))]
+    pub const SPECIAL_LW_START_GFX: u32 = 0x8011_4034;
+    #[doc(alias("LW_FN_801140B0"))]
+    pub const SPECIAL_LW_END_GFX: u32 = 0x8011_40B0;
+    #[doc(alias("LW_FN_8011412C"))]
+    pub const SPECIAL_LW_SWAP: u32 = 0x8011_412C;
     pub const SPECIAL_LW_ENTER: u32 = 0x8011_4160;
     pub const SPECIAL_AIR_LW_ENTER: u32 = 0x8011_4224;
-    pub const LW_80114758: u32 = 0x8011_4758;
+    #[doc(alias("LW_80114758"))]
+    pub const SPECIAL_LW_FINISH: u32 = 0x8011_4758;
 }
 
 /// The `u` offsets of `ftSeak_FighterVars`' members.

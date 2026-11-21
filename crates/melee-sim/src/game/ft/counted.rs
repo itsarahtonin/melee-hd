@@ -25,8 +25,10 @@ use crate::hsd::tobj::TObjId;
 pub struct CostumeTObjList {
     /// +0x0
     pub n_costume_tobjs: u32,
-    /// +0x4
-    pub x5D0: Option<DataRef>,
+    /// +0x4: the costume's texture animations' indices (`x5D0` as the fighter holds it), or
+    /// the default costume's. The comparer's label keeps the offset.
+    #[doc(alias("x5D0"))]
+    pub tobj_indices: Option<DataRef>,
     /// +0x8: the costume's textures, the first `n_costume_tobjs` of them set.
     pub costume_tobjs: [Option<TObjId>; 5],
     /// The textures' words as the block held them, past the count.
@@ -61,7 +63,7 @@ impl Mirror for CostumeTObjList {
         let used = Self::used(n);
         CostumeTObjList {
             n_costume_tobjs: n,
-            x5D0: cx.import_data(m.u32(at + 4)),
+            tobj_indices: cx.import_data(m.u32(at + 4)),
             costume_tobjs: core::array::from_fn(|i| {
                 if i < used {
                     cx.import_handle("TObjId", m.u32(at + 8 + 4 * i as u32))
@@ -83,7 +85,7 @@ impl Mirror for CostumeTObjList {
                 format!("{n:?}"),
             );
         }
-        cx.compare_data(&format!("{path}.x5D0"), self.x5D0, m.u32(at + 4));
+        cx.compare_data(&format!("{path}.x5D0"), self.tobj_indices, m.u32(at + 4));
         let used = Self::used(self.n_costume_tobjs.max(n));
         for i in 0..used {
             cx.compare_handle(
@@ -104,7 +106,7 @@ impl LayOut for CostumeTObjList {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         self.left.lay(l, at + 8);
         l.put_u32(at, self.n_costume_tobjs);
-        l.put_word(at + 4, cx.data(self.x5D0));
+        l.put_word(at + 4, cx.data(self.tobj_indices));
         for i in 0..Self::used(self.n_costume_tobjs) {
             let h = self.costume_tobjs[i].map(|h| h.0);
             l.put_word(at + 8 + 4 * i as u32, cx.handle("TObjId", h));

@@ -841,7 +841,7 @@ impl Running<'_> {
         let c = self.common();
         match self.game.fighters[f.0].mv_i32(DEAD_PHASE) {
             1 => {
-                if self.game.fighters[f.0].x2222_b6 && !self.x100_rot_changed(f) {
+                if self.game.fighters[f.0].x2222_b6 && !self.part_35_rot_x_changed(f) {
                     return;
                 }
                 let a = crate::vec::Vec3::new(c.f32(0x538), c.f32(0x53C), c.f32(0x540));
@@ -881,7 +881,7 @@ impl Running<'_> {
                     self.set_dead_vec(gobj, DEAD_VIEW_VEL, v);
                     v
                 };
-                if self.game.fighters[f.0].x2222_b6 && !self.x100_rot_changed(f) {
+                if self.game.fighters[f.0].x2222_b6 && !self.part_35_rot_x_changed(f) {
                     return;
                 }
                 let p = self.dead_vec(gobj, DEAD_VIEW_POS) + v;

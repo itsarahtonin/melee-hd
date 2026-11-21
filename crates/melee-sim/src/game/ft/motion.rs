@@ -758,7 +758,7 @@ impl Running<'_> {
             }
         }
         if flags & SKIP_COL_ANIM == 0 {
-            self.reset_x488(gobj);
+            self.reset_secondary_overlay(gobj);
         }
         if flags & KEEP_GFX == 0 && self.game.fighters[f.0].x2219_b0 {
             self.destroy_effects(gobj);
@@ -832,16 +832,16 @@ impl Running<'_> {
         let ms = Self::motion_state(&self.game.fighters[f.0], msid);
         if self.game.fighters[f.0].ground_or_air == GA_GROUND
             && flags & SKIP_HIT_STUN_START == 0
-            && ms.x8 & 0x0040_0000 != 0
+            && ms.move_bits & 0x0040_0000 != 0
             && self.game.fighters[f.0].dmg.x18C8 == -1
         {
             let x814 = self.common().i32(0x814);
             self.game.fighters[f.0].dmg.x18C8 = if x814 > 0 { x814 } else { 1 };
         }
         let prev_attack = self.game.fighters[f.0].x2070;
-        self.set_attack_id(f, ms.x8 >> 24);
+        self.set_attack_id(f, ms.move_bits >> 24);
         self.set_attack_flags(f, ms.flags);
-        self.game.fighters[f.0].x2225_b3 = ms.x8 & 0x0080_0000 != 0;
+        self.game.fighters[f.0].x2225_b3 = ms.move_bits & 0x0080_0000 != 0;
         if self.game.fighters[f.0].x2226_b4 {
             if self.game.fighters[f.0].x2070[1] & 0x04 != 0 {
                 self.start_color_anim_unless_held(gobj, 0x7E);

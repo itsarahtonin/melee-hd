@@ -25,9 +25,11 @@ const FALL_SPECIAL_LANDING_LAG: usize = 0x14;
 const FALL_SPECIAL_ALLOW_INTERRUPT: usize = 0x18;
 
 /// `un_80322598`: the crowd's reaction to a fall (the audio port's crowd).
-const UN_80322598: u32 = 0x8032_2598;
+#[doc(alias("UN_80322598"))]
+const UN_CROWD_RECOVERY: u32 = 0x8032_2598;
 /// `un_803224DC`: the crowd's reaction to a landing.
-const UN_803224DC: u32 = 0x8032_24DC;
+#[doc(alias("UN_803224DC"))]
+const UN_CROWD_SIDE_BLAST: u32 = 0x8032_24DC;
 
 impl Running<'_> {
     /// `ftCo_Fall_IASA_Inner` (`ftCo_Fall_IASA`, `ftCo_FallAerial_IASA`): specials, item
@@ -261,7 +263,7 @@ impl Running<'_> {
             Val::Float(reg(fp.cur_pos.x)),
             Val::Float(reg(fp.dmg.x18A4_knockbackMagnitude)),
         ];
-        if code::call(self, UN_803224DC, &args).int() != 0 {
+        if code::call(self, UN_CROWD_SIDE_BLAST, &args).int() != 0 {
             self.game.fighter_mut(gobj).dmg.x18A4_knockbackMagnitude = 0.0;
         }
     }
@@ -501,7 +503,7 @@ impl Running<'_> {
         }
         let fp = self.game.fighter(gobj);
         let args = [Val::Int(fp.x8_spawnNum), Val::Float(reg(fp.cur_pos.y))];
-        code::call(self, UN_80322598, &args);
+        code::call(self, UN_CROWD_RECOVERY, &args);
     }
 
     /// Falling helpless after a move with full drift, `ftCo_800968C8`.

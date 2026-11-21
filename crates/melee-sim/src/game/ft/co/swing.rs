@@ -199,7 +199,7 @@ impl Running<'_> {
         }
         let hand = i32::from(
             self.data
-                .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x10)),
+                .u8(self.ft_model_desc(&self.game.fighters[f.0]).at(0x10)),
         );
         let parts = self.game.fighters[f.0].parts.expect("parts");
         let joint = self.game.fighter_parts[parts.0][hand as usize].joint;

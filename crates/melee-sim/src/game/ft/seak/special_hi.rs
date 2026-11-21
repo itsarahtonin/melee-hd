@@ -14,8 +14,8 @@ use crate::hsd::gobj::GObjId;
 pub const SHEIK: Teleport = Teleport {
     states: ms::SPECIAL_HI_START_0,
     attrs: 0x28,
-    start_cb: addr::HI_FN_80112ED8,
-    end_cb: addr::HI_FN_80113038,
+    start_cb: addr::SPECIAL_HI_VANISH,
+    end_cb: addr::SPECIAL_HI_APPEAR_GFX,
     windup: Windup::Hop,
     wind: false,
     vanish_at_travel: true,
@@ -69,8 +69,8 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     let t = &SHEIK;
     match a {
-        addr::HI_FN_80112ED8 => g.seak_special_hi_vanish(gobj),
-        addr::HI_FN_80113038 => g.teleport_appear_gfx(gobj, t),
+        addr::SPECIAL_HI_VANISH => g.seak_special_hi_vanish(gobj),
+        addr::SPECIAL_HI_APPEAR_GFX => g.teleport_appear_gfx(gobj, t),
         0x8011_2F48 => g.seak_special_hi_spawn_flash(gobj),
         0x8011_2FA8 => g.seak_special_hi_vanish_gfx(gobj),
         addr::SPECIAL_HI_ENTER => g.teleport_enter(gobj, t),

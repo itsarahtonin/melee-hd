@@ -101,11 +101,11 @@ pub const PURIN: Rollout = Rollout {
         air_end_l: ms::SPECIAL_AIR_N_END_L,
         hit: ms::SPECIAL_N_HIT,
     },
-    on_death: addr::SPECIAL_S_8013D658,
-    on_damage: addr::SPECIAL_S_8013D658,
-    on_hit: addr::SPECIAL_S_8013D764,
-    on_turned: addr::SPECIAL_S_8013D8B0,
-    on_mirror: addr::SPECIAL_N_8014222C,
+    on_death: addr::ROLLOUT_RESTORE,
+    on_damage: addr::ROLLOUT_RESTORE,
+    on_hit: addr::ROLLOUT_HIT,
+    on_turned: addr::ROLLOUT_NEW_ATTACK,
+    on_mirror: addr::ROLLOUT_MIRROR,
     roll_before_top: false,
     dust_from_roll: false,
 };
@@ -1481,11 +1481,11 @@ const EMPTY: [u32; 8] = [
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     let r = &PURIN;
     match a {
-        addr::SPECIAL_S_8013D658 => g.rollout_restore(gobj, r),
-        addr::SPECIAL_S_8013D764 => g.rollout_hit(gobj, r),
-        addr::SPECIAL_S_8013D8B0 => g.rollout_new_attack(gobj),
-        addr::SPECIAL_S_8013D8E4 => g.rollout_hitbox(gobj, r),
-        addr::SPECIAL_S_8013DC64 => g.rollout_init(gobj, r),
+        addr::ROLLOUT_RESTORE => g.rollout_restore(gobj, r),
+        addr::ROLLOUT_HIT => g.rollout_hit(gobj, r),
+        addr::ROLLOUT_NEW_ATTACK => g.rollout_new_attack(gobj),
+        addr::ROLLOUT_HITBOX => g.rollout_hitbox(gobj, r),
+        addr::ROLLOUT_INIT => g.rollout_init(gobj, r),
         addr::SPECIAL_N_ENTER => g.rollout_enter(gobj, r),
         addr::SPECIAL_AIR_N_ENTER => g.rollout_air_enter(gobj, r),
         addr::SPECIAL_N_START_ANIM => g.rollout_start_anim(gobj, r, false),
@@ -1535,7 +1535,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_N_START_TURN_COLL => g.rollout_air_turn_coll(gobj, r),
         addr::SPECIAL_AIR_N_END_COLL => g.rollout_air_end_coll(gobj, r),
         addr::SPECIAL_N_HIT_COLL => g.rollout_hit_coll(gobj, r),
-        addr::SPECIAL_N_8014222C => g.rollout_mirror(gobj),
+        addr::ROLLOUT_MIRROR => g.rollout_mirror(gobj),
         _ => return false,
     }
     true

@@ -64,32 +64,32 @@ impl Running<'_> {
             ms::DAMAGE2 => {
                 let mut v = self.floor_left0();
                 v.y = HAND.f32(self, f, attr::X24);
-                Start::Glide(addr::FN_80157080, v)
+                Start::Glide(addr::SLIDE_WINDUP_ENTER, v)
             }
             ms::ENTRY => {
                 let mut v = self.floor_left0();
                 v.y = HAND.f32(self, f, attr::X20);
-                Start::Glide(addr::FN_80156F6C, v)
+                Start::Glide(addr::RISE_ENTER, v)
             }
-            ms::SWEEP_LOOP => Start::Glide(addr::FN_8015746C, pt(self, attr::X2C)),
-            ms::SLAP => Start::Glide(addr::FN_8015755C, pt(self, attr::X34)),
-            ms::WALK_LOOP => Start::Glide(addr::FN_801578E8, pt(self, attr::X6C)),
-            ms::DRILL => Start::Glide(addr::FN_80157C50, pt(self, attr::X80)),
-            ms::ROCK_CRUSH_UP => Start::Now(addr::INIT_80157DF8),
-            ms::ROCK_CRUSH_DOWN => Start::Glide(addr::FN_80158144, pt(self, attr::X4C)),
+            ms::SWEEP_LOOP => Start::Glide(addr::SWEEP_LOOP_ENTER, pt(self, attr::X2C)),
+            ms::SLAP => Start::Glide(addr::SLAP_WINDUP_ENTER, pt(self, attr::X34)),
+            ms::WALK_LOOP => Start::Glide(addr::HOLD_START_ENTER, pt(self, attr::X6C)),
+            ms::DRILL => Start::Glide(addr::WINDOW_ENTER, pt(self, attr::X80)),
+            ms::ROCK_CRUSH_UP => Start::Now(addr::CHASES_ENTER),
+            ms::ROCK_CRUSH_DOWN => Start::Glide(addr::COUNTDOWN_ENTER, pt(self, attr::X4C)),
             // Where the poke starts: `x88` and up to `x90`, `x94` either way, at random.
             ms::POKE1 => Start::Glide(
-                addr::FN_801582D8,
+                addr::BEAMS_WINDUP_ENTER,
                 self.hand_point_around(f, &HAND, attr::X88, attr::X90),
             ),
-            ms::FINGER_BEAM_START => Start::Glide(addr::FN_801587B0, pt(self, attr::X98)),
-            ms::BACK_AIRPLANE2 | ms::BACK_AIRPLANE3 => Start::Now(addr::INIT_80158B3C),
-            ms::BACK_DISAPPEAR => Start::With(addr::INIT_801597F0, addr::FN_80159908),
-            ms::WAIT1_1 => Start::With(addr::INIT_801597F0, addr::FN_80159AA4),
-            ms::GRAB => Start::Now(addr::INIT_80159F40),
-            ms::SQUEEZING1 => Start::Glide(addr::FN_8015AAC8, pt(self, attr::X104)),
-            ms::SQUEEZE => Start::Glide(addr::FN_8015AAC8, pt(self, attr::X10C)),
-            ms::THROW => Start::Glide(addr::FN_8015AAC8, pt(self, attr::X114)),
+            ms::FINGER_BEAM_START => Start::Glide(addr::BOMBS_ENTER, pt(self, attr::X98)),
+            ms::BACK_AIRPLANE2 | ms::BACK_AIRPLANE3 => Start::Now(addr::REACH_ENTER),
+            ms::BACK_DISAPPEAR => Start::With(addr::VANISH_ENTER, addr::RAM_ENTER),
+            ms::WAIT1_1 => Start::With(addr::VANISH_ENTER, addr::SHRINK_ENTER),
+            ms::GRAB => Start::Now(addr::PASS_RISE_ENTER),
+            ms::SQUEEZING1 => Start::Glide(addr::TAG_WAIT_ENTER, pt(self, attr::X104)),
+            ms::SQUEEZE => Start::Glide(addr::TAG_WAIT_ENTER, pt(self, attr::X10C)),
+            ms::THROW => Start::Glide(addr::TAG_WAIT_ENTER, pt(self, attr::X114)),
             _ => return None,
         })
     }
@@ -182,7 +182,7 @@ impl Running<'_> {
             // and waits for Master Hand.
             next(self, ms::SLAM);
             let v = HAND.point(self, f, attr::X11C);
-            self.hand_glide_to(gobj, &HAND, addr::FN_8015AAC8, v);
+            self.hand_glide_to(gobj, &HAND, addr::TAG_WAIT_ENTER, v);
             return;
         } else {
             return;
@@ -202,18 +202,18 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::INIT_80155FCC => g.hand_start(gobj, &HAND),
-        addr::INIT_80156018 => g.hand_enter_wait1(gobj, &HAND),
-        addr::INIT_801560D8 => g.hand_enter_wait2(gobj, &HAND),
-        addr::INIT_80156198 => g.hand_enter_wait(gobj, &HAND),
-        addr::INIT_80156310 => g.hand_start_in_place(gobj, &HAND),
+        addr::START => g.hand_start(gobj, &HAND),
+        addr::WAIT1_ENTER => g.hand_enter_wait1(gobj, &HAND),
+        addr::WAIT2_ENTER => g.hand_enter_wait2(gobj, &HAND),
+        addr::WAIT_ENTER => g.hand_enter_wait(gobj, &HAND),
+        addr::START_IN_PLACE => g.hand_start_in_place(gobj, &HAND),
         addr::WAIT1_0_ANIM => g.hand_wait_anim(gobj, &HAND),
-        addr::INIT_80156AD8 => g.ch_human_attack(gobj),
-        addr::GRAB_UNK1_8015B8FC => g.hand_enter_glide1(gobj, &HAND),
-        addr::GRAB_UNK1_8015B998 => g.hand_enter_glide2(gobj, &HAND),
+        addr::HUMAN_ATTACK => g.ch_human_attack(gobj),
+        addr::GLIDE1_ENTER => g.hand_enter_glide1(gobj, &HAND),
+        addr::GLIDE2_ENTER => g.hand_enter_glide2(gobj, &HAND),
         addr::TAG_CANCEL_ANIM => g.hand_glide_anim(gobj, &HAND),
         addr::TAG_CANCEL_COLL => g.hand_glide_coll(gobj),
-        addr::GRAB_UNK1_8015BC88 => g.hand_return(gobj, &HAND),
+        addr::RETURN => g.hand_return(gobj, &HAND),
         _ => return false,
     }
     true

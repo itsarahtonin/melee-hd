@@ -124,20 +124,20 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::MS_344_80151828 => g.hand_enter(gobj, ms::WAIT_SWEEP),
+        addr::WAIT_SWEEP_ENTER => g.hand_enter(gobj, ms::WAIT_SWEEP),
         addr::WAIT_SWEEP_ANIM => g.mh_wait_sweep_anim(gobj),
-        addr::MS_346_80151918 => g.mh_sweep_enter(gobj),
+        addr::SWEEP_ENTER => g.mh_sweep_enter(gobj),
         addr::SWEEP_LOOP_ANIM => g.mh_sweep_loop_anim(gobj),
         addr::SWEEP_LOOP_PHYS => g.hand_glide_step(gobj, &super::HAND),
-        addr::MS_347_80151AC8 => g.hand_enter(gobj, ms::SWEEP_WAIT),
-        addr::MS_348_80151BB8 => g.hand_enter(gobj, ms::SLAP),
-        addr::MS_349_80151CA8 => g.mh_walk_shoot_enter(gobj),
-        addr::MS_353_80151DC4 => g.hand_enter(gobj, ms::WALK2),
+        addr::SWEEP_WAIT_ENTER => g.hand_enter(gobj, ms::SWEEP_WAIT),
+        addr::SLAP_ENTER => g.hand_enter(gobj, ms::SLAP),
+        addr::WALK_SHOOT_ENTER => g.mh_walk_shoot_enter(gobj),
+        addr::WALK2_ENTER => g.hand_enter(gobj, ms::WALK2),
         addr::WALK2_ANIM => g.mh_walk2_anim(gobj),
-        addr::MS_350_80151EB4 => g.hand_enter(gobj, ms::WALK_LOOP),
+        addr::WALK_LOOP_ENTER => g.hand_enter(gobj, ms::WALK_LOOP),
         addr::WALK_LOOP_ANIM => g.mh_walk_loop_anim(gobj),
         addr::WALK_LOOP_PHYS => g.mh_walk_loop_phys(gobj),
-        addr::MS_351_801520D8 => g.mh_walk_wait_enter(gobj),
+        addr::WALK_WAIT_ENTER => g.mh_walk_wait_enter(gobj),
         _ => return false,
     }
     true

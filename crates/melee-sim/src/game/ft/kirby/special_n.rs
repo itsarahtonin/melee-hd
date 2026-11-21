@@ -67,7 +67,8 @@ impl Running<'_> {
     }
 
     /// The grab's catch flags (`ftCommon_8007E2F4`).
-    fn kb_set_x1a6a(&mut self, gobj: GObjId, v: u16) {
+    #[doc(alias("kb_set_x1a6a"))]
+    fn kb_set_catch_flags(&mut self, gobj: GObjId, v: u16) {
         self.game.fighter_mut(gobj).x1A6A = v;
     }
 
@@ -364,7 +365,7 @@ impl Running<'_> {
         fp.x2222_b2 = true;
         fp.u[u::N_XF4] |= 0x80;
         self.kb_set_death_cbs(gobj);
-        self.kb_set_x1a6a(gobj, 0x1FF);
+        self.kb_set_catch_flags(gobj, 0x1FF);
     }
 
     /// A fighter caught on the ground, `fn_800F6210`: pulling it in.
@@ -374,7 +375,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.x2222_b2 = true;
         fp.u[u::N_XF4] &= 0x7F;
-        self.kb_set_x1a6a(gobj, 0x1FF);
+        self.kb_set_catch_flags(gobj, 0x1FF);
     }
 
     /// An item caught in the air, `fn_800F6280`.
@@ -390,14 +391,14 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.x2222_b2 = true;
         fp.u[u::N_XF4] &= 0x7F;
-        self.kb_set_x1a6a(gobj, 0x1FF);
+        self.kb_set_catch_flags(gobj, 0x1FF);
     }
 
     /// Into a held state (`enterCaptureState`).
     fn kb_n_enter_capture(&mut self, gobj: GObjId, msid: i32) {
         self.change_motion_state(gobj, msid, 0x10, 0.0, 1.0, 0.0, None);
         self.kb_set_death_cbs(gobj);
-        self.kb_set_x1a6a(gobj, 0x1FF);
+        self.kb_set_catch_flags(gobj, 0x1FF);
     }
 
     /// The victim in his mouth on the ground, `ftKb_SpecialN_800F6388`.
@@ -420,7 +421,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms::EAT_FALL, 0x90, 0.0, 1.0, 0.0, None);
         self.kb_set_death_cbs(gobj);
         self.anim_update(gobj);
-        self.kb_set_x1a6a(gobj, 0x1FF);
+        self.kb_set_catch_flags(gobj, 0x1FF);
     }
 
     /// The held walk at the speed the ground speed calls for, `fn_800F64C8`.
@@ -448,7 +449,7 @@ impl Running<'_> {
             rates,
             speed,
         );
-        self.kb_set_x1a6a(gobj, 0x1FF);
+        self.kb_set_catch_flags(gobj, 0x1FF);
     }
 
     /// The held landing, `fn_800F6528`.
@@ -525,7 +526,7 @@ impl Running<'_> {
             self.kb_set_death_cbs(gobj);
         }
         if x1a6a {
-            self.kb_set_x1a6a(gobj, 0x1FF);
+            self.kb_set_catch_flags(gobj, 0x1FF);
         }
     }
 
@@ -542,7 +543,7 @@ impl Running<'_> {
             self.kb_set_death_cbs(gobj);
         }
         if x1a6a {
-            self.kb_set_x1a6a(gobj, 0x1FF);
+            self.kb_set_catch_flags(gobj, 0x1FF);
         }
     }
 
@@ -773,7 +774,7 @@ impl Running<'_> {
             self.change_motion_state(gobj, ms::EAT_WAIT, 0x10, 0.0, 1.0, 0.0, None);
             self.kb_set_death_cbs(gobj);
             self.anim_update(gobj);
-            self.kb_set_x1a6a(gobj, 0x1FF);
+            self.kb_set_catch_flags(gobj, 0x1FF);
         }
     }
 
@@ -794,7 +795,7 @@ impl Running<'_> {
         if fp.cmd_vars[0] != 0
             && let Some(it) = fp.target_item_gobj
         {
-            self.kb_set_x1a6a(gobj, 0);
+            self.kb_set_catch_flags(gobj, 0);
             let fp = self.game.fighter(gobj);
             let part = self.bone_index(fp, crate::game::ft::parts::TRANS_N2);
             let joint = self.bone_joint(gobj, part);
@@ -835,7 +836,7 @@ impl Running<'_> {
         if fp.cmd_vars[0] != 0
             && let Some(victim) = fp.victim_gobj
         {
-            self.kb_set_x1a6a(gobj, 0);
+            self.kb_set_catch_flags(gobj, 0);
             self.throw_hit(gobj, victim, false);
             self.enter_thrown_kirby_star(victim, gobj);
             let v = self.game.fighter_id(victim);
@@ -854,7 +855,7 @@ impl Running<'_> {
         if fp.cmd_vars[0] != 0
             && let Some(it) = fp.target_item_gobj
         {
-            self.kb_set_x1a6a(gobj, 0);
+            self.kb_set_catch_flags(gobj, 0);
             let f = self.game.fighter_id(gobj);
             self.fighter_play_sfx(f, 0x222F6, 0x7F, 0x40);
             kirbyspitstar::release(self, it, false, 0.0);
@@ -876,7 +877,7 @@ impl Running<'_> {
         if fp.cmd_vars[0] != 0
             && let Some(victim) = fp.victim_gobj
         {
-            self.kb_set_x1a6a(gobj, 0);
+            self.kb_set_catch_flags(gobj, 0);
             self.throw_hit(gobj, victim, false);
             self.enter_thrown_copy_star(victim, gobj);
             let kind = self.copy_kind_of(gobj, victim);
@@ -897,7 +898,7 @@ impl Running<'_> {
             self.change_motion_state(gobj, ms::EAT_WAIT, 0x10, 0.0, 1.0, 0.0, None);
             self.kb_set_death_cbs(gobj);
             self.anim_update(gobj);
-            self.kb_set_x1a6a(gobj, 0x1FF);
+            self.kb_set_catch_flags(gobj, 0x1FF);
         }
     }
 
@@ -966,7 +967,7 @@ impl Running<'_> {
         }
         self.kb_set_death_cbs(gobj);
         self.anim_update(gobj);
-        self.kb_set_x1a6a(gobj, 0x1FF);
+        self.kb_set_catch_flags(gobj, 0x1FF);
     }
 
     /// The held wait's choices: swallowing (B, or the stick down past the attributes' range)

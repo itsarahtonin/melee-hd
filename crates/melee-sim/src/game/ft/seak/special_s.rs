@@ -419,7 +419,8 @@ impl Running<'_> {
 
     /// The side special's hitbox frames as a word (`specials.x1C`, which the chain reads as
     /// `mv.co.common.x1C`).
-    pub fn seak_special_s_x1c(&self, gobj: GObjId) -> i32 {
+    #[doc(alias("seak_special_s_x1c"))]
+    pub fn seak_special_s_hitbox_frames(&self, gobj: GObjId) -> i32 {
         self.game.fighter(gobj).mv_i32(mv::S_X1C)
     }
 
@@ -462,7 +463,7 @@ impl Running<'_> {
         }
         set_u_vec(fp, u::LSTICK_DELTA, Vec3::new(0.0, 0.0, 0.0));
         fp.x2222_b2 = true;
-        fp.accessory4_cb = Some(CodeRef(addr::S_8011097C));
+        fp.accessory4_cb = Some(CodeRef(addr::SPECIAL_S_NOTHING));
     }
 
     /// The grounded side special, `ftSk_SpecialS_Enter`.
@@ -490,8 +491,8 @@ impl Running<'_> {
             fp.death2_cb = Some(CodeRef(addr::DAMAGE_CB));
             fp.take_dmg_cb = Some(CodeRef(addr::DAMAGE_CB));
         }
-        fp.accessory4_cb = Some(CodeRef(addr::S_8011097C));
-        fp.pre_hitlag_cb = Some(CodeRef(addr::S_80110EE8));
+        fp.accessory4_cb = Some(CodeRef(addr::SPECIAL_S_NOTHING));
+        fp.pre_hitlag_cb = Some(CodeRef(addr::SPECIAL_S_CHAIN_PAUSE));
         fp.post_hitlag_cb = Some(CodeRef(addr::S_CHAIN_SOMETHING));
     }
 
@@ -508,7 +509,7 @@ impl Running<'_> {
             fp.death2_cb = Some(CodeRef(addr::DAMAGE_CB));
             fp.take_dmg_cb = Some(CodeRef(addr::DAMAGE_CB));
         }
-        fp.pre_hitlag_cb = Some(CodeRef(addr::S_80110EE8));
+        fp.pre_hitlag_cb = Some(CodeRef(addr::SPECIAL_S_CHAIN_PAUSE));
         fp.post_hitlag_cb = Some(CodeRef(addr::S_CHAIN_SOMETHING));
     }
 
@@ -834,16 +835,16 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::S_8011097C => g.seak_special_s_nothing(gobj),
+        addr::SPECIAL_S_NOTHING => g.seak_special_s_nothing(gobj),
         addr::S_ZERO_HITBOX_POSITIONS => g.seak_special_s_zero_hitbox_positions(gobj),
         0x8011_0AEC => g.seak_special_s_hitboxes_on(gobj),
         0x8011_0BCC => g.seak_special_s_chain_hits(gobj),
         0x8011_0788 => g.seak_special_s_input(gobj),
-        addr::S_80110E4C => g.seak_special_s_chain_gone(gobj),
+        addr::SPECIAL_S_CHAIN_GONE => g.seak_special_s_chain_gone(gobj),
         addr::S_CHECK_AND_DESTROY_CHAIN => g.seak_check_and_destroy_chain(gobj),
-        addr::S_80110EE8 => g.seak_special_s_chain_pause(gobj),
+        addr::SPECIAL_S_CHAIN_PAUSE => g.seak_special_s_chain_pause(gobj),
         addr::S_CHAIN_SOMETHING => g.seak_special_s_chain_resume(gobj),
-        addr::S_80110F70 => g.seak_special_s_init(gobj),
+        addr::SPECIAL_S_INIT => g.seak_special_s_init(gobj),
         addr::SPECIAL_S_ENTER => g.seak_special_s_enter(gobj),
         addr::SPECIAL_AIR_S_ENTER => g.seak_special_air_s_enter(gobj),
         0x8011_12CC => g.seak_special_s_start_anim(gobj),
@@ -882,10 +883,10 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj();
     Some(match f {
-        addr::S_80110F58 => Val::Float(reg(r.seak_stick_x(gobj(0).expect("a null fighter")))),
-        addr::S_80110F64 => Val::Float(reg(r.seak_stick_y(gobj(0).expect("a null fighter")))),
-        addr::S_80111F70 => Val::Int(i32::from(r.seak_lets_go(gobj(0), &super::special_n::SEAK))),
-        addr::S_80111FA0 => Val::Int(r.seak_held_count(gobj(0), &super::special_n::SEAK)),
+        addr::STICK_X => Val::Float(reg(r.seak_stick_x(gobj(0).expect("a null fighter")))),
+        addr::STICK_Y => Val::Float(reg(r.seak_stick_y(gobj(0).expect("a null fighter")))),
+        addr::LETS_GO => Val::Int(i32::from(r.seak_lets_go(gobj(0), &super::special_n::SEAK))),
+        addr::HELD_COUNT => Val::Int(r.seak_held_count(gobj(0), &super::special_n::SEAK)),
         addr::S_CHECK_INIT_CHAIN => Val::Int(i32::from(
             r.seak_special_s_check_init_chain(gobj(0).expect("a null fighter")),
         )),
