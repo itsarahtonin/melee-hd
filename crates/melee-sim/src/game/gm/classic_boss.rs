@@ -214,7 +214,7 @@ impl Running<'_> {
                     self.boss_camera_on_player(focus);
                     self.game.set_db_pause_flag(6);
                     self.player_disable_input(SLOT_PLAYER);
-                    self.player_80036844(SLOT_PLAYER, 1);
+                    self.set_player_unkillable(SLOT_PLAYER, 1);
                     self.game.vs.start.timer_enabled = false;
                 } else if t == w164 {
                     self.sfx_play_cheer(0x4E200);

@@ -1776,8 +1776,8 @@ fn player_costume_data() {
         |r, a| {
             match a.r(5) {
                 0 => r.player_load_costume(a.i(3), a.r(4) as u8),
-                1 => r.player_80031d2c(a.i(3), a.r(4) as u8),
-                _ => r.player_80031da8(a.i(3), a.i(4)),
+                1 => r.player_load_kirby_hats(a.i(3), a.r(4) as u8),
+                _ => r.player_kirby_copy(a.i(3), a.i(4)),
             }
             vec![]
         },
@@ -1801,7 +1801,7 @@ fn player_first_init() {
         &[nothing(0x8006_7A84)],
         |_| {},
         |r, _| {
-            r.player_80036da4();
+            r.player_lib_init();
             vec![]
         },
         |ctx, _| {

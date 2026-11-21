@@ -1052,7 +1052,7 @@ impl Running<'_> {
                     super::super::pl::player::ckind_ftkind(i32::from(self.data.u8(p) as i8), 0);
                 self.load_fighter_costume(kind, ev.x50[2]);
                 if ev.x0 as i8 == 4 {
-                    self.player_80031da8(kind, i32::from(ev.x1));
+                    self.player_kirby_copy(kind, i32::from(ev.x1));
                 }
             }
             _ => {}
@@ -1166,7 +1166,7 @@ impl Running<'_> {
         self.put_anim_file(kind);
         // `ftData_800857E0`: Kirby's copies' setup (`ftData_UnkMotionStates5`, Kirby's only).
         if kind == FighterKind::Kirby {
-            self.player_80031dc8();
+            self.player_kirby_copies();
         }
     }
 }
@@ -1272,7 +1272,7 @@ impl Running<'_> {
             self.game.game_data.vs.unk_530.xC = kos as i32;
             kos > best
         };
-        self.player_80036844(0, 1);
+        self.set_player_unkillable(0, 1);
         self.game.audio.lb.master = 0x7F;
         self.game.set_game_speed(1.0);
         self.game.vs_set_end_kind(2);
@@ -1598,7 +1598,7 @@ impl Running<'_> {
         }
         ev.x38 = if sheik { 0x13 } else { 0x21 };
         ev.x34 = ev.x34.wrapping_add(fc);
-        self.player_80036844(0, 1);
+        self.set_player_unkillable(0, 1);
         self.game.audio.lb.master = 0x7F;
         self.game.set_game_speed(1.0);
         self.game.vs_set_end_kind(8);
@@ -1853,7 +1853,7 @@ impl Running<'_> {
                 self.boss_camera_on_player(slot);
                 self.game.set_db_pause_flag(6);
                 self.player_disable_input(0);
-                self.player_80036844(0, 1);
+                self.set_player_unkillable(0, 1);
                 self.game.game_data.vs.unk_530.x34 = self.game.vs_frame_count() as i32;
                 self.game.vs.start.timer_enabled = false;
             }

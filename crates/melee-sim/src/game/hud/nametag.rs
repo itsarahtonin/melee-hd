@@ -220,7 +220,7 @@ impl Running<'_> {
             && g.player_stocks(s) != 0
             && (g.hud.nametags.shown[usize::from(slot)] != 0
                 || g.player_nametag(s) != NO_NAMETAG
-                || g.player_80036058(s)
+                || g.player_tag_due(s)
                 || g.vs_fighter_x4_b3(s));
         if !show {
             jobj::set_flags(&mut self.game.objs.jobjs, child, HIDDEN);

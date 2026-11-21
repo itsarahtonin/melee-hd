@@ -1340,7 +1340,7 @@ impl Running<'_> {
         g.set_player_facing(slot, if pos.x >= 0.0 { -1.0 } else { 1.0 });
         let damage = i32::from(g.vs.state.fighters[slot as usize].x6);
         g.set_player_damage_at(slot, sub, damage);
-        self.player_80032070(slot, sub != 0);
+        self.player_next_stock(slot, sub != 0);
         if sub != 1 {
             self.show_damage_display(slot);
             if self.game.vs.state.fighters[slot as usize].xC & 0x8000 != 0 {
@@ -1631,7 +1631,7 @@ impl Running<'_> {
                 let kind = ckind_ftkind(i32::from(ck), sub);
                 if kind != -1 && kind != 4 {
                     for &c in &costumes {
-                        r.player_80031da8(kind, c);
+                        r.player_kirby_copy(kind, c);
                     }
                 }
             }
@@ -1658,7 +1658,7 @@ impl Running<'_> {
             while o.costumes[i] != END {
                 let v = o.costumes[i];
                 if v != -1 && o.characters[i] == 4 && o.copies[i] != -1 {
-                    self.player_80031da8(i32::from(o.copies[i]), i32::from(v));
+                    self.player_kirby_copy(i32::from(o.copies[i]), i32::from(v));
                 }
                 i += 1;
             }
@@ -1667,7 +1667,7 @@ impl Running<'_> {
             let mut i = 0;
             while o.costumes[i] != END {
                 if o.costumes[i] != -1 && o.copies[i] != -1 {
-                    self.player_80031da8(i32::from(o.copies[i]), i32::from(costume));
+                    self.player_kirby_copy(i32::from(o.copies[i]), i32::from(costume));
                 }
                 i += 1;
             }
@@ -1698,7 +1698,7 @@ impl Running<'_> {
                 let kind = self.game.player_ftkind(i, sub);
                 if kind != -1 && kind != 4 {
                     for &c in &costumes {
-                        self.player_80031da8(kind, c);
+                        self.player_kirby_copy(kind, c);
                     }
                 }
             }
@@ -1714,7 +1714,7 @@ impl Running<'_> {
     /// stops by name where it would decide a facing (`f26`, none).
     #[doc(alias = "fn_8016E2BC")]
     pub fn place_players(&mut self, f26: Option<f64>) {
-        self.player_80036da4();
+        self.player_lib_init();
         if self.game.vs.state.is_singleplayer == 1 {
             self.place_single_player();
             return;

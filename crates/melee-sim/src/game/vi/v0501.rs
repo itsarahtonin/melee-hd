@@ -63,7 +63,7 @@ impl Running<'_> {
                 v.archive.file,
                 6,
             );
-            self.player_80031da8(i32::from(count), kirby_costume);
+            self.player_kirby_copy(i32::from(count), kirby_costume);
             self.game.set_player_flags_bit1(slot);
             self.game.set_player_ckind(slot, CharacterKind::Kirby.id());
             self.game.set_player_costume(slot, kirby_costume);

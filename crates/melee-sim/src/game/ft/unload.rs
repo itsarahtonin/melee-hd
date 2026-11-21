@@ -76,7 +76,7 @@ impl Running<'_> {
         crate::hsd::lobj::remove_all(&mut self.game.objs, lights);
         let fp = &self.game.fighters[f.0];
         let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
-        self.game.player_80031fb0(slot, sub);
+        self.game.player_fighter_gone(slot, sub);
         self.free_fighter_blocks(f);
     }
 

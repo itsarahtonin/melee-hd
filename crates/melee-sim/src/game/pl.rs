@@ -36,12 +36,13 @@ impl Running<'_> {
 
     /// `pl_800411C4`: the frame's counters end; repeated inputs count toward a bonus, and an
     /// entry for another player marked with a count of one gives that player bonus 0x4C.
+    #[doc(alias("pl_800411c4"))]
     #[doc(alias = "pl_800411C4")]
-    pub fn pl_800411c4(&mut self, slot: i32, sub: i32) {
+    pub fn end_frame_counters(&mut self, slot: i32, sub: i32) {
         if sub == 1 {
             return;
         }
-        self.pl_8004138c(slot, sub);
+        self.count_dominant_input(slot, sub);
         for i in 0..6 {
             let e = &self.game.player_unk6a8(slot).x10[i];
             // Bonus 0x4C goes to the player the entry is for.
@@ -69,8 +70,9 @@ impl Running<'_> {
     }
 
     /// `fn_8004138C`: a bonus for one input dominating the frame's counters.
+    #[doc(alias("pl_8004138c"))]
     #[doc(alias = "fn_8004138C")]
-    fn pl_8004138c(&mut self, slot: i32, sub: i32) {
+    fn count_dominant_input(&mut self, slot: i32, sub: i32) {
         if sub == 1 {
             return;
         }
@@ -100,9 +102,11 @@ impl Running<'_> {
         *n = n.wrapping_add(1);
     }
 
-    /// `pl_8003FE1C`: bonus 10, for either Ice Climber.
+    /// `pl_8003FE1C`: bonus 10, for either Ice Climber (a fighter that left a downward
+    /// tumble early, `x2227_b4`).
+    #[doc(alias("pl_8003fe1c"))]
     #[doc(alias = "pl_8003FE1C")]
-    pub fn pl_8003fe1c(&mut self, slot: i32, _sub: i32) {
+    pub fn count_early_out_bonus(&mut self, slot: i32, _sub: i32) {
         self.count_bonus(slot, 10);
     }
 

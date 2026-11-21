@@ -397,7 +397,7 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
         63 => {
             let s = rand.below(2) == 0;
             (
-                i(game.player_800319c4(slot, s).into()),
+                i(game.player_fighters_all(slot, s).into()),
                 i(fns::Player_800319C4(ctx, slot, s.into())),
             )
         }
@@ -668,7 +668,7 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             (Got::None, Got::None)
         }
         95 => {
-            game.player_80031fb0(slot, sub);
+            game.player_fighter_gone(slot, sub);
             fns::Player_80031FB0(ctx, slot, sub);
             (Got::None, Got::None)
         }
@@ -676,16 +676,16 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             let v = small(rand);
             match rand.below(3) {
                 0 => {
-                    r.player_800366dc(slot, v);
+                    r.set_player_visible(slot, v);
                     fns::Player_800366DC(ctx, slot, v);
                 }
                 1 => {
                     let x = flt(rand);
-                    r.player_80036790(slot, x);
+                    r.set_player_hitlag(slot, x);
                     fns::Player_80036790(ctx, slot, arg(x));
                 }
                 _ => {
-                    r.player_80036844(slot, v);
+                    r.set_player_unkillable(slot, v);
                     fns::Player_80036844(ctx, slot, v);
                 }
             }
@@ -708,7 +708,7 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             i(fns::Player_8003219C(ctx, slot)),
         ),
         100 if game.player_entity(slot).is_some() => (
-            i(game.player_80036058(slot).into()),
+            i(game.player_tag_due(slot).into()),
             i(fns::Player_80036058(ctx, slot)),
         ),
         _ => (Got::None, Got::None),

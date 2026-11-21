@@ -782,7 +782,7 @@ impl Running<'_> {
             fp.x213C = -1;
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
             if fp.x2227_b4 {
-                self.pl_8003fe1c(slot, sub);
+                self.count_early_out_bonus(slot, sub);
                 self.game.fighters[f.0].x2227_b4 = false;
             }
             self.game.fighters[f.0].x2227_b5 = false;
