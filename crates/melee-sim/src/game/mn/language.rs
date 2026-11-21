@@ -11,6 +11,7 @@ use super::main::{IN_A, IN_BACK};
 use super::options::{
     EXIT_TO, JOBJ_MASK, LANGUAGE, MOBJ_MASK, OptionMenu, SETTINGS, SFX_BACK, SFX_MOVE, al,
 };
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj;
 
@@ -93,7 +94,7 @@ impl Running<'_> {
         // The language's bank loads wait at once, and their first wait starts the save.
         self.card_game_save_changes();
         self.lb_audio_language(0xAD);
-        self.menu_exit_to(super::super::gm::machine::GM_MENU);
+        self.menu_exit_to(GameMode::Menu);
         self.mark_links_ran(1, 9);
         let f = &mut self.game.menu.flow;
         f.cur_menu = SETTINGS;

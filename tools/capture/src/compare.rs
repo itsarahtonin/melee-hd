@@ -25,6 +25,7 @@ use crate::import::{FIGHTER_ATTRS_SIZE, Maps, VS_CONTROLLER, sym, try_box_index}
 pub const UNLAID: &str = "unlaid: ";
 use crate::{DataMap, FT_ANIM_FILES, FT_KINDS, MEM1};
 use melee_sim::game::ft::FighterKind;
+use melee_sim::game::gm::GameScene;
 
 /// The archives an earlier scan found that the latest doesn't (their scene's heap went with
 /// them, and their bytes since changed), where they were last: what the original's pointers
@@ -214,7 +215,7 @@ impl<'a> Comparer<'a> {
     /// files, ours the scene's last ones, until the next such scene sets them again, and
     /// nothing reads them (docs/engine.md, "A scene's statics past its heap").
     pub(crate) fn match_statics_live(&self) -> bool {
-        use melee_sim::game::gm::machine::{GS_RESULTS, is_match_scene, scene_kind};
+        use melee_sim::game::gm::machine::{is_match_scene, scene_kind};
         let g = self.game;
         // With no modes' machine (a replay's match, a state taken up from a trace tick) the
         // state is a match's.
@@ -222,7 +223,7 @@ impl<'a> Comparer<'a> {
         g.gr.param.is_none()
             || g.machine.scene_info.is_none()
             || is_match_scene(kind)
-            || kind == Some(GS_RESULTS)
+            || kind == Some(GameScene::Results)
     }
 
     pub(crate) fn u32(&self, a: u32) -> u32 {

@@ -6,6 +6,7 @@
 
 use super::super::hud::prize::{EntryRef, PrizeEntry};
 use super::super::state::Running;
+use crate::game::gm::GameMode;
 
 /// `TY_TROPHY_COUNT`.
 const TROPHIES: usize = 293;
@@ -143,7 +144,7 @@ impl Running<'_> {
     #[doc(alias = "onExitPrize@801BFF7C")]
     pub fn prize_state_on_exit(&mut self) {
         let m = self.game.gm.challenger.curr_mode;
-        self.set_pending_game_mode(m);
+        self.set_pending_game_mode(GameMode::of(m));
         self.set_new_game_mode_pending();
     }
 

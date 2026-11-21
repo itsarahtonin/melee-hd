@@ -12,6 +12,7 @@ use super::STATE_SETUP;
 use super::bracket::{Counters, Screen, player_x};
 use super::lib::{ckind_of, f, icon_frame, icon_of, scene_model};
 use crate::fpu::{mem, reg};
+use crate::game::gm::GameMode;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
@@ -40,7 +41,6 @@ const PAD_R: u32 = 0x20;
 const PAD_L: u32 = 0x40;
 const PAD_LEFT: u32 = 0x0004_0001;
 const PAD_RIGHT: u32 = 0x0008_0002;
-const GM_MENU: u8 = 1;
 
 fn match_up_counters(t: &mut super::Tournament) -> Counters<'_> {
     let a = &mut t.alt;
@@ -378,7 +378,7 @@ impl Running<'_> {
             self.lb_audio_call(0);
             self.game.game_data.x1850.force_main_menu = 1;
             self.game.end_scene();
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
         let n = usize::from(self.game.tou.tm.players_per_match);

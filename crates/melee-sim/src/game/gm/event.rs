@@ -7,10 +7,8 @@ use melee_data::archive::DataRef;
 use super::super::state::Running;
 use super::opponents::NONE;
 use crate::game::ft::FighterKind;
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::{self, GObjId};
-
-/// `GM_EVENT`.
-pub const GM_EVENT: u8 = 0x2B;
 
 /// The events (`0x33`).
 pub const EVENTS: u8 = 0x33;
@@ -304,7 +302,7 @@ impl Running<'_> {
     #[doc(alias = "onExitCss@801BAAD0")]
     pub fn event_exit_css(&mut self) {
         if self.game.event.css.pending_scene_change == 2 {
-            self.change_game_mode_after_scene(super::machine::GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
         let (ckind, _, color, nametag, _) =
@@ -909,7 +907,7 @@ impl Running<'_> {
             return;
         }
         if me.outcome == super::vs::OUTCOME_NO_CONTEST {
-            self.change_game_mode_after_scene(super::machine::GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
         let p0 = &me.player_standings[0];
@@ -993,19 +991,12 @@ impl Running<'_> {
         let _ = self.special_unlocks(0x10);
         let ev = self.game.game_data.vs.unk_530.clone();
         if kind != 0x21 {
-            self.init_challenger(
-                ev.x0,
-                ev.x1,
-                ev.x6,
-                ev.nametag,
-                kind,
-                super::machine::GM_MENU,
-            );
-            self.change_game_mode_after_scene(super::machine::GM_CHALLENGER_APPROACH);
+            self.init_challenger(ev.x0, ev.x1, ev.x6, ev.nametag, kind, GameMode::Menu.id());
+            self.change_game_mode_after_scene(GameMode::ChallengerApproach);
             return;
         }
-        if !self.challenger_check(1, ev.x6) {
-            self.change_game_mode_after_scene(super::machine::GM_MENU);
+        if !self.challenger_check(GameMode::Menu, ev.x6) {
+            self.change_game_mode_after_scene(GameMode::Menu);
         }
     }
 

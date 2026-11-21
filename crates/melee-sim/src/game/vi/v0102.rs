@@ -1,6 +1,7 @@
 //! Luigi's cutscene (`vi0102.c`, `Vi0102.dat`): Mario and Luigi at Peach's Castle, the
 //! camera's animation running the scene, a rumble at its frame 190.
 
+use crate::game::gm::GameScene;
 use melee_data::archive::DataRef;
 
 use super::super::state::{Obj, Running};
@@ -87,7 +88,7 @@ impl Running<'_> {
     #[doc(alias = "vi0102_Scene_OnEnter")]
     #[doc(alias = "vi0102_JObjCallback")]
     pub fn vi0102_on_enter(&mut self) {
-        let desc = super::enter_desc(self.game, 0x11);
+        let desc = super::enter_desc(self.game, GameScene::CutsceneLuigi);
         self.lb_audio_music_stop();
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);

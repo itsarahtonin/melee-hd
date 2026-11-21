@@ -14,6 +14,7 @@ use gekko_fp as fp;
 use super::debug_tables::{SETTINGS_INIT, TABLES, WORDS};
 use super::devtext::Link;
 use crate::fpu::{mem, reg};
+use crate::game::gm::GameMode;
 use crate::game::handles::CodeRef;
 use crate::game::state::{Game, OBJ_CAMERA, OBJ_LIGHT, Obj, Running};
 use crate::hsd::cobj::{self, StaticDesc};
@@ -28,8 +29,6 @@ use crate::vec::Vec3;
 pub const MENU_PROC: u32 = 0x8030_3EF4;
 /// `gm_Scene_DebugMenu_OnEnter`.
 pub const ON_ENTER: CodeRef = CodeRef(0x801B_E1D0);
-/// `GS_DEBUG_MENU`.
-pub const GS_DEBUG_MENU: u8 = 0x07;
 
 /// The stick's directions as `un_803039A4` reports them, above the buttons' bits.
 const STICK_LEFT: u32 = 0x4000_0000;
@@ -1336,7 +1335,7 @@ impl Running<'_> {
         self.game
             .machine
             .scene_info
-            .is_some_and(|(m, _)| m == crate::game::gm::GM_DEBUG)
+            .is_some_and(|(m, _)| m == GameMode::Debug)
     }
 
     /// `onEnterPrize`: the special message the settings name (`un_802FFEE0`: its id, at most

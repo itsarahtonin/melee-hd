@@ -16,6 +16,7 @@ use super::memory::{COPY_PERIOD, CompactStep, LbMemory};
 use crate::audio::Audio;
 use crate::audio::devcom::cb;
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 use crate::game::gr::{GrKind, StKind};
 
 /// `PreloadEntry`: a file the cache holds or wants. `state`: 0 free, 1 wanted, 2 reading,
@@ -95,7 +96,7 @@ pub struct SceneCache {
 pub const SCENE_DEFAULT: SceneCache = SceneCache {
     is_heap_persistent: [false; 2],
     game_cache: GameCache {
-        mode_kind: crate::game::gm::machine::GM_COUNT,
+        mode_kind: GameMode::NONE,
         x1: 0,
         x2: 0,
         x3: 0,
@@ -434,7 +435,7 @@ impl Dvd {
     #[doc(alias = "grStadium_801D511C")]
     fn want_game_cache(&mut self, saved_us: bool) {
         let gc = self.cache.new_scene.game_cache;
-        if gc.mode_kind == crate::game::gm::machine::GM_CAMERA_MODE {
+        if gc.mode_kind == GameMode::CameraMode {
             self.want_camera_mode();
         }
         if gc.stkind != StKind::Unk328 {

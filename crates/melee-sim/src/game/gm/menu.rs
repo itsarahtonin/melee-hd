@@ -4,7 +4,7 @@
 //! chose.
 
 use super::super::state::Running;
-use super::machine::{GM_CHALLENGER_APPROACH, GM_MENU};
+use crate::game::gm::GameMode;
 
 /// `MenuKind`s and selections the entry opens on.
 pub const MENU_KIND_MAIN: u8 = 0;
@@ -25,45 +25,45 @@ pub struct MenuMode {
 
 /// The list and selection the menu opens on after mode `prev` (`onEnter`'s switch).
 fn entry_list(prev: u8) -> (u8, u8) {
-    match prev {
+    match GameMode::from_id(prev) {
         // Classic, Adventure, All-Star and their game overs: the Regular Match list.
-        0x03 | 0x15 => (6, 0),
-        0x04 | 0x16 => (6, 1),
-        0x05 | 0x17 => (6, 2),
+        Some(GameMode::Classic | GameMode::ClassicEnding) => (6, 0),
+        Some(GameMode::Adventure | GameMode::AdventureEnding) => (6, 1),
+        Some(GameMode::AllStar | GameMode::AllStarEnding) => (6, 2),
         // Event.
-        0x2B => (7, 0),
+        Some(GameMode::Event) => (7, 0),
         // Target Test, Home-Run Contest: the Stadium list.
-        0x0F => (9, 0),
-        0x20 => (9, 1),
+        Some(GameMode::TargetTest) => (9, 0),
+        Some(GameMode::HomeRunContest) => (9, 1),
         // The Multi-Man modes.
-        0x21 => (33, 0),
-        0x22 => (33, 1),
-        0x23 => (33, 2),
-        0x24 => (33, 3),
-        0x25 => (33, 4),
-        0x26 => (33, 5),
+        Some(GameMode::TenMan) => (33, 0),
+        Some(GameMode::HundredMan) => (33, 1),
+        Some(GameMode::ThreeMinute) => (33, 2),
+        Some(GameMode::FifteenMinute) => (33, 3),
+        Some(GameMode::Endless) => (33, 4),
+        Some(GameMode::Cruel) => (33, 5),
         // Training.
-        0x1C => (1, 4),
+        Some(GameMode::Training) => (1, 4),
         // VS Melee, Tournament.
-        0x02 => (2, 0),
-        0x1B => (2, 1),
+        Some(GameMode::Vs) => (2, 0),
+        Some(GameMode::Tournament) => (2, 1),
         // Camera Mode and the Special Melee modes.
-        0x0A => (12, 0),
-        0x1F => (12, 1),
-        0x10 => (12, 2),
-        0x1E => (12, 3),
-        0x1D => (12, 4),
-        0x11 => (12, 5),
-        0x12 => (12, 9),
-        0x13 => (12, 8),
-        0x2A => (12, 6),
-        0x2C => (12, 7),
+        Some(GameMode::CameraMode) => (12, 0),
+        Some(GameMode::Stamina) => (12, 1),
+        Some(GameMode::SuperSuddenDeath) => (12, 2),
+        Some(GameMode::Giant) => (12, 3),
+        Some(GameMode::Tiny) => (12, 4),
+        Some(GameMode::Invisible) => (12, 5),
+        Some(GameMode::SlowMo) => (12, 9),
+        Some(GameMode::Lightning) => (12, 8),
+        Some(GameMode::FixedCamera) => (12, 6),
+        Some(GameMode::SingleButton) => (12, 7),
         // The trophies.
-        0x0B => (3, 0),
-        0x0C => (3, 1),
-        0x0D => (3, 3),
+        Some(GameMode::TrophyGallery) => (3, 0),
+        Some(GameMode::TrophyLottery) => (3, 1),
+        Some(GameMode::TrophyCollection) => (3, 3),
         // The menu itself (its options' language change restarts it).
-        GM_MENU => (4, 4),
+        Some(GameMode::Menu) => (4, 4),
         _ => (MENU_KIND_MAIN, 0),
     }
 }
@@ -112,7 +112,7 @@ impl Running<'_> {
         }
         m.load_assets = 1;
         let mut prev = self.game.machine.routing.prev_mode;
-        if prev == GM_CHALLENGER_APPROACH {
+        if prev == GameMode::ChallengerApproach {
             prev = self.game.gm.challenger.prev_mode;
         }
         let (kind, sel) = entry_list(prev);
@@ -125,7 +125,7 @@ impl Running<'_> {
     #[doc(alias = "onExit@801B138C")]
     pub fn menu_mode_on_exit(&mut self) {
         let mode = self.game.menu_mode.pending_mode as u8;
-        self.set_pending_game_mode(mode);
+        self.set_pending_game_mode(GameMode::of(mode));
         self.set_new_game_mode_pending();
     }
 }

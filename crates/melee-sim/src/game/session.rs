@@ -19,6 +19,7 @@ use crate::audio::boot::{BootTimes, console_boot_delay};
 use crate::audio::clock::{DiscSpeed, TB_HZ};
 use crate::audio::dsp::DspModel;
 use crate::game::ft::FighterKind;
+use crate::game::gm::{GameMode, GameScene};
 use crate::input::controller::PadData;
 use crate::input::pad::{ERR_NONE, ERR_NOT_READY, ERR_TRANSFER};
 use crate::lb::save::{CardDevice, CardLent, CardSlot};
@@ -945,7 +946,7 @@ impl Session {
             data: &self.data,
         }
         .entering_scene()
-            == Some(super::gm::training::GS_TRAINING);
+            == Some(GameScene::Training);
         // Training's computer players join mid-match as its menu's count asks
         // (`gm_8016EDDC`): the fighters' files of every slot the match may make.
         if training {
@@ -965,7 +966,7 @@ impl Session {
         }
         // Classic's horde stages' opponents join in the costumes their setup drew, every one
         // of which the intro's game cache holds (color 0xFF).
-        if self.game.game_mode == super::gm::one_player::GM_CLASSIC
+        if self.game.game_mode == GameMode::Classic
             && self.game.one_player.classic.base.stage[0] & 8 != 0
         {
             let mut kinds: Vec<i32> = Vec::new();
@@ -1052,7 +1053,7 @@ impl Session {
                 data: &self.data,
             }
             .entering_scene()
-                == Some(super::gm::machine::GS_VS);
+                == Some(GameScene::Vs);
         if multi_man {
             let mut joining = start.clone();
             for (i, ck) in [(1, 0x1B), (2, 0x1C)] {
@@ -1072,12 +1073,12 @@ impl Session {
         // opponents, Event 44's third player): their fighters' files, each costume of a
         // crowd's (it may shuffle them), and with a Kirby among them his copies' (every
         // character's for a crowd that copies).
-        if self.game.game_mode == super::gm::event::GM_EVENT {
+        if self.game.game_mode == GameMode::Event {
             let r = Running {
                 game: &mut self.game,
                 data: &self.data,
             };
-            if r.entering_scene() == Some(super::gm::machine::GS_VS) {
+            if r.entering_scene() == Some(GameScene::Vs) {
                 let (joiners, all_copies) = r.event_joiners();
                 let mut sets: Vec<Vec<(i8, u8)>> = Vec::new();
                 for &(ck, color) in &joiners {

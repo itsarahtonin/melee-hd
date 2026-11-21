@@ -18,6 +18,7 @@ use melee_slippi::replay::event;
 
 use crate::Session;
 use crate::predict_tests::disc;
+use melee_sim::game::gm::GameScene;
 
 /// Fox against Marth on Final Destination, a one-minute timed match: the recording ends with
 /// the time's game end.
@@ -470,7 +471,7 @@ fn live_settings_from(s: &Settings) -> (melee_sim::game::vs_match::ReplayStart, 
         ..Default::default()
     };
     g.objs.rng.seed = s.seed;
-    g.machine.routing.curr_mode = 2;
+    g.machine.routing.curr_mode = melee_sim::game::gm::GameMode::Vs.id();
     g.machine.routing.curr_state_id = 2;
     let (start, setup) = record::live_start(&g, &s.start);
     let mut live = Settings::live(&start).expect("the ruleset's codes");
@@ -1322,7 +1323,7 @@ fn a_ruleset_session_saves_its_live_matches() {
             sudden_death |= matches!(s.game().machine.phase,
                 melee_sim::game::gm::machine::Phase::Scene { scene_mode, state, .. }
                     if melee_sim::game::gm::machine::scene_kind(Some((scene_mode, state)))
-                        == Some(melee_sim::game::gm::machine::GS_SUDDEN_DEATH));
+                        == Some(GameScene::SuddenDeath));
         }
         drop(s);
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);

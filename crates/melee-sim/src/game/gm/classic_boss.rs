@@ -4,9 +4,9 @@
 
 use super::super::handles::CodeRef;
 use super::super::state::Running;
-use super::GM_CLASSIC;
 use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
+use crate::game::gm::GameMode;
 
 /// `fn_8017C1A4`, the controller's process.
 pub const PROC: u32 = 0x8017_C1A4;
@@ -269,7 +269,7 @@ impl Running<'_> {
     /// Normal or harder, in under 21,000 frames of play.
     #[doc(alias = "fn_8017EDDC")]
     fn classic_crazy_hand_allowed(&self) -> bool {
-        if self.game.game_mode != GM_CLASSIC {
+        if self.game.game_mode != GameMode::Classic {
             return false;
         }
         let run = &self.game.one_player.classic.base;

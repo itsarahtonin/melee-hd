@@ -5,6 +5,7 @@ use super::super::handles::CodeRef;
 use super::super::state::Running;
 use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
+use crate::game::gm::GameMode;
 
 /// `ChKind_None`, `CKind_Kirby`, `CKind_Mario`, `CKind_Luigi`.
 const NONE: u8 = 0x21;
@@ -939,7 +940,6 @@ pub const ESCAPE_END: u32 = 0x8017_E7A0;
 /// Bowser's match's end hook, `gm_8017E7FC`.
 pub const BOWSER_END: u32 = 0x8017_E7FC;
 /// `GM_ADVENTURE`, `ADVENTURE_BOWSERTOY_CUTSCENE`.
-const GM_ADVENTURE: u8 = 4;
 const BOWSERTOY_CUTSCENE: u8 = 0x5A;
 const PEACH_FIGHT: u8 = 0x03;
 /// The states whose scene is a match (`GS_VS`), in `gm_Mode_Adventure_States`' order.
@@ -1350,7 +1350,7 @@ impl Running<'_> {
     #[doc(alias = "gm_8017E7FC")]
     pub fn adventure_bowser_end(&mut self, _outcome: u8) {
         let run = &self.game.one_player.adventure;
-        let giga = self.game.machine.routing.curr_mode == GM_ADVENTURE
+        let giga = self.game.machine.routing.curr_mode == GameMode::Adventure
             && run.base.player.cpu_level >= 2
             && run.base.frames.wrapping_add(self.game.vs_frame_count()) < 0xFD20;
         if !giga {
@@ -1365,7 +1365,7 @@ impl Running<'_> {
     fn adventure_clear(&mut self) {
         let run = self.game.one_player.adventure.base;
         let stocks = self.game.game_data.vs.unk_522.stocks;
-        self.one_player_clear(&run, stocks, super::endings::GM_ADVENTURE_GOVER);
+        self.one_player_clear(&run, stocks, GameMode::AdventureEnding);
     }
 
     /// Bowser's toy's cutscene's exit, `gm_801B5078`: without Giga Bowser (`x77`), Adventure's

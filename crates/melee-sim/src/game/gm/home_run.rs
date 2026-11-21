@@ -3,6 +3,7 @@
 //! distance counter until the bag stops, the new record's fanfare, the record kept per
 //! character in tenths of the save's units, and the end.
 
+use crate::game::gm::GameMode;
 use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, DataRef};
 
@@ -184,7 +185,7 @@ impl Running<'_> {
         self.homerun_trophies(dist);
         self.trophy_unlocks();
         let _ = self.special_unlocks(8);
-        if !self.challenger_check(0x20, self.game.one_player.homerun_slot) {
+        if !self.challenger_check(GameMode::HomeRunContest, self.game.one_player.homerun_slot) {
             self.set_next_game_mode_state_id(0);
         }
     }

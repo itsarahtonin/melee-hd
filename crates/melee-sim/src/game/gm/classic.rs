@@ -6,6 +6,7 @@ use super::super::handles::CodeRef;
 use super::super::state::Running;
 use super::one_player::{CLASSIC_STAGES, OnePlayerRun, Opponent, matchup};
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 
 /// `ChKind_None`, `CKind_Zelda`, `CKind_Seak`, `CKind_Kirby`.
 const NONE: i8 = 0x21;
@@ -1003,7 +1004,7 @@ impl Running<'_> {
         {
             // `gm_8017CBAC` with Classic's run and stocks (`gmMainLib_8015CDC8`).
             let stocks = self.game.game_data.vs.unk_51C.stocks;
-            self.one_player_clear(&run, stocks, super::endings::GM_CLASSIC_GOVER);
+            self.one_player_clear(&run, stocks, GameMode::ClassicEnding);
         }
         if entry.flags == 0x80 && entry.bonus == 1 {
             self.classic_target_records();

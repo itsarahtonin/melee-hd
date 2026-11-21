@@ -5,12 +5,13 @@ use std::time::{Duration, Instant};
 
 use melee_audio::Simulated;
 use melee_sim::audio::clock::TB_HZ;
-use melee_sim::game::gm::machine::{GM_MENU, GM_VS, Phase};
+use melee_sim::game::gm::machine::Phase;
 
 use crate::Session;
 use crate::holds::Holds;
 use crate::jit;
 use crate::pacing::Mode;
+use melee_sim::game::gm::GameMode;
 
 /// The console from power-on, muted: with a blank card and the controllers given, or playing the
 /// recorded session `inputs` with its card.
@@ -45,7 +46,7 @@ fn mode(s: &Session) -> Option<u8> {
 /// it and A again into Melee's character select, B held back out to the main menu.
 fn vs_entry(s: &Session, t: u64, menu: &mut Option<u64>) -> melee_sim::input::controller::PadData {
     const IN_AND_OUT: &str = "down@100-102,a@160-162,a@260-262,b@600-660";
-    if menu.is_none() && mode(s) == Some(GM_MENU) {
+    if menu.is_none() && mode(s) == Some(GameMode::Menu.id()) {
         *menu = Some(t);
     }
     match *menu {
@@ -93,7 +94,7 @@ fn play(rule: bool, ticks: u64) -> Option<Played> {
         let pads = vs_entry(&s, t, &mut menu);
         let f = s.tick(pads);
         s.recycle(f);
-        played.reached_vs |= mode(&s) == Some(GM_VS);
+        played.reached_vs |= mode(&s) == Some(GameMode::Vs.id());
         let length = s.length.expect("a timeline");
         let long = jit::is_long(length, tick);
         // The host's time for the tick, the device playing meanwhile.

@@ -11,6 +11,7 @@ use melee_sim::game::mn::stagesel::STAGES;
 use crate::MEM1;
 use crate::compare::Comparer;
 use crate::import::sym;
+use melee_sim::game::gm::GameMode;
 
 /// `HSD_Free`, the screens' blocks' release.
 const HSD_FREE: u32 = 0x8037_F1B0;
@@ -339,13 +340,13 @@ impl<'a> Comparer<'a> {
         let css = self.u32(sym("mnCharSel_804D6CB0"));
         if c.entered {
             // A single-player mode's own select data (`melee_sim::game::gm::one_player`).
-            let ours = match c.entered_mode {
-                0x03..=0x05 => 0x8047_0708,
-                0x0F => 0x8049_0960,
-                0x21..=0x26 => 0x8049_50F0,
-                0x1C => 0x8048_E230,
-                0x2B => 0x8049_7758,
-                melee_sim::game::gm::GM_HANYU_CSS => 0x8049_BEE8,
+            let ours = match GameMode::from_id(c.entered_mode) {
+                Some(GameMode::Classic | GameMode::Adventure | GameMode::AllStar) => 0x8047_0708,
+                Some(GameMode::TargetTest) => 0x8049_0960,
+                Some(m) if melee_sim::game::gm::multi_man::is_multi_man(m.id()) => 0x8049_50F0,
+                Some(GameMode::Training) => 0x8048_E230,
+                Some(GameMode::Event) => 0x8049_7758,
+                Some(GameMode::HanyuCss) => 0x8049_BEE8,
                 _ => CSS_DATA,
             };
             self.check("mnCharSel_804D6CB0", "the CSSData", ours, css);

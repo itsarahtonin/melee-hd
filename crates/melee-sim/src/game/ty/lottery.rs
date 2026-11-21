@@ -6,6 +6,7 @@
 //! table, which goes back to the save with the save marked to write. B with one coin or none
 //! set ends the scene. Its mode's states are `gmtoylottery.c`'s.
 
+use crate::game::gm::GameMode;
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
@@ -1447,7 +1448,7 @@ impl Running<'_> {
     #[doc(alias = "onExit@801BECD0")]
     pub fn lot_mode_exit(&mut self) {
         self.special_unlocks(4);
-        if !self.challenger_check(1, 0) {
+        if !self.challenger_check(GameMode::Menu, 0) {
             self.toy_mode_exit_to_menu();
         }
     }

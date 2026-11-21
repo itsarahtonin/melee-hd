@@ -11,6 +11,7 @@ use melee_sim::lb::memory;
 use crate::MEM1;
 use crate::compare::Comparer;
 use crate::import::sym;
+use melee_sim::game::gm::GameMode;
 
 /// Statics whose names other units' share, by address.
 const STATE_MACHINE: u32 = 0x8047_9D30;
@@ -91,55 +92,53 @@ impl<'a> Comparer<'a> {
             (self.u8(STATE_MACHINE + 0xC), self.u32(STATE_MACHINE + 0x10)),
         );
         let info = sm.scene_info.map_or(0, |(mode, state)| {
-            let states = match mode {
-                melee_sim::game::gm::machine::GM_BOOT => sym("gm_Mode_Boot_States"),
-                melee_sim::game::gm::machine::GM_MEMCARD => sym("gm_Mode_MemCard_States"),
-                melee_sim::game::gm::machine::GM_OPENING_MV => sym("gm_Mode_Opening_States"),
-                melee_sim::game::gm::machine::GM_TITLE => sym("gm_Mode_Title_States"),
-                melee_sim::game::gm::machine::GM_PROGRESSIVE_SCAN => sym("gm_Mode_ProgScan_States"),
-                melee_sim::game::gm::machine::GM_MENU => sym("gm_Mode_Menu_States"),
-                melee_sim::game::gm::machine::GM_VS => sym("gm_Mode_Vs_States"),
-                melee_sim::game::gm::machine::GM_CAMERA_MODE => sym("gm_Mode_Camera_States"),
-                melee_sim::game::gm::tournament::GM_TOURNAMENT => sym("gm_Mode_Tournament_States"),
-                0x10 => sym("gm_Mode_SuperSuddenDeath_States"),
-                0x11 => sym("gm_Mode_InvisibleVs_States"),
-                0x12 => sym("gm_Mode_SlowMo_States"),
-                0x13 => sym("gm_Mode_LightningVs_States"),
-                0x1D => sym("gm_Mode_TinyVs_States"),
-                0x1E => sym("gm_Mode_GiantVs_States"),
-                0x1F => sym("gm_Mode_StaminaVs_States"),
-                0x2A => sym("gm_Mode_CameraVs_States"),
-                0x2C => sym("gm_Mode_SingleButtonVs_States"),
-                melee_sim::game::ty::GM_TOY_GALLERY => sym("gm_Mode_ToyGallery_States"),
-                melee_sim::game::ty::GM_TOY_LOTTERY => sym("gm_Mode_ToyLottery_States"),
-                melee_sim::game::ty::GM_TOY_COLLECTION => sym("gm_Mode_ToyCollection_States"),
-                melee_sim::game::gm::machine::GM_CHALLENGER_APPROACH => {
-                    sym("gm_Mode_ChallengerApproach_States")
-                }
-                melee_sim::game::gm::GM_DEBUG => sym("gm_Mode_Debug_States"),
-                melee_sim::game::gm::GM_DEBUG_VS => sym("gm_Mode_DebugVs_States"),
-                melee_sim::game::gm::GM_DEBUG_SOUND_TEST => sym("gm_Mode_DebugMenu_States"),
-                melee_sim::game::gm::GM_HANYU_CSS => sym("gm_Mode_HanyuCss_States"),
-                melee_sim::game::gm::GM_HANYU_SSS => sym("gm_Mode_HanyuSss_States"),
-                melee_sim::game::vi::GM_DEBUG_CUTSCENE => sym("gm_Mode_DebugCutscene_States"),
-                melee_sim::game::gm::endings::GM_DEBUG_GOVER => sym("gm_Mode_DebugGOver_States"),
-                melee_sim::game::gm::endings::GM_CLASSIC_GOVER
-                | melee_sim::game::gm::endings::GM_ADVENTURE_GOVER
-                | melee_sim::game::gm::endings::GM_ALLSTAR_GOVER => sym("gm_Mode_GOver_States"),
-                0x03 => sym("gm_Mode_Classic_States"),
-                0x04 => sym("gm_Mode_Adventure_States"),
-                0x05 => sym("gm_Mode_AllStar_States"),
-                0x0F => sym("gm_Mode_TargetTest_States"),
-                0x1C => sym("gm_Mode_Training_States"),
-                0x20 => sym("gm_Mode_Homerun_States"),
-                0x21 => sym("gm_Mode_10ManVs_States"),
-                0x22 => sym("gm_Mode_100ManVs_States"),
-                0x23 => sym("gm_Mode_3Min_States"),
-                0x24 => sym("gm_Mode_15Min_States"),
-                0x25 => sym("gm_Mode_EndlessVs_States"),
-                0x26 => sym("gm_Mode_CruelVs_States"),
-                0x2B => sym("gm_Mode_Event_States"),
-                m => panic!("game mode {m:#x}'s states"),
+            let states = match GameMode::from_id(mode) {
+                Some(GameMode::Boot) => sym("gm_Mode_Boot_States"),
+                Some(GameMode::MemCard) => sym("gm_Mode_MemCard_States"),
+                Some(GameMode::Opening) => sym("gm_Mode_Opening_States"),
+                Some(GameMode::Title) => sym("gm_Mode_Title_States"),
+                Some(GameMode::ProgressiveScan) => sym("gm_Mode_ProgScan_States"),
+                Some(GameMode::Menu) => sym("gm_Mode_Menu_States"),
+                Some(GameMode::Vs) => sym("gm_Mode_Vs_States"),
+                Some(GameMode::CameraMode) => sym("gm_Mode_Camera_States"),
+                Some(GameMode::Tournament) => sym("gm_Mode_Tournament_States"),
+                Some(GameMode::SuperSuddenDeath) => sym("gm_Mode_SuperSuddenDeath_States"),
+                Some(GameMode::Invisible) => sym("gm_Mode_InvisibleVs_States"),
+                Some(GameMode::SlowMo) => sym("gm_Mode_SlowMo_States"),
+                Some(GameMode::Lightning) => sym("gm_Mode_LightningVs_States"),
+                Some(GameMode::Tiny) => sym("gm_Mode_TinyVs_States"),
+                Some(GameMode::Giant) => sym("gm_Mode_GiantVs_States"),
+                Some(GameMode::Stamina) => sym("gm_Mode_StaminaVs_States"),
+                Some(GameMode::FixedCamera) => sym("gm_Mode_CameraVs_States"),
+                Some(GameMode::SingleButton) => sym("gm_Mode_SingleButtonVs_States"),
+                Some(GameMode::TrophyGallery) => sym("gm_Mode_ToyGallery_States"),
+                Some(GameMode::TrophyLottery) => sym("gm_Mode_ToyLottery_States"),
+                Some(GameMode::TrophyCollection) => sym("gm_Mode_ToyCollection_States"),
+                Some(GameMode::ChallengerApproach) => sym("gm_Mode_ChallengerApproach_States"),
+                Some(GameMode::Debug) => sym("gm_Mode_Debug_States"),
+                Some(GameMode::DebugVs) => sym("gm_Mode_DebugVs_States"),
+                Some(GameMode::DebugSoundTest) => sym("gm_Mode_DebugMenu_States"),
+                Some(GameMode::HanyuCss) => sym("gm_Mode_HanyuCss_States"),
+                Some(GameMode::HanyuSss) => sym("gm_Mode_HanyuSss_States"),
+                Some(GameMode::DebugCutscenes) => sym("gm_Mode_DebugCutscene_States"),
+                Some(GameMode::DebugEnding) => sym("gm_Mode_DebugGOver_States"),
+                Some(
+                    GameMode::ClassicEnding | GameMode::AdventureEnding | GameMode::AllStarEnding,
+                ) => sym("gm_Mode_GOver_States"),
+                Some(GameMode::Classic) => sym("gm_Mode_Classic_States"),
+                Some(GameMode::Adventure) => sym("gm_Mode_Adventure_States"),
+                Some(GameMode::AllStar) => sym("gm_Mode_AllStar_States"),
+                Some(GameMode::TargetTest) => sym("gm_Mode_TargetTest_States"),
+                Some(GameMode::Training) => sym("gm_Mode_Training_States"),
+                Some(GameMode::HomeRunContest) => sym("gm_Mode_Homerun_States"),
+                Some(GameMode::TenMan) => sym("gm_Mode_10ManVs_States"),
+                Some(GameMode::HundredMan) => sym("gm_Mode_100ManVs_States"),
+                Some(GameMode::ThreeMinute) => sym("gm_Mode_3Min_States"),
+                Some(GameMode::FifteenMinute) => sym("gm_Mode_15Min_States"),
+                Some(GameMode::Endless) => sym("gm_Mode_EndlessVs_States"),
+                Some(GameMode::Cruel) => sym("gm_Mode_CruelVs_States"),
+                Some(GameMode::Event) => sym("gm_Mode_Event_States"),
+                _ => panic!("game mode {mode:#x}'s states"),
             };
             states + 0x18 * u32::from(state) + 0xC
         });
@@ -351,8 +350,8 @@ impl<'a> Comparer<'a> {
         // The windows' scene, while the memory card scene runs: past it, the pointer names
         // the scene's freed heap, which nothing reads until the windows' setup
         // (`gm_801AEBB0`) sets it again (docs/engine.md, "Uninitialized values").
-        use melee_sim::game::gm::machine::{GM_BOOT, GM_MEMCARD};
-        if matches!(self.game.machine.scene_info, Some((m, _)) if m == GM_BOOT || m == GM_MEMCARD) {
+        if matches!(self.game.machine.scene_info, Some((m, _)) if m == GameMode::Boot || m == GameMode::MemCard)
+        {
             let scene = mc.scene;
             let theirs = self.u32(sym("gm_804D6868"));
             self.compare_data("gm_804D6868", scene, theirs);

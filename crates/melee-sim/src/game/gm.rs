@@ -35,6 +35,7 @@ pub mod opponents;
 pub mod pause;
 pub mod progressive;
 pub mod records;
+pub mod registry;
 pub mod results;
 pub mod results_exit;
 pub mod results_fighters;
@@ -56,31 +57,11 @@ pub mod vs;
 pub mod vs_melee;
 pub mod vs_mode;
 
+pub use registry::{GameMode, GameScene};
+
 use super::handles::CodeRef;
 use super::state::Game;
 use crate::hsd::gobj::GObjId;
-
-/// `GameModeKind`s the match code asks about.
-pub const GM_VS: u8 = 2;
-pub const GM_CLASSIC: u8 = 3;
-pub const GM_ADVENTURE: u8 = 4;
-pub const GM_ALLSTAR: u8 = 5;
-/// The debug VS mode, which Slippi's playback codes run a replay's match in.
-pub const GM_DEBUG_VS: u8 = 14;
-/// The debug menu's mode and the sound test's debug mode, which only a debug level's title
-/// exits reach.
-pub const GM_DEBUG: u8 = 6;
-pub const GM_DEBUG_SOUND_TEST: u8 = 7;
-/// The Hanyu selects, the debug menu's character and stage select tests.
-pub const GM_HANYU_CSS: u8 = 8;
-pub const GM_HANYU_SSS: u8 = 9;
-pub const GM_TARGET_TEST: u8 = 15;
-pub const GM_SUPER_SUDDEN_DEATH_VS: u8 = 16;
-pub const GM_CHALLENGER_APPROACH: u8 = 20;
-pub const GM_STAMINA_VS: u8 = 31;
-pub const GM_10MAN_VS: u8 = 33;
-pub const GM_CRUEL_VS: u8 = 38;
-pub const GM_EVENT: u8 = 43;
 
 /// The game-mode layer's globals besides the scene loop's and the match's.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
@@ -237,8 +218,22 @@ pub const DB_DEBUG_ROM: i32 = 3;
 #[doc(alias = "gm_IsCurrently1PMode_inline")]
 pub fn is_1p_mode(game: &Game) -> bool {
     matches!(
-        game.game_mode,
-        0x03 | 0x04 | 0x05 | 0x0F | 0x1C | 0x20 | 0x21 | 0x22 | 0x23 | 0x24 | 0x25 | 0x26 | 0x2B
+        GameMode::from_id(game.game_mode),
+        Some(
+            GameMode::Classic
+                | GameMode::Adventure
+                | GameMode::AllStar
+                | GameMode::TargetTest
+                | GameMode::Training
+                | GameMode::HomeRunContest
+                | GameMode::TenMan
+                | GameMode::HundredMan
+                | GameMode::ThreeMinute
+                | GameMode::FifteenMinute
+                | GameMode::Endless
+                | GameMode::Cruel
+                | GameMode::Event
+        )
     )
 }
 
@@ -254,7 +249,7 @@ pub fn is_1p_mode_for_c_stick(game: &Game) -> bool {
 /// Whether the game is in training mode, `gm_8018841C`.
 #[doc(alias = "gm_8018841C")]
 pub fn is_training(game: &Game) -> bool {
-    game.game_mode == 0x1C
+    game.game_mode == GameMode::Training
 }
 
 /// What the memory card's save data has unlocked and recorded, and which of Slippi Dolphin's
@@ -567,7 +562,7 @@ pub const fn language_setting_is_us() -> bool {
 /// Whether the game mode is Super Sudden Death, `gm_8016B3A0`.
 #[doc(alias = "gm_8016B3A0")]
 pub fn is_super_sudden_death(game: &Game) -> bool {
-    game.game_mode == GM_SUPER_SUDDEN_DEATH_VS
+    game.game_mode == GameMode::SuperSuddenDeath
 }
 
 /// The fixed camera, `gm_80165290`: Fixed-Camera Mode's unpause hook

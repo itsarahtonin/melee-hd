@@ -7,6 +7,7 @@ use super::super::state::{Game, Running};
 use super::super::structs::{
     FighterData, GamePrefs, GameRules, GmSaveData, GmStats, NameTagData, gmm_x0,
 };
+use crate::game::gm::GameMode;
 
 /// `LANG_JP`, `LANG_US`.
 pub const LANG_JP: u8 = 0;
@@ -386,8 +387,7 @@ impl Game {
         if self.unlock_code(super::code::TROPHIES_ALL) {
             return 0x63;
         }
-        let flags = if super::is_1p_mode(self) || self.game_mode == crate::game::ty::GM_TOY_LOTTERY
-        {
+        let flags = if super::is_1p_mode(self) || self.game_mode == GameMode::TrophyLottery {
             &self.toys.table.flags
         } else {
             &self.game_data.thing.save_data.trophy_flags

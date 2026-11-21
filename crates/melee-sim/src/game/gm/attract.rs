@@ -6,9 +6,9 @@
 
 use super::super::handles::CodeRef;
 use super::super::state::Running;
-use super::machine::GM_TITLE;
 use super::vs_mode::{GamePrefs, GameRules};
 use crate::game::camera;
+use crate::game::gm::GameMode;
 use crate::game::pl::player::PKIND_CPU;
 use crate::game::structs::StartMeleeData;
 use crate::hsd::gobj::GObjId;
@@ -170,7 +170,7 @@ impl Running<'_> {
             self.sfx_stop_all();
             self.lb_audio_call(1);
             self.game.end_scene();
-            self.set_pending_game_mode(GM_TITLE);
+            self.set_pending_game_mode(GameMode::Title);
             self.set_new_game_mode_pending();
             return;
         }
@@ -242,7 +242,7 @@ impl Running<'_> {
     pub fn sudden_death_scene_on_enter(&mut self, scene_mode: u8) {
         // The mark goes on the scene's own enter data: Tournament mode's is its own
         // (`gm_804876D8`).
-        if scene_mode == super::tournament::GM_TOURNAMENT {
+        if scene_mode == GameMode::Tournament {
             self.game.tou.start.rules.x6 = 1;
         } else {
             self.game.vs_melee.start.rules.x6 = 1;
@@ -305,20 +305,20 @@ pub(crate) fn scene_enter_data(
     game: &mut crate::game::state::Game,
     scene_mode: u8,
 ) -> &mut crate::game::structs::StartMeleeData {
-    match scene_mode {
-        super::machine::GM_OPENING_MV => &mut game.attract.start,
-        m if super::machine::uses_vs_melee(m) => &mut game.vs_melee.start,
-        super::tournament::GM_TOURNAMENT => &mut game.tou.start,
-        super::GM_DEBUG => &mut game.debug_mode.vs_enter,
-        super::event::GM_EVENT => &mut game.event.start,
-        super::one_player::GM_TARGET_TEST => &mut game.one_player.target_start,
-        super::one_player::GM_TRAINING => &mut game.training.enter,
-        super::one_player::GM_CLASSIC
-        | super::one_player::GM_ADVENTURE
-        | super::one_player::GM_ALLSTAR => &mut game.one_player.match_start,
-        m if super::multi_man::is_multi_man(m) => &mut game.multi_man.start,
+    match GameMode::of(scene_mode) {
+        GameMode::Opening => &mut game.attract.start,
+        m if super::machine::uses_vs_melee(m.id()) => &mut game.vs_melee.start,
+        GameMode::Tournament => &mut game.tou.start,
+        GameMode::Debug => &mut game.debug_mode.vs_enter,
+        GameMode::Event => &mut game.event.start,
+        GameMode::TargetTest => &mut game.one_player.target_start,
+        GameMode::Training => &mut game.training.enter,
+        GameMode::Classic | GameMode::Adventure | GameMode::AllStar => {
+            &mut game.one_player.match_start
+        }
+        m if super::multi_man::is_multi_man(m.id()) => &mut game.multi_man.start,
         m => crate::game::code::unported_call(&format!(
-            "the VS scene's enter data in game mode {m:#x}"
+            "the VS scene's enter data in game mode {m:?}"
         )),
     }
 }

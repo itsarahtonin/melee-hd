@@ -1378,8 +1378,7 @@ impl Running<'_> {
             return;
         }
         let c = &self.game.fighters[f.0].cpu;
-        // `GM_TRAINING`.
-        if c.x88 > 0 && self.game.gr.game_mode != 28 {
+        if c.x88 > 0 && self.game.gr.game_mode != crate::game::gm::GameMode::Training {
             self.cpu_neutral_stick(f);
             self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
             self.cpu_cmd(f, cmd::PRESS_UP);

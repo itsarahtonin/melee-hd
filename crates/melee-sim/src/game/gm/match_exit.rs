@@ -6,8 +6,8 @@
 use super::super::state::{Game, Running};
 use super::super::structs::MatchEnd;
 use super::decisions::{COUNT, decision_kind};
-use super::machine::{GM_OPENING_MV, GM_VS};
 use crate::game::ft::CharacterKind;
+use crate::game::gm::{GameMode, GameScene};
 
 /// `OUTCOME_NO_CONTEST`, `OUTCOME_RETRY`.
 pub const OUTCOME_NO_CONTEST: u8 = 7;
@@ -47,8 +47,18 @@ pub fn selkind(ckind: u8) -> u8 {
 /// Death and the Special Melee modes kept with VS's results).
 fn special_melee_mode(mode: u8) -> bool {
     matches!(
-        mode,
-        0x10 | 0x11 | 0x12 | 0x13 | 0x1D | 0x1E | 0x1F | 0x2A | 0x2C
+        GameMode::from_id(mode),
+        Some(
+            GameMode::SuperSuddenDeath
+                | GameMode::Invisible
+                | GameMode::SlowMo
+                | GameMode::Lightning
+                | GameMode::Tiny
+                | GameMode::Giant
+                | GameMode::Stamina
+                | GameMode::FixedCamera
+                | GameMode::SingleButton
+        )
     )
 }
 
@@ -69,7 +79,8 @@ impl Game {
     /// The end of `gm_Scene_Vs_OnExit`: in VS mode (and the modes kept with it) and the
     /// single-player runs, each character in `played` marked played in the save.
     pub fn mark_played(&mut self, played: &[u8]) {
-        if self.is_1p_run() || special_melee_mode(self.game_mode) || self.game_mode == GM_VS {
+        if self.is_1p_run() || special_melee_mode(self.game_mode) || self.game_mode == GameMode::Vs
+        {
             for &s in played {
                 self.mark_character_played(s);
             }
@@ -79,37 +90,38 @@ impl Game {
     /// The match's exit data for the scene that ends: VS mode's match or Sudden Death's,
     /// or the attract match's.
     pub fn match_exit_data(&mut self, scene_mode: u8, state: u8) -> &mut MatchExitInfo {
-        use super::machine::{GS_SUDDEN_DEATH, GS_VS, scene_kind, uses_vs_melee};
+        use super::machine::{scene_kind, uses_vs_melee};
         let scene = scene_kind(Some((scene_mode, state)));
-        match (scene_mode, state) {
-            (m, _) if uses_vs_melee(m) && scene == Some(GS_VS) => &mut self.vs_melee.exit,
-            (m, _) if uses_vs_melee(m) && scene == Some(GS_SUDDEN_DEATH) => {
+        match (GameMode::of(scene_mode), state) {
+            (m, _) if uses_vs_melee(m.id()) && scene == Some(GameScene::Vs) => {
+                &mut self.vs_melee.exit
+            }
+            (m, _) if uses_vs_melee(m.id()) && scene == Some(GameScene::SuddenDeath) => {
                 &mut self.vs_melee.sd_exit
             }
-            (GM_OPENING_MV, _) => &mut self.attract.exit,
-            (super::event::GM_EVENT, _) if scene == Some(GS_VS) => &mut self.event.exit,
-            (super::GM_DEBUG, _) if scene == Some(GS_VS) => &mut self.debug_mode.vs_exit,
-            (super::one_player::GM_TARGET_TEST, _) if scene == Some(GS_VS) => {
+            (GameMode::Opening, _) => &mut self.attract.exit,
+            (GameMode::Event, _) if scene == Some(GameScene::Vs) => &mut self.event.exit,
+            (GameMode::Debug, _) if scene == Some(GameScene::Vs) => &mut self.debug_mode.vs_exit,
+            (GameMode::TargetTest, _) if scene == Some(GameScene::Vs) => {
                 &mut self.one_player.target_exit
             }
-            (super::tournament::GM_TOURNAMENT, _) if scene == Some(GS_VS) => &mut self.tou.exit,
-            (super::tournament::GM_TOURNAMENT, _) if scene == Some(GS_SUDDEN_DEATH) => {
+            (GameMode::Tournament, _) if scene == Some(GameScene::Vs) => &mut self.tou.exit,
+            (GameMode::Tournament, _) if scene == Some(GameScene::SuddenDeath) => {
                 &mut self.tou.sd_exit
             }
-            (super::one_player::GM_TRAINING, _) if scene == Some(super::training::GS_TRAINING) => {
+            (GameMode::Training, _) if scene == Some(GameScene::Training) => {
                 &mut self.training.exit
             }
-            (
-                super::one_player::GM_CLASSIC
-                | super::one_player::GM_ADVENTURE
-                | super::one_player::GM_ALLSTAR,
-                _,
-            ) if scene == Some(GS_VS) => &mut self.one_player.match_exit,
-            (m, _) if super::multi_man::is_multi_man(m) && scene == Some(GS_VS) => {
+            (GameMode::Classic | GameMode::Adventure | GameMode::AllStar, _)
+                if scene == Some(GameScene::Vs) =>
+            {
+                &mut self.one_player.match_exit
+            }
+            (m, _) if super::multi_man::is_multi_man(m.id()) && scene == Some(GameScene::Vs) => {
                 &mut self.multi_man.exit
             }
             (m, s) => super::super::code::unported_call(&format!(
-                "a match's exit data in game mode {m:#x} state {s}"
+                "a match's exit data in game mode {m:?} state {s}"
             )),
         }
     }
@@ -178,10 +190,10 @@ impl Running<'_> {
         if self.game.vs.state.unk_9 == 0 {
             return;
         }
-        match self.game.game_mode {
-            3 => self.classic_results(r),
-            4 => self.adventure_results(r),
-            5 => self.allstar_results(r),
+        match GameMode::from_id(self.game.game_mode) {
+            Some(GameMode::Classic) => self.classic_results(r),
+            Some(GameMode::Adventure) => self.adventure_results(r),
+            Some(GameMode::AllStar) => self.allstar_results(r),
             _ => {}
         }
     }

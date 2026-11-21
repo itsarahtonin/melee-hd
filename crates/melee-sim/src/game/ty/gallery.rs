@@ -16,6 +16,7 @@ use super::super::render::{CAMERA_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
 use super::super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running, UserData};
 use super::{Loaded, TROPHY_COUNT};
 use crate::fpu::{mem, reg};
+use crate::game::gm::GameMode;
 use crate::hsd::cobj::{self, CObjId};
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj::{self, JObjId};
@@ -328,7 +329,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801BED14")]
     #[doc(alias = "onExit@801BEC80")]
     pub fn toy_mode_exit_to_menu(&mut self) {
-        self.set_pending_game_mode(super::super::gm::machine::GM_MENU);
+        self.set_pending_game_mode(GameMode::Menu);
         self.set_new_game_mode_pending();
     }
 

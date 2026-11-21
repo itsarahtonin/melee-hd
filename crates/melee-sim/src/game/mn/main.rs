@@ -16,6 +16,7 @@ use super::super::handles::CodeRef;
 use super::super::render::{JOBJ_CALLBACK, LOBJ_CALLBACK};
 use super::super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running, UserData};
 use crate::fpu::{mem, reg};
+use crate::game::gm::GameMode;
 use crate::hsd::cobj;
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj::{self, JObjId};
@@ -1444,8 +1445,8 @@ impl Running<'_> {
 
     /// The scene ends for mode `mode` (`gm_GetCurrentSceneExitData`'s pending mode).
     #[doc(alias = "mn_80229860")]
-    pub(crate) fn menu_exit_to(&mut self, mode: u8) {
-        self.game.menu_mode.pending_mode = mode as i8;
+    pub(crate) fn menu_exit_to(&mut self, mode: GameMode) {
+        self.game.menu_mode.pending_mode = mode.id() as i8;
         self.game.end_scene();
     }
 
@@ -1532,7 +1533,7 @@ impl Running<'_> {
             self.lb_audio_call(0);
             self.game.menu.flow.entering_menu = 0;
             self.game.menu.cooldown = 5;
-            self.menu_exit_to(super::super::gm::machine::GM_TITLE);
+            self.menu_exit_to(GameMode::Title);
         } else {
             self.list_move(b, MAIN, 5);
         }
@@ -1562,7 +1563,7 @@ impl Running<'_> {
                 }
                 4 => {
                     self.lb_audio_call(1);
-                    self.menu_exit_to(0x1C);
+                    self.menu_exit_to(GameMode::Training);
                 }
                 _ => {}
             }
@@ -1583,9 +1584,9 @@ impl Running<'_> {
             self.game.menu.flow.entering_menu = 1;
             self.note_confirm_port();
             let mode = match self.game.menu.flow.hovered_selection {
-                0 => super::super::gm::GM_CLASSIC,
-                1 => super::super::gm::GM_ADVENTURE,
-                2 => super::super::gm::GM_ALLSTAR,
+                0 => GameMode::Classic,
+                1 => GameMode::Adventure,
+                2 => GameMode::AllStar,
                 _ => return,
             };
             self.lb_audio_call(1);
@@ -1609,12 +1610,12 @@ impl Running<'_> {
                 0 => {
                     self.lb_audio_call(1);
                     self.note_confirm_port();
-                    self.menu_exit_to(super::super::gm::GM_TARGET_TEST);
+                    self.menu_exit_to(GameMode::TargetTest);
                 }
                 1 => {
                     self.lb_audio_call(1);
                     self.note_confirm_port();
-                    self.menu_exit_to(0x20);
+                    self.menu_exit_to(GameMode::HomeRunContest);
                 }
                 2 => {
                     self.lb_audio_call(1);
@@ -1641,11 +1642,11 @@ impl Running<'_> {
             match self.game.menu.flow.hovered_selection {
                 0 => {
                     self.lb_audio_call(1);
-                    self.menu_exit_to(super::super::gm::GM_VS);
+                    self.menu_exit_to(GameMode::Vs);
                 }
                 1 => {
                     self.lb_audio_call(1);
-                    self.menu_exit_to(0x1B);
+                    self.menu_exit_to(GameMode::Tournament);
                 }
                 2 => {
                     self.lb_audio_call(1);
@@ -1691,7 +1692,18 @@ impl Running<'_> {
         if b & IN_CONFIRM != 0 {
             self.game.menu.cooldown = 5;
             self.game.menu.flow.entering_menu = 1;
-            const MODES: [u8; 10] = [0x0A, 0x1F, 0x10, 0x1E, 0x1D, 0x11, 0x2A, 0x2C, 0x13, 0x12];
+            const MODES: [GameMode; 10] = [
+                GameMode::CameraMode,
+                GameMode::Stamina,
+                GameMode::SuperSuddenDeath,
+                GameMode::Giant,
+                GameMode::Tiny,
+                GameMode::Invisible,
+                GameMode::FixedCamera,
+                GameMode::SingleButton,
+                GameMode::Lightning,
+                GameMode::SlowMo,
+            ];
             if let Some(&mode) = MODES.get(usize::from(self.game.menu.flow.hovered_selection)) {
                 self.lb_audio_call(1);
                 self.menu_exit_to(mode);
@@ -1712,9 +1724,9 @@ impl Running<'_> {
             self.game.menu.flow.entering_menu = 1;
             self.note_confirm_port();
             let mode = match self.game.menu.flow.hovered_selection {
-                0 => 0x0B,
-                1 => 0x0C,
-                3 => 0x0D,
+                0 => GameMode::TrophyGallery,
+                1 => GameMode::TrophyLottery,
+                3 => GameMode::TrophyCollection,
                 _ => return,
             };
             self.lb_audio_call(1);
@@ -1900,7 +1912,7 @@ impl Running<'_> {
         self.mthp_release();
         self.free_gobj_links(1, 8);
         self.sis_reset();
-        self.menu_exit_to(super::super::gm::machine::GM_MENU);
+        self.menu_exit_to(GameMode::Menu);
     }
 
     /// `mnMain_Scene_OnEnter`: the inputs' cooldown, the flow on the entry's list; with

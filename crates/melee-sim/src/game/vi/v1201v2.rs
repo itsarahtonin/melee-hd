@@ -3,6 +3,7 @@
 //! at the first model's frame 251 the trophy and stand go, the scene's second model comes in
 //! and Giga Bowser is made in his cutscene's state (pose 15), at his own size.
 
+use crate::game::gm::GameScene;
 use melee_data::archive::DataRef;
 
 use super::super::gr::StKind;
@@ -180,7 +181,7 @@ impl Running<'_> {
     #[doc(alias = "un_803204E4")]
     #[doc(alias = "vi1201v2_Scene_OnFrame")]
     pub fn vi1201v2_on_enter(&mut self) {
-        let desc = super::enter_desc(self.game, 0x1a);
+        let desc = super::enter_desc(self.game, GameScene::CutsceneGigaTransform);
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);
         self.lb_play_music(0x5C);

@@ -9,7 +9,7 @@ use gekko_fp as fp;
 use super::super::handles::CodeRef;
 use super::super::state::Running;
 use super::super::structs::StartMeleeData;
-use super::one_player::{GM_ALLSTAR, OnePlayerRun};
+use super::one_player::OnePlayerRun;
 use super::opponents::NONE;
 
 /// `lbl_8046B668`'s address, which the rules' `x58` holds while it's the characters left.
@@ -94,6 +94,7 @@ impl super::super::state::Game {
 use super::vs_mode::{player_defaults, rules_defaults};
 use crate::fpu::mem;
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 
 /// `gm_80165290`, the boss stages' pause override; `fn_8017C7EC`, `fn_8017C7A0` and
 /// `fn_8017C71C`, the bonus stages' and the bosses' hooks.
@@ -570,7 +571,7 @@ impl Running<'_> {
         super::vs_mode::load_rumble_enabled_with(&mut start, &prefs, &tags);
         self.game.one_player.allstar.base.player.mode = id;
         self.game.one_player.match_start = start;
-        let _ = GM_ALLSTAR;
+        let _ = GameMode::AllStar;
     }
 
     /// Counts `n` more of a trophy the match won, `gm_8017E280`: its entry's count, or the
@@ -646,10 +647,10 @@ impl Running<'_> {
             let sel = super::match_exit::selkind(run.player.ckind as u8);
             let mode = self.game.game_mode;
             let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
-            let best = match mode {
-                super::one_player::GM_CLASSIC => Some(&mut rec.x88),
-                super::one_player::GM_ADVENTURE => Some(&mut rec.x8C),
-                GM_ALLSTAR => Some(&mut rec.x90),
+            let best = match GameMode::of(mode) {
+                GameMode::Classic => Some(&mut rec.x88),
+                GameMode::Adventure => Some(&mut rec.x8C),
+                GameMode::AllStar => Some(&mut rec.x90),
                 _ => None,
             };
             if let Some(best) = best
@@ -657,7 +658,7 @@ impl Running<'_> {
             {
                 *best = run.score;
             }
-            self.change_game_mode_after_scene(super::machine::GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return false;
         }
         self.give_match_trophies();
@@ -713,7 +714,7 @@ impl Running<'_> {
             // `gm_8017CBAC` with All-Star's run and stocks (`gmMainLib_8015CDE0`).
             let run = self.game.one_player.allstar.base;
             let stocks = self.game.game_data.vs.unk_528.stocks;
-            self.one_player_clear(&run, stocks, super::endings::GM_ALLSTAR_GOVER);
+            self.one_player_clear(&run, stocks, GameMode::AllStarEnding);
         }
     }
 
@@ -875,10 +876,10 @@ impl Running<'_> {
             let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
             // `fn_80162BFC`, `fn_80162DF8`, `fn_80162FF4`: the mode's high score, a word
             // compared unsigned.
-            let best = match self.game.game_mode {
-                super::one_player::GM_CLASSIC => Some(&mut rec.x88),
-                super::one_player::GM_ADVENTURE => Some(&mut rec.x8C),
-                GM_ALLSTAR => Some(&mut rec.x90),
+            let best = match GameMode::of(self.game.game_mode) {
+                GameMode::Classic => Some(&mut rec.x88),
+                GameMode::Adventure => Some(&mut rec.x8C),
+                GameMode::AllStar => Some(&mut rec.x90),
                 _ => None,
             };
             if let Some(best) = best
@@ -888,18 +889,25 @@ impl Running<'_> {
             }
             self.toy_table_sync(true);
             // `gm_8017390C(fn_8017DF90(), 0)`: without a clear only Adventure's Luigi trophy.
-            if super::one_player::GM_ADVENTURE == self.game.game_mode {
+            if GameMode::Adventure == self.game.game_mode {
                 self.clear_trophies(0, false);
             }
             self.trophy_unlocks();
             self.special_unlocks(0x40);
             if challenger == super::opponents::NONE as u8 {
-                if !self.challenger_check(super::machine::GM_MENU, p.slot) {
-                    self.change_game_mode_after_scene(super::machine::GM_MENU);
+                if !self.challenger_check(GameMode::Menu, p.slot) {
+                    self.change_game_mode_after_scene(GameMode::Menu);
                 }
             } else {
-                self.init_challenger(p.ckind as u8, p.color, p.slot, p.nametag, challenger, 1);
-                self.change_game_mode_after_scene(super::machine::GM_CHALLENGER_APPROACH);
+                self.init_challenger(
+                    p.ckind as u8,
+                    p.color,
+                    p.slot,
+                    p.nametag,
+                    challenger,
+                    GameMode::Menu.id(),
+                );
+                self.change_game_mode_after_scene(GameMode::ChallengerApproach);
             }
         } else {
             run.score = super::results_exit::add_u32_saturating(d.run_score as u32, 1) as i32;
@@ -927,12 +935,12 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015D134")]
     #[doc(alias = "gmMainLib_8015D1C8")]
     #[doc(alias = "gmMainLib_8015D2F0")]
-    pub fn one_player_clear(&mut self, run: &OnePlayerRun, stocks: u8, mode: u8) {
+    pub fn one_player_clear(&mut self, run: &OnePlayerRun, stocks: u8, mode: GameMode) {
         let p = run.player;
         let sel = super::match_exit::selkind(p.ckind as u8);
         self.toy_table_sync(true);
         match mode {
-            super::endings::GM_ADVENTURE_GOVER => {
+            GameMode::AdventureEnding => {
                 let s = &mut self.game.game_data.thing.save_data;
                 // `gmMainLib_8015D25C`: cleared, and this run's clear in `x14`'s mask.
                 s.x1F2C[usize::from(sel)].x7C.b5 = true;
@@ -952,7 +960,7 @@ impl Running<'_> {
                     rec.b10_to_12 = stocks & 7;
                 }
             }
-            super::endings::GM_CLASSIC_GOVER => {
+            GameMode::ClassicEnding => {
                 let s = &mut self.game.game_data.thing.save_data;
                 // `gmMainLib_8015D134`: cleared, and this run's clear in `x10`'s mask.
                 s.x1F2C[usize::from(sel)].x7C.b4 = true;
@@ -973,7 +981,7 @@ impl Running<'_> {
                 }
             }
             // All-Star's case (task 23's arm).
-            super::endings::GM_ALLSTAR_GOVER => self.allstar_clear_records(run, sel, stocks),
+            GameMode::AllStarEnding => self.allstar_clear_records(run, sel, stocks),
             _ => {}
         }
         self.save_after_run();

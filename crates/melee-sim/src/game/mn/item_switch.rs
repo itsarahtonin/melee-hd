@@ -17,6 +17,7 @@ use super::common::{
 };
 use super::main::{IN_A, IN_BACK, IN_START};
 use super::rules::{ITEM_SWITCH, MODEL_CON_IS, MODEL_CURSOR_IS};
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj::JObjId;
 use crate::hsd::sis::TextWord;
@@ -259,8 +260,8 @@ impl Running<'_> {
             self.lb_audio_call(1);
             self.items_commit(screen);
             self.card_game_mark_changes();
-            if game_mode(self) == super::super::gm::machine::GM_MENU {
-                self.menu_exit_to(super::super::gm::GM_VS);
+            if game_mode(self) == GameMode::Menu {
+                self.menu_exit_to(GameMode::Vs);
                 return;
             }
             self.rules_leave();

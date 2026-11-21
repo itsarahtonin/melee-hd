@@ -5,7 +5,7 @@
 
 use super::super::state::Running;
 use super::super::structs::{StartMeleeData, VsModeData};
-use super::machine::GM_MENU;
+use crate::game::gm::GameMode;
 use crate::game::gr::StKind;
 
 /// `CSSData` (`gmVsMelee_CssData`): the select screen's port for one-player modes, the
@@ -156,7 +156,7 @@ impl Running<'_> {
     #[doc(alias = "gmVsMelee_ExitCss")]
     pub fn vs_melee_exit_css(&mut self, table: usize) {
         if self.game.vs_melee.css.pending_scene_change == 2 {
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
         let vs = self.game.vs_melee.css.vs.clone();

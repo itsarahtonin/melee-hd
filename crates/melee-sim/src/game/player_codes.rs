@@ -68,6 +68,7 @@
 use super::slippi::{Code, CodeError};
 use super::state::{Game, Running};
 use super::structs::StartMeleeData;
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::GObjId;
 
 /// The players' codes a match runs (`game::player_codes`).
@@ -443,9 +444,9 @@ enum Scene {
 }
 
 fn scene(g: &Game) -> Scene {
-    match g.game_mode {
-        super::gm::GM_VS => Scene::Vs,
-        super::gm::GM_DEBUG_VS => Scene::Replay,
+    match GameMode::of(g.game_mode) {
+        GameMode::Vs => Scene::Vs,
+        GameMode::DebugVs => Scene::Replay,
         _ => Scene::Other,
     }
 }

@@ -5,7 +5,7 @@
 use melee_data::archive::DataRef;
 
 use super::debug_menu::{CB_BACK, CB_SELECT, SOUND_TEST_TABLE, SoundTestPatch};
-use crate::game::gm::machine::GM_TITLE;
+use crate::game::gm::GameMode;
 use crate::game::state::Running;
 
 /// `un_804D5850`, `un_804D5854`, `un_804D5858`: the master, effects and music volumes;
@@ -207,7 +207,7 @@ impl Running<'_> {
                     self.lb_audio_call(0);
                     self.lb_audio_music_stop();
                     self.sound_test_full_volumes();
-                    self.change_game_mode_after_scene(GM_TITLE);
+                    self.change_game_mode_after_scene(GameMode::Title);
                     self.game.end_scene();
                 }
                 1

@@ -11,18 +11,10 @@
 use super::super::handles::CodeRef;
 use super::super::state::Running;
 use super::super::structs::{StartMeleeData, VsModeData};
-use super::machine::GM_MENU;
 use super::vs_melee::{CssData, SssData};
 use crate::game::ft::CharacterKind;
+use crate::game::gm::GameMode;
 use gekko_fp as fp;
-
-/// The single-player `GameModeKind`s with a select.
-pub const GM_CLASSIC: u8 = 0x03;
-pub const GM_ADVENTURE: u8 = 0x04;
-pub const GM_ALLSTAR: u8 = 0x05;
-pub const GM_TARGET_TEST: u8 = 0x0F;
-pub const GM_TRAINING: u8 = 0x1C;
-pub const GM_HOME_RUN: u8 = 0x20;
 
 /// The select's match types (`CSSMatchType`) the modes enter it with.
 pub const REG_CLASSIC: u8 = 0xB;
@@ -604,25 +596,27 @@ impl Running<'_> {
     /// The select data a single-player mode's select edits (its state's enter data).
     pub fn one_player_css(&self, mode: u8) -> Option<&CssData> {
         let o = &self.game.one_player;
-        match mode {
-            GM_CLASSIC | GM_ADVENTURE | GM_ALLSTAR => Some(&o.css),
-            GM_TARGET_TEST => Some(&o.target_css),
-            GM_TRAINING => Some(&o.training_css),
-            GM_HOME_RUN => Some(&self.game.vs_melee.css),
-            super::event::GM_EVENT => Some(&self.game.event.css),
-            m if super::multi_man::is_multi_man(m) => Some(&self.game.multi_man.css),
+        match GameMode::of(mode) {
+            GameMode::Classic | GameMode::Adventure | GameMode::AllStar => Some(&o.css),
+            GameMode::TargetTest => Some(&o.target_css),
+            GameMode::Training => Some(&o.training_css),
+            GameMode::HomeRunContest => Some(&self.game.vs_melee.css),
+            GameMode::Event => Some(&self.game.event.css),
+            m if super::multi_man::is_multi_man(m.id()) => Some(&self.game.multi_man.css),
             _ => None,
         }
     }
 
     pub fn one_player_css_mut(&mut self, mode: u8) -> Option<&mut CssData> {
-        match mode {
-            GM_CLASSIC | GM_ADVENTURE | GM_ALLSTAR => Some(&mut self.game.one_player.css),
-            GM_TARGET_TEST => Some(&mut self.game.one_player.target_css),
-            GM_TRAINING => Some(&mut self.game.one_player.training_css),
-            GM_HOME_RUN => Some(&mut self.game.vs_melee.css),
-            super::event::GM_EVENT => Some(&mut self.game.event.css),
-            m if super::multi_man::is_multi_man(m) => Some(&mut self.game.multi_man.css),
+        match GameMode::of(mode) {
+            GameMode::Classic | GameMode::Adventure | GameMode::AllStar => {
+                Some(&mut self.game.one_player.css)
+            }
+            GameMode::TargetTest => Some(&mut self.game.one_player.target_css),
+            GameMode::Training => Some(&mut self.game.one_player.training_css),
+            GameMode::HomeRunContest => Some(&mut self.game.vs_melee.css),
+            GameMode::Event => Some(&mut self.game.event.css),
+            m if super::multi_man::is_multi_man(m.id()) => Some(&mut self.game.multi_man.css),
             _ => None,
         }
     }
@@ -704,10 +698,10 @@ impl Running<'_> {
     #[doc(alias = "gmClassic_801B3E44")]
     pub fn classic_exit_css(&mut self) {
         if self.game.one_player.css.pending_scene_change == 2 {
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
-        let x5 = self.save_one_player_choice(GM_CLASSIC);
+        let x5 = self.save_one_player_choice(GameMode::Classic);
         self.classic_pick_matchups();
         self.set_next_game_mode_state_id(x5 << 3);
         self.load_announcer_bank();
@@ -716,13 +710,13 @@ impl Running<'_> {
     /// The select's choices saved in the mode's entry of the game's data
     /// (`gmMainLib_8015CDC8`, `8015CDD4`, `8015CDE0`) and given to its run; the entry's
     /// `x5`, the stage to start from.
-    fn save_one_player_choice(&mut self, mode: u8) -> u8 {
+    fn save_one_player_choice(&mut self, mode: GameMode) -> u8 {
         let (ckind, stocks, color, nametag, level) =
             super::setup_players::css_one_player_choice(&self.game.one_player.css);
         let d = &mut self.game.game_data.vs;
         let s = match mode {
-            GM_CLASSIC => &mut d.unk_51C,
-            GM_ADVENTURE => &mut d.unk_522,
+            GameMode::Classic => &mut d.unk_51C,
+            GameMode::Adventure => &mut d.unk_522,
             _ => &mut d.unk_528,
         };
         s.c_kind = ckind;
@@ -733,8 +727,8 @@ impl Running<'_> {
         let s = s.clone();
         let o = &mut self.game.one_player;
         let p = &mut match mode {
-            GM_CLASSIC => &mut o.classic.base,
-            GM_ADVENTURE => &mut o.adventure.base,
+            GameMode::Classic => &mut o.classic.base,
+            GameMode::Adventure => &mut o.adventure.base,
             _ => &mut o.allstar.base,
         }
         .player;
@@ -880,10 +874,10 @@ impl Running<'_> {
     #[doc(alias = "gm_801B4350")]
     pub fn adventure_exit_css(&mut self) {
         if self.game.one_player.css.pending_scene_change == 2 {
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
-        let x5 = self.save_one_player_choice(GM_ADVENTURE);
+        let x5 = self.save_one_player_choice(GameMode::Adventure);
         self.set_next_game_mode_state_id(x5 << 3);
         self.load_announcer_bank();
     }
@@ -943,10 +937,10 @@ impl Running<'_> {
     #[doc(alias = "gm_801B5FB4")]
     pub fn allstar_exit_css(&mut self) {
         if self.game.one_player.css.pending_scene_change == 2 {
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
-        let x5 = self.save_one_player_choice(GM_ALLSTAR);
+        let x5 = self.save_one_player_choice(GameMode::AllStar);
         self.set_next_game_mode_state_id(x5.wrapping_mul(8) & 0xF8);
         self.load_announcer_bank();
         let round = self.game.game_data.vs.unk_528.x5;
@@ -1061,7 +1055,7 @@ impl Running<'_> {
     pub fn target_exit_css(&mut self) {
         let css = &self.game.one_player.target_css;
         if css.pending_scene_change == 2 {
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
         let (ckind, _, color, nametag, _) = super::setup_players::css_one_player_choice(css);
@@ -1185,14 +1179,14 @@ impl Running<'_> {
                     slot,
                     t.unk_586,
                     challenger,
-                    GM_TARGET_TEST,
+                    GameMode::TargetTest.id(),
                 );
-                self.set_pending_game_mode(super::machine::GM_CHALLENGER_APPROACH);
+                self.set_pending_game_mode(GameMode::ChallengerApproach);
                 self.set_new_game_mode_pending();
                 return;
             }
         }
-        if !self.challenger_check(GM_TARGET_TEST, slot) {
+        if !self.challenger_check(GameMode::TargetTest, slot) {
             self.set_next_game_mode_state_id(0);
         }
     }
@@ -1309,7 +1303,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801B999C")]
     pub fn homerun_exit_css(&mut self) {
         if self.game.vs_melee.css.pending_scene_change == 2 {
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
         let (ckind, _, color, nametag, _) =
@@ -1383,7 +1377,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801B1C24")]
     pub fn training_exit_css(&mut self) {
         if self.game.one_player.training_css.pending_scene_change == 2 {
-            self.change_game_mode_after_scene(GM_MENU);
+            self.change_game_mode_after_scene(GameMode::Menu);
             return;
         }
         let css = self.game.one_player.training_css.clone();

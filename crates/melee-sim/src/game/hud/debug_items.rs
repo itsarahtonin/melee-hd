@@ -4,14 +4,8 @@
 //! it answers 0 for the menu's own callback to run after it.
 
 use super::debug_menu::{CB_BACK, CB_SELECT, CB_START};
-use crate::game::gm::machine::{GM_BOOT, GM_MENU, GM_OPENING_MV, GM_PROGRESSIVE_SCAN, GM_TITLE};
+use crate::game::gm::GameMode;
 use crate::game::state::Running;
-
-/// `GM_HANYU_CSS`, `GM_HANYU_SSS`, `GM_DEBUG_CUTSCENE`, `GM_CAMERA_VS`.
-const GM_HANYU_CSS: u8 = 8;
-const GM_HANYU_SSS: u8 = 9;
-const GM_DEBUG_CUTSCENE: u8 = 0x19;
-const GM_CAMERA_VS: u8 = 0x2A;
 
 /// `fn_802FFE6C`, the submenus' own callback.
 pub const SUBMENU_BACK: u32 = 0x802F_FE6C;
@@ -35,7 +29,7 @@ impl Running<'_> {
 
     /// The scene ends for game mode `mode` (`gm_ChangeGameModeAfterCurrentScene`,
     /// `gm_801A4B60`).
-    fn debug_to_mode(&mut self, mode: u8) {
+    fn debug_to_mode(&mut self, mode: GameMode) {
         self.change_game_mode_after_scene(mode);
         self.game.end_scene();
     }
@@ -260,9 +254,9 @@ impl Running<'_> {
                 if arg == CB_SELECT {
                     self.sfx_forward();
                     self.debug_to_mode(if cb == 0x8030_0968 {
-                        GM_HANYU_CSS
+                        GameMode::HanyuCss
                     } else {
-                        GM_HANYU_SSS
+                        GameMode::HanyuSss
                     });
                 }
                 0
@@ -294,14 +288,14 @@ impl Running<'_> {
                 if arg == CB_SELECT {
                     self.sfx_forward();
                     self.game.boot_mode.opening_state = if cb == 0x8030_1328 { 0 } else { 5 };
-                    self.debug_to_mode(GM_OPENING_MV);
+                    self.debug_to_mode(GameMode::Opening);
                 }
                 0
             }
-            0x8030_13B0 => self.debug_mode_item(arg, GM_DEBUG_CUTSCENE),
-            0x8030_1454 => self.debug_mode_item(arg, GM_BOOT),
-            0x8030_15BC => self.debug_mode_item(arg, GM_PROGRESSIVE_SCAN),
-            0x8030_1D40 => self.debug_mode_item(arg, GM_CAMERA_VS),
+            0x8030_13B0 => self.debug_mode_item(arg, GameMode::DebugCutscenes),
+            0x8030_1454 => self.debug_mode_item(arg, GameMode::Boot),
+            0x8030_15BC => self.debug_mode_item(arg, GameMode::ProgressiveScan),
+            0x8030_1D40 => self.debug_mode_item(arg, GameMode::FixedCamera),
             0x8030_13EC => {
                 self.debug_submenu(arg, 0x803F_D58C, 0x8030_1B48);
                 0
@@ -408,7 +402,7 @@ impl Running<'_> {
                     CB_START => {
                         self.sfx_forward();
                         self.debug_records_write(cb);
-                        self.debug_to_mode(GM_MENU);
+                        self.debug_to_mode(GameMode::Menu);
                     }
                     _ => {}
                 }
@@ -491,24 +485,24 @@ impl Running<'_> {
             0x8030_0BBC => {
                 self.mark_class_two_trophies();
                 self.hold_every_trophy();
-                crate::game::ty::GM_TOY_GALLERY
+                GameMode::TrophyGallery
             }
             0x8030_0BF8 | 0x8030_0C3C => {
                 self.mark_class_two_trophies();
                 self.add_trophy(if cb == 0x8030_0BF8 { 0xE6 } else { 0xC9 }, 1);
-                GM_MENU
+                GameMode::Menu
             }
             0x8030_0C80 => {
                 let n = self.game.hud.debug.word(0x804D_6DDC);
                 self.game.game_data.thing.save_data.x1A48 = n.wrapping_mul(10);
                 self.mark_class_two_trophies();
-                GM_MENU
+                GameMode::Menu
             }
             _ => {
                 let n = self.game.hud.debug.word(0x804D_6DF4);
                 self.sfx_forward();
                 self.game.game_data.thing.save_data.x1A5C = n as i32;
-                GM_MENU
+                GameMode::Menu
             }
         };
         self.game.sync_unlocks();
@@ -566,7 +560,6 @@ impl Running<'_> {
     #[doc(alias = "fn_803011EC")]
     #[doc(alias = "un_80301280")]
     fn debug_ending_test(&mut self, real: bool) {
-        use crate::game::gm::endings::{GM_CLASSIC_GOVER, GM_DEBUG_GOVER};
         let d = &self.game.hud.debug;
         let (ckind, color, mode) = (
             d.word(0x804D_6DF8),
@@ -580,13 +573,13 @@ impl Running<'_> {
             let p = &mut self.game.one_player.classic.base.player;
             p.ckind = ckind as i8;
             p.color = color as u8;
-            self.change_game_mode_after_scene(GM_CLASSIC_GOVER);
+            self.change_game_mode_after_scene(GameMode::ClassicEnding);
         } else {
             let s = &mut self.game.game_data.vs.unk_51C;
             s.c_kind = ckind as _;
             s.color = color as u8;
             if mode <= 2 {
-                self.change_game_mode_after_scene(GM_DEBUG_GOVER);
+                self.change_game_mode_after_scene(GameMode::DebugEnding);
                 self.game.endings.gover.set_mode(0x15 + mode as u8);
             }
         }
@@ -603,7 +596,7 @@ impl Running<'_> {
     }
 
     /// An entry whose A goes to game mode `mode`.
-    fn debug_mode_item(&mut self, arg: i32, mode: u8) -> i32 {
+    fn debug_mode_item(&mut self, arg: i32, mode: GameMode) -> i32 {
         if arg == CB_SELECT {
             self.sfx_forward();
             self.debug_to_mode(mode);
@@ -619,7 +612,7 @@ impl Running<'_> {
             self.sfx_forward();
             let n = self.game.hud.debug.setting(0x188).wrapping_sub(1) as u8;
             self.set_event(n);
-            self.debug_to_mode(crate::game::gm::GM_EVENT);
+            self.debug_to_mode(GameMode::Event);
         }
         0
     }
@@ -633,7 +626,7 @@ impl Running<'_> {
             let round = self.game.hud.debug.word(0x804D_5910).wrapping_sub(1);
             self.game.game_data.vs.unk_528.x5 = round as u8;
             self.sfx_forward();
-            self.debug_to_mode(crate::game::gm::GM_ALLSTAR);
+            self.debug_to_mode(GameMode::AllStar);
         }
         0
     }
@@ -647,7 +640,7 @@ impl Running<'_> {
             let stage = self.game.hud.debug.word(0x804D_5908).wrapping_sub(1);
             self.game.game_data.vs.unk_522.x5 = stage as u8;
             self.sfx_forward();
-            self.debug_to_mode(crate::game::gm::GM_ADVENTURE);
+            self.debug_to_mode(GameMode::Adventure);
         }
         0
     }
@@ -661,7 +654,7 @@ impl Running<'_> {
             let stage = self.game.hud.debug.word(0x804D_590C).wrapping_sub(1);
             self.game.game_data.vs.unk_51C.x5 = stage as u8;
             self.sfx_forward();
-            self.debug_to_mode(crate::game::gm::GM_CLASSIC);
+            self.debug_to_mode(GameMode::Classic);
         }
         0
     }
@@ -682,7 +675,7 @@ impl Running<'_> {
     pub fn debug_menu_back_to_title(&mut self, arg: i32) -> i32 {
         if arg == CB_BACK {
             self.sfx_back();
-            self.debug_to_mode(GM_TITLE);
+            self.debug_to_mode(GameMode::Title);
         }
         0
     }

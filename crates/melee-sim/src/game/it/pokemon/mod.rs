@@ -19,6 +19,7 @@ use melee_data::archive::DataRef;
 use crate::fpu::{mem, reg};
 use crate::game::code;
 use crate::game::ef::Arg;
+use crate::game::gm::GameMode;
 use crate::game::gm::{RECORD_CEREBI, RECORD_MEW};
 use crate::game::handles::CodeRef;
 use crate::game::state::{Game, Running};
@@ -198,7 +199,7 @@ fn choose(r: &mut Running, ball: GObjId) -> i32 {
     if crate::game::gm::is_training(r.game) {
         return draw_from_list(r, ball, &COMMON_POKEMON);
     }
-    if r.game.game_mode == crate::game::gm::machine::GM_OPENING_MV {
+    if r.game.game_mode == GameMode::Opening {
         return draw_weighted(r, ball);
     }
     let mut kind = r.game.it.db_menu.CurrentlySelectedPokemon;

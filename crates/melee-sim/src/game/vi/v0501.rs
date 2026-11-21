@@ -2,6 +2,7 @@
 //! Greens, scaled to 0.7, with three Kirbys walking in, each a demo fighter whose start point
 //! the scene measures from its animation's frame 140.
 
+use crate::game::gm::GameScene;
 use melee_data::archive::DataRef;
 
 use super::super::state::Running;
@@ -136,7 +137,7 @@ impl Running<'_> {
     #[doc(alias = "HSD_SetEraseColor")]
     #[doc(alias = "vi_8031DC80")]
     pub fn vi0501_on_enter(&mut self) {
-        let desc = super::enter_desc(self.game, 0x14);
+        let desc = super::enter_desc(self.game, GameScene::CutsceneThreeKirbys);
         self.lb_audio_music_stop();
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);

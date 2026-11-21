@@ -4,11 +4,12 @@
 //! flames, the columns and the display state). They live in the results scene: past it their
 //! pointers name its freed heap, and the next results screen sets them up again.
 
-use melee_sim::game::gm::machine::{GS_RESULTS, scene_kind};
+use melee_sim::game::gm::machine::scene_kind;
 use melee_sim::game::mirror::Cx;
 
 use crate::compare::Comparer;
 use crate::import::sym;
+use melee_sim::game::gm::GameScene;
 
 /// `ResultsPlayerData`'s size.
 const PLAYER_SIZE: u32 = 0xD8;
@@ -17,7 +18,7 @@ impl Comparer<'_> {
     /// The results screen's statics, in its scene.
     pub fn results(&mut self) {
         let game = self.game;
-        if scene_kind(game.machine.scene_info) != Some(GS_RESULTS) {
+        if scene_kind(game.machine.scene_info) != Some(GameScene::Results) {
             return;
         }
         let d = &game.results.data;

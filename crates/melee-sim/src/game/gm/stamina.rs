@@ -6,7 +6,7 @@ use super::super::code::Val;
 use super::super::handles::CodeRef;
 use super::super::pl::player::PKIND_NONE;
 use super::super::state::{Game, Running};
-use super::GM_STAMINA_VS;
+use crate::game::gm::GameMode;
 
 /// The match start the mode sets (`StartMeleeRules::on_match_start`).
 pub const ON_MATCH_START: u32 = 0x801B_9850;
@@ -123,7 +123,7 @@ impl Game {
     /// counts it; no other mode does anything.
     #[doc(alias = "gm_80167470")]
     pub fn fighter_lost(&mut self, slot: i32, sub: i32) {
-        if self.game_mode == GM_STAMINA_VS {
+        if self.game_mode == GameMode::Stamina {
             self.stamina_knocked_out(slot, sub);
         }
     }

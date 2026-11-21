@@ -13,6 +13,7 @@ use super::super::super::handles::CodeRef;
 use super::super::super::render::{CAMERA_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
 use super::super::super::state::{OBJ_CAMERA, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
 use crate::fpu::{mem, reg};
+use crate::game::gm::GameMode;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, HIDDEN, JObjId};
 use crate::hsd::sis::TextId;
@@ -32,11 +33,6 @@ pub const PROC_SOON: u32 = 0x801A_0B60;
 const PAD_A_START: u32 = 0x1100;
 const PAD_LEFT: u32 = 0x4_0000;
 const PAD_RIGHT: u32 = 0x8_0000;
-
-/// The mode the screen takes the trophy from: Classic's, Adventure's, else All-Star's.
-const GM_CLASSIC: u8 = 3;
-const GM_ADVENTURE: u8 = 4;
-const GM_ALLSTAR: u8 = 5;
 
 /// `CKind_Mario`, the character a missing trophy falls back to.
 const MARIO: u32 = 8;
@@ -128,10 +124,10 @@ impl Running<'_> {
     /// The game over's trophy for `ckind` in the mode running (`gm_80160474` by
     /// `gm_GetCurrentGameMode`), inline in `fn_8019F9C4`.
     fn game_over_trophy(&self, ckind: u32) -> i32 {
-        let mode = match self.game.machine.routing.curr_mode {
-            GM_CLASSIC => GM_CLASSIC,
-            GM_ADVENTURE => GM_ADVENTURE,
-            _ => GM_ALLSTAR,
+        let mode = match GameMode::of(self.game.machine.routing.curr_mode) {
+            GameMode::Classic => GameMode::Classic,
+            GameMode::Adventure => GameMode::Adventure,
+            _ => GameMode::AllStar,
         };
         super::super::unlocks::mode_trophy(ckind as u8, mode)
     }
@@ -649,8 +645,10 @@ impl Running<'_> {
 
     /// Whether the game over is Classic's, Adventure's or All-Star's (`gmClassic_80470850`).
     fn one_player_game_over(&self) -> bool {
-        use super::super::one_player::{GM_ADVENTURE, GM_ALLSTAR, GM_CLASSIC};
-        matches!(self.game.game_mode, GM_CLASSIC | GM_ADVENTURE | GM_ALLSTAR)
+        matches!(
+            GameMode::from_id(self.game.game_mode),
+            Some(GameMode::Classic | GameMode::Adventure | GameMode::AllStar)
+        )
     }
 
     /// `fn_801A0B60`, coming soon's process: its model's animation, held at frame 189 until

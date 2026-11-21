@@ -2,6 +2,7 @@
 //! metal Mario, and metal Luigi once he's unlocked, walk in (each a demo fighter in his
 //! cutscene's slow walk, pose 10); the scene's other camera when Luigi is locked.
 
+use crate::game::gm::GameScene;
 use melee_data::archive::DataRef;
 
 use super::super::state::Running;
@@ -136,7 +137,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8031F548")]
     #[doc(alias = "vi1101_Scene_OnFrame")]
     pub fn vi1101_on_enter(&mut self) {
-        let desc = super::enter_desc(self.game, 0x18);
+        let desc = super::enter_desc(self.game, GameScene::CutsceneMetal);
         self.lb_audio_music_stop();
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);

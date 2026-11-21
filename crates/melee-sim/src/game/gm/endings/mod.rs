@@ -13,24 +13,6 @@ pub mod toy_fall;
 
 use super::super::state::Running;
 
-/// The game over modes: Classic's, Adventure's and All-Star's after a run's end, and the
-/// debug menu's (the trophy fall and congratulations alone).
-pub const GM_CLASSIC_GOVER: u8 = 0x15;
-pub const GM_ADVENTURE_GOVER: u8 = 0x16;
-pub const GM_ALLSTAR_GOVER: u8 = 0x17;
-pub const GM_DEBUG_GOVER: u8 = 0x1A;
-
-/// `GS_REGEND_TOYFALL`, the trophy fall.
-pub const GS_REGEND_TOYFALL: u8 = 0x0F;
-
-/// `GS_MOVIE_END`, the ending movie; `GS_STAFFROLL`, the staff roll.
-pub const GS_MOVIE_END: u8 = 0x1D;
-pub const GS_STAFFROLL: u8 = 0x2B;
-
-/// `GS_GAMEOVER`, `GS_COMING_SOON`.
-pub const GS_GAMEOVER: u8 = 0x22;
-pub const GS_COMING_SOON: u8 = 0x23;
-
 /// `gm_8049C178` (`gmgover.c`): what an ending shows, by the setters' offsets.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct GOver(pub [u8; 16]);

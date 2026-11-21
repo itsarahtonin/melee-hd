@@ -3,6 +3,7 @@
 //! effect at the models' frame 120, and the character, made at the camera's frame 100,
 //! posing as a winner (pose 1) from its results animations.
 
+use crate::game::gm::GameScene;
 use melee_data::archive::DataRef;
 
 use super::super::state::{Obj, Running};
@@ -150,7 +151,7 @@ impl Running<'_> {
     #[doc(alias = "un_8031F9B4")]
     #[doc(alias = "vi1201v1_Scene_OnFrame")]
     pub fn vi1201v1_on_enter(&mut self) {
-        let desc = super::enter_desc(self.game, 0x19);
+        let desc = super::enter_desc(self.game, GameScene::CutsceneBowserTrophy);
         let v = &mut self.game.vi.v1201v1;
         v.ckind = desc[0];
         v.costume = desc[1];

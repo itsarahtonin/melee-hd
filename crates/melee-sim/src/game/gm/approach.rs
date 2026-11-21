@@ -5,6 +5,7 @@
 //! the human wins, the character unlocked; any notice waiting goes through the prize screen
 //! (`ifprize`) before the character select.
 
+use crate::game::gm::GameMode;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::handles::CodeRef;
@@ -188,7 +189,7 @@ impl Running<'_> {
             match then {
                 None => self.set_next_game_mode_state_id(0),
                 Some(mode) => {
-                    self.set_pending_game_mode(mode);
+                    self.set_pending_game_mode(GameMode::of(mode));
                     self.set_new_game_mode_pending();
                 }
             }

@@ -10,8 +10,9 @@
 //! console's on which nobody confirmed there: no game code changes, and a session the player
 //! records is still a console's.
 
-use super::gm::machine::{GM_MENU, Phase};
+use super::gm::machine::Phase;
 use super::state::Game;
+use crate::game::gm::GameMode;
 
 /// A menu entry the player doesn't let a player confirm.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -41,7 +42,7 @@ pub fn gate_in(game: &Game, gates: &'static [Gate]) -> Option<&'static Gate> {
     let Phase::Scene { mode, .. } = game.machine.phase else {
         return None;
     };
-    if mode != GM_MENU {
+    if mode != GameMode::Menu {
         return None;
     }
     let f = &game.menu.flow;

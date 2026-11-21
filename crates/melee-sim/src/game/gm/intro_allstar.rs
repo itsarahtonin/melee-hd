@@ -11,11 +11,9 @@ use super::super::render::{FOG_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
 use super::super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
 use super::super::vi::Loaded;
 use crate::fpu::{mem, reg};
+use crate::game::gm::GameScene;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
-
-/// `GS_INTRO_ALLSTAR`.
-pub const GS_INTRO_ALLSTAR: u8 = 0x21;
 
 /// The scene's entry and frame function (`gmscdata.c`'s table).
 pub const ON_ENTER: CodeRef = CodeRef(0x8018_77A8);
@@ -88,8 +86,8 @@ pub struct IntroAllstar {
 }
 
 /// Whether `scene` is All-Star's intro.
-pub fn is_scene(scene: u8) -> bool {
-    scene == GS_INTRO_ALLSTAR
+pub fn is_scene(scene: GameScene) -> bool {
+    scene == GameScene::AllStarIntro
 }
 
 impl Running<'_> {

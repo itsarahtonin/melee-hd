@@ -11,10 +11,11 @@
 
 use melee_data::archive::Archives;
 
-use super::gm::machine::{self, GS_SUDDEN_DEATH, GS_VS, Phase};
+use super::gm::machine::{self, Phase};
 use super::gm::match_exit::MatchExitInfo;
 use super::gm::vs_mode::Special;
 use super::state::{Game, Ruleset, Running};
+use crate::game::gm::{GameMode, GameScene};
 
 /// Why the VS-scene match about to enter in `r` can't be built from its game start, as
 /// Slippi's playback builds a replay's match (design call 6 of `docs/slippi-ruleset.md`), or
@@ -34,8 +35,8 @@ pub fn rebuild_refusal(r: &Running) -> Option<&'static str> {
         return Some("no scene is entering");
     };
     match machine::scene_kind(Some((scene_mode, state))) {
-        Some(GS_VS) => {}
-        Some(GS_SUDDEN_DEATH) => return Some(SUDDEN_DEATH),
+        Some(GameScene::Vs) => {}
+        Some(GameScene::SuddenDeath) => return Some(SUDDEN_DEATH),
         _ => return Some("not a VS scene's match"),
     }
     if let Some(why) = mode_refusal(scene_mode) {
@@ -68,14 +69,13 @@ pub const DEBUG: &str = "the debug menus' matches, which only Vanilla's develope
 /// Why matches of game mode `mode` can't be rebuilt, whatever their start data: what the
 /// match reads of its game mode, beside the start data (`docs/slippi-ruleset.md`, call 6).
 fn mode_refusal(mode: u8) -> Option<&'static str> {
-    use super::gm::{GM_DEBUG, GM_DEBUG_VS, one_player, tournament};
-    match mode {
-        machine::GM_VS | tournament::GM_TOURNAMENT => None,
-        machine::GM_OPENING_MV => Some(ATTRACT),
-        machine::GM_CHALLENGER_APPROACH => Some(CHALLENGER),
-        GM_DEBUG | GM_DEBUG_VS => Some(DEBUG),
-        one_player::GM_HOME_RUN => Some(SINGLE_PLAYER),
-        m => match Special::from_game_mode(m) {
+    match GameMode::of(mode) {
+        GameMode::Vs | GameMode::Tournament => None,
+        GameMode::Opening => Some(ATTRACT),
+        GameMode::ChallengerApproach => Some(CHALLENGER),
+        GameMode::Debug | GameMode::DebugVs => Some(DEBUG),
+        GameMode::HomeRunContest => Some(SINGLE_PLAYER),
+        m => match Special::from_game_mode(m.id()) {
             Some(Special::SuperSuddenDeath) => Some(SUPER_SUDDEN_DEATH),
             Some(Special::Stamina) => Some(STAMINA),
             Some(Special::FixedCamera) => Some(FIXED_CAMERA),
@@ -1195,9 +1195,7 @@ impl Game {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::game::gm::machine::{GM_CHALLENGER_APPROACH, GM_OPENING_MV, scene_kind};
-    use crate::game::gm::one_player::{GM_CLASSIC, GM_HOME_RUN};
-    use crate::game::gm::tournament::GM_TOURNAMENT;
+    use crate::game::gm::machine::scene_kind;
     use crate::game::handles::CodeRef;
     use melee_data::archive::Archives;
 
@@ -1205,13 +1203,14 @@ mod tests {
     /// session under `ruleset`, after `f` changes the game.
     fn refusal(
         ruleset: Ruleset,
-        mode: u8,
-        scene: u8,
+        mode: GameMode,
+        scene: GameScene,
         f: impl FnOnce(&mut Game),
     ) -> Option<&'static str> {
+        let mode = mode.id();
         let state = (0..32)
             .find(|&s| scene_kind(Some((mode, s))) == Some(scene))
-            .unwrap_or_else(|| panic!("mode {mode:#x} has no scene {scene:#x}"));
+            .unwrap_or_else(|| panic!("mode {mode:#x} has no scene {scene:?}"));
         let mut g = Box::<Game>::default();
         g.ruleset = ruleset;
         g.machine.phase = Phase::Entering {
@@ -1233,8 +1232,8 @@ mod tests {
     #[test]
     fn the_matches_playback_rebuilds() {
         let slippi = |mode, scene| refusal(Ruleset::Slippi, mode, scene, |_| {});
-        assert_eq!(slippi(machine::GM_VS, GS_VS), None);
-        assert_eq!(slippi(GM_TOURNAMENT, GS_VS), None);
+        assert_eq!(slippi(GameMode::Vs, GameScene::Vs), None);
+        assert_eq!(slippi(GameMode::Tournament, GameScene::Vs), None);
         for m in [
             Special::Invisible,
             Special::Tiny,
@@ -1243,29 +1242,44 @@ mod tests {
             Special::SlowMo,
             Special::SingleButton,
         ] {
-            assert_eq!(slippi(m.game_mode(), GS_VS), None, "{m:?}");
+            assert_eq!(slippi(m.game_mode(), GameScene::Vs), None, "{m:?}");
         }
         assert_eq!(
-            slippi(Special::SuperSuddenDeath.game_mode(), GS_VS),
+            slippi(Special::SuperSuddenDeath.game_mode(), GameScene::Vs),
             Some(SUPER_SUDDEN_DEATH)
         );
-        assert_eq!(slippi(Special::Stamina.game_mode(), GS_VS), Some(STAMINA));
         assert_eq!(
-            slippi(Special::FixedCamera.game_mode(), GS_VS),
+            slippi(Special::Stamina.game_mode(), GameScene::Vs),
+            Some(STAMINA)
+        );
+        assert_eq!(
+            slippi(Special::FixedCamera.game_mode(), GameScene::Vs),
             Some(FIXED_CAMERA)
         );
-        assert_eq!(slippi(machine::GM_VS, GS_SUDDEN_DEATH), Some(SUDDEN_DEATH));
-        assert_eq!(slippi(GM_OPENING_MV, GS_VS), Some(ATTRACT));
-        assert_eq!(slippi(GM_CHALLENGER_APPROACH, GS_VS), Some(CHALLENGER));
-        assert_eq!(slippi(GM_CLASSIC, GS_VS), Some(SINGLE_PLAYER));
-        assert_eq!(slippi(GM_HOME_RUN, GS_VS), Some(SINGLE_PLAYER));
+        assert_eq!(
+            slippi(GameMode::Vs, GameScene::SuddenDeath),
+            Some(SUDDEN_DEATH)
+        );
+        assert_eq!(slippi(GameMode::Opening, GameScene::Vs), Some(ATTRACT));
+        assert_eq!(
+            slippi(GameMode::ChallengerApproach, GameScene::Vs),
+            Some(CHALLENGER)
+        );
+        assert_eq!(
+            slippi(GameMode::Classic, GameScene::Vs),
+            Some(SINGLE_PLAYER)
+        );
+        assert_eq!(
+            slippi(GameMode::HomeRunContest, GameScene::Vs),
+            Some(SINGLE_PLAYER)
+        );
         // A callback in VS mode's start data, which playback would clear.
-        let hooked = refusal(Ruleset::Slippi, machine::GM_VS, GS_VS, |g| {
+        let hooked = refusal(Ruleset::Slippi, GameMode::Vs, GameScene::Vs, |g| {
             g.vs_melee.start.rules.on_match_start = Some(CodeRef(0x8016_5290));
         });
         assert_eq!(hooked, Some(CALLBACK));
         // Vanilla's matches all run in the menus' session.
-        assert!(refusal(Ruleset::Vanilla, machine::GM_VS, GS_VS, |_| {}).is_some());
+        assert!(refusal(Ruleset::Vanilla, GameMode::Vs, GameScene::Vs, |_| {}).is_some());
     }
 
     fn view(x: f32) -> crate::game::camera::View {
