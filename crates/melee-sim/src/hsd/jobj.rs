@@ -373,16 +373,18 @@ pub fn make_matrix(objs: &mut Objects, data: &Archives, j: JObjId) {
             None => o.scale,
         });
     }
-    o.mtx = if o.flags & USE_QUATERNION != 0 {
-        Mtx34::srt_quat(o.scale, o.rotate, o.translate, parent_scl)
-    } else {
-        let euler = Vec3::new(o.rotate.x, o.rotate.y, o.rotate.z);
-        Mtx34::srt(o.scale, euler, o.translate, parent_scl)
-    };
-    if let Some(p) = parent {
-        let m = jobjs[p].mtx.concat(&jobjs[j].mtx);
-        jobjs[j].mtx = m;
-    }
+    let parent_mtx = parent.map(|p| jobjs[p].mtx);
+    let o = &jobjs[j];
+    let m = made_matrix(
+        j.0,
+        o.flags,
+        o.scale,
+        o.rotate,
+        o.translate,
+        parent_scl,
+        parent_mtx,
+    );
+    jobjs[j].mtx = m;
     let bound = jobjs[j].aobj.and_then(|a| objs.aobjs[a].hsd_obj);
     if let Some(b) = bound {
         setup_matrix(objs, data, Some(b));
@@ -391,6 +393,87 @@ pub fn make_matrix(objs: &mut Objects, data: &Archives, j: JObjId) {
         m[0][3] = v.x;
         m[1][3] = v.y;
         m[2][3] = v.z;
+    }
+}
+
+/// What `HSD_JObjMakeMatrix` makes of a joint's SRT (Euler angles, or with `USE_QUATERNION`
+/// in `flags` the quaternion) and its parent's scale and matrix, before a bound path joint
+/// moves it: the local matrix, times the parent's.
+///
+/// It depends only on these inputs' bits and the float mode, so the last result is kept by
+/// the joint's slot (`memo`, docs/performance.md): a joint made again with nothing changed
+/// (the dynamics fix's pass over a model some reader already set up this tick, a swing
+/// chain's parent made anew, a stage's joints from one frame to the next) gets its matrix
+/// back without the concatenation. The key is every input, so a slot another joint (or
+/// another game) filled only misses.
+pub(crate) fn made_matrix(
+    slot: u32,
+    flags: u32,
+    scale: Vec3,
+    rotate: Quat,
+    translate: Vec3,
+    parent_scl: Option<Vec3>,
+    parent: Option<Mtx34>,
+) -> Mtx34 {
+    use std::cell::RefCell;
+
+    use crate::memo::{self, Memo};
+    thread_local! {
+        static MADE: RefCell<Memo<[u32; 26], Mtx34, 12>> = const { RefCell::new(Memo::new()) };
+    }
+    let quat = flags & USE_QUATERNION != 0;
+    let mut key = [0u32; 26];
+    key[0] = memo::mode()
+        | u32::from(quat) << 8
+        | u32::from(parent_scl.is_some()) << 9
+        | u32::from(parent.is_some()) << 10;
+    let words = [scale.x, scale.y, scale.z, rotate.x, rotate.y, rotate.z];
+    for (k, v) in key[1..7].iter_mut().zip(words) {
+        *k = v.to_bits();
+    }
+    // An Euler joint's w is no input (and may be a stale stack word).
+    key[7] = if quat { rotate.w.to_bits() } else { 0 };
+    for (k, v) in key[8..11]
+        .iter_mut()
+        .zip([translate.x, translate.y, translate.z])
+    {
+        *k = v.to_bits();
+    }
+    if let Some(p) = parent_scl {
+        for (k, v) in key[11..14].iter_mut().zip([p.x, p.y, p.z]) {
+            *k = v.to_bits();
+        }
+    }
+    if let Some(p) = &parent {
+        for (k, v) in key[14..26].iter_mut().zip(p.m.iter().flatten()) {
+            *k = v.to_bits();
+        }
+    }
+    // The slot's low bits pick the table's entry.
+    let at = u64::from(slot) << (64 - 12);
+    Memo::get(&MADE, key, at, || {
+        made_matrix_uncached(flags, scale, rotate, translate, parent_scl, parent)
+    })
+}
+
+/// [`made_matrix`] without its memo.
+pub(crate) fn made_matrix_uncached(
+    flags: u32,
+    scale: Vec3,
+    rotate: Quat,
+    translate: Vec3,
+    parent_scl: Option<Vec3>,
+    parent: Option<Mtx34>,
+) -> Mtx34 {
+    let local = if flags & USE_QUATERNION != 0 {
+        Mtx34::srt_quat(scale, rotate, translate, parent_scl)
+    } else {
+        let euler = Vec3::new(rotate.x, rotate.y, rotate.z);
+        Mtx34::srt(scale, euler, translate, parent_scl)
+    };
+    match parent {
+        Some(p) => p.concat(&local),
+        None => local,
     }
 }
 
