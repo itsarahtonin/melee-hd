@@ -700,7 +700,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["pc", "peachs-castle"],
         audit: Some(Audit {
             units: &["melee/gr/grcastle", "melee/it/kinds/ityaku"],
-            modules: &["gr/castle", "it/kinds/yaku"],
+            modules: &["gr/peachs_castle", "it/kinds/yaku"],
             unreached: &[
                 YAKU_UNANCHORED,
                 (
@@ -734,7 +734,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["rc", "rainbow-cruise"],
         audit: Some(Audit {
             units: &["melee/gr/grrcruise"],
-            modules: &["gr/rcruise"],
+            modules: &["gr/rainbow_cruise"],
             unreached: &[],
             missing: &[],
         }),
@@ -767,7 +767,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
                 "melee/it/kinds/itklap",
                 "melee/ft/kinds/ftCommon/ftCo_BarrelWait",
             ],
-            modules: &["gr/kongo", "it/kinds/klap"],
+            modules: &["gr/kongo_jungle", "it/kinds/klap"],
             unreached: &[],
             missing: &[],
         }),
@@ -793,7 +793,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["jj", "jungle-japes"],
         audit: Some(Audit {
             units: &["melee/gr/grgarden", "melee/it/kinds/ityaku"],
-            modules: &["gr/garden", "it/kinds/yaku"],
+            modules: &["gr/jungle_japes", "it/kinds/yaku"],
             unreached: &[YAKU_UNANCHORED],
             missing: &[],
         }),
@@ -821,7 +821,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["gb", "great-bay"],
         audit: Some(Audit {
             units: &["melee/gr/grgreatbay", "melee/it/kinds/ittincle"],
-            modules: &["gr/greatbay", "it/kinds/tincle"],
+            modules: &["gr/great_bay", "it/kinds/tincle"],
             unreached: &[],
             missing: &[],
         }),
@@ -843,7 +843,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["ht", "hyrule-temple"],
         audit: Some(Audit {
             units: &["melee/gr/grshrine"],
-            modules: &["gr/shrine"],
+            modules: &["gr/hyrule_temple"],
             unreached: &[],
             missing: &[],
         }),
@@ -873,7 +873,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["br", "brinstar"],
         audit: Some(Audit {
             units: &["melee/gr/grzebes", "melee/it/kinds/ityaku"],
-            modules: &["gr/zebes", "it/kinds/yaku"],
+            modules: &["gr/brinstar", "it/kinds/yaku"],
             unreached: &[YAKU_UNANCHORED],
             missing: &[],
         }),
@@ -899,7 +899,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["bd", "brinstar-depths"],
         audit: Some(Audit {
             units: &["melee/gr/grkraid"],
-            modules: &["gr/kraid"],
+            modules: &["gr/brinstar_depths"],
             unreached: &[],
             missing: &[],
         }),
@@ -925,7 +925,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["ys", "yoshis-story"],
         audit: Some(Audit {
             units: &["melee/gr/grstory", "melee/it/kinds/itheiho"],
-            modules: &["gr/story", "it/kinds/heiho"],
+            modules: &["gr/yoshis_story", "it/kinds/heiho"],
             unreached: &[],
             missing: &[],
         }),
@@ -950,7 +950,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["yi", "yoshis-island"],
         audit: Some(Audit {
             units: &["melee/gr/gryorster", "melee/it/kinds/ityaku"],
-            modules: &["gr/yorster", "it/kinds/yaku"],
+            modules: &["gr/yoshis_island", "it/kinds/yaku"],
             unreached: &[YAKU_UNANCHORED],
             missing: &[],
         }),
@@ -979,7 +979,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["fod", "fountain-of-dreams"],
         audit: Some(Audit {
             units: &["melee/gr/grizumi"],
-            modules: &["gr/izumi"],
+            modules: &["gr/fountain_of_dreams"],
             unreached: &[],
             missing: &[],
         }),
@@ -1009,7 +1009,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
                 "melee/it/kinds/itwhispyapple",
                 "melee/it/kinds/ityaku",
             ],
-            modules: &["gr/greens", "it/kinds/whispyapple", "it/kinds/yaku"],
+            modules: &["gr/green_greens", "it/kinds/whispyapple", "it/kinds/yaku"],
             unreached: &[YAKU_UNANCHORED],
             missing: &[],
         }),
@@ -1112,7 +1112,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["ps", "pokemon-stadium"],
         audit: Some(Audit {
             units: &["melee/gr/grpstadium"],
-            modules: &["gr/stadium"],
+            modules: &["gr/pokemon_stadium"],
             unreached: &[],
             missing: &[],
         }),
@@ -1139,7 +1139,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["pf", "poke-floats"],
         audit: Some(Audit {
             units: &["melee/gr/grpura"],
-            modules: &["gr/pura"],
+            modules: &["gr/poke_floats"],
             unreached: &[],
             missing: &[],
         }),
@@ -1170,7 +1170,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
                 "melee/gr/grfzerocar",
                 "melee/it/kinds/ityaku",
             ],
-            modules: &["gr/mutecity", "gr/fzerocar", "it/kinds/yaku"],
+            modules: &["gr/mute_city", "gr/fzerocar", "it/kinds/yaku"],
             unreached: &[YAKU_UNANCHORED],
             missing: &[],
         }),
@@ -1199,7 +1199,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["bb", "big-blue"],
         audit: Some(Audit {
             units: &["melee/gr/grbigblue", "melee/gr/grfzerocar"],
-            modules: &["gr/bigblue", "gr/fzerocar"],
+            modules: &["gr/big_blue", "gr/fzerocar"],
             unreached: &[],
             missing: &[],
         }),
@@ -1282,7 +1282,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["im", "icicle-mountain"],
         audit: Some(Audit {
             units: &["melee/gr/gricemt", "melee/it/kinds/ityaku"],
-            modules: &["gr/icemt", "it/kinds/yaku"],
+            modules: &["gr/icicle_mountain", "it/kinds/yaku"],
             unreached: &[YAKU_UNANCHORED],
             missing: &[],
         }),
@@ -1310,7 +1310,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["mk", "mushroom-kingdom"],
         audit: Some(Audit {
             units: &["melee/gr/grinishie1", "melee/it/kinds/ityaku"],
-            modules: &["gr/inishie1", "it/kinds/yaku"],
+            modules: &["gr/mushroom_kingdom", "it/kinds/yaku"],
             unreached: &[
                 YAKU_UNANCHORED,
                 (
@@ -1352,7 +1352,11 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
                 "melee/it/kinds/itkyasarin",
                 "melee/it/kinds/itkyasarinegg",
             ],
-            modules: &["gr/inishie2", "it/kinds/kyasarin", "it/kinds/kyasarinegg"],
+            modules: &[
+                "gr/mushroom_kingdom_2",
+                "it/kinds/kyasarin",
+                "it/kinds/kyasarinegg",
+            ],
             unreached: &[],
             missing: &[],
         }),
@@ -1383,7 +1387,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["fz", "flat-zone"],
         audit: Some(Audit {
             units: &["melee/gr/grflatzone", "melee/it/kinds/ittools"],
-            modules: &["gr/flatzone", "it/kinds/tools"],
+            modules: &["gr/flat_zone", "it/kinds/tools"],
             unreached: &[],
             missing: &[],
         }),
@@ -1409,7 +1413,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["dl", "dream-land"],
         audit: Some(Audit {
             units: &["melee/gr/groldpupupu"],
-            modules: &["gr/oldpupupu"],
+            modules: &["gr/dream_land"],
             unreached: &[],
             missing: &[],
         }),
@@ -1437,7 +1441,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["yi64", "yoshis-island-64"],
         audit: Some(Audit {
             units: &["melee/gr/groldyoshi"],
-            modules: &["gr/oldyoshi"],
+            modules: &["gr/yoshis_island_64"],
             unreached: &[],
             missing: &[],
         }),
@@ -1468,7 +1472,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
                 "melee/gr/groldkongo",
                 "melee/ft/kinds/ftCommon/ftCo_BarrelWait",
             ],
-            modules: &["gr/oldkongo"],
+            modules: &["gr/kongo_jungle_64"],
             unreached: &[],
             missing: &[],
         }),
@@ -1599,7 +1603,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["bf", "battlefield"],
         audit: Some(Audit {
             units: &["melee/gr/grbattle"],
-            modules: &["gr/battle"],
+            modules: &["gr/battlefield"],
             unreached: &[],
             missing: &[],
         }),
@@ -1625,7 +1629,7 @@ pub static STAGES: [Option<Stage>; GrKind::COUNT] = [
         keys: &["fd", "final-destination"],
         audit: Some(Audit {
             units: &["melee/gr/grlast"],
-            modules: &["gr/last"],
+            modules: &["gr/final_destination"],
             unreached: &[],
             missing: &[],
         }),
