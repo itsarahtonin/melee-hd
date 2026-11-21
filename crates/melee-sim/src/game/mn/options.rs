@@ -40,9 +40,12 @@ pub struct Options {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct OptionMenu {
     pub cursor: u8,
-    pub unk1: Option<u8>,
-    pub unk2: Option<u8>,
-    pub unk3: Option<u8>,
+    #[doc(alias("unk1"))]
+    pub setting: Option<u8>,
+    #[doc(alias("unk2"))]
+    pub state: Option<u8>,
+    #[doc(alias("unk3"))]
+    pub balance: Option<u8>,
     pub text: Option<TextId>,
 }
 
@@ -51,7 +54,7 @@ impl OptionMenu {
     /// what the heap's image knows the block held.
     pub fn with_leftovers(mut self, data: &melee_data::archive::Archives, addr: u32) -> Self {
         let left = super::leftover_bytes_known::<3>(data, addr + 1);
-        for (v, l) in [&mut self.unk1, &mut self.unk2, &mut self.unk3]
+        for (v, l) in [&mut self.setting, &mut self.state, &mut self.balance]
             .into_iter()
             .zip(left)
         {
@@ -239,8 +242,8 @@ impl Running<'_> {
     pub(crate) fn menu_cooldown_tick(&mut self) {
         let m = &mut self.game.menu;
         m.cooldown = m.cooldown.wrapping_sub(1);
-        m.input_x2 = 0;
-        m.input_x4 = 0;
+        m.input_unused_a = 0;
+        m.input_unused_b = 0;
     }
 
     /// `Menu_InitCenterText`: a screen's description, string `id` of the menus' strings.

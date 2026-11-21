@@ -54,8 +54,10 @@ pub struct Node {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct GameOverData {
     pub score: u32,
-    pub x4: i32,
-    pub x8: u32,
+    #[doc(alias("x4"))]
+    pub run_score: i32,
+    #[doc(alias("x8"))]
+    pub from_mode: u32,
     pub result: i32,
     pub ckind: u32,
     pub slot: u8,
@@ -596,7 +598,7 @@ impl Running<'_> {
         g.cost = d.cost;
         g.short = u8::from(g.held < g.cost);
         g.tag = d.tag;
-        g.mode = d.x8 as i32;
+        g.mode = d.from_mode as i32;
         g.score = d.score as i32;
         g.half = d.score as i32 / 2;
         g.step = (g.score.wrapping_sub(g.half) as u32) / 120;
@@ -613,7 +615,7 @@ impl Running<'_> {
     pub fn game_over_on_exit(&mut self) {
         let g = self.game.endings.game_over;
         let d = self.game_over_data_mut();
-        d.x4 = g.score;
+        d.run_score = g.score;
         d.result = g.result;
         d.coins = g.coins;
         self.lb_audio_music_stop();

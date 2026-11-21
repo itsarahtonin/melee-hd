@@ -179,7 +179,7 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             )
         }
         9 => (
-            i(game.player_unk4e(slot)),
+            i(game.player_spawn_point(slot)),
             i(fns::Player_80032F30(ctx, slot)),
         ),
         10 => (
@@ -212,7 +212,7 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             i(fns::Player_GetHandicap(ctx, slot)),
         ),
         18 => (
-            f(game.player_unk50(slot)),
+            f(game.player_unset_ratio(slot)),
             Got::F(fns::Player_GetUnk50(ctx, slot).to_bits()),
         ),
         19 => (
@@ -241,11 +241,11 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             i(fns::Player_GetTotalCoins(ctx, slot)),
         ),
         26 => (
-            i(game.player_unk98(slot)),
+            i(game.player_coins_knocked(slot)),
             i(fns::Player_GetUnk98(ctx, slot)),
         ),
         27 => (
-            i(game.player_unk9c(slot)),
+            i(game.player_coins_lost(slot)),
             i(fns::Player_GetUnk9C(ctx, slot)),
         ),
         28 => (
@@ -371,15 +371,15 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             u(fns::Player_GetFlagsBit7(ctx, slot).into()),
         ),
         57 => (
-            i(game.player_unk4d(slot)),
+            i(game.player_kirby_copy_kind(slot)),
             i(fns::Player_GetUnk4D(ctx, slot)),
         ),
         58 => (
-            i(game.player_unk4c(slot)),
+            i(game.player_entry_delay(slot)),
             i(fns::Player_GetUnk4C(ctx, slot)),
         ),
         59 => (
-            u(game.player_unk45(slot)),
+            u(game.player_effect_color(slot)),
             u(fns::Player_GetUnk45(ctx, slot)),
         ),
         60 => (
@@ -397,7 +397,7 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
         63 => {
             let s = rand.below(2) == 0;
             (
-                i(game.player_800319c4(slot, s).into()),
+                i(game.player_fighters_all(slot, s).into()),
                 i(fns::Player_800319C4(ctx, slot, s.into())),
             )
         }
@@ -444,7 +444,7 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
         }
         70 => {
             let v = rand.bits() as i32;
-            game.set_player_unk4e(slot, v);
+            game.set_player_spawn_point(slot, v);
             fns::Player_80032FA4(ctx, slot, v);
             (Got::None, Got::None)
         }
@@ -509,9 +509,9 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             fns::Player_SetCoins(ctx, slot, v[0]);
             game.set_player_total_coins(slot, v[1]);
             fns::Player_SetTotalCoins(ctx, slot, v[1]);
-            game.set_player_unk98(slot, v[2]);
+            game.set_player_coins_knocked(slot, v[2]);
             fns::Player_SetUnk98(ctx, slot, v[2]);
-            game.set_player_unk9c(slot, v[3]);
+            game.set_player_coins_lost(slot, v[3]);
             fns::Player_SetUnk9C(ctx, slot, v[3]);
             (Got::None, Got::None)
         }
@@ -645,15 +645,15 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             let v = rand.bits() as i32;
             game.set_player_nametag(slot, v);
             fns::Player_SetNametagSlotID(ctx, slot, v);
-            game.set_player_unk45(slot, v);
+            game.set_player_effect_color(slot, v);
             fns::Player_SetUnk45(ctx, slot, v);
             (Got::None, Got::None)
         }
         92 => {
             let v = rand.bits() as u8;
-            game.set_player_unk4d(slot, v as i8);
+            game.set_player_kirby_copy_kind(slot, v as i8);
             fns::Player_SetUnk4D(ctx, slot, v as i8);
-            game.set_player_unk4c(slot, v);
+            game.set_player_entry_delay(slot, v);
             fns::Player_SetUnk4C(ctx, slot, v);
             (Got::None, Got::None)
         }
@@ -668,7 +668,7 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             (Got::None, Got::None)
         }
         95 => {
-            game.player_80031fb0(slot, sub);
+            game.player_fighter_gone(slot, sub);
             fns::Player_80031FB0(ctx, slot, sub);
             (Got::None, Got::None)
         }
@@ -676,16 +676,16 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             let v = small(rand);
             match rand.below(3) {
                 0 => {
-                    r.player_800366dc(slot, v);
+                    r.set_player_visible(slot, v);
                     fns::Player_800366DC(ctx, slot, v);
                 }
                 1 => {
                     let x = flt(rand);
-                    r.player_80036790(slot, x);
+                    r.set_player_hitlag(slot, x);
                     fns::Player_80036790(ctx, slot, arg(x));
                 }
                 _ => {
-                    r.player_80036844(slot, v);
+                    r.set_player_unkillable(slot, v);
                     fns::Player_80036844(ctx, slot, v);
                 }
             }
@@ -708,7 +708,7 @@ fn step(ctx: &Ctx, r: &mut Running, maps: &Maps, rand: &mut Rand) -> (String, Go
             i(fns::Player_8003219C(ctx, slot)),
         ),
         100 if game.player_entity(slot).is_some() => (
-            i(game.player_80036058(slot).into()),
+            i(game.player_tag_due(slot).into()),
             i(fns::Player_80036058(ctx, slot)),
         ),
         _ => (Got::None, Got::None),
@@ -809,32 +809,35 @@ fn gm_step(ctx: &Ctx, game: &mut Game, rand: &mut Rand) -> (String, Got, Got) {
     let name = format!("op {op} slot {slot} bit {bit} port {port}");
     let (ours, theirs) = match op {
         0 => (i(game.vs_item_freq()), i(fns::gm_8016AE80(ctx))),
-        1 => (f(game.vs_unk34()), Got::F(fns::gm_8016AE94(ctx).to_bits())),
+        1 => (
+            f(game.vs_item_weight()),
+            Got::F(fns::gm_8016AE94(ctx).to_bits()),
+        ),
         2 => (u(game.vs_timer_seconds()), u(fns::gm_8016AEEC(ctx))),
         3 => (u(game.vs_frame_count()), u(fns::gm_GetFrameCount(ctx))),
         4 => (u(game.vs_stkind().into()), u(fns::gm_GetStKind(ctx).into())),
         5 => (b(game.vs_is_stock()), i(fns::gm_8016B094(ctx))),
         6 => (b(game.vs_is_coins()), i(fns::gm_8016B0B4(ctx))),
         7 => (b(game.vs_friendly_fire()), i(fns::gm_8016B0D4(ctx))),
-        8 => (b(game.vs_x4_2()), i(fns::gm_8016B0E8(ctx))),
+        8 => (b(game.vs_single_player_rules()), i(fns::gm_8016B0E8(ctx))),
         9 => (b(game.vs_single_button()), i(fns::gm_8016B0FC(ctx))),
         10 => (b(game.vs_timer_counts_up()), i(fns::gm_8016B110(ctx))),
-        11 => (b(game.vs_x2_1()), i(fns::gm_8016B124(ctx))),
+        11 => (b(game.vs_arrows_flag()), i(fns::gm_8016B124(ctx))),
         12 => (b(game.vs_is_ffa()), i(fns::gm_8016B14C(ctx))),
         13 => (b(game.vs_is_teams()), i(fns::gm_8016B168(ctx))),
         14 => (b(game.vs_is_singleplayer()), i(fns::gm_8016B184(ctx))),
-        15 => (b(game.vs_x9_is_1()), i(fns::gm_8016B1A8(ctx))),
-        16 => (b(game.vs_x5_2()), i(fns::gm_8016B1C4(ctx))),
-        17 => (b(game.vs_x5_3()), i(fns::gm_8016B1D8(ctx))),
+        15 => (b(game.vs_target_test()), i(fns::gm_8016B1A8(ctx))),
+        16 => (b(game.vs_no_fighter_hits()), i(fns::gm_8016B1C4(ctx))),
+        17 => (b(game.vs_stadium_zoom()), i(fns::gm_8016B1D8(ctx))),
         18 => (b(game.vs_in_play()), i(fns::gm_8016B1EC(ctx))),
         19 => (b(game.vs_untimed()), i(fns::gm_8016B204(ctx))),
-        20 => (u(game.vs_x6().into()), i(fns::gm_8016B238(ctx))),
+        20 => (u(game.vs_sudden_death().into()), i(fns::gm_8016B238(ctx))),
         21 => (
             f(game.vs_damage_ratio()),
             Got::F(fns::gm_8016B248(ctx).to_bits()),
         ),
         22 => (
-            b(game.vs_fighter_x4_b3(slot)),
+            b(game.vs_fighter_shows_hearts(slot)),
             i(fns::gm_8016B258(ctx, slot)),
         ),
         23 => {
@@ -850,7 +853,7 @@ fn gm_step(ctx: &Ctx, game: &mut Game, rand: &mut Rand) -> (String, Got, Got) {
         }
         25 => (b(game.is_1p_run()), i(fns::gm_8016B3D8(ctx))),
         26 => (i(game.player_count()), i(fns::gm_8016B558(ctx))),
-        27 => (u(game.vs_unk_c().into()), u(fns::fn_8016B728(ctx).into())),
+        27 => (u(game.vs_joiners().into()), u(fns::fn_8016B728(ctx).into())),
         28 => {
             let ours = std::ptr::eq(game.vs_results(), &game.vs.state.x24C);
             (
@@ -863,7 +866,7 @@ fn gm_step(ctx: &Ctx, game: &mut Game, rand: &mut Rand) -> (String, Got, Got) {
             b(game.trailed_from_first(slot)),
             i(fns::fn_80171B2C(ctx, slot)),
         ),
-        31 => (b(game.vs_has_x58()), i(fns::gm_8016A944(ctx))),
+        31 => (b(game.vs_has_challenger_record()), i(fns::gm_8016A944(ctx))),
         32 => {
             let p = port.min(4);
             (

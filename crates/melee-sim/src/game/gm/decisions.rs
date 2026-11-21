@@ -13,19 +13,23 @@ use super::super::structs::MatchEnd;
 #[derive(Clone, Copy)]
 struct Decision {
     kind: i16,
-    x2: u16,
-    x4: u8,
-    x5: u8,
-    x6: u8,
+    #[doc(alias("x2"))]
+    text: u16,
+    #[doc(alias("x4"))]
+    match_kinds: u8,
+    #[doc(alias("x5"))]
+    dec_type: u8,
+    #[doc(alias("x6"))]
+    scale: u8,
 }
 
-const fn d(kind: i16, x2: u16, x4: u8, x5: u8, x6: u8) -> Decision {
+const fn d(kind: i16, text: u16, match_kinds: u8, dec_type: u8, scale: u8) -> Decision {
     Decision {
         kind,
-        x2,
-        x4,
-        x5,
-        x6,
+        text,
+        match_kinds,
+        dec_type,
+        scale,
     }
 }
 
@@ -337,7 +341,7 @@ fn missing(e: &Decision, kind: i32) -> bool {
 
 /// The decision's points (`lbl_803D5648[x2 - 2]`).
 fn points(e: &Decision) -> i32 {
-    POINTS[usize::from(e.x2) - 2]
+    POINTS[usize::from(e.text) - 2]
 }
 
 /// The match kinds a decision counts in, `fn_8016F180` (0 for none).
@@ -347,7 +351,7 @@ pub fn decision_flags(kind: i32) -> u8 {
     if missing(e, kind) {
         return 0;
     }
-    e.x4
+    e.match_kinds
 }
 
 /// Whether a decision is a flag or counts points, `gmDecisionGetType` (a flag when there's
@@ -358,7 +362,7 @@ pub fn decision_type(kind: i32) -> u8 {
     if missing(e, kind) {
         return DEC_FLAG;
     }
-    e.x5
+    e.dec_type
 }
 
 /// The kind of the decision at `idx`, `fn_8016F1F0`.
@@ -375,10 +379,10 @@ pub fn decision_text(kind: i32, us: bool) -> i32 {
     if missing(e, kind) {
         return 0;
     }
-    if e.x2 == 0xDE && us {
+    if e.text == 0xDE && us {
         return 0x102;
     }
-    i32::from(e.x2)
+    i32::from(e.text)
 }
 
 /// A decision's points, `gm_8016F2F8` (-1 for no such decision).
@@ -456,7 +460,7 @@ impl Game {
         let ranks = score_ranks(r);
         let p = &r.player_standings;
         let pts = points(e);
-        if e.x6 & 2 != 0 && flags & 2 != 0 {
+        if e.scale & 2 != 0 && flags & 2 != 0 {
             let pr = ranks[usize::from(player)];
             if pr == 0 {
                 return pts.wrapping_mul(2);
@@ -465,11 +469,11 @@ impl Game {
                 return pts / 2;
             }
         }
-        if e.x6 & 1 != 0 && flags & 4 != 0 {
+        if e.scale & 1 != 0 && flags & 4 != 0 {
             return ((pts / 10) as u32).wrapping_mul(self.bonus_count(i32::from(player), kind))
                 as i32;
         }
-        if e.x5 == DEC_POINT {
+        if e.dec_type == DEC_POINT {
             let pl = &p[usize::from(player)];
             return match kind {
                 0xE3 => (pts as u32).wrapping_mul(pl.x20) as i32,
@@ -509,7 +513,7 @@ impl Game {
             return 0;
         }
         if let Some(run) = self.one_player_run() {
-            return i32::from(run.xc[0]);
+            return i32::from(run.counters[0]);
         }
         1
     }

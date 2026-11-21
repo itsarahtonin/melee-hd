@@ -353,7 +353,7 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         let fp = &g.game.fighters[f.0];
         if !fp.x221C_b6 {
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
-            g.pl_800411c4(slot, sub);
+            g.end_frame_counters(slot, sub);
         }
         g.smash_charge_tick(gobj);
         if let Some(cb) = g.game.fighters[f.0].anim_cb {

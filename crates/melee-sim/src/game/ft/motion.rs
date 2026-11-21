@@ -782,12 +782,12 @@ impl Running<'_> {
             fp.x213C = -1;
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
             if fp.x2227_b4 {
-                self.pl_8003fe1c(slot, sub);
+                self.count_early_out_bonus(slot, sub);
                 self.game.fighters[f.0].x2227_b4 = false;
             }
             self.game.fighters[f.0].x2227_b5 = false;
             let x2140 = self.game.fighters[f.0].x2140;
-            self.lower_xcf8(slot, sub, x2140);
+            self.keep_lowest_dip(slot, sub, x2140);
             let fp = &mut self.game.fighters[f.0];
             fp.x2140 = 0.0;
             fp.used_tether = false;

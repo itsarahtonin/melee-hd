@@ -164,7 +164,7 @@ fn one_player_screens() {
         b[0] = 0;
         b[1] = rand.below(4) as u8 + 1;
         let mut ours = vs_melee::CssData {
-            unk_0x0: u16::from_be_bytes([b[0], b[1]]),
+            first_port: u16::from_be_bytes([b[0], b[1]]),
             match_type: b[2],
             pending_scene_change: b[3],
             ko_counts_null: false,
@@ -229,7 +229,7 @@ fn one_player_screens() {
         }
         let after = read(ctx, at, size);
         assert_eq!(
-            (ours.unk_0x0, ours.match_type, ours.pending_scene_change),
+            (ours.first_port, ours.match_type, ours.pending_scene_change),
             (u16::from_be_bytes([after[0], after[1]]), after[2], after[3]),
             "CSSData {n}'s header"
         );

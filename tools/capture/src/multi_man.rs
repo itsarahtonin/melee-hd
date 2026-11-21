@@ -38,7 +38,7 @@ impl Comparer<'_> {
         self.check(
             "lbl_80472ED8",
             "x0, x4, x8",
-            (mm.x0, mm.x4, mm.x8),
+            (mm.brought_in, mm.kos_early, mm.start_frames),
             (
                 self.u32(a) as i32,
                 self.u32(a + 4) as i32,
@@ -46,11 +46,11 @@ impl Comparer<'_> {
             ),
         );
         let m = self.mem_view();
-        mm.xC.compare(&m, a + 0xC, "lbl_80472ED8.xC", self);
+        mm.joiner.compare(&m, a + 0xC, "lbl_80472ED8.xC", self);
         // `x30` to `x53`: nothing writes them.
         let theirs: Vec<u8> = (0x30..0x54).map(|i| self.u8(a + i)).collect();
         self.check("lbl_80472ED8", "x30 to x53", vec![0u8; 0x24], theirs);
-        for (i, e) in mm.x54.iter().enumerate() {
+        for (i, e) in mm.table.iter().enumerate() {
             let at = a + 0x54 + 0x10 * i as u32;
             let theirs = (
                 self.u32(at) as i32,
@@ -64,10 +64,10 @@ impl Comparer<'_> {
                 self.u32(at + 0xC),
             );
             let ours = (
-                e.x0,
-                [e.x4, e.x5, e.x6, e.x7],
-                e.x8.to_bits(),
-                e.xC.to_bits(),
+                e.wait_for,
+                [e.at_once, e.ckind, e.level, e.cpu_kind],
+                e.attack_ratio.to_bits(),
+                e.defense_ratio.to_bits(),
             );
             self.check("lbl_80472ED8.x54", &format!("[{i}]"), ours, theirs);
         }
@@ -95,7 +95,7 @@ impl Comparer<'_> {
         self.check(
             "lbl_80473594",
             "x0, x2, x4, x8, xC, x10, x11",
-            (r.x0, r.x2, r.x4, r.x8, r.xC, r.x10, r.x11),
+            (r.won, r.kos, r.frames, r.mode, r.ckind, r.port, r.nametag),
             theirs,
         );
         for (b, blk) in mm.blocks.iter().enumerate() {
@@ -111,7 +111,7 @@ impl Comparer<'_> {
         self.check(
             "lbl_804D65E0",
             "x0, x2, x4",
-            (x.x0, x.x2, x.x4),
+            (x.icon, x.kos, x.score),
             (
                 self.u8(RESULT),
                 self.u16(RESULT + 2),

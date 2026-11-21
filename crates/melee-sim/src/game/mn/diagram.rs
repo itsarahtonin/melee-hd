@@ -1261,7 +1261,7 @@ impl Running<'_> {
     pub fn diagram_on_frame(&mut self, gobj: GObjId) {
         let f = self.game.menu.flow;
         let d = self.diagram_data(gobj);
-        if f.cur_menu != SCREEN || f.x10 != 0 {
+        if f.cur_menu != SCREEN || f.names_screen != 0 {
             if f.cur_menu == SCREEN {
                 self.diagram_clear(gobj);
                 gobj::free(self, gobj);
@@ -1481,7 +1481,7 @@ impl Running<'_> {
     #[doc(alias = "mnDiagram_CursorProc")]
     pub fn diagram_cursor_proc(&mut self, gobj: GObjId) {
         let f = self.game.menu.flow;
-        if f.cur_menu != SCREEN || f.x10 != 0 {
+        if f.cur_menu != SCREEN || f.names_screen != 0 {
             gobj::free(self, gobj);
             return;
         }
@@ -1627,7 +1627,7 @@ impl Running<'_> {
         let f = &mut self.game.menu.flow;
         f.prev_menu = f.cur_menu;
         f.cur_menu = SCREEN;
-        f.x10 = 0;
+        f.names_screen = 0;
         f.hovered_selection = 0;
         if load {
             self.diagram_load();

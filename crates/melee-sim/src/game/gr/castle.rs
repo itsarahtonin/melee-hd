@@ -1057,7 +1057,7 @@ pub fn grow(r: &mut Running, gobj: GObjId, grow: bool) -> bool {
                     jobj::clear_flags(jobjs, Some(bj), HIDDEN);
                     let small = 0.000_1;
                     if let (Some(a), Some(b)) = (ea, eb) {
-                        let items_on = r.game.vs_item_freq() != -1 && r.game.vs_x6() == 0;
+                        let items_on = r.game.vs_item_freq() != -1 && r.game.vs_sudden_death() == 0;
                         let jobjs = &mut r.game.objs.jobjs;
                         let (shown, hidden) = if items_on { (a, b) } else { (b, a) };
                         jobj::clear_flags(jobjs, Some(shown), HIDDEN);

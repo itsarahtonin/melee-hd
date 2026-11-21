@@ -230,7 +230,7 @@ impl Running<'_> {
             let n = i32::from(self.horde().count);
             for i in 0..n {
                 for j in 0..=n {
-                    self.player_800366dc(j, i32::from(j != 0 && i + 1 == j));
+                    self.set_player_visible(j, i32::from(j != 0 && i + 1 == j));
                 }
                 self.camera_fighters(gobj, 1);
                 self.horde_copy(i as u8, false);
@@ -275,7 +275,7 @@ impl Running<'_> {
         if crate::hsd::display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
             let n = i32::from(self.horde().count);
             for i in 0..=n {
-                self.player_800366dc(i, i32::from(i == 0));
+                self.set_player_visible(i, i32::from(i == 0));
             }
             self.camera_fighters(gobj, 1);
             self.game.world.gobj_mut(gobj).gxlink_prios = 0x1001;

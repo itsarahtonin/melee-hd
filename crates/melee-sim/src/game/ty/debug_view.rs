@@ -219,21 +219,21 @@ impl Running<'_> {
             self.toy_keep_frustum(c);
             // `OSReport("*** Pad = %d\n", Toy_80305B88())`.
             let _ = self.toy_triggered();
-            self.game.toys.gallery.x5c = 0;
+            self.game.toys.gallery.timer = 0;
             match self.game.toys.gallery.state {
                 0 => {
                     self.toy_close_links(true);
                     let g = &mut self.game.toys.gallery;
                     g.state = 1;
-                    g.x5c = 0;
+                    g.timer = 0;
                     return;
                 }
                 2 => {
-                    self.game.toys.gallery.x5c = 0;
+                    self.game.toys.gallery.timer = 0;
                     self.toy_view_reset(false);
                     self.toy_close_links(false);
                     let g = &mut self.game.toys.gallery;
-                    g.x5c = 0;
+                    g.timer = 0;
                     g.state = 3;
                     self.lb_audio_call(0);
                     return;
@@ -447,7 +447,7 @@ impl Running<'_> {
                     self.lb_audio_call(1);
                     self.toy_keep_frustum(c);
                     let g = &mut self.game.toys.gallery;
-                    g.x5c = 0;
+                    g.timer = 0;
                     g.state = 1;
                     self.toy_view_place(0.0, 0.0);
                     return;
@@ -456,11 +456,11 @@ impl Running<'_> {
             1 | 3 => self.toy_transition(c),
             2 => {
                 let t = self.toy_triggered();
-                if t & PAD_B != 0 || int_f(self.game.toys.gallery.x5c) > reg(7200.0) {
+                if t & PAD_B != 0 || int_f(self.game.toys.gallery.timer) > reg(7200.0) {
                     self.lb_audio_call(0);
                     self.toy_keep_frustum(c);
                     self.toy_info_flags(9);
-                    self.game.toys.gallery.x5c = 0;
+                    self.game.toys.gallery.timer = 0;
                     let data = self.data;
                     let o = &mut self.game.objs;
                     let _ = cobj::eye_position(o, data, c);
@@ -483,9 +483,9 @@ impl Running<'_> {
                     ),
                 );
                 if fp::fadds(sum, fp::frsp(f64::from(t))) == 0.0 {
-                    self.game.toys.gallery.x5c += 1;
+                    self.game.toys.gallery.timer += 1;
                 } else {
-                    self.game.toys.gallery.x5c = 0;
+                    self.game.toys.gallery.timer = 0;
                 }
                 let g = &self.game.toys.gallery;
                 let scale = fp::fdivs(reg(g.dist), reg(38.0));
@@ -570,9 +570,9 @@ impl Running<'_> {
             self.toy_set_light(0);
             self.toy_back(0);
             let a = &mut self.game.toys.anim;
-            a.x11 = 0;
-            a.x10 = 0;
-            a.x0e = 1;
+            a.look_asked = 0;
+            a.look = 0;
+            a.stand = 1;
         }
         let a = self.game.toys.anim;
         let jobjs = &mut self.game.objs.jobjs;

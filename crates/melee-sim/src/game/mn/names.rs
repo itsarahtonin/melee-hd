@@ -545,7 +545,7 @@ impl Running<'_> {
             if self.confirmed_read() == 0 {
                 self.lb_audio_call(0);
                 self.game.menu.cooldown = 5;
-                self.game.menu.flow.x10 = 0;
+                self.game.menu.flow.names_screen = 0;
                 return;
             }
             let name = self.hovered_name();
@@ -566,13 +566,13 @@ impl Running<'_> {
             }
             self.name_list_refresh(list);
             self.name_deleted(name);
-            self.game.menu.flow.x10 = 0;
+            self.game.menu.flow.names_screen = 0;
             return;
         }
         if buttons & IN_BACK != 0 {
             self.lb_audio_call(0);
             self.game.menu.cooldown = 5;
-            self.game.menu.flow.x10 = 0;
+            self.game.menu.flow.names_screen = 0;
             return;
         }
         if buttons & 0xC != 0 {
@@ -686,7 +686,7 @@ impl Running<'_> {
                     let name = self.hovered_name();
                     if self.name_valid(name) {
                         self.lb_audio_call(1);
-                        self.game.menu.flow.x10 = 2;
+                        self.game.menu.flow.names_screen = 2;
                         self.set_confirmed(Some(0));
                         self.name_prompt();
                         return;
@@ -731,7 +731,7 @@ impl Running<'_> {
     /// the flow's screen (`x10`).
     #[doc(alias = "fn_80238540")]
     pub fn names_think(&mut self, gobj: GObjId) {
-        match self.game.menu.flow.x10 {
+        match self.game.menu.flow.names_screen {
             0 => self.name_list_input(),
             1 => self.name_keys_input(gobj),
             2 => self.name_delete_input(),
@@ -907,7 +907,9 @@ impl Running<'_> {
         }
         let d = self.name_list_data(gobj);
         let h = self.game.menu.flow.hovered_selection;
-        if self.game.menu.flow.x10 != 1 && matches!(d.state, 0 | 1 | 3) && u16::from(d.hovered) != h
+        if self.game.menu.flow.names_screen != 1
+            && matches!(d.state, 0 | 1 | 3)
+            && u16::from(d.hovered) != h
         {
             sel = true;
         }
@@ -1049,7 +1051,7 @@ impl Running<'_> {
     pub fn name_prompt_proc(&mut self, gobj: GObjId) {
         let j = super::common::jobj_of(self, gobj);
         let frame_j = node(self, Some(j), 2);
-        if self.game.menu.flow.x10 != 2 {
+        if self.game.menu.flow.names_screen != 2 {
             if let Some(t) = self.names_mut().prompt_text.take() {
                 self.destroy_text(t);
             }
@@ -1160,7 +1162,7 @@ impl Running<'_> {
             d.jobjs[i] = node(self, Some(root), i as i32);
         }
         self.names_mut().lists.insert(addr, d);
-        if f.x10 == 1 {
+        if f.names_screen == 1 {
             self.name_grid_clear(gobj);
             hide(self, d.jobjs[8]);
         } else {
@@ -1191,7 +1193,7 @@ impl Running<'_> {
     #[doc(alias = "mnName_8023A9B4")]
     fn names_back(&mut self, scroll: u8) {
         self.game.menu.flow.hovered_selection = u16::from(NEW);
-        self.game.menu.flow.x10 = 0;
+        self.game.menu.flow.names_screen = 0;
         for i in 0..SLOTS {
             self.names_mut().display_order[i] = i as u8;
         }
@@ -1249,7 +1251,7 @@ impl Running<'_> {
         for i in 0..SLOTS {
             n.display_order[i] = i as u8;
         }
-        self.game.menu.flow.x10 = 0;
+        self.game.menu.flow.names_screen = 0;
         let g = self.name_list(1);
         self.game.world.mark_ran(g);
         let w = &mut self.game.world;
@@ -2077,7 +2079,7 @@ impl Running<'_> {
                 done = false;
             }
         }
-        if done || self.game.menu.flow.x10 == 1 {
+        if done || self.game.menu.flow.names_screen == 1 {
             gobj::free(self, gobj);
         }
     }
@@ -2090,7 +2092,7 @@ impl Running<'_> {
     pub fn name_keys_proc(&mut self, gobj: GObjId) {
         let a = self.keys_addr(gobj);
         let d = self.names().entries[&a];
-        if self.game.menu.flow.x10 != 1 {
+        if self.game.menu.flow.names_screen != 1 {
             hide(self, d.jobjs[16]);
             hide(self, d.jobjs[12]);
             hide(self, d.jobjs[13]);
@@ -2235,15 +2237,15 @@ impl Running<'_> {
     pub(crate) fn name_new_from_screen(&mut self, a: melee_data::archive::ArchiveId, port: u8) {
         let m = &mut self.game.menu;
         m.cooldown = 0x14;
-        m.input_x2 = 0;
-        m.input_x4 = 0;
+        m.input_unused_a = 0;
+        m.input_unused_b = 0;
         let f = &mut m.flow;
         f.buttons = 0;
         f.prev_menu = f.cur_menu;
         f.cur_menu = NAMES;
         let us = self.game.game_data.saved_language() == LANG_US;
         self.game.menu.flow.hovered_selection = if us { 0x2D } else { 0 };
-        self.game.menu.flow.x10 = 1;
+        self.game.menu.flow.names_screen = 1;
         self.sis_reset();
         self.names_mut().port = port;
         let ar = self.data.get(a);
@@ -2286,7 +2288,7 @@ impl Running<'_> {
     /// (letters in English), the menu's inputs, the name empty, and the keyboard.
     #[doc(alias = "mnNameNew_EnterFromMnName")]
     fn name_new_from_list(&mut self, count: u8) {
-        self.game.menu.flow.x10 = 1;
+        self.game.menu.flow.names_screen = 1;
         let us = self.game.game_data.saved_language() == LANG_US;
         self.game.menu.flow.hovered_selection = if us { 0x2D } else { 0 };
         let n = self.names_mut();

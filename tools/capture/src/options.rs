@@ -53,7 +53,7 @@ impl Comparer<'_> {
             return;
         };
         self.check(path, "Menu cursor", m.cursor, self.u8(ud));
-        for (k, v) in [m.unk1, m.unk2, m.unk3].into_iter().enumerate() {
+        for (k, v) in [m.setting, m.state, m.balance].into_iter().enumerate() {
             if let Some(v) = v {
                 self.check(
                     path,

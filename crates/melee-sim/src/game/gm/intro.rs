@@ -91,8 +91,10 @@ pub struct EasyData {
     pub ally_metal: [u8; 3],
     pub enemy_metal: [u8; 3],
     /// The enter data's last byte and the four after it.
-    pub x1f: u8,
-    pub pad: [u8; 4],
+    #[doc(alias("x1f"))]
+    pub last_byte: u8,
+    #[doc(alias("pad"))]
+    pub tail: [u8; 4],
 }
 
 impl EasyData {
@@ -112,8 +114,8 @@ impl EasyData {
         b[0x16..0x19].copy_from_slice(&self.enemy_colors);
         b[0x19..0x1C].copy_from_slice(&self.ally_metal);
         b[0x1C..0x1F].copy_from_slice(&self.enemy_metal);
-        b[0x1F] = self.x1f;
-        b[0x20..].copy_from_slice(&self.pad);
+        b[0x1F] = self.last_byte;
+        b[0x20..].copy_from_slice(&self.tail);
         b
     }
 
@@ -133,7 +135,7 @@ impl EasyData {
         self.enemy_colors.copy_from_slice(&e[0x16..0x19]);
         self.ally_metal.copy_from_slice(&e[0x19..0x1C]);
         self.enemy_metal.copy_from_slice(&e[0x1C..0x1F]);
-        self.x1f = e[0x1F];
+        self.last_byte = e[0x1F];
     }
 }
 
@@ -152,7 +154,8 @@ pub struct IntroEasy {
     pub tick: u16,
     pub map_frame: u16,
     pub map_frame2: u16,
-    pub x3e: u16,
+    #[doc(alias("x3e"))]
+    pub unused: u16,
     /// `lbl_8047368C`.
     pub data: EasyData,
     /// `lbl_804D65F4`, `lbl_804D65F8`: the screen's archive and the map's.
@@ -175,7 +178,8 @@ pub struct IntroNormal {
     pub camera: Option<DataRef>,
     pub gobj: Option<GObjId>,
     /// `x34`: set to 2400 once the map's first animation ends, never read.
-    pub x34: u16,
+    #[doc(alias("x34"))]
+    pub unused: u16,
     /// `x36`'s bits: the stage's number, the scene's end asked for, the flash started, Start
     /// pressed.
     pub stage: u8,
@@ -1097,7 +1101,7 @@ impl Running<'_> {
         let s = &mut self.game.intros.normal;
         s.map_anim = 0;
         s.stretch = 0;
-        s.x34 = 0;
+        s.unused = 0;
         s.done = false;
         s.flash = false;
         s.stage = e.stage & 0x1F;
@@ -1319,7 +1323,7 @@ impl Running<'_> {
                 if !animated {
                     self.game.intros.normal.map_anim = 1;
                     self.intro_normal_anim(j, m, 1);
-                    self.game.intros.normal.x34 = 0x960;
+                    self.game.intros.normal.unused = 0x960;
                 }
             }
             1 => {

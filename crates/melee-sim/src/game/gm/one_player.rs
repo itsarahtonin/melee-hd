@@ -127,7 +127,8 @@ pub struct GmPlayerData {
     pub slot: u8,
     pub nametag: u8,
     pub stocks: u8,
-    pub x6: u8,
+    #[doc(alias("x6"))]
+    pub unused: u8,
     pub mode: u8,
 }
 
@@ -145,16 +146,23 @@ pub struct Opponent {
 /// `Unk1PData`: a 1P run's state (`gm_17C0`'s): its player, its counters (`xC` to `x23`),
 /// the next match's opponents, and the mode's tables' getters (`x48` to `x70`, function
 /// pointers: their addresses).
+#[doc(alias("Unk1PData"))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
-pub struct Unk1PData {
+pub struct OnePlayerRun {
     pub player: GmPlayerData,
-    pub x8: [u8; 4],
+    #[doc(alias("x8"))]
+    pub stage: [u8; 4],
     /// `xC` to `x13`.
-    pub xc: [u8; 8],
-    pub x14: u16,
-    pub x18: i32,
-    pub x1c: i32,
-    pub x20: u32,
+    #[doc(alias("xc"))]
+    pub counters: [u8; 8],
+    #[doc(alias("x14"))]
+    pub coins: u16,
+    #[doc(alias("x18"))]
+    pub score: i32,
+    #[doc(alias("x1c"))]
+    pub damage_taken: i32,
+    #[doc(alias("x20"))]
+    pub frames: u32,
     pub opponents: [Opponent; 3],
     /// `x48`, `x4C`, `x50`, `x54`, `x58`, `x5C`, `x60`, `x64`, `x68`, `x6C`, `x70`.
     pub getters: [Option<CodeRef>; 11],
@@ -163,24 +171,34 @@ pub struct Unk1PData {
 /// `UnkAllstarData` (`lbl_80472CB0`, Classic's; `gm_80473A18`, All-Star's).
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct AllStarData {
-    pub base: Unk1PData,
-    pub x74: u16,
-    pub x76: [u8; 26],
-    pub x90: [u8; 4],
-    pub x94: [u8; 2],
-    pub x96: [u8; 6],
-    pub x9c: u32,
+    pub base: OnePlayerRun,
+    #[doc(alias("x74"))]
+    pub damage: u16,
+    #[doc(alias("x76"))]
+    pub fought: [u8; 26],
+    #[doc(alias("x90"))]
+    pub hearts: [u8; 4],
+    #[doc(alias("x94"))]
+    pub rest_counts: [u8; 2],
+    #[doc(alias("x96"))]
+    pub next_chars: [u8; 6],
+    #[doc(alias("x9c"))]
+    pub frames: u32,
 }
 
 /// `UnkAdventureData` (`lbl_80472C30`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct AdventureData {
-    pub base: Unk1PData,
+    pub base: OnePlayerRun,
     /// `x74` to `x78`.
-    pub x74: [u8; 5],
-    pub x79: [u8; 3],
-    pub x7c: u8,
-    pub x7d: [u8; 3],
+    #[doc(alias("x74"))]
+    pub feats: [u8; 5],
+    #[doc(alias("x79"))]
+    pub unused: [u8; 3],
+    #[doc(alias("x7c"))]
+    pub star_fox_kind: u8,
+    #[doc(alias("x7d"))]
+    pub unused_tail: [u8; 3],
 }
 
 /// Where a Classic stage list entry's matchup (`gm_803DDEC8Struct::xC`) points: one of the
@@ -231,7 +249,8 @@ pub struct OnePlayer {
     pub ally_pool: [u8; 24],
     /// `lbl_80472C30` (`gm_GetAdventureData`) and `gm_80490910`.
     pub adventure: AdventureData,
-    pub adventure_x910: [u8; ADVENTURE_STAGES],
+    #[doc(alias("adventure_x910"))]
+    pub adventure_results: [u8; ADVENTURE_STAGES],
     /// `gm_804D68E0`: Adventure's intro scene's enter data.
     pub adventure_intro: super::adventure::IntroData,
     /// `gm_804D68D8`: Adventure's cutscenes' enter data (`CutsceneData`, eight bytes of a
@@ -240,7 +259,8 @@ pub struct OnePlayer {
     /// `gm_80473A18`, All-Star's run, `gm_80490940`, and `gm_803DEBE8`'s opponents as the
     /// load shuffles them (stages, stage, character).
     pub allstar: AllStarData,
-    pub allstar_x940: [u8; 25],
+    #[doc(alias("allstar_x940"))]
+    pub allstar_results: [u8; 25],
     pub allstar_opponents: [[u8; 4]; 25],
     /// `gmClassic_80472AF8` and `gmClassic_8047086C`: Classic's and All-Star's matches'
     /// enter and exit data.
@@ -286,11 +306,11 @@ impl Default for OnePlayer {
             classic_picks: [MatchupRef::None; 12],
             ally_pool: ALLY_POOL,
             adventure: AdventureData::default(),
-            adventure_x910: [0; ADVENTURE_STAGES],
+            adventure_results: [0; ADVENTURE_STAGES],
             adventure_intro: Default::default(),
             adventure_cutscene: [0; 8],
             allstar: AllStarData::default(),
-            allstar_x940: [0; 25],
+            allstar_results: [0; 25],
             allstar_opponents: ALLSTAR_OPPONENTS,
             match_start: StartMeleeData::default(),
             match_exit: Default::default(),
@@ -342,22 +362,35 @@ const ALLSTAR_OPPONENTS: [[u8; 4]; 25] = [
 /// kind, time and the rest, in the executable's data.
 #[derive(Clone, Copy, Debug)]
 pub struct ClassicStage {
-    pub x0: u8,
-    pub x1: u8,
-    pub x2: u8,
-    pub x4: u16,
-    pub x6: u16,
-    pub x8: u8,
+    #[doc(alias("x0"))]
+    pub stage: u8,
+    #[doc(alias("x1"))]
+    pub flags: u8,
+    #[doc(alias("x2"))]
+    pub bonus: u8,
+    #[doc(alias("x4"))]
+    pub time: u16,
+    #[doc(alias("x6"))]
+    pub opponents: u16,
+    #[doc(alias("x8"))]
+    pub rules_bit: u8,
 }
 
-const fn cs(x0: u8, x1: u8, x2: u8, x4: u16, x6: u16, x8: u8) -> ClassicStage {
+const fn cs(
+    stage: u8,
+    flags: u8,
+    bonus: u8,
+    time: u16,
+    opponents: u16,
+    rules_bit: u8,
+) -> ClassicStage {
     ClassicStage {
-        x0,
-        x1,
-        x2,
-        x4,
-        x6,
-        x8,
+        stage,
+        flags,
+        bonus,
+        time,
+        opponents,
+        rules_bit,
     }
 }
 
@@ -598,8 +631,8 @@ impl Running<'_> {
     /// opponents' characters none (`gm_8017DB58`), the 1P port and the getters.
     #[doc(alias = "gm_8017C984")]
     #[doc(alias = "gm_8017DB58")]
-    fn one_player_run_start(run: &mut Unk1PData, slot: u8) {
-        *run = Unk1PData::default();
+    fn one_player_run_start(run: &mut OnePlayerRun, slot: u8) {
+        *run = OnePlayerRun::default();
         for o in &mut run.opponents {
             o.ckind = CharacterKind::NONE as i8;
         }
@@ -729,7 +762,7 @@ impl Running<'_> {
     fn classic_pick_matchups(&mut self) {
         let n = CLASSIC_STAGES
             .iter()
-            .position(|s| s.x0 == 0xD)
+            .position(|s| s.stage == 0xD)
             .expect("the list's end");
         // Which stages each pass picks for, and from which table.
         type Pass = (fn(u8) -> bool, usize);
@@ -741,7 +774,7 @@ impl Running<'_> {
         ];
         for (wants, table) in passes {
             for i in 0..n {
-                if wants(CLASSIC_STAGES[i].x1) {
+                if wants(CLASSIC_STAGES[i].flags) {
                     let Some(r) = self.classic_pick(table) else {
                         // `for (;;) {}`: a console hangs.
                         panic!("gmClassic_801B2D54 found no matchup: a console hangs here");
@@ -752,11 +785,11 @@ impl Running<'_> {
         }
         for i in 0..n {
             let s = CLASSIC_STAGES[i];
-            if s.x1 == 0x80 && (1..=3).contains(&s.x2) {
-                self.game.one_player.classic_picks[i] = MatchupRef::Bonus(s.x2);
+            if s.flags == 0x80 && (1..=3).contains(&s.bonus) {
+                self.game.one_player.classic_picks[i] = MatchupRef::Bonus(s.bonus);
             }
         }
-        if let Some(i) = (0..n).find(|&i| CLASSIC_STAGES[i].x1 & 0x20 != 0) {
+        if let Some(i) = (0..n).find(|&i| CLASSIC_STAGES[i].flags & 0x20 != 0) {
             self.game.one_player.classic_picks[i] = MatchupRef::Table(0xC0, 0);
         }
     }
@@ -817,7 +850,7 @@ impl Running<'_> {
         let o = &mut self.game.one_player;
         o.adventure = AdventureData::default();
         Self::one_player_run_start(&mut o.adventure.base, slot);
-        o.adventure_x910 = [0; ADVENTURE_STAGES];
+        o.adventure_results = [0; ADVENTURE_STAGES];
         o.adventure.base.getters = ADVENTURE_GETTERS;
         // `ADVENTURE_BACK_TO_CSS`.
         self.set_game_mode_state_id(ADVENTURE_CSS);
@@ -864,7 +897,7 @@ impl Running<'_> {
         let slot = self.one_player_port();
         let o = &mut self.game.one_player;
         Self::one_player_run_start(&mut o.allstar.base, slot);
-        o.allstar_x940 = [0; 25];
+        o.allstar_results = [0; 25];
         for (i, g) in ALLSTAR_GETTERS {
             o.allstar.base.getters[i] = g;
         }
@@ -878,10 +911,10 @@ impl Running<'_> {
             self.game.one_player.allstar_opponents.swap(i, j);
         }
         let a = &mut self.game.one_player.allstar;
-        a.x74 = 0;
-        a.x9c = 0;
-        a.x76 = [CharacterKind::NONE; 26];
-        a.x90 = [1; 4];
+        a.damage = 0;
+        a.frames = 0;
+        a.fought = [CharacterKind::NONE; 26];
+        a.hearts = [1; 4];
         self.set_game_mode_state_id(0x70);
         self.game.clear_trophy_notices();
         self.ground_load_trophies();
@@ -1409,9 +1442,9 @@ impl Running<'_> {
     #[doc(alias = "gm_801B1EB8")]
     pub fn training_enter_sss(&mut self) {
         let s = &mut self.game.one_player.training_sss;
-        s.x1 = 0;
+        s.no_b = 0;
         s.force_stage_id = -1;
-        s.unk_stage = 0;
+        s.cursor_port = 0;
     }
 
     /// `gm_801B1EEC`: back to the select, or the stage kept for the match and its banks.

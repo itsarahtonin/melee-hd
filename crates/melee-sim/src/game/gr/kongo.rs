@@ -223,7 +223,7 @@ pub fn on_init(r: &mut Running) {
     setup::measure_blast_zones(r.game, r.data);
     r.game.geometry_mut().disable_joint(0);
     r.game.geometry_mut().disable_joint(1);
-    if super::stage::stkind(r.game) != 0x3D && r.game.vs_x6() == 0 {
+    if super::stage::stkind(r.game) != 0x3D && r.game.vs_sudden_death() == 0 {
         r.stage_sound(0x5_A551);
     }
 }
@@ -636,7 +636,8 @@ pub fn events(r: &mut Running, gobj: GObjId) {
     }
     let p = param(r.game);
     let boxes = |r: &Running| {
-        r.game.vs_x6() == 0 && super::super::it::spawn::kind_on(r.game, ItKind::Crate.id())
+        r.game.vs_sudden_death() == 0
+            && super::super::it::spawn::kind_on(r.game, ItKind::Crate.id())
     };
     let box_w = if boxes(r) {
         reg(p.f(r.data, BOX_WEIGHT))

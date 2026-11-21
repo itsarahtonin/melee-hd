@@ -17,7 +17,8 @@ pub struct MenuMode {
     pub menu_kind: u8,
     pub hovered_selection: u8,
     pub load_assets: u8,
-    pub x3: i8,
+    #[doc(alias("x3"))]
+    pub unused: i8,
     /// `MenuExitData::pending_mode`, the mode the menu chose.
     pub pending_mode: i8,
 }

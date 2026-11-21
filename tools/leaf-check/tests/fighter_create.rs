@@ -339,7 +339,7 @@ fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode, first_init: bool
                 data: &archives,
             };
             if s < 0 {
-                r.player_80036da4();
+                r.player_lib_init();
             } else {
                 r.player_create_fighters(s);
             }

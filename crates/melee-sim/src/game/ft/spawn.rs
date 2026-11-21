@@ -785,7 +785,7 @@ impl Running<'_> {
         let f = self.game.fighter_id(gobj);
         let root = self.root_jobj(gobj);
         let slot = i32::from(self.game.fighters[f.0].player_idx);
-        let timer = self.game.player_unk4c(slot);
+        let timer = self.game.player_entry_delay(slot);
         let height = self.common().f32(0x6C4);
         let scale = self.game.objs.jobjs[root].scale;
         let fp = &mut self.game.fighters[f.0];

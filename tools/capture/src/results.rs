@@ -27,7 +27,15 @@ impl Comparer<'_> {
         self.check(
             "lbl_8046DBE8",
             "flags",
-            (d.x0_0, d.x0_1, d.phase, d.x0_4, d.x0_5, d.x0_6, d.x0_7),
+            (
+                d.started,
+                d.rows_shown,
+                d.phase,
+                d.pause_first,
+                d.link0_only,
+                d.unused_a,
+                d.unused_b,
+            ),
             (
                 bit(0),
                 bit(1),
@@ -44,12 +52,12 @@ impl Comparer<'_> {
             (
                 d.state,
                 d.num_pages,
-                d.x3,
-                d.x4,
-                d.x5,
-                d.x6,
+                d.end_frames,
+                d.winner,
+                d.winning_team,
+                d.team_best,
                 d.frames,
-                d.xc.to_bits(),
+                d.rows_offset.to_bits(),
             ),
             (
                 self.u8(at + 1),
@@ -78,9 +86,9 @@ impl Comparer<'_> {
         );
         for (name, j, off) in [
             ("x20", d.emblem, 0x20),
-            ("x24", d.x24, 0x24),
-            ("x28", d.x28, 0x28),
-            ("x30", d.x30, 0x30),
+            ("x24", d.rows_anchor, 0x24),
+            ("x28", d.title_anchor, 0x28),
+            ("x30", d.title, 0x30),
         ] {
             let theirs = self.u32(at + off);
             self.compare_handle(
@@ -91,16 +99,21 @@ impl Comparer<'_> {
             );
         }
         let theirs = self.u32(at + 0x2C);
-        self.compare_handle("lbl_8046DBE8.x2C", "TextId", d.x2c.map(|t| t.0), theirs);
+        self.compare_handle(
+            "lbl_8046DBE8.x2C",
+            "TextId",
+            d.title_text.map(|t| t.0),
+            theirs,
+        );
         for i in 0..6 {
             let theirs = self.u32(at + 0x34 + 4 * i as u32);
             self.compare_handle(
                 &format!("lbl_8046DBE8.x34[{i}]"),
                 "JObjId",
-                d.x34[i].map(|j| j.0),
+                d.row_anchors[i].map(|j| j.0),
                 theirs,
             );
-            let v = d.x4c[i];
+            let v = d.row_positions[i];
             let a = at + 0x4C + 0xC * i as u32;
             self.check(
                 &format!("lbl_8046DBE8.x4C[{i}]"),
@@ -119,12 +132,12 @@ impl Comparer<'_> {
                 "flags, page, x2, scroll",
                 (
                     p.done,
-                    p.x0_1,
-                    p.x0_2,
-                    p.x0_3,
-                    p.x0_4,
+                    p.more_above,
+                    p.more_below,
+                    p.page_before,
+                    p.page_after,
                     p.page,
-                    p.x2,
+                    p.cpu_page_frames,
                     p.scroll_offset.to_bits(),
                 ),
                 (
@@ -196,7 +209,7 @@ impl Comparer<'_> {
             self.check(
                 &format!("lbl_8046E190[{i}]"),
                 "bonuses' page",
-                (s.x0, s.x1),
+                (s.mode, s.count),
                 (self.u8(a), self.u8(a + 1)),
             );
         }
@@ -240,7 +253,7 @@ impl Comparer<'_> {
         self.check(
             "lbl_8046E3AC",
             "flags and players' images taken",
-            (s.x0_0, s.x0_4, s.x0_6, s.player_flags),
+            (s.set_up, s.columns, s.flames_away, s.player_flags),
             (
                 b >> 4,
                 b >> 2 & 3,

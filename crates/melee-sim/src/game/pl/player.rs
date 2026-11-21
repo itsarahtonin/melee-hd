@@ -47,9 +47,15 @@ const FT_MAPPING: [u8; 0x90] = [
 
 /// The functions of the original's the player blocks call, by address.
 mod addr {
-    pub const FTDATA_800855C8: u32 = 0x8008_55C8;
-    pub const FTDATA_8008578C: u32 = 0x8008_578C;
-    pub const FTKB_SPECIALN_800EED50: u32 = 0x800E_ED50;
+    /// `ftData_800855C8`, a fighter kind's costume loaded.
+    #[doc(alias("FTDATA_800855C8"))]
+    pub const LOAD_COSTUME: u32 = 0x8008_55C8;
+    /// `ftData_8008578C`, Kirby's copy hat of a fighter kind, in a Kirby costume.
+    #[doc(alias("FTDATA_8008578C"))]
+    pub const LOAD_KIRBY_HAT: u32 = 0x8008_578C;
+    /// `ftKb_SpecialN_800EED50`, Kirby's copy of a fighter kind's neutral special.
+    #[doc(alias("FTKB_SPECIALN_800EED50"))]
+    pub const KIRBY_COPY_SPECIAL: u32 = 0x800E_ED50;
 }
 
 /// `Player_CheckSlot`: the original asserts a slot is in range.
@@ -115,8 +121,9 @@ impl Game {
     }
 
     /// Whether the slot's fighters exist (`arg1`) or are all gone, `Player_800319C4`.
+    #[doc(alias("player_800319c4"))]
     #[doc(alias = "Player_800319C4")]
-    pub fn player_800319c4(&self, slot: i32, present: bool) -> bool {
+    pub fn player_fighters_all(&self, slot: i32, present: bool) -> bool {
         let p = self.player(slot);
         if present {
             (0..2).all(|i| p.entity(i).is_some())
@@ -127,13 +134,14 @@ impl Game {
 
     /// The slot's entity `entity_index` is gone, `Player_80031FB0`: the slot stops playing once
     /// it has no second fighter or both are gone.
+    #[doc(alias("player_80031fb0"))]
     #[doc(alias = "Player_80031FB0")]
-    pub fn player_80031fb0(&mut self, slot: i32, entity_index: i32) {
+    pub fn player_fighter_gone(&mut self, slot: i32, entity_index: i32) {
         let p = self.player_mut(slot);
         let e = p.entity_index(entity_index as usize);
         p.player_entity[e] = None;
         let two = p.flags.b2;
-        if !two || self.player_800319c4(slot, false) {
+        if !two || self.player_fighters_all(slot, false) {
             self.player_mut(slot).player_state = 0;
         }
     }
@@ -230,13 +238,17 @@ impl Game {
         self.player_mut(slot).set_pose(3, pos);
     }
 
+    /// The stage point the slot respawns at (`unk4E`, -1 for none).
+    #[doc(alias("player_unk4e"))]
     #[doc(alias = "Player_80032F30")]
-    pub fn player_unk4e(&self, slot: i32) -> i32 {
+    pub fn player_spawn_point(&self, slot: i32) -> i32 {
         i32::from(self.player(slot).unk4E)
     }
 
+    /// Sets the slot's respawn point (`unk4E`).
+    #[doc(alias("set_player_unk4e"))]
     #[doc(alias = "Player_80032FA4")]
-    pub fn set_player_unk4e(&mut self, slot: i32, v: i32) {
+    pub fn set_player_spawn_point(&mut self, slot: i32, v: i32) {
         self.player_mut(slot).unk4E = v as i8;
     }
 
@@ -319,8 +331,11 @@ impl Game {
         self.player_mut(slot).handicap = v as u8;
     }
 
+    /// The block's `unk50`, a ratio nothing sets (1 from the reset): Master Hand's defense
+    /// ratio copies it, and the debug display shows it.
+    #[doc(alias("player_unk50"))]
     #[doc(alias = "Player_GetUnk50")]
-    pub fn player_unk50(&self, slot: i32) -> f32 {
+    pub fn player_unset_ratio(&self, slot: i32) -> f32 {
         self.player(slot).unk50
     }
 
@@ -397,23 +412,31 @@ impl Game {
         self.player_mut(slot).total_coins = v;
     }
 
+    /// The coins the slot's hits knocked out of others (`unk98`).
+    #[doc(alias("player_unk98"))]
     #[doc(alias = "Player_GetUnk98")]
-    pub fn player_unk98(&self, slot: i32) -> i32 {
+    pub fn player_coins_knocked(&self, slot: i32) -> i32 {
         self.player(slot).unk98
     }
 
+    /// Sets the coins the slot knocked out (`unk98`).
+    #[doc(alias("set_player_unk98"))]
     #[doc(alias = "Player_SetUnk98")]
-    pub fn set_player_unk98(&mut self, slot: i32, v: i32) {
+    pub fn set_player_coins_knocked(&mut self, slot: i32, v: i32) {
         self.player_mut(slot).unk98 = v;
     }
 
+    /// The coins the slot lost falling (`unk9C`).
+    #[doc(alias("player_unk9c"))]
     #[doc(alias = "Player_GetUnk9C")]
-    pub fn player_unk9c(&self, slot: i32) -> i32 {
+    pub fn player_coins_lost(&self, slot: i32) -> i32 {
         self.player(slot).unk9C
     }
 
+    /// Sets the coins the slot lost (`unk9C`).
+    #[doc(alias("set_player_unk9c"))]
     #[doc(alias = "Player_SetUnk9C")]
-    pub fn set_player_unk9c(&mut self, slot: i32, v: i32) {
+    pub fn set_player_coins_lost(&mut self, slot: i32, v: i32) {
         self.player_mut(slot).unk9C = v;
     }
 
@@ -718,23 +741,31 @@ impl Game {
         self.player_mut(slot).flags.b7 = v & 1 != 0;
     }
 
+    /// The fighter kind Kirby's copy starts as (`unk4D`; Kirby's own kind for none).
+    #[doc(alias("player_unk4d"))]
     #[doc(alias = "Player_GetUnk4D")]
-    pub fn player_unk4d(&self, slot: i32) -> i32 {
+    pub fn player_kirby_copy_kind(&self, slot: i32) -> i32 {
         i32::from(self.player(slot).unk4D as u8)
     }
 
+    /// Sets the kind Kirby's copy starts as (`unk4D`).
+    #[doc(alias("set_player_unk4d"))]
     #[doc(alias = "Player_SetUnk4D")]
-    pub fn set_player_unk4d(&mut self, slot: i32, v: i8) {
+    pub fn set_player_kirby_copy_kind(&mut self, slot: i32, v: i8) {
         self.player_mut(slot).unk4D = v;
     }
 
+    /// The frames the slot's entry waits (`unk4C`).
+    #[doc(alias("player_unk4c"))]
     #[doc(alias = "Player_GetUnk4C")]
-    pub fn player_unk4c(&self, slot: i32) -> i32 {
+    pub fn player_entry_delay(&self, slot: i32) -> i32 {
         i32::from(self.player(slot).unk4C as u8)
     }
 
+    /// Sets the frames the slot's entry waits (`unk4C`).
+    #[doc(alias("set_player_unk4c"))]
     #[doc(alias = "Player_SetUnk4C")]
-    pub fn set_player_unk4c(&mut self, slot: i32, v: u8) {
+    pub fn set_player_entry_delay(&mut self, slot: i32, v: u8) {
         self.player_mut(slot).unk4C = v as i8;
     }
 
@@ -758,8 +789,11 @@ impl Game {
         &mut self.player_mut(slot).stale_moves
     }
 
+    /// The slot's combo counters (`stale_moves.x5EC`): who last hit it, and its hits and
+    /// damage on each other slot.
+    #[doc(alias("player_unk6a8"))]
     #[doc(alias = "Player_GetUnk6A8Ptr")]
-    pub fn player_unk6a8(&mut self, slot: i32) -> &mut pl_x5EC_t {
+    pub fn player_combos(&mut self, slot: i32) -> &mut pl_x5EC_t {
         &mut self.player_mut(slot).stale_moves.x5EC
     }
 
@@ -782,14 +816,18 @@ impl Game {
         }
     }
 
+    /// Sets the color the slot's shield and KO effects take (`unk45`).
+    #[doc(alias("set_player_unk45"))]
     #[doc(alias = "Player_SetUnk45")]
-    pub fn set_player_unk45(&mut self, slot: i32, v: i32) {
+    pub fn set_player_effect_color(&mut self, slot: i32, v: i32) {
         self.player_mut(slot).unk45 = v as u8;
     }
 
-    /// `Player_GetUnk45`: 4 for anyone but a human.
+    /// The color the slot's shield and KO effects take (`unk45`), `Player_GetUnk45`: 4 for
+    /// anyone but a human.
+    #[doc(alias("player_unk45"))]
     #[doc(alias = "Player_GetUnk45")]
-    pub fn player_unk45(&self, slot: i32) -> u32 {
+    pub fn player_effect_color(&self, slot: i32) -> u32 {
         let p = self.player(slot);
         if p.pkind == PKIND_HUMAN {
             u32::from(p.unk45)
@@ -824,9 +862,11 @@ impl Game {
         self.player_state(slot) == 2 && !self.player_asleep(slot)
     }
 
-    /// `Player_80036058`.
+    /// Whether the slot's fighter shows its name tag for a respawn or a barrel (its
+    /// `x209A` count at one, neither of `x221F`'s two flags set), `Player_80036058`.
+    #[doc(alias("player_80036058"))]
     #[doc(alias = "Player_80036058")]
-    pub fn player_80036058(&self, slot: i32) -> bool {
+    pub fn player_tag_due(&self, slot: i32) -> bool {
         let g = self.player(slot).entity(0).expect("a fighter");
         self.ft_80086f4c(g)
     }
@@ -1016,13 +1056,15 @@ impl Running<'_> {
     /// Loads a costume's data for a character's fighters, `Player_80031CB0`.
     #[doc(alias = "Player_80031CB0")]
     pub fn player_load_costume(&mut self, ckind: i32, color: u8) {
-        self.for_each_ftkind(ckind, addr::FTDATA_800855C8, color);
+        self.for_each_ftkind(ckind, addr::LOAD_COSTUME, color);
     }
 
-    /// `Player_80031D2C`.
+    /// Kirby's copy hats of the character's fighter kinds in a Kirby costume,
+    /// `Player_80031D2C` (`ftData_8008578C` on each).
+    #[doc(alias("player_80031d2c"))]
     #[doc(alias = "Player_80031D2C")]
-    pub fn player_80031d2c(&mut self, ckind: i32, color: u8) {
-        self.for_each_ftkind(ckind, addr::FTDATA_8008578C, color);
+    pub fn player_load_kirby_hats(&mut self, ckind: i32, color: u8) {
+        self.for_each_ftkind(ckind, addr::LOAD_KIRBY_HAT, color);
     }
 
     fn for_each_ftkind(&mut self, ckind: i32, f: u32, color: u8) {
@@ -1039,36 +1081,35 @@ impl Running<'_> {
     }
 
     /// `Player_80031DA8`: Kirby's copy of a fighter's neutral special.
+    #[doc(alias("player_80031da8"))]
     #[doc(alias = "Player_80031DA8")]
-    pub fn player_80031da8(&mut self, a: i32, b: i32) {
-        code::call(
-            self,
-            addr::FTKB_SPECIALN_800EED50,
-            &[Val::Int(a), Val::Int(b)],
-        );
+    pub fn player_kirby_copy(&mut self, a: i32, b: i32) {
+        code::call(self, addr::KIRBY_COPY_SPECIAL, &[Val::Int(a), Val::Int(b)]);
     }
 
     /// Kirby's copies of every playing slot's fighters' neutral specials, `Player_80031DC8`
     /// with `ftKb_SpecialN_800EED50` (Kirby's `ftData_800857E0`,
     /// `ftKb_Init_UnkMotionStates5`).
+    #[doc(alias("player_80031dc8"))]
     #[doc(alias = "Player_80031DC8")]
     #[doc(alias = "ftKb_Init_UnkMotionStates5")]
-    pub fn player_80031dc8(&mut self) {
+    pub fn player_kirby_copies(&mut self) {
         for slot in 0..6 {
             if self.game.player_state(slot) == 0 {
                 continue;
             }
             let m = mapping(self.game.player_ckind(slot));
-            self.player_80031da8(i32::from(m.internal_id), 0);
+            self.player_kirby_copy(i32::from(m.internal_id), 0);
             if m.extra_internal_id != -1 {
-                self.player_80031da8(i32::from(m.extra_internal_id), 0);
+                self.player_kirby_copy(i32::from(m.extra_internal_id), 0);
             }
         }
     }
 
     /// Brings the slot's fighter back for its next stock, `Player_80032070`.
+    #[doc(alias("player_80032070"))]
     #[doc(alias = "Player_80032070")]
-    pub fn player_80032070(&mut self, slot: i32, sub: bool) {
+    pub fn player_next_stock(&mut self, slot: i32, sub: bool) {
         let p = self.game.player(slot);
         let (first, second) = (p.entity(0), p.entity(1));
         let partner = p.flags.b2 && mapping(p.ckind).has_transformation == 0;
@@ -1159,9 +1200,10 @@ impl Running<'_> {
         self.ft_name_tag_height(g.expect("ftLib_GetNameTagHeight on no fighter faults"))
     }
 
-    /// `Player_800366DC`.
+    /// The slot's fighters shown (or turned invisible with 0), `Player_800366DC`.
+    #[doc(alias("player_800366dc"))]
     #[doc(alias = "Player_800366DC")]
-    pub fn player_800366dc(&mut self, slot: i32, arg: i32) {
+    pub fn set_player_visible(&mut self, slot: i32, arg: i32) {
         for i in 0..2 {
             if let Some(g) = self.game.player(slot).entity(i) {
                 self.game.ft_80087ac0(g, arg);
@@ -1169,9 +1211,10 @@ impl Running<'_> {
         }
     }
 
-    /// `Player_80036790`.
+    /// The slot's fighters' hitlag to come (`dmg.x1958`), `Player_80036790`.
+    #[doc(alias("player_80036790"))]
     #[doc(alias = "Player_80036790")]
-    pub fn player_80036790(&mut self, slot: i32, v: f32) {
+    pub fn set_player_hitlag(&mut self, slot: i32, v: f32) {
         for i in 0..2 {
             if let Some(g) = self.game.player(slot).entity(i) {
                 self.game.ft_80086a4c(g, v);
@@ -1179,9 +1222,10 @@ impl Running<'_> {
         }
     }
 
-    /// `Player_80036844`.
+    /// The slot's fighters out of reach of the blast zones (`x2228_b5`), `Player_80036844`.
+    #[doc(alias("player_80036844"))]
     #[doc(alias = "Player_80036844")]
-    pub fn player_80036844(&mut self, slot: i32, arg: i32) {
+    pub fn set_player_unkillable(&mut self, slot: i32, arg: i32) {
         for i in 0..2 {
             if let Some(g) = self.game.player(slot).entity(i) {
                 self.game.ft_80087bac(g, arg);
@@ -1191,8 +1235,9 @@ impl Running<'_> {
 
     /// `Player_80036DA4`: the player library's allocator, then the fighters' first setup. The
     /// allocator (`Player_AllocData`) serves nothing in melee-sim.
+    #[doc(alias("player_80036da4"))]
     #[doc(alias = "Player_80036DA4")]
-    pub fn player_80036da4(&mut self) {
+    pub fn player_lib_init(&mut self) {
         crate::hsd::heap::init_pools(&[crate::hsd::heap::Kind::Player]);
         self.fighter_first_init();
     }

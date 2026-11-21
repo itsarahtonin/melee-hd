@@ -2,7 +2,7 @@
 //! the 1P runs' state and the tables their loads write, compared with memory.
 
 use melee_sim::game::gm::one_player::{
-    self as op, AllStarData, ClassicStage, MatchupRef, Unk1PData,
+    self as op, AllStarData, ClassicStage, MatchupRef, OnePlayerRun,
 };
 use melee_sim::game::gm::vs_melee::{CssData, SssData};
 use melee_sim::game::mirror::{Cx, Mirror};
@@ -74,7 +74,12 @@ impl Comparer<'_> {
         self.check(
             name,
             "port, match type, pending, KO counts' pointer",
-            (css.unk_0x0, css.match_type, css.pending_scene_change, 0u32),
+            (
+                css.first_port,
+                css.match_type,
+                css.pending_scene_change,
+                0u32,
+            ),
             (
                 self.u16(at),
                 self.u8(at + 2),
@@ -90,7 +95,13 @@ impl Comparer<'_> {
         self.check(
             name,
             "stage, x1, no LRAS, forced, start",
-            (s.unk_stage, s.x1, s.no_lras, s.force_stage_id, s.start_game),
+            (
+                s.cursor_port,
+                s.no_b,
+                s.no_lras,
+                s.force_stage_id,
+                s.start_game,
+            ),
             (
                 self.u8(at),
                 self.u8(at + 1),
@@ -104,7 +115,7 @@ impl Comparer<'_> {
     }
 
     /// A 1P run's state (`Unk1PData`) at `at`.
-    fn one_player_run(&mut self, name: &str, r: &Unk1PData, at: u32) {
+    fn one_player_run(&mut self, name: &str, r: &OnePlayerRun, at: u32) {
         let p = r.player;
         let ours: Vec<u8> = [
             p.ckind as u8,
@@ -113,19 +124,19 @@ impl Comparer<'_> {
             p.slot,
             p.nametag,
             p.stocks,
-            p.x6,
+            p.unused,
             p.mode,
         ]
         .into_iter()
-        .chain(r.x8)
-        .chain(r.xc)
+        .chain(r.stage)
+        .chain(r.counters)
         .collect();
         let theirs: Vec<u8> = (0..0x14).map(|i| self.u8(at + i)).collect();
         self.check(name, "player, x8 to x13", ours, theirs);
         self.check(
             name,
             "x14, x18, x1C, x20",
-            (r.x14, r.x18 as u32, r.x1c as u32, r.x20),
+            (r.coins, r.score as u32, r.damage_taken as u32, r.frames),
             (
                 self.u16(at + 0x14),
                 self.u32(at + 0x18),
@@ -157,21 +168,21 @@ impl Comparer<'_> {
 
     fn one_player_allstar(&mut self, name: &str, a: &AllStarData, at: u32, whole: bool) {
         self.one_player_run(name, &a.base, at);
-        self.check(name, "x74", a.x74, self.u16(at + 0x74));
+        self.check(name, "x74", a.damage, self.u16(at + 0x74));
         if !whole {
             return;
         }
         let ours: Vec<u8> = a
-            .x76
+            .fought
             .iter()
-            .chain(&a.x90)
-            .chain(&a.x94)
-            .chain(&a.x96)
+            .chain(&a.hearts)
+            .chain(&a.rest_counts)
+            .chain(&a.next_chars)
             .copied()
             .collect();
         let theirs: Vec<u8> = (0x76..0x9C).map(|i| self.u8(at + i)).collect();
         self.check(name, "x76 to x9B", ours, theirs);
-        self.check(name, "x9C", a.x9c, self.u32(at + 0x9C));
+        self.check(name, "x9C", a.frames, self.u32(at + 0x9C));
     }
 
     /// The single-player modes' statics.
@@ -200,11 +211,11 @@ impl Comparer<'_> {
         self.one_player_run("lbl_80472C30", &o.adventure.base, ADVENTURE_RUN);
         let a = &o.adventure;
         let ours: Vec<u8> = a
-            .x74
+            .feats
             .iter()
-            .chain(&a.x79)
-            .chain(core::iter::once(&a.x7c))
-            .chain(&a.x7d)
+            .chain(&a.unused)
+            .chain(core::iter::once(&a.star_fox_kind))
+            .chain(&a.unused_tail)
             .copied()
             .collect();
         let theirs: Vec<u8> = (0x74..0x80).map(|i| self.u8(ADVENTURE_RUN + i)).collect();
@@ -217,8 +228,8 @@ impl Comparer<'_> {
                 &o.classic_intro[..],
             ),
             ("gm_804908A0", CLASSIC_ORDER, &o.classic_order[..]),
-            ("gm_80490910", ADVENTURE_X910, &o.adventure_x910[..]),
-            ("gm_80490940", ALLSTAR_X940, &o.allstar_x940[..]),
+            ("gm_80490910", ADVENTURE_X910, &o.adventure_results[..]),
+            ("gm_80490940", ALLSTAR_X940, &o.allstar_results[..]),
             ("lbl_803D79F0", ALLY_POOL, &o.ally_pool[..]),
             ("gm_804D68D8", ADVENTURE_CUTSCENE, &o.adventure_cutscene[..]),
         ] {
@@ -270,8 +281,8 @@ impl Comparer<'_> {
             b.focus,
             b.timer,
             b.hp,
-            b.player_x1988,
-            b.master_x1988,
+            b.player_hurt_state,
+            b.master_hurt_state,
         ];
         self.check("lbl_804706C0", "the boss stage's controller", ours, theirs);
         self.clear_state();
@@ -333,8 +344,21 @@ impl Comparer<'_> {
             (self.u16(a + 0xC0), self.u32(a + 0xC4), self.u8(a + 0xC8)),
         );
         let ours = [
-            c.xCC, c.xD0, c.xD4, c.xD8, c.xDC, c.xE0, c.xE4, c.xE8, c.xEC, c.xF0, c.xF4, c.xF8,
-            c.xFC, c.x100, c.x104,
+            c.match_points,
+            c.time_bonus,
+            c.time_bonus_shown,
+            c.time_bonus_frames,
+            c.damage_bonus,
+            c.damage_bonus_shown,
+            c.damage_bonus_frames,
+            c.bonus_points,
+            c.unused,
+            c.bonus_total,
+            c.bonus_total_shown,
+            c.bonus_total_frames,
+            c.score_shown,
+            c.score_drawn,
+            c.new_score,
         ];
         let theirs: [i32; 15] = core::array::from_fn(|k| self.u32(a + 0xCC + 4 * k as u32) as i32);
         self.check(
@@ -346,7 +370,12 @@ impl Comparer<'_> {
         self.check(
             name,
             "x108, x10A, x10C, x110",
-            (c.x108, c.x10A, c.x10C.to_bits(), c.x110),
+            (
+                c.time_multiplier,
+                c.damage_multiplier,
+                c.blur_growth.to_bits(),
+                c.frames_shown,
+            ),
             (
                 self.u16(a + 0x108) as i16,
                 self.u16(a + 0x10A) as i16,
@@ -355,8 +384,18 @@ impl Comparer<'_> {
             ),
         );
         let ours = [
-            c.x114, c.x115, c.x116, c.x117, c.x118, c.x119, c.x11A, c.x11B, c.x11C, c.x11D, c.x11E,
-            c.x11F,
+            c.continue_frame,
+            c.counted,
+            c.ended_with_start,
+            c.has_bonus_list,
+            c.race_to_finish,
+            c.boss_stage,
+            c.targets_stage,
+            c.all_targets_broken,
+            c.targets_broken,
+            c.target_icons_shown,
+            c.up_arrow_hidden,
+            c.down_arrow_hidden,
         ];
         let theirs: [u8; 12] = core::array::from_fn(|k| self.u8(a + 0x114 + k as u32));
         self.check(name, "x114 to x11F (the screen's flags)", ours, theirs);

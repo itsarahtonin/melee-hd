@@ -104,7 +104,7 @@ fn hanyu_select_entry() {
         game.game_data.modes.table[VS_MODE_MELEE] = mem(&vs, vs_at);
         game.game_data.thing.save_data.unlocked_characters = unlocks;
         let h = &mut game.debug_mode.hanyu_css;
-        h.unk_0x0 = u16::from_be_bytes([css[0], css[1]]);
+        h.first_port = u16::from_be_bytes([css[0], css[1]]);
         h.match_type = css[2];
         h.pending_scene_change = css[3];
         h.vs = mem(&css[8..], css_at + 8);
@@ -122,7 +122,7 @@ fn hanyu_select_entry() {
         let after = read(ctx, css_at, 8 + VsModeData::SIZE);
         let h = &game.debug_mode.hanyu_css;
         assert_eq!(
-            (h.unk_0x0, h.match_type, h.pending_scene_change),
+            (h.first_port, h.match_type, h.pending_scene_change),
             (u16::from_be_bytes([after[0], after[1]]), after[2], after[3]),
             "gm_801BED3C {n}: the select's header"
         );

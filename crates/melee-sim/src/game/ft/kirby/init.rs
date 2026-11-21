@@ -127,8 +127,10 @@ impl Running<'_> {
         fp.set_u_i32(u::BUMP_TIMER, 0);
         fp.set_u_i32(u::X64, 0);
         let slot = i32::from(fp.player_idx);
-        if self.game.player_flags_bit1(slot) && self.game.player_unk4d(slot) != FighterKind::Kirby {
-            let kind = self.game.player_unk4d(slot);
+        if self.game.player_flags_bit1(slot)
+            && self.game.player_kirby_copy_kind(slot) != FighterKind::Kirby
+        {
+            let kind = self.game.player_kirby_copy_kind(slot);
             self.kb_copy(gobj, kind, false);
         }
     }

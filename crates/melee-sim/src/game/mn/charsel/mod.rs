@@ -637,7 +637,8 @@ pub struct Cursor {
     /// What it holds: a door's coin (0 to 3), a CPU level slider (4 to 7), a handicap slider
     /// (8 to 11).
     pub held: u8,
-    pub x7: u8,
+    #[doc(alias("x7"))]
+    pub unused: u8,
     /// Over a button this frame.
     pub hover: u16,
     /// Frames B was held.
@@ -1033,7 +1034,7 @@ impl Running<'_> {
         self.card_game_load_archive(0);
         self.game.charsel.entered = true;
         self.game.charsel.entered_mode = super::common::game_mode(self);
-        let first = self.css().unk_0x0;
+        let first = self.css().first_port;
         self.game.charsel.port0 = first.wrapping_sub(1) as i8;
         let mut n = 0u8;
         while n < NO_TAG {
@@ -1411,7 +1412,7 @@ impl Running<'_> {
                 port: i as u8,
                 state: 2,
                 held: 0,
-                x7: 0,
+                unused: 0,
                 hover: 0,
                 b_timer: 0,
                 x,
