@@ -47,9 +47,15 @@ const FT_MAPPING: [u8; 0x90] = [
 
 /// The functions of the original's the player blocks call, by address.
 mod addr {
-    pub const FTDATA_800855C8: u32 = 0x8008_55C8;
-    pub const FTDATA_8008578C: u32 = 0x8008_578C;
-    pub const FTKB_SPECIALN_800EED50: u32 = 0x800E_ED50;
+    /// `ftData_800855C8`, a fighter kind's costume loaded.
+    #[doc(alias("FTDATA_800855C8"))]
+    pub const LOAD_COSTUME: u32 = 0x8008_55C8;
+    /// `ftData_8008578C`, Kirby's copy hat of a fighter kind, in a Kirby costume.
+    #[doc(alias("FTDATA_8008578C"))]
+    pub const LOAD_KIRBY_HAT: u32 = 0x8008_578C;
+    /// `ftKb_SpecialN_800EED50`, Kirby's copy of a fighter kind's neutral special.
+    #[doc(alias("FTKB_SPECIALN_800EED50"))]
+    pub const KIRBY_COPY_SPECIAL: u32 = 0x800E_ED50;
 }
 
 /// `Player_CheckSlot`: the original asserts a slot is in range.
@@ -1016,13 +1022,13 @@ impl Running<'_> {
     /// Loads a costume's data for a character's fighters, `Player_80031CB0`.
     #[doc(alias = "Player_80031CB0")]
     pub fn player_load_costume(&mut self, ckind: i32, color: u8) {
-        self.for_each_ftkind(ckind, addr::FTDATA_800855C8, color);
+        self.for_each_ftkind(ckind, addr::LOAD_COSTUME, color);
     }
 
     /// `Player_80031D2C`.
     #[doc(alias = "Player_80031D2C")]
     pub fn player_80031d2c(&mut self, ckind: i32, color: u8) {
-        self.for_each_ftkind(ckind, addr::FTDATA_8008578C, color);
+        self.for_each_ftkind(ckind, addr::LOAD_KIRBY_HAT, color);
     }
 
     fn for_each_ftkind(&mut self, ckind: i32, f: u32, color: u8) {
@@ -1041,11 +1047,7 @@ impl Running<'_> {
     /// `Player_80031DA8`: Kirby's copy of a fighter's neutral special.
     #[doc(alias = "Player_80031DA8")]
     pub fn player_80031da8(&mut self, a: i32, b: i32) {
-        code::call(
-            self,
-            addr::FTKB_SPECIALN_800EED50,
-            &[Val::Int(a), Val::Int(b)],
-        );
+        code::call(self, addr::KIRBY_COPY_SPECIAL, &[Val::Int(a), Val::Int(b)]);
     }
 
     /// Kirby's copies of every playing slot's fighters' neutral specials, `Player_80031DC8`

@@ -65,14 +65,24 @@ const ENTRY_VOICES: (u32, [u32; 4]) = (0x803D_5620, [0x7C859, 0x7C85A, 0x7C85B, 
 
 /// The functions of the original's the match calls, by address.
 mod addr {
-    pub const FN_8016B88C: u32 = 0x8016_B88C;
-    pub const FN_8016B7B4: u32 = 0x8016_B7B4;
-    pub const FN_8016B7F8: u32 = 0x8016_B7F8;
-    pub const FN_80182B5C: u32 = 0x8018_2B5C;
+    /// `fn_8016B88C`, GAME!'s start.
+    #[doc(alias("FN_8016B88C"))]
+    pub const GAME_END: u32 = 0x8016_B88C;
+    /// `fn_8016B7B4`, Ready's start.
+    #[doc(alias("FN_8016B7B4"))]
+    pub const READY: u32 = 0x8016_B7B4;
+    /// `fn_8016B7F8`, Ready's end and GO!.
+    #[doc(alias("FN_8016B7F8"))]
+    pub const GO: u32 = 0x8016_B7F8;
+    /// `fn_80182B5C`, a Multi-Man match's end.
+    #[doc(alias("FN_80182B5C"))]
+    pub const MULTI_MAN_MATCH_END: u32 = 0x8018_2B5C;
     pub const EFLIB_INIT: u32 = 0x8005_B4B8;
     pub const EFASYNC_LOAD_SYNC: u32 = 0x8006_737C;
     pub const SFX_SETUP_CROWD_SFX: u32 = 0x8032_1900;
-    pub const FN_8016B784: u32 = 0x8016_B784;
+    /// `fn_8016B784`, GO!'s end: the HUD comes on.
+    #[doc(alias("FN_8016B784"))]
+    pub const HUD_ON: u32 = 0x8016_B784;
 }
 
 /// The match's live standings (`gm_16F1.c`'s `lbl_8046DBC8`, `lbl_804D65A8` and
@@ -726,7 +736,7 @@ impl Running<'_> {
         self.start_stage(stkind);
         self.stadium_go();
         let kind = if self.game.vs.start.x1_3 { 8 } else { 4 };
-        self.announce(kind, -1, -1, 0, None, Some(CodeRef(addr::FN_8016B784)));
+        self.announce(kind, -1, -1, 0, None, Some(CodeRef(addr::HUD_ON)));
         self.game.unshow_nametags();
     }
 
@@ -945,7 +955,7 @@ impl Running<'_> {
             self.tou_rumble(port, tag, 0xD, 0x5A);
         }
         if (super::GM_10MAN_VS..=super::GM_CRUEL_VS).contains(&mode) {
-            code::call(self, addr::FN_80182B5C, &[]);
+            code::call(self, addr::MULTI_MAN_MATCH_END, &[]);
         }
     }
 
@@ -1088,7 +1098,7 @@ impl Running<'_> {
     /// the crowd, and the match freezes.
     fn vs_match_over(&mut self) {
         self.vs_end();
-        self.announce_match_end(Some(CodeRef(addr::FN_8016B88C)));
+        self.announce_match_end(Some(CodeRef(addr::GAME_END)));
         self.lb_audio_reset_flush();
         self.game.set_db_pause_flag(4);
         self.game.vs.state.unk_0 = 1;
@@ -2064,8 +2074,8 @@ impl Running<'_> {
             -1,
             -1,
             0,
-            Some(CodeRef(addr::FN_8016B7B4)),
-            Some(CodeRef(addr::FN_8016B7F8)),
+            Some(CodeRef(addr::READY)),
+            Some(CodeRef(addr::GO)),
         );
         self.create_timers();
         self.show_damage_displays(i32::from(d.rules.x0_3));
@@ -2092,8 +2102,8 @@ impl Running<'_> {
             -1,
             -1,
             0,
-            Some(CodeRef(addr::FN_8016B7B4)),
-            Some(CodeRef(addr::FN_8016B7F8)),
+            Some(CodeRef(addr::READY)),
+            Some(CodeRef(addr::GO)),
         );
         self.create_timers();
         self.show_damage_displays(i32::from(d.rules.x0_3));
