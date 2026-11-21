@@ -572,6 +572,10 @@ pub fn face(r: &mut Running, gobj: GObjId, y_rot: f32) {
 #[doc(alias = "itLeadead_UnkMotion16_Anim")]
 #[doc(alias = "itLeadead_UnkMotion17_Anim")]
 #[doc(alias = "itLeadead_UnkMotion16_Coll")]
+#[doc(alias = "itNokonoko_UnkMotion1_Anim")]
+#[doc(alias = "itNokonoko_UnkMotion4_Anim")]
+// Ports itNokonoko_UnkMotion6_Anim; aliased once a check reaches it.
+#[doc(alias = "itPatapata_UnkMotion1_Anim")]
 pub fn answers_false(_: &mut Running, _: GObjId) -> bool {
     false
 }
@@ -999,6 +1003,11 @@ pub enum Knock {
     /// speed; kept to the floor, a fifth of its sideways speed: the Polar Bear. Only the floor's
     /// branch runs ([`Knock::Free`]'s note).
     Fifth,
+    /// Up at least 0.2 (a double in the comparison) whichever way it points, and in the air: the
+    /// Koopa Troopa's knockback (`it_802DCCCC`).
+    Airborne,
+    /// Not floored: the Koopa Troopa knocked out of its shell (`it_802DCFBC`).
+    Plain,
 }
 
 /// The enemy's special attributes (its article's), `off` bytes in.
@@ -1200,13 +1209,21 @@ pub fn fling_to_screen(r: &mut Running, gobj: GObjId, e: &Enemy) {
 /// ([`knockback_vel`]), in the air if it points off the floor (floored as `knock` says), else on
 /// the ground.
 pub fn knock_back(r: &mut Running, gobj: GObjId, knock: Knock) {
-    if !matches!(knock, Knock::AtLeast(_)) {
+    if matches!(knock, Knock::Free | Knock::Fifth) {
         maplib::enter_air(item_mut(r.game, gobj));
     }
     let mut v = item(r.game, gobj).x40_vel;
     let up = knockback_vel(r, gobj, &mut v);
     let ip = item_mut(r.game, gobj);
     ip.x40_vel = v;
+    if let Knock::Airborne = knock {
+        // A double 0.2 in the comparison, as the C writes it.
+        if reg(ip.x40_vel.y) <= 0.2 {
+            ip.x40_vel.y = mem(fp::frsp(0.2));
+        }
+        maplib::enter_air(ip);
+        return;
+    }
     if up {
         match knock {
             Knock::AtLeast(min) => {
@@ -1222,7 +1239,7 @@ pub fn knock_back(r: &mut Running, gobj: GObjId, knock: Knock) {
                     ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), fp::frsp(0.2)));
                 }
             }
-            Knock::Free => {}
+            Knock::Free | Knock::Plain | Knock::Airborne => {}
         }
         maplib::enter_air(ip);
     } else {
@@ -1257,6 +1274,9 @@ pub fn knock_back(r: &mut Running, gobj: GObjId, knock: Knock) {
 #[doc(alias = "itLikelike_UnkMotion20_Anim")]
 #[doc(alias = "itLeadead_UnkMotion13_Anim")]
 #[doc(alias = "itLeadead_UnkMotion14_Anim")]
+// Ports itNokonoko_UnkMotion10_Anim; aliased once a check reaches it.
+// Ports itPatapata_UnkMotion5_Anim; aliased once a check reaches it.
+// Ports itPatapata_UnkMotion6_Anim; aliased once a check reaches it.
 pub fn looped(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) -> bool {
     if !lib2725::is_animating(r.game, gobj) {
         change_state(r, gobj, msid, flags);
@@ -1309,6 +1329,9 @@ pub fn knocked_coll(r: &mut Running, gobj: GObjId, landed: Event, fell: Event) -
 // Ports itLikelike_UnkMotion19_Phys; aliased once a check reaches it.
 #[doc(alias = "itLeadead_UnkMotion10_Phys")]
 #[doc(alias = "itLeadead_UnkMotion14_Phys")]
+#[doc(alias = "itNokonoko_UnkMotion4_Phys")]
+// Ports itNokonoko_UnkMotion10_Phys; aliased once a check reaches it.
+// Ports itPatapata_UnkMotion6_Phys; aliased once a check reaches it.
 pub fn fall_physics(r: &mut Running, gobj: GObjId) {
     let a = attr_of(item(r.game, gobj));
     let accel = a.f32(r.data, data::attr::FALL_SPEED);
@@ -1336,6 +1359,8 @@ pub fn flight_physics(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itOldottosea_UnkMotion5_Phys")]
 #[doc(alias = "itOldkuri_UnkMotion9_Phys")]
 #[doc(alias = "itLeadead_UnkMotion12_Phys")]
+#[doc(alias = "itNokonoko_UnkMotion5_Phys")]
+#[doc(alias = "itNokonoko_UnkMotion7_Phys")]
 pub fn knocked_physics(r: &mut Running, gobj: GObjId) {
     if item(r.game, gobj).ground_or_air == GA_AIR {
         flight_physics(r, gobj);
@@ -1395,4 +1420,39 @@ pub fn turning(r: &mut Running, gobj: GObjId, timer: usize) -> bool {
 #[doc(alias = "itLeadead_UnkMotion9_Phys")]
 #[doc(alias = "itLeadead_UnkMotion13_Phys")]
 #[doc(alias = "itLeadead_UnkMotion15_Phys")]
+#[doc(alias = "itNokonoko_UnkMotion3_Phys")]
+// Ports itNokonoko_UnkMotion9_Phys; aliased once a check reaches it.
+// Ports itPatapata_UnkMotion5_Phys; aliased once a check reaches it.
+// Ports itPatapata_UnkMotion7_Phys; aliased once a check reaches it.
 pub fn still(_: &mut Running, _: GObjId) {}
+
+/// Enters a state it can be landed on in: stompable, its jumped-on callback `stomped` (the
+/// Goomba's, the Koopa Troopa's and the Paratroopa's).
+#[doc(alias = "it_802D848C")]
+#[doc(alias = "it_802DD4A8")]
+#[doc(alias = "it_802E1648")]
+pub fn enter_stompable(r: &mut Running, gobj: GObjId, msid: i32, flags: u32, stomped: u32) {
+    change_state(r, gobj, msid, flags);
+    lib2725::make_stompable(r.game, gobj);
+    item_mut(r.game, gobj).jumped_on = Some(crate::game::handles::CodeRef(stomped));
+}
+
+/// An enemy KO'd and gone, the Koopas' way: an effect and a sound, the KO ([`ko`]), and
+/// destroyed.
+// Ports it_802DD78C; aliased once a check reaches it.
+// Ports it_802E1694; aliased once a check reaches it.
+pub fn ko_destroy(r: &mut Running, gobj: GObjId) {
+    lib2725::destroy_effect(r, gobj, 0x444, 0x130);
+    ko(r, gobj);
+    super::item::destroy(r, gobj);
+}
+
+/// The Koopas' thrown states' collision: touching the stage, KO'd and gone ([`ko_destroy`]).
+// Ports itNokonoko_UnkMotion10_Coll; aliased once a check reaches it.
+// Ports itPatapata_UnkMotion6_Coll; aliased once a check reaches it.
+pub fn thrown_lands(r: &mut Running, gobj: GObjId) -> bool {
+    if super::ground::air_touches(r, gobj) & 0xF != 0 {
+        ko_destroy(r, gobj);
+    }
+    false
+}
