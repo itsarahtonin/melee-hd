@@ -108,7 +108,7 @@ pub fn spawn(r: &mut Running, pos: Vec3) {
     spawn.x40 = 0;
     if let Some(gobj) = spawn_air(r, &mut spawn) {
         fell(r, gobj);
-        item_mut(r.game, gobj).xDD4_itemVar.egg().x0.set(0);
+        item_mut(r.game, gobj).vars.egg().broken.set(0);
     }
 }
 
@@ -121,7 +121,7 @@ pub fn destroyed(r: &mut Running, _: GObjId) {
 /// `itEvYoshiEgg_Logic42_Spawned`: whole, falling.
 #[doc(alias = "itEvYoshiEgg_Logic42_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).xDD4_itemVar.egg().x0.set(0);
+    item_mut(r.game, gobj).vars.egg().broken.set(0);
     fell(r, gobj);
 }
 
@@ -212,10 +212,10 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itEvyoshiegg_UnkMotion5_Anim")]
 #[doc(alias = "gm_801BEB68")]
 pub fn vanishing(r: &mut Running, gobj: GObjId) -> bool {
-    if item_mut(r.game, gobj).xDD4_itemVar.egg().rand_max.get() == 40 {
+    if item_mut(r.game, gobj).vars.egg().rand_max.get() == 40 {
         r.game.game_data.vs.unk_530.x18 = 1;
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.egg();
+    let v = item_mut(r.game, gobj).vars.egg();
     let left = v.rand_max.get().wrapping_sub(1);
     v.rand_max.set(left);
     left <= 0
@@ -231,8 +231,8 @@ pub fn vanishing(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_3F14_Logic42_Reflected")]
 pub fn bounced(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = 1.5;
+    ip.vel.x = 0.0;
+    ip.vel.y = 1.5;
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     false
 }
@@ -242,14 +242,14 @@ pub fn bounced(r: &mut Running, gobj: GObjId) -> bool {
 /// gone 60 ticks later.
 #[doc(alias = "itEvYoshiEgg_Logic42_DmgReceived")]
 pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
-    if item_mut(r.game, gobj).xDD4_itemVar.egg().x0.get() != 0 {
+    if item_mut(r.game, gobj).vars.egg().broken.get() != 0 {
         return false;
     }
     let a = article(item(r.game, gobj))
         .special(r.data)
         .expect("the event egg without attributes");
     let ip = item(r.game, gobj);
-    if ip.xC9C < r.data.u32(a) as i32 {
+    if ip.damage_taken < r.data.u32(a) as i32 {
         return false;
     }
     let pos = ip.pos;
@@ -266,10 +266,10 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     hitbox::start_blink(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = 0.0;
-    let v = ip.xDD4_itemVar.egg();
-    v.x0.set(1);
+    ip.vel.x = 0.0;
+    ip.vel.y = 0.0;
+    let v = ip.vars.egg();
+    v.broken.set(1);
     v.rand_max.set(60);
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 5, change::ANIM_UPDATE);

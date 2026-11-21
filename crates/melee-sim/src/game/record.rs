@@ -625,14 +625,14 @@ impl Recorder {
             w.u16(it.kind as u16);
             w.u8(it.msid as u8);
             w.f32(it.facing_dir);
-            w.f32(it.x40_vel.x);
-            w.f32(it.x40_vel.y);
+            w.f32(it.vel.x);
+            w.f32(it.vel.y);
             w.f32(it.pos.x);
             w.f32(it.pos.y);
-            w.u16(it.xC9C as u16);
-            w.f32(it.xD44_lifeTimer);
-            w.u32(it.x1C as u32);
-            w.bytes(&item_misc(&it.xDD4_itemVar));
+            w.u16(it.damage_taken as u16);
+            w.f32(it.life_timer);
+            w.u32(it.spawn_num as u32);
+            w.bytes(&item_misc(&it.vars));
             // The owner's player slot: byte 0xC of the owner GObj's user data.
             let owner = it.owner.and_then(|o| match g.world.gobj(o).user_data {
                 Some(UserData::Fighter(f)) => Some(g.fighters[f.0].player_idx),
@@ -640,7 +640,7 @@ impl Recorder {
                 _ => None,
             });
             w.u8(owner.unwrap_or(0xFF));
-            w.u16(it.xDA8_short);
+            w.u16(it.attack_record_short);
         }
         self.frame_buf = w.0;
     }
@@ -935,9 +935,9 @@ fn item_misc(v: &super::it::ItemVars) -> [u8; 4] {
     match &v.member {
         Member::Bytes => [b[3], b[7], b[0x17], b[0x1B]],
         Member::SamusMissile(m) => [low(*m.is_smash_missile.peek()), 0, 0, 0],
-        Member::PeachTurnip(t) => [0, low(*t.xDD8.peek()), 0, 0],
-        Member::SamusChargeshot(c) => [0, 0, low(*c.xDE8.peek()), low(*c.xDEC.peek())],
-        Member::MewtwoShadowball(s) => [0, 0, low(*s.x14.peek()), low(*s.x18.peek())],
+        Member::PeachTurnip(t) => [0, low(*t.face.peek()), 0, 0],
+        Member::SamusChargeshot(c) => [0, 0, low(*c.fired.peek()), low(*c.charge.peek())],
+        Member::MewtwoShadowball(s) => [0, 0, low(*s.fired.peek()), low(*s.charge.peek())],
         _ => [0; 4],
     }
 }

@@ -114,7 +114,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
-    ip.xDBC[0] &= !0x80;
+    ip.cmd_flags[0] &= !0x80;
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
     choose_target(r, gobj);
@@ -127,8 +127,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
         v.set_f32(off, 0.0);
     }
     let ip = item_mut(r.game, gobj);
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDB0_itcmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    ip.cmd_var1 = 0;
     enter_air(r, gobj);
     play_sfx(r, gobj, CRY, 0x7F, 0x40);
 }
@@ -144,7 +144,7 @@ pub fn landed_nothing(_: &mut Running, _: GObjId) {}
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
     pokemon::vars(r.game, gobj).set_gobj(TARGET, None);
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = 1;
+    item_mut(r.game, gobj).cmd_var0 = 1;
 }
 
 /// Its fighter and offset, `it_802D43EC`: the opponent of its owner with the lowest percent
@@ -195,7 +195,7 @@ pub fn choose_shots(r: &mut Running, gobj: GObjId) {
 /// cries and starts shooting.
 #[doc(alias = "it_802D4564")]
 pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
+    if item(r.game, gobj).cmd_var0 != 0 {
         return true;
     }
     if !lib2725::is_animating(r.game, gobj) {
@@ -217,7 +217,7 @@ pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
             None => pokemon::face_nearest_opponent(r, gobj),
         }
         start_shooting(r, gobj);
-        item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+        item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
         play_sfx(r, gobj, CRY, 127, 64);
     }
     false
@@ -259,12 +259,12 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
     let mut sx = v.f32(SPEED_X);
     let x = approach(&mut sx, reg(dir.x), max_x, accel_x, decel_x);
     v.set_f32(SPEED_X, sx);
-    item_mut(r.game, gobj).x40_vel.x = mem(x);
+    item_mut(r.game, gobj).vel.x = mem(x);
     let v = pokemon::vars(r.game, gobj);
     let mut sy = v.f32(SPEED_Y);
     let y = approach(&mut sy, reg(dir.y), max_y, accel_y, decel_y);
     v.set_f32(SPEED_Y, sy);
-    item_mut(r.game, gobj).x40_vel.y = mem(y);
+    item_mut(r.game, gobj).vel.y = mem(y);
 }
 
 /// `it_802D48A8`: nothing.
@@ -320,7 +320,7 @@ pub fn start_shooting(r: &mut Running, gobj: GObjId) {
 /// (`x48`), slowing (`x4C`, [`phys1`]); its animation looping.
 #[doc(alias = "itHitodeman_UnkMotion1_Anim")]
 pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
+    if item(r.game, gobj).cmd_var0 != 0 {
         return true;
     }
     let v = pokemon::vars(r.game, gobj);
@@ -337,9 +337,9 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
         if pokemon::vars(r.game, gobj).gobj(TARGET).is_some() {
             let kick = attr_f32(r, gobj, 0x48);
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.x = mem(fp::fmuls(fp::fneg(reg(ip.facing_dir)), reg(kick)));
+            ip.vel.x = mem(fp::fmuls(fp::fneg(reg(ip.facing_dir)), reg(kick)));
             shoot(r, gobj);
-            item_mut(r.game, gobj).xDB0_itcmd_var1 = 1;
+            item_mut(r.game, gobj).cmd_var1 = 1;
         }
     }
     if !lib2725::is_animating(r.game, gobj) {
@@ -351,13 +351,13 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 /// `itHitodeman_UnkMotion1_Phys`: once it has shot, its kick back slows by `x4C` a frame.
 #[doc(alias = "itHitodeman_UnkMotion1_Phys")]
 pub fn phys1(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDB0_itcmd_var1 == 0 {
+    if item(r.game, gobj).cmd_var1 == 0 {
         return;
     }
     let slow = attr_f32(r, gobj, 0x4C);
     let ip = item_mut(r.game, gobj);
-    let v = fp::fnmsubs(fp::fneg(reg(ip.facing_dir)), reg(slow), reg(ip.x40_vel.x));
-    ip.x40_vel.x = mem(v);
+    let v = fp::fnmsubs(fp::fneg(reg(ip.facing_dir)), reg(slow), reg(ip.vel.x));
+    ip.vel.x = mem(v);
 }
 
 /// `itHitodeman_UnkMotion1_Coll`: nothing.
@@ -453,7 +453,7 @@ pub fn star_spawned(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj).expect("a star without a model");
     let life = attr_f32(r, gobj, 0);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
-    item_mut(r.game, gobj).xDB4_itcmd_var2 = 0;
+    item_mut(r.game, gobj).cmd_var2 = 0;
     lib2725::stop_spin(r.game, r.data, gobj);
     star_fly(r, gobj);
     lib26b1::disable_pickup(r.game, gobj);
@@ -463,7 +463,7 @@ pub fn star_spawned(r: &mut Running, gobj: GObjId) {
 /// The star's damage dealt, `it_802D4EF4`: it goes at its next frame.
 #[doc(alias = "it_802D4EF4")]
 pub fn star_dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
-    item_mut(r.game, gobj).xDB4_itcmd_var2 = 1;
+    item_mut(r.game, gobj).cmd_var2 = 1;
     false
 }
 
@@ -511,12 +511,12 @@ pub fn star_fly(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802D4FFC")]
 pub fn star_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    let life = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    ip.xD44_lifeTimer = life;
+    let life = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    ip.life_timer = life;
     if reg(life) <= 0.0 {
         return true;
     }
-    ip.xDB4_itcmd_var2 != 0
+    ip.cmd_var2 != 0
 }
 
 /// The star's `it_802D5044`: nothing.

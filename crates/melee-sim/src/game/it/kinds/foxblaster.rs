@@ -139,7 +139,7 @@ pub fn set_visible(r: &mut Running, gobj: GObjId, visibility: i32) {
     let game = &mut *r.game;
     let root = jobj_of(game, gobj);
     let child = root.and_then(|j| game.objs.jobjs[j].child);
-    let v = item_mut(game, gobj).xDD4_itemVar.fox_blaster();
+    let v = item_mut(game, gobj).vars.fox_blaster();
     if v.set_sfx_var2.get() != visibility {
         v.set_sfx_var2.set(visibility);
         if visibility == 2 {
@@ -147,12 +147,7 @@ pub fn set_visible(r: &mut Running, gobj: GObjId, visibility: i32) {
         }
     }
     let game = &mut *r.game;
-    match item_mut(game, gobj)
-        .xDD4_itemVar
-        .fox_blaster()
-        .set_sfx_var2
-        .get()
-    {
+    match item_mut(game, gobj).vars.fox_blaster().set_sfx_var2.get() {
         0 | 2 => jobj::set_flags_all(&mut game.objs.jobjs, child, jobj::HIDDEN),
         1 => jobj::clear_flags_all(&mut game.objs.jobjs, child, jobj::HIDDEN),
         _ => {}
@@ -171,7 +166,7 @@ pub fn on_shot(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
     let kind = ip.kind;
-    let v = ip.xDD4_itemVar.fox_blaster();
+    let v = ip.vars.fox_blaster();
     if owner != v.owner.get() || v.gfx_spawn_var.get() == 0 {
         return;
     }
@@ -190,8 +185,8 @@ pub fn on_shot(r: &mut Running, gobj: GObjId) {
     } else {
         r.fox_muzzle(o)
     };
-    let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
-    v.xE14[0].set(Vec3::new(
+    let v = item_mut(r.game, gobj).vars.fox_blaster();
+    v.shot_dirs[0].set(Vec3::new(
         mem(fp::fsubs(reg(muzzle.x), reg(pos.x))),
         mem(fp::fsubs(reg(muzzle.y), reg(pos.y))),
         mem(fp::fsubs(reg(muzzle.z), reg(pos.z))),
@@ -201,12 +196,12 @@ pub fn on_shot(r: &mut Running, gobj: GObjId) {
     } else {
         r.fox_grip(o)
     };
-    let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
+    let v = item_mut(r.game, gobj).vars.fox_blaster();
     v.angle[0].set(crate::math::atan2(
         mem(fp::fsubs(reg(muzzle.y), reg(grip.y))),
         mem(fp::fsubs(reg(muzzle.x), reg(grip.x))),
     ));
-    v.xDFC[0].set(0);
+    v.shot_kinds[0].set(0);
     let angle = v.angle[0].get();
     let flash = crate::game::ef::spawn(
         r,
@@ -217,7 +212,7 @@ pub fn on_shot(r: &mut Running, gobj: GObjId) {
             crate::game::ef::Arg::Float(angle),
         ],
     );
-    item_mut(r.game, gobj).xDD4_itemVar.fox_blaster().xDE4[0].set(match flash {
+    item_mut(r.game, gobj).vars.fox_blaster().flashes[0].set(match flash {
         crate::game::ef::Spawned::Effect(e) => Some(e),
         crate::game::ef::Spawned::None => None,
         other => panic!("the blaster's flash spawned {other:?}"),
@@ -227,20 +222,20 @@ pub fn on_shot(r: &mut Running, gobj: GObjId) {
 
 /// The shots' history moves on, the newest first.
 fn shift_history(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.fox_blaster();
+    let v = item_mut(r.game, gobj).vars.fox_blaster();
     for i in (1..6).rev() {
-        let x = v.xDE4[i - 1].get();
-        v.xDE4[i].set(x);
-        let x = v.xDFC[i - 1].get();
-        v.xDFC[i].set(x);
-        let x = v.xE14[i - 1].get();
-        v.xE14[i].set(x);
+        let x = v.flashes[i - 1].get();
+        v.flashes[i].set(x);
+        let x = v.shot_kinds[i - 1].get();
+        v.shot_kinds[i].set(x);
+        let x = v.shot_dirs[i - 1].get();
+        v.shot_dirs[i].set(x);
         let x = v.angle[i - 1].get();
         v.angle[i].set(x);
     }
-    v.xDE4[0].set(None);
-    v.xDFC[0].set(0);
-    v.xE14[0].set(Vec3::new(0.0, 0.0, 0.0));
+    v.flashes[0].set(None);
+    v.shot_kinds[0].set(0);
+    v.shot_dirs[0].set(Vec3::new(0.0, 0.0, 0.0));
     v.angle[0].set(0.0);
 }
 
@@ -248,9 +243,9 @@ fn shift_history(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802AE1D0")]
 pub fn shot(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    ip.xDD4_itemVar.fox_blaster().xDD4.set(1);
+    ip.vars.fox_blaster().recoil_frame.set(1);
     ip.on_accessory = Some(crate::game::handles::CodeRef(ON_SHOT));
-    ip.xDD4_itemVar.fox_blaster().gfx_spawn_var.set(1);
+    ip.vars.fox_blaster().gfx_spawn_var.set(1);
 }
 
 /// The first child `n` levels down (null-safe, as the original walks it).
@@ -283,18 +278,18 @@ pub fn recoil(game: &mut Game, gobj: GObjId) {
     let Some(j1) = j4.and_then(|j| game.objs.jobjs[j].next) else {
         return;
     };
-    let f = item_mut(game, gobj).xDD4_itemVar.fox_blaster().xDD4.get() as usize;
+    let f = item_mut(game, gobj).vars.fox_blaster().recoil_frame.get() as usize;
     jobj::set_srt(&mut game.objs.jobjs, j1, |o| o.translate.z = RECOIL_Z[f]);
     let j2 = game.objs.jobjs[j1].next.expect("jobj");
     jobj::set_srt(&mut game.objs.jobjs, j2, |o| o.scale.y = RECOIL_SCALE[f]);
     jobj::set_srt(&mut game.objs.jobjs, j2, |o| o.scale.z = RECOIL_SCALE[f]);
     let j3 = game.objs.jobjs[j2].next.expect("jobj");
     lib2725::set_rotation_x(game, j3, RECOIL_TURN[f]);
-    let v = item_mut(game, gobj).xDD4_itemVar.fox_blaster();
-    if v.xDD4.get() > 0 && v.xDD4.get() < 14 {
-        v.xDD4.update(|old| old + 1);
-        if v.xDD4.get() >= 14 {
-            v.xDD4.set(0);
+    let v = item_mut(game, gobj).vars.fox_blaster();
+    if v.recoil_frame.get() > 0 && v.recoil_frame.get() < 14 {
+        v.recoil_frame.update(|old| old + 1);
+        if v.recoil_frame.get() >= 14 {
+            v.recoil_frame.set(0);
         }
     }
 }
@@ -303,17 +298,13 @@ pub fn recoil(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_802AE538")]
 pub fn start_pulse(r: &mut Running, gobj: GObjId) {
     let game = &mut *r.game;
-    let v = item_mut(game, gobj).xDD4_itemVar.fox_blaster();
-    if v.xDD8.get() != 4 {
-        v.xDD8.set(1);
-        v.xDDC.set(1);
-        if v.xDE0.get() == 0 {
+    let v = item_mut(game, gobj).vars.fox_blaster();
+    if v.pulse.get() != 4 {
+        v.pulse.set(1);
+        v.pulse_step.set(1);
+        if v.fired.get() == 0 {
             play_kind_sfx(r, gobj, 0x1AE05, 0x186F1);
-            item_mut(r.game, gobj)
-                .xDD4_itemVar
-                .fox_blaster()
-                .xDE0
-                .set(1);
+            item_mut(r.game, gobj).vars.fox_blaster().fired.set(1);
         }
     }
 }
@@ -321,10 +312,10 @@ pub fn start_pulse(r: &mut Running, gobj: GObjId) {
 /// Runs the barrel's pulse back down as the blaster is put away, `it_802AE608`.
 #[doc(alias = "it_802AE608")]
 pub fn end_pulse(game: &mut Game, gobj: GObjId) {
-    let v = item_mut(game, gobj).xDD4_itemVar.fox_blaster();
-    if v.xDD8.get() != 0 {
-        v.xDD8.set(3);
-        v.xDDC.set(-1);
+    let v = item_mut(game, gobj).vars.fox_blaster();
+    if v.pulse.get() != 0 {
+        v.pulse.set(3);
+        v.pulse_step.set(-1);
     }
 }
 
@@ -338,27 +329,27 @@ pub fn pulse(game: &mut Game, gobj: GObjId) {
     let Some(target) = down(game, root, 4) else {
         return;
     };
-    let f = item_mut(game, gobj).xDD4_itemVar.fox_blaster().xDD8.get() as usize;
+    let f = item_mut(game, gobj).vars.fox_blaster().pulse.get() as usize;
     jobj::set_srt(&mut game.objs.jobjs, target, |o| o.translate.y = PULSE_Y[f]);
-    let v = item_mut(game, gobj).xDD4_itemVar.fox_blaster();
-    if v.xDD8.get() > 0 && v.xDD8.get() < 4 {
-        v.xDD8.update(|old| old.wrapping_add(v.xDDC.get()));
-        if v.xDD8.get() >= 5 {
-            v.xDD8.set(4);
-            v.xDDC.set(0);
-        } else if v.xDD8.get() <= 0 {
-            v.xDD8.set(0);
-            v.xDDC.set(0);
+    let v = item_mut(game, gobj).vars.fox_blaster();
+    if v.pulse.get() > 0 && v.pulse.get() < 4 {
+        v.pulse.update(|old| old.wrapping_add(v.pulse_step.get()));
+        if v.pulse.get() >= 5 {
+            v.pulse.set(4);
+            v.pulse_step.set(0);
+        } else if v.pulse.get() <= 0 {
+            v.pulse.set(0);
+            v.pulse_step.set(0);
         }
     }
 }
 
 /// Sets the item's script variables (`itFoxBlaster_SetCommandVars`).
 pub fn set_command_vars(ip: &mut Item, value: u32) {
-    ip.xDB8_itcmd_var3 = value;
-    ip.xDB4_itcmd_var2 = value;
-    ip.xDB0_itcmd_var1 = value;
-    ip.xDAC_itcmd_var0 = value;
+    ip.cmd_var3 = value;
+    ip.cmd_var2 = value;
+    ip.cmd_var1 = value;
+    ip.cmd_var0 = value;
 }
 
 /// Clears the blaster's variables, `it_802AE7B8`.
@@ -366,18 +357,18 @@ pub fn set_command_vars(ip: &mut Item, value: u32) {
 pub fn reset(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
     set_command_vars(ip, 0);
-    ip.xDCC_flag.b3 = false;
-    let v = ip.xDD4_itemVar.fox_blaster();
-    v.xDD4.set(0);
-    v.xDD8.set(0);
-    v.xDDC.set(0);
-    v.xDE0.set(0);
+    ip.state_flags.b3 = false;
+    let v = ip.vars.fox_blaster();
+    v.recoil_frame.set(0);
+    v.pulse.set(0);
+    v.pulse_step.set(0);
+    v.fired.set(0);
     v.gfx_spawn_var.set(0);
     v.set_sfx_var2.set(1);
     for i in 0..6 {
-        v.xDE4[i].set(None);
-        v.xDFC[i].set(0);
-        v.xE14[i].set(Vec3::new(0.0, 0.0, 0.0));
+        v.flashes[i].set(None);
+        v.shot_kinds[i].set(0);
+        v.shot_dirs[i].set(Vec3::new(0.0, 0.0, 0.0));
         v.angle[i].set(0.0);
     }
 }
@@ -412,7 +403,7 @@ pub fn spawn(
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .fox_blaster()
         .owner
         .set(Some(fighter));
@@ -443,7 +434,7 @@ pub fn spawn_demo(r: &mut Running, fighter: GObjId, part: i32, kind: i32) -> Opt
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .fox_blaster()
         .owner
         .set(Some(fighter));
@@ -459,7 +450,7 @@ pub fn remove(r: &mut Running, gobj: Option<GObjId>) {
     let Some(gobj) = gobj else { return };
     let ip = item_mut(r.game, gobj);
     ip.owner = None;
-    ip.xDD4_itemVar.fox_blaster().owner.set(None);
+    ip.vars.fox_blaster().owner.set(None);
     crate::game::ef::destroy_all(r, gobj);
     destroy(r, gobj);
 }
@@ -472,16 +463,12 @@ const STATE_FOR_ACTION: [i32; 11] = [0, 9, 9, 3, 9, 9, 6, 7, 8, 9, 10];
 #[doc(alias = "itFoxBlaster_Logic96_PickedUp")]
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    let vars = ip.xDB8_itcmd_var3 | ip.xDB4_itcmd_var2 | ip.xDAC_itcmd_var0 | ip.xDB0_itcmd_var1;
+    let vars = ip.cmd_var3 | ip.cmd_var2 | ip.cmd_var0 | ip.cmd_var1;
     let flags = super::super::item::change::ANIM_UPDATE;
     if vars != 0 {
         change_state(r, gobj, 0xA, flags);
     } else {
-        let owner = item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .fox_blaster()
-            .owner
-            .get();
+        let owner = item_mut(r.game, gobj).vars.fox_blaster().owner.get();
         let action = match ItKind::of(item(r.game, gobj).kind) {
             ItKind::FoxBlaster | ItKind::FalcoBlaster => blaster_action(r.game, owner),
             ItKind::KirbyFoxBlaster | ItKind::KirbyFalcoBlaster => r.kb_fx_blaster_action(owner),
@@ -497,7 +484,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 pub fn release(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
-    let vowner = ip.xDD4_itemVar.fox_blaster().owner.get();
+    let vowner = ip.vars.fox_blaster().owner.get();
     if owner == vowner {
         match ItKind::of(item(r.game, gobj).kind) {
             ItKind::FoxBlaster | ItKind::FalcoBlaster => {
@@ -511,7 +498,7 @@ pub fn release(r: &mut Running, gobj: GObjId) {
     }
     let ip = item_mut(r.game, gobj);
     ip.owner = None;
-    ip.xDD4_itemVar.fox_blaster().owner.set(None);
+    ip.vars.fox_blaster().owner.set(None);
     crate::game::ef::destroy_all(r, gobj);
 }
 
@@ -522,11 +509,7 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
     let msid = item(r.game, gobj).msid;
     let kind = item(r.game, gobj).kind;
     if !matches!(msid, 2 | 5..=8) {
-        let owner = item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .fox_blaster()
-            .owner
-            .get();
+        let owner = item_mut(r.game, gobj).vars.fox_blaster().owner.get();
         let action = match ItKind::of(kind) {
             ItKind::FoxBlaster | ItKind::FalcoBlaster => blaster_action(r.game, owner),
             ItKind::KirbyFoxBlaster | ItKind::KirbyFalcoBlaster => r.kb_fx_blaster_action(owner),
@@ -537,11 +520,7 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
             animate(r, gobj);
         }
     }
-    let owner = item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .fox_blaster()
-        .owner
-        .get();
+    let owner = item_mut(r.game, gobj).vars.fox_blaster().owner.get();
     let Some(o) = owner else {
         clear(r, gobj);
         return false;
@@ -566,11 +545,7 @@ pub fn follow_fighter(r: &mut Running, gobj: GObjId) -> bool {
             _ => true,
         };
         if not_needed {
-            item_mut(r.game, gobj)
-                .xDD4_itemVar
-                .fox_blaster()
-                .owner
-                .set(None);
+            item_mut(r.game, gobj).vars.fox_blaster().owner.set(None);
             destroy(r, gobj);
             // The original then destroys the effects of the GObj it just freed
             // (`efLib_DestroyAll`), which finds none: destroying the item destroyed them.
@@ -584,7 +559,7 @@ pub fn clear(r: &mut Running, gobj: GObjId) {
     release(r, gobj);
     let ip = item_mut(r.game, gobj);
     ip.owner = None;
-    ip.xDD4_itemVar.fox_blaster().owner.set(None);
+    ip.vars.fox_blaster().owner.set(None);
     crate::game::ef::destroy_all(r, gobj);
     destroy(r, gobj);
 }
@@ -593,11 +568,7 @@ pub fn clear(r: &mut Running, gobj: GObjId) {
 /// (`ftCo_800BF228`: a results pose's states), `itFoxblaster_UnkMotion10_Anim`.
 #[doc(alias = "itFoxblaster_UnkMotion10_Anim")]
 pub fn scale_with_owner(r: &mut Running, gobj: GObjId) -> bool {
-    let owner = item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .fox_blaster()
-        .owner
-        .get();
+    let owner = item_mut(r.game, gobj).vars.fox_blaster().owner.get();
     if let Some(o) = owner
         && crate::game::ft::demo::frozen_or_asleep(r.game, o)
     {

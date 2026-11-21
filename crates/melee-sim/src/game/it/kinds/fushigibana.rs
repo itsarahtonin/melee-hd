@@ -75,7 +75,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// Lands and stands, `it_802D705C`: still, `xDCE`'s last flag off.
 #[doc(alias = "it_802D705C")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
-    set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, false);
+    set_flag(&mut item_mut(r.game, gobj).hurt_flags, 7, false);
     lib2725::clear_velocity(r.game, gobj);
     stand(r, gobj);
 }
@@ -132,8 +132,8 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
     v.set_f32(ROAR_FRAMES, mem(fp::fsubs(reg(left), 1.0)));
     // `itFushigibana_UnkMotion1_Anim_inline2`.
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    reg(ip.xD44_lifeTimer) <= 0.0
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    reg(ip.life_timer) <= 0.0
 }
 
 /// `itFushigibana_UnkMotion1_Phys`: nothing.

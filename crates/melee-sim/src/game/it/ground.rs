@@ -17,7 +17,7 @@ use crate::vec::Vec3;
 /// Whether the line the item keeps in `xC30` is live, `it_8026D604`.
 #[doc(alias = "it_8026D604")]
 pub fn on_line(game: &Game, gobj: GObjId) -> bool {
-    let line = item(game, gobj).xC30;
+    let line = item(game, gobj).touched_line;
     game.geometry
         .as_ref()
         .expect("no collision geometry")
@@ -49,7 +49,7 @@ pub type Event = fn(&mut Running, GObjId);
 /// where it ended up, and the floor it found.
 fn pass(r: &mut Running, gobj: GObjId, ground: bool, ecb: u32, flags: u32, keep: bool) -> bool {
     prep_coll(r.game, r.data, gobj);
-    let mut cd = item(r.game, gobj).x378_itemColl.clone();
+    let mut cd = item(r.game, gobj).coll.clone();
     let hit = with_stage_coll(r.game, r.data, |c| {
         if ground {
             c.ground_frame(&mut cd, ecb, flags)
@@ -58,11 +58,11 @@ fn pass(r: &mut Running, gobj: GObjId, ground: bool, ecb: u32, flags: u32, keep:
         }
     });
     let ip = item_mut(r.game, gobj);
-    ip.x378_itemColl = cd;
+    ip.coll = cd;
     if keep {
-        ip.pos = ip.x378_itemColl.cur_pos;
+        ip.pos = ip.coll.cur_pos;
         if hit {
-            ip.xC30 = ip.x378_itemColl.floor.index;
+            ip.touched_line = ip.coll.floor.index;
         }
     }
     hit
@@ -89,7 +89,7 @@ pub fn ground_or_fall(r: &mut Running, gobj: GObjId, fell: Event) {
         fell(r, gobj);
         return;
     }
-    if start_skid(r.game, r.data, gobj) && !item(r.game, gobj).xDCD_flag.x0.b3 {
+    if start_skid(r.game, r.data, gobj) && !item(r.game, gobj).hit_flags.x0.b3 {
         super::item::enter_air_state(r, gobj);
     }
 }
@@ -135,7 +135,7 @@ pub fn ground_to_ledge(r: &mut Running, gobj: GObjId, at_ledge: Event) -> bool {
 #[doc(alias = "it_8026D938")]
 pub fn line_or(r: &mut Running, gobj: GObjId, gone: Event) {
     if !on_line(r.game, gobj) {
-        item_mut(r.game, gobj).xC30 = -1;
+        item_mut(r.game, gobj).touched_line = -1;
         gone(r, gobj);
     }
 }
@@ -162,16 +162,16 @@ pub fn air(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802DDA84")]
 pub fn snap_down(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.x378_itemColl.cur_pos = ip.pos;
-    ip.x378_itemColl.last_pos = ip.x378_itemColl.cur_pos;
-    let c = &mut ip.x378_itemColl;
+    ip.coll.cur_pos = ip.pos;
+    ip.coll.last_pos = ip.coll.cur_pos;
+    let c = &mut ip.coll;
     c.last_pos.y = mem(fp::fadds(reg(c.last_pos.y), 10.0));
     c.cur_pos.y = mem(fp::fsubs(reg(c.cur_pos.y), 10.0));
     let mut cd = c.clone();
     let hit = with_stage_coll(r.game, r.data, |s| s.air_frame(&mut cd, 6, 0));
     let ip = item_mut(r.game, gobj);
-    ip.x378_itemColl = cd;
-    ip.pos = ip.x378_itemColl.cur_pos;
+    ip.coll = cd;
+    ip.pos = ip.coll.cur_pos;
     hit
 }
 
@@ -216,7 +216,7 @@ pub fn settles(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
         a.f32(data, super::data::attr::X58),
         a.f32(data, super::data::attr::X5C),
     );
-    if item(game, gobj).xD50_landNum <= 1 {
+    if item(game, gobj).land_count <= 1 {
         let x74 = common_data(game).f32(data, super::data::common::X74);
         super::lib2725::clamp_fall(game, gobj, x74);
         reset_box(game, gobj);
@@ -227,16 +227,16 @@ pub fn settles(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
         if v < 0.0 { fp::fneg(v) } else { v }
     };
     let tiny = f64::from(1.0e-5_f32);
-    if abs(ip.x40_vel.x) <= tiny {
-        ip.x40_vel.x = 0.0;
+    if abs(ip.vel.x) <= tiny {
+        ip.vel.x = 0.0;
     }
-    if abs(ip.x40_vel.y) <= tiny {
-        ip.x40_vel.y = 0.0;
+    if abs(ip.vel.y) <= tiny {
+        ip.vel.y = 0.0;
     }
-    let slow = abs(ip.x40_vel.x) <= reg(stop) && abs(ip.x40_vel.y) <= reg(stop);
-    if slow || ip.xDCD_flag.x0.b4 || reg(keep) == 0.0 {
+    let slow = abs(ip.vel.x) <= reg(stop) && abs(ip.vel.y) <= reg(stop);
+    if slow || ip.hit_flags.x0.b4 || reg(keep) == 0.0 {
         // `itResetVelocity`.
-        ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
+        ip.vel = Vec3::new(0.0, 0.0, 0.0);
         return true;
     }
     false
@@ -247,9 +247,9 @@ pub fn settles(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
 #[doc(alias = "it_8026DD5C")]
 pub fn land(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.xD50_landNum = 0;
+    ip.land_count = 0;
     enter_ground(ip);
-    if !slides(r.game, r.data, gobj) || item(r.game, gobj).xDCD_flag.x0.b3 {
+    if !slides(r.game, r.data, gobj) || item(r.game, gobj).hit_flags.x0.b3 {
         super::lib2725::stop_spin(r.game, r.data, gobj);
         remember_surface(r.game, gobj);
     } else {
@@ -268,11 +268,11 @@ pub fn land(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_8026DE98")]
 pub fn count_landing(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.xD50_landNum = ip.xD50_landNum.wrapping_add(1);
-    if ip.xD50_landNum == 1 && ip.xD54_throwNum != 0 {
+    ip.land_count = ip.land_count.wrapping_add(1);
+    if ip.land_count == 1 && ip.throw_count != 0 {
         let b = common_data(r.game).u32(r.data, super::data::common::X48) >> 24;
         let ip = item(r.game, gobj);
-        if ip.xD54_throwNum == (b >> 4 & 0xF) || r.game.objs.rng.below((b & 0xF) as i32) == 0 {
+        if ip.throw_count == (b >> 4 & 0xF) || r.game.objs.rng.below((b & 0xF) as i32) == 0 {
             item_mut(r.game, gobj).destroy_type = 1;
             super::item::destroy(r, gobj);
             return false;
@@ -333,7 +333,7 @@ pub fn fall_unbreakable(r: &mut Running, gobj: GObjId, landed: Event) -> i32 {
         bounce(r, gobj, t);
         if t & 1 != 0 {
             let ip = item_mut(r.game, gobj);
-            ip.xD50_landNum = ip.xD50_landNum.wrapping_add(1);
+            ip.land_count = ip.land_count.wrapping_add(1);
             if settles(r.game, r.data, gobj) && land(r, gobj) {
                 landed(r, gobj);
             }
@@ -447,10 +447,10 @@ pub fn ground_skid(r: &mut Running, gobj: GObjId, stopped: Event, fell: Event) {
     }
     slides(r.game, r.data, gobj);
     if touched_wall(r.game, gobj) != 0 {
-        item_mut(r.game, gobj).xD5C = 0;
+        item_mut(r.game, gobj).skid = 0;
     }
     let ip = item(r.game, gobj);
-    if !ip.xDC8_word.flags.x1F || ip.xD5C == 0 {
+    if !ip.flags.flags.may_skid || ip.skid == 0 {
         remember_surface(r.game, gobj);
         stopped(r, gobj);
     }

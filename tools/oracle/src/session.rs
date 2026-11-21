@@ -2015,7 +2015,7 @@ fn past_named(d: &str, live: bool) -> Option<&'static str> {
 /// (`0x3F`; the top two are `xDD1_flag`'s 0 and 1): the console's block keeps an earlier
 /// item's bits there, playback's fresh heap zero.
 fn item_unnamed_bits(d: &str) -> bool {
-    let Some((_, rest)) = d.split_once(" item.xDD1_flag: ours [") else {
+    let Some((_, rest)) = d.split_once(" item.phys_flags (xDD1_flag): ours [") else {
         return false;
     };
     let Some((ours, theirs)) = rest.split_once("], theirs [") else {
@@ -2088,7 +2088,7 @@ const LEFTOVER_WHY: &str = "playback's fresh heap (the console's blocks hold the
 /// sets, clears or reads: the console's block keeps the menus' bit there, playback's fresh heap
 /// zero (`matches-b`'s first match, tick 2642).
 fn unset_item_bit(d: &str) -> bool {
-    let Some((_, rest)) = d.split_once(" item.xDD0_flag: ours [") else {
+    let Some((_, rest)) = d.split_once(" item.status_flags (xDD0_flag): ours [") else {
         return false;
     };
     let Some((ours, theirs)) = rest.split_once("], theirs [") else {

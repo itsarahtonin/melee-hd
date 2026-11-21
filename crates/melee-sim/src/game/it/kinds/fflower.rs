@@ -76,13 +76,13 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
         .special(r.data)
         .expect("a Fire Flower without attributes");
     let fuel = r.data.u32(a) as i32;
-    item_mut(r.game, gobj).xD4C = fuel;
+    item_mut(r.game, gobj).ammo = fuel;
     let id = next_attack_id(r.game);
     let ip = item_mut(r.game, gobj);
-    ip.xAC4_ignoreItemID = IgnoreId(Some(id));
-    let v = ip.xDD4_itemVar.fflower();
-    v.x0.set(0);
-    v.x4.set(0);
+    ip.ignore_id = IgnoreId(Some(id));
+    let v = ip.vars.fflower();
+    v.shots.set(0);
+    v.flame_on.set(0);
     fell(r, gobj);
 }
 
@@ -92,12 +92,12 @@ fn end_flame(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
     let end = match ip.msid {
         0 | 1 | 2 | 3 | 5 | 6 | 7 => true,
-        4 => ip.xD4C <= 0,
+        4 => ip.ammo <= 0,
         _ => false,
     };
     if end {
         eflib::destroy_all(r, gobj);
-        item_mut(r.game, gobj).xDD4_itemVar.fflower().x4.set(0);
+        item_mut(r.game, gobj).vars.fflower().flame_on.set(0);
     }
 }
 
@@ -128,29 +128,29 @@ pub fn muzzle() -> crate::vec::Vec3 {
 /// for the flames every sixth.
 #[doc(alias = "it_80292F14")]
 pub fn fire(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3, dir: f32) {
-    if item(r.game, gobj).xD4C <= 0 {
+    if item(r.game, gobj).ammo <= 0 {
         return;
     }
-    if item_mut(r.game, gobj).xDD4_itemVar.fflower().x4.get() == 0 {
+    if item_mut(r.game, gobj).vars.fflower().flame_on.get() == 0 {
         let t = item(r.game, gobj)
-            .xBBC_dynamicBoneTable
+            .bone_table
             .expect("a Fire Flower without bones");
         let j = r.game.it.bone_tables[t.0].bones[4];
         crate::game::ef::spawn(r, 0x473, Some(gobj), &[crate::game::ef::Arg::JObj(j)]);
-        item_mut(r.game, gobj).xDD4_itemVar.fflower().x4.set(1);
+        item_mut(r.game, gobj).vars.fflower().flame_on.set(1);
     }
     let ip = item_mut(r.game, gobj);
-    ip.xD4C -= 1;
+    ip.ammo -= 1;
     let owner = ip.owner;
-    let ignore = ip.xAC4_ignoreItemID;
+    let ignore = ip.ignore_id;
     let ignore = ignore.read(&mut r.game.objs.stale_reads).unwrap_or(0);
     super::lgunbeam::spawn(r, owner, pos, ignore, dir);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.fflower();
-    v.x0.update(|n| n.wrapping_add(1));
-    v.x0.update(|n| n.wrapping_rem(6));
-    if v.x0.get() == 0 {
+    let v = item_mut(r.game, gobj).vars.fflower();
+    v.shots.update(|n| n.wrapping_add(1));
+    v.shots.update(|n| n.wrapping_rem(6));
+    if v.shots.get() == 0 {
         let id = next_attack_id(r.game);
-        item_mut(r.game, gobj).xAC4_ignoreItemID = IgnoreId(Some(id));
+        item_mut(r.game, gobj).ignore_id = IgnoreId(Some(id));
     }
 }
 
@@ -194,7 +194,7 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itFflower_UnkMotion0_Anim")]
 pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
     end_flame(r, gobj);
-    let held = item(r.game, gobj).xDC8_word.flags.x2;
+    let held = item(r.game, gobj).flags.flags.holds_still;
     if !lib2725::is_animating(r.game, gobj) {
         change_state(r, gobj, 0, change::ANIM_UPDATE);
         if held {
@@ -246,7 +246,7 @@ pub fn gravity(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itFflower_UnkMotion1_Coll")]
 #[doc(alias = "itFflower_UnkMotion6_Coll")]
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xD4C != 0 {
+    if item(r.game, gobj).ammo != 0 {
         fall(r, gobj, landed);
         return false;
     }

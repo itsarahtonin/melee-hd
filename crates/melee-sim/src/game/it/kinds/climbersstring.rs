@@ -124,18 +124,18 @@ impl Attrs {
 
 fn hand(r: &mut Running, gobj: GObjId) -> ItemLinkId {
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .climbers_string()
-        .x4
+        .tip
         .get()
         .expect("a string without its hand link")
 }
 
 fn far_end(r: &mut Running, gobj: GObjId) -> ItemLinkId {
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .climbers_string()
-        .x8
+        .hand
         .get()
         .expect("a string without its far link")
 }
@@ -166,9 +166,9 @@ fn hand_point(r: &mut Running, l: ItemLinkId) -> Vec3 {
 /// The owner's fighter, whose up special keeps the hand's point (`ftPopo_FighterVars::x2240`).
 fn popo_of(r: &mut Running, gobj: GObjId) -> GObjId {
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .climbers_string()
-        .xC
+        .popo
         .get()
         .expect("a string without Popo")
 }
@@ -196,7 +196,7 @@ pub fn make_links(r: &mut Running, gobj: GObjId, hand_joint: Option<JObjId>) {
             k.gobj = Some(g);
             k.vel = Vec3::new(0.0, 0.0, 0.0);
             k.pos = pos;
-            k.x2C_b0 = b0;
+            k.out = b0;
         };
         let last = i == n - 1;
         if i == 0 {
@@ -227,16 +227,16 @@ pub fn make_links(r: &mut Running, gobj: GObjId, hand_joint: Option<JObjId>) {
         r.game.world.setup_gx_link(g, CodeRef(render), 6, 0);
         if knot {
             item_mut(r.game, gobj)
-                .xDD4_itemVar
+                .vars
                 .climbers_string()
-                .x14
+                .hand_joint
                 .set(Some(model));
         }
         prev_link = Some(l);
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.climbers_string();
-    v.x4.set(tail);
-    v.x8.set(head);
+    let v = item_mut(r.game, gobj).vars.climbers_string();
+    v.tip.set(tail);
+    v.hand.set(head);
 }
 
 /// The string's links go and Popo lets go of it (`itClimbersstring_Cleanup`).
@@ -245,9 +245,9 @@ fn release_links(r: &mut Running, gobj: GObjId) {
         r.popo_forget_string(owner);
     }
     item_mut(r.game, gobj).owner = None;
-    let v = item_mut(r.game, gobj).xDD4_itemVar.climbers_string();
-    v.xC.set(None);
-    let mut cur = v.x4.get();
+    let v = item_mut(r.game, gobj).vars.climbers_string();
+    v.popo.set(None);
+    let mut cur = v.tip.get();
     while let Some(l) = cur {
         let g = lk(r.game, l).gobj.expect("a link without its GObj");
         cur = lk(r.game, l).next;
@@ -282,9 +282,9 @@ pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Opti
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .climbers_string()
-        .xC
+        .popo
         .set(Some(owner));
     let j = r.bone_joint(owner, PART_L4TH_NB);
     make_links(r, gobj, j);
@@ -303,7 +303,7 @@ pub fn held(r: &mut Running, gobj: GObjId) {
 pub fn pay_out_frame(r: &mut Running, gobj: GObjId) {
     let a = Attrs::of(r, gobj);
     let l = hand(r, gobj);
-    link_mut(r.game, l).x2C_b0 = true;
+    link_mut(r.game, l).out = true;
     let pos = hand_point(r, l);
     pay_out(r, l, pos, a, gobj);
     line_up(r, gobj, pos);
@@ -314,7 +314,7 @@ pub fn pay_out_frame(r: &mut Running, gobj: GObjId) {
 pub fn fall_frame(r: &mut Running, gobj: GObjId) {
     let a = Attrs::of(r, gobj);
     let l = hand(r, gobj);
-    link_mut(r.game, l).x2C_b0 = true;
+    link_mut(r.game, l).out = true;
     let pos = hand_point(r, l);
     fall_links(r, l, pos, a, gobj);
     line_up(r, gobj, pos);
@@ -326,11 +326,7 @@ pub fn reel_frame(r: &mut Running, gobj: GObjId) {
     let a = Attrs::of(r, gobj);
     let l = far_end(r, gobj);
     let pos = hand_point(r, l);
-    let speed = reg(item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .climbers_string()
-        .x0
-        .get());
+    let speed = reg(item_mut(r.game, gobj).vars.climbers_string().reel.get());
     if reel_in(r, l, pos, a, speed) {
         picked_up(r, gobj);
     }
@@ -368,7 +364,7 @@ pub fn pull_links(r: &mut Running, l: ItemLinkId, target: Vec3, a: Attrs, length
     k.pos.y = mem(fp::fmadds(reg(d.y), length, reg(target.y)));
     k.pos.z = mem(fp::fmadds(reg(d.z), length, reg(target.z)));
     while let Some(p) = prev {
-        if lk(r.game, p).x2C_b0 {
+        if lk(r.game, p).out {
             let at = lk(r.game, cur).pos;
             if direction(lk(r.game, p).pos, at, &mut d) > len {
                 hold_to(r, p, at, d, len);
@@ -436,21 +432,21 @@ pub fn pay_out(r: &mut Running, l: ItemLinkId, target: Vec3, a: Attrs, gobj: GOb
     link_mut(r.game, l).vel = Vec3::new(0.0, 0.0, 0.0);
     while let Some(it) = iter {
         let at = lk(r.game, cur).pos;
-        if lk(r.game, it).x2C_b0 {
+        if lk(r.game, it).out {
             link_mut(r.game, it).pos = target;
             let dist = direction(target, at, &mut d);
             if dist > len {
                 hold_to(r, it, at, d, len);
             } else if dist < min {
                 if direction(lk(r.game, it).pos, target, &mut d2) <= reg(0.1f32) {
-                    link_mut(r.game, it).x2C_b0 = false;
+                    link_mut(r.game, it).out = false;
                 } else {
                     hold_to(r, it, at, d, min);
                 }
             }
         } else if direction(target, at, &mut d) > len {
             hold_to(r, it, at, d, len);
-            link_mut(r.game, it).x2C_b0 = true;
+            link_mut(r.game, it).out = true;
         } else {
             return 0;
         }
@@ -483,7 +479,7 @@ pub fn fall_links(r: &mut Running, l: ItemLinkId, target: Vec3, a: Attrs, gobj: 
     while let Some(it) = iter {
         counter = counter.wrapping_add(1);
         let at = lk(r.game, cur).pos;
-        if lk(r.game, it).x2C_b0 {
+        if lk(r.game, it).out {
             let k = link_mut(r.game, it);
             k.vel.y = mem(fp::fsubs(reg(k.vel.y), gravity));
             apply_vel(r.game, it);
@@ -494,7 +490,7 @@ pub fn fall_links(r: &mut Running, l: ItemLinkId, target: Vec3, a: Attrs, gobj: 
             link_mut(r.game, it).pos = target;
         } else if direction(target, at, &mut d) > len {
             hold_to(r, it, at, d, len);
-            link_mut(r.game, it).x2C_b0 = true;
+            link_mut(r.game, it).out = true;
         } else {
             return 0;
         }
@@ -519,7 +515,7 @@ pub fn reel_in(r: &mut Running, l: ItemLinkId, pos: Vec3, a: Attrs, speed: f64) 
     let mut cur = l;
     let mut next = lk(r.game, l).prev;
     while let Some(n) = next {
-        if lk(r.game, cur).x2C_b0 {
+        if lk(r.game, cur).out {
             break;
         }
         cur = n;
@@ -530,7 +526,7 @@ pub fn reel_in(r: &mut Running, l: ItemLinkId, pos: Vec3, a: Attrs, speed: f64) 
         if !(speed > distance) {
             break;
         }
-        link_mut(r.game, cur).x2C_b0 = false;
+        link_mut(r.game, cur).out = false;
         distance = direction(lk(r.game, n).pos, pos, &mut d);
         cur = n;
         next = lk(r.game, n).prev;
@@ -549,7 +545,7 @@ pub fn reel_in(r: &mut Running, l: ItemLinkId, pos: Vec3, a: Attrs, speed: f64) 
 pub fn knot_to_hand(r: &mut Running, gobj: GObjId) {
     let l = hand(r, gobj);
     let model = model_of(r, l);
-    link_mut(r.game, l).x2C_b0 = false;
+    link_mut(r.game, l).out = false;
     // `HSD_JObjCopyMtx`, through `PSMTXCopy`.
     let m = hand_mtx(r, l).copied();
     let jobjs = &mut r.game.objs.jobjs;
@@ -565,7 +561,7 @@ pub fn knot_to_hand(r: &mut Running, gobj: GObjId) {
 pub fn line_up(r: &mut Running, gobj: GObjId, target: Vec3) {
     let mut l = Some(far_end(r, gobj));
     while let Some(k) = l {
-        if lk(r.game, k).x2C_b0 {
+        if lk(r.game, k).out {
             break;
         }
         l = lk(r.game, k).prev;
@@ -573,7 +569,7 @@ pub fn line_up(r: &mut Running, gobj: GObjId, target: Vec3) {
     while let Some(k) = l {
         let lnk = lk(r.game, k);
         let next_pos = match lnk.next {
-            Some(n) if lk(r.game, n).x2C_b0 => lk(r.game, n).pos,
+            Some(n) if lk(r.game, n).out => lk(r.game, n).pos,
             _ => target,
         };
         let prev_pos = match lnk.prev {
@@ -625,11 +621,7 @@ pub fn to_fall(r: &mut Running, gobj: GObjId) {
 pub fn to_reel(r: &mut Running, gobj: GObjId) {
     let l = far_end(r, gobj);
     let _ = hand_mtx(r, l);
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .climbers_string()
-        .x0
-        .set(2.25);
+    item_mut(r.game, gobj).vars.climbers_string().reel.set(2.25);
     change_state(r, gobj, 3, change::ANIM_UPDATE);
     lib26b1::show(r.game, gobj);
     item_mut(r.game, gobj).on_accessory = Some(CodeRef(REEL));
@@ -645,7 +637,7 @@ pub fn to_pay_out(r: &mut Running, gobj: GObjId) {
     k.pos = pos;
     k.coll_data.cur_pos = k.pos;
     k.coll_data.last_pos = k.coll_data.cur_pos;
-    k.x2C_b0 = true;
+    k.out = true;
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     lib26b1::show(r.game, gobj);
     item_mut(r.game, gobj).on_accessory = Some(CodeRef(PAY_OUT));
@@ -656,8 +648,8 @@ pub fn to_pay_out(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_2725_Logic70_EvtUnk")]
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.climbers_string();
-    if v.xC.get() == other {
-        v.xC.set(None);
+    let v = item_mut(r.game, gobj).vars.climbers_string();
+    if v.popo.get() == other {
+        v.popo.set(None);
     }
 }

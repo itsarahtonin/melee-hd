@@ -116,7 +116,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     v.set_i32(SWARM_FRAMES, 0);
     v.set_i32(SWARMS, swarms);
     let ip = item_mut(r.game, gobj);
-    ip.xDCC_flag.b3 = false;
+    ip.state_flags.b3 = false;
     ip.facing_dir = 0.0;
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
@@ -160,7 +160,7 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
     lib2725::fall(r.game, gobj, g, max);
     let drift = pokemon::vars(r.game, gobj).f32(DRIFT);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmadds(reg(accel), reg(drift), reg(ip.x40_vel.x)));
+    ip.vel.x = mem(fp::fmadds(reg(accel), reg(drift), reg(ip.vel.x)));
 }
 
 /// `itUnknown_UnkMotion0_Coll`: nothing.
@@ -194,7 +194,7 @@ fn along(
 pub fn start_swarms(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     let side = r.game.objs.rng.below(4);
     let (side, x, y) = match side {
         0 => {
@@ -302,7 +302,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
     if pokemon::fall(r, gobj) {
         lib2725::clear_velocity(r.game, gobj);
         let up = attr_f32(r, gobj, 8);
-        item_mut(r.game, gobj).x40_vel.y = up;
+        item_mut(r.game, gobj).vel.y = up;
         change_state(r, gobj, 0, change::ANIM_UPDATE);
         effect_hitlag(r.game, gobj);
     }
@@ -366,8 +366,8 @@ pub fn swarm_spawned(r: &mut Running, gobj: GObjId) {
     lib2725::set_model(r, gobj, joint);
     let life = attr_i32(r, gobj, 0);
     let ip = item_mut(r.game, gobj);
-    ip.xDCC_flag.b3 = false;
-    ip.xD44_lifeTimer = mem(fp::frsp(f64::from(life)));
+    ip.state_flags.b3 = false;
+    ip.life_timer = mem(fp::frsp(f64::from(life)));
     lib2725::stop_spin(r.game, r.data, gobj);
     let slow = attr_f32(r, gobj, 0x1C);
     let ip = item_mut(r.game, gobj);
@@ -375,11 +375,11 @@ pub fn swarm_spawned(r: &mut Running, gobj: GObjId) {
         let v = reg(v);
         if v < 0.0 { fp::fneg(v) } else { v }
     };
-    let vertical = if abs(ip.x40_vel.x) > abs(ip.x40_vel.y) {
-        ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), reg(slow)));
+    let vertical = if abs(ip.vel.x) > abs(ip.vel.y) {
+        ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), reg(slow)));
         0
     } else {
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), reg(slow)));
+        ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), reg(slow)));
         1
     };
     let v = pokemon::vars(r.game, gobj);
@@ -415,8 +415,8 @@ pub fn swarm_fly(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802CF120")]
 pub fn swarm_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    reg(ip.xD44_lifeTimer) <= 0.0
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    reg(ip.life_timer) <= 0.0
 }
 
 /// `it_802CF154`: spins, and its slower axis slows on (`x20`).
@@ -439,9 +439,9 @@ pub fn swarm_phys(r: &mut Running, gobj: GObjId) {
     lib2725::set_rotation_z(r.game, j, rad(angles[2]));
     let ip = item_mut(r.game, gobj);
     if vertical != 0 {
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), reg(slow)));
+        ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), reg(slow)));
     } else {
-        ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), reg(slow)));
+        ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), reg(slow)));
     }
 }
 

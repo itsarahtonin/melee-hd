@@ -124,11 +124,11 @@ pub fn reset(game: &mut Game, gobj: GObjId, l: ItemLinkId) {
     k.next = None;
     k.vel = Vec3::new(0.0, 0.0, 0.0);
     k.pos = Vec3::new(0.0, 0.0, 0.0);
-    k.x20 = LinkX20(Some(Vec3::new(0.0, 0.0, 0.0)));
-    k.x2C_b0 = false;
-    k.x2C_b1 = false;
-    k.x2C_b2 = false;
-    k.x1CC = 0;
+    k.unread_20 = LinkX20(Some(Vec3::new(0.0, 0.0, 0.0)));
+    k.out = false;
+    k.touching = false;
+    k.sounded = false;
+    k.wall_line = 0;
     k.gobj = Some(gobj);
     k.jobj = None;
 }
@@ -137,7 +137,7 @@ pub fn reset(game: &mut Game, gobj: GObjId, l: ItemLinkId) {
 /// is out.
 #[doc(alias = "it_802A24A0")]
 pub fn drawn(game: &Game, gobj: GObjId) -> bool {
-    link(game, link_of(game, gobj)).x2C_b0
+    link(game, link_of(game, gobj)).out
 }
 
 impl Running<'_> {
@@ -305,7 +305,7 @@ pub fn orient_scaled(game: &mut Game, j: JObjId, pos: Vec3, dir: &mut Vec3, scal
 pub fn line_up_models(r: &mut Running, hand: ItemLinkId, at: Vec3, scale: f32) {
     let mut l = Some(hand);
     while let Some(k) = l {
-        if link(r.game, k).x2C_b0 {
+        if link(r.game, k).out {
             break;
         }
         l = link(r.game, k).prev;
@@ -313,7 +313,7 @@ pub fn line_up_models(r: &mut Running, hand: ItemLinkId, at: Vec3, scale: f32) {
     while let Some(k) = l {
         let lk = link(r.game, k);
         let from = match lk.next {
-            Some(n) if link(r.game, n).x2C_b0 => link(r.game, n).pos,
+            Some(n) if link(r.game, n).out => link(r.game, n).pos,
             _ => at,
         };
         let to = match lk.prev {
@@ -349,7 +349,7 @@ fn coll_air_pass(r: &mut Running, l: ItemLinkId) -> i32 {
     let hit = with_stage_coll(r.game, r.data, |c| c.air_frame(&mut cd, 6, 0));
     let k = link_mut(r.game, l);
     k.coll_data = cd;
-    k.x2C_b1 = hit;
+    k.touching = hit;
     k.pos = k.coll_data.cur_pos;
     k.coll_data.env_flags & FLOOR_AND_WALLS
 }

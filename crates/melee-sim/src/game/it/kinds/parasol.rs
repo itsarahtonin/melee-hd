@@ -98,7 +98,7 @@ pub fn anim_frames(state: i32) -> i32 {
 /// `itParasol_Logic13_Spawned`: falling.
 #[doc(alias = "itParasol_Logic13_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, false);
+    set_flag(&mut item_mut(r.game, gobj).hurt_flags, 7, false);
     fell(r, gobj);
 }
 
@@ -150,7 +150,7 @@ pub fn spin(r: &mut Running, gobj: GObjId) -> bool {
     let ry = reg(r.game.objs.jobjs[canopy].rotate.y);
     let (base, by_fall) = (attr(r, gobj, 2), attr(r, gobj, 3));
     let ip = item(r.game, gobj);
-    let fall = fp::fmuls(reg(ip.x40_vel.y), reg(by_fall));
+    let fall = fp::fmuls(reg(ip.vel.y), reg(by_fall));
     let fall = if fall < 0.0 { fp::fneg(fall) } else { fall };
     let turn = fp::fmuls(fp::fadds(reg(base), fall), reg(ip.facing_dir));
     let ry = mem(fp::fmadds(f64::from(0.017_453_292_f32), turn, ry));
@@ -162,17 +162,17 @@ pub fn spin(r: &mut Running, gobj: GObjId) -> bool {
 fn decelerate(r: &mut Running, gobj: GObjId, decel: f32) {
     let ip = item_mut(r.game, gobj);
     let d = reg(decel);
-    let vx = reg(ip.x40_vel.x);
+    let vx = reg(ip.vel.x);
     let abs = if vx < 0.0 { fp::fneg(vx) } else { vx };
     if abs > d {
-        if reg(ip.x40_vel.x) > d {
-            ip.x40_vel.x = mem(fp::fsubs(reg(ip.x40_vel.x), d));
+        if reg(ip.vel.x) > d {
+            ip.vel.x = mem(fp::fsubs(reg(ip.vel.x), d));
         }
-        if reg(ip.x40_vel.x) < fp::fneg(d) {
-            ip.x40_vel.x = mem(fp::fadds(reg(ip.x40_vel.x), d));
+        if reg(ip.vel.x) < fp::fneg(d) {
+            ip.vel.x = mem(fp::fadds(reg(ip.vel.x), d));
         }
     } else {
-        ip.x40_vel.x = 0.0;
+        ip.vel.x = 0.0;
     }
 }
 
@@ -262,6 +262,6 @@ pub fn open_step(r: &mut Running, gobj: GObjId, speed: f32, state: i32) {
     if state > 4 {
         play_sfx(r, gobj, 0xF7, 0x7F, 0x40);
     }
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = speed;
+    item_mut(r.game, gobj).anim_speed = speed;
     change_state(r, gobj, state, change::ANIM_UPDATE);
 }

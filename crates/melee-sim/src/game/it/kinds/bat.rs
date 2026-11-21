@@ -76,7 +76,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
         .special(r.data)
         .expect("a bat without attributes");
     let vy = r.data.f32(a.at(0xC));
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, vy, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, vy, 0.0);
     fell(r, gobj);
 }
 
@@ -109,8 +109,8 @@ pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
 #[doc(alias = "it_80284974")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
-    ip.xD50_landNum = 0;
+    ip.vel = Vec3::new(0.0, 0.0, 0.0);
+    ip.land_count = 0;
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 
@@ -141,7 +141,7 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802849F0")]
 pub fn fell(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 1, change::ANIM_UPDATE);
-    item_mut(r.game, gobj).xD50_landNum = 0;
+    item_mut(r.game, gobj).land_count = 0;
 }
 
 /// `itBat_UnkMotion3_Phys`: falling and spinning.
@@ -172,7 +172,7 @@ fn show(r: &mut Running, gobj: GObjId) {
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
     show(r, gobj);
     change_state(r, gobj, 2, change::ANIM_UPDATE);
-    item_mut(r.game, gobj).xD50_landNum = 0;
+    item_mut(r.game, gobj).land_count = 0;
 }
 
 /// Let go of or thrown, it falls, `itBat_Logic11_Dropped` and `itBat_Logic11_Thrown`.

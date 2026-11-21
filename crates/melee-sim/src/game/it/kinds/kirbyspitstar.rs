@@ -92,7 +92,7 @@ pub fn spawn(
         return 0.0;
     };
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .kirby_spit_star()
         .set_f32(DECEL, decel);
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
@@ -105,7 +105,7 @@ pub fn spawn(
 fn setup(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
-    super::super::set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, false);
+    super::super::set_flag(&mut item_mut(r.game, gobj).hurt_flags, 7, false);
 }
 
 /// `it_2F28_UnkMotion0_Anim`: gone when its lifetime runs out.
@@ -118,21 +118,18 @@ fn anim(r: &mut Running, gobj: GObjId) -> bool {
 /// it's no faster than that.
 #[doc(alias = "it_2F28_UnkMotion0_Phys")]
 fn phys(r: &mut Running, gobj: GObjId) {
-    let decel = item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .kirby_spit_star()
-        .f32(DECEL);
+    let decel = item_mut(r.game, gobj).vars.kirby_spit_star().f32(DECEL);
     let ip = item_mut(r.game, gobj);
-    let (vx, vy) = (reg(ip.x40_vel.x), reg(ip.x40_vel.y));
+    let (vx, vy) = (reg(ip.vel.x), reg(ip.vel.y));
     let speed = math::sqrt_reg(fp::fadds(fp::fmuls(vx, vx), fp::fmuls(vy, vy)));
     if speed > reg(decel) {
         let left = fp::fsubs(speed, reg(decel));
-        ip.x40_vel.x = mem(fp::fdivs(fp::fmuls(vx, left), speed));
-        let vy = reg(ip.x40_vel.y);
+        ip.vel.x = mem(fp::fdivs(fp::fmuls(vx, left), speed));
+        let vy = reg(ip.vel.y);
         let left = fp::fsubs(speed, reg(decel));
-        ip.x40_vel.y = mem(fp::fdivs(fp::fmuls(vy, left), speed));
+        ip.vel.y = mem(fp::fdivs(fp::fmuls(vy, left), speed));
     } else {
-        ip.x40_vel.x = 0.0;
+        ip.vel.x = 0.0;
     }
 }
 

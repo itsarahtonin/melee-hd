@@ -105,12 +105,7 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
 /// `itPeachTurnip_Logic56_Destroyed`: its puller forgets it.
 #[doc(alias = "itPeachTurnip_Logic56_Destroyed")]
 fn destroyed(r: &mut Running, gobj: GObjId) {
-    if let Some(owner) = item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .peach_turnip()
-        .xDE4_owner
-        .get()
-    {
+    if let Some(owner) = item_mut(r.game, gobj).vars.peach_turnip().owner.get() {
         r.peach_unset_veg(owner);
     }
 }
@@ -147,18 +142,14 @@ pub fn spawn(
         let life = f32::from_bits(attr_word(r, gobj, 0));
         lib2725::set_lifetime(r.game, r.data, gobj, life);
         let face = pick_face(r, gobj);
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .peach_turnip()
-            .xDD8
-            .set(face);
+        item_mut(r.game, gobj).vars.peach_turnip().face.set(face);
         let damage = attr_word(r, gobj, 8 + 8 * face as u32 + 4) as i32;
         let ip = item_mut(r.game, gobj);
         let owner = ip.owner;
-        let v = ip.xDD4_itemVar.peach_turnip();
-        v.xDDC_damage.set(damage);
-        v.xDD4.set(TurnipFlag { picked_up: false });
-        v.xDE4_owner.set(owner);
+        let v = ip.vars.peach_turnip();
+        v.damage.set(damage);
+        v.picked_up.set(TurnipFlag { picked_up: false });
+        v.owner.set(owner);
         lib26b1::silence(r.game, gobj);
     }
     super::super::item::pick_up(r, gobj, parent, part);
@@ -168,9 +159,9 @@ pub fn spawn(
         let scl = ip.scl;
         // The union's word at 0x14 for a Bob-omb, at 0xC for Mr. Saturn and a turnip.
         match ItKind::of(ip.kind) {
-            ItKind::BobOmb => ip.xDD4_itemVar.bombhei().xDE8.set(scl),
-            ItKind::MrSaturn => ip.xDD4_itemVar.dosei().xDE0.set(scl),
-            ItKind::PeachTurnip => ip.xDD4_itemVar.peach_turnip().xDE0_scl.set(scl),
+            ItKind::BobOmb => ip.vars.bombhei().scale.set(scl),
+            ItKind::MrSaturn => ip.vars.dosei().scale.set(scl),
+            ItKind::PeachTurnip => ip.vars.peach_turnip().scale.set(scl),
             _ => {}
         }
     }
@@ -179,11 +170,7 @@ pub fn spawn(
 
 /// The vegetable's face, its model posed at its face's frame (`it_80273670`).
 fn show_face(r: &mut Running, gobj: GObjId) {
-    let face = item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .peach_turnip()
-        .xDD8
-        .get();
+    let face = item_mut(r.game, gobj).vars.peach_turnip().face.get();
     let frame = mem(fp::frsp(f64::from(face)));
     super::drmariopill::set_pose(r, gobj, 0, frame);
 }
@@ -194,9 +181,9 @@ fn show_face(r: &mut Running, gobj: GObjId) {
 fn picked_up(r: &mut Running, gobj: GObjId) {
     show_face(r, gobj);
     let again = item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .peach_turnip()
-        .xDD4
+        .picked_up
         .get()
         .picked_up;
     if again {
@@ -206,9 +193,9 @@ fn picked_up(r: &mut Running, gobj: GObjId) {
         lib26b1::unsilence(r.game, gobj);
     }
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .peach_turnip()
-        .xDD4
+        .picked_up
         .set(TurnipFlag { picked_up: true });
     animate(r, gobj);
 }
@@ -219,8 +206,8 @@ fn picked_up(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itPeachturnip_UnkMotion3_Anim")]
 fn life_out(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    ip.xD44_lifeTimer <= 0.0
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    ip.life_timer <= 0.0
 }
 
 /// `itPeachturnip_UnkMotion4_Anim`: held, nothing to animate.
@@ -249,8 +236,8 @@ fn thrown(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj).expect("a vegetable without a model");
     change_state(r, gobj, 2, change::ANIM_UPDATE | change::DROP_UPDATE);
     show_face(r, gobj);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.peach_turnip();
-    let (damage, scl) = (v.xDDC_damage.get(), v.xDE0_scl.get());
+    let v = item_mut(r.game, gobj).vars.peach_turnip();
+    let (damage, scl) = (v.damage.get(), v.scale.get());
     super::super::coll::set_hit_damage(r.game, r.data, gobj, 0, damage as u32);
     lib2725::rescale(r.game, gobj, j, scl);
 }
@@ -319,9 +306,9 @@ fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itPeachTurnip_Logic56_EvtUnk")]
 #[doc(alias("evt_unk"))]
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.peach_turnip();
-    if v.xDE4_owner.get() == other {
-        v.xDE4_owner.set(None);
+    let v = item_mut(r.game, gobj).vars.peach_turnip();
+    if v.owner.get() == other {
+        v.owner.set(None);
     }
     lib26b1::forget(r.game, gobj, other);
 }

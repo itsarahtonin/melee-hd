@@ -67,7 +67,7 @@ pub fn spawn(r: &mut Running, pos: Vec3, vel: Vec3, facing_dir: f32) {
 fn setup(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
-    super::super::set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, false);
+    super::super::set_flag(&mut item_mut(r.game, gobj).hurt_flags, 7, false);
 }
 
 /// `it_2ADA_UnkMotion0_Anim`: gone when its lifetime runs out.

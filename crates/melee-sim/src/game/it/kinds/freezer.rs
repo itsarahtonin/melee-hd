@@ -73,8 +73,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDB0_itcmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    ip.cmd_var1 = 0;
     enter_air(r, gobj);
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
@@ -115,10 +115,10 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
 /// effect (`0x462`) on its sixth bone; then the frost (`0x461`) every so many frames.
 #[doc(alias = "itFreezer_802CD090")]
 pub fn breath_effects(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDB0_itcmd_var1 != 0 {
+    if item(r.game, gobj).cmd_var1 != 0 {
         let bone = pokemon::table_bone(r.game, gobj, 5);
         pokemon::effect_scaled(r, 0x462, gobj, bone, EFFECT_SIZE);
-        item_mut(r.game, gobj).xDB0_itcmd_var1 = 0;
+        item_mut(r.game, gobj).cmd_var1 = 0;
     }
     frost(r, gobj);
 }
@@ -131,7 +131,7 @@ pub fn fly_up(r: &mut Running, gobj: GObjId) {
     effect_hitlag(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(FROST_ACCESSORY));
-    ip.xDB0_itcmd_var1 = 0;
+    ip.cmd_var1 = 0;
 }
 
 /// `itFreezer_UnkMotion2_Anim`: flying up, its animation looping; gone above the top blast
@@ -148,17 +148,17 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
 /// faster (`x8`) every frame.
 #[doc(alias = "itFreezer_UnkMotion2_Phys")]
 pub fn phys2(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
+    if item(r.game, gobj).cmd_var0 != 0 {
         let up = attr_f32(r, gobj, 4);
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.y = up;
-        ip.xDAC_itcmd_var0 = 0;
-        ip.xDB0_itcmd_var1 = 1;
+        ip.vel.y = up;
+        ip.cmd_var0 = 0;
+        ip.cmd_var1 = 1;
     }
-    if item(r.game, gobj).xDB0_itcmd_var1 != 0 {
+    if item(r.game, gobj).cmd_var1 != 0 {
         let a = attr_f32(r, gobj, 8);
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), reg(a)));
+        ip.vel.y = mem(fp::fadds(reg(ip.vel.y), reg(a)));
     }
 }
 
@@ -207,7 +207,7 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
         change_state(r, gobj, 1, change::ANIM_UPDATE);
         effect_hitlag(r.game, gobj);
         item_mut(r.game, gobj).on_accessory = Some(CodeRef(BREATH_ACCESSORY));
-        set_flag(&mut item_mut(r.game, gobj).xDD1_flag, 1, true);
+        set_flag(&mut item_mut(r.game, gobj).phys_flags, 1, true);
     }
 }
 

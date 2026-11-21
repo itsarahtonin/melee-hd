@@ -51,7 +51,7 @@ impl Running<'_> {
         };
         let mut hooks = code::ParticleHooks;
         let trsp = display::pass_trsp(pass);
-        self.game.objs.display.item_flags = Some(item(self.game, gobj).xDCF_flag[0]);
+        self.game.objs.display.item_flags = Some(item(self.game, gobj).draw_flags[0]);
         display::jobj_disp_all(&mut self.game.objs, self.data, &mut hooks, j, vmtx, trsp, 0);
         self.game.objs.display.item_flags = None;
     }
@@ -63,7 +63,7 @@ impl Running<'_> {
     #[doc(alias = "it_8026EBC8")]
     fn item_bones_hidden(&mut self, gobj: GObjId, list: (u16, Option<DataRef>), hide: bool) {
         let (n, at) = list;
-        let table = item(self.game, gobj).xBBC_dynamicBoneTable;
+        let table = item(self.game, gobj).bone_table;
         for k in 0..u32::from(n) {
             let idx = self
                 .data
@@ -115,39 +115,42 @@ impl Running<'_> {
         let mut drew = false;
         if ip.kind == ItKind::VsCoin {
             // The coin (`It_Kind_Unk4`): its range while it can be picked up.
-            let v = &mut ip.xDD4_itemVar.coin().vars;
-            let f = v.x18.get();
-            if flag(ip.xDAA, 0) && (f.others || f.owner) {
+            let v = &mut ip.vars.coin().vars;
+            let f = v.flags.get();
+            if flag(ip.debug_flags, 0) && (f.others || f.owner) {
                 let sub = &mut v.sub;
-                let (a, b, x0) = (sub.x14.get(), sub.x8.get(), sub.x0.get());
+                let (a, b, x0) = (sub.prev_pos.get(), sub.pos.get(), sub.radius.get());
                 return coll_draw::coin_range(objs, a, b, x0, ip.scl, pass);
             }
             return false;
         }
-        if flag(ip.xDAA, 6) {
-            if flag(ip.xDAA, 2) {
-                for h in &ip.x5D4_hitboxes {
+        if flag(ip.debug_flags, 6) {
+            if flag(ip.debug_flags, 2) {
+                for h in &ip.hitboxes {
                     drew |= coll_draw::hit(objs, &h.hit, pass, ip.scl);
                 }
             }
-            if !ip.xDC8_word.flags.x13 && flag(ip.xDAA, 1) {
-                let n = usize::from(ip.xAC8_hurtboxNum);
-                let state = (ip.xD0C != 0).then_some(ip.xD0C as u32);
-                for h in &mut ip.xACC_itemHurtbox[..n] {
+            if !ip.flags.flags.held && flag(ip.debug_flags, 1) {
+                let n = usize::from(ip.hurtbox_count);
+                let state = (ip.invincibility != 0).then_some(ip.invincibility as u32);
+                for h in &mut ip.hurtboxes[..n] {
                     drew |= coll_draw::hurt(objs, data, h, state, pass, None, 0.0);
                 }
             }
         }
-        if flag(ip.xDAA, 4) && ip.xDC8_word.flags.x15 {
+        if flag(ip.debug_flags, 4) && ip.flags.flags.pickup {
             let range = crate::quat::Quat {
-                x: ip.xBCC_unk.x,
-                y: ip.xBCC_unk.y,
-                z: ip.xBD4_grabRange.x,
-                w: ip.xBD4_grabRange.y,
+                x: ip.grab_offset.x,
+                y: ip.grab_offset.y,
+                z: ip.grab_range.x,
+                w: ip.grab_range.y,
             };
             drew |= coll_draw::range(objs, range, ip.pos, PICKUP_RANGE, pass, ip.facing_dir);
         }
-        if flag(ip.xDAA, 3) && flag(ip.xDD0_flag, 0) && coll_draw::stomp(objs, &ip.xB54, pass) {
+        if flag(ip.debug_flags, 3)
+            && flag(ip.status_flags, 0)
+            && coll_draw::stomp(objs, &ip.stomp_box, pass)
+        {
             drew = true;
         }
         drew
@@ -156,11 +159,11 @@ impl Running<'_> {
     /// The model part of `it_8026EECC`.
     fn render_item_model(&mut self, gobj: GObjId, pass: i32) {
         let ip = item(self.game, gobj);
-        if !flag(ip.xDAA, 7) {
+        if !flag(ip.debug_flags, 7) {
             return;
         }
         let mut pos = Vec3::ZERO;
-        if ip.xDC8_word.flags.x13 {
+        if ip.flags.flags.held {
             let owner = ip.owner;
             let fighter_owner = owner.filter(|&o| {
                 matches!(
@@ -173,16 +176,16 @@ impl Running<'_> {
             {
                 return;
             }
-            set_flag(&mut item_mut(self.game, gobj).xDCF_flag, 7, false);
+            set_flag(&mut item_mut(self.game, gobj).draw_flags, 7, false);
             if let Some(o) = fighter_owner {
                 let d = &self.game.fighter(o).dmg;
                 if d.x18B8 != 0.0 || d.x18BC != 0.0 {
                     pos = Vec3::new(d.x18B8, d.x18BC, 0.0);
-                    set_flag(&mut item_mut(self.game, gobj).xDCF_flag, 7, true);
+                    set_flag(&mut item_mut(self.game, gobj).draw_flags, 7, true);
                 }
             }
         }
-        let outlined = flag(item(self.game, gobj).xDCF_flag, 3);
+        let outlined = flag(item(self.game, gobj).draw_flags, 3);
         match self.game.camera.pass() {
             1 if outlined => {
                 // `it_8026EECC_inline_1`, `_inline_2` and `_inline_3`: the outline's two
@@ -190,9 +193,9 @@ impl Running<'_> {
                 let lists = super::kinds::gamewatch::outline_lists(self, gobj);
                 for (b4, b5) in [(true, false), (false, false), (true, true)] {
                     let ip = item_mut(self.game, gobj);
-                    set_flag(&mut ip.xDCF_flag, 4, b4);
-                    set_flag(&mut ip.xDCF_flag, 5, b5);
-                    let shake = flag(ip.xDCF_flag, 7).then_some(pos);
+                    set_flag(&mut ip.draw_flags, 4, b4);
+                    set_flag(&mut ip.draw_flags, 5, b5);
+                    let shake = flag(ip.draw_flags, 7).then_some(pos);
                     if b4 {
                         self.item_bones_hidden(gobj, lists.0, true);
                         self.item_bones_hidden(gobj, lists.1, false);
@@ -206,9 +209,9 @@ impl Running<'_> {
             }
             0 if !outlined => {
                 let ip = item_mut(self.game, gobj);
-                set_flag(&mut ip.xDCF_flag, 4, false);
-                set_flag(&mut ip.xDCF_flag, 5, false);
-                let shake = flag(ip.xDCF_flag, 7).then_some(pos);
+                set_flag(&mut ip.draw_flags, 4, false);
+                set_flag(&mut ip.draw_flags, 5, false);
+                let shake = flag(ip.draw_flags, 7).then_some(pos);
                 self.draw_item_tree(gobj, pass, shake);
             }
             _ => {}

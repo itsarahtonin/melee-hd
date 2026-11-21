@@ -166,7 +166,7 @@ pub struct Tether {
 
 /// The item's shared variables.
 pub fn vars<'r>(r: &'r mut Running, gobj: GObjId, t: &Tether) -> Vars<'r> {
-    (t.vars)(&mut item_mut(r.game, gobj).xDD4_itemVar)
+    (t.vars)(&mut item_mut(r.game, gobj).vars)
 }
 
 /// The tip, the first link made.
@@ -328,7 +328,7 @@ pub fn spawn(
     let hs = spawn_air(r, &mut spawn)?;
     if t.stale_ignore_id {
         // The beam's spawn never sets `x40`, a stack word: its ignore id is stale.
-        item_mut(r.game, hs).xAC4_ignoreItemID = super::super::IgnoreId(None);
+        item_mut(r.game, hs).ignore_id = super::super::IgnoreId(None);
     }
     vars(r, hs, t).done.set(0);
     if let Some(on_spawn) = t.on_spawn {
@@ -457,7 +457,7 @@ pub fn shot(r: &mut Running, gobj: GObjId, t: &Tether) {
         sequence(r, f);
     }
     let l = tip(r, gobj, t);
-    let first_out = lk(r.game, l).next.is_some_and(|n| lk(r.game, n).x2C_b0);
+    let first_out = lk(r.game, l).next.is_some_and(|n| lk(r.game, n).out);
     if !holds(t, r.game.fighter(f).motion_id) && !first_out {
         put_away(r, gobj, t);
         return;

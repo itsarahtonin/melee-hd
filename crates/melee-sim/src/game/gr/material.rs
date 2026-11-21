@@ -227,7 +227,7 @@ pub fn set_item_hurtbox(
     b: crate::vec::Vec3,
     scale: f32,
 ) {
-    let h = &mut super::super::it::item_mut(game, item).xACC_itemHurtbox[0];
+    let h = &mut super::super::it::item_mut(game, item).hurtboxes[0];
     h.a_offset = a;
     h.b_offset = b;
     h.scale = scale;
@@ -274,7 +274,7 @@ pub fn item_state(r: &mut super::super::state::Running, item: GObjId, state: i32
 #[doc(alias = "grMaterial_801C8E48")]
 pub fn item_script_done(game: &Game, item: GObjId) -> bool {
     super::super::it::item(game, item)
-        .x524_cmd
+        .cmd
         .script
         .cursor
         .is_none()

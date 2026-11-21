@@ -58,7 +58,7 @@ pub mod spawn {
 
 /// A Pokémon's variables.
 pub fn vars(game: &mut Game, gobj: GObjId) -> &mut PokemonVars {
-    item_mut(game, gobj).xDD4_itemVar.pokemon()
+    item_mut(game, gobj).vars.pokemon()
 }
 
 /// The Poké Ball's own attributes (`itPokemonSpawn_DatAttrs`), word `off`.
@@ -307,7 +307,7 @@ pub fn count_for_owner(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "pl_80037DF4")]
 pub fn count_attack(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    let (owner, ev) = (ip.owner, ip.xD90);
+    let (owner, ev) = (ip.owner, ip.attack_flags);
     if !super::item::is_fighter(r.game, owner) {
         return;
     }
@@ -561,8 +561,8 @@ pub fn take_bone_motion(r: &mut Running, bone: Option<JObjId>, gobj: GObjId) {
 pub fn move_by_bone(game: &mut Game, gobj: GObjId) {
     let m = vars(game, gobj).vec(spawn::MOTION);
     let ip = item_mut(game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(m.z), reg(ip.facing_dir)));
-    ip.x40_vel.y = m.y;
+    ip.vel.x = mem(fp::fmuls(reg(m.z), reg(ip.facing_dir)));
+    ip.vel.y = m.y;
 }
 
 /// An effect on `j` at the item's size over `size`, `it_8027ADEC`.
@@ -579,9 +579,12 @@ pub fn effect_scaled(r: &mut Running, id: i32, gobj: GObjId, j: Option<JObjId>, 
 pub fn bounce_off_wall(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj).expect("a Pokémon without a model");
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(fp::fneg(reg(ip.x40_vel.x)), reg(ip.xC70)));
+    ip.vel.x = mem(fp::fmuls(
+        fp::fneg(reg(ip.vel.x)),
+        reg(ip.reflect_speed_mul),
+    ));
     ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-    ip.xD44_lifeTimer = ip.xD48_halfLifeTimer;
+    ip.life_timer = ip.half_life;
     let facing = ip.facing_dir;
     set_facing_rotation(r.game, j, facing);
     false
@@ -593,8 +596,8 @@ pub fn bounce_off_wall(r: &mut Running, gobj: GObjId) -> bool {
 pub fn bounce_off_surface(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj).expect("a Pokémon without a model");
     let ip = item_mut(r.game, gobj);
-    let n = ip.xC58;
-    ip.x40_vel.mirror_xy(n);
+    let n = ip.shield_normal;
+    ip.vel.mirror_xy(n);
     lib2725::face_motion(r.game, gobj);
     let facing = item(r.game, gobj).facing_dir;
     set_facing_rotation(r.game, j, facing);
@@ -617,7 +620,7 @@ fn set_facing_rotation(game: &mut Game, j: JObjId, facing: f32) {
 /// Joint `i` of the item's bone table (`xBBC_dynamicBoneTable->bones[i]`).
 pub fn table_bone(game: &Game, gobj: GObjId, i: usize) -> Option<JObjId> {
     let t = item(game, gobj)
-        .xBBC_dynamicBoneTable
+        .bone_table
         .expect("a Pokémon without its bone table");
     game.it.bone_tables[t.0].bones[i]
 }

@@ -13,20 +13,20 @@ use melee_data::archive::Archives;
 #[doc(alias = "it_802753DC")]
 pub fn clear_dealt(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    ip.xC34_damageDealt = 0;
-    ip.xC40 = 1.0;
-    ip.xC44 = 1.0;
-    ip.xC3C = 1.0;
-    ip.xC48 = 0;
-    ip.xC4C = 0;
-    ip.xC50 = 0;
-    set_flag(&mut ip.xDCE_flag, 6, false);
+    ip.damage_dealt = 0;
+    ip.damage_mul = 1.0;
+    ip.next_damage_mul = 1.0;
+    ip.damage_scale = 1.0;
+    ip.clank_damage = 0;
+    ip.reflected_damage = 0;
+    ip.shield_damage = 0;
+    set_flag(&mut ip.hurt_flags, 6, false);
 }
 
 /// Clears `xDCD`'s hit flags, `it_80275474`.
 #[doc(alias = "it_80275474")]
 pub fn clear_hit_ids(game: &mut Game, gobj: GObjId) {
-    let f = &mut item_mut(game, gobj).xDCD_flag.x0;
+    let f = &mut item_mut(game, gobj).hit_flags.x0;
     f.b5 = false;
     f.b7 = false;
     f.b6 = false;
@@ -36,15 +36,15 @@ pub fn clear_hit_ids(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_80275504")]
 pub fn clear_hit_ids2(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    set_flag(&mut ip.xDCE_flag, 0, false);
-    set_flag(&mut ip.xDCE_flag, 2, false);
-    set_flag(&mut ip.xDCE_flag, 1, false);
+    set_flag(&mut ip.hurt_flags, 0, false);
+    set_flag(&mut ip.hurt_flags, 2, false);
+    set_flag(&mut ip.hurt_flags, 1, false);
 }
 
 /// Scales one hitbox, if it's on, `it_80275594`.
 #[doc(alias = "it_80275594")]
 pub fn scale_hitbox(game: &mut Game, gobj: GObjId, idx: usize, mult: f64) {
-    let hit = &mut item_mut(game, gobj).x5D4_hitboxes[idx].hit;
+    let hit = &mut item_mut(game, gobj).hitboxes[idx].hit;
     if hit.state != hitcapsule::DISABLED {
         hit.scale = mem(fp::fmuls(reg(hit.scale), mult));
     }
@@ -61,18 +61,18 @@ pub fn scale_hitboxes(game: &mut Game, gobj: GObjId, mult: f64) {
 /// Clears the item's `xDCD` bit 7, `it_8027542C`.
 #[doc(alias = "it_8027542C")]
 pub fn clear_dcd_b7(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDCD_flag.x0.b7 = false;
+    item_mut(game, gobj).hit_flags.x0.b7 = false;
 }
 
 /// The most damage of the item's enabled hitboxes, 0 with none, `it_802758D4`.
 #[doc(alias = "it_802758D4")]
 pub fn max_damage(game: &Game, gobj: GObjId) -> f32 {
     let ip = super::item(game, gobj);
-    let on = |k: usize| ip.x5D4_hitboxes[k].hit.state != crate::lb::hitcapsule::DISABLED;
+    let on = |k: usize| ip.hitboxes[k].hit.state != crate::lb::hitcapsule::DISABLED;
     let mut damage = 0.0;
     if (0..4).any(on) {
         for k in (0..4).filter(|&k| on(k)) {
-            let d = ip.x5D4_hitboxes[k].hit.damage;
+            let d = ip.hitboxes[k].hit.damage;
             if damage <= d {
                 damage = d;
             }
@@ -84,13 +84,13 @@ pub fn max_damage(game: &Game, gobj: GObjId) -> f32 {
 /// Marks the item blinking, `it_802756D0`.
 #[doc(alias = "it_802756D0")]
 pub fn start_blink(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xD0C = 2;
+    item_mut(game, gobj).invincibility = 2;
 }
 
 /// Ends the item's blink, `it_802756E0`.
 #[doc(alias = "it_802756E0")]
 pub fn end_blink(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xD0C = 0;
+    item_mut(game, gobj).invincibility = 0;
     super::coll::refresh_hurtboxes(game, gobj);
 }
 
@@ -105,7 +105,7 @@ pub fn update_boxes(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_80275640")]
 pub fn scale_damage(game: &mut Game, data: &Archives, gobj: GObjId, mult: f64) {
     for i in 0..4 {
-        let hit = &item(game, gobj).x5D4_hitboxes[i].hit;
+        let hit = &item(game, gobj).hitboxes[i].hit;
         if hit.state != hitcapsule::DISABLED {
             let d = crate::ppc::cvt_fp2unsigned(fp::fmuls(reg(hit.damage), mult));
             super::coll::set_hit_damage(game, data, gobj, i, d);
@@ -117,42 +117,42 @@ pub fn scale_damage(game: &mut Game, data: &Archives, gobj: GObjId, mult: f64) {
 #[doc(alias = "it_8027572C")]
 #[doc(alias = "it_8027570C")]
 pub fn set_hit_flag0(game: &mut Game, gobj: GObjId, idx: usize, on: bool) {
-    item_mut(game, gobj).x5D4_hitboxes[idx].hit.x40_b0 = on;
+    item_mut(game, gobj).hitboxes[idx].hit.x40_b0 = on;
 }
 
 /// Lets ownerless and the same player's items hit it, `it_80275414`.
 #[doc(alias = "it_80275414")]
 pub fn let_own_items_hit(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDCD_flag.x0.b7 = true;
+    item_mut(game, gobj).hit_flags.x0.b7 = true;
 }
 
 /// Lets ownerless and its own player's items hit it (`xDCE`'s third flag), `it_802754A4`.
 #[doc(alias = "it_802754A4")]
 #[doc(alias("set_xdce_b2"))]
 pub fn set_hit_by_own_items(game: &mut Game, gobj: GObjId) {
-    set_flag(&mut item_mut(game, gobj).xDCE_flag, 2, true);
+    set_flag(&mut item_mut(game, gobj).hurt_flags, 2, true);
 }
 
 /// Stops ownerless and its own player's items hitting it (`xDCE`'s third flag), `it_802754BC`.
 #[doc(alias = "it_802754BC")]
 #[doc(alias("clear_xdce_b2"))]
 pub fn clear_hit_by_own_items(game: &mut Game, gobj: GObjId) {
-    set_flag(&mut item_mut(game, gobj).xDCE_flag, 2, false);
+    set_flag(&mut item_mut(game, gobj).hurt_flags, 2, false);
 }
 
 /// Sets `xDCE`'s hit flags, `it_802754D4`.
 #[doc(alias = "it_802754D4")]
 pub fn set_hit_ids2(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    set_flag(&mut ip.xDCE_flag, 0, true);
-    set_flag(&mut ip.xDCE_flag, 2, true);
-    set_flag(&mut ip.xDCE_flag, 1, true);
+    set_flag(&mut ip.hurt_flags, 0, true);
+    set_flag(&mut ip.hurt_flags, 2, true);
+    set_flag(&mut ip.hurt_flags, 1, true);
 }
 
 /// Sets every hitbox that's on to `scale`, `it_80275534`.
 #[doc(alias = "it_80275534")]
 pub fn set_hit_scale(game: &mut Game, gobj: GObjId, scale: f32) {
-    for h in &mut item_mut(game, gobj).x5D4_hitboxes {
+    for h in &mut item_mut(game, gobj).hitboxes {
         if h.hit.state != hitcapsule::DISABLED {
             h.hit.scale = scale;
         }
@@ -162,13 +162,13 @@ pub fn set_hit_scale(game: &mut Game, gobj: GObjId, scale: f32) {
 /// Clears the item's `xDCD` bit 7, `it_8027542C`.
 #[doc(alias = "it_8027542C")]
 pub fn clear_hit_ids_b7(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDCD_flag.x0.b7 = false;
+    item_mut(game, gobj).hit_flags.x0.b7 = false;
 }
 
 /// Sets `xDCD`'s hit flags, `it_80275444`.
 #[doc(alias = "it_80275444")]
 pub fn set_hit_ids(game: &mut Game, gobj: GObjId) {
-    let f = &mut item_mut(game, gobj).xDCD_flag.x0;
+    let f = &mut item_mut(game, gobj).hit_flags.x0;
     f.b5 = true;
     f.b7 = true;
     f.b6 = true;

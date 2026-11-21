@@ -46,7 +46,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itCLinkMilk_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.clink_milk()
+    item_mut(game, gobj).vars.clink_milk()
 }
 
 /// The milk in `parent`'s hand at bone `bone`, `it_802C8B28`: at `pos` (on the plane) facing
@@ -75,12 +75,12 @@ pub fn spawn(
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDCC_flag.b3 = false;
-    vars(r.game, gobj).x0.set(Some(parent));
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    ip.state_flags.b3 = false;
+    vars(r.game, gobj).parent.set(Some(parent));
     pick_up(r, gobj, parent, bone);
     Some(gobj)
 }
@@ -88,7 +88,7 @@ pub fn spawn(
 /// Takes the milk away, `it_802C8C34`: no owner, destroyed.
 #[doc(alias = "it_802C8C34")]
 pub fn remove(r: &mut Running, gobj: GObjId) {
-    vars(r.game, gobj).x0.set(None);
+    vars(r.game, gobj).parent.set(None);
     item_mut(r.game, gobj).owner = None;
     destroy(r, gobj);
 }
@@ -108,20 +108,20 @@ fn picked_up(r: &mut Running, gobj: GObjId) {
 /// The milk lets go of its owner (`itCLinkMilk_NotifyParent`): the owner forgets it if it
 /// still holds it (`ftCl_Init_801492C4`).
 fn notify_parent(r: &mut Running, gobj: GObjId) {
-    let parent = vars(r.game, gobj).x0.get();
+    let parent = vars(r.game, gobj).parent.get();
     if let Some(p) = parent
         && item(r.game, gobj).owner == Some(p)
     {
         r.clink_forget_milk(p);
     }
-    vars(r.game, gobj).x0.set(None);
+    vars(r.game, gobj).parent.set(None);
     item_mut(r.game, gobj).owner = None;
 }
 
 /// The end once let go (`itCLinkMilk_Destroy`): no owner.
 fn release(r: &mut Running, gobj: GObjId) -> bool {
     notify_parent(r, gobj);
-    vars(r.game, gobj).x0.set(None);
+    vars(r.game, gobj).parent.set(None);
     item_mut(r.game, gobj).owner = None;
     true
 }
@@ -134,19 +134,19 @@ fn release(r: &mut Running, gobj: GObjId) -> bool {
 fn anim(r: &mut Running, gobj: GObjId) -> bool {
     let model = jobj_of(r.game, gobj);
     let child = model.and_then(|j| r.game.objs.jobjs[j].child);
-    if item(r.game, gobj).xDAC_itcmd_var0 == 1 {
+    if item(r.game, gobj).cmd_var0 == 1 {
         jobj::clear_flags(&mut r.game.objs.jobjs, child, HIDDEN);
     } else {
         jobj::set_flags(&mut r.game.objs.jobjs, child, HIDDEN);
     }
-    let Some(owner) = vars(r.game, gobj).x0.get() else {
+    let Some(owner) = vars(r.game, gobj).parent.get() else {
         return release(r, gobj);
     };
     if r.clink_milk_done(owner) {
         return release(r, gobj);
     }
     let word = r.clink_appeal_cmd_var1(owner);
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = word;
+    item_mut(r.game, gobj).cmd_var0 = word;
     let s = mem(crate::game::state::Running::model_scale(
         r.game.fighter(owner),
     ));

@@ -103,10 +103,10 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     v.set_i32(DUST_FRAMES, dust);
     v.set_i32(SPREAD, fp::fctiwz(reg(spread)));
     let ip = item_mut(r.game, gobj);
-    ip.xDCC_flag.b3 = true;
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDB4_itcmd_var2 = 1;
+    ip.state_flags.b3 = true;
+    ip.cmd_var0 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var2 = 1;
     let first = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, first);
     play_sfx(r, gobj, 0x2723, 0x7F, 0x40);
@@ -134,7 +134,7 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 /// standing.
 #[doc(alias = "it_802C9E44")]
 pub fn out_landed(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).xDCC_flag.b4567 = 0xE;
+    item_mut(r.game, gobj).state_flags.b4567 = 0xE;
     lib2725::clear_velocity(r.game, gobj);
     stand(r, gobj);
 }
@@ -152,13 +152,13 @@ pub fn stand(r: &mut Running, gobj: GObjId) {
 /// past the top of the blast zone it goes up there.
 #[doc(alias = "itKabigon_UnkMotion0_Anim")]
 pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xDB0_itcmd_var1 != 0 {
+    if item(r.game, gobj).cmd_var1 != 0 {
         let leap = pokemon::vars(r.game, gobj).f32(LEAP);
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.y = leap;
+        ip.vel.y = leap;
         maplib::enter_air(ip);
-        if ip.xDB4_itcmd_var2 != 0 {
-            ip.xDB4_itcmd_var2 = 0;
+        if ip.cmd_var2 != 0 {
+            ip.cmd_var2 = 0;
         }
     }
     let top = stage::blast_top(r.game);
@@ -172,7 +172,7 @@ pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itKabigon_UnkMotion0_Phys")]
 pub fn phys0(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if ip.xDB0_itcmd_var1 == 0 && ip.ground_or_air == 1 {
+    if ip.cmd_var1 == 0 && ip.ground_or_air == 1 {
         super::gravity(r, gobj);
     }
 }
@@ -182,7 +182,7 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itKabigon_UnkMotion0_Coll")]
 pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item(r.game, gobj);
-    if ip.xDB0_itcmd_var1 == 0 {
+    if ip.cmd_var1 == 0 {
         if ip.ground_or_air == 1 {
             fall(r, gobj, landed_nothing);
         } else {
@@ -196,7 +196,7 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 /// count from `itPokemonAttributes`' `x14`).
 #[doc(alias = "it_802CA014")]
 pub fn dust_when_due(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDB0_itcmd_var1 == 0 {
+    if item(r.game, gobj).cmd_var1 == 0 {
         return;
     }
     let v = pokemon::vars(r.game, gobj);
@@ -224,7 +224,7 @@ pub fn go_up(r: &mut Running, gobj: GObjId) {
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     effect_hitlag(r.game, gobj);
-    item_mut(r.game, gobj).x40_vel.y = 0.0;
+    item_mut(r.game, gobj).vel.y = 0.0;
     set_size(r, gobj);
     play_sfx(r, gobj, 0x2724, 0x7F, 0x40);
 }
@@ -234,18 +234,18 @@ pub fn go_up(r: &mut Running, gobj: GObjId) {
 /// animation loops at its size up there (`itKabigon_UnkMotion1_Anim_inline`).
 #[doc(alias = "itKabigon_UnkMotion1_Anim")]
 pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xDAC_itcmd_var0 == 0 {
+    if item(r.game, gobj).cmd_var0 == 0 {
         let v = pokemon::vars(r.game, gobj);
         let wait = v.i32(WAIT);
         if wait <= 0 {
             let drop = v.f32(DROP);
-            item_mut(r.game, gobj).xDAC_itcmd_var0 = 1;
+            item_mut(r.game, gobj).cmd_var0 = 1;
             let j = jobj_of(r.game, gobj);
             jobj::clear_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
             let top = stage::blast_top(r.game);
             let ip = item_mut(r.game, gobj);
             ip.pos.y = top;
-            ip.x40_vel.y = drop;
+            ip.vel.y = drop;
             camera::request_quake(r, QUAKE_SMALL, None);
         } else {
             v.set_i32(WAIT, wait.wrapping_sub(1));

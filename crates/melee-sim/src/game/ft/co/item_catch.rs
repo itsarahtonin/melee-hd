@@ -160,7 +160,7 @@ impl Running<'_> {
         let me = self.game.player_entity_at(slot, sub);
         let ip = item(self.game, it);
         let owner = ip.owner;
-        if me != owner && ip.xDC8_word.flags.x14 {
+        if me != owner && ip.flags.flags.thrown {
             self.count_bonus(slot, BONUS_CATCH);
             if lib26b1::kind(self.game, it) == ItKind::MrSaturn {
                 self.set_point(slot, BONUS_DOSEI, 1);

@@ -101,14 +101,14 @@ pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) {
 fn velocity_from_angle(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let facing = reg(ip.facing_dir);
-    let v = ip.xDD4_itemVar.kirby_cutter_beam();
+    let v = ip.vars.kirby_cutter_beam();
     let (speed, angle) = (v.speed.get(), v.angle.get());
     let c = reg(math::cos(angle));
     let vx = mem(fp::fmuls(facing, fp::fmuls(reg(speed), c)));
     let s = reg(math::sin(angle));
     let vy = mem(fp::fmuls(fp::fneg(reg(speed)), s));
-    ip.x40_vel.x = vx;
-    ip.x40_vel.y = vy;
+    ip.vel.x = vx;
+    ip.vel.y = vy;
 }
 
 /// The wave set off, `it_8029BB90`: at the angle Kirby's body leans (`ftKb_AttackDashAir_800F21C0`),
@@ -117,11 +117,11 @@ fn velocity_from_angle(r: &mut Running, gobj: GObjId) {
 pub fn start(r: &mut Running, gobj: GObjId, owner: GObjId) {
     let angle = r.kb_lean_angle(owner);
     let speed = attr_f32(r, gobj, attr::SPEED);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.kirby_cutter_beam();
+    let v = item_mut(r.game, gobj).vars.kirby_cutter_beam();
     v.angle.set(angle);
     v.speed.set(speed);
     velocity_from_angle(r, gobj);
-    item_mut(r.game, gobj).x40_vel.z = 0.0;
+    item_mut(r.game, gobj).vel.z = 0.0;
     let life = attr_f32(r, gobj, attr::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
@@ -129,7 +129,7 @@ pub fn start(r: &mut Running, gobj: GObjId, owner: GObjId) {
     maplib::enter_ground(ip);
     let facing = reg(ip.facing_dir);
     let pos = ip.pos;
-    let v = ip.xDD4_itemVar.kirby_cutter_beam();
+    let v = ip.vars.kirby_cutter_beam();
     let angle = v.angle.get();
     let dx = mem(fp::fmuls(facing, reg(math::sin(angle))));
     let dy = math::cos(angle);
@@ -153,20 +153,20 @@ pub fn physics(r: &mut Running, gobj: GObjId) {
     let child = r.game.objs.jobjs[j].child;
     let ip = item_mut(r.game, gobj);
     let pos = ip.pos;
-    ip.xDD4_itemVar.kirby_cutter_beam().init_pos.set(pos);
+    ip.vars.kirby_cutter_beam().init_pos.set(pos);
     velocity_from_angle(r, gobj);
     let ip = item_mut(r.game, gobj);
-    if ip.ground_or_air == 0 && reg(ip.x40_vel.y) < 0.0 {
-        let vy = reg(ip.x40_vel.y);
-        ip.x40_vel.y = mem(fp::fmadds(f64::from(0.05_f32), vy, vy));
+    if ip.ground_or_air == 0 && reg(ip.vel.y) < 0.0 {
+        let vy = reg(ip.vel.y);
+        ip.vel.y = mem(fp::fmadds(f64::from(0.05_f32), vy, vy));
     }
-    ip.x40_vel.z = 0.0;
-    let v = ip.xDD4_itemVar.kirby_cutter_beam();
+    ip.vel.z = 0.0;
+    let v = ip.vars.kirby_cutter_beam();
     v.speed.update(|s| mem(fp::fsubs(reg(s), decel)));
     if reg(v.speed.get()) < f64::from(0.01_f32) {
         v.speed.set(0.01);
     }
-    let hidden = reg(ip.xD44_lifeTimer) <= 5.0;
+    let hidden = reg(ip.life_timer) <= 5.0;
     let jobjs = &mut r.game.objs.jobjs;
     if hidden {
         jobj::set_flags_all(jobjs, child, jobj::HIDDEN);
@@ -178,7 +178,7 @@ pub fn physics(r: &mut Running, gobj: GObjId) {
 /// The floor's angle under it, its way (`facing · atan2(normal.x, normal.y)`).
 fn floor_angle(r: &mut Running, gobj: GObjId) -> f32 {
     let ip = item(r.game, gobj);
-    let n = ip.x378_itemColl.floor.normal;
+    let n = ip.coll.floor.normal;
     mem(fp::fmuls(reg(ip.facing_dir), reg(math::atan2(n.x, n.y))))
 }
 
@@ -190,37 +190,25 @@ pub fn collide(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).ground_or_air == 0 {
         if ground::ground(r, gobj) {
             let a = floor_angle(r, gobj);
-            item_mut(r.game, gobj)
-                .xDD4_itemVar
-                .kirby_cutter_beam()
-                .angle
-                .set(a);
+            item_mut(r.game, gobj).vars.kirby_cutter_beam().angle.set(a);
         } else {
             let ip = item_mut(r.game, gobj);
             maplib::enter_air(ip);
             ip.pos.y = mem(fp::fadds(reg(ip.pos.y), f64::from(0.001_f32)));
-            let y = &mut ip.x378_itemColl.last_pos.y;
+            let y = &mut ip.coll.last_pos.y;
             *y = mem(fp::fadds(reg(*y), f64::from(0.001_f32)));
         }
     } else if ground::air(r, gobj) {
         maplib::enter_ground(item_mut(r.game, gobj));
         let a = floor_angle(r, gobj);
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .kirby_cutter_beam()
-            .angle
-            .set(a);
+        item_mut(r.game, gobj).vars.kirby_cutter_beam().angle.set(a);
     }
     let j = jobj_of(r.game, gobj).expect("the wave without a model");
-    let angle = item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .kirby_cutter_beam()
-        .angle
-        .get();
+    let angle = item_mut(r.game, gobj).vars.kirby_cutter_beam().angle.get();
     lib2725::set_rotation_x(r.game, j, angle);
     let ip = item(r.game, gobj);
-    let flags = ip.x378_itemColl.env_flags;
-    let vx = reg(ip.x40_vel.x);
+    let flags = ip.coll.env_flags;
+    let vx = reg(ip.vel.x);
     if vx == 0.0 {
         flags & LEFT_WALL != 0 || flags & RIGHT_WALL != 0
     } else if vx > 0.0 {
@@ -257,15 +245,11 @@ fn reangle(r: &mut Running, gobj: GObjId) {
         } else {
             std::f64::consts::PI
         };
-        let t = reg(math::atan2(ip.x40_vel.y, ip.x40_vel.x));
+        let t = reg(math::atan2(ip.vel.y, ip.vel.x));
         mem(fp::frsp(fp::fadd(base, t)))
     };
     let a = normalize(a);
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .kirby_cutter_beam()
-        .angle
-        .set(a);
+    item_mut(r.game, gobj).vars.kirby_cutter_beam().angle.set(a);
     let j = jobj_of(r.game, gobj).expect("the wave without a model");
     lib2725::set_rotation_x(r.game, j, a);
     let facing = reg(item(r.game, gobj).facing_dir);
@@ -279,8 +263,8 @@ fn reangle(r: &mut Running, gobj: GObjId) {
 pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-    ip.x40_vel.x = mem(fp::fneg(reg(ip.x40_vel.x)));
-    ip.x40_vel.y = mem(fp::fneg(reg(ip.x40_vel.y)));
+    ip.vel.x = mem(fp::fneg(reg(ip.vel.x)));
+    ip.vel.y = mem(fp::fneg(reg(ip.vel.y)));
     reangle(r, gobj);
     false
 }
@@ -290,11 +274,11 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_2725_Logic7_ShieldBounced")]
 pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    let n = ip.xC58;
-    ip.x40_vel.mirror_xy(n);
-    let a = normalize(math::atan2(ip.x40_vel.y, ip.x40_vel.x));
-    ip.xDD4_itemVar.kirby_cutter_beam().angle.set(a);
-    ip.facing_dir = if reg(ip.x40_vel.x) >= 0.0 { 1.0 } else { -1.0 };
+    let n = ip.shield_normal;
+    ip.vel.mirror_xy(n);
+    let a = normalize(math::atan2(ip.vel.y, ip.vel.x));
+    ip.vars.kirby_cutter_beam().angle.set(a);
+    ip.facing_dir = if reg(ip.vel.x) >= 0.0 { 1.0 } else { -1.0 };
     reangle(r, gobj);
     false
 }

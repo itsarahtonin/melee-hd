@@ -161,12 +161,12 @@ pub static GRAPPLE: Tether = Tether {
     vars: |v| {
         let v = v.samus_grapple();
         tether::Vars {
-            tip: &mut v.x0,
-            hand: &mut v.x4,
-            fighter: &mut v.x8,
-            tip_model: &mut v.xC,
-            frame: &mut v.unk_10,
-            done: &mut v.x14,
+            tip: &mut v.tip,
+            hand: &mut v.hand,
+            fighter: &mut v.fighter,
+            tip_model: &mut v.tip_model,
+            frame: &mut v.frame,
+            done: &mut v.done,
         }
     },
     slot: crate::game::ft::samus::u::GRAPPLE,
@@ -301,11 +301,7 @@ fn on_spawn(r: &mut Running, beam: GObjId, owner: GObjId) {
     if x16 == 0 {
         r.game.fighter_mut(owner).u[0x14] = 0;
     }
-    item_mut(r.game, beam)
-        .xDD4_itemVar
-        .samus_grapple()
-        .x16
-        .set(x16);
+    item_mut(r.game, beam).vars.samus_grapple().hanging.set(x16);
 }
 
 /// The beam's own animations, after its links.
@@ -321,11 +317,7 @@ fn after_links(r: &mut Running, beam: GObjId) {
 
 /// Hanging: the sequence's beam (`x16`) with Z held lengthens her hang a frame.
 fn on_hang(r: &mut Running, gobj: GObjId, f: GObjId) {
-    let x16 = item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .samus_grapple()
-        .x16
-        .get();
+    let x16 = item_mut(r.game, gobj).vars.samus_grapple().hanging.get();
     let fp = r.game.fighter_mut(f);
     if x16 != 0 && fp.input.held_buttons[0] & PAD_Z != 0 {
         let v = fp::fadds(reg(fp.mv_f32(tether::MV_HANG)), 1.0);
@@ -450,13 +442,7 @@ pub fn make_links(
         fp::fmuls(count, reg(link))
     };
     let mut n = fp::fctiwz(fp::fdivs(fp::fmuls(temp, coeff), reg(link)));
-    if item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .samus_grapple()
-        .x16
-        .get()
-        == 1
-    {
+    if item_mut(r.game, gobj).vars.samus_grapple().hanging.get() == 1 {
         n = n.wrapping_mul(2);
     }
     r.game.it.grapple_lengths = Lengths {
@@ -466,9 +452,9 @@ pub fn make_links(
     };
     image_lengths(a.0.at(attr::N), n, &w);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .samus_grapple()
-        .x15
+        .links_made
         .set(n as u8);
     let mut prev_link: Option<ItemLinkId> = None;
     let (mut head, mut tail, mut result) = (None, None, None);
@@ -500,9 +486,9 @@ pub fn make_links(
         k.gobj = Some(g);
         k.vel = Vec3::new(0.0, 0.0, 0.0);
         k.pos = Vec3::new(0.0, 0.0, 0.0);
-        k.x2C_b0 = false;
-        k.x2C_b1 = false;
-        k.x2C_b2 = false;
+        k.out = false;
+        k.touching = false;
+        k.sounded = false;
         link::init_coll_fixed(r, l, size);
         if i == n - 1 && i != 0 {
             // `samus_grapple_setup_tail`.
@@ -520,12 +506,12 @@ pub fn make_links(
         } else {
             link_model(r, g, a.0, if i == 0 { 0 } else { (i % 3) as usize });
         }
-        link_mut(r.game, l).x1CC = -1;
+        link_mut(r.game, l).wall_line = -1;
         prev_link = Some(l);
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.samus_grapple();
-    v.x0.set(tail);
-    v.x4.set(head);
+    let v = item_mut(r.game, gobj).vars.samus_grapple();
+    v.tip.set(tail);
+    v.hand.set(head);
     result
 }
 
@@ -700,12 +686,7 @@ fn ground_swing(r: &mut Running, f: GObjId, slot: SwingSlot) {
         .expect("a grapple beam's fighter without it");
     let fp = r.game.fighter(f);
     if fp.ground_or_air != crate::game::ft::common::GA_GROUND
-        || item_mut(r.game, beam)
-            .xDD4_itemVar
-            .samus_grapple()
-            .x16
-            .get()
-            != 1
+        || item_mut(r.game, beam).vars.samus_grapple().hanging.get() != 1
     {
         return;
     }
@@ -727,9 +708,9 @@ fn ground_swing(r: &mut Running, f: GObjId, slot: SwingSlot) {
         let [a, b, c, d, e] = SWING_HITBOX;
         let fid = r.game.fighter_id(f);
         swing_hitbox(r, f, fid, [a, b, c, d, e, sixth]);
-        let v = item_mut(r.game, beam).xDD4_itemVar.samus_grapple();
-        let n = v.x16.get();
-        v.x16.set(n + 1);
+        let v = item_mut(r.game, beam).vars.samus_grapple();
+        let n = v.hanging.get();
+        v.hanging.set(n + 1);
     }
 }
 
@@ -773,18 +754,13 @@ pub fn lead(
         k.pos = p;
         k.coll_data.cur_pos = k.pos;
         k.coll_data.last_pos = k.coll_data.cur_pos;
-        k.x2C_b0 = true;
+        k.out = true;
     }
     ground_swing(r, f, slot);
     let next = lk(r.game, l).next;
     let beam = r.game.fighter(f).u.gobj_at(0x10).expect("the beam");
     if r.game.fighter(f).input.held_buttons[0] & PAD_Z != 0
-        && item_mut(r.game, beam)
-            .xDD4_itemVar
-            .samus_grapple()
-            .x16
-            .get()
-            == 1
+        && item_mut(r.game, beam).vars.samus_grapple().hanging.get() == 1
         && let Some(t) = r.nearest_fighter(fid)
     {
         let tp = r.game.fighters[t.0].cur_pos;
@@ -803,11 +779,11 @@ pub fn lead(
     if result != 0 {
         result = if result & 0x3F != 0 {
             let w = lk(r.game, l).coll_data.left_facing_wall.index;
-            link_mut(r.game, l).x1CC = w;
+            link_mut(r.game, l).wall_line = w;
             1
         } else if result & 0xFC0 != 0 {
             let w = lk(r.game, l).coll_data.right_facing_wall.index;
-            link_mut(r.game, l).x1CC = w;
+            link_mut(r.game, l).wall_line = w;
             1
         } else {
             2
@@ -818,7 +794,7 @@ pub fn lead(
     let (max, min) = (a.f(r, attr::LINK), a.f(r, attr::LINK_MIN));
     let mut dir = Vec3::default();
     while let Some(n) = next {
-        if lk(r.game, n).x2C_b0 {
+        if lk(r.game, n).out {
             let vy = lk(r.game, n).vel.y;
             let s = swing(r, vy, 1.0);
             let k = link_mut(r.game, n);
@@ -836,7 +812,7 @@ pub fn lead(
             let at = lk(r.game, cur).pos;
             if direction(*pos, at, &mut dir) > max {
                 hold_to(r, n, at, dir, max);
-                link_mut(r.game, n).x2C_b0 = true;
+                link_mut(r.game, n).out = true;
                 place_coll(r.game, n);
             } else {
                 return result;
@@ -879,7 +855,7 @@ pub fn fall_back(
     let (max, min) = (a.f(r, attr::LINK), a.f(r, attr::LINK_MIN));
     let mut dir = Vec3::default();
     while let Some(n) = next {
-        if lk(r.game, n).x2C_b0 {
+        if lk(r.game, n).out {
             let vy = lk(r.game, n).vel.y;
             let s = swing(r, vy, fp::frsp(0.6));
             let k = link_mut(r.game, n);
@@ -897,7 +873,7 @@ pub fn fall_back(
             let at = lk(r.game, cur).pos;
             if direction(*pos, at, &mut dir) > max {
                 hold_to(r, n, at, dir, max);
-                link_mut(r.game, n).x2C_b0 = true;
+                link_mut(r.game, n).out = true;
                 place_coll(r.game, n);
             } else {
                 return result;
@@ -937,7 +913,7 @@ pub fn hang_links(
     let mut cur = l;
     let mut prev = lk(r.game, cur).prev;
     while let Some(p) = prev {
-        if lk(r.game, cur).x2C_b0 {
+        if lk(r.game, cur).out {
             break;
         }
         cur = p;
@@ -984,7 +960,7 @@ pub fn pay_out(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs) -> bool
     let max = a.f(r, attr::LINK);
     let mut dir = Vec3::default();
     while let Some(n) = next {
-        if lk(r.game, n).x2C_b0 {
+        if lk(r.game, n).out {
             let vy = lk(r.game, n).vel.y;
             let s = swing(r, vy, fp::frsp(0.6));
             let k = link_mut(r.game, n);
@@ -999,7 +975,7 @@ pub fn pay_out(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs) -> bool
             let at = lk(r.game, cur).pos;
             if direction(*pos, at, &mut dir) > max {
                 hold_to(r, n, at, dir, max);
-                link_mut(r.game, n).x2C_b0 = true;
+                link_mut(r.game, n).out = true;
                 place_coll(r.game, n);
             } else {
                 return false;
@@ -1015,7 +991,7 @@ pub fn pay_out(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs) -> bool
 #[doc(alias = "it_802A4454")]
 pub fn ride_line(r: &mut Running, l: ItemLinkId) {
     let k = lk(r.game, l);
-    let (line, at) = (k.x1CC, k.pos);
+    let (line, at) = (k.wall_line, k.pos);
     let g = r.game.geometry.as_ref().expect("no collision geometry");
     if !g.line_live(line) {
         return;
@@ -1040,7 +1016,7 @@ pub fn wind_in(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, speed: 
     let mut dir = Vec3::default();
     let mut d = 0.0;
     while let Some(n) = next {
-        if lk(r.game, cur).x2C_b0 {
+        if lk(r.game, cur).out {
             d = direction(lk(r.game, cur).pos, *pos, &mut dir);
             break;
         }
@@ -1054,7 +1030,7 @@ pub fn wind_in(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, speed: 
         if !(speed > d) {
             break;
         }
-        link_mut(r.game, cur).x2C_b0 = false;
+        link_mut(r.game, cur).out = false;
         d = direction(lk(r.game, n).pos, *pos, &mut dir);
         cur = n;
         next = lk(r.game, n).prev;
@@ -1101,7 +1077,7 @@ fn retract_chain(
     let mut cur = l;
     let mut next = lk(r.game, l).prev;
     while let Some(n) = next {
-        if lk(r.game, cur).x2C_b0 {
+        if lk(r.game, cur).out {
             break;
         }
         cur = n;
@@ -1113,7 +1089,7 @@ fn retract_chain(
         if !(speed > d) {
             break;
         }
-        link_mut(r.game, cur).x2C_b0 = false;
+        link_mut(r.game, cur).out = false;
         d = direction(lk(r.game, n).pos, pos, &mut dir);
         cur = n;
         next = lk(r.game, n).prev;
@@ -1144,7 +1120,7 @@ pub fn climb(
     let mut next = lk(r.game, tail).prev;
     let saved = lk(r.game, tip).pos;
     while let Some(n) = next {
-        if lk(r.game, tail).x2C_b0 {
+        if lk(r.game, tail).out {
             break;
         }
         tail = n;
@@ -1159,7 +1135,7 @@ pub fn climb(
         if !(speed > d) {
             break;
         }
-        link_mut(r.game, tail).x2C_b0 = false;
+        link_mut(r.game, tail).out = false;
         d = direction(lk(r.game, n).pos, *pos, &mut dir);
         tail = n;
         next = lk(r.game, n).prev;
@@ -1174,7 +1150,7 @@ pub fn climb(
     let mut head = tip;
     let mut cur = lk(r.game, head).next;
     while let Some(c) = cur {
-        if !lk(r.game, c).x2C_b0 {
+        if !lk(r.game, c).out {
             break;
         }
         count += 1;
@@ -1207,7 +1183,7 @@ pub fn hold_on(r: &mut Running, hand: ItemLinkId, tip: ItemLinkId, pos: &mut Vec
     let saved = lk(r.game, tip).pos;
     let mut next = lk(r.game, hand).prev;
     while let Some(n) = next {
-        if lk(r.game, cur).x2C_b0 {
+        if lk(r.game, cur).out {
             break;
         }
         cur = n;
@@ -1221,7 +1197,7 @@ pub fn hold_on(r: &mut Running, hand: ItemLinkId, tip: ItemLinkId, pos: &mut Vec
     let mut head = tip;
     let mut l = lk(r.game, head).next;
     while let Some(c) = l {
-        if !lk(r.game, c).x2C_b0 {
+        if !lk(r.game, c).out {
             break;
         }
         if !retracted {
@@ -1266,7 +1242,7 @@ pub fn before_attach(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, f
     let max = a.f(r, attr::LINK);
     let mut dir = Vec3::default();
     while let Some(n) = next {
-        if lk(r.game, n).x2C_b0 {
+        if lk(r.game, n).out {
             let at = lk(r.game, cur).pos;
             if direction(lk(r.game, n).pos, at, &mut dir) > max {
                 hold_to(r, n, at, dir, max);
@@ -1276,7 +1252,7 @@ pub fn before_attach(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, f
             let at = lk(r.game, cur).pos;
             if direction(*pos, at, &mut dir) > max {
                 hold_to(r, n, at, dir, max);
-                link_mut(r.game, n).x2C_b0 = true;
+                link_mut(r.game, n).out = true;
                 place_coll(r.game, n);
             } else {
                 return false;

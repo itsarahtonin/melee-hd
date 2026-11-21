@@ -95,8 +95,8 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, dir: Vec3, facing: f32)
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = facing;
     let vx = fp::fmuls(reg(dir.x), reg(speed));
-    ip.x40_vel.x = mem(fp::fmuls(vx, reg(ip.facing_dir)));
-    ip.x40_vel.y = mem(fp::fmadds(reg(dir.y), reg(speed), 0.5));
+    ip.vel.x = mem(fp::fmuls(vx, reg(ip.facing_dir)));
+    ip.vel.y = mem(fp::fmadds(reg(dir.y), reg(speed), 0.5));
     super::super::item::debug_owner_bubbles(r.game, gobj, Some(parent));
 }
 
@@ -161,11 +161,11 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
 pub fn tick(r: &mut Running, gobj: GObjId) -> bool {
     let x34 = common_data(r.game).u32(r.data, super::super::data::common::X34);
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    if reg(ip.life_timer) <= 0.0 {
         return true;
     }
-    if reg(ip.xD44_lifeTimer) <= fp::frsp(f64::from(x34)) {
+    if reg(ip.life_timer) <= fp::frsp(f64::from(x34)) {
         lib2725::flicker(r.game, r.data, gobj);
     }
     false
@@ -194,8 +194,8 @@ pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_80299FB4")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = 0.0;
-    ip.x40_vel.x = 0.0;
+    ip.vel.y = 0.0;
+    ip.vel.x = 0.0;
     lib26b1::enable_pickup(r.game, gobj);
     change_state(r, gobj, 3, 1);
 }

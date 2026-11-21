@@ -79,14 +79,14 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 #[doc(alias = "it_802993E0")]
 pub fn surface_direction(r: &mut Running, gobj: GObjId, flags: i32) {
     let ip = item_mut(r.game, gobj);
-    let cd = &ip.x378_itemColl;
+    let cd = &ip.coll;
     let surfaces = [
         (FLOOR, cd.floor.normal),
         (CEILING, cd.ceiling.normal),
         (LEFT_WALL, cd.left_facing_wall.normal),
         (RIGHT_WALL, cd.right_facing_wall.normal),
     ];
-    let v = ip.xDD4_itemVar.lgunbeam();
+    let v = ip.vars.lgunbeam();
     v.angle0.update(clamp_angle);
     let mut d = Vec3::new(0.0, 0.0, 0.0);
     for (bit, n) in surfaces {
@@ -106,7 +106,7 @@ pub fn turn(r: &mut Running, gobj: GObjId, flags: i32) {
     if flags == 0 {
         return;
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.lgunbeam();
+    let v = item_mut(r.game, gobj).vars.lgunbeam();
     let (dir, vel) = (v.position1.get(), v.velocity.get());
     let a = math::atan2(dir.x, dir.y);
     let diff = clamp_angle_reverse(mem(fp::fsubs(reg(math::atan2(vel.x, vel.y)), reg(a))));
@@ -158,31 +158,23 @@ pub fn spawn(
     let lifetime = attr(r, gobj, LIFETIME);
     let ip = item_mut(r.game, gobj);
     // `Item_ClearCmdVars`.
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDD4_itemVar.lgunbeam().lifetime.set(lifetime);
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    ip.vars.lgunbeam().lifetime.set(lifetime);
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .lgunbeam()
-        .position0
-        .set(pos);
+    item_mut(r.game, gobj).vars.lgunbeam().position0.set(pos);
     let (lo, hi) = (reg(attr(r, gobj, MIN_SPEED)), reg(attr(r, gobj, MAX_SPEED)));
     let rng = reg(r.game.objs.rng.draw_f32());
     let speed = mem(fp::fmadds(fp::fsubs(hi, lo), rng, lo));
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .lgunbeam()
-        .angle1
-        .set(speed);
+    item_mut(r.game, gobj).vars.lgunbeam().angle1.set(speed);
     let (lo, hi) = (reg(attr(r, gobj, MIN_ANGLE)), reg(attr(r, gobj, MAX_ANGLE)));
     let rng = reg(r.game.objs.rng.draw_f32());
     let angle = mem(fp::fmadds(fp::fsubs(hi, lo), rng, lo));
     let ip = item_mut(r.game, gobj);
     let right = reg(ip.facing_dir) == fp::frsp(1.0);
-    let v = ip.xDD4_itemVar.lgunbeam();
+    let v = ip.vars.lgunbeam();
     v.angle0.set(if right {
         angle
     } else {
@@ -198,8 +190,8 @@ pub fn spawn(
         }
         mem(a)
     });
-    v.xE04.set(0);
-    ip.xDCC_flag.b3 = false;
+    v.unread_e04.set(0);
+    ip.state_flags.b3 = false;
     let look = r.game.objs.rng.below(4);
     setup(r, gobj, parent, look);
     Some(gobj)
@@ -211,15 +203,15 @@ pub fn spawn(
 pub fn setup(r: &mut Running, gobj: GObjId, parent: GObjId, look: i32) {
     // `Item_ClearFlagsAndEnterState(gobj, ip, 0)`.
     lib26b1::disable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
+    item_mut(r.game, gobj).flags.flags.held = false;
     lib2725::show(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     let at = item(r.game, gobj).pos;
     super::super::item::animate(r, gobj);
     physics(r, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.pos.x = mem(fp::fsubs(reg(ip.pos.x), reg(ip.x40_vel.x)));
-    ip.pos.y = mem(fp::fsubs(reg(ip.pos.y), reg(ip.x40_vel.y)));
+    ip.pos.x = mem(fp::fsubs(reg(ip.pos.x), reg(ip.vel.x)));
+    ip.pos.y = mem(fp::fsubs(reg(ip.pos.y), reg(ip.vel.y)));
     ground::air_stay(r, gobj);
     item_mut(r.game, gobj).pos = at;
     let j = jobj_of(r.game, gobj);
@@ -248,15 +240,15 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
 pub fn physics(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let pos = ip.pos;
-    let v = ip.xDD4_itemVar.lgunbeam();
+    let v = ip.vars.lgunbeam();
     v.position0.set(pos);
     let (speed, angle) = (reg(v.angle1.get()), v.angle0.get());
     let x = mem(fp::fmuls(speed, reg(math::sin(angle))));
     let y = mem(fp::fmuls(speed, reg(math::cos(angle))));
     let mut vel = Vec3::new(x, y, 0.0);
-    ip.x40_vel = vel;
+    ip.vel = vel;
     vel.normalize();
-    ip.xDD4_itemVar.lgunbeam().velocity.set(vel);
+    ip.vars.lgunbeam().velocity.set(vel);
 }
 
 /// `itLgunbeam_UnkMotion0_Coll`: a small fixed box, an airborne pass, and turning along what
@@ -264,11 +256,11 @@ pub fn physics(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itLgunbeam_UnkMotion0_Coll")]
 pub fn collide(r: &mut Running, gobj: GObjId) -> bool {
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .lgunbeam()
         .angle0
         .update(clamp_angle);
-    match &mut item_mut(r.game, gobj).x378_itemColl.ecb_source.shape {
+    match &mut item_mut(r.game, gobj).coll.ecb_source.shape {
         EcbShape::Box {
             up,
             down,
@@ -284,7 +276,7 @@ pub fn collide(r: &mut Running, gobj: GObjId) -> bool {
         other => panic!("a flame's ECB source holds {other:?}, not a box"),
     }
     ground::air_stay(r, gobj);
-    let env = item(r.game, gobj).x378_itemColl.env_flags;
+    let env = item(r.game, gobj).coll.env_flags;
     let mut flags = 0;
     if env & (0x8000 | 0x10000) != 0 {
         flags |= FLOOR;
@@ -326,12 +318,12 @@ pub fn gone(_: &mut Running, _: GObjId) -> bool {
 #[doc(alias = "itLGunBeam_Logic39_Reflected")]
 pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.lgunbeam();
+    let v = ip.vars.lgunbeam();
     v.angle0
         .update(|a| clamp_angle(mem(fp::frsp(fp::fadd(reg(a), PI)))));
     ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-    ip.x40_vel.x = mem(fp::fneg(reg(ip.x40_vel.x)));
-    ip.x40_vel.y = mem(fp::fneg(reg(ip.x40_vel.y)));
+    ip.vel.x = mem(fp::fneg(reg(ip.vel.x)));
+    ip.vel.y = mem(fp::fneg(reg(ip.vel.y)));
     false
 }
 

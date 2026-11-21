@@ -106,13 +106,13 @@ pub fn spawn(
     let gobj = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
     // `Item_ClearCmdVars`.
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-    let v = ip.xDD4_itemVar.zelda_din_fire_explode();
-    v.xDD4.set(size);
-    v.xDDC.set(Some(parent));
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    let v = ip.vars.zelda_din_fire_explode();
+    v.size.set(size);
+    v.unread_parent.set(Some(parent));
     start(r, gobj);
     Some(gobj)
 }
@@ -124,9 +124,9 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).owner = None;
     crate::game::ef::eflib::destroy_all(r, gobj);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .zelda_din_fire_explode()
-        .xDE0
+        .started
         .set(0);
 }
 
@@ -137,29 +137,29 @@ pub fn start(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     // `Item_ClearFlagsAndEnterState(gobj, ip, 0)`.
     lib26b1::disable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
+    item_mut(r.game, gobj).flags.flags.held = false;
     lib2725::show(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     lib2725::set_lifetime(r.game, r.data, gobj, 60.0);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .zelda_din_fire_explode()
-        .xDD8
+        .first_scale
         .set(0.0);
     ef::spawn(r, GFX, Some(gobj), &[Arg::JObj(j)]);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .zelda_din_fire_explode()
-        .xDE0
+        .started
         .set(1);
     // `Item_802694CC`.
     super::super::item::animate(r, gobj);
     animate(r, gobj);
     let full = reg(attr_f32(r, gobj, attr::SIZE));
     let size = reg(item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .zelda_din_fire_explode()
-        .xDD4
+        .size
         .get());
     let t = fp::fdivs(size, full);
     let pos = item(r.game, gobj).pos;
@@ -192,15 +192,15 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
         reg(attr_f32(r, gobj, attr::DAMAGE_GROWTH)),
     );
     let size = reg(item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .zelda_din_fire_explode()
-        .xDD4
+        .size
         .get());
     let t = fp::fdivs(fp::fsubs(max, min), full);
     let s = mem(fp::fmadds(size, t, min));
     let j = jobj_of(r.game, gobj).expect("Din's Fire's explosion without a model");
     jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
-    if item(r.game, gobj).x5D4_hitboxes[0].hit.state != hitcapsule::DISABLED {
+    if item(r.game, gobj).hitboxes[0].hit.state != hitcapsule::DISABLED {
         let dmg = mem(fp::fmadds(size, growth, base));
         coll::set_hit_damage(
             r.game,
@@ -210,13 +210,13 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
             crate::ppc::cvt_fp2unsigned(reg(dmg)),
         );
         let ip = item_mut(r.game, gobj);
-        let first = ip.x5D4_hitboxes[0].hit.scale;
-        let v = ip.xDD4_itemVar.zelda_din_fire_explode();
-        if v.xDD8.get() == 0.0 {
-            v.xDD8.set(first);
+        let first = ip.hitboxes[0].hit.scale;
+        let v = ip.vars.zelda_din_fire_explode();
+        if v.first_scale.get() == 0.0 {
+            v.first_scale.set(first);
         }
-        let k = v.xDD8.get();
-        ip.x5D4_hitboxes[0].hit.scale = mem(fp::fmuls(reg(k), reg(s)));
+        let k = v.first_scale.get();
+        ip.hitboxes[0].hit.scale = mem(fp::fmuls(reg(k), reg(s)));
     }
     lib2725::tick_lifetime(r.game, gobj)
 }
@@ -226,8 +226,8 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itZeldadinfireexplode_UnkMotion0_Phys")]
 pub fn physics(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
 }
 
 /// Forgets a GObj the explosion points to, `itZeldaDinFireExplode_Logic66_EvtUnk`.

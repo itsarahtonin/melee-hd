@@ -89,8 +89,8 @@ fn is_air(r: &Running, gobj: GObjId) -> bool {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     pokemon::face_nearest_opponent(r, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDB0_itcmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    ip.cmd_var1 = 0;
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
     enter_air(r, gobj);
@@ -230,7 +230,7 @@ pub fn leap(r: &mut Running, gobj: GObjId) {
     let y = mem(fp::fadds(reg(v.f32(VEL + 4)), reg(lift)));
     v.set_f32(VEL + 4, y);
     let vel = v.vec(VEL);
-    item_mut(r.game, gobj).x40_vel = vel;
+    item_mut(r.game, gobj).vel = vel;
     lib2725::face_motion(r.game, gobj);
 }
 
@@ -243,9 +243,9 @@ pub fn charge(r: &mut Running, gobj: GObjId) {
     let frames = attr_i32(r, gobj, 0x18);
     let speed = attr_f32(r, gobj, 4);
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::frsp(f64::from(frames)));
+    ip.life_timer = mem(fp::frsp(f64::from(frames)));
     let vx = mem(fp::fmuls(reg(speed), reg(ip.facing_dir)));
-    ip.x40_vel.x = vx;
+    ip.vel.x = vx;
     let vx = mem(fp::fmuls(reg(speed), reg(ip.facing_dir)));
     let v = pokemon::vars(r.game, gobj);
     v.set_f32(VEL, vx);
@@ -263,7 +263,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
         effect_hitlag(r.game, gobj);
     }
     bone_motion(r, gobj);
-    if item(r.game, gobj).xDB0_itcmd_var1 != 0 {
+    if item(r.game, gobj).cmd_var1 != 0 {
         let j = jobj_of(r.game, gobj).expect("Scizor without a model");
         let frames = attr_i32(r, gobj, 0x20);
         let now = r.game.objs.jobjs[j].rotate.y;
@@ -274,15 +274,15 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
         v.set_f32(TURN, turn);
         lib2725::set_rotation_y(r.game, j, turn);
         let ip = item_mut(r.game, gobj);
-        ip.xDB0_itcmd_var1 = ip.xDB0_itcmd_var1.wrapping_add(1);
-        if ip.xDB0_itcmd_var1 > frames as u32 {
-            ip.xDB0_itcmd_var1 = 0;
+        ip.cmd_var1 = ip.cmd_var1.wrapping_add(1);
+        if ip.cmd_var1 > frames as u32 {
+            ip.cmd_var1 = 0;
         }
     }
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    if reg(ip.xD44_lifeTimer) < 0.0 {
-        if ip.xDAC_itcmd_var0 != 0 {
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    if reg(ip.life_timer) < 0.0 {
+        if ip.cmd_var0 != 0 {
             fly_off(r, gobj);
         } else {
             let before = ip.facing_dir;
@@ -290,10 +290,10 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
             let frames = attr_i32(r, gobj, 0x1C);
             let ip = item_mut(r.game, gobj);
             if reg(before) != reg(ip.facing_dir) {
-                ip.xDB0_itcmd_var1 = 1;
+                ip.cmd_var1 = 1;
             }
-            ip.xDAC_itcmd_var0 = 1;
-            ip.xD44_lifeTimer = mem(fp::frsp(f64::from(frames)));
+            ip.cmd_var0 = 1;
+            ip.life_timer = mem(fp::frsp(f64::from(frames)));
             maplib::enter_air(ip);
         }
     }
@@ -316,15 +316,15 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
     }
     let m = pokemon::vars(r.game, gobj).vec(VEL);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fadds(reg(ip.x40_vel.x), reg(m.x)));
-    ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), reg(m.y)));
-    ip.x40_vel.z = mem(fp::fadds(reg(ip.x40_vel.z), reg(m.z)));
+    ip.vel.x = mem(fp::fadds(reg(ip.vel.x), reg(m.x)));
+    ip.vel.y = mem(fp::fadds(reg(ip.vel.y), reg(m.y)));
+    ip.vel.z = mem(fp::fadds(reg(ip.vel.z), reg(m.z)));
 }
 
 /// `itHassam_UnkMotion1_Coll`: until it leaps.
 #[doc(alias = "itHassam_UnkMotion1_Coll")]
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xDAC_itcmd_var0 == 0 {
+    if item(r.game, gobj).cmd_var0 == 0 {
         floor_or_fall(r, gobj);
     }
     false
@@ -357,7 +357,7 @@ pub fn fly_off(r: &mut Running, gobj: GObjId) {
         .decide_camera_read(&bits(d), |_, t| bits(toward(t.position)));
     pokemon::vars(r.game, gobj).set_vec(VEL, d);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    ip.vel = Vec3::new(0.0, 0.0, 0.0);
     ip.facing_dir = 0.0;
     lib2725::set_rotation_y(r.game, j, 0.0);
 }

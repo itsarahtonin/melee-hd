@@ -201,10 +201,10 @@ pub fn spawn(
     let scale = attr_of(item(r.game, gobj)).f32(r.data, item_attr::SCALE);
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
-    let v = ip.xDD4_itemVar.climbers_ice();
-    v.x0.set(owner);
-    v.x8_b0.set(false);
-    v.x4.set(scale);
+    let v = ip.vars.climbers_ice();
+    v.owner.set(owner);
+    v.thrown.set(false);
+    v.scale.set(scale);
     let id = if kind == ItKind::IceClimbersIceShot {
         0x4E9
     } else {
@@ -226,15 +226,11 @@ pub fn throw(r: &mut Running, gobj: GObjId) {
     let speed = attr_f32(r, gobj, attr::SPEED);
     let lifetime = attr_f32(r, gobj, attr::LIFETIME);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(speed), reg(ip.facing_dir)));
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
+    ip.vel.x = mem(fp::fmuls(reg(speed), reg(ip.facing_dir)));
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .climbers_ice()
-        .x8_b0
-        .set(true);
+    item_mut(r.game, gobj).vars.climbers_ice().thrown.set(true);
     lib2725::face_motion(r.game, gobj);
     effect(r, gobj, 0x4EA, 0x4AF);
     slide_effect(r, gobj);
@@ -253,7 +249,7 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let kind = ip.kind;
-    if let Some(owner) = ip.xDD4_itemVar.climbers_ice().x0.get() {
+    if let Some(owner) = ip.vars.climbers_ice().owner.get() {
         if kind == ItKind::IceClimbersIceShot {
             r.popo_forget_item(owner, &crate::game::ft::popo::special_n::POPO, gobj);
         } else {
@@ -264,11 +260,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
             );
         }
     }
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .climbers_ice()
-        .x0
-        .set(None);
+    item_mut(r.game, gobj).vars.climbers_ice().owner.set(None);
 }
 
 /// One of the ice's effects by its kind (`itClimbersice_Spawn`): on its model, facing its
@@ -303,12 +295,12 @@ fn slide_effect(r: &mut Running, gobj: GObjId) {
 fn shrink(r: &mut Running, gobj: GObjId) -> bool {
     let shrink = attr_f32(r, gobj, attr::SHRINK);
     let j = child(r, gobj);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.climbers_ice();
-    if !v.x8_b0.get() {
+    let v = item_mut(r.game, gobj).vars.climbers_ice();
+    if !v.thrown.get() {
         return false;
     }
-    let s = mem(fp::fmuls(reg(v.x4.get()), reg(shrink)));
-    v.x4.set(s);
+    let s = mem(fp::fmuls(reg(v.scale.get()), reg(shrink)));
+    v.scale.set(s);
     if let Some(j) = j {
         lib2725::set_uniform_scale(r.game, j, s);
     }
@@ -324,7 +316,7 @@ fn drop(r: &mut Running, gobj: GObjId) {
 /// Stops the ice, `it_802C1950`: no velocity, state 0.
 #[doc(alias = "it_802C1950")]
 fn stop(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 
@@ -338,10 +330,10 @@ fn slide_fall(r: &mut Running, gobj: GObjId) {
 /// `Item_TickLifetime`: done once it reaches 0, else one less.
 fn tick_lifetime(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
+    if reg(ip.life_timer) <= 0.0 {
         return true;
     }
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
     false
 }
 
@@ -356,23 +348,23 @@ fn slide(r: &mut Running, gobj: GObjId) -> bool {
     let up = reg(attr_f32(r, gobj, attr::SLOPE_UP));
     let stop_speed = reg(attr_f32(r, gobj, attr::STOP_SPEED));
     let ip = item_mut(r.game, gobj);
-    if ip.x378_itemColl.env_flags & FLOOR_MASK == 0 {
+    if ip.coll.env_flags & FLOOR_MASK == 0 {
         return false;
     }
-    let nx = reg(ip.x378_itemColl.floor.normal.x);
+    let nx = reg(ip.coll.floor.normal.x);
     let normal_sign = if nx < 0.0 { -1 } else { 1 };
-    let vel_sign = if ip.x40_vel.x < 0.0 { -1 } else { 1 };
+    let vel_sign = if ip.vel.x < 0.0 { -1 } else { 1 };
     let delta = if vel_sign != normal_sign {
         fp::fmuls(up, fp::fmuls(nx, slope))
     } else {
         fp::fmuls(down, fp::fmuls(nx, slope))
     };
-    ip.x40_vel.x = mem(fp::fadds(reg(ip.x40_vel.x), delta));
-    let vx = reg(ip.x40_vel.x);
+    ip.vel.x = mem(fp::fadds(reg(ip.vel.x), delta));
+    let vx = reg(ip.vel.x);
     let speed = if vx < 0.0 { fp::fneg(vx) } else { vx };
     if speed < stop_speed {
         // `it_8026BD84`.
-        item_mut(r.game, gobj).xDCD_flag.x0.b4 = true;
+        item_mut(r.game, gobj).hit_flags.x0.b4 = true;
         lib26b1::set_quiet(r.game, gobj);
         stop(r, gobj);
         crate::game::ef::eflib::destroy_all(r, gobj);
@@ -385,7 +377,7 @@ fn slide(r: &mut Running, gobj: GObjId) -> bool {
 fn set_damage(r: &mut Running, gobj: GObjId) {
     let scale = attr_u32(r, gobj, attr::DAMAGE_SCALE);
     let base = attr_u32(r, gobj, attr::DAMAGE);
-    let vx = reg(item(r.game, gobj).x40_vel.x);
+    let vx = reg(item(r.game, gobj).vel.x);
     let v = fp::fmuls(vx, fp::frsp(f64::from(scale as i32)));
     let v = if v < 0.0 { fp::fneg(v) } else { v };
     let damage = crate::ppc::cvt_fp2unsigned(v).wrapping_add(base);
@@ -396,7 +388,7 @@ fn set_damage(r: &mut Running, gobj: GObjId) {
 fn bounce_cost(r: &mut Running, gobj: GObjId) {
     let cost = attr_f32(r, gobj, attr::BOUNCE_COST);
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), reg(cost)));
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), reg(cost)));
 }
 
 /// A wall met (`itClimbersice_Coll`): slow enough, it bounces back at a cost to its
@@ -406,7 +398,7 @@ fn wall_bounce(r: &mut Running, gobj: GObjId) -> bool {
     if maplib::touched_wall(r.game, gobj) == 0 {
         return false;
     }
-    let vx = reg(item(r.game, gobj).x40_vel.x);
+    let vx = reg(item(r.game, gobj).vel.x);
     let speed = if vx < 0.0 { fp::fneg(vx) } else { vx };
     if speed <= max {
         maplib::bounce_off_wall(r.game, r.data, gobj);
@@ -423,7 +415,7 @@ fn wall_bounce(r: &mut Running, gobj: GObjId) -> bool {
 fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
     let max = reg(attr_f32(r, gobj, attr::BOUNCE_SPEED));
     let min_life = reg(attr_f32(r, gobj, attr::BOUNCE_MIN_LIFE));
-    let vx = reg(item(r.game, gobj).x40_vel.x);
+    let vx = reg(item(r.game, gobj).vel.x);
     let speed = if vx < 0.0 { fp::fneg(vx) } else { vx };
     if speed > max {
         return true;
@@ -432,20 +424,20 @@ fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
     lib2725::face_motion(r.game, gobj);
     let s = reg(attr_of(item(r.game, gobj)).f32(r.data, item_attr::X58));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), s));
-    ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), s));
-    ip.x40_vel.z = mem(fp::fmuls(reg(ip.x40_vel.z), s));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), s));
+    ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), s));
+    ip.vel.z = mem(fp::fmuls(reg(ip.vel.z), s));
     bounce_cost(r, gobj);
-    reg(item(r.game, gobj).xD44_lifeTimer) < min_life
+    reg(item(r.game, gobj).life_timer) < min_life
 }
 
 /// Forgets a GObj the ice points to, `itClimbersIce_Logic90_EvtUnk`: its owner, then
 /// `it_8026B894`'s.
 // `itClimbersIce_Logic90_EvtUnk`, as game/it/evt_unk.rs runs it (aliased there).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.climbers_ice();
-    if v.x0.get() == other {
-        v.x0.set(None);
+    let v = item_mut(r.game, gobj).vars.climbers_ice();
+    if v.owner.get() == other {
+        v.owner.set(None);
     }
     lib26b1::forget(r.game, gobj, other);
 }

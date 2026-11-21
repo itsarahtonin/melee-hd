@@ -228,7 +228,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::face(r, gobj, facing);
     set_coll_facing(r.game, gobj);
     zako::init_collision(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x19 = true;
+    item_mut(r.game, gobj).flags.flags.turns_to_face = true;
     set(r, gobj, off::TIMER, 0);
     set(r, gobj, off::SHRUGS, 0);
     let wait = attr_s16(r, gobj, 0x1C);
@@ -238,7 +238,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     v.set_vec(off::HURT + 4, a);
     v.set_vec(off::HURT + 0x10, b);
     v.set_f32(off::HURT + 0x1C, scale);
-    let e = item(r.game, gobj).xC1C.clone();
+    let e = item(r.game, gobj).coll_box.clone();
     let v = zako::bytes(r.game, gobj);
     v.set_f32(off::ECB, e.top);
     v.set_f32(off::ECB + 4, e.bottom);
@@ -289,7 +289,7 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
             zako::fling_away(r, gobj, &REDEAD);
         } else {
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), reg(1.5)));
+            ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), reg(1.5)));
             let n = get(r, gobj, off::SHRUGS).wrapping_add(1);
             set(r, gobj, off::SHRUGS, n);
             knocked_back(r, gobj);
@@ -303,7 +303,7 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802E8F24")]
 pub fn land(r: &mut Running, gobj: GObjId) {
     zako::settle(r, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x1A = true;
+    item_mut(r.game, gobj).flags.flags.keeps_clear = true;
     change_state(r, gobj, 1, change::ANIM_UPDATE);
 }
 
@@ -380,13 +380,13 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
     set(r, gobj, off::FRAME, n);
     let ip = item(r.game, gobj);
     let facing = reg(ip.facing_dir);
-    let nudge = reg(ip.x70_nudge.x);
+    let nudge = reg(ip.nudge.x);
     if (facing > 0.0 && nudge < 0.0) || (facing < 0.0 && nudge > 0.0) {
         turn(r, gobj);
     }
     let ip = item_mut(r.game, gobj);
-    let (normal, facing) = (ip.x378_itemColl.floor.normal, ip.facing_dir);
-    zako::along_surface(&mut ip.x40_vel, normal, facing);
+    let (normal, facing) = (ip.coll.floor.normal, ip.facing_dir);
+    zako::along_surface(&mut ip.vel, normal, facing);
 }
 
 /// Walking's collision, `itLeadead_UnkMotion2_Coll`: at a ledge or a wall it turns; off the
@@ -409,7 +409,7 @@ pub fn fall(r: &mut Running, gobj: GObjId) {
     set(r, gobj, off::TIMER, 0);
     let k = reg(attr_f32(r, gobj, 0xC));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), k));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), k));
     change_state(r, gobj, 10, change::ANIM_UPDATE);
 }
 
@@ -443,10 +443,10 @@ pub fn knocked_down_again(r: &mut Running, gobj: GObjId) {
     zako::knock_back(r, gobj, Knock::AtLeast(0.2f32 as f64));
     let fall = reg(attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = mem(fp::fmuls(reg(0.3), reg(ip.x40_vel.y)));
-    if reg(ip.x40_vel.y) <= fall {
-        ip.x40_vel.y = mem(fp::fadds(reg(0.1), fall));
+    ip.vel.x = 0.0;
+    ip.vel.y = mem(fp::fmuls(reg(0.3), reg(ip.vel.y)));
+    if reg(ip.vel.y) <= fall {
+        ip.vel.y = mem(fp::fadds(reg(0.1), fall));
     }
     set(r, gobj, off::FRAME, 1);
     let ip = item_mut(r.game, gobj);
@@ -543,8 +543,8 @@ pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itLeadead_UnkMotion7_Phys")]
 pub fn phys7(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    let (normal, facing) = (ip.x378_itemColl.floor.normal, ip.facing_dir);
-    zako::along_surface(&mut ip.x40_vel, normal, facing);
+    let (normal, facing) = (ip.coll.floor.normal, ip.facing_dir);
+    zako::along_surface(&mut ip.vel, normal, facing);
     zako::align_floor(r, gobj, facing, 5.0);
 }
 
@@ -563,9 +563,9 @@ pub fn coll_shrug(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802E98E0")]
 pub fn lie_down(r: &mut Running, gobj: GObjId) {
     stop(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x1A = false;
+    item_mut(r.game, gobj).flags.flags.keeps_clear = false;
     let k = attr_s16(r, gobj, 0x1A);
-    let frames = item(r.game, gobj).xC9C.wrapping_mul(k);
+    let frames = item(r.game, gobj).damage_taken.wrapping_mul(k);
     set(r, gobj, off::TIMER, frames);
     set(r, gobj, off::FRAME, 0);
     change_state(r, gobj, 8, change::ANIM_UPDATE);
@@ -581,8 +581,8 @@ pub fn phys8(r: &mut Running, gobj: GObjId) {
         set(r, gobj, off::TIMER, t.wrapping_sub(1));
     }
     let ip = item_mut(r.game, gobj);
-    let (normal, facing) = (ip.x378_itemColl.floor.normal, ip.facing_dir);
-    zako::along_surface(&mut ip.x40_vel, normal, facing);
+    let (normal, facing) = (ip.coll.floor.normal, ip.facing_dir);
+    zako::along_surface(&mut ip.vel, normal, facing);
     zako::align_floor(r, gobj, facing, 5.0);
 }
 
@@ -666,10 +666,10 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
     if t > 36 {
         let s = reg(attr_f32(r, gobj, 0x14));
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = mem(fp::fmuls(s, reg(ip.facing_dir)));
+        ip.vel.x = mem(fp::fmuls(s, reg(ip.facing_dir)));
     }
     if get(r, gobj, off::TIMER) > 113 {
-        item_mut(r.game, gobj).x40_vel.x = 0.0;
+        item_mut(r.game, gobj).vel.x = 0.0;
     }
     let t = get(r, gobj, off::TIMER).wrapping_add(1);
     set(r, gobj, off::TIMER, t);
@@ -689,8 +689,8 @@ pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
         }
     }
     let ip = item_mut(r.game, gobj);
-    let (normal, facing) = (ip.x378_itemColl.floor.normal, ip.facing_dir);
-    zako::along_surface(&mut ip.x40_vel, normal, facing);
+    let (normal, facing) = (ip.coll.floor.normal, ip.facing_dir);
+    zako::along_surface(&mut ip.vel, normal, facing);
     zako::answers_false(r, gobj)
 }
 
@@ -764,7 +764,7 @@ pub fn set_box(r: &mut Running, gobj: GObjId, kind: i32, step: i32) {
     let mut e = if step == 0 {
         ecb(r, gobj)
     } else {
-        item(r.game, gobj).xC1C.clone()
+        item(r.game, gobj).coll_box.clone()
     };
     let add = |a: f32, b: f32| mem(fp::fadds(reg(a), reg(b)));
     let sub = |a: f32, b: f32| mem(fp::fsubs(reg(a), reg(b)));
@@ -875,7 +875,7 @@ pub fn in_reach(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802EA804")]
 pub fn ground_ahead(r: &mut Running, gobj: GObjId, range: f32, f27: f64) -> bool {
     let ip = item(r.game, gobj);
-    let (line, pos, facing) = (ip.x378_itemColl.floor.index, ip.pos, ip.facing_dir);
+    let (line, pos, facing) = (ip.coll.floor.index, ip.pos, ip.facing_dir);
     let g = r.game.geometry.as_ref().expect("no collision geometry");
     let here = g.walk_floor(line, pos, 0.0, 0.0, f27);
     let ahead = mem(fp::fmuls(reg(facing), reg(range)));
@@ -918,7 +918,7 @@ pub fn ground_ahead(r: &mut Running, gobj: GObjId, range: f32, f27: f64) -> bool
 /// floor or ceiling (from the collision's last pass; the moved copy goes unused).
 #[doc(alias = "it_802EA988")]
 pub fn touches_ahead(r: &mut Running, gobj: GObjId, _dx: f32, _dy: f32) -> i32 {
-    let flags = item(r.game, gobj).x378_itemColl.env_flags;
+    let flags = item(r.game, gobj).coll.env_flags;
     let mut ret = 0;
     if flags & 0x3F != 0 {
         ret = 8;

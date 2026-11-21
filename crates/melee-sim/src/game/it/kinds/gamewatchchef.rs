@@ -129,12 +129,12 @@ pub fn throw(r: &mut Running, gobj: GObjId, index: i32) {
     gamewatch::vars(r, gobj).sausage.set(index);
     let life = attr_f32(r, gobj, attr::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
-    item_mut(r.game, gobj).xD5C = 0;
+    item_mut(r.game, gobj).skid = 0;
     let ahead = reg(entry_f32(r, gobj, 0x0));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(ahead, reg(ip.facing_dir)));
+    ip.vel.x = mem(fp::fmuls(ahead, reg(ip.facing_dir)));
     let up = entry_f32(r, gobj, 0x4);
-    item_mut(r.game, gobj).x40_vel.y = up;
+    item_mut(r.game, gobj).vel.y = up;
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
@@ -147,9 +147,9 @@ pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
     let rot = fp::fadds(reg(r.game.objs.jobjs[j].rotate.x), spin);
     lib2725::set_rotation_x(r.game, j, mem(rot));
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    if ip.xD44_lifeTimer <= 0.0 {
-        ip.xD44_lifeTimer = 0.0;
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    if ip.life_timer <= 0.0 {
+        ip.life_timer = 0.0;
         stop(r, gobj);
     }
     false
@@ -167,12 +167,12 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
 /// ceiling stops it.
 #[doc(alias = "itGamewatchchef_UnkMotion0_Coll")]
 pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).x40_vel.x != 0.0 {
+    if item(r.game, gobj).vel.x != 0.0 {
         let touched = ground::air_touches(r, gobj);
         if touched & 0xC != 0 {
             let bounce = reg(attr_f32(r, gobj, attr::BOUNCE));
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), fp::fneg(bounce)));
+            ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), fp::fneg(bounce)));
         }
         if touched & 3 != 0 {
             stop(r, gobj);
@@ -185,8 +185,8 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802C875C")]
 pub fn stop(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = 0.0;
-    ip.x40_vel.x = 0.0;
+    ip.vel.y = 0.0;
+    ip.vel.x = 0.0;
     let life = attr_f32(r, gobj, attr::STOPPED_LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
@@ -196,12 +196,12 @@ pub fn stop(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itGamewatchchef_UnkMotion1_Anim")]
 pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    if ip.xD44_lifeTimer <= 0.0 {
-        ip.xD44_lifeTimer = 0.0;
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    if ip.life_timer <= 0.0 {
+        ip.life_timer = 0.0;
         return true;
     }
-    if fp::fctiwz(reg(ip.xD44_lifeTimer)) & 2 != 0 {
+    if fp::fctiwz(reg(ip.life_timer)) & 2 != 0 {
         lib26b1::show(r.game, gobj);
     } else {
         lib26b1::hide(r.game, gobj);
@@ -237,7 +237,7 @@ pub fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_2725_Logic112_Absorbed")]
 pub fn absorbed(r: &mut Running, gobj: GObjId) -> bool {
     stop(r, gobj);
-    item_mut(r.game, gobj).xD44_lifeTimer = 0.0;
+    item_mut(r.game, gobj).life_timer = 0.0;
     false
 }
 

@@ -129,7 +129,7 @@ fn is_kirbys(r: &Running, gobj: GObjId) -> bool {
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itLinkArrow_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.link_arrow()
+    item_mut(game, gobj).vars.link_arrow()
 }
 
 fn attrs(r: &Running, gobj: GObjId) -> DataRef {
@@ -148,7 +148,7 @@ fn model(r: &Running, gobj: GObjId) -> JObjId {
 
 /// The arrow at its owner's size.
 fn scale(r: &mut Running, gobj: GObjId) {
-    let s = vars(r.game, gobj).xC0.get();
+    let s = vars(r.game, gobj).scale.get();
     let j = model(r, gobj);
     jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
 }
@@ -165,26 +165,26 @@ fn trail_history(r: &mut Running, gobj: GObjId) {
     let j = model(r, gobj);
     let q = r.game.objs.jobjs[j].rotate;
     let v = vars(r.game, gobj);
-    v.x48.set(v.x3C.get());
-    v.x84.set(v.x74.get());
-    v.x3C.set(v.x30.get());
-    v.x74.set(v.x64.get());
-    v.x30.set(v.x24.get());
-    v.x64.set(v.x54.get());
-    let mut p = v.x18.get();
+    v.trail_pos_3.set(v.trail_pos_2.get());
+    v.trail_rot_3.set(v.trail_rot_2.get());
+    v.trail_pos_2.set(v.trail_pos_1.get());
+    v.trail_rot_2.set(v.trail_rot_1.get());
+    v.trail_pos_1.set(v.trail_pos_0.get());
+    v.trail_rot_1.set(v.trail_rot_0.get());
+    let mut p = v.string_pos.get();
     p.z = mem(fp::fsubs(reg(p.z), reg(0.02f32)));
-    v.x24.set(p);
-    v.x54.set(q);
+    v.trail_pos_0.set(p);
+    v.trail_rot_0.set(q);
     let s = r.game.objs.jobjs[j].scale;
     for i in 0..2 {
-        let Some(t) = vars(r.game, gobj).xB4[i].get() else {
+        let Some(t) = vars(r.game, gobj).trails[i].get() else {
             continue;
         };
         let v = vars(r.game, gobj);
         let (p, q) = if i == 0 {
-            (v.x24.get(), v.x54.get())
+            (v.trail_pos_0.get(), v.trail_rot_0.get())
         } else {
-            (v.x30.get(), v.x64.get())
+            (v.trail_pos_1.get(), v.trail_rot_1.get())
         };
         jobj::set_translate(&mut r.game.objs.jobjs, t, p);
         jobj::set_rotation(&mut r.game.objs.jobjs, t, q);
@@ -196,9 +196,9 @@ fn trail_history(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802A8330")]
 fn remove_trails(r: &mut Running, gobj: GObjId) {
     for i in 0..2 {
-        if let Some(t) = vars(r.game, gobj).xB4[i].get() {
+        if let Some(t) = vars(r.game, gobj).trails[i].get() {
             jobj::remove_all(&mut r.game.objs, Some(t));
-            vars(r.game, gobj).xB4[i].set(None);
+            vars(r.game, gobj).trails[i].set(None);
         }
     }
 }
@@ -207,7 +207,7 @@ fn remove_trails(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802A8398")]
 pub fn on_string(r: &mut Running, gobj: GObjId, pos: Vec3, string: Vec3) {
     item_mut(r.game, gobj).pos = pos;
-    vars(r.game, gobj).x18.set(string);
+    vars(r.game, gobj).string_pos.set(string);
 }
 
 /// An arrow in `owner`'s hand at bone `part`, `it_802A83E0`: of `kind`, at `pos` (on the
@@ -238,23 +238,23 @@ pub fn spawn(
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
     let life = attr_f32(r, gobj, attr::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
     let s = model_scale(r, owner);
     let v = vars(r.game, gobj);
-    v.xA0.set(0);
-    v.xB0.set(0);
-    v.xB4[1].set(None);
-    v.xB4[0].set(None);
-    v.xE0.set(Some(owner));
-    v.xC0.set(s);
-    v.xE4.set(-1);
-    v.xEC.set(0.0);
-    v.xE8.set(0.0);
+    v.loosed.set(0);
+    v.frames.set(0);
+    v.trails[1].set(None);
+    v.trails[0].set(None);
+    v.owner.set(Some(owner));
+    v.scale.set(s);
+    v.line.set(-1);
+    v.last_line_angle.set(0.0);
+    v.line_angle.set(0.0);
     pick_up(r, gobj, owner, part);
     super::super::item::debug_owner_bubbles(r.game, gobj, Some(owner));
     Some(gobj)
@@ -281,20 +281,20 @@ pub fn loose(
     charge: f32,
     max: f32,
 ) -> bool {
-    vars(r.game, gobj).x94.set(angle);
+    vars(r.game, gobj).angle.set(angle);
     let (life, stuck) = (
         attr_f32(r, gobj, attr::LIFETIME),
         attr_f32(r, gobj, attr::STUCK_LIFE),
     );
     lib2725::set_lifetime(r.game, r.data, gobj, mem(fp::fadds(reg(life), reg(stuck))));
-    vars(r.game, gobj).xAC.set(charge);
-    let owner = vars(r.game, gobj).xE0.get();
+    vars(r.game, gobj).unread_charge.set(charge);
+    let owner = vars(r.game, gobj).owner.get();
     let Some(o) = owner.filter(|&o| item(r.game, gobj).owner == Some(o)) else {
         crate::game::code::unported_call("itLinkArrow_802A850C loosing an arrow not its owner's");
     };
     fly(r, gobj);
     release::let_go(r, gobj, Vec3::ZERO);
-    item_mut(r.game, gobj).xDC8_word.flags.x14 = false;
+    item_mut(r.game, gobj).flags.flags.thrown = false;
     lib26b1::disable_pickup(r.game, gobj);
     let a = attrs(r, gobj);
     let f = |off| reg(r.data.f32(a.at(off)));
@@ -315,41 +315,41 @@ pub fn loose(
         d0,
     ));
     let v = vars(r.game, gobj);
-    v.xA8.set(speed);
-    v.xA4.set(damage);
+    v.unread_speed.set(speed);
+    v.damage.set(damage);
     let facing = r.game.fighter(o).facing_dir;
     item_mut(r.game, gobj).facing_dir = facing;
     let j = model(r, gobj);
     let ry = mem(fp::frsp(fp::fmul(std::f64::consts::FRAC_PI_2, reg(facing))));
     jobj::set_rotation_y(&mut r.game.objs.jobjs, j, ry);
     item_mut(r.game, gobj).pos = pos;
-    vars(r.game, gobj).x18.set(string);
-    let a94 = vars(r.game, gobj).x94.get();
+    vars(r.game, gobj).string_pos.set(string);
+    let a94 = vars(r.game, gobj).angle.get();
     let c = math::cos(a94);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(facing), fp::fmuls(reg(speed), reg(c))));
+    ip.vel.x = mem(fp::fmuls(reg(facing), fp::fmuls(reg(speed), reg(c))));
     let s = math::sin(a94);
-    ip.x40_vel.y = mem(fp::fmuls(reg(speed), reg(s)));
-    ip.x40_vel.z = 0.0;
+    ip.vel.y = mem(fp::fmuls(reg(speed), reg(s)));
+    ip.vel.z = 0.0;
     jobj::set_rotation_z(&mut r.game.objs.jobjs, j, a94);
-    vars(r.game, gobj).xA0.set(1);
+    vars(r.game, gobj).loosed.set(1);
     let q = r.game.objs.jobjs[j].rotate;
     let v = vars(r.game, gobj);
-    let mut p = v.x18.get();
+    let mut p = v.string_pos.get();
     p.z = mem(fp::fsubs(reg(p.z), reg(0.02f32)));
-    v.x24.set(p);
-    v.x30.set(p);
-    v.x3C.set(p);
-    v.x48.set(p);
-    v.x54.set(q);
-    v.x64.set(q);
-    v.x74.set(q);
-    v.x84.set(q);
+    v.trail_pos_0.set(p);
+    v.trail_pos_1.set(p);
+    v.trail_pos_2.set(p);
+    v.trail_pos_3.set(p);
+    v.trail_rot_0.set(q);
+    v.trail_rot_1.set(q);
+    v.trail_rot_2.set(q);
+    v.trail_rot_3.set(q);
     for (i, off) in attr::TRAILS.into_iter().enumerate() {
         let t = load_trail(r, gobj, off);
-        vars(r.game, gobj).xB4[i].set(t);
+        vars(r.game, gobj).trails[i].set(t);
     }
-    vars(r.game, gobj).xB0.set(0);
+    vars(r.game, gobj).frames.set(0);
     crosses(r, gobj).is_some()
 }
 
@@ -357,12 +357,12 @@ pub fn loose(
 /// the arrow then stops where it meets it, and the line's id, flags and normal.
 #[doc(alias = "it_8026EA20")]
 fn crosses(r: &mut Running, gobj: GObjId) -> Option<Vec3> {
-    let from = vars(r.game, gobj).x18.get();
+    let from = vars(r.game, gobj).string_pos.get();
     let to = item(r.game, gobj).pos;
     let g = r.game.geometry.as_mut().expect("no collision geometry");
     let hit = g.check_all_remap(-1, -1, from.x, from.y, to.x, to.y)?;
     item_mut(r.game, gobj).pos = hit.pos;
-    vars(r.game, gobj).xE4.set(hit.line);
+    vars(r.game, gobj).line.set(hit.line);
     Some(hit.normal)
 }
 
@@ -370,8 +370,8 @@ fn crosses(r: &mut Running, gobj: GObjId) -> Option<Vec3> {
 /// go, and it has no owner.
 #[doc(alias = "itLinkArrow_Logic98_Destroyed")]
 fn destroyed(r: &mut Running, gobj: GObjId) {
-    if vars(r.game, gobj).xA0.get() == 0
-        && let Some(o) = vars(r.game, gobj).xE0.get()
+    if vars(r.game, gobj).loosed.get() == 0
+        && let Some(o) = vars(r.game, gobj).owner.get()
         && item(r.game, gobj).owner == Some(o)
     {
         if is_kirbys(r, gobj) {
@@ -381,10 +381,10 @@ fn destroyed(r: &mut Running, gobj: GObjId) {
         }
     }
     remove_trails(r, gobj);
-    vars(r.game, gobj).xE0.set(None);
+    vars(r.game, gobj).owner.set(None);
     let ip = item_mut(r.game, gobj);
     ip.owner = None;
-    ip.xDC8_word.flags.x13 = false;
+    ip.flags.flags.held = false;
 }
 
 /// Takes the arrow away, `it_802A8A7C`: its trails, then the item.
@@ -404,7 +404,7 @@ fn picked_up(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itLinkarrow_UnkMotion0_Anim")]
 fn anim0(r: &mut Running, gobj: GObjId) -> bool {
     scale(r, gobj);
-    let Some(o) = vars(r.game, gobj).xE0.get() else {
+    let Some(o) = vars(r.game, gobj).owner.get() else {
         return true;
     };
     let released = if is_kirbys(r, gobj) {
@@ -413,7 +413,7 @@ fn anim0(r: &mut Running, gobj: GObjId) -> bool {
         r.link_bow_released(o, &LINK)
     };
     if item(r.game, gobj).owner == Some(o) && released {
-        vars(r.game, gobj).xE0.set(None);
+        vars(r.game, gobj).owner.set(None);
         return true;
     }
     false
@@ -456,15 +456,15 @@ fn life_out(r: &mut Running, gobj: GObjId) -> bool {
 /// A trail shown at its place and turn from a frame (trail 0) or two (trail 1) back, at the
 /// arrow's size (`itLinkarrow_UnkMotion1_Anim_inline`).
 fn show_trail(r: &mut Running, gobj: GObjId, i: usize) {
-    let Some(t) = vars(r.game, gobj).xB4[i].get() else {
+    let Some(t) = vars(r.game, gobj).trails[i].get() else {
         return;
     };
     lib2725::show_tree(r.game, Some(t));
     let v = vars(r.game, gobj);
     let (p, q) = if i == 0 {
-        (v.x30.get(), v.x64.get())
+        (v.trail_pos_1.get(), v.trail_rot_1.get())
     } else {
-        (v.x3C.get(), v.x74.get())
+        (v.trail_pos_2.get(), v.trail_rot_2.get())
     };
     jobj::set_translate(&mut r.game.objs.jobjs, t, p);
     jobj::set_rotation(&mut r.game.objs.jobjs, t, q);
@@ -477,25 +477,25 @@ fn show_trail(r: &mut Running, gobj: GObjId, i: usize) {
 #[doc(alias = "itLinkarrow_UnkMotion1_Anim")]
 fn anim1(r: &mut Running, gobj: GObjId) -> bool {
     scale(r, gobj);
-    if item(r.game, gobj).xDB4_itcmd_var2 == 0 {
-        let damage = vars(r.game, gobj).xA4.get();
+    if item(r.game, gobj).cmd_var2 == 0 {
+        let damage = vars(r.game, gobj).damage.get();
         coll::set_hit_damage(r.game, r.data, gobj, 0, damage);
-        item_mut(r.game, gobj).xDB4_itcmd_var2 = 1;
+        item_mut(r.game, gobj).cmd_var2 = 1;
     }
-    let frames = vars(r.game, gobj).xB0.get();
+    let frames = vars(r.game, gobj).frames.get();
     if frames > 0 {
-        item_mut(r.game, gobj).xDAC_itcmd_var0 = 1;
+        item_mut(r.game, gobj).cmd_var0 = 1;
     }
     if frames > 1 {
-        item_mut(r.game, gobj).xDB0_itcmd_var1 = 1;
+        item_mut(r.game, gobj).cmd_var1 = 1;
     }
-    if item(r.game, gobj).xDAC_itcmd_var0 == 1 {
+    if item(r.game, gobj).cmd_var0 == 1 {
         show_trail(r, gobj, 0);
     }
-    if item(r.game, gobj).xDB0_itcmd_var1 == 1 {
+    if item(r.game, gobj).cmd_var1 == 1 {
         show_trail(r, gobj, 1);
     }
-    vars(r.game, gobj).xB0.update(|v| v + 1);
+    vars(r.game, gobj).frames.update(|v| v + 1);
     life_out(r, gobj)
 }
 
@@ -505,10 +505,10 @@ fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 fn phys1(r: &mut Running, gobj: GObjId) {
     let g = attr_f32(r, gobj, attr::GRAVITY);
     let pos = item(r.game, gobj).pos;
-    vars(r.game, gobj).x18.set(pos);
+    vars(r.game, gobj).string_pos.set(pos);
     let g = if g < 0.0 { mem(fp::fneg(reg(g))) } else { g };
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), reg(g)));
+    ip.vel.y = mem(fp::fsubs(reg(ip.vel.y), reg(g)));
 }
 
 /// `itLinkarrow_UnkMotion1_Coll`: its nose along its path, within the attributes' angle; on
@@ -516,7 +516,7 @@ fn phys1(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itLinkarrow_UnkMotion1_Coll")]
 fn coll1(r: &mut Running, gobj: GObjId) -> bool {
     let max = attr_f32(r, gobj, attr::ANGLE_MAX);
-    let s = vars(r.game, gobj).x18.get();
+    let s = vars(r.game, gobj).string_pos.get();
     let ip_pos = item(r.game, gobj).pos;
     let facing = item(r.game, gobj).facing_dir;
     let dy = mem(fp::fsubs(reg(ip_pos.y), reg(s.y)));
@@ -527,7 +527,7 @@ fn coll1(r: &mut Running, gobj: GObjId) -> bool {
         let dx = mem(fp::fsubs(reg(s.x), reg(ip_pos.x)));
         mem(fp::fneg(reg(math::atan2(dy, dx))))
     };
-    vars(r.game, gobj).x94.set(a);
+    vars(r.game, gobj).angle.set(a);
     let abs = if a < 0.0 { mem(fp::fneg(reg(a))) } else { a };
     if abs > max {
         let lim = if a < 0.0 {
@@ -535,18 +535,18 @@ fn coll1(r: &mut Running, gobj: GObjId) -> bool {
         } else {
             max
         };
-        vars(r.game, gobj).x94.set(lim);
+        vars(r.game, gobj).angle.set(lim);
     }
     let j = model(r, gobj);
-    let z = vars(r.game, gobj).x94.get();
+    let z = vars(r.game, gobj).angle.get();
     jobj::set_rotation_z(&mut r.game.objs.jobjs, j, z);
     if let Some(n) = crosses(r, gobj) {
-        let line = vars(r.game, gobj).xE4.get();
+        let line = vars(r.game, gobj).line.get();
         if ride_line(r, gobj, line) {
             let a = math::atan2(n.y, n.x);
             let v = vars(r.game, gobj);
-            v.xEC.set(a);
-            v.xE8.set(a);
+            v.last_line_angle.set(a);
+            v.line_angle.set(a);
             stick(r, gobj);
         }
     }
@@ -561,13 +561,13 @@ fn ride_line(r: &mut Running, gobj: GObjId, line: i32) -> bool {
     if !live {
         return false;
     }
-    let mut cd = item(r.game, gobj).x378_itemColl.clone();
+    let mut cd = item(r.game, gobj).coll.clone();
     super::super::maplib::with_stage_coll(r.game, r.data, |c| c.line_callback(&mut cd, line));
-    item_mut(r.game, gobj).x378_itemColl = cd;
+    item_mut(r.game, gobj).coll = cd;
     let pos = item(r.game, gobj).pos;
     let g = r.game.geometry.as_ref().expect("no collision geometry");
     if let Some(v) = g.line_speed(line, pos) {
-        item_mut(r.game, gobj).x40_vel = v;
+        item_mut(r.game, gobj).vel = v;
     }
     true
 }
@@ -581,11 +581,11 @@ fn stick(r: &mut Running, gobj: GObjId) {
     lib2725::set_lifetime(r.game, r.data, gobj, life);
     let w = r.game.objs.rng.below(4) + 3;
     let v = vars(r.game, gobj);
-    v.x9C.set(w as u32);
-    v.xF0.set(0);
+    v.wobble_frames.set(w as u32);
+    v.stuck_frames.set(0);
     change_state(r, gobj, 4, change::ANIM_UPDATE);
     let j = model(r, gobj);
-    let z = vars(r.game, gobj).x94.get();
+    let z = vars(r.game, gobj).angle.get();
     jobj::set_rotation_z(&mut r.game.objs.jobjs, j, z);
     remove_trails(r, gobj);
     if matches!(
@@ -613,7 +613,10 @@ fn stick(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "ftLib_IsShielding")]
 #[doc(alias = "itLinkarrow_UnkMotion2_Anim")]
 fn anim2(r: &mut Running, gobj: GObjId) -> bool {
-    let f = vars(r.game, gobj).xC4.get().expect("an arrow on no shield");
+    let f = vars(r.game, gobj)
+        .shield_fighter
+        .get()
+        .expect("an arrow on no shield");
     if !GUARD_STATES.contains(&r.game.fighter(f).motion_id) {
         return true;
     }
@@ -623,7 +626,10 @@ fn anim2(r: &mut Running, gobj: GObjId) -> bool {
 /// `itLinkarrow_UnkMotion2_Phys`: on the shield's edge at its angle.
 #[doc(alias = "itLinkarrow_UnkMotion2_Phys")]
 fn phys2(r: &mut Running, gobj: GObjId) {
-    let f = vars(r.game, gobj).xC4.get().expect("an arrow on no shield");
+    let f = vars(r.game, gobj)
+        .shield_fighter
+        .get()
+        .expect("an arrow on no shield");
     shield_place(r, gobj, f);
 }
 
@@ -633,11 +639,16 @@ fn shield_place(r: &mut Running, gobj: GObjId, f: GObjId) {
     let (center, size) = r.shield_center(f);
     let s = model_scale(r, f);
     let v = vars(r.game, gobj);
-    v.xC8.set(center.x);
-    v.xCC.set(center.y);
-    v.xD0.set(RawPtr(center.z.to_bits()));
-    v.xD4.set(mem(fp::fmuls(size, reg(s))));
-    let (d, a, cx, cy) = (v.xD4.get(), v.xD8.get(), v.xC8.get(), v.xCC.get());
+    v.shield_x.set(center.x);
+    v.shield_y.set(center.y);
+    v.shield_z.set(RawPtr(center.z.to_bits()));
+    v.shield_distance.set(mem(fp::fmuls(size, reg(s))));
+    let (d, a, cx, cy) = (
+        v.shield_distance.get(),
+        v.shield_angle.get(),
+        v.shield_x.get(),
+        v.shield_y.get(),
+    );
     let ip = item_mut(r.game, gobj);
     ip.pos.x = mem(fp::fmadds(reg(d), reg(math::cos(a)), reg(cx)));
     ip.pos.y = mem(fp::fmadds(reg(d), reg(math::sin(a)), reg(cy)));
@@ -648,8 +659,8 @@ fn shield_place(r: &mut Running, gobj: GObjId, f: GObjId) {
 /// a random swing for frames 6 to 0 left, toward each side in turn.
 #[doc(alias = "itLinkArrow_802A81C4")]
 pub fn wobble(r: &mut Running, gobj: GObjId) {
-    let k = vars(r.game, gobj).x9C.get();
-    let a94 = vars(r.game, gobj).x94.get();
+    let k = vars(r.game, gobj).wobble_frames.get();
+    let a94 = vars(r.game, gobj).angle.get();
     let z = if k <= 6 {
         let rand = r.game.objs.rng.draw_f32();
         let deg = fp::fmadds(
@@ -668,7 +679,9 @@ pub fn wobble(r: &mut Running, gobj: GObjId) {
     };
     let j = model(r, gobj);
     jobj::set_rotation_z(&mut r.game.objs.jobjs, j, z);
-    vars(r.game, gobj).x9C.update(|v| v.wrapping_sub(1));
+    vars(r.game, gobj)
+        .wobble_frames
+        .update(|v| v.wrapping_sub(1));
 }
 
 /// `itLinkarrow_UnkMotion4_Anim`: wobbling for its frames; once its life is out it blinks
@@ -677,14 +690,14 @@ pub fn wobble(r: &mut Running, gobj: GObjId) {
 fn anim4(r: &mut Running, gobj: GObjId) -> bool {
     wobble(r, gobj);
     if life_out(r, gobj) {
-        if vars(r.game, gobj).xF0.get() == 0 {
+        if vars(r.game, gobj).stuck_frames.get() == 0 {
             super::super::effect::spawn_simple(r, gobj, GFX_BLINK);
             hitbox::start_blink(r.game, gobj);
         }
         lib26b1::hide(r.game, gobj);
-        super::super::set_flag(&mut item_mut(r.game, gobj).xDCF_flag, 2, true);
-        vars(r.game, gobj).xF0.update(|v| v + 1);
-        if vars(r.game, gobj).xF0.get() > 0x12C {
+        super::super::set_flag(&mut item_mut(r.game, gobj).draw_flags, 2, true);
+        vars(r.game, gobj).stuck_frames.update(|v| v + 1);
+        if vars(r.game, gobj).stuck_frames.get() > 0x12C {
             return true;
         }
     }
@@ -697,10 +710,10 @@ fn anim4(r: &mut Running, gobj: GObjId) -> bool {
 fn coll4(r: &mut Running, gobj: GObjId) -> bool {
     trail_history(r, gobj);
     let v = vars(r.game, gobj);
-    v.xEC.set(v.xE8.get());
-    let line = v.xE4.get();
+    v.last_line_angle.set(v.line_angle.get());
+    let line = v.line.get();
     if line == -1 {
-        item_mut(r.game, gobj).x40_vel = Vec3::ZERO;
+        item_mut(r.game, gobj).vel = Vec3::ZERO;
         return true;
     }
     if !ride_line(r, gobj, line) {
@@ -712,12 +725,12 @@ fn coll4(r: &mut Running, gobj: GObjId) -> bool {
         .as_ref()
         .expect("no collision geometry")
         .line_normal(line);
-    vars(r.game, gobj).xE8.set(math::atan2(n.y, n.x));
+    vars(r.game, gobj).line_angle.set(math::atan2(n.y, n.x));
     let v = vars(r.game, gobj);
-    let (e8, ec) = (v.xE8.get(), v.xEC.get());
+    let (e8, ec) = (v.line_angle.get(), v.last_line_angle.get());
     if e8 != ec {
-        let a = mem(fp::fadds(reg(v.x94.get()), fp::fsubs(reg(e8), reg(ec))));
-        v.x94.set(a);
+        let a = mem(fp::fadds(reg(v.angle.get()), fp::fsubs(reg(e8), reg(ec))));
+        v.angle.set(a);
         let j = model(r, gobj);
         jobj::set_rotation_z(&mut r.game.objs.jobjs, j, a);
     }
@@ -729,7 +742,7 @@ fn coll4(r: &mut Running, gobj: GObjId) -> bool {
 fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
     let x14 = attr_f32(r, gobj, attr::X14);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), reg(x14)));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), reg(x14)));
     remove_trails(r, gobj);
     true
 }
@@ -738,7 +751,7 @@ fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
 /// from the middle of its last frame's path; anything else's, it's gone.
 #[doc(alias = "itLinkArrow_Logic98_HitShield")]
 fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
-    let Some(f) = item(r.game, gobj).xCF4_fighterGObjUnk else {
+    let Some(f) = item(r.game, gobj).met_fighter else {
         return true;
     };
     let is_fighter = matches!(
@@ -751,28 +764,28 @@ fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
     scale(r, gobj);
     let life = attr_f32(r, gobj, attr::STUCK_LIFE);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
-    item_mut(r.game, gobj).x40_vel = Vec3::ZERO;
+    item_mut(r.game, gobj).vel = Vec3::ZERO;
     change_state(r, gobj, 2, change::ANIM_UPDATE);
     remove_trails(r, gobj);
-    vars(r.game, gobj).xC4.set(Some(f));
+    vars(r.game, gobj).shield_fighter.set(Some(f));
     let (center, size) = r.shield_center(f);
     let s = model_scale(r, f);
     let v = vars(r.game, gobj);
-    v.xC8.set(center.x);
-    v.xCC.set(center.y);
-    v.xD0.set(RawPtr(center.z.to_bits()));
-    v.xD4.set(mem(fp::fmuls(reg(s), size)));
+    v.shield_x.set(center.x);
+    v.shield_y.set(center.y);
+    v.shield_z.set(RawPtr(center.z.to_bits()));
+    v.shield_distance.set(mem(fp::fmuls(reg(s), size)));
     let ip_pos = item(r.game, gobj).pos;
     let v = vars(r.game, gobj);
-    let st = v.x18.get();
+    let st = v.string_pos.get();
     let hx = fp::fmuls(0.5, fp::fadds(reg(ip_pos.x), reg(st.x)));
     let hy = fp::fmuls(0.5, fp::fadds(reg(ip_pos.y), reg(st.y)));
     let a = math::atan2(
-        mem(fp::fsubs(hy, reg(v.xCC.get()))),
-        mem(fp::fsubs(hx, reg(v.xC8.get()))),
+        mem(fp::fsubs(hy, reg(v.shield_y.get()))),
+        mem(fp::fsubs(hx, reg(v.shield_x.get()))),
     );
-    v.xD8.set(a);
-    let (d, cx, cy) = (v.xD4.get(), v.xC8.get(), v.xCC.get());
+    v.shield_angle.set(a);
+    let (d, cx, cy) = (v.shield_distance.get(), v.shield_x.get(), v.shield_y.get());
     let ip = item_mut(r.game, gobj);
     ip.pos.x = mem(fp::fmadds(reg(d), reg(math::cos(a)), reg(cx)));
     ip.pos.y = mem(fp::fmadds(reg(d), reg(math::sin(a)), reg(cy)));
@@ -800,21 +813,21 @@ fn reflected(r: &mut Running, gobj: GObjId) -> bool {
         std::f64::consts::FRAC_PI_2,
         reg(ip.facing_dir),
     )));
-    ip.x40_vel.x = mem(fp::fneg(reg(ip.x40_vel.x)));
-    ip.x40_vel.y = mem(fp::fneg(reg(ip.x40_vel.y)));
-    ip.x40_vel.z = 0.0;
-    ip.pos.x = mem(fp::fadds(reg(ip.pos.x), reg(ip.x40_vel.x)));
-    ip.pos.y = mem(fp::fadds(reg(ip.pos.y), reg(ip.x40_vel.y)));
+    ip.vel.x = mem(fp::fneg(reg(ip.vel.x)));
+    ip.vel.y = mem(fp::fneg(reg(ip.vel.y)));
+    ip.vel.z = 0.0;
+    ip.pos.x = mem(fp::fadds(reg(ip.pos.x), reg(ip.vel.x)));
+    ip.pos.y = mem(fp::fadds(reg(ip.pos.y), reg(ip.vel.y)));
     ip.pos.z = 0.0;
     jobj::set_rotation_y(&mut r.game.objs.jobjs, j, ry);
-    let mut a = fp::frsp(fp::fadd(PI, reg(vars(r.game, gobj).x94.get())));
+    let mut a = fp::frsp(fp::fadd(PI, reg(vars(r.game, gobj).angle.get())));
     while a > PI {
         a = fp::frsp(fp::fsub(a, PI));
     }
     while a < fp::fneg(PI) {
         a = fp::frsp(fp::fadd(a, PI));
     }
-    vars(r.game, gobj).x94.set(mem(a));
+    vars(r.game, gobj).angle.set(mem(a));
     jobj::set_rotation_z(&mut r.game.objs.jobjs, j, mem(a));
     let pos = item(r.game, gobj).pos;
     jobj::set_translate(&mut r.game.objs.jobjs, j, pos);
@@ -835,10 +848,10 @@ impl Running<'_> {
     pub fn render_link_arrow(&mut self, gobj: GObjId, pass: i32) {
         let shown = {
             let ip = item(self.game, gobj);
-            [ip.xDAC_itcmd_var0 == 1, ip.xDB0_itcmd_var1 == 1]
+            [ip.cmd_var0 == 1, ip.cmd_var1 == 1]
         };
         for (i, show) in shown.into_iter().enumerate() {
-            let t = *item_mut(self.game, gobj).xDD4_itemVar.link_arrow().xB4[i].peek();
+            let t = *item_mut(self.game, gobj).vars.link_arrow().trails[i].peek();
             if let Some(t) = t
                 && show
             {

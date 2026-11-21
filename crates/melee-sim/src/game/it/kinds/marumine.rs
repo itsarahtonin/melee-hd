@@ -103,7 +103,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "it_802D09D0")]
 pub fn burst(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if !ip.xDC8_word.flags.x13 && ip.msid != 6 {
+    if !ip.flags.flags.held && ip.msid != 6 {
         explode(r, gobj);
     }
 }
@@ -115,17 +115,17 @@ pub fn burst(r: &mut Running, gobj: GObjId) {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
-    ip.xDC8_word.flags.x0 = true;
+    ip.flags.flags.held_for_owner = true;
     let max = attr_i32(r, gobj, 8);
     pokemon::vars(r.game, gobj).set_i32(FUSE_FRAMES, 0xB4_i32.wrapping_sub(max));
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
     lib2725::clear_velocity(r.game, gobj);
     enter_air(r, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x0 = true;
+    item_mut(r.game, gobj).flags.flags.held_for_owner = true;
     let sparks = attr_i32(r, gobj, 0xC);
     pokemon::vars(r.game, gobj).set_i32(SPARK_FRAMES, sparks);
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = 1;
+    item_mut(r.game, gobj).cmd_var0 = 1;
 }
 
 /// Landing in its states, `it_802D0AAC`: nothing.
@@ -152,7 +152,7 @@ pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
 fn set_anim_speed(r: &mut Running, gobj: GObjId, speed: f32) {
     let j = jobj_of(r.game, gobj);
     // The joints take the speed as the item stores it.
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = speed;
+    item_mut(r.game, gobj).anim_speed = speed;
     crate::lb::anim::set_framerate(&mut r.game.objs, j, speed);
 }
 
@@ -186,7 +186,7 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
     if !air(r, gobj) {
         let frame = attr_i32(r, gobj, 4);
         let at = fp::frsp(f64::from(frame));
-        if reg(item(r.game, gobj).x5CC_currentAnimFrame) >= at {
+        if reg(item(r.game, gobj).anim_frame) >= at {
             fell(r, gobj);
         }
     }
@@ -325,8 +325,8 @@ pub fn fuse_when_told(r: &mut Running, gobj: GObjId) {
     if t < 0 {
         spark(r, gobj);
         lib26b1::enable_pickup(r.game, gobj);
-        if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
-            item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+        if item(r.game, gobj).cmd_var0 != 0 {
+            item_mut(r.game, gobj).cmd_var0 = 0;
             play_sfx(r, gobj, 0x271F, 0x7F, 0x40);
         }
     }
@@ -338,7 +338,7 @@ pub fn fuse_when_told(r: &mut Running, gobj: GObjId) {
 pub fn explode(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     play_sfx(r, gobj, 0x2720, 0x7F, 0x40);
-    if item(r.game, gobj).xDC8_word.flags.x13 {
+    if item(r.game, gobj).flags.flags.held {
         release::throw(r, gobj, Vec3::new(0.0, 0.0, 0.0));
     }
     lib26b1::disable_pickup(r.game, gobj);

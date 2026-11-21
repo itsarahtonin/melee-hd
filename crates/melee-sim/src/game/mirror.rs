@@ -221,7 +221,7 @@ pub fn read_vec3(data: &melee_data::archive::Archives, at: DataRef) -> Vec3 {
 #[cfg(test)]
 mod label_tests {
     use super::*;
-    use crate::game::structs::Fighter;
+    use crate::game::structs::{Fighter, Item, itGShell_ItemVars};
 
     /// Collects the comparer's labels.
     #[derive(Default)]
@@ -273,5 +273,40 @@ mod label_tests {
                 "fighter.in_hitstun (x221C_b6)",
             ]
         );
+    }
+
+    /// The same for an item (task 22): its own fields, a bit of its flag word, and a kind's
+    /// variables (the green shell's).
+    #[test]
+    fn a_renamed_item_fields_label_gives_the_originals_name() {
+        let block = vec![0u8; Item::SIZE as usize];
+        let m = Mem {
+            bytes: &block,
+            base: 0x8000_0000,
+        };
+        let mut ip = Item::import(&m, 0x8000_0000, &mut Labels::default());
+        let mut l = Labels::default();
+        ip.compare(&m, 0x8000_0000, "item", &mut l);
+        assert!(l.0.is_empty(), "{:?}", l.0);
+        ip.pos.x = 3.0;
+        ip.hit_damage = 1;
+        ip.flags.flags.held = true;
+        let mut l = Labels::default();
+        ip.compare(&m, 0x8000_0000, "item", &mut l);
+        assert_eq!(
+            l.0,
+            [
+                "item.pos",
+                "item.hit_damage (xCA0)",
+                "item.flags (xDC8_word).flags.held (x13)",
+            ]
+        );
+
+        let mut v = itGShell_ItemVars::import(&m, 0x8000_0000, &mut Labels::default());
+        v.life.set(1.0);
+        v.popped.set(true);
+        let mut l = Labels::default();
+        v.compare(&m, 0x8000_0000, "gshell", &mut l);
+        assert_eq!(l.0, ["gshell.life (xDD4)", "gshell.popped (xDEC_b3)"]);
     }
 }

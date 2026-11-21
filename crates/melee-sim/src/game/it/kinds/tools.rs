@@ -129,7 +129,7 @@ impl Mirror for ToolsVars {
 
 /// Which tool it is.
 fn tool(r: &mut Running, gobj: GObjId) -> i32 {
-    item_mut(r.game, gobj).xDD4_itemVar.tools().tool.get()
+    item_mut(r.game, gobj).vars.tools().tool.get()
 }
 
 /// The word at `off` of the tools' attributes.
@@ -176,14 +176,14 @@ pub fn spawn(r: &mut Running, pos: Vec3, which: i32, facing_dir: f32) -> Option<
 /// speed straight down, out of reach, in the tool's falling state.
 #[doc(alias = "it_802EF098")]
 pub fn start(r: &mut Running, gobj: GObjId, which: i32) {
-    item_mut(r.game, gobj).xDD4_itemVar.tools().tool.set(which);
+    item_mut(r.game, gobj).vars.tools().tool.set(which);
     let life = attr_f(r, gobj, a::FALL_LIFE);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
     let speed = motion(r, gobj, m::START_SPEED);
     let ip = item_mut(r.game, gobj);
-    ip.xD5C = 0;
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = mem(fp::fneg(reg(speed)));
+    ip.skid = 0;
+    ip.vel.x = 0.0;
+    ip.vel.y = mem(fp::fneg(reg(speed)));
     lib26b1::disable_pickup(r.game, gobj);
     let t = tool(r, gobj);
     change_state(r, gobj, t, change::ANIM_UPDATE);
@@ -206,9 +206,9 @@ pub fn anim_fall(r: &mut Running, gobj: GObjId) -> bool {
     let rz = fp::fmadds(reg(spin), reg(item(r.game, gobj).facing_dir), rz);
     jobj::set_rotation_z(&mut r.game.objs.jobjs, j, mem(rz));
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
-        ip.xD44_lifeTimer = 0.0;
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    if reg(ip.life_timer) <= 0.0 {
+        ip.life_timer = 0.0;
         lie(r, gobj);
     }
     false
@@ -225,7 +225,7 @@ pub fn phys_fall(r: &mut Running, gobj: GObjId) {
 /// Falling, `itTools_UnkMotion4_Coll`: moving, it lies down on a floor or a ceiling it meets.
 #[doc(alias = "itTools_UnkMotion4_Coll")]
 pub fn coll_fall(r: &mut Running, gobj: GObjId) -> bool {
-    let v = item(r.game, gobj).x40_vel;
+    let v = item(r.game, gobj).vel;
     if (reg(v.x) != 0.0 || reg(v.y) != 0.0) && air_touches(r, gobj) & 3 != 0 {
         lie(r, gobj);
     }
@@ -240,9 +240,9 @@ pub fn lie(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
     let life = attr_f(r, gobj, a::LIE_LIFE);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = 0.0;
-    ip.x40_vel.x = 0.0;
-    ip.xD44_lifeTimer = mem(fp::frsp(f64::from(fp::fctiwz(reg(life)) & 0xFFFE)));
+    ip.vel.y = 0.0;
+    ip.vel.x = 0.0;
+    ip.life_timer = mem(fp::frsp(f64::from(fp::fctiwz(reg(life)) & 0xFFFE)));
     let t = tool(r, gobj);
     change_state(r, gobj, t + LIE, change::ANIM_UPDATE);
 }
@@ -252,12 +252,12 @@ pub fn lie(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itTools_UnkMotion9_Anim")]
 pub fn anim_lie(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
-        ip.xD44_lifeTimer = 0.0;
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    if reg(ip.life_timer) <= 0.0 {
+        ip.life_timer = 0.0;
         return true;
     }
-    if fp::fctiwz(reg(ip.xD44_lifeTimer)) & 2 != 0 {
+    if fp::fctiwz(reg(ip.life_timer)) & 2 != 0 {
         lib26b1::show(r.game, gobj);
         let t = tool(r, gobj);
         super::drmariopill::set_pose(r, gobj, t + LIE, 0.0);
@@ -274,7 +274,7 @@ pub fn phys_lie(_: &mut Running, _: GObjId) {}
 /// Lying, `itTools_UnkMotion9_Coll`: moving, it lies down again on what it meets.
 #[doc(alias = "itTools_UnkMotion9_Coll")]
 pub fn coll_lie(r: &mut Running, gobj: GObjId) -> bool {
-    let v = item(r.game, gobj).x40_vel;
+    let v = item(r.game, gobj).vel;
     if (reg(v.x) != 0.0 || reg(v.y) != 0.0) && air_touches(r, gobj) & 3 != 0 {
         lie(r, gobj);
     }
@@ -288,16 +288,16 @@ pub fn coll_lie(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802EF548")]
 pub fn knock(r: &mut Running, gobj: GObjId) {
     let limit = motion(r, gobj, m::HIT_MAX_SPEED);
-    let vx = reg(item(r.game, gobj).x40_vel.x);
+    let vx = reg(item(r.game, gobj).vel.x);
     let abs = if vx < 0.0 { fp::fneg(vx) } else { vx };
     if abs > reg(limit) {
         return;
     }
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = ip.xD48_halfLifeTimer;
-    let fighter = ip.xCEC_fighterGObj;
-    let mut damage = fp::frsp(f64::from(ip.xCA0));
-    let mut dir = fp::fmuls(fp::fneg(1.0), reg(ip.xCCC_incDamageDirection));
+    ip.life_timer = ip.half_life;
+    let fighter = ip.attacker;
+    let mut damage = fp::frsp(f64::from(ip.hit_damage));
+    let mut dir = fp::fmuls(fp::fneg(1.0), reg(ip.damage_dir));
     if let Some(f) = fighter {
         if !is_fighter(r.game, Some(f)) {
             return;
@@ -313,7 +313,7 @@ pub fn knock(r: &mut Running, gobj: GObjId) {
     let scale = attr_f(r, gobj, a::DAMAGE_SCALE);
     let max = fp::frsp(f64::from(attr(r, gobj, a::DAMAGE_MAX)));
     damage = fp::fmuls(damage, reg(scale));
-    damage = fp::fadds(damage, reg(item(r.game, gobj).x5D4_hitboxes[0].hit.damage));
+    damage = fp::fadds(damage, reg(item(r.game, gobj).hitboxes[0].hit.damage));
     if damage > max {
         damage = max;
     }
@@ -321,12 +321,12 @@ pub fn knock(r: &mut Running, gobj: GObjId) {
     let speed = motion(r, gobj, m::HIT_SPEED);
     let rise = motion(r, gobj, m::HIT_RISE);
     let ip = item_mut(r.game, gobj);
-    let hit = reg(ip.x5D4_hitboxes[0].hit.damage);
-    ip.x40_vel.x = mem(fp::fmuls(
+    let hit = reg(ip.hitboxes[0].hit.damage);
+    ip.vel.x = mem(fp::fmuls(
         dir,
         fp::fmuls(fp::fadds(1.0, fp::fsubs(hit, 10.0)), reg(speed)),
     ));
-    ip.x40_vel.y = rise;
+    ip.vel.y = rise;
 }
 
 /// A hit it took knocks it, `itTools_Logic22_DmgReceived`.
@@ -354,7 +354,7 @@ pub fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_2725_Logic22_Absorbed")]
 pub fn absorbed(r: &mut Running, gobj: GObjId) -> bool {
     lie(r, gobj);
-    item_mut(r.game, gobj).xD44_lifeTimer = 0.0;
+    item_mut(r.game, gobj).life_timer = 0.0;
     false
 }
 

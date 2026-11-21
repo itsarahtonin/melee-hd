@@ -124,8 +124,8 @@ fn setup(r: &mut Running, gobj: GObjId, owner: GObjId) {
     let up = attr_of(item(r.game, gobj)).f32(r.data, data::attr::X18);
     let ip = item_mut(r.game, gobj);
     ip.owner = Some(owner);
-    ip.x40_vel.x = mem(fp::fmuls(reg(speed), reg(ip.facing_dir)));
-    ip.x40_vel.y = up;
+    ip.vel.x = mem(fp::fmuls(reg(speed), reg(ip.facing_dir)));
+    ip.vel.y = up;
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
@@ -145,7 +145,7 @@ fn physics(r: &mut Running, gobj: GObjId) {
     let push = attr_f32(r, gobj, attr::ACCEL);
     lib2725::fall(r.game, gobj, accel, max);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmadds(reg(push), reg(ip.facing_dir), reg(ip.x40_vel.x)));
+    ip.vel.x = mem(fp::fmadds(reg(push), reg(ip.facing_dir), reg(ip.vel.x)));
 }
 
 /// `itYoshistar_UnkMotion0_Coll`: it stays in the air.

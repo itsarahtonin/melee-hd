@@ -77,7 +77,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 pub fn remove(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.owner = None;
-    ip.xDC8_word.flags.x13 = false;
+    ip.flags.flags.held = false;
     super::super::item::destroy(r, gobj);
 }
 
@@ -88,7 +88,7 @@ pub fn throw(r: &mut Running, gobj: GObjId, vel: Vec3, offset: Vec3, spin: f32) 
     let j = jobj_of(r.game, gobj);
     fly(r, gobj);
     release::let_go(r, gobj, vel);
-    item_mut(r.game, gobj).xDC8_word.flags.x14 = false;
+    item_mut(r.game, gobj).flags.flags.thrown = false;
     lib26b1::disable_pickup(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.pos.x = mem(fp::fadds(reg(ip.pos.x), reg(offset.x)));
@@ -145,10 +145,10 @@ fn fly(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itYoshieggthrow_UnkMotion1_Anim")]
 fn fly_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    if ip.xD44_lifeTimer <= 0.0 {
+    if ip.life_timer <= 0.0 {
         crack(r, gobj);
     } else {
-        ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
+        ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
     }
     false
 }
@@ -190,7 +190,7 @@ fn crack(r: &mut Running, gobj: GObjId) {
     lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     lib2725::clear_velocity(r.game, gobj);
-    item_mut(r.game, gobj).xD44_lifeTimer = time;
+    item_mut(r.game, gobj).life_timer = time;
     queue(r, gobj, SpawnKind::Pos, 0x4CE, j, &[]);
     queue(r, gobj, SpawnKind::PosParam, 0x4CF, j, &[Arg::Float(1.0)]);
     super::super::item::play_sfx(r, gobj, 0x44618, 0x7F, 0x40);

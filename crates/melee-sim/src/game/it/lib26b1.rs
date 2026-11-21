@@ -19,7 +19,7 @@ use crate::vec::Vec3;
 #[doc(alias = "it_8026C1E8")]
 pub fn free_to_take(game: &Game, gobj: GObjId) -> bool {
     let ip = super::item(game, gobj);
-    !(ip.grab_victim.is_some() || ip.xDC8_word.flags.x13 && ip.owner.is_some())
+    !(ip.grab_victim.is_some() || ip.flags.flags.held && ip.owner.is_some())
 }
 
 pub fn count_kind(game: &Game, kind: i32) -> i32 {
@@ -57,7 +57,7 @@ pub fn is_empty_shooter(game: &Game, gobj: GObjId) -> bool {
             | ItKind::StarRod
             | ItKind::LipsStick
             | ItKind::FireFlower
-    ) && ip.xD4C <= 0
+    ) && ip.ammo <= 0
 }
 
 /// The item's kind, `itGetKind`.
@@ -76,9 +76,9 @@ pub fn position(game: &Game, gobj: GObjId) -> crate::vec::Vec3 {
 #[doc(alias = "it_8026B47C")]
 pub fn heal_amount(game: &mut Game, gobj: GObjId) -> i32 {
     let kind = item(game, gobj).kind;
-    let v = &mut item_mut(game, gobj).xDD4_itemVar;
+    let v = &mut item_mut(game, gobj).vars;
     match ItKind::of(kind) {
-        ItKind::HeartContainer => v.heart().xDD4_heal.get(),
+        ItKind::HeartContainer => v.heart().heal.get(),
         ItKind::MaximTomato => v.tomato().heal_amount.get(),
         ItKind::Food => v.foods().heal_amount.get() as i32,
         // The egg is one of the Pokémon's items, whose union member is theirs: its
@@ -109,10 +109,10 @@ pub fn grab_pos(game: &Game, gobj: GObjId) -> Vec3 {
     Vec3::new(
         mem(fp::fmadds(
             reg(ip.facing_dir),
-            reg(ip.xBCC_unk.x),
+            reg(ip.grab_offset.x),
             reg(ip.pos.x),
         )),
-        mem(fp::fadds(reg(ip.pos.y), reg(ip.xBCC_unk.y))),
+        mem(fp::fadds(reg(ip.pos.y), reg(ip.grab_offset.y))),
         ip.pos.z,
     )
 }
@@ -120,20 +120,20 @@ pub fn grab_pos(game: &Game, gobj: GObjId) -> Vec3 {
 /// How far from its grab point fighters reach it, `itGetGrabRangeX` and `itGetGrabRangeY`.
 // Ports `itGetGrabRangeX` and `itGetGrabRangeY`; aliased once a check reaches them.
 pub fn grab_range(game: &Game, gobj: GObjId) -> (f32, f32) {
-    let r = &item(game, gobj).xBD4_grabRange;
+    let r = &item(game, gobj).grab_range;
     (r.x, r.y)
 }
 
 /// Lets the item make its throw and drop sounds, `it_8026BCF4`.
 #[doc(alias = "it_8026BCF4")]
 pub fn unsilence(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDCD_flag.x0.b2 = false;
+    item_mut(game, gobj).hit_flags.x0.b2 = false;
 }
 
 /// Silences the item's throw and drop sounds, `it_8026BD0C`.
 #[doc(alias = "it_8026BD0C")]
 pub fn silence(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDCD_flag.x0.b2 = true;
+    item_mut(game, gobj).hit_flags.x0.b2 = true;
 }
 
 /// Scales the item to `mul` times its attributes' scale, `it_8026BAE8`.
@@ -152,7 +152,7 @@ pub fn set_scale(game: &mut Game, data: &Archives, gobj: GObjId, mul: f32) {
 /// The item's spawn number (`x1C`), `it_8026B7CC`.
 #[doc(alias = "it_8026B7CC")]
 pub fn spawn_number(game: &Game, gobj: GObjId) -> i32 {
-    item(game, gobj).x1C
+    item(game, gobj).spawn_num
 }
 
 /// What's left of a lit fuse, or -1: a Bob-omb's (`xDEC`) unless it's exploding (state 11),
@@ -161,8 +161,8 @@ pub fn spawn_number(game: &Game, gobj: GObjId) -> i32 {
 pub fn fuse_left(game: &mut Game, gobj: GObjId) -> f32 {
     let ip = super::item_mut(game, gobj);
     match ItKind::of(ip.kind) {
-        ItKind::BobOmb if ip.msid != 0xB => ip.xDD4_itemVar.bombhei().xDEC.get(),
-        ItKind::LinkBomb if ip.msid != 5 => ip.xD44_lifeTimer,
+        ItKind::BobOmb if ip.msid != 0xB => ip.vars.bombhei().fuse_left.get(),
+        ItKind::LinkBomb if ip.msid != 5 => ip.life_timer,
         _ => -1.0,
     }
 }
@@ -181,12 +181,12 @@ pub fn hand_over(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
     let data = r.data;
     let model = super::jobj_of(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.xD54_throwNum = ip.xD54_throwNum.wrapping_sub(1);
-    ip.xDC8_word.flags.x14 = false;
+    ip.throw_count = ip.throw_count.wrapping_sub(1);
+    ip.flags.flags.thrown = false;
     let anim_id = ip.anim_id;
     if anim_id == -1 {
         jobj::remove_anim_all(&mut r.game.objs, model);
-        item_mut(r.game, gobj).x524_cmd.script.cursor = None;
+        item_mut(r.game, gobj).cmd.script.cursor = None;
         return;
     }
     assert!(
@@ -197,8 +197,8 @@ pub fn hand_over(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
         .states(data)
         .expect("an article without states");
     let desc = descs.at(0x10 * first_anim as u32);
-    ip.xD0_itemStateDesc = Some(desc);
-    let (joint, speed, kind) = (ip.xC8_joint, ip.x5D0_animFrameSpeed, ip.kind);
+    ip.state_desc = Some(desc);
+    let (joint, speed, kind) = (ip.joint, ip.anim_speed, ip.kind);
     jobj::remove_anim_all(&mut r.game.objs, model);
     if let Some(joint) = joint {
         let first = model.and_then(|j| r.game.objs.jobjs[j].child);
@@ -237,7 +237,7 @@ pub fn hand_over(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
 pub fn uses_left(game: &Game, gobj: GObjId) -> i32 {
     let ip = item(game, gobj);
     match ItKind::of(ip.kind) {
-        ItKind::SuperScope | ItKind::StarRod | ItKind::RayGun | ItKind::FireFlower => ip.xD4C,
+        ItKind::SuperScope | ItKind::StarRod | ItKind::RayGun | ItKind::FireFlower => ip.ammo,
         _ => -1,
     }
 }
@@ -246,7 +246,7 @@ pub fn uses_left(game: &Game, gobj: GObjId) -> i32 {
 #[doc(alias = "it_8026C334")]
 pub fn bottom_pos(game: &Game, gobj: GObjId) -> crate::vec::Vec3 {
     let ip = item(game, gobj);
-    let bottom = reg(ip.x378_itemColl.ecb.bottom.y);
+    let bottom = reg(ip.coll.ecb.bottom.y);
     crate::vec::Vec3::new(
         mem(fp::fadds(reg(ip.pos.x), 0.0)),
         mem(fp::fadds(reg(ip.pos.y), bottom)),
@@ -257,13 +257,13 @@ pub fn bottom_pos(game: &Game, gobj: GObjId) -> crate::vec::Vec3 {
 /// Lets fighters pick the item up, `it_8026B390`.
 #[doc(alias = "it_8026B390")]
 pub fn enable_pickup(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDC8_word.flags.x15 = true;
+    item_mut(game, gobj).flags.flags.pickup = true;
 }
 
 /// Stops fighters picking the item up, `it_8026B3A8`.
 #[doc(alias = "it_8026B3A8")]
 pub fn disable_pickup(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDC8_word.flags.x15 = false;
+    item_mut(game, gobj).flags.flags.pickup = false;
 }
 
 /// The hitlag a hit of `damage` deals an item, `it_8026B424`: truncated, as a float.
@@ -308,7 +308,7 @@ pub fn metal_box_health(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
 /// Sets the item's hitlag, `it_8026B718`.
 #[doc(alias = "it_8026B718")]
 pub fn set_hitlag(game: &mut Game, gobj: GObjId, frames: f32) {
-    item_mut(game, gobj).xCBC_hitlagFrames = frames;
+    item_mut(game, gobj).hitlag_frames = frames;
 }
 
 /// Forgets a GObj the item points to, `it_8026B894`: whether it was the owner.
@@ -320,18 +320,18 @@ pub fn forget(game: &mut Game, gobj: GObjId, other: Option<GObjId>) -> bool {
         ip.owner = None;
         was_owner = true;
     }
-    if ip.xC64_reflectGObj == other {
-        ip.xC64_reflectGObj = None;
+    if ip.reflector == other {
+        ip.reflector = None;
     }
-    if ip.xC90_absorbGObj == other {
-        ip.xC90_absorbGObj = None;
+    if ip.absorber == other {
+        ip.absorber = None;
     }
-    if ip.xCEC_fighterGObj == other {
-        ip.xCEC_fighterGObj = None;
-        ip.xCB0_source_ply = 6;
+    if ip.attacker == other {
+        ip.attacker = None;
+        ip.source_player = 6;
     }
-    if ip.xCF4_fighterGObjUnk == other {
-        ip.xCF4_fighterGObjUnk = None;
+    if ip.met_fighter == other {
+        ip.met_fighter = None;
     }
     if ip.toucher == other {
         ip.toucher = None;
@@ -343,7 +343,7 @@ pub fn forget(game: &mut Game, gobj: GObjId, other: Option<GObjId>) -> bool {
 #[doc(alias = "it_8026BB88")]
 pub fn ecb_center(game: &Game, gobj: GObjId) -> Vec3 {
     let ip = item(game, gobj);
-    let e = &ip.x378_itemColl.ecb;
+    let e = &ip.coll.ecb;
     let dy = fp::fmuls(0.5, fp::fadds(reg(e.top.y), reg(e.bottom.y)));
     Vec3::new(
         mem(fp::fadds(reg(ip.pos.x), 0.0)),
@@ -355,7 +355,7 @@ pub fn ecb_center(game: &Game, gobj: GObjId) -> Vec3 {
 /// The last collision's ECB center, `it_8026BBCC`.
 #[doc(alias = "it_8026BBCC")]
 pub fn last_ecb_center(game: &Game, gobj: GObjId) -> Vec3 {
-    let cd = &item(game, gobj).x378_itemColl;
+    let cd = &item(game, gobj).coll;
     let e = &cd.xE4_ecb;
     let dy = fp::fmuls(0.5, fp::fadds(reg(e.top.y), reg(e.bottom.y)));
     Vec3::new(
@@ -368,7 +368,7 @@ pub fn last_ecb_center(game: &Game, gobj: GObjId) -> Vec3 {
 /// `xDD0_flag.b0`, `it_8026BC68`.
 #[doc(alias = "it_8026BC68")]
 pub fn is_stomp(game: &Game, gobj: GObjId) -> bool {
-    flag(item(game, gobj).xDD0_flag, 0)
+    flag(item(game, gobj).status_flags, 0)
 }
 
 /// The item's owner, `itGetOwner`.
@@ -380,31 +380,31 @@ pub fn owner(game: &Game, gobj: GObjId) -> Option<GObjId> {
 /// The item's attack id, `itGetAttackId`.
 #[doc(alias = "itGetAttackId")]
 pub fn attack_id(game: &Game, gobj: GObjId) -> i32 {
-    item(game, gobj).xD88_attackID
+    item(game, gobj).attack_id
 }
 
 /// Marks the item quiet, `it_8026BD6C`.
 #[doc(alias = "it_8026BD6C")]
 #[doc(alias("set_xdcd_b3"))]
 pub fn set_quiet(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDCD_flag.x0.b3 = true;
+    item_mut(game, gobj).hit_flags.x0.b3 = true;
 }
 
 /// Spawns the effects the item queued (`efAsync_QueueFlush` on `xBC0`).
 pub fn flush_effects(r: &mut Running, gobj: GObjId) {
-    let mut head = item(r.game, gobj).xBC0;
+    let mut head = item(r.game, gobj).effect_queue;
     if head.is_some() {
         crate::game::ef::flush(r, Some(gobj), &mut head);
-        item_mut(r.game, gobj).xBC0 = head;
+        item_mut(r.game, gobj).effect_queue = head;
     }
 }
 
 /// Drops the effects the item queued (`efAsync_QueueClear` on `xBC0`).
 pub fn clear_effect_queue(game: &mut Game, gobj: GObjId) {
-    let mut head = item(game, gobj).xBC0;
+    let mut head = item(game, gobj).effect_queue;
     if head.is_some() {
         crate::game::ef::queue_clear(game, &mut head);
-        item_mut(game, gobj).xBC0 = head;
+        item_mut(game, gobj).effect_queue = head;
     }
 }
 
@@ -413,7 +413,7 @@ pub fn clear_effect_queue(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_8026C368")]
 pub fn check_burst(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if !ip.x378_itemColl.x34_flags.b7 {
+    if !ip.coll.x34_flags.b7 {
         return;
     }
     match ip.item_kind() {
@@ -432,7 +432,7 @@ pub fn check_burst(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8026BD24")]
 #[doc(alias("set_xdd0_b3"))]
 pub fn freeze_lifetime(game: &mut Game, gobj: GObjId) {
-    super::set_flag(&mut item_mut(game, gobj).xDD0_flag, 3, true);
+    super::set_flag(&mut item_mut(game, gobj).status_flags, 3, true);
 }
 
 /// Turns off the flags an item holding still for its animation keeps (`xDD0_flag.b3`,
@@ -440,22 +440,22 @@ pub fn freeze_lifetime(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_8026BDCC")]
 pub fn hold_flags_off(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    super::set_flag(&mut ip.xDD0_flag, 3, false);
-    ip.xDCC_flag.b3 = true;
-    ip.xDCD_flag.x0.b3 = false;
-    ip.xDCD_flag.x0.b4 = false;
-    ip.xDC8_word.flags.x1A = true;
+    super::set_flag(&mut ip.status_flags, 3, false);
+    ip.state_flags.b3 = true;
+    ip.hit_flags.x0.b3 = false;
+    ip.hit_flags.x0.b4 = false;
+    ip.flags.flags.keeps_clear = true;
 }
 
 /// The inverse of [`hold_flags_off`], `it_8026BE28`.
 #[doc(alias = "it_8026BE28")]
 pub fn hold_flags_on(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    super::set_flag(&mut ip.xDD0_flag, 3, true);
-    ip.xDCC_flag.b3 = false;
-    ip.xDCD_flag.x0.b3 = true;
-    ip.xDCD_flag.x0.b4 = true;
-    ip.xDC8_word.flags.x1A = false;
+    super::set_flag(&mut ip.status_flags, 3, true);
+    ip.state_flags.b3 = false;
+    ip.hit_flags.x0.b3 = true;
+    ip.hit_flags.x0.b4 = true;
+    ip.flags.flags.keeps_clear = false;
 }
 
 /// Makes an item of `kind` at `pos` (`BobOmbRain`'s `x14` and `x8_vec`), `it_8026BE84`, as the
@@ -526,9 +526,9 @@ pub fn drop_food(
     }
     let mut spawn = super::item::drop_spawn(ItKind::HeartContainer.id(), pos, true);
     let gobj = super::item::spawn_air(r, &mut spawn)?;
-    let v = item_mut(r.game, gobj).xDD4_itemVar.heart();
-    v.xDD8.set(super::TurnipFlag { picked_up: true });
-    v.xDDC.set(slot);
+    let v = item_mut(r.game, gobj).vars.heart();
+    v.picked_up.set(super::TurnipFlag { picked_up: true });
+    v.food_slot.set(slot);
     super::item::remove_camera_box(r.game, gobj);
     super::kinds::heart::second_heal(r, gobj);
     if hold {
@@ -560,13 +560,13 @@ pub fn drop_flipper(
 /// Makes the item keep clear of others (`xDC8_word.x1A`), `it_8026BD9C`.
 #[doc(alias = "it_8026BD9C")]
 pub fn keep_clear(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDC8_word.flags.x1A = true;
+    item_mut(game, gobj).flags.flags.keeps_clear = true;
 }
 
 /// Stops the item keeping clear of others (`xDC8_word.x1A`), `it_8026BDB4`.
 #[doc(alias = "it_8026BDB4")]
 pub fn stop_keeping_clear(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDC8_word.flags.x1A = false;
+    item_mut(game, gobj).flags.flags.keeps_clear = false;
 }
 
 /// Hides the item's model, `it_8026BB44`.
@@ -604,7 +604,7 @@ pub fn nearest_target_item(game: &Game, pos: Vec3, facing_dir: f32) -> Option<GO
         let k = ip.hold_kind;
         if !matches!(k, 4..=7)
             || ip.grab_victim.is_some()
-            || (ip.xDC8_word.flags.x13 && ip.owner.is_some())
+            || (ip.flags.flags.held && ip.owner.is_some())
             || (facing_dir == -1.0 && ip.pos.x > pos.x)
             || (facing_dir == 1.0 && ip.pos.x < pos.x)
         {
@@ -624,11 +624,11 @@ pub fn nearest_target_item(game: &Game, pos: Vec3, facing_dir: f32) -> Option<GO
 /// Sets `xDCC_flag.b3`, `it_8026BD3C`.
 #[doc(alias = "it_8026BD3C")]
 pub fn set_dcc_b3(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDCC_flag.b3 = true;
+    item_mut(game, gobj).state_flags.b3 = true;
 }
 
 /// Clears `xDCC_flag.b3`, `it_8026BD54`.
 #[doc(alias = "it_8026BD54")]
 pub fn clear_dcc_b3(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDCC_flag.b3 = false;
+    item_mut(game, gobj).state_flags.b3 = false;
 }

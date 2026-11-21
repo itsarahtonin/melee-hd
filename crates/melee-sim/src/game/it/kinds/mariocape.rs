@@ -105,12 +105,12 @@ pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_2725_Logic41_PickedUp")]
 fn picked_up(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
     if ip.owner.is_none() {
         return;
     }
-    let word = ip.xD4_dynamicBones.0[0].dyn_desc.count as i32;
+    let word = ip.dynamic_bones.0[0].dyn_desc.count as i32;
     let state = if word != 1 { 0 } else { 1 };
     change_state(r, gobj, state, change::ANIM_UPDATE);
     animate(r, gobj);
@@ -124,17 +124,17 @@ fn picked_up(r: &mut Running, gobj: GObjId) {
 fn animate_cape(r: &mut Running, gobj: GObjId) -> bool {
     let bone = |r: &Running, i: usize| {
         let t = item(r.game, gobj)
-            .xBBC_dynamicBoneTable
+            .bone_table
             .expect("a cape without a bone table");
         r.game.it.bone_tables[t.0].bones[i]
     };
-    if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
-        item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    if item(r.game, gobj).cmd_var0 != 0 {
+        item_mut(r.game, gobj).cmd_var0 = 0;
         let j = bone(r, 16);
         queue(r, gobj, SpawnKind::Attach, 0x47D, j, &[]);
     }
-    if item(r.game, gobj).xDB0_itcmd_var1 != 0 {
-        item_mut(r.game, gobj).xDB0_itcmd_var1 = 0;
+    if item(r.game, gobj).cmd_var1 != 0 {
+        item_mut(r.game, gobj).cmd_var1 = 0;
         let j = bone(r, 6);
         queue(r, gobj, SpawnKind::Attach, 0x47E, j, &[]);
     }

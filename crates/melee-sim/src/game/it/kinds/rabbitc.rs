@@ -116,7 +116,7 @@ pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
 /// Stops and rests, `it_80295138`.
 #[doc(alias = "it_80295138")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     lib26b1::enable_pickup(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }

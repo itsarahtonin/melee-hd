@@ -1219,12 +1219,12 @@ pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
     // have none keeps the word its block held, which a place in no file reads as none.
     let state_desc = l.kept(at + 0xD0, 4);
     o.lay(&mut l, at, &cx);
-    if o.xD0_itemStateDesc.is_none() {
+    if o.state_desc.is_none() {
         l.restore(state_desc);
     }
     // A stage's hurtbox item's attributes are the executable's (`it_803F8C08`), which the
     // mirror holds as none.
-    if o.kind == ItKind::StageHurtbox && o.xCC_item_attr.is_none() {
+    if o.kind == ItKind::StageHurtbox && o.attrs.is_none() {
         l.put_u32(at + 0xCC, 0x803F_8C08);
     }
     // The command script's cursor is a state's script in the item's file (`Item_80268E5C`)
@@ -1232,16 +1232,16 @@ pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
     // clears), and the color overlay's
     // an entry of the items' color animations (`it_804D6D04`, `ItCo.dat`) or null
     // (`lb_80014498`): none is null, not a place in no file.
-    if o.x524_cmd.script.cursor.is_none() {
+    if o.cmd.script.cursor.is_none() {
         l.put_u32(at + 0x52C, 0);
     }
-    if o.x548_colorOverlay.script.cursor.is_none() {
+    if o.color_overlay.script.cursor.is_none() {
         l.put_u32(at + 0x550, 0);
     }
-    let n = o.x374_dynamicBonesNum.max(0) as usize;
-    o.xD4_dynamicBones.lay_counted(&mut l, at + 0xD4, &cx, n);
-    let n = usize::from(o.xAC8_hurtboxNum);
-    o.xACC_itemHurtbox.lay_counted(&mut l, at + 0xACC, &cx, n);
+    let n = o.dynamic_bone_count.max(0) as usize;
+    o.dynamic_bones.lay_counted(&mut l, at + 0xD4, &cx, n);
+    let n = usize::from(o.hurtbox_count);
+    o.hurtboxes.lay_counted(&mut l, at + 0xACC, &cx, n);
     if let Some(runs) = game.it.render_leftovers.get(&i.0) {
         // The flag byte `xDD0`'s `b2`, which no item code writes: over the GPU's pixels the
         // item never held it, and the image keeps whole bytes, so the byte goes back as the
@@ -1290,19 +1290,19 @@ fn with_addrs<R>(game: &Game, f: impl FnOnce(&Addrs) -> R) -> R {
 pub fn leave_item(game: &mut Game, i: ItemId) {
     let (vars, bones, hurt) = with_addrs(game, |cx| {
         let o = &game.items[i.0];
-        let n = o.x374_dynamicBonesNum.max(0) as usize;
-        let h = usize::from(o.xAC8_hurtboxNum);
+        let n = o.dynamic_bone_count.max(0) as usize;
+        let h = usize::from(o.hurtbox_count);
         (
-            o.xDD4_itemVar.left_after(cx),
-            o.xD4_dynamicBones.left_after(cx, n),
-            o.xACC_itemHurtbox.left_after(cx, h),
+            o.vars.left_after(cx),
+            o.dynamic_bones.left_after(cx, n),
+            o.hurtboxes.left_after(cx, h),
         )
     });
     let o = &mut game.items[i.0];
-    o.xDD4_itemVar.member = super::it::Member::Bytes;
-    o.xDD4_itemVar.left = vars;
-    o.xD4_dynamicBones.1 = bones;
-    o.xACC_itemHurtbox.1 = hurt;
+    o.vars.member = super::it::Member::Bytes;
+    o.vars.left = vars;
+    o.dynamic_bones.1 = bones;
+    o.hurtboxes.1 = hurt;
 }
 
 /// A fighter's counted arrays' entries as the block holds them now become the bytes it keeps

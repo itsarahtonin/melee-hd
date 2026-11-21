@@ -89,20 +89,20 @@ pub fn spawn(
     let trail = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, trail);
     // `Item_ClearCmdVars`.
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-    let v = ip.xDD4_itemVar.ness_pk_thunder_trail();
-    v.x0.set(Some(ball));
-    v.x4.set(idx);
-    v.x8.set(0);
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    let v = ip.vars.ness_pk_thunder_trail();
+    v.ball.set(Some(ball));
+    v.index.set(idx);
+    v.frames.set(0);
     lib26b1::disable_pickup(r.game, trail);
-    item_mut(r.game, trail).xDC8_word.flags.x13 = false;
+    item_mut(r.game, trail).flags.flags.held = false;
     lib2725::show(r.game, trail);
     let ip = item_mut(r.game, trail);
-    ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
-    ip.xDCC_flag.b3 = false;
+    ip.vel = Vec3::new(0.0, 0.0, 0.0);
+    ip.state_flags.b3 = false;
     if owner.is_some() {
         debug_owner_bubbles(r.game, trail, owner);
     }
@@ -115,9 +115,9 @@ pub fn spawn(
 pub fn let_go(r: &mut Running, gobj: GObjId) {
     lib2725::clear_hitboxes(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.xDD4_itemVar.ness_pk_thunder_trail().x0.set(None);
+    ip.vars.ness_pk_thunder_trail().ball.set(None);
     ip.owner = None;
-    ip.xDC8_word.flags.x13 = false;
+    ip.flags.flags.held = false;
 }
 
 /// The trail without an owner, `it_802AC5D8`.
@@ -125,7 +125,7 @@ pub fn let_go(r: &mut Running, gobj: GObjId) {
 pub fn orphan(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.owner = None;
-    ip.xDC8_word.flags.x13 = false;
+    ip.flags.flags.held = false;
 }
 
 /// `it_802AC604`: state 0.
@@ -141,18 +141,18 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj);
     let child = j.and_then(|j| r.game.objs.jobjs[j].child);
     let n = item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .ness_pk_thunder_trail()
-        .x8
+        .frames
         .get();
     if n & 1 != 0 {
         jobj::set_flags_all(&mut r.game.objs.jobjs, child, HIDDEN);
     } else {
         jobj::clear_flags_all(&mut r.game.objs.jobjs, child, HIDDEN);
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.ness_pk_thunder_trail();
-    v.x8.update(|n| n.wrapping_add(1));
-    v.x0.get().is_none()
+    let v = item_mut(r.game, gobj).vars.ness_pk_thunder_trail();
+    v.frames.update(|n| n.wrapping_add(1));
+    v.ball.get().is_none()
 }
 
 /// `itNesspkthundertrail_UnkMotion0_Phys`: at the ball's position for its place in the trail,
@@ -160,9 +160,9 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itNesspkthundertrail_UnkMotion0_Phys")]
 pub fn physics(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj).expect("a trail without a model");
-    let v = item_mut(r.game, gobj).xDD4_itemVar.ness_pk_thunder_trail();
-    let Some(ball) = v.x0.get() else { return };
-    let idx = v.x4.get();
+    let v = item_mut(r.game, gobj).vars.ness_pk_thunder_trail();
+    let Some(ball) = v.ball.get() else { return };
+    let idx = v.index.get();
     let pos = super::nesspkthunder::trail_pos(r, ball, idx);
     item_mut(r.game, gobj).pos = pos;
     let radius = super::nesspkthunder::speed(r, ball);

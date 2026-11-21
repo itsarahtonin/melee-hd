@@ -10,15 +10,15 @@ use crate::hsd::gobj::GObjId;
 /// Clears an attack's hit record (`ft_80089768`, on the item's copy at `xD94`).
 #[doc(alias = "ft_80089768")]
 pub fn clear_attack_record(ip: &mut Item) {
-    ip.xD94.x = 0;
-    ip.xD94.y = 0;
-    ip.xD9C.x = 0.0;
-    ip.xD9C.y = 6;
+    ip.attack_record_a.x = 0;
+    ip.attack_record_a.y = 0;
+    ip.attack_record_b.x = 0.0;
+    ip.attack_record_b.y = 6;
     // All of +0x10 and the top five bits of +0x11 (`x10_b0` to `x11_b3`).
-    let mut w = ip.xDA4_word.to_be_bytes();
+    let mut w = ip.attack_record_word.to_be_bytes();
     w[0] = 0;
     w[1] &= 0x07;
-    ip.xDA4_word = u32::from_be_bytes(w);
+    ip.attack_record_word = u32::from_be_bytes(w);
 }
 
 /// Takes the attack a fighter is in for a new item, `it_8027B070`.
@@ -33,13 +33,13 @@ pub fn copy_fighter_attack(game: &mut Game, gobj: GObjId, fighter: GObjId) {
         fp.attack_record.clone(),
     );
     let ip = item_mut(game, gobj);
-    ip.xD88_attackID = id;
-    ip.xD8C_attack_instance = instance;
-    ip.xD90 = x2070;
-    ip.xD94 = x2074.x2074_vec;
-    ip.xD9C = x2074.x207C;
-    ip.xDA4_word = u32::from_be_bytes(x2074.x10);
-    ip.xDA8_short = x2074.x2088;
+    ip.attack_id = id;
+    ip.attack_instance = instance;
+    ip.attack_flags = x2070;
+    ip.attack_record_a = x2074.x2074_vec;
+    ip.attack_record_b = x2074.x207C;
+    ip.attack_record_word = u32::from_be_bytes(x2074.x10);
+    ip.attack_record_short = x2074.x2088;
     let i = super::item_of(game, gobj);
     carry_record(game, RenderOf::Fighter(f), i);
 }
@@ -67,22 +67,22 @@ pub fn track_spawn(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         } else {
             let o = item(game, p2.expect("an item made by an item without one"));
             let (id, inst, x90, x94, x9c, xa4, xa8) = (
-                o.xD88_attackID,
-                o.xD8C_attack_instance,
-                o.xD90,
-                o.xD94.clone(),
-                o.xD9C.clone(),
-                o.xDA4_word,
-                o.xDA8_short,
+                o.attack_id,
+                o.attack_instance,
+                o.attack_flags,
+                o.attack_record_a.clone(),
+                o.attack_record_b.clone(),
+                o.attack_record_word,
+                o.attack_record_short,
             );
             let ip = item_mut(game, gobj);
-            ip.xD88_attackID = id;
-            ip.xD8C_attack_instance = inst;
-            ip.xD90 = x90;
-            ip.xD94 = x94;
-            ip.xD9C = x9c;
-            ip.xDA4_word = xa4;
-            ip.xDA8_short = xa8;
+            ip.attack_id = id;
+            ip.attack_instance = inst;
+            ip.attack_flags = x90;
+            ip.attack_record_a = x94;
+            ip.attack_record_b = x9c;
+            ip.attack_record_word = xa4;
+            ip.attack_record_short = xa8;
             let (from, to) = (
                 super::item_of(game, p2.unwrap()),
                 super::item_of(game, gobj),
@@ -91,11 +91,11 @@ pub fn track_spawn(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         }
     } else {
         let ip = item_mut(game, gobj);
-        ip.xD88_attackID = 1;
-        ip.xD8C_attack_instance = 0;
-        ip.xD90 = [0; 4];
+        ip.attack_id = 1;
+        ip.attack_instance = 0;
+        ip.attack_flags = [0; 4];
         clear_attack_record(ip);
-        ip.xDA8_short = 0;
+        ip.attack_record_short = 0;
     }
 }
 
@@ -104,18 +104,18 @@ pub fn track_spawn(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
 #[doc(alias = "it_8027B1F4")]
 pub fn restart_attack(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    ip.xD88_attackID = 1;
-    ip.xD8C_attack_instance = 0;
-    ip.xD90 = [0; 4];
-    ip.xDA8_short = 0;
+    ip.attack_id = 1;
+    ip.attack_instance = 0;
+    ip.attack_flags = [0; 4];
+    ip.attack_record_short = 0;
     let owner = ip.owner;
     if is_fighter(game, owner) {
         let f = super::owner::fighter_of(game, owner.unwrap());
         let rec = game.fighters[f.0].attack_record.clone();
         let ip = item_mut(game, gobj);
-        ip.xD94 = rec.x2074_vec;
-        ip.xD9C = rec.x207C;
-        ip.xDA4_word = u32::from_be_bytes(rec.x10);
+        ip.attack_record_a = rec.x2074_vec;
+        ip.attack_record_b = rec.x207C;
+        ip.attack_record_word = u32::from_be_bytes(rec.x10);
         let i = super::item_of(game, gobj);
         carry_record(game, RenderOf::Fighter(f), i);
         return;
@@ -127,7 +127,7 @@ pub fn restart_attack(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_8027B564")]
 pub fn count_owner_attack(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    let (owner, flags) = (ip.owner, ip.xD90);
+    let (owner, flags) = (ip.owner, ip.attack_flags);
     if is_fighter(r.game, owner) {
         r.count_item_attack(owner.expect("an owner"), flags);
     }

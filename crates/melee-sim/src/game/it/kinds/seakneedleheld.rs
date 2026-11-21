@@ -47,11 +47,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// The fighter holding the needles (`seakneedleheld.owner`).
 fn owner_of(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .seak_needle_held()
-        .owner
-        .get()
+    item_mut(r.game, gobj).vars.seak_needle_held().owner.get()
 }
 
 /// Shows as many needles as the owner holds, `it_802B18B0`.
@@ -112,12 +108,12 @@ pub fn spawn(
     let gobj = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
     // `Item_ClearCmdVars`.
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDCC_flag.b3 = false;
-    ip.xDD4_itemVar.seak_needle_held().owner.set(Some(parent));
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    ip.state_flags.b3 = false;
+    ip.vars.seak_needle_held().owner.set(Some(parent));
     pick_up(r, gobj, parent, part);
     Some(gobj)
 }

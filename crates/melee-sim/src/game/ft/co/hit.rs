@@ -545,7 +545,7 @@ impl Running<'_> {
             if ip.owner != Some(holder) {
                 return false;
             }
-            ip.xDA8_short
+            ip.attack_record_short
         };
         let fp = &mut self.game.fighters[f.0];
         let last = u16::from_be_bytes([fp.mv[0x46], fp.mv[0x47]]);

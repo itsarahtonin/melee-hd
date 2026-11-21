@@ -61,7 +61,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var0 = 0;
     enter_air(r, gobj);
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
@@ -109,7 +109,7 @@ pub fn fly_up(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     pokemon::effect_scaled(r, 0x463, gobj, j, 1.1);
     let up = attr_f32(r, gobj, 8);
-    item_mut(r.game, gobj).x40_vel.y = up;
+    item_mut(r.game, gobj).vel.y = up;
     change_state(r, gobj, 2, change::ANIM_UPDATE);
     effect_hitlag(r.game, gobj);
 }
@@ -129,7 +129,7 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
 pub fn phys2(r: &mut Running, gobj: GObjId) {
     let a = attr_f32(r, gobj, 0xC);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), reg(a)));
+    ip.vel.y = mem(fp::fadds(reg(ip.vel.y), reg(a)));
 }
 
 /// `itFire_UnkMotion2_Coll`: nothing.
@@ -160,10 +160,10 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
         pokemon::effect_scaled(r, 0x464, gobj, j, 1.1);
         lib2725::clear_velocity(r.game, gobj);
         let up = attr_f32(r, gobj, 4);
-        item_mut(r.game, gobj).x40_vel.y = up;
+        item_mut(r.game, gobj).vel.y = up;
         change_state(r, gobj, 1, change::ANIM_UPDATE);
         effect_hitlag(r.game, gobj);
-        set_flag(&mut item_mut(r.game, gobj).xDD1_flag, 1, true);
+        set_flag(&mut item_mut(r.game, gobj).phys_flags, 1, true);
     }
 }
 

@@ -80,12 +80,12 @@ pub fn spawn(
     let bat = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, bat);
     // `Item_ClearCmdVars`.
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDCC_flag.b3 = false;
-    ip.xDD4_itemVar.ness_bat().x0.set(Some(ness));
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    ip.state_flags.b3 = false;
+    ip.vars.ness_bat().ness.set(Some(ness));
     lib2725::set_lifetime(r.game, r.data, bat, 1200.0);
     pick_up(r, bat, ness, part);
     Some(bat)
@@ -113,12 +113,12 @@ pub fn spawn_demo(r: &mut Running, ness: GObjId, part: i32) -> Option<GObjId> {
     spawn.x40 = 0;
     let bat = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, bat);
-    ip.xDB8_itcmd_var3 = 1;
-    ip.xDB4_itcmd_var2 = 1;
-    ip.xDB0_itcmd_var1 = 1;
-    ip.xDAC_itcmd_var0 = 1;
-    ip.xDCC_flag.b3 = false;
-    ip.xDD4_itemVar.ness_bat().x0.set(Some(ness));
+    ip.cmd_var3 = 1;
+    ip.cmd_var2 = 1;
+    ip.cmd_var1 = 1;
+    ip.cmd_var0 = 1;
+    ip.state_flags.b3 = false;
+    ip.vars.ness_bat().ness.set(Some(ness));
     pick_up(r, bat, ness, part);
     Some(bat)
 }
@@ -127,7 +127,7 @@ pub fn spawn_demo(r: &mut Running, ness: GObjId, part: i32) -> Option<GObjId> {
 /// screen or asleep (`ftCo_800BF228`), `itNessbat_UnkMotion1_Anim`.
 #[doc(alias = "itNessbat_UnkMotion1_Anim")]
 pub fn animate_1(r: &mut Running, gobj: GObjId) -> bool {
-    let ness = item_mut(r.game, gobj).xDD4_itemVar.ness_bat().x0.get();
+    let ness = item_mut(r.game, gobj).vars.ness_bat().ness.get();
     if let Some(n) = ness
         && crate::game::ft::demo::frozen_or_asleep(r.game, n)
     {
@@ -140,7 +140,7 @@ pub fn animate_1(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802AD6B8")]
 pub fn remove(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.xDD4_itemVar.ness_bat().x0.set(None);
+    ip.vars.ness_bat().ness.set(None);
     ip.owner = None;
     destroy(r, gobj);
 }
@@ -150,7 +150,7 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_2725_Logic58_PickedUp")]
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    let any = ip.xDAC_itcmd_var0 | ip.xDB0_itcmd_var1 | ip.xDB4_itcmd_var2 | ip.xDB8_itcmd_var3;
+    let any = ip.cmd_var0 | ip.cmd_var1 | ip.cmd_var2 | ip.cmd_var3;
     change_state(r, gobj, if any != 0 { 1 } else { 0 }, change::ANIM_UPDATE);
     super::super::item::animate(r, gobj);
 }
@@ -160,12 +160,12 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itNessbat_UnkMotion0_Anim")]
 pub fn animate_0(r: &mut Running, gobj: GObjId) -> bool {
     let child = jobj_of(r.game, gobj).and_then(|j| r.game.objs.jobjs[j].child);
-    if item(r.game, gobj).xDAC_itcmd_var0 == 0 {
+    if item(r.game, gobj).cmd_var0 == 0 {
         jobj::clear_flags_all(&mut r.game.objs.jobjs, child, HIDDEN);
     } else {
         jobj::set_flags_all(&mut r.game.objs.jobjs, child, HIDDEN);
     }
-    let ness = item_mut(r.game, gobj).xDD4_itemVar.ness_bat().x0.get();
+    let ness = item_mut(r.game, gobj).vars.ness_bat().ness.get();
     if let Some(n) = ness
         && !r.ness_bat_should_go(n)
     {
@@ -174,17 +174,17 @@ pub fn animate_0(r: &mut Running, gobj: GObjId) -> bool {
     // `itNessbat_ClearOwnerRef`.
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
-    if let Some(n) = ip.xDD4_itemVar.ness_bat().x0.get()
+    if let Some(n) = ip.vars.ness_bat().ness.get()
         && owner == Some(n)
     {
         r.ness_bat_set_null(n);
     }
     let ip = item_mut(r.game, gobj);
-    ip.xDD4_itemVar.ness_bat().x0.set(None);
+    ip.vars.ness_bat().ness.set(None);
     ip.owner = None;
     // `itNessbat_RemoveItem`.
     let ip = item_mut(r.game, gobj);
-    ip.xDD4_itemVar.ness_bat().x0.set(None);
+    ip.vars.ness_bat().ness.set(None);
     ip.owner = None;
     true
 }

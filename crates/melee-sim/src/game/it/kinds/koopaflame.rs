@@ -109,8 +109,8 @@ pub(super) fn clamp_angle_reverse(a: f32) -> f32 {
 
 /// The flame's angle clamped in place.
 fn clamp_own_angle(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.koopa_flame();
-    v.x24_angle.update(clamp_angle);
+    let v = item_mut(r.game, gobj).vars.koopa_flame();
+    v.angle.update(clamp_angle);
 }
 
 /// A flame for `parent` from `pos`, `itKoopaFlame_Spawn`: its speed and size the fuel's share
@@ -148,27 +148,27 @@ pub fn spawn(
     let lifetime = attr_f32(r, gobj, attr::LIFETIME);
     let ip = item_mut(r.game, gobj);
     // `Item_ClearCmdVars`.
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDD4_itemVar.koopa_flame().x2C_lifetime.set(lifetime);
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    ip.vars.koopa_flame().lifetime.set(lifetime);
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
     let ip = item_mut(r.game, gobj);
     let (kind, owner) = (ip.kind, ip.owner);
-    let v = ip.xDD4_itemVar.koopa_flame();
-    v.x0_pos.set(pos);
-    v.x34_base_scale.set(0.0);
+    let v = ip.vars.koopa_flame();
+    v.pos.set(pos);
+    v.base_scale.set(0.0);
     match ItKind::of(kind) {
         ItKind::BowserFlame => {
             let full_speed = r.kp_flame_max_speed(owner, &KOOPA);
             let full_size = r.kp_flame_max_size(owner, &KOOPA);
-            let v = item_mut(r.game, gobj).xDD4_itemVar.koopa_flame();
-            v.x38_base_speed.set(mem(fp::fdivs(
+            let v = item_mut(r.game, gobj).vars.koopa_flame();
+            v.base_speed.set(mem(fp::fdivs(
                 fp::frsp(f64::from(base_speed)),
                 fp::frsp(f64::from(full_speed)),
             )));
-            v.x3C_scale.set(mem(fp::fdivs(
+            v.scale.set(mem(fp::fdivs(
                 fp::frsp(f64::from(scale)),
                 fp::frsp(f64::from(full_size)),
             )));
@@ -176,12 +176,12 @@ pub fn spawn(
         ItKind::KirbyBowserFlame => {
             let full_speed = r.kp_flame_max_speed(owner, &KP_KIRBY);
             let full_size = r.kp_flame_max_size(owner, &KP_KIRBY);
-            let v = item_mut(r.game, gobj).xDD4_itemVar.koopa_flame();
-            v.x38_base_speed.set(mem(fp::fdivs(
+            let v = item_mut(r.game, gobj).vars.koopa_flame();
+            v.base_speed.set(mem(fp::fdivs(
                 fp::frsp(f64::from(base_speed)),
                 fp::frsp(f64::from(full_speed)),
             )));
-            v.x3C_scale.set(mem(fp::fdivs(
+            v.scale.set(mem(fp::fdivs(
                 fp::frsp(f64::from(scale)),
                 fp::frsp(f64::from(full_size)),
             )));
@@ -198,26 +198,26 @@ pub fn spawn(
     );
     let rng = reg(r.game.objs.rng.draw_f32());
     let range = fp::fsubs(max_speed, min_speed);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.koopa_flame();
-    let base = reg(v.x38_base_speed.get());
-    v.x28_speed
+    let v = item_mut(r.game, gobj).vars.koopa_flame();
+    let base = reg(v.base_speed.get());
+    v.speed
         .set(mem(fp::fmuls(base, fp::fmadds(range, rng, min_speed))));
     let rng = reg(r.game.objs.rng.draw_f32());
     let range = fp::fsubs(max_angle, min_angle);
     let ip = item_mut(r.game, gobj);
     let facing = ip.facing_dir;
-    let v = ip.xDD4_itemVar.koopa_flame();
-    v.x24_angle.set(mem(fp::fmadds(range, rng, min_angle)));
+    let v = ip.vars.koopa_flame();
+    v.angle.set(mem(fp::fmadds(range, rng, min_angle)));
     if facing != 1.0 {
-        v.x24_angle.update(|a| mem(fp::fneg(reg(a))));
+        v.angle.update(|a| mem(fp::fneg(reg(a))));
     }
-    v.x24_angle.update(clamp_angle);
-    v.x40_frame_counter.set(0);
-    v.x30.set(0);
-    v.x44_spawned.set(0);
-    v.x48_gfx.set(gfx);
-    v.xC_direction.set(Vec3::new(facing, 0.0, 0.0));
-    ip.xDCC_flag.b3 = false;
+    v.angle.update(clamp_angle);
+    v.frame_counter.set(0);
+    v.unread_30.set(0);
+    v.spawned.set(0);
+    v.gfx.set(gfx);
+    v.direction.set(Vec3::new(facing, 0.0, 0.0));
+    ip.state_flags.b3 = false;
     setup(r, gobj, parent);
     Some(gobj)
 }
@@ -228,15 +228,15 @@ pub fn spawn(
 pub fn setup(r: &mut Running, gobj: GObjId, parent: GObjId) {
     // `Item_ClearFlagsAndEnterState(gobj, ip, 0)`.
     lib26b1::disable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
+    item_mut(r.game, gobj).flags.flags.held = false;
     lib2725::show(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     let at = item(r.game, gobj).pos;
     super::super::item::animate(r, gobj);
     physics(r, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.pos.x = mem(fp::fsubs(reg(ip.pos.x), reg(ip.x40_vel.x)));
-    ip.pos.y = mem(fp::fsubs(reg(ip.pos.y), reg(ip.x40_vel.y)));
+    ip.pos.x = mem(fp::fsubs(reg(ip.pos.x), reg(ip.vel.x)));
+    ip.pos.y = mem(fp::fsubs(reg(ip.pos.y), reg(ip.vel.y)));
     ground::air_stay(r, gobj);
     item_mut(r.game, gobj).pos = at;
     debug_owner_bubbles(r.game, gobj, Some(parent));
@@ -249,35 +249,32 @@ fn animate_0(r: &mut Running, gobj: GObjId) -> bool {
     let hitbox_life = attr_f32(r, gobj, attr::HITBOX_LIFETIME);
     let j = jobj_of(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    if ip.x5D4_hitboxes[0].hit.state != hitcapsule::DISABLED {
-        let first = ip.x5D4_hitboxes[0].hit.scale;
-        let v = ip.xDD4_itemVar.koopa_flame();
-        if v.x34_base_scale.get() == 0.0 {
-            v.x34_base_scale.set(first);
+    if ip.hitboxes[0].hit.state != hitcapsule::DISABLED {
+        let first = ip.hitboxes[0].hit.scale;
+        let v = ip.vars.koopa_flame();
+        if v.base_scale.get() == 0.0 {
+            v.base_scale.set(first);
         }
-        let s = mem(fp::fmuls(
-            reg(v.x34_base_scale.get()),
-            reg(v.x3C_scale.get()),
-        ));
-        ip.x5D4_hitboxes[0].hit.scale = s;
+        let s = mem(fp::fmuls(reg(v.base_scale.get()), reg(v.scale.get())));
+        ip.hitboxes[0].hit.scale = s;
     }
     let ip = item_mut(r.game, gobj);
-    let s = ip.xDD4_itemVar.koopa_flame().x3C_scale.get();
+    let s = ip.vars.koopa_flame().scale.get();
     let jj = j.expect("a flame without a model");
     jobj::set_scale(&mut r.game.objs.jobjs, jj, Vec3::new(s, s, s));
     let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.koopa_flame();
-    v.x40_frame_counter.update(|n| n.wrapping_add(1));
-    let n = v.x40_frame_counter.get();
+    let v = ip.vars.koopa_flame();
+    v.frame_counter.update(|n| n.wrapping_add(1));
+    let n = v.frame_counter.get();
     if fp::frsp(f64::from(n)) > reg(hitbox_life) {
         lib2725::clear_hitboxes(r.game, r.data, gobj);
     }
     let ip = item_mut(r.game, gobj);
     let kind = ip.kind;
-    let v = ip.xDD4_itemVar.koopa_flame();
-    if v.x44_spawned.get() == 0 {
-        v.x44_spawned.set(1);
-        let gfx = v.x48_gfx.get();
+    let v = ip.vars.koopa_flame();
+    if v.spawned.get() == 0 {
+        v.spawned.set(1);
+        let gfx = v.gfx.get();
         match ItKind::of(kind) {
             ItKind::BowserFlame => {
                 ef::spawn(r, 0x4DB_i32.wrapping_add(gfx), Some(gobj), &[Arg::JObj(j)]);
@@ -297,15 +294,15 @@ fn animate_0(r: &mut Running, gobj: GObjId) -> bool {
 fn physics(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let pos = ip.pos;
-    let v = ip.xDD4_itemVar.koopa_flame();
-    v.x0_pos.set(pos);
-    let (speed, angle) = (reg(v.x28_speed.get()), v.x24_angle.get());
+    let v = ip.vars.koopa_flame();
+    v.pos.set(pos);
+    let (speed, angle) = (reg(v.speed.get()), v.angle.get());
     let x = mem(fp::fmuls(speed, reg(crate::math::sin(angle))));
     let y = mem(fp::fmuls(speed, reg(crate::math::cos(angle))));
     let mut vel = Vec3::new(x, y, 0.0);
-    ip.x40_vel = vel;
+    ip.vel = vel;
     vel.normalize();
-    ip.xDD4_itemVar.koopa_flame().x18_vel.set(vel);
+    ip.vars.koopa_flame().vel.set(vel);
 }
 
 /// `itKoopaFlame_Update_Direction`: its direction of travel turned by the normals of the
@@ -313,16 +310,16 @@ fn physics(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itKoopaFlame_Update_Direction")]
 pub fn update_direction(r: &mut Running, gobj: GObjId, flags: i32) {
     let ip = item_mut(r.game, gobj);
-    let cd = &ip.x378_itemColl;
+    let cd = &ip.coll;
     let surfaces = [
         (FLOOR, cd.floor.normal),
         (CEILING, cd.ceiling.normal),
         (LEFT_WALL, cd.left_facing_wall.normal),
         (RIGHT_WALL, cd.right_facing_wall.normal),
     ];
-    let v = ip.xDD4_itemVar.koopa_flame();
-    let mut d = v.xC_direction.get();
-    v.x24_angle.update(clamp_angle);
+    let v = ip.vars.koopa_flame();
+    let mut d = v.direction.get();
+    v.angle.update(clamp_angle);
     for (bit, n) in surfaces {
         if flags & bit != 0 {
             d.x = mem(fp::fadds(reg(d.x), reg(n.x)));
@@ -330,7 +327,7 @@ pub fn update_direction(r: &mut Running, gobj: GObjId, flags: i32) {
         }
     }
     d.normalize();
-    v.xC_direction.set(d);
+    v.direction.set(d);
 }
 
 /// `itKoopaFlame_Update_Angle`: its angle turned toward its new direction, a little when they
@@ -340,8 +337,8 @@ pub fn update_angle(r: &mut Running, gobj: GObjId, flags: i32) {
     if flags == 0 {
         return;
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.koopa_flame();
-    let (vel, dir) = (v.x18_vel.get(), v.xC_direction.get());
+    let v = item_mut(r.game, gobj).vars.koopa_flame();
+    let (vel, dir) = (v.vel.get(), v.direction.get());
     let a = crate::math::atan2(dir.x, dir.y);
     let b = crate::math::atan2(vel.x, vel.y);
     let diff = clamp_angle_reverse(mem(fp::fsubs(reg(b), reg(a))));
@@ -359,7 +356,7 @@ pub fn update_angle(r: &mut Running, gobj: GObjId, flags: i32) {
         let signed = if d < 0.0 { fp::fneg(k) } else { k };
         fp::fmuls(angle, signed)
     };
-    v.x24_angle
+    v.angle
         .update(|old| clamp_angle(mem(fp::fsubs(reg(old), turn))));
 }
 
@@ -368,7 +365,7 @@ pub fn update_angle(r: &mut Running, gobj: GObjId, flags: i32) {
 #[doc(alias = "itKoopaFlame_UnkMotion0_Coll")]
 fn collide(r: &mut Running, gobj: GObjId) -> bool {
     clamp_own_angle(r, gobj);
-    match &mut item_mut(r.game, gobj).x378_itemColl.ecb_source.shape {
+    match &mut item_mut(r.game, gobj).coll.ecb_source.shape {
         EcbShape::Box {
             up,
             down,
@@ -384,7 +381,7 @@ fn collide(r: &mut Running, gobj: GObjId) -> bool {
         other => panic!("a flame's ECB source holds {other:?}, not a box"),
     }
     ground::air_stay(r, gobj);
-    let env = item(r.game, gobj).x378_itemColl.env_flags;
+    let env = item(r.game, gobj).coll.env_flags;
     let mut flags = 0;
     if env & (0x8000 | 0x10000) != 0 {
         flags |= FLOOR;
@@ -427,12 +424,12 @@ fn hit_shield(_: &mut Running, _: GObjId) -> bool {
 #[doc(alias = "itKoopaFlame_Logic111_Reflected")]
 fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.koopa_flame();
-    v.x24_angle
+    let v = ip.vars.koopa_flame();
+    v.angle
         .update(|a| clamp_angle(mem(fp::frsp(fp::fadd(reg(a), PI)))));
     ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-    ip.x40_vel.x = mem(fp::fneg(reg(ip.x40_vel.x)));
-    ip.x40_vel.y = mem(fp::fneg(reg(ip.x40_vel.y)));
+    ip.vel.x = mem(fp::fneg(reg(ip.vel.x)));
+    ip.vel.y = mem(fp::fneg(reg(ip.vel.y)));
     false
 }
 
@@ -448,11 +445,11 @@ fn absorbed(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itKoopaFlame_Logic111_ShieldBounced")]
 fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    let axis = ip.xC58;
-    ip.x40_vel.mirror_xy(axis);
-    ip.x40_vel.z = 0.0;
-    let a = crate::math::atan2(ip.x40_vel.y, ip.x40_vel.x);
-    ip.xDD4_itemVar.koopa_flame().x24_angle.set(clamp_angle(a));
+    let axis = ip.shield_normal;
+    ip.vel.mirror_xy(axis);
+    ip.vel.z = 0.0;
+    let a = crate::math::atan2(ip.vel.y, ip.vel.x);
+    ip.vars.koopa_flame().angle.set(clamp_angle(a));
     false
 }
 

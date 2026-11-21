@@ -37,7 +37,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 fn vars<'r>(r: &'r mut Running<'_>, gobj: GObjId) -> &'r mut GameWatchRescueVars {
-    item_mut(r.game, gobj).xDD4_itemVar.game_watch_rescue()
+    item_mut(r.game, gobj).vars.game_watch_rescue()
 }
 
 /// The trampoline under `parent` in state `state`, `it_802C8038`: flattened onto the stage's
@@ -64,11 +64,11 @@ pub fn spawn(
     let attr = gamewatch::first_attr(r, gobj);
     let ip = item_mut(r.game, gobj);
     // `Item_ClearCmdVars`.
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDCC_flag.b3 = false;
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    ip.state_flags.b3 = false;
     vars(r, gobj).parent.set(Some(parent));
     gamewatch::colors(r, gobj, parent, attr);
     set_state(r, gobj, state);

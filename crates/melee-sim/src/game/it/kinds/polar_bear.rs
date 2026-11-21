@@ -159,7 +159,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     set_coll_facing(r.game, gobj);
     zako::init_collision(r.game, gobj);
     lib2725::stop_spin(r.game, r.data, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x19 = true;
+    item_mut(r.game, gobj).flags.flags.turns_to_face = true;
     set(r, gobj, off::WALK, 1);
     set(r, gobj, off::TIMER, 0);
     fall(r, gobj);
@@ -230,7 +230,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
     }
     let step = get(r, gobj, off::STEP);
     if step <= 0 {
-        let line = item(r.game, gobj).xC30;
+        let line = item(r.game, gobj).touched_line;
         let flags = r
             .game
             .geometry
@@ -270,8 +270,8 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
         turn(r, gobj);
     }
     let ip = item_mut(r.game, gobj);
-    let (normal, facing) = (ip.x378_itemColl.floor.normal, ip.facing_dir);
-    zako::along_surface(&mut ip.x40_vel, normal, facing);
+    let (normal, facing) = (ip.coll.floor.normal, ip.facing_dir);
+    zako::along_surface(&mut ip.vel, normal, facing);
 }
 
 /// Walking's collision, `itWhitebea_UnkMotion1_Coll`: at a ledge or into a wall it turns; off
@@ -295,8 +295,8 @@ pub fn fall(r: &mut Running, gobj: GObjId) {
     set(r, gobj, off::TIMER, 0);
     let k = reg(attr_f32(r, gobj, 4));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), k));
-    let (facing, nudge) = (reg(ip.facing_dir), reg(ip.x70_nudge.x));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), k));
+    let (facing, nudge) = (reg(ip.facing_dir), reg(ip.nudge.x));
     if facing > 0.0 && nudge < 0.0 || facing < 0.0 && nudge > 0.0 {
         item_mut(r.game, gobj).facing_dir = mem(fp::fneg(facing));
         set_coll_facing(r.game, gobj);
@@ -380,7 +380,7 @@ pub fn jump(r: &mut Running, gobj: GObjId) {
     let up = attr_f32(r, gobj, 0x10);
     let ip = item_mut(r.game, gobj);
     maplib::enter_air(ip);
-    ip.x40_vel.y = up;
+    ip.vel.y = up;
     zako::clear_dd0_b4(r.game, gobj);
     play_sfx(r, gobj, 0x4A, 127, 64);
     change_state(r, gobj, 6, change::ANIM_UPDATE);

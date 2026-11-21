@@ -116,8 +116,8 @@ impl Running<'_> {
             }
         };
         // `it_8026B7E8`, `it_8026B774`.
-        let thrown = ip.xDC8_word.flags.x1;
-        let touched = ip.xDC8_word.flags.xF;
+        let thrown = ip.flags.flags.not_from_fighter;
+        let touched = ip.flags.flags.held_by_players;
         let by = |p: i32| i32::from(touched) & (1 << p) != 0;
         if kind2 != -1
             && (kind2 == ItKind::RayGunShot

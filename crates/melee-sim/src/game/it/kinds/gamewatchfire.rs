@@ -85,8 +85,8 @@ pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itGamewatchFire_PickedUp")]
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
     lib26b1::hide(r.game, gobj);
     if item(r.game, gobj).owner.is_some() {
         change_state(r, gobj, 0, change::ANIM_UPDATE);
@@ -99,7 +99,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itGamewatchFire_Motion0_Anim")]
 pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
     let jobj = jobj_of(r.game, gobj);
-    if item(r.game, gobj).x5CC_currentAnimFrame == 3.0 {
+    if item(r.game, gobj).anim_frame == 3.0 {
         lib26b1::show(r.game, gobj);
     }
     let owner = item(r.game, gobj).owner;
@@ -117,8 +117,8 @@ pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
         } else {
             1.0
         };
-        if item(r.game, gobj).x5D0_animFrameSpeed != speed {
-            item_mut(r.game, gobj).x5D0_animFrameSpeed = speed;
+        if item(r.game, gobj).anim_speed != speed {
+            item_mut(r.game, gobj).anim_speed = speed;
             crate::lb::anim::set_framerate(&mut r.game.objs, jobj, speed);
         }
     }

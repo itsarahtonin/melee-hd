@@ -76,8 +76,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
         .expect("a Ray Gun without attributes");
     let ammo = r.data.u32(a) as i32;
     let ip = item_mut(r.game, gobj);
-    ip.xD4C = ammo;
-    ip.xDD4_itemVar.lgun().timer.set(0);
+    ip.ammo = ammo;
+    ip.vars.lgun().timer.set(0);
     fell(r, gobj);
 }
 
@@ -95,8 +95,8 @@ pub fn muzzle(r: &Running, gobj: GObjId) -> crate::vec::Vec3 {
 #[doc(alias = "it_8028E79C")]
 pub fn fire(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3, facing: f32) {
     let ip = item_mut(r.game, gobj);
-    if ip.xD4C > 0 {
-        ip.xD4C -= 1;
+    if ip.ammo > 0 {
+        ip.ammo -= 1;
     }
     let owner = ip.owner;
     super::lgunray::spawn(r, owner, pos, facing);
@@ -161,7 +161,7 @@ pub fn gravity(r: &mut Running, gobj: GObjId) {
 /// through, gone once it's past the stage.
 #[doc(alias = "itLgun_UnkMotion4_Coll")]
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xD4C != 0 {
+    if item(r.game, gobj).ammo != 0 {
         fall(r, gobj, landed);
         return false;
     }
@@ -177,14 +177,14 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 /// A shot's recoil, `it_8028E938`.
 #[doc(alias = "it_8028E938")]
 pub fn shot(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).xDD4_itemVar.lgun().timer.set(40);
+    item_mut(r.game, gobj).vars.lgun().timer.set(40);
     change_state(r, gobj, 3, change::ANIM_UPDATE);
 }
 
 /// `itLgun_UnkMotion3_Anim`: the recoil counts down, then back to held.
 #[doc(alias = "itLgun_UnkMotion3_Anim")]
 pub fn recoil(r: &mut Running, gobj: GObjId) -> bool {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.lgun();
+    let v = item_mut(r.game, gobj).vars.lgun();
     let t = v.timer.get().wrapping_sub(1);
     v.timer.set(t);
     if t <= 0 {

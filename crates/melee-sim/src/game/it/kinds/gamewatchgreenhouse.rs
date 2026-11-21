@@ -87,8 +87,8 @@ pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itGamewatchGreenhouse_PickedUp")]
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
     let Some(owner) = ip.owner else { return };
     let state = if r.gw_not_attack11(owner) { 1 } else { 0 };
     change_state(r, gobj, state, change::ANIM_UPDATE);

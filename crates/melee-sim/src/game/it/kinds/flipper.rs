@@ -150,9 +150,9 @@ pub fn spawn(r: &mut Running, jobj: Option<JObjId>) -> Option<GObjId> {
     spawn.x44_flag[0] &= !0x80;
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
-    let v = item_mut(r.game, gobj).xDD4_itemVar.flipper();
-    v.xDE8_isStageFixed.set(1);
-    v.xDEC_stageAnchor.set(Some(j));
+    let v = item_mut(r.game, gobj).vars.flipper();
+    v.stage_fixed.set(1);
+    v.stage_anchor.set(Some(j));
     settle(r, gobj);
     Some(gobj)
 }
@@ -160,14 +160,14 @@ pub fn spawn(r: &mut Running, jobj: Option<JObjId>) -> Option<GObjId> {
 /// `itFlipper_Spawned`: nothing thrown, settled or spun yet, falling.
 #[doc(alias = "itFlipper_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.flipper();
-    v.xDD4_flightTimer.set(0);
-    v.xDD8_isSettled.set(0);
-    v.xDDC_hitboxTimer.set(0);
-    v.xDE0_spinAngle.set(0.0);
-    v.xDE4_spinVel.set(0.0);
-    v.xDE8_isStageFixed.set(0);
-    v.xDEC_stageAnchor.set(None);
+    let v = item_mut(r.game, gobj).vars.flipper();
+    v.flight_timer.set(0);
+    v.settled.set(0);
+    v.hitbox_timer.set(0);
+    v.spin_angle.set(0.0);
+    v.spin_vel.set(0.0);
+    v.stage_fixed.set(0);
+    v.stage_anchor.set(None);
     hitbox::start_blink(r.game, gobj);
     enter_falling(r, gobj);
 }
@@ -180,27 +180,27 @@ pub fn update_spin(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj)
         .and_then(|j| r.game.objs.jobjs[j].child)
         .and_then(|c| r.game.objs.jobjs[c].child);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.flipper();
-    if reg(v.xDE4_spinVel.get()) > PI {
-        v.xDE4_spinVel.update(|s| mem(fp::fsubs(reg(s), TAU)));
+    let v = item_mut(r.game, gobj).vars.flipper();
+    if reg(v.spin_vel.get()) > PI {
+        v.spin_vel.update(|s| mem(fp::fsubs(reg(s), TAU)));
     }
-    if reg(v.xDE4_spinVel.get()) < fp::fneg(PI) {
-        v.xDE4_spinVel.update(|s| mem(fp::fadds(reg(s), TAU)));
+    if reg(v.spin_vel.get()) < fp::fneg(PI) {
+        v.spin_vel.update(|s| mem(fp::fadds(reg(s), TAU)));
     }
     let abs = |s: f64| if s < 0.0 { fp::fneg(s) } else { s };
-    let s = reg(v.xDE4_spinVel.get());
+    let s = reg(v.spin_vel.get());
     if abs(s) > 0.0 {
         if abs(s) < decay {
-            v.xDE4_spinVel.set(0.0);
+            v.spin_vel.set(0.0);
         } else if s > 0.0 {
-            v.xDE4_spinVel.set(mem(fp::fsubs(s, decay)));
+            v.spin_vel.set(mem(fp::fsubs(s, decay)));
         } else {
-            v.xDE4_spinVel.set(mem(fp::fadds(s, decay)));
+            v.spin_vel.set(mem(fp::fadds(s, decay)));
         }
     }
-    let s = reg(v.xDE4_spinVel.get());
-    v.xDE0_spinAngle.update(|a| mem(fp::fadds(reg(a), s)));
-    let angle = v.xDE0_spinAngle.get();
+    let s = reg(v.spin_vel.get());
+    v.spin_angle.update(|a| mem(fp::fadds(reg(a), s)));
+    let angle = v.spin_angle.get();
     lib2725::set_rotation_x(r.game, j.expect("a Flipper without its paddle"), angle);
 }
 
@@ -211,20 +211,20 @@ pub fn add_spin_impulse(r: &mut Running, gobj: GObjId, pos: Vec3, vel: f64) {
     let speed = fp::fadds(vel, attr_f(r, gobj, A_BASE_SPIN));
     let max = attr_f(r, gobj, A_MAX_SPIN);
     let me = item(r.game, gobj).pos;
-    let v = item_mut(r.game, gobj).xDD4_itemVar.flipper();
+    let v = item_mut(r.game, gobj).vars.flipper();
     let right = reg(pos.x) > reg(me.x);
     let above = reg(pos.y) > reg(me.y);
     let add = right == above;
     if add {
-        v.xDE4_spinVel.update(|s| mem(fp::fadds(reg(s), speed)));
+        v.spin_vel.update(|s| mem(fp::fadds(reg(s), speed)));
     } else {
-        v.xDE4_spinVel.update(|s| mem(fp::fsubs(reg(s), speed)));
+        v.spin_vel.update(|s| mem(fp::fsubs(reg(s), speed)));
     }
-    if reg(v.xDE4_spinVel.get()) > max {
-        v.xDE4_spinVel.set(mem(max));
+    if reg(v.spin_vel.get()) > max {
+        v.spin_vel.set(mem(max));
     }
-    if reg(v.xDE4_spinVel.get()) < fp::fneg(max) {
-        v.xDE4_spinVel.set(mem(fp::fneg(max)));
+    if reg(v.spin_vel.get()) < fp::fneg(max) {
+        v.spin_vel.set(mem(fp::fneg(max)));
     }
 }
 
@@ -250,11 +250,11 @@ fn spin_speed(r: &mut Running, gobj: GObjId, other: Option<GObjId>, pos: &mut Ve
 #[doc(alias = "itFlipper_SpinFromFighter")]
 pub fn spin_from_fighter(r: &mut Running, gobj: GObjId) {
     let mut pos = item(r.game, gobj).pos;
-    let other = item(r.game, gobj).xCF4_fighterGObjUnk;
+    let other = item(r.game, gobj).met_fighter;
     let mut speed = 10.0;
     if other.is_some() {
         speed = spin_speed(r, gobj, other, &mut pos);
-        item_mut(r.game, gobj).xCF4_fighterGObjUnk = None;
+        item_mut(r.game, gobj).met_fighter = None;
     }
     add_spin_impulse(r, gobj, pos, fp::fmuls(DEG, speed));
 }
@@ -262,11 +262,11 @@ pub fn spin_from_fighter(r: &mut Running, gobj: GObjId) {
 /// Spins from the fighter that hit it (`xCEC`), the damage hook's inline.
 fn spin_from_attacker(r: &mut Running, gobj: GObjId) {
     let mut pos = item(r.game, gobj).pos;
-    let other = item(r.game, gobj).xCEC_fighterGObj;
+    let other = item(r.game, gobj).attacker;
     let mut speed = 10.0;
     if other.is_some() {
         speed = spin_speed(r, gobj, other, &mut pos);
-        item_mut(r.game, gobj).xCEC_fighterGObj = None;
+        item_mut(r.game, gobj).attacker = None;
     }
     add_spin_impulse(r, gobj, pos, fp::fmuls(DEG, speed));
 }
@@ -288,14 +288,14 @@ pub fn repel(r: &mut Running, gobj: GObjId, kind: i32, pos: Vec3) {
     v.x = mem(fp::fmuls(reg(v.x), 0.20000000298023224));
     v.y = mem(fp::fmuls(reg(v.y), 0.20000000298023224));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fadds(reg(ip.x40_vel.x), reg(v.x)));
-    ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), reg(v.y)));
+    ip.vel.x = mem(fp::fadds(reg(ip.vel.x), reg(v.x)));
+    ip.vel.y = mem(fp::fadds(reg(ip.vel.y), reg(v.y)));
 }
 
 /// Stops and rests on the ground, `itFlipper_EnterResting`.
 #[doc(alias = "itFlipper_EnterResting")]
 pub fn enter_resting(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     lib26b1::enable_pickup(r.game, gobj);
     change_state(r, gobj, MS_RESTING, change::ANIM_UPDATE);
 }
@@ -357,11 +357,7 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
         // `ftLib_80087284`: whether the owner's state is a smash throw.
         let smash = r.game.fighter(owner).motion_id >= crate::game::ft::co::ids::ms::LIGHT_THROW_F4;
         let t = attr_i(r, gobj, if smash { A_SMASH_THROW } else { A_THROW });
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .flipper()
-            .xDD4_flightTimer
-            .set(t);
+        item_mut(r.game, gobj).vars.flipper().flight_timer.set(t);
     }
     lib26b1::disable_pickup(r.game, gobj);
     change_state(
@@ -375,9 +371,9 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
 /// `itFlipper_Inflight_Anim`: settles when its flight runs out.
 #[doc(alias = "itFlipper_Inflight_Anim")]
 pub fn inflight_anim(r: &mut Running, gobj: GObjId) -> bool {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.flipper();
-    v.xDD4_flightTimer.update(|t| t.wrapping_sub(1));
-    if v.xDD4_flightTimer.get() <= 0 {
+    let v = item_mut(r.game, gobj).vars.flipper();
+    v.flight_timer.update(|t| t.wrapping_sub(1));
+    if v.flight_timer.get() <= 0 {
         settle(r, gobj);
     }
     false
@@ -387,19 +383,15 @@ pub fn inflight_anim(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itFlipper_Inflight_Phys")]
 pub fn inflight_phys(r: &mut Running, gobj: GObjId) {
     super::gravity(r, gobj);
-    let t = item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .flipper()
-        .xDD4_flightTimer
-        .get();
+    let t = item_mut(r.game, gobj).vars.flipper().flight_timer.get();
     if t <= 10 {
         let k = || {
             let tf = fp::frsp(f64::from(t));
             fp::fdivs(tf, fp::fadds(1.0, tf))
         };
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), k()));
-        ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), k()));
+        ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), k()));
+        ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), k()));
     }
     let x68 = common_data(r.game).f32(r.data, data::common::X68);
     lib2725::clamp_fall(r.game, gobj, x68);
@@ -413,7 +405,7 @@ pub fn inflight_coll(r: &mut Running, gobj: GObjId) -> bool {
     let coll = air_touches(r, gobj);
     if coll != 0 {
         let ip = item_mut(r.game, gobj);
-        let v = &mut ip.x40_vel;
+        let v = &mut ip.vel;
         if coll & 0xC != 0 {
             v.x = mem(fp::fmuls(reg(v.x), fp::fneg(wall)));
         }
@@ -435,23 +427,17 @@ pub fn inflight_coll(r: &mut Running, gobj: GObjId) -> bool {
 pub fn settle(r: &mut Running, gobj: GObjId) {
     let life = attr_i(r, gobj, A_LIFETIME);
     let ip = item_mut(r.game, gobj);
-    ip.xD5C = 0;
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = 0.0;
-    super::super::set_flag(&mut ip.xDD1_flag, 1, true);
-    ip.xDD4_itemVar.flipper().xDD8_isSettled.set(1);
+    ip.skid = 0;
+    ip.vel.x = 0.0;
+    ip.vel.y = 0.0;
+    super::super::set_flag(&mut ip.phys_flags, 1, true);
+    ip.vars.flipper().settled.set(1);
     hitbox::set_hit_ids(r.game, gobj);
     lib2725::clear_hitboxes(r.game, r.data, gobj);
-    if item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .flipper()
-        .xDE8_isStageFixed
-        .get()
-        != 0
-    {
+    if item_mut(r.game, gobj).vars.flipper().stage_fixed.get() != 0 {
         hitbox::clear_hit_ids_b7(r.game, gobj);
     }
-    item_mut(r.game, gobj).xD44_lifeTimer = mem(fp::frsp(f64::from(life)));
+    item_mut(r.game, gobj).life_timer = mem(fp::frsp(f64::from(life)));
     lib26b1::disable_pickup(r.game, gobj);
     hitbox::end_blink(r.game, gobj);
     enter_active(r, gobj);
@@ -475,41 +461,35 @@ pub fn update_active(r: &mut Running, gobj: GObjId) -> bool {
     update_spin(r, gobj);
     let ip = item_mut(r.game, gobj);
     let abs = |s: f64| if s < 0.0 { fp::fneg(s) } else { s };
-    for v in [&mut ip.x40_vel.x, &mut ip.x40_vel.y] {
+    for v in [&mut ip.vel.x, &mut ip.vel.y] {
         if abs(reg(*v)) >= 0.009999999776482582 {
             *v = mem(fp::fmuls(reg(*v), 0.8999999761581421));
         } else {
             *v = 0.0;
         }
     }
-    let timer = ip.xDD4_itemVar.flipper().xDDC_hitboxTimer.get();
+    let timer = ip.vars.flipper().hitbox_timer.get();
     if timer > 0 {
-        let v = ip.xDD4_itemVar.flipper();
-        v.xDDC_hitboxTimer.set(timer.wrapping_sub(1));
-        if v.xDDC_hitboxTimer.get() == 0 {
+        let v = ip.vars.flipper();
+        v.hitbox_timer.set(timer.wrapping_sub(1));
+        if v.hitbox_timer.get() == 0 {
             // `itFlipper_RefreshHitboxes`.
             lib2725::start_hitbox(r.game, r.data, gobj, 0);
             lib2725::start_hitbox(r.game, r.data, gobj, 1);
             let ip = item_mut(r.game, gobj);
-            clear_victims(&mut ip.x5D4_hitboxes[0].hit);
-            clear_victims(&mut ip.x5D4_hitboxes[1].hit);
+            clear_victims(&mut ip.hitboxes[0].hit);
+            clear_victims(&mut ip.hitboxes[1].hit);
             hitbox::end_blink(r.game, gobj);
         }
     }
-    if item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .flipper()
-        .xDE8_isStageFixed
-        .get()
-        == 0
-    {
+    if item_mut(r.game, gobj).vars.flipper().stage_fixed.get() == 0 {
         let flicker = common_data(r.game).i32(r.data, data::common::X34);
         let ip = item_mut(r.game, gobj);
-        ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-        if reg(ip.xD44_lifeTimer) <= 0.0 {
+        ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+        if reg(ip.life_timer) <= 0.0 {
             return true;
         }
-        if reg(ip.xD44_lifeTimer) <= fp::frsp(f64::from(flicker)) {
+        if reg(ip.life_timer) <= fp::frsp(f64::from(flicker)) {
             lib2725::flicker(r.game, r.data, gobj);
         }
     }
@@ -519,13 +499,7 @@ pub fn update_active(r: &mut Running, gobj: GObjId) -> bool {
 /// `itFlipper_Active_Anim`: spinning once its paddle turns.
 #[doc(alias = "itFlipper_Active_Anim")]
 pub fn active_anim(r: &mut Running, gobj: GObjId) -> bool {
-    if item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .flipper()
-        .xDE4_spinVel
-        .get()
-        != 0.0
-    {
+    if item_mut(r.game, gobj).vars.flipper().spin_vel.get() != 0.0 {
         change_state(
             r,
             gobj,
@@ -539,13 +513,7 @@ pub fn active_anim(r: &mut Running, gobj: GObjId) -> bool {
 /// `itFlipper_Spinning_Anim`: still again once its paddle stops.
 #[doc(alias = "itFlipper_Spinning_Anim")]
 pub fn spinning_anim(r: &mut Running, gobj: GObjId) -> bool {
-    if item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .flipper()
-        .xDE4_spinVel
-        .get()
-        == 0.0
-    {
+    if item_mut(r.game, gobj).vars.flipper().spin_vel.get() == 0.0 {
         change_state(
             r,
             gobj,
@@ -559,9 +527,9 @@ pub fn spinning_anim(r: &mut Running, gobj: GObjId) -> bool {
 /// `itFlipper_Spinning_Phys` (both armed states): a fixed Flipper follows its joint.
 #[doc(alias = "itFlipper_Spinning_Phys")]
 pub fn spinning_phys(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.flipper();
-    if v.xDE8_isStageFixed.get() != 0
-        && let Some(j) = v.xDEC_stageAnchor.get()
+    let v = item_mut(r.game, gobj).vars.flipper();
+    if v.stage_fixed.get() != 0
+        && let Some(j) = v.stage_anchor.get()
     {
         let p = world_position(&mut r.game.objs, r.data, Some(j), None);
         item_mut(r.game, gobj).pos = p;
@@ -571,13 +539,7 @@ pub fn spinning_phys(r: &mut Running, gobj: GObjId) {
 /// `itFlipper_Spinning_Coll` (both armed states): a free Flipper keeps to the air.
 #[doc(alias = "itFlipper_Spinning_Coll")]
 pub fn spinning_coll(r: &mut Running, gobj: GObjId) -> bool {
-    if item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .flipper()
-        .xDE8_isStageFixed
-        .get()
-        == 0
-    {
+    if item_mut(r.game, gobj).vars.flipper().stage_fixed.get() == 0 {
         air_stay(r, gobj);
     }
     false
@@ -586,19 +548,13 @@ pub fn spinning_coll(r: &mut Running, gobj: GObjId) -> bool {
 /// Bounces off a victim while flying (the inline `bounce`): off it as items do after six
 /// frames, straight back before.
 fn bounce(r: &mut Running, gobj: GObjId) {
-    if item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .flipper()
-        .xDD4_flightTimer
-        .get()
-        >= 6
-    {
+    if item_mut(r.game, gobj).vars.flipper().flight_timer.get() >= 6 {
         lib2725::bounce_off_victim(r.game, r.data, gobj);
     } else {
         let x60 = reg(common_data(r.game).f32(r.data, data::common::X60));
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = mem(fp::fmuls(fp::fneg(1.0), reg(ip.x40_vel.x)));
-        ip.x40_vel.y = mem(fp::fmadds(fp::fneg(1.0), reg(ip.x40_vel.y), x60));
+        ip.vel.x = mem(fp::fmuls(fp::fneg(1.0), reg(ip.vel.x)));
+        ip.vel.y = mem(fp::fmadds(fp::fneg(1.0), reg(ip.vel.y), x60));
     }
 }
 
@@ -607,32 +563,21 @@ fn bounce(r: &mut Running, gobj: GObjId) {
 fn hit_spin(r: &mut Running, gobj: GObjId, spin: fn(&mut Running, GObjId), kind: i32, pos: Vec3) {
     let interval = attr_i(r, gobj, A_HITBOX_INTERVAL);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .flipper()
-        .xDDC_hitboxTimer
+        .hitbox_timer
         .set(interval);
     spin(r, gobj);
     lib2725::clear_hitbox(r.game, r.data, gobj, 0);
     lib2725::clear_hitbox(r.game, r.data, gobj, 1);
     hitbox::start_blink(r.game, gobj);
-    if item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .flipper()
-        .xDE8_isStageFixed
-        .get()
-        == 0
-    {
+    if item_mut(r.game, gobj).vars.flipper().stage_fixed.get() == 0 {
         repel(r, gobj, kind, pos);
     }
 }
 
 fn settled(r: &mut Running, gobj: GObjId) -> bool {
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .flipper()
-        .xDD8_isSettled
-        .get()
-        != 0
+    item_mut(r.game, gobj).vars.flipper().settled.get() != 0
 }
 
 /// Its hitbox hit something, `itFlipper_DmgDealt`: flying, it bounces; armed, it spins from
@@ -642,7 +587,10 @@ pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
     if !settled(r, gobj) {
         bounce(r, gobj);
     } else {
-        let (kind, pos) = (item(r.game, gobj).xC38, item(r.game, gobj).xCD4);
+        let (kind, pos) = (
+            item(r.game, gobj).hit_item_kind,
+            item(r.game, gobj).hit_item_pos,
+        );
         hit_spin(r, gobj, spin_from_fighter, kind, pos);
     }
     false
@@ -673,7 +621,10 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itFlipper_DmgReceived")]
 pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     if settled(r, gobj) {
-        let (kind, pos) = (item(r.game, gobj).xCB4, item(r.game, gobj).xCE0);
+        let (kind, pos) = (
+            item(r.game, gobj).hit_by_kind,
+            item(r.game, gobj).hit_by_pos,
+        );
         hit_spin(r, gobj, spin_from_attacker, kind, pos);
     }
     false

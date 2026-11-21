@@ -32,7 +32,7 @@ pub fn grab_fighters(r: &mut Running, gobj: GObjId) {
     use hitcapsule::Victim;
     let ip = item_mut(r.game, gobj);
     ip.grab_victim = None;
-    ip.xD10 = 3.402_823_5e38;
+    ip.grab_distance = 3.402_823_5e38;
     let mut cur = r.game.world.first_in(FIGHTER_P_LINK);
     while let Some(v) = cur {
         cur = r.game.world.gobjs[v.0].next;
@@ -47,21 +47,21 @@ pub fn grab_fighters(r: &mut Running, gobj: GObjId) {
         let fp = &r.game.fighters[f.0];
         let teams = r.game.vs_is_teams();
         let friendly = r.game.vs_friendly_fire();
-        let may = (!same_player || ip.xDCD_flag.x0.b5)
-            && (!teams || friendly || ip.xDCD_flag.x0.b6 || ip.x20_team_id != fp.team)
+        let may = (!same_player || ip.hit_flags.x0.b5)
+            && (!teams || friendly || ip.hit_flags.x0.b6 || ip.team != fp.team)
             && !fp.out_of_play
             && !fp.ungrabbable
             && fp.hit_status == 0
             && fp.timed_hit_status == 0
             && !fp.starman
-            && fp.grab_immune & u16::from(ip.xD08) == 0;
+            && fp.grab_immune & u16::from(ip.grab_mask) == 0;
         if !may {
             continue;
         }
         for hi in 0..4 {
             let ip = item(r.game, gobj);
             let fp = &r.game.fighters[f.0];
-            let h = &ip.x5D4_hitboxes[hi].hit;
+            let h = &ip.hitboxes[hi].hit;
             let can = h.state != hitcapsule::DISABLED
                 && h.element == ELEMENT_CATCH
                 && ((h.x40_b2 && fp.ground_or_air == GA_AIR)
@@ -75,7 +75,7 @@ pub fn grab_fighters(r: &mut Running, gobj: GObjId) {
                     continue;
                 }
                 let mtx = r.own_matrix(f);
-                let mut hit = item(r.game, gobj).x5D4_hitboxes[hi].hit.clone();
+                let mut hit = item(r.game, gobj).hitboxes[hi].hit.clone();
                 let scale = item(r.game, gobj).scl;
                 let fp = &mut r.game.fighters[f.0];
                 let (fscale, z) = (fp.scale.y, fp.cur_pos.z);
@@ -89,7 +89,7 @@ pub fn grab_fighters(r: &mut Running, gobj: GObjId) {
                     fscale,
                     z,
                 );
-                let h = &mut item_mut(r.game, gobj).x5D4_hitboxes[hi].hit;
+                let h = &mut item_mut(r.game, gobj).hitboxes[hi].hit;
                 h.hurt_coll_pos = hit.hurt_coll_pos;
                 h.coll_distance = hit.coll_distance;
                 if touch {
@@ -98,11 +98,11 @@ pub fn grab_fighters(r: &mut Running, gobj: GObjId) {
                     let ip = item_mut(r.game, gobj);
                     let d = fp::fsubs(fx, reg(ip.pos.x));
                     let d = mem(if d < 0.0 { fp::fneg(d) } else { d });
-                    if reg(d) < reg(ip.xD10) {
+                    if reg(d) < reg(ip.grab_distance) {
                         ip.grab_victim = Some(v);
                         ip.atk_victim = Some(v);
-                        set_flag(&mut ip.xDD0_flag, 1, true);
-                        ip.xD10 = d;
+                        set_flag(&mut ip.status_flags, 1, true);
+                        ip.grab_distance = d;
                     }
                     return;
                 }
@@ -165,7 +165,7 @@ fn abs(v: f64) -> f64 {
 fn item_hits_item(r: &mut Running, g: GObjId, hi: usize, me: GObjId) {
     use hitcapsule::Victim;
     let me_id = super::item_of(r.game, me);
-    let kind = if item(r.game, g).x5D4_hitboxes[hi].hit.x41_b4 {
+    let kind = if item(r.game, g).hitboxes[hi].hit.x41_b4 {
         8
     } else {
         0
@@ -173,7 +173,7 @@ fn item_hits_item(r: &mut Running, g: GObjId, hi: usize, me: GObjId) {
     r.item_add_victim(g, hi, kind, Victim::Item(me_id), false);
     let slow = reg(common_data(r.game).f32(r.data, common::XD4));
     let (attacker, victim) = (item(r.game, g), item(r.game, me));
-    let vx = reg(attacker.x40_vel.x);
+    let vx = reg(attacker.vel.x);
     let dir = if abs(vx) < slow {
         if attacker.pos.x > victim.pos.x {
             -1.0
@@ -185,20 +185,20 @@ fn item_hits_item(r: &mut Running, g: GObjId, hi: usize, me: GObjId) {
     } else {
         1.0
     };
-    let hit = &attacker.x5D4_hitboxes[hi].hit;
+    let hit = &attacker.hitboxes[hi].hit;
     let dmg = fp::fctiwz(reg(hit.damage));
     let (sfx_kind, sfx_severity) = (hit.sfx_kind, hit.sfx_severity);
     let (victim_kind, victim_pos) = (victim.kind, victim.pos);
     let a = item_mut(r.game, g);
-    a.xCB8_outDamageDirection = dir;
-    a.xC34_damageDealt = dmg;
-    a.xCF4_fighterGObjUnk = None;
-    a.xC38 = victim_kind;
-    a.xCD4 = victim_pos;
+    a.out_damage_dir = dir;
+    a.damage_dealt = dmg;
+    a.met_fighter = None;
+    a.hit_item_kind = victim_kind;
+    a.hit_item_pos = victim_pos;
     let v = item_mut(r.game, me);
-    v.xCA0 = v.xCA0.wrapping_add(dmg);
-    if dmg > v.xCA4 {
-        v.xCA4 = dmg;
+    v.hit_damage = v.hit_damage.wrapping_add(dmg);
+    if dmg > v.max_hit_damage {
+        v.max_hit_damage = dmg;
     }
     log_damage(
         r.game,
@@ -216,21 +216,21 @@ fn item_hits_item(r: &mut Running, g: GObjId, hi: usize, me: GObjId) {
 /// `it_8026FCF8`: an item with an ignore id shares them with every item of that id.
 #[doc(alias = "it_8026FCF8")]
 pub fn share_group_victims(game: &mut Game, gobj: GObjId, idx: usize) {
-    let id = item(game, gobj).xAC4_ignoreItemID;
+    let id = item(game, gobj).ignore_id;
     if id.is_set() {
-        let group = item(game, gobj).x5D4_hitboxes[idx].hit.x4;
+        let group = item(game, gobj).hitboxes[idx].hit.x4;
         let mut cur = game.world.first_in(super::P_LINK_ITEM);
         while let Some(g) = cur {
-            let same = id.same(item(game, g).xAC4_ignoreItemID, g == gobj);
+            let same = id.same(item(game, g).ignore_id, g == gobj);
             let other = item(game, g);
             if same {
                 let src = (0..4).find(|&i| {
-                    let h = &other.x5D4_hitboxes[i].hit;
+                    let h = &other.hitboxes[i].hit;
                     !(g == gobj && i == idx) && h.state != hitcapsule::DISABLED && h.x4 == group
                 });
                 if let Some(i) = src {
-                    let h = other.x5D4_hitboxes[i].hit.clone();
-                    hitcapsule::copy_victims(&h, &mut item_mut(game, gobj).x5D4_hitboxes[idx].hit);
+                    let h = other.hitboxes[i].hit.clone();
+                    hitcapsule::copy_victims(&h, &mut item_mut(game, gobj).hitboxes[idx].hit);
                     // What the source's block held there comes along (the GPU's pixels).
                     let hit = |k: usize| 0x5D4 + 0x13C * k as u32;
                     let (from, to) = (super::item_of(game, g), super::item_of(game, gobj));
@@ -247,7 +247,7 @@ pub fn share_group_victims(game: &mut Game, gobj: GObjId, idx: usize) {
             cur = game.world.gobjs[g.0].next;
         }
     }
-    hitcapsule::clear_victims(&mut item_mut(game, gobj).x5D4_hitboxes[idx].hit);
+    hitcapsule::clear_victims(&mut item_mut(game, gobj).hitboxes[idx].hit);
 }
 
 /// The fighters' process link.
@@ -261,7 +261,7 @@ const P_LINK_FIGHTER: u8 = 8;
 #[doc(alias = "it_802703E8")]
 pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
     use hitcapsule::Victim;
-    if item(r.game, gobj).xAC8_hurtboxNum == 0 {
+    if item(r.game, gobj).hurtbox_count == 0 {
         return;
     }
     let me_id = super::item_of(r.game, gobj);
@@ -270,7 +270,7 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
         cur = r.game.world.gobjs[fg.0].next;
         let game = &*r.game;
         let me = item(game, gobj);
-        let any = flag(me.xDCE_flag, 0);
+        let any = flag(me.hurt_flags, 0);
         if me.owner == Some(fg) && !any {
             continue;
         }
@@ -289,8 +289,8 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
         };
         if game.vs_is_teams()
             && !game.vs_friendly_fire()
-            && !flag(me.xDCE_flag, 1)
-            && team == i32::from(me.x20_team_id)
+            && !flag(me.hurt_flags, 1)
+            && team == i32::from(me.team)
         {
             continue;
         }
@@ -303,15 +303,15 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
                 || ((!h.x40_b2 || me.ground_or_air != GA_AIR)
                     && (!h.x40_b3 || me.ground_or_air != GA_GROUND))
                 || hitcapsule::has_victim(h, Victim::Item(me_id))
-                || me.xD0C == 2
+                || me.invincibility == 2
             {
                 continue;
             }
-            for n in 0..usize::from(me.xAC8_hurtboxNum) {
+            for n in 0..usize::from(me.hurtbox_count) {
                 let mut hit = r.game.fighters[f.0].hitboxes[hi].clone();
                 let hs = r.game.fighters[f.0].scale.y;
                 let ms = item(r.game, gobj).scl;
-                let mut hurt = item(r.game, gobj).xACC_itemHurtbox[n].clone();
+                let mut hurt = item(r.game, gobj).hurtboxes[n].clone();
                 let touch = hitcapsule::hits_hurtbox(
                     &mut r.game.objs,
                     r.data,
@@ -323,7 +323,7 @@ pub fn hit_by_fighters(r: &mut Running, gobj: GObjId) {
                     ms,
                     0.0,
                 );
-                item_mut(r.game, gobj).xACC_itemHurtbox[n] = hurt;
+                item_mut(r.game, gobj).hurtboxes[n] = hurt;
                 let h = &mut r.game.fighters[f.0].hitboxes[hi];
                 h.hurt_coll_pos = hit.hurt_coll_pos;
                 h.coll_distance = hit.coll_distance;
@@ -349,7 +349,7 @@ pub fn enemy_damage_by_item(r: &mut Running, attacker: GObjId, me: GObjId, dmg: 
         return;
     }
     let ip = item(r.game, attacker);
-    let (owner, kind) = (ip.owner, i32::from(ip.xD90[3]));
+    let (owner, kind) = (ip.owner, i32::from(ip.attack_flags[3]));
     if let Some(o) = owner.filter(|&o| is_fighter(r.game, Some(o))) {
         let fp = r.game.fighter(o);
         let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
@@ -376,7 +376,7 @@ pub fn enemy_hit_by_item(r: &mut Running, attacker: GObjId, me: GObjId) {
     }
     let owner = item(r.game, attacker).owner;
     if let Some(o) = owner.filter(|&o| is_fighter(r.game, Some(o))) {
-        let id = item(r.game, attacker).xD90[3];
+        let id = item(r.game, attacker).attack_flags[3];
         r.record_enemy_hit(o, id, crate::game::pl::trick::AttackRecord::Item(attacker));
     }
 }
@@ -408,9 +408,9 @@ fn fighter_hits_item(r: &mut Running, fg: GObjId, hi: usize, me: GObjId) {
     let (sfx_kind, sfx_severity) = (hit.sfx_kind, hit.sfx_severity);
     r.game.fighters[f.0].dmg.x1914 = dmg;
     let v = item_mut(r.game, me);
-    v.xCA0 = v.xCA0.wrapping_add(dmg);
-    if dmg > v.xCA4 {
-        v.xCA4 = dmg;
+    v.hit_damage = v.hit_damage.wrapping_add(dmg);
+    if dmg > v.max_hit_damage {
+        v.max_hit_damage = dmg;
     }
     log_damage(
         r.game,
@@ -430,7 +430,7 @@ fn fighter_hits_item(r: &mut Running, fg: GObjId, hi: usize, me: GObjId) {
 /// hit's sound kind 1 or 2 (a sound of its own, 0x61A87) or 8 with those kinds (none).
 fn random_kind_hit_sound(r: &mut Running, me: GObjId, sfx_kind: i32, sfx_severity: i32) {
     let pokemon = (item(r.game, me).kind == ItKind::StageHurtbox)
-        .then(|| item_mut(r.game, me).xDD4_itemVar.yaku().hit_sound.get());
+        .then(|| item_mut(r.game, me).vars.yaku().hit_sound.get());
     let kind_1_or_2 = sfx_kind == 1 || sfx_kind == 2;
     match pokemon {
         Some(7) if kind_1_or_2 => {
@@ -448,7 +448,7 @@ fn logged_hit(game: &Game, e: &DamageLogEntry) -> crate::game::structs::HitCapsu
     if e.kind == 1 {
         game.fighter(e.source).hitboxes[e.hit].clone()
     } else {
-        item(game, e.source).x5D4_hitboxes[e.hit].hit.clone()
+        item(game, e.source).hitboxes[e.hit].hit.clone()
     }
 }
 
@@ -480,28 +480,28 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
         let other = item(game, g);
         let skip = (me.owner.is_none()
             && other.owner.is_none()
-            && !other.xDCD_flag.x0.b7
-            && !flag(me.xDCE_flag, 2))
+            && !other.hit_flags.x0.b7
+            && !flag(me.hurt_flags, 2))
             || (is_fighter(game, other.owner)
                 && is_fighter(game, me.owner)
                 && r.is_same_player(me.owner, other.owner)
-                && !other.xDCD_flag.x0.b7
-                && !flag(me.xDCE_flag, 2))
+                && !other.hit_flags.x0.b7
+                && !flag(me.hurt_flags, 2))
             || (game.vs_is_teams()
                 && !game.vs_friendly_fire()
-                && !other.xDCD_flag.x0.b6
-                && !flag(me.xDCE_flag, 1)
-                && other.x20_team_id == me.x20_team_id);
+                && !other.hit_flags.x0.b6
+                && !flag(me.hurt_flags, 1)
+                && other.team == me.team);
         if skip {
             continue;
         }
         let other_id = super::item_of(game, g);
-        let clanks = passed && !flag(me.xDD0_flag, 1);
+        let clanks = passed && !flag(me.status_flags, 1);
         if clanks {
             count = 0;
             for k in 0..4 {
                 let (me, other) = (item(r.game, gobj), item(r.game, g));
-                let h = &me.x5D4_hitboxes[k].hit;
+                let h = &me.hitboxes[k].hit;
                 let can = h.state != hitcapsule::DISABLED
                     && h.element != ELEMENT_CATCH
                     && ((h.x40_b2 && other.ground_or_air == GA_AIR)
@@ -515,7 +515,7 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
         }
         for hi in 0..4 {
             let (me, other) = (item(r.game, gobj), item(r.game, g));
-            let h = &other.x5D4_hitboxes[hi].hit;
+            let h = &other.hitboxes[hi].hit;
             if h.state == hitcapsule::DISABLED
                 || !h.x42_b7
                 || (!(h.x40_b2 && me.ground_or_air == GA_AIR)
@@ -531,18 +531,18 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
                         continue;
                     }
                     let (me, other) = (item(r.game, gobj), item(r.game, g));
-                    let (theirs, mine) = (&other.x5D4_hitboxes[hi].hit, &me.x5D4_hitboxes[i].hit);
+                    let (theirs, mine) = (&other.hitboxes[hi].hit, &me.hitboxes[i].hit);
                     if theirs.element == ELEMENT_INERT || mine.element == ELEMENT_INERT {
                         let inert_theirs = theirs.element == ELEMENT_INERT;
                         if theirs.element != mine.element && boxes_touch(r.game, g, hi, gobj, i) {
                             if inert_theirs {
                                 let o = item_mut(r.game, g);
-                                set_flag(&mut o.xDCE_flag, 6, true);
+                                set_flag(&mut o.hurt_flags, 6, true);
                                 o.toucher = Some(gobj);
                             } else {
                                 let ent = item(r.game, g).entity;
                                 let m = item_mut(r.game, gobj);
-                                set_flag(&mut m.xDCE_flag, 6, true);
+                                set_flag(&mut m.hurt_flags, 6, true);
                                 m.toucher = ent;
                             }
                             clanked = true;
@@ -559,15 +559,15 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
                 }
             }
             let me = item(r.game, gobj);
-            if me.xAC8_hurtboxNum == 0 {
+            if me.hurtbox_count == 0 {
                 continue;
             }
-            if item(r.game, g).x5D4_hitboxes[hi].hit.element == ELEMENT_INERT {
+            if item(r.game, g).hitboxes[hi].hit.element == ELEMENT_INERT {
                 // An inert box only notes that it touched the item, every hurtbox tested.
-                for n in 0..usize::from(me.xAC8_hurtboxNum) {
-                    let mut hit = item(r.game, g).x5D4_hitboxes[hi].hit.clone();
+                for n in 0..usize::from(me.hurtbox_count) {
+                    let mut hit = item(r.game, g).hitboxes[hi].hit.clone();
                     let (hs, ms) = (item(r.game, g).scl, item(r.game, gobj).scl);
-                    let mut hurt = item(r.game, gobj).xACC_itemHurtbox[n].clone();
+                    let mut hurt = item(r.game, gobj).hurtboxes[n].clone();
                     let touch = hitcapsule::touches_hurtbox(
                         &mut r.game.objs,
                         r.data,
@@ -578,21 +578,21 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
                         ms,
                         0.0,
                     );
-                    item_mut(r.game, gobj).xACC_itemHurtbox[n] = hurt;
+                    item_mut(r.game, gobj).hurtboxes[n] = hurt;
                     let ip = item_mut(r.game, g);
-                    let h = &mut ip.x5D4_hitboxes[hi].hit;
+                    let h = &mut ip.hitboxes[hi].hit;
                     h.hurt_coll_pos = hit.hurt_coll_pos;
                     h.coll_distance = hit.coll_distance;
                     if touch {
-                        super::set_flag(&mut ip.xDCE_flag, 6, true);
+                        super::set_flag(&mut ip.hurt_flags, 6, true);
                         ip.toucher = Some(gobj);
                     }
                 }
-            } else if me.xD0C != 2 {
-                for n in 0..usize::from(me.xAC8_hurtboxNum) {
-                    let mut hit = item(r.game, g).x5D4_hitboxes[hi].hit.clone();
+            } else if me.invincibility != 2 {
+                for n in 0..usize::from(me.hurtbox_count) {
+                    let mut hit = item(r.game, g).hitboxes[hi].hit.clone();
                     let (hs, ms) = (item(r.game, g).scl, item(r.game, gobj).scl);
-                    let mut hurt = item(r.game, gobj).xACC_itemHurtbox[n].clone();
+                    let mut hurt = item(r.game, gobj).hurtboxes[n].clone();
                     let touch = hitcapsule::hits_hurtbox(
                         &mut r.game.objs,
                         r.data,
@@ -604,8 +604,8 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
                         ms,
                         0.0,
                     );
-                    item_mut(r.game, gobj).xACC_itemHurtbox[n] = hurt;
-                    let h = &mut item_mut(r.game, g).x5D4_hitboxes[hi].hit;
+                    item_mut(r.game, gobj).hurtboxes[n] = hurt;
+                    let h = &mut item_mut(r.game, g).hitboxes[hi].hit;
                     h.hurt_coll_pos = hit.hurt_coll_pos;
                     h.coll_distance = hit.coll_distance;
                     if touch {
@@ -621,12 +621,12 @@ pub fn hit_by_items(r: &mut Running, gobj: GObjId) {
 /// Whether item `a`'s box `i` touches item `b`'s box `j` (`lbColl_80007AFC`), each keeping
 /// where it met the other.
 fn boxes_touch(game: &mut Game, a: GObjId, i: usize, b: GObjId, j: usize) -> bool {
-    let mut sa = hitcapsule::shape(&item(game, a).x5D4_hitboxes[i].hit);
-    let mut sb = hitcapsule::shape(&item(game, b).x5D4_hitboxes[j].hit);
+    let mut sa = hitcapsule::shape(&item(game, a).hitboxes[i].hit);
+    let mut sb = hitcapsule::shape(&item(game, b).hitboxes[j].hit);
     let (ka, kb) = (item(game, a).scl, item(game, b).scl);
     let touch = crate::lb::collision::hitboxes_touch(&mut sa, &mut sb, ka, kb);
-    item_mut(game, a).x5D4_hitboxes[i].hit.hurt_coll_pos = sa.contact;
-    item_mut(game, b).x5D4_hitboxes[j].hit.hurt_coll_pos = sb.contact;
+    item_mut(game, a).hitboxes[i].hit.hurt_coll_pos = sa.contact;
+    item_mut(game, b).hitboxes[j].hit.hurt_coll_pos = sb.contact;
     touch
 }
 
@@ -638,8 +638,8 @@ fn clank(r: &mut Running, a: GObjId, i: usize, b: GObjId, j: usize) {
     use hitcapsule::Victim;
     let mid = {
         let (h1, h3) = (
-            &item(r.game, a).x5D4_hitboxes[i].hit,
-            &item(r.game, b).x5D4_hitboxes[j].hit,
+            &item(r.game, a).hitboxes[i].hit,
+            &item(r.game, b).hitboxes[j].hit,
         );
         let m = |p: f32, q: f32| mem(fp::fmuls(0.5, fp::fadds(reg(p), reg(q))));
         Vec3::new(
@@ -652,29 +652,29 @@ fn clank(r: &mut Running, a: GObjId, i: usize, b: GObjId, j: usize) {
     let (margin, slow) = (c.i32(r.data, common::XB4), c.f32(r.data, common::XD4));
     // The second item's box first, then the first's.
     for (me, mi, other, oi, clear) in [(b, j, a, i, true), (a, i, b, j, false)] {
-        let mine = reg(item(r.game, me).x5D4_hitboxes[mi].hit.damage);
-        let theirs = reg(item(r.game, other).x5D4_hitboxes[oi].hit.damage);
+        let mine = reg(item(r.game, me).hitboxes[mi].hit.damage);
+        let theirs = reg(item(r.game, other).hitboxes[oi].hit.damage);
         if fp::fctiwz(mine).wrapping_sub(margin) >= fp::fctiwz(theirs) {
             continue;
         }
         let dmg = fp::fctiwz(mine);
-        let kind = if item(r.game, me).x5D4_hitboxes[mi].hit.x41_b5 {
+        let kind = if item(r.game, me).hitboxes[mi].hit.x41_b5 {
             4
         } else {
             3
         };
         let victim = Victim::Item(super::item_of(r.game, other));
         r.item_add_victim(me, mi, kind, victim, clear);
-        if dmg > item(r.game, me).xC48 {
+        if dmg > item(r.game, me).clank_damage {
             let (okind, opos) = (item(r.game, other).kind, item(r.game, other).pos);
             let ip = item_mut(r.game, me);
-            ip.xC48 = dmg;
-            ip.xCF4_fighterGObjUnk = None;
-            ip.xC38 = okind;
-            ip.xCD4 = opos;
-            let vx = reg(ip.x40_vel.x);
+            ip.clank_damage = dmg;
+            ip.met_fighter = None;
+            ip.hit_item_kind = okind;
+            ip.hit_item_pos = opos;
+            let vx = reg(ip.vel.x);
             let mag = if vx < 0.0 { fp::fneg(vx) } else { vx };
-            ip.xCB8_outDamageDirection = if mag < reg(slow) {
+            ip.out_damage_dir = if mag < reg(slow) {
                 if reg(ip.pos.x) > reg(opos.x) {
                     -1.0
                 } else {
@@ -712,7 +712,10 @@ pub fn knockback_of(r: &Running, gobj: GObjId, hit: &crate::game::structs::HitCa
         fp::fmadds(fp::fmuls(f64::from(0.01_f32), u(hit.x24)), t, u(hit.x2C))
     } else {
         let me = item(r.game, gobj);
-        let sum = fp::fadds(fp::frsp(f64::from(me.xC9C)), fp::frsp(f64::from(me.xCA0)));
+        let sum = fp::fadds(
+            fp::frsp(f64::from(me.damage_taken)),
+            fp::frsp(f64::from(me.hit_damage)),
+        );
         let t = fp::fmuls(k(9), fp::fmuls(reg(hit.damage), sum));
         let t = fp::fmadds(k(8), sum, t);
         let t = fp::fmuls(damage_mul, t);
@@ -755,7 +758,10 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
             fp::fmadds(fp::fmuls(f64::from(0.01_f32), u(hit.x24)), t, u(hit.x2C))
         } else {
             let me = item(r.game, gobj);
-            let sum = fp::fadds(fp::frsp(f64::from(me.xC9C)), fp::frsp(f64::from(me.xCA0)));
+            let sum = fp::fadds(
+                fp::frsp(f64::from(me.damage_taken)),
+                fp::frsp(f64::from(me.hit_damage)),
+            );
             let t = fp::fmuls(k(9), fp::fmuls(reg(hit.damage), sum));
             let t = fp::fmadds(k(8), sum, t);
             let t = fp::fmuls(damage_mul, t);
@@ -764,7 +770,7 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
         };
         let kb = if kb >= cap { cap } else { kb };
         let me = item(r.game, gobj);
-        if !flag(me.xDCF_flag, 1) {
+        if !flag(me.draw_flags, 1) {
             let pos = hit.hurt_coll_pos;
             if me.hold_kind == 4 || me.hold_kind == 6 {
                 // An enemy's: the hit's own effect by element. The effects but the spark and
@@ -814,10 +820,10 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
             let me = item(r.game, gobj);
             let dir = if me.pos.x > x { -1.0 } else { 1.0 };
             let ip = item_mut(r.game, gobj);
-            ip.xCB0_source_ply = slot;
-            ip.xCEC_fighterGObj = Some(e.source);
-            ip.xCF0_itemGObj = None;
-            ip.xCCC_incDamageDirection = dir;
+            ip.source_player = slot;
+            ip.attacker = Some(e.source);
+            ip.attacker_owner = None;
+            ip.damage_dir = dir;
             enemy_hit_by_fighter(r, e.source, gobj);
         }
         2 => {
@@ -829,7 +835,7 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
                 _ => (6, None),
             };
             let attacker = item(r.game, e.source);
-            let (kind, pos, vx) = (attacker.kind, attacker.pos, reg(attacker.x40_vel.x));
+            let (kind, pos, vx) = (attacker.kind, attacker.pos, reg(attacker.vel.x));
             let me = item(r.game, gobj);
             let dir = if abs(vx) < slow {
                 if me.pos.x > pos.x { -1.0 } else { 1.0 }
@@ -839,50 +845,50 @@ pub fn take_hits(r: &mut Running, gobj: GObjId) {
                 -1.0
             };
             let ip = item_mut(r.game, gobj);
-            ip.xCB0_source_ply = src;
-            ip.xCEC_fighterGObj = None;
-            ip.xCF0_itemGObj = fighter;
-            ip.xCB4 = kind;
-            ip.xCE0 = pos;
-            ip.xCCC_incDamageDirection = dir;
+            ip.source_player = src;
+            ip.attacker = None;
+            ip.attacker_owner = fighter;
+            ip.hit_by_kind = kind;
+            ip.hit_by_pos = pos;
+            ip.damage_dir = dir;
             enemy_hit_by_item(r, e.source, gobj);
         }
         _ => {}
     }
     let hit = logged_hit(r.game, &e);
     let ip = item_mut(r.game, gobj);
-    ip.xCAC_angle = hit.kb_angle;
-    ip.xCC8_knockback = mem(max);
-    ip.xCC4 = hit.element as i32;
-    set_flag(&mut ip.xDCF_flag, 6, hit.x43_b0);
+    ip.kb_angle = hit.kb_angle;
+    ip.knockback = mem(max);
+    ip.hit_element = hit.element as i32;
+    set_flag(&mut ip.draw_flags, 6, hit.x43_b0);
 }
 
 /// Brings a hitbox's position up to date, `it_8027129C`: a new one starts where its joint
 /// is, a live one remembers where it was.
 #[doc(alias = "it_8027129C")]
 pub fn update_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize) {
-    let hit = &item(game, gobj).x5D4_hitboxes[idx].hit;
+    let hit = &item(game, gobj).hitboxes[idx].hit;
     match hit.state {
         hitcapsule::ENABLED => {
             let (j, off) = (hit.jobj.get("it_8027129C"), hit.b_offset);
             let p = crate::lb::joint::world_position(&mut game.objs, data, j, Some(off));
             let ip = item_mut(game, gobj);
-            let hit = &mut ip.x5D4_hitboxes[idx].hit;
+            let hit = &mut ip.hitboxes[idx].hit;
             hit.x4C = p;
             hit.x58 = p;
             hit.state = hitcapsule::PLACED;
-            set_flag(&mut ip.xDAA, 2, true);
+            set_flag(&mut ip.debug_flags, 2, true);
         }
         hitcapsule::PLACED | hitcapsule::MOVING => {
             let (j, off) = (hit.jobj.get("it_8027129C"), hit.b_offset);
             let ip = item_mut(game, gobj);
-            let hit = &mut ip.x5D4_hitboxes[idx].hit;
+            let hit = &mut ip.hitboxes[idx].hit;
             if hit.state == hitcapsule::PLACED {
                 hit.state = hitcapsule::MOVING;
             }
             hit.x58 = hit.x4C;
             let p = crate::lb::joint::world_position(&mut game.objs, data, j, Some(off));
-            item_mut(game, gobj).x5D4_hitboxes[idx].hit.x4C = p;
+            item_mut(game, gobj).hitboxes[idx].hit.x4C = p;
         }
         _ => {}
     }
@@ -899,7 +905,7 @@ pub fn update_hitboxes(game: &mut Game, data: &Archives, gobj: GObjId) {
 /// Ages the victims each hitbox remembers, `it_8027146C`.
 #[doc(alias = "it_8027146C")]
 pub fn age_hit_victims(game: &mut Game, gobj: GObjId) {
-    for h in &mut item_mut(game, gobj).x5D4_hitboxes {
+    for h in &mut item_mut(game, gobj).hitboxes {
         hitcapsule::age_victims(&mut h.hit);
     }
 }
@@ -908,19 +914,19 @@ pub fn age_hit_victims(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_802714C0")]
 pub fn refresh_hurtboxes(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    let n = ip.xAC8_hurtboxNum as usize;
-    for h in &mut ip.xACC_itemHurtbox[..n] {
+    let n = ip.hurtbox_count as usize;
+    for h in &mut ip.hurtboxes[..n] {
         h.skip_update_pos = false;
     }
-    set_flag(&mut ip.xDAA, 1, true);
+    set_flag(&mut ip.debug_flags, 1, true);
 }
 
 /// Sets every hurtbox's state, `it_80271508`.
 #[doc(alias = "it_80271508")]
 pub fn set_hurtbox_state(game: &mut Game, gobj: GObjId, state: i32) {
     let ip = item_mut(game, gobj);
-    let n = ip.xAC8_hurtboxNum as usize;
-    for h in &mut ip.xACC_itemHurtbox[..n] {
+    let n = ip.hurtbox_count as usize;
+    for h in &mut ip.hurtboxes[..n] {
         h.state = state;
     }
 }
@@ -931,7 +937,7 @@ pub fn init_hurtboxes(r: &mut Running, gobj: GObjId) {
     let data = r.data;
     let a = article(item(r.game, gobj));
     let root = jobj_of(r.game, gobj);
-    let table = item(r.game, gobj).xBBC_dynamicBoneTable;
+    let table = item(r.game, gobj).bone_table;
     let bone = |game: &Game, id: u32| {
         let t = table.expect("item can't init hit!");
         game.it.bone_tables[t.0].bones[id as usize]
@@ -940,7 +946,7 @@ pub fn init_hurtboxes(r: &mut Running, gobj: GObjId) {
         Some(list) => {
             let n = data.u32(list);
             assert!(n <= 2, "item hit num over!");
-            item_mut(r.game, gobj).xAC8_hurtboxNum = n as u8;
+            item_mut(r.game, gobj).hurtbox_count = n as u8;
             let descs = data.ptr(list.at(4)).expect("hurtbox descriptions");
             for i in 0..n {
                 let d = descs.at(0x20 * i);
@@ -953,7 +959,7 @@ pub fn init_hurtboxes(r: &mut Running, gobj: GObjId) {
                         data.f32(d.at(o + 8)),
                     )
                 };
-                let hurt = &mut item_mut(r.game, gobj).xACC_itemHurtbox[i as usize];
+                let hurt = &mut item_mut(r.game, gobj).hurtboxes[i as usize];
                 hurt.state = HURT_ENABLED;
                 hurt.bone = b;
                 hurt.a_offset = v(4);
@@ -961,22 +967,22 @@ pub fn init_hurtboxes(r: &mut Running, gobj: GObjId) {
                 hurt.scale = data.f32(d.at(0x1C));
             }
         }
-        None => item_mut(r.game, gobj).xAC8_hurtboxNum = 0,
+        None => item_mut(r.game, gobj).hurtbox_count = 0,
     }
     if let Some(dyns) = a.dynamics(data) {
         let n = data.u32(dyns.at(8));
         assert!(n <= 2, "item dynamics hit num over!");
-        item_mut(r.game, gobj).xB68 = n as u8;
+        item_mut(r.game, gobj).dynamics_count = n as u8;
         let descs = data.ptr(dyns.at(0xC));
         for i in 0..n {
             let d = descs.expect("collision dynamics descriptions").at(0x14 * i);
             let id = data.u32(d);
             let b = bone(r.game, id);
-            let v = &mut item_mut(r.game, gobj).xB6C_vars[i as usize];
-            v.xB90 = id;
-            v.xB7C = b;
-            v.xB6C = Vec3::new(data.f32(d.at(4)), data.f32(d.at(8)), data.f32(d.at(0xC)));
-            v.xB78 = data.f32(d.at(0x10));
+            let v = &mut item_mut(r.game, gobj).dynamics_points[i as usize];
+            v.bone_id = id;
+            v.bone = b;
+            v.offset = Vec3::new(data.f32(d.at(4)), data.f32(d.at(8)), data.f32(d.at(0xC)));
+            v.radius = data.f32(d.at(0x10));
         }
     }
 }
@@ -1016,21 +1022,21 @@ pub fn rotate_ecb(ecb: &mut _itECB, angle: f32) {
 #[doc(alias = "it_80271A58")]
 pub fn update_ecb(game: &mut Game, data: &Archives, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    ip.xBEC = ip.xBDC.clone();
-    if reg(ip.facing_dir) == 1.0 && ip.xDC8_word.flags.x19 {
-        let (l, rt) = (ip.xBEC.left, ip.xBEC.right);
-        ip.xBEC.right = mem(fp::fneg(reg(l)));
-        ip.xBEC.left = mem(fp::fneg(reg(rt)));
+    ip.push_box = ip.push_box_base.clone();
+    if reg(ip.facing_dir) == 1.0 && ip.flags.flags.turns_to_face {
+        let (l, rt) = (ip.push_box.left, ip.push_box.right);
+        ip.push_box.right = mem(fp::fneg(reg(l)));
+        ip.push_box.left = mem(fp::fneg(reg(rt)));
     }
     let j = super::lib2725::spin_joint(game, data, gobj).expect("jobj");
     let q = game.objs.jobjs[j].rotate;
     let ip = item_mut(game, gobj);
-    let angle = match ip.xDC8_word.flags.x17 {
+    let angle = match ip.flags.flags.spin_axis {
         0 => q.z,
         1 => q.x,
         _ => q.y,
     };
-    rotate_ecb(&mut ip.xBEC, angle);
+    rotate_ecb(&mut ip.push_box, angle);
 }
 
 /// Whether `target` lies in the box at (`x`, `y`) the two ECBs make together
@@ -1067,7 +1073,7 @@ pub fn push_dir(
 /// Pushes a grounded item clear of the fighters, `it_80271B60`.
 #[doc(alias = "it_80271B60")]
 pub fn push_from_fighters(game: &mut Game, data: &Archives, gobj: GObjId) {
-    if flag(game.it.ft_track.x154, 0) {
+    if flag(game.it.ft_track.untracked, 0) {
         return;
     }
     let j = jobj_of(game, gobj).expect("jobj");
@@ -1080,7 +1086,7 @@ pub fn push_from_fighters(game: &mut Game, data: &Archives, gobj: GObjId) {
             t.ft_pos_arr[i].x,
             t.ft_pos_arr[i].y,
         );
-        if ecbs_overlap(fx, fy, &item(game, gobj).xBEC, &ecb, pos) {
+        if ecbs_overlap(fx, fy, &item(game, gobj).push_box, &ecb, pos) {
             let dir = push_dir(game, pos.x, fx, |g| {
                 if g.objs.rng.below(2) != 0 {
                     1.0
@@ -1089,8 +1095,8 @@ pub fn push_from_fighters(game: &mut Game, data: &Archives, gobj: GObjId) {
                 }
             });
             let ip = item_mut(game, gobj);
-            ip.x70_nudge.x = mem(fp::fmuls(reg(push), dir));
-            ip.xDC0 |= 1;
+            ip.nudge.x = mem(fp::fmuls(reg(push), dir));
+            ip.push_flags |= 1;
         }
     }
 }
@@ -1108,19 +1114,19 @@ pub fn push_from_items(game: &mut Game, data: &Archives, gobj: GObjId, heavy_onl
         let other = item(game, g);
         let me = item(game, gobj);
         let candidate = g != gobj
-            && !other.xDC8_word.flags.x13
+            && !other.flags.flags.held
             && other.ground_or_air == 0
-            && !flag(other.xDD1_flag, 0)
+            && !flag(other.phys_flags, 0)
             && if heavy_only {
                 super::lib26b1::is_heavy(game, data, g)
             } else {
-                other.hold_kind != 3 || me.xDC8_word.flags.x1E
+                other.hold_kind != 3 || me.flags.flags.pushed_by_enemies
             };
         if candidate {
             let oj = jobj_of(game, g).expect("jobj");
             let opos = game.objs.jobjs[oj].translate;
-            if ecbs_overlap(opos.x, opos.y, &me.xBEC, &other.xBEC, pos) {
-                let (x1b, nudge) = (other.xDC8_word.flags.x1B, other.x70_nudge.x);
+            if ecbs_overlap(opos.x, opos.y, &me.push_box, &other.push_box, pos) {
+                let (x1b, nudge) = (other.flags.flags.random_push, other.nudge.x);
                 let dir = push_dir(game, pos.x, opos.x, |gm| {
                     if !x1b {
                         if reg(nudge) < 0.0 { 1.0 } else { fp::fneg(1.0) }
@@ -1131,8 +1137,8 @@ pub fn push_from_items(game: &mut Game, data: &Archives, gobj: GObjId, heavy_onl
                     }
                 });
                 let ip = item_mut(game, gobj);
-                ip.x70_nudge.x = mem(fp::fmuls(reg(push), dir));
-                ip.xDC0 |= 2;
+                ip.nudge.x = mem(fp::fmuls(reg(push), dir));
+                ip.push_flags |= 2;
             }
         }
         cur = game.world.gobjs[g.0].next;
@@ -1143,22 +1149,19 @@ pub fn push_from_items(game: &mut Game, data: &Archives, gobj: GObjId, heavy_onl
 #[doc(alias = "it_802721B8")]
 pub fn keep_clear(game: &mut Game, data: &Archives, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    ip.x70_nudge = Vec3::new(0.0, 0.0, 0.0);
-    ip.xDC0 = 0;
-    let f = &ip.xDC8_word.flags;
-    if !f.x13 && f.x1A && ip.ground_or_air == 0 {
-        if f.x1C {
+    ip.nudge = Vec3::new(0.0, 0.0, 0.0);
+    ip.push_flags = 0;
+    let f = &ip.flags.flags;
+    if !f.held && f.keeps_clear && ip.ground_or_air == 0 {
+        if f.clear_of_fighters {
             push_from_fighters(game, data, gobj);
         }
-        if item(game, gobj).xDC8_word.flags.x1D {
+        if item(game, gobj).flags.flags.clear_of_items {
             push_from_items(game, data, gobj, false);
         }
     }
     let ip = item(game, gobj);
-    if !ip.xDC8_word.flags.x13
-        && ip.ground_or_air == 0
-        && super::lib26b1::is_heavy(game, data, gobj)
-    {
+    if !ip.flags.flags.held && ip.ground_or_air == 0 && super::lib26b1::is_heavy(game, data, gobj) {
         push_from_items(game, data, gobj, true);
     }
 }
@@ -1167,14 +1170,14 @@ pub fn keep_clear(game: &mut Game, data: &Archives, gobj: GObjId) {
 #[doc(alias = "it_80272280")]
 #[doc(alias("clear_x1b"))]
 pub fn clear_random_push(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDC8_word.flags.x1B = false;
+    item_mut(game, gobj).flags.flags.random_push = false;
 }
 
 /// Pushed apart from an overlapping item a random way (`xDC8`'s `x1B` set), `it_80272298`.
 #[doc(alias = "it_80272298")]
 #[doc(alias("set_x1b"))]
 pub fn set_random_push(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDC8_word.flags.x1B = true;
+    item_mut(game, gobj).flags.flags.random_push = true;
 }
 
 /// The first item takes the fighters' positions for every item to keep clear of,
@@ -1183,18 +1186,18 @@ pub fn set_random_push(game: &mut Game, gobj: GObjId) {
 pub fn track_fighters(game: &mut Game, gobj: GObjId) {
     if game.world.first_in(super::P_LINK_ITEM) == Some(gobj) {
         super::owner::track_fighters(game);
-        set_flag(&mut game.it.ft_track.x154, 0, false);
+        set_flag(&mut game.it.ft_track.untracked, 0, false);
     }
 }
 
 /// Moves the item's collision dynamics points with their joints, `it_80272304`.
 #[doc(alias = "it_80272304")]
 pub fn update_dynamics_points(game: &mut Game, data: &Archives, gobj: GObjId) {
-    for i in 0..item(game, gobj).xB68 as usize {
-        let v = &item(game, gobj).xB6C_vars[i];
-        let (j, off) = (v.xB7C, v.xB6C);
+    for i in 0..item(game, gobj).dynamics_count as usize {
+        let v = &item(game, gobj).dynamics_points[i];
+        let (j, off) = (v.bone, v.offset);
         let p = crate::lb::joint::world_position(&mut game.objs, data, j, Some(off));
-        item_mut(game, gobj).xB6C_vars[i].xB84 = p;
+        item_mut(game, gobj).dynamics_points[i].pos = p;
     }
 }
 
@@ -1219,14 +1222,14 @@ pub fn set_hit_damage(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize
             dmg = crate::ppc::cvt_fp2unsigned(fp::fadds(f64::from(0.999_f32), scaled));
         }
         let ip = item(game, gobj);
-        let (attack, count) = (ip.xD88_attackID, dmg);
+        let (attack, count) = (ip.attack_id, dmg);
         let d = super::owner::stale_damage(game, data, f, attack, fp::frsp(f64::from(count)));
-        let hit = &mut item_mut(game, gobj).x5D4_hitboxes[idx].hit;
+        let hit = &mut item_mut(game, gobj).hitboxes[idx].hit;
         hit.unk_count = count;
         hit.damage = mem(d);
         return;
     }
-    let hit = &mut item_mut(game, gobj).x5D4_hitboxes[idx].hit;
+    let hit = &mut item_mut(game, gobj).hitboxes[idx].hit;
     hit.unk_count = dmg;
     hit.damage = mem(fp::frsp(f64::from(dmg)));
 }
@@ -1245,11 +1248,11 @@ fn owner_team(game: &Game, owner: GObjId) -> u8 {
 #[doc(alias = "it_8027236C")]
 pub fn take_attacker(game: &mut Game, gobj: GObjId) -> Option<GObjId> {
     let ip = item(game, gobj);
-    let by = ip.xCEC_fighterGObj.or(ip.xCF0_itemGObj);
+    let by = ip.attacker.or(ip.attacker_owner);
     let team = by.map_or(255, |o| owner_team(game, o));
     let ip = item_mut(game, gobj);
     ip.owner = by;
-    ip.x20_team_id = team;
+    ip.team = team;
     super::lib279c::restart_attack(game, gobj);
     item(game, gobj).owner
 }
@@ -1257,7 +1260,7 @@ pub fn take_attacker(game: &mut Game, gobj: GObjId) -> Option<GObjId> {
 /// Takes the fighter that jumped on it as its owner, `it_802723FC`.
 #[doc(alias = "it_802723FC")]
 pub fn take_stomper(game: &mut Game, gobj: GObjId) -> Option<GObjId> {
-    let by = item(game, gobj).xCFC;
+    let by = item(game, gobj).stomper;
     let (owner, team) = if is_fighter(game, by) {
         (by, owner_team(game, by.unwrap()))
     } else {
@@ -1265,7 +1268,7 @@ pub fn take_stomper(game: &mut Game, gobj: GObjId) -> Option<GObjId> {
     };
     let ip = item_mut(game, gobj);
     ip.owner = owner;
-    ip.x20_team_id = team;
+    ip.team = team;
     owner
 }
 
@@ -1283,7 +1286,7 @@ pub fn set_hurt_capsule(
 ) {
     let ip = item_mut(game, gobj);
     if article(ip).hurtbones(data).is_some() {
-        let h = &mut ip.xACC_itemHurtbox[index];
+        let h = &mut ip.hurtboxes[index];
         h.a_offset = a;
         h.b_offset = b;
         h.scale = scale;
@@ -1296,7 +1299,7 @@ pub fn set_hurt_capsule(
 pub fn hurt_capsule(game: &Game, data: &Archives, gobj: GObjId, index: usize) -> (Vec3, Vec3, f32) {
     let ip = item(game, gobj);
     if article(ip).hurtbones(data).is_some() {
-        let h = &ip.xACC_itemHurtbox[index];
+        let h = &ip.hurtboxes[index];
         return (h.a_offset, h.b_offset, h.scale);
     }
     let zero = Vec3::new(0.0, 0.0, 0.0);

@@ -165,7 +165,7 @@ impl Mirror for GreatFoxLaserVars {
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut GreatFoxLaserVars {
-    item_mut(game, gobj).xDD4_itemVar.greatfox_laser()
+    item_mut(game, gobj).vars.greatfox_laser()
 }
 
 /// The laser's attribute at `off`.
@@ -230,9 +230,9 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let face = item(r.game, gobj).facing_dir;
     zako::face(r, gobj, face);
     let ip = item_mut(r.game, gobj);
-    ip.xDCC_flag.b3 = false;
-    ip.xD5C = 0;
-    ip.xDC8_word.flags.x15 = false;
+    ip.state_flags.b3 = false;
+    ip.skid = 0;
+    ip.flags.flags.pickup = false;
     super::super::hitbox::clear_hit_ids_b7(r.game, gobj);
     vars(r.game, gobj).state_ticks.set(1);
     enter(r, gobj);
@@ -262,7 +262,7 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
             if big { attr::BIG_SPEED } else { attr::SPEED },
         ));
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
+        ip.vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
         set_damage(r, gobj, if big { attr::BIG_DAMAGE } else { attr::DAMAGE });
     } else {
         let owner = vars(r.game, gobj).great_fox.get();
@@ -311,7 +311,7 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).msid != 0 {
         return false;
     }
-    let by = item(r.game, gobj).xC64_reflectGObj.expect("a reflector");
+    let by = item(r.game, gobj).reflector.expect("a reflector");
     let at = r.game.ft_pos(by);
     let owner = vars(r.game, gobj).great_fox.get();
     let j = owner.and_then(|o| super::super::super::gr::ground::jobj_of(r.game, o));
@@ -325,7 +325,7 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let pos = world_position(&mut r.game.objs, r.data, j, Some(off));
     item_mut(r.game, gobj).pos = pos;
     let t = item(r.game, gobj)
-        .xBBC_dynamicBoneTable
+        .bone_table
         .expect("the Great Fox's laser without bones");
     let b2 = r.game.it.bone_tables[t.0].bones[2].expect("a bone");
     jobj::set_translate(&mut r.game.objs.jobjs, b2, pos);

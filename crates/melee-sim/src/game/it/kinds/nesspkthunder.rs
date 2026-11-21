@@ -96,13 +96,13 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 /// origin for no ball.
 #[doc(alias = "it_802AB3F0")]
 pub fn trail_pos(r: &mut Running, gobj: GObjId, idx: i32) -> Vec3 {
-    item_mut(r.game, gobj).xDD4_itemVar.pk_thunder().positions[(idx * 2) as usize].get()
+    item_mut(r.game, gobj).vars.pk_thunder().positions[(idx * 2) as usize].get()
 }
 
 /// The ball's speed, `it_802AB468`.
 #[doc(alias = "it_802AB468")]
 pub fn speed(r: &mut Running, gobj: GObjId) -> f32 {
-    item_mut(r.game, gobj).xDD4_itemVar.pk_thunder().xEEC.get()
+    item_mut(r.game, gobj).vars.pk_thunder().speed.get()
 }
 
 /// Whether the ball met the stage head on, `it_802AB4B8`: the airborne pass, then the
@@ -111,16 +111,16 @@ pub fn speed(r: &mut Running, gobj: GObjId) -> f32 {
 pub fn hit_stage(r: &mut Running, gobj: GObjId) -> bool {
     ground::air(r, gobj);
     let ip = item(r.game, gobj);
-    let env = ip.x378_itemColl.env_flags;
+    let env = ip.coll.env_flags;
     let mut hit = false;
-    if ip.x40_vel.y > 0.0 {
+    if ip.vel.y > 0.0 {
         if env & (CEILING_PUSH | CEILING_HUG) != 0 {
             hit = true;
         }
     } else if env & (FLOOR_PUSH | FLOOR_HUG) != 0 {
         hit = true;
     }
-    if ip.x40_vel.x > 0.0 {
+    if ip.vel.x > 0.0 {
         if env & LEFT_WALL_MASK != 0 {
             hit = true;
         }
@@ -163,29 +163,29 @@ pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Opti
     ));
     let ip = item_mut(r.game, ball);
     // `Item_ClearCmdVars`.
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
     lib2725::set_lifetime(r.game, r.data, ball, life);
-    let v = item_mut(r.game, ball).xDD4_itemVar.pk_thunder();
-    v.xEF4.set(None);
+    let v = item_mut(r.game, ball).vars.pk_thunder();
+    v.unread_ef4.set(None);
     for p in &mut v.positions {
         p.set(pos);
     }
     for a in &mut v.angles {
         a.set(first);
     }
-    for t in &mut v.xDD4 {
+    for t in &mut v.trails {
         t.set(None);
     }
-    v.xEFC.set(0);
-    v.xEF8.set(0);
-    v.xF00.set(0);
-    v.xF04.set(Some(owner));
-    v.xF08.set(None);
+    v.trail_count.set(0);
+    v.frame.set(0);
+    v.hit_ness.set(0);
+    v.ness.set(Some(owner));
+    v.unread_f08.set(None);
     start(r, ball);
-    item_mut(r.game, ball).xDCC_flag.b3 = false;
+    item_mut(r.game, ball).state_flags.b3 = false;
     if crate::game::gr::stage::stkind(r.game) == crate::game::gr::StKind::HomeRun {
         super::super::item::remove_camera_box(r.game, ball);
     }
@@ -199,25 +199,21 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     lib2725::clear_hitboxes(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
-    let v = ip.xDD4_itemVar.pk_thunder();
-    if let Some(ness) = v.xF04.get() {
-        if v.xF00.get() == 0 && Some(ness) == owner {
+    let v = ip.vars.pk_thunder();
+    if let Some(ness) = v.ness.get() {
+        if v.hit_ness.get() == 0 && Some(ness) == owner {
             r.ness_thunder_remove(ness);
         }
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .pk_thunder()
-            .xF04
-            .set(None);
+        item_mut(r.game, gobj).vars.pk_thunder().ness.set(None);
     }
     for i in 0..6 {
-        let t = item_mut(r.game, gobj).xDD4_itemVar.pk_thunder().xDD4[i].get();
+        let t = item_mut(r.game, gobj).vars.pk_thunder().trails[i].get();
         if let Some(t) = t {
             super::nesspkthundertrail::let_go(r, t);
-            item_mut(r.game, gobj).xDD4_itemVar.pk_thunder().xDD4[i].set(None);
+            item_mut(r.game, gobj).vars.pk_thunder().trails[i].set(None);
         }
     }
-    item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
+    item_mut(r.game, gobj).flags.flags.held = false;
 }
 
 /// Ness hit while steering, `it_802AB9C0`: unless reflected, the ball loses its owner, as do
@@ -225,13 +221,13 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802AB9C0")]
 pub fn remove(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    if ip.xDD4_itemVar.pk_thunder().xF00.get() != 0 {
+    if ip.vars.pk_thunder().hit_ness.get() != 0 {
         return;
     }
     ip.owner = None;
-    ip.xDC8_word.flags.x13 = false;
+    ip.flags.flags.held = false;
     for i in 0..6 {
-        let t = item_mut(r.game, gobj).xDD4_itemVar.pk_thunder().xDD4[i].get();
+        let t = item_mut(r.game, gobj).vars.pk_thunder().trails[i].get();
         if let Some(t) = t {
             super::nesspkthundertrail::orphan(r, t);
         }
@@ -244,7 +240,7 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
 pub fn start(r: &mut Running, gobj: GObjId) {
     // `Item_ClearFlagsAndEnterState(gobj, ip, 0)`.
     lib26b1::disable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
+    item_mut(r.game, gobj).flags.flags.held = false;
     lib2725::show(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     let life = attr_f32(r, gobj, attr::LIFETIME);
@@ -255,15 +251,15 @@ pub fn start(r: &mut Running, gobj: GObjId) {
     ));
     let speed = attr_f32(r, gobj, attr::SPEED);
     let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.pk_thunder();
+    let v = ip.vars.pk_thunder();
     for a in &mut v.angles {
         a.set(first);
     }
-    v.xEEC.set(speed);
-    ip.x40_vel.y = speed;
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.x = 0.0;
-    let ness = item_mut(r.game, gobj).xDD4_itemVar.pk_thunder().xF04.get();
+    v.speed.set(speed);
+    ip.vel.y = speed;
+    ip.vel.z = 0.0;
+    ip.vel.x = 0.0;
+    let ness = item_mut(r.game, gobj).vars.pk_thunder().ness.get();
     debug_owner_bubbles(r.game, gobj, ness);
 }
 
@@ -274,26 +270,26 @@ pub fn start(r: &mut Running, gobj: GObjId) {
 pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
-    let (pos, facing, ignore) = (ip.pos, ip.facing_dir, ip.xAC4_ignoreItemID);
-    let v = ip.xDD4_itemVar.pk_thunder();
-    let frame = v.xEF8.get();
-    if matches!(frame, 0 | 2 | 4 | 6 | 8 | 10) && v.xEFC.get() <= 5 {
-        let ness = v.xF04.get();
-        let idx = v.xEFC.get();
+    let (pos, facing, ignore) = (ip.pos, ip.facing_dir, ip.ignore_id);
+    let v = ip.vars.pk_thunder();
+    let frame = v.frame.get();
+    if matches!(frame, 0 | 2 | 4 | 6 | 8 | 10) && v.trail_count.get() <= 5 {
+        let ness = v.ness.get();
+        let idx = v.trail_count.get();
         let parent = if owner == ness { ness } else { None };
         // PK Thunder's own spawn sets its id; a stale one would pass on a stack word.
         let ignore = ignore.read(&mut r.game.objs.stale_reads).unwrap_or(0) as i32;
         let t = super::nesspkthundertrail::spawn(r, parent, gobj, pos, idx, ignore, facing);
-        let v = item_mut(r.game, gobj).xDD4_itemVar.pk_thunder();
-        v.xDD4[idx as usize].set(t);
-        v.xEFC.update(|n| n.wrapping_add(1));
+        let v = item_mut(r.game, gobj).vars.pk_thunder();
+        v.trails[idx as usize].set(t);
+        v.trail_count.update(|n| n.wrapping_add(1));
     }
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
-    let v = ip.xDD4_itemVar.pk_thunder();
-    v.xEF8.update(|n| n.wrapping_add(1));
-    if v.xF00.get() == 0
-        && let Some(ness) = v.xF04.get()
+    let v = ip.vars.pk_thunder();
+    v.frame.update(|n| n.wrapping_add(1));
+    if v.hit_ness.get() == 0
+        && let Some(ness) = v.ness.get()
     {
         if owner == Some(ness) {
             if !r.ness_special_hi_holding(ness) {
@@ -316,9 +312,9 @@ pub fn physics(r: &mut Running, gobj: GObjId) {
     let turn = reg(attr_f32(r, gobj, attr::TURN_RADIUS));
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
-    let v = ip.xDD4_itemVar.pk_thunder();
-    let ness = v.xF04.get();
-    let steered = v.xF00.get() == 0
+    let v = ip.vars.pk_thunder();
+    let ness = v.ness.get();
+    let steered = v.hit_ness.get() == 0
         && ness.is_some()
         && owner == ness
         && r.ness_special_hi_holding(ness.unwrap());
@@ -329,11 +325,11 @@ pub fn physics(r: &mut Running, gobj: GObjId) {
         let abs = |x: f64| if x < 0.0 { fp::fneg(x) } else { x };
         if abs(reg(sx)) > threshold || abs(reg(sy)) > threshold {
             let ip = item_mut(r.game, gobj);
-            let vel = ip.x40_vel;
+            let vel = ip.vel;
             let angle = reg(vel.angle(stick));
             let cross = vel.cross_normalized(stick);
             let deg = f64::from(DEG_TO_RAD);
-            let v = ip.xDD4_itemVar.pk_thunder();
+            let v = ip.vars.pk_thunder();
             let big = fp::fmuls(45.0, deg);
             if angle >= big {
                 if cross.z > 0.0 {
@@ -362,7 +358,7 @@ pub fn physics(r: &mut Running, gobj: GObjId) {
     }
     let ip = item_mut(r.game, gobj);
     let pos = ip.pos;
-    let v = ip.xDD4_itemVar.pk_thunder();
+    let v = ip.vars.pk_thunder();
     for i in (0..15).rev() {
         let p = v.positions[i].get();
         v.positions[i + 1].set(p);
@@ -372,7 +368,7 @@ pub fn physics(r: &mut Running, gobj: GObjId) {
 
 /// The `ShiftAngles` inline.
 fn shift_angles(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.pk_thunder();
+    let v = item_mut(r.game, gobj).vars.pk_thunder();
     for i in (0..15).rev() {
         let a = v.angles[i].get();
         v.angles[i + 1].set(a);
@@ -382,13 +378,13 @@ fn shift_angles(r: &mut Running, gobj: GObjId) {
 /// The velocity along `angles[0]` at its speed.
 fn set_velocity(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.pk_thunder();
-    let (speed, a) = (v.xEEC.get(), v.angles[0].get());
-    ip.x40_vel.x = mem(fp::fmuls(reg(speed), reg(math::cos(a))));
-    let v = ip.xDD4_itemVar.pk_thunder();
-    let (speed, a) = (v.xEEC.get(), v.angles[0].get());
-    ip.x40_vel.y = mem(fp::fmuls(reg(speed), reg(math::sin(a))));
-    ip.x40_vel.z = 0.0;
+    let v = ip.vars.pk_thunder();
+    let (speed, a) = (v.speed.get(), v.angles[0].get());
+    ip.vel.x = mem(fp::fmuls(reg(speed), reg(math::cos(a))));
+    let v = ip.vars.pk_thunder();
+    let (speed, a) = (v.speed.get(), v.angles[0].get());
+    ip.vel.y = mem(fp::fmuls(reg(speed), reg(math::sin(a))));
+    ip.vel.z = 0.0;
 }
 
 /// `itNesspkthunderball_UnkMotion0_Coll`: meeting the stage, its hitboxes off and it goes.
@@ -407,31 +403,27 @@ pub fn collide(r: &mut Running, gobj: GObjId) -> bool {
 pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
-    let v = ip.xDD4_itemVar.pk_thunder();
-    if let Some(ness) = v.xF04.get() {
+    let v = ip.vars.pk_thunder();
+    if let Some(ness) = v.ness.get() {
         if owner == Some(ness) {
             r.ness_thunder_check_own(ness, gobj);
         }
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .pk_thunder()
-            .xF04
-            .set(None);
+        item_mut(r.game, gobj).vars.pk_thunder().ness.set(None);
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.pk_thunder();
-    v.xF00.set(1);
+    let v = item_mut(r.game, gobj).vars.pk_thunder();
+    v.hit_ness.set(1);
     v.angles[0].update(|a| mem(fp::frsp(fp::fadd(reg(a), std::f64::consts::PI))));
     v.angles[0].update(super::foxlaser::normalize);
     for i in 0..6 {
-        let t = item_mut(r.game, gobj).xDD4_itemVar.pk_thunder().xDD4[i].get();
+        let t = item_mut(r.game, gobj).vars.pk_thunder().trails[i].get();
         if let Some(t) = t {
             super::nesspkthundertrail::let_go(r, t);
-            item_mut(r.game, gobj).xDD4_itemVar.pk_thunder().xDD4[i].set(None);
+            item_mut(r.game, gobj).vars.pk_thunder().trails[i].set(None);
         }
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.pk_thunder();
-    v.xEF8.set(0);
-    v.xEFC.set(0);
+    let v = item_mut(r.game, gobj).vars.pk_thunder();
+    v.frame.set(0);
+    v.trail_count.set(0);
     for i in 1..16 {
         let p = v.positions[0].get();
         v.positions[i].set(p);
@@ -446,11 +438,11 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802AC35C")]
 pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    let n = ip.xC58;
-    ip.x40_vel.mirror_xy(n);
-    ip.x40_vel.z = 0.0;
-    let a = math::atan2(ip.x40_vel.y, ip.x40_vel.x);
-    let v = ip.xDD4_itemVar.pk_thunder();
+    let n = ip.shield_normal;
+    ip.vel.mirror_xy(n);
+    ip.vel.z = 0.0;
+    let a = math::atan2(ip.vel.y, ip.vel.x);
+    let v = ip.vars.pk_thunder();
     v.angles[0].set(a);
     v.angles[0].update(super::foxlaser::normalize);
     false

@@ -976,7 +976,7 @@ fn rotate_ecb() {
     leaf_check::shard_test!();
     check("it_80271830", &|r, a| {
         let ip = &mut r.game.items[a.item(0).0];
-        coll::rotate_ecb(&mut ip.xBEC, a.float(0));
+        coll::rotate_ecb(&mut ip.push_box, a.float(0));
         Ret::None
     });
 }
@@ -2411,7 +2411,7 @@ fn maplib_queries() {
     let on_stack = |c: &mut Call| c.regs.gpr[5].wrapping_sub(c.regs.gpr[1]) < 0x1000;
     check_calls("it_80276408", "it_80276408", &on_stack, &|r, a| {
         let cd = r.game.items[a.maps.items[&(a.int(1) - 0x378)].0]
-            .x378_itemColl
+            .coll
             .clone();
         match maplib::surface_normal(&cd) {
             Some(n) => Ret::Words(a.int(2), vec_words(n)),
@@ -2808,7 +2808,7 @@ fn drops() {
             &|r, a| {
                 let vel = (a.int(2) != 0).then(|| a.vec(1));
                 drop::pop_up(r.game, r.data, a.gobj(0), vel);
-                let v = r.game.items[a.maps.items[&a.cap.u32(a.int(0) + 0x2C)].0].x40_vel;
+                let v = r.game.items[a.maps.items[&a.cap.u32(a.int(0) + 0x2C)].0].vel;
                 Ret::Words(a.int(1), vec_words(v))
             },
         );

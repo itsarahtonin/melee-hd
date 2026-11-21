@@ -187,12 +187,12 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::face(r, gobj, facing);
     set_coll_facing(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.xD5C = 0;
-    ip.xDCC_flag.b3 = false;
-    ip.xDC8_word.flags.x15 = false;
+    ip.skid = 0;
+    ip.state_flags.b3 = false;
+    ip.flags.flags.pickup = false;
     hitbox::clear_dcd_b7(r.game, gobj);
     zako::set_dd0_b4(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x19 = true;
+    item_mut(r.game, gobj).flags.flags.turns_to_face = true;
     set(r, gobj, off::TIMER, 1);
     zako::bytes(r.game, gobj).set_gobj(off::FREEZIE, None);
     let makes = if r.game.vs_item_freq() == -1 {
@@ -262,10 +262,7 @@ pub fn walk(r: &mut Running, gobj: GObjId) {
         let f = super::freeze::spawn_pushed(r, gobj, pos, facing, decel);
         zako::bytes(r.game, gobj).set_gobj(off::FREEZIE, f);
         if let Some(f) = f {
-            let v = fp::fmuls(
-                reg(item(r.game, gobj).x40_vel.x),
-                reg(attr_f32(r, gobj, 0x1C)),
-            );
+            let v = fp::fmuls(reg(item(r.game, gobj).vel.x), reg(attr_f32(r, gobj, 0x1C)));
             super::freeze::hand_speed(r, f, mem(v));
         }
         zako::bytes(r.game, gobj).set_i16(off::MAKES_FREEZIE, 0);
@@ -290,7 +287,7 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
         charge(r, gobj);
         return false;
     }
-    item_mut(r.game, gobj).x40_vel.x = 0.0;
+    item_mut(r.game, gobj).vel.x = 0.0;
     set(r, gobj, off::TIMER, 0);
     set(r, gobj, off::FRAME, 0);
     let has = freezie(r, gobj).is_some();
@@ -315,11 +312,11 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
     if get(r, gobj, off::FRAME) == start {
         let s = reg(walk_speed(r, gobj));
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), s));
+        ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), s));
     }
     let n = get(r, gobj, off::FRAME).wrapping_add(1);
     set(r, gobj, off::FRAME, n);
-    if item(r.game, gobj).x40_vel.x != 0.0
+    if item(r.game, gobj).vel.x != 0.0
         && freezie(r, gobj).is_none()
         && lib2725::script_flags_have(r.game, gobj, 2)
     {
@@ -340,7 +337,7 @@ fn along_floor(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itOldottosea_UnkMotion2_Coll")]
 pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
     if ground::ground_to_ledge(r, gobj, turn) {
-        if item(r.game, gobj).x40_vel.x != 0.0 && maplib::touched_wall(r.game, gobj) != 0 {
+        if item(r.game, gobj).vel.x != 0.0 && maplib::touched_wall(r.game, gobj) != 0 {
             turn(r, gobj);
         }
     } else {
@@ -355,7 +352,7 @@ pub fn fall(r: &mut Running, gobj: GObjId) {
     set(r, gobj, off::TIMER, 0);
     let k = reg(attr_f32(r, gobj, 4));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), k));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), k));
     change_state(r, gobj, 4, change::ANIM_UPDATE);
 }
 
@@ -394,7 +391,7 @@ pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802E2DF4")]
 pub fn landed_knocked(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if ip.xCCC_incDamageDirection == ip.facing_dir {
+    if ip.damage_dir == ip.facing_dir {
         turn(r, gobj);
         return;
     }
@@ -433,18 +430,14 @@ pub fn phys7(r: &mut Running, gobj: GObjId) {
     if n == 0x19 {
         let s = reg(attr_f32(r, gobj, 8));
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), s));
+        ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), s));
     } else if n > 0x19 {
         let k = reg(attr_f32(r, gobj, 0xC));
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = mem(fp::fmadds(
-            fp::fneg(reg(ip.facing_dir)),
-            k,
-            reg(ip.x40_vel.x),
-        ));
+        ip.vel.x = mem(fp::fmadds(fp::fneg(reg(ip.facing_dir)), k, reg(ip.vel.x)));
     }
     set(r, gobj, off::FRAME, n.wrapping_add(1));
-    if item(r.game, gobj).x40_vel.x != 0.0
+    if item(r.game, gobj).vel.x != 0.0
         && freezie(r, gobj).is_none()
         && lib2725::script_flags_have(r.game, gobj, 2)
     {
@@ -458,7 +451,7 @@ pub fn phys7(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itOldottosea_UnkMotion7_Coll")]
 pub fn coll7(r: &mut Running, gobj: GObjId) -> bool {
     ground::ground_or_fall(r, gobj, fall);
-    if item(r.game, gobj).x40_vel.x != 0.0 && maplib::touched_wall(r.game, gobj) != 0 {
+    if item(r.game, gobj).vel.x != 0.0 && maplib::touched_wall(r.game, gobj) != 0 {
         turn(r, gobj);
     }
     watch(r, gobj)
@@ -539,18 +532,18 @@ pub fn watch(r: &mut Running, gobj: GObjId) -> bool {
     let pos = item(r.game, gobj).pos;
     let (x, y) = (reg(pos.x), reg(pos.y));
     if x > reg(stage::blast_right(r.game)) {
-        item_mut(r.game, gobj).xDCC_flag.b3 = true;
+        item_mut(r.game, gobj).state_flags.b3 = true;
     }
     if x < reg(stage::blast_left(r.game)) {
-        item_mut(r.game, gobj).xDCC_flag.b3 = true;
+        item_mut(r.game, gobj).state_flags.b3 = true;
     }
     if y > reg(stage::blast_top(r.game)) {
-        item_mut(r.game, gobj).xDCC_flag.b3 = true;
+        item_mut(r.game, gobj).state_flags.b3 = true;
     }
     if y < reg(stage::blast_bottom(r.game)) {
-        item_mut(r.game, gobj).xDCC_flag.b3 = true;
+        item_mut(r.game, gobj).state_flags.b3 = true;
     }
-    if item(r.game, gobj).xDCC_flag.b3 {
+    if item(r.game, gobj).state_flags.b3 {
         if let Some(f) = freezie(r, gobj) {
             super::freeze::let_go(r, f);
         }
@@ -574,7 +567,7 @@ pub fn watch(r: &mut Running, gobj: GObjId) -> bool {
             } else {
                 0x1C
             };
-            let v = fp::fmuls(reg(item(r.game, gobj).x40_vel.x), reg(attr_f32(r, gobj, k)));
+            let v = fp::fmuls(reg(item(r.game, gobj).vel.x), reg(attr_f32(r, gobj, k)));
             super::freeze::hand_speed(r, f, mem(v));
         }
     }

@@ -341,7 +341,7 @@ impl Mirror for TincleVars {
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut TincleVars {
-    item_mut(game, gobj).xDD4_itemVar.tincle()
+    item_mut(game, gobj).vars.tincle()
 }
 
 /// `itTincleAttributes`' word at `off`, as a float and as an integer.
@@ -383,9 +383,9 @@ fn hide(game: &mut Game, gobj: GObjId, hidden: bool) {
 /// `itResetVelocity`.
 fn reset_velocity(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
-    ip.x40_vel.x = 0.0;
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
+    ip.vel.x = 0.0;
 }
 
 /// Tingle's setup, `it_802EB5C8`: the enemies' common variables, flags, his balloon's height
@@ -394,19 +394,19 @@ fn reset_velocity(game: &mut Game, gobj: GObjId) {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::reset(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.xD5C = 0;
-    ip.xDCC_flag.b3 = false;
-    ip.xDC8_word.flags.x15 = false;
+    ip.skid = 0;
+    ip.state_flags.b3 = false;
+    ip.flags.flags.pickup = false;
     hitbox::clear_dcd_b7(r.game, gobj);
     let t = item(r.game, gobj)
-        .xBBC_dynamicBoneTable
+        .bone_table
         .expect("Tingle without a bone table");
     let bone = r.game.it.bone_tables[t.0].bones[11];
     let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, bone, None);
     let y = reg(item(r.game, gobj).pos.y);
     let h = mem(abs(fp::fsubs(reg(pos.y), y)));
     vars(r.game, gobj).balloon_top.set(h);
-    let b = Ecb::of(&item(r.game, gobj).xC1C);
+    let b = Ecb::of(&item(r.game, gobj).coll_box);
     vars(r.game, gobj).ecb.set(b);
     wait(r, gobj);
 }
@@ -493,8 +493,8 @@ pub fn drop_in(r: &mut Running, gobj: GObjId) {
         .set(mem(fp::fadds(b, fp::frsp(f64::from(s)))));
     let fall = attr(r, gobj, 0x18).f(r);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fneg(fall));
-    ip.x40_vel.x = 0.0;
+    ip.vel.y = mem(fp::fneg(fall));
+    ip.vel.x = 0.0;
     hide(r.game, gobj, false);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     set_box(r, gobj);
@@ -526,7 +526,7 @@ pub fn float(r: &mut Running, gobj: GObjId) {
     let wait = attr(r, gobj, 0x2C).i(r);
     let half = attr(r, gobj, 0x28).i(r).wrapping_mul(2);
     vars(r.game, gobj).countdown.set(wait);
-    item_mut(r.game, gobj).x40_vel.y = 0.0;
+    item_mut(r.game, gobj).vel.y = 0.0;
     let v = vars(r.game, gobj);
     v.bob_accel
         .set(mem(fp::fdivs(fp::fmuls(2.0, height), fp::fmuls(dur, dur))));
@@ -536,7 +536,7 @@ pub fn float(r: &mut Running, gobj: GObjId) {
     v.bob_half_cycles_left.set(2.0);
     v.drift_ticks.set(0);
     hitbox::end_blink(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x1A = true;
+    item_mut(r.game, gobj).flags.flags.keeps_clear = true;
     hide(r.game, gobj, false);
     change_state(r, gobj, 2, UNK_0X1);
     set_box(r, gobj);
@@ -573,10 +573,10 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
         } else {
             let a = reg(vars(r.game, gobj).bob_accel.get());
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.y = if half < quarter {
-                mem(fp::fadds(reg(ip.x40_vel.y), a))
+            ip.vel.y = if half < quarter {
+                mem(fp::fadds(reg(ip.vel.y), a))
             } else {
-                mem(fp::fsubs(reg(ip.x40_vel.y), a))
+                mem(fp::fsubs(reg(ip.vel.y), a))
             };
             vars(r.game, gobj).bob_count.update(|c| c.wrapping_sub(1));
         }
@@ -594,13 +594,13 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
             turn(r, gobj, 0);
             return;
         }
-        item_mut(r.game, gobj).x40_vel.x = 0.0;
+        item_mut(r.game, gobj).vel.x = 0.0;
         vars(r.game, gobj).countdown.set(wait);
         return;
     }
     let n = vars(r.game, gobj).drift_elapsed.get();
     if n >= drift {
-        item_mut(r.game, gobj).x40_vel.x = 0.0;
+        item_mut(r.game, gobj).vel.x = 0.0;
         let v = vars(r.game, gobj);
         v.drift_accel.set(0.0);
         v.drift_elapsed.set(0);
@@ -616,7 +616,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
     }
     let a = reg(vars(r.game, gobj).drift_accel.get());
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fadds(reg(ip.x40_vel.x), a));
+    ip.vel.x = mem(fp::fadds(reg(ip.vel.x), a));
     vars(r.game, gobj)
         .drift_elapsed
         .update(|c| c.wrapping_add(1));
@@ -634,7 +634,7 @@ pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
 /// Notes the state a press interrupts, `it_802EBD14`'s and `it_802EBE5C`'s first lines.
 fn note_state(game: &mut Game, gobj: GObjId) {
     let ip = item(game, gobj);
-    let (msid, vy) = (ip.msid, ip.x40_vel.y);
+    let (msid, vy) = (ip.msid, ip.vel.y);
     let v = vars(game, gobj);
     v.interrupted_state.set(mem(fp::frsp(f64::from(msid))));
     v.saved_vertical_speed.set(vy);
@@ -652,9 +652,9 @@ pub fn press(r: &mut Running, gobj: GObjId) {
     let w = reg(vars(r.game, gobj).stood_weight.get());
     let y = item(r.game, gobj).pos.y;
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = mem(fp::fneg(w));
+    ip.vel.z = 0.0;
+    ip.vel.x = 0.0;
+    ip.vel.y = mem(fp::fneg(w));
     let v = vars(r.game, gobj);
     v.bob_accel.set(mem(fp::fdivs(w, 10.0)));
     v.countdown.set(0x13);
@@ -670,12 +670,12 @@ pub fn phys3(r: &mut Running, gobj: GObjId) {
         let y = vars(r.game, gobj).press_height.get();
         let ip = item_mut(r.game, gobj);
         ip.pos.y = y;
-        ip.x40_vel.y = 0.0;
+        ip.vel.y = 0.0;
         sit(r, gobj);
     } else {
         let a = reg(vars(r.game, gobj).bob_accel.get());
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), a));
+        ip.vel.y = mem(fp::fadds(reg(ip.vel.y), a));
         vars(r.game, gobj).countdown.update(|t| t.wrapping_sub(1));
     }
 }
@@ -708,7 +708,7 @@ pub fn sit(r: &mut Running, gobj: GObjId) {
 pub fn phys4(r: &mut Running, gobj: GObjId) {
     if vars(r.game, gobj).countdown.get() == 0 {
         let speed = attr(r, gobj, 0x48).f(r);
-        item_mut(r.game, gobj).x40_vel.y = mem(fp::fneg(speed));
+        item_mut(r.game, gobj).vel.y = mem(fp::fneg(speed));
         let from = reg(vars(r.game, gobj).press_height.get());
         let dist = abs(fp::fsubs(from, reg(item(r.game, gobj).pos.y)));
         if dist > attr(r, gobj, 0x44).f(r) {
@@ -731,10 +731,10 @@ pub fn release(r: &mut Running, gobj: GObjId) {
     let max = attr(r, gobj, 0x4C).f(r);
     if dist > max {
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.y = mem(max);
-        ip.x40_vel.z = 0.0;
-        ip.x40_vel.x = 0.0;
-        let vy = reg(ip.x40_vel.y);
+        ip.vel.y = mem(max);
+        ip.vel.z = 0.0;
+        ip.vel.x = 0.0;
+        let vy = reg(ip.vel.y);
         let v = vars(r.game, gobj);
         v.bob_count.set(fp::fctiwz(dist));
         let c = v.bob_count.get();
@@ -756,9 +756,9 @@ pub fn release(r: &mut Running, gobj: GObjId) {
         )
     };
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = vy;
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.x = 0.0;
+    ip.vel.y = vy;
+    ip.vel.z = 0.0;
+    ip.vel.x = 0.0;
     let v = vars(r.game, gobj);
     v.bob_accel.set(a);
     v.bob_count.set(fp::fctiwz(reg(c)));
@@ -778,7 +778,7 @@ pub fn release(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itTincle_UnkMotion5_Phys")]
 #[doc(alias = "itTincle_UnkMotion12_Phys")]
 pub fn phys_rise(r: &mut Running, gobj: GObjId) {
-    if reg(item(r.game, gobj).x40_vel.y) <= 0.0 {
+    if reg(item(r.game, gobj).vel.y) <= 0.0 {
         reset_velocity(r.game, gobj);
         let v = vars(r.game, gobj);
         v.bob_accel.set(0.0);
@@ -788,7 +788,7 @@ pub fn phys_rise(r: &mut Running, gobj: GObjId) {
     } else {
         let a = reg(vars(r.game, gobj).bob_accel.get());
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), a));
+        ip.vel.y = mem(fp::fadds(reg(ip.vel.y), a));
     }
 }
 
@@ -874,10 +874,10 @@ pub fn coll8(r: &mut Running, gobj: GObjId) -> bool {
 pub fn land(r: &mut Running, gobj: GObjId) {
     reset_velocity(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.xDC8_word.flags.x1A = false;
-    ip.x70_nudge.z = 0.0;
-    ip.x70_nudge.y = 0.0;
-    ip.x70_nudge.x = 0.0;
+    ip.flags.flags.keeps_clear = false;
+    ip.nudge.z = 0.0;
+    ip.nudge.y = 0.0;
+    ip.nudge.x = 0.0;
     change_state(r, gobj, 9, change::ANIM_UPDATE);
     set_box(r, gobj);
 }
@@ -960,10 +960,10 @@ pub fn rise_again(r: &mut Running, gobj: GObjId) {
     }
     let speed = r.data.f32(attr(r, gobj, 0x50).0);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = speed;
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.x = 0.0;
-    let vy = reg(ip.x40_vel.y);
+    ip.vel.y = speed;
+    ip.vel.z = 0.0;
+    ip.vel.x = 0.0;
+    let vy = reg(ip.vel.y);
     let v = vars(r.game, gobj);
     v.bob_count.set(fp::fctiwz(dist));
     let c = v.bob_count.get();
@@ -1000,7 +1000,7 @@ pub fn turn(r: &mut Running, gobj: GObjId, back: i32) {
     if back != 0 {
         let ip = item_mut(r.game, gobj);
         ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), fp::fneg(1.0)));
+        ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), fp::fneg(1.0)));
         let a = reg(vars(r.game, gobj).drift_accel.get());
         vars(r.game, gobj)
             .drift_accel
@@ -1023,15 +1023,15 @@ pub fn turn(r: &mut Running, gobj: GObjId, back: i32) {
     let (lo, top) = (attr(r, gobj, 0x34).f(r), attr(r, gobj, 0x38).f(r));
     let range = abs(fp::fsubs(top, lo));
     let f = reg(r.game.objs.rng.draw_f32());
-    item_mut(r.game, gobj).x40_vel.x = mem(fp::fmuls(range, f));
+    item_mut(r.game, gobj).vel.x = mem(fp::fmuls(range, f));
     let len = attr(r, gobj, 0x3C).i(r);
     vars(r.game, gobj).drift_ticks.set(len);
-    let vx = reg(item(r.game, gobj).x40_vel.x);
+    let vx = reg(item(r.game, gobj).vel.x);
     let pull = mem(fp::fdivs(fp::fsubs(top, vx), fp::frsp(f64::from(len / 2))));
     vars(r.game, gobj).drift_accel.set(pull);
     let facing = reg(item(r.game, gobj).facing_dir);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), facing));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), facing));
     let a = reg(vars(r.game, gobj).drift_accel.get());
     vars(r.game, gobj)
         .drift_accel
@@ -1075,7 +1075,7 @@ pub fn create(r: &mut Running, owner: GObjId) -> Option<GObjId> {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
     vars(r.game, gobj).stage_object.set(Some(owner));
-    item_mut(r.game, gobj).x378_itemColl.joint_id_skip = 5;
+    item_mut(r.game, gobj).coll.joint_id_skip = 5;
     wait(r, gobj);
     Some(gobj)
 }

@@ -701,7 +701,7 @@ fn scope_one_shot_charge() {
         let fp = g.game.fighter(gobj_arg(maps, call));
         if let Some(scope) = fp.item_gobj {
             let addr = g.game.world.gobjs.addr(scope.0) as i32;
-            if item(g.game, scope).xD4C > 1_000_000 {
+            if item(g.game, scope).ammo > 1_000_000 {
                 refilled.fetch_add(1, Ordering::Relaxed);
             }
             if fp.mv_i32(0) == addr {

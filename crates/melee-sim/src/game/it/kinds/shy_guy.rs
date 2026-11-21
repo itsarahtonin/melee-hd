@@ -213,7 +213,7 @@ impl Mirror for HeihoVars {
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut HeihoVars {
-    item_mut(game, gobj).xDD4_itemVar.heiho()
+    item_mut(game, gobj).vars.heiho()
 }
 
 /// The kind's special attributes as floats: the first word is its health (an integer), the
@@ -257,8 +257,8 @@ pub fn spawn(r: &mut Running, i: i32, pos: Vec3, speed: i32, delay: i32) {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::reset(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.xD5C = 0;
-    ip.xDCC_flag.b3 = false;
+    ip.skid = 0;
+    ip.state_flags.b3 = false;
     let pos = ip.pos;
     let food = super::foods::spawn(r, None, pos);
     vars(r.game, gobj).food.set(food);
@@ -289,8 +289,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802D8894")]
 pub fn wait(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = 0.0;
-    ip.x40_vel.x = 0.0;
+    ip.vel.y = 0.0;
+    ip.vel.x = 0.0;
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 
@@ -309,7 +309,7 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802D98C4")]
 pub fn follow_bone(r: &mut Running, gobj: GObjId) {
     let t = item(r.game, gobj)
-        .xBBC_dynamicBoneTable
+        .bone_table
         .expect("a Shy Guy without a bone table");
     let Some(j) = r.game.it.bone_tables[t.0].bones[1] else {
         return;
@@ -328,7 +328,7 @@ pub fn follow_bone(r: &mut Running, gobj: GObjId) {
     let v = vars(r.game, gobj);
     v.last_bone_translation.set(pos);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = Vec3::new(vx, vy, vz);
+    ip.vel = Vec3::new(vx, vy, vz);
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
         o.translate = Vec3::new(0.0, 0.0, 0.0)
     });
@@ -388,9 +388,9 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 fn sink(r: &mut Running, gobj: GObjId) {
     if vars(r.game, gobj).sink_count.get() > 960 {
         let ip = item_mut(r.game, gobj);
-        let vx = reg(ip.x40_vel.x);
+        let vx = reg(ip.vel.x);
         let abs = if vx < fp::frsp(0.0) { fp::fneg(vx) } else { vx };
-        ip.x40_vel.y = mem(fp::fnmsubs(fp::fneg(reg(0.04)), abs, reg(ip.x40_vel.y)));
+        ip.vel.y = mem(fp::fnmsubs(fp::fneg(reg(0.04)), abs, reg(ip.vel.y)));
     }
 }
 
@@ -415,7 +415,7 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
     let speed = i32::from(vars(r.game, gobj).speed_index.get()) + 1;
     let s = attr_f32(r, gobj, speed);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), reg(s)));
+    ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), reg(s)));
     sink(r, gobj);
     blast_zones(r, gobj);
     turn(r, gobj);
@@ -430,7 +430,7 @@ fn coll_moving(r: &mut Running, gobj: GObjId, on_leave: fn(&mut Running, GObjId)
         let s = attr_f32(r, gobj, speed);
         let ip = item_mut(r.game, gobj);
         ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), reg(s)));
+        ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), reg(s)));
         vars(r.game, gobj).countdown.set(20);
     } else if left {
         on_leave(r, gobj);
@@ -451,7 +451,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
     zako::fall_physics(r, gobj);
     let n = r.game.objs.rng.below(3);
     let deg = fp::fmadds(8.0, fp::frsp(f64::from(n)), 1.0);
-    item_mut(r.game, gobj).xD3C_spinSpeed = mem(fp::fmuls(reg(0.017_453_292), deg));
+    item_mut(r.game, gobj).spin_speed = mem(fp::fmuls(reg(0.017_453_292), deg));
     lib2725::spin(r.game, r.data, gobj);
 }
 
@@ -482,19 +482,19 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
         super::foods::fell(r, food);
         vars(r.game, gobj).food.set(None);
     }
-    item_mut(r.game, gobj).xDCC_flag.b3 = true;
+    item_mut(r.game, gobj).state_flags.b3 = true;
     // `**attr`: the attributes' first word is a pointer to the health.
     let health = zako::health(r, gobj);
     let limit = fp::fctiwz(fp::fmuls(reg(0.8), fp::frsp(f64::from(health))));
-    if item(r.game, gobj).xC9C > limit {
+    if item(r.game, gobj).damage_taken > limit {
         zako::ko(r, gobj);
         let f = reg(r.game.objs.rng.draw_f32());
         let rand = fp::fmuls(2.0, fp::fsubs(f, 0.5));
         let spread = attr_f32(r, gobj, 5);
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = mem(fp::fmadds(reg(spread), rand, reg(ip.x40_vel.x)));
-        ip.x40_vel.y = 2.0;
-        ip.x40_vel.z = 1.5;
+        ip.vel.x = mem(fp::fmadds(reg(spread), rand, reg(ip.vel.x)));
+        ip.vel.y = 2.0;
+        ip.vel.z = 1.5;
         face_model(r.game, gobj);
         reset_bone(r.game, gobj);
         change_state(r, gobj, 2, change::ANIM_UPDATE);
@@ -563,7 +563,7 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
     let speed = i32::from(vars(r.game, gobj).speed_index.get()) + 1;
     let s = attr_f32(r, gobj, speed);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(1.5, fp::fmuls(reg(ip.facing_dir), reg(s))));
+    ip.vel.x = mem(fp::fmuls(1.5, fp::fmuls(reg(ip.facing_dir), reg(s))));
     sink(r, gobj);
     turn(r, gobj);
 }
@@ -607,7 +607,7 @@ pub fn blast_zones(r: &mut Running, gobj: GObjId) {
             || y < fp::fsubs(reg(stage::blast_bottom(r.game)), 20.0)
     };
     if leave {
-        item_mut(r.game, gobj).xDCC_flag.b3 = true;
+        item_mut(r.game, gobj).state_flags.b3 = true;
         if let Some(food) = vars(r.game, gobj).food.get() {
             super::foods::gone(r, food);
             vars(r.game, gobj).food.set(None);

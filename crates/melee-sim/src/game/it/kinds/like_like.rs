@@ -268,7 +268,7 @@ pub fn turn_back(r: &mut Running, gobj: GObjId) {
     let s = reg(speed(r, gobj));
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), s));
+    ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), s));
 }
 
 /// The Like Like's setup, `it_802D9BA8`: the enemies' common variables, facing most fighters,
@@ -283,8 +283,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).facing_dir = facing;
     zako::face(r, gobj, 0.0);
     let ip = item_mut(r.game, gobj);
-    ip.xD5C = 0;
-    ip.xDC8_word.flags.x15 = false;
+    ip.skid = 0;
+    ip.flags.flags.pickup = false;
     hitbox::clear_dcd_b7(r.game, gobj);
     zako::set_dd0_b4(r.game, gobj);
     set(r, gobj, off::PAUSE, 1);
@@ -343,13 +343,13 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
 /// leaves it and the ceiling it found; whether it's at a ledge (`it_802762D8`).
 fn cling(r: &mut Running, gobj: GObjId) -> bool {
     maplib::prep_coll(r.game, r.data, gobj);
-    let mut cd = item(r.game, gobj).x378_itemColl.clone();
+    let mut cd = item(r.game, gobj).coll.clone();
     let hit = maplib::with_stage_coll(r.game, r.data, |c| c.ceiling_frame(&mut cd));
     let ip = item_mut(r.game, gobj);
-    ip.x378_itemColl = cd;
-    ip.pos = ip.x378_itemColl.cur_pos;
+    ip.coll = cd;
+    ip.pos = ip.coll.cur_pos;
     if hit {
-        ip.xC30 = ip.x378_itemColl.ceiling.index;
+        ip.touched_line = ip.coll.ceiling.index;
     }
     maplib::at_edge(r.game, gobj)
 }
@@ -413,13 +413,13 @@ pub fn crawl_ceiling(r: &mut Running, gobj: GObjId) {
 fn start_crawl(r: &mut Running, gobj: GObjId, msid: i32) {
     let s = reg(speed(r, gobj));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), s));
+    ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), s));
     if msid == 1 {
-        ip.x40_vel.z = 0.0;
-        ip.x40_vel.y = 0.0;
+        ip.vel.z = 0.0;
+        ip.vel.y = 0.0;
     } else {
-        ip.x40_vel.y = 0.0;
-        ip.x40_vel.z = 0.0;
+        ip.vel.y = 0.0;
+        ip.vel.z = 0.0;
     }
     hitbox::end_blink(r.game, gobj);
     let n = attr_i32(r, gobj, 0x18);
@@ -432,10 +432,10 @@ fn start_crawl(r: &mut Running, gobj: GObjId, msid: i32) {
 /// Turned away from a nudge against its facing (the crawls' physics).
 fn turn_from_nudge(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    let (facing, nudge) = (reg(ip.facing_dir), reg(ip.x70_nudge.x));
+    let (facing, nudge) = (reg(ip.facing_dir), reg(ip.nudge.x));
     if facing > 0.0 && nudge < 0.0 || facing < 0.0 && nudge > 0.0 {
         ip.facing_dir = mem(fp::fneg(facing));
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), fp::fneg(1.0)));
+        ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), fp::fneg(1.0)));
     }
 }
 
@@ -478,8 +478,8 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
     }
     turn_from_nudge(r, gobj);
     let ip = item_mut(r.game, gobj);
-    let (normal, facing) = (ip.x378_itemColl.floor.normal, ip.facing_dir);
-    zako::along_surface(&mut ip.x40_vel, normal, facing);
+    let (normal, facing) = (ip.coll.floor.normal, ip.facing_dir);
+    zako::along_surface(&mut ip.vel, normal, facing);
     zako::align_floor(r, gobj, 0.0, 5.0);
 }
 
@@ -561,11 +561,11 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
     }
     let s = reg(speed(r, gobj));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), s));
+    ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), s));
     turn_from_nudge(r, gobj);
     let ip = item_mut(r.game, gobj);
-    let (normal, facing) = (ip.x378_itemColl.floor.normal, ip.facing_dir);
-    zako::along_surface(&mut ip.x40_vel, normal, facing);
+    let (normal, facing) = (ip.coll.floor.normal, ip.facing_dir);
+    zako::along_surface(&mut ip.vel, normal, facing);
     zako::align_ceiling(r, gobj, 0.0, 5.0);
 }
 
@@ -576,7 +576,7 @@ pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
     let reverse = |r: &mut Running| {
         let ip = item_mut(r.game, gobj);
         ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), fp::fneg(1.0)));
+        ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), fp::fneg(1.0)));
     };
     if cling(r, gobj) || maplib::touched_wall(r.game, gobj) != 0 {
         reverse(r);
@@ -598,9 +598,9 @@ pub fn clung(r: &mut Running, gobj: GObjId) {
 /// Its box upside down (bottom and top swapped).
 fn flip_box(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    let mut e = ip.xC1C.clone();
+    let mut e = ip.coll_box.clone();
     e.bottom = e.top;
-    e.top = ip.xC1C.bottom;
+    e.top = ip.coll_box.bottom;
     maplib::set_box(r.game, gobj, e);
 }
 
@@ -686,8 +686,8 @@ pub fn anim17(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itLikelike_UnkMotion17_Phys")]
 pub fn phys17(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    let (normal, facing) = (ip.x378_itemColl.floor.normal, ip.facing_dir);
-    zako::along_surface(&mut ip.x40_vel, normal, facing);
+    let (normal, facing) = (ip.coll.floor.normal, ip.facing_dir);
+    zako::along_surface(&mut ip.vel, normal, facing);
     zako::align_floor(r, gobj, 0.0, 5.0);
 }
 
@@ -708,7 +708,7 @@ pub fn rise(r: &mut Running, gobj: GObjId) {
         j,
         mem(fp::frsp(std::f64::consts::PI)),
     );
-    super::super::set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, true);
+    super::super::set_flag(&mut item_mut(r.game, gobj).hurt_flags, 7, true);
     change_state(r, gobj, 3, change::ANIM_UPDATE);
 }
 
@@ -717,7 +717,7 @@ pub fn rise(r: &mut Running, gobj: GObjId) {
 pub fn phys3(r: &mut Running, gobj: GObjId) {
     let accel = reg(attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), accel));
+    ip.vel.y = mem(fp::fadds(reg(ip.vel.y), accel));
 }
 
 /// Rising's collision, `itLikelike_UnkMotion3_Coll`: touching the ceiling, it clings there.
@@ -770,7 +770,7 @@ pub fn lunge(r: &mut Running, gobj: GObjId) {
     let s = reg(speed(r, gobj));
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = mem(fp::frsp(f64::from(aim)));
-    ip.x40_vel.x = mem(fp::fmuls(2.0, fp::fmuls(reg(ip.facing_dir), s)));
+    ip.vel.x = mem(fp::fmuls(2.0, fp::fmuls(reg(ip.facing_dir), s)));
     set(r, gobj, off::TIMER, 0x1E);
     change_state(r, gobj, 8, change::ANIM_UPDATE);
 }
@@ -809,8 +809,8 @@ pub fn phys8(r: &mut Running, gobj: GObjId) {
         }
     }
     let ip = item_mut(r.game, gobj);
-    let (normal, facing) = (ip.x378_itemColl.floor.normal, ip.facing_dir);
-    zako::along_surface(&mut ip.x40_vel, normal, facing);
+    let (normal, facing) = (ip.coll.floor.normal, ip.facing_dir);
+    zako::along_surface(&mut ip.vel, normal, facing);
     zako::align_ceiling(r, gobj, 0.0, 5.0);
 }
 
@@ -820,7 +820,7 @@ pub fn phys8(r: &mut Running, gobj: GObjId) {
 pub fn swallowed(r: &mut Running, gobj: GObjId) {
     let victim = item(r.game, gobj).grab_victim;
     set_target(r, gobj, victim);
-    super::super::set_flag(&mut item_mut(r.game, gobj).xDD0_flag, 5, false);
+    super::super::set_flag(&mut item_mut(r.game, gobj).status_flags, 5, false);
     lib2725::set_xd09(r.game, gobj, true);
 }
 
@@ -996,7 +996,7 @@ pub fn release(r: &mut Running, gobj: GObjId, way: i32, hit_1: bool) {
         return;
     }
     let ip = item(r.game, gobj);
-    let cd = &ip.x378_itemColl;
+    let cd = &ip.coll;
     let mid = mem(fp::fmuls(
         0.5,
         fp::fadds(reg(cd.ecb.top.y), reg(cd.ecb.bottom.y)),

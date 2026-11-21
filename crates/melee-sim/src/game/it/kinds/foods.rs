@@ -75,10 +75,10 @@ fn attrs(r: &Running, gobj: GObjId) -> DataRef {
 /// in the air at its position.
 #[doc(alias = "it_8028F8E4")]
 pub fn let_fall(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).xDCC_flag.b3 = true;
+    item_mut(r.game, gobj).state_flags.b3 = true;
     lib26b1::enable_pickup(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x378_itemColl.cur_pos = ip.pos;
+    ip.coll.cur_pos = ip.pos;
     let pos = ip.pos;
     super::super::maplib::place_air(r, gobj, pos);
 }
@@ -88,7 +88,7 @@ pub fn let_fall(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8028F968")]
 pub fn carried(r: &mut Running, gobj: GObjId) {
     lib2725::clear_velocity(r.game, gobj);
-    item_mut(r.game, gobj).xDCC_flag.b3 = false;
+    item_mut(r.game, gobj).state_flags.b3 = false;
     lib26b1::disable_pickup(r.game, gobj);
 }
 
@@ -131,7 +131,7 @@ pub fn spawn(r: &mut Running, parent: Option<GObjId>, pos: Vec3) -> Option<GObjI
 #[doc(alias = "it_8028F9D8")]
 pub fn place(r: &mut Running, gobj: GObjId, pos: Vec3, dir: f64) {
     let a = attrs(r, gobj);
-    let dish = item_mut(r.game, gobj).xDD4_itemVar.foods().x0.get();
+    let dish = item_mut(r.game, gobj).vars.foods().dish.get();
     let w = r.data.f32(a.at(dish.wrapping_mul(16).wrapping_add(12)));
     let next_x = r.data.f32(a.at(dish.wrapping_add(1).wrapping_mul(16)));
     let ip = item_mut(r.game, gobj);
@@ -152,9 +152,9 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let entry = a.at((dish as u32).wrapping_mul(16));
     let heal = r.data.u32(entry.at(8));
     let joint = r.data.ptr(entry.at(4));
-    let v = item_mut(r.game, gobj).xDD4_itemVar.foods();
+    let v = item_mut(r.game, gobj).vars.foods();
     v.heal_amount.set(heal);
-    v.x0.set(dish as u32);
+    v.dish.set(dish as u32);
     set_model(r, gobj, joint);
     fell(r, gobj);
 }
@@ -163,7 +163,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// `joint`, scaled and placed at the item.
 #[doc(alias = "it_80273318")]
 pub fn set_model(r: &mut Running, gobj: GObjId, joint: Option<DataRef>) {
-    item_mut(r.game, gobj).xC8_joint = joint;
+    item_mut(r.game, gobj).joint = joint;
     // `HSD_GObjObject_80390B0C`.
     if let Some((kind, obj)) = r.game.world.take_obj(gobj) {
         r.remove_obj(kind, obj);
@@ -213,7 +213,7 @@ pub fn falling(r: &mut Running, gobj: GObjId) -> bool {
 /// Lands, stopped, with a sound, `it_8028FCE8`.
 #[doc(alias = "it_8028FCE8")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     play_sfx(r, gobj, SFX_LAND, 127, 64);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
 }

@@ -71,7 +71,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var0 = 0;
     enter_air(r, gobj);
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
@@ -144,7 +144,7 @@ pub fn fly_off(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 2, change::ANIM_UPDATE);
     effect_hitlag(r.game, gobj);
     pokemon::vars(r.game, gobj).set_f32(RISE, 0.0);
-    item_mut(r.game, gobj).xDB0_itcmd_var1 = 0;
+    item_mut(r.game, gobj).cmd_var1 = 0;
 }
 
 /// `itThunder_UnkMotion2_Anim`: flying off, its animation over and over; gone past the top of
@@ -164,21 +164,21 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itThunder_UnkMotion2_Phys")]
 pub fn phys2(r: &mut Running, gobj: GObjId) {
     pokemon::move_by_bone(r.game, gobj);
-    if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
+    if item(r.game, gobj).cmd_var0 != 0 {
         let rise = attr_f32(r, gobj, 4);
         pokemon::vars(r.game, gobj).set_f32(RISE, rise);
         let ip = item_mut(r.game, gobj);
-        ip.xDAC_itcmd_var0 = 0;
-        ip.xDB0_itcmd_var1 = 1;
+        ip.cmd_var0 = 0;
+        ip.cmd_var1 = 1;
     }
-    if item(r.game, gobj).xDB0_itcmd_var1 != 0 {
+    if item(r.game, gobj).cmd_var1 != 0 {
         let accel = attr_f32(r, gobj, 8);
         let v = pokemon::vars(r.game, gobj);
         let rise = v.f32(RISE);
         v.set_f32(RISE, mem(fp::fadds(reg(rise), reg(accel))));
     }
     let rise = pokemon::vars(r.game, gobj).f32(RISE);
-    item_mut(r.game, gobj).x40_vel.y = rise;
+    item_mut(r.game, gobj).vel.y = rise;
 }
 
 /// `itThunder_UnkMotion2_Coll`: nothing.
@@ -217,7 +217,7 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
     effect_hitlag(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(THUNDER_ACCESSORY));
-    set_flag(&mut ip.xDD1_flag, 1, true);
+    set_flag(&mut ip.phys_flags, 1, true);
 }
 
 /// `itThunder_UnkMotion0_Coll`: lands out of the ball, doing nothing.

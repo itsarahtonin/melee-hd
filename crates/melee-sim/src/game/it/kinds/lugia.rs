@@ -146,9 +146,9 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
     let climb = mem(fp::fadds(reg(v.f32(CLIMB)), reg(x18)));
     v.set_f32(CLIMB, climb);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = climb;
-    if reg(ip.x40_vel.y) > 0.0 {
-        ip.x40_vel.y = 0.0;
+    ip.vel.y = climb;
+    if reg(ip.vel.y) > 0.0 {
+        ip.vel.y = 0.0;
         fire(r, gobj);
     }
 }
@@ -174,7 +174,7 @@ pub fn fire(r: &mut Running, gobj: GObjId) {
     v.set_i32(ANGLE, 0);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(FIRE_ACCESSORY));
-    ip.xDCC_flag.b3 = true;
+    ip.state_flags.b3 = true;
 }
 
 /// One count towards an Aeroblast, up by `step`.
@@ -189,7 +189,7 @@ fn count_up(r: &mut Running, gobj: GObjId, at: usize, step: f32) {
 /// (`x1C`, `x24`, `x2C`), the first with one of three cries.
 #[doc(alias = "it_802D1BBC")]
 pub fn fire_when_told(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDAC_itcmd_var0 == 0 {
+    if item(r.game, gobj).cmd_var0 == 0 {
         return;
     }
     let (s1, s2, s3) = (
@@ -374,5 +374,5 @@ pub fn blast_phys(r: &mut Running, gobj: GObjId) {
         _ => 0.0,
     };
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.z = mem(fp::fmuls(reg(ip.x40_vel.z), reg(factor)));
+    ip.vel.z = mem(fp::fmuls(reg(ip.vel.z), reg(factor)));
 }

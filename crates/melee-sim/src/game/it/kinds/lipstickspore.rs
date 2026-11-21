@@ -83,9 +83,9 @@ fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing: f32, kind: i32) -> O
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .lipstick_spore()
-        .xDD4
+        .facing
         .set(kind);
     Some(gobj)
 }
@@ -130,21 +130,17 @@ pub fn launch(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
     lib2725::stop_spin(r.game, r.data, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
-    let kind = item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .lipstick_spore()
-        .xDD4
-        .get();
+    let kind = item_mut(r.game, gobj).vars.lipstick_spore().facing.get();
     let speed = reg(r.data.f32(attr(r, gobj, 0)));
     let fly = |r: &mut Running, life: u32, mul: u32, damage: u32| {
         let life = r.data.f32(attr(r, gobj, life));
         lib2725::set_lifetime(r.game, r.data, gobj, life);
         let mul = reg(r.data.f32(attr(r, gobj, mul)));
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), fp::fmuls(speed, mul)));
-        let step = fp::fdivs(reg(ip.x40_vel.x), reg(life));
+        ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), fp::fmuls(speed, mul)));
+        let step = fp::fdivs(reg(ip.vel.x), reg(life));
         let step = if step < 0.0 { fp::fneg(step) } else { step };
-        ip.xDD4_itemVar.lipstick_spore().xDD8.set(mem(step));
+        ip.vars.lipstick_spore().step.set(mem(step));
         let damage = r.data.u32(attr(r, gobj, damage));
         coll::set_hit_damage(r.game, r.data, gobj, 0, damage);
     };
@@ -155,14 +151,14 @@ pub fn launch(r: &mut Running, gobj: GObjId) {
             let life = r.data.f32(attr(r, gobj, 0xC));
             lib2725::set_lifetime(r.game, r.data, gobj, life);
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.x = 0.0;
-            ip.xDD4_itemVar.lipstick_spore().xDD8.set(0.0);
+            ip.vel.x = 0.0;
+            ip.vars.lipstick_spore().step.set(0.0);
             let damage = r.data.u32(attr(r, gobj, 0x14));
             coll::set_hit_damage(r.game, r.data, gobj, 0, damage);
         }
         _ => {}
     }
-    super::super::set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, false);
+    super::super::set_flag(&mut item_mut(r.game, gobj).hurt_flags, 7, false);
 }
 
 /// A thrown stick's spores, still for 5 frames, `it_8029A498`.
@@ -172,7 +168,7 @@ pub fn hang(r: &mut Running, gobj: GObjId) {
     lib2725::stop_spin(r.game, r.data, gobj);
     lib2725::set_lifetime(r.game, r.data, gobj, 5.0);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
-    super::super::set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, false);
+    super::super::set_flag(&mut item_mut(r.game, gobj).hurt_flags, 7, false);
 }
 
 /// `itLipstickspore_UnkMotion0_Anim` (and 1): gone once its life runs out.
@@ -187,8 +183,8 @@ pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itLipstickspore_UnkMotion0_Phys")]
 pub fn phys0(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    let step = reg(ip.xDD4_itemVar.lipstick_spore().xDD8.get());
-    let vx = reg(ip.x40_vel.x);
+    let step = reg(ip.vars.lipstick_spore().step.get());
+    let vx = reg(ip.vel.x);
     if vx == 0.0 || step == 0.0 {
         return;
     }
@@ -197,11 +193,11 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
     } else {
         fp::fadds(vx, step)
     };
-    ip.x40_vel.x = mem(vx);
-    let vx = reg(ip.x40_vel.x);
+    ip.vel.x = mem(vx);
+    let vx = reg(ip.vel.x);
     let abs = if vx < 0.0 { fp::fneg(vx) } else { vx };
     if abs < step {
-        ip.x40_vel.x = 0.0;
+        ip.vel.x = 0.0;
     }
 }
 
@@ -237,7 +233,7 @@ pub fn gone(_: &mut Running, _: GObjId) -> bool {
 #[doc(alias = "itLipstickSpore_Logic37_Reflected")]
 pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     lib2725::reflected_back(r.game, gobj);
-    let v = item(r.game, gobj).x40_vel;
+    let v = item(r.game, gobj).vel;
     let j = jobj_of(r.game, gobj).expect("spores without a model");
     jobj::set_rotation_z(&mut r.game.objs.jobjs, j, math::atan2(v.y, v.x));
     false

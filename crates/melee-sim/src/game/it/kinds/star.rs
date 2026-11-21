@@ -57,11 +57,11 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
         -1.0
     };
     let ip = item_mut(r.game, gobj);
-    ip.xDD4_itemVar.star().dir.set(dir);
-    let dir = ip.xDD4_itemVar.star().dir.get();
-    ip.x40_vel.x = mem(fp::fmuls(reg(vx), reg(dir)));
-    ip.x40_vel.y = vy;
-    ip.x40_vel.z = 0.0;
+    ip.vars.star().dir.set(dir);
+    let dir = ip.vars.star().dir.get();
+    ip.vel.x = mem(fp::fmuls(reg(vx), reg(dir)));
+    ip.vel.y = vy;
+    ip.vel.z = 0.0;
     bounce_state(r, gobj);
 }
 
@@ -85,24 +85,24 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     if ground::air(r, gobj) {
         let (vx, vy) = bounce_speeds(r, gobj);
         let ip = item_mut(r.game, gobj);
-        let dir = ip.xDD4_itemVar.star().dir.get();
-        ip.x40_vel.x = mem(fp::fmuls(reg(vx), reg(dir)));
-        ip.x40_vel.y = vy;
+        let dir = ip.vars.star().dir.get();
+        ip.vel.x = mem(fp::fmuls(reg(vx), reg(dir)));
+        ip.vel.y = vy;
         change_state(r, gobj, 0, 0x1 | change::HIT_PRESERVE);
         touched = true;
     }
     if maplib::touched_wall(r.game, gobj) != 0 {
         let ip = item_mut(r.game, gobj);
-        let v = ip.xDD4_itemVar.star();
+        let v = ip.vars.star();
         let dir = v.dir.get();
         v.dir.set(mem(fp::fneg(reg(dir))));
-        ip.x40_vel.x = mem(fp::fneg(reg(ip.x40_vel.x)));
+        ip.vel.x = mem(fp::fneg(reg(ip.vel.x)));
         touched = true;
     }
     if maplib::touched_ceiling(r.game, gobj) != 0 {
         let ip = item_mut(r.game, gobj);
-        if reg(ip.x40_vel.y) > 0.0 {
-            ip.x40_vel.y = 0.0;
+        if reg(ip.vel.y) > 0.0 {
+            ip.vel.y = 0.0;
         }
         touched = true;
     }

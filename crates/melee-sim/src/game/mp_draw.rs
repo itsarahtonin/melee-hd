@@ -209,7 +209,7 @@ impl Running<'_> {
         }
         for g in items {
             let ip = super::it::item(self.game, g);
-            let (mut cd, kind) = (ip.x378_itemColl.clone(), ip.kind);
+            let (mut cd, kind) = (ip.coll.clone(), ip.kind);
             if !cd.x35_flags.b0 {
                 continue;
             }
@@ -228,9 +228,9 @@ impl Running<'_> {
             }
             if kind == ItKind::LinkHookshot {
                 let tip = super::it::item_mut(self.game, g)
-                    .xDD4_itemVar
+                    .vars
                     .link_hookshot()
-                    .x0
+                    .tip
                     .get()
                     .expect("a hookshot without its tip");
                 let cd = super::it::link::link(self.game, tip).coll_data.clone();

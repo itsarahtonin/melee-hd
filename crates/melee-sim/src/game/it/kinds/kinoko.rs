@@ -71,12 +71,12 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = if reg(ip.pos.x) > 0.0 { -1.0 } else { 1.0 };
-    ip.xD5C = 0;
-    let v = ip.xDD4_itemVar.kinoko();
-    v.x0.set(0.0);
-    v.x4.set_x(0.0);
-    v.x4.set_y(1.0);
-    v.x4.set_z(0.0);
+    ip.skid = 0;
+    let v = ip.vars.kinoko();
+    v.speed.set(0.0);
+    v.normal.set_x(0.0);
+    v.normal.set_y(1.0);
+    v.normal.set_z(0.0);
     fell(r, gobj);
 }
 
@@ -85,10 +85,10 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_80293A70")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    let speed = ip.xDD4_itemVar.kinoko().x0.get();
-    ip.x40_vel.x = speed;
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
+    let speed = ip.vars.kinoko().speed.get();
+    ip.vel.x = speed;
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
     lib26b1::enable_pickup(r.game, gobj);
     play_sfx(r, gobj, 0x107, 0x7F, 0x40);
     change_state(r, gobj, 0, 0x1 | change::HIT_PRESERVE);
@@ -115,21 +115,21 @@ pub fn walk(r: &mut Running, gobj: GObjId) {
         return;
     }
     let s = mem(fp::fmuls(reg(speed), reg(ip.facing_dir)));
-    let v = ip.xDD4_itemVar.kinoko();
-    v.x0.set(s);
-    let s = v.x0.get();
-    let ny = v.x4.y();
-    ip.x40_vel.x = mem(fp::fmuls(reg(s), reg(ny)));
+    let v = ip.vars.kinoko();
+    v.speed.set(s);
+    let s = v.speed.get();
+    let ny = v.normal.y();
+    ip.vel.x = mem(fp::fmuls(reg(s), reg(ny)));
 }
 
 /// Keeps the floor's normal (`it_80276408`), when it touched a surface.
 fn keep_normal(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    if let Some(n) = maplib::surface_normal(&ip.x378_itemColl) {
-        let v = ip.xDD4_itemVar.kinoko();
-        v.x4.set_x(n.x);
-        v.x4.set_y(n.y);
-        v.x4.set_z(n.z);
+    if let Some(n) = maplib::surface_normal(&ip.coll) {
+        let v = ip.vars.kinoko();
+        v.normal.set_x(n.x);
+        v.normal.set_y(n.y);
+        v.normal.set_z(n.z);
     }
 }
 
@@ -142,21 +142,21 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).ground_or_air == 1 {
         return false;
     }
-    if item(r.game, gobj).x378_itemColl.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
+    if item(r.game, gobj).coll.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
         keep_normal(r, gobj);
     } else {
-        item_mut(r.game, gobj).xDD4_itemVar.kinoko().x4.set_x(0.0);
+        item_mut(r.game, gobj).vars.kinoko().normal.set_x(0.0);
     }
-    let env = item(r.game, gobj).x378_itemColl.env_flags;
+    let env = item(r.game, gobj).coll.env_flags;
     if env & 0x3F != 0 || env & 0xFC0 != 0 {
         let ip = item_mut(r.game, gobj);
         ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-        let v = ip.xDD4_itemVar.kinoko();
-        let s = v.x0.get();
-        v.x0.set(mem(fp::fneg(reg(s))));
-        let s = v.x0.get();
-        let ny = v.x4.y();
-        ip.x40_vel.x = mem(fp::fmuls(reg(s), reg(ny)));
+        let v = ip.vars.kinoko();
+        let s = v.speed.get();
+        v.speed.set(mem(fp::fneg(reg(s))));
+        let s = v.speed.get();
+        let ny = v.normal.y();
+        ip.vel.x = mem(fp::fmuls(reg(s), reg(ny)));
     }
     false
 }
@@ -182,17 +182,17 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
     let decel = reg(attr(r, gobj, 4));
     super::gravity(r, gobj);
     let ip = item_mut(r.game, gobj);
-    let vx = reg(ip.x40_vel.x);
+    let vx = reg(ip.vel.x);
     let speed = if vx < 0.0 { fp::fneg(vx) } else { vx };
     if speed < decel {
-        ip.x40_vel.x = 0.0;
+        ip.vel.x = 0.0;
         return;
     }
-    if reg(ip.x40_vel.x) > 0.0 {
-        ip.x40_vel.x = mem(fp::fsubs(reg(ip.x40_vel.x), decel));
+    if reg(ip.vel.x) > 0.0 {
+        ip.vel.x = mem(fp::fsubs(reg(ip.vel.x), decel));
     }
-    if reg(ip.x40_vel.x) < 0.0 {
-        ip.x40_vel.x = mem(fp::fadds(reg(ip.x40_vel.x), decel));
+    if reg(ip.vel.x) < 0.0 {
+        ip.vel.x = mem(fp::fadds(reg(ip.vel.x), decel));
     }
 }
 
@@ -216,7 +216,7 @@ pub fn d_coll1(r: &mut Running, gobj: GObjId) -> bool {
 /// On the ground and touching a floor, its normal kept.
 fn keep_floor_normal(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if ip.ground_or_air != 1 && ip.x378_itemColl.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
+    if ip.ground_or_air != 1 && ip.coll.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
         keep_normal(r, gobj);
     }
 }

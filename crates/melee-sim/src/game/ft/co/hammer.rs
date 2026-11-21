@@ -634,7 +634,7 @@ impl Running<'_> {
 /// else off (`it_802725D4`).
 #[doc(alias = "it_8026C16C")]
 pub fn hammer_hits_on(r: &mut Running, gobj: GObjId, on: bool) {
-    if it::item(r.game, gobj).xD4C <= 0 || !on {
+    if it::item(r.game, gobj).ammo <= 0 || !on {
         lib2725::clear_hitboxes(r.game, r.data, gobj);
     } else {
         all_hitboxes_on(r, gobj);
@@ -645,10 +645,10 @@ pub fn hammer_hits_on(r: &mut Running, gobj: GObjId, on: bool) {
 #[doc(alias = "it_80272784")]
 pub fn all_hitboxes_on(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    for h in &mut ip.x5D4_hitboxes {
+    for h in &mut ip.hitboxes {
         hitcapsule::enable(&mut h.hit);
     }
-    ip.xDC8_word.flags.x16 = true;
+    ip.flags.flags.hitbox_on = true;
     for i in 0..4 {
         it::coll::update_hitbox(r.game, r.data, gobj, i);
     }

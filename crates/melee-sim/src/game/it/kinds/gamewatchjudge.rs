@@ -113,8 +113,8 @@ pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_2725_Logic77_PickedUp")]
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
     if item(r.game, gobj).owner.is_some() {
         change_state(r, gobj, 0, change::ANIM_UPDATE);
     }

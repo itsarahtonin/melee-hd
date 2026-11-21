@@ -102,7 +102,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// The party ball's variables: `x0` whether it's opened, `x4` a frame count.
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itKusudama_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.kusudama()
+    item_mut(game, gobj).vars.kusudama()
 }
 
 /// `itKusudamaAttributes`' word at `off`.
@@ -140,11 +140,11 @@ fn rotation(r: &Running, j: JObjId) -> crate::quat::Quat {
 #[doc(alias = "itKusudama_Logic4_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    super::super::set_flag(&mut ip.xDCE_flag, 7, false);
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    vars(r.game, gobj).x0.set(0);
+    super::super::set_flag(&mut ip.hurt_flags, 7, false);
+    ip.cmd_var0 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var2 = 0;
+    vars(r.game, gobj).opened.set(0);
     fell(r, gobj);
 }
 
@@ -368,7 +368,7 @@ pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
 #[doc(alias = "it_8028A190")]
 pub fn stopped(r: &mut Running, gobj: GObjId) {
     // `Item_StopAndEnterState`.
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     lib26b1::enable_pickup(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     stand(r, gobj);
@@ -411,8 +411,8 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 /// opens when the script says, facing front.
 #[doc(alias = "itKusudama_UnkMotion1_Anim")]
 pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xDB4_itcmd_var2 == 1 {
-        item_mut(r.game, gobj).xDB4_itcmd_var2 = 2;
+    if item(r.game, gobj).cmd_var2 == 1 {
+        item_mut(r.game, gobj).cmd_var2 = 2;
         let sfx = if r.game.objs.rng.below(2) != 0 {
             0x127
         } else {
@@ -420,7 +420,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
         };
         play_sfx(r, gobj, sfx, 0x7F, 0x40);
     }
-    if item(r.game, gobj).xDB0_itcmd_var1 != 0 {
+    if item(r.game, gobj).cmd_var1 != 0 {
         open(r, gobj);
     }
     tip_towards(r, gobj, 0.0);
@@ -464,12 +464,12 @@ pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
 pub fn rise(r: &mut Running, gobj: GObjId) {
     let (x18, x1c) = (attr_f(r, gobj, 0x18), attr_f(r, gobj, 0x1C));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = x18;
-    let v = ip.xDD4_itemVar.kusudama();
-    v.x4.set(fp::fctiwz(reg(x1c)));
-    v.x0.set(1);
+    ip.vel.z = 0.0;
+    ip.vel.x = 0.0;
+    ip.vel.y = x18;
+    let v = ip.vars.kusudama();
+    v.timer.set(fp::fctiwz(reg(x1c)));
+    v.opened.set(1);
     maplib::enter_air(item_mut(r.game, gobj));
     hitbox::set_hit_ids(r.game, gobj);
     lib26b1::show(r.game, gobj);
@@ -487,9 +487,9 @@ pub fn rise(r: &mut Running, gobj: GObjId) {
 /// Stops in the air to swing open (state 1, 90 frames), keeping its turn.
 fn hang(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
-    ip.xDD4_itemVar.kusudama().x4.set(0x5A);
-    super::super::set_flag(&mut ip.xDD1_flag, 1, true);
+    ip.vel = Vec3::new(0.0, 0.0, 0.0);
+    ip.vars.kusudama().timer.set(0x5A);
+    super::super::set_flag(&mut ip.phys_flags, 1, true);
     lib26b1::disable_pickup(r.game, gobj);
     let j = root(r, gobj);
     let y = rotation(r, j).y;
@@ -501,8 +501,8 @@ fn hang(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itKusudama_UnkMotion3_Anim")]
 pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
     let v = vars(r.game, gobj);
-    v.x4.update(|old| old.wrapping_sub(1));
-    if v.x4.get() <= 0 {
+    v.timer.update(|old| old.wrapping_sub(1));
+    if v.timer.get() <= 0 {
         hang(r, gobj);
     }
     tip_towards(r, gobj, 0.0);
@@ -514,7 +514,7 @@ pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itKusudama_UnkMotion3_Coll")]
 pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
     air(r, gobj);
-    if item(r.game, gobj).x378_itemColl.env_flags & 0x6000 != 0 {
+    if item(r.game, gobj).coll.env_flags & 0x6000 != 0 {
         hang(r, gobj);
     }
     false
@@ -549,8 +549,8 @@ pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
         open_or_burst(r, gobj, true);
     } else if maplib::touched_ceiling(r.game, gobj) != 0 {
         let ip = item_mut(r.game, gobj);
-        if reg(ip.x40_vel.y) > 0.0 {
-            ip.x40_vel.y = 0.0;
+        if reg(ip.vel.y) > 0.0 {
+            ip.vel.y = 0.0;
         }
     } else if maplib::touched_wall(r.game, gobj) != 0 {
         open_or_burst(r, gobj, true);
@@ -570,12 +570,12 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
 pub fn coll6(r: &mut Running, gobj: GObjId) -> bool {
     let limit = attr_f(r, gobj, 0x2C);
     if air(r, gobj) {
-        let vy = reg(item(r.game, gobj).x40_vel.y);
+        let vy = reg(item(r.game, gobj).vel.y);
         if (if vy < 0.0 { -vy } else { vy }) > reg(limit) {
             open_or_burst(r, gobj, true);
         } else {
             maplib::enter_ground(item_mut(r.game, gobj));
-            item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+            item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
             lib26b1::enable_pickup(r.game, gobj);
             change_state(r, gobj, 0, change::ANIM_UPDATE);
             tip_to(r, gobj, FRAC_PI_2);
@@ -595,12 +595,12 @@ pub fn burst(r: &mut Running, gobj: GObjId) {
     lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = 0.0;
-    super::super::set_flag(&mut ip.xDCF_flag, 2, true);
-    let v = ip.xDD4_itemVar.kusudama();
-    v.x0.set(1);
-    v.x4.set(0x28);
+    ip.vel.x = 0.0;
+    ip.vel.y = 0.0;
+    super::super::set_flag(&mut ip.draw_flags, 2, true);
+    let v = ip.vars.kusudama();
+    v.opened.set(1);
+    v.timer.set(0x28);
     hitbox::set_hit_ids(r.game, gobj);
     change_state(r, gobj, 7, change::ANIM_UPDATE);
 }
@@ -617,12 +617,12 @@ pub fn open(r: &mut Running, gobj: GObjId) {
     play_sfx(r, gobj, 0xF8, 0x7F, 0x40);
     hitbox::start_blink(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = 0.0;
-    super::super::set_flag(&mut ip.xDCF_flag, 2, true);
-    let v = ip.xDD4_itemVar.kusudama();
-    v.x0.set(1);
-    v.x4.set(0x55);
+    ip.vel.x = 0.0;
+    ip.vel.y = 0.0;
+    super::super::set_flag(&mut ip.draw_flags, 2, true);
+    let v = ip.vars.kusudama();
+    v.opened.set(1);
+    v.timer.set(0x55);
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 8, change::ANIM_UPDATE);
 }
@@ -631,27 +631,27 @@ pub fn open(r: &mut Running, gobj: GObjId) {
 /// bones 3 and 5), and is gone after 85 frames.
 #[doc(alias = "itKusudama_UnkMotion8_Anim")]
 pub fn anim8(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
-        item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    if item(r.game, gobj).cmd_var0 != 0 {
+        item_mut(r.game, gobj).cmd_var0 = 0;
         let w = [4, 0, 8].map(|o| attr_i(r, gobj, o));
         rain(r, gobj, w[0], w[1], w[2]);
         for b in [3, 5] {
             let t = item(r.game, gobj)
-                .xBBC_dynamicBoneTable
+                .bone_table
                 .expect("a party ball without a bone table");
             let j = r.game.it.bone_tables[t.0].bones[b];
             crate::game::ef::spawn(r, 0x433, Some(gobj), &[crate::game::ef::Arg::JObj(j)]);
         }
     }
     let v = vars(r.game, gobj);
-    v.x4.update(|old| old.wrapping_sub(1));
-    v.x4.get() <= 0
+    v.timer.update(|old| old.wrapping_sub(1));
+    v.timer.get() <= 0
 }
 
 /// `itKusudama_Logic4_DmgDealt`: an unopened ball opens or bursts.
 #[doc(alias = "itKusudama_Logic4_DmgDealt")]
 pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
-    if vars(r.game, gobj).x0.get() == 0 {
+    if vars(r.game, gobj).opened.get() == 0 {
         open_or_burst(r, gobj, false);
     }
     false
@@ -669,8 +669,8 @@ pub fn clanked(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itKusudama_Logic4_DmgReceived")]
 pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     let limit = attr_f(r, gobj, 0x20);
-    if vars(r.game, gobj).x0.get() == 0
-        && fp::frsp(f64::from(item(r.game, gobj).xC9C)) >= reg(limit)
+    if vars(r.game, gobj).opened.get() == 0
+        && fp::frsp(f64::from(item(r.game, gobj).damage_taken)) >= reg(limit)
     {
         open_or_burst(r, gobj, false);
     }

@@ -102,9 +102,9 @@ fn face(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802B3368")]
 pub fn linked(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .pikachu_jolt_ground()
-        .xDDC
+        .air_jolt
         .get()
 }
 
@@ -112,9 +112,9 @@ pub fn linked(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
 #[doc(alias = "it_802B3544")]
 pub fn unlink(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .pikachu_jolt_ground()
-        .xDDC
+        .air_jolt
         .set(None);
 }
 
@@ -150,21 +150,21 @@ pub fn spawn(
     }
     let lifetime = attr_f32(r, gobj, attr::LIFETIME);
     let ip = item_mut(r.game, gobj);
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.pikachu_jolt_ground();
-    v.xDDC.set(None);
-    v.xDE4.set(0);
-    v.xDE8.set(spawn.pos);
-    v.xDF4.set(Vec3::new(0.0, 0.0, 0.0));
+    let v = item_mut(r.game, gobj).vars.pikachu_jolt_ground();
+    v.air_jolt.set(None);
+    v.placed_frames.set(0);
+    v.last_pos.set(spawn.pos);
+    v.normal.set(Vec3::new(0.0, 0.0, 0.0));
     setup(r, gobj, owner);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .pikachu_jolt_ground()
-        .xDD8
+        .pikachu
         .set(Some(owner));
     Some(gobj)
 }
@@ -174,7 +174,7 @@ pub fn spawn(
 #[doc(alias = "it_802B3554")]
 fn setup(r: &mut Running, gobj: GObjId, owner: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
+    item_mut(r.game, gobj).flags.flags.held = false;
     lib2725::show(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     let a = reg(attr_f32(r, gobj, attr::ANGLE));
@@ -184,9 +184,9 @@ fn setup(r: &mut Running, gobj: GObjId, owner: GObjId) {
         fp::fadd(std::f64::consts::PI, if a < 0.0 { fp::fneg(a) } else { a })
     };
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .pikachu_jolt_ground()
-        .xDD4
+        .angle
         .set(mem(angle));
     let id = match item(r.game, gobj).kind {
         89 | 91 => Some(0x4BD),
@@ -197,9 +197,9 @@ fn setup(r: &mut Running, gobj: GObjId, owner: GObjId) {
         let j = jobj_of(r.game, gobj);
         ef_spawn(r, id, Some(gobj), &[Arg::JObj(j)]);
         item_mut(r.game, gobj)
-            .xDD4_itemVar
+            .vars
             .pikachu_jolt_ground()
-            .xDE0
+            .has_effect
             .set(1);
     }
     debug_owner_bubbles(r.game, gobj, Some(owner));
@@ -210,7 +210,7 @@ fn setup(r: &mut Running, gobj: GObjId, owner: GObjId) {
 fn anim0(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     let pos = ip.pos;
-    ip.xDD4_itemVar.pikachu_jolt_ground().xDE8.set(pos);
+    ip.vars.pikachu_jolt_ground().last_pos.set(pos);
     lib2725::tick_lifetime(r.game, gobj)
 }
 
@@ -237,31 +237,31 @@ fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 fn phys0(r: &mut Running, gobj: GObjId) {
     let speed = reg(attr_f32(r, gobj, attr::SPEED));
     let ip = item_mut(r.game, gobj);
-    let a = ip.xDD4_itemVar.pikachu_jolt_ground().xDD4.get();
-    ip.x40_vel.x = mem(fp::fmuls(speed, reg(math::cos(a))));
+    let a = ip.vars.pikachu_jolt_ground().angle.get();
+    ip.vel.x = mem(fp::fmuls(speed, reg(math::cos(a))));
     let ip = item_mut(r.game, gobj);
-    let a = ip.xDD4_itemVar.pikachu_jolt_ground().xDD4.get();
-    ip.x40_vel.y = mem(fp::fmuls(speed, reg(math::sin(a))));
+    let a = ip.vars.pikachu_jolt_ground().angle.get();
+    ip.vel.y = mem(fp::fmuls(speed, reg(math::sin(a))));
 }
 
 /// `itPikachutjoltground_UnkMotion1_Phys`: still (the running jolt moves it).
 #[doc(alias = "itPikachutjoltground_UnkMotion1_Phys")]
 fn phys1(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    ip.vel = Vec3::new(0.0, 0.0, 0.0);
 }
 
 /// Whether the move since last frame crosses the stage, stopping it there and keeping the
 /// surface's normal (`it_8026E9A4` from `xDE8`).
 fn crosses(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    let from = ip.xDD4_itemVar.pikachu_jolt_ground().xDE8.get();
+    let from = ip.vars.pikachu_jolt_ground().last_pos.get();
     let to = ip.pos;
     match ground::stage_crossing_normal(r.game, from, to) {
         Some((p, n)) => {
             let ip = item_mut(r.game, gobj);
             ip.pos = p;
-            ip.xDD4_itemVar.pikachu_jolt_ground().xDF4.set(n);
+            ip.vars.pikachu_jolt_ground().normal.set(n);
             true
         }
         None => false,
@@ -270,16 +270,16 @@ fn crosses(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Keeps the surface's normal as the last (`xE00 = xDF4`).
 fn keep_normal(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.pikachu_jolt_ground();
-    let n = v.xDF4.get();
-    v.xE00.set(n);
+    let v = item_mut(r.game, gobj).vars.pikachu_jolt_ground();
+    let n = v.normal.get();
+    v.last_normal.set(n);
 }
 
 /// Hands the running jolt where this one is and the surface it runs along.
 fn place_linked(r: &mut Running, gobj: GObjId, air: GObjId) {
     let ip = item_mut(r.game, gobj);
-    let (pos, coll) = (ip.pos, ip.x378_itemColl.clone());
-    let n = ip.xDD4_itemVar.pikachu_jolt_ground().xDF4.get();
+    let (pos, coll) = (ip.pos, ip.coll.clone());
+    let n = ip.vars.pikachu_jolt_ground().normal.get();
     pikachutjoltair::place(r, air, pos, coll, n);
 }
 
@@ -293,15 +293,15 @@ fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     }
     crate::game::ef::destroy_all(r, gobj);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .pikachu_jolt_ground()
-        .xDE0
+        .has_effect
         .set(0);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
-    let n = ip.xDD4_itemVar.pikachu_jolt_ground().xDF4.get();
+    let n = ip.vars.pikachu_jolt_ground().normal.get();
     let ground_angle = math::atan2(n.y, n.x);
-    let v = ip.x40_vel;
+    let v = ip.vel;
     let diff = fp::fsubs(reg(math::atan2(v.y, v.x)), reg(ground_angle));
     let diff = normalize(diff);
     let facing = if reg(diff) < std::f64::consts::PI {
@@ -313,9 +313,9 @@ fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     let (owner, pos, kind) = (ip.owner, ip.pos, ip.kind);
     let air = pikachutjoltair::spawn(r, owner, gobj, pos, kind + 1, facing);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .pikachu_jolt_ground()
-        .xDDC
+        .air_jolt
         .set(air);
     keep_normal(r, gobj);
     let Some(air) = air else {
@@ -323,9 +323,9 @@ fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     };
     place_linked(r, gobj, air);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .pikachu_jolt_ground()
-        .xDE4
+        .placed_frames
         .set(0);
     lib2725::clear_hitboxes(r.game, r.data, gobj);
     false
@@ -337,9 +337,9 @@ fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itPikachutjoltground_UnkMotion1_Coll")]
 fn coll1(r: &mut Running, gobj: GObjId) -> bool {
     if item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .pikachu_jolt_ground()
-        .xDE4
+        .placed_frames
         .get()
         >= 0
     {
@@ -349,8 +349,8 @@ fn coll1(r: &mut Running, gobj: GObjId) -> bool {
             let ends = if 0.0 == limit {
                 false
             } else {
-                let v = item_mut(r.game, gobj).xDD4_itemVar.pikachu_jolt_ground();
-                let angle = reg(v.xDF4.get().angle(v.xE00.get()));
+                let v = item_mut(r.game, gobj).vars.pikachu_jolt_ground();
+                let angle = reg(v.normal.get().angle(v.last_normal.get()));
                 angle > if limit < 0.0 { fp::fneg(limit) } else { limit }
             };
             if ends {
@@ -361,14 +361,14 @@ fn coll1(r: &mut Running, gobj: GObjId) -> bool {
             };
             place_linked(r, gobj, air);
             item_mut(r.game, gobj)
-                .xDD4_itemVar
+                .vars
                 .pikachu_jolt_ground()
-                .xDE4
+                .placed_frames
                 .set(0);
         }
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.pikachu_jolt_ground();
-    v.xDE4.update(|n| n.wrapping_add(1));
+    let v = item_mut(r.game, gobj).vars.pikachu_jolt_ground();
+    v.placed_frames.update(|n| n.wrapping_add(1));
     false
 }
 
@@ -380,9 +380,9 @@ fn release(r: &mut Running, gobj: GObjId) {
     }
     crate::game::ef::destroy_all(r, gobj);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .pikachu_jolt_ground()
-        .xDE0
+        .has_effect
         .set(0);
 }
 
@@ -408,9 +408,9 @@ fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
     face(r, gobj);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.pikachu_jolt_ground();
-    let a = fp::frsp(fp::fadd(reg(v.xDD4.get()), std::f64::consts::PI));
-    v.xDD4.set(normalize(a));
+    let v = item_mut(r.game, gobj).vars.pikachu_jolt_ground();
+    let a = fp::frsp(fp::fadd(reg(v.angle.get()), std::f64::consts::PI));
+    v.angle.set(normalize(a));
     false
 }
 
@@ -418,11 +418,11 @@ fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_2725_Logic106_ShieldBounced")]
 fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    let n = ip.xC58;
-    ip.x40_vel.mirror_xy(n);
-    let (vx, vy) = (ip.x40_vel.x, ip.x40_vel.y);
+    let n = ip.shield_normal;
+    ip.vel.mirror_xy(n);
+    let (vx, vy) = (ip.vel.x, ip.vel.y);
     let a = reg(math::atan2(vy, vx));
-    ip.xDD4_itemVar.pikachu_jolt_ground().xDD4.set(normalize(a));
+    ip.vars.pikachu_jolt_ground().angle.set(normalize(a));
     ip.facing_dir = if reg(vx) >= 0.0 { 1.0 } else { -1.0 };
     face(r, gobj);
     false

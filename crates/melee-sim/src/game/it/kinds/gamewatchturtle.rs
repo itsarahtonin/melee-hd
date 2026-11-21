@@ -83,7 +83,7 @@ pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
 /// Taken in hand, `itGameWatchTurtle_Logic75_PickedUp`: animating.
 #[doc(alias = "itGameWatchTurtle_Logic75_PickedUp")]
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    item_mut(r.game, gobj).cmd_var0 = 0;
     if item(r.game, gobj).owner.is_some() {
         change_state(r, gobj, 0, change::ANIM_UPDATE);
         animate(r, gobj);

@@ -131,7 +131,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itLinkBomb_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.link_bomb()
+    item_mut(game, gobj).vars.link_bomb()
 }
 
 fn attrs(r: &Running, gobj: GObjId) -> melee_data::archive::DataRef {
@@ -150,7 +150,7 @@ fn attr_u32(r: &Running, gobj: GObjId, off: u32) -> u32 {
 
 fn fuse_bone(game: &Game, gobj: GObjId) -> JObjId {
     let t = item(game, gobj)
-        .xBBC_dynamicBoneTable
+        .bone_table
         .expect("a bomb without a bone table");
     game.it.bone_tables[t.0].bones[FUSE_BONE].expect("a bomb without its fuse's bone")
 }
@@ -160,7 +160,7 @@ fn fuse_bone(game: &Game, gobj: GObjId) -> JObjId {
 #[doc(alias = "it_8029D968")]
 pub fn set_off(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if !ip.xDC8_word.flags.x13 && ip.msid != 5 {
+    if !ip.flags.flags.held && ip.msid != 5 {
         explode(r, gobj);
     }
 }
@@ -174,7 +174,7 @@ fn change_keeping_bone(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
         let o = &r.game.objs.jobjs[j];
         (o.translate.y, o.rotate.x)
     };
-    let last = vars(r.game, gobj).x0.get().fuse_end;
+    let last = vars(r.game, gobj).flags.get().fuse_end;
     let more = if last {
         change::CMD_UPDATE
     } else {
@@ -191,13 +191,13 @@ fn change_keeping_bone(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
 /// and tilts.
 fn burn(r: &mut Running, gobj: GObjId) {
     let xc = attr_u32(r, gobj, attr::XC);
-    let last = vars(r.game, gobj).x0.get().fuse_end;
-    if item(r.game, gobj).xD44_lifeTimer <= mem(fp::frsp(f64::from(xc))) && !last {
+    let last = vars(r.game, gobj).flags.get().fuse_end;
+    if item(r.game, gobj).life_timer <= mem(fp::frsp(f64::from(xc))) && !last {
         let desc = article(item(r.game, gobj))
             .states(r.data)
             .expect("an article without states")
             .at(0x10 * 3);
-        item_mut(r.game, gobj).xD0_itemStateDesc = Some(desc);
+        item_mut(r.game, gobj).state_desc = Some(desc);
         set_state_anims(r, gobj, desc);
         let j = jobj_of(r.game, gobj);
         jobj::anim_all(
@@ -206,16 +206,16 @@ fn burn(r: &mut Running, gobj: GObjId) {
             &mut crate::game::code::ParticleHooks,
             j,
         );
-        vars(r.game, gobj).x0.update(|f| LinkBombFlags {
+        vars(r.game, gobj).flags.update(|f| LinkBombFlags {
             fuse_end: true,
             ..f
         });
     }
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    if !vars(r.game, gobj).x0.get().fuse_end {
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    if !vars(r.game, gobj).flags.get().fuse_end {
         let v = vars(r.game, gobj);
-        let (dy, dx) = (v.x8.get(), v.xC.get());
+        let (dy, dx) = (v.sink.get(), v.tilt.get());
         let j = fuse_bone(r.game, gobj);
         jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
             o.translate.y = mem(fp::fadds(reg(o.translate.y), reg(dy)));
@@ -229,7 +229,7 @@ fn burn(r: &mut Running, gobj: GObjId) {
 /// The fuse's frame, blowing up once its life is out, `it_8029DB5C`.
 #[doc(alias = "it_8029DB5C")]
 fn burn_or_explode(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xD44_lifeTimer <= 0.0 {
+    if item(r.game, gobj).life_timer <= 0.0 {
         explode(r, gobj);
     } else {
         burn(r, gobj);
@@ -297,16 +297,16 @@ pub fn spawn(
     let scl = item(r.game, gobj).scl;
     let span = fp::frsp(f64::from(life.wrapping_sub(xc)));
     let v = vars(r.game, gobj);
-    v.x0.set(LinkBombFlags {
+    v.flags.set(LinkBombFlags {
         fuse_end: false,
         rolling: None,
         knocked: false,
     });
-    v.x10.set(Some(parent));
+    v.parent.set(Some(parent));
     let sink = fp::fdivs(fp::fneg(reg(2.800_000_2_f32)), span);
-    v.x8.set(mem(fp::fmuls(sink, reg(scl))));
+    v.sink.set(mem(fp::fmuls(sink, reg(scl))));
     let tilt = fp::fdivs(fp::fneg(reg(0.157_079_64_f32)), span);
-    v.xC.set(mem(fp::fmuls(tilt, reg(scl))));
+    v.tilt.set(mem(fp::fmuls(tilt, reg(scl))));
     lib26b1::silence(r.game, gobj);
     pick_up(r, gobj, parent, part);
     Some(gobj)
@@ -385,11 +385,11 @@ fn too_fast(r: &mut Running, gobj: GObjId, vel: Vec3) -> bool {
 #[doc(alias = "itLinkbomb_UnkMotion2_Coll")]
 #[doc(alias = "itLinkbomb_UnkMotion3_Coll")]
 fn coll_flying(r: &mut Running, gobj: GObjId) -> bool {
-    let vel = item(r.game, gobj).x40_vel;
+    let vel = item(r.game, gobj).vel;
     let touched = ground::air_touches(r, gobj);
     if touched & 0xF != 0 && !too_fast(r, gobj, vel) && touched & 1 != 0 {
         maplib::enter_ground(item_mut(r.game, gobj));
-        let b = item(r.game, gobj).xC0C.clone();
+        let b = item(r.game, gobj).kind_coll_box.clone();
         maplib::set_box(r.game, gobj, b);
         to_roll(r, gobj);
     }
@@ -400,12 +400,12 @@ fn coll_flying(r: &mut Running, gobj: GObjId) -> bool {
 /// always passes).
 #[doc(alias = "it_8029F18C")]
 fn to_roll(r: &mut Running, gobj: GObjId) {
-    let vx = item(r.game, gobj).x40_vel.x;
+    let vx = item(r.game, gobj).vel.x;
     let dir = if vx >= 0.0 { 1.0 } else { -1.0 };
-    vars(r.game, gobj).x4.set(dir);
+    vars(r.game, gobj).roll_dir.set(dir);
     let facing = if dir == -1.0 { -1 } else { 1 };
-    item_mut(r.game, gobj).x378_itemColl.set_facing_dir(facing);
-    vars(r.game, gobj).x0.update(|f| LinkBombFlags {
+    item_mut(r.game, gobj).coll.set_facing_dir(facing);
+    vars(r.game, gobj).flags.update(|f| LinkBombFlags {
         rolling: Some(true),
         ..f
     });
@@ -417,20 +417,20 @@ fn to_roll(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itLinkbomb_UnkMotion4_Phys")]
 fn phys_roll(r: &mut Running, gobj: GObjId) {
     let (x2c, x30) = (attr_f32(r, gobj, attr::X2C), attr_f32(r, gobj, attr::X30));
-    let rolling = vars(r.game, gobj).x0.get().rolling == Some(true);
+    let rolling = vars(r.game, gobj).flags.get().rolling == Some(true);
     if !rolling {
         return;
     }
-    let dir = vars(r.game, gobj).x4.get();
+    let dir = vars(r.game, gobj).roll_dir.get();
     let ip = item_mut(r.game, gobj);
-    let vx = ip.x40_vel.x;
+    let vx = ip.vel.x;
     if vx != 0.0 {
-        ip.x40_vel.x = mem(fp::fmadds(reg(x2c), reg(dir), reg(vx)));
+        ip.vel.x = mem(fp::fmadds(reg(x2c), reg(dir), reg(vx)));
     }
-    let vx = ip.x40_vel.x;
+    let vx = ip.vel.x;
     let abs = if vx < 0.0 { mem(fp::fneg(reg(vx))) } else { vx };
     if abs < x30 {
-        ip.x40_vel.x = 0.0;
+        ip.vel.x = 0.0;
     }
 }
 
@@ -439,12 +439,12 @@ fn phys_roll(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8029F69C")]
 pub fn explode(r: &mut Running, gobj: GObjId) {
     hitbox::set_hit_ids(r.game, gobj);
-    if item(r.game, gobj).xDC8_word.flags.x13 {
+    if item(r.game, gobj).flags.flags.held {
         release::let_go(r, gobj, ZERO);
         hitbox::start_blink(r.game, gobj);
         let owner = item(r.game, gobj).owner;
         if let Some(o) = owner
-            && vars(r.game, gobj).x10.get() == Some(o)
+            && vars(r.game, gobj).parent.get() == Some(o)
         {
             r.link_attack_air_setup_parts(o);
         }
@@ -474,13 +474,13 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8029F960")]
 fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).msid != 5 {
-        let vel = item(r.game, gobj).x40_vel;
+        let vel = item(r.game, gobj).vel;
         if !too_fast(r, gobj, vel) {
             let (x1c, x20) = (attr_f32(r, gobj, attr::X1C), attr_f32(r, gobj, attr::X20));
             let ip = item_mut(r.game, gobj);
             ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-            ip.x40_vel.x = mem(fp::fmuls(reg(x1c), reg(ip.facing_dir)));
-            ip.x40_vel.y = x20;
+            ip.vel.x = mem(fp::fmuls(reg(x1c), reg(ip.facing_dir)));
+            ip.vel.y = x20;
         }
     }
     false
@@ -494,11 +494,11 @@ fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
         return false;
     }
     let x10 = attr_u32(r, gobj, attr::X10) as i32;
-    if item(r.game, gobj).xCA0 >= x10 {
+    if item(r.game, gobj).hit_damage >= x10 {
         explode(r, gobj);
         return false;
     }
-    if vars(r.game, gobj).x0.get().knocked {
+    if vars(r.game, gobj).flags.get().knocked {
         return false;
     }
     let (x14, x18, x30) = (
@@ -506,20 +506,20 @@ fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
         attr_f32(r, gobj, attr::X18),
         attr_f32(r, gobj, attr::X30),
     );
-    if item(r.game, gobj).x40_vel.x > x30 {
+    if item(r.game, gobj).vel.x > x30 {
         let ip = item_mut(r.game, gobj);
-        ip.facing_dir = mem(fp::fneg(reg(ip.xCCC_incDamageDirection)));
-        ip.x40_vel.x = mem(fp::fmuls(reg(x14), reg(ip.facing_dir)));
+        ip.facing_dir = mem(fp::fneg(reg(ip.damage_dir)));
+        ip.vel.x = mem(fp::fmuls(reg(x14), reg(ip.facing_dir)));
     } else {
         let rand = reg(r.game.objs.rng.draw_f32());
         let way = mem(fp::fmuls(2.0, fp::fsubs(rand, 0.5)));
-        item_mut(r.game, gobj).x40_vel.x = mem(fp::fmuls(reg(x14), reg(way)));
+        item_mut(r.game, gobj).vel.x = mem(fp::fmuls(reg(x14), reg(way)));
         lib2725::face_motion(r.game, gobj);
     }
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fmuls(reg(x18), reg(ip.facing_dir)));
+    ip.vel.y = mem(fp::fmuls(reg(x18), reg(ip.facing_dir)));
     vars(r.game, gobj)
-        .x0
+        .flags
         .update(|f| LinkBombFlags { knocked: true, ..f });
     false
 }
@@ -535,8 +535,8 @@ fn entered_air(r: &mut Running, gobj: GObjId) {
 #[doc(alias("evt_unk"))]
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     let v = vars(r.game, gobj);
-    if v.x10.get() == other {
-        v.x10.set(None);
+    if v.parent.get() == other {
+        v.parent.set(None);
     }
     lib26b1::forget(r.game, gobj, other);
 }

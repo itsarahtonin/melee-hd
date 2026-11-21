@@ -95,8 +95,14 @@ impl Running<'_> {
             }
             AttackRecord::Item(g) => {
                 let ip = super::super::it::item(self.game, g);
-                let w = ip.xDA4_word.to_be_bytes();
-                (ip.xD94.x, ip.xD94.y, ip.xD9C.x, ip.xD9C.y, [w[0], w[1]])
+                let w = ip.attack_record_word.to_be_bytes();
+                (
+                    ip.attack_record_a.x,
+                    ip.attack_record_a.y,
+                    ip.attack_record_b.x,
+                    ip.attack_record_b.y,
+                    [w[0], w[1]],
+                )
             }
         };
         let (a, b) = (flag_bits(flags[0]), flag_bits(flags[1]));
@@ -130,7 +136,9 @@ impl Running<'_> {
                 [x[1], x[2], x[3]]
             }
             AttackRecord::Item(g) => {
-                let w = super::super::it::item(self.game, g).xDA4_word.to_be_bytes();
+                let w = super::super::it::item(self.game, g)
+                    .attack_record_word
+                    .to_be_bytes();
                 [w[1], w[2], w[3]]
             }
         }
@@ -141,7 +149,7 @@ impl Running<'_> {
         match r {
             AttackRecord::Fighter(g) => self.game.fighter_mut(g).attack_record.x10[0] |= 0x01,
             AttackRecord::Item(g) => {
-                super::super::it::item_mut(self.game, g).xDA4_word |= 0x0100_0000;
+                super::super::it::item_mut(self.game, g).attack_record_word |= 0x0100_0000;
             }
         }
     }

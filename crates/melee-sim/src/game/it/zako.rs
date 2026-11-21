@@ -77,7 +77,7 @@ pub fn spawn(
     v.set_jobj(jobj);
     v.set_idx(-1);
     v.set_word(2, 0);
-    item_mut(r.game, gobj).x378_itemColl.x34_flags.b1234 = 3;
+    item_mut(r.game, gobj).coll.x34_flags.b1234 = 3;
     Some(gobj)
 }
 
@@ -181,7 +181,7 @@ impl CommonVars<'_> {
 /// The enemy's common variables in its kind's member.
 pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
     let kind = item(game, gobj).kind;
-    let vars = &mut item_mut(game, gobj).xDD4_itemVar;
+    let vars = &mut item_mut(game, gobj).vars;
     macro_rules! of {
         ($v:expr) => {{
             let v = $v;
@@ -218,25 +218,25 @@ pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
 
 /// A containers' monster's variables, the union's bytes (`it::pokemon::vars`'s store).
 pub fn bytes(game: &mut Game, gobj: GObjId) -> &mut PokemonVars {
-    item_mut(game, gobj).xDD4_itemVar.zako()
+    item_mut(game, gobj).vars.zako()
 }
 
 /// `it_80275210`.
 #[doc(alias = "it_80275210")]
 pub fn set_x1c(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDC8_word.flags.x1C = true;
+    item_mut(game, gobj).flags.flags.clear_of_fighters = true;
 }
 
 /// `it_80275228`.
 #[doc(alias = "it_80275228")]
 pub fn clear_x1c(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDC8_word.flags.x1C = false;
+    item_mut(game, gobj).flags.flags.clear_of_fighters = false;
 }
 
 /// `it_80275240`.
 #[doc(alias = "it_80275240")]
 pub fn clear_x1e(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDC8_word.flags.x1E = false;
+    item_mut(game, gobj).flags.flags.pushed_by_enemies = false;
 }
 
 /// An enemy's destroy callback, `it_2725_Logic9_Destroyed` (`grZakoGenerator_801CAC14`):
@@ -308,20 +308,20 @@ pub const GA_AIR: i32 = 1;
 #[doc(alias = "it_8027B798")]
 pub fn knockback_vel(r: &mut Running, gobj: GObjId, out: &mut Vec3) -> bool {
     let ip = item(r.game, gobj);
-    let kb = reg(ip.xCC8_knockback);
+    let kb = reg(ip.knockback);
     let mag = fp::fmuls(kb, reg(r.common().f32(0x100)));
-    let angle = launch_angle(r, ip.ground_or_air, ip.xCAC_angle, kb);
+    let angle = launch_angle(r, ip.ground_or_air, ip.kb_angle, kb);
     let a = mem(angle);
     let dx = fp::fmuls(mag, reg(math::cos(a)));
     let dy = fp::fmuls(mag, reg(math::sin(a)));
     let ip = item_mut(r.game, gobj);
-    ip.facing_dir = ip.xCCC_incDamageDirection;
+    ip.facing_dir = ip.damage_dir;
     let x = mem(fp::fmuls(fp::fneg(dx), reg(ip.facing_dir)));
     if ip.ground_or_air == GA_AIR {
         *out = Vec3::new(x, mem(dy), 0.0);
         return false;
     }
-    let normal = ip.x378_itemColl.floor.normal;
+    let normal = ip.coll.floor.normal;
     let v = Vec3::new(x, mem(dy), 0.0);
     if reg(normal.angle(v)) < reg(1.570_796_4) {
         *out = Vec3::new(v.x, v.y, 0.0);
@@ -344,22 +344,19 @@ pub fn launch(r: &mut Running, gobj: GObjId, chk: bool) {
     if chk {
         super::maplib::reflect_velocity(r.game, r.data, gobj);
     } else {
-        let mut v = item(r.game, gobj).x40_vel;
+        let mut v = item(r.game, gobj).vel;
         knockback_vel(r, gobj, &mut v);
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel = v;
-        if ip.x40_vel.x == 0.0 && ip.x40_vel.y == 0.0 {
-            ip.x40_vel.x = mem(fp::fmuls(
-                reg(0.1f32),
-                fp::fneg(reg(ip.xCCC_incDamageDirection)),
-            ));
-            ip.x40_vel.y = 0.1;
+        ip.vel = v;
+        if ip.vel.x == 0.0 && ip.vel.y == 0.0 {
+            ip.vel.x = mem(fp::fmuls(reg(0.1f32), fp::fneg(reg(ip.damage_dir))));
+            ip.vel.y = 0.1;
         }
-        if ip.x40_vel.y == 0.0 {
-            ip.x40_vel.y = 0.1;
+        if ip.vel.y == 0.0 {
+            ip.vel.y = 0.1;
         }
     }
-    let mut v = item(r.game, gobj).x40_vel;
+    let mut v = item(r.game, gobj).vel;
     v.normalize();
     let zako = r.game.it.zako.expect("no enemies' common data");
     let scale = reg(r.data.f32(zako.at(4)));
@@ -368,7 +365,7 @@ pub fn launch(r: &mut Running, gobj: GObjId, chk: bool) {
         mem(fp::fmuls(reg(v.y), scale)),
         mem(fp::fmuls(reg(v.z), scale)),
     );
-    item_mut(r.game, gobj).x40_vel = v;
+    item_mut(r.game, gobj).vel = v;
 }
 
 /// A velocity of 10 toward a point near the camera, `it_8027BA54`: the camera's position moved
@@ -486,7 +483,7 @@ fn align(r: &mut Running, gobj: GObjId, normal: Vec3, facing: f64, frames: f64) 
 /// one, `it_8027BBF4`.
 #[doc(alias = "it_8027BBF4")]
 pub fn align_surface(r: &mut Running, gobj: GObjId, ceiling: bool, facing: f64, frames: f32) {
-    let cd = &item(r.game, gobj).x378_itemColl;
+    let cd = &item(r.game, gobj).coll;
     let (mask, normal) = if ceiling {
         (CEILING_MASK, cd.ceiling.normal)
     } else {
@@ -520,7 +517,7 @@ pub fn align_on_floor(
     facing: f64,
     frames: f32,
 ) {
-    if item(r.game, gobj).x378_itemColl.env_flags & FLOOR_MASK == 0 {
+    if item(r.game, gobj).coll.env_flags & FLOOR_MASK == 0 {
         return;
     }
     let normal = normal.unwrap_or(Vec3::new(0.0, 1.0, 0.0));
@@ -721,8 +718,8 @@ pub fn held_by_enemy(game: &Game, fighter: GObjId) -> bool {
 #[doc(alias = "it_8027CAD8")]
 pub fn settle(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = 0.0;
-    ip.x40_vel.x = 0.0;
+    ip.vel.y = 0.0;
+    ip.vel.x = 0.0;
     super::hitbox::clear_dcd_b7(r.game, gobj);
     super::hitbox::set_hit_ids(r.game, gobj);
     super::lib2725::stop_spin(r.game, r.data, gobj);
@@ -763,7 +760,7 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8027CBFC")]
 pub fn element_damage(r: &Running, gobj: GObjId) -> f32 {
     let zako = r.game.it.zako.expect("no enemies' common data");
-    let n = match item(r.game, gobj).xCC4 {
+    let n = match item(r.game, gobj).hit_element {
         6 | 7 => fp::fctiwz(reg(r.data.f32(zako.at(0xC)))),
         9 => fp::fctiwz(reg(r.data.f32(zako.at(0x10)))),
         _ => 0,
@@ -813,9 +810,9 @@ pub fn trophy_roll(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
         let vx = fp::fmuls(x54, fp::fmuls(2.0, fp::fsubs(f, 0.5)));
         let vy = super::item::attr_of(item(r.game, coin)).f32(r.data, 0x18);
         let ip = item_mut(r.game, coin);
-        ip.x40_vel.x = mem(vx);
-        ip.x40_vel.y = vy;
-        ip.x40_vel.z = 0.0;
+        ip.vel.x = mem(vx);
+        ip.vel.y = vy;
+        ip.vel.z = 0.0;
         grlib::set_trophy_coin_wait(r.game, 1);
         return Some(coin);
     }
@@ -832,20 +829,20 @@ pub fn trophy_roll(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
 /// Sets `xDD0`'s bit 4, `it_80275270`.
 #[doc(alias = "it_80275270")]
 pub fn set_dd0_b4(game: &mut Game, gobj: GObjId) {
-    super::set_flag(&mut item_mut(game, gobj).xDD0_flag, 4, true);
+    super::set_flag(&mut item_mut(game, gobj).status_flags, 4, true);
 }
 
 /// Clears `xDD0`'s bit 4, `it_80275258`.
 #[doc(alias = "it_80275258")]
 pub fn clear_dd0_b4(game: &mut Game, gobj: GObjId) {
-    super::set_flag(&mut item_mut(game, gobj).xDD0_flag, 4, false);
+    super::set_flag(&mut item_mut(game, gobj).status_flags, 4, false);
 }
 
 /// The item's source player becomes `fighter`'s, `it_8026C220`.
 #[doc(alias = "it_8026C220")]
 pub fn set_source_player(game: &mut Game, gobj: GObjId, fighter: GObjId) {
     let p = i32::from(game.fighter(fighter).player_idx);
-    item_mut(game, gobj).xCB0_source_ply = p;
+    item_mut(game, gobj).source_player = p;
 }
 
 /// An enemy KO'd, `it_8027CE44` (`grZakoGenerator_801CACB8`): its source player's KO bonus
@@ -890,7 +887,7 @@ pub fn ko(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8027CE18")]
 pub fn ko_bonus(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    let (player, kind) = (ip.xCB0_source_ply, ip.kind);
+    let (player, kind) = (ip.source_player, ip.kind);
     r.zako_ko_bonus(player, kind);
 }
 
@@ -1087,12 +1084,12 @@ pub fn set_coll_facing(game: &mut Game, gobj: GObjId) {
     } else {
         1
     };
-    ip.x378_itemColl.set_facing_dir(f);
+    ip.coll.set_facing_dir(f);
 }
 
 /// Stops (the inline `itResetVelocity`): z, then y, then x.
 pub fn stop(game: &mut Game, gobj: GObjId) {
-    let v = &mut item_mut(game, gobj).x40_vel;
+    let v = &mut item_mut(game, gobj).vel;
     v.z = 0.0;
     v.y = 0.0;
     v.x = 0.0;
@@ -1102,8 +1099,8 @@ pub fn stop(game: &mut Game, gobj: GObjId) {
 /// pickable (`x15`), `xDCD`'s bit 7 cleared and `xDD0`'s bit 4 set.
 pub fn init_collision(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    ip.xD5C = 0;
-    ip.xDC8_word.flags.x15 = false;
+    ip.skid = 0;
+    ip.flags.flags.pickup = false;
     hitbox::clear_dcd_b7(game, gobj);
     set_dd0_b4(game, gobj);
 }
@@ -1111,16 +1108,16 @@ pub fn init_collision(game: &mut Game, gobj: GObjId) {
 /// Along the floor: its velocity's speed turned along the floor's normal, the way it faces.
 pub fn along_floor(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    let (normal, facing) = (ip.x378_itemColl.floor.normal, ip.facing_dir);
-    along_surface(&mut ip.x40_vel, normal, facing);
+    let (normal, facing) = (ip.coll.floor.normal, ip.facing_dir);
+    along_surface(&mut ip.vel, normal, facing);
 }
 
 /// A hit's element added to the damage it has taken (`xC9C`), which it answers.
 pub fn add_hit_damage(r: &mut Running, gobj: GObjId) -> i32 {
     let extra = reg(element_damage(r, gobj));
     let ip = item_mut(r.game, gobj);
-    ip.xC9C = fp::fctiwz(fp::fadds(fp::frsp(f64::from(ip.xC9C)), extra));
-    ip.xC9C
+    ip.damage_taken = fp::fctiwz(fp::fadds(fp::frsp(f64::from(ip.damage_taken)), extra));
+    ip.damage_taken
 }
 
 /// An enemy's damage callback: its first step ([`Enemy::on_hit`]), its facing kept
@@ -1194,7 +1191,7 @@ pub fn fling_away(r: &mut Running, gobj: GObjId, e: &Enemy) {
 #[doc(alias = "it_802EA2A0")]
 pub fn fling(r: &mut Running, gobj: GObjId, e: &Enemy) {
     if e.flung_checks_blast_zones {
-        item_mut(r.game, gobj).xDCC_flag.b3 = true;
+        item_mut(r.game, gobj).state_flags.b3 = true;
     }
     maplib::enter_air(item_mut(r.game, gobj));
     launch(r, gobj, false);
@@ -1221,7 +1218,7 @@ pub fn fling(r: &mut Running, gobj: GObjId, e: &Enemy) {
 pub fn fling_to_screen(r: &mut Running, gobj: GObjId, e: &Enemy) {
     maplib::enter_air(item_mut(r.game, gobj));
     let v = toward_camera(r, gobj);
-    item_mut(r.game, gobj).x40_vel = v;
+    item_mut(r.game, gobj).vel = v;
     maplib::enter_air(item_mut(r.game, gobj));
     if e.flung_upright {
         face(r, gobj, 0.0);
@@ -1236,14 +1233,14 @@ pub fn knock_back(r: &mut Running, gobj: GObjId, knock: Knock) {
     if matches!(knock, Knock::Free | Knock::Fifth) {
         maplib::enter_air(item_mut(r.game, gobj));
     }
-    let mut v = item(r.game, gobj).x40_vel;
+    let mut v = item(r.game, gobj).vel;
     let up = knockback_vel(r, gobj, &mut v);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = v;
+    ip.vel = v;
     if let Knock::Airborne = knock {
         // A double 0.2 in the comparison, as the C writes it.
-        if reg(ip.x40_vel.y) <= 0.2 {
-            ip.x40_vel.y = mem(fp::frsp(0.2));
+        if reg(ip.vel.y) <= 0.2 {
+            ip.vel.y = mem(fp::frsp(0.2));
         }
         maplib::enter_air(ip);
         return;
@@ -1257,16 +1254,16 @@ pub fn knock_back(r: &mut Running, gobj: GObjId, knock: Knock) {
     if up {
         match knock {
             Knock::AtLeast(min) => {
-                if reg(ip.x40_vel.y) <= min {
-                    ip.x40_vel.y = 0.2;
+                if reg(ip.vel.y) <= min {
+                    ip.vel.y = 0.2;
                 }
             }
             // A double 0.2 in the comparison, as the C writes it.
             Knock::Fifth => {
-                if reg(ip.x40_vel.y) <= 0.2 {
-                    ip.x40_vel.y = mem(fp::frsp(0.2));
+                if reg(ip.vel.y) <= 0.2 {
+                    ip.vel.y = mem(fp::frsp(0.2));
                 } else {
-                    ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), fp::frsp(0.2)));
+                    ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), fp::frsp(0.2)));
                 }
             }
             Knock::Free | Knock::Plain | Knock::Airborne | Knock::Lift => {}
@@ -1275,7 +1272,7 @@ pub fn knock_back(r: &mut Running, gobj: GObjId, knock: Knock) {
     } else {
         maplib::enter_ground(ip);
         if matches!(knock, Knock::Fifth) {
-            ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), fp::frsp(0.2)));
+            ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), fp::frsp(0.2)));
         }
     }
 }
@@ -1384,7 +1381,7 @@ pub fn fall_physics(r: &mut Running, gobj: GObjId) {
 pub fn flight_physics(r: &mut Running, gobj: GObjId) {
     let accel = reg(attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), accel));
+    ip.vel.y = mem(fp::fsubs(reg(ip.vel.y), accel));
 }
 
 /// Knocked back's physics: in the air, [`flight_physics`].
@@ -1407,9 +1404,9 @@ pub fn walk_velocity(r: &mut Running, gobj: GObjId) -> f32 {
     let speed = reg(walk_speed(r, gobj));
     let ip = item_mut(r.game, gobj);
     let v = mem(fp::fmuls(reg(ip.facing_dir), speed));
-    ip.x40_vel.x = v;
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
+    ip.vel.x = v;
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
     v
 }
 

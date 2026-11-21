@@ -103,7 +103,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// The barrel's variables.
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itTaru_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.taru()
+    item_mut(game, gobj).vars.taru()
 }
 
 /// `itTaruAttributes`' word at `off`.
@@ -133,20 +133,20 @@ fn abs(v: f32) -> f64 {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = -1.0;
-    ip.xD5C = 0;
-    super::super::set_flag(&mut ip.xDCE_flag, 7, false);
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDB0_itcmd_var1 = 0;
+    ip.skid = 0;
+    super::super::set_flag(&mut ip.hurt_flags, 7, false);
+    ip.cmd_var0 = 0;
+    ip.cmd_var1 = 0;
     let f = r.game.objs.rng.draw_f32();
     let v = vars(r.game, gobj);
-    v.xDD4.set(0);
-    v.xDDC.set(mem(fp::fadds(
+    v.hit.set(0);
+    v.tilt.set(mem(fp::fadds(
         f64::from(1.308_996_9_f32),
         fp::fmuls(f64::from(0.349_065_84_f32), reg(f)),
     )));
-    v.xDE0.set(0.0);
-    v.xDE4.set(0.0);
-    v.xDE8.set(Vec3::new(0.0, 1.0, 0.0));
+    v.turn.set(0.0);
+    v.roll_speed.set(0.0);
+    v.normal.set(Vec3::new(0.0, 1.0, 0.0));
     fell(r, gobj);
 }
 
@@ -161,42 +161,45 @@ pub fn roll(r: &mut Running, gobj: GObjId) {
         attr_f(r, gobj, 0x2C),
     );
     let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.taru();
+    let v = ip.vars.taru();
     if ip.ground_or_air == 1 {
         let back = -reg(ip.facing_dir);
-        v.xDE0
+        v.turn
             .update(|old| mem(fp::fmadds(f64::from(0.104_719_76_f32), back, reg(old))));
         return;
     }
-    let slope = v.xDE8.x();
+    let slope = v.normal.x();
     if abs(slope) > f64::from(0.1_f32) {
-        if abs(v.xDE4.get()) < reg(x2c) {
-            v.xDE4
+        if abs(v.roll_speed.get()) < reg(x2c) {
+            v.roll_speed
                 .update(|old| mem(fp::fmadds(reg(slope), reg(x24), reg(old))));
         }
-    } else if abs(v.xDE4.get()) < reg(x28) {
-        v.xDE4.set(0.0);
-    } else if reg(v.xDE4.get()) > 0.0 {
-        v.xDE4.update(|old| mem(fp::fsubs(reg(old), reg(x28))));
+    } else if abs(v.roll_speed.get()) < reg(x28) {
+        v.roll_speed.set(0.0);
+    } else if reg(v.roll_speed.get()) > 0.0 {
+        v.roll_speed
+            .update(|old| mem(fp::fsubs(reg(old), reg(x28))));
     } else {
-        v.xDE4.update(|old| mem(fp::fadds(reg(old), reg(x28))));
+        v.roll_speed
+            .update(|old| mem(fp::fadds(reg(old), reg(x28))));
     }
-    let s = reg(v.xDE4.get());
+    let s = reg(v.roll_speed.get());
     let f = reg(ip.facing_dir);
     if (s > 0.0 && f < 0.0) || (s < 0.0 && f > 0.0) {
         ip.facing_dir = mem(fp::fmuls(f, -1.0));
     }
-    let v = ip.xDD4_itemVar.taru();
-    if abs(v.xDE4.get()) > reg(x20) {
-        v.xDE4.set(mem(fp::fmuls(reg(x20), reg(ip.facing_dir))));
+    let v = ip.vars.taru();
+    if abs(v.roll_speed.get()) > reg(x20) {
+        v.roll_speed
+            .set(mem(fp::fmuls(reg(x20), reg(ip.facing_dir))));
     }
-    let v = ip.xDD4_itemVar.taru();
-    let (speed, up) = (v.xDE4.get(), v.xDE8.y());
-    ip.x40_vel.x = mem(fp::fmuls(reg(speed), reg(up)));
+    let v = ip.vars.taru();
+    let (speed, up) = (v.roll_speed.get(), v.normal.y());
+    ip.vel.x = mem(fp::fmuls(reg(speed), reg(up)));
     let turn = fp::fmuls(f64::from(0.122_173_05_f32), abs(speed));
     let back = -reg(ip.facing_dir);
-    let v = ip.xDD4_itemVar.taru();
-    v.xDE0.update(|old| mem(fp::fmadds(turn, back, reg(old))));
+    let v = ip.vars.taru();
+    v.turn.update(|old| mem(fp::fmadds(turn, back, reg(old))));
 }
 
 /// A joint's rotation about one axis; the original asserts it has no quaternion.
@@ -216,16 +219,16 @@ pub fn turn(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj).expect("a barrel without a model");
     let step = fp::fdivs(f64::from(1.570_796_4_f32), reg(attr_f(r, gobj, 0x18)));
     let child = r.game.objs.jobjs[j].child.expect("a barrel without a body");
-    let tilt = vars(r.game, gobj).xDDC.get();
+    let tilt = vars(r.game, gobj).tilt.get();
     let up = f64::from(1.570_796_4_f32);
-    if item(r.game, gobj).xDB0_itcmd_var1 != 0 {
+    if item(r.game, gobj).cmd_var1 != 0 {
         let z = reg(rotation(r, child).z);
         let z = if z > fp::fadds(f64::from(1.588_249_6_f32), step) {
             fp::fsubs(z, step)
         } else if z < fp::fsubs(f64::from(1.553_343_f32), step) {
             fp::fadds(z, step)
         } else {
-            item_mut(r.game, gobj).xDB0_itcmd_var1 = 0;
+            item_mut(r.game, gobj).cmd_var1 = 0;
             up
         };
         jobj::set_angle(&mut r.game.objs.jobjs, child, |q| q.z = mem(z));
@@ -243,7 +246,7 @@ pub fn turn(r: &mut Running, gobj: GObjId) {
         jobj::set_angle(&mut r.game.objs.jobjs, child, |q| q.z = mem(up));
         jobj::set_angle(&mut r.game.objs.jobjs, child, |q| q.x = tilt);
     }
-    let roll = vars(r.game, gobj).xDE0.get();
+    let roll = vars(r.game, gobj).turn.get();
     jobj::set_angle(&mut r.game.objs.jobjs, j, |q| q.z = 0.0);
     jobj::set_angle(&mut r.game.objs.jobjs, j, |q| q.z = roll);
 }
@@ -251,7 +254,7 @@ pub fn turn(r: &mut Running, gobj: GObjId) {
 /// Smokes as its time runs out, `itTaru_UnkMotion0_Anim`.
 #[doc(alias = "itTaru_UnkMotion0_Anim")]
 pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
-    if reg(item(r.game, gobj).xD44_lifeTimer) <= 1.0 {
+    if reg(item(r.game, gobj).life_timer) <= 1.0 {
         effect::spawn_simple(r, gobj, 0x421);
     }
     false
@@ -285,16 +288,16 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     let limit = attr_f(r, gobj, 0x14);
     let ip = item_mut(r.game, gobj);
     let floor = crate::mp::coll::FLOOR_PUSH | crate::mp::coll::FLOOR_HUG;
-    if ip.ground_or_air != 1 && ip.x378_itemColl.env_flags & floor != 0 {
-        let n = maplib::surface_normal(&ip.x378_itemColl).expect("a floor's normal");
-        let v = ip.xDD4_itemVar.taru();
-        v.xDE8.set(n);
+    if ip.ground_or_air != 1 && ip.coll.env_flags & floor != 0 {
+        let n = maplib::surface_normal(&ip.coll).expect("a floor's normal");
+        let v = ip.vars.taru();
+        v.normal.set(n);
         if reg(n.angle_xy(Vec3::new(0.0, 1.0, 0.0))) > reg(limit) {
             ip.facing_dir = if reg(n.x) > 0.0 { 1.0 } else { -1.0 };
             let f = ip.facing_dir;
-            ip.xDD4_itemVar
+            ip.vars
                 .taru()
-                .xDE4
+                .roll_speed
                 .set(mem(fp::fmuls(f64::from(0.1_f32), reg(f))));
             rolling(r, gobj);
             return false;
@@ -327,7 +330,7 @@ fn bounce(r: &mut Running, gobj: GObjId) {
     let x58 = attr_of(item(r.game, gobj)).f32(r.data, super::super::data::attr::X58);
     let ip = item_mut(r.game, gobj);
     maplib::enter_air(ip);
-    ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), -reg(x58)));
+    ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), -reg(x58)));
 }
 
 /// `itTaru_UnkMotion1_Coll`: falling, it stops on a soft landing and bounces on a hard one.
@@ -337,9 +340,9 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
         maplib::enter_ground(item_mut(r.game, gobj));
         play_sfx(r, gobj, 0x104, 0x7F, 0x40);
         let x34 = attr_f(r, gobj, 0x34);
-        if abs(item(r.game, gobj).x40_vel.y) < reg(x34) {
+        if abs(item(r.game, gobj).vel.y) < reg(x34) {
             // `Item_StopAndEnterState`.
-            item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+            item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
             lib26b1::enable_pickup(r.game, gobj);
             change_state(r, gobj, 0, change::ANIM_UPDATE);
         } else {
@@ -352,7 +355,7 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
 /// `itTaru_Logic2_PickedUp`: carried, it straightens up.
 #[doc(alias = "itTaru_Logic2_PickedUp")]
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).xDB0_itcmd_var1 = 1;
+    item_mut(r.game, gobj).cmd_var1 = 1;
     change_state(r, gobj, 2, change::ANIM_UPDATE);
 }
 
@@ -387,12 +390,12 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
 pub fn tick(r: &mut Running, gobj: GObjId) -> bool {
     let x34 = common_data(r.game).u32(r.data, super::super::data::common::X34);
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    if reg(ip.life_timer) <= 0.0 {
         effect::spawn_simple(r, gobj, 0x421);
         return true;
     }
-    if reg(item(r.game, gobj).xD44_lifeTimer) <= fp::frsp(f64::from(x34)) {
+    if reg(item(r.game, gobj).life_timer) <= fp::frsp(f64::from(x34)) {
         lib2725::flicker(r.game, r.data, gobj);
     }
     false
@@ -414,22 +417,22 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
         maplib::enter_ground(item_mut(r.game, gobj));
         play_sfx(r, gobj, 0x104, 0x7F, 0x40);
         let x34 = attr_f(r, gobj, 0x34);
-        if abs(item(r.game, gobj).x40_vel.y) > reg(x34) {
+        if abs(item(r.game, gobj).vel.y) > reg(x34) {
             return hit(r, gobj);
         }
         let x5c = attr_of(item(r.game, gobj)).f32(r.data, super::super::data::attr::X5C);
         let ip = item_mut(r.game, gobj);
-        if abs(ip.x40_vel.y) < reg(x5c) {
-            let speed = mem(fp::fmuls(reg(ip.facing_dir), abs(ip.x40_vel.x)));
-            ip.xDD4_itemVar.taru().xDE4.set(speed);
+        if abs(ip.vel.y) < reg(x5c) {
+            let speed = mem(fp::fmuls(reg(ip.facing_dir), abs(ip.vel.x)));
+            ip.vars.taru().roll_speed.set(speed);
             land_rolling(r, gobj);
         } else {
             bounce(r, gobj);
         }
     } else if maplib::touched_ceiling(r.game, gobj) != 0 {
         let ip = item_mut(r.game, gobj);
-        if reg(ip.x40_vel.y) > 0.0 {
-            ip.x40_vel.y = 0.0;
+        if reg(ip.vel.y) > 0.0 {
+            ip.vel.y = 0.0;
         }
     } else if maplib::touched_wall(r.game, gobj) != 0 {
         return hit(r, gobj);
@@ -450,8 +453,8 @@ pub fn land_rolling(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_80288194")]
 pub fn rolling(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = ip.xDD4_itemVar.taru().xDE4.get();
-    ip.x40_vel.y = 0.0;
+    ip.vel.x = ip.vars.taru().roll_speed.get();
+    ip.vel.y = 0.0;
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 5, change::ANIM_UPDATE);
 }
@@ -459,8 +462,8 @@ pub fn rolling(r: &mut Running, gobj: GObjId) {
 /// `itTaru_UnkMotion5_Anim`: the script turns its hits on once; its time runs out.
 #[doc(alias = "itTaru_UnkMotion5_Anim")]
 pub fn anim5(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xDAC_itcmd_var0 == 1 {
-        item_mut(r.game, gobj).xDAC_itcmd_var0 = 2;
+    if item(r.game, gobj).cmd_var0 == 1 {
+        item_mut(r.game, gobj).cmd_var0 = 2;
         hitbox::set_hit_ids(r.game, gobj);
     }
     tick(r, gobj)
@@ -483,22 +486,23 @@ pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     if ip.ground_or_air != 1 {
         let floor = crate::mp::coll::FLOOR_PUSH | crate::mp::coll::FLOOR_HUG;
-        if ip.x378_itemColl.env_flags & floor != 0 {
-            let n = maplib::surface_normal(&ip.x378_itemColl).expect("a floor's normal");
-            ip.xDD4_itemVar.taru().xDE8.set(n);
+        if ip.coll.env_flags & floor != 0 {
+            let n = maplib::surface_normal(&ip.coll).expect("a floor's normal");
+            ip.vars.taru().normal.set(n);
         } else {
-            ip.xDD4_itemVar.taru().xDE8.set_x(0.0);
+            ip.vars.taru().normal.set_x(0.0);
         }
         let walls = crate::mp::coll::LEFT_WALL_MASK | crate::mp::coll::RIGHT_WALL_MASK;
-        if ip.x378_itemColl.env_flags & walls != 0 {
-            if abs(ip.xDD4_itemVar.taru().xDE4.get()) > reg(x2c) {
+        if ip.coll.env_flags & walls != 0 {
+            if abs(ip.vars.taru().roll_speed.get()) > reg(x2c) {
                 return hit(r, gobj);
             }
             ip.facing_dir = -ip.facing_dir;
-            let v = ip.xDD4_itemVar.taru();
-            v.xDE4.update(|old| mem(-fp::fmuls(reg(old), reg(x30))));
-            let (speed, up) = (v.xDE4.get(), v.xDE8.y());
-            ip.x40_vel.x = mem(fp::fmuls(reg(speed), reg(up)));
+            let v = ip.vars.taru();
+            v.roll_speed
+                .update(|old| mem(-fp::fmuls(reg(old), reg(x30))));
+            let (speed, up) = (v.roll_speed.get(), v.normal.y());
+            ip.vel.x = mem(fp::fmuls(reg(speed), reg(up)));
             hitbox::set_hit_ids(r.game, gobj);
         }
     }
@@ -512,11 +516,11 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
     roll(r, gobj);
     turn(r, gobj);
     let x1c = attr_f(r, gobj, 0x1C);
-    if abs(vars(r.game, gobj).xDE4.get()) > reg(x1c) {
+    if abs(vars(r.game, gobj).roll_speed.get()) > reg(x1c) {
         rolling(r, gobj);
         hitbox::set_hit_ids(r.game, gobj);
     }
-    if abs(vars(r.game, gobj).xDE4.get()) < f64::from(0.01_f32) {
+    if abs(vars(r.game, gobj).roll_speed.get()) < f64::from(0.01_f32) {
         hitbox::set_hit_ids(r.game, gobj);
     }
 }
@@ -531,12 +535,12 @@ pub fn open_empty(r: &mut Running, gobj: GObjId) {
     lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = 0.0;
-    super::super::set_flag(&mut ip.xDCF_flag, 2, true);
-    let v = ip.xDD4_itemVar.taru();
-    v.xDD4.set(1);
-    v.xDD8.set(40);
+    ip.vel.x = 0.0;
+    ip.vel.y = 0.0;
+    super::super::set_flag(&mut ip.draw_flags, 2, true);
+    let v = ip.vars.taru();
+    v.hit.set(1);
+    v.open_frames.set(40);
     hitbox::set_hit_ids(r.game, gobj);
     let pos = item(r.game, gobj).pos;
     crate::lb::wind::blast(
@@ -572,12 +576,12 @@ pub fn open(r: &mut Running, gobj: GObjId) {
     lib2725::hide_tree(r.game, j);
     hitbox::start_blink(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = 0.0;
-    super::super::set_flag(&mut ip.xDCF_flag, 2, true);
-    let v = ip.xDD4_itemVar.taru();
-    v.xDD4.set(1);
-    v.xDD8.set(0x28);
+    ip.vel.x = 0.0;
+    ip.vel.y = 0.0;
+    super::super::set_flag(&mut ip.draw_flags, 2, true);
+    let v = ip.vars.taru();
+    v.hit.set(1);
+    v.open_frames.set(0x28);
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 7, change::ANIM_UPDATE);
 }
@@ -586,8 +590,8 @@ pub fn open(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itTaru_UnkMotion7_Anim")]
 pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
     let v = vars(r.game, gobj);
-    v.xDD8.update(|old| old.wrapping_sub(1));
-    v.xDD8.get() <= 0
+    v.open_frames.update(|old| old.wrapping_sub(1));
+    v.open_frames.get() <= 0
 }
 
 /// Breaks: splinters (effect 0x427), then opens with an item (`x0` in `x0 + x4`) or empty.
@@ -610,7 +614,7 @@ fn break_open(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_3F14_Logic2_HitShield")]
 #[doc(alias = "it_3F14_Logic2_Reflected")]
 pub fn hit(r: &mut Running, gobj: GObjId) -> bool {
-    if vars(r.game, gobj).xDD4.get() == 0 {
+    if vars(r.game, gobj).hit.get() == 0 {
         break_open(r, gobj);
     }
     false
@@ -620,7 +624,7 @@ pub fn hit(r: &mut Running, gobj: GObjId) -> bool {
 /// rolling, and pushes a rolling one.
 #[doc(alias = "it_3F14_Logic2_DmgReceived")]
 pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
-    if vars(r.game, gobj).xDD4.get() != 0 {
+    if vars(r.game, gobj).hit.get() != 0 {
         return false;
     }
     let (x8, xc, x10) = (
@@ -628,7 +632,7 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
         attr_f(r, gobj, 0xC),
         attr_f(r, gobj, 0x10),
     );
-    if to_f32(item(r.game, gobj).xC9C) >= reg(xc) {
+    if to_f32(item(r.game, gobj).damage_taken) >= reg(xc) {
         break_open(r, gobj);
         return false;
     }
@@ -636,22 +640,20 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     if msid == 0 {
         if r.game.objs.rng.below(fp::fctiwz(reg(x8))) == 0 {
             let ip = item_mut(r.game, gobj);
-            ip.facing_dir = mem(-reg(ip.xCCC_incDamageDirection));
-            let push = fp::fmuls(to_f32(ip.xCA0), reg(x10));
+            ip.facing_dir = mem(-reg(ip.damage_dir));
+            let push = fp::fmuls(to_f32(ip.hit_damage), reg(x10));
             let f = ip.facing_dir;
-            ip.xDD4_itemVar
-                .taru()
-                .xDE4
-                .set(mem(fp::fmuls(reg(f), push)));
+            ip.vars.taru().roll_speed.set(mem(fp::fmuls(reg(f), push)));
             coll::take_attacker(r.game, gobj);
             rolling(r, gobj);
         }
     } else if (msid as u32).wrapping_sub(4) <= 1 {
         let ip = item_mut(r.game, gobj);
-        let push = fp::fmuls(to_f32(ip.xCA0), reg(x10));
-        let away = -reg(ip.xCCC_incDamageDirection);
-        let v = ip.xDD4_itemVar.taru();
-        v.xDE4.update(|old| mem(fp::fmadds(away, push, reg(old))));
+        let push = fp::fmuls(to_f32(ip.hit_damage), reg(x10));
+        let away = -reg(ip.damage_dir);
+        let v = ip.vars.taru();
+        v.roll_speed
+            .update(|old| mem(fp::fmadds(away, push, reg(old))));
         coll::take_attacker(r.game, gobj);
         hitbox::set_hit_ids(r.game, gobj);
     }

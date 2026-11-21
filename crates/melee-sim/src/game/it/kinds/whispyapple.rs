@@ -134,7 +134,7 @@ impl Mirror for WhispyAppleVars {
 }
 
 fn vars<'r>(r: &'r mut Running, gobj: GObjId) -> &'r mut WhispyAppleVars {
-    item_mut(r.game, gobj).xDD4_itemVar.whispy_apple()
+    item_mut(r.game, gobj).vars.whispy_apple()
 }
 
 /// Whether the apple bursts where it lands (`xDD8`, 1), which also keeps it from being picked
@@ -218,10 +218,10 @@ pub fn start(r: &mut Running, gobj: GObjId) {
     let spread = reg(f32::from_bits(attr(r, gobj, 0x18)));
     let rise = f32::from_bits(attr(r, gobj, 0x14));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmsubs(fp::fmuls(2.0, spread), rand, spread));
-    ip.x40_vel.y = rise;
+    ip.vel.x = mem(fp::fmsubs(fp::fmuls(2.0, spread), rand, spread));
+    ip.vel.y = rise;
     let z = fp::fdivs(reg(ip.pos.z), 20.0);
-    ip.x40_vel.z = mem(if z < 0.0 { fp::fneg(z) } else { z });
+    ip.vel.z = mem(if z < 0.0 { fp::fneg(z) } else { z });
 }
 
 /// The life every state counts down (the inline `itWhispyapple_UnkMotion0_Anim_inline`):
@@ -231,8 +231,8 @@ fn age(r: &mut Running, gobj: GObjId) -> bool {
     let child = jobj_of(r.game, gobj).and_then(|j| r.game.objs.jobjs[j].child);
     let flicker = common_data(r.game).i32(r.data, data::common::X34);
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    let (msid, life, z) = (ip.msid, reg(ip.xD44_lifeTimer), reg(ip.pos.z));
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    let (msid, life, z) = (ip.msid, reg(ip.life_timer), reg(ip.pos.z));
     if msid == 7 {
         jobj::set_flags_all(&mut r.game.objs.jobjs, child, jobj::HIDDEN);
     } else if life <= fp::frsp(f64::from(flicker)) || (if z < 0.0 { fp::fneg(z) } else { z }) > 1.0
@@ -241,7 +241,7 @@ fn age(r: &mut Running, gobj: GObjId) -> bool {
     } else {
         jobj::clear_flags_all(&mut r.game.objs.jobjs, child, jobj::HIDDEN);
     }
-    reg(item(r.game, gobj).xD44_lifeTimer) <= 0.0
+    reg(item(r.game, gobj).life_timer) <= 0.0
 }
 
 /// `itWhispyapple_UnkMotion0_Anim`: falling, an apple that bursts stays out of reach.
@@ -272,7 +272,7 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     if reg(item(r.game, gobj).pos.z) >= 0.0 {
         let ip = item_mut(r.game, gobj);
         ip.pos.z = 0.0;
-        ip.x40_vel.z = 0.0;
+        ip.vel.z = 0.0;
         if bursts(r, gobj) {
             fall(r, gobj, burst);
         } else {
@@ -299,7 +299,7 @@ fn bounce(r: &mut Running, gobj: GObjId) {
 /// Lands, stopped, `it_802EE6A0`.
 #[doc(alias = "it_802EE6A0")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
 }
 
@@ -375,8 +375,8 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
     show(r, gobj);
     change_state(r, gobj, 4, change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
     ip.pos.z = 0.0;
     release::let_go(r, gobj, Vec3::new(0.0, 0.0, 0.0));
 }
@@ -388,7 +388,7 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
     show(r, gobj);
     change_state(r, gobj, 5, change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.z = 0.0;
+    ip.vel.z = 0.0;
     ip.pos.z = 0.0;
 }
 
@@ -417,9 +417,9 @@ pub fn burst(r: &mut Running, gobj: GObjId) {
     lib2725::set_lifetime(r.game, r.data, gobj, 20.0);
     lib26b1::stop_keeping_clear(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
-    ip.x40_vel.x = 0.0;
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
+    ip.vel.x = 0.0;
     lib2725::blast_effect(r, gobj);
     hitbox::start_blink(r.game, gobj);
     hitbox::set_hit_ids(r.game, gobj);

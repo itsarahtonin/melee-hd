@@ -123,18 +123,18 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// The shell's variables.
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itRShell_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.rshell()
+    item_mut(game, gobj).vars.rshell()
 }
 
 /// The fields the green shell has too.
 fn shared(v: &mut ItemVars) -> shell::Vars<'_> {
     let s = v.rshell();
     shell::Vars {
-        life: &mut s.xDD4,
-        hit_delay: &mut s.xDD8,
-        trail: &mut s.xDDC,
-        landings: &mut s.xDE8,
-        bounced: &mut s.xDF4_b0,
+        life: &mut s.life,
+        hit_delay: &mut s.hit_delay,
+        trail: &mut s.trail,
+        landings: &mut s.landings,
+        bounced: &mut s.bounced,
         popped: None,
     }
 }
@@ -148,11 +148,11 @@ fn sign(v: f64) -> i32 {
 #[doc(alias = "it_8028D090")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
     let x4 = attr(r, gobj, 4);
-    let b = item(r.game, gobj).xC0C.clone();
+    let b = item(r.game, gobj).kind_coll_box.clone();
     maplib::set_box(r.game, gobj, b);
     chase(r, gobj);
     let facing = item(r.game, gobj).facing_dir;
-    item_mut(r.game, gobj).x40_vel.x = launch_speed(r, gobj, x4, facing);
+    item_mut(r.game, gobj).vel.x = launch_speed(r, gobj, x4, facing);
     lib2725::face_motion(r.game, gobj);
 }
 
@@ -175,7 +175,7 @@ fn push_for(msid: i32) -> Push {
 /// Goes on chasing when fast enough after a hit, else drops its hitboxes.
 fn after_push(r: &mut Running, gobj: GObjId, did_hit: bool, take: fn(&mut Game, GObjId)) {
     let x10 = attr(r, gobj, 0x10);
-    if reg(item(r.game, gobj).x40_vel.x).abs() > reg(x10) {
+    if reg(item(r.game, gobj).vel.x).abs() > reg(x10) {
         take(r.game, gobj);
         if did_hit {
             hitbox::start_blink(r.game, gobj);
@@ -205,11 +205,11 @@ pub fn knocked(r: &mut Running, gobj: GObjId) {
         count_hit(r, gobj);
     }
     let ip = item_mut(r.game, gobj);
-    let p = fp::fmuls(to_f32(ip.xCA0), reg(mult));
-    let away = -reg(ip.xCCC_incDamageDirection);
+    let p = fp::fmuls(to_f32(ip.hit_damage), reg(mult));
+    let away = -reg(ip.damage_dir);
     match push {
-        Push::Set => ip.x40_vel.x = mem(fp::fmuls(away, p)),
-        Push::Add => ip.x40_vel.x = mem(fp::fmadds(away, p, reg(ip.x40_vel.x))),
+        Push::Set => ip.vel.x = mem(fp::fmuls(away, p)),
+        Push::Add => ip.vel.x = mem(fp::fmadds(away, p, reg(ip.vel.x))),
         Push::None => {}
     }
     after_push(r, gobj, matches!(push, Push::Set), |g, o| {
@@ -232,10 +232,10 @@ pub fn stomped(r: &mut Running, gobj: GObjId) {
         count_hit(r, gobj);
     }
     let ip = item_mut(r.game, gobj);
-    let away = -reg(ip.xCD0);
+    let away = -reg(ip.stomp_dir);
     match push {
-        Push::Set => ip.x40_vel.x = mem(fp::fmuls(reg(mult), away)),
-        Push::Add => ip.x40_vel.x = mem(fp::fmadds(reg(mult), away, reg(ip.x40_vel.x))),
+        Push::Set => ip.vel.x = mem(fp::fmuls(reg(mult), away)),
+        Push::Add => ip.vel.x = mem(fp::fmadds(reg(mult), away, reg(ip.vel.x))),
         Push::None => {}
     }
     after_push(r, gobj, matches!(push, Push::Set), |g, o| {
@@ -247,9 +247,9 @@ pub fn stomped(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8028D390")]
 pub fn count_hit(r: &mut Running, gobj: GObjId) {
     let v = vars(r.game, gobj);
-    v.xDEC.update(|old| old.wrapping_sub(1));
-    if v.xDEC.get() == 0 {
-        v.xDF0.set(1);
+    v.hits_left.update(|old| old.wrapping_sub(1));
+    if v.hits_left.get() == 0 {
+        v.hit.set(1);
     }
 }
 
@@ -257,14 +257,14 @@ pub fn count_hit(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8028D3B8")]
 pub fn bounced(r: &mut Running, gobj: GObjId) {
     count_hit(r, gobj);
-    if vars(r.game, gobj).xDF0.get() != 0 {
+    if vars(r.game, gobj).hit.get() != 0 {
         return;
     }
     hitbox::end_blink(r.game, gobj);
     hitbox::set_hit_ids(r.game, gobj);
     let ip = item(r.game, gobj);
-    let (vx, dir) = (ip.x40_vel.x, ip.xCB8_outDamageDirection);
-    item_mut(r.game, gobj).x40_vel.x = launch_speed(r, gobj, vx, dir);
+    let (vx, dir) = (ip.vel.x, ip.out_damage_dir);
+    item_mut(r.game, gobj).vel.x = launch_speed(r, gobj, vx, dir);
     lib2725::face_motion(r.game, gobj);
     shell::draw_landings(r, gobj, &RED);
     let ip = item(r.game, gobj);
@@ -281,9 +281,9 @@ pub fn bounced(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "fn_8028D4A8")]
 pub fn turn_back(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = -ip.x40_vel.x;
+    ip.vel.x = -ip.vel.x;
     let v = vars(r.game, gobj);
-    v.xDE0.update(|old| -old);
+    v.accel.update(|old| -old);
     lib2725::face_motion(r.game, gobj);
 }
 
@@ -292,9 +292,9 @@ pub fn turn_back(r: &mut Running, gobj: GObjId) {
 pub fn cap_speed(r: &mut Running, gobj: GObjId) {
     let xc = attr(r, gobj, 0xC);
     let ip = item_mut(r.game, gobj);
-    let vx = reg(ip.x40_vel.x);
+    let vx = reg(ip.vel.x);
     if vx.abs() > reg(xc) {
-        ip.x40_vel.x = mem(fp::fmuls(to_f32(sign(vx)), reg(xc)));
+        ip.vel.x = mem(fp::fmuls(to_f32(sign(vx)), reg(xc)));
     }
 }
 
@@ -318,12 +318,12 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let hits = r.data.u32(shell::attr_ref(r, gobj, 0x54)) as i32;
     shell::start_life(r, gobj, &RED);
     let v = vars(r.game, gobj);
-    v.xDEC.set(hits);
-    v.xDF0.set(0);
-    v.xDD8.set(x3c);
-    v.xDE8.set(1);
-    v.xDF4_b0.set(false);
-    v.xDE0.set(0.0);
+    v.hits_left.set(hits);
+    v.hit.set(0);
+    v.hit_delay.set(x3c);
+    v.landings.set(1);
+    v.bounced.set(false);
+    v.accel.set(0.0);
     fell(r, gobj);
 }
 
@@ -334,8 +334,8 @@ pub fn stopped(r: &mut Running, gobj: GObjId) {
     lib26b1::enable_pickup(r.game, gobj);
     hitbox::let_own_items_hit(r.game, gobj);
     hitbox::end_blink(r.game, gobj);
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
-    vars(r.game, gobj).xDD8.set(x3c);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
+    vars(r.game, gobj).hit_delay.set(x3c);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     lib2725::make_stompable(r.game, gobj);
     item_mut(r.game, gobj).jumped_on = Some(CodeRef(JUMPED_ON));
@@ -362,11 +362,11 @@ fn start_chase(r: &mut Running, gobj: GObjId, msid: i32) {
     lib2725::clear_stomp(r.game, gobj);
     let life = common_data(r.game).u32(r.data, super::super::data::common::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, mem(fp::frsp(f64::from(life))));
-    item_mut(r.game, gobj).xD5C = 0;
+    item_mut(r.game, gobj).skid = 0;
     let v = vars(r.game, gobj);
-    v.xDD8.set(x3c);
-    v.xDE4.set(0.0);
-    v.xDDC.set(x44);
+    v.hit_delay.set(x3c);
+    v.chase_delay.set(0.0);
+    v.trail.set(x44);
     hitbox::let_own_items_hit(r.game, gobj);
     cap_speed(r, gobj);
     lib2725::face_motion(r.game, gobj);
@@ -381,7 +381,7 @@ fn start_chase(r: &mut Running, gobj: GObjId, msid: i32) {
 /// Chases on the ground, `it_8028DAE4`.
 #[doc(alias = "it_8028DAE4")]
 pub fn chase(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).x40_vel.y = 0.0;
+    item_mut(r.game, gobj).vel.y = 0.0;
     start_chase(r, gobj, 5);
 }
 
@@ -390,10 +390,10 @@ pub fn chase(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itRshell_UnkMotion5_Anim")]
 pub fn anim5(r: &mut Running, gobj: GObjId) -> bool {
     let v = vars(r.game, gobj);
-    if reg(v.xDD4.get()) <= 0.0 {
+    if reg(v.life.get()) <= 0.0 {
         return true;
     }
-    v.xDD4.update(|old| mem(fp::fsubs(reg(old), 1.0)));
+    v.life.update(|old| mem(fp::fsubs(reg(old), 1.0)));
     shell::count_hit_delay(r, gobj, &RED);
     if item(r.game, gobj).msid == 5 {
         shell::trail(r, gobj, &RED);
@@ -403,10 +403,10 @@ pub fn anim5(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Speeds up by `xDE0`, capping the speed once it runs the same way.
 fn accelerate(r: &mut Running, gobj: GObjId) {
-    let accel = vars(r.game, gobj).xDE0.get();
+    let accel = vars(r.game, gobj).accel.get();
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fadds(reg(ip.x40_vel.x), reg(accel)));
-    if sign(reg(ip.x40_vel.x)) == sign(reg(accel)) {
+    ip.vel.x = mem(fp::fadds(reg(ip.vel.x), reg(accel)));
+    if sign(reg(ip.vel.x)) == sign(reg(accel)) {
         cap_speed(r, gobj);
     }
 }
@@ -415,31 +415,29 @@ fn accelerate(r: &mut Running, gobj: GObjId) {
 /// nearest fighter.
 #[doc(alias = "itRshell_UnkMotion5_Phys")]
 pub fn phys5(r: &mut Running, gobj: GObjId) {
-    if reg(vars(r.game, gobj).xDE4.get()) <= 0.0 {
+    if reg(vars(r.game, gobj).chase_delay.get()) <= 0.0 {
         let pos = item(r.game, gobj).pos;
         if let Some((_, target)) = owner::nearest_fighter(r.game, r.data, pos, None) {
             let x8 = attr(r, gobj, 8);
             let dir = sign(fp::fsubs(reg(target.x), reg(pos.x)));
             vars(r.game, gobj)
-                .xDE0
+                .accel
                 .set(mem(fp::fmuls(reg(x8), to_f32(dir))));
             accelerate(r, gobj);
             let x10 = attr(r, gobj, 0x10);
             let ip = item(r.game, gobj);
-            if ip.x5D4_hitboxes[0].hit.state == hitcapsule::DISABLED
-                && reg(ip.x40_vel.x).abs() <= reg(x10)
-            {
+            if ip.hitboxes[0].hit.state == hitcapsule::DISABLED && reg(ip.vel.x).abs() <= reg(x10) {
                 lib2725::start_hitbox(r.game, r.data, gobj, 0);
             }
             lib2725::face_motion(r.game, gobj);
         }
         let x40 = attr(r, gobj, 0x40);
-        vars(r.game, gobj).xDE4.set(x40);
+        vars(r.game, gobj).chase_delay.set(x40);
     } else {
         accelerate(r, gobj);
         lib2725::face_motion(r.game, gobj);
         let v = vars(r.game, gobj);
-        v.xDE4.update(|old| mem(fp::fsubs(reg(old), 1.0)));
+        v.chase_delay.update(|old| mem(fp::fsubs(reg(old), 1.0)));
     }
 }
 
@@ -454,9 +452,9 @@ pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
     }
     if maplib::touched_wall_normal(r.game, gobj).0 != 0 {
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = -ip.x40_vel.x;
+        ip.vel.x = -ip.vel.x;
         let v = vars(r.game, gobj);
-        v.xDE0.update(|old| -old);
+        v.accel.update(|old| -old);
         lib2725::face_motion(r.game, gobj);
         hitbox::set_hit_ids(r.game, gobj);
     }
@@ -482,7 +480,7 @@ pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
 pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
     lib2725::show(r.game, gobj);
     bounced(r, gobj);
-    vars(r.game, gobj).xDF0.get() != 0
+    vars(r.game, gobj).hit.get() != 0
 }
 
 /// `it_3F14_Logic15_DmgReceived`: whether it's spent.
@@ -490,7 +488,7 @@ pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
 pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     lib2725::show(r.game, gobj);
     knocked(r, gobj);
-    vars(r.game, gobj).xDF0.get() != 0
+    vars(r.game, gobj).hit.get() != 0
 }
 
 /// `itRShell_Logic15_Clanked`.
@@ -508,7 +506,7 @@ pub fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
         3 | 4 => lib2725::bounce_off_victim(r.game, r.data, gobj),
         5 | 6 => {
             bounced(r, gobj);
-            return vars(r.game, gobj).xDF0.get() != 0;
+            return vars(r.game, gobj).hit.get() != 0;
         }
         _ => {}
     }
@@ -521,5 +519,5 @@ pub fn jumped_on(r: &mut Running, gobj: GObjId) -> bool {
     lib2725::show(r.game, gobj);
     stomped(r, gobj);
     play_sfx(r, gobj, 0xF1, 0x7F, 0x40);
-    vars(r.game, gobj).xDF0.get() != 0
+    vars(r.game, gobj).hit.get() != 0
 }

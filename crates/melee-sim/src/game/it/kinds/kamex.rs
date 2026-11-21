@@ -96,7 +96,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     pokemon::face_nearest_opponent(r, gobj);
     pokemon::vars(r.game, gobj).set_i32(SHOTS, -1);
-    item_mut(r.game, gobj).xDBC[0] &= !0x80;
+    item_mut(r.game, gobj).cmd_flags[0] &= !0x80;
     let v = pokemon::vars(r.game, gobj);
     v.set_i32(CANNON, 0);
     v.set_f32(PUSH, 0.0);
@@ -195,7 +195,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
         let shots = v.i32(SHOTS);
         if shots <= 0 {
             v.set_i32(SHOTS, 0);
-            item_mut(r.game, gobj).x40_vel.x = 0.0;
+            item_mut(r.game, gobj).vel.x = 0.0;
             leave(r, gobj);
         } else {
             v.set_i32(SHOTS, shots.wrapping_sub(1));
@@ -210,11 +210,11 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itKamex_UnkMotion1_Phys")]
 pub fn phys1(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    let (vx, facing) = (reg(ip.x40_vel.x), reg(ip.facing_dir));
+    let (vx, facing) = (reg(ip.vel.x), reg(ip.facing_dir));
     if vx != 0.0 && ((vx > 0.0 && facing <= 0.0) || (vx <= 0.0 && facing > 0.0)) {
         let slowing = pokemon::vars(r.game, gobj).f32(SLOWING);
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = mem(fp::fmadds(reg(slowing), facing, reg(ip.x40_vel.x)));
+        ip.vel.x = mem(fp::fmadds(reg(slowing), facing, reg(ip.vel.x)));
     }
     phys0(r, gobj);
 }
@@ -222,12 +222,12 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
 /// Its `on_accessory`, `it_802CA8DC`: fires a shot when its script says, pushed back.
 #[doc(alias = "it_802CA8DC")]
 pub fn fire_when_told(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDBC[0] & 0x80 != 0 {
+    if item(r.game, gobj).cmd_flags[0] & 0x80 != 0 {
         shoot(r, gobj);
         let push = pokemon::vars(r.game, gobj).f32(PUSH);
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = mem(fp::fmuls(reg(push), fp::fneg(reg(ip.facing_dir))));
-        ip.xDBC[0] &= !0x80;
+        ip.vel.x = mem(fp::fmuls(reg(push), fp::fneg(reg(ip.facing_dir))));
+        ip.cmd_flags[0] &= !0x80;
     }
 }
 
@@ -331,7 +331,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId) {
 pub fn water_spawned(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj).expect("the water without a model");
     let life = attr_f32(r, gobj, 0);
-    item_mut(r.game, gobj).xD44_lifeTimer = life;
+    item_mut(r.game, gobj).life_timer = life;
     lib2725::stop_spin(r.game, r.data, gobj);
     water_fly(r, gobj);
     lib26b1::disable_pickup(r.game, gobj);
@@ -364,8 +364,8 @@ pub fn water_fly(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802CAE60")]
 pub fn water_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    reg(ip.xD44_lifeTimer) <= 0.0
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    reg(ip.life_timer) <= 0.0
 }
 
 /// The water's `it_802CAE94`: growing to full size, by 0.06 a frame in double precision.

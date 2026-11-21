@@ -124,8 +124,8 @@ pub fn fly_off(r: &mut Running, gobj: GObjId) {
     };
     let up = attr_f32(r, gobj, 8);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = x;
-    ip.x40_vel.y = up;
+    ip.vel.x = x;
+    ip.vel.y = up;
 }
 
 /// `itMew_UnkMotion2_Anim`: gone above the top blast zone.
@@ -139,7 +139,7 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
 pub fn phys2(r: &mut Running, gobj: GObjId) {
     let a = attr_f32(r, gobj, 0xC);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), reg(a)));
+    ip.vel.y = mem(fp::fadds(reg(ip.vel.y), reg(a)));
 }
 
 /// `itMew_UnkMotion2_Coll`: nothing.

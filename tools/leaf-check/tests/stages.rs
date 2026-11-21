@@ -1274,7 +1274,7 @@ fn coll_arg(r: &Running, maps: &Maps, call: &Call) -> melee_sim::game::structs::
     }
     for (&ip, &i) in &maps.items {
         if a == ip + 0x378 {
-            return r.game.items[i.0].x378_itemColl.clone();
+            return r.game.items[i.0].coll.clone();
         }
     }
     panic!("r5 {a:#x} is neither a fighter's nor an item's collision data");
@@ -3315,7 +3315,7 @@ fn coll_at(r: &Running, maps: &Maps, call: &Call, addr: u32) -> melee_sim::game:
             return r.game.fighter(g).coll_data.clone();
         }
         if user + 0x378 == addr {
-            return melee_sim::game::it::item(r.game, g).x378_itemColl.clone();
+            return melee_sim::game::it::item(r.game, g).coll.clone();
         }
     }
     panic!("no object's collision data at {addr:#x}")
@@ -11010,7 +11010,7 @@ fn mc_coll_mut<'a>(
         return &mut r.game.fighters[f.0].coll_data;
     }
     if let Some((_, &i)) = maps.items.iter().find(|(ip, _)| a == **ip + 0x378) {
-        return &mut r.game.items[i.0].x378_itemColl;
+        return &mut r.game.items[i.0].coll;
     }
     panic!("r5 {a:#x} is neither a fighter's nor an item's collision data");
 }

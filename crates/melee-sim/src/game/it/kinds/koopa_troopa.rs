@@ -140,11 +140,11 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::face(r, gobj, facing);
     zako::set_coll_facing(r.game, gobj);
     zako::init_collision(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x19 = true;
+    item_mut(r.game, gobj).flags.flags.turns_to_face = true;
     set(r, gobj, off::TIMER, 0);
     set(r, gobj, off::SHELL, 0);
     set(r, gobj, off::WALK, 0);
-    let b = item(r.game, gobj).xC1C.clone();
+    let b = item(r.game, gobj).coll_box.clone();
     let v = zako::bytes(r.game, gobj);
     v.set_f32(off::ECB, b.top);
     v.set_f32(off::ECB + 4, b.bottom);
@@ -186,7 +186,7 @@ pub fn stomped(r: &mut Running, gobj: GObjId) -> bool {
     camera::request_quake(r, QUAKE_SMALL, Some(pos));
     play_sfx(r, gobj, 0x12E, 127, 64);
     let stomper = item(r.game, gobj)
-        .xCFC
+        .stomper
         .expect("a Koopa Troopa landed on by nobody");
     lib2725::fighter_item_rumble(r, stomper, 0xC, 0);
     false
@@ -284,10 +284,10 @@ pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
 pub fn fall(r: &mut Running, gobj: GObjId) {
     let k = zako::attr_f32(r, gobj, 4);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), reg(k)));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), reg(k)));
     set(r, gobj, off::TIMER, 0);
     let ip = item(r.game, gobj);
-    let (facing, nudge) = (reg(ip.facing_dir), reg(ip.x70_nudge.x));
+    let (facing, nudge) = (reg(ip.facing_dir), reg(ip.nudge.x));
     if facing > 0.0 && nudge < 0.0 || facing < 0.0 && nudge > 0.0 {
         item_mut(r.game, gobj).facing_dir = mem(fp::fneg(facing));
         zako::set_coll_facing(r.game, gobj);
@@ -340,9 +340,9 @@ pub fn knock_back_kept(r: &mut Running, gobj: GObjId) {
     let v = zako::bytes(r.game, gobj);
     let (kb, angle, dir) = (v.f32(off::KB), v.i32(off::KB_ANGLE), v.f32(off::KB_DIR));
     let ip = item_mut(r.game, gobj);
-    ip.xCC8_knockback = kb;
-    ip.xCAC_angle = angle;
-    ip.xCCC_incDamageDirection = dir;
+    ip.knockback = kb;
+    ip.kb_angle = angle;
+    ip.damage_dir = dir;
     change_state(r, gobj, 8, change::ANIM_UPDATE);
 }
 
@@ -366,7 +366,7 @@ pub fn recover(r: &mut Running, gobj: GObjId) {
     set(r, gobj, off::TIMER, 0);
     hitbox::end_blink(r.game, gobj);
     let ip = item(r.game, gobj);
-    if reg(ip.xCCC_incDamageDirection) == reg(ip.facing_dir) {
+    if reg(ip.damage_dir) == reg(ip.facing_dir) {
         turn_keep(r, gobj);
         return;
     }
@@ -385,7 +385,7 @@ pub fn unshell(r: &mut Running, gobj: GObjId) {
     zako::set_coll_facing(r.game, gobj);
     set(r, gobj, off::TIMER, 0);
     change_state(r, gobj, 5, change::ANIM_UPDATE);
-    let mut b: _itECB = item(r.game, gobj).xC1C.clone();
+    let mut b: _itECB = item(r.game, gobj).coll_box.clone();
     b.top = 4.5;
     b.right = 3.0;
     b.left = 3.0;

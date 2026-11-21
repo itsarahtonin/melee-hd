@@ -105,7 +105,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 /// `itMball_Destroyed`: out of the count of Poké Balls, unless its Pokémon came out.
 #[doc(alias = "itMball_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
-    if !item_mut(r.game, gobj).xDD4_itemVar.mball().b1.get() {
+    if !item_mut(r.game, gobj).vars.mball().out.get() {
         let c = &mut r.game.it.counts;
         c.x1C = c.x1C.wrapping_sub(1);
     }
@@ -114,9 +114,9 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 /// `itMball_Spawned`: closed, falling.
 #[doc(alias = "itMball_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mball();
-    v.b0.set(false);
-    v.b1.set(false);
+    let v = item_mut(r.game, gobj).vars.mball();
+    v.open.set(false);
+    v.out.set(false);
     fell(r, gobj);
 }
 
@@ -154,7 +154,7 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 /// Falls, `itMball_802979D4`: a closed ball's state keeps its animation from where it was.
 #[doc(alias = "itMball_802979D4")]
 pub fn fell(r: &mut Running, gobj: GObjId) {
-    let open = item_mut(r.game, gobj).xDD4_itemVar.mball().b0.get();
+    let open = item_mut(r.game, gobj).vars.mball().open.get();
     let flags = if open { change::ANIM_UPDATE } else { 1 };
     change_state(r, gobj, 1, flags);
 }
@@ -168,9 +168,9 @@ pub fn gravity(r: &mut Running, gobj: GObjId) {
 
 /// A fall that turns to face its motion when it bounces, the falling states' collision.
 fn fall_facing(r: &mut Running, gobj: GObjId, landed: fn(&mut Running, GObjId)) {
-    let before = item(r.game, gobj).x40_vel.x;
+    let before = item(r.game, gobj).vel.x;
     fall(r, gobj, landed);
-    if item(r.game, gobj).x40_vel.x != before {
+    if item(r.game, gobj).vel.x != before {
         lib2725::face_motion(r.game, gobj);
     }
 }
@@ -233,10 +233,13 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 pub fn entered_air(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 4, change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
-    let v = fp::fadds(fp::fadds(reg(ip.x40_vel.x), reg(ip.x7C.x)), reg(ip.x88.x));
+    let v = fp::fadds(
+        fp::fadds(reg(ip.vel.x), reg(ip.skid_vel.x)),
+        reg(ip.slide_vel.x),
+    );
     ip.facing_dir = if v >= 0.0 { 1.0 } else { -1.0 };
     let dir = if -1.0 == ip.facing_dir { -1 } else { 1 };
-    ip.x378_itemColl.set_facing_dir(dir);
+    ip.coll.set_facing_dir(dir);
 }
 
 /// `itMball_Motion4_Coll`: skidding, it stops or falls.
@@ -252,14 +255,14 @@ fn open_into(r: &mut Running, gobj: GObjId, state: i32) {
     let life = attr(r, gobj, 0);
     let j = jobj_of(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.xDC8_word.flags.x1A = false;
-    ip.xD5C = 0;
+    ip.flags.flags.keeps_clear = false;
+    ip.skid = 0;
     lib2725::clear_velocity(r.game, gobj);
     lib2725::stop_spin(r.game, r.data, gobj);
-    if !item_mut(r.game, gobj).xDD4_itemVar.mball().b0.get() {
+    if !item_mut(r.game, gobj).vars.mball().open.get() {
         let ip = item_mut(r.game, gobj);
-        ip.xD44_lifeTimer = life;
-        ip.xDD4_itemVar.mball().b0.set(true);
+        ip.life_timer = life;
+        ip.vars.mball().open.set(true);
         effect::queue(r, gobj, SpawnKind::Attach, 0x449, j, &[]);
         play_sfx(r, gobj, 0x10C, 0x7F, 0x40);
         change_state(r, gobj, state, change::ANIM_UPDATE);
@@ -273,10 +276,10 @@ fn open_into(r: &mut Running, gobj: GObjId, state: i32) {
 #[doc(alias = "itMball_80297CC4")]
 pub fn open(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
-    let b = item(r.game, gobj).xC0C.clone();
+    let b = item(r.game, gobj).kind_coll_box.clone();
     maplib::set_box(r.game, gobj, b);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    ip.vel = Vec3::new(0.0, 0.0, 0.0);
     open_into(r, gobj, 5);
 }
 
@@ -284,9 +287,9 @@ pub fn open(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itMball_OnAccessory")]
 pub fn on_accessory(r: &mut Running, gobj: GObjId) {
     let at = attr(r, gobj, 4);
-    if item(r.game, gobj).xD44_lifeTimer == at {
+    if item(r.game, gobj).life_timer == at {
         let out = super::super::pokemon::release(r, gobj);
-        item_mut(r.game, gobj).xDD4_itemVar.mball().b1.set(out);
+        item_mut(r.game, gobj).vars.mball().out.set(out);
     }
 }
 
@@ -296,10 +299,10 @@ pub fn on_accessory(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itMball_Motion6_Anim")]
 pub fn opening(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
+    if reg(ip.life_timer) <= 0.0 {
         return true;
     }
-    ip.xD44_lifeTimer = crate::fpu::mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
+    ip.life_timer = crate::fpu::mem(fp::fsubs(reg(ip.life_timer), 1.0));
     false
 }
 

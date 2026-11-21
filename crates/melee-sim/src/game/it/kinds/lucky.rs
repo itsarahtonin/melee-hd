@@ -124,7 +124,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let healing = spawn::healing_on(r.game);
     pokemon::vars(r.game, gobj).set_i32(HEALING, i32::from(healing));
     play_sfx(r, gobj, 0x273B, 0x7F, 0x40);
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    item_mut(r.game, gobj).cmd_var0 = 0;
     enter_air(r, gobj);
 }
 
@@ -194,10 +194,10 @@ pub fn lay(r: &mut Running, gobj: GObjId) {
 /// Its `on_accessory`, `it_802D52E4`: lays an egg when its script says, with a sound.
 #[doc(alias = "it_802D52E4")]
 pub fn lay_when_told(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
+    if item(r.game, gobj).cmd_var0 != 0 {
         lay(r, gobj);
         play_sfx(r, gobj, 0x273C, 0x7F, 0x40);
-        item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+        item_mut(r.game, gobj).cmd_var0 = 0;
     }
 }
 
@@ -206,7 +206,7 @@ pub fn lay_when_told(r: &mut Running, gobj: GObjId) {
 pub fn enter_next(r: &mut Running, gobj: GObjId) {
     let msid = pokemon::vars(r.game, gobj).i32(NEXT);
     change_state(r, gobj, msid, change::ANIM_UPDATE);
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    item_mut(r.game, gobj).cmd_var0 = 0;
     effect_hitlag(r.game, gobj);
     item_mut(r.game, gobj).on_accessory = Some(crate::game::handles::CodeRef(LAY_ACCESSORY));
 }
@@ -244,7 +244,7 @@ pub fn out(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802D546C")]
 pub fn fell(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 5, 1);
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    item_mut(r.game, gobj).cmd_var0 = 0;
     effect_hitlag(r.game, gobj);
 }
 
@@ -306,7 +306,7 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802D5648")]
 pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     let limit = attr_f32(r, gobj, 0xC);
-    let damage = fp::frsp(f64::from(item(r.game, gobj).xC9C));
+    let damage = fp::frsp(f64::from(item(r.game, gobj).damage_taken));
     if damage >= reg(limit) {
         pokemon::launch(r, gobj);
         let ip = item_mut(r.game, gobj);
@@ -372,9 +372,9 @@ pub fn egg_landed(r: &mut Running, gobj: GObjId) {
     lib26b1::enable_pickup(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     // `itResetVelocity`: z, then y, then x.
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
-    ip.x40_vel.x = 0.0;
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
+    ip.vel.x = 0.0;
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 
@@ -385,8 +385,8 @@ pub fn egg_landed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802D5A2C")]
 pub fn egg_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    reg(ip.xD44_lifeTimer) <= 0.0
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    reg(ip.life_timer) <= 0.0
 }
 
 /// The egg's `it_802D58BC`, `itLucky_UnkMotion2_Phys` and `it_802D5A64`: nothing.

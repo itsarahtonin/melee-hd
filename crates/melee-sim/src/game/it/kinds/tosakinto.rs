@@ -77,7 +77,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let life = attr_f32(r, gobj, 4);
     pokemon::vars(r.game, gobj).set_i32(MSID, 0);
-    item_mut(r.game, gobj).xD44_lifeTimer = life;
+    item_mut(r.game, gobj).life_timer = life;
     pokemon::vars(r.game, gobj).set_i32(SFX, -1);
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
@@ -102,7 +102,7 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
     jobj::set_scale(&mut r.game.objs.jobjs, child, Vec3::new(s, s, s));
     lib2725::clear_velocity(r.game, gobj);
     flop(r, gobj);
-    let sfx = item(r.game, gobj).xD6C;
+    let sfx = item(r.game, gobj).sfx;
     pokemon::vars(r.game, gobj).set_i32(SFX, sfx);
 }
 
@@ -137,10 +137,10 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
     let child = jobj_of(r.game, gobj).and_then(|j| r.game.objs.jobjs[j].child);
     take_bone_motion(r, child, gobj);
     let ip = item_mut(r.game, gobj);
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
+    if reg(ip.life_timer) <= 0.0 {
         return true;
     }
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
     false
 }
 
@@ -150,7 +150,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
     pokemon::move_by_bone(r.game, gobj);
     let push = pokemon::vars(r.game, gobj).f32(PUSH);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fadds(reg(ip.x40_vel.x), reg(push)));
+    ip.vel.x = mem(fp::fadds(reg(ip.vel.x), reg(push)));
 }
 
 /// `itTosakinto_UnkMotion2_Coll`: touching the stage flops again; at its animation's end

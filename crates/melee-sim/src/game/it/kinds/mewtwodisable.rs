@@ -68,7 +68,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 
 /// The fighter who sent it, if any.
 fn owner(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
-    item_mut(r.game, gobj).xDD4_itemVar.mdisable().owner.get()
+    item_mut(r.game, gobj).vars.mdisable().owner.get()
 }
 
 /// Gone at Mewtwo's asking, `itMewtwoDisable_Logic67_Destroy`.
@@ -84,11 +84,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     if let Some(o) = owner(r, gobj) {
         r.mt_clear_disable(o);
     }
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .mdisable()
-        .owner
-        .set(None);
+    item_mut(r.game, gobj).vars.mdisable().owner.set(None);
 }
 
 /// Sends it from `pos` facing `facing_dir`, `itMewtwoDisable_Logic67_SpawnMewtwoDisable`:
@@ -111,11 +107,11 @@ pub fn spawn(r: &mut Running, fighter: GObjId, pos: Vec3, facing_dir: f32) -> Op
     let gobj = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
     let o = ip.owner;
-    ip.xDD4_itemVar.mdisable().owner.set(o);
+    ip.vars.mdisable().owner.set(o);
     start(r, gobj);
     lib26b1::disable_pickup(r.game, gobj);
     item::debug_owner_bubbles(r.game, gobj, Some(fighter));
-    item_mut(r.game, gobj).xDCC_flag.b3 = true;
+    item_mut(r.game, gobj).state_flags.b3 = true;
     Some(gobj)
 }
 
@@ -127,9 +123,9 @@ pub fn start(r: &mut Running, gobj: GObjId) {
     let speed = reg(attr_f32(r, gobj, attr::X_VEL));
     let scale = reg(r.game.ft_scale(o));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(fp::fmuls(speed, reg(ip.facing_dir)), scale));
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
+    ip.vel.x = mem(fp::fmuls(fp::fmuls(speed, reg(ip.facing_dir)), scale));
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
     let life = attr_f32(r, gobj, attr::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
     scale_hitboxes(r, gobj);
@@ -148,10 +144,10 @@ pub fn scale_hitboxes(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itMewtwodisable_UnkMotion0_Anim")]
 pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
+    if reg(ip.life_timer) <= 0.0 {
         return true;
     }
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
     false
 }
 
@@ -192,11 +188,7 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias("evt_unk"))]
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     if owner(r, gobj) == other {
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .mdisable()
-            .owner
-            .set(None);
+        item_mut(r.game, gobj).vars.mdisable().owner.set(None);
     }
     lib26b1::forget(r.game, gobj, other);
 }

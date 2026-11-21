@@ -83,121 +83,121 @@ pub trait Vars {
 
 impl Vars for itSamusChargeshot_ItemVars {
     fn angle(&mut self) -> f32 {
-        self.xDD8.get()
+        self.angle.get()
     }
     fn set_angle(&mut self, v: f32) {
-        self.xDD8.set(v);
+        self.angle.set(v);
     }
     fn speed(&mut self) -> f32 {
-        self.xDDC.get()
+        self.speed.get()
     }
     fn set_speed(&mut self, v: f32) {
-        self.xDDC.set(v);
+        self.speed.set(v);
     }
     fn set_xc(&mut self, v: f32) {
-        self.xDE0.set(v);
+        self.unread_e0.set(v);
     }
     fn size(&mut self) -> f32 {
-        self.xDE4.get()
+        self.size.get()
     }
     fn set_size(&mut self, v: f32) {
-        self.xDE4.set(v);
+        self.size.set(v);
     }
     fn fired(&mut self) -> i32 {
-        self.xDE8.get()
+        self.fired.get()
     }
     fn set_fired(&mut self, v: i32) {
-        self.xDE8.set(v);
+        self.fired.set(v);
     }
     fn charge(&mut self) -> i32 {
-        self.xDEC.get()
+        self.charge.get()
     }
     fn set_charge(&mut self, v: i32) {
-        self.xDEC.set(v);
+        self.charge.set(v);
     }
     fn levels(&mut self) -> i32 {
-        self.xDF0.get()
+        self.levels.get()
     }
     fn set_levels(&mut self, v: i32) {
-        self.xDF0.set(v);
+        self.levels.set(v);
     }
     fn sparkle(&mut self) -> i32 {
-        self.xDF4.get()
+        self.sparkle.get()
     }
     fn set_sparkle(&mut self, v: i32) {
-        self.xDF4.set(v);
+        self.sparkle.set(v);
     }
     fn set_damage(&mut self, v: u32) {
-        self.xDF8.set(v as i32);
+        self.unread_damage.set(v as i32);
     }
     fn set_effects(&mut self, v: i32) {
-        self.xDFC.set(v);
+        self.effects.set(v);
     }
     fn maker(&mut self) -> Option<GObjId> {
-        self.xE00.get()
+        self.maker.get()
     }
     fn set_maker(&mut self, v: Option<GObjId>) {
-        self.xE00.set(v);
+        self.maker.set(v);
     }
 }
 
 impl Vars for itMewtwoShadowball_ItemVars {
     fn angle(&mut self) -> f32 {
-        self.x4.x()
+        self.motion.x()
     }
     fn set_angle(&mut self, v: f32) {
-        self.x4.set_x(v);
+        self.motion.set_x(v);
     }
     fn speed(&mut self) -> f32 {
-        self.x4.y()
+        self.motion.y()
     }
     fn set_speed(&mut self, v: f32) {
-        self.x4.set_y(v);
+        self.motion.set_y(v);
     }
     fn set_xc(&mut self, v: f32) {
-        self.x4.set_z(v);
+        self.motion.set_z(v);
     }
     fn size(&mut self) -> f32 {
-        self.x10.get()
+        self.size.get()
     }
     fn set_size(&mut self, v: f32) {
-        self.x10.set(v);
+        self.size.set(v);
     }
     fn fired(&mut self) -> i32 {
-        self.x14.get()
+        self.fired.get()
     }
     fn set_fired(&mut self, v: i32) {
-        self.x14.set(v);
+        self.fired.set(v);
     }
     fn charge(&mut self) -> i32 {
-        self.x18.get()
+        self.charge.get()
     }
     fn set_charge(&mut self, v: i32) {
-        self.x18.set(v);
+        self.charge.set(v);
     }
     fn levels(&mut self) -> i32 {
-        self.x1C.get()
+        self.levels.get()
     }
     fn set_levels(&mut self, v: i32) {
-        self.x1C.set(v);
+        self.levels.set(v);
     }
     fn sparkle(&mut self) -> i32 {
-        self.x20.get()
+        self.sparkle.get()
     }
     fn set_sparkle(&mut self, v: i32) {
-        self.x20.set(v);
+        self.sparkle.set(v);
     }
     fn set_damage(&mut self, v: u32) {
-        self.x24.set(v);
+        self.unread_damage.set(v);
     }
     fn set_effects(&mut self, v: i32) {
-        self.x28.set(v);
+        self.unread_effects.set(v);
     }
     fn maker(&mut self) -> Option<GObjId> {
-        self.x2C.get()
+        self.maker.get()
     }
     fn set_maker(&mut self, v: Option<GObjId>) {
-        self.x2C.set(v);
+        self.maker.set(v);
     }
 }
 
@@ -244,7 +244,7 @@ pub struct ChargedShot {
 
 /// The shot's shared variables.
 pub fn vars<'r>(r: &'r mut Running, gobj: GObjId, s: &ChargedShot) -> &'r mut dyn Vars {
-    (s.vars)(&mut item_mut(r.game, gobj).xDD4_itemVar)
+    (s.vars)(&mut item_mut(r.game, gobj).vars)
 }
 
 pub fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
@@ -283,16 +283,16 @@ pub fn lerp_int(r: &Running, gobj: GObjId, lo: u32, hi: u32, charge: i32, max: i
 pub fn hit_stage(r: &mut Running, gobj: GObjId) -> bool {
     ground::air(r, gobj);
     let ip = item(r.game, gobj);
-    let env = ip.x378_itemColl.env_flags;
+    let env = ip.coll.env_flags;
     let mut hit = false;
-    if ip.x40_vel.y > 0.0 {
+    if ip.vel.y > 0.0 {
         if env & (CEILING_PUSH | CEILING_HUG) != 0 {
             hit = true;
         }
     } else if env & (FLOOR_PUSH | FLOOR_HUG) != 0 {
         hit = true;
     }
-    if ip.x40_vel.x > 0.0 {
+    if ip.vel.x > 0.0 {
         if env & LEFT_WALL_MASK != 0 {
             hit = true;
         }
@@ -325,10 +325,10 @@ pub fn make(r: &mut Running, parent: GObjId, pos: Vec3, kind: i32, facing: f32) 
 /// `Item_ClearCmdVars`.
 pub fn clear_cmd_vars(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
 }
 
 /// Makes the ball in `parent`'s hand at `pos`, `it_802B55C8` and `it_802C5000`: its lifetime,
@@ -393,7 +393,7 @@ pub fn fire(
     fired(r, gobj, s);
     // `HSD_MtxGetRotation` of the held part's matrix: its result goes unused.
     super::super::release::let_go(r, gobj, Vec3::new(0.0, 0.0, 0.0));
-    item_mut(r.game, gobj).xDC8_word.flags.x14 = false;
+    item_mut(r.game, gobj).flags.flags.thrown = false;
     lib26b1::disable_pickup(r.game, gobj);
     let lerp = |r: &Running, lo, hi| {
         let (lo, hi) = (reg(attr_f32(r, gobj, lo)), reg(attr_f32(r, gobj, hi)));
@@ -422,7 +422,7 @@ pub fn fire(
     ip.facing_dir = facing;
     ip.pos = pos;
     vars(r, gobj, s).set_effects(0);
-    let wobble = s.wobbles.then(|| shadow_ball(r, gobj).x50.get());
+    let wobble = s.wobbles.then(|| shadow_ball(r, gobj).wobble_scale.get());
     let v = vars(r, gobj, s);
     let (speed, angle) = (reg(v.speed()), v.angle());
     let speed = match wobble {
@@ -432,12 +432,12 @@ pub fn fire(
     let c = reg(math::cos(angle));
     let sn = reg(math::sin(angle));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(speed, c));
-    ip.x40_vel.y = mem(fp::fmuls(speed, sn));
-    ip.x40_vel.z = 0.0;
+    ip.vel.x = mem(fp::fmuls(speed, c));
+    ip.vel.y = mem(fp::fmuls(speed, sn));
+    ip.vel.z = 0.0;
     vars(r, gobj, s).set_fired(1);
     if s.wobbles {
-        shadow_ball(r, gobj).x4C.set(0);
+        shadow_ball(r, gobj).flight_frames.set(0);
         let root = jobj_of(r.game, gobj).expect("the Shadow Ball without a model");
         let child = r.game.objs.jobjs[root].child;
         let child = child.expect("HSD_JObjSetScale on a null joint");
@@ -447,7 +447,7 @@ pub fn fire(
 
 /// The Shadow Ball's own variables.
 fn shadow_ball<'r>(r: &'r mut Running, gobj: GObjId) -> &'r mut itMewtwoShadowball_ItemVars {
-    item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball()
+    item_mut(r.game, gobj).vars.mewtwo_shadowball()
 }
 
 /// The shot's end, `it_2725_Logic108_Destroyed` and `it_2725_Logic101_Destroyed`: its effects
@@ -469,7 +469,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId, s: &ChargedShot) {
     }
     let ip = item_mut(r.game, gobj);
     ip.owner = None;
-    ip.xDC8_word.flags.x13 = false;
+    ip.flags.flags.held = false;
 }
 
 /// The ball taken away from the hand, `it_802B5974` and `it_802C573C`: its effects gone, and
@@ -519,13 +519,13 @@ pub fn animate_held(r: &mut Running, gobj: GObjId, s: &ChargedShot) -> bool {
     jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(sc, sc, sc));
     if s.wobbles {
         let v = shadow_ball(r, gobj);
-        if v.x58.x() == 0.0 && v.x58.y() == 0.0 && v.x58.z() == 0.0 {
+        if v.held_offset.x() == 0.0 && v.held_offset.y() == 0.0 && v.held_offset.z() == 0.0 {
             let t = r.game.objs.jobjs[j].translate;
-            shadow_ball(r, gobj).x58.set(t);
+            shadow_ball(r, gobj).held_offset.set(t);
         }
         let v = shadow_ball(r, gobj);
-        let k = reg(v.x54.get());
-        let o = v.x58.get();
+        let k = reg(v.held_scale.get());
+        let o = v.held_offset.get();
         let t = Vec3::new(
             mem(fp::fmuls(fp::fneg(reg(o.x)), k)),
             mem(fp::fmuls(fp::fneg(reg(o.y)), k)),
@@ -551,10 +551,10 @@ pub fn fired(r: &mut Running, gobj: GObjId, s: &ChargedShot) {
     if s.wobbles {
         let v = shadow_ball(r, gobj);
         let part = fp::fdivs(
-            fp::frsp(f64::from(v.x18.get())),
-            fp::frsp(f64::from(v.x1C.get())),
+            fp::frsp(f64::from(v.charge.get())),
+            fp::frsp(f64::from(v.levels.get())),
         );
-        v.x50.set(mem(fp::fmadds(0.5, part, 0.5)));
+        v.wobble_scale.set(mem(fp::fmadds(0.5, part, 0.5)));
     }
 }
 
@@ -599,11 +599,11 @@ pub fn fly(r: &mut Running, gobj: GObjId, s: &ChargedShot) {
     let v = vars(r, gobj, s);
     let (speed, angle) = (reg(v.speed()), v.angle());
     let c = reg(math::cos(angle));
-    item_mut(r.game, gobj).x40_vel.x = mem(fp::fmuls(speed, c));
+    item_mut(r.game, gobj).vel.x = mem(fp::fmuls(speed, c));
     let v = vars(r, gobj, s);
     let (speed, angle) = (reg(v.speed()), v.angle());
     let sn = reg(math::sin(angle));
-    item_mut(r.game, gobj).x40_vel.y = mem(fp::fmuls(speed, sn));
+    item_mut(r.game, gobj).vel.y = mem(fp::fmuls(speed, sn));
 }
 
 /// A fired shot's sparkles (its accessory), `it_802B5EDC` and `fn_802C5E18`: when full, its
@@ -672,13 +672,13 @@ pub fn reflected(r: &mut Running, gobj: GObjId, s: &ChargedShot) -> bool {
 #[doc(alias = "it_2725_Logic101_ShieldBounced")]
 pub fn shield_bounced(r: &mut Running, gobj: GObjId, s: &ChargedShot) -> bool {
     let ip = item_mut(r.game, gobj);
-    let normal = ip.xC58;
-    ip.x40_vel.mirror_xy(normal);
-    let a = math::atan2(ip.x40_vel.y, ip.x40_vel.x);
+    let normal = ip.shield_normal;
+    ip.vel.mirror_xy(normal);
+    let a = math::atan2(ip.vel.y, ip.vel.x);
     vars(r, gobj, s).set_angle(wrap(a));
     if s.turns {
         let ip = item_mut(r.game, gobj);
-        ip.facing_dir = if ip.x40_vel.x >= 0.0 { 1.0 } else { -1.0 };
+        ip.facing_dir = if ip.vel.x >= 0.0 { 1.0 } else { -1.0 };
         face(r, gobj);
     }
     false

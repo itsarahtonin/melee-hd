@@ -82,8 +82,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
         .expect("a Lip's Stick without attributes");
     let charges = r.data.u32(a) as i32;
     let ip = item_mut(r.game, gobj);
-    ip.xD4C = charges;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.ammo = charges;
+    ip.cmd_var0 = 0;
     fell(r, gobj);
 }
 
@@ -106,8 +106,8 @@ pub fn spore_offset(r: &Running, gobj: GObjId) -> Vec3 {
 #[doc(alias = "it_80295770")]
 pub fn puff(r: &mut Running, gobj: GObjId, pos: Vec3, facing: f32, kind: i32) {
     let ip = item_mut(r.game, gobj);
-    if ip.xD4C > 0 {
-        ip.xD4C -= 1;
+    if ip.ammo > 0 {
+        ip.ammo -= 1;
     }
     let owner = ip.owner.expect("a Lip's Stick swung with no owner");
     lipstickspore::swing(r, owner, pos, facing, kind);
@@ -170,7 +170,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 /// `itLipstick_UnkMotion2_Anim`: held, it will spread spores if thrown.
 #[doc(alias = "itLipstick_UnkMotion2_Anim")]
 pub fn held(r: &mut Running, gobj: GObjId) -> bool {
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = 1;
+    item_mut(r.game, gobj).cmd_var0 = 1;
     false
 }
 
@@ -184,7 +184,7 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
 /// through, gone once it's past the stage.
 #[doc(alias = "itLipstick_UnkMotion4_Coll")]
 pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xD4C != 0 {
+    if item(r.game, gobj).ammo != 0 {
         fall(r, gobj, landed);
         return false;
     }
@@ -202,17 +202,17 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
 /// through.
 #[doc(alias = "itLipstick_UnkMotion3_Coll")]
 pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xD4C == 0 {
+    if item(r.game, gobj).ammo == 0 {
         return air(r, gobj);
     }
     let t = air_touches(r, gobj);
     if t & 0xF != 0 {
-        if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
+        if item(r.game, gobj).cmd_var0 != 0 {
             let ip = item(r.game, gobj);
             let owner = ip.owner.expect("a Lip's Stick thrown with no owner");
             let (pos, facing) = (ip.pos, ip.facing_dir);
             lipstickspore::burst(r, owner, pos, facing, 0);
-            item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+            item_mut(r.game, gobj).cmd_var0 = 0;
         }
         maplib::bounce(r, gobj, t);
         if t & 1 != 0 && try_land(r, gobj) {

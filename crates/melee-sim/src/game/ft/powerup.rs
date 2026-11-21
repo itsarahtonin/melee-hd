@@ -19,7 +19,7 @@ impl Running<'_> {
     /// invincible and a mushroom queues a growth or a shrink (each turning the box off and
     /// telling the item it hit), and the item counts for its player.
     pub(super) fn take_touch_item(&mut self, g: GObjId, j: usize, me: FighterId) {
-        let h = &it::item(self.game, g).x5D4_hitboxes[j].hit;
+        let h = &it::item(self.game, g).hitboxes[j].hit;
         let mode = if h.x41_b5 { 5 } else { 0 };
         self.item_add_victim(g, j, mode, victim(me), false);
         if self.game.fighters[me.0].stamina_dead {
@@ -28,8 +28,8 @@ impl Running<'_> {
         match ItKind::of(it::item(self.game, g).kind) {
             ItKind::Starman => {
                 let ip = it::item_mut(self.game, g);
-                ip.x5D4_hitboxes[j].hit.state = hitcapsule::DISABLED;
-                ip.xC34_damageDealt = 1;
+                ip.hitboxes[j].hit.state = hitcapsule::DISABLED;
+                ip.damage_dealt = 1;
                 let frames = it::lib2725::special_word(self.game, self.data, g);
                 self.start_star(me, frames);
                 self.fighter_play_sfx(me, 0xF9, 0x7F, 0x40);
@@ -37,15 +37,15 @@ impl Running<'_> {
             }
             ItKind::SuperMushroom => {
                 let ip = it::item_mut(self.game, g);
-                ip.x5D4_hitboxes[j].hit.state = hitcapsule::DISABLED;
+                ip.hitboxes[j].hit.state = hitcapsule::DISABLED;
                 self.game.fighters[me.0].queued_grows += 1;
-                it::item_mut(self.game, g).xC34_damageDealt = 1;
+                it::item_mut(self.game, g).damage_dealt = 1;
             }
             ItKind::PoisonMushroom => {
                 let ip = it::item_mut(self.game, g);
-                ip.x5D4_hitboxes[j].hit.state = hitcapsule::DISABLED;
+                ip.hitboxes[j].hit.state = hitcapsule::DISABLED;
                 self.game.fighters[me.0].queued_shrinks += 1;
-                it::item_mut(self.game, g).xC34_damageDealt = 1;
+                it::item_mut(self.game, g).damage_dealt = 1;
             }
             _ => {}
         }

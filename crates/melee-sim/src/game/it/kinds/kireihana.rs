@@ -84,7 +84,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var0 = 0;
     let dances = attr_i32(r, gobj, 4);
     pokemon::vars(r.game, gobj).set_i32(DANCES, dances);
     enter_air(r, gobj);
@@ -250,7 +250,7 @@ fn fall(r: &mut Running, gobj: GObjId) {
         s = max;
         v.set_f32(FALL_SPEED, s);
     }
-    item_mut(r.game, gobj).x40_vel.y = mem(fp::fneg(reg(s)));
+    item_mut(r.game, gobj).vel.y = mem(fp::fneg(reg(s)));
 }
 
 /// `itKireihana_UnkMotion2_Phys`: petals without sounds, the bone's motion and its fall.

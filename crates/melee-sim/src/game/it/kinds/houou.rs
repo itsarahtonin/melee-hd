@@ -123,9 +123,9 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
     v.set_f32(CLIMB, climb);
     let home_y = v.f32(HOME + 4);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), reg(climb)));
+    ip.vel.y = mem(fp::fadds(reg(ip.vel.y), reg(climb)));
     if reg(ip.pos.y) < fp::fsubs(reg(home_y), 10.0) {
-        ip.x40_vel.y = 0.0;
+        ip.vel.y = 0.0;
     }
 }
 
@@ -135,22 +135,22 @@ pub fn call_fire(r: &mut Running, gobj: GObjId) {
     lg::enter(r, gobj, 5);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(FIRE_ACCESSORY));
-    ip.xDCC_flag.b3 = true;
+    ip.state_flags.b3 = true;
 }
 
 /// Its `on_accessory`, `it_802D2B4C`: on its script's first word an effect on each of its
 /// bones 16 and 17, on its second the Sacred Fire.
 #[doc(alias = "it_802D2B4C")]
 pub fn call_fire_when_told(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
-        item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    if item(r.game, gobj).cmd_var0 != 0 {
+        item_mut(r.game, gobj).cmd_var0 = 0;
         let b16 = pokemon::table_bone(r.game, gobj, 16);
         pokemon::effect_scaled(r, 0x46F, gobj, b16, 1.3);
         let b17 = pokemon::table_bone(r.game, gobj, 17);
         pokemon::effect_scaled(r, 0x46F, gobj, b17, 1.3);
     }
-    if item(r.game, gobj).xDB0_itcmd_var1 != 0 {
-        item_mut(r.game, gobj).xDB0_itcmd_var1 = 0;
+    if item(r.game, gobj).cmd_var1 != 0 {
+        item_mut(r.game, gobj).cmd_var1 = 0;
         sacred_fire(r, gobj);
     }
 }

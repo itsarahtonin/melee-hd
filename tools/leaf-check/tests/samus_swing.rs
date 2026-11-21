@@ -81,9 +81,9 @@ fn run_frame(
     let gobj = gobj_arg(maps, call);
     let x16 = |r: &mut melee_sim::game::state::Running| {
         melee_sim::game::it::item_mut(r.game, gobj)
-            .xDD4_itemVar
+            .vars
             .samus_grapple()
-            .x16
+            .hanging
             .get()
     };
     let before = x16(r);

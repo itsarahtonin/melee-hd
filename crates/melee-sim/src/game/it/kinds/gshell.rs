@@ -119,19 +119,19 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// The shell's variables.
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itGShell_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.gshell()
+    item_mut(game, gobj).vars.gshell()
 }
 
 /// The fields the red shell has too.
 fn shared(v: &mut ItemVars) -> shell::Vars<'_> {
     let g = v.gshell();
     shell::Vars {
-        life: &mut g.xDD4,
-        hit_delay: &mut g.xDD8,
-        trail: &mut g.xDDC,
-        landings: &mut g.xDE8,
-        bounced: &mut g.xDEC_b0,
-        popped: Some(&mut g.xDEC_b3),
+        life: &mut g.life,
+        hit_delay: &mut g.hit_delay,
+        trail: &mut g.trail,
+        landings: &mut g.landings,
+        bounced: &mut g.bounced,
+        popped: Some(&mut g.popped),
     }
 }
 
@@ -140,14 +140,14 @@ fn shared(v: &mut ItemVars) -> shell::Vars<'_> {
 pub fn count_owner_grace(r: &mut Running, gobj: GObjId) {
     let x28 = attr(r, gobj, 0x28);
     let v = vars(r.game, gobj);
-    if !v.xDEC_b1.get() {
+    if !v.grace_counting.get() {
         return;
     }
-    v.xDE0.update(|old| mem(fp::fsubs(reg(old), 1.0)));
-    if reg(v.xDE0.get()) <= 0.0 {
-        v.xDEC_b1.set(false);
-        v.xDE0.set(x28);
-        let blinking = v.xDEC_b2.get();
+    v.owner_grace.update(|old| mem(fp::fsubs(reg(old), 1.0)));
+    if reg(v.owner_grace.get()) <= 0.0 {
+        v.grace_counting.set(false);
+        v.owner_grace.set(x28);
+        let blinking = v.blinking.get();
         hitbox::set_hit_flag0(r.game, gobj, 0, true);
         if blinking {
             hitbox::end_blink(r.game, gobj);
@@ -160,10 +160,10 @@ pub fn count_owner_grace(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8028BA2C")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
     let x8 = attr(r, gobj, 8);
-    let b = item(r.game, gobj).xC0C.clone();
+    let b = item(r.game, gobj).kind_coll_box.clone();
     maplib::set_box(r.game, gobj, b);
-    if reg(item(r.game, gobj).x40_vel.x).abs() < reg(x8) {
-        item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    if reg(item(r.game, gobj).vel.x).abs() < reg(x8) {
+        item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
         if !maplib::slides(r.game, r.data, gobj) {
             stopped(r, gobj);
         } else {
@@ -179,16 +179,16 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
 pub fn knocked(r: &mut Running, gobj: GObjId) {
     let x14 = attr(r, gobj, 0x14);
     let ip = item_mut(r.game, gobj);
-    let push = fp::fmuls(to_f32(ip.xCA0), reg(x14));
-    let away = -reg(ip.xCCC_incDamageDirection);
+    let push = fp::fmuls(to_f32(ip.hit_damage), reg(x14));
+    let away = -reg(ip.damage_dir);
     match ip.msid {
         0 | 1 | 3 | 4 | 9 => {
-            ip.x40_vel.x = mem(fp::fmuls(away, push));
-            vars(r.game, gobj).xDEC_b2.set(true);
+            ip.vel.x = mem(fp::fmuls(away, push));
+            vars(r.game, gobj).blinking.set(true);
         }
         5..=8 => {
-            ip.x40_vel.x = mem(fp::fmadds(away, push, reg(ip.x40_vel.x)));
-            vars(r.game, gobj).xDEC_b2.set(true);
+            ip.vel.x = mem(fp::fmadds(away, push, reg(ip.vel.x)));
+            vars(r.game, gobj).blinking.set(true);
         }
         _ => {}
     }
@@ -199,7 +199,7 @@ pub fn knocked(r: &mut Running, gobj: GObjId) {
     } else {
         slide(r, gobj);
     }
-    vars(r.game, gobj).xDEC_b1.set(true);
+    vars(r.game, gobj).grace_counting.set(true);
     hitbox::set_hit_flag0(r.game, gobj, 0, false);
 }
 
@@ -211,15 +211,15 @@ fn pop_up(r: &mut Running, gobj: GObjId) {
     hitbox::set_hit_ids(r.game, gobj);
     let f = r.game.objs.rng.draw_f32();
     let ip = item_mut(r.game, gobj);
-    let vx = fp::fmuls(-reg(ip.x40_vel.x), reg(xc));
-    ip.x40_vel.x = mem(fp::fmuls(vx, reg(f)));
-    ip.x40_vel.y = x10;
+    let vx = fp::fmuls(-reg(ip.vel.x), reg(xc));
+    ip.vel.x = mem(fp::fmuls(vx, reg(f)));
+    ip.vel.y = x10;
     shell::draw_landings(r, gobj, &GREEN);
     maplib::enter_air(item_mut(r.game, gobj));
     fell(r, gobj);
     let v = vars(r.game, gobj);
-    v.xDEC_b3.set(true);
-    v.xDE4.set(x2c);
+    v.popped.set(true);
+    v.pop_timer.set(x2c);
 }
 
 /// Jumped on: a sliding shell pops up, a still one is kicked away from the jumper,
@@ -229,14 +229,14 @@ pub fn stomped(r: &mut Running, gobj: GObjId) {
     match item(r.game, gobj).msid {
         5..=8 => {
             pop_up(r, gobj);
-            vars(r.game, gobj).xDEC_b2.set(true);
+            vars(r.game, gobj).blinking.set(true);
         }
         0 | 1 | 3 | 4 | 9 => {
             let x1c = attr(r, gobj, 0x1C);
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.x = mem(fp::fmuls(reg(x1c), -reg(ip.xCD0)));
+            ip.vel.x = mem(fp::fmuls(reg(x1c), -reg(ip.stomp_dir)));
             coll::take_stomper(r.game, gobj);
-            vars(r.game, gobj).xDEC_b2.set(true);
+            vars(r.game, gobj).blinking.set(true);
             if item(r.game, gobj).ground_or_air == 1 {
                 slide_air(r, gobj);
             } else {
@@ -246,7 +246,7 @@ pub fn stomped(r: &mut Running, gobj: GObjId) {
         _ => {}
     }
     hitbox::start_blink(r.game, gobj);
-    vars(r.game, gobj).xDEC_b1.set(true);
+    vars(r.game, gobj).grace_counting.set(true);
     hitbox::set_hit_flag0(r.game, gobj, 0, false);
 }
 
@@ -256,13 +256,13 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let (x28, x2c) = (attr(r, gobj, 0x28), attr(r, gobj, 0x2C));
     shell::start_life(r, gobj, &GREEN);
     let v = vars(r.game, gobj);
-    v.xDE8.set(1);
-    v.xDEC_b0.set(false);
-    v.xDEC_b1.set(false);
-    v.xDE0.set(x28);
-    v.xDEC_b3.set(false);
-    v.xDE4.set(x2c);
-    v.xDEC_b2.set(true);
+    v.landings.set(1);
+    v.bounced.set(false);
+    v.grace_counting.set(false);
+    v.owner_grace.set(x28);
+    v.popped.set(false);
+    v.pop_timer.set(x2c);
+    v.blinking.set(true);
     fell(r, gobj);
 }
 
@@ -273,9 +273,9 @@ pub fn stopped(r: &mut Running, gobj: GObjId) {
     hitbox::set_hit_ids(r.game, gobj);
     hitbox::set_hit_ids2(r.game, gobj);
     hitbox::end_blink(r.game, gobj);
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
-    vars(r.game, gobj).xDEC_b3.set(false);
+    vars(r.game, gobj).popped.set(false);
     lib2725::make_stompable(r.game, gobj);
     item_mut(r.game, gobj).jumped_on = Some(CodeRef(JUMPED_ON));
 }
@@ -290,14 +290,14 @@ pub fn fell(r: &mut Running, gobj: GObjId) {
 /// `itGshell_UnkMotion1_Anim`: a popped-up shell turns stompable again after `xDE4` frames.
 #[doc(alias = "itGshell_UnkMotion1_Anim")]
 pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
-    let stompable = super::super::flag(item(r.game, gobj).xDD0_flag, 0);
+    let stompable = super::super::flag(item(r.game, gobj).status_flags, 0);
     let v = vars(r.game, gobj);
-    if v.xDEC_b3.get() && !stompable {
-        if reg(v.xDE4.get()) <= 0.0 {
+    if v.popped.get() && !stompable {
+        if reg(v.pop_timer.get()) <= 0.0 {
             lib2725::make_stompable(r.game, gobj);
             item_mut(r.game, gobj).jumped_on = Some(CodeRef(JUMPED_ON));
         } else {
-            v.xDE4.update(|old| mem(fp::fsubs(reg(old), 1.0)));
+            v.pop_timer.update(|old| mem(fp::fsubs(reg(old), 1.0)));
         }
     }
     false
@@ -325,18 +325,18 @@ fn start_slide(r: &mut Running, gobj: GObjId, fast: i32, slow: i32, ground: bool
     hitbox::let_own_items_hit(r.game, gobj);
     let life = common_data(r.game).u32(r.data, super::super::data::common::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, mem(fp::frsp(f64::from(life))));
-    item_mut(r.game, gobj).xD5C = 0;
+    item_mut(r.game, gobj).skid = 0;
     let v = vars(r.game, gobj);
-    v.xDD8.set(x24);
-    v.xDDC.set(x30);
-    v.xDEC_b3.set(false);
+    v.hit_delay.set(x24);
+    v.trail.set(x30);
+    v.popped.set(false);
     let ip = item_mut(r.game, gobj);
-    if reg(ip.x40_vel.x).abs() > reg(x4) {
-        let dir = if reg(ip.x40_vel.x) < 0.0 { -1.0 } else { 1.0 };
-        ip.x40_vel.x = mem(fp::fmuls(dir, reg(x4)));
+    if reg(ip.vel.x).abs() > reg(x4) {
+        let dir = if reg(ip.vel.x) < 0.0 { -1.0 } else { 1.0 };
+        ip.vel.x = mem(fp::fmuls(dir, reg(x4)));
     }
     lib2725::face_motion(r.game, gobj);
-    if reg(item(r.game, gobj).x40_vel.x).abs() < reg(x8) {
+    if reg(item(r.game, gobj).vel.x).abs() < reg(x8) {
         change_state(r, gobj, slow, change::ANIM_UPDATE);
         lib26b1::enable_pickup(r.game, gobj);
         if ground {
@@ -365,10 +365,10 @@ pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
         shell::trail(r, gobj, &GREEN);
     }
     let v = vars(r.game, gobj);
-    if reg(v.xDD4.get()) <= 0.0 {
+    if reg(v.life.get()) <= 0.0 {
         return true;
     }
-    v.xDD4.update(|old| mem(fp::fsubs(reg(old), 1.0)));
+    v.life.update(|old| mem(fp::fsubs(reg(old), 1.0)));
     false
 }
 
@@ -377,7 +377,7 @@ pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
 pub fn phys6(r: &mut Running, gobj: GObjId) {
     let x8 = attr(r, gobj, 8);
     let ip = item(r.game, gobj);
-    if reg(ip.x40_vel.x).abs() < reg(x8) && !ip.xDC8_word.flags.x15 {
+    if reg(ip.vel.x).abs() < reg(x8) && !ip.flags.flags.pickup {
         lib26b1::enable_pickup(r.game, gobj);
         lib2725::clear_hitboxes(r.game, r.data, gobj);
         hitbox::set_hit_ids2(r.game, gobj);

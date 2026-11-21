@@ -109,10 +109,10 @@ pub fn lay(
     spawn.x40 = 0;
     let gobj = super::super::item::spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
-    set_flag(&mut ip.xDD0_flag, 6, false);
-    ip.xD40 = 0.0;
+    set_flag(&mut ip.status_flags, 6, false);
+    ip.invincible_frames = 0.0;
     super::super::anim::clear_overlay(ip);
-    if !super::super::flag(ip.xDD0_flag, 7) {
+    if !super::super::flag(ip.status_flags, 7) {
         hitbox::end_blink(r.game, gobj);
     }
     Some(gobj)
@@ -121,7 +121,7 @@ pub fn lay(
 /// `itEgg_Logic3_Spawned`: whole, falling.
 #[doc(alias = "itEgg_Logic3_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).xDD4_itemVar.egg().x0.set(0);
+    item_mut(r.game, gobj).vars.egg().broken.set(0);
     fell(r, gobj);
 }
 
@@ -238,11 +238,11 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = 0.0;
-    set_flag(&mut ip.xDCF_flag, 2, true);
-    let v = ip.xDD4_itemVar.egg();
-    v.x0.set(1);
+    ip.vel.x = 0.0;
+    ip.vel.y = 0.0;
+    set_flag(&mut ip.draw_flags, 2, true);
+    let v = ip.vars.egg();
+    v.broken.set(1);
     v.rand_max.set(20);
     change_state(r, gobj, 5, change::ANIM_UPDATE);
 }
@@ -260,11 +260,11 @@ pub fn vanish(r: &mut Running, gobj: GObjId) {
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     hitbox::start_blink(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = 0.0;
-    set_flag(&mut ip.xDCF_flag, 2, true);
-    let v = ip.xDD4_itemVar.egg();
-    v.x0.set(1);
+    ip.vel.x = 0.0;
+    ip.vel.y = 0.0;
+    set_flag(&mut ip.draw_flags, 2, true);
+    let v = ip.vars.egg();
+    v.broken.set(1);
     v.rand_max.set(40);
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 6, change::ANIM_UPDATE);
@@ -273,7 +273,7 @@ pub fn vanish(r: &mut Running, gobj: GObjId) {
 /// `itEgg_UnkMotion6_Anim`: broken open, counting down to gone.
 #[doc(alias = "itEgg_UnkMotion6_Anim")]
 pub fn vanishing(r: &mut Running, gobj: GObjId) -> bool {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.egg();
+    let v = item_mut(r.game, gobj).vars.egg();
     let left = v.rand_max.get().wrapping_sub(1);
     v.rand_max.set(left);
     left <= 0
@@ -287,7 +287,7 @@ pub fn vanishing(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itEgg_Logic3_Reflected")]
 #[doc(alias = "itEgg_Logic3_DmgReceived")]
 pub fn broken(r: &mut Running, gobj: GObjId) -> bool {
-    if item_mut(r.game, gobj).xDD4_itemVar.egg().x0.get() != 0 {
+    if item_mut(r.game, gobj).vars.egg().broken.get() != 0 {
         return false;
     }
     if break_open(r, gobj) {

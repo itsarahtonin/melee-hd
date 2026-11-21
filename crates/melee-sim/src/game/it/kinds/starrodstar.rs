@@ -79,11 +79,7 @@ pub fn fire(r: &mut Running, owner: GObjId, pos: Vec3, big: i32, facing: f32) {
     let Some(gobj) = spawn_air(r, &mut spawn) else {
         return;
     };
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .star_rod_star()
-        .x0
-        .set(big);
+    item_mut(r.game, gobj).vars.star_rod_star().big.set(big);
     launch(r, gobj);
     debug_owner_bubbles(r.game, gobj, Some(owner));
 }
@@ -95,7 +91,7 @@ pub fn launch(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
     lib2725::stop_spin(r.game, r.data, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
-    let big = item_mut(r.game, gobj).xDD4_itemVar.star_rod_star().x0.get() != 0;
+    let big = item_mut(r.game, gobj).vars.star_rod_star().big.get() != 0;
     let speed = reg(r.data.f32(attr(r, gobj, 0)));
     let (life, mul, damage) = if big {
         (attr(r, gobj, 0x10), attr(r, gobj, 8), attr(r, gobj, 0x18))
@@ -105,27 +101,27 @@ pub fn launch(r: &mut Running, gobj: GObjId) {
     let (life, mul, damage) = (r.data.f32(life), r.data.f32(mul), r.data.u32(damage));
     lib2725::set_lifetime(r.game, r.data, gobj, life);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), fp::fmuls(speed, reg(mul))));
+    ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), fp::fmuls(speed, reg(mul))));
     coll::set_hit_damage(r.game, r.data, gobj, 0, damage);
     let spin = reg(r.data.f32(attr(r, gobj, 0x1C)));
     let ip = item_mut(r.game, gobj);
     let facing = reg(ip.facing_dir);
-    ip.xDD4_itemVar
+    ip.vars
         .star_rod_star()
-        .x4
+        .spin
         .set(mem(fp::fmuls(spin, facing)));
-    super::super::set_flag(&mut ip.xDCE_flag, 7, false);
+    super::super::set_flag(&mut ip.hurt_flags, 7, false);
 }
 
 /// `itStarrodstar_UnkMotion0_Anim`: gone once its life runs out, else it spins.
 #[doc(alias = "itStarrodstar_UnkMotion0_Anim")]
 pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    if reg(ip.life_timer) <= 0.0 {
         return true;
     }
-    let spin = ip.xDD4_itemVar.star_rod_star().x4.get();
+    let spin = ip.vars.star_rod_star().spin.get();
     let j = jobj_of(r.game, gobj).expect("a star without a model");
     // `HSD_JObjAddRotationZ`.
     let z = r.game.objs.jobjs[j].rotate.z;
@@ -155,7 +151,7 @@ pub fn gone(_: &mut Running, _: GObjId) -> bool {
 
 /// Points the model the way the star now flies.
 fn face_velocity(r: &mut Running, gobj: GObjId) {
-    let v = item(r.game, gobj).x40_vel;
+    let v = item(r.game, gobj).vel;
     let j = jobj_of(r.game, gobj).expect("a star without a model");
     jobj::set_rotation_z(&mut r.game.objs.jobjs, j, math::atan2(v.y, v.x));
 }

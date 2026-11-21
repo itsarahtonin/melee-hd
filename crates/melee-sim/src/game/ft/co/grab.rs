@@ -90,9 +90,9 @@ impl Running<'_> {
                     .expect("the hookshot");
                 tether::to_retract_caught(self, hs, &linkhookshot::HOOKSHOT);
                 super::super::super::it::item_mut(self.game, hs)
-                    .xDD4_itemVar
+                    .vars
                     .link_hookshot()
-                    .xC
+                    .tip_model
                     .get()
             }
             // The beam winds in fast, and she holds at its tip.
@@ -105,9 +105,9 @@ impl Running<'_> {
                     .expect("the grapple beam");
                 tether::to_retract_caught(self, beam, &samusgrapple::GRAPPLE);
                 super::super::super::it::item_mut(self.game, beam)
-                    .xDD4_itemVar
+                    .vars
                     .samus_grapple()
-                    .xC
+                    .tip_model
                     .get()
             }
             _ => self.hold_bone_joint(gobj),
@@ -131,9 +131,9 @@ impl Running<'_> {
                 None => true,
                 Some(hs) => {
                     super::super::super::it::item_mut(self.game, hs)
-                        .xDD4_itemVar
+                        .vars
                         .link_hookshot()
-                        .x14
+                        .done
                         .get()
                         != 0
                 }
@@ -149,9 +149,9 @@ impl Running<'_> {
                 None => true,
                 Some(beam) => {
                     super::super::super::it::item_mut(self.game, beam)
-                        .xDD4_itemVar
+                        .vars
                         .samus_grapple()
-                        .x14
+                        .done
                         .get()
                         != 0
                 }

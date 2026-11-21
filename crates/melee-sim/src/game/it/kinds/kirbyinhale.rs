@@ -91,9 +91,9 @@ pub fn catch(r: &mut Running, gobj: GObjId, owner: GObjId, facing_dir: f32) {
     ip.grab_victim = Some(owner);
     zako::set_source_player(r.game, gobj, owner);
     let ip = item_mut(r.game, gobj);
-    super::super::set_flag(&mut ip.xDD0_flag, 1, false);
+    super::super::set_flag(&mut ip.status_flags, 1, false);
     ip.facing_dir = facing_dir;
-    ip.xBC_itemStateContainer = Some(ItemStatesRef(STATES));
+    ip.state_table = Some(ItemStatesRef(STATES));
     change_state(r, gobj, 0, 0);
     maplib::enter_air(item_mut(r.game, gobj));
     // `it_802F23EC_inline`.

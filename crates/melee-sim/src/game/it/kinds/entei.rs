@@ -117,9 +117,9 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 pub fn spawned_of(r: &mut Running, gobj: GObjId) {
     pokemon::face_nearest_opponent(r, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDB4_itcmd_var2 = 0;
+    ip.cmd_var0 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var2 = 0;
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
     enter_air(r, gobj);
@@ -176,16 +176,16 @@ pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
 /// roaring; gone when its animation ends; while its effects run, one of three roars every so
 /// many frames.
 pub fn anim0_of(b: &Beast, r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xDB0_itcmd_var1 != 0 {
+    if item(r.game, gobj).cmd_var1 != 0 {
         let ip = item_mut(r.game, gobj);
-        ip.xDB0_itcmd_var1 = 0;
-        ip.xDB4_itcmd_var2 = 0;
+        ip.cmd_var1 = 0;
+        ip.cmd_var2 = 0;
         ef::destroy_all(r, gobj);
     }
     if !lib2725::is_animating(r.game, gobj) {
         return true;
     }
-    if item(r.game, gobj).xDB4_itcmd_var2 != 0 {
+    if item(r.game, gobj).cmd_var2 != 0 {
         let v = pokemon::vars(r.game, gobj);
         let left = v.i32(ROAR_FRAMES).wrapping_sub(1);
         v.set_i32(ROAR_FRAMES, left);
@@ -241,13 +241,13 @@ pub fn fire_when_told(r: &mut Running, gobj: GObjId) {
 /// A beast's `on_accessory`: when its script says, its effect on its model and its sound, and
 /// it starts roaring.
 pub fn fire_when_told_of(b: &Beast, r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDAC_itcmd_var0 == 0 {
+    if item(r.game, gobj).cmd_var0 == 0 {
         return;
     }
     let j = jobj_of(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDB4_itcmd_var2 = 1;
+    ip.cmd_var0 = 0;
+    ip.cmd_var2 = 1;
     ef::spawn(r, b.effect, Some(gobj), &[Arg::JObj(j), Arg::Float(1.0)]);
     play_sfx(r, gobj, b.cry, 0x7F, 0x40);
 }

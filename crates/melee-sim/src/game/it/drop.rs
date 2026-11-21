@@ -78,7 +78,7 @@ pub fn pop_up(
     vel: Option<Vec3>,
 ) {
     let vel = vel.unwrap_or_else(|| random_pop(game, data, gobj));
-    item_mut(game, gobj).x40_vel = vel;
+    item_mut(game, gobj).vel = vel;
 }
 
 /// A random side and the item's pop-up speed (`it_8026F53C`'s `chk == false` case).
@@ -136,7 +136,7 @@ pub fn drop_monster(
     let kind = super::spawn::pick(r.game, &table);
     let g = spawn_at(r, gobj, kind, pos)?;
     let vel = vel.unwrap_or_else(|| random_pop(r.game, r.data, g));
-    item_mut(r.game, g).x40_vel = vel;
+    item_mut(r.game, g).vel = vel;
     Some(g)
 }
 
@@ -152,7 +152,7 @@ pub fn drop_random(r: &mut Running, pos: Vec3, vel: Option<Vec3>) -> Option<GObj
     }
     let g = spawn_at(r, None, kind, pos)?;
     let vel = vel.unwrap_or_else(|| random_pop(r.game, r.data, g));
-    item_mut(r.game, g).x40_vel = vel;
+    item_mut(r.game, g).vel = vel;
     r.game.it.spawned = r.game.it.spawned.wrapping_add(1);
     Some(g)
 }

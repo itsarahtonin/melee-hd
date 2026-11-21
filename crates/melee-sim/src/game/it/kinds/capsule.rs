@@ -96,9 +96,9 @@ fn attrs(r: &Running, gobj: GObjId) -> (i32, i32) {
 /// `itCapsule_Logic0_Spawned`: closed, on the ground.
 #[doc(alias = "itCapsule_Logic0_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.capsule();
-    v.x0.set(0);
-    v.x4.set(0);
+    let v = item_mut(r.game, gobj).vars.capsule();
+    v.hit.set(0);
+    v.opened.set(0);
     fell(r, gobj);
 }
 
@@ -120,9 +120,9 @@ pub fn land_check(r: &mut Running, gobj: GObjId) {
         }
     };
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .capsule()
-        .x0
+        .hit
         .set(i32::from(gone));
 }
 
@@ -132,9 +132,9 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
     let j = jobj_of(r.game, gobj);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = 1.0;
+    item_mut(r.game, gobj).anim_speed = 1.0;
     lib2725::clear_velocity(r.game, gobj);
-    item_mut(r.game, gobj).xDD4_itemVar.capsule().x4.set(1);
+    item_mut(r.game, gobj).vars.capsule().opened.set(1);
     lib2725::blast_effect(r, gobj);
     hitbox::set_hit_ids(r.game, gobj);
     hitbox::start_blink(r.game, gobj);
@@ -150,7 +150,7 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8027D0B8")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
     lib26b1::enable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     change_state(r, gobj, 0, 2);
 }
 
@@ -195,13 +195,13 @@ pub fn phys3(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itCapsule_UnkMotion3_Coll")]
 pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
     fall_to_floor(r, gobj, land_check);
-    item_mut(r.game, gobj).xDD4_itemVar.capsule().x0.get() != 0
+    item_mut(r.game, gobj).vars.capsule().hit.get() != 0
 }
 
 /// Explodes, once, `it_8027D2DC`.
 #[doc(alias = "it_8027D2DC")]
 pub fn break_open(r: &mut Running, gobj: GObjId) {
-    if item_mut(r.game, gobj).xDD4_itemVar.capsule().x4.get() == 0 {
+    if item_mut(r.game, gobj).vars.capsule().opened.get() == 0 {
         explode(r, gobj);
     }
 }
@@ -216,7 +216,7 @@ pub fn hit(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).msid != 5 {
         land_check(r, gobj);
     }
-    item_mut(r.game, gobj).xDD4_itemVar.capsule().x0.get() != 0
+    item_mut(r.game, gobj).vars.capsule().hit.get() != 0
 }
 
 /// `itCapsule_UnkMotion6_Coll`: skidding, it stops or falls.
@@ -231,7 +231,7 @@ pub fn coll6(r: &mut Running, gobj: GObjId) -> bool {
 pub fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).msid == 3 {
         land_check(r, gobj);
-        return item_mut(r.game, gobj).xDD4_itemVar.capsule().x0.get() != 0;
+        return item_mut(r.game, gobj).vars.capsule().hit.get() != 0;
     }
     false
 }

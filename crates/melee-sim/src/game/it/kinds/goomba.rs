@@ -293,7 +293,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
         walk_left(r, gobj);
     }
     let v = zako::bytes(r.game, gobj).f32(off::SPEED);
-    item_mut(r.game, gobj).x40_vel.x = v;
+    item_mut(r.game, gobj).vel.x = v;
     along_floor(r, gobj);
 }
 
@@ -409,7 +409,7 @@ pub fn stomped(r: &mut Running, gobj: GObjId) -> bool {
     }
     play_sfx(r, gobj, 0x12E, 127, 64);
     let stomper = item(r.game, gobj)
-        .xCFC
+        .stomper
         .expect("a Goomba landed on by nobody");
     lib2725::fighter_item_rumble(r, stomper, 0xC, 0);
     false
@@ -418,7 +418,7 @@ pub fn stomped(r: &mut Running, gobj: GObjId) -> bool {
 /// Flattened, `it_802D813C`: stopped, its model turned to the floor facing nowhere, state 7.
 #[doc(alias = "it_802D813C")]
 pub fn flatten(r: &mut Running, gobj: GObjId) {
-    let v = &mut item_mut(r.game, gobj).x40_vel;
+    let v = &mut item_mut(r.game, gobj).vel;
     v.z = 0.0;
     v.y = 0.0;
     v.x = 0.0;
@@ -448,7 +448,7 @@ pub fn coll8(r: &mut Running, gobj: GObjId) -> bool {
 pub fn knock_down(r: &mut Running, gobj: GObjId) {
     let k = reg(r.data.f32(attr(r, gobj, 8)));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), k));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), k));
     change_state(r, gobj, 8, change::ANIM_UPDATE);
 }
 

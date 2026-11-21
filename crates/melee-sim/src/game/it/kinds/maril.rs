@@ -106,8 +106,8 @@ pub fn flame_anim(r: &mut Running, gobj: GObjId) -> bool {
 pub fn flame_phys(r: &mut Running, gobj: GObjId) {
     let rise = attr_f32(r, gobj, 0xC);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), reg(rise)));
-    let vel = ip.x40_vel;
+    ip.vel.y = mem(fp::fadds(reg(ip.vel.y), reg(rise)));
+    let vel = ip.vel;
     let v = pokemon::vars(r.game, gobj);
     v.set_vec(FLAME_DIR, vel);
     let mut d = v.vec(FLAME_DIR);
@@ -166,7 +166,7 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     pokemon::vars(r.game, gobj).set_bit(FLAGS, TURNING, false);
     let speed = attr_f32(r, gobj, 0x10);
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = speed;
+    item_mut(r.game, gobj).anim_speed = speed;
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
     play_sfx(r, gobj, 0x273D, 0x7F, 0x40);
@@ -217,7 +217,7 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
     lib2725::clear_velocity(r.game, gobj);
     maplib::enter_air(item_mut(r.game, gobj));
     walk(r, gobj);
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    item_mut(r.game, gobj).cmd_var0 = 0;
     effect_hitlag(r.game, gobj);
     pokemon::vars(r.game, gobj).set_f32(X68, 8.0);
 }
@@ -256,7 +256,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
         v.set_f32(TURN_FRAMES, left);
         if reg(left) <= 0.0 {
             v.set_bit(FLAGS, TURNING, false);
-            item_mut(r.game, gobj).xDC8_word.flags.x19 = true;
+            item_mut(r.game, gobj).flags.flags.turns_to_face = true;
         }
     }
     life_out(r, gobj)
@@ -274,7 +274,7 @@ fn add_rotation_y(r: &mut Running, j: jobj::JObjId, v: f32) {
 pub fn phys1(r: &mut Running, gobj: GObjId) {
     pokemon::move_by_bone(r.game, gobj);
     let speed = pokemon::vars(r.game, gobj).f32(SPEED);
-    item_mut(r.game, gobj).x40_vel.x = speed;
+    item_mut(r.game, gobj).vel.x = speed;
 }
 
 /// `itMaril_UnkMotion1_Coll`: at each step's end it walks on, or falls off the floor; mid-step
@@ -312,7 +312,7 @@ fn turn(r: &mut Running, gobj: GObjId) {
     v.set_bit(FLAGS, TURNING, true);
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-    ip.xDC8_word.flags.x19 = false;
+    ip.flags.flags.turns_to_face = false;
     let v = pokemon::vars(r.game, gobj);
     let speed = v.f32(SPEED);
     v.set_f32(SPEED, mem(fp::fneg(reg(speed))));
@@ -350,7 +350,7 @@ pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802D6F00")]
 pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     let limit = attr_f32(r, gobj, 0x14);
-    let damage = fp::frsp(f64::from(item(r.game, gobj).xC9C));
+    let damage = fp::frsp(f64::from(item(r.game, gobj).damage_taken));
     if damage >= reg(limit) {
         pokemon::launch(r, gobj);
         knocked_away(r, gobj);

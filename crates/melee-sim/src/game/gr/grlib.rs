@@ -340,7 +340,7 @@ pub fn point_near_object(game: &Game, point: Vec3, offset: f32) -> bool {
     while let Some(g) = cur {
         if crate::game::it::lib26b1::kind(game, g) != ItKind::StageHurtbox {
             let ip = crate::game::it::item(game, g);
-            if point_in_ecb(&ip.x378_itemColl, point, offset) {
+            if point_in_ecb(&ip.coll, point, offset) {
                 return true;
             }
         }

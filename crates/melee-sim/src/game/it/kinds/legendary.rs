@@ -66,12 +66,12 @@ pub fn spawned(r: &mut Running, gobj: GObjId, b: &Legendary) {
     pokemon::vars(r.game, gobj).set_vec(HOME, pos);
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var0 = 0;
     if b.second_script_word {
-        ip.xDB0_itcmd_var1 = 0;
+        ip.cmd_var1 = 0;
     }
     pokemon::vars(r.game, gobj).set_i32(COME_FRAMES, frames);
-    item_mut(r.game, gobj).xDCC_flag.b3 = false;
+    item_mut(r.game, gobj).state_flags.b3 = false;
     enter_air(r, gobj);
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
@@ -168,10 +168,10 @@ pub fn phys2(r: &mut Running, gobj: GObjId, b: &Legendary) {
     let climb = mem(fp::fadds(reg(v.f32(b.climb)), reg(accel)));
     v.set_f32(b.climb, climb);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), reg(climb)));
+    ip.vel.y = mem(fp::fadds(reg(ip.vel.y), reg(climb)));
     let top = stage::blast_top(r.game);
     if reg(item(r.game, gobj).pos.y) > reg(top) {
-        item_mut(r.game, gobj).x40_vel.y = 0.0;
+        item_mut(r.game, gobj).vel.y = 0.0;
         come_back(r, gobj);
     }
 }
@@ -207,10 +207,10 @@ pub fn phys3(r: &mut Running, gobj: GObjId, b: &Legendary) {
     v.set_i32(COME_FRAMES, left.wrapping_sub(1));
     if left != 0 {
         let speed = attr_f32(r, gobj, 0x10);
-        item_mut(r.game, gobj).x40_vel.z = speed;
+        item_mut(r.game, gobj).vel.z = speed;
         return;
     }
-    item_mut(r.game, gobj).x40_vel.z = 0.0;
+    item_mut(r.game, gobj).vel.z = 0.0;
     (b.sink)(r, gobj);
 }
 
@@ -259,7 +259,7 @@ pub fn phys0(r: &mut Running, gobj: GObjId) {
     if pokemon::fall(r, gobj) {
         lib2725::clear_velocity(r.game, gobj);
         enter(r, gobj, 1);
-        set_flag(&mut item_mut(r.game, gobj).xDD1_flag, 1, true);
+        set_flag(&mut item_mut(r.game, gobj).phys_flags, 1, true);
     }
 }
 
@@ -276,7 +276,7 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_2725_Logic42_Spawned")]
 pub fn shot_out(r: &mut Running, gobj: GObjId) {
     let life = attr_f32(r, gobj, 0);
-    item_mut(r.game, gobj).xD44_lifeTimer = life;
+    item_mut(r.game, gobj).life_timer = life;
     lib2725::stop_spin(r.game, r.data, gobj);
     enter(r, gobj, 0);
     lib26b1::disable_pickup(r.game, gobj);
@@ -288,10 +288,10 @@ pub fn shot_out(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802D2F3C")]
 pub fn shot_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
+    if reg(ip.life_timer) <= 0.0 {
         return true;
     }
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
     false
 }
 

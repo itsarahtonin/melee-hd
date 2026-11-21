@@ -81,14 +81,14 @@ impl Importer<'_> {
         let m = mem(&cap.call.mem1);
         self.stale = true;
         let mut item = Item::import(&m, a, self);
-        item.xDD4_itemVar = ItemVars::import_as(vars_kind(item.kind), &m, a + VARS, self);
-        if let Member::Pokemon(v) | Member::Zako(v) = &mut item.xDD4_itemVar.member {
+        item.vars = ItemVars::import_as(vars_kind(item.kind), &m, a + VARS, self);
+        if let Member::Pokemon(v) | Member::Zako(v) = &mut item.vars.member {
             v.import_handles(item.kind, &m, a + VARS, self);
         }
         self.stale = false;
         let table = cap.u32(a + 0xBBC);
         // A dangling or unknown table (a word never set) has no entries to read.
-        if let Some(t) = item.xBBC_dynamicBoneTable
+        if let Some(t) = item.bone_table
             && !self.maps.dangling_bone_tables.contains_key(&t.0)
             && !self.maps.unknown.contains_key(&t.0)
         {
@@ -158,7 +158,7 @@ impl Importer<'_> {
             let mut item = Item::import(&m, b, self);
             if i >= fresh_from {
                 // `HSD_ObjAllocAddFree` links the new block to the empty free list's head.
-                item.x0 = None;
+                item.next_free = None;
             }
             let id = self.maps.items[&b];
             self.game.items[id.0] = item;
@@ -486,10 +486,10 @@ impl Comparer<'_> {
             |l, cx| {
                 use melee_sim::game::mirror::LayOut;
                 item.lay(l, t, cx);
-                let n = item.x374_dynamicBonesNum.max(0) as usize;
-                item.xD4_dynamicBones.lay_counted(l, t + 0xD4, cx, n);
-                let n = usize::from(item.xAC8_hurtboxNum);
-                item.xACC_itemHurtbox.lay_counted(l, t + 0xACC, cx, n);
+                let n = item.dynamic_bone_count.max(0) as usize;
+                item.dynamic_bones.lay_counted(l, t + 0xD4, cx, n);
+                let n = usize::from(item.hurtbox_count);
+                item.hurtboxes.lay_counted(l, t + 0xACC, cx, n);
             },
         );
         // A collision's last position its spawn's stack words gave is left out
@@ -502,12 +502,15 @@ impl Comparer<'_> {
                 self.mem[lo..lo + <melee_sim::game::structs::Item as Mirror>::SIZE as usize]
                     .to_vec()
             });
-            let p = &item.x378_itemColl.last_pos;
+            let p = &item.coll.last_pos;
             for (k, v) in [p.x, p.y, p.z].into_iter().enumerate() {
                 let off = 0x378 + 0x1C + 4 * k;
                 block[off..off + 4].copy_from_slice(&v.to_bits().to_be_bytes());
             }
-            for (k, v) in [item.xB54.unk_x, item.xB54.unk_y].into_iter().enumerate() {
+            for (k, v) in [item.stomp_box.unk_x, item.stomp_box.unk_y]
+                .into_iter()
+                .enumerate()
+            {
                 let off = 0xB54 + 4 * k;
                 block[off..off + 4].copy_from_slice(&v.to_bits().to_be_bytes());
             }

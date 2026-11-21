@@ -65,9 +65,9 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
     enter_air(r, gobj);
@@ -104,7 +104,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 /// Its state's animations from the start again (`Item_80268D34` with `xD0_itemStateDesc`).
 fn replay(r: &mut Running, gobj: GObjId) {
     let desc = item(r.game, gobj)
-        .xD0_itemStateDesc
+        .state_desc
         .expect("Clefairy without its state's description");
     set_state_anims(r, gobj, desc);
 }
@@ -167,7 +167,7 @@ pub fn anim5(r: &mut Running, gobj: GObjId) -> bool {
     if !lib2725::is_animating(r.game, gobj) {
         replay(r, gobj);
     }
-    item(r.game, gobj).xDAC_itcmd_var0 != 0
+    item(r.game, gobj).cmd_var0 != 0
 }
 
 /// Into the air at its first state, `it_802D3590`: its idle loops from its attributes.

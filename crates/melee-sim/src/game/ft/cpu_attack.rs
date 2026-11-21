@@ -951,18 +951,18 @@ impl Running<'_> {
         use super::super::it::data::attr as a;
         let fp_term_neg = fp::fneg(reg(me.co_attrs.terminal_velocity));
         let fp_y = reg(me.cur_pos.y);
-        let it_vy = reg(ip.x40_vel.y);
+        let it_vy = reg(ip.vel.y);
         let it_term_neg = fp::fneg(reg(attr.f32(self.data, a::FALL_SPEED_MAX)));
         let size_half = fp::frsp(fp::fmul(
             0.5,
-            fp::fadds(reg(ip.xC1C.right), reg(ip.xC1C.left)),
+            fp::fadds(reg(ip.coll_box.right), reg(ip.coll_box.left)),
         ));
         let fp_x = reg(me.cur_pos.x);
-        let y_bound = fp::fadds(reg(ip.xC1C.top), reg(ip.xC1C.bottom));
+        let y_bound = fp::fadds(reg(ip.coll_box.top), reg(ip.coll_box.bottom));
         let (fp_vx, fp_vy) = (reg(me.pos_delta.x), reg(me.pos_delta.y));
         let fp_grav = reg(me.co_attrs.gravity);
         let (it_x, it_y) = (reg(ip.pos.x), reg(ip.pos.y));
-        let it_vx = reg(ip.x40_vel.x);
+        let it_vx = reg(ip.vel.x);
         let it_grav = reg(attr.f32(self.data, a::FALL_SPEED));
         let item_air = ip.ground_or_air == GA_AIR;
         let tiny = reg(1e-5);
@@ -1522,7 +1522,7 @@ impl Running<'_> {
             let it = super::super::it::item_of(self.game, g);
             // `it_8026C1B4`: a hitbox on.
             let live = self.game.items[it.0]
-                .x5D4_hitboxes
+                .hitboxes
                 .iter()
                 .take(4)
                 .any(|h| h.hit.state != hitcapsule::DISABLED);
@@ -1666,7 +1666,7 @@ impl Running<'_> {
             along(fpp.pos_delta.y, middle.y),
             along(fpp.pos_delta.z, middle.z),
         );
-        let hit = self.game.items[it.0].x5D4_hitboxes.iter().take(4).any(|b| {
+        let hit = self.game.items[it.0].hitboxes.iter().take(4).any(|b| {
             let h = &b.hit;
             if h.state == hitcapsule::DISABLED
                 || h.state == hitcapsule::ENABLED

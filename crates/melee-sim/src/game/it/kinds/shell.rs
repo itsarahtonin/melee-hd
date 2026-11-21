@@ -59,7 +59,7 @@ pub struct Shell {
 
 /// The shell's shared variables.
 pub fn vars<'r>(r: &'r mut Running, gobj: GObjId, s: &Shell) -> Vars<'r> {
-    (s.vars)(&mut item_mut(r.game, gobj).xDD4_itemVar)
+    (s.vars)(&mut item_mut(r.game, gobj).vars)
 }
 
 /// Its attributes' float at `off` (`itGShell_Attrs`, `itRShell_Attrs`).
@@ -125,7 +125,7 @@ pub fn draw_landings(r: &mut Running, gobj: GObjId, s: &Shell) {
 pub fn count_hit_delay(r: &mut Running, gobj: GObjId, s: &Shell) {
     let v = vars(r, gobj, s);
     if reg(v.hit_delay.get()) <= 0.0 {
-        if !item(r.game, gobj).xDCD_flag.x0.b5 {
+        if !item(r.game, gobj).hit_flags.x0.b5 {
             hitbox::set_hit_ids(r.game, gobj);
         }
     } else {
@@ -163,7 +163,7 @@ pub fn roll(r: &mut Running, gobj: GObjId, s: &Shell) {
     let rate = attr(r, gobj, s.roll);
     maplib::tilt_on_floor(r.game, r.data, gobj);
     let child = jobj_of(r.game, gobj).and_then(|j| r.game.objs.jobjs[j].child);
-    let turn = fp::fmuls(reg(rate), reg(item(r.game, gobj).x40_vel.x).abs());
+    let turn = fp::fmuls(reg(rate), reg(item(r.game, gobj).vel.x).abs());
     let j = child.expect("a shell without a model child");
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
         o.rotate.y = mem(fp::fadds(reg(o.rotate.y), turn));
@@ -265,7 +265,7 @@ pub fn dropped(r: &mut Running, gobj: GObjId, s: &Shell) {
 #[doc(alias = "itGShell_Logic14_EnteredAir")]
 #[doc(alias = "it_3F14_Logic15_EnteredAir")]
 pub fn entered_air(r: &mut Running, gobj: GObjId, s: &Shell) {
-    item_mut(r.game, gobj).xDC8_word.flags.x1F = true;
+    item_mut(r.game, gobj).flags.flags.may_skid = true;
     if let Some(p) = vars(r, gobj, s).popped {
         p.set(false);
     }
@@ -288,7 +288,7 @@ pub fn skid_coll(r: &mut Running, gobj: GObjId, s: &Shell) -> bool {
 #[doc(alias = "itRShell_Logic15_Reflected")]
 pub fn reflected(r: &mut Running, gobj: GObjId, s: &Shell) -> bool {
     lib2725::reflected_back(r.game, gobj);
-    let half = item(r.game, gobj).xD48_halfLifeTimer;
+    let half = item(r.game, gobj).half_life;
     vars(r, gobj, s).life.set(half);
     false
 }

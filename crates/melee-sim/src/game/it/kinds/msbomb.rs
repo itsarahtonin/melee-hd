@@ -96,7 +96,7 @@ fn attrs(r: &Running, gobj: GObjId) -> DataRef {
 #[doc(alias = "it_8028FE90")]
 pub fn detonate(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if !ip.xDC8_word.flags.x13 && (ip.msid == 4 || ip.msid == 5) {
+    if !ip.flags.flags.held && (ip.msid == 4 || ip.msid == 5) {
         explode(r, gobj);
     }
 }
@@ -104,11 +104,7 @@ pub fn detonate(r: &mut Running, gobj: GObjId) {
 /// `itMSBomb_Logic19_Spawned`: not armed, falling.
 #[doc(alias = "itMSBomb_Logic19_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .msbomb()
-        .xDD4_b0
-        .set(false);
+    item_mut(r.game, gobj).vars.msbomb().armed.set(false);
     hitbox::start_blink(r.game, gobj);
     fell(r, gobj);
 }
@@ -169,9 +165,9 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
         right: r.data.f32(a.at(8)),
         left: r.data.f32(a.at(12)),
     };
-    item_mut(r.game, gobj).xBFC = b.clone();
+    item_mut(r.game, gobj).throw_coll_box = b.clone();
     maplib::set_box(r.game, gobj, b);
-    set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, false);
+    set_flag(&mut item_mut(r.game, gobj).hurt_flags, 7, false);
 }
 
 /// Flying, `itMsbomb_UnkMotion3_Phys` and `itMsbomb_UnkMotion5_Phys`.
@@ -194,7 +190,7 @@ pub fn thrown_coll(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_80290238")]
 pub fn settle(r: &mut Running, gobj: GObjId) {
     let a = attrs(r, gobj);
-    set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 3, true);
+    set_flag(&mut item_mut(r.game, gobj).hurt_flags, 3, true);
     if !maplib::touched_floor(r.game, gobj) {
         if maplib::touched_ceiling(r.game, gobj) == 2 {
             let (top, bottom) = (r.data.f32(a.at(8)), r.data.f32(a.at(12)));
@@ -222,7 +218,7 @@ pub fn settle(r: &mut Running, gobj: GObjId) {
 /// Stuck where it touched, armed, `it_80290314`.
 #[doc(alias = "it_80290314")]
 pub fn stick(r: &mut Running, gobj: GObjId) {
-    let flags = if item_mut(r.game, gobj).xDD4_itemVar.msbomb().xDD4_b0.get() {
+    let flags = if item_mut(r.game, gobj).vars.msbomb().armed.get() {
         17
     } else {
         change::ANIM_UPDATE
@@ -244,15 +240,11 @@ fn arm(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.touched = Some(CodeRef(TOUCHED));
-    ip.xDC8_word.flags.x1A = false;
+    ip.flags.flags.keeps_clear = false;
     hitbox::end_blink(r.game, gobj);
     hitbox::set_hit_ids(r.game, gobj);
     hitbox::set_hit_ids2(r.game, gobj);
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .msbomb()
-        .xDD4_b0
-        .set(true);
+    item_mut(r.game, gobj).vars.msbomb().armed.set(true);
 }
 
 /// `itMsbomb_UnkMotion4_Coll`: stuck to a moving line, it rides it; when the line goes, it
@@ -260,10 +252,10 @@ fn arm(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itMsbomb_UnkMotion4_Coll")]
 pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
     if on_line(r.game, gobj) {
-        let line = item(r.game, gobj).xC30;
-        let mut cd = item(r.game, gobj).x378_itemColl.clone();
+        let line = item(r.game, gobj).touched_line;
+        let mut cd = item(r.game, gobj).coll.clone();
         maplib::with_stage_coll(r.game, r.data, |c| c.line_callback(&mut cd, line));
-        item_mut(r.game, gobj).x378_itemColl = cd;
+        item_mut(r.game, gobj).coll = cd;
         maplib::tilt_to_line(r.game, r.data, gobj, 0);
     }
     line_or(r, gobj, unstuck);
@@ -276,7 +268,7 @@ pub fn unstuck(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 5, 17);
     maplib::enter_air(item_mut(r.game, gobj));
     arm(r, gobj);
-    set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 3, false);
+    set_flag(&mut item_mut(r.game, gobj).hurt_flags, 3, false);
 }
 
 /// Explodes, `it_802905D8`.

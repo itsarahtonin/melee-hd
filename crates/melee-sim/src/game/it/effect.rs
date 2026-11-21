@@ -215,9 +215,9 @@ pub fn queue(
     j: Option<JObjId>,
     args: &[Arg],
 ) {
-    let mut head = item(r.game, gobj).xBC0;
+    let mut head = item(r.game, gobj).effect_queue;
     ef::queue(r, Some(gobj), &mut head, kind, ef_id, j, args);
-    item_mut(r.game, gobj).xBC0 = head;
+    item_mut(r.game, gobj).effect_queue = head;
 }
 
 /// Destroys the item's effects (`efLib_DestroyAll`).

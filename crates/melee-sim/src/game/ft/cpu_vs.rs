@@ -801,7 +801,7 @@ impl Running<'_> {
         if self.game.fighters[f.0].ground_or_air == GA_AIR || ip.ground_or_air == GA_AIR {
             return;
         }
-        let (ix, iy, item_line) = (ip.pos.x, ip.pos.y, ip.x378_itemColl.floor.index);
+        let (ix, iy, item_line) = (ip.pos.x, ip.pos.y, ip.coll.floor.index);
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
         let island = geo.island_of_line(item_line);
         if self.cpu_island_unsafe(island) {

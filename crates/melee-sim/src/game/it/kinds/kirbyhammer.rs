@@ -70,14 +70,10 @@ pub fn spawn(
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     // `setupHammerParticles`.
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .kirby_hammer()
-        .x0
-        .set(vars);
+    item_mut(r.game, gobj).vars.kirby_hammer().in_air.set(vars);
     item::debug_owner_bubbles(r.game, gobj, Some(parent));
     item::pick_up(r, gobj, parent, part);
-    let air = item_mut(r.game, gobj).xDD4_itemVar.kirby_hammer().x0.get() == 1;
+    let air = item_mut(r.game, gobj).vars.kirby_hammer().in_air.get() == 1;
     let id = if air { 1177 } else { 1176 };
     let j = lib2725::attach_bone(r.game, r.data, gobj);
     effect::queue(r, gobj, SpawnKind::Attach, id, j, &[]);

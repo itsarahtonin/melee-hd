@@ -30,7 +30,7 @@ pub fn fighter_unloaded(r: &mut Running, fighter: GObjId) {
         if let Some(f) = super::item::logic(r.game, g).forget {
             run(r, g, Some(fighter), f);
         }
-        if item(r.game, g).xDC8_word.flags.x13 && owner == Some(fighter) {
+        if item(r.game, g).flags.flags.held && owner == Some(fighter) {
             super::item::destroy(r, g);
         }
         cur = r.game.world.gobj(g).next;
@@ -150,9 +150,9 @@ fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 /// Pikachu's Thunder forgets its thrower too, `itPikachuThunder_Logic39_EvtUnk`.
 #[doc(alias = "itPikachuThunder_Logic39_EvtUnk")]
 fn pikachu_thunder(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.pikachu_thunder();
-    if v.x38.get() == other {
-        v.x38.set(None);
+    let v = item_mut(r.game, gobj).vars.pikachu_thunder();
+    if v.owner.get() == other {
+        v.owner.set(None);
     }
     lib26b1::forget(r.game, gobj, other);
 }
@@ -161,18 +161,14 @@ fn pikachu_thunder(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 #[doc(alias = "itSamusBomb_Logic50_EvtUnk")]
 fn samus_bomb(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .samus_bomb()
-        .owner
-        .set(None);
+    item_mut(r.game, gobj).vars.samus_bomb().owner.set(None);
 }
 
 /// Samus's missile forgets its owner if it's the one going, `it_2725_Logic52_EvtUnk`.
 #[doc(alias = "it_2725_Logic52_EvtUnk")]
 fn samus_missile(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.samus_missile();
+    let v = item_mut(r.game, gobj).vars.samus_missile();
     if v.owner.get() == other {
         v.owner.set(None);
     }
@@ -181,9 +177,9 @@ fn samus_missile(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 /// The Ice Climbers' ice forgets its climber too, `itClimbersIce_Logic90_EvtUnk`.
 #[doc(alias = "itClimbersIce_Logic90_EvtUnk")]
 fn climbers_ice(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.climbers_ice();
-    if v.x0.get() == other {
-        v.x0.set(None);
+    let v = item_mut(r.game, gobj).vars.climbers_ice();
+    if v.owner.get() == other {
+        v.owner.set(None);
     }
     lib26b1::forget(r.game, gobj, other);
 }

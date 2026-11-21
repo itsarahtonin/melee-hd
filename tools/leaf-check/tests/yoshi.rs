@@ -278,7 +278,7 @@ fn run_yoshi(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         use melee_sim::game::it;
         let ip = it::item(g.game, gobj);
         let ok = if a < EGG_START {
-            ip.xBC_itemStateContainer.map(|s| s.0) == Some(0x803F_9480)
+            ip.state_table.map(|s| s.0) == Some(0x803F_9480)
         } else {
             matches!(
                 ItKind::of(ip.kind),

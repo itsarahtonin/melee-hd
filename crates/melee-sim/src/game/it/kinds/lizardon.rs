@@ -125,9 +125,9 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "it_802CB8AC")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDB4_itcmd_var2 = 0;
+    ip.cmd_var0 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var2 = 0;
     let v = pokemon::vars(r.game, gobj);
     v.set_i32(ROUNDS, -1);
     v.set_i32(BACK, 0);
@@ -248,15 +248,15 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
 /// mouth, each a step smaller than the last one this frame.
 #[doc(alias = "it_802CBD24")]
 pub fn accessory(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDB0_itcmd_var1 != 0 {
+    if item(r.game, gobj).cmd_var1 != 0 {
         let every = attr_i32(r, gobj, 0x14);
         let v = pokemon::vars(r.game, gobj);
         let back = v.i32(BACK);
         v.set_i32(BACK, back ^ 1);
         v.set_f32(FLAME_FRAMES, mem(fp::frsp(f64::from(every))));
-        item_mut(r.game, gobj).xDB0_itcmd_var1 = 0;
+        item_mut(r.game, gobj).cmd_var1 = 0;
     }
-    if item(r.game, gobj).xDAC_itcmd_var0 == 0 {
+    if item(r.game, gobj).cmd_var0 == 0 {
         return;
     }
     let mut scale = 1.0f32;
@@ -479,10 +479,10 @@ pub fn flame_fly(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802CC650")]
 pub fn flame_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
+    if reg(ip.life_timer) <= 0.0 {
         return true;
     }
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
     false
 }
 
@@ -491,8 +491,8 @@ pub fn flame_anim(r: &mut Running, gobj: GObjId) -> bool {
 pub fn flame_phys(r: &mut Running, gobj: GObjId) {
     let k = reg(attr_f32(r, gobj, 4));
     let ip = item_mut(r.game, gobj);
-    let v = ip.x40_vel;
-    ip.x40_vel = Vec3::new(
+    let v = ip.vel;
+    ip.vel = Vec3::new(
         mem(fp::fmuls(reg(v.x), k)),
         mem(fp::fmuls(reg(v.y), k)),
         mem(fp::fmuls(reg(v.z), k)),

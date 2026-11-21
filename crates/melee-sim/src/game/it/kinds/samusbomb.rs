@@ -166,10 +166,10 @@ pub fn start(r: &mut Running, gobj: GObjId) {
     let rise = attr_of(item(r.game, gobj)).f32(r.data, 0x18);
     let life = attr_f32(r, gobj, attr::LIFETIME);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = rise;
-    ip.xDB4_itcmd_var2 = 0;
+    ip.vel.y = rise;
+    ip.cmd_var2 = 0;
     let owner = ip.owner;
-    ip.xDD4_itemVar.samus_bomb().owner.set(owner);
+    ip.vars.samus_bomb().owner.set(owner);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
@@ -195,21 +195,21 @@ fn tick(r: &mut Running, gobj: GObjId) {
         attr_f32(r, gobj, attr::PULSE_RATE),
     );
     let j = jobj_of(r.game, gobj);
-    if item(r.game, gobj).xD44_lifeTimer <= pulse_at {
+    if item(r.game, gobj).life_timer <= pulse_at {
         crate::lb::anim::set_framerate(&mut r.game.objs, j, rate);
     }
     let ip = item_mut(r.game, gobj);
-    if ip.xD44_lifeTimer <= 0.0 {
+    if ip.life_timer <= 0.0 {
         explode(r, gobj);
     } else {
-        ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), fp::frsp(1.0)));
+        ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), fp::frsp(1.0)));
     }
 }
 
 /// Rolling (`itSamusBomb_UnkMotion_Process`): moving at all, it faces its motion
 /// (`it_80272980`) and turns its model that way.
 fn roll(r: &mut Running, gobj: GObjId) {
-    let x = reg(item(r.game, gobj).x40_vel.x);
+    let x = reg(item(r.game, gobj).vel.x);
     let speed = if x < fp::frsp(0.0) { fp::fneg(x) } else { x };
     if speed < 9.999_999_747_378_752e-5 {
         return;
@@ -230,13 +230,13 @@ fn roll(r: &mut Running, gobj: GObjId) {
 pub fn physics_knocked(r: &mut Running, gobj: GObjId) {
     let max = attr_f32(r, gobj, attr::KNOCK_SPEED_MAX);
     let ip = item_mut(r.game, gobj);
-    let (x, y) = (reg(ip.x7C.x), reg(ip.x7C.y));
+    let (x, y) = (reg(ip.skid_vel.x), reg(ip.skid_vel.y));
     let len = crate::math::sqrt_accurate(mem(fp::fadds(fp::fmuls(x, x), fp::fmuls(y, y))));
     if len > max {
-        ip.x7C.normalize_xy();
+        ip.skid_vel.normalize_xy();
         let m = reg(max);
-        ip.x7C.x = mem(fp::fmuls(reg(ip.x7C.x), m));
-        ip.x7C.y = mem(fp::fmuls(reg(ip.x7C.y), m));
+        ip.skid_vel.x = mem(fp::fmuls(reg(ip.skid_vel.x), m));
+        ip.skid_vel.y = mem(fp::fmuls(reg(ip.skid_vel.y), m));
     }
 }
 
@@ -245,11 +245,11 @@ pub fn physics_knocked(r: &mut Running, gobj: GObjId) {
 pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     lib2725::reflected_back(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    let y = reg(ip.x40_vel.y);
+    let y = reg(ip.vel.y);
     if y < 0.0 {
-        ip.x40_vel.y = mem(fp::fmuls(fp::fneg(y), reg(ip.xC70)));
+        ip.vel.y = mem(fp::fmuls(fp::fneg(y), reg(ip.reflect_speed_mul)));
     }
-    ip.xDD4_itemVar.samus_bomb().owner.set(None);
+    ip.vars.samus_bomb().owner.set(None);
     false
 }
 
@@ -258,7 +258,7 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802B53CC")]
 pub fn explode(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 3, change::ANIM_UPDATE);
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = 1.0;
+    item_mut(r.game, gobj).anim_speed = 1.0;
     lib2725::clear_velocity(r.game, gobj);
     lib26b1::hide(r.game, gobj);
     lib2725::blast_small(r, gobj);
@@ -267,7 +267,7 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     lib2725::start_vanishing(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(BLAST));
-    ip.xDD4_itemVar.samus_bomb().x0.set(1);
+    ip.vars.samus_bomb().exploded.set(1);
 }
 
 /// The blast's first frame (its accessory), `it_802B5478`: if it touches its owner, she
@@ -275,18 +275,18 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802B5478")]
 pub fn blast(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.samus_bomb();
-    if v.x0.get() == 0 {
+    let v = ip.vars.samus_bomb();
+    if v.exploded.get() == 0 {
         return;
     }
-    v.x0.set(0);
+    v.exploded.set(0);
     let Some(owner) = v.owner.get() else {
         return;
     };
     let scale = item(r.game, gobj).scl;
     if r.samus_bomb_touches(owner, gobj, scale) {
         let ip = item(r.game, gobj);
-        let (x, reach) = (ip.pos.x, ip.x5D4_hitboxes[0].hit.scale);
+        let (x, reach) = (ip.pos.x, ip.hitboxes[0].hit.scale);
         r.samus_bomb_jump(owner, x, reach);
     }
 }
@@ -295,9 +295,5 @@ pub fn blast(r: &mut Running, gobj: GObjId) {
 // `itSamusBomb_Logic50_EvtUnk`, as game/it/evt_unk.rs runs it (aliased there).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .samus_bomb()
-        .owner
-        .set(None);
+    item_mut(r.game, gobj).vars.samus_bomb().owner.set(None);
 }

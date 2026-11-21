@@ -641,7 +641,7 @@ fn live_equals_playback(
                 let ids: Vec<u32> = ours.items.iter().map(|(i, _)| i).collect();
                 for i in ids {
                     let (p, it) = (&play.game.items[i], &mut ours.items[i]);
-                    (it.sfx_unk1, it.sfx_unk2) = (p.sfx_unk1, p.sfx_unk2);
+                    (it.sfx_loop_1, it.sfx_loop_2) = (p.sfx_loop_1, p.sfx_loop_2);
                 }
                 let c = &play.game.crowd;
                 (ours.crowd.cheer_handle, ours.crowd.chant_handle) =
@@ -1626,8 +1626,7 @@ fn playback_counters(g: &mut melee_sim::game::state::Game, play: &melee_sim::gam
     }
     each_slot!(g.fighters, play.fighters, |a, b| a.coll_data.x38 =
         b.coll_data.x38);
-    each_slot!(g.items, play.items, |a, b| a.x378_itemColl.x38 =
-        b.x378_itemColl.x38);
+    each_slot!(g.items, play.items, |a, b| a.coll.x38 = b.coll.x38);
     each_slot!(g.it.links, play.it.links, |a, b| a.coll_data.x38 =
         b.coll_data.x38);
     let o = &mut g.objs;

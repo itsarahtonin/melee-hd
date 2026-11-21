@@ -73,8 +73,8 @@ fn dmg_dealt(_r: &mut Running, _gobj: GObjId) -> bool {
 pub fn setup(r: &mut Running, gobj: GObjId, owner: GObjId, smash: bool) {
     let ip = item_mut(r.game, gobj);
     ip.owner = Some(owner);
-    ip.xD44_lifeTimer = 60.0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.life_timer = 60.0;
+    ip.cmd_var0 = 0;
     lib26b1::hide(r.game, gobj);
     lib2725::blast_effect(r, gobj);
     lib26b1::disable_pickup(r.game, gobj);

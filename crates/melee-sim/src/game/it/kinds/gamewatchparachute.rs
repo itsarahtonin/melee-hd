@@ -83,7 +83,7 @@ pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
 /// Taken in hand, `itGameWatchParachute_Logic74_PickedUp`: animating.
 #[doc(alias = "itGameWatchParachute_Logic74_PickedUp")]
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    item_mut(r.game, gobj).cmd_var0 = 0;
     if item(r.game, gobj).owner.is_some() {
         change_state(r, gobj, 0, change::ANIM_UPDATE);
         animate(r, gobj);
@@ -100,7 +100,7 @@ pub fn land(r: &mut Running, gobj: GObjId) {
 /// `itGamewatchparachute_UnkMotion1_Anim`: gone on its animation's frame 30, or once its owner leaves his neutral aerial and its landing.
 #[doc(alias = "itGamewatchparachute_UnkMotion1_Anim")]
 pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).x5CC_currentAnimFrame == 30.0 {
+    if item(r.game, gobj).anim_frame == 30.0 {
         destroyed(r, gobj);
         return true;
     }

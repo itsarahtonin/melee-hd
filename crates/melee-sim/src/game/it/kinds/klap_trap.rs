@@ -141,7 +141,7 @@ impl Mirror for KlapVars {
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut KlapVars {
-    item_mut(game, gobj).xDD4_itemVar.klap()
+    item_mut(game, gobj).vars.klap()
 }
 
 /// Runs one of the Klap Trap's predicates, if `addr` is one.
@@ -178,7 +178,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::reset(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
-    ip.xD5C = 0;
+    ip.skid = 0;
     vars(r.game, gobj).path_object.set(None);
     swim(r, gobj);
 }
@@ -210,8 +210,8 @@ pub fn spawn(r: &mut Running, path: Option<GObjId>) -> Option<GObjId> {
 #[doc(alias = "it_802E1930")]
 pub fn swim(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = 0.0;
-    ip.x40_vel.x = 0.0;
+    ip.vel.y = 0.0;
+    ip.vel.x = 0.0;
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 
@@ -219,8 +219,8 @@ pub fn swim(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802E1C4C")]
 pub fn snap(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = 0.0;
-    ip.x40_vel.x = 0.0;
+    ip.vel.y = 0.0;
+    ip.vel.x = 0.0;
     change_state(r, gobj, 1, change::ANIM_UPDATE);
 }
 
@@ -272,9 +272,9 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
 pub fn fall(r: &mut Running, gobj: GObjId) {
     let model = jobj_of(r.game, gobj).expect("a Klap Trap without a model");
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = 0.0;
-    ip.x40_vel.x = 0.0;
-    ip.xDCC_flag.b3 = true;
+    ip.vel.y = 0.0;
+    ip.vel.x = 0.0;
+    ip.state_flags.b3 = true;
     let child = r.game.objs.jobjs[model].child;
     let p = crate::lb::joint::world_position(&mut r.game.objs, r.data, child, None);
     item_mut(r.game, gobj).pos = p;
@@ -302,7 +302,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
 /// A hit taken, `it_2725_Logic10_DmgReceived`: knocked away spinning.
 #[doc(alias = "it_2725_Logic10_DmgReceived")]
 pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
-    item_mut(r.game, gobj).xDCC_flag.b3 = true;
+    item_mut(r.game, gobj).state_flags.b3 = true;
     knocked(r, gobj);
     false
 }
@@ -316,7 +316,7 @@ pub fn knocked(r: &mut Running, gobj: GObjId) {
     if zako::knockback_vel(r, gobj, &mut v) {
         super::super::maplib::enter_air(item_mut(r.game, gobj));
     }
-    item_mut(r.game, gobj).x40_vel = v;
+    item_mut(r.game, gobj).vel = v;
     spin_away(r, gobj);
 }
 
@@ -363,7 +363,7 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802E20D8")]
 pub fn enter_barrel(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    ip.vel = Vec3::new(0.0, 0.0, 0.0);
     super::super::maplib::enter_air(ip);
     change_state(r, gobj, 3, change::ANIM_UPDATE);
     super::super::hitbox::start_blink(r.game, gobj);
@@ -414,15 +414,15 @@ pub fn shot(
     }
     let kb = super::super::coll::knockback_of(r, gobj, &hit);
     let ip = item_mut(r.game, gobj);
-    ip.xCC8_knockback = kb;
-    ip.xCAC_angle = fp::fctiwz(a);
-    ip.xCCC_incDamageDirection = ip.facing_dir;
+    ip.knockback = kb;
+    ip.kb_angle = fp::fctiwz(a);
+    ip.damage_dir = ip.facing_dir;
     super::super::maplib::enter_air(item_mut(r.game, gobj));
     let mut v = Vec3::default();
     if zako::knockback_vel(r, gobj, &mut v) {
         super::super::maplib::enter_air(item_mut(r.game, gobj));
     }
-    item_mut(r.game, gobj).x40_vel = v;
+    item_mut(r.game, gobj).vel = v;
     spin_away(r, gobj);
 }
 

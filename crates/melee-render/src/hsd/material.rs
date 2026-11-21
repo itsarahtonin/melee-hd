@@ -488,7 +488,7 @@ impl Ctx<'_> {
     /// (`ItCo.dat`'s seven) hold no light command (13), which alone sets `x7C_flag2`.
     #[doc(alias = "it_80277F90")]
     fn item_light_overlay(&mut self, desc: &TevDesc, ip: &Item) -> Option<u8> {
-        let own = &ip.x548_colorOverlay;
+        let own = &ip.color_overlay;
         // The mutation adds the stage for an overlay that doesn't light.
         if (!own.x7C_flag2 || !own.x7C_light_enable) && !crate::mutation::on("it_80277F90") {
             return None;
@@ -511,9 +511,9 @@ impl Ctx<'_> {
         b4: bool,
     ) {
         let game = self.game;
-        let mut overlay = &ip.x548_colorOverlay;
+        let mut overlay = &ip.color_overlay;
         if b3
-            && ip.xDC8_word.flags.x13
+            && ip.flags.flags.held
             && !crate::mutation::on("ftCo_800C0674")
             && let Some(o) = ip.owner
             && let Some(UserData::Fighter(f)) = game.world.gobj(o).user_data
@@ -521,12 +521,12 @@ impl Ctx<'_> {
             overlay = active_overlay_ft(&game.fighters[f.0]);
         }
         let tint = if b4 {
-            Some(color(&ip.xBC8.x0_unk))
-        } else if ip.x5C8 != 0 {
+            Some(color(&ip.outline.color))
+        } else if ip.tinted != 0 {
             if overlay.x7C_color_enable {
-                Some(blend_tint(&ip.xBC4, &overlay.x2C_hex))
+                Some(blend_tint(&ip.tint, &overlay.x2C_hex))
             } else {
-                Some(color(&ip.xBC4))
+                Some(color(&ip.tint))
             }
         } else if overlay.x7C_color_enable {
             Some(color(&overlay.x2C_hex))
@@ -537,7 +537,7 @@ impl Ctx<'_> {
             if crate::mutation::on("it_80278108") {
                 tint.r ^= 0x10;
             }
-            let alpha = (ip.x5C9 != 0xFF).then_some(ip.x5C9);
+            let alpha = (ip.alpha != 0xFF).then_some(ip.alpha);
             self.color_overlay_stage(desc, light_reg, tint, alpha, GX_ENABLE);
         }
     }
@@ -566,11 +566,11 @@ impl Ctx<'_> {
             .filter(|_| !crate::mutation::on("fn_80277D8C"));
         let flags = match named {
             Some(f) => f,
-            None if self.hsd.item_flags.is_some() => ip.xDCF_flag[0],
+            None if self.hsd.item_flags.is_some() => ip.draw_flags[0],
             None => {
                 self.hsd
                     .note_once("an item material before its draw flags were named");
-                ip.xDCF_flag[0]
+                ip.draw_flags[0]
             }
         };
         let flag = |i: u32| flags >> (7 - i) & 1 != 0;
@@ -586,13 +586,13 @@ impl Ctx<'_> {
             self.item_color_overlay(&desc, ip, light_reg, b3, b4);
         }
 
-        if ip.x5C9 != 0xFF {
+        if ip.alpha != 0xFF {
             rendermode |= RENDER_BLENDING;
         }
         if b4 && !b5 {
             rendermode |= RENDER_NO_ZUPDATE;
         }
-        let pe = if b5 && ip.x5C9 == 0xFF {
+        let pe = if b5 && ip.alpha == 0xFF {
             Some(SILHOUETTE_PE)
         } else {
             game.objs.mobjs[m].pe

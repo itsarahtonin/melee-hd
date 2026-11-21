@@ -141,7 +141,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// Mr. Saturn's variables.
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itDosei_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.dosei()
+    item_mut(game, gobj).vars.dosei()
 }
 
 /// `itDoseiAttributes`' word at `off`: the held and thrown animation's speed (`unk0`, a
@@ -166,13 +166,13 @@ fn root(game: &Game, gobj: GObjId) -> jobj::JObjId {
 /// The animation runs at `speed` (`itDosei_SetSpeed`).
 fn set_speed(r: &mut Running, gobj: GObjId, speed: f32) {
     let j = jobj_of(r.game, gobj);
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = speed;
+    item_mut(r.game, gobj).anim_speed = speed;
     crate::lb::anim::set_framerate(&mut r.game.objs, j, speed);
 }
 
 /// `itResetVelocity`.
 fn stop(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
 }
 
 /// The way it faces, turned by `m` (`itDosei_FacingAngle`): `facing * π/2 + facing * m`.
@@ -205,7 +205,7 @@ fn face_ahead(r: &mut Running, gobj: GObjId) {
 /// Where it stands now, remembered for a turn.
 fn remember_pos(game: &mut Game, gobj: GObjId) {
     let pos = item(game, gobj).pos;
-    vars(game, gobj).xDE4.set(pos);
+    vars(game, gobj).turn_pos.set(pos);
 }
 
 /// Its model shown again (when let go of).
@@ -217,9 +217,9 @@ fn show(r: &mut Running, gobj: GObjId) {
 /// Spins it about its axis 1 and turns its model to face its way (`xDC8`'s `x17` and `x19`).
 #[doc(alias("set_x17_x19"))]
 fn set_spin_and_facing(game: &mut Game, gobj: GObjId) {
-    let f = &mut item_mut(game, gobj).xDC8_word.flags;
-    f.x17 = 1;
-    f.x19 = true;
+    let f = &mut item_mut(game, gobj).flags.flags;
+    f.spin_axis = 1;
+    f.turns_to_face = true;
 }
 
 /// `itDosei_Logic7_Spawned`: still, standing for `unk4` frames once it lands, falling.
@@ -228,9 +228,9 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     stop(r, gobj);
     let frames = attr_word(r, gobj, 4) as i32;
     let v = vars(r.game, gobj);
-    v.xDD4.set(frames);
-    v.xDF0.set(0);
-    v.xDE0.set(1.0);
+    v.frames.set(frames);
+    v.hits_left.set(0);
+    v.scale.set(1.0);
     lib26b1::enable_pickup(r.game, gobj);
     spawn_fall(r, gobj);
     let j = root(r.game, gobj);
@@ -255,9 +255,9 @@ pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
     remember_pos(r.game, gobj);
     face_ahead(r, gobj);
     let v = vars(r.game, gobj);
-    v.xDF0.update(|n| n.wrapping_sub(1));
-    if v.xDF0.get() <= 0 {
-        v.xDF0.set(0);
+    v.hits_left.update(|n| n.wrapping_sub(1));
+    if v.hits_left.get() <= 0 {
+        v.hits_left.set(0);
         walk(r, gobj);
     }
     false
@@ -285,7 +285,7 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itDosei_80281734")]
 pub fn skidded(r: &mut Running, gobj: GObjId) {
     let facing = item(r.game, gobj).facing_dir;
-    let nx = reg(vars(r.game, gobj).xDF8.get().x);
+    let nx = reg(vars(r.game, gobj).skid_normal.get().x);
     let uphill = if reg(facing) == 1.0 {
         nx < 0.0
     } else {
@@ -304,19 +304,19 @@ pub fn walk(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let speed = attr_f32(r, gobj, 8);
     let ip = item_mut(r.game, gobj);
-    ip.xD5C = 0;
-    ip.xDC8_word.flags.x17 = 1;
-    ip.xDC8_word.flags.x19 = true;
+    ip.skid = 0;
+    ip.flags.flags.spin_axis = 1;
+    ip.flags.flags.turns_to_face = true;
     ip.owner = None;
     maplib::enter_ground(ip);
     change_state(r, gobj, 1, 0xB);
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = 1.0;
+    item_mut(r.game, gobj).anim_speed = 1.0;
     crate::lb::anim::set_framerate(&mut r.game.objs, j, 1.0);
     face_ahead(r, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), reg(speed)));
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
+    ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), reg(speed)));
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
 }
 
 /// `itDosei_UnkMotion1_Anim`: walking, its steps quicken downhill and slow uphill.
@@ -326,7 +326,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item(r.game, gobj);
     let speed = mem(fp::fmadds(
         0.5,
-        fp::fmuls(reg(ip.x378_itemColl.floor.normal.x), reg(ip.facing_dir)),
+        fp::fmuls(reg(ip.coll.floor.normal.x), reg(ip.facing_dir)),
         1.0,
     ));
     set_speed(r, gobj, speed);
@@ -341,9 +341,9 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 pub fn phys1(r: &mut Running, gobj: GObjId) {
     let speed = attr_f32(r, gobj, 8);
     let ip = item_mut(r.game, gobj);
-    let v = fp::fmuls(reg(speed), reg(ip.x5D0_animFrameSpeed));
+    let v = fp::fmuls(reg(speed), reg(ip.anim_speed));
     let v = if v < fp::frsp(0.0) { fp::fneg(v) } else { v };
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), v));
+    ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), v));
 }
 
 /// `itDosei_UnkMotion1_Coll`: it turns at a ledge or a wall, skids down a steep slope, and
@@ -356,16 +356,16 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
             return false;
         }
         let ip = item_mut(r.game, gobj);
-        let nx = reg(ip.x378_itemColl.floor.normal.x);
+        let nx = reg(ip.coll.floor.normal.x);
         let angle = if nx < fp::frsp(0.0) { fp::fneg(nx) } else { nx };
         if angle >= fp::fdivs(fp::frsp(PI), 4.0) {
-            ip.xD5C = 1;
-            ip.xDC8_word.flags.x1F = true;
+            ip.skid = 1;
+            ip.flags.flags.may_skid = true;
         } else {
-            ip.xD5C = 0;
-            ip.xDC8_word.flags.x1F = false;
+            ip.skid = 0;
+            ip.flags.flags.may_skid = false;
         }
-        if item(r.game, gobj).xD5C == 1 {
+        if item(r.game, gobj).skid == 1 {
             entered_air(r, gobj);
         } else {
             maplib::tilt_on_floor(r.game, r.data, gobj);
@@ -380,12 +380,12 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itDosei_80281C6C")]
 pub fn turn(r: &mut Running, gobj: GObjId) {
     let v = vars(r.game, gobj);
-    v.xDD8.set(0);
-    let pos = v.xDE4.get();
-    v.xDDC.set(0.0);
+    v.turn_state.set(0);
+    let pos = v.turn_pos.get();
+    v.turn_left.set(0.0);
     let ip = item_mut(r.game, gobj);
     ip.pos = pos;
-    ip.x40_vel.x = 0.0;
+    ip.vel.x = 0.0;
     maplib::enter_ground(ip);
     change_state(r, gobj, 2, 3);
     set_speed(r, gobj, 1.0);
@@ -417,7 +417,7 @@ fn walk_on(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itDosei_UnkMotion2_Coll")]
 pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
     ground_or_fall(r, gobj, fall_start);
-    if vars(r.game, gobj).xDD8.get() == 2 {
+    if vars(r.game, gobj).turn_state.get() == 2 {
         walk_on(r, gobj);
     }
     maplib::tilt_on_floor(r.game, r.data, gobj);
@@ -516,7 +516,7 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
     } else {
         change_state(r, gobj, 5, change::ANIM_UPDATE | change::DROP_UPDATE);
     }
-    let scale = vars(r.game, gobj).xDE0.get();
+    let scale = vars(r.game, gobj).scale.get();
     let j = root(r.game, gobj);
     lib2725::rescale(r.game, gobj, j, scale);
 }
@@ -539,7 +539,7 @@ pub fn phys5(r: &mut Running, gobj: GObjId) {
 /// `itDosei_Logic7_EnteredAir`.
 #[doc(alias = "itDosei_Logic7_EnteredAir")]
 pub fn entered_air(r: &mut Running, gobj: GObjId) {
-    let msid = if item(r.game, gobj).xDC8_word.flags.x19 {
+    let msid = if item(r.game, gobj).flags.flags.turns_to_face {
         6
     } else {
         10
@@ -560,8 +560,8 @@ pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
 /// `itDosei_UnkMotion6_Coll`: skidding, it keeps the floor's slope, and stops or falls.
 #[doc(alias = "itDosei_UnkMotion6_Coll")]
 pub fn coll6(r: &mut Running, gobj: GObjId) -> bool {
-    let n = item(r.game, gobj).x378_itemColl.floor.normal;
-    vars(r.game, gobj).xDF8.set(n);
+    let n = item(r.game, gobj).coll.floor.normal;
+    vars(r.game, gobj).skid_normal.set(n);
     ground_skid(r, gobj, skidded, fall_start);
     false
 }
@@ -597,8 +597,8 @@ pub fn spawn_landed(r: &mut Running, gobj: GObjId) {
 pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
     remember_pos(r.game, gobj);
     let v = vars(r.game, gobj);
-    if v.xDD4.get() > 0 {
-        v.xDD4.update(|n| n.wrapping_sub(1));
+    if v.frames.get() > 0 {
+        v.frames.update(|n| n.wrapping_sub(1));
     } else {
         spawn_turn(r, gobj);
     }
@@ -619,17 +619,17 @@ pub fn coll7(r: &mut Running, gobj: GObjId) -> bool {
 pub fn spawn_turn(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let v = vars(r.game, gobj);
-    v.xDD8.set(1);
-    v.xDDC.set(mem(fp::frsp(fp::fdiv(PI, 2.0))));
+    v.turn_state.set(1);
+    v.turn_left.set(mem(fp::frsp(fp::fdiv(PI, 2.0))));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.xDC8_word.flags.x17 = 1;
-    ip.xDC8_word.flags.x19 = true;
+    ip.vel.x = 0.0;
+    ip.flags.flags.spin_axis = 1;
+    ip.flags.flags.turns_to_face = true;
     ip.owner = None;
     change_state(r, gobj, 9, 3);
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = 1.0;
+    item_mut(r.game, gobj).anim_speed = 1.0;
     crate::lb::anim::set_framerate(&mut r.game.objs, j, 1.0);
-    let left = reg(vars(r.game, gobj).xDDC.get());
+    let left = reg(vars(r.game, gobj).turn_left.get());
     let angle = facing_angle(r.game, gobj, fp::fneg(left));
     face(r, gobj, angle);
 }
@@ -642,21 +642,21 @@ pub fn anim9(r: &mut Running, gobj: GObjId) -> bool {
     let frames = attr_word(r, gobj, 0xC) as i32;
     let speed = attr_f32(r, gobj, 8);
     let v = vars(r.game, gobj);
-    let left = reg(v.xDDC.get());
-    v.xDDC.set(mem(fp::frsp(fp::fsub(
+    let left = reg(v.turn_left.get());
+    v.turn_left.set(mem(fp::frsp(fp::fsub(
         left,
         fp::fdiv(PI, f64::from(frames)),
     ))));
-    if v.xDD8.get() == 1 {
-        let left = reg(v.xDDC.get());
+    if v.turn_state.get() == 1 {
+        let left = reg(v.turn_left.get());
         let angle = facing_angle(r.game, gobj, fp::fneg(left));
         let j = root(r.game, gobj);
         jobj::set_rotation_y(&mut r.game.objs.jobjs, j, angle);
         let v = vars(r.game, gobj);
-        if reg(v.xDDC.get()) <= 0.0 {
-            v.xDD8.set(2);
+        if reg(v.turn_left.get()) <= 0.0 {
+            v.turn_state.set(2);
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), reg(speed)));
+            ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), reg(speed)));
         }
     }
     if !lib2725::is_animating(r.game, gobj) {
@@ -670,8 +670,8 @@ pub fn anim9(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itDosei_UnkMotion9_Coll")]
 pub fn coll9(r: &mut Running, gobj: GObjId) -> bool {
     ground_or_fall(r, gobj, fall_start);
-    if vars(r.game, gobj).xDD8.get() == 2 {
-        let frame = item(r.game, gobj).x5CC_currentAnimFrame;
+    if vars(r.game, gobj).turn_state.get() == 2 {
+        let frame = item(r.game, gobj).anim_frame;
         walk_on(r, gobj);
         seek_anim(r, gobj, frame);
     }
@@ -705,24 +705,24 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     );
     change_state(r, gobj, 11, 3);
     maplib::enter_air(item_mut(r.game, gobj));
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = 1.0;
+    item_mut(r.game, gobj).anim_speed = 1.0;
     crate::lb::anim::set_framerate(&mut r.game.objs, j, 1.0);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(fp::frsp(f64::from(push_x)), reg(ip.facing_dir)));
+    ip.vel.x = mem(fp::fmuls(fp::frsp(f64::from(push_x)), reg(ip.facing_dir)));
     let up = if push_y < 0 {
         push_y.wrapping_neg()
     } else {
         push_y
     };
-    ip.x40_vel.y = mem(fp::frsp(f64::from(up)));
-    ip.x40_vel.z = 0.0;
-    ip.xDC8_word.flags.x17 = 1;
-    ip.xDC8_word.flags.x19 = true;
-    vars(r.game, gobj).xDF0.set(20);
+    ip.vel.y = mem(fp::frsp(f64::from(up)));
+    ip.vel.z = 0.0;
+    ip.flags.flags.spin_axis = 1;
+    ip.flags.flags.turns_to_face = true;
+    vars(r.game, gobj).hits_left.set(20);
     face_ahead(r, gobj);
     let ip = item_mut(r.game, gobj);
     ip.owner = None;
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 60.0));
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 60.0));
     lib2725::tick_lifetime(r.game, gobj)
 }
 

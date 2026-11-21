@@ -43,7 +43,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         MOTION0_COLL | MOTION1_COLL | MOTION2_COLL => false,
         DMG_DEALT => {
             // `itFoxIllusion_Logic14_DmgDealt`.
-            item_mut(r.game, gobj).xCA8 = 0;
+            item_mut(r.game, gobj).hitlag_damage = 0;
             false
         }
         _ => return None,
@@ -64,7 +64,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// The owner's ghost joint tree, if it has one yet.
 fn ghost(game: &mut Game, gobj: GObjId) -> Option<JObjId> {
-    item_mut(game, gobj).xDD4_itemVar.fox_illusion().xDDC.get()
+    item_mut(game, gobj).vars.fox_illusion().ghost.get()
 }
 
 /// The afterimage behind a dash, `it_8029CEB4`: made at `pos` facing `facing_dir`, for
@@ -111,9 +111,9 @@ fn setup(r: &mut Running, gobj: GObjId) {
     let lifetime = r.data.f32(attrs.at(LIFETIME));
     let joint = art.model(r.data).joint(r.data);
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = lifetime;
-    ip.xD5C = 0;
-    ip.xDD4_itemVar.fox_illusion().xDD4.set(joint);
+    ip.life_timer = lifetime;
+    ip.skid = 0;
+    ip.vars.fox_illusion().ghost_joint.set(joint);
     lib26b1::disable_pickup(r.game, gobj);
     let owner = item(r.game, gobj)
         .owner
@@ -123,11 +123,7 @@ fn setup(r: &mut Running, gobj: GObjId) {
     let flags = super::super::item::change::ANIM_UPDATE;
     change_state(r, gobj, if air { 1 } else { 0 }, flags);
     lib2725::scale_by_owner(r, gobj);
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .fox_illusion()
-        .xDDC
-        .set(None);
+    item_mut(r.game, gobj).vars.fox_illusion().ghost.set(None);
 }
 
 /// The owner's ghost, `it_8029CD78`: its model loaded, turned as the afterimage and sized as
@@ -135,9 +131,9 @@ fn setup(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8029CD78")]
 fn make_ghost(r: &mut Running, gobj: GObjId) -> Option<JObjId> {
     let root = jobj_of(r.game, gobj).expect("an afterimage without a model");
-    let v = item_mut(r.game, gobj).xDD4_itemVar.fox_illusion();
-    assert!(v.xDDC.get().is_none(), "illusion add twice.");
-    let joint = v.xDD4.get();
+    let v = item_mut(r.game, gobj).vars.fox_illusion();
+    assert!(v.ghost.get().is_none(), "illusion add twice.");
+    let joint = v.ghost_joint.get();
     let g = jobj::load_joint(&mut r.game.objs, r.data, joint)?;
     let (q, stale) = {
         let o = &r.game.objs.jobjs[root];
@@ -164,19 +160,15 @@ fn follow(r: &mut Running, gobj: GObjId) -> bool {
         && ghost(r.game, gobj).is_none()
     {
         let g = make_ghost(r, gobj);
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .fox_illusion()
-            .xDDC
-            .set(g);
+        item_mut(r.game, gobj).vars.fox_illusion().ghost.set(g);
     }
     if owner.is_none_or(|o| r.fox_special_s_ghost_gone(o)) {
         return true;
     }
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = crate::fpu::mem(gekko_fp::fsubs(crate::fpu::reg(ip.xD44_lifeTimer), 1.0));
-    if ip.xD44_lifeTimer <= 0.0 {
-        ip.xD44_lifeTimer = 0.0;
+    ip.life_timer = crate::fpu::mem(gekko_fp::fsubs(crate::fpu::reg(ip.life_timer), 1.0));
+    if ip.life_timer <= 0.0 {
+        ip.life_timer = 0.0;
         start_fade(r, gobj);
     }
     false
@@ -210,7 +202,7 @@ fn start_fade(r: &mut Running, gobj: GObjId) {
         .special(r.data)
         .expect("an afterimage without attributes");
     let lifetime = r.data.f32(attrs.at(FADE_LIFETIME));
-    item_mut(r.game, gobj).xD44_lifeTimer = lifetime;
+    item_mut(r.game, gobj).life_timer = lifetime;
     let root = jobj_of(r.game, gobj);
     lib2725::hide_tree(r.game, root);
     change_state(r, gobj, 2, super::super::item::change::ANIM_UPDATE);
@@ -225,9 +217,9 @@ fn fade(r: &mut Running, gobj: GObjId) -> bool {
         return true;
     }
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = crate::fpu::mem(gekko_fp::fsubs(crate::fpu::reg(ip.xD44_lifeTimer), 1.0));
-    if ip.xD44_lifeTimer <= 0.0 {
-        ip.xD44_lifeTimer = 0.0;
+    ip.life_timer = crate::fpu::mem(gekko_fp::fsubs(crate::fpu::reg(ip.life_timer), 1.0));
+    if ip.life_timer <= 0.0 {
+        ip.life_timer = 0.0;
         return true;
     }
     false
@@ -253,9 +245,9 @@ fn destroyed(r: &mut Running, gobj: GObjId) {
         jobj::remove_all(&mut r.game.objs, g);
     }
     let ip = item_mut(r.game, gobj);
-    ip.xDD4_itemVar.fox_illusion().xDDC.set(None);
+    ip.vars.fox_illusion().ghost.set(None);
     ip.owner = None;
-    ip.xDC8_word.flags.x13 = false;
+    ip.flags.flags.held = false;
 }
 
 /// Forgets a GObj the afterimage points to, `it_8029D948` (`it_8026B894`).

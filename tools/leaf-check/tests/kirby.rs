@@ -453,7 +453,7 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     if u == INHALED_UNIT {
         let ip = melee_sim::game::it::item(g.game, gobj);
         let ok = if a < STAR_START {
-            ip.xBC_itemStateContainer.map(|s| s.0) == Some(0x803F_9450)
+            ip.state_table.map(|s| s.0) == Some(0x803F_9450)
         } else {
             ip.kind == ItKind::KirbySpitStar.id()
         };

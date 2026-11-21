@@ -146,19 +146,19 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, smash: bool, facing_dir
     };
     let ip = item_mut(r.game, missile);
     let owner = ip.owner;
-    let v = ip.xDD4_itemVar.samus_missile();
+    let v = ip.vars.samus_missile();
     v.is_smash_missile.set(i32::from(smash));
     v.owner.set(owner);
     if let Some(o) = v.owner.get() {
         let fired = r.samus_missiles(o);
         item_mut(r.game, missile)
-            .xDD4_itemVar
+            .vars
             .samus_missile()
-            .x4
+            .msid
             .set(fired);
     }
     if item_mut(r.game, missile)
-        .xDD4_itemVar
+        .vars
         .samus_missile()
         .is_smash_missile
         .get()
@@ -186,23 +186,23 @@ pub fn life(r: &mut Running, gobj: GObjId) {
     );
     let homing_end = fp::fsubs(life, time);
     let ip = item_mut(r.game, gobj);
-    ip.xDAC_itcmd_var0 = u32::from(reg(ip.xD44_lifeTimer) > homing_end);
-    let smash = ip.xDD4_itemVar.samus_missile().is_smash_missile.get() != 0;
-    if reg(ip.xD44_lifeTimer) == homing_end && !smash {
+    ip.cmd_var0 = u32::from(reg(ip.life_timer) > homing_end);
+    let smash = ip.vars.samus_missile().is_smash_missile.get() != 0;
+    if reg(ip.life_timer) == homing_end && !smash {
         ef::eflib::destroy_all(r, gobj);
     }
     let ip = item_mut(r.game, gobj);
-    if reg(ip.xD44_lifeTimer) <= fp::fsubs(slife, wait) {
-        ip.xDB0_itcmd_var1 = 1;
+    if reg(ip.life_timer) <= fp::fsubs(slife, wait) {
+        ip.cmd_var1 = 1;
     }
-    if ip.xD44_lifeTimer <= 0.0 {
+    if ip.life_timer <= 0.0 {
         if !smash {
             burst_homing(r, gobj);
         } else {
             burst_super(r, gobj);
         }
     } else {
-        ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), fp::frsp(1.0)));
+        ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), fp::frsp(1.0)));
     }
 }
 
@@ -227,7 +227,7 @@ pub fn home(r: &mut Running, gobj: GObjId) {
         return;
     }
     let ip = item(r.game, gobj);
-    let mut course = Vec3::new(ip.x40_vel.x, ip.x40_vel.y, 0.0);
+    let mut course = Vec3::new(ip.vel.x, ip.vel.y, 0.0);
     course.normalize_xy();
     let mut to = Vec3::new(
         mem(fp::fsubs(reg(target.x), reg(ip.pos.x))),
@@ -242,23 +242,23 @@ pub fn home(r: &mut Running, gobj: GObjId) {
     let d = to - course;
     let step = reg(attr_f32(r, gobj, attr::TURN_STEP));
     let max = attr_f32(r, gobj, attr::TURN_MAX);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.samus_missile();
+    let v = item_mut(r.game, gobj).vars.samus_missile();
     if reg(d.y) > 0.001_000_000_047_497_451_3 {
-        let t = reg(v.x8.get());
-        v.x8.set(mem(fp::fsubs(t, step)));
+        let t = reg(v.homing_left.get());
+        v.homing_left.set(mem(fp::fsubs(t, step)));
     } else if reg(d.y) < 0.001_000_000_047_497_451_3 {
-        let t = reg(v.x8.get());
-        v.x8.set(mem(fp::fadds(t, step)));
+        let t = reg(v.homing_left.get());
+        v.homing_left.set(mem(fp::fadds(t, step)));
     }
     // `itSamusMissile_ClampTurn`.
-    let turn = v.x8.get();
+    let turn = v.homing_left.get();
     let mag = if turn < 0.0 {
         mem(fp::fneg(reg(turn)))
     } else {
         turn
     };
     if mag > max {
-        v.x8.set(if turn > 0.0 {
+        v.homing_left.set(if turn > 0.0 {
             max
         } else {
             mem(fp::fneg(reg(max)))
@@ -273,16 +273,16 @@ pub fn start_homing(r: &mut Running, gobj: GObjId) {
     let speed = reg(attr_f32(r, gobj, attr::HOMING_SPEED));
     let life = attr_f32(r, gobj, attr::HOMING_LIFE);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
-    ip.x40_vel.y = 0.0;
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
+    ip.vel.y = 0.0;
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var0 = 0;
     lib2725::set_lifetime(r.game, r.data, gobj, life);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .samus_missile()
-        .x8
+        .homing_left
         .set(0.0);
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
@@ -297,10 +297,10 @@ pub fn start_homing(r: &mut Running, gobj: GObjId) {
 pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     life(r, gobj);
     let ip = item_mut(r.game, gobj);
-    if ip.xDB8_itcmd_var3 == 0 {
-        let v = ip.xDD4_itemVar.samus_missile();
+    if ip.cmd_var3 == 0 {
+        let v = ip.vars.samus_missile();
         if let Some(owner) = v.owner.get() {
-            let at = v.x4.get();
+            let at = v.msid.get();
             if (r.samus_missiles(owner).wrapping_sub(at) as u32) >= 2 {
                 hit(r, gobj);
             }
@@ -315,7 +315,11 @@ fn turn_model(r: &mut Running, gobj: GObjId) {
     let child = r.game.objs.jobjs[root]
         .child
         .expect("the missile's model's child");
-    let turn = item_mut(r.game, gobj).xDD4_itemVar.samus_missile().x8.get();
+    let turn = item_mut(r.game, gobj)
+        .vars
+        .samus_missile()
+        .homing_left
+        .get();
     jobj::set_rotation_x(&mut r.game.objs.jobjs, child, turn);
 }
 
@@ -323,25 +327,25 @@ fn turn_model(r: &mut Running, gobj: GObjId) {
 /// speed along the turn; then it slows by the attributes' `x10` down to `x14`.
 #[doc(alias = "itSamusmissile_UnkMotion0_Phys")]
 pub fn physics_homing(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
+    if item(r.game, gobj).cmd_var0 != 0 {
         home(r, gobj);
         let speed = reg(attr_f32(r, gobj, attr::HOMING_SPEED));
         let ip = item_mut(r.game, gobj);
         let mut v = Vec3::new(mem(fp::fmuls(speed, reg(ip.facing_dir))), 0.0, 0.0);
-        let turn = ip.xDD4_itemVar.samus_missile().x8.get();
+        let turn = ip.vars.samus_missile().homing_left.get();
         let facing = reg(item(r.game, gobj).facing_dir);
         v.rotate(Axis::Z, mem(fp::fmuls(reg(turn), fp::fneg(facing))));
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = v.x;
-        ip.x40_vel.y = v.y;
+        ip.vel.x = v.x;
+        ip.vel.y = v.y;
     } else {
         let decel = reg(attr_f32(r, gobj, attr::HOMING_DECEL));
         let min = reg(attr_f32(r, gobj, attr::HOMING_SPEED_MIN));
         let ip = item_mut(r.game, gobj);
-        let (x, y) = (reg(ip.x40_vel.x), reg(ip.x40_vel.y));
+        let (x, y) = (reg(ip.vel.x), reg(ip.vel.y));
         if fp::fmadds(x, x, fp::fmuls(y, y)) > fp::fmuls(min, min) {
-            ip.x40_vel.x = mem(fp::fmuls(x, decel));
-            ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), decel));
+            ip.vel.x = mem(fp::fmuls(x, decel));
+            ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), decel));
         }
     }
     turn_model(r, gobj);
@@ -354,11 +358,11 @@ pub fn start_super(r: &mut Running, gobj: GObjId) {
     let speed = reg(attr_f32(r, gobj, attr::SUPER_SPEED));
     let life = attr_f32(r, gobj, attr::SUPER_LIFE);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
-    ip.x40_vel.y = 0.0;
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
+    ip.vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
+    ip.vel.y = 0.0;
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
     lib2725::set_lifetime(r.game, r.data, gobj, life);
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
@@ -370,17 +374,17 @@ pub fn start_super(r: &mut Running, gobj: GObjId) {
 /// `x30` up to `x34`.
 #[doc(alias = "itSamusmissile_UnkMotion1_Phys")]
 pub fn physics_super(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDB0_itcmd_var1 == 0 {
+    if item(r.game, gobj).cmd_var1 == 0 {
         return;
     }
     let accel = reg(attr_f32(r, gobj, attr::SUPER_ACCEL));
     let max = attr_f32(r, gobj, attr::SUPER_SPEED_MAX);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmadds(accel, reg(ip.facing_dir), reg(ip.x40_vel.x)));
-    let x = reg(ip.x40_vel.x);
+    ip.vel.x = mem(fp::fmadds(accel, reg(ip.facing_dir), reg(ip.vel.x)));
+    let x = reg(ip.vel.x);
     let speed = if x < fp::frsp(0.0) { fp::fneg(x) } else { x };
     if speed > reg(max) {
-        ip.x40_vel.x = if ip.facing_dir == 1.0 {
+        ip.vel.x = if ip.facing_dir == 1.0 {
             max
         } else {
             mem(fp::fneg(reg(max)))
@@ -396,7 +400,7 @@ pub fn physics_super(r: &mut Running, gobj: GObjId) {
 pub fn hit(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     let msid = ip.msid;
-    if ip.xDD4_itemVar.samus_missile().is_smash_missile.get() == 0 {
+    if ip.vars.samus_missile().is_smash_missile.get() == 0 {
         if msid != 2 {
             burst_homing(r, gobj);
         }
@@ -411,7 +415,7 @@ pub fn hit(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_2725_Logic52_ShieldBounced")]
 pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     if item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .samus_missile()
         .is_smash_missile
         .get()
@@ -421,7 +425,7 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     }
     lib2725::bounce_off_shield(r.game, gobj);
     let ip = item(r.game, gobj);
-    let a = reg(math::atan2(ip.x40_vel.x, ip.x40_vel.y));
+    let a = reg(math::atan2(ip.vel.x, ip.vel.y));
     let turn = if ip.facing_dir == 1.0 {
         fp::fsubs(a, fp::fdivs(PI_F, 2.0))
     } else {
@@ -441,15 +445,18 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_2725_Logic52_Reflected")]
 pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let speed = reg(attr_f32(r, gobj, attr::SUPER_SPEED));
-    item_mut(r.game, gobj).xDB8_itcmd_var3 = 1;
+    item_mut(r.game, gobj).cmd_var3 = 1;
     lib2725::reflected_back(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    let smash = ip.xDD4_itemVar.samus_missile().is_smash_missile.get() != 0;
+    let smash = ip.vars.samus_missile().is_smash_missile.get() != 0;
     if smash {
-        ip.x40_vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
+        ip.vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
     }
-    if ip.x40_vel.y < 0.0 {
-        ip.x40_vel.y = mem(fp::fmuls(fp::fneg(reg(ip.x40_vel.y)), reg(ip.xC70)));
+    if ip.vel.y < 0.0 {
+        ip.vel.y = mem(fp::fmuls(
+            fp::fneg(reg(ip.vel.y)),
+            reg(ip.reflect_speed_mul),
+        ));
     }
     let yaw = mem(fp::fmuls(fp::frsp(HALF_PI), reg(ip.facing_dir)));
     let root = jobj_of(r.game, gobj).expect("a missile without a model");
@@ -490,7 +497,7 @@ pub fn burst_super(r: &mut Running, gobj: GObjId) {
 // `it_2725_Logic52_EvtUnk`, as game/it/evt_unk.rs runs it (aliased there).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.samus_missile();
+    let v = item_mut(r.game, gobj).vars.samus_missile();
     if v.owner.get() == other {
         v.owner.set(None);
     }

@@ -920,7 +920,7 @@ impl Running<'_> {
             let it = super::super::it::item_of(self.game, g);
             let ip = &self.game.items[it.0];
             // `it_8026C1B4`: a hitbox on.
-            let live = ip.x5D4_hitboxes.iter().take(4).any(|h| h.hit.state != 0);
+            let live = ip.hitboxes.iter().take(4).any(|h| h.hit.state != 0);
             // `ftCo_800A5944`: `It_Kind_BombHei`, `_G_Shell`, `_R_Shell`.
             if !live
                 || !matches!(
@@ -930,7 +930,7 @@ impl Running<'_> {
             {
                 continue;
             }
-            if geo.island_of_line(ip.x378_itemColl.floor.index) == Some(island) {
+            if geo.island_of_line(ip.coll.floor.index) == Some(island) {
                 return true;
             }
         }
@@ -1282,7 +1282,7 @@ impl Running<'_> {
         let Some(island) = geo.island_of_line(fpp.coll_data.floor.index) else {
             return false;
         };
-        if geo.island_of_line(self.game.items[item.0].x378_itemColl.floor.index) != Some(island) {
+        if geo.island_of_line(self.game.items[item.0].coll.floor.index) != Some(island) {
             return false;
         }
         let g = fpp.gobj.expect("the fighter's GObj");

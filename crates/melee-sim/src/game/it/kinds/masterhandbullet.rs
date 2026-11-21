@@ -99,7 +99,7 @@ pub fn start(r: &mut Running, gobj: GObjId, state: i32) {
     change_state(r, gobj, state, change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(crate::game::handles::CodeRef(ACCESSORY));
-    ip.xDD4_itemVar.masterhand_bullet().x0.set(life);
+    ip.vars.masterhand_bullet().life.set(life);
     lib2725::uncount_hits(r.game, gobj);
     let facing = item(r.game, gobj).facing_dir;
     let y = mem(fp::frsp(fp::fmul(
@@ -120,9 +120,9 @@ pub fn start(r: &mut Running, gobj: GObjId, state: i32) {
 fn anim(r: &mut Running, gobj: GObjId) -> bool {
     let pos = item(r.game, gobj).pos;
     crate::game::ef::spawn(r, GFX_SPARK, Some(gobj), &[Arg::Vec(pos)]);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.masterhand_bullet();
-    let t = mem(fp::fsubs(reg(v.x0.get()), 1.0));
-    v.x0.set(t);
+    let v = item_mut(r.game, gobj).vars.masterhand_bullet();
+    let t = mem(fp::fsubs(reg(v.life.get()), 1.0));
+    v.life.set(t);
     reg(t) < 0.0
 }
 

@@ -234,13 +234,13 @@ impl Mirror for ArwingLaserVars {
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut ArwingLaserVars {
-    item_mut(game, gobj).xDD4_itemVar.arwing_laser()
+    item_mut(game, gobj).vars.arwing_laser()
 }
 
 /// A bone of the laser's model (`xBBC_dynamicBoneTable->bones[i]`).
 fn bone(game: &Game, gobj: GObjId, i: usize) -> Option<JObjId> {
     let t = item(game, gobj)
-        .xBBC_dynamicBoneTable
+        .bone_table
         .expect("an Arwing's laser without bones");
     game.it.bone_tables[t.0].bones[i]
 }
@@ -277,7 +277,7 @@ pub fn meets_stage(r: &mut Running, gobj: GObjId) -> bool {
         let pos = item(r.game, gobj).pos;
         let g = r.game.geometry.as_ref().expect("no collision geometry");
         if let Some(v) = g.line_speed(hit.line, pos) {
-            item_mut(r.game, gobj).x40_vel = v;
+            item_mut(r.game, gobj).vel = v;
         }
         return true;
     }
@@ -479,7 +479,7 @@ pub fn spawn_aimed(
     lib2725::set_rotation_z(r.game, j, 0.0);
     enter(r, gobj);
     lib2725::first_frame(r, gobj);
-    item_mut(r.game, gobj).xDCC_flag.b3 = false;
+    item_mut(r.game, gobj).state_flags.b3 = false;
 }
 
 /// A lead's destroy callback, `it_802E79C8`: it lets go of its beams, which let go of it.
@@ -547,16 +547,16 @@ pub fn phys_straight(r: &mut Running, gobj: GObjId) {
     if matches!(vars(r.game, gobj).shot_type.get(), 0 | 2) {
         if vars(r.game, gobj).left_gun.get() == 1 {
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
-            ip.x40_vel.z = 0.0;
-            ip.x40_vel.y = 0.0;
+            ip.vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
+            ip.vel.z = 0.0;
+            ip.vel.y = 0.0;
         } else {
             let gun = vars(r.game, gobj).gun.get();
             let at = world_position(&mut r.game.objs, r.data, gun, None);
             let ip = item_mut(r.game, gobj);
             ip.pos = at;
             ip.pos.z = 0.0;
-            ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
+            ip.vel = Vec3::new(0.0, 0.0, 0.0);
         }
     }
     let v = vars(r.game, gobj);
@@ -575,9 +575,9 @@ pub fn phys_aimed(r: &mut Running, gobj: GObjId) {
         let h = vars(r.game, gobj).heading.get();
         let k = fp::fmuls(speed, mul);
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = mem(fp::fmuls(reg(h.x), k));
-        ip.x40_vel.y = mem(fp::fmuls(reg(h.y), k));
-        ip.x40_vel.z = mem(fp::fmuls(reg(h.z), k));
+        ip.vel.x = mem(fp::fmuls(reg(h.x), k));
+        ip.vel.y = mem(fp::fmuls(reg(h.y), k));
+        ip.vel.z = mem(fp::fmuls(reg(h.z), k));
     }
     let v = vars(r.game, gobj);
     let s = fp::fmuls(reg(v.stage_scale.get()), reg(v.scale.get()));
@@ -619,7 +619,7 @@ pub fn coll_straight(r: &mut Running, gobj: GObjId) -> bool {
     let pos = item(r.game, gobj).pos;
     let g = r.game.geometry.as_ref().expect("no collision geometry");
     if let Some(v) = g.line_speed(hit.line, pos) {
-        item_mut(r.game, gobj).x40_vel = v;
+        item_mut(r.game, gobj).vel = v;
     }
     let cur = vars(r.game, gobj).tip.get();
     let ip = item_mut(r.game, gobj);
@@ -709,10 +709,10 @@ pub fn ends(_r: &mut Running, _gobj: GObjId) -> bool {
 pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj).expect("an Arwing's laser without a model");
     let ip = item(r.game, gobj);
-    let by = if !ip.xDCC_flag.b1 {
+    let by = if !ip.state_flags.b1 {
         ip.owner
     } else {
-        ip.xC64_reflectGObj
+        ip.reflector
     };
     vars(r.game, gobj).reflected.set(1);
     match vars(r.game, gobj).shot_type.get() {
@@ -724,9 +724,9 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
             vars(r.game, gobj).tip.set(tip);
             let ip = item_mut(r.game, gobj);
             ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-            ip.x40_vel.x = mem(fp::fneg(reg(ip.x40_vel.x)));
-            ip.x40_vel.z = 0.0;
-            ip.x40_vel.y = 0.0;
+            ip.vel.x = mem(fp::fneg(reg(ip.vel.x)));
+            ip.vel.z = 0.0;
+            ip.vel.y = 0.0;
             let face = reg(ip.facing_dir);
             let ry = mem(fp::frsp(fp::fmul(std::f64::consts::FRAC_PI_2, face)));
             lib2725::set_rotation_y(r.game, j, ry);
@@ -734,7 +734,7 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
         1 | 3 => {
             let facing = reg(r.game.ft_facing_dir(by.expect("a reflector")));
             let ip = item_mut(r.game, gobj);
-            if fp::fmuls(reg(ip.x40_vel.x), facing) < 0.0 {
+            if fp::fmuls(reg(ip.vel.x), facing) < 0.0 {
                 ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
             }
         }
@@ -750,8 +750,8 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj).expect("an Arwing's laser without a model");
     vars(r.game, gobj).reflected.set(1);
     let ip = item_mut(r.game, gobj);
-    let axis = ip.xC58;
-    ip.x40_vel.mirror_xy(axis);
+    let axis = ip.shield_normal;
+    ip.vel.mirror_xy(axis);
     let b4 = bone(r.game, gobj, 4);
     let tip = world_position(&mut r.game.objs, r.data, b4, None);
     item_mut(r.game, gobj).pos = tip;
@@ -759,7 +759,7 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     vars(r.game, gobj).tip.set(tip);
     if matches!(vars(r.game, gobj).shot_type.get(), 0 | 2) {
         let ip = item_mut(r.game, gobj);
-        ip.facing_dir = if reg(ip.x40_vel.x) < 0.0 { -1.0 } else { 1.0 };
+        ip.facing_dir = if reg(ip.vel.x) < 0.0 { -1.0 } else { 1.0 };
         let face = reg(ip.facing_dir);
         let ry = mem(fp::frsp(fp::fmul(std::f64::consts::FRAC_PI_2, face)));
         lib2725::set_rotation_y(r.game, j, ry);

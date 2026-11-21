@@ -66,7 +66,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 
 fn item_attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
     let a = item(r.game, gobj)
-        .xCC_item_attr
+        .attrs
         .expect("an item without attributes");
     r.data.f32(a.at(off))
 }
@@ -110,16 +110,16 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     let min = reg(attr_f32(r, gobj, attr::SCALE));
     let life0 = reg(attr_f32(r, gobj, attr::LIFETIME));
     let model = reg(item_attr_f32(r, gobj, ITEM_SCALE));
-    let life = reg(item(r.game, gobj).xD44_lifeTimer);
+    let life = reg(item(r.game, gobj).life_timer);
     let s = fp::fadds(min, fp::fdivs(fp::fmuls(life, fp::fsubs(1.0, min)), life0));
     let s = mem(fp::fmuls(s, model));
     let j = jobj_of(r.game, gobj).expect("PK Fire's pillar without a model");
     jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
     let ip = item_mut(r.game, gobj);
-    if ip.xD44_lifeTimer <= 0.0 {
+    if ip.life_timer <= 0.0 {
         return true;
     }
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
     false
 }
 
@@ -150,10 +150,10 @@ pub fn collide(r: &mut Running, gobj: GObjId) -> bool {
 pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
     let per = reg(attr_f32(r, gobj, attr::DAMAGE_LIFE));
     let ip = item_mut(r.game, gobj);
-    let taken = fp::frsp(f64::from(ip.xC9C));
-    ip.xD44_lifeTimer = mem(fp::fnmsubs(taken, per, reg(ip.xD44_lifeTimer)));
-    if ip.xD44_lifeTimer <= 0.0 {
-        ip.xD44_lifeTimer = 1.0;
+    let taken = fp::frsp(f64::from(ip.damage_taken));
+    ip.life_timer = mem(fp::fnmsubs(taken, per, reg(ip.life_timer)));
+    if ip.life_timer <= 0.0 {
+        ip.life_timer = 1.0;
     }
     false
 }

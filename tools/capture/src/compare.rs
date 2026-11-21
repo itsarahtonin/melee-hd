@@ -2252,10 +2252,10 @@ pub(crate) fn item_render_target_view(
     let mut l = melee_sim::hsd::export::Lay::new(at, size);
     let cx = LeftoverWords(&game.objs.heap.image);
     o.lay(&mut l, at, &cx);
-    let n = o.x374_dynamicBonesNum.max(0) as usize;
-    o.xD4_dynamicBones.lay_counted(&mut l, at + 0xD4, &cx, n);
-    let n = usize::from(o.xAC8_hurtboxNum);
-    o.xACC_itemHurtbox.lay_counted(&mut l, at + 0xACC, &cx, n);
+    let n = o.dynamic_bone_count.max(0) as usize;
+    o.dynamic_bones.lay_counted(&mut l, at + 0xD4, &cx, n);
+    let n = usize::from(o.hurtbox_count);
+    o.hurtboxes.lay_counted(&mut l, at + 0xACC, &cx, n);
     let mut block = mem[lo..lo + size as usize].to_vec();
     for &(a, b) in runs {
         for off in a..b {

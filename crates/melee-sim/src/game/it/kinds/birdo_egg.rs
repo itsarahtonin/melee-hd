@@ -124,7 +124,7 @@ impl Mirror for KyasarinEggVars {
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut KyasarinEggVars {
-    item_mut(game, gobj).xDD4_itemVar.kyasarin_egg()
+    item_mut(game, gobj).vars.kyasarin_egg()
 }
 
 fn attr(r: &Running, gobj: GObjId, off: u32) -> melee_data::archive::DataRef {
@@ -176,13 +176,13 @@ pub fn spawn(r: &mut Running, parent: Option<GObjId>, pos: Vec3, dir: f32) {
     let ip = item_mut(r.game, egg);
     ip.facing_dir = dir;
     let facing = if ip.facing_dir == -1.0 { -1 } else { 1 };
-    ip.x378_itemColl.set_facing_dir(facing);
-    set_flag(&mut ip.xDD0_flag, 6, false);
-    ip.xD40 = 0.0;
+    ip.coll.set_facing_dir(facing);
+    set_flag(&mut ip.status_flags, 6, false);
+    ip.invincible_frames = 0.0;
     vars(r.game, egg).broken.set(0);
     let ip = item_mut(r.game, egg);
     super::super::anim::clear_overlay(ip);
-    if !super::super::flag(ip.xDD0_flag, 7) {
+    if !super::super::flag(ip.status_flags, 7) {
         hitbox::end_blink(r.game, egg);
     }
     roll(r, egg);
@@ -194,9 +194,9 @@ pub fn roll(r: &mut Running, gobj: GObjId) {
     lib26b1::enable_pickup(r.game, gobj);
     let speed = reg(r.data.f32(attr(r, gobj, a::SPEED)));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
+    ip.vel.x = mem(fp::fmuls(speed, reg(ip.facing_dir)));
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 
@@ -246,8 +246,8 @@ pub fn bounce(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     let up = r.data.f32(attr(r, gobj, a::BOUNCE));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fneg(reg(ip.x40_vel.x)));
-    ip.x40_vel.y = up;
+    ip.vel.x = mem(fp::fneg(reg(ip.vel.x)));
+    ip.vel.y = up;
 }
 
 /// Bouncing's collision, `itKyasarinegg_UnkMotion1_Coll`: whether it touched anything (then
@@ -268,8 +268,8 @@ pub fn break_empty(r: &mut Running, gobj: GObjId) {
     lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = 0.0;
+    ip.vel.x = 0.0;
+    ip.vel.y = 0.0;
     vars(r.game, gobj).broken.set(1);
     change_state(r, gobj, 4, change::ANIM_UPDATE);
 }

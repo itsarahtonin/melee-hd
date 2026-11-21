@@ -67,9 +67,9 @@ fn catch_in(r: &mut Running, gobj: GObjId, owner: GObjId, states: u32) {
     ip.atk_victim = Some(owner);
     ip.grab_victim = Some(owner);
     // `it_8026C220`.
-    ip.xCB0_source_ply = slot;
-    super::super::set_flag(&mut ip.xDD0_flag, 1, false);
-    ip.xBC_itemStateContainer = Some(ItemStatesRef(states));
+    ip.source_player = slot;
+    super::super::set_flag(&mut ip.status_flags, 1, false);
+    ip.state_table = Some(ItemStatesRef(states));
     let bone = article(ip).model(r.data).bone_attach_id(r.data);
     let part = tip(r, owner);
     lib2725::attach_to_part(r.game, r.data, gobj, bone, owner, part);
@@ -77,10 +77,10 @@ fn catch_in(r: &mut Running, gobj: GObjId, owner: GObjId, states: u32) {
     maplib::enter_air(item_mut(r.game, gobj));
     super::super::hitbox::start_blink(r.game, gobj);
     // `it_80274ECC`.
-    item_mut(r.game, gobj).xD09 = 1;
+    item_mut(r.game, gobj).no_catch = 1;
     lib2725::clear_stomp(r.game, gobj);
     // `it_8026BD54`.
-    item_mut(r.game, gobj).xDCC_flag.b3 = false;
+    item_mut(r.game, gobj).state_flags.b3 = false;
     lib2725::stop_all(r.game, gobj);
 }
 

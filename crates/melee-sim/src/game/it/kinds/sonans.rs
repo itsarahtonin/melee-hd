@@ -79,8 +79,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let life = attr_i32(r, gobj, 0x24);
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xD44_lifeTimer = mem(fp::frsp(f64::from(life)));
+    ip.cmd_var0 = 0;
+    ip.life_timer = mem(fp::frsp(f64::from(life)));
     let v = pokemon::vars(r.game, gobj);
     v.set_f32(SWING_SPEED, 0.0);
     v.set_f32(SWING_ANGLE, 0.0);
@@ -111,7 +111,7 @@ pub fn swing(r: &mut Running, gobj: GObjId) {
     if item(r.game, gobj).ground_or_air == GA_AIR {
         super::gravity(r, gobj);
     }
-    if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
+    if item(r.game, gobj).cmd_var0 != 0 {
         let push = attr_f32(r, gobj, 0x14);
         let pull = attr_f32(r, gobj, 0x10);
         let rest = reg(attr_f32(r, gobj, 0x1C));
@@ -140,7 +140,7 @@ pub fn swing(r: &mut Running, gobj: GObjId) {
         if stopped {
             v.set_f32(SWING_ANGLE, 0.0);
             v.set_f32(SWING_SPEED, 0.0);
-            item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+            item_mut(r.game, gobj).cmd_var0 = 0;
         } else {
             let (a, s) = (v.f32(SWING_ANGLE), v.f32(SWING_SPEED));
             v.set_f32(SWING_ANGLE, mem(fp::fadds(reg(a), reg(s))));
@@ -195,15 +195,15 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     );
     let ip = item(r.game, gobj);
     let (hit, dir, swinging) = (
-        fp::frsp(f64::from(ip.xCA0)),
-        reg(ip.xCCC_incDamageDirection),
-        ip.xDAC_itcmd_var0 != 0,
+        fp::frsp(f64::from(ip.hit_damage)),
+        reg(ip.damage_dir),
+        ip.cmd_var0 != 0,
     );
     let speed = || fp::fmuls(reg(k), fp::fmuls(hit, dir));
     let abs = |x: f64| if x < 0.0 { fp::fneg(x) } else { x };
     if !swinging {
         pokemon::vars(r.game, gobj).set_f32(SWING_SPEED, mem(speed()));
-        item_mut(r.game, gobj).xDAC_itcmd_var0 = 1;
+        item_mut(r.game, gobj).cmd_var0 = 1;
     } else {
         let v = pokemon::vars(r.game, gobj);
         if abs(reg(v.f32(SWING_SPEED))) < abs(speed()) {
@@ -229,7 +229,7 @@ pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
         play_sfx(r, gobj, 0x272B, 0x7F, 0x40);
     }
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
     false
 }
 
@@ -263,8 +263,8 @@ pub fn stand(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itSonans_UnkMotion1_Anim")]
 pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    let life = fp::fsubs(reg(ip.xD44_lifeTimer), 1.0);
-    ip.xD44_lifeTimer = mem(life);
+    let life = fp::fsubs(reg(ip.life_timer), 1.0);
+    ip.life_timer = mem(life);
     life == fp::frsp(0.0)
 }
 

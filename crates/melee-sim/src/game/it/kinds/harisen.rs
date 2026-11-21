@@ -153,14 +153,14 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802929C8")]
 #[doc(alias = "it_802929F8")]
 pub fn swing(r: &mut Running, gobj: GObjId, msid: i32, speed: f32) {
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = speed;
+    item_mut(r.game, gobj).anim_speed = speed;
     change_state(r, gobj, msid, change::ANIM_UPDATE);
 }
 
 /// The dash swing's state, 6, at its own speed, `it_80292A28`.
 #[doc(alias = "it_80292A28")]
 pub fn swing_dash(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = 1.0;
+    item_mut(r.game, gobj).anim_speed = 1.0;
     change_state(r, gobj, 6, change::ANIM_UPDATE);
 }
 
@@ -173,7 +173,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 /// Let go of, at its own size and speed, it falls, `itHarisen_Logic24_Dropped`.
 #[doc(alias = "itHarisen_Logic24_Dropped")]
 pub fn dropped(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = 1.0;
+    item_mut(r.game, gobj).anim_speed = 1.0;
     shrink(r, gobj);
     change_state(r, gobj, 8, change::ANIM_UPDATE | change::DROP_UPDATE);
 }
@@ -215,7 +215,7 @@ fn landing_word_set(r: &Running, gobj: GObjId) -> bool {
         let at = r.game.items.addr(slot) + XD4C;
         let (before, known) = crate::hsd::heap::with(|h| h.image.pre_copy_bytes(r.data, at, 4))
             .unwrap_or_else(|| (vec![0; 4], vec![false; 4]));
-        let ours = item(r.game, gobj).xD4C.to_be_bytes();
+        let ours = item(r.game, gobj).ammo.to_be_bytes();
         let mut word = [0; 4];
         for (i, w) in word.iter_mut().enumerate() {
             *w = if !pixels[i] {
@@ -245,7 +245,7 @@ fn landing_word_set(r: &Running, gobj: GObjId) -> bool {
             );
         }
     }
-    item(r.game, gobj).xD4C != 0
+    item(r.game, gobj).ammo != 0
 }
 
 /// Thrown, `itHarisen_Logic24_Thrown`.

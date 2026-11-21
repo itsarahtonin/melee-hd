@@ -81,7 +81,7 @@ impl Running<'_> {
     pub fn samus_bomb_touches(&mut self, gobj: GObjId, bomb: GObjId, scale: f32) -> bool {
         let f = self.game.fighter_id(gobj);
         let mtx = self.own_matrix(f);
-        let mut hit = super::super::super::it::item(self.game, bomb).x5D4_hitboxes[0]
+        let mut hit = super::super::super::it::item(self.game, bomb).hitboxes[0]
             .hit
             .clone();
         let mut touch = false;
@@ -102,7 +102,7 @@ impl Running<'_> {
                 break;
             }
         }
-        let h = &mut super::super::super::it::item_mut(self.game, bomb).x5D4_hitboxes[0].hit;
+        let h = &mut super::super::super::it::item_mut(self.game, bomb).hitboxes[0].hit;
         h.hurt_coll_pos = hit.hurt_coll_pos;
         h.coll_distance = hit.coll_distance;
         touch

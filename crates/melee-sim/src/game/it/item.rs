@@ -61,12 +61,12 @@ pub fn run_proc(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// freed item's first word links it to the next free item (`HSD_ObjFree`), which it keeps
 /// when reused.
 pub fn free_user_data(game: &mut Game, item: ItemId) {
-    if let Some(t) = game.items[item.0].xBBC_dynamicBoneTable {
+    if let Some(t) = game.items[item.0].bone_table {
         let g = &*game;
         crate::hsd::export::with_image(|img| crate::game::export::bone_table(g, img, t));
         game.it.bone_tables.free(t.0);
     }
-    game.items[item.0].x0 = game.items.free_head().map(ItemId);
+    game.items[item.0].next_free = game.items.free_head().map(ItemId);
     game.items.free(item.0);
 }
 
@@ -104,7 +104,7 @@ pub fn apply_scale(game: &mut Game, gobj: GObjId) {
 /// a quarter turn about y per unit of facing, in double precision.
 pub fn apply_facing(game: &mut Game, gobj: GObjId, j: Option<JObjId>) {
     let ip = super::item(game, gobj);
-    if ip.xDC8_word.flags.x19 {
+    if ip.flags.flags.turns_to_face {
         let y = fp::frsp(fp::fmul(
             fp::fdiv(std::f64::consts::PI, 2.0),
             reg(ip.facing_dir),
@@ -172,7 +172,7 @@ pub fn bump_count(n: &mut super::super::structs::HSD_ObjAllocUnk, hold_kind: i32
 pub fn uncount(game: &mut Game, gobj: GObjId) {
     let (hold_kind, x18) = {
         let ip = super::item(game, gobj);
-        (ip.hold_kind, ip.x18)
+        (ip.hold_kind, ip.spawn_origin)
     };
     bump_count(&mut game.it.counts, hold_kind, -1);
     if super::super::gm::is_training(game) && x18 == 1 {
@@ -185,7 +185,7 @@ pub fn uncount(game: &mut Game, gobj: GObjId) {
 pub fn count(game: &mut Game, gobj: GObjId) {
     let (hold_kind, kind, x18) = {
         let ip = super::item(game, gobj);
-        (ip.hold_kind, ip.kind, ip.x18)
+        (ip.hold_kind, ip.kind, ip.spawn_origin)
     };
     if hold_kind != 9 {
         bump_count(&mut game.it.counts, hold_kind, 1);
@@ -275,24 +275,24 @@ pub fn set_kind_data(game: &mut Game, data: &Archives, gobj: GObjId) {
     let article = article_of(game, data, kind);
     let logic = tables::logic_ref(kind);
     let ip = item_mut(game, gobj);
-    ip.xC4_article_data = article;
-    ip.xB8_itemLogicTable = Some(logic);
-    ip.xBC_itemStateContainer = Some(ItemStatesRef(tables::logic(logic).states));
+    ip.article = article;
+    ip.logic_table = Some(logic);
+    ip.state_table = Some(ItemStatesRef(tables::logic(logic).states));
 }
 
 /// The item's `ItemAttr`.
 pub fn attr_of(ip: &Item) -> Attr {
     // Only a stage's hurtbox item has attributes outside the archives (`it_803F8C08`).
     assert!(
-        ip.xCC_item_attr.is_some() || ip.kind == ItKind::StageHurtbox,
+        ip.attrs.is_some() || ip.kind == ItKind::StageHurtbox,
         "an item without attributes"
     );
-    Attr(ip.xCC_item_attr)
+    Attr(ip.attrs)
 }
 
 /// The item's article.
 pub fn article(ip: &Item) -> Article {
-    Article(ip.xC4_article_data.expect("an item without an article"))
+    Article(ip.article.expect("an item without an article"))
 }
 
 /// `ItCo.dat`'s common item data.
@@ -313,8 +313,8 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         let ip = item_mut(r.game, gobj);
         ip.kind = spawn.kind;
         ip.hold_kind = spawn.hold_kind;
-        ip.x18 = spawn.x10;
-        ip.x1C = made;
+        ip.spawn_origin = spawn.x10;
+        ip.spawn_num = made;
         ip.entity = Some(gobj);
     }
     set_kind_data(r.game, data, gobj);
@@ -322,140 +322,140 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         let ip = item_mut(r.game, gobj);
         ip.msid = -1;
         let a = article(ip);
-        ip.xC8_joint = a.model(data).joint(data);
+        ip.joint = a.model(data).joint(data);
         // The stage items' spawn (`it_802E6AEC`) points the kind's article at the
         // executable's attributes, which no archive holds.
-        ip.xCC_item_attr = if ip.kind == ItKind::StageHurtbox && yaku_attr {
+        ip.attrs = if ip.kind == ItKind::StageHurtbox && yaku_attr {
             None
         } else {
             Some(a.attr(data))
         };
         ip.owner = None;
-        ip.xDC8_word.flags.x0 = false;
+        ip.flags.flags.held_for_owner = false;
         ip.ecb_lock = -1;
-        ip.xDC4 = 0;
-        ip.xDC8_word.flags.xF = 0;
-        ip.xCC4 = 0;
-        set_flag(&mut ip.xDCF_flag, 6, false);
-        set_flag(&mut ip.xDCF_flag, 7, false);
-        ip.xCB0_source_ply = 6;
-        ip.xCB4 = -1;
-        ip.xC38 = -1;
-        ip.xCE0 = Vec3::new(0.0, 0.0, 0.0);
-        ip.xCD4 = Vec3::new(0.0, 0.0, 0.0);
-        set_flag(&mut ip.xDD0_flag, 1, false);
-        ip.xDC8_word.flags.x14 = false;
-        ip.xDC8_word.flags.xE = false;
-        ip.xCEC_fighterGObj = None;
-        ip.xCF0_itemGObj = None;
-        ip.xCF4_fighterGObjUnk = None;
+        ip.hold_part = 0;
+        ip.flags.flags.held_by_players = 0;
+        ip.hit_element = 0;
+        set_flag(&mut ip.draw_flags, 6, false);
+        set_flag(&mut ip.draw_flags, 7, false);
+        ip.source_player = 6;
+        ip.hit_by_kind = -1;
+        ip.hit_item_kind = -1;
+        ip.hit_by_pos = Vec3::new(0.0, 0.0, 0.0);
+        ip.hit_item_pos = Vec3::new(0.0, 0.0, 0.0);
+        set_flag(&mut ip.status_flags, 1, false);
+        ip.flags.flags.thrown = false;
+        ip.flags.flags.holds_fighter_data = false;
+        ip.attacker = None;
+        ip.attacker_owner = None;
+        ip.met_fighter = None;
         ip.toucher = None;
-        ip.xC64_reflectGObj = None;
-        ip.xCFC = None;
+        ip.reflector = None;
+        ip.stomper = None;
         ip.atk_victim = None;
         ip.grab_victim = None;
-        ip.xCCC_incDamageDirection = 0.0;
-        ip.xCB8_outDamageDirection = 0.0;
-        ip.xC68 = 0.0;
-        ip.xCD0 = 0.0;
+        ip.damage_dir = 0.0;
+        ip.out_damage_dir = 0.0;
+        ip.reflect_dir = 0.0;
+        ip.stomp_dir = 0.0;
     }
     let lifetime = common_data(r.game).u32(data, common::LIFETIME);
     lib2725::set_lifetime(r.game, data, gobj, mem(fp::frsp(f64::from(lifetime))));
     let ip = item_mut(r.game, gobj);
     let a = attr_of(ip);
-    set_flag(&mut ip.xDD0_flag, 3, false);
+    set_flag(&mut ip.status_flags, 3, false);
     ip.spin_spd = a.f32(data, attr::SPIN_SPEED);
-    ip.xDC8_word.flags.x19 = a.turns_to_face(data);
-    ip.xDC8_word.flags.x17 = a.spin_axis(data);
-    ip.xBCC_unk = a.vec2(data, attr::X30);
-    ip.xBD4_grabRange = a.vec2(data, attr::GRAB_RANGE);
-    ip.xDC8_word.flags.x1A = a.x1_4(data);
-    ip.xBEC = a.ecb(data, attr::ECB);
-    ip.xBDC = a.ecb(data, attr::ECB);
-    ip.xDC8_word.flags.x1C = true;
-    ip.xDC8_word.flags.x1D = true;
-    ip.xDC8_word.flags.x1E = true;
-    ip.xC1C = a.ecb(data, attr::X40);
-    ip.xC0C = ip.xC1C.clone();
-    ip.xBFC = ip.xC0C.clone();
-    ip.xDC8_word.flags.xC = a.hits_counted(data);
-    ip.xDC8_word.flags.xD = true;
-    ip.xDCD_flag.x0.b01 = a.cam_kind(data);
-    set_flag(&mut ip.xDCE_flag, 3, false);
-    ip.xD54_throwNum = 0;
-    ip.xD50_landNum = 0;
-    ip.xD58 = 0;
-    ip.xD5C = 2;
-    ip.xDCC_flag.b3 = true;
-    ip.xDCC_flag.b4567 = 15;
-    ip.xAC4_ignoreItemID = super::IgnoreId(Some(spawn.x40 as u32));
+    ip.flags.flags.turns_to_face = a.turns_to_face(data);
+    ip.flags.flags.spin_axis = a.spin_axis(data);
+    ip.grab_offset = a.vec2(data, attr::X30);
+    ip.grab_range = a.vec2(data, attr::GRAB_RANGE);
+    ip.flags.flags.keeps_clear = a.x1_4(data);
+    ip.push_box = a.ecb(data, attr::ECB);
+    ip.push_box_base = a.ecb(data, attr::ECB);
+    ip.flags.flags.clear_of_fighters = true;
+    ip.flags.flags.clear_of_items = true;
+    ip.flags.flags.pushed_by_enemies = true;
+    ip.coll_box = a.ecb(data, attr::X40);
+    ip.kind_coll_box = ip.coll_box.clone();
+    ip.throw_coll_box = ip.kind_coll_box.clone();
+    ip.flags.flags.hits_counted = a.hits_counted(data);
+    ip.flags.flags.shield_hitlag = true;
+    ip.hit_flags.x0.b01 = a.cam_kind(data);
+    set_flag(&mut ip.hurt_flags, 3, false);
+    ip.throw_count = 0;
+    ip.land_count = 0;
+    ip.slide_frames = 0;
+    ip.skid = 2;
+    ip.state_flags.b3 = true;
+    ip.state_flags.b4567 = 15;
+    ip.ignore_id = super::IgnoreId(Some(spawn.x40 as u32));
     ip.destroy_type = 4;
-    set_flag(&mut ip.xDCE_flag, 5, false);
-    set_flag(&mut ip.xDCE_flag, 4, false);
-    ip.xC54 = 0.0;
+    set_flag(&mut ip.hurt_flags, 5, false);
+    set_flag(&mut ip.hurt_flags, 4, false);
+    ip.shield_angle = 0.0;
     // The original clears xC58.x three times and never y or z.
-    ip.xC58.x = 0.0;
-    let f = &mut ip.xDC8_word.flags;
-    f.x9 = false;
-    f.x3 = false;
-    f.x4 = false;
-    f.x5 = false;
-    f.x6 = false;
-    f.x7 = false;
-    f.x8 = false;
-    set_flag(&mut ip.xDD0_flag, 5, false);
-    ip.xD09 = 0;
-    set_flag(&mut ip.xDD0_flag, 4, false);
-    ip.xCA8 = 0;
-    ip.xCBC_hitlagFrames = 0.0;
-    ip.xCC0 = 0.0;
-    ip.xDC8_word.flags.xA = false;
-    ip.xDC8_word.flags.xB = false;
-    ip.xDCC_flag.b1 = false;
-    ip.xC70 = 1.0;
-    ip.xC6C = 1.0;
-    ip.xDCC_flag.b2 = false;
-    set_flag(&mut ip.xDD0_flag, 0, false);
-    set_flag(&mut ip.xDCE_flag, 6, false);
-    set_flag(&mut ip.xDCF_flag, 0, false);
-    set_flag(&mut ip.xDCF_flag, 1, false);
-    set_flag(&mut ip.xDCF_flag, 2, false);
-    set_flag(&mut ip.xDD1_flag, 0, false);
-    set_flag(&mut ip.xDCE_flag, 7, true);
+    ip.shield_normal.x = 0.0;
+    let f = &mut ip.flags.flags;
+    f.in_hitlag = false;
+    f.hit_hitlag_asked = false;
+    f.clank_hitlag_asked = false;
+    f.hit_hitlag_ending = false;
+    f.clank_hitlag_ending = false;
+    f.hit_hitlag = false;
+    f.clank_hitlag = false;
+    set_flag(&mut ip.status_flags, 5, false);
+    ip.no_catch = 0;
+    set_flag(&mut ip.status_flags, 4, false);
+    ip.hitlag_damage = 0;
+    ip.hitlag_frames = 0.0;
+    ip.min_hitlag = 0.0;
+    ip.flags.flags.hitlag_counting = false;
+    ip.flags.flags.damage_hitlag = false;
+    ip.state_flags.b1 = false;
+    ip.reflect_speed_mul = 1.0;
+    ip.reflect_damage_mul = 1.0;
+    ip.state_flags.b2 = false;
+    set_flag(&mut ip.status_flags, 0, false);
+    set_flag(&mut ip.hurt_flags, 6, false);
+    set_flag(&mut ip.draw_flags, 0, false);
+    set_flag(&mut ip.draw_flags, 1, false);
+    set_flag(&mut ip.draw_flags, 2, false);
+    set_flag(&mut ip.phys_flags, 0, false);
+    set_flag(&mut ip.hurt_flags, 7, true);
     ip.scl = a.f32(data, attr::SCALE);
-    ip.x3C = 0.0;
-    ip.xDCD_flag.x0.b3 = false;
-    ip.xDCD_flag.x0.b4 = false;
-    set_flag(&mut ip.xDD0_flag, 7, false);
-    ip.xBC0 = Default::default();
-    set_flag(&mut ip.xDD1_flag, 1, false);
-    ip.xDCD_flag.x0.b2 = false;
-    ip.xD6C = NO_SFX;
-    ip.sfx_unk2 = NO_SFX;
-    ip.sfx_unk1 = NO_SFX;
-    ip.xD70 = a.i32(data, attr::X6C);
-    ip.xD74 = a.i32(data, attr::X70);
-    ip.xD78 = a.i32(data, attr::X74);
+    ip.hitbox_scale = 0.0;
+    ip.hit_flags.x0.b3 = false;
+    ip.hit_flags.x0.b4 = false;
+    set_flag(&mut ip.status_flags, 7, false);
+    ip.effect_queue = Default::default();
+    set_flag(&mut ip.phys_flags, 1, false);
+    ip.hit_flags.x0.b2 = false;
+    ip.sfx = NO_SFX;
+    ip.sfx_loop_2 = NO_SFX;
+    ip.sfx_loop_1 = NO_SFX;
+    ip.pickup_sfx = a.i32(data, attr::X6C);
+    ip.throw_sfx = a.i32(data, attr::X70);
+    ip.drop_sfx = a.i32(data, attr::X74);
     ip.destroy_sfx = a.i32(data, attr::DESTROY_SFX);
-    ip.xD80 = a.i32(data, attr::X7C);
-    ip.xD84 = a.i32(data, attr::X80);
+    ip.break_sfx = a.i32(data, attr::X7C);
+    ip.bounce_sfx = a.i32(data, attr::X80);
     super::hitbox::clear_hit_ids(r.game, gobj);
     super::hitbox::clear_hit_ids2(r.game, gobj);
     lib2725::stop_holding_still(r.game, gobj);
     let parent = spawn.x0_parent_gobj;
     let parent_is_fighter = is_fighter(r.game, parent);
     let ip = item_mut(r.game, gobj);
-    ip.xDC8_word.flags.x1 = !parent_is_fighter;
-    ip.x5C8 = 0;
-    ip.xBC4 = Default::default();
-    ip.x5C9 = 255;
+    ip.flags.flags.not_from_fighter = !parent_is_fighter;
+    ip.tinted = 0;
+    ip.tint = Default::default();
+    ip.alpha = 255;
     super::anim::clear_overlay(ip);
-    set_flag(&mut ip.xDCF_flag, 3, false);
-    set_flag(&mut ip.xDCF_flag, 4, false);
-    set_flag(&mut ip.xDCF_flag, 5, false);
-    ip.xDAA = [1];
+    set_flag(&mut ip.draw_flags, 3, false);
+    set_flag(&mut ip.draw_flags, 4, false);
+    set_flag(&mut ip.draw_flags, 5, false);
+    ip.debug_flags = [1];
     if r.game.it.db_menu.ShowItemPickupRange {
-        set_flag(&mut item_mut(r.game, gobj).xDAA, 4, true);
+        set_flag(&mut item_mut(r.game, gobj).debug_flags, 4, true);
     }
     let team = match parent {
         None => u8::MAX,
@@ -464,16 +464,16 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
             r.game.fighters[f.0].team
         }
         // `itGetTeamId`: dead, no spawn parent is ever an item (ledger/dead.txt).
-        Some(p) if is_item(r.game, Some(p)) => super::item(r.game, p).x20_team_id,
+        Some(p) if is_item(r.game, Some(p)) => super::item(r.game, p).team,
         Some(_) => u8::MAX,
     };
-    item_mut(r.game, gobj).x20_team_id = team;
+    item_mut(r.game, gobj).team = team;
 }
 
 /// Gives an item its model, `Item_802680CC`: its kind's joint tree, or a bare joint.
 #[doc(alias = "Item_802680CC")]
 pub fn make_model(r: &mut Running, gobj: GObjId) {
-    let joint = super::item(r.game, gobj).xC8_joint;
+    let joint = super::item(r.game, gobj).joint;
     let j = match joint {
         Some(_) => jobj::load_joint(&mut r.game.objs, r.data, joint).expect("a loaded joint"),
         None => {
@@ -540,7 +540,7 @@ pub fn make_bone_table(r: &mut Running, gobj: GObjId) {
         .model(data)
         .bone_count(data);
     if count == 0 {
-        item_mut(r.game, gobj).xBBC_dynamicBoneTable = None;
+        item_mut(r.game, gobj).bone_table = None;
         return;
     }
     let mut table = BoneTable::default();
@@ -553,7 +553,7 @@ pub fn make_bone_table(r: &mut Running, gobj: GObjId) {
     }
     table.len = i as u8;
     let id = BoneTableId(r.game.it.bone_tables.alloc(table));
-    item_mut(r.game, gobj).xBBC_dynamicBoneTable = Some(id);
+    item_mut(r.game, gobj).bone_table = Some(id);
 }
 
 /// Sets up the item's dynamic bones from its article, `Item_80268560`.
@@ -563,12 +563,12 @@ pub fn init_dynamics(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     match article(ip).dynamics(data) {
         None => {
-            ip.x374_dynamicBonesNum = 0;
-            ip.xB68 = 0;
+            ip.dynamic_bone_count = 0;
+            ip.dynamics_count = 0;
         }
         Some(d) => {
             let n = data.u32(d) as i32;
-            ip.x374_dynamicBonesNum = n;
+            ip.dynamic_bone_count = n;
             let descs = data.ptr(d.at(4));
             for i in 0..n.max(0) as usize {
                 // `BoneDynamicsDesc`: the bone, then the chain's description.
@@ -578,18 +578,16 @@ pub fn init_dynamics(r: &mut Running, gobj: GObjId) {
                 let bone = data.u32(entry) as usize;
                 let count = data.u32(entry.at(8));
                 let table = super::item(r.game, gobj)
-                    .xBBC_dynamicBoneTable
+                    .bone_table
                     .expect("an item with dynamic bones has a bone table");
                 let j = r.game.it.bone_tables[table.0].bones[bone];
-                let mut desc = super::item(r.game, gobj).xD4_dynamicBones[i]
-                    .dyn_desc
-                    .clone();
+                let mut desc = super::item(r.game, gobj).dynamic_bones[i].dyn_desc.clone();
                 r.game.load_dynamics_chain(data, j, &mut desc, count);
-                let b = &mut item_mut(r.game, gobj).xD4_dynamicBones[i];
+                let b = &mut item_mut(r.game, gobj).dynamic_bones[i];
                 b.skeleton = j;
                 b.flags = 0;
                 r.game.set_dynamics_params(data, entry.at(4), &mut desc);
-                item_mut(r.game, gobj).xD4_dynamicBones[i].dyn_desc = desc;
+                item_mut(r.game, gobj).dynamic_bones[i].dyn_desc = desc;
             }
         }
     }
@@ -632,13 +630,13 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
     // The variables the block's last item left are stale until the new kind writes them: the
     // bytes it left as it went (`export::leave_item`), or, for a slot that kept an item never
     // freed, as it leaves them now.
-    if !matches!(r.game.items[id.0].xDD4_itemVar.member, super::Member::Bytes) {
+    if !matches!(r.game.items[id.0].vars.member, super::Member::Bytes) {
         crate::game::export::leave_item(r.game, id);
     }
-    r.game.items[id.0].xDD4_itemVar.mark_stale();
+    r.game.items[id.0].vars.mark_stale();
     r.game.it.stale_last_pos.remove(&id.0);
     // Its hitboxes' joints keep the block's words until the script makes each box (`HitJObj`).
-    for h in &mut r.game.items[id.0].x5D4_hitboxes {
+    for h in &mut r.game.items[id.0].hitboxes {
         h.hit.jobj.mark_unwritten();
     }
     r.game
@@ -675,18 +673,18 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
             let data = r.data;
             let t = common_data(r.game).i32(data, common::X2C);
             let ip = item_mut(r.game, gobj);
-            if ip.xD0C == 2 {
-                set_flag(&mut ip.xDD0_flag, 7, true);
+            if ip.invincibility == 2 {
+                set_flag(&mut ip.status_flags, 7, true);
             }
-            ip.xD40 = mem(fp::frsp(f64::from(t)));
-            set_flag(&mut ip.xDD0_flag, 6, true);
+            ip.invincible_frames = mem(fp::frsp(f64::from(t)));
+            set_flag(&mut ip.status_flags, 6, true);
             super::hitbox::start_blink(r.game, gobj);
             super::anim::start_colanim(r.game, data, gobj, 3, 0);
         }
         _ => {
             let ip = item_mut(r.game, gobj);
-            ip.xD40 = 0.0;
-            set_flag(&mut ip.xDD0_flag, 6, false);
+            ip.invincible_frames = 0.0;
+            set_flag(&mut ip.status_flags, 6, false);
         }
     }
     count(r.game, gobj);
@@ -701,15 +699,15 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
         let f = super::owner::fighter_of(r.game, owner.unwrap());
         let fkind = r.game.fighters[f.0].kind;
         let ip = item_mut(r.game, gobj);
-        ip.xDC8_word.flags.xE = true;
+        ip.flags.flags.holds_fighter_data = true;
         ip.ecb_lock = fkind;
         super::owner::inc_fighter_refs(r.game, fkind);
     }
     // `foobar3`: the camera follows some items.
-    let cam = super::item(r.game, gobj).xDCD_flag.x0.b01;
+    let cam = super::item(r.game, gobj).hit_flags.x0.b01;
     if cam != 0 {
         let b = r.game.camera.alloc_box(if cam == 1 { 0 } else { 2 });
-        item_mut(r.game, gobj).x520_cameraBox = Some(b);
+        item_mut(r.game, gobj).camera_box = Some(b);
         {
             let c = common_data(r.game);
             let d = r.data;
@@ -738,26 +736,26 @@ pub fn init_position(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         } else {
             1
         };
-        ip.x378_itemColl.set_facing_dir(dir);
+        ip.coll.set_facing_dir(dir);
     }
     apply_facing(r.game, gobj, model);
     lib2725::set_velocity(r.game, gobj, spawn.vel);
     {
         let ip = item_mut(r.game, gobj);
-        ip.x5CC_currentAnimFrame = 0.0;
-        ip.x5D0_animFrameSpeed = 1.0;
+        ip.anim_frame = 0.0;
+        ip.anim_speed = 1.0;
     }
     lib2725::set_damage_taken(r.game, gobj, spawn.x3C_damage);
     super::hitbox::clear_dealt(r.game, gobj);
     {
         let ip = item_mut(r.game, gobj);
-        ip.xC64_reflectGObj = None;
-        ip.xDCC_flag.b0 = false;
-        ip.xC90_absorbGObj = None;
-        ip.xD0C = 0;
+        ip.reflector = None;
+        ip.state_flags.b0 = false;
+        ip.absorber = None;
+        ip.invincibility = 0;
     }
     lib26b1::enable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
+    item_mut(r.game, gobj).flags.flags.held = false;
     if spawn.x48_ground_or_air == 1 {
         super::maplib::enter_air(item_mut(r.game, gobj));
     } else {
@@ -803,7 +801,7 @@ fn hold_kind_scale(r: &mut Running, gobj: GObjId) {
         let level = one_player_cpu_level(r);
         if level >= 0 {
             let c = common_data(r.game).f32(r.data, common::X80 + 4 * level as u32);
-            item_mut(r.game, gobj).xC3C = c;
+            item_mut(r.game, gobj).damage_scale = c;
         }
     }
 }
@@ -817,15 +815,15 @@ fn hold_kind_scale(r: &mut Running, gobj: GObjId) {
 pub fn debug_owner_bubbles(game: &mut Game, gobj: GObjId, owner: Option<GObjId>) {
     let bubbles = game.it.db_bubbles as u8;
     if owner.is_none() || !is_fighter(game, owner) {
-        item_mut(game, gobj).xDAA[0] |= bubbles;
+        item_mut(game, gobj).debug_flags[0] |= bubbles;
         return;
     }
     let f = super::owner::fighter_of(game, owner.unwrap());
     let x = game.fighters[f.0].debug_draw_flags[0];
     let ip = item_mut(game, gobj);
-    ip.xDAA[0] &= 0xFC;
+    ip.debug_flags[0] &= 0xFC;
     if x != 0 {
-        ip.xDAA[0] |= x & 3;
+        ip.debug_flags[0] |= x & 3;
     }
 }
 
@@ -841,7 +839,7 @@ pub fn on_spawned(r: &mut Running, gobj: GObjId) {
 pub fn logic(game: &Game, gobj: GObjId) -> &'static tables::ItemLogic {
     tables::logic(
         super::item(game, gobj)
-            .xB8_itemLogicTable
+            .logic_table
             .expect("an item without a logic table"),
     )
 }
@@ -915,9 +913,9 @@ pub fn add_anims(
     let next = |d: Option<DataRef>| d.and_then(|d| data.ptr(d.at(4)));
     if aj.is_some() {
         let ip = &r.game.items[item.0];
-        let n = ip.x374_dynamicBonesNum;
+        let n = ip.dynamic_bone_count;
         for i in 0..n.max(0) as usize {
-            if ip.xD4_dynamicBones[i].skeleton == Some(j) {
+            if ip.dynamic_bones[i].skeleton == Some(j) {
                 if next(aj).is_some() {
                     let nj = r.game.objs.jobjs[j].next;
                     add_anims(r, nj, next(aj), next(mj), next(sj), item);
@@ -947,7 +945,7 @@ pub fn set_state_anims_at(r: &mut Running, gobj: GObjId, desc: DataRef, frame: f
     let j = jobj_of(r.game, gobj);
     let i = item_of(r.game, gobj);
     jobj::remove_anim_all(&mut r.game.objs, j);
-    let joint = r.game.items[i.0].xC8_joint;
+    let joint = r.game.items[i.0].joint;
     if let Some(joint) = joint {
         let first = j.and_then(|j| r.game.objs.jobjs[j].child);
         crate::game::gr::anime::reset_tree_srt(
@@ -965,7 +963,7 @@ pub fn set_state_anims_at(r: &mut Running, gobj: GObjId, desc: DataRef, frame: f
         data.ptr(desc.at(8)),
         i,
     );
-    let speed = r.game.items[i.0].x5D0_animFrameSpeed;
+    let speed = r.game.items[i.0].anim_speed;
     crate::lb::anim::set_framerate(&mut r.game.objs, j, speed);
     jobj::req_anim_all(&mut r.game.objs, j, frame);
 }
@@ -974,7 +972,7 @@ pub fn set_state_anims_at(r: &mut Running, gobj: GObjId, desc: DataRef, frame: f
 #[doc(alias = "Item_80268DD4")]
 pub fn seek_anim(r: &mut Running, gobj: GObjId, frame: f32) {
     let j = jobj_of(r.game, gobj);
-    let speed = super::item(r.game, gobj).x5D0_animFrameSpeed;
+    let speed = super::item(r.game, gobj).anim_speed;
     crate::lb::anim::set_framerate(&mut r.game.objs, j, speed);
     jobj::req_anim_all(&mut r.game.objs, j, frame);
     jobj::anim_all(
@@ -984,15 +982,15 @@ pub fn seek_anim(r: &mut Running, gobj: GObjId, frame: f32) {
         j,
     );
     let f = crate::lb::anim::current_frame(&r.game.objs, j);
-    item_mut(r.game, gobj).x5CC_currentAnimFrame = f;
+    item_mut(r.game, gobj).anim_frame = f;
 }
 
 /// Starts a state's script (found by [`super::anim::state_script`]), `Item_80268E40`.
 #[doc(alias = "Item_80268E40")]
 pub fn start_script(ip: &mut Item, script: Option<DataRef>) {
-    ip.x524_cmd.script.cursor = script;
-    ip.x524_cmd.script.loop_count = 0;
-    ip.x524_cmd.script.set_timer_f32(0.0);
+    ip.cmd.script.cursor = script;
+    ip.cmd.script.loop_count = 0;
+    ip.cmd.script.set_timer_f32(0.0);
 }
 
 /// `Item_StateChangeFlags`.
@@ -1017,12 +1015,12 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
     let pos = {
         let ip = item_mut(r.game, gobj);
         ip.msid = msid;
-        ip.xDC8_word.flags.x14 = false;
+        ip.flags.flags.thrown = false;
         ip.pos
     };
     set_translate(r.game, model.expect("an item without a model"), pos);
     lib26b1::flush_effects(r, gobj);
-    if super::item(r.game, gobj).xDC8_word.flags.x2 {
+    if super::item(r.game, gobj).flags.flags.holds_still {
         lib26b1::hold_flags_off(r.game, gobj);
         lib2725::stop_holding_still(r.game, gobj);
     }
@@ -1031,7 +1029,7 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
     }
     if flags & COLANIM_PRESERVE == 0 {
         let colanims = r.game.it.colanims.expect("no item color animations");
-        let i = i32::from_be_bytes(super::item(r.game, gobj).x548_colorOverlay.x28_colanim);
+        let i = i32::from_be_bytes(super::item(r.game, gobj).color_overlay.x28_colanim);
         if data.u8(colanims.at(8 * i as u32 + 5)) != 0 {
             super::anim::clear_overlay(item_mut(r.game, gobj));
         }
@@ -1042,30 +1040,30 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
     apply_facing(r.game, gobj, model);
     {
         let ip = item_mut(r.game, gobj);
-        ip.xC40 = if flags & DROP_UPDATE != 0 {
-            ip.xC44
+        ip.damage_mul = if flags & DROP_UPDATE != 0 {
+            ip.next_damage_mul
         } else {
             1.0
         };
     }
-    if flags & HIT_PRESERVE == 0 && super::item(r.game, gobj).xDC8_word.flags.x16 {
+    if flags & HIT_PRESERVE == 0 && super::item(r.game, gobj).flags.flags.hitbox_on {
         lib2725::clear_hitboxes(r.game, data, gobj);
     }
     let states = super::item(r.game, gobj)
-        .xBC_itemStateContainer
+        .state_table
         .expect("an item without states");
     let state = tables::states(states)[msid as usize];
     {
         let ip = item_mut(r.game, gobj);
-        ip.xCC8_knockback = 0.0;
+        ip.knockback = 0.0;
         ip.anim_id = state.anim_id;
-        ip.x5CC_currentAnimFrame = 0.0;
+        ip.anim_frame = 0.0;
     }
     if state.anim_id != -1 {
         let ip = item_mut(r.game, gobj);
         let descs = article(ip).states(data).expect("an article without states");
         let desc = descs.at(0x10 * state.anim_id as u32);
-        ip.xD0_itemStateDesc = Some(desc);
+        ip.state_desc = Some(desc);
         let kind = super::item(r.game, gobj).kind;
         let script = super::anim::state_script(r.game, data, kind, state.anim_id, desc);
         if flags & ANIM_UPDATE != 0 {
@@ -1077,10 +1075,10 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
                 apply_scale(r.game, gobj);
                 let ip = item_mut(r.game, gobj);
                 let a = attr_of(ip);
-                ip.xBCC_unk = a.vec2(data, attr::X30);
-                ip.xBD4_grabRange = a.vec2(data, attr::GRAB_RANGE);
-                ip.xBEC = a.ecb(data, attr::ECB);
-                ip.xBDC = a.ecb(data, attr::ECB);
+                ip.grab_offset = a.vec2(data, attr::X30);
+                ip.grab_range = a.vec2(data, attr::GRAB_RANGE);
+                ip.push_box = a.ecb(data, attr::ECB);
+                ip.push_box_base = a.ecb(data, attr::ECB);
             } else {
                 apply_scale(r.game, gobj);
             }
@@ -1098,7 +1096,7 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
         super::anim::run_script(r, gobj);
     } else {
         jobj::remove_anim_all(&mut r.game.objs, model);
-        item_mut(r.game, gobj).x524_cmd.script.cursor = None;
+        item_mut(r.game, gobj).cmd.script.cursor = None;
     }
     let ip = item_mut(r.game, gobj);
     ip.animated = state.animated;
@@ -1109,8 +1107,8 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
     ip.entered_hitlag = None;
     ip.exited_hitlag = None;
     ip.jumped_on = None;
-    set_flag(&mut ip.xDD0_flag, 5, false);
-    ip.xD09 = 0;
+    set_flag(&mut ip.status_flags, 5, false);
+    ip.no_catch = 0;
     coll::refresh_hurtboxes(r.game, gobj);
 }
 
@@ -1119,23 +1117,23 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
 #[doc(alias = "Item_802693E4")]
 pub fn proc_hitlag(r: &mut Running, gobj: GObjId) {
     let i = item_of(r.game, gobj);
-    if r.game.items[i.0].xDC8_word.flags.x5 {
+    if r.game.items[i.0].flags.flags.hit_hitlag_ending {
         end_hit_hitlag(r, gobj);
-        r.game.items[i.0].xDC8_word.flags.x5 = false;
+        r.game.items[i.0].flags.flags.hit_hitlag_ending = false;
     }
-    if r.game.items[i.0].xDC8_word.flags.x6 {
+    if r.game.items[i.0].flags.flags.clank_hitlag_ending {
         end_clank_hitlag(r, gobj);
-        r.game.items[i.0].xDC8_word.flags.x6 = false;
+        r.game.items[i.0].flags.flags.clank_hitlag_ending = false;
     }
     let ip = &mut r.game.items[i.0];
-    if reg(ip.xCBC_hitlagFrames) > 0.0 {
-        ip.xCBC_hitlagFrames = mem(fp::fsubs(reg(ip.xCBC_hitlagFrames), 1.0));
-        if reg(ip.xCBC_hitlagFrames) <= 0.0 {
-            ip.xCBC_hitlagFrames = 0.0;
-            ip.xDC8_word.flags.xB = false;
-            ip.xDC8_word.flags.xA = false;
-            let f = &ip.xDC8_word.flags;
-            if !f.x8 && !f.x7 {
+    if reg(ip.hitlag_frames) > 0.0 {
+        ip.hitlag_frames = mem(fp::fsubs(reg(ip.hitlag_frames), 1.0));
+        if reg(ip.hitlag_frames) <= 0.0 {
+            ip.hitlag_frames = 0.0;
+            ip.flags.flags.damage_hitlag = false;
+            ip.flags.flags.hitlag_counting = false;
+            let f = &ip.flags.flags;
+            if !f.clank_hitlag && !f.hit_hitlag {
                 exit_hitlag(r, gobj);
             }
         }
@@ -1153,7 +1151,7 @@ pub fn animate(r: &mut Running, gobj: GObjId) {
         j,
     );
     let f = crate::lb::anim::current_frame(&r.game.objs, j);
-    item_mut(r.game, gobj).x5CC_currentAnimFrame = f;
+    item_mut(r.game, gobj).anim_frame = f;
     super::anim::run_script(r, gobj);
 }
 
@@ -1162,7 +1160,7 @@ pub fn animate(r: &mut Running, gobj: GObjId) {
 /// fighters and other items.
 #[doc(alias = "Item_80269528")]
 pub fn proc_anim(r: &mut Running, gobj: GObjId) {
-    if !super::item(r.game, gobj).xDC8_word.flags.x9 {
+    if !super::item(r.game, gobj).flags.flags.in_hitlag {
         animate(r, gobj);
         if let Some(cb) = super::item(r.game, gobj).animated
             && call_pred(r, gobj, cb)
@@ -1172,29 +1170,29 @@ pub fn proc_anim(r: &mut Running, gobj: GObjId) {
             return;
         }
     }
-    if flag(super::item(r.game, gobj).xDD0_flag, 6) {
+    if flag(super::item(r.game, gobj).status_flags, 6) {
         let ip = item_mut(r.game, gobj);
-        ip.xD40 = mem(fp::fsubs(reg(ip.xD40), 1.0));
-        if reg(ip.xD40) <= 0.0 {
-            set_flag(&mut ip.xDD0_flag, 6, false);
-            ip.xD40 = 0.0;
+        ip.invincible_frames = mem(fp::fsubs(reg(ip.invincible_frames), 1.0));
+        if reg(ip.invincible_frames) <= 0.0 {
+            set_flag(&mut ip.status_flags, 6, false);
+            ip.invincible_frames = 0.0;
             super::anim::clear_overlay(ip);
-            if !flag(ip.xDD0_flag, 7) {
+            if !flag(ip.status_flags, 7) {
                 super::hitbox::end_blink(r.game, gobj);
             }
         }
     }
     let ip = super::item(r.game, gobj);
-    if ip.xDC8_word.flags.x15 && ip.kind < ItKind::COMMON_END && !flag(ip.xDD0_flag, 3) {
+    if ip.flags.flags.pickup && ip.kind < ItKind::COMMON_END && !flag(ip.status_flags, 3) {
         let x34 = common_data(r.game).u32(r.data, common::X34);
         let ip = item_mut(r.game, gobj);
-        ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-        if reg(ip.xD44_lifeTimer) <= 0.0 {
+        ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+        if reg(ip.life_timer) <= 0.0 {
             ip.destroy_type = 0;
             destroy(r, gobj);
             return;
         }
-        if reg(ip.xD44_lifeTimer) <= fp::frsp(f64::from(x34)) {
+        if reg(ip.life_timer) <= fp::frsp(f64::from(x34)) {
             lib2725::flicker(r.game, r.data, gobj);
         }
     }
@@ -1208,7 +1206,7 @@ pub fn proc_anim(r: &mut Running, gobj: GObjId) {
 pub fn check_blast_zones(r: &mut Running, gobj: GObjId) -> bool {
     use crate::game::gr::stage;
     let ip = super::item(r.game, gobj);
-    let zones = ip.xDCC_flag.b4567;
+    let zones = ip.state_flags.b4567;
     let (x, y) = (reg(ip.pos.x), reg(ip.pos.y));
     let out = (zones & 8 != 0 && x > reg(stage::blast_right(r.game)))
         || (zones & 4 != 0 && x < reg(stage::blast_left(r.game)))
@@ -1231,52 +1229,52 @@ pub fn vec_add(a: Vec3, b: Vec3) -> Vec3 {
 /// callback, then its velocity, the floor's motion and the blast zones.
 #[doc(alias = "Item_802697D4")]
 pub fn proc_phys(r: &mut Running, gobj: GObjId) {
-    let x9 = super::item(r.game, gobj).xDC8_word.flags.x9;
+    let x9 = super::item(r.game, gobj).flags.flags.in_hitlag;
     if !x9 && let Some(cb) = super::item(r.game, gobj).physics_updated {
         call(r, gobj, cb);
     }
     let ip = super::item(r.game, gobj);
-    if !ip.xDC8_word.flags.x13 {
-        if !ip.xDC8_word.flags.x9 {
-            let mut v = vec_add(ip.x40_vel, ip.x70_nudge);
-            if ip.ground_or_air == 0 && !ip.xDCD_flag.x0.b3 {
+    if !ip.flags.flags.held {
+        if !ip.flags.flags.in_hitlag {
+            let mut v = vec_add(ip.vel, ip.nudge);
+            if ip.ground_or_air == 0 && !ip.hit_flags.x0.b3 {
                 super::maplib::slide(r.game, r.data, gobj, &mut v);
             }
             let ip = item_mut(r.game, gobj);
             ip.pos = vec_add(ip.pos, v);
         }
         let ip = super::item(r.game, gobj);
-        if ip.xDCC_flag.b3 && ip.xDCC_flag.b4567 & 0xF != 0 && check_blast_zones(r, gobj) {
+        if ip.state_flags.b3 && ip.state_flags.b4567 & 0xF != 0 && check_blast_zones(r, gobj) {
             return;
         }
         let ip = super::item(r.game, gobj);
-        if reg(ip.xD3C_spinSpeed) != 0.0 && ip.ground_or_air == 1 {
+        if reg(ip.spin_speed) != 0.0 && ip.ground_or_air == 1 {
             lib2725::spin(r.game, r.data, gobj);
         }
     }
     let ip = super::item(r.game, gobj);
-    if flag(ip.xDD1_flag, 1) && ip.ground_or_air == 1 {
-        let mut v = super::item(r.game, gobj).x58_vec_unk;
+    if flag(ip.phys_flags, 1) && ip.ground_or_air == 1 {
+        let mut v = super::item(r.game, gobj).wind_push;
         crate::game::gr::grlib::item_wind(r.game, &mut v);
-        item_mut(r.game, gobj).x58_vec_unk = v;
+        item_mut(r.game, gobj).wind_push = v;
     }
     let ip = item_mut(r.game, gobj);
-    ip.pos = vec_add(ip.pos, ip.x58_vec_unk);
+    ip.pos = vec_add(ip.pos, ip.wind_push);
     lib2725::clear_displacement(r.game, gobj);
     let ip = super::item(r.game, gobj);
     if ip.ground_or_air == 0 {
-        let line = if flag(ip.xDCE_flag, 3) && super::ground::on_line(r.game, gobj) {
-            ip.xC30
+        let line = if flag(ip.hurt_flags, 3) && super::ground::on_line(r.game, gobj) {
+            ip.touched_line
         } else {
-            ip.x378_itemColl.floor.index
+            ip.coll.floor.index
         };
         let pos = ip.pos;
         if let Some(speed) = super::maplib::floor_speed(r.game, line, pos) {
-            item_mut(r.game, gobj).x64_vec_unk2 = speed;
+            item_mut(r.game, gobj).floor_motion = speed;
         }
     }
     let ip = item_mut(r.game, gobj);
-    ip.pos = vec_add(ip.pos, ip.x64_vec_unk2);
+    ip.pos = vec_add(ip.pos, ip.floor_motion);
     lib2725::clear_floor_motion(r.game, gobj);
     coll::refresh_hurtboxes(r.game, gobj);
 }
@@ -1304,14 +1302,14 @@ pub fn proc_coll(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "Item_80269A9C")]
 pub fn proc_accessory(r: &mut Running, gobj: GObjId) {
     lib26b1::flush_effects(r, gobj);
-    if !super::item(r.game, gobj).xDC8_word.flags.x9
+    if !super::item(r.game, gobj).flags.flags.in_hitlag
         && let Some(cb) = super::item(r.game, gobj).on_accessory
     {
         call(r, gobj, cb);
     }
     let ip = super::item(r.game, gobj);
-    if ip.xDCD_flag.x0.b01 != 0
-        && let Some(b) = ip.x520_cameraBox
+    if ip.hit_flags.x0.b01 != 0
+        && let Some(b) = ip.camera_box
     {
         let pos = ip.pos;
         let cb = r.game.camera.subject_mut(b);
@@ -1327,7 +1325,7 @@ pub fn proc_accessory(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "Item_80269B60")]
 pub fn proc_jumped_on(r: &mut Running, gobj: GObjId) {
     let ip = super::item(r.game, gobj);
-    if ip.xCFC.is_some()
+    if ip.stomper.is_some()
         && let Some(cb) = ip.jumped_on
         && call_pred(r, gobj, cb)
     {
@@ -1343,7 +1341,7 @@ pub fn proc_jumped_on(r: &mut Running, gobj: GObjId) {
 /// barrel cannon) look for one; a catch runs the item's grab callback, then the fighter's.
 #[doc(alias = "Item_80269BE4")]
 pub fn proc_grab(r: &mut Running, gobj: GObjId) {
-    if !flag(super::item(r.game, gobj).xDD0_flag, 5) {
+    if !flag(super::item(r.game, gobj).status_flags, 5) {
         return;
     }
     coll::grab_fighters(r, gobj);
@@ -1380,52 +1378,52 @@ pub fn proc_hit(r: &mut Running, gobj: GObjId) {
 /// Adds damage the item took, up to 999, `Item_80269CA0`.
 #[doc(alias = "Item_80269CA0")]
 pub fn add_damage(ip: &mut Item, damage: i32) {
-    ip.xC9C = ip.xC9C.wrapping_add(damage);
-    if ip.xC9C > 999 {
-        ip.xC9C = 999;
+    ip.damage_taken = ip.damage_taken.wrapping_add(damage);
+    if ip.damage_taken > 999 {
+        ip.damage_taken = 999;
     }
 }
 
 /// Clears what this tick's hits recorded, `Item_80269CC4`.
 #[doc(alias = "Item_80269CC4")]
 pub fn clear_hit_record(ip: &mut Item) {
-    ip.xCA0 = 0;
-    ip.xCA4 = 0;
-    ip.xC94 = 0;
-    ip.xCC8_knockback = 0.0;
-    ip.xC34_damageDealt = 0;
-    ip.xC48 = 0;
-    ip.xC4C = 0;
-    ip.xC50 = 0;
-    ip.xCCC_incDamageDirection = 0.0;
-    ip.xCB8_outDamageDirection = 0.0;
-    ip.xC68 = 0.0;
-    ip.xCD0 = 0.0;
-    ip.xCC0 = 0.0;
-    set_flag(&mut ip.xDCF_flag, 6, false);
-    ip.xCC4 = 0;
-    ip.xCEC_fighterGObj = None;
-    ip.xCF0_itemGObj = None;
-    ip.xCF4_fighterGObjUnk = None;
+    ip.hit_damage = 0;
+    ip.max_hit_damage = 0;
+    ip.unread_c94 = 0;
+    ip.knockback = 0.0;
+    ip.damage_dealt = 0;
+    ip.clank_damage = 0;
+    ip.reflected_damage = 0;
+    ip.shield_damage = 0;
+    ip.damage_dir = 0.0;
+    ip.out_damage_dir = 0.0;
+    ip.reflect_dir = 0.0;
+    ip.stomp_dir = 0.0;
+    ip.min_hitlag = 0.0;
+    set_flag(&mut ip.draw_flags, 6, false);
+    ip.hit_element = 0;
+    ip.attacker = None;
+    ip.attacker_owner = None;
+    ip.met_fighter = None;
     ip.toucher = None;
-    ip.xC64_reflectGObj = None;
-    ip.xC90_absorbGObj = None;
-    ip.xCFC = None;
-    ip.xCB4 = -1;
-    ip.xC38 = -1;
-    ip.xCE0 = Vec3::new(0.0, 0.0, 0.0);
-    ip.xCD4 = Vec3::new(0.0, 0.0, 0.0);
-    set_flag(&mut ip.xDCE_flag, 5, false);
-    set_flag(&mut ip.xDCE_flag, 4, false);
-    ip.xDCC_flag.b1 = false;
-    ip.xC70 = 1.0;
-    ip.xC6C = 1.0;
-    ip.xDCC_flag.b2 = false;
-    ip.xDC8_word.flags.xB = false;
-    ip.xCA8 = 0;
-    ip.xDC8_word.flags.x3 = false;
-    ip.xDC8_word.flags.x4 = false;
-    set_flag(&mut ip.xDCE_flag, 6, false);
+    ip.reflector = None;
+    ip.absorber = None;
+    ip.stomper = None;
+    ip.hit_by_kind = -1;
+    ip.hit_item_kind = -1;
+    ip.hit_by_pos = Vec3::new(0.0, 0.0, 0.0);
+    ip.hit_item_pos = Vec3::new(0.0, 0.0, 0.0);
+    set_flag(&mut ip.hurt_flags, 5, false);
+    set_flag(&mut ip.hurt_flags, 4, false);
+    ip.state_flags.b1 = false;
+    ip.reflect_speed_mul = 1.0;
+    ip.reflect_damage_mul = 1.0;
+    ip.state_flags.b2 = false;
+    ip.flags.flags.damage_hitlag = false;
+    ip.hitlag_damage = 0;
+    ip.flags.flags.hit_hitlag_asked = false;
+    ip.flags.flags.clank_hitlag_asked = false;
+    set_flag(&mut ip.hurt_flags, 6, false);
 }
 
 /// Calls an event callback that can destroy the item (`processCallback`).
@@ -1451,18 +1449,18 @@ pub fn react_shield(r: &mut Running, gobj: GObjId) -> bool {
         fp::fdivs(fp::frsp(std::f64::consts::PI), 180.0),
         fp::fadds(90.0, reg(degrees)),
     );
-    let bounce = flag(ip.xDCE_flag, 5)
+    let bounce = flag(ip.hurt_flags, 5)
         && ip.ground_or_air == 1
-        && (flag(ip.xDCE_flag, 4) || reg(ip.xC54) < limit);
+        && (flag(ip.hurt_flags, 4) || reg(ip.shield_angle) < limit);
     if bounce {
         let ip = item_mut(r.game, gobj);
-        if !flag(ip.xDCE_flag, 4) {
-            ip.xC54 = mem(fp::frsp(fp::fsub(
-                reg(ip.xC54),
+        if !flag(ip.hurt_flags, 4) {
+            ip.shield_angle = mem(fp::frsp(fp::fsub(
+                reg(ip.shield_angle),
                 std::f64::consts::FRAC_PI_2,
             )));
-            if reg(ip.xC54) < 0.0 {
-                ip.xC54 = 0.0;
+            if reg(ip.shield_angle) < 0.0 {
+                ip.shield_angle = 0.0;
             }
         }
         let cb = logic(r.game, gobj).shield_bounced;
@@ -1471,7 +1469,7 @@ pub fn react_shield(r: &mut Running, gobj: GObjId) -> bool {
         let cb = logic(r.game, gobj).hit_shield;
         if lib2725::is_hit_counted(r.game, gobj) {
             let ip = item_mut(r.game, gobj);
-            ip.xCA8 = ip.xC50;
+            ip.hitlag_damage = ip.shield_damage;
         }
         react_with(r, gobj, cb)
     }
@@ -1482,22 +1480,22 @@ pub fn react_shield(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "Item_80269F14")]
 pub fn react_reflect(r: &mut Running, gobj: GObjId) -> bool {
     let ip = super::item(r.game, gobj);
-    if !ip.xDCC_flag.b1 && (ip.kind != ItKind::PokeBall || !ip.xDCC_flag.b2) {
-        let reflector = ip.xC64_reflectGObj;
+    if !ip.state_flags.b1 && (ip.kind != ItKind::PokeBall || !ip.state_flags.b2) {
+        let reflector = ip.reflector;
         let team = super::owner::team(r.game, reflector);
         let ip = item_mut(r.game, gobj);
         ip.owner = reflector;
-        ip.x20_team_id = team as u8;
+        ip.team = team as u8;
     }
     let owner = super::item(r.game, gobj).owner;
     debug_owner_bubbles(r.game, gobj, owner);
     {
         let ip = item_mut(r.game, gobj);
-        ip.xD90 = ip.xC74.to_be_bytes();
-        ip.xD94 = ip.xC78.clone();
-        ip.xD9C = ip.xC80.clone();
-        ip.xDA4_word = ip.xC88 as u32;
-        ip.xDA8_short = ip.xC8C;
+        ip.attack_flags = ip.reflect_attack_flags.to_be_bytes();
+        ip.attack_record_a = ip.reflect_record_a.clone();
+        ip.attack_record_b = ip.reflect_record_b.clone();
+        ip.attack_record_word = ip.reflect_record_word as u32;
+        ip.attack_record_short = ip.reflect_record_short;
         let i = item_of(r.game, gobj);
         crate::game::leftovers::carry_render(
             r.game,
@@ -1512,13 +1510,17 @@ pub fn react_reflect(r: &mut Running, gobj: GObjId) -> bool {
     if react_with(r, gobj, cb) {
         return true;
     }
-    if !super::item(r.game, gobj).xDCC_flag.b0 {
+    if !super::item(r.game, gobj).state_flags.b0 {
         let max = common_data(r.game).u32(r.data, common::XD8);
         for i in 0..4 {
             let ip = super::item(r.game, gobj);
-            let hit = &ip.x5D4_hitboxes[i].hit;
+            let hit = &ip.hitboxes[i].hit;
             if hit.state != 0 {
-                let d = fp::fmadds(reg(hit.damage), reg(ip.xC6C), f64::from(0.99_f32));
+                let d = fp::fmadds(
+                    reg(hit.damage),
+                    reg(ip.reflect_damage_mul),
+                    f64::from(0.99_f32),
+                );
                 let mut dmg = crate::ppc::cvt_fp2unsigned(d);
                 if dmg > max {
                     dmg = max;
@@ -1532,17 +1534,17 @@ pub fn react_reflect(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Enters hitlag if not in it (`EnterHitlagThink`).
 pub fn enter_hitlag_if_free(r: &mut Running, gobj: GObjId) {
-    if !super::item(r.game, gobj).xDC8_word.flags.x9 {
+    if !super::item(r.game, gobj).flags.flags.in_hitlag {
         enter_hitlag(r, gobj);
     }
 }
 
 /// Raises the hitlag to at least `frames` (`checkHitLag`).
 pub fn raise_hitlag(ip: &mut Item, frames: f64) {
-    if reg(ip.xCBC_hitlagFrames) < frames {
-        ip.xCBC_hitlagFrames = mem(frames);
+    if reg(ip.hitlag_frames) < frames {
+        ip.hitlag_frames = mem(frames);
     }
-    ip.xDC8_word.flags.xA = true;
+    ip.flags.flags.hitlag_counting = true;
 }
 
 /// The item's reaction process (priority 14), `Item_8026A294`: the kind's callbacks for what
@@ -1551,35 +1553,35 @@ pub fn raise_hitlag(ip: &mut Item, frames: f64) {
 #[doc(alias = "Item_8026A294")]
 pub fn proc_react(r: &mut Running, gobj: GObjId) {
     let ip = super::item(r.game, gobj);
-    let destroyed = if reg(ip.xCC8_knockback) != 0.0 || ip.xCA0 != 0 {
+    let destroyed = if reg(ip.knockback) != 0.0 || ip.hit_damage != 0 {
         let ip = item_mut(r.game, gobj);
-        add_damage(ip, ip.xCA0);
-        ip.xCA8 = ip.xCA0;
-        ip.xDC8_word.flags.xB = true;
+        add_damage(ip, ip.hit_damage);
+        ip.hitlag_damage = ip.hit_damage;
+        ip.flags.flags.damage_hitlag = true;
         let cb = logic(r.game, gobj).dmg_received;
         react_with(r, gobj, cb)
-    } else if ip.xC50 != 0 {
+    } else if ip.shield_damage != 0 {
         react_shield(r, gobj)
-    } else if ip.xC48 != 0 {
+    } else if ip.clank_damage != 0 {
         let cb = logic(r.game, gobj).clanked;
         if lib2725::is_hit_counted(r.game, gobj) {
             let ip = item_mut(r.game, gobj);
-            ip.xCA8 = ip.xC48;
+            ip.hitlag_damage = ip.clank_damage;
         }
         react_with(r, gobj, cb)
-    } else if ip.xC34_damageDealt != 0 || ip.xC4C != 0 {
+    } else if ip.damage_dealt != 0 || ip.reflected_damage != 0 {
         let cb = logic(r.game, gobj).dmg_dealt;
         if lib2725::is_hit_counted(r.game, gobj) {
             let ip = item_mut(r.game, gobj);
-            ip.xCA8 = ip.xC34_damageDealt;
+            ip.hitlag_damage = ip.damage_dealt;
         }
         react_with(r, gobj, cb)
-    } else if ip.xC64_reflectGObj.is_some() {
+    } else if ip.reflector.is_some() {
         react_reflect(r, gobj)
-    } else if ip.xC90_absorbGObj.is_some() {
+    } else if ip.absorber.is_some() {
         let cb = logic(r.game, gobj).absorbed;
         react_with(r, gobj, cb)
-    } else if flag(ip.xDCE_flag, 6) {
+    } else if flag(ip.hurt_flags, 6) {
         let cb = ip.touched;
         react_with(r, gobj, cb)
     } else {
@@ -1589,25 +1591,25 @@ pub fn proc_react(r: &mut Running, gobj: GObjId) {
         return;
     }
     let ip = super::item(r.game, gobj);
-    if ip.xDC8_word.flags.xD && reg(ip.xCC0) > 0.0 {
-        let frames = reg(ip.xCC0);
+    if ip.flags.flags.shield_hitlag && reg(ip.min_hitlag) > 0.0 {
+        let frames = reg(ip.min_hitlag);
         raise_hitlag(item_mut(r.game, gobj), frames);
         enter_hitlag_if_free(r, gobj);
-    } else if ip.xCA8 != 0 {
-        let frames = lib26b1::hitlag_frames(r.game, r.data, ip.xCA8);
+    } else if ip.hitlag_damage != 0 {
+        let frames = lib26b1::hitlag_frames(r.game, r.data, ip.hitlag_damage);
         raise_hitlag(item_mut(r.game, gobj), frames);
         enter_hitlag_if_free(r, gobj);
     }
-    let f = &super::item(r.game, gobj).xDC8_word.flags;
-    if f.x4 || f.x3 {
+    let f = &super::item(r.game, gobj).flags.flags;
+    if f.clank_hitlag_asked || f.hit_hitlag_asked {
         enter_hitlag_if_free(r, gobj);
         let ip = item_mut(r.game, gobj);
-        if ip.xDC8_word.flags.x4 {
-            ip.xDC8_word.flags.x8 = true;
-            ip.xDC8_word.flags.x4 = false;
+        if ip.flags.flags.clank_hitlag_asked {
+            ip.flags.flags.clank_hitlag = true;
+            ip.flags.flags.clank_hitlag_asked = false;
         } else {
-            ip.xDC8_word.flags.x7 = true;
-            ip.xDC8_word.flags.x3 = false;
+            ip.flags.flags.hit_hitlag = true;
+            ip.flags.flags.hit_hitlag_asked = false;
         }
     }
     clear_hit_record(item_mut(r.game, gobj));
@@ -1620,7 +1622,7 @@ pub fn proc_react(r: &mut Running, gobj: GObjId) {
 pub fn pause_all(game: &mut Game) {
     let mut cur = game.world.first_in(super::P_LINK_ITEM);
     while let Some(g) = cur {
-        item_mut(game, g).xDC8_word.flags.x3 = true;
+        item_mut(game, g).flags.flags.hit_hitlag_asked = true;
         cur = game.world.gobjs[g.0].next;
     }
 }
@@ -1631,12 +1633,12 @@ pub fn pause_all(game: &mut Game) {
 pub fn resume_all(game: &mut Game) {
     let mut cur = game.world.first_in(super::P_LINK_ITEM);
     while let Some(g) = cur {
-        let f = &mut item_mut(game, g).xDC8_word.flags;
-        if f.x7 {
-            f.x5 = true;
+        let f = &mut item_mut(game, g).flags.flags;
+        if f.hit_hitlag {
+            f.hit_hitlag_ending = true;
         }
-        if f.x3 {
-            f.x3 = false;
+        if f.hit_hitlag_asked {
+            f.hit_hitlag_asked = false;
         }
         cur = game.world.gobjs[g.0].next;
     }
@@ -1648,14 +1650,14 @@ pub fn proc_dynamics(r: &mut Running, gobj: GObjId) {
     coll::update_dynamics_points(r.game, r.data, gobj);
     let ip = super::item(r.game, gobj);
     // The colliders are the item's dynamics points (`xB6C_t`, read as `lb_Collider`s).
-    let count = usize::from(ip.xB68);
+    let count = usize::from(ip.dynamics_count);
     let colliders: [Collider; 2] = std::array::from_fn(|k| Collider {
-        radius: ip.xB6C_vars[k].xB78,
-        center: ip.xB6C_vars[k].xB84,
+        radius: ip.dynamics_points[k].radius,
+        center: ip.dynamics_points[k].pos,
     });
     let colliders = &colliders[..count];
-    for i in 0..ip.x374_dynamicBonesNum.max(0) as usize {
-        let b = &super::item(r.game, gobj).xD4_dynamicBones[i];
+    for i in 0..ip.dynamic_bone_count.max(0) as usize {
+        let b = &super::item(r.game, gobj).dynamic_bones[i];
         let (desc, flags) = (b.dyn_desc.clone(), b.flags);
         r.game
             .swing_chain(r.data, &desc, colliders, None, BoneSlot::Id(flags), 0, true);
@@ -1665,12 +1667,12 @@ pub fn proc_dynamics(r: &mut Running, gobj: GObjId) {
 /// Ends the hitlag a hit started, `Item_8026A0A0`, unless another hitlag holds it.
 #[doc(alias = "Item_8026A0A0")]
 pub fn end_hit_hitlag(r: &mut Running, gobj: GObjId) {
-    let f = &item_mut(r.game, gobj).xDC8_word.flags;
-    if f.x7 {
-        if !f.xA && !f.x8 {
+    let f = &item_mut(r.game, gobj).flags.flags;
+    if f.hit_hitlag {
+        if !f.hitlag_counting && !f.clank_hitlag {
             exit_hitlag(r, gobj);
         }
-        item_mut(r.game, gobj).xDC8_word.flags.x7 = false;
+        item_mut(r.game, gobj).flags.flags.hit_hitlag = false;
     }
 }
 
@@ -1678,12 +1680,12 @@ pub fn end_hit_hitlag(r: &mut Running, gobj: GObjId) {
 /// unless another hitlag holds it.
 #[doc(alias = "Item_8026A0FC")]
 pub fn end_clank_hitlag(r: &mut Running, gobj: GObjId) {
-    let f = &item_mut(r.game, gobj).xDC8_word.flags;
-    if f.x8 {
-        if !f.xA && !f.x7 {
+    let f = &item_mut(r.game, gobj).flags.flags;
+    if f.clank_hitlag {
+        if !f.hitlag_counting && !f.hit_hitlag {
             exit_hitlag(r, gobj);
         }
-        item_mut(r.game, gobj).xDC8_word.flags.x8 = false;
+        item_mut(r.game, gobj).flags.flags.clank_hitlag = false;
     }
 }
 
@@ -1694,13 +1696,13 @@ pub fn enter_hitlag(r: &mut Running, gobj: GObjId) {
         call(r, gobj, cb);
     }
     let ip = item_mut(r.game, gobj);
-    ip.xDC8_word.flags.x9 = true;
-    let (victim, x8) = (ip.atk_victim, ip.xDC8_word.flags.x8);
+    ip.flags.flags.in_hitlag = true;
+    let (victim, x8) = (ip.atk_victim, ip.flags.flags.clank_hitlag);
     if let Some(v) = victim
         && is_item(r.game, victim)
         && !x8
     {
-        item_mut(r.game, v).xDC8_word.flags.x8 = true;
+        item_mut(r.game, v).flags.flags.clank_hitlag = true;
         enter_hitlag(r, v);
     }
 }
@@ -1712,8 +1714,8 @@ pub fn exit_hitlag(r: &mut Running, gobj: GObjId) {
         call(r, gobj, cb);
     }
     let ip = item_mut(r.game, gobj);
-    ip.xDC8_word.flags.x9 = false;
-    let (victim, x8) = (ip.atk_victim, ip.xDC8_word.flags.x8);
+    ip.flags.flags.in_hitlag = false;
+    let (victim, x8) = (ip.atk_victim, ip.flags.flags.clank_hitlag);
     if let Some(v) = victim
         && is_item(r.game, victim)
         && !x8
@@ -1752,21 +1754,21 @@ pub fn destroy(r: &mut Running, gobj: GObjId) {
     uncount(r.game, gobj);
     // `func_8026A8EC_inline1`: a character item lets its character's data go.
     let ip = item_mut(r.game, gobj);
-    if ip.xDC8_word.flags.xE {
+    if ip.flags.flags.holds_fighter_data {
         let k = ip.ecb_lock;
-        ip.xDC8_word.flags.xE = false;
+        ip.flags.flags.holds_fighter_data = false;
         ip.ecb_lock = -1;
         super::owner::dec_fighter_refs(r.game, k);
     }
     super::effect::destroy_all(r, gobj);
     let ip = super::item(r.game, gobj);
-    if !flag(ip.xDCF_flag, 2) && (!ip.xDC8_word.flags.x13 || ip.owner.is_none()) {
+    if !flag(ip.draw_flags, 2) && (!ip.flags.flags.held || ip.owner.is_none()) {
         // `ItemSwitch`: the destroy effect and sound by how the item went.
         let a = attr_of(ip);
         let data = r.data;
         let (gfx, sfx) = match ip.destroy_type {
             0 => (Some(a.i32(data, attr::DESTROY_GFX)), ip.destroy_sfx),
-            1 | 2 => (Some(a.i32(data, attr::X68)), ip.xD80),
+            1 | 2 => (Some(a.i32(data, attr::X68)), ip.break_sfx),
             _ => (None, 0),
         };
         if let Some(gfx) = gfx {
@@ -1777,7 +1779,7 @@ pub fn destroy(r: &mut Running, gobj: GObjId) {
         call(r, gobj, cb);
     }
     let ip = super::item(r.game, gobj);
-    if ip.xDC8_word.flags.x13 && is_fighter(r.game, ip.owner) {
+    if ip.flags.flags.held && is_fighter(r.game, ip.owner) {
         let owner = ip.owner.unwrap();
         let special = is_special_held(ip);
         super::owner::release(r, gobj, owner, special);
@@ -1786,10 +1788,10 @@ pub fn destroy(r: &mut Running, gobj: GObjId) {
     // `func_8026A8EC_inline3`: the camera box.
     remove_camera_box(r.game, gobj);
     let i = item_of(r.game, gobj);
-    for k in 0..r.game.items[i.0].x374_dynamicBonesNum.max(0) as usize {
-        let mut desc = r.game.items[i.0].xD4_dynamicBones[k].dyn_desc.clone();
+    for k in 0..r.game.items[i.0].dynamic_bone_count.max(0) as usize {
+        let mut desc = r.game.items[i.0].dynamic_bones[k].dyn_desc.clone();
         r.game.free_dynamics_chain(&mut desc);
-        r.game.items[i.0].xD4_dynamicBones[k].dyn_desc = desc;
+        r.game.items[i.0].dynamic_bones[k].dyn_desc = desc;
     }
     stop_all_sfx(r, gobj);
     lib26b1::clear_effect_queue(r.game, gobj);
@@ -1800,11 +1802,11 @@ pub fn destroy(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "Item_80267454")]
 pub fn remove_camera_box(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    if ip.xDCD_flag.x0.b01 != 0
-        && let Some(b) = ip.x520_cameraBox
+    if ip.hit_flags.x0.b01 != 0
+        && let Some(b) = ip.camera_box
     {
-        ip.x520_cameraBox = None;
-        ip.xDCD_flag.x0.b01 = 0;
+        ip.camera_box = None;
+        ip.hit_flags.x0.b01 = 0;
         game.camera.free_box(b);
     }
 }
@@ -1840,7 +1842,7 @@ pub fn play_sfx(r: &mut Running, gobj: GObjId, sfx: i32, pan: u8, volume: u8) {
         SFX_SILENT
     };
     let h = r.sfx_play(id, pan.into(), volume.into());
-    item_mut(r.game, gobj).xD6C = h;
+    item_mut(r.game, gobj).sfx = h;
 }
 
 /// Plays a sound in the item's first slot, `Item_8026AF0C`, stopping the one there.
@@ -1853,13 +1855,13 @@ pub fn play_sfx1(r: &mut Running, gobj: GObjId, sfx: i32, pan: u8, volume: u8) {
         stop_sfx1(r, gobj);
         return;
     }
-    let old = super::item(r.game, gobj).sfx_unk1;
+    let old = super::item(r.game, gobj).sfx_loop_1;
     if old != NO_SFX {
         r.sfx_stop(old);
     }
     let id = r.game.audio.lb.kirby_voice(sfx);
     let h = r.sfx_play(id, pan.into(), volume.into());
-    item_mut(r.game, gobj).sfx_unk1 = h;
+    item_mut(r.game, gobj).sfx_loop_1 = h;
 }
 
 /// Plays a sound in the item's second slot, `Item_8026AFA0`, stopping the one there.
@@ -1872,33 +1874,33 @@ pub fn play_sfx2(r: &mut Running, gobj: GObjId, sfx: i32, pan: u8, volume: u8) {
         stop_sfx2(r, gobj);
         return;
     }
-    let old = super::item(r.game, gobj).sfx_unk2;
+    let old = super::item(r.game, gobj).sfx_loop_2;
     if old != NO_SFX {
         r.sfx_stop(old);
     }
     let id = r.game.audio.lb.kirby_voice(sfx);
     let h = r.sfx_play(id, pan.into(), volume.into());
-    item_mut(r.game, gobj).sfx_unk2 = h;
+    item_mut(r.game, gobj).sfx_loop_2 = h;
 }
 
 /// Stops the sound in the item's first slot, `Item_8026B034`.
 #[doc(alias = "Item_8026B034")]
 pub fn stop_sfx1(r: &mut Running, gobj: GObjId) {
-    let old = super::item(r.game, gobj).sfx_unk1;
+    let old = super::item(r.game, gobj).sfx_loop_1;
     if old != NO_SFX {
         r.sfx_stop(old);
     }
-    item_mut(r.game, gobj).sfx_unk1 = NO_SFX;
+    item_mut(r.game, gobj).sfx_loop_1 = NO_SFX;
 }
 
 /// Stops the sound in the item's second slot, `Item_8026B074`.
 #[doc(alias = "Item_8026B074")]
 pub fn stop_sfx2(r: &mut Running, gobj: GObjId) {
-    let old = super::item(r.game, gobj).sfx_unk2;
+    let old = super::item(r.game, gobj).sfx_loop_2;
     if old != NO_SFX {
         r.sfx_stop(old);
     }
-    item_mut(r.game, gobj).sfx_unk2 = NO_SFX;
+    item_mut(r.game, gobj).sfx_loop_2 = NO_SFX;
 }
 
 /// Stops every sound the item made, `Item_8026B0B4`: the sound objects it owns, then its
@@ -1906,38 +1908,38 @@ pub fn stop_sfx2(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "Item_8026B0B4")]
 pub fn stop_all_sfx(r: &mut Running, gobj: GObjId) {
     r.lb_stop_owned_sound_objects(gobj);
-    let xd6c = super::item(r.game, gobj).xD6C;
+    let xd6c = super::item(r.game, gobj).sfx;
     if xd6c != NO_SFX {
         r.lb_stop_owned_sound_object(gobj, xd6c);
-        item_mut(r.game, gobj).xD6C = NO_SFX;
+        item_mut(r.game, gobj).sfx = NO_SFX;
     }
     for second in [false, true] {
         let ip = super::item(r.game, gobj);
-        let h = if second { ip.sfx_unk2 } else { ip.sfx_unk1 };
+        let h = if second { ip.sfx_loop_2 } else { ip.sfx_loop_1 };
         if h != NO_SFX && r.lb_stop_owned_sound_object(gobj, h) {
             r.sfx_stop(h);
             let ip = item_mut(r.game, gobj);
             if second {
-                ip.sfx_unk2 = NO_SFX;
+                ip.sfx_loop_2 = NO_SFX;
             } else {
-                ip.sfx_unk1 = NO_SFX;
+                ip.sfx_loop_1 = NO_SFX;
             }
         }
     }
     for second in [false, true] {
         let ip = super::item(r.game, gobj);
-        let h = if second { ip.sfx_unk2 } else { ip.sfx_unk1 };
+        let h = if second { ip.sfx_loop_2 } else { ip.sfx_loop_1 };
         if h != NO_SFX {
             r.sfx_stop(h);
         }
         let ip = item_mut(r.game, gobj);
         if second {
-            ip.sfx_unk2 = NO_SFX;
+            ip.sfx_loop_2 = NO_SFX;
         } else {
-            ip.sfx_unk1 = NO_SFX;
+            ip.sfx_loop_1 = NO_SFX;
         }
     }
-    item_mut(r.game, gobj).xD6C = NO_SFX;
+    item_mut(r.game, gobj).sfx = NO_SFX;
 }
 
 /// A fighter takes the item in hand at its part `part`, `Item_8026AB54`: the pickup sound, the
@@ -1958,7 +1960,7 @@ pub fn pick_up(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
 pub fn hold(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
     let data = r.data;
     let root = jobj_of(r.game, gobj);
-    let joint = super::item(r.game, gobj).xC8_joint;
+    let joint = super::item(r.game, gobj).joint;
     crate::game::gr::anime::reset_tree_srt(&mut r.game.objs, data, root, joint);
     apply_scale(r.game, gobj);
     if is_fighter(r.game, Some(holder)) {
@@ -1968,16 +1970,16 @@ pub fn hold(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
             (fp.player_idx, fp.team)
         };
         let ip = item_mut(r.game, gobj);
-        ip.xDC8_word.flags.xF = (ip.xDC8_word.flags.xF | 1 << slot) & 0xF;
-        if !ip.xDC8_word.flags.x0 {
+        ip.flags.flags.held_by_players = (ip.flags.flags.held_by_players | 1 << slot) & 0xF;
+        if !ip.flags.flags.held_for_owner {
             ip.owner = Some(holder);
         } else {
-            ip.x51C = Some(holder);
+            ip.holder = Some(holder);
         }
-        ip.xDC4 = part as u32;
-        ip.x20_team_id = team;
-        ip.xD50_landNum = 0;
-        ip.xDC8_word.flags.x13 = true;
+        ip.hold_part = part as u32;
+        ip.team = team;
+        ip.land_count = 0;
+        ip.flags.flags.held = true;
         let child = root.and_then(|j| r.game.objs.jobjs[j].child);
         jobj::clear_flags_all(&mut r.game.objs.jobjs, child, jobj::HIDDEN);
         super::hitbox::start_blink(r.game, gobj);
@@ -1985,9 +1987,9 @@ pub fn hold(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
         debug_owner_bubbles(r.game, gobj, Some(holder));
     }
     let ip = item_mut(r.game, gobj);
-    if flag(ip.xDD0_flag, 6) {
-        set_flag(&mut ip.xDD0_flag, 6, false);
-        ip.xD40 = 0.0;
+    if flag(ip.status_flags, 6) {
+        set_flag(&mut ip.status_flags, 6, false);
+        ip.invincible_frames = 0.0;
         super::anim::clear_overlay(ip);
     }
     if super::item(r.game, gobj).kind < ItKind::COMMON_END {
@@ -2004,7 +2006,7 @@ pub fn hold(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
 /// Whether a fighter can pick the item up, `Item_IsGrabbable`.
 #[doc(alias = "Item_IsGrabbable")]
 pub fn is_grabbable(game: &Game, gobj: GObjId) -> bool {
-    super::item(game, gobj).xDC8_word.flags.x15 && logic(game, gobj).picked_up.is_some()
+    super::item(game, gobj).flags.flags.pickup && logic(game, gobj).picked_up.is_some()
 }
 
 /// Takes the items' common data from `ItCo.usd`, `Item_80266F70` (`it_8027870C`, whose
@@ -2089,7 +2091,7 @@ pub fn init_globals(game: &mut Game, data: &Archives) {
     n.x54 = w(0x20);
     n.x5C = w(0x28);
     n.x64 = w(0x148);
-    game.it.ft_track.x154[0] |= 0x80;
+    game.it.ft_track.untracked[0] |= 0x80;
     game.it.ft_track.count = 1;
     game.it.pokemon.last_kind = UNSELECTED;
     game.it.pokemon.previous_kind = UNSELECTED;
@@ -2117,6 +2119,6 @@ const UNSELECTED: i32 = -1;
 pub fn enter_air_state(r: &mut Running, gobj: GObjId) {
     if let Some(cb) = logic(r.game, gobj).entered_air {
         call(r, gobj, cb);
-        item_mut(r.game, gobj).xDC8_word.flags.x1F = true;
+        item_mut(r.game, gobj).flags.flags.may_skid = true;
     }
 }

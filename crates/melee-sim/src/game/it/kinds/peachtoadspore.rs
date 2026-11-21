@@ -104,7 +104,7 @@ pub fn launch(r: &mut Running, gobj: GObjId, owner: GObjId) {
     let j = jobj_of(r.game, gobj);
     item_mut(r.game, gobj).owner = Some(owner);
     lib2725::set_lifetime(r.game, r.data, gobj, 60.0);
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    item_mut(r.game, gobj).cmd_var0 = 0;
     let (min, offset, spread) = (
         reg(attr_f32(r, gobj, attr::MIN_SPEED)),
         reg(attr_f32(r, gobj, attr::MAX_SPEED_OFFSET)),
@@ -118,9 +118,9 @@ pub fn launch(r: &mut Running, gobj: GObjId, owner: GObjId) {
     let angle = fp::fmadds(0.5, double_angle, angle_offset);
     let sin = reg(math::sin(mem(angle)));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), fp::fmuls(speed, sin)));
+    ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), fp::fmuls(speed, sin)));
     let cos = reg(math::cos(mem(angle)));
-    item_mut(r.game, gobj).x40_vel.y = mem(fp::fmuls(speed, cos));
+    item_mut(r.game, gobj).vel.y = mem(fp::fmuls(speed, cos));
     lib2725::hide_tree(r.game, j);
     lib26b1::disable_pickup(r.game, gobj);
     let j = jobj_of(r.game, gobj);
@@ -132,12 +132,12 @@ pub fn launch(r: &mut Running, gobj: GObjId, owner: GObjId) {
 #[doc(alias = "itPeachtoadspore_UnkMotion0_Anim")]
 fn tick(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    if ip.xDAC_itcmd_var0 != 0 {
+    if ip.cmd_var0 != 0 {
         return true;
     }
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
-        ip.xD44_lifeTimer = 0.0;
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    if reg(ip.life_timer) <= 0.0 {
+        ip.life_timer = 0.0;
         return true;
     }
     false
@@ -148,8 +148,8 @@ fn tick(r: &mut Running, gobj: GObjId) -> bool {
 fn slow(r: &mut Running, gobj: GObjId) {
     let decay = reg(attr_f32(r, gobj, attr::SPEED_DECAY));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), decay));
-    ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), decay));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), decay));
+    ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), decay));
 }
 
 /// The spore's hit, clank, shield hit and absorption (`itPeachToadSpore_Logic92_DmgDealt`,
@@ -173,9 +173,9 @@ fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 /// `itPeachToadSpore_Logic68_Reflected`: sent back, keeping its life.
 #[doc(alias = "itPeachToadSpore_Logic68_Reflected")]
 fn reflected(r: &mut Running, gobj: GObjId) -> bool {
-    let life = item(r.game, gobj).xD44_lifeTimer;
+    let life = item(r.game, gobj).life_timer;
     lib2725::reflected_back(r.game, gobj);
-    item_mut(r.game, gobj).xD44_lifeTimer = life;
+    item_mut(r.game, gobj).life_timer = life;
     false
 }
 

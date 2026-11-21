@@ -56,12 +56,12 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itLinkBow_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.link_bow()
+    item_mut(game, gobj).vars.link_bow()
 }
 
 /// The bow at his size.
 fn scale(r: &mut Running, gobj: GObjId) {
-    let s = vars(r.game, gobj).x0.get();
+    let s = vars(r.game, gobj).scale.get();
     let j = jobj_of(r.game, gobj).expect("a bow without a model");
     jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
 }
@@ -93,16 +93,16 @@ pub fn spawn(
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDCC_flag.b3 = false;
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    ip.state_flags.b3 = false;
     let o = item(r.game, gobj).owner.expect("a bow without its owner");
     let s = mem(crate::game::state::Running::model_scale(r.game.fighter(o)));
     let v = vars(r.game, gobj);
-    v.x0.set(s);
-    v.x4.set(Some(owner));
+    v.scale.set(s);
+    v.owner.set(Some(owner));
     pick_up(r, gobj, owner, part);
     Some(gobj)
 }
@@ -136,7 +136,7 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
 
 /// The owner's bow state, if the bow is still his.
 fn owner_index(r: &mut Running, gobj: GObjId) -> Option<i32> {
-    let owner = vars(r.game, gobj).x4.get()?;
+    let owner = vars(r.game, gobj).owner.get()?;
     if item(r.game, gobj).owner != Some(owner) {
         return None;
     }
@@ -159,7 +159,7 @@ fn follow(r: &mut Running, gobj: GObjId) {
         return;
     }
     if msid == OTHER[i as usize] {
-        let frame = item(r.game, gobj).x5CC_currentAnimFrame;
+        let frame = item(r.game, gobj).anim_frame;
         change_state(r, gobj, i, change::ANIM_UPDATE);
         animate(r, gobj);
         seek_anim(r, gobj, frame);
@@ -194,14 +194,14 @@ fn anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item(r.game, gobj);
     match ip.msid {
         2 | 5 => {
-            if ip.x5CC_currentAnimFrame == 0.0 || ip.x5CC_currentAnimFrame >= 24.0 {
+            if ip.anim_frame == 0.0 || ip.anim_frame >= 24.0 {
                 destroyed(r, gobj);
                 return true;
             }
         }
         _ => follow(r, gobj),
     }
-    let Some(owner) = vars(r.game, gobj).x4.get() else {
+    let Some(owner) = vars(r.game, gobj).owner.get() else {
         return true;
     };
     if item(r.game, gobj).owner != Some(owner) {

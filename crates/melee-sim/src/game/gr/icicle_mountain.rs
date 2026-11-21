@@ -1036,7 +1036,7 @@ pub fn make_blocks(r: &mut Running, gobj: GObjId, parts: &[i32]) {
 pub fn block_hit(r: &mut Running, item: GObjId, _g: GroundId) {
     material::item_hurtbox_off(r.game, item);
     let anchor = super::super::it::item_mut(r.game, item)
-        .xDD4_itemVar
+        .vars
         .yaku()
         .anchor
         .get();

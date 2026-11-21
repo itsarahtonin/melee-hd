@@ -669,7 +669,7 @@ fn slippi_super_scope_stand_in_matches_the_model() {
                     if !addrs.contains(&addr) {
                         addrs.push(addr);
                     }
-                    let (want, got) = (it.xD4C, off.game.items[i].xD4C);
+                    let (want, got) = (it.ammo, off.game.items[i].ammo);
                     if want != got {
                         assert!(
                             want > 1_000_000_000
@@ -1290,8 +1290,8 @@ fn slippi_scizor_notes_reads_off_course() {
             let ids: Vec<u32> = g.items.iter().map(|(i, _)| i).collect();
             for i in ids {
                 let it = &mut g.items[i];
-                if it.kind == ItKind::Scizor && it.msid == 1 && it.xDAC_itcmd_var0 != 0 {
-                    it.xD44_lifeTimer = it.xD44_lifeTimer.min(20.0);
+                if it.kind == ItKind::Scizor && it.msid == 1 && it.cmd_var0 != 0 {
+                    it.life_timer = it.life_timer.min(20.0);
                 }
             }
         },

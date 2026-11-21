@@ -149,7 +149,7 @@ pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
 /// The yo-yo's spin texture from `frame` (0 still, 1 spinning), `it_802BE5D8`.
 #[doc(alias = "it_802BE5D8")]
 pub fn set_spin(r: &mut Running, gobj: GObjId, frame: f32) {
-    let j = item_mut(r.game, gobj).xDD4_itemVar.ness_yoyo().x18.get();
+    let j = item_mut(r.game, gobj).vars.ness_yoyo().model.get();
     let mat = r.data.ptr(attrs(r, gobj).at(attr::YOYO_MATANIM));
     jobj::remove_anim_all(&mut r.game.objs, j);
     jobj::add_anim_all(&mut r.game.objs, r.data, j, None, mat, None);
@@ -180,7 +180,7 @@ pub fn make_links(r: &mut Running, gobj: GObjId, bone: Option<JObjId>) {
             k.gobj = Some(g);
             k.vel = Vec3::new(0.0, 0.0, 0.0);
             k.pos = pos;
-            k.x2C_b0 = b0;
+            k.out = b0;
         };
         let (joint, render) = if i == 0 {
             link_mut(r.game, l).next = None;
@@ -211,16 +211,16 @@ pub fn make_links(r: &mut Running, gobj: GObjId, bone: Option<JObjId>) {
         r.game.world.setup_gx_link(g, CodeRef(render), 6, 0);
         if i == n - 1 {
             item_mut(r.game, gobj)
-                .xDD4_itemVar
+                .vars
                 .ness_yoyo()
-                .x18
+                .model
                 .set(Some(model));
         }
         prev_link = Some(l);
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.ness_yoyo();
-    v.x8.set(tail);
-    v.xC.set(head);
+    let v = item_mut(r.game, gobj).vars.ness_yoyo();
+    v.tip.set(tail);
+    v.hand.set(head);
 }
 
 /// The yo-yo's links go and its owner lets go of it (`it_802BE958_inline`).
@@ -229,7 +229,7 @@ fn release_links(r: &mut Running, gobj: GObjId) {
         r.ness_yoyo_item_set_flag(owner);
     }
     item_mut(r.game, gobj).owner = None;
-    let mut cur = item_mut(r.game, gobj).xDD4_itemVar.ness_yoyo().x8.get();
+    let mut cur = item_mut(r.game, gobj).vars.ness_yoyo().tip.get();
     while let Some(l) = cur {
         let g = lk(r.game, l).gobj.expect("a link without its GObj");
         cur = lk(r.game, l).next;
@@ -271,10 +271,10 @@ pub fn spawn(
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.ness_yoyo();
-    v.x10.set(Some(owner));
-    v.x0.set(msid);
-    if v.x0.get() == MS_FLIPPED {
+    let v = ip.vars.ness_yoyo();
+    v.ness.set(Some(owner));
+    v.msid.set(msid);
+    if v.msid.get() == MS_FLIPPED {
         ip.facing_dir = mem(fp::fmuls(reg(ip.facing_dir), fp::fneg(1.0)));
     }
     let bone = r.bone_joint(owner, crate::game::ft::ness::PART_R2ND_NA);
@@ -295,10 +295,10 @@ fn joint_point(r: &mut Running, l: ItemLinkId) -> Vec3 {
 
 /// The tip and the link at the hand.
 fn ends(r: &mut Running, gobj: GObjId) -> (ItemLinkId, ItemLinkId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.ness_yoyo();
+    let v = item_mut(r.game, gobj).vars.ness_yoyo();
     (
-        v.x8.get().expect("a yo-yo without its tip"),
-        v.xC.get().expect("a yo-yo without its hand's link"),
+        v.tip.get().expect("a yo-yo without its tip"),
+        v.hand.get().expect("a yo-yo without its hand's link"),
     )
 }
 
@@ -326,12 +326,12 @@ pub fn physics_2(r: &mut Running, gobj: GObjId) {
 pub fn physics_3(r: &mut Running, gobj: GObjId) {
     let (_, hand) = ends(r, gobj);
     let pos = joint_point(r, hand);
-    let speed = item_mut(r.game, gobj).xDD4_itemVar.ness_yoyo().x4.get();
+    let speed = item_mut(r.game, gobj).vars.ness_yoyo().speed.get();
     if reel(r, gobj, hand, pos, speed) {
         spin_out(r, gobj, Vec3::new(0.0, 0.0, 0.0));
-        let v = item_mut(r.game, gobj).xDD4_itemVar.ness_yoyo();
-        let ness = v.x10.get().expect("a yo-yo without Ness");
-        let tip = v.x8.get().expect("a yo-yo without its tip");
+        let v = item_mut(r.game, gobj).vars.ness_yoyo();
+        let ness = v.ness.get().expect("a yo-yo without Ness");
+        let tip = v.tip.get().expect("a yo-yo without its tip");
         let p = attack_hi4::hitbox_pos(r.game.fighter(ness));
         link_mut(r.game, tip).pos = p;
     }
@@ -342,9 +342,9 @@ pub fn physics_3(r: &mut Running, gobj: GObjId) {
 /// once Ness leaves the smashes, the yo-yo goes.
 #[doc(alias = "itNessyoyo_UnkMotion3_Anim")]
 pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.ness_yoyo();
-    let ness = v.x10.get().expect("a yo-yo without Ness");
-    let model = v.x18.get();
+    let v = item_mut(r.game, gobj).vars.ness_yoyo();
+    let ness = v.ness.get().expect("a yo-yo without Ness");
+    let model = v.model.get();
     let child = model.and_then(|m| r.game.objs.jobjs[m].child);
     if let Some(c) = child {
         let rot = r.game.objs.jobjs[c].rotate.x;
@@ -375,19 +375,19 @@ pub fn link_coll(r: &mut Running, l: ItemLinkId, flag: bool, offset: f32) -> i32
     link_mut(r.game, l).coll_data = cd;
     let k = link_mut(r.game, l);
     if hit {
-        if !k.x2C_b1 && flag && !k.x2C_b2 {
-            k.x2C_b2 = true;
+        if !k.touching && flag && !k.sounded {
+            k.sounded = true;
         }
-        k.x2C_b1 = true;
+        k.touching = true;
     } else {
-        k.x2C_b1 = false;
+        k.touching = false;
     }
     let env = k.coll_data.env_flags;
     if env & 0x18000 != 0 {
         k.coll_data.cur_pos.x = k.pos.x;
     } else if env & 0xFFF != 0 {
         let (next, prev) = (k.next, k.prev);
-        if next.is_some_and(|n| lk(r.game, n).x2C_b0) && prev.is_some() {
+        if next.is_some_and(|n| lk(r.game, n).out) && prev.is_some() {
             let k = link_mut(r.game, l);
             k.coll_data.cur_pos.y = mem(fp::fadds(reg(k.coll_data.cur_pos.y), reg(offset)));
         }
@@ -437,9 +437,9 @@ pub fn spin_out_step(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3)
     let min = fp::fmuls(reg(attr_f32(r, gobj, attr::UNK1)), scale);
     let max = fp::fmuls(reg(attr_f32(r, gobj, attr::SIZE)), scale);
     let ness = item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .ness_yoyo()
-        .x10
+        .ness
         .get()
         .expect("a yo-yo without Ness");
     let p = attack_hi4::hitbox_pos(r.game.fighter(ness));
@@ -450,7 +450,7 @@ pub fn spin_out_step(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3)
     let mut next = k.next;
     let (mut dir, mut dir2) = (Vec3::default(), Vec3::default());
     while let Some(n) = next {
-        if lk(r.game, n).x2C_b0 {
+        if lk(r.game, n).out {
             link_mut(r.game, n).pos = target;
             let from = lk(r.game, cur).pos;
             let dist = direction(target, from, &mut dir);
@@ -458,7 +458,7 @@ pub fn spin_out_step(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3)
                 link_mut(r.game, n).pos = along(dir, max, from);
             } else if dist < min {
                 if direction(target, target, &mut dir2) <= f64::from(0.1_f32) {
-                    link_mut(r.game, n).x2C_b0 = false;
+                    link_mut(r.game, n).out = false;
                 } else {
                     link_mut(r.game, n).pos = along(dir, min, from);
                 }
@@ -468,7 +468,7 @@ pub fn spin_out_step(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3)
             if direction(target, from, &mut dir) > max {
                 let k = link_mut(r.game, n);
                 k.pos = along(dir, max, from);
-                k.x2C_b0 = true;
+                k.out = true;
             } else {
                 return 0;
             }
@@ -528,12 +528,12 @@ pub fn drag(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) -> i32 {
         }
     }
     coll_flags &= 0xFFF;
-    let smash = item_mut(r.game, gobj).xDD4_itemVar.ness_yoyo().x0.get();
+    let smash = item_mut(r.game, gobj).vars.ness_yoyo().msid.get();
     let mut count = 0;
     let mut dir = Vec3::default();
     while let Some(n) = next {
         count += 1;
-        if lk(r.game, n).x2C_b0 {
+        if lk(r.game, n).out {
             let k = link_mut(r.game, n);
             k.vel.y = mem(fp::fsubs(reg(k.vel.y), pull2));
             apply_vel(r.game, n);
@@ -558,7 +558,7 @@ pub fn drag(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) -> i32 {
             } else if direction(target, from, &mut dir) > size {
                 let k = link_mut(r.game, n);
                 k.pos = along(dir, size, from);
-                k.x2C_b0 = true;
+                k.out = true;
                 place_coll(r.game, n);
             } else if coll_flags != 0 {
                 return 1;
@@ -599,7 +599,7 @@ pub fn reel(r: &mut Running, gobj: GObjId, l: ItemLinkId, pos: Vec3, dist: f32) 
     let mut prev = lk(r.game, l).prev;
     let mut cur = l;
     while let Some(p) = prev {
-        if lk(r.game, cur).x2C_b0 {
+        if lk(r.game, cur).out {
             break;
         }
         cur = p;
@@ -612,7 +612,7 @@ pub fn reel(r: &mut Running, gobj: GObjId, l: ItemLinkId, pos: Vec3, dist: f32) 
         if !(dist > len) {
             break;
         }
-        link_mut(r.game, cur).x2C_b0 = false;
+        link_mut(r.game, cur).out = false;
         len = direction(lk(r.game, p).pos, pos, &mut dir);
         cur = p;
         prev = lk(r.game, p).prev;
@@ -668,12 +668,12 @@ pub fn hang(r: &mut Running, gobj: GObjId) {
 /// Ness's yo-yo hitbox at it), scaled.
 #[doc(alias = "it_802BFAFC")]
 pub fn line_up(r: &mut Running, gobj: GObjId, target: Vec3) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.ness_yoyo();
-    let mut cur = v.xC.get();
-    let model = v.x18.get();
-    let ness = v.x10.get().expect("a yo-yo without Ness");
+    let v = item_mut(r.game, gobj).vars.ness_yoyo();
+    let mut cur = v.hand.get();
+    let model = v.model.get();
+    let ness = v.ness.get().expect("a yo-yo without Ness");
     while let Some(l) = cur {
-        if lk(r.game, l).x2C_b0 {
+        if lk(r.game, l).out {
             break;
         }
         cur = lk(r.game, l).prev;
@@ -683,7 +683,7 @@ pub fn line_up(r: &mut Running, gobj: GObjId, target: Vec3) {
     while let Some(l) = cur {
         let k = lk(r.game, l);
         let next_pos = match k.next {
-            Some(n) if lk(r.game, n).x2C_b0 => lk(r.game, n).pos,
+            Some(n) if lk(r.game, n).out => lk(r.game, n).pos,
             _ => target,
         };
         let prev_pos = match k.prev {
@@ -746,9 +746,10 @@ pub fn nudge(r: &mut Running, gobj: GObjId) {
     let dx = fp::fsubs(reg(p.x), reg(at.x));
     let dy = fp::fsubs(reg(p.y), reg(at.y));
     let d = crate::math::sqrt_reg(fp::fadds(fp::fmuls(dx, dx), fp::fmuls(dy, dy)));
-    let v = item_mut(r.game, gobj).xDD4_itemVar.ness_yoyo();
-    v.x4.set(mem(d));
-    v.x4.update(|x| mem(fp::fmuls(reg(x), f64::from(0.1_f32))));
+    let v = item_mut(r.game, gobj).vars.ness_yoyo();
+    v.speed.set(mem(d));
+    v.speed
+        .update(|x| mem(fp::fmuls(reg(x), f64::from(0.1_f32))));
     change_state(r, gobj, 3, change::ANIM_UPDATE);
 }
 
@@ -761,7 +762,7 @@ pub fn spin_out(r: &mut Running, gobj: GObjId, vel: Vec3) {
     k.pos = pos;
     k.coll_data.cur_pos = k.pos;
     k.coll_data.last_pos = k.coll_data.cur_pos;
-    k.x2C_b0 = true;
+    k.out = true;
     k.vel = vel;
     change_state(r, gobj, 1, change::ANIM_UPDATE);
 }

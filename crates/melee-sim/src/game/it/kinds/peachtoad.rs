@@ -136,7 +136,7 @@ fn picked_up(r: &mut Running, gobj: GObjId) {
 /// by his owner, once she has left the move.
 #[doc(alias = "itPeachtoad_UnkMotion0_Anim")]
 fn standing(r: &mut Running, gobj: GObjId) -> bool {
-    let frame = reg(item(r.game, gobj).x5CC_currentAnimFrame);
+    let frame = reg(item(r.game, gobj).anim_frame);
     if frame == 7.0 {
         lib26b1::show(r.game, gobj);
     }
@@ -167,7 +167,7 @@ pub fn hit(r: &mut Running, gobj: GObjId) {
 /// move.
 #[doc(alias = "itPeachtoad_UnkMotion1_Anim")]
 fn releasing(r: &mut Running, gobj: GObjId) -> bool {
-    if reg(item(r.game, gobj).x5CC_currentAnimFrame) >= 60.0 {
+    if reg(item(r.game, gobj).anim_frame) >= 60.0 {
         lib26b1::hide(r.game, gobj);
     }
     owner_done(r, gobj)

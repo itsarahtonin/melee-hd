@@ -126,7 +126,7 @@ pub fn set_pose(r: &mut Running, gobj: GObjId, state: i32, frame: f32) {
         .states(data)
         .expect("an article without states");
     let desc = descs.at(0x10 * state as u32);
-    item_mut(r.game, gobj).xD0_itemStateDesc = Some(desc);
+    item_mut(r.game, gobj).state_desc = Some(desc);
     super::super::item::set_state_anims_at(r, gobj, desc, frame);
     let model = jobj_of(r.game, gobj);
     jobj::anim_all(
@@ -136,7 +136,7 @@ pub fn set_pose(r: &mut Running, gobj: GObjId, state: i32, frame: f32) {
         model,
     );
     jobj::remove_anim_all(&mut r.game.objs, model);
-    item_mut(r.game, gobj).x524_cmd.script.cursor = None;
+    item_mut(r.game, gobj).cmd.script.cursor = None;
 }
 
 /// A new pill's spawn fields: from `pos`, its owner's ECB center, facing `facing_dir`, with a
@@ -184,9 +184,9 @@ fn setup(r: &mut Running, gobj: GObjId) {
     let c = reg(crate::math::cos(angle));
     let s = reg(crate::math::sin(angle));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), fp::fmuls(speed, c)));
-    ip.x40_vel.y = mem(fp::fmuls(speed, s));
-    ip.x40_vel.z = 0.0;
+    ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), fp::fmuls(speed, c)));
+    ip.vel.y = mem(fp::fmuls(speed, s));
+    ip.vel.z = 0.0;
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     lib26b1::disable_pickup(r.game, gobj);
@@ -196,12 +196,12 @@ fn setup(r: &mut Running, gobj: GObjId) {
 /// owner's position, turned to its facing.
 #[doc(alias = "itDrMarioPill_802C061C")]
 fn follow_owner(r: &mut Running, gobj: GObjId) {
-    let owner = item_mut(r.game, gobj).xDD4_itemVar.drmario_pill().x4.get();
+    let owner = item_mut(r.game, gobj).vars.drmario_pill().owner.get();
     if let Some(o) = owner {
         let v = r.game.ft_pos(o);
         item_mut(r.game, gobj).pos = v;
         let j = jobj_of(r.game, gobj).expect("a pill without a model");
-        let facing = item_mut(r.game, gobj).xDD4_itemVar.drmario_pill().x0.get();
+        let facing = item_mut(r.game, gobj).vars.drmario_pill().facing_dir.get();
         super::super::item::set_translate(r.game, j, v);
         let ry = mem(fp::frsp(fp::fmul(
             fp::fdiv(std::f64::consts::PI, 2.0),
@@ -231,17 +231,17 @@ pub fn appeal_spawn(
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 2, change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDC8_word.flags.x19 = false;
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    ip.flags.flags.turns_to_face = false;
     ip.on_accessory = Some(CodeRef(ACCESSORY));
-    ip.xDC8_word.flags.x13 = true;
+    ip.flags.flags.held = true;
     ip.owner = Some(parent);
-    let v = ip.xDD4_itemVar.drmario_pill();
-    v.x4.set(Some(parent));
-    v.x0.set(facing_dir);
+    let v = ip.vars.drmario_pill();
+    v.owner.set(Some(parent));
+    v.facing_dir.set(facing_dir);
     lib2725::stop_spin(r.game, r.data, gobj);
     super::super::hitbox::start_blink(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
@@ -274,17 +274,17 @@ pub fn spawn_demo(
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, msid.wrapping_add(4), change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDC8_word.flags.x19 = false;
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    ip.flags.flags.turns_to_face = false;
     ip.on_accessory = Some(CodeRef(ACCESSORY));
-    ip.xDC8_word.flags.x13 = true;
+    ip.flags.flags.held = true;
     ip.owner = Some(parent);
-    let v = ip.xDD4_itemVar.drmario_pill();
-    v.x4.set(Some(parent));
-    v.x0.set(facing_dir);
+    let v = ip.vars.drmario_pill();
+    v.owner.set(Some(parent));
+    v.facing_dir.set(facing_dir);
     lib2725::stop_spin(r.game, r.data, gobj);
     super::super::hitbox::start_blink(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
@@ -310,8 +310,8 @@ fn held_start(r: &mut Running, gobj: GObjId, msid: i32) {
 fn motion0_anim(r: &mut Running, gobj: GObjId) -> bool {
     lib26b1::disable_pickup(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    reg(ip.xD44_lifeTimer) <= 0.0
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    reg(ip.life_timer) <= 0.0
 }
 
 /// `itDrMarioPill_UnkMotion0_Phys`: gravity (`Item_ApplyFallingPhysics`).
@@ -336,7 +336,7 @@ fn motion0_coll(r: &mut Running, gobj: GObjId) -> bool {
         return false;
     }
     let min = attr_f32(r, gobj, attr::MIN_SPEED);
-    let v = item(r.game, gobj).x40_vel;
+    let v = item(r.game, gobj).vel;
     let sq = fp::fadds(fp::fmuls(reg(v.x), reg(v.x)), fp::fmuls(reg(v.y), reg(v.y)));
     if reg(crate::math::sqrt_accurate(mem(sq))) < reg(min) {
         return true;
@@ -348,11 +348,7 @@ fn motion0_coll(r: &mut Running, gobj: GObjId) -> bool {
 /// Takes the taunt's pill away, `itDrMarioPill_802C0DBC`.
 #[doc(alias = "itDrMarioPill_802C0DBC")]
 pub fn remove(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .drmario_pill()
-        .x4
-        .set(None);
+    item_mut(r.game, gobj).vars.drmario_pill().owner.set(None);
     destroy(r, gobj);
 }
 
@@ -368,17 +364,17 @@ fn appeal_setup(r: &mut Running, gobj: GObjId) {
 /// The taunt's pill lets go of its owner (`itDrMarioPill_Motion2_Anim`'s inline): the owner
 /// forgets it if it holds it; true when it ends.
 fn release(r: &mut Running, gobj: GObjId) -> bool {
-    let owner = item_mut(r.game, gobj).xDD4_itemVar.drmario_pill().x4.get();
+    let owner = item_mut(r.game, gobj).vars.drmario_pill().owner.get();
     if let Some(o) = owner
         && item(r.game, gobj).owner == Some(o)
     {
         r.dr_forget_appeal_pill(o);
     }
     let ip = item_mut(r.game, gobj);
-    ip.xDD4_itemVar.drmario_pill().x4.set(None);
+    ip.vars.drmario_pill().owner.set(None);
     ip.on_accessory = None;
     let ip = item_mut(r.game, gobj);
-    ip.xDD4_itemVar.drmario_pill().x4.set(None);
+    ip.vars.drmario_pill().owner.set(None);
     ip.on_accessory = None;
     true
 }
@@ -392,19 +388,19 @@ fn motion2_anim(r: &mut Running, gobj: GObjId) -> bool {
     let model = jobj_of(r.game, gobj);
     let child = model.and_then(|j| r.game.objs.jobjs[j].child);
     lib26b1::disable_pickup(r.game, gobj);
-    if item(r.game, gobj).xDAC_itcmd_var0 == 1 {
+    if item(r.game, gobj).cmd_var0 == 1 {
         jobj::clear_flags(&mut r.game.objs.jobjs, child, 1 << 4);
     } else {
         jobj::set_flags(&mut r.game.objs.jobjs, child, 1 << 4);
     }
-    let owner = item_mut(r.game, gobj).xDD4_itemVar.drmario_pill().x4.get();
+    let owner = item_mut(r.game, gobj).vars.drmario_pill().owner.get();
     let Some(o) = owner else {
         return release(r, gobj);
     };
     if r.dr_appeal_pill_done(o) {
         return release(r, gobj);
     }
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = r.dr_appeal_cmd_var1(o);
+    item_mut(r.game, gobj).cmd_var0 = r.dr_appeal_cmd_var1(o);
     if item(r.game, gobj).owner == Some(o) {
         let scale = mem(crate::game::state::Running::model_scale(r.game.fighter(o)));
         let j = model.expect("a pill without a model");
@@ -439,7 +435,7 @@ fn picked_up(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itDrMarioPill_Motion6_Anim")]
 fn motion6_anim(r: &mut Running, gobj: GObjId) -> bool {
     lib26b1::disable_pickup(r.game, gobj);
-    let owner = item_mut(r.game, gobj).xDD4_itemVar.drmario_pill().x4.get();
+    let owner = item_mut(r.game, gobj).vars.drmario_pill().owner.get();
     if let Some(o) = owner
         && crate::game::ft::demo::frozen_or_asleep(r.game, o)
     {

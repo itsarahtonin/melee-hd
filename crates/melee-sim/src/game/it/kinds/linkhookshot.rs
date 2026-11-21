@@ -151,12 +151,12 @@ pub static HOOKSHOT: Tether = Tether {
     vars: |v| {
         let v = v.link_hookshot();
         tether::Vars {
-            tip: &mut v.x0,
-            hand: &mut v.x4,
-            fighter: &mut v.x8,
-            tip_model: &mut v.xC,
-            frame: &mut v.x10,
-            done: &mut v.x14,
+            tip: &mut v.tip,
+            hand: &mut v.hand,
+            fighter: &mut v.fighter,
+            tip_model: &mut v.tip_model,
+            frame: &mut v.frame,
+            done: &mut v.done,
         }
     },
     slot: crate::game::ft::link::u::HOOKSHOT,
@@ -304,7 +304,7 @@ fn vars<'r>(
     r: &'r mut Running,
     gobj: GObjId,
 ) -> &'r mut crate::game::structs::itLinkHookshot_ItemVars {
-    item_mut(r.game, gobj).xDD4_itemVar.link_hookshot()
+    item_mut(r.game, gobj).vars.link_hookshot()
 }
 
 /// The unit direction from `b` to `a` written to `dir`, and the distance in a register (the
@@ -408,9 +408,9 @@ fn make_links(
         k.gobj = Some(g);
         k.vel = Vec3::new(0.0, 0.0, 0.0);
         k.pos = Vec3::new(0.0, 0.0, 0.0);
-        k.x2C_b0 = false;
-        k.x2C_b1 = false;
-        k.x2C_b2 = false;
+        k.out = false;
+        k.touching = false;
+        k.sounded = false;
         link::init_coll(r, l, scale);
         let (desc, render) = if last {
             (
@@ -428,15 +428,15 @@ fn make_links(
         if last {
             result = Some(model);
         }
-        link_mut(r.game, l).x1CC = -1;
+        link_mut(r.game, l).wall_line = -1;
         prev_link = Some(l);
     }
     if n == 1 {
         unported_call("it_802A2568 with one link (its tip and the returned joint are unset)");
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.link_hookshot();
-    v.x0.set(tail);
-    v.x4.set(head);
+    let v = item_mut(r.game, gobj).vars.link_hookshot();
+    v.tip.set(tail);
+    v.hand.set(head);
     result
 }
 
@@ -445,9 +445,9 @@ fn make_links(
 #[doc(alias = "itLinkhookshot_UnkMotion8_Anim")]
 fn anim(r: &mut Running, gobj: GObjId) -> bool {
     let mut out = 0i32;
-    let mut cur = vars(r, gobj).x0.get();
+    let mut cur = vars(r, gobj).tip.get();
     while let Some(l) = cur {
-        if !lk(r.game, l).x2C_b0 {
+        if !lk(r.game, l).out {
             break;
         }
         cur = lk(r.game, l).next;
@@ -481,8 +481,8 @@ fn anim(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802A40D0")]
 #[doc(alias = "it_802A3E50")]
 fn link_coll(r: &mut Running, l: ItemLinkId, width: f32, clink: Option<i32>) -> i32 {
-    let next = lk(r.game, l).next.filter(|&n| lk(r.game, n).x2C_b0);
-    let was_on_floor = lk(r.game, l).x2C_b1;
+    let next = lk(r.game, l).next.filter(|&n| lk(r.game, n).out);
+    let was_on_floor = lk(r.game, l).touching;
     {
         let from = next.map(|n| lk(r.game, n).coll_data.cur_pos);
         let k = link_mut(r.game, l);
@@ -490,8 +490,8 @@ fn link_coll(r: &mut Running, l: ItemLinkId, width: f32, clink: Option<i32>) -> 
         k.coll_data.cur_pos = k.pos;
     }
     if let Some(n) = next
-        && lk(r.game, n).x2C_b1
-        && !lk(r.game, l).x2C_b1
+        && lk(r.game, n).touching
+        && !lk(r.game, l).touching
     {
         let floor = lk(r.game, n).coll_data.floor.index;
         if let Some((left, right)) = island_ends(r, floor) {
@@ -506,7 +506,7 @@ fn link_coll(r: &mut Running, l: ItemLinkId, width: f32, clink: Option<i32>) -> 
             }
         }
     }
-    let on_floor = lk(r.game, l).x2C_b1;
+    let on_floor = lk(r.game, l).touching;
     let mut cd = lk(r.game, l).coll_data.clone();
     let hit = super::super::maplib::with_stage_coll(r.game, r.data, |c| {
         if on_floor {
@@ -516,7 +516,7 @@ fn link_coll(r: &mut Running, l: ItemLinkId, width: f32, clink: Option<i32>) -> 
         }
     });
     link_mut(r.game, l).coll_data = cd;
-    link_mut(r.game, l).x2C_b1 = hit;
+    link_mut(r.game, l).touching = hit;
     let flags = lk(r.game, l).coll_data.env_flags;
     let prev = lk(r.game, l).prev;
     if flags & FLOOR_MASK != 0 {
@@ -531,9 +531,9 @@ fn link_coll(r: &mut Running, l: ItemLinkId, width: f32, clink: Option<i32>) -> 
         k.coll_data.cur_pos.y = mem(fp::fadds(reg(k.coll_data.cur_pos.y), reg(width)));
     }
     if let Some(kind) = clink
-        && lk(r.game, l).x2C_b1
+        && lk(r.game, l).touching
         && !was_on_floor
-        && !lk(r.game, l).x2C_b2
+        && !lk(r.game, l).sounded
     {
         let sfx = if kind == FighterKind::Clink {
             SFX_CLINK_CLINK
@@ -541,7 +541,7 @@ fn link_coll(r: &mut Running, l: ItemLinkId, width: f32, clink: Option<i32>) -> 
             SFX_CLINK
         };
         r.sfx_play(sfx, 0x7F, 0x40);
-        link_mut(r.game, l).x2C_b2 = true;
+        link_mut(r.game, l).sounded = true;
     }
     let k = link_mut(r.game, l);
     k.pos = k.coll_data.cur_pos;
@@ -588,7 +588,7 @@ fn lead(r: &mut Running, gobj: GObjId, t: ItemLinkId, at: Vec3, owner: GObjId) -
         k.pos = p;
         k.coll_data.cur_pos = k.pos;
         k.coll_data.last_pos = k.coll_data.cur_pos;
-        k.x2C_b0 = true;
+        k.out = true;
     }
     let mut l0 = t;
     let mut l1 = lk(r.game, t).next;
@@ -596,14 +596,14 @@ fn lead(r: &mut Running, gobj: GObjId, t: ItemLinkId, at: Vec3, owner: GObjId) -
     let flag = link_coll(r, t, width, None);
     if flag & LEFT_WALL_MASK != 0 {
         let i = lk(r.game, t).coll_data.left_facing_wall.index;
-        link_mut(r.game, t).x1CC = i;
+        link_mut(r.game, t).wall_line = i;
     } else if flag & RIGHT_WALL_MASK != 0 {
         let i = lk(r.game, t).coll_data.right_facing_wall.index;
-        link_mut(r.game, t).x1CC = i;
+        link_mut(r.game, t).wall_line = i;
     }
     while let Some(k1) = l1 {
         let p0 = lk(r.game, l0).pos;
-        if lk(r.game, k1).x2C_b0 {
+        if lk(r.game, k1).out {
             let mut v = Vec3::ZERO;
             let len = direction(lk(r.game, k1).pos, p0, &mut v);
             if len > reg(width) {
@@ -615,11 +615,11 @@ fn lead(r: &mut Running, gobj: GObjId, t: ItemLinkId, at: Vec3, owner: GObjId) -
             let len = direction(at, p0, &mut v);
             if len > reg(width) {
                 link_mut(r.game, k1).pos = along(p0, v, width);
-                link_mut(r.game, k1).x2C_b0 = true;
+                link_mut(r.game, k1).out = true;
                 link::place_coll(r.game, k1);
             } else {
                 link_mut(r.game, k1).pos = at;
-                link_mut(r.game, k1).x2C_b0 = true;
+                link_mut(r.game, k1).out = true;
                 link::place_coll(r.game, k1);
                 if flag & WALL_MASK != 0 {
                     return 1;
@@ -706,7 +706,7 @@ fn bounce_back(r: &mut Running, gobj: GObjId, t: ItemLinkId, at: Vec3, owner: GO
     let mut i = 0;
     while let Some(k1) = l1 {
         let pc = lk(r.game, cur).pos;
-        if lk(r.game, k1).x2C_b0 {
+        if lk(r.game, k1).out {
             {
                 let k = link_mut(r.game, k1);
                 k.vel.y = mem(fp::fsubs(reg(k.vel.y), reg(gravity)));
@@ -726,11 +726,11 @@ fn bounce_back(r: &mut Running, gobj: GObjId, t: ItemLinkId, at: Vec3, owner: GO
             let len = direction(at, pc, &mut v);
             if len > reg(width) {
                 link_mut(r.game, k1).pos = along(pc, v, width);
-                link_mut(r.game, k1).x2C_b0 = true;
+                link_mut(r.game, k1).out = true;
                 link::place_coll(r.game, k1);
             } else {
                 link_mut(r.game, k1).pos = at;
-                link_mut(r.game, k1).x2C_b0 = true;
+                link_mut(r.game, k1).out = true;
                 link::place_coll(r.game, k1);
                 return i32::from(walls != 0);
             }
@@ -759,7 +759,7 @@ fn fall_from_hand(r: &mut Running, gobj: GObjId, h: ItemLinkId, at: Vec3, owner:
     let mut cur = h;
     let mut l1 = lk(r.game, cur).prev;
     while let Some(p) = l1 {
-        if lk(r.game, cur).x2C_b0 {
+        if lk(r.game, cur).out {
             break;
         }
         cur = p;
@@ -807,7 +807,7 @@ fn reel_in(r: &mut Running, gobj: GObjId, h: ItemLinkId, at: Vec3, speed: f64) -
     let mut l0 = h;
     let mut l1 = lk(r.game, l0).prev;
     while let Some(p) = l1 {
-        if lk(r.game, l0).x2C_b0 {
+        if lk(r.game, l0).out {
             break;
         }
         l0 = p;
@@ -819,7 +819,7 @@ fn reel_in(r: &mut Running, gobj: GObjId, h: ItemLinkId, at: Vec3, speed: f64) -
         if !(speed > len) {
             break;
         }
-        link_mut(r.game, l0).x2C_b0 = false;
+        link_mut(r.game, l0).out = false;
         len = direction(lk(r.game, p).pos, at, &mut v);
         l0 = p;
         l1 = lk(r.game, p).prev;
@@ -858,7 +858,7 @@ fn follow(r: &mut Running, gobj: GObjId, t: ItemLinkId, at: Vec3, owner: GObjId)
     while let Some(k1) = l1 {
         let p0 = lk(r.game, l0).pos;
         let mut v = Vec3::ZERO;
-        if lk(r.game, k1).x2C_b0 {
+        if lk(r.game, k1).out {
             let len = direction(lk(r.game, k1).pos, p0, &mut v);
             if len > reg(width) {
                 link_mut(r.game, k1).pos = along(p0, v, width);
@@ -868,7 +868,7 @@ fn follow(r: &mut Running, gobj: GObjId, t: ItemLinkId, at: Vec3, owner: GObjId)
             let len = direction(at, p0, &mut v);
             if len > reg(width) {
                 link_mut(r.game, k1).pos = along(p0, v, width);
-                link_mut(r.game, k1).x2C_b0 = true;
+                link_mut(r.game, k1).out = true;
                 link::place_coll(r.game, k1);
             } else {
                 return false;
@@ -919,7 +919,7 @@ fn pay_out(r: &mut Running, gobj: GObjId, t: ItemLinkId, pos: Vec3) -> bool {
     let mut v = Vec3::ZERO;
     while let Some(k1) = l1 {
         let pc = lk(r.game, cur).pos;
-        if lk(r.game, k1).x2C_b0 {
+        if lk(r.game, k1).out {
             {
                 let k = link_mut(r.game, k1);
                 k.vel.y = mem(fp::fsubs(reg(k.vel.y), reg(gravity)));
@@ -935,7 +935,7 @@ fn pay_out(r: &mut Running, gobj: GObjId, t: ItemLinkId, pos: Vec3) -> bool {
             let len = direction(pos, pc, &mut v);
             if len > reg(width) {
                 link_mut(r.game, k1).pos = along(pc, v, width);
-                link_mut(r.game, k1).x2C_b0 = true;
+                link_mut(r.game, k1).out = true;
                 link::place_coll(r.game, k1);
             } else {
                 return false;
@@ -966,7 +966,7 @@ fn climb(
     let mut l1 = lk(r.game, l0).prev;
     let saved = lk(r.game, t).pos;
     while let Some(p) = l1 {
-        if lk(r.game, l0).x2C_b0 {
+        if lk(r.game, l0).out {
             break;
         }
         l0 = p;
@@ -980,7 +980,7 @@ fn climb(
         if !(speed > len) {
             break;
         }
-        link_mut(r.game, l0).x2C_b0 = false;
+        link_mut(r.game, l0).out = false;
         len = direction(lk(r.game, p).pos, *pos, &mut v);
         l0 = p;
         l1 = lk(r.game, p).prev;
@@ -993,7 +993,7 @@ fn climb(
     let mut l2 = t;
     let mut l1 = lk(r.game, t).next;
     while let Some(k1) = l1 {
-        if !lk(r.game, k1).x2C_b0 {
+        if !lk(r.game, k1).out {
             break;
         }
         count += 1;
@@ -1025,7 +1025,7 @@ fn hold_on(r: &mut Running, gobj: GObjId, h: ItemLinkId, t: ItemLinkId, pos: &mu
     let mut prev = lk(r.game, h).prev;
     let saved = lk(r.game, t).pos;
     while let Some(p) = prev {
-        if lk(r.game, cur).x2C_b0 {
+        if lk(r.game, cur).out {
             break;
         }
         cur = p;
@@ -1038,7 +1038,7 @@ fn hold_on(r: &mut Running, gobj: GObjId, h: ItemLinkId, t: ItemLinkId, pos: &mu
     let mut next = lk(r.game, t).next;
     let mut v = Vec3::ZERO;
     while let Some(n) = next {
-        if !lk(r.game, n).x2C_b0 {
+        if !lk(r.game, n).out {
             break;
         }
         if !slack {
@@ -1094,7 +1094,7 @@ fn sag_moving(r: &mut Running, gobj: GObjId, mut l0: ItemLinkId, at: Vec3, dist:
 fn line_up_hanging(r: &mut Running, gobj: GObjId, at: Vec3, scale: f32) {
     let owner = tether::owner_of(r, gobj);
     let mut l = tether::hand(r, gobj, &HOOKSHOT);
-    while !lk(r.game, l).x2C_b0 {
+    while !lk(r.game, l).out {
         l = lk(r.game, l).prev.expect("no link out");
     }
     let model = |r: &Running, l: ItemLinkId| {
@@ -1104,7 +1104,7 @@ fn line_up_hanging(r: &mut Running, gobj: GObjId, at: Vec3, scale: f32) {
     while let Some(p) = lk(r.game, l).prev {
         let k = lk(r.game, l);
         let from = match k.next {
-            Some(n) if lk(r.game, n).x2C_b0 => lk(r.game, n).pos,
+            Some(n) if lk(r.game, n).out => lk(r.game, n).pos,
             _ => at,
         };
         let to = lk(r.game, p).pos;

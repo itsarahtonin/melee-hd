@@ -146,7 +146,7 @@ fn to_f32(i: i32) -> f64 {
 /// Its model's bone `i` (`xBBC_dynamicBoneTable->bones[i]`).
 fn bone(r: &Running, gobj: GObjId, i: usize) -> Option<JObjId> {
     let t = item(r.game, gobj)
-        .xBBC_dynamicBoneTable
+        .bone_table
         .expect("a Koopa Paratroopa without bones");
     r.game.it.bone_tables[t.0].bones[i]
 }
@@ -163,7 +163,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::set_coll_facing(r.game, gobj);
     zako::face(r, gobj, f);
     zako::init_collision(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x19 = true;
+    item_mut(r.game, gobj).flags.flags.turns_to_face = true;
     set(r, gobj, off::X28, 0xA);
     set(r, gobj, off::X24, 0);
     set(r, gobj, off::X20, 0);
@@ -215,13 +215,13 @@ pub fn fly(r: &mut Running, gobj: GObjId) {
             let x10sq = x10.wrapping_mul(x10);
             let xc = reg(attr_f32(r, gobj, 0xC));
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.x = mem(fp::fmuls(facing, speed));
-            ip.x40_vel.y = 0.0;
+            ip.vel.x = mem(fp::fmuls(facing, speed));
+            ip.vel.y = 0.0;
             let a = fp::fmuls(fp::fneg(1.0), fp::fdivs(fp::fmuls(2.0, xc), to_f32(x10sq)));
             set_f32(r, gobj, off::X30, mem(a));
         }
         1 => {
-            item_mut(r.game, gobj).x40_vel.x = mem(fp::fmuls(facing, speed));
+            item_mut(r.game, gobj).vel.x = mem(fp::fmuls(facing, speed));
             let half_width = fp::fdivs(reg(attr_f32(r, gobj, 0x14)), to_f32(2));
             let frames = fp::fctiwz(fp::fdivs(half_width, speed));
             set(r, gobj, off::X20, frames);
@@ -237,7 +237,7 @@ pub fn fly(r: &mut Running, gobj: GObjId) {
             let x24 = attr_i32(r, gobj, 0x1C) / 2;
             let half_height = fp::fdivs(reg(attr_f32(r, gobj, 0x18)), to_f32(2));
             set(r, gobj, off::X24, x24);
-            item_mut(r.game, gobj).x40_vel.y = mem(fp::fmuls(
+            item_mut(r.game, gobj).vel.y = mem(fp::fmuls(
                 fp::fneg(1.0),
                 fp::fdivs(half_height, to_f32(x24)),
             ));
@@ -248,7 +248,7 @@ pub fn fly(r: &mut Running, gobj: GObjId) {
             let x20 = attr_i32(r, gobj, 0x24) / 2;
             let half_height = fp::fdivs(reg(attr_f32(r, gobj, 0x20)), to_f32(2));
             set(r, gobj, off::X20, x20);
-            item_mut(r.game, gobj).x40_vel.y = mem(fp::fmuls(
+            item_mut(r.game, gobj).vel.y = mem(fp::fmuls(
                 fp::fneg(1.0),
                 fp::fdivs(half_height, to_f32(x20)),
             ));
@@ -257,7 +257,7 @@ pub fn fly(r: &mut Running, gobj: GObjId) {
         }
         _ => {}
     }
-    item_mut(r.game, gobj).x40_vel.z = 0.0;
+    item_mut(r.game, gobj).vel.z = 0.0;
     let f = item(r.game, gobj).facing_dir;
     zako::face(r, gobj, f);
     hitbox::end_blink(r.game, gobj);
@@ -285,7 +285,7 @@ pub fn phys3(r: &mut Running, gobj: GObjId) {
         0 => {
             let a = reg(get_f32(r, gobj, off::X30));
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), a));
+            ip.vel.y = mem(fp::fadds(reg(ip.vel.y), a));
         }
         1 => {
             if get(r, gobj, off::X20) == 0 {
@@ -297,7 +297,7 @@ pub fn phys3(r: &mut Running, gobj: GObjId) {
             } else {
                 let a = reg(get_f32(r, gobj, off::X2C));
                 let ip = item_mut(r.game, gobj);
-                ip.x40_vel.x = mem(fp::fadds(reg(ip.x40_vel.x), a));
+                ip.vel.x = mem(fp::fadds(reg(ip.vel.x), a));
                 let n = get(r, gobj, off::X20).wrapping_sub(1);
                 set(r, gobj, off::X20, n);
                 if get(r, gobj, off::X28) == get(r, gobj, off::X20) {
@@ -324,7 +324,7 @@ fn bob(r: &mut Running, gobj: GObjId, count: usize, frames: i32) {
     } else {
         let a = reg(get_f32(r, gobj, off::X30));
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), a));
+        ip.vel.y = mem(fp::fadds(reg(ip.vel.y), a));
         let n = get(r, gobj, count).wrapping_sub(1);
         set(r, gobj, count, n);
     }
@@ -346,7 +346,7 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
             1 => {
                 let speed = reg(zako::walk_speed(r, gobj));
                 let ip = item_mut(r.game, gobj);
-                ip.x40_vel.x = mem(fp::fmuls(fp::fneg(reg(ip.facing_dir)), speed));
+                ip.vel.x = mem(fp::fmuls(fp::fneg(reg(ip.facing_dir)), speed));
                 let width = reg(attr_f32(r, gobj, 0x14));
                 let frames = fp::fctiwz(fp::fdivs(width, speed));
                 set(r, gobj, off::X20, frames);
@@ -372,12 +372,12 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
                 let xc = reg(attr_f32(r, gobj, 0xC));
                 let speed = reg(zako::walk_speed(r, gobj));
                 let ip = item_mut(r.game, gobj);
-                ip.x40_vel.x = mem(fp::fmuls(dir, speed));
-                ip.x40_vel.y = mem(fp::fdivs(xc, to_f32(x10)));
+                ip.vel.x = mem(fp::fmuls(dir, speed));
+                ip.vel.y = mem(fp::fdivs(xc, to_f32(x10)));
             }
             1 => {
                 let ip = item_mut(r.game, gobj);
-                ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), fp::fneg(1.0)));
+                ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), fp::fneg(1.0)));
                 let a = reg(get_f32(r, gobj, off::X30));
                 set_f32(r, gobj, off::X30, mem(fp::fmuls(a, fp::fneg(1.0))));
             }
@@ -385,7 +385,7 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
                 let frames = attr_i32(r, gobj, 0x24);
                 let height = reg(attr_f32(r, gobj, 0x20));
                 set(r, gobj, off::X20, frames);
-                item_mut(r.game, gobj).x40_vel.y = mem(fp::fdivs(height, to_f32(frames)));
+                item_mut(r.game, gobj).vel.y = mem(fp::fdivs(height, to_f32(frames)));
                 let a = fp::fmuls(
                     fp::fneg(1.0),
                     fp::fdivs(fp::fmuls(2.0, height), to_f32(frames.wrapping_mul(frames))),
@@ -404,7 +404,7 @@ pub fn turn(r: &mut Running, gobj: GObjId) {
     if get(r, gobj, off::KIND) == 0 {
         let speed = reg(zako::walk_speed(r, gobj));
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.x = mem(fp::fmuls(fp::fneg(reg(ip.facing_dir)), speed));
+        ip.vel.x = mem(fp::fmuls(fp::fneg(reg(ip.facing_dir)), speed));
     }
     enter(r, gobj, 3, ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
@@ -420,9 +420,9 @@ pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
         let f = item(r.game, gobj).facing_dir;
         zako::face(r, gobj, f);
         let ip = item_mut(r.game, gobj);
-        let (vx, facing) = (reg(ip.x40_vel.x), reg(ip.facing_dir));
+        let (vx, facing) = (reg(ip.vel.x), reg(ip.facing_dir));
         if vx < 0.0 && facing == 1.0 || vx > 0.0 && facing == fp::fneg(1.0) {
-            ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), fp::fneg(1.0)));
+            ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), fp::fneg(1.0)));
         }
         enter(r, gobj, 2, ANIM_UPDATE);
     }
@@ -448,7 +448,7 @@ pub fn stomped(r: &mut Running, gobj: GObjId) -> bool {
     unwing(r, gobj);
     play_sfx(r, gobj, 0x12E, 127, 64);
     let stomper = item(r.game, gobj)
-        .xCFC
+        .stomper
         .expect("a Koopa Paratroopa landed on by nobody");
     lib2725::fighter_item_rumble(r, stomper, 12, 0);
     false
@@ -512,10 +512,10 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
 pub fn unwing(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.init_facing_dir = ip.facing_dir;
-    let mut v = item(r.game, gobj).x40_vel;
+    let mut v = item(r.game, gobj).vel;
     let _ = zako::knockback_vel(r, gobj, &mut v);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = v;
+    ip.vel = v;
     ip.facing_dir = ip.init_facing_dir;
     zako::set_coll_facing(r.game, gobj);
     let (b0, b18, b11) = (bone(r, gobj, 0), bone(r, gobj, 18), bone(r, gobj, 11));
@@ -548,7 +548,7 @@ pub fn unwing(r: &mut Running, gobj: GObjId) {
     set_f32(r, gobj, off::X2C, mem(drift));
     let push = step(r);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fadds(reg(ip.x40_vel.x), push));
+    ip.vel.x = mem(fp::fadds(reg(ip.vel.x), push));
     change_state(r, gobj, 4, ANIM_UPDATE);
 }
 
@@ -596,7 +596,7 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
 pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
     let n = get(r, gobj, off::X20);
     if n == 0 {
-        item_mut(r.game, gobj).xDCC_flag.b3 = true;
+        item_mut(r.game, gobj).state_flags.b3 = true;
         return true;
     }
     set(r, gobj, off::X20, n.wrapping_sub(1));
@@ -614,11 +614,11 @@ pub fn spawn_koopa(r: &mut Running, gobj: GObjId) {
     camera::request_quake(r, QUAKE_SMALL, Some(at));
     let kind = get(r, gobj, off::KIND);
     let ip = item(r.game, gobj);
-    let (vel, facing) = (ip.x40_vel, fp::fctiwz(reg(ip.facing_dir)));
+    let (vel, facing) = (ip.vel, fp::fctiwz(reg(ip.facing_dir)));
     let koopa = super::koopa_troopa::spawn(r, kind, pos, Some(vel), facing)
         .expect("it_802E15B0: no Koopa Troopa spawned");
     let ip = item(r.game, gobj);
-    let (kb, angle, dir) = (ip.xCC8_knockback, ip.xCAC_angle, ip.xCCC_incDamageDirection);
+    let (kb, angle, dir) = (ip.knockback, ip.kb_angle, ip.damage_dir);
     let slot = get(r, gobj, off::SLOT);
     let v = zako::bytes(r.game, koopa);
     v.set_f32(super::koopa_troopa::off::KB, kb);

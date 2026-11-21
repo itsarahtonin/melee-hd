@@ -87,8 +87,8 @@ pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itGameWatchPanic_Logic78_PickedUp")]
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
     let Some(owner) = ip.owner else { return };
     let ga = r.game.ft_ground_air(owner);
     item_mut(r.game, gobj).ground_or_air = ga;

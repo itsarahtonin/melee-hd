@@ -182,7 +182,7 @@ impl Mirror for YakuVars {
 }
 
 pub(crate) fn vars(game: &mut Game, gobj: GObjId) -> &mut YakuVars {
-    item_mut(game, gobj).xDD4_itemVar.yaku()
+    item_mut(game, gobj).vars.yaku()
 }
 
 /// Runs one of the item's predicates, if `addr` is one.
@@ -271,12 +271,12 @@ pub fn spawn(
     v.touched.set(touched);
     let model = jobj_of(r.game, gobj).expect("a stage item without a model");
     jobj::set_scale(&mut r.game.objs.jobjs, model, SCALE);
-    item_mut(r.game, gobj).xDCC_flag.b3 = false;
+    item_mut(r.game, gobj).state_flags.b3 = false;
     super::super::hitbox::start_blink(r.game, gobj);
     change_state(r, gobj, state, super::super::item::change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
     ip.touched = Some(CodeRef(TOUCHED));
-    ip.x378_itemColl.x34_flags.b1234 = 5;
+    ip.coll.x34_flags.b1234 = 5;
     Some(gobj)
 }
 
@@ -319,11 +319,11 @@ pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
 /// fighter that hit it and the damage.
 #[doc(alias = "it_2E6A_Logic117_DmgReceived")]
 pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
-    item_mut(r.game, gobj).xC9C = 0;
+    item_mut(r.game, gobj).damage_taken = 0;
     let mut dir = Vec3::default();
     super::super::zako::knockback_vel(r, gobj, &mut dir);
-    let fighter = item(r.game, gobj).xCEC_fighterGObj;
-    let damage = gekko_fp::frsp(f64::from(item(r.game, gobj).xCA0)) as f32;
+    let fighter = item(r.game, gobj).attacker;
+    let damage = gekko_fp::frsp(f64::from(item(r.game, gobj).hit_damage)) as f32;
     let v = vars(r.game, gobj);
     let (cb, g) = (v.received.get(), v.ground.get());
     if let (Some(cb), Some(g)) = (cb, g) {

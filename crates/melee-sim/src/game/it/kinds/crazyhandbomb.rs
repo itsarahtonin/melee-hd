@@ -90,7 +90,7 @@ pub fn start(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(ACCESSORY_0));
-    ip.x40_vel.y = speed;
+    ip.vel.y = speed;
 }
 
 /// `itCrazyhandbomb_UnkMotion0_Phys`: the fall, and a tumble about one axis at random by ten
@@ -103,7 +103,7 @@ fn phys_0(r: &mut Running, gobj: GObjId) {
     lib2725::fall(r.game, gobj, accel, max);
     let j = jobj_of(r.game, gobj).expect("a bomb without its model");
     let mut q = r.game.objs.jobjs[j].rotate;
-    let vy = item(r.game, gobj).x40_vel.y;
+    let vy = item(r.game, gobj).vel.y;
     let turn = |v: f32| {
         mem(fp::fmadds(
             f64::from(0.017_453_292_f32),

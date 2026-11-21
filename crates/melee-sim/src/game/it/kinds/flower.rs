@@ -68,7 +68,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itFFlowerFlame_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.fflower_flame()
+    item_mut(game, gobj).vars.fflower_flame()
 }
 
 /// Grows a flower on `owner`'s `part`, facing `facing`, `it_8029A748`: its life the
@@ -109,8 +109,8 @@ pub fn grow(r: &mut Running, owner: GObjId, pos: Vec3, part: i32, facing: f32) -
 #[doc(alias = "it_8029A89C")]
 pub fn set_size(r: &mut Running, gobj: GObjId, size: f32) {
     let petals = lib2725::bone(r.game, r.data, gobj, 1);
-    vars(r.game, gobj).unk.set(size);
-    let size = vars(r.game, gobj).unk.get();
+    vars(r.game, gobj).size.set(size);
+    let size = vars(r.game, gobj).size.get();
     lib2725::set_uniform_scale(r.game, petals.expect("a flower without petals"), size);
 }
 
@@ -136,14 +136,14 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// Lands and lies still, `it_8029AA1C`.
 #[doc(alias = "it_8029AA1C")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     lib26b1::disable_pickup(r.game, gobj);
 }
 
 /// The petals' size and the stem's place kept each frame.
 fn keep_shape(r: &mut Running, gobj: GObjId) {
-    let size = vars(r.game, gobj).unk.get();
+    let size = vars(r.game, gobj).size.get();
     let petals = lib2725::bone(r.game, r.data, gobj, 1).expect("a flower without petals");
     lib2725::set_uniform_scale(r.game, petals, size);
     let stem = lib2725::bone(r.game, r.data, gobj, 2).expect("a flower without a stem");
@@ -170,7 +170,7 @@ pub fn anim_life(r: &mut Running, gobj: GObjId) -> bool {
 /// `itFflowerflame_UnkMotion2_Anim`: on the head, the petals' size kept.
 #[doc(alias = "itFflowerflame_UnkMotion2_Anim")]
 pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
-    let size = vars(r.game, gobj).unk.get();
+    let size = vars(r.game, gobj).size.get();
     let petals = lib2725::bone(r.game, r.data, gobj, 1).expect("a flower without petals");
     lib2725::set_uniform_scale(r.game, petals, size);
     false

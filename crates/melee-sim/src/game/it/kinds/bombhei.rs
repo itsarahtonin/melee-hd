@@ -132,7 +132,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// The bob-omb's variables.
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itBombHei_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.bombhei()
+    item_mut(game, gobj).vars.bombhei()
 }
 
 /// `itBombHeiAttributes`' float at `off`.
@@ -156,7 +156,7 @@ fn to_f32(i: i32) -> f64 {
 /// Bone 11, whose height and tilt make the walking pose.
 fn pose_bone(game: &Game, gobj: GObjId) -> JObjId {
     let t = item(game, gobj)
-        .xBBC_dynamicBoneTable
+        .bone_table
         .expect("a bob-omb without a bone table");
     game.it.bone_tables[t.0].bones[0xB].expect("a bob-omb without bone 11")
 }
@@ -181,7 +181,7 @@ fn pose(r: &mut Running, gobj: GObjId) {
     let j = pose_bone(r.game, gobj);
     let (dy, dx) = {
         let v = vars(r.game, gobj);
-        (v.xDF8.get(), v.xDFC.get())
+        (v.pose_height.get(), v.pose_tilt.get())
     };
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
         o.translate.y = mem(fp::fadds(reg(o.translate.y), reg(dy)));
@@ -194,9 +194,9 @@ fn pose(r: &mut Running, gobj: GObjId) {
 /// Counts the integer timer and the fuse total down a frame.
 fn tick(r: &mut Running, gobj: GObjId) -> i32 {
     let v = vars(r.game, gobj);
-    v.xDD4.update(|old| old.wrapping_sub(1));
-    v.xDEC.update(|old| mem(fp::fsubs(reg(old), 1.0)));
-    v.xDD4.get()
+    v.timer.update(|old| old.wrapping_sub(1));
+    v.fuse_left.update(|old| mem(fp::fsubs(reg(old), 1.0)));
+    v.timer.get()
 }
 
 /// Drops a bob-omb at `pos`, lit, `it_8027D670`.
@@ -225,7 +225,7 @@ pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
 /// Explodes unless held or already exploding, `it_8027D730`.
 #[doc(alias = "it_8027D730")]
 pub fn detonate(r: &mut Running, gobj: GObjId) {
-    if !item(r.game, gobj).xDC8_word.flags.x13 && vars(r.game, gobj).xDDC.get() == 0 {
+    if !item(r.game, gobj).flags.flags.held && vars(r.game, gobj).exploded.get() == 0 {
         explode(r, gobj);
     }
 }
@@ -241,21 +241,21 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     );
     let scl = reg(item(r.game, gobj).scl);
     let v = vars(r.game, gobj);
-    v.xDDC.set(0);
-    v.xDD4.set(to_int(x10));
+    v.exploded.set(0);
+    v.timer.set(to_int(x10));
     let walk = fp::fadds(reg(x4), fp::fadds(reg(x10), reg(x14)));
-    v.xDEC.set(mem(fp::fadds(reg(x8), walk)));
-    v.xDE0.set(0);
-    v.xDE4.set(0);
-    v.xDF8.set(mem(fp::fmuls(
+    v.fuse_left.set(mem(fp::fadds(reg(x8), walk)));
+    v.lit.set(0);
+    v.stood_up.set(0);
+    v.pose_height.set(mem(fp::fmuls(
         fp::fdivs(f64::from(-1.599_999_9_f32), walk),
         scl,
     )));
-    v.xDFC.set(mem(fp::fmuls(
+    v.pose_tilt.set(mem(fp::fmuls(
         fp::fdivs(f64::from(-0.261_799_4_f32), walk),
         scl,
     )));
-    v.xDE8.set(1.0);
+    v.scale.set(1.0);
     fell(r, gobj);
 }
 
@@ -266,8 +266,8 @@ pub fn fuse(r: &mut Running, gobj: GObjId) {
     let (x18, x1c) = (attr(r, gobj, 0x18), attr(r, gobj, 0x1C));
     let j = jobj_of(r.game, gobj).expect("a bob-omb without a model");
     let v = vars(r.game, gobj);
-    v.xDD4.update(|old| old.wrapping_sub(1));
-    let s = fp::fmuls(reg(x1c), to_f32(v.xDD8.get()));
+    v.timer.update(|old| old.wrapping_sub(1));
+    let s = fp::fmuls(reg(x1c), to_f32(v.pulse_dir.get()));
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
         o.scale.x = mem(fp::fadds(reg(o.scale.x), s));
     });
@@ -278,13 +278,13 @@ pub fn fuse(r: &mut Running, gobj: GObjId) {
         o.scale.z = mem(fp::fadds(reg(o.scale.z), s));
     });
     let v = vars(r.game, gobj);
-    if v.xDD4.get() <= 0 {
-        v.xDD4.set(to_int(x18));
-        v.xDD8.update(|old| old.wrapping_neg());
+    if v.timer.get() <= 0 {
+        v.timer.set(to_int(x18));
+        v.pulse_dir.update(|old| old.wrapping_neg());
     }
-    v.xDF0.update(|old| mem(fp::fsubs(reg(old), 1.0)));
-    v.xDEC.update(|old| mem(fp::fsubs(reg(old), 1.0)));
-    if reg(v.xDF0.get()) <= 0.0 {
+    v.fuse.update(|old| mem(fp::fsubs(reg(old), 1.0)));
+    v.fuse_left.update(|old| mem(fp::fsubs(reg(old), 1.0)));
+    if reg(v.fuse.get()) <= 0.0 {
         explode_once(r, gobj);
     }
 }
@@ -293,14 +293,14 @@ pub fn fuse(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "fn_8027DAC8")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
     lib26b1::enable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     change_keeping_pose(r, gobj, 0, change::ANIM_UPDATE);
 }
 
 /// `itBombhei_UnkMotion0_Anim`: lying down until it stands up.
 #[doc(alias = "itBombhei_UnkMotion0_Anim")]
 pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
-    if vars(r.game, gobj).xDD4.get() <= 0 {
+    if vars(r.game, gobj).timer.get() <= 0 {
         stand_up(r, gobj);
     } else {
         tick(r, gobj);
@@ -333,13 +333,13 @@ fn ready_fall(r: &mut Running, gobj: GObjId) {
     let x14 = attr(r, gobj, 0x14);
     let msid = item(r.game, gobj).msid;
     if msid == 3 || msid == 0 {
-        let f = &mut item_mut(r.game, gobj).xDC8_word.flags;
-        f.x19 = true;
-        f.x17 = 1;
+        let f = &mut item_mut(r.game, gobj).flags.flags;
+        f.turns_to_face = true;
+        f.spin_axis = 1;
         lib2725::stop_spin(r.game, r.data, gobj);
     }
     if msid == 3 {
-        vars(r.game, gobj).xDD4.set(to_int(x14));
+        vars(r.game, gobj).timer.set(to_int(x14));
     }
 }
 
@@ -370,7 +370,7 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
 /// landing); one that hasn't lands lying down.
 #[doc(alias = "itBombhei_UnkMotion1_Coll")]
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    if vars(r.game, gobj).xDE4.get() != 0 {
+    if vars(r.game, gobj).stood_up.get() != 0 {
         land_hard_or(r, gobj, landed_thrown);
     } else {
         fall(r, gobj, landed);
@@ -381,14 +381,14 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
 /// Held: lit ones keep burning (state 8), unlit ones wait (state 7).
 fn hold(r: &mut Running, gobj: GObjId, unlit: i32, lit: i32, unlit_flags: u32, lit_flags: u32) {
     let x0 = attr(r, gobj, 0);
-    let f = &mut item_mut(r.game, gobj).xDC8_word.flags;
-    f.x19 = true;
-    f.x17 = 1;
-    if vars(r.game, gobj).xDE0.get() == 0 {
-        item_mut(r.game, gobj).x5D0_animFrameSpeed = x0;
+    let f = &mut item_mut(r.game, gobj).flags.flags;
+    f.turns_to_face = true;
+    f.spin_axis = 1;
+    if vars(r.game, gobj).lit.get() == 0 {
+        item_mut(r.game, gobj).anim_speed = x0;
         change_keeping_pose(r, gobj, unlit, unlit_flags);
     } else {
-        item_mut(r.game, gobj).x5D0_animFrameSpeed = 1.0;
+        item_mut(r.game, gobj).anim_speed = 1.0;
         change_keeping_pose(r, gobj, lit, lit_flags);
     }
 }
@@ -406,7 +406,7 @@ pub fn anim8(r: &mut Running, gobj: GObjId) -> bool {
     if !lib2725::is_animating(r.game, gobj) {
         hold(r, gobj, 7, 8, change::ANIM_UPDATE, 1);
     }
-    if vars(r.game, gobj).xDE0.get() != 0 {
+    if vars(r.game, gobj).lit.get() != 0 {
         fuse(r, gobj);
     }
     false
@@ -425,11 +425,11 @@ pub fn stand_up(r: &mut Running, gobj: GObjId) {
     maplib::enter_ground(item_mut(r.game, gobj));
     let facing = reg(item(r.game, gobj).facing_dir);
     let v = vars(r.game, gobj);
-    v.xDD4.set(to_int(x4));
+    v.timer.set(to_int(x4));
     let turn = fp::fmul(std::f64::consts::FRAC_PI_2, facing);
-    v.xE04
-        .set(mem(fp::frsp(fp::fdiv(turn, f64::from(v.xDD4.get())))));
-    v.xDE4.set(1);
+    v.turn_step
+        .set(mem(fp::frsp(fp::fdiv(turn, f64::from(v.timer.get())))));
+    v.stood_up.set(1);
     change_keeping_pose(r, gobj, 3, change::ANIM_UPDATE);
 }
 
@@ -437,14 +437,14 @@ pub fn stand_up(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itBombhei_UnkMotion3_Anim")]
 pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj).expect("a bob-omb without a model");
-    let turn = vars(r.game, gobj).xE04.get();
+    let turn = vars(r.game, gobj).turn_step.get();
     jobj::set_angle(&mut r.game.objs.jobjs, j, |q| {
         q.y = mem(fp::fadds(reg(q.y), reg(turn)));
     });
     if tick(r, gobj) <= 0 {
         let x14 = attr(r, gobj, 0x14);
-        item_mut(r.game, gobj).xDC8_word.flags.x19 = true;
-        vars(r.game, gobj).xDD4.set(to_int(x14));
+        item_mut(r.game, gobj).flags.flags.turns_to_face = true;
+        vars(r.game, gobj).timer.set(to_int(x14));
         walk(r, gobj);
         play_sfx(r, gobj, 0xF0, 0x7F, 0x40);
     }
@@ -466,8 +466,8 @@ fn set_off(r: &mut Running, gobj: GObjId) {
     let xc = attr(r, gobj, 0xC);
     lib26b1::disable_pickup(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(xc), reg(ip.facing_dir)));
-    ip.xD5C = 0;
+    ip.vel.x = mem(fp::fmuls(reg(xc), reg(ip.facing_dir)));
+    ip.skid = 0;
     hitbox::set_hit_ids(r.game, gobj);
 }
 
@@ -513,9 +513,9 @@ pub fn turn(r: &mut Running, gobj: GObjId) {
     maplib::enter_ground(item_mut(r.game, gobj));
     change_keeping_pose(r, gobj, 4, 0x12);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
+    ip.vel.x = 0.0;
     let back = -ip.facing_dir;
-    vars(r.game, gobj).xDF4.set(back);
+    vars(r.game, gobj).turn_back.set(back);
 }
 
 /// `itBombhei_UnkMotion4_Anim`: turning, it walks back the other way once the animation
@@ -529,7 +529,7 @@ pub fn anim4(r: &mut Running, gobj: GObjId) -> bool {
         change_keeping_pose(r, gobj, 2, 0x1A);
     }
     if tick(r, gobj) <= 0 {
-        let back = vars(r.game, gobj).xDF4.get();
+        let back = vars(r.game, gobj).turn_back.get();
         item_mut(r.game, gobj).facing_dir = back;
         light(r, gobj);
     }
@@ -540,16 +540,16 @@ pub fn anim4(r: &mut Running, gobj: GObjId) -> bool {
 /// Stops and lights its fuse in `msid` (lit once: a lit one only changes state).
 fn light_in(r: &mut Running, gobj: GObjId, msid: i32) {
     let (x8, x18) = (attr(r, gobj, 8), attr(r, gobj, 0x18));
-    item_mut(r.game, gobj).x40_vel.x = 0.0;
+    item_mut(r.game, gobj).vel.x = 0.0;
     lib26b1::enable_pickup(r.game, gobj);
-    if vars(r.game, gobj).xDE0.get() == 0 {
+    if vars(r.game, gobj).lit.get() == 0 {
         let life = common_data(r.game).u32(r.data, super::super::data::common::LIFETIME);
         let v = vars(r.game, gobj);
-        v.xDD4.set(to_int(x18));
-        v.xDD8.set(1);
-        v.xDF0.set(x8);
-        v.xDE0.set(1);
-        item_mut(r.game, gobj).xD44_lifeTimer = mem(fp::frsp(f64::from(life)));
+        v.timer.set(to_int(x18));
+        v.pulse_dir.set(1);
+        v.fuse.set(x8);
+        v.lit.set(1);
+        item_mut(r.game, gobj).life_timer = mem(fp::frsp(f64::from(life)));
         change_keeping_pose(r, gobj, msid, change::ANIM_UPDATE);
     } else {
         change_keeping_pose(r, gobj, msid, 1);
@@ -565,7 +565,7 @@ pub fn light(r: &mut Running, gobj: GObjId) {
 /// `itBombhei_UnkMotion5_Anim`.
 #[doc(alias = "itBombhei_UnkMotion5_Anim")]
 pub fn anim5(r: &mut Running, gobj: GObjId) -> bool {
-    if vars(r.game, gobj).xDE0.get() != 0 {
+    if vars(r.game, gobj).lit.get() != 0 {
         fuse(r, gobj);
     }
     false
@@ -603,7 +603,7 @@ pub fn phys_spin(r: &mut Running, gobj: GObjId) {
 /// Whether it landed harder than the attributes' `x20` in x or y.
 fn hard_landing(r: &mut Running, gobj: GObjId) -> bool {
     let (lx, ly) = (attr(r, gobj, 0x20), attr(r, gobj, 0x24));
-    let v = vars(r.game, gobj).xE0C.get();
+    let v = vars(r.game, gobj).land_vel.get();
     reg(v.x).abs() > reg(lx) || reg(v.y).abs() > reg(ly)
 }
 
@@ -620,8 +620,8 @@ pub fn landed_lit(r: &mut Running, gobj: GObjId) {
 
 /// Lands from falling with the speed it landed at kept (`xE0C`).
 fn land_hard_or(r: &mut Running, gobj: GObjId, landed: fn(&mut Running, GObjId)) {
-    let vel = item(r.game, gobj).x40_vel;
-    vars(r.game, gobj).xE0C.set(vel);
+    let vel = item(r.game, gobj).vel;
+    vars(r.game, gobj).land_vel.set(vel);
     fall_to_floor(r, gobj, landed);
 }
 
@@ -642,15 +642,15 @@ pub fn coll10(r: &mut Running, gobj: GObjId) -> bool {
 /// Thrown (state 9, or 10 lit), at the size it was thrown at.
 fn throw(r: &mut Running, gobj: GObjId) {
     let x0 = attr(r, gobj, 0);
-    if vars(r.game, gobj).xDE0.get() == 0 {
-        item_mut(r.game, gobj).x5D0_animFrameSpeed = x0;
+    if vars(r.game, gobj).lit.get() == 0 {
+        item_mut(r.game, gobj).anim_speed = x0;
         change_keeping_pose(r, gobj, 9, 6);
     } else {
-        item_mut(r.game, gobj).x5D0_animFrameSpeed = 1.0;
+        item_mut(r.game, gobj).anim_speed = 1.0;
         change_keeping_pose(r, gobj, 10, 0x104);
     }
     hitbox::clear_hit_ids(r.game, gobj);
-    let scale = vars(r.game, gobj).xDE8.get();
+    let scale = vars(r.game, gobj).scale.get();
     if reg(scale) != 1.0 {
         let j = jobj_of(r.game, gobj).expect("a bob-omb without a model");
         lib2725::rescale(r.game, gobj, j, scale);
@@ -669,7 +669,7 @@ pub fn anim10(r: &mut Running, gobj: GObjId) -> bool {
     if !lib2725::is_animating(r.game, gobj) {
         throw(r, gobj);
     }
-    if vars(r.game, gobj).xDE0.get() != 0 {
+    if vars(r.game, gobj).lit.get() != 0 {
         fuse(r, gobj);
     }
     false
@@ -690,7 +690,7 @@ pub fn landed_thrown(r: &mut Running, gobj: GObjId) {
 /// the wind.
 #[doc(alias = "it_80280B60")]
 pub fn explode(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDC8_word.flags.x13 {
+    if item(r.game, gobj).flags.flags.held {
         super::super::release::let_go(r, gobj, Vec3::new(0.0, 0.0, 0.0));
     }
     lib26b1::disable_pickup(r.game, gobj);
@@ -698,9 +698,9 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = 1.0;
+    item_mut(r.game, gobj).anim_speed = 1.0;
     lib2725::clear_velocity(r.game, gobj);
-    vars(r.game, gobj).xDDC.set(1);
+    vars(r.game, gobj).exploded.set(1);
     lib2725::blast_effect(r, gobj);
     hitbox::start_blink(r.game, gobj);
     hitbox::set_hit_ids(r.game, gobj);
@@ -719,7 +719,7 @@ pub fn explode(r: &mut Running, gobj: GObjId) {
 /// Explodes unless it already is, `it_80280DC0`.
 #[doc(alias = "it_80280DC0")]
 pub fn explode_once(r: &mut Running, gobj: GObjId) {
-    if vars(r.game, gobj).xDDC.get() == 0 {
+    if vars(r.game, gobj).exploded.get() == 0 {
         explode(r, gobj);
     }
 }
@@ -728,7 +728,7 @@ pub fn explode_once(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_3F14_Logic6_DmgDealt")]
 #[doc(alias = "it_3F14_Logic6_DmgReceived")]
 pub fn dmg(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).msid != 7 && vars(r.game, gobj).xDDC.get() == 0 {
+    if item(r.game, gobj).msid != 7 && vars(r.game, gobj).exploded.get() == 0 {
         explode(r, gobj);
     }
     false
@@ -776,7 +776,7 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_3F14_Logic6_HitShield")]
 #[doc(alias = "it_3F14_Logic6_ShieldBounced")]
 pub fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).msid == 9 && vars(r.game, gobj).xDDC.get() == 0 {
+    if item(r.game, gobj).msid == 9 && vars(r.game, gobj).exploded.get() == 0 {
         explode(r, gobj);
     }
     false

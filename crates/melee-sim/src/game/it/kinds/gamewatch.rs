@@ -200,25 +200,25 @@ fn color(c: _GXColor) -> Color {
 /// owner's team tint, the size by the owner's scale, and the attributes' pointer kept.
 #[doc(alias = "it_8027CE64")]
 pub(super) fn colors(r: &mut Running, gobj: GObjId, fighter: GObjId, attr: Option<DataRef>) {
-    set_flag(&mut item_mut(r.game, gobj).xDCF_flag, 3, true);
+    set_flag(&mut item_mut(r.game, gobj).draw_flags, 3, true);
     let c = game_watch_color(r, fighter);
     let root = super::super::jobj_of(r.game, gobj);
     crate::game::ft::gamewatch::init::set_diffuse_all(&mut r.game.objs, root, color(c));
     let outline = game_watch_outline(r, fighter);
-    item_mut(r.game, gobj).xBC8.x0_unk = outline;
+    item_mut(r.game, gobj).outline.color = outline;
     let owner = item(r.game, gobj)
         .owner
         .expect("ftLib_GetSubColor: no owner");
     let sub = sub_color(r, owner);
     let ip = item_mut(r.game, gobj);
-    ip.x5C8 = u8::from(sub.is_some());
+    ip.tinted = u8::from(sub.is_some());
     if let Some(s) = sub {
-        ip.xBC4 = s;
+        ip.tint = s;
     }
     super::super::lib2725::scale_by_owner(r, gobj);
     if item(r.game, gobj).kind == ItKind::GameAndWatchTrampoline {
         item_mut(r.game, gobj)
-            .xDD4_itemVar
+            .vars
             .game_watch_rescue()
             .attr
             .set(attr);
@@ -266,7 +266,7 @@ fn sub_color(r: &Running, fighter: GObjId) -> Option<_GXColor> {
 
 /// The item's variables as his items' (all but the trampoline).
 pub(super) fn vars<'r>(r: &'r mut Running<'_>, gobj: GObjId) -> &'r mut GameWatchVars {
-    item_mut(r.game, gobj).xDD4_itemVar.game_watch()
+    item_mut(r.game, gobj).vars.game_watch()
 }
 
 /// The item pauses in hitlag (`it_8026B724`).
@@ -286,11 +286,7 @@ pub fn outline_lists(
     gobj: GObjId,
 ) -> ((u16, Option<DataRef>), (u16, Option<DataRef>)) {
     let attr = if item(r.game, gobj).kind == ItKind::GameAndWatchTrampoline {
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .game_watch_rescue()
-            .attr
-            .get()
+        item_mut(r.game, gobj).vars.game_watch_rescue().attr.get()
     } else {
         vars(r, gobj).attr.get()
     };

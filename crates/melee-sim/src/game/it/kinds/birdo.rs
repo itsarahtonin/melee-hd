@@ -215,7 +215,7 @@ impl Mirror for KyasarinVars {
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut KyasarinVars {
-    item_mut(game, gobj).xDD4_itemVar.kyasarin()
+    item_mut(game, gobj).vars.kyasarin()
 }
 
 /// An attribute's word as a float and as an integer.
@@ -316,7 +316,7 @@ pub fn spawn(r: &mut Running, platform: GObjId, pos: Vec3, facing: f32) -> Optio
         let j = jobj_of(r.game, gobj).expect("Birdo without a model");
         jobj::set_rotation_y(&mut r.game.objs.jobjs, j, mem(rot));
     }
-    item_mut(r.game, gobj).xDCC_flag.b3 = false;
+    item_mut(r.game, gobj).state_flags.b3 = false;
     lib26b1::disable_pickup(r.game, gobj);
     walk_in(r, gobj);
     Some(gobj)
@@ -333,9 +333,9 @@ fn walk(r: &mut Running, gobj: GObjId, sign: f64) {
     let speed = attr(r, gobj, a::SPEED).f(r);
     let ip = item_mut(r.game, gobj);
     let s = if sign < 0.0 { fp::fneg(speed) } else { speed };
-    ip.x40_vel.x = mem(fp::fmuls(s, reg(ip.facing_dir)));
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
+    ip.vel.x = mem(fp::fmuls(s, reg(ip.facing_dir)));
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
 }
 
 /// Walking in, `it_802ECEB0`: at her speed as she faces, state 0.
@@ -518,11 +518,11 @@ fn turn_around(r: &mut Running, gobj: GObjId) {
     let speed = attr(r, gobj, a::SPEED).f(r);
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = mem(fp::fneg(reg(from)));
-    ip.xDCC_flag.b3 = true;
+    ip.state_flags.b3 = true;
     let v = fp::fmuls(speed, reg(ip.facing_dir));
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x5D0_animFrameSpeed), v));
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
+    ip.vel.x = mem(fp::fmuls(reg(ip.anim_speed), v));
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
 }
 
 /// Standing's animation, `itKyasarin_UnkMotion6_Anim`: her stand and her egg's wait count
@@ -640,7 +640,7 @@ fn flip_and_fall(r: &mut Running, gobj: GObjId) {
     );
     maplib::enter_air(item_mut(r.game, gobj));
     let ip = item_mut(r.game, gobj);
-    ip.x378_itemColl.cur_pos = ip.pos;
+    ip.coll.cur_pos = ip.pos;
     let pos = ip.pos;
     maplib::place_air(r, gobj, pos);
     hitbox::start_blink(r.game, gobj);
@@ -652,7 +652,7 @@ fn flip_and_fall(r: &mut Running, gobj: GObjId) {
 /// one time in the common data's `x8`, else bouncing away along the hit.
 #[doc(alias = "it_802EDDC0")]
 pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
-    let hit = item(r.game, gobj).xCA0;
+    let hit = item(r.game, gobj).hit_damage;
     let v = vars(r.game, gobj);
     let total = v.damage.get().wrapping_add(hit);
     v.damage.set(total);
@@ -660,19 +660,19 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
         flinch(r, gobj);
     } else if total < attr(r, gobj, a::FALL_DAMAGE).i(r) {
         let speed = mem(attr(r, gobj, a::TURN_SPEED).f(r));
-        item_mut(r.game, gobj).x5D0_animFrameSpeed = speed;
+        item_mut(r.game, gobj).anim_speed = speed;
         turn_around(r, gobj);
     } else {
         if let Some(platform) = vars(r.game, gobj).platform.get() {
             crate::game::gr::mushroom_kingdom_2::birdo_down(r, platform);
         }
-        item_mut(r.game, gobj).xDCC_flag.b3 = true;
+        item_mut(r.game, gobj).state_flags.b3 = true;
         let zako = r.game.it.zako.expect("no enemies' common data");
         let chance = reg(r.data.f32(zako.at(8)));
         if reg(r.game.objs.rng.draw_f32()) < chance {
             flip_and_fall(r, gobj);
             let v = zako::toward_camera(r, gobj);
-            item_mut(r.game, gobj).x40_vel = v;
+            item_mut(r.game, gobj).vel = v;
             change_state(r, gobj, 9, change::ANIM_UPDATE);
         } else {
             flip_and_fall(r, gobj);

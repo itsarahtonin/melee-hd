@@ -82,7 +82,7 @@ fn attrs(r: &Running, gobj: GObjId) -> melee_data::archive::DataRef {
 #[doc(alias = "itSScope_Logic21_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ammo = r.data.u32(attrs(r, gobj)) as i32;
-    item_mut(r.game, gobj).xD4C = ammo;
+    item_mut(r.game, gobj).ammo = ammo;
     fell(r, gobj);
 }
 
@@ -161,7 +161,7 @@ pub const ADDRESS_STAND_IN: u32 = 0x8100_0000;
 /// which its callers take as a level: the infinite-ammunition glitch (`docs/melee-bugs.md`).
 #[doc(alias = "it_80291DAC")]
 pub fn affordable(r: &Running, gobj: GObjId, charge: i32) -> i32 {
-    let ammo = item(r.game, gobj).xD4C;
+    let ammo = item(r.game, gobj).ammo;
     if ammo <= 0 {
         return -1;
     }
@@ -203,12 +203,12 @@ pub fn spend(r: &mut Running, gobj: GObjId, level: i32) {
         );
     }
     let ip = item_mut(r.game, gobj);
-    ip.xD4C = ip.xD4C.wrapping_sub(c);
-    if ip.xD4C < 0 {
-        ip.xD4C = 0;
+    ip.ammo = ip.ammo.wrapping_sub(c);
+    if ip.ammo < 0 {
+        ip.ammo = 0;
     }
     assert!(
-        !stand_in || ip.xD4C > 0,
+        !stand_in || ip.ammo > 0,
         "the Super Scope's address stand-in left it no ammunition"
     );
 }
@@ -278,7 +278,7 @@ pub fn gravity(r: &mut Running, gobj: GObjId) {
 /// falls through, gone once it's past the stage.
 #[doc(alias = "itSscope_UnkMotion3_Coll")]
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xD4C != 0 {
+    if item(r.game, gobj).ammo != 0 {
         fall(r, gobj, landed);
         return false;
     }

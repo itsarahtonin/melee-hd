@@ -65,8 +65,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         DESTROYED => destroyed(r, gobj),
         PHYS => {
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.z = 0.0;
-            ip.x40_vel.y = 0.0;
+            ip.vel.z = 0.0;
+            ip.vel.y = 0.0;
         }
         _ => return false,
     }
@@ -108,13 +108,13 @@ pub fn spawn(
     let gobj = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
     // `Item_ClearCmdVars`.
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-    let v = ip.xDD4_itemVar.pk_flush_explode();
-    v.xDD4.set(charge);
-    v.xDDC.set(Some(owner));
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    let v = ip.vars.pk_flush_explode();
+    v.charge.set(charge);
+    v.unread_owner.set(Some(owner));
     start(r, gobj);
     Some(gobj)
 }
@@ -131,24 +131,20 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 pub fn start(r: &mut Running, gobj: GObjId) {
     // `Item_ClearFlagsAndEnterState(gobj, ip, 0)`.
     lib26b1::disable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
+    item_mut(r.game, gobj).flags.flags.held = false;
     lib2725::show(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     lib2725::set_lifetime(r.game, r.data, gobj, 1024.0);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .pk_flush_explode()
-        .xDD8
+        .first_scale
         .set(0.0);
     // `Item_802694CC`.
     super::super::item::animate(r, gobj);
     animate(r, gobj);
     let full = reg(attr_f32(r, gobj, attr::HITBOX_SIZE_MUL));
-    let charge = reg(item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .pk_flush_explode()
-        .xDD4
-        .get());
+    let charge = reg(item_mut(r.game, gobj).vars.pk_flush_explode().charge.get());
     let ratio = fp::fdivs(charge, full);
     let pos = item(r.game, gobj).pos;
     if ratio > f64::from(0.849_999_96_f32) {
@@ -179,11 +175,7 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
         reg(attr_f32(r, gobj, attr::BASE_DAMAGE)),
         reg(attr_f32(r, gobj, attr::DAMAGE_MUL)),
     );
-    let charge = reg(item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .pk_flush_explode()
-        .xDD4
-        .get());
+    let charge = reg(item_mut(r.game, gobj).vars.pk_flush_explode().charge.get());
     let s = mem(fp::fmadds(
         charge,
         fp::fdivs(fp::fsubs(growth, init), full),
@@ -192,19 +184,19 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj).expect("PK Flash's blast without a model");
     jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
     let ip = item(r.game, gobj);
-    if ip.xDB4_itcmd_var2 == 0 && ip.x5D4_hitboxes[0].hit.state != hitcapsule::DISABLED {
+    if ip.cmd_var2 == 0 && ip.hitboxes[0].hit.state != hitcapsule::DISABLED {
         let dmg = fp::fmadds(charge, mul, base);
         coll::set_hit_damage(r.game, r.data, gobj, 0, crate::ppc::cvt_fp2unsigned(dmg));
-        item_mut(r.game, gobj).xDB4_itcmd_var2 = 1;
+        item_mut(r.game, gobj).cmd_var2 = 1;
     }
     let ip = item_mut(r.game, gobj);
-    let first = ip.x5D4_hitboxes[0].hit.scale;
-    let v = ip.xDD4_itemVar.pk_flush_explode();
-    if v.xDD8.get() == 0.0 {
-        v.xDD8.set(first);
+    let first = ip.hitboxes[0].hit.scale;
+    let v = ip.vars.pk_flush_explode();
+    if v.first_scale.get() == 0.0 {
+        v.first_scale.set(first);
     }
-    let k = v.xDD8.get();
-    ip.x5D4_hitboxes[0].hit.scale = mem(fp::fmuls(reg(k), reg(s)));
+    let k = v.first_scale.get();
+    ip.hitboxes[0].hit.scale = mem(fp::fmuls(reg(k), reg(s)));
     !lib2725::is_animating(r.game, gobj)
 }
 

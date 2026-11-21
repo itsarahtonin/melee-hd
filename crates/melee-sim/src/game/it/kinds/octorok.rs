@@ -149,7 +149,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     set_coll_facing(r.game, gobj);
     zako::face(r, gobj, facing);
     zako::init_collision(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x19 = true;
+    item_mut(r.game, gobj).flags.flags.turns_to_face = true;
     set_timer(r, gobj, 0);
     fall(r, gobj);
 }
@@ -199,7 +199,7 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 pub fn fall(r: &mut Running, gobj: GObjId) {
     let k = reg(attr_f32(r, gobj, 4));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), k));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), k));
     change_state(r, gobj, 2, zako::UNK_0X1 | change::ANIM_UPDATE);
 }
 
@@ -236,7 +236,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId) {
 /// The model's bone `i` from its bone table.
 fn bone(r: &Running, gobj: GObjId, i: usize) -> Option<JObjId> {
     let t = item(r.game, gobj)
-        .xBBC_dynamicBoneTable
+        .bone_table
         .expect("an Octorok without a bone table");
     r.game.it.bone_tables[t.0].bones[i]
 }
@@ -282,7 +282,7 @@ pub fn anim4(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itOctarock_UnkMotion4_Phys")]
 pub fn phys4(r: &mut Running, gobj: GObjId) {
     let airborne = zako::bytes(r.game, gobj).i32(off::AIRBORNE);
-    if airborne == 0 && reg(item(r.game, gobj).x40_vel.y) > 0.0 {
+    if airborne == 0 && reg(item(r.game, gobj).vel.y) > 0.0 {
         maplib::enter_air(item_mut(r.game, gobj));
         zako::bytes(r.game, gobj).set_i32(off::AIRBORNE, 1);
     }
@@ -302,7 +302,7 @@ pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
     } else {
         maplib::touched_ceiling(r.game, gobj);
         let ip = item_mut(r.game, gobj);
-        ip.pos = ip.x378_itemColl.cur_pos;
+        ip.pos = ip.coll.cur_pos;
     }
     zako::answers_false(r, gobj)
 }
@@ -371,7 +371,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itOctarock_UnkMotion1_Phys")]
 pub fn phys1(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    if ip.ground_or_air == GA_GROUND && reg(ip.x40_vel.y) > 0.0 {
+    if ip.ground_or_air == GA_GROUND && reg(ip.vel.y) > 0.0 {
         maplib::enter_air(ip);
     }
 }
@@ -389,7 +389,7 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
     } else {
         maplib::touched_ceiling(r.game, gobj);
         let ip = item_mut(r.game, gobj);
-        ip.pos = ip.x378_itemColl.cur_pos;
+        ip.pos = ip.coll.cur_pos;
     }
     zako::answers_false(r, gobj)
 }
@@ -435,9 +435,9 @@ pub fn follow_bone(r: &mut Running, j: Option<JObjId>, gobj: GObjId) {
     let prev = zako::bytes(r.game, gobj).vec(off::BONE);
     let facing = reg(item(r.game, gobj).facing_dir);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(facing, fp::fsubs(reg(pos.z), reg(prev.z))));
-    ip.x40_vel.y = mem(fp::fsubs(reg(pos.y), reg(prev.y)));
-    ip.x40_vel.z = mem(fp::fsubs(reg(pos.x), reg(prev.x)));
+    ip.vel.x = mem(fp::fmuls(facing, fp::fsubs(reg(pos.z), reg(prev.z))));
+    ip.vel.y = mem(fp::fsubs(reg(pos.y), reg(prev.y)));
+    ip.vel.z = mem(fp::fsubs(reg(pos.x), reg(prev.x)));
     zako::bytes(r.game, gobj).set_vec(off::BONE, pos);
     jobj::set_translate(&mut r.game.objs.jobjs, j, Vec3::new(0.0, 0.0, 0.0));
 }

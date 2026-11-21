@@ -57,7 +57,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// `itMetalB_Logic32_Spawned`: falling.
 #[doc(alias = "itMetalB_Logic32_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, false);
+    set_flag(&mut item_mut(r.game, gobj).hurt_flags, 7, false);
     fell(r, gobj);
 }
 
@@ -138,14 +138,14 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     let Some(by) = coll::take_attacker(r.game, gobj) else {
         return true;
     };
-    if is_fighter(r.game, Some(by)) && flag(item(r.game, gobj).xDCF_flag, 6) {
+    if is_fighter(r.game, Some(by)) && flag(item(r.game, gobj).draw_flags, 6) {
         r.apply_metal_box(by, gobj);
         let fp = r.game.fighter(by);
         let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
         r.item_pickup_stat(slot, sub, gobj);
         return true;
     }
-    item_mut(r.game, gobj).xCEC_fighterGObj = None;
+    item_mut(r.game, gobj).attacker = None;
     true
 }
 

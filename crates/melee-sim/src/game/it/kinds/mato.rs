@@ -45,8 +45,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::reset(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = 0.0;
-    ip.xD5C = 0;
-    ip.xDCC_flag.b3 = false;
+    ip.skid = 0;
+    ip.state_flags.b3 = false;
     enter_still(r, gobj);
 }
 
@@ -54,8 +54,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802D8554")]
 pub fn enter_still(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = 0.0;
+    ip.vel.x = 0.0;
+    ip.vel.y = 0.0;
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 

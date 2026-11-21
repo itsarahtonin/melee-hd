@@ -67,10 +67,10 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "itWStar_Logic29_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    set_flag(&mut ip.xDCE_flag, 7, false);
-    let v = ip.xDD4_itemVar.wstar();
-    v.xDD8.set(1.0);
-    v.xDD4.set(1.0);
+    set_flag(&mut ip.hurt_flags, 7, false);
+    let v = ip.vars.wstar();
+    v.hit.set(1.0);
+    v.speed.set(1.0);
     fell(r, gobj);
 }
 
@@ -180,8 +180,8 @@ pub fn ride_anim(r: &mut Running, gobj: GObjId) -> Option<melee_data::archive::D
     let n = candidates.len() as i32;
     let picked = candidates[r.game.objs.rng.below(n) as usize];
     r.game.it.warp_star_last_anim = picked as i8;
-    item_mut(r.game, gobj).xDD4_itemVar.wstar().xDDC.set(picked);
-    let i = item_mut(r.game, gobj).xDD4_itemVar.wstar().xDDC.get();
+    item_mut(r.game, gobj).vars.wstar().ride_anim.set(picked);
+    let i = item_mut(r.game, gobj).vars.wstar().ride_anim.get();
     let entries = attr(r, gobj, 0x28);
     let sfx = r.data.u32(entries.at(8 * i as u32 + 4)) as i32;
     super::super::item::play_sfx(r, gobj, sfx, 0x7F, 0x40);
@@ -200,13 +200,9 @@ pub fn size_for_rider(r: &mut Running, gobj: GObjId, height: f32, hit_scale: f32
     let j = lib2725::attach_bone(r.game, r.data, gobj).expect("a Warp Star without its bone");
     let speed = fp::fmuls(reg(x8), fp::fdivs(reg(height), reg(x4)));
     let speed = mem(fp::fmuls(speed, reg(item_scale)));
-    item_mut(r.game, gobj).xDD4_itemVar.wstar().xDD4.set(speed);
+    item_mut(r.game, gobj).vars.wstar().speed.set(speed);
     lib2725::set_uniform_scale(r.game, j, speed);
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .wstar()
-        .xDD8
-        .set(hit_scale);
+    item_mut(r.game, gobj).vars.wstar().hit.set(hit_scale);
 }
 
 /// The ride's collision box at the star's size, `it_802944AC`.
@@ -214,7 +210,7 @@ pub fn size_for_rider(r: &mut Running, gobj: GObjId, height: f32, hit_scale: f32
 pub fn ride_box(r: &mut Running, gobj: GObjId) -> crate::game::structs::ftCollisionBox {
     use crate::fpu::{mem, reg};
     use gekko_fp as fp;
-    let s = reg(item_mut(r.game, gobj).xDD4_itemVar.wstar().xDD4.get());
+    let s = reg(item_mut(r.game, gobj).vars.wstar().speed.get());
     let f = |off: u32| mem(fp::fmuls(reg(r.data.f32(attr(r, gobj, off))), s));
     use crate::game::structs::Vec2;
     crate::game::structs::ftCollisionBox {
@@ -237,10 +233,10 @@ pub fn ride_box(r: &mut Running, gobj: GObjId) -> crate::game::structs::ftCollis
 pub fn descend(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 3, change::ANIM_UPDATE);
     let j = lib2725::attach_bone(r.game, r.data, gobj).expect("a Warp Star without its bone");
-    let v = item_mut(r.game, gobj).xDD4_itemVar.wstar();
-    let size = v.xDD4.get();
+    let v = item_mut(r.game, gobj).vars.wstar();
+    let size = v.speed.get();
     lib2725::set_uniform_scale(r.game, j, size);
-    let hit = item_mut(r.game, gobj).xDD4_itemVar.wstar().xDD8.get();
+    let hit = item_mut(r.game, gobj).vars.wstar().hit.get();
     super::super::hitbox::scale_hitboxes(r.game, gobj, crate::fpu::reg(hit));
     set_attack_flags(r, gobj, 0x0044_005F);
     set_attack_id(r, gobj, 0x5E);
@@ -252,19 +248,19 @@ pub fn descend(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8027B288")]
 pub fn set_attack_flags(r: &mut Running, gobj: GObjId, flags: u32) {
     let b = flags.to_be_bytes();
-    if b[3] == 0 || b[3] != item(r.game, gobj).xD90[3] {
+    if b[3] == 0 || b[3] != item(r.game, gobj).attack_flags[3] {
         let rec = r.game.next_attack_record();
-        item_mut(r.game, gobj).xDA8_short = rec;
+        item_mut(r.game, gobj).attack_record_short = rec;
     }
-    item_mut(r.game, gobj).xD90 = b;
+    item_mut(r.game, gobj).attack_flags = b;
     let owner = item(r.game, gobj).owner;
     if super::super::item::is_fighter(r.game, owner) {
         let f = super::super::owner::fighter_of(r.game, owner.expect("an owner"));
         let rec = r.game.fighters[f.0].attack_record.clone();
         let ip = item_mut(r.game, gobj);
-        ip.xD94 = rec.x2074_vec;
-        ip.xD9C = rec.x207C;
-        ip.xDA4_word = u32::from_be_bytes(rec.x10);
+        ip.attack_record_a = rec.x2074_vec;
+        ip.attack_record_b = rec.x207C;
+        ip.attack_record_word = u32::from_be_bytes(rec.x10);
         return;
     }
     super::super::lib279c::clear_attack_record(item_mut(r.game, gobj));
@@ -273,10 +269,10 @@ pub fn set_attack_flags(r: &mut Running, gobj: GObjId, flags: u32) {
 /// The item's attack id `id`, `it_8027B330`: a new attack instance for id 1 or a new id.
 #[doc(alias = "it_8027B330")]
 pub fn set_attack_id(r: &mut Running, gobj: GObjId, id: i32) {
-    if id == 1 || id != item(r.game, gobj).xD88_attackID {
-        item_mut(r.game, gobj).xD88_attackID = id;
+    if id == 1 || id != item(r.game, gobj).attack_id {
+        item_mut(r.game, gobj).attack_id = id;
         let inst = r.game.next_attack_instance();
-        item_mut(r.game, gobj).xD8C_attack_instance = inst;
+        item_mut(r.game, gobj).attack_instance = inst;
     }
 }
 
@@ -286,24 +282,24 @@ pub fn set_attack_id(r: &mut Running, gobj: GObjId, id: i32) {
 #[doc(alias = "it_802947CC")]
 pub fn crash(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3) {
     lib2725::clear_velocity(r.game, gobj);
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    item_mut(r.game, gobj).cmd_var0 = 0;
     change_state(r, gobj, 5, change::ANIM_UPDATE);
     let ip = item(r.game, gobj);
     let saved = (
-        ip.xD90,
-        ip.xD94.clone(),
-        ip.xD9C.clone(),
-        ip.xDA4_word,
-        ip.xDA8_short,
+        ip.attack_flags,
+        ip.attack_record_a.clone(),
+        ip.attack_record_b.clone(),
+        ip.attack_record_word,
+        ip.attack_record_short,
     );
-    let vel = ip.x40_vel;
+    let vel = ip.vel;
     super::super::release::let_go(r, gobj, vel);
     let ip = item_mut(r.game, gobj);
-    ip.xD90 = saved.0;
-    ip.xD94 = saved.1;
-    ip.xD9C = saved.2;
-    ip.xDA4_word = saved.3;
-    ip.xDA8_short = saved.4;
+    ip.attack_flags = saved.0;
+    ip.attack_record_a = saved.1;
+    ip.attack_record_b = saved.2;
+    ip.attack_record_word = saved.3;
+    ip.attack_record_short = saved.4;
     lib26b1::disable_pickup(r.game, gobj);
     item_mut(r.game, gobj).pos = pos;
     let j = super::super::jobj_of(r.game, gobj).expect("a Warp Star without a model");
@@ -322,7 +318,7 @@ pub fn crash(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3) {
         std::f32::consts::FRAC_PI_3,
     );
     lib2725::blast_effect(r, gobj);
-    let hit = item_mut(r.game, gobj).xDD4_itemVar.wstar().xDD8.get();
+    let hit = item_mut(r.game, gobj).vars.wstar().hit.get();
     super::super::hitbox::scale_hitboxes(r.game, gobj, crate::fpu::reg(hit));
 }
 
@@ -330,10 +326,10 @@ pub fn crash(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3) {
 /// once its time's up.
 #[doc(alias = "itWstar_UnkMotion5_Anim")]
 pub fn crashed(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
-        let hit = item_mut(r.game, gobj).xDD4_itemVar.wstar().xDD8.get();
+    if item(r.game, gobj).cmd_var0 != 0 {
+        let hit = item_mut(r.game, gobj).vars.wstar().hit.get();
         super::super::hitbox::scale_hitboxes(r.game, gobj, crate::fpu::reg(hit));
-        item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+        item_mut(r.game, gobj).cmd_var0 = 0;
     }
     lib2725::tick_life(r.game, gobj)
 }

@@ -122,10 +122,10 @@ pub fn spawn(
     spawn.x44_flag[0] |= 0x80;
     spawn.x40 = 0;
     let gobj = super::super::item::spawn_air(r, &mut spawn)?;
-    let v = item_mut(r.game, gobj).xDD4_itemVar.trophy_coin();
-    v.x0.set(trophy);
-    v.x4.set(kind);
-    v.x14.set(from);
+    let v = item_mut(r.game, gobj).vars.trophy_coin();
+    v.trophy.set(trophy);
+    v.trophy_kind.set(kind);
+    v.stand.set(from);
     if kind != 0 {
         hitbox::end_blink(r.game, gobj);
         lib26b1::disable_pickup(r.game, gobj);
@@ -135,14 +135,14 @@ pub fn spawn(
             _ => (0x0, 0x4),
         };
         let (f, m) = (attr(r, gobj, fall_at), attr(r, gobj, max_at));
-        let v = item_mut(r.game, gobj).xDD4_itemVar.trophy_coin();
-        v.x8.set(f);
-        v.xC.set(m);
+        let v = item_mut(r.game, gobj).vars.trophy_coin();
+        v.spin.set(f);
+        v.spin_max.set(m);
     } else {
         super::super::item::remove_camera_box(r.game, gobj);
         hitbox::start_blink(r.game, gobj);
         lib26b1::enable_pickup(r.game, gobj);
-        item_mut(r.game, gobj).xD5C = 0;
+        item_mut(r.game, gobj).skid = 0;
     }
     let model = r.coin_trophy_model(trophy);
     // `HSD_GObjObject_80390B0C`, then `HSD_GObjObject_80390A70` with the trophy's model.
@@ -170,10 +170,10 @@ pub fn spawn(
 /// `itCoin_Logic116_Spawned`: a trophy's coin, falling.
 #[doc(alias = "itCoin_Logic116_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.trophy_coin();
-    v.x4.set(0);
-    v.x0.set(0);
-    v.x10.set(0);
+    let v = item_mut(r.game, gobj).vars.trophy_coin();
+    v.trophy_kind.set(0);
+    v.trophy.set(0);
+    v.unread_10.set(0);
     fell(r, gobj);
 }
 
@@ -183,13 +183,13 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itCoin_Logic116_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    let held = ip.xDC8_word.flags.x13;
-    let v = ip.xDD4_itemVar.trophy_coin();
-    if v.x4.get() != 0 {
-        let stand = v.x14.get();
+    let held = ip.flags.flags.held;
+    let v = ip.vars.trophy_coin();
+    if v.trophy_kind.get() != 0 {
+        let stand = v.stand.get();
         crate::game::gr::snag_the_trophies::coin_gone(r.game, stand);
     } else if held {
-        let trophy = v.x0.get();
+        let trophy = v.trophy.get();
         r.count_match_trophy(trophy as u16, 1);
         zako::ko(r, gobj);
     }
@@ -223,12 +223,12 @@ pub fn idle(_: &mut Running, _: GObjId) {}
 /// Snag the Trophies' at its own.
 #[doc(alias = "itCoin_UnkMotion0_Phys")]
 pub fn phys0(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.trophy_coin();
-    if v.x4.get() == 0 {
+    let v = item_mut(r.game, gobj).vars.trophy_coin();
+    if v.trophy_kind.get() == 0 {
         phys4(r, gobj);
         return;
     }
-    let (f, m) = (v.x8.get(), v.xC.get());
+    let (f, m) = (v.spin.get(), v.spin_max.get());
     lib2725::fall(r.game, gobj, f, m);
 }
 
@@ -286,31 +286,28 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
     maplib::enter_air(item_mut(r.game, gobj));
     let extra = reg(zako::element_damage(r, gobj));
     let ip = item_mut(r.game, gobj);
-    ip.xC9C = fp::fctiwz(fp::fadds(fp::frsp(f64::from(ip.xC9C)), extra));
-    let mut vel = item(r.game, gobj).x40_vel;
+    ip.damage_taken = fp::fctiwz(fp::fadds(fp::frsp(f64::from(ip.damage_taken)), extra));
+    let mut vel = item(r.game, gobj).vel;
     zako::knockback_vel(r, gobj, &mut vel);
-    item_mut(r.game, gobj).x40_vel = vel;
+    item_mut(r.game, gobj).vel = vel;
     let ip = item_mut(r.game, gobj);
     let zero = 0.0;
-    if reg(ip.x40_vel.x) == zero && reg(ip.x40_vel.y) == zero {
-        ip.x40_vel.x = mem(fp::fmuls(
-            reg(0.1),
-            fp::fneg(reg(ip.xCCC_incDamageDirection)),
-        ));
-        ip.x40_vel.y = 0.1;
+    if reg(ip.vel.x) == zero && reg(ip.vel.y) == zero {
+        ip.vel.x = mem(fp::fmuls(reg(0.1), fp::fneg(reg(ip.damage_dir))));
+        ip.vel.y = 0.1;
     }
-    ip.x40_vel.normalize();
+    ip.vel.normalize();
     let minus = fp::frsp(-1.0);
     let plus = fp::frsp(1.0);
-    let dir = reg(ip.xCCC_incDamageDirection);
+    let dir = reg(ip.damage_dir);
     let x = reg(ip.pos.x);
     if x > zero && minus == dir {
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), minus));
+        ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), minus));
     }
     if x < zero && plus == dir {
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), minus));
+        ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), minus));
     }
-    let damage = fp::frsp(f64::from(item(r.game, gobj).xC9C));
+    let damage = fp::frsp(f64::from(item(r.game, gobj).damage_taken));
     let (x24, x28) = (a(r, 0x24), a(r, 0x28));
     let (x2c, x30, x38) = (a(r, 0x2C), a(r, 0x30), a(r, 0x38));
     let (x3c, x40) = (a(r, 0x3C), a(r, 0x40));
@@ -318,35 +315,35 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
     let scaled = |m: f64| fp::fmuls(m, fp::fadds(x24, damage));
     if x > zero {
         let m = if dir == minus { x30 } else { x2c };
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), scaled(m)));
-        if reg(ip.x40_vel.x) <= fp::fneg(x3c) {
-            ip.x40_vel.x = mem(fp::fneg(x3c));
+        ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), scaled(m)));
+        if reg(ip.vel.x) <= fp::fneg(x3c) {
+            ip.vel.x = mem(fp::fneg(x3c));
         }
     } else {
         let m = if minus == dir { x2c } else { x30 };
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), scaled(m)));
-        if reg(ip.x40_vel.x) >= x3c {
-            ip.x40_vel.x = mem(x3c);
+        ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), scaled(m)));
+        if reg(ip.vel.x) >= x3c {
+            ip.vel.x = mem(x3c);
         }
     }
-    ip.x40_vel.y = mem(fp::fmuls(
-        reg(ip.x40_vel.y),
+    ip.vel.y = mem(fp::fmuls(
+        reg(ip.vel.y),
         fp::fmuls(x38, fp::fadds(x28, damage)),
     ));
-    if reg(ip.x40_vel.y) >= x40 {
-        ip.x40_vel.y = mem(x40);
+    if reg(ip.vel.y) >= x40 {
+        ip.vel.y = mem(x40);
     }
-    ip.x40_vel.z = mem(zero);
-    ip.xC9C = 0;
-    let off = match ip.xDD4_itemVar.trophy_coin().x4.get() {
+    ip.vel.z = mem(zero);
+    ip.damage_taken = 0;
+    let off = match ip.vars.trophy_coin().trophy_kind.get() {
         2 => 0x14,
         3 => 0x20,
         _ => 0x8,
     };
     let add = a(r, off);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.trophy_coin();
-    let x8 = reg(v.x8.get());
-    v.x8.set(mem(fp::fadds(x8, add)));
+    let v = item_mut(r.game, gobj).vars.trophy_coin();
+    let x8 = reg(v.spin.get());
+    v.spin.set(mem(fp::fadds(x8, add)));
     change_state(r, gobj, 3, UNK_0X1);
     false
 }
@@ -357,9 +354,9 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
 pub fn phys3(r: &mut Running, gobj: GObjId) {
     let keep = reg(attr(r, gobj, 0x34));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), keep));
-    let v = ip.xDD4_itemVar.trophy_coin();
-    let (f, m) = (v.x8.get(), v.xC.get());
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), keep));
+    let v = ip.vars.trophy_coin();
+    let (f, m) = (v.spin.get(), v.spin_max.get());
     lib2725::fall(r.game, gobj, f, m);
 }
 
@@ -392,14 +389,17 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
 pub fn entered_air(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 5, change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
-    let v = fp::fadds(reg(ip.x88.x), fp::fadds(reg(ip.x40_vel.x), reg(ip.x7C.x)));
+    let v = fp::fadds(
+        reg(ip.slide_vel.x),
+        fp::fadds(reg(ip.vel.x), reg(ip.skid_vel.x)),
+    );
     ip.facing_dir = if v >= 0.0 { 1.0 } else { -1.0 };
     let dir = if fp::frsp(-1.0) == reg(ip.facing_dir) {
         -1
     } else {
         1
     };
-    ip.x378_itemColl.set_facing_dir(dir);
+    ip.coll.set_facing_dir(dir);
 }
 
 /// Skidding's collision, `itCoin_UnkMotion5_Coll`: it lands or falls (`it_8026E8C4`).
@@ -412,13 +412,13 @@ pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
 /// Snag the Trophies' coin's collision joint alone, `it_802F2014`.
 #[doc(alias = "it_802F2014")]
 pub fn set_joint_only(r: &mut Running, gobj: GObjId, joint: i32) {
-    item_mut(r.game, gobj).x378_itemColl.joint_id_only = joint;
+    item_mut(r.game, gobj).coll.joint_id_only = joint;
 }
 
 /// The coin's trophy, `it_802F2020` (Snag the Trophies').
 #[doc(alias = "it_802F2020")]
 pub fn trophy(r: &mut Running, gobj: GObjId) -> i32 {
-    item_mut(r.game, gobj).xDD4_itemVar.trophy_coin().x0.get()
+    item_mut(r.game, gobj).vars.trophy_coin().trophy.get()
 }
 
 /// Snag the Trophies' coin knocked off its stand, `it_802F202C`: the sound 0xAA, no sideways
@@ -427,9 +427,9 @@ pub fn trophy(r: &mut Running, gobj: GObjId) -> i32 {
 pub fn knocked_off(r: &mut Running, gobj: GObjId) {
     r.sfx_play(0xAA, 0x7F, 0x40);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    if reg(ip.x40_vel.y) < fp::fneg(1.5) {
-        ip.x40_vel.y = mem(fp::fneg(1.5));
+    ip.vel.x = 0.0;
+    if reg(ip.vel.y) < fp::fneg(1.5) {
+        ip.vel.y = mem(fp::fneg(1.5));
     }
     hitbox::start_blink(r.game, gobj);
 }
@@ -445,18 +445,14 @@ impl Running<'_> {
     pub fn render_trophy_coin(&mut self, gobj: GObjId, pass: i32) {
         let x48 = reg(attr(self, gobj, 0x48));
         let kind = item_mut(self.game, gobj)
-            .xDD4_itemVar
+            .vars
             .trophy_coin()
-            .x4
+            .trophy_kind
             .get();
         let j = jobj_of(self.game, gobj).and_then(|j| self.game.objs.jobjs[j].child);
         let mark = if kind != 0 {
             // The question mark while the stand's coins aren't all snagged or gone.
-            let stand = item_mut(self.game, gobj)
-                .xDD4_itemVar
-                .trophy_coin()
-                .x14
-                .get();
+            let stand = item_mut(self.game, gobj).vars.trophy_coin().stand.get();
             let zoom = reg(self.game.camera.zoom());
             (self.game.db_pause_flag(1) || zoom < x48)
                 && !crate::game::gr::snag_the_trophies::done(self.game, stand)

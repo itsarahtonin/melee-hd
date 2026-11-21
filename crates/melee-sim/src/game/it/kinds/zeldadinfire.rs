@@ -83,7 +83,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DESTROYED => destroyed(r, gobj),
         PHYS_0 => fly_physics(r, gobj),
-        PHYS_1 => item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0),
+        PHYS_1 => item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0),
         _ => return false,
     }
     true
@@ -108,16 +108,16 @@ pub fn owner(r: &Running, gobj: GObjId) -> Option<GObjId> {
 pub fn hit_stage(r: &mut Running, gobj: GObjId) -> bool {
     ground::air(r, gobj);
     let ip = item(r.game, gobj);
-    let env = ip.x378_itemColl.env_flags;
+    let env = ip.coll.env_flags;
     let mut hit = false;
-    if ip.x40_vel.y > 0.0 {
+    if ip.vel.y > 0.0 {
         if env & CEILING_MASK != 0 {
             hit = true;
         }
     } else if env & FLOOR_MASK != 0 {
         hit = true;
     }
-    if ip.x40_vel.x > 0.0 {
+    if ip.vel.x > 0.0 {
         if env & LEFT_WALL_MASK != 0 {
             hit = true;
         }
@@ -149,17 +149,17 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Opt
     let gobj = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
     // `Item_ClearCmdVars`.
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
     let lifetime = attr_f32(r, gobj, attr::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.zelda_din_fire();
-    v.xDD8.set(0.0);
-    v.xDDC.set(0);
-    v.xDE0.set(Some(parent));
-    v.xDE4.set(0);
+    let v = item_mut(r.game, gobj).vars.zelda_din_fire();
+    v.scale.set(0.0);
+    v.frames.set(0);
+    v.zelda.set(Some(parent));
+    v.unread_e4.set(0);
     start(r, gobj);
     Some(gobj)
 }
@@ -171,32 +171,18 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     lib2725::clear_hitboxes(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
-    let v = ip.xDD4_itemVar.zelda_din_fire();
-    if let Some(zelda) = v.xDE0.get() {
+    let v = ip.vars.zelda_din_fire();
+    if let Some(zelda) = v.zelda.get() {
         if owner == Some(zelda) {
             r.zelda_forget_din_fire(zelda);
         }
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .zelda_din_fire()
-            .xDE0
-            .set(None);
+        item_mut(r.game, gobj).vars.zelda_din_fire().zelda.set(None);
     }
-    if item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .zelda_din_fire()
-        .xDF4
-        .get()
-        != 0
-    {
+    if item_mut(r.game, gobj).vars.zelda_din_fire().started.get() != 0 {
         crate::game::ef::eflib::destroy_all(r, gobj);
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .zelda_din_fire()
-            .xDF4
-            .set(0);
+        item_mut(r.game, gobj).vars.zelda_din_fire().started.set(0);
     }
-    item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
+    item_mut(r.game, gobj).flags.flags.held = false;
 }
 
 /// The fire let go of by its owner, `it_802C3D44`: no owner, no Zelda.
@@ -205,8 +191,8 @@ pub fn let_go(r: &mut Running, gobj: Option<GObjId>) {
     let Some(gobj) = gobj else { return };
     let ip = item_mut(r.game, gobj);
     ip.owner = None;
-    ip.xDD4_itemVar.zelda_din_fire().xDE0.set(None);
-    ip.xDC8_word.flags.x13 = false;
+    ip.vars.zelda_din_fire().zelda.set(None);
+    ip.flags.flags.held = false;
 }
 
 /// The fire's flight's start, `it_802C3D74`: its lifetime, the first angle and speed facing
@@ -216,7 +202,7 @@ pub fn start(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     // `Item_ClearFlagsAndEnterState(gobj, ip, 0)`.
     lib26b1::disable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
+    item_mut(r.game, gobj).flags.flags.held = false;
     lib2725::show(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     let lifetime = attr_f32(r, gobj, attr::LIFETIME);
@@ -226,24 +212,20 @@ pub fn start(r: &mut Running, gobj: GObjId) {
         attr_f32(r, gobj, attr::SPEED),
     );
     let facing = item(r.game, gobj).facing_dir;
-    let v = item_mut(r.game, gobj).xDD4_itemVar.zelda_din_fire();
-    v.xDD8.set(0.0);
-    v.xDDC.set(0);
-    v.xDE8.set(mem(fp::fmuls(reg(angle), reg(facing))));
+    let v = item_mut(r.game, gobj).vars.zelda_din_fire();
+    v.scale.set(0.0);
+    v.frames.set(0);
+    v.turn.set(mem(fp::fmuls(reg(angle), reg(facing))));
     // `M_PI`, a double, stored as a float.
     let rot = if facing == 1.0 {
         0.0
     } else {
         std::f64::consts::PI as f32
     };
-    v.xDEC.set(rot);
-    v.xDF0.set(speed);
+    v.rot.set(rot);
+    v.speed.set(speed);
     ef::spawn(r, GFX_FLY, Some(gobj), &[Arg::JObj(j)]);
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .zelda_din_fire()
-        .xDF4
-        .set(1);
+    item_mut(r.game, gobj).vars.zelda_din_fire().started.set(1);
     set_velocity(r, gobj);
     let owner = item(r.game, gobj).owner;
     debug_owner_bubbles(r.game, gobj, owner);
@@ -251,50 +233,36 @@ pub fn start(r: &mut Running, gobj: GObjId) {
 
 /// The velocity along the angle (`xDEC` + `xDE8`) at the speed (`xDF0`).
 fn set_velocity(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.zelda_din_fire();
+    let v = item_mut(r.game, gobj).vars.zelda_din_fire();
     let (speed, a) = (
-        v.xDF0.get(),
-        mem(fp::fadds(reg(v.xDEC.get()), reg(v.xDE8.get()))),
+        v.speed.get(),
+        mem(fp::fadds(reg(v.rot.get()), reg(v.turn.get()))),
     );
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(speed), reg(math::cos(a))));
-    let v = ip.xDD4_itemVar.zelda_din_fire();
+    ip.vel.x = mem(fp::fmuls(reg(speed), reg(math::cos(a))));
+    let v = ip.vars.zelda_din_fire();
     let (speed, a) = (
-        v.xDF0.get(),
-        mem(fp::fadds(reg(v.xDEC.get()), reg(v.xDE8.get()))),
+        v.speed.get(),
+        mem(fp::fadds(reg(v.rot.get()), reg(v.turn.get()))),
     );
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fmuls(reg(speed), reg(math::sin(a))));
-    ip.x40_vel.z = 0.0;
+    ip.vel.y = mem(fp::fmuls(reg(speed), reg(math::sin(a))));
+    ip.vel.z = 0.0;
 }
 
 /// The burst, `itZeldadinfire_UnkMotion0_Anim_inline`: the flight's effect gone, state 1, the
 /// burst's effect and lifetime.
 fn burst(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
-    if item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .zelda_din_fire()
-        .xDF4
-        .get()
-        != 0
-    {
+    if item_mut(r.game, gobj).vars.zelda_din_fire().started.get() != 0 {
         crate::game::ef::eflib::destroy_all(r, gobj);
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .zelda_din_fire()
-            .xDF4
-            .set(0);
+        item_mut(r.game, gobj).vars.zelda_din_fire().started.set(0);
     }
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     ef::spawn(r, GFX_BURST, Some(gobj), &[Arg::JObj(j)]);
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .zelda_din_fire()
-        .xDF4
-        .set(1);
+    item_mut(r.game, gobj).vars.zelda_din_fire().started.set(1);
     let life = attr_f32(r, gobj, attr::BURST);
-    item_mut(r.game, gobj).xD44_lifeTimer = life;
+    item_mut(r.game, gobj).life_timer = life;
 }
 
 /// The fire's scale by its growth (`xDD8`), set on its joint.
@@ -304,11 +272,7 @@ fn grow(r: &mut Running, gobj: GObjId) {
         reg(attr_f32(r, gobj, attr::SCALE_MIN)),
         reg(attr_f32(r, gobj, attr::SCALE_MAX)),
     );
-    let grown = reg(item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .zelda_din_fire()
-        .xDD8
-        .get());
+    let grown = reg(item_mut(r.game, gobj).vars.zelda_din_fire().scale.get());
     let s = mem(fp::fmadds(
         grown,
         fp::fdivs(fp::fsubs(max, min), frames),
@@ -325,13 +289,13 @@ fn grow(r: &mut Running, gobj: GObjId) {
 pub fn animate_0(r: &mut Running, gobj: GObjId) -> bool {
     let frames = attr_f32(r, gobj, attr::GROW_FRAMES);
     let owner = item(r.game, gobj).owner;
-    let v = item_mut(r.game, gobj).xDD4_itemVar.zelda_din_fire();
-    if v.xDDC.get() == 0 {
-        v.xDD8.update(|old| mem(fp::fadds(reg(old), 1.0)));
-        if reg(v.xDD8.get()) >= reg(frames) {
-            v.xDD8.set(frames);
+    let v = item_mut(r.game, gobj).vars.zelda_din_fire();
+    if v.frames.get() == 0 {
+        v.scale.update(|old| mem(fp::fadds(reg(old), 1.0)));
+        if reg(v.scale.get()) >= reg(frames) {
+            v.scale.set(frames);
         }
-        if let Some(zelda) = v.xDE0.get()
+        if let Some(zelda) = v.zelda.get()
             && owner == Some(zelda)
             && r.zelda_din_fire_released(zelda)
         {
@@ -354,27 +318,17 @@ pub fn animate_1(r: &mut Running, gobj: GObjId) -> bool {
     if !lib2725::tick_lifetime(r.game, gobj) {
         return false;
     }
-    if item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .zelda_din_fire()
-        .xDF4
-        .get()
-        != 0
-    {
+    if item_mut(r.game, gobj).vars.zelda_din_fire().started.get() != 0 {
         crate::game::ef::eflib::destroy_all(r, gobj);
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .zelda_din_fire()
-            .xDF4
-            .set(0);
+        item_mut(r.game, gobj).vars.zelda_din_fire().started.set(0);
     }
     let ip = item_mut(r.game, gobj);
     let (owner, pos, facing) = (ip.owner, ip.pos, ip.facing_dir);
-    let v = ip.xDD4_itemVar.zelda_din_fire();
-    if let Some(zelda) = v.xDE0.get()
+    let v = ip.vars.zelda_din_fire();
+    if let Some(zelda) = v.zelda.get()
         && Some(zelda) == owner
     {
-        let size = v.xDD8.get();
+        let size = v.scale.get();
         super::zeldadinfireexplode::spawn(r, zelda, gobj, pos, facing, size);
         r.zelda_forget_din_fire(zelda);
     }
@@ -387,11 +341,11 @@ pub fn animate_1(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itZeldadinfire_UnkMotion0_Phys")]
 pub fn fly_physics(r: &mut Running, gobj: GObjId) {
     let owner = item(r.game, gobj).owner;
-    let v = item_mut(r.game, gobj).xDD4_itemVar.zelda_din_fire();
-    if v.xDDC.get() != 0 {
+    let v = item_mut(r.game, gobj).vars.zelda_din_fire();
+    if v.frames.get() != 0 {
         return;
     }
-    let Some(zelda) = v.xDE0.get() else { return };
+    let Some(zelda) = v.zelda.get() else { return };
     if owner != Some(zelda) || !r.zelda_din_fire_held(zelda) {
         return;
     }
@@ -407,18 +361,18 @@ pub fn fly_physics(r: &mut Running, gobj: GObjId) {
     );
     let abs = |v: f64| if v < 0.0 { fp::fneg(v) } else { v };
     let facing = reg(item(r.game, gobj).facing_dir);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.zelda_din_fire();
+    let v = item_mut(r.game, gobj).vars.zelda_din_fire();
     if abs(y) > stick {
-        v.xDE8
+        v.turn
             .update(|old| mem(fp::fmadds(facing, fp::fmuls(turn, y), reg(old))));
-        let a = reg(v.xDE8.get());
+        let a = reg(v.turn.get());
         if abs(a) > max {
-            v.xDE8.set(mem(if a > 0.0 { max } else { fp::fneg(max) }));
+            v.turn.set(mem(if a > 0.0 { max } else { fp::fneg(max) }));
         }
     }
-    v.xDF0.update(|old| mem(fp::fadds(reg(old), accel)));
-    if reg(v.xDF0.get()) > speed_max {
-        v.xDF0.set(mem(speed_max));
+    v.speed.update(|old| mem(fp::fadds(reg(old), accel)));
+    if reg(v.speed.get()) > speed_max {
+        v.speed.set(mem(speed_max));
     }
     set_velocity(r, gobj);
 }
@@ -438,7 +392,7 @@ pub fn collide_0(r: &mut Running, gobj: GObjId) -> bool {
 pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj).expect("Din's Fire without a model");
     let ip = item_mut(r.game, gobj);
-    ip.xDD4_itemVar.zelda_din_fire().xDDC.set(1);
+    ip.vars.zelda_din_fire().frames.set(1);
     ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
     let y = mem(fp::frsp(fp::fmul(
         std::f64::consts::FRAC_PI_2,
@@ -446,9 +400,9 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     )));
     lib2725::set_rotation_y(r.game, j, y);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fneg(reg(ip.x40_vel.x)));
-    ip.x40_vel.y = mem(fp::fneg(reg(ip.x40_vel.y)));
-    ip.x40_vel.z = 0.0;
+    ip.vel.x = mem(fp::fneg(reg(ip.vel.x)));
+    ip.vel.y = mem(fp::fneg(reg(ip.vel.y)));
+    ip.vel.z = 0.0;
     false
 }
 

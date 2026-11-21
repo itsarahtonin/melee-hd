@@ -40,8 +40,8 @@ pub fn set_scale_z(game: &mut Game, j: JObjId, z: f32) {
 #[doc(alias = "it_80272560")]
 pub fn clear_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize) {
     let ip = item_mut(game, gobj);
-    hitcapsule::disable(&mut ip.x5D4_hitboxes[idx].hit);
-    set_flag(&mut ip.xDAA, 2, false);
+    hitcapsule::disable(&mut ip.hitboxes[idx].hit);
+    set_flag(&mut ip.debug_flags, 2, false);
     for i in 0..4 {
         super::coll::update_hitbox(game, data, gobj, i);
     }
@@ -51,15 +51,15 @@ pub fn clear_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize) 
 #[doc(alias = "it_802725D4")]
 pub fn clear_hitboxes(game: &mut Game, data: &Archives, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    for h in &mut ip.x5D4_hitboxes {
+    for h in &mut ip.hitboxes {
         hitcapsule::disable(&mut h.hit);
     }
     for i in 0..4 {
         super::coll::update_hitbox(game, data, gobj, i);
     }
     let ip = item_mut(game, gobj);
-    ip.xDC8_word.flags.x16 = false;
-    set_flag(&mut ip.xDAA, 2, false);
+    ip.flags.flags.hitbox_on = false;
+    set_flag(&mut ip.debug_flags, 2, false);
 }
 
 /// Shows the model when its lifetime count's tick isn't a multiple of `x44`, else hides it:
@@ -69,7 +69,7 @@ pub fn flicker(game: &mut Game, data: &Archives, gobj: GObjId) {
     let root = jobj_of(game, gobj);
     let first = root.and_then(|j| game.objs.jobjs[j].child);
     let period = common_data(game).u32(data, common::X44);
-    let life = fp::fctiwz(reg(item(game, gobj).xD44_lifeTimer)) as u32;
+    let life = fp::fctiwz(reg(item(game, gobj).life_timer)) as u32;
     if !life.is_multiple_of(period) {
         jobj::clear_flags_all(&mut game.objs.jobjs, first, jobj::HIDDEN);
     } else {
@@ -119,9 +119,7 @@ pub fn bone(game: &Game, data: &Archives, gobj: GObjId, idx: i32) -> Option<JObj
     let ip = item(game, gobj);
     let mut j = jobj_of(game, gobj);
     if article(ip).model(data).bone_count(data) != 0 {
-        let t = ip
-            .xBBC_dynamicBoneTable
-            .expect("an item without a bone table");
+        let t = ip.bone_table.expect("an item without a bone table");
         return game.it.bone_tables[t.0].bones[idx as usize];
     }
     for _ in 0..idx.max(0) {
@@ -141,16 +139,16 @@ pub fn attach_bone(game: &Game, data: &Archives, gobj: GObjId) -> Option<JObjId>
 #[doc(alias = "it_80273130")]
 pub fn tick_lifetime(game: &mut Game, gobj: GObjId) -> bool {
     let ip = item_mut(game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    reg(ip.xD44_lifeTimer) <= 0.0
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    reg(ip.life_timer) <= 0.0
 }
 
 /// Plays the pickup sound, `it_80273168`.
 #[doc(alias = "it_80273168")]
 pub fn pickup_sfx(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if !ip.xDCD_flag.x0.b2 {
-        let sfx = ip.xD70;
+    if !ip.hit_flags.x0.b2 {
+        let sfx = ip.pickup_sfx;
         super::item::play_sfx(r, gobj, sfx, 0x7F, 0x40);
     }
 }
@@ -161,7 +159,7 @@ pub fn destroy_effect(r: &mut Running, gobj: GObjId, gfx: i32, sfx: i32) {
     if gfx != -1 {
         super::effect::spawn_simple(r, gobj, gfx);
     }
-    if !item(r.game, gobj).xDCD_flag.x0.b2 {
+    if !item(r.game, gobj).hit_flags.x0.b2 {
         play_sfx(r, gobj, sfx);
         // Only the target's break (kind 0xD1, Target Test and the trophy stages) has it.
         if sfx == 0x12F {
@@ -173,7 +171,7 @@ pub fn destroy_effect(r: &mut Running, gobj: GObjId, gfx: i32, sfx: i32) {
 /// Plays a sound unless the item is quiet, `it_802732E4`.
 #[doc(alias = "it_802732E4")]
 pub fn play_sfx(r: &mut Running, gobj: GObjId, sfx: i32) {
-    if !item(r.game, gobj).xDCD_flag.x0.b2 {
+    if !item(r.game, gobj).hit_flags.x0.b2 {
         super::item::play_sfx(r, gobj, sfx, 0x7F, 0x40);
     }
 }
@@ -182,39 +180,39 @@ pub fn play_sfx(r: &mut Running, gobj: GObjId, sfx: i32) {
 #[doc(alias = "it_8027346C")]
 #[doc(alias("clear_x64"))]
 pub fn clear_floor_motion(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).x64_vec_unk2 = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(game, gobj).floor_motion = Vec3::new(0.0, 0.0, 0.0);
 }
 
 /// Clears the tick's displacement (`x58`: the wind's push, added to the position), `it_80273484`.
 #[doc(alias = "it_80273484")]
 #[doc(alias("clear_x58"))]
 pub fn clear_displacement(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).x58_vec_unk = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(game, gobj).wind_push = Vec3::new(0.0, 0.0, 0.0);
 }
 
 /// Clears the nudge, `it_8027349C`.
 #[doc(alias = "it_8027349C")]
 pub fn clear_nudge(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).x70_nudge = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(game, gobj).nudge = Vec3::new(0.0, 0.0, 0.0);
 }
 
 /// Clears the knockback vectors, `it_802734B4`.
 #[doc(alias = "it_802734B4")]
 pub fn clear_knockback(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    ip.x7C = Vec3::new(0.0, 0.0, 0.0);
-    ip.x88 = Vec3::new(0.0, 0.0, 0.0);
-    ip.x94 = Vec3::new(0.0, 0.0, 0.0);
-    ip.xA0 = Vec3::new(0.0, 0.0, 0.0);
-    ip.xAC_unk.x = 0.0;
-    ip.xAC_unk.z = 0.0;
-    ip.xAC_unk.y = 1.0;
+    ip.skid_vel = Vec3::new(0.0, 0.0, 0.0);
+    ip.slide_vel = Vec3::new(0.0, 0.0, 0.0);
+    ip.last_slide_vel = Vec3::new(0.0, 0.0, 0.0);
+    ip.unread_a0 = Vec3::new(0.0, 0.0, 0.0);
+    ip.surface_normal.x = 0.0;
+    ip.surface_normal.z = 0.0;
+    ip.surface_normal.y = 1.0;
 }
 
 /// Sets the velocity and clears the other motion, `it_80273500`.
 #[doc(alias = "it_80273500")]
 pub fn set_velocity(game: &mut Game, gobj: GObjId, v: Vec3) {
-    item_mut(game, gobj).x40_vel = v;
+    item_mut(game, gobj).vel = v;
     clear_floor_motion(game, gobj);
     clear_displacement(game, gobj);
     clear_nudge(game, gobj);
@@ -234,17 +232,14 @@ pub fn clamp_fall(game: &mut Game, gobj: GObjId, arg: f32) -> i32 {
             fp::fmuls(f64::from(0.017453292_f32), reg(arg)),
         );
     }
-    ip.xD3C_spinSpeed = mem(spin);
+    ip.spin_speed = mem(spin);
     let facing = if reg(ip.facing_dir) < 0.0 { -1 } else { 1 };
-    let moving = if reg(ip.x40_vel.x) < 0.0 { -1 } else { 1 };
+    let moving = if reg(ip.vel.x) < 0.0 { -1 } else { 1 };
     if moving != facing {
-        ip.xD3C_spinSpeed = mem(fp::fneg(reg(ip.xD3C_spinSpeed)));
+        ip.spin_speed = mem(fp::fneg(reg(ip.spin_speed)));
     }
-    if !ip.xDC8_word.flags.x19 {
-        ip.xD3C_spinSpeed = mem(fp::fmuls(
-            reg(ip.xD3C_spinSpeed),
-            fp::fneg(reg(ip.facing_dir)),
-        ));
+    if !ip.flags.flags.turns_to_face {
+        ip.spin_speed = mem(fp::fmuls(reg(ip.spin_speed), fp::fneg(reg(ip.facing_dir))));
     }
     moving
 }
@@ -267,7 +262,7 @@ pub fn spin_joint(game: &Game, data: &Archives, gobj: GObjId) -> Option<JObjId> 
 pub fn spin(game: &mut Game, data: &Archives, gobj: GObjId) {
     let j = spin_joint(game, data, gobj).expect("an item without a model");
     let ip = item(game, gobj);
-    let (axis, s) = (ip.xDC8_word.flags.x17, reg(ip.xD3C_spinSpeed));
+    let (axis, s) = (ip.flags.flags.spin_axis, reg(ip.spin_speed));
     jobj::set_angle(&mut game.objs.jobjs, j, |q| {
         let r = match axis {
             0 => &mut q.z,
@@ -296,13 +291,13 @@ pub fn landing_dust_at(r: &mut Running, gobj: GObjId, offset: Vec3) {
 /// Turns off the hit-counting flag, `it_80274C60`.
 #[doc(alias = "it_80274C60")]
 pub fn uncount_hits(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDC8_word.flags.xC = false;
+    item_mut(game, gobj).flags.flags.hits_counted = false;
 }
 
 /// Whether the item's hits count toward its hitlag, `it_80274C78`.
 #[doc(alias = "it_80274C78")]
 pub fn is_hit_counted(game: &Game, gobj: GObjId) -> bool {
-    item(game, gobj).xDC8_word.flags.xC
+    item(game, gobj).flags.flags.hits_counted
 }
 
 /// Makes the item's joint `bone` follow fighter `holder`'s part `part`, `it_80274F48`.
@@ -326,8 +321,8 @@ pub fn attach_to_part(
 #[doc(alias = "it_80274C88")]
 pub fn clear_stomp(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    set_flag(&mut ip.xDD0_flag, 0, false);
-    set_flag(&mut ip.xDAA, 3, false);
+    set_flag(&mut ip.status_flags, 0, false);
+    set_flag(&mut ip.debug_flags, 3, false);
 }
 
 /// The ECB's center offset this tick from last (`it_80274D04`), into `xB54`.
@@ -336,19 +331,19 @@ pub fn ecb_motion(game: &mut Game, gobj: GObjId) {
     let a = super::lib26b1::ecb_center(game, gobj);
     let b = super::lib26b1::last_ecb_center(game, gobj);
     let ip = item_mut(game, gobj);
-    ip.xB54.unk_x = mem(fp::fsubs(reg(a.x), reg(b.x)));
-    ip.xB54.unk_y = mem(fp::fsubs(reg(a.y), reg(b.y)));
+    ip.stomp_box.unk_x = mem(fp::fsubs(reg(a.x), reg(b.x)));
+    ip.stomp_box.unk_y = mem(fp::fsubs(reg(a.y), reg(b.y)));
 }
 
 /// The ECB's extent in the world, into `xB54.x8`, `it_80274D6C`.
 #[doc(alias = "it_80274D6C")]
 pub fn ecb_extent(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    let e = &ip.x378_itemColl.ecb;
+    let e = &ip.coll.ecb;
     let (right_x, right_y, left_x, top_y) = (e.right.x, e.right.y, e.left.x, e.top.y);
-    ip.xB54.x8.y = mem(fp::fadds(reg(right_x), reg(ip.pos.x)));
-    ip.xB54.x8.x = mem(fp::fadds(reg(left_x), reg(ip.pos.x)));
-    ip.xB54.x8.z = mem(fp::fadds(
+    ip.stomp_box.x8.y = mem(fp::fadds(reg(right_x), reg(ip.pos.x)));
+    ip.stomp_box.x8.x = mem(fp::fadds(reg(left_x), reg(ip.pos.x)));
+    ip.stomp_box.x8.z = mem(fp::fadds(
         reg(top_y),
         fp::fadds(reg(right_y), reg(ip.pos.y)),
     ));
@@ -358,15 +353,15 @@ pub fn ecb_extent(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_80274DAC")]
 pub fn init_spin(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    ip.xB54.unk_x = 0.0;
-    ip.xB54.unk_y = 0.0;
+    ip.stomp_box.unk_x = 0.0;
+    ip.stomp_box.unk_y = 0.0;
     ecb_extent(game, gobj);
 }
 
 /// Stops the item holding still for its animation (`xDC8_word.x2`), `it_80274EF8`.
 #[doc(alias = "it_80274EF8")]
 pub fn stop_holding_still(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDC8_word.flags.x2 = false;
+    item_mut(game, gobj).flags.flags.holds_still = false;
 }
 
 /// Sets the lifetime and the half lifetime it reflects with, `it_80275158`.
@@ -374,18 +369,18 @@ pub fn stop_holding_still(game: &mut Game, gobj: GObjId) {
 pub fn set_lifetime(game: &mut Game, data: &Archives, gobj: GObjId, lifetime: f32) {
     let x4c = common_data(game).f32(data, common::X4C);
     let ip = item_mut(game, gobj);
-    ip.xD44_lifeTimer = lifetime;
-    ip.xD48_halfLifeTimer = mem(fp::fmuls(reg(lifetime), reg(x4c)));
+    ip.life_timer = lifetime;
+    ip.half_life = mem(fp::fmuls(reg(lifetime), reg(x4c)));
 }
 
 /// Sets the damage taken and clears the record, `it_802753BC`.
 #[doc(alias = "it_802753BC")]
 pub fn set_damage_taken(game: &mut Game, gobj: GObjId, damage: i16) {
     let ip = item_mut(game, gobj);
-    ip.xC94 = 0;
-    ip.xC9C = i32::from(damage);
-    ip.xCA0 = 0;
-    ip.xCA4 = 0;
+    ip.unread_c94 = 0;
+    ip.damage_taken = i32::from(damage);
+    ip.hit_damage = 0;
+    ip.max_hit_damage = 0;
 }
 
 /// Lets go of its owner and stops being pickable, `it_80275390`.
@@ -400,7 +395,7 @@ pub fn drop_owner(game: &mut Game, gobj: GObjId) {
 pub fn spin_angle(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
     let j = spin_joint(game, data, gobj).expect("an item without a model");
     let r = &game.objs.jobjs[j].rotate;
-    match item(game, gobj).xDC8_word.flags.x17 {
+    match item(game, gobj).flags.flags.spin_axis {
         0 => r.z,
         1 => r.x,
         _ => r.y,
@@ -411,10 +406,10 @@ pub fn spin_angle(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
 #[doc(alias = "it_8027321C")]
 pub fn bounce_sfx(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if ip.xDCD_flag.x0.b2 {
+    if ip.hit_flags.x0.b2 {
         return;
     }
-    let sfx = ip.xD84;
+    let sfx = ip.bounce_sfx;
     if ip.kind == ItKind::VsCoin {
         r.sfx_play_track(sfx, 127, 64, 154);
         return;
@@ -427,8 +422,8 @@ pub fn bounce_sfx(r: &mut Running, gobj: GObjId) {
 pub fn stop_spin(game: &mut Game, data: &Archives, gobj: GObjId) {
     let j = spin_joint(game, data, gobj).expect("an item without a model");
     let ip = item_mut(game, gobj);
-    ip.xD3C_spinSpeed = 0.0;
-    let (axis, v) = (ip.xDC8_word.flags.x17, ip.xD3C_spinSpeed);
+    ip.spin_speed = 0.0;
+    let (axis, v) = (ip.flags.flags.spin_axis, ip.spin_speed);
     let jobjs = &mut game.objs.jobjs;
     match axis {
         0 => jobj::set_rotation_z(jobjs, j, v),
@@ -443,7 +438,7 @@ pub fn stop_spin(game: &mut Game, data: &Archives, gobj: GObjId) {
 #[doc(alias = "it_80273318")]
 pub fn set_model(r: &mut Running, gobj: GObjId, joint: Option<melee_data::archive::DataRef>) {
     use crate::hsd::gobj::Host;
-    item_mut(r.game, gobj).xC8_joint = joint;
+    item_mut(r.game, gobj).joint = joint;
     if let Some((kind, obj)) = r.world().take_obj(gobj) {
         r.remove_obj(kind, obj);
     }
@@ -468,7 +463,7 @@ pub fn stop_all(game: &mut Game, gobj: GObjId) {
 /// Stops the item, `it_80273454` (`itResetVelocity`).
 #[doc(alias = "it_80273454")]
 pub fn clear_velocity(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
 }
 
 /// Starts the item's vanishing countdown (the common data's `xF8`), `it_8027518C`.
@@ -476,9 +471,9 @@ pub fn clear_velocity(game: &mut Game, gobj: GObjId) {
 pub fn start_vanishing(game: &mut Game, data: &Archives, gobj: GObjId) {
     let t = common_data(game).f32(data, common::XF8);
     let ip = item_mut(game, gobj);
-    ip.xD44_lifeTimer = t;
-    set_flag(&mut ip.xDCF_flag, 2, true);
-    set_flag(&mut ip.xDD1_flag, 0, true);
+    ip.life_timer = t;
+    set_flag(&mut ip.draw_flags, 2, true);
+    set_flag(&mut ip.phys_flags, 0, true);
     super::lib26b1::stop_keeping_clear(game, gobj);
 }
 
@@ -486,8 +481,8 @@ pub fn start_vanishing(game: &mut Game, data: &Archives, gobj: GObjId) {
 #[doc(alias = "it_802751D8")]
 pub fn tick_life(game: &mut Game, gobj: GObjId) -> bool {
     let ip = item_mut(game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    reg(ip.xD44_lifeTimer) <= 0.0
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    reg(ip.life_timer) <= 0.0
 }
 
 /// Gravity: the fall speed grows by `accel` until it reaches `max`, `it_80272860`.
@@ -497,7 +492,7 @@ pub fn tick_life(game: &mut Game, gobj: GObjId) -> bool {
 pub fn fall(game: &mut Game, gobj: GObjId, accel: f32, max: f32) {
     let ip = item_mut(game, gobj);
     let sign = |v: f64| if v < 0.0 { -1 } else { 1 };
-    let mut vy = reg(ip.x40_vel.y);
+    let mut vy = reg(ip.vel.y);
     if sign(vy) != sign(reg(accel)) {
         if vy < 0.0 {
             vy = fp::fneg(vy);
@@ -506,7 +501,7 @@ pub fn fall(game: &mut Game, gobj: GObjId, accel: f32, max: f32) {
             return;
         }
     }
-    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), reg(accel)));
+    ip.vel.y = mem(fp::fsubs(reg(ip.vel.y), reg(accel)));
 }
 
 /// Bounces the item off a shield (`xC58`'s normal), turning it the way it now moves,
@@ -516,9 +511,9 @@ pub fn fall(game: &mut Game, gobj: GObjId, accel: f32, max: f32) {
 #[doc(alias = "itColl_BounceOffShield")]
 pub fn bounce_off_shield(game: &mut Game, gobj: GObjId) -> bool {
     let ip = item_mut(game, gobj);
-    let n = ip.xC58;
-    ip.x40_vel.mirror_xy(n);
-    let vx = reg(ip.x40_vel.x);
+    let n = ip.shield_normal;
+    ip.vel.mirror_xy(n);
+    let vx = reg(ip.vel.x);
     let abs = if vx < 0.0 { fp::fneg(vx) } else { vx };
     if !(abs < f64::from(1.0e-5_f32)) || !(reg(ip.facing_dir) != 0.0) {
         ip.facing_dir = if vx >= 0.0 { 1.0 } else { -1.0 };
@@ -528,7 +523,7 @@ pub fn bounce_off_shield(game: &mut Game, gobj: GObjId) -> bool {
     } else {
         1
     };
-    ip.x378_itemColl.set_facing_dir(dir);
+    ip.coll.set_facing_dir(dir);
     false
 }
 
@@ -543,8 +538,8 @@ pub fn bounce_off_victim(game: &mut Game, data: &Archives, gobj: GObjId) {
         reg(c.f32(data, common::X60)),
     );
     let ip = item_mut(game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), sx));
-    ip.x40_vel.y = mem(fp::fmadds(reg(ip.x40_vel.y), sy, up));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), sx));
+    ip.vel.y = mem(fp::fmadds(reg(ip.vel.y), sy, up));
 }
 
 /// Sent back the way it came by a reflection, at the reflection's speed (`xC70`), with half
@@ -552,11 +547,11 @@ pub fn bounce_off_victim(game: &mut Game, data: &Archives, gobj: GObjId) {
 #[doc(alias = "it_80273030")]
 pub fn reflected_back(game: &mut Game, gobj: GObjId) -> bool {
     let ip = item_mut(game, gobj);
-    let k = reg(ip.xC70);
-    ip.x40_vel.x = mem(fp::fmuls(fp::fneg(reg(ip.x40_vel.x)), k));
-    ip.x40_vel.y = mem(fp::fmuls(fp::fneg(reg(ip.x40_vel.y)), k));
+    let k = reg(ip.reflect_speed_mul);
+    ip.vel.x = mem(fp::fmuls(fp::fneg(reg(ip.vel.x)), k));
+    ip.vel.y = mem(fp::fmuls(fp::fneg(reg(ip.vel.y)), k));
     ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-    ip.xD44_lifeTimer = ip.xD48_halfLifeTimer;
+    ip.life_timer = ip.half_life;
     false
 }
 
@@ -564,7 +559,7 @@ pub fn reflected_back(game: &mut Game, gobj: GObjId) -> bool {
 #[doc(alias = "it_80275174")]
 pub fn set_half_life(game: &mut Game, data: &Archives, gobj: GObjId, lifetime: f32) {
     let x4c = common_data(game).f32(data, common::X4C);
-    item_mut(game, gobj).xD48_halfLifeTimer = mem(fp::fmuls(reg(lifetime), reg(x4c)));
+    item_mut(game, gobj).half_life = mem(fp::fmuls(reg(lifetime), reg(x4c)));
 }
 
 /// Faces the way it moves, unless it has all but stopped (and faces some way),
@@ -574,12 +569,12 @@ pub fn set_half_life(game: &mut Game, data: &Archives, gobj: GObjId, lifetime: f
 #[doc(alias = "it_80272980")]
 pub fn face_motion(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    let vx = reg(ip.x40_vel.x).abs();
+    let vx = reg(ip.vel.x).abs();
     if !(vx < fp::frsp(0.00001)) || reg(ip.facing_dir) == 0.0 {
-        ip.facing_dir = if reg(ip.x40_vel.x) >= 0.0 { 1.0 } else { -1.0 };
+        ip.facing_dir = if reg(ip.vel.x) >= 0.0 { 1.0 } else { -1.0 };
     }
     let dir = if reg(ip.facing_dir) == -1.0 { -1 } else { 1 };
-    ip.x378_itemColl.set_facing_dir(dir);
+    ip.coll.set_facing_dir(dir);
 }
 
 /// Lets fighters jump on it, `it_80274CAC` (showing the range with the debug menu's
@@ -589,9 +584,9 @@ pub fn face_motion(game: &mut Game, gobj: GObjId) {
 pub fn make_stompable(game: &mut Game, gobj: GObjId) {
     let show = game.it.db_menu.ShowEnemyStompRange;
     let ip = item_mut(game, gobj);
-    set_flag(&mut ip.xDD0_flag, 0, true);
+    set_flag(&mut ip.status_flags, 0, true);
     if show {
-        set_flag(&mut ip.xDAA, 3, true);
+        set_flag(&mut ip.debug_flags, 3, true);
     }
 }
 
@@ -601,25 +596,25 @@ pub fn make_stompable(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_802750F8")]
 pub fn first_frame(r: &mut Running, gobj: GObjId) {
     let id = super::item_of(r.game, gobj);
-    r.game.items[id.0].xDCC_flag.b3 = false;
+    r.game.items[id.0].state_flags.b3 = false;
     super::item::proc_phys(r, gobj);
     super::item::proc_coll(r, gobj);
-    r.game.items[id.0].xDCC_flag.b3 = true;
+    r.game.items[id.0].state_flags.b3 = true;
 }
 
 /// Turns hitbox `idx` on where its joint is now, `it_80272674`.
 #[doc(alias = "it_80272674")]
 pub fn start_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize) {
     let ip = item_mut(game, gobj);
-    hitcapsule::enable(&mut ip.x5D4_hitboxes[idx].hit);
-    ip.xDC8_word.flags.x16 = true;
+    hitcapsule::enable(&mut ip.hitboxes[idx].hit);
+    ip.flags.flags.hitbox_on = true;
     super::coll::update_hitbox(game, data, gobj, idx);
 }
 
 /// Marks the item holding still for its animation (`xDC8_word.x2`), `it_80274F10`.
 #[doc(alias = "it_80274F10")]
 pub fn hold_still(game: &mut Game, gobj: GObjId) {
-    item_mut(game, gobj).xDC8_word.flags.x2 = true;
+    item_mut(game, gobj).flags.flags.holds_still = true;
 }
 
 /// Whether the model still plays an animation, `it_80272C6C`.
@@ -633,7 +628,7 @@ pub fn is_animating(game: &Game, gobj: GObjId) -> bool {
 pub fn rescale(game: &mut Game, gobj: GObjId, j: JObjId, scale: f32) {
     item_mut(game, gobj).scl = scale;
     set_uniform_scale(game, j, scale);
-    let x3c = item(game, gobj).x3C;
+    let x3c = item(game, gobj).hitbox_scale;
     super::hitbox::set_hit_scale(game, gobj, x3c);
     scale_ranges(game, gobj);
     scale_boxes(game, gobj);
@@ -644,7 +639,7 @@ pub fn rescale(game: &mut Game, gobj: GObjId, j: JObjId, scale: f32) {
 pub fn scale_ranges(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
     let s = reg(ip.scl);
-    for v in [&mut ip.xBCC_unk, &mut ip.xBD4_grabRange] {
+    for v in [&mut ip.grab_offset, &mut ip.grab_range] {
         v.x = mem(fp::fmuls(reg(v.x), s));
         v.y = mem(fp::fmuls(reg(v.y), s));
     }
@@ -655,7 +650,7 @@ pub fn scale_ranges(game: &mut Game, gobj: GObjId) {
 pub fn scale_boxes(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
     let s = reg(ip.scl);
-    for b in [&mut ip.xBEC, &mut ip.xBDC] {
+    for b in [&mut ip.push_box, &mut ip.push_box_base] {
         b.top = mem(fp::fmuls(reg(b.top), s));
         b.bottom = mem(fp::fmuls(reg(b.bottom), s));
         b.right = mem(fp::fmuls(reg(b.right), s));
@@ -666,7 +661,7 @@ pub fn scale_boxes(game: &mut Game, gobj: GObjId) {
 /// Sets `xD09`, `it_80274ECC`.
 #[doc(alias = "it_80274ECC")]
 pub fn set_xd09(game: &mut Game, gobj: GObjId, on: bool) {
-    item_mut(game, gobj).xD09 = u8::from(on);
+    item_mut(game, gobj).no_catch = u8::from(on);
 }
 
 /// Arms the item to grab a fighter (`xDD0_flag.b5`), `it_80274F28`: fighters whose `x1A6A`
@@ -679,8 +674,8 @@ pub fn arm_grab(
     dealt: crate::game::handles::CodeRef,
     victim: crate::game::handles::CodeRef,
 ) {
-    super::set_flag(&mut ip.xDD0_flag, 5, true);
-    ip.xD08 = mask;
+    super::set_flag(&mut ip.status_flags, 5, true);
+    ip.grab_mask = mask;
     ip.grab_dealt = Some(dealt);
     ip.grabbed_for_victim = Some(victim);
 }
@@ -808,7 +803,7 @@ pub fn scale_by_owner(r: &mut Running, gobj: GObjId) {
     let scl = ip.scl;
     let j = super::jobj_of(r.game, gobj).expect("an item without a model");
     set_uniform_scale(r.game, j, scl);
-    let x3c = item(r.game, gobj).x3C;
+    let x3c = item(r.game, gobj).hitbox_scale;
     super::hitbox::set_hit_scale(r.game, gobj, x3c);
     scale_ranges(r.game, gobj);
     scale_boxes(r.game, gobj);
@@ -850,5 +845,5 @@ pub fn unbind_bone(r: &mut Running, gobj: GObjId, bone_id: i32) {
 #[doc(alias = "it_802750E8")]
 #[doc(alias("xdc0_has"))]
 pub fn script_flags_have(game: &Game, gobj: GObjId, mask: u32) -> bool {
-    item(game, gobj).xDC0 & mask != 0
+    item(game, gobj).push_flags & mask != 0
 }

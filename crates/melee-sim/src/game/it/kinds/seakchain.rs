@@ -143,38 +143,34 @@ impl Attrs {
 
 /// The chain's tip, its link at the hand, and its fighter.
 fn tip(r: &mut Running, gobj: GObjId) -> Option<ItemLinkId> {
-    item_mut(r.game, gobj).xDD4_itemVar.seak_chain().x0.get()
+    item_mut(r.game, gobj).vars.seak_chain().tip.get()
 }
 
 fn hand(r: &mut Running, gobj: GObjId) -> Option<ItemLinkId> {
-    item_mut(r.game, gobj).xDD4_itemVar.seak_chain().x4.get()
+    item_mut(r.game, gobj).vars.seak_chain().hand.get()
 }
 
 fn parent(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .seak_chain()
-        .parent_gobj
-        .get()
+    item_mut(r.game, gobj).vars.seak_chain().parent_gobj.get()
 }
 
 /// The chain pauses in hitlag, `it_802BAEEC` (`it_8026B724`).
 #[doc(alias = "it_802BAEEC")]
 #[doc(alias = "it_8026B724")]
 pub fn hitlag_start(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).xDC8_word.flags.x3 = true;
+    item_mut(r.game, gobj).flags.flags.hit_hitlag_asked = true;
 }
 
 /// The chain resumes, `it_802BAF0C` (`it_8026B73C`).
 #[doc(alias = "it_802BAF0C")]
 #[doc(alias = "it_8026B73C")]
 pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
-    let f = &mut item_mut(r.game, gobj).xDC8_word.flags;
-    if f.x7 {
-        f.x5 = true;
+    let f = &mut item_mut(r.game, gobj).flags.flags;
+    if f.hit_hitlag {
+        f.hit_hitlag_ending = true;
     }
-    if f.x3 {
-        f.x3 = false;
+    if f.hit_hitlag_asked {
+        f.hit_hitlag_asked = false;
     }
 }
 
@@ -214,7 +210,7 @@ pub fn make_links(r: &mut Running, gobj: GObjId, hand_joint: Option<JObjId>) {
         k.gobj = Some(g);
         k.vel = Vec3::new(0.0, 0.0, 0.0);
         k.pos = Vec3::new(0.0, 0.0, 0.0);
-        k.x2C_b0 = false;
+        k.out = false;
         link::init_coll(r, l, 1.0);
         let desc = a.joint(r, joint);
         let model = jobj::load_joint(&mut r.game.objs, r.data, desc);
@@ -225,9 +221,9 @@ pub fn make_links(r: &mut Running, gobj: GObjId, hand_joint: Option<JObjId>) {
         r.game.world.setup_gx_link(g, CodeRef(render), 6, 0);
         prev_link = Some(l);
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.seak_chain();
-    v.x0.set(tail);
-    v.x4.set(head);
+    let v = item_mut(r.game, gobj).vars.seak_chain();
+    v.tip.set(tail);
+    v.hand.set(head);
 }
 
 /// `inlineA0`: the chain lets its owner go (`ftSk_SpecialS_80110E4C`) and its links go.
@@ -237,7 +233,7 @@ fn release(r: &mut Running, gobj: GObjId) {
     }
     item_mut(r.game, gobj).owner = None;
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .seak_chain()
         .parent_gobj
         .set(None);
@@ -275,10 +271,10 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Opt
     spawn.x44_flag[0] |= 0x80;
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
-    let v = item_mut(r.game, gobj).xDD4_itemVar.seak_chain();
+    let v = item_mut(r.game, gobj).vars.seak_chain();
     v.parent_gobj.set(Some(parent));
-    v.x10.set(0);
-    v.x14.set(0);
+    v.swing_arg.set(0);
+    v.unread_14.set(0);
     for h in &mut v.history {
         h.set(Vec3::new(0.0, 0.0, 0.0));
     }
@@ -408,7 +404,7 @@ fn link_coll_clank(r: &mut Running, l: ItemLinkId, clank: bool, rise: f64) -> (i
     let mut consulted = false;
     let next = lk(r.game, l).next;
     let from = match next {
-        Some(n) if lk(r.game, n).x2C_b0 => lk(r.game, n).pos,
+        Some(n) if lk(r.game, n).out => lk(r.game, n).pos,
         _ => lk(r.game, l).coll_data.cur_pos,
     };
     let k = link_mut(r.game, l);
@@ -419,23 +415,23 @@ fn link_coll_clank(r: &mut Running, l: ItemLinkId, clank: bool, rise: f64) -> (i
     link_mut(r.game, l).coll_data = cd;
     if hit {
         let k = lk(r.game, l);
-        consulted = !k.x2C_b1 && !k.x2C_b2;
-        if !k.x2C_b1 && clank && !k.x2C_b2 {
+        consulted = !k.touching && !k.sounded;
+        if !k.touching && clank && !k.sounded {
             r.sfx_play(SFX_CLANK, 0x7F, 0x40);
             // 0xF, truncated to the bit.
-            link_mut(r.game, l).x2C_b2 = true;
+            link_mut(r.game, l).sounded = true;
         }
-        link_mut(r.game, l).x2C_b1 = true;
+        link_mut(r.game, l).touching = true;
     } else {
         let k = link_mut(r.game, l);
-        k.x2C_b1 = false;
-        if k.x2C_b2 {
-            k.x2C_b2 = false;
+        k.touching = false;
+        if k.sounded {
+            k.sounded = false;
         }
     }
     let between = {
         let k = lk(r.game, l);
-        matches!(k.next, Some(n) if lk(r.game, n).x2C_b0) && k.prev.is_some()
+        matches!(k.next, Some(n) if lk(r.game, n).out) && k.prev.is_some()
     };
     let k = link_mut(r.game, l);
     let env = k.coll_data.env_flags;
@@ -508,7 +504,7 @@ fn extend(r: &mut Running, l: ItemLinkId, at: Vec3, a: Attrs) -> i32 {
     let mut cur = l;
     let mut prev = lk(r.game, l).next;
     while let Some(p) = prev {
-        if lk(r.game, p).x2C_b0 {
+        if lk(r.game, p).out {
             let from = lk(r.game, cur).pos;
             if direction(lk(r.game, p).pos, from, &mut d) > len {
                 hold_to(r, p, cur, d, len);
@@ -518,7 +514,7 @@ fn extend(r: &mut Running, l: ItemLinkId, at: Vec3, a: Attrs) -> i32 {
             let from = lk(r.game, cur).pos;
             if direction(at, from, &mut d) > len {
                 hold_to(r, p, cur, d, len);
-                link_mut(r.game, p).x2C_b0 = true;
+                link_mut(r.game, p).out = true;
                 place_coll(r.game, p);
             } else {
                 return i32::from(hit != 0);
@@ -546,7 +542,7 @@ fn extend_falling(r: &mut Running, l: ItemLinkId, at: Vec3, a: Attrs) -> i32 {
     let mut cur = l;
     let mut prev = lk(r.game, l).next;
     while let Some(p) = prev {
-        if lk(r.game, p).x2C_b0 {
+        if lk(r.game, p).out {
             let k = link_mut(r.game, p);
             k.vel.y = mem(fp::fnmsubs(g, fall, reg(k.vel.y)));
             fall = fp::fmuls(fall, x34);
@@ -560,7 +556,7 @@ fn extend_falling(r: &mut Running, l: ItemLinkId, at: Vec3, a: Attrs) -> i32 {
             let from = lk(r.game, cur).pos;
             if direction(at, from, &mut d) > len {
                 hold_to(r, p, cur, d, len);
-                link_mut(r.game, p).x2C_b0 = true;
+                link_mut(r.game, p).out = true;
                 place_coll(r.game, p);
             } else {
                 return i32::from(hit != 0);
@@ -613,18 +609,18 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
     let mut cur = l;
     let mut iter = lk(r.game, l).prev;
     while let Some(i) = iter {
-        if lk(r.game, cur).x2C_b0 {
+        if lk(r.game, cur).out {
             break;
         }
         cur = i;
         iter = lk(r.game, i).prev;
     }
     let last = fp::fctiwz(fp::fmsubs(0.5, fp::frsp(f64::from(n)), 1.0)) as usize;
-    let v = item_mut(r.game, gobj).xDD4_itemVar.seak_chain();
+    let v = item_mut(r.game, gobj).vars.seak_chain();
     // A new chain's first swing finds `x18` as its block's last item left it (the union's
     // bytes, `ItemVars::left`): it counts as read only where a link's clank sound looks at
     // it (`link_coll_clank`).
-    let coll_clank = *v.x18.peek() != 0;
+    let coll_clank = *v.coll_state.peek() != 0;
     let parent_gobj = v.parent_gobj.get().expect("a chain without its fighter");
     // The history moves down a step.
     for i in 0..last {
@@ -656,10 +652,10 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
         0.0
     };
     let x1c_state = r.seak_special_s_hitbox_frames(parent_gobj);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.seak_chain();
+    let v = item_mut(r.game, gobj).vars.seak_chain();
     v.history[0].set_x(hx);
     v.history[0].set_y(hy);
-    v.x18.set(x1c_state);
+    v.coll_state.set(x1c_state);
     // The first out link.
     let k = link_mut(r.game, cur);
     k.vel.x = mem(fp::fmadds(reg(hx), x1c, reg(k.vel.x)));
@@ -701,7 +697,7 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
         k.pos.y = mem(fp::fmadds(reg(d.y), len, reg(target.y)));
         k.pos.z = mem(fp::fmadds(reg(d.z), len, reg(target.z)));
     }
-    let use_arg = item_mut(r.game, gobj).xDD4_itemVar.seak_chain().x10.get();
+    let use_arg = item_mut(r.game, gobj).vars.seak_chain().swing_arg.get();
     let lx = reg(r.seak_stick_x(parent_gobj));
     let ly = reg(r.seak_stick_y(parent_gobj));
     let mode = if abs(lx) < dead && abs(ly) < dead {
@@ -715,7 +711,7 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
     let mut env_flags = None;
     while let Some(i) = iter {
         let idx = fp::fctiwz(fp::fmuls(0.5, fp::frsp(f64::from(counter + 1)))) as usize;
-        let h = item_mut(r.game, gobj).xDD4_itemVar.seak_chain().history[idx].get();
+        let h = item_mut(r.game, gobj).vars.seak_chain().history[idx].get();
         let mut ddx = fp::fmuls(scale, fp::fmuls(reg(h.x), x1c));
         let ddy = fp::fmuls(scale, fp::fmuls(reg(h.y), x20));
         if use_arg != 0 {
@@ -762,7 +758,7 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
                 // `it_802BBAEC`, out of line.
                 let (env, consulted) = link_coll_clank(r, i, coll_clank, len);
                 if consulted {
-                    item_mut(r.game, gobj).xDD4_itemVar.seak_chain().x18.get();
+                    item_mut(r.game, gobj).vars.seak_chain().coll_state.get();
                 }
                 env
             } else {
@@ -802,11 +798,7 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
              first out one)"
         );
     };
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .seak_chain()
-        .x10
-        .set(env);
+    item_mut(r.game, gobj).vars.seak_chain().swing_arg.set(env);
 }
 
 /// The pull, `it_802BC94C` (`Item_RetractChain`): the links within `speed` of the hand go in,
@@ -818,7 +810,7 @@ fn wind_in(r: &mut Running, l: ItemLinkId, at: Vec3, a: Attrs, speed: f64) -> bo
     let mut cur = l;
     let mut next = lk(r.game, l).prev;
     while let Some(n) = next {
-        if lk(r.game, cur).x2C_b0 {
+        if lk(r.game, cur).out {
             break;
         }
         cur = n;
@@ -829,7 +821,7 @@ fn wind_in(r: &mut Running, l: ItemLinkId, at: Vec3, a: Attrs, speed: f64) -> bo
         if !(speed > distance) {
             break;
         }
-        link_mut(r.game, cur).x2C_b0 = false;
+        link_mut(r.game, cur).out = false;
         distance = direction(lk(r.game, n).pos, at, &mut d);
         cur = n;
         next = lk(r.game, n).prev;
@@ -864,7 +856,7 @@ pub fn line_up(r: &mut Running, gobj: GObjId, at: Vec3) {
     let stride = a.count(r) / 3;
     let parent_gobj = parent(r, gobj);
     let mut l = hand(r, gobj).expect("a chain without links");
-    while !lk(r.game, l).x2C_b0 {
+    while !lk(r.game, l).out {
         l = lk(r.game, l).prev.expect("a chain with no link out");
     }
     let mut count = 0;
@@ -872,7 +864,7 @@ pub fn line_up(r: &mut Running, gobj: GObjId, at: Vec3) {
     while let Some(l) = cur {
         let k = lk(r.game, l);
         let pos0 = match k.next {
-            Some(n) if lk(r.game, n).x2C_b0 => lk(r.game, n).pos,
+            Some(n) if lk(r.game, n).out => lk(r.game, n).pos,
             _ => at,
         };
         let pos1 = match k.prev {
@@ -954,7 +946,7 @@ pub fn throw(r: &mut Running, gobj: GObjId, vel: Vec3) {
     let k = link_mut(r.game, l);
     k.coll_data.cur_pos = center;
     k.coll_data.last_pos = k.coll_data.cur_pos;
-    k.x2C_b0 = true;
+    k.out = true;
     k.vel = vel;
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     item_mut(r.game, gobj).on_accessory = Some(CodeRef(THROWN));
@@ -964,7 +956,7 @@ pub fn throw(r: &mut Running, gobj: GObjId, vel: Vec3) {
 #[doc(alias = "itSeakChain_Logic54_EvtUnk")]
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.seak_chain();
+    let v = item_mut(r.game, gobj).vars.seak_chain();
     if v.parent_gobj.get() == other {
         v.parent_gobj.set(None);
     }

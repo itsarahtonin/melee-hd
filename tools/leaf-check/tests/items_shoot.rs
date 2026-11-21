@@ -288,7 +288,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         // `it_8027649C` reads from an unset stack vector, which the port refuses. A neighbour's
         // state that touched none is one the game never sticks from.
         if name == "it_80290314"
-            && it::maplib::surface_normal(&it::item(g.game, gobj).x378_itemColl).is_none()
+            && it::maplib::surface_normal(&it::item(g.game, gobj).coll).is_none()
         {
             panic!("{SKIP}{name} from a state that touched no surface");
         }

@@ -692,9 +692,7 @@ pub fn proc_tools(r: &mut Running, gobj: GObjId) {
                 -1.0
             };
             if let Some(item) = super::super::it::kinds::tools::spawn(r, pos, which, facing) {
-                super::super::it::item_mut(r.game, item)
-                    .x378_itemColl
-                    .joint_id_only = 50;
+                super::super::it::item_mut(r.game, item).coll.joint_id_only = 50;
             }
         }
         let v = r.game.grounds[g.0].u.flatzone_tools();

@@ -245,7 +245,7 @@ fn abs(x: f32) -> f64 {
 
 /// Stops (the velocity's z, then y, then x).
 fn stop(r: &mut Running, gobj: GObjId) {
-    let v = &mut item_mut(r.game, gobj).x40_vel;
+    let v = &mut item_mut(r.game, gobj).vel;
     v.z = 0.0;
     v.y = 0.0;
     v.x = 0.0;
@@ -296,10 +296,10 @@ pub fn count_grace(r: &mut Running, gobj: GObjId) {
 /// slope), else it slides on.
 #[doc(alias = "fn_802DDC8C")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
-    let b = item(r.game, gobj).xC0C.clone();
+    let b = item(r.game, gobj).kind_coll_box.clone();
     maplib::set_box(r.game, gobj, b);
     let x8 = attr(r, gobj, 8);
-    if abs(item(r.game, gobj).x40_vel.x) < reg(x8) {
+    if abs(item(r.game, gobj).vel.x) < reg(x8) {
         stop(r, gobj);
         if !maplib::slides(r.game, r.data, gobj) {
             stopped(r, gobj);
@@ -322,15 +322,15 @@ fn to_f32(i: i32) -> f64 {
 pub fn knocked(r: &mut Running, gobj: GObjId) {
     let x14 = attr(r, gobj, 0x14);
     let ip = item_mut(r.game, gobj);
-    let push = fp::fmuls(to_f32(ip.xCA0), reg(x14));
-    let away = fp::fneg(reg(ip.xCCC_incDamageDirection));
+    let push = fp::fmuls(to_f32(ip.hit_damage), reg(x14));
+    let away = fp::fneg(reg(ip.damage_dir));
     match ip.msid {
         0 | 1 | 3 | 4 | 9 | 10 => {
-            ip.x40_vel.x = mem(fp::fmuls(away, push));
+            ip.vel.x = mem(fp::fmuls(away, push));
             set_bit(r, gobj, off::FLAGS, B1, true);
         }
         5..=8 => {
-            ip.x40_vel.x = mem(fp::fmadds(away, push, reg(ip.x40_vel.x)));
+            ip.vel.x = mem(fp::fmadds(away, push, reg(ip.vel.x)));
             set_bit(r, gobj, off::FLAGS, B1, true);
         }
         _ => {}
@@ -361,9 +361,9 @@ fn pop_up(r: &mut Running, gobj: GObjId) {
     hitbox::set_hit_ids(r.game, gobj);
     let f = r.game.objs.rng.draw_f32();
     let ip = item_mut(r.game, gobj);
-    let vx = fp::fmuls(fp::fneg(reg(ip.x40_vel.x)), reg(xc));
-    ip.x40_vel.x = mem(fp::fmuls(vx, reg(f)));
-    ip.x40_vel.y = x10;
+    let vx = fp::fmuls(fp::fneg(reg(ip.vel.x)), reg(xc));
+    ip.vel.x = mem(fp::fmuls(vx, reg(f)));
+    ip.vel.y = x10;
     maplib::enter_air(ip);
     set_bit(r, gobj, off::POPPED, B0, true);
     set_f32(r, gobj, off::STOMP_DELAY, x34);
@@ -382,7 +382,7 @@ pub fn stomped(r: &mut Running, gobj: GObjId) {
         0 | 1 | 3 | 4 | 9 => {
             let x1c = attr(r, gobj, 0x1C);
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.x = mem(fp::fmuls(reg(x1c), fp::fneg(reg(ip.xCD0))));
+            ip.vel.x = mem(fp::fmuls(reg(x1c), fp::fneg(reg(ip.stomp_dir))));
             coll::take_stomper(r.game, gobj);
             set_bit(r, gobj, off::FLAGS, B1, true);
             if item(r.game, gobj).ground_or_air == GA_AIR {
@@ -482,7 +482,7 @@ fn roll(r: &mut Running, gobj: GObjId) {
     let rate = attr(r, gobj, 0x20);
     maplib::tilt_on_floor(r.game, r.data, gobj);
     let child = jobj_of(r.game, gobj).and_then(|j| r.game.objs.jobjs[j].child);
-    let turn = fp::fmuls(reg(rate), abs(item(r.game, gobj).x40_vel.x));
+    let turn = fp::fmuls(reg(rate), abs(item(r.game, gobj).vel.x));
     let j = child.expect("a shell without a model child");
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
         o.rotate.y = mem(fp::fadds(reg(o.rotate.y), turn));
@@ -508,7 +508,7 @@ pub fn fell(r: &mut Running, gobj: GObjId) {
 /// after `xE04` frames.
 #[doc(alias = "itZrshell_UnkMotion1_Anim")]
 pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
-    let stompable = super::super::flag(item(r.game, gobj).xDD0_flag, 0);
+    let stompable = super::super::flag(item(r.game, gobj).status_flags, 0);
     if bit(r, gobj, off::POPPED, B0) && !stompable {
         let d = get_f32(r, gobj, off::STOMP_DELAY);
         if reg(d) <= 0.0 {
@@ -605,21 +605,21 @@ fn start_slide(r: &mut Running, gobj: GObjId, fast: i32, slow: i32, ground: bool
     hitbox::let_own_items_hit(r.game, gobj);
     let life = common_data(r.game).u32(r.data, data::common::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, mem(fp::frsp(f64::from(life))));
-    item_mut(r.game, gobj).xD5C = 0;
+    item_mut(r.game, gobj).skid = 0;
     set_f32(r, gobj, off::HIT_DELAY, x24);
     set_f32(r, gobj, off::TRAIL, x38);
     set_bit(r, gobj, off::POPPED, B0, false);
     let ip = item_mut(r.game, gobj);
-    if abs(ip.x40_vel.x) > reg(x4) {
-        ip.x40_vel.x = if reg(ip.x40_vel.x) < 0.0 { -1.0 } else { 1.0 };
-        ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), reg(x4)));
+    if abs(ip.vel.x) > reg(x4) {
+        ip.vel.x = if reg(ip.vel.x) < 0.0 { -1.0 } else { 1.0 };
+        ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), reg(x4)));
     }
     lib2725::face_motion(r.game, gobj);
     set(r, gobj, off::TIMER, 0);
     if ground {
         forget_bone(r, gobj);
     }
-    if abs(item(r.game, gobj).x40_vel.x) < reg(x8) {
+    if abs(item(r.game, gobj).vel.x) < reg(x8) {
         change_state(r, gobj, slow, change::ANIM_UPDATE);
         lib26b1::enable_pickup(r.game, gobj);
         if ground {
@@ -644,7 +644,7 @@ pub fn slide(r: &mut Running, gobj: GObjId) {
 pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
     let d = get_f32(r, gobj, off::HIT_DELAY);
     if reg(d) <= 0.0 {
-        if !item(r.game, gobj).xDCD_flag.x0.b5 {
+        if !item(r.game, gobj).hit_flags.x0.b5 {
             hitbox::set_hit_ids(r.game, gobj);
         }
     } else {
@@ -663,12 +663,12 @@ pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
 pub fn phys6(r: &mut Running, gobj: GObjId) {
     let (x8, x30) = (attr(r, gobj, 8), attr(r, gobj, 0x30));
     let ip = item(r.game, gobj);
-    if abs(ip.x40_vel.x) < reg(x8) && !ip.xDC8_word.flags.x15 {
+    if abs(ip.vel.x) < reg(x8) && !ip.flags.flags.pickup {
         lib26b1::enable_pickup(r.game, gobj);
         lib2725::clear_hitboxes(r.game, r.data, gobj);
         hitbox::set_hit_ids2(r.game, gobj);
     }
-    if abs(item(r.game, gobj).x40_vel.x) < reg(x30) {
+    if abs(item(r.game, gobj).vel.x) < reg(x30) {
         stop(r, gobj);
         if !maplib::slides(r.game, r.data, gobj) {
             rest(r, gobj, UNK_0X1, false);
@@ -713,7 +713,7 @@ pub fn entered_air(r: &mut Running, gobj: GObjId) {
     }
     forget_bone(r, gobj);
     set_bit(r, gobj, off::POPPED, B0, false);
-    item_mut(r.game, gobj).xDC8_word.flags.x1F = true;
+    item_mut(r.game, gobj).flags.flags.may_skid = true;
     change_state(r, gobj, 9, change::ANIM_UPDATE);
 }
 
@@ -722,7 +722,7 @@ pub fn entered_air(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itZrshell_UnkMotion9_Phys")]
 pub fn phys9(r: &mut Running, gobj: GObjId) {
     let x30 = attr(r, gobj, 0x30);
-    if abs(item(r.game, gobj).x40_vel.x) < reg(x30) {
+    if abs(item(r.game, gobj).vel.x) < reg(x30) {
         stop(r, gobj);
         rest(r, gobj, UNK_0X1, false);
     }
@@ -753,11 +753,11 @@ pub fn coll9(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802DF230")]
 pub fn wake(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.xC9C = 0;
-    ip.xCA0 = 0;
+    ip.damage_taken = 0;
+    ip.hit_damage = 0;
     hitbox::end_blink(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x1F = false;
+    item_mut(r.game, gobj).flags.flags.may_skid = false;
     stop(r, gobj);
     set_hurt(r, gobj, true);
     set(r, gobj, off::TIMER, 20);
@@ -802,12 +802,12 @@ pub fn wake(r: &mut Running, gobj: GObjId) {
         let n = get(r, gobj, off::TIMER);
         set_f32(r, gobj, off::TURN, mem(fp::fdivs(factor, to_f32(n))));
     }
-    if item(r.game, gobj).xDC8_word.flags.x13 {
-        let vel = item(r.game, gobj).x40_vel;
+    if item(r.game, gobj).flags.flags.held {
+        let vel = item(r.game, gobj).vel;
         super::super::release::let_go(r, gobj, vel);
         let max = attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED_MAX);
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), reg(max)));
+        ip.vel.y = mem(fp::fsubs(reg(ip.vel.y), reg(max)));
         lib26b1::disable_pickup(r.game, gobj);
         set(r, gobj, off::HELD, 1);
         maplib::enter_air(item_mut(r.game, gobj));
@@ -837,7 +837,7 @@ pub fn anim11(r: &mut Running, gobj: GObjId) -> bool {
         set(r, gobj, off::TIMER, t.wrapping_sub(1));
     }
     if lib2725::is_animating(r.game, gobj) {
-        let saved_vy = reg(item(r.game, gobj).x40_vel.y);
+        let saved_vy = reg(item(r.game, gobj).vel.y);
         let bone = bone1(r, gobj);
         follow_bone(r, bone, gobj);
         let w = get(r, gobj, off::WAKE);
@@ -848,13 +848,13 @@ pub fn anim11(r: &mut Running, gobj: GObjId) -> bool {
             let accel = reg(a.f32(r.data, data::attr::FALL_SPEED));
             let max = a.f32(r.data, data::attr::FALL_SPEED_MAX);
             let ip = item_mut(r.game, gobj);
-            if reg(ip.x40_vel.y) != 0.0 {
-                ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), accel));
-                if reg(ip.x40_vel.y) > saved_vy {
-                    ip.x40_vel.y = mem(fp::fsubs(saved_vy, accel));
+            if reg(ip.vel.y) != 0.0 {
+                ip.vel.y = mem(fp::fsubs(reg(ip.vel.y), accel));
+                if reg(ip.vel.y) > saved_vy {
+                    ip.vel.y = mem(fp::fsubs(saved_vy, accel));
                 }
             } else {
-                ip.x40_vel.y = max;
+                ip.vel.y = max;
             }
         } else {
             stop(r, gobj);
@@ -883,7 +883,7 @@ pub fn anim11(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itZrshell_UnkMotion11_Phys")]
 pub fn phys11(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    if reg(ip.x40_vel.y) > 0.0 {
+    if reg(ip.vel.y) > 0.0 {
         maplib::enter_air(ip);
     }
 }
@@ -910,7 +910,7 @@ pub fn coll_waking(r: &mut Running, gobj: GObjId) -> bool {
 pub fn bounced(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     maplib::enter_air(ip);
-    ip.xDC8_word.flags.x1F = false;
+    ip.flags.flags.may_skid = false;
     set_hurt(r, gobj, false);
     hitbox::start_blink(r.game, gobj);
     change_state(r, gobj, 0xA, change::ANIM_UPDATE);
@@ -935,7 +935,7 @@ pub fn anim10(r: &mut Running, gobj: GObjId) -> bool {
 pub fn phys10(r: &mut Running, gobj: GObjId) {
     let accel = reg(attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), accel));
+    ip.vel.y = mem(fp::fsubs(reg(ip.vel.y), accel));
 }
 
 /// `itZGShell_Logic11_DmgDealt` (the red one's `itZRShell_Logic12_DmgDealt`).
@@ -1046,7 +1046,7 @@ pub fn forget_bone(r: &mut Running, gobj: GObjId) {
 /// Its model's bone 1 (`xBBC_dynamicBoneTable->bones[1]`).
 fn bone1(r: &Running, gobj: GObjId) -> Option<crate::hsd::jobj::JObjId> {
     let t = item(r.game, gobj)
-        .xBBC_dynamicBoneTable
+        .bone_table
         .expect("a shell without bones");
     r.game.it.bone_tables[t.0].bones[1]
 }
@@ -1062,9 +1062,9 @@ pub fn follow_bone(r: &mut Running, j: Option<crate::hsd::jobj::JObjId>, gobj: G
     let prev = zako::bytes(r.game, gobj).vec(off::BONE);
     let facing = reg(item(r.game, gobj).facing_dir);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(facing, fp::fsubs(reg(pos.z), reg(prev.z))));
-    ip.x40_vel.y = mem(fp::fsubs(reg(pos.y), reg(prev.y)));
-    ip.x40_vel.z = mem(fp::fsubs(reg(pos.x), reg(prev.x)));
+    ip.vel.x = mem(fp::fmuls(facing, fp::fsubs(reg(pos.z), reg(prev.z))));
+    ip.vel.y = mem(fp::fsubs(reg(pos.y), reg(prev.y)));
+    ip.vel.z = mem(fp::fsubs(reg(pos.x), reg(prev.x)));
     zako::bytes(r.game, gobj).set_vec(off::BONE, pos);
     jobj::set_translate(&mut r.game.objs.jobjs, j, Vec3::new(0.0, 0.0, 0.0));
 }
@@ -1114,6 +1114,6 @@ fn face(r: &mut Running, gobj: GObjId, facing: i32, kind: i32) {
     } else {
         1
     };
-    ip.x378_itemColl.set_facing_dir(d);
+    ip.coll.set_facing_dir(d);
     set(r, gobj, off::KOOPA, kind);
 }

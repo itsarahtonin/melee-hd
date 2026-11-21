@@ -88,8 +88,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "it_802D5CF8")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.xDAC_itcmd_var0 = 0;
-    ip.xDB0_itcmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    ip.cmd_var1 = 0;
     let scl = ip.scl;
     let v = pokemon::vars(r.game, gobj);
     v.set_bit(FLAGS, LIT, false);
@@ -105,7 +105,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// out when it asks (`xDB0`).
 #[doc(alias = "it_802D5D7C")]
 pub fn accessory(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
+    if item(r.game, gobj).cmd_var0 != 0 {
         if !pokemon::vars(r.game, gobj).bit(FLAGS, LIT) {
             pokemon::vars(r.game, gobj).set_bit(FLAGS, LIT, true);
             let bone = table_bone(r.game, gobj, 2);
@@ -116,12 +116,12 @@ pub fn accessory(r: &mut Running, gobj: GObjId) {
         let id = super::super::item::next_attack_id(r.game);
         let facing = item(r.game, gobj).facing_dir;
         spawn_flame(r, gobj, pos, id, facing);
-        item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+        item_mut(r.game, gobj).cmd_var0 = 0;
     }
-    if item(r.game, gobj).xDB0_itcmd_var1 != 0 {
+    if item(r.game, gobj).cmd_var1 != 0 {
         ef::destroy_all(r, gobj);
         pokemon::vars(r.game, gobj).set_bit(FLAGS, OUT, true);
-        item_mut(r.game, gobj).xDB0_itcmd_var1 = 0;
+        item_mut(r.game, gobj).cmd_var1 = 0;
     }
 }
 
@@ -167,7 +167,7 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
     lib2725::clear_velocity(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(ACCESSORY));
-    set_flag(&mut ip.xDD1_flag, 1, true);
+    set_flag(&mut ip.phys_flags, 1, true);
 }
 
 /// `itHinoarashi_UnkMotion1_Anim`: gone when its animation ends; while its flames burn, a
@@ -228,7 +228,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_2725_Logic27_DmgReceived")]
 pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     let limit = attr_f32(r, gobj, 4);
-    let taken = item(r.game, gobj).xC9C;
+    let taken = item(r.game, gobj).damage_taken;
     if fp::frsp(f64::from(taken)) >= reg(limit) {
         pokemon::launch(r, gobj);
         maplib::enter_air(item_mut(r.game, gobj));
@@ -278,7 +278,7 @@ pub fn touch_normal(r: &mut Running, gobj: GObjId, coll: i32) {
     let v = pokemon::vars(r.game, gobj);
     let a = wrap_angle(v.f32(ANGLE), true);
     v.set_f32(ANGLE, a);
-    let c = &item(r.game, gobj).x378_itemColl;
+    let c = &item(r.game, gobj).coll;
     let mut n = Vec3::new(0.0, 0.0, 0.0);
     for (bit, s) in [
         (1, c.floor.normal),
@@ -374,10 +374,10 @@ pub fn spawn_flame(r: &mut Running, gobj: GObjId, pos: Vec3, attack_id: u32, fac
     let rand = reg(r.game.objs.rng.draw_f32());
     let speed = fp::fmadds(fp::fsubs(reg(fast), reg(slow)), rand, reg(slow));
     let ip = item_mut(r.game, flame);
-    ip.x40_vel.x = mem(fp::fmuls(speed, reg(crate::math::cos(angle))));
-    ip.x40_vel.y = mem(fp::fmuls(speed, reg(crate::math::sin(angle))));
-    ip.x40_vel.z = 0.0;
-    ip.xDCC_flag.b3 = false;
+    ip.vel.x = mem(fp::fmuls(speed, reg(crate::math::cos(angle))));
+    ip.vel.y = mem(fp::fmuls(speed, reg(crate::math::sin(angle))));
+    ip.vel.z = 0.0;
+    ip.state_flags.b3 = false;
     let which = r.game.objs.rng.below(4);
     flame_start(r, flame, which);
 }

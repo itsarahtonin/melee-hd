@@ -93,7 +93,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         DESTROYED => destroyed(r, gobj),
         PHYS_0 => physics_0(r, gobj),
-        PHYS_1 | PHYS_2 => item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0),
+        PHYS_1 | PHYS_2 => item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0),
         _ => return false,
     }
     true
@@ -123,16 +123,16 @@ pub fn released(r: &Running, gobj: GObjId) -> bool {
 pub fn hit_stage(r: &mut Running, gobj: GObjId) -> bool {
     ground::air(r, gobj);
     let ip = item(r.game, gobj);
-    let env = ip.x378_itemColl.env_flags;
+    let env = ip.coll.env_flags;
     let mut hit = false;
-    if ip.x40_vel.y > 0.0 {
+    if ip.vel.y > 0.0 {
         if env & (CEILING_PUSH | CEILING_HUG) != 0 {
             hit = true;
         }
     } else if env & (FLOOR_PUSH | FLOOR_HUG) != 0 {
         hit = true;
     }
-    if ip.x40_vel.x > 0.0 {
+    if ip.vel.x > 0.0 {
         if env & LEFT_WALL_MASK != 0 {
             hit = true;
         }
@@ -171,16 +171,16 @@ pub fn spawn(
     let life = attr_f32(r, flash, attr::LIFETIMER);
     let ip = item_mut(r.game, flash);
     // `Item_ClearCmdVars`.
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
     lib2725::set_lifetime(r.game, r.data, flash, life);
-    let v = item_mut(r.game, flash).xDD4_itemVar.pk_flush();
-    v.xDD8_PKFlash.set(0.0);
-    v.xDDC_PKFlash.set(0);
-    v.xDE0_PKFlash_Owner.set(Some(parent));
-    v.xDE4_PKFlash.set(0);
+    let v = item_mut(r.game, flash).vars.pk_flush();
+    v.scale.set(0.0);
+    v.frames.set(0);
+    v.owner.set(Some(parent));
+    v.unread_e4.set(0);
     start(r, flash);
     Some(flash)
 }
@@ -192,7 +192,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     lib2725::clear_hitboxes(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
     let (owner, kind) = (ip.owner, ip.kind);
-    let field = ip.xDD4_itemVar.pk_flush().xDE0_PKFlash_Owner.get();
+    let field = ip.vars.pk_flush().owner.get();
     if let Some(ness) = field {
         if owner == Some(ness) {
             match ItKind::of(kind) {
@@ -201,13 +201,9 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
                 _ => {}
             }
         }
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .pk_flush()
-            .xDE0_PKFlash_Owner
-            .set(None);
+        item_mut(r.game, gobj).vars.pk_flush().owner.set(None);
     }
-    item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
+    item_mut(r.game, gobj).flags.flags.held = false;
 }
 
 /// The flash loses Ness, `it_802AAA50`.
@@ -215,8 +211,8 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 pub fn let_go(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.owner = None;
-    ip.xDD4_itemVar.pk_flush().xDE0_PKFlash_Owner.set(None);
-    ip.xDC8_word.flags.x13 = false;
+    ip.vars.pk_flush().owner.set(None);
+    ip.flags.flags.held = false;
 }
 
 /// The flash's start, `it_802AAA80`: state 0, its lifetime, and up and away at its angle.
@@ -224,14 +220,14 @@ pub fn let_go(r: &mut Running, gobj: GObjId) {
 pub fn start(r: &mut Running, gobj: GObjId) {
     // `Item_ClearFlagsAndEnterState(gobj, ip, 0)`.
     lib26b1::disable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
+    item_mut(r.game, gobj).flags.flags.held = false;
     lib2725::show(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     let life = attr_f32(r, gobj, attr::LIFETIMER);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.pk_flush();
-    v.xDD8_PKFlash.set(0.0);
-    v.xDDC_PKFlash.set(0);
+    let v = item_mut(r.game, gobj).vars.pk_flush();
+    v.scale.set(0.0);
+    v.frames.set(0);
     let unk1 = reg(attr_f32(r, gobj, attr::UNK1));
     let rise = reg(attr_f32(r, gobj, attr::PEAK_RISE_HEIGHT));
     let ip = item_mut(r.game, gobj);
@@ -240,9 +236,9 @@ pub fn start(r: &mut Running, gobj: GObjId) {
         reg(ip.facing_dir),
         fp::frsp(fp::fdiv(std::f64::consts::PI, 2.0)),
     ));
-    ip.x40_vel.x = mem(fp::fmuls(fp::fneg(rise), reg(math::cos(angle))));
-    ip.x40_vel.y = mem(fp::fmuls(rise, reg(math::sin(angle))));
-    ip.x40_vel.z = 0.0;
+    ip.vel.x = mem(fp::fmuls(fp::fneg(rise), reg(math::cos(angle))));
+    ip.vel.y = mem(fp::fmuls(rise, reg(math::sin(angle))));
+    ip.vel.z = 0.0;
     let owner = ip.owner;
     debug_owner_bubbles(r.game, gobj, owner);
 }
@@ -262,8 +258,8 @@ fn to_burst(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     let delay = attr_f32(r, gobj, attr::EXPLOSION_DELAY);
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = delay;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.life_timer = delay;
+    ip.cmd_var0 = 0;
 }
 
 /// The flash's scale by its growth.
@@ -273,11 +269,7 @@ fn set_scale(r: &mut Running, gobj: GObjId) {
         reg(attr_f32(r, gobj, attr::GRAPHIC_SIZE_GROWTH_MUL)),
         reg(attr_f32(r, gobj, attr::HITBOX_SIZE_MUL)),
     );
-    let grown = reg(item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .pk_flush()
-        .xDD8_PKFlash
-        .get());
+    let grown = reg(item_mut(r.game, gobj).vars.pk_flush().scale.get());
     let s = mem(fp::fmadds(
         grown,
         fp::fdivs(fp::fsubs(growth, init), full),
@@ -297,13 +289,13 @@ pub fn animate_0(r: &mut Running, gobj: GObjId) -> bool {
     let full = attr_f32(r, gobj, attr::HITBOX_SIZE_MUL);
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
-    let v = ip.xDD4_itemVar.pk_flush();
-    if v.xDDC_PKFlash.get() == 0 {
-        v.xDD8_PKFlash.update(|g| mem(fp::fadds(reg(g), 1.0)));
-        if reg(v.xDD8_PKFlash.get()) >= reg(full) {
-            v.xDD8_PKFlash.set(full);
+    let v = ip.vars.pk_flush();
+    if v.frames.get() == 0 {
+        v.scale.update(|g| mem(fp::fadds(reg(g), 1.0)));
+        if reg(v.scale.get()) >= reg(full) {
+            v.scale.set(full);
         }
-        if let Some(ness) = v.xDE0_PKFlash_Owner.get()
+        if let Some(ness) = v.owner.get()
             && owner == Some(ness)
             && !owner_holding(r, gobj, ness)
         {
@@ -323,21 +315,16 @@ pub fn animate_0(r: &mut Running, gobj: GObjId) -> bool {
 pub fn animate_1(r: &mut Running, gobj: GObjId) -> bool {
     let delay = attr_f32(r, gobj, attr::EXPLOSION_DELAY);
     let ip = item_mut(r.game, gobj);
-    ip.xDAC_itcmd_var0 = ip.xDAC_itcmd_var0.wrapping_add(1);
-    let (owner, n, pos, facing, kind) = (
-        ip.owner,
-        ip.xDAC_itcmd_var0 as i32,
-        ip.pos,
-        ip.facing_dir,
-        ip.kind,
-    );
-    let v = ip.xDD4_itemVar.pk_flush();
-    if v.xDDC_PKFlash.get() == 0
-        && let Some(ness) = v.xDE0_PKFlash_Owner.get()
+    ip.cmd_var0 = ip.cmd_var0.wrapping_add(1);
+    let (owner, n, pos, facing, kind) =
+        (ip.owner, ip.cmd_var0 as i32, ip.pos, ip.facing_dir, ip.kind);
+    let v = ip.vars.pk_flush();
+    if v.frames.get() == 0
+        && let Some(ness) = v.owner.get()
         && owner == Some(ness)
         && n >= fp::fctiwz(reg(delay)).wrapping_sub(2)
     {
-        let size = v.xDD8_PKFlash.get();
+        let size = v.scale.get();
         match ItKind::of(kind) {
             ItKind::NessPKFlash => {
                 super::nesspkflashexplode::spawn(
@@ -386,9 +373,9 @@ pub fn physics_0(r: &mut Running, gobj: GObjId) {
     let max_fall = reg(attr_f32(r, gobj, attr::UNK3));
     let ip = item_mut(r.game, gobj);
     let owner = ip.owner;
-    let v = ip.xDD4_itemVar.pk_flush();
-    if v.xDDC_PKFlash.get() == 0
-        && let Some(ness) = v.xDE0_PKFlash_Owner.get()
+    let v = ip.vars.pk_flush();
+    if v.frames.get() == 0
+        && let Some(ness) = v.owner.get()
         && owner == Some(ness)
         && owner_holding(r, gobj, ness)
     {
@@ -397,20 +384,20 @@ pub fn physics_0(r: &mut Running, gobj: GObjId) {
         let abs = |v: f64| if v < 0.0 { fp::fneg(v) } else { v };
         if abs(x) > f64::from(0.2_f32) {
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.x = mem(fp::fmadds(x, control, reg(ip.x40_vel.x)));
-            let vx = reg(ip.x40_vel.x);
+            ip.vel.x = mem(fp::fmadds(x, control, reg(ip.vel.x)));
+            let vx = reg(ip.vel.x);
             if abs(vx) > max_x {
-                ip.x40_vel.x = mem(if vx > 0.0 { max_x } else { fp::fneg(max_x) });
+                ip.vel.x = mem(if vx > 0.0 { max_x } else { fp::fneg(max_x) });
             }
         }
     }
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), gravity));
+    ip.vel.y = mem(fp::fsubs(reg(ip.vel.y), gravity));
     let lim = fp::fneg(max_fall);
-    if reg(ip.x40_vel.y) < lim {
-        ip.x40_vel.y = mem(lim);
+    if reg(ip.vel.y) < lim {
+        ip.vel.y = mem(lim);
     }
-    ip.x40_vel.z = 0.0;
+    ip.vel.z = 0.0;
 }
 
 /// `itNesspkflash_UnkMotion0_Coll`: meeting the stage head on, it fizzles with a sound.
@@ -419,7 +406,7 @@ pub fn collide_0(r: &mut Running, gobj: GObjId) -> bool {
     if hit_stage(r, gobj) {
         change_state(r, gobj, 2, change::ANIM_UPDATE);
         let delay = attr_f32(r, gobj, attr::EXPLOSION_DELAY);
-        item_mut(r.game, gobj).xD44_lifeTimer = delay;
+        item_mut(r.game, gobj).life_timer = delay;
         stop_sfx2(r, gobj);
         play_sfx(r, gobj, SFX_FIZZLE, 0x7F, 0x40);
     }
@@ -433,7 +420,7 @@ pub fn collide_0(r: &mut Running, gobj: GObjId) -> bool {
 pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj).expect("PK Flash without a model");
     let ip = item_mut(r.game, gobj);
-    ip.xDD4_itemVar.pk_flush().xDDC_PKFlash.set(1);
+    ip.vars.pk_flush().frames.set(1);
     ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
     let y = mem(fp::frsp(fp::fmul(
         std::f64::consts::FRAC_PI_2,
@@ -441,9 +428,9 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     )));
     lib2725::set_rotation_y(r.game, j, y);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fneg(reg(ip.x40_vel.x)));
-    ip.x40_vel.y = mem(fp::fneg(reg(ip.x40_vel.y)));
-    ip.x40_vel.z = 0.0;
+    ip.vel.x = mem(fp::fneg(reg(ip.vel.x)));
+    ip.vel.y = mem(fp::fneg(reg(ip.vel.y)));
+    ip.vel.z = 0.0;
     false
 }
 

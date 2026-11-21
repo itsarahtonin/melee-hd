@@ -108,7 +108,7 @@ pub fn spawn(
         .expect("a shot without attributes");
     let lifetime = r.data.f32(attrs.at(LIFETIME));
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.fox_laser();
+    let v = item_mut(r.game, gobj).vars.fox_laser();
     v.scale.set(0.0);
     v.angle.set(angle);
     v.speed.set(speed);
@@ -139,27 +139,27 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     let max = r.data.f32(attrs.at(SCALE));
     let j = jobj_of(r.game, gobj).expect("a shot without a model");
     let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.fox_laser();
+    let v = ip.vars.fox_laser();
     let (speed, angle) = (v.speed.get(), v.angle.get());
-    ip.x40_vel.x = mem(fp::fmuls(reg(speed), reg(math::cos(angle))));
-    ip.x40_vel.y = mem(fp::fmuls(reg(speed), reg(math::sin(angle))));
-    ip.x40_vel.z = 0.0;
-    ip.facing_dir = if reg(ip.x40_vel.x) > 0.0 { 1.0 } else { -1.0 };
+    ip.vel.x = mem(fp::fmuls(reg(speed), reg(math::cos(angle))));
+    ip.vel.y = mem(fp::fmuls(reg(speed), reg(math::sin(angle))));
+    ip.vel.z = 0.0;
+    ip.facing_dir = if reg(ip.vel.x) > 0.0 { 1.0 } else { -1.0 };
     let half_pi = fp::fdiv(std::f64::consts::PI, 2.0);
     let y = mem(fp::frsp(fp::fmul(half_pi, reg(ip.facing_dir))));
     let vel_x = if reg(ip.facing_dir) == 1.0 {
-        mem(fp::fneg(reg(ip.x40_vel.x)))
+        mem(fp::fneg(reg(ip.vel.x)))
     } else {
-        ip.x40_vel.x
+        ip.vel.x
     };
-    let vel_y = ip.x40_vel.y;
+    let vel_y = ip.vel.y;
     lib2725::set_rotation_y(r.game, j, y);
     let x = mem(fp::frsp(fp::fadd(
         std::f64::consts::PI,
         reg(math::atan2(vel_y, vel_x)),
     )));
     lib2725::set_rotation_x(r.game, j, x);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.fox_laser();
+    let v = item_mut(r.game, gobj).vars.fox_laser();
     let speed = reg(v.speed.get());
     let mag = if speed < fp::frsp(0.0) {
         fp::fneg(speed)
@@ -184,7 +184,7 @@ pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
 pub fn physics(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let pos = ip.pos;
-    ip.xDD4_itemVar.fox_laser().pos.set(pos);
+    ip.vars.fox_laser().pos.set(pos);
 }
 
 /// Whether the shot's move since last frame crosses the stage, stopping it there, `it_8029C4D4`
@@ -192,7 +192,7 @@ pub fn physics(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_8029C4D4")]
 pub fn hits_stage(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    let from = ip.xDD4_itemVar.fox_laser().pos.get();
+    let from = ip.vars.fox_laser().pos.get();
     let to = ip.pos;
     match super::super::ground::stage_crossing(r.game, from, to) {
         Some(p) => {
@@ -234,16 +234,16 @@ pub fn turned(angle: f32, by: f64) -> f32 {
 pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj).expect("a shot without a model");
     let ip = item_mut(r.game, gobj);
-    if reg(ip.facing_dir) != reg(ip.xC68) {
-        ip.facing_dir = ip.xC68;
+    if reg(ip.facing_dir) != reg(ip.reflect_dir) {
+        ip.facing_dir = ip.reflect_dir;
         let half_pi = fp::fdiv(std::f64::consts::PI, 2.0);
         let y = mem(fp::frsp(fp::fmul(half_pi, reg(ip.facing_dir))));
         lib2725::set_rotation_y(r.game, j, y);
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.fox_laser();
+    let v = item_mut(r.game, gobj).vars.fox_laser();
     v.scale.set(1e-3);
     lib2725::set_scale_z(r.game, j, 1e-3);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.fox_laser();
+    let v = item_mut(r.game, gobj).vars.fox_laser();
     v.angle.update(|old| turned(old, std::f64::consts::PI));
     false
 }
@@ -253,10 +253,10 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itFoxLaser_Logic94_ShieldBounced")]
 pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    let n = ip.xC58;
-    ip.x40_vel.mirror_xy(n);
-    let (vy, vx) = (ip.x40_vel.y, ip.x40_vel.x);
-    let v = ip.xDD4_itemVar.fox_laser();
+    let n = ip.shield_normal;
+    ip.vel.mirror_xy(n);
+    let (vy, vx) = (ip.vel.y, ip.vel.x);
+    let v = ip.vars.fox_laser();
     v.scale.set(1e-3);
     v.angle.set(normalize(math::atan2(vy, vx)));
     false

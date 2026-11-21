@@ -85,7 +85,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     pokemon::face_nearest_opponent(r, gobj);
     pokemon::vars(r.game, gobj).set_i32(SHOTS, -1);
-    item_mut(r.game, gobj).xDBC[0] &= !0x80;
+    item_mut(r.game, gobj).cmd_flags[0] &= !0x80;
     let size = attr_f32(r, gobj, 0);
     pokemon::start(r, gobj, size);
     pokemon::vars(r.game, gobj).set_f32(FALL_SPEED, 0.0);
@@ -182,7 +182,7 @@ pub fn phys(r: &mut Running, gobj: GObjId) {
         v.set_f32(FALL_SPEED, mem(fp::fsubs(reg(s), reg(g))));
     }
     let s = v.f32(FALL_SPEED);
-    item_mut(r.game, gobj).x40_vel.y = s;
+    item_mut(r.game, gobj).vel.y = s;
 }
 
 /// Lands in the air, falls off the floor on it, doing nothing either way
@@ -201,9 +201,9 @@ pub fn coll(r: &mut Running, gobj: GObjId) -> bool {
 /// Its `on_accessory`, `it_802C989C`: fires a leaf when its script says.
 #[doc(alias = "it_802C989C")]
 pub fn fire_when_told(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDBC[0] & 0x80 != 0 {
+    if item(r.game, gobj).cmd_flags[0] & 0x80 != 0 {
         shoot(r, gobj);
-        item_mut(r.game, gobj).xDBC[0] &= !0x80;
+        item_mut(r.game, gobj).cmd_flags[0] &= !0x80;
     }
 }
 
@@ -282,7 +282,7 @@ pub fn shoot(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itChicoritaLeaf_Logic30_Spawned")]
 pub fn leaf_spawned(r: &mut Running, gobj: GObjId) {
     let life = attr_f32(r, gobj, 0);
-    item_mut(r.game, gobj).xD44_lifeTimer = life;
+    item_mut(r.game, gobj).life_timer = life;
     lib2725::stop_spin(r.game, r.data, gobj);
     leaf_fly(r, gobj);
     lib26b1::disable_pickup(r.game, gobj);
@@ -312,10 +312,10 @@ pub fn leaf_fly(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itChicoritaleaf_UnkMotion0_Anim")]
 pub fn leaf_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
+    if reg(ip.life_timer) <= 0.0 {
         return true;
     }
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
     false
 }
 

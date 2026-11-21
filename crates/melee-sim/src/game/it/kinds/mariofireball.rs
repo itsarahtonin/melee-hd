@@ -112,9 +112,9 @@ fn setup(r: &mut Running, gobj: GObjId) {
     let c = reg(crate::math::cos(angle));
     let s = reg(crate::math::sin(angle));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), fp::fmuls(speed, c)));
-    ip.x40_vel.y = mem(fp::fmuls(speed, s));
-    ip.x40_vel.z = 0.0;
+    ip.vel.x = mem(fp::fmuls(reg(ip.facing_dir), fp::fmuls(speed, c)));
+    ip.vel.y = mem(fp::fmuls(speed, s));
+    ip.vel.z = 0.0;
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
@@ -140,7 +140,7 @@ fn collide(r: &mut Running, gobj: GObjId) -> bool {
     }
     let j = jobj_of(r.game, gobj);
     let min = attr_f32(r, gobj, attr::MIN_SPEED);
-    let v = item(r.game, gobj).x40_vel;
+    let v = item(r.game, gobj).vel;
     let sq = fp::fadds(fp::fmuls(reg(v.x), reg(v.x)), fp::fmuls(reg(v.y), reg(v.y)));
     if reg(crate::math::sqrt_accurate(mem(sq))) < reg(min) {
         return true;

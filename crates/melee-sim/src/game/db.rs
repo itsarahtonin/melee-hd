@@ -1267,12 +1267,12 @@ impl Running<'_> {
     fn db_set_item_ranges(&mut self, which: u8, on: bool) {
         for g in self.game.link_gobjs(P_LINK_ITEM) {
             let ip = super::it::item_mut(self.game, g);
-            let flags = &mut ip.xDAA[0];
+            let flags = &mut ip.debug_flags[0];
             match (which, on) {
                 // `xDAA_flag.x0.b3`, for an enemy (`xDD0_flag.x0.b0`) when shown.
                 (0, true) => {
-                    if ip.xDD0_flag[0] & 0x80 != 0 {
-                        ip.xDAA[0] |= 0x10;
+                    if ip.status_flags[0] & 0x80 != 0 {
+                        ip.debug_flags[0] |= 0x10;
                     }
                 }
                 (0, false) => *flags &= !0x10,
@@ -1283,9 +1283,9 @@ impl Running<'_> {
                 (2, on) => {
                     if ip.kind == ItKind::VsCoin {
                         if on {
-                            ip.xDAA[0] |= 0x80;
+                            ip.debug_flags[0] |= 0x80;
                         } else {
-                            ip.xDAA[0] &= !0x80;
+                            ip.debug_flags[0] &= !0x80;
                         }
                     }
                 }
@@ -1310,7 +1310,7 @@ impl Running<'_> {
         }
         let b = self.game.it.db_bubbles as u8;
         for g in self.game.link_gobjs(P_LINK_ITEM) {
-            let f = &mut super::it::item_mut(self.game, g).xDAA[0];
+            let f = &mut super::it::item_mut(self.game, g).debug_flags[0];
             *f &= 0xFC;
             *f |= b;
         }
@@ -1492,7 +1492,7 @@ impl Running<'_> {
         }
         if let Some(g) = super::it::item::spawn_air(self, &mut spawn) {
             let b = self.game.it.db_bubbles as u8;
-            super::it::item_mut(self.game, g).xDAA[0] |= b;
+            super::it::item_mut(self.game, g).debug_flags[0] |= b;
             super::ef::spawn(self, 0x420, Some(g), &[super::ef::Arg::Vec(spawn.prev_pos)]);
         }
     }

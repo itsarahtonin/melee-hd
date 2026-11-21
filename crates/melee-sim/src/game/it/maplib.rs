@@ -94,7 +94,7 @@ pub fn enter_ground(ip: &mut Item) {
 #[doc(alias = "it_802762BC")]
 pub fn enter_air(ip: &mut Item) {
     ip.ground_or_air = 1;
-    ip.xDC8_word.flags.x1F = false;
+    ip.flags.flags.may_skid = false;
 }
 
 /// The collision kind a new item's collision data gets (`x34_flags.b1234`), by its kind.
@@ -127,28 +127,28 @@ pub fn init_coll(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     let data = r.data;
     let mut cd = {
         let ip = item_mut(r.game, gobj);
-        ip.x378_itemColl.cur_pos = ip.pos;
-        ip.x378_itemColl.clone()
+        ip.coll.cur_pos = ip.pos;
+        ip.coll.clone()
     };
     with_coll(r, &mut cd, |c, cd| c.init(cd));
     let ip = item_mut(r.game, gobj);
-    ip.x378_itemColl = cd;
+    ip.coll = cd;
     if let Some(k) = coll_kind(ip.kind) {
-        ip.x378_itemColl.x34_flags.b1234 = k;
+        ip.coll.x34_flags.b1234 = k;
     }
     let s = reg(ip.scl);
-    let b = ip.xC1C.clone();
+    let b = ip.coll_box.clone();
     let m = |v: f32| mem(fp::fmuls(reg(v), s));
-    ip.x378_itemColl
+    ip.coll
         .set_ecb_source_box(Some(gobj), m(b.top), m(b.bottom), m(b.right), m(b.left));
     let dir = if fp::fneg(1.0) == reg(ip.facing_dir) {
         -1
     } else {
         1
     };
-    ip.x378_itemColl.set_facing_dir(dir);
+    ip.coll.set_facing_dir(dir);
     let x1c = attr_of(ip).f32(data, super::data::attr::DAMAGE_MUL);
-    ip.x378_itemColl.x50 = x1c;
+    ip.coll.x50 = x1c;
     if spawn.x44_flag[0] & 0x80 != 0 {
         if spawn.x48_ground_or_air == 1 {
             place_air(r, gobj, spawn.pos);
@@ -158,8 +158,8 @@ pub fn init_coll(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
         return;
     }
     let ip = item_mut(r.game, gobj);
-    ip.x378_itemColl.last_pos = spawn.pos;
-    ip.x378_itemColl.request_clear();
+    ip.coll.last_pos = spawn.pos;
+    ip.coll.request_clear();
 }
 
 /// Places an item in the air, checking the move from `pos` against the stage,
@@ -168,14 +168,14 @@ pub fn init_coll(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
 pub fn place_air(r: &mut Running, gobj: GObjId, pos: Vec3) {
     let mut cd = {
         let ip = item_mut(r.game, gobj);
-        ip.x378_itemColl.last_pos = pos;
-        ip.x378_itemColl.request_clear();
-        ip.x378_itemColl.clone()
+        ip.coll.last_pos = pos;
+        ip.coll.request_clear();
+        ip.coll.clone()
     };
     with_coll(r, &mut cd, |c, cd| c.air_frame(cd, 6, 0));
     let ip = item_mut(r.game, gobj);
     ip.pos = cd.cur_pos;
-    ip.x378_itemColl = cd;
+    ip.coll = cd;
 }
 
 /// Places an item on the ground, `it_80276174`: dropped onto the floor below it, if one lies
@@ -184,8 +184,8 @@ pub fn place_air(r: &mut Running, gobj: GObjId, pos: Vec3) {
 pub fn place_ground(game: &mut Game, data: &Archives, gobj: GObjId, pos: Vec3) {
     let reach = super::item::common_data(game).f32(data, super::data::common::XF4);
     let ip = item_mut(game, gobj);
-    ip.x378_itemColl.last_pos = pos;
-    ip.x378_itemColl.request_clear();
+    ip.coll.last_pos = pos;
+    ip.coll.request_clear();
     let (x, y) = (ip.pos.x, ip.pos.y);
     let below = mem(fp::fsubs(reg(y), reg(reach)));
     let g = game.geometry.as_mut().expect("no collision geometry");
@@ -207,10 +207,10 @@ pub fn floor_speed(game: &Game, line: i32, pos: Vec3) -> Option<Vec3> {
 #[doc(alias = "it_80276214")]
 pub fn prep_coll(game: &mut Game, data: &Archives, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    let cd = &mut ip.x378_itemColl;
+    let cd = &mut ip.coll;
     cd.last_pos = cd.cur_pos;
     cd.cur_pos = ip.pos;
-    if flag(ip.xDCE_flag, 7) {
+    if flag(ip.hurt_flags, 7) {
         turn_box(game, data, gobj);
     }
 }
@@ -219,7 +219,7 @@ pub fn prep_coll(game: &mut Game, data: &Archives, gobj: GObjId) {
 #[doc(alias = "it_80276278")]
 pub fn turn_box(game: &mut Game, data: &Archives, gobj: GObjId) {
     let angle = super::lib2725::spin_angle(game, data, gobj);
-    set_box_angle(&mut item_mut(game, gobj).x378_itemColl, angle);
+    set_box_angle(&mut item_mut(game, gobj).coll, angle);
 }
 
 /// Sets a fixed box's rotation, wrapped into ±2π once, `mpColl_800436E4`.
@@ -243,7 +243,7 @@ pub fn set_box_angle(cd: &mut CollData, angle: f32) {
 /// Whether the item stands at a ledge, `it_802762D8`.
 #[doc(alias = "it_802762D8")]
 pub fn at_edge(game: &Game, gobj: GObjId) -> bool {
-    item(game, gobj).x378_itemColl.env_flags & (LEFT_EDGE | RIGHT_EDGE) != 0
+    item(game, gobj).coll.env_flags & (LEFT_EDGE | RIGHT_EDGE) != 0
 }
 
 /// Which wall it touches (8 left, 4 right), keeping the line, `it_80276308`.
@@ -256,15 +256,15 @@ pub fn touched_wall(game: &mut Game, gobj: GObjId) -> i32 {
 #[doc(alias = "it_80276348")]
 pub fn touched_wall_normal(game: &mut Game, gobj: GObjId) -> (i32, Option<Vec3>) {
     let ip = item_mut(game, gobj);
-    let cd = &ip.x378_itemColl;
+    let cd = &ip.coll;
     let (mut ret, mut normal) = (0, None);
     if cd.env_flags & LEFT_WALL_MASK != 0 {
         ret = 8;
-        ip.xC30 = cd.left_facing_wall.index;
+        ip.touched_line = cd.left_facing_wall.index;
         normal = Some(cd.left_facing_wall.normal);
     }
     if cd.env_flags & RIGHT_WALL_MASK != 0 {
-        ip.xC30 = cd.right_facing_wall.index;
+        ip.touched_line = cd.right_facing_wall.index;
         normal = Some(cd.right_facing_wall.normal);
         ret = 4;
     }
@@ -275,9 +275,9 @@ pub fn touched_wall_normal(game: &mut Game, gobj: GObjId) -> (i32, Option<Vec3>)
 #[doc(alias = "it_802763B8")]
 pub fn touched_floor(game: &mut Game, gobj: GObjId) -> bool {
     let ip = item_mut(game, gobj);
-    let cd = &ip.x378_itemColl;
+    let cd = &ip.coll;
     if cd.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
-        ip.xC30 = cd.floor.index;
+        ip.touched_line = cd.floor.index;
         return true;
     }
     false
@@ -287,9 +287,9 @@ pub fn touched_floor(game: &mut Game, gobj: GObjId) -> bool {
 #[doc(alias = "it_802763E0")]
 pub fn touched_ceiling(game: &mut Game, gobj: GObjId) -> i32 {
     let ip = item_mut(game, gobj);
-    let cd = &ip.x378_itemColl;
+    let cd = &ip.coll;
     if cd.env_flags & (CEILING_PUSH | CEILING_HUG) != 0 {
-        ip.xC30 = cd.ceiling.index;
+        ip.touched_line = cd.ceiling.index;
         return 2;
     }
     0
@@ -319,7 +319,7 @@ pub fn surface_normal(cd: &CollData) -> Option<Vec3> {
 #[doc(alias = "it_8027649C")]
 pub fn slope_angle(game: &Game, gobj: GObjId) -> f64 {
     let ip = item(game, gobj);
-    let normal = surface_normal(&ip.x378_itemColl).expect("it_8027649C: no surface touched");
+    let normal = surface_normal(&ip.coll).expect("it_8027649C: no surface touched");
     angle_from_up(normal, ip.facing_dir)
 }
 
@@ -336,7 +336,7 @@ fn angle_from_up(normal: Vec3, facing: f32) -> f64 {
 pub fn tilt_to_slope(game: &mut Game, data: &Archives, gobj: GObjId, bone: i32) {
     let j = super::lib2725::bone(game, data, gobj, bone).expect("a missing joint");
     let ip = item(game, gobj);
-    let axis = ip.xDC8_word.flags.x17;
+    let axis = ip.flags.flags.spin_axis;
     let angle = slope_angle(game, gobj);
     let facing = item(game, gobj).facing_dir;
     let jobjs = &mut game.objs.jobjs;
@@ -352,7 +352,7 @@ pub fn tilt_to_slope(game: &mut Game, data: &Archives, gobj: GObjId, bone: i32) 
 pub fn tilt_to_line(game: &mut Game, data: &Archives, gobj: GObjId, bone: i32) {
     let j = super::lib2725::bone(game, data, gobj, bone).expect("a missing joint");
     let ip = item(game, gobj);
-    let (axis, line, facing) = (ip.xDC8_word.flags.x17, ip.xC30, ip.facing_dir);
+    let (axis, line, facing) = (ip.flags.flags.spin_axis, ip.touched_line, ip.facing_dir);
     let normal = game
         .geometry
         .as_ref()
@@ -370,7 +370,7 @@ pub fn tilt_to_line(game: &mut Game, data: &Archives, gobj: GObjId, bone: i32) {
 /// Tilts the model's root to the floor it stands on, `it_80276CB8`.
 #[doc(alias = "it_80276CB8")]
 pub fn tilt_on_floor(game: &mut Game, data: &Archives, gobj: GObjId) {
-    if item(game, gobj).x378_itemColl.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
+    if item(game, gobj).coll.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
         tilt_to_slope(game, data, gobj, 0);
     }
 }
@@ -380,7 +380,7 @@ pub fn tilt_on_floor(game: &mut Game, data: &Archives, gobj: GObjId) {
 #[doc(alias = "it_80276CEC")]
 pub fn remember_surface(game: &mut Game, gobj: GObjId) {
     let ip = item_mut(game, gobj);
-    let cd = &ip.x378_itemColl;
+    let cd = &ip.coll;
     let mut index = None;
     for (mask, s) in [
         (LEFT_WALL_MASK, &cd.left_facing_wall),
@@ -389,12 +389,12 @@ pub fn remember_surface(game: &mut Game, gobj: GObjId) {
         (FLOOR_PUSH | FLOOR_HUG, &cd.floor),
     ] {
         if cd.env_flags & mask != 0 {
-            ip.xAC_unk = s.normal;
+            ip.surface_normal = s.normal;
             index = Some(s.index);
         }
     }
     // With no surface the original stores an unset register.
-    ip.xC2C = index.expect("it_80276CEC: no surface touched");
+    ip.surface_line = index.expect("it_80276CEC: no surface touched");
 }
 
 /// Frees an item wedged between walls or caught on a surface it touched last frame,
@@ -403,13 +403,13 @@ pub fn remember_surface(game: &mut Game, gobj: GObjId) {
 #[doc(alias = "it_80276D9C")]
 pub fn unstick(game: &mut Game, gobj: GObjId, touched: i32) -> bool {
     let ip = item_mut(game, gobj);
-    let cd = &ip.x378_itemColl;
+    let cd = &ip.coll;
     let flags = cd.env_flags;
     if flags & LEFT_WALL_MASK != 0 && flags & RIGHT_WALL_MASK != 0 {
         let abs = |v: f64| if v < 0.0 { fp::fneg(v) } else { v };
         let right = abs(fp::fsubs(reg(cd.ecb.right.x), 1.0));
         let left = abs(fp::fadds(1.0, reg(cd.ecb.left.x)));
-        let mut b = ip.xC1C.clone();
+        let mut b = ip.coll_box.clone();
         if cd.facing_dir == 1 {
             b.right = mem(right);
             b.left = mem(left);
@@ -417,21 +417,16 @@ pub fn unstick(game: &mut Game, gobj: GObjId, touched: i32) -> bool {
             b.right = mem(left);
             b.left = mem(right);
         }
-        ip.xC1C = b.clone();
+        ip.coll_box = b.clone();
         let m = |v: f32| mem(fp::fmuls(reg(v), 1.0));
-        ip.x378_itemColl.set_ecb_source_box(
-            Some(gobj),
-            m(b.top),
-            m(b.bottom),
-            m(b.right),
-            m(b.left),
-        );
+        ip.coll
+            .set_ecb_source_box(Some(gobj), m(b.top), m(b.bottom), m(b.right), m(b.left));
         let dir = if fp::fneg(1.0) == reg(ip.facing_dir) {
             -1
         } else {
             1
         };
-        ip.x378_itemColl.set_facing_dir(dir);
+        ip.coll.set_facing_dir(dir);
         return false;
     }
     let prev = cd.prev_env_flags;
@@ -471,7 +466,7 @@ pub fn bounce(r: &mut Running, gobj: GObjId, touched: i32) {
 /// Resets the item's collision box to its kind's (`xC0C`), at its scale, `it_80275DFC`.
 #[doc(alias = "it_80275DFC")]
 pub fn reset_box(game: &mut Game, gobj: GObjId) {
-    let b = item(game, gobj).xC0C.clone();
+    let b = item(game, gobj).kind_coll_box.clone();
     set_box(game, gobj, b);
 }
 
@@ -480,16 +475,16 @@ pub fn reset_box(game: &mut Game, gobj: GObjId) {
 pub fn set_box(game: &mut Game, gobj: GObjId, b: _itECB) {
     let ip = item_mut(game, gobj);
     let s = reg(ip.scl);
-    ip.xC1C = b.clone();
+    ip.coll_box = b.clone();
     let m = |v: f32| mem(fp::fmuls(reg(v), s));
-    ip.x378_itemColl
+    ip.coll
         .set_ecb_source_box(Some(gobj), m(b.top), m(b.bottom), m(b.right), m(b.left));
     let dir = if fp::fneg(1.0) == reg(ip.facing_dir) {
         -1
     } else {
         1
     };
-    ip.x378_itemColl.set_facing_dir(dir);
+    ip.coll.set_facing_dir(dir);
 }
 
 /// Whether the item slides down the slope it lands on, `it_80277040`, setting its slide
@@ -504,53 +499,53 @@ pub fn slides(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
     let abs = |v: f64| if v < 0.0 { fp::fneg(v) } else { v };
     if abs(reg(x50)) < f64::from(1.0e-5_f32) {
         let ip = item_mut(game, gobj);
-        ip.x88.y = 0.0;
-        ip.x88.x = 0.0;
+        ip.slide_vel.y = 0.0;
+        ip.slide_vel.x = 0.0;
         return false;
     }
     let ip = item_mut(game, gobj);
-    let normal = surface_normal(&ip.x378_itemColl).expect("it_80277040: no surface touched");
-    ip.x94 = ip.x88;
+    let normal = surface_normal(&ip.coll).expect("it_80277040: no surface touched");
+    ip.last_slide_vel = ip.slide_vel;
     let up = Vec3::new(0.0, 1.0, 0.0);
     let mut angle = reg(normal.angle_xy(up));
     if angle < 0.0 {
         angle = fp::fneg(angle);
     }
     if !(angle >= reg(c.f32(data, common::XC0))) {
-        ip.x88.y = 0.0;
-        ip.x88.x = 0.0;
+        ip.slide_vel.y = 0.0;
+        ip.slide_vel.x = 0.0;
         return false;
     }
     let down = Vec3::new(0.0, -1.0, 0.0);
     let cross = normal.cross_normalized(down);
     let slope = cross.cross_normalized(normal);
     let x50 = reg(x50);
-    let was_x = fp::fdivs(reg(ip.x94.x), x50);
-    let was_y = fp::fdivs(reg(ip.x94.y), x50);
-    ip.x88.x = mem(fp::fmuls(reg(slope.x), x50));
-    ip.x88.y = mem(fp::fmuls(reg(slope.y), x50));
+    let was_x = fp::fdivs(reg(ip.last_slide_vel.x), x50);
+    let was_y = fp::fdivs(reg(ip.last_slide_vel.y), x50);
+    ip.slide_vel.x = mem(fp::fmuls(reg(slope.x), x50));
+    ip.slide_vel.y = mem(fp::fmuls(reg(slope.y), x50));
     // `checkNormalAngle`: the surface turned far enough from the one it remembers, on the
     // same line.
-    let mut turned = reg(normal.angle(ip.xAC_unk));
+    let mut turned = reg(normal.angle(ip.surface_normal));
     if turned < 0.0 {
         turned = fp::fneg(turned);
     }
-    if turned >= reg(c.f32(data, common::XC4)) && ip.xC30 == ip.xC2C {
-        ip.xD5C = 2;
+    if turned >= reg(c.f32(data, common::XC4)) && ip.touched_line == ip.surface_line {
+        ip.skid = 2;
         return true;
     }
-    if reg(ip.x94.x) == 0.0 && reg(ip.x94.y) == 0.0 {
+    if reg(ip.last_slide_vel.x) == 0.0 && reg(ip.last_slide_vel.y) == 0.0 {
         return true;
     }
     let sign = |v: f64| if v < 0.0 { -1 } else { 1 };
     if sign(reg(slope.x)) == sign(was_x) && sign(reg(slope.y)) == sign(was_y) {
         return true;
     }
-    ip.xD58 = ip.xD58.wrapping_add(1);
-    if ip.xD58 >= c.u32(data, common::X38) {
-        ip.xD58 = 0;
-        ip.x88.y = 0.0;
-        ip.x88.x = 0.0;
+    ip.slide_frames = ip.slide_frames.wrapping_add(1);
+    if ip.slide_frames >= c.u32(data, common::X38) {
+        ip.slide_frames = 0;
+        ip.slide_vel.y = 0.0;
+        ip.slide_vel.x = 0.0;
         return false;
     }
     true
@@ -561,49 +556,49 @@ pub fn slides(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
 #[doc(alias = "it_8027737C")]
 pub fn slide(game: &mut Game, data: &Archives, gobj: GObjId, pos: &mut Vec3) {
     let ip = item(game, gobj);
-    if !ip.xDC8_word.flags.x1F || ip.xD5C == 0 {
+    if !ip.flags.flags.may_skid || ip.skid == 0 {
         return;
     }
     let c = common_data(game);
     let x54 = reg(attr_of(ip).f32(data, super::data::attr::X54));
     let ip = item_mut(game, gobj);
-    ip.x7C = ip.x88.sdk_add(ip.x7C);
-    ip.x7C.x = mem(fp::fmuls(reg(ip.x7C.x), x54));
-    ip.x7C.y = mem(fp::fmuls(reg(ip.x7C.y), x54));
+    ip.skid_vel = ip.slide_vel.sdk_add(ip.skid_vel);
+    ip.skid_vel.x = mem(fp::fmuls(reg(ip.skid_vel.x), x54));
+    ip.skid_vel.y = mem(fp::fmuls(reg(ip.skid_vel.y), x54));
     let len2 = |v: Vec3| fp::fadds(fp::fmuls(reg(v.x), reg(v.x)), fp::fmuls(reg(v.y), reg(v.y)));
     let cap = c.f32(data, common::XC8);
-    if reg(crate::math::sqrt_accurate(mem(len2(ip.x7C)))) > reg(cap) {
-        ip.x7C.normalize_xy();
-        ip.x7C.x = mem(fp::fmuls(reg(ip.x7C.x), reg(cap)));
-        ip.x7C.y = mem(fp::fmuls(reg(ip.x7C.y), reg(cap)));
+    if reg(crate::math::sqrt_accurate(mem(len2(ip.skid_vel)))) > reg(cap) {
+        ip.skid_vel.normalize_xy();
+        ip.skid_vel.x = mem(fp::fmuls(reg(ip.skid_vel.x), reg(cap)));
+        ip.skid_vel.y = mem(fp::fmuls(reg(ip.skid_vel.y), reg(cap)));
     }
-    if len2(ip.x7C) < reg(c.f32(data, common::XCC)) {
-        ip.xDC8_word.flags.x1F = false;
-        ip.x7C.y = 0.0;
-        ip.x7C.x = 0.0;
+    if len2(ip.skid_vel) < reg(c.f32(data, common::XCC)) {
+        ip.flags.flags.may_skid = false;
+        ip.skid_vel.y = 0.0;
+        ip.skid_vel.x = 0.0;
         return;
     }
-    let skid = ip.x7C;
+    let skid = ip.skid_vel;
     spin_from_speed(game, gobj, skid);
     super::lib2725::spin(game, data, gobj);
-    let skid = item(game, gobj).x7C;
+    let skid = item(game, gobj).skid_vel;
     *pos = skid.sdk_add(*pos);
 }
 
 /// Starts the item skidding if it slides fast enough (or was told to), `it_80277544`.
 #[doc(alias = "it_80277544")]
 pub fn start_skid(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
-    if item(game, gobj).xD5C == 0 || !slides(game, data, gobj) {
+    if item(game, gobj).skid == 0 || !slides(game, data, gobj) {
         return false;
     }
     let c = common_data(game);
     let ip = item_mut(game, gobj);
-    let v = ip.x40_vel.sdk_add(ip.x70_nudge);
+    let v = ip.vel.sdk_add(ip.nudge);
     let fast = fp::fadds(fp::fmuls(reg(v.x), reg(v.x)), fp::fmuls(reg(v.y), reg(v.y)))
         >= reg(c.f32(data, common::XCC));
-    if fast || ip.xD5C == 2 {
-        ip.xDC8_word.flags.x1F = true;
-        ip.xD5C = 1;
+    if fast || ip.skid == 2 {
+        ip.flags.flags.may_skid = true;
+        ip.skid = 1;
         return true;
     }
     false
@@ -620,19 +615,16 @@ pub fn spin_from_speed(game: &mut Game, gobj: GObjId, v: Vec3) {
         fp::fmuls(reg(v.x), reg(v.x)),
         fp::fmuls(reg(v.y), reg(v.y)),
     )));
-    ip.xD3C_spinSpeed = mem(fp::fmuls(
+    ip.spin_speed = mem(fp::fmuls(
         f64::from(0.85_f32),
-        fp::fdivs(reg(speed), reg(ip.xC1C.bottom)),
+        fp::fdivs(reg(speed), reg(ip.coll_box.bottom)),
     ));
     let sign = |v: f32| if reg(v) < 0.0 { -1 } else { 1 };
     if sign(v.x) != sign(ip.facing_dir) {
-        ip.xD3C_spinSpeed = mem(fp::fneg(reg(ip.xD3C_spinSpeed)));
+        ip.spin_speed = mem(fp::fneg(reg(ip.spin_speed)));
     }
-    if !ip.xDC8_word.flags.x19 {
-        ip.xD3C_spinSpeed = mem(fp::fmuls(
-            reg(ip.xD3C_spinSpeed),
-            fp::fneg(reg(ip.facing_dir)),
-        ));
+    if !ip.flags.flags.turns_to_face {
+        ip.spin_speed = mem(fp::fmuls(reg(ip.spin_speed), fp::fneg(reg(ip.facing_dir))));
     }
 }
 
@@ -646,18 +638,18 @@ pub fn bounce_off_wall(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
     }
     let n = normal.expect("a wall's normal");
     let ip = item_mut(game, gobj);
-    let v = ip.x40_vel;
+    let v = ip.vel;
     let dot = fp::fmadds(
         reg(v.z),
         reg(n.z),
         fp::fmadds(reg(v.x), reg(n.x), fp::fmuls(reg(v.y), reg(n.y))),
     );
     if dot < 0.0 {
-        ip.x40_vel.mirror_xy(n);
+        ip.vel.mirror_xy(n);
     }
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), keep));
-    ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), keep));
-    ip.x40_vel.z = mem(fp::fmuls(reg(ip.x40_vel.z), keep));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), keep));
+    ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), keep));
+    ip.vel.z = mem(fp::fmuls(reg(ip.vel.z), keep));
     true
 }
 
@@ -667,8 +659,8 @@ pub fn bounce_off_wall(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
 pub fn reflect_velocity(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
     let keep = reg(attr_of(item(game, gobj)).f32(data, super::data::attr::X58));
     let ip = item(game, gobj);
-    let cd = ip.x378_itemColl.clone();
-    let vel = ip.x40_vel;
+    let cd = ip.coll.clone();
+    let vel = ip.vel;
     let len_xy = |v: Vec3| {
         crate::math::sqrt_accurate(mem(fp::fadds(
             fp::fmuls(reg(v.x), reg(v.x)),
@@ -713,8 +705,8 @@ pub fn reflect_velocity(game: &mut Game, data: &Archives, gobj: GObjId) -> bool 
     out.x = mem(fp::fmuls(reg(out.x), speed));
     out.y = mem(fp::fmuls(reg(out.y), speed));
     let ip = item_mut(game, gobj);
-    ip.x64_vec_unk2 = motion;
-    ip.x40_vel = out;
+    ip.floor_motion = motion;
+    ip.vel = out;
     true
 }
 
@@ -722,7 +714,7 @@ pub fn reflect_velocity(game: &mut Game, data: &Archives, gobj: GObjId) -> bool 
 /// the top over the left over the right), unless the item makes none, `it_80277C40`.
 #[doc(alias = "it_80277C40")]
 pub fn bounce_effect(r: &mut Running, gobj: GObjId, touched: i32) {
-    let ecb = &item(r.game, gobj).x378_itemColl.ecb;
+    let ecb = &item(r.game, gobj).coll.ecb;
     let mut at = Vec3::new(0.0, 0.0, 0.0);
     let sides = [
         (8, &ecb.right),
@@ -736,7 +728,7 @@ pub fn bounce_effect(r: &mut Running, gobj: GObjId, touched: i32) {
             (at.x, at.y) = side;
         }
     }
-    if !flag(item(r.game, gobj).xDCF_flag, 0) {
+    if !flag(item(r.game, gobj).draw_flags, 0) {
         let zero = Vec3::new(0.0, 0.0, 0.0);
         super::effect::spawn(r, gobj, 0x405, 0, at, zero, false);
     }
@@ -749,7 +741,7 @@ pub fn coll_data_of(game: &Game, gobj: GObjId) -> Option<CollData> {
     if super::item::is_fighter(game, Some(gobj)) {
         Some(game.fighter(gobj).coll_data.clone())
     } else if super::is_item(game, Some(gobj)) {
-        Some(item(game, gobj).x378_itemColl.clone())
+        Some(item(game, gobj).coll.clone())
     } else {
         None
     }
@@ -779,7 +771,7 @@ pub fn place_by(r: &mut Running, gobj: GObjId, other: GObjId) {
     if g.line_live(coll2.floor.index) {
         let below = g.floor_below(at, -1, -1);
         if below != -1 && g.lines_connected(below, coll2.floor.index) {
-            item_mut(r.game, gobj).x378_itemColl.floor.index = below;
+            item_mut(r.game, gobj).coll.floor.index = below;
             let g = r.game.geometry.as_ref().expect("no collision geometry");
             let Some(probe) = g.probe_floor(below, at) else {
                 code::unported_call("it_802759DC (a height the floor probe left unwritten)");
@@ -791,7 +783,7 @@ pub fn place_by(r: &mut Running, gobj: GObjId, other: GObjId) {
                 ip.pos.y = mem(fp::fadds(reg(at.y), reg(probe.offset)));
                 ip.pos.z = at.z;
                 let pos = ip.pos;
-                ip.x378_itemColl.set_position(pos);
+                ip.coll.set_position(pos);
                 placed = true;
                 enter_ground(ip);
             }
@@ -810,16 +802,16 @@ pub fn place_by(r: &mut Running, gobj: GObjId, other: GObjId) {
         mem(fp::fadds(reg(o.y), mid)),
         mem(fp::fadds(reg(o.z), 0.0)),
     );
-    let mut cd = item(r.game, gobj).x378_itemColl.clone();
+    let mut cd = item(r.game, gobj).coll.clone();
     cd.last_pos = last;
     cd.request_clear();
     cd.cur_pos = at;
     let landed = with_stage_coll(r.game, r.data, |c| c.air_frame(&mut cd, 6, 0));
     let ip = item_mut(r.game, gobj);
-    ip.x378_itemColl = cd;
+    ip.coll = cd;
     if landed {
         enter_ground(ip);
-        ip.pos = ip.x378_itemColl.cur_pos;
+        ip.pos = ip.coll.cur_pos;
         return;
     }
     enter_air(ip);

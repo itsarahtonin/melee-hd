@@ -71,7 +71,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 }
 
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itYoshiEggLay_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.yoshi_egg_lay()
+    item_mut(game, gobj).vars.yoshi_egg_lay()
 }
 
 /// Lays the egg, `it_802F2F34` (its first argument, Yoshi, unused): at `pos` (on the plane),
@@ -94,8 +94,8 @@ pub fn spawn(r: &mut Running, laid: &Laid) -> Option<GObjId> {
     spawn.x44_flag[0] |= 0x80;
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
-    vars(r.game, gobj).x0.set(laid.damage_mul);
-    item_mut(r.game, gobj).xC98 = laid.damage_behavior;
+    vars(r.game, gobj).damage_mul.set(laid.damage_mul);
+    item_mut(r.game, gobj).unread_c98 = laid.damage_behavior;
     lib2725::set_lifetime(r.game, r.data, gobj, laid.lifetime);
     fall(r, gobj);
     Some(gobj)
@@ -106,15 +106,15 @@ pub fn spawn(r: &mut Running, laid: &Laid) -> Option<GObjId> {
 fn fall(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
-    set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, false);
+    set_flag(&mut item_mut(r.game, gobj).hurt_flags, 7, false);
 }
 
 /// Its time counted down: at its end it breaks with its sound and effect (`it_27CF_UnkMotion0_Anim`
 /// and `it_27CF_UnkMotion1_Anim`, the same code).
 fn tick(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    if ip.xD44_lifeTimer <= 0.0 {
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    if ip.life_timer <= 0.0 {
         let j = jobj_of(r.game, gobj);
         play_sfx(r, gobj, 0x44618, 0x7F, 0x40);
         queue(r, gobj, SpawnKind::PosParam, 0x4CF, j, &[Arg::Float(1.0)]);
@@ -174,8 +174,8 @@ fn sit_coll(r: &mut Running, gobj: GObjId) -> bool {
 pub fn crack(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
-    ip.xD44_lifeTimer = 40.0;
+    ip.vel = Vec3::new(0.0, 0.0, 0.0);
+    ip.life_timer = 40.0;
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     super::super::hitbox::start_blink(r.game, gobj);
     change_state(r, gobj, 2, change::ANIM_UPDATE);
@@ -185,19 +185,19 @@ pub fn crack(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_27CF_UnkMotion2_Anim")]
 fn break_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    ip.xD44_lifeTimer <= 0.0
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
+    ip.life_timer <= 0.0
 }
 
 /// A hit shortens its life by the damage times its factor, `it_27CF_Logic114_DmgReceived`.
 #[doc(alias = "it_27CF_Logic114_DmgReceived")]
 fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
-    let mul = vars(r.game, gobj).x0.get();
+    let mul = vars(r.game, gobj).damage_mul.get();
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fnmsubs(
-        fp::frsp(f64::from(ip.xCA0)),
+    ip.life_timer = mem(fp::fnmsubs(
+        fp::frsp(f64::from(ip.hit_damage)),
         reg(mul),
-        reg(ip.xD44_lifeTimer),
+        reg(ip.life_timer),
     ));
     false
 }

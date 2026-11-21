@@ -79,7 +79,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// The sword's variables.
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itSword_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.sword()
+    item_mut(game, gobj).vars.sword()
 }
 
 /// `itSword_UnkArticle1`: the blade's swung lengths (`x10`, `x14`) and the frames it takes
@@ -107,23 +107,28 @@ fn step(to: f32, from: f32, frames: i32) -> f32 {
 #[doc(alias = "it_80284FC4")]
 pub fn grow(game: &mut Game, gobj: GObjId, frames: i32, to: f32) {
     let v = vars(game, gobj);
-    v.x4.set(0);
-    v.x8.set(frames);
-    v.xC.set(1);
-    v.x10.set(1.0);
-    v.x14.set(to);
-    v.x18.set(step(v.x14.get(), v.x10.get(), frames));
+    v.length_frames.set(0);
+    v.length_end.set(frames);
+    v.length_dir.set(1);
+    v.length.set(1.0);
+    v.length_target.set(to);
+    v.length_step
+        .set(step(v.length_target.get(), v.length.get(), frames));
 }
 
 /// The blade's length eases back to 1 over `frames`, `it_80285024` (`inlineA1` with 4).
 #[doc(alias = "it_80285024")]
 pub fn shrink(game: &mut Game, gobj: GObjId, frames: i32) {
     let v = vars(game, gobj);
-    v.x4.set(frames);
-    v.x8.set(0);
-    v.xC.set(-1);
-    v.x14.set(1.0);
-    v.x18.set(step(v.x14.get(), v.x10.get(), v.x4.get()));
+    v.length_frames.set(frames);
+    v.length_end.set(0);
+    v.length_dir.set(-1);
+    v.length_target.set(1.0);
+    v.length_step.set(step(
+        v.length_target.get(),
+        v.length.get(),
+        v.length_frames.get(),
+    ));
 }
 
 /// One eased value: a count stepping toward its end, and a value stepping toward its target.
@@ -161,39 +166,54 @@ fn ease_one(
 #[doc(alias = "it_80285084")]
 pub fn ease_length(game: &mut Game, gobj: GObjId) {
     let v = vars(game, gobj);
-    let (end, target) = (v.x8.get(), v.x14.get());
-    let (mut c, mut d, mut x, mut dx) = (v.x4.get(), v.xC.get(), v.x10.get(), v.x18.get());
+    let (end, target) = (v.length_end.get(), v.length_target.get());
+    let (mut c, mut d, mut x, mut dx) = (
+        v.length_frames.get(),
+        v.length_dir.get(),
+        v.length.get(),
+        v.length_step.get(),
+    );
     ease_one(&mut c, end, &mut d, &mut x, target, &mut dx);
-    v.x4.set(c);
-    v.xC.set(d);
-    v.x10.set(x);
-    v.x18.set(dx);
+    v.length_frames.set(c);
+    v.length_dir.set(d);
+    v.length.set(x);
+    v.length_step.set(dx);
 }
 
 /// Steps the blade's width, `it_80285140`.
 #[doc(alias = "it_80285140")]
 pub fn ease_width(game: &mut Game, gobj: GObjId) {
     let v = vars(game, gobj);
-    let (end, target) = (v.x20.get(), v.x2C.get());
-    let (mut c, mut d, mut x, mut dx) = (v.x1C.get(), v.x24.get(), v.x28.get(), v.x30.get());
+    let (end, target) = (v.width_end.get(), v.width_target.get());
+    let (mut c, mut d, mut x, mut dx) = (
+        v.width_frames.get(),
+        v.width_dir.get(),
+        v.width.get(),
+        v.width_step.get(),
+    );
     ease_one(&mut c, end, &mut d, &mut x, target, &mut dx);
-    v.x1C.set(c);
-    v.x24.set(d);
-    v.x28.set(x);
-    v.x30.set(dx);
+    v.width_frames.set(c);
+    v.width_dir.set(d);
+    v.width.set(x);
+    v.width_step.set(dx);
 }
 
 /// Steps the swing's stretch, `it_802851FC`.
 #[doc(alias = "it_802851FC")]
 pub fn ease_swing(game: &mut Game, gobj: GObjId) {
     let v = vars(game, gobj);
-    let (end, target) = (v.x38.get(), v.x44.get());
-    let (mut c, mut d, mut x, mut dx) = (v.x34.get(), v.x3C.get(), v.x40.get(), v.x48.get());
+    let (end, target) = (v.swing_end.get(), v.swing_target.get());
+    let (mut c, mut d, mut x, mut dx) = (
+        v.swing_frames.get(),
+        v.swing_dir.get(),
+        v.swing.get(),
+        v.swing_step.get(),
+    );
     ease_one(&mut c, end, &mut d, &mut x, target, &mut dx);
-    v.x34.set(c);
-    v.x3C.set(d);
-    v.x40.set(x);
-    v.x48.set(dx);
+    v.swing_frames.set(c);
+    v.swing_dir.set(d);
+    v.swing.set(x);
+    v.swing_step.set(dx);
 }
 
 /// Scales the blade's joints from the eased values, `it_80284E30`.
@@ -201,20 +221,20 @@ pub fn ease_swing(game: &mut Game, gobj: GObjId) {
 pub fn scale_blade(r: &mut Running, gobj: GObjId) {
     let msid = item(r.game, gobj).msid;
     let t = item(r.game, gobj)
-        .xBBC_dynamicBoneTable
+        .bone_table
         .expect("a sword without a bone table");
     let bones = r.game.it.bone_tables[t.0].bones;
     let v = vars(r.game, gobj);
     let y = fp::fmuls(
         f64::from(0.3_f32),
         fp::fmuls(
-            reg(v.x28.get()),
-            fp::fmuls(reg(v.x4C.get()), reg(v.x10.get())),
+            reg(v.width.get()),
+            fp::fmuls(reg(v.base_width.get()), reg(v.length.get())),
         ),
     );
     let scale = if msid == 2 {
-        let xz = mem(fp::fmadds(1.5, reg(v.x40.get()), y));
-        Vec3::new(xz, mem(fp::fadds(y, reg(v.x40.get()))), xz)
+        let xz = mem(fp::fmadds(1.5, reg(v.swing.get()), y));
+        Vec3::new(xz, mem(fp::fadds(y, reg(v.swing.get()))), xz)
     } else {
         Vec3::new(1.0, mem(y), 1.0)
     };
@@ -227,45 +247,50 @@ pub fn scale_blade(r: &mut Running, gobj: GObjId) {
 /// The width eases back to 1 over 4 frames (`inlineA2`).
 fn narrow(game: &mut Game, gobj: GObjId) {
     let v = vars(game, gobj);
-    v.x1C.set(4);
-    v.x20.set(0);
-    v.x24.set(-1);
-    v.x2C.set(1.0);
-    v.x30.set(step(v.x2C.get(), v.x28.get(), v.x1C.get()));
+    v.width_frames.set(4);
+    v.width_end.set(0);
+    v.width_dir.set(-1);
+    v.width_target.set(1.0);
+    v.width_step.set(step(
+        v.width_target.get(),
+        v.width.get(),
+        v.width_frames.get(),
+    ));
 }
 
 /// The width eases from 1 to 2 over 4 frames (`inlineC1`).
 fn widen(game: &mut Game, gobj: GObjId) {
     let v = vars(game, gobj);
-    v.x1C.set(0);
-    v.x20.set(4);
-    v.x24.set(1);
-    v.x28.set(1.0);
-    v.x2C.set(2.0);
-    v.x30.set(step(v.x2C.get(), v.x28.get(), 4));
+    v.width_frames.set(0);
+    v.width_end.set(4);
+    v.width_dir.set(1);
+    v.width.set(1.0);
+    v.width_target.set(2.0);
+    v.width_step
+        .set(step(v.width_target.get(), v.width.get(), 4));
 }
 
 /// The swing eases back to its rest length (`inlineA3`).
 fn unswing(r: &mut Running, gobj: GObjId) {
     let (rest, _, frames) = attrs(r, gobj);
     let v = vars(r.game, gobj);
-    v.x34.set(frames);
-    v.x38.set(0);
-    v.x3C.set(-1);
-    v.x44.set(rest);
-    v.x48.set(step(rest, v.x40.get(), frames));
+    v.swing_frames.set(frames);
+    v.swing_end.set(0);
+    v.swing_dir.set(-1);
+    v.swing_target.set(rest);
+    v.swing_step.set(step(rest, v.swing.get(), frames));
 }
 
 /// The swing eases out to its full length (`inlineD1`).
 fn swing(r: &mut Running, gobj: GObjId) {
     let (rest, full, frames) = attrs(r, gobj);
     let v = vars(r.game, gobj);
-    v.x34.set(0);
-    v.x38.set(frames);
-    v.x3C.set(1);
-    v.x40.set(rest);
-    v.x44.set(full);
-    v.x48.set(step(full, rest, frames));
+    v.swing_frames.set(0);
+    v.swing_end.set(frames);
+    v.swing_dir.set(1);
+    v.swing.set(rest);
+    v.swing_target.set(full);
+    v.swing_step.set(step(full, rest, frames));
 }
 
 /// Steps every eased value and scales the blade (`inlineA4`); the states' animation,
@@ -299,35 +324,35 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
             .expect("a sword without attributes");
         r.data.f32(a.at(0xC))
     };
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, vy, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, vy, 0.0);
     let t = item(r.game, gobj)
-        .xBBC_dynamicBoneTable
+        .bone_table
         .expect("a sword without a bone table");
     let b6 = r.game.it.bone_tables[t.0].bones[6].expect("bone 6");
     let y = r.game.objs.jobjs[b6].scale.y;
     let v = vars(r.game, gobj);
-    v.x0.set(0);
-    v.x4.set(0);
-    v.x8.set(0);
-    v.xC.set(0);
-    v.x10.set(1.0);
-    v.x14.set(1.0);
-    v.x18.set(0.0);
-    v.x1C.set(0);
-    v.x20.set(0);
-    v.x24.set(0);
-    v.x28.set(1.0);
-    v.x2C.set(1.0);
-    v.x30.set(0.0);
-    v.x34.set(0);
-    v.x38.set(0);
-    v.x3C.set(0);
-    v.x40.set(1.0);
-    v.x44.set(1.0);
-    v.x48.set(0.0);
-    v.x50.set(0.0);
-    v.x4C.set(y);
-    v.x54.set(0);
+    v.unread_0.set(0);
+    v.length_frames.set(0);
+    v.length_end.set(0);
+    v.length_dir.set(0);
+    v.length.set(1.0);
+    v.length_target.set(1.0);
+    v.length_step.set(0.0);
+    v.width_frames.set(0);
+    v.width_end.set(0);
+    v.width_dir.set(0);
+    v.width.set(1.0);
+    v.width_target.set(1.0);
+    v.width_step.set(0.0);
+    v.swing_frames.set(0);
+    v.swing_end.set(0);
+    v.swing_dir.set(0);
+    v.swing.set(1.0);
+    v.swing_target.set(1.0);
+    v.swing_step.set(0.0);
+    v.unread_50.set(0.0);
+    v.base_width.set(y);
+    v.unread_54.set(0);
     fell(r, gobj);
 }
 
@@ -335,8 +360,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_80285424")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
-    ip.xD50_landNum = 0;
+    ip.vel = Vec3::new(0.0, 0.0, 0.0);
+    ip.land_count = 0;
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     rest(r, gobj);
 }
@@ -345,7 +370,7 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802855F8")]
 pub fn fell(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 1, change::ANIM_UPDATE);
-    item_mut(r.game, gobj).xD50_landNum = 0;
+    item_mut(r.game, gobj).land_count = 0;
     rest(r, gobj);
 }
 
@@ -396,7 +421,7 @@ fn show(r: &mut Running, gobj: GObjId) {
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
     show(r, gobj);
     change_state(r, gobj, 2, change::ANIM_UPDATE);
-    item_mut(r.game, gobj).xD50_landNum = 0;
+    item_mut(r.game, gobj).land_count = 0;
     shrink(r.game, gobj, 4);
     widen(r.game, gobj);
     ease(r, gobj);
@@ -420,10 +445,10 @@ pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
     }
     let (_, _, frames) = attrs(r, gobj);
     let v = vars(r.game, gobj);
-    if v.x3C.get() == 0 && v.x34.get() == v.x38.get() {
-        if v.x38.get() == 0 {
+    if v.swing_dir.get() == 0 && v.swing_frames.get() == v.swing_end.get() {
+        if v.swing_end.get() == 0 {
             swing(r, gobj);
-        } else if v.x38.get() == frames {
+        } else if v.swing_end.get() == frames {
             unswing(r, gobj);
         }
     }
@@ -526,8 +551,8 @@ pub fn trail_widths(game: &mut Game, gobj: GObjId) -> (f32, f32) {
     let f1 = fp::fmuls(
         f64::from(0.3_f32),
         fp::fmuls(
-            reg(v.x28.get()),
-            fp::fmuls(reg(v.x4C.get()), reg(v.x10.get())),
+            reg(v.width.get()),
+            fp::fmuls(reg(v.base_width.get()), reg(v.length.get())),
         ),
     );
     (0.0, mem(fp::fmuls(f64::from(10.03_f32), f1)))

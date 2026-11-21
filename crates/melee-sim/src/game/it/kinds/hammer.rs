@@ -71,7 +71,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// Hides the head joint once no head is left (the file's inline `thing`).
 fn hide_lost_head(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xD4C <= 0 {
+    if item(r.game, gobj).ammo <= 0 {
         let head = lib2725::bone(r.game, r.data, gobj, 3);
         lib2725::hide_tree(r.game, head);
     }
@@ -81,12 +81,12 @@ fn hide_lost_head(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_80293D94")]
 #[doc(alias = "it_8026BC14")]
 pub fn hitlag(r: &mut Running, gobj: GObjId) {
-    let f = &item(r.game, gobj).xDC8_word.flags;
-    if f.xB || !f.xA {
+    let f = &item(r.game, gobj).flags.flags;
+    if f.damage_hitlag || !f.hitlag_counting {
         return;
     }
     let ip = item(r.game, gobj);
-    let (owner, frames) = (ip.owner, ip.xCBC_hitlagFrames);
+    let (owner, frames) = (ip.owner, ip.hitlag_frames);
     if let Some(o) = owner
         && super::super::item::is_fighter(r.game, owner)
     {
@@ -113,9 +113,9 @@ pub fn swings_to_lose_head(r: &mut Running, gobj: GObjId) -> i32 {
 /// Throws the head off along the handle when one is left, `it_80293E34`.
 #[doc(alias = "it_80293E34")]
 pub fn lose_head(r: &mut Running, gobj: GObjId) {
-    let left = item(r.game, gobj).xD4C;
+    let left = item(r.game, gobj).ammo;
     if left > 0 {
-        item_mut(r.game, gobj).xD4C = left - 1;
+        item_mut(r.game, gobj).ammo = left - 1;
         let head = lib2725::bone(r.game, r.data, gobj, 3);
         let head = world_position(&mut r.game.objs, r.data, head, None);
         let handle = lib2725::bone(r.game, r.data, gobj, 1);
@@ -141,14 +141,14 @@ pub fn lose_head(r: &mut Running, gobj: GObjId) {
 /// `itHammer_Logic28_Spawned`: one head, falling.
 #[doc(alias = "itHammer_Logic28_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).xD4C = 1;
+    item_mut(r.game, gobj).ammo = 1;
     fell(r, gobj);
 }
 
 /// Lands, stopped, `it_80293F84`.
 #[doc(alias = "it_80293F84")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     lib26b1::enable_pickup(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     hide_lost_head(r, gobj);
@@ -195,7 +195,7 @@ pub fn phys_fall(r: &mut Running, gobj: GObjId) {
 /// touching anything.
 #[doc(alias = "itHammer_UnkMotion1_Coll")]
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xD4C != 0 {
+    if item(r.game, gobj).ammo != 0 {
         fall(r, gobj, landed);
         return false;
     }
@@ -214,7 +214,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 /// `itHammer_UnkMotion3_Anim`: held, it turns headless once the head is gone.
 #[doc(alias = "itHammer_UnkMotion3_Anim")]
 pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xD4C == 0 {
+    if item(r.game, gobj).ammo == 0 {
         headless(r, gobj);
     }
     false

@@ -36,13 +36,13 @@ pub fn fixed(v: i32) -> f32 {
 
 /// The word at the item's script cursor, `n` words on.
 pub fn word(r: &Running, gobj: GObjId, n: u32) -> u32 {
-    let s = &item(r.game, gobj).x524_cmd.script;
+    let s = &item(r.game, gobj).cmd.script;
     s.word_at(r.data, n)
 }
 
 /// Moves the item's script on `n` words.
 pub fn skip(r: &mut Running, gobj: GObjId, n: u32) {
-    item_mut(r.game, gobj).x524_cmd.script.skip(n);
+    item_mut(r.game, gobj).cmd.script.skip(n);
 }
 
 /// Makes or updates a hitbox from the script, `it_802790C0`.
@@ -54,19 +54,19 @@ pub fn create_hitbox(r: &mut Running, gobj: GObjId) {
     let group = field(w0, 9, 3);
     {
         let ip = item_mut(r.game, gobj);
-        let hit = &mut ip.x5D4_hitboxes[idx].hit;
+        let hit = &mut ip.hitboxes[idx].hit;
         if hit.state == hitcapsule::DISABLED || hit.x4 != group {
             hit.x4 = group;
             hit.state = hitcapsule::ENABLED;
-            ip.xDC8_word.flags.x16 = true;
-            set_flag(&mut ip.xDAA, 2, false);
+            ip.flags.flags.hitbox_on = true;
+            set_flag(&mut ip.debug_flags, 2, false);
             super::coll::share_group_victims(r.game, gobj, idx);
         }
     }
     let bone = field(w0, 12, 7);
     let j = if bone != 0 {
         let t = item(r.game, gobj)
-            .xBBC_dynamicBoneTable
+            .bone_table
             .expect("item can't set attack!");
         r.game.it.bone_tables[t.0].bones[bone as usize]
     } else {
@@ -74,38 +74,35 @@ pub fn create_hitbox(r: &mut Running, gobj: GObjId) {
     };
     // The joint's address too: the word the item's block keeps for the next item there.
     let at = j.map_or(0, |j| r.game.objs.jobjs.pool.addr(j.0));
-    item_mut(r.game, gobj).x5D4_hitboxes[idx]
-        .hit
-        .jobj
-        .set_at(j, at);
+    item_mut(r.game, gobj).hitboxes[idx].hit.jobj.set_at(j, at);
     let ip = item(r.game, gobj);
     let dmg = fp::fmuls(
-        reg(ip.xC3C),
-        fp::fmuls(fp::frsp(f64::from(field(w0, 19, 13))), reg(ip.xC40)),
+        reg(ip.damage_scale),
+        fp::fmuls(fp::frsp(f64::from(field(w0, 19, 13))), reg(ip.damage_mul)),
     );
     super::coll::set_hit_damage(r.game, data, gobj, idx, crate::ppc::cvt_fp2unsigned(dmg));
     skip(r, gobj, 1);
     let w1 = word(r, gobj, 0);
     {
         let ip = item_mut(r.game, gobj);
-        let hit = &mut ip.x5D4_hitboxes[idx].hit;
+        let hit = &mut ip.hitboxes[idx].hit;
         hit.scale = fixed(field(w1, 0, 16) as i32);
-        ip.x3C = ip.x5D4_hitboxes[idx].hit.scale;
+        ip.hitbox_scale = ip.hitboxes[idx].hit.scale;
     }
     let inv = fp::fdivs(1.0, reg(item(r.game, gobj).scl));
     super::hitbox::scale_hitbox(r.game, gobj, idx, inv);
-    item_mut(r.game, gobj).x5D4_hitboxes[idx].hit.b_offset.x = fixed(sfield(w1, 16, 16));
+    item_mut(r.game, gobj).hitboxes[idx].hit.b_offset.x = fixed(sfield(w1, 16, 16));
     skip(r, gobj, 1);
     let w2 = word(r, gobj, 0);
     {
-        let hit = &mut item_mut(r.game, gobj).x5D4_hitboxes[idx].hit;
+        let hit = &mut item_mut(r.game, gobj).hitboxes[idx].hit;
         hit.b_offset.y = fixed(sfield(w2, 0, 16));
         hit.b_offset.z = fixed(sfield(w2, 16, 16));
     }
     skip(r, gobj, 1);
     let w3 = word(r, gobj, 0);
     {
-        let hit = &mut item_mut(r.game, gobj).x5D4_hitboxes[idx].hit;
+        let hit = &mut item_mut(r.game, gobj).hitboxes[idx].hit;
         hit.kb_angle = field(w3, 0, 9) as i32;
         hit.x24 = field(w3, 9, 9);
         hit.x28 = field(w3, 18, 9);
@@ -114,7 +111,7 @@ pub fn create_hitbox(r: &mut Running, gobj: GObjId) {
     skip(r, gobj, 1);
     let w4 = word(r, gobj, 0);
     {
-        let hit = &mut item_mut(r.game, gobj).x5D4_hitboxes[idx].hit;
+        let hit = &mut item_mut(r.game, gobj).hitboxes[idx].hit;
         hit.x2C = field(w4, 0, 9);
         hit.element = field(w4, 9, 5);
         hit.x40_b0 = field(w4, 14, 1) != 0;
@@ -129,7 +126,7 @@ pub fn create_hitbox(r: &mut Running, gobj: GObjId) {
     let w5 = word(r, gobj, 0);
     {
         let ip = item_mut(r.game, gobj);
-        let hb = &mut ip.x5D4_hitboxes[idx];
+        let hb = &mut ip.hitboxes[idx];
         let hit = &mut hb.hit;
         hit.x40_b4 = field(w5, 0, 8) as u8;
         hit.x41_b4 = field(w5, 8, 1) != 0;
@@ -146,10 +143,10 @@ pub fn create_hitbox(r: &mut Running, gobj: GObjId) {
         hit.x42_b6 = b2 >> 5 & 1 != 0;
         hit.x42_b7 = b2 >> 4 & 1 != 0;
         hit.x43_b0 = b2 >> 3 & 1 != 0;
-        hb.x138 = b2 >> 2 & 1 != 0;
+        hb.always_hits = b2 >> 2 & 1 != 0;
     }
     skip(r, gobj, 1);
-    item_mut(r.game, gobj).x5D4_hitboxes[idx].hit.x43_b2 = false;
+    item_mut(r.game, gobj).hitboxes[idx].hit.x43_b2 = false;
     let w = &r.game.world;
     if let Some(p) = w.current_proc()
         && w.procs[p.0].s_link > 11
@@ -166,8 +163,8 @@ pub fn set_hitbox_damage(r: &mut Running, gobj: GObjId) {
     let val = w & 0x1FFF;
     let ip = item(r.game, gobj);
     let dmg = fp::fmuls(
-        reg(ip.xC3C),
-        fp::fmuls(fp::frsp(f64::from(val)), reg(ip.xC40)),
+        reg(ip.damage_scale),
+        fp::fmuls(fp::frsp(f64::from(val)), reg(ip.damage_mul)),
     );
     super::coll::set_hit_damage(r.game, r.data, gobj, idx, crate::ppc::cvt_fp2unsigned(dmg));
     skip(r, gobj, 1);
@@ -180,8 +177,8 @@ pub fn set_hitbox_scale(r: &mut Running, gobj: GObjId) {
     let idx = field(w, 6, 3) as usize;
     {
         let ip = item_mut(r.game, gobj);
-        ip.x5D4_hitboxes[idx].hit.scale = fixed(field(w, 9, 23) as i32);
-        ip.x3C = ip.x5D4_hitboxes[idx].hit.scale;
+        ip.hitboxes[idx].hit.scale = fixed(field(w, 9, 23) as i32);
+        ip.hitbox_scale = ip.hitboxes[idx].hit.scale;
     }
     let inv = fp::fdivs(1.0, reg(item(r.game, gobj).scl));
     super::hitbox::scale_hitbox(r.game, gobj, idx, inv);
@@ -274,15 +271,15 @@ pub fn run_command(r: &mut Running, gobj: GObjId, opcode: u32) {
             let v = word(r, gobj, 0) & 0x3FF_FFFF;
             let ip = item_mut(r.game, gobj);
             match opcode {
-                17 => ip.xDAC_itcmd_var0 = v,
-                18 => ip.xDB0_itcmd_var1 = v,
-                _ => ip.xDB4_itcmd_var2 = v,
+                17 => ip.cmd_var0 = v,
+                18 => ip.cmd_var1 = v,
+                _ => ip.cmd_var2 = v,
             }
             skip(r, gobj, 1);
         }
         // it_80279768: the script's flag for this frame.
         20 => {
-            item_mut(r.game, gobj).xDBC[0] |= 0x80;
+            item_mut(r.game, gobj).cmd_flags[0] |= 0x80;
             skip(r, gobj, 1);
         }
         // it_80279888, it_802798D4 and it_8027990C: rumble (13-bit kind and frames).
@@ -320,23 +317,20 @@ pub fn run_command(r: &mut Running, gobj: GObjId, opcode: u32) {
 pub fn run_script(r: &mut Running, gobj: GObjId) {
     {
         let ip = item_mut(r.game, gobj);
-        ip.x524_cmd.script.frame_count = ip.x5CC_currentAnimFrame.to_bits();
-        ip.xDBC = [0; 4];
-        if ip.x524_cmd.script.cursor.is_none() {
+        ip.cmd.script.frame_count = ip.anim_frame.to_bits();
+        ip.cmd_flags = [0; 4];
+        if ip.cmd.script.cursor.is_none() {
             return;
         }
-        let s = &mut ip.x524_cmd.script;
+        let s = &mut ip.cmd.script;
         if reg(s.timer_f32()) != reg(WAIT_FOR_FRAME) {
-            s.set_timer_f32(mem(fp::fsubs(
-                reg(s.timer_f32()),
-                reg(ip.x5D0_animFrameSpeed),
-            )));
+            s.set_timer_f32(mem(fp::fsubs(reg(s.timer_f32()), reg(ip.anim_speed))));
         }
     }
     loop {
         let ip = item_mut(r.game, gobj);
-        let speed = reg(ip.x5D0_animFrameSpeed);
-        let s = &mut ip.x524_cmd.script;
+        let speed = reg(ip.anim_speed);
+        let s = &mut ip.cmd.script;
         if s.cursor.is_none() {
             return;
         }
@@ -364,7 +358,7 @@ pub fn run_script(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_80279B64")]
 #[doc(alias = "it_80279BBC")]
 pub fn clear_overlay(ip: &mut Item) {
-    crate::lb::colanim::clear(&mut ip.x548_colorOverlay);
+    crate::lb::colanim::clear(&mut ip.color_overlay);
 }
 
 /// The items' own color script commands (`fn_80279B30`, through `it_804D51C8`): dead with
@@ -383,7 +377,7 @@ pub fn overlay_command(_data: &Archives, _co: &mut ColorOverlay, opcode: u32) {
 pub fn run_overlay(r: &mut Running, gobj: GObjId) {
     let data = r.data;
     loop {
-        let co = &mut item_mut(r.game, gobj).x548_colorOverlay;
+        let co = &mut item_mut(r.game, gobj).color_overlay;
         let ended = crate::lb::colanim::step(data, co, &mut |co, op| overlay_command(data, co, op));
         if !ended {
             return;
@@ -419,6 +413,6 @@ pub fn state_script(
 #[doc(alias = "it_80279B88")]
 pub fn start_colanim(game: &mut Game, data: &Archives, gobj: GObjId, id: i32, frames: i32) -> bool {
     let table = game.it.colanims.expect("no item color animations");
-    let co = &mut item_mut(game, gobj).x548_colorOverlay;
+    let co = &mut item_mut(game, gobj).color_overlay;
     crate::lb::colanim::start(co, data, table, id, frames)
 }

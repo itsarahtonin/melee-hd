@@ -464,11 +464,11 @@ impl Running<'_> {
             }
             let it_x = mem(fp::fmadds(
                 reg(ip.facing_dir),
-                reg(ip.xBCC_unk.x),
+                reg(ip.grab_offset.x),
                 reg(ip.pos.x),
             ));
-            let it_y = mem(fp::fadds(reg(ip.pos.y), reg(ip.xBCC_unk.y)));
-            let (xr, yr) = (reg(ip.xBD4_grabRange.x), reg(ip.xBD4_grabRange.y));
+            let it_y = mem(fp::fadds(reg(ip.pos.y), reg(ip.grab_offset.y)));
+            let (xr, yr) = (reg(ip.grab_range.x), reg(ip.grab_range.y));
             let v = if heavy { &p.gr_heavy_offset } else { light };
             let x1 = reg(v.z);
             let x0 = mem(fp::fmadds(reg(fp.facing_dir), reg(v.x), reg(fp.cur_pos.x)));

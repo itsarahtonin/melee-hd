@@ -42,7 +42,7 @@ pub fn let_go_model(r: &mut Running, gobj: GObjId, vel: Vec3) {
     };
     // `getOwnerJointPosition`.
     let owner = owner.expect("a held item without a holder");
-    let part = item(r.game, gobj).xDC4;
+    let part = item(r.game, gobj).hold_part;
     let hand = r.bone_joint(owner, part as i32);
     let at = crate::lb::joint::world_position(&mut r.game.objs, data, hand, Some(offset));
     let ip = item_mut(r.game, gobj);
@@ -72,7 +72,7 @@ pub fn let_go_model_at(r: &mut Running, gobj: GObjId, pos: Vec3, vel: Vec3) {
             mem(fp::fneg(reg(t.z))),
         );
         let owner = owner.expect("a held item without a holder");
-        let part = item(r.game, gobj).xDC4;
+        let part = item(r.game, gobj).hold_part;
         let hand = r.bone_joint(owner, part as i32);
         let a = crate::lb::joint::world_position(&mut r.game.objs, data, hand, Some(back));
         let b = crate::lb::joint::world_position(&mut r.game.objs, data, hand, None);
@@ -116,28 +116,28 @@ fn let_go_start(
     hitbox::end_blink(r.game, gobj);
     let rotation = lib2725::spin_angle(r.game, data, gobj);
     let root = jobj_of(r.game, gobj);
-    let joint = item(r.game, gobj).xC8_joint;
+    let joint = item(r.game, gobj).joint;
     crate::game::gr::anime::reset_tree_srt(&mut r.game.objs, data, root, joint);
     apply_scale(r.game, gobj);
     lib2725::clamp_fall(r.game, gobj, rotation);
     let ip = item(r.game, gobj);
-    if ip.xDC8_word.flags.x0 {
-        owner = ip.x51C;
+    if ip.flags.flags.held_for_owner {
+        owner = ip.holder;
     }
     let mul = reg(attr_of(ip).f32(data, super::data::attr::THROW_SPEED_MUL));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = vel;
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), mul));
-    ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), mul));
-    ip.x40_vel.z = mem(fp::fmuls(reg(ip.x40_vel.z), mul));
-    let x = reg(ip.x40_vel.x);
+    ip.vel = vel;
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), mul));
+    ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), mul));
+    ip.vel.z = mem(fp::fmuls(reg(ip.vel.z), mul));
+    let x = reg(ip.vel.x);
     let speed = if x < 0.0 { fp::fneg(x) } else { x };
     if !(speed < 1e-5_f32 as f64) || ip.facing_dir == 0.0 {
-        ip.facing_dir = if ip.x40_vel.x >= 0.0 { 1.0 } else { -1.0 };
+        ip.facing_dir = if ip.vel.x >= 0.0 { 1.0 } else { -1.0 };
     }
     let dir = if ip.facing_dir == -1.0 { -1 } else { 1 };
-    ip.x378_itemColl.set_facing_dir(dir);
-    if ip.xDC8_word.flags.x19 {
+    ip.coll.set_facing_dir(dir);
+    if ip.flags.flags.turns_to_face {
         let yaw = mem(fp::frsp(fp::fmul(HALF_PI, reg(ip.facing_dir))));
         let j = root.expect("an item without a model");
         jobj::set_rotation_y(&mut r.game.objs.jobjs, j, yaw);
@@ -152,16 +152,16 @@ fn let_go_start(
 #[doc(alias = "it_80273F34")]
 pub fn thrown(r: &mut Running, gobj: GObjId, thrower: Option<GObjId>) {
     let ip = item_mut(r.game, gobj);
-    ip.xDC8_word.flags.x13 = false;
-    ip.xDC8_word.flags.x14 = true;
-    ip.xDC4 = 0;
-    ip.xD54_throwNum = ip.xD54_throwNum.wrapping_add(1);
-    ip.xD50_landNum = 0;
+    ip.flags.flags.held = false;
+    ip.flags.flags.thrown = true;
+    ip.hold_part = 0;
+    ip.throw_count = ip.throw_count.wrapping_add(1);
+    ip.land_count = 0;
     start_coll(r, gobj, thrower);
     lib2725::init_spin(r.game, gobj);
     let root = jobj_of(r.game, gobj).expect("an item without a model");
     let ip = item(r.game, gobj);
-    if ip.xDC8_word.flags.x19 {
+    if ip.flags.flags.turns_to_face {
         let yaw = mem(fp::frsp(fp::fmul(HALF_PI, reg(ip.facing_dir))));
         jobj::set_rotation_y(&mut r.game.objs.jobjs, root, yaw);
     }
@@ -172,7 +172,7 @@ pub fn thrown(r: &mut Running, gobj: GObjId, thrower: Option<GObjId>) {
     }
     let ip = item_mut(r.game, gobj);
     let dir = if ip.facing_dir == -1.0 { -1 } else { 1 };
-    ip.x378_itemColl.set_facing_dir(dir);
+    ip.coll.set_facing_dir(dir);
     stop_sfx2(r, gobj);
     maplib::enter_air(item_mut(r.game, gobj));
     let pos = item(r.game, gobj).pos;
@@ -190,9 +190,9 @@ pub fn thrown(r: &mut Running, gobj: GObjId, thrower: Option<GObjId>) {
 #[doc(alias = "it_80275BC8")]
 pub fn start_coll(r: &mut Running, gobj: GObjId, thrower: Option<GObjId>) {
     let ip = item_mut(r.game, gobj);
-    let mut b = ip.xBFC.clone();
+    let mut b = ip.throw_coll_box.clone();
     maplib::enter_air(ip);
-    ip.x378_itemColl.cur_pos = ip.pos;
+    ip.coll.cur_pos = ip.pos;
     let from = match thrower {
         Some(t) if super::item::is_fighter(r.game, Some(t)) => {
             lib26b1::parent_ecb_center(r.game, t)
@@ -207,8 +207,8 @@ pub fn start_coll(r: &mut Running, gobj: GObjId, thrower: Option<GObjId>) {
     b.right = mem(fp::fmuls(reg(b.right), s));
     b.left = mem(fp::fmuls(reg(b.left), s));
     let ip = item_mut(r.game, gobj);
-    ip.xC0C = ip.xC1C.clone();
-    if super::flag(ip.xDCE_flag, 7) {
+    ip.kind_coll_box = ip.coll_box.clone();
+    if super::flag(ip.hurt_flags, 7) {
         maplib::set_box(r.game, gobj, b);
     }
     maplib::place_air(r, gobj, from);
@@ -219,8 +219,8 @@ pub fn start_coll(r: &mut Running, gobj: GObjId, thrower: Option<GObjId>) {
 pub fn throw(r: &mut Running, gobj: GObjId, vel: Vec3) {
     let_go_model(r, gobj, vel);
     let ip = item(r.game, gobj);
-    let thrower = if ip.xDC8_word.flags.x0 {
-        ip.x51C
+    let thrower = if ip.flags.flags.held_for_owner {
+        ip.holder
     } else {
         ip.owner
     };
@@ -234,10 +234,10 @@ pub fn let_go(r: &mut Running, gobj: GObjId, vel: Vec3) {
     let_go_model(r, gobj, vel);
     let ip = item_mut(r.game, gobj);
     let mut thrower = ip.owner;
-    if ip.xDC8_word.flags.x0 {
-        thrower = ip.x51C;
+    if ip.flags.flags.held_for_owner {
+        thrower = ip.holder;
         ip.owner = thrower;
-        ip.x51C = None;
+        ip.holder = None;
     }
     thrown(r, gobj, thrower);
 }
@@ -250,13 +250,13 @@ pub fn let_go(r: &mut Running, gobj: GObjId, vel: Vec3) {
 pub fn thrown_by_holder(r: &mut Running, gobj: GObjId, give_back: bool) {
     let ip = item_mut(r.game, gobj);
     let mut thrower = ip.owner;
-    if ip.xDC8_word.flags.x0 {
+    if ip.flags.flags.held_for_owner {
         if give_back {
-            thrower = ip.x51C;
+            thrower = ip.holder;
             ip.owner = thrower;
-            ip.x51C = None;
+            ip.holder = None;
         } else {
-            thrower = ip.x51C;
+            thrower = ip.holder;
         }
     }
     thrown(r, gobj, thrower);
@@ -266,8 +266,8 @@ pub fn thrown_by_holder(r: &mut Running, gobj: GObjId, give_back: bool) {
 #[doc(alias = "it_802731A4")]
 pub fn drop_sfx(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if !ip.xDCD_flag.x0.b2 {
-        let sfx = ip.xD78;
+    if !ip.hit_flags.x0.b2 {
+        let sfx = ip.drop_sfx;
         super::item::play_sfx(r, gobj, sfx, 0x7F, 0x40);
     }
 }
@@ -276,8 +276,8 @@ pub fn drop_sfx(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802731E0")]
 pub fn throw_sfx(r: &mut Running, gobj: GObjId) {
     let ip = item(r.game, gobj);
-    if !ip.xDCD_flag.x0.b2 {
-        let sfx = ip.xD74;
+    if !ip.hit_flags.x0.b2 {
+        let sfx = ip.throw_sfx;
         super::item::play_sfx(r, gobj, sfx, 0x7F, 0x40);
     }
 }
@@ -287,7 +287,7 @@ pub fn throw_sfx(r: &mut Running, gobj: GObjId) {
 /// item forgets its owner.
 #[doc(alias = "Item_8026ABD8")]
 pub fn drop(r: &mut Running, gobj: GObjId, vel: Vec3, speed: f32) {
-    item_mut(r.game, gobj).xC44 = speed;
+    item_mut(r.game, gobj).next_damage_mul = speed;
     drop_sfx(r, gobj);
     let_go_model(r, gobj, vel);
     if let Some(cb) = super::item::logic(r.game, gobj).dropped {
@@ -303,7 +303,7 @@ pub fn drop(r: &mut Running, gobj: GObjId, vel: Vec3, speed: f32) {
 /// Dropped from `pos` at `vel`, `Item_8026AC74` (a light throw's drop).
 #[doc(alias = "Item_8026AC74")]
 pub fn drop_at(r: &mut Running, gobj: GObjId, pos: Vec3, vel: Vec3, speed: f32) {
-    item_mut(r.game, gobj).xC44 = speed;
+    item_mut(r.game, gobj).next_damage_mul = speed;
     drop_sfx(r, gobj);
     let_go_model_at(r, gobj, pos, vel);
     if let Some(cb) = super::item::logic(r.game, gobj).dropped {
@@ -322,7 +322,7 @@ pub fn drop_at(r: &mut Running, gobj: GObjId, pos: Vec3, vel: Vec3, speed: f32) 
 #[doc(alias = "Item_8026AD20")]
 pub fn throw_at(r: &mut Running, gobj: GObjId, pos: Vec3, vel: Vec3, speed: f32) {
     throw_sfx(r, gobj);
-    item_mut(r.game, gobj).xC44 = speed;
+    item_mut(r.game, gobj).next_damage_mul = speed;
     let_go_model_at(r, gobj, pos, vel);
     if let Some(cb) = super::item::logic(r.game, gobj).thrown {
         super::item::call(r, gobj, cb);

@@ -43,7 +43,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 /// The beam's end bone (`xBBC_dynamicBoneTable->bones[2]`).
 fn tip(r: &Running, gobj: GObjId) -> Option<JObjId> {
     let t = item(r.game, gobj)
-        .xBBC_dynamicBoneTable
+        .bone_table
         .expect("a laser without bones");
     r.game.it.bone_tables[t.0].bones[2]
 }
@@ -87,9 +87,9 @@ pub fn spawn(
     debug_owner_bubbles(r.game, g, Some(owner));
     lib2725::first_frame(r, g);
     let j = jobj_of(r.game, g);
-    let v = item_mut(r.game, g).xDD4_itemVar.masterhand_laser();
-    v.x4.set(part);
-    v.x10.set(j);
+    let v = item_mut(r.game, g).vars.masterhand_laser();
+    v.part.set(part);
+    v.joint.set(j);
     let target = owner_part(r, owner, part);
     crate::lb::anim::attach(&mut r.game.objs, j, target);
     super::super::item::animate(r, g);
@@ -106,11 +106,7 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 #[doc(alias = "it_802F046C")]
 pub fn end(r: &mut Running, gobj: Option<GObjId>) {
     if let Some(g) = gobj {
-        item_mut(r.game, g)
-            .xDD4_itemVar
-            .masterhand_laser()
-            .x0
-            .set(1);
+        item_mut(r.game, g).vars.masterhand_laser().ended.set(1);
     }
 }
 
@@ -121,9 +117,9 @@ pub fn reset(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(crate::game::handles::CodeRef(ACCESSORY));
-    let v = ip.xDD4_itemVar.masterhand_laser();
-    v.x0.set(0);
-    v.x8.set(fp::fctiwz(reg(n)));
+    let v = ip.vars.masterhand_laser();
+    v.ended.set(0);
+    v.reach_frames.set(fp::fctiwz(reg(n)));
 }
 
 /// `itMasterhandlaser_UnkMotion0_Anim`: its animation again when it ends; gone once ended,
@@ -132,9 +128,9 @@ fn anim(r: &mut Running, gobj: GObjId) -> bool {
     if !lib2725::is_animating(r.game, gobj) {
         reset(r, gobj);
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.masterhand_laser();
-    if v.x0.get() != 0 {
-        let j = v.x10.get().expect("a laser without its joint");
+    let v = item_mut(r.game, gobj).vars.masterhand_laser();
+    if v.ended.get() != 0 {
+        let j = v.joint.get().expect("a laser without its joint");
         crate::game::ft::co::throw::unconstrain(&mut r.game.objs, j);
         return true;
     }
@@ -147,11 +143,7 @@ fn anim(r: &mut Running, gobj: GObjId) -> bool {
 pub fn accessory(r: &mut Running, gobj: GObjId) {
     let owner = item(r.game, gobj).owner.expect("a laser without its owner");
     reach(r, gobj, owner);
-    let part = item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .masterhand_laser()
-        .x4
-        .get();
+    let part = item_mut(r.game, gobj).vars.masterhand_laser().part.get();
     let pj = owner_part(r, owner, part);
     let from = world_position(&mut r.game.objs, r.data, pj, None);
     let t = tip(r, gobj);
@@ -165,10 +157,10 @@ pub fn accessory(r: &mut Running, gobj: GObjId) {
 pub fn hitbox_off(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     for k in 0..4 {
-        let hit = &mut ip.x5D4_hitboxes[k].hit;
+        let hit = &mut ip.hitboxes[k].hit;
         if hit.state != crate::lb::hitcapsule::DISABLED {
             hit.state = crate::lb::hitcapsule::STOPPED;
-            super::super::set_flag(&mut ip.xDAA, 2, true);
+            super::super::set_flag(&mut ip.debug_flags, 2, true);
         }
     }
 }
@@ -176,7 +168,7 @@ pub fn hitbox_off(r: &mut Running, gobj: GObjId) {
 /// Hitbox `idx`'s ends, `it_80275820`, if it's on.
 #[doc(alias = "it_80275820")]
 pub fn hitbox_at(r: &mut Running, gobj: GObjId, a: Vec3, b: Vec3, idx: usize) {
-    let hit = &mut item_mut(r.game, gobj).x5D4_hitboxes[idx].hit;
+    let hit = &mut item_mut(r.game, gobj).hitboxes[idx].hit;
     if hit.state != crate::lb::hitcapsule::DISABLED {
         hit.x58 = b;
         hit.x4C = a;
@@ -199,14 +191,10 @@ pub fn reach(r: &mut Running, gobj: GObjId, owner: GObjId) {
     let length = attr_f32(r, gobj, attr::LENGTH);
     let root = jobj_of(r.game, gobj);
     let child = root.and_then(|j| r.game.objs.jobjs[j].child);
-    let desc = item(r.game, gobj).xC8_joint;
+    let desc = item(r.game, gobj).joint;
     let desc_child = desc.and_then(|d| r.data.ptr(d.at(8)));
     crate::game::gr::anime::reset_tree_srt(&mut r.game.objs, r.data, child, desc_child);
-    let part = item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .masterhand_laser()
-        .x4
-        .get();
+    let part = item_mut(r.game, gobj).vars.masterhand_laser().part.get();
     let pj = owner_part(r, owner, part);
     let p0 = world_position(&mut r.game.objs, r.data, pj, None);
     let mut translate = Vec3::new(0.0, mem(fp::fneg(reg(length))), 0.0);
@@ -235,17 +223,17 @@ pub fn reach(r: &mut Running, gobj: GObjId, owner: GObjId) {
     let flat = sqrt_store(fp::fadds(fp::fmuls(dx, dx), fp::fmuls(dy, dy)));
     translate.y = mem(fp::fmuls(full, fp::fneg(fp::fdivs(cut, flat))));
     jobj::set_translate(&mut r.game.objs.jobjs, t, translate);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.masterhand_laser();
-    let n = v.x8.get().wrapping_sub(1);
-    v.x8.set(n);
+    let v = item_mut(r.game, gobj).vars.masterhand_laser();
+    let n = v.reach_frames.get().wrapping_sub(1);
+    v.reach_frames.set(n);
     if n < 0 {
         let at = world_position(&mut r.game.objs, r.data, Some(t), None);
         crate::game::ef::spawn(r, GFX_SPARK, Some(gobj), &[Arg::Vec(at)]);
         let frames = attr_f32(r, gobj, attr::SPARK_FRAMES);
         item_mut(r.game, gobj)
-            .xDD4_itemVar
+            .vars
             .masterhand_laser()
-            .x8
+            .reach_frames
             .set(fp::fctiwz(reg(frames)));
     }
 }

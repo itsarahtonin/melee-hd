@@ -106,8 +106,8 @@ pub fn start(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itNesspkfire_UnkMotion0_Anim")]
 pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), fp::frsp(1.0)));
-    ip.xD44_lifeTimer <= 0.0
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), fp::frsp(1.0)));
+    ip.life_timer <= 0.0
 }
 
 /// Hitting a fighter or clanking, `it_2725_Logic23_DmgDealt` and `it_2725_Logic23_Clanked`:

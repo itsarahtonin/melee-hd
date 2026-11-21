@@ -3740,20 +3740,23 @@ pub struct ItemHitbox {
     /// +0x0
     pub hit: HitCapsule,
     /// +0x138 (bits 0..+1)
-    pub x138: bool,
+    #[doc(alias("x138"))]
+    pub always_hits: bool,
     /// +0x138 (bits 1..+7)
-    pub x138_b1_7: u8,
+    #[doc(alias("x138_b1_7"))]
+    pub unused_138_b1_7: u8,
     /// +0x139
-    pub x139: [u8; 3],
+    #[doc(alias("x139"))]
+    pub unused_139: [u8; 3],
 }
 
 impl Default for ItemHitbox {
     fn default() -> Self {
         ItemHitbox {
             hit: Default::default(),
-            x138: false,
-            x138_b1_7: 0,
-            x139: [0; 3],
+            always_hits: false,
+            unused_138_b1_7: 0,
+            unused_139: [0; 3],
         }
     }
 }
@@ -3783,28 +3786,34 @@ impl Default for lb_80014638_arg1_t {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct xB6C_t {
     /// +0x0
-    pub xB6C: Vec3,
+    #[doc(alias("xB6C"))]
+    pub offset: Vec3,
     /// +0xc
-    pub xB78: f32,
+    #[doc(alias("xB78"))]
+    pub radius: f32,
     /// +0x10
-    pub xB7C: Option<JObjId>,
+    #[doc(alias("xB7C"))]
+    pub bone: Option<JObjId>,
     /// +0x14
-    pub xB80: u32,
+    #[doc(alias("xB80"))]
+    pub unused_b80: u32,
     /// +0x18
-    pub xB84: Vec3,
+    #[doc(alias("xB84"))]
+    pub pos: Vec3,
     /// +0x24
-    pub xB90: u32,
+    #[doc(alias("xB90"))]
+    pub bone_id: u32,
 }
 
 impl Default for xB6C_t {
     fn default() -> Self {
         xB6C_t {
-            xB6C: Default::default(),
-            xB78: 0.0,
-            xB7C: None,
-            xB80: 0,
-            xB84: Default::default(),
-            xB90: 0,
+            offset: Default::default(),
+            radius: 0.0,
+            bone: None,
+            unused_b80: 0,
+            pos: Default::default(),
+            bone_id: 0,
         }
     }
 }
@@ -3813,13 +3822,14 @@ impl Default for xB6C_t {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct ItemModStruct {
     /// +0x0
-    pub x0_unk: _GXColor,
+    #[doc(alias("x0_unk"))]
+    pub color: _GXColor,
 }
 
 impl Default for ItemModStruct {
     fn default() -> Self {
         ItemModStruct {
-            x0_unk: Default::default(),
+            color: Default::default(),
         }
     }
 }
@@ -3852,94 +3862,122 @@ impl Default for _itECB {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct flag32_flags {
     /// +0x0 (bits 0..+1)
-    pub x0: bool,
+    #[doc(alias("x0"))]
+    pub held_for_owner: bool,
     /// +0x0 (bits 1..+1)
-    pub x1: bool,
+    #[doc(alias("x1"))]
+    pub not_from_fighter: bool,
     /// +0x0 (bits 2..+1)
-    pub x2: bool,
+    #[doc(alias("x2"))]
+    pub holds_still: bool,
     /// +0x0 (bits 3..+1)
-    pub x3: bool,
+    #[doc(alias("x3"))]
+    pub hit_hitlag_asked: bool,
     /// +0x0 (bits 4..+1)
-    pub x4: bool,
+    #[doc(alias("x4"))]
+    pub clank_hitlag_asked: bool,
     /// +0x0 (bits 5..+1)
-    pub x5: bool,
+    #[doc(alias("x5"))]
+    pub hit_hitlag_ending: bool,
     /// +0x0 (bits 6..+1)
-    pub x6: bool,
+    #[doc(alias("x6"))]
+    pub clank_hitlag_ending: bool,
     /// +0x0 (bits 7..+1)
-    pub x7: bool,
+    #[doc(alias("x7"))]
+    pub hit_hitlag: bool,
     /// +0x1 (bits 0..+1)
-    pub x8: bool,
+    #[doc(alias("x8"))]
+    pub clank_hitlag: bool,
     /// +0x1 (bits 1..+1)
-    pub x9: bool,
+    #[doc(alias("x9"))]
+    pub in_hitlag: bool,
     /// +0x1 (bits 2..+1)
-    pub xA: bool,
+    #[doc(alias("xA"))]
+    pub hitlag_counting: bool,
     /// +0x1 (bits 3..+1)
-    pub xB: bool,
+    #[doc(alias("xB"))]
+    pub damage_hitlag: bool,
     /// +0x1 (bits 4..+1)
-    pub xC: bool,
+    #[doc(alias("xC"))]
+    pub hits_counted: bool,
     /// +0x1 (bits 5..+1)
-    pub xD: bool,
+    #[doc(alias("xD"))]
+    pub shield_hitlag: bool,
     /// +0x1 (bits 6..+1)
-    pub xE: bool,
+    #[doc(alias("xE"))]
+    pub holds_fighter_data: bool,
     /// +0x1 (bits 7..+4)
-    pub xF: u8,
+    #[doc(alias("xF"))]
+    pub held_by_players: u8,
     /// +0x2 (bits 3..+1)
-    pub x13: bool,
+    #[doc(alias("x13"))]
+    pub held: bool,
     /// +0x2 (bits 4..+1)
-    pub x14: bool,
+    #[doc(alias("x14"))]
+    pub thrown: bool,
     /// +0x2 (bits 5..+1)
-    pub x15: bool,
+    #[doc(alias("x15"))]
+    pub pickup: bool,
     /// +0x2 (bits 6..+1)
-    pub x16: bool,
+    #[doc(alias("x16"))]
+    pub hitbox_on: bool,
     /// +0x2 (bits 7..+2)
-    pub x17: u8,
+    #[doc(alias("x17"))]
+    pub spin_axis: u8,
     /// +0x3 (bits 1..+1)
-    pub x19: bool,
+    #[doc(alias("x19"))]
+    pub turns_to_face: bool,
     /// +0x3 (bits 2..+1)
-    pub x1A: bool,
+    #[doc(alias("x1A"))]
+    pub keeps_clear: bool,
     /// +0x3 (bits 3..+1)
-    pub x1B: bool,
+    #[doc(alias("x1B"))]
+    pub random_push: bool,
     /// +0x3 (bits 4..+1)
-    pub x1C: bool,
+    #[doc(alias("x1C"))]
+    pub clear_of_fighters: bool,
     /// +0x3 (bits 5..+1)
-    pub x1D: bool,
+    #[doc(alias("x1D"))]
+    pub clear_of_items: bool,
     /// +0x3 (bits 6..+1)
-    pub x1E: bool,
+    #[doc(alias("x1E"))]
+    pub pushed_by_enemies: bool,
     /// +0x3 (bits 7..+1)
-    pub x1F: bool,
+    #[doc(alias("x1F"))]
+    pub may_skid: bool,
 }
 
 impl Default for flag32_flags {
     fn default() -> Self {
         flag32_flags {
-            x0: false,
-            x1: false,
-            x2: false,
-            x3: false,
-            x4: false,
-            x5: false,
-            x6: false,
-            x7: false,
-            x8: false,
-            x9: false,
-            xA: false,
-            xB: false,
-            xC: false,
-            xD: false,
-            xE: false,
-            xF: 0,
-            x13: false,
-            x14: false,
-            x15: false,
-            x16: false,
-            x17: 0,
-            x19: false,
-            x1A: false,
-            x1B: false,
-            x1C: false,
-            x1D: false,
-            x1E: false,
-            x1F: false,
+            held_for_owner: false,
+            not_from_fighter: false,
+            holds_still: false,
+            hit_hitlag_asked: false,
+            clank_hitlag_asked: false,
+            hit_hitlag_ending: false,
+            clank_hitlag_ending: false,
+            hit_hitlag: false,
+            clank_hitlag: false,
+            in_hitlag: false,
+            hitlag_counting: false,
+            damage_hitlag: false,
+            hits_counted: false,
+            shield_hitlag: false,
+            holds_fighter_data: false,
+            held_by_players: 0,
+            held: false,
+            thrown: false,
+            pickup: false,
+            hitbox_on: false,
+            spin_axis: 0,
+            turns_to_face: false,
+            keeps_clear: false,
+            random_push: false,
+            clear_of_fighters: false,
+            clear_of_items: false,
+            pushed_by_enemies: false,
+            may_skid: false,
         }
     }
 }
@@ -4038,11 +4076,13 @@ impl Default for CameraBoxFlags {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Item {
     /// +0x0
-    pub x0: Option<ItemId>,
+    #[doc(alias("x0"))]
+    pub next_free: Option<ItemId>,
     /// +0x4
     pub entity: Option<GObjId>,
     /// +0x8
-    pub x8: Kept<i32>,
+    #[doc(alias("x8"))]
+    pub unused_8: Kept<i32>,
     /// +0xc
     pub spawn_kind: i32,
     /// +0x10
@@ -4050,17 +4090,23 @@ pub struct Item {
     /// +0x14
     pub hold_kind: i32,
     /// +0x18
-    pub x18: i32,
+    #[doc(alias("x18"))]
+    pub spawn_origin: i32,
     /// +0x1c
-    pub x1C: i32,
+    #[doc(alias("x1C"))]
+    pub spawn_num: i32,
     /// +0x20
-    pub x20_team_id: u8,
+    #[doc(alias("x20_team_id"))]
+    pub team: u8,
     /// +0x21
-    pub x21: Kept<u8>,
+    #[doc(alias("x21"))]
+    pub unused_21: Kept<u8>,
     /// +0x22
-    pub x22: Kept<u8>,
+    #[doc(alias("x22"))]
+    pub unused_22: Kept<u8>,
     /// +0x23
-    pub x23: Kept<u8>,
+    #[doc(alias("x23"))]
+    pub unused_23: Kept<u8>,
     /// +0x24
     pub msid: i32,
     /// +0x28
@@ -4074,219 +4120,319 @@ pub struct Item {
     /// +0x38
     pub scl: f32,
     /// +0x3c
-    pub x3C: f32,
+    #[doc(alias("x3C"))]
+    pub hitbox_scale: f32,
     /// +0x40
-    pub x40_vel: Vec3,
+    #[doc(alias("x40_vel"))]
+    pub vel: Vec3,
     /// +0x4c
     pub pos: Vec3,
     /// +0x58
-    pub x58_vec_unk: Vec3,
+    #[doc(alias("x58_vec_unk"))]
+    pub wind_push: Vec3,
     /// +0x64
-    pub x64_vec_unk2: Vec3,
+    #[doc(alias("x64_vec_unk2"))]
+    pub floor_motion: Vec3,
     /// +0x70
-    pub x70_nudge: Vec3,
+    #[doc(alias("x70_nudge"))]
+    pub nudge: Vec3,
     /// +0x7c
-    pub x7C: Vec3,
+    #[doc(alias("x7C"))]
+    pub skid_vel: Vec3,
     /// +0x88
-    pub x88: Vec3,
+    #[doc(alias("x88"))]
+    pub slide_vel: Vec3,
     /// +0x94
-    pub x94: Vec3,
+    #[doc(alias("x94"))]
+    pub last_slide_vel: Vec3,
     /// +0xa0
-    pub xA0: Vec3,
+    #[doc(alias("xA0"))]
+    pub unread_a0: Vec3,
     /// +0xac
-    pub xAC_unk: Vec3,
+    #[doc(alias("xAC_unk"))]
+    pub surface_normal: Vec3,
     /// +0xb8
-    pub xB8_itemLogicTable: Option<ItemLogicRef>,
+    #[doc(alias("xB8_itemLogicTable"))]
+    pub logic_table: Option<ItemLogicRef>,
     /// +0xbc
-    pub xBC_itemStateContainer: Option<ItemStatesRef>,
+    #[doc(alias("xBC_itemStateContainer"))]
+    pub state_table: Option<ItemStatesRef>,
     /// +0xc0
     pub ground_or_air: i32,
     /// +0xc4
-    pub xC4_article_data: Option<DataRef>,
+    #[doc(alias("xC4_article_data"))]
+    pub article: Option<DataRef>,
     /// +0xc8
-    pub xC8_joint: Option<DataRef>,
+    #[doc(alias("xC8_joint"))]
+    pub joint: Option<DataRef>,
     /// +0xcc
-    pub xCC_item_attr: Option<DataRef>,
+    #[doc(alias("xCC_item_attr"))]
+    pub attrs: Option<DataRef>,
     /// +0xd0
-    pub xD0_itemStateDesc: Option<DataRef>,
+    #[doc(alias("xD0_itemStateDesc"))]
+    pub state_desc: Option<DataRef>,
     /// +0xd4
-    pub xD4_dynamicBones: ItemDynamicBones,
+    #[doc(alias("xD4_dynamicBones"))]
+    pub dynamic_bones: ItemDynamicBones,
     /// +0x374
-    pub x374_dynamicBonesNum: i32,
+    #[doc(alias("x374_dynamicBonesNum"))]
+    pub dynamic_bone_count: i32,
     /// +0x378
-    pub x378_itemColl: CollData,
+    #[doc(alias("x378_itemColl"))]
+    pub coll: CollData,
     /// +0x514
     pub ecb_lock: i32,
     /// +0x518
     pub owner: Option<GObjId>,
     /// +0x51c
-    pub x51C: Option<GObjId>,
+    #[doc(alias("x51C"))]
+    pub holder: Option<GObjId>,
     /// +0x520
-    pub x520_cameraBox: Option<CameraBoxId>,
+    #[doc(alias("x520_cameraBox"))]
+    pub camera_box: Option<CameraBoxId>,
     /// +0x524
-    pub x524_cmd: CommandInfo,
+    #[doc(alias("x524_cmd"))]
+    pub cmd: CommandInfo,
     /// +0x548
-    pub x548_colorOverlay: ColorOverlay,
+    #[doc(alias("x548_colorOverlay"))]
+    pub color_overlay: ColorOverlay,
     /// +0x5c8
-    pub x5C8: u8,
+    #[doc(alias("x5C8"))]
+    pub tinted: u8,
     /// +0x5c9
-    pub x5C9: u8,
+    #[doc(alias("x5C9"))]
+    pub alpha: u8,
     /// +0x5ca
-    pub x5CA: u8,
+    #[doc(alias("x5CA"))]
+    pub pad_5ca: u8,
     /// +0x5cb
-    pub x5CB: u8,
+    #[doc(alias("x5CB"))]
+    pub pad_5cb: u8,
     /// +0x5cc
-    pub x5CC_currentAnimFrame: f32,
+    #[doc(alias("x5CC_currentAnimFrame"))]
+    pub anim_frame: f32,
     /// +0x5d0
-    pub x5D0_animFrameSpeed: f32,
+    #[doc(alias("x5D0_animFrameSpeed"))]
+    pub anim_speed: f32,
     /// +0x5d4
-    pub x5D4_hitboxes: [ItemHitbox; 4],
+    #[doc(alias("x5D4_hitboxes"))]
+    pub hitboxes: [ItemHitbox; 4],
     /// +0xac4
-    pub xAC4_ignoreItemID: IgnoreId,
+    #[doc(alias("xAC4_ignoreItemID"))]
+    pub ignore_id: IgnoreId,
     /// +0xac8
-    pub xAC8_hurtboxNum: u8,
+    #[doc(alias("xAC8_hurtboxNum"))]
+    pub hurtbox_count: u8,
     /// +0xacc
-    pub xACC_itemHurtbox: ItemHurtboxes,
+    #[doc(alias("xACC_itemHurtbox"))]
+    pub hurtboxes: ItemHurtboxes,
     /// +0xb54
-    pub xB54: lb_80014638_arg1_t,
+    #[doc(alias("xB54"))]
+    pub stomp_box: lb_80014638_arg1_t,
     /// +0xb68
-    pub xB68: u8,
+    #[doc(alias("xB68"))]
+    pub dynamics_count: u8,
     /// +0xb69
-    pub xB69: u8,
+    #[doc(alias("xB69"))]
+    pub pad_b69: u8,
     /// +0xb6a
-    pub xB6A: u8,
+    #[doc(alias("xB6A"))]
+    pub pad_b6a: u8,
     /// +0xb6b
-    pub xB6B: u8,
+    #[doc(alias("xB6B"))]
+    pub pad_b6b: u8,
     /// +0xb6c
-    pub xB6C_vars: [xB6C_t; 2],
+    #[doc(alias("xB6C_vars"))]
+    pub dynamics_points: [xB6C_t; 2],
     /// +0xbbc
-    pub xBBC_dynamicBoneTable: Option<BoneTableId>,
+    #[doc(alias("xBBC_dynamicBoneTable"))]
+    pub bone_table: Option<BoneTableId>,
     /// +0xbc0
-    pub xBC0: Option<QueuedId>,
+    #[doc(alias("xBC0"))]
+    pub effect_queue: Option<QueuedId>,
     /// +0xbc4
-    pub xBC4: _GXColor,
+    #[doc(alias("xBC4"))]
+    pub tint: _GXColor,
     /// +0xbc8
-    pub xBC8: ItemModStruct,
+    #[doc(alias("xBC8"))]
+    pub outline: ItemModStruct,
     /// +0xbcc
-    pub xBCC_unk: Vec2,
+    #[doc(alias("xBCC_unk"))]
+    pub grab_offset: Vec2,
     /// +0xbd4
-    pub xBD4_grabRange: Vec2,
+    #[doc(alias("xBD4_grabRange"))]
+    pub grab_range: Vec2,
     /// +0xbdc
-    pub xBDC: _itECB,
+    #[doc(alias("xBDC"))]
+    pub push_box_base: _itECB,
     /// +0xbec
-    pub xBEC: _itECB,
+    #[doc(alias("xBEC"))]
+    pub push_box: _itECB,
     /// +0xbfc
-    pub xBFC: _itECB,
+    #[doc(alias("xBFC"))]
+    pub throw_coll_box: _itECB,
     /// +0xc0c
-    pub xC0C: _itECB,
+    #[doc(alias("xC0C"))]
+    pub kind_coll_box: _itECB,
     /// +0xc1c
-    pub xC1C: _itECB,
+    #[doc(alias("xC1C"))]
+    pub coll_box: _itECB,
     /// +0xc2c
-    pub xC2C: i32,
+    #[doc(alias("xC2C"))]
+    pub surface_line: i32,
     /// +0xc30
-    pub xC30: i32,
+    #[doc(alias("xC30"))]
+    pub touched_line: i32,
     /// +0xc34
-    pub xC34_damageDealt: i32,
+    #[doc(alias("xC34_damageDealt"))]
+    pub damage_dealt: i32,
     /// +0xc38
-    pub xC38: i32,
+    #[doc(alias("xC38"))]
+    pub hit_item_kind: i32,
     /// +0xc3c
-    pub xC3C: f32,
+    #[doc(alias("xC3C"))]
+    pub damage_scale: f32,
     /// +0xc40
-    pub xC40: f32,
+    #[doc(alias("xC40"))]
+    pub damage_mul: f32,
     /// +0xc44
-    pub xC44: f32,
+    #[doc(alias("xC44"))]
+    pub next_damage_mul: f32,
     /// +0xc48
-    pub xC48: i32,
+    #[doc(alias("xC48"))]
+    pub clank_damage: i32,
     /// +0xc4c
-    pub xC4C: i32,
+    #[doc(alias("xC4C"))]
+    pub reflected_damage: i32,
     /// +0xc50
-    pub xC50: i32,
+    #[doc(alias("xC50"))]
+    pub shield_damage: i32,
     /// +0xc54
-    pub xC54: f32,
+    #[doc(alias("xC54"))]
+    pub shield_angle: f32,
     /// +0xc58
-    pub xC58: Vec3,
+    #[doc(alias("xC58"))]
+    pub shield_normal: Vec3,
     /// +0xc64
-    pub xC64_reflectGObj: Option<GObjId>,
+    #[doc(alias("xC64_reflectGObj"))]
+    pub reflector: Option<GObjId>,
     /// +0xc68
-    pub xC68: f32,
+    #[doc(alias("xC68"))]
+    pub reflect_dir: f32,
     /// +0xc6c
-    pub xC6C: f32,
+    #[doc(alias("xC6C"))]
+    pub reflect_damage_mul: f32,
     /// +0xc70
-    pub xC70: f32,
+    #[doc(alias("xC70"))]
+    pub reflect_speed_mul: f32,
     /// +0xc74
-    pub xC74: i32,
+    #[doc(alias("xC74"))]
+    pub reflect_attack_flags: i32,
     /// +0xc78
-    pub xC78: S32Vec2,
+    #[doc(alias("xC78"))]
+    pub reflect_record_a: S32Vec2,
     /// +0xc80
-    pub xC80: Struct207C,
+    #[doc(alias("xC80"))]
+    pub reflect_record_b: Struct207C,
     /// +0xc88
-    pub xC88: i32,
+    #[doc(alias("xC88"))]
+    pub reflect_record_word: i32,
     /// +0xc8c
-    pub xC8C: u16,
+    #[doc(alias("xC8C"))]
+    pub reflect_record_short: u16,
     /// +0xc90
-    pub xC90_absorbGObj: Option<GObjId>,
+    #[doc(alias("xC90_absorbGObj"))]
+    pub absorber: Option<GObjId>,
     /// +0xc94
-    pub xC94: i32,
+    #[doc(alias("xC94"))]
+    pub unread_c94: i32,
     /// +0xc98
-    pub xC98: f32,
+    #[doc(alias("xC98"))]
+    pub unread_c98: f32,
     /// +0xc9c
-    pub xC9C: i32,
+    #[doc(alias("xC9C"))]
+    pub damage_taken: i32,
     /// +0xca0
-    pub xCA0: i32,
+    #[doc(alias("xCA0"))]
+    pub hit_damage: i32,
     /// +0xca4
-    pub xCA4: i32,
+    #[doc(alias("xCA4"))]
+    pub max_hit_damage: i32,
     /// +0xca8
-    pub xCA8: i32,
+    #[doc(alias("xCA8"))]
+    pub hitlag_damage: i32,
     /// +0xcac
-    pub xCAC_angle: i32,
+    #[doc(alias("xCAC_angle"))]
+    pub kb_angle: i32,
     /// +0xcb0
-    pub xCB0_source_ply: i32,
+    #[doc(alias("xCB0_source_ply"))]
+    pub source_player: i32,
     /// +0xcb4
-    pub xCB4: i32,
+    #[doc(alias("xCB4"))]
+    pub hit_by_kind: i32,
     /// +0xcb8
-    pub xCB8_outDamageDirection: f32,
+    #[doc(alias("xCB8_outDamageDirection"))]
+    pub out_damage_dir: f32,
     /// +0xcbc
-    pub xCBC_hitlagFrames: f32,
+    #[doc(alias("xCBC_hitlagFrames"))]
+    pub hitlag_frames: f32,
     /// +0xcc0
-    pub xCC0: f32,
+    #[doc(alias("xCC0"))]
+    pub min_hitlag: f32,
     /// +0xcc4
-    pub xCC4: i32,
+    #[doc(alias("xCC4"))]
+    pub hit_element: i32,
     /// +0xcc8
-    pub xCC8_knockback: f32,
+    #[doc(alias("xCC8_knockback"))]
+    pub knockback: f32,
     /// +0xccc
-    pub xCCC_incDamageDirection: f32,
+    #[doc(alias("xCCC_incDamageDirection"))]
+    pub damage_dir: f32,
     /// +0xcd0
-    pub xCD0: f32,
+    #[doc(alias("xCD0"))]
+    pub stomp_dir: f32,
     /// +0xcd4
-    pub xCD4: Vec3,
+    #[doc(alias("xCD4"))]
+    pub hit_item_pos: Vec3,
     /// +0xce0
-    pub xCE0: Vec3,
+    #[doc(alias("xCE0"))]
+    pub hit_by_pos: Vec3,
     /// +0xcec
-    pub xCEC_fighterGObj: Option<GObjId>,
+    #[doc(alias("xCEC_fighterGObj"))]
+    pub attacker: Option<GObjId>,
     /// +0xcf0
-    pub xCF0_itemGObj: Option<GObjId>,
+    #[doc(alias("xCF0_itemGObj"))]
+    pub attacker_owner: Option<GObjId>,
     /// +0xcf4
-    pub xCF4_fighterGObjUnk: Option<GObjId>,
+    #[doc(alias("xCF4_fighterGObjUnk"))]
+    pub met_fighter: Option<GObjId>,
     /// +0xcf8
     pub toucher: Option<GObjId>,
     /// +0xcfc
-    pub xCFC: Option<GObjId>,
+    #[doc(alias("xCFC"))]
+    pub stomper: Option<GObjId>,
     /// +0xd00
     pub grab_victim: Option<GObjId>,
     /// +0xd04
     pub atk_victim: Option<GObjId>,
     /// +0xd08
-    pub xD08: u8,
+    #[doc(alias("xD08"))]
+    pub grab_mask: u8,
     /// +0xd09
-    pub xD09: u8,
+    #[doc(alias("xD09"))]
+    pub no_catch: u8,
     /// +0xd0a
-    pub xD0A: u8,
+    #[doc(alias("xD0A"))]
+    pub pad_d0a: u8,
     /// +0xd0b
-    pub xD0B: u8,
+    #[doc(alias("xD0B"))]
+    pub pad_d0b: u8,
     /// +0xd0c
-    pub xD0C: i32,
+    #[doc(alias("xD0C"))]
+    pub invincibility: i32,
     /// +0xd10
-    pub xD10: f32,
+    #[doc(alias("xD10"))]
+    pub grab_distance: f32,
     /// +0xd14
     pub animated: Option<CodeRef>,
     /// +0xd18
@@ -4308,225 +4454,268 @@ pub struct Item {
     /// +0xd38
     pub grabbed_for_victim: Option<CodeRef>,
     /// +0xd3c
-    pub xD3C_spinSpeed: f32,
+    #[doc(alias("xD3C_spinSpeed"))]
+    pub spin_speed: f32,
     /// +0xd40
-    pub xD40: f32,
+    #[doc(alias("xD40"))]
+    pub invincible_frames: f32,
     /// +0xd44
-    pub xD44_lifeTimer: f32,
+    #[doc(alias("xD44_lifeTimer"))]
+    pub life_timer: f32,
     /// +0xd48
-    pub xD48_halfLifeTimer: f32,
+    #[doc(alias("xD48_halfLifeTimer"))]
+    pub half_life: f32,
     /// +0xd4c
-    pub xD4C: i32,
+    #[doc(alias("xD4C"))]
+    pub ammo: i32,
     /// +0xd50
-    pub xD50_landNum: u32,
+    #[doc(alias("xD50_landNum"))]
+    pub land_count: u32,
     /// +0xd54
-    pub xD54_throwNum: u32,
+    #[doc(alias("xD54_throwNum"))]
+    pub throw_count: u32,
     /// +0xd58
-    pub xD58: u32,
+    #[doc(alias("xD58"))]
+    pub slide_frames: u32,
     /// +0xd5c
-    pub xD5C: u32,
+    #[doc(alias("xD5C"))]
+    pub skid: u32,
     /// +0xd60
     pub destroy_type: i32,
     /// +0xd64
-    pub sfx_unk1: i32,
+    #[doc(alias("sfx_unk1"))]
+    pub sfx_loop_1: i32,
     /// +0xd68
-    pub sfx_unk2: i32,
+    #[doc(alias("sfx_unk2"))]
+    pub sfx_loop_2: i32,
     /// +0xd6c
-    pub xD6C: i32,
+    #[doc(alias("xD6C"))]
+    pub sfx: i32,
     /// +0xd70
-    pub xD70: i32,
+    #[doc(alias("xD70"))]
+    pub pickup_sfx: i32,
     /// +0xd74
-    pub xD74: i32,
+    #[doc(alias("xD74"))]
+    pub throw_sfx: i32,
     /// +0xd78
-    pub xD78: i32,
+    #[doc(alias("xD78"))]
+    pub drop_sfx: i32,
     /// +0xd7c
     pub destroy_sfx: i32,
     /// +0xd80
-    pub xD80: i32,
+    #[doc(alias("xD80"))]
+    pub break_sfx: i32,
     /// +0xd84
-    pub xD84: i32,
+    #[doc(alias("xD84"))]
+    pub bounce_sfx: i32,
     /// +0xd88
-    pub xD88_attackID: i32,
+    #[doc(alias("xD88_attackID"))]
+    pub attack_id: i32,
     /// +0xd8c
-    pub xD8C_attack_instance: u16,
+    #[doc(alias("xD8C_attack_instance"))]
+    pub attack_instance: u16,
     /// +0xd8e
-    pub xD8E: i16,
+    #[doc(alias("xD8E"))]
+    pub pad_d8e: i16,
     /// +0xd90
-    pub xD90: [u8; 4],
+    #[doc(alias("xD90"))]
+    pub attack_flags: [u8; 4],
     /// +0xd94
-    pub xD94: S32Vec2,
+    #[doc(alias("xD94"))]
+    pub attack_record_a: S32Vec2,
     /// +0xd9c
-    pub xD9C: Struct207C,
+    #[doc(alias("xD9C"))]
+    pub attack_record_b: Struct207C,
     /// +0xda4
-    pub xDA4_word: u32,
+    #[doc(alias("xDA4_word"))]
+    pub attack_record_word: u32,
     /// +0xda8
-    pub xDA8_short: u16,
+    #[doc(alias("xDA8_short"))]
+    pub attack_record_short: u16,
     /// +0xdaa
-    pub xDAA: [u8; 1],
+    #[doc(alias("xDAA"))]
+    pub debug_flags: [u8; 1],
     /// +0xdac
-    pub xDAC_itcmd_var0: u32,
+    #[doc(alias("xDAC_itcmd_var0"))]
+    pub cmd_var0: u32,
     /// +0xdb0
-    pub xDB0_itcmd_var1: u32,
+    #[doc(alias("xDB0_itcmd_var1"))]
+    pub cmd_var1: u32,
     /// +0xdb4
-    pub xDB4_itcmd_var2: u32,
+    #[doc(alias("xDB4_itcmd_var2"))]
+    pub cmd_var2: u32,
     /// +0xdb8
-    pub xDB8_itcmd_var3: u32,
+    #[doc(alias("xDB8_itcmd_var3"))]
+    pub cmd_var3: u32,
     /// +0xdbc
-    pub xDBC: [u8; 4],
+    #[doc(alias("xDBC"))]
+    pub cmd_flags: [u8; 4],
     /// +0xdc0
-    pub xDC0: u32,
+    #[doc(alias("xDC0"))]
+    pub push_flags: u32,
     /// +0xdc4
-    pub xDC4: u32,
+    #[doc(alias("xDC4"))]
+    pub hold_part: u32,
     /// +0xdc8
-    pub xDC8_word: flag32,
+    #[doc(alias("xDC8_word"))]
+    pub flags: flag32,
     /// +0xdcc
-    pub xDCC_flag: Item_xDCC_flag,
+    #[doc(alias("xDCC_flag"))]
+    pub state_flags: Item_xDCC_flag,
     /// +0xdcd
-    pub xDCD_flag: CameraBoxFlags,
+    #[doc(alias("xDCD_flag"))]
+    pub hit_flags: CameraBoxFlags,
     /// +0xdce
-    pub xDCE_flag: [u8; 1],
+    #[doc(alias("xDCE_flag"))]
+    pub hurt_flags: [u8; 1],
     /// +0xdcf
-    pub xDCF_flag: [u8; 1],
+    #[doc(alias("xDCF_flag"))]
+    pub draw_flags: [u8; 1],
     /// +0xdd0
-    pub xDD0_flag: [u8; 1],
+    #[doc(alias("xDD0_flag"))]
+    pub status_flags: [u8; 1],
     /// +0xdd1
-    pub xDD1_flag: [u8; 1],
+    #[doc(alias("xDD1_flag"))]
+    pub phys_flags: [u8; 1],
     /// +0xdd2
-    pub xDD2_flag: [u8; 1],
+    #[doc(alias("xDD2_flag"))]
+    pub unused_dd2: [u8; 1],
     /// +0xdd3
-    pub xDD3_flag: [u8; 1],
+    #[doc(alias("xDD3_flag"))]
+    pub unused_dd3: [u8; 1],
     /// +0xdd4
-    pub xDD4_itemVar: ItemVars,
+    #[doc(alias("xDD4_itemVar"))]
+    pub vars: ItemVars,
 }
 
 impl Default for Item {
     fn default() -> Self {
         Item {
-            x0: None,
+            next_free: None,
             entity: None,
-            x8: Kept(None),
+            unused_8: Kept(None),
             spawn_kind: 0,
             kind: 0,
             hold_kind: 0,
-            x18: 0,
-            x1C: 0,
-            x20_team_id: 0,
-            x21: Kept(None),
-            x22: Kept(None),
-            x23: Kept(None),
+            spawn_origin: 0,
+            spawn_num: 0,
+            team: 0,
+            unused_21: Kept(None),
+            unused_22: Kept(None),
+            unused_23: Kept(None),
             msid: 0,
             anim_id: 0,
             facing_dir: 0.0,
             init_facing_dir: 0.0,
             spin_spd: 0.0,
             scl: 0.0,
-            x3C: 0.0,
-            x40_vel: Default::default(),
+            hitbox_scale: 0.0,
+            vel: Default::default(),
             pos: Default::default(),
-            x58_vec_unk: Default::default(),
-            x64_vec_unk2: Default::default(),
-            x70_nudge: Default::default(),
-            x7C: Default::default(),
-            x88: Default::default(),
-            x94: Default::default(),
-            xA0: Default::default(),
-            xAC_unk: Default::default(),
-            xB8_itemLogicTable: None,
-            xBC_itemStateContainer: None,
+            wind_push: Default::default(),
+            floor_motion: Default::default(),
+            nudge: Default::default(),
+            skid_vel: Default::default(),
+            slide_vel: Default::default(),
+            last_slide_vel: Default::default(),
+            unread_a0: Default::default(),
+            surface_normal: Default::default(),
+            logic_table: None,
+            state_table: None,
             ground_or_air: 0,
-            xC4_article_data: None,
-            xC8_joint: None,
-            xCC_item_attr: None,
-            xD0_itemStateDesc: None,
-            xD4_dynamicBones: Default::default(),
-            x374_dynamicBonesNum: 0,
-            x378_itemColl: Default::default(),
+            article: None,
+            joint: None,
+            attrs: None,
+            state_desc: None,
+            dynamic_bones: Default::default(),
+            dynamic_bone_count: 0,
+            coll: Default::default(),
             ecb_lock: 0,
             owner: None,
-            x51C: None,
-            x520_cameraBox: None,
-            x524_cmd: Default::default(),
-            x548_colorOverlay: Default::default(),
-            x5C8: 0,
-            x5C9: 0,
-            x5CA: 0,
-            x5CB: 0,
-            x5CC_currentAnimFrame: 0.0,
-            x5D0_animFrameSpeed: 0.0,
-            x5D4_hitboxes: core::array::from_fn(|_| Default::default()),
-            xAC4_ignoreItemID: Default::default(),
-            xAC8_hurtboxNum: 0,
-            xACC_itemHurtbox: Default::default(),
-            xB54: Default::default(),
-            xB68: 0,
-            xB69: 0,
-            xB6A: 0,
-            xB6B: 0,
-            xB6C_vars: core::array::from_fn(|_| Default::default()),
-            xBBC_dynamicBoneTable: None,
-            xBC0: None,
-            xBC4: Default::default(),
-            xBC8: Default::default(),
-            xBCC_unk: Default::default(),
-            xBD4_grabRange: Default::default(),
-            xBDC: Default::default(),
-            xBEC: Default::default(),
-            xBFC: Default::default(),
-            xC0C: Default::default(),
-            xC1C: Default::default(),
-            xC2C: 0,
-            xC30: 0,
-            xC34_damageDealt: 0,
-            xC38: 0,
-            xC3C: 0.0,
-            xC40: 0.0,
-            xC44: 0.0,
-            xC48: 0,
-            xC4C: 0,
-            xC50: 0,
-            xC54: 0.0,
-            xC58: Default::default(),
-            xC64_reflectGObj: None,
-            xC68: 0.0,
-            xC6C: 0.0,
-            xC70: 0.0,
-            xC74: 0,
-            xC78: Default::default(),
-            xC80: Default::default(),
-            xC88: 0,
-            xC8C: 0,
-            xC90_absorbGObj: None,
-            xC94: 0,
-            xC98: 0.0,
-            xC9C: 0,
-            xCA0: 0,
-            xCA4: 0,
-            xCA8: 0,
-            xCAC_angle: 0,
-            xCB0_source_ply: 0,
-            xCB4: 0,
-            xCB8_outDamageDirection: 0.0,
-            xCBC_hitlagFrames: 0.0,
-            xCC0: 0.0,
-            xCC4: 0,
-            xCC8_knockback: 0.0,
-            xCCC_incDamageDirection: 0.0,
-            xCD0: 0.0,
-            xCD4: Default::default(),
-            xCE0: Default::default(),
-            xCEC_fighterGObj: None,
-            xCF0_itemGObj: None,
-            xCF4_fighterGObjUnk: None,
+            holder: None,
+            camera_box: None,
+            cmd: Default::default(),
+            color_overlay: Default::default(),
+            tinted: 0,
+            alpha: 0,
+            pad_5ca: 0,
+            pad_5cb: 0,
+            anim_frame: 0.0,
+            anim_speed: 0.0,
+            hitboxes: core::array::from_fn(|_| Default::default()),
+            ignore_id: Default::default(),
+            hurtbox_count: 0,
+            hurtboxes: Default::default(),
+            stomp_box: Default::default(),
+            dynamics_count: 0,
+            pad_b69: 0,
+            pad_b6a: 0,
+            pad_b6b: 0,
+            dynamics_points: core::array::from_fn(|_| Default::default()),
+            bone_table: None,
+            effect_queue: None,
+            tint: Default::default(),
+            outline: Default::default(),
+            grab_offset: Default::default(),
+            grab_range: Default::default(),
+            push_box_base: Default::default(),
+            push_box: Default::default(),
+            throw_coll_box: Default::default(),
+            kind_coll_box: Default::default(),
+            coll_box: Default::default(),
+            surface_line: 0,
+            touched_line: 0,
+            damage_dealt: 0,
+            hit_item_kind: 0,
+            damage_scale: 0.0,
+            damage_mul: 0.0,
+            next_damage_mul: 0.0,
+            clank_damage: 0,
+            reflected_damage: 0,
+            shield_damage: 0,
+            shield_angle: 0.0,
+            shield_normal: Default::default(),
+            reflector: None,
+            reflect_dir: 0.0,
+            reflect_damage_mul: 0.0,
+            reflect_speed_mul: 0.0,
+            reflect_attack_flags: 0,
+            reflect_record_a: Default::default(),
+            reflect_record_b: Default::default(),
+            reflect_record_word: 0,
+            reflect_record_short: 0,
+            absorber: None,
+            unread_c94: 0,
+            unread_c98: 0.0,
+            damage_taken: 0,
+            hit_damage: 0,
+            max_hit_damage: 0,
+            hitlag_damage: 0,
+            kb_angle: 0,
+            source_player: 0,
+            hit_by_kind: 0,
+            out_damage_dir: 0.0,
+            hitlag_frames: 0.0,
+            min_hitlag: 0.0,
+            hit_element: 0,
+            knockback: 0.0,
+            damage_dir: 0.0,
+            stomp_dir: 0.0,
+            hit_item_pos: Default::default(),
+            hit_by_pos: Default::default(),
+            attacker: None,
+            attacker_owner: None,
+            met_fighter: None,
             toucher: None,
-            xCFC: None,
+            stomper: None,
             grab_victim: None,
             atk_victim: None,
-            xD08: 0,
-            xD09: 0,
-            xD0A: 0,
-            xD0B: 0,
-            xD0C: 0,
-            xD10: 0.0,
+            grab_mask: 0,
+            no_catch: 0,
+            pad_d0a: 0,
+            pad_d0b: 0,
+            invincibility: 0,
+            grab_distance: 0.0,
             animated: None,
             physics_updated: None,
             collided: None,
@@ -4537,51 +4726,51 @@ impl Default for Item {
             jumped_on: None,
             grab_dealt: None,
             grabbed_for_victim: None,
-            xD3C_spinSpeed: 0.0,
-            xD40: 0.0,
-            xD44_lifeTimer: 0.0,
-            xD48_halfLifeTimer: 0.0,
-            xD4C: 0,
-            xD50_landNum: 0,
-            xD54_throwNum: 0,
-            xD58: 0,
-            xD5C: 0,
+            spin_speed: 0.0,
+            invincible_frames: 0.0,
+            life_timer: 0.0,
+            half_life: 0.0,
+            ammo: 0,
+            land_count: 0,
+            throw_count: 0,
+            slide_frames: 0,
+            skid: 0,
             destroy_type: 0,
-            sfx_unk1: 0,
-            sfx_unk2: 0,
-            xD6C: 0,
-            xD70: 0,
-            xD74: 0,
-            xD78: 0,
+            sfx_loop_1: 0,
+            sfx_loop_2: 0,
+            sfx: 0,
+            pickup_sfx: 0,
+            throw_sfx: 0,
+            drop_sfx: 0,
             destroy_sfx: 0,
-            xD80: 0,
-            xD84: 0,
-            xD88_attackID: 0,
-            xD8C_attack_instance: 0,
-            xD8E: 0,
-            xD90: [0; 4],
-            xD94: Default::default(),
-            xD9C: Default::default(),
-            xDA4_word: 0,
-            xDA8_short: 0,
-            xDAA: [0; 1],
-            xDAC_itcmd_var0: 0,
-            xDB0_itcmd_var1: 0,
-            xDB4_itcmd_var2: 0,
-            xDB8_itcmd_var3: 0,
-            xDBC: [0; 4],
-            xDC0: 0,
-            xDC4: 0,
-            xDC8_word: Default::default(),
-            xDCC_flag: Default::default(),
-            xDCD_flag: Default::default(),
-            xDCE_flag: [0; 1],
-            xDCF_flag: [0; 1],
-            xDD0_flag: [0; 1],
-            xDD1_flag: [0; 1],
-            xDD2_flag: [0; 1],
-            xDD3_flag: [0; 1],
-            xDD4_itemVar: Default::default(),
+            break_sfx: 0,
+            bounce_sfx: 0,
+            attack_id: 0,
+            attack_instance: 0,
+            pad_d8e: 0,
+            attack_flags: [0; 4],
+            attack_record_a: Default::default(),
+            attack_record_b: Default::default(),
+            attack_record_word: 0,
+            attack_record_short: 0,
+            debug_flags: [0; 1],
+            cmd_var0: 0,
+            cmd_var1: 0,
+            cmd_var2: 0,
+            cmd_var3: 0,
+            cmd_flags: [0; 4],
+            push_flags: 0,
+            hold_part: 0,
+            flags: Default::default(),
+            state_flags: Default::default(),
+            hit_flags: Default::default(),
+            hurt_flags: [0; 1],
+            draw_flags: [0; 1],
+            status_flags: [0; 1],
+            phys_flags: [0; 1],
+            unused_dd2: [0; 1],
+            unused_dd3: [0; 1],
+            vars: Default::default(),
         }
     }
 }
@@ -7544,41 +7733,49 @@ pub struct Item_FtTrack {
     /// +0x0
     pub ecb_offset_arr: [_itECB; 11],
     /// +0xb0
-    pub xB0: i32,
+    #[doc(alias("xB0"))]
+    pub unused_b0: i32,
     /// +0xb4
-    pub xB4: i32,
+    #[doc(alias("xB4"))]
+    pub unused_b4: i32,
     /// +0xb8
-    pub xB8: i32,
+    #[doc(alias("xB8"))]
+    pub unused_b8: i32,
     /// +0xbc
-    pub xBC: i32,
+    #[doc(alias("xBC"))]
+    pub unused_bc: i32,
     /// +0xc0
     pub ft_pos_arr: [Vec3; 11],
     /// +0x144
-    pub x144: u32,
+    #[doc(alias("x144"))]
+    pub unused_144: u32,
     /// +0x148
-    pub x148: u32,
+    #[doc(alias("x148"))]
+    pub unused_148: u32,
     /// +0x14c
-    pub x14C: u32,
+    #[doc(alias("x14C"))]
+    pub unused_14c: u32,
     /// +0x150
     pub count: u32,
     /// +0x154
-    pub x154: [u8; 1],
+    #[doc(alias("x154"))]
+    pub untracked: [u8; 1],
 }
 
 impl Default for Item_FtTrack {
     fn default() -> Self {
         Item_FtTrack {
             ecb_offset_arr: core::array::from_fn(|_| Default::default()),
-            xB0: 0,
-            xB4: 0,
-            xB8: 0,
-            xBC: 0,
+            unused_b0: 0,
+            unused_b4: 0,
+            unused_b8: 0,
+            unused_bc: 0,
             ft_pos_arr: core::array::from_fn(|_| Default::default()),
-            x144: 0,
-            x148: 0,
-            x14C: 0,
+            unused_144: 0,
+            unused_148: 0,
+            unused_14c: 0,
             count: 0,
-            x154: [0; 1],
+            untracked: [0; 1],
         }
     }
 }
@@ -7650,19 +7847,26 @@ impl Default for SpawnItem {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itFoxBlaster_ItemVars {
     /// +0x0
-    pub xDD4: Var<i32>,
+    #[doc(alias("xDD4"))]
+    pub recoil_frame: Var<i32>,
     /// +0x4
-    pub xDD8: Var<i32>,
+    #[doc(alias("xDD8"))]
+    pub pulse: Var<i32>,
     /// +0x8
-    pub xDDC: Var<i32>,
+    #[doc(alias("xDDC"))]
+    pub pulse_step: Var<i32>,
     /// +0xc
-    pub xDE0: Var<i32>,
+    #[doc(alias("xDE0"))]
+    pub fired: Var<i32>,
     /// +0x10
-    pub xDE4: [Var<Option<EffectId>>; 6],
+    #[doc(alias("xDE4"))]
+    pub flashes: [Var<Option<EffectId>>; 6],
     /// +0x28
-    pub xDFC: [Var<i32>; 6],
+    #[doc(alias("xDFC"))]
+    pub shot_kinds: [Var<i32>; 6],
     /// +0x40
-    pub xE14: [Var<Vec3>; 6],
+    #[doc(alias("xE14"))]
+    pub shot_dirs: [Var<Vec3>; 6],
     /// +0x88
     pub angle: [Var<f32>; 6],
     /// +0xa0
@@ -7676,13 +7880,13 @@ pub struct itFoxBlaster_ItemVars {
 impl Default for itFoxBlaster_ItemVars {
     fn default() -> Self {
         itFoxBlaster_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
-            xDE0: Var::new(Default::default()),
-            xDE4: core::array::from_fn(|_| Var::new(None)),
-            xDFC: core::array::from_fn(|_| Var::new(Default::default())),
-            xE14: core::array::from_fn(|_| Var::new(Default::default())),
+            recoil_frame: Var::new(Default::default()),
+            pulse: Var::new(Default::default()),
+            pulse_step: Var::new(Default::default()),
+            fired: Var::new(Default::default()),
+            flashes: core::array::from_fn(|_| Var::new(None)),
+            shot_kinds: core::array::from_fn(|_| Var::new(Default::default())),
+            shot_dirs: core::array::from_fn(|_| Var::new(Default::default())),
             angle: core::array::from_fn(|_| Var::new(Default::default())),
             gfx_spawn_var: Var::new(Default::default()),
             set_sfx_var2: Var::new(Default::default()),
@@ -7694,13 +7898,13 @@ impl Default for itFoxBlaster_ItemVars {
 impl itFoxBlaster_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
-        self.xDE0.mark_stale();
-        self.xDE4.iter_mut().for_each(|v| v.mark_stale());
-        self.xDFC.iter_mut().for_each(|v| v.mark_stale());
-        self.xE14.iter_mut().for_each(|v| v.mark_stale());
+        self.recoil_frame.mark_stale();
+        self.pulse.mark_stale();
+        self.pulse_step.mark_stale();
+        self.fired.mark_stale();
+        self.flashes.iter_mut().for_each(|v| v.mark_stale());
+        self.shot_kinds.iter_mut().for_each(|v| v.mark_stale());
+        self.shot_dirs.iter_mut().for_each(|v| v.mark_stale());
         self.angle.iter_mut().for_each(|v| v.mark_stale());
         self.gfx_spawn_var.mark_stale();
         self.set_sfx_var2.mark_stale();
@@ -7746,19 +7950,22 @@ impl itFoxLaser_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itFoxIllusion_ItemVars {
     /// +0x0
-    pub xDD4: Var<Option<DataRef>>,
+    #[doc(alias("xDD4"))]
+    pub ghost_joint: Var<Option<DataRef>>,
     /// +0x4
-    pub xDD8: Var<f32>,
+    #[doc(alias("xDD8"))]
+    pub unused_dd8: Var<f32>,
     /// +0x8
-    pub xDDC: Var<Option<JObjId>>,
+    #[doc(alias("xDDC"))]
+    pub ghost: Var<Option<JObjId>>,
 }
 
 impl Default for itFoxIllusion_ItemVars {
     fn default() -> Self {
         itFoxIllusion_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
+            ghost_joint: Var::new(Default::default()),
+            unused_dd8: Var::new(Default::default()),
+            ghost: Var::new(Default::default()),
         }
     }
 }
@@ -7766,9 +7973,9 @@ impl Default for itFoxIllusion_ItemVars {
 impl itFoxIllusion_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
+        self.ghost_joint.mark_stale();
+        self.unused_dd8.mark_stale();
+        self.ghost.mark_stale();
     }
 }
 
@@ -7798,37 +8005,46 @@ impl itSeakNeedleHeld_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itSeakNeedleThrown_ItemVars {
     /// +0x0
-    pub xDD4: Var<f32>,
+    #[doc(alias("xDD4"))]
+    pub spin: Var<f32>,
     /// +0x4
-    pub xDD8: Var<f32>,
+    #[doc(alias("xDD8"))]
+    pub tumble_vel: Var<f32>,
     /// +0x8
-    pub xDDC: Var<f32>,
+    #[doc(alias("xDDC"))]
+    pub tumble_max: Var<f32>,
     /// +0xc
-    pub xDE0: Var<f32>,
+    #[doc(alias("xDE0"))]
+    pub tumble_accel: Var<f32>,
     /// +0x10
-    pub xDE4: Var<Vec3>,
+    #[doc(alias("xDE4"))]
+    pub last_pos: Var<Vec3>,
     /// +0x1c
-    pub xDF0: Var<f32>,
+    #[doc(alias("xDF0"))]
+    pub angle: Var<f32>,
     /// +0x20
-    pub xDF4: Var<i32>,
+    #[doc(alias("xDF4"))]
+    pub line: Var<i32>,
     /// +0x24
-    pub xDF8: Var<f32>,
+    #[doc(alias("xDF8"))]
+    pub line_angle: Var<f32>,
     /// +0x28
-    pub xDFC: Var<f32>,
+    #[doc(alias("xDFC"))]
+    pub last_line_angle: Var<f32>,
 }
 
 impl Default for itSeakNeedleThrown_ItemVars {
     fn default() -> Self {
         itSeakNeedleThrown_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
-            xDE0: Var::new(Default::default()),
-            xDE4: Var::new(Default::default()),
-            xDF0: Var::new(Default::default()),
-            xDF4: Var::new(Default::default()),
-            xDF8: Var::new(Default::default()),
-            xDFC: Var::new(Default::default()),
+            spin: Var::new(Default::default()),
+            tumble_vel: Var::new(Default::default()),
+            tumble_max: Var::new(Default::default()),
+            tumble_accel: Var::new(Default::default()),
+            last_pos: Var::new(Default::default()),
+            angle: Var::new(Default::default()),
+            line: Var::new(Default::default()),
+            line_angle: Var::new(Default::default()),
+            last_line_angle: Var::new(Default::default()),
         }
     }
 }
@@ -7836,15 +8052,15 @@ impl Default for itSeakNeedleThrown_ItemVars {
 impl itSeakNeedleThrown_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
-        self.xDE0.mark_stale();
-        self.xDE4.mark_stale();
-        self.xDF0.mark_stale();
-        self.xDF4.mark_stale();
-        self.xDF8.mark_stale();
-        self.xDFC.mark_stale();
+        self.spin.mark_stale();
+        self.tumble_vel.mark_stale();
+        self.tumble_max.mark_stale();
+        self.tumble_accel.mark_stale();
+        self.last_pos.mark_stale();
+        self.angle.mark_stale();
+        self.line.mark_stale();
+        self.line_angle.mark_stale();
+        self.last_line_angle.mark_stale();
     }
 }
 
@@ -7860,27 +8076,37 @@ pub struct ItemLink {
     /// +0x14
     pub pos: Vec3,
     /// +0x20
-    pub x20: LinkX20,
+    #[doc(alias("x20"))]
+    pub unread_20: LinkX20,
     /// +0x2c (bits 0..+1)
-    pub x2C_b0: bool,
+    #[doc(alias("x2C_b0"))]
+    pub out: bool,
     /// +0x2c (bits 1..+1)
-    pub x2C_b1: bool,
+    #[doc(alias("x2C_b1"))]
+    pub touching: bool,
     /// +0x2c (bits 2..+1)
-    pub x2C_b2: bool,
+    #[doc(alias("x2C_b2"))]
+    pub sounded: bool,
     /// +0x2c (bits 3..+1)
-    pub x2C_b3: Kept<bool>,
+    #[doc(alias("x2C_b3"))]
+    pub unused_2c_b3: Kept<bool>,
     /// +0x2c (bits 4..+1)
-    pub x2C_b4: Kept<bool>,
+    #[doc(alias("x2C_b4"))]
+    pub unused_2c_b4: Kept<bool>,
     /// +0x2c (bits 5..+1)
-    pub x2C_b5: Kept<bool>,
+    #[doc(alias("x2C_b5"))]
+    pub unused_2c_b5: Kept<bool>,
     /// +0x2c (bits 6..+1)
-    pub x2C_b6: Kept<bool>,
+    #[doc(alias("x2C_b6"))]
+    pub unused_2c_b6: Kept<bool>,
     /// +0x2c (bits 7..+1)
-    pub x2C_b7: Kept<bool>,
+    #[doc(alias("x2C_b7"))]
+    pub unused_2c_b7: Kept<bool>,
     /// +0x30
     pub coll_data: CollData,
     /// +0x1cc
-    pub x1CC: i32,
+    #[doc(alias("x1CC"))]
+    pub wall_line: i32,
     /// +0x1d0
     pub gobj: Option<GObjId>,
     /// +0x1d4
@@ -7894,17 +8120,17 @@ impl Default for ItemLink {
             next: None,
             vel: Default::default(),
             pos: Default::default(),
-            x20: Default::default(),
-            x2C_b0: false,
-            x2C_b1: false,
-            x2C_b2: false,
-            x2C_b3: Kept(None),
-            x2C_b4: Kept(None),
-            x2C_b5: Kept(None),
-            x2C_b6: Kept(None),
-            x2C_b7: Kept(None),
+            unread_20: Default::default(),
+            out: false,
+            touching: false,
+            sounded: false,
+            unused_2c_b3: Kept(None),
+            unused_2c_b4: Kept(None),
+            unused_2c_b5: Kept(None),
+            unused_2c_b6: Kept(None),
+            unused_2c_b7: Kept(None),
             coll_data: Default::default(),
-            x1CC: 0,
+            wall_line: 0,
             gobj: None,
             jobj: None,
         }
@@ -7915,19 +8141,25 @@ impl Default for ItemLink {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itSeakChain_ItemVars {
     /// +0x0
-    pub x0: Var<Option<ItemLinkId>>,
+    #[doc(alias("x0"))]
+    pub tip: Var<Option<ItemLinkId>>,
     /// +0x4
-    pub x4: Var<Option<ItemLinkId>>,
+    #[doc(alias("x4"))]
+    pub hand: Var<Option<ItemLinkId>>,
     /// +0x8
     pub parent_gobj: Var<Option<GObjId>>,
     /// +0xc
-    pub pad_C: [Var<u8>; 4],
+    #[doc(alias("pad_C"))]
+    pub pad_c: [Var<u8>; 4],
     /// +0x10
-    pub x10: Var<i32>,
+    #[doc(alias("x10"))]
+    pub swing_arg: Var<i32>,
     /// +0x14
-    pub x14: Var<i32>,
+    #[doc(alias("x14"))]
+    pub unread_14: Var<i32>,
     /// +0x18
-    pub x18: Var<i32>,
+    #[doc(alias("x18"))]
+    pub coll_state: Var<i32>,
     /// +0x1c
     pub history: [Var<Vec3>; 15],
 }
@@ -7935,13 +8167,13 @@ pub struct itSeakChain_ItemVars {
 impl Default for itSeakChain_ItemVars {
     fn default() -> Self {
         itSeakChain_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
+            tip: Var::new(Default::default()),
+            hand: Var::new(Default::default()),
             parent_gobj: Var::new(Default::default()),
-            pad_C: core::array::from_fn(|_| Var::new(Default::default())),
-            x10: Var::new(Default::default()),
-            x14: Var::new(Default::default()),
-            x18: Var::new(Default::default()),
+            pad_c: core::array::from_fn(|_| Var::new(Default::default())),
+            swing_arg: Var::new(Default::default()),
+            unread_14: Var::new(Default::default()),
+            coll_state: Var::new(Default::default()),
             history: core::array::from_fn(|_| Var::new(Default::default())),
         }
     }
@@ -7950,13 +8182,13 @@ impl Default for itSeakChain_ItemVars {
 impl itSeakChain_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
+        self.tip.mark_stale();
+        self.hand.mark_stale();
         self.parent_gobj.mark_stale();
-        self.pad_C.iter_mut().for_each(|v| v.mark_stale());
-        self.x10.mark_stale();
-        self.x14.mark_stale();
-        self.x18.mark_stale();
+        self.pad_c.iter_mut().for_each(|v| v.mark_stale());
+        self.swing_arg.mark_stale();
+        self.unread_14.mark_stale();
+        self.coll_state.mark_stale();
         self.history.iter_mut().for_each(|v| v.mark_stale());
     }
 }
@@ -7965,37 +8197,46 @@ impl itSeakChain_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itZeldaDinFire_ItemVars {
     /// +0x0
-    pub padDD4: Var<i32>,
+    #[doc(alias("padDD4"))]
+    pub pad_0: Var<i32>,
     /// +0x4
-    pub xDD8: Var<f32>,
+    #[doc(alias("xDD8"))]
+    pub scale: Var<f32>,
     /// +0x8
-    pub xDDC: Var<i32>,
+    #[doc(alias("xDDC"))]
+    pub frames: Var<i32>,
     /// +0xc
-    pub xDE0: Var<Option<GObjId>>,
+    #[doc(alias("xDE0"))]
+    pub zelda: Var<Option<GObjId>>,
     /// +0x10
-    pub xDE4: Var<i32>,
+    #[doc(alias("xDE4"))]
+    pub unread_e4: Var<i32>,
     /// +0x14
-    pub xDE8: Var<f32>,
+    #[doc(alias("xDE8"))]
+    pub turn: Var<f32>,
     /// +0x18
-    pub xDEC: Var<f32>,
+    #[doc(alias("xDEC"))]
+    pub rot: Var<f32>,
     /// +0x1c
-    pub xDF0: Var<f32>,
+    #[doc(alias("xDF0"))]
+    pub speed: Var<f32>,
     /// +0x20
-    pub xDF4: Var<u32>,
+    #[doc(alias("xDF4"))]
+    pub started: Var<u32>,
 }
 
 impl Default for itZeldaDinFire_ItemVars {
     fn default() -> Self {
         itZeldaDinFire_ItemVars {
-            padDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
-            xDE0: Var::new(Default::default()),
-            xDE4: Var::new(Default::default()),
-            xDE8: Var::new(Default::default()),
-            xDEC: Var::new(Default::default()),
-            xDF0: Var::new(Default::default()),
-            xDF4: Var::new(Default::default()),
+            pad_0: Var::new(Default::default()),
+            scale: Var::new(Default::default()),
+            frames: Var::new(Default::default()),
+            zelda: Var::new(Default::default()),
+            unread_e4: Var::new(Default::default()),
+            turn: Var::new(Default::default()),
+            rot: Var::new(Default::default()),
+            speed: Var::new(Default::default()),
+            started: Var::new(Default::default()),
         }
     }
 }
@@ -8003,15 +8244,15 @@ impl Default for itZeldaDinFire_ItemVars {
 impl itZeldaDinFire_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.padDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
-        self.xDE0.mark_stale();
-        self.xDE4.mark_stale();
-        self.xDE8.mark_stale();
-        self.xDEC.mark_stale();
-        self.xDF0.mark_stale();
-        self.xDF4.mark_stale();
+        self.pad_0.mark_stale();
+        self.scale.mark_stale();
+        self.frames.mark_stale();
+        self.zelda.mark_stale();
+        self.unread_e4.mark_stale();
+        self.turn.mark_stale();
+        self.rot.mark_stale();
+        self.speed.mark_stale();
+        self.started.mark_stale();
     }
 }
 
@@ -8019,22 +8260,26 @@ impl itZeldaDinFire_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itZeldaDinFireExplode_ItemVars {
     /// +0x0
-    pub xDD4: Var<f32>,
+    #[doc(alias("xDD4"))]
+    pub size: Var<f32>,
     /// +0x4
-    pub xDD8: Var<f32>,
+    #[doc(alias("xDD8"))]
+    pub first_scale: Var<f32>,
     /// +0x8
-    pub xDDC: Var<Option<GObjId>>,
+    #[doc(alias("xDDC"))]
+    pub unread_parent: Var<Option<GObjId>>,
     /// +0xc
-    pub xDE0: Var<i32>,
+    #[doc(alias("xDE0"))]
+    pub started: Var<i32>,
 }
 
 impl Default for itZeldaDinFireExplode_ItemVars {
     fn default() -> Self {
         itZeldaDinFireExplode_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
-            xDE0: Var::new(Default::default()),
+            size: Var::new(Default::default()),
+            first_scale: Var::new(Default::default()),
+            unread_parent: Var::new(Default::default()),
+            started: Var::new(Default::default()),
         }
     }
 }
@@ -8042,10 +8287,10 @@ impl Default for itZeldaDinFireExplode_ItemVars {
 impl itZeldaDinFireExplode_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
-        self.xDE0.mark_stale();
+        self.size.mark_stale();
+        self.first_scale.mark_stale();
+        self.unread_parent.mark_stale();
+        self.started.mark_stale();
     }
 }
 
@@ -8053,25 +8298,30 @@ impl itZeldaDinFireExplode_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itPKFlush_ItemVars {
     /// +0x0
-    pub xDD4_PKFlash: Var<i32>,
+    #[doc(alias("xDD4_PKFlash"))]
+    pub unused_dd4_pkflash: Var<i32>,
     /// +0x4
-    pub xDD8_PKFlash: Var<f32>,
+    #[doc(alias("xDD8_PKFlash"))]
+    pub scale: Var<f32>,
     /// +0x8
-    pub xDDC_PKFlash: Var<i32>,
+    #[doc(alias("xDDC_PKFlash"))]
+    pub frames: Var<i32>,
     /// +0xc
-    pub xDE0_PKFlash_Owner: Var<Option<GObjId>>,
+    #[doc(alias("xDE0_PKFlash_Owner"))]
+    pub owner: Var<Option<GObjId>>,
     /// +0x10
-    pub xDE4_PKFlash: Var<i32>,
+    #[doc(alias("xDE4_PKFlash"))]
+    pub unread_e4: Var<i32>,
 }
 
 impl Default for itPKFlush_ItemVars {
     fn default() -> Self {
         itPKFlush_ItemVars {
-            xDD4_PKFlash: Var::new(Default::default()),
-            xDD8_PKFlash: Var::new(Default::default()),
-            xDDC_PKFlash: Var::new(Default::default()),
-            xDE0_PKFlash_Owner: Var::new(Default::default()),
-            xDE4_PKFlash: Var::new(Default::default()),
+            unused_dd4_pkflash: Var::new(Default::default()),
+            scale: Var::new(Default::default()),
+            frames: Var::new(Default::default()),
+            owner: Var::new(Default::default()),
+            unread_e4: Var::new(Default::default()),
         }
     }
 }
@@ -8079,11 +8329,11 @@ impl Default for itPKFlush_ItemVars {
 impl itPKFlush_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4_PKFlash.mark_stale();
-        self.xDD8_PKFlash.mark_stale();
-        self.xDDC_PKFlash.mark_stale();
-        self.xDE0_PKFlash_Owner.mark_stale();
-        self.xDE4_PKFlash.mark_stale();
+        self.unused_dd4_pkflash.mark_stale();
+        self.scale.mark_stale();
+        self.frames.mark_stale();
+        self.owner.mark_stale();
+        self.unread_e4.mark_stale();
     }
 }
 
@@ -8091,19 +8341,22 @@ impl itPKFlush_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itPKFlushExplode_ItemVars {
     /// +0x0
-    pub xDD4: Var<f32>,
+    #[doc(alias("xDD4"))]
+    pub charge: Var<f32>,
     /// +0x4
-    pub xDD8: Var<f32>,
+    #[doc(alias("xDD8"))]
+    pub first_scale: Var<f32>,
     /// +0x8
-    pub xDDC: Var<Option<GObjId>>,
+    #[doc(alias("xDDC"))]
+    pub unread_owner: Var<Option<GObjId>>,
 }
 
 impl Default for itPKFlushExplode_ItemVars {
     fn default() -> Self {
         itPKFlushExplode_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
+            charge: Var::new(Default::default()),
+            first_scale: Var::new(Default::default()),
+            unread_owner: Var::new(Default::default()),
         }
     }
 }
@@ -8111,9 +8364,9 @@ impl Default for itPKFlushExplode_ItemVars {
 impl itPKFlushExplode_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
+        self.charge.mark_stale();
+        self.first_scale.mark_stale();
+        self.unread_owner.mark_stale();
     }
 }
 
@@ -8121,43 +8374,52 @@ impl itPKFlushExplode_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itPKThunder_ItemVars {
     /// +0x0
-    pub xDD4: [Var<Option<GObjId>>; 6],
+    #[doc(alias("xDD4"))]
+    pub trails: [Var<Option<GObjId>>; 6],
     /// +0x18
     pub positions: [Var<Vec3>; 16],
     /// +0xd8
     pub angles: [Var<f32>; 16],
     /// +0x118
-    pub xEEC: Var<f32>,
+    #[doc(alias("xEEC"))]
+    pub speed: Var<f32>,
     /// +0x11c
-    pub xEF0: Var<i32>,
+    #[doc(alias("xEF0"))]
+    pub unused_ef0: Var<i32>,
     /// +0x120
-    pub xEF4: Var<Option<GObjId>>,
+    #[doc(alias("xEF4"))]
+    pub unread_ef4: Var<Option<GObjId>>,
     /// +0x124
-    pub xEF8: Var<i32>,
+    #[doc(alias("xEF8"))]
+    pub frame: Var<i32>,
     /// +0x128
-    pub xEFC: Var<i32>,
+    #[doc(alias("xEFC"))]
+    pub trail_count: Var<i32>,
     /// +0x12c
-    pub xF00: Var<i32>,
+    #[doc(alias("xF00"))]
+    pub hit_ness: Var<i32>,
     /// +0x130
-    pub xF04: Var<Option<GObjId>>,
+    #[doc(alias("xF04"))]
+    pub ness: Var<Option<GObjId>>,
     /// +0x134
-    pub xF08: Var<Option<GObjId>>,
+    #[doc(alias("xF08"))]
+    pub unread_f08: Var<Option<GObjId>>,
 }
 
 impl Default for itPKThunder_ItemVars {
     fn default() -> Self {
         itPKThunder_ItemVars {
-            xDD4: core::array::from_fn(|_| Var::new(Default::default())),
+            trails: core::array::from_fn(|_| Var::new(Default::default())),
             positions: core::array::from_fn(|_| Var::new(Default::default())),
             angles: core::array::from_fn(|_| Var::new(Default::default())),
-            xEEC: Var::new(Default::default()),
-            xEF0: Var::new(Default::default()),
-            xEF4: Var::new(Default::default()),
-            xEF8: Var::new(Default::default()),
-            xEFC: Var::new(Default::default()),
-            xF00: Var::new(Default::default()),
-            xF04: Var::new(Default::default()),
-            xF08: Var::new(Default::default()),
+            speed: Var::new(Default::default()),
+            unused_ef0: Var::new(Default::default()),
+            unread_ef4: Var::new(Default::default()),
+            frame: Var::new(Default::default()),
+            trail_count: Var::new(Default::default()),
+            hit_ness: Var::new(Default::default()),
+            ness: Var::new(Default::default()),
+            unread_f08: Var::new(Default::default()),
         }
     }
 }
@@ -8165,17 +8427,17 @@ impl Default for itPKThunder_ItemVars {
 impl itPKThunder_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.iter_mut().for_each(|v| v.mark_stale());
+        self.trails.iter_mut().for_each(|v| v.mark_stale());
         self.positions.iter_mut().for_each(|v| v.mark_stale());
         self.angles.iter_mut().for_each(|v| v.mark_stale());
-        self.xEEC.mark_stale();
-        self.xEF0.mark_stale();
-        self.xEF4.mark_stale();
-        self.xEF8.mark_stale();
-        self.xEFC.mark_stale();
-        self.xF00.mark_stale();
-        self.xF04.mark_stale();
-        self.xF08.mark_stale();
+        self.speed.mark_stale();
+        self.unused_ef0.mark_stale();
+        self.unread_ef4.mark_stale();
+        self.frame.mark_stale();
+        self.trail_count.mark_stale();
+        self.hit_ness.mark_stale();
+        self.ness.mark_stale();
+        self.unread_f08.mark_stale();
     }
 }
 
@@ -8183,19 +8445,22 @@ impl itPKThunder_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itNesspkthundertrail_ItemVars {
     /// +0x0
-    pub x0: Var<Option<GObjId>>,
+    #[doc(alias("x0"))]
+    pub ball: Var<Option<GObjId>>,
     /// +0x4
-    pub x4: Var<i32>,
+    #[doc(alias("x4"))]
+    pub index: Var<i32>,
     /// +0x8
-    pub x8: Var<i32>,
+    #[doc(alias("x8"))]
+    pub frames: Var<i32>,
 }
 
 impl Default for itNesspkthundertrail_ItemVars {
     fn default() -> Self {
         itNesspkthundertrail_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
+            ball: Var::new(Default::default()),
+            index: Var::new(Default::default()),
+            frames: Var::new(Default::default()),
         }
     }
 }
@@ -8203,9 +8468,9 @@ impl Default for itNesspkthundertrail_ItemVars {
 impl itNesspkthundertrail_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
+        self.ball.mark_stale();
+        self.index.mark_stale();
+        self.frames.mark_stale();
     }
 }
 
@@ -8213,13 +8478,14 @@ impl itNesspkthundertrail_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itNessbat_ItemVars {
     /// +0x0
-    pub x0: Var<Option<GObjId>>,
+    #[doc(alias("x0"))]
+    pub ness: Var<Option<GObjId>>,
 }
 
 impl Default for itNessbat_ItemVars {
     fn default() -> Self {
         itNessbat_ItemVars {
-            x0: Var::new(Default::default()),
+            ness: Var::new(Default::default()),
         }
     }
 }
@@ -8227,7 +8493,7 @@ impl Default for itNessbat_ItemVars {
 impl itNessbat_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
+        self.ness.mark_stale();
     }
 }
 
@@ -8235,31 +8501,37 @@ impl itNessbat_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itNessYoyo_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub msid: Var<i32>,
     /// +0x4
-    pub x4: Var<f32>,
+    #[doc(alias("x4"))]
+    pub speed: Var<f32>,
     /// +0x8
-    pub x8: Var<Option<ItemLinkId>>,
+    #[doc(alias("x8"))]
+    pub tip: Var<Option<ItemLinkId>>,
     /// +0xc
-    pub xC: Var<Option<ItemLinkId>>,
+    #[doc(alias("xC"))]
+    pub hand: Var<Option<ItemLinkId>>,
     /// +0x10
-    pub x10: Var<Option<GObjId>>,
+    #[doc(alias("x10"))]
+    pub ness: Var<Option<GObjId>>,
     /// +0x14
     pub pad_14: [Var<i8>; 4],
     /// +0x18
-    pub x18: Var<Option<JObjId>>,
+    #[doc(alias("x18"))]
+    pub model: Var<Option<JObjId>>,
 }
 
 impl Default for itNessYoyo_ItemVars {
     fn default() -> Self {
         itNessYoyo_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            xC: Var::new(Default::default()),
-            x10: Var::new(Default::default()),
+            msid: Var::new(Default::default()),
+            speed: Var::new(Default::default()),
+            tip: Var::new(Default::default()),
+            hand: Var::new(Default::default()),
+            ness: Var::new(Default::default()),
             pad_14: core::array::from_fn(|_| Var::new(Default::default())),
-            x18: Var::new(Default::default()),
+            model: Var::new(Default::default()),
         }
     }
 }
@@ -8267,13 +8539,13 @@ impl Default for itNessYoyo_ItemVars {
 impl itNessYoyo_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.xC.mark_stale();
-        self.x10.mark_stale();
+        self.msid.mark_stale();
+        self.speed.mark_stale();
+        self.tip.mark_stale();
+        self.hand.mark_stale();
+        self.ness.mark_stale();
         self.pad_14.iter_mut().for_each(|v| v.mark_stale());
-        self.x18.mark_stale();
+        self.model.mark_stale();
     }
 }
 
@@ -8281,7 +8553,8 @@ impl itNessYoyo_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itSamusBomb_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub exploded: Var<i32>,
     /// +0x4
     pub owner: Var<Option<GObjId>>,
 }
@@ -8289,7 +8562,7 @@ pub struct itSamusBomb_ItemVars {
 impl Default for itSamusBomb_ItemVars {
     fn default() -> Self {
         itSamusBomb_ItemVars {
-            x0: Var::new(Default::default()),
+            exploded: Var::new(Default::default()),
             owner: Var::new(Default::default()),
         }
     }
@@ -8298,7 +8571,7 @@ impl Default for itSamusBomb_ItemVars {
 impl itSamusBomb_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
+        self.exploded.mark_stale();
         self.owner.mark_stale();
     }
 }
@@ -8307,64 +8580,82 @@ impl itSamusBomb_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itSamusChargeshot_ItemVars {
     /// +0x0
-    pub xDD4_pad: Var<u32>,
+    #[doc(alias("xDD4_pad"))]
+    pub unused_dd4_pad: Var<u32>,
     /// +0x4
-    pub xDD8: Var<f32>,
+    #[doc(alias("xDD8"))]
+    pub angle: Var<f32>,
     /// +0x8
-    pub xDDC: Var<f32>,
+    #[doc(alias("xDDC"))]
+    pub speed: Var<f32>,
     /// +0xc
-    pub xDE0: Var<f32>,
+    #[doc(alias("xDE0"))]
+    pub unread_e0: Var<f32>,
     /// +0x10
-    pub xDE4: Var<f32>,
+    #[doc(alias("xDE4"))]
+    pub size: Var<f32>,
     /// +0x14
-    pub xDE8: Var<i32>,
+    #[doc(alias("xDE8"))]
+    pub fired: Var<i32>,
     /// +0x18
-    pub xDEC: Var<i32>,
+    #[doc(alias("xDEC"))]
+    pub charge: Var<i32>,
     /// +0x1c
-    pub xDF0: Var<i32>,
+    #[doc(alias("xDF0"))]
+    pub levels: Var<i32>,
     /// +0x20
-    pub xDF4: Var<i32>,
+    #[doc(alias("xDF4"))]
+    pub sparkle: Var<i32>,
     /// +0x24
-    pub xDF8: Var<i32>,
+    #[doc(alias("xDF8"))]
+    pub unread_damage: Var<i32>,
     /// +0x28
-    pub xDFC: Var<i32>,
+    #[doc(alias("xDFC"))]
+    pub effects: Var<i32>,
     /// +0x2c
-    pub xE00: Var<Option<GObjId>>,
+    #[doc(alias("xE00"))]
+    pub maker: Var<Option<GObjId>>,
     /// +0x30
-    pub xE04: Var<f32>,
+    #[doc(alias("xE04"))]
+    pub unread_scale: Var<f32>,
     /// +0x34
-    pub pad1: [Var<u32>; 9],
+    #[doc(alias("pad1"))]
+    pub pad_34: [Var<u32>; 9],
     /// +0x58
-    pub xE2C: Var<f32>,
+    #[doc(alias("xE2C"))]
+    pub unread_e2c: Var<f32>,
     /// +0x5c
-    pub xE30: Var<f32>,
+    #[doc(alias("xE30"))]
+    pub unread_e30: Var<f32>,
     /// +0x60
-    pub xE34: Var<f32>,
+    #[doc(alias("xE34"))]
+    pub unread_e34: Var<f32>,
     /// +0x64
-    pub padding: [Var<u32>; 15],
+    #[doc(alias("padding"))]
+    pub pad_64: [Var<u32>; 15],
 }
 
 impl Default for itSamusChargeshot_ItemVars {
     fn default() -> Self {
         itSamusChargeshot_ItemVars {
-            xDD4_pad: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
-            xDE0: Var::new(Default::default()),
-            xDE4: Var::new(Default::default()),
-            xDE8: Var::new(Default::default()),
-            xDEC: Var::new(Default::default()),
-            xDF0: Var::new(Default::default()),
-            xDF4: Var::new(Default::default()),
-            xDF8: Var::new(Default::default()),
-            xDFC: Var::new(Default::default()),
-            xE00: Var::new(Default::default()),
-            xE04: Var::new(Default::default()),
-            pad1: core::array::from_fn(|_| Var::new(Default::default())),
-            xE2C: Var::new(Default::default()),
-            xE30: Var::new(Default::default()),
-            xE34: Var::new(Default::default()),
-            padding: core::array::from_fn(|_| Var::new(Default::default())),
+            unused_dd4_pad: Var::new(Default::default()),
+            angle: Var::new(Default::default()),
+            speed: Var::new(Default::default()),
+            unread_e0: Var::new(Default::default()),
+            size: Var::new(Default::default()),
+            fired: Var::new(Default::default()),
+            charge: Var::new(Default::default()),
+            levels: Var::new(Default::default()),
+            sparkle: Var::new(Default::default()),
+            unread_damage: Var::new(Default::default()),
+            effects: Var::new(Default::default()),
+            maker: Var::new(Default::default()),
+            unread_scale: Var::new(Default::default()),
+            pad_34: core::array::from_fn(|_| Var::new(Default::default())),
+            unread_e2c: Var::new(Default::default()),
+            unread_e30: Var::new(Default::default()),
+            unread_e34: Var::new(Default::default()),
+            pad_64: core::array::from_fn(|_| Var::new(Default::default())),
         }
     }
 }
@@ -8372,24 +8663,24 @@ impl Default for itSamusChargeshot_ItemVars {
 impl itSamusChargeshot_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4_pad.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
-        self.xDE0.mark_stale();
-        self.xDE4.mark_stale();
-        self.xDE8.mark_stale();
-        self.xDEC.mark_stale();
-        self.xDF0.mark_stale();
-        self.xDF4.mark_stale();
-        self.xDF8.mark_stale();
-        self.xDFC.mark_stale();
-        self.xE00.mark_stale();
-        self.xE04.mark_stale();
-        self.pad1.iter_mut().for_each(|v| v.mark_stale());
-        self.xE2C.mark_stale();
-        self.xE30.mark_stale();
-        self.xE34.mark_stale();
-        self.padding.iter_mut().for_each(|v| v.mark_stale());
+        self.unused_dd4_pad.mark_stale();
+        self.angle.mark_stale();
+        self.speed.mark_stale();
+        self.unread_e0.mark_stale();
+        self.size.mark_stale();
+        self.fired.mark_stale();
+        self.charge.mark_stale();
+        self.levels.mark_stale();
+        self.sparkle.mark_stale();
+        self.unread_damage.mark_stale();
+        self.effects.mark_stale();
+        self.maker.mark_stale();
+        self.unread_scale.mark_stale();
+        self.pad_34.iter_mut().for_each(|v| v.mark_stale());
+        self.unread_e2c.mark_stale();
+        self.unread_e30.mark_stale();
+        self.unread_e34.mark_stale();
+        self.pad_64.iter_mut().for_each(|v| v.mark_stale());
     }
 }
 
@@ -8399,23 +8690,26 @@ pub struct itSamusMissile_ItemVars {
     /// +0x0
     pub is_smash_missile: Var<i32>,
     /// +0x4
-    pub x4: Var<i32>,
+    #[doc(alias("x4"))]
+    pub msid: Var<i32>,
     /// +0x8
-    pub x8: Var<f32>,
+    #[doc(alias("x8"))]
+    pub homing_left: Var<f32>,
     /// +0xc
     pub owner: Var<Option<GObjId>>,
     /// +0x10
-    pub x10: Var<Option<GObjId>>,
+    #[doc(alias("x10"))]
+    pub unused_10: Var<Option<GObjId>>,
 }
 
 impl Default for itSamusMissile_ItemVars {
     fn default() -> Self {
         itSamusMissile_ItemVars {
             is_smash_missile: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
+            msid: Var::new(Default::default()),
+            homing_left: Var::new(Default::default()),
             owner: Var::new(Default::default()),
-            x10: Var::new(Default::default()),
+            unused_10: Var::new(Default::default()),
         }
     }
 }
@@ -8424,10 +8718,10 @@ impl itSamusMissile_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
         self.is_smash_missile.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
+        self.msid.mark_stale();
+        self.homing_left.mark_stale();
         self.owner.mark_stale();
-        self.x10.mark_stale();
+        self.unused_10.mark_stale();
     }
 }
 
@@ -8435,34 +8729,42 @@ impl itSamusMissile_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itSamusGrapple_ItemVars {
     /// +0x0
-    pub x0: Var<Option<ItemLinkId>>,
+    #[doc(alias("x0"))]
+    pub tip: Var<Option<ItemLinkId>>,
     /// +0x4
-    pub x4: Var<Option<ItemLinkId>>,
+    #[doc(alias("x4"))]
+    pub hand: Var<Option<ItemLinkId>>,
     /// +0x8
-    pub x8: Var<Option<GObjId>>,
+    #[doc(alias("x8"))]
+    pub fighter: Var<Option<GObjId>>,
     /// +0xc
-    pub xC: Var<Option<JObjId>>,
+    #[doc(alias("xC"))]
+    pub tip_model: Var<Option<JObjId>>,
     /// +0x10
-    pub unk_10: Var<Option<CodeRef>>,
+    #[doc(alias("unk_10"))]
+    pub frame: Var<Option<CodeRef>>,
     /// +0x14
-    pub x14: Var<u8>,
+    #[doc(alias("x14"))]
+    pub done: Var<u8>,
     /// +0x15
-    pub x15: Var<u8>,
+    #[doc(alias("x15"))]
+    pub links_made: Var<u8>,
     /// +0x16
-    pub x16: Var<u8>,
+    #[doc(alias("x16"))]
+    pub hanging: Var<u8>,
 }
 
 impl Default for itSamusGrapple_ItemVars {
     fn default() -> Self {
         itSamusGrapple_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            xC: Var::new(Default::default()),
-            unk_10: Var::new(Default::default()),
-            x14: Var::new(Default::default()),
-            x15: Var::new(Default::default()),
-            x16: Var::new(Default::default()),
+            tip: Var::new(Default::default()),
+            hand: Var::new(Default::default()),
+            fighter: Var::new(Default::default()),
+            tip_model: Var::new(Default::default()),
+            frame: Var::new(Default::default()),
+            done: Var::new(Default::default()),
+            links_made: Var::new(Default::default()),
+            hanging: Var::new(Default::default()),
         }
     }
 }
@@ -8470,14 +8772,14 @@ impl Default for itSamusGrapple_ItemVars {
 impl itSamusGrapple_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.xC.mark_stale();
-        self.unk_10.mark_stale();
-        self.x14.mark_stale();
-        self.x15.mark_stale();
-        self.x16.mark_stale();
+        self.tip.mark_stale();
+        self.hand.mark_stale();
+        self.fighter.mark_stale();
+        self.tip_model.mark_stale();
+        self.frame.mark_stale();
+        self.done.mark_stale();
+        self.links_made.mark_stale();
+        self.hanging.mark_stale();
     }
 }
 
@@ -8485,22 +8787,26 @@ impl itSamusGrapple_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itDrMarioPill_ItemVars {
     /// +0x0
-    pub x0: Var<f32>,
+    #[doc(alias("x0"))]
+    pub facing_dir: Var<f32>,
     /// +0x4
-    pub x4: Var<Option<GObjId>>,
+    #[doc(alias("x4"))]
+    pub owner: Var<Option<GObjId>>,
     /// +0x8
-    pub x8: Var<f32>,
+    #[doc(alias("x8"))]
+    pub unused_8: Var<f32>,
     /// +0xc
-    pub xC: Var<f32>,
+    #[doc(alias("xC"))]
+    pub unused_c: Var<f32>,
 }
 
 impl Default for itDrMarioPill_ItemVars {
     fn default() -> Self {
         itDrMarioPill_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            xC: Var::new(Default::default()),
+            facing_dir: Var::new(Default::default()),
+            owner: Var::new(Default::default()),
+            unused_8: Var::new(Default::default()),
+            unused_c: Var::new(Default::default()),
         }
     }
 }
@@ -8508,10 +8814,10 @@ impl Default for itDrMarioPill_ItemVars {
 impl itDrMarioPill_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.xC.mark_stale();
+        self.facing_dir.mark_stale();
+        self.owner.mark_stale();
+        self.unused_8.mark_stale();
+        self.unused_c.mark_stale();
     }
 }
 
@@ -8519,43 +8825,54 @@ impl itDrMarioPill_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itPikachuthunder_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub index: Var<i32>,
     /// +0x4
-    pub x4: Var<i32>,
+    #[doc(alias("x4"))]
+    pub hit: Var<i32>,
     /// +0x8
-    pub x8: Var<i32>,
+    #[doc(alias("x8"))]
+    pub wait: Var<i32>,
     /// +0xc
-    pub xC: Var<f32>,
+    #[doc(alias("xC"))]
+    pub length: Var<f32>,
     /// +0x10
-    pub x10: Var<f32>,
+    #[doc(alias("x10"))]
+    pub stretch: Var<f32>,
     /// +0x14
-    pub x14: Var<f32>,
+    #[doc(alias("x14"))]
+    pub stop_frames: Var<f32>,
     /// +0x18
-    pub x18: Var<f32>,
+    #[doc(alias("x18"))]
+    pub scale: Var<f32>,
     /// +0x1c
-    pub x1C: Var<Vec3>,
+    #[doc(alias("x1C"))]
+    pub vel: Var<Vec3>,
     /// +0x28
-    pub x28: Var<Vec3>,
+    #[doc(alias("x28"))]
+    pub stop_pos: Var<Vec3>,
     /// +0x34
-    pub x34: Var<Option<GObjId>>,
+    #[doc(alias("x34"))]
+    pub next: Var<Option<GObjId>>,
     /// +0x38
-    pub x38: Var<Option<GObjId>>,
+    #[doc(alias("x38"))]
+    pub owner: Var<Option<GObjId>>,
 }
 
 impl Default for itPikachuthunder_ItemVars {
     fn default() -> Self {
         itPikachuthunder_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            xC: Var::new(Default::default()),
-            x10: Var::new(Default::default()),
-            x14: Var::new(Default::default()),
-            x18: Var::new(Default::default()),
-            x1C: Var::new(Default::default()),
-            x28: Var::new(Default::default()),
-            x34: Var::new(Default::default()),
-            x38: Var::new(Default::default()),
+            index: Var::new(Default::default()),
+            hit: Var::new(Default::default()),
+            wait: Var::new(Default::default()),
+            length: Var::new(Default::default()),
+            stretch: Var::new(Default::default()),
+            stop_frames: Var::new(Default::default()),
+            scale: Var::new(Default::default()),
+            vel: Var::new(Default::default()),
+            stop_pos: Var::new(Default::default()),
+            next: Var::new(Default::default()),
+            owner: Var::new(Default::default()),
         }
     }
 }
@@ -8563,17 +8880,17 @@ impl Default for itPikachuthunder_ItemVars {
 impl itPikachuthunder_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.xC.mark_stale();
-        self.x10.mark_stale();
-        self.x14.mark_stale();
-        self.x18.mark_stale();
-        self.x1C.mark_stale();
-        self.x28.mark_stale();
-        self.x34.mark_stale();
-        self.x38.mark_stale();
+        self.index.mark_stale();
+        self.hit.mark_stale();
+        self.wait.mark_stale();
+        self.length.mark_stale();
+        self.stretch.mark_stale();
+        self.stop_frames.mark_stale();
+        self.scale.mark_stale();
+        self.vel.mark_stale();
+        self.stop_pos.mark_stale();
+        self.next.mark_stale();
+        self.owner.mark_stale();
     }
 }
 
@@ -8581,34 +8898,42 @@ impl itPikachuthunder_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itPikachutJoltGround_ItemVars {
     /// +0x0
-    pub xDD4: Var<f32>,
+    #[doc(alias("xDD4"))]
+    pub angle: Var<f32>,
     /// +0x4
-    pub xDD8: Var<Option<GObjId>>,
+    #[doc(alias("xDD8"))]
+    pub pikachu: Var<Option<GObjId>>,
     /// +0x8
-    pub xDDC: Var<Option<GObjId>>,
+    #[doc(alias("xDDC"))]
+    pub air_jolt: Var<Option<GObjId>>,
     /// +0xc
-    pub xDE0: Var<i32>,
+    #[doc(alias("xDE0"))]
+    pub has_effect: Var<i32>,
     /// +0x10
-    pub xDE4: Var<i32>,
+    #[doc(alias("xDE4"))]
+    pub placed_frames: Var<i32>,
     /// +0x14
-    pub xDE8: Var<Vec3>,
+    #[doc(alias("xDE8"))]
+    pub last_pos: Var<Vec3>,
     /// +0x20
-    pub xDF4: Var<Vec3>,
+    #[doc(alias("xDF4"))]
+    pub normal: Var<Vec3>,
     /// +0x2c
-    pub xE00: Var<Vec3>,
+    #[doc(alias("xE00"))]
+    pub last_normal: Var<Vec3>,
 }
 
 impl Default for itPikachutJoltGround_ItemVars {
     fn default() -> Self {
         itPikachutJoltGround_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
-            xDE0: Var::new(Default::default()),
-            xDE4: Var::new(Default::default()),
-            xDE8: Var::new(Default::default()),
-            xDF4: Var::new(Default::default()),
-            xE00: Var::new(Default::default()),
+            angle: Var::new(Default::default()),
+            pikachu: Var::new(Default::default()),
+            air_jolt: Var::new(Default::default()),
+            has_effect: Var::new(Default::default()),
+            placed_frames: Var::new(Default::default()),
+            last_pos: Var::new(Default::default()),
+            normal: Var::new(Default::default()),
+            last_normal: Var::new(Default::default()),
         }
     }
 }
@@ -8616,14 +8941,14 @@ impl Default for itPikachutJoltGround_ItemVars {
 impl itPikachutJoltGround_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
-        self.xDE0.mark_stale();
-        self.xDE4.mark_stale();
-        self.xDE8.mark_stale();
-        self.xDF4.mark_stale();
-        self.xE00.mark_stale();
+        self.angle.mark_stale();
+        self.pikachu.mark_stale();
+        self.air_jolt.mark_stale();
+        self.has_effect.mark_stale();
+        self.placed_frames.mark_stale();
+        self.last_pos.mark_stale();
+        self.normal.mark_stale();
+        self.last_normal.mark_stale();
     }
 }
 
@@ -8631,25 +8956,29 @@ impl itPikachutJoltGround_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itPikachutJoltAir_ItemVars {
     /// +0x0
-    pub xDD4: Var<Option<GObjId>>,
+    #[doc(alias("xDD4"))]
+    pub pikachu: Var<Option<GObjId>>,
     /// +0x4
-    pub xDD8: Var<Option<GObjId>>,
+    #[doc(alias("xDD8"))]
+    pub ground_jolt: Var<Option<GObjId>>,
     /// +0x8
     pub pad_8: [Var<u8>; 12],
     /// +0x14
-    pub xDE8: Var<Vec3>,
+    #[doc(alias("xDE8"))]
+    pub normal: Var<Vec3>,
     /// +0x20
-    pub xDF4: Var<i32>,
+    #[doc(alias("xDF4"))]
+    pub frames: Var<i32>,
 }
 
 impl Default for itPikachutJoltAir_ItemVars {
     fn default() -> Self {
         itPikachutJoltAir_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
+            pikachu: Var::new(Default::default()),
+            ground_jolt: Var::new(Default::default()),
             pad_8: core::array::from_fn(|_| Var::new(Default::default())),
-            xDE8: Var::new(Default::default()),
-            xDF4: Var::new(Default::default()),
+            normal: Var::new(Default::default()),
+            frames: Var::new(Default::default()),
         }
     }
 }
@@ -8657,11 +8986,11 @@ impl Default for itPikachutJoltAir_ItemVars {
 impl itPikachutJoltAir_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
+        self.pikachu.mark_stale();
+        self.ground_jolt.mark_stale();
         self.pad_8.iter_mut().for_each(|v| v.mark_stale());
-        self.xDE8.mark_stale();
-        self.xDF4.mark_stale();
+        self.normal.mark_stale();
+        self.frames.mark_stale();
     }
 }
 
@@ -8669,19 +8998,22 @@ impl itPikachutJoltAir_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itClimbersIce_ItemVars {
     /// +0x0
-    pub x0: Var<Option<GObjId>>,
+    #[doc(alias("x0"))]
+    pub owner: Var<Option<GObjId>>,
     /// +0x4
-    pub x4: Var<f32>,
+    #[doc(alias("x4"))]
+    pub scale: Var<f32>,
     /// +0x8 (bits 0..+1)
-    pub x8_b0: Var<bool>,
+    #[doc(alias("x8_b0"))]
+    pub thrown: Var<bool>,
 }
 
 impl Default for itClimbersIce_ItemVars {
     fn default() -> Self {
         itClimbersIce_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8_b0: Var::new(Default::default()),
+            owner: Var::new(Default::default()),
+            scale: Var::new(Default::default()),
+            thrown: Var::new(Default::default()),
         }
     }
 }
@@ -8689,9 +9021,9 @@ impl Default for itClimbersIce_ItemVars {
 impl itClimbersIce_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8_b0.mark_stale();
+        self.owner.mark_stale();
+        self.scale.mark_stale();
+        self.thrown.mark_stale();
     }
 }
 
@@ -8699,16 +9031,18 @@ impl itClimbersIce_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itClimbersBlizzard_ItemVars {
     /// +0x0
-    pub x0: Var<f32>,
+    #[doc(alias("x0"))]
+    pub scale: Var<f32>,
     /// +0x4 (bits 0..+1)
-    pub flag0: Var<bool>,
+    #[doc(alias("flag0"))]
+    pub launched: Var<bool>,
 }
 
 impl Default for itClimbersBlizzard_ItemVars {
     fn default() -> Self {
         itClimbersBlizzard_ItemVars {
-            x0: Var::new(Default::default()),
-            flag0: Var::new(Default::default()),
+            scale: Var::new(Default::default()),
+            launched: Var::new(Default::default()),
         }
     }
 }
@@ -8716,8 +9050,8 @@ impl Default for itClimbersBlizzard_ItemVars {
 impl itClimbersBlizzard_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.flag0.mark_stale();
+        self.scale.mark_stale();
+        self.launched.mark_stale();
     }
 }
 
@@ -8725,28 +9059,33 @@ impl itClimbersBlizzard_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itClimbersString_ItemVars {
     /// +0x0
-    pub x0: Var<f32>,
+    #[doc(alias("x0"))]
+    pub reel: Var<f32>,
     /// +0x4
-    pub x4: Var<Option<ItemLinkId>>,
+    #[doc(alias("x4"))]
+    pub tip: Var<Option<ItemLinkId>>,
     /// +0x8
-    pub x8: Var<Option<ItemLinkId>>,
+    #[doc(alias("x8"))]
+    pub hand: Var<Option<ItemLinkId>>,
     /// +0xc
-    pub xC: Var<Option<GObjId>>,
+    #[doc(alias("xC"))]
+    pub popo: Var<Option<GObjId>>,
     /// +0x10
     pub pad_10: [Var<u8>; 4],
     /// +0x14
-    pub x14: Var<Option<JObjId>>,
+    #[doc(alias("x14"))]
+    pub hand_joint: Var<Option<JObjId>>,
 }
 
 impl Default for itClimbersString_ItemVars {
     fn default() -> Self {
         itClimbersString_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            xC: Var::new(Default::default()),
+            reel: Var::new(Default::default()),
+            tip: Var::new(Default::default()),
+            hand: Var::new(Default::default()),
+            popo: Var::new(Default::default()),
             pad_10: core::array::from_fn(|_| Var::new(Default::default())),
-            x14: Var::new(Default::default()),
+            hand_joint: Var::new(Default::default()),
         }
     }
 }
@@ -8754,12 +9093,12 @@ impl Default for itClimbersString_ItemVars {
 impl itClimbersString_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.xC.mark_stale();
+        self.reel.mark_stale();
+        self.tip.mark_stale();
+        self.hand.mark_stale();
+        self.popo.mark_stale();
         self.pad_10.iter_mut().for_each(|v| v.mark_stale());
-        self.x14.mark_stale();
+        self.hand_joint.mark_stale();
     }
 }
 
@@ -8767,22 +9106,26 @@ impl itClimbersString_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itMasterHandLaser_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub ended: Var<i32>,
     /// +0x4
-    pub x4: Var<i32>,
+    #[doc(alias("x4"))]
+    pub part: Var<i32>,
     /// +0x8
-    pub x8: Var<i32>,
+    #[doc(alias("x8"))]
+    pub reach_frames: Var<i32>,
     /// +0xc
-    pub x10: Var<Option<JObjId>>,
+    #[doc(alias("x10"))]
+    pub joint: Var<Option<JObjId>>,
 }
 
 impl Default for itMasterHandLaser_ItemVars {
     fn default() -> Self {
         itMasterHandLaser_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            x10: Var::new(Default::default()),
+            ended: Var::new(Default::default()),
+            part: Var::new(Default::default()),
+            reach_frames: Var::new(Default::default()),
+            joint: Var::new(Default::default()),
         }
     }
 }
@@ -8790,10 +9133,10 @@ impl Default for itMasterHandLaser_ItemVars {
 impl itMasterHandLaser_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.x10.mark_stale();
+        self.ended.mark_stale();
+        self.part.mark_stale();
+        self.reach_frames.mark_stale();
+        self.joint.mark_stale();
     }
 }
 
@@ -8801,13 +9144,14 @@ impl itMasterHandLaser_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itMasterHandBullet_ItemVars {
     /// +0x0
-    pub x0: Var<f32>,
+    #[doc(alias("x0"))]
+    pub life: Var<f32>,
 }
 
 impl Default for itMasterHandBullet_ItemVars {
     fn default() -> Self {
         itMasterHandBullet_ItemVars {
-            x0: Var::new(Default::default()),
+            life: Var::new(Default::default()),
         }
     }
 }
@@ -8815,7 +9159,7 @@ impl Default for itMasterHandBullet_ItemVars {
 impl itMasterHandBullet_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
+        self.life.mark_stale();
     }
 }
 
@@ -8823,28 +9167,34 @@ impl itMasterHandBullet_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itPeachTurnip_ItemVars {
     /// +0x0
-    pub xDD4: Var<TurnipFlag>,
+    #[doc(alias("xDD4"))]
+    pub picked_up: Var<TurnipFlag>,
     /// +0x4
-    pub xDD8: Var<i32>,
+    #[doc(alias("xDD8"))]
+    pub face: Var<i32>,
     /// +0x8
-    pub xDDC_damage: Var<i32>,
+    #[doc(alias("xDDC_damage"))]
+    pub damage: Var<i32>,
     /// +0xc
-    pub xDE0_scl: Var<f32>,
+    #[doc(alias("xDE0_scl"))]
+    pub scale: Var<f32>,
     /// +0x10
-    pub xDE4_owner: Var<Option<GObjId>>,
+    #[doc(alias("xDE4_owner"))]
+    pub owner: Var<Option<GObjId>>,
     /// +0x14
-    pub xDE8_scl: Var<f32>,
+    #[doc(alias("xDE8_scl"))]
+    pub unused_de8_scl: Var<f32>,
 }
 
 impl Default for itPeachTurnip_ItemVars {
     fn default() -> Self {
         itPeachTurnip_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC_damage: Var::new(Default::default()),
-            xDE0_scl: Var::new(Default::default()),
-            xDE4_owner: Var::new(Default::default()),
-            xDE8_scl: Var::new(Default::default()),
+            picked_up: Var::new(Default::default()),
+            face: Var::new(Default::default()),
+            damage: Var::new(Default::default()),
+            scale: Var::new(Default::default()),
+            owner: Var::new(Default::default()),
+            unused_de8_scl: Var::new(Default::default()),
         }
     }
 }
@@ -8852,12 +9202,12 @@ impl Default for itPeachTurnip_ItemVars {
 impl itPeachTurnip_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC_damage.mark_stale();
-        self.xDE0_scl.mark_stale();
-        self.xDE4_owner.mark_stale();
-        self.xDE8_scl.mark_stale();
+        self.picked_up.mark_stale();
+        self.face.mark_stale();
+        self.damage.mark_stale();
+        self.scale.mark_stale();
+        self.owner.mark_stale();
+        self.unused_de8_scl.mark_stale();
     }
 }
 
@@ -8865,34 +9215,42 @@ impl itPeachTurnip_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itLinkBomb_ItemVars {
     /// +0x0
-    pub x0: Var<LinkBombFlags>,
+    #[doc(alias("x0"))]
+    pub flags: Var<LinkBombFlags>,
     /// +0x1
-    pub x1: Var<u8>,
+    #[doc(alias("x1"))]
+    pub unused_1: Var<u8>,
     /// +0x2
-    pub x2: Var<u8>,
+    #[doc(alias("x2"))]
+    pub unused_2: Var<u8>,
     /// +0x3
-    pub x3: Var<u8>,
+    #[doc(alias("x3"))]
+    pub unused_3: Var<u8>,
     /// +0x4
-    pub x4: Var<f32>,
+    #[doc(alias("x4"))]
+    pub roll_dir: Var<f32>,
     /// +0x8
-    pub x8: Var<f32>,
+    #[doc(alias("x8"))]
+    pub sink: Var<f32>,
     /// +0xc
-    pub xC: Var<f32>,
+    #[doc(alias("xC"))]
+    pub tilt: Var<f32>,
     /// +0x10
-    pub x10: Var<Option<GObjId>>,
+    #[doc(alias("x10"))]
+    pub parent: Var<Option<GObjId>>,
 }
 
 impl Default for itLinkBomb_ItemVars {
     fn default() -> Self {
         itLinkBomb_ItemVars {
-            x0: Var::new(Default::default()),
-            x1: Var::new(Default::default()),
-            x2: Var::new(Default::default()),
-            x3: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            xC: Var::new(Default::default()),
-            x10: Var::new(Default::default()),
+            flags: Var::new(Default::default()),
+            unused_1: Var::new(Default::default()),
+            unused_2: Var::new(Default::default()),
+            unused_3: Var::new(Default::default()),
+            roll_dir: Var::new(Default::default()),
+            sink: Var::new(Default::default()),
+            tilt: Var::new(Default::default()),
+            parent: Var::new(Default::default()),
         }
     }
 }
@@ -8900,14 +9258,14 @@ impl Default for itLinkBomb_ItemVars {
 impl itLinkBomb_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x1.mark_stale();
-        self.x2.mark_stale();
-        self.x3.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.xC.mark_stale();
-        self.x10.mark_stale();
+        self.flags.mark_stale();
+        self.unused_1.mark_stale();
+        self.unused_2.mark_stale();
+        self.unused_3.mark_stale();
+        self.roll_dir.mark_stale();
+        self.sink.mark_stale();
+        self.tilt.mark_stale();
+        self.parent.mark_stale();
     }
 }
 
@@ -8915,64 +9273,82 @@ impl itLinkBomb_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itLinkBoomerang_ItemVars {
     /// +0x0
-    pub xDD4: Var<i32>,
+    #[doc(alias("xDD4"))]
+    pub unused_dd4: Var<i32>,
     /// +0x4
-    pub xDD8: Var<i32>,
+    #[doc(alias("xDD8"))]
+    pub trail_slot: Var<i32>,
     /// +0x8
-    pub xDDC: [Var<i32>; 2],
+    #[doc(alias("xDDC"))]
+    pub trail_slots: [Var<i32>; 2],
     /// +0x10
-    pub xDE4: Var<i32>,
+    #[doc(alias("xDE4"))]
+    pub unwind_frames: Var<i32>,
     /// +0x14
-    pub xDE8: Var<i32>,
+    #[doc(alias("xDE8"))]
+    pub returning: Var<i32>,
     /// +0x18
-    pub xDEC: Var<i32>,
+    #[doc(alias("xDEC"))]
+    pub owner_kind: Var<i32>,
     /// +0x1c
-    pub xDF0: [Var<Vec3>; 16],
+    #[doc(alias("xDF0"))]
+    pub trail_pos: [Var<Vec3>; 16],
     /// +0xdc
-    pub xEB0: [Var<Vec3>; 16],
+    #[doc(alias("xEB0"))]
+    pub trail_rot: [Var<Vec3>; 16],
     /// +0x19c
-    pub xF70: Var<f32>,
+    #[doc(alias("xF70"))]
+    pub flight_left: Var<f32>,
     /// +0x1a0
-    pub xF74: Var<f32>,
+    #[doc(alias("xF74"))]
+    pub heading: Var<f32>,
     /// +0x1a4
-    pub xF78: Var<f32>,
+    #[doc(alias("xF78"))]
+    pub roll: Var<f32>,
     /// +0x1a8
-    pub xF7C: Var<f32>,
+    #[doc(alias("xF7C"))]
+    pub bounce_limit: Var<f32>,
     /// +0x1ac
-    pub xF80: Var<f32>,
+    #[doc(alias("xF80"))]
+    pub home_frames: Var<f32>,
     /// +0x1b0
-    pub xF84: Var<f32>,
+    #[doc(alias("xF84"))]
+    pub turn_limit: Var<f32>,
     /// +0x1b4
-    pub xF88: Var<f32>,
+    #[doc(alias("xF88"))]
+    pub unwind_step: Var<f32>,
     /// +0x1b8
-    pub xF8C: Var<f32>,
+    #[doc(alias("xF8C"))]
+    pub sfx_timer: Var<f32>,
     /// +0x1bc
-    pub xF90: [Var<Option<JObjId>>; 2],
+    #[doc(alias("xF90"))]
+    pub trails: [Var<Option<JObjId>>; 2],
     /// +0x1c4
-    pub xF98: Var<Option<GObjId>>,
+    #[doc(alias("xF98"))]
+    pub owner: Var<Option<GObjId>>,
 }
 
 impl Default for itLinkBoomerang_ItemVars {
     fn default() -> Self {
         itLinkBoomerang_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: core::array::from_fn(|_| Var::new(Default::default())),
-            xDE4: Var::new(Default::default()),
-            xDE8: Var::new(Default::default()),
-            xDEC: Var::new(Default::default()),
-            xDF0: core::array::from_fn(|_| Var::new(Default::default())),
-            xEB0: core::array::from_fn(|_| Var::new(Default::default())),
-            xF70: Var::new(Default::default()),
-            xF74: Var::new(Default::default()),
-            xF78: Var::new(Default::default()),
-            xF7C: Var::new(Default::default()),
-            xF80: Var::new(Default::default()),
-            xF84: Var::new(Default::default()),
-            xF88: Var::new(Default::default()),
-            xF8C: Var::new(Default::default()),
-            xF90: core::array::from_fn(|_| Var::new(Default::default())),
-            xF98: Var::new(Default::default()),
+            unused_dd4: Var::new(Default::default()),
+            trail_slot: Var::new(Default::default()),
+            trail_slots: core::array::from_fn(|_| Var::new(Default::default())),
+            unwind_frames: Var::new(Default::default()),
+            returning: Var::new(Default::default()),
+            owner_kind: Var::new(Default::default()),
+            trail_pos: core::array::from_fn(|_| Var::new(Default::default())),
+            trail_rot: core::array::from_fn(|_| Var::new(Default::default())),
+            flight_left: Var::new(Default::default()),
+            heading: Var::new(Default::default()),
+            roll: Var::new(Default::default()),
+            bounce_limit: Var::new(Default::default()),
+            home_frames: Var::new(Default::default()),
+            turn_limit: Var::new(Default::default()),
+            unwind_step: Var::new(Default::default()),
+            sfx_timer: Var::new(Default::default()),
+            trails: core::array::from_fn(|_| Var::new(Default::default())),
+            owner: Var::new(Default::default()),
         }
     }
 }
@@ -8980,24 +9356,24 @@ impl Default for itLinkBoomerang_ItemVars {
 impl itLinkBoomerang_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.iter_mut().for_each(|v| v.mark_stale());
-        self.xDE4.mark_stale();
-        self.xDE8.mark_stale();
-        self.xDEC.mark_stale();
-        self.xDF0.iter_mut().for_each(|v| v.mark_stale());
-        self.xEB0.iter_mut().for_each(|v| v.mark_stale());
-        self.xF70.mark_stale();
-        self.xF74.mark_stale();
-        self.xF78.mark_stale();
-        self.xF7C.mark_stale();
-        self.xF80.mark_stale();
-        self.xF84.mark_stale();
-        self.xF88.mark_stale();
-        self.xF8C.mark_stale();
-        self.xF90.iter_mut().for_each(|v| v.mark_stale());
-        self.xF98.mark_stale();
+        self.unused_dd4.mark_stale();
+        self.trail_slot.mark_stale();
+        self.trail_slots.iter_mut().for_each(|v| v.mark_stale());
+        self.unwind_frames.mark_stale();
+        self.returning.mark_stale();
+        self.owner_kind.mark_stale();
+        self.trail_pos.iter_mut().for_each(|v| v.mark_stale());
+        self.trail_rot.iter_mut().for_each(|v| v.mark_stale());
+        self.flight_left.mark_stale();
+        self.heading.mark_stale();
+        self.roll.mark_stale();
+        self.bounce_limit.mark_stale();
+        self.home_frames.mark_stale();
+        self.turn_limit.mark_stale();
+        self.unwind_step.mark_stale();
+        self.sfx_timer.mark_stale();
+        self.trails.iter_mut().for_each(|v| v.mark_stale());
+        self.owner.mark_stale();
     }
 }
 
@@ -9005,85 +9381,110 @@ impl itLinkBoomerang_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itLinkHookshot_ItemVars {
     /// +0x0
-    pub x0: Var<Option<ItemLinkId>>,
+    #[doc(alias("x0"))]
+    pub tip: Var<Option<ItemLinkId>>,
     /// +0x4
-    pub x4: Var<Option<ItemLinkId>>,
+    #[doc(alias("x4"))]
+    pub hand: Var<Option<ItemLinkId>>,
     /// +0x8
-    pub x8: Var<Option<GObjId>>,
+    #[doc(alias("x8"))]
+    pub fighter: Var<Option<GObjId>>,
     /// +0xc
-    pub xC: Var<Option<JObjId>>,
+    #[doc(alias("xC"))]
+    pub tip_model: Var<Option<JObjId>>,
     /// +0x10
-    pub x10: Var<Option<CodeRef>>,
+    #[doc(alias("x10"))]
+    pub frame: Var<Option<CodeRef>>,
     /// +0x14
-    pub x14: Var<u8>,
+    #[doc(alias("x14"))]
+    pub done: Var<u8>,
     /// +0x18
-    pub x18: Var<f32>,
+    #[doc(alias("x18"))]
+    pub unused_18: Var<f32>,
     /// +0x1c
-    pub x1C: Var<f32>,
+    #[doc(alias("x1C"))]
+    pub unused_1c: Var<f32>,
     /// +0x20
-    pub x20: Var<f32>,
+    #[doc(alias("x20"))]
+    pub unused_20: Var<f32>,
     /// +0x24
-    pub x24: Var<f32>,
+    #[doc(alias("x24"))]
+    pub unused_24: Var<f32>,
     /// +0x28
-    pub x28: Var<f32>,
+    #[doc(alias("x28"))]
+    pub unused_28: Var<f32>,
     /// +0x2c
-    pub x2C: Var<f32>,
+    #[doc(alias("x2C"))]
+    pub unused_2c: Var<f32>,
     /// +0x30
-    pub x30: Var<f32>,
+    #[doc(alias("x30"))]
+    pub unused_30: Var<f32>,
     /// +0x34
-    pub x34: Var<f32>,
+    #[doc(alias("x34"))]
+    pub unused_34: Var<f32>,
     /// +0x38
-    pub x38: Var<f32>,
+    #[doc(alias("x38"))]
+    pub unused_38: Var<f32>,
     /// +0x3c
-    pub x3C: Var<f32>,
+    #[doc(alias("x3C"))]
+    pub unused_3c: Var<f32>,
     /// +0x40
-    pub x40: Var<f32>,
+    #[doc(alias("x40"))]
+    pub unused_40: Var<f32>,
     /// +0x44
-    pub x44: Var<f32>,
+    #[doc(alias("x44"))]
+    pub unused_44: Var<f32>,
     /// +0x48
-    pub x48: Var<f32>,
+    #[doc(alias("x48"))]
+    pub unused_48: Var<f32>,
     /// +0x4c
-    pub x4C: Var<f32>,
+    #[doc(alias("x4C"))]
+    pub unused_4c: Var<f32>,
     /// +0x50
-    pub x50: Var<f32>,
+    #[doc(alias("x50"))]
+    pub unused_50: Var<f32>,
     /// +0x54
-    pub x54: Var<f32>,
+    #[doc(alias("x54"))]
+    pub unused_54: Var<f32>,
     /// +0x58
-    pub x58: Var<f32>,
+    #[doc(alias("x58"))]
+    pub unused_58: Var<f32>,
     /// +0x5c
-    pub x5C: Var<f32>,
+    #[doc(alias("x5C"))]
+    pub unused_5c: Var<f32>,
     /// +0x60
-    pub x60: Var<f32>,
+    #[doc(alias("x60"))]
+    pub unused_60: Var<f32>,
 }
 
 impl Default for itLinkHookshot_ItemVars {
     fn default() -> Self {
         itLinkHookshot_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            xC: Var::new(Default::default()),
-            x10: Var::new(Default::default()),
-            x14: Var::new(Default::default()),
-            x18: Var::new(Default::default()),
-            x1C: Var::new(Default::default()),
-            x20: Var::new(Default::default()),
-            x24: Var::new(Default::default()),
-            x28: Var::new(Default::default()),
-            x2C: Var::new(Default::default()),
-            x30: Var::new(Default::default()),
-            x34: Var::new(Default::default()),
-            x38: Var::new(Default::default()),
-            x3C: Var::new(Default::default()),
-            x40: Var::new(Default::default()),
-            x44: Var::new(Default::default()),
-            x48: Var::new(Default::default()),
-            x4C: Var::new(Default::default()),
-            x50: Var::new(Default::default()),
-            x54: Var::new(Default::default()),
-            x58: Var::new(Default::default()),
-            x5C: Var::new(Default::default()),
-            x60: Var::new(Default::default()),
+            tip: Var::new(Default::default()),
+            hand: Var::new(Default::default()),
+            fighter: Var::new(Default::default()),
+            tip_model: Var::new(Default::default()),
+            frame: Var::new(Default::default()),
+            done: Var::new(Default::default()),
+            unused_18: Var::new(Default::default()),
+            unused_1c: Var::new(Default::default()),
+            unused_20: Var::new(Default::default()),
+            unused_24: Var::new(Default::default()),
+            unused_28: Var::new(Default::default()),
+            unused_2c: Var::new(Default::default()),
+            unused_30: Var::new(Default::default()),
+            unused_34: Var::new(Default::default()),
+            unused_38: Var::new(Default::default()),
+            unused_3c: Var::new(Default::default()),
+            unused_40: Var::new(Default::default()),
+            unused_44: Var::new(Default::default()),
+            unused_48: Var::new(Default::default()),
+            unused_4c: Var::new(Default::default()),
+            unused_50: Var::new(Default::default()),
+            unused_54: Var::new(Default::default()),
+            unused_58: Var::new(Default::default()),
+            unused_5c: Var::new(Default::default()),
+            unused_60: Var::new(Default::default()),
         }
     }
 }
@@ -9091,31 +9492,31 @@ impl Default for itLinkHookshot_ItemVars {
 impl itLinkHookshot_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.xC.mark_stale();
-        self.x10.mark_stale();
-        self.x14.mark_stale();
-        self.x18.mark_stale();
-        self.x1C.mark_stale();
-        self.x20.mark_stale();
-        self.x24.mark_stale();
-        self.x28.mark_stale();
-        self.x2C.mark_stale();
-        self.x30.mark_stale();
-        self.x34.mark_stale();
-        self.x38.mark_stale();
-        self.x3C.mark_stale();
-        self.x40.mark_stale();
-        self.x44.mark_stale();
-        self.x48.mark_stale();
-        self.x4C.mark_stale();
-        self.x50.mark_stale();
-        self.x54.mark_stale();
-        self.x58.mark_stale();
-        self.x5C.mark_stale();
-        self.x60.mark_stale();
+        self.tip.mark_stale();
+        self.hand.mark_stale();
+        self.fighter.mark_stale();
+        self.tip_model.mark_stale();
+        self.frame.mark_stale();
+        self.done.mark_stale();
+        self.unused_18.mark_stale();
+        self.unused_1c.mark_stale();
+        self.unused_20.mark_stale();
+        self.unused_24.mark_stale();
+        self.unused_28.mark_stale();
+        self.unused_2c.mark_stale();
+        self.unused_30.mark_stale();
+        self.unused_34.mark_stale();
+        self.unused_38.mark_stale();
+        self.unused_3c.mark_stale();
+        self.unused_40.mark_stale();
+        self.unused_44.mark_stale();
+        self.unused_48.mark_stale();
+        self.unused_4c.mark_stale();
+        self.unused_50.mark_stale();
+        self.unused_54.mark_stale();
+        self.unused_58.mark_stale();
+        self.unused_5c.mark_stale();
+        self.unused_60.mark_stale();
     }
 }
 
@@ -9123,121 +9524,158 @@ impl itLinkHookshot_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itLinkArrow_ItemVars {
     /// +0x0
-    pub x0: Var<f32>,
+    #[doc(alias("x0"))]
+    pub unused_0: Var<f32>,
     /// +0x4
-    pub x4: Var<f32>,
+    #[doc(alias("x4"))]
+    pub unused_4: Var<f32>,
     /// +0x8
-    pub x8: Var<f32>,
+    #[doc(alias("x8"))]
+    pub unused_8: Var<f32>,
     /// +0xc
-    pub xC: Var<f32>,
+    #[doc(alias("xC"))]
+    pub unused_c: Var<f32>,
     /// +0x10
-    pub x10: Var<f32>,
+    #[doc(alias("x10"))]
+    pub unused_10: Var<f32>,
     /// +0x14
-    pub x14: Var<f32>,
+    #[doc(alias("x14"))]
+    pub unused_14: Var<f32>,
     /// +0x18
-    pub x18: Var<Vec3>,
+    #[doc(alias("x18"))]
+    pub string_pos: Var<Vec3>,
     /// +0x24
-    pub x24: Var<Vec3>,
+    #[doc(alias("x24"))]
+    pub trail_pos_0: Var<Vec3>,
     /// +0x30
-    pub x30: Var<Vec3>,
+    #[doc(alias("x30"))]
+    pub trail_pos_1: Var<Vec3>,
     /// +0x3c
-    pub x3C: Var<Vec3>,
+    #[doc(alias("x3C"))]
+    pub trail_pos_2: Var<Vec3>,
     /// +0x48
-    pub x48: Var<Vec3>,
+    #[doc(alias("x48"))]
+    pub trail_pos_3: Var<Vec3>,
     /// +0x54
-    pub x54: Var<Quat>,
+    #[doc(alias("x54"))]
+    pub trail_rot_0: Var<Quat>,
     /// +0x64
-    pub x64: Var<Quat>,
+    #[doc(alias("x64"))]
+    pub trail_rot_1: Var<Quat>,
     /// +0x74
-    pub x74: Var<Quat>,
+    #[doc(alias("x74"))]
+    pub trail_rot_2: Var<Quat>,
     /// +0x84
-    pub x84: Var<Quat>,
+    #[doc(alias("x84"))]
+    pub trail_rot_3: Var<Quat>,
     /// +0x94
-    pub x94: Var<f32>,
+    #[doc(alias("x94"))]
+    pub angle: Var<f32>,
     /// +0x98
-    pub x98: Var<f32>,
+    #[doc(alias("x98"))]
+    pub unused_98: Var<f32>,
     /// +0x9c
-    pub x9C: Var<u32>,
+    #[doc(alias("x9C"))]
+    pub wobble_frames: Var<u32>,
     /// +0xa0
-    pub xA0: Var<i32>,
+    #[doc(alias("xA0"))]
+    pub loosed: Var<i32>,
     /// +0xa4
-    pub xA4: Var<u32>,
+    #[doc(alias("xA4"))]
+    pub damage: Var<u32>,
     /// +0xa8
-    pub xA8: Var<f32>,
+    #[doc(alias("xA8"))]
+    pub unread_speed: Var<f32>,
     /// +0xac
-    pub xAC: Var<f32>,
+    #[doc(alias("xAC"))]
+    pub unread_charge: Var<f32>,
     /// +0xb0
-    pub xB0: Var<i32>,
+    #[doc(alias("xB0"))]
+    pub frames: Var<i32>,
     /// +0xb4
-    pub xB4: [Var<Option<JObjId>>; 3],
+    #[doc(alias("xB4"))]
+    pub trails: [Var<Option<JObjId>>; 3],
     /// +0xc0
-    pub xC0: Var<f32>,
+    #[doc(alias("xC0"))]
+    pub scale: Var<f32>,
     /// +0xc4
-    pub xC4: Var<Option<GObjId>>,
+    #[doc(alias("xC4"))]
+    pub shield_fighter: Var<Option<GObjId>>,
     /// +0xc8
-    pub xC8: Var<f32>,
+    #[doc(alias("xC8"))]
+    pub shield_x: Var<f32>,
     /// +0xcc
-    pub xCC: Var<f32>,
+    #[doc(alias("xCC"))]
+    pub shield_y: Var<f32>,
     /// +0xd0
-    pub xD0: Var<RawPtr>,
+    #[doc(alias("xD0"))]
+    pub shield_z: Var<RawPtr>,
     /// +0xd4
-    pub xD4: Var<f32>,
+    #[doc(alias("xD4"))]
+    pub shield_distance: Var<f32>,
     /// +0xd8
-    pub xD8: Var<f32>,
+    #[doc(alias("xD8"))]
+    pub shield_angle: Var<f32>,
     /// +0xdc
-    pub xDC: Var<f32>,
+    #[doc(alias("xDC"))]
+    pub unused_dc: Var<f32>,
     /// +0xe0
-    pub xE0: Var<Option<GObjId>>,
+    #[doc(alias("xE0"))]
+    pub owner: Var<Option<GObjId>>,
     /// +0xe4
-    pub xE4: Var<i32>,
+    #[doc(alias("xE4"))]
+    pub line: Var<i32>,
     /// +0xe8
-    pub xE8: Var<f32>,
+    #[doc(alias("xE8"))]
+    pub line_angle: Var<f32>,
     /// +0xec
-    pub xEC: Var<f32>,
+    #[doc(alias("xEC"))]
+    pub last_line_angle: Var<f32>,
     /// +0xf0
-    pub xF0: Var<i32>,
+    #[doc(alias("xF0"))]
+    pub stuck_frames: Var<i32>,
 }
 
 impl Default for itLinkArrow_ItemVars {
     fn default() -> Self {
         itLinkArrow_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            xC: Var::new(Default::default()),
-            x10: Var::new(Default::default()),
-            x14: Var::new(Default::default()),
-            x18: Var::new(Default::default()),
-            x24: Var::new(Default::default()),
-            x30: Var::new(Default::default()),
-            x3C: Var::new(Default::default()),
-            x48: Var::new(Default::default()),
-            x54: Var::new(Default::default()),
-            x64: Var::new(Default::default()),
-            x74: Var::new(Default::default()),
-            x84: Var::new(Default::default()),
-            x94: Var::new(Default::default()),
-            x98: Var::new(Default::default()),
-            x9C: Var::new(Default::default()),
-            xA0: Var::new(Default::default()),
-            xA4: Var::new(Default::default()),
-            xA8: Var::new(Default::default()),
-            xAC: Var::new(Default::default()),
-            xB0: Var::new(Default::default()),
-            xB4: core::array::from_fn(|_| Var::new(Default::default())),
-            xC0: Var::new(Default::default()),
-            xC4: Var::new(Default::default()),
-            xC8: Var::new(Default::default()),
-            xCC: Var::new(Default::default()),
-            xD0: Var::new(Default::default()),
-            xD4: Var::new(Default::default()),
-            xD8: Var::new(Default::default()),
-            xDC: Var::new(Default::default()),
-            xE0: Var::new(Default::default()),
-            xE4: Var::new(Default::default()),
-            xE8: Var::new(Default::default()),
-            xEC: Var::new(Default::default()),
-            xF0: Var::new(Default::default()),
+            unused_0: Var::new(Default::default()),
+            unused_4: Var::new(Default::default()),
+            unused_8: Var::new(Default::default()),
+            unused_c: Var::new(Default::default()),
+            unused_10: Var::new(Default::default()),
+            unused_14: Var::new(Default::default()),
+            string_pos: Var::new(Default::default()),
+            trail_pos_0: Var::new(Default::default()),
+            trail_pos_1: Var::new(Default::default()),
+            trail_pos_2: Var::new(Default::default()),
+            trail_pos_3: Var::new(Default::default()),
+            trail_rot_0: Var::new(Default::default()),
+            trail_rot_1: Var::new(Default::default()),
+            trail_rot_2: Var::new(Default::default()),
+            trail_rot_3: Var::new(Default::default()),
+            angle: Var::new(Default::default()),
+            unused_98: Var::new(Default::default()),
+            wobble_frames: Var::new(Default::default()),
+            loosed: Var::new(Default::default()),
+            damage: Var::new(Default::default()),
+            unread_speed: Var::new(Default::default()),
+            unread_charge: Var::new(Default::default()),
+            frames: Var::new(Default::default()),
+            trails: core::array::from_fn(|_| Var::new(Default::default())),
+            scale: Var::new(Default::default()),
+            shield_fighter: Var::new(Default::default()),
+            shield_x: Var::new(Default::default()),
+            shield_y: Var::new(Default::default()),
+            shield_z: Var::new(Default::default()),
+            shield_distance: Var::new(Default::default()),
+            shield_angle: Var::new(Default::default()),
+            unused_dc: Var::new(Default::default()),
+            owner: Var::new(Default::default()),
+            line: Var::new(Default::default()),
+            line_angle: Var::new(Default::default()),
+            last_line_angle: Var::new(Default::default()),
+            stuck_frames: Var::new(Default::default()),
         }
     }
 }
@@ -9245,43 +9683,43 @@ impl Default for itLinkArrow_ItemVars {
 impl itLinkArrow_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.xC.mark_stale();
-        self.x10.mark_stale();
-        self.x14.mark_stale();
-        self.x18.mark_stale();
-        self.x24.mark_stale();
-        self.x30.mark_stale();
-        self.x3C.mark_stale();
-        self.x48.mark_stale();
-        self.x54.mark_stale();
-        self.x64.mark_stale();
-        self.x74.mark_stale();
-        self.x84.mark_stale();
-        self.x94.mark_stale();
-        self.x98.mark_stale();
-        self.x9C.mark_stale();
-        self.xA0.mark_stale();
-        self.xA4.mark_stale();
-        self.xA8.mark_stale();
-        self.xAC.mark_stale();
-        self.xB0.mark_stale();
-        self.xB4.iter_mut().for_each(|v| v.mark_stale());
-        self.xC0.mark_stale();
-        self.xC4.mark_stale();
-        self.xC8.mark_stale();
-        self.xCC.mark_stale();
-        self.xD0.mark_stale();
-        self.xD4.mark_stale();
-        self.xD8.mark_stale();
-        self.xDC.mark_stale();
-        self.xE0.mark_stale();
-        self.xE4.mark_stale();
-        self.xE8.mark_stale();
-        self.xEC.mark_stale();
-        self.xF0.mark_stale();
+        self.unused_0.mark_stale();
+        self.unused_4.mark_stale();
+        self.unused_8.mark_stale();
+        self.unused_c.mark_stale();
+        self.unused_10.mark_stale();
+        self.unused_14.mark_stale();
+        self.string_pos.mark_stale();
+        self.trail_pos_0.mark_stale();
+        self.trail_pos_1.mark_stale();
+        self.trail_pos_2.mark_stale();
+        self.trail_pos_3.mark_stale();
+        self.trail_rot_0.mark_stale();
+        self.trail_rot_1.mark_stale();
+        self.trail_rot_2.mark_stale();
+        self.trail_rot_3.mark_stale();
+        self.angle.mark_stale();
+        self.unused_98.mark_stale();
+        self.wobble_frames.mark_stale();
+        self.loosed.mark_stale();
+        self.damage.mark_stale();
+        self.unread_speed.mark_stale();
+        self.unread_charge.mark_stale();
+        self.frames.mark_stale();
+        self.trails.iter_mut().for_each(|v| v.mark_stale());
+        self.scale.mark_stale();
+        self.shield_fighter.mark_stale();
+        self.shield_x.mark_stale();
+        self.shield_y.mark_stale();
+        self.shield_z.mark_stale();
+        self.shield_distance.mark_stale();
+        self.shield_angle.mark_stale();
+        self.unused_dc.mark_stale();
+        self.owner.mark_stale();
+        self.line.mark_stale();
+        self.line_angle.mark_stale();
+        self.last_line_angle.mark_stale();
+        self.stuck_frames.mark_stale();
     }
 }
 
@@ -9289,16 +9727,18 @@ impl itLinkArrow_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itLinkBow_ItemVars {
     /// +0x0
-    pub x0: Var<f32>,
+    #[doc(alias("x0"))]
+    pub scale: Var<f32>,
     /// +0x4
-    pub x4: Var<Option<GObjId>>,
+    #[doc(alias("x4"))]
+    pub owner: Var<Option<GObjId>>,
 }
 
 impl Default for itLinkBow_ItemVars {
     fn default() -> Self {
         itLinkBow_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
+            scale: Var::new(Default::default()),
+            owner: Var::new(Default::default()),
         }
     }
 }
@@ -9306,8 +9746,8 @@ impl Default for itLinkBow_ItemVars {
 impl itLinkBow_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
+        self.scale.mark_stale();
+        self.owner.mark_stale();
     }
 }
 
@@ -9315,13 +9755,14 @@ impl itLinkBow_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itCLinkMilk_ItemVars {
     /// +0x0
-    pub x0: Var<Option<GObjId>>,
+    #[doc(alias("x0"))]
+    pub parent: Var<Option<GObjId>>,
 }
 
 impl Default for itCLinkMilk_ItemVars {
     fn default() -> Self {
         itCLinkMilk_ItemVars {
-            x0: Var::new(Default::default()),
+            parent: Var::new(Default::default()),
         }
     }
 }
@@ -9329,7 +9770,7 @@ impl Default for itCLinkMilk_ItemVars {
 impl itCLinkMilk_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
+        self.parent.mark_stale();
     }
 }
 
@@ -9337,13 +9778,14 @@ impl itCLinkMilk_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itYoshiEggLay_ItemVars {
     /// +0x0
-    pub x0: Var<f32>,
+    #[doc(alias("x0"))]
+    pub damage_mul: Var<f32>,
 }
 
 impl Default for itYoshiEggLay_ItemVars {
     fn default() -> Self {
         itYoshiEggLay_ItemVars {
-            x0: Var::new(Default::default()),
+            damage_mul: Var::new(Default::default()),
         }
     }
 }
@@ -9351,7 +9793,7 @@ impl Default for itYoshiEggLay_ItemVars {
 impl itYoshiEggLay_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
+        self.damage_mul.mark_stale();
     }
 }
 
@@ -9359,70 +9801,90 @@ impl itYoshiEggLay_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itMewtwoShadowball_ItemVars {
     /// +0x0
-    pub x0: Var<f32>,
+    #[doc(alias("x0"))]
+    pub unread_life: Var<f32>,
     /// +0x4
-    pub x4: Var<Vec3>,
+    #[doc(alias("x4"))]
+    pub motion: Var<Vec3>,
     /// +0x10
-    pub x10: Var<f32>,
+    #[doc(alias("x10"))]
+    pub size: Var<f32>,
     /// +0x14
-    pub x14: Var<i32>,
+    #[doc(alias("x14"))]
+    pub fired: Var<i32>,
     /// +0x18
-    pub x18: Var<i32>,
+    #[doc(alias("x18"))]
+    pub charge: Var<i32>,
     /// +0x1c
-    pub x1C: Var<i32>,
+    #[doc(alias("x1C"))]
+    pub levels: Var<i32>,
     /// +0x20
-    pub x20: Var<i32>,
+    #[doc(alias("x20"))]
+    pub sparkle: Var<i32>,
     /// +0x24
-    pub x24: Var<u32>,
+    #[doc(alias("x24"))]
+    pub unread_damage: Var<u32>,
     /// +0x28
-    pub x28: Var<i32>,
+    #[doc(alias("x28"))]
+    pub unread_effects: Var<i32>,
     /// +0x2c
-    pub x2C: Var<Option<GObjId>>,
+    #[doc(alias("x2C"))]
+    pub maker: Var<Option<GObjId>>,
     /// +0x30
-    pub x30: Var<Vec3>,
+    #[doc(alias("x30"))]
+    pub wobble_offset: Var<Vec3>,
     /// +0x3c
-    pub x3C: Var<f32>,
+    #[doc(alias("x3C"))]
+    pub wobble_angle: Var<f32>,
     /// +0x40
-    pub x40: Var<f32>,
+    #[doc(alias("x40"))]
+    pub wobble_size: Var<f32>,
     /// +0x44
-    pub x44: Var<f32>,
+    #[doc(alias("x44"))]
+    pub wobble_step: Var<f32>,
     /// +0x48
-    pub x48: Var<i32>,
+    #[doc(alias("x48"))]
+    pub wobble_frame: Var<i32>,
     /// +0x4c
-    pub x4C: Var<i32>,
+    #[doc(alias("x4C"))]
+    pub flight_frames: Var<i32>,
     /// +0x50
-    pub x50: Var<f32>,
+    #[doc(alias("x50"))]
+    pub wobble_scale: Var<f32>,
     /// +0x54
-    pub x54: Var<f32>,
+    #[doc(alias("x54"))]
+    pub held_scale: Var<f32>,
     /// +0x58
-    pub x58: Var<Vec3>,
+    #[doc(alias("x58"))]
+    pub held_offset: Var<Vec3>,
     /// +0x64
-    pub x64: Var<f32>,
+    #[doc(alias("x64"))]
+    pub burst_scale: Var<f32>,
 }
 
 impl Default for itMewtwoShadowball_ItemVars {
     fn default() -> Self {
         itMewtwoShadowball_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x10: Var::new(Default::default()),
-            x14: Var::new(Default::default()),
-            x18: Var::new(Default::default()),
-            x1C: Var::new(Default::default()),
-            x20: Var::new(Default::default()),
-            x24: Var::new(Default::default()),
-            x28: Var::new(Default::default()),
-            x2C: Var::new(Default::default()),
-            x30: Var::new(Default::default()),
-            x3C: Var::new(Default::default()),
-            x40: Var::new(Default::default()),
-            x44: Var::new(Default::default()),
-            x48: Var::new(Default::default()),
-            x4C: Var::new(Default::default()),
-            x50: Var::new(Default::default()),
-            x54: Var::new(Default::default()),
-            x58: Var::new(Default::default()),
-            x64: Var::new(Default::default()),
+            unread_life: Var::new(Default::default()),
+            motion: Var::new(Default::default()),
+            size: Var::new(Default::default()),
+            fired: Var::new(Default::default()),
+            charge: Var::new(Default::default()),
+            levels: Var::new(Default::default()),
+            sparkle: Var::new(Default::default()),
+            unread_damage: Var::new(Default::default()),
+            unread_effects: Var::new(Default::default()),
+            maker: Var::new(Default::default()),
+            wobble_offset: Var::new(Default::default()),
+            wobble_angle: Var::new(Default::default()),
+            wobble_size: Var::new(Default::default()),
+            wobble_step: Var::new(Default::default()),
+            wobble_frame: Var::new(Default::default()),
+            flight_frames: Var::new(Default::default()),
+            wobble_scale: Var::new(Default::default()),
+            held_scale: Var::new(Default::default()),
+            held_offset: Var::new(Default::default()),
+            burst_scale: Var::new(Default::default()),
         }
     }
 }
@@ -9430,26 +9892,26 @@ impl Default for itMewtwoShadowball_ItemVars {
 impl itMewtwoShadowball_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x10.mark_stale();
-        self.x14.mark_stale();
-        self.x18.mark_stale();
-        self.x1C.mark_stale();
-        self.x20.mark_stale();
-        self.x24.mark_stale();
-        self.x28.mark_stale();
-        self.x2C.mark_stale();
-        self.x30.mark_stale();
-        self.x3C.mark_stale();
-        self.x40.mark_stale();
-        self.x44.mark_stale();
-        self.x48.mark_stale();
-        self.x4C.mark_stale();
-        self.x50.mark_stale();
-        self.x54.mark_stale();
-        self.x58.mark_stale();
-        self.x64.mark_stale();
+        self.unread_life.mark_stale();
+        self.motion.mark_stale();
+        self.size.mark_stale();
+        self.fired.mark_stale();
+        self.charge.mark_stale();
+        self.levels.mark_stale();
+        self.sparkle.mark_stale();
+        self.unread_damage.mark_stale();
+        self.unread_effects.mark_stale();
+        self.maker.mark_stale();
+        self.wobble_offset.mark_stale();
+        self.wobble_angle.mark_stale();
+        self.wobble_size.mark_stale();
+        self.wobble_step.mark_stale();
+        self.wobble_frame.mark_stale();
+        self.flight_frames.mark_stale();
+        self.wobble_scale.mark_stale();
+        self.held_scale.mark_stale();
+        self.held_offset.mark_stale();
+        self.burst_scale.mark_stale();
     }
 }
 
@@ -9479,49 +9941,62 @@ impl itMDisable_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itKoopaFlame_ItemVars {
     /// +0x0
-    pub x0_pos: Var<Vec3>,
+    #[doc(alias("x0_pos"))]
+    pub pos: Var<Vec3>,
     /// +0xc
-    pub xC_direction: Var<Vec3>,
+    #[doc(alias("xC_direction"))]
+    pub direction: Var<Vec3>,
     /// +0x18
-    pub x18_vel: Var<Vec3>,
+    #[doc(alias("x18_vel"))]
+    pub vel: Var<Vec3>,
     /// +0x24
-    pub x24_angle: Var<f32>,
+    #[doc(alias("x24_angle"))]
+    pub angle: Var<f32>,
     /// +0x28
-    pub x28_speed: Var<f32>,
+    #[doc(alias("x28_speed"))]
+    pub speed: Var<f32>,
     /// +0x2c
-    pub x2C_lifetime: Var<f32>,
+    #[doc(alias("x2C_lifetime"))]
+    pub lifetime: Var<f32>,
     /// +0x30
-    pub x30: Var<i32>,
+    #[doc(alias("x30"))]
+    pub unread_30: Var<i32>,
     /// +0x34
-    pub x34_base_scale: Var<f32>,
+    #[doc(alias("x34_base_scale"))]
+    pub base_scale: Var<f32>,
     /// +0x38
-    pub x38_base_speed: Var<f32>,
+    #[doc(alias("x38_base_speed"))]
+    pub base_speed: Var<f32>,
     /// +0x3c
-    pub x3C_scale: Var<f32>,
+    #[doc(alias("x3C_scale"))]
+    pub scale: Var<f32>,
     /// +0x40
-    pub x40_frame_counter: Var<i32>,
+    #[doc(alias("x40_frame_counter"))]
+    pub frame_counter: Var<i32>,
     /// +0x44
-    pub x44_spawned: Var<i32>,
+    #[doc(alias("x44_spawned"))]
+    pub spawned: Var<i32>,
     /// +0x48
-    pub x48_gfx: Var<i32>,
+    #[doc(alias("x48_gfx"))]
+    pub gfx: Var<i32>,
 }
 
 impl Default for itKoopaFlame_ItemVars {
     fn default() -> Self {
         itKoopaFlame_ItemVars {
-            x0_pos: Var::new(Default::default()),
-            xC_direction: Var::new(Default::default()),
-            x18_vel: Var::new(Default::default()),
-            x24_angle: Var::new(Default::default()),
-            x28_speed: Var::new(Default::default()),
-            x2C_lifetime: Var::new(Default::default()),
-            x30: Var::new(Default::default()),
-            x34_base_scale: Var::new(Default::default()),
-            x38_base_speed: Var::new(Default::default()),
-            x3C_scale: Var::new(Default::default()),
-            x40_frame_counter: Var::new(Default::default()),
-            x44_spawned: Var::new(Default::default()),
-            x48_gfx: Var::new(Default::default()),
+            pos: Var::new(Default::default()),
+            direction: Var::new(Default::default()),
+            vel: Var::new(Default::default()),
+            angle: Var::new(Default::default()),
+            speed: Var::new(Default::default()),
+            lifetime: Var::new(Default::default()),
+            unread_30: Var::new(Default::default()),
+            base_scale: Var::new(Default::default()),
+            base_speed: Var::new(Default::default()),
+            scale: Var::new(Default::default()),
+            frame_counter: Var::new(Default::default()),
+            spawned: Var::new(Default::default()),
+            gfx: Var::new(Default::default()),
         }
     }
 }
@@ -9529,19 +10004,19 @@ impl Default for itKoopaFlame_ItemVars {
 impl itKoopaFlame_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0_pos.mark_stale();
-        self.xC_direction.mark_stale();
-        self.x18_vel.mark_stale();
-        self.x24_angle.mark_stale();
-        self.x28_speed.mark_stale();
-        self.x2C_lifetime.mark_stale();
-        self.x30.mark_stale();
-        self.x34_base_scale.mark_stale();
-        self.x38_base_speed.mark_stale();
-        self.x3C_scale.mark_stale();
-        self.x40_frame_counter.mark_stale();
-        self.x44_spawned.mark_stale();
-        self.x48_gfx.mark_stale();
+        self.pos.mark_stale();
+        self.direction.mark_stale();
+        self.vel.mark_stale();
+        self.angle.mark_stale();
+        self.speed.mark_stale();
+        self.lifetime.mark_stale();
+        self.unread_30.mark_stale();
+        self.base_scale.mark_stale();
+        self.base_speed.mark_stale();
+        self.scale.mark_stale();
+        self.frame_counter.mark_stale();
+        self.spawned.mark_stale();
+        self.gfx.mark_stale();
     }
 }
 
@@ -9583,13 +10058,14 @@ impl itKirbyCutterBeam_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itKirbyHammer_ItemVars {
     /// +0x0
-    pub x0: Var<u32>,
+    #[doc(alias("x0"))]
+    pub in_air: Var<u32>,
 }
 
 impl Default for itKirbyHammer_ItemVars {
     fn default() -> Self {
         itKirbyHammer_ItemVars {
-            x0: Var::new(Default::default()),
+            in_air: Var::new(Default::default()),
         }
     }
 }
@@ -9597,7 +10073,7 @@ impl Default for itKirbyHammer_ItemVars {
 impl itKirbyHammer_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
+        self.in_air.mark_stale();
     }
 }
 
@@ -9605,40 +10081,50 @@ impl itKirbyHammer_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itKirby2F23_ItemVars {
     /// +0x0
-    pub _pad: [Var<u8>; 456],
+    #[doc(alias("_pad"))]
+    pub pad_0: [Var<u8>; 456],
     /// +0x1c8
-    pub x1C8: Var<f32>,
+    #[doc(alias("x1C8"))]
+    pub to_mouth_x: Var<f32>,
     /// +0x1cc
-    pub x1CC: Var<f32>,
+    #[doc(alias("x1CC"))]
+    pub to_mouth_y: Var<f32>,
     /// +0x1d0
-    pub x1D0: Var<f32>,
+    #[doc(alias("x1D0"))]
+    pub shrink_range: Var<f32>,
     /// +0x1d4
-    pub x1D4: Var<f32>,
+    #[doc(alias("x1D4"))]
+    pub shrink_scale: Var<f32>,
     /// +0x1d8
-    pub x1D8: Var<f32>,
+    #[doc(alias("x1D8"))]
+    pub pull_speed_x: Var<f32>,
     /// +0x1dc
-    pub x1DC: Var<f32>,
+    #[doc(alias("x1DC"))]
+    pub pull_speed_y: Var<f32>,
     /// +0x1e0
-    pub _pad2: [Var<u8>; 8],
+    #[doc(alias("_pad2"))]
+    pub pad_1e0: [Var<u8>; 8],
     /// +0x1e8
-    pub x1E8: Var<Vec3>,
+    #[doc(alias("x1E8"))]
+    pub caught_scale: Var<Vec3>,
     /// +0x1f4
-    pub x1F4: Var<f32>,
+    #[doc(alias("x1F4"))]
+    pub hold_time: Var<f32>,
 }
 
 impl Default for itKirby2F23_ItemVars {
     fn default() -> Self {
         itKirby2F23_ItemVars {
-            _pad: core::array::from_fn(|_| Var::new(Default::default())),
-            x1C8: Var::new(Default::default()),
-            x1CC: Var::new(Default::default()),
-            x1D0: Var::new(Default::default()),
-            x1D4: Var::new(Default::default()),
-            x1D8: Var::new(Default::default()),
-            x1DC: Var::new(Default::default()),
-            _pad2: core::array::from_fn(|_| Var::new(Default::default())),
-            x1E8: Var::new(Default::default()),
-            x1F4: Var::new(Default::default()),
+            pad_0: core::array::from_fn(|_| Var::new(Default::default())),
+            to_mouth_x: Var::new(Default::default()),
+            to_mouth_y: Var::new(Default::default()),
+            shrink_range: Var::new(Default::default()),
+            shrink_scale: Var::new(Default::default()),
+            pull_speed_x: Var::new(Default::default()),
+            pull_speed_y: Var::new(Default::default()),
+            pad_1e0: core::array::from_fn(|_| Var::new(Default::default())),
+            caught_scale: Var::new(Default::default()),
+            hold_time: Var::new(Default::default()),
         }
     }
 }
@@ -9646,16 +10132,16 @@ impl Default for itKirby2F23_ItemVars {
 impl itKirby2F23_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self._pad.iter_mut().for_each(|v| v.mark_stale());
-        self.x1C8.mark_stale();
-        self.x1CC.mark_stale();
-        self.x1D0.mark_stale();
-        self.x1D4.mark_stale();
-        self.x1D8.mark_stale();
-        self.x1DC.mark_stale();
-        self._pad2.iter_mut().for_each(|v| v.mark_stale());
-        self.x1E8.mark_stale();
-        self.x1F4.mark_stale();
+        self.pad_0.iter_mut().for_each(|v| v.mark_stale());
+        self.to_mouth_x.mark_stale();
+        self.to_mouth_y.mark_stale();
+        self.shrink_range.mark_stale();
+        self.shrink_scale.mark_stale();
+        self.pull_speed_x.mark_stale();
+        self.pull_speed_y.mark_stale();
+        self.pad_1e0.iter_mut().for_each(|v| v.mark_stale());
+        self.caught_scale.mark_stale();
+        self.hold_time.mark_stale();
     }
 }
 
@@ -10434,16 +10920,18 @@ impl Default for db_ItemAndPokemonMenu_t {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itCapsule_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub hit: Var<i32>,
     /// +0x4
-    pub x4: Var<i32>,
+    #[doc(alias("x4"))]
+    pub opened: Var<i32>,
 }
 
 impl Default for itCapsule_ItemVars {
     fn default() -> Self {
         itCapsule_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
+            hit: Var::new(Default::default()),
+            opened: Var::new(Default::default()),
         }
     }
 }
@@ -10451,8 +10939,8 @@ impl Default for itCapsule_ItemVars {
 impl itCapsule_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
+        self.hit.mark_stale();
+        self.opened.mark_stale();
     }
 }
 
@@ -10460,28 +10948,34 @@ impl itCapsule_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itHeart_ItemVars {
     /// +0x0
-    pub xDD4_heal: Var<i32>,
+    #[doc(alias("xDD4_heal"))]
+    pub heal: Var<i32>,
     /// +0x4
-    pub xDD8: Var<TurnipFlag>,
+    #[doc(alias("xDD8"))]
+    pub picked_up: Var<TurnipFlag>,
     /// +0x8
-    pub xDDC: Var<i32>,
+    #[doc(alias("xDDC"))]
+    pub food_slot: Var<i32>,
     /// +0xc
-    pub xDE0_filler: [Var<u8>; 8],
+    #[doc(alias("xDE0_filler"))]
+    pub unused_de0_filler: [Var<u8>; 8],
     /// +0x14
-    pub xDE8_float: Var<f32>,
+    #[doc(alias("xDE8_float"))]
+    pub unused_de8_float: Var<f32>,
     /// +0x18
-    pub xDEC: Var<f32>,
+    #[doc(alias("xDEC"))]
+    pub unused_dec: Var<f32>,
 }
 
 impl Default for itHeart_ItemVars {
     fn default() -> Self {
         itHeart_ItemVars {
-            xDD4_heal: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
-            xDE0_filler: core::array::from_fn(|_| Var::new(Default::default())),
-            xDE8_float: Var::new(Default::default()),
-            xDEC: Var::new(Default::default()),
+            heal: Var::new(Default::default()),
+            picked_up: Var::new(Default::default()),
+            food_slot: Var::new(Default::default()),
+            unused_de0_filler: core::array::from_fn(|_| Var::new(Default::default())),
+            unused_de8_float: Var::new(Default::default()),
+            unused_dec: Var::new(Default::default()),
         }
     }
 }
@@ -10489,12 +10983,14 @@ impl Default for itHeart_ItemVars {
 impl itHeart_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4_heal.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
-        self.xDE0_filler.iter_mut().for_each(|v| v.mark_stale());
-        self.xDE8_float.mark_stale();
-        self.xDEC.mark_stale();
+        self.heal.mark_stale();
+        self.picked_up.mark_stale();
+        self.food_slot.mark_stale();
+        self.unused_de0_filler
+            .iter_mut()
+            .for_each(|v| v.mark_stale());
+        self.unused_de8_float.mark_stale();
+        self.unused_dec.mark_stale();
     }
 }
 
@@ -10504,17 +11000,19 @@ pub struct itTomato_ItemVars {
     /// +0x0
     pub heal_amount: Var<i32>,
     /// +0x4 (bits 0..+1)
-    pub x4_b0: Var<bool>,
+    #[doc(alias("x4_b0"))]
+    pub picked_up: Var<bool>,
     /// +0x8
-    pub x8: Var<u32>,
+    #[doc(alias("x8"))]
+    pub unread_8: Var<u32>,
 }
 
 impl Default for itTomato_ItemVars {
     fn default() -> Self {
         itTomato_ItemVars {
             heal_amount: Var::new(Default::default()),
-            x4_b0: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
+            picked_up: Var::new(Default::default()),
+            unread_8: Var::new(Default::default()),
         }
     }
 }
@@ -10523,8 +11021,8 @@ impl itTomato_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
         self.heal_amount.mark_stale();
-        self.x4_b0.mark_stale();
-        self.x8.mark_stale();
+        self.picked_up.mark_stale();
+        self.unread_8.mark_stale();
     }
 }
 
@@ -10570,28 +11068,34 @@ impl itBox_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itTaru_ItemVars {
     /// +0x0
-    pub xDD4: Var<i32>,
+    #[doc(alias("xDD4"))]
+    pub hit: Var<i32>,
     /// +0x4
-    pub xDD8: Var<i32>,
+    #[doc(alias("xDD8"))]
+    pub open_frames: Var<i32>,
     /// +0x8
-    pub xDDC: Var<f32>,
+    #[doc(alias("xDDC"))]
+    pub tilt: Var<f32>,
     /// +0xc
-    pub xDE0: Var<f32>,
+    #[doc(alias("xDE0"))]
+    pub turn: Var<f32>,
     /// +0x10
-    pub xDE4: Var<f32>,
+    #[doc(alias("xDE4"))]
+    pub roll_speed: Var<f32>,
     /// +0x14
-    pub xDE8: Var<Vec3>,
+    #[doc(alias("xDE8"))]
+    pub normal: Var<Vec3>,
 }
 
 impl Default for itTaru_ItemVars {
     fn default() -> Self {
         itTaru_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
-            xDE0: Var::new(Default::default()),
-            xDE4: Var::new(Default::default()),
-            xDE8: Var::new(Default::default()),
+            hit: Var::new(Default::default()),
+            open_frames: Var::new(Default::default()),
+            tilt: Var::new(Default::default()),
+            turn: Var::new(Default::default()),
+            roll_speed: Var::new(Default::default()),
+            normal: Var::new(Default::default()),
         }
     }
 }
@@ -10599,12 +11103,12 @@ impl Default for itTaru_ItemVars {
 impl itTaru_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
-        self.xDE0.mark_stale();
-        self.xDE4.mark_stale();
-        self.xDE8.mark_stale();
+        self.hit.mark_stale();
+        self.open_frames.mark_stale();
+        self.tilt.mark_stale();
+        self.turn.mark_stale();
+        self.roll_speed.mark_stale();
+        self.normal.mark_stale();
     }
 }
 
@@ -10612,16 +11116,18 @@ impl itTaru_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itKusudama_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub opened: Var<i32>,
     /// +0x4
-    pub x4: Var<i32>,
+    #[doc(alias("x4"))]
+    pub timer: Var<i32>,
 }
 
 impl Default for itKusudama_ItemVars {
     fn default() -> Self {
         itKusudama_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
+            opened: Var::new(Default::default()),
+            timer: Var::new(Default::default()),
         }
     }
 }
@@ -10629,8 +11135,8 @@ impl Default for itKusudama_ItemVars {
 impl itKusudama_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
+        self.opened.mark_stale();
+        self.timer.mark_stale();
     }
 }
 
@@ -10638,55 +11144,70 @@ impl itKusudama_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itBombHei_ItemVars {
     /// +0x0
-    pub xDD4: Var<i32>,
+    #[doc(alias("xDD4"))]
+    pub timer: Var<i32>,
     /// +0x4
-    pub xDD8: Var<i32>,
+    #[doc(alias("xDD8"))]
+    pub pulse_dir: Var<i32>,
     /// +0x8
-    pub xDDC: Var<i32>,
+    #[doc(alias("xDDC"))]
+    pub exploded: Var<i32>,
     /// +0xc
-    pub xDE0: Var<i32>,
+    #[doc(alias("xDE0"))]
+    pub lit: Var<i32>,
     /// +0x10
-    pub xDE4: Var<i32>,
+    #[doc(alias("xDE4"))]
+    pub stood_up: Var<i32>,
     /// +0x14
-    pub xDE8: Var<f32>,
+    #[doc(alias("xDE8"))]
+    pub scale: Var<f32>,
     /// +0x18
-    pub xDEC: Var<f32>,
+    #[doc(alias("xDEC"))]
+    pub fuse_left: Var<f32>,
     /// +0x1c
-    pub xDF0: Var<f32>,
+    #[doc(alias("xDF0"))]
+    pub fuse: Var<f32>,
     /// +0x20
-    pub xDF4: Var<f32>,
+    #[doc(alias("xDF4"))]
+    pub turn_back: Var<f32>,
     /// +0x24
-    pub xDF8: Var<f32>,
+    #[doc(alias("xDF8"))]
+    pub pose_height: Var<f32>,
     /// +0x28
-    pub xDFC: Var<f32>,
+    #[doc(alias("xDFC"))]
+    pub pose_tilt: Var<f32>,
     /// +0x2c
-    pub _E00: Var<i32>,
+    #[doc(alias("_E00"))]
+    pub unused_e00: Var<i32>,
     /// +0x30
-    pub xE04: Var<f32>,
+    #[doc(alias("xE04"))]
+    pub turn_step: Var<f32>,
     /// +0x34
-    pub _E08: Var<i32>,
+    #[doc(alias("_E08"))]
+    pub unused_e08: Var<i32>,
     /// +0x38
-    pub xE0C: Var<Vec3>,
+    #[doc(alias("xE0C"))]
+    pub land_vel: Var<Vec3>,
 }
 
 impl Default for itBombHei_ItemVars {
     fn default() -> Self {
         itBombHei_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
-            xDE0: Var::new(Default::default()),
-            xDE4: Var::new(Default::default()),
-            xDE8: Var::new(Default::default()),
-            xDEC: Var::new(Default::default()),
-            xDF0: Var::new(Default::default()),
-            xDF4: Var::new(Default::default()),
-            xDF8: Var::new(Default::default()),
-            xDFC: Var::new(Default::default()),
-            _E00: Var::new(Default::default()),
-            xE04: Var::new(Default::default()),
-            _E08: Var::new(Default::default()),
-            xE0C: Var::new(Default::default()),
+            timer: Var::new(Default::default()),
+            pulse_dir: Var::new(Default::default()),
+            exploded: Var::new(Default::default()),
+            lit: Var::new(Default::default()),
+            stood_up: Var::new(Default::default()),
+            scale: Var::new(Default::default()),
+            fuse_left: Var::new(Default::default()),
+            fuse: Var::new(Default::default()),
+            turn_back: Var::new(Default::default()),
+            pose_height: Var::new(Default::default()),
+            pose_tilt: Var::new(Default::default()),
+            unused_e00: Var::new(Default::default()),
+            turn_step: Var::new(Default::default()),
+            unused_e08: Var::new(Default::default()),
+            land_vel: Var::new(Default::default()),
         }
     }
 }
@@ -10694,21 +11215,21 @@ impl Default for itBombHei_ItemVars {
 impl itBombHei_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
-        self.xDE0.mark_stale();
-        self.xDE4.mark_stale();
-        self.xDE8.mark_stale();
-        self.xDEC.mark_stale();
-        self.xDF0.mark_stale();
-        self.xDF4.mark_stale();
-        self.xDF8.mark_stale();
-        self.xDFC.mark_stale();
-        self._E00.mark_stale();
-        self.xE04.mark_stale();
-        self._E08.mark_stale();
-        self.xE0C.mark_stale();
+        self.timer.mark_stale();
+        self.pulse_dir.mark_stale();
+        self.exploded.mark_stale();
+        self.lit.mark_stale();
+        self.stood_up.mark_stale();
+        self.scale.mark_stale();
+        self.fuse_left.mark_stale();
+        self.fuse.mark_stale();
+        self.turn_back.mark_stale();
+        self.pose_height.mark_stale();
+        self.pose_tilt.mark_stale();
+        self.unused_e00.mark_stale();
+        self.turn_step.mark_stale();
+        self.unused_e08.mark_stale();
+        self.land_vel.mark_stale();
     }
 }
 
@@ -10750,142 +11271,185 @@ impl itGShell_HurtInit {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itGShell_ItemVars {
     /// +0x0
-    pub xDD4: Var<f32>,
+    #[doc(alias("xDD4"))]
+    pub life: Var<f32>,
     /// +0x4
-    pub xDD8: Var<f32>,
+    #[doc(alias("xDD8"))]
+    pub hit_delay: Var<f32>,
     /// +0x8
-    pub xDDC: Var<f32>,
+    #[doc(alias("xDDC"))]
+    pub trail: Var<f32>,
     /// +0xc
-    pub xDE0: Var<f32>,
+    #[doc(alias("xDE0"))]
+    pub owner_grace: Var<f32>,
     /// +0x10
-    pub xDE4: Var<f32>,
+    #[doc(alias("xDE4"))]
+    pub pop_timer: Var<f32>,
     /// +0x14
-    pub xDE8: Var<i32>,
+    #[doc(alias("xDE8"))]
+    pub landings: Var<i32>,
     /// +0x18 (bits 0..+1)
-    pub xDEC_b0: Var<bool>,
+    #[doc(alias("xDEC_b0"))]
+    pub bounced: Var<bool>,
     /// +0x18 (bits 1..+1)
-    pub xDEC_b1: Var<bool>,
+    #[doc(alias("xDEC_b1"))]
+    pub grace_counting: Var<bool>,
     /// +0x18 (bits 2..+1)
-    pub xDEC_b2: Var<bool>,
+    #[doc(alias("xDEC_b2"))]
+    pub blinking: Var<bool>,
     /// +0x18 (bits 3..+1)
-    pub xDEC_b3: Var<bool>,
+    #[doc(alias("xDEC_b3"))]
+    pub popped: Var<bool>,
     /// +0x18 (bits 4..+1)
-    pub xDEC_b4: Var<bool>,
+    #[doc(alias("xDEC_b4"))]
+    pub unused_dec_b4: Var<bool>,
     /// +0x18 (bits 5..+1)
-    pub xDEC_b5: Var<bool>,
+    #[doc(alias("xDEC_b5"))]
+    pub unused_dec_b5: Var<bool>,
     /// +0x18 (bits 6..+1)
-    pub xDEC_b6: Var<bool>,
+    #[doc(alias("xDEC_b6"))]
+    pub unused_dec_b6: Var<bool>,
     /// +0x18 (bits 7..+1)
-    pub xDEC_b7: Var<bool>,
+    #[doc(alias("xDEC_b7"))]
+    pub unused_dec_b7: Var<bool>,
     /// +0x1c
-    pub xDF0: Var<i32>,
+    #[doc(alias("xDF0"))]
+    pub unused_df0: Var<i32>,
     /// +0x20
-    pub xDF4: Var<f32>,
+    #[doc(alias("xDF4"))]
+    pub unused_df4: Var<f32>,
     /// +0x24
-    pub xDF8: Var<f32>,
+    #[doc(alias("xDF8"))]
+    pub unused_df8: Var<f32>,
     /// +0x28
-    pub xDFC: Var<f32>,
+    #[doc(alias("xDFC"))]
+    pub unused_dfc: Var<f32>,
     /// +0x2c
-    pub xE00: Var<f32>,
+    #[doc(alias("xE00"))]
+    pub unused_e00: Var<f32>,
     /// +0x30
-    pub xE04: Var<f32>,
+    #[doc(alias("xE04"))]
+    pub unused_e04: Var<f32>,
     /// +0x34 (bits 0..+1)
-    pub xE08_b0: Var<bool>,
+    #[doc(alias("xE08_b0"))]
+    pub unused_e08_b0: Var<bool>,
     /// +0x34 (bits 1..+1)
-    pub xE08_b1: Var<bool>,
+    #[doc(alias("xE08_b1"))]
+    pub unused_e08_b1: Var<bool>,
     /// +0x34 (bits 2..+1)
-    pub xE08_b2: Var<bool>,
+    #[doc(alias("xE08_b2"))]
+    pub unused_e08_b2: Var<bool>,
     /// +0x34 (bits 3..+1)
-    pub xE08_b3: Var<bool>,
+    #[doc(alias("xE08_b3"))]
+    pub unused_e08_b3: Var<bool>,
     /// +0x34 (bits 4..+1)
-    pub xE08_b4: Var<bool>,
+    #[doc(alias("xE08_b4"))]
+    pub unused_e08_b4: Var<bool>,
     /// +0x34 (bits 5..+1)
-    pub xE08_b5: Var<bool>,
+    #[doc(alias("xE08_b5"))]
+    pub unused_e08_b5: Var<bool>,
     /// +0x34 (bits 6..+1)
-    pub xE08_b6: Var<bool>,
+    #[doc(alias("xE08_b6"))]
+    pub unused_e08_b6: Var<bool>,
     /// +0x34 (bits 7..+1)
-    pub xE08_b7: Var<bool>,
+    #[doc(alias("xE08_b7"))]
+    pub unused_e08_b7: Var<bool>,
     /// +0x35
-    pub pad_E09: [Var<i8>; 3],
+    #[doc(alias("pad_E09"))]
+    pub pad_35: [Var<i8>; 3],
     /// +0x38
-    pub xE0C: Var<i32>,
+    #[doc(alias("xE0C"))]
+    pub unused_e0c: Var<i32>,
     /// +0x3c
-    pub xE10: Var<i32>,
+    #[doc(alias("xE10"))]
+    pub unused_e10: Var<i32>,
     /// +0x40
-    pub xE14: Var<i32>,
+    #[doc(alias("xE14"))]
+    pub unused_e14: Var<i32>,
     /// +0x44
-    pub xE18: Var<i32>,
+    #[doc(alias("xE18"))]
+    pub unused_e18: Var<i32>,
     /// +0x48 (bits 0..+1)
-    pub xE1C_b0: Var<bool>,
+    #[doc(alias("xE1C_b0"))]
+    pub unused_e1c_b0: Var<bool>,
     /// +0x48 (bits 1..+1)
-    pub xE1C_b1: Var<bool>,
+    #[doc(alias("xE1C_b1"))]
+    pub unused_e1c_b1: Var<bool>,
     /// +0x48 (bits 2..+1)
-    pub xE1C_b2: Var<bool>,
+    #[doc(alias("xE1C_b2"))]
+    pub unused_e1c_b2: Var<bool>,
     /// +0x48 (bits 3..+1)
-    pub xE1C_b3: Var<bool>,
+    #[doc(alias("xE1C_b3"))]
+    pub unused_e1c_b3: Var<bool>,
     /// +0x48 (bits 4..+1)
-    pub xE1C_b4: Var<bool>,
+    #[doc(alias("xE1C_b4"))]
+    pub unused_e1c_b4: Var<bool>,
     /// +0x48 (bits 5..+1)
-    pub xE1C_b5: Var<bool>,
+    #[doc(alias("xE1C_b5"))]
+    pub unused_e1c_b5: Var<bool>,
     /// +0x48 (bits 6..+1)
-    pub xE1C_b6: Var<bool>,
+    #[doc(alias("xE1C_b6"))]
+    pub unused_e1c_b6: Var<bool>,
     /// +0x48 (bits 7..+1)
-    pub xE1C_b7: Var<bool>,
+    #[doc(alias("xE1C_b7"))]
+    pub unused_e1c_b7: Var<bool>,
     /// +0x49
-    pub pad_E1D: [Var<i8>; 3],
+    #[doc(alias("pad_E1D"))]
+    pub pad_49: [Var<i8>; 3],
     /// +0x4c
     pub vel: Var<Vec3>,
     /// +0x58
-    pub x58_hurtInit: itGShell_HurtInit,
+    #[doc(alias("x58_hurtInit"))]
+    pub hurt_init: itGShell_HurtInit,
 }
 
 impl Default for itGShell_ItemVars {
     fn default() -> Self {
         itGShell_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
-            xDE0: Var::new(Default::default()),
-            xDE4: Var::new(Default::default()),
-            xDE8: Var::new(Default::default()),
-            xDEC_b0: Var::new(Default::default()),
-            xDEC_b1: Var::new(Default::default()),
-            xDEC_b2: Var::new(Default::default()),
-            xDEC_b3: Var::new(Default::default()),
-            xDEC_b4: Var::new(Default::default()),
-            xDEC_b5: Var::new(Default::default()),
-            xDEC_b6: Var::new(Default::default()),
-            xDEC_b7: Var::new(Default::default()),
-            xDF0: Var::new(Default::default()),
-            xDF4: Var::new(Default::default()),
-            xDF8: Var::new(Default::default()),
-            xDFC: Var::new(Default::default()),
-            xE00: Var::new(Default::default()),
-            xE04: Var::new(Default::default()),
-            xE08_b0: Var::new(Default::default()),
-            xE08_b1: Var::new(Default::default()),
-            xE08_b2: Var::new(Default::default()),
-            xE08_b3: Var::new(Default::default()),
-            xE08_b4: Var::new(Default::default()),
-            xE08_b5: Var::new(Default::default()),
-            xE08_b6: Var::new(Default::default()),
-            xE08_b7: Var::new(Default::default()),
-            pad_E09: core::array::from_fn(|_| Var::new(Default::default())),
-            xE0C: Var::new(Default::default()),
-            xE10: Var::new(Default::default()),
-            xE14: Var::new(Default::default()),
-            xE18: Var::new(Default::default()),
-            xE1C_b0: Var::new(Default::default()),
-            xE1C_b1: Var::new(Default::default()),
-            xE1C_b2: Var::new(Default::default()),
-            xE1C_b3: Var::new(Default::default()),
-            xE1C_b4: Var::new(Default::default()),
-            xE1C_b5: Var::new(Default::default()),
-            xE1C_b6: Var::new(Default::default()),
-            xE1C_b7: Var::new(Default::default()),
-            pad_E1D: core::array::from_fn(|_| Var::new(Default::default())),
+            life: Var::new(Default::default()),
+            hit_delay: Var::new(Default::default()),
+            trail: Var::new(Default::default()),
+            owner_grace: Var::new(Default::default()),
+            pop_timer: Var::new(Default::default()),
+            landings: Var::new(Default::default()),
+            bounced: Var::new(Default::default()),
+            grace_counting: Var::new(Default::default()),
+            blinking: Var::new(Default::default()),
+            popped: Var::new(Default::default()),
+            unused_dec_b4: Var::new(Default::default()),
+            unused_dec_b5: Var::new(Default::default()),
+            unused_dec_b6: Var::new(Default::default()),
+            unused_dec_b7: Var::new(Default::default()),
+            unused_df0: Var::new(Default::default()),
+            unused_df4: Var::new(Default::default()),
+            unused_df8: Var::new(Default::default()),
+            unused_dfc: Var::new(Default::default()),
+            unused_e00: Var::new(Default::default()),
+            unused_e04: Var::new(Default::default()),
+            unused_e08_b0: Var::new(Default::default()),
+            unused_e08_b1: Var::new(Default::default()),
+            unused_e08_b2: Var::new(Default::default()),
+            unused_e08_b3: Var::new(Default::default()),
+            unused_e08_b4: Var::new(Default::default()),
+            unused_e08_b5: Var::new(Default::default()),
+            unused_e08_b6: Var::new(Default::default()),
+            unused_e08_b7: Var::new(Default::default()),
+            pad_35: core::array::from_fn(|_| Var::new(Default::default())),
+            unused_e0c: Var::new(Default::default()),
+            unused_e10: Var::new(Default::default()),
+            unused_e14: Var::new(Default::default()),
+            unused_e18: Var::new(Default::default()),
+            unused_e1c_b0: Var::new(Default::default()),
+            unused_e1c_b1: Var::new(Default::default()),
+            unused_e1c_b2: Var::new(Default::default()),
+            unused_e1c_b3: Var::new(Default::default()),
+            unused_e1c_b4: Var::new(Default::default()),
+            unused_e1c_b5: Var::new(Default::default()),
+            unused_e1c_b6: Var::new(Default::default()),
+            unused_e1c_b7: Var::new(Default::default()),
+            pad_49: core::array::from_fn(|_| Var::new(Default::default())),
             vel: Var::new(Default::default()),
-            x58_hurtInit: Default::default(),
+            hurt_init: Default::default(),
         }
     }
 }
@@ -10893,50 +11457,50 @@ impl Default for itGShell_ItemVars {
 impl itGShell_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
-        self.xDE0.mark_stale();
-        self.xDE4.mark_stale();
-        self.xDE8.mark_stale();
-        self.xDEC_b0.mark_stale();
-        self.xDEC_b1.mark_stale();
-        self.xDEC_b2.mark_stale();
-        self.xDEC_b3.mark_stale();
-        self.xDEC_b4.mark_stale();
-        self.xDEC_b5.mark_stale();
-        self.xDEC_b6.mark_stale();
-        self.xDEC_b7.mark_stale();
-        self.xDF0.mark_stale();
-        self.xDF4.mark_stale();
-        self.xDF8.mark_stale();
-        self.xDFC.mark_stale();
-        self.xE00.mark_stale();
-        self.xE04.mark_stale();
-        self.xE08_b0.mark_stale();
-        self.xE08_b1.mark_stale();
-        self.xE08_b2.mark_stale();
-        self.xE08_b3.mark_stale();
-        self.xE08_b4.mark_stale();
-        self.xE08_b5.mark_stale();
-        self.xE08_b6.mark_stale();
-        self.xE08_b7.mark_stale();
-        self.pad_E09.iter_mut().for_each(|v| v.mark_stale());
-        self.xE0C.mark_stale();
-        self.xE10.mark_stale();
-        self.xE14.mark_stale();
-        self.xE18.mark_stale();
-        self.xE1C_b0.mark_stale();
-        self.xE1C_b1.mark_stale();
-        self.xE1C_b2.mark_stale();
-        self.xE1C_b3.mark_stale();
-        self.xE1C_b4.mark_stale();
-        self.xE1C_b5.mark_stale();
-        self.xE1C_b6.mark_stale();
-        self.xE1C_b7.mark_stale();
-        self.pad_E1D.iter_mut().for_each(|v| v.mark_stale());
+        self.life.mark_stale();
+        self.hit_delay.mark_stale();
+        self.trail.mark_stale();
+        self.owner_grace.mark_stale();
+        self.pop_timer.mark_stale();
+        self.landings.mark_stale();
+        self.bounced.mark_stale();
+        self.grace_counting.mark_stale();
+        self.blinking.mark_stale();
+        self.popped.mark_stale();
+        self.unused_dec_b4.mark_stale();
+        self.unused_dec_b5.mark_stale();
+        self.unused_dec_b6.mark_stale();
+        self.unused_dec_b7.mark_stale();
+        self.unused_df0.mark_stale();
+        self.unused_df4.mark_stale();
+        self.unused_df8.mark_stale();
+        self.unused_dfc.mark_stale();
+        self.unused_e00.mark_stale();
+        self.unused_e04.mark_stale();
+        self.unused_e08_b0.mark_stale();
+        self.unused_e08_b1.mark_stale();
+        self.unused_e08_b2.mark_stale();
+        self.unused_e08_b3.mark_stale();
+        self.unused_e08_b4.mark_stale();
+        self.unused_e08_b5.mark_stale();
+        self.unused_e08_b6.mark_stale();
+        self.unused_e08_b7.mark_stale();
+        self.pad_35.iter_mut().for_each(|v| v.mark_stale());
+        self.unused_e0c.mark_stale();
+        self.unused_e10.mark_stale();
+        self.unused_e14.mark_stale();
+        self.unused_e18.mark_stale();
+        self.unused_e1c_b0.mark_stale();
+        self.unused_e1c_b1.mark_stale();
+        self.unused_e1c_b2.mark_stale();
+        self.unused_e1c_b3.mark_stale();
+        self.unused_e1c_b4.mark_stale();
+        self.unused_e1c_b5.mark_stale();
+        self.unused_e1c_b6.mark_stale();
+        self.unused_e1c_b7.mark_stale();
+        self.pad_49.iter_mut().for_each(|v| v.mark_stale());
         self.vel.mark_stale();
-        self.x58_hurtInit.mark_stale();
+        self.hurt_init.mark_stale();
     }
 }
 
@@ -10944,39 +11508,56 @@ impl itGShell_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itRShell_ItemVars {
     /// +0x0
-    pub xDD4: Var<f32>,
+    #[doc(alias("xDD4"))]
+    pub life: Var<f32>,
     /// +0x4
-    pub xDD8: Var<f32>,
+    #[doc(alias("xDD8"))]
+    pub hit_delay: Var<f32>,
     /// +0x8
-    pub xDDC: Var<f32>,
+    #[doc(alias("xDDC"))]
+    pub trail: Var<f32>,
     /// +0xc
-    pub xDE0: Var<f32>,
+    #[doc(alias("xDE0"))]
+    pub accel: Var<f32>,
     /// +0x10
-    pub xDE4: Var<f32>,
+    #[doc(alias("xDE4"))]
+    pub chase_delay: Var<f32>,
     /// +0x14
-    pub xDE8: Var<i32>,
+    #[doc(alias("xDE8"))]
+    pub landings: Var<i32>,
     /// +0x18
-    pub xDEC: Var<i32>,
+    #[doc(alias("xDEC"))]
+    pub hits_left: Var<i32>,
     /// +0x1c
-    pub xDF0: Var<i32>,
+    #[doc(alias("xDF0"))]
+    pub hit: Var<i32>,
     /// +0x20 (bits 0..+1)
-    pub xDF4_b0: Var<bool>,
+    #[doc(alias("xDF4_b0"))]
+    pub bounced: Var<bool>,
     /// +0x20 (bits 1..+1)
-    pub xDF4_b1: Var<bool>,
+    #[doc(alias("xDF4_b1"))]
+    pub unused_df4_b1: Var<bool>,
     /// +0x20 (bits 2..+1)
-    pub xDF4_b2: Var<bool>,
+    #[doc(alias("xDF4_b2"))]
+    pub unused_df4_b2: Var<bool>,
     /// +0x20 (bits 3..+1)
-    pub xDF4_b3: Var<bool>,
+    #[doc(alias("xDF4_b3"))]
+    pub unused_df4_b3: Var<bool>,
     /// +0x20 (bits 4..+1)
-    pub xDF4_b4: Var<bool>,
+    #[doc(alias("xDF4_b4"))]
+    pub unused_df4_b4: Var<bool>,
     /// +0x20 (bits 5..+1)
-    pub xDF4_b5: Var<bool>,
+    #[doc(alias("xDF4_b5"))]
+    pub unused_df4_b5: Var<bool>,
     /// +0x20 (bits 6..+1)
-    pub xDF4_b6: Var<bool>,
+    #[doc(alias("xDF4_b6"))]
+    pub unused_df4_b6: Var<bool>,
     /// +0x20 (bits 7..+1)
-    pub xDF4_b7: Var<bool>,
+    #[doc(alias("xDF4_b7"))]
+    pub unused_df4_b7: Var<bool>,
     /// +0x21
-    pub pad_DF5: [Var<i8>; 43],
+    #[doc(alias("pad_DF5"))]
+    pub pad_21: [Var<i8>; 43],
     /// +0x4c
     pub vel: Var<Vec3>,
 }
@@ -10984,23 +11565,23 @@ pub struct itRShell_ItemVars {
 impl Default for itRShell_ItemVars {
     fn default() -> Self {
         itRShell_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
-            xDE0: Var::new(Default::default()),
-            xDE4: Var::new(Default::default()),
-            xDE8: Var::new(Default::default()),
-            xDEC: Var::new(Default::default()),
-            xDF0: Var::new(Default::default()),
-            xDF4_b0: Var::new(Default::default()),
-            xDF4_b1: Var::new(Default::default()),
-            xDF4_b2: Var::new(Default::default()),
-            xDF4_b3: Var::new(Default::default()),
-            xDF4_b4: Var::new(Default::default()),
-            xDF4_b5: Var::new(Default::default()),
-            xDF4_b6: Var::new(Default::default()),
-            xDF4_b7: Var::new(Default::default()),
-            pad_DF5: core::array::from_fn(|_| Var::new(Default::default())),
+            life: Var::new(Default::default()),
+            hit_delay: Var::new(Default::default()),
+            trail: Var::new(Default::default()),
+            accel: Var::new(Default::default()),
+            chase_delay: Var::new(Default::default()),
+            landings: Var::new(Default::default()),
+            hits_left: Var::new(Default::default()),
+            hit: Var::new(Default::default()),
+            bounced: Var::new(Default::default()),
+            unused_df4_b1: Var::new(Default::default()),
+            unused_df4_b2: Var::new(Default::default()),
+            unused_df4_b3: Var::new(Default::default()),
+            unused_df4_b4: Var::new(Default::default()),
+            unused_df4_b5: Var::new(Default::default()),
+            unused_df4_b6: Var::new(Default::default()),
+            unused_df4_b7: Var::new(Default::default()),
+            pad_21: core::array::from_fn(|_| Var::new(Default::default())),
             vel: Var::new(Default::default()),
         }
     }
@@ -11009,23 +11590,23 @@ impl Default for itRShell_ItemVars {
 impl itRShell_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
-        self.xDE0.mark_stale();
-        self.xDE4.mark_stale();
-        self.xDE8.mark_stale();
-        self.xDEC.mark_stale();
-        self.xDF0.mark_stale();
-        self.xDF4_b0.mark_stale();
-        self.xDF4_b1.mark_stale();
-        self.xDF4_b2.mark_stale();
-        self.xDF4_b3.mark_stale();
-        self.xDF4_b4.mark_stale();
-        self.xDF4_b5.mark_stale();
-        self.xDF4_b6.mark_stale();
-        self.xDF4_b7.mark_stale();
-        self.pad_DF5.iter_mut().for_each(|v| v.mark_stale());
+        self.life.mark_stale();
+        self.hit_delay.mark_stale();
+        self.trail.mark_stale();
+        self.accel.mark_stale();
+        self.chase_delay.mark_stale();
+        self.landings.mark_stale();
+        self.hits_left.mark_stale();
+        self.hit.mark_stale();
+        self.bounced.mark_stale();
+        self.unused_df4_b1.mark_stale();
+        self.unused_df4_b2.mark_stale();
+        self.unused_df4_b3.mark_stale();
+        self.unused_df4_b4.mark_stale();
+        self.unused_df4_b5.mark_stale();
+        self.unused_df4_b6.mark_stale();
+        self.unused_df4_b7.mark_stale();
+        self.pad_21.iter_mut().for_each(|v| v.mark_stale());
         self.vel.mark_stale();
     }
 }
@@ -11034,79 +11615,102 @@ impl itRShell_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itSword_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub unread_0: Var<i32>,
     /// +0x4
-    pub x4: Var<i32>,
+    #[doc(alias("x4"))]
+    pub length_frames: Var<i32>,
     /// +0x8
-    pub x8: Var<i32>,
+    #[doc(alias("x8"))]
+    pub length_end: Var<i32>,
     /// +0xc
-    pub xC: Var<i32>,
+    #[doc(alias("xC"))]
+    pub length_dir: Var<i32>,
     /// +0x10
-    pub x10: Var<f32>,
+    #[doc(alias("x10"))]
+    pub length: Var<f32>,
     /// +0x14
-    pub x14: Var<f32>,
+    #[doc(alias("x14"))]
+    pub length_target: Var<f32>,
     /// +0x18
-    pub x18: Var<f32>,
+    #[doc(alias("x18"))]
+    pub length_step: Var<f32>,
     /// +0x1c
-    pub x1C: Var<i32>,
+    #[doc(alias("x1C"))]
+    pub width_frames: Var<i32>,
     /// +0x20
-    pub x20: Var<i32>,
+    #[doc(alias("x20"))]
+    pub width_end: Var<i32>,
     /// +0x24
-    pub x24: Var<i32>,
+    #[doc(alias("x24"))]
+    pub width_dir: Var<i32>,
     /// +0x28
-    pub x28: Var<f32>,
+    #[doc(alias("x28"))]
+    pub width: Var<f32>,
     /// +0x2c
-    pub x2C: Var<f32>,
+    #[doc(alias("x2C"))]
+    pub width_target: Var<f32>,
     /// +0x30
-    pub x30: Var<f32>,
+    #[doc(alias("x30"))]
+    pub width_step: Var<f32>,
     /// +0x34
-    pub x34: Var<i32>,
+    #[doc(alias("x34"))]
+    pub swing_frames: Var<i32>,
     /// +0x38
-    pub x38: Var<i32>,
+    #[doc(alias("x38"))]
+    pub swing_end: Var<i32>,
     /// +0x3c
-    pub x3C: Var<i32>,
+    #[doc(alias("x3C"))]
+    pub swing_dir: Var<i32>,
     /// +0x40
-    pub x40: Var<f32>,
+    #[doc(alias("x40"))]
+    pub swing: Var<f32>,
     /// +0x44
-    pub x44: Var<f32>,
+    #[doc(alias("x44"))]
+    pub swing_target: Var<f32>,
     /// +0x48
-    pub x48: Var<f32>,
+    #[doc(alias("x48"))]
+    pub swing_step: Var<f32>,
     /// +0x4c
-    pub x4C: Var<f32>,
+    #[doc(alias("x4C"))]
+    pub base_width: Var<f32>,
     /// +0x50
-    pub x50: Var<f32>,
+    #[doc(alias("x50"))]
+    pub unread_50: Var<f32>,
     /// +0x54
-    pub x54: Var<i32>,
+    #[doc(alias("x54"))]
+    pub unread_54: Var<i32>,
     /// +0x58
-    pub x58: Var<f32>,
+    #[doc(alias("x58"))]
+    pub unused_58: Var<f32>,
 }
 
 impl Default for itSword_ItemVars {
     fn default() -> Self {
         itSword_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            xC: Var::new(Default::default()),
-            x10: Var::new(Default::default()),
-            x14: Var::new(Default::default()),
-            x18: Var::new(Default::default()),
-            x1C: Var::new(Default::default()),
-            x20: Var::new(Default::default()),
-            x24: Var::new(Default::default()),
-            x28: Var::new(Default::default()),
-            x2C: Var::new(Default::default()),
-            x30: Var::new(Default::default()),
-            x34: Var::new(Default::default()),
-            x38: Var::new(Default::default()),
-            x3C: Var::new(Default::default()),
-            x40: Var::new(Default::default()),
-            x44: Var::new(Default::default()),
-            x48: Var::new(Default::default()),
-            x4C: Var::new(Default::default()),
-            x50: Var::new(Default::default()),
-            x54: Var::new(Default::default()),
-            x58: Var::new(Default::default()),
+            unread_0: Var::new(Default::default()),
+            length_frames: Var::new(Default::default()),
+            length_end: Var::new(Default::default()),
+            length_dir: Var::new(Default::default()),
+            length: Var::new(Default::default()),
+            length_target: Var::new(Default::default()),
+            length_step: Var::new(Default::default()),
+            width_frames: Var::new(Default::default()),
+            width_end: Var::new(Default::default()),
+            width_dir: Var::new(Default::default()),
+            width: Var::new(Default::default()),
+            width_target: Var::new(Default::default()),
+            width_step: Var::new(Default::default()),
+            swing_frames: Var::new(Default::default()),
+            swing_end: Var::new(Default::default()),
+            swing_dir: Var::new(Default::default()),
+            swing: Var::new(Default::default()),
+            swing_target: Var::new(Default::default()),
+            swing_step: Var::new(Default::default()),
+            base_width: Var::new(Default::default()),
+            unread_50: Var::new(Default::default()),
+            unread_54: Var::new(Default::default()),
+            unused_58: Var::new(Default::default()),
         }
     }
 }
@@ -11114,29 +11718,29 @@ impl Default for itSword_ItemVars {
 impl itSword_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.xC.mark_stale();
-        self.x10.mark_stale();
-        self.x14.mark_stale();
-        self.x18.mark_stale();
-        self.x1C.mark_stale();
-        self.x20.mark_stale();
-        self.x24.mark_stale();
-        self.x28.mark_stale();
-        self.x2C.mark_stale();
-        self.x30.mark_stale();
-        self.x34.mark_stale();
-        self.x38.mark_stale();
-        self.x3C.mark_stale();
-        self.x40.mark_stale();
-        self.x44.mark_stale();
-        self.x48.mark_stale();
-        self.x4C.mark_stale();
-        self.x50.mark_stale();
-        self.x54.mark_stale();
-        self.x58.mark_stale();
+        self.unread_0.mark_stale();
+        self.length_frames.mark_stale();
+        self.length_end.mark_stale();
+        self.length_dir.mark_stale();
+        self.length.mark_stale();
+        self.length_target.mark_stale();
+        self.length_step.mark_stale();
+        self.width_frames.mark_stale();
+        self.width_end.mark_stale();
+        self.width_dir.mark_stale();
+        self.width.mark_stale();
+        self.width_target.mark_stale();
+        self.width_step.mark_stale();
+        self.swing_frames.mark_stale();
+        self.swing_end.mark_stale();
+        self.swing_dir.mark_stale();
+        self.swing.mark_stale();
+        self.swing_target.mark_stale();
+        self.swing_step.mark_stale();
+        self.base_width.mark_stale();
+        self.unread_50.mark_stale();
+        self.unread_54.mark_stale();
+        self.unused_58.mark_stale();
     }
 }
 
@@ -11144,34 +11748,42 @@ impl itSword_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itDosei_ItemVars {
     /// +0x0
-    pub xDD4: Var<i32>,
+    #[doc(alias("xDD4"))]
+    pub frames: Var<i32>,
     /// +0x4
-    pub xDD8: Var<i32>,
+    #[doc(alias("xDD8"))]
+    pub turn_state: Var<i32>,
     /// +0x8
-    pub xDDC: Var<f32>,
+    #[doc(alias("xDDC"))]
+    pub turn_left: Var<f32>,
     /// +0xc
-    pub xDE0: Var<f32>,
+    #[doc(alias("xDE0"))]
+    pub scale: Var<f32>,
     /// +0x10
-    pub xDE4: Var<Vec3>,
+    #[doc(alias("xDE4"))]
+    pub turn_pos: Var<Vec3>,
     /// +0x1c
-    pub xDF0: Var<i32>,
+    #[doc(alias("xDF0"))]
+    pub hits_left: Var<i32>,
     /// +0x20
-    pub xDF4: Var<f32>,
+    #[doc(alias("xDF4"))]
+    pub unused_df4: Var<f32>,
     /// +0x24
-    pub xDF8: Var<Vec3>,
+    #[doc(alias("xDF8"))]
+    pub skid_normal: Var<Vec3>,
 }
 
 impl Default for itDosei_ItemVars {
     fn default() -> Self {
         itDosei_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
-            xDE0: Var::new(Default::default()),
-            xDE4: Var::new(Default::default()),
-            xDF0: Var::new(Default::default()),
-            xDF4: Var::new(Default::default()),
-            xDF8: Var::new(Default::default()),
+            frames: Var::new(Default::default()),
+            turn_state: Var::new(Default::default()),
+            turn_left: Var::new(Default::default()),
+            scale: Var::new(Default::default()),
+            turn_pos: Var::new(Default::default()),
+            hits_left: Var::new(Default::default()),
+            unused_df4: Var::new(Default::default()),
+            skid_normal: Var::new(Default::default()),
         }
     }
 }
@@ -11179,14 +11791,14 @@ impl Default for itDosei_ItemVars {
 impl itDosei_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
-        self.xDE0.mark_stale();
-        self.xDE4.mark_stale();
-        self.xDF0.mark_stale();
-        self.xDF4.mark_stale();
-        self.xDF8.mark_stale();
+        self.frames.mark_stale();
+        self.turn_state.mark_stale();
+        self.turn_left.mark_stale();
+        self.scale.mark_stale();
+        self.turn_pos.mark_stale();
+        self.hits_left.mark_stale();
+        self.unused_df4.mark_stale();
+        self.skid_normal.mark_stale();
     }
 }
 
@@ -11194,11 +11806,13 @@ impl itDosei_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itEgg_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub broken: Var<i32>,
     /// +0x4
     pub rand_max: Var<i32>,
     /// +0x8
-    pub _8: [Var<u8>; 88],
+    #[doc(alias("_8"))]
+    pub unused_8: [Var<u8>; 88],
     /// +0x60
     pub heal_amount: Var<i32>,
 }
@@ -11206,9 +11820,9 @@ pub struct itEgg_ItemVars {
 impl Default for itEgg_ItemVars {
     fn default() -> Self {
         itEgg_ItemVars {
-            x0: Var::new(Default::default()),
+            broken: Var::new(Default::default()),
             rand_max: Var::new(Default::default()),
-            _8: core::array::from_fn(|_| Var::new(Default::default())),
+            unused_8: core::array::from_fn(|_| Var::new(Default::default())),
             heal_amount: Var::new(Default::default()),
         }
     }
@@ -11217,9 +11831,9 @@ impl Default for itEgg_ItemVars {
 impl itEgg_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
+        self.broken.mark_stale();
         self.rand_max.mark_stale();
-        self._8.iter_mut().for_each(|v| v.mark_stale());
+        self.unused_8.iter_mut().for_each(|v| v.mark_stale());
         self.heal_amount.mark_stale();
     }
 }
@@ -11228,16 +11842,18 @@ impl itEgg_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itFFlower_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub shots: Var<i32>,
     /// +0x4
-    pub x4: Var<u32>,
+    #[doc(alias("x4"))]
+    pub flame_on: Var<u32>,
 }
 
 impl Default for itFFlower_ItemVars {
     fn default() -> Self {
         itFFlower_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
+            shots: Var::new(Default::default()),
+            flame_on: Var::new(Default::default()),
         }
     }
 }
@@ -11245,8 +11861,8 @@ impl Default for itFFlower_ItemVars {
 impl itFFlower_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
+        self.shots.mark_stale();
+        self.flame_on.mark_stale();
     }
 }
 
@@ -11254,31 +11870,38 @@ impl itFFlower_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itFreeze_ItemVars {
     /// +0x0
-    pub x0: Var<f32>,
+    #[doc(alias("x0"))]
+    pub speed: Var<f32>,
     /// +0x4
-    pub x4: Var<Vec3>,
+    #[doc(alias("x4"))]
+    pub normal: Var<Vec3>,
     /// +0x10
-    pub x10: Var<f32>,
+    #[doc(alias("x10"))]
+    pub handed_speed: Var<f32>,
     /// +0x14
-    pub x14: Var<f32>,
+    #[doc(alias("x14"))]
+    pub push_decel: Var<f32>,
     /// +0x18
-    pub x18: Var<i32>,
+    #[doc(alias("x18"))]
+    pub stop_frames: Var<i32>,
     /// +0x1c
-    pub unk_1C: Var<Option<GObjId>>,
+    #[doc(alias("unk_1C"))]
+    pub pusher: Var<Option<GObjId>>,
     /// +0x20
-    pub x20: Var<RawPtr>,
+    #[doc(alias("x20"))]
+    pub unused_20: Var<RawPtr>,
 }
 
 impl Default for itFreeze_ItemVars {
     fn default() -> Self {
         itFreeze_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x10: Var::new(Default::default()),
-            x14: Var::new(Default::default()),
-            x18: Var::new(Default::default()),
-            unk_1C: Var::new(Default::default()),
-            x20: Var::new(Default::default()),
+            speed: Var::new(Default::default()),
+            normal: Var::new(Default::default()),
+            handed_speed: Var::new(Default::default()),
+            push_decel: Var::new(Default::default()),
+            stop_frames: Var::new(Default::default()),
+            pusher: Var::new(Default::default()),
+            unused_20: Var::new(Default::default()),
         }
     }
 }
@@ -11286,13 +11909,13 @@ impl Default for itFreeze_ItemVars {
 impl itFreeze_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x10.mark_stale();
-        self.x14.mark_stale();
-        self.x18.mark_stale();
-        self.unk_1C.mark_stale();
-        self.x20.mark_stale();
+        self.speed.mark_stale();
+        self.normal.mark_stale();
+        self.handed_speed.mark_stale();
+        self.push_decel.mark_stale();
+        self.stop_frames.mark_stale();
+        self.pusher.mark_stale();
+        self.unused_20.mark_stale();
     }
 }
 
@@ -11322,34 +11945,42 @@ impl itLGun_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itMBall_ItemVars {
     /// +0x0 (bits 0..+1)
-    pub b0: Var<bool>,
+    #[doc(alias("b0"))]
+    pub open: Var<bool>,
     /// +0x0 (bits 1..+1)
-    pub b1: Var<bool>,
+    #[doc(alias("b1"))]
+    pub out: Var<bool>,
     /// +0x0 (bits 2..+1)
-    pub b2: Var<bool>,
+    #[doc(alias("b2"))]
+    pub unused_b2: Var<bool>,
     /// +0x0 (bits 3..+1)
-    pub b3: Var<bool>,
+    #[doc(alias("b3"))]
+    pub unused_b3: Var<bool>,
     /// +0x0 (bits 4..+1)
-    pub b4: Var<bool>,
+    #[doc(alias("b4"))]
+    pub unused_b4: Var<bool>,
     /// +0x0 (bits 5..+1)
-    pub b5: Var<bool>,
+    #[doc(alias("b5"))]
+    pub unused_b5: Var<bool>,
     /// +0x0 (bits 6..+1)
-    pub b6: Var<bool>,
+    #[doc(alias("b6"))]
+    pub unused_b6: Var<bool>,
     /// +0x0 (bits 7..+1)
-    pub b7: Var<bool>,
+    #[doc(alias("b7"))]
+    pub unused_b7: Var<bool>,
 }
 
 impl Default for itMBall_ItemVars {
     fn default() -> Self {
         itMBall_ItemVars {
-            b0: Var::new(Default::default()),
-            b1: Var::new(Default::default()),
-            b2: Var::new(Default::default()),
-            b3: Var::new(Default::default()),
-            b4: Var::new(Default::default()),
-            b5: Var::new(Default::default()),
-            b6: Var::new(Default::default()),
-            b7: Var::new(Default::default()),
+            open: Var::new(Default::default()),
+            out: Var::new(Default::default()),
+            unused_b2: Var::new(Default::default()),
+            unused_b3: Var::new(Default::default()),
+            unused_b4: Var::new(Default::default()),
+            unused_b5: Var::new(Default::default()),
+            unused_b6: Var::new(Default::default()),
+            unused_b7: Var::new(Default::default()),
         }
     }
 }
@@ -11357,14 +11988,14 @@ impl Default for itMBall_ItemVars {
 impl itMBall_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.b0.mark_stale();
-        self.b1.mark_stale();
-        self.b2.mark_stale();
-        self.b3.mark_stale();
-        self.b4.mark_stale();
-        self.b5.mark_stale();
-        self.b6.mark_stale();
-        self.b7.mark_stale();
+        self.open.mark_stale();
+        self.out.mark_stale();
+        self.unused_b2.mark_stale();
+        self.unused_b3.mark_stale();
+        self.unused_b4.mark_stale();
+        self.unused_b5.mark_stale();
+        self.unused_b6.mark_stale();
+        self.unused_b7.mark_stale();
     }
 }
 
@@ -11372,16 +12003,18 @@ impl itMBall_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itScopeBeam_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub charge: Var<i32>,
     /// +0x4
-    pub x4: Var<f32>,
+    #[doc(alias("x4"))]
+    pub unused_4: Var<f32>,
 }
 
 impl Default for itScopeBeam_ItemVars {
     fn default() -> Self {
         itScopeBeam_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
+            charge: Var::new(Default::default()),
+            unused_4: Var::new(Default::default()),
         }
     }
 }
@@ -11389,8 +12022,8 @@ impl Default for itScopeBeam_ItemVars {
 impl itScopeBeam_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
+        self.charge.mark_stale();
+        self.unused_4.mark_stale();
     }
 }
 
@@ -11398,19 +12031,22 @@ impl itScopeBeam_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itWstar_ItemVars {
     /// +0x0
-    pub xDD4: Var<f32>,
+    #[doc(alias("xDD4"))]
+    pub speed: Var<f32>,
     /// +0x4
-    pub xDD8: Var<f32>,
+    #[doc(alias("xDD8"))]
+    pub hit: Var<f32>,
     /// +0x8
-    pub xDDC: Var<i32>,
+    #[doc(alias("xDDC"))]
+    pub ride_anim: Var<i32>,
 }
 
 impl Default for itWstar_ItemVars {
     fn default() -> Self {
         itWstar_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
-            xDDC: Var::new(Default::default()),
+            speed: Var::new(Default::default()),
+            hit: Var::new(Default::default()),
+            ride_anim: Var::new(Default::default()),
         }
     }
 }
@@ -11418,9 +12054,9 @@ impl Default for itWstar_ItemVars {
 impl itWstar_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
-        self.xDDC.mark_stale();
+        self.speed.mark_stale();
+        self.hit.mark_stale();
+        self.ride_anim.mark_stale();
     }
 }
 
@@ -11430,11 +12066,14 @@ pub struct itStar_ItemVars {
     /// +0x0
     pub dir: Var<f32>,
     /// +0x4
-    pub x4: Var<f32>,
+    #[doc(alias("x4"))]
+    pub unused_4: Var<f32>,
     /// +0x8
-    pub x8: Var<f32>,
+    #[doc(alias("x8"))]
+    pub unused_8: Var<f32>,
     /// +0xc
-    pub xC: Var<f32>,
+    #[doc(alias("xC"))]
+    pub unused_c: Var<f32>,
     /// +0x10
     pub xvel: Var<f32>,
     /// +0x14
@@ -11445,9 +12084,9 @@ impl Default for itStar_ItemVars {
     fn default() -> Self {
         itStar_ItemVars {
             dir: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            xC: Var::new(Default::default()),
+            unused_4: Var::new(Default::default()),
+            unused_8: Var::new(Default::default()),
+            unused_c: Var::new(Default::default()),
             xvel: Var::new(Default::default()),
             yvel: Var::new(Default::default()),
         }
@@ -11458,9 +12097,9 @@ impl itStar_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
         self.dir.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.xC.mark_stale();
+        self.unused_4.mark_stale();
+        self.unused_8.mark_stale();
+        self.unused_c.mark_stale();
         self.xvel.mark_stale();
         self.yvel.mark_stale();
     }
@@ -11470,16 +12109,18 @@ impl itStar_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itKinoko_ItemVars {
     /// +0x0
-    pub x0: Var<f32>,
+    #[doc(alias("x0"))]
+    pub speed: Var<f32>,
     /// +0x4
-    pub x4: Var<Vec3>,
+    #[doc(alias("x4"))]
+    pub normal: Var<Vec3>,
 }
 
 impl Default for itKinoko_ItemVars {
     fn default() -> Self {
         itKinoko_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
+            speed: Var::new(Default::default()),
+            normal: Var::new(Default::default()),
         }
     }
 }
@@ -11487,8 +12128,8 @@ impl Default for itKinoko_ItemVars {
 impl itKinoko_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
+        self.speed.mark_stale();
+        self.normal.mark_stale();
     }
 }
 
@@ -11496,7 +12137,8 @@ impl itKinoko_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itFoods_ItemVars {
     /// +0x0
-    pub x0: Var<u32>,
+    #[doc(alias("x0"))]
+    pub dish: Var<u32>,
     /// +0x4
     pub heal_amount: Var<u32>,
 }
@@ -11504,7 +12146,7 @@ pub struct itFoods_ItemVars {
 impl Default for itFoods_ItemVars {
     fn default() -> Self {
         itFoods_ItemVars {
-            x0: Var::new(Default::default()),
+            dish: Var::new(Default::default()),
             heal_amount: Var::new(Default::default()),
         }
     }
@@ -11513,7 +12155,7 @@ impl Default for itFoods_ItemVars {
 impl itFoods_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
+        self.dish.mark_stale();
         self.heal_amount.mark_stale();
     }
 }
@@ -11522,34 +12164,42 @@ impl itFoods_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itMsBomb_ItemVars {
     /// +0x0 (bits 0..+1)
-    pub xDD4_b0: Var<bool>,
+    #[doc(alias("xDD4_b0"))]
+    pub armed: Var<bool>,
     /// +0x0 (bits 1..+1)
-    pub xDD4_b1: Var<bool>,
+    #[doc(alias("xDD4_b1"))]
+    pub unused_dd4_b1: Var<bool>,
     /// +0x0 (bits 2..+1)
-    pub xDD4_b2: Var<bool>,
+    #[doc(alias("xDD4_b2"))]
+    pub unused_dd4_b2: Var<bool>,
     /// +0x0 (bits 3..+1)
-    pub xDD4_b3: Var<bool>,
+    #[doc(alias("xDD4_b3"))]
+    pub unused_dd4_b3: Var<bool>,
     /// +0x0 (bits 4..+1)
-    pub xDD4_b4: Var<bool>,
+    #[doc(alias("xDD4_b4"))]
+    pub unused_dd4_b4: Var<bool>,
     /// +0x0 (bits 5..+1)
-    pub xDD4_b5: Var<bool>,
+    #[doc(alias("xDD4_b5"))]
+    pub unused_dd4_b5: Var<bool>,
     /// +0x0 (bits 6..+1)
-    pub xDD4_b6: Var<bool>,
+    #[doc(alias("xDD4_b6"))]
+    pub unused_dd4_b6: Var<bool>,
     /// +0x0 (bits 7..+1)
-    pub xDD4_b7: Var<bool>,
+    #[doc(alias("xDD4_b7"))]
+    pub unused_dd4_b7: Var<bool>,
 }
 
 impl Default for itMsBomb_ItemVars {
     fn default() -> Self {
         itMsBomb_ItemVars {
-            xDD4_b0: Var::new(Default::default()),
-            xDD4_b1: Var::new(Default::default()),
-            xDD4_b2: Var::new(Default::default()),
-            xDD4_b3: Var::new(Default::default()),
-            xDD4_b4: Var::new(Default::default()),
-            xDD4_b5: Var::new(Default::default()),
-            xDD4_b6: Var::new(Default::default()),
-            xDD4_b7: Var::new(Default::default()),
+            armed: Var::new(Default::default()),
+            unused_dd4_b1: Var::new(Default::default()),
+            unused_dd4_b2: Var::new(Default::default()),
+            unused_dd4_b3: Var::new(Default::default()),
+            unused_dd4_b4: Var::new(Default::default()),
+            unused_dd4_b5: Var::new(Default::default()),
+            unused_dd4_b6: Var::new(Default::default()),
+            unused_dd4_b7: Var::new(Default::default()),
         }
     }
 }
@@ -11557,14 +12207,14 @@ impl Default for itMsBomb_ItemVars {
 impl itMsBomb_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4_b0.mark_stale();
-        self.xDD4_b1.mark_stale();
-        self.xDD4_b2.mark_stale();
-        self.xDD4_b3.mark_stale();
-        self.xDD4_b4.mark_stale();
-        self.xDD4_b5.mark_stale();
-        self.xDD4_b6.mark_stale();
-        self.xDD4_b7.mark_stale();
+        self.armed.mark_stale();
+        self.unused_dd4_b1.mark_stale();
+        self.unused_dd4_b2.mark_stale();
+        self.unused_dd4_b3.mark_stale();
+        self.unused_dd4_b4.mark_stale();
+        self.unused_dd4_b5.mark_stale();
+        self.unused_dd4_b6.mark_stale();
+        self.unused_dd4_b7.mark_stale();
     }
 }
 
@@ -11572,31 +12222,38 @@ impl itMsBomb_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itFlipper_ItemVars {
     /// +0x0
-    pub xDD4_flightTimer: Var<i32>,
+    #[doc(alias("xDD4_flightTimer"))]
+    pub flight_timer: Var<i32>,
     /// +0x4
-    pub xDD8_isSettled: Var<i32>,
+    #[doc(alias("xDD8_isSettled"))]
+    pub settled: Var<i32>,
     /// +0x8
-    pub xDDC_hitboxTimer: Var<i32>,
+    #[doc(alias("xDDC_hitboxTimer"))]
+    pub hitbox_timer: Var<i32>,
     /// +0xc
-    pub xDE0_spinAngle: Var<f32>,
+    #[doc(alias("xDE0_spinAngle"))]
+    pub spin_angle: Var<f32>,
     /// +0x10
-    pub xDE4_spinVel: Var<f32>,
+    #[doc(alias("xDE4_spinVel"))]
+    pub spin_vel: Var<f32>,
     /// +0x14
-    pub xDE8_isStageFixed: Var<i32>,
+    #[doc(alias("xDE8_isStageFixed"))]
+    pub stage_fixed: Var<i32>,
     /// +0x18
-    pub xDEC_stageAnchor: Var<Option<JObjId>>,
+    #[doc(alias("xDEC_stageAnchor"))]
+    pub stage_anchor: Var<Option<JObjId>>,
 }
 
 impl Default for itFlipper_ItemVars {
     fn default() -> Self {
         itFlipper_ItemVars {
-            xDD4_flightTimer: Var::new(Default::default()),
-            xDD8_isSettled: Var::new(Default::default()),
-            xDDC_hitboxTimer: Var::new(Default::default()),
-            xDE0_spinAngle: Var::new(Default::default()),
-            xDE4_spinVel: Var::new(Default::default()),
-            xDE8_isStageFixed: Var::new(Default::default()),
-            xDEC_stageAnchor: Var::new(Default::default()),
+            flight_timer: Var::new(Default::default()),
+            settled: Var::new(Default::default()),
+            hitbox_timer: Var::new(Default::default()),
+            spin_angle: Var::new(Default::default()),
+            spin_vel: Var::new(Default::default()),
+            stage_fixed: Var::new(Default::default()),
+            stage_anchor: Var::new(Default::default()),
         }
     }
 }
@@ -11604,13 +12261,13 @@ impl Default for itFlipper_ItemVars {
 impl itFlipper_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4_flightTimer.mark_stale();
-        self.xDD8_isSettled.mark_stale();
-        self.xDDC_hitboxTimer.mark_stale();
-        self.xDE0_spinAngle.mark_stale();
-        self.xDE4_spinVel.mark_stale();
-        self.xDE8_isStageFixed.mark_stale();
-        self.xDEC_stageAnchor.mark_stale();
+        self.flight_timer.mark_stale();
+        self.settled.mark_stale();
+        self.hitbox_timer.mark_stale();
+        self.spin_angle.mark_stale();
+        self.spin_vel.mark_stale();
+        self.stage_fixed.mark_stale();
+        self.stage_anchor.mark_stale();
     }
 }
 
@@ -11630,7 +12287,8 @@ pub struct itLGunBeam_ItemVars {
     /// +0x2c
     pub lifetime: Var<f32>,
     /// +0x30
-    pub xE04: Var<i32>,
+    #[doc(alias("xE04"))]
+    pub unread_e04: Var<i32>,
 }
 
 impl Default for itLGunBeam_ItemVars {
@@ -11642,7 +12300,7 @@ impl Default for itLGunBeam_ItemVars {
             angle0: Var::new(Default::default()),
             angle1: Var::new(Default::default()),
             lifetime: Var::new(Default::default()),
-            xE04: Var::new(Default::default()),
+            unread_e04: Var::new(Default::default()),
         }
     }
 }
@@ -11656,7 +12314,7 @@ impl itLGunBeam_ItemVars {
         self.angle0.mark_stale();
         self.angle1.mark_stale();
         self.lifetime.mark_stale();
-        self.xE04.mark_stale();
+        self.unread_e04.mark_stale();
     }
 }
 
@@ -11664,22 +12322,26 @@ impl itLGunBeam_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct it_2E5A_SubVars {
     /// +0x0
-    pub x0: Var<f32>,
+    #[doc(alias("x0"))]
+    pub radius: Var<f32>,
     /// +0x4
-    pub x4: Var<Option<JObjId>>,
+    #[doc(alias("x4"))]
+    pub bone: Var<Option<JObjId>>,
     /// +0x8
-    pub x8: Var<Vec3>,
+    #[doc(alias("x8"))]
+    pub pos: Var<Vec3>,
     /// +0x14
-    pub x14: Var<Vec3>,
+    #[doc(alias("x14"))]
+    pub prev_pos: Var<Vec3>,
 }
 
 impl Default for it_2E5A_SubVars {
     fn default() -> Self {
         it_2E5A_SubVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            x14: Var::new(Default::default()),
+            radius: Var::new(Default::default()),
+            bone: Var::new(Default::default()),
+            pos: Var::new(Default::default()),
+            prev_pos: Var::new(Default::default()),
         }
     }
 }
@@ -11687,10 +12349,10 @@ impl Default for it_2E5A_SubVars {
 impl it_2E5A_SubVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.x14.mark_stale();
+        self.radius.mark_stale();
+        self.bone.mark_stale();
+        self.pos.mark_stale();
+        self.prev_pos.mark_stale();
     }
 }
 
@@ -11698,19 +12360,26 @@ impl it_2E5A_SubVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct it_2E5A_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub worth: Var<i32>,
     /// +0x4
-    pub x4: Var<i32>,
+    #[doc(alias("x4"))]
+    pub tier: Var<i32>,
     /// +0x8
-    pub x8: Var<i32>,
+    #[doc(alias("x8"))]
+    pub pickable: Var<i32>,
     /// +0xc
-    pub xC: Var<i32>,
+    #[doc(alias("xC"))]
+    pub flying: Var<i32>,
     /// +0x10
-    pub x10: Var<f32>,
+    #[doc(alias("x10"))]
+    pub wait_a: Var<f32>,
     /// +0x14
-    pub x14: Var<f32>,
+    #[doc(alias("x14"))]
+    pub wait_b: Var<f32>,
     /// +0x18
-    pub x18: Var<CoinFlags>,
+    #[doc(alias("x18"))]
+    pub flags: Var<CoinFlags>,
     /// +0x1c
     pub sub: it_2E5A_SubVars,
 }
@@ -11718,13 +12387,13 @@ pub struct it_2E5A_ItemVars {
 impl Default for it_2E5A_ItemVars {
     fn default() -> Self {
         it_2E5A_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            xC: Var::new(Default::default()),
-            x10: Var::new(Default::default()),
-            x14: Var::new(Default::default()),
-            x18: Var::new(Default::default()),
+            worth: Var::new(Default::default()),
+            tier: Var::new(Default::default()),
+            pickable: Var::new(Default::default()),
+            flying: Var::new(Default::default()),
+            wait_a: Var::new(Default::default()),
+            wait_b: Var::new(Default::default()),
+            flags: Var::new(Default::default()),
             sub: Default::default(),
         }
     }
@@ -11733,13 +12402,13 @@ impl Default for it_2E5A_ItemVars {
 impl it_2E5A_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.xC.mark_stale();
-        self.x10.mark_stale();
-        self.x14.mark_stale();
-        self.x18.mark_stale();
+        self.worth.mark_stale();
+        self.tier.mark_stale();
+        self.pickable.mark_stale();
+        self.flying.mark_stale();
+        self.wait_a.mark_stale();
+        self.wait_b.mark_stale();
+        self.flags.mark_stale();
         self.sub.mark_stale();
     }
 }
@@ -11748,28 +12417,34 @@ impl it_2E5A_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itCoin_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub trophy: Var<i32>,
     /// +0x4
-    pub x4: Var<i32>,
+    #[doc(alias("x4"))]
+    pub trophy_kind: Var<i32>,
     /// +0x8
-    pub x8: Var<f32>,
+    #[doc(alias("x8"))]
+    pub spin: Var<f32>,
     /// +0xc
-    pub xC: Var<f32>,
+    #[doc(alias("xC"))]
+    pub spin_max: Var<f32>,
     /// +0x10
-    pub x10: Var<i32>,
+    #[doc(alias("x10"))]
+    pub unread_10: Var<i32>,
     /// +0x14
-    pub x14: Var<Option<GObjId>>,
+    #[doc(alias("x14"))]
+    pub stand: Var<Option<GObjId>>,
 }
 
 impl Default for itCoin_ItemVars {
     fn default() -> Self {
         itCoin_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            xC: Var::new(Default::default()),
-            x10: Var::new(Default::default()),
-            x14: Var::new(Default::default()),
+            trophy: Var::new(Default::default()),
+            trophy_kind: Var::new(Default::default()),
+            spin: Var::new(Default::default()),
+            spin_max: Var::new(Default::default()),
+            unread_10: Var::new(Default::default()),
+            stand: Var::new(Default::default()),
         }
     }
 }
@@ -11777,12 +12452,12 @@ impl Default for itCoin_ItemVars {
 impl itCoin_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.xC.mark_stale();
-        self.x10.mark_stale();
-        self.x14.mark_stale();
+        self.trophy.mark_stale();
+        self.trophy_kind.mark_stale();
+        self.spin.mark_stale();
+        self.spin_max.mark_stale();
+        self.unread_10.mark_stale();
+        self.stand.mark_stale();
     }
 }
 
@@ -11790,37 +12465,46 @@ impl itCoin_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itTarucann_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub unread_0: Var<i32>,
     /// +0x4
-    pub x4: Var<i32>,
+    #[doc(alias("x4"))]
+    pub fire_frames: Var<i32>,
     /// +0x8
-    pub x8: Var<f32>,
+    #[doc(alias("x8"))]
+    pub unread_8: Var<f32>,
     /// +0xc
-    pub xC: Var<f32>,
+    #[doc(alias("xC"))]
+    pub turn: Var<f32>,
     /// +0x10
-    pub x10: Var<f32>,
+    #[doc(alias("x10"))]
+    pub roll_speed: Var<f32>,
     /// +0x14
-    pub x14: Var<Vec3>,
+    #[doc(alias("x14"))]
+    pub normal: Var<Vec3>,
     /// +0x20
-    pub x20: Var<Option<GObjId>>,
+    #[doc(alias("x20"))]
+    pub rider: Var<Option<GObjId>>,
     /// +0x24
-    pub x24: Var<i32>,
+    #[doc(alias("x24"))]
+    pub unread_24: Var<i32>,
     /// +0x28
-    pub x28: Var<f32>,
+    #[doc(alias("x28"))]
+    pub scale: Var<f32>,
 }
 
 impl Default for itTarucann_ItemVars {
     fn default() -> Self {
         itTarucann_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
-            x8: Var::new(Default::default()),
-            xC: Var::new(Default::default()),
-            x10: Var::new(Default::default()),
-            x14: Var::new(Default::default()),
-            x20: Var::new(Default::default()),
-            x24: Var::new(Default::default()),
-            x28: Var::new(Default::default()),
+            unread_0: Var::new(Default::default()),
+            fire_frames: Var::new(Default::default()),
+            unread_8: Var::new(Default::default()),
+            turn: Var::new(Default::default()),
+            roll_speed: Var::new(Default::default()),
+            normal: Var::new(Default::default()),
+            rider: Var::new(Default::default()),
+            unread_24: Var::new(Default::default()),
+            scale: Var::new(Default::default()),
         }
     }
 }
@@ -11828,15 +12512,15 @@ impl Default for itTarucann_ItemVars {
 impl itTarucann_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
-        self.x8.mark_stale();
-        self.xC.mark_stale();
-        self.x10.mark_stale();
-        self.x14.mark_stale();
-        self.x20.mark_stale();
-        self.x24.mark_stale();
-        self.x28.mark_stale();
+        self.unread_0.mark_stale();
+        self.fire_frames.mark_stale();
+        self.unread_8.mark_stale();
+        self.turn.mark_stale();
+        self.roll_speed.mark_stale();
+        self.normal.mark_stale();
+        self.rider.mark_stale();
+        self.unread_24.mark_stale();
+        self.scale.mark_stale();
     }
 }
 
@@ -11844,16 +12528,18 @@ impl itTarucann_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itStarRodStar_ItemVars {
     /// +0x0
-    pub x0: Var<i32>,
+    #[doc(alias("x0"))]
+    pub big: Var<i32>,
     /// +0x4
-    pub x4: Var<f32>,
+    #[doc(alias("x4"))]
+    pub spin: Var<f32>,
 }
 
 impl Default for itStarRodStar_ItemVars {
     fn default() -> Self {
         itStarRodStar_ItemVars {
-            x0: Var::new(Default::default()),
-            x4: Var::new(Default::default()),
+            big: Var::new(Default::default()),
+            spin: Var::new(Default::default()),
         }
     }
 }
@@ -11861,8 +12547,8 @@ impl Default for itStarRodStar_ItemVars {
 impl itStarRodStar_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.x0.mark_stale();
-        self.x4.mark_stale();
+        self.big.mark_stale();
+        self.spin.mark_stale();
     }
 }
 
@@ -11870,16 +12556,18 @@ impl itStarRodStar_ItemVars {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itLipstickSpore_ItemVars {
     /// +0x0
-    pub xDD4: Var<i32>,
+    #[doc(alias("xDD4"))]
+    pub facing: Var<i32>,
     /// +0x4
-    pub xDD8: Var<f32>,
+    #[doc(alias("xDD8"))]
+    pub step: Var<f32>,
 }
 
 impl Default for itLipstickSpore_ItemVars {
     fn default() -> Self {
         itLipstickSpore_ItemVars {
-            xDD4: Var::new(Default::default()),
-            xDD8: Var::new(Default::default()),
+            facing: Var::new(Default::default()),
+            step: Var::new(Default::default()),
         }
     }
 }
@@ -11887,8 +12575,8 @@ impl Default for itLipstickSpore_ItemVars {
 impl itLipstickSpore_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
-        self.xDD4.mark_stale();
-        self.xDD8.mark_stale();
+        self.facing.mark_stale();
+        self.step.mark_stale();
     }
 }
 
@@ -11898,14 +12586,15 @@ pub struct itFFlowerFlame_ItemVars {
     /// +0x0
     pub pos: Var<Vec3>,
     /// +0xc
-    pub unk: Var<f32>,
+    #[doc(alias("unk"))]
+    pub size: Var<f32>,
 }
 
 impl Default for itFFlowerFlame_ItemVars {
     fn default() -> Self {
         itFFlowerFlame_ItemVars {
             pos: Var::new(Default::default()),
-            unk: Var::new(Default::default()),
+            size: Var::new(Default::default()),
         }
     }
 }
@@ -11914,7 +12603,7 @@ impl itFFlowerFlame_ItemVars {
     /// Marks every field stale, as a new item finds its variables.
     pub fn mark_stale(&mut self) {
         self.pos.mark_stale();
-        self.unk.mark_stale();
+        self.size.mark_stale();
     }
 }
 

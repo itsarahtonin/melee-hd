@@ -59,7 +59,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PHYS => {
             // `itPikachutjoltair_UnkMotion0_Phys`: still (its animation moves it).
-            item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+            item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
         }
         _ => return false,
     }
@@ -68,9 +68,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// A bone of the model.
 fn bone(r: &Running, gobj: GObjId, i: usize) -> Option<JObjId> {
-    let t = item(r.game, gobj)
-        .xBBC_dynamicBoneTable
-        .expect("a jolt without bones");
+    let t = item(r.game, gobj).bone_table.expect("a jolt without bones");
     r.game.it.bone_tables[t.0].bones[i]
 }
 
@@ -86,7 +84,7 @@ fn face(r: &mut Running, gobj: GObjId) {
 fn tilt(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj).expect("a jolt without a model");
     let ip = item_mut(r.game, gobj);
-    let n = ip.xDD4_itemVar.pikachu_jolt_air().xDE8.get();
+    let n = ip.vars.pikachu_jolt_air().normal.get();
     let angle = math::atan2(n.x, n.y);
     let x = if reg(ip.facing_dir) == 1.0 {
         angle
@@ -100,9 +98,9 @@ fn tilt(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802B3EFC")]
 pub fn linked(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .pikachu_jolt_air()
-        .xDD8
+        .ground_jolt
         .get()
 }
 
@@ -110,9 +108,9 @@ pub fn linked(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
 #[doc(alias = "it_802B43B0")]
 pub fn unlink(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .pikachu_jolt_air()
-        .xDD8
+        .ground_jolt
         .set(None);
 }
 
@@ -135,10 +133,10 @@ pub fn tip(r: &mut Running, gobj: GObjId) -> Vec3 {
 pub fn place(r: &mut Running, gobj: GObjId, pos: Vec3, coll: CollData, n: Vec3) {
     let ip = item_mut(r.game, gobj);
     ip.pos = pos;
-    ip.x378_itemColl = coll;
-    let v = ip.xDD4_itemVar.pikachu_jolt_air();
-    v.xDE8.set(n);
-    v.xDF4.set(0);
+    ip.coll = coll;
+    let v = ip.vars.pikachu_jolt_air();
+    v.normal.set(n);
+    v.frames.set(0);
     let j = jobj_of(r.game, gobj).expect("a jolt without a model");
     jobj::set_translate(&mut r.game.objs.jobjs, j, pos);
     tilt(r, gobj);
@@ -179,19 +177,19 @@ pub fn spawn(
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let ip = item_mut(r.game, gobj);
-    ip.xDB8_itcmd_var3 = 0;
-    ip.xDB4_itcmd_var2 = 0;
-    ip.xDB0_itcmd_var1 = 0;
-    ip.xDAC_itcmd_var0 = 0;
-    let v = ip.xDD4_itemVar.pikachu_jolt_air();
-    v.xDD8.set(Some(ground));
-    v.xDF4.set(0);
+    ip.cmd_var3 = 0;
+    ip.cmd_var2 = 0;
+    ip.cmd_var1 = 0;
+    ip.cmd_var0 = 0;
+    let v = ip.vars.pikachu_jolt_air();
+    v.ground_jolt.set(Some(ground));
+    v.frames.set(0);
     face(r, gobj);
     setup(r, gobj, owner);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .pikachu_jolt_air()
-        .xDD4
+        .pikachu
         .set(owner);
     Some(gobj)
 }
@@ -200,7 +198,7 @@ pub fn spawn(
 #[doc(alias = "it_802B43D0")]
 fn setup(r: &mut Running, gobj: GObjId, owner: Option<GObjId>) {
     lib26b1::disable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).xDC8_word.flags.x13 = false;
+    item_mut(r.game, gobj).flags.flags.held = false;
     lib2725::show(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     super::super::item::animate(r, gobj);
@@ -221,9 +219,9 @@ fn release(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itPikachutjoltair_UnkMotion0_Anim")]
 fn anim(r: &mut Running, gobj: GObjId) -> bool {
     tilt(r, gobj);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.pikachu_jolt_air();
-    v.xDF4.update(|n| n.wrapping_add(1));
-    let frames = v.xDF4.get();
+    let v = item_mut(r.game, gobj).vars.pikachu_jolt_air();
+    v.frames.update(|n| n.wrapping_add(1));
+    let frames = v.frames.get();
     let followed = match linked(r, gobj) {
         Some(ground) => pikachutjoltground::linked(r, ground) == Some(gobj),
         None => false,
@@ -280,9 +278,9 @@ fn reflected(r: &mut Running, gobj: GObjId) -> bool {
         mem(fp::fneg(angle))
     };
     let n = Vec3::new(math::sin(a), math::cos(a), 0.0);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.pikachu_jolt_air();
-    v.xDE8.set(n);
-    v.xDF4.set(0);
+    let v = item_mut(r.game, gobj).vars.pikachu_jolt_air();
+    v.normal.set(n);
+    v.frames.set(0);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     false
 }

@@ -64,7 +64,7 @@ fn birdo(g: &Game) -> Option<(melee_sim::hsd::gobj::GObjId, f32, f32, i32, i32)>
         .iter()
         .find(|(_, it)| it.kind == ItKind::Birdo)
         .map(|(_, it)| {
-            let touches = match &it.xDD4_itemVar.member {
+            let touches = match &it.vars.member {
                 it::Member::Kyasarin(v) => *v.words[1].peek(),
                 _ => -1,
             };
@@ -310,10 +310,10 @@ pub fn birdo_sweep(args: &[&str]) -> ExitCode {
                         let gobj = birdo(&s.game).expect("Birdo").0;
                         let ip = it::item_mut(&mut s.game, gobj);
                         ip.pos.x = px;
-                        ip.xCA0 = 1000;
-                        ip.xCAC_angle = a.max(0);
-                        ip.xCC8_knockback = if a < 0 { 0.0 } else { 50.0 };
-                        ip.xCCC_incDamageDirection = dir;
+                        ip.hit_damage = 1000;
+                        ip.kb_angle = a.max(0);
+                        ip.knockback = if a < 0 { 0.0 } else { 50.0 };
+                        ip.damage_dir = dir;
                         step(&mut s, &mut reads, &disc, &mut next, still);
                         if birdo(&s.game).is_some_and(|b| b.3 == 10) {
                             break gobj;
@@ -357,7 +357,7 @@ pub fn birdo_sweep(args: &[&str]) -> ExitCode {
                             Some((_, bx, by, 10, n)) => {
                                 most = most.max(n);
                                 last = (bx, by);
-                                let v = it::item(&s.game, gobj).x40_vel;
+                                let v = it::item(&s.game, gobj).vel;
                                 if (bx < -310.0 && v.x <= 0.0)
                                     || (bx > 310.0 && v.x >= 0.0)
                                     || (by > 65.0 && v.y >= 0.0)

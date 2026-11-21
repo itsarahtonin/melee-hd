@@ -84,7 +84,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "it_802CAFD4")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj).expect("Weezing without a model");
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    item_mut(r.game, gobj).cmd_var0 = 0;
     let frames = attr_f32(r, gobj, 4);
     let v = pokemon::vars(r.game, gobj);
     v.set_i32(PUFF_FRAMES, fp::fctiwz(reg(frames)));
@@ -144,7 +144,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 /// either gas at even odds.
 #[doc(alias = "it_802CB2B0")]
 pub fn puff_when_told(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).xDAC_itcmd_var0 == 0 {
+    if item(r.game, gobj).cmd_var0 == 0 {
         return;
     }
     let v = pokemon::vars(r.game, gobj);
@@ -193,7 +193,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
     jobj::set_rotation_y(&mut r.game.objs.jobjs, j, 0.0);
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(GAS_ACCESSORY));
-    set_flag(&mut ip.xDD1_flag, 1, true);
+    set_flag(&mut ip.phys_flags, 1, true);
 }
 
 /// `itMatadogas_UnkMotion2_Coll`: lands out of the ball, doing nothing.
@@ -267,7 +267,7 @@ fn gas_effects(r: &mut Running, gobj: GObjId, a: i32, b: i32) {
 #[doc(alias = "it_802CB798")]
 pub fn gas_drift(r: &mut Running, gobj: GObjId) {
     let life = attr_f32(r, gobj, 0);
-    item_mut(r.game, gobj).xD44_lifeTimer = life;
+    item_mut(r.game, gobj).life_timer = life;
     lib2725::stop_spin(r.game, r.data, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     effect_hitlag(r.game, gobj);
@@ -278,10 +278,10 @@ pub fn gas_drift(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802CB810")]
 pub fn gas_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
+    if reg(ip.life_timer) <= 0.0 {
         return true;
     }
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
     false
 }
 
@@ -295,9 +295,9 @@ pub fn gas_phys(r: &mut Running, gobj: GObjId) {
         _ => 0.0,
     };
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), reg(scale)));
-    ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), reg(scale)));
-    ip.x40_vel.z = mem(fp::fmuls(reg(ip.x40_vel.z), reg(scale)));
+    ip.vel.x = mem(fp::fmuls(reg(ip.vel.x), reg(scale)));
+    ip.vel.y = mem(fp::fmuls(reg(ip.vel.y), reg(scale)));
+    ip.vel.z = mem(fp::fmuls(reg(ip.vel.z), reg(scale)));
 }
 
 /// The gas's `it_802CB8A4`: nothing.

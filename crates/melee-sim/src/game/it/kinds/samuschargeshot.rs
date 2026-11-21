@@ -157,15 +157,15 @@ pub fn spawn(
 /// Its variables as it's made in `parent`'s hand.
 fn init(r: &mut Running, shot: GObjId, parent: GObjId) {
     let scale = crate::fpu::mem(Running::model_scale(r.game.fighter(parent)));
-    let v = item_mut(r.game, shot).xDD4_itemVar.samus_chargeshot();
-    v.xDE8.set(0);
-    v.xDE0.set(0.0);
-    v.xDFC.set(0);
-    v.xE00.set(Some(parent));
-    v.xE04.set(scale);
-    v.xE2C.set(0.0);
-    v.xE30.set(0.0);
-    v.xE34.set(0.0);
+    let v = item_mut(r.game, shot).vars.samus_chargeshot();
+    v.fired.set(0);
+    v.unread_e0.set(0.0);
+    v.effects.set(0);
+    v.maker.set(Some(parent));
+    v.unread_scale.set(scale);
+    v.unread_e2c.set(0.0);
+    v.unread_e30.set(0.0);
+    v.unread_e34.set(0.0);
 }
 
 /// Fires the shot ([`cs::fire`]).
@@ -190,8 +190,8 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
     };
     ef::spawn(r, gfx, Some(gobj), &[Arg::JObj(Some(j))]);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .samus_chargeshot()
-        .xDFC
+        .effects
         .set(1);
 }

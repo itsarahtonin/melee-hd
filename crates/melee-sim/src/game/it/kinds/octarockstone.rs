@@ -58,8 +58,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 #[doc(alias = "itOctarockstone_802E878C")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    ip.xD5C = 0;
-    ip.xDC8_word.flags.x15 = false;
+    ip.skid = 0;
+    ip.flags.flags.pickup = false;
     hitbox::clear_hit_ids(r.game, gobj);
     fly(r, gobj);
 }
@@ -148,7 +148,7 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
 pub fn phys1(r: &mut Running, gobj: GObjId) {
     let accel = reg(attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED));
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), accel));
+    ip.vel.y = mem(fp::fsubs(reg(ip.vel.y), accel));
 }
 
 /// Forgets a GObj the stone points to, `itOctarockstone_802E89B0` (`it_8026B894`).
@@ -166,11 +166,11 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 #[doc(alias = "it_802E89D0")]
 pub fn aim(r: &mut Running, gobj: GObjId, speed: f32, min_vy: f32, max_vy: f32) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(speed), reg(ip.facing_dir)));
-    ip.x40_vel.z = 0.0;
+    ip.vel.x = mem(fp::fmuls(reg(speed), reg(ip.facing_dir)));
+    ip.vel.z = 0.0;
     let pos = ip.pos;
     let Some(f) = owner::nearest_opponent(r.game, r.data, pos, None) else {
-        item_mut(r.game, gobj).x40_vel.y = 0.0;
+        item_mut(r.game, gobj).vel.y = 0.0;
         return;
     };
     let fid = r.game.fighter_id(f);
@@ -183,16 +183,16 @@ pub fn aim(r: &mut Running, gobj: GObjId, speed: f32, min_vy: f32, max_vy: f32) 
     let g = reg(attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED));
     let h = fp::fmuls(fp::fmuls(g, fp::fmuls(t, t)), 0.5);
     let vy = mem(fp::fdivs(h, t));
-    item_mut(r.game, gobj).x40_vel.y = vy;
+    item_mut(r.game, gobj).vel.y = vy;
     let rand = reg(r.game.objs.rng.draw_f32());
     let rise = fp::fdivs(fp::fsubs(reg(target.y), reg(pos.y)), 10.0);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fmadds(rise, rand, reg(ip.x40_vel.y)));
-    if reg(ip.x40_vel.y) > reg(max_vy) {
-        ip.x40_vel.y = max_vy;
+    ip.vel.y = mem(fp::fmadds(rise, rand, reg(ip.vel.y)));
+    if reg(ip.vel.y) > reg(max_vy) {
+        ip.vel.y = max_vy;
     }
-    if reg(ip.x40_vel.y) < reg(min_vy) {
-        ip.x40_vel.y = min_vy;
+    if reg(ip.vel.y) < reg(min_vy) {
+        ip.vel.y = min_vy;
     }
 }
 

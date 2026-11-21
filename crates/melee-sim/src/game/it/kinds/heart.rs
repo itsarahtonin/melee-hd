@@ -74,7 +74,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> melee_data::archive::DataRef {
 #[doc(alias = "it_80283BD4")]
 pub fn second_heal(r: &mut Running, gobj: GObjId) {
     let h = r.data.u32(attr(r, gobj, 4)) as i32;
-    item_mut(r.game, gobj).xDD4_itemVar.heart().xDD4_heal.set(h);
+    item_mut(r.game, gobj).vars.heart().heal.set(h);
 }
 
 /// `itHeart_Logic8_Spawned`: popping up, falling.
@@ -83,11 +83,11 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let vy = r.data.f32(attr(r, gobj, 0x14));
     let heal = r.data.u32(attr(r, gobj, 0)) as i32;
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = Vec3::new(0.0, vy, 0.0);
-    let v = ip.xDD4_itemVar.heart();
-    v.xDD4_heal.set(heal);
-    v.xDD8.set(TurnipFlag { picked_up: false });
-    v.xDDC.set(0);
+    ip.vel = Vec3::new(0.0, vy, 0.0);
+    let v = ip.vars.heart();
+    v.heal.set(heal);
+    v.picked_up.set(TurnipFlag { picked_up: false });
+    v.food_slot.set(0);
     fell(r, gobj);
 }
 
@@ -95,14 +95,14 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itHeart_Logic8_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     if item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .heart()
-        .xDD8
+        .picked_up
         .get()
         .picked_up
     {
         // All-Star's rest area's heart: its slot taken.
-        let slot = item_mut(r.game, gobj).xDD4_itemVar.heart().xDDC.get();
+        let slot = item_mut(r.game, gobj).vars.heart().food_slot.get();
         r.game.one_player.allstar.hearts[slot as usize] = 0;
     }
 }
@@ -111,7 +111,7 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_80283C7C")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
     lib26b1::enable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     change_state(r, gobj, 0, 2);
 }
 

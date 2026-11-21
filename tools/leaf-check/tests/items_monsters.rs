@@ -280,7 +280,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             };
             let normal = vec_at(r(4));
             let ip = it::item_mut(g.game, gobj);
-            zako::along_surface(&mut ip.x40_vel, normal, f(1) as f32);
+            zako::along_surface(&mut ip.vel, normal, f(1) as f32);
             return Ret::Nothing;
         }
         "it_8027C9D8" => {
@@ -371,7 +371,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
                 panic!("{SKIP}{name} writes a vector that isn't an item's velocity");
             };
             let v = zako::toward_camera(g, gobj);
-            it::item_mut(g.game, owner).x40_vel = v;
+            it::item_mut(g.game, owner).vel = v;
         }
         "it_8027BBF4" => zako::align_surface(g, gobj, r(4) != 0, f(1), f(2) as f32),
         "it_8027C0A8" => zako::align_floor(g, gobj, f(1) as f32, f(2) as f32),
@@ -513,7 +513,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "itOctarockstone_802E89B0" => octarockstone::forget(g, gobj, Some(other(4))),
         "it_802D84D8" | "itOldKuri_Logic29_EvtUnk" => goomba::forget(g, gobj, Some(other(4))),
         "it_802D8098" => {
-            if it::item(g.game, gobj).xCFC.is_none() {
+            if it::item(g.game, gobj).stomper.is_none() {
                 panic!("{SKIP}{name} takes a Goomba a fighter landed on");
             }
             return b(goomba::stomped(g, gobj));

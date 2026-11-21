@@ -639,15 +639,15 @@ impl Running<'_> {
                 let feet = self.game.fighter(gobj).dmg.x1930.clone();
                 let i = crate::game::it::item_of(self.game, item);
                 self.game.it.last_pos_known(i.0, "ft_80081A00");
-                if crate::lb::stomp::stepped_on(&feet, &self.game.items[i.0].xB54) {
+                if crate::lb::stomp::stepped_on(&feet, &self.game.items[i.0].stomp_box) {
                     let (fx, slot) = {
                         let fp = self.game.fighter(gobj);
                         (fp.cur_pos.x, i32::from(fp.player_idx))
                     };
                     let ip = &mut self.game.items[i.0];
-                    ip.xCD0 = if ip.pos.x > fx { -1.0 } else { 1.0 };
-                    ip.xCFC = Some(gobj);
-                    ip.xCB0_source_ply = slot;
+                    ip.stomp_dir = if ip.pos.x > fx { -1.0 } else { 1.0 };
+                    ip.stomper = Some(gobj);
+                    ip.source_player = slot;
                     self.game.fighter_mut(gobj).dmg.x1950 = 1;
                 }
             }

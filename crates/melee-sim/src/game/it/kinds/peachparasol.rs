@@ -121,7 +121,7 @@ pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "it_802BDC38")]
 pub fn is_open(r: &Running, gobj: GObjId) -> bool {
     let ip = item(r.game, gobj);
-    ip.msid == 2 && ip.x5CC_currentAnimFrame >= 16.0
+    ip.msid == 2 && ip.anim_frame >= 16.0
 }
 
 /// `itPeachParasol_Logic60_PickedUp`: opened at once, animated, at normal speed.
@@ -129,7 +129,7 @@ pub fn is_open(r: &Running, gobj: GObjId) -> bool {
 fn picked_up(r: &mut Running, gobj: GObjId) {
     open(r, gobj, 16.0);
     animate(r, gobj);
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = 1.0;
+    item_mut(r.game, gobj).anim_speed = 1.0;
 }
 
 /// `itPeachparasol_UnkMotion2_Anim`: gone once its owner (if any) leaves the up special and
@@ -151,7 +151,7 @@ fn animated(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_802BDD40")]
 pub fn opening(r: &mut Running, gobj: GObjId, speed: f32) {
     super::super::item::play_sfx(r, gobj, 0xF7, 0x7F, 0x40);
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = speed;
+    item_mut(r.game, gobj).anim_speed = speed;
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     item_mut(r.game, gobj).on_accessory = Some(CodeRef(ACCESSORY));
 }
@@ -160,7 +160,7 @@ pub fn opening(r: &mut Running, gobj: GObjId, speed: f32) {
 #[doc(alias = "it_802BDDB4")]
 #[doc(alias = "it_802BDD3C")]
 pub fn open(r: &mut Running, gobj: GObjId, speed: f32) {
-    item_mut(r.game, gobj).x5D0_animFrameSpeed = speed;
+    item_mut(r.game, gobj).anim_speed = speed;
     change_state(r, gobj, 2, change::ANIM_UPDATE);
     item_mut(r.game, gobj).on_accessory = Some(CodeRef(ACCESSORY));
 }

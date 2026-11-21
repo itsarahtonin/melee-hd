@@ -75,11 +75,7 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> melee_data::archive::DataRef {
 #[doc(alias = "it_8028428C")]
 pub fn second_heal(r: &mut Running, gobj: GObjId) {
     let h = r.data.u32(attr(r, gobj, 4)) as i32;
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .tomato()
-        .heal_amount
-        .set(h);
+    item_mut(r.game, gobj).vars.tomato().heal_amount.set(h);
 }
 
 /// `itTomato_Logic9_Spawned`: popping up, falling.
@@ -89,18 +85,18 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let vy = r.data.f32(attr(r, gobj, 0x14));
     let heal = r.data.u32(attr(r, gobj, 0)) as i32;
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = Vec3::new(0.0, vy, 0.0);
-    let v = ip.xDD4_itemVar.tomato();
+    ip.vel = Vec3::new(0.0, vy, 0.0);
+    let v = ip.vars.tomato();
     v.heal_amount.set(heal);
-    v.x4_b0.set(false);
-    v.x8.set(0);
+    v.picked_up.set(false);
+    v.unread_8.set(0);
     fell(r, gobj);
 }
 
 /// `itTomato_Logic9_Destroyed`: a tomato from an event frees its slot.
 #[doc(alias = "itTomato_Logic9_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
-    if item_mut(r.game, gobj).xDD4_itemVar.tomato().x4_b0.get() {
+    if item_mut(r.game, gobj).vars.tomato().picked_up.get() {
         code::unported_call("gm_80473A18 (an event's tomato slots)");
     }
 }
@@ -148,7 +144,7 @@ pub fn falling(r: &mut Running, gobj: GObjId) -> bool {
 /// Lands, stopped, `it_802843E4`.
 #[doc(alias = "it_802843E4")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
 }
 

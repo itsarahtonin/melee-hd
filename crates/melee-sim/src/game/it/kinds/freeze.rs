@@ -94,14 +94,10 @@ fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
 /// Lets go of the Topi pushing it, if one is (the inline `itFreeze_ClearLinkedItem`): the Topi
 /// forgets it (`it_802E37A4`), and it the Topi.
 fn release_pusher(r: &mut Running, gobj: GObjId) {
-    let v = item_mut(r.game, gobj).xDD4_itemVar.freeze();
-    if let Some(topi) = v.unk_1C.get() {
+    let v = item_mut(r.game, gobj).vars.freeze();
+    if let Some(topi) = v.pusher.get() {
         super::topi::forget_freezie(r, topi);
-        item_mut(r.game, gobj)
-            .xDD4_itemVar
-            .freeze()
-            .unk_1C
-            .set(None);
+        item_mut(r.game, gobj).vars.freeze().pusher.set(None);
     }
 }
 
@@ -141,13 +137,13 @@ pub fn spawn_pushed(
 #[doc(alias = "it_8028F434")]
 pub fn start_pushed(r: &mut Running, gobj: GObjId, decel: f32, topi: Option<GObjId>) {
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
-    ip.x40_vel.x = 0.0;
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
+    ip.vel.x = 0.0;
     let decel = abs(reg(decel));
-    let v = ip.xDD4_itemVar.freeze();
-    v.x14.set(mem(decel));
-    v.unk_1C.set(topi);
+    let v = ip.vars.freeze();
+    v.push_decel.set(mem(decel));
+    v.pusher.set(topi);
     lib26b1::enable_pickup(r.game, gobj);
     maplib::enter_ground(item_mut(r.game, gobj));
     change_state(r, gobj, 4, change::ANIM_UPDATE);
@@ -157,7 +153,7 @@ pub fn start_pushed(r: &mut Running, gobj: GObjId, decel: f32, topi: Option<GObj
 /// and its life starts over at the items' common lifetime.
 #[doc(alias = "it_8028EC98")]
 pub fn hand_speed(r: &mut Running, gobj: GObjId, vel: f32) {
-    item_mut(r.game, gobj).xDD4_itemVar.freeze().x10.set(vel);
+    item_mut(r.game, gobj).vars.freeze().handed_speed.set(vel);
     let life =
         super::super::item::common_data(r.game).u32(r.data, super::super::data::common::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, mem(fp::frsp(f64::from(life as i32))));
@@ -166,11 +162,7 @@ pub fn hand_speed(r: &mut Running, gobj: GObjId, vel: f32) {
 /// The Topi lets go, `it_8028ECE0`: the Freezie forgets it.
 #[doc(alias = "it_8028ECE0")]
 pub fn let_go(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .freeze()
-        .unk_1C
-        .set(None);
+    item_mut(r.game, gobj).vars.freeze().pusher.set(None);
 }
 
 /// The Freezie's position, `it_8028ECF0`.
@@ -190,13 +182,13 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
 pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = if reg(ip.pos.x) > 0.0 { -1.0 } else { 1.0 };
-    ip.xD5C = 0;
-    let v = ip.xDD4_itemVar.freeze();
-    v.x0.set(0.0);
-    v.x4.set_x(0.0);
-    v.x4.set_y(1.0);
-    v.x4.set_z(0.0);
-    v.unk_1C.set(None);
+    ip.skid = 0;
+    let v = ip.vars.freeze();
+    v.speed.set(0.0);
+    v.normal.set_x(0.0);
+    v.normal.set_y(1.0);
+    v.normal.set_z(0.0);
+    v.pusher.set(None);
     fell(r, gobj);
 }
 
@@ -220,9 +212,9 @@ pub fn slide(r: &mut Running, gobj: GObjId) {
     if ip.ground_or_air == 1 {
         return;
     }
-    let v = ip.xDD4_itemVar.freeze();
-    let nx = v.x4.x();
-    let mut speed = v.x0.get();
+    let v = ip.vars.freeze();
+    let nx = v.normal.x();
+    let mut speed = v.speed.get();
     if abs(reg(nx)) > f64::from(0.1_f32) {
         if reg(speed) == 0.0 {
             ip.facing_dir = if reg(nx) > 0.0 { 1.0 } else { -1.0 };
@@ -247,20 +239,20 @@ pub fn slide(r: &mut Running, gobj: GObjId) {
     {
         ip.facing_dir = mem(fp::fmuls(reg(ip.facing_dir), -1.0));
     }
-    let v = ip.xDD4_itemVar.freeze();
-    v.x0.set(speed);
-    let ny = v.x4.y();
-    ip.x40_vel.x = mem(fp::fmuls(reg(speed), reg(ny)));
+    let v = ip.vars.freeze();
+    v.speed.set(speed);
+    let ny = v.normal.y();
+    ip.vel.x = mem(fp::fmuls(reg(speed), reg(ny)));
 }
 
 /// Lands and slides on at its speed, `it_8028EF34`.
 #[doc(alias = "it_8028EF34")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    let speed = ip.xDD4_itemVar.freeze().x0.get();
-    ip.x40_vel.x = speed;
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
+    let speed = ip.vars.freeze().speed.get();
+    ip.vel.x = speed;
+    ip.vel.z = 0.0;
+    ip.vel.y = 0.0;
     lib26b1::enable_pickup(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
@@ -294,17 +286,17 @@ fn lie_along(r: &mut Running, gobj: GObjId) {
 /// Keeps the floor's normal (`it_80276408`), when it touched a floor.
 fn keep_normal(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    if let Some(n) = maplib::surface_normal(&ip.x378_itemColl) {
-        let v = ip.xDD4_itemVar.freeze();
-        v.x4.set_x(n.x);
-        v.x4.set_y(n.y);
-        v.x4.set_z(n.z);
+    if let Some(n) = maplib::surface_normal(&ip.coll) {
+        let v = ip.vars.freeze();
+        v.normal.set_x(n.x);
+        v.normal.set_y(n.y);
+        v.normal.set_z(n.z);
     }
 }
 
 /// Whether the collision touched a wall (`0x3F`, `0xFC0`).
 fn hit_wall(r: &Running, gobj: GObjId) -> bool {
-    let env = item(r.game, gobj).x378_itemColl.env_flags;
+    let env = item(r.game, gobj).coll.env_flags;
     env & 0x3F != 0 || env & 0xFC0 != 0
 }
 
@@ -316,19 +308,19 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).ground_or_air == 1 {
         return false;
     }
-    if item(r.game, gobj).x378_itemColl.env_flags & 0x18000 != 0 {
+    if item(r.game, gobj).coll.env_flags & 0x18000 != 0 {
         keep_normal(r, gobj);
     } else {
-        item_mut(r.game, gobj).xDD4_itemVar.freeze().x4.set_x(0.0);
+        item_mut(r.game, gobj).vars.freeze().normal.set_x(0.0);
     }
     if hit_wall(r, gobj) {
         let ip = item_mut(r.game, gobj);
         ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-        let v = ip.xDD4_itemVar.freeze();
-        let speed = mem(fp::fneg(reg(v.x0.get())));
-        v.x0.set(speed);
-        let ny = v.x4.y();
-        ip.x40_vel.x = mem(fp::fmuls(reg(speed), reg(ny)));
+        let v = ip.vars.freeze();
+        let speed = mem(fp::fneg(reg(v.speed.get())));
+        v.speed.set(speed);
+        let ny = v.normal.y();
+        ip.vel.x = mem(fp::fmuls(reg(speed), reg(ny)));
     }
     lie_along(r, gobj);
     false
@@ -352,7 +344,7 @@ pub fn gravity(r: &mut Running, gobj: GObjId) {
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
     fall_to_floor(r, gobj, landed);
     let ip = item(r.game, gobj);
-    if ip.ground_or_air != 1 && ip.x378_itemColl.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
+    if ip.ground_or_air != 1 && ip.coll.env_flags & (FLOOR_PUSH | FLOOR_HUG) != 0 {
         keep_normal(r, gobj);
     }
     false
@@ -411,28 +403,28 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itFreeze_UnkMotion4_Phys")]
 pub fn pushed(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.freeze();
-    let handed = v.x10.get();
+    let v = ip.vars.freeze();
+    let handed = v.handed_speed.get();
     if reg(handed) != 0.0 {
-        v.x10.set(mem(fp::fmuls(0.0, 0.0)));
-        ip.x40_vel.x = handed;
+        v.handed_speed.set(mem(fp::fmuls(0.0, 0.0)));
+        ip.vel.x = handed;
     }
-    let mut decel = reg(ip.xDD4_itemVar.freeze().x14.get());
-    let vel = reg(ip.x40_vel.x);
+    let mut decel = reg(ip.vars.freeze().push_decel.get());
+    let vel = reg(ip.vel.x);
     if abs(vel) < abs(decel) {
-        ip.x40_vel.x = 0.0;
+        ip.vel.x = 0.0;
         return;
     }
     if vel > 0.0 {
-        if reg(ip.xDD4_itemVar.freeze().x14.get()) < 0.0 {
+        if reg(ip.vars.freeze().push_decel.get()) < 0.0 {
             decel = fp::fneg(decel);
         }
-        ip.x40_vel.x = mem(fp::fsubs(vel, decel));
+        ip.vel.x = mem(fp::fsubs(vel, decel));
     } else {
         if decel < 0.0 {
             decel = fp::fneg(decel);
         }
-        ip.x40_vel.x = mem(fp::fadds(vel, decel));
+        ip.vel.x = mem(fp::fadds(vel, decel));
     }
 }
 
@@ -455,13 +447,7 @@ pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
         release_pusher(r, gobj);
         return false;
     }
-    if item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .freeze()
-        .unk_1C
-        .get()
-        .is_none()
-    {
+    if item_mut(r.game, gobj).vars.freeze().pusher.get().is_none() {
         slide_on(r, gobj);
         return false;
     }
@@ -474,7 +460,7 @@ pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
 pub fn stopped(r: &mut Running, gobj: GObjId) {
     lib2725::clear_velocity(r.game, gobj);
     lib26b1::enable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).xDD4_itemVar.freeze().x18.set(90);
+    item_mut(r.game, gobj).vars.freeze().stop_frames.set(90);
     change_state(r, gobj, 5, change::ANIM_UPDATE);
 }
 
@@ -483,12 +469,12 @@ pub fn stopped(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itFreeze_UnkMotion5_Coll")]
 pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
     ground_or_fall(r, gobj, fell);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.freeze();
-    let left = v.x18.get();
+    let v = item_mut(r.game, gobj).vars.freeze();
+    let left = v.stop_frames.get();
     if left <= 0 {
         slide_on(r, gobj);
     } else {
-        v.x18.set(left - 1);
+        v.stop_frames.set(left - 1);
     }
     false
 }

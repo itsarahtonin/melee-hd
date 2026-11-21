@@ -86,7 +86,7 @@ pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
 /// Taken in hand, `itGameWatchManhole_Logic72_PickedUp`: hidden, animating.
 #[doc(alias = "itGameWatchManhole_Logic72_PickedUp")]
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    item_mut(r.game, gobj).cmd_var0 = 0;
     lib26b1::hide(r.game, gobj);
     if item(r.game, gobj).owner.is_some() {
         change_state(r, gobj, 0, change::ANIM_UPDATE);
@@ -98,8 +98,8 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 /// lid; gone once its owner leaves the down tilt.
 #[doc(alias = "itGamewatchmanhole_UnkMotion0_Anim")]
 pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xDAC_itcmd_var0 != 0 {
-        item_mut(r.game, gobj).xDAC_itcmd_var0 = 0;
+    if item(r.game, gobj).cmd_var0 != 0 {
+        item_mut(r.game, gobj).cmd_var0 = 0;
         lib26b1::show(r.game, gobj);
         let lid = jobj_of(r.game, gobj).and_then(|j| r.game.objs.jobjs[j].child);
         let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, lid, None);

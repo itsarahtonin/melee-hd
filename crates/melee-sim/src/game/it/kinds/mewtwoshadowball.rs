@@ -172,46 +172,46 @@ fn hold(r: &mut Running, maker: GObjId, kind: i32) -> Hold {
 pub fn wobble(r: &mut Running, gobj: GObjId) {
     let j = cs::grandchild(r, gobj);
     let period = attr_i32(r, gobj, attr::WOBBLE_FRAMES);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    if v.x4C.get() > 0 {
-        let n = v.x48.get().wrapping_add(1);
-        v.x48.set(n);
-        if v.x48.get() >= period {
-            v.x48.set(0);
+    let v = item_mut(r.game, gobj).vars.mewtwo_shadowball();
+    if v.flight_frames.get() > 0 {
+        let n = v.wobble_frame.get().wrapping_add(1);
+        v.wobble_frame.set(n);
+        if v.wobble_frame.get() >= period {
+            v.wobble_frame.set(0);
             let rand = reg(r.game.objs.rng.draw_f32());
-            let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
+            let v = item_mut(r.game, gobj).vars.mewtwo_shadowball();
             let turn = fp::fmuls(2.0, fp::fsubs(rand, 0.5));
-            let a = fp::frsp(fp::fmadd(QUARTER_PI, turn, reg(v.x3C.get())));
-            v.x3C.set(mem(a));
+            let a = fp::frsp(fp::fmadd(QUARTER_PI, turn, reg(v.wobble_angle.get())));
+            v.wobble_angle.set(mem(a));
             let half = fp::fmuls(0.5, fp::frsp(f64::from(period)));
-            let swing = fp::fdivs(fp::fneg(reg(v.x40.get())), half);
-            v.x44.set(mem(swing));
+            let swing = fp::fdivs(fp::fneg(reg(v.wobble_size.get())), half);
+            v.wobble_step.set(mem(swing));
             let i = r.game.objs.rng.below(3);
             play_sfx1(r, gobj, SFX_WOBBLE[i as usize], 127, 64);
         }
-        let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-        let x40 = fp::fadds(reg(v.x40.get()), reg(v.x44.get()));
-        v.x40.set(mem(x40));
-        v.x30.set_x(0.0);
-        let s = reg(math::sin(v.x3C.get()));
-        let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-        let amp = fp::fmuls(reg(v.x40.get()), reg(v.x50.get()));
-        let y = fp::fmadds(amp, s, reg(v.x30.y()));
-        v.x30.set_y(mem(y));
-        let c = reg(math::cos(v.x3C.get()));
-        let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-        let amp = fp::fmuls(reg(v.x40.get()), reg(v.x50.get()));
-        let z = fp::fmadds(amp, c, reg(v.x30.z()));
-        v.x30.set_z(mem(z));
+        let v = item_mut(r.game, gobj).vars.mewtwo_shadowball();
+        let x40 = fp::fadds(reg(v.wobble_size.get()), reg(v.wobble_step.get()));
+        v.wobble_size.set(mem(x40));
+        v.wobble_offset.set_x(0.0);
+        let s = reg(math::sin(v.wobble_angle.get()));
+        let v = item_mut(r.game, gobj).vars.mewtwo_shadowball();
+        let amp = fp::fmuls(reg(v.wobble_size.get()), reg(v.wobble_scale.get()));
+        let y = fp::fmadds(amp, s, reg(v.wobble_offset.y()));
+        v.wobble_offset.set_y(mem(y));
+        let c = reg(math::cos(v.wobble_angle.get()));
+        let v = item_mut(r.game, gobj).vars.mewtwo_shadowball();
+        let amp = fp::fmuls(reg(v.wobble_size.get()), reg(v.wobble_scale.get()));
+        let z = fp::fmadds(amp, c, reg(v.wobble_offset.z()));
+        v.wobble_offset.set_z(mem(z));
     } else {
-        v.x30.set(Vec3::new(0.0, 0.0, 0.0));
+        v.wobble_offset.set(Vec3::new(0.0, 0.0, 0.0));
     }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    let t = v.x30.get();
+    let v = item_mut(r.game, gobj).vars.mewtwo_shadowball();
+    let t = v.wobble_offset.get();
     jobj::set_translate(&mut r.game.objs.jobjs, j, t);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.mewtwo_shadowball();
-    let n = v.x4C.get().wrapping_add(1);
-    v.x4C.set(n);
+    let v = item_mut(r.game, gobj).vars.mewtwo_shadowball();
+    let n = v.flight_frames.get().wrapping_add(1);
+    v.flight_frames.set(n);
 }
 
 /// Makes the ball in `parent`'s hands at `pos` ([`cs::spawn_held`]): not fired, a random first
@@ -230,28 +230,28 @@ pub fn spawn_held(
 /// Its variables as it's made in `parent`'s hands.
 fn init(r: &mut Running, b: GObjId, parent: GObjId) {
     let period = attr_i32(r, b, attr::WOBBLE_FRAMES);
-    let v = item_mut(r.game, b).xDD4_itemVar.mewtwo_shadowball();
-    v.x14.set(0);
-    v.x4.set_z(0.0);
-    v.x28.set(0);
-    v.x2C.set(Some(parent));
-    v.x30.set(Vec3::new(0.0, 0.0, 0.0));
-    v.x48.set(period);
+    let v = item_mut(r.game, b).vars.mewtwo_shadowball();
+    v.fired.set(0);
+    v.motion.set_z(0.0);
+    v.unread_effects.set(0);
+    v.maker.set(Some(parent));
+    v.wobble_offset.set(Vec3::new(0.0, 0.0, 0.0));
+    v.wobble_frame.set(period);
     let rand = reg(r.game.objs.rng.draw_f32());
-    let v = item_mut(r.game, b).xDD4_itemVar.mewtwo_shadowball();
-    v.x3C.set(mem(fp::frsp(fp::fmul(TAU, rand))));
+    let v = item_mut(r.game, b).vars.mewtwo_shadowball();
+    v.wobble_angle.set(mem(fp::frsp(fp::fmul(TAU, rand))));
     let rand = reg(r.game.objs.rng.draw_f32());
-    let v = item_mut(r.game, b).xDD4_itemVar.mewtwo_shadowball();
-    v.x40.set(mem(fp::fadds(2.5, fp::fsubs(rand, 0.5))));
-    let half = fp::fmuls(0.5, fp::frsp(f64::from(v.x48.get())));
-    let swing = fp::fdivs(fp::fneg(reg(v.x40.get())), half);
-    v.x44.set(mem(swing));
-    v.x4C.set(0);
-    v.x50.set(0.0);
+    let v = item_mut(r.game, b).vars.mewtwo_shadowball();
+    v.wobble_size.set(mem(fp::fadds(2.5, fp::fsubs(rand, 0.5))));
+    let half = fp::fmuls(0.5, fp::frsp(f64::from(v.wobble_frame.get())));
+    let swing = fp::fdivs(fp::fneg(reg(v.wobble_size.get())), half);
+    v.wobble_step.set(mem(swing));
+    v.flight_frames.set(0);
+    v.wobble_scale.set(0.0);
     let scale = mem(Running::model_scale(r.game.fighter(parent)));
-    let v = item_mut(r.game, b).xDD4_itemVar.mewtwo_shadowball();
-    v.x54.set(scale);
-    v.x58.set(Vec3::new(0.0, 0.0, 0.0));
+    let v = item_mut(r.game, b).vars.mewtwo_shadowball();
+    v.held_scale.set(scale);
+    v.held_offset.set(Vec3::new(0.0, 0.0, 0.0));
 }
 
 /// The full ball his forward throw fires from `pos` at `angle`, `it_802C519C`: already fired
@@ -272,35 +272,35 @@ pub fn spawn_fired(
     cs::clear_cmd_vars(r, b);
     let life = attr_f32(r, b, cs::attr::LIFETIME);
     item_mut(r.game, b)
-        .xDD4_itemVar
+        .vars
         .mewtwo_shadowball()
-        .x0
+        .unread_life
         .set(life);
     lib2725::set_lifetime(r.game, r.data, b, life);
     let period = attr_i32(r, b, attr::WOBBLE_FRAMES);
     let speed = attr_f32(r, b, attr::THROWN_SPEED);
     let scale = mem(Running::model_scale(r.game.fighter(parent)));
-    let v = item_mut(r.game, b).xDD4_itemVar.mewtwo_shadowball();
-    v.x14.set(1);
-    v.x4.set_z(1.0);
-    v.x28.set(0);
-    v.x2C.set(Some(parent));
-    v.x30.set(Vec3::new(0.0, 0.0, 0.0));
-    v.x48.set(period);
-    v.x4.set_x(angle);
-    v.x3C.set(angle);
-    v.x4.set_y(speed);
-    v.x40.set(speed);
-    v.x44.set(0.0);
-    v.x4C.set(0);
-    v.x50.set(1.0);
-    v.x54.set(scale);
-    v.x58.set(Vec3::new(0.0, 0.0, 0.0));
-    v.x30.set(Vec3::new(0.0, 0.0, 0.0));
-    v.x18.set(0);
-    v.x1C.set(max);
-    v.x20.set(0);
-    let (charge, levels) = (v.x18.get(), v.x1C.get());
+    let v = item_mut(r.game, b).vars.mewtwo_shadowball();
+    v.fired.set(1);
+    v.motion.set_z(1.0);
+    v.unread_effects.set(0);
+    v.maker.set(Some(parent));
+    v.wobble_offset.set(Vec3::new(0.0, 0.0, 0.0));
+    v.wobble_frame.set(period);
+    v.motion.set_x(angle);
+    v.wobble_angle.set(angle);
+    v.motion.set_y(speed);
+    v.wobble_size.set(speed);
+    v.wobble_step.set(0.0);
+    v.flight_frames.set(0);
+    v.wobble_scale.set(1.0);
+    v.held_scale.set(scale);
+    v.held_offset.set(Vec3::new(0.0, 0.0, 0.0));
+    v.wobble_offset.set(Vec3::new(0.0, 0.0, 0.0));
+    v.charge.set(0);
+    v.levels.set(max);
+    v.sparkle.set(0);
+    let (charge, levels) = (v.charge.get(), v.levels.get());
     let size = mem(lerp_int(
         r,
         b,
@@ -317,17 +317,17 @@ pub fn spawn_fired(
         charge,
         levels,
     );
-    let v = item_mut(r.game, b).xDD4_itemVar.mewtwo_shadowball();
-    v.x10.set(size);
-    v.x24.set(crate::ppc::cvt_fp2unsigned(damage));
-    let (speed, angle) = (reg(v.x4.y()), v.x4.x());
+    let v = item_mut(r.game, b).vars.mewtwo_shadowball();
+    v.size.set(size);
+    v.unread_damage.set(crate::ppc::cvt_fp2unsigned(damage));
+    let (speed, angle) = (reg(v.motion.y()), v.motion.x());
     let c = reg(math::cos(angle));
-    item_mut(r.game, b).x40_vel.x = mem(fp::fmuls(speed, c));
-    let angle = item_mut(r.game, b).xDD4_itemVar.mewtwo_shadowball().x4.x();
+    item_mut(r.game, b).vel.x = mem(fp::fmuls(speed, c));
+    let angle = item_mut(r.game, b).vars.mewtwo_shadowball().motion.x();
     let s = reg(math::sin(angle));
     let ip = item_mut(r.game, b);
-    ip.x40_vel.y = mem(fp::fmuls(speed, s));
-    ip.x40_vel.z = 0.0;
+    ip.vel.y = mem(fp::fmuls(speed, s));
+    ip.vel.z = 0.0;
     lib26b1::disable_pickup(r.game, b);
     Some(b)
 }
@@ -347,9 +347,9 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
 pub fn picked_up(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .mewtwo_shadowball()
-        .x50
+        .wobble_scale
         .set(0.0);
 }
 
@@ -358,9 +358,9 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itMewtwoshadowball_UnkMotion8_Phys")]
 pub fn physics_flying(r: &mut Running, gobj: GObjId) {
     if item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .mewtwo_shadowball()
-        .x4C
+        .flight_frames
         .get()
         > 0
     {
@@ -394,8 +394,8 @@ pub fn burst(r: &mut Running, gobj: GObjId) {
     let k = reg(attr_f32(r, gobj, attr::BURST_SCALE));
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = None;
-    let s = mem(fp::fmuls(reg(ip.x5D4_hitboxes[0].hit.scale), k));
-    ip.xDD4_itemVar.mewtwo_shadowball().x64.set(s);
+    let s = mem(fp::fmuls(reg(ip.hitboxes[0].hit.scale), k));
+    ip.vars.mewtwo_shadowball().burst_scale.set(s);
     let j = cs::grandchild(r, gobj);
     let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, Some(j), None);
     ef::spawn(r, GFX_BURST, Some(gobj), &[Arg::Vec(pos)]);
@@ -408,12 +408,12 @@ pub fn burst(r: &mut Running, gobj: GObjId) {
 pub fn animate_burst(r: &mut Running, gobj: GObjId) -> bool {
     let j = cs::grandchild(r, gobj);
     let ip = item_mut(r.game, gobj);
-    let s = ip.xDD4_itemVar.mewtwo_shadowball().x10.get();
+    let s = ip.vars.mewtwo_shadowball().size.get();
     jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(s, s, s));
     let ip = item_mut(r.game, gobj);
-    if ip.x5D4_hitboxes[0].hit.state != hitcapsule::DISABLED {
-        let s = ip.xDD4_itemVar.mewtwo_shadowball().x64.get();
-        ip.x5D4_hitboxes[0].hit.scale = s;
+    if ip.hitboxes[0].hit.state != hitcapsule::DISABLED {
+        let s = ip.vars.mewtwo_shadowball().burst_scale.get();
+        ip.hitboxes[0].hit.scale = s;
     }
     lib2725::tick_lifetime(r.game, gobj)
 }

@@ -275,7 +275,7 @@ impl Running<'_> {
         while let Some(g) = cur {
             cur = self.game.world.gobjs[g.0].next;
             let ip = it::item(self.game, g);
-            if ip.xD0C != 0 || ip.xDD0_flag[0] & 0x08 == 0 || ip.xD09 != 0 {
+            if ip.invincibility != 0 || ip.status_flags[0] & 0x08 == 0 || ip.no_catch != 0 {
                 continue;
             }
             let ii = it::item_of(self.game, g);
@@ -293,11 +293,11 @@ impl Running<'_> {
                 if hitcapsule::has_victim(h, Victim::Item(ii)) {
                     continue;
                 }
-                for j in 0..usize::from(ip.xAC8_hurtboxNum) {
+                for j in 0..usize::from(ip.hurtbox_count) {
                     let mut hit = self.game.fighters[me.0].hitboxes[i].clone();
                     let scale = self.game.fighters[me.0].scale.y;
                     let ip = it::item(self.game, g);
-                    let (iscl, mut hurt) = (ip.scl, ip.xACC_itemHurtbox[j].clone());
+                    let (iscl, mut hurt) = (ip.scl, ip.hurtboxes[j].clone());
                     let touch = hitcapsule::grabs_hurtbox(
                         &mut self.game.objs,
                         self.data,
@@ -308,7 +308,7 @@ impl Running<'_> {
                         iscl,
                         0.0,
                     );
-                    it::item_mut(self.game, g).xACC_itemHurtbox[j] = hurt;
+                    it::item_mut(self.game, g).hurtboxes[j] = hurt;
                     let h = &mut self.game.fighters[me.0].hitboxes[i];
                     h.hurt_coll_pos = hit.hurt_coll_pos;
                     h.coll_distance = hit.coll_distance;

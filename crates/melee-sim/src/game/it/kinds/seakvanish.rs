@@ -61,8 +61,8 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Opt
 pub fn init(r: &mut Running, gobj: GObjId, owner: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.owner = Some(owner);
-    ip.xD44_lifeTimer = 60.0;
-    ip.xDAC_itcmd_var0 = 0;
+    ip.life_timer = 60.0;
+    ip.cmd_var0 = 0;
     lib26b1::hide(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
     lib26b1::freeze_lifetime(r.game, gobj);

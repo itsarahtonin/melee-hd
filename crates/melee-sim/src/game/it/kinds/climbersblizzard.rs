@@ -67,7 +67,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         PHYS => {
             let rise = attr_f32(r, gobj, attr::RISE);
             let ip = item_mut(r.game, gobj);
-            ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), reg(rise)));
+            ip.vel.y = mem(fp::fadds(reg(ip.vel.y), reg(rise)));
         }
         _ => return false,
     }
@@ -84,10 +84,10 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 /// `Item_TickLifetime`: done once it reaches 0, else one less.
 fn tick_lifetime(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
+    if reg(ip.life_timer) <= 0.0 {
         return true;
     }
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
+    ip.life_timer = mem(fp::fsubs(reg(ip.life_timer), 1.0));
     false
 }
 
@@ -111,9 +111,9 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Opt
     spawn.x40 = 0;
     let gobj = spawn_air(r, &mut spawn)?;
     let scale = attr_of(item(r.game, gobj)).f32(r.data, data::attr::SCALE);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.climbers_blizzard();
-    v.flag0.set(false);
-    v.x0.set(scale);
+    let v = item_mut(r.game, gobj).vars.climbers_blizzard();
+    v.launched.set(false);
+    v.scale.set(scale);
     launch(r, gobj);
     debug_owner_bubbles(r.game, gobj, Some(parent));
     lib26b1::disable_pickup(r.game, gobj);
@@ -149,14 +149,14 @@ fn launch(r: &mut Running, gobj: GObjId) {
         angle = fp::frsp(fp::fsub(angle, tau));
     }
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(speed, reg(math::cos(mem(angle)))));
-    ip.x40_vel.y = mem(fp::fmuls(speed, reg(math::sin(mem(angle)))));
-    ip.x40_vel.z = 0.0;
+    ip.vel.x = mem(fp::fmuls(speed, reg(math::cos(mem(angle)))));
+    ip.vel.y = mem(fp::fmuls(speed, reg(math::sin(mem(angle)))));
+    ip.vel.z = 0.0;
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
     item_mut(r.game, gobj)
-        .xDD4_itemVar
+        .vars
         .climbers_blizzard()
-        .flag0
+        .launched
         .set(true);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }

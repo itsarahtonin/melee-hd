@@ -97,7 +97,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 
 /// The box's variables.
 fn vars(game: &mut Game, gobj: GObjId) -> &mut itBox_ItemVars {
-    item_mut(game, gobj).xDD4_itemVar.crate_box()
+    item_mut(game, gobj).vars.crate_box()
 }
 
 /// `itBoxAttributes`' word at `off`.
@@ -148,7 +148,7 @@ pub fn spawn_floating(r: &mut Running, parent: Option<GObjId>) -> Option<GObjId>
             vars(r.game, gobj).rot_vel_y.set(v);
         }
     }
-    item_mut(r.game, gobj).xDC8_word.flags.x19 = false;
+    item_mut(r.game, gobj).flags.flags.turns_to_face = false;
     lib26b1::stop_keeping_clear(r.game, gobj);
     float(r, gobj);
     Some(gobj)
@@ -157,7 +157,7 @@ pub fn spawn_floating(r: &mut Running, parent: Option<GObjId>) -> Option<GObjId>
 /// `itBox_Logic1_Spawned`.
 #[doc(alias = "itBox_Logic1_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    super::super::set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, false);
+    super::super::set_flag(&mut item_mut(r.game, gobj).hurt_flags, 7, false);
     let v = vars(r.game, gobj);
     v.opened.set(0);
     v.spawned_gobj.set(None);
@@ -213,18 +213,17 @@ pub fn has_items(r: &mut Running, w1: i32, w2: i32, w3: i32, empty: i32) -> bool
 pub fn lands_upright(r: &mut Running, gobj: GObjId) -> bool {
     let limit = attr_f(r, gobj, 0x18);
     let ip = item_mut(r.game, gobj);
-    if ip.x378_itemColl.env_flags & (crate::mp::coll::FLOOR_PUSH | crate::mp::coll::FLOOR_HUG) == 0
-    {
+    if ip.coll.env_flags & (crate::mp::coll::FLOOR_PUSH | crate::mp::coll::FLOOR_HUG) == 0 {
         return false;
     }
-    let dir = maplib::surface_normal(&ip.x378_itemColl).expect("a floor's normal");
+    let dir = maplib::surface_normal(&ip.coll).expect("a floor's normal");
     if reg(dir.angle_xy(Vec3::new(0.0, 1.0, 0.0))) < reg(limit) {
         let z = Vec3::new(0.0, 0.0, 0.0);
-        ip.x7C = z;
-        ip.x88 = z;
-        ip.x94 = z;
-        ip.xA0 = z;
-        ip.xD5C = 1;
+        ip.skid_vel = z;
+        ip.slide_vel = z;
+        ip.last_slide_vel = z;
+        ip.unread_a0 = z;
+        ip.skid = 1;
         return true;
     }
     false
@@ -234,14 +233,14 @@ pub fn lands_upright(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "fn_80286480")]
 pub fn landed(r: &mut Running, gobj: GObjId) {
     lib26b1::enable_pickup(r.game, gobj);
-    item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+    item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 
 /// `itBox_UnkMotion0_Anim`: smokes as its time runs out.
 #[doc(alias = "itBox_UnkMotion0_Anim")]
 pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
-    if reg(item(r.game, gobj).xD44_lifeTimer) <= 1.0 {
+    if reg(item(r.game, gobj).life_timer) <= 1.0 {
         effect::spawn_simple(r, gobj, 0x421);
     }
     false
@@ -316,7 +315,7 @@ pub fn phys1(r: &mut Running, gobj: GObjId) {
     lib2725::fall(r.game, gobj, accel, max);
     if vars(r.game, gobj).spawned_gobj.get().is_some() {
         let ip = item_mut(r.game, gobj);
-        ip.x40_vel.z = mem(fp::fmuls(reg(ip.x40_vel.z), f64::from(0.95_f32)));
+        ip.vel.z = mem(fp::fmuls(reg(ip.vel.z), f64::from(0.95_f32)));
         spin(r, gobj);
     }
 }
@@ -372,8 +371,8 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
         break_open(r, gobj);
     } else if maplib::touched_ceiling(r.game, gobj) != 0 {
         let ip = item_mut(r.game, gobj);
-        if reg(ip.x40_vel.y) > 0.0 {
-            ip.x40_vel.y = 0.0;
+        if reg(ip.vel.y) > 0.0 {
+            ip.vel.y = 0.0;
         }
     } else if maplib::touched_wall(r.game, gobj) != 0 {
         break_open(r, gobj);
@@ -393,12 +392,12 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
 pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
     let limit = attr_f(r, gobj, 0x1C);
     if air(r, gobj) {
-        if reg(item(r.game, gobj).x40_vel.y).abs() > reg(limit) {
+        if reg(item(r.game, gobj).vel.y).abs() > reg(limit) {
             break_open(r, gobj);
         } else {
             maplib::enter_ground(item_mut(r.game, gobj));
             lib26b1::enable_pickup(r.game, gobj);
-            item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+            item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
             change_state(r, gobj, 0, change::ANIM_UPDATE);
         }
     }
@@ -415,9 +414,9 @@ pub fn open_empty(r: &mut Running, gobj: GObjId) {
     lib26b1::freeze_lifetime(r.game, gobj);
     lib2725::start_vanishing(r.game, r.data, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = 0.0;
-    super::super::set_flag(&mut ip.xDCF_flag, 2, true);
+    ip.vel.x = 0.0;
+    ip.vel.y = 0.0;
+    super::super::set_flag(&mut ip.draw_flags, 2, true);
     let v = vars(r.game, gobj);
     v.opened.set(1);
     v.despawn_timer.set(40);
@@ -452,9 +451,9 @@ pub fn open(r: &mut Running, gobj: GObjId) {
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     hitbox::start_blink(r.game, gobj);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = 0.0;
-    ip.x40_vel.y = 0.0;
-    super::super::set_flag(&mut ip.xDCF_flag, 2, true);
+    ip.vel.x = 0.0;
+    ip.vel.y = 0.0;
+    super::super::set_flag(&mut ip.draw_flags, 2, true);
     let v = vars(r.game, gobj);
     v.opened.set(1);
     v.despawn_timer.set(40);
@@ -488,7 +487,7 @@ pub fn hit(r: &mut Running, gobj: GObjId) -> bool {
 pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     let limit = attr_f(r, gobj, 0x14);
     if vars(r.game, gobj).opened.get() == 0
-        && fp::frsp(f64::from(item(r.game, gobj).xC9C)) >= reg(limit)
+        && fp::frsp(f64::from(item(r.game, gobj).damage_taken)) >= reg(limit)
     {
         break_open(r, gobj);
     }
@@ -500,7 +499,7 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
 pub fn entered_air(r: &mut Running, gobj: GObjId) {
     if lands_upright(r, gobj) {
         lib26b1::enable_pickup(r.game, gobj);
-        item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
+        item_mut(r.game, gobj).vel = Vec3::new(0.0, 0.0, 0.0);
         change_state(r, gobj, 0, 2);
     } else {
         change_state(r, gobj, 5, 2);
@@ -579,11 +578,11 @@ pub fn follow(r: &mut Running, gobj: GObjId) {
         if !(reg(target.z) >= 0.0) {
             return;
         }
-        ip.x40_vel = vel;
+        ip.vel = vel;
     }
     let ip = item_mut(r.game, gobj);
     let pos = ip.pos;
-    ip.x378_itemColl.set_position(pos);
+    ip.coll.set_position(pos);
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 1, 2);
 }

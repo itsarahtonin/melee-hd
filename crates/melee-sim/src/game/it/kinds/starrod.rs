@@ -75,7 +75,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
         .special(r.data)
         .expect("a Star Rod without attributes");
     let charges = r.data.u32(a) as i32;
-    item_mut(r.game, gobj).xD4C = charges;
+    item_mut(r.game, gobj).ammo = charges;
     fell(r, gobj);
 }
 
@@ -97,8 +97,8 @@ pub fn star_offset(r: &Running, gobj: GObjId) -> Vec3 {
 #[doc(alias = "it_802923BC")]
 pub fn fire(r: &mut Running, gobj: GObjId, pos: Vec3, facing: f32, big: i32) {
     let ip = item_mut(r.game, gobj);
-    if ip.xD4C > 0 {
-        ip.xD4C -= 1;
+    if ip.ammo > 0 {
+        ip.ammo -= 1;
     }
     let owner = ip.owner.expect("a Star Rod fired with no owner");
     starrodstar::fire(r, owner, pos, big, facing);
@@ -170,7 +170,7 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itStarrod_UnkMotion4_Coll")]
 #[doc(alias = "itStarrod_UnkMotion3_Coll")]
 pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xD4C != 0 {
+    if item(r.game, gobj).ammo != 0 {
         fall(r, gobj, landed);
         return false;
     }
