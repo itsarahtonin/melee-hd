@@ -116,7 +116,7 @@ pub fn case(
 /// Sets both sides' statics field by field.
 fn set_tiny(wd: &mut World, tiny: bool) {
     wd.ctx().write_u32(sym("mpColl_IsEcbTiny"), u32::from(tiny));
-    wd.statics.raw_parts().ecb_tiny = tiny;
+    *wd.statics.raw_parts_mut().ecb_tiny = tiny;
 }
 
 fn set_filter(wd: &mut World, on: bool, gobj: u32) {
@@ -126,8 +126,8 @@ fn set_filter(wd: &mut World, on: bool, gobj: u32) {
         if on { super::FLOOR_FILTER } else { 0 },
     );
     ctx.write_u32(sym("mpColl_804D64A4"), gobj);
-    wd.statics.raw_parts().floor_filter = on.then_some(CodeRef(super::FLOOR_FILTER));
-    wd.statics.raw_parts().floor_filter_gobj = (gobj != 0).then_some(GObjId(gobj));
+    *wd.statics.raw_parts_mut().floor_filter = on.then_some(CodeRef(super::FLOOR_FILTER));
+    *wd.statics.raw_parts_mut().floor_filter_gobj = (gobj != 0).then_some(GObjId(gobj));
 }
 
 /// Gives the joints random callbacks on both sides, each told apart by its user data.
