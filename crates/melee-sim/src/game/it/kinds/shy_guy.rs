@@ -10,7 +10,7 @@
 
 use gekko_fp as fp;
 
-use super::super::item::{article, attr_of, change, change_state};
+use super::super::item::{change, change_state};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib, zako};
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
@@ -56,8 +56,7 @@ const PI: f32 = std::f32::consts::PI;
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 | ANIM2 | ANIM3 => still(r, gobj),
-        COLL0 | COLL2 => still(r, gobj),
+        ANIM0 | ANIM2 | ANIM3 | COLL0 | COLL2 => zako::answers_false(r, gobj),
         ANIM1 => anim1(r, gobj),
         COLL1 => coll1(r, gobj),
         COLL3 => coll3(r, gobj),
@@ -220,10 +219,7 @@ fn vars(game: &mut Game, gobj: GObjId) -> &mut HeihoVars {
 /// The kind's special attributes as floats: the first word is its health (an integer), the
 /// next three its speeds, the sixth its spread when sent spinning.
 fn attr_f32(r: &Running, gobj: GObjId, idx: i32) -> f32 {
-    let a = article(item(r.game, gobj))
-        .special(r.data)
-        .expect("a Shy Guy without attributes");
-    r.data.f32(a.at(4 * idx as u32))
+    zako::attr_f32(r, gobj, 4 * idx as u32)
 }
 
 /// Sets the model's y rotation (the inline `HSD_JObjSetRotationY`).
@@ -296,16 +292,6 @@ pub fn wait(r: &mut Running, gobj: GObjId) {
     ip.x40_vel.y = 0.0;
     ip.x40_vel.x = 0.0;
     change_state(r, gobj, 0, change::ANIM_UPDATE);
-}
-
-/// The states that animate or collide with nothing (`itHeiho_UnkMotion0_Anim` and friends).
-#[doc(alias = "itHeiho_UnkMotion0_Anim")]
-#[doc(alias = "itHeiho_UnkMotion0_Coll")]
-#[doc(alias = "itHeiho_UnkMotion2_Anim")]
-#[doc(alias = "itHeiho_UnkMotion2_Coll")]
-#[doc(alias = "itHeiho_UnkMotion3_Anim")]
-pub fn still(_: &mut Running, _: GObjId) -> bool {
-    false
 }
 
 /// The wait's countdown, `itHeiho_UnkMotion0_Phys`: then it flies.
@@ -462,10 +448,7 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
 /// degrees a tick.
 #[doc(alias = "itHeiho_UnkMotion2_Phys")]
 pub fn phys2(r: &mut Running, gobj: GObjId) {
-    let a = attr_of(item(r.game, gobj));
-    let accel = a.f32(r.data, super::super::data::attr::FALL_SPEED);
-    let max = a.f32(r.data, super::super::data::attr::FALL_SPEED_MAX);
-    lib2725::fall(r.game, gobj, accel, max);
+    zako::fall_physics(r, gobj);
     let n = r.game.objs.rng.below(3);
     let deg = fp::fmadds(8.0, fp::frsp(f64::from(n)), 1.0);
     item_mut(r.game, gobj).xD3C_spinSpeed = mem(fp::fmuls(reg(0.017_453_292), deg));
@@ -475,10 +458,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
 /// Knocked back's physics, `itHeiho_UnkMotion3_Phys`: falling, then walking on.
 #[doc(alias = "itHeiho_UnkMotion3_Phys")]
 pub fn phys3(r: &mut Running, gobj: GObjId) {
-    let a = attr_of(item(r.game, gobj));
-    let accel = a.f32(r.data, super::super::data::attr::FALL_SPEED);
-    let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), reg(accel)));
+    zako::flight_physics(r, gobj);
     if vars(r.game, gobj).countdown.get() != 0 {
         vars(r.game, gobj).countdown.update(|t| t.wrapping_sub(1));
         return;
@@ -503,11 +483,8 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
         vars(r.game, gobj).food.set(None);
     }
     item_mut(r.game, gobj).xDCC_flag.b3 = true;
-    let a = article(item(r.game, gobj))
-        .special(r.data)
-        .expect("a Shy Guy without attributes");
     // `**attr`: the attributes' first word is a pointer to the health.
-    let health = r.data.u32(r.data.ptr(a).expect("a Shy Guy's health")) as i32;
+    let health = zako::health(r, gobj);
     let limit = fp::fctiwz(fp::fmuls(reg(0.8), fp::frsp(f64::from(health))));
     if item(r.game, gobj).xC9C > limit {
         zako::ko(r, gobj);
@@ -522,12 +499,7 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
         reset_bone(r.game, gobj);
         change_state(r, gobj, 2, change::ANIM_UPDATE);
     } else {
-        let mut vel = item(r.game, gobj).x40_vel;
-        let along = zako::knockback_vel(r, gobj, &mut vel);
-        item_mut(r.game, gobj).x40_vel = vel;
-        if along {
-            maplib::enter_air(item_mut(r.game, gobj));
-        }
+        zako::knock_back(r, gobj, zako::Knock::Lift);
         vars(r.game, gobj).countdown.set(12);
         reset_bone(r.game, gobj);
         change_state(r, gobj, 3, change::ANIM_UPDATE);

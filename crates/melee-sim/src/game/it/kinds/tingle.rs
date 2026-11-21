@@ -10,8 +10,8 @@
 
 use gekko_fp as fp;
 
-use super::super::item::{article, attr_of, change, change_state};
-use super::super::{data, ground, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, zako};
+use super::super::item::{article, change, change_state};
+use super::super::{ground, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, zako};
 use crate::fpu::{mem, reg};
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::state::{Game, Running};
@@ -72,7 +72,7 @@ pub const COLL12: u32 = 0x802E_C80C;
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 | ANIM1 | ANIM3 | ANIM4 | ANIM5 | ANIM8 | ANIM12 => still(r, gobj),
+        ANIM0 | ANIM1 | ANIM3 | ANIM4 | ANIM5 | ANIM8 | ANIM12 => zako::answers_false(r, gobj),
         COLL0 => coll0(r, gobj),
         COLL1 => coll1(r, gobj),
         ANIM2 => anim2(r, gobj),
@@ -103,8 +103,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         PHYS3 => phys3(r, gobj),
         PHYS4 => phys4(r, gobj),
         PHYS5 | PHYS12 => phys_rise(r, gobj),
-        PHYS7 | PHYS9 | PHYS10 | PHYS11 => phys_none(r, gobj),
-        PHYS8 => phys8(r, gobj),
+        PHYS7 | PHYS9 | PHYS10 | PHYS11 => zako::still(r, gobj),
+        PHYS8 => zako::fall_physics(r, gobj),
         _ => return false,
     }
     true
@@ -459,25 +459,6 @@ pub fn wait(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     set_box(r, gobj);
 }
-
-/// The states whose animation callbacks do nothing.
-#[doc(alias = "itTincle_UnkMotion0_Anim")]
-#[doc(alias = "itTincle_UnkMotion1_Anim")]
-#[doc(alias = "itTincle_UnkMotion3_Anim")]
-#[doc(alias = "itTincle_UnkMotion4_Anim")]
-#[doc(alias = "itTincle_UnkMotion5_Anim")]
-#[doc(alias = "itTincle_UnkMotion8_Anim")]
-#[doc(alias = "itTincle_UnkMotion12_Anim")]
-pub fn still(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states whose physics do nothing.
-#[doc(alias = "itTincle_UnkMotion7_Phys")]
-#[doc(alias = "itTincle_UnkMotion9_Phys")]
-#[doc(alias = "itTincle_UnkMotion10_Phys")]
-#[doc(alias = "itTincle_UnkMotion11_Phys")]
-pub fn phys_none(_: &mut Running, _: GObjId) {}
 
 /// The wait's countdown, `itTincle_UnkMotion0_Phys`: then he drops in.
 #[doc(alias = "itTincle_UnkMotion0_Phys")]
@@ -879,15 +860,6 @@ pub fn coll7(r: &mut Running, gobj: GObjId) -> bool {
 pub fn fall(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).pos.z = -10.0;
     change_state(r, gobj, 8, change::ANIM_UPDATE);
-}
-
-/// Falling, `itTincle_UnkMotion8_Phys`: gravity from his item attributes.
-#[doc(alias = "itTincle_UnkMotion8_Phys")]
-pub fn phys8(r: &mut Running, gobj: GObjId) {
-    let a = attr_of(item(r.game, gobj));
-    let accel = a.f32(r.data, data::attr::FALL_SPEED);
-    let max = a.f32(r.data, data::attr::FALL_SPEED_MAX);
-    lib2725::fall(r.game, gobj, accel, max);
 }
 
 /// `itTincle_UnkMotion8_Coll`: landing lands him.

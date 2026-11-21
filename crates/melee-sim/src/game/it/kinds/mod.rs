@@ -3,6 +3,10 @@
 
 pub mod arwinglaser;
 pub mod bat;
+#[doc(alias("kyasarin"))]
+pub mod birdo;
+#[doc(alias("kyasarinegg"))]
+pub mod birdo_egg;
 pub mod bombhei;
 pub mod capsule;
 pub mod cerebi;
@@ -51,7 +55,6 @@ pub mod hammerhead;
 pub mod harisen;
 pub mod hassam;
 pub mod heart;
-pub mod heiho;
 pub mod hinoarashi;
 pub mod hitodeman;
 pub mod houou;
@@ -65,11 +68,14 @@ pub mod kirbyhammer;
 pub mod kirbyinhale;
 pub mod kirbyspitstar;
 pub mod kireihana;
-pub mod klap;
+#[doc(alias("klap"))]
+pub mod klap_trap;
+#[doc(alias("patapata"))]
+pub mod koopa_paratroopa;
+#[doc(alias("nokonoko"))]
+pub mod koopa_troopa;
 pub mod koopaflame;
 pub mod kusudama;
-pub mod kyasarin;
-pub mod kyasarinegg;
 pub mod legendary;
 pub mod lgun;
 pub mod lgunbeam;
@@ -110,12 +116,10 @@ pub mod nesspkflashexplode;
 pub mod nesspkthunder;
 pub mod nesspkthundertrail;
 pub mod nessyoyo;
-pub mod nokonoko;
 pub mod octarockstone;
 #[doc(alias("octarock"))]
 pub mod octorok;
 pub mod parasol;
-pub mod patapata;
 pub mod peachexplode;
 pub mod peachparasol;
 pub mod peachtoad;
@@ -143,6 +147,8 @@ pub mod seakneedleheld;
 pub mod seakneedlethrown;
 pub mod seakvanish;
 pub mod shell;
+#[doc(alias("heiho"))]
+pub mod shy_guy;
 pub mod sonans;
 pub mod spycloak;
 pub mod sscope;
@@ -156,7 +162,8 @@ pub mod taru;
 pub mod tarucann;
 pub mod tether;
 pub mod thunder;
-pub mod tincle;
+#[doc(alias("tincle"))]
+pub mod tingle;
 pub mod togepy;
 pub mod tomato;
 pub mod tools;

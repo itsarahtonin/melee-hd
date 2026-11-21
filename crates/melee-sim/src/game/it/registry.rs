@@ -18,27 +18,27 @@
 
 use super::super::code::{Entries, kind};
 use super::kinds::{
-    arwinglaser, bat, bombhei, capsule, cerebi, chicorita, climbersblizzard, climbersice,
-    climbersstring, clinkmilk, coin, crate_box, crazyhandbomb, dosei, drmariopill, egg, entei,
-    evyoshiegg, fflower, fire, flipper, flower, foods, foxblaster, foxillusion, foxlaser, freeze,
-    freezer, fushigibana, gamewatchbreath, gamewatchchef, gamewatchfire, gamewatchgreenhouse,
-    gamewatchjudge, gamewatchmanhole, gamewatchpanic, gamewatchparachute, gamewatchrescue,
-    gamewatchturtle, goomba, greatfoxlaser, gshell, hammer, hammerhead, harisen, hassam, heart,
-    heiho, hinoarashi, hitodeman, houou, kabigon, kamex, kinoko, kirbycopystar, kirbycutterbeam,
-    kirbygamewatchchefpan, kirbyhammer, kirbyinhale, kirbyspitstar, kireihana, klap, koopaflame,
-    kusudama, kyasarin, kyasarinegg, lgun, lgunbeam, lgunray, like_like, linkarrow, linkbomb,
-    linkboomerang, linkbow, linkhookshot, lipstick, lipstickspore, lizardon, lucky, lugia,
-    luigifireball, maril, mariocape, mariofireball, marumine, masterhandbullet, masterhandlaser,
-    matadogas, mato, mball, metalb, metamon, mew, mewtwodisable, mewtwoshadowball, msbomb, nessbat,
-    nesspkfire, nesspkfirepillar, nesspkflash, nesspkflashexplode, nesspkthunder,
-    nesspkthundertrail, nessyoyo, nokonoko, octarockstone, octorok, parasol, patapata,
-    peachexplode, peachparasol, peachtoad, peachtoadspore, peachturnip, pikachuthunder,
+    arwinglaser, bat, birdo, birdo_egg, bombhei, capsule, cerebi, chicorita, climbersblizzard,
+    climbersice, climbersstring, clinkmilk, coin, crate_box, crazyhandbomb, dosei, drmariopill,
+    egg, entei, evyoshiegg, fflower, fire, flipper, flower, foods, foxblaster, foxillusion,
+    foxlaser, freeze, freezer, fushigibana, gamewatchbreath, gamewatchchef, gamewatchfire,
+    gamewatchgreenhouse, gamewatchjudge, gamewatchmanhole, gamewatchpanic, gamewatchparachute,
+    gamewatchrescue, gamewatchturtle, goomba, greatfoxlaser, gshell, hammer, hammerhead, harisen,
+    hassam, heart, hinoarashi, hitodeman, houou, kabigon, kamex, kinoko, kirbycopystar,
+    kirbycutterbeam, kirbygamewatchchefpan, kirbyhammer, kirbyinhale, kirbyspitstar, kireihana,
+    klap_trap, koopa_paratroopa, koopa_troopa, koopaflame, kusudama, lgun, lgunbeam, lgunray,
+    like_like, linkarrow, linkbomb, linkboomerang, linkbow, linkhookshot, lipstick, lipstickspore,
+    lizardon, lucky, lugia, luigifireball, maril, mariocape, mariofireball, marumine,
+    masterhandbullet, masterhandlaser, matadogas, mato, mball, metalb, metamon, mew, mewtwodisable,
+    mewtwoshadowball, msbomb, nessbat, nesspkfire, nesspkfirepillar, nesspkflash,
+    nesspkflashexplode, nesspkthunder, nesspkthundertrail, nessyoyo, octarockstone, octorok,
+    parasol, peachexplode, peachparasol, peachtoad, peachtoadspore, peachturnip, pikachuthunder,
     pikachutjoltair, pikachutjoltground, pippi, polar_bear, porygon2, rabbitc, raikou, redead,
     rshell, samusbomb, samuschargeshot, samusgrapple, samusmissile, scball, seakchain,
-    seakneedleheld, seakneedlethrown, seakvanish, sonans, spycloak, sscope, sscopebeam, star,
-    starrod, starrodstar, suikun, sword, taru, tarucann, thunder, tincle, togepy, tomato, tools,
-    topi, tosakinto, trophycoin, unknown, whispyapple, wstar, yaku, yoshiegglay, yoshieggthrow,
-    yoshistar, yoshitongue, zeldadinfire, zeldadinfireexplode, zgshell,
+    seakneedleheld, seakneedlethrown, seakvanish, shy_guy, sonans, spycloak, sscope, sscopebeam,
+    star, starrod, starrodstar, suikun, sword, taru, tarucann, thunder, tingle, togepy, tomato,
+    tools, topi, tosakinto, trophycoin, unknown, whispyapple, wstar, yaku, yoshiegglay,
+    yoshieggthrow, yoshistar, yoshitongue, zeldadinfire, zeldadinfireexplode, zgshell,
 };
 use super::tables::{self, ItemLogic};
 use super::{VarsKind, pokemon, zako};
@@ -2563,22 +2563,22 @@ pub static ITEMS: [ItemKind; ItKind::COUNT] = [
     ItemKind {
         kind: ItKind::ShyGuy,
         name: "Yoshi's Story's Shy Guys",
-        events: &[heiho::run_event, zako::run_event],
-        preds: &[heiho::run_pred],
+        events: &[shy_guy::run_event, zako::run_event],
+        preds: &[shy_guy::run_pred],
         vars: VarsKind::Heiho,
     },
     ItemKind {
         kind: ItKind::KoopaTroopa,
         name: "Koopa Troopa",
-        events: &[nokonoko::run_event, zako::run_event],
-        preds: &[nokonoko::run_pred],
+        events: &[koopa_troopa::run_event, zako::run_event],
+        preds: &[koopa_troopa::run_pred],
         vars: VarsKind::Zako,
     },
     ItemKind {
         kind: ItKind::KoopaParatroopa,
         name: "Koopa Paratroopa",
-        events: &[patapata::run_event, zako::run_event],
-        preds: &[patapata::run_pred],
+        events: &[koopa_paratroopa::run_event, zako::run_event],
+        preds: &[koopa_paratroopa::run_pred],
         vars: VarsKind::Zako,
     },
     ItemKind {
@@ -2619,8 +2619,8 @@ pub static ITEMS: [ItemKind; ItKind::COUNT] = [
     ItemKind {
         kind: ItKind::KlapTrap,
         name: "Kongo Jungle's Klap Trap",
-        events: &[klap::run_event],
-        preds: &[klap::run_pred],
+        events: &[klap_trap::run_event],
+        preds: &[klap_trap::run_pred],
         vars: VarsKind::Klap,
     },
     ItemKind {
@@ -2640,8 +2640,8 @@ pub static ITEMS: [ItemKind; ItKind::COUNT] = [
     ItemKind {
         kind: ItKind::Tingle,
         name: "Great Bay's Tingle",
-        events: &[tincle::run_event],
-        preds: &[tincle::run_pred],
+        events: &[tingle::run_event],
+        preds: &[tingle::run_pred],
         vars: VarsKind::Tincle,
     },
     ItemKind {
@@ -2724,8 +2724,8 @@ pub static ITEMS: [ItemKind; ItKind::COUNT] = [
     ItemKind {
         kind: ItKind::Birdo,
         name: "Birdo",
-        events: &[kyasarin::run_event],
-        preds: &[kyasarin::run_pred],
+        events: &[birdo::run_event],
+        preds: &[birdo::run_pred],
         vars: VarsKind::Kyasarin,
     },
     ItemKind {
@@ -2745,8 +2745,8 @@ pub static ITEMS: [ItemKind; ItKind::COUNT] = [
     ItemKind {
         kind: ItKind::BirdoEgg,
         name: "Birdo's egg",
-        events: &[kyasarinegg::run_event],
-        preds: &[kyasarinegg::run_pred],
+        events: &[birdo_egg::run_event],
+        preds: &[birdo_egg::run_pred],
         vars: VarsKind::KyasarinEgg,
     },
 ];

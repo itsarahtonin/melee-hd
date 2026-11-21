@@ -869,7 +869,7 @@ pub fn anim11(r: &mut Running, gobj: GObjId) -> bool {
             get(r, gobj, off::KOOPA),
             fp::fctiwz(reg(item(r.game, gobj).facing_dir)),
         );
-        if let Some(koopa) = super::nokonoko::spawn(r, kind, pos, None, facing) {
+        if let Some(koopa) = super::koopa_troopa::spawn(r, kind, pos, None, facing) {
             let slot = get(r, gobj, off::SLOT);
             zako::bytes(r.game, koopa).set_i32(off::SLOT, slot);
             set(r, gobj, off::SLOT, -1);

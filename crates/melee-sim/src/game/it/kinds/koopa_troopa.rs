@@ -13,13 +13,12 @@
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use gekko_fp as fp;
-use melee_data::archive::DataRef;
 
-use super::super::item::{article, attr_of, change, change_state, play_sfx};
-use super::super::{data, ground, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, zako};
+use super::super::item::{change, change_state, play_sfx};
+use super::super::zako::{self, GA_AIR, GA_GROUND, Knock, QUAKE_SMALL};
+use super::super::{ground, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib};
 use crate::fpu::{mem, reg};
 use crate::game::camera;
-use crate::game::handles::CodeRef;
 use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::game::structs::_itECB;
@@ -81,45 +80,13 @@ pub mod off {
     pub const ECB: usize = 0x74;
 }
 
-/// Its special attributes (`itNokoNoko_DatAttrs`), `off` bytes in.
-fn attr(r: &Running, gobj: GObjId, off: u32) -> DataRef {
-    article(item(r.game, gobj))
-        .special(r.data)
-        .expect("a Koopa Troopa without attributes")
-        .at(off)
-}
-
-/// `da->x0->x0`: its health.
-fn health(r: &Running, gobj: GObjId) -> i32 {
-    let p = r
-        .data
-        .ptr(attr(r, gobj, 0))
-        .expect("a Koopa Troopa's health");
-    r.data.u32(p) as i32
-}
-
-/// `da->x0->x4`: its walking speed.
-fn walk_speed(r: &Running, gobj: GObjId) -> f32 {
-    let p = r
-        .data
-        .ptr(attr(r, gobj, 0))
-        .expect("a Koopa Troopa's speed");
-    r.data.f32(p.at(4))
-}
-
 fn get(r: &mut Running, gobj: GObjId, off: usize) -> i32 {
-    zako::bytes(r.game, gobj).i32(off)
+    zako::var(r.game, gobj, off)
 }
 
 fn set(r: &mut Running, gobj: GObjId, off: usize, v: i32) {
-    zako::bytes(r.game, gobj).set_i32(off, v);
+    zako::set_var(r.game, gobj, off, v);
 }
-
-/// `GA_Ground`, `GA_Air`.
-const GA_GROUND: i32 = 0;
-const GA_AIR: i32 = 1;
-/// `QuakeKind_Small`.
-const QUAKE_SMALL: i32 = 2;
 
 /// Runs one of the Koopa Troopa's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
@@ -127,7 +94,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         DMG_RECEIVED => damaged(r, gobj),
         STOMPED => stomped(r, gobj),
-        ANIM1 | ANIM4 | ANIM6 => answers_false(r, gobj),
+        ANIM1 | ANIM4 | ANIM6 => zako::answers_false(r, gobj),
         COLL1 | COLL3 => coll_standing(r, gobj),
         ANIM2 => anim2(r, gobj),
         COLL2 => coll2(r, gobj),
@@ -138,8 +105,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         COLL5 => coll5(r, gobj),
         ANIM3 => anim3(r, gobj),
         ANIM9 => anim9(r, gobj),
-        ANIM10 => anim10(r, gobj),
-        COLL10 => coll10(r, gobj),
+        ANIM10 => zako::looped(r, gobj, 0xA, change::ANIM_UPDATE),
+        COLL10 => zako::thrown_lands(r, gobj),
         _ => return None,
     })
 }
@@ -154,34 +121,14 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         THROWN => thrown(r, gobj),
         PHYS1 => phys1(r, gobj),
         PHYS2 => phys2(r, gobj),
-        PHYS4 | PHYS10 => phys_fall(r, gobj),
-        PHYS7 => phys7(r, gobj),
+        PHYS4 | PHYS10 => zako::fall_physics(r, gobj),
+        PHYS5 | PHYS7 => zako::knocked_physics(r, gobj),
         PHYS8 => phys8(r, gobj),
-        PHYS5 => phys5(r, gobj),
         PHYS6 => phys6(r, gobj),
-        PHYS3 | PHYS9 => still(r, gobj),
+        PHYS3 | PHYS9 => zako::still(r, gobj),
         _ => return false,
     }
     true
-}
-
-/// The collision's facing from the item's (the inline `coll_inline`, `mpCollSetFacingDir`).
-fn set_coll_facing(r: &mut Running, gobj: GObjId) {
-    let ip = item_mut(r.game, gobj);
-    let f = if reg(ip.facing_dir) == fp::fneg(1.0) {
-        -1
-    } else {
-        1
-    };
-    ip.x378_itemColl.set_facing_dir(f);
-}
-
-/// Stops (the inline `itResetVelocity`): z, then y, then x.
-fn stop(r: &mut Running, gobj: GObjId) {
-    let v = &mut item_mut(r.game, gobj).x40_vel;
-    v.z = 0.0;
-    v.y = 0.0;
-    v.x = 0.0;
 }
 
 /// The Koopa Troopa's setup, `it_802DC69C`: the enemies' common variables, its model facing its
@@ -191,12 +138,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     zako::reset(r.game, gobj);
     let facing = item(r.game, gobj).facing_dir;
     zako::face(r, gobj, facing);
-    set_coll_facing(r, gobj);
-    let ip = item_mut(r.game, gobj);
-    ip.xD5C = 0;
-    ip.xDC8_word.flags.x15 = false;
-    hitbox::clear_dcd_b7(r.game, gobj);
-    zako::set_dd0_b4(r.game, gobj);
+    zako::set_coll_facing(r.game, gobj);
+    zako::init_collision(r.game, gobj);
     item_mut(r.game, gobj).xDC8_word.flags.x19 = true;
     set(r, gobj, off::TIMER, 0);
     set(r, gobj, off::SHELL, 0);
@@ -213,17 +156,17 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// Takes a hit, `itNokonoko_Logic3_DmgReceived`: its facing kept, the hit's element adds to
 /// the damage; thrown (10) it ends as a KO, past its health it leaves its shell, else it's
 /// knocked back.
+///
+/// The enemies' shared [`zako::damaged`] doesn't fit it: a hit past its health knocks it out of
+/// its shell rather than beating it, and a hit while thrown is a KO without a fling.
 #[doc(alias = "itNokonoko_Logic3_DmgReceived")]
 pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     ip.init_facing_dir = ip.facing_dir;
-    let extra = reg(zako::element_damage(r, gobj));
-    let ip = item_mut(r.game, gobj);
-    ip.xC9C = fp::fctiwz(fp::fadds(fp::frsp(f64::from(ip.xC9C)), extra));
-    let (damage, msid) = (ip.xC9C, ip.msid);
-    if msid == 0xA {
-        ko(r, gobj);
-    } else if damage > health(r, gobj) {
+    let damage = zako::add_hit_damage(r, gobj);
+    if item(r.game, gobj).msid == 0xA {
+        zako::ko_destroy(r, gobj);
+    } else if damage > zako::health(r, gobj) {
         unshell(r, gobj);
     } else {
         knock_back(r, gobj);
@@ -258,19 +201,6 @@ pub fn land(r: &mut Running, gobj: GObjId) {
     enter(r, gobj, 1, change::ANIM_UPDATE);
 }
 
-/// The states' animation that answers false (`itNokonoko_UnkMotion1_Anim` and its like).
-#[doc(alias = "itNokonoko_UnkMotion1_Anim")]
-#[doc(alias = "itNokonoko_UnkMotion4_Anim")]
-// Ports itNokonoko_UnkMotion6_Anim; aliased once a check reaches it.
-pub fn answers_false(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states' physics that do nothing (`itNokonoko_UnkMotion3_Phys`, `_9_Phys`).
-#[doc(alias = "itNokonoko_UnkMotion3_Phys")]
-// Ports itNokonoko_UnkMotion9_Phys; aliased once a check reaches it.
-pub fn still(_: &mut Running, _: GObjId) {}
-
 /// Standing's physics, `itNokonoko_UnkMotion1_Phys`: its countdown done, it walks.
 #[doc(alias = "itNokonoko_UnkMotion1_Phys")]
 pub fn phys1(r: &mut Running, gobj: GObjId) {
@@ -295,15 +225,12 @@ pub fn coll_standing(r: &mut Running, gobj: GObjId) -> bool {
 /// its speed) if none are left, state 2.
 #[doc(alias = "it_802DC990")]
 pub fn walk(r: &mut Running, gobj: GObjId) {
-    let speed = walk_speed(r, gobj);
-    let ip = item_mut(r.game, gobj);
-    ip.x40_vel.x = mem(fp::fmuls(reg(ip.facing_dir), reg(speed)));
-    ip.x40_vel.z = 0.0;
-    ip.x40_vel.y = 0.0;
-    set_coll_facing(r, gobj);
+    zako::walk_velocity(r, gobj);
+    let speed = zako::walk_speed(r, gobj);
+    zako::set_coll_facing(r.game, gobj);
     hitbox::end_blink(r.game, gobj);
     if get(r, gobj, off::WALK) == 0 {
-        let x8 = r.data.f32(attr(r, gobj, 8));
+        let x8 = zako::attr_f32(r, gobj, 8);
         let frames = fp::fctiwz(fp::fdivs(reg(x8), reg(speed)));
         set(r, gobj, off::WALK, frames);
     }
@@ -332,9 +259,7 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
     if lib2725::script_flags_have(r.game, gobj, 2) {
         turn(r, gobj);
     }
-    let ip = item_mut(r.game, gobj);
-    let (normal, facing) = (ip.x378_itemColl.floor.normal, ip.facing_dir);
-    zako::along_surface(&mut ip.x40_vel, normal, facing);
+    zako::along_floor(r.game, gobj);
     let facing = item(r.game, gobj).facing_dir;
     zako::align_floor(r, gobj, facing, 5.0);
 }
@@ -357,7 +282,7 @@ pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
 /// nudge against its facing, state 4.
 #[doc(alias = "it_802DCB9C")]
 pub fn fall(r: &mut Running, gobj: GObjId) {
-    let k = r.data.f32(attr(r, gobj, 4));
+    let k = zako::attr_f32(r, gobj, 4);
     let ip = item_mut(r.game, gobj);
     ip.x40_vel.x = mem(fp::fmuls(reg(ip.x40_vel.x), reg(k)));
     set(r, gobj, off::TIMER, 0);
@@ -365,19 +290,9 @@ pub fn fall(r: &mut Running, gobj: GObjId) {
     let (facing, nudge) = (reg(ip.facing_dir), reg(ip.x70_nudge.x));
     if facing > 0.0 && nudge < 0.0 || facing < 0.0 && nudge > 0.0 {
         item_mut(r.game, gobj).facing_dir = mem(fp::fneg(facing));
-        set_coll_facing(r, gobj);
+        zako::set_coll_facing(r.game, gobj);
     }
     enter(r, gobj, 4, change::ANIM_UPDATE);
-}
-
-/// Falling's and thrown's physics (`itNokonoko_UnkMotion4_Phys`, `_10_Phys`): gravity.
-#[doc(alias = "itNokonoko_UnkMotion4_Phys")]
-// Ports itNokonoko_UnkMotion10_Phys; aliased once a check reaches it.
-pub fn phys_fall(r: &mut Running, gobj: GObjId) {
-    let a = attr_of(item(r.game, gobj));
-    let accel = a.f32(r.data, data::attr::FALL_SPEED);
-    let max = a.f32(r.data, data::attr::FALL_SPEED_MAX);
-    lib2725::fall(r.game, gobj, accel, max);
 }
 
 /// Falling's collision, `itNokonoko_UnkMotion6_Coll`: landing, it stands.
@@ -388,20 +303,13 @@ pub fn coll_falling(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Knocked back, `it_802DCCCC`: no countdown, its hit records cleared, along its knockback (up
-/// at least 0.2), in the air, its facing as it was hit, state 7.
+/// at least 0.2) in the air ([`Knock::Airborne`]), its facing as it was hit, state 7.
 #[doc(alias = "it_802DCCCC")]
 pub fn knock_back(r: &mut Running, gobj: GObjId) {
     set(r, gobj, off::TIMER, 0);
     hitbox::clear_hit_ids(r.game, gobj);
-    let mut v = item(r.game, gobj).x40_vel;
-    let _ = zako::knockback_vel(r, gobj, &mut v);
+    zako::knock_back(r, gobj, Knock::Airborne);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = v;
-    // A double 0.2 in the comparison, as the C writes it.
-    if reg(ip.x40_vel.y) <= 0.2 {
-        ip.x40_vel.y = mem(fp::frsp(0.2));
-    }
-    maplib::enter_air(ip);
     ip.facing_dir = ip.init_facing_dir;
     enter(r, gobj, 7, change::ANIM_UPDATE);
 }
@@ -415,21 +323,6 @@ pub fn anim8(r: &mut Running, gobj: GObjId) -> bool {
     false
 }
 
-/// Knocked back's physics, `itNokonoko_UnkMotion7_Phys`: in the air its fall speed off the
-/// vertical velocity.
-#[doc(alias = "itNokonoko_UnkMotion7_Phys")]
-pub fn phys7(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
-        gravity(r, gobj);
-    }
-}
-
-fn gravity(r: &mut Running, gobj: GObjId) {
-    let accel = reg(attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED));
-    let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), accel));
-}
-
 /// Knocked back's collision, `itNokonoko_UnkMotion8_Coll`: landing, it recovers.
 #[doc(alias = "itNokonoko_UnkMotion8_Coll")]
 pub fn coll8(r: &mut Running, gobj: GObjId) -> bool {
@@ -438,7 +331,7 @@ pub fn coll8(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Knocked out of a Paratroopa, `it_802DCE00`: in the air, a 10-frame countdown, blinking, the
-/// kept knockback (the Paratroopa's, [`super::patapata::spawn_koopa`]), state 8.
+/// kept knockback (the Paratroopa's, [`super::koopa_paratroopa::spawn_koopa`]), state 8.
 #[doc(alias = "it_802DCE00")]
 pub fn knock_back_kept(r: &mut Running, gobj: GObjId) {
     maplib::enter_air(item_mut(r.game, gobj));
@@ -453,11 +346,11 @@ pub fn knock_back_kept(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 8, change::ANIM_UPDATE);
 }
 
-/// State 8's physics, `itNokonoko_UnkMotion8_Phys`: gravity, and its blink ends with its
-/// countdown.
+/// State 8's physics, `itNokonoko_UnkMotion8_Phys`: its fall speed off the vertical velocity
+/// ([`zako::flight_physics`]), and its blink ends with its countdown.
 #[doc(alias = "itNokonoko_UnkMotion8_Phys")]
 pub fn phys8(r: &mut Running, gobj: GObjId) {
-    gravity(r, gobj);
+    zako::flight_physics(r, gobj);
     let t = get(r, gobj, off::TIMER);
     if t == 0 {
         hitbox::end_blink(r.game, gobj);
@@ -481,21 +374,15 @@ pub fn recover(r: &mut Running, gobj: GObjId) {
 }
 
 /// Out of its shell, `it_802DCFBC`: blinking, in the air or on the ground as its knockback
-/// leaves it, its facing as it was hit, no countdown, state 5, its box 4.5 high and 3 wide.
+/// leaves it ([`Knock::Plain`]), its facing as it was hit, no countdown, state 5, its box 4.5
+/// high and 3 wide.
 #[doc(alias = "it_802DCFBC")]
 pub fn unshell(r: &mut Running, gobj: GObjId) {
     hitbox::start_blink(r.game, gobj);
-    let mut v = item(r.game, gobj).x40_vel;
-    let up = zako::knockback_vel(r, gobj, &mut v);
+    zako::knock_back(r, gobj, Knock::Plain);
     let ip = item_mut(r.game, gobj);
-    ip.x40_vel = v;
-    if up {
-        maplib::enter_air(ip);
-    } else {
-        maplib::enter_ground(ip);
-    }
     ip.facing_dir = ip.init_facing_dir;
-    set_coll_facing(r, gobj);
+    zako::set_coll_facing(r.game, gobj);
     set(r, gobj, off::TIMER, 0);
     change_state(r, gobj, 5, change::ANIM_UPDATE);
     let mut b: _itECB = item(r.game, gobj).xC1C.clone();
@@ -525,20 +412,12 @@ pub fn anim5(r: &mut Running, gobj: GObjId) -> bool {
         };
         if let Some(shell) = shell {
             let slot = get(r, gobj, off::SLOT);
-            zako::bytes(r.game, shell).set_i32(off::SLOT, slot);
+            zako::set_var(r.game, shell, off::SLOT, slot);
             set(r, gobj, off::SLOT, -1);
         }
         return true;
     }
     false
-}
-
-/// Out of its shell's physics, `itNokonoko_UnkMotion5_Phys`: in the air, gravity.
-#[doc(alias = "itNokonoko_UnkMotion5_Phys")]
-pub fn phys5(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air == GA_AIR {
-        gravity(r, gobj);
-    }
 }
 
 /// Out of its shell's collision, `itNokonoko_UnkMotion5_Coll`: in the air, landing on a floor
@@ -548,7 +427,7 @@ pub fn coll5(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).ground_or_air == GA_AIR {
         if ground::air_touches_walls(r, gobj) & 1 != 0 {
             maplib::enter_ground(item_mut(r.game, gobj));
-            stop(r, gobj);
+            zako::stop(r.game, gobj);
         }
     } else {
         ground::ground_or_air(r, gobj);
@@ -565,7 +444,7 @@ pub fn phys6(r: &mut Running, gobj: GObjId) {
 
 /// Turns (the inline `it_802DD290_inline`): stopped, no walk left, 38 frames, state 3.
 fn start_turn(r: &mut Running, gobj: GObjId, flags: u32) {
-    stop(r, gobj);
+    zako::stop(r.game, gobj);
     set(r, gobj, off::WALK, 0);
     set(r, gobj, off::TIMER, 0x26);
     enter(r, gobj, 3, flags);
@@ -584,18 +463,10 @@ pub fn turn_keep(r: &mut Running, gobj: GObjId) {
 }
 
 /// Turning's animation, `itNokonoko_UnkMotion3_Anim`: its facing flips when the countdown
-/// reaches 0; at the end, the floor probed and it walks.
+/// reaches 0 ([`zako::turning`]); at the end, the floor probed and it walks.
 #[doc(alias = "itNokonoko_UnkMotion3_Anim")]
 pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
-    let t = get(r, gobj, off::TIMER);
-    if t == 0 {
-        let ip = item_mut(r.game, gobj);
-        ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
-        set_coll_facing(r, gobj);
-    }
-    let t = get(r, gobj, off::TIMER);
-    set(r, gobj, off::TIMER, t.wrapping_sub(1));
-    if !lib2725::is_animating(r.game, gobj) {
+    if zako::turning(r, gobj, off::TIMER) {
         let _ = ground::ground_probe(r, gobj);
         set(r, gobj, off::TIMER, 0);
         walk(r, gobj);
@@ -603,13 +474,10 @@ pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
     false
 }
 
-/// Enters a state it can be landed on in, `it_802DD4A8`: stompable, its jumped-on callback
+/// Enters a state it can be landed on in ([`zako::enter_stompable`]), its jumped-on callback
 /// [`stomped`].
-#[doc(alias = "it_802DD4A8")]
-pub fn enter(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
-    change_state(r, gobj, msid, flags);
-    lib2725::make_stompable(r.game, gobj);
-    item_mut(r.game, gobj).jumped_on = Some(CodeRef(STOMPED));
+fn enter(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
+    zako::enter_stompable(r, gobj, msid, flags, STOMPED);
 }
 
 /// Picked up, `it_802DD4F4`: no countdown, no spin, state 9.
@@ -645,32 +513,6 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 0xA, change::ANIM_UPDATE);
 }
 
-/// Thrown's animation, `itNokonoko_UnkMotion10_Anim`: looped.
-// Ports itNokonoko_UnkMotion10_Anim; aliased once a check reaches it.
-pub fn anim10(r: &mut Running, gobj: GObjId) -> bool {
-    if !lib2725::is_animating(r.game, gobj) {
-        change_state(r, gobj, 0xA, change::ANIM_UPDATE);
-    }
-    false
-}
-
-/// Thrown's collision, `itNokonoko_UnkMotion10_Coll`: touching the stage, it ends as a KO.
-// Ports itNokonoko_UnkMotion10_Coll; aliased once a check reaches it.
-pub fn coll10(r: &mut Running, gobj: GObjId) -> bool {
-    if ground::air_touches(r, gobj) & 0xF != 0 {
-        ko(r, gobj);
-    }
-    false
-}
-
-/// An enemy KO, `it_802DD78C`: an effect and a sound, the KO, and gone.
-// Ports it_802DD78C; aliased once a check reaches it.
-pub fn ko(r: &mut Running, gobj: GObjId) {
-    lib2725::destroy_effect(r, gobj, 0x444, 0x130);
-    zako::ko(r, gobj);
-    super::super::item::destroy(r, gobj);
-}
-
 /// Forgets a GObj going away, `it_802DD7D0` (`it_8026B894`).
 // Ports it_802DD7D0; aliased once a check reaches it.
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
@@ -693,7 +535,7 @@ pub fn spawn(
     let j = jobj_of(r.game, gobj).expect("a Koopa Troopa without a model");
     let f = mem(fp::frsp(f64::from(facing)));
     item_mut(r.game, gobj).facing_dir = f;
-    set_coll_facing(r, gobj);
+    zako::set_coll_facing(r.game, gobj);
     let rot = mem(fp::frsp(fp::fmul(std::f64::consts::FRAC_PI_2, reg(f))));
     jobj::set_rotation_y(&mut r.game.objs.jobjs, j, rot);
     set(r, gobj, off::SHELL, x2);

@@ -463,7 +463,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802D81FC" => goomba::knock_down(g, gobj),
         "it_802D82C4" => zako::fling(g, gobj, &goomba::GOOMBA),
         "it_802D839C" => zako::fling_to_screen(g, gobj, &goomba::GOOMBA),
-        "it_802D848C" => goomba::enter(g, gobj, r(4) as i32, r(5)),
+        "it_802D848C" => zako::enter_stompable(g, gobj, r(4) as i32, r(5), goomba::STOMPED),
         "it_802E4C08" => octorok::stand(g, gobj),
         "it_802E4DB4" => octorok::fall(g, gobj),
         "it_802E4E6C" => octorok::knocked_back(g, gobj),
