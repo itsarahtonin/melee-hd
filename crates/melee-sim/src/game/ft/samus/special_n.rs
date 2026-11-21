@@ -515,8 +515,8 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     let p = &SAMUS;
     match a {
-        addr::SPECIAL_N_801291F0 => g.samus_shot_released(gobj, p),
-        addr::SPECIAL_N_80129258 => g.samus_drop_charge(gobj, p),
+        addr::SHOT_RELEASED => g.samus_shot_released(gobj, p),
+        addr::DROP_CHARGE => g.samus_drop_charge(gobj, p),
         addr::SPECIAL_N_ENTER => g.samus_special_n_enter(gobj, p),
         addr::SPECIAL_AIR_N_ENTER => g.samus_special_air_n_enter(gobj, p),
         addr::SPECIAL_N_START_ANIM => g.samus_special_n_start_anim(gobj, p),

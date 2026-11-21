@@ -811,7 +811,7 @@ impl<'a> Comparer<'a> {
             self.check(
                 "ft",
                 &format!("slot word {s}"),
-                (o.x0, o.x6),
+                (o.word, o.flags),
                 (self.u32(at), self.u8(at + 6)),
             );
         }

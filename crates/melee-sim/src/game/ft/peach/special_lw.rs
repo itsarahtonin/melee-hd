@@ -121,7 +121,7 @@ impl Running<'_> {
         // `setupVeg`.
         let part = i32::from(
             self.data
-                .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x10)),
+                .u8(self.ft_model_desc(&self.game.fighters[f.0]).at(0x10)),
         );
         let facing = self.game.fighters[f.0].facing_dir;
         let veg = peachturnip::spawn(self, gobj, pos, part, kind, facing);

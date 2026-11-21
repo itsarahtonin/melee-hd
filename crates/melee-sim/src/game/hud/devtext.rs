@@ -85,7 +85,8 @@ pub struct DevText {
     pub flags: u8,
     /// The byte at 0x27: the cursor's blink counter (top six bits) and the colour index new
     /// characters take (bottom two).
-    pub unk: u8,
+    #[doc(alias("unk"))]
+    pub blink: u8,
     pub current_color: u8,
     pub buf: Vec<Glyph>,
     /// The buffer's address (`x28`), where melee-sim knows it (a debug menu's glyph block, 0
@@ -301,7 +302,7 @@ impl DevTexts {
         t.id = id;
         t.line_width = 10;
         t.flags = SHOW_CURSOR;
-        t.unk = 0;
+        t.blink = 0;
         t.current_color = 0;
         t.prev = None;
         t.next = None;
@@ -524,10 +525,10 @@ impl DevText {
             yy = fp::fctiwz(fp::fadds(s32(yy), sy));
         }
         if self.flags & SHOW_CURSOR != 0 {
-            self.unk = self.unk.wrapping_add(1) & 0x3F;
-            if self.unk > 16 {
-                self.unk = 0;
-            } else if 8 < self.unk {
+            self.blink = self.blink.wrapping_add(1) & 0x3F;
+            if self.blink > 16 {
+                self.blink = 0;
+            } else if 8 < self.blink {
                 out.push(Draw::Rect {
                     x: (fp::fmadds(sx, s32(i32::from(self.cursor_x)), s32(x))),
                     y: (fp::fsubs(

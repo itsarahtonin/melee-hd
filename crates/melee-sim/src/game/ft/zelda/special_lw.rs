@@ -38,10 +38,10 @@ const ZELDA: Transform = Transform {
     states: ms::SPECIAL_LW,
     attrs: 0x70,
     start_part: 104,
-    start_cb: addr::LW_8013ADB4,
-    end_cb: addr::LW_8013AE30,
-    swap_cb: addr::LW_8013AEAC,
-    into: super::super::seak::addr::LW_80114758,
+    start_cb: addr::SPECIAL_LW_START_GFX,
+    end_cb: addr::SPECIAL_LW_END_GFX,
+    swap_cb: addr::SPECIAL_LW_SWAP,
+    into: super::super::seak::addr::SPECIAL_LW_FINISH,
 };
 
 /// The four states from [`Transform::states`].
@@ -283,9 +283,9 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     let t = &ZELDA;
     match a {
-        addr::LW_8013ADB4 => g.transform_start_gfx(gobj, t),
-        addr::LW_8013AE30 => g.transform_end_gfx(gobj),
-        addr::LW_8013AEAC => g.transform_swap(gobj, t),
+        addr::SPECIAL_LW_START_GFX => g.transform_start_gfx(gobj, t),
+        addr::SPECIAL_LW_END_GFX => g.transform_end_gfx(gobj),
+        addr::SPECIAL_LW_SWAP => g.transform_swap(gobj, t),
         addr::SPECIAL_LW_ENTER => g.transform_enter(gobj, t),
         addr::SPECIAL_AIR_LW_ENTER => g.transform_air_enter(gobj, t),
         0x8013_B068 | 0x8013_B0A8 => g.transform_anim(gobj, t),
@@ -302,7 +302,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         0x8013_B3C4 => g.transform_air_second_coll(gobj, t),
         0x8013_B400 => g.transform_second_to_air(gobj, t),
         0x8013_B46C => g.transform_second_to_ground(gobj, t),
-        addr::LW_8013B4D8 => g.transform_finish(gobj, t),
+        addr::SPECIAL_LW_FINISH => g.transform_finish(gobj, t),
         _ => return false,
     }
     true

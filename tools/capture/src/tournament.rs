@@ -147,8 +147,8 @@ impl Comparer<'_> {
             "gm_8048BD20",
             "stage, x1, no LRAS, forced, start",
             (
-                ss.unk_stage,
-                ss.x1,
+                ss.cursor_port,
+                ss.no_b,
                 ss.no_lras,
                 ss.force_stage_id,
                 ss.start_game,
@@ -177,69 +177,81 @@ impl Comparer<'_> {
         let words: Vec<i32> = (0..10).map(|k| tm.word(k)).collect();
         let theirs: Vec<i32> = (0..10).map(|k| self.u32(a + 4 * k) as i32).collect();
         self.check("gm_804771C4", "option and words", words, theirs);
-        self.check("gm_804771C4", "x28", tm.x28, self.u32(a + 0x28));
+        self.check("gm_804771C4", "x28", tm.stage, self.u32(a + 0x28));
         let bytes = [
-            tm.x2c, tm.x2d, tm.x2e, tm.x2f, tm.x30, tm.x31, tm.x32, tm.x33, tm.x34,
+            tm.new_bracket,
+            tm.to_match,
+            tm.entrant_count,
+            tm.human_count,
+            tm.players_per_match,
+            tm.handicaps,
+            tm.stage_picked,
+            tm.rank,
+            tm.last_rank,
         ];
         self.tou_bytes("gm_804771C4.x2C", &bytes, a + 0x2C);
-        for (i, e) in tm.x37.iter().enumerate() {
+        for (i, e) in tm.roster.iter().enumerate() {
             let at = a + 0x37 + 0x12 * i as u32;
             let ours = [
                 tm.present[i],
-                e.x0,
-                e.x1,
-                e.x2,
-                e.x3,
-                e.x4,
-                e.x5,
-                e.x6,
-                e.x7,
-                e.x8,
-                (e.x9 >> 8) as u8,
-                e.x9 as u8,
-                (e.xb >> 8) as u8,
-                e.xb as u8,
-                e.xd,
-                e.xe,
-                e.xf,
+                e.slot_type,
+                e.level,
+                e.handicap,
+                e.icon,
+                e.saved_icon,
+                e.random,
+                e.saved_random,
+                e.color,
+                e.saved_color,
+                (e.name >> 8) as u8,
+                e.name as u8,
+                (e.saved_name >> 8) as u8,
+                e.saved_name as u8,
+                e.seat,
+                e.matchup_seat,
+                e.shown_seat,
             ];
             self.tou_bytes(&format!("gm_804771C4.x37[{i}]"), &ours, at - 1);
         }
-        self.tou_bytes("gm_804771C4.x4B6", &[tm.x4b6, tm.x4b7], a + 0x4B6);
-        for (i, p) in tm.x4b8.iter().enumerate() {
+        self.tou_bytes(
+            "gm_804771C4.x4B6",
+            &[tm.first_present, tm.first_entrant],
+            a + 0x4B6,
+        );
+        for (i, p) in tm.match_players.iter().enumerate() {
             let at = a + 0x4B8 + 0xA * i as u32;
             let ours = [
-                p.x0,
-                p.x1,
-                p.x2,
-                p.x3,
-                p.x4,
-                p.x5,
-                (p.x6 >> 8) as u8,
-                p.x6 as u8,
-                p.x8,
-                p.x9,
+                p.slot_type,
+                p.icon,
+                p.random,
+                p.color,
+                p.level,
+                p.handicap,
+                (p.name >> 8) as u8,
+                p.name as u8,
+                p.next_present,
+                p.next_entrant,
             ];
             self.tou_bytes(&format!("gm_804771C4.x4B8[{i}]"), &ours, at);
         }
-        self.tou_text("gm_804771C4.x4E0", tm.x4e0, a + 0x4E0);
-        self.tou_text("gm_804771C4.x4E4", tm.x4e4, a + 0x4E4);
+        self.tou_text("gm_804771C4.x4E0", tm.title_text, a + 0x4E0);
+        self.tou_text("gm_804771C4.x4E4", tm.count_text, a + 0x4E4);
         for i in 0..6 {
             self.tou_text(
                 &format!("gm_804771C4.x4E8[{i}]"),
-                tm.x4e8[i],
+                tm.description_texts[i],
                 a + 0x4E8 + 4 * i as u32,
             );
             self.tou_text(
                 &format!("gm_804771C4.x500[{i}]"),
-                tm.x500[i],
+                tm.value_texts[i],
                 a + 0x500 + 4 * i as u32,
             );
         }
         for i in 0..23 {
             self.tou_text(
                 &format!("gm_804771C4.x518[{i}]"),
-                tm.x518[i],
+                tm.name_texts[i],
                 a + 0x518 + 4 * i as u32,
             );
         }
@@ -247,28 +259,45 @@ impl Comparer<'_> {
 
     /// A bracket box (`BracketEntry`) at `at`.
     fn tou_box(&mut self, path: &str, e: &BracketEntry, at: u32) {
-        let head = [e.x0, e.x1, e.x2, e.x3, e.x4, e.x5, e.x6];
+        let head = [
+            e.in_bracket,
+            e.playing,
+            e.opens,
+            e.kind,
+            e.seats,
+            e.winner_box,
+            e.winner_seat,
+        ];
         self.tou_bytes(path, &head, at);
-        let words = [e.xc, e.x10, e.x14, e.x18];
+        let words = [e.x, e.y, e.width, e.height];
         let theirs: [i32; 4] = core::array::from_fn(|k| self.u32(at + 0xC + 4 * k as u32) as i32);
         self.check(path, "rectangle", words, theirs);
-        self.tou_floats(path, &[e.x1c], at + 0x1C);
+        self.tou_floats(path, &[e.thickness], at + 0x1C);
         let tail = [
-            e.x20[0], e.x20[1], e.x20[2], e.x20[3], e.x24, e.x25, e.x26, e.x27, e.x28,
+            e.color[0], e.color[1], e.color[2], e.color[3], e.unread_a, e.unread_b, e.unread_c,
+            e.unread_d, e.unread_e,
         ];
         self.tou_bytes(path, &tail, at + 0x20);
         for (k, s) in e.slots.iter().enumerate() {
             let sa = at + 0x2C + 0x2C * k as u32;
             let sp = format!("{path}.slots[{k}]");
-            self.tou_gobj(&sp, s.x2c, sa);
-            self.tou_bytes(&sp, &[s.x30], sa + 4);
-            self.tou_bytes(&sp, &[s.x32], sa + 6);
-            let w = [s.x34, s.x38, s.x3c, s.x40, s.x44, s.x48];
+            self.tou_gobj(&sp, s.icon_gobj, sa);
+            self.tou_bytes(&sp, &[s.present], sa + 4);
+            self.tou_bytes(&sp, &[s.bye_line], sa + 6);
+            let w = [s.start_x, s.start_y, s.target_x, s.target_y, s.x, s.y];
             let theirs: [i32; 6] = core::array::from_fn(|n| self.u32(sa + 8 + 4 * n as u32) as i32);
             self.check(&sp, "corners", w, theirs);
-            let b = [s.x4c, s.x4d, s.x4e, s.x4f, s.x50, s.x51, s.x52];
+            let b = [
+                s.rank,
+                s.icon,
+                s.slot_type,
+                s.color,
+                s.entrant,
+                s.level,
+                s.handicap,
+            ];
             self.tou_bytes(&sp, &b, sa + 0x20);
-            self.check(&sp, "name", s.x54, self.u16(sa + 0x28));
+            self.check(&sp, "name", s.name, self.u16(sa + 0x28));
         }
     }
 
@@ -277,12 +306,23 @@ impl Comparer<'_> {
         let s = &t.setup;
         let a = sym("lbl_804799B8");
         let head = [
-            s.x0, s.x1, s.x2, s.x3, s.x4, s.x5, s.x6, s.x7, s.x8, s.x9, s.xa, s.xb,
+            s.handicap,
+            s.editing_handicap,
+            s.cursor,
+            s.scroll,
+            s.scroll_end,
+            s.name_cursor,
+            s.name_page,
+            s.left_flash,
+            s.right_flash,
+            s.unused_a,
+            s.cursor_flash,
+            s.unused_b,
         ];
         self.tou_bytes("lbl_804799B8", &head, a);
-        self.check("lbl_804799B8", "xC", s.xc, self.u16(a + 0xC));
-        self.tou_bytes("lbl_804799B8.xE", &[s.xe, s.xf], a + 0xE);
-        self.tou_bytes("lbl_804799B8.pad2", &s.pad2, a + 0x10);
+        self.check("lbl_804799B8", "xC", s.bg_frame, self.u16(a + 0xC));
+        self.tou_bytes("lbl_804799B8.xE", &[s.panel_frame, s.marks_frame], a + 0xE);
+        self.tou_bytes("lbl_804799B8.pad2", &s.model_frames, a + 0x10);
         self.tou_archive("lbl_804D6640", s.tou1, sym("lbl_804D6640"));
         self.tou_archive("lbl_804D6644", s.tou2, sym("lbl_804D6644"));
         self.tou_archive("lbl_804D6648", s.ext, sym("lbl_804D6648"));
@@ -307,7 +347,13 @@ impl Comparer<'_> {
         self.check(
             "lbl_804799D8",
             "counters",
-            (b.x0, b.x4, b.x8, b.xc, b.x10),
+            (
+                b.step_frames,
+                b.banner_frame,
+                b.banner_start,
+                b.banner_end,
+                b.bg,
+            ),
             (
                 self.u32(a),
                 self.u32(a + 4),
@@ -317,22 +363,33 @@ impl Comparer<'_> {
             ),
         );
         let x12: [u16; 4] = core::array::from_fn(|i| self.u16(a + 0x12 + 2 * i as u32));
-        self.check("lbl_804799D8", "x12", b.x12, x12);
-        let mut bytes = vec![b.x1a, b.x1b, b.x1c];
-        bytes.extend_from_slice(&b.x1d);
-        bytes.extend_from_slice(&b.x21);
-        bytes.extend_from_slice(&b.x25);
-        bytes.push(b.x29);
-        for p in &b.x2a {
+        self.check("lbl_804799D8", "x12", b.unplugged, x12);
+        let mut bytes = vec![b.panel, b.rank_frames, b.title];
+        bytes.extend_from_slice(&b.bounce);
+        bytes.extend_from_slice(&b.name_flash);
+        bytes.extend_from_slice(&b.cleared);
+        bytes.push(b.bar);
+        for p in &b.anims {
             bytes.extend_from_slice(&[p.start, p.cur, p.end, p.state, p.done, p.loop_]);
         }
         self.tou_bytes("lbl_804799D8.x1A", &bytes, a + 0x1A);
-        self.tou_bytes("lbl_804799D8.x44", &b.x44, a + 0x44);
-        let x48 = if b.x48 { sym("gm_80477738") } else { 0 };
+        self.tou_bytes("lbl_804799D8.x44", &b.choice, a + 0x44);
+        let x48 = if b.settled { sym("gm_80477738") } else { 0 };
         self.check("lbl_804799D8", "x48", x48, self.u32(a + 0x48));
-        self.tou_bytes("lbl_804799D8.x4C", &[b.x4c, b.x4d], a + 0x4C);
-        self.tou_bytes("lbl_804799D8.x4E", &b.x4e, a + 0x4E);
-        let v = [b.x64.x, b.x64.y, b.x64.z, b.x70.x, b.x70.y, b.x70.z];
+        self.tou_bytes(
+            "lbl_804799D8.x4C",
+            &[b.winner_seat, b.winner_type],
+            a + 0x4C,
+        );
+        self.tou_bytes("lbl_804799D8.x4E", &b.winner_name, a + 0x4E);
+        let v = [
+            b.banner_translate.x,
+            b.banner_translate.y,
+            b.banner_translate.z,
+            b.banner_scale.x,
+            b.banner_scale.y,
+            b.banner_scale.z,
+        ];
         self.tou_floats("lbl_804799D8.x64", &v, a + 0x64);
         self.tou_archive("lbl_804D6660", b.tou1, sym("lbl_804D6660"));
         self.tou_archive("lbl_804D6664", b.tou3, sym("lbl_804D6664"));
@@ -347,7 +404,7 @@ impl Comparer<'_> {
         self.check(
             "lbl_804D6678",
             "x6678, x667C",
-            (b.x6678, b.x667c),
+            (b.back_to_players, b.banner_hidden),
             (
                 self.u32(sym("lbl_804D6678")) as i32,
                 self.u32(sym("lbl_804D667C")) as i32,
@@ -363,21 +420,21 @@ impl Comparer<'_> {
         self.check(
             "lbl_80479A58",
             "x0, x4",
-            (s.x0, s.x4),
+            (s.confirm_frames, s.bg),
             (self.u32(a), self.u16(a + 4)),
         );
         let x6: [u16; 4] = core::array::from_fn(|i| self.u16(a + 6 + 2 * i as u32));
-        self.check("lbl_80479A58", "x6", s.x6, x6);
-        let mut bytes = vec![s.xe, s.xf];
-        bytes.extend_from_slice(&s.x10);
+        self.check("lbl_80479A58", "x6", s.unplugged, x6);
+        let mut bytes = vec![s.panel, s.title];
+        bytes.extend_from_slice(&s.bounce);
         self.tou_bytes("lbl_80479A58.xE", &bytes, a + 0xE);
-        let mut bytes = s.x18.to_vec();
-        bytes.push(s.x1c);
-        for p in &s.x1d {
+        let mut bytes = s.b_held.to_vec();
+        bytes.push(s.bar);
+        for p in &s.anims {
             bytes.extend_from_slice(&[p.start, p.cur, p.end, p.state, p.done, p.loop_]);
         }
         self.tou_bytes("lbl_80479A58.x18", &bytes, a + 0x18);
-        self.tou_bytes("lbl_80479A58.x38", &s.x38, a + 0x38);
+        self.tou_bytes("lbl_80479A58.x38", &s.choice, a + 0x38);
         self.tou_archive("lbl_804D6688", s.tou1, sym("lbl_804D6688"));
         self.tou_archive("lbl_804D668C", s.tou4, sym("lbl_804D668C"));
         for (name, d, l) in [

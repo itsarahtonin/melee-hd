@@ -426,7 +426,7 @@ impl Copier {
     pub fn copy(
         &self,
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        queue: &crate::submit::Ordered,
         target: &wgpu::TextureView,
         request: &Request,
         (scale, width): (u32, u32),
@@ -459,7 +459,7 @@ impl Copier {
             pass.set_bind_group(0, &self.group, &[]);
             pass.draw(0..3, 0..1);
         }
-        queue.submit([encoder.finish()]);
+        queue.submit(encoder);
     }
 }
 
@@ -576,7 +576,7 @@ impl DepthReader {
     pub fn read(
         &self,
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        queue: &crate::submit::Ordered,
         depth: &wgpu::TextureView,
         (scale, width): (u32, u32),
     ) -> wgpu::Texture {
@@ -619,7 +619,7 @@ impl DepthReader {
             pass.set_bind_group(0, &group, &[]);
             pass.draw(0..3, 0..1);
         }
-        queue.submit([encoder.finish()]);
+        queue.submit(encoder);
         self.target.clone()
     }
 }

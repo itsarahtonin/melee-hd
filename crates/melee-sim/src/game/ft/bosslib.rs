@@ -295,10 +295,10 @@ impl Running<'_> {
     #[doc(alias = "ftBossLib_8015CA6C")]
     pub fn boss_set_rate(&mut self, rate: i32) {
         let v = mem(fp::frsp(f64::from(rate)));
-        self.player_80036790(0, v);
+        self.set_player_hitlag(0, v);
         for kind in [FighterKind::MasterHand.id(), FighterKind::CrazyHand.id()] {
             if let Some(g) = self.boss_gobj(kind) {
-                self.game.ft_80086a4c(g, v);
+                self.game.ft_set_pending_hitlag(g, v);
             }
         }
         super::super::it::item::pause_all(self.game);

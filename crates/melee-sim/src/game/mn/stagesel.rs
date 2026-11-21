@@ -719,7 +719,7 @@ impl Running<'_> {
             };
         }
         self.game.menu.cam = self.game.stagesel.cam;
-        let unk = self.sss_data().unk_stage;
+        let unk = self.sss_data().cursor_port;
         let s = &mut self.game.stagesel;
         s.picked = 0;
         s.buttons = 0;
@@ -951,7 +951,7 @@ impl Running<'_> {
             s.wait -= 1;
             return;
         }
-        if self.sss_data().x1 == 0
+        if self.sss_data().no_b == 0
             && self.game.stagesel.buttons & 0x200 != 0
             && self.game.stagesel.picked == 0
         {

@@ -211,7 +211,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_HI_IASA | addr::SPECIAL_AIR_HI_IASA => g.mars_special_hi_iasa(gobj),
         addr::SPECIAL_HI_PHYS => g.mars_special_hi_phys(gobj),
         addr::SPECIAL_AIR_HI_PHYS => g.mars_special_air_hi_phys(gobj),
-        addr::HI_80138884 => g.mars_special_hi_land(gobj),
+        addr::SPECIAL_HI_LAND => g.mars_special_hi_land(gobj),
         addr::SPECIAL_HI_COLL | addr::SPECIAL_AIR_HI_COLL => g.mars_special_hi_coll(gobj),
         _ => return false,
     }

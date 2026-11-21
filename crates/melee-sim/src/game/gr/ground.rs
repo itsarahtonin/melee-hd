@@ -467,7 +467,7 @@ pub fn proc_watch(r: &mut Running, _gobj: GObjId) {
         }
     }
     // `gm_8016B238`: the rules' bob-omb rain, a bomb every 30 frames after the first 1200.
-    if r.game.vs_x6() != 0 {
+    if r.game.vs_sudden_death() != 0 {
         let frame = r.game.vs_frame_count();
         if frame as i32 > 0x4B0 && frame.wrapping_sub(r.game.stage_info.x9C) > 0x1E {
             r.game.stage_info.x9C = frame;

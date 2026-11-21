@@ -26,6 +26,21 @@ pub const XFB_ADDR: u32 = 0x00F0_0000;
 /// within 0.06%: 584.32 pixels by 480.
 pub const GAME_ASPECT: f32 = 73.0 / 60.0;
 
+/// The least a piece of a streamed frame holds ([`Frames::frame_streamed`]): enough that
+/// handing it on costs little beside building it, little enough that the renderer's threads
+/// start on a frame's first draws early.
+pub const STREAM_PIECE: usize = 4096;
+
+/// What takes a frame's stream in pieces as it's built ([`Frames::frame_streamed`]).
+pub trait Stream {
+    /// The frame starts: the address space is as the frame's draws find it (its ranges given
+    /// back and taken for the frame).
+    fn start(&mut self, _space: &Space) {}
+    /// The stream's next bytes, whole commands, with the marks so far (every draw these bytes
+    /// hold has its mark).
+    fn piece(&mut self, space: &Space, bytes: &[u8], marks: &[(u32, u32)]);
+}
+
 /// What the frame's stream starts from and keeps from frame to frame: GX's state and HSD's.
 pub struct Frames {
     pub gx: Gx,
@@ -96,6 +111,51 @@ impl Frames {
         draws: &[Draw],
         blend: Option<Blend<'_>>,
     ) -> Vec<u8> {
+        self.build(game, data, draws, blend, None, None)
+    }
+
+    /// The frame [`Frames::frame_blended`] builds, handed to `to` in pieces as it's built
+    /// (whole commands, at least [`STREAM_PIECE`] bytes but for the last), so whatever runs the
+    /// stream starts on the frame's first draws while the rest are built: the fast renderer's
+    /// threads draw beside the game thread rather than after it. The pieces are the frame's
+    /// stream in order, and [`Frames::marks`] counts offsets from the frame's start as before.
+    pub fn frame_streamed(
+        &mut self,
+        game: &Game,
+        data: &Archives,
+        draws: &[Draw],
+        blend: Option<Blend<'_>>,
+        to: &mut dyn Stream,
+    ) {
+        let rest = self.build(game, data, draws, blend, Some(to), None);
+        to.piece(&self.space, &rest, &self.marks);
+    }
+
+    /// The frame [`Frames::frame_streamed`] hands to `to`, with `to` running each piece on a
+    /// thread of its own while the game thread builds the next (and its frame's start before
+    /// the first), so running the stream (through melee-gx to the renderer) leaves the game
+    /// thread. The address space is shared meanwhile: what the stream reads of it the build
+    /// wrote before handing on the piece that reads it. No marks are handed on.
+    pub fn frame_piped(
+        &mut self,
+        game: &Game,
+        data: &Archives,
+        draws: &[Draw],
+        blend: Option<Blend<'_>>,
+        to: &mut (dyn Stream + Send),
+    ) {
+        self.build(game, data, draws, blend, None, Some(to));
+    }
+
+    fn build(
+        &mut self,
+        game: &Game,
+        data: &Archives,
+        draws: &[Draw],
+        blend: Option<Blend<'_>>,
+        to: Option<&mut dyn Stream>,
+        piped: Option<&mut (dyn Stream + Send)>,
+    ) -> Vec<u8> {
         let patches = &game.objs.pobjs.refract_patches;
         if self.patched != patches.len() {
             self.patched = patches.len();
@@ -127,44 +187,152 @@ impl Frames {
         if blend.is_some() {
             self.hsd.motion.start();
         }
-        // The arrays HSD's caches hold from the frames before keep their addresses.
-        self.space.begin_frame(&[
-            self.hsd.prev_array.map(|d| d.archive),
-            self.hsd.prev_vtxdesc.map(|d| d.archive),
-        ]);
-        let mut ctx = Ctx {
-            gx: &mut self.gx,
-            hsd: &mut self.hsd,
-            game,
-            data,
-            space: &self.space,
-            blend,
+        let Frames {
+            gx,
+            hsd,
+            space,
+            marks,
+            ..
+        } = self;
+        let space: &Space = space;
+        let Some(run) = piped else {
+            return build_rest(gx, hsd, space, marks, (game, data, draws, blend), to);
         };
-        ctx.gx.invalidate_vtx_cache();
-        ctx.gx.invalidate_tex_all();
-        ctx.start_render(false);
-        self.marks.clear();
-        let mut i = 0;
-        while i < draws.len() {
-            self.marks.push((ctx.gx.fifo.len() as u32, i as u32));
-            i += ctx.draw(draws, i);
-        }
-        // What the frame sends after its draws (the copy to the XFB) is the list's end.
-        self.marks
-            .push((ctx.gx.fifo.len() as u32, draws.len() as u32));
-        if let Some(n) = ctx.hsd.lights_after_render_mode.take() {
-            ctx.load_lights(n);
-        }
-        ctx.copy_xfb();
-        for at in self.gx.copied_to.drain(..) {
-            self.space.pin_at(at);
-        }
-        if self.gx.unset_reads != 0 {
-            *self.hsd.notes.entry(UNSET_READ.to_owned()).or_default() += self.gx.unset_reads;
-            self.gx.unset_reads = 0;
-        }
-        self.gx.take_fifo()
+        // The pieces run on a thread of their own while the rest are built.
+        std::thread::scope(|s| {
+            let (tx, rx) = std::sync::mpsc::channel::<Piece>();
+            let (spare_tx, spare) = std::sync::mpsc::channel::<Vec<u8>>();
+            let runner = std::thread::Builder::new()
+                .name("stream".to_owned())
+                .spawn_scoped(s, move || {
+                    let mut marks = Vec::new();
+                    for piece in rx {
+                        match piece {
+                            Piece::Start => run.start(space),
+                            Piece::Bytes(bytes, more) => {
+                                marks.extend_from_slice(&more);
+                                run.piece(space, &bytes, &marks);
+                                let _ = spare_tx.send(bytes);
+                            }
+                        }
+                    }
+                })
+                .expect("the stream's thread");
+            let mut pipe = Pipe {
+                tx,
+                spare,
+                marks: 0,
+            };
+            let last = build_rest(
+                gx,
+                hsd,
+                space,
+                marks,
+                (game, data, draws, blend),
+                Some(&mut pipe),
+            );
+            pipe.piece(space, &last, marks);
+            drop(pipe);
+            runner.join().expect("the stream's thread");
+        });
+        Vec::new()
     }
+}
+
+/// What a piped frame hands the thread that runs it ([`Frames::frame_piped`]).
+enum Piece {
+    /// The frame's start.
+    Start,
+    /// A piece's bytes, and the marks added since the last.
+    Bytes(Vec<u8>, Vec<(u32, u32)>),
+}
+
+/// Hands a piped frame's pieces to the thread that runs them.
+struct Pipe {
+    tx: std::sync::mpsc::Sender<Piece>,
+    spare: std::sync::mpsc::Receiver<Vec<u8>>,
+    /// The marks handed on so far.
+    marks: usize,
+}
+
+impl Stream for Pipe {
+    fn start(&mut self, _space: &Space) {
+        self.tx
+            .send(Piece::Start)
+            .expect("the stream's thread stopped");
+    }
+
+    fn piece(&mut self, _space: &Space, bytes: &[u8], marks: &[(u32, u32)]) {
+        let mut piece = self.spare.try_recv().unwrap_or_default();
+        piece.clear();
+        piece.extend_from_slice(bytes);
+        let more = marks[self.marks.min(marks.len())..].to_vec();
+        self.marks = marks.len();
+        self.tx
+            .send(Piece::Bytes(piece, more))
+            .expect("the stream's thread stopped");
+    }
+}
+
+/// The frame's stream after [`Frames::build`]'s set-up: its draws, handed to `to` in pieces
+/// if given; returns what's left of it.
+fn build_rest(
+    gx: &mut Gx,
+    hsd: &mut Hsd,
+    space: &Space,
+    marks: &mut Vec<(u32, u32)>,
+    (game, data, draws, blend): (&Game, &Archives, &[Draw], Option<Blend<'_>>),
+    mut to: Option<&mut dyn Stream>,
+) -> Vec<u8> {
+    // The arrays HSD's caches hold from the frames before keep their addresses.
+    space.begin_frame(&[
+        hsd.prev_array.map(|d| d.archive),
+        hsd.prev_vtxdesc.map(|d| d.archive),
+    ]);
+    let mut ctx = Ctx {
+        gx,
+        hsd,
+        game,
+        data,
+        space,
+        blend,
+    };
+    if let Some(to) = to.as_deref_mut() {
+        to.start(space);
+    }
+    ctx.gx.invalidate_vtx_cache();
+    ctx.gx.invalidate_tex_all();
+    ctx.start_render(false);
+    marks.clear();
+    // Bytes handed on so far: the marks count from the frame's start.
+    let mut sent = 0u32;
+    let mut i = 0;
+    while i < draws.len() {
+        if let Some(to) = to.as_deref_mut()
+            && ctx.gx.fifo.len() >= STREAM_PIECE
+            && !ctx.gx.in_display_list()
+        {
+            to.piece(ctx.space, &ctx.gx.fifo, marks);
+            sent += ctx.gx.fifo.len() as u32;
+            ctx.gx.fifo.clear();
+        }
+        marks.push((sent + ctx.gx.fifo.len() as u32, i as u32));
+        i += ctx.draw(draws, i);
+    }
+    // What the frame sends after its draws (the copy to the XFB) is the list's end.
+    marks.push((sent + ctx.gx.fifo.len() as u32, draws.len() as u32));
+    if let Some(n) = ctx.hsd.lights_after_render_mode.take() {
+        ctx.load_lights(n);
+    }
+    ctx.copy_xfb();
+    for at in gx.copied_to.drain(..) {
+        space.pin_at(at);
+    }
+    if gx.unset_reads != 0 {
+        *hsd.notes.entry(UNSET_READ.to_owned()).or_default() += gx.unset_reads;
+        gx.unset_reads = 0;
+    }
+    gx.take_fifo()
 }
 
 impl Ctx<'_> {

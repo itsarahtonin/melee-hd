@@ -272,7 +272,7 @@ impl Running<'_> {
         if o.logo_shown && o.clock == o.end_at {
             self.lb_audio_music_stop();
             self.game.end_scene();
-        } else if self.game.main_lib.xc && !ended {
+        } else if self.game.main_lib.movie_skip && !ended {
             self.reset_video_mode();
             self.lb_audio_music_stop();
             self.sfx_stop_all();
@@ -423,11 +423,11 @@ impl Running<'_> {
             d.colors[c] = 0;
             add_char_usage(&mut self.game.game_data, pick as usize);
         }
-        self.game.boot_mode.demo.x8 = self.game.objs.rng.below(4) as u8;
+        self.game.boot_mode.demo.look_first = self.game.objs.rng.below(4) as u8;
         loop {
-            self.game.boot_mode.demo.x9 = self.game.objs.rng.below(4) as u8;
+            self.game.boot_mode.demo.look_second = self.game.objs.rng.below(4) as u8;
             let d = self.game.boot_mode.demo;
-            if d.x8 != d.x9 {
+            if d.look_first != d.look_second {
                 break;
             }
         }

@@ -156,12 +156,12 @@ impl Running<'_> {
         let opt_u = opt as usize;
         match mode {
             0 => {
-                let t = self.text(tm.x4e0);
+                let t = self.text(tm.title_text);
                 let m = MESSAGES[opt_u * 2 + col];
                 self.game.sis.reset_text(self.data, t, i32::from(m));
             }
             2 => {
-                let t = self.text(tm.x4e8.get(opt_u).copied().flatten());
+                let t = self.text(tm.description_texts.get(opt_u).copied().flatten());
                 let m = MESSAGES[opt_u * 2 + col + 0xE];
                 self.game.sis.reset_text(self.data, t, i32::from(m));
             }
@@ -178,18 +178,18 @@ impl Running<'_> {
                 } else {
                     base + v
                 };
-                let t = self.text(tm.x500.get(opt_u).copied().flatten());
+                let t = self.text(tm.value_texts.get(opt_u).copied().flatten());
                 self.game.sis.reset_text(self.data, t, m);
             }
             1 => {
                 let m = i32::from(ENTRANTS[tm.entrants() as usize]) + 0xB0 - tm.hmn_cpu_count();
-                let t = self.text(tm.x4e4);
+                let t = self.text(tm.count_text);
                 self.game.sis.reset_text(self.data, t, m);
             }
             4 => {
-                let t = self.text(tm.x518[0]);
+                let t = self.text(tm.name_texts[0]);
                 self.game.sis.clear_text(t);
-                let page = i32::from(self.game.tou.setup.x6);
+                let page = i32::from(self.game.tou.setup.name_page);
                 for k in 0..0x24 {
                     let x = fp::fmadds(149.0, f(k % 4), 537.0);
                     let y = fp::fmadds(47.0, f(k / 4), 409.0);
@@ -197,33 +197,40 @@ impl Running<'_> {
                 }
             }
             6 => {
-                let t1 = self.text(tm.x518[1]);
-                let t2 = self.text(tm.x518[2]);
+                let t1 = self.text(tm.name_texts[1]);
+                let t2 = self.text(tm.name_texts[2]);
                 self.game.sis.clear_text(t1);
                 self.game.sis.clear_text(t2);
                 for i in 0..12 {
                     let s = &self.game.tou.setup;
-                    let idx = i32::from(s.x3) + i;
-                    if idx > i32::from(s.x4) {
+                    let idx = i32::from(s.scroll) + i;
+                    if idx > i32::from(s.scroll_end) {
                         continue;
                     }
                     let y = fp::fmadds(reg(48.6), f(i), 183.0);
                     for _ in 0..2 {
-                        let e = self.game.tou.tm.x37[idx as usize];
-                        self.tou_add_name(i32::from(e.x9), i32::from(e.x0), 1, 143.0, y, 2);
+                        let e = self.game.tou.tm.roster[idx as usize];
+                        self.tou_add_name(
+                            i32::from(e.name),
+                            i32::from(e.slot_type),
+                            1,
+                            143.0,
+                            y,
+                            2,
+                        );
                     }
                 }
             }
             5 => {
-                let t1 = self.text(tm.x518[3]);
-                let t2 = self.text(tm.x518[4]);
+                let t1 = self.text(tm.name_texts[3]);
+                let t2 = self.text(tm.name_texts[4]);
                 self.game.sis.clear_text(t1);
                 self.game.sis.clear_text(t2);
                 for _ in 0..2 {
                     let s = &self.game.tou.setup;
-                    let idx = usize::from(s.x2) + usize::from(s.x3);
-                    let e = self.game.tou.tm.x37[idx];
-                    self.tou_add_name(i32::from(e.x9), i32::from(e.x0), 3, 514.0, 87.0, 4);
+                    let idx = usize::from(s.cursor) + usize::from(s.scroll);
+                    let e = self.game.tou.tm.roster[idx];
+                    self.tou_add_name(i32::from(e.name), i32::from(e.slot_type), 3, 514.0, 87.0, 4);
                 }
             }
             _ => {}
@@ -259,14 +266,14 @@ impl Running<'_> {
         if self.mt() == 0 {
             self.tou_show_bracket();
         }
-        self.game.tou.tm.x20 = 0;
+        self.game.tou.tm.in_name_entry = 0;
         let h = if self.game.game_data.x1850.handicap == 1 {
             5
         } else {
             9
         };
-        for e in &mut self.game.tou.tm.x37 {
-            e.x2 = h;
+        for e in &mut self.game.tou.tm.roster {
+            e.handicap = h;
         }
     }
 
@@ -296,12 +303,12 @@ impl Running<'_> {
             self.tou_texts(1);
             self.game.tou.tm.cur_option += 1;
         }
-        self.game.tou.tm.x20 = 0;
+        self.game.tou.tm.in_name_entry = 0;
         self.game.tou.tm.cur_option = 0xC;
         if name != 0x78 {
             let s = &self.game.tou.setup;
-            let i = usize::from(s.x2) + usize::from(s.x3);
-            self.game.tou.tm.x37[i].x9 = name as u16;
+            let i = usize::from(s.cursor) + usize::from(s.scroll);
+            self.game.tou.tm.roster[i].name = name as u16;
         }
         self.tou_texts(5);
         self.tou_texts(6);
@@ -311,13 +318,13 @@ impl Running<'_> {
     #[doc(alias = "fn_801910E0")]
     fn tou_bg_proc(&mut self, gobj: GObjId) {
         let j = self.tou_jobj(gobj);
-        let c = &mut self.su().xc;
+        let c = &mut self.su().bg_frame;
         if *c > 0x320 {
             *c = 0;
         }
         let frame = *c;
         self.tou_frame(Some(j), mem(f(i32::from(frame))));
-        let c = &mut self.su().xc;
+        let c = &mut self.su().bg_frame;
         *c = c.wrapping_add(1);
     }
 
@@ -327,22 +334,22 @@ impl Running<'_> {
     fn tou_panel_proc(&mut self, gobj: GObjId) {
         let j = self.tou_jobj(gobj);
         if self.game.tou.tm.cur_option < 9 {
-            if self.su().xe > 0x27 {
-                self.su().xe = 0xA;
+            if self.su().panel_frame > 0x27 {
+                self.su().panel_frame = 0xA;
             }
         } else {
-            if self.su().xe == 0x31 {
+            if self.su().panel_frame == 0x31 {
                 self.tou_texts(6);
                 self.tou_texts(5);
                 self.game.tou.tm.cur_option = 0xA;
             }
-            if self.su().xe > 0x4E {
-                self.su().xe = 0x32;
+            if self.su().panel_frame > 0x4E {
+                self.su().panel_frame = 0x32;
             }
         }
-        let frame = self.su().xe;
+        let frame = self.su().panel_frame;
         self.tou_frame(Some(j), mem(f(i32::from(frame))));
-        let c = &mut self.su().xe;
+        let c = &mut self.su().panel_frame;
         *c = c.wrapping_add(1);
     }
 
@@ -360,15 +367,15 @@ impl Running<'_> {
         let first = self.tou_child(Some(j));
         let second = self.tou_next(first);
         if val == cur {
-            if self.su().x7 != 0 {
+            if self.su().left_flash != 0 {
                 self.tou_frame(first, 1.0);
-                self.su().x7 -= 1;
+                self.su().left_flash -= 1;
             } else {
                 self.tou_frame(first, 0.0);
             }
-            if self.su().x8 != 0 {
+            if self.su().right_flash != 0 {
                 self.tou_frame(second, 1.0);
-                self.su().x8 -= 1;
+                self.su().right_flash -= 1;
                 return;
             }
             self.tou_frame(second, 0.0);
@@ -397,34 +404,34 @@ impl Running<'_> {
             self.tou_show(Some(j));
             if idx == 0 {
                 for k in 0..5 {
-                    self.tou_text_hidden(tm.x518[k], 1);
+                    self.tou_text_hidden(tm.name_texts[k], 1);
                 }
-                self.tou_text_hidden(tm.x4e0, 0);
+                self.tou_text_hidden(tm.title_text, 0);
             }
             if idx <= cur {
-                self.tou_text_hidden(tm.x4e8[iu], 0);
-                self.tou_text_hidden(tm.x500[iu], 0);
+                self.tou_text_hidden(tm.description_texts[iu], 0);
+                self.tou_text_hidden(tm.value_texts[iu], 0);
                 let h = u8::from(idx < 3 && self.mt() == 0);
-                self.tou_text_hidden(tm.x4e4, h);
+                self.tou_text_hidden(tm.count_text, h);
                 if idx == 5 && self.mt() != 0 {
-                    self.tou_text_hidden(tm.x4e8[iu], 1);
-                    self.tou_text_hidden(tm.x500[iu], 1);
+                    self.tou_text_hidden(tm.description_texts[iu], 1);
+                    self.tou_text_hidden(tm.value_texts[iu], 1);
                     self.tou_hide(Some(j));
                 }
             } else {
-                self.tou_text_hidden(tm.x4e8[iu], 1);
-                self.tou_text_hidden(tm.x500[iu], 1);
+                self.tou_text_hidden(tm.description_texts[iu], 1);
+                self.tou_text_hidden(tm.value_texts[iu], 1);
             }
             let h = u8::from(!(cur >= 3 && self.mt() == 0));
-            self.tou_text_hidden(tm.x4e4, h);
+            self.tou_text_hidden(tm.count_text, h);
             if idx == cur {
-                let c = &mut self.su().pad2[iu];
+                let c = &mut self.su().model_frames[iu];
                 if *c >= 0x14 {
                     *c = 0xA;
                 }
                 let frame = *c;
                 self.tou_frame(Some(j), mem(f(i32::from(frame))));
-                let c = &mut self.su().pad2[iu];
+                let c = &mut self.su().model_frames[iu];
                 *c = c.wrapping_add(1);
                 return;
             }
@@ -436,17 +443,17 @@ impl Running<'_> {
             return;
         }
         self.tou_hide(Some(j));
-        self.tou_text_hidden(tm.x4e8[iu], 1);
-        self.tou_text_hidden(tm.x500[iu], 1);
+        self.tou_text_hidden(tm.description_texts[iu], 1);
+        self.tou_text_hidden(tm.value_texts[iu], 1);
         if idx == 0 {
             if cur > 9 {
                 for k in 1..5 {
-                    self.tou_text_hidden(tm.x518[k], 0);
+                    self.tou_text_hidden(tm.name_texts[k], 0);
                 }
-                self.tou_text_hidden(tm.x518[0], u8::from(cur != 0xF));
+                self.tou_text_hidden(tm.name_texts[0], u8::from(cur != 0xF));
             }
-            self.tou_text_hidden(tm.x4e4, 1);
-            self.tou_text_hidden(tm.x4e0, 1);
+            self.tou_text_hidden(tm.count_text, 1);
+            self.tou_text_hidden(tm.title_text, 1);
         }
     }
 
@@ -462,13 +469,13 @@ impl Running<'_> {
         }
         self.tou_show(Some(j));
         if idx == cur {
-            let c = &mut self.su().pad2[6 + idx as usize];
+            let c = &mut self.su().model_frames[6 + idx as usize];
             if *c > 0x64 {
                 *c = 0;
             }
             let frame = *c;
             self.tou_frame(Some(j), mem(f(i32::from(frame))));
-            let c = &mut self.su().pad2[6 + idx as usize];
+            let c = &mut self.su().model_frames[6 + idx as usize];
             *c = c.wrapping_add(1);
             return;
         }
@@ -493,18 +500,18 @@ impl Running<'_> {
         let b = self.tou_next(a);
         let entries = [a, b, c0];
         if cur >= 6 {
-            if self.su().xf >= 0x14 {
-                self.su().xf = 0;
+            if self.su().marks_frame >= 0x14 {
+                self.su().marks_frame = 0;
             }
             for (i, &e) in entries.iter().enumerate() {
                 if i as i32 != cur - 6 {
                     self.tou_frame(e, 0.0);
                 } else {
-                    let frame = self.su().xf;
+                    let frame = self.su().marks_frame;
                     self.tou_frame(e, mem(f(i32::from(frame))));
                 }
             }
-            let c = &mut self.su().xf;
+            let c = &mut self.su().marks_frame;
             *c = c.wrapping_add(1);
             return;
         }
@@ -523,25 +530,25 @@ impl Running<'_> {
         self.tou_show(Some(j));
         match cur {
             0xB => {
-                let c = &mut self.su().pad2[0xC];
+                let c = &mut self.su().model_frames[0xC];
                 if *c > 5 {
                     *c = 0;
                 }
                 let frame = *c;
                 self.tou_frame(Some(j), mem(f(i32::from(frame))));
-                let c = &mut self.su().pad2[0xC];
+                let c = &mut self.su().model_frames[0xC];
                 if *c < 5 {
                     *c += 1;
                 }
             }
             0xD | 0xE => {
-                let c = &mut self.su().pad2[0xC];
+                let c = &mut self.su().model_frames[0xC];
                 if *c < 10 {
                     *c = 10;
                 }
                 let frame = *c;
                 self.tou_frame(Some(j), mem(f(i32::from(frame))));
-                let c = &mut self.su().pad2[0xC];
+                let c = &mut self.su().model_frames[0xC];
                 if *c < 15 {
                     *c += 1;
                 }
@@ -564,9 +571,9 @@ impl Running<'_> {
         let child = self.tou_child(Some(j));
         let mobj = self.tou_mobj(child);
         if cur == 0xA || cur == 0xC || cur == 0x10 {
-            let x2 = self.su().x2;
+            let x2 = self.su().cursor;
             self.tou_frame(child, mem(f(i32::from(x2))));
-            let xa = self.su().xa;
+            let xa = self.su().cursor_flash;
             crate::hsd::mobj::req_anim(&mut self.game.objs, mobj, mem(f(i32::from(xa))));
         } else {
             crate::hsd::mobj::req_anim(&mut self.game.objs, mobj, 6.0);
@@ -584,7 +591,7 @@ impl Running<'_> {
             return;
         }
         self.tou_show(Some(j));
-        let xa = i32::from(self.su().xa);
+        let xa = i32::from(self.su().cursor_flash);
         match cur {
             10 => self.tou_frame(Some(j), mem(f(xa))),
             11 => self.tou_frame(Some(j), 5.0),
@@ -614,8 +621,8 @@ impl Running<'_> {
     /// A row's place in the list's twelve shown, its joint at its height (`fn_80191D38`'s and
     /// `fn_80191E9C`'s), or `None` for a row not shown.
     fn tou_row_place(&mut self, j: JObjId, idx: i32) -> bool {
-        let x3 = i32::from(self.su().x3);
-        if idx < x3 || idx >= i32::from(self.game.tou.tm.x2e) || idx > x3 + 0xB {
+        let x3 = i32::from(self.su().scroll);
+        if idx < x3 || idx >= i32::from(self.game.tou.tm.entrant_count) || idx > x3 + 0xB {
             self.tou_hide(Some(j));
             return false;
         }
@@ -637,13 +644,13 @@ impl Running<'_> {
         if !self.tou_row_place(j, idx) {
             return;
         }
-        let e = self.game.tou.tm.x37[idx as usize];
-        if e.x5 != 0 {
+        let e = self.game.tou.tm.roster[idx as usize];
+        if e.random != 0 {
             self.tou_frame(Some(j), 201.0);
         } else {
-            self.tou_frame(Some(j), icon_frame(i32::from(e.x3), i32::from(e.x7)));
+            self.tou_frame(Some(j), icon_frame(i32::from(e.icon), i32::from(e.color)));
         }
-        if self.game.tou.unlocked[usize::from(e.x3)] != 0 {
+        if self.game.tou.unlocked[usize::from(e.icon)] != 0 {
             self.tou_show(Some(j));
         } else {
             self.tou_hide(Some(j));
@@ -660,20 +667,20 @@ impl Running<'_> {
             return;
         }
         self.tou_show(Some(j));
-        if self.su().x0 == 0 {
+        if self.su().handicap == 0 {
             self.tou_hide(Some(j));
             return;
         }
         if !self.tou_row_place(j, idx) {
             return;
         }
-        let h = self.game.tou.tm.x37[idx as usize].x2;
+        let h = self.game.tou.tm.roster[idx as usize].handicap;
         self.tou_frame(Some(j), mem(f(i32::from(h))));
     }
 
     /// The entrant the list's cursor is on.
     fn tou_row(&mut self) -> usize {
-        usize::from(self.su().x2) + usize::from(self.su().x3)
+        usize::from(self.su().cursor) + usize::from(self.su().scroll)
     }
 
     /// Whether a grid place's character can be picked: unlocked, or one the grid shows
@@ -699,17 +706,17 @@ impl Running<'_> {
             self.tou_frame(child, 0.0);
             let sib = self.tou_next(child);
             let slot = self.tou_row();
-            let e = self.game.tou.tm.x37[slot];
-            if e.x5 != 0 {
+            let e = self.game.tou.tm.roster[slot];
+            if e.random != 0 {
                 self.tou_frame(sib, 201.0);
                 return;
             }
-            self.tou_frame(sib, icon_frame(i32::from(e.x3), i32::from(e.x7)));
-            if self.game.tou.unlocked[usize::from(e.x3)] != 0 {
+            self.tou_frame(sib, icon_frame(i32::from(e.icon), i32::from(e.color)));
+            if self.game.tou.unlocked[usize::from(e.icon)] != 0 {
                 self.tou_show(sib);
                 return;
             }
-            if grid_group(grid_place(ckind_of(i32::from(e.x3)))) == 1 {
+            if grid_group(grid_place(ckind_of(i32::from(e.icon)))) == 1 {
                 self.tou_frame(sib, 200.0);
                 return;
             }
@@ -724,9 +731,9 @@ impl Running<'_> {
         let child2 = self.tou_child(Some(j));
         let hud = icon_of(grid_ckind(idx));
         let slot = self.tou_row();
-        let e = self.game.tou.tm.x37[slot];
-        if i32::from(e.x3) == hud {
-            let xa = i32::from(self.su().xa);
+        let e = self.game.tou.tm.roster[slot];
+        if i32::from(e.icon) == hud {
+            let xa = i32::from(self.su().cursor_flash);
             self.tou_frame(child2, mem(f(xa + 0xA)));
         } else if self.tou_grid_shown(hud) {
             self.tou_frame(child2, 0.0);
@@ -737,9 +744,9 @@ impl Running<'_> {
         self.tou_show(sib2);
         if self.game.tou.unlocked[hud as usize] != 0 {
             let slot = self.tou_row();
-            let e = self.game.tou.tm.x37[slot];
-            if i32::from(e.x3) == hud {
-                let frame = i32::from(e.x7) * 0x1E + hud;
+            let e = self.game.tou.tm.roster[slot];
+            if i32::from(e.icon) == hud {
+                let frame = i32::from(e.color) * 0x1E + hud;
                 self.tou_frame(sib2, mem(f(frame)));
                 return;
             }
@@ -769,9 +776,9 @@ impl Running<'_> {
             self.tou_hide(Some(j));
             return;
         }
-        let xa = i32::from(self.su().xa);
+        let xa = i32::from(self.su().cursor_flash);
         self.tou_frame(Some(j), mem(f(xa)));
-        let x5 = i32::from(self.su().x5);
+        let x5 = i32::from(self.su().name_cursor);
         let x = fp::fmadds(reg(7.189_999_6), f(x5 % 4), fp::fneg(reg(1.8)));
         let y = fp::fnmsubs(reg(2.3), f(x5 / 4), reg(2.7));
         self.tou_move(j, x, y, 666.0);
@@ -799,7 +806,7 @@ impl Running<'_> {
         c2 = self.tou_next(c2);
         c2 = self.tou_next(c2);
         let c3 = self.tou_next(c2);
-        let xa = i32::from(self.su().xa);
+        let xa = i32::from(self.su().cursor_flash);
         if cur == 0xD {
             self.tou_frame(c, 0.0);
             self.tou_frame(c3, mem(f(xa + 10)));
@@ -836,18 +843,18 @@ impl Running<'_> {
             return;
         }
         self.tou_show(Some(j));
-        if self.su().x0 == 0 {
+        if self.su().handicap == 0 {
             self.tou_hide(Some(j));
             return;
         }
         let slot = self.tou_row();
-        let h = self.game.tou.tm.x37[slot].x2;
+        let h = self.game.tou.tm.roster[slot].handicap;
         self.tou_frame(Some(j), mem(f(i32::from(h))));
         let up = self.tou_child(Some(j));
         let down = self.tou_next(up);
         let hidden = super::super::super::mn::common::HIDDEN;
         let js = &mut self.game.objs.jobjs;
-        if self.game.tou.setup.x1 != 0 {
+        if self.game.tou.setup.editing_handicap != 0 {
             crate::hsd::jobj::clear_flags(js, up, hidden);
             crate::hsd::jobj::clear_flags(js, down, hidden);
             match h {
@@ -872,84 +879,84 @@ impl Running<'_> {
         let mt = self.mt();
         let tm = &mut self.game.tou.tm;
         if mt == 0 {
-            tm.x2e = ENTRANTS[tm.entrants() as usize];
-            tm.x2f = tm.hmn_cpu_count() as u8;
+            tm.entrant_count = ENTRANTS[tm.entrants() as usize];
+            tm.human_count = tm.hmn_cpu_count() as u8;
         } else {
             let c = tm.combatants() as u8;
-            tm.x2e = c;
-            tm.x2f = c;
-            tm.x30 = tm.entrants() as u8;
+            tm.entrant_count = c;
+            tm.human_count = c;
+            tm.players_per_match = tm.entrants() as u8;
         }
         for i in 0..64 {
-            self.game.tou.tm.x37[i].x5 = 0;
-            self.game.tou.tm.x37[i].xd = i as u8;
+            self.game.tou.tm.roster[i].random = 0;
+            self.game.tou.tm.roster[i].seat = i as u8;
             if self.game.game_data.x1850.handicap == 1 {
                 if self.mt() == 0 {
                     self.game.game_data.x1850.handicap = 0;
-                    self.game.tou.tm.x37[i].x2 = 9;
+                    self.game.tou.tm.roster[i].handicap = 9;
                 } else {
-                    self.game.tou.tm.x37[i].x2 = 5;
+                    self.game.tou.tm.roster[i].handicap = 5;
                 }
             } else {
-                self.game.tou.tm.x37[i].x2 = 9;
+                self.game.tou.tm.roster[i].handicap = 9;
             }
             let icon = self.tou_random_icon();
-            self.game.tou.tm.x37[i].x3 = icon as u8;
+            self.game.tou.tm.roster[i].icon = icon as u8;
             let n = super::super::super::playback::costume_count(ckind_of(icon) as u8);
-            self.game.tou.tm.x37[i].x7 = self.game.objs.rng.below(i32::from(n)) as u8;
-            let (x2e, x2f) = (self.game.tou.tm.x2e, self.game.tou.tm.x2f);
+            self.game.tou.tm.roster[i].color = self.game.objs.rng.below(i32::from(n)) as u8;
+            let (x2e, x2f) = (self.game.tou.tm.entrant_count, self.game.tou.tm.human_count);
             if (i as i32) < i32::from(x2e) {
                 self.game.tou.tm.present[i] = 1;
                 if (i as i32) < i32::from(x2f) {
-                    let e = &mut self.game.tou.tm.x37[i];
-                    e.x0 = 0;
-                    e.x9 = (i + 0x320) as u16;
+                    let e = &mut self.game.tou.tm.roster[i];
+                    e.slot_type = 0;
+                    e.name = (i + 0x320) as u16;
                 } else {
-                    let e = &mut self.game.tou.tm.x37[i];
-                    e.x0 = 1;
-                    e.x9 = ((i + 0x384) as u16).wrapping_sub(u16::from(x2f));
+                    let e = &mut self.game.tou.tm.roster[i];
+                    e.slot_type = 1;
+                    e.name = ((i + 0x384) as u16).wrapping_sub(u16::from(x2f));
                     let level = self.game.tou.tm.cpu_level();
                     if self.mt() == 0 && level == 0 {
                         let l = self.game.objs.rng.below(9) + 1;
-                        self.game.tou.tm.x37[i].x1 = l as u8;
+                        self.game.tou.tm.roster[i].level = l as u8;
                     } else {
-                        self.game.tou.tm.x37[i].x1 = level as u8;
+                        self.game.tou.tm.roster[i].level = level as u8;
                     }
                 }
             } else {
                 self.game.tou.tm.present[i] = 0;
-                let e = &mut self.game.tou.tm.x37[i];
-                e.x0 = 3;
-                e.x9 = 0x3E7;
+                let e = &mut self.game.tou.tm.roster[i];
+                e.slot_type = 3;
+                e.name = 0x3E7;
             }
         }
-        for m in &mut self.game.tou.tm.x4b8 {
-            m.x2 = 0;
+        for m in &mut self.game.tou.tm.match_players {
+            m.random = 0;
         }
         if self.mt() == 0 {
             let start = i32::from(self.su().pads < 2);
-            let x2e = i32::from(self.game.tou.tm.x2e);
+            let x2e = i32::from(self.game.tou.tm.entrant_count);
             for _ in 0..0x3E8 {
                 let a = start + self.game.objs.rng.below(x2e - start);
                 let b = start + self.game.objs.rng.below(x2e - start);
-                let x37 = &mut self.game.tou.tm.x37;
-                let t = x37[a as usize].xd;
-                x37[a as usize].xd = x37[b as usize].xd;
-                x37[b as usize].xd = t;
+                let x37 = &mut self.game.tou.tm.roster;
+                let t = x37[a as usize].seat;
+                x37[a as usize].seat = x37[b as usize].seat;
+                x37[b as usize].seat = t;
             }
         }
         let handicap = self.game.game_data.x1850.handicap;
         let s = self.su();
-        s.x2 = 0;
-        s.x3 = 0;
-        s.x4 = 0xB;
-        s.x5 = 0;
-        s.x6 = 0;
-        s.x0 = handicap;
+        s.cursor = 0;
+        s.scroll = 0;
+        s.scroll_end = 0xB;
+        s.name_cursor = 0;
+        s.name_page = 0;
+        s.handicap = handicap;
         let tm = &mut self.game.tou.tm;
-        tm.x24 = 0;
-        tm.x34 = 0xFF;
-        tm.x33 = 0xFF;
+        tm.rounds = 0;
+        tm.last_rank = 0xFF;
+        tm.rank = 0xFF;
     }
 
     /// `fn_80192BB0`: the menu and, for each option, its arrows, row and cursor.
@@ -1063,7 +1070,7 @@ impl Running<'_> {
         let t = self.create_text(0, canvas, Vec3::new(124.5, 45.0, 0.0), 391.0, 30.0);
         self.game.sis.text_mut(t).default_fitting = 1;
         self.game.sis.reset_text(self.data, t, 0x4A);
-        self.game.tou.tm.x4e0 = Some(t);
+        self.game.tou.tm.title_text = Some(t);
         let t = self.create_text(
             0,
             canvas,
@@ -1072,7 +1079,7 @@ impl Running<'_> {
             40.0,
         );
         self.game.sis.text_mut(t).hidden = 1;
-        self.game.tou.tm.x4e4 = Some(t);
+        self.game.tou.tm.count_text = Some(t);
         for i in 0..6 {
             let y = mem(fp::fmadds(reg(35.7), f(i), 113.0));
             for (k, x, m) in [(0, 123.0, 0x5C), (1, 343.0, 0x53)] {
@@ -1082,9 +1089,9 @@ impl Running<'_> {
                 tx.hidden = 1;
                 self.game.sis.reset_text(self.data, t, m);
                 if k == 0 {
-                    self.game.tou.tm.x4e8[i as usize] = Some(t);
+                    self.game.tou.tm.description_texts[i as usize] = Some(t);
                 } else {
-                    self.game.tou.tm.x500[i as usize] = Some(t);
+                    self.game.tou.tm.value_texts[i as usize] = Some(t);
                 }
             }
         }
@@ -1092,7 +1099,7 @@ impl Running<'_> {
         let tx = self.game.sis.text_mut(t);
         tx.font_size = [0.5, 0.5];
         tx.default_kerning = 1;
-        self.game.tou.tm.x518[0] = Some(t);
+        self.game.tou.tm.name_texts[0] = Some(t);
         for (k, idx) in [(0, 1), (1, 2)] {
             let t = self.create_text_buffer(0, canvas);
             let tx = self.game.sis.text_mut(t);
@@ -1101,7 +1108,7 @@ impl Running<'_> {
             if k != 0 {
                 tx.text_color = GREEN;
             }
-            self.game.tou.tm.x518[idx] = Some(t);
+            self.game.tou.tm.name_texts[idx] = Some(t);
         }
         for (k, idx) in [(0, 3), (1, 4)] {
             let t = self.create_text_buffer(0, canvas);
@@ -1112,7 +1119,7 @@ impl Running<'_> {
             if k != 0 {
                 tx.text_color = GREEN;
             }
-            self.game.tou.tm.x518[idx] = Some(t);
+            self.game.tou.tm.name_texts[idx] = Some(t);
         }
     }
 
@@ -1130,22 +1137,22 @@ impl Running<'_> {
         self.tou_setup_models_again();
         let s = self.su();
         s.panel = 0;
-        s.xc = 0;
-        s.xe = 0;
-        s.xf = 0;
-        s.pad2[12] = 0;
+        s.bg_frame = 0;
+        s.panel_frame = 0;
+        s.marks_frame = 0;
+        s.model_frames[12] = 0;
         for i in 0..6 {
-            s.pad2[i] = 0xA;
-            s.pad2[i + 6] = 0;
+            s.model_frames[i] = 0xA;
+            s.model_frames[i + 6] = 0;
         }
         for (o, m) in self.game.tou.tm.opts.iter_mut().zip(&MIN) {
             *o = i32::from(m[0]);
         }
         let handicap = self.game.game_data.x1850.handicap;
         let s = self.su();
-        s.x1 = 0;
-        s.x0 = handicap;
-        self.game.tou.tm.x32 = 0;
+        s.editing_handicap = 0;
+        s.handicap = handicap;
+        self.game.tou.tm.stage_picked = 0;
         for i in 0..25 {
             let k = ckind_of(i) as u8;
             self.game.tou.unlocked[i as usize] = u8::from(self.game.gm.unlocks.ckind_unlocked(k));
@@ -1161,7 +1168,7 @@ impl Running<'_> {
     /// `tmSettings_StepDown`: the option's value one down, to its maximum past its minimum.
     fn tou_step_down(&mut self) {
         self.lb_audio_call(2);
-        self.su().x7 = 5;
+        self.su().left_flash = 5;
         let col = self.col();
         let tm = &mut self.game.tou.tm;
         let idx = tm.cur_option as usize;
@@ -1176,7 +1183,7 @@ impl Running<'_> {
     /// `tmSettings_StepUp`: the option's value one up, to its minimum past its maximum.
     fn tou_step_up(&mut self) {
         self.lb_audio_call(2);
-        self.su().x8 = 5;
+        self.su().right_flash = 5;
         let col = self.col();
         let tm = &mut self.game.tou.tm;
         let idx = tm.cur_option as usize;
@@ -1260,13 +1267,13 @@ impl Running<'_> {
                 if v > i32::from(MIN[idx][col]) {
                     *self.game.tou.tm.word_mut(idx + 1) = v - 1;
                     self.lb_audio_call(2);
-                    self.su().x7 = 5;
+                    self.su().left_flash = 5;
                 } else {
                     let max = i32::from(MAX[idx][col]);
                     *self.game.tou.tm.word_mut(idx + 1) = if clamp < max { clamp } else { max };
                     if self.game.tou.tm.word(idx + 1) != i32::from(MIN[idx][col]) {
                         self.lb_audio_call(2);
-                        self.su().x7 = 5;
+                        self.su().left_flash = 5;
                     }
                 }
             } else {
@@ -1279,19 +1286,19 @@ impl Running<'_> {
                     if v < clamp {
                         *self.game.tou.tm.word_mut(idx + 1) = v + 1;
                         self.lb_audio_call(2);
-                        self.su().x8 = 5;
+                        self.su().right_flash = 5;
                     } else {
                         *self.game.tou.tm.word_mut(idx + 1) = i32::from(MIN[idx][col]);
                         if self.game.tou.tm.word(idx + 1) != clamp {
                             self.lb_audio_call(2);
-                            self.su().x8 = 5;
+                            self.su().right_flash = 5;
                         }
                     }
                 } else {
                     *self.game.tou.tm.word_mut(idx + 1) = i32::from(MIN[idx][col]);
                     if self.game.tou.tm.word(idx + 1) != i32::from(MAX[idx][col]) {
                         self.lb_audio_call(2);
-                        self.su().x8 = 5;
+                        self.su().right_flash = 5;
                     }
                 }
             } else {
@@ -1300,7 +1307,7 @@ impl Running<'_> {
         }
         let tm = &mut self.game.tou.tm;
         if mt0 {
-            tm.x30 = tm.word(2) as u8;
+            tm.players_per_match = tm.word(2) as u8;
         } else if tm.word(3) > tm.word(2) - 1 {
             *tm.word_mut(3) = tm.word(2) - 1;
         }
@@ -1312,7 +1319,7 @@ impl Running<'_> {
             self.game.tou.tm.cur_option += 1;
             if mt0 {
                 let tm = &mut self.game.tou.tm;
-                *tm.word_mut(3) = match tm.x30 {
+                *tm.word_mut(3) = match tm.players_per_match {
                     2 => 0,
                     3 => 9,
                     _ => 0xE,
@@ -1354,13 +1361,13 @@ impl Running<'_> {
                 if v > i32::from(MIN[idx][col]) {
                     *self.game.tou.tm.word_mut(idx + 1) = v - 1;
                     self.lb_audio_call(2);
-                    self.su().x7 = 5;
+                    self.su().left_flash = 5;
                 } else {
                     let max1 = i32::from(MAX[idx][col]) + 1;
                     *self.game.tou.tm.word_mut(idx + 1) = if clamp < max1 { clamp } else { max1 };
                     if self.game.tou.tm.word(idx + 1) != i32::from(MIN[idx][col]) {
                         self.lb_audio_call(2);
-                        self.su().x7 = 5;
+                        self.su().left_flash = 5;
                     }
                 }
             } else {
@@ -1369,7 +1376,7 @@ impl Running<'_> {
             if mt0 {
                 let tm = &mut self.game.tou.tm;
                 let w3 = tm.word(3);
-                match tm.x30 {
+                match tm.players_per_match {
                     2 if w3 == 0x1F => *tm.word_mut(3) = 8,
                     3 if w3 == 8 => *tm.word_mut(3) = 0xD,
                     4 if w3 == 0xD => *tm.word_mut(3) = 0x1F,
@@ -1385,24 +1392,24 @@ impl Running<'_> {
                     if v < clamp && v + 1 < w2 {
                         *self.game.tou.tm.word_mut(idx + 1) = v + 1;
                         self.lb_audio_call(2);
-                        self.su().x8 = 5;
+                        self.su().right_flash = 5;
                     } else {
                         *self.game.tou.tm.word_mut(idx + 1) = i32::from(MIN[idx][col]);
                         if self.game.tou.tm.word(idx + 1) != clamp {
                             self.lb_audio_call(2);
-                            self.su().x8 = 5;
+                            self.su().right_flash = 5;
                         }
                     }
                 } else {
                     *self.game.tou.tm.word_mut(idx + 1) = i32::from(MIN[idx][col]);
                     if self.game.tou.tm.word(idx + 1) != i32::from(MAX[idx][col]) + 1 {
                         self.lb_audio_call(2);
-                        self.su().x8 = 5;
+                        self.su().right_flash = 5;
                     }
                 }
             } else {
                 self.lb_audio_call(2);
-                self.su().x8 = 5;
+                self.su().right_flash = 5;
                 let v = self.game.tou.tm.word(idx + 1);
                 *self.game.tou.tm.word_mut(idx + 1) = if v < i32::from(MAX[idx][col]) {
                     v + 1
@@ -1413,7 +1420,7 @@ impl Running<'_> {
             if mt0 {
                 let tm = &mut self.game.tou.tm;
                 let w3 = tm.word(3);
-                match tm.x30 {
+                match tm.players_per_match {
                     2 if w3 == 9 => *tm.word_mut(3) = 0,
                     3 if w3 == 0xE => *tm.word_mut(3) = 9,
                     4 if w3 == 0 => *tm.word_mut(3) = 0xE,
@@ -1433,7 +1440,7 @@ impl Running<'_> {
             if tm.word(4) > tm.word(2) - tm.word(3) {
                 *tm.word_mut(4) = tm.word(2) - tm.word(3);
             }
-            tm.x30 = tm.word(3) as u8;
+            tm.players_per_match = tm.word(3) as u8;
         }
         let refresh = |r: &mut Running| {
             if (b | t) & 0x300 != 0 {
@@ -1531,9 +1538,9 @@ impl Running<'_> {
         if val != self.game.tou.tm.word(4) {
             self.lb_audio_call(2);
             if !changed {
-                self.su().x7 = 5;
+                self.su().left_flash = 5;
             } else {
-                self.su().x8 = 5;
+                self.su().right_flash = 5;
             }
         }
         if b != 0 {
@@ -1644,7 +1651,7 @@ impl Running<'_> {
             match self.game.tou.tm.cur_option {
                 6 => self.tou_make_list(),
                 7 => {
-                    self.game.tou.tm.x20 = 1;
+                    self.game.tou.tm.in_name_entry = 1;
                     self.sis_reset();
                     self.free_gobj_links(0x19, 0x1C);
                     self.free_gobj_links(0x12, 0x15);
@@ -1685,7 +1692,7 @@ impl Running<'_> {
                 16 => {
                     self.lb_audio_call(2);
                     self.game.tou.tm.cur_option = 0xC;
-                    self.su().x1 = 0;
+                    self.su().editing_handicap = 0;
                 }
                 _ => {}
             }
@@ -1695,54 +1702,54 @@ impl Running<'_> {
                     self.lb_audio_call(2);
                     self.game.tou.tm.cur_option = 0xC;
                 }
-                12 if self.su().x0 != 0 => {
+                12 if self.su().handicap != 0 => {
                     self.lb_audio_call(2);
                     self.game.tou.tm.cur_option = 0x10;
                 }
                 _ => {}
             }
         } else if b & PAD_UP != 0 {
-            if cur != 0x10 || self.su().x1 == 0 {
-                if self.su().x2 != 0 {
+            if cur != 0x10 || self.su().editing_handicap == 0 {
+                if self.su().cursor != 0 {
                     self.lb_audio_call(2);
-                    self.su().x2 -= 1;
+                    self.su().cursor -= 1;
                     self.tou_texts(5);
-                } else if self.su().x3 != 0 {
+                } else if self.su().scroll != 0 {
                     self.lb_audio_call(2);
-                    self.su().x3 -= 1;
-                    self.su().x4 = self.su().x4.wrapping_sub(1);
+                    self.su().scroll -= 1;
+                    self.su().scroll_end = self.su().scroll_end.wrapping_sub(1);
                     self.tou_texts(5);
                     self.tou_texts(6);
                 }
             } else {
                 let i = self.tou_row();
-                if self.game.tou.tm.x37[i].x2 > 1 {
+                if self.game.tou.tm.roster[i].handicap > 1 {
                     self.lb_audio_call(2);
-                    self.game.tou.tm.x37[i].x2 -= 1;
+                    self.game.tou.tm.roster[i].handicap -= 1;
                 }
             }
         } else if b & PAD_DOWN != 0 {
-            if cur != 0x10 || self.su().x1 == 0 {
-                let x2e = i32::from(self.game.tou.tm.x2e);
-                let pos = self.su().x2;
+            if cur != 0x10 || self.su().editing_handicap == 0 {
+                let x2e = i32::from(self.game.tou.tm.entrant_count);
+                let pos = self.su().cursor;
                 if pos < 0xB {
-                    if i32::from(pos) + i32::from(self.su().x3) < x2e - 1 {
+                    if i32::from(pos) + i32::from(self.su().scroll) < x2e - 1 {
                         self.lb_audio_call(2);
-                        self.su().x2 += 1;
+                        self.su().cursor += 1;
                         self.tou_texts(5);
                     }
-                } else if i32::from(pos) + i32::from(self.su().x3) < x2e - 1 {
+                } else if i32::from(pos) + i32::from(self.su().scroll) < x2e - 1 {
                     self.lb_audio_call(2);
-                    self.su().x3 += 1;
-                    self.su().x4 = self.su().x4.wrapping_add(1);
+                    self.su().scroll += 1;
+                    self.su().scroll_end = self.su().scroll_end.wrapping_add(1);
                     self.tou_texts(5);
                     self.tou_texts(6);
                 }
             } else {
                 let i = self.tou_row();
-                if self.game.tou.tm.x37[i].x2 < 9 {
+                if self.game.tou.tm.roster[i].handicap < 9 {
                     self.lb_audio_call(2);
-                    self.game.tou.tm.x37[i].x2 += 1;
+                    self.game.tou.tm.roster[i].handicap += 1;
                 }
             }
         }
@@ -1751,31 +1758,31 @@ impl Running<'_> {
                 12 | 10 => {
                     self.lb_audio_call(1);
                     let i = self.tou_row();
-                    let e = &mut self.game.tou.tm.x37[i];
-                    e.x4 = e.x3;
-                    e.x8 = e.x7;
-                    e.xb = e.x9;
-                    e.x6 = e.x5;
+                    let e = &mut self.game.tou.tm.roster[i];
+                    e.saved_icon = e.icon;
+                    e.saved_color = e.color;
+                    e.saved_name = e.name;
+                    e.saved_random = e.random;
                     self.game.tou.tm.cur_option += 1;
                 }
-                16 if self.game.tou.setup.x0 != 1 => {
-                    if self.su().x1 != 1 {
+                16 if self.game.tou.setup.handicap != 1 => {
+                    if self.su().editing_handicap != 1 {
                         self.lb_audio_call(1);
                     }
-                    self.su().x1 = 1;
+                    self.su().editing_handicap = 1;
                 }
                 _ => {}
             }
         } else if t & PAD_B != 0 {
             self.lb_audio_call(0);
-            if self.game.tou.tm.cur_option != 0x10 || self.su().x1 == 0 {
+            if self.game.tou.tm.cur_option != 0x10 || self.su().editing_handicap == 0 {
                 self.game.tou.tm.cur_option = 6;
-                self.su().xe = 0;
+                self.su().panel_frame = 0;
                 if self.mt() == 0 {
                     self.tou_show_bracket();
                 }
             } else {
-                self.su().x1 = 0;
+                self.su().editing_handicap = 0;
             }
         }
     }
@@ -1788,10 +1795,10 @@ impl Running<'_> {
             if self.tou_grid_shown(adj) {
                 self.lb_audio_call(2);
                 let i = self.tou_row();
-                let e = &mut self.game.tou.tm.x37[i];
-                e.x7 = 0;
-                e.x5 = 0;
-                e.x3 = adj as u8;
+                let e = &mut self.game.tou.tm.roster[i];
+                e.color = 0;
+                e.random = 0;
+                e.icon = adj as u8;
                 break;
             }
         }
@@ -1804,13 +1811,13 @@ impl Running<'_> {
     #[doc(alias = "fn_801953C8")]
     fn tou_opt_character(&mut self, b: u32, t: u32) {
         let i = self.tou_row();
-        let cur_pos = grid_place(ckind_of(i32::from(self.game.tou.tm.x37[i].x3)));
+        let cur_pos = grid_place(ckind_of(i32::from(self.game.tou.tm.roster[i].icon)));
         if t & PAD_START != 0 {
             self.lb_audio_call(0);
-            let e = &mut self.game.tou.tm.x37[i];
-            e.x3 = e.x4;
-            e.x7 = e.x8;
-            e.x5 = e.x6;
+            let e = &mut self.game.tou.tm.roster[i];
+            e.icon = e.saved_icon;
+            e.color = e.saved_color;
+            e.random = e.saved_random;
             self.su().back_to = self.game.tou.tm.cur_option;
             self.game.tou.tm.cur_option = 0x11;
             return;
@@ -1842,47 +1849,47 @@ impl Running<'_> {
             let held = self.tou_held(4);
             if held & PAD_L != 0 && held & PAD_R != 0 && self.mt() != 0 {
                 let i = self.tou_row();
-                if self.game.tou.unlocked[usize::from(self.game.tou.tm.x37[i].x3)] == 0 {
+                if self.game.tou.unlocked[usize::from(self.game.tou.tm.roster[i].icon)] == 0 {
                     self.lb_audio_call(3);
                     return;
                 }
                 self.lb_audio_call(1);
-                self.game.tou.tm.x37[i].x5 = 1;
+                self.game.tou.tm.roster[i].random = 1;
                 self.game.tou.tm.cur_option -= 1;
                 return;
             }
             let i = self.tou_row();
-            if self.game.tou.unlocked[usize::from(self.game.tou.tm.x37[i].x3)] == 0 {
+            if self.game.tou.unlocked[usize::from(self.game.tou.tm.roster[i].icon)] == 0 {
                 self.lb_audio_call(3);
                 return;
             }
             self.lb_audio_call(1);
             self.game.tou.tm.cur_option -= 1;
             let i = self.tou_row();
-            if self.game.tou.tm.x37[i].x5 != 0 {
-                self.game.tou.tm.x37[i].x5 = 0;
+            if self.game.tou.tm.roster[i].random != 0 {
+                self.game.tou.tm.roster[i].random = 0;
             }
         } else if t & PAD_B != 0 {
             self.lb_audio_call(0);
             let i = self.tou_row();
-            let e = &mut self.game.tou.tm.x37[i];
-            e.x3 = e.x4;
-            e.x7 = e.x8;
-            e.x5 = e.x6;
+            let e = &mut self.game.tou.tm.roster[i];
+            e.icon = e.saved_icon;
+            e.color = e.saved_color;
+            e.random = e.saved_random;
             self.game.tou.tm.cur_option -= 1;
         } else if t & PAD_X != 0 {
             let i = self.tou_row();
-            let e = self.game.tou.tm.x37[i];
-            let n = super::super::super::playback::costume_count(ckind_of(i32::from(e.x3)) as u8);
-            if i32::from(e.x7) < i32::from(n) - 1 {
+            let e = self.game.tou.tm.roster[i];
+            let n = super::super::super::playback::costume_count(ckind_of(i32::from(e.icon)) as u8);
+            if i32::from(e.color) < i32::from(n) - 1 {
                 self.lb_audio_call(2);
-                self.game.tou.tm.x37[i].x7 += 1;
+                self.game.tou.tm.roster[i].color += 1;
             }
         } else if t & PAD_Y != 0 {
             let i = self.tou_row();
-            if self.game.tou.tm.x37[i].x7 != 0 {
+            if self.game.tou.tm.roster[i].color != 0 {
                 self.lb_audio_call(2);
-                self.game.tou.tm.x37[i].x7 -= 1;
+                self.game.tou.tm.roster[i].color -= 1;
             }
         }
     }
@@ -1909,12 +1916,12 @@ impl Running<'_> {
         if t & PAD_A != 0 {
             self.lb_audio_call(1);
             let i = self.tou_row();
-            let e = &mut self.game.tou.tm.x37[i];
-            e.xb = e.x9;
+            let e = &mut self.game.tou.tm.roster[i];
+            e.saved_name = e.name;
             match self.game.tou.tm.cur_option {
                 0xD => {
                     if !self.game.name_list_full() {
-                        self.game.tou.tm.x20 = 1;
+                        self.game.tou.tm.in_name_entry = 1;
                         self.sis_reset();
                         self.free_gobj_links(0x19, 0x1C);
                         self.free_gobj_links(0x12, 0x15);
@@ -1924,10 +1931,10 @@ impl Running<'_> {
                 }
                 0xE => {
                     let s = &self.game.tou.setup;
-                    let slot = s.x5 + s.x6 * 4;
+                    let slot = s.name_cursor + s.name_page * 4;
                     if self.game.name_text(slot).is_some() {
                         let i = self.tou_row();
-                        self.game.tou.tm.x37[i].x9 = u16::from(slot);
+                        self.game.tou.tm.roster[i].name = u16::from(slot);
                     }
                     self.game.tou.tm.cur_option = 0xF;
                     self.tou_texts(4);
@@ -1937,8 +1944,8 @@ impl Running<'_> {
         } else if t & PAD_B != 0 {
             self.lb_audio_call(0);
             let i = self.tou_row();
-            let e = &mut self.game.tou.tm.x37[i];
-            e.x9 = e.xb;
+            let e = &mut self.game.tou.tm.roster[i];
+            e.name = e.saved_name;
             self.tou_texts(5);
             self.tou_texts(6);
             self.game.tou.tm.cur_option = 0xC;
@@ -1949,9 +1956,9 @@ impl Running<'_> {
     /// names shown again.
     fn tou_name_pick(&mut self) {
         let s = &self.game.tou.setup;
-        let name = u16::from(s.x5) + u16::from(s.x6) * 4;
+        let name = u16::from(s.name_cursor) + u16::from(s.name_page) * 4;
         let i = self.tou_row();
-        self.game.tou.tm.x37[i].x9 = name;
+        self.game.tou.tm.roster[i].name = name;
         self.tou_texts(5);
         self.tou_texts(4);
     }
@@ -1964,57 +1971,59 @@ impl Running<'_> {
         let count = self.name_count();
         if b & PAD_LEFT != 0 {
             self.lb_audio_call(2);
-            if !self.su().x5.is_multiple_of(4) {
-                self.su().x5 -= 1;
+            if !self.su().name_cursor.is_multiple_of(4) {
+                self.su().name_cursor -= 1;
                 self.tou_name_pick();
             }
         } else if b & PAD_RIGHT != 0 {
             self.lb_audio_call(2);
             let s = &self.game.tou.setup;
-            if s.x5 % 4 < 3 && i32::from(s.x5) + i32::from(s.x6) * 4 + 1 < count {
-                self.su().x5 += 1;
+            if s.name_cursor % 4 < 3
+                && i32::from(s.name_cursor) + i32::from(s.name_page) * 4 + 1 < count
+            {
+                self.su().name_cursor += 1;
                 self.tou_name_pick();
             }
         } else if b & PAD_UP != 0 {
             self.lb_audio_call(2);
-            if self.su().x5 / 4 != 0 {
-                self.su().x5 -= 4;
+            if self.su().name_cursor / 4 != 0 {
+                self.su().name_cursor -= 4;
                 self.tou_name_pick();
-            } else if self.su().x6 != 0 {
-                self.su().x6 -= 1;
+            } else if self.su().name_page != 0 {
+                self.su().name_page -= 1;
                 self.tou_name_pick();
             }
         } else if b & PAD_DOWN != 0 {
             self.lb_audio_call(2);
             let s = &self.game.tou.setup;
-            if s.x5 / 4 < 8 {
-                if i32::from(s.x5) + i32::from(s.x6) * 4 + 4 < count {
-                    self.su().x5 += 4;
+            if s.name_cursor / 4 < 8 {
+                if i32::from(s.name_cursor) + i32::from(s.name_page) * 4 + 4 < count {
+                    self.su().name_cursor += 4;
                     let s = &self.game.tou.setup;
-                    let name = u16::from(s.x5) + u16::from(s.x6) * 4;
+                    let name = u16::from(s.name_cursor) + u16::from(s.name_page) * 4;
                     let i = self.tou_row();
-                    self.game.tou.tm.x37[i].x9 = name;
+                    self.game.tou.tm.roster[i].name = name;
                 }
                 self.tou_texts(5);
                 self.tou_texts(4);
-            } else if i32::from(s.x5) + i32::from(s.x6) * 4 + 4 < count {
-                self.su().x6 += 1;
+            } else if i32::from(s.name_cursor) + i32::from(s.name_page) * 4 + 4 < count {
+                self.su().name_page += 1;
                 self.tou_name_pick();
             }
         }
         if t & PAD_A != 0 {
             let s = &self.game.tou.setup;
-            let selected = s.x5 + s.x6 * 4;
+            let selected = s.name_cursor + s.name_page * 4;
             if self.game.name_text(selected).is_some() {
                 let slot = self.tou_row();
                 let tm = &self.game.tou.tm;
-                let n = usize::from(tm.x2e);
-                let unique =
-                    (0..n).all(|i| i == slot || i32::from(selected) != i32::from(tm.x37[i].x9));
+                let n = usize::from(tm.entrant_count);
+                let unique = (0..n)
+                    .all(|i| i == slot || i32::from(selected) != i32::from(tm.roster[i].name));
                 if unique {
                     self.lb_audio_call(1);
                     let slot = self.tou_row();
-                    self.game.tou.tm.x37[slot].x9 = u16::from(selected);
+                    self.game.tou.tm.roster[slot].name = u16::from(selected);
                     self.tou_texts(5);
                     self.tou_texts(6);
                     self.game.tou.tm.cur_option = 0xC;
@@ -2027,8 +2036,8 @@ impl Running<'_> {
         if t & PAD_B != 0 {
             self.lb_audio_call(0);
             let i = self.tou_row();
-            let e = &mut self.game.tou.tm.x37[i];
-            e.x9 = e.xb;
+            let e = &mut self.game.tou.tm.roster[i];
+            e.name = e.saved_name;
             self.tou_texts(5);
             self.tou_texts(6);
             self.game.tou.tm.cur_option = 0xE;
@@ -2056,19 +2065,19 @@ impl Running<'_> {
                     self.set_next_game_mode_state_id(STATE_BRACKET);
                 } else {
                     let tm = &mut self.game.tou.tm;
-                    for i in 0..usize::from(tm.x2e) {
-                        let e = &mut tm.x37[i];
-                        e.xe = e.xd;
-                        e.xf = 0;
-                        if i < usize::from(tm.x30) {
-                            let e = tm.x37[i];
-                            let m = &mut tm.x4b8[i];
-                            m.x6 = e.x9;
-                            m.x5 = e.x2;
-                            m.x1 = e.x3;
-                            m.x0 = e.x0;
-                            m.x3 = e.x7;
-                            m.x2 = e.x5;
+                    for i in 0..usize::from(tm.entrant_count) {
+                        let e = &mut tm.roster[i];
+                        e.matchup_seat = e.seat;
+                        e.shown_seat = 0;
+                        if i < usize::from(tm.players_per_match) {
+                            let e = tm.roster[i];
+                            let m = &mut tm.match_players[i];
+                            m.name = e.name;
+                            m.handicap = e.handicap;
+                            m.icon = e.icon;
+                            m.slot_type = e.slot_type;
+                            m.color = e.color;
+                            m.random = e.random;
                         }
                     }
                     self.set_next_game_mode_state_id(STATE_ALT);
@@ -2102,11 +2111,11 @@ impl Running<'_> {
             self.change_game_mode_after_scene(GM_MENU);
             return;
         }
-        if self.game.tou.tm.x20 != 0 {
+        if self.game.tou.tm.in_name_entry != 0 {
             return;
         }
         let s = self.su();
-        s.xa = ((i32::from(s.xa) + 1) % 11) as u8;
+        s.cursor_flash = ((i32::from(s.cursor_flash) + 1) % 11) as u8;
         let cur = self.game.tou.tm.cur_option;
         if cur == 9 || cur >= 0x13 {
             return;
@@ -2239,8 +2248,8 @@ impl Running<'_> {
         self.tou_free_archive(b);
         let tm = &mut self.game.tou.tm;
         tm.cur_option = 0x13;
-        tm.x2c = 1;
-        tm.x31 = s.x0;
+        tm.new_bracket = 1;
+        tm.handicaps = s.handicap;
     }
 
     /// The setup's processes.
@@ -2273,8 +2282,8 @@ impl Running<'_> {
     #[doc(alias = "gm_8019A828")]
     pub fn tou_back_to_players(&mut self) {
         let tm = &mut self.game.tou.tm;
-        tm.x32 = 0;
-        self.game.tou.bracket_scene.x6678 = 1;
+        tm.stage_picked = 0;
+        self.game.tou.bracket_scene.back_to_players = 1;
         self.game.tou.tm.cur_option = 0x1B;
         let _ = MATCH_TYPE;
     }

@@ -3,7 +3,7 @@
 //! ```text
 //! melee-hd [--saves DIR] [--no-session-record]     boots Melee from power-on with the native save
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
-//!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread]
+//!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread]
 //!          [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [--resize-at TICK:WxH] [...]
 //!                                               plays headless, timing each frame
@@ -209,6 +209,8 @@ struct Args {
     one_thread: bool,
     /// Samples a pixel: 4 for MSAA, 1 as the console draws.
     msaa: u32,
+    /// Draws with the fast renderer (docs/fast-renderer.md) rather than the exact one.
+    fast: bool,
     /// The console from power-on with the settings panel (no match on the command line).
     front: bool,
     /// Draws the settings panel to this PNG and quits, on this tab (`--settings-tab`).
@@ -275,7 +277,7 @@ struct Args {
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|quick-match|recordings]]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--renderer fast|exact] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|quick-match|recordings]]\n\
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
@@ -334,6 +336,8 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
         aspect: present::Aspect::GAME,
         one_thread: false,
         msaa: 1,
+        // The fast renderer by default (Sarah, 2026-11-20); `--renderer exact` for the other.
+        fast: true,
         front: false,
         settings_shot: None,
         settings_tab: front::Tab::Settings,
@@ -450,6 +454,14 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                     _ => return Err("--msaa 4 (or 1, off)".into()),
                 };
                 a.given.msaa = true;
+            }
+            "--renderer" => {
+                a.fast = match value()?.as_str() {
+                    "fast" => true,
+                    "exact" => false,
+                    _ => return Err("--renderer fast|exact".into()),
+                };
+                a.given.renderer = true;
             }
             "--bench" => a.bench = Some(value()?.parse().map_err(|_| "--bench TICKS")?),
             "--size" | "--windowed" => a.size = size(&value()?)?,
@@ -1288,6 +1300,7 @@ struct Aside {
     scale: u32,
     efb_width: u32,
     msaa: u32,
+    fast: bool,
     console_view: Option<ConsoleView>,
     last_image: Option<melee_gpu::Frame>,
     hold: jit::Hold<melee_sim::game::vs_match::Frame>,
@@ -1366,6 +1379,8 @@ struct App {
     efb_width: u32,
     one_thread: bool,
     msaa: u32,
+    /// Draws with the fast renderer.
+    fast: bool,
     /// The window's size, which the internal resolution follows.
     window_size: (u32, u32),
     /// Alt is held (Alt+Enter toggles fullscreen).
@@ -1990,18 +2005,26 @@ impl App {
         let m = self.session.as_ref().expect("a match");
         let last = self.frames.hsd.perf_host.take();
         self.frames.hsd.perf_host = Some(self.host_times.host(last));
-        let fifo = self.frames.frame_blended(m.game(), m.data(), draws, blend);
         let gpu = self.renderer.get_or_insert_with(|| {
             gpu_for(
                 pipelines::renderer(&self.gpu, self.scale, self.msaa, self.aspect),
                 self.one_thread,
+                self.fast,
             )
         });
         let before = self
             .capture_next
             .is_some()
             .then(|| capture::Regs::of(&gpu.state));
-        let images = gpu.run(&self.frames.space, m.data(), &fifo, None);
+        // A capture keeps the frame's stream whole; otherwise the fast renderer runs it as
+        // it's built (`Gpu::draw`).
+        let (images, fifo) = if before.is_some() {
+            let fifo = self.frames.frame_blended(m.game(), m.data(), draws, blend);
+            (gpu.run(&self.frames.space, m.data(), &fifo, None), fifo)
+        } else {
+            let images = gpu.draw(&mut self.frames, m.game(), m.data(), draws, blend);
+            (images, Vec::new())
+        };
         let after = before.as_ref().map(|_| capture::Regs::of(&gpu.state));
         if let Some(dir) = self.capture_next.take()
             && let (Some(before), Some(after)) = (before, after)
@@ -2123,6 +2146,7 @@ impl App {
             scale: self.scale,
             efb_width: self.efb_width,
             msaa: self.msaa,
+            fast: self.fast,
         };
         let (gpu, aspect, one_thread, dol) = (&self.gpu, self.aspect, self.one_thread, &s.dol);
         let moved = self
@@ -2132,7 +2156,7 @@ impl App {
                 frames.space.load_dol(dol);
                 frames.hsd.widescreen = aspect.widescreen();
                 let r = pipelines::renderer(gpu, shape.scale, shape.msaa, aspect);
-                (frames, Some(gpu_for(r, one_thread)))
+                (frames, Some(gpu_for(r, one_thread, shape.fast)))
             });
         if let handoff::Moved::Back {
             shape: was,
@@ -2142,11 +2166,12 @@ impl App {
             if let Some(g) = renderer {
                 self.specialized = pipelines::save(&g.into_renderer());
             }
-            if was.msaa != self.msaa {
+            if (was.msaa, was.fast) != (self.msaa, self.fast) {
                 self.drop_renderer();
                 self.renderer = Some(gpu_for(
                     pipelines::renderer(&self.gpu, self.scale, self.msaa, self.aspect),
                     self.one_thread,
+                    self.fast,
                 ));
             } else if (was.scale, was.efb_width) != (self.scale, self.efb_width)
                 && let Some(g) = &mut self.renderer
@@ -2346,6 +2371,7 @@ impl App {
         self.renderer = Some(gpu_for(
             pipelines::renderer(&self.gpu, self.scale, self.msaa, aspect),
             self.one_thread,
+            self.fast,
         ));
         // What the controllers did meanwhile doesn't reach the game.
         self.inputs.read();
@@ -2400,18 +2426,21 @@ impl App {
     /// The settings to the frames, the latency and the recordings.
     fn apply(&mut self, s: &front::Settings) {
         let msaa = if s.msaa { 4 } else { 1 };
+        let fast = s.fast_renderer;
         self.args.scale = s.scale;
         self.set_aspect(s.aspect);
         self.scale = scale_for(s.scale, self.window_size, s.aspect);
         let width = s.aspect.efb_width(self.scale);
-        if msaa != self.msaa {
-            // Its pipelines take the sample count: a renderer made anew.
-            self.msaa = msaa;
+        if (msaa, fast) != (self.msaa, self.fast) {
+            // Its pipelines take the sample count, and the fast renderer is one of its own: a
+            // renderer made anew.
+            (self.msaa, self.fast) = (msaa, fast);
             if self.renderer.is_some() {
                 self.drop_renderer();
                 self.renderer = Some(gpu_for(
                     pipelines::renderer(&self.gpu, self.scale, msaa, s.aspect),
                     self.one_thread,
+                    fast,
                 ));
             }
         } else if let Some(g) = &mut self.renderer {
@@ -2670,6 +2699,7 @@ impl App {
             scale: self.scale,
             efb_width: self.efb_width,
             msaa: self.msaa,
+            fast: self.fast,
             console_view: self.console_view.take(),
             last_image: self.last_image.take(),
             hold: std::mem::take(&mut self.hold),
@@ -2735,7 +2765,7 @@ impl App {
         self.frames = a.frames;
         self.renderer = a.renderer;
         // The renderer as it was: the panel's closing makes it the settings' again.
-        (self.scale, self.efb_width, self.msaa) = (a.scale, a.efb_width, a.msaa);
+        (self.scale, self.efb_width, self.msaa, self.fast) = (a.scale, a.efb_width, a.msaa, a.fast);
         self.console_view = a.console_view;
         self.last_image = a.last_image;
         self.hold = a.hold;
@@ -3041,8 +3071,10 @@ impl ApplicationHandler for App {
 
 /// The GPU's side of the frames: the renderer on threads of its own (each frame done before
 /// it's presented), or on this one with `--one-thread`.
-fn gpu_for(renderer: melee_gpu::Renderer, one_thread: bool) -> Gpu {
-    if one_thread {
+fn gpu_for(renderer: melee_gpu::Renderer, one_thread: bool, fast: bool) -> Gpu {
+    if fast {
+        Gpu::fast(renderer, !one_thread)
+    } else if one_thread {
         Gpu::new(renderer)
     } else {
         Gpu::threaded(renderer)
@@ -3081,7 +3113,7 @@ fn bench_follow(
         f.hsd.widescreen = args.aspect.widescreen();
         let mut r = pipelines::renderer(gpu, shape.scale, shape.msaa, args.aspect);
         r.xfb_readback = args.shot.is_some();
-        (f, gpu_for(r, args.one_thread))
+        (f, gpu_for(r, args.one_thread, shape.fast))
     };
     let moved = handoff.follow(live, frames, renderer, shape, fresh);
     if let handoff::Moved::Back {
@@ -3116,7 +3148,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     let mut scale = scale_for(args.scale, size, args.aspect);
     let mut r = pipelines::renderer(&gpu, scale, args.msaa, args.aspect);
     r.xfb_readback = args.shot.is_some();
-    let mut renderer = gpu_for(r, args.one_thread);
+    let mut renderer = gpu_for(r, args.one_thread, args.fast);
     let mut handoff = handoff::Handoff::default();
     let mut console_view = None;
     let mut last = None;
@@ -3166,6 +3198,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
             scale,
             efb_width: args.aspect.efb_width(scale),
             msaa: args.msaa,
+            fast: args.fast,
         };
         bench_follow(
             &mut handoff,
@@ -3179,9 +3212,16 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
         give_snapshot(&mut console_view, &gpu, &session, &f.draws);
         round += t1 - t0;
         if !f.draws.is_empty() {
-            let fifo = frames.frame(session.game(), session.data(), &f.draws);
-            let ta = Instant::now();
-            let images = renderer.run(&frames.space, session.data(), &fifo, None);
+            // The fast renderer builds the frame as it runs it: all of it in the run's time.
+            let (images, ta) = if renderer.is_fast() {
+                let ta = Instant::now();
+                let (game, data) = (session.game(), session.data());
+                (renderer.draw(&mut frames, game, data, &f.draws, None), ta)
+            } else {
+                let fifo = frames.frame(session.game(), session.data(), &f.draws);
+                let ta = Instant::now();
+                (renderer.run(&frames.space, session.data(), &fifo, None), ta)
+            };
             let tb = Instant::now();
             if let Some(frame) = images.into_iter().last() {
                 target.present(&gpu, &frame);
@@ -3285,7 +3325,7 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
     let scale = scale_for(args.scale, args.size, args.aspect);
     let mut r = pipelines::renderer(&gpu, scale, args.msaa, args.aspect);
     r.xfb_readback = args.shot.is_some();
-    let mut renderer = gpu_for(r, args.one_thread);
+    let mut renderer = gpu_for(r, args.one_thread, args.fast);
     let mut handoff = handoff::Handoff::default();
     let mut frames = Frames::new();
     frames.space.load_dol(&session.dol);
@@ -3316,6 +3356,7 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                 scale,
                 efb_width: args.aspect.efb_width(scale),
                 msaa: args.msaa,
+                fast: args.fast,
             };
             bench_follow(
                 &mut handoff,
@@ -3356,9 +3397,17 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                     Blend { from: &before, t }
                 };
                 let ta = Instant::now();
-                let fifo = frames.frame_blended(game, data, &f.draws, Some(blend));
-                let tb = Instant::now();
-                let images = renderer.run(&frames.space, data, &fifo, None);
+                // The fast renderer builds the frame as it runs it: all of it in the run's time.
+                let (images, tb) = if renderer.is_fast() {
+                    (
+                        renderer.draw(&mut frames, game, data, &f.draws, Some(blend)),
+                        ta,
+                    )
+                } else {
+                    let fifo = frames.frame_blended(game, data, &f.draws, Some(blend));
+                    let tb = Instant::now();
+                    (renderer.run(&frames.space, data, &fifo, None), tb)
+                };
                 let tc = Instant::now();
                 if let Some(frame) = images.into_iter().last() {
                     target.present(&gpu, &frame);
@@ -3461,6 +3510,9 @@ fn settings_of(args: &Args) -> front::Settings {
     if g.msaa {
         s.msaa = args.msaa == 4;
     }
+    if g.renderer {
+        s.fast_renderer = args.fast;
+    }
     if g.present {
         s.present = args.present;
     }
@@ -3500,6 +3552,7 @@ fn with_settings(mut a: Args, s: &front::Settings) -> Args {
     a.fullscreen = s.fullscreen;
     a.scale = s.scale;
     a.msaa = if s.msaa { 4 } else { 1 };
+    a.fast = s.fast_renderer;
     a.present = s.present;
     a.added_delay = s.added_delay;
     a.high_refresh = s.high_refresh;
@@ -3631,6 +3684,7 @@ fn run(args: Args) -> ExitCode {
             .efb_width(scale_for(args.scale, args.size, args.aspect)),
         one_thread: args.one_thread,
         msaa: args.msaa,
+        fast: args.fast,
         window_size: args.size,
         alt: false,
         stopped: None,
@@ -3677,6 +3731,7 @@ fn run(args: Args) -> ExitCode {
         app.renderer = Some(gpu_for(
             pipelines::renderer(&app.gpu, app.scale, app.msaa, app.aspect),
             app.one_thread,
+            app.fast,
         ));
     }
     let r = event_loop.run_app(&mut app);

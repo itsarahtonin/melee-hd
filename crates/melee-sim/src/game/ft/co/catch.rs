@@ -372,10 +372,10 @@ impl Running<'_> {
             super::yoshi_egg::KB_CAPTURE => self.enter_capture_kirby_yoshi(victim, grabber),
             super::capture_mewtwo::CAPTURE => self.enter_capture_mewtwo(victim, grabber, false),
             super::capture_mewtwo::CAPTURE_AIR => self.enter_capture_mewtwo(victim, grabber, true),
-            super::super::masterhand::addr::MS_388_80155A58 => {
+            super::super::masterhand::addr::CAPTURE_ENTER => {
                 self.hand_capture_enter(victim, grabber, &super::super::masterhand::HAND)
             }
-            super::super::crazyhand::addr::FN_8015B548 => {
+            super::super::crazyhand::addr::CAPTURE_ENTER => {
                 self.hand_capture_enter(victim, grabber, &super::super::crazyhand::HAND)
             }
             cb if super::capture_koopa::run_grabbed(self, victim, grabber, cb) => {}

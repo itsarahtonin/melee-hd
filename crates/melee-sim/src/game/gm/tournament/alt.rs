@@ -45,14 +45,14 @@ const GM_MENU: u8 = 1;
 fn match_up_counters(t: &mut super::Tournament) -> Counters<'_> {
     let a = &mut t.alt;
     Counters {
-        bg: &mut a.x4,
-        panel: &mut a.xe,
-        title: &mut a.xf,
-        bounce: &mut a.x10,
+        bg: &mut a.bg,
+        panel: &mut a.panel,
+        title: &mut a.title,
+        bounce: &mut a.bounce,
         bounce_ys: &t.alt_bounce,
-        bar: &mut a.x1c,
-        anims: &mut a.x1d,
-        choice: &mut a.x38,
+        bar: &mut a.bar,
+        anims: &mut a.anims,
+        choice: &mut a.choice,
     }
 }
 
@@ -84,9 +84,9 @@ impl Running<'_> {
     /// one).
     #[doc(alias = "fn_8019BA08")]
     pub(super) fn alt_icon_model(&mut self, p: usize, j: JObjId) {
-        let m = self.game.tou.tm.x4b8[p];
+        let m = self.game.tou.tm.match_players[p];
         let first = self.tou_child(Some(j));
-        if m.x2 != 0 {
+        if m.random != 0 {
             let mut c = first;
             self.tou_set_tz(c, 10000.0);
             for _ in 1..=12 {
@@ -95,7 +95,7 @@ impl Running<'_> {
             }
             return;
         }
-        self.tou_icon_model(first, super::bracket::ICON_MODELS[usize::from(m.x1)]);
+        self.tou_icon_model(first, super::bracket::ICON_MODELS[usize::from(m.icon)]);
     }
 
     /// `fn_8019CA38`: a player's "ready" marker, looping until they're ready.
@@ -108,17 +108,17 @@ impl Running<'_> {
             return;
         }
         self.tou_show(Some(j));
-        let x = player_x(self.game.tou.tm.x30, p as i32);
+        let x = player_x(self.game.tou.tm.players_per_match, p as i32);
         self.tou_move(j, x, 666.0, 666.0);
-        if self.alt().x1d[p].state == 2 {
+        if self.alt().anims[p].state == 2 {
             self.tou_hide(Some(j));
         }
-        if self.alt().x6[p] < 600 {
-            self.alt().x6[p] += 1;
+        if self.alt().unplugged[p] < 600 {
+            self.alt().unplugged[p] += 1;
         } else {
-            self.alt().x6[p] = 0;
+            self.alt().unplugged[p] = 0;
         }
-        let c = self.alt().x6[p];
+        let c = self.alt().unplugged[p];
         self.tou_frame(Some(j), mem(f(i32::from(c))));
     }
 
@@ -130,16 +130,21 @@ impl Running<'_> {
         let j = self.tou_jobj(gobj);
         let idx = self.tou_index(gobj) as usize;
         let mut x = super::super::super::mn::common::tx(self, Some(j));
-        let seat = self.game.tou.tm.x37[idx].xe;
+        let seat = self.game.tou.tm.roster[idx].matchup_seat;
         let target = mem(fp::fmsubs(reg(5.999_997), f(i32::from(seat)), 21.5));
         super::lib::step_towards(&mut x, target, 0.4);
-        let t = self.game.tou.tm.x534(idx).expect("an entrant's name");
+        let t = self
+            .game
+            .tou
+            .tm
+            .entrant_text(idx)
+            .expect("an entrant's name");
         let (y, ty, z) = match super::lib::step_towards(&mut x, target, 0.2) {
             1 => (19.5, -197.0, -6.0),
             -1 => (15.0, -152.0, 6.0),
             _ => {
-                let e = &mut self.game.tou.tm.x37[idx];
-                e.xf = e.xe;
+                let e = &mut self.game.tou.tm.roster[idx];
+                e.shown_seat = e.matchup_seat;
                 (17.0, -172.0, 0.01)
             }
         };
@@ -147,12 +152,12 @@ impl Running<'_> {
         let tx = fp::fmuls(10.0, reg(x));
         self.game.sis.set_position(self.data, t, 0, tx, ty);
         self.game.sis.text_mut(t).pos.z = z;
-        let e = self.game.tou.tm.x37[idx];
-        if e.x5 != 0 {
+        let e = self.game.tou.tm.roster[idx];
+        if e.random != 0 {
             self.tou_frame(Some(j), 201.0);
             return;
         }
-        self.tou_frame(Some(j), icon_frame(i32::from(e.x3), i32::from(e.x7)));
+        self.tou_frame(Some(j), icon_frame(i32::from(e.icon), i32::from(e.color)));
     }
 
     /// `fn_8019CFA4`: the entrants' and the players' counts.
@@ -162,7 +167,10 @@ impl Running<'_> {
         let c = self.tou_child(Some(j));
         let c = self.tou_next(c);
         let c = self.tou_next(c);
-        let (x2e, x30) = (self.game.tou.tm.x2e, self.game.tou.tm.x30);
+        let (x2e, x30) = (
+            self.game.tou.tm.entrant_count,
+            self.game.tou.tm.players_per_match,
+        );
         self.tou_frame(c, mem(f(i32::from(x2e))));
         let c = self.tou_next(c);
         self.tou_frame(c, mem(f(i32::from(x30))));
@@ -174,7 +182,7 @@ impl Running<'_> {
     /// and name across the top.
     #[doc(alias = "fn_8019D1BC")]
     fn alt_models(&mut self) {
-        let n = usize::from(self.game.tou.tm.x30);
+        let n = usize::from(self.game.tou.tm.players_per_match);
         for i in 0..n {
             let ii = i as i32;
             let m = self.alt_m4(12);
@@ -188,16 +196,16 @@ impl Running<'_> {
                 crate::hsd::mobj::remove_anim_by_flags(&mut self.game.objs, mo, 4);
                 c = self.tou_next(c);
             }
-            let x30 = self.game.tou.tm.x30;
+            let x30 = self.game.tou.tm.players_per_match;
             let pos = match x30 {
                 4 => fp::fadds(73.0, fp::fmadds(240.0, f(ii), 152.0)),
                 3 => fp::fadds(73.0, fp::fmadds(240.0, f(ii), 270.0)),
                 _ => fp::fadds(73.0, fp::fmadds(480.0, f(ii), 270.0)),
             };
-            let pm = self.game.tou.tm.x4b8[i];
+            let pm = self.game.tou.tm.match_players[i];
             let x = fp::fmsubs(reg(0.99), fp::fsubs(pos, 320.0), 261.0);
-            self.tou_add_name(i32::from(pm.x6), i32::from(pm.x0), 5, x, -11.0, 5);
-            let t = self.game.tou.tm.x524(2).expect("the players' names");
+            self.tou_add_name(i32::from(pm.name), i32::from(pm.slot_type), 5, x, -11.0, 5);
+            let t = self.game.tou.tm.screen_text(2).expect("the players' names");
             self.game.sis.text_mut(t).hidden = 1;
             let posf = mem(pos);
             let m = self.alt_m4(10);
@@ -214,17 +222,17 @@ impl Running<'_> {
             self.tou_move(j, fp::fsubs(px, reg(2.799_999)), reg(4.3), reg(0.001));
             let c = self.tou_child(Some(j));
             let c = self.tou_next(c);
-            if pm.x2 != 0 {
+            if pm.random != 0 {
                 self.tou_frame(c, 201.0);
             } else {
-                self.tou_frame(c, icon_frame(i32::from(pm.x1), i32::from(pm.x3)));
+                self.tou_frame(c, icon_frame(i32::from(pm.icon), i32::from(pm.color)));
             }
             let m = self.alt_m4(9);
             let g = self.tou_model(false, m, 0, 0x1A, 2, true, Some(PROC_TAG), posf);
             let j = self.tou_jobj(g);
             self.tou_set_ty(Some(j), -2.5);
             self.tou_set_index(g, ii);
-            let anim = if pm.x0 == 0 { mem(f(ii)) } else { 4.0 };
+            let anim = if pm.slot_type == 0 { mem(f(ii)) } else { 4.0 };
             self.tou_frame(Some(j), anim);
             let m = self.alt_m4(8);
             let g = self.tou_model(false, m, 0, 0x1A, 2, true, Some(PROC_READY), 0.0);
@@ -236,13 +244,13 @@ impl Running<'_> {
             let j = self.tou_jobj(g);
             self.tou_set_ty(Some(j), -2.5);
             self.tou_set_index(g, ii);
-            if self.game.tou.tm.x31 != 0 {
+            if self.game.tou.tm.handicaps != 0 {
                 let m = self.alt_m4(11);
                 let g = self.tou_model(false, m, 0, 0x1A, 2, true, Some(PROC_HANDICAP), anim);
                 let j = self.tou_jobj(g);
                 self.tou_set_ty(Some(j), -2.0);
                 self.tou_set_index(g, ii);
-                self.tou_frame(Some(j), mem(f(i32::from(pm.x5))));
+                self.tou_frame(Some(j), mem(f(i32::from(pm.handicap))));
             }
         }
         let m = self.alt_m4(1);
@@ -264,28 +272,28 @@ impl Running<'_> {
         let m = self.alt_m4(6);
         self.tou_model(false, m, 0, 0x1A, 2, true, Some(PROC_BAR), 0.0);
         let canvas = self.game.tou.canvas;
-        for i in 0..usize::from(self.game.tou.tm.x2e) {
+        for i in 0..usize::from(self.game.tou.tm.entrant_count) {
             let ii = i as i32;
             let m = self.alt_m4(3);
             let g = self.tou_model(false, m, 0, 0x1A, 2, true, Some(PROC_ROW), 0.0);
             let j = self.tou_jobj(g);
-            let e = self.game.tou.tm.x37[i];
-            let x = fp::fmsubs(reg(5.999_997), f(i32::from(e.xf)), 21.5);
+            let e = self.game.tou.tm.roster[i];
+            let x = fp::fmsubs(reg(5.999_997), f(i32::from(e.shown_seat)), 21.5);
             self.tou_move(j, x, 17.0, reg(0.01));
-            if e.x5 != 0 {
+            if e.random != 0 {
                 self.tou_frame(Some(j), 201.0);
             } else {
-                self.tou_frame(Some(j), icon_frame(i32::from(e.x3), i32::from(e.x7)));
+                self.tou_frame(Some(j), icon_frame(i32::from(e.icon), i32::from(e.color)));
             }
             self.tou_set_index(g, ii);
-            let name = self.tou_name(i32::from(e.x9));
+            let name = self.tou_name(i32::from(e.name));
             let t = self.create_text_buffer(0, canvas);
             let tx = self.game.sis.text_mut(t);
             tx.default_kerning = 1;
             tx.x4c = 1;
             tx.font_size = [0.1, 0.1];
             tx.default_alignment = 1;
-            self.game.tou.tm.x518[7 + i] = Some(t);
+            self.game.tou.tm.name_texts[7 + i] = Some(t);
             let x = fp::fmuls(10.0, fp::fmsubs(reg(5.999_997), f(ii), 21.5));
             self.game.sis.add_string(t, x, -172.0, Some(&name));
             self.game
@@ -299,7 +307,7 @@ impl Running<'_> {
     /// models, the fog, and each player's model back to coming in.
     #[doc(alias = "fn_8019DD60")]
     fn alt_make(&mut self) {
-        if self.game.tou.tm.x2c == 0 {
+        if self.game.tou.tm.new_bracket == 0 {
             let id = if self.game.tou.tm.match_type() == 1 {
                 0x7545
             } else {
@@ -307,7 +315,7 @@ impl Running<'_> {
             };
             self.sfx_play(id, 0x7F, 0x40);
         }
-        self.game.tou.tm.x2c = 0;
+        self.game.tou.tm.new_bracket = 0;
         let scene = self.game.tou.alt.scene1;
         let cam = self.tou_camera(scene);
         self.tou_camera2(scene);
@@ -323,20 +331,20 @@ impl Running<'_> {
         x.default_kerning = 1;
         x.font_size = [0.054945, 0.08];
         x.default_alignment = 1;
-        self.game.tou.tm.x518[5] = Some(t);
+        self.game.tou.tm.name_texts[5] = Some(t);
         self.alt_models();
         self.tou_fog(scene);
-        let n = usize::from(self.game.tou.tm.x30);
+        let n = usize::from(self.game.tou.tm.players_per_match);
         let a = self.alt();
-        a.x0 = 0;
-        a.x4 = 0;
-        a.xe = 0x50;
-        a.xf = 0;
+        a.confirm_frames = 0;
+        a.bg = 0;
+        a.panel = 0x50;
+        a.title = 0;
         for i in 0..n {
-            a.x18[i] = 0;
-            a.x6[i] = 0;
-            a.x10[i] = 0;
-            a.x1d[i] = super::PlayerAnim {
+            a.b_held[i] = 0;
+            a.unplugged[i] = 0;
+            a.bounce[i] = 0;
+            a.anims[i] = super::PlayerAnim {
                 start: 0,
                 cur: 0,
                 end: 0x1E,
@@ -344,7 +352,7 @@ impl Running<'_> {
                 done: 0,
                 loop_: 0,
             };
-            a.x38[i] = 6;
+            a.choice[i] = 6;
         }
     }
 
@@ -352,8 +360,8 @@ impl Running<'_> {
     /// match-up seat is `p`, else the first).
     fn alt_entrant_at(&self, p: i32) -> usize {
         let tm = &self.game.tou.tm;
-        (0..usize::from(tm.x2e))
-            .find(|&i| i32::from(tm.x37[i].xe) == p)
+        (0..usize::from(tm.entrant_count))
+            .find(|&i| i32::from(tm.roster[i].matchup_seat) == p)
             .unwrap_or(0)
     }
 
@@ -373,25 +381,26 @@ impl Running<'_> {
             self.change_game_mode_after_scene(GM_MENU);
             return;
         }
-        let n = usize::from(self.game.tou.tm.x30);
+        let n = usize::from(self.game.tou.tm.players_per_match);
         let mut confirmed = 0;
         for i in 0..n {
-            let a = self.alt().x1d[i];
+            let a = self.alt().anims[i];
             if a.state == 2 && a.cur >= 0x3C && self.tou_pad_err(i) == 0 {
                 confirmed += 1;
             }
         }
         if confirmed == n {
-            self.alt().x0 += 1;
-            if self.alt().x0 >= 0x1E {
-                for e in &mut self.game.tou.tm.x37[..usize::from(self.game.tou.tm.x2e)] {
-                    e.xf = e.xe;
+            self.alt().confirm_frames += 1;
+            if self.alt().confirm_frames >= 0x1E {
+                for e in &mut self.game.tou.tm.roster[..usize::from(self.game.tou.tm.entrant_count)]
+                {
+                    e.shown_seat = e.matchup_seat;
                 }
                 self.tou_go_to_match();
             }
             return;
         }
-        self.alt().x0 = 0;
+        self.alt().confirm_frames = 0;
         for i in 0..n {
             if self.tou_pad_err(i) != 0 {
                 continue;
@@ -400,23 +409,23 @@ impl Running<'_> {
             let buttons = self.tou_triggered(ii);
             let pressed = self.tou_repeated(ii);
             if self.tou_held(ii) & PAD_B != 0 {
-                self.alt().x18[i] = self.alt().x18[i].wrapping_add(1);
-                if self.alt().x18[i] > 0x5A {
+                self.alt().b_held[i] = self.alt().b_held[i].wrapping_add(1);
+                if self.alt().b_held[i] > 0x5A {
                     self.lb_audio_call(1);
                     self.set_next_game_mode_state_id(STATE_SETUP);
                     self.game.end_scene();
                     return;
                 }
             } else {
-                self.alt().x18[i] = 0;
+                self.alt().b_held[i] = 0;
             }
-            let status = self.alt().x1d[i].state;
+            let status = self.alt().anims[i].state;
             if status != 2 && status != 1 {
                 let held = self.tou_held(ii);
                 if held & PAD_L != 0 && held & PAD_R != 0 {
                     let j = self.alt_entrant_at(ii);
-                    self.game.tou.tm.x37[j].x5 = 1;
-                    self.game.tou.tm.x4b8[i].x2 = 1;
+                    self.game.tou.tm.roster[j].random = 1;
+                    self.game.tou.tm.match_players[i].random = 1;
                 }
                 let step: Option<i32> = if pressed & PAD_LEFT != 0 {
                     Some(-1)
@@ -428,9 +437,9 @@ impl Running<'_> {
                 if let Some(d) = step {
                     self.lb_audio_call(2);
                     let j = self.alt_entrant_at(ii);
-                    self.game.tou.tm.x37[j].x5 = 0;
-                    self.game.tou.tm.x4b8[i].x2 = 0;
-                    let mut chr = self.game.tou.tm.x4b8[i].x1;
+                    self.game.tou.tm.roster[j].random = 0;
+                    self.game.tou.tm.match_players[i].random = 0;
+                    let mut chr = self.game.tou.tm.match_players[i].icon;
                     loop {
                         if d < 0 {
                             if chr != 0 {
@@ -448,45 +457,45 @@ impl Running<'_> {
                             break;
                         }
                     }
-                    self.game.tou.tm.x4b8[i].x1 = chr;
+                    self.game.tou.tm.match_players[i].icon = chr;
                     let j = self.alt_entrant_at(ii);
-                    self.game.tou.tm.x37[j].x3 = chr;
+                    self.game.tou.tm.roster[j].icon = chr;
                     let j = self.alt_entrant_at(ii);
-                    self.game.tou.tm.x4b8[i].x3 = 0;
-                    self.game.tou.tm.x37[j].x7 = 0;
+                    self.game.tou.tm.match_players[i].color = 0;
+                    self.game.tou.tm.roster[j].color = 0;
                 }
             }
             if buttons & (PAD_A | PAD_START) != 0 {
-                if self.alt().x1d[i].state != 2 {
+                if self.alt().anims[i].state != 2 {
                     self.lb_audio_call(1);
-                    self.alt().x1d[i].state = 1;
-                    let tag = self.game.tou.tm.x4b8[i].x6;
+                    self.alt().anims[i].state = 1;
+                    let tag = self.game.tou.tm.match_players[i].name;
                     self.tou_rumble(i, tag.min(0x78) as u8, 0xB, 0x14);
                 }
             } else if buttons & PAD_B != 0 {
-                if self.alt().x1d[i].state == 2 {
+                if self.alt().anims[i].state == 2 {
                     self.lb_audio_call(0);
-                    self.alt().x1d[i].state = 3;
+                    self.alt().anims[i].state = 3;
                 }
             } else {
-                let s = self.alt().x1d[i].state;
+                let s = self.alt().anims[i].state;
                 if s != 2 && s != 1 {
                     if buttons & PAD_X != 0 {
-                        let m = self.game.tou.tm.x4b8[i];
-                        let k = ckind_of(i32::from(m.x1)) as u8;
+                        let m = self.game.tou.tm.match_players[i];
+                        let k = ckind_of(i32::from(m.icon)) as u8;
                         let count = super::super::super::playback::costume_count(k);
-                        if i32::from(m.x3) < i32::from(count) - 1 {
-                            self.game.tou.tm.x4b8[i].x3 += 1;
+                        if i32::from(m.color) < i32::from(count) - 1 {
+                            self.game.tou.tm.match_players[i].color += 1;
                         }
                         let j = self.alt_entrant_at(ii);
-                        self.game.tou.tm.x37[j].x7 = self.game.tou.tm.x4b8[i].x3;
+                        self.game.tou.tm.roster[j].color = self.game.tou.tm.match_players[i].color;
                     } else if buttons & PAD_Y != 0 {
-                        let c = self.game.tou.tm.x4b8[i].x3;
+                        let c = self.game.tou.tm.match_players[i].color;
                         if c != 0 {
-                            self.game.tou.tm.x4b8[i].x3 = c - 1;
+                            self.game.tou.tm.match_players[i].color = c - 1;
                         }
                         let j = self.alt_entrant_at(ii);
-                        self.game.tou.tm.x37[j].x7 = self.game.tou.tm.x4b8[i].x3;
+                        self.game.tou.tm.roster[j].color = self.game.tou.tm.match_players[i].color;
                     }
                 }
             }
@@ -494,12 +503,12 @@ impl Running<'_> {
         let stage = if self.tou_stage_random() {
             self.game.tou.stage
         } else {
-            self.game.tou.tm.x28 as i32
+            self.game.tou.tm.stage as i32
         };
         let players: Vec<(u8, i32, u8)> = (0..4)
             .map(|i| {
-                let m = self.game.tou.tm.x4b8[i];
-                (m.x0, ckind_of(i32::from(m.x1)), m.x3)
+                let m = self.game.tou.tm.match_players[i];
+                (m.slot_type, ckind_of(i32::from(m.icon)), m.color)
             })
             .collect();
         self.tou_preload_match(stage, &players, true);
@@ -518,7 +527,7 @@ impl Running<'_> {
     #[doc(alias = "gm_8019E634")]
     pub fn tou_next_match_up(&mut self) {
         let hmn_cpu = self.game.tou.tm.hmn_cpu_count();
-        let n = i32::from(self.game.tou.tm.x30);
+        let n = i32::from(self.game.tou.tm.players_per_match);
         // `lbl_803B7D3C`.
         let mut indices: [i32; 4] = [0, 1, 2, 3];
         let mut results = [0i32; 4];
@@ -541,44 +550,44 @@ impl Running<'_> {
             let mut hbuf = [0u8; 4];
             for (i, h) in hbuf.iter_mut().enumerate().take(n as usize) {
                 let j = self.alt_entrant_kept(results[i]);
-                *h = self.game.tou.tm.x37[j].x2;
+                *h = self.game.tou.tm.roster[j].handicap;
             }
             let end = (*self.game.tou.match_end).clone();
             let mut stack = self.shallow_exit_stack("Tournament's next match-up (gm_8019E634)");
             super::super::results_exit::move_handicaps(&end, &mut hbuf, &mut stack);
             for (i, &h) in hbuf.iter().enumerate().take(n as usize) {
                 let j = self.alt_entrant_kept(results[i]);
-                self.game.tou.tm.x37[j].x2 = h;
+                self.game.tou.tm.roster[j].handicap = h;
             }
         }
-        let x2e = i32::from(self.game.tou.tm.x2e);
+        let x2e = i32::from(self.game.tou.tm.entrant_count);
         let winner_out = self.game.tou.tm.match_type() == 1;
         for i in 0..hmn_cpu {
             let at = if winner_out { i } else { n - 1 - i };
             let id = indices[at as usize];
             let j = self.alt_entrant_kept(id);
-            self.game.tou.tm.x37[j].xe = (x2e - 1 - i) as u8;
+            self.game.tou.tm.roster[j].matchup_seat = (x2e - 1 - i) as u8;
             let j = self.alt_entrant_kept(n + i);
-            self.game.tou.tm.x37[j].xe = id as u8;
+            self.game.tou.tm.roster[j].matchup_seat = id as u8;
         }
         for i in n + hmn_cpu..x2e {
             let j = self.alt_entrant_kept(i);
-            let e = &mut self.game.tou.tm.x37[j];
-            e.xe = e.xe.wrapping_sub(hmn_cpu as u8);
+            let e = &mut self.game.tou.tm.roster[j];
+            e.matchup_seat = e.matchup_seat.wrapping_sub(hmn_cpu as u8);
         }
         for i in 0..n as usize {
-            let e = self.game.tou.tm.x37[self.alt_entrant_at(i as i32)];
-            let m = &mut self.game.tou.tm.x4b8[i];
-            m.x6 = e.x9;
-            m.x5 = e.x2;
-            m.x1 = e.x3;
-            m.x0 = e.x0;
-            m.x3 = e.x7;
-            m.x2 = e.x5;
+            let e = self.game.tou.tm.roster[self.alt_entrant_at(i as i32)];
+            let m = &mut self.game.tou.tm.match_players[i];
+            m.name = e.name;
+            m.handicap = e.handicap;
+            m.icon = e.icon;
+            m.slot_type = e.slot_type;
+            m.color = e.color;
+            m.random = e.random;
         }
         let mut mask = 8u64;
-        for m in self.game.tou.tm.x4b8.iter().take(n as usize) {
-            mask |= crate::lb::audio::character_banks(i32::from(m.x1));
+        for m in self.game.tou.tm.match_players.iter().take(n as usize) {
+            mask |= crate::lb::audio::character_banks(i32::from(m.icon));
         }
         let a = &mut self.game.audio;
         a.lb.unwant_banks(22);
@@ -590,8 +599,8 @@ impl Running<'_> {
     /// first entrant).
     fn alt_entrant_kept(&self, p: i32) -> usize {
         let tm = &self.game.tou.tm;
-        (0..usize::from(tm.x2e))
-            .find(|&i| i32::from(tm.x37[i].xf) == p)
+        (0..usize::from(tm.entrant_count))
+            .find(|&i| i32::from(tm.roster[i].shown_seat) == p)
             .unwrap_or(0)
     }
 
@@ -620,23 +629,23 @@ impl Running<'_> {
         let mut chars = [0i32; 4];
         let mut colors = [0u8; 4];
         for i in 0..4 {
-            let m = self.game.tou.tm.x4b8[i];
-            if m.x0 != 3 {
-                chars[i] = ckind_of(i32::from(m.x1));
-                colors[i] = m.x3;
+            let m = self.game.tou.tm.match_players[i];
+            if m.slot_type != 3 {
+                chars[i] = ckind_of(i32::from(m.icon));
+                colors[i] = m.color;
             }
         }
         self.tou_pick_stage();
         let stage = if self.tou_stage_random() {
             self.game.tou.stage
         } else {
-            self.game.tou.tm.x28 as i32
+            self.game.tou.tm.stage as i32
         };
         let _ = self.tou_stage_chosen();
         self.setup_vs_preload_cache();
         let mut mask = 0u64;
-        for (m, &c) in self.game.tou.tm.x4b8.iter().zip(&chars) {
-            if m.x0 != 3 {
+        for (m, &c) in self.game.tou.tm.match_players.iter().zip(&chars) {
+            if m.slot_type != 3 {
                 mask |= crate::lb::audio::character_banks(c);
             }
         }

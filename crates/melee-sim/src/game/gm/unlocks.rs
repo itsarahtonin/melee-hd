@@ -527,7 +527,8 @@ pub struct ChallengerData {
     pub cpu_ckind: u8,
     pub curr_mode: u8,
     pub prev_mode: u8,
-    pub x8: u16,
+    #[doc(alias("x8"))]
+    pub unused: u16,
 }
 
 #[cfg(test)]

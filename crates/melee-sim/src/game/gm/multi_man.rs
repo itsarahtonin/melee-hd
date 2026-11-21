@@ -50,13 +50,20 @@ const WAITING: i32 = -1;
 /// its character, level and computer kind, `x8` and `xC` its attack and defense ratios.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct SpawnEntry {
-    pub x0: i32,
-    pub x4: u8,
-    pub x5: u8,
-    pub x6: u8,
-    pub x7: u8,
-    pub x8: f32,
-    pub xC: f32,
+    #[doc(alias("x0"))]
+    pub wait_for: i32,
+    #[doc(alias("x4"))]
+    pub at_once: u8,
+    #[doc(alias("x5"))]
+    pub ckind: u8,
+    #[doc(alias("x6"))]
+    pub level: u8,
+    #[doc(alias("x7"))]
+    pub cpu_kind: u8,
+    #[doc(alias("x8"))]
+    pub attack_ratio: f32,
+    #[doc(alias("xC"))]
+    pub defense_ratio: f32,
 }
 
 /// `lbl_80473594` (`lbl_80472ED8 + 0x6BC`, `RegClearRecordState`): the match's result as it
@@ -65,13 +72,20 @@ pub struct SpawnEntry {
 /// new record's rumble.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct RecordState {
-    pub x0: u8,
-    pub x2: u16,
-    pub x4: i32,
-    pub x8: i32,
-    pub xC: i32,
-    pub x10: i8,
-    pub x11: u8,
+    #[doc(alias("x0"))]
+    pub won: u8,
+    #[doc(alias("x2"))]
+    pub kos: u16,
+    #[doc(alias("x4"))]
+    pub frames: i32,
+    #[doc(alias("x8"))]
+    pub mode: i32,
+    #[doc(alias("xC"))]
+    pub ckind: i32,
+    #[doc(alias("x10"))]
+    pub port: i8,
+    #[doc(alias("x11"))]
+    pub nametag: u8,
 }
 
 /// `lbl_803D8D08`'s entries (`RecordBlock`), one per mode: by character, the record's
@@ -101,18 +115,21 @@ impl Default for RecordBlock {
 /// character. `x0` is its first byte, the record's win its top bit (`x0_0`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Record {
-    pub x0: u8,
-    pub x2: u16,
-    pub x4: i32,
+    #[doc(alias("x0"))]
+    pub icon: u8,
+    #[doc(alias("x2"))]
+    pub kos: u16,
+    #[doc(alias("x4"))]
+    pub score: i32,
 }
 
 impl Record {
     fn won(&self) -> bool {
-        self.x0 & 0x80 != 0
+        self.icon & 0x80 != 0
     }
 
     fn set_won(&mut self, v: bool) {
-        self.x0 = (self.x0 & 0x7F) | if v { 0x80 } else { 0 };
+        self.icon = (self.icon & 0x7F) | if v { 0x80 } else { 0 };
     }
 }
 
@@ -131,11 +148,16 @@ pub struct MultiMan {
     /// next entry came (`x4`), the frames from the match's start up to 91 (`x8`), the
     /// joiners' player block (`xC`), the mode's table (`x54`) and the six tables in
     /// `GmKumite.dat` (`x6A4` to `x6B8`).
-    pub x0: i32,
-    pub x4: i32,
-    pub x8: i32,
-    pub xC: PlayerInitData,
-    pub x54: [SpawnEntry; ENTRIES],
+    #[doc(alias("x0"))]
+    pub brought_in: i32,
+    #[doc(alias("x4"))]
+    pub kos_early: i32,
+    #[doc(alias("x8"))]
+    pub start_frames: i32,
+    #[doc(alias("xC"))]
+    pub joiner: PlayerInitData,
+    #[doc(alias("x54"))]
+    pub table: [SpawnEntry; ENTRIES],
     pub tables: [Option<DataRef>; 6],
     pub record: RecordState,
     /// `lbl_803D8D08`.
@@ -155,11 +177,11 @@ impl Default for MultiMan {
             exit: MatchExitInfo::default(),
             slot: 0,
             entries: 0,
-            x0: 0,
-            x4: 0,
-            x8: 0,
-            xC: PlayerInitData::default(),
-            x54: [SpawnEntry::default(); ENTRIES],
+            brought_in: 0,
+            kos_early: 0,
+            start_frames: 0,
+            joiner: PlayerInitData::default(),
+            table: [SpawnEntry::default(); ENTRIES],
             tables: [None; 6],
             record: RecordState::default(),
             blocks: [RecordBlock::default(); 6],
@@ -214,9 +236,9 @@ impl MultiMan {
             let k = ckind as usize;
             let blk = &self.blocks[b];
             self.result.set_won(blk.icons[k] & 1 != 0);
-            self.result.x2 = blk.times[k];
+            self.result.kos = blk.times[k];
             if b < 2 {
-                self.result.x4 = blk.scores[k] as i32;
+                self.result.score = blk.scores[k] as i32;
             }
         }
         self.result
@@ -226,11 +248,11 @@ impl MultiMan {
     #[doc(alias = "gm_80182554")]
     fn start_record(&mut self, ckind: i32, mode: i32) {
         let r = &mut self.record;
-        r.xC = ckind;
-        r.x8 = mode;
-        r.x0 = 0;
-        r.x4 = 0;
-        r.x2 = 0;
+        r.ckind = ckind;
+        r.mode = mode;
+        r.won = 0;
+        r.frames = 0;
+        r.kos = 0;
     }
 }
 
@@ -450,11 +472,11 @@ impl Running<'_> {
                 r.set_won(won);
                 mm.set_icon(own, m, won);
                 if won {
-                    r.x4 = saved;
+                    r.score = saved;
                     mm.result = r;
                     mm.set_score(own, m, saved as u32);
                 } else {
-                    r.x2 = saved as u16;
+                    r.kos = saved as u16;
                     mm.result = r;
                     mm.set_time(own, m, saved as u16);
                     mm.set_score(own, m, 0x0FFF_FFFF);
@@ -466,16 +488,16 @@ impl Running<'_> {
                 let won = saved != 0;
                 r.set_won(won);
                 mm.set_icon(own, m, won);
-                r.x2 = if won { saved } else { 0 };
+                r.kos = if won { saved } else { 0 };
                 mm.result = r;
-                mm.set_time(own, m, r.x2);
+                mm.set_time(own, m, r.kos);
             }
             _ => {
                 let saved = if mode == GM_ENDLESS { rec.xA4 } else { rec.xA8 };
                 let mut r = mm.record_of(own, m);
-                r.x2 = saved as u16;
+                r.kos = saved as u16;
                 mm.result = r;
-                mm.set_time(own, m, r.x2);
+                mm.set_time(own, m, r.kos);
             }
         }
     }
@@ -511,7 +533,7 @@ impl Running<'_> {
         let rec = self.mm_record_1p(own);
         match mode {
             GM_10MAN | GM_100MAN => {
-                let v = if r.won() { r.x4 } else { i32::from(r.x2) };
+                let v = if r.won() { r.score } else { i32::from(r.kos) };
                 if mode == GM_10MAN {
                     rec.b1 = r.won();
                     rec.x98 = v;
@@ -521,7 +543,7 @@ impl Running<'_> {
                 }
             }
             GM_3MIN | GM_15MIN => {
-                let v = if r.won() { r.x2 } else { 0 };
+                let v = if r.won() { r.kos } else { 0 };
                 if mode == GM_3MIN {
                     rec.xA0 = v;
                 } else {
@@ -533,9 +555,9 @@ impl Running<'_> {
             }
             _ => {
                 if mode == GM_ENDLESS {
-                    rec.xA4 = i32::from(r.x2);
+                    rec.xA4 = i32::from(r.kos);
                 } else {
-                    rec.xA8 = i32::from(r.x2);
+                    rec.xA8 = i32::from(r.kos);
                 }
             }
         }
@@ -558,7 +580,7 @@ impl Running<'_> {
         self.card_game_load_archive(0);
         self.card_game_save_changes();
         let rec = self.game.multi_man.record;
-        let won = rec.x0 != 0;
+        let won = rec.won != 0;
         if won && mode == GM_15MIN {
             let stage = self.multi_man_15min_stage();
             if stage != 0x148 {
@@ -566,7 +588,7 @@ impl Running<'_> {
             }
         }
         let p = self.multi_man_data().start.players[0].clone();
-        self.multi_man_trophies(mode, u32::from(rec.x2), rec.x4 as u32, won);
+        self.multi_man_trophies(mode, u32::from(rec.kos), rec.frames as u32, won);
         self.trophy_unlocks();
         self.special_unlocks(0x20);
         // `gm_80173460`: Falco while he's locked.
@@ -638,7 +660,7 @@ impl Running<'_> {
     #[doc(alias = "gm_80182578")]
     fn multi_man_store_result(&mut self) {
         let r = self.game.multi_man.record;
-        let (idx, mode) = (r.xC, r.x8);
+        let (idx, mode) = (r.ckind, r.mode);
         let Some(b) = block_index(mode) else {
             return;
         };
@@ -651,23 +673,23 @@ impl Running<'_> {
             let x7c = &self.game.game_data.thing.save_data.x1F2C[sel].x7C;
             let cleared = if mm_mode == GM_10MAN { x7c.b1 } else { x7c.b2 };
             let blk = &mut self.game.multi_man.blocks[b];
-            if r.x0 != 0 {
-                if (r.x4 as u32) < score {
-                    blk.icons[k] = r.x0;
-                    blk.scores[k] = r.x4 as u32;
-                    blk.times[k] = r.x2;
+            if r.won != 0 {
+                if (r.frames as u32) < score {
+                    blk.icons[k] = r.won;
+                    blk.scores[k] = r.frames as u32;
+                    blk.times[k] = r.kos;
                 }
-            } else if i32::from(r.x2) > time && !cleared {
-                blk.times[k] = r.x2;
+            } else if i32::from(r.kos) > time && !cleared {
+                blk.times[k] = r.kos;
             }
         } else if mm_mode == GM_3MIN || mm_mode == GM_15MIN {
-            if r.x0 != 0 && i32::from(r.x2) > time {
+            if r.won != 0 && i32::from(r.kos) > time {
                 let blk = &mut self.game.multi_man.blocks[b];
-                blk.icons[k] = r.x0;
-                blk.times[k] = r.x2;
+                blk.icons[k] = r.won;
+                blk.times[k] = r.kos;
             }
-        } else if i32::from(r.x2) > time {
-            self.game.multi_man.blocks[b].times[k] = r.x2;
+        } else if i32::from(r.kos) > time {
+            self.game.multi_man.blocks[b].times[k] = r.kos;
         }
     }
 
@@ -680,7 +702,7 @@ impl Running<'_> {
     #[doc(alias = "gm_8016B378")]
     pub fn multi_man_match_end(&mut self) {
         let r = self.game.multi_man.record;
-        let (idx, mode) = (r.xC, r.x8);
+        let (idx, mode) = (r.ckind, r.mode);
         let (time, score) = match block_index(mode) {
             Some(b) => {
                 let blk = &self.game.multi_man.blocks[b];
@@ -690,22 +712,22 @@ impl Running<'_> {
         };
         let record = match mode as u8 {
             GM_10MAN | GM_100MAN => {
-                if r.x0 != 0 {
-                    (r.x4 as u32) < score
+                if r.won != 0 {
+                    (r.frames as u32) < score
                 } else {
                     self.game.vs.state.unk_14 = 0x149;
                     self.game.vs.state.unk_18 = 40;
                     false
                 }
             }
-            GM_3MIN | GM_15MIN => r.x0 != 0 && i32::from(r.x2) > time,
-            GM_ENDLESS | GM_CRUEL => i32::from(r.x2) > time,
+            GM_3MIN | GM_15MIN => r.won != 0 && i32::from(r.kos) > time,
+            GM_ENDLESS | GM_CRUEL => i32::from(r.kos) > time,
             _ => false,
         };
         if record {
             self.game.vs.state.unk_10 = 0x9C41;
             self.game.vs.state.unk_14 = 0x145;
-            self.tou_rumble(r.x10 as usize, r.x11, 0xD, 0x5A);
+            self.tou_rumble(r.port as usize, r.nametag, 0xD, 0x5A);
         }
     }
 
@@ -735,15 +757,15 @@ impl Running<'_> {
         });
         let mm = &mut self.game.multi_man;
         mm.tables = tables;
-        mm.x0 = 0;
-        mm.x4 = 0;
-        mm.x8 = 0;
+        mm.brought_in = 0;
+        mm.kos_early = 0;
+        mm.start_frames = 0;
         let mut p = super::vs_mode::player_defaults();
         p.ckind = CharacterKind::Boy as i8;
         p.slot_type = 1;
         p.stocks = 1;
         p.xD_b4 = true;
-        mm.xC = p;
+        mm.joiner = p;
         if let Some(b) = block_index(i32::from(mode)) {
             let t = self.game.multi_man.tables[b].expect("a Multi-Man table");
             let data = self.data;
@@ -751,15 +773,15 @@ impl Running<'_> {
                 let e = t.at(0x10 * i as u32);
                 let x0 = data.u32(e) as i32;
                 let entry = SpawnEntry {
-                    x0,
-                    x4: data.u8(e.at(4)),
-                    x5: data.u8(e.at(5)),
-                    x6: data.u8(e.at(6)),
-                    x7: data.u8(e.at(7)),
-                    x8: f32::from_bits(data.u32(e.at(8))),
-                    xC: f32::from_bits(data.u32(e.at(0xC))),
+                    wait_for: x0,
+                    at_once: data.u8(e.at(4)),
+                    ckind: data.u8(e.at(5)),
+                    level: data.u8(e.at(6)),
+                    cpu_kind: data.u8(e.at(7)),
+                    attack_ratio: f32::from_bits(data.u32(e.at(8))),
+                    defense_ratio: f32::from_bits(data.u32(e.at(0xC))),
                 };
-                self.game.multi_man.x54[i] = entry;
+                self.game.multi_man.table[i] = entry;
                 if x0 == TABLE_END {
                     break;
                 }
@@ -768,8 +790,8 @@ impl Running<'_> {
         let port = self.game.player_port(0) as i8;
         let tag = self.game.player_nametag(0);
         let r = &mut self.game.multi_man.record;
-        r.x10 = port;
-        r.x11 = tag;
+        r.port = port;
+        r.nametag = tag;
         let w = &mut self.game.world;
         let o = w.create(0xF, 0x11, 0);
         w.setup_proc(o, CodeRef(PROC), 0x15);
@@ -800,7 +822,7 @@ impl Running<'_> {
     fn multi_man_join(&mut self, i: usize) {
         let (count, free) = self.multi_man_in();
         let mm = &self.game.multi_man;
-        if i32::from(mm.x54[i].x4) <= count || mm.x8 <= 0x5A {
+        if i32::from(mm.table[i].at_once) <= count || mm.start_frames <= 0x5A {
             return;
         }
         // `sp38` is written for every slot not counted, so with fewer than five in it's set.
@@ -812,19 +834,19 @@ impl Running<'_> {
         }
         let team = u8::from(self.game.player_team(0) == 0);
         let mm = &mut self.game.multi_man;
-        mm.x54[i].x0 = TAKEN;
-        let e = mm.x54[i];
-        let mut p = mm.xC.clone();
+        mm.table[i].wait_for = TAKEN;
+        let e = mm.table[i];
+        let mut p = mm.joiner.clone();
         p.team = team;
-        p.ckind = e.x5 as i8;
-        p.cpu_level = e.x6;
-        p.cpu_kind = e.x7;
-        p.attack_ratio = e.x8;
-        p.defense_ratio = e.xC;
+        p.ckind = e.ckind as i8;
+        p.cpu_level = e.level;
+        p.cpu_kind = e.cpu_kind;
+        p.attack_ratio = e.attack_ratio;
+        p.defense_ratio = e.defense_ratio;
         self.vs_add_player(slot, &p);
         self.game.set_player_nametag(slot, 0x78);
         self.refresh_nametag(slot);
-        self.game.multi_man.x0 += 1;
+        self.game.multi_man.brought_in += 1;
     }
 
     /// `ifStock_802FA2D0`'s argument for the mode: the opponents left of 10 or 100, else
@@ -848,14 +870,14 @@ impl Running<'_> {
     #[doc(alias = "fn_80181E18")]
     pub fn multi_man_proc(&mut self, _gobj: GObjId) {
         let mode = self.game.game_mode;
-        if self.game.multi_man.x8 <= 0x5A {
-            self.game.multi_man.x8 += 1;
+        if self.game.multi_man.start_frames <= 0x5A {
+            self.game.multi_man.start_frames += 1;
         }
         match mode {
             GM_3MIN | GM_15MIN
                 if self.game.vs_timer_seconds() == 0 && self.game.vs_timer_frames() == 0x3B =>
             {
-                self.game.multi_man.record.x0 = 1;
+                self.game.multi_man.record.won = 1;
                 self.game.vs_set_end_kind(7);
                 self.game.vs_terminate();
             }
@@ -865,37 +887,37 @@ impl Running<'_> {
             }
             _ => {}
         }
-        let Some(i) = (0..ENTRIES).find(|&i| self.game.multi_man.x54[i].x0 != TAKEN) else {
+        let Some(i) = (0..ENTRIES).find(|&i| self.game.multi_man.table[i].wait_for != TAKEN) else {
             return;
         };
-        let rmode = self.game.multi_man.record.x8;
+        let rmode = self.game.multi_man.record.mode;
         if rmode == i32::from(GM_10MAN) || rmode == i32::from(GM_100MAN) {
-            self.game.multi_man.record.x4 = self.game.vs_frame_count() as i32;
+            self.game.multi_man.record.frames = self.game.vs_frame_count() as i32;
         }
         let kos = |r: &Running| {
             let t = (i as i32) - r.multi_man_in().0;
-            t.max(0) + r.game.multi_man.x4
+            t.max(0) + r.game.multi_man.kos_early
         };
-        self.game.multi_man.record.x2 = kos(self) as i16 as u16;
+        self.game.multi_man.record.kos = kos(self) as i16 as u16;
         let k = kos(self);
         self.multi_man_counter(mode, k);
-        let next = self.game.multi_man.x54[i].x0;
+        let next = self.game.multi_man.table[i].wait_for;
         if next == WAITING {
             self.multi_man_join(i);
             return;
         }
         if next == TABLE_END {
             if self.multi_man_in().0 == 0 {
-                self.game.multi_man.record.x0 = 1;
+                self.game.multi_man.record.won = 1;
                 self.game.vs_set_end_kind(7);
                 self.game.vs_terminate();
             }
         } else {
             for k in next..i as i32 {
-                self.game.multi_man.x54[k as usize].x0 = WAITING;
-                self.game.multi_man.x4 += 1;
+                self.game.multi_man.table[k as usize].wait_for = WAITING;
+                self.game.multi_man.kos_early += 1;
             }
-            let j = self.game.multi_man.x54[i].x0;
+            let j = self.game.multi_man.table[i].wait_for;
             self.multi_man_join(j as usize);
             let k = kos(self);
             self.set_multi_man_counter(k);

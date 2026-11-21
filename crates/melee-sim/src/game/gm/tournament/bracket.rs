@@ -137,14 +137,14 @@ pub struct Counters<'a> {
 fn bracket_counters(t: &mut super::Tournament) -> Counters<'_> {
     let b = &mut t.bracket_scene;
     Counters {
-        bg: &mut b.x10,
-        panel: &mut b.x1a,
-        title: &mut b.x1c,
-        bounce: &mut b.x1d,
+        bg: &mut b.bg,
+        panel: &mut b.panel,
+        title: &mut b.title,
+        bounce: &mut b.bounce,
         bounce_ys: &t.bounce,
-        bar: &mut b.x29,
-        anims: &mut b.x2a,
-        choice: &mut b.x44,
+        bar: &mut b.bar,
+        anims: &mut b.anims,
+        choice: &mut b.choice,
     }
 }
 
@@ -206,16 +206,16 @@ impl Running<'_> {
     /// with the random stage when it's random.
     #[doc(alias = "fn_801965C4")]
     pub fn tou_go_to_match(&mut self) {
-        self.game.tou.tm.x2d = 1;
+        self.game.tou.tm.to_match = 1;
         if self.tou_stage_chosen() {
-            self.game.tou.tm.x32 = 1;
+            self.game.tou.tm.stage_picked = 1;
             self.set_next_game_mode_state_id(STATE_SSS);
             self.game.end_scene();
             return;
         }
         if self.tou_stage_random() {
-            self.game.tou.tm.x32 = 1;
-            self.game.tou.tm.x28 = self.game.tou.stage as u32;
+            self.game.tou.tm.stage_picked = 1;
+            self.game.tou.tm.stage = self.game.tou.stage as u32;
         }
         self.set_next_game_mode_state_id(STATE_VS);
         self.game.end_scene();
@@ -226,7 +226,7 @@ impl Running<'_> {
     fn tou_rank(&self) -> i32 {
         let tm = &self.game.tou.tm;
         let t = &RANKS[tm.entrants() as usize];
-        let x24 = tm.x24;
+        let x24 = tm.rounds;
         if x24 > i32::from(t[5]) {
             return 6;
         }
@@ -250,13 +250,13 @@ impl Running<'_> {
             return;
         }
         self.tou_show(Some(j));
-        if self.br().x1b != 0 {
-            self.br().x1b -= 1;
+        if self.br().rank_frames != 0 {
+            self.br().rank_frames -= 1;
             super::super::super::mn::common::anim_all(self, Some(j));
             let tm = &self.game.tou.tm;
-            if tm.x33 == tm.x34 {
-                if self.br().x1b > 2 {
-                    self.br().x1b = 2;
+            if tm.rank == tm.last_rank {
+                if self.br().rank_frames > 2 {
+                    self.br().rank_frames = 2;
                 }
                 self.tou_hide(Some(j));
             }
@@ -295,7 +295,8 @@ impl Running<'_> {
     /// Whether player `p`'s controller hides their models: unplugged, and on the bracket's
     /// screen a human (a computer plays on without one).
     fn screen_unplugged(&self, s: &Screen, p: usize) -> bool {
-        self.tou_pad_err(p) != 0 && (!s.step_only || self.game.tou.tm.x4b8[p].x0 != 1)
+        self.tou_pad_err(p) != 0
+            && (!s.step_only || self.game.tou.tm.match_players[p].slot_type != 1)
     }
 
     /// The bracket's screen hidden outside the players' step, and shown in it; whether to
@@ -374,7 +375,7 @@ impl Running<'_> {
         if !self.screen_step(s, j) {
             return;
         }
-        let t = self.game.tou.tm.x524(2).expect("the players' names");
+        let t = self.game.tou.tm.screen_text(2).expect("the players' names");
         if self.screen_unplugged(s, p) {
             self.tou_hide(Some(j));
             self.game.sis.set_scale(self.data, t, p as i32, 0.0, 0.0);
@@ -386,7 +387,7 @@ impl Running<'_> {
         let state = self.scr(s).anims[p].state;
         let k = if state == 4 { 0.0 } else { 1.0 };
         self.game.sis.set_scale(self.data, t, p as i32, k, k);
-        let x = player_x(self.game.tou.tm.x30, p as i32);
+        let x = player_x(self.game.tou.tm.players_per_match, p as i32);
         self.tou_set_tx(Some(j), mem(x));
         self.game.sis.text_mut(t).hidden = 0;
         let mut a = self.scr(s).anims[p];
@@ -394,7 +395,7 @@ impl Running<'_> {
         if a.state == 0
             && self.scr(s).choice[p] == 6
             && a.done != 0
-            && self.game.tou.tm.x4b8[p].x0 != 0
+            && self.game.tou.tm.match_players[p].slot_type != 0
         {
             a.state = 1;
             a.done = 0;
@@ -418,7 +419,7 @@ impl Running<'_> {
         if !self.screen_shown(s, j, p) {
             return;
         }
-        let x = player_x(self.game.tou.tm.x30, p as i32);
+        let x = player_x(self.game.tou.tm.players_per_match, p as i32);
         self.tou_move(j, fp::fadds(4.5, x), s.icon_y, 666.0);
         if self.scr(s).anims[p].state == 4 {
             self.tou_hide(Some(j));
@@ -445,14 +446,14 @@ impl Running<'_> {
         if !s.icon_each_frame {
             return;
         }
-        let m = self.game.tou.tm.x4b8[p];
+        let m = self.game.tou.tm.match_players[p];
         let c = self.tou_child(Some(j));
         let c = self.tou_next(c);
-        if m.x2 != 0 {
+        if m.random != 0 {
             self.tou_frame(c, 201.0);
             return;
         }
-        self.tou_frame(c, icon_frame(i32::from(m.x1), i32::from(m.x3)));
+        self.tou_frame(c, icon_frame(i32::from(m.icon), i32::from(m.color)));
     }
 
     /// The screen's title coming in, sixty frames (the match-up screen's, winner-out's or
@@ -488,7 +489,7 @@ impl Running<'_> {
         if !self.screen_step(s, j) {
             return;
         }
-        let x = player_x(self.game.tou.tm.x30, p as i32);
+        let x = player_x(self.game.tou.tm.players_per_match, p as i32);
         self.tou_move(j, fp::fadds(reg(0.3), x), reg(s.tag_y), 666.0);
         if self.scr(s).anims[p].state == 4 {
             let c = self.scr(s);
@@ -500,9 +501,9 @@ impl Running<'_> {
         } else {
             self.scr(s).bounce[p] = 0;
         }
-        if self.tou_pad_err(p) != 0 && self.game.tou.tm.x4b8[p].x0 != 1 {
+        if self.tou_pad_err(p) != 0 && self.game.tou.tm.match_players[p].slot_type != 1 {
             self.tou_show(Some(j));
-            let x = player_x(self.game.tou.tm.x30, p as i32);
+            let x = player_x(self.game.tou.tm.players_per_match, p as i32);
             self.tou_move(j, fp::fadds(reg(0.3), x), reg(s.tag_y), 666.0);
         }
     }
@@ -536,7 +537,7 @@ impl Running<'_> {
         if s.handicap_hides_out && self.tou_pad_err(p) == 0 && self.scr(s).anims[p].state == 4 {
             self.tou_hide(Some(j));
         }
-        let x = player_x(self.game.tou.tm.x30, p as i32);
+        let x = player_x(self.game.tou.tm.players_per_match, p as i32);
         self.tou_move(j, x, 666.0, 666.0);
     }
 
@@ -557,7 +558,7 @@ impl Running<'_> {
         if !s.step_only {
             self.tou_show(Some(j));
         }
-        let x = player_x(self.game.tou.tm.x30, p as i32);
+        let x = player_x(self.game.tou.tm.players_per_match, p as i32);
         self.tou_move(j, x, 666.0, reg(0.01));
     }
 
@@ -569,21 +570,21 @@ impl Running<'_> {
         if !self.screen_shown(&PLAYERS, j, p) {
             return;
         }
-        if self.game.tou.tm.x4b8[p].x0 == 1 {
+        if self.game.tou.tm.match_players[p].slot_type == 1 {
             self.tou_hide(Some(j));
         }
-        let x = player_x(self.game.tou.tm.x30, p as i32);
+        let x = player_x(self.game.tou.tm.players_per_match, p as i32);
         self.tou_move(j, x, 666.0, 666.0);
-        let a = self.br().x2a[p];
-        if self.br().x44[p] != 6 || a.state == 1 || a.state == 2 || a.state == 4 {
+        let a = self.br().anims[p];
+        if self.br().choice[p] != 6 || a.state == 1 || a.state == 2 || a.state == 4 {
             self.tou_hide(Some(j));
         }
-        if self.br().x12[p] < 0x258 {
-            self.br().x12[p] += 1;
+        if self.br().unplugged[p] < 0x258 {
+            self.br().unplugged[p] += 1;
         } else {
-            self.br().x12[p] = 0;
+            self.br().unplugged[p] = 0;
         }
-        let c = self.br().x12[p];
+        let c = self.br().unplugged[p];
         self.tou_frame(Some(j), mem(f(i32::from(c))));
     }
 
@@ -595,10 +596,10 @@ impl Running<'_> {
         if !self.screen_shown(&PLAYERS, j, p) {
             return;
         }
-        if self.game.tou.tm.x4b8[p].x0 != 1 {
+        if self.game.tou.tm.match_players[p].slot_type != 1 {
             self.tou_hide(Some(j));
         }
-        let x = player_x(self.game.tou.tm.x30, p as i32);
+        let x = player_x(self.game.tou.tm.players_per_match, p as i32);
         self.tou_move(j, x, 666.0, 666.0);
     }
 
@@ -612,18 +613,18 @@ impl Running<'_> {
             return;
         }
         self.tou_show(Some(j));
-        if self.tou_pad_err(p) != 0 && self.br().x2a[p].state != 4 {
+        if self.tou_pad_err(p) != 0 && self.br().anims[p].state != 4 {
             self.tou_hide(Some(j));
             return;
         }
-        if self.br().x44[p] == 6 {
+        if self.br().choice[p] == 6 {
             self.tou_hide(Some(j));
         }
-        let x = player_x(self.game.tou.tm.x30, p as i32);
+        let x = player_x(self.game.tou.tm.players_per_match, p as i32);
         self.tou_move(j, x, 666.0, reg(0.01));
-        let c = ((i32::from(self.br().x21[p]) + 1) % 11) as u8;
-        self.br().x21[p] = c;
-        let frame = if self.br().x44[p] == 7 {
+        let c = ((i32::from(self.br().name_flash[p]) + 1) % 11) as u8;
+        self.br().name_flash[p] = c;
+        let frame = if self.br().choice[p] == 7 {
             i32::from(c)
         } else {
             i32::from(c) + 0x14
@@ -653,8 +654,8 @@ impl Running<'_> {
             return;
         }
         self.tou_set_tz(Some(j), 0.0);
-        if self.br().x0 < 0xA {
-            self.br().x667c = 1;
+        if self.br().step_frames < 0xA {
+            self.br().banner_hidden = 1;
             return;
         }
         super::super::super::mn::common::anim_all(self, Some(j));
@@ -664,11 +665,11 @@ impl Running<'_> {
         let hidden = self.game.objs.jobjs[c]
             .dobj()
             .is_some_and(|d| self.game.objs.dobjs[d].flags & 1 != 0);
-        self.br().x667c = i32::from(hidden);
+        self.br().banner_hidden = i32::from(hidden);
         let jo = &self.game.objs.jobjs[c];
         let (t, s) = (jo.translate, jo.scale);
-        self.br().x64 = t;
-        self.br().x70 = s;
+        self.br().banner_translate = t;
+        self.br().banner_scale = s;
     }
 
     /// `fn_80198824`: the winner's icon in the result's banner.
@@ -681,20 +682,20 @@ impl Running<'_> {
             return;
         }
         self.tou_set_tz(Some(j), 0.0);
-        if self.br().x667c != 0 {
+        if self.br().banner_hidden != 0 {
             self.tou_set_tz(Some(j), 10000.0);
             return;
         }
         let b = self.br();
-        let min = b.x8 as u32;
-        if b.x4 < min {
-            b.x4 = min;
+        let min = b.banner_start as u32;
+        if b.banner_frame < min {
+            b.banner_frame = min;
         }
-        if b.x4 < b.xc as u32 {
-            b.x4 += 1;
+        if b.banner_frame < b.banner_end as u32 {
+            b.banner_frame += 1;
         }
-        let frame = b.x4;
-        let (t, s) = (b.x64, b.x70);
+        let frame = b.banner_frame;
+        let (t, s) = (b.banner_translate, b.banner_scale);
         super::super::super::mn::common::req_all(self, Some(j), mem(fp::frsp(f64::from(frame))));
         super::super::super::mn::common::anim_all(self, Some(j));
         crate::hsd::jobj::set_translate(&mut self.game.objs.jobjs, j, t);
@@ -704,18 +705,18 @@ impl Running<'_> {
     /// `fn_80198BA0`: the screen's counters, and each player of the match back to coming in.
     #[doc(alias = "fn_80198BA0")]
     fn br_reset(&mut self) {
-        let x2c = self.game.tou.tm.x2c;
-        let n = usize::from(self.game.tou.tm.x30);
+        let x2c = self.game.tou.tm.new_bracket;
+        let n = usize::from(self.game.tou.tm.players_per_match);
         let b = self.br();
-        b.x0 = 0;
-        b.x10 = 0;
-        b.x1a = if x2c != 0 { 0x50 } else { 0x5A };
-        b.x1c = 0;
+        b.step_frames = 0;
+        b.bg = 0;
+        b.panel = if x2c != 0 { 0x50 } else { 0x5A };
+        b.title = 0;
         for i in 0..n {
-            b.x25[i] = 0;
-            b.x12[i] = 0;
-            b.x1d[i] = 0;
-            b.x2a[i] = super::PlayerAnim {
+            b.cleared[i] = 0;
+            b.unplugged[i] = 0;
+            b.bounce[i] = 0;
+            b.anims[i] = super::PlayerAnim {
                 start: 0,
                 cur: 0,
                 end: 0x1E,
@@ -723,7 +724,7 @@ impl Running<'_> {
                 done: 0,
                 loop_: 0,
             };
-            b.x44[i] = 6;
+            b.choice[i] = 6;
         }
     }
 
@@ -736,12 +737,12 @@ impl Running<'_> {
         x.font_size = [0.054945, 0.08];
         x.default_alignment = 1;
         x.default_kerning = 1;
-        self.game.tou.tm.x518[5] = Some(t);
+        self.game.tou.tm.name_texts[5] = Some(t);
         let t = self.create_text_buffer(0, canvas);
         let x = self.game.sis.text_mut(t);
         x.default_alignment = 1;
         x.default_kerning = 1;
-        self.game.tou.tm.x518[6] = Some(t);
+        self.game.tou.tm.name_texts[6] = Some(t);
         self.game.sis.add_string(t, 320.0, 250.0, Some(b"    "));
         self.game.sis.set_scale(self.data, t, 0, 1.5, 1.5);
     }
@@ -811,17 +812,17 @@ impl Running<'_> {
     #[doc(alias = "fn_80198EBC")]
     fn br_players(&mut self) {
         self.br_scene();
-        let n = usize::from(self.game.tou.tm.x30);
+        let n = usize::from(self.game.tou.tm.players_per_match);
         for i in 0..n {
-            let kind = self.game.tou.tm.x4b8[i].x0;
+            let kind = self.game.tou.tm.match_players[i].slot_type;
             let rate = if kind == 0 {
                 mem(f(i as i32))
             } else if kind == 1 {
                 4.0
             } else {
-                self.game.tou.tm.x4b8[i].x0 = 0;
-                self.br().x44[i] = 6;
-                self.br().x2a[i].state = 4;
+                self.game.tou.tm.match_players[i].slot_type = 0;
+                self.br().choice[i] = 6;
+                self.br().anims[i].state = 4;
                 mem(f(i as i32))
             };
             let m = self.br_m4(12);
@@ -834,23 +835,23 @@ impl Running<'_> {
                 crate::hsd::mobj::remove_anim_by_flags(&mut self.game.objs, mo, 4);
                 c = self.tou_next(c);
             }
-            let x30 = self.game.tou.tm.x30;
+            let x30 = self.game.tou.tm.players_per_match;
             let pos = match x30 {
                 4 => fp::fadds(73.0, fp::fmadds(240.0, f(i as i32), 152.0)),
                 3 => fp::fadds(73.0, fp::fmadds(240.0, f(i as i32), 270.0)),
                 _ => fp::fadds(73.0, fp::fmadds(240.0, fp::fmuls(2.0, f(i as i32)), 270.0)),
             };
-            let m = self.game.tou.tm.x4b8[i];
+            let m = self.game.tou.tm.match_players[i];
             let x = fp::fmsubs(reg(0.99), fp::fsubs(pos, 320.0), 261.0);
-            self.tou_add_name(i32::from(m.x6), i32::from(m.x0), 5, x, -42.0, 5);
-            let t = self.game.tou.tm.x524(2);
+            self.tou_add_name(i32::from(m.name), i32::from(m.slot_type), 5, x, -42.0, 5);
+            let t = self.game.tou.tm.screen_text(2);
             self.set_text_hidden(t, 1);
             let mm = self.br_m4(10);
             let g = self.tou_model(false, mm, 0, 0x1A, 2, true, Some(PROC_ICON), rate);
             let j = self.tou_jobj(g);
             self.tou_set_index(g, i as i32);
             let c = self.tou_child(Some(j));
-            self.tou_icon_model(c, ICON_MODELS[usize::from(m.x1)]);
+            self.tou_icon_model(c, ICON_MODELS[usize::from(m.icon)]);
             let mm = self.br_m4(4);
             let g = self.tou_model(false, mm, 0, 0x1A, 2, true, Some(PROC_BASE), rate);
             let j = self.tou_jobj(g);
@@ -859,7 +860,7 @@ impl Running<'_> {
             self.tou_move(j, fp::fsubs(px, reg(2.799_999)), reg(6.8), reg(0.001));
             let c = self.tou_child(Some(j));
             let c = self.tou_next(c);
-            self.tou_frame(c, icon_frame(i32::from(m.x1), i32::from(m.x3)));
+            self.tou_frame(c, icon_frame(i32::from(m.icon), i32::from(m.color)));
             let mm = self.br_m4(9);
             let g = self.tou_model(false, mm, 0, 0x1A, 2, true, Some(PROC_TAG), rate);
             let j = self.tou_jobj(g);
@@ -872,18 +873,18 @@ impl Running<'_> {
             let g = self.tou_model(false, mm, 0, 0x1A, 2, true, Some(PROC_LEVEL), rate);
             let j = self.tou_jobj(g);
             self.tou_set_index(g, i as i32);
-            let m = self.game.tou.tm.x4b8[i];
-            if m.x0 == 1 {
-                self.tou_frame(Some(j), mem(f(i32::from(m.x4))));
+            let m = self.game.tou.tm.match_players[i];
+            if m.slot_type == 1 {
+                self.tou_frame(Some(j), mem(f(i32::from(m.level))));
             } else {
                 self.tou_hide(Some(j));
             }
-            if self.game.tou.tm.x31 != 0 {
+            if self.game.tou.tm.handicaps != 0 {
                 let mm = self.br_m4(11);
                 let g = self.tou_model(false, mm, 0, 0x1A, 2, true, Some(PROC_HANDICAP), rate);
                 let j = self.tou_jobj(g);
                 self.tou_set_index(g, i as i32);
-                self.tou_frame(Some(j), mem(f(i32::from(m.x5))));
+                self.tou_frame(Some(j), mem(f(i32::from(m.handicap))));
             }
             let mm = self.br_m4(7);
             let g = self.tou_model(false, mm, 0, 0x1A, 2, true, Some(PROC_CURSOR), rate);
@@ -943,7 +944,7 @@ impl Running<'_> {
         let (n, _) = self.tou_players_left();
         let mut mode = if n == 1 {
             1
-        } else if self.game.tou.tm.x33 == 5 {
+        } else if self.game.tou.tm.rank == 5 {
             2
         } else {
             0
@@ -951,10 +952,10 @@ impl Running<'_> {
         let slot = self.br_winner_seat();
         let idx = self.tou_current_box();
         self.br_scene();
-        if self.game.tou.tm.x33 == 5 {
+        if self.game.tou.tm.rank == 5 {
             mode = 2;
         }
-        if mode != 2 && self.game.tou.bracket[idx].x18 == 0 {
+        if mode != 2 && self.game.tou.bracket[idx].height == 0 {
             return;
         }
         let m = self.br_m3(0);
@@ -964,12 +965,12 @@ impl Running<'_> {
         let j = self.tou_jobj(g);
         let c = self.tou_child(Some(j));
         let b = self.br();
-        b.x8 = mode * 0x14;
-        b.xc = if mode == 2 { 0x96 } else { mode * 0x14 + 0x13 };
+        b.banner_start = mode * 0x14;
+        b.banner_end = if mode == 2 { 0x96 } else { mode * 0x14 + 0x13 };
         let slot = usize::try_from(slot).unwrap_or_else(|_| {
             super::super::super::code::unported_call("fn_80199AF0 with no winner's seat")
         });
-        let icon = self.game.tou.tm.x4b8[slot].x1;
+        let icon = self.game.tou.tm.match_players[slot].icon;
         self.tou_icon_model(c, ICON_MODELS[usize::from(icon)]);
     }
 
@@ -978,32 +979,32 @@ impl Running<'_> {
     /// them; then the winner's seat, kind and name (a human's rumble) for the banner.
     #[doc(alias = "fn_8019A158")]
     fn br_settle(&mut self) {
-        self.br().x48 = true;
-        self.br().x0 = 0;
+        self.br().settled = true;
+        self.br().step_frames = 0;
         let (n, last) = self.tou_players_left();
         let mut mode = 0;
         if n == 1 {
             mode = 1;
-        } else if self.game.tou.tm.x33 == 5 {
+        } else if self.game.tou.tm.rank == 5 {
             mode = 2;
         }
         let mut sel = self.br_winner_seat();
         let idx = self.tou_current_box();
-        self.br().x4e = [0; 20];
+        self.br().winner_name = [0; 20];
         if mode == 1 {
             let s = last.expect("a seat") as usize;
             for i in 0..4 {
-                self.game.tou.bracket[idx].slots[i].x4c = if i == s { 0 } else { 3 };
+                self.game.tou.bracket[idx].slots[i].rank = if i == s { 0 } else { 3 };
             }
-        } else if self.game.tou.tm.x2d == 1 {
+        } else if self.game.tou.tm.to_match == 1 {
             for i in 0..4 {
-                if self.game.tou.bracket[idx].slots[i].x4e == 3 {
-                    self.game.tou.bracket[idx].slots[i].x4c = 3;
+                if self.game.tou.bracket[idx].slots[i].slot_type == 3 {
+                    self.game.tou.bracket[idx].slots[i].rank = 3;
                 } else {
                     let p = &mut self.game.tou.match_end.player_standings[i];
                     let v = p.is_small_loser;
                     p.is_big_loser = v;
-                    self.game.tou.bracket[idx].slots[i].x4c = v;
+                    self.game.tou.bracket[idx].slots[i].rank = v;
                     if v == 0 {
                         sel = i as i32;
                     }
@@ -1013,25 +1014,25 @@ impl Running<'_> {
             let mut count = 0;
             for i in 0..4 {
                 let s = &mut self.game.tou.bracket[idx].slots[i];
-                if s.x4e == 3 {
-                    s.x4c = 4;
+                if s.slot_type == 3 {
+                    s.rank = 4;
                 } else {
-                    s.x4c = count;
+                    s.rank = count;
                     count += 1;
                 }
             }
             match count {
                 2 => {
                     let b = &self.game.tou.bracket[idx];
-                    let (w0, w1) = (i32::from(b.slots[0].x51), i32::from(b.slots[1].x51));
+                    let (w0, w1) = (i32::from(b.slots[0].level), i32::from(b.slots[1].level));
                     let r = self.game.objs.rng.below(w0 + w1);
                     let s = &mut self.game.tou.bracket[idx].slots;
                     if r < w0 {
-                        s[0].x4c = 0;
-                        s[1].x4c = 1;
+                        s[0].rank = 0;
+                        s[1].rank = 1;
                     } else {
-                        s[0].x4c = 1;
-                        s[1].x4c = 0;
+                        s[0].rank = 1;
+                        s[1].rank = 0;
                     }
                 }
                 3 => self.tou_draw_ranks_3(idx),
@@ -1039,13 +1040,13 @@ impl Running<'_> {
                 _ => {}
             }
             for i in 0..4 {
-                let v = self.game.tou.bracket[idx].slots[i].x4c;
+                let v = self.game.tou.bracket[idx].slots[i].rank;
                 let p = &mut self.game.tou.match_end.player_standings[i];
                 p.is_big_loser = v;
                 p.is_small_loser = v;
             }
             for i in 0..4 {
-                if self.game.tou.bracket[idx].slots[i].x4c == 0 {
+                if self.game.tou.bracket[idx].slots[i].rank == 0 {
                     sel = i as i32;
                 }
             }
@@ -1054,17 +1055,17 @@ impl Running<'_> {
             super::super::super::code::unported_call("fn_8019A158 with no winner's seat")
         });
         let s = self.game.tou.bracket[idx].slots[sel];
-        self.br().x4c = sel as u8;
-        self.br().x4d = s.x4e;
-        if s.x4e == 0 && self.game.tou.bracket[idx].x18 != 0 {
-            let tag = self.game.tou.tm.x4b8[sel].x6;
+        self.br().winner_seat = sel as u8;
+        self.br().winner_type = s.slot_type;
+        if s.slot_type == 0 && self.game.tou.bracket[idx].height != 0 {
+            let tag = self.game.tou.tm.match_players[sel].name;
             self.tou_rumble(sel, tag.min(0x78) as u8, 0x1F, 0x78);
         }
-        let name = self.game.tou.tm.x37[usize::from(s.x50)].x9;
+        let name = self.game.tou.tm.roster[usize::from(s.entrant)].name;
         let text = self.tou_name(i32::from(name));
         let n = text.len().min(20);
         let b = self.br();
-        b.x4e[..n].copy_from_slice(&text[..n]);
+        b.winner_name[..n].copy_from_slice(&text[..n]);
     }
 
     /// `gm_80167858`: a rumble on `port` if its rumble is on for name tag `tag`.
@@ -1078,7 +1079,7 @@ impl Running<'_> {
     /// `fn_80196684`: three computers' places drawn by their levels.
     #[doc(alias = "fn_80196684")]
     fn tou_draw_ranks_3(&mut self, i: usize) {
-        let w = |r: &Running, k: usize| i32::from(r.game.tou.bracket[i].slots[k].x51);
+        let w = |r: &Running, k: usize| i32::from(r.game.tou.bracket[i].slots[k].level);
         let (w0, w1, w2) = (w(self, 0), w(self, 1), w(self, 2));
         let r = self.game.objs.rng.below(w0 + w1 + w2);
         let (first, a, b) = if r < w0 {
@@ -1088,16 +1089,16 @@ impl Running<'_> {
         } else {
             (2, 0, 1)
         };
-        self.game.tou.bracket[i].slots[first].x4c = 0;
+        self.game.tou.bracket[i].slots[first].rank = 0;
         let (wa, wb) = (w(self, a), w(self, b));
         let r = self.game.objs.rng.below(wa + wb);
         let s = &mut self.game.tou.bracket[i].slots;
         if r < wa {
-            s[a].x4c = 1;
-            s[b].x4c = 2;
+            s[a].rank = 1;
+            s[b].rank = 2;
         } else {
-            s[a].x4c = 2;
-            s[b].x4c = 1;
+            s[a].rank = 2;
+            s[b].rank = 1;
         }
     }
 
@@ -1107,7 +1108,7 @@ impl Running<'_> {
     /// as the second seat's chance (`docs/melee-bugs.md`).
     #[doc(alias = "fn_801967E0")]
     fn tou_draw_ranks_4(&mut self, i: usize) {
-        let w = |r: &Running, k: usize| i32::from(r.game.tou.bracket[i].slots[k].x51);
+        let w = |r: &Running, k: usize| i32::from(r.game.tou.bracket[i].slots[k].level);
         let ws = [w(self, 0), w(self, 1), w(self, 2), w(self, 3)];
         let r = self.game.objs.rng.below(ws[0] + ws[1] + ws[2] + ws[3]);
         let first = if r < ws[0] {
@@ -1119,7 +1120,7 @@ impl Running<'_> {
         } else {
             3
         };
-        self.game.tou.bracket[i].slots[first].x4c = 0;
+        self.game.tou.bracket[i].slots[first].rank = 0;
         let rest: Vec<usize> = (0..4).filter(|&k| k != first).collect();
         let (a, b, c) = (rest[0], rest[1], rest[2]);
         let r = self.game.objs.rng.below(ws[a] + ws[b] + ws[c]);
@@ -1130,7 +1131,7 @@ impl Running<'_> {
         } else {
             (c, a, b)
         };
-        self.game.tou.bracket[i].slots[second].x4c = 1;
+        self.game.tou.bracket[i].slots[second].rank = 1;
         let r = self.game.objs.rng.below(ws[x] + ws[y]);
         let weight = if first == 0 && second == 3 {
             ws[y]
@@ -1139,11 +1140,11 @@ impl Running<'_> {
         };
         let s = &mut self.game.tou.bracket[i].slots;
         if r < weight {
-            s[x].x4c = 2;
-            s[y].x4c = 3;
+            s[x].rank = 2;
+            s[y].rank = 3;
         } else {
-            s[x].x4c = 3;
-            s[y].x4c = 2;
+            s[x].rank = 3;
+            s[y].rank = 2;
         }
     }
 
@@ -1156,9 +1157,9 @@ impl Running<'_> {
             self.br_round_start();
         }
         if self.game.tou.tm.cur_option > 0x14 {
-            self.br().x0 += 1;
+            self.br().step_frames += 1;
         }
-        let c = self.br().x0;
+        let c = self.br().step_frames;
         if c >= 0x14 {
             self.game.tou.tm.cur_option = 0x15;
         }
@@ -1191,7 +1192,7 @@ impl Running<'_> {
     fn br_players_start(&mut self) {
         self.br_players();
         self.game.tou.tm.cur_option = 0x1C;
-        self.br().x0 = 0;
+        self.br().step_frames = 0;
     }
 
     /// `fn_8019A86C`: the match's players' screen: each human readies (A or Start), backs
@@ -1205,11 +1206,11 @@ impl Running<'_> {
             self.br_players_start();
         }
         if self.game.tou.tm.cur_option == 0x1D {
-            self.br().x0 += 1;
-            if t & 0x600 != 0 || self.br().x0 >= 0x12C {
+            self.br().step_frames += 1;
+            if t & 0x600 != 0 || self.br().step_frames >= 0x12C {
                 self.lb_audio_call(0);
                 self.tou_free_scene();
-                self.game.tou.tm.x2d = 0;
+                self.game.tou.tm.to_match = 0;
                 self.game.tou.tm.cur_option = 0x1F;
             }
             if t & 0x1100 != 0 {
@@ -1218,11 +1219,11 @@ impl Running<'_> {
             }
             return;
         }
-        let n = usize::from(self.game.tou.tm.x30);
+        let n = usize::from(self.game.tou.tm.players_per_match);
         let mut ready = 0;
         let mut unplugged = false;
         for i in 0..n {
-            if self.game.tou.tm.x4b8[i].x0 == 1 {
+            if self.game.tou.tm.match_players[i].slot_type == 1 {
                 ready += 1;
                 continue;
             }
@@ -1230,7 +1231,7 @@ impl Running<'_> {
             if err != 0 {
                 unplugged = true;
             }
-            let a = self.br().x2a[i];
+            let a = self.br().anims[i];
             if ((a.state == 2 && a.cur >= 0x3C) || (a.state == 4 && a.cur == 0x82)) && err == 0 {
                 ready += 1;
             }
@@ -1247,24 +1248,25 @@ impl Running<'_> {
             return;
         }
         if ready == n as i32 {
-            self.br().x0 += 1;
-            if self.br().x0 < 0x1E {
+            self.br().step_frames += 1;
+            if self.br().step_frames < 0x1E {
                 return;
             }
             for i in 0..n {
-                if self.game.tou.tm.x4b8[i].x0 == 0 && self.br().x2a[i].state == 4 {
-                    self.game.tou.tm.x4b8[i].x0 = 3;
+                if self.game.tou.tm.match_players[i].slot_type == 0 && self.br().anims[i].state == 4
+                {
+                    self.game.tou.tm.match_players[i].slot_type = 3;
                 }
             }
             let bi = self.tou_current_box();
             for i in 0..4 {
-                let k = self.game.tou.tm.x4b8[i].x0;
-                self.game.tou.bracket[bi].slots[i].x4e = k;
+                let k = self.game.tou.tm.match_players[i].slot_type;
+                self.game.tou.bracket[bi].slots[i].slot_type = k;
             }
             let mut humans = 0;
             let mut active = 0;
             for i in 0..4 {
-                let k = self.game.tou.tm.x4b8[i].x0;
+                let k = self.game.tou.tm.match_players[i].slot_type;
                 if k == 0 {
                     humans += 1;
                 }
@@ -1274,7 +1276,7 @@ impl Running<'_> {
             }
             if active <= 1 {
                 self.tou_free_scene();
-                self.game.tou.tm.x2d = 0;
+                self.game.tou.tm.to_match = 0;
                 self.game.tou.tm.cur_option = 0x1F;
                 return;
             }
@@ -1285,61 +1287,61 @@ impl Running<'_> {
             self.tou_go_to_match();
             return;
         }
-        self.br().x0 = 0;
+        self.br().step_frames = 0;
         for i in 0..n {
-            if self.tou_pad_err(i) != 0 || self.game.tou.tm.x4b8[i].x0 != 0 {
+            if self.tou_pad_err(i) != 0 || self.game.tou.tm.match_players[i].slot_type != 0 {
                 continue;
             }
             let b = self.tou_triggered(i as i32);
             if b & (PAD_A | PAD_START) != 0 {
                 self.lb_audio_call(1);
-                let x44 = self.br().x44[i];
+                let x44 = self.br().choice[i];
                 if x44 == 7 {
-                    self.br().x44[i] = 6;
+                    self.br().choice[i] = 6;
                 } else if x44 == 8 {
-                    let np = usize::from(self.game.tou.tm.x30);
-                    let out = (0..np).filter(|&j| self.br().x2a[j].state == 4).count() as i32;
-                    if out < i32::from(self.game.tou.tm.x30) - 1 {
-                        self.br().x44[i] = 6;
-                        self.br().x2a[i].state = 4;
+                    let np = usize::from(self.game.tou.tm.players_per_match);
+                    let out = (0..np).filter(|&j| self.br().anims[j].state == 4).count() as i32;
+                    if out < i32::from(self.game.tou.tm.players_per_match) - 1 {
+                        self.br().choice[i] = 6;
+                        self.br().anims[i].state = 4;
                     }
                 } else {
-                    let s = self.br().x2a[i].state;
+                    let s = self.br().anims[i].state;
                     if s == 4 {
-                        self.br().x2a[i].state = 5;
+                        self.br().anims[i].state = 5;
                     } else if s == 0 || s == 3 || s == 5 {
-                        let tag = self.game.tou.tm.x4b8[i].x6;
+                        let tag = self.game.tou.tm.match_players[i].name;
                         self.tou_rumble(i, tag.min(0x78) as u8, 0xB, 0x14);
-                        self.br().x2a[i].state = 1;
+                        self.br().anims[i].state = 1;
                     }
                 }
             } else if b & PAD_X != 0 {
-                if self.br().x44[i] != 6 {
+                if self.br().choice[i] != 6 {
                     self.lb_audio_call(0);
-                    self.br().x44[i] = 6;
+                    self.br().choice[i] = 6;
                 } else {
-                    let s = self.br().x2a[i].state;
+                    let s = self.br().anims[i].state;
                     if s == 0 || s == 3 || s == 5 {
-                        let np = usize::from(self.game.tou.tm.x30);
-                        let out = (0..np).filter(|&j| self.br().x2a[j].state == 4).count() as i32;
-                        if out < i32::from(self.game.tou.tm.x30) - 1 {
+                        let np = usize::from(self.game.tou.tm.players_per_match);
+                        let out = (0..np).filter(|&j| self.br().anims[j].state == 4).count() as i32;
+                        if out < i32::from(self.game.tou.tm.players_per_match) - 1 {
                             self.lb_audio_call(0);
-                            self.br().x44[i] = 7;
+                            self.br().choice[i] = 7;
                         }
                     } else if s == 2 {
                         self.lb_audio_call(0);
-                        self.br().x2a[i].state = 3;
-                        self.br().x2a[i].done = 0;
+                        self.br().anims[i].state = 3;
+                        self.br().anims[i].done = 0;
                     }
                 }
             } else if b & PAD_UP != 0 {
-                if self.br().x44[i] == 8 {
+                if self.br().choice[i] == 8 {
                     self.lb_audio_call(2);
-                    self.br().x44[i] = 7;
+                    self.br().choice[i] = 7;
                 }
-            } else if b & PAD_DOWN != 0 && self.br().x44[i] == 7 {
+            } else if b & PAD_DOWN != 0 && self.br().choice[i] == 7 {
                 self.lb_audio_call(2);
-                self.br().x44[i] = 8;
+                self.br().choice[i] = 8;
             }
         }
     }
@@ -1356,7 +1358,7 @@ impl Running<'_> {
         if self.game.tou.tm.cur_option == 0x1F {
             self.br_after_match();
         }
-        if self.game.tou.tm.x33 == 6 {
+        if self.game.tou.tm.rank == 6 {
             let song = self.game.tou.bracket_scene.song;
             match song[0] {
                 2 => {
@@ -1371,8 +1373,8 @@ impl Running<'_> {
                     let b = &self.game.tou.bracket[idx];
                     let mut icon = song[1];
                     for s in &b.slots {
-                        if s.x30 != 0 && s.x4c == 0 {
-                            icon = s.x4d;
+                        if s.present != 0 && s.rank == 0 {
+                            icon = s.icon;
                             break;
                         }
                     }
@@ -1391,16 +1393,25 @@ impl Running<'_> {
                 _ => {}
             }
         }
-        let port = if self.br().x4d != 1 { self.br().x4c } else { 4 };
+        let port = if self.br().winner_type != 1 {
+            self.br().winner_seat
+        } else {
+            4
+        };
         let buttons = self.game.buttons_triggered(port) as u32;
-        let tm_text = self.game.tou.tm.x524(3).expect("the winner's name's text");
-        if self.game.tou.bracket[idx.min(63)].x18 != 0 {
-            if self.br().x0 < 0xFA {
-                self.br().x0 += 1;
+        let tm_text = self
+            .game
+            .tou
+            .tm
+            .screen_text(3)
+            .expect("the winner's name's text");
+        if self.game.tou.bracket[idx.min(63)].height != 0 {
+            if self.br().step_frames < 0xFA {
+                self.br().step_frames += 1;
                 let mut buf = [0u8; 20];
-                if self.br().x0 >= 0x64 {
-                    let count = (self.br().x0 - 0x64) / 15;
-                    let name = self.br().x4e;
+                if self.br().step_frames >= 0x64 {
+                    let count = (self.br().step_frames - 0x64) / 15;
+                    let name = self.br().winner_name;
                     for i in 0..count as usize {
                         buf[2 * i] = name[2 * i];
                         buf[2 * i + 1] = name[2 * i + 1];
@@ -1411,22 +1422,22 @@ impl Running<'_> {
                     .sis
                     .replace_string(self.data, tm_text, 0, Some(&buf[..len]));
             } else {
-                self.br().x0 += 2;
-                if self.br().x4d != 1 && self.br().x0 > 0xFA {
-                    self.br().x0 = 0xFA;
+                self.br().step_frames += 2;
+                if self.br().winner_type != 1 && self.br().step_frames > 0xFA {
+                    self.br().step_frames = 0xFA;
                 }
-                let name = self.br().x4e;
+                let name = self.br().winner_name;
                 let len = name.iter().position(|&c| c == 0).unwrap_or(20);
                 self.game
                     .sis
                     .replace_string(self.data, tm_text, 0, Some(&name[..len]));
             }
-        } else if self.br().x0 < 0xFA {
-            self.br().x0 = 0xFA;
+        } else if self.br().step_frames < 0xFA {
+            self.br().step_frames = 0xFA;
         }
-        if self.game.tou.tm.cur_option == 0x27 && self.br().x0 >= 0xFA {
-            if self.game.tou.tm.x33 == 6 {
-                if self.br().x0 >= 0x1C20 || buttons & (PAD_A | PAD_START) != 0 {
+        if self.game.tou.tm.cur_option == 0x27 && self.br().step_frames >= 0xFA {
+            if self.game.tou.tm.rank == 6 {
+                if self.br().step_frames >= 0x1C20 || buttons & (PAD_A | PAD_START) != 0 {
                     self.change_game_mode_after_scene(GM_MENU);
                     self.game.end_scene();
                 }
@@ -1468,21 +1479,21 @@ impl Running<'_> {
     #[doc(alias = "fn_8019B458")]
     fn br_round_start(&mut self) {
         let tm = &mut self.game.tou.tm;
-        tm.x24 += 1;
-        self.br().x0 = 0;
+        tm.rounds += 1;
+        self.br().step_frames = 0;
         let tm = &mut self.game.tou.tm;
-        tm.x34 = tm.x33;
+        tm.last_rank = tm.rank;
         let rank = self.tou_rank();
-        self.game.tou.tm.x33 = rank as u8;
+        self.game.tou.tm.rank = rank as u8;
         let rank = self.tou_rank();
         self.br_scene();
         let m = self.br_m3(3);
         let g = self.tou_model(false, m, rank as u32, 0x1A, 3, true, Some(PROC_RANK), 0.0);
-        if i32::from(self.game.tou.tm.x34) == rank {
+        if i32::from(self.game.tou.tm.last_rank) == rank {
             let j = self.tou_jobj(g);
             self.tou_hide(Some(j));
         }
-        self.br().x1b = if rank < 4 {
+        self.br().rank_frames = if rank < 4 {
             0x50
         } else if rank == 4 {
             0x5F
@@ -1491,31 +1502,31 @@ impl Running<'_> {
         };
         self.br_reset();
         let entrants = self.game.tou.tm.entrants();
-        let fill = self.game.tou.tm.x2c != 0;
+        let fill = self.game.tou.tm.new_bracket != 0;
         self.tou_bracket_make(entrants, 4.5, fill);
         let m = self.br_m3(4);
         self.tou_bracket_icons(m, fill);
         self.tou_match_players();
         self.game.tou.tm.cur_option = 0x14;
-        self.game.tou.tm.x2c = 0;
+        self.game.tou.tm.new_bracket = 0;
         let mut chars = [0i32; 4];
         let mut colors = [0u8; 4];
         for i in 0..4 {
-            let m = self.game.tou.tm.x4b8[i];
-            if m.x0 != 3 {
-                chars[i] = ckind_of(i32::from(m.x1));
-                colors[i] = m.x3;
+            let m = self.game.tou.tm.match_players[i];
+            if m.slot_type != 3 {
+                chars[i] = ckind_of(i32::from(m.icon));
+                colors[i] = m.color;
             }
         }
         let stage = if self.tou_stage_random() {
             self.tou_pick_stage();
             self.game.tou.stage
         } else {
-            self.game.tou.tm.x28 as i32
+            self.game.tou.tm.stage as i32
         };
         self.setup_vs_preload_cache();
         for i in 0..4 {
-            if self.game.tou.tm.x4b8[i].x0 != 3 {
+            if self.game.tou.tm.match_players[i].slot_type != 3 {
                 let gc = &mut self.dvd_mut().cache.scene.game_cache;
                 gc.entries[i].char_id = chars[i];
                 gc.entries[i].color = colors[i];
@@ -1526,8 +1537,8 @@ impl Running<'_> {
         }
         self.preload_refresh();
         let mut mask = 0u64;
-        for (m, &c) in self.game.tou.tm.x4b8.iter().zip(&chars) {
-            if m.x0 != 3 {
+        for (m, &c) in self.game.tou.tm.match_players.iter().zip(&chars) {
+            if m.slot_type != 3 {
                 mask |= crate::lb::audio::character_banks(c);
             }
         }
@@ -1547,7 +1558,7 @@ impl Running<'_> {
         self.br_reset();
         self.tou_light_box();
         let entrants = self.game.tou.tm.entrants();
-        let fill = self.game.tou.tm.x2c != 0;
+        let fill = self.game.tou.tm.new_bracket != 0;
         self.tou_bracket_make(entrants, 4.5, fill);
         let m = self.br_m3(4);
         self.tou_bracket_icons(m, fill);

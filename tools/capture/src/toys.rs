@@ -56,7 +56,7 @@ impl Comparer<'_> {
         self.check(
             "Toy_804A2AA8",
             "trophy, stand, frames, looks",
-            (an.trophy, an.x0e, an.x0f, an.x10, an.x11),
+            (an.trophy, an.stand, an.stand_frames, an.look, an.look_asked),
             (
                 self.u16(a + 0xC) as i16,
                 self.u8(a + 0xE) as i8,
@@ -122,8 +122,8 @@ impl Comparer<'_> {
                 g.base_shown,
                 g.editor.map_or(0, |e| e.block),
                 g.z_switch,
-                g.xa0,
-                g.xa1,
+                g.editor_step,
+                g.debug_unlocked,
                 g.debug_z as u8,
                 text_at(g.editor_text),
                 text_at(g.debug_text),
@@ -335,7 +335,7 @@ impl Comparer<'_> {
         self.check(
             "TyDspConfig",
             "wait, columns, rows, x7C",
-            (c.wait, c.cols, c.rows, c.x7c),
+            (c.wait, c.cols, c.rows, c.debug_trophy),
             (
                 self.u8(f + 0x74) as i8,
                 self.u8(f + 0x75),
@@ -353,7 +353,7 @@ impl Comparer<'_> {
             let a = c.archives.get(i as usize).copied().flatten();
             self.toy_archive(&format!("TyDspBgData.archives[{i}]"), a, b + 0x50 + 4 * i);
         }
-        self.check("TyDspBgData", "x104", c.x104, self.u16(b + 0x104) as i16);
+        self.check("TyDspBgData", "x104", c.unused, self.u16(b + 0x104) as i16);
         self.toy_lights();
     }
 
@@ -369,8 +369,8 @@ impl Comparer<'_> {
             g.yaw,
             g.dist,
             g.spin,
-            g.x28,
-            g.x2c,
+            g.unused_a,
+            g.unused_b,
             g.stick[0],
             g.stick[1],
             g.stick_prev[0],
@@ -386,7 +386,7 @@ impl Comparer<'_> {
         self.check(
             "Toy6E68",
             "idle, x5C, cooldown, state",
-            (g.idle, g.x5c, g.cooldown, g.state),
+            (g.idle, g.timer, g.cooldown, g.state),
             (
                 self.u32(c + 0x58) as i32,
                 self.u32(c + 0x5C) as i32,
@@ -587,7 +587,14 @@ impl Comparer<'_> {
         self.check(
             "un_804D6EF4_t",
             "left, x56, x58, state, drawn bet, bet",
-            (l.left, l.x56, l.x58, l.state, l.drawn_bet, l.bet),
+            (
+                l.left,
+                l.drop_frames,
+                l.state_frames,
+                l.state,
+                l.drawn_bet,
+                l.bet,
+            ),
             (
                 self.u16(e + 0x54) as i16,
                 self.u16(e + 0x56) as i16,
@@ -680,11 +687,11 @@ impl Comparer<'_> {
                 s.count,
                 s.sort,
                 s.sort_dir,
-                s.x29d,
-                s.x29e,
-                s.x29f,
-                s.x2a0,
-                s.x2a1,
+                s.page_rows,
+                s.rows_left,
+                s.scroll_frames,
+                s.repeat_wait,
+                s.scroll_dir,
                 s.step.to_bits(),
                 s.height.to_bits(),
             ),
@@ -713,11 +720,11 @@ impl Comparer<'_> {
                 inp.slot,
                 inp.slot_before,
                 inp.held,
-                inp.x10,
-                inp.x11,
-                inp.x12,
-                inp.x13,
-                inp.x14,
+                inp.last_x,
+                inp.last_y,
+                inp.held_frames,
+                inp.repeat_frames,
+                inp.repeat_after,
                 inp.intro,
             ),
             (
@@ -766,7 +773,7 @@ impl Comparer<'_> {
         let w = |c: &Self, o: u32| c.u32(ud + o) as i32;
         match b.kind {
             0 => {
-                self.check(path, "coin frames", b.x8, w(self, 8));
+                self.check(path, "coin frames", b.frames, w(self, 8));
                 self.toy_floats(
                     &format!("{path} coin step"),
                     &[b.step.x, b.step.y, b.step.z],
@@ -776,23 +783,28 @@ impl Comparer<'_> {
                 let fall = self.u32(ud + 0x50);
                 self.check(path, "coin fall", b.fall.to_bits(), fall);
             }
-            1 => self.check(path, "lever frames", b.x8, w(self, 8)),
+            1 => self.check(path, "lever frames", b.frames, w(self, 8)),
             2 => {
-                let ours = (b.x8, b.x10);
+                let ours = (b.frames, b.total_digits);
                 let theirs = (w(self, 8), [w(self, 0x10), w(self, 0x14), w(self, 0x18)]);
                 self.check(path, "drop frames, coins' digits", ours, theirs);
                 if b.armed {
                     let theirs = [w(self, 0x28), w(self, 0x2C), w(self, 0x30)];
-                    self.check(path, "drop bet's digits", b.x28, theirs);
+                    self.check(path, "drop bet's digits", b.bet_digits, theirs);
                 }
             }
-            3 => self.check(path, "fall speed", b.x44.to_bits(), self.u32(ud + 0x44)),
+            3 => self.check(
+                path,
+                "fall speed",
+                b.fall_speed.to_bits(),
+                self.u32(ud + 0x44),
+            ),
             _ => {
                 if b.armed {
                     self.check(
                         path,
                         "sign frames, shown",
-                        (b.x8, b.x4),
+                        (b.frames, b.show),
                         (w(self, 8), w(self, 4)),
                     );
                 }

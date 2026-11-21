@@ -14,7 +14,8 @@ use crate::game::gr::StKind;
 /// entry sets it so (`ko_counts_null`).
 #[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct CssData {
-    pub unk_0x0: u16,
+    #[doc(alias("unk_0x0"))]
+    pub first_port: u16,
     pub match_type: u8,
     pub pending_scene_change: u8,
     pub ko_counts_null: bool,
@@ -26,8 +27,10 @@ pub struct CssData {
 /// on it (none, -1), whether the match starts, and its copy of the VS data.
 #[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct SssData {
-    pub unk_stage: u8,
-    pub x1: u8,
+    #[doc(alias("unk_stage"))]
+    pub cursor_port: u8,
+    #[doc(alias("x1"))]
+    pub no_b: u8,
     pub no_lras: u8,
     pub force_stage_id: i8,
     pub start_game: u8,
@@ -380,7 +383,7 @@ impl Running<'_> {
         }
         self.game.vs_melee.sss.force_stage_id = -1;
         match sel {
-            0 => self.game.vs_melee.sss.unk_stage = 0,
+            0 => self.game.vs_melee.sss.cursor_port = 0,
             2 => {
                 let at = i32::from(self.game.vs_melee.sss.vs.ordered_stage_index);
                 for i in 0..i32::from(StKind::OldYoshi.id()) {
@@ -401,9 +404,9 @@ impl Running<'_> {
                 sss.vs.loser = port as i8;
                 if port < 0 {
                     sss.vs.loser = 0;
-                    sss.unk_stage = 0;
+                    sss.cursor_port = 0;
                 } else {
-                    sss.unk_stage = (port + 1) as u8;
+                    sss.cursor_port = (port + 1) as u8;
                 }
             }
             4 => {
@@ -414,7 +417,7 @@ impl Running<'_> {
                     i32::from(winner)
                 };
                 let port = self.sss_human_from(base);
-                self.game.vs_melee.sss.unk_stage = (port + 1) as u8;
+                self.game.vs_melee.sss.cursor_port = (port + 1) as u8;
             }
             _ => {}
         }

@@ -234,7 +234,7 @@ impl R<'_> {
         let r = sym("lbl_804D65A8");
         Ranks {
             taken: self.u8(a),
-            x1: self.u8(a + 1),
+            trailer_taken: self.u8(a + 1),
             first: core::array::from_fn(|i| {
                 let e = a + 2 + 2 * i as u32;
                 (self.u8(e), self.u8(e + 1))
@@ -264,7 +264,7 @@ impl R<'_> {
             copy_mode: b(0xE),
             more_flag6: b(0xF),
             flags: b(0x10),
-            x11: core::array::from_fn(|i| b(0x11 + i as u32)),
+            unused: core::array::from_fn(|i| b(0x11 + i as u32)),
             attack_ratio: self.f32(at + 0x14),
             defense_ratio: self.f32(at + 0x18),
             model_scale: self.f32(at + 0x1C),
@@ -272,15 +272,15 @@ impl R<'_> {
             characters: core::array::from_fn(|i| s(0xA2 + i as u32)),
             copies: core::array::from_fn(|i| s(0x124 + i as u32)),
             slot_index: core::array::from_fn(|i| s(0x1A6 + i as u32)),
-            x1ac: b(0x1AC),
-            x1ad: b(0x1AD),
-            x1ae: core::array::from_fn(|i| s(0x1AE + i as u32)),
-            x1b2: b(0x1B2),
-            x1b3: core::array::from_fn(|i| s(0x1B3 + i as u32)),
+            first_ckind: b(0x1AC),
+            second_ckind: b(0x1AD),
+            unused_b: core::array::from_fn(|i| s(0x1AE + i as u32)),
+            first_costume: b(0x1B2),
+            unused_c: core::array::from_fn(|i| s(0x1B3 + i as u32)),
             on_end: code(0x1B8),
             on_join: code(0x1BC),
             pool: core::array::from_fn(|i| s(0x1C0 + i as u32)),
-            x1db: core::array::from_fn(|i| b(0x1DB + i as u32)),
+            pool_tail: core::array::from_fn(|i| b(0x1DB + i as u32)),
         }
     }
 
@@ -422,7 +422,7 @@ impl<'a> Comparer<'a> {
                     o.more_flag6,
                 ],
                 o.flags,
-                o.x11,
+                o.unused,
             )
         };
         self.check(n, "kinds to flags", head(o), head(t));
@@ -437,10 +437,19 @@ impl<'a> Comparer<'a> {
             t.characters.to_vec(),
         );
         self.check(n, "copies", o.copies.to_vec(), t.copies.to_vec());
-        let tail = |o: &Opponents| (o.slot_index, o.x1ac, o.x1ad, o.x1ae, o.x1b2, o.x1b3);
+        let tail = |o: &Opponents| {
+            (
+                o.slot_index,
+                o.first_ckind,
+                o.second_ckind,
+                o.unused_b,
+                o.first_costume,
+                o.unused_c,
+            )
+        };
         self.check(n, "slots to x1B7", tail(o), tail(t));
         self.check(n, "callbacks", (o.on_end, o.on_join), (t.on_end, t.on_join));
-        self.check(n, "pool", (o.pool, o.x1db), (t.pool, t.x1db));
+        self.check(n, "pool", (o.pool, o.pool_tail), (t.pool, t.pool_tail));
     }
 
     fn r(&self) -> R<'a> {

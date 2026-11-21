@@ -61,11 +61,16 @@ pub struct ListState {
     pub sort_dir: i8,
     /// `x29D` to `x2A1`: a page's rows, its rows left, its scroll's frames left, frames before
     /// the next repeat, and which way it scrolls.
-    pub x29d: i8,
-    pub x29e: i8,
-    pub x29f: i8,
-    pub x2a0: i8,
-    pub x2a1: i8,
+    #[doc(alias("x29d"))]
+    pub page_rows: i8,
+    #[doc(alias("x29e"))]
+    pub rows_left: i8,
+    #[doc(alias("x29f"))]
+    pub scroll_frames: i8,
+    #[doc(alias("x2a0"))]
+    pub repeat_wait: i8,
+    #[doc(alias("x2a1"))]
+    pub scroll_dir: i8,
     /// `x2A4`: a scroll's step; `x2A8` a row's height.
     pub step: f32,
     pub height: f32,
@@ -80,11 +85,16 @@ pub struct ListInput {
     pub slot: i8,
     pub slot_before: i8,
     pub held: i8,
-    pub x10: i8,
-    pub x11: i8,
-    pub x12: i8,
-    pub x13: i8,
-    pub x14: i8,
+    #[doc(alias("x10"))]
+    pub last_x: i8,
+    #[doc(alias("x11"))]
+    pub last_y: i8,
+    #[doc(alias("x12"))]
+    pub held_frames: i8,
+    #[doc(alias("x13"))]
+    pub repeat_frames: i8,
+    #[doc(alias("x14"))]
+    pub repeat_after: i8,
     pub intro: i8,
 }
 
@@ -385,31 +395,32 @@ impl Running<'_> {
     /// frames left.
     #[doc(alias = "_tyList_8031305C")]
     fn toy_list_scroll(&mut self, sound: bool) -> i8 {
-        if self.game.toys.list.state.x29f <= 0 {
-            return self.game.toys.list.state.x29f;
+        if self.game.toys.list.state.scroll_frames <= 0 {
+            return self.game.toys.list.state.scroll_frames;
         }
         let s = &self.game.toys.list.state;
         let mut delta = s.step;
-        if s.x2a1 == 0 {
+        if s.scroll_dir == 0 {
             delta = mem(fp::fmuls(reg(delta), -reg(1.0)));
         }
         let count = i32::from(s.count);
         for i in 0..count as usize {
             let s = &self.game.toys.list.state;
             let row = s.rows[i];
-            if (s.x2a1 != 0 || row.slot != -1) && (s.x2a1 != 1 || count - 1 != i32::from(row.slot))
+            if (s.scroll_dir != 0 || row.slot != -1)
+                && (s.scroll_dir != 1 || count - 1 != i32::from(row.slot))
             {
                 self.toy_list_move_row(i as u8, delta);
             }
         }
-        self.ls().x29f -= 1;
-        if self.game.toys.list.state.x29f == 0 {
+        self.ls().scroll_frames -= 1;
+        if self.game.toys.list.state.scroll_frames == 0 {
             let mut r = 0u8;
             for _ in 0..count {
                 self.toy_list_move_row(r, 999.0);
                 let s = self.ls();
                 let row = &mut s.rows[usize::from(r)];
-                if s.x2a1 == 0 {
+                if s.scroll_dir == 0 {
                     row.slot -= 1;
                     if row.slot < -1 {
                         row.slot = (count - 2) as i8;
@@ -424,7 +435,7 @@ impl Running<'_> {
             }
             let total = self.toy_total();
             let slot = self.game.toys.list.input.slot;
-            if self.game.toys.list.state.x2a1 == 0 {
+            if self.game.toys.list.state.scroll_dir == 0 {
                 let s = self.ls();
                 let last_idx = s.rows[usize::from(s.last)].idx;
                 let f = usize::from(s.first);
@@ -455,23 +466,23 @@ impl Running<'_> {
                 s.first = s.rows[usize::from(s.first)].prev;
                 s.last = s.rows[usize::from(s.last)].prev;
             }
-            if self.game.toys.list.state.x29e > 0 {
-                self.ls().x29e -= 1;
+            if self.game.toys.list.state.rows_left > 0 {
+                self.ls().rows_left -= 1;
             }
-            if self.game.toys.list.state.x29e == 0 {
+            if self.game.toys.list.state.rows_left == 0 {
                 let c = self.game.toys.list.state.cursor;
                 jobj::clear_flags_all(&mut self.game.objs.jobjs, c, jobj::HIDDEN);
                 let s = &self.game.toys.list.state;
                 let (row, slot) = (s.cursor_row, s.rows[usize::from(s.cursor_row)].slot);
                 self.toy_list_row(row, slot);
                 let held = self.game.pads.copy[0].button & 0xC00 != 0;
-                self.ls().x2a0 = if held { 5 } else { 0 };
+                self.ls().repeat_wait = if held { 5 } else { 0 };
             }
             if sound {
                 self.lb_audio_call(2);
             }
         }
-        self.game.toys.list.state.x29f
+        self.game.toys.list.state.scroll_frames
     }
 
     /// `_tyList_80313358(state, page, frames, way)`: a scroll of `frames` frames (a page of
@@ -481,15 +492,15 @@ impl Running<'_> {
     fn toy_list_start_scroll(&mut self, page: i8, frames: i8, way: i8) {
         let s = self.ls();
         if page != -1 {
-            s.x29e = page;
-            s.x2a1 = way;
+            s.rows_left = page;
+            s.scroll_dir = way;
         }
-        s.x29f = frames;
+        s.scroll_frames = frames;
         s.step = mem(fp::fdivs(reg(s.height), fp::frsp(f64::from(frames))));
         let count = s.count;
         for i in 0..count as usize {
             let s = self.ls();
-            let to = if s.x2a1 == 0 {
+            let to = if s.scroll_dir == 0 {
                 s.rows[i].prev
             } else {
                 s.rows[i].next
@@ -572,7 +583,7 @@ impl Running<'_> {
     #[doc(alias = "_tyList_80313774")]
     fn toy_list_build(&mut self) {
         let t = &self.game.toys.table;
-        let (sel, sort, dir, slot) = (t.selected, t.sort, t.sort_dir, t.x3 as i8);
+        let (sel, sort, dir, slot) = (t.selected, t.sort, t.sort_dir, t.list_slot as i8);
         let s = self.ls();
         s.selected = sel;
         s.sort = sort;
@@ -693,13 +704,13 @@ impl Running<'_> {
             if self.toy_list_scroll(true) != 0 {
                 return;
             }
-            if self.game.toys.list.state.x2a0 != 0 {
-                self.ls().x2a0 -= 1;
+            if self.game.toys.list.state.repeat_wait != 0 {
+                self.ls().repeat_wait -= 1;
                 return;
             }
-            let e = i32::from(self.game.toys.list.state.x29e);
+            let e = i32::from(self.game.toys.list.state.rows_left);
             if e != 0 {
-                let d = i32::from(self.game.toys.list.state.x29d);
+                let d = i32::from(self.game.toys.list.state.page_rows);
                 let half = d / 2;
                 let mut r = if d % 2 != 0 {
                     if e <= half { 5 - e } else { 4 - (d - e) }
@@ -720,19 +731,19 @@ impl Running<'_> {
         let mut x = reg(self.toy_stick_x());
         let mut y = reg(self.toy_axis(1));
         if x < -reg(0.8) {
-            self.li().x12 += 1;
+            self.li().held_frames += 1;
             x = -1.0;
             y = 0.0;
         } else if x > reg(0.8) {
-            self.li().x12 += 1;
+            self.li().held_frames += 1;
             x = 1.0;
             y = 0.0;
         } else if y < -reg(0.6) || self.toy_held() & 4 != 0 {
-            self.li().x12 += 1;
+            self.li().held_frames += 1;
             x = 0.0;
             y = 1.0;
         } else if y > reg(0.6) || self.toy_held() & 8 != 0 {
-            self.li().x12 += 1;
+            self.li().held_frames += 1;
             x = 0.0;
             y = -1.0;
         } else {
@@ -740,11 +751,11 @@ impl Running<'_> {
             x = y;
             let li = self.li();
             li.held = 0;
-            li.x12 = 0;
-            li.x14 = 6;
-            li.x13 = 0;
-            li.x11 = 0;
-            li.x10 = 0;
+            li.held_frames = 0;
+            li.repeat_after = 6;
+            li.repeat_frames = 0;
+            li.last_y = 0;
+            li.last_x = 0;
         }
         if self.game.buttons_triggered(4) & super::super::mn::main::PAD_LR_START != 0 {
             self.lb_audio_call(0);
@@ -778,14 +789,14 @@ impl Running<'_> {
             return;
         }
         let li = self.li();
-        if li.x12 > li.x14 {
-            li.x12 = li.x14 + 1;
-            li.x14 = 3;
+        if li.held_frames > li.repeat_after {
+            li.held_frames = li.repeat_after + 1;
+            li.repeat_after = 3;
             li.held = 0;
         }
-        let x10 = fp::frsp(f64::from(self.game.toys.list.input.x10));
+        let x10 = fp::frsp(f64::from(self.game.toys.list.input.last_x));
         if (x < 0.0 && x != x10) || self.toy_triggered() & 0x41 != 0 {
-            self.li().x10 = fp::fctiwz(x) as i8;
+            self.li().last_x = fp::fctiwz(x) as i8;
             let s = self.ls();
             s.sort -= 1;
             if s.sort < 0 {
@@ -797,7 +808,7 @@ impl Running<'_> {
             return;
         }
         if (x > 0.0 && x != x10) || self.toy_triggered() & 0x22 != 0 {
-            self.li().x10 = fp::fctiwz(x) as i8;
+            self.li().last_x = fp::fctiwz(x) as i8;
             let s = self.ls();
             s.sort += 1;
             if s.sort >= 3 {
@@ -825,7 +836,7 @@ impl Running<'_> {
                     self.toy_list_start_scroll(n, 4, 0);
                 }
                 let s = self.ls();
-                s.x29d = s.x29e;
+                s.page_rows = s.rows_left;
                 return;
             }
             if self.toy_held() & 0x800 != 0 {
@@ -840,7 +851,7 @@ impl Running<'_> {
                     self.toy_list_start_scroll(after as i8, 4, 1);
                 }
                 let s = self.ls();
-                s.x29d = s.x29e;
+                s.page_rows = s.rows_left;
                 return;
             }
         }
@@ -860,9 +871,9 @@ impl Running<'_> {
             li.slot = (count - 3) as i8;
         }
         if li.slot != li.slot_before {
-            li.x12 = 0;
-            li.x13 = 0;
-            li.x11 = fp::fctiwz(y) as i8;
+            li.held_frames = 0;
+            li.repeat_frames = 0;
+            li.last_y = fp::fctiwz(y) as i8;
             self.toy_list_follow();
             let li = self.li();
             li.slot_before = li.slot;
@@ -872,20 +883,20 @@ impl Running<'_> {
             return;
         }
         let li = self.li();
-        if li.x11 == 0 {
-            li.x13 = 5;
-            li.x12 = li.x14 + 1;
-            li.x14 = 3;
+        if li.last_y == 0 {
+            li.repeat_frames = 5;
+            li.held_frames = li.repeat_after + 1;
+            li.repeat_after = 3;
             li.held = 0;
         }
-        li.x11 = fp::fctiwz(y) as i8;
-        let v = li.x13;
+        li.last_y = fp::fctiwz(y) as i8;
+        let v = li.repeat_frames;
         if v == 0 {
-            li.x13 = 1;
+            li.repeat_frames = 1;
             return;
         }
         if v < 5 {
-            li.x13 = v + 1;
+            li.repeat_frames = v + 1;
             return;
         }
         for i in 0..count as u8 {
@@ -1108,11 +1119,11 @@ impl Running<'_> {
             if chosen {
                 t.sort = sort;
                 t.sort_dir = dir;
-                t.x3 = slot as u8;
+                t.list_slot = slot as u8;
             } else {
                 t.sort = 0;
                 t.sort_dir = 0;
-                t.x3 = 0;
+                t.list_slot = 0;
             }
             let f = &mut self.toy_flags_mut()[trophy as usize];
             if *f & 0x8000 != 0 {

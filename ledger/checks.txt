@@ -639,8 +639,8 @@ plAttack_8003759C	leaf-check vs reset_action_stats: every capture
 plStale_ResetStaleMoveTableForPlayer	leaf-check vs reset_stale_moves: every capture
 pl_8003891C	leaf-check vs reset_player_records: every capture
 pl_80040DDC	leaf-check vs reset_frame_counters: every capture
-pl_80041524	leaf-check vs reset_x8c0: every capture
-pl_800418F4	leaf-check vs reset_x8d8: every capture
+pl_80041524	leaf-check vs reset_ko_ring: every capture
+pl_800418F4	leaf-check vs reset_bob_omb_ring: every capture
 
 # Items (melee/it) and what they reach: tools/leaf-check/tests/items.rs runs captured calls (or other functions from captured item states) on both sides and compares the whole state.
 ftLib_IsHoldingItem	leaf-check items: held_items runs it from captured item states

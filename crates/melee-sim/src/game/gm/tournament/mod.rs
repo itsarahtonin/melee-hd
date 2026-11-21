@@ -61,21 +61,35 @@ pub const STATE_RESULTS: u8 = 6;
 /// screen's seats.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Entrant {
-    pub x0: u8,
-    pub x1: u8,
-    pub x2: u8,
-    pub x3: u8,
-    pub x4: u8,
-    pub x5: u8,
-    pub x6: u8,
-    pub x7: u8,
-    pub x8: u8,
-    pub x9: u16,
+    #[doc(alias("x0"))]
+    pub slot_type: u8,
+    #[doc(alias("x1"))]
+    pub level: u8,
+    #[doc(alias("x2"))]
+    pub handicap: u8,
+    #[doc(alias("x3"))]
+    pub icon: u8,
+    #[doc(alias("x4"))]
+    pub saved_icon: u8,
+    #[doc(alias("x5"))]
+    pub random: u8,
+    #[doc(alias("x6"))]
+    pub saved_random: u8,
+    #[doc(alias("x7"))]
+    pub color: u8,
+    #[doc(alias("x8"))]
+    pub saved_color: u8,
+    #[doc(alias("x9"))]
+    pub name: u16,
     /// `xB` as `TmData_80194F30` sees it, a halfword over `xB` and `xC`.
-    pub xb: u16,
-    pub xd: u8,
-    pub xe: u8,
-    pub xf: u8,
+    #[doc(alias("xb"))]
+    pub saved_name: u16,
+    #[doc(alias("xd"))]
+    pub seat: u8,
+    #[doc(alias("xe"))]
+    pub matchup_seat: u8,
+    #[doc(alias("xf"))]
+    pub shown_seat: u8,
 }
 
 /// A player of the next match (`TmData.x4B8[i]`, 0xA bytes): slot type, character icon,
@@ -84,15 +98,24 @@ pub struct Entrant {
 /// entrant).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct MatchPlayer {
-    pub x0: u8,
-    pub x1: u8,
-    pub x2: u8,
-    pub x3: u8,
-    pub x4: u8,
-    pub x5: u8,
-    pub x6: u16,
-    pub x8: u8,
-    pub x9: u8,
+    #[doc(alias("x0"))]
+    pub slot_type: u8,
+    #[doc(alias("x1"))]
+    pub icon: u8,
+    #[doc(alias("x2"))]
+    pub random: u8,
+    #[doc(alias("x3"))]
+    pub color: u8,
+    #[doc(alias("x4"))]
+    pub level: u8,
+    #[doc(alias("x5"))]
+    pub handicap: u8,
+    #[doc(alias("x6"))]
+    pub name: u16,
+    #[doc(alias("x8"))]
+    pub next_present: u8,
+    #[doc(alias("x9"))]
+    pub next_entrant: u8,
 }
 
 /// The tournament's data (`gm_804771C4`, `TmData`, 0x574 bytes of `.bss`): the setup's
@@ -105,35 +128,57 @@ pub struct TmData {
     /// `match_type` to `cpu_level`: the setup's six options, which its code indexes as the
     /// words after `cur_option`.
     pub opts: [i32; 6],
-    pub x1c: i32,
-    pub x20: i32,
-    pub x24: i32,
-    pub x28: u32,
-    pub x2c: u8,
-    pub x2d: u8,
-    pub x2e: u8,
-    pub x2f: u8,
-    pub x30: u8,
-    pub x31: u8,
-    pub x32: u8,
-    pub x33: u8,
+    #[doc(alias("x1c"))]
+    pub with_camera: i32,
+    #[doc(alias("x20"))]
+    pub in_name_entry: i32,
+    #[doc(alias("x24"))]
+    pub rounds: i32,
+    #[doc(alias("x28"))]
+    pub stage: u32,
+    #[doc(alias("x2c"))]
+    pub new_bracket: u8,
+    #[doc(alias("x2d"))]
+    pub to_match: u8,
+    #[doc(alias("x2e"))]
+    pub entrant_count: u8,
+    #[doc(alias("x2f"))]
+    pub human_count: u8,
+    #[doc(alias("x30"))]
+    pub players_per_match: u8,
+    #[doc(alias("x31"))]
+    pub handicaps: u8,
+    #[doc(alias("x32"))]
+    pub stage_picked: u8,
+    #[doc(alias("x33"))]
+    pub rank: u8,
     /// `pad_x34[0]`: the rank shown before the last match's.
-    pub x34: u8,
+    #[doc(alias("x34"))]
+    pub last_rank: u8,
     /// The byte before each entrant (`((u8*)&x37[i])[-1]`: `pad_x34[2]` for the first, the
     /// last pad byte of the one before for the rest): whether it's in the tournament.
     pub present: [u8; 64],
-    pub x37: [Entrant; 64],
+    #[doc(alias("x37"))]
+    pub roster: [Entrant; 64],
     /// The two bytes before `x4B8` (the last entrant's pad and `pad_x4B7`), which
     /// `fn_8018FA24` writes for the first player.
-    pub x4b6: u8,
-    pub x4b7: u8,
-    pub x4b8: [MatchPlayer; 4],
-    pub x4e0: Option<TextId>,
-    pub x4e4: Option<TextId>,
-    pub x4e8: [Option<TextId>; 6],
-    pub x500: [Option<TextId>; 6],
+    #[doc(alias("x4b6"))]
+    pub first_present: u8,
+    #[doc(alias("x4b7"))]
+    pub first_entrant: u8,
+    #[doc(alias("x4b8"))]
+    pub match_players: [MatchPlayer; 4],
+    #[doc(alias("x4e0"))]
+    pub title_text: Option<TextId>,
+    #[doc(alias("x4e4"))]
+    pub count_text: Option<TextId>,
+    #[doc(alias("x4e8"))]
+    pub description_texts: [Option<TextId>; 6],
+    #[doc(alias("x500"))]
+    pub value_texts: [Option<TextId>; 6],
     /// The texts from `x518` on (`x518[3]`, `x524[4]`, `x534[16]` overlap as one array).
-    pub x518: [Option<TextId>; 23],
+    #[doc(alias("x518"))]
+    pub name_texts: [Option<TextId>; 23],
 }
 
 impl Default for TmData {
@@ -141,29 +186,29 @@ impl Default for TmData {
         TmData {
             cur_option: 0,
             opts: [0; 6],
-            x1c: 0,
-            x20: 0,
-            x24: 0,
-            x28: 0,
-            x2c: 0,
-            x2d: 0,
-            x2e: 0,
-            x2f: 0,
-            x30: 0,
-            x31: 0,
-            x32: 0,
-            x33: 0,
-            x34: 0,
+            with_camera: 0,
+            in_name_entry: 0,
+            rounds: 0,
+            stage: 0,
+            new_bracket: 0,
+            to_match: 0,
+            entrant_count: 0,
+            human_count: 0,
+            players_per_match: 0,
+            handicaps: 0,
+            stage_picked: 0,
+            rank: 0,
+            last_rank: 0,
             present: [0; 64],
-            x37: [Entrant::default(); 64],
-            x4b6: 0,
-            x4b7: 0,
-            x4b8: [MatchPlayer::default(); 4],
-            x4e0: None,
-            x4e4: None,
-            x4e8: [None; 6],
-            x500: [None; 6],
-            x518: [None; 23],
+            roster: [Entrant::default(); 64],
+            first_present: 0,
+            first_entrant: 0,
+            match_players: [MatchPlayer::default(); 4],
+            title_text: None,
+            count_text: None,
+            description_texts: [None; 6],
+            value_texts: [None; 6],
+            name_texts: [None; 23],
         }
     }
 }
@@ -202,9 +247,9 @@ impl TmData {
         match k {
             0 => self.cur_option,
             1..=6 => self.opts[k - 1],
-            7 => self.x1c,
-            8 => self.x20,
-            9 => self.x24,
+            7 => self.with_camera,
+            8 => self.in_name_entry,
+            9 => self.rounds,
             _ => panic!("TmData's word {k}"),
         }
     }
@@ -213,21 +258,23 @@ impl TmData {
         match k {
             0 => &mut self.cur_option,
             1..=6 => &mut self.opts[k - 1],
-            7 => &mut self.x1c,
-            8 => &mut self.x20,
-            9 => &mut self.x24,
+            7 => &mut self.with_camera,
+            8 => &mut self.in_name_entry,
+            9 => &mut self.rounds,
             _ => panic!("TmData's word {k}"),
         }
     }
 
-    /// `x524[k]`.
-    pub fn x524(&self, k: usize) -> Option<TextId> {
-        self.x518[3 + k]
+    /// The scenes' texts from `x524` on (`x524[k]`: the players' names 2, the winner's 3).
+    #[doc(alias("x524"))]
+    pub fn screen_text(&self, k: usize) -> Option<TextId> {
+        self.name_texts[3 + k]
     }
 
-    /// `x534[k]`.
-    pub fn x534(&self, k: usize) -> Option<TextId> {
-        self.x518[7 + k]
+    /// Each entrant's name's text on the match-up screen (`x534[k]`).
+    #[doc(alias("x534"))]
+    pub fn entrant_text(&self, k: usize) -> Option<TextId> {
+        self.name_texts[7 + k]
     }
 }
 
@@ -236,23 +283,40 @@ impl TmData {
 /// the match, character icon, slot type, color, entrant, level and handicap, and name.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct BracketSlot {
-    pub x2c: Option<GObjId>,
-    pub x30: u8,
-    pub x32: u8,
-    pub x34: i32,
-    pub x38: i32,
-    pub x3c: i32,
-    pub x40: i32,
-    pub x44: i32,
-    pub x48: i32,
-    pub x4c: u8,
-    pub x4d: u8,
-    pub x4e: u8,
-    pub x4f: u8,
-    pub x50: u8,
-    pub x51: u8,
-    pub x52: u8,
-    pub x54: u16,
+    #[doc(alias("x2c"))]
+    pub icon_gobj: Option<GObjId>,
+    #[doc(alias("x30"))]
+    pub present: u8,
+    #[doc(alias("x32"))]
+    pub bye_line: u8,
+    #[doc(alias("x34"))]
+    pub start_x: i32,
+    #[doc(alias("x38"))]
+    pub start_y: i32,
+    #[doc(alias("x3c"))]
+    pub target_x: i32,
+    #[doc(alias("x40"))]
+    pub target_y: i32,
+    #[doc(alias("x44"))]
+    pub x: i32,
+    #[doc(alias("x48"))]
+    pub y: i32,
+    #[doc(alias("x4c"))]
+    pub rank: u8,
+    #[doc(alias("x4d"))]
+    pub icon: u8,
+    #[doc(alias("x4e"))]
+    pub slot_type: u8,
+    #[doc(alias("x4f"))]
+    pub color: u8,
+    #[doc(alias("x50"))]
+    pub entrant: u8,
+    #[doc(alias("x51"))]
+    pub level: u8,
+    #[doc(alias("x52"))]
+    pub handicap: u8,
+    #[doc(alias("x54"))]
+    pub name: u16,
 }
 
 /// A bracket box (`BracketEntry`, 0xDC bytes, `lbl_80473AB8[64]`): whether it's in the
@@ -261,24 +325,42 @@ pub struct BracketSlot {
 /// players.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct BracketEntry {
-    pub x0: u8,
-    pub x1: u8,
-    pub x2: u8,
-    pub x3: u8,
-    pub x4: u8,
-    pub x5: u8,
-    pub x6: u8,
-    pub xc: i32,
-    pub x10: i32,
-    pub x14: i32,
-    pub x18: i32,
-    pub x1c: f32,
-    pub x20: [u8; 4],
-    pub x24: u8,
-    pub x25: u8,
-    pub x26: u8,
-    pub x27: u8,
-    pub x28: u8,
+    #[doc(alias("x0"))]
+    pub in_bracket: u8,
+    #[doc(alias("x1"))]
+    pub playing: u8,
+    #[doc(alias("x2"))]
+    pub opens: u8,
+    #[doc(alias("x3"))]
+    pub kind: u8,
+    #[doc(alias("x4"))]
+    pub seats: u8,
+    #[doc(alias("x5"))]
+    pub winner_box: u8,
+    #[doc(alias("x6"))]
+    pub winner_seat: u8,
+    #[doc(alias("xc"))]
+    pub x: i32,
+    #[doc(alias("x10"))]
+    pub y: i32,
+    #[doc(alias("x14"))]
+    pub width: i32,
+    #[doc(alias("x18"))]
+    pub height: i32,
+    #[doc(alias("x1c"))]
+    pub thickness: f32,
+    #[doc(alias("x20"))]
+    pub color: [u8; 4],
+    #[doc(alias("x24"))]
+    pub unread_a: u8,
+    #[doc(alias("x25"))]
+    pub unread_b: u8,
+    #[doc(alias("x26"))]
+    pub unread_c: u8,
+    #[doc(alias("x27"))]
+    pub unread_d: u8,
+    #[doc(alias("x28"))]
+    pub unread_e: u8,
     pub slots: [BracketSlot; 4],
 }
 
@@ -318,22 +400,38 @@ pub struct Loaded {
 /// the controllers counted.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Setup {
-    pub x0: u8,
-    pub x1: u8,
-    pub x2: u8,
-    pub x3: u8,
-    pub x4: u8,
-    pub x5: u8,
-    pub x6: u8,
-    pub x7: u8,
-    pub x8: u8,
-    pub x9: u8,
-    pub xa: u8,
-    pub xb: u8,
-    pub xc: u16,
-    pub xe: u8,
-    pub xf: u8,
-    pub pad2: [u8; 16],
+    #[doc(alias("x0"))]
+    pub handicap: u8,
+    #[doc(alias("x1"))]
+    pub editing_handicap: u8,
+    #[doc(alias("x2"))]
+    pub cursor: u8,
+    #[doc(alias("x3"))]
+    pub scroll: u8,
+    #[doc(alias("x4"))]
+    pub scroll_end: u8,
+    #[doc(alias("x5"))]
+    pub name_cursor: u8,
+    #[doc(alias("x6"))]
+    pub name_page: u8,
+    #[doc(alias("x7"))]
+    pub left_flash: u8,
+    #[doc(alias("x8"))]
+    pub right_flash: u8,
+    #[doc(alias("x9"))]
+    pub unused_a: u8,
+    #[doc(alias("xa"))]
+    pub cursor_flash: u8,
+    #[doc(alias("xb"))]
+    pub unused_b: u8,
+    #[doc(alias("xc"))]
+    pub bg_frame: u16,
+    #[doc(alias("xe"))]
+    pub panel_frame: u8,
+    #[doc(alias("xf"))]
+    pub marks_frame: u8,
+    #[doc(alias("pad2"))]
+    pub model_frames: [u8; 16],
     /// `lbl_804D6640`, `6644`, `6648`: `GmTou1p`, `GmTou2p`, `MnExtAll`.
     pub tou1: Loaded,
     pub tou2: Loaded,
@@ -364,28 +462,49 @@ pub struct PlayerAnim {
 /// scenes, and the song's steps.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Bracket {
-    pub x0: u32,
-    pub x4: u32,
-    pub x8: i32,
-    pub xc: i32,
-    pub x10: u16,
-    pub x12: [u16; 4],
-    pub x1a: u8,
-    pub x1b: u8,
-    pub x1c: u8,
-    pub x1d: [u8; 4],
-    pub x21: [u8; 4],
-    pub x25: [u8; 4],
-    pub x29: u8,
-    pub x2a: [PlayerAnim; 4],
-    pub x44: [u8; 4],
+    #[doc(alias("x0"))]
+    pub step_frames: u32,
+    #[doc(alias("x4"))]
+    pub banner_frame: u32,
+    #[doc(alias("x8"))]
+    pub banner_start: i32,
+    #[doc(alias("xc"))]
+    pub banner_end: i32,
+    #[doc(alias("x10"))]
+    pub bg: u16,
+    #[doc(alias("x12"))]
+    pub unplugged: [u16; 4],
+    #[doc(alias("x1a"))]
+    pub panel: u8,
+    #[doc(alias("x1b"))]
+    pub rank_frames: u8,
+    #[doc(alias("x1c"))]
+    pub title: u8,
+    #[doc(alias("x1d"))]
+    pub bounce: [u8; 4],
+    #[doc(alias("x21"))]
+    pub name_flash: [u8; 4],
+    #[doc(alias("x25"))]
+    pub cleared: [u8; 4],
+    #[doc(alias("x29"))]
+    pub bar: u8,
+    #[doc(alias("x2a"))]
+    pub anims: [PlayerAnim; 4],
+    #[doc(alias("x44"))]
+    pub choice: [u8; 4],
     /// `x48`: `&gm_80477738` once set.
-    pub x48: bool,
-    pub x4c: u8,
-    pub x4d: u8,
-    pub x4e: [u8; 20],
-    pub x64: Vec3,
-    pub x70: Vec3,
+    #[doc(alias("x48"))]
+    pub settled: bool,
+    #[doc(alias("x4c"))]
+    pub winner_seat: u8,
+    #[doc(alias("x4d"))]
+    pub winner_type: u8,
+    #[doc(alias("x4e"))]
+    pub winner_name: [u8; 20],
+    #[doc(alias("x64"))]
+    pub banner_translate: Vec3,
+    #[doc(alias("x70"))]
+    pub banner_scale: Vec3,
     /// `lbl_804D6660`, `6664`, `6668`: `GmTou1p`, `GmTou3p`, `GmTou4p`.
     pub tou1: Loaded,
     pub tou3: Loaded,
@@ -395,8 +514,10 @@ pub struct Bracket {
     pub scene3: Option<DataRef>,
     pub scene4: Option<DataRef>,
     /// `lbl_804D6678`, `667C`, `6680[3]`.
-    pub x6678: i32,
-    pub x667c: i32,
+    #[doc(alias("x6678"))]
+    pub back_to_players: i32,
+    #[doc(alias("x667c"))]
+    pub banner_hidden: i32,
     pub song: [u8; 3],
 }
 
@@ -404,18 +525,28 @@ pub struct Bracket {
 /// players' models' states), the archives and scenes.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Alt {
-    pub x0: u32,
-    pub x4: u16,
-    pub x6: [u16; 4],
-    pub xe: u8,
-    pub xf: u8,
-    pub x10: [u8; 4],
-    pub x18: [u8; 4],
-    pub x1c: u8,
+    #[doc(alias("x0"))]
+    pub confirm_frames: u32,
+    #[doc(alias("x4"))]
+    pub bg: u16,
+    #[doc(alias("x6"))]
+    pub unplugged: [u16; 4],
+    #[doc(alias("xe"))]
+    pub panel: u8,
+    #[doc(alias("xf"))]
+    pub title: u8,
+    #[doc(alias("x10"))]
+    pub bounce: [u8; 4],
+    #[doc(alias("x18"))]
+    pub b_held: [u8; 4],
+    #[doc(alias("x1c"))]
+    pub bar: u8,
     /// `x1D[i]`: `a` (start), `b` (current), `c` (end), `x0` (state), `x1` (done), `x2`
     /// (loop).
-    pub x1d: [PlayerAnim; 4],
-    pub x38: [u8; 4],
+    #[doc(alias("x1d"))]
+    pub anims: [PlayerAnim; 4],
+    #[doc(alias("x38"))]
+    pub choice: [u8; 4],
     /// `lbl_804D6688`, `668C`: `GmTou1p`, `GmTou4p`; `6690`, `6694` their scenes.
     pub tou1: Loaded,
     pub tou4: Loaded,
@@ -516,10 +647,10 @@ impl Running<'_> {
     #[doc(alias = "gm_801B174C")]
     pub fn tou_enter_sss(&mut self) {
         let s = &mut self.game.tou.sss;
-        s.x1 = 0;
+        s.no_b = 0;
         s.no_lras = 1;
         s.force_stage_id = -1;
-        s.unk_stage = 0;
+        s.cursor_port = 0;
     }
 
     /// `gm_801B1788`, the stage select's exit: the match with the stage picked, else back to
@@ -530,7 +661,7 @@ impl Running<'_> {
         if s.start_game != 0 {
             let stage = s.vs.start.rules.stkind;
             self.set_next_game_mode_state_id(STATE_VS);
-            self.game.tou.tm.x28 = u32::from(stage);
+            self.game.tou.tm.stage = u32::from(stage);
             return;
         }
         if self.game.tou.tm.match_type() == 0 {
@@ -538,7 +669,7 @@ impl Running<'_> {
             self.set_next_game_mode_state_id(STATE_BRACKET);
             return;
         }
-        self.game.tou.tm.x32 = 0;
+        self.game.tou.tm.stage_picked = 0;
         self.set_next_game_mode_state_id(STATE_ALT);
     }
 

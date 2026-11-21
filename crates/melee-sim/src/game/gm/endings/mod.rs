@@ -132,7 +132,7 @@ impl Running<'_> {
         let cost = self.game.objs.rng.below(10) as u16 + 1;
         let d = &mut self.game.endings.debug_game_over;
         d.score = 99_999;
-        d.x8 = 1;
+        d.from_mode = 1;
         d.ckind = ckind;
         d.slot = 0;
         d.tag = 0x78;
@@ -260,7 +260,7 @@ impl Running<'_> {
             _ => o.allstar.base,
         };
         let p = run.player;
-        let ckind = if p.ckind == 0x12 && run.xc[6] != 0 {
+        let ckind = if p.ckind == 0x12 && run.counters[6] != 0 {
             0x13
         } else {
             p.ckind as u8

@@ -1057,7 +1057,7 @@ pub fn grow(r: &mut Running, gobj: GObjId, grow: bool) -> bool {
                     jobj::clear_flags(jobjs, Some(bj), HIDDEN);
                     let small = 0.000_1;
                     if let (Some(a), Some(b)) = (ea, eb) {
-                        let items_on = r.game.vs_item_freq() != -1 && r.game.vs_x6() == 0;
+                        let items_on = r.game.vs_item_freq() != -1 && r.game.vs_sudden_death() == 0;
                         let jobjs = &mut r.game.objs.jobjs;
                         let (shown, hidden) = if items_on { (a, b) } else { (b, a) };
                         jobj::clear_flags(jobjs, Some(shown), HIDDEN);
@@ -1493,7 +1493,7 @@ fn press(r: &mut Running, g: GroundId, by: Option<GObjId>) {
     r.game.grounds[g.0].u.castle_switch().state = 4;
     if super::super::it::item::is_fighter(r.game, by) {
         let lag = fp::frsp(f64::from(param(r.game).h(r.data, 4))) as f32;
-        r.game.ft_80086a4c(by.expect("a fighter"), lag);
+        r.game.ft_set_pending_hitlag(by.expect("a fighter"), lag);
     }
 }
 

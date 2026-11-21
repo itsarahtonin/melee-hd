@@ -177,12 +177,18 @@ impl LoadedFiles {
 }
 
 /// `ft_8045993C`: six words, each with two bitfields beside it, which the fighters' first
-/// setup clears.
+/// setup clears. A fighter's `x61C` (its `AllocInfo::slot_word`) picks the one it shares
+/// with the other fighters of its slot.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
-pub struct Ft8045993C {
-    pub x0: u32,
-    /// The byte at +6: `x6_b0` (0x80) and `x6_b1_b2` (0x60), and bits nothing names.
-    pub x6: u8,
+#[doc(alias("Ft8045993C"))]
+pub struct SlotWord {
+    /// +0x0.
+    #[doc(alias("x0"))]
+    pub word: u32,
+    /// The byte at +6: `x6_b0` (0x80, cleared when the last fighter sharing the word
+    /// unloads) and `x6_b1_b2` (0x60), and bits nothing names.
+    #[doc(alias("x6"))]
+    pub flags: u8,
 }
 
 /// The fighter data's globals.
@@ -205,7 +211,7 @@ pub struct DataGlobals {
     pub demo_x14: [[u32; 18]; FighterKind::COUNT],
     /// Each kind's reference count (`ft_8045996C`).
     pub ref_counts: [i32; FighterKind::COUNT],
-    pub slot_words: [Ft8045993C; 6],
+    pub slot_words: [SlotWord; 6],
 }
 
 impl Default for DataGlobals {
@@ -218,7 +224,7 @@ impl Default for DataGlobals {
             demo_files: [None; FighterKind::COUNT],
             demo_x14: [[0; 18]; FighterKind::COUNT],
             ref_counts: [0; FighterKind::COUNT],
-            slot_words: [Ft8045993C::default(); 6],
+            slot_words: [SlotWord::default(); 6],
         }
     }
 }
@@ -285,8 +291,8 @@ impl Game {
             d.demo_anims[kind] = 0;
         }
         for s in &mut d.slot_words {
-            s.x0 = 0;
-            s.x6 &= !0xE0;
+            s.word = 0;
+            s.flags &= !0xE0;
         }
     }
 

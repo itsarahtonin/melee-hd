@@ -221,7 +221,7 @@ fn choose(r: &mut Running, ball: GObjId) -> i32 {
 #[doc(alias = "gm_801BEC54")]
 fn event_list(r: &mut Running, ball: GObjId) -> i32 {
     let ev = r.event();
-    let Some(list) = r.event_entry(ev).and_then(|e| e.x4(r)) else {
+    let Some(list) = r.event_entry(ev).and_then(|e| e.params(r)) else {
         return ItKind::Wobbuffet.id();
     };
     if let Some(k) = rare(r) {

@@ -246,13 +246,16 @@ pub fn tie_goes_on(tm: &TmData, me: &MatchEnd) -> bool {
         0 => true,
         1 => match tm.hmn_cpu_count() {
             1 => true,
-            2 => (tm.x30 == 3 && me.n_winners == 3) || (tm.x30 == 4 && me.n_winners >= 3),
+            2 => {
+                (tm.players_per_match == 3 && me.n_winners == 3)
+                    || (tm.players_per_match == 4 && me.n_winners >= 3)
+            }
             3 => me.n_winners == 4,
             _ => false,
         },
         2 => match tm.hmn_cpu_count() {
-            1 => tm.x30 == me.n_winners,
-            2 => tm.x30 == 3 || (tm.x30 == 4 && me.n_winners >= 3),
+            1 => tm.players_per_match == me.n_winners,
+            2 => tm.players_per_match == 3 || (tm.players_per_match == 4 && me.n_winners >= 3),
             3 => true,
             _ => false,
         },
@@ -295,35 +298,35 @@ impl Running<'_> {
         for i in 0..n {
             let s = src.at(0x28 * i as u32);
             let b = &mut self.game.tou.bracket[i];
-            b.x0 = d.u8(s);
-            b.x1 = d.u8(s.at(1));
-            b.x2 = d.u8(s.at(2));
-            b.x3 = d.u8(s.at(3));
-            b.x4 = d.u8(s.at(4));
-            b.x5 = d.u8(s.at(5));
-            b.x6 = d.u8(s.at(6));
-            b.x1c = thickness;
-            b.xc = d.u32(s.at(8)) as i32;
-            b.x14 = d.u32(s.at(0xC)) as i32;
-            b.x10 = d.u32(s.at(0x10)) as i32;
-            b.x18 = d.u32(s.at(0x14)) as i32;
-            b.x20 = [
+            b.in_bracket = d.u8(s);
+            b.playing = d.u8(s.at(1));
+            b.opens = d.u8(s.at(2));
+            b.kind = d.u8(s.at(3));
+            b.seats = d.u8(s.at(4));
+            b.winner_box = d.u8(s.at(5));
+            b.winner_seat = d.u8(s.at(6));
+            b.thickness = thickness;
+            b.x = d.u32(s.at(8)) as i32;
+            b.width = d.u32(s.at(0xC)) as i32;
+            b.y = d.u32(s.at(0x10)) as i32;
+            b.height = d.u32(s.at(0x14)) as i32;
+            b.color = [
                 d.u8(s.at(0x18)),
                 d.u8(s.at(0x1A)),
                 d.u8(s.at(0x1C)),
                 d.u8(s.at(0x1E)),
             ];
-            b.x24 = d.u8(s.at(0x19));
-            b.x25 = d.u8(s.at(0x1B));
-            b.x26 = d.u8(s.at(0x1D));
-            b.x27 = d.u8(s.at(0x1F));
-            b.x28 = d.u8(s.at(0x20));
+            b.unread_a = d.u8(s.at(0x19));
+            b.unread_b = d.u8(s.at(0x1B));
+            b.unread_c = d.u8(s.at(0x1D));
+            b.unread_d = d.u8(s.at(0x1F));
+            b.unread_e = d.u8(s.at(0x20));
             for k in 0..4 {
-                b.slots[k].x52 = 9;
-                b.slots[k].x32 = 0;
+                b.slots[k].handicap = 9;
+                b.slots[k].bye_line = 0;
             }
             for k in 0..4 {
-                b.slots[k].x30 = d.u8(s.at(0x21 + k as u32));
+                b.slots[k].present = d.u8(s.at(0x21 + k as u32));
             }
         }
         if region == 0 {
@@ -335,15 +338,15 @@ impl Running<'_> {
     fn tou_bracket_byes(&mut self, count: i32) {
         let b = &mut self.game.tou.bracket;
         match count {
-            1 => b[5].slots[1].x32 = 1,
+            1 => b[5].slots[1].bye_line = 1,
             3 => {
-                b[10].slots[0].x32 = 1;
-                b[11].slots[1].x32 = 1;
+                b[10].slots[0].bye_line = 1;
+                b[11].slots[1].bye_line = 1;
             }
-            5 => b[23].slots[1].x32 = 1,
+            5 => b[23].slots[1].bye_line = 1,
             7 => {
-                b[46].slots[1].x32 = 1;
-                b[47].slots[1].x32 = 1;
+                b[46].slots[1].bye_line = 1;
+                b[47].slots[1].bye_line = 1;
             }
             _ => {}
         }
@@ -354,7 +357,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8018A970")]
     pub fn tou_bracket_gobjs(&mut self, count: i32) {
         for i in 0..64 {
-            if self.game.tou.bracket[i].x0 == 0 {
+            if self.game.tou.bracket[i].in_bracket == 0 {
                 continue;
             }
             let w = &mut self.game.world;
@@ -374,83 +377,81 @@ impl Running<'_> {
     /// rectangle by the box's kind and seats), and the icon moved there.
     #[doc(alias = "fn_8018AA74")]
     pub fn tou_place_icon(&mut self, j: JObjId, i: usize, slot: usize) {
-        let entrants = self.game.tou.tm.x2e;
+        let entrants = self.game.tou.tm.entrant_count;
         let b = self.game.tou.bracket[i];
         let s = &mut self.game.tou.bracket[i].slots[slot];
-        if b.x1 != 0 {
-            let x3 = b.x3;
-            if x3 == 0 && b.x4 != 0 {
+        if b.playing != 0 {
+            let x3 = b.kind;
+            if x3 == 0 && b.seats != 0 {
                 let si = slot as i32;
-                let (x, y, y40) = match b.x4 {
+                let (x, y, y40) = match b.seats {
                     1 => {
-                        let y = b
-                            .x10
-                            .wrapping_add(b.x18)
-                            .wrapping_sub(si.wrapping_mul(b.x18));
-                        (b.xc, y, b.x10.wrapping_add(b.x18 / 2))
+                        let y =
+                            b.y.wrapping_add(b.height)
+                                .wrapping_sub(si.wrapping_mul(b.height));
+                        (b.x, y, b.y.wrapping_add(b.height / 2))
                     }
                     2 => match slot {
                         0 => (
-                            b.xc.wrapping_add(0x2B),
-                            b.x10.wrapping_add(b.x18),
-                            b.x10.wrapping_add(b.x18 / 2),
+                            b.x.wrapping_add(0x2B),
+                            b.y.wrapping_add(b.height),
+                            b.y.wrapping_add(b.height / 2),
                         ),
                         1 => (
-                            b.xc.wrapping_add(b.x14),
-                            b.x10.wrapping_add(b.x18),
-                            b.x10.wrapping_add(b.x18 / 2),
+                            b.x.wrapping_add(b.width),
+                            b.y.wrapping_add(b.height),
+                            b.y.wrapping_add(b.height / 2),
                         ),
                         _ => (
-                            b.xc.wrapping_add(b.x14 / 2),
-                            b.x10,
-                            b.x10.wrapping_add(b.x18 / 2),
+                            b.x.wrapping_add(b.width / 2),
+                            b.y,
+                            b.y.wrapping_add(b.height / 2),
                         ),
                     },
                     3 => match slot {
                         0 => (
-                            b.xc,
-                            b.x10.wrapping_add(b.x18),
-                            b.x10.wrapping_add(b.x18).wrapping_sub(b.x18 / 3),
+                            b.x,
+                            b.y.wrapping_add(b.height),
+                            b.y.wrapping_add(b.height).wrapping_sub(b.height / 3),
                         ),
                         1 => (
-                            b.xc.wrapping_add(b.x14),
-                            b.x10.wrapping_add(b.x18),
-                            b.x10.wrapping_add(b.x18).wrapping_sub(b.x18 / 3),
+                            b.x.wrapping_add(b.width),
+                            b.y.wrapping_add(b.height),
+                            b.y.wrapping_add(b.height).wrapping_sub(b.height / 3),
                         ),
-                        2 => (b.xc, b.x10, b.x10.wrapping_add(b.x18 / 3)),
+                        2 => (b.x, b.y, b.y.wrapping_add(b.height / 3)),
                         _ => (
-                            b.xc.wrapping_add(b.x14),
-                            b.x10,
-                            b.x10.wrapping_add(b.x18 / 3),
+                            b.x.wrapping_add(b.width),
+                            b.y,
+                            b.y.wrapping_add(b.height / 3),
                         ),
                     },
                     _ => {
                         // Kinds past 3 write nothing.
-                        (s.x34, s.x38, s.x40)
+                        (s.start_x, s.start_y, s.target_y)
                     }
                 };
-                if b.x4 <= 3 {
-                    s.x3c = x;
-                    s.x44 = x;
-                    s.x34 = x;
-                    s.x48 = y;
-                    s.x38 = y;
-                    s.x40 = y40;
+                if b.seats <= 3 {
+                    s.target_x = x;
+                    s.x = x;
+                    s.start_x = x;
+                    s.y = y;
+                    s.start_y = y;
+                    s.target_y = y40;
                 }
             } else {
                 let si = slot as i32;
                 let x =
-                    b.xc.wrapping_add(si.wrapping_mul(divw(b.x14, i32::from(x3))));
-                s.x3c = x;
-                s.x44 = x;
-                s.x34 = x;
-                let y = b
-                    .x10
-                    .wrapping_add(b.x18)
-                    .wrapping_sub(b.x18.wrapping_mul(i32::from(b.x2)));
-                s.x48 = y;
-                s.x38 = y;
-                s.x40 = b.x10.wrapping_add(b.x18.wrapping_mul(i32::from(b.x2)));
+                    b.x.wrapping_add(si.wrapping_mul(divw(b.width, i32::from(x3))));
+                s.target_x = x;
+                s.x = x;
+                s.start_x = x;
+                let y =
+                    b.y.wrapping_add(b.height)
+                        .wrapping_sub(b.height.wrapping_mul(i32::from(b.opens)));
+                s.y = y;
+                s.start_y = y;
+                s.target_y = b.y.wrapping_add(b.height.wrapping_mul(i32::from(b.opens)));
                 if x3 == 1 {
                     let shift = match (entrants, i, slot) {
                         (6, 5, 1) => 0x46,
@@ -461,14 +462,14 @@ impl Running<'_> {
                         _ => 0,
                     };
                     if shift != 0 {
-                        let t = s.x48.wrapping_add(shift);
-                        s.x48 = t;
-                        s.x38 = t;
+                        let t = s.y.wrapping_add(shift);
+                        s.y = t;
+                        s.start_y = t;
                     }
                 }
             }
         }
-        let (x44, x48) = (s.x44, s.x48);
+        let (x44, x48) = (s.x, s.y);
         self.tou_set_tx(Some(j), mem(f(x44)));
         self.tou_set_ty(Some(j), mem(fp::fneg(f(x48))));
     }
@@ -497,7 +498,7 @@ impl Running<'_> {
     /// A box's player's icon's joint tree.
     fn tou_icon(&self, i: usize, slot: usize) -> JObjId {
         let g = self.game.tou.bracket[i].slots[slot]
-            .x2c
+            .icon_gobj
             .expect("a bracket icon's GObj");
         self.tou_jobj(g)
     }
@@ -515,21 +516,21 @@ impl Running<'_> {
             }
             21 => {
                 let b = self.game.tou.bracket[idx];
-                if b.x18 != 0 {
+                if b.height != 0 {
                     for i in 0..4 {
-                        if b.slots[i].x30 == 0 {
+                        if b.slots[i].present == 0 {
                             continue;
                         }
                         let j = self.tou_icon(idx, i);
                         let n = reg(0.3);
                         let c = f(self.game.tou.slide);
-                        let x48 = f(b.slots[i].x48);
+                        let x48 = f(b.slots[i].y);
                         let fwd = fp::fnmadds(n, c, x48);
                         let rev = fp::fmsubs(n, c, x48);
-                        let y = if b.x2 != 0 {
+                        let y = if b.opens != 0 {
                             rev
                         } else {
-                            match b.x4 {
+                            match b.seats {
                                 1 => {
                                     if i == 0 {
                                         fwd
@@ -555,12 +556,12 @@ impl Running<'_> {
             22 | 23 => {
                 if cur == 22 {
                     let b = self.game.tou.bracket[idx];
-                    let h = b.x18;
+                    let h = b.height;
                     if h != 0 {
                         let c = &mut self.game.tou.cam;
                         c.current = Vec3::new(320.0, -240.0, 0.0);
-                        c.target.x = mem(f(b.xc.wrapping_add(b.x14 / 2)));
-                        c.target.y = mem(fp::fneg(f(b.x10.wrapping_add(h / 2))));
+                        c.target.x = mem(f(b.x.wrapping_add(b.width / 2)));
+                        c.target.y = mem(fp::fneg(f(b.y.wrapping_add(h / 2))));
                         c.target.z = -150.0;
                         let k = reg(0.033333);
                         let abs = |d: f64| if d < 0.0 { fp::fneg(d) } else { d };
@@ -574,7 +575,7 @@ impl Running<'_> {
                     self.game.tou.slide = 0;
                 }
                 let b = self.game.tou.bracket[idx];
-                if b.x18 == 0 {
+                if b.height == 0 {
                     return;
                 }
                 let amount = self.game.tou.slide / 6;
@@ -592,15 +593,15 @@ impl Running<'_> {
                 }
                 let cur = c.current;
                 self.tou_camera_to(reg(cur.x), reg(cur.y), reg(cur.z));
-                if b.x4 != 1 {
+                if b.seats != 1 {
                     for k in 0..4 {
-                        if b.slots[k].x30 == 0 {
+                        if b.slots[k].present == 0 {
                             continue;
                         }
                         let s = &mut self.game.tou.bracket[idx].slots[k];
-                        let target = s.x40;
-                        step_towards_int(&mut s.x48, target, amount);
-                        let y = mem(fp::fneg(f(s.x48)));
+                        let target = s.target_y;
+                        step_towards_int(&mut s.y, target, amount);
+                        let y = mem(fp::fneg(f(s.y)));
                         let j = self.tou_icon(idx, k);
                         self.tou_set_ty(Some(j), y);
                     }
@@ -608,31 +609,31 @@ impl Running<'_> {
                 }
                 for i in 0..4 {
                     let s = &mut self.game.tou.bracket[idx].slots[i];
-                    if s.x30 != 0 {
-                        s.x40 = s.x48;
+                    if s.present != 0 {
+                        s.target_y = s.y;
                     }
                 }
             }
             24 => {
                 let b = self.game.tou.bracket[idx];
-                if b.x18 == 0 {
+                if b.height == 0 {
                     return;
                 }
                 self.game.tou.slide = self.game.tou.slide.wrapping_add(1);
                 let bounce = f(BOUNCE[(self.game.tou.slide % 10) as usize]);
                 for k in 0..4 {
-                    if b.slots[k].x30 == 0 {
+                    if b.slots[k].present == 0 {
                         continue;
                     }
                     let j = self.tou_icon(idx, k);
-                    let x40 = f(b.slots[k].x40);
+                    let x40 = f(b.slots[k].target_y);
                     let n = reg(0.1);
                     let up = fp::fnmadds(n, bounce, x40);
                     let down = fp::fmsubs(n, bounce, x40);
-                    let y = if b.x2 != 0 {
+                    let y = if b.opens != 0 {
                         down
                     } else {
-                        match b.x4 {
+                        match b.seats {
                             1 => {
                                 if k == 0 {
                                     up
@@ -655,24 +656,24 @@ impl Running<'_> {
             }
             25 => {
                 for s in &mut self.game.tou.bracket[idx].slots {
-                    if s.x30 != 0 {
-                        s.x48 = s.x40;
+                    if s.present != 0 {
+                        s.y = s.target_y;
                     }
                 }
             }
             32 => {
                 let b = self.game.tou.bracket[idx];
-                if b.x18 != 0 {
+                if b.height != 0 {
                     self.tou_camera_to(
-                        f(b.xc.wrapping_add(b.x14 / 2)),
-                        fp::fneg(f(b.x10.wrapping_add(b.x18 / 2))),
+                        f(b.x.wrapping_add(b.width / 2)),
+                        fp::fneg(f(b.y.wrapping_add(b.height / 2))),
                         -150.0,
                     );
                     for s in &mut self.game.tou.bracket[idx].slots {
-                        if s.x4c == 0 {
-                            s.x3c = b.xc.wrapping_add(b.x14 / 2);
+                        if s.rank == 0 {
+                            s.target_x = b.x.wrapping_add(b.width / 2);
                         } else {
-                            std::mem::swap(&mut s.x40, &mut s.x38);
+                            std::mem::swap(&mut s.target_y, &mut s.start_y);
                         }
                     }
                 } else {
@@ -682,28 +683,28 @@ impl Running<'_> {
             }
             33 => {
                 let b = self.game.tou.bracket[idx];
-                if b.x18 == 0 {
+                if b.height == 0 {
                     self.game.tou.tm.cur_option = 0x22;
                     return;
                 }
                 let mut done = 0;
                 for i in 0..4 {
                     let s = self.game.tou.bracket[idx].slots[i];
-                    if s.x30 == 0 {
+                    if s.present == 0 {
                         done += 1;
                         continue;
                     }
-                    let t5 = s.x4c;
+                    let t5 = s.rank;
                     if t5 == 0 {
                         self.game.tou.seat = i as i32;
-                        if b.x4 != 1 {
+                        if b.seats != 1 {
                             let s = &mut self.game.tou.bracket[idx].slots[i];
-                            let target = s.x3c;
-                            step_towards_int(&mut s.x44, target, 2);
-                            if s.x44 == s.x3c {
+                            let target = s.target_x;
+                            step_towards_int(&mut s.x, target, 2);
+                            if s.x == s.target_x {
                                 done += 1;
                             }
-                            let x = mem(f(s.x44));
+                            let x = mem(f(s.x));
                             let j = self.tou_icon(idx, i);
                             self.tou_set_tx(Some(j), x);
                         } else {
@@ -711,13 +712,13 @@ impl Running<'_> {
                         }
                     } else {
                         let s = &mut self.game.tou.bracket[idx].slots[i];
-                        let target = s.x40;
+                        let target = s.target_y;
                         let t5 = i32::from(t5);
-                        step_towards_int(&mut s.x48, target, t5 + (t5 + 1) / 2);
-                        if s.x48 == s.x40 {
+                        step_towards_int(&mut s.y, target, t5 + (t5 + 1) / 2);
+                        if s.y == s.target_y {
                             done += 1;
                         }
-                        let y = mem(fp::fneg(f(s.x48)));
+                        let y = mem(fp::fneg(f(s.y)));
                         let j = self.tou_icon(idx, i);
                         self.tou_set_ty(Some(j), y);
                     }
@@ -726,14 +727,14 @@ impl Running<'_> {
                     let e = self.game.tou.tm.entrants() as usize;
                     let seat = self.game.tou.seat as usize;
                     let s = &mut self.game.tou.bracket[idx].slots[seat];
-                    s.x3c = i32::from(WINNER_AT[e][0]);
-                    s.x40 = i32::from(WINNER_AT[e][1]);
+                    s.target_x = i32::from(WINNER_AT[e][0]);
+                    s.target_y = i32::from(WINNER_AT[e][1]);
                     self.game.tou.tm.cur_option = 0x22;
                 }
             }
             34 | 35 => {
                 let b = self.game.tou.bracket[idx];
-                if b.x18 == 0 || self.game.tou.tm.x33 != 5 {
+                if b.height == 0 || self.game.tou.tm.rank != 5 {
                     self.game.tou.slide = 0;
                     self.game.tou.tm.cur_option = 0x24;
                     return;
@@ -742,30 +743,30 @@ impl Running<'_> {
                 let j = self.tou_icon(idx, seat);
                 let s = &mut self.game.tou.bracket[idx].slots[seat];
                 if cur == 34 {
-                    let target = s.x3c;
-                    step_towards_int(&mut s.x44, target, 2);
-                    let (x, done) = (s.x44, s.x44 == s.x3c);
+                    let target = s.target_x;
+                    step_towards_int(&mut s.x, target, 2);
+                    let (x, done) = (s.x, s.x == s.target_x);
                     self.tou_set_tx(Some(j), mem(f(x)));
                     if done {
                         self.game.tou.tm.cur_option = 0x23;
                     }
                 } else {
-                    let target = s.x40;
-                    step_towards_int(&mut s.x48, target, 2);
-                    let (y, done) = (s.x48, s.x48 == s.x40);
+                    let target = s.target_y;
+                    step_towards_int(&mut s.y, target, 2);
+                    let (y, done) = (s.y, s.y == s.target_y);
                     self.tou_set_ty(Some(j), mem(fp::fneg(f(y))));
                     if done {
-                        self.game.tou.tm.x33 = 6;
+                        self.game.tou.tm.rank = 6;
                     }
                 }
             }
             36 => {
                 let b = self.game.tou.bracket[idx];
-                let h = b.x18;
+                let h = b.height;
                 if h != 0 {
                     let c = &mut self.game.tou.cam;
-                    c.current.x = mem(f(b.xc.wrapping_add(b.x14 / 2)));
-                    c.current.y = mem(fp::fneg(f(b.x10.wrapping_add(h / 2))));
+                    c.current.x = mem(f(b.x.wrapping_add(b.width / 2)));
+                    c.current.y = mem(fp::fneg(f(b.y.wrapping_add(h / 2))));
                     c.current.z = -150.0;
                     c.target = Vec3::new(320.0, -240.0, 0.0);
                     let k = reg(0.04);
@@ -786,7 +787,7 @@ impl Running<'_> {
                 self.game.tou.tm.cur_option = 0x25;
             }
             37 => {
-                if self.game.tou.bracket[idx].x18 == 0 {
+                if self.game.tou.bracket[idx].height == 0 {
                     self.game.tou.slide = 0x78;
                 }
                 if self.game.tou.slide < 0x78 {
@@ -804,7 +805,7 @@ impl Running<'_> {
                 self.game.tou.tm.cur_option = 0x26;
             }
             38 => {
-                if self.game.tou.bracket[idx].x18 == 0 {
+                if self.game.tou.bracket[idx].height == 0 {
                     self.game.tou.slide = 0x78;
                 }
                 if self.game.tou.slide < 0x78 {
@@ -812,7 +813,7 @@ impl Running<'_> {
                     return;
                 }
                 let b = &self.game.tou.bracket[idx];
-                let seat = (0..4).find(|&i| b.slots[i].x4c == 0).unwrap_or(4);
+                let seat = (0..4).find(|&i| b.slots[i].rank == 0).unwrap_or(4);
                 let src_i = self.tou_current_box();
                 self.tou_winner_moves_on(src_i, seat);
                 self.game.tou.tm.cur_option = 0x27;
@@ -825,20 +826,20 @@ impl Running<'_> {
     /// seat, box `i` no longer the match being played.
     fn tou_winner_moves_on(&mut self, i: usize, seat: usize) {
         let b = self.game.tou.bracket[i];
-        self.game.tou.bracket[i].x1 = 0;
-        let (ne, ns) = (usize::from(b.x5), usize::from(b.x6));
+        self.game.tou.bracket[i].playing = 0;
+        let (ne, ns) = (usize::from(b.winner_box), usize::from(b.winner_seat));
         let from = b.slots[seat];
         let to = &mut self.game.tou.bracket[ne].slots[ns];
-        to.x30 = 1;
-        to.x50 = from.x50;
-        to.x51 = from.x51;
-        to.x52 = from.x52;
-        to.x4d = from.x4d;
-        to.x4e = from.x4e;
-        to.x4f = from.x4f;
+        to.present = 1;
+        to.entrant = from.entrant;
+        to.level = from.level;
+        to.handicap = from.handicap;
+        to.icon = from.icon;
+        to.slot_type = from.slot_type;
+        to.color = from.color;
         let s = &mut self.game.tou.bracket[i].slots[seat];
-        s.x30 = 0;
-        s.x4e = 3;
+        s.present = 0;
+        s.slot_type = 3;
     }
 
     /// `fn_8018E46C`, a box's GObj's render callback: no fog, the debug drawing set up
@@ -849,10 +850,10 @@ impl Running<'_> {
             panic!("a bracket box's GObj without its box");
         };
         let b = self.game.tou.bracket[usize::from(i)];
-        let r30 = if b.x2 != 0 {
-            b.x10.wrapping_add(b.x18).wrapping_neg()
+        let r30 = if b.opens != 0 {
+            b.y.wrapping_add(b.height).wrapping_neg()
         } else {
-            b.x10.wrapping_neg()
+            b.y.wrapping_neg()
         };
         crate::hsd::display::fog_set(&mut self.game.objs, None);
         let c = self
@@ -862,11 +863,12 @@ impl Running<'_> {
             .current
             .expect("hsd_80391A04: no camera");
         cobj::viewing_mtx_copy(&mut self.game.objs, self.data, c);
-        let x = b.xc.wrapping_sub(fp::fctiwz(fp::fmuls(0.5, reg(b.x1c))));
-        let (y, w, h) = (b.x10.wrapping_neg(), b.x14, b.x18.wrapping_neg());
+        let x =
+            b.x.wrapping_sub(fp::fctiwz(fp::fmuls(0.5, reg(b.thickness))));
+        let (y, w, h) = (b.y.wrapping_neg(), b.width, b.height.wrapping_neg());
         let entrants = self.game.tou.tm.entrants();
         let mut q = Vec::new();
-        match b.x3 {
+        match b.kind {
             0 => lines_0(&b, x, y, w, h, &mut q),
             1 => lines_1(&b, entrants, x, y, w, h, r30, &mut q),
             2 => lines_2(&b, x, y, w, h, r30, &mut q),
@@ -891,9 +893,9 @@ impl Running<'_> {
         }
         if reset {
             for b in &mut self.game.tou.bracket {
-                b.x0 = 0;
+                b.in_bracket = 0;
                 for s in &mut b.slots {
-                    s.x4e = 3;
+                    s.slot_type = 3;
                 }
             }
         }
@@ -921,41 +923,41 @@ impl Running<'_> {
     pub fn tou_bracket_icons(&mut self, model: DataRef, fill: bool) {
         let mut seat = 0u8;
         for i in 0..64 {
-            if self.game.tou.bracket[i].x0 == 0 {
+            if self.game.tou.bracket[i].in_bracket == 0 {
                 continue;
             }
             for k in 0..4 {
-                if self.game.tou.bracket[i].slots[k].x30 == 0 {
+                if self.game.tou.bracket[i].slots[k].present == 0 {
                     continue;
                 }
                 if fill {
                     let tm = &self.game.tou.tm;
-                    let j = (0..64).find(|&j| tm.x37[j].xd == seat).unwrap_or(64);
-                    let e = tm.x37.get(j).copied().unwrap_or_else(|| {
+                    let j = (0..64).find(|&j| tm.roster[j].seat == seat).unwrap_or(64);
+                    let e = tm.roster.get(j).copied().unwrap_or_else(|| {
                         super::super::super::code::unported_call(
                             "fn_8018E85C past the entrants (no entrant at a bracket seat)",
                         )
                     });
                     let s = &mut self.game.tou.bracket[i].slots[k];
-                    s.x50 = j as u8;
-                    s.x4d = e.x3;
-                    s.x4e = e.x0;
-                    s.x4f = e.x7;
-                    s.x51 = e.x1;
-                    s.x52 = e.x2;
-                    s.x54 = e.x9;
+                    s.entrant = j as u8;
+                    s.icon = e.icon;
+                    s.slot_type = e.slot_type;
+                    s.color = e.color;
+                    s.level = e.level;
+                    s.handicap = e.handicap;
+                    s.name = e.name;
                     seat = seat.wrapping_add(1);
                 }
                 let data = self.data;
                 let g = &mut *self.game;
                 let gobj = g.world.create(0xE, 0x1B, 0);
-                g.tou.bracket[i].slots[k].x2c = Some(gobj);
+                g.tou.bracket[i].slots[k].icon_gobj = Some(gobj);
                 let j = jobj::load_joint(&mut g.objs, data, data.ptr(model)).expect("an icon");
                 g.world.set_obj(gobj, OBJ_JOBJ, Obj::JObj(j));
                 g.world.setup_gx_link(gobj, CodeRef(JOBJ_CALLBACK), 4, 2);
                 super::super::vs::add_model_anim(&mut g.objs, data, Some(j), model, 0);
                 let s = g.tou.bracket[i].slots[k];
-                let frame = i32::from(s.x4d).wrapping_add(i32::from(s.x4f) * 0x1E);
+                let frame = i32::from(s.icon).wrapping_add(i32::from(s.color) * 0x1E);
                 jobj::req_anim_all(&mut g.objs, Some(j), mem(f(frame)));
                 super::super::super::mn::common::anim_all(self, Some(j));
                 let mult = if i == self.tou_current_box() {
@@ -963,7 +965,7 @@ impl Running<'_> {
                 } else {
                     7.0
                 };
-                let n = f(64 - i32::from(self.game.tou.tm.x2e));
+                let n = f(64 - i32::from(self.game.tou.tm.entrant_count));
                 let pos = fp::fmadds(reg(0.0083), n, 1.0);
                 let scale = mem(fp::fmuls(mult, pos));
                 jobj::set_srt(&mut self.game.objs.jobjs, j, |o| o.scale.x = scale);
@@ -974,7 +976,7 @@ impl Running<'_> {
                     self.tou_place_icon(j, i, k);
                 } else {
                     let s = self.game.tou.bracket[i].slots[k];
-                    self.tou_move(j, f(s.x44), fp::fneg(f(s.x48)), 666.0);
+                    self.tou_move(j, f(s.x), fp::fneg(f(s.y)), 666.0);
                 }
             }
         }
@@ -1001,7 +1003,7 @@ impl Running<'_> {
     pub fn tou_add_name(&mut self, name: i32, kind: i32, a: usize, x: f64, y: f64, b: usize) {
         let us = self.game.gm.unlocks.is_us();
         let text = |r: &Running, k: usize| -> TextId {
-            r.game.tou.tm.x518[k].expect("a tournament name's text")
+            r.game.tou.tm.name_texts[k].expect("a tournament name's text")
         };
         if kind == 0xFF {
             let s = self.game.name_text(name as u8);
@@ -1096,7 +1098,7 @@ impl Running<'_> {
     pub fn tou_players_left(&self) -> (i32, Option<i32>) {
         let i = self.tou_current_box();
         let b = &self.game.tou.bracket[i.min(63)];
-        if i >= 64 || b.x0 == 0 {
+        if i >= 64 || b.in_bracket == 0 {
             if i >= 64 {
                 super::super::super::code::unported_call("fn_8018F508 past the bracket");
             }
@@ -1105,7 +1107,7 @@ impl Running<'_> {
         let mut count = 0;
         let mut last = None;
         for (k, s) in b.slots.iter().enumerate() {
-            if s.x4e != 3 {
+            if s.slot_type != 3 {
                 last = Some(k as i32);
                 count += 1;
             }
@@ -1138,7 +1140,7 @@ impl Running<'_> {
             .tou
             .bracket
             .iter()
-            .position(|b| b.x1 != 0)
+            .position(|b| b.playing != 0)
             .unwrap_or(64)
     }
 
@@ -1158,12 +1160,12 @@ impl Running<'_> {
     #[doc(alias = "fn_8018F888")]
     pub fn tou_light_box(&mut self) {
         let i = self.tou_current_box();
-        self.game.tou.bracket[i].x20[1] = 0;
-        if self.game.tou.tm.x33 != 5 {
+        self.game.tou.bracket[i].color[1] = 0;
+        if self.game.tou.tm.rank != 5 {
             return;
         }
         let i = self.tou_current_box();
-        self.game.tou.bracket[i + 1].x20[1] = 0;
+        self.game.tou.bracket[i + 1].color[1] = 0;
     }
 
     /// `fn_8018FA24`: the next match's players from the box being played's seats, each
@@ -1176,31 +1178,31 @@ impl Running<'_> {
             let s = self.game.tou.bracket[i].slots[p];
             let tm = &mut self.game.tou.tm;
             if p == 0 {
-                tm.x4b6 = s.x30;
-                tm.x4b7 = s.x50;
+                tm.first_present = s.present;
+                tm.first_entrant = s.entrant;
             } else {
-                tm.x4b8[p - 1].x8 = s.x30;
-                tm.x4b8[p - 1].x9 = s.x50;
+                tm.match_players[p - 1].next_present = s.present;
+                tm.match_players[p - 1].next_entrant = s.entrant;
             }
-            let name = tm.x37[usize::from(s.x50)].x9;
-            let m = &mut tm.x4b8[p];
-            m.x6 = name;
-            m.x4 = s.x51;
-            m.x5 = s.x52;
-            m.x1 = s.x4d;
-            let ckind = ckind_of(i32::from(m.x1));
-            m.x0 = s.x4e;
-            if m.x0 != 3 {
+            let name = tm.roster[usize::from(s.entrant)].name;
+            let m = &mut tm.match_players[p];
+            m.name = name;
+            m.level = s.level;
+            m.handicap = s.handicap;
+            m.icon = s.icon;
+            let ckind = ckind_of(i32::from(m.icon));
+            m.slot_type = s.slot_type;
+            if m.slot_type != 3 {
                 count += 1;
             }
-            let (slot_type, color) = (m.x0, s.x4f);
-            m.x3 = color;
-            m.x4 = s.x51;
+            let (slot_type, color) = (m.slot_type, s.color);
+            m.color = color;
+            m.level = s.level;
             self.game.set_player_ckind(p as i32, ckind);
             self.game.set_player_pkind(p as i32, i32::from(slot_type));
             self.game.set_player_costume(p as i32, i32::from(color));
         }
-        self.game.tou.tm.x30 = count;
+        self.game.tou.tm.players_per_match = count;
     }
 
     /// `fn_8018FBD8`: a GObj's user data set to a number.
@@ -1234,14 +1236,14 @@ impl Running<'_> {
     ) {
         let tm = &mut self.game.tou.tm;
         tm.cur_option = opt;
-        tm.x1c = x1c;
-        tm.x20 = x20;
-        for (i, e) in tm.x37.iter_mut().enumerate() {
-            e.x2 = a3;
-            e.x1 = a4;
-            e.xd = i as u8;
-            e.x9 = a5;
-            e.x0 = a6;
+        tm.with_camera = x1c;
+        tm.in_name_entry = x20;
+        for (i, e) in tm.roster.iter_mut().enumerate() {
+            e.handicap = a3;
+            e.level = a4;
+            e.seat = i as u8;
+            e.name = a5;
+            e.slot_type = a6;
         }
     }
 
@@ -1326,7 +1328,7 @@ impl Running<'_> {
     #[doc(alias = "fn_801902F0")]
     pub fn tou_canvas(&mut self, camera: Option<GObjId>) {
         self.sis_reset();
-        let camera = if self.game.tou.tm.x1c == 0 {
+        let camera = if self.game.tou.tm.with_camera == 0 {
             None
         } else {
             camera
@@ -1428,7 +1430,7 @@ impl Running<'_> {
         };
         let r = &mut d.rules;
         r.is_teams = 0;
-        r.stkind = self.game.tou.tm.x28 as u16;
+        r.stkind = self.game.tou.tm.stage as u16;
         for (i, &kind) in super::super::vs_mode::ITEM_SWITCH_KINDS.iter().enumerate() {
             if kind != super::super::vs_mode::NO_ITEM_KIND {
                 if prefs_mask & (1 << i) != 0 {
@@ -1474,12 +1476,12 @@ impl Running<'_> {
         super::super::vs_mode::all_player_defaults(&mut d.players);
         for i in 0..4 {
             let tm = self.game.tou.tm.clone();
-            if i < usize::from(tm.x30) {
-                let m = tm.x4b8[i];
+            if i < usize::from(tm.players_per_match) {
+                let m = tm.match_players[i];
                 let p = &mut d.players[i];
                 p.model_scale = 1.0;
-                p.nametag = m.x6.min(0x78) as u8;
-                if m.x2 != 0 {
+                p.nametag = m.name.min(0x78) as u8;
+                if m.random != 0 {
                     let icon = self.tou_random_icon();
                     let ckind = ckind_of(icon) as u8;
                     d.players[i].ckind = ckind as i8;
@@ -1487,23 +1489,23 @@ impl Running<'_> {
                     d.players[i].color = self.game.objs.rng.below(i32::from(n)) as u8;
                 } else {
                     let p = &mut d.players[i];
-                    p.ckind = ckind_of(i32::from(m.x1)) as i8;
-                    p.color = m.x3;
+                    p.ckind = ckind_of(i32::from(m.icon)) as i8;
+                    p.color = m.color;
                 }
                 let tag = d.players[i].nametag;
                 let rumble = self.rumble_enabled_for(i, tag);
                 let p = &mut d.players[i];
-                p.slot_type = m.x0;
+                p.slot_type = m.slot_type;
                 p.stocks = rules.stock_count as i8;
                 p.sub_color = 0;
                 p.team = 0xFF;
-                p.rumble_enabled = rumble && m.x0 != 1;
+                p.rumble_enabled = rumble && m.slot_type != 1;
                 p.cpu_kind = 4;
-                p.cpu_level = m.x4;
+                p.cpu_level = m.level;
                 p.damage1 = 0;
                 if self.game.game_data.x1850.handicap != 0 {
-                    let (a, df) =
-                        super::super::vs_mode::HANDICAP_RATIOS[usize::from(m.x5.wrapping_sub(1))];
+                    let (a, df) = super::super::vs_mode::HANDICAP_RATIOS
+                        [usize::from(m.handicap.wrapping_sub(1))];
                     let p = &mut d.players[i];
                     p.attack_ratio = a;
                     p.defense_ratio = df;
@@ -1533,7 +1535,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8019EF08")]
     #[doc(alias = "fn_8019EE80")]
     pub fn tou_preload_match(&mut self, stkind: i32, players: &[(u8, i32, u8)], alt: bool) {
-        let n = usize::from(self.game.tou.tm.x30);
+        let n = usize::from(self.game.tou.tm.players_per_match);
         let chosen = self.tou_stage_chosen();
         for (i, &(slot_type, ckind, color)) in players.iter().enumerate().take(4) {
             let take = if alt {
@@ -1558,14 +1560,14 @@ impl Running<'_> {
     #[doc(alias = "fn_80196594")]
     pub fn tou_stage_chosen(&self) -> bool {
         let tm = &self.game.tou.tm;
-        (tm.stage_selection_type() == 2 && tm.x32 == 0) || tm.stage_selection_type() == 3
+        (tm.stage_selection_type() == 2 && tm.stage_picked == 0) || tm.stage_selection_type() == 3
     }
 
     /// `fn_80196564`: whether this match's stage is random (once, or every match).
     #[doc(alias = "fn_80196564")]
     pub fn tou_stage_random(&self) -> bool {
         let tm = &self.game.tou.tm;
-        (tm.stage_selection_type() == 0 && tm.x32 == 0) || tm.stage_selection_type() == 1
+        (tm.stage_selection_type() == 0 && tm.stage_picked == 0) || tm.stage_selection_type() == 1
     }
 
     /// Whether the tournament is the mode running.
@@ -1588,10 +1590,10 @@ fn rect(q: &mut Vec<Quad>, x: f64, y: f64, w: f64, h: f64, color: [u8; 4]) {
 /// `fn_8018C8D4`: the lines of a box of kind 0 (the first round's), by its seats' layout.
 #[doc(alias = "fn_8018C8D4")]
 fn lines_0(b: &super::BracketEntry, x: i32, y: i32, w: i32, h: i32, q: &mut Vec<Quad>) {
-    let t = reg(b.x1c);
-    let c = b.x20;
+    let t = reg(b.thickness);
+    let c = b.color;
     let lit = c[1] == 0;
-    match b.x4 {
+    match b.seats {
         0 => {
             rect(q, f(x), f(y), t, f(h), YELLOW);
             if lit {
@@ -1601,7 +1603,7 @@ fn lines_0(b: &super::BracketEntry, x: i32, y: i32, w: i32, h: i32, q: &mut Vec<
         1 => {
             rect(q, f(x), f(y), t, f(h), YELLOW);
             if lit {
-                if b.slots[0].x4c == 0 {
+                if b.slots[0].rank == 0 {
                     let half_h = h / 2;
                     rect(q, f(x), f(y.wrapping_add(half_h)), t, f(half_h), c);
                     return;
@@ -1628,7 +1630,7 @@ fn lines_0(b: &super::BracketEntry, x: i32, y: i32, w: i32, h: i32, q: &mut Vec<
             let right = x.wrapping_add(w);
             rect(q, f(right), f(mid_y), t, f(half_h), YELLOW);
             if lit {
-                if b.slots[0].x4c == 0 {
+                if b.slots[0].rank == 0 {
                     rect(q, f(x.wrapping_add(0x2B)), f(mid_y), t, f(half_h), c);
                     rect(
                         q,
@@ -1640,7 +1642,7 @@ fn lines_0(b: &super::BracketEntry, x: i32, y: i32, w: i32, h: i32, q: &mut Vec<
                     );
                     return;
                 }
-                if b.slots[1].x4c == 0 {
+                if b.slots[1].rank == 0 {
                     rect(q, f(right), f(mid_y), t, f(half_h), c);
                     rect(q, f(center), f(mid_y), fp::fadds(f(half), t), neg, c);
                     return;
@@ -1678,7 +1680,7 @@ fn lines_0(b: &super::BracketEntry, x: i32, y: i32, w: i32, h: i32, q: &mut Vec<
             if lit {
                 let two_third_y = y.wrapping_add(h.wrapping_mul(2) / 3);
                 let sixth = (h / 6).wrapping_sub(1);
-                if b.slots[0].x4c == 0 {
+                if b.slots[0].rank == 0 {
                     rect(q, f(x), f(two_third_y), t, f(third_h), c);
                     rect(q, f(x), f(two_third_y), f(half), neg, c);
                     rect(
@@ -1691,7 +1693,7 @@ fn lines_0(b: &super::BracketEntry, x: i32, y: i32, w: i32, h: i32, q: &mut Vec<
                     );
                     return;
                 }
-                if b.slots[1].x4c == 0 {
+                if b.slots[1].rank == 0 {
                     rect(q, f(right), f(two_third_y), t, f(third_h), c);
                     rect(q, f(x.wrapping_add(half)), f(two_third_y), f(half), neg, c);
                     rect(
@@ -1704,7 +1706,7 @@ fn lines_0(b: &super::BracketEntry, x: i32, y: i32, w: i32, h: i32, q: &mut Vec<
                     );
                     return;
                 }
-                if b.slots[2].x4c == 0 {
+                if b.slots[2].rank == 0 {
                     rect(q, f(x), f(y), t, f(third_h), c);
                     rect(q, f(x), f(y.wrapping_add(third_h)), f(half), neg, c);
                     rect(
@@ -1754,8 +1756,8 @@ fn lines_1(
     y5: i32,
     q: &mut Vec<Quad>,
 ) {
-    let t = reg(b.x1c);
-    let c = b.x20;
+    let t = reg(b.thickness);
+    let c = b.color;
     let lit = c[1] == 0;
     rect(q, f(x), f(y), t, f(h), YELLOW);
     let right = x.wrapping_add(w);
@@ -1763,7 +1765,7 @@ fn lines_1(
     let neg = fp::fneg(t);
     rect(q, f(x), f(y5), fp::fadds(f(w), t), neg, YELLOW);
     if lit {
-        if b.slots[0].x4c == 0 {
+        if b.slots[0].rank == 0 {
             rect(q, f(x), f(y), t, f(h), c);
             rect(q, f(x), f(y5), fp::fadds(f(w / 2), t), neg, c);
         } else {
@@ -1782,40 +1784,40 @@ fn lines_1(
     let bottom = y.wrapping_add(h);
     match entrants {
         1 => {
-            if b.slots[1].x32 != 0 {
+            if b.slots[1].bye_line != 0 {
                 rect(q, f(right), f(bottom), t, -70.0, YELLOW);
-                if lit && b.slots[0].x4c != 0 {
+                if lit && b.slots[0].rank != 0 {
                     rect(q, f(right), f(bottom), t, -70.0, c);
                 }
             }
         }
         3 => {
-            if b.slots[0].x32 != 0 {
+            if b.slots[0].bye_line != 0 {
                 rect(q, f(x), f(bottom), t, -60.0, YELLOW);
-                if lit && b.slots[0].x4c == 0 {
+                if lit && b.slots[0].rank == 0 {
                     rect(q, f(x), f(bottom), t, -60.0, c);
                 }
-            } else if b.slots[1].x32 != 0 {
+            } else if b.slots[1].bye_line != 0 {
                 rect(q, f(right), f(bottom), t, -60.0, YELLOW);
-                if lit && b.slots[0].x4c != 0 {
+                if lit && b.slots[0].rank != 0 {
                     rect(q, f(right), f(bottom), t, -60.0, c);
                 }
             }
         }
-        5 if b.slots[1].x32 != 0 => {
+        5 if b.slots[1].bye_line != 0 => {
             rect(q, f(right), f(bottom), t, -40.0, YELLOW);
-            if lit && b.slots[0].x4c != 0 {
+            if lit && b.slots[0].rank != 0 {
                 rect(q, f(right), f(bottom), t, -40.0, c);
             }
         }
-        7 if b.slots[1].x32 != 0 => {
-            let at = if b.x2 == 0 {
+        7 if b.slots[1].bye_line != 0 => {
+            let at = if b.opens == 0 {
                 bottom
             } else {
                 y.wrapping_add(0x1E)
             };
             rect(q, f(right), f(at), t, -30.0, YELLOW);
-            if lit && b.slots[0].x4c != 0 {
+            if lit && b.slots[0].rank != 0 {
                 rect(q, f(right), f(at), t, -30.0, c);
             }
         }
@@ -1826,8 +1828,8 @@ fn lines_1(
 /// `fn_8018DC18`: the lines of a box of kind 2 (three players).
 #[doc(alias = "fn_8018DC18")]
 fn lines_2(b: &super::BracketEntry, x: i32, y: i32, w: i32, h: i32, y5: i32, q: &mut Vec<Quad>) {
-    let t = reg(b.x1c);
-    let c = b.x20;
+    let t = reg(b.thickness);
+    let c = b.color;
     rect(q, f(x), f(y), t, f(h), YELLOW);
     let right = x.wrapping_add(w);
     rect(q, f(right), f(y), t, f(h), YELLOW);
@@ -1837,12 +1839,12 @@ fn lines_2(b: &super::BracketEntry, x: i32, y: i32, w: i32, h: i32, y5: i32, q: 
     let neg = fp::fneg(t);
     rect(q, f(x), f(y5), fp::fadds(f(w), t), neg, YELLOW);
     if c[1] == 0 {
-        if b.slots[0].x4c == 0 {
+        if b.slots[0].rank == 0 {
             rect(q, f(x), f(y), t, f(h), c);
             rect(q, f(x), f(y5), fp::fadds(f(half), t), neg, c);
             return;
         }
-        if b.slots[1].x4c == 0 {
+        if b.slots[1].rank == 0 {
             rect(q, f(center), f(y), t, f(h), c);
             return;
         }
@@ -1854,8 +1856,8 @@ fn lines_2(b: &super::BracketEntry, x: i32, y: i32, w: i32, h: i32, y5: i32, q: 
 /// `fn_8018DF68`: the lines of a box of kind 3 (four players).
 #[doc(alias = "fn_8018DF68")]
 fn lines_3(b: &super::BracketEntry, x: i32, y: i32, w: i32, h: i32, y5: i32, q: &mut Vec<Quad>) {
-    let t = reg(b.x1c);
-    let c = b.x20;
+    let t = reg(b.thickness);
+    let c = b.color;
     rect(q, f(x), f(y), t, f(h), YELLOW);
     let right = x.wrapping_add(w);
     rect(q, f(right), f(y), t, f(h), YELLOW);
@@ -1866,12 +1868,12 @@ fn lines_3(b: &super::BracketEntry, x: i32, y: i32, w: i32, h: i32, y5: i32, q: 
     let neg = fp::fneg(t);
     rect(q, f(x), f(y5), fp::fadds(f(w), t), neg, YELLOW);
     if c[1] == 0 {
-        if b.slots[0].x4c == 0 {
+        if b.slots[0].rank == 0 {
             rect(q, f(x), f(y), t, f(h), c);
             rect(q, f(x), f(y5), fp::fadds(f(w / 2), t), neg, c);
             return;
         }
-        if b.slots[1].x4c == 0 {
+        if b.slots[1].rank == 0 {
             rect(q, f(x.wrapping_add(third)), f(y), t, f(h), c);
             rect(
                 q,
@@ -1883,7 +1885,7 @@ fn lines_3(b: &super::BracketEntry, x: i32, y: i32, w: i32, h: i32, y5: i32, q: 
             );
             return;
         }
-        if b.slots[2].x4c == 0 {
+        if b.slots[2].rank == 0 {
             rect(q, f(right_third), f(y), t, f(h), c);
             let half = w / 2;
             rect(

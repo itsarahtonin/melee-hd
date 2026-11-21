@@ -2,7 +2,7 @@
 //! cloud under the side platform (map 2), and the background (map 1).
 //!
 //! Every two seconds with no Shy Guy left, the Shy Guys' controller sends a flight of them
-//! (`It_Kind_Heiho` items, `it::kinds::heiho`) across the stage from one of six heights on
+//! (`It_Kind_Heiho` items, `it::kinds::shy_guy`) across the stage from one of six heights on
 //! either side, a different one each time. Randall puffs a cloud effect every 10 to 29 ticks.
 
 use gekko_fp as fp;
@@ -179,7 +179,7 @@ pub fn shyguys_tick(r: &mut Running, gobj: GObjId) {
     let mut i = 0;
     while i < i32::from(r.game.grounds[g.0].u.story_shyguys().count) {
         let delay = fp::fctiwz(fp::fmuls(25.0, fp::frsp(f64::from(i))));
-        crate::game::it::kinds::heiho::spawn(r, i, pos, speed, delay);
+        crate::game::it::kinds::shy_guy::spawn(r, i, pos, speed, delay);
         let f = reg(r.game.objs.rng.draw_f32());
         let amp = fp::fmuls(2.0, fp::fsubs(f, 0.5));
         pos.y = mem(fp::fmadds(3.0, amp, reg(vpos)));

@@ -49,15 +49,18 @@ pub mod addr {
     pub const INIT_ON_DEATH: u32 = 0x8014_A250;
     pub const INIT_ON_LOAD: u32 = 0x8014_A37C;
     pub const INIT_ON_DAMAGE: u32 = 0x8014_A4CC;
-    pub const INIT_8014A538: u32 = 0x8014_A538;
+    #[doc(alias("INIT_8014A538"))]
+    pub const DROP_ITEMS_IN_AIR: u32 = 0x8014_A538;
     pub const INIT_ON_ITEM_PICKUP: u32 = 0x8014_A5B8;
     pub const INIT_ON_ITEM_INVISIBLE: u32 = 0x8014_A698;
     pub const INIT_ON_ITEM_VISIBLE: u32 = 0x8014_A6E0;
     pub const INIT_ON_ITEM_DROP: u32 = 0x8014_A728;
     pub const INIT_UNK_MOTION_STATES4: u32 = 0x8014_A77C;
     pub const INIT_LOAD_SPECIAL_ATTRS: u32 = 0x8014_A7B4;
-    pub const INIT_8014A7F4: u32 = 0x8014_A7F4;
-    pub const INIT_8014A814: u32 = 0x8014_A814;
+    #[doc(alias("INIT_8014A7F4"))]
+    pub const COLOR: u32 = 0x8014_A7F4;
+    #[doc(alias("INIT_8014A814"))]
+    pub const OUTLINE_COLOR: u32 = 0x8014_A814;
     pub const INIT_ON_ABSORB: u32 = 0x8014_A828;
     pub const ITEM_TORCH_SETUP: u32 = 0x8014_A848;
     pub const ATTACK_S4_ITEM_TORCH_SET_FLAG: u32 = 0x8014_A904;

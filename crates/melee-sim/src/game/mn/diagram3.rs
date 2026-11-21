@@ -463,7 +463,7 @@ impl Running<'_> {
     #[doc(alias = "mnDiagram3_Think")]
     pub fn d3_think(&mut self, gobj: GObjId) {
         let f = self.game.menu.flow;
-        if f.cur_menu != SCREEN || f.x10 != 2 {
+        if f.cur_menu != SCREEN || f.names_screen != 2 {
             if f.cur_menu == SCREEN {
                 gobj::free(self, gobj);
             } else {
@@ -525,7 +525,7 @@ impl Running<'_> {
     #[doc(alias = "mnDiagram3_Init")]
     pub fn d3_open(&mut self) {
         let f = &mut self.game.menu.flow;
-        f.x10 = 2;
+        f.names_screen = 2;
         f.hovered_selection = 0;
         let gobj = self.d3_create();
         let m = self.game.data_menus.diagram.cursor_b3;

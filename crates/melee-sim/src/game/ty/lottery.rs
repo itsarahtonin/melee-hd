@@ -71,11 +71,16 @@ pub struct UserBlock {
     pub kind: u8,
     /// The sign's `x4` and `x8` written (`Toy_80306B18`), or the drop's bet digits (`x28`).
     pub armed: bool,
-    pub x4: i32,
-    pub x8: i32,
-    pub x10: [i32; 3],
-    pub x28: [i32; 3],
-    pub x44: f32,
+    #[doc(alias("x4"))]
+    pub show: i32,
+    #[doc(alias("x8"))]
+    pub frames: i32,
+    #[doc(alias("x10"))]
+    pub total_digits: [i32; 3],
+    #[doc(alias("x28"))]
+    pub bet_digits: [i32; 3],
+    #[doc(alias("x44"))]
+    pub fall_speed: f32,
     /// `Toy.translate` (+0x40) and `offset.y` (+0x50).
     pub step: Vec3,
     pub fall: f32,
@@ -109,8 +114,10 @@ pub struct Lottery {
     pub jobjs: [Option<JObjId>; 16],
     pub archive: Option<Loaded>,
     pub left: i16,
-    pub x56: i16,
-    pub x58: i16,
+    #[doc(alias("x56"))]
+    pub drop_frames: i16,
+    #[doc(alias("x58"))]
+    pub state_frames: i16,
     pub state: i8,
     pub drawn_bet: i8,
     pub bet: i8,
@@ -279,12 +286,12 @@ impl Running<'_> {
         match self.lot_user(gobj) {
             Some(a) => {
                 let ud = *self.lot_ud(a);
-                if ud.x8 % 30 == 0 {
+                if ud.frames % 30 == 0 {
                     jobj::req_anim_all(&mut self.game.objs, Some(j), 0.0);
                 }
                 self.lot_anim_all(Some(j));
-                let left = ud.x8;
-                self.lot_ud(a).x8 = left - 1;
+                let left = ud.frames;
+                self.lot_ud(a).frames = left - 1;
                 if left != 0 {
                     let u = self.lot_ud(a);
                     u.step.y = mem(fp::fadds(reg(u.step.y), reg(u.fall)));
@@ -307,7 +314,7 @@ impl Running<'_> {
                     });
                 } else {
                     self.sfx_play(146, 127, 64);
-                    self.lot_ud(a).x8 = 0;
+                    self.lot_ud(a).frames = 0;
                     gobj::free(self, gobj);
                 }
             }
@@ -339,8 +346,8 @@ impl Running<'_> {
                 u.step.z = mem(fp::fmuls(reg(-0.72), fp::fdivs(dz, reg(30.0))));
                 u.step.y = 0.4;
                 u.fall = -0.026_666_667;
-                u.x8 = frames;
-                self.lot().x56 = frames as i16;
+                u.frames = frames;
+                self.lot().drop_frames = frames as i16;
                 let jo = &mut self.game.objs.jobjs;
                 jobj::set_srt(jo, j, |o| o.translate.x = x);
                 jobj::set_srt(jo, j, |o| o.translate.y = y);
@@ -359,15 +366,15 @@ impl Running<'_> {
         let j0 = self.lot_j(0);
         match self.lot_user(gobj) {
             Some(a) => {
-                let left = self.lot_ud(a).x8;
-                self.lot_ud(a).x8 = left - 1;
+                let left = self.lot_ud(a).frames;
+                self.lot_ud(a).frames = left - 1;
                 if left != 0 {
                     self.lot_anim_all(j0);
                     if (left - 1) % 30 == 0 {
                         jobj::req_anim_all(&mut self.game.objs, j0, 0.0);
                     }
                 } else {
-                    self.lot_ud(a).x8 = 0;
+                    self.lot_ud(a).frames = 0;
                     self.lot_user_remove(gobj);
                     let p = self.game.world.current_proc().expect("the lever's process");
                     self.game.world.remove_proc(p);
@@ -377,7 +384,7 @@ impl Running<'_> {
                 let a = self.lot_user_new(gobj, 1);
                 jobj::req_anim_all(&mut self.game.objs, j0, 0.0);
                 let bet = i32::from(self.game.toys.lottery.bet);
-                self.lot_ud(a).x8 = 0x1E + (bet * 2 / 30) * 0x1E;
+                self.lot_ud(a).frames = 0x1E + (bet * 2 / 30) * 0x1E;
             }
         }
     }
@@ -493,10 +500,10 @@ impl Running<'_> {
         };
         match l.state {
             2 => {
-                self.lot().x58 -= 1;
-                if self.game.toys.lottery.x58 == 0 {
+                self.lot().state_frames -= 1;
+                if self.game.toys.lottery.state_frames == 0 {
                     self.lot().drawing = 1;
-                    self.lot().x58 = 0x14;
+                    self.lot().state_frames = 0x14;
                     jobj::req_anim_all(&mut self.game.objs, j, 0.0);
                     self.lot().state = 3;
                     let port = self.game.menu.confirm_port as u8;
@@ -506,38 +513,38 @@ impl Running<'_> {
             3 => {
                 spin(self);
                 self.lot_anim_all(j);
-                self.lot().x58 -= 1;
-                if self.game.toys.lottery.x58 == 0 {
+                self.lot().state_frames -= 1;
+                if self.game.toys.lottery.state_frames == 0 {
                     self.sfx_play(0xA8, 0x7F, 0x40);
-                    self.lot().x58 = 0x14;
+                    self.lot().state_frames = 0x14;
                     self.lot().state = 4;
                 }
             }
             4 => {
                 spin(self);
                 self.lot_anim_all(j);
-                if self.game.toys.lottery.x58 < 0xE {
+                if self.game.toys.lottery.state_frames < 0xE {
                     jobj::req_anim_all(&mut self.game.objs, j, 30.0);
                 }
-                self.lot().x58 -= 1;
-                if self.game.toys.lottery.x58 == 0 {
-                    self.lot().x58 = 0xE;
+                self.lot().state_frames -= 1;
+                if self.game.toys.lottery.state_frames == 0 {
+                    self.lot().state_frames = 0xE;
                     self.lot().state = 5;
                 }
             }
             5 => {
-                self.lot().x58 -= 1;
-                if self.game.toys.lottery.x58 == 0 {
+                self.lot().state_frames -= 1;
+                if self.game.toys.lottery.state_frames == 0 {
                     let sc = i32::from(self.game.toys.lottery.drawn_bet);
                     if sc >= 3 {
                         let f = fp::fmuls(fp::frsp(f64::from(sc)), reg(1.62));
-                        self.lot().x58 = (fp::fctiwz(f) as i16).wrapping_add(0xE);
+                        self.lot().state_frames = (fp::fctiwz(f) as i16).wrapping_add(0xE);
                         jobj::req_anim_all(&mut self.game.objs, j, 50.0);
                         let jj = self.lot_j(0xE);
                         jobj::req_anim_all(&mut self.game.objs, jj, 0.0);
                         self.sfx_play_track(0xA9, 0x7F, 0x40, 0x8A);
                     } else {
-                        self.lot().x58 = 1;
+                        self.lot().state_frames = 1;
                     }
                     self.lot().state = 6;
                 }
@@ -546,16 +553,16 @@ impl Running<'_> {
                 if self.game.toys.lottery.drawn_bet >= 3 {
                     spin(self);
                     self.lot_anim_all(j);
-                    if self.game.toys.lottery.x58 % 40 == 0 {
+                    if self.game.toys.lottery.state_frames % 40 == 0 {
                         jobj::req_anim_all(&mut self.game.objs, j, 50.0);
                         self.sfx_play_track(0xA9, 0x7F, 0x40, 0x8A);
                     }
-                    if self.game.toys.lottery.x58 < 0xE {
+                    if self.game.toys.lottery.state_frames < 0xE {
                         jobj::req_anim_all(&mut self.game.objs, j, 50.0);
                     }
                 }
-                self.lot().x58 -= 1;
-                if self.game.toys.lottery.x58 == 0 {
+                self.lot().state_frames -= 1;
+                if self.game.toys.lottery.state_frames == 0 {
                     if self.game.toys.lottery.drawing != 0 {
                         let left = i32::from(self.game.toys.lottery.left);
                         let total = fp::frsp(f64::from(left + self.lot_held()));
@@ -578,7 +585,7 @@ impl Running<'_> {
                         let rem = self.lot_remaining();
                         self.lot().left = rem as i16;
                         self.lot().drawing = 0;
-                        self.lot().x58 = 0x78;
+                        self.lot().state_frames = 0x78;
                         self.lot().state = 8;
                         return;
                     }
@@ -586,8 +593,8 @@ impl Running<'_> {
                 }
             }
             8 => {
-                self.lot().x58 -= 1;
-                if self.game.toys.lottery.x58 == 0 {
+                self.lot().state_frames -= 1;
+                if self.game.toys.lottery.state_frames == 0 {
                     if let Some(a) = self.game.toys.lottery.entry_archive.take() {
                         self.toy_free(a);
                     }
@@ -614,8 +621,8 @@ impl Running<'_> {
                 }
                 self.lot_chance();
                 let l = self.lot();
-                l.x58 = 0;
-                l.x56 = 0;
+                l.state_frames = 0;
+                l.drop_frames = 0;
                 let p = self.game.world.current_proc().expect("the draw's process");
                 self.game.world.remove_proc(p);
                 self.lot().state = 0;
@@ -660,7 +667,7 @@ impl Running<'_> {
         let Some(a) = self.lot_user(gobj) else {
             let a = self.lot_user_new(gobj, 2);
             let total = self.lot_coins() as i32;
-            Self::lot_store_digits(&mut self.lot_ud(a).x10, total);
+            Self::lot_store_digits(&mut self.lot_ud(a).total_digits, total);
             self.lot_digits(total, 3, 3, 1);
             for k in 3..6 {
                 let child = self.lot_j(k).and_then(|j| self.game.objs.jobjs[j].child);
@@ -668,49 +675,49 @@ impl Running<'_> {
                 crate::hsd::aobj::set_rate(&mut self.game.objs.aobjs, aobj, 2.0);
             }
             let bet = i32::from(self.game.toys.lottery.bet);
-            self.lot_ud(a).x8 = bet * 2;
+            self.lot_ud(a).frames = bet * 2;
             return;
         };
         let ud = *self.lot_ud(a);
-        if ud.x8 == 0 {
-            self.lot_ud(a).x8 = 0;
+        if ud.frames == 0 {
+            self.lot_ud(a).frames = 0;
             self.lot().bet = 0;
             self.lot_digits(self.lot_coins() as i32, 3, 3, 1);
             self.lot_digits(0, 6, 2, 0);
             self.lot_arrow(0);
             self.lot_user_remove(gobj);
             let l = self.lot();
-            l.x58 = l.x56 + 0xE;
+            l.state_frames = l.drop_frames + 0xE;
             l.state = 2;
             let p = self.game.world.current_proc().expect("the drop's process");
             self.game.world.remove_proc(p);
             return;
         }
-        if ud.x10[0] == 0 && ud.x10[1] == 0 && ud.x10[2] != 0 {
+        if ud.total_digits[0] == 0 && ud.total_digits[1] == 0 && ud.total_digits[2] != 0 {
             self.lot_anim_all(self.lot_j(5));
         }
-        if ud.x10[0] == 0 {
-            if ud.x10[1] == 0 {
+        if ud.total_digits[0] == 0 {
+            if ud.total_digits[1] == 0 {
                 let jj = self.lot_j(4);
                 jobj::req_anim_all(&mut self.game.objs, jj, 0.0);
             }
             self.lot_anim_all(self.lot_j(4));
         }
-        if ud.x10[0] == 0 {
+        if ud.total_digits[0] == 0 {
             let jj = self.lot_j(3);
             jobj::req_anim_all(&mut self.game.objs, jj, 0.0);
         }
         self.lot_anim_all(self.lot_j(3));
-        self.lot_ud(a).x8 -= 1;
-        if self.lot_ud(a).x8 % 2 == 0 {
+        self.lot_ud(a).frames -= 1;
+        if self.lot_ud(a).frames % 2 == 0 {
             self.lot_coin();
             let coins = self.game.game_data.thing.save_data.x1A48.wrapping_sub(0xA);
             self.game.game_data.set_score(coins);
             self.lot().bet -= 1;
             let total = self.lot_coins() as i32;
-            Self::lot_store_digits(&mut self.lot_ud(a).x10, total);
+            Self::lot_store_digits(&mut self.lot_ud(a).total_digits, total);
             let bet = i32::from(self.game.toys.lottery.bet);
-            Self::lot_store_digits(&mut self.lot_ud(a).x28, bet);
+            Self::lot_store_digits(&mut self.lot_ud(a).bet_digits, bet);
             self.lot_ud(a).armed = true;
             self.lot_digits(total, 3, 3, 1);
             self.lot_digits(bet, 6, 2, 0);
@@ -755,16 +762,16 @@ impl Running<'_> {
         let y = self.game.objs.jobjs[j].translate.y;
         let Some(a) = self.lot_user(gobj) else {
             let a = self.lot_user_new(gobj, 3);
-            self.lot_ud(a).x44 = 0.0;
+            self.lot_ud(a).fall_speed = 0.0;
             return;
         };
-        let v = self.lot_ud(a).x44;
+        let v = self.lot_ud(a).fall_speed;
         if fp::fadds(reg(y), reg(v)) <= reg(-6.2) {
             let t = self.game.toys.anim.trophy;
             if self.trophy_count(t as usize) == 1 {
                 self.toy_new_sound();
             }
-            self.game.toys.table.x0 = 1;
+            self.game.toys.table.screen = 1;
             self.sfx_play(0xA7, 0x7F, 0x40);
             jobj::set_srt(&mut self.game.objs.jobjs, j, |o| o.translate.y = -7.2);
             let port = self.game.menu.confirm_port as u8;
@@ -775,7 +782,7 @@ impl Running<'_> {
             return;
         }
         let v = mem(fp::fsubs(reg(v), reg(0.6)));
-        self.lot_ud(a).x44 = v;
+        self.lot_ud(a).fall_speed = v;
         jobj::set_srt(&mut self.game.objs.jobjs, j, |o| {
             o.translate.y = mem(fp::fadds(reg(o.translate.y), reg(v)));
         });
@@ -785,7 +792,7 @@ impl Running<'_> {
     /// the lottery's 0xAB).
     #[doc(alias = "Toy_80306D14")]
     fn toy_new_sound(&mut self) {
-        match self.game.toys.table.x0 {
+        match self.game.toys.table.screen {
             1 => {
                 self.sfx_play(0xAA, 0x7F, 0x40);
             }
@@ -848,7 +855,7 @@ impl Running<'_> {
         let s = self.toy_string(i32::from(trophy), 2, 0x128);
         self.game.sis.reset_text(self.data, t, s);
         self.toy_mark(self.lot_j(0xC), i32::from(trophy));
-        if self.game.toys.table.x0 == 2 {
+        if self.game.toys.table.screen == 2 {
             if self.game.toys.lottery.text_proc.is_none() {
                 let c = self.game.toys.lottery.camera.expect("the camera");
                 let p = self.game.world.setup_proc(c, CodeRef(PROC_TEXT), 0);
@@ -872,8 +879,8 @@ impl Running<'_> {
         jobj::clear_flags_all(&mut self.game.objs.jobjs, Some(j), jobj::HIDDEN);
         jobj::req_anim_all(&mut self.game.objs, Some(j), frame as f32);
         let u = self.lot_ud(a);
-        u.x8 = frames;
-        u.x4 = show;
+        u.frames = frames;
+        u.show = show;
         u.armed = true;
         self.game
             .world
@@ -885,13 +892,13 @@ impl Running<'_> {
     /// process removed.
     pub fn toy_anim_frames_proc(&mut self, gobj: GObjId, a: u32) {
         let j = self.lot_gobj_jobj(gobj);
-        let left = self.lot_ud(a).x8;
-        self.lot_ud(a).x8 = left - 1;
+        let left = self.lot_ud(a).frames;
+        self.lot_ud(a).frames = left - 1;
         if left != 0 {
             self.lot_anim_all(Some(j));
         } else {
-            self.lot_ud(a).x8 = 0;
-            if self.lot_ud(a).x4 != 0 {
+            self.lot_ud(a).frames = 0;
+            if self.lot_ud(a).show != 0 {
                 jobj::clear_flags_all(&mut self.game.objs.jobjs, Some(j), jobj::HIDDEN);
             }
             let p = self.game.world.current_proc().expect("the model's process");
@@ -1034,7 +1041,7 @@ impl Running<'_> {
             if bet != 0 {
                 let l = self.lot();
                 l.drawn_bet = bet;
-                l.x56 = 0x1E;
+                l.drop_frames = 0x1E;
                 let (panel, chance) = (l.panel.expect("the panel"), l.chance.expect("the chance"));
                 let w = &mut self.game.world;
                 w.setup_proc(panel, CodeRef(PROC_DROP), 0);
@@ -1341,7 +1348,7 @@ impl Running<'_> {
         self.game.toys.stand = None;
         self.toy_scene_prepare();
         self.toy_mark_class(3, false, true);
-        self.game.toys.table.x0 = 1;
+        self.game.toys.table.screen = 1;
         let name = if self.saved_us() {
             "TyMnFigp.usd"
         } else {
@@ -1349,7 +1356,7 @@ impl Running<'_> {
         };
         let a = self.toy_load(name);
         self.lot().archive = Some(a);
-        self.lot().x58 = 0;
+        self.lot().state_frames = 0;
         self.lot_cameras();
         if let Some(list) = self.lot_sym("ScMenFigure_scene_lights") {
             let g = self.game.world.create(2, 3, 0);

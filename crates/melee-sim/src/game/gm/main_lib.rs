@@ -24,8 +24,13 @@ pub struct MainLib {
     pub skip_intro: bool,
     pub resetting: bool,
     pub progressive: bool,
-    pub xc: bool,
-    pub x10: u32,
+    /// `xC`: the movies (the opening, the endings', the how-to, the gallery's) end at once and
+    /// the scene with them; cleared at the start, set by nothing ported.
+    #[doc(alias("xc"))]
+    pub movie_skip: bool,
+    /// `x10`: the clock [`MainLib::take_power_time`] noted last.
+    #[doc(alias("x10"))]
+    pub power_clock: u32,
     /// The video mode the game last set (`HSD_VISetConfigure`): progressive, and with the
     /// deflicker filter (the copy to the XFB's vertical filter). Not memory of the game's:
     /// the presentation draws by it. None until a ported scene sets it (a replay's match:
@@ -37,8 +42,8 @@ impl MainLib {
     /// `gmMainLib_8015FC74`: the seconds since the last call, and the clock noted.
     #[doc(alias = "gmMainLib_8015FC74")]
     pub fn take_power_time(&mut self, now: u32) -> i32 {
-        let prev = self.x10;
-        self.x10 = now;
+        let prev = self.power_clock;
+        self.power_clock = now;
         now.wrapping_sub(prev) as i32
     }
 }
@@ -355,8 +360,8 @@ impl Running<'_> {
         m.skip_intro = false;
         m.resetting = false;
         m.progressive = false;
-        m.xc = false;
-        m.x10 = now;
+        m.movie_skip = false;
+        m.power_clock = now;
     }
 }
 

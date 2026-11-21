@@ -14,7 +14,8 @@ use melee_gx::vertex::{self, NormalCache};
 use melee_gx::xform::{self, Viewport};
 use melee_gx::{Draw, Memory, State};
 use melee_render::gpu::{Mesh, MeshKind};
-use std::cell::{Cell, RefCell};
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 /// What a run of vertices draws.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -164,33 +165,37 @@ pub fn source_at(marks: &[(u32, u32)], offset: usize) -> u32 {
 /// Records each GX draw's transformed vertices as the exact renderer draws it, keyed by the
 /// display pass's draw it came from: as an observer of melee-render's stream (it follows the
 /// stream's offset by its commands), or fed by a host that knows the source.
-pub struct Recorder<'a> {
-    marks: &'a [(u32, u32)],
-    offset: Cell<usize>,
-    normals: RefCell<NormalCache>,
-    inputs: RefCell<Vec<vertex::Input>>,
-    pub draws: RefCell<Vec<DrawGeometry>>,
+pub struct Recorder {
+    /// The stream's marks (`Frames::marks`), as far as the stream has run.
+    marks: Mutex<Vec<(u32, u32)>>,
+    offset: AtomicUsize,
+    normals: Mutex<NormalCache>,
+    inputs: Mutex<Vec<vertex::Input>>,
+    pub draws: Mutex<Vec<DrawGeometry>>,
 }
 
-impl<'a> Recorder<'a> {
-    pub fn new(marks: &'a [(u32, u32)]) -> Self {
+impl Recorder {
+    pub fn new(marks: &[(u32, u32)]) -> Self {
         Recorder {
-            marks,
-            offset: Cell::new(0),
-            normals: RefCell::new([[0.0; 3]; 3]),
-            inputs: RefCell::new(Vec::new()),
-            draws: RefCell::new(Vec::new()),
+            marks: Mutex::new(marks.to_vec()),
+            offset: AtomicUsize::new(0),
+            normals: Mutex::new([[0.0; 3]; 3]),
+            inputs: Mutex::new(Vec::new()),
+            draws: Mutex::new(Vec::new()),
         }
     }
 
     /// The display pass's draw the stream's next command comes from.
     pub fn source(&self) -> u32 {
-        source_at(self.marks, self.offset.get())
+        source_at(
+            &self.marks.lock().unwrap(),
+            self.offset.load(Ordering::Relaxed),
+        )
     }
 
     /// A command of the stream (not of a display list it calls) has run.
     pub fn command(&self, bytes: &[u8]) {
-        self.offset.set(self.offset.get() + bytes.len());
+        self.offset.fetch_add(bytes.len(), Ordering::Relaxed);
     }
 
     /// Records a draw, its vertices fetched, from the display pass's draw `source`.
@@ -199,7 +204,7 @@ impl<'a> Recorder<'a> {
             draw.fetched,
             "the geometry needs the draws' vertices fetched"
         );
-        let mut inputs = self.inputs.borrow_mut();
+        let mut inputs = self.inputs.lock().unwrap();
         inputs.clear();
         let xf_index = [state.xf[xform::MATINDEX_A], state.xf[xform::MATINDEX_A + 1]];
         vertex::decode(
@@ -208,7 +213,7 @@ impl<'a> Recorder<'a> {
             usize::from(draw.vat),
             draw.data,
             usize::from(draw.count),
-            &mut self.normals.borrow_mut(),
+            &mut self.normals.lock().unwrap(),
             &mut inputs,
         );
         let setup = xform::Setup::new(&state.xf, &state.bp);
@@ -224,7 +229,7 @@ impl<'a> Recorder<'a> {
         expand(draw.primitive, clips.len(), |e| {
             clip.extend(e.iter().map(|&i| clips[i]));
         });
-        self.draws.borrow_mut().push(DrawGeometry {
+        self.draws.lock().unwrap().push(DrawGeometry {
             source,
             kind: kind_of(draw.primitive),
             viewport: Viewport::of(&state.xf),
@@ -238,7 +243,7 @@ impl<'a> Recorder<'a> {
     /// the CPU (`Mesh::transform`, as F2's renderer does), its elements in the list's order and
     /// GX's.
     pub fn record_mesh(&self, source: u32, state: &State, mesh: &Mesh, gpu: Option<&[[f32; 4]]>) {
-        let mut normals = self.normals.borrow_mut();
+        let mut normals = self.normals.lock().unwrap();
         let clips = match gpu {
             Some(c) => c.to_vec(),
             None => {
@@ -248,7 +253,7 @@ impl<'a> Recorder<'a> {
             }
         };
         mesh.leave_normals(&mut normals);
-        let mut draws = self.draws.borrow_mut();
+        let mut draws = self.draws.lock().unwrap();
         for (kind, run) in &mesh.runs {
             let els = &mesh.elements[run.start as usize..run.end as usize];
             draws.push(DrawGeometry {
@@ -266,15 +271,21 @@ impl<'a> Recorder<'a> {
     }
 
     pub fn into_geometry(self) -> Geometry {
-        let groups = self.marks.iter().map(|&(_, s)| s).collect();
+        let groups = self.marks.lock().unwrap().iter().map(|&(_, s)| s).collect();
         Geometry {
-            draws: self.draws.into_inner(),
+            draws: self.draws.into_inner().unwrap(),
             groups,
         }
     }
 }
 
-impl melee_render::gpu::Observer for Recorder<'_> {
+impl melee_render::gpu::StreamObserver for Recorder {
+    fn marks(&self, marks: &[(u32, u32)]) {
+        marks.clone_into(&mut self.marks.lock().unwrap());
+    }
+}
+
+impl melee_render::gpu::Observer for Recorder {
     fn draw(&self, state: &State, draw: &Draw<'_>, _mem: &dyn Memory) {
         self.record(self.source(), state, draw);
     }

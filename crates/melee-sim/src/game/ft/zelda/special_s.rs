@@ -155,8 +155,8 @@ impl Running<'_> {
         self.set_zelda_din_fire(gobj, fire);
         if fire.is_some() {
             let fp = &mut self.game.fighters[f.0];
-            fp.death2_cb = Some(CodeRef(addr::INIT_801393AC));
-            fp.take_dmg_cb = Some(CodeRef(addr::INIT_801393AC));
+            fp.death2_cb = Some(CodeRef(addr::SPECIAL_S_ON_DAMAGE));
+            fp.take_dmg_cb = Some(CodeRef(addr::SPECIAL_S_ON_DAMAGE));
         }
         let j = self.bone_joint(gobj, PART_GFX);
         spawn(self, GFX_CAST, Some(gobj), &[Arg::JObj(j)]);
@@ -363,7 +363,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_S_ENTER => g.zelda_special_s_enter(gobj),
         addr::SPECIAL_AIR_S_ENTER => g.zelda_special_air_s_enter(gobj),
-        addr::INIT_801393AC => g.zelda_damage_cb(gobj),
+        addr::SPECIAL_S_ON_DAMAGE => g.zelda_damage_cb(gobj),
         0x8013_B5C4 => g.zelda_forget_din_fire(gobj),
         0x8013_B5EC => g.zelda_let_go_din_fire(gobj),
         0x8013_B780 => g.zelda_special_s_start_anim_ground(gobj),

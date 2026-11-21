@@ -102,7 +102,7 @@ impl Running<'_> {
     /// The shield's joint, `parts[ftData::x8->x11]`.
     pub(super) fn shield_joint(&self, gobj: GObjId) -> Option<JObjId> {
         let f = self.game.fighter_id(gobj);
-        let x8 = self.ft_data_x8(&self.game.fighters[f.0]);
+        let x8 = self.ft_model_desc(&self.game.fighters[f.0]);
         let part = self.data.u8(x8.at(0x11));
         self.bones(f)[part as usize].joint
     }
@@ -112,7 +112,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80092158")]
     fn shield_effect(&mut self, gobj: GObjId, id: i32) {
         let slot = i32::from(self.game.fighter(gobj).player_idx);
-        let off = self.game.player_unk45(slot) << 2;
+        let off = self.game.player_effect_color(slot) << 2;
         let colors = self.common_ptr(0x48);
         let c = |i: u32| u32::from(self.data.u8(colors.at(off + i)));
         let rgb = (c(0) << 16) | (c(1) << 8) | c(2);
@@ -717,7 +717,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_8009370C")]
     pub fn powershield_reflect_shape(&mut self, gobj: GObjId, on_reflect: CodeRef) {
         let f = self.game.fighter_id(gobj);
-        let x8 = self.ft_data_x8(&self.game.fighters[f.0]);
+        let x8 = self.ft_model_desc(&self.game.fighters[f.0]);
         let c = self.common();
         let d = ReflectDesc {
             bone: i32::from(self.data.u8(x8.at(0x11))),

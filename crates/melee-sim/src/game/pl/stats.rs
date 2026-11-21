@@ -181,8 +181,8 @@ impl Game {
         self.reset_stale_moves(slot);
         self.reset_action_stats(slot);
         self.reset_frame_counters(slot);
-        self.reset_x8c0(slot);
-        self.reset_x8d8(slot);
+        self.reset_ko_ring(slot);
+        self.reset_bob_omb_ring(slot);
         let p = self.player_mut(slot);
         let t = &mut p.stale_moves;
         t.x674 = [0; 39];
@@ -280,7 +280,7 @@ impl Game {
 
     #[doc(alias = "pl_80040DDC")]
     pub fn reset_frame_counters(&mut self, slot: i32) {
-        let t = self.player_unk6a8(slot);
+        let t = self.player_combos(slot);
         t.x0 = 0;
         t.x4 = 0.0;
         t.x8 = 0;
@@ -295,9 +295,10 @@ impl Game {
         }
     }
 
-    /// `pl_80041524`.
+    /// Clears the ring of the attack instances that KOed (`x8C0`), `pl_80041524`.
+    #[doc(alias("reset_x8c0"))]
     #[doc(alias = "pl_80041524")]
-    pub fn reset_x8c0(&mut self, slot: i32) {
+    pub fn reset_ko_ring(&mut self, slot: i32) {
         let t = &mut self.player_stale_moves(slot).x8C0;
         t.x0 = 0;
         for e in &mut t.x4 {
@@ -307,9 +308,10 @@ impl Game {
         }
     }
 
-    /// `pl_800418F4`.
+    /// Clears the ring of the Bob-ombs thrown (`x8D8`), `pl_800418F4`.
+    #[doc(alias("reset_x8d8"))]
     #[doc(alias = "pl_800418F4")]
-    pub fn reset_x8d8(&mut self, slot: i32) {
+    pub fn reset_bob_omb_ring(&mut self, slot: i32) {
         let t = &mut self.player_stale_moves(slot).x8D8;
         t.x0 = 0;
         for e in &mut t.x4 {

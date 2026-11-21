@@ -35,7 +35,7 @@ impl Comparer<'_> {
         self.check(
             "lbl_804735A8",
             "x38 to x3E",
-            [e.tick, e.map_frame, e.map_frame2, e.x3e],
+            [e.tick, e.map_frame, e.map_frame2, e.unused],
             [0x38, 0x3A, 0x3C, 0x3E].map(|o| self.u16(at + o)),
         );
         let at = sym("lbl_8047368C");
@@ -105,7 +105,7 @@ impl Comparer<'_> {
         self.compare_data("lbl_804736C0.x4", n.camera, self.u32(at + 4));
         let theirs = self.u32(at + 8);
         self.compare_handle("lbl_804736C0.x8", "GObjId", n.gobj.map(|g| g.0), theirs);
-        self.check("lbl_804736C0", "x34", n.x34, self.u16(at + 0x34));
+        self.check("lbl_804736C0", "x34", n.unused, self.u16(at + 0x34));
         self.check(
             "lbl_804736C0",
             "x36 to x38",

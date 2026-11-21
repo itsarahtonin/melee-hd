@@ -4,7 +4,7 @@
 //!
 //! The stage sends each of them after a random wait and waits again once it's gone: a log
 //! comes down the waterfall, its collision on after a while, until its animation ends; Birdo's
-//! platform comes in from a random side carrying Birdo (`it::kinds::kyasarin`), its collision
+//! platform comes in from a random side carrying Birdo (`it::kinds::birdo`), its collision
 //! following her, and goes with her; Pidgit's carpet flies in from a random side, turning
 //! about between the camera's edges a few times before it leaves. Under 20 seconds left, the
 //! music speeds up.
@@ -430,7 +430,7 @@ pub fn init_birdo(r: &mut Running, gobj: GObjId) {
         pos,
     );
     let facing = if side == 0 { -1.0 } else { 1.0 };
-    let birdo = super::super::it::kinds::kyasarin::spawn(r, gobj, pos, facing);
+    let birdo = super::super::it::kinds::birdo::spawn(r, gobj, pos, facing);
     r.game.grounds[g.0].u.inishie2_birdo().xC4 = birdo;
     let m = map_id(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
@@ -443,7 +443,7 @@ pub fn proc_birdo(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj);
     if let Some(birdo) = r.game.grounds[g.0].u.inishie2_birdo().xC4 {
-        let mut pos = super::super::it::kinds::kyasarin::position(r.game, birdo);
+        let mut pos = super::super::it::kinds::birdo::position(r.game, birdo);
         let up = param(r.game).f(r.data, p::BIRDO_PLATFORM);
         pos.y = mem(fp::fadds(reg(pos.y), reg(up)));
         jobj::set_translate(

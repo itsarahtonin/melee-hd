@@ -992,8 +992,8 @@ impl Running<'_> {
     pub(crate) fn rules_from_screen(&mut self, archive: melee_data::archive::ArchiveId, auto: i32) {
         let m = &mut self.game.menu;
         m.cooldown = 0x14;
-        m.input_x2 = 0;
-        m.input_x4 = 0;
+        m.input_unused_a = 0;
+        m.input_unused_b = 0;
         let f = &mut m.flow;
         f.buttons = 0;
         f.prev_menu = f.cur_menu;

@@ -326,7 +326,8 @@ pub struct DebugMenu {
     /// `x14` of a submenu, which nothing sets or reads: the word its block held (its slot's
     /// last menu's, or the heap's image's for a block new from the heap), none where
     /// melee-sim doesn't know it.
-    pub x14: Option<u32>,
+    #[doc(alias("x14"))]
+    pub submenu_leftover: Option<u32>,
     /// `prev`: the submenu open over it; `next`: the menu it was opened over.
     pub prev: Option<u32>,
     pub next: Option<u32>,
@@ -1004,7 +1005,7 @@ impl Running<'_> {
             let old = &pool[m];
             match old.proc {
                 Some(p) => Some(self.game.world.procs.addr(p.0)).filter(|&a| a != 0),
-                None => old.x14,
+                None => old.submenu_leftover,
             }
         };
         let pool = self
@@ -1015,7 +1016,7 @@ impl Running<'_> {
             .as_mut()
             .expect("the debug menus' pool");
         pool[m] = DebugMenu {
-            x14,
+            submenu_leftover: x14,
             ..DebugMenu::default()
         };
         let cursor = self.menu(parent).cursor;
@@ -1467,12 +1468,12 @@ impl Running<'_> {
     pub fn debug_mode_enter_results1(&mut self) {
         let w = |r: &Self, i: u32| r.game.hud.debug.setting(4 * i);
         let mut e = std::mem::take(&mut self.game.debug_mode.results1);
-        e.x0_0 = w(self, 0x5E) & 1 != 0;
-        e.x0_1 = w(self, 0x5F) & 1 != 0;
-        e.x1 = w(self, 0x5A) as u8;
-        e.x2 = w(self, 0x5B) as u8;
-        e.x3 = w(self, 0x5C) as u8;
-        e.x4 = (e.x4 & 0x00FF_FFFF) | (w(self, 0x5D) as u8 as i32) << 24;
+        e.pause_first = w(self, 0x5E) & 1 != 0;
+        e.link0_only = w(self, 0x5F) & 1 != 0;
+        e.pose_p1 = w(self, 0x5A) as u8;
+        e.pose_p2 = w(self, 0x5B) as u8;
+        e.pose_p3 = w(self, 0x5C) as u8;
+        e.pose_p4 = (e.pose_p4 & 0x00FF_FFFF) | (w(self, 0x5D) as u8 as i32) << 24;
         let color = w(self, 0x60) as u8;
         let ckinds = [0x51, 0x52, 0x53, 0x54].map(|i| w(self, i) as i8);
         let ranks = [0x56, 0x57, 0x58, 0x59].map(|i| w(self, i).wrapping_sub(1) as u8);

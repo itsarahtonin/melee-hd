@@ -21,6 +21,7 @@ use melee_gx::{State, xform};
 
 use crate::bits;
 use crate::mesh::{Kind, Mesh};
+use crate::submit::Ordered;
 
 /// A draw's record, in words (xform.wgsl's `REC` and `R_`).
 const REC: usize = 40;
@@ -88,7 +89,7 @@ impl Pool {
 
     /// Room for `words` more: their first word's place, the buffer grown (its words copied on
     /// the GPU, after the writes already queued) if they don't fit.
-    fn alloc(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, words: u64) -> u64 {
+    fn alloc(&mut self, device: &wgpu::Device, queue: &Ordered, words: u64) -> u64 {
         let at = self.used;
         let need = (at + words) * 4;
         if need > self.buffer.size() {
@@ -101,7 +102,7 @@ impl Pool {
             if at > 0 {
                 let mut encoder = device.create_command_encoder(&Default::default());
                 encoder.copy_buffer_to_buffer(&self.buffer, 0, &buffer, 0, at * 4);
-                queue.submit([encoder.finish()]);
+                queue.submit(encoder);
             }
             self.buffer = buffer;
         }
@@ -483,7 +484,7 @@ impl GpuMeshes {
     fn resident(
         &mut self,
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        queue: &Ordered,
         mesh: &Arc<Mesh>,
         frame: u64,
     ) -> &Resident {
@@ -500,7 +501,7 @@ impl GpuMeshes {
 
     fn upload(
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        queue: &Ordered,
         arena: &mut Pool,
         index: &mut Pool,
         mesh: Arc<Mesh>,
@@ -538,7 +539,7 @@ impl GpuMeshes {
     pub(crate) fn draw(
         &mut self,
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        queue: &Ordered,
         state: &State,
         mesh: &Arc<Mesh>,
         normals: &NormalCache,
@@ -574,11 +575,11 @@ impl GpuMeshes {
     pub(crate) fn flush(
         &mut self,
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        queue: &Ordered,
         vertex_layout: &wgpu::BindGroupLayout,
         encoder: &mut wgpu::CommandEncoder,
-        words: &[u32],
-        indices: &[u32],
+        words: &mut Vec<u32>,
+        indices: &mut Vec<u32>,
     ) -> (u32, u32) {
         let storage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
         let b = &mut self.batch;
@@ -615,14 +616,10 @@ impl GpuMeshes {
             self.indices.as_ref().expect("indices"),
         );
         if !words.is_empty() {
-            queue.write_buffer(out, words_at * 4, bytemuck::cast_slice(words));
+            queue.write_words(out, words_at * 4, words);
         }
         if !indices.is_empty() {
-            queue.write_buffer(
-                drawn,
-                u64::from(mesh_indices) * 4,
-                bytemuck::cast_slice(indices),
-            );
+            queue.write_words(drawn, u64::from(mesh_indices) * 4, indices);
         }
         let place = (words_at as u32, mesh_indices);
         if b.records.is_empty() && b.copies.is_empty() {
@@ -687,9 +684,9 @@ impl GpuMeshes {
                 self.xf.as_ref().expect("xf"),
                 self.work.as_ref().expect("work"),
             );
-            queue.write_buffer(records, 0, bytemuck::cast_slice(&b.records));
+            queue.write_words(records, 0, &mut b.records);
             if !b.xf.is_empty() {
-                queue.write_buffer(xf, 0, bytemuck::cast_slice(&b.xf));
+                queue.write_words(xf, 0, &mut b.xf);
             }
             queue.write_buffer(work, 0, bytemuck::cast_slice(&b.work));
             let buffers = [&self.arena.buffer, records, xf, work, out];
@@ -734,7 +731,7 @@ impl GpuMeshes {
 
     /// Between frames: meshes no draw used for a while go, and the pools close their gaps once
     /// they're half gaps, every mesh kept uploaded again in order.
-    pub(crate) fn end_frame(&mut self, device: &wgpu::Device, queue: &wgpu::Queue, frame: u64) {
+    pub(crate) fn end_frame(&mut self, device: &wgpu::Device, queue: &Ordered, frame: u64) {
         if !self.batch.records.is_empty() || !frame.is_multiple_of(60) {
             return;
         }
@@ -766,7 +763,7 @@ impl GpuMeshes {
     pub(crate) fn clips(
         &mut self,
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        queue: &Ordered,
         state: &State,
         mesh: &Arc<Mesh>,
         normals: &NormalCache,
@@ -821,7 +818,8 @@ impl GpuMeshes {
             pass.dispatch_workgroups(n.min(65535), n.div_ceil(65535), 1);
         }
         encoder.copy_buffer_to_buffer(&out, 0, &read, 0, size);
-        queue.submit([encoder.finish()]);
+        queue.submit(encoder);
+        queue.drain();
         let slice = read.slice(..size);
         slice.map_async(wgpu::MapMode::Read, |_| {});
         device
@@ -849,7 +847,7 @@ impl GpuMeshes {
     pub(crate) fn words(
         &mut self,
         device: &wgpu::Device,
-        queue: &wgpu::Queue,
+        queue: &Ordered,
         vertex_layout: &wgpu::BindGroupLayout,
         state: &State,
         mesh: &Arc<Mesh>,
@@ -864,7 +862,14 @@ impl GpuMeshes {
         let start = u64::from(first) * u64::from(6 + 3 * tg) * 4;
         let size = self.batch.out_words * 4 - start;
         let mut encoder = device.create_command_encoder(&Default::default());
-        self.flush(device, queue, vertex_layout, &mut encoder, &[], &[]);
+        self.flush(
+            device,
+            queue,
+            vertex_layout,
+            &mut encoder,
+            &mut Vec::new(),
+            &mut Vec::new(),
+        );
         if size == 0 {
             return Vec::new();
         }
@@ -881,7 +886,8 @@ impl GpuMeshes {
             0,
             size,
         );
-        queue.submit([encoder.finish()]);
+        queue.submit(encoder);
+        queue.drain();
         let slice = read.slice(..);
         slice.map_async(wgpu::MapMode::Read, |_| {});
         device

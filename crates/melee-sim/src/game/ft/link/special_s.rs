@@ -47,7 +47,8 @@ impl Running<'_> {
 
     /// `ftLk_SepcialS_Get2219b5`.
     #[doc(alias = "ftLk_SepcialS_Get2219b5")]
-    pub fn link_x2219_b5(&self, gobj: GObjId) -> bool {
+    #[doc(alias("link_x2219_b5"))]
+    pub fn link_in_hitlag(&self, gobj: GObjId) -> bool {
         self.game.fighter(gobj).x2219_b5
     }
 

@@ -37,6 +37,7 @@ pub struct Drawn {
 }
 
 /// A rendered frame of the match, as [`drive`] hands it on.
+#[derive(Clone, Copy)]
 pub struct Tick<'a> {
     /// Match frames counted from its first rendered frame, 0.
     pub n: u32,
@@ -46,6 +47,13 @@ pub struct Tick<'a> {
     pub draws: &'a [melee_sim::hsd::display::Draw],
     /// The disc's main.dol, which melee-render's address space loads.
     pub dol: &'a [u8],
+    /// The next tick's display pass, run ahead on a copy of the match with the replay's own
+    /// inputs (Extrapolate's prediction, made exactly), where [`drive_predicting`] asked.
+    pub predicted: Option<&'a melee_render::blend::Capture>,
+    /// A frame between two ticks to draw in place of the tick's own: its blend (the player's
+    /// High refresh), set by the harness ([`crate::fast`]'s `--interpolate` and
+    /// `--extrapolate`); every renderer that draws the tick draws it so.
+    pub blend: Option<melee_render::blend::Blend<'a>>,
 }
 
 /// The console a recorded session plays on: the recording's reads in order (the last one
@@ -144,6 +152,8 @@ fn drive_session(
                 data: &s.data,
                 draws: &draws,
                 dol: &dol,
+                predicted: None,
+                blend: None,
             };
             if !each(&tick) {
                 return;
@@ -165,6 +175,19 @@ pub(crate) fn drive(
     replay_path: &str,
     to: u32,
     cosmetic: Cosmetic,
+    each: impl FnMut(&Tick<'_>) -> bool,
+) {
+    drive_predicting(disc_path, replay_path, to, cosmetic, &|_| false, each);
+}
+
+/// [`drive`], each rendered frame `n` that `predict(n)` names handed on with the next tick's
+/// display pass run ahead ([`Tick::predicted`]; a replay's, not a recorded session's).
+pub(crate) fn drive_predicting(
+    disc_path: &str,
+    replay_path: &str,
+    to: u32,
+    cosmetic: Cosmetic,
+    predict: &dyn Fn(u32) -> bool,
     mut each: impl FnMut(&Tick<'_>) -> bool,
 ) {
     if replay_path.ends_with(".inputs") {
@@ -203,11 +226,22 @@ pub(crate) fn drive(
     let mut device = Device(&replay);
     let dol = disc.dol().unwrap_or_else(|e| panic!("main.dol: {e}"));
     let mut n = 0u32;
+    let mut predictor = melee_render::predict::Predictor::<Match>::default();
     loop {
         let (mut f, render) = m.step_replay_tick(&mut device);
         let ended = f.ended;
         if render {
             f.draws = m.render();
+            let predicted = predict(n) && {
+                let step = |copy: &mut Match| {
+                    let (mut f, render) = copy.step_replay_tick(&mut Device(&replay));
+                    if render {
+                        f.draws = copy.render();
+                    }
+                    f
+                };
+                predictor.predict(&m, step).is_ok() && predictor.is_filled()
+            };
             let tick = Tick {
                 n,
                 replay_frame: m.game.playback.as_ref().map_or(-124, |p| p.frame_index),
@@ -215,6 +249,8 @@ pub(crate) fn drive(
                 data: &m.data,
                 draws: &f.draws,
                 dol: &dol,
+                predicted: predicted.then(|| predictor.capture()),
+                blend: None,
             };
             if !each(&tick) {
                 return;

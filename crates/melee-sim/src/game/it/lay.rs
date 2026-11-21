@@ -7,9 +7,9 @@ use melee_data::archive::DataRef;
 
 use super::Var;
 use super::kinds::{
-    arwinglaser::ArwingLaserVars, coin::CoinVars, gamewatch::GameWatchRescueVars,
-    gamewatch::GameWatchVars, greatfoxlaser::GreatFoxLaserVars, heiho::HeihoVars, klap::KlapVars,
-    kyasarin::KyasarinVars, kyasarinegg::KyasarinEggVars, tincle::TincleVars, tools::ToolsVars,
+    arwinglaser::ArwingLaserVars, birdo::KyasarinVars, birdo_egg::KyasarinEggVars, coin::CoinVars,
+    gamewatch::GameWatchRescueVars, gamewatch::GameWatchVars, greatfoxlaser::GreatFoxLaserVars,
+    klap_trap::KlapVars, shy_guy::HeihoVars, tingle::TincleVars, tools::ToolsVars,
     whispyapple::WhispyAppleVars, yaku::Anchor, yaku::YakuVars,
 };
 use crate::game::mirror::{LayCx, LayOut};

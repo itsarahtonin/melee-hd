@@ -76,9 +76,12 @@ pub mod addr {
     pub const SPECIAL_AIR_HI_PHYS: u32 = 0x8013_CC88;
     pub const SPECIAL_HI_COLL: u32 = 0x8013_CCA8;
     pub const SPECIAL_AIR_HI_COLL: u32 = 0x8013_CCE4;
-    pub const SPECIAL_HI_8013CD34: u32 = 0x8013_CD34;
-    pub const SPECIAL_HI_8013CDD8: u32 = 0x8013_CDD8;
-    pub const SPECIAL_HI_8013CE7C: u32 = 0x8013_CE7C;
+    #[doc(alias("SPECIAL_HI_8013CD34"))]
+    pub const SPECIAL_HI_TO_AIR: u32 = 0x8013_CD34;
+    #[doc(alias("SPECIAL_HI_8013CDD8"))]
+    pub const SPECIAL_AIR_HI_TO_GROUND: u32 = 0x8013_CDD8;
+    #[doc(alias("SPECIAL_HI_8013CE7C"))]
+    pub const CLEAR_ACCESSORY: u32 = 0x8013_CE7C;
     pub const SPECIAL_LW_ENTER: u32 = 0x8013_CE8C;
     pub const SPECIAL_AIR_LW_ENTER: u32 = 0x8013_CF2C;
     pub const SPECIAL_LW_ANIM: u32 = 0x8013_CFCC;
@@ -89,8 +92,10 @@ pub mod addr {
     pub const SPECIAL_AIR_LW_PHYS: u32 = 0x8013_D06C;
     pub const SPECIAL_LW_COLL: u32 = 0x8013_D08C;
     pub const SPECIAL_AIR_LW_COLL: u32 = 0x8013_D0C8;
-    pub const SPECIAL_LW_8013D104: u32 = 0x8013_D104;
-    pub const SPECIAL_LW_8013D19C: u32 = 0x8013_D19C;
+    #[doc(alias("SPECIAL_LW_8013D104"))]
+    pub const SPECIAL_LW_TO_AIR: u32 = 0x8013_D104;
+    #[doc(alias("SPECIAL_LW_8013D19C"))]
+    pub const SPECIAL_AIR_LW_TO_GROUND: u32 = 0x8013_D19C;
     pub const SPECIAL_S_ENTER: u32 = 0x8013_D234;
     pub const SPECIAL_AIR_S_ENTER: u32 = 0x8013_D2A0;
     pub const SPECIAL_S_ANIM: u32 = 0x8013_D30C;
@@ -101,15 +106,24 @@ pub mod addr {
     pub const SPECIAL_AIR_S_PHYS: u32 = 0x8013_D3AC;
     pub const SPECIAL_S_COLL: u32 = 0x8013_D518;
     pub const SPECIAL_AIR_S_COLL: u32 = 0x8013_D554;
-    pub const SPECIAL_S_8013D590: u32 = 0x8013_D590;
-    pub const SPECIAL_S_8013D5F0: u32 = 0x8013_D5F0;
-    pub const SPECIAL_S_8013D658: u32 = 0x8013_D658;
-    pub const SPECIAL_S_8013D764: u32 = 0x8013_D764;
-    pub const SPECIAL_S_8013D8B0: u32 = 0x8013_D8B0;
-    pub const SPECIAL_S_8013D8E4: u32 = 0x8013_D8E4;
-    pub const SPECIAL_S_8013DA24: u32 = 0x8013_DA24;
-    pub const SPECIAL_S_8013DC64: u32 = 0x8013_DC64;
-    pub const SPECIAL_S_8013DD54: u32 = 0x8013_DD54;
+    #[doc(alias("SPECIAL_S_8013D590"))]
+    pub const SPECIAL_S_TO_AIR: u32 = 0x8013_D590;
+    #[doc(alias("SPECIAL_S_8013D5F0"))]
+    pub const SPECIAL_AIR_S_TO_GROUND: u32 = 0x8013_D5F0;
+    #[doc(alias("SPECIAL_S_8013D658"))]
+    pub const ROLLOUT_RESTORE: u32 = 0x8013_D658;
+    #[doc(alias("SPECIAL_S_8013D764"))]
+    pub const ROLLOUT_HIT: u32 = 0x8013_D764;
+    #[doc(alias("SPECIAL_S_8013D8B0"))]
+    pub const ROLLOUT_NEW_ATTACK: u32 = 0x8013_D8B0;
+    #[doc(alias("SPECIAL_S_8013D8E4"))]
+    pub const ROLLOUT_HITBOX: u32 = 0x8013_D8E4;
+    #[doc(alias("SPECIAL_S_8013DA24"))]
+    pub const ROLLOUT_END: u32 = 0x8013_DA24;
+    #[doc(alias("SPECIAL_S_8013DC64"))]
+    pub const ROLLOUT_INIT: u32 = 0x8013_DC64;
+    #[doc(alias("SPECIAL_S_8013DD54"))]
+    pub const ROLLOUT_TICK: u32 = 0x8013_DD54;
     pub const SPECIAL_N_ENTER: u32 = 0x8013_DEA8;
     pub const SPECIAL_AIR_N_ENTER: u32 = 0x8013_DF60;
     pub const SPECIAL_N_START_ANIM: u32 = 0x8013_E014;
@@ -164,7 +178,8 @@ pub mod addr {
     pub const SPECIAL_AIR_N_START_TURN_COLL: u32 = 0x8014_1FB8;
     pub const SPECIAL_AIR_N_END_COLL: u32 = 0x8014_2070;
     pub const SPECIAL_N_HIT_COLL: u32 = 0x8014_20D0;
-    pub const SPECIAL_N_8014222C: u32 = 0x8014_222C;
+    #[doc(alias("SPECIAL_N_8014222C"))]
+    pub const ROLLOUT_MIRROR: u32 = 0x8014_222C;
 }
 
 /// `ftPurin_FighterVars`' offsets in `u`: Pound's uses in the air, the model's scale Rollout

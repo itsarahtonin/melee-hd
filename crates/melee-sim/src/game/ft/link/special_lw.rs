@@ -58,7 +58,7 @@ impl Running<'_> {
         let kind = self.link_attr_i32(f, attr::X48);
         let hand = i32::from(
             self.data
-                .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x10)),
+                .u8(self.ft_model_desc(&self.game.fighters[f.0]).at(0x10)),
         );
         let facing = self.game.fighters[f.0].facing_dir;
         let bomb = linkbomb::spawn(self, gobj, pos, hand, kind, facing);

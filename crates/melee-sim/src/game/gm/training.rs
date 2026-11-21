@@ -512,21 +512,21 @@ impl Running<'_> {
     /// The hits in a row slot `slot`'s last attacker has on it, `pl_8004134C`.
     #[doc(alias = "pl_8004134C")]
     fn combo_count_on(&mut self, slot: i32) -> i32 {
-        let by = i32::from(self.game.player_unk6a8(slot).x0);
-        i32::from(self.game.player_unk6a8(by).x10[slot as usize].x4)
+        let by = i32::from(self.game.player_combos(slot).x0);
+        i32::from(self.game.player_combos(by).x10[slot as usize].x4)
     }
 
     /// The damage of those hits, `pl_80041300`.
     #[doc(alias = "pl_80041300")]
     fn combo_damage_on(&mut self, slot: i32) -> i32 {
-        let by = i32::from(self.game.player_unk6a8(slot).x0);
-        fp::fctiwz(reg(self.game.player_unk6a8(by).x10[slot as usize].x0))
+        let by = i32::from(self.game.player_combos(slot).x0);
+        fp::fctiwz(reg(self.game.player_combos(by).x10[slot as usize].x0))
     }
 
     /// The slot's damage taken in the frame counters, `pl_800412D0`.
     #[doc(alias = "pl_800412D0")]
     fn frame_damage(&mut self, slot: i32) -> i32 {
-        fp::fctiwz(reg(self.game.player_unk6a8(slot).x4))
+        fp::fctiwz(reg(self.game.player_combos(slot).x4))
     }
 
     /// `fn_80188738`: the damage counter's digits (at most 999).
@@ -981,7 +981,7 @@ impl Running<'_> {
             teams,
             g.player_pkind(slot) as u8,
         );
-        g.set_player_unk45(slot, i32::from(super::vs::cap_color(color as u8)));
+        g.set_player_effect_color(slot, i32::from(super::vs::cap_color(color as u8)));
         self.player_create_fighters(slot);
         if self.game.vs.state.fighters[slot as usize].x4[0] & 0x08 != 0 {
             self.sfx_play(0x41F4E, 0x7F, 0x40);

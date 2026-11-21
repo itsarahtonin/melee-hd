@@ -733,7 +733,7 @@ impl Running<'_> {
         if self.no_ledges(f) {
             return self.air_coll(gobj, false, |_| {}, |c, cd| pass(c, cd, 0));
         }
-        let x44 = self.ft_data_x44(f);
+        let x44 = self.ft_ecb_desc(f);
         let snap = reg(self.data.f32(x44.at(0x18)));
         let scale = reg(fp.x34_scale.y);
         let mul = reg(self.common().f32(0x1CC));
@@ -758,7 +758,8 @@ impl Running<'_> {
     }
 
     /// `ftData::x44`: the character's ECB joints and ledge snap.
-    fn ft_data_x44(&self, f: FighterId) -> melee_data::archive::DataRef {
+    #[doc(alias("ft_data_x44"))]
+    fn ft_ecb_desc(&self, f: FighterId) -> melee_data::archive::DataRef {
         let ft_data = self.game.fighters[f.0]
             .ft_data
             .expect("a fighter without ftData");

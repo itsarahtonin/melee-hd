@@ -1,5 +1,5 @@
 //! Birdo's eggs, `melee/it/kinds/itkyasarinegg.c` (`It_Kind_Kyasarin_Egg`): spat out ahead
-//! of her (`it::kinds::kyasarin`), an egg rolls along (state 0), bouncing back up off what it
+//! of her (`it::kinds::birdo`), an egg rolls along (state 0), bouncing back up off what it
 //! meets (1). It can be picked up (2) and thrown (3); a thrown egg that lands or hits something
 //! breaks with an effect and a sound, dropping items or, one time in its attributes' `x10`,
 //! fading away empty (4).

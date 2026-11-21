@@ -65,7 +65,8 @@ fn read_depth(r: &Renderer) -> Vec<u8> {
             depth_or_array_layers: 1,
         },
     );
-    r.queue.submit([encoder.finish()]);
+    r.queue.submit(encoder);
+    r.queue.drain();
     let slice = buffer.slice(..);
     slice.map_async(wgpu::MapMode::Read, |_| {});
     r.device

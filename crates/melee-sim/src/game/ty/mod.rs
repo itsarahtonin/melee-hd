@@ -37,17 +37,21 @@ pub const GS_TOY_COLLECTION: u8 = 0xD;
 pub struct ToyTable {
     /// `x0`: which screen shows a trophy (1 the gallery, 2 the lottery: `Toy_80306D14`'s
     /// sound).
-    pub x0: i8,
+    #[doc(alias("x0"))]
+    pub screen: i8,
     /// `x1`: the gallery's sort (`x195`), and `x2` its direction (`x196`).
     pub sort: i8,
     pub sort_dir: i8,
-    pub x3: u8,
+    #[doc(alias("x3"))]
+    pub list_slot: u8,
     /// `x4`: the scene ends (`x198`).
     pub exit: i8,
-    pub x5: u8,
+    #[doc(alias("x5"))]
+    pub unused: u8,
     /// `x6`: the categories' bits (`x19A`), and `x8` (`x19C`).
     pub categories: u16,
-    pub x8: u16,
+    #[doc(alias("x8"))]
+    pub extra_categories: u16,
     /// `xA`: each trophy's flags (`x19E`).
     pub flags: [u16; TROPHY_COUNT],
     /// `x254`: the gallery's selection (`x3E8`) and its trophy (`x3EA`).
@@ -55,25 +59,26 @@ pub struct ToyTable {
     pub selected_trophy: i16,
     /// `x258`: how many trophies (`x3EC`).
     pub count: i16,
-    pub x25a: u16,
+    #[doc(alias("x25a"))]
+    pub unused_tail: u16,
 }
 
 impl Default for ToyTable {
     fn default() -> Self {
         Self {
-            x0: 0,
+            screen: 0,
             sort: 0,
             sort_dir: 0,
-            x3: 0,
+            list_slot: 0,
             exit: 0,
-            x5: 0,
+            unused: 0,
             categories: 0,
-            x8: 0,
+            extra_categories: 0,
             flags: [0; TROPHY_COUNT],
             selected: 0,
             selected_trophy: 0,
             count: 0,
-            x25a: 0,
+            unused_tail: 0,
         }
     }
 }
@@ -82,21 +87,21 @@ impl ToyTable {
     /// The table's 0x25C bytes as memory holds them.
     pub fn bytes(&self) -> Vec<u8> {
         let mut b = vec![0u8; 0x25C];
-        b[0] = self.x0 as u8;
+        b[0] = self.screen as u8;
         b[1] = self.sort as u8;
         b[2] = self.sort_dir as u8;
-        b[3] = self.x3;
+        b[3] = self.list_slot;
         b[4] = self.exit as u8;
-        b[5] = self.x5;
+        b[5] = self.unused;
         b[6..8].copy_from_slice(&self.categories.to_be_bytes());
-        b[8..0xA].copy_from_slice(&self.x8.to_be_bytes());
+        b[8..0xA].copy_from_slice(&self.extra_categories.to_be_bytes());
         for (i, f) in self.flags.iter().enumerate() {
             b[0xA + 2 * i..0xC + 2 * i].copy_from_slice(&f.to_be_bytes());
         }
         b[0x254..0x256].copy_from_slice(&self.selected.to_be_bytes());
         b[0x256..0x258].copy_from_slice(&self.selected_trophy.to_be_bytes());
         b[0x258..0x25A].copy_from_slice(&self.count.to_be_bytes());
-        b[0x25A..0x25C].copy_from_slice(&self.x25a.to_be_bytes());
+        b[0x25A..0x25C].copy_from_slice(&self.unused_tail.to_be_bytes());
         b
     }
 }
@@ -111,10 +116,14 @@ pub struct AnimState {
     pub trophy: i16,
     /// `xE`: which stand is shown; `xF` the frames of its change left; `x10` and `x11` its
     /// look (1 or 2) and the look asked for.
-    pub x0e: i8,
-    pub x0f: i8,
-    pub x10: i8,
-    pub x11: i8,
+    #[doc(alias("x0e"))]
+    pub stand: i8,
+    #[doc(alias("x0f"))]
+    pub stand_frames: i8,
+    #[doc(alias("x10"))]
+    pub look: i8,
+    #[doc(alias("x11"))]
+    pub look_asked: i8,
 }
 
 /// An archive loaded into the scene's heap with its two blocks (`lbArchive_LoadSymbols`'s),

@@ -321,7 +321,7 @@ impl super::super::state::Running<'_> {
     /// `which`.
     #[doc(alias = "Stage_80225074")]
     pub fn start_stage_music(&mut self, which: i32) -> i32 {
-        let flags = if self.game.vs_x6() != 0 {
+        let flags = if self.game.vs_sudden_death() != 0 {
             if self.game.stage_info.unk8C.b0 || which == 2 {
                 0x12
             } else {

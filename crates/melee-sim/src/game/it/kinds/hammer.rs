@@ -90,7 +90,8 @@ pub fn hitlag(r: &mut Running, gobj: GObjId) {
     if let Some(o) = owner
         && super::super::item::is_fighter(r.game, owner)
     {
-        r.game.ft_80086a4c(o, mem(fp::fsubs(reg(frames), 1.0)));
+        r.game
+            .ft_set_pending_hitlag(o, mem(fp::fsubs(reg(frames), 1.0)));
     }
 }
 

@@ -711,7 +711,7 @@ impl Running<'_> {
     /// VS scene's state, as the console does (docs/melee-bugs.md).
     #[doc(alias = "fn_802FAC34")]
     pub fn stock_tally_proc_2(&mut self, _gobj: GObjId) {
-        if self.game.vs_has_x58() {
+        if self.game.vs_has_challenger_record() {
             if self.game.hud.stock_1acc.x0 != 0 {
                 return;
             }
@@ -925,7 +925,7 @@ impl Running<'_> {
         }
         for i in 0..16 {
             self.game.hud.stock_1a8c[i] = None;
-            if self.game.vs_x9_is_1() {
+            if self.game.vs_target_test() {
                 let o = self.create_target_icon(i as i32);
                 self.game.hud.stock_1a8c[i] = Some(o);
             }
