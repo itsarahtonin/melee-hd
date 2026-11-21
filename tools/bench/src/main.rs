@@ -282,7 +282,7 @@ fn run(args: Vec<String>) -> std::process::ExitCode {
         }
         _ => eprintln!(
             "melee-bench snapshot CALL... | codes DIR | oracle-codes DIR | oracle-sets DIR [SET|NAME...] | dolphin [--dir DIR] [--runs N] [--calibrate] [MATCH...]              | native [--dir DIR] [--runs N] [MATCH...] | snapshot-match [--dir DIR] [--every TICKS] [MATCH] | corpus [--rules slippi|own] [--heap rules|off|on] [--fp slippi|hardware|own] [--jobs N] [--list FILE]... [PATH...] \
-             | alloc-sites [--dir DIR] [--from TICK] [--ticks N] [--rollback] [--fp slippi] [MATCH] | rollback-split [--dir DIR] [--at TICK] [--runs N] [MATCH] | player [--matches fd,fod,gb,ps] [--scales 1,3,5] [...]              | seed-search MATCH FROM COUNT [--jobs N] [--codes REPLAY.slp] [--record DIR] [--watch KIND[:STATE]|caught]... | record-match MATCH OUT.slp [--codes REPLAY.slp]"
+             | alloc-sites [--dir DIR] [--from TICK] [--ticks N] [--rollback] [--fp slippi] [MATCH] | rollback-split [--dir DIR] [--at TICK | --every TICKS] [--runs N] [MATCH] | player [--matches fd,fod,gb,ps] [--scales 1,3,5] [...]              | seed-search MATCH FROM COUNT [--jobs N] [--codes REPLAY.slp] [--record DIR] [--watch KIND[:STATE]|caught]... | record-match MATCH OUT.slp [--codes REPLAY.slp]"
         ),
     }
     std::process::ExitCode::SUCCESS
