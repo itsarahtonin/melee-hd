@@ -817,7 +817,13 @@ impl Match {
     /// them rather than allocating new ones. Changes nothing the game reads.
     pub fn recycle(&mut self, mut frame: Frame) {
         frame.events.clear();
-        frame.draws.clear();
+        // The texts' draws keep their storage for the next frame's layouts.
+        let spares = &mut self.game.objs.display.spare_texts;
+        for d in frame.draws.drain(..) {
+            if let crate::hsd::display::Draw::SisText(t) = d {
+                spares.push(t);
+            }
+        }
         if self.game.events.is_empty() && self.game.events.capacity() < frame.events.capacity() {
             self.game.events = frame.events;
         }

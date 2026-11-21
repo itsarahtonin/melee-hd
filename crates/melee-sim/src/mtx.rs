@@ -1,10 +1,13 @@
 //! 3×4 and 4×4 matrices, with the SDK's matrix routines (`dolphin/mtx/mtx.c`, `mtxvec.c`,
 //! `mtx44.c`). The paired-single ones follow their assembly lane by lane.
 
+use std::cell::RefCell;
+
 use gekko_fp::{self as fp, Ps};
 
 use crate::fpu::{copy, mem, reg};
 use crate::math;
+use crate::memo::{self, Memo};
 use crate::pairs::{load1, load2, moved, moved_paired, splat, store_paired};
 use crate::quat::Quat;
 use crate::vec::Vec3;
@@ -355,8 +358,34 @@ impl Mtx34 {
     }
 
     /// The view matrix of a camera at `eye` looking at `target`, `C_MTXLookAt`.
+    ///
+    /// It depends only on its inputs' bits and the float mode, so the result is kept
+    /// (`memo`): a frame projects every fighter's camera box through the same camera.
     #[doc(alias = "C_MTXLookAt")]
     pub fn look_at(eye: Vec3, up: Vec3, target: Vec3) -> Mtx34 {
+        thread_local! {
+            static LOOK_AT: RefCell<Memo<[u32; 10], Mtx34, 6>> =
+                const { RefCell::new(Memo::new()) };
+        }
+        let key = [
+            eye.x.to_bits(),
+            eye.y.to_bits(),
+            eye.z.to_bits(),
+            up.x.to_bits(),
+            up.y.to_bits(),
+            up.z.to_bits(),
+            target.x.to_bits(),
+            target.y.to_bits(),
+            target.z.to_bits(),
+            memo::mode(),
+        ];
+        Memo::get(&LOOK_AT, key, memo::hash(&key), || {
+            Mtx34::look_at_uncached(eye, up, target)
+        })
+    }
+
+    /// [`Mtx34::look_at`] without its memo.
+    pub(crate) fn look_at_uncached(eye: Vec3, up: Vec3, target: Vec3) -> Mtx34 {
         let look = Vec3::new(
             mem(fp::fsubs(reg(eye.x), reg(target.x))),
             mem(fp::fsubs(reg(eye.y), reg(target.y))),
@@ -503,9 +532,28 @@ impl Mtx44 {
         m
     }
 
-    /// A perspective projection: `fov_y` in degrees, `MTXPerspective`.
+    /// A perspective projection: `fov_y` in degrees, `MTXPerspective`. Kept as
+    /// [`Mtx34::look_at`] is (`memo`).
     #[doc(alias = "MTXPerspective")]
     pub fn perspective(fov_y: f32, aspect: f32, n: f32, f: f32) -> Mtx44 {
+        thread_local! {
+            static PERSPECTIVE: RefCell<Memo<[u32; 5], Mtx44, 6>> =
+                const { RefCell::new(Memo::new()) };
+        }
+        let key = [
+            fov_y.to_bits(),
+            aspect.to_bits(),
+            n.to_bits(),
+            f.to_bits(),
+            memo::mode(),
+        ];
+        Memo::get(&PERSPECTIVE, key, memo::hash(&key), || {
+            Mtx44::perspective_uncached(fov_y, aspect, n, f)
+        })
+    }
+
+    /// [`Mtx44::perspective`] without its memo.
+    pub(crate) fn perspective_uncached(fov_y: f32, aspect: f32, n: f32, f: f32) -> Mtx44 {
         let cot = cotangent_of_half(fov_y);
         let (n, f) = (reg(n), reg(f));
         let mut m = Mtx44::default();

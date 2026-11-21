@@ -600,7 +600,7 @@ impl<K: Eq + Hash + Debug, V: StateEq, S: BuildHasher> StateEq for HashMap<K, V,
 }
 
 /// [`map`], every difference: each of one map's entries against the other's.
-fn map_all<'a, K: Debug + 'a, V: StateEq + 'a>(
+pub(crate) fn map_all<'a, K: Debug + 'a, V: StateEq + 'a>(
     entries: impl Iterator<Item = (&'a K, &'a V)>,
     get: impl Fn(&K) -> Option<&'a V>,
     out: &mut Vec<Diff>,
@@ -620,7 +620,7 @@ fn map_all<'a, K: Debug + 'a, V: StateEq + 'a>(
 }
 
 /// The other map's keys that one lacks.
-fn map_missing<'a, K: Debug + 'a>(
+pub(crate) fn map_missing<'a, K: Debug + 'a>(
     keys: impl Iterator<Item = &'a K>,
     has: impl Fn(&K) -> bool,
     out: &mut Vec<Diff>,
@@ -631,7 +631,7 @@ fn map_missing<'a, K: Debug + 'a>(
 }
 
 /// Each entry of one map against the other's entry with its key.
-fn map<'a, K: Debug + 'a, V: StateEq + 'a>(
+pub(crate) fn map<'a, K: Debug + 'a, V: StateEq + 'a>(
     a_len: usize,
     b_len: usize,
     entries: impl Iterator<Item = (&'a K, &'a V)>,

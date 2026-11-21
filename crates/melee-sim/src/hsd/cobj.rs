@@ -7,6 +7,7 @@
 //! `GXSetViewport`, `GXSetScissor` and `GXSetProjection`, and `HSD_CObjEraseScreen`) belongs to
 //! the display pass and isn't ported yet; [`setup_viewing_mtx`] is the state it computes.
 
+use std::cell::RefCell;
 use std::ops::{Index, IndexMut};
 
 use gekko_fp as fp;
@@ -21,6 +22,7 @@ use super::pool::Pool;
 use super::wobj::{self, WObjId};
 use crate::fpu::{copy, mem, reg};
 use crate::math;
+use crate::memo::{self, Memo};
 use crate::mtx::{Mtx34, Mtx44};
 use crate::vec::Vec3;
 
@@ -539,6 +541,30 @@ pub fn eye_distance(objs: &mut Objects, data: &Archives, c: Option<CObjId>) -> f
 #[doc(alias = "roll2upvec")]
 fn roll_to_up(objs: &mut Objects, data: &Archives, c: CObjId, roll: f32) -> Option<Vec3> {
     let eye = eye_vector(objs, data, Some(c))?;
+    Some(up_of_roll(eye, roll))
+}
+
+/// [`roll_to_up`] of the eye vector `eye`. It depends only on its inputs' bits and the float
+/// mode, so the result is kept (`memo`): a frame asks it of the same camera for every
+/// fighter's place on screen.
+pub(crate) fn up_of_roll(eye: Vec3, roll: f32) -> Vec3 {
+    thread_local! {
+        static UP: RefCell<Memo<[u32; 5], Vec3, 6>> = const { RefCell::new(Memo::new()) };
+    }
+    let key = [
+        eye.x.to_bits(),
+        eye.y.to_bits(),
+        eye.z.to_bits(),
+        roll.to_bits(),
+        memo::mode(),
+    ];
+    Memo::get(&UP, key, memo::hash(&key), || {
+        up_of_roll_uncached(eye, roll)
+    })
+}
+
+/// [`up_of_roll`] without its memo.
+pub(crate) fn up_of_roll_uncached(eye: Vec3, roll: f32) -> Vec3 {
     let (x, y, z) = (reg(eye.x), reg(eye.y), reg(eye.z));
     let sq = |a: f64, b: f64| math::sqrt(mem(fp::fadds(fp::fmuls(a, a), fp::fmuls(b, b))));
     let mut v0 = Vec3::ZERO;
@@ -553,7 +579,7 @@ fn roll_to_up(objs: &mut Objects, data: &Archives, c: CObjId, roll: f32) -> Opti
         v0.z = mem(fp::fmuls(z, fp::fdivs(fp::fneg(y), reg(v0.y))));
     }
     let m = Mtx34::rotation_about(eye, mem(fp::fneg(reg(roll))));
-    Some(m.rotate(v0).sdk_normalize())
+    m.rotate(v0).sdk_normalize()
 }
 
 /// The roll an up vector gives, about the eye vector: the inline `upvec2roll`. 0 without an

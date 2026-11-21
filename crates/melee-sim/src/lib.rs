@@ -13,6 +13,7 @@ pub use gekko_fp;
 extern crate self as melee_sim;
 
 pub mod audio;
+pub mod flat_map;
 mod fpu;
 pub mod game;
 pub mod hsd;

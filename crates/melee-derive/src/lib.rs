@@ -15,7 +15,9 @@
 //! (`melee_sim::state_eq::StateEq`), as a whole: for containers whose own `clone_from` builds
 //! anew (maps, vectors of tuples holding strings) and that rarely change. A field marked
 //! `#[clone_from(keep)]` isn't state but spare storage: a clone starts it empty (`Default`),
-//! and `clone_from` leaves the target's.
+//! and `clone_from` leaves the target's. A map marked `#[clone_from(refill)]` (a `HashMap`,
+//! whose own `clone_from` builds a new table when the sizes differ) is emptied and refilled
+//! with the source's entries, keeping the table it has.
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as Tokens;
@@ -140,6 +142,16 @@ fn fields(ctor: Tokens, f: &Fields, ours: Tokens, theirs: Tokens) -> (Tokens, To
                         if ::melee_sim::state_eq::StateEq::state_diff(&#ours #n, &#theirs #n).is_some() {
                             #ours #n = ::core::clone::Clone::clone(&#theirs #n);
                         }
+                    }
+                } else if option(field, "refill") {
+                    quote! {
+                        #ours #n.clear();
+                        ::core::iter::Extend::extend(
+                            &mut #ours #n,
+                            #theirs #n.iter().map(|(k, v)| {
+                                (::core::clone::Clone::clone(k), ::core::clone::Clone::clone(v))
+                            }),
+                        );
                     }
                 } else {
                     quote!(::core::clone::Clone::clone_from(&mut #ours #n, &#theirs #n);)
