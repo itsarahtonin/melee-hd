@@ -771,3 +771,75 @@ MELEE_GPU_WORKERS=1 MELEE_GPU_SUBMIT=0 taskset -c 0,1 bench fod --renderer fast
 ```
 
 **Indicative, on the busy PC** (2026-11-20, other agents' work running; these decide nothing): Fountain of Dreams at 1x with the submission thread, 4.19 to 4.86 ms against 4.31 to 5.43 without, the render thread's flushes 1.6 to 2.0 ms to 0.27 to 0.37; the stream thread there didn't show a gain (2.55 and 2.91 ms with it, 2.43 and 2.62 without), the busy machine starving its extra thread.
+
+## F5: the whole scene (third round)
+
+The third round took Sarah's target (2026-11-20): the player at 3840x2160 and 144 fps on the worker's GTX 1080 Ti, every displayed frame within 6.94 ms at the 99th percentile with the present and the GPU's wait, with Interpolate and Extrapolate. The second round had measured the fast renderer's 99th percentile with presenting at 18.6 to 26.3 ms there, all of the tail in the present step.
+
+**Each paced frame timed** (melee-player's `bench_frames`). The paced bench (`--bench` with `--high-refresh interpolate|extrapolate`) now keeps every frame's drawing, the present's submission and the wait for the GPU, with its passes' times on the GPU (timestamp queries, `GpuTimer`, by stage: the scene, the EFB copies, the XFB copy, the present), and reports the GPU's time a frame by stage, the frames over 144 Hz's interval and their place between ticks, and the slowest twelve with their parts. `MELEE_BENCH_FRAMES=FILE` writes every frame as a CSV row.
+
+**What made the tail: the uber shader at the match's start.** On the worker (exclusive, 2026-11-21) nearly every frame over 6.94 ms fell in the bench's first second, and their scene pass took 20 to 25 ms on the GPU against 1.7 ms after it: the draws were waiting for their specialized pipelines (686 in the saved list, 5.8 to 6.0 ms each on two threads) and drew with the uber shader, whose per-pixel work at an EFB of 2920 by 2400 takes the 1080 Ti about 13 times as long. From tick 60 on the same runs were at the target or close (Fountain of Dreams at 2 frames a tick: p99 with presenting 26.06 ms over the whole run, 6.81 from tick 60; `fox-marth-ps` 21.78 and 7.64). `MELEE_GPU_TIMING=0` changed nothing (the queries cost nothing measurable). The player had the same at every match's start: the handoff makes a fresh renderer for the match, which made the saved list again.
+
+**Specialized pipelines shared across a device's renderers** (`melee_gpu::SharedSpecialized`, `Renderer::share_specialized`, `present::Gpu::specialized`). Every renderer the player makes on its GPU takes the specialized pipelines the others made, by what each is made for, its TEV configuration and its samples a pixel, and puts its own there: the menus' renderer makes the saved list's during the boot and the menus, and a match's renderer takes them as it asks (its `warm_specialized` takes the whole list at once). One renderer's pipeline draws with another's bind groups because wgpu dedups equal bind group layouts and every renderer's are the same. Checked by `tev_tests::a_renderer_draws_with_the_specialized_pipelines_another_made` (a second renderer on the device draws twelve random configurations with the first's pipelines, making none, bit for bit as the first drew them; mutations: the lookup skipped, and the first renderer not putting what it made in the store: both fail it). The exact renderer is unchanged: the harness and the frames tests make no shared store. The paced bench now waits for the saved list before the match as the menus would (`finish_specialized` on its first renderer: "686 made in 2,000 ms before the match" on the worker), so no measured draw used the uber shader.
+
+**Frames in flight** (`MELEE_BENCH_IN_FLIGHT=1`). The paced bench waits for the GPU after each frame, so a frame's time is the CPU's frame plus the GPU's; the player's swap chain (`desired_maximum_frame_latency` 1) draws the next frame while the GPU finishes the last. With `MELEE_BENCH_IN_FLIGHT=1` each frame's present is left in flight and waited for after the next frame's present, so a frame's time (its drawing, present and that wait) is the time between frames, and its GPU times land on the frame they're of. Still offscreen: no display's refresh paces it.
+
+### The player at 4K and 144 fps (third round)
+
+On the worker's exclusive runner (2026-11-21 07:09 to 07:24), `feat/fast-f5` with both changes, release with line tables, the GTX 1080 Ti through Vulkan, internal 5x (EFB 2920 by 2400), 1980 ticks of each replay. Waiting for each frame: two rounds, both shown; in flight: one round. Milliseconds.
+
+| Replay | Mode, frames a tick | A frame's drawing, p99 | Waiting for each frame: p50, p99 | In flight: p50, p99 | The GPU a frame: p50, p99 |
+| --- | --- | --- | --- | --- | --- |
+| Fountain of Dreams | Interpolate, 3 | 4.92 / 4.72 | 4.91 / 4.91, 6.86 / 6.80 | 3.51, 4.61 | 3.13, 3.64 |
+| Fountain of Dreams | Interpolate, 2 | 4.74 / 4.97 | 4.84 / 4.90, 6.74 / 6.93 | 2.92, 4.55 | 3.13, 3.63 |
+| Fountain of Dreams | Extrapolate, 3 | 4.82 / 4.99 | 4.92 / 4.95, 6.77 / 6.94 | 2.84, 4.59 | 3.14, 3.65 |
+| Fountain of Dreams | Extrapolate, 2 | 4.94 / 4.78 | 4.95 / 4.92, 6.97 / 6.76 | 2.65, 4.54 | 3.15, 3.66 |
+| `fox-marth-ps` | Interpolate, 3 | 4.55 / 4.51 | 4.91 / 4.88, 7.60 / 7.58 | 3.97, 5.69 | 3.58, 5.13 |
+| `fox-marth-ps` | Interpolate, 2 | 4.57 / 4.58 | 4.88 / 4.84, 7.60 / 7.62 | 3.87, 5.66 | 3.58, 5.13 |
+| `fox-marth-ps` | Extrapolate, 3 | 4.60 / 4.60 | 4.91 / 4.91, 7.62 / 7.68 | 3.88, 5.70 | 3.57, 5.13 |
+| `fox-marth-ps` | Extrapolate, 2 | 4.64 / 4.62 | 4.92 / 4.90, 7.57 / 7.67 | 3.31, 5.70 | 3.58, 5.13 |
+| Fountain of Dreams, exact | Interpolate, 2 | 12.00 | 9.33, 13.49 | 7.54, 12.11 | 3.22, 3.85 |
+| `fox-marth-ps`, exact | Interpolate, 2 | 7.16 | 5.90, 8.99 | 3.73, 6.20 | 3.57, 5.11 |
+
+The GPU's frame at 4K: the scene 1.7 ms (Fountain of Dreams) to 2.0 (`fox-marth-ps`, 2.8 at p99), the EFB copies 0.45 to 0.57 (1.4 at p99 on Pokémon Stadium), the XFB copy 0.75 and the present 0.23.
+
+**Against the target: met by the fast renderer with a frame in flight, as the player presents, on both matches in both modes and at 2 and 3 frames a tick**: p99 4.5 to 4.6 ms on Fountain of Dreams and 5.7 on `fox-marth-ps`, against 6.94. Waiting for each frame (the CPU's and the GPU's times added) Fountain of Dreams sits at the line (6.74 to 6.97) and `fox-marth-ps` over it (7.57 to 7.68), where Pokémon Stadium's later transformations make the GPU's frame 4.3 to 5.1 ms. The exact renderer meets it on neither (Fountain of Dreams' CPU frame alone is 7.4 ms at p50). What's over 6.94 ms with a frame in flight is 0.05 to 0.4% of the frames: the first frame (31 to 41 ms) and, on Fountain of Dreams, a frame at the same few ticks each run (5, 10, 84, 233, 585, 714, 890, 1143, 1220, 1295 and a few more) whose drawing on the CPU takes 8 to 17 ms, each the first frame after its tick: what first appears there (meshes into the cache, textures decoded and made) rather than the GPU. Each is a single hitched frame, below the 99th percentile. This is offscreen, and the tick (the simulation's 1.2 to 1.4 ms and Extrapolate's prediction, 0.9 to 1.1) runs between frames outside these times; in flight it overlaps the GPU's work on the frame before. The player in its window, below, has both.
+
+**The player in its window on the worker** (Sarah's go-ahead, 2026-11-21; `s3.sh`). The worker's display is a 1920 by 1080 panel at 60 Hz on DVI-D (its modes read from the compositor: nothing above 1080p, nothing above 75 Hz), so neither 4K nor 144 Hz can be shown there. What it can show: the real player (`--replay R --ticks 1980 --perf-report FILE`, the run's ticks and frames and the swap chain's present, the perf report's frame time being the time between presents from tick 180 on) fullscreen at 1920 by 1080 with internal 5x, the same EFB of 2920 by 2400 and so the same scene, copies and XFB copy on the GPU as 4K; only the present's blit is smaller (0.09 ms against 0.23 at 4K). The driver offers no immediate present mode under GNOME's Wayland session, so `--present immediate` falls back to Mailbox, which doesn't wait for the panel. A window asked for at 3840 by 2160 is made 1853 by 1016 by the compositor. One run each (two for the fast renderer at 144), 2026-11-21 08:07 to 08:16, the same `release` build as the offscreen runs (line tables only added; not `dist`'s LTO build, as design call 10 has it):
+
+| Replay | Renderer, mode, frames for | Frames a second | Frame time (between presents): p50, p99, max | The GPU a frame: mean, p99 | The CPU's build a frame: p50, p99 |
+| --- | --- | --- | --- | --- | --- |
+| Fountain of Dreams | fast, Interpolate, uncapped (`--refresh 1000`) | 268.8 | 3.65, 5.94, 20.7 | 2.97, 3.49 | 2.54, 4.52 |
+| `fox-marth-ps` | fast, Interpolate, uncapped | 230.8 | 4.07, 5.87, 20.8 | 3.73, 4.97 | 2.22, 3.84 |
+| Fountain of Dreams | fast, Interpolate, 144 Hz (`--refresh 144`) | 135.6 / 143.8 | 6.96 / 6.95, 23.6 / 9.79 | 3.39 / 2.98, 21.9 / 3.49 | 2.80 / 2.79, 5.49 / 5.28 |
+| Fountain of Dreams | fast, Extrapolate, 144 Hz | 143.9 / 143.9 | 6.94 / 6.94, 10.71 / 10.43 | 2.98 / 2.98, 3.49 / 3.49 | 2.74 / 2.77, 5.09 / 5.20 |
+| `fox-marth-ps` | fast, Interpolate, 144 Hz | 143.9 / 144.0 | 6.94 / 6.94, 9.37 / 9.30 | 3.81 / 3.80, 5.00 / 4.98 | 2.39 / 2.40, 4.55 / 4.49 |
+| `fox-marth-ps` | fast, Extrapolate, 144 Hz | 144.0 / 144.0 | 6.94 / 6.95, 9.94 / 9.61 | 3.81 / 3.80, 5.00 / 4.99 | 2.36 / 2.38, 4.62 / 4.58 |
+| Fountain of Dreams | exact, Interpolate, 144 Hz | 109.3 | 9.14, 14.00, 30.5 | 2.98, 3.48 | 7.57, 12.37 |
+| `fox-marth-ps` | exact, Interpolate, 144 Hz | 144.0 | 6.95, 10.17, 12.8 | 3.80, 4.99 | 4.20, 7.49 |
+
+**What the window says.** Uncapped, the fast renderer's frames come 3.7 to 4.1 ms apart at the median and 5.9 at the 99th percentile, present included, on a real swap chain with the tick between frames: every frame but a few in a thousand is made within 6.94 ms. Paced for 144 Hz, the fast renderer holds 143.8 to 144.0 frames a second on both matches in both modes (the first Interpolate run on Fountain of Dreams excepted: its pipelines still made slowly (17 ms each) after the session's cold first run, its GPU's 99th percentile 21.9 ms the uber shader's); the time between presents is then 6.94 ms at the median and 9.3 to 10.7 at the 99th percentile, but that spread is the pacing's, not missed frames: with no 144 Hz display the player paces by its own clock, so one present lands early and the next late around 6.94, where a 144 Hz panel's refresh would take each in its turn. **What a 60 Hz panel can't tell**: whether each frame makes its refresh on a real 144 Hz display (the vblank's timing against the frame's, the compositor's latency at 144 Hz, and Mailbox's or FIFO's behaviour there), and the present's cost at 4K (0.14 ms more on the GPU than at 1080p, by the offscreen runs). The uncapped numbers say there's room: the slowest 1% of frames take 5.9 ms against 6.94's budget.
+
+Two more things the window showed. The first run in the session made its specialized pipelines at 175 ms each (the driver's cache cold for it) and drew all 30 s with the uber shader, 47.5 frames a second; every run after made them in 6 ms. A replay in the player has no menus before it, so its renderer makes the saved list from the replay's start (the perf report's first 3 s skip it: 23,000 to 39,000 draw calls with the uber shader each run, all before tick 180). The exact renderer misses 144 on Fountain of Dreams in the window too (109 frames a second, its CPU's build 7.6 ms).
+
+The commands (the worker's scripts in `fast-f5/w3`, `s1.sh`, `s2.sh` and `s3.sh`):
+
+```sh
+# Each frame's parts and GPU passes, as CSV, waiting for each frame; then with one in flight.
+MELEE_BENCH_FRAMES=out.csv melee-hd --disc D --replay R --bench 1980 --size 3840x2160 \
+    --renderer fast --high-refresh interpolate --frames-per-tick 2
+MELEE_BENCH_IN_FLIGHT=1 MELEE_BENCH_FRAMES=out.csv melee-hd ...   # the same arguments
+# The player in its window: fullscreen, internal 5x, paced for 144 Hz or uncapped.
+melee-hd --disc D --replay R --ticks 1980 --mute --renderer fast --high-refresh interpolate \
+    --present immediate --refresh 144 --fullscreen --scale 5 --perf-report out.txt   # --refresh 1000: uncapped
+```
+
+**Indicative, on this PC** (the RTX 5070 Ti, other agents' work running; these decide nothing): Fountain of Dreams at 2 frames a tick, the GPU a frame 0.86 ms at p50; there the slow frames were the busy machine's, on the CPU.
+
+### What's left (after F5's third round)
+
+- **A 144 Hz display**: the worker's is 1080p at 60 Hz, so whether each frame makes a 144 Hz refresh at 4K is still unmeasured; the uncapped window (p99 5.9 ms) and the offscreen runs at 4K in flight (p99 4.5 to 5.7) say it should.
+- **A cold start**: the first run on a driver cache that doesn't hold the pipelines draws with the uber shader for its first 30 s and more (47.5 frames a second at internal 5x on the 1080 Ti); a replay's first seconds draw with it while the list is made.
+- **The first frame after new content** (the 8 to 17 ms frames above): what the CPU does when a mesh or texture first appears, which a warm-up of the match's meshes and textures before it starts could take, as the specialized pipelines' list does for shaders.
+- **The uber shader at 4K** (20 to 25 ms a frame on the 1080 Ti): a configuration the saved list lacks still draws with it until its pipeline is made, a frame or a few; a cheaper fallback, or making that pipeline at once for the first draw that wants it, would remove the hitch.
+- **The CPU frame's 1 ms** (unchanged this round): records from the `Draw` list to shorten the stream thread, and the frame's end (0.3 ms), as the second round left them.

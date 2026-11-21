@@ -317,6 +317,42 @@ impl Drop for Workers {
     }
 }
 
+/// Specialized pipelines made by any of one device's renderers, for the others to take as they
+/// ask for them: the player's renderers (the menus' and each match's, made at its start) share
+/// one, so a match's first frames draw with the pipelines the menus' renderer made from the
+/// saved list during the boot and the menus, not with the uber shader while the match's own
+/// threads make them again. A pipeline is what it's made for, its TEV configuration and its
+/// samples a pixel; every renderer's bind group layouts are the same (wgpu dedups equal
+/// layouts), so one renderer's pipeline draws with another's bind groups.
+#[derive(Clone, Default)]
+pub struct SharedSpecialized(Arc<Mutex<SharedPipelines>>);
+
+/// The shared pipelines, by what each is made for, its TEV configuration and its samples a pixel.
+type SharedPipelines = FxHashMap<(PipelineKey, Uid, u32), wgpu::RenderPipeline>;
+
+impl SharedSpecialized {
+    fn get(&self, key: PipelineKey, uid: Uid, samples: u32) -> Option<wgpu::RenderPipeline> {
+        self.0.lock().unwrap().get(&(key, uid, samples)).cloned()
+    }
+
+    fn put(&self, key: PipelineKey, uid: Uid, samples: u32, p: &wgpu::RenderPipeline) {
+        self.0
+            .lock()
+            .unwrap()
+            .entry((key, uid, samples))
+            .or_insert_with(|| p.clone());
+    }
+
+    /// The pipelines held.
+    pub fn len(&self) -> usize {
+        self.0.lock().unwrap().len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+}
+
 /// Modules made so far, by uid and early z, shared by the threads.
 type Modules = Arc<Mutex<FxHashMap<(Uid, bool), wgpu::ShaderModule>>>;
 
@@ -363,6 +399,8 @@ pub(crate) struct Specializer {
     pipelines: FxHashMap<(PipelineKey, u32), Option<wgpu::RenderPipeline>>,
     workers: Option<Workers>,
     modules: Modules,
+    /// Pipelines other renderers on the device made, and this one's for them.
+    pub shared: Option<SharedSpecialized>,
     pub stats: TevStats,
 }
 
@@ -375,6 +413,8 @@ pub struct TevStats {
     /// Pipelines made, and the time making them took (each on its own thread): in all, and
     /// the longest.
     pub made: u32,
+    /// Pipelines taken from another renderer ([`SharedSpecialized`]), not made.
+    pub shared: u32,
     pub compile: Duration,
     pub longest: Duration,
     /// Draw calls made with a specialized shader, and with the uber shader while one wasn't
@@ -387,10 +427,11 @@ impl std::fmt::Display for TevStats {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{} pipelines for {} TEV configurations, {} made, {:.1} ms each on average, {:.1} ms at most; draw calls {} specialized, {} uber while waiting",
+            "{} pipelines for {} TEV configurations, {} made, {} shared, {:.1} ms each on average, {:.1} ms at most; draw calls {} specialized, {} uber while waiting",
             self.pipelines,
             self.configurations,
             self.made,
+            self.shared,
             self.compile.as_secs_f64() * 1000.0 / f64::from(self.made.max(1)),
             self.longest.as_secs_f64() * 1000.0,
             self.specialized_calls,
@@ -423,6 +464,7 @@ impl Specializer {
             pipelines: FxHashMap::default(),
             workers: None,
             modules: Arc::default(),
+            shared: None,
             stats: TevStats::default(),
         }
     }
@@ -485,6 +527,14 @@ impl Specializer {
         self.stats.made += 1;
         self.stats.compile += made.time;
         self.stats.longest = self.stats.longest.max(made.time);
+        if let Some(s) = &self.shared {
+            s.put(
+                made.key,
+                self.uids[made.id as usize],
+                self.maker.samples,
+                &made.pipeline,
+            );
+        }
         self.pipelines
             .insert((made.key, made.id), Some(made.pipeline));
     }
@@ -497,6 +547,15 @@ impl Specializer {
         }
         let id = self.intern(uid);
         if self.pipelines.contains_key(&(key, id)) {
+            return id;
+        }
+        if let Some(p) = self
+            .shared
+            .as_ref()
+            .and_then(|s| s.get(key, uid, self.maker.samples))
+        {
+            self.stats.shared += 1;
+            self.pipelines.insert((key, id), Some(p));
             return id;
         }
         self.pipelines.insert((key, id), None);

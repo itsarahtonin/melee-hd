@@ -204,6 +204,10 @@ pub struct Gpu {
     /// Times every render pass by stage, where the device has timestamp queries (unless
     /// `MELEE_GPU_TIMING=0`): the renderer's, the blit's and the overlay's.
     pub timer: Option<melee_gpu::GpuTimer>,
+    /// The specialized pipelines every renderer made on it has made: the menus' renderer makes
+    /// the saved list's during the boot and the menus, and each match's renderer, made at its
+    /// start, takes them instead of drawing with the uber shader while making them again.
+    pub specialized: melee_gpu::SharedSpecialized,
 }
 
 impl Gpu {
@@ -248,6 +252,7 @@ impl Gpu {
             device,
             queue,
             timer,
+            specialized: melee_gpu::SharedSpecialized::default(),
         }
     }
 
@@ -265,6 +270,7 @@ impl Gpu {
         r.xfb_on_gpu = true;
         r.xfb_readback = false;
         r.set_timer(self.timer.clone());
+        r.share_specialized(Some(self.specialized.clone()));
         r
     }
 
@@ -748,16 +754,28 @@ impl Offscreen {
         }
     }
 
-    /// Draws a frame into the target and waits for the GPU to finish it.
-    pub fn present(&mut self, gpu: &Gpu, frame: &melee_gpu::Frame) {
-        let Some(texture) = &frame.texture else {
-            return;
-        };
+    /// Draws a frame into the target and waits for the GPU to finish it. Returns when the
+    /// present was submitted, before the wait.
+    pub fn present(&mut self, gpu: &Gpu, frame: &melee_gpu::Frame) -> std::time::Instant {
+        self.present_queued(gpu, frame);
+        let submitted = std::time::Instant::now();
+        let _ = gpu.device.poll(wgpu::PollType::wait_indefinitely());
+        submitted
+    }
+
+    /// Draws a frame into the target without waiting: the submission the GPU finishes it with,
+    /// as a window's present leaves the frame in flight.
+    pub fn present_queued(
+        &mut self,
+        gpu: &Gpu,
+        frame: &melee_gpu::Frame,
+    ) -> Option<wgpu::SubmissionIndex> {
+        let texture = frame.texture.as_ref()?;
         let view = self.texture.create_view(&Default::default());
         self.blit
             .draw(gpu, Some(texture), &view, self.width, self.height);
         gpu.end_frame();
-        let _ = gpu.device.poll(wgpu::PollType::wait_indefinitely());
+        Some(gpu.queue.submit(std::iter::empty()))
     }
 }
 

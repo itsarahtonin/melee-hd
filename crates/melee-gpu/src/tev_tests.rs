@@ -9,7 +9,7 @@ use melee_gx::State;
 
 use crate::{
     EFB_HEIGHT, EFB_WIDTH, GpuVertex, MODE_DEPTH_ONLY, MODE_DRAW, PendingClear, PipelineKey,
-    Renderer, TevMode, tev,
+    Renderer, SharedSpecialized, TevMode, tev,
 };
 
 pub(crate) struct Rng(pub(crate) u64);
@@ -343,4 +343,39 @@ fn uids_round_trip_and_ignore_data() {
         s.bp[0xC0] ^= 1;
         assert_ne!(tev::Uid::of(&s.bp, MODE_DRAW), uid);
     }
+}
+
+/// Two renderers on one device sharing their specialized pipelines (the player's menus' and a
+/// match's): the second takes every pipeline the first made, making none, and draws with them
+/// as the first did, bit for bit, with its own bind groups.
+#[test]
+fn a_renderer_draws_with_the_specialized_pipelines_another_made() {
+    let Some(mut a) = renderer() else {
+        eprintln!("skipped: no hardware GPU adapter");
+        return;
+    };
+    let mut b = Renderer::with_device(a.device.clone(), a.queue().clone());
+    let shared = SharedSpecialized::default();
+    a.share_specialized(Some(shared.clone()));
+    b.share_specialized(Some(shared.clone()));
+    let seed = 0x2545_F491_4F6C_DD1D;
+    let (ids_a, levels) = textures(&mut a, &mut Rng(seed));
+    let (ids_b, _) = textures(&mut b, &mut Rng(seed));
+    let mut rng = Rng(seed ^ 1);
+    let configs = 12;
+    for i in 0..configs {
+        let s = state(&mut rng);
+        let vs = quad(&mut rng);
+        let made = draw(&mut a, &s, &vs, ids_a, levels, MODE_DRAW, TevMode::Sync);
+        // Sync makes any pipeline the shared ones lack: none must be.
+        let taken = draw(&mut b, &s, &vs, ids_b, levels, MODE_DRAW, TevMode::Sync);
+        assert!(
+            made == taken,
+            "config {i}: the shared pipeline drew differently"
+        );
+    }
+    assert_eq!(b.tev.stats.made, 0, "the second renderer made its own");
+    assert_eq!(b.tev.stats.shared as usize, shared.len());
+    assert_eq!(a.tev.stats.made as usize, shared.len());
+    assert!(shared.len() > configs / 2);
 }

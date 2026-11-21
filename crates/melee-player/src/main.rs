@@ -62,6 +62,7 @@
 // No console window for the release build on Windows (`console` attaches to a terminal's).
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
+mod bench_frames;
 mod capture;
 mod channel;
 mod console;
@@ -3325,6 +3326,16 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
     let scale = scale_for(args.scale, args.size, args.aspect);
     let mut r = pipelines::renderer(&gpu, scale, args.msaa, args.aspect);
     r.xfb_readback = args.shot.is_some();
+    // The player's menus' renderer makes the saved list's specialized pipelines during the boot
+    // and the menus, and the match's takes them (`present::Gpu::specialized`): so does the
+    // match's here, this renderer standing for the menus'.
+    let warm = Instant::now();
+    r.finish_specialized();
+    println!(
+        "the saved specialized pipelines: {} made in {:.0} ms before the match, as the menus would",
+        gpu.specialized.len(),
+        warm.elapsed().as_secs_f64() * 1000.0
+    );
     let mut renderer = gpu_for(r, args.one_thread, args.fast);
     let mut handoff = handoff::Handoff::default();
     let mut frames = Frames::new();
@@ -3343,8 +3354,17 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
     let mut parts = [Duration::ZERO; 3];
     let mut drawing: Vec<Duration> = Vec::with_capacity((ticks * per_tick) as usize);
     let mut presented: Vec<Duration> = Vec::with_capacity((ticks * per_tick) as usize);
+    let mut rows = bench_frames::Frames::with_capacity((ticks * per_tick) as usize);
     let mut last = None;
     let mut rendered = 0u32;
+    // Times read back from before the first frame aren't its.
+    let _ = gpu.gpu_times();
+    // MELEE_BENCH_IN_FLIGHT=1: each frame's present is left in flight while the next is drawn,
+    // and waited for after the next's present, as a window's swap chain with one frame of
+    // latency has it; a frame's wait is then for the frame before, and its drawing, present
+    // and wait are the time between frames.
+    let in_flight = std::env::var("MELEE_BENCH_IN_FLIGHT").is_ok_and(|v| v == "1");
+    let mut flying: Option<wgpu::SubmissionIndex> = None;
     for tick in 0..ticks {
         let t0 = Instant::now();
         let pads = args.holds.as_ref().map_or(rest, |h| h.at(u64::from(tick)));
@@ -3409,8 +3429,20 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                     (renderer.run(&frames.space, data, &fifo, None), tb)
                 };
                 let tc = Instant::now();
+                let mut submitted = tc;
                 if let Some(frame) = images.into_iter().last() {
-                    target.present(&gpu, &frame);
+                    if in_flight {
+                        let now = target.present_queued(&gpu, &frame);
+                        submitted = Instant::now();
+                        if let Some(before) = std::mem::replace(&mut flying, now) {
+                            let _ = gpu.device.poll(wgpu::PollType::Wait {
+                                submission_index: Some(before),
+                                timeout: None,
+                            });
+                        }
+                    } else {
+                        submitted = target.present(&gpu, &frame);
+                    }
                     last = Some(frame);
                 }
                 let td = Instant::now();
@@ -3419,6 +3451,15 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                 parts[2] += td - tc;
                 drawing.push(tc - ta);
                 presented.push(td - ta);
+                rows.push(bench_frames::Row {
+                    tick,
+                    k,
+                    draw: tc - ta,
+                    submit: submitted - tc,
+                    wait: td - submitted,
+                    gpu: None,
+                });
+                rows.gpu(&gpu.gpu_times(), usize::from(in_flight));
             }
         }
         session.recycle(f);
@@ -3481,6 +3522,15 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
             pct(&mut ticked, 0.99),
             pct(&mut ticked, 1.0)
         );
+    }
+    if in_flight {
+        println!(
+            "each frame left in flight while the next is drawn (MELEE_BENCH_IN_FLIGHT=1): a frame's wait is for the frame before"
+        );
+    }
+    print!("{}", rows.report(bench_frames::INTERVAL));
+    if let Ok(path) = std::env::var("MELEE_BENCH_FRAMES") {
+        std::fs::write(&path, rows.csv()).unwrap_or_else(|e| eprintln!("{path}: {e}"));
     }
     if let (Some(path), Some(f)) = (&args.shot, &last) {
         f.save_png(std::path::Path::new(path))
