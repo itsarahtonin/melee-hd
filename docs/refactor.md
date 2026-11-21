@@ -892,6 +892,47 @@ Link's and Young Link's hookshot and Samus's grapple beam are one tether in two 
 | Speed (indicative, this PC with other agents' oracle runs on it) | `melee-bench native --runs 5`, three alternating rounds of the base (`510e5139`) and final builds, median of the 15: `grapple-samus-bf` 4,199 frames/s before, 4,189 after (runs 4,017–4,594 and 4,083–4,609); `cpu-l1-puff-l5-link-fod` 2,089 before, 2,065 after (2,047–2,139 and 2,026–2,100; its runs differ from the replay before and after alike). Within the spread. For the worker: `melee-bench native --dir DIR --runs 5 grapple-samus-bf cpu-l1-puff-l5-link-fod`, the two copied from `local/bench/oracle-m4-grapple/` and `local/bench/oracle-m4/` |
 | After main's batch 10 (merged at `65e04cb3`: wave 3's `forget` and item-kind names) | the comparer's coverage had moved, so `65e04cb3`'s build wrote fresh goldens of the 72 (full diffs, 732,664 ticks, no difference) and the merged build matched all 72 every tick; `sync-test --rollback 7` clean on `ics-link-bf-2a40237f-rf`, `ylink-fox-dl` and `dk-samus-bf-9da5c633`; leaf-check `link`, `young_link`, `samus`, `samus_swing` pass |
 
+### Task 11, the item pairs: done (2026-11-20, `refactor/dedup-item-pairs` from `75bc50b4`)
+
+Lugia and Ho-oh, the green and red shells, and Samus's Charge Shot and Mewtwo's Shadow Ball (with Kirby's copies of both) each share one implementation now, the tether's way ([design call 7](#design-calls)): a new module per pair holds the shared functions, each carrying both originals' `#[doc(alias)]`, over a descriptor per item that names what differs. Each item's file keeps its addresses, its `run` tables, its data and what only it does; the fighters' callers keep calling each item's one-line `spawn`, `fire` and `remove`.
+
+- **The birds** (`it::kinds::legendary`, `itlugia.c` and `ithouou.c`): out of the ball, the pose, the climb off the top of the screen, the return towards the camera, the sink's countdown, the attack's end, and their shots' set-out, life and stage hits, over a `Legendary` per bird (`lugia::LUGIA`, `houou::HO_OH`).
+- **The shells** (`it::kinds::shell`, `itgshell.c` and `itrshell.c`): the dust trail, the roll, the fall, the landings, the pickup, throw and drop, the skid, the reflection, the shield bounce, the landings a bounce draws and the hit delay, over a `Shell` per shell (`gshell::GREEN`, `rshell::RED`) whose `vars` gives the variables' shared fields (`shell::Vars`, the same offsets in `itGShell_ItemVars` and `itRShell_ItemVars`).
+- **The charged shots** (`it::kinds::chargedshot`, `itsamuschargeshot.c` and `itmewtwoshadowball.c`): the ball made in the hand and grown with the charge, the firing, the flight and its stage hits, the sparkles' count, the end, the removal, the reflection and the shield bounce, over a `ChargedShot` per shot (`samuschargeshot::CHARGE_SHOT`, `mewtwoshadowball::SHADOW_BALL`). Their variables are the same from `x4` to `x2C` but typed apart (the Charge Shot's three floats are the Shadow Ball's `Vec3` at `x4`), so the shared code reads them through a trait (`chargedshot::Vars`) both generated structs implement.
+
+**What differed**, besides the addresses, each a setting:
+
+| Pair | Setting | First | Second |
+| --- | --- | --- | --- |
+| Lugia, Ho-oh | `climb` | its climb in `xE50.x` (`0x7C`) | `vel_accum` (`0x70`) |
+| | `second_script_word` | one word (fire) | two (the effects, the fire), both cleared at the spawn |
+| | `take_off_speed` | climbs from its attributes' `x4`, upward | from a standstill |
+| | `sink`, `sink_ended` | the speed that brings it to rest where it came out; the sink's animation again (it fires at rest, in its physics) | its attributes' speed; the fire called when the animation ends |
+| Green, red shell | `trail`, `roll` | dust every `x30` frames, roll at `x20` | `x44`, `x38` |
+| | `hit_delay_on_throw` | none (started as it slides) | `x3C` on a throw or a drop |
+| | `skid` | state 9 | state 7 |
+| | `Vars::popped` | the pop-up bit (`xDEC` bit 3), cleared on a pickup and a skid | none |
+| Charge Shot, Shadow Ball | `top` | the charge's state at most the eighth | up to the charge's levels |
+| | `full_sparkles` | Samus's or Kirby's sparkles when full | none (its test's result dropped, [Melee's bugs](melee-bugs.md#mewtwo-the-fired-balls-dropped-comparison)) |
+| | `wobbles` | no | the speed times the wobble's size (`x50`), the wobble's frame reset and the model's child back to size on firing; set back in the hands by the maker's scale |
+| | `turns` | turns to face the way it flies back or bounces | keeps its facing |
+| | `released`, `hold` | `ftSs_SpecialN_801291F0` and Samus's queries | `ftMt_SpecialN_SetNULL` and Mewtwo's |
+
+**Left as each item's own, and why.** The birds' attacks (Lugia's three counts, its aim's search and the Aeroblasts' depth factors; Ho-oh's effects and the Sacred Fire's line search and ride) and their sinks' physics differ outright. The green shell's slide, pop-ups and owner grace and the red shell's chase, its push table, bounces and hit count share no more than the hits' outlines: their states, flags and speeds differ at every step, and the two `anim` countdowns run in different orders. The Charge Shot's glow in the hand, and the Shadow Ball's wobble, burst and the forward throw's ball, are one shot's alone. The Koopas' shells (`zgshell`, `zrshell`) near-copy the green shell's (186 of their 1,119 lines) but stay out: they're enemy items over the enemies' common variables (`zako::bytes`, not the shells' struct), have their own states (waking, the red one's pose), and are `refactor/dedup-enemies`' area. The Charge Shot's damage now converts as the Shadow Ball's did (`ppc::cvt_fp2unsigned`); its own conversion differed only for a NaN, which no charge reaches.
+
+**The numbers.**
+
+| | |
+| --- | --- |
+| Lines | the pairs' files with their new module: the birds 1,003 to 894 (−109; code lines, comments and blanks left out, 790 to 691), the shells 1,304 to 1,296 (−8; 1,092 to 1,060), the charged shots 1,287 to 1,346 (+59; 1,102 to 1,097: the variables' trait is 130 lines); 1,861 added and 1,840 removed in `crates` and `tools`, leaf-check's tables included. The near-copied logic is gone (the 100-token scan finds 60 of Ho-oh's 213 lines in Lugia's, 105 of the green shell's 451 in the red one's, 66 of the Shadow Ball's 445 in the Charge Shot's: the address lists, `run` tables and the shells' hit outlines), but the descriptors' and the shared code's docs take back most of the lines |
+| Aliases | the same 18,078 `#[doc(alias = "...")]` attributes after each commit (a sorted list diffed); the list-form `evt_unk` the two birds' `forget` carried is one now (442 list-form aliases, from 443); `ledger --check` 19,827 of 19,827 each time, only the CSV's locations moved |
+| Oracle | the base build (`75bc50b4`) ran the full diff of the 45 verify replays whose Slippi item updates name one of the six items (Lugia and Ho-oh in `items-pokeball5-bf`, Ho-oh in `items-pokeball9-fd`; the shells in eight item matches; the Charge Shot in 20 and the Shadow Ball in 16, Kirby's copies in `kirby-samus-fod` and `kirby-mewtwo-bf`), 496,088 ticks with no difference, writing per-tick whole-state goldens; each commit's build checked its pair's replays and the final build all 45: every tick's state hash equal |
+| Sessions | the verify's session traces scanned for the six kinds in their item regions (65 of 534 traces); the 52 session diffs with one of them (the Koopas' shells aside), on the final build: all compare with no difference, 897,590 ticks (40 on the worker, 12 here, whose traces the worker lacks), Lugia and Ho-oh in `m6u-ev37-pichu` (20,124 ticks), the shells in Classic, All-Star, the events, Training, Multi-Man Melee and the long recordings, the Charge Shot (Kirby's in `rt-attract`) and the Shadow Ball in events, unlocks and replays |
+| Mutation | one write in the shared code switched on for one item kind at a time fails that item's replay: the birds' take-off (`legendary::take_off`) Lugia `items-pokeball5-bf` tick 2345, Ho-oh the same replay at 6008 and `items-pokeball9-fd` at 3830; the shells' roll (`shell::roll`) the green shell `items-ported-bf` 2628 and `items-ported-fd` 5492, the red shell `items-ported-fd` 6941 and `oracle-cpu-items-marth-fd` 9396; the flying shot's size (`chargedshot::animate_flying`) the Charge Shot `own-samus-fd` 165, Kirby's `kirby-samus-fod` 9897, the Shadow Ball `oracle-cpu-mewtwo-dl` 7279, Kirby's `kirby-mewtwo-bf` 3097. Lugia is in one replay and one session (`m6u-ev37-pichu`) of the corpus |
+| Sync | `sync-test --rollback 7`, no difference: `items-pokeball5-bf` (both birds, 7,318 ticks), `items-ported-fd` (both shells, 7,318), `kirby-mewtwo-bf` (both Shadow Balls, 15,899) and `kirby-samus-fod` (both Charge Shots, 19,865) |
+| Leaf-check | `items_pokemon`, `items_shoot`, `items` (three shards), `mewtwo`, `samus`, `kirby`: all pass |
+| Other | melee-sim's unit tests (171 passed, 2 ignored) after each commit, `ticks_and_restores_dont_allocate` at one thread, `fmt`, `clippy -D warnings`. Not benchmarked: no hot path changed beyond a descriptor read per call |
+
 ### The fast renderer
 
 Its own crates (melee-render, melee-gpu, melee-player); the `feat/linux-011` branch works in melee-gpu and melee-player now, so F2 onward should start from its merge or keep to new files.

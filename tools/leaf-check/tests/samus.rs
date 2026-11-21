@@ -38,7 +38,7 @@ use melee_sim::game::ft::fox::ext as fox_ext;
 use melee_sim::game::ft::samus::special_n::SAMUS;
 use melee_sim::game::it::CLASS_ITEM;
 use melee_sim::game::it::kinds::samusgrapple::GRAPPLE;
-use melee_sim::game::it::kinds::{samusbomb, samuschargeshot, samusmissile, tether};
+use melee_sim::game::it::kinds::{chargedshot, samusbomb, samuschargeshot, samusmissile, tether};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::capture::Call;
@@ -273,7 +273,7 @@ fn run_callback(g: &mut Running, gobj: GObjId, a: u32) -> Ret {
         }
         "it_802B5CBC" => {
             item_helper(g, gobj);
-            samuschargeshot::fired(g, gobj);
+            chargedshot::fired(g, gobj, &samuschargeshot::CHARGE_SHOT);
             return Ret::Nothing;
         }
         "it_802B63F8" => {

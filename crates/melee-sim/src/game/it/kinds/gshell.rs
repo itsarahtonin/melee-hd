@@ -1,19 +1,19 @@
 //! The green shell, `melee/it/kinds/itgshell.c`: kicked, jumped on or hit, it slides along the
 //! ground hitting what it meets, bouncing off walls, until it slows to a stop or its time runs
-//! out.
+//! out. The red shell's code ([`super::shell`]) with its own slide, pop-ups and hits.
 
 use gekko_fp as fp;
 
-use super::super::ground::{air, fall_to_floor, fall_unbreakable, ground_or_fall, ground_skid};
-use super::super::item::{article, attr_of, change, change_state, common_data, play_sfx};
-use super::super::{coll, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib};
+use super::super::ground::ground_or_fall;
+use super::super::item::{change, change_state, common_data, play_sfx};
+use super::super::vars::ItemVars;
+use super::super::{coll, hitbox, item, item_mut, lib26b1, lib2725, maplib};
+use super::shell::{self, Shell, attr, to_f32};
 use crate::fpu::{mem, reg};
-use crate::game::ef::{Arg, SpawnKind};
 use crate::game::handles::CodeRef;
 use crate::game::state::{Game, Running};
 use crate::game::structs::itGShell_ItemVars;
 use crate::hsd::gobj::GObjId;
-use crate::hsd::jobj;
 use crate::vec::Vec3;
 
 pub const TRAIL: u32 = 0x8028_B8D8;
@@ -57,26 +57,39 @@ pub const HIT_SHIELD: u32 = 0x8028_CE1C;
 pub const SHIELD_BOUNCED: u32 = 0x8028_CF2C;
 pub const JUMPED_ON: u32 = 0x8028_CF68;
 
+/// The green shell: its dust every `x30` frames, its roll at `x20`, its hit delay started only
+/// as it slides, its skid state 9, and it pops up (`xDEC` bit 3).
+pub const GREEN: Shell = Shell {
+    vars: shared,
+    trail: 0x30,
+    roll: 0x20,
+    hit_delay_on_throw: None,
+    skid: 9,
+    stopped,
+    fell,
+    landed,
+};
+
 /// Runs one of the shell's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 | ANIM2 | ANIM9 => still(r, gobj),
-        COLL0 => coll0(r, gobj),
+        ANIM0 | ANIM2 | ANIM9 => shell::still(r, gobj),
+        COLL0 => shell::coll0(r, gobj, &GREEN),
         ANIM1 => anim1(r, gobj),
-        COLL1 => coll1(r, gobj),
+        COLL1 => shell::coll1(r, gobj, &GREEN),
         ANIM3 | ANIM4 => anim3(r, gobj),
-        COLL3 | COLL4 | COLL8 => coll3(r, gobj),
+        COLL3 | COLL4 | COLL8 => shell::coll3(r, gobj, &GREEN),
         ANIM6 => anim6(r, gobj),
         COLL6 => coll6(r, gobj),
         ANIM8 => anim8(r, gobj),
-        COLL9 => coll9(r, gobj),
+        COLL9 => shell::skid_coll(r, gobj, &GREEN),
         DMG_DEALT => dmg_dealt(r, gobj),
         DMG_RECEIVED => dmg_received(r, gobj),
-        REFLECTED => reflected(r, gobj),
+        REFLECTED => shell::reflected(r, gobj, &GREEN),
         CLANKED => clanked(r, gobj),
         HIT_SHIELD => hit_shield(r, gobj),
-        SHIELD_BOUNCED => shield_bounced(r, gobj),
+        SHIELD_BOUNCED => shell::shield_bounced(r, gobj),
         JUMPED_ON => jumped_on(r, gobj),
         _ => return None,
     })
@@ -86,19 +99,19 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        TRAIL => trail(r, gobj),
+        TRAIL => shell::trail(r, gobj, &GREEN),
         SPAWNED => spawned(r, gobj),
         STOPPED => stopped(r, gobj),
-        PHYS0 | PHYS2 | PHYS9 => idle(r, gobj),
+        PHYS0 | PHYS2 | PHYS9 => shell::idle(r, gobj),
         FELL => fell(r, gobj),
-        PHYS1 | PHYS3 | PHYS4 | PHYS8 => phys_fall(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
-        THROWN => thrown(r, gobj),
-        DROPPED => dropped(r, gobj),
+        PHYS1 | PHYS3 | PHYS4 | PHYS8 => shell::phys_fall(r, gobj),
+        PICKED_UP => shell::picked_up(r, gobj, &GREEN),
+        THROWN => shell::thrown(r, gobj, &GREEN),
+        DROPPED => shell::dropped(r, gobj, &GREEN),
         SLIDE => slide(r, gobj),
         PHYS6 => phys6(r, gobj),
         SLIDE_AIR => slide_air(r, gobj),
-        ENTERED_AIR => entered_air(r, gobj),
+        ENTERED_AIR => shell::entered_air(r, gobj, &GREEN),
         _ => return false,
     }
     true
@@ -109,35 +122,17 @@ fn vars(game: &mut Game, gobj: GObjId) -> &mut itGShell_ItemVars {
     item_mut(game, gobj).xDD4_itemVar.gshell()
 }
 
-/// `itGShell_Attrs`' float at `off`.
-fn attr(r: &Running, gobj: GObjId, off: u32) -> f32 {
-    let a = article(item(r.game, gobj))
-        .special(r.data)
-        .expect("a shell without attributes");
-    r.data.f32(a.at(off))
-}
-
-/// Starts the dust trail every `x30` frames, `it_8028B8D8`.
-#[doc(alias = "it_8028B8D8")]
-// NaN counts down, as the original's `<= 0` test has it.
-#[allow(clippy::neg_cmp_op_on_partial_ord)]
-pub fn trail(r: &mut Running, gobj: GObjId) {
-    if !(reg(vars(r.game, gobj).xDDC.get()) <= 0.0) {
-        let v = vars(r.game, gobj);
-        v.xDDC.update(|old| mem(fp::fsubs(reg(old), 1.0)));
-        return;
+/// The fields the red shell has too.
+fn shared(v: &mut ItemVars) -> shell::Vars<'_> {
+    let g = v.gshell();
+    shell::Vars {
+        life: &mut g.xDD4,
+        hit_delay: &mut g.xDD8,
+        trail: &mut g.xDDC,
+        landings: &mut g.xDE8,
+        bounced: &mut g.xDEC_b0,
+        popped: Some(&mut g.xDEC_b3),
     }
-    let f = |r: &Running, off: u32| attr(r, gobj, off);
-    let back = -reg(item(r.game, gobj).facing_dir);
-    let v = Vec3::new(
-        mem(fp::fmuls(reg(f(r, 0x34)), back)),
-        f(r, 0x38),
-        f(r, 0x3C),
-    );
-    let j = jobj_of(r.game, gobj);
-    super::super::effect::queue(r, gobj, SpawnKind::PosOffset, 1029, j, &[Arg::Vec(v)]);
-    let x = f(r, 0x30);
-    vars(r.game, gobj).xDDC.set(x);
 }
 
 /// Counts down how long a hit shell can't hurt its owner, `it_8028B988`.
@@ -172,16 +167,11 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
         if !maplib::slides(r.game, r.data, gobj) {
             stopped(r, gobj);
         } else {
-            entered_air(r, gobj);
+            shell::entered_air(r, gobj, &GREEN);
         }
     } else {
         slide(r, gobj);
     }
-}
-
-/// `(f32) i`, as the original converts it (exact, then rounded to single).
-fn to_f32(i: i32) -> f64 {
-    fp::frsp(f64::from(i))
 }
 
 /// Sent sliding the way the hit pushed it, `it_8028BAD8`.
@@ -215,7 +205,7 @@ pub fn knocked(r: &mut Running, gobj: GObjId) {
 
 /// Bounces up off a fighter who hit a sliding shell (the file's inline `shellHit`, and the
 /// sliding half of `it_8028BC2C`), up to `fell` (state 1).
-fn pop_up(r: &mut Running, gobj: GObjId, fell: fn(&mut Running, GObjId)) {
+fn pop_up(r: &mut Running, gobj: GObjId) {
     let (xc, x10, x2c) = (attr(r, gobj, 0xC), attr(r, gobj, 0x10), attr(r, gobj, 0x2C));
     hitbox::start_blink(r.game, gobj);
     hitbox::set_hit_ids(r.game, gobj);
@@ -224,16 +214,7 @@ fn pop_up(r: &mut Running, gobj: GObjId, fell: fn(&mut Running, GObjId)) {
     let vx = fp::fmuls(-reg(ip.x40_vel.x), reg(xc));
     ip.x40_vel.x = mem(fp::fmuls(vx, reg(f)));
     ip.x40_vel.y = x10;
-    if vars(r.game, gobj).xDEC_b0.get() {
-        let max = r
-            .data
-            .u8(common_data(r.game).0.at(super::super::data::common::X48))
-            & 0xF;
-        let n = r.game.objs.rng.below(i32::from(max));
-        vars(r.game, gobj).xDE8.set(n);
-    } else {
-        vars(r.game, gobj).xDEC_b0.set(true);
-    }
+    shell::draw_landings(r, gobj, &GREEN);
     maplib::enter_air(item_mut(r.game, gobj));
     fell(r, gobj);
     let v = vars(r.game, gobj);
@@ -247,7 +228,7 @@ fn pop_up(r: &mut Running, gobj: GObjId, fell: fn(&mut Running, GObjId)) {
 pub fn stomped(r: &mut Running, gobj: GObjId) {
     match item(r.game, gobj).msid {
         5..=8 => {
-            pop_up(r, gobj, fell);
+            pop_up(r, gobj);
             vars(r.game, gobj).xDEC_b2.set(true);
         }
         0 | 1 | 3 | 4 | 9 => {
@@ -272,9 +253,8 @@ pub fn stomped(r: &mut Running, gobj: GObjId) {
 /// `itGShell_Logic14_Spawned`.
 #[doc(alias = "itGShell_Logic14_Spawned")]
 pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let (x0, x28, x2c) = (attr(r, gobj, 0), attr(r, gobj, 0x28), attr(r, gobj, 0x2C));
-    vars(r.game, gobj).xDD4.set(x0);
-    lib2725::set_half_life(r.game, r.data, gobj, x0);
+    let (x28, x2c) = (attr(r, gobj, 0x28), attr(r, gobj, 0x2C));
+    shell::start_life(r, gobj, &GREEN);
     let v = vars(r.game, gobj);
     v.xDE8.set(1);
     v.xDEC_b0.set(false);
@@ -300,43 +280,6 @@ pub fn stopped(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).jumped_on = Some(CodeRef(JUMPED_ON));
 }
 
-/// The states that animate nothing, `itGshell_UnkMotion0_Anim` (2, 9).
-#[doc(alias = "itGshell_UnkMotion0_Anim")]
-#[doc(alias = "itGshell_UnkMotion2_Anim")]
-#[doc(alias = "itGshell_UnkMotion9_Anim")]
-pub fn still(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states that move nothing, `itGshell_UnkMotion0_Phys` (2, 9).
-#[doc(alias = "itGshell_UnkMotion0_Phys")]
-#[doc(alias = "itGshell_UnkMotion2_Phys")]
-#[doc(alias = "itGshell_UnkMotion9_Phys")]
-pub fn idle(_: &mut Running, _: GObjId) {}
-
-/// Rolls the model with the speed on the ground (`Item_UpdateRollingShellRotation`).
-fn roll(r: &mut Running, gobj: GObjId) {
-    if item(r.game, gobj).ground_or_air != 0 {
-        return;
-    }
-    let rate = attr(r, gobj, 0x20);
-    maplib::tilt_on_floor(r.game, r.data, gobj);
-    let child = jobj_of(r.game, gobj).and_then(|j| r.game.objs.jobjs[j].child);
-    let turn = fp::fmuls(reg(rate), reg(item(r.game, gobj).x40_vel.x).abs());
-    let j = child.expect("a shell without a model child");
-    jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
-        o.rotate.y = mem(fp::fadds(reg(o.rotate.y), turn));
-    });
-}
-
-/// `itGshell_UnkMotion0_Coll`.
-#[doc(alias = "itGshell_UnkMotion0_Coll")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    ground_or_fall(r, gobj, fell);
-    roll(r, gobj);
-    false
-}
-
 /// Falls (state 1), not stompable, `it_8028C018`.
 #[doc(alias = "it_8028C018")]
 pub fn fell(r: &mut Running, gobj: GObjId) {
@@ -360,65 +303,12 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
     false
 }
 
-/// Gravity from the attributes, `itGshell_UnkMotion1_Phys` (3, 4, 8).
-#[doc(alias = "itGshell_UnkMotion1_Phys")]
-#[doc(alias = "itGshell_UnkMotion3_Phys")]
-#[doc(alias = "itGshell_UnkMotion4_Phys")]
-#[doc(alias = "itGshell_UnkMotion8_Phys")]
-pub fn phys_fall(r: &mut Running, gobj: GObjId) {
-    let a = attr_of(item(r.game, gobj));
-    let accel = a.f32(r.data, super::super::data::attr::FALL_SPEED);
-    let max = a.f32(r.data, super::super::data::attr::FALL_SPEED_MAX);
-    lib2725::fall(r.game, gobj, accel, max);
-}
-
-/// `itGshell_UnkMotion1_Coll`: lands stopped while it has landings left (`xDE8`).
-#[doc(alias = "itGshell_UnkMotion1_Coll")]
-pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    if vars(r.game, gobj).xDE8.get() != 0 {
-        fall_unbreakable(r, gobj, stopped);
-        return false;
-    }
-    air(r, gobj)
-}
-
-/// `itGShell_Logic14_PickedUp`.
-#[doc(alias = "itGShell_Logic14_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    hitbox::clear_hit_ids(r.game, gobj);
-    vars(r.game, gobj).xDEC_b3.set(false);
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
-}
-
-/// `itGShell_Logic14_Thrown`.
-#[doc(alias = "itGShell_Logic14_Thrown")]
-pub fn thrown(r: &mut Running, gobj: GObjId) {
-    vars(r.game, gobj).xDE8.set(1);
-    change_state(r, gobj, 3, change::ANIM_UPDATE | change::DROP_UPDATE);
-    play_sfx(r, gobj, 242, 127, 64);
-}
-
 /// `itGshell_UnkMotion3_Anim` and 4.
 #[doc(alias = "itGshell_UnkMotion3_Anim")]
 #[doc(alias = "itGshell_UnkMotion4_Anim")]
 pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
     count_owner_grace(r, gobj);
     false
-}
-
-/// `itGshell_UnkMotion3_Coll` (4, 8).
-#[doc(alias = "itGshell_UnkMotion3_Coll")]
-#[doc(alias = "itGshell_UnkMotion4_Coll")]
-#[doc(alias = "itGshell_UnkMotion8_Coll")]
-pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
-    fall_to_floor(r, gobj, landed);
-    false
-}
-
-/// `itGShell_Logic14_Dropped`.
-#[doc(alias = "itGShell_Logic14_Dropped")]
-pub fn dropped(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 4, change::ANIM_UPDATE | change::DROP_UPDATE);
 }
 
 /// Starts sliding: the speed capped, its time and hit delays set, then sliding (`slow` when
@@ -469,17 +359,10 @@ pub fn slide(r: &mut Running, gobj: GObjId) {
 /// dust on the ground, and its time runs out.
 #[doc(alias = "itGshell_UnkMotion6_Anim")]
 pub fn anim6(r: &mut Running, gobj: GObjId) -> bool {
-    let v = vars(r.game, gobj);
-    if reg(v.xDD8.get()) <= 0.0 {
-        if !item(r.game, gobj).xDCD_flag.x0.b5 {
-            hitbox::set_hit_ids(r.game, gobj);
-        }
-    } else {
-        v.xDD8.update(|old| mem(fp::fsubs(reg(old), 1.0)));
-    }
+    shell::count_hit_delay(r, gobj, &GREEN);
     count_owner_grace(r, gobj);
     if matches!(item(r.game, gobj).msid, 5 | 6) {
-        trail(r, gobj);
+        shell::trail(r, gobj, &GREEN);
     }
     let v = vars(r.game, gobj);
     if reg(v.xDD4.get()) <= 0.0 {
@@ -505,7 +388,7 @@ pub fn phys6(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itGshell_UnkMotion6_Coll")]
 pub fn coll6(r: &mut Running, gobj: GObjId) -> bool {
     ground_or_fall(r, gobj, slide_air);
-    roll(r, gobj);
+    shell::roll(r, gobj, &GREEN);
     if maplib::bounce_off_wall(r.game, r.data, gobj) {
         lib2725::face_motion(r.game, gobj);
     }
@@ -525,22 +408,6 @@ pub fn anim8(r: &mut Running, gobj: GObjId) -> bool {
     false
 }
 
-/// `itGShell_Logic14_EnteredAir`.
-#[doc(alias = "itGShell_Logic14_EnteredAir")]
-pub fn entered_air(r: &mut Running, gobj: GObjId) {
-    item_mut(r.game, gobj).xDC8_word.flags.x1F = true;
-    vars(r.game, gobj).xDEC_b3.set(false);
-    change_state(r, gobj, 9, change::ANIM_UPDATE);
-}
-
-/// `itGshell_UnkMotion9_Coll`.
-#[doc(alias = "itGshell_UnkMotion9_Coll")]
-pub fn coll9(r: &mut Running, gobj: GObjId) -> bool {
-    ground_skid(r, gobj, stopped, fell);
-    roll(r, gobj);
-    false
-}
-
 /// `itGShell_Logic14_DmgDealt`.
 #[doc(alias = "itGShell_Logic14_DmgDealt")]
 pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
@@ -556,19 +423,10 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     false
 }
 
-/// `itGShell_Logic14_Reflected`: its time starts over at the half lifetime.
-#[doc(alias = "itGShell_Logic14_Reflected")]
-pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::reflected_back(r.game, gobj);
-    let half = item(r.game, gobj).xD48_halfLifeTimer;
-    vars(r.game, gobj).xDD4.set(half);
-    false
-}
-
 /// `itGShell_Logic14_Clanked`.
 #[doc(alias = "itGShell_Logic14_Clanked")]
 pub fn clanked(r: &mut Running, gobj: GObjId) -> bool {
-    pop_up(r, gobj, fell);
+    pop_up(r, gobj);
     false
 }
 
@@ -577,17 +435,8 @@ pub fn clanked(r: &mut Running, gobj: GObjId) -> bool {
 pub fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
     match item(r.game, gobj).msid {
         3 | 4 => lib2725::bounce_off_victim(r.game, r.data, gobj),
-        5..=8 => pop_up(r, gobj, fell),
+        5..=8 => pop_up(r, gobj),
         _ => {}
-    }
-    false
-}
-
-/// `itGShell_Logic14_ShieldBounced`.
-#[doc(alias = "itGShell_Logic14_ShieldBounced")]
-pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
-    if matches!(item(r.game, gobj).msid, 3 | 4) {
-        lib2725::bounce_off_shield(r.game, gobj);
     }
     false
 }
@@ -599,10 +448,4 @@ pub fn jumped_on(r: &mut Running, gobj: GObjId) -> bool {
     stomped(r, gobj);
     play_sfx(r, gobj, 241, 127, 64);
     false
-}
-
-/// Forgets a GObj the shell points to, `itGShell_Logic14_EvtUnk` (`it_8026B894`).
-#[doc(alias = "itGShell_Logic14_EvtUnk")]
-pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    lib26b1::forget(r.game, gobj, other);
 }

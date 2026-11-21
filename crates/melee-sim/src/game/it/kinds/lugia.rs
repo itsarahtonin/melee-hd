@@ -1,7 +1,7 @@
 //! Lugia (`It_PKind_Lugia`), `melee/it/kinds/itlugia.c`: out of the ball it flies up off the
 //! top of the screen, comes back into the background towards the camera, sinks to where it
 //! came out, and fires Aeroblasts out of the background at points around the stage until its
-//! animation ends.
+//! animation ends. Ho-oh's code with its own sink and attack ([`super::legendary`]).
 //!
 //! The unit also holds the Aeroblasts' code (`It_Kind_Lugia_Aeroblast`, `_Aeroblast2` and
 //! `_Aeroblast3`): each flies straight at its speed, slowing towards or away from the camera by
@@ -9,11 +9,11 @@
 
 use gekko_fp as fp;
 
-use super::super::item::{change, change_state, play_sfx, spawn_air};
-use super::super::pokemon::{self, attr_f32, attr_i32, effect_hitlag, enter_first_state};
-use super::super::{ground, item, item_mut, jobj_of, lib26b1, lib2725, set_flag};
+use super::super::item::{play_sfx, spawn_air};
+use super::super::pokemon::{self, attr_f32};
+use super::super::{item, item_mut, jobj_of, lib26b1};
+use super::legendary::{self as lg, HOME, Legendary};
 use crate::fpu::{mem, reg};
-use crate::game::gr::stage;
 use crate::game::handles::CodeRef;
 use crate::game::it::ItKind;
 use crate::game::state::Running;
@@ -54,13 +54,11 @@ pub const BLAST_ANIM: u32 = 0x802D_246C;
 pub const BLAST_PHYS: u32 = 0x802D_24A0;
 pub const BLAST_COLL: u32 = 0x802D_24FC;
 
-/// Its variables past the release's (`itLugia_ItemVars`): the frames it comes towards the
-/// camera (`x60`), where it came out (`x64`), where its Aeroblasts start (`x70`, its mouth),
-/// its climb's or sink's speed (`xE50.x`) and the three Aeroblasts' counts towards the next
+/// Its variables past the frames towards the camera and where it came out ([`lg::COME_FRAMES`],
+/// [`lg::HOME`]) in `itLugia_ItemVars`: where its Aeroblasts start (`x70`, its mouth), its
+/// climb's or sink's speed (`xE50.x`) and the three Aeroblasts' counts towards the next
 /// (`xE50.y`, `xE50.z`, `x88`), the point the next one flies at (`x8C`) and the angle the
 /// search for that point starts from (`xA4`, degrees).
-const COME_FRAMES: usize = 0x60;
-const HOME: usize = 0x64;
 const MOUTH: usize = 0x70;
 const CLIMB: usize = 0x7C;
 const COUNT1: usize = 0x80;
@@ -69,20 +67,30 @@ const COUNT3: usize = 0x88;
 const TARGET: usize = 0x8C;
 const ANGLE: usize = 0xA4;
 
+/// Lugia: one script word, off at its attributes' speed (`x4`), its own sink, which it plays
+/// again until it comes to rest and fires.
+pub const LUGIA: Legendary = Legendary {
+    climb: CLIMB,
+    second_script_word: false,
+    take_off_speed: Some(4),
+    sink,
+    sink_ended: sink_again,
+};
+
 /// Runs one of Lugia's (or its Aeroblasts') predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM1 => anim1(r, gobj),
-        ANIM2 => anim2(r, gobj),
-        ANIM3 => anim3(r, gobj),
-        ANIM4 => anim4(r, gobj),
-        ANIM5 => anim5(r, gobj),
-        COLL1 | COLL2 | COLL3 | COLL4 | COLL5 => coll_nothing(r, gobj),
-        ANIM0 => anim0(r, gobj),
-        COLL0 => coll0(r, gobj),
-        BLAST_ANIM => blast_anim(r, gobj),
-        BLAST_COLL => blast_coll(r, gobj),
+        ANIM1 => lg::anim1(r, gobj, &LUGIA),
+        ANIM2 => lg::anim2(r, gobj),
+        ANIM3 => lg::anim3(r, gobj),
+        ANIM4 => lg::anim4(r, gobj, &LUGIA),
+        ANIM5 => lg::anim5(r, gobj),
+        COLL1 | COLL2 | COLL3 | COLL4 | COLL5 => lg::coll_nothing(r, gobj),
+        ANIM0 => lg::anim0(r, gobj),
+        COLL0 => lg::coll0(r, gobj),
+        BLAST_ANIM => lg::shot_anim(r, gobj),
+        BLAST_COLL => lg::shot_coll(r, gobj),
         _ => return None,
     })
 }
@@ -91,14 +99,14 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        SPAWNED => spawned(r, gobj),
+        SPAWNED => lg::spawned(r, gobj, &LUGIA),
         LANDED_NOTHING => {}
-        PHYS1 | PHYS5 => phys1(r, gobj),
-        PHYS2 => phys2(r, gobj),
-        PHYS3 => phys3(r, gobj),
+        PHYS1 | PHYS5 => lg::phys1(r, gobj),
+        PHYS2 => lg::phys2(r, gobj, &LUGIA),
+        PHYS3 => lg::phys3(r, gobj, &LUGIA),
         PHYS4 => phys4(r, gobj),
         FIRE_ACCESSORY => fire_when_told(r, gobj),
-        PHYS0 => phys0(r, gobj),
+        PHYS0 => lg::phys0(r, gobj),
         BLAST1_SPAWNED => blast1_spawned(r, gobj),
         BLAST2_SPAWNED => blast2_spawned(r, gobj),
         BLAST3_SPAWNED => blast3_spawned(r, gobj),
@@ -108,155 +116,12 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     true
 }
 
-/// Its root joint's child's motion taken as its own.
-fn bone_motion(r: &mut Running, gobj: GObjId) {
-    let bone = jobj_of(r.game, gobj).and_then(|j| r.game.objs.jobjs[j].child);
-    pokemon::take_bone_motion(r, bone, gobj);
-}
-
-/// Into state `msid`, its effects pausing in hitlag.
-fn enter(r: &mut Running, gobj: GObjId, msid: i32) {
-    change_state(r, gobj, msid, change::ANIM_UPDATE);
-    effect_hitlag(r.game, gobj);
-}
-
-/// `it_2725_Logic17_Spawned`: where it came out kept, facing nowhere, its script's flag clear,
-/// its frames towards the camera from its attributes, not kept in the blast zones, into the air
-/// out of the ball at its first size, not climbing.
-#[doc(alias = "it_2725_Logic17_Spawned")]
-pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let frames = attr_i32(r, gobj, 0x14);
-    let pos = item(r.game, gobj).pos;
-    pokemon::vars(r.game, gobj).set_vec(HOME, pos);
-    let ip = item_mut(r.game, gobj);
-    ip.facing_dir = 0.0;
-    ip.xDAC_itcmd_var0 = 0;
-    pokemon::vars(r.game, gobj).set_i32(COME_FRAMES, frames);
-    item_mut(r.game, gobj).xDCC_flag.b3 = false;
-    enter_air(r, gobj);
-    let size = attr_f32(r, gobj, 0);
-    pokemon::start(r, gobj, size);
-    pokemon::vars(r.game, gobj).set_f32(CLIMB, 0.0);
-}
-
-/// Landing out of the ball, `it_802D14D0`: nothing.
-#[doc(alias = "it_802D14D0")]
-pub fn landed_nothing(_: &mut Running, _: GObjId) {}
-
-/// Forgets a GObj going away, `itLugia_Logic17_EvtUnk` and the Aeroblasts' `it_802D23D4`
-/// (`it_8026B894`).
-#[doc(alias = "itLugia_Logic17_EvtUnk")]
-#[doc(alias = "it_802D23D4")]
-#[doc(alias("evt_unk"))]
-pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    lib26b1::forget(r.game, gobj, other);
-}
-
-/// `itLugia_UnkMotion1_Anim`: out of the ball, its bone's motion; it takes off when its
-/// animation ends.
-#[doc(alias = "itLugia_UnkMotion1_Anim")]
-pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
-    bone_motion(r, gobj);
-    if !lib2725::is_animating(r.game, gobj) {
-        take_off(r, gobj);
-    }
-    false
-}
-
-/// `itLugia_UnkMotion1_Phys` and `itLugia_UnkMotion5_Phys`: the bone's motion.
-#[doc(alias = "itLugia_UnkMotion1_Phys")]
-#[doc(alias = "itLugia_UnkMotion5_Phys")]
-pub fn phys1(r: &mut Running, gobj: GObjId) {
-    pokemon::move_by_bone(r.game, gobj);
-}
-
-/// `itLugia_UnkMotion1_Coll` to `itLugia_UnkMotion5_Coll`: nothing.
-#[doc(alias = "itLugia_UnkMotion1_Coll")]
-#[doc(alias = "itLugia_UnkMotion2_Coll")]
-#[doc(alias = "itLugia_UnkMotion3_Coll")]
-#[doc(alias = "itLugia_UnkMotion4_Coll")]
-#[doc(alias = "itLugia_UnkMotion5_Coll")]
-pub fn coll_nothing(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// Takes off, `it_802D1580`: climbing from its attribute's speed (`x4`) down.
-#[doc(alias = "it_802D1580")]
-pub fn take_off(r: &mut Running, gobj: GObjId) {
-    let speed = attr_f32(r, gobj, 4);
-    pokemon::vars(r.game, gobj).set_f32(CLIMB, mem(fp::fneg(reg(speed))));
-    enter(r, gobj, 2);
-}
-
-/// `itLugia_UnkMotion2_Anim`: its bone's motion.
-#[doc(alias = "itLugia_UnkMotion2_Anim")]
-pub fn anim2(r: &mut Running, gobj: GObjId) -> bool {
-    bone_motion(r, gobj);
-    false
-}
-
-/// `itLugia_UnkMotion2_Phys`: the bone's motion and its climb, faster by `x8` a frame while its
-/// animation plays and by `xC` after; past the top of the blast zone it stops and comes back.
-#[doc(alias = "itLugia_UnkMotion2_Phys")]
-pub fn phys2(r: &mut Running, gobj: GObjId) {
-    pokemon::move_by_bone(r.game, gobj);
-    let accel = if lib2725::is_animating(r.game, gobj) {
-        attr_f32(r, gobj, 8)
-    } else {
-        attr_f32(r, gobj, 0xC)
-    };
-    let v = pokemon::vars(r.game, gobj);
-    let climb = mem(fp::fadds(reg(v.f32(CLIMB)), reg(accel)));
-    v.set_f32(CLIMB, climb);
-    let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fadds(reg(ip.x40_vel.y), reg(climb)));
-    let top = stage::blast_top(r.game);
-    if reg(item(r.game, gobj).pos.y) > reg(top) {
-        item_mut(r.game, gobj).x40_vel.y = 0.0;
-        come_back(r, gobj);
-    }
-}
-
-/// Comes back towards the camera, `it_802D16D4` (and its inline copy in
-/// `itLugia_UnkMotion3_Anim`).
-#[doc(alias = "it_802D16D4")]
-pub fn come_back(r: &mut Running, gobj: GObjId) {
-    enter(r, gobj, 3);
-}
-
-/// `itLugia_UnkMotion3_Anim`: its bone's motion, its animation over and over.
-#[doc(alias = "itLugia_UnkMotion3_Anim")]
-pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
-    bone_motion(r, gobj);
-    if !lib2725::is_animating(r.game, gobj) {
-        come_back(r, gobj);
-    }
-    false
-}
-
-/// `itLugia_UnkMotion3_Phys`: the bone's motion; towards the camera at `x10` for its frames,
-/// then it stops and sinks.
-#[doc(alias = "itLugia_UnkMotion3_Phys")]
-pub fn phys3(r: &mut Running, gobj: GObjId) {
-    pokemon::move_by_bone(r.game, gobj);
-    let v = pokemon::vars(r.game, gobj);
-    let left = v.i32(COME_FRAMES);
-    v.set_i32(COME_FRAMES, left.wrapping_sub(1));
-    if left != 0 {
-        let speed = attr_f32(r, gobj, 0x10);
-        item_mut(r.game, gobj).x40_vel.z = speed;
-    } else {
-        item_mut(r.game, gobj).x40_vel.z = 0.0;
-        sink(r, gobj);
-    }
-}
-
 /// Sinks, `it_802D1830`: at the speed that, slowed by `x18` a frame, brings it to rest where it
 /// came out (the root of `s² - s·x18 - 2·x18·d = 0` over the height `d` above it, with
 /// `lbVector_sqrtf_accurate`'s inline square root).
 #[doc(alias = "it_802D1830")]
 pub fn sink(r: &mut Running, gobj: GObjId) {
-    enter(r, gobj, 4);
+    lg::enter(r, gobj, 4);
     let home_y = pokemon::vars(r.game, gobj).f32(HOME + 4);
     let disc = fp::fsubs(reg(item(r.game, gobj).pos.y), reg(home_y));
     let x18 = reg(attr_f32(r, gobj, 0x18));
@@ -266,14 +131,9 @@ pub fn sink(r: &mut Running, gobj: GObjId) {
     pokemon::vars(r.game, gobj).set_f32(CLIMB, mem(speed));
 }
 
-/// `itLugia_UnkMotion4_Anim`: its bone's motion, its animation over and over.
-#[doc(alias = "itLugia_UnkMotion4_Anim")]
-pub fn anim4(r: &mut Running, gobj: GObjId) -> bool {
-    bone_motion(r, gobj);
-    if !lib2725::is_animating(r.game, gobj) {
-        enter(r, gobj, 4);
-    }
-    false
+/// The sink's animation over and over (`itLugia_UnkMotion4_Anim`'s end).
+fn sink_again(r: &mut Running, gobj: GObjId) {
+    lg::enter(r, gobj, 4);
 }
 
 /// `itLugia_UnkMotion4_Phys`: the bone's motion and its sink, slowing by `x18` a frame; when it
@@ -298,7 +158,7 @@ pub fn phys4(r: &mut Running, gobj: GObjId) {
 /// word, kept in the blast zones.
 #[doc(alias = "it_802D1A44")]
 pub fn fire(r: &mut Running, gobj: GObjId) {
-    enter(r, gobj, 5);
+    lg::enter(r, gobj, 5);
     let v = pokemon::vars(r.game, gobj);
     v.set_f32(COUNT1, 1.0);
     v.set_f32(COUNT2, 0.7);
@@ -315,13 +175,6 @@ pub fn fire(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.on_accessory = Some(CodeRef(FIRE_ACCESSORY));
     ip.xDCC_flag.b3 = true;
-}
-
-/// `itLugia_UnkMotion5_Anim`: firing; gone when its animation ends.
-#[doc(alias = "itLugia_UnkMotion5_Anim")]
-pub fn anim5(r: &mut Running, gobj: GObjId) -> bool {
-    bone_motion(r, gobj);
-    !lib2725::is_animating(r.game, gobj)
 }
 
 /// One count towards an Aeroblast, up by `step`.
@@ -377,35 +230,6 @@ fn take_one(r: &mut Running, gobj: GObjId, at: usize) -> bool {
         return true;
     }
     false
-}
-
-/// Into the air out of the ball, `it_802D1D40` (`Item_EnterAirStateWithHitlagAndStateDesc`).
-#[doc(alias = "it_802D1D40")]
-pub fn enter_air(r: &mut Running, gobj: GObjId) {
-    enter_first_state(r, gobj);
-}
-
-/// `it_802D1DB4`: growing out of the ball.
-#[doc(alias = "it_802D1DB4")]
-pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
-    pokemon::grow(r, gobj);
-    false
-}
-
-/// `it_802D1DD8`: falling out of the ball; once its frames are up it stops and poses.
-#[doc(alias = "it_802D1DD8")]
-pub fn phys0(r: &mut Running, gobj: GObjId) {
-    if pokemon::fall(r, gobj) {
-        lib2725::clear_velocity(r.game, gobj);
-        enter(r, gobj, 1);
-        set_flag(&mut item_mut(r.game, gobj).xDD1_flag, 1, true);
-    }
-}
-
-/// `it_802D1E64`: lands out of the ball, doing nothing.
-#[doc(alias = "it_802D1E64")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    pokemon::land(r, gobj, landed_nothing)
 }
 
 /// Fires an Aeroblast of `kind`, `it_802D1E8C`: from its mouth, at the next point round where
@@ -532,33 +356,11 @@ pub fn blast3_spawned(r: &mut Running, gobj: GObjId) {
     blast_spawned(r, gobj, 0x467);
 }
 
-/// Its effect on its model at its size over 0.8, and flying.
+/// Its effect on its model at its size over 0.8, and flying ([`lg::shot_out`]).
 fn blast_spawned(r: &mut Running, gobj: GObjId, effect: i32) {
     let j = jobj_of(r.game, gobj);
     pokemon::effect_scaled(r, effect, gobj, j, 0.8);
-    blast_fly(r, gobj);
-}
-
-/// An Aeroblast flies, `it_802D23F4`: its life, not spinning, not pickable.
-#[doc(alias = "it_802D23F4")]
-pub fn blast_fly(r: &mut Running, gobj: GObjId) {
-    let life = attr_f32(r, gobj, 0);
-    item_mut(r.game, gobj).xD44_lifeTimer = life;
-    lib2725::stop_spin(r.game, r.data, gobj);
-    enter(r, gobj, 0);
-    lib26b1::disable_pickup(r.game, gobj);
-}
-
-/// An Aeroblast's `it_802D246C` (`Item_TickLifetime`): gone once its life has run out, else a
-/// frame less.
-#[doc(alias = "it_802D246C")]
-pub fn blast_anim(r: &mut Running, gobj: GObjId) -> bool {
-    let ip = item_mut(r.game, gobj);
-    if reg(ip.xD44_lifeTimer) <= 0.0 {
-        return true;
-    }
-    ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
-    false
+    lg::shot_out(r, gobj);
 }
 
 /// An Aeroblast's `it_802D24A0`: its speed towards or away from the camera times its kind's
@@ -573,10 +375,4 @@ pub fn blast_phys(r: &mut Running, gobj: GObjId) {
     };
     let ip = item_mut(r.game, gobj);
     ip.x40_vel.z = mem(fp::fmuls(reg(ip.x40_vel.z), reg(factor)));
-}
-
-/// An Aeroblast's `it_802D24FC`: gone when it touches the stage (`it_8026DA08`).
-#[doc(alias = "it_802D24FC")]
-pub fn blast_coll(r: &mut Running, gobj: GObjId) -> bool {
-    ground::air(r, gobj)
 }
