@@ -634,11 +634,12 @@ pub fn alloc_sites(args: &[String]) {
     });
 }
 
-/// `melee-bench rollback-split [--dir DIR] [--at TICK] [--runs N] [MATCH]`: one state's
+/// `melee-bench rollback-split [--dir DIR] [--at TICK | --every TICKS] [--runs N] [MATCH]`: the
 /// rollback window taken apart. Plays the match (default `fox-marth-ps`) to tick `TICK` (default
 /// 12,500), keeps its state, then `N` times (default 200) restores it and plays 8 ticks as
 /// `snapshot-match` does, timing the restore and each tick's engine part and display pass
-/// apart, and prints their medians. With `PERF_CTL_FIFO` and `PERF_ACK_FIFO` set (Linux: `perf
+/// apart, and prints their medians. With `--every`, the states every `TICKS` ticks as far as
+/// the match runs, a line each. With `PERF_CTL_FIFO` and `PERF_ACK_FIFO` set (Linux: `perf
 /// record --control fifo:CTL,ACK -D -1`), a profile covers only the timed windows.
 pub fn rollback_split(args: &[String]) {
     let mut at = 12_500u64;
@@ -655,7 +656,8 @@ pub fn rollback_split(args: &[String]) {
     } else {
         200
     };
-    let (dir, _, names, _) = args_dir(&rest);
+    let (dir, _, names, every) = args_dir(&rest);
+    let every = every.map(|e| e.max(1));
     let name = names
         .first()
         .cloned()
@@ -667,72 +669,125 @@ pub fn rollback_split(args: &[String]) {
         let b = Bench::open(&dir, &name).unwrap_or_else(|e| panic!("{name}: {e}"));
         let mut m = b.start(&mut files);
         let mut device = Device(&b.replay);
-        for _ in 0..at {
+        // The states measured: the one at `at`, or every `every` ticks while the match runs.
+        let mut kept = Vec::new();
+        let mut tick = 0u64;
+        loop {
+            if every.map_or(tick == at, |e| tick > 0 && tick.is_multiple_of(e)) {
+                kept.push((tick, frame(&m), m.game.clone()));
+            }
+            if every.is_none() && tick >= at {
+                break;
+            }
             let f = m.step_replay(&mut device);
+            tick += 1;
+            let ended = f.ended;
             m.recycle(f);
+            if ended || frame(&m) >= b.last {
+                break;
+            }
         }
-        let kept = m.game.clone();
         println!(
-            "{name}: tick {at} (frame {}), {runs} restores and {ROLLBACK_TICKS} ticks, the display passes building their draws as snapshot-match's do",
-            frame(&m)
+            "{name}: {runs} restores and {ROLLBACK_TICKS} ticks a state, the display passes building their draws as snapshot-match's do"
         );
+        if every.is_some() {
+            println!(
+                "| tick (frame) | restore | engine ticks | display passes | restore and {ROLLBACK_TICKS} ticks |"
+            );
+            println!("| --- | --- | --- | --- | --- |");
+        }
         let mut ctl = PerfCtl::open();
-        // Per run: the restore, then each tick's engine part and display pass.
-        let mut restore = Vec::with_capacity(runs);
-        let mut ticks: Vec<Vec<f64>> = (0..ROLLBACK_TICKS)
-            .map(|_| Vec::with_capacity(runs))
-            .collect();
-        let mut passes: Vec<Vec<f64>> = (0..ROLLBACK_TICKS)
-            .map(|_| Vec::with_capacity(runs))
-            .collect();
-        let mut total = Vec::with_capacity(runs);
-        let mut frames = [0i32; ROLLBACK_TICKS];
-        for run in 0..runs + 2 {
-            if let Some(c) = ctl.as_mut() {
-                c.send("enable");
-            }
-            let (r, split, all) = rollback_window(&mut m, &kept, &mut device, &mut frames);
-            if let Some(c) = ctl.as_mut() {
-                c.send("disable");
-            }
-            // Two warm-up runs.
-            if run < 2 {
+        for (tick, f, state) in &kept {
+            let w = measure_windows(&mut m, state, &mut device, runs, &mut ctl);
+            if every.is_some() {
+                println!(
+                    "| {tick} ({f}) | {:.1} µs | {:.1} µs | {:.1} µs | {:.2} ms |",
+                    w.restore,
+                    w.ticks.iter().sum::<f64>(),
+                    w.passes.iter().sum::<f64>(),
+                    w.total / 1e3
+                );
                 continue;
             }
-            restore.push(r);
-            for (i, (t, p)) in split.into_iter().enumerate() {
-                ticks[i].push(t);
-                passes[i].push(p);
+            println!("{name}: tick {tick} (frame {f})");
+            println!("| part | median µs |");
+            println!("| --- | --- |");
+            println!("| restore | {:.1} |", w.restore);
+            for i in 0..ROLLBACK_TICKS {
+                println!(
+                    "| tick {} (frame {}): engine, display | {:.1}, {:.1} |",
+                    tick + i as u64 + 1,
+                    w.frames[i],
+                    w.ticks[i],
+                    w.passes[i]
+                );
             }
-            total.push(all);
-        }
-        let med = |v: &mut Vec<f64>| {
-            v.sort_by(f64::total_cmp);
-            v[v.len() / 2] * 1e6
-        };
-        println!("| part | median µs |");
-        println!("| --- | --- |");
-        println!("| restore | {:.1} |", med(&mut restore));
-        for i in 0..ROLLBACK_TICKS {
             println!(
-                "| tick {} (frame {}): engine, display | {:.1}, {:.1} |",
-                at + i as u64 + 1,
-                frames[i],
-                med(&mut ticks[i]),
-                med(&mut passes[i])
+                "| engine ticks, display passes (medians summed) | {:.1}, {:.1} |",
+                w.ticks.iter().sum::<f64>(),
+                w.passes.iter().sum::<f64>()
             );
+            println!("| restore and {ROLLBACK_TICKS} ticks | {:.1} |", w.total);
         }
-        let (mut t, mut p): (f64, f64) = (0.0, 0.0);
-        for i in 0..ROLLBACK_TICKS {
-            t += med(&mut ticks[i]);
-            p += med(&mut passes[i]);
-        }
-        println!("| engine ticks, display passes (medians summed) | {t:.1}, {p:.1} |");
-        println!(
-            "| restore and {ROLLBACK_TICKS} ticks | {:.1} |",
-            med(&mut total)
-        );
     });
+}
+
+/// One state's rollback windows' medians, in microseconds: the restore, each tick's engine
+/// part and display pass, and the whole window; and the frames the ticks played.
+struct Windows {
+    restore: f64,
+    ticks: [f64; ROLLBACK_TICKS],
+    passes: [f64; ROLLBACK_TICKS],
+    total: f64,
+    frames: [i32; ROLLBACK_TICKS],
+}
+
+/// `runs` rollback windows from `state` (after two to warm up), the profile enabled over each.
+fn measure_windows(
+    m: &mut Match,
+    state: &Game,
+    device: &mut Device<'_>,
+    runs: usize,
+    ctl: &mut Option<PerfCtl>,
+) -> Windows {
+    let mut restore = Vec::with_capacity(runs);
+    let mut ticks: Vec<Vec<f64>> = (0..ROLLBACK_TICKS)
+        .map(|_| Vec::with_capacity(runs))
+        .collect();
+    let mut passes: Vec<Vec<f64>> = (0..ROLLBACK_TICKS)
+        .map(|_| Vec::with_capacity(runs))
+        .collect();
+    let mut total = Vec::with_capacity(runs);
+    let mut frames = [0i32; ROLLBACK_TICKS];
+    for run in 0..runs + 2 {
+        if let Some(c) = ctl.as_mut() {
+            c.send("enable");
+        }
+        let (r, split, all) = rollback_window(m, state, device, &mut frames);
+        if let Some(c) = ctl.as_mut() {
+            c.send("disable");
+        }
+        if run < 2 {
+            continue;
+        }
+        restore.push(r);
+        for (i, (t, p)) in split.into_iter().enumerate() {
+            ticks[i].push(t);
+            passes[i].push(p);
+        }
+        total.push(all);
+    }
+    let med = |v: &mut Vec<f64>| {
+        v.sort_by(f64::total_cmp);
+        v[v.len() / 2] * 1e6
+    };
+    Windows {
+        restore: med(&mut restore),
+        ticks: std::array::from_fn(|i| med(&mut ticks[i])),
+        passes: std::array::from_fn(|i| med(&mut passes[i])),
+        total: med(&mut total),
+        frames,
+    }
 }
 
 /// One rollback window: `kept` restored into `m`, then [`ROLLBACK_TICKS`] ticks with their display
