@@ -13,6 +13,7 @@ use super::code::Val;
 use super::handles::CodeRef;
 use super::state::Running;
 use crate::fpu::reg;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::lb::audio::SFX_NONE;
 
@@ -413,7 +414,7 @@ impl Running<'_> {
     fn fighter_chant(&self, g: GObjId) -> i32 {
         let fp = self.game.fighter(g);
         // `ftCommon_80080144`: Popo or Nana.
-        if (fp.kind == 0xA || fp.kind == 0xB) && fp.costume_id >= 2 {
+        if (fp.kind == FighterKind::Popo || fp.kind == FighterKind::Nana) && fp.costume_id >= 2 {
             return 0x1FBD1;
         }
         let sfx = self

@@ -294,7 +294,8 @@ impl Running<'_> {
             .id;
         let cpu_luigi = |g: &super::super::state::Game| {
             (0..6).any(|i| {
-                g.player_pkind(i) == super::super::pl::player::PKIND_CPU && g.player_ckind(i) == 7
+                g.player_pkind(i) == super::super::pl::player::PKIND_CPU
+                    && g.player_ckind(i) == CharacterKind::Luigi
             })
         };
         if id == 0x03 && cpu_luigi(g) {

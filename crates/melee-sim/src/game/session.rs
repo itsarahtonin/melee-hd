@@ -18,6 +18,7 @@ use super::vs_match::{DiscFile, Frame};
 use crate::audio::boot::{BootTimes, console_boot_delay};
 use crate::audio::clock::{DiscSpeed, TB_HZ};
 use crate::audio::dsp::DspModel;
+use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
 use crate::input::controller::PadData;
 use crate::input::pad::{ERR_NONE, ERR_NOT_READY, ERR_TRANSFER};
@@ -1011,7 +1012,7 @@ impl Session {
             let kinds: Vec<i32> =
                 super::gm::adventure::match_start_kinds(&self.game, start.rules.stkind)
                     .iter()
-                    .filter(|&&k| k != 0x21)
+                    .filter(|&&k| k != CharacterKind::NONE as i8)
                     .map(|&k| i32::from(k))
                     .collect();
             super::vs_match::load_kind_files(
@@ -1024,7 +1025,7 @@ impl Session {
             // Kirby's hats on Green Greens, and Kirby's data setup's copies.
             if kinds.contains(&FighterKind::Kirby.id()) {
                 let a = self.game.one_player.adventure.base.player;
-                let costume = usize::from(a.ckind == 4 && a.color == 0);
+                let costume = usize::from(a.ckind == CharacterKind::Kirby && a.color == 0);
                 let playing: Vec<(i32, i32)> = start
                     .players
                     .iter()

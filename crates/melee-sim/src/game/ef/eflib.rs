@@ -893,13 +893,15 @@ pub fn spawn_particle_effect(
             return;
         }
         0xD4 | 0x243 => {
+            // The generator that takes its root joint's scale too.
+            const TAKES_ROOT_SCALE: i32 = 0xD4;
             if let Some(g) = generator::spawn(objs, data, hooks, 2, bank, gfx_id)
                 && let Some(s) = ensure_appsrt(objs, data, hooks, g, 1)
             {
                 root = root_of(objs, root);
                 objs.app_srts[s].rot.z = copy(objs.jobjs[root].rotate.z);
                 objs.app_srts[s].translate = objs.jobjs[root].translate;
-                if gfx_id == 0xD4 {
+                if gfx_id == TAKES_ROOT_SCALE {
                     objs.app_srts[s].scale = objs.jobjs[root].scale;
                 }
             }
@@ -1328,8 +1330,14 @@ pub fn set_param_gfx_id(game: &mut Game, gobj: Option<GObjId>, gfx_id: i32) {
     }
 }
 
+/// The effects [`cb_apply_stored_alpha`] treats apart: the one whose alpha goes to its
+/// model's second texture, and the one whose six next joints take it too.
+const ALPHA_ON_SECOND_TEXTURE: u16 = 0x417;
+const ALPHA_ON_SEVEN_JOINTS: u16 = 0x419;
+
 /// Applies the alpha stored for the effect's spawner to its model's TEV constant (a later
-/// texture for id 0x417, and six more joints' for 0x419), `efLib_Cb_ApplyStoredAlpha`.
+/// texture for [`ALPHA_ON_SECOND_TEXTURE`], and six more joints' for
+/// [`ALPHA_ON_SEVEN_JOINTS`]), `efLib_Cb_ApplyStoredAlpha`.
 #[doc(alias = "efLib_Cb_ApplyStoredAlpha")]
 pub fn cb_apply_stored_alpha(game: &mut Game, e: EffectId) {
     let mut j = effect_jobj(game, e).and_then(|j| game.objs.jobjs[j].child);
@@ -1338,9 +1346,9 @@ pub fn cb_apply_stored_alpha(game: &mut Game, e: EffectId) {
         return;
     };
     let objs = &mut game.objs;
-    let t = nth_tobj(objs, j, i32::from(entry.gfx_id == 0x417));
+    let t = nth_tobj(objs, j, i32::from(entry.gfx_id == ALPHA_ON_SECOND_TEXTURE));
     objs.tobjs[t].tev.as_mut().expect("tobj->tev").konst.a = entry.alpha as u8;
-    if entry.gfx_id == 0x419 {
+    if entry.gfx_id == ALPHA_ON_SEVEN_JOINTS {
         for _ in 0..6 {
             j = objs.jobjs[j.expect("jobj->next")].next;
             let t = nth_tobj(objs, j, 0);

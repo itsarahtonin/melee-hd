@@ -12,8 +12,10 @@ use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use super::cpu_script::cmd;
 use crate::fpu::{mem, reg};
+use crate::game::ft::CpuKind;
 use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
+use crate::game::it::ItKind;
 use crate::math;
 
 /// `ftLoadCommonData::x58`: the computer players' data, whose first word is its scripts.
@@ -199,20 +201,20 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800ABA34")]
     pub(super) fn cpu_walk(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
-        match fpp.cpu.kind {
-            11 => {
+        match CpuKind::from_id(fpp.cpu.kind) {
+            Some(CpuKind::SpLwLink) => {
                 if fpp.item_gobj.is_none() {
                     self.cpu_data_script(f, 38);
                     return;
                 }
             }
-            12 => {
+            Some(CpuKind::SpLwSamus) => {
                 if fpp.cpu.x7C % 30 == 0 {
                     self.cpu_data_script(f, 38);
                     return;
                 }
             }
-            16 if fpp.ground_or_air == GA_GROUND && fpp.cpu.x7C % 0x12C == 0 => {
+            Some(CpuKind::Air) if fpp.ground_or_air == GA_GROUND && fpp.cpu.x7C % 0x12C == 0 => {
                 self.cpu_jump_toward_target(f);
                 return;
             }
@@ -220,7 +222,7 @@ impl Running<'_> {
         }
         let fpp = &self.game.fighters[f.0];
         // Ft_Kind_Zelda, Ft_Kind_Seak; `ftCo_MS_RebirthWait`.
-        if matches!(fpp.kind, 19 | 7) && fpp.cpu.xF8_b5 {
+        if matches!(fpp.fighter_kind(), FighterKind::Zelda | FighterKind::Seak) && fpp.cpu.xF8_b5 {
             self.cpu_data_script(f, 38);
             self.game.fighters[f.0].cpu.xF8_b5 = false;
         } else if self.cpu_entering_enemy(f).is_none() && self.game.fighters[f.0].motion_id == 13 {
@@ -248,7 +250,7 @@ impl Running<'_> {
             return false;
         }
         // Ft_Kind_Yoshi.
-        if fpp.kind == 14 && fpp.x34_scale.y > 1.0 && c.x7C < 0x384 {
+        if fpp.kind == FighterKind::Yoshi && fpp.x34_scale.y > 1.0 && c.x7C < 0x384 {
             return false;
         }
         let dy = fp::fsubs(reg(c.x54.y), reg(fpp.cur_pos.y));
@@ -288,11 +290,11 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A963C")]
     pub(super) fn cpu_recover(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
-        match fpp.kind {
+        match fpp.fighter_kind() {
             // Ft_Kind_Pikachu, Ft_Kind_Pichu.
-            12 | 23 => self.cpu_recover_pikachu(f),
+            FighterKind::Pikachu | FighterKind::Pichu => self.cpu_recover_pikachu(f),
             // Ft_Kind_Fox, Ft_Kind_Falco.
-            1 | 22 => {
+            FighterKind::Fox | FighterKind::Falco => {
                 self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 88);
                 self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, 88);
                 self.cpu_cmd1(f, cmd::PRESS_B_FOR, 1);
@@ -301,9 +303,9 @@ impl Running<'_> {
                 self.cpu_cmd(f, cmd::DONE);
             }
             // Ft_Kind_Yoshi.
-            14 => self.cpu_cmd(f, cmd::DONE),
+            FighterKind::Yoshi => self.cpu_cmd(f, cmd::DONE),
             // Ft_Kind_Ness.
-            8 => {
+            FighterKind::Ness => {
                 let above = fp::fsub(reg(fpp.cpu.x54.y), 10.0);
                 if reg(fpp.cur_pos.y) > above {
                     self.cpu_cmd(f, cmd::DONE);
@@ -312,7 +314,7 @@ impl Running<'_> {
                 }
             }
             // Ft_Kind_Luigi.
-            17 => {
+            FighterKind::Luigi => {
                 self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
                 self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, 127);
                 self.cpu_cmd1(f, cmd::PRESS_B_FOR, 1);
@@ -321,7 +323,7 @@ impl Running<'_> {
                 self.cpu_cmd(f, cmd::DONE);
             }
             // Ft_Kind_Zelda.
-            19 => self.cpu_recover_zelda(f),
+            FighterKind::Zelda => self.cpu_recover_zelda(f),
             // Ft_Kind_Samus, `ftCo_800A963C`, then the default's own commands.
             _ => {
                 // `ftCo_CpuRecoverDiagonally`.
@@ -460,7 +462,7 @@ impl Running<'_> {
                     self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
                     self.cpu_cmd(f, cmd::RELEASE_Y);
                     self.cpu_cmd(f, cmd::DONE);
-                } else if fpp.kind == 14
+                } else if fpp.kind == FighterKind::Yoshi
                     && fpp.x34_scale.y < 1.0
                     && abs(fp::fsubs(reg(c.x54.x), reg(fpp.cur_pos.x))) < 20.0
                 {
@@ -1104,7 +1106,7 @@ impl Running<'_> {
             _ => {}
         }
         let kind = self.game.fighters[f.0].cpu.kind;
-        if kind == 15 || kind == 0 {
+        if kind == CpuKind::NoAct || kind == CpuKind::Stay {
             self.cpu_hold_up(f);
             return;
         }
@@ -1394,7 +1396,7 @@ impl Running<'_> {
             return;
         }
         let fpp = &self.game.fighters[f.0];
-        if fpp.cpu.kind == 11 && fpp.item_gobj.is_none() {
+        if fpp.cpu.kind == CpuKind::SpLwLink && fpp.item_gobj.is_none() {
             self.cpu_data_script(f, 38);
             return;
         }
@@ -1403,7 +1405,7 @@ impl Running<'_> {
             return;
         }
         let fpp = &self.game.fighters[f.0];
-        if matches!(fpp.kind, 19 | 7) && fpp.cpu.xF8_b5 {
+        if matches!(fpp.fighter_kind(), FighterKind::Zelda | FighterKind::Seak) && fpp.cpu.xF8_b5 {
             self.cpu_data_script(f, 38);
             self.game.fighters[f.0].cpu.xF8_b5 = false;
             return;
@@ -1644,7 +1646,10 @@ impl Running<'_> {
         };
         let kind = self.game.items[super::super::it::item_of(self.game, g).0].kind;
         // `It_Kind_Capsule`, `_Egg`, `_M_Ball`.
-        let drop = matches!(kind, 0 | 3 | 0x22);
+        let drop = matches!(
+            ItKind::from_id(kind),
+            Some(ItKind::Capsule | ItKind::Egg | ItKind::PokeBall)
+        );
         let enemy = fpp.cpu.x44;
         // `lb_8000D008(enemy.y - pos.y, ABS(enemy.x - pos.x))`.
         let angle = |r: &Self, e: FighterId| {
@@ -1656,7 +1661,7 @@ impl Running<'_> {
         const STEEP: f64 = 1.308_996_928_855_776_8;
         const LEVEL: f64 = 0.261_799_385_771_155_36;
         match enemy {
-            Some(e) if fpp.cpu.kind == 0x1D => {
+            Some(e) if fpp.cpu.kind == CpuKind::ItemLover => {
                 if !self.cpu_target_ahead(f) {
                     self.cpu_turn_around(f);
                     return;

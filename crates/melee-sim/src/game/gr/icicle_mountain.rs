@@ -642,7 +642,7 @@ pub fn draw_speed(r: &mut Running, g: GroundId) -> (i32, i32) {
     let prm = param(r.game);
     let rest = r.game.grounds[g.0].u.icemt_scroll().speed_rests;
     let list: Vec<i32> = (0..12)
-        .filter(|&i| rest[i as usize] == 0 && (stkind != 212 || i >= 4))
+        .filter(|&i| rest[i as usize] == 0 && (stkind != super::StKind::Icemt212 || i >= 4))
         .collect();
     assert!(!list.is_empty(), "gricemt.c: 2077: max");
     let n = list.len() as i32;

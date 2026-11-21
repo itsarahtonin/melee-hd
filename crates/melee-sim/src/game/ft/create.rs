@@ -10,6 +10,8 @@ use super::super::state::{Game, OBJ_JOBJ, Running, UserData};
 use super::super::structs::Fighter;
 use super::data::{FIGHTER_ATTRS_SIZE, figatree_frames, kind_tables};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
+use crate::game::gr::GrKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::hsd::pobj::{self, PObjClass};
@@ -263,10 +265,10 @@ impl Running<'_> {
             self.game.world.setup_proc(gobj, CodeRef(proc), priority);
         }
         self.fighter_spawn(gobj);
-        match kind {
+        match FighterKind::from_id(kind) {
             // ftMh_MS_341_8014FE10, ftCh_Init_80155FCC: the hands' entrances.
-            0x1B => self.hand_start(gobj, &super::masterhand::HAND),
-            0x1C => self.hand_start(gobj, &super::crazyhand::HAND),
+            Some(FighterKind::MasterHand) => self.hand_start(gobj, &super::masterhand::HAND),
+            Some(FighterKind::CrazyHand) => self.hand_start(gobj, &super::crazyhand::HAND),
             _ if info.transformation => self.sleep(gobj),
             _ if self.game.player_flags_bit3(i32::from(info.slot)) => self.enter_entry(gobj),
             _ => {
@@ -451,7 +453,7 @@ impl Running<'_> {
     #[doc(alias = "Fighter_80068E64")]
     pub(super) fn set_depth_scale(&mut self, f: FighterId) {
         // `Gr_Kind_Flatzone`.
-        let z = if self.game.stage_info.grkind == 27 {
+        let z = if self.game.stage_info.grkind == GrKind::Flatzone {
             self.common().f32(0x7E4)
         } else {
             1.0

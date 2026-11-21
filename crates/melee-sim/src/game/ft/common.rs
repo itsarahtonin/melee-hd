@@ -9,6 +9,7 @@ use super::super::state::Running;
 use super::super::structs::{Fighter, Vec2};
 use super::parts::{TOP_N, TRANS_N};
 use crate::fpu::{mem, reg};
+use crate::game::gr::GrKind;
 use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -533,7 +534,17 @@ impl Running<'_> {
         if fp.bury_timer_1 != 0 {
             fp.bury_timer_1 -= 1;
         }
-        if matches!(fp.bury_grkind, 30 | 4 | 32 | 39 | 8) && fp.bury_timer_2 != 0 {
+        if matches!(
+            GrKind::from_id(fp.bury_grkind),
+            Some(
+                GrKind::OldKongo
+                    | GrKind::Kongo
+                    | GrKind::ShrineRoute
+                    | GrKind::Pushon
+                    | GrKind::Zebes
+            )
+        ) && fp.bury_timer_2 != 0
+        {
             fp.bury_timer_2 -= 1;
         }
     }

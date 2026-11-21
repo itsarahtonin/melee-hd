@@ -146,7 +146,7 @@ impl Running<'_> {
         let pad = &mut self.game.ucf.0[port];
         pad.index = pad.index.wrapping_add(1) & 3;
         pad.history[usize::from(pad.index)] = [poll.stick_x, poll.stick_y];
-        if !(fp.kind == 0x13 && fp.motion_id == 349) {
+        if !(fp.kind == FighterKind::Zelda && fp.motion_id == 349) {
             cardinal(poll.stick_x, poll.stick_y, &mut fp.input.lstick[0]);
             cardinal(poll.substick_x, poll.substick_y, &mut fp.input.cstick[0]);
         }

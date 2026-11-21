@@ -84,7 +84,10 @@ pub fn on_init(r: &mut Running) {
     create(r, 0, setup::SETUP_FRAME);
     // `gm_8016B3D8`: Classic, Adventure and All-Star.
     let single = (3..=5).contains(&r.game.gr.game_mode);
-    if single || r.game.gr.stkind == 273 || r.game.gr.stkind == 245 {
+    if single
+        || r.game.gr.stkind == super::StKind::Battle273
+        || r.game.gr.stkind == super::StKind::Battle245
+    {
         create(r, 5, setup::SETUP_FRAME);
     } else {
         create(r, 3, setup::SETUP_FRAME);

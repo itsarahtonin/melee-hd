@@ -18,6 +18,7 @@ use melee_data::archive::DataRef;
 
 use super::results_scene::PKIND_NA;
 use crate::game::ft::CharacterKind;
+use crate::game::gr::StKind;
 
 pub const GM_10MAN: u8 = 0x21;
 pub const GM_100MAN: u8 = 0x22;
@@ -27,7 +28,7 @@ pub const GM_ENDLESS: u8 = 0x25;
 pub const GM_CRUEL: u8 = 0x26;
 
 /// The Multi-Man stage.
-pub const STKIND: u16 = 0x11D;
+pub const STKIND: StKind = StKind::MultiMan;
 
 /// `gm_80182174`, the match's start hook, and `fn_80181E18`, the hordes' process it starts.
 pub const ON_MATCH_START: u32 = 0x8018_2174;
@@ -315,7 +316,7 @@ impl Running<'_> {
         gc.entries[1].color = 0;
         gc.entries[2].char_id = i32::from(CharacterKind::Girl as u8);
         gc.entries[2].color = 0;
-        gc.stkind = i32::from(STKIND);
+        gc.stkind = i32::from(STKIND.id());
         self.preload_refresh();
     }
 
@@ -362,7 +363,7 @@ impl Running<'_> {
         r.x4_3 = true;
         r.x5_1 = true;
         r.is_teams = 1;
-        r.stkind = STKIND;
+        r.stkind = STKIND.id();
         r.x18 = 0;
         r.item_freq = 2;
         r.x2C = 0.5;

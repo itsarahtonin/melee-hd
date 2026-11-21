@@ -5,6 +5,8 @@
 
 use super::super::structs::{MatchEnd, PlayerInitData, StartMeleeData};
 use super::vs_melee::CssData;
+use crate::game::ft::CharacterKind;
+use crate::game::ft::FighterKind;
 
 /// `Gm_PKind_Human`, `Gm_PKind_Cpu`, `Gm_PKind_NA`.
 const PKIND_HUMAN: u8 = 0;
@@ -51,8 +53,12 @@ pub fn setup_sudden_death(start: &mut StartMeleeData, end: &MatchEnd) {
         let p = &mut start.players[i];
         if big_loser == 0 && left > 0 {
             let mut c = ps.ckind;
-            if c == 0x12 || c == 0x13 {
-                c = if ps.ftkind == 7 { 0x13 } else { 0x12 };
+            if c == CharacterKind::Zelda || c == CharacterKind::Seak {
+                c = if ps.ftkind == FighterKind::Seak {
+                    CharacterKind::Seak.id() as i8
+                } else {
+                    CharacterKind::Zelda.id() as i8
+                };
             }
             p.ckind = c;
             p.stocks = 1;

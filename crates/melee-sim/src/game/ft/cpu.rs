@@ -8,6 +8,7 @@ use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::Running;
 use super::super::structs::Vec2;
 use crate::fpu::{mem, reg};
+use crate::game::ft::CpuKind;
 use crate::game::ft::FighterKind;
 use crate::game::gr::GrKind;
 use crate::vec::Vec3;
@@ -63,7 +64,7 @@ impl Running<'_> {
         let c = &mut fp.cpu;
         if fp.kind == FighterKind::Nana {
             c.xF9_b2 = true;
-            c.kind = 6;
+            c.kind = CpuKind::Nana.id();
             c.x3C = 15.0;
         } else {
             c.kind = kind;
@@ -71,10 +72,10 @@ impl Running<'_> {
         }
         c.level = level;
         c.x14 = x14;
-        (c.x18, c.x1C, c.x20) = match c.kind {
-            1 | 25 => (12, 12, 0),
-            3 => (1, 1, 11),
-            15 => (0, 0, 0),
+        (c.x18, c.x1C, c.x20) = match CpuKind::from_id(c.kind) {
+            Some(CpuKind::Walk | CpuKind::EnemyAgain) => (12, 12, 0),
+            Some(CpuKind::Jump) => (1, 1, 11),
+            Some(CpuKind::NoAct) => (0, 0, 0),
             _ => (1, 1, 10),
         };
         c.x24 = 0x12C;
@@ -198,10 +199,10 @@ impl Running<'_> {
         c.x570 = 1.0;
         self.cpu_attack_timer(f);
         let fp = &mut self.game.fighters[f.0];
-        fp.cpu.x56C = match fp.kind {
-            3 | 5 => 8.5,
-            31 => 17.0,
-            11 => 1.0,
+        fp.cpu.x56C = match fp.fighter_kind() {
+            FighterKind::Donkey | FighterKind::Koopa => 8.5,
+            FighterKind::GKoopa => 17.0,
+            FighterKind::Nana => 1.0,
             _ => 3.5,
         };
     }
@@ -214,7 +215,7 @@ impl Running<'_> {
         let c = &mut self.game.fighters[f.0].cpu;
         let level = fp::frsp(f64::from(10i32.wrapping_sub(c.level)));
         c.x34 = fp::fctiwz(fp::fmadds(level, fp::fmadds(15.0, reg(rand), 15.0), 10.0));
-        if c.kind == 7 {
+        if c.kind == CpuKind::Defensive {
             c.x34 /= 2;
         }
     }

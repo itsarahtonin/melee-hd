@@ -695,9 +695,34 @@ pub fn load_map_joint(game: &mut Game, data: &Archives, map_id: i32, depth: i32)
 
 /// The stage kinds the bob-omb rain falls on players over (`Ground_801C0A70`'s
 /// `enabled_stages`): every VS stage but Icicle Mountain and Flat Zone.
-const RAIN_OVER_PLAYERS: [i32; 27] = [
-    2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 24, 25, 28, 29, 30, 36,
-    37,
+const RAIN_OVER_PLAYERS: [super::GrKind; 27] = [
+    super::GrKind::Castle,
+    super::GrKind::RCruise,
+    super::GrKind::Kongo,
+    super::GrKind::Garden,
+    super::GrKind::GreatBay,
+    super::GrKind::Shrine,
+    super::GrKind::Zebes,
+    super::GrKind::Kraid,
+    super::GrKind::Story,
+    super::GrKind::Yorster,
+    super::GrKind::Izumi,
+    super::GrKind::Greens,
+    super::GrKind::Corneria,
+    super::GrKind::Venom,
+    super::GrKind::PStadium,
+    super::GrKind::Pura,
+    super::GrKind::MuteCity,
+    super::GrKind::BigBlue,
+    super::GrKind::Onett,
+    super::GrKind::Fourside,
+    super::GrKind::Inishie1,
+    super::GrKind::Inishie2,
+    super::GrKind::OldPupupu,
+    super::GrKind::OldYoshi,
+    super::GrKind::OldKongo,
+    super::GrKind::Battle,
+    super::GrKind::Last,
 ];
 
 /// Where a bob-omb of the rain starts, `Ground_801C0A70`: half the time, on a stage that
@@ -707,7 +732,11 @@ const RAIN_OVER_PLAYERS: [i32; 27] = [
 /// none).
 #[doc(alias = "Ground_801C0A70")]
 pub fn bomb_rain_point(game: &mut Game, data: &Archives, pos: Vec3) -> (bool, Vec3) {
-    if game.objs.rng.below(2) != 0 && RAIN_OVER_PLAYERS.contains(&game.stage_info.grkind) {
+    if game.objs.rng.below(2) != 0
+        && RAIN_OVER_PLAYERS
+            .iter()
+            .any(|&k| k == game.stage_info.grkind)
+    {
         let slot = game.objs.rng.below(4);
         if game.player_entity(slot).is_some() {
             let mut p = game.player_pos(slot);

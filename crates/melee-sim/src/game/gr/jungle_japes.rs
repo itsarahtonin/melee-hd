@@ -116,7 +116,7 @@ pub fn on_init(r: &mut Running) {
     }
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
-    if super::stage::stkind(r.game) != 62 && r.game.vs_sudden_death() == 0 {
+    if super::stage::stkind(r.game) != super::StKind::AdventureGarden && r.game.vs_sudden_death() == 0 {
         r.stage_sound(0x6_4194);
     }
 }

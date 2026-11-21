@@ -6,6 +6,7 @@ use melee_data::archive::DataRef;
 
 use super::super::state::Running;
 use super::opponents::NONE;
+use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
 use crate::hsd::gobj::{self, GObjId};
 
@@ -529,7 +530,11 @@ impl Running<'_> {
         if own && ev.x0 as i8 == ck && ev.x1 == d.u8(b.at(6)) {
             self.game.game_data.vs.unk_530.x50[1] = next_color(d.u8(b.at(6)));
         }
-        let copies = if ck == 4 { d.u8(b.at(0x17)) } else { 0 };
+        let copies = if ck == CharacterKind::Kirby {
+            d.u8(b.at(0x17))
+        } else {
+            0
+        };
         let ev = self.game.game_data.vs.unk_530.clone();
         self.setup_opponents(
             &[ck, NONE, NONE],
@@ -607,7 +612,10 @@ impl Running<'_> {
         if p1.ckind == p0.ckind && p1.color == p0.color {
             p1.color = next_color(p1.color);
         }
-        if p0.ckind == 0x13 && p1.ckind == 0x12 && p1.color == p0.color {
+        if p0.ckind == CharacterKind::Seak
+            && p1.ckind == CharacterKind::Zelda
+            && p1.color == p0.color
+        {
             p1.color = next_color(p1.color);
         }
         let (c, col) = (p1.ckind, p1.color);
@@ -793,7 +801,7 @@ impl Running<'_> {
         super::setup_players::set_slot(&mut start.players[0], i32::from(ev.x6));
         let p = &mut start.players[0];
         let team = p.team;
-        if p.ckind == 0x21 {
+        if p.ckind == CharacterKind::NONE as i8 {
             p.ckind = ev.x2;
             p.color = ev.x3;
             p.nametag = ev.nametag;
@@ -825,7 +833,7 @@ impl Running<'_> {
             start.players[i].team = p0.team;
             start.players[i].xD_b1 = true;
         }
-        if src.ckind(self) == 0x21 {
+        if src.ckind(self) == CharacterKind::NONE as i8 {
             let ev = &self.game.game_data.vs.unk_530;
             let kept = match i {
                 1 => ev.x8,
@@ -851,7 +859,8 @@ impl Running<'_> {
             p.color = next_color(p.color);
         }
         // Sheik's opponent Zelda keeps apart from her costume as the same character does.
-        if p0.ckind == 0x13 && p.ckind == 0x12 && p.color == p0.color {
+        if p0.ckind == CharacterKind::Seak && p.ckind == CharacterKind::Zelda && p.color == p0.color
+        {
             p.color = next_color(p.color);
         }
         if i < 4 {
@@ -992,7 +1001,7 @@ impl Running<'_> {
         self.trophy_unlocks();
         let _ = self.special_unlocks(0x10);
         let ev = self.game.game_data.vs.unk_530.clone();
-        if kind != 0x21 {
+        if kind != CharacterKind::NONE {
             self.init_challenger(
                 ev.x0,
                 ev.x1,
@@ -1145,7 +1154,10 @@ impl Running<'_> {
             _ if e.kind(self) == 1 => {
                 let b = e.evbonus(self).expect("the event's crowd");
                 let ck = d.u8(b) as i8;
-                (vec![(ck, None)], ck == 4 && d.u8(b.at(0x17)) != 0)
+                (
+                    vec![(ck, None)],
+                    ck == CharacterKind::Kirby && d.u8(b.at(0x17)) != 0,
+                )
             }
             _ => (Vec::new(), false),
         }

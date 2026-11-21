@@ -19,6 +19,9 @@ use super::super::state::{Event, Game, Running};
 use super::super::structs::{MatchEnd, PlayerInitData, StartMeleeData};
 use super::{GM_ADVENTURE, GM_ALLSTAR, GM_CHALLENGER_APPROACH, GM_CLASSIC, GM_VS};
 use crate::fpu::{mem, reg};
+use crate::game::ft::CharacterKind;
+use crate::game::ft::FighterKind;
+use crate::game::gr::StKind;
 use crate::hsd::Objects;
 use crate::hsd::jobj::{self, JObjId};
 use crate::vec::Vec3;
@@ -1342,7 +1345,7 @@ impl Running<'_> {
             let point = i32::from(self.game.stage_info.x6DC);
             let pos = super::super::gr::stage::entry_point(self.game, self.data, point)
                 .unwrap_or_else(|| panic!("entry point {point} reads a stale vector"));
-            if stkind != 0x4C && sub == 0 {
+            if stkind != StKind::AdventureIcemt && sub == 0 {
                 let c = &mut self.game.stage_info.cam_info;
                 c.cam_x_offset = pos.x;
                 c.cam_y_offset = pos.y;
@@ -1448,25 +1451,26 @@ pub fn hud_color(c: u32) -> [u8; 4] {
 pub fn stock_icon_frame(ckind: i32, ftkind: i32, costume: i32) -> f64 {
     // CKind_GKoops, CKind_Boy and CKind_Girl, CKind_MasterH, CKind_CrezyH; then Zelda and
     // Sheik, Sandbag and Popo.
-    match ckind {
-        0x1D => return 58.0,
-        0x1B | 0x1C => return 26.0,
-        0x1A => return 28.0,
-        0x1E => return 27.0,
+    let kind = CharacterKind::from_id(ckind);
+    match kind {
+        Some(CharacterKind::GKoopa) => return 58.0,
+        Some(CharacterKind::Boy | CharacterKind::Girl) => return 26.0,
+        Some(CharacterKind::MasterHand) => return 28.0,
+        Some(CharacterKind::CrazyHand) => return 27.0,
         _ => {}
     }
-    let base = match ckind {
-        0x12 | 0x13 => {
-            if ftkind == 7 {
+    let base = match kind {
+        Some(CharacterKind::Zelda | CharacterKind::Seak) => {
+            if ftkind == FighterKind::Seak {
                 0x19
             } else {
                 0x12
             }
         }
-        0x1F => return 59.0,
-        0x20 => 0xE,
-        k if k > 0x13 => k.wrapping_sub(1),
-        k => k,
+        Some(CharacterKind::Sandbag) => return 59.0,
+        Some(CharacterKind::Popo) => CharacterKind::IceClimbers.id(),
+        _ if ckind > CharacterKind::Seak.id() => ckind.wrapping_sub(1),
+        _ => ckind,
     };
     gekko_fp::frsp(f64::from(base.wrapping_add(costume.wrapping_mul(30))))
 }
@@ -1644,7 +1648,7 @@ impl Running<'_> {
                 costumes.push(i32::from(o.costume));
             }
         }
-        if ckind == 4 {
+        if ckind == CharacterKind::Kirby {
             costumes.push(i32::from(costume));
         }
         if costumes.is_empty() {
@@ -1653,7 +1657,7 @@ impl Running<'_> {
         let copy = |r: &mut Self, ck: i8| {
             for sub in 0..2 {
                 let kind = ckind_ftkind(i32::from(ck), sub);
-                if kind != -1 && kind != 4 {
+                if kind != -1 && kind != FighterKind::Kirby {
                     for &c in &costumes {
                         r.player_kirby_copy(kind, c);
                     }
@@ -1661,11 +1665,11 @@ impl Running<'_> {
             }
         };
         for k in o.kinds {
-            if k != 0x21 && k != 4 {
+            if k != CharacterKind::NONE as i8 && k != CharacterKind::Kirby {
                 copy(self, k);
             }
         }
-        if ckind != 4 {
+        if ckind != CharacterKind::Kirby {
             copy(self, ckind);
         }
     }
@@ -1687,7 +1691,7 @@ impl Running<'_> {
                 i += 1;
             }
         }
-        if ckind == 4 && o.copy_mode != 0 {
+        if ckind == CharacterKind::Kirby && o.copy_mode != 0 {
             let mut i = 0;
             while o.costumes[i] != END {
                 if o.costumes[i] != -1 && o.copies[i] != -1 {
@@ -1704,7 +1708,7 @@ impl Running<'_> {
         let mut costumes: Vec<i32> = Vec::new();
         for i in 0..6 {
             let g = &*self.game;
-            if g.player_pkind(i) != 3 && g.player_ckind(i) == 4 {
+            if g.player_pkind(i) != 3 && g.player_ckind(i) == CharacterKind::Kirby {
                 let c = g.player_costume(i) as i8 as i32;
                 if !costumes.contains(&c) {
                     costumes.push(c);
@@ -1720,7 +1724,7 @@ impl Running<'_> {
             }
             for sub in 0..2 {
                 let kind = self.game.player_ftkind(i, sub);
-                if kind != -1 && kind != 4 {
+                if kind != -1 && kind != FighterKind::Kirby {
                     for &c in &costumes {
                         self.player_kirby_copy(kind, c);
                     }
@@ -1808,9 +1812,16 @@ impl Game {
         let ck = self.player_ckind(slot);
         if i32::from(d.slot_type) == PKIND_HUMAN
             && self.pads.copy[port].button & 0x100 != 0
-            && (ck == 18 || ck == 19)
+            && (ck == CharacterKind::Zelda || ck == CharacterKind::Seak)
         {
-            self.set_player_ckind(slot, if ck == 18 { 19 } else { 18 });
+            self.set_player_ckind(
+                slot,
+                if ck == CharacterKind::Zelda {
+                    CharacterKind::Seak.id()
+                } else {
+                    CharacterKind::Zelda.id()
+                },
+            );
             self.vs.state.fighters[slot as usize].x4[0] |= 0x08;
         }
         self.vs.state.fighters[slot as usize].spawn_point = d.spawn_pos;

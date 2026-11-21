@@ -1290,7 +1290,7 @@ fn slippi_scizor_notes_reads_off_course() {
             let ids: Vec<u32> = g.items.iter().map(|(i, _)| i).collect();
             for i in ids {
                 let it = &mut g.items[i];
-                if it.kind == 171 && it.msid == 1 && it.xDAC_itcmd_var0 != 0 {
+                if it.kind == ItKind::Scizor && it.msid == 1 && it.xDAC_itcmd_var0 != 0 {
                     it.xD44_lifeTimer = it.xD44_lifeTimer.min(20.0);
                 }
             }

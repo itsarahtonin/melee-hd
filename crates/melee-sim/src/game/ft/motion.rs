@@ -426,7 +426,7 @@ impl Running<'_> {
             crate::hsd::aobj::req_anim(&mut objs.aobjs, &mut objs.fobjs, a, 0.0);
             crate::hsd::tobj::anim(objs, self.data, Some(t));
         }
-        if self.game.fighters[f.0].kind == 4 {
+        if self.game.fighters[f.0].kind == FighterKind::Kirby {
             let gobj = self.game.fighters[f.0]
                 .gobj
                 .expect("a fighter without its GObj");

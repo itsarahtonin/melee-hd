@@ -10,6 +10,7 @@ use super::super::handles::CodeRef;
 use super::super::state::{OBJ_CAMERA, OBJ_LIGHT, Obj, Running};
 use super::super::structs::{HSD_ImageDesc, MatchEnd};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 use crate::vec::Vec3;
@@ -503,7 +504,7 @@ impl Running<'_> {
         let file = super::results_stats::results_file(kind)?;
         let mut kind = kind;
         if (kind - 18) as u32 <= 1 {
-            kind = if s.match_end.player_standings[slot as usize].ftkind == 7 {
+            kind = if s.match_end.player_standings[slot as usize].ftkind == FighterKind::Seak {
                 0x13
             } else {
                 0x12

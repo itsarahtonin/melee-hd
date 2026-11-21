@@ -3,6 +3,7 @@
 
 use super::super::state::Running;
 use super::super::structs::ColorOverlay;
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::lb::colanim::{self, Stop, clear};
 use melee_data::archive::DataRef;
@@ -92,19 +93,19 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         // `ftData_UnkMotionStates4`: Donkey Kong's, Kirby's, Sheik's, Samus's, Mewtwo's and
         // Game & Watch's.
-        match fp.kind {
+        match fp.fighter_kind() {
             // `ftSk_Init_UnkMotionStates4`: Sheik's charged needles glow.
-            7 => {
+            FighterKind::Seak => {
                 if i32::from_be_bytes(fp.u[..4].try_into().unwrap()) == 6 {
                     self.start_color_anim(gobj, 86, 0);
                 }
             }
-            13 => self.samus_charged_glow(gobj),
+            FighterKind::Samus => self.samus_charged_glow(gobj),
             // `ftDk_Init_UnkMotionStates4`: Donkey Kong's charged punch glows.
-            3 => self.dk_charged_glow(gobj),
-            16 => self.mt_charged_glow(gobj),
-            24 => self.gw_unk_motion_states4(gobj),
-            4 => self.kb_charged_glow(gobj),
+            FighterKind::Donkey => self.dk_charged_glow(gobj),
+            FighterKind::Mewtwo => self.mt_charged_glow(gobj),
+            FighterKind::GameWatch => self.gw_unk_motion_states4(gobj),
+            FighterKind::Kirby => self.kb_charged_glow(gobj),
             _ => {}
         }
         let fp = self.game.fighter(gobj);

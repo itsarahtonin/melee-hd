@@ -9,6 +9,7 @@ use super::super::state::Running;
 use super::common::GA_GROUND;
 use super::cpu_script::cmd;
 use crate::fpu::{mem, reg};
+use crate::game::ft::CpuKind;
 use crate::game::ft::FighterKind;
 use crate::math;
 
@@ -388,7 +389,7 @@ impl Running<'_> {
             _ => {}
         }
         let kind = self.game.fighters[f.0].cpu.kind;
-        if kind == 0xF || kind == 0 {
+        if kind == CpuKind::NoAct || kind == CpuKind::Stay {
             self.cpu_ledge_getup(f);
             return;
         }

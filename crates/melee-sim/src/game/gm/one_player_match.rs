@@ -94,6 +94,8 @@ impl super::super::state::Game {
 use super::vs_mode::{player_defaults, rules_defaults};
 use crate::fpu::mem;
 use crate::game::ft::CharacterKind;
+use crate::game::ft::FighterKind;
+use crate::game::gr::StKind;
 
 /// `gm_80165290`, the boss stages' pause override; `fn_8017C7EC`, `fn_8017C7A0` and
 /// `fn_8017C71C`, the bonus stages' and the bosses' hooks.
@@ -485,7 +487,7 @@ impl Running<'_> {
             r.on_match_start = Some(CodeRef(BOSS_START));
             run.counters[0] = 6;
         }
-        if stkind == 0x49 {
+        if stkind == StKind::BigBlueRoute {
             run.counters[0] = 8;
         }
     }
@@ -626,7 +628,7 @@ impl Running<'_> {
         if run.stage[0] & 0x80 == 0 {
             run.frames = add(run.frames, end.frame_count);
         }
-        run.counters[6] = u8::from(p.ftkind == 7);
+        run.counters[6] = u8::from(p.ftkind == FighterKind::Seak);
         let g = &*self.game;
         if g.vs.start.x9 == 2 && super::super::gr::ground::flags(g, 0x20) != 0 {
             run.counters[3] = 1;

@@ -226,7 +226,15 @@ pub fn cam_angles(game: &Game) -> [f32; 4] {
 /// Whether a stage kind is one of the five `Stage_80224DC8` singles out.
 #[doc(alias = "Stage_80224DC8")]
 pub fn is_special_target_stage(stkind: i32) -> bool {
-    matches!(stkind, 0x3B | 0x3F | 0x42 | 0x49 | 0x4C)
+    [
+        super::StKind::AdventureKinokoRoute,
+        super::StKind::AdventureShrineRoute,
+        super::StKind::AdventureZebesRoute,
+        super::StKind::BigBlueRoute,
+        super::StKind::AdventureIcemt,
+    ]
+    .iter()
+    .any(|&k| stkind == k)
 }
 
 /// A player's entry point (`Stage_80224E38`): point of interest `slot + 4`, if the stage has it

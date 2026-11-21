@@ -28,7 +28,7 @@ pub const SONG: i32 = 0x48;
 
 /// `MatchKind_Stock`, `CpuKind_4`.
 const MATCH_STOCK: u8 = 1;
-const CPU_KIND: u8 = 4;
+const CPU_KIND: u8 = crate::game::ft::CpuKind::Normal.byte();
 
 /// `HSD_PAD_A | HSD_PAD_START`.
 const PAD_A_START: u32 = 0x1100;

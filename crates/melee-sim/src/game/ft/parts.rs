@@ -4,6 +4,7 @@
 use super::super::handles::{DObjListId, FighterId, PartsId};
 use super::super::state::{Game, Running};
 use super::super::structs::{Fighter, FighterBone};
+use crate::game::ft::FighterKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId, USE_QUATERNION};
 use crate::hsd::mobj::MObjClass;
@@ -412,9 +413,9 @@ impl Running<'_> {
                 self.hide_parts_vis(f, idx, list);
             }
             // The kind's model event (`ftData_UnkIntBoolFunc0`) after each lookup.
-            match self.game.fighters[f.0].kind {
-                4 => self.kb_hat_vis(f, idx, show),
-                15 => self.purin_hat_vis(f, idx, show),
+            match self.game.fighters[f.0].fighter_kind() {
+                FighterKind::Kirby => self.kb_hat_vis(f, idx, show),
+                FighterKind::Purin => self.purin_hat_vis(f, idx, show),
                 _ => {}
             }
         }

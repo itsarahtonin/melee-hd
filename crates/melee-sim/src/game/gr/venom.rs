@@ -205,7 +205,7 @@ pub fn on_init(r: &mut Running) {
         c.types = [0; 3];
         c.groups = [0; 3];
     }
-    let demo = i32::from(stage::stkind(r.game) == 0xE9);
+    let demo = i32::from(stage::stkind(r.game) == super::StKind::Corneria233);
     g(r.game).demo = demo;
     g(r.game).wait = if demo == 1 {
         0x78
@@ -327,7 +327,7 @@ const START_HOOK: u32 = 0x8020_40B4;
 /// line about to start.
 #[doc(alias = "fn_802040B4")]
 pub fn platform_start(r: &mut Running, gobj: GObjId) {
-    if stage::stkind(r.game) == 0xE4 {
+    if stage::stkind(r.game) == super::StKind::Venom228 {
         let gid = ground_of(r.game, gobj);
         r.game.grounds[gid.0].u.venom_platform().timer = 1;
     }

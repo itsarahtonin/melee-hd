@@ -8,6 +8,7 @@ use super::super::camera;
 use super::super::code;
 use super::super::state::{Obj, Running};
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::handles::FighterId;
 use crate::game::it::ItKind;
 use crate::hsd::display::{self, FighterFlags, FighterMaterial};
@@ -188,9 +189,9 @@ impl Running<'_> {
     /// Jigglypuff's hat.
     fn kind_draw(&mut self, g: GObjId, vmtx: Option<Mtx34>, pass: i32) {
         let f = self.game.fighter_id(g);
-        match self.game.fighters[f.0].kind {
-            4 => self.kb_draw_hat(g, vmtx, pass),
-            15 => self.purin_draw_hat(g, vmtx, pass),
+        match self.game.fighters[f.0].fighter_kind() {
+            FighterKind::Kirby => self.kb_draw_hat(g, vmtx, pass),
+            FighterKind::Purin => self.purin_draw_hat(g, vmtx, pass),
             _ => {}
         }
     }
@@ -501,9 +502,12 @@ impl Running<'_> {
         } else {
             // Link's and Young Link's sword attributes, Marth's and Roy's; any other
             // character's are whatever the stack held.
-            match fp.kind {
-                6 | 20 | 18 | 26 => {}
-                k => panic!("ftCo_800C2600: character {k} has no sword attributes to read"),
+            match fp.fighter_kind() {
+                FighterKind::Link
+                | FighterKind::Clink
+                | FighterKind::Mars
+                | FighterKind::Emblem => {}
+                k => panic!("ftCo_800C2600: character {k:?} has no sword attributes to read"),
             }
         }
         self.game.objs.display.push(display::Draw::Afterimage(f));

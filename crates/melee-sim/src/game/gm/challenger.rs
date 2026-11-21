@@ -6,6 +6,7 @@
 
 use super::super::hud::prize::{EntryRef, PrizeEntry};
 use super::super::state::Running;
+use crate::game::ft::CharacterKind;
 
 /// `TY_TROPHY_COUNT`.
 const TROPHIES: usize = 293;
@@ -18,7 +19,7 @@ impl Running<'_> {
     #[doc(alias = "gm_Mode_ChallengerApproach_OnLoad")]
     pub fn challenger_mode_on_load(&mut self) {
         self.game.gm.challenger.prev_mode = self.game.machine.routing.prev_mode;
-        let id = if self.game.gm.challenger.human_ckind == 0x21 {
+        let id = if self.game.gm.challenger.human_ckind == CharacterKind::NONE {
             2
         } else {
             0

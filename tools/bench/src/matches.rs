@@ -19,6 +19,7 @@ use std::borrow::Cow;
 use std::fmt::Write as _;
 
 use crate::gecko_words::{INFO, INFO_DATA, LAYOUT, LAYOUT_PATCH, SCENE, SCENE_DATA};
+use melee_sim::game::ft::CharacterKind;
 use melee_sim::game::gr::StKind;
 use melee_sim::game::it::ItKind;
 
@@ -3026,7 +3027,11 @@ fn player_block(player: Option<Player>, slot: u8, stocks: u8) -> [u8; 0x24] {
             ]);
         }
         None => {
-            let ckind = if slot < 4 { 0x15 } else { 0x21 };
+            let ckind = if slot < 4 {
+                CharacterKind::Clink.byte()
+            } else {
+                CharacterKind::NONE
+            };
             let flags = if slot < 4 { 0xC0 } else { 0x40 };
             b[..0x10].copy_from_slice(&[
                 ckind, 0x03, 0x04, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x09, 0x00, 0x78, 0x00, flags,
@@ -3335,7 +3340,11 @@ mod tests {
             b
         };
         let empty = |slot: u8| {
-            let (ckind, flags) = if slot < 4 { (0x15, 0xC0) } else { (0x21, 0x40) };
+            let (ckind, flags) = if slot < 4 {
+                (CharacterKind::Clink.byte(), 0xC0)
+            } else {
+                (CharacterKind::NONE, 0x40)
+            };
             let mut b = vec![ckind, 3, 4, 0, 0, 0xFF, 0, 0, 9, 0, 0x78, 0, flags, 0, 4, 0];
             b.resize(0x18, 0);
             b

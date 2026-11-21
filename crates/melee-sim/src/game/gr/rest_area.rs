@@ -184,7 +184,11 @@ fn drop_heart(r: &mut Running, kind: i32, joint: i32, slot: i32) {
 /// the first for one with none.
 #[doc(alias = "grHeal_8021F70C")]
 fn trophy_frame(ckind: i32) -> i32 {
-    let ckind = if ckind == 19 { 18 } else { ckind };
+    let ckind = if ckind == CharacterKind::Seak {
+        CharacterKind::Zelda.id()
+    } else {
+        ckind
+    };
     FRAME_CHARACTERS
         .iter()
         .take_while(|&&c| c != -1)

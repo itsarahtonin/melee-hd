@@ -404,7 +404,7 @@ impl Running<'_> {
     }
 
     /// The copy's cleanup when hit or KO'd: the hat's tongue back at rest and an item let go.
-    pub(super) fn kb_ys_cleanup(&mut self, gobj: GObjId) {
+    pub(crate) fn kb_ys_cleanup(&mut self, gobj: GObjId) {
         self.kb_ys_hat_reset(gobj);
         self.kb_ys_release_item(gobj);
     }

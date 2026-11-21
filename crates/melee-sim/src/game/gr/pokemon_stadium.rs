@@ -1751,7 +1751,7 @@ pub fn cycle(r: &mut Running, gobj: GObjId) {
     if super::super::gm::is_training(r.game) {
         return;
     }
-    if r.game.gr.stkind == 0xF0 {
+    if r.game.gr.stkind == super::StKind::PStadium240 {
         if let Some(d) = map_gobj(r.game, MAP_DISPLAY) {
             let dg = ground_of(r.game, d);
             if let Some(b) = r.game.grounds[dg.0].u.stadium_display().subject {

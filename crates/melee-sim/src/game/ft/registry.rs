@@ -27,16 +27,19 @@ use super::co::kind_callbacks::{self, KindCallbacks};
 use super::create_model::Creator;
 use super::data::KindTables;
 use super::kind_tables;
+use super::kirby::copy::{KirbyCopy, NO_COPY};
+use super::vars;
 use super::{
     captain, clink, crazyhand, donkey, drmario, emblem, falco, fox, gamewatch, gkoopa, kinds,
     kirby, koopa, link, luigi, mario, mars, masterhand, mewtwo, ness, peach, pichu, pikachu, popo,
     purin, samus, sandbag, seak, yoshi, zako, zelda,
 };
+use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 
 /// Declares a kind enum with the game's numbers: `ALL`, `COUNT`, `from_id`, `id`, and
 /// comparisons with the numbers the state holds.
-macro_rules! kinds {
+macro_rules! kind_enum {
     ($(#[$m:meta])* $name:ident: $($(#[$vm:meta])* $v:ident = $n:expr,)*) => {
         $(#[$m])*
         #[repr(u8)]
@@ -97,8 +100,9 @@ macro_rules! kinds {
         }
     };
 }
+pub(crate) use kind_enum;
 
-kinds! {
+kind_enum! {
     /// A fighter kind (`FighterKind`, `Ft_Kind_*`): which fighter's code and files run, the
     /// index of the executable's per-kind tables and of this registry ([`CHARACTERS`]). The
     /// game's own numbers.
@@ -171,7 +175,7 @@ kinds! {
     Sandbag = 32,
 }
 
-kinds! {
+kind_enum! {
     /// A character kind (`CharacterKind`, `CKind_*`): which character a player chose, as the
     /// character select, the rules, the replays and the save number it; the game's
     /// `ftMapping_list` takes it to its [`FighterKind`]s. The game's own numbers.
@@ -319,6 +323,11 @@ pub struct Character {
     pub calls: Option<fn(&mut Entries<kind::Call>)>,
     /// How many bytes of its attributes (`ftData::ext_attr`) its hooks copy.
     pub attrs_size: usize,
+    /// Kirby's copy of it: his neutral special, hat, cleanups and items while he has it.
+    pub kirby_copy: KirbyCopy,
+    /// The words of its variables (`Fighter::u`) that keep GObjs (its items, Fox's blaster,
+    /// Sheik's chain), which the importer types as handles (`vars::gobj_words`).
+    pub item_words: &'static [usize],
     /// The character kind a match takes it as, for a character the roster lists: the player's
     /// command line and launcher offer it once the fighter audit finds nothing missing.
     pub vs: Option<CharacterKind>,
@@ -392,6 +401,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(mario::run),
         calls: Some(mario::call),
         attrs_size: mario::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.mr_special_n_enter(g, &kirby::special_mario::KIRBY),
+            special_air_n: |r, g| r.mr_special_air_n_enter(g, &kirby::special_mario::KIRBY),
+            hat_on: Some(|r, g| r.kb_mario_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_head_hat_off(g)),
+            cleanup: None,
+            hit_cleanup: None,
+            items: &[(0, ItKind::KirbyMarioFireball)],
+            hat_jumps: false,
+        },
+        item_words: &[vars::MARIO_CAPE, vars::MARIO_X2240],
         vs: Some(CharacterKind::Mario),
         keys: &["mario"],
     }),
@@ -407,6 +427,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(fox::run),
         calls: Some(fox::call),
         attrs_size: fox::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.kb_fx_enter(g),
+            special_air_n: |r, g| r.kb_fx_air_enter(g),
+            hat_on: Some(|r, g| r.kb_fox_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_head_hat_off(g)),
+            cleanup: Some(|r, g| r.kb_fx_remove_blaster(g)),
+            hit_cleanup: Some(|r, g| r.kb_fx_remove_blaster(g)),
+            items: &[(0, ItKind::KirbyFoxLaser), (1, ItKind::KirbyFoxBlaster)],
+            hat_jumps: false,
+        },
+        item_words: &[vars::FOX_BLASTER],
         vs: Some(CharacterKind::Fox),
         keys: &["fox"],
     }),
@@ -422,6 +453,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(captain::run),
         calls: Some(captain::call),
         attrs_size: kinds::CAPTAIN_ATTRS_SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.ca_special_n_enter(g, &kirby::special_captain::KIRBY),
+            special_air_n: |r, g| r.ca_special_air_n_enter(g, &kirby::special_captain::KIRBY),
+            hat_on: Some(|r, g| r.kb_captain_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_head_hat_off(g)),
+            cleanup: None,
+            hit_cleanup: None,
+            items: &[],
+            hat_jumps: true,
+        },
+        item_words: &[],
         vs: Some(CharacterKind::Captain),
         keys: &["falcon", "captain-falcon", "cf"],
     }),
@@ -437,6 +479,21 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(donkey::run),
         calls: Some(donkey::call),
         attrs_size: donkey::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.dk_special_n_enter(g, &kirby::special_donkey::KIRBY),
+            special_air_n: |r, g| r.dk_special_air_n_enter(g, &kirby::special_donkey::KIRBY),
+            hat_on: Some(|r, g| r.kb_donkey_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_donkey_hat_off(g)),
+            cleanup: Some(|r, g| {
+                r.dk_special_n_destroy_effects_plus(g, &kirby::special_donkey::KIRBY)
+            }),
+            hit_cleanup: Some(|r, g| {
+                r.dk_special_n_destroy_effects_plus(g, &kirby::special_donkey::KIRBY)
+            }),
+            items: &[],
+            hat_jumps: false,
+        },
+        item_words: &[],
         vs: Some(CharacterKind::Donkey),
         keys: &["donkey-kong", "dk", "donkey"],
     }),
@@ -452,6 +509,8 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(kirby::run),
         calls: Some(kirby::call),
         attrs_size: kirby::attr::SIZE,
+        kirby_copy: NO_COPY,
+        item_words: &vars::KIRBY_ITEMS,
         vs: Some(CharacterKind::Kirby),
         keys: &["kirby"],
     }),
@@ -467,6 +526,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(koopa::run),
         calls: Some(koopa::call),
         attrs_size: koopa::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.kp_special_n_enter(g, &kirby::special_koopa::KIRBY),
+            special_air_n: |r, g| r.kp_special_air_n_enter(g, &kirby::special_koopa::KIRBY),
+            hat_on: Some(|r, g| r.kb_koopa_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
+            cleanup: None,
+            hit_cleanup: None,
+            items: &[(0, ItKind::KirbyBowserFlame)],
+            hat_jumps: false,
+        },
+        item_words: &[],
         vs: Some(CharacterKind::Koopa),
         keys: &["bowser", "koopa"],
     }),
@@ -482,6 +552,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(link::run),
         calls: Some(link::call),
         attrs_size: link::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.link_special_n_enter(g, &kirby::special_link::KIRBY, false),
+            special_air_n: |r, g| r.link_special_n_enter(g, &kirby::special_link::KIRBY, true),
+            hat_on: Some(|r, g| r.kb_link_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
+            cleanup: Some(|r, g| r.kb_lk_cleanup(g)),
+            hit_cleanup: Some(|r, g| r.kb_lk_cleanup(g)),
+            items: &[(0, ItKind::KirbyLinkArrow), (1, ItKind::KirbyLinkBow)],
+            hat_jumps: false,
+        },
+        item_words: &vars::LINK_ITEMS,
         vs: Some(CharacterKind::Link),
         keys: &["link"],
     }),
@@ -497,6 +578,20 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(seak::run),
         calls: Some(seak::call),
         attrs_size: kinds::SEAK_ATTRS_SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.seak_special_n_enter(g, &kirby::special_seak::KIRBY),
+            special_air_n: |r, g| r.seak_special_air_n_enter(g, &kirby::special_seak::KIRBY),
+            hat_on: Some(|r, g| r.kb_seak_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
+            cleanup: Some(|r, g| r.seak_drop_needles(g, &kirby::special_seak::KIRBY)),
+            hit_cleanup: Some(|r, g| r.seak_drop_needles(g, &kirby::special_seak::KIRBY)),
+            items: &[
+                (0, ItKind::KirbySheikNeedleThrown),
+                (1, ItKind::KirbySheikNeedleHeld),
+            ],
+            hat_jumps: true,
+        },
+        item_words: &[vars::SEAK_NEEDLES, vars::SEAK_CHAIN],
         vs: Some(CharacterKind::Seak),
         keys: &["sheik"],
     }),
@@ -512,6 +607,20 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(ness::run),
         calls: Some(ness::call),
         attrs_size: ness::init::ATTRS_SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.ness_special_n_start_enter(g, &kirby::special_ness::KIRBY),
+            special_air_n: |r, g| r.ness_special_air_n_start_enter(g, &kirby::special_ness::KIRBY),
+            hat_on: Some(|r, g| r.kb_ness_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_head_hat_off(g)),
+            cleanup: Some(|r, g| r.ness_pkflash_set_null(g, &kirby::special_ness::KIRBY)),
+            hit_cleanup: Some(|r, g| r.ness_pkflash_set_null(g, &kirby::special_ness::KIRBY)),
+            items: &[
+                (0, ItKind::KirbyNessPKFlash),
+                (1, ItKind::KirbyNessPKFlashExplosion),
+            ],
+            hat_jumps: false,
+        },
+        item_words: &vars::NESS_ITEMS,
         vs: Some(CharacterKind::Ness),
         keys: &["ness"],
     }),
@@ -527,6 +636,20 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(peach::run),
         calls: Some(peach::call),
         attrs_size: peach::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.peach_special_n_enter(g, &kirby::special_peach::KIRBY),
+            special_air_n: |r, g| r.peach_special_air_n_enter(g, &kirby::special_peach::KIRBY),
+            hat_on: Some(|r, g| r.kb_peach_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_head_hat_off(g)),
+            cleanup: Some(|r, g| r.peach_toad_on_death2(g, &kirby::special_peach::KIRBY)),
+            hit_cleanup: Some(|r, g| r.peach_toad_on_death2(g, &kirby::special_peach::KIRBY)),
+            items: &[
+                (0, ItKind::KirbyPeachToad),
+                (1, ItKind::KirbyPeachToadSpore),
+            ],
+            hat_jumps: false,
+        },
+        item_words: &vars::PEACH_ITEMS,
         vs: Some(CharacterKind::Peach),
         keys: &["peach"],
     }),
@@ -542,6 +665,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(popo::run),
         calls: Some(popo::call),
         attrs_size: popo::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.popo_special_n_enter(g, &kirby::special_iceclimber::KIRBY),
+            special_air_n: |r, g| r.popo_special_air_n_enter(g, &kirby::special_iceclimber::KIRBY),
+            hat_on: Some(|r, g| r.kb_popo_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_head_hat_off(g)),
+            cleanup: Some(|r, g| r.popo_remove_ice(g, &kirby::special_iceclimber::KIRBY)),
+            hit_cleanup: Some(|r, g| r.popo_remove_ice(g, &kirby::special_iceclimber::KIRBY)),
+            items: &[(0, ItKind::KirbyIceClimbersIceShot)],
+            hat_jumps: true,
+        },
+        item_words: &vars::ICE_CLIMBER_ITEMS,
         vs: Some(CharacterKind::IceClimbers),
         keys: &["ice-climbers", "ics"],
     }),
@@ -557,6 +691,11 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: None,
         calls: None,
         attrs_size: popo::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            hat_jumps: true,
+            ..NO_COPY
+        },
+        item_words: &vars::ICE_CLIMBER_ITEMS,
         vs: None,
         keys: &[],
     }),
@@ -572,6 +711,20 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(pikachu::run),
         calls: Some(pikachu::call),
         attrs_size: pikachu::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.pk_special_n_enter(g, &kirby::special_pikachu::KIRBY),
+            special_air_n: |r, g| r.pk_special_air_n_enter(g, &kirby::special_pikachu::KIRBY),
+            hat_on: Some(|r, g| r.kb_pikachu_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
+            cleanup: None,
+            hit_cleanup: None,
+            items: &[
+                (0, ItKind::KirbyPikachuThunderJoltGround),
+                (1, ItKind::KirbyPikachuThunderJoltAir),
+            ],
+            hat_jumps: false,
+        },
+        item_words: &[],
         vs: Some(CharacterKind::Pikachu),
         keys: &["pikachu", "pika"],
     }),
@@ -587,6 +740,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(samus::run),
         calls: Some(samus::call),
         attrs_size: samus::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.samus_special_n_enter(g, &kirby::special_samus::KIRBY),
+            special_air_n: |r, g| r.samus_special_air_n_enter(g, &kirby::special_samus::KIRBY),
+            hat_on: Some(|r, g| r.kb_samus_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_samus_hat_off(g)),
+            cleanup: Some(|r, g| r.samus_drop_charge(g, &kirby::special_samus::KIRBY)),
+            hit_cleanup: Some(|r, g| r.samus_drop_charge(g, &kirby::special_samus::KIRBY)),
+            items: &[(0, ItKind::KirbySamusChargeShot)],
+            hat_jumps: true,
+        },
+        item_words: &vars::SAMUS_ITEMS,
         vs: Some(CharacterKind::Samus),
         keys: &["samus"],
     }),
@@ -602,6 +766,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(yoshi::run),
         calls: Some(yoshi::call),
         attrs_size: yoshi::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.kb_ys_enter(g),
+            special_air_n: |r, g| r.kb_ys_air_enter(g),
+            hat_on: Some(|r, g| r.kb_yoshi_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_head_hat_off(g)),
+            cleanup: Some(|r, g| r.kb_ys_cleanup(g)),
+            hit_cleanup: Some(|r, g| r.kb_ys_cleanup(g)),
+            items: &[(5, ItKind::KirbyYoshiEggLay)],
+            hat_jumps: false,
+        },
+        item_words: &[vars::YOSHI_EGG],
         vs: Some(CharacterKind::Yoshi),
         keys: &["yoshi"],
     }),
@@ -617,6 +792,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(purin::run),
         calls: Some(purin::call),
         attrs_size: purin::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.rollout_enter(g, &kirby::special_purin::KIRBY),
+            special_air_n: |r, g| r.rollout_air_enter(g, &kirby::special_purin::KIRBY),
+            hat_on: Some(|r, g| r.kb_purin_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_purin_hat_off(g)),
+            cleanup: None,
+            hit_cleanup: None,
+            items: &[],
+            hat_jumps: false,
+        },
+        item_words: &[],
         vs: Some(CharacterKind::Purin),
         keys: &["jigglypuff", "puff", "jiggs"],
     }),
@@ -632,6 +818,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(mewtwo::run),
         calls: Some(mewtwo::call),
         attrs_size: mewtwo::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.mt_special_n_enter(g, &kirby::special_mewtwo::KIRBY),
+            special_air_n: |r, g| r.mt_special_air_n_enter(g, &kirby::special_mewtwo::KIRBY),
+            hat_on: Some(|r, g| r.kb_mewtwo_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_mewtwo_hat_off(g)),
+            cleanup: Some(|r, g| r.mt_n_lose_ball(g, &kirby::special_mewtwo::KIRBY)),
+            hit_cleanup: Some(|r, g| r.mt_n_drop_ball(g, &kirby::special_mewtwo::KIRBY)),
+            items: &[(3, ItKind::KirbyMewtwoShadowBall)],
+            hat_jumps: false,
+        },
+        item_words: &vars::MEWTWO_ITEMS,
         vs: Some(CharacterKind::Mewtwo),
         keys: &["mewtwo"],
     }),
@@ -647,6 +844,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(luigi::run),
         calls: Some(luigi::call),
         attrs_size: luigi::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.lg_special_n_enter(g, &kirby::special_luigi::KIRBY),
+            special_air_n: |r, g| r.lg_special_air_n_enter(g, &kirby::special_luigi::KIRBY),
+            hat_on: Some(|r, g| r.kb_luigi_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_head_hat_off(g)),
+            cleanup: None,
+            hit_cleanup: None,
+            items: &[(0, ItKind::KirbyLuigiFireball)],
+            hat_jumps: false,
+        },
+        item_words: &[],
         vs: Some(CharacterKind::Luigi),
         keys: &["luigi"],
     }),
@@ -662,6 +870,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(mars::run),
         calls: Some(mars::call),
         attrs_size: kinds::MARS_ATTRS_SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.mars_special_n_enter(g, &kirby::special_mars::KIRBY),
+            special_air_n: |r, g| r.mars_special_air_n_enter(g, &kirby::special_mars::KIRBY),
+            hat_on: Some(|r, g| r.kb_mars_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
+            cleanup: None,
+            hit_cleanup: None,
+            items: &[],
+            hat_jumps: false,
+        },
+        item_words: &[],
         vs: Some(CharacterKind::Mars),
         keys: &["marth"],
     }),
@@ -677,6 +896,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(zelda::run),
         calls: Some(zelda::call),
         attrs_size: kinds::ZELDA_ATTRS_SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.zelda_special_n_enter(g, &kirby::special_zelda::KIRBY),
+            special_air_n: |r, g| r.zelda_special_air_n_enter(g, &kirby::special_zelda::KIRBY),
+            hat_on: Some(|r, g| r.kb_zelda_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
+            cleanup: None,
+            hit_cleanup: None,
+            items: &[],
+            hat_jumps: false,
+        },
+        item_words: &[vars::ZELDA_DIN_FIRE],
         vs: Some(CharacterKind::Zelda),
         keys: &["zelda"],
     }),
@@ -692,6 +922,20 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(clink::run),
         calls: Some(clink::call),
         attrs_size: link::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.link_special_n_enter(g, &kirby::special_link::KIRBY, false),
+            special_air_n: |r, g| r.link_special_n_enter(g, &kirby::special_link::KIRBY, true),
+            hat_on: Some(|r, g| r.kb_clink_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
+            cleanup: Some(|r, g| r.kb_lk_cleanup(g)),
+            hit_cleanup: Some(|r, g| r.kb_lk_cleanup(g)),
+            items: &[
+                (0, ItKind::KirbyYoungLinkFireArrow),
+                (1, ItKind::KirbyYoungLinkBow),
+            ],
+            hat_jumps: false,
+        },
+        item_words: &vars::LINK_ITEMS,
         vs: Some(CharacterKind::Clink),
         keys: &["young-link", "ylink", "yl"],
     }),
@@ -707,6 +951,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(drmario::run),
         calls: Some(drmario::call),
         attrs_size: mario::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.mr_special_n_enter(g, &kirby::special_mario::KIRBY),
+            special_air_n: |r, g| r.mr_special_air_n_enter(g, &kirby::special_mario::KIRBY),
+            hat_on: Some(|r, g| r.kb_drmario_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_head_hat_off(g)),
+            cleanup: None,
+            hit_cleanup: None,
+            items: &[(0, ItKind::KirbyDrMarioMegavitamin)],
+            hat_jumps: false,
+        },
+        item_words: &[vars::MARIO_CAPE, vars::MARIO_X2240],
         vs: Some(CharacterKind::DrMario),
         keys: &["drmario", "dr-mario", "doc"],
     }),
@@ -722,6 +977,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(falco::run),
         calls: Some(falco::call),
         attrs_size: fox::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.kb_fx_enter(g),
+            special_air_n: |r, g| r.kb_fx_air_enter(g),
+            hat_on: Some(|r, g| r.kb_falco_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_falco_hat_off(g)),
+            cleanup: Some(|r, g| r.kb_fx_remove_blaster(g)),
+            hit_cleanup: Some(|r, g| r.kb_fx_remove_blaster(g)),
+            items: &[(3, ItKind::KirbyFalcoLaser), (4, ItKind::KirbyFalcoBlaster)],
+            hat_jumps: false,
+        },
+        item_words: &[vars::FOX_BLASTER],
         vs: Some(CharacterKind::Falco),
         keys: &["falco"],
     }),
@@ -737,6 +1003,20 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(pichu::run),
         calls: Some(pichu::call),
         attrs_size: pikachu::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.pk_special_n_enter(g, &kirby::special_pikachu::KIRBY),
+            special_air_n: |r, g| r.pk_special_air_n_enter(g, &kirby::special_pikachu::KIRBY),
+            hat_on: Some(|r, g| r.kb_pichu_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
+            cleanup: None,
+            hit_cleanup: None,
+            items: &[
+                (0, ItKind::KirbyPichuThunderJoltGround),
+                (1, ItKind::KirbyPichuThunderJoltAir),
+            ],
+            hat_jumps: false,
+        },
+        item_words: &[],
         vs: Some(CharacterKind::Pichu),
         keys: &["pichu"],
     }),
@@ -752,6 +1032,20 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(gamewatch::run),
         calls: Some(gamewatch::call),
         attrs_size: gamewatch::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.gw_special_n_enter(g, &kirby::special_gamewatch::KIRBY, false),
+            special_air_n: |r, g| r.gw_special_n_enter(g, &kirby::special_gamewatch::KIRBY, true),
+            hat_on: Some(|r, g| r.kb_gamewatch_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_gamewatch_hat_off(g)),
+            cleanup: Some(|r, g| r.kb_gw_cleanup(g)),
+            hit_cleanup: Some(|r, g| r.kb_gw_cleanup(g)),
+            items: &[
+                (5, ItKind::KirbyGameAndWatchSausage),
+                (6, ItKind::KirbyGameAndWatchPan),
+            ],
+            hat_jumps: false,
+        },
+        item_words: &gamewatch::u::ITEMS,
         vs: Some(CharacterKind::GameWatch),
         keys: &["game-and-watch", "gnw", "gw", "mr-game-and-watch"],
     }),
@@ -767,6 +1061,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: None,
         calls: None,
         attrs_size: kinds::CAPTAIN_ATTRS_SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.ca_special_n_enter(g, &kirby::special_captain::KIRBY),
+            special_air_n: |r, g| r.ca_special_air_n_enter(g, &kirby::special_captain::KIRBY),
+            hat_on: Some(|r, g| r.kb_ganon_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_head_hat_off(g)),
+            cleanup: None,
+            hit_cleanup: None,
+            items: &[],
+            hat_jumps: false,
+        },
+        item_words: &[],
         vs: Some(CharacterKind::Ganon),
         keys: &["ganondorf", "ganon"],
     }),
@@ -782,6 +1087,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(emblem::run),
         calls: Some(emblem::call),
         attrs_size: kinds::MARS_ATTRS_SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.mars_special_n_enter(g, &kirby::special_mars::KIRBY),
+            special_air_n: |r, g| r.mars_special_air_n_enter(g, &kirby::special_mars::KIRBY),
+            hat_on: Some(|r, g| r.kb_emblem_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
+            cleanup: None,
+            hit_cleanup: None,
+            items: &[],
+            hat_jumps: false,
+        },
+        item_words: &[],
         vs: Some(CharacterKind::Emblem),
         keys: &["roy"],
     }),
@@ -797,6 +1113,8 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(masterhand::run),
         calls: None,
         attrs_size: masterhand::attr::SIZE,
+        kirby_copy: NO_COPY,
+        item_words: &[],
         vs: None,
         keys: &[],
     }),
@@ -812,6 +1130,8 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(crazyhand::run),
         calls: None,
         attrs_size: crazyhand::attr::SIZE,
+        kirby_copy: NO_COPY,
+        item_words: &[],
         vs: None,
         keys: &[],
     }),
@@ -827,6 +1147,8 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(zako::run),
         calls: Some(zako::call),
         attrs_size: zako::ATTRS_SIZE,
+        kirby_copy: NO_COPY,
+        item_words: &[],
         vs: None,
         keys: &[],
     }),
@@ -842,6 +1164,8 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: None,
         calls: None,
         attrs_size: zako::ATTRS_SIZE,
+        kirby_copy: NO_COPY,
+        item_words: &[],
         vs: None,
         keys: &[],
     }),
@@ -857,6 +1181,17 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(gkoopa::run),
         calls: Some(gkoopa::call),
         attrs_size: koopa::attr::SIZE,
+        kirby_copy: KirbyCopy {
+            special_n: |r, g| r.kp_special_n_enter(g, &kirby::special_koopa::KIRBY),
+            special_air_n: |r, g| r.kp_special_air_n_enter(g, &kirby::special_koopa::KIRBY),
+            hat_on: Some(|r, g| r.kb_koopa_hat_on(g)),
+            hat_off: Some(|r, g| r.kb_pikachu_hat_off(g)),
+            cleanup: None,
+            hit_cleanup: None,
+            items: &[(0, ItKind::KirbyBowserFlame)],
+            hat_jumps: false,
+        },
+        item_words: &[],
         vs: None,
         keys: &[],
     }),
@@ -872,6 +1207,8 @@ pub static CHARACTERS: [Option<Character>; FighterKind::COUNT] = [
         fighter: Some(sandbag::run),
         calls: None,
         attrs_size: sandbag::ATTRS_SIZE,
+        kirby_copy: NO_COPY,
+        item_words: &[],
         vs: None,
         keys: &[],
     }),
@@ -923,6 +1260,36 @@ mod tests {
             }
         }
         assert_eq!(seen.len(), CharacterKind::PLAYABLE);
+    }
+
+    /// Each entry's Kirby copy registers only the copy items of its own character (the item
+    /// kinds named `Kirby` and the character, `KirbyBowserFlame` for Bowser and Giga Bowser),
+    /// and a copy without a hat has no items or cleanups either.
+    #[test]
+    fn kirby_copies_take_their_own_items() {
+        for c in ported() {
+            let who: String = c
+                .name
+                .trim_start_matches("Mr. ")
+                .trim_start_matches("Giga ")
+                .replace('&', "And")
+                .chars()
+                .filter(char::is_ascii_alphanumeric)
+                .collect();
+            for &(_, item) in c.kirby_copy.items {
+                let name = format!("{item:?}");
+                assert!(
+                    name.starts_with(&format!("Kirby{who}")),
+                    "{}'s copy registers {name}",
+                    c.name
+                );
+            }
+            if c.kirby_copy.hat_on.is_none() {
+                assert!(c.kirby_copy.items.is_empty(), "{}", c.name);
+                assert!(c.kirby_copy.hat_off.is_none(), "{}", c.name);
+                assert!(c.kirby_copy.cleanup.is_none(), "{}", c.name);
+            }
+        }
     }
 
     /// Each kind's first setup hook is ported where its table names one.

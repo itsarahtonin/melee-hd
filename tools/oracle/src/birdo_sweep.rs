@@ -36,6 +36,7 @@ use melee_sim::input::controller::PadData;
 use melee_sim::input::pad::PadStatus;
 
 use crate::session::{Console, Recording};
+use melee_sim::game::gr::GrKind;
 use melee_sim::game::it::ItKind;
 
 /// One tick of the session, its first controller held at `pad` (none: the recording's).
@@ -201,7 +202,10 @@ pub fn birdo_sweep(args: &[&str]) -> ExitCode {
         let p = reads[next.min(reads.len() - 1)][0];
         step(&mut s, &mut reads, &disc, &mut next, p);
         let g = &s.game;
-        if g.fighters.used() > 0 && g.stage_info.grkind == 0x19 && g.player_entity(0).is_some() {
+        if g.fighters.used() > 0
+            && g.stage_info.grkind == GrKind::Inishie2
+            && g.player_entity(0).is_some()
+        {
             break;
         }
         assert!(next < rec.reads.len(), "no match on Mushroom Kingdom II");
