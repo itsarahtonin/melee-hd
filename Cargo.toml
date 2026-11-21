@@ -23,8 +23,8 @@ ssbm-ppc = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-ba
 ssbm-disc = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
 ssbm-types = { git = "https://github.com/itsarahtonin/ssbm-rs", tag = "melee-hd-base" }
 
-# The player's build (`cargo run -p dist`): the release build optimized as one program. Slower to
-# build, so checks and tests stay on release.
+# The player's build (`cargo run -p dist`): the release build optimized as one program, 8 to 13%
+# faster than release on the worker (2026-11-21). Slower to build, so checks and tests stay on release.
 [profile.dist]
 inherits = "release"
 lto = "fat"
