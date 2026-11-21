@@ -1,13 +1,14 @@
 //! The Super Scope, `melee/it/kinds/itsscope.c`: a shooting item that falls, lands and is
 //! held, with its ammunition (`xD4C`), the cost of each charge, and its shots
-//! ([`sscopebeam`](super::sscopebeam)), which the fighter's scope states fire.
+//! ([`sscopebeam`](super::sscopebeam)), which the fighter's scope states fire. Its callbacks
+//! are the held items' ([`super::held`]).
 
 use gekko_fp as fp;
 
-use super::super::ground::{air, fall, ground_or_fall, ground_skid};
-use super::super::item::{article, change, change_state};
-use super::super::{item, item_mut, lib26b1, lib2725};
-use super::{falling_phys, sscopebeam};
+use super::super::item::article;
+use super::super::{item, item_mut};
+use super::held::{self, Held};
+use super::sscopebeam;
 use crate::game::it::ItKind;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
@@ -37,17 +38,32 @@ pub const ANIM4: u32 = 0x8029_2300;
 pub const PHYS4: u32 = 0x8029_2308;
 pub const COLL4: u32 = 0x8029_230C;
 
+/// The Super Scope: its ammunition, let go of or thrown into state 3, skidding in 4.
+pub const SUPER_SCOPE: Held = Held {
+    name: "Super Scope",
+    charges: true,
+    on_spawn: None,
+    fell: held::fell,
+    dropped: 3,
+    thrown: 3,
+    drop_update: true,
+    skid: 4,
+    bounces_only_let_go: false,
+    hits_disarm: false,
+    skid_faces_motion: false,
+};
+
 /// Runs one of the Super Scope's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 | ANIM1 | ANIM2 | ANIM4 => still(r, gobj),
-        COLL0 => coll0(r, gobj),
-        COLL1 => coll1(r, gobj),
-        COLL4 => coll4(r, gobj),
-        DMG_DEALT | CLANKED | HIT_SHIELD => bounce(r, gobj),
-        REFLECTED => reflected(r, gobj),
-        SHIELD_BOUNCED => shield_bounced(r, gobj),
+        ANIM0 | ANIM1 | ANIM2 | ANIM4 => held::still(r, gobj),
+        COLL0 => held::grounded(r, gobj, &SUPER_SCOPE),
+        COLL1 => held::lands_loaded(r, gobj),
+        COLL4 => held::skid(r, gobj, &SUPER_SCOPE),
+        DMG_DEALT | CLANKED | HIT_SHIELD => held::bounce(r, gobj, &SUPER_SCOPE),
+        REFLECTED => held::reflected(r, gobj, &SUPER_SCOPE),
+        SHIELD_BOUNCED => held::shield_bounced(r, gobj, &SUPER_SCOPE),
         _ => return None,
     })
 }
@@ -56,14 +72,14 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        SPAWNED => spawned(r, gobj),
-        FELL => fell(r, gobj),
-        PHYS0 | PHYS2 | PHYS4 => idle(r, gobj),
-        PHYS1 => gravity(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
-        DROPPED | THROWN => dropped(r, gobj),
-        PHYS3 => thrown_phys(r, gobj),
-        ENTERED_AIR => entered_air(r, gobj),
+        SPAWNED => held::spawned(r, gobj, &SUPER_SCOPE),
+        FELL => held::fell(r, gobj),
+        PHYS0 | PHYS2 | PHYS4 => held::idle(r, gobj),
+        PHYS1 => held::gravity(r, gobj),
+        PICKED_UP => held::picked_up(r, gobj),
+        DROPPED | THROWN => held::dropped(r, gobj, &SUPER_SCOPE),
+        PHYS3 => held::thrown_phys(r, gobj),
+        ENTERED_AIR => held::entered_air(r, gobj, &SUPER_SCOPE),
         _ => return false,
     }
     true
@@ -76,14 +92,6 @@ fn attrs(r: &Running, gobj: GObjId) -> melee_data::archive::DataRef {
     article(item(r.game, gobj))
         .special(r.data)
         .expect("a Super Scope without attributes")
-}
-
-/// `itSScope_Logic21_Spawned`: its attributes' ammunition, falling.
-#[doc(alias = "itSScope_Logic21_Spawned")]
-pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let ammo = r.data.u32(attrs(r, gobj)) as i32;
-    item_mut(r.game, gobj).xD4C = ammo;
-    fell(r, gobj);
 }
 
 /// Where the shots leave the muzzle, in the hand's space, `it_80291CCC`.
@@ -228,113 +236,6 @@ pub fn shoot(r: &mut Running, gobj: GObjId, pos: Vec3, level: i32, facing: f32) 
 pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
     let mut spawn = super::super::item::drop_spawn(ItKind::SuperScope.id(), pos, false);
     let gobj = super::super::item::spawn_ground(r, &mut spawn)?;
-    landed(r, gobj);
+    held::landed(r, gobj);
     Some(gobj)
-}
-
-/// Stops and stands, `it_80292030`.
-#[doc(alias = "it_80292030")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    lib2725::clear_velocity(r.game, gobj);
-    lib26b1::enable_pickup(r.game, gobj);
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
-}
-
-/// The states that animate nothing, `itSscope_UnkMotion0_Anim` (2, 3 for 1 and 3, 4).
-#[doc(alias = "itSscope_UnkMotion0_Anim")]
-#[doc(alias = "itSscope_UnkMotion2_Anim")]
-#[doc(alias = "itSscope_UnkMotion3_Anim")]
-#[doc(alias = "itSscope_UnkMotion4_Anim")]
-pub fn still(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states that move nothing, `itSscope_UnkMotion0_Phys` (2, 4).
-#[doc(alias = "itSscope_UnkMotion0_Phys")]
-#[doc(alias = "itSscope_UnkMotion2_Phys")]
-#[doc(alias = "itSscope_UnkMotion4_Phys")]
-pub fn idle(_: &mut Running, _: GObjId) {}
-
-/// `itSscope_UnkMotion0_Coll`: falls off ledges.
-#[doc(alias = "itSscope_UnkMotion0_Coll")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    ground_or_fall(r, gobj, fell);
-    false
-}
-
-/// Falls, `it_802920B8`.
-#[doc(alias = "it_802920B8")]
-pub fn fell(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
-}
-
-/// Gravity, `itSscope_UnkMotion1_Phys`.
-#[doc(alias = "itSscope_UnkMotion1_Phys")]
-pub fn gravity(r: &mut Running, gobj: GObjId) {
-    super::gravity(r, gobj);
-}
-
-/// `itSscope_UnkMotion3_Coll` (states 1 and 3): with ammunition left it lands; empty, it
-/// falls through, gone once it's past the stage.
-#[doc(alias = "itSscope_UnkMotion3_Coll")]
-pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xD4C != 0 {
-        fall(r, gobj, landed);
-        return false;
-    }
-    air(r, gobj)
-}
-
-/// Held, `itSScope_Logic21_PickedUp`.
-#[doc(alias = "itSScope_Logic21_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
-}
-
-/// Let go of or thrown, it falls, `itSScope_Logic21_Dropped` and `itSScope_Logic21_Thrown`.
-#[doc(alias = "itSScope_Logic21_Dropped")]
-#[doc(alias = "itSScope_Logic21_Thrown")]
-pub fn dropped(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 3, change::ANIM_UPDATE | change::DROP_UPDATE);
-}
-
-/// Bounces off what it hit, a clank or a shield, `itSScope_Logic21_DmgDealt` (and
-/// `Clanked`, `HitShield`).
-#[doc(alias = "itSScope_Logic21_DmgDealt")]
-#[doc(alias = "itSScope_Logic21_Clanked")]
-#[doc(alias = "itSScope_Logic21_HitShield")]
-pub fn bounce(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::bounce_off_victim(r.game, r.data, gobj);
-    false
-}
-
-/// Sent back by a reflection, `itSScope_Logic21_Reflected`.
-#[doc(alias = "itSScope_Logic21_Reflected")]
-pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::reflected_back(r.game, gobj)
-}
-
-/// Bounces off a shield, `itSScope_Logic21_ShieldBounced`.
-#[doc(alias = "itSScope_Logic21_ShieldBounced")]
-pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::bounce_off_shield(r.game, gobj)
-}
-
-/// Skidding off a slope, `itSScope_Logic21_EnteredAir`.
-#[doc(alias = "itSScope_Logic21_EnteredAir")]
-pub fn entered_air(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 4, change::ANIM_UPDATE);
-}
-
-/// `itSscope_UnkMotion4_Coll`: skidding, it stops or falls.
-#[doc(alias = "itSscope_UnkMotion4_Coll")]
-pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
-    ground_skid(r, gobj, landed, fell);
-    false
-}
-
-/// Thrown, gravity and the spin it slows (`Item_ApplyFallingPhysics`), `itSscope_UnkMotion3_Phys`.
-#[doc(alias = "itSscope_UnkMotion3_Phys")]
-pub fn thrown_phys(r: &mut Running, gobj: GObjId) {
-    falling_phys(r, gobj);
 }

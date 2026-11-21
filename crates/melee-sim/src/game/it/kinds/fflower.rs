@@ -1,10 +1,11 @@
 //! The Fire Flower, `melee/it/kinds/itfflower.c`: a shooting item that falls, lands, loops
 //! its animation and is held (its flames, `it_80292F14`, come with the fighter's shooting
-//! states, not ported).
+//! states, not ported). The held items' callbacks ([`super::held`]), but for its animations,
+//! which loop and end its flames.
 
-use super::super::ground::{air, fall, ground_or_fall, ground_skid};
-use super::super::item::{article, change, change_state, next_attack_id};
+use super::super::item::{change, change_state, next_attack_id};
 use super::super::{IgnoreId, item, item_mut, lib26b1, lib2725};
+use super::held::{self, Held};
 use crate::game::ef::eflib;
 use crate::game::it::ItKind;
 use crate::game::state::Running;
@@ -35,6 +36,22 @@ pub const ANIM7: u32 = 0x8029_355C;
 pub const PHYS7: u32 = 0x8029_3608;
 pub const COLL7: u32 = 0x8029_360C;
 
+/// The Fire Flower: its fuel and an attack id of its own, let go of or thrown into state 6
+/// (without the drop's update), skidding in 7.
+pub const FIRE_FLOWER: Held = Held {
+    name: "Fire Flower",
+    charges: true,
+    on_spawn: Some(arm),
+    fell: held::fell,
+    dropped: 6,
+    thrown: 6,
+    drop_update: false,
+    skid: 7,
+    bounces_only_let_go: false,
+    hits_disarm: false,
+    skid_faces_motion: false,
+};
+
 /// Runs one of the Fire Flower's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
@@ -43,12 +60,12 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         ANIM1 => anim1(r, gobj),
         ANIM2 => held_anim(r, gobj),
         ANIM7 => anim7(r, gobj),
-        COLL0 => coll0(r, gobj),
-        COLL1 | COLL6 => coll1(r, gobj),
-        COLL7 => coll7(r, gobj),
-        DMG_DEALT | CLANKED | HIT_SHIELD => bounce(r, gobj),
-        REFLECTED => reflected(r, gobj),
-        SHIELD_BOUNCED => shield_bounced(r, gobj),
+        COLL0 => held::grounded(r, gobj, &FIRE_FLOWER),
+        COLL1 | COLL6 => held::lands_loaded(r, gobj),
+        COLL7 => held::skid(r, gobj, &FIRE_FLOWER),
+        DMG_DEALT | CLANKED | HIT_SHIELD => held::bounce(r, gobj, &FIRE_FLOWER),
+        REFLECTED => held::reflected(r, gobj, &FIRE_FLOWER),
+        SHIELD_BOUNCED => held::shield_bounced(r, gobj, &FIRE_FLOWER),
         _ => return None,
     })
 }
@@ -57,33 +74,27 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        SPAWNED => spawned(r, gobj),
-        FELL => fell(r, gobj),
-        PHYS0 | PHYS2 | PHYS7 => idle(r, gobj),
-        PHYS1 | PHYS6 => gravity(r, gobj),
-        PICKED_UP => picked_up(r, gobj),
-        DROPPED | THROWN => dropped(r, gobj),
-        ENTERED_AIR => entered_air(r, gobj),
+        SPAWNED => held::spawned(r, gobj, &FIRE_FLOWER),
+        FELL => held::fell(r, gobj),
+        PHYS0 | PHYS2 | PHYS7 => held::idle(r, gobj),
+        PHYS1 | PHYS6 => held::gravity(r, gobj),
+        PICKED_UP => held::picked_up(r, gobj),
+        DROPPED | THROWN => held::dropped(r, gobj, &FIRE_FLOWER),
+        ENTERED_AIR => held::entered_air(r, gobj, &FIRE_FLOWER),
         _ => return false,
     }
     true
 }
 
-/// `itFFlower_Logic25_Spawned`: its attributes' fuel, an attack id of its own, falling.
-#[doc(alias = "itFFlower_Logic25_Spawned")]
-pub fn spawned(r: &mut Running, gobj: GObjId) {
-    let a = article(item(r.game, gobj))
-        .special(r.data)
-        .expect("a Fire Flower without attributes");
-    let fuel = r.data.u32(a) as i32;
-    item_mut(r.game, gobj).xD4C = fuel;
+/// Its spawn's own part, after its fuel: an attack id of its own, its flames' count and effect
+/// cleared.
+fn arm(r: &mut Running, gobj: GObjId) {
     let id = next_attack_id(r.game);
     let ip = item_mut(r.game, gobj);
     ip.xAC4_ignoreItemID = IgnoreId(Some(id));
     let v = ip.xDD4_itemVar.fflower();
     v.x0.set(0);
     v.x4.set(0);
-    fell(r, gobj);
 }
 
 /// The flower's flame effect ends (`efLib_DestroyAll`) unless it's shooting with fuel left
@@ -172,7 +183,7 @@ pub fn spawn_at(r: &mut Running, pos: crate::vec::Vec3) -> Option<GObjId> {
     spawn.x44_flag[0] |= 0x80;
     spawn.x40 = 0;
     let gobj = super::super::item::spawn_air(r, &mut spawn)?;
-    landed(r, gobj);
+    held::landed(r, gobj);
     Some(gobj)
 }
 
@@ -180,14 +191,6 @@ pub fn spawn_at(r: &mut Running, pos: crate::vec::Vec3) -> Option<GObjId> {
 #[doc(alias = "itFFlower_Logic25_EvtUnk")]
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
-}
-
-/// Stops and stands, `it_80292FF0`.
-#[doc(alias = "it_80292FF0")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    lib2725::clear_velocity(r.game, gobj);
-    lib26b1::enable_pickup(r.game, gobj);
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 
 /// `itFflower_UnkMotion0_Anim`: standing, its animation loops, holding still once it has.
@@ -205,25 +208,6 @@ pub fn anim0(r: &mut Running, gobj: GObjId) -> bool {
     false
 }
 
-/// The states that move nothing, `itFflower_UnkMotion0_Phys` (5, 7).
-#[doc(alias = "itFflower_UnkMotion0_Phys")]
-#[doc(alias = "itFflower_UnkMotion5_Phys")]
-#[doc(alias = "itFflower_UnkMotion7_Phys")]
-pub fn idle(_: &mut Running, _: GObjId) {}
-
-/// `itFflower_UnkMotion0_Coll`: falls off ledges.
-#[doc(alias = "itFflower_UnkMotion0_Coll")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    ground_or_fall(r, gobj, fell);
-    false
-}
-
-/// Falls, `it_8029313C`.
-#[doc(alias = "it_8029313C")]
-pub fn fell(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
-}
-
 /// `itFflower_UnkMotion6_Anim` (states 1 and 6): falling, the animation loops in state 1.
 #[doc(alias = "itFflower_UnkMotion6_Anim")]
 pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
@@ -232,31 +216,6 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
         change_state(r, gobj, 1, change::ANIM_UPDATE);
     }
     false
-}
-
-/// Gravity, `itFflower_UnkMotion1_Phys` and `itFflower_UnkMotion6_Phys`.
-#[doc(alias = "itFflower_UnkMotion1_Phys")]
-#[doc(alias = "itFflower_UnkMotion6_Phys")]
-pub fn gravity(r: &mut Running, gobj: GObjId) {
-    super::gravity(r, gobj);
-}
-
-/// `itFflower_UnkMotion1_Coll` and `itFflower_UnkMotion6_Coll`: with fuel left it lands;
-/// empty, it falls through, gone once it's past the stage.
-#[doc(alias = "itFflower_UnkMotion1_Coll")]
-#[doc(alias = "itFflower_UnkMotion6_Coll")]
-pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xD4C != 0 {
-        fall(r, gobj, landed);
-        return false;
-    }
-    air(r, gobj)
-}
-
-/// Held, `itFFlower_Logic25_PickedUp`.
-#[doc(alias = "itFFlower_Logic25_PickedUp")]
-pub fn picked_up(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 2, change::ANIM_UPDATE);
 }
 
 /// `itFflower_UnkMotion5_Anim` (states 2 to 5): each loops into the held state, or
@@ -275,41 +234,6 @@ pub fn held_anim(r: &mut Running, gobj: GObjId) -> bool {
     false
 }
 
-/// Let go of or thrown, it falls, `itFFlower_Logic25_Dropped` and `itFFlower_Logic25_Thrown`.
-#[doc(alias = "itFFlower_Logic25_Dropped")]
-#[doc(alias = "itFFlower_Logic25_Thrown")]
-pub fn dropped(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 6, change::ANIM_UPDATE);
-}
-
-/// Bounces off what it hit, a clank or a shield, `itFFlower_Logic25_DmgDealt` (and
-/// `Clanked`, `HitShield`).
-#[doc(alias = "itFFlower_Logic25_DmgDealt")]
-#[doc(alias = "itFFlower_Logic25_Clanked")]
-#[doc(alias = "itFFlower_Logic25_HitShield")]
-pub fn bounce(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::bounce_off_victim(r.game, r.data, gobj);
-    false
-}
-
-/// Sent back by a reflection, `itFFlower_Logic25_Reflected`.
-#[doc(alias = "itFFlower_Logic25_Reflected")]
-pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::reflected_back(r.game, gobj)
-}
-
-/// Bounces off a shield, `itFFlower_Logic25_ShieldBounced`.
-#[doc(alias = "itFFlower_Logic25_ShieldBounced")]
-pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::bounce_off_shield(r.game, gobj)
-}
-
-/// Skidding off a slope, `itFFlower_Logic25_EnteredAir`.
-#[doc(alias = "itFFlower_Logic25_EnteredAir")]
-pub fn entered_air(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 7, change::ANIM_UPDATE);
-}
-
 /// `itFflower_UnkMotion7_Anim`: skidding, the animation loops.
 #[doc(alias = "itFflower_UnkMotion7_Anim")]
 pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
@@ -317,12 +241,5 @@ pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
     if !lib2725::is_animating(r.game, gobj) {
         change_state(r, gobj, 7, change::ANIM_UPDATE);
     }
-    false
-}
-
-/// `itFflower_UnkMotion7_Coll`: skidding, it stops or falls.
-#[doc(alias = "itFflower_UnkMotion7_Coll")]
-pub fn coll7(r: &mut Running, gobj: GObjId) -> bool {
-    ground_skid(r, gobj, landed, fell);
     false
 }

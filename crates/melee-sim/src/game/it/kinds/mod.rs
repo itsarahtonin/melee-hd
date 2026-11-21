@@ -55,6 +55,7 @@ pub mod hammerhead;
 pub mod harisen;
 pub mod hassam;
 pub mod heart;
+pub mod held;
 pub mod hinoarashi;
 pub mod hitodeman;
 pub mod houou;

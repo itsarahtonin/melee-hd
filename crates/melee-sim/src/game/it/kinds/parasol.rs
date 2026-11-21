@@ -1,12 +1,13 @@
 //! The parasol, `melee/it/kinds/itparasol.c`: it falls with its canopy spinning, slowing in
 //! x, lies about, and in hand opens and closes through states 4 to 10, which the held
-//! parasol's fighter states drive (`ftCommon_8007E83C`, not ported for this parasol).
+//! parasol's fighter states drive (`ftCommon_8007E83C`, not ported for this parasol). The
+//! held items' callbacks ([`super::held`]), but for its falls, its throw and its pickup.
 
 use gekko_fp as fp;
 
-use super::super::ground::{fall, ground_or_fall, ground_skid};
 use super::super::item::{article, change, change_state, play_sfx};
-use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, set_flag};
+use super::super::{item, item_mut, jobj_of, set_flag};
+use super::held::{self, Held};
 use crate::fpu::{mem, reg};
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
@@ -41,18 +42,34 @@ pub const PHYS10: u32 = 0x8028_B614;
 const ANIM_FRAMES: [i32; 8] = [20, 16, 45, 2, 20, 30, 40, 16];
 const STATE_ANIMS: [i32; 11] = [-1, 4, 0, -1, 1, 2, 3, 4, 5, 6, 7];
 
+/// The parasol: closed and falling as it spawns, let go of or thrown into state 2 (its own,
+/// with its sound), skidding in 3.
+pub const PARASOL: Held = Held {
+    name: "parasol",
+    charges: false,
+    on_spawn: Some(closed),
+    fell: held::fell,
+    dropped: 2,
+    thrown: 2,
+    drop_update: true,
+    skid: 3,
+    bounces_only_let_go: false,
+    hits_disarm: false,
+    skid_faces_motion: false,
+};
+
 /// Runs one of the parasol's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM0 | ANIM3 | ANIM10 => still(r, gobj),
+        ANIM0 | ANIM3 | ANIM10 => held::still(r, gobj),
         SPIN => spin(r, gobj),
-        COLL0 => coll0(r, gobj),
-        COLL1 => coll1(r, gobj),
-        COLL3 => coll3(r, gobj),
-        DMG_DEALT | CLANKED | HIT_SHIELD => bounce(r, gobj),
-        REFLECTED => reflected(r, gobj),
-        SHIELD_BOUNCED => shield_bounced(r, gobj),
+        COLL0 => held::grounded(r, gobj, &PARASOL),
+        COLL1 => held::lands(r, gobj),
+        COLL3 => held::skid(r, gobj, &PARASOL),
+        DMG_DEALT | CLANKED | HIT_SHIELD => held::bounce(r, gobj, &PARASOL),
+        REFLECTED => held::reflected(r, gobj, &PARASOL),
+        SHIELD_BOUNCED => held::shield_bounced(r, gobj, &PARASOL),
         _ => return None,
     })
 }
@@ -61,14 +78,14 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 #[melee_callbacks::callbacks(Proc)]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
-        SPAWNED => spawned(r, gobj),
-        LANDED => landed(r, gobj),
-        FELL => fell(r, gobj),
-        PHYS0 | PHYS3 | PHYS10 => idle(r, gobj),
+        SPAWNED => held::spawned(r, gobj, &PARASOL),
+        LANDED => held::landed(r, gobj),
+        FELL => held::fell(r, gobj),
+        PHYS0 | PHYS3 | PHYS10 => held::idle(r, gobj),
         PHYS1 => phys1(r, gobj),
         PHYS2 => phys2(r, gobj),
         DROPPED | THROWN => thrown(r, gobj),
-        ENTERED_AIR => entered_air(r, gobj),
+        ENTERED_AIR => held::entered_air(r, gobj, &PARASOL),
         PICKED_UP => picked_up(r, gobj),
         _ => return false,
     }
@@ -95,48 +112,6 @@ pub fn anim_frames(state: i32) -> i32 {
     ANIM_FRAMES[anim as usize]
 }
 
-/// `itParasol_Logic13_Spawned`: falling.
-#[doc(alias = "itParasol_Logic13_Spawned")]
-pub fn spawned(r: &mut Running, gobj: GObjId) {
-    set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, false);
-    fell(r, gobj);
-}
-
-/// Lands and lies still, `it_8028B0EC`.
-#[doc(alias = "it_8028B0EC")]
-pub fn landed(r: &mut Running, gobj: GObjId) {
-    lib26b1::enable_pickup(r.game, gobj);
-    lib2725::clear_velocity(r.game, gobj);
-    change_state(r, gobj, 0, change::ANIM_UPDATE);
-}
-
-/// The states that animate nothing, `itParasol_UnkMotion0_Anim` (3, and 4 to 10's).
-#[doc(alias = "itParasol_UnkMotion0_Anim")]
-#[doc(alias = "itParasol_UnkMotion3_Anim")]
-#[doc(alias = "itParasol_UnkMotion10_Anim")]
-pub fn still(_: &mut Running, _: GObjId) -> bool {
-    false
-}
-
-/// The states that move nothing, `itParasol_UnkMotion0_Phys` (3, and 4 to 10's).
-#[doc(alias = "itParasol_UnkMotion0_Phys")]
-#[doc(alias = "itParasol_UnkMotion3_Phys")]
-#[doc(alias = "itParasol_UnkMotion10_Phys")]
-pub fn idle(_: &mut Running, _: GObjId) {}
-
-/// `itParasol_UnkMotion0_Coll`: falls off ledges.
-#[doc(alias = "itParasol_UnkMotion0_Coll")]
-pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
-    ground_or_fall(r, gobj, fell);
-    false
-}
-
-/// Falls, `it_8028B17C`.
-#[doc(alias = "it_8028B17C")]
-pub fn fell(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
-}
-
 /// `itParasol_UnkMotion2_Anim` (falling and thrown): the canopy turns by its spin plus the
 /// fall's speed, in degrees, the way it faces.
 #[doc(alias = "itParasol_UnkMotion2_Anim")]
@@ -156,6 +131,11 @@ pub fn spin(r: &mut Running, gobj: GObjId) -> bool {
     let ry = mem(fp::fmadds(f64::from(0.017_453_292_f32), turn, ry));
     jobj::set_rotation_y(&mut r.game.objs.jobjs, canopy, ry);
     false
+}
+
+/// Its spawn's own part: its canopy's flag (`xDCE` bit 7) off.
+fn closed(r: &mut Running, gobj: GObjId) {
+    set_flag(&mut item_mut(r.game, gobj).xDCE_flag, 7, false);
 }
 
 /// Slows the item in x by `decel`, to a stop (`decelerateItemX`).
@@ -192,13 +172,6 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
     decelerate(r, gobj, d);
 }
 
-/// `itParasol_UnkMotion2_Coll` (falling and thrown): lands.
-#[doc(alias = "itParasol_UnkMotion2_Coll")]
-pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    fall(r, gobj, landed);
-    false
-}
-
 /// Let go of or thrown, with its sound, `itParasol_Logic13_Dropped` and
 /// `itParasol_Logic13_Thrown`.
 #[doc(alias = "itParasol_Logic13_Dropped")]
@@ -206,41 +179,6 @@ pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
 pub fn thrown(r: &mut Running, gobj: GObjId) {
     play_sfx(r, gobj, 0xF7, 0x7F, 0x40);
     change_state(r, gobj, 2, change::ANIM_UPDATE | change::DROP_UPDATE);
-}
-
-/// Bounces off what it hit, a clank or a shield, `itParasol_Logic13_DmgDealt` (and
-/// `Clanked`, `HitShield`).
-#[doc(alias = "itParasol_Logic13_DmgDealt")]
-#[doc(alias = "itParasol_Logic13_Clanked")]
-#[doc(alias = "itParasol_Logic13_HitShield")]
-pub fn bounce(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::bounce_off_victim(r.game, r.data, gobj);
-    false
-}
-
-/// Sent back by a reflection, `itParasol_Logic13_Reflected`.
-#[doc(alias = "itParasol_Logic13_Reflected")]
-pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::reflected_back(r.game, gobj)
-}
-
-/// Bounces off a shield, `itParasol_Logic13_ShieldBounced`.
-#[doc(alias = "itParasol_Logic13_ShieldBounced")]
-pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
-    lib2725::bounce_off_shield(r.game, gobj)
-}
-
-/// Skidding off a slope, `itParasol_Logic13_EnteredAir`.
-#[doc(alias = "itParasol_Logic13_EnteredAir")]
-pub fn entered_air(r: &mut Running, gobj: GObjId) {
-    change_state(r, gobj, 3, change::ANIM_UPDATE);
-}
-
-/// `itParasol_UnkMotion3_Coll`: skidding, it stops or falls.
-#[doc(alias = "itParasol_UnkMotion3_Coll")]
-pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
-    ground_skid(r, gobj, landed, fell);
-    false
 }
 
 /// Held, closed, `itParasol_Logic13_PickedUp`.
