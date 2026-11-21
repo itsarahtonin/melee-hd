@@ -1908,6 +1908,31 @@ fn the_hookshot_bounces_back_off_a_wall() {
     }
 }
 
+/// The side specials Pikachu and Pichu share with Luigi (docs/oracle.md, "Sessions"):
+/// `skull-bash/skull2`, debug VS on Final Destination with Pikachu, Pichu and Luigi, one at a
+/// time. Pikachu's and Pichu's Skull Bash on the ground and in the air, each uncharged (B let
+/// go before the charge's first frame) and charged (37 frames on the ground, 17 in the air, the
+/// air one landing as it launches); Luigi's Green Missile uncharged, charged on the ground and
+/// in the air, one charged in the air landing before its launch, and a misfire on the ground.
+/// Clean from power-on with `--all --heap` and the card after the original's.
+#[test]
+fn skull_bash_and_the_green_missile_on_the_ground_and_in_the_air() {
+    let after = ssbm_rs_local("traces/skull-bash/skull2-play.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    let Some(out) = scripted_session("skull-bash", "skull2", &args) else {
+        return;
+    };
+    assert!(
+        out.contains("8878 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
 /// The debug menu's Yoshiki Test page (`debug-sessions/yoshiki-*`, recorded with ssbm-rs's
 /// `--develop 3`), each from power-on to its trace's end with the card it leaves: Init as the
 /// page opens and again on A and B; Accessable, Create, Save, Load and SnapMount0 with the
