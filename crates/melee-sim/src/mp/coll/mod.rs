@@ -36,9 +36,11 @@ use crate::math;
 use crate::vec::Vec3;
 
 /// `x130_flags`: keep the desired ECB's bottom when loading (`CollData_X130_Locked`).
-pub const X130_LOCKED: u32 = 1 << 4;
+#[doc(alias("X130_LOCKED"))]
+pub const KEEP_ECB_BOTTOM: u32 = 1 << 4;
 /// `x130_flags`: zero the ECB before the next load (`CollData_X130_Clear`).
-pub const X130_CLEAR: u32 = 1 << 5;
+#[doc(alias("X130_CLEAR"))]
+pub const CLEAR_ECB: u32 = 1 << 5;
 
 /// `env_flags`: what the last collision pass touched (`Collide_*`).
 pub const LEFT_WALL_PUSH: i32 = 0x1;
@@ -743,9 +745,9 @@ impl CollData {
 
     /// Zeroes the ECB if a clear was requested, and saves it before a load.
     fn begin_load(&mut self) {
-        if self.x130_flags & X130_CLEAR != 0 {
+        if self.x130_flags & CLEAR_ECB != 0 {
             zero_ecb(&mut self.ecb);
-            self.x130_flags &= !X130_CLEAR;
+            self.x130_flags &= !CLEAR_ECB;
         }
         self.xE4_ecb = self.ecb.clone();
     }
@@ -887,7 +889,7 @@ impl CollData {
     /// Requests the ECB be zeroed at the next load, `mpColl_80043670`.
     #[doc(alias = "mpColl_80043670")]
     pub fn request_clear(&mut self) {
-        self.x130_flags |= X130_CLEAR;
+        self.x130_flags |= CLEAR_ECB;
     }
 
     /// Places the object, `mpColl_80043680`: all three positions, and the ECB zeroed at the
@@ -897,7 +899,7 @@ impl CollData {
         self.cur_pos = pos;
         self.prev_pos = self.cur_pos;
         self.last_pos = self.prev_pos;
-        self.x130_flags |= X130_CLEAR;
+        self.x130_flags |= CLEAR_ECB;
     }
 
     #[doc(alias = "mpCollSetFacingDir")]
@@ -1252,10 +1254,10 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
 
     /// [`Self::load_ecb`] before `mpColl_80042384`.
     fn load_ecb_unfixed(&mut self, cd: &mut CollData, flags: u32) {
-        let locked = (cd.x130_flags & X130_LOCKED != 0)
+        let locked = (cd.x130_flags & KEEP_ECB_BOTTOM != 0)
             .then(|| (copy(cd.desired_ecb.bottom.x), copy(cd.desired_ecb.bottom.y)));
         self.load_ecb_raw(cd, flags);
-        if cd.x130_flags & X130_LOCKED != 0 {
+        if cd.x130_flags & KEEP_ECB_BOTTOM != 0 {
             let (x, y) = locked.expect("the lock doesn't change during a load");
             cd.desired_ecb.bottom.x = x;
             cd.desired_ecb.bottom.y = y;

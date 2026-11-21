@@ -870,15 +870,15 @@ pub fn update_hitbox(game: &mut Game, data: &Archives, gobj: GObjId, idx: usize)
             let hit = &mut ip.x5D4_hitboxes[idx].hit;
             hit.x4C = p;
             hit.x58 = p;
-            hit.state = hitcapsule::UNK2;
+            hit.state = hitcapsule::PLACED;
             set_flag(&mut ip.xDAA, 2, true);
         }
-        hitcapsule::UNK2 | hitcapsule::UNK3 => {
+        hitcapsule::PLACED | hitcapsule::MOVING => {
             let (j, off) = (hit.jobj.get("it_8027129C"), hit.b_offset);
             let ip = item_mut(game, gobj);
             let hit = &mut ip.x5D4_hitboxes[idx].hit;
-            if hit.state == hitcapsule::UNK2 {
-                hit.state = hitcapsule::UNK3;
+            if hit.state == hitcapsule::PLACED {
+                hit.state = hitcapsule::MOVING;
             }
             hit.x58 = hit.x4C;
             let p = crate::lb::joint::world_position(&mut game.objs, data, j, Some(off));

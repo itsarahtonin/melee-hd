@@ -366,7 +366,7 @@ impl Running<'_> {
         }
         if flags & 0x80 != 0 && !fp.x2229_b4 {
             for c in &fp.x1614 {
-                drew |= coll_draw::x1614(objs, c, pass, scale_y);
+                drew |= coll_draw::coin_capsule(objs, c, pass, scale_y);
             }
         }
         if drew {

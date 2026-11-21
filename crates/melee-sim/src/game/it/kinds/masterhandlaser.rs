@@ -167,7 +167,7 @@ pub fn hitbox_off(r: &mut Running, gobj: GObjId) {
     for k in 0..4 {
         let hit = &mut ip.x5D4_hitboxes[k].hit;
         if hit.state != crate::lb::hitcapsule::DISABLED {
-            hit.state = crate::lb::hitcapsule::UNK4;
+            hit.state = crate::lb::hitcapsule::STOPPED;
             super::super::set_flag(&mut ip.xDAA, 2, true);
         }
     }
