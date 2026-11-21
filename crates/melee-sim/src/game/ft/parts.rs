@@ -120,7 +120,8 @@ pub fn bone_from_joint(bone: &mut FighterBone, flags: u32, depth: u32) {
 }
 
 /// Sets a part's last DObj index, the seven-bit `xC_u.x0.xD` (the top bits of its byte).
-pub fn set_bone_xd(b: &mut FighterBone, v: u8) {
+#[doc(alias("set_bone_xd"))]
+pub fn set_bone_last_dobj(b: &mut FighterBone, v: u8) {
     b.xC_u[1] = (b.xC_u[1] & 1) | (v << 1);
 }
 
@@ -272,7 +273,7 @@ impl Running<'_> {
             }
             let bone = &mut self.game.fighter_parts[parts][part as usize];
             let xd = if count != 0 { (count - 1) as u8 } else { 0 };
-            set_bone_xd(bone, xd);
+            set_bone_last_dobj(bone, xd);
             set_bone_bit(bone, 1, 6, own != 0);
             part += 1;
             let (next, dd) = next_in_tree(&self.game.objs.jobjs, cur);

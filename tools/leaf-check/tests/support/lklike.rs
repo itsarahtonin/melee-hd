@@ -379,9 +379,9 @@ fn run_link(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "ftLk_SpecialHi_ProcessPartLThumbNb" => {
             return Ret::Int(g.link_left_thumb_bone(gobj) as u32);
         }
-        "ftLk_SpecialHi_GetFv4" => return Ret::Int(g.link_u_x4(gobj) as u32),
+        "ftLk_SpecialHi_GetFv4" => return Ret::Int(g.link_smash_boomerang(gobj) as u32),
         "on21EC" => g.link_special_s_smash(gobj),
-        "ftLk_SepcialS_Get2219b5" => return b(g.link_x2219_b5(gobj)),
+        "ftLk_SepcialS_Get2219b5" => return b(g.link_in_hitlag(gobj)),
         "ftLk_SpecialS_Is2071b0_5to13" => return b(g.link_attack_id_5_to_13(gobj)),
         "ftLk_SpecialS_Is2071b0_1to13" => return b(g.link_attack_id_1_to_13(gobj)),
         "ftLk_SpecialS_RemoveBoomerang0" => return b(g.link_remove_boomerang0(gobj)),

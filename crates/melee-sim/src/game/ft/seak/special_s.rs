@@ -419,7 +419,8 @@ impl Running<'_> {
 
     /// The side special's hitbox frames as a word (`specials.x1C`, which the chain reads as
     /// `mv.co.common.x1C`).
-    pub fn seak_special_s_x1c(&self, gobj: GObjId) -> i32 {
+    #[doc(alias("seak_special_s_x1c"))]
+    pub fn seak_special_s_hitbox_frames(&self, gobj: GObjId) -> i32 {
         self.game.fighter(gobj).mv_i32(mv::S_X1C)
     }
 

@@ -822,7 +822,8 @@ impl Running<'_> {
     /// cleared.
     #[doc(alias = "ftYs_SpecialAirSStart_1_IASA")]
     #[doc(alias = "ftYs_SpecialAirSLanding_IASA")]
-    pub fn ys_s_clear_x30(&mut self, gobj: GObjId) {
+    #[doc(alias("ys_s_clear_x30"))]
+    pub fn ys_s_clear_roll_frames(&mut self, gobj: GObjId) {
         self.ys_set_mvi(gobj, mv::X30, 0);
     }
 
@@ -1334,7 +1335,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_S_LOOP_0_IASA => g.ys_special_s_loop_iasa(gobj),
         addr::SPECIAL_AIR_S_LOOP_1_IASA => g.ys_special_s_turn_iasa(gobj),
         addr::SPECIAL_AIR_S_START_1_IASA | addr::SPECIAL_AIR_S_LANDING_IASA => {
-            g.ys_s_clear_x30(gobj)
+            g.ys_s_clear_roll_frames(gobj)
         }
         addr::SPECIAL_AIR_S_LOOP_2_IASA | addr::SPECIAL_AIR_S_LOOP_3_IASA => {
             g.ys_special_air_s_loop_iasa(gobj)

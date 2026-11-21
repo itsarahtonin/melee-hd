@@ -349,7 +349,7 @@ pub fn throw(r: &mut Running, gobj: GObjId, vel: Vec3, angle: f32) {
         .xF98
         .get()
         .expect("a boomerang without its thrower");
-    let life = if r.link_u_x4(thrower) != 0 {
+    let life = if r.link_smash_boomerang(thrower) != 0 {
         attr_u32(r, gobj, attr::X4)
     } else {
         attr_u32(r, gobj, attr::X0)

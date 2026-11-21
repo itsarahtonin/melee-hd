@@ -164,7 +164,7 @@ impl Running<'_> {
     /// The charge lost: none, its glow cleared (`ftCo_800BFFAC`) and his effects gone.
     fn mt_n_charge_lost(&mut self, gobj: GObjId, p: &ShadowBall) {
         self.game.fighter_mut(gobj).set_u_i32(p.u + u::CHARGE, 0);
-        self.clear_color_anim_x488(gobj);
+        self.clear_secondary_overlay(gobj);
         ef::eflib::destroy_all(self, gobj);
     }
 

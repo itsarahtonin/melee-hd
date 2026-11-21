@@ -7,7 +7,7 @@ use super::super::handles::{CodeRef, DObjListId, FighterId};
 use super::super::state::{OBJ_LIGHT, Obj, Running};
 use super::bind::next_joint;
 use super::dynamics::BoneSlot;
-use super::parts::{MAX_SECOND_DOBJS, set_bone_bit, set_bone_xd};
+use super::parts::{MAX_SECOND_DOBJS, set_bone_bit, set_bone_last_dobj};
 use crate::fpu::{mem, reg};
 use crate::hsd::dobj;
 use crate::hsd::gobj::GObjId;
@@ -154,7 +154,7 @@ impl Running<'_> {
                     count += 1;
                 }
                 let bone = &mut self.game.fighter_parts[parts][part as usize];
-                set_bone_xd(bone, (count as i32 - 1) as u8);
+                set_bone_last_dobj(bone, (count as i32 - 1) as u8);
                 set_bone_bit(bone, 1, 6, true);
             }
             part += 1;

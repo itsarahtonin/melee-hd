@@ -345,7 +345,7 @@ impl Running<'_> {
                 self.play_sound_words(f, [w0, s[0] as u32, w2]);
             }
             if gfx_id != -1 {
-                let x8 = self.ft_data_x8(&self.game.fighters[f.0]);
+                let x8 = self.ft_model_desc(&self.game.fighters[f.0]);
                 let part = self
                     .data
                     .u8(x8.at(if bits(w0, 14, 1) == 0 { 0x13 } else { 0x14 }));

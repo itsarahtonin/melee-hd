@@ -758,7 +758,7 @@ impl Running<'_> {
             }
         }
         if flags & SKIP_COL_ANIM == 0 {
-            self.reset_x488(gobj);
+            self.reset_secondary_overlay(gobj);
         }
         if flags & KEEP_GFX == 0 && self.game.fighters[f.0].x2219_b0 {
             self.destroy_effects(gobj);

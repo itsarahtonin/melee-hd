@@ -11,18 +11,24 @@ use melee_data::archive::DataRef;
 /// and `x508` (Spycloak's).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum Overlay {
-    X408,
-    X488,
-    X508,
+    /// `x408`: most color animations, and the lasting states' colors.
+    #[doc(alias("X408"))]
+    Main,
+    /// `x488`: those `Fighter_804D653C` marks, shown when `Main` plays none.
+    #[doc(alias("X488"))]
+    Secondary,
+    /// `x508`: Sheik's Spycloak.
+    #[doc(alias("X508"))]
+    Spycloak,
 }
 
 impl Running<'_> {
     fn overlay(&mut self, gobj: GObjId, which: Overlay) -> &mut ColorOverlay {
         let fp = self.game.fighter_mut(gobj);
         match which {
-            Overlay::X408 => &mut fp.x408,
-            Overlay::X488 => &mut fp.x488,
-            Overlay::X508 => &mut fp.x508,
+            Overlay::Main => &mut fp.x408,
+            Overlay::Secondary => &mut fp.x488,
+            Overlay::Spycloak => &mut fp.x508,
         }
     }
 
@@ -32,26 +38,27 @@ impl Running<'_> {
     #[doc(alias = "ft_800BFF34")]
     #[doc(alias = "ftCo_800C0408")]
     pub fn color_anim_update(&mut self, gobj: GObjId) {
-        while self.color_overlay_step(gobj, Overlay::X508, false) {
+        while self.color_overlay_step(gobj, Overlay::Spycloak, false) {
             // `ft_800C0098`.
-            clear(self.overlay(gobj, Overlay::X508));
+            clear(self.overlay(gobj, Overlay::Spycloak));
             if self.game.fighter(gobj).x2226_b4 {
                 self.start_color_anim(gobj, 0x80, 0);
             }
         }
-        while self.color_overlay_step(gobj, Overlay::X408, false) {
-            self.reset_x408(gobj);
+        while self.color_overlay_step(gobj, Overlay::Main, false) {
+            self.reset_main_overlay(gobj);
         }
         let alt = i32::from_be_bytes(self.game.fighter(gobj).x408.x28_colanim) != 0;
-        while self.color_overlay_step(gobj, Overlay::X488, alt) {
-            self.reset_x488(gobj);
+        while self.color_overlay_step(gobj, Overlay::Secondary, alt) {
+            self.reset_secondary_overlay(gobj);
         }
         self.game.fighter_mut(gobj).x2221_b3 = true;
     }
 
     /// `resetColAnimX408`: back to whichever lasting state's color applies.
-    fn reset_x408(&mut self, gobj: GObjId) {
-        clear(self.overlay(gobj, Overlay::X408));
+    #[doc(alias("reset_x408"))]
+    fn reset_main_overlay(&mut self, gobj: GObjId) {
+        clear(self.overlay(gobj, Overlay::Main));
         let fp = self.game.fighter(gobj);
         let (dead, healing, b6) = (fp.stamina_dead, fp.dmg.x18F0 != 0, fp.x221D_b6);
         let x9 = fp.x1994 != 0 || fp.x1990 != 0 || fp.x2221_b0;
@@ -71,15 +78,17 @@ impl Running<'_> {
 
     /// The `x488` overlay cleared, `ftCo_800BFFAC`.
     #[doc(alias = "ftCo_800BFFAC")]
-    pub fn clear_color_anim_x488(&mut self, gobj: GObjId) {
-        clear(self.overlay(gobj, Overlay::X488));
+    #[doc(alias("clear_color_anim_x488"))]
+    pub fn clear_secondary_overlay(&mut self, gobj: GObjId) {
+        clear(self.overlay(gobj, Overlay::Secondary));
     }
 
     /// `ftCo_800C0134`.
     #[doc(alias = "ftCo_800C0134")]
     #[doc(alias = "ftSk_Init_UnkMotionStates4")]
-    pub(super) fn reset_x488(&mut self, gobj: GObjId) {
-        clear(self.overlay(gobj, Overlay::X488));
+    #[doc(alias("reset_x488"))]
+    pub(super) fn reset_secondary_overlay(&mut self, gobj: GObjId) {
+        clear(self.overlay(gobj, Overlay::Secondary));
         let fp = self.game.fighter(gobj);
         // `ftData_UnkMotionStates4`: Donkey Kong's, Kirby's, Sheik's, Samus's, Mewtwo's and
         // Game & Watch's.
@@ -122,11 +131,11 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800BFFD0")]
     pub fn start_color_anim(&mut self, gobj: GObjId, id: i32, frames: i32) -> bool {
         let (which, spycloak, i) = if id >= SPYCLOAK_START {
-            (Overlay::X508, true, id - SPYCLOAK_START)
+            (Overlay::Spycloak, true, id - SPYCLOAK_START)
         } else if self.color_anim_entry(false, id).2 != 0 {
-            (Overlay::X488, false, id)
+            (Overlay::Secondary, false, id)
         } else {
-            (Overlay::X408, false, id)
+            (Overlay::Main, false, id)
         };
         let table = self.load_common(if spycloak { 0x1C } else { 0x18 });
         let data = self.data;
@@ -151,9 +160,9 @@ impl Running<'_> {
     pub fn end_color_anim(&mut self, gobj: GObjId, id: i32) {
         assert!(id < SPYCLOAK_START, "don't reset spycloak colanim!");
         if self.color_anim_entry(false, id).2 != 0 {
-            self.reset_x488(gobj);
+            self.reset_secondary_overlay(gobj);
         } else {
-            self.reset_x408(gobj);
+            self.reset_main_overlay(gobj);
         }
     }
 

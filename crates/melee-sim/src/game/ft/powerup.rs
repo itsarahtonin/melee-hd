@@ -439,7 +439,7 @@ impl Running<'_> {
         it::release::drop(self, hood, crate::vec::Vec3::new(0.0, 0.0, 0.0), 0.0);
         let head = i32::from(
             self.data
-                .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x12)),
+                .u8(self.ft_model_desc(&self.game.fighters[f.0]).at(0x12)),
         );
         it::item::pick_up(self, hood, gobj, head);
         self.wear_hood(gobj, hood, frames);

@@ -105,9 +105,9 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         match which {
             None => &mut fp.x3E4_fighterCmdScript.script,
-            Some(Overlay::X408) => &mut fp.x408.script,
-            Some(Overlay::X488) => &mut fp.x488.script,
-            Some(Overlay::X508) => &mut fp.x508.script,
+            Some(Overlay::Main) => &mut fp.x408.script,
+            Some(Overlay::Secondary) => &mut fp.x488.script,
+            Some(Overlay::Spycloak) => &mut fp.x508.script,
         }
     }
 
@@ -119,9 +119,9 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         let s = match which {
             None => &fp.x3E4_fighterCmdScript.script,
-            Some(Overlay::X408) => &fp.x408.script,
-            Some(Overlay::X488) => &fp.x488.script,
-            Some(Overlay::X508) => &fp.x508.script,
+            Some(Overlay::Main) => &fp.x408.script,
+            Some(Overlay::Secondary) => &fp.x488.script,
+            Some(Overlay::Spycloak) => &fp.x508.script,
         };
         s.word_at(self.data, n)
     }

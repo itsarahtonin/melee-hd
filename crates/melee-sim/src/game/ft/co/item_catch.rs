@@ -35,7 +35,7 @@ impl Running<'_> {
         let held = self.game.fighters[f.0].item_gobj.expect("no item caught");
         let hand = i32::from(
             self.data
-                .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x10)),
+                .u8(self.ft_model_desc(&self.game.fighters[f.0]).at(0x10)),
         );
         let part = if lib26b1::kind(self.game, held) == ItKind::WarpStar {
             0

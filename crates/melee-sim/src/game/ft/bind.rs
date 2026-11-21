@@ -156,7 +156,7 @@ impl Running<'_> {
         let kind = self.game.fighters[f.0].kind;
         let root_part = i32::from(
             self.data
-                .u8(self.ft_data_x8(&self.game.fighters[f.0]).at(0x10)),
+                .u8(self.ft_model_desc(&self.game.fighters[f.0]).at(0x10)),
         );
         let mut stack = JointStack::new();
         let mut i = part;

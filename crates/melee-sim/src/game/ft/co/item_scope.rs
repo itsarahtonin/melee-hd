@@ -100,7 +100,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800CDE94")]
     pub fn item_hand_point(&mut self, gobj: GObjId, p: Vec3) -> Vec3 {
         let fp = self.game.fighter(gobj);
-        let bone = usize::from(self.data.u8(self.ft_data_x8(fp).at(0x10)));
+        let bone = usize::from(self.data.u8(self.ft_model_desc(fp).at(0x10)));
         let parts = fp.parts.expect("a fighter without parts").0;
         let scale = reg(fp.x34_scale.y);
         let j = self.game.fighter_parts[parts][bone]

@@ -45,7 +45,7 @@ impl Running<'_> {
         } else {
             let (pos, facing) = (fp.cur_pos, fp.facing_dir);
             let fp = &self.game.fighters[f.0];
-            let part = i32::from(self.data.u8(self.ft_data_x8(fp).at(0x12)));
+            let part = i32::from(self.data.u8(self.ft_model_desc(fp).at(0x12)));
             if let Some(it) = flower::grow(self, gobj, pos, part, facing) {
                 self.flower_planted(gobj, it, frames, damage);
                 self.flower_shape(gobj);

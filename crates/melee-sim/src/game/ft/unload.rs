@@ -95,13 +95,14 @@ impl Running<'_> {
         crate::hsd::jobj::remove_all(&mut self.game.objs, Some(hat));
         self.game.fighters[f.0].u.set_jobj_at(u::HAT, None);
         if let Some(list) = self.game.fighters[f.0].u.dobj_list_at(LIST) {
-            self.free_x2040_list(list);
+            self.free_dobj_list(list);
         }
         self.game.fighters[f.0].u.set_dobj_list_at(LIST, None);
     }
 
     /// A DObj list back to `fighter_x2040_alloc_data` (`HSD_ObjFree`), holding its entries.
-    fn free_x2040_list(&mut self, list: super::super::handles::DObjListId) {
+    #[doc(alias("free_x2040_list"))]
+    fn free_dobj_list(&mut self, list: super::super::handles::DObjListId) {
         let g = &*self.game;
         let data = self.data;
         crate::hsd::export::with_image(|img| super::super::export::x2040_list(g, data, img, list));
@@ -198,7 +199,7 @@ impl Running<'_> {
             self.game.fighter_dobj_lists.free(l.0);
         }
         if let Some(l) = second {
-            self.free_x2040_list(l);
+            self.free_dobj_list(l);
         }
         if let Some(a) = attrs {
             self.game.fighter_attrs.free(a.0);
