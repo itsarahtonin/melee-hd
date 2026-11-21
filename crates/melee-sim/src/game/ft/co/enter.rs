@@ -54,8 +54,8 @@ impl Running<'_> {
     #[doc(alias = "ft_8008A2BC")]
     pub fn enter_wait(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).fighter_kind() {
-            FighterKind::MasterHand => self.mh_return(gobj),
-            FighterKind::CrazyHand => self.ch_return(gobj),
+            FighterKind::MasterHand => self.hand_return(gobj, &super::super::masterhand::HAND),
+            FighterKind::CrazyHand => self.hand_return(gobj, &super::super::crazyhand::HAND),
             _ => self.enter_wait_blend(gobj, 0.0),
         }
     }
@@ -116,11 +116,11 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         match fp.fighter_kind() {
             FighterKind::MasterHand => {
-                self.mh_return(gobj);
+                self.hand_return(gobj, &super::super::masterhand::HAND);
                 return;
             }
             FighterKind::CrazyHand => {
-                self.ch_return(gobj);
+                self.hand_return(gobj, &super::super::crazyhand::HAND);
                 return;
             }
             _ => {}

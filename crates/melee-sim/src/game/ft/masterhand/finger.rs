@@ -1,21 +1,22 @@
-//! The finger beams (`ftmasterhandfingerbeam.c`: a laser from four fingers, with their hum)
-//! and the finger gun (`ftmasterhandfingergun.c`, `ftmasterhandfingergun3.c`: chasing the
-//! nearest opponent, then a round of bullets from two fingers, faster and more of them once
-//! he's hurt past `xEC`).
+//! The finger beams (Master Hand's, `ftmasterhandfingerbeam.c`; Crazy Hand's poke,
+//! `ftcrazyhandpoke.c`: a laser from four fingers, with their hums) and Master Hand's finger
+//! gun (`ftmasterhandfingergun.c`, `ftmasterhandfingergun3.c`: chasing the nearest opponent,
+//! then a round of bullets from two fingers, faster and more of them once he's hurt past
+//! `xEC`).
 
 use gekko_fp as fp;
 
 use super::super::super::handles::CodeRef;
 use super::super::super::it::kinds::{masterhandbullet, masterhandlaser};
 use super::super::super::state::Running;
-use super::{addr, attr, ms, mv};
+use super::{HAND, Hand, addr, attr, ms, mv};
 use crate::fpu::reg;
 use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
 /// `FtPart_LKneeJ`, `FtPart_RLegJA`, `FtPart_RKneeJ`, `FtPart_BustN`, `FtPart_LHandN` and
-/// `FtPart_L3rdNa`: the fingers his beams and shots come from (his parts table is a hand's).
+/// `FtPart_L3rdNa`: the fingers the beams and shots come from (a hand's parts table).
 const PART_L_KNEE_J: i32 = 8;
 const PART_R_LEG_JA: i32 = 11;
 const PART_R_KNEE_J: i32 = 13;
@@ -23,91 +24,112 @@ const PART_BUST_N: i32 = 16;
 const PART_L_HAND_N: i32 = 21;
 const PART_L_3RD_NA: i32 = 26;
 
-/// The beams' three hums.
+/// The fingers the four lasers come from.
+const LASER_FINGERS: [i32; 4] = [PART_R_LEG_JA, PART_BUST_N, PART_L_HAND_N, PART_L_3RD_NA];
+
+/// The beams' three hums (`lbAudioAx_800237A8`), the same for both.
 const SFX_BEAM: [i32; 3] = [320004, 320005, 320006];
 
+/// The finger beams: their states (the wind-up, the beams, the end), the accessory that makes
+/// the lasers, and whether the lasers are the other hand's (Crazy Hand's poke makes Master
+/// Hand's laser, whose article only Master Hand's creation registers: without him in the
+/// match Melee reads it through null, docs/melee-bugs.md).
+pub struct Beams {
+    pub states: [i32; 3],
+    pub lasers: u32,
+    pub partners_lasers: bool,
+}
+
 impl Running<'_> {
-    /// The finger beams' start, `ftMh_MS_359_80152BCC`: no hum playing (`mv.x28` to `x30`).
+    /// The beams' wind-up, `ftMh_MS_359_80152BCC` and `fn_801582D8`: no hum playing.
     #[doc(alias = "ftMh_MS_359_80152BCC")]
-    pub fn mh_beam_enter(&mut self, gobj: GObjId) {
-        self.mh_enter(gobj, ms::FINGER_BEAM_START);
+    #[doc(alias = "fn_801582D8")]
+    pub fn hand_beams_windup_enter(&mut self, gobj: GObjId, h: &Hand) {
+        self.hand_enter(gobj, h.beams.states[0]);
         let fp = self.game.fighter_mut(gobj);
-        for off in [mv::X28, mv::X2C, mv::X30] {
+        for off in h.hums {
             fp.set_mv_i32(off, -1);
         }
     }
 
-    /// `ftMh_FingerBeamStart_Anim`: the beams once it ends.
+    /// `ftMh_FingerBeamStart_Anim` and `ftCh_PaperCrush_Anim`: the beams once the wind-up
+    /// ends.
     #[doc(alias = "ftMh_FingerBeamStart_Anim")]
-    pub fn mh_beam_start_anim(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftCh_PaperCrush_Anim")]
+    pub fn hand_beams_windup_anim(&mut self, gobj: GObjId, h: &Hand) {
         if !self.anim_frames_remaining(gobj) {
-            self.mh_beam_loop_enter(gobj);
+            self.hand_beams_enter(gobj, h);
         }
     }
 
-    /// The beams, `ftMh_MS_361_80152CD8`: made by the accessory on its first frame.
+    /// The beams, `ftMh_MS_361_80152CD8` and `ftCh_Init_801583E4`: made by the accessory on
+    /// its first frame.
     #[doc(alias = "ftMh_MS_361_80152CD8")]
-    pub fn mh_beam_loop_enter(&mut self, gobj: GObjId) {
-        self.mh_enter(gobj, ms::FINGER_BEAM_LOOP);
+    #[doc(alias = "ftCh_Init_801583E4")]
+    pub fn hand_beams_enter(&mut self, gobj: GObjId, h: &Hand) {
+        self.hand_enter(gobj, h.beams.states[1]);
         let fp = self.game.fighter_mut(gobj);
-        fp.accessory4_cb = Some(CodeRef(addr::MS_362_80152E28));
+        fp.accessory4_cb = Some(CodeRef(h.beams.lasers));
         fp.cmd_vars[0] = 1;
     }
 
-    /// `ftMh_FingerBeamLoop_Anim`: the end once it ends, the lasers ended.
+    /// `ftMh_FingerBeamLoop_Anim` and `ftCh_Poke1_Anim`: the end once they end, the lasers
+    /// ended.
     #[doc(alias = "ftMh_FingerBeamLoop_Anim")]
-    pub fn mh_beam_loop_anim(&mut self, gobj: GObjId) {
+    #[doc(alias = "ftCh_Poke1_Anim")]
+    pub fn hand_beams_anim(&mut self, gobj: GObjId, h: &Hand) {
         if self.anim_frames_remaining(gobj) {
             return;
         }
-        self.mh_beam_end_enter(gobj);
+        self.hand_beams_end_enter(gobj, h);
         let f = self.game.fighter_id(gobj);
-        for off in [mv::X34, mv::X38, mv::X3C, mv::X40] {
+        for off in h.lasers {
             let l = self.game.fighters[f.0].mv.gobj_at(off);
             masterhandlaser::end(self, l);
         }
         let fp = &mut self.game.fighters[f.0];
-        for off in [mv::X34, mv::X38, mv::X3C, mv::X40] {
+        for off in h.lasers {
             fp.mv.set_gobj_at(off, None);
         }
     }
 
-    /// The lasers and their hums on the accessory's first frame, `ftMh_MS_362_80152E28`.
+    /// The lasers (Master Hand's kind) from his four fingers and their hums on the accessory's
+    /// first frame, `ftMh_MS_362_80152E28` and `fn_80158534`.
     #[doc(alias = "ftMh_MS_362_80152E28")]
-    pub fn mh_beam_lasers(&mut self, gobj: GObjId) {
+    #[doc(alias = "fn_80158534")]
+    pub fn hand_beams_lasers(&mut self, gobj: GObjId, h: &Hand) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] == 0 {
             return;
         }
-        for (off, part) in [
-            (mv::X34, PART_R_LEG_JA),
-            (mv::X38, PART_BUST_N),
-            (mv::X3C, PART_L_HAND_N),
-            (mv::X40, PART_L_3RD_NA),
-        ] {
-            let j = self.mh_part_joint(gobj, part);
+        let kind = ItKind::MasterHandLaser.id();
+        if h.beams.partners_lasers
+            && super::super::super::it::item::article_of(self.game, self.data, kind).is_none()
+        {
+            panic!(
+                "Melee crashes: Crazy Hand's poke makes Master Hand's laser (item kind {kind}), whose article no Master Hand registered, and Item_80267AA8 reads it at address 0x10"
+            );
+        }
+        for (off, part) in h.lasers.into_iter().zip(LASER_FINGERS) {
+            let j = self.hand_part_joint(gobj, part);
             let v = crate::lb::joint::world_position(&mut self.game.objs, self.data, j, None);
             let facing = self.game.fighters[f.0].facing_dir;
-            let l = masterhandlaser::spawn(
-                self,
-                gobj,
-                v,
-                v,
-                part,
-                ItKind::MasterHandLaser.id(),
-                facing,
-            );
+            let l = masterhandlaser::spawn(self, gobj, v, v, part, kind, facing);
             self.game.fighters[f.0].mv.set_gobj_at(off, l);
         }
-        for (off, id) in [mv::X28, mv::X2C, mv::X30].into_iter().zip(SFX_BEAM) {
-            let h = self.sfx_play(id, 127, 64);
-            self.game.fighters[f.0].set_mv_i32(off, h);
+        for (off, id) in h.hums.into_iter().zip(SFX_BEAM) {
+            let s = self.sfx_play(id, 127, 64);
+            self.game.fighters[f.0].set_mv_i32(off, s);
         }
         self.game.fighters[f.0].cmd_vars[0] = 0;
     }
 
     /// The joint of his part `part` (`fp->parts[part]`, his table indexed by the part).
-    fn mh_part_joint(&self, gobj: GObjId, part: i32) -> Option<crate::hsd::jobj::JObjId> {
+    pub(crate) fn hand_part_joint(
+        &self,
+        gobj: GObjId,
+        part: i32,
+    ) -> Option<crate::hsd::jobj::JObjId> {
         let parts = self
             .game
             .fighter(gobj)
@@ -116,17 +138,19 @@ impl Running<'_> {
         self.game.fighter_parts[parts.0][part as usize].joint
     }
 
-    /// The beams' end, `ftMh_MS_362_80152F80`: the hums stopped.
+    /// The beams' end, `ftMh_MS_362_80152F80` and `ftCh_Init_8015868C`: the hums stopped and
+    /// forgotten.
     #[doc(alias = "ftMh_MS_362_80152F80")]
-    pub fn mh_beam_end_enter(&mut self, gobj: GObjId) {
-        self.mh_enter(gobj, ms::FINGER_BEAM_END);
+    #[doc(alias = "ftCh_Init_8015868C")]
+    pub fn hand_beams_end_enter(&mut self, gobj: GObjId, h: &Hand) {
+        self.hand_enter(gobj, h.beams.states[2]);
         let f = self.game.fighter_id(gobj);
-        for off in [mv::X28, mv::X2C, mv::X30] {
-            let h = self.game.fighters[f.0].mv_i32(off);
-            self.sfx_stop(h);
+        for off in h.hums {
+            let s = self.game.fighters[f.0].mv_i32(off);
+            self.sfx_stop(s);
         }
         let fp = &mut self.game.fighters[f.0];
-        for off in [mv::X28, mv::X2C, mv::X30] {
+        for off in h.hums {
             fp.set_mv_i32(off, -1);
         }
     }
@@ -136,8 +160,11 @@ impl Running<'_> {
     #[doc(alias = "ftMh_MS_363_801530A4")]
     pub fn mh_gun_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.mh_enter(gobj, ms::FINGER_GUN1);
-        let (hi, lo) = (self.mh_da_f32(f, attr::XE8), self.mh_da_f32(f, attr::XE4));
+        self.hand_enter(gobj, ms::FINGER_GUN1);
+        let (hi, lo) = (
+            super::HAND.f32(self, f, attr::XE8),
+            super::HAND.f32(self, f, attr::XE4),
+        );
         let r = self
             .game
             .objs
@@ -164,8 +191,8 @@ impl Running<'_> {
         fp.set_mv_f32(mv::X50, reg(n));
         if reg(n) < 0.0 {
             self.mh_gun2_enter(gobj);
-            let rounds = if self.game.ft_percent(gobj) > self.mh_da_i32(f, attr::XEC) {
-                self.mh_da_i32(f, attr::XF0)
+            let rounds = if self.game.ft_percent(gobj) > super::HAND.i32(self, f, attr::XEC) {
+                super::HAND.i32(self, f, attr::XF0)
             } else {
                 1
             };
@@ -181,7 +208,7 @@ impl Running<'_> {
     pub fn mh_gun1_phys(&mut self, gobj: GObjId) {
         self.air_anim_motion(gobj);
         if self.game.fighter(gobj).cmd_vars[2] != 0 {
-            self.mh_chase(gobj, attr::XDC, attr::XE0);
+            self.hand_chase(gobj, &super::HAND, attr::XDC);
         }
     }
 
@@ -190,9 +217,9 @@ impl Running<'_> {
     #[doc(alias = "ftMh_MS_364_801533CC")]
     pub fn mh_gun2_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        self.mh_enter(gobj, ms::FINGER_GUN2);
-        if self.game.ft_percent(gobj) > self.mh_da_i32(f, attr::XEC) {
-            let rate = self.mh_da_f32(f, attr::XF4);
+        self.hand_enter(gobj, ms::FINGER_GUN2);
+        if self.game.ft_percent(gobj) > super::HAND.i32(self, f, attr::XEC) {
+            let rate = super::HAND.f32(self, f, attr::XF4);
             self.set_anim_rate(gobj, rate);
         }
         let fp = &mut self.game.fighters[f.0];
@@ -212,7 +239,7 @@ impl Running<'_> {
         fp.set_mv_i32(mv::X54, n);
         if n == 0 {
             self.set_anim_rate(gobj, 1.0);
-            self.mh_enter(gobj, ms::FINGER_GUN3);
+            self.hand_enter(gobj, ms::FINGER_GUN3);
         } else {
             self.mh_gun2_enter(gobj);
         }
@@ -224,14 +251,20 @@ impl Running<'_> {
     pub fn mh_gun_shots(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] != 0 {
-            let j = self.mh_part_joint(gobj, PART_L_KNEE_J);
-            let (dx, dy) = (self.mh_da_f32(f, attr::XF8), self.mh_da_f32(f, attr::XFC));
+            let j = self.hand_part_joint(gobj, PART_L_KNEE_J);
+            let (dx, dy) = (
+                super::HAND.f32(self, f, attr::XF8),
+                super::HAND.f32(self, f, attr::XFC),
+            );
             self.mh_gun_shot(gobj, j, dx, dy);
             self.game.fighters[f.0].cmd_vars[0] = 0;
         }
         if self.game.fighters[f.0].cmd_vars[1] != 0 {
-            let j = self.mh_part_joint(gobj, PART_R_KNEE_J);
-            let (dx, dy) = (self.mh_da_f32(f, attr::X100), self.mh_da_f32(f, attr::X104));
+            let j = self.hand_part_joint(gobj, PART_R_KNEE_J);
+            let (dx, dy) = (
+                super::HAND.f32(self, f, attr::X100),
+                super::HAND.f32(self, f, attr::X104),
+            );
             self.mh_gun_shot(gobj, j, dx, dy);
             self.game.fighters[f.0].cmd_vars[1] = 0;
         }
@@ -255,9 +288,12 @@ impl Running<'_> {
             crate::fpu::mem(fp::fadds(reg(at.y), reg(dy))),
             at.z,
         );
-        let fast = self.game.ft_percent(gobj) > self.mh_da_i32(f, attr::XEC);
+        let fast = self.game.ft_percent(gobj) > super::HAND.i32(self, f, attr::XEC);
         let facing = self.game.fighters[f.0].facing_dir;
-        let (sx, sy) = (self.mh_da_f32(f, attr::XD4), self.mh_da_f32(f, attr::XD8));
+        let (sx, sy) = (
+            super::HAND.f32(self, f, attr::XD4),
+            super::HAND.f32(self, f, attr::XD8),
+        );
         masterhandbullet::spawn(
             self,
             gobj,
@@ -275,19 +311,19 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::MS_359_80152BCC => g.mh_beam_enter(gobj),
-        addr::FINGER_BEAM_START_ANIM => g.mh_beam_start_anim(gobj),
-        addr::MS_361_80152CD8 => g.mh_beam_loop_enter(gobj),
-        addr::FINGER_BEAM_LOOP_ANIM => g.mh_beam_loop_anim(gobj),
-        addr::MS_362_80152E28 => g.mh_beam_lasers(gobj),
-        addr::MS_362_80152F80 => g.mh_beam_end_enter(gobj),
+        addr::MS_359_80152BCC => g.hand_beams_windup_enter(gobj, &HAND),
+        addr::FINGER_BEAM_START_ANIM => g.hand_beams_windup_anim(gobj, &HAND),
+        addr::MS_361_80152CD8 => g.hand_beams_enter(gobj, &HAND),
+        addr::FINGER_BEAM_LOOP_ANIM => g.hand_beams_anim(gobj, &HAND),
+        addr::MS_362_80152E28 => g.hand_beams_lasers(gobj, &HAND),
+        addr::MS_362_80152F80 => g.hand_beams_end_enter(gobj, &HAND),
         addr::MS_363_801530A4 => g.mh_gun_enter(gobj),
         addr::FINGER_GUN1_ANIM => g.mh_gun1_anim(gobj),
         addr::FINGER_GUN1_PHYS => g.mh_gun1_phys(gobj),
         addr::MS_364_801533CC => g.mh_gun2_enter(gobj),
         addr::FINGER_GUN2_ANIM => g.mh_gun2_anim(gobj),
         addr::MS_365_801535B0 => g.mh_gun_shots(gobj),
-        addr::MS_365_80153730 => g.mh_enter(gobj, ms::FINGER_GUN3),
+        addr::MS_365_80153730 => g.hand_enter(gobj, ms::FINGER_GUN3),
         _ => return false,
     }
     true
