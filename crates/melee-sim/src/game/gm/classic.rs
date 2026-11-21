@@ -775,24 +775,24 @@ impl Running<'_> {
         let mut run = self.game.one_player.classic.base;
         run.player.mode = id;
         let mut sd = self.game.one_player.classic_intro;
-        sd[d::STAGE] = entry.x0.wrapping_add(1);
+        sd[d::STAGE] = entry.stage.wrapping_add(1);
         sd[d::SLOT] = run.player.slot;
-        let kind: i32 = if entry.x1 & 0x80 != 0 {
+        let kind: i32 = if entry.flags & 0x80 != 0 {
             3
-        } else if entry.x1 & 8 != 0 {
+        } else if entry.flags & 8 != 0 {
             4
-        } else if entry.x1 & 0x10 != 0 {
+        } else if entry.flags & 0x10 != 0 {
             1
-        } else if entry.x1 & 2 != 0 {
+        } else if entry.flags & 2 != 0 {
             2
         } else {
             0
         };
         sd[d::KIND..d::KIND + 4].copy_from_slice(&kind.to_be_bytes());
         if kind == 3 {
-            if let 1..=3 = entry.x2 {
+            if let 1..=3 = entry.bonus {
                 sd[d::GAME_TYPE..d::GAME_TYPE + 4]
-                    .copy_from_slice(&i32::from(entry.x2).to_be_bytes());
+                    .copy_from_slice(&i32::from(entry.bonus).to_be_bytes());
             }
         } else {
             sd[d::GAME_TYPE..d::GAME_TYPE + 4].fill(0);
@@ -804,8 +804,12 @@ impl Running<'_> {
             let n = crate::game::playback::costume_count(chars[i] as u8);
             let c = match run.getters[3] {
                 Some(g) => {
-                    let v =
-                        Self::one_player_getter(Some(g), entry.x0, run.player.cpu_level, i as u8);
+                    let v = Self::one_player_getter(
+                        Some(g),
+                        entry.stage,
+                        run.player.cpu_level,
+                        i as u8,
+                    );
                     if n != 0 { v % n } else { 0 }
                 }
                 None => 0,
@@ -823,20 +827,26 @@ impl Running<'_> {
                 &mut colors,
             );
             sd[d::ENEMY_COLORS..d::ENEMY_COLORS + 3].copy_from_slice(&colors);
-            sd[d::ENEMY_METAL + i] = u8::from(entry.x1 & 4 != 0);
+            sd[d::ENEMY_METAL + i] = u8::from(entry.flags & 4 != 0);
             if chars[i] != NONE {
                 enemies += 1;
             }
         }
         sd[d::ENEMIES] = enemies;
         let ckind = run.player.ckind;
-        sd[d::ALLY_KINDS] = if ckind == CharacterKind::Zelda && run.xc[6] != 0 {
+        sd[d::ALLY_KINDS] = if ckind == CharacterKind::Zelda && run.counters[6] != 0 {
             CharacterKind::Seak as u8
         } else {
             ckind as u8
         };
         sd[d::ALLY_COLORS] = run.player.color;
-        self.classic_allies(&mut run, entry.x1, &chars, round as u8, sd[d::ALLY_KINDS]);
+        self.classic_allies(
+            &mut run,
+            entry.flags,
+            &chars,
+            round as u8,
+            sd[d::ALLY_KINDS],
+        );
         let mut allies = 1;
         for i in 1..3 {
             sd[d::ALLY_KINDS + i] = run.opponents[i - 1].ckind as u8;
@@ -861,7 +871,7 @@ impl Running<'_> {
         for i in 0..3 {
             if chars[i] != NONE {
                 gc.entries[slot].char_id = i32::from(chars[i]);
-                gc.entries[slot].color = if entry.x1 & 8 != 0 {
+                gc.entries[slot].color = if entry.flags & 8 != 0 {
                     0xFF
                 } else {
                     sd[d::ENEMY_COLORS + i]
@@ -877,10 +887,10 @@ impl Running<'_> {
             }
         }
         self.preload_refresh();
-        let target = entry.x1 == 0x80 && entry.x2 == 1;
+        let target = entry.flags == 0x80 && entry.bonus == 1;
         let cache_stage = if target {
             super::one_player::target_stage(ckind as u8)
-        } else if entry.x1 == 4 {
+        } else if entry.flags == 4 {
             0xAF
         } else {
             stkind
@@ -932,15 +942,15 @@ impl Running<'_> {
             matchup(self.game.one_player.classic_picks[round]).expect("a Classic stage's matchup");
         let mut run = self.game.one_player.classic.base;
         let mut stage = i32::from(stkind);
-        if entry.x1 == 0x80 && entry.x2 == 1 {
+        if entry.flags == 0x80 && entry.bonus == 1 {
             stage = i32::from(super::one_player::target_stage(run.player.ckind as u8));
         }
-        if entry.x1 == 4 {
+        if entry.flags == 4 {
             stage = 0xAF;
         }
-        run.x8[0] = entry.x1;
-        run.x8[1] = entry.x2;
-        run.x8[3] = entry.x8;
+        run.stage[0] = entry.flags;
+        run.stage[1] = entry.bonus;
+        run.stage[3] = entry.rules_bit;
         let color_kind = if round == 0 {
             self.game.one_player.classic_intro[0x1F]
         } else {
@@ -951,10 +961,10 @@ impl Running<'_> {
             &mut start,
             &mut run,
             &chars,
-            entry.x6 as u8,
+            entry.opponents as u8,
             1,
             0,
-            i32::from(entry.x4),
+            i32::from(entry.time),
             stage,
             round as i32,
             i32::from(color_kind),
@@ -975,7 +985,7 @@ impl Running<'_> {
         let id = self.game.machine.routing.curr_state_id;
         let round = usize::from((id >> 3) & 0x1F);
         let entry = CLASSIC_STAGES[round];
-        let won = self.game.one_player.match_exit.x8 != 0;
+        let won = self.game.one_player.match_exit.stage_flag != 0;
         // `gm_804908A0[stage - 1]`: the first stage's is the byte before the table.
         let mark = if won { 2 } else { 1 };
         if round == 0 {
@@ -986,12 +996,16 @@ impl Running<'_> {
         let mut run = self.game.one_player.classic.base;
         let on = self.one_player_match_exit(&mut run, 0x69);
         self.game.one_player.classic.base = run;
-        if on && CLASSIC_STAGES.get(round + 1).is_some_and(|e| e.x0 == 0xD) {
+        if on
+            && CLASSIC_STAGES
+                .get(round + 1)
+                .is_some_and(|e| e.stage == 0xD)
+        {
             // `gm_8017CBAC` with Classic's run and stocks (`gmMainLib_8015CDC8`).
             let stocks = self.game.game_data.vs.unk_51C.stocks;
             self.one_player_clear(&run, stocks, super::endings::GM_CLASSIC_GOVER);
         }
-        if entry.x1 == 0x80 && entry.x2 == 1 {
+        if entry.flags == 0x80 && entry.bonus == 1 {
             self.classic_target_records();
         }
     }

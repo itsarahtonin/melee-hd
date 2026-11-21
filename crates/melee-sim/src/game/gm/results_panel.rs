@@ -201,7 +201,12 @@ impl Running<'_> {
     /// first 30, or 30 from the picture's from 180 on), its texture animations stopped
     /// (`fn_80178BB4`'s three copies, on `x30`'s second display object).
     fn rp_title_texture(&mut self, anim: i32) {
-        let x30 = self.game.results.data.x30.expect("the panel's title joint");
+        let x30 = self
+            .game
+            .results
+            .data
+            .title
+            .expect("the panel's title joint");
         let data = self.data;
         let t = self.rp_tobj(x30, true);
         let a = t.and_then(|t| self.game.objs.tobjs[t].aobj);
@@ -241,7 +246,7 @@ impl Running<'_> {
         if canceled(me.outcome) {
             self.rp_title_texture(0xB8);
         } else if me.is_teams == 1 {
-            let t = i32::from(self.game.results.data.x5) + 0xB5;
+            let t = i32::from(self.game.results.data.winning_team) + 0xB5;
             self.rp_title_texture(t);
         }
         for i in 0..6 {
@@ -339,15 +344,15 @@ impl Running<'_> {
         let columns = self.rp_node(r, 0x41);
         self.results_columns(columns);
         let x24 = self.rp_node(r, 0x68);
-        self.game.results.data.x24 = x24;
+        self.game.results.data.rows_anchor = x24;
         let x28 = self.rp_node(r, 0x69);
-        self.game.results.data.x28 = x28;
+        self.game.results.data.title_anchor = x28;
         for i in 0..6 {
             let n = self.rp_node(r, i as i32 + 0x62);
-            self.game.results.data.x34[i] = n;
+            self.game.results.data.row_anchors[i] = n;
         }
         let x30 = self.rp_node(r, 0xA);
-        self.game.results.data.x30 = x30;
+        self.game.results.data.title = x30;
         for j in 0..4 {
             self.game.results.data.players[j].done = false;
             for (k, col) in COLUMNS.iter().enumerate() {
@@ -366,10 +371,10 @@ impl Running<'_> {
             3 => 5,
             _ => return,
         };
-        if let Some(t) = self.game.results.data.x2c {
+        if let Some(t) = self.game.results.data.title_text {
             self.destroy_text(t);
         }
-        let x28 = self.game.results.data.x28;
+        let x28 = self.game.results.data.title_anchor;
         let p =
             crate::lb::joint::world_position(&mut self.game.objs, data, x28, Some(TITLE_OFFSET));
         let t = self.create_text(0, 0, Vec3::new(p.x, -p.y, p.z), 12.0, 300.0);
@@ -414,15 +419,18 @@ impl Running<'_> {
     #[doc(alias = "fn_80175C5C")]
     fn results_panel_texts(&mut self) {
         let data = self.data;
-        let x24 = self.game.results.data.x24;
+        let x24 = self.game.results.data.rows_anchor;
         let position = crate::lb::joint::world_position(&mut self.game.objs, data, x24, None);
         for i in 0..6 {
-            let j = self.game.results.data.x34[i];
+            let j = self.game.results.data.row_anchors[i];
             let p = crate::lb::joint::world_position(&mut self.game.objs, data, j, None);
-            self.game.results.data.x4c[i] = p;
+            self.game.results.data.row_positions[i] = p;
         }
         let d = &mut self.game.results.data;
-        d.xc = mem(fp::fsubs(f64::from(d.x4c[0].y), f64::from(position.y)));
+        d.rows_offset = mem(fp::fsubs(
+            f64::from(d.row_positions[0].y),
+            f64::from(position.y),
+        ));
         self.create_text_buffer(0, 0);
         self.create_text_buffer(0, 0);
         for i in 0..4 {
@@ -471,16 +479,22 @@ impl Running<'_> {
         let d = &self.game.results.data;
         let first = fp::fmuls(
             1.14,
-            fp::fsubs(f64::from(d.x4c[4].y), f64::from(d.x4c[0].y)),
+            fp::fsubs(
+                f64::from(d.row_positions[4].y),
+                f64::from(d.row_positions[0].y),
+            ),
         );
         let second = fp::fmuls(
             1.12,
-            fp::fsubs(f64::from(d.x4c[5].y), f64::from(d.x4c[4].y)),
+            fp::fsubs(
+                f64::from(d.row_positions[5].y),
+                f64::from(d.row_positions[4].y),
+            ),
         );
         let color = column_color(&me, slot);
         let t = self.create_text_buffer(0, 0);
         self.game.results.data.players[slot].ko_count = Some(t);
-        let at = self.game.results.data.x4c[slot];
+        let at = self.game.results.data.row_positions[slot];
         let tx = self.game.sis.text_mut(t);
         tx.pos = Vec3::new(at.x, mem(fp::fsubs(-f64::from(at.y), 30.0)), at.z);
         tx.default_alignment = 1;
@@ -515,7 +529,7 @@ impl Running<'_> {
             let p = crate::lb::joint::world_position(&mut self.game.objs, data, j12, None);
             mem(fp::fadds(5.5, f64::from(p.x)))
         } else {
-            self.game.results.data.x4c[slot].x
+            self.game.results.data.row_positions[slot].x
         };
         let t = self.create_text_buffer(0, 0);
         self.game.results.data.players[slot].ko_time = Some(t);
@@ -614,7 +628,7 @@ impl Running<'_> {
         let t = self.game.results.data.players[slot]
             .ko_time
             .expect("a column's time text");
-        let x6 = usize::from(self.game.results.data.x6);
+        let x6 = usize::from(self.game.results.data.team_best);
         let p = &me.player_standings[slot];
         let w = &me.player_standings[x6];
         if p.pkind != PKIND_NA {
@@ -668,7 +682,7 @@ impl Running<'_> {
                     i32::from(p.is_big_loser)
                 });
             } else if me.is_teams == 1 {
-                place = Some(if usize::from(self.game.results.data.x6) == i {
+                place = Some(if usize::from(self.game.results.data.team_best) == i {
                     5
                 } else {
                     i32::from(me.team_standings[usize::from(p.team)].is_big_loser)
@@ -737,8 +751,8 @@ impl Running<'_> {
             2 => {
                 let s = self.game.results.stats_info[slot];
                 StatsList {
-                    mode: s.x0,
-                    count: s.x1,
+                    mode: s.mode,
+                    count: s.count,
                     entries: &[],
                 }
             }
@@ -880,10 +894,10 @@ impl Running<'_> {
         pos.y = mem(y);
         let visible = self.stats_shown(&list, 0);
         let p = &mut self.game.results.data.players[slot];
-        p.x0_3 = page != 0;
-        p.x0_4 = i32::from(page) < i32::from(num_pages) - 1;
-        p.x0_2 = f64::from(p.scroll_offset) < fp::frsp(f64::from(visible.wrapping_sub(10)));
-        p.x0_1 = p.scroll_offset > 0.0;
+        p.page_before = page != 0;
+        p.page_after = i32::from(page) < i32::from(num_pages) - 1;
+        p.more_below = f64::from(p.scroll_offset) < fp::frsp(f64::from(visible.wrapping_sub(10)));
+        p.more_above = p.scroll_offset > 0.0;
         let data = self.data;
         let mut count = 0;
         let mut idx = start;
@@ -1123,10 +1137,10 @@ impl Running<'_> {
         };
         match p.page {
             0 => {
-                let old = p.x2;
-                p.x2 = p.x2.wrapping_add(1);
+                let old = p.cpu_page_frames;
+                p.cpu_page_frames = p.cpu_page_frames.wrapping_add(1);
                 if i32::from(old) > 180 {
-                    p.x2 = 0;
+                    p.cpu_page_frames = 0;
                     p.scroll_offset = 0.0;
                     p.page = 1;
                     true
@@ -1135,25 +1149,25 @@ impl Running<'_> {
                 }
             }
             1 => {
-                let old = p.x2;
-                p.x2 = p.x2.wrapping_add(1);
+                let old = p.cpu_page_frames;
+                p.cpu_page_frames = p.cpu_page_frames.wrapping_add(1);
                 if i32::from(old) > 1000 {
                     if i32::from(p.page) < i32::from(num_pages) - 1 {
-                        p.x2 = 0;
+                        p.cpu_page_frames = 0;
                         p.scroll_offset = 0.0;
                         p.page = 2;
                         true
                     } else {
-                        p.x2 = p.x2.wrapping_sub(1);
+                        p.cpu_page_frames = p.cpu_page_frames.wrapping_sub(1);
                         false
                     }
                 } else {
                     scroll(p)
                 }
             }
-            2 if i32::from(p.x2) < 1000 => {
+            2 if i32::from(p.cpu_page_frames) < 1000 => {
                 let r = scroll(p);
-                p.x2 = p.x2.wrapping_add(1);
+                p.cpu_page_frames = p.cpu_page_frames.wrapping_add(1);
                 r
             }
             _ => false,
@@ -1164,7 +1178,7 @@ impl Running<'_> {
     #[doc(alias = "fn_80175D34")]
     fn results_counts_away(&mut self) {
         let data = self.data;
-        let x24 = self.game.results.data.x24;
+        let x24 = self.game.results.data.rows_anchor;
         let pos = crate::lb::joint::world_position(&mut self.game.objs, data, x24, None);
         for i in 0..4 {
             if let Some(t) = self.game.results.data.players[i].ko_count.take() {
@@ -1198,7 +1212,7 @@ impl Running<'_> {
             self.game.results.data.phase = 1;
             let no_human = !(0..4).any(|i| me.player_standings[i].pkind == PKIND_HUMAN);
             self.game.results.no_human = i32::from(no_human);
-            self.game.results.data.x3 = if no_human { 0x14 } else { 0x0A };
+            self.game.results.data.end_frames = if no_human { 0x14 } else { 0x0A };
         }
         self.results_counts_away();
         let phase = self.game.results.data.phase;
@@ -1237,10 +1251,10 @@ impl Running<'_> {
                         self.rp_hide(js[0]);
                         self.rp_hide(js[4]);
                         let p = &mut self.game.results.data.players[k];
-                        p.x0_1 = false;
-                        p.x0_2 = false;
-                        p.x0_3 = false;
-                        p.x0_4 = false;
+                        p.more_above = false;
+                        p.more_below = false;
+                        p.page_before = false;
+                        p.page_after = false;
                         self.lb_audio_call(1);
                     }
                 } else if s.trigger & PAD_START != 0 {
@@ -1276,10 +1290,10 @@ impl Running<'_> {
             }
             let p = self.game.results.data.players[k];
             for (shown, j) in [
-                (p.x0_1, p.jobjs[8]),
-                (p.x0_2, p.jobjs[9]),
-                (p.x0_3, p.jobjs[10]),
-                (p.x0_4, p.jobjs[11]),
+                (p.more_above, p.jobjs[8]),
+                (p.more_below, p.jobjs[9]),
+                (p.page_before, p.jobjs[10]),
+                (p.page_after, p.jobjs[11]),
             ] {
                 if shown {
                     self.rp_show(j);

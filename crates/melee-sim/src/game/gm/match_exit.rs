@@ -21,9 +21,12 @@ const PKIND_NA: u8 = 3;
 /// the stage's flag, and the results.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct MatchExitInfo {
-    pub x0: u32,
-    pub x4: u32,
-    pub x8: u32,
+    #[doc(alias("x0"))]
+    pub run_value: u32,
+    #[doc(alias("x4"))]
+    pub timer_seconds: u32,
+    #[doc(alias("x8"))]
+    pub stage_flag: u32,
     pub match_end: MatchEnd,
 }
 
@@ -156,14 +159,14 @@ impl Running<'_> {
         }
         let x0 = if self.game.vs.start.x4_4 {
             // `fn_8017F294`.
-            self.game.one_player.clear.x104 as u32
+            self.game.one_player.clear.new_score as u32
         } else {
             self.game.vs.start.x18
         };
         MatchExitInfo {
-            x0,
-            x4: self.game.vs.state.timer_seconds,
-            x8: u32::from(super::super::gr::ground::b1(self.game)),
+            run_value: x0,
+            timer_seconds: self.game.vs.state.timer_seconds,
+            stage_flag: u32::from(super::super::gr::ground::b1(self.game)),
             match_end: r,
         }
     }
@@ -205,7 +208,7 @@ impl Running<'_> {
             return;
         }
         let a = &g.one_player.allstar.base;
-        let total = a.x20.wrapping_add(g.vs_frame_count());
+        let total = a.frames.wrapping_add(g.vs_frame_count());
         r._x448[0] |= 0x20;
         if a.player.cpu_level == 4 {
             r._x448[0] |= 0x04;
@@ -215,19 +218,21 @@ impl Running<'_> {
         } else if total < 0x9AB0 {
             r._x448[2] |= 0x80;
         }
-        if a.x1c == 0 && r.player_standings[0].x44 == 0 {
+        if a.damage_taken == 0 && r.player_standings[0].x44 == 0 {
             r._x448[1] |= 0x02;
         }
-        if a.xc[2] != 0 {
+        if a.counters[2] != 0 {
             r._x448[2] |= 0x20;
         }
-        if a.xc[3] != 0 {
+        if a.counters[3] != 0 {
             r._x448[2] |= 0x10;
         }
-        if (a.x1c as u32).wrapping_add(r.player_standings[0].x44) == g.player_damage(0) as u32 {
+        if (a.damage_taken as u32).wrapping_add(r.player_standings[0].x44)
+            == g.player_damage(0) as u32
+        {
             r._x448[0] |= 0x02;
         }
-        if a.xc[1] != 0 {
+        if a.counters[1] != 0 {
             r._x448[1] |= 0x01;
             return;
         }
@@ -257,7 +262,7 @@ impl Running<'_> {
         }
         if g.vs.start.x4_5 {
             let a = &g.one_player.adventure.base;
-            let total = a.x20.wrapping_add(g.vs_frame_count());
+            let total = a.frames.wrapping_add(g.vs_frame_count());
             r._x448[0] |= 0x40;
             if a.player.cpu_level == 4 {
                 r._x448[0] |= 0x08;
@@ -267,16 +272,16 @@ impl Running<'_> {
             } else if total < 0x13560 {
                 r._x448[2] |= 0x80;
             }
-            if a.x1c == 0 && r.player_standings[0].x44 == 0 {
+            if a.damage_taken == 0 && r.player_standings[0].x44 == 0 {
                 r._x448[1] |= 0x02;
             }
-            if a.xc[2] != 0 {
+            if a.counters[2] != 0 {
                 r._x448[2] |= 0x20;
             }
-            if a.xc[3] != 0 {
+            if a.counters[3] != 0 {
                 r._x448[2] |= 0x10;
             }
-            if a.xc[1] != 0 {
+            if a.counters[1] != 0 {
                 r._x448[1] |= 0x01;
             } else if r.player_standings[0].stocks as i32
                 == i32::from(g.game_data.vs.unk_522.stocks)
@@ -332,7 +337,7 @@ impl Running<'_> {
         }
         if g.vs.start.x4_5 {
             let a = &g.one_player.classic.base;
-            let total = a.x20.wrapping_add(g.vs_frame_count());
+            let total = a.frames.wrapping_add(g.vs_frame_count());
             r._x448[0] |= 0x80;
             if a.player.cpu_level == 4 {
                 r._x448[0] |= 0x10;
@@ -342,16 +347,16 @@ impl Running<'_> {
             } else if total < 0x5460 {
                 r._x448[2] |= 0x80;
             }
-            if a.x1c == 0 && r.player_standings[0].x44 == 0 {
+            if a.damage_taken == 0 && r.player_standings[0].x44 == 0 {
                 r._x448[1] |= 0x02;
             }
-            if a.xc[2] != 0 {
+            if a.counters[2] != 0 {
                 r._x448[2] |= 0x20;
             }
-            if a.xc[3] != 0 {
+            if a.counters[3] != 0 {
                 r._x448[2] |= 0x10;
             }
-            if a.xc[1] != 0 {
+            if a.counters[1] != 0 {
                 r._x448[1] |= 0x01;
             } else if r.player_standings[0].stocks as i32
                 == i32::from(g.game_data.vs.unk_51C.stocks)

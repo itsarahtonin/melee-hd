@@ -120,7 +120,7 @@ impl Running<'_> {
         let (x0, chan, mode) = if self.debug_mode_scene() {
             self.game.debug_mode.memcard_enter
         } else {
-            (b.load_x0, b.load_x4, b.load_mode)
+            (b.load_question, b.load_channel, b.load_mode)
         };
         let m = &mut self.game.memcard;
         *m = super::memcard::MemCard {
@@ -155,7 +155,7 @@ impl Running<'_> {
             e.1 = mode;
         } else {
             let b = &mut self.game.boot_mode;
-            b.leave_x0 = answer;
+            b.leave_answer = answer;
             b.leave_mode = mode;
         }
         self.close_windows(0);

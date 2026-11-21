@@ -197,7 +197,14 @@ impl Comparer<'_> {
         self.check(
             "gm_8049E548",
             "the attract match",
-            (d.ckinds, d.colors, d.x8, d.x9, d.match_kind, d.stkind),
+            (
+                d.ckinds,
+                d.colors,
+                d.look_first,
+                d.look_second,
+                d.match_kind,
+                d.stkind,
+            ),
             (
                 [0, 1, 2, 3].map(|k| self.u8(at + k)),
                 [0, 1, 2, 3].map(|k| self.u8(at + 4 + k)),

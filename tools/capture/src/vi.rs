@@ -147,7 +147,7 @@ impl Comparer<'_> {
         self.vi_jobj("un_804D7024", a.anchor);
         self.vi_color("un_804D7028", a.erase);
         let theirs = self.u32(sym("un_804D702C")) as i32;
-        self.check("un_804D702C", "word", a.x2c, theirs);
+        self.check("un_804D702C", "word", a.unused, theirs);
         self.vi_gobj("un_804D7030", sym("un_804D7030"), a.trophy_gobj);
         self.vi_gobj("un_804D7034", sym("un_804D7034"), a.stand_gobj);
         // `vi1202.c`.

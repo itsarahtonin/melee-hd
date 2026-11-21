@@ -333,7 +333,8 @@ pub struct MenuFlow {
     pub hovered_selection: u16,
     pub confirmed_selection: u8,
     pub buttons: u64,
-    pub x10: u8,
+    #[doc(alias("x10"))]
+    pub names_screen: u8,
     pub entering_menu: u8,
     pub light_lerp_frames: u8,
     /// `light_color`: which of [`LIGHT_COLORS`] (`mn_8022BFBC`'s), none before the first.
@@ -358,7 +359,8 @@ pub struct PanelData {
     pub prev_menu: u8,
     /// `x2`, which `mn_80229DC0` never writes and nothing reads: what the heap block held,
     /// from the heap's image (none where it doesn't know it).
-    pub x2: Option<u8>,
+    #[doc(alias("x2"))]
+    pub leftover: Option<u8>,
     pub state: u8,
 }
 
@@ -368,8 +370,10 @@ pub struct MainMenu {
     pub flow: MenuFlow,
     /// `mn_804D6BC8` (`MenuInputState`): frames the inputs wait, `x2`, `x4`.
     pub cooldown: u16,
-    pub input_x2: u16,
-    pub input_x4: i32,
+    #[doc(alias("input_x2"))]
+    pub input_unused_a: u16,
+    #[doc(alias("input_x4"))]
+    pub input_unused_b: i32,
     /// `mn_804D6BA8` (the fog), `mn_804D6BAC` (the erase camera), `mn_804D6BB0` (the text
     /// camera).
     pub fog: Option<GObjId>,
@@ -542,8 +546,8 @@ impl Running<'_> {
         let m = &mut self.game.menu;
         if m.cooldown != 0 {
             m.cooldown -= 1;
-            m.input_x2 = 0;
-            m.input_x4 = 0;
+            m.input_unused_a = 0;
+            m.input_unused_b = 0;
             return 0;
         }
         use crate::input::pad::*;
@@ -734,7 +738,7 @@ impl Running<'_> {
             PanelData {
                 cur_menu: cur,
                 prev_menu: cur,
-                x2,
+                leftover: x2,
                 state: 0,
             },
         );
@@ -1911,8 +1915,8 @@ impl Running<'_> {
     pub fn menu_on_enter(&mut self) {
         let m = &mut self.game.menu;
         m.cooldown = 0x14;
-        m.input_x2 = 0;
-        m.input_x4 = 0;
+        m.input_unused_a = 0;
+        m.input_unused_b = 0;
         m.flow.buttons = 0;
         let e = self.game.menu_mode;
         let m = &mut self.game.menu;

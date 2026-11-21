@@ -92,7 +92,8 @@ mod addr {
 pub struct Ranks {
     /// `lbl_8046DBC8.x0`, `x1`: the first ranking with a leader was taken.
     pub taken: u8,
-    pub x1: u8,
+    #[doc(alias("x1"))]
+    pub trailer_taken: u8,
     /// `lbl_8046DBC8.x2`: per player, led (`x0`) or trailed (`x1`) then and still does.
     pub first: [(u8, u8); 6],
     /// `lbl_804D65A8`: how many players score above each.
@@ -584,7 +585,7 @@ impl Game {
     pub fn reset_ranks(&mut self) {
         let r = &mut self.gm.ranks;
         r.taken = 0;
-        r.x1 = 0;
+        r.trailer_taken = 0;
         r.first = [(0, 0); 6];
     }
 
@@ -597,7 +598,7 @@ impl Game {
     /// Whether a player trailed the first ranking and still does, `fn_80171B2C`.
     #[doc(alias = "fn_80171B2C")]
     pub fn trailed_from_first(&self, slot: i32) -> bool {
-        self.gm.ranks.x1 != 0 && self.gm.ranks.first[slot as usize].1 != 0
+        self.gm.ranks.trailer_taken != 0 && self.gm.ranks.first[slot as usize].1 != 0
     }
 
     /// Ranks the players by score (KOs less falls, self-destructs counted at the rules'
@@ -675,7 +676,7 @@ impl Game {
         let r = &mut self.gm.ranks;
         if r.taken == 0 && 0 < r.lowest {
             r.taken = 1;
-            r.x1 = 1;
+            r.trailer_taken = 1;
             for (i, &k) in pkinds.iter().enumerate() {
                 if k == 3 {
                     continue;
@@ -1173,7 +1174,7 @@ impl Running<'_> {
             {
                 result = false;
             }
-            if run == 1 && g.one_player.classic.base.x8[0] & 0x20 != 0 {
+            if run == 1 && g.one_player.classic.base.stage[0] & 0x20 != 0 {
                 result = false;
             }
         }

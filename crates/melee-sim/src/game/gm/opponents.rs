@@ -66,7 +66,8 @@ pub struct Opponents {
     pub more_flag6: u8,
     /// The flags (`x10`: [`BEATEN`], [`JOINING`] and the rest).
     pub flags: u8,
-    pub x11: [u8; 3],
+    #[doc(alias("x11"))]
+    pub unused: [u8; 3],
     /// The joiners' attack and defense ratios and model scale (`x14`, `x18`, `x1C`).
     pub attack_ratio: f32,
     pub defense_ratio: f32,
@@ -79,11 +80,16 @@ pub struct Opponents {
     pub copies: [i8; LIST_LEN],
     /// Each slot's joiner's index in the lists (`x1A6`).
     pub slot_index: [i8; 6],
-    pub x1ac: u8,
-    pub x1ad: u8,
-    pub x1ae: [i8; 4],
-    pub x1b2: u8,
-    pub x1b3: [i8; 5],
+    #[doc(alias("x1ac"))]
+    pub first_ckind: u8,
+    #[doc(alias("x1ad"))]
+    pub second_ckind: u8,
+    #[doc(alias("x1ae"))]
+    pub unused_b: [i8; 4],
+    #[doc(alias("x1b2"))]
+    pub first_costume: u8,
+    #[doc(alias("x1b3"))]
+    pub unused_c: [i8; 5],
     /// Told when the last is beaten (1) or the first player falls (2) (`x1B8`); cleared once
     /// it answers 1.
     pub on_end: Option<CodeRef>,
@@ -91,7 +97,8 @@ pub struct Opponents {
     pub on_join: Option<CodeRef>,
     /// Kirby's copies' shuffled characters (`x1C0`).
     pub pool: [i8; 0x1B],
-    pub x1db: [u8; 5],
+    #[doc(alias("x1db"))]
+    pub pool_tail: [u8; 5],
 }
 
 impl Default for Opponents {
@@ -110,7 +117,7 @@ impl Default for Opponents {
             copy_mode: 0,
             more_flag6: 0,
             flags: 0,
-            x11: [0; 3],
+            unused: [0; 3],
             attack_ratio: 0.0,
             defense_ratio: 0.0,
             model_scale: 0.0,
@@ -118,15 +125,15 @@ impl Default for Opponents {
             characters: [0; LIST_LEN],
             copies: [0; LIST_LEN],
             slot_index: [0; 6],
-            x1ac: 0,
-            x1ad: 0,
-            x1ae: [0; 4],
-            x1b2: 0,
-            x1b3: [0; 5],
+            first_ckind: 0,
+            second_ckind: 0,
+            unused_b: [0; 4],
+            first_costume: 0,
+            unused_c: [0; 5],
             on_end: None,
             on_join: None,
             pool: [0; 0x1B],
-            x1db: [0; 5],
+            pool_tail: [0; 5],
         }
     }
 }
@@ -328,7 +335,7 @@ impl Opponents {
     fn pool_at(&self, i: usize) -> i8 {
         match i {
             0..0x1B => self.pool[i],
-            0x1B..0x20 => self.x1db[i - 0x1B] as i8,
+            0x1B..0x20 => self.pool_tail[i - 0x1B] as i8,
             _ => panic!("Kirby's copies' pick read past lbl_8046B488 (entry {i})"),
         }
     }
@@ -533,17 +540,17 @@ impl Running<'_> {
     ) {
         let g = &mut *self.game;
         let o = &mut g.gm.opponents;
-        let (pool, tail) = (o.pool, o.x1db);
+        let (pool, tail) = (o.pool, o.pool_tail);
         *o = Opponents {
             pool,
-            x1db: tail,
+            pool_tail: tail,
             ..Opponents::default()
         };
         o.kinds = *kinds;
         o.colors = colors;
-        o.x1ac = p1_ckind;
-        o.x1ad = NONE as u8;
-        o.x1b2 = p1_costume;
+        o.first_ckind = p1_ckind;
+        o.second_ckind = NONE as u8;
+        o.first_costume = p1_costume;
         o.cpu_level = cpu_level as u8;
         o.left = count as u8;
         o.total = count as u8;

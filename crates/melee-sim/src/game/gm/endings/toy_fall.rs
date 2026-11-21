@@ -119,8 +119,10 @@ pub struct ToyFall {
     pub main: Option<GObjId>,
     pub spare: Option<GObjId>,
     /// `gm_804D6770`, `gm_804D6774`: cleared, read by nothing.
-    pub x6770: i32,
-    pub x6774: i32,
+    #[doc(alias("x6770"))]
+    pub unused_a: i32,
+    #[doc(alias("x6774"))]
+    pub unused_b: i32,
     /// `gm_804D6778`: the stand's GObj; `gm_804D677C`: the frame's copy's sprite GObj.
     pub stand: Option<GObjId>,
     pub frame_gobj: Option<GObjId>,
@@ -643,8 +645,8 @@ impl Running<'_> {
         t.copied = 0;
         t.copy_index = 0;
         t.spare = None;
-        t.x6770 = 0;
-        t.x6774 = 0;
+        t.unused_a = 0;
+        t.unused_b = 0;
         t.frame_gobj = None;
         t.framed = 0;
         t.frame_index = 0;

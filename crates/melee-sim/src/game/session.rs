@@ -966,7 +966,7 @@ impl Session {
         // Classic's horde stages' opponents join in the costumes their setup drew, every one
         // of which the intro's game cache holds (color 0xFF).
         if self.game.game_mode == super::gm::one_player::GM_CLASSIC
-            && self.game.one_player.classic.base.x8[0] & 8 != 0
+            && self.game.one_player.classic.base.stage[0] & 8 != 0
         {
             let mut kinds: Vec<i32> = Vec::new();
             for &c in &self.game.gm.opponents.kinds {

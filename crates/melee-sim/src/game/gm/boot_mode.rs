@@ -16,11 +16,14 @@ const TROPHY_PIKMIN: usize = 275;
 pub struct BootMode {
     /// `load_data`: the card scene's question (0 at boot, 1 from the memory card mode), its
     /// channel, and the mode after it.
-    pub load_x0: u32,
-    pub load_x4: u8,
+    #[doc(alias("load_x0"))]
+    pub load_question: u32,
+    #[doc(alias("load_x4"))]
+    pub load_channel: u8,
     pub load_mode: u8,
     /// `leave_data`: the card scene's answer, and the mode after it.
-    pub leave_x0: u32,
+    #[doc(alias("leave_x0"))]
+    pub leave_answer: u32,
     pub leave_mode: u8,
     pub opening_state: u8,
     /// The rest of `gm_8049E548`: the attract match the title picked.
@@ -33,8 +36,10 @@ pub struct BootMode {
 pub struct TitleDemo {
     pub ckinds: [u8; 4],
     pub colors: [u8; 4],
-    pub x8: u8,
-    pub x9: u8,
+    #[doc(alias("x8"))]
+    pub look_first: u8,
+    #[doc(alias("x9"))]
+    pub look_second: u8,
     pub match_kind: u8,
     pub stkind: u16,
 }
@@ -46,8 +51,8 @@ impl Running<'_> {
     #[doc(alias = "gm_801BF708")]
     pub fn boot_on_load(&mut self) {
         let b = &mut self.game.boot_mode;
-        b.load_x4 = 0;
-        b.load_x0 = 0;
+        b.load_channel = 0;
+        b.load_question = 0;
         if self.game.main_lib.skip_intro {
             b.load_mode = GM_TITLE;
         } else {
@@ -81,8 +86,8 @@ impl Running<'_> {
     #[doc(alias = "memcardOnLoad")]
     pub fn memcard_mode_on_load(&mut self) {
         let b = &mut self.game.boot_mode;
-        b.load_x4 = 0;
-        b.load_x0 = 1;
+        b.load_channel = 0;
+        b.load_question = 1;
     }
 
     /// `onEnterMovie` (`gmopeningmode.c`): the preload cache keeps the VS mode's class

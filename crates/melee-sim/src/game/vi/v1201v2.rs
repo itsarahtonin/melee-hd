@@ -52,7 +52,8 @@ pub struct Vi1201v2 {
     /// `un_804D7028`: the fog's color at its animation's start.
     pub erase: [u8; 4],
     /// `un_804D702C`: set to 0 and never read.
-    pub x2c: i32,
+    #[doc(alias("x2c"))]
+    pub unused: i32,
     /// `un_804D7030`, `un_804D7034`: the trophy's and the stand's GObjs, until they go.
     pub trophy_gobj: Option<GObjId>,
     pub stand_gobj: Option<GObjId>,
@@ -224,7 +225,7 @@ impl Running<'_> {
         let erase = self.vi_fog_animated(scene, FOG_PROC);
         let v = &mut self.game.vi.v1201v2;
         v.erase = erase;
-        v.x2c = 0;
+        v.unused = 0;
         self.vi_lights(scene);
         self.lb_audio_pause(false);
     }

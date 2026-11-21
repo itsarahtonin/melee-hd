@@ -188,7 +188,7 @@ impl Running<'_> {
             return;
         }
         let d = self.game.boot_mode.demo;
-        let (first, second) = (i32::from(d.x8), i32::from(d.x9));
+        let (first, second) = (i32::from(d.look_first), i32::from(d.look_second));
         match self.game.attract.camera_step {
             0 if ticks == 0x190 => {
                 self.game.attract.camera_step = 1;

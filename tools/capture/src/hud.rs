@@ -117,7 +117,7 @@ pub(crate) trait Words {
             id: self.b(a + 0x24) as i8,
             line_width: self.b(a + 0x25),
             flags: self.b(a + 0x26),
-            unk: packed >> 2,
+            blink: packed >> 2,
             current_color: packed & 3,
             buf,
             buf_addr: buf_at,
@@ -776,7 +776,7 @@ impl Comparer<'_> {
                         Some(melee_sim::game::hud::debug_menu::MENU_PROC),
                         theirs,
                     );
-                } else if let Some(w) = m.x14 {
+                } else if let Some(w) = m.submenu_leftover {
                     self.check(&path, "x14 (the block's word)", w, mem.w(a + 0x14));
                 }
                 self.check(&path, "glyphs' block", m.buf, mem.w(text_at(m.text) + 0x28));

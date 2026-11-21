@@ -158,7 +158,7 @@ impl Running<'_> {
             }
         }
         self.game.game_data.thing.save_data.trophy_category_flags = 0xF4;
-        self.game.toys.gallery.xa1 = 1;
+        self.game.toys.gallery.debug_unlocked = 1;
     }
 
     /// `Toy_803124BC`: each trophy the region can win of class 2 marked as one it can't
@@ -265,12 +265,12 @@ impl Running<'_> {
         };
         let categories = if own {
             let t = &self.game.toys.table;
-            t.categories | t.x8
+            t.categories | t.extra_categories
         } else {
             self.game.game_data.thing.save_data.trophy_category_flags
         };
         if categories & 0x80 == 0 && self.toy_total() >= 0xFA {
-            self.game.toys.table.x0 = 2;
+            self.game.toys.table.screen = 2;
             self.toy_mark_class(7, false, false);
         }
         self.trophy_class_notices();
@@ -309,7 +309,7 @@ impl Running<'_> {
         let bit = 1u16 << class;
         let own = self.toy_own_table();
         let cats = if extra {
-            &mut self.game.toys.table.x8
+            &mut self.game.toys.table.extra_categories
         } else if own {
             &mut self.game.toys.table.categories
         } else {
@@ -344,7 +344,7 @@ impl Running<'_> {
     pub fn toy_class_open(&self, class: i32) -> bool {
         let cats = if self.toy_own_table() {
             let t = &self.game.toys.table;
-            t.categories | t.x8
+            t.categories | t.extra_categories
         } else {
             self.game.game_data.thing.save_data.trophy_category_flags
         };
@@ -375,7 +375,7 @@ impl Running<'_> {
             }
             for i in 0..class as i32 {
                 if i > 1 && i != 3 && !self.toy_class_open(i) {
-                    self.game.toys.table.x0 = 2;
+                    self.game.toys.table.screen = 2;
                     self.toy_mark_class(i, false, false);
                 }
             }
@@ -384,7 +384,7 @@ impl Running<'_> {
                 next += 1;
             }
             if (4..=6).contains(&next) && !self.toy_class_open(next) {
-                self.game.toys.table.x0 = 2;
+                self.game.toys.table.screen = 2;
                 self.toy_mark_class(next, false, false);
             }
             break;

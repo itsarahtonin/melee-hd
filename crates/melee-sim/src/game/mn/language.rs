@@ -69,10 +69,10 @@ impl Running<'_> {
         }
         if ev & IN_A != 0 {
             let m = self.option_menu(g).1;
-            if m.unk1 != Some(m.cursor) {
+            if m.setting != Some(m.cursor) {
                 self.language_change(m.cursor);
             }
-        } else if m.unk2.expect("the language screen's state") != 0
+        } else if m.state.expect("the language screen's state") != 0
             && ev & (super::main::IN_LEFT | super::main::IN_RIGHT) != 0
         {
             self.lb_audio_call(SFX_MOVE);
@@ -150,7 +150,7 @@ impl Running<'_> {
         let j = self.options_jobj(gobj);
         if self.anim_loop_stopped(j, COME_IN, MOBJ_MASK) == crate::fpu::reg(COME_IN.end) {
             self.options_swap_proc(gobj, IDLE);
-            self.option_menu_mut(gobj).unk2 = Some(1);
+            self.option_menu_mut(gobj).state = Some(1);
         }
     }
 
@@ -175,9 +175,9 @@ impl Running<'_> {
             addr,
             OptionMenu {
                 cursor: lang,
-                unk1: Some(lang),
-                unk2: Some(0),
-                unk3: None,
+                setting: Some(lang),
+                state: Some(0),
+                balance: None,
                 text: None,
             }
             .with_leftovers(self.data, addr),

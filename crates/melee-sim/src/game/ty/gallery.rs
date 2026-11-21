@@ -173,8 +173,10 @@ pub struct Gallery {
     pub yaw: f32,
     pub dist: f32,
     pub spin: f32,
-    pub x28: f32,
-    pub x2c: f32,
+    #[doc(alias("x28"))]
+    pub unused_a: f32,
+    #[doc(alias("x2c"))]
+    pub unused_b: f32,
     pub stick: [f32; 2],
     pub stick_prev: [f32; 2],
     pub cstick: [f32; 2],
@@ -183,7 +185,8 @@ pub struct Gallery {
     /// `x58`: frames idle (the view turns by itself after 2,400); `x5C` the transition's
     /// frames, or the close-up's idle frames.
     pub idle: i32,
-    pub x5c: i32,
+    #[doc(alias("x5c"))]
+    pub timer: i32,
     /// `x60`: frames before the view takes input; `x61` the view's state (0 the view, 1
     /// closing in, 2 the close-up, 3 coming back).
     pub cooldown: i8,
@@ -246,8 +249,10 @@ pub struct Gallery {
     pub dist_step: f32,
     pub pitch_step: f32,
     /// `_Toy_sbss_804D6EA1`: set by `Toy_80311680` (a debug unlock); `_Toy_sbss_804D6EA0`.
-    pub xa1: u8,
-    pub xa0: u8,
+    #[doc(alias("xa1"))]
+    pub debug_unlocked: u8,
+    #[doc(alias("xa0"))]
+    pub editor_step: u8,
     /// `_Toy_sbss_804D6E50`, `_Toy_sbss_804D6EA2`: the debug views L and Z held at the entry
     /// ask for (from the debug ROM's level).
     pub debug_l: i8,
@@ -296,13 +301,13 @@ impl Running<'_> {
     /// categories' third bit, in the table in play.
     pub fn toy_mode_init(&mut self) {
         self.game.toys.table = super::ToyTable::default();
-        self.game.toys.gallery.xa1 = 0;
+        self.game.toys.gallery.debug_unlocked = 0;
         if self.toy_own_table() {
             self.game.toys.table.categories |= 4;
         } else {
             self.game.game_data.thing.save_data.trophy_category_flags |= 4;
         }
-        self.game.toys.table.x0 = 1;
+        self.game.toys.table.screen = 1;
     }
 
     /// `Toy_80311960`'s part outside the save (which its callers clear): the screens' table's
@@ -311,10 +316,10 @@ impl Running<'_> {
         let t = &mut self.game.toys.table;
         t.flags = [0; TROPHY_COUNT];
         t.categories = 0;
-        t.x8 = 0;
+        t.extra_categories = 0;
         t.selected = 0;
         t.selected_trophy = 0;
-        t.x3 = 0;
+        t.list_slot = 0;
         t.count = 0;
     }
 
@@ -370,7 +375,7 @@ impl Running<'_> {
             let s = &self.game.game_data.thing.save_data;
             let t = &mut self.game.toys.table;
             t.categories = s.trophy_category_flags;
-            t.x8 = 0;
+            t.extra_categories = 0;
             t.flags = s.trophy_flags;
             t.count = s.trophy_count;
         }
@@ -421,7 +426,7 @@ impl Running<'_> {
     #[doc(alias = "Toy_Scene_OnEnter")]
     pub fn toy_on_enter(&mut self) {
         let g = &mut self.game.toys.gallery;
-        g.xa1 = 0;
+        g.debug_unlocked = 0;
         // From the debug ROM's level, the buttons held as it enters: L the debug view
         // (`_Toy_sbss_804D6E50`), Z the fog's (`_Toy_sbss_804D6EA2`), Start and R the
         // unlock editor's step (`_Toy_sbss_804D6EA0`, which runs the editor at 1).
@@ -433,14 +438,14 @@ impl Running<'_> {
             let z = i8::from(self.toy_held() & 0x10 != 0);
             self.game.toys.gallery.debug_z = z;
             if self.toy_held() & 0x1000 != 0 {
-                self.game.toys.gallery.xa0 = 0;
+                self.game.toys.gallery.editor_step = 0;
             }
             let g = &mut self.game.toys.gallery;
-            if g.xa0 as i8 != 0 {
-                g.xa0 = g.xa0.wrapping_add(1);
+            if g.editor_step as i8 != 0 {
+                g.editor_step = g.editor_step.wrapping_add(1);
             }
             if self.toy_held() & 0x20 != 0 {
-                self.game.toys.gallery.xa0 = 1;
+                self.game.toys.gallery.editor_step = 1;
             }
         }
         let alloc = |size: u32| crate::hsd::heap::mem_alloc(size);
@@ -468,7 +473,7 @@ impl Running<'_> {
             frustum: self.game.toys.gallery.frustum,
             dist_step: self.game.toys.gallery.dist_step,
             pitch_step: self.game.toys.gallery.pitch_step,
-            xa0: self.game.toys.gallery.xa0,
+            editor_step: self.game.toys.gallery.editor_step,
             debug_l: self.game.toys.gallery.debug_l,
             debug_z: self.game.toys.gallery.debug_z,
             editor_text: self.game.toys.gallery.editor_text,
@@ -502,7 +507,7 @@ impl Running<'_> {
         if self.game.toys.gallery.debug_z != 0 {
             self.toy_z_text();
         }
-        if self.game.toys.gallery.xa0 == 1 {
+        if self.game.toys.gallery.editor_step == 1 {
             self.toy_editor();
             return;
         }
@@ -922,9 +927,9 @@ impl Running<'_> {
     #[doc(alias = "_Toy_80307F64")]
     pub(super) fn toy_stand_look(&mut self, look: i8, animate: bool) {
         let a = self.game.toys.anim;
-        let idx = a.x0e as usize;
+        let idx = a.stand as usize;
         let (j1, j2) = (a.jobj[idx], a.jobj[idx ^ 1]);
-        if a.x0f != 0 {
+        if a.stand_frames != 0 {
             return;
         }
         let stand = self.game.toys.stand.expect("TyStand.dat").id;
@@ -934,17 +939,17 @@ impl Running<'_> {
             "ToyStandModel_TopN_ACTION_action2_matanim_joint"
         };
         if animate {
-            if look == a.x11 {
+            if look == a.look_asked {
                 return;
             }
             jobj::remove_anim_all(&mut self.game.objs, j1);
             jobj::remove_anim_all(&mut self.game.objs, j2);
             let s = &mut self.game.toys.anim;
-            s.x11 = look;
-            s.x10 = look;
+            s.look_asked = look;
+            s.look = look;
             self.toy_add_anims(j1, [None, Some(name), None], stand, 0);
             self.toy_add_anims(j2, [None, Some(name), None], stand, 0);
-            self.game.toys.anim.x0f = 0xA;
+            self.game.toys.anim.stand_frames = 0xA;
             let g = self.game.toys.anim.gobj.expect("the trophy's GObj");
             self.game.world.setup_proc(g, CodeRef(PROC_STAND), 0);
             self.game.world.mark_ran(g);
@@ -953,7 +958,7 @@ impl Running<'_> {
             self.toy_add_anims(j2, [None, Some(name), None], stand, 10);
             jobj::remove_anim_all(&mut self.game.objs, j1);
             jobj::remove_anim_all(&mut self.game.objs, j2);
-            self.game.toys.anim.x0f = 0;
+            self.game.toys.anim.stand_frames = 0;
         }
     }
 
@@ -962,19 +967,19 @@ impl Running<'_> {
     #[doc(alias = "Toy_80307E84")]
     pub fn toy_stand_proc(&mut self, gobj: GObjId) {
         let a = self.game.toys.anim;
-        let idx = a.x0e as usize;
+        let idx = a.stand as usize;
         let (j0, j1) = (a.jobj[idx], a.jobj[idx ^ 1]);
-        if a.x0f <= 0 {
-            if a.x10 == 1 {
+        if a.stand_frames <= 0 {
+            if a.look == 1 {
                 jobj::set_flags_all(&mut self.game.objs.jobjs, j0, jobj::HIDDEN);
                 jobj::set_flags_all(&mut self.game.objs.jobjs, j1, jobj::HIDDEN);
             }
-            self.game.toys.anim.x10 = 0;
+            self.game.toys.anim.look = 0;
             jobj::remove_anim_all(&mut self.game.objs, j0);
             jobj::remove_anim_all(&mut self.game.objs, j1);
             self.game.world.remove_all_procs(gobj);
         } else {
-            self.game.toys.anim.x0f -= 1;
+            self.game.toys.anim.stand_frames -= 1;
             let data = self.data;
             jobj::anim_all(
                 &mut self.game.objs,
@@ -1010,15 +1015,15 @@ impl Running<'_> {
         let j = jobj::load_joint(o, data, joint).expect("the stand");
         jobj::add_child(&mut o.jobjs, Some(parent), Some(j));
         let a = &mut self.game.toys.anim;
-        a.x0e = i8::from(a.jobj[0].is_some());
-        a.jobj[a.x0e as usize] = Some(j);
+        a.stand = i8::from(a.jobj[0].is_some());
+        a.jobj[a.stand as usize] = Some(j);
         jobj::set_srt(&mut self.game.objs.jobjs, j, |o| {
             o.translate.y = mem(fp::fadds(reg(o.translate.y), reg(0.25)));
         });
         let a = &mut self.game.toys.anim;
-        a.x11 = 2;
-        a.x10 = 2;
-        a.x0f = 0;
+        a.look_asked = 2;
+        a.look = 2;
+        a.stand_frames = 0;
         self.toy_stand_look(2, false);
         let s = self.toy_param(i32::from(trophy), 4);
         jobj::set_srt(&mut self.game.objs.jobjs, j, |o| {
@@ -1090,7 +1095,7 @@ impl Running<'_> {
         }
         let second = self.toy_stand(root, trophy);
         jobj::set_flags_all(&mut self.game.objs.jobjs, Some(second), jobj::HIDDEN);
-        self.game.toys.anim.x0e = 0;
+        self.game.toys.anim.stand = 0;
         (g, archive)
     }
 
@@ -1659,8 +1664,8 @@ impl Running<'_> {
             g.light_pitch = 0.0;
         }
         g.dist = 38.0;
-        g.x2c = 0.0;
-        g.x28 = 0.0;
+        g.unused_b = 0.0;
+        g.unused_a = 0.0;
         g.spin = 0.0;
         let c = self.toy_view_cobj();
         cobj::set_interest(&mut self.game.objs, c, Vec3::new(0.0, 8.0, 0.0));
@@ -1831,15 +1836,15 @@ impl Running<'_> {
         g.yaw = 0.0;
         g.dist = 0.0;
         g.spin = 0.0;
-        g.x28 = 0.0;
-        g.x2c = 0.0;
+        g.unused_a = 0.0;
+        g.unused_b = 0.0;
         g.stick = [0.0; 2];
         g.stick_prev = [0.0; 2];
         g.cstick = [0.0; 2];
         g.cstick_prev = [0.0; 2];
         g.pan = [0.0; 2];
         g.idle = 0;
-        g.x5c = 0;
+        g.timer = 0;
         g.cooldown = 0;
         g.state = 0;
         g.cam_block = block;

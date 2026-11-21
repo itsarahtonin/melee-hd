@@ -75,11 +75,11 @@ impl Comparer<'_> {
         // `x2`: `mn_80229DC0` never writes it and nothing reads it, so it holds what the heap
         // block held before, compared where the heap's image knew it (docs/oracle.md, the
         // menu sessions).
-        let x2 = d.x2.map(|_| self.u8(ud + 2));
+        let x2 = d.leftover.map(|_| self.u8(ud + 2));
         self.check(
             path,
             "panel menus, x2, state",
-            (d.cur_menu, d.prev_menu, d.x2, d.state),
+            (d.cur_menu, d.prev_menu, d.leftover, d.state),
             (self.u8(ud), self.u8(ud + 1), x2, self.u8(ud + 3)),
         );
     }
@@ -91,7 +91,12 @@ impl Comparer<'_> {
         self.check(
             "gmmenumode enter_data",
             "list, hovered, load, x3",
-            (e.menu_kind, e.hovered_selection, e.load_assets, e.x3 as u8),
+            (
+                e.menu_kind,
+                e.hovered_selection,
+                e.load_assets,
+                e.unused as u8,
+            ),
             (
                 self.u8(MENU_ENTER),
                 self.u8(MENU_ENTER + 1),
@@ -129,7 +134,7 @@ impl Comparer<'_> {
                 f.hovered_selection,
                 confirmed,
                 f.buttons,
-                f.x10,
+                f.names_screen,
                 f.entering_menu,
                 f.light_lerp_frames,
                 color,
@@ -150,7 +155,7 @@ impl Comparer<'_> {
         self.check(
             "mn_804D6BC8",
             "cooldown, x2, x4",
-            (m.cooldown, m.input_x2, m.input_x4),
+            (m.cooldown, m.input_unused_a, m.input_unused_b),
             (self.u16(at), self.u16(at + 2), self.u32(at + 4) as i32),
         );
         for (name, g) in [
@@ -234,7 +239,7 @@ impl Comparer<'_> {
                     c.curr_mode,
                     c.prev_mode,
                 ],
-                c.x8,
+                c.unused,
             ),
             (
                 [0, 1, 2, 3, 4, 5, 6].map(|k| self.u8(at + k)),

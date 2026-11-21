@@ -965,7 +965,8 @@ impl Game {
     /// Classic's, Adventure's and All-Star's, none in another mode).
     #[doc(alias = "gm_80172140")]
     pub fn one_player_falls(&self) -> i32 {
-        self.one_player_run().map_or(0, |run| i32::from(run.xc[4]))
+        self.one_player_run()
+            .map_or(0, |run| i32::from(run.counters[4]))
     }
 
     /// The running 1P run's state, `fn_8017DF28`: Classic's, Adventure's or All-Star's.

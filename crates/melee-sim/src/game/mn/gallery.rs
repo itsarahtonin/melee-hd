@@ -432,7 +432,7 @@ impl Running<'_> {
             let gd = self.gallery_mut();
             gd.ended_ticks = gd.ended_ticks.wrapping_add(1);
         }
-        let skip = self.game.main_lib.xc && !ended;
+        let skip = self.game.main_lib.movie_skip && !ended;
         let pressed = buttons & 0x1300 != 0;
         if pressed || self.gallery().ended_ticks > 0x32 || skip {
             if pressed {
@@ -452,8 +452,8 @@ impl Running<'_> {
         if self.game.menu.cooldown != 0 {
             let m = &mut self.game.menu;
             m.cooldown -= 1;
-            m.input_x2 = 0;
-            m.input_x4 = 0;
+            m.input_unused_a = 0;
+            m.input_unused_b = 0;
             return;
         }
         let state = self.gallery().state;

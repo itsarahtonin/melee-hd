@@ -443,7 +443,7 @@ impl Running<'_> {
         self.game.sync_unlocks();
         let run = *run_data(self, n).expect("a single-player run");
         let locked = |r: &Self, ck: u8| !r.game.gm.unlocks.ckind_unlocked(ck);
-        if run.xc[1] == 0 {
+        if run.counters[1] == 0 {
             if run.player.ckind as u8 == CharacterKind::Mars
                 && locked(self, CharacterKind::Emblem as u8)
             {
@@ -467,7 +467,7 @@ impl Running<'_> {
         }
         if n == 0 {
             let a = &self.game.one_player.adventure;
-            if locked(self, CharacterKind::Luigi as u8) && a.x74[0] != 0 && a.x74[1] != 0 {
+            if locked(self, CharacterKind::Luigi as u8) && a.feats[0] != 0 && a.feats[1] != 0 {
                 return CharacterKind::Luigi as u8;
             }
         }
@@ -524,19 +524,19 @@ impl Running<'_> {
         match n {
             0 => {
                 let a = self.game.one_player.adventure;
-                if a.x74[2] != 0 {
+                if a.feats[2] != 0 {
                     self.give_record_trophy(0xE7);
                 }
                 if clear {
                     let b = a.base;
                     self.give_mode_trophy(b.player.ckind as u8, 4, true);
-                    if b.xc[1] == 0 && a.x74[3] != 0 {
+                    if b.counters[1] == 0 && a.feats[3] != 0 {
                         self.give_record_trophy(0x51);
                     }
-                    if b.xc[1] == 0 && b.player.cpu_level >= 3 {
+                    if b.counters[1] == 0 && b.player.cpu_level >= 3 {
                         self.give_record_trophy(0x53);
                     }
-                    if b.x20 < 0x101D0 {
+                    if b.frames < 0x101D0 {
                         self.give_record_trophy(0xE3);
                     }
                 }
@@ -544,10 +544,10 @@ impl Running<'_> {
             1 if clear => {
                 let b = self.game.one_player.classic.base;
                 self.give_mode_trophy(b.player.ckind as u8, 3, true);
-                if b.xc[1] == 0 && b.player.cpu_level >= 3 {
+                if b.counters[1] == 0 && b.player.cpu_level >= 3 {
                     self.give_record_trophy(0x52);
                 }
-                if b.x20 < 0x4650 {
+                if b.frames < 0x4650 {
                     self.give_record_trophy(0x11A);
                 }
             }
@@ -555,7 +555,7 @@ impl Running<'_> {
                 let b = self.game.one_player.allstar.base;
                 self.give_mode_trophy(b.player.ckind as u8, 5, true);
                 self.give_record_trophy(0xBE);
-                if b.xc[1] == 0 {
+                if b.counters[1] == 0 {
                     self.give_record_trophy(0xCC);
                 }
                 if b.player.cpu_level >= 3 {
