@@ -1880,6 +1880,34 @@ fn the_hookshot_lengths_live_in_their_file() {
     }
 }
 
+/// The hookshot bounces back off a wall (docs/oracle.md, "Sessions"): `hookshot-walls/link-front`
+/// and `yl-step`, debug VS on Corneria with Link and with Young Link alone. On the front deck
+/// facing the upper deck's step, a wall, each grabs standing from further than the grab's
+/// reach (`fn_800D8EC8`'s stage check), so the hookshot is shot, hits the step and bounces back
+/// (state 2, `fn_802A3110`) until all its links are out (Link twice, Young Link three times);
+/// within the reach it's put away; then a dash grab into the step bounces too, and Link's air
+/// grab latches on. Each clean from power-on with `--all --heap` and the card after the
+/// original's.
+#[test]
+fn the_hookshot_bounces_back_off_a_wall() {
+    for (name, want) in [("link-front", 3790), ("yl-step", 4625)] {
+        let after = ssbm_rs_local(&format!("traces/hookshot-walls/{name}-play.card"));
+        let args = ["--all", "--heap", "--card-after", &after];
+        let Some(out) = scripted_session("hookshot-walls", name, &args) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{want} ticks compared, no difference\n")),
+            "{name}: {out}"
+        );
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
+
 /// The debug menu's Yoshiki Test page (`debug-sessions/yoshiki-*`, recorded with ssbm-rs's
 /// `--develop 3`), each from power-on to its trace's end with the card it leaves: Init as the
 /// page opens and again on A and B; Accessable, Create, Save, Load and SnapMount0 with the
