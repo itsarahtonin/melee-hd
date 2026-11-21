@@ -225,7 +225,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.self_vel.x = 0.0;
         fp.self_vel.y = 0.0;
-        fp.accessory4_cb = Some(CodeRef(addr::MS_365_801535B0));
+        fp.accessory4_cb = Some(CodeRef(addr::GUN_SHOTS));
     }
 
     /// `ftMh_FingerGun2_Anim`: another round, or the end once the rounds run out.
@@ -311,19 +311,19 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::MS_359_80152BCC => g.hand_beams_windup_enter(gobj, &HAND),
+        addr::BEAMS_WINDUP_ENTER => g.hand_beams_windup_enter(gobj, &HAND),
         addr::FINGER_BEAM_START_ANIM => g.hand_beams_windup_anim(gobj, &HAND),
-        addr::MS_361_80152CD8 => g.hand_beams_enter(gobj, &HAND),
+        addr::BEAMS_ENTER => g.hand_beams_enter(gobj, &HAND),
         addr::FINGER_BEAM_LOOP_ANIM => g.hand_beams_anim(gobj, &HAND),
-        addr::MS_362_80152E28 => g.hand_beams_lasers(gobj, &HAND),
-        addr::MS_362_80152F80 => g.hand_beams_end_enter(gobj, &HAND),
-        addr::MS_363_801530A4 => g.mh_gun_enter(gobj),
+        addr::BEAMS_LASERS => g.hand_beams_lasers(gobj, &HAND),
+        addr::BEAMS_END_ENTER => g.hand_beams_end_enter(gobj, &HAND),
+        addr::GUN_ENTER => g.mh_gun_enter(gobj),
         addr::FINGER_GUN1_ANIM => g.mh_gun1_anim(gobj),
         addr::FINGER_GUN1_PHYS => g.mh_gun1_phys(gobj),
-        addr::MS_364_801533CC => g.mh_gun2_enter(gobj),
+        addr::GUN2_ENTER => g.mh_gun2_enter(gobj),
         addr::FINGER_GUN2_ANIM => g.mh_gun2_anim(gobj),
-        addr::MS_365_801535B0 => g.mh_gun_shots(gobj),
-        addr::MS_365_80153730 => g.hand_enter(gobj, ms::FINGER_GUN3),
+        addr::GUN_SHOTS => g.mh_gun_shots(gobj),
+        addr::FINGER_GUN3_ENTER => g.hand_enter(gobj, ms::FINGER_GUN3),
         _ => return false,
     }
     true

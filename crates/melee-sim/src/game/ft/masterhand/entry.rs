@@ -70,9 +70,9 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::MS_343_801510B0 => g.hand_entry_enter(gobj, &HAND),
+        addr::ENTRY_ENTER => g.hand_entry_enter(gobj, &HAND),
         addr::ENTRY_ANIM => g.hand_entry_anim(gobj, &HAND),
-        addr::MS_343_801511FC => g.hand_entry_camera(gobj, &HAND),
+        addr::ENTRY_CAMERA => g.hand_entry_camera(gobj, &HAND),
         _ => return false,
     }
     true

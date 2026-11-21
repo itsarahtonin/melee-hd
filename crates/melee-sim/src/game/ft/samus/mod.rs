@@ -67,10 +67,14 @@ pub mod addr {
     pub const SPECIAL_AIR_LW_PHYS: u32 = 0x8012_8EF8;
     pub const SPECIAL_LW_COLL: u32 = 0x8012_8F60;
     pub const SPECIAL_AIR_LW_COLL: u32 = 0x8012_8FD4;
-    pub const SPECIAL_LW_80129048: u32 = 0x8012_9048;
-    pub const SPECIAL_LW_801290A4: u32 = 0x8012_90A4;
-    pub const SPECIAL_N_801291F0: u32 = 0x8012_91F0;
-    pub const SPECIAL_N_80129258: u32 = 0x8012_9258;
+    #[doc(alias("SPECIAL_LW_80129048"))]
+    pub const BOMB_JUMP_TO_AIR: u32 = 0x8012_9048;
+    #[doc(alias("SPECIAL_LW_801290A4"))]
+    pub const BOMB_JUMP_TO_GROUND: u32 = 0x8012_90A4;
+    #[doc(alias("SPECIAL_N_801291F0"))]
+    pub const SHOT_RELEASED: u32 = 0x8012_91F0;
+    #[doc(alias("SPECIAL_N_80129258"))]
+    pub const DROP_CHARGE: u32 = 0x8012_9258;
     pub const SPECIAL_N_ENTER: u32 = 0x8012_954C;
     pub const SPECIAL_AIR_N_ENTER: u32 = 0x8012_95F0;
     pub const SPECIAL_N_START_ANIM: u32 = 0x8012_9684;
@@ -97,7 +101,8 @@ pub mod addr {
     pub const SPECIAL_N_COLL: u32 = 0x8012_9EE8;
     pub const SPECIAL_AIR_N_START_COLL: u32 = 0x8012_9F68;
     pub const SPECIAL_AIR_N_COLL: u32 = 0x8012_9FE8;
-    pub const SPECIAL_S_8012A074: u32 = 0x8012_A074;
+    #[doc(alias("SPECIAL_S_8012A074"))]
+    pub const MISSILE_LAUNCH: u32 = 0x8012_A074;
     pub const SPECIAL_S_ENTER: u32 = 0x8012_A1D8;
     pub const SPECIAL_AIR_S_ENTER: u32 = 0x8012_A2AC;
     pub const SPECIAL_S_ANIM: u32 = 0x8012_A380;
@@ -116,7 +121,8 @@ pub mod addr {
     pub const SPECIAL_AIR_S_SMASH_PHYS: u32 = 0x8012_A580;
     pub const SPECIAL_S_SMASH_COLL: u32 = 0x8012_A5C8;
     pub const SPECIAL_AIR_S_SMASH_COLL: u32 = 0x8012_A604;
-    pub const SPECIAL_S_8012A640: u32 = 0x8012_A640;
+    #[doc(alias("SPECIAL_S_8012A640"))]
+    pub const SCREW_EFFECTS_OFF: u32 = 0x8012_A640;
     pub const SPECIAL_HI_ENTER: u32 = 0x8012_A674;
     pub const SPECIAL_AIR_HI_ENTER: u32 = 0x8012_A738;
     pub const SPECIAL_HI_ANIM: u32 = 0x8012_A81C;
@@ -127,9 +133,12 @@ pub mod addr {
     pub const SPECIAL_AIR_HI_PHYS: u32 = 0x8012_ABB4;
     pub const SPECIAL_HI_COLL: u32 = 0x8012_AC00;
     pub const SPECIAL_AIR_HI_COLL: u32 = 0x8012_ACF8;
-    pub const SPECIAL_LW_8012ADF0: u32 = 0x8012_ADF0;
-    pub const SPECIAL_LW_8012AEBC: u32 = 0x8012_AEBC;
-    pub const SPECIAL_LW_8012AF38: u32 = 0x8012_AF38;
+    #[doc(alias("SPECIAL_LW_8012ADF0"))]
+    pub const BOMB_DROP: u32 = 0x8012_ADF0;
+    #[doc(alias("SPECIAL_LW_8012AEBC"))]
+    pub const BALL_INTANGIBLE: u32 = 0x8012_AEBC;
+    #[doc(alias("SPECIAL_LW_8012AF38"))]
+    pub const BALL_TANGIBLE: u32 = 0x8012_AF38;
     pub const SPECIAL_LW_ENTER: u32 = 0x8012_AF5C;
     pub const SPECIAL_AIR_LW_ENTER: u32 = 0x8012_B09C;
     pub const SPECIAL_LW_BOMB_ANIM: u32 = 0x8012_B150;
@@ -140,9 +149,12 @@ pub mod addr {
     pub const SPECIAL_AIR_LW_BOMB_PHYS: u32 = 0x8012_B41C;
     pub const SPECIAL_LW_BOMB_COLL: u32 = 0x8012_B488;
     pub const SPECIAL_AIR_LW_BOMB_COLL: u32 = 0x8012_B4FC;
-    pub const SPECIAL_LW_8012B570: u32 = 0x8012_B570;
-    pub const SPECIAL_LW_8012B5F0: u32 = 0x8012_B5F0;
-    pub const SPECIAL_LW_8012B668: u32 = 0x8012_B668;
+    #[doc(alias("SPECIAL_LW_8012B570"))]
+    pub const BOMB_TO_AIR: u32 = 0x8012_B570;
+    #[doc(alias("SPECIAL_LW_8012B5F0"))]
+    pub const BOMB_HOP: u32 = 0x8012_B5F0;
+    #[doc(alias("SPECIAL_LW_8012B668"))]
+    pub const BOMB_TO_GROUND: u32 = 0x8012_B668;
 }
 
 /// `ftSamus_FighterVars`' offsets in `u`.

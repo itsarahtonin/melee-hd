@@ -531,8 +531,8 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     let p = &SEAK;
     match a {
-        addr::N_80111FBC => g.seak_drop_needles(gobj, p),
-        addr::N_801120D4 => g.seak_clear_damage_cb(gobj),
+        addr::DROP_NEEDLES => g.seak_drop_needles(gobj, p),
+        addr::CLEAR_DAMAGE_CB => g.seak_clear_damage_cb(gobj),
         addr::SPECIAL_N_ENTER => g.seak_special_n_enter(gobj, p),
         addr::SPECIAL_AIR_N_ENTER => g.seak_special_air_n_enter(gobj, p),
         0x8011_2248 => g.seak_special_n_start_anim(gobj, p, false),

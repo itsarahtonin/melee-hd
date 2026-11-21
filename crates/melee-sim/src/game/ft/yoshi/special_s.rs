@@ -297,10 +297,10 @@ impl Running<'_> {
     /// The roll's callbacks (`ftYoshi_SpecialS_SetCall`).
     fn ys_s_set_cbs(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
-        fp.death2_cb = Some(CodeRef(addr::S_8012EC7C));
-        fp.take_dmg_cb = Some(CodeRef(addr::S_8012EDE8));
-        fp.deal_dmg_cb = Some(CodeRef(addr::S_8012EFF4));
-        fp.x21F8 = Some(CodeRef(addr::S_8013295C));
+        fp.death2_cb = Some(CodeRef(addr::SPECIAL_S_ON_DEATH));
+        fp.take_dmg_cb = Some(CodeRef(addr::SPECIAL_S_ON_HIT));
+        fp.deal_dmg_cb = Some(CodeRef(addr::SPECIAL_S_ON_DEAL_DAMAGE));
+        fp.x21F8 = Some(CodeRef(addr::SPECIAL_S_TURNED));
     }
 
     /// The roll's end, `ftYs_SpecialS_8012F0DC`: no hitboxes, the ground's end (slowed by
@@ -376,8 +376,8 @@ impl Running<'_> {
         fp.set_mv_i32(mv::X28, 0);
         fp.set_mv_i32(mv::X2C, 0);
         fp.set_mv_i32(mv::X30, 0);
-        fp.deal_dmg_cb = Some(CodeRef(addr::S_8012EFF4));
-        fp.x21F8 = Some(CodeRef(addr::S_8013295C));
+        fp.deal_dmg_cb = Some(CodeRef(addr::SPECIAL_S_ON_DEAL_DAMAGE));
+        fp.x21F8 = Some(CodeRef(addr::SPECIAL_S_TURNED));
     }
 
     /// Whether the stick was smashed sideways (`ftYs_SpecialS_CheckButtonPressure`: its timer
@@ -949,7 +949,7 @@ impl Running<'_> {
         if !reversed || !past {
             return;
         }
-        self.game.fighters[f.0].x21EC = Some(CodeRef(addr::S_8012EFC0));
+        self.game.fighters[f.0].x21EC = Some(CodeRef(addr::SPECIAL_S_RENEW_ATTACK));
         let frame = self.game.fighters[f.0].cur_anim_frame;
         self.change_motion_state(
             gobj,
@@ -1315,11 +1315,11 @@ fn abs(v: f64) -> f64 {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::S_8012EB48 => g.ys_s_switch(gobj),
-        addr::S_8012EC7C => g.ys_s_on_death(gobj),
-        addr::S_8012EDE8 => g.ys_s_on_hit(gobj),
-        addr::S_8012EFC0 => g.ys_s_renew_attack(gobj),
-        addr::S_8012EFF4 => g.ys_s_on_deal_damage(gobj),
+        addr::SPECIAL_S_SWITCH => g.ys_s_switch(gobj),
+        addr::SPECIAL_S_ON_DEATH => g.ys_s_on_death(gobj),
+        addr::SPECIAL_S_ON_HIT => g.ys_s_on_hit(gobj),
+        addr::SPECIAL_S_RENEW_ATTACK => g.ys_s_renew_attack(gobj),
+        addr::SPECIAL_S_ON_DEAL_DAMAGE => g.ys_s_on_deal_damage(gobj),
         addr::SPECIAL_S_ENTER => g.ys_special_s_enter(gobj),
         addr::SPECIAL_AIR_S_ENTER => g.ys_special_air_s_enter(gobj),
         addr::SPECIAL_AIR_S_START_0_ANIM => g.ys_special_s_start_anim(gobj),
@@ -1357,7 +1357,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_S_LOOP_2_COLL => g.ys_special_air_s_loop_coll(gobj),
         addr::SPECIAL_AIR_S_LOOP_3_COLL => g.ys_special_air_s_roll_coll(gobj),
         addr::SPECIAL_AIR_S_LANDING_COLL => g.ys_special_air_s_end_coll(gobj),
-        addr::S_8013295C => g.ys_s_turned(gobj),
+        addr::SPECIAL_S_TURNED => g.ys_s_turned(gobj),
         _ => return false,
     }
     true

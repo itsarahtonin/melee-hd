@@ -80,9 +80,9 @@ impl Running<'_> {
 #[melee_callbacks::callbacks(Fighter)]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
-        addr::MS_380_80155194 => g.mh_tag_enter(gobj, ms::TAG_CRUSH),
-        addr::MS_382_801552F8 => g.mh_tag_enter(gobj, ms::TAG_APPLAUD),
-        addr::MS_383_80155484 => g.mh_tag_enter(gobj, ms::TAG_ROCK_PAPER),
+        addr::TAG_CRUSH_ENTER => g.mh_tag_enter(gobj, ms::TAG_CRUSH),
+        addr::TAG_APPLAUD_ENTER => g.mh_tag_enter(gobj, ms::TAG_APPLAUD),
+        addr::TAG_ROCK_PAPER_ENTER => g.mh_tag_enter(gobj, ms::TAG_ROCK_PAPER),
         addr::TAG_CRUSH_ANIM | addr::TAG_APPLAUD_ANIM | addr::TAG_ROCK_PAPER_ANIM => {
             g.hand_tag_anim(gobj, &HAND)
         }

@@ -114,10 +114,14 @@ pub mod addr {
 
     // Between the egg lay and the egg throw: the damage callbacks set, the item on his
     // tongue let go, the throw's speed and the egg in hand dropped.
-    pub const S_8012DF00: u32 = 0x8012_DF00;
-    pub const S_8012DF18: u32 = 0x8012_DF18;
-    pub const S_8012DF8C: u32 = 0x8012_DF8C;
-    pub const S_8012E270: u32 = 0x8012_E270;
+    #[doc(alias("S_8012DF00"))]
+    pub const SET_DAMAGE_CBS: u32 = 0x8012_DF00;
+    #[doc(alias("S_8012DF18"))]
+    pub const RELEASE_TONGUE_ITEM: u32 = 0x8012_DF18;
+    #[doc(alias("S_8012DF8C"))]
+    pub const HI_THROW_VEL: u32 = 0x8012_DF8C;
+    #[doc(alias("S_8012E270"))]
+    pub const DROP_EGG: u32 = 0x8012_E270;
 
     // The egg throw.
     pub const HI_THROW: u32 = 0x8012_E110;
@@ -149,11 +153,16 @@ pub mod addr {
     pub const LW_LANDING: u32 = 0x8012_EAD8;
 
     // The egg roll.
-    pub const S_8012EB48: u32 = 0x8012_EB48;
-    pub const S_8012EC7C: u32 = 0x8012_EC7C;
-    pub const S_8012EDE8: u32 = 0x8012_EDE8;
-    pub const S_8012EFC0: u32 = 0x8012_EFC0;
-    pub const S_8012EFF4: u32 = 0x8012_EFF4;
+    #[doc(alias("S_8012EB48"))]
+    pub const SPECIAL_S_SWITCH: u32 = 0x8012_EB48;
+    #[doc(alias("S_8012EC7C"))]
+    pub const SPECIAL_S_ON_DEATH: u32 = 0x8012_EC7C;
+    #[doc(alias("S_8012EDE8"))]
+    pub const SPECIAL_S_ON_HIT: u32 = 0x8012_EDE8;
+    #[doc(alias("S_8012EFC0"))]
+    pub const SPECIAL_S_RENEW_ATTACK: u32 = 0x8012_EFC0;
+    #[doc(alias("S_8012EFF4"))]
+    pub const SPECIAL_S_ON_DEAL_DAMAGE: u32 = 0x8012_EFF4;
     pub const SPECIAL_S_ENTER: u32 = 0x8012_F4B4;
     pub const SPECIAL_AIR_S_ENTER: u32 = 0x8012_F588;
     pub const SPECIAL_AIR_S_START_0_ANIM: u32 = 0x8012_F654;
@@ -188,7 +197,8 @@ pub mod addr {
     pub const SPECIAL_AIR_S_LOOP_2_COLL: u32 = 0x8013_1F80;
     pub const SPECIAL_AIR_S_LOOP_3_COLL: u32 = 0x8013_245C;
     pub const SPECIAL_AIR_S_LANDING_COLL: u32 = 0x8013_28F0;
-    pub const S_8013295C: u32 = 0x8013_295C;
+    #[doc(alias("S_8013295C"))]
+    pub const SPECIAL_S_TURNED: u32 = 0x8013_295C;
 }
 
 /// Yoshi's action states (`ftYs_MS_*`).

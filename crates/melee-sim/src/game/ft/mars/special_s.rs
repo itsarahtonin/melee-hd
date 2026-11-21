@@ -257,7 +257,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.cmd_vars[1] = 0;
         fp.cmd_vars[0] = 0;
-        fp.x21EC = Some(CodeRef(addr::S_80137A68));
+        fp.x21EC = Some(CodeRef(addr::SPECIAL_S_NEW_ATTACK));
         let y = reg(fp.input.lstick[0].y);
         let (g, a) = if y > t {
             states[0]
@@ -372,21 +372,21 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_S1_PHYS | addr::SPECIAL_S2_PHYS => g.mars_special_s_phys(gobj),
         addr::SPECIAL_S3_PHYS | addr::SPECIAL_S4_PHYS => g.mars_special_s_late_phys(gobj),
         addr::SPECIAL_AIR_S1_COLL => g.mars_special_s1_coll(gobj),
-        addr::S_801376E8 => g.mars_special_s1_to_air(gobj),
-        addr::S_80137748 => g.mars_special_s1_land(gobj),
+        addr::SPECIAL_S1_TO_AIR => g.mars_special_s1_to_air(gobj),
+        addr::SPECIAL_S1_LAND => g.mars_special_s1_land(gobj),
         addr::SPECIAL_S2_COLL => g.mars_special_s2_coll(gobj),
-        addr::S_80137940 => g.mars_special_s2_to_air(gobj),
-        addr::S_801379D0 => g.mars_special_s2_land(gobj),
-        addr::S_80137A68 => g.mars_special_s_new_attack(gobj),
-        addr::S_80137A9C => g.mars_special_s2_start(gobj),
+        addr::SPECIAL_S2_TO_AIR => g.mars_special_s2_to_air(gobj),
+        addr::SPECIAL_S2_LAND => g.mars_special_s2_land(gobj),
+        addr::SPECIAL_S_NEW_ATTACK => g.mars_special_s_new_attack(gobj),
+        addr::SPECIAL_S2_START => g.mars_special_s2_start(gobj),
         addr::SPECIAL_S3_COLL => g.mars_special_s3_coll(gobj),
-        addr::S_80137CBC => g.mars_special_s3_to_air(gobj),
-        addr::S_80137D60 => g.mars_special_s3_land(gobj),
-        addr::S_80137E0C => g.mars_special_s3_start(gobj),
+        addr::SPECIAL_S3_TO_AIR => g.mars_special_s3_to_air(gobj),
+        addr::SPECIAL_S3_LAND => g.mars_special_s3_land(gobj),
+        addr::SPECIAL_S3_START => g.mars_special_s3_start(gobj),
         addr::SPECIAL_S4_COLL => g.mars_special_s4_coll(gobj),
-        addr::S_80137FF8 => g.mars_special_s4_to_air(gobj),
-        addr::S_8013809C => g.mars_special_s4_land(gobj),
-        addr::S_80138148 => g.mars_special_s4_start(gobj),
+        addr::SPECIAL_S4_TO_AIR => g.mars_special_s4_to_air(gobj),
+        addr::SPECIAL_S4_LAND => g.mars_special_s4_land(gobj),
+        addr::SPECIAL_S4_START => g.mars_special_s4_start(gobj),
         _ => return false,
     }
     true
