@@ -1998,7 +1998,7 @@ impl Running<'_> {
         }
         let me = self.game.fighter_id(gobj);
         let max = self.hit_status(me);
-        for i in 0..self.game.gr.devices.x6570 {
+        for i in 0..self.game.gr.devices.coll_count {
             assert!(i == 0, "ftColl_8007BAC0: a device past ft_80459A8C's one");
             let d = &self.game.gr.devices;
             let Some(ground) = d.device2 else { continue };

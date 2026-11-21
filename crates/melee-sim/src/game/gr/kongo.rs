@@ -275,16 +275,16 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     r.game.grounds[g.0].x10_flags.b5 = true;
     let joints = [0x13, 0xD, 0x2B, 0x28].map(|d| nth_joint(r.game, gobj, d));
     let v = r.game.grounds[g.0].u.kongo();
-    v.xE4 = -1;
-    v.xE6 = -1;
-    v.xC4 = 0.0;
-    v.xC8 = 0.0;
-    v.xCC = joints[0];
-    v.xD0 = joints[1];
-    v.xD4 = 0.0;
-    v.xD8 = 0.0;
-    v.xDC = joints[2];
-    v.xE0 = joints[3];
+    v.event_wait = -1;
+    v.last_event = -1;
+    v.left_angle = 0.0;
+    v.left_speed = 0.0;
+    v.left_post = joints[0];
+    v.left_post2 = joints[1];
+    v.right_angle = 0.0;
+    v.right_speed = 0.0;
+    v.right_post = joints[2];
+    v.right_post2 = joints[3];
     init_bridge(r, gobj);
     setup::add_start_hook(r.game, gobj, CodeRef(START_HOOK));
     update_map_coll(r.game, r.data, gobj);
@@ -309,7 +309,7 @@ fn event_wait(r: &mut Running, g: GroundId) {
     let p = param(r.game);
     let min = reg(p.f(r.data, EVENT_WAIT_A));
     let range = fp::fsubs(reg(p.f(r.data, EVENT_WAIT_B)), min);
-    r.game.grounds[g.0].u.kongo().xE4 = fp::fctiwz(fp::fmadds(range, f, min)) as i16;
+    r.game.grounds[g.0].u.kongo().event_wait = fp::fctiwz(fp::fmadds(range, f, min)) as i16;
 }
 
 /// The stage's process (map 10), `grKongo_801D557C`: the bridge, the posts' sway, the events,
@@ -480,9 +480,9 @@ pub fn bridge(r: &mut Running, gobj: GObjId, _first: bool) {
         if ad > jolt {
             let v = r.game.grounds[g.0].u.kongo();
             if post == 0 {
-                v.xC8 = mem(fp::fneg(d));
+                v.left_speed = mem(fp::fneg(d));
             } else {
-                v.xD8 = mem(fp::fneg(d));
+                v.right_speed = mem(fp::fneg(d));
             }
         }
     }
@@ -572,12 +572,15 @@ pub fn sway(r: &mut Running, gobj: GObjId, first: bool) {
     );
     let v = r.game.grounds[g.0].u.kongo();
     if first {
-        v.xC4 = 0.0;
-        v.xC8 = 0.0;
-        v.xD4 = 0.0;
-        v.xD8 = 0.0;
+        v.left_angle = 0.0;
+        v.left_speed = 0.0;
+        v.right_angle = 0.0;
+        v.right_speed = 0.0;
     } else {
-        for (angle, speed) in [(&mut v.xC4, &mut v.xC8), (&mut v.xD4, &mut v.xD8)] {
+        for (angle, speed) in [
+            (&mut v.left_angle, &mut v.left_speed),
+            (&mut v.right_angle, &mut v.right_speed),
+        ] {
             let a = reg(*angle);
             if a > 0.0 {
                 let step = if reg(*speed) > 0.0 {
@@ -610,8 +613,8 @@ pub fn sway(r: &mut Running, gobj: GObjId, first: bool) {
         }
     }
     let v = r.game.grounds[g.0].u.kongo();
-    let (a, b) = (v.xC4, v.xD4);
-    let (j0, j1, j2, j3) = (v.xCC, v.xD0, v.xDC, v.xE0);
+    let (a, b) = (v.left_angle, v.right_angle);
+    let (j0, j1, j2, j3) = (v.left_post, v.left_post2, v.right_post, v.right_post2);
     set_rotation_z(r.game, j0, a);
     set_rotation_z(r.game, j1, a);
     set_rotation_z(r.game, j2, b);
@@ -628,10 +631,10 @@ pub fn sway(r: &mut Running, gobj: GObjId, first: bool) {
 pub fn events(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.kongo();
-    if v.xE4 > 0 {
-        v.xE4 -= 1;
+    if v.event_wait > 0 {
+        v.event_wait -= 1;
     }
-    if v.xE4 == -1 || v.xE4 != 0 {
+    if v.event_wait == -1 || v.event_wait != 0 {
         return;
     }
     let p = param(r.game);
@@ -684,13 +687,13 @@ pub fn events(r: &mut Running, gobj: GObjId) {
             }
         }
     };
-    if i32::from(r.game.grounds[g.0].u.kongo().xE6) == event {
+    if i32::from(r.game.grounds[g.0].u.kongo().last_event) == event {
         let f = reg(r.game.objs.rng.draw_f32());
         if f > reg(p.f(r.data, REPEAT)) {
             return;
         }
     }
-    r.game.grounds[g.0].u.kongo().xE6 = event as i16;
+    r.game.grounds[g.0].u.kongo().last_event = event as i16;
     match event {
         1 => {
             if let Some(path) = create(r, 11, EVENT_FRAME)
@@ -781,19 +784,19 @@ impl Barrel {
 fn barrel_vars(game: &mut Game, g: GroundId) -> BarrelView<'_> {
     let v = game.grounds[g.0].u.kongo_barrel();
     BarrelView {
-        turn: &mut v.xC4,
-        hold: &mut v.xC6,
-        swing: &mut v.xC8,
-        held_for: &mut v.xCA,
-        turn_timer: &mut v.xCC,
-        swing_timer: &mut v.xCE,
+        turn: &mut v.turn,
+        hold: &mut v.hold,
+        swing: &mut v.swing_cycle,
+        held_for: &mut v.hold_timer,
+        turn_timer: &mut v.turn_timer,
+        swing_timer: &mut v.swing_timer,
         keep: &mut v.keep,
-        heading: &mut v.xD4,
-        angle: &mut v.xD8,
-        step: &mut v.xDC,
-        speed: &mut v.xE0,
-        one: &mut v.xE4,
-        rate: &mut v.xE8,
+        heading: &mut v.heading,
+        angle: &mut v.angle,
+        step: &mut v.turn_accel,
+        speed: &mut v.turn_speed,
+        one: &mut v.unread,
+        rate: &mut v.swing_speed,
     }
 }
 
@@ -1159,7 +1162,7 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
     let at = turn_and_swing(r, gobj, &BARREL);
     let g = ground_of(r.game, gobj);
     let p = param(r.game);
-    let mut state = r.game.grounds[g.0].u.kongo_barrel().xC6;
+    let mut state = r.game.grounds[g.0].u.kongo_barrel().hold;
     match state {
         0 => {
             if let Some(klap) = klap_near(r) {
@@ -1168,9 +1171,9 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
                 let (a, b) = (reg(p.f(r.data, HOLD_A)), reg(p.f(r.data, HOLD_B)));
                 let hold = fp::fctiwz(fp::fmadds(fp::fsubs(b, a), f, a));
                 let v = r.game.grounds[g.0].u.kongo_barrel();
-                v.xCA = hold as i16;
+                v.hold_timer = hold as i16;
                 v.keep = Some(klap);
-                v.xC6 = 1;
+                v.hold = 1;
                 r.object_sound(Some(g), 0, 0x129);
                 let script = r.data.ptr(p.0.at(COLOR_SCRIPT));
                 material::start_script(r.game, r.data, gobj, script, 0);
@@ -1182,14 +1185,14 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
             // `break`); nothing leaves a held state without what it holds.
             let v = r.game.grounds[g.0].u.kongo_barrel();
             if v.keep.is_none() {
-                v.xC6 = 0;
+                v.hold = 0;
             } else {
-                let left = v.xCA;
-                v.xCA = left.wrapping_sub(1);
+                let left = v.hold_timer;
+                v.hold_timer = left.wrapping_sub(1);
                 if left >= 0 {
                     return;
                 }
-                v.xC6 = 2;
+                v.hold = 2;
             }
             state = 2;
         }
@@ -1201,7 +1204,7 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
                 std::array::from_fn(|i| r.data.u32(p.0.at(SHOT_HIT + 4 * i as u32)));
             let mut a = fp::frsp(fp::fadd(
                 std::f64::consts::FRAC_PI_2,
-                reg(r.game.grounds[g.0].u.kongo_barrel().xD8),
+                reg(r.game.grounds[g.0].u.kongo_barrel().angle),
             ));
             if a < 0.0 {
                 a = fp::frsp(fp::fadd(a, std::f64::consts::TAU));
@@ -1216,12 +1219,12 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
                 9 => super::super::it::kinds::klap::shot(r, keep, at, shot_hit(words), a),
                 _ => {}
             }
-            r.game.grounds[g.0].u.kongo_barrel().xC6 = 3;
+            r.game.grounds[g.0].u.kongo_barrel().hold = 3;
             r.object_sound(Some(g), 0, 0x12A);
             material::reset_overlay(r.game, gobj);
         }
         3 if klap_near(r).is_none() => {
-            r.game.grounds[g.0].u.kongo_barrel().xC6 = 0;
+            r.game.grounds[g.0].u.kongo_barrel().hold = 0;
         }
         _ => {}
     }
@@ -1278,19 +1281,19 @@ pub fn init_platform(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let v = r.game.grounds[g.0].u.kongo_platform();
-    v.xC4 = 0;
-    v.xC6 = 0;
-    v.xC8 = 0;
-    v.xCA = 0;
-    v.xD0 = -99999.0;
-    v.xD4 = f32::MAX;
+    v.state = 0;
+    v.landings = 0;
+    v.landings_last = 0;
+    v.ticks_afloat = 0;
+    v.unread_min = -99999.0;
+    v.unread_max = f32::MAX;
     let f = reg(r.game.objs.rng.draw_f32());
     let x = if m == 1 {
         fp::frsp(fp::fmadd(45.0, f, -15.0))
     } else {
         fp::frsp(fp::fmul(9.0, f))
     };
-    r.game.grounds[g.0].u.kongo_platform().xCC = mem(x);
+    r.game.grounds[g.0].u.kongo_platform().across = mem(x);
     let j = j.expect("jobj.h: jobj");
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.x = mem(x));
 }
@@ -1305,7 +1308,7 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     let joint = if m == 1 { 0 } else { 1 };
-    let state = r.game.grounds[g.0].u.kongo_platform().xC4;
+    let state = r.game.grounds[g.0].u.kongo_platform().state;
     match state {
         0 => {
             if anime::finished(r.game, gobj, 0, 1) {
@@ -1319,19 +1322,19 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
                     Some(super::CollUser::Ground(g)),
                     Some(CodeRef(PLATFORM_LANDED)),
                 );
-                r.game.grounds[g.0].u.kongo_platform().xC4 = 1;
+                r.game.grounds[g.0].u.kongo_platform().state = 1;
             }
         }
         1 => {
             let v = r.game.grounds[g.0].u.kongo_platform();
-            v.xCA = v.xCA.wrapping_add(1);
-            if v.xC8 == v.xC6 {
-                v.xC6 = 0;
-                v.xC8 = 0;
+            v.ticks_afloat = v.ticks_afloat.wrapping_add(1);
+            if v.landings_last == v.landings {
+                v.landings = 0;
+                v.landings_last = 0;
             } else {
-                v.xC8 = v.xC6;
+                v.landings_last = v.landings;
             }
-            let (landings, ticks) = (v.xC6, v.xCA);
+            let (landings, ticks) = (v.landings, v.ticks_afloat);
             let p = param(r.game);
             let over = |n: i16, off: u32| fp::frsp(f64::from(n)) > reg(p.f(r.data, off));
             if over(landings, PLATFORM_LANDINGS)
@@ -1342,7 +1345,7 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
                 let geo = r.game.geometry_mut();
                 geo.disable_joint(joint);
                 geo.clear_ledge_callback(joint);
-                r.game.grounds[g.0].u.kongo_platform().xC4 = 2;
+                r.game.grounds[g.0].u.kongo_platform().state = 2;
             }
         }
         2 if anime::finished(r.game, gobj, 0, 1) => {
@@ -1358,7 +1361,7 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
 pub fn platform_landed(gp: &mut super::super::structs::Ground, ground_kind: i32) {
     if ground_kind == 2 {
         let v = gp.u.kongo_platform();
-        v.xC6 = v.xC8.wrapping_add(1);
+        v.landings = v.landings_last.wrapping_add(1);
     }
 }
 
@@ -1424,7 +1427,7 @@ pub fn init_log(r: &mut Running, gobj: GObjId) {
         8 => fp::frsp(fp::fmadd(20.0, f, -10.0)),
         _ => fp::frsp(fp::fmul(9.0, f)),
     };
-    r.game.grounds[g.0].u.kongo_log().xCC = mem(x);
+    r.game.grounds[g.0].u.kongo_log().across = mem(x);
     let j = j.expect("jobj.h: jobj");
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.x = mem(x));
 }
@@ -1448,12 +1451,12 @@ pub fn init_path(r: &mut Running, gobj: GObjId) {
     let (file, i) = SPLINES[r.game.objs.rng.below(3) as usize];
     let spline = super::ground::spline(r.game, r.data, file, i);
     let v = r.game.grounds[g.0].u.kongo_path();
-    v.xC4 = spline;
-    v.xC8 = 0.0;
-    v.xD0 = 0.0;
-    v.xCC = 0.0;
-    v.xD8 = -99999.0;
-    v.xDC = f32::MAX;
+    v.spline = spline;
+    v.unread = 0.0;
+    v.unread2 = 0.0;
+    v.along = 0.0;
+    v.highest = -99999.0;
+    v.deepest = f32::MAX;
     let spline = spline.expect("grkongo.c: the river's spline");
     let at = crate::hsd::spline::arc_length_point(r.data, spline, 0.0)
         .expect("splArcLengthPoint: the start of a spline");
@@ -1469,9 +1472,9 @@ pub fn init_path(r: &mut Running, gobj: GObjId) {
 pub fn proc_path(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj).expect("jobj.h: jobj");
-    let spline = r.game.grounds[g.0].u.kongo_path().xC4;
+    let spline = r.game.grounds[g.0].u.kongo_path().spline;
     let spline = spline.expect("grkongo.c: the river's spline");
-    let s = r.game.grounds[g.0].u.kongo_path().xCC;
+    let s = r.game.grounds[g.0].u.kongo_path().along;
     let step = reg(0.001f32);
     if fp::fadds(reg(s), step) <= 1.0 {
         let a = crate::hsd::spline::arc_length_point(r.data, spline, s);
@@ -1494,13 +1497,13 @@ pub fn proc_path(r: &mut Running, gobj: GObjId) {
             let speed = reg(param(r.game).f(r.data, PATH_SPEED));
             let scaled = fp::fmuls(step, fp::fdivs(speed, dist));
             let v = r.game.grounds[g.0].u.kongo_path();
-            v.xCC = mem(fp::fadds(reg(v.xCC), scaled));
-            if reg(v.xCC) > 1.0 {
-                v.xCC = 1.0;
+            v.along = mem(fp::fadds(reg(v.along), scaled));
+            if reg(v.along) > 1.0 {
+                v.along = 1.0;
             }
         }
     }
-    let s = r.game.grounds[g.0].u.kongo_path().xCC;
+    let s = r.game.grounds[g.0].u.kongo_path().along;
     let (at, rot) = super::ground::spline_pose(r.data, spline, s);
     let at = at.expect("splGetSplinePoint: a point on the spline");
     let before = r.game.objs.jobjs[j].translate;
@@ -1516,14 +1519,14 @@ pub fn proc_path(r: &mut Running, gobj: GObjId) {
         },
     );
     let v = r.game.grounds[g.0].u.kongo_path();
-    if reg(v.xD8) < reg(at.y) {
-        v.xD8 = at.y;
+    if reg(v.highest) < reg(at.y) {
+        v.highest = at.y;
     }
-    if reg(v.xDC) > reg(at.z) {
-        v.xDC = at.z;
+    if reg(v.deepest) > reg(at.z) {
+        v.deepest = at.z;
     }
-    let top = reg(v.xD8);
-    let deepest = reg(v.xDC);
+    let top = reg(v.highest);
+    let deepest = reg(v.deepest);
     if fp::fsubs(top, reg(before.y)) < 5.0 && fp::fsubs(top, reg(at.y)) > 5.0 {
         r.object_sound(Some(g), 0, 0x5_A550);
         let vol = mem(fp::fsubs(1.0, fp::fdivs(reg(at.z), deepest)));

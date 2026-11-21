@@ -378,7 +378,7 @@ pub fn proc_maze(r: &mut Running, gobj: GObjId) {
                     if mid == 3 {
                         let v = r.game.grounds[g.0].u.shrineroute();
                         v.state = 6;
-                        v.xd0 = Some(0x3C);
+                        v.way_out = Some(0x3C);
                     } else {
                         enter_arena(r, gobj, result);
                     }

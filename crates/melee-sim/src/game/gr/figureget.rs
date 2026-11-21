@@ -151,10 +151,10 @@ pub fn init_stand(r: &mut Running, gobj: GObjId) {
     r.stage_trophies();
     let i0 = r.game.objs.rng.below(3) as usize;
     let t = r.toy_draw(0, 0x63, 0, 65.0);
-    r.game.grounds[g.0].u.figureget().x10[i0] = t;
+    r.game.grounds[g.0].u.figureget().coin_trophies[i0] = t;
     let i1 = if i0 + 1 >= 3 { 0 } else { i0 + 1 };
     let shown = super::ground::x6e4_drawn(r.game);
-    r.game.grounds[g.0].u.figureget().x10[i1] = shown;
+    r.game.grounds[g.0].u.figureget().coin_trophies[i1] = shown;
     let mut kin = [0; 1];
     let third = if r.display_kin(shown, &mut kin, 1, 2) == 0 {
         loop {
@@ -167,20 +167,20 @@ pub fn init_stand(r: &mut Running, gobj: GObjId) {
         kin[0]
     };
     let i2 = if i1 + 1 >= 3 { 0 } else { i1 + 1 };
-    r.game.grounds[g.0].u.figureget().x10[i2] = third;
+    r.game.grounds[g.0].u.figureget().coin_trophies[i2] = third;
     for i in 0..3 {
-        let id = r.game.grounds[g.0].u.figureget().x10[i];
+        let id = r.game.grounds[g.0].u.figureget().coin_trophies[i];
         r.stage_trophy_load(id);
     }
     let wait = next_wait(r);
     let v = r.game.grounds[g.0].u.figureget();
-    v.x0 = wait;
-    v.x4 = 0;
-    v.x8 = 0;
-    v.xC = 0;
-    v.x1C = [0; 3];
-    v.x28 = [None; 3];
-    v.x34 = [None; 3];
+    v.coin_wait = wait;
+    v.coins_out = 0;
+    v.coins_landed = 0;
+    v.coins_gone = 0;
+    v.landed_trophies = [0; 3];
+    v.landed_coins = [None; 3];
+    v.coins = [None; 3];
     r.game.geometry_mut().set_ledge_callback(
         0,
         Some(CollUser::Ground(g)),
@@ -208,10 +208,10 @@ pub fn proc_stand(r: &mut Running, gobj: GObjId) {
     let p = param(r.game);
     let total = r.data.u32(p.at(8)) as i32;
     let v = r.game.grounds[g.0].u.figureget();
-    if v.x4 < total {
-        if v.x0 == 0 {
-            v.x4 += 1;
-            let x4 = v.x4;
+    if v.coins_out < total {
+        if v.coin_wait == 0 {
+            v.coins_out += 1;
+            let x4 = v.coins_out;
             let (xc, x10, x14) = (
                 r.data.f32(p.at(0xC)),
                 r.data.f32(p.at(0x10)),
@@ -229,7 +229,7 @@ pub fn proc_stand(r: &mut Running, gobj: GObjId) {
                 x = mem(fp::fmuls(reg(x), fp::fneg(1.0)));
             }
             let y = mem(fp::fadds(reg(x14), reg(stage::cam_top(r.game))));
-            let trophy = r.game.grounds[g.0].u.figureget().x10[(x4 - 1) as usize];
+            let trophy = r.game.grounds[g.0].u.figureget().coin_trophies[(x4 - 1) as usize];
             let coin = super::super::it::kinds::trophycoin::spawn(
                 r,
                 Some(gobj),
@@ -237,7 +237,7 @@ pub fn proc_stand(r: &mut Running, gobj: GObjId) {
                 trophy,
                 x4,
             );
-            r.game.grounds[g.0].u.figureget().x34[(x4 - 1) as usize] = coin;
+            r.game.grounds[g.0].u.figureget().coins[(x4 - 1) as usize] = coin;
             if let Some(c) = coin {
                 super::super::it::kinds::trophycoin::set_joint_only(r, c, 0);
             } else {
@@ -246,13 +246,13 @@ pub fn proc_stand(r: &mut Running, gobj: GObjId) {
                 );
             }
             let wait = next_wait(r);
-            r.game.grounds[g.0].u.figureget().x0 = wait;
+            r.game.grounds[g.0].u.figureget().coin_wait = wait;
         } else {
-            v.x0 -= 1;
+            v.coin_wait -= 1;
         }
     } else if done(r.game, Some(gobj)) {
         let v = r.game.grounds[g.0].u.figureget();
-        let (n, kept) = (v.x8, v.x1C);
+        let (n, kept) = (v.coins_landed, v.landed_trophies);
         for &t in kept.iter().take(n.clamp(0, 3) as usize) {
             r.count_match_trophy(t as u16, 1);
         }
@@ -273,7 +273,7 @@ pub fn proc_stand(r: &mut Running, gobj: GObjId) {
 pub fn coin_gone(game: &mut Game, stand: Option<GObjId>) {
     let Some(gobj) = stand else { return };
     let g = ground_of(game, gobj);
-    game.grounds[g.0].u.figureget().xC += 1;
+    game.grounds[g.0].u.figureget().coins_gone += 1;
 }
 
 /// Whether every coin is snagged or gone, `grFigureGet_80219C50`: their counts' sum at least
@@ -283,7 +283,7 @@ pub fn done(game: &mut Game, stand: Option<GObjId>) -> bool {
     let Some(gobj) = stand else { return false };
     let g = ground_of(game, gobj);
     let v = game.grounds[g.0].u.figureget();
-    v.x8.wrapping_add(v.xC) >= 3
+    v.coins_landed.wrapping_add(v.coins_gone) >= 3
 }
 
 /// The coins' touches of the stand's collision joint in a collision pass, applied after it in
@@ -314,22 +314,22 @@ impl CoinTouch {
         use super::super::it::kinds::trophycoin;
         for (g, coin, x) in self.0 {
             if super::super::it::item(r.game, coin).kind != ItKind::Trophy
-                || r.game.grounds[g.0].u.figureget().x8 >= 3
+                || r.game.grounds[g.0].u.figureget().coins_landed >= 3
             {
                 continue;
             }
             let value = trophycoin::trophy(r, coin);
             let v = r.game.grounds[g.0].u.figureget();
-            let n = v.x8.clamp(0, 3) as usize;
-            if v.x28[..n].contains(&Some(coin)) {
+            let n = v.coins_landed.clamp(0, 3) as usize;
+            if v.landed_coins[..n].contains(&Some(coin)) {
                 continue;
             }
             if reg(x) <= 4.5 && reg(x) >= fp::fneg(4.5) {
                 trophycoin::knocked_off(r, coin);
                 let v = r.game.grounds[g.0].u.figureget();
-                v.x28[n] = Some(coin);
-                v.x1C[n] = value;
-                v.x8 += 1;
+                v.landed_coins[n] = Some(coin);
+                v.landed_trophies[n] = value;
+                v.coins_landed += 1;
             }
         }
     }

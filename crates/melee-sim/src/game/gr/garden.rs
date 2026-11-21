@@ -215,10 +215,10 @@ pub fn init_water(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "grGarden_80203004")]
 pub fn init_cranky(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    r.game.grounds[g.0].u.garden().xc4 = 0;
+    r.game.grounds[g.0].u.garden().anim = 0;
     let n = param(r.game).i(r.data, 8);
     let wait = randi_or_zero(r, n) + 1;
-    r.game.grounds[g.0].u.garden().xc8 = wait;
+    r.game.grounds[g.0].u.garden().runs_left = wait;
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let gp = &mut r.game.grounds[g.0];
@@ -237,24 +237,24 @@ pub fn proc_cranky(r: &mut Running, gobj: GObjId) {
         return;
     }
     let v = r.game.grounds[g.0].u.garden();
-    if v.xc8 != 0 {
-        v.xc8 -= 1;
+    if v.runs_left != 0 {
+        v.runs_left -= 1;
         return;
     }
-    v.xc4 += 1;
-    if 3 < v.xc4 {
-        v.xc4 = 0;
+    v.anim += 1;
+    if 3 < v.anim {
+        v.anim = 0;
     }
-    let anim = v.xc4;
+    let anim = v.anim;
     let p = param(r.game);
     if anim == 0 {
         let n = p.i(r.data, 8);
         let w = randi_or_zero(r, n) + 1;
-        r.game.grounds[g.0].u.garden().xc8 = w;
+        r.game.grounds[g.0].u.garden().runs_left = w;
     } else if anim == 2 {
         let n = p.i(r.data, 0xC);
         let w = randi_or_zero(r, n) + 1;
-        r.game.grounds[g.0].u.garden().xc8 = w;
+        r.game.grounds[g.0].u.garden().runs_left = w;
     }
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, anim);
@@ -268,13 +268,13 @@ pub fn init_klaptrap(r: &mut Running, gobj: GObjId) {
     let part = nth_joint(r.game, gobj, 8);
     let item =
         super::material::stage_item(r, 0, 0, g, part, Some(CodeRef(KLAPTRAP_BIT)), None, None);
-    r.game.grounds[g.0].u.garden2().xc4 = item;
+    r.game.grounds[g.0].u.garden2().item = item;
     let p = param(r.game);
     let n = p.i(r.data, 0x14);
     let wait = p.i(r.data, 0x10).wrapping_add(randi_or_zero(r, n));
     let v = r.game.grounds[g.0].u.garden2();
-    v.xcc = wait;
-    v.xc8 = 0;
+    v.count = wait;
+    v.state = 0;
     let gp = &mut r.game.grounds[g.0];
     gp.x8_callback = None;
     gp.xC_callback = None;
@@ -292,13 +292,13 @@ pub fn proc_klaptrap(r: &mut Running, gobj: GObjId) {
     let j = nth_joint(r.game, gobj, 0);
     let p = param(r.game);
     let v = r.game.grounds[g.0].u.garden2();
-    match v.xc8 {
+    match v.state {
         0 => {
-            if v.xcc != 0 {
-                v.xcc -= 1;
+            if v.count != 0 {
+                v.count -= 1;
                 return;
             }
-            let item = v.xc4.expect("grgarden.c: the Klaptrap's item");
+            let item = v.item.expect("grgarden.c: the Klaptrap's item");
             super::super::it::item::change_state(r, item, 2, 2);
             let m = map_id(r.game, gobj);
             anime::start_map(r.game, r.data, gobj, m, 0);
@@ -310,29 +310,29 @@ pub fn proc_klaptrap(r: &mut Running, gobj: GObjId) {
             let j = j.expect("grgarden.c: the Klaptrap's part");
             jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.x = x);
             let v = r.game.grounds[g.0].u.garden2();
-            v.xcc = 0;
-            v.xc8 = 1;
+            v.count = 0;
+            v.state = 1;
         }
         1 => {
-            let t = v.xcc;
+            let t = v.count;
             if t == 38 || t == 148 {
                 r.stage_sound(410_001);
             } else if t == 110 || t == 210 {
                 r.stage_sound(410_002);
             }
             if anime::finished(r.game, gobj, 0, 7) {
-                let item = r.game.grounds[g.0].u.garden2().xc4;
+                let item = r.game.grounds[g.0].u.garden2().item;
                 let item = item.expect("grgarden.c: the Klaptrap's item");
                 super::super::it::item::change_state(r, item, 0, 2);
                 jobj::remove_anim_all(&mut r.game.objs, j);
                 let n = p.i(r.data, 0x14);
                 let wait = p.i(r.data, 0x10).wrapping_add(randi_or_zero(r, n));
                 let v = r.game.grounds[g.0].u.garden2();
-                v.xcc = wait;
-                v.xc8 = 0;
+                v.count = wait;
+                v.state = 0;
             }
             let v = r.game.grounds[g.0].u.garden2();
-            v.xcc = v.xcc.wrapping_add(1);
+            v.count = v.count.wrapping_add(1);
         }
         _ => {}
     }

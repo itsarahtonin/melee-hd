@@ -262,8 +262,8 @@ fn next_color(r: &mut Running, g: super::super::handles::GroundId) {
     loop {
         let c = r.game.objs.rng.below(4);
         let v = r.game.grounds[g.0].u.pura();
-        v.xC6 = c as i16;
-        if v.xC4 != v.xC6 {
+        v.color_to = c as i16;
+        if v.color_from != v.color_to {
             break;
         }
     }
@@ -278,11 +278,11 @@ pub fn init_sky(r: &mut Running, gobj: GObjId) {
     anime::start_map(r.game, r.data, gobj, m, 0);
     r.game.grounds[g.0].x11_flags.b012 = 2;
     let c = r.game.objs.rng.below(4);
-    r.game.grounds[g.0].u.pura().xC4 = c as i16;
+    r.game.grounds[g.0].u.pura().color_from = c as i16;
     next_color(r, g);
-    let from = r.game.grounds[g.0].u.pura().xC4;
+    let from = r.game.grounds[g.0].u.pura().color_from;
     set_sky(r.game, SKY[from as usize]);
-    r.game.grounds[g.0].u.pura().xC8 = 0;
+    r.game.grounds[g.0].u.pura().fade_tick = 0;
 }
 
 /// The sky's process, `stageGObj1_GObjProc`: over 3,600 ticks the fog and background fade
@@ -291,11 +291,11 @@ pub fn init_sky(r: &mut Running, gobj: GObjId) {
 pub fn proc_sky(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.pura();
-    if v.xC8 < SKY_FADE {
-        let (to, mut c) = (SKY[v.xC6 as usize], SKY[v.xC4 as usize]);
-        let cur = v.xC8;
+    if v.fade_tick < SKY_FADE {
+        let (to, mut c) = (SKY[v.color_to as usize], SKY[v.color_from as usize]);
+        let cur = v.fade_tick;
         let t = fp::fdivs(fp::frsp(f64::from(cur)), 3600.0f32 as f64);
-        v.xC8 = cur.wrapping_add(1);
+        v.fade_tick = cur.wrapping_add(1);
         let lerp = |to: u8, from: u8| {
             let d = fp::frsp(f64::from(i32::from(to) - i32::from(from)));
             fp::fctiwz(fp::fmadds(t, d, fp::frsp(f64::from(from)))) as u8
@@ -306,9 +306,9 @@ pub fn proc_sky(r: &mut Running, gobj: GObjId) {
         set_sky(r.game, c);
         return;
     }
-    v.xC4 = v.xC6;
+    v.color_from = v.color_to;
     next_color(r, g);
-    r.game.grounds[g.0].u.pura().xC8 = 0;
+    r.game.grounds[g.0].u.pura().fade_tick = 0;
 }
 
 /// A float's setup (maps 2, 3 and 5 to 26), `stageGObj2_OnInit`: drawn by
@@ -334,7 +334,7 @@ pub fn proc_float(r: &mut Running, gobj: GObjId) {
     let src = r.game.grounds[g.0]
         .u
         .pura_float()
-        .xC8
+        .stage_jobj
         .expect("a float's stage joint");
     let j = jobj_of(r.game, gobj).expect("a float's joint");
     let jobjs = &mut r.game.objs.jobjs;
@@ -367,10 +367,10 @@ pub fn make_floats(r: &mut Running, stage: GObjId) {
         }
         let gobj = create(r, map, FLOAT_FRAME).expect("grpura.c: gobj");
         let g = ground_of(r.game, gobj);
-        r.game.grounds[g.0].u.pura_float().xC4 = part as i16;
+        r.game.grounds[g.0].u.pura_float().part = part as i16;
         let joint = setup::coll_joint_part(r.game, r.data, 4, part);
         let src = nth_joint(r.game, stage, joint);
-        r.game.grounds[g.0].u.pura_float().xC8 = src;
+        r.game.grounds[g.0].u.pura_float().stage_jobj = src;
         let src = src.expect("a float's stage joint");
         let j = jobj_of(r.game, gobj).expect("a float's joint");
         let jobjs = &mut r.game.objs.jobjs;
@@ -414,8 +414,8 @@ pub fn init_subjects(r: &mut Running, gobj: GObjId) {
     {
         let b = r.game.camera.alloc_box(camera::ACTIVE);
         let v = r.game.grounds[g.0].u.pura_stage();
-        v.x128[i] = Some(b);
-        v.xC4[i] = Some(n);
+        v.subjects[i] = Some(b);
+        v.jobjs[i] = Some(n);
         let pos = world_position(&mut r.game.objs, r.data, Some(n), None);
         let hidden = jobj::get_flags(&r.game.objs.jobjs, Some(n)) & jobj::HIDDEN != 0;
         let s = r.game.camera.subject_mut(b);
@@ -442,7 +442,7 @@ pub fn update_subjects(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     for i in 0..SUBJECTS {
         let v = r.game.grounds[g.0].u.pura_stage();
-        let (Some(j), Some(b)) = (v.xC4[i], v.x128[i]) else {
+        let (Some(j), Some(b)) = (v.jobjs[i], v.subjects[i]) else {
             continue;
         };
         let pos = world_position(&mut r.game.objs, r.data, Some(j), None);

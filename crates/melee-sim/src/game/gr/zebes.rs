@@ -136,26 +136,37 @@ fn param(game: &Game) -> Param {
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 #[allow(non_snake_case)]
 pub struct Bubble {
-    pub x00: u8,
-    pub x02: i16,
-    pub x04: Option<JObjId>,
-    pub x08: f32,
-    pub x0C: f32,
-    pub x10: f32,
-    pub x14: f32,
-    pub x18: f32,
-    pub x1C: f32,
-    pub x20: Option<GObjId>,
-    pub x04_left: bool,
+    #[doc(alias("x00"))]
+    pub state: u8,
+    #[doc(alias("x02"))]
+    pub timer: i16,
+    #[doc(alias("x04"))]
+    pub pop: Option<JObjId>,
+    #[doc(alias("x08"))]
+    pub x: f32,
+    #[doc(alias("x0C"))]
+    pub y: f32,
+    #[doc(alias("x10"))]
+    pub vel_x: f32,
+    #[doc(alias("x14"))]
+    pub vel_y: f32,
+    #[doc(alias("x18"))]
+    pub size: f32,
+    #[doc(alias("x1C"))]
+    pub target_size: f32,
+    #[doc(alias("x20"))]
+    pub gobj: Option<GObjId>,
+    #[doc(alias("x04_left"))]
+    pub pop_left: bool,
 }
 
 impl Bubble {
     /// The pop's model (`x04`), a stale read if a bubble that moved up left it.
     fn pop(&self, stale_reads: &mut u32) -> Option<JObjId> {
-        if self.x04_left {
+        if self.pop_left {
             *stale_reads += 1;
         }
-        self.x04
+        self.pop
     }
 }
 
@@ -191,8 +202,8 @@ impl Globals {
             _ => {
                 let b = &self.bubbles[(off as usize - 0x30) / 0x24];
                 match (off - 0x30) % 0x24 {
-                    0x08 => b.x08,
-                    0x0C => b.x0C,
+                    0x08 => b.x,
+                    0x0C => b.y,
                     other => panic!("grzebes.c: a bubble's word at {other:#x} read as a place"),
                 }
             }
@@ -362,7 +373,7 @@ fn translate_x(game: &Game, j: Option<JObjId>) -> f32 {
 pub fn init_stage(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let island = create(r, MAP_ISLAND, ISLAND_FRAME);
-    r.game.grounds[g.0].u.zebes_stage().xF0 = island;
+    r.game.grounds[g.0].u.zebes_stage().island = island;
     let j = jobj_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
@@ -376,22 +387,22 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     let base_x = translate_x(r.game, child);
     let jobj2 = nth_joint(r.game, gobj, 0x20);
     let v = r.game.grounds[g.0].u.zebes_stage();
-    v.xC4 = 0;
+    v.platform_state = 0;
     v.acid = AcidState {
-        x00: 0xFF,
-        x01: 0,
-        x02: 0,
-        x04: base_x,
-        x08: 0.0,
-        x0C: 0.0,
-        x10: 0.0,
-        x14: child,
-        x18: jobj2,
-        x1C: Some(item),
-        x20: 0x1C,
+        state: 0xFF,
+        next_state: 0,
+        timer: 0,
+        rest_x: base_x,
+        swing: 0.0,
+        swing_speed: 0.0,
+        damage: 0.0,
+        jobj: child,
+        jobj2: jobj2,
+        item: Some(item),
+        anim_part: 0x1C,
     };
-    v.xEC = 0;
-    v.xF4 = 0;
+    v.last_state = 0;
+    v.bubble_wait = 0;
     let bubbles = material::stage_item_at(
         r,
         0,
@@ -405,10 +416,10 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     )
     .expect("grzebes.c: the bubbles' item");
     material::item_hurtbox_on(r.game, bubbles);
-    r.game.grounds[g.0].u.zebes_stage().x100 = Some(bubbles);
+    r.game.grounds[g.0].u.zebes_stage().platform_item = Some(bubbles);
     reset_bubbles(r, gobj);
     let config = zako::new_config(r.game, r.data, STAGE_LINES, 10, CodeRef(STAGE_BUBBLES), 1.0);
-    r.game.grounds[g.0].u.zebes_stage().xFC = config;
+    r.game.grounds[g.0].u.zebes_stage().spawn_config = config;
     r.game.geometry_mut().set_always_near(0);
     super::ground::update_map_coll(r.game, r.data, gobj);
 }
@@ -429,10 +440,10 @@ fn world(r: &mut Running, j: Option<JObjId>, local: Vec3) -> Vec3 {
 #[doc(alias = "grZebes_801D881C")]
 pub fn proc_stage(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    let island = r.game.grounds[g.0].u.zebes_stage().xF0;
+    let island = r.game.grounds[g.0].u.zebes_stage().island;
     let result = shake(r, gobj, g, Acid::Stage, 1, 2);
-    if r.game.grounds[g.0].u.zebes_stage().xEC as i32 != result {
-        r.game.grounds[g.0].u.zebes_stage().xEC = result as u32;
+    if r.game.grounds[g.0].u.zebes_stage().last_state as i32 != result {
+        r.game.grounds[g.0].u.zebes_stage().last_state = result as u32;
         if result == 1 {
             anime::start(r.game, r.data, gobj, 0x15, 1, 1, 30.0, 1.0, true);
             anime::clear_loop(r.game, gobj, 0x15, 1, true);
@@ -441,8 +452,8 @@ pub fn proc_stage(r: &mut Running, gobj: GObjId) {
             anime::clear_loop(r.game, gobj, 0x15, 1, true);
         }
     }
-    let t = r.game.grounds[g.0].u.zebes_stage().xF8;
-    r.game.grounds[g.0].u.zebes_stage().xF8 = t.wrapping_sub(1);
+    let t = r.game.grounds[g.0].u.zebes_stage().pop_wait;
+    r.game.grounds[g.0].u.zebes_stage().pop_wait = t.wrapping_sub(1);
     if t < 0 {
         show_pop(r);
         let p = param(r.game);
@@ -452,18 +463,18 @@ pub fn proc_stage(r: &mut Running, gobj: GObjId) {
             reg(p.f(r.data, POP_WAIT_MAX)),
         );
         let wait = fp::fctiwz(fp::fmadds(fp::fsubs(hi, lo), rand, lo));
-        r.game.grounds[g.0].u.zebes_stage().xF8 = wait as i16;
+        r.game.grounds[g.0].u.zebes_stage().pop_wait = wait as i16;
     }
     let popped = move_bubbles(r, gobj);
     place_bubbles(r);
-    let item = r.game.grounds[g.0].u.zebes_stage().x100;
+    let item = r.game.grounds[g.0].u.zebes_stage().platform_item;
     span_bubbles(r, item.expect("grzebes.c: 2200: yaku"));
     grow_bubbles(r, gobj);
     let island = island.expect("grzebes.c: the island");
-    match r.game.grounds[g.0].u.zebes_stage().xC4 {
+    match r.game.grounds[g.0].u.zebes_stage().platform_state {
         0 => {
             if popped {
-                r.game.grounds[g.0].u.zebes_stage().xC4 = 1;
+                r.game.grounds[g.0].u.zebes_stage().platform_state = 1;
                 anime::start(r.game, r.data, gobj, 0xE, 1, 3, 0.0, 1.0, false);
                 anime::clear_loop(r.game, gobj, 0xE, 1, false);
                 anime::start(r.game, r.data, island, 1, 1, 3, 0.0, 1.0, false);
@@ -472,7 +483,7 @@ pub fn proc_stage(r: &mut Running, gobj: GObjId) {
         }
         1 => {
             if anime::finished(r.game, gobj, 0xE, 1) {
-                r.game.grounds[g.0].u.zebes_stage().xC4 = 2;
+                r.game.grounds[g.0].u.zebes_stage().platform_state = 2;
                 let p = param(r.game);
                 let rand = reg(r.game.objs.rng.draw_f32());
                 let (lo, hi) = (
@@ -480,26 +491,26 @@ pub fn proc_stage(r: &mut Running, gobj: GObjId) {
                     reg(p.f(r.data, PLATFORM_WAIT_MAX)),
                 );
                 let wait = fp::fctiwz(fp::fmadds(fp::fsubs(hi, lo), rand, lo));
-                r.game.grounds[g.0].u.zebes_stage().xC6 = wait as i16;
+                r.game.grounds[g.0].u.zebes_stage().platform_wait = wait as i16;
             }
         }
         2 => {
             let v = r.game.grounds[g.0].u.zebes_stage();
-            v.xC6 = v.xC6.wrapping_sub(1);
-            if v.xC6 < 0 {
-                v.xC4 = 3;
+            v.platform_wait = v.platform_wait.wrapping_sub(1);
+            if v.platform_wait < 0 {
+                v.platform_state = 3;
                 anime::start(r.game, r.data, gobj, 0xE, 1, 4, 0.0, 1.0, false);
                 anime::clear_loop(r.game, gobj, 0xE, 1, false);
                 anime::start(r.game, r.data, island, 1, 1, 4, 0.0, 1.0, false);
                 anime::clear_loop(r.game, island, 1, 1, false);
-                r.game.grounds[g.0].u.zebes_stage().xF6 = 0;
+                r.game.grounds[g.0].u.zebes_stage().regrowths = 0;
                 r.game.gr.zebes.pop_wait = 0;
             }
         }
         3 => {
             let v = r.game.grounds[g.0].u.zebes_stage();
-            v.xF6 = v.xF6.wrapping_add(1);
-            let n = i32::from(v.xF6);
+            v.regrowths = v.regrowths.wrapping_add(1);
+            let n = i32::from(v.regrowths);
             let every = param(r.game).i(r.data, SPAWN_EVERY);
             if n.wrapping_rem(every) == 0 {
                 let phase = n.wrapping_div(every);
@@ -525,10 +536,10 @@ pub fn proc_stage(r: &mut Running, gobj: GObjId) {
                 }
             }
             if anime::finished(r.game, gobj, 0xE, 1) {
-                r.game.grounds[g.0].u.zebes_stage().xC4 = 0;
+                r.game.grounds[g.0].u.zebes_stage().platform_state = 0;
                 for b in &mut r.game.gr.zebes.bubbles {
-                    if b.x00 == 4 {
-                        b.x00 = 1;
+                    if b.state == 4 {
+                        b.state = 1;
                     }
                 }
             }
@@ -540,13 +551,13 @@ pub fn proc_stage(r: &mut Running, gobj: GObjId) {
         r.game.gr.zebes.anchors[0] = world(r, j, LEFT_ANCHOR);
         r.game.gr.zebes.bounds[0] = world(r, j, LEFT_BOUND);
     }
-    if r.game.grounds[g.0].u.zebes_stage().xC4 == 0 {
+    if r.game.grounds[g.0].u.zebes_stage().platform_state == 0 {
         platform_collision(r, gobj, island);
     } else {
         r.game.geometry_mut().disable_joint(0);
     }
     let (level, _) = x724_and_step(r.game);
-    let config = r.game.grounds[g.0].u.zebes_stage().xFC;
+    let config = r.game.grounds[g.0].u.zebes_stage().spawn_config;
     let j = nth_joint(r.game, gobj, 0xE);
     zako::run_config(r, config, j, level);
     super::ground::update_map_coll(r.game, r.data, gobj);
@@ -569,9 +580,9 @@ fn platform_collision(r: &mut Running, gobj: GObjId, island: GObjId) {
     // plain data can't give: such a place counts as a stale read.
     let mut xs = [0.0f32; 6];
     let mut set = [false; 6];
-    for b in z.bubbles.iter().filter(|b| b.x00 == 1) {
-        let off = fp::fsubs(reg(b.x08), left_x);
-        let top = mem(fp::frsp(fp::fmadd(1.8, reg(b.x18), reg(b.x0C))));
+    for b in z.bubbles.iter().filter(|b| b.state == 1) {
+        let off = fp::fsubs(reg(b.x), left_x);
+        let top = mem(fp::frsp(fp::fmadd(1.8, reg(b.size), reg(b.y))));
         let left = fp::frsp(fp::fsub(off, 0.9));
         let right = fp::frsp(fp::fadd(0.9, off));
         for edge in [left, right] {
@@ -641,89 +652,89 @@ pub fn shake(r: &mut Running, gobj: GObjId, g: GroundId, which: Acid, anim: i32,
     let p = param(r.game);
     let d = r.data;
     let st = acid(r.game, g, which).clone();
-    if st.x00 != st.x01 {
-        acid(r.game, g, which).x00 = st.x01;
-        let part = i32::from(st.x20);
-        match st.x01 {
+    if st.state != st.next_state {
+        acid(r.game, g, which).state = st.next_state;
+        let part = i32::from(st.anim_part);
+        match st.next_state {
             0 => {
                 anime::start(r.game, r.data, gobj, part, 1, anim, 0.0, 1.0, true);
-                material::item_hurtbox_on(r.game, st.x1C.expect("a shaking part's item"));
+                material::item_hurtbox_on(r.game, st.item.expect("a shaking part's item"));
                 let a = acid(r.game, g, which);
-                a.x02 = 0;
-                a.x08 = 0.0;
-                a.x0C = 0.0;
+                a.timer = 0;
+                a.swing = 0.0;
+                a.swing_speed = 0.0;
             }
             1 => {
                 anime::clear_loop(r.game, gobj, part, 1, true);
-                material::item_hurtbox_off(r.game, st.x1C.expect("a shaking part's item"));
+                material::item_hurtbox_off(r.game, st.item.expect("a shaking part's item"));
             }
             2 => {
                 let rand = reg(r.game.objs.rng.draw_f32());
                 let (lo, hi) = (reg(p.f(d, BROKEN_MIN)), reg(p.f(d, BROKEN_MAX)));
                 let t = fp::fctiwz(fp::fmadds(fp::fsubs(hi, lo), rand, lo));
-                acid(r.game, g, which).x02 = t as i16;
+                acid(r.game, g, which).timer = t as i16;
             }
             3 => {
                 anime::start(r.game, r.data, gobj, part, 1, back, 0.0, 1.0, true);
                 anime::clear_loop(r.game, gobj, part, 1, true);
-                acid(r.game, g, which).x10 = 0.0;
+                acid(r.game, g, which).damage = 0.0;
             }
             _ => {}
         }
     }
     let st = acid(r.game, g, which).clone();
-    let part = i32::from(st.x20);
-    match st.x00 {
+    let part = i32::from(st.anim_part);
+    match st.state {
         0 => {
             let a = acid(r.game, g, which);
-            let t = a.x02;
-            a.x02 = t.wrapping_add(1);
+            let t = a.timer;
+            a.timer = t.wrapping_add(1);
             if fp::frsp(f64::from(t)) > reg(p.f(d, DAMAGE_DECAY)) {
-                a.x02 = 0;
-                a.x10 = mem(fp::fsubs(reg(a.x10), 1.0));
-                if reg(a.x10) < 0.0 {
-                    a.x10 = 0.0;
+                a.timer = 0;
+                a.damage = mem(fp::fsubs(reg(a.damage), 1.0));
+                if reg(a.damage) < 0.0 {
+                    a.damage = 0.0;
                 }
             }
             let rest = p.f(d, SHAKE_REST);
-            if reg(a.x08) > reg(rest) {
-                a.x0C = mem(fp::fsubs(reg(a.x0C), reg(p.f(d, SHAKE_PULL))));
-            } else if reg(a.x08) < fp::fneg(reg(rest)) {
-                a.x0C = mem(fp::fadds(reg(a.x0C), reg(p.f(d, SHAKE_PULL))));
+            if reg(a.swing) > reg(rest) {
+                a.swing_speed = mem(fp::fsubs(reg(a.swing_speed), reg(p.f(d, SHAKE_PULL))));
+            } else if reg(a.swing) < fp::fneg(reg(rest)) {
+                a.swing_speed = mem(fp::fadds(reg(a.swing_speed), reg(p.f(d, SHAKE_PULL))));
             }
-            a.x0C = mem(fp::fmuls(
-                reg(a.x0C),
+            a.swing_speed = mem(fp::fmuls(
+                reg(a.swing_speed),
                 fp::fsubs(1.0, reg(p.f(d, SHAKE_DAMP))),
             ));
             let vmax = p.f(d, SHAKE_SPEED_MAX);
-            if reg(a.x0C) > reg(vmax) {
-                a.x0C = vmax;
-            } else if reg(a.x0C) < fp::fneg(reg(vmax)) {
-                a.x0C = mem(fp::fneg(reg(vmax)));
+            if reg(a.swing_speed) > reg(vmax) {
+                a.swing_speed = vmax;
+            } else if reg(a.swing_speed) < fp::fneg(reg(vmax)) {
+                a.swing_speed = mem(fp::fneg(reg(vmax)));
             }
-            a.x08 = mem(fp::fadds(reg(a.x08), reg(a.x0C)));
+            a.swing = mem(fp::fadds(reg(a.swing), reg(a.swing_speed)));
             let max = p.f(d, SHAKE_MAX);
-            if reg(a.x08) > reg(max) {
-                a.x08 = max;
-            } else if reg(a.x08) < fp::fneg(reg(max)) {
-                a.x08 = mem(fp::fneg(reg(max)));
+            if reg(a.swing) > reg(max) {
+                a.swing = max;
+            } else if reg(a.swing) < fp::fneg(reg(max)) {
+                a.swing = mem(fp::fneg(reg(max)));
             }
-            let mut off = reg(a.x08);
+            let mut off = reg(a.swing);
             if off < 0.0 {
                 off = fp::fneg(off);
             }
             if off < reg(rest) {
-                let mut v = reg(a.x0C);
+                let mut v = reg(a.swing_speed);
                 if v < 0.0 {
                     v = fp::fneg(v);
                 }
                 if v < reg(p.f(d, SHAKE_REST_SPEED)) {
-                    a.x08 = 0.0;
-                    a.x0C = 0.0;
+                    a.swing = 0.0;
+                    a.swing_speed = 0.0;
                 }
             }
-            let x = mem(fp::fadds(reg(a.x04), reg(a.x08)));
-            let (j1, j2) = (a.x14, a.x18);
+            let x = mem(fp::fadds(reg(a.rest_x), reg(a.swing)));
+            let (j1, j2) = (a.jobj, a.jobj2);
             for j in [j1, j2] {
                 jobj::set_srt(
                     &mut r.game.objs.jobjs,
@@ -731,10 +742,10 @@ pub fn shake(r: &mut Running, gobj: GObjId, g: GroundId, which: Acid, anim: i32,
                     |o| o.translate.x = x,
                 );
             }
-            let dmg = reg(acid(r.game, g, which).x10);
+            let dmg = reg(acid(r.game, g, which).damage);
             let max = reg(p.f(d, DAMAGE_MAX));
             let frame = if dmg > max {
-                acid(r.game, g, which).x01 = 1;
+                acid(r.game, g, which).next_state = 1;
                 r.stage_sound(0x61A86);
                 crate::game::ft::ftlib::start_rumble_all(r, 1, 0x5A);
                 30.0
@@ -745,20 +756,20 @@ pub fn shake(r: &mut Running, gobj: GObjId, g: GroundId, which: Acid, anim: i32,
         }
         1 => {
             if anime::finished(r.game, gobj, part, 1) {
-                acid(r.game, g, which).x01 = 2;
+                acid(r.game, g, which).next_state = 2;
             }
         }
         2 => {
             let a = acid(r.game, g, which);
-            a.x02 = a.x02.wrapping_sub(1);
-            if a.x02 < 0 {
-                a.x01 = 3;
+            a.timer = a.timer.wrapping_sub(1);
+            if a.timer < 0 {
+                a.next_state = 3;
             }
         }
-        3 if anime::finished(r.game, gobj, part, 1) => acid(r.game, g, which).x01 = 0,
+        3 if anime::finished(r.game, gobj, part, 1) => acid(r.game, g, which).next_state = 0,
         _ => {}
     }
-    i32::from(acid(r.game, g, which).x00)
+    i32::from(acid(r.game, g, which).state)
 }
 
 /// A hit the pillar's item took, `fn_801DA9D8`: its damage counted and its push taken from the
@@ -766,16 +777,16 @@ pub fn shake(r: &mut Running, gobj: GObjId, g: GroundId, which: Acid, anim: i32,
 #[doc(alias = "fn_801DA9D8")]
 pub fn pillar_hit(r: &mut Running, g: GroundId, dir: Vec3, damage: f32) {
     let a = &mut r.game.grounds[g.0].u.zebes_stage().acid;
-    a.x10 = mem(fp::fadds(reg(a.x10), reg(damage)));
-    a.x0C = dir.x;
+    a.damage = mem(fp::fadds(reg(a.damage), reg(damage)));
+    a.swing_speed = dir.x;
 }
 
 /// A hit the island's item took, `fn_801DA9F0`: likewise.
 #[doc(alias = "fn_801DA9F0")]
 pub fn island_hit(r: &mut Running, g: GroundId, dir: Vec3, damage: f32) {
     let a = &mut r.game.grounds[g.0].u.zebes_island().acid;
-    a.x10 = mem(fp::fadds(reg(a.x10), reg(damage)));
-    a.x0C = dir.x;
+    a.damage = mem(fp::fadds(reg(a.damage), reg(damage)));
+    a.swing_speed = dir.x;
 }
 
 /// The island's setup (map 7), `grZebes_801D9100`: its animation, its collision, its hurtbox
@@ -798,19 +809,19 @@ pub fn init_island(r: &mut Running, gobj: GObjId) {
     let jobj2 = nth_joint(r.game, gobj, 0x11);
     let v = r.game.grounds[g.0].u.zebes_island();
     v.acid = AcidState {
-        x00: 0xFF,
-        x01: 0,
-        x02: 0,
-        x04: base_x,
-        x08: 0.0,
-        x0C: 0.0,
-        x10: 0.0,
-        x14: child,
-        x18: jobj2,
-        x1C: Some(item),
-        x20: 0xD,
+        state: 0xFF,
+        next_state: 0,
+        timer: 0,
+        rest_x: base_x,
+        swing: 0.0,
+        swing_speed: 0.0,
+        damage: 0.0,
+        jobj: child,
+        jobj2: jobj2,
+        item: Some(item),
+        anim_part: 0xD,
     };
-    v.xE8 = 0;
+    v.last_state = 0;
     let config = zako::new_config(
         r.game,
         r.data,
@@ -819,7 +830,7 @@ pub fn init_island(r: &mut Running, gobj: GObjId) {
         CodeRef(ISLAND_BUBBLES),
         1.0,
     );
-    r.game.grounds[g.0].u.zebes_island().xEC = config;
+    r.game.grounds[g.0].u.zebes_island().spawn_config = config;
     super::ground::update_map_coll(r.game, r.data, gobj);
 }
 
@@ -830,8 +841,8 @@ pub fn init_island(r: &mut Running, gobj: GObjId) {
 pub fn proc_island(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let result = shake(r, gobj, g, Acid::Island, 1, 2);
-    if r.game.grounds[g.0].u.zebes_island().xE8 != result {
-        r.game.grounds[g.0].u.zebes_island().xE8 = result;
+    if r.game.grounds[g.0].u.zebes_island().last_state != result {
+        r.game.grounds[g.0].u.zebes_island().last_state = result;
         if result == 1 {
             anime::start(r.game, r.data, gobj, 6, 1, 1, 30.0, 1.0, true);
             anime::clear_loop(r.game, gobj, 6, 1, true);
@@ -846,7 +857,7 @@ pub fn proc_island(r: &mut Running, gobj: GObjId) {
         r.game.gr.zebes.bounds[1] = world(r, j, RIGHT_BOUND);
     }
     let (level, _) = x724_and_step(r.game);
-    let config = r.game.grounds[g.0].u.zebes_island().xEC;
+    let config = r.game.grounds[g.0].u.zebes_island().spawn_config;
     let j = nth_joint(r.game, gobj, 1);
     zako::run_config(r, config, j, level);
     super::ground::update_map_coll(r.game, r.data, gobj);
@@ -889,8 +900,8 @@ pub fn init_creature(r: &mut Running, gobj: GObjId) {
     let t = r.game.objs.rng.below(600).wrapping_add(3000);
     let v = r.game.grounds[g.0].u.zebes_creature();
     v.stored_jobj = j;
-    v.x8 = 1;
-    v.xA = t as i16;
+    v.next_anim = 1;
+    v.wait = t as i16;
     v.set_waiting(true);
     setup::add_start_hook(r.game, gobj, CodeRef(CREATURE_START));
 }
@@ -911,20 +922,20 @@ pub fn proc_creature(r: &mut Running, gobj: GObjId) {
     }
     let m = map_id(r.game, gobj);
     let v = r.game.grounds[g.0].u.zebes_creature();
-    if v.xA > 0 {
-        v.xA = v.xA.wrapping_sub(1);
-        if v.xA == 0 {
-            if v.x8 > 0 {
+    if v.wait > 0 {
+        v.wait = v.wait.wrapping_sub(1);
+        if v.wait == 0 {
+            if v.next_anim > 0 {
                 anime::start_map(r.game, r.data, gobj, m, 0);
-                r.game.grounds[g.0].u.zebes_creature().x8 = -1;
+                r.game.grounds[g.0].u.zebes_creature().next_anim = -1;
                 return;
             }
             anime::start_map(r.game, r.data, gobj, m, 1);
-            r.game.grounds[g.0].u.zebes_creature().x8 = 1;
+            r.game.grounds[g.0].u.zebes_creature().next_anim = 1;
         }
     } else if anime::finished(r.game, gobj, 0, 7) {
         let t = r.game.objs.rng.below(600).wrapping_add(3000);
-        r.game.grounds[g.0].u.zebes_creature().xA = t as i16;
+        r.game.grounds[g.0].u.zebes_creature().wait = t as i16;
     }
 }
 
@@ -937,7 +948,7 @@ pub fn start_lava(r: &mut Running, gobj: GObjId) {
         .gr
         .devices
         .register_coll(gobj, 3, CodeRef(LAVA_DEVICE));
-    r.game.grounds[g.0].u.zebes_lava().xC8 = 1;
+    r.game.grounds[g.0].u.zebes_lava().state = 1;
 }
 
 /// A level table entry's wait: its base plus a random part of its extra.
@@ -974,14 +985,14 @@ pub fn init_lava(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     let p = param(r.game);
-    r.game.grounds[g.0].u.zebes_lava().xC4 = 0;
+    r.game.grounds[g.0].u.zebes_lava().entry = 0;
     let wait = level_wait(r, p.level(r.data, 0));
     let v = r.game.grounds[g.0].u.zebes_lava();
-    v.xC6 = wait;
-    v.xC8 = 0;
-    v.xCC = 0.0;
-    v.xD0 = 0.0;
-    v.xDC = None;
+    v.wait = wait;
+    v.state = 0;
+    v.top_speed = 0.0;
+    v.speed = 0.0;
+    v.light = None;
     r.game.grounds[g.0].x11_flags.b012 = 1;
     let mut last = 0;
     while last < 0x1D && !entry_empty(p.level(r.data, last + 1)) {
@@ -991,8 +1002,8 @@ pub fn init_lava(r: &mut Running, gobj: GObjId) {
     let level = fp::frsp(f64::from(p.level(r.data, last)[3]));
     let y = mem(fp::fmadds(reg(p.f(r.data, LAVA_SPREAD)), rand, level));
     let v = r.game.grounds[g.0].u.zebes_lava();
-    v.xD8 = y;
-    v.xD4 = y;
+    v.level = y;
+    v.target = y;
     if let Some(j) = nth_joint(r.game, gobj, 0) {
         jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = y);
         let s = mem(fp::fadds(fp::fneg(55.0), reg(y)));
@@ -1013,30 +1024,30 @@ pub fn proc_lava(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let p = param(r.game);
     let d = r.data;
-    let state = r.game.grounds[g.0].u.zebes_lava().xC8;
+    let state = r.game.grounds[g.0].u.zebes_lava().state;
     match state {
         1 => {
             let v = r.game.grounds[g.0].u.zebes_lava();
-            v.xC6 = v.xC6.wrapping_sub(1);
-            if v.xC6 < 0x78 {
+            v.wait = v.wait.wrapping_sub(1);
+            if v.wait < 0x78 {
                 super::super::camera::request_quake(r, super::super::camera::QUAKE_LOOP, None);
             }
-            if r.game.grounds[g.0].u.zebes_lava().xC6 < 0 {
+            if r.game.grounds[g.0].u.zebes_lava().wait < 0 {
                 let rand = reg(r.game.objs.rng.draw_f32());
-                let idx = r.game.grounds[g.0].u.zebes_lava().xC4;
+                let idx = r.game.grounds[g.0].u.zebes_lava().entry;
                 let level = fp::frsp(f64::from(p.level(d, i32::from(idx))[3]));
                 let v = r.game.grounds[g.0].u.zebes_lava();
-                v.xD4 = mem(fp::fmadds(reg(p.f(d, LAVA_SPREAD)), rand, level));
+                v.target = mem(fp::fmadds(reg(p.f(d, LAVA_SPREAD)), rand, level));
                 let (top, bottom) = (p.f(d, LAVA_TOP), p.f(d, LAVA_BOTTOM));
-                if reg(v.xD4) > reg(top) {
-                    v.xD4 = top;
-                } else if reg(v.xD4) < reg(bottom) {
-                    v.xD4 = bottom;
+                if reg(v.target) > reg(top) {
+                    v.target = top;
+                } else if reg(v.target) < reg(bottom) {
+                    v.target = bottom;
                 }
-                v.xD0 = 0.0;
-                v.xC8 = 2;
-                v.xC6 = 0;
-                let delta = fp::fsubs(reg(v.xD4), reg(v.xD8));
+                v.speed = 0.0;
+                v.state = 2;
+                v.wait = 0;
+                let delta = fp::fsubs(reg(v.target), reg(v.level));
                 let diff = if delta < 0.0 { fp::fneg(delta) } else { delta };
                 let (speed, accel) = (reg(p.f(d, LAVA_SPEED)), reg(p.f(d, LAVA_ACCEL)));
                 let disc = fp::fsubs(
@@ -1045,30 +1056,30 @@ pub fn proc_lava(r: &mut Running, gobj: GObjId) {
                 );
                 let v = r.game.grounds[g.0].u.zebes_lava();
                 if disc < 0.0 {
-                    v.xCC = 999.0;
+                    v.top_speed = 999.0;
                 } else {
                     let root = crate::math::sqrt_reg(disc);
-                    v.xCC = mem(fp::frsp(fp::fmul(
+                    v.top_speed = mem(fp::frsp(fp::fmul(
                         0.5,
                         fp::fmuls(accel, fp::fsubs(speed, root)),
                     )));
-                    if reg(v.xCC) < 0.0 {
-                        v.xCC = 999.0;
+                    if reg(v.top_speed) < 0.0 {
+                        v.top_speed = 999.0;
                     }
                 }
-                let up = reg(v.xD4) > reg(v.xD8);
+                let up = reg(v.target) > reg(v.level);
                 r.stage_sound(if up { 0x61A80 } else { 0x61A81 });
             }
         }
-        2 => r.game.grounds[g.0].u.zebes_lava().xC8 = 3,
+        2 => r.game.grounds[g.0].u.zebes_lava().state = 3,
         3 => {
             let v = r.game.grounds[g.0].u.zebes_lava();
-            v.xC6 = v.xC6.wrapping_add(1);
-            if v.xC6 < 60 {
+            v.wait = v.wait.wrapping_add(1);
+            if v.wait < 60 {
                 super::super::camera::request_quake(r, super::super::camera::QUAKE_LOOP, None);
             }
             let v = r.game.grounds[g.0].u.zebes_lava();
-            let vel = reg(v.xD0);
+            let vel = reg(v.speed);
             let accel = reg(p.f(d, LAVA_ACCEL));
             let t = fp::fdivs(vel, accel);
             let threshold = fp::frsp(fp::fnmsub(
@@ -1076,40 +1087,40 @@ pub fn proc_lava(r: &mut Running, gobj: GObjId) {
                 fp::fmuls(t, t),
                 fp::fmuls(vel, t),
             ));
-            let delta = fp::fsubs(reg(v.xD4), reg(v.xD8));
+            let delta = fp::fsubs(reg(v.target), reg(v.level));
             let abs = if delta < 0.0 { fp::fneg(delta) } else { delta };
             if abs < threshold || abs < accel {
-                v.xC8 = 4;
+                v.state = 4;
             } else {
-                v.xD0 = mem(fp::fadds(reg(v.xD0), accel));
-                if reg(v.xD0) > reg(v.xCC) {
-                    v.xD0 = v.xCC;
+                v.speed = mem(fp::fadds(reg(v.speed), accel));
+                if reg(v.speed) > reg(v.top_speed) {
+                    v.speed = v.top_speed;
                 }
             }
             step_level(v);
         }
         4 => {
             let v = r.game.grounds[g.0].u.zebes_lava();
-            let delta = fp::fsubs(reg(v.xD4), reg(v.xD8));
-            v.xD0 = mem(fp::fsubs(reg(v.xD0), reg(p.f(d, LAVA_ACCEL))));
+            let delta = fp::fsubs(reg(v.target), reg(v.level));
+            v.speed = mem(fp::fsubs(reg(v.speed), reg(p.f(d, LAVA_ACCEL))));
             let abs = if delta < 0.0 { fp::fneg(delta) } else { delta };
-            if reg(v.xD0) < 0.0 || abs < reg(v.xD0) {
-                v.xC8 = 1;
-                v.xD0 = 0.0;
-                v.xC4 = v.xC4.wrapping_add(1);
-                let idx = v.xC4;
+            if reg(v.speed) < 0.0 || abs < reg(v.speed) {
+                v.state = 1;
+                v.speed = 0.0;
+                v.entry = v.entry.wrapping_add(1);
+                let idx = v.entry;
                 if idx == 0x1E || entry_empty(p.level(d, i32::from(idx))) {
-                    v.xC4 = 0;
+                    v.entry = 0;
                 }
-                let idx = r.game.grounds[g.0].u.zebes_lava().xC4;
+                let idx = r.game.grounds[g.0].u.zebes_lava().entry;
                 let wait = level_wait(r, p.level(d, i32::from(idx)));
-                r.game.grounds[g.0].u.zebes_lava().xC6 = wait;
+                r.game.grounds[g.0].u.zebes_lava().wait = wait;
             }
             step_level(r.game.grounds[g.0].u.zebes_lava());
         }
         _ => {}
     }
-    let level = r.game.grounds[g.0].u.zebes_lava().xD8;
+    let level = r.game.grounds[g.0].u.zebes_lava().level;
     fog_color(r.game, level);
     light_color(r, gobj, level);
     if let Some(j) = nth_joint(r.game, gobj, 0) {
@@ -1121,10 +1132,10 @@ pub fn proc_lava(r: &mut Running, gobj: GObjId) {
 
 /// The lava's level moved toward its target by its speed.
 fn step_level(v: &mut super::vars::ZebesLavaVars) {
-    v.xD8 = if reg(v.xD4) > reg(v.xD8) {
-        mem(fp::fadds(reg(v.xD8), reg(v.xD0)))
+    v.level = if reg(v.target) > reg(v.level) {
+        mem(fp::fadds(reg(v.level), reg(v.speed)))
     } else {
-        mem(fp::fsubs(reg(v.xD8), reg(v.xD0)))
+        mem(fp::fsubs(reg(v.level), reg(v.speed)))
     };
 }
 
@@ -1135,7 +1146,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].u.zebes_back().xC4 = 0;
+    r.game.grounds[g.0].u.zebes_back().state = 0;
     r.game.grounds[g.0].x11_flags.b012 = 1;
 }
 
@@ -1144,7 +1155,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "grZebes_801D9F84")]
 pub fn proc_back(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    let state = r.game.grounds[g.0].u.zebes_back().xC4;
+    let state = r.game.grounds[g.0].u.zebes_back().state;
     match state {
         0 => {
             let (level, _) = x724_and_step(r.game);
@@ -1157,12 +1168,12 @@ pub fn proc_back(r: &mut Running, gobj: GObjId) {
             };
             anime::start(r.game, r.data, gobj, 3, 7, anim, 0.0, 1.0, true);
             anime::clear_loop(r.game, gobj, 3, 7, true);
-            r.game.grounds[g.0].u.zebes_back().xC4 = 1;
+            r.game.grounds[g.0].u.zebes_back().state = 1;
             r.stage_sound(0x61A85);
         }
         1 if anime::finished(r.game, gobj, 3, 7) => {
             anime::start(r.game, r.data, gobj, 3, 7, 0, 0.0, 1.0, true);
-            r.game.grounds[g.0].u.zebes_back().xC4 = 0;
+            r.game.grounds[g.0].u.zebes_back().state = 0;
         }
         _ => {}
     }
@@ -1201,7 +1212,7 @@ pub fn fog_color(game: &mut Game, level: f32) {
 #[doc(alias = "grZebes_801DA254")]
 pub fn light_color(r: &mut Running, gobj: GObjId, level: f32) {
     let g = ground_of(r.game, gobj);
-    let mut l = r.game.grounds[g.0].u.zebes_lava().xDC;
+    let mut l = r.game.grounds[g.0].u.zebes_lava().light;
     if l.is_none() {
         if let Some(lg) = r.game.world.first_rendered(4) {
             let mut cur = match r.game.world.gobj(lg).obj {
@@ -1216,7 +1227,7 @@ pub fn light_color(r: &mut Running, gobj: GObjId, level: f32) {
             }
             l = cur;
         }
-        r.game.grounds[g.0].u.zebes_lava().xDC = l;
+        r.game.grounds[g.0].u.zebes_lava().light = l;
     }
     let Some(l) = l else { return };
     let p = param(r.game);
@@ -1273,7 +1284,7 @@ pub fn show_pop(r: &mut Running) -> bool {
     let candidates: Vec<usize> = (0..20)
         .filter(|&i| {
             let b = &z.bubbles[i];
-            b.x00 == 1 && i != 0 && i != 6 && b.pop(stale).is_none()
+            b.state == 1 && i != 0 && i != 6 && b.pop(stale).is_none()
         })
         .collect();
     if candidates.is_empty() {
@@ -1284,8 +1295,10 @@ pub fn show_pop(r: &mut Running) -> bool {
     let Some(pop) = super::ground::load_map_joint(r.game, r.data, 2, 0) else {
         return false;
     };
-    r.game.gr.zebes.bubbles[sel].x04 = Some(pop);
-    let gobj = r.game.gr.zebes.bubbles[sel].x20.expect("a bubble's object");
+    r.game.gr.zebes.bubbles[sel].pop = Some(pop);
+    let gobj = r.game.gr.zebes.bubbles[sel]
+        .gobj
+        .expect("a bubble's object");
     let child = jobj_of(r.game, gobj).and_then(|j| r.game.objs.jobjs[j].child);
     jobj::set_flags_all(&mut r.game.objs.jobjs, child, jobj::HIDDEN);
     jobj::add_child(&mut r.game.objs.jobjs, child, Some(pop));
@@ -1306,10 +1319,10 @@ pub fn show_pop(r: &mut Running) -> bool {
 #[doc(alias = "fn_801DAC90")]
 pub fn bubbles_hit(r: &mut Running) {
     let z = &mut r.game.gr.zebes;
-    if let Some(i) = (0..20).find(|&i| z.bubbles[i].x00 == 1 && i != 0 && i != 6) {
-        z.bubbles[i].x00 = 2;
+    if let Some(i) = (0..20).find(|&i| z.bubbles[i].state == 1 && i != 0 && i != 6) {
+        z.bubbles[i].state = 2;
         z.pop_wait = 0x78;
-        z.bubbles[i].x1C = mem(fp::frsp(0.001));
+        z.bubbles[i].target_size = mem(fp::frsp(0.001));
     }
 }
 
@@ -1319,16 +1332,16 @@ pub fn bubbles_hit(r: &mut Running) {
 #[doc(alias = "grZebes_801DAE70")]
 pub fn add_bubble(r: &mut Running, i: i32, state: u8, x: f32, y: f32, size: f32, frame: u32) {
     let b = r.game.gr.zebes.bubbles[i as usize];
-    if b.x00 != 0 || b.x20.is_some() {
+    if b.state != 0 || b.gobj.is_some() {
         return;
     }
     let b = &mut r.game.gr.zebes.bubbles[i as usize];
-    b.x08 = x;
-    b.x0C = y;
-    b.x10 = 0.0;
-    b.x14 = 0.0;
-    b.x1C = size;
-    b.x18 = size;
+    b.x = x;
+    b.y = y;
+    b.vel_x = 0.0;
+    b.vel_y = 0.0;
+    b.target_size = size;
+    b.size = size;
     let gobj = if i == 0 || i == 6 {
         None
     } else {
@@ -1340,16 +1353,16 @@ pub fn add_bubble(r: &mut Running, i: i32, state: u8, x: f32, y: f32, size: f32,
             let s = Vec3::new(size, size, mem(fp::frsp(0.001)));
             jobj::set_scale(&mut r.game.objs.jobjs, j, s);
             let v = r.game.grounds[g.0].u.zebes_bubble();
-            v.xC4 = None;
-            v.xC8 = i;
+            v.item = None;
+            v.bubble = i;
         }
         gobj
     };
     let b = &mut r.game.gr.zebes.bubbles[i as usize];
-    b.x00 = state;
-    b.x20 = gobj;
-    b.x04 = None;
-    b.x04_left = false;
+    b.state = state;
+    b.gobj = gobj;
+    b.pop = None;
+    b.pop_left = false;
 }
 
 /// Bubble `i`'s tick, `grZebes_801DB088`: its size grows toward its target, a finished pop's
@@ -1361,46 +1374,46 @@ pub fn add_bubble(r: &mut Running, i: i32, state: u8, x: f32, y: f32, size: f32,
 #[doc(alias = "grZebes_801DB088")]
 pub fn tick_bubble(r: &mut Running, gobj: GObjId, i: usize) -> bool {
     let b = r.game.gr.zebes.bubbles[i];
-    if b.x00 == 0 {
+    if b.state == 0 {
         return false;
     }
-    let Some(obj) = b.x20 else { return false };
+    let Some(obj) = b.gobj else { return false };
     let og = ground_of(r.game, obj);
-    let item = r.game.grounds[og.0].u.zebes_bubble().xC4;
+    let item = r.game.grounds[og.0].u.zebes_bubble().item;
     if let Some(it) = item {
-        if b.x00 == 1 {
+        if b.state == 1 {
             material::item_hurtbox_on(r.game, it);
         } else {
             material::item_hurtbox_off(r.game, it);
         }
     }
     let speed = reg(param(r.game).f(r.data, GROW_SPEED));
-    let (target, cur) = (reg(b.x1C), reg(b.x18));
+    let (target, cur) = (reg(b.target_size), reg(b.size));
     let diff = fp::fsubs(target, cur);
     let bb = &mut r.game.gr.zebes.bubbles[i];
-    bb.x18 = if diff > speed {
+    bb.size = if diff > speed {
         mem(fp::fadds(cur, speed))
     } else if diff < fp::fneg(speed) {
         mem(fp::fsubs(cur, speed))
     } else {
-        b.x1C
+        b.target_size
     };
     if let Some(pop) = b.pop(&mut r.game.objs.stale_reads)
         && anime::finished(r.game, obj, 0, 7)
     {
         jobj::remove_all(&mut r.game.objs, Some(pop));
-        r.game.gr.zebes.bubbles[i].x04 = None;
+        r.game.gr.zebes.bubbles[i].pop = None;
         let j = jobj_of(r.game, obj);
         if j.is_some() {
             jobj::clear_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
         }
     }
     let mut result = false;
-    match r.game.gr.zebes.bubbles[i].x00 {
+    match r.game.gr.zebes.bubbles[i].state {
         3 => {
             let bb = &mut r.game.gr.zebes.bubbles[i];
-            let t = bb.x02;
-            bb.x02 = t.wrapping_sub(1);
+            let t = bb.timer;
+            bb.timer = t.wrapping_sub(1);
             if t < 0 {
                 if let Some(it) = item {
                     material::destroy_item(r, it);
@@ -1409,9 +1422,9 @@ pub fn tick_bubble(r: &mut Running, gobj: GObjId, i: usize) -> bool {
                 pop_effect(r, i);
                 pop_sound(r, gobj);
                 let bb = &mut r.game.gr.zebes.bubbles[i];
-                bb.x20 = None;
-                bb.x04 = None;
-                bb.x00 = 0;
+                bb.gobj = None;
+                bb.pop = None;
+                bb.state = 0;
             }
         }
         2 => {
@@ -1421,19 +1434,19 @@ pub fn tick_bubble(r: &mut Running, gobj: GObjId, i: usize) -> bool {
             setup::destroy(r, Some(obj));
             pop_effect(r, i);
             let bb = &mut r.game.gr.zebes.bubbles[i];
-            bb.x20 = None;
-            bb.x04 = None;
-            bb.x00 = 0;
+            bb.gobj = None;
+            bb.pop = None;
+            bb.state = 0;
             if i < 7 && i != 0 && i != 6 {
                 let z = &mut r.game.gr.zebes;
-                let (ex, ey) = (reg(z.bubbles[i].x08), reg(z.bubbles[i].x0C));
+                let (ex, ey) = (reg(z.bubbles[i].x), reg(z.bubbles[i].y));
                 let mut best = 64.0;
                 let mut best_idx = None;
                 for j in 7..20 {
                     let c = &z.bubbles[j];
-                    if c.x00 == 1 {
-                        let dx = fp::fsubs(reg(c.x08), ex);
-                        let dy = fp::fsubs(reg(c.x0C), ey);
+                    if c.state == 1 {
+                        let dx = fp::fsubs(reg(c.x), ex);
+                        let dy = fp::fsubs(reg(c.y), ey);
                         let dist = fp::fadds(fp::fmuls(dx, dx), fp::fmuls(dy, dy));
                         if dist < best {
                             best_idx = Some(j);
@@ -1444,20 +1457,20 @@ pub fn tick_bubble(r: &mut Running, gobj: GObjId, i: usize) -> bool {
                 if let Some(j) = best_idx {
                     let c = z.bubbles[j];
                     let bb = &mut z.bubbles[i];
-                    bb.x00 = c.x00;
-                    bb.x04 = c.x04;
-                    bb.x18 = c.x18;
-                    bb.x1C = c.x1C;
-                    bb.x20 = c.x20;
-                    z.bubbles[j].x00 = 0;
-                    z.bubbles[j].x20 = None;
-                    z.bubbles[j].x04_left = true;
+                    bb.state = c.state;
+                    bb.pop = c.pop;
+                    bb.size = c.size;
+                    bb.target_size = c.target_size;
+                    bb.gobj = c.gobj;
+                    z.bubbles[j].state = 0;
+                    z.bubbles[j].gobj = None;
+                    z.bubbles[j].pop_left = true;
                 } else {
                     for j in 7..20 {
-                        if r.game.gr.zebes.bubbles[j].x00 == 1 {
-                            r.game.gr.zebes.bubbles[j].x00 = 3;
+                        if r.game.gr.zebes.bubbles[j].state == 1 {
+                            r.game.gr.zebes.bubbles[j].state = 3;
                             let t = r.game.objs.rng.below(0x3C).wrapping_add(0xA);
-                            r.game.gr.zebes.bubbles[j].x02 = t as i16;
+                            r.game.gr.zebes.bubbles[j].timer = t as i16;
                         }
                     }
                     result = true;
@@ -1472,7 +1485,7 @@ pub fn tick_bubble(r: &mut Running, gobj: GObjId, i: usize) -> bool {
 /// A gone bubble's effect, at its place a little in front.
 fn pop_effect(r: &mut Running, i: usize) {
     let b = r.game.gr.zebes.bubbles[i];
-    let pos = Vec3::new(b.x08, b.x0C, 4.0);
+    let pos = Vec3::new(b.x, b.y, 4.0);
     let _ = grlib::generator_at(r.game, r.data, 0x7530, 0x1E, pos);
 }
 
@@ -1501,7 +1514,7 @@ fn pop_sound(r: &mut Running, gobj: GObjId) {
 pub fn move_bubbles(r: &mut Running, gobj: GObjId) -> bool {
     let mut popped = false;
     for i in 0..20 {
-        if r.game.gr.zebes.bubbles[i].x00 != 0 && tick_bubble(r, gobj, i) {
+        if r.game.gr.zebes.bubbles[i].state != 0 && tick_bubble(r, gobj, i) {
             popped = true;
         }
     }
@@ -1509,15 +1522,15 @@ pub fn move_bubbles(r: &mut Running, gobj: GObjId) -> bool {
     let d = r.data;
     let sink = p.f(d, BUBBLE_SINK);
     for b in &mut r.game.gr.zebes.bubbles {
-        if b.x00 != 0 {
-            b.x10 = 0.0;
-            b.x14 = mem(fp::fneg(reg(sink)));
+        if b.state != 0 {
+            b.vel_x = 0.0;
+            b.vel_y = mem(fp::fneg(reg(sink)));
         }
     }
     let spacing = reg(p.f(d, BUBBLE_SPACING));
     let pull_max = reg(p.f(d, BUBBLE_PULL_MAX));
     for idx in 0..7 {
-        let active = r.game.gr.zebes.bubbles[idx].x00;
+        let active = r.game.gr.zebes.bubbles[idx].state;
         if !(active == 1 || active == 4) || idx == 0 || idx == 6 {
             continue;
         }
@@ -1526,12 +1539,12 @@ pub fn move_bubbles(r: &mut Running, gobj: GObjId) -> bool {
         for (n, other) in [(0, idx - 1), (1, idx + 1)] {
             let z = &r.game.gr.zebes;
             let o = z.bubbles[other];
-            if o.x00 == 0 {
+            if o.state == 0 {
                 continue;
             }
             let cur = z.bubbles[idx];
-            let mut dx = fp::fsubs(reg(o.x08), reg(cur.x08));
-            let dy = fp::fsubs(reg(o.x0C), reg(cur.x0C));
+            let mut dx = fp::fsubs(reg(o.x), reg(cur.x));
+            let dy = fp::fsubs(reg(o.y), reg(cur.y));
             let mut dist = crate::math::sqrt_reg(fp::fmadds(dx, dx, fp::fmuls(dy, dy)));
             if dist > spacing {
                 dx = fp::fdivs(dx, dist);
@@ -1546,12 +1559,12 @@ pub fn move_bubbles(r: &mut Running, gobj: GObjId) -> bool {
             neighbours = if n == 0 { 1 } else { neighbours + 1 };
         }
         let cur = &mut r.game.gr.zebes.bubbles[idx];
-        cur.x08 = mem(fp::fadds(reg(cur.x08), fx));
-        cur.x0C = mem(fp::fadds(reg(cur.x0C), fy));
-        if cur.x00 != 4 && neighbours != 2 {
-            cur.x00 = 3;
+        cur.x = mem(fp::fadds(reg(cur.x), fx));
+        cur.y = mem(fp::fadds(reg(cur.y), fy));
+        if cur.state != 4 && neighbours != 2 {
+            cur.state = 3;
             let t = r.game.objs.rng.below(0x3C).wrapping_add(0xA);
-            r.game.gr.zebes.bubbles[idx].x02 = t as i16;
+            r.game.gr.zebes.bubbles[idx].timer = t as i16;
         }
     }
     let (far, near, attract) = (
@@ -1561,18 +1574,18 @@ pub fn move_bubbles(r: &mut Running, gobj: GObjId) -> bool {
     );
     let bubbles = &mut r.game.gr.zebes.bubbles;
     for a in 0..19 {
-        if bubbles[a].x00 == 0 {
+        if bubbles[a].state == 0 {
             continue;
         }
         for b in a + 1..20 {
-            if bubbles[b].x00 == 0 {
+            if bubbles[b].state == 0 {
                 continue;
             }
             let (ea, eb) = (bubbles[a], bubbles[b]);
-            let mut dx = fp::fsubs(reg(eb.x08), reg(ea.x08));
-            let mut dy = fp::fsubs(reg(eb.x0C), reg(ea.x0C));
+            let mut dx = fp::fsubs(reg(eb.x), reg(ea.x));
+            let mut dy = fp::fsubs(reg(eb.y), reg(ea.y));
             let mut dist = crate::math::sqrt_reg(fp::fmadds(dx, dx, fp::fmuls(dy, dy)));
-            let sizes = fp::fadds(reg(ea.x18), reg(eb.x18));
+            let sizes = fp::fadds(reg(ea.size), reg(eb.size));
             let col = fp::fmuls(fp::fdivs(spacing, 2.0), sizes);
             let near_r = fp::fmuls(fp::fdivs(reg(near), 2.0), sizes);
             let far_r = fp::fmuls(fp::fdivs(reg(far), 2.0), sizes);
@@ -1589,28 +1602,28 @@ pub fn move_bubbles(r: &mut Running, gobj: GObjId) -> bool {
                     let vy = fp::fmuls(fp::fneg(dy), s);
                     let vy = if vy < 0.0 { 0.0 } else { vy };
                     let e = &mut bubbles[a];
-                    e.x10 = mem(fp::fadds(reg(e.x10), vx));
-                    e.x14 = mem(fp::fadds(reg(e.x14), vy));
+                    e.vel_x = mem(fp::fadds(reg(e.vel_x), vx));
+                    e.vel_y = mem(fp::fadds(reg(e.vel_y), vy));
                 }
                 if b >= 7 {
                     let vx = fp::fmuls(dx, s);
                     let vy = fp::fmuls(dy, s);
                     let vy = if vy < 0.0 { 0.0 } else { vy };
                     let e = &mut bubbles[b];
-                    e.x10 = mem(fp::fadds(reg(e.x10), vx));
-                    e.x14 = mem(fp::fadds(reg(e.x14), vy));
+                    e.vel_x = mem(fp::fadds(reg(e.vel_x), vx));
+                    e.vel_y = mem(fp::fadds(reg(e.vel_y), vy));
                 }
             } else if !(dist < near_r) && dist < far_r {
                 let k = fp::fdivs(reg(attract), dist);
                 if a >= 7 {
                     let e = &mut bubbles[a];
-                    e.x10 = mem(fp::fadds(reg(e.x10), fp::fmuls(dx, k)));
-                    e.x14 = mem(fp::fadds(reg(e.x14), fp::fmuls(dy, k)));
+                    e.vel_x = mem(fp::fadds(reg(e.vel_x), fp::fmuls(dx, k)));
+                    e.vel_y = mem(fp::fadds(reg(e.vel_y), fp::fmuls(dy, k)));
                 }
                 if b >= 7 {
                     let e = &mut bubbles[b];
-                    e.x10 = mem(fp::fadds(reg(e.x10), fp::fmuls(fp::fneg(dx), k)));
-                    e.x14 = mem(fp::fadds(reg(e.x14), fp::fmuls(fp::fneg(dy), k)));
+                    e.vel_x = mem(fp::fadds(reg(e.vel_x), fp::fmuls(fp::fneg(dx), k)));
+                    e.vel_y = mem(fp::fadds(reg(e.vel_y), fp::fmuls(fp::fneg(dy), k)));
                 }
             }
         }
@@ -1620,44 +1633,44 @@ pub fn move_bubbles(r: &mut Running, gobj: GObjId) -> bool {
     let (lb, rb) = (z.bounds[0], z.bounds[1]);
     let vmax = p.f(d, BUBBLE_SPEED_MAX);
     for (k, b) in z.bubbles.iter_mut().enumerate() {
-        if b.x00 == 0 {
+        if b.state == 0 {
             continue;
         }
         if k == 0 || k == 6 {
             let a = if k == 0 { la } else { ra };
-            b.x10 = 0.0;
-            b.x14 = 0.0;
-            b.x08 = a.x;
-            b.x0C = a.y;
+            b.vel_x = 0.0;
+            b.vel_y = 0.0;
+            b.x = a.x;
+            b.y = a.y;
             continue;
         }
-        let mut nx = mem(fp::fadds(reg(b.x08), reg(b.x10)));
-        let mut ny = mem(fp::fadds(reg(b.x0C), reg(b.x14)));
+        let mut nx = mem(fp::fadds(reg(b.x), reg(b.vel_x)));
+        let mut ny = mem(fp::fadds(reg(b.y), reg(b.vel_y)));
         if reg(ny) < reg(lb.y) && reg(nx) < reg(lb.x) {
-            if reg(b.x0C) >= reg(lb.y) {
+            if reg(b.y) >= reg(lb.y) {
                 ny = lb.y;
-            } else if reg(b.x08) >= reg(lb.x) {
+            } else if reg(b.x) >= reg(lb.x) {
                 nx = lb.x;
             }
         }
         if reg(ny) < reg(rb.y) && reg(nx) > reg(rb.x) {
-            if reg(b.x0C) >= reg(rb.y) {
+            if reg(b.y) >= reg(rb.y) {
                 ny = rb.y;
-            } else if reg(b.x08) <= reg(rb.x) {
+            } else if reg(b.x) <= reg(rb.x) {
                 nx = rb.x;
             }
         }
-        b.x08 = nx;
-        b.x0C = ny;
-        if reg(b.x10) > reg(vmax) {
-            b.x10 = vmax;
-        } else if reg(b.x10) < fp::fneg(reg(vmax)) {
-            b.x10 = mem(fp::fneg(reg(vmax)));
+        b.x = nx;
+        b.y = ny;
+        if reg(b.vel_x) > reg(vmax) {
+            b.vel_x = vmax;
+        } else if reg(b.vel_x) < fp::fneg(reg(vmax)) {
+            b.vel_x = mem(fp::fneg(reg(vmax)));
         }
-        if reg(b.x14) > reg(vmax) {
-            b.x14 = vmax;
-        } else if reg(b.x14) < fp::fneg(reg(vmax)) {
-            b.x14 = mem(fp::fneg(reg(vmax)));
+        if reg(b.vel_y) > reg(vmax) {
+            b.vel_y = vmax;
+        } else if reg(b.vel_y) < fp::fneg(reg(vmax)) {
+            b.vel_y = mem(fp::fneg(reg(vmax)));
         }
     }
     popped
@@ -1669,7 +1682,7 @@ pub fn move_bubbles(r: &mut Running, gobj: GObjId) -> bool {
 /// Whether it's on.
 #[doc(alias = "grZebes_801DBB60")]
 pub fn span_bubbles(r: &mut Running, item: GObjId) -> bool {
-    let top = |i: usize, b: &Bubble| b.x00 == 1 && i != 0 && i != 6;
+    let top = |i: usize, b: &Bubble| b.state == 1 && i != 0 && i != 6;
     let z = &r.game.gr.zebes;
     let mut count = 0;
     let mut last = 0usize;
@@ -1688,8 +1701,8 @@ pub fn span_bubbles(r: &mut Running, item: GObjId) -> bool {
     }
     let ball = |r: &mut Running, i: usize| {
         let b = r.game.gr.zebes.bubbles[i];
-        let p = Vec3::new(b.x08, b.x0C, 0.0);
-        let size = mem(fp::frsp(fp::fmul(2.0, reg(b.x18))));
+        let p = Vec3::new(b.x, b.y, 0.0);
+        let size = mem(fp::frsp(fp::fmul(2.0, reg(b.size))));
         material::set_item_hurtbox(r.game, item, p, p, size);
     };
     material::item_hurtbox_on(r.game, item);
@@ -1710,16 +1723,16 @@ pub fn span_bubbles(r: &mut Running, item: GObjId) -> bool {
             if !top(j, &ej) {
                 continue;
             }
-            let dx = fp::fsubs(reg(ei.x08), reg(ej.x08));
-            let dy = fp::fsubs(reg(ei.x0C), reg(ej.x0C));
+            let dx = fp::fsubs(reg(ei.x), reg(ej.x));
+            let dy = fp::fsubs(reg(ei.y), reg(ej.y));
             let dist = fp::fadds(fp::fmuls(dx, dx), fp::fmuls(dy, dy));
             if !(max >= dist) {
                 max = dist;
-                x1 = reg(ei.x08);
-                y1 = reg(ei.x0C);
-                x2 = reg(ej.x08);
-                y2 = reg(ej.x0C);
-                last = if reg(ei.x18) > reg(ej.x18) { i } else { j };
+                x1 = reg(ei.x);
+                y1 = reg(ei.y);
+                x2 = reg(ej.x);
+                y2 = reg(ej.y);
+                last = if reg(ei.size) > reg(ej.size) { i } else { j };
             }
         }
     }
@@ -1738,7 +1751,7 @@ pub fn span_bubbles(r: &mut Running, item: GObjId) -> bool {
         if !top(k, &b) {
             continue;
         }
-        let (by, bx) = (reg(b.x0C), reg(b.x08));
+        let (by, bx) = (reg(b.y), reg(b.x));
         let py = fp::fsubs(by, y1);
         let px = fp::fsubs(bx, x1);
         let t = fp::fmuls(inv, fp::fmadds(dx, px, fp::fmuls(dy, py)));
@@ -1754,7 +1767,7 @@ pub fn span_bubbles(r: &mut Running, item: GObjId) -> bool {
             fp::fadds(fp::fmuls(ex, ex), fp::fmuls(ey, ey))
         };
         let dist = if d2 > 0.0 { sqrt(d2) } else { d2 };
-        let reach = fp::frsp(fp::fmadd(2.0, reg(b.x18), dist));
+        let reach = fp::frsp(fp::fmadd(2.0, reg(b.size), dist));
         if !(reach > width) {
             continue;
         }
@@ -1766,7 +1779,7 @@ pub fn span_bubbles(r: &mut Running, item: GObjId) -> bool {
         let d = if d > 0.0 { sqrt(d) } else { d };
         let new_width = fp::frsp(fp::fmul(
             0.5,
-            fp::fmadd(2.0, reg(b.x18), fp::fadds(d, width)),
+            fp::fmadd(2.0, reg(b.size), fp::fadds(d, width)),
         ));
         let (mut ax, mut ay) = (ax, ay);
         if d > reg(0.001) {
@@ -1803,13 +1816,13 @@ pub fn span_bubbles(r: &mut Running, item: GObjId) -> bool {
 pub fn place_bubbles(r: &mut Running) {
     for i in 0..20 {
         let b = r.game.gr.zebes.bubbles[i];
-        if b.x00 == 0 {
+        if b.state == 0 {
             continue;
         }
-        let Some(obj) = b.x20 else { continue };
+        let Some(obj) = b.gobj else { continue };
         let j = jobj_of(r.game, obj).expect("a bubble's model");
-        jobj::set_translate(&mut r.game.objs.jobjs, j, Vec3::new(b.x08, b.x0C, 0.0));
-        jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(b.x18, b.x18, b.x18));
+        jobj::set_translate(&mut r.game.objs.jobjs, j, Vec3::new(b.x, b.y, 0.0));
+        jobj::set_scale(&mut r.game.objs.jobjs, j, Vec3::new(b.size, b.size, b.size));
     }
 }
 
@@ -1819,7 +1832,7 @@ pub fn place_bubbles(r: &mut Running) {
 #[doc(alias = "grZebes_801DC408")]
 pub fn grow_bubbles(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    if r.game.grounds[g.0].u.zebes_stage().xC4 != 0 {
+    if r.game.grounds[g.0].u.zebes_stage().platform_state != 0 {
         return;
     }
     if r.game.gr.zebes.pop_wait != 0 {
@@ -1827,15 +1840,15 @@ pub fn grow_bubbles(r: &mut Running, gobj: GObjId) {
         return;
     }
     let v = r.game.grounds[g.0].u.zebes_stage();
-    v.xF4 = v.xF4.wrapping_sub(1);
-    if v.xF4 >= 0 {
+    v.bubble_wait = v.bubble_wait.wrapping_sub(1);
+    if v.bubble_wait >= 0 {
         return;
     }
     let p = param(r.game);
     let d = r.data;
     let z = &r.game.gr.zebes;
-    let count = z.bubbles.iter().filter(|b| b.x00 != 0).count();
-    let free = z.bubbles.iter().position(|b| b.x00 == 0);
+    let count = z.bubbles.iter().filter(|b| b.state != 0).count();
+    let free = z.bubbles.iter().position(|b| b.state == 0);
     if count < 15 {
         let y_min = reg(z.anchors[0].y);
         let r_ = reg(p.f(d, BUBBLE_SPACING));
@@ -1850,13 +1863,13 @@ pub fn grow_bubbles(r: &mut Running, gobj: GObjId) {
         let size = mem(fp::frsp(fp::fmadd(0.5, rscale, 1.0)));
         let i = free.expect("grzebes.c: a free bubble under 15");
         add_bubble(r, i as i32, 1, x, y, size, GROW_BUBBLE_FRAME);
-        r.game.gr.zebes.bubbles[i].x18 = mem(fp::frsp(0.001));
+        r.game.gr.zebes.bubbles[i].size = mem(fp::frsp(0.001));
         r.stage_sound(0x61A83);
     }
     let lo = fp::fctiwz(reg(p.f(d, GROW_WAIT_MIN)));
     let hi = fp::fctiwz(reg(p.f(d, GROW_WAIT_MAX)));
     let t = grlib::rand_range(&mut r.game.objs.rng, hi, lo);
-    r.game.grounds[g.0].u.zebes_stage().xF4 = t as i16;
+    r.game.grounds[g.0].u.zebes_stage().bubble_wait = t as i16;
 }
 
 /// The platform's starting bubbles, `grZebes_801DC744`: `which` bit 0 the top's seven, evenly
@@ -1920,8 +1933,8 @@ pub fn reset_bubbles(r: &mut Running, gobj: GObjId) {
     let z = &mut r.game.gr.zebes;
     z.pop_wait = 0;
     for b in &mut z.bubbles {
-        b.x00 = 0;
-        b.x20 = None;
+        b.state = 0;
+        b.gobj = None;
     }
     z.anchors = START_ANCHORS;
     z.bounds = START_BOUNDS;

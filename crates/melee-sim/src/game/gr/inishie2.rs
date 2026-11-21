@@ -223,7 +223,7 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     init_pidgit_wait(r, gobj);
     let joints = [9, 0xC, 8, 0xB, 0xA, 0xD].map(|k| nth_joint(r.game, gobj, k));
     super::ground::set_guide_points(r.game, r.data, joints);
-    r.game.grounds[g.0].u.inishie2().xC4 &= !MUSIC;
+    r.game.grounds[g.0].u.inishie2().flags &= !MUSIC;
 }
 
 /// The music under 20 seconds left, `grInishie2_801FCF2C` (a copy of Mushroom Kingdom's,
@@ -231,7 +231,7 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "grInishie2_801FCF2C")]
 pub fn music(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    if r.game.grounds[g.0].u.inishie2().xC4 & MUSIC != 0 {
+    if r.game.grounds[g.0].u.inishie2().flags & MUSIC != 0 {
         return;
     }
     match r.game.vs_match_timer() {
@@ -239,10 +239,10 @@ pub fn music(r: &mut Running, gobj: GObjId) {
             if left < 20 {
                 let bgm = super::inishie1::fast_song(super::ground::x98(r.game)).unwrap_or(-1);
                 r.lb_play_music(bgm);
-                r.game.grounds[g.0].u.inishie2().xC4 |= MUSIC;
+                r.game.grounds[g.0].u.inishie2().flags |= MUSIC;
             }
         }
-        None => r.game.grounds[g.0].u.inishie2().xC4 |= MUSIC,
+        None => r.game.grounds[g.0].u.inishie2().flags |= MUSIC,
     }
 }
 
@@ -263,11 +263,11 @@ pub fn proc_stage(r: &mut Running, gobj: GObjId) {
 pub fn init_logs(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let pa = param(r.game);
-    r.game.grounds[g.0].u.inishie2().xC4 |= LOG_WAITS[0] | LOG_WAITS[1];
+    r.game.grounds[g.0].u.inishie2().flags |= LOG_WAITS[0] | LOG_WAITS[1];
     let w = wait(r, pa.h(r.data, p::LOG1_WAIT), pa.h(r.data, p::LOG1_SPREAD));
-    r.game.grounds[g.0].u.inishie2().xC6 = w;
+    r.game.grounds[g.0].u.inishie2().log_wait_a = w;
     let w = wait(r, pa.h(r.data, p::LOG2_WAIT), pa.h(r.data, p::LOG2_SPREAD));
-    r.game.grounds[g.0].u.inishie2().xC8 = w;
+    r.game.grounds[g.0].u.inishie2().log_wait_b = w;
 }
 
 /// Sending the logs, `grInishie2_801FD0B4`: each wait that runs out sends its log, its
@@ -277,19 +277,23 @@ pub fn send_logs(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     for k in 0..2 {
         let v = r.game.grounds[g.0].u.inishie2();
-        if v.xC4 & LOG_WAITS[k] == 0 {
+        if v.flags & LOG_WAITS[k] == 0 {
             continue;
         }
-        let w = if k == 0 { &mut v.xC6 } else { &mut v.xC8 };
+        let w = if k == 0 {
+            &mut v.log_wait_a
+        } else {
+            &mut v.log_wait_b
+        };
         let timer = *w;
         *w = timer.wrapping_sub(1);
         if timer < 0 {
             let log = create(r, MAP_LOGS[k], LOG_FRAME);
             r.game.geometry_mut().disable_joint(LOG_JOINTS[k]);
-            r.game.grounds[g.0].u.inishie2().xC4 &= !LOG_WAITS[k];
+            r.game.grounds[g.0].u.inishie2().flags &= !LOG_WAITS[k];
             if let Some(log) = log {
                 let lg = ground_of(r.game, log);
-                r.game.grounds[lg.0].u.inishie2_log().xCC = Some(gobj);
+                r.game.grounds[lg.0].u.inishie2_log().sender = Some(gobj);
             }
         }
     }
@@ -307,9 +311,9 @@ pub fn init_log(r: &mut Running, gobj: GObjId) {
     let which = (m - 3) as i16;
     let on = param(r.game).h(r.data, p::LOG_ON + 2 * which as u32);
     let v = r.game.grounds[g.0].u.inishie2_log();
-    v.xC4 &= !LOG_ON;
-    v.xC8 = which;
-    v.xC6 = on;
+    v.flags &= !LOG_ON;
+    v.log = which;
+    v.wait = on;
 }
 
 /// A log's process, `grInishie2_801FD224`: its collision comes back once its wait runs out,
@@ -319,31 +323,31 @@ pub fn init_log(r: &mut Running, gobj: GObjId) {
 pub fn proc_log(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.inishie2_log();
-    if v.xC4 & LOG_ON == 0 {
-        let counter = v.xC6;
-        v.xC6 = counter.wrapping_sub(1);
+    if v.flags & LOG_ON == 0 {
+        let counter = v.wait;
+        v.wait = counter.wrapping_sub(1);
         if counter < 0 {
-            let which = v.xC8;
+            let which = v.log;
             r.game
                 .geometry_mut()
                 .enable_joint(if which == 0 { 0xC } else { 0xD });
-            r.game.grounds[g.0].u.inishie2_log().xC4 |= LOG_ON;
+            r.game.grounds[g.0].u.inishie2_log().flags |= LOG_ON;
         }
     }
     update_map_coll(r.game, r.data, gobj);
     if anime::finished(r.game, gobj, 0, 1) {
         let v = r.game.grounds[g.0].u.inishie2_log();
-        let (stage_gobj, which) = (v.xCC, v.xC8);
+        let (stage_gobj, which) = (v.sender, v.log);
         let sg = ground_of(r.game, stage_gobj.expect("a log's stage object"));
         let pa = param(r.game);
         if which == 0 {
-            r.game.grounds[sg.0].u.inishie2().xC4 |= LOG_WAITS[0];
+            r.game.grounds[sg.0].u.inishie2().flags |= LOG_WAITS[0];
             let w = wait(r, pa.h(r.data, p::LOG1_WAIT), pa.h(r.data, p::LOG1_SPREAD));
-            r.game.grounds[sg.0].u.inishie2().xC6 = w;
+            r.game.grounds[sg.0].u.inishie2().log_wait_a = w;
         } else {
-            r.game.grounds[sg.0].u.inishie2().xC4 |= LOG_WAITS[1];
+            r.game.grounds[sg.0].u.inishie2().flags |= LOG_WAITS[1];
             let w = wait(r, pa.h(r.data, p::LOG2_WAIT), pa.h(r.data, p::LOG2_SPREAD));
-            r.game.grounds[sg.0].u.inishie2().xC8 = w;
+            r.game.grounds[sg.0].u.inishie2().log_wait_b = w;
         }
         setup::destroy(r, Some(gobj));
     }
@@ -354,13 +358,13 @@ pub fn proc_log(r: &mut Running, gobj: GObjId) {
 pub fn init_birdo_wait(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let pa = param(r.game);
-    r.game.grounds[g.0].u.inishie2().xC4 |= BIRDO_WAIT;
+    r.game.grounds[g.0].u.inishie2().flags |= BIRDO_WAIT;
     let w = wait(
         r,
         pa.h(r.data, p::BIRDO_WAIT),
         pa.h(r.data, p::BIRDO_SPREAD),
     );
-    r.game.grounds[g.0].u.inishie2().xCA = w;
+    r.game.grounds[g.0].u.inishie2().birdo_wait = w;
 }
 
 /// Sending Birdo, `grInishie2_801FD3CC`: once her wait runs out, her platform comes, and the
@@ -369,17 +373,17 @@ pub fn init_birdo_wait(r: &mut Running, gobj: GObjId) {
 pub fn send_birdo(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.inishie2();
-    if v.xC4 & BIRDO_WAIT == 0 {
+    if v.flags & BIRDO_WAIT == 0 {
         return;
     }
-    let counter = v.xCA;
-    v.xCA = counter.wrapping_sub(1);
+    let counter = v.birdo_wait;
+    v.birdo_wait = counter.wrapping_sub(1);
     if counter < 0 {
         let platform = create(r, MAP_BIRDO, SEND_FRAME);
-        r.game.grounds[g.0].u.inishie2().xC4 &= !BIRDO_WAIT;
+        r.game.grounds[g.0].u.inishie2().flags &= !BIRDO_WAIT;
         if let Some(platform) = platform {
             let pg = ground_of(r.game, platform);
-            r.game.grounds[pg.0].u.inishie2_birdo().xC8 = Some(gobj);
+            r.game.grounds[pg.0].u.inishie2_birdo().sender = Some(gobj);
         }
     }
 }
@@ -389,16 +393,16 @@ pub fn send_birdo(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "grInishie2_801FD448")]
 pub fn birdo_gone(r: &mut Running, platform: GObjId) {
     let g = ground_of(r.game, platform);
-    let stage_gobj = r.game.grounds[g.0].u.inishie2_birdo().xC8;
+    let stage_gobj = r.game.grounds[g.0].u.inishie2_birdo().sender;
     let sg = ground_of(r.game, stage_gobj.expect("Birdo's platform's stage object"));
     let pa = param(r.game);
-    r.game.grounds[sg.0].u.inishie2().xC4 |= BIRDO_WAIT;
+    r.game.grounds[sg.0].u.inishie2().flags |= BIRDO_WAIT;
     let w = wait(
         r,
         pa.h(r.data, p::BIRDO_WAIT),
         pa.h(r.data, p::BIRDO_SPREAD),
     );
-    r.game.grounds[sg.0].u.inishie2().xCA = w;
+    r.game.grounds[sg.0].u.inishie2().birdo_wait = w;
     setup::destroy(r, Some(platform));
 }
 
@@ -431,7 +435,7 @@ pub fn init_birdo(r: &mut Running, gobj: GObjId) {
     );
     let facing = if side == 0 { -1.0 } else { 1.0 };
     let birdo = super::super::it::kinds::kyasarin::spawn(r, gobj, pos, facing);
-    r.game.grounds[g.0].u.inishie2_birdo().xC4 = birdo;
+    r.game.grounds[g.0].u.inishie2_birdo().birdo = birdo;
     let m = map_id(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
 }
@@ -442,7 +446,7 @@ pub fn init_birdo(r: &mut Running, gobj: GObjId) {
 pub fn proc_birdo(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj);
-    if let Some(birdo) = r.game.grounds[g.0].u.inishie2_birdo().xC4 {
+    if let Some(birdo) = r.game.grounds[g.0].u.inishie2_birdo().birdo {
         let mut pos = super::super::it::kinds::kyasarin::position(r.game, birdo);
         let up = param(r.game).f(r.data, p::BIRDO_PLATFORM);
         pos.y = mem(fp::fadds(reg(pos.y), reg(up)));
@@ -460,13 +464,13 @@ pub fn proc_birdo(r: &mut Running, gobj: GObjId) {
 pub fn init_pidgit_wait(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let pa = param(r.game);
-    r.game.grounds[g.0].u.inishie2().xC4 |= PIDGIT_WAIT;
+    r.game.grounds[g.0].u.inishie2().flags |= PIDGIT_WAIT;
     let w = wait(
         r,
         pa.h(r.data, p::PIDGIT_WAIT),
         pa.h(r.data, p::PIDGIT_SPREAD),
     );
-    r.game.grounds[g.0].u.inishie2().xCC = w;
+    r.game.grounds[g.0].u.inishie2().pidgit_wait = w;
 }
 
 /// Sending Pidgit, `grInishie2_801FD7A8`: once his wait runs out, his carpet comes, and the
@@ -475,17 +479,17 @@ pub fn init_pidgit_wait(r: &mut Running, gobj: GObjId) {
 pub fn send_pidgit(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.inishie2();
-    if v.xC4 & PIDGIT_WAIT == 0 {
+    if v.flags & PIDGIT_WAIT == 0 {
         return;
     }
-    let counter = v.xCC;
-    v.xCC = counter.wrapping_sub(1);
+    let counter = v.pidgit_wait;
+    v.pidgit_wait = counter.wrapping_sub(1);
     if counter < 0 {
         let carpet = create(r, MAP_PIDGIT, SEND_FRAME);
-        r.game.grounds[g.0].u.inishie2().xC4 &= !PIDGIT_WAIT;
+        r.game.grounds[g.0].u.inishie2().flags &= !PIDGIT_WAIT;
         if let Some(carpet) = carpet {
             let cg = ground_of(r.game, carpet);
-            r.game.grounds[cg.0].u.inishie2_pidgit().xC4 = Some(gobj);
+            r.game.grounds[cg.0].u.inishie2_pidgit().sender = Some(gobj);
         }
     }
 }
@@ -507,18 +511,18 @@ pub fn pidgit_in(r: &mut Running, gobj: GObjId) {
     let pos = Vec3::new(mem(fp::fadds(reg(from.x), reg(edge))), from.y, from.z);
     let v = r.game.grounds[g.0].u.inishie2_pidgit();
     if side == 0 {
-        v.xC8 |= SIDE;
+        v.flags |= SIDE;
     } else {
-        v.xC8 &= !SIDE;
+        v.flags &= !SIDE;
     }
-    let anim = i32::from(v.xC8 & SIDE != 0);
+    let anim = i32::from(v.flags & SIDE != 0);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, anim);
     let v = r.game.grounds[g.0].u.inishie2_pidgit();
-    v.xC8 |= COMING_IN;
-    v.xC8 &= !(LEAVING | GOING);
-    v.xCA = 0;
-    v.xD8 = pos;
+    v.flags |= COMING_IN;
+    v.flags &= !(LEAVING | GOING);
+    v.turns = 0;
+    v.place = pos;
     let part = nth_joint(r.game, gobj, 0).expect("Pidgit's carpet's part 0");
     jobj::set_translate(&mut r.game.objs.jobjs, part, pos);
 }
@@ -546,28 +550,28 @@ pub fn pidgit_fly(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     if anime::finished(r.game, gobj, 1, 1) {
         let v = r.game.grounds[g.0].u.inishie2_pidgit();
-        let x = mem(fp::fadds(reg(v.xD8.x), reg(v.xCC.x)));
-        if v.xC8 & COMING_IN != 0 {
+        let x = mem(fp::fadds(reg(v.place.x), reg(v.anim_step.x)));
+        if v.flags & COMING_IN != 0 {
             if past_edge(r.game, x) == 0 {
-                r.game.grounds[g.0].u.inishie2_pidgit().xC8 &= !COMING_IN;
+                r.game.grounds[g.0].u.inishie2_pidgit().flags &= !COMING_IN;
             }
         } else {
             let v = r.game.grounds[g.0].u.inishie2_pidgit();
-            if v.xC8 & GOING == 0 {
-                if v.xCA < 2 {
-                    v.xC8 ^= SIDE;
+            if v.flags & GOING == 0 {
+                if v.turns < 2 {
+                    v.flags ^= SIDE;
                 } else {
                     let past = past_edge(r.game, x);
                     if past != 0 {
                         let v = r.game.grounds[g.0].u.inishie2_pidgit();
-                        v.xC8 |= GOING;
+                        v.flags |= GOING;
                         // A one-bit field: 2 (past the right) keeps 0.
                         if past & 1 != 0 {
-                            v.xC8 |= SIDE;
+                            v.flags |= SIDE;
                         } else {
-                            v.xC8 &= !SIDE;
+                            v.flags &= !SIDE;
                         }
-                        v.xC8 |= LEAVING;
+                        v.flags |= LEAVING;
                     } else {
                         let pa = param(r.game);
                         let keep = pa.h(r.data, p::PIDGIT_KEEP);
@@ -579,20 +583,20 @@ pub fn pidgit_fly(r: &mut Running, gobj: GObjId) {
                             0
                         };
                         if k >= i32::from(keep) {
-                            r.game.grounds[g.0].u.inishie2_pidgit().xC8 ^= SIDE;
+                            r.game.grounds[g.0].u.inishie2_pidgit().flags ^= SIDE;
                         }
                     }
                 }
             }
             let v = r.game.grounds[g.0].u.inishie2_pidgit();
-            v.xCA = v.xCA.wrapping_add(1);
+            v.turns = v.turns.wrapping_add(1);
         }
         let v = r.game.grounds[g.0].u.inishie2_pidgit();
-        let anim = i32::from(v.xC8 & SIDE != 0);
+        let anim = i32::from(v.flags & SIDE != 0);
         let m = map_id(r.game, gobj);
         anime::start_map(r.game, r.data, gobj, m, anim);
         let v = r.game.grounds[g.0].u.inishie2_pidgit();
-        let (place, step) = (v.xD8, v.xCC);
+        let (place, step) = (v.place, v.anim_step);
         let part = nth_joint(r.game, gobj, 0).expect("Pidgit's carpet's part 0");
         let jobjs = &mut r.game.objs.jobjs;
         jobj::set_translate(jobjs, part, place);
@@ -606,12 +610,12 @@ pub fn pidgit_fly(r: &mut Running, gobj: GObjId) {
             o.translate.z = mem(fp::fadds(reg(o.translate.z), reg(step.z)))
         });
         let t = jobjs[part].translate;
-        r.game.grounds[g.0].u.inishie2_pidgit().xD8 = t;
+        r.game.grounds[g.0].u.inishie2_pidgit().place = t;
         return;
     }
     let part = nth_joint(r.game, gobj, 1).expect("Pidgit's carpet's part 1");
     let t = r.game.objs.jobjs[part].translate;
-    r.game.grounds[g.0].u.inishie2_pidgit().xCC = t;
+    r.game.grounds[g.0].u.inishie2_pidgit().anim_step = t;
 }
 
 /// Pidgit's carpet's setup (map 1), `grInishie2_801FDE8C`: coming in, its collision.
@@ -636,15 +640,15 @@ pub fn proc_pidgit(r: &mut Running, gobj: GObjId) {
     let out =
         reg(pos.x) > reg(stage::blast_right(r.game)) || reg(pos.x) < reg(stage::blast_left(r.game));
     let v = r.game.grounds[g.0].u.inishie2_pidgit();
-    if out && v.xC8 & LEAVING != 0 {
-        let stage_gobj = v.xC4.expect("Pidgit's carpet's stage object");
+    if out && v.flags & LEAVING != 0 {
+        let stage_gobj = v.sender.expect("Pidgit's carpet's stage object");
         let sg = ground_of(r.game, stage_gobj);
         let pa = param(r.game);
-        r.game.grounds[sg.0].u.inishie2().xC4 |= PIDGIT_WAIT;
+        r.game.grounds[sg.0].u.inishie2().flags |= PIDGIT_WAIT;
         let base = pa.h(r.data, p::PIDGIT_WAIT);
         let spread = pa.h(r.data, p::PIDGIT_SPREAD);
         let k = random_below(r, i32::from(spread));
-        r.game.grounds[sg.0].u.inishie2().xCC = i32::from(base).wrapping_add(k) as i16;
+        r.game.grounds[sg.0].u.inishie2().pidgit_wait = i32::from(base).wrapping_add(k) as i16;
         setup::destroy(r, Some(gobj));
     }
 }

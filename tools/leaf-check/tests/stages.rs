@@ -1620,8 +1620,8 @@ fn tincle_states() {
             .get(&peek_u32(call, u + 0x2C))
             .expect("Tingle's stage object");
         let v = r.game.grounds[gr.0].u.greatbay4();
-        v.xC4 = state;
-        v.xE4 = pos;
+        v.state = state;
+        v.place = pos;
         Ret::Nothing
     };
     check_hazard(&d, "it_802ECCA4", 1, &as_saved, &ask);
@@ -2921,7 +2921,7 @@ fn rcruise_unreached_callbacks() {
     let wind = |r: &mut Running, maps: &Maps, call: &Call| {
         let w = rcruise::wind(r.game);
         let g = rc_ground(maps, call.regs.gpr[3] - 0x10);
-        r.game.grounds[g.0].u.scroll().x10 = w;
+        r.game.grounds[g.0].u.scroll().offset = w;
         Ret::Nothing
     };
     check_calls_with(&d, from, 1, &into, &wind);
@@ -4245,7 +4245,7 @@ fn river_spline(r: &mut Running) -> melee_data::archive::DataRef {
         .grounds
         .iter()
         .find_map(|(_, g)| match &g.u.vars {
-            GroundVars::KongoPath(v) => v.xC4,
+            GroundVars::KongoPath(v) => v.spline,
             _ => None,
         })
         .expect("a river path with its spline")
@@ -7193,9 +7193,9 @@ fn inishie1_hatena() {
         let v = vars(call);
         r.game.grounds[g.0].u.vars = melee_sim::game::gr::GroundVars::Inishie1Hatena(
             melee_sim::game::gr::vars::Inishie1HatenaVars {
-                xC4: maps.jobjs.get(&peek_u32(call, v)).copied(),
-                xC8: peek_u32(call, v + 4) as i32,
-                xCC: peek_u32(call, v + 8) as i32,
+                brick_jobj: maps.jobjs.get(&peek_u32(call, v)).copied(),
+                blink: peek_u32(call, v + 4) as i32,
+                hidden: peek_u32(call, v + 8) as i32,
             },
         );
         inishie1::proc_hatena(r, gobj);
@@ -8279,8 +8279,8 @@ fn icemt_unreached_callbacks() {
         let v = r.game.grounds[g.0].u.icemt_scroll();
         for (k, c) in [w.x, w.y, w.z].into_iter().enumerate() {
             let b = c.to_bits();
-            v.x18[2 * k] = (b >> 16) as u16 as i16;
-            v.x18[2 * k + 1] = b as u16 as i16;
+            v.speed_rests[2 * k] = (b >> 16) as u16 as i16;
+            v.speed_rests[2 * k + 1] = b as u16 as i16;
         }
         Ret::Nothing
     };

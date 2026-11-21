@@ -711,7 +711,7 @@ fn set_mode(r: &mut Running, gobj: GObjId, mode: i32, timer: i32) {
         let v = r.game.grounds[g.0].u.stadium_display();
         v.shown = shown;
         v.rendered = false;
-        v.xF8_1 = false;
+        v.unread_bit = false;
     };
     match mode {
         0 => {
@@ -830,8 +830,8 @@ pub fn reset_display(r: &mut Running, gobj: GObjId) {
         v.shown = 1;
         v.applied = -1;
         v.rendered = false;
-        v.xF8_1 = false;
-        v.xF8_2 = false;
+        v.unread_bit = false;
+        v.shows_count = false;
         v.prev_mode = -1;
         v.player = 99;
         v.count = 0;
@@ -1436,7 +1436,7 @@ pub fn text_names_or_count(r: &mut Running, gobj: GObjId) {
     if v.mode != 1 {
         return;
     }
-    let x_f8_2 = v.xF8_2;
+    let x_f8_2 = v.shows_count;
     if r.game.vs_is_singleplayer() || x_f8_2 {
         text_count(r, gobj);
     } else {

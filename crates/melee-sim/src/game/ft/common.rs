@@ -561,7 +561,7 @@ impl Running<'_> {
         if self.game.fighter(gobj).x2224_b4 {
             return out;
         }
-        for i in 0..self.game.gr.devices.x6578 {
+        for i in 0..self.game.gr.devices.wind_count {
             assert!(
                 i == 0,
                 "ftColl_GetWindOffsetVec: a wind device past ft_80459A68's one"

@@ -193,10 +193,10 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
 pub fn init_face(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.oldpupupu();
-    v.xC4 = 0;
-    v.xC8 = 0;
-    v.xCC = 0;
-    v.xD0 = 1;
+    v.cycle = 0;
+    v.state = 0;
+    v.blink = 0;
+    v.timer = 1;
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
 }
@@ -207,11 +207,11 @@ pub fn init_face(r: &mut Running, gobj: GObjId) {
 pub fn proc_face(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.oldpupupu();
-    if v.xD0 != 1 {
+    if v.timer != 1 {
         return;
     }
-    v.xD0 = 0;
-    let (state, row, side) = (v.xC8, v.xCC, v.xD4);
+    v.timer = 0;
+    let (state, row, side) = (v.state, v.blink, v.state_new);
     let table = match state {
         0 => FACE_IDLE,
         1 => FACE_TURN,
@@ -297,7 +297,7 @@ fn flight_wait(r: &mut Running) -> i16 {
 pub fn init_flights(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let t = flight_wait(r);
-    r.game.grounds[g.0].u.oldpupupu2().xC4 = t;
+    r.game.grounds[g.0].u.oldpupupu2().flight_wait = t;
 }
 
 /// The flights' process, `grOldPupupu_80210D10`: when the wait runs out, one of the ten
@@ -307,8 +307,8 @@ pub fn init_flights(r: &mut Running, gobj: GObjId) {
 pub fn proc_flights(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.oldpupupu2();
-    let timer = v.xC4;
-    v.xC4 = timer.wrapping_sub(1);
+    let timer = v.flight_wait;
+    v.flight_wait = timer.wrapping_sub(1);
     if timer >= 0 {
         return;
     }
@@ -357,7 +357,7 @@ pub fn proc_flights(r: &mut Running, gobj: GObjId) {
         x = fp::fadds(x, step);
     }
     let t = flight_wait(r);
-    r.game.grounds[g.0].u.oldpupupu2().xC4 = t;
+    r.game.grounds[g.0].u.oldpupupu2().flight_wait = t;
 }
 
 /// Where a flight of `count` from side `from` (1 the right) starts through a view whose ground
@@ -407,15 +407,15 @@ pub fn init_whispy(r: &mut Running, gobj: GObjId) {
     let p = param(r.game);
     let (min, max) = (p.i(r, 0xC), p.i(r, 8));
     let v = r.game.grounds[g.0].u.oldpupupu();
-    v.xC4 = 0;
-    v.xC8 = 0;
-    v.xCC = 0;
+    v.cycle = 0;
+    v.state = 0;
+    v.blink = 0;
     let wait = randrange(r, min, max);
     let v = r.game.grounds[g.0].u.oldpupupu();
-    v.xD0 = wait;
-    v.xD4 = 1;
-    v.xE0 = 0;
-    v.xD8 = 1;
+    v.timer = wait;
+    v.state_new = 1;
+    v.ticks = 0;
+    v.facing = 1;
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     r.game.grounds[g.0].x11_flags.b012 = 1;
@@ -429,7 +429,7 @@ pub fn register_wind(game: &mut Game, gobj: GObjId, kind: u32, cb: CodeRef) {
     d.device = Some(gobj);
     d.device_type = kind;
     d.device_cb = Some(cb);
-    d.x6578 = d.x6578.wrapping_add(1);
+    d.wind_count = d.wind_count.wrapping_add(1);
 }
 
 /// Whether `pos` lies strictly inside the box the two x and two y bounds make, in either
@@ -462,7 +462,7 @@ pub fn wind_push(r: &mut Running, gobj: GObjId, fighter: GObjId) -> Option<Vec3>
     let pos = r.game.fighter(fighter).cur_pos;
     let p = param(r.game);
     let g = ground_of(r.game, gobj);
-    let blowing = r.game.grounds[g.0].u.oldpupupu().xDC;
+    let blowing = r.game.grounds[g.0].u.oldpupupu().wind_target;
     let (y1, y0) = (p.f(r, 0x24), p.f(r, 0x28));
     let x = match blowing {
         1 if in_box(pos, p.f(r, 0x1C), p.f(r, 0x20), y1, y0) => mem(fp::fneg(reg(p.f(r, 0x10)))),
@@ -476,27 +476,27 @@ pub fn wind_push(r: &mut Running, gobj: GObjId, fighter: GObjId) -> Option<Vec3>
 fn sync_face(game: &mut Game, gobj: GObjId) {
     let g = ground_of(game, gobj);
     let v = game.grounds[g.0].u.oldpupupu();
-    let (c4, c8, d8) = (v.xC4, v.xC8, v.xD8);
+    let (c4, c8, d8) = (v.cycle, v.state, v.facing);
     let face = map_gobj(game, MAP_FACE).expect("Ground_GetMapGObj(1)");
     let fg = ground_of(game, face);
     let o = game.grounds[fg.0].u.oldpupupu();
-    o.xC4 = c4;
-    o.xC8 = c8;
-    o.xCC = 0;
-    o.xD4 = d8;
-    o.xD0 = 1;
+    o.cycle = c4;
+    o.state = c8;
+    o.blink = 0;
+    o.state_new = d8;
+    o.timer = 1;
 }
 
 /// Whispy's next state in the cycle (the inline `grOldPupupu_Advance`).
 fn advance(game: &mut Game, gobj: GObjId) {
     let g = ground_of(game, gobj);
     let v = game.grounds[g.0].u.oldpupupu();
-    v.xC4 = v.xC4.wrapping_add(1);
-    if v.xC4 >= 3 {
-        v.xC4 = 0;
+    v.cycle = v.cycle.wrapping_add(1);
+    if v.cycle >= 3 {
+        v.cycle = 0;
     }
-    v.xC8 = CYCLE[v.xC4 as usize];
-    v.xD4 = 1;
+    v.state = CYCLE[v.cycle as usize];
+    v.state_new = 1;
 }
 
 /// A random count between the parameters' floats at 0x30 and 0x2C, as integers.
@@ -515,37 +515,37 @@ pub fn proc_whispy(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     let v = r.game.grounds[g.0].u.oldpupupu();
-    v.xE0 = v.xE0.wrapping_add(1);
-    v.xDC = 0;
-    match v.xC8 {
+    v.ticks = v.ticks.wrapping_add(1);
+    v.wind_target = 0;
+    match v.state {
         0 => {
-            if r.game.grounds[g.0].u.oldpupupu().xD4 != 0 {
+            if r.game.grounds[g.0].u.oldpupupu().state_new != 0 {
                 let p = param(r.game);
                 let (min, max) = (p.i(r, 0xC), p.i(r, 8));
                 let v = r.game.grounds[g.0].u.oldpupupu();
-                v.xD4 = 0;
-                v.xCC = 0;
+                v.state_new = 0;
+                v.blink = 0;
                 let wait = randrange(r, min, max);
                 let v = r.game.grounds[g.0].u.oldpupupu();
-                v.xD0 = wait;
-                let anim = pick(WHISPY_IDLE, v.xCC, v.xD8);
+                v.timer = wait;
+                let anim = pick(WHISPY_IDLE, v.blink, v.facing);
                 anime::start_map(r.game, r.data, gobj, m, anim);
                 sync_face(r.game, gobj);
                 let b = blink_wait(r);
-                r.game.grounds[g.0].u.oldpupupu().xCC = b;
+                r.game.grounds[g.0].u.oldpupupu().blink = b;
             }
             let v = r.game.grounds[g.0].u.oldpupupu();
-            v.xD0 = v.xD0.wrapping_sub(1);
+            v.timer = v.timer.wrapping_sub(1);
             if anime::finished(r.game, gobj, 0, 7) {
-                if r.game.grounds[g.0].u.oldpupupu().xD0 > 0 {
+                if r.game.grounds[g.0].u.oldpupupu().timer > 0 {
                     let v = r.game.grounds[g.0].u.oldpupupu();
-                    v.xCC = v.xCC.wrapping_sub(1);
-                    if v.xCC <= 0 {
-                        v.xCC = 0;
-                        let anim = pick(WHISPY_IDLE, v.xCC, v.xD8);
+                    v.blink = v.blink.wrapping_sub(1);
+                    if v.blink <= 0 {
+                        v.blink = 0;
+                        let anim = pick(WHISPY_IDLE, v.blink, v.facing);
                         anime::start_map(r.game, r.data, gobj, m, anim);
                         let b = blink_wait(r);
-                        r.game.grounds[g.0].u.oldpupupu().xCC = b;
+                        r.game.grounds[g.0].u.oldpupupu().blink = b;
                     }
                     sync_face(r.game, gobj);
                     return;
@@ -555,45 +555,45 @@ pub fn proc_whispy(r: &mut Running, gobj: GObjId) {
             }
         }
         1 => {
-            if r.game.grounds[g.0].u.oldpupupu().xD4 != 0 {
-                r.game.grounds[g.0].u.oldpupupu().xCC = 0;
+            if r.game.grounds[g.0].u.oldpupupu().state_new != 0 {
+                r.game.grounds[g.0].u.oldpupupu().blink = 0;
                 let j = jobj_of(r.game, gobj).expect("Whispy's model");
                 let pos = r.game.objs.jobjs[j].translate;
                 let dir = super::super::it::owner::opponents_dir(r.game, r.data, pos, None);
                 let side_f = fp::frsp(if reg(dir) == 1.0 { 1.0 } else { 0.0 });
                 let v = r.game.grounds[g.0].u.oldpupupu();
-                if fp::frsp(f64::from(v.xD8)) == side_f {
-                    v.xC8 = 2;
-                    v.xD4 = 0;
-                    v.xCC = 0;
-                    v.xD0 = 0;
-                    let anim = pick(WHISPY_BLOW, v.xCC, v.xD8);
+                if fp::frsp(f64::from(v.facing)) == side_f {
+                    v.state = 2;
+                    v.state_new = 0;
+                    v.blink = 0;
+                    v.timer = 0;
+                    let anim = pick(WHISPY_BLOW, v.blink, v.facing);
                     anime::start_map(r.game, r.data, gobj, m, anim);
                     advance(r.game, gobj);
                     sync_face(r.game, gobj);
                     sync_face(r.game, gobj);
                 } else {
-                    v.xD8 = fp::fctiwz(side_f);
-                    v.xD4 = 0;
-                    v.xCC = 0;
-                    v.xD0 = 0;
-                    let anim = pick(WHISPY_TURN, v.xCC, v.xD8);
+                    v.facing = fp::fctiwz(side_f);
+                    v.state_new = 0;
+                    v.blink = 0;
+                    v.timer = 0;
+                    let anim = pick(WHISPY_TURN, v.blink, v.facing);
                     anime::start_map(r.game, r.data, gobj, m, anim);
                     sync_face(r.game, gobj);
                 }
             }
-            if r.game.grounds[g.0].u.oldpupupu().xC8 == 1 && anime::finished(r.game, gobj, 0, 7) {
+            if r.game.grounds[g.0].u.oldpupupu().state == 1 && anime::finished(r.game, gobj, 0, 7) {
                 advance(r.game, gobj);
                 sync_face(r.game, gobj);
             }
         }
         2 => {
-            if r.game.grounds[g.0].u.oldpupupu().xD4 != 0 {
+            if r.game.grounds[g.0].u.oldpupupu().state_new != 0 {
                 let v = r.game.grounds[g.0].u.oldpupupu();
-                v.xD4 = 0;
-                v.xCC = 0;
-                v.xD0 = 0;
-                let anim = pick(WHISPY_BLOW, v.xCC, v.xD8);
+                v.state_new = 0;
+                v.blink = 0;
+                v.timer = 0;
+                let anim = pick(WHISPY_BLOW, v.blink, v.facing);
                 anime::start_map(r.game, r.data, gobj, m, anim);
                 sync_face(r.game, gobj);
             }
@@ -603,14 +603,14 @@ pub fn proc_whispy(r: &mut Running, gobj: GObjId) {
                 return;
             }
             let v = r.game.grounds[g.0].u.oldpupupu();
-            v.xD0 = v.xD0.wrapping_add(1);
-            let (t, side) = (v.xD0, v.xD8);
+            v.timer = v.timer.wrapping_add(1);
+            let (t, side) = (v.timer, v.facing);
             if t == 45 {
                 r.sfx_play(if side == 0 { 0x72BF0 } else { 0x72BF1 }, 0x7F, 0x40);
             }
             if t > 45 && t < 0x140 {
                 super::super::camera::request_quake(r, super::super::camera::QUAKE_LOOP, None);
-                r.game.grounds[g.0].u.oldpupupu().xDC = side.wrapping_add(1);
+                r.game.grounds[g.0].u.oldpupupu().wind_target = side.wrapping_add(1);
                 if t % 10 == 0 {
                     let p = param(r.game);
                     let (x0, x1) = if side == 0 {
@@ -646,8 +646,8 @@ pub fn proc_leaves(r: &mut Running, gobj: GObjId) {
     let w = map_gobj(r.game, MAP_WHISPY).expect("Ground_GetMapGObj(7)");
     let wg = ground_of(r.game, w);
     let o = r.game.grounds[wg.0].u.oldpupupu();
-    if o.xC8 == 2 && o.xD4 != 0 {
-        let anim = pick(LEAVES_BLOW, o.xCC, o.xD8);
+    if o.state == 2 && o.state_new != 0 {
+        let anim = pick(LEAVES_BLOW, o.blink, o.facing);
         let m = map_id(r.game, gobj);
         anime::start_map(r.game, r.data, gobj, m, anim);
     }

@@ -635,7 +635,7 @@ fn frozen(_game: &Game) -> bool {
 /// Whether a far Arwing fires this tick: every eighth tick of its flight with odds of one in
 /// eight, inside its type's window of ticks flown.
 fn fires(r: &mut Running, gid: GroundId, ty: i32) -> i32 {
-    let flown = r.game.grounds[gid.0].u.arwing().xF0;
+    let flown = r.game.grounds[gid.0].u.arwing().ticks_flown;
     if flown & 7 == 0 && r.game.objs.rng.below(8) == 0 {
         let (lo, hi) = match ty {
             8 => (0x3C, 0xE6),
@@ -770,7 +770,7 @@ pub fn path_pos(r: &mut Running, path: Option<GObjId>) -> Vec3 {
     };
     let slot = {
         let pg = ground_of(r.game, path);
-        r.game.grounds[pg.0].u.arwing_path().xC8 as usize
+        r.game.grounds[pg.0].u.arwing_path().slot as usize
     };
     let j = nth_joint(r.game, path, 5);
     let pos = world_position(&mut r.game.objs, r.data, j, None);
@@ -813,9 +813,9 @@ pub fn start_talk(r: &mut Running, which: i32) -> bool {
     let w = create(r, 8, TALK_FRAME).expect("grvenom.c: 2244: wgobj");
     let gid = ground_of(r.game, w);
     let v = r.game.grounds[gid.0].u.starfox_talk();
-    v.xCC = 10;
-    v.xC8 = 0;
-    v.xC4 = talk as u32;
+    v.wait = 10;
+    v.next_line = 0;
+    v.talk = talk as u32;
     true
 }
 

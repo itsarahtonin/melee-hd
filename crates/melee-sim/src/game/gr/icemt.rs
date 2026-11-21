@@ -474,7 +474,7 @@ pub fn init_scenery(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "fn_801F75EC")]
 pub fn on_climb_start(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    r.game.grounds[g.0].u.icemt_scroll().x14 = 0;
+    r.game.grounds[g.0].u.icemt_scroll().waiting = 0;
 }
 
 /// Draws a field at random whose rest count is 0, and gives it the rest count once shown.
@@ -482,11 +482,11 @@ fn draw_field(r: &mut Running, g: GroundId) -> i32 {
     let rest = param(r.game).h(r.data, p::FIELD_REST);
     let i = loop {
         let i = r.game.objs.rng.below(6) as usize;
-        if r.game.grounds[g.0].u.icemt_scroll().x30[i] == 0 {
+        if r.game.grounds[g.0].u.icemt_scroll().field_rests[i] == 0 {
             break i;
         }
     };
-    r.game.grounds[g.0].u.icemt_scroll().x30[i] = rest;
+    r.game.grounds[g.0].u.icemt_scroll().field_rests[i] = rest;
     FIELDS[i].0
 }
 
@@ -498,8 +498,8 @@ pub fn init_climb(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     {
         let v = r.game.grounds[g.0].u.icemt_scroll();
-        v.x18 = [0; 12];
-        v.x30 = [0; 10];
+        v.speed_rests = [0; 12];
+        v.field_rests = [0; 10];
     }
     let under = draw_field(r, g);
     r.game.grounds[g.0].u.icemt_scroll().under = under as i16;
@@ -507,14 +507,14 @@ pub fn init_climb(r: &mut Running, gobj: GObjId) {
     r.game.grounds[g.0].u.icemt_scroll().upper = upper as i16;
     place_fields(r, g);
     let v = r.game.grounds[g.0].u.icemt_scroll();
-    v.x16 = 0;
+    v.unread = 0;
     v.phase = 0;
     v.burst_count = 0;
     v.delay = 0;
     v.lerp_count = 0;
     v.idx = -1;
     v.cur = 0.0;
-    v.x14 = 1;
+    v.waiting = 1;
     setup::add_start_hook(r.game, gobj, CodeRef(START_HOOK));
 }
 
@@ -524,7 +524,7 @@ pub fn init_climb(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "stageGObj9_GObjProc@801F7728")]
 pub fn proc_climb(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    if r.game.grounds[g.0].u.icemt_scroll().x14 != 0 {
+    if r.game.grounds[g.0].u.icemt_scroll().waiting != 0 {
         return;
     }
     let (y, _) = speed_step(r, g);
@@ -605,15 +605,15 @@ pub fn climb_speed(r: &mut Running, g: GroundId, c: Climb) -> (f32, bool) {
 pub fn next_speed(r: &mut Running, g: GroundId) -> (i32, i32) {
     let prm = param(r.game);
     loop {
-        let k = i32::from(climb10(r.game, g).x1A);
+        let k = i32::from(climb10(r.game, g).speed_cursor);
         let a = prm.list(r.data, p::SPEED_IXS, k);
         let out = prm.list(r.data, p::SPEED_WAITS, k);
         if a != -1 && out != -1 {
             let v = climb10(r.game, g);
-            v.x1A = v.x1A.wrapping_add(1);
+            v.speed_cursor = v.speed_cursor.wrapping_add(1);
             return (a, out);
         }
-        climb10(r.game, g).x1A = 0;
+        climb10(r.game, g).speed_cursor = 0;
     }
 }
 
@@ -622,14 +622,14 @@ pub fn next_speed(r: &mut Running, g: GroundId) -> (i32, i32) {
 #[doc(alias = "fn_801F91A8")]
 pub fn next_climb_field(r: &mut Running, g: GroundId) -> i32 {
     let prm = param(r.game);
-    let k = i32::from(climb10(r.game, g).x1C);
+    let k = i32::from(climb10(r.game, g).field_cursor);
     let index = prm.list(r.data, p::FIELD_IXS, k);
     if index == -1 {
         return -1;
     }
     let id = field_id_at(index);
     let v = climb10(r.game, g);
-    v.x1C = v.x1C.wrapping_add(1);
+    v.field_cursor = v.field_cursor.wrapping_add(1);
     id
 }
 
@@ -640,7 +640,7 @@ pub fn next_climb_field(r: &mut Running, g: GroundId) -> i32 {
 pub fn draw_speed(r: &mut Running, g: GroundId) -> (i32, i32) {
     let stkind = super::stage::stkind(r.game);
     let prm = param(r.game);
-    let rest = r.game.grounds[g.0].u.icemt_scroll().x18;
+    let rest = r.game.grounds[g.0].u.icemt_scroll().speed_rests;
     let list: Vec<i32> = (0..12)
         .filter(|&i| rest[i as usize] == 0 && (stkind != 212 || i >= 4))
         .collect();
@@ -653,12 +653,12 @@ pub fn draw_speed(r: &mut Running, g: GroundId) -> (i32, i32) {
     }];
     let speed_rest = prm.h(r.data, p::SPEED_REST);
     let v = r.game.grounds[g.0].u.icemt_scroll();
-    for c in v.x18.iter_mut() {
+    for c in v.speed_rests.iter_mut() {
         if *c > 0 {
             *c -= 1;
         }
     }
-    v.x18[chosen as usize] = speed_rest;
+    v.speed_rests[chosen as usize] = speed_rest;
     let a = i32::from(prm.h(r.data, p::HOLD_A));
     let b = i32::from(prm.h(r.data, p::HOLD_B));
     let wait = super::grlib::rand_range(&mut r.game.objs.rng, a, b);
@@ -674,17 +674,17 @@ pub fn next_field(r: &mut Running, g: GroundId) -> i32 {
         let idx = r.game.objs.rng.below(6) as usize;
         let v = r.game.grounds[g.0].u.icemt_scroll();
         let id = FIELDS[idx].0 as i16;
-        if v.x30[idx] == 0 && v.under != id && v.upper != id {
+        if v.field_rests[idx] == 0 && v.under != id && v.upper != id {
             break idx;
         }
     };
     let v = r.game.grounds[g.0].u.icemt_scroll();
-    for c in v.x30[..6].iter_mut() {
+    for c in v.field_rests[..6].iter_mut() {
         if *c > 0 {
             *c -= 1;
         }
     }
-    v.x30[idx] = rest;
+    v.field_rests[idx] = rest;
     FIELDS[idx].0
 }
 
@@ -694,7 +694,7 @@ pub fn tell_bg(game: &mut Game, y: f32) {
     let bg = map_gobj(game, 8);
     assert!(bg.is_some(), "gricemt.c: 2615: bg_gobj");
     let g = ground_of(game, bg.unwrap());
-    game.grounds[g.0].u.icemt_bg().x0 = y;
+    game.grounds[g.0].u.icemt_bg().speed = y;
 }
 
 /// Moves the two fields shown up by `y`, `grIceMt_801F96E0` (it returns nothing its caller
@@ -1201,7 +1201,7 @@ impl ClimbTouch {
         }
         if let Some(gobj) = map_gobj(game, 10) {
             let g = ground_of(game, gobj);
-            climb10(game, g).x14 |= IceMtClimbVars::B4;
+            climb10(game, g).flags |= IceMtClimbVars::B4;
         }
     }
 }
@@ -1219,19 +1219,19 @@ pub fn init_climb10(r: &mut Running, gobj: GObjId) {
     set_ids(r.game, g, Climb::Adventure, under, upper);
     place_climb_fields(r, g, Climb::Adventure);
     let v = climb10(r.game, g);
-    v.x18 = 0;
-    v.x1C = 2;
-    v.x1A = 0;
-    v.x14 &= !(IceMtClimbVars::B1 | IceMtClimbVars::B2 | IceMtClimbVars::B3 | IceMtClimbVars::B4);
-    v.x16 = 0;
-    v.x20 = 0.0;
+    v.unread = 0;
+    v.field_cursor = 2;
+    v.speed_cursor = 0;
+    v.flags &= !(IceMtClimbVars::B1 | IceMtClimbVars::B2 | IceMtClimbVars::B3 | IceMtClimbVars::B4);
+    v.push_ticks = 0;
+    v.push_speed = 0.0;
     v.phase = 0;
     v.burst_count = 0;
     v.delay = 0;
     v.lerp_count = 0;
     v.idx = -1;
     v.cur = 0.0;
-    v.x14 |= IceMtClimbVars::B0;
+    v.flags |= IceMtClimbVars::B0;
     setup::add_start_hook(r.game, gobj, CodeRef(CLIMB10_START_HOOK));
 }
 
@@ -1241,7 +1241,7 @@ pub fn init_climb10(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "stageGObj10_UnkGroundCallback")]
 pub fn on_climb10_start(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    climb10(r.game, g).x14 &= !IceMtClimbVars::B0;
+    climb10(r.game, g).flags &= !IceMtClimbVars::B0;
     let geometry = r.game.geometry_mut();
     for joint in 0..217 {
         if geometry.ledge_callback(joint).0.is_none() {
@@ -1273,48 +1273,48 @@ pub fn proc_climb10(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let prm = param(r.game);
     let data = r.data;
-    if climb10(r.game, g).x14 & IceMtClimbVars::B0 != 0 {
+    if climb10(r.game, g).flags & IceMtClimbVars::B0 != 0 {
         return;
     }
     let mut done: Option<bool> = None;
-    let y = if climb10(r.game, g).x14 & IceMtClimbVars::B2 == 0 {
+    let y = if climb10(r.game, g).flags & IceMtClimbVars::B2 == 0 {
         let (step, ret) = climb_speed(r, g, Climb::Adventure);
         done = Some(ret);
-        if climb10(r.game, g).x14 & IceMtClimbVars::B4 != 0
+        if climb10(r.game, g).flags & IceMtClimbVars::B4 != 0
             && let Some(f) = super::ground::p1_fighter(r.game)
         {
             let pos = r.game.ft_pos(f);
             let max_y = fp::frsp(f64::from(prm.h(data, p::FT_MAX_Y)));
-            if climb10(r.game, g).x14 & IceMtClimbVars::B1 == 0
+            if climb10(r.game, g).flags & IceMtClimbVars::B1 == 0
                 && !r.game.ft_is_in_hitstun(f)
                 && !(reg(pos.y) <= max_y)
             {
                 let ticks = prm.h(data, p::PUSH_TICKS);
                 let v = climb10(r.game, g);
-                v.x14 |= IceMtClimbVars::B1;
-                v.x16 = ticks;
+                v.flags |= IceMtClimbVars::B1;
+                v.push_ticks = ticks;
             }
         }
         let push_step = reg(prm.f(data, p::PUSH_STEP));
-        if climb10(r.game, g).x14 & IceMtClimbVars::B1 != 0 {
+        if climb10(r.game, g).flags & IceMtClimbVars::B1 != 0 {
             let max = prm.f(data, p::PUSH_MAX);
             let v = climb10(r.game, g);
-            v.x20 = mem(fp::fadds(reg(v.x20), push_step));
-            if !(reg(v.x20) <= reg(max)) {
-                v.x20 = max;
+            v.push_speed = mem(fp::fadds(reg(v.push_speed), push_step));
+            if !(reg(v.push_speed) <= reg(max)) {
+                v.push_speed = max;
             }
-            v.x16 = v.x16.wrapping_sub(1);
-            if v.x16 == 0 {
-                v.x14 &= !IceMtClimbVars::B1;
+            v.push_ticks = v.push_ticks.wrapping_sub(1);
+            if v.push_ticks == 0 {
+                v.flags &= !IceMtClimbVars::B1;
             }
         } else {
             let v = climb10(r.game, g);
-            v.x20 = mem(fp::fsubs(reg(v.x20), push_step));
-            if !(reg(v.x20) >= 0.0) {
-                v.x20 = 0.0;
+            v.push_speed = mem(fp::fsubs(reg(v.push_speed), push_step));
+            if !(reg(v.push_speed) >= 0.0) {
+                v.push_speed = 0.0;
             }
         }
-        mem(fp::fadds(reg(step), reg(climb10(r.game, g).x20)))
+        mem(fp::fadds(reg(step), reg(climb10(r.game, g).push_speed)))
     } else {
         let upper = climb10(r.game, g).upper;
         let mgobj = map_gobj(r.game, i32::from(upper));
@@ -1346,10 +1346,10 @@ pub fn proc_climb10(r: &mut Running, gobj: GObjId) {
     change_climb_field(r, g, Climb::Adventure);
     tell_bg(r.game, y);
     if climb10(r.game, g).under == -1 {
-        climb10(r.game, g).x14 |= IceMtClimbVars::B2;
+        climb10(r.game, g).flags |= IceMtClimbVars::B2;
     }
-    if climb10(r.game, g).x14 & IceMtClimbVars::B3 == 0 {
-        let at_end = climb10(r.game, g).x1A == prm.h(data, p::END_IDX);
+    if climb10(r.game, g).flags & IceMtClimbVars::B3 == 0 {
+        let at_end = climb10(r.game, g).speed_cursor == prm.h(data, p::END_IDX);
         let done = match done {
             Some(d) => d,
             None if at_end => panic!(
@@ -1358,7 +1358,7 @@ pub fn proc_climb10(r: &mut Running, gobj: GObjId) {
             None => false,
         };
         if done && at_end {
-            climb10(r.game, g).x14 |= IceMtClimbVars::B3;
+            climb10(r.game, g).flags |= IceMtClimbVars::B3;
             super::ground::clear_x6d8(r.game);
             r.start_stage_event(14, 2, 2, 0, CodeRef(END_EVENT));
             zako::clear_enemies(r);
@@ -1366,7 +1366,7 @@ pub fn proc_climb10(r: &mut Running, gobj: GObjId) {
     } else if super::ground::x6d8(r.game) == 1 {
         super::ground::set_flags(r.game, 0x10);
     }
-    climb10(r.game, g).x14 &= !IceMtClimbVars::B4;
+    climb10(r.game, g).flags &= !IceMtClimbVars::B4;
 }
 
 /// The climb's end's callback for the arena's event, `fn_801FA4CC`: on 1, the stage's `x6D8`
@@ -1449,7 +1449,7 @@ pub fn init_bg(r: &mut Running, gobj: GObjId) {
     anime::set_loop(r.game, gobj, 0, 7, true);
     let parts = [1, 2, 3, 4, 5, 6].map(|d| nth_joint(r.game, gobj, d));
     super::ground::set_guide_points(r.game, r.data, parts);
-    r.game.grounds[g.0].u.icemt_bg().x0 = 0.0;
+    r.game.grounds[g.0].u.icemt_bg().speed = 0.0;
     r.game.grounds[g.0].x11_flags.b012 = 2;
 }
 
@@ -1458,7 +1458,7 @@ pub fn init_bg(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "stageGObj8_GObjProc")]
 pub fn proc_bg(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    let x0 = r.game.grounds[g.0].u.icemt_bg().x0;
+    let x0 = r.game.grounds[g.0].u.icemt_bg().speed;
     let mul = fp::fmuls(0.300_000_011_920_929, reg(x0));
     let j = nth_joint(r.game, gobj, 8);
     assert!(j.is_some(), "gricemt.c: 1935: jobj");

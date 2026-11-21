@@ -198,10 +198,10 @@ pub fn init_clouds(r: &mut Running, gobj: GObjId) {
         c.set_state(0);
         c.set_touched(false);
         c.set_count(0);
-        c.xD4 = 0.0;
-        c.xD0 = 0.0;
+        c.sink_speed = 0.0;
+        c.sunk = 0.0;
         c.jobj = model;
-        c.xCC = y;
+        c.rest_y = y;
         r.game.geometry_mut().set_ledge_callback(
             coll,
             Some(super::CollUser::Ground(g)),
@@ -231,7 +231,7 @@ pub fn proc_clouds(r: &mut Running, gobj: GObjId) {
         let c = &r.game.grounds[g.0].u.oldyoshi_cloud().cloud[i];
         match c.state() {
             0 => {
-                let (speed, depth) = (c.xD4, c.xD0);
+                let (speed, depth) = (c.sink_speed, c.sunk);
                 if c.touched() {
                     let v = approach(
                         reg(speed),
@@ -242,10 +242,10 @@ pub fn proc_clouds(r: &mut Running, gobj: GObjId) {
                         fp::fneg(reg(max)),
                     );
                     let c = &mut r.game.grounds[g.0].u.oldyoshi_cloud().cloud[i];
-                    c.xD4 = mem(v);
-                    c.xD0 = mem(fp::fadds(reg(c.xD0), reg(c.xD4)));
-                    if reg(c.xD0) > reg(deepest) {
-                        c.xD0 = deepest;
+                    c.sink_speed = mem(v);
+                    c.sunk = mem(fp::fadds(reg(c.sunk), reg(c.sink_speed)));
+                    if reg(c.sunk) > reg(deepest) {
+                        c.sunk = deepest;
                     }
                     let n = c.count();
                     c.set_count(n + 1);
@@ -266,10 +266,10 @@ pub fn proc_clouds(r: &mut Running, gobj: GObjId) {
                         fp::fneg(reg(max)),
                     );
                     let c = &mut r.game.grounds[g.0].u.oldyoshi_cloud().cloud[i];
-                    c.xD4 = mem(v);
-                    c.xD0 = mem(fp::fadds(reg(c.xD0), reg(c.xD4)));
-                    if reg(c.xD0) < 0.0 {
-                        c.xD0 = 0.0;
+                    c.sink_speed = mem(v);
+                    c.sunk = mem(fp::fadds(reg(c.sunk), reg(c.sink_speed)));
+                    if reg(c.sunk) < 0.0 {
+                        c.sunk = 0.0;
                     }
                     c.set_count(0);
                 }
@@ -317,7 +317,7 @@ pub fn proc_clouds(r: &mut Running, gobj: GObjId) {
             _ => {}
         }
         let c = &mut r.game.grounds[g.0].u.oldyoshi_cloud().cloud[i];
-        let y = mem(fp::fsubs(reg(c.xCC), reg(c.xD0)));
+        let y = mem(fp::fsubs(reg(c.rest_y), reg(c.sunk)));
         let model = c.jobj.expect("jobj");
         c.set_touched(false);
         jobj::set_srt(&mut r.game.objs.jobjs, model, |o| o.translate.y = y);
@@ -386,8 +386,8 @@ pub fn init_guest(r: &mut Running, gobj: GObjId) {
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     let wait = guest_wait(r);
     let v = r.game.grounds[g.0].u.oldyoshi_guest();
-    v.xC4 = wait as i16;
-    v.xC6 = -1;
+    v.wait = wait as i16;
+    v.part = -1;
     r.game.grounds[g.0].x11_flags.b012 = 2;
 }
 
@@ -405,12 +405,12 @@ fn guest_wait(r: &mut Running) -> i32 {
 pub fn proc_guest(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.oldyoshi_guest();
-    if v.xC6 == -1 {
-        let left = v.xC4;
-        v.xC4 = left.wrapping_sub(1);
+    if v.part == -1 {
+        let left = v.wait;
+        v.wait = left.wrapping_sub(1);
         if left < 0 {
             let k = r.game.objs.rng.below(5);
-            r.game.grounds[g.0].u.oldyoshi_guest().xC6 = GUESTS[k as usize];
+            r.game.grounds[g.0].u.oldyoshi_guest().part = GUESTS[k as usize];
         }
         let m = map_id(r.game, gobj);
         anime::start_map(r.game, r.data, gobj, m, 0);
@@ -420,7 +420,7 @@ pub fn proc_guest(r: &mut Running, gobj: GObjId) {
         let j = jobj_of(r.game, gobj).expect("jobj");
         jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = y);
     } else {
-        let part = v.xC6;
+        let part = v.part;
         let Some(j) = nth_joint(r.game, gobj, i32::from(part)) else {
             return;
         };
@@ -431,8 +431,8 @@ pub fn proc_guest(r: &mut Running, gobj: GObjId) {
             jobj::set_flags_all(&mut r.game.objs.jobjs, Some(j), jobj::HIDDEN);
             let wait = guest_wait(r);
             let v = r.game.grounds[g.0].u.oldyoshi_guest();
-            v.xC4 = wait as i16;
-            v.xC6 = -1;
+            v.wait = wait as i16;
+            v.part = -1;
         }
     }
 }

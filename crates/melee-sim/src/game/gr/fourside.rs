@@ -198,9 +198,9 @@ pub fn init_city(r: &mut Running, gobj: GObjId) {
     let (a, b) = (n(r, 2), n(r, 3));
     let back = map_gobj(r.game, 4).and_then(|b| jobj_of(r.game, b));
     let v = r.game.grounds[g.0].u.fourside();
-    v.x0 = a;
-    v.x4 = b;
-    v.x8 = back;
+    v.skyline = a;
+    v.skyline2 = b;
+    v.back = back;
     r.game.geometry_mut().set_ledge_callback(
         0,
         Some(super::CollUser::GObj(gobj)),
@@ -226,7 +226,7 @@ pub fn proc_city(r: &mut Running, gobj: GObjId) {
 pub fn roof_touched(gp_ufo: &mut super::super::structs::Ground, kind: u32) {
     if kind == 1 {
         let v = gp_ufo.u.fourside_ufo();
-        v.x8 = v.x8.wrapping_add(1);
+        v.on_roof = v.on_roof.wrapping_add(1);
     }
 }
 
@@ -267,12 +267,12 @@ pub fn init_crane(r: &mut Running, gobj: GObjId) {
     let wait = p.wait(r, p::CRANE_WAIT, p::CRANE_WAIT_ADD);
     let y = r.game.objs.jobjs[girder.expect("jobj")].translate.y;
     let v = r.game.grounds[g.0].u.fourside_crane();
-    v.x4 = wait;
-    v.x8 = y;
-    v.x8 = mem(fp::fsubs(reg(v.x8), 10.0));
-    v.x10 = v.x8;
-    v.xC = v.x10;
-    v.x0 = 0;
+    v.ticks = wait;
+    v.rest_y = y;
+    v.rest_y = mem(fp::fsubs(reg(v.rest_y), 10.0));
+    v.target = v.rest_y;
+    v.height = v.target;
+    v.state = 0;
     let gp = &mut r.game.grounds[g.0];
     gp.x10_flags.b5 = true;
     gp.x11_flags.b012 = 1;
@@ -292,39 +292,39 @@ pub fn proc_crane(r: &mut Running, gobj: GObjId) {
     let p = param(r.game);
     let abs = |x: f64| if x < 0.0 { fp::fneg(x) } else { x };
     let v = r.game.grounds[g.0].u.fourside_crane();
-    match v.x0 {
+    match v.state {
         0 => {
-            if v.x4 <= 0 {
+            if v.ticks <= 0 {
                 let (frame, next) = if !v.swung() { (0.0, 1) } else { (400.0, 2) };
                 anime::req_anim(r.game, gobj, 0, 7, frame, true);
                 anime::set_rate(r.game, gobj, 0, 7, 1.0, true);
                 let v = r.game.grounds[g.0].u.fourside_crane();
-                v.x4 = 0;
-                v.x0 = next;
+                v.ticks = 0;
+                v.state = next;
             } else {
-                v.x4 = v.x4.wrapping_sub(1);
+                v.ticks = v.ticks.wrapping_sub(1);
             }
         }
         state @ (1 | 2) => {
-            if v.x4 >= 300 {
+            if v.ticks >= 300 {
                 anime::set_rate(r.game, gobj, 0, 7, 0.0, true);
                 let v = r.game.grounds[g.0].u.fourside_crane();
                 v.set_swung(state == 1);
-                v.x0 = 3;
+                v.state = 3;
             } else {
-                v.x4 = v.x4.wrapping_add(1);
+                v.ticks = v.ticks.wrapping_add(1);
             }
         }
         3 => {
             let wait = p.wait(r, p::CRANE_IRON_WAIT, p::CRANE_IRON_WAIT_ADD);
             let v = r.game.grounds[g.0].u.fourside_crane();
-            v.x4 = wait;
-            v.x0 = 4;
+            v.ticks = wait;
+            v.state = 4;
         }
         4 => {
-            if v.x4 <= 0 {
-                v.x10 = v.x8;
-                let down = reg(v.xC) > reg(v.x8);
+            if v.ticks <= 0 {
+                v.target = v.rest_y;
+                let down = reg(v.height) > reg(v.rest_y);
                 let (max, min) = if down {
                     (p::CRANE_IRON_DOWN_MAX, p::CRANE_IRON_DOWN_MIN)
                 } else {
@@ -337,67 +337,67 @@ pub fn proc_crane(r: &mut Running, gobj: GObjId) {
                 let from = abs(reg(p.f(r, min)));
                 let v = r.game.grounds[g.0].u.fourside_crane();
                 if down {
-                    v.x10 = mem(fp::fsubs(reg(v.x10), fp::fadds(d, from)));
+                    v.target = mem(fp::fsubs(reg(v.target), fp::fadds(d, from)));
                     v.set_lowering(true);
                     crate::game::code::os_report();
-                    r.game.grounds[g.0].u.fourside_crane().x0 = 5;
+                    r.game.grounds[g.0].u.fourside_crane().state = 5;
                 } else {
-                    v.x10 = mem(fp::fadds(reg(v.x10), fp::fadds(d, from)));
+                    v.target = mem(fp::fadds(reg(v.target), fp::fadds(d, from)));
                     v.set_lowering(false);
                     crate::game::code::os_report();
-                    r.game.grounds[g.0].u.fourside_crane().x0 = 6;
+                    r.game.grounds[g.0].u.fourside_crane().state = 6;
                 }
             } else {
-                v.x4 = v.x4.wrapping_sub(1);
+                v.ticks = v.ticks.wrapping_sub(1);
             }
         }
         5 => {
             let spd = p.f(r, p::CRANE_IRON_SPD);
             let acl = p.f(r, p::CRANE_IRON_STOP_ACL);
             let v = r.game.grounds[g.0].u.fourside_crane();
-            v.xC = mem(fp::fsubs(reg(v.xC), reg(spd)));
-            if reg(v.xC) <= reg(v.x10) {
-                v.xC = v.x10;
-                v.x18 = spd;
-                v.x14 = spd;
-                v.x1C = acl;
-                v.x0 = 7;
+            v.height = mem(fp::fsubs(reg(v.height), reg(spd)));
+            if reg(v.height) <= reg(v.target) {
+                v.height = v.target;
+                v.speed = spd;
+                v.start_speed = spd;
+                v.pull = acl;
+                v.state = 7;
             }
         }
         6 => {
             let spd = p.f(r, p::CRANE_IRON_SPD);
             let acl = p.f(r, p::CRANE_IRON_STOP_ACL);
             let v = r.game.grounds[g.0].u.fourside_crane();
-            v.xC = mem(fp::fadds(reg(v.xC), reg(spd)));
-            if reg(v.xC) >= reg(v.x10) {
-                v.x18 = spd;
-                v.x14 = spd;
-                v.x1C = acl;
-                v.x0 = 7;
+            v.height = mem(fp::fadds(reg(v.height), reg(spd)));
+            if reg(v.height) >= reg(v.target) {
+                v.speed = spd;
+                v.start_speed = spd;
+                v.pull = acl;
+                v.state = 7;
             }
         }
         7 => {
-            let pull = reg(v.x1C);
-            if abs(pull) > reg(v.x14) {
-                v.xC = v.x10;
+            let pull = reg(v.pull);
+            if abs(pull) > reg(v.start_speed) {
+                v.height = v.target;
                 let wait = p.wait(r, p::CRANE_WAIT, p::CRANE_WAIT_ADD);
                 let v = r.game.grounds[g.0].u.fourside_crane();
-                v.x4 = wait;
-                v.x0 = 0;
+                v.ticks = wait;
+                v.state = 0;
             } else {
-                v.x18 = mem(fp::fadds(reg(v.x18), pull));
-                v.xC = mem(fp::fadds(reg(v.xC), reg(v.x18)));
-                if reg(v.x1C) < 0.0 && reg(v.xC) < reg(v.x10) {
-                    v.x1C = mem(fp::fmuls(reg(v.x1C), fp::fneg(2.0)));
+                v.speed = mem(fp::fadds(reg(v.speed), pull));
+                v.height = mem(fp::fadds(reg(v.height), reg(v.speed)));
+                if reg(v.pull) < 0.0 && reg(v.height) < reg(v.target) {
+                    v.pull = mem(fp::fmuls(reg(v.pull), fp::fneg(2.0)));
                 }
-                if reg(v.x1C) > 0.0 && reg(v.xC) > reg(v.x10) {
-                    v.x1C = mem(fp::fmuls(reg(v.x1C), fp::fneg(2.0)));
+                if reg(v.pull) > 0.0 && reg(v.height) > reg(v.target) {
+                    v.pull = mem(fp::fmuls(reg(v.pull), fp::fneg(2.0)));
                 }
             }
         }
         _ => {}
     }
-    let y = r.game.grounds[g.0].u.fourside_crane().xC;
+    let y = r.game.grounds[g.0].u.fourside_crane().height;
     let girder = girder.expect("jobj");
     jobj::set_srt(&mut r.game.objs.jobjs, girder, |o| o.translate.y = y);
     update_map_coll(r.game, r.data, gobj);
@@ -413,13 +413,13 @@ pub fn init_ufo(r: &mut Running, gobj: GObjId) {
     setup::init_map_coll(r.game, r.data, j, m);
     let wait = param(r.game).i(r, p::UFO_WAIT);
     let v = r.game.grounds[g.0].u.fourside_ufo();
-    v.x4 = wait;
-    v.x0 = 0;
-    v.x1 = 0xFF;
-    v.x8 = 0;
-    v.x2 = 0;
-    v.xC = None;
-    v.x3 = 0;
+    v.ticks = wait;
+    v.state = 0;
+    v.building = 0xFF;
+    v.on_roof = 0;
+    v.waits = 0;
+    v.subject = None;
+    v.sound_state = 0;
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     r.game.geometry_mut().disable_joint(UFO_JOINT);
     r.game.grounds[g.0].x10_flags.b5 = true;
@@ -439,21 +439,21 @@ pub fn proc_ufo(r: &mut Running, gobj: GObjId) {
     let p = param(r.game);
     let m = map_id(r.game, gobj);
     let v = r.game.grounds[g.0].u.fourside_ufo();
-    let (state, prev) = (v.x0, v.x1);
+    let (state, prev) = (v.state, v.building);
     match state {
         0 => {
-            let timer = v.x4;
+            let timer = v.ticks;
             if timer <= 0 {
                 let mut prob = 0;
-                if v.x8 != 0 {
+                if v.on_roof != 0 {
                     prob = i32::from(p.h(r, p::X46));
                 }
                 let v = r.game.grounds[g.0].u.fourside_ufo();
-                if i32::from(v.x2) >= i32::from(p.h(r, p::UFO_CHALLENGE)) {
+                if i32::from(v.waits) >= i32::from(p.h(r, p::UFO_CHALLENGE)) {
                     prob = i32::from(p.h(r, p::X48));
                 }
                 if prob != 0 && r.game.objs.rng.below(prob) == 0 {
-                    r.game.grounds[g.0].u.fourside_ufo().x2 = 0;
+                    r.game.grounds[g.0].u.fourside_ufo().waits = 0;
                     let building = loop {
                         let b = r.game.objs.rng.below(3);
                         if i32::from(prev) != b {
@@ -461,8 +461,8 @@ pub fn proc_ufo(r: &mut Running, gobj: GObjId) {
                         }
                     };
                     if building == 2 || !heli_about(r.game) {
-                        r.game.grounds[g.0].u.fourside_ufo().x1 = building as u8;
-                        let a = i32::from(r.game.grounds[g.0].u.fourside_ufo().x1) * 4;
+                        r.game.grounds[g.0].u.fourside_ufo().building = building as u8;
+                        let a = i32::from(r.game.grounds[g.0].u.fourside_ufo().building) * 4;
                         anime::start_map(r.game, r.data, gobj, m, a);
                         update_coll_joint(r.game, r.data, UFO_JOINT);
                         r.game.geometry_mut().settle_vertices(UFO_JOINT);
@@ -470,72 +470,72 @@ pub fn proc_ufo(r: &mut Running, gobj: GObjId) {
                         r.game.geometry_mut().enable_joint(UFO_JOINT);
                         let b = r.game.camera.alloc_box(camera::ACTIVE);
                         let v = r.game.grounds[g.0].u.fourside_ufo();
-                        v.xC = Some(b);
-                        v.x3 = 0;
-                        v.x0 = 1;
+                        v.subject = Some(b);
+                        v.sound_state = 0;
+                        v.state = 1;
                     }
                 } else {
                     let wait = p.i(r, p::UFO_WAIT);
                     let v = r.game.grounds[g.0].u.fourside_ufo();
-                    v.x4 = wait;
-                    v.x2 = v.x2.wrapping_add(1);
+                    v.ticks = wait;
+                    v.waits = v.waits.wrapping_add(1);
                 }
             } else {
-                v.x4 = timer.wrapping_sub(1);
+                v.ticks = timer.wrapping_sub(1);
             }
         }
         1 => {
             if anime::finished(r.game, gobj, 0, 7) {
                 let stay = p.wait(r, p::UFO_STAY_TIME, p::UFO_STAY_TIME_ADD);
-                r.game.grounds[g.0].u.fourside_ufo().x4 = stay;
+                r.game.grounds[g.0].u.fourside_ufo().ticks = stay;
                 anime::start_map(r.game, r.data, gobj, m, i32::from(prev) * 4 + 1);
-                let b = r.game.grounds[g.0].u.fourside_ufo().xC;
+                let b = r.game.grounds[g.0].u.fourside_ufo().subject;
                 r.game.camera.free_box(b.expect("the UFO's camera subject"));
                 let v = r.game.grounds[g.0].u.fourside_ufo();
-                v.xC = None;
-                v.x0 = 2;
+                v.subject = None;
+                v.state = 2;
             }
             frame_ufo(r, gobj);
             let v = r.game.grounds[g.0].u.fourside_ufo();
-            if v.x3 == 1 {
-                let id = match v.x1 {
+            if v.sound_state == 1 {
+                let id = match v.building {
                     0 => 0x704E4,
                     1 => 0x704E0,
                     _ => 0x704E3,
                 };
                 r.stage_sound(id);
                 let v = r.game.grounds[g.0].u.fourside_ufo();
-                v.x3 = v.x3.wrapping_add(1);
+                v.sound_state = v.sound_state.wrapping_add(1);
             }
         }
         2 => {
-            let timer = v.x4;
+            let timer = v.ticks;
             if timer <= 0 {
                 if anime::rewound(r.game, gobj, 0, 7) {
                     anime::start_map(r.game, r.data, gobj, m, i32::from(prev) * 4 + 2);
-                    r.game.grounds[g.0].u.fourside_ufo().x0 = 4;
+                    r.game.grounds[g.0].u.fourside_ufo().state = 4;
                 }
             } else {
-                v.x4 = timer.wrapping_sub(1);
+                v.ticks = timer.wrapping_sub(1);
             }
         }
         4 => {
-            let timer = v.x4;
+            let timer = v.ticks;
             if timer >= 0x3C {
                 jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
                 r.game.geometry_mut().disable_joint(UFO_JOINT);
                 let wait = p.i(r, p::UFO_WAIT);
                 let v = r.game.grounds[g.0].u.fourside_ufo();
-                v.x4 = wait;
-                v.x0 = 0;
+                v.ticks = wait;
+                v.state = 0;
             } else {
-                v.x4 = timer.wrapping_add(1);
+                v.ticks = timer.wrapping_add(1);
             }
         }
         _ => {}
     }
     update_map_coll(r.game, r.data, gobj);
-    r.game.grounds[g.0].u.fourside_ufo().x8 = 0;
+    r.game.grounds[g.0].u.fourside_ufo().on_roof = 0;
 }
 
 /// The UFO's camera subject, `grFourside_801F3B70`: once the UFO is low enough (its part 1
@@ -546,7 +546,7 @@ pub fn frame_ufo(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let j = nth_joint(r.game, gobj, 1);
     let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, j, None);
-    let Some(b) = r.game.grounds[g.0].u.fourside_ufo().xC else {
+    let Some(b) = r.game.grounds[g.0].u.fourside_ufo().subject else {
         return;
     };
     let top = super::stage::cam_top(r.game);
@@ -555,8 +555,8 @@ pub fn frame_ufo(r: &mut Running, gobj: GObjId) {
         return;
     }
     let v = r.game.grounds[g.0].u.fourside_ufo();
-    if v.x3 == 0 {
-        v.x3 = 1;
+    if v.sound_state == 0 {
+        v.sound_state = 1;
     }
     let cam = r.game.camera.subject_mut(b);
     cam.pos = pos;
@@ -574,12 +574,12 @@ pub fn init_heli(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     r.game.grounds[g.0].x11_flags.b012 = 1;
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    r.game.grounds[g.0].u.fourside2().x0 = 0;
+    r.game.grounds[g.0].u.fourside2().state = 0;
     let p = param(r.game);
     let wait = p.wait(r, p::HELI_WAIT, p::HELI_WAIT_ADD);
     let v = r.game.grounds[g.0].u.fourside2();
-    v.x4 = wait;
-    v.x1 = 0;
+    v.ticks = wait;
+    v.sound_played = 0;
 }
 
 /// Whether the UFO is out: neither waiting nor over the third building.
@@ -587,7 +587,7 @@ fn ufo_out(game: &mut Game) -> bool {
     let u = map_gobj(game, MAP_UFO).expect("Ground_GetMapGObj(5)");
     let ug = ground_of(game, u);
     let v = game.grounds[ug.0].u.fourside_ufo();
-    !(v.x1 == 2 || v.x0 == 0)
+    !(v.building == 2 || v.state == 0)
 }
 
 /// The helicopter's process (map 3), `grFourside_801F3CC8`. Once its wait is over and the UFO
@@ -600,57 +600,57 @@ pub fn proc_heli(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let heli = nth_joint(r.game, gobj, 2);
     let m = map_id(r.game, gobj);
-    match r.game.grounds[g.0].u.fourside2().x0 {
+    match r.game.grounds[g.0].u.fourside2().state {
         0 => {
-            if r.game.grounds[g.0].u.fourside2().x4 <= 0 {
+            if r.game.grounds[g.0].u.fourside2().ticks <= 0 {
                 if !ufo_out(r.game) {
                     jobj::clear_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
                     anime::start_map(r.game, r.data, gobj, m, 0);
                     let v = r.game.grounds[g.0].u.fourside2();
-                    v.x1 = 0;
-                    v.x0 = 1;
+                    v.sound_played = 0;
+                    v.state = 1;
                 }
             } else {
                 let v = r.game.grounds[g.0].u.fourside2();
-                v.x4 = v.x4.wrapping_sub(1);
+                v.ticks = v.ticks.wrapping_sub(1);
             }
         }
         1 => {
-            if r.game.grounds[g.0].u.fourside2().x1 == 0 {
+            if r.game.grounds[g.0].u.fourside2().sound_played == 0 {
                 let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, heli, None);
                 let top = super::stage::cam_top(r.game);
                 if reg(pos.y) <= fp::fadds(50.0, reg(top)) {
-                    r.game.grounds[g.0].u.fourside2().x1 = 1;
+                    r.game.grounds[g.0].u.fourside2().sound_played = 1;
                     r.stage_sound(0x704E1);
                 }
             }
             if anime::finished(r.game, gobj, 0, 7) {
-                r.game.grounds[g.0].u.fourside2().x0 = 2;
+                r.game.grounds[g.0].u.fourside2().state = 2;
             }
         }
         2 => {
-            if r.game.grounds[g.0].u.fourside2().x4 <= 0 {
+            if r.game.grounds[g.0].u.fourside2().ticks <= 0 {
                 if !ufo_out(r.game) {
                     anime::start_map(r.game, r.data, gobj, m, 2);
-                    r.game.grounds[g.0].u.fourside2().x0 = 3;
+                    r.game.grounds[g.0].u.fourside2().state = 3;
                     r.stage_sound(0x704E2);
-                    r.game.grounds[g.0].u.fourside2().x4 = 0;
+                    r.game.grounds[g.0].u.fourside2().ticks = 0;
                 }
             } else {
                 let v = r.game.grounds[g.0].u.fourside2();
-                v.x4 = v.x4.wrapping_sub(1);
+                v.ticks = v.ticks.wrapping_sub(1);
             }
         }
         3 => {
             if anime::finished(r.game, gobj, 0, 7) {
                 jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-                r.game.grounds[g.0].u.fourside2().x0 = 0;
+                r.game.grounds[g.0].u.fourside2().state = 0;
                 let p = param(r.game);
                 let wait = p.wait(r, p::HELI_WAIT, p::HELI_WAIT_ADD);
-                r.game.grounds[g.0].u.fourside2().x4 = wait;
+                r.game.grounds[g.0].u.fourside2().ticks = wait;
             }
             let v = r.game.grounds[g.0].u.fourside2();
-            v.x4 = v.x4.wrapping_add(1);
+            v.ticks = v.ticks.wrapping_add(1);
         }
         _ => {}
     }
@@ -663,7 +663,7 @@ pub fn heli_about(game: &mut Game) -> bool {
     let h = map_gobj(game, 3).expect("Ground_GetMapGObj(3)");
     let hg = ground_of(game, h);
     let v = game.grounds[hg.0].u.fourside2();
-    (v.x0 == 1 && v.x1 == 0) || (v.x0 == 3 && v.x4 <= 700)
+    (v.state == 1 && v.sound_played == 0) || (v.state == 3 && v.ticks <= 700)
 }
 
 /// The city's render callback, `fn_801F3F74`: in the display pass, unless the camera looks
@@ -684,7 +684,8 @@ pub fn render_city(r: &mut Running, gobj: GObjId, pass: i32) {
                 mem(fp::fneg(reg(eye.z))),
             ));
             let v = r.game.grounds[g.0].u.fourside();
-            let layers: [(Option<JObjId>, f32); 3] = [(v.x0, 0.2), (v.x4, 0.4), (v.x8, 0.7)];
+            let layers: [(Option<JObjId>, f32); 3] =
+                [(v.skyline, 0.2), (v.skyline2, 0.4), (v.back, 0.7)];
             for (j, k) in layers {
                 if let Some(j) = j {
                     let a = mem(fp::fmuls(reg(k), angle));

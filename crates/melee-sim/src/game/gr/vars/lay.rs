@@ -66,7 +66,7 @@ impl GroundVars {
             GroundVars::Bytes(_) => return false,
             GroundVars::Map(v) => {
                 l.put_u32(a, v.word());
-                f(l, a + 4, v.xC8);
+                f(l, a + 4, v.cycle_timer);
                 for (i, &g) in v.lv_gobj.iter().enumerate() {
                     gobj(l, cx, a + 8 + 4 * i as u32, g);
                 }
@@ -74,7 +74,15 @@ impl GroundVars {
                     l,
                     a + 0x20,
                     &[
-                        v.xE4, v.xE8, v.xEC, v.xF0, v.xF4, v.xF8, v.xFC, v.x100, v.x104,
+                        v.blend_r,
+                        v.blend_g,
+                        v.blend_b,
+                        v.blend_unused,
+                        v.fog_r,
+                        v.fog_g,
+                        v.fog_b,
+                        v.fog_unused,
+                        v.blend_frames,
                     ],
                 );
                 for (i, &g) in v.symbol.iter().enumerate() {
@@ -86,8 +94,14 @@ impl GroundVars {
                 l.put_bytes(a + 0x74, &v.pad_74);
             }
             GroundVars::Last(v) => {
-                fs(l, a, &[v.xC4, v.xC8, v.xCC, v.xD0, v.xD4, v.xD8, v.xDC]);
-                l.put_word(a + 0x1C, cx.handle("GeneratorId", v.xE0.map(|g| g.0)));
+                fs(
+                    l,
+                    a,
+                    &[
+                        v.angle_x, v.angle_y, v.speed_x, v.speed_y, v.push_x, v.push_y, v.fade,
+                    ],
+                );
+                l.put_word(a + 0x1C, cx.handle("GeneratorId", v.generator.map(|g| g.0)));
             }
             GroundVars::StadiumDisplay(v) => {
                 bits(l, a, v.bits);
@@ -106,7 +120,7 @@ impl GroundVars {
                         v.shown,
                         v.applied,
                         v.prev_mode,
-                        v.xEC,
+                        v.unwritten,
                         v.player,
                         v.slot_type,
                         v.count,
@@ -114,8 +128,8 @@ impl GroundVars {
                 );
                 l.put_word(a + 0x30, cx.handle("CameraBoxId", v.subject.map(|s| s.0)));
                 l.put_bits(a + 0x34, 0, 1, u32::from(v.rendered));
-                l.put_bits(a + 0x34, 1, 1, u32::from(v.xF8_1));
-                l.put_bits(a + 0x34, 2, 1, u32::from(v.xF8_2));
+                l.put_bits(a + 0x34, 1, 1, u32::from(v.unread_bit));
+                l.put_bits(a + 0x34, 2, 1, u32::from(v.shows_count));
             }
             GroundVars::Stadium(v) => {
                 bits(l, a, v.bits);
@@ -144,144 +158,225 @@ impl GroundVars {
                 jobj(l, cx, a + 0x10, v.turning);
             }
             GroundVars::Izumi(v) => {
-                l.put_word(a, cx.handle("TObjId", v.xC4.map(|o| o.0)));
-                gobj(l, cx, a + 4, v.xC8);
-                gobj(l, cx, a + 8, v.xCC);
-                jobj(l, cx, a + 0xC, v.xD0);
-                jobj(l, cx, a + 0x10, v.xD4);
+                l.put_word(a, cx.handle("TObjId", v.water_tobj.map(|o| o.0)));
+                gobj(l, cx, a + 4, v.reflection_camera);
+                gobj(l, cx, a + 8, v.reflections);
+                jobj(l, cx, a + 0xC, v.platform_jobj);
+                jobj(l, cx, a + 0x10, v.platform_jobj2);
             }
             GroundVars::Izumi2(v) => {
-                jobj(l, cx, a, v.xC4);
-                jobj(l, cx, a + 4, v.xC8);
+                jobj(l, cx, a, v.reflection);
+                jobj(l, cx, a + 4, v.reflection2);
             }
             GroundVars::Izumi3(v) => {
-                h16(l, a, &[v.xC4, v.xC6, v.xC8, v.xCA]);
-                jobj(l, cx, a + 8, v.xCC);
-                fs(l, a + 0xC, &[v.xD0, v.xD4, v.xD8, v.xDC]);
+                h16(l, a, &[v.state, v.timer, v.coll_joint, v.unwritten]);
+                jobj(l, cx, a + 8, v.column);
+                fs(
+                    l,
+                    a + 0xC,
+                    &[v.height, v.target_height, v.column_height, v.home_height],
+                );
             }
             GroundVars::OldPupupu(v) => w32(l, a, &v.words()),
-            GroundVars::OldPupupu2(v) => h16(l, a, &[v.xC4, v.xC6]),
+            GroundVars::OldPupupu2(v) => h16(l, a, &[v.flight_wait, v.unwritten]),
             GroundVars::OldYoshiCloud(v) => {
                 for (i, c) in v.cloud.iter().enumerate() {
                     let b = a + 0x14 * i as u32;
                     l.put_u32(b, c.bits);
                     jobj(l, cx, b + 4, c.jobj);
-                    fs(l, b + 8, &[c.xCC, c.xD0, c.xD4]);
+                    fs(l, b + 8, &[c.rest_y, c.sunk, c.sink_speed]);
                 }
             }
-            GroundVars::OldYoshiGuest(v) => h16(l, a, &[v.xC4, v.xC6]),
+            GroundVars::OldYoshiGuest(v) => h16(l, a, &[v.wait, v.part]),
             GroundVars::OldKongo(v) => {
                 h16(
                     l,
                     a,
-                    &[v.xC4, v.xC6, v.xC8, v.xCA, v.xCC, v.xCE, v.hit_timer],
+                    &[
+                        v.turn,
+                        v.hold,
+                        v.swing_cycle,
+                        v.hold_timer,
+                        v.turn_timer,
+                        v.swing_timer,
+                        v.hit_timer,
+                    ],
                 );
                 gobj(l, cx, a + 0x10, v.keep);
-                fs(l, a + 0x14, &[v.xD8, v.xDC, v.xE0, v.xE4, v.xE8, v.xEC]);
+                fs(
+                    l,
+                    a + 0x14,
+                    &[
+                        v.heading,
+                        v.angle,
+                        v.turn_accel,
+                        v.turn_speed,
+                        v.unread,
+                        v.swing_speed,
+                    ],
+                );
             }
-            GroundVars::OldKongoBirds(v) => l.put_u32(a, v.xC4 as u32),
-            GroundVars::Garden(v) => w32(l, a, &[v.xc4, v.xc8]),
+            GroundVars::OldKongoBirds(v) => l.put_u32(a, v.wait as u32),
+            GroundVars::Garden(v) => w32(l, a, &[v.anim, v.runs_left]),
             GroundVars::Garden2(v) => {
-                gobj(l, cx, a, v.xc4);
-                l.put_u8(a + 4, v.xc8 as u8);
-                l.put_u32(a + 8, v.xcc as u32);
+                gobj(l, cx, a, v.item);
+                l.put_u8(a + 4, v.state as u8);
+                l.put_u32(a + 8, v.count as u32);
             }
             GroundVars::Kongo(v) => {
-                fs(l, a, &[v.xC4, v.xC8]);
-                jobj(l, cx, a + 8, v.xCC);
-                jobj(l, cx, a + 0xC, v.xD0);
-                fs(l, a + 0x10, &[v.xD4, v.xD8]);
-                jobj(l, cx, a + 0x18, v.xDC);
-                jobj(l, cx, a + 0x1C, v.xE0);
-                h16(l, a + 0x20, &[v.xE4, v.xE6]);
+                fs(l, a, &[v.left_angle, v.left_speed]);
+                jobj(l, cx, a + 8, v.left_post);
+                jobj(l, cx, a + 0xC, v.left_post2);
+                fs(l, a + 0x10, &[v.right_angle, v.right_speed]);
+                jobj(l, cx, a + 0x18, v.right_post);
+                jobj(l, cx, a + 0x1C, v.right_post2);
+                h16(l, a + 0x20, &[v.event_wait, v.last_event]);
             }
             GroundVars::KongoBarrel(v) => {
-                h16(l, a, &[v.xC4, v.xC6, v.xC8, v.xCA, v.xCC, v.xCE]);
+                h16(
+                    l,
+                    a,
+                    &[
+                        v.turn,
+                        v.hold,
+                        v.swing_cycle,
+                        v.hold_timer,
+                        v.turn_timer,
+                        v.swing_timer,
+                    ],
+                );
                 gobj(l, cx, a + 0xC, v.keep);
-                fs(l, a + 0x10, &[v.xD4, v.xD8, v.xDC, v.xE0, v.xE4, v.xE8]);
+                fs(
+                    l,
+                    a + 0x10,
+                    &[
+                        v.heading,
+                        v.angle,
+                        v.turn_accel,
+                        v.turn_speed,
+                        v.unread,
+                        v.swing_speed,
+                    ],
+                );
             }
             GroundVars::KongoPlatform(v) => {
-                h16(l, a, &[v.xC4, v.xC6, v.xC8, v.xCA]);
-                fs(l, a + 8, &[v.xCC, v.xD0, v.xD4]);
+                h16(
+                    l,
+                    a,
+                    &[v.state, v.landings, v.landings_last, v.ticks_afloat],
+                );
+                fs(l, a + 8, &[v.across, v.unread_min, v.unread_max]);
             }
-            GroundVars::KongoLog(v) => f(l, a + 8, v.xCC),
+            GroundVars::KongoLog(v) => f(l, a + 8, v.across),
             GroundVars::KongoPath(v) => {
-                data(l, cx, a, v.xC4);
-                fs(l, a + 4, &[v.xC8, v.xCC, v.xD0]);
-                fs(l, a + 0x14, &[v.xD8, v.xDC]);
+                data(l, cx, a, v.spline);
+                fs(l, a + 4, &[v.unread, v.along, v.unread2]);
+                fs(l, a + 0x14, &[v.highest, v.deepest]);
             }
-            GroundVars::Pura(v) => h16(l, a, &[v.xC4, v.xC6, v.xC8]),
+            GroundVars::Pura(v) => h16(l, a, &[v.color_from, v.color_to, v.fade_tick]),
             GroundVars::PuraFloat(v) => {
-                h16(l, a, &[v.xC4]);
+                h16(l, a, &[v.part]);
                 l.put_bytes(a + 2, &v.pad);
-                jobj(l, cx, a + 4, v.xC8);
+                jobj(l, cx, a + 4, v.stage_jobj);
             }
             GroundVars::PuraStage(v) => {
                 for i in 0..25 {
-                    jobj(l, cx, a + 4 * i as u32, v.xC4[i]);
+                    jobj(l, cx, a + 4 * i as u32, v.jobjs[i]);
                     l.put_word(
                         a + 0x64 + 4 * i as u32,
-                        cx.handle("CameraBoxId", v.x128[i].map(|b| b.0)),
+                        cx.handle("CameraBoxId", v.subjects[i].map(|b| b.0)),
                     );
                 }
             }
             GroundVars::RCruise(v) => {
-                l.put_u8(a, v.xC4);
+                l.put_u8(a, v.flags);
                 // The wind's slot in the pool `WIND_POOL` names: its address in the wind
                 // sources' block where the allocator model gives it (unknown where none runs).
-                l.put_word(a + 4, cx.handle("WindSource", v.x4.map(u32::from)));
-                f(l, a + 8, v.x8);
-                w32(l, a + 0xC, &[v.xC, v.x10]);
-                fs(l, a + 0x14, &[v.x14, v.x18, v.x1C, v.x20, v.x24, v.x28]);
-                w32(l, a + 0x2C, &[v.x2C, v.x30, v.x34, v.x38]);
+                l.put_word(a + 4, cx.handle("WindSource", v.wind.map(u32::from)));
+                f(l, a + 8, v.steer_step);
+                w32(l, a + 0xC, &[v.gust, v.waiting]);
+                fs(
+                    l,
+                    a + 0x14,
+                    &[
+                        v.unread,
+                        v.tilt,
+                        v.tilt_dir,
+                        v.tilt_speed,
+                        v.pull_left,
+                        v.pull_right,
+                    ],
+                );
+                w32(
+                    l,
+                    a + 0x2C,
+                    &[v.tilt_state, v.touches_last, v.touches, v.ease_wait],
+                );
                 addr(l, a + 0x6C, v.entries_addr);
                 addr(l, a + 0x70, v.vanish_addr);
             }
             GroundVars::RCruiseBlocks(v) => {
-                for (i, e) in v.x3C.iter().enumerate() {
+                for (i, e) in v.blocks.iter().enumerate() {
                     let b = a + 0x3C + 0x10 * i as u32;
-                    l.put_u8(b, e.x0);
-                    l.put_u8(b + 1, e.x1);
-                    l.put_u16(b + 2, e.x2 as u16);
-                    w32(l, b + 4, &[e.x4, e.x8]);
-                    jobj(l, cx, b + 0xC, e.xC);
+                    l.put_u8(b, e.state);
+                    l.put_u8(b + 1, e.flags);
+                    l.put_u16(b + 2, e.coll_joint as u16);
+                    w32(l, b + 4, &[e.ticks, e.touches]);
+                    jobj(l, cx, b + 0xC, e.jobj);
                 }
             }
             GroundVars::Corneria(v) => {
-                l.put_bytes(a, &[v.xC4, v.xC5, v.xC6, v.xC7]);
-                addr(l, a + 4, v.xC8);
-                addr(l, a + 8, v.xCC);
+                l.put_bytes(a, &[v.flags, v.unwritten, v.unwritten2, v.unwritten3]);
+                addr(l, a + 4, v.splash_config);
+                addr(l, a + 8, v.splash_config2);
                 fs(
                     l,
                     a + 0xC,
-                    &[v.xD0, v.base_x, v.base_y, v.offset_x, v.offset_y],
+                    &[v.sink_depth, v.base_x, v.base_y, v.offset_x, v.offset_y],
                 );
                 fs(
                     l,
                     a + 0x20,
-                    &[v.xE4.x, v.xE4.y, v.xE4.z, v.xF0, v.xF4, v.xF8, v.xFC],
+                    &[
+                        v.last_drift.x,
+                        v.last_drift.y,
+                        v.last_drift.z,
+                        v.drift_speed_y,
+                        v.drift_accel_x,
+                        v.drift_accel_y,
+                        v.sink_speed,
+                    ],
                 );
                 w32(
                     l,
                     a + 0x3C,
-                    &[v.x100, v.x104, v.x108 as i32, v.x10C, v.x110],
+                    &[
+                        v.sink_ticks,
+                        v.drift_ticks,
+                        v.guns_state as i32,
+                        v.guns_wait,
+                        v.shot_wait,
+                    ],
                 );
-                f(l, a + 0x50, v.x114);
-                l.put_bytes(a + 0x54, &[v.x118 as u8, v.x119, v.x11A, v.x11B]);
-                l.put_u32(a + 0x58, v.x11C);
+                f(l, a + 0x50, v.guns_damage);
+                l.put_bytes(
+                    a + 0x54,
+                    &[v.shots_left as u8, v.shot_kind, v.shot_side, v.unwritten4],
+                );
+                l.put_u32(a + 0x58, v.unwritten5);
                 gobj(l, cx, a + 0x5C, v.left_cannon);
                 gobj(l, cx, a + 0x60, v.right_cannon);
-                gobj(l, cx, a + 0x64, v.x128);
-                jobj(l, cx, a + 0x68, v.x12C);
+                gobj(l, cx, a + 0x64, v.copy);
+                jobj(l, cx, a + 0x68, v.deck);
             }
             GroundVars::CorneriaCity(v) => {
-                l.put_u8(a, v.xC4);
-                l.put_u8(a + 1, v.xC5);
+                l.put_u8(a, v.waiting);
+                l.put_u8(a + 1, v.made_next);
                 l.put_bits(a + 2, 0, 1, u32::from(v.still));
             }
             GroundVars::CorneriaCity8(v) => {
-                l.put_bytes(a, &[v.xC4, v.xC5, v.xC6]);
-                for (k, &w) in v.xC8.iter().enumerate() {
+                l.put_bytes(a, &[v.waiting, v.made_next, v.cleared]);
+                for (k, &w) in v.cleared_words.iter().enumerate() {
                     l.put_u32(a + 4 + 4 * k as u32, w);
                 }
                 l.put_bits(a + 0x1C, 0, 1, u32::from(v.still));
@@ -298,14 +393,14 @@ fn v3(l: &mut Lay, at: u32, v: &crate::vec::Vec3) {
 
 /// Brinstar's acid's state (`grZebes_AcidState`, 0x24).
 fn acid(l: &mut Lay, cx: &dyn LayCx, at: u32, s: &AcidState) {
-    l.put_u8(at, s.x00);
-    l.put_u8(at + 1, s.x01);
-    l.put_u16(at + 2, s.x02 as u16);
-    fs(l, at + 4, &[s.x04, s.x08, s.x0C, s.x10]);
-    jobj(l, cx, at + 0x14, s.x14);
-    jobj(l, cx, at + 0x18, s.x18);
-    gobj(l, cx, at + 0x1C, s.x1C);
-    l.put_u16(at + 0x20, s.x20 as u16);
+    l.put_u8(at, s.state);
+    l.put_u8(at + 1, s.next_state);
+    l.put_u16(at + 2, s.timer as u16);
+    fs(l, at + 4, &[s.rest_x, s.swing, s.swing_speed, s.damage]);
+    jobj(l, cx, at + 0x14, s.jobj);
+    jobj(l, cx, at + 0x18, s.jobj2);
+    gobj(l, cx, at + 0x1C, s.item);
+    l.put_u16(at + 0x20, s.anim_part as u16);
 }
 
 fn dynamics(l: &mut Lay, cx: &dyn LayCx, at: u32, d: &crate::game::structs::DynamicsDesc) {
@@ -319,35 +414,39 @@ impl GroundVars {
     fn lay_rest(&self, l: &mut Lay, a: u32, cx: &dyn LayCx) -> bool {
         match self {
             GroundVars::ArwingPath(v) => {
-                l.put_u32(a + 4, v.xC8);
-                w32(l, a + 0x10, &[v.xD4, v.xD8]);
+                l.put_u32(a + 4, v.slot);
+                w32(l, a + 0x10, &[v.anim_pending, v.sound_state]);
             }
             GroundVars::Arwing(v) => {
                 l.put_bits(a, 0, 1, u32::from(v.b0));
-                l.put_u32(a + 4, v.xC8 as u32);
-                l.put_u32(a + 0x10, v.xD4 as u32);
-                gobj(l, cx, a + 0x18, v.xDC);
-                for (k, &g) in v.xE0.iter().enumerate() {
+                l.put_u32(a + 4, v.slot as u32);
+                l.put_u32(a + 0x10, v.cleared as u32);
+                gobj(l, cx, a + 0x18, v.coll);
+                for (k, &g) in v.articles.iter().enumerate() {
                     if v.disabled && k < 2 {
                         l.put_u32(a + 0x1C + 4 * k as u32, u32::MAX);
                     } else {
                         gobj(l, cx, a + 0x1C + 4 * k as u32, g);
                     }
                 }
-                w32(l, a + 0x2C, &[v.xF0, v.xF4, v.xF8, v.xFC]);
-                if let Some(x100) = v.x100 {
+                w32(
+                    l,
+                    a + 0x2C,
+                    &[v.ticks_flown, v.roll_state, v.roll_wait, v.fires],
+                );
+                if let Some(x100) = v.next_gun {
                     l.put_u32(a + 0x3C, x100 as u32);
                 }
             }
             GroundVars::ArwingColl(v) => {
-                l.put_u32(a + 4, v.xC8);
-                l.put_u32(a + 0xC, v.xD0);
-                f(l, a + 0x18, v.xDC);
-                v3(l, a + 0x1C, &v.xE0);
+                l.put_u32(a + 4, v.slot);
+                l.put_u32(a + 0xC, v.cleared);
+                f(l, a + 0x18, v.roll);
+                v3(l, a + 0x1C, &v.pos);
             }
             GroundVars::StarFoxTalk(v) => {
-                l.put_u32(a, v.xC4);
-                w32(l, a + 4, &[v.xC8, v.xCC]);
+                l.put_u32(a, v.talk);
+                w32(l, a + 4, &[v.next_line, v.wait]);
             }
             GroundVars::SmashTaunt(v) => {
                 h16(l, a, &[v.state, v.timer, v.line, v.sis_data_idx]);
@@ -368,7 +467,7 @@ impl GroundVars {
                 for (k, &j) in v.jobjs.iter().enumerate() {
                     jobj(l, cx, a + 4 * k as u32, j);
                 }
-                l.put_u16(a + 0x1C, v.xE0);
+                l.put_u16(a + 0x1C, v.bits);
                 f(l, a + 0x20, v.frame);
             }
             GroundVars::Castle(v) => {
@@ -381,7 +480,7 @@ impl GroundVars {
                     &[v.switch_slot, v.switch_wait, v.bill_wait, v.recent_at],
                 );
                 h16(l, a + 0x14, &v.recent);
-                l.put_u8(a + 0x1A, v.xDE);
+                l.put_u8(a + 0x1A, v.flags);
                 for (i, d) in v.dynamics.iter().enumerate() {
                     dynamics(l, cx, a + 0x1C + 0x14 * i as u32, d);
                 }
@@ -404,7 +503,7 @@ impl GroundVars {
                 l.put_word(a + 4, cx.handle("CameraBoxId", v.subject.map(|b| b.0)));
             }
             GroundVars::CastleBill(v) => {
-                l.put_u8(a, v.xC4);
+                l.put_u8(a, v.flags);
                 h16(l, a + 2, &[v.path, v.linger, v.delay]);
                 gobj(l, cx, a + 8, v.blaster);
                 gobj(l, cx, a + 0xC, v.item);
@@ -434,45 +533,71 @@ impl GroundVars {
                 jobj(l, cx, a + 0x10, v.anchor);
                 gobj(l, cx, a + 0x14, v.item);
             }
-            GroundVars::RCruiseFlag(v) => dynamics(l, cx, a, &v.xC4),
+            GroundVars::RCruiseFlag(v) => dynamics(l, cx, a, &v.chain),
             GroundVars::Inishie1(v) => {
-                l.put_u16(a, v.xC4);
-                h16(l, a + 2, &[v.xC6, v.xC8, v.xCA, v.xCC]);
-                w32(l, a + 0xC, &[v.xD0, v.xD4, v.xD8]);
+                l.put_u16(a, v.flags);
+                h16(
+                    l,
+                    a + 2,
+                    &[
+                        v.hatena_wait_a,
+                        v.hatena_wait_b,
+                        v.last_hatena_a,
+                        v.last_hatena_b,
+                    ],
+                );
+                w32(l, a + 0xC, &[v.unwritten, v.unwritten2, v.hatena_cooldown]);
                 addr(l, a + 0x18, v.blocks_addr);
-                fs(l, a + 0x1C, &[v.xE0, v.xE4]);
-                h16(l, a + 0x24, &[v.xE8, v.xEA, v.xEC, v.xEE]);
-                fs(l, a + 0x2C, &[v.xF0, v.xF4, v.xF8, v.xFC]);
-                jobj(l, cx, a + 0x3C, v.x100);
-                jobj(l, cx, a + 0x40, v.x104);
-                jobj(l, cx, a + 0x44, v.x108);
-                jobj(l, cx, a + 0x48, v.x10C);
+                fs(l, a + 0x1C, &[v.lift_weight_a, v.lift_weight_b]);
+                h16(
+                    l,
+                    a + 0x24,
+                    &[
+                        v.lift_touches_a,
+                        v.lift_touches_b,
+                        v.lift_wait,
+                        v.lift_state,
+                    ],
+                );
+                fs(
+                    l,
+                    a + 0x2C,
+                    &[v.lift_offset, v.lift_speed, v.unwritten3, v.lift_rest_y],
+                );
+                jobj(l, cx, a + 0x3C, v.platform_a);
+                jobj(l, cx, a + 0x40, v.platform_b);
+                jobj(l, cx, a + 0x44, v.arm_a);
+                jobj(l, cx, a + 0x48, v.arm_b);
             }
             GroundVars::Inishie1Hatena(v) => {
-                jobj(l, cx, a, v.xC4);
-                w32(l, a + 4, &[v.xC8, v.xCC]);
+                jobj(l, cx, a, v.brick_jobj);
+                w32(l, a + 4, &[v.blink, v.hidden]);
             }
             // The flags' bits the stage writes (0x80 to 0x08) and the log's (0x80), with the
             // rest as the block held them.
             GroundVars::Inishie2(v) => {
-                l.put_u8(a, v.xC4);
-                h16(l, a + 2, &[v.xC6, v.xC8, v.xCA, v.xCC]);
+                l.put_u8(a, v.flags);
+                h16(
+                    l,
+                    a + 2,
+                    &[v.log_wait_a, v.log_wait_b, v.birdo_wait, v.pidgit_wait],
+                );
             }
             GroundVars::Inishie2Log(v) => {
-                l.put_u8(a, v.xC4);
-                h16(l, a + 2, &[v.xC6, v.xC8]);
-                gobj(l, cx, a + 8, v.xCC);
+                l.put_u8(a, v.flags);
+                h16(l, a + 2, &[v.wait, v.log]);
+                gobj(l, cx, a + 8, v.sender);
             }
             GroundVars::Inishie2Birdo(v) => {
-                gobj(l, cx, a, v.xC4);
-                gobj(l, cx, a + 4, v.xC8);
+                gobj(l, cx, a, v.birdo);
+                gobj(l, cx, a + 4, v.sender);
             }
             GroundVars::Inishie2Pidgit(v) => {
-                gobj(l, cx, a, v.xC4);
-                l.put_u8(a + 4, v.xC8);
-                h16(l, a + 6, &[v.xCA]);
-                v3(l, a + 8, &v.xCC);
-                v3(l, a + 0x14, &v.xD8);
+                gobj(l, cx, a, v.sender);
+                l.put_u8(a + 4, v.flags);
+                h16(l, a + 6, &[v.turns]);
+                v3(l, a + 8, &v.anim_step);
+                v3(l, a + 0x14, &v.place);
             }
             GroundVars::IceMtScroll(v) => {
                 h16(
@@ -489,9 +614,9 @@ impl GroundVars {
                     ],
                 );
                 f(l, a + 0x10, v.cur);
-                h16(l, a + 0x14, &[v.x14, v.x16]);
-                h16(l, a + 0x18, &v.x18);
-                h16(l, a + 0x30, &v.x30);
+                h16(l, a + 0x14, &[v.waiting, v.unread]);
+                h16(l, a + 0x18, &v.speed_rests);
+                h16(l, a + 0x30, &v.field_rests);
             }
             GroundVars::IceMtClimb(v) => {
                 h16(
@@ -509,10 +634,14 @@ impl GroundVars {
                 );
                 f(l, a + 0x10, v.cur);
                 for k in 0..5 {
-                    l.put_bits(a + 0x14, k, 1, u32::from(v.x14 & (0x80 >> k) != 0));
+                    l.put_bits(a + 0x14, k, 1, u32::from(v.flags & (0x80 >> k) != 0));
                 }
-                h16(l, a + 0x16, &[v.x16, v.x18, v.x1A, v.x1C]);
-                f(l, a + 0x20, v.x20);
+                h16(
+                    l,
+                    a + 0x16,
+                    &[v.push_ticks, v.unread, v.speed_cursor, v.field_cursor],
+                );
+                f(l, a + 0x20, v.push_speed);
             }
             GroundVars::IceMtField(v) => {
                 let (n, slots) = icemt_field_layout(v.map);
@@ -528,47 +657,47 @@ impl GroundVars {
                     h16(l, a + off, &s.0);
                 }
             }
-            GroundVars::IceMtBg(v) => f(l, a, v.x0),
+            GroundVars::IceMtBg(v) => f(l, a, v.speed),
             GroundVars::Scroll(v) => {
-                l.put_u8(a, v.xC4);
-                v3(l, a + 4, &v.x4);
-                v3(l, a + 0x10, &v.x10);
-                v3(l, a + 0x1C, &v.x1C);
+                l.put_u8(a, v.flags);
+                v3(l, a + 4, &v.center);
+                v3(l, a + 0x10, &v.offset);
+                v3(l, a + 0x1C, &v.step);
                 gobj(l, cx, a + 0x28, v.anim_gobj);
                 jobj(l, cx, a + 0x2C, v.int_jobj);
                 jobj(l, cx, a + 0x30, v.cam_jobj);
                 jobj(l, cx, a + 0x34, v.ctr_jobj);
-                for (k, &j) in v.x38.iter().enumerate() {
+                for (k, &j) in v.scenery.iter().enumerate() {
                     jobj(l, cx, a + 0x38 + 4 * k as u32, j);
                 }
-                jobj(l, cx, a + 0x44, v.x44);
+                jobj(l, cx, a + 0x44, v.scenery2);
             }
             GroundVars::MuteCity(v) => {
-                h16(l, a, &[v.xC4, v.xC6]);
-                gobj(l, cx, a + 4, v.xC8);
-                gobj(l, cx, a + 8, v.xCC);
-                l.put_u8(a + 0xC, v.xD0);
-                h16(l, a + 0xE, &[v.xD2]);
-                fs(l, a + 0x10, &[v.xD4, v.xD8]);
-                jobj(l, cx, a + 0x18, v.xDC);
-                jobj(l, cx, a + 0x1C, v.xE0);
-                v3(l, a + 0x20, &v.xE4);
-                v3(l, a + 0x2C, &v.xF0);
+                h16(l, a, &[v.script_cursor, v.script_wait]);
+                gobj(l, cx, a + 4, v.platform);
+                gobj(l, cx, a + 8, v.cars);
+                l.put_u8(a + 0xC, v.flags);
+                h16(l, a + 0xE, &[v.cleared]);
+                fs(l, a + 0x10, &[v.left_end, v.right_end]);
+                jobj(l, cx, a + 0x18, v.spline_jobj);
+                jobj(l, cx, a + 0x1C, v.spline_jobj2);
+                v3(l, a + 0x20, &v.track_start);
+                v3(l, a + 0x2C, &v.track_end);
                 for (k, &j) in v.shadow_jobjs.iter().enumerate() {
                     jobj(l, cx, a + 0x38 + 4 * k as u32, j);
                 }
-                l.put_word(a + 0x4C, cx.handle("LObjId", v.x110.map(|o| o.0)));
+                l.put_word(a + 0x4C, cx.handle("LObjId", v.light.map(|o| o.0)));
                 fs(l, a + 0x50, &v.bounds);
             }
             GroundVars::MuteCity2(v) => {
-                l.put_u8(a, v.xC4);
-                jobj(l, cx, a + 4, v.xC8);
-                fs(l, a + 8, &[v.xCC, v.xD0]);
+                l.put_u8(a, v.flags);
+                jobj(l, cx, a + 4, v.sway_jobj);
+                fs(l, a + 8, &[v.sway_target, v.sway_scale]);
                 for (k, c) in v.saved_colors.iter().enumerate() {
                     l.put_bytes(a + 0x10 + 4 * k as u32, c);
                 }
             }
-            GroundVars::MuteCityCars(v) => h16(l, a, &[v.xC4]),
+            GroundVars::MuteCityCars(v) => h16(l, a, &[v.horn_wait]),
             GroundVars::BigBlueManager(v) => {
                 l.put_u32(a, v.flags);
                 for (k, &e) in v.event.iter().enumerate() {
@@ -583,16 +712,16 @@ impl GroundVars {
                 }
                 for (k, d) in v.data.iter().enumerate() {
                     let b = a + 0x20 + 0x54 * k as u32;
-                    l.put_bytes(b, &[d.index, d.x1, d.x2 as u8, d.x3]);
-                    l.put_u32(b + 4, d.x4 as u32);
-                    f(l, b + 8, d.x8);
-                    v3(l, b + 0xC, &d.xC);
-                    v3(l, b + 0x18, &d.x18);
-                    fs(l, b + 0x24, &[d.x24, d.x28]);
-                    w32(l, b + 0x2C, &[d.x2C, d.x30, d.x34]);
-                    v3(l, b + 0x38, &d.x38);
-                    v3(l, b + 0x44, &d.x44);
-                    gobj(l, cx, b + 0x50, d.x50);
+                    l.put_bytes(b, &[d.index, d.state, d.dir as u8, d.unwritten]);
+                    l.put_u32(b + 4, d.timer as u32);
+                    f(l, b + 8, d.height);
+                    v3(l, b + 0xC, &d.targets);
+                    v3(l, b + 0x18, &d.swing);
+                    fs(l, b + 0x24, &[d.push_left, d.push_right]);
+                    w32(l, b + 0x2C, &[d.landings, d.landings_last, d.dip_stage]);
+                    v3(l, b + 0x38, &d.pos);
+                    v3(l, b + 0x44, &d.speed);
+                    gobj(l, cx, b + 0x50, d.item);
                 }
             }
             GroundVars::BigBlueCars(v) => {
@@ -602,9 +731,9 @@ impl GroundVars {
                 h16(l, a + 0xC, &[v.spawn_timer]);
                 for (k, c) in v.cars.iter().enumerate() {
                     let b = a + 0x10 + 0x40 * k as u32;
-                    l.put_u16(b, c.x0);
-                    l.put_u8(b + 2, c.x2 as u8);
-                    l.put_u8(b + 3, c.x3);
+                    l.put_u16(b, c.status);
+                    l.put_u8(b + 2, c.unwritten as u8);
+                    l.put_u8(b + 3, c.unwritten2);
                     fs(
                         l,
                         b + 4,
@@ -622,7 +751,7 @@ impl GroundVars {
                             c.rotation,
                             c.amplitude,
                             c.angular_velocity,
-                            c.x110,
+                            c.unwritten3,
                         ],
                     );
                 }
@@ -637,9 +766,9 @@ impl GroundVars {
                 f(l, a + 0x34, v.rotation);
             }
             GroundVars::BigBlueFlyer(v) => {
-                l.put_u8(a, v.xC4);
-                l.put_u32(a + 4, v.xC8 as u32);
-                fs(l, a + 8, &[v.xCC, v.xD0, v.xD4, v.xD8]);
+                l.put_u8(a, v.state);
+                l.put_u32(a + 4, v.timer as u32);
+                fs(l, a + 8, &[v.target_turn, v.target_y, v.unwritten, v.speed]);
             }
             GroundVars::KinokoRoute(v) => {
                 for (i, e) in v.entries.iter().enumerate() {
@@ -649,7 +778,7 @@ impl GroundVars {
                 }
             }
             GroundVars::KinokoRoute2(v) => {
-                l.put_u8(a, u8::from(v.flags_0) << 7 | v.x0_rest);
+                l.put_u8(a, u8::from(v.flags_0) << 7 | v.flags_rest);
                 l.put_u8(a + 1, v.pad_01);
                 h16(l, a + 2, &[v.phase, v.spawn_idx, v.zone_idx, v.cam_timer]);
                 l.put_bytes(a + 0xA, &v.pad_0a);
@@ -665,7 +794,7 @@ impl GroundVars {
                     v.cam_timer,
                 ];
                 h16(l, a, &hs.map(|x| x as i16));
-                if let Some(x) = v.xd0 {
+                if let Some(x) = v.way_out {
                     l.put_u16(a + 0xC, x);
                 }
                 gobj(l, cx, a + 0x10, v.portal);
@@ -701,7 +830,7 @@ impl GroundVars {
                 }
             }
             GroundVars::BigBlueRouteCars(v) => {
-                l.put_u32(a, v.xC4);
+                l.put_u32(a, v.flags);
                 addr(l, a + 4, v.cars_addr);
                 data(l, cx, a + 8, v.air);
                 data(l, cx, a + 0xC, v.left);
@@ -726,12 +855,16 @@ impl GroundVars {
             }
 
             GroundVars::FigureGet(v) => {
-                w32(l, a, &[v.x0, v.x4, v.x8, v.xC]);
-                w32(l, a + 0x10, &v.x10);
-                w32(l, a + 0x1C, &v.x1C);
+                w32(
+                    l,
+                    a,
+                    &[v.coin_wait, v.coins_out, v.coins_landed, v.coins_gone],
+                );
+                w32(l, a + 0x10, &v.coin_trophies);
+                w32(l, a + 0x1C, &v.landed_trophies);
                 for i in 0..3 {
-                    gobj(l, cx, a + 0x28 + 4 * i as u32, v.x28[i]);
-                    gobj(l, cx, a + 0x34 + 4 * i as u32, v.x34[i]);
+                    gobj(l, cx, a + 0x28 + 4 * i as u32, v.landed_coins[i]);
+                    gobj(l, cx, a + 0x34 + 4 * i as u32, v.coins[i]);
                 }
             }
 
@@ -744,7 +877,7 @@ impl GroundVars {
                 for (i, &g) in v.bg.iter().enumerate() {
                     gobj(l, cx, a + 0x14 + 4 * i as u32, g);
                 }
-                l.put_u8(a + 0x24, u8::from(v.landed) << 7 | v.xe8_rest);
+                l.put_u8(a + 0x24, u8::from(v.landed) << 7 | v.landed_rest);
             }
             GroundVars::HomeRunPart(v) => {
                 l.put_u16(a, v.index);
@@ -759,22 +892,22 @@ impl GroundVars {
                 f(l, a + 0xC, v.x);
             }
             GroundVars::BigBlueRelay(v) => {
-                l.put_u32(a, v.xC4);
-                w32(l, a + 4, &[v.xC8_timer, v.xCC_timer, v.xD0_timer]);
-                fs(l, a + 0x10, &[v.height_offset, v.xD8, v.target_y]);
+                l.put_u32(a, v.state_dir);
+                w32(l, a + 4, &[v.arrive_timer, v.side_timer, v.rise_timer]);
+                fs(l, a + 0x10, &[v.height_offset, v.unwritten, v.target_y]);
                 v3(l, a + 0x1C, &v.velocity);
-                f(l, a + 0x28, v.xEC);
+                f(l, a + 0x28, v.unread);
             }
             GroundVars::Yorster(v) => {
-                l.put_u32(a, v.xC4 as u32);
+                l.put_u32(a, v.waiting as u32);
                 for (i, e) in v.blocks.iter().enumerate() {
                     let b = a + 4 + 0x20 * i as u32;
-                    l.put_u8(b, e.x00 as u8);
-                    l.put_u8(b + 1, e.x01);
-                    fs(l, b + 4, &[e.x04, e.x08]);
-                    w32(l, b + 0xC, &[e.x0C, e.x10, e.x14]);
-                    jobj(l, cx, b + 0x18, e.x18);
-                    gobj(l, cx, b + 0x1C, e.x1C);
+                    l.put_u8(b, e.index as u8);
+                    l.put_u8(b + 1, e.state);
+                    fs(l, b + 4, &[e.damage, e.landing_speed]);
+                    w32(l, b + 0xC, &[e.timer, e.flip_start, e.part]);
+                    jobj(l, cx, b + 0x18, e.jobj);
+                    gobj(l, cx, b + 0x1C, e.item);
                 }
             }
             GroundVars::StoryShyGuys(v) => {
@@ -789,16 +922,25 @@ impl GroundVars {
                 jobj(l, cx, a + 4, v.jobj);
             }
             GroundVars::Greens(v) => {
-                l.put_u32(a, v.x0);
-                addr(l, a + 4, v.x4);
-                addr(l, a + 8, v.x8);
-                l.put_u32(a + 0xC, v.xC as u32);
+                l.put_u32(a, v.flags);
+                addr(l, a + 4, v.grid_addr);
+                addr(l, a + 8, v.blocks_addr);
+                l.put_u32(a + 0xC, v.wait as u32);
             }
             GroundVars::Greens2(v) => w32(
                 l,
                 a,
                 &[
-                    v.x0, v.x4, v.x8, v.xC, v.x10, v.x14, v.x18, v.x1C, v.x20, v.x24,
+                    v.cycle,
+                    v.state,
+                    v.step,
+                    v.count,
+                    v.state_new,
+                    v.facing,
+                    v.wind,
+                    v.ticks,
+                    v.apples_left,
+                    v.apple_side,
                 ],
             ),
             GroundVars::Onett(v) => {
@@ -826,7 +968,7 @@ impl GroundVars {
                 l.put_u32(a + 0xC, v.timer);
             }
             GroundVars::OnettCar(v) => {
-                l.put_bits(a, 0, 1, v.x0 >> 31);
+                l.put_bits(a, 0, 1, v.flags >> 31);
                 for (k, &j) in v.car_jobjs.iter().enumerate() {
                     jobj(l, cx, a + 4 + 4 * k as u32, j);
                 }
@@ -837,8 +979,8 @@ impl GroundVars {
                     jobj(l, cx, a + 0x2C + 4 * k as u32, j);
                 }
                 l.put_bytes(a + 0x40, &[v.curr_car as u8, v.state_a]);
-                l.put_u32(a + 0x44, v.x108 as u32);
-                l.put_u32(a + 0x4C, v.x110 as u32);
+                l.put_u32(a + 0x44, v.timer_a as u32);
+                l.put_u32(a + 0x4C, v.sub_state_a as u32);
                 f(l, a + 0x50, v.car_speed);
                 l.put_bytes(a + 0x54, &[v.next_car as u8, v.state_b]);
                 l.put_u32(a + 0x58, v.timer_b as u32);
@@ -846,108 +988,154 @@ impl GroundVars {
                 f(l, a + 0x64, v.speed_b);
             }
             GroundVars::Kraid(v) => {
-                l.put_bytes(a, &[v.x0 as u8, v.x1 as u8]);
-                fs(l, a + 4, &[v.x4, v.x8, v.xC]);
-                l.put_u32(a + 0x10, v.x10 as u32);
+                l.put_bytes(a, &[v.state as u8, v.rumbling as u8]);
+                fs(l, a + 4, &[v.turn_dir, v.turn_speed, v.turn_step]);
+                l.put_u32(a + 0x10, v.turn_delay as u32);
             }
             GroundVars::Kraid2(v) => {
-                l.put_bytes(a, &[v.x0, v.x1, v.x2, v.x3, v.x4, v.x5].map(|x| x as u8));
-                f(l, a + 8, v.x8);
-                l.put_u32(a + 0xC, v.xC as u32);
-                jobj(l, cx, a + 0x10, v.x10);
-                jobj(l, cx, a + 0x14, v.x14);
+                l.put_bytes(
+                    a,
+                    &[
+                        v.state,
+                        v.anim,
+                        v.last_place,
+                        v.leftmost,
+                        v.rightmost,
+                        v.turned_rock,
+                    ]
+                    .map(|x| x as u8),
+                );
+                f(l, a + 8, v.swipe_side);
+                l.put_u32(a + 0xC, v.ticks as u32);
+                jobj(l, cx, a + 0x10, v.hand);
+                jobj(l, cx, a + 0x14, v.hand2);
             }
             GroundVars::Flatzone(v) => {
-                l.put_bytes(a, &[v.xC4, v.xC5, v.xC6, v.xC7]);
-                h16(l, a + 4, &[v.xC8]);
+                l.put_bytes(a, &[v.waiting, v.last_event, v.event_before, v.may_start]);
+                h16(l, a + 4, &[v.timer]);
             }
             GroundVars::FlatzoneOil(v) => {
-                l.put_u8(a, v.xC4);
-                f(l, a + 4, v.xC8);
-                l.put_u32(a + 8, super::super::flatzone::area_addr(v.xCC));
-                w32(l, a + 0xC, &[v.xD0, v.timer]);
+                l.put_u8(a, v.started);
+                f(l, a + 4, v.side);
+                l.put_u32(a + 8, super::super::flatzone::area_addr(v.area));
+                w32(l, a + 0xC, &[v.state, v.timer]);
             }
             GroundVars::FlatzonePlatforms(v) => {
-                l.put_bytes(a, &[v.xC4, v.xC5, v.xC6, v.xC7, v.xC8, v.xC9, v.xCA]);
-                h16(l, a + 8, &[v.xCC]);
+                l.put_bytes(
+                    a,
+                    &[
+                        v.waiting,
+                        v.anim,
+                        v.last_anim,
+                        v.set,
+                        v.last_set,
+                        v.row,
+                        v.last_row,
+                    ],
+                );
+                h16(l, a + 8, &[v.timer]);
             }
-            GroundVars::FlatzoneEvent(v) => l.put_u8(a, v.xC4),
+            GroundVars::FlatzoneEvent(v) => l.put_u8(a, v.started),
             GroundVars::FlatzoneTools(v) => {
-                l.put_u8(a, v.xC4);
-                l.put_u32(a + 4, v.xC8 as u32);
+                l.put_u8(a, v.started);
+                l.put_u32(a + 4, v.timer as u32);
             }
             GroundVars::Fourside(v) => {
-                jobj(l, cx, a, v.x0);
-                jobj(l, cx, a + 4, v.x4);
-                jobj(l, cx, a + 8, v.x8);
+                jobj(l, cx, a, v.skyline);
+                jobj(l, cx, a + 4, v.skyline2);
+                jobj(l, cx, a + 8, v.back);
             }
             GroundVars::FoursideCrane(v) => {
-                l.put_bytes(a, &[v.x0, v.x1]);
-                l.put_u32(a + 4, v.x4 as u32);
-                fs(l, a + 8, &[v.x8, v.xC, v.x10, v.x14, v.x18, v.x1C]);
+                l.put_bytes(a, &[v.state, v.flags]);
+                l.put_u32(a + 4, v.ticks as u32);
+                fs(
+                    l,
+                    a + 8,
+                    &[v.rest_y, v.height, v.target, v.start_speed, v.speed, v.pull],
+                );
             }
             GroundVars::FoursideUfo(v) => {
-                l.put_bytes(a, &[v.x0, v.x1, v.x2, v.x3]);
-                w32(l, a + 4, &[v.x4, v.x8]);
-                l.put_word(a + 0xC, cx.handle("CameraBoxId", v.xC.map(|b| b.0)));
+                l.put_bytes(a, &[v.state, v.building, v.waits, v.sound_state]);
+                w32(l, a + 4, &[v.ticks, v.on_roof]);
+                l.put_word(a + 0xC, cx.handle("CameraBoxId", v.subject.map(|b| b.0)));
             }
             GroundVars::Fourside2(v) => {
-                l.put_bytes(a, &[v.x0, v.x1]);
-                w32(l, a + 4, &[v.x4, v.x8]);
+                l.put_bytes(a, &[v.state, v.sound_played]);
+                w32(l, a + 4, &[v.ticks, v.on_roof]);
             }
             GroundVars::GreatBay(v) => {
-                l.put_bytes(a, &[v.xC4, v.xC5]);
-                h16(l, a + 2, &[v.xC6]);
-                l.put_word(a + 4, cx.handle("GeneratorId", v.xC8.map(|g| g.0)));
-                f(l, a + 8, v.xCC);
+                l.put_bytes(a, &[v.state, v.bits]);
+                h16(l, a + 2, &[v.ticks]);
+                l.put_word(a + 4, cx.handle("GeneratorId", v.splash.map(|g| g.0)));
+                f(l, a + 8, v.shell_height);
             }
             GroundVars::GreatBay2(v) => {
                 for (i, &g) in v.gobjs.iter().enumerate() {
                     gobj(l, cx, a + 4 * i as u32, g);
                 }
-                h16(l, a + 0x10, &[v.x10]);
-                l.put_u8(a + 0x12, v.x12);
+                h16(l, a + 0x10, &[v.moon_wait]);
+                l.put_u8(a + 0x12, v.moon_flags);
             }
             GroundVars::GreatBay3(v) => {
                 v3(l, a, &v.translation);
-                fs(l, a + 0xC, &[v.xD0, v.xD4, v.xD8, v.xDC, v.xE0]);
+                fs(
+                    l,
+                    a + 0xC,
+                    &[v.slide_push, v.sink_push, v.tilt, v.slide, v.sink],
+                );
                 jobj(l, cx, a + 0x20, v.jobj);
             }
             GroundVars::GreatBay4(v) => {
-                w32(l, a, &[v.xC4, v.xC8, v.xCC, v.xD0, v.xD4, v.xD8, v.xDC]);
-                f(l, a + 0x1C, v.xE0);
-                v3(l, a + 0x20, &v.xE4);
-                gobj(l, cx, a + 0x2C, v.xF0);
+                w32(
+                    l,
+                    a,
+                    &[
+                        v.state,
+                        v.last_state,
+                        v.popped,
+                        v.splashed,
+                        v.ledge_hang,
+                        v.standing,
+                        v.standing_last,
+                    ],
+                );
+                f(l, a + 0x1C, v.weight);
+                v3(l, a + 0x20, &v.place);
+                gobj(l, cx, a + 0x2C, v.item);
             }
             GroundVars::ZebesCreature(v) => {
-                l.put_u8(a, v.x0);
+                l.put_u8(a, v.flags);
                 jobj(l, cx, a + 4, v.stored_jobj);
-                h16(l, a + 8, &[v.x8, v.xA]);
+                h16(l, a + 8, &[v.next_anim, v.wait]);
             }
-            GroundVars::ZebesBack(v) => h16(l, a, &[v.xC4]),
+            GroundVars::ZebesBack(v) => h16(l, a, &[v.state]),
             GroundVars::ZebesBubble(v) => {
-                gobj(l, cx, a, v.xC4);
-                l.put_u32(a + 4, v.xC8 as u32);
+                gobj(l, cx, a, v.item);
+                l.put_u32(a + 4, v.bubble as u32);
             }
             GroundVars::ZebesIsland(v) => {
                 acid(l, cx, a, &v.acid);
-                l.put_u32(a + 0x24, v.xE8 as u32);
-                addr(l, a + 0x28, v.xEC);
+                l.put_u32(a + 0x24, v.last_state as u32);
+                addr(l, a + 0x28, v.spawn_config);
             }
             GroundVars::ZebesStage(v) => {
-                h16(l, a, &[v.xC4, v.xC6]);
+                h16(l, a, &[v.platform_state, v.platform_wait]);
                 acid(l, cx, a + 4, &v.acid);
-                l.put_u32(a + 0x28, v.xEC);
-                gobj(l, cx, a + 0x2C, v.xF0);
-                h16(l, a + 0x30, &[v.xF4, v.xF6, v.xF8, v.xFA]);
-                addr(l, a + 0x38, v.xFC);
-                gobj(l, cx, a + 0x3C, v.x100);
+                l.put_u32(a + 0x28, v.last_state);
+                gobj(l, cx, a + 0x2C, v.island);
+                h16(
+                    l,
+                    a + 0x30,
+                    &[v.bubble_wait, v.regrowths, v.pop_wait, v.pop_wait_low],
+                );
+                addr(l, a + 0x38, v.spawn_config);
+                gobj(l, cx, a + 0x3C, v.platform_item);
             }
             GroundVars::ZebesLava(v) => {
-                h16(l, a, &[v.xC4, v.xC6]);
-                l.put_u32(a + 4, v.xC8);
-                fs(l, a + 8, &[v.xCC, v.xD0, v.xD4, v.xD8]);
-                l.put_word(a + 0x18, cx.handle("LObjId", v.xDC.map(|o| o.0)));
+                h16(l, a, &[v.entry, v.wait]);
+                l.put_u32(a + 4, v.state);
+                fs(l, a + 8, &[v.top_speed, v.speed, v.target, v.level]);
+                l.put_word(a + 0x18, cx.handle("LObjId", v.light.map(|o| o.0)));
             }
             GroundVars::BattleBg(v) => w32(l, a, &[v.state, v.curr, v.prev, v.timer]),
             _ => return false,
@@ -969,11 +1157,11 @@ impl GroundVars {
                     let mut l = Lay::new(v.entries_addr, 0x18 * v.entries.len() as u32);
                     for (i, e) in v.entries.iter().enumerate() {
                         let b = v.entries_addr + 0x18 * i as u32;
-                        l.put_bytes(b, &[e.x0, e.x1]);
-                        h16(&mut l, b + 2, &[e.x2]);
-                        w32(&mut l, b + 4, &[e.x4, e.x8]);
-                        fs(&mut l, b + 0xC, &[e.xC, e.x10]);
-                        jobj(&mut l, cx, b + 0x14, e.x14);
+                        l.put_bytes(b, &[e.state, e.flags]);
+                        h16(&mut l, b + 2, &[e.coll_joint]);
+                        w32(&mut l, b + 4, &[e.ticks, e.touches]);
+                        fs(&mut l, b + 0xC, &[e.rest_y, e.fall_speed]);
+                        jobj(&mut l, cx, b + 0x14, e.jobj);
                     }
                     lays.push(l);
                 }
@@ -981,7 +1169,7 @@ impl GroundVars {
                     let mut l = Lay::new(v.vanish_addr, 8 * v.vanish.len() as u32);
                     for (i, e) in v.vanish.iter().enumerate() {
                         let b = v.vanish_addr + 8 * i as u32;
-                        h16(&mut l, b, &[e.x0, e.x2]);
+                        h16(&mut l, b, &[e.state, e.unwritten]);
                         jobj(&mut l, cx, b + 4, e.jobj);
                     }
                     lays.push(l);
@@ -1002,34 +1190,34 @@ impl GroundVars {
                 let mut l = Lay::new(v.blocks_addr, 0x24 * v.blocks.len() as u32);
                 for (i, e) in v.blocks.iter().enumerate() {
                     let b = v.blocks_addr + 0x24 * i as u32;
-                    h16(&mut l, b, &[e.status, e.x2, e.x4, e.x6]);
-                    fs(&mut l, b + 8, &[e.x8, e.xC, e.x10]);
+                    h16(&mut l, b, &[e.status, e.state, e.count, e.unwritten]);
+                    fs(&mut l, b + 8, &[e.rest_y, e.bump, e.bump_speed]);
                     jobj(&mut l, cx, b + 0x14, e.jobj2);
                     gobj(&mut l, cx, b + 0x18, e.hatena_gobj);
                     gobj(&mut l, cx, b + 0x1C, e.item_gobj);
-                    h16(&mut l, b + 0x20, &[e.x20, e.x22]);
+                    h16(&mut l, b + 0x20, &[e.back_wait, e.blink]);
                 }
                 lays.push(l);
             }
             GroundVars::Greens(v) => {
-                if v.x4 != 0 && v.grid.len() == 30 {
-                    let mut l = Lay::new(v.x4, 0xC * 30);
+                if v.grid_addr != 0 && v.grid.len() == 30 {
+                    let mut l = Lay::new(v.grid_addr, 0xC * 30);
                     for (i, c) in v.grid.iter().enumerate() {
-                        v3(&mut l, v.x4 + 0xC * i as u32, c);
+                        v3(&mut l, v.grid_addr + 0xC * i as u32, c);
                     }
                     lays.push(l);
                 }
-                if v.x8 != 0 && v.blocks.len() == 30 {
-                    let mut l = Lay::new(v.x8, 0x20 * 30);
+                if v.blocks_addr != 0 && v.blocks.len() == 30 {
+                    let mut l = Lay::new(v.blocks_addr, 0x20 * 30);
                     for (i, e) in v.blocks.iter().enumerate() {
-                        let b = v.x8 + 0x20 * i as u32;
-                        l.put_u32(b, e.x0);
-                        fs(&mut l, b + 4, &[e.x4, e.x8]);
-                        gobj(&mut l, cx, b + 0xC, e.xC);
-                        gobj(&mut l, cx, b + 0x10, e.x10);
-                        jobj(&mut l, cx, b + 0x14, e.x14);
-                        l.put_u32(b + 0x18, e.x18 as u32);
-                        gobj(&mut l, cx, b + 0x1C, e.x1C);
+                        let b = v.blocks_addr + 0x20 * i as u32;
+                        l.put_u32(b, e.bits);
+                        fs(&mut l, b + 4, &[e.fall_speed, e.height]);
+                        gobj(&mut l, cx, b + 0xC, e.gobj);
+                        gobj(&mut l, cx, b + 0x10, e.item);
+                        jobj(&mut l, cx, b + 0x14, e.jobj);
+                        l.put_u32(b + 0x18, e.coll_joint as u32);
+                        gobj(&mut l, cx, b + 0x1C, e.breaker);
                     }
                     lays.push(l);
                 }
@@ -1042,7 +1230,17 @@ impl GroundVars {
                     fs(
                         &mut l,
                         b + 4,
-                        &[c.x4, c.x8, c.xC, c.x10, c.x14, c.x18, c.x1C, c.x20, c.x24],
+                        &[
+                            c.road_pos,
+                            c.road_speed,
+                            c.lane,
+                            c.target_lane,
+                            c.air_pos,
+                            c.air_speed,
+                            c.roll,
+                            c.target_roll,
+                            c.line_change_start,
+                        ],
                     );
                     gobj(&mut l, cx, b + 0x28, c.item);
                 }

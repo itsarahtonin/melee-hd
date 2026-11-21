@@ -385,7 +385,10 @@ fn stage_ticks(path: &std::path::Path, ticks: u32, every: u32) {
             let g = game.stage_info.map_gobjs[3].unwrap();
             let gp = melee_sim::game::gr::ground::ground_of(&game, g);
             if let melee_sim::game::gr::GroundVars::Map(v) = &game.grounds[gp.0].u.vars {
-                eprintln!("tick {tick}: phase {} b26 {} xC8 {}", v.phase, v.b26, v.xC8);
+                eprintln!(
+                    "tick {tick}: phase {} b26 {} xC8 {}",
+                    v.phase, v.b26, v.cycle_timer
+                );
             }
         }
         if tick % every == 0 || tick == ticks {

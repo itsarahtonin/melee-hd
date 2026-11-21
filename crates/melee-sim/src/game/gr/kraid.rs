@@ -179,10 +179,10 @@ pub fn init_rock(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
     let v = r.game.grounds[g.0].u.kraid();
-    v.x0 = 0;
-    v.x4 = 0.0;
-    v.x8 = 0.0;
-    v.xC = 0.0;
+    v.state = 0;
+    v.turn_dir = 0.0;
+    v.turn_speed = 0.0;
+    v.turn_step = 0.0;
     anime::start_map(r.game, r.data, gobj, m, 0);
     anime::start(r.game, r.data, gobj, 0xD, 7, 2, 0.0, 1.0, true);
 }
@@ -199,33 +199,33 @@ pub fn proc_rock(r: &mut Running, gobj: GObjId) {
     let j = nth_joint(r.game, gobj, 0);
     let p = param(r.game);
     let v = r.game.grounds[g.0].u.kraid();
-    match v.x0 {
+    match v.state {
         0 => {
-            if reg(v.x4) != 0.0 {
+            if reg(v.turn_dir) != 0.0 {
                 let (max, min) = (p.w(r, MAP_TIME_MAX) as i32, p.w(r, MAP_TIME_MIN) as i32);
                 let delay = grlib::rand_range(&mut r.game.objs.rng, max, min);
                 let v = r.game.grounds[g.0].u.kraid();
-                v.x10 = delay;
-                v.x0 = 1;
+                v.turn_delay = delay;
+                v.state = 1;
                 anime::start(r.game, r.data, gobj, 18, 7, 1, 0.0, 1.0, true);
                 r.stage_sound(420_007);
-                r.game.grounds[g.0].u.kraid().x1 = 1;
+                r.game.grounds[g.0].u.kraid().rumbling = 1;
             }
         }
         1 => {
-            if v.x10 == 0 {
-                v.x8 = mem(fp::fsubs(reg(v.x8), reg(v.xC)));
+            if v.turn_delay == 0 {
+                v.turn_speed = mem(fp::fsubs(reg(v.turn_speed), reg(v.turn_step)));
             } else {
-                v.x10 = v.x10.wrapping_sub(1);
+                v.turn_delay = v.turn_delay.wrapping_sub(1);
             }
             let abs = |x: f64| if x < 0.0 { fp::fneg(x) } else { x };
-            let step = abs(reg(v.xC));
-            let speed = reg(v.x8);
+            let step = abs(reg(v.turn_step));
+            let speed = reg(v.turn_speed);
             if abs(speed) < step {
-                v.xC = 0.0;
-                v.x8 = 0.0;
-                v.x4 = 0.0;
-                v.x0 = 0;
+                v.turn_step = 0.0;
+                v.turn_speed = 0.0;
+                v.turn_dir = 0.0;
+                v.state = 0;
             } else {
                 let turn = fp::fmuls(fp::fdivs(reg(std::f32::consts::PI), fp::frsp(180.0)), speed);
                 let j = j.expect("jobj");
@@ -241,9 +241,9 @@ pub fn proc_rock(r: &mut Running, gobj: GObjId) {
         }
         _ => {}
     }
-    if r.game.grounds[g.0].u.kraid().x1 != 0 && anime::finished(r.game, gobj, 18, 7) {
+    if r.game.grounds[g.0].u.kraid().rumbling != 0 && anime::finished(r.game, gobj, 18, 7) {
         anime::start(r.game, r.data, gobj, 18, 7, 0, 0.0, 1.0, true);
-        r.game.grounds[g.0].u.kraid().x1 = 0;
+        r.game.grounds[g.0].u.kraid().rumbling = 0;
     }
     let level = r.game.gr.wind_level;
     r.game.gr.wind_level = crate::lb::wind::tick(&mut r.game.gr.winds, level);
@@ -257,10 +257,10 @@ pub fn proc_rock(r: &mut Running, gobj: GObjId) {
 pub fn swipe_hit(r: &mut Running, hand: Option<JObjId>, direction: f64) {
     let rock = map_gobj(r.game, 3).expect("Ground_GetMapGObj(3)");
     let g = ground_of(r.game, rock);
-    if reg(r.game.grounds[g.0].u.kraid().x4) != 0.0 {
+    if reg(r.game.grounds[g.0].u.kraid().turn_dir) != 0.0 {
         return;
     }
-    r.game.grounds[g.0].u.kraid().x4 = mem(direction);
+    r.game.grounds[g.0].u.kraid().turn_dir = mem(direction);
     let hand_pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, hand, None);
     crate::game::code::os_report();
     let p = param(r.game);
@@ -269,20 +269,20 @@ pub fn swipe_hit(r: &mut Running, hand: Option<JObjId>, direction: f64) {
     let x = reg(hand_pos.x);
     let ax = if x < 0.0 { fp::fneg(x) } else { x };
     let v = r.game.grounds[g.0].u.kraid();
-    v.x8 = mem(fp::fmuls(rot, ax));
+    v.turn_speed = mem(fp::fmuls(rot, ax));
     let min = p.f(r, MAP_ROT_SPD_MIN);
     let max = p.f(r, MAP_ROT_SPD_MAX);
     let v = r.game.grounds[g.0].u.kraid();
-    if reg(v.x8) < reg(min) {
-        v.x8 = min;
+    if reg(v.turn_speed) < reg(min) {
+        v.turn_speed = min;
     }
-    if reg(v.x8) > reg(max) {
-        v.x8 = max;
+    if reg(v.turn_speed) > reg(max) {
+        v.turn_speed = max;
     }
-    v.x8 = mem(fp::fmuls(reg(v.x8), reg(v.x4)));
+    v.turn_speed = mem(fp::fmuls(reg(v.turn_speed), reg(v.turn_dir)));
     let acl = fp::frsp(f64::from(p.w(r, MAP_TIME_ACL) as i32));
     let v = r.game.grounds[g.0].u.kraid();
-    v.xC = mem(fp::fdivs(reg(v.x8), acl));
+    v.turn_step = mem(fp::fdivs(reg(v.turn_speed), acl));
     r.stage_sound(420_005);
     crate::game::camera::request_quake(r, crate::game::camera::QUAKE_MEDIUM, Some(hand_pos));
 }
@@ -308,29 +308,29 @@ pub fn init_kraid(r: &mut Running, gobj: GObjId) {
     let p = param(r.game);
     let pos: [f32; 6] = std::array::from_fn(|i| p.pos_x(r, i));
     let v = r.game.grounds[g.0].u.kraid2();
-    v.x10 = right_hand;
-    v.x14 = left_hand;
+    v.hand = right_hand;
+    v.hand2 = left_hand;
     let (mut lo, mut hi) = (0.0f64, 0.0f64);
-    v.x4 = 0;
-    v.x3 = 0;
+    v.rightmost = 0;
+    v.leftmost = 0;
     for (i, &x) in pos.iter().enumerate() {
         let x = reg(x);
         if x < lo {
-            v.x3 = i as i8;
+            v.leftmost = i as i8;
             lo = x;
         } else if x > hi {
             hi = x;
-            v.x4 = i as i8;
+            v.rightmost = i as i8;
         }
     }
-    v.x0 = 0;
+    v.state = 0;
     let wait = kraid_wait(r);
     let v = r.game.grounds[g.0].u.kraid2();
-    v.xC = wait;
-    v.x8 = 0.0;
-    v.x2 = 0;
-    v.x1 = 0;
-    v.x5 = 1;
+    v.ticks = wait;
+    v.swipe_side = 0.0;
+    v.last_place = 0;
+    v.anim = 0;
+    v.turned_rock = 1;
 }
 
 /// Kraid's process (map 4), `grKraid_801FEA00`. Waiting (state 0), once the wait is over and
@@ -345,16 +345,16 @@ pub fn proc_kraid(r: &mut Running, gobj: GObjId) {
     let rock_still = |r: &mut Running| {
         let rock = map_gobj(r.game, 3).expect("Ground_GetMapGObj(3)");
         let rg = ground_of(r.game, rock);
-        fp::fctiwz(reg(r.game.grounds[rg.0].u.kraid().x4)) == 0
+        fp::fctiwz(reg(r.game.grounds[rg.0].u.kraid().turn_dir)) == 0
     };
     let copy = |r: &Running| {
         let c = map_gobj(r.game, 1).expect("Ground_GetMapGObj(1)");
         jobj_of(r.game, c)
     };
-    let state = r.game.grounds[g.0].u.kraid2().x0;
+    let state = r.game.grounds[g.0].u.kraid2().state;
     match state {
         0 => {
-            if r.game.grounds[g.0].u.kraid2().xC <= 0 {
+            if r.game.grounds[g.0].u.kraid2().ticks <= 0 {
                 if rock_still(r) {
                     place(r, gobj);
                     jobj::clear_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
@@ -363,11 +363,11 @@ pub fn proc_kraid(r: &mut Running, gobj: GObjId) {
                     set_anim(r, gobj, 3);
                     r.stage_sound(420_001);
                     r.stage_sound(420_008);
-                    r.game.grounds[g.0].u.kraid2().x0 = 1;
+                    r.game.grounds[g.0].u.kraid2().state = 1;
                 }
             } else {
                 let v = r.game.grounds[g.0].u.kraid2();
-                v.xC = v.xC.wrapping_sub(1);
+                v.ticks = v.ticks.wrapping_sub(1);
             }
         }
         1 => {
@@ -375,20 +375,20 @@ pub fn proc_kraid(r: &mut Running, gobj: GObjId) {
                 let k = r.game.objs.rng.below(3);
                 set_anim(r, gobj, k);
                 let v = r.game.grounds[g.0].u.kraid2();
-                v.xC = 0;
-                v.x0 = 2;
+                v.ticks = 0;
+                v.state = 2;
             }
         }
         2 => {
             let v = r.game.grounds[g.0].u.kraid2();
-            let (idle, t) = (v.x1, v.xC);
+            let (idle, t) = (v.anim, v.ticks);
             if idle == 0 && t == 80 || idle == 1 && t == 45 {
                 r.stage_sound(420_000);
             } else if idle == 2 && t == 55 {
                 r.object_sound(Some(g), 0, 420_000);
             }
             let v = r.game.grounds[g.0].u.kraid2();
-            let (idle, t) = (v.x1, v.xC);
+            let (idle, t) = (v.anim, v.ticks);
             if idle == 2 && t == 161 {
                 r.stop_object_sound(Some(g), 0);
                 r.stage_sound(420_004);
@@ -396,38 +396,38 @@ pub fn proc_kraid(r: &mut Running, gobj: GObjId) {
                 r.stage_sound(420_004);
             }
             if anime::finished(r.game, gobj, 0, 7) {
-                let side = r.game.grounds[g.0].u.kraid2().x8;
+                let side = r.game.grounds[g.0].u.kraid2().swipe_side;
                 set_anim(r, gobj, fp::fctiwz(fp::fadds(5.0, reg(side))));
                 let v = r.game.grounds[g.0].u.kraid2();
-                v.xC = 0;
-                v.x0 = 3;
+                v.ticks = 0;
+                v.state = 3;
             }
             let v = r.game.grounds[g.0].u.kraid2();
-            v.xC = v.xC.wrapping_add(1);
+            v.ticks = v.ticks.wrapping_add(1);
         }
         3 => {
-            let left = r.game.grounds[g.0].u.kraid2().x1 == 5;
+            let left = r.game.grounds[g.0].u.kraid2().anim == 5;
             let (from, to, hit_at) = if left { (147, 169, 1) } else { (123, 138, 0) };
-            let t = r.game.grounds[g.0].u.kraid2().xC;
+            let t = r.game.grounds[g.0].u.kraid2().ticks;
             if rock_still(r) && t >= from && t <= to {
                 if t == from {
                     r.stage_sound(420_003);
                 }
                 if swipe_reached(r, gobj, hit_at) {
                     let v = r.game.grounds[g.0].u.kraid2();
-                    v.x5 = 1;
-                    v.x8 = 1.0;
-                    let (hand, dir) = if left { (v.x14, -1.0) } else { (v.x10, 1.0) };
+                    v.turned_rock = 1;
+                    v.swipe_side = 1.0;
+                    let (hand, dir) = if left { (v.hand2, -1.0) } else { (v.hand, 1.0) };
                     swipe_hit(r, hand, dir);
                 }
             }
             let v = r.game.grounds[g.0].u.kraid2();
-            v.xC = v.xC.wrapping_add(1);
+            v.ticks = v.ticks.wrapping_add(1);
             if anime::finished(r.game, gobj, 0, 7) {
                 set_anim(r, gobj, 4);
                 r.stage_sound(420_002);
                 r.stage_sound(420_008);
-                r.game.grounds[g.0].u.kraid2().x0 = 4;
+                r.game.grounds[g.0].u.kraid2().state = 4;
             }
         }
         4 if anime::finished(r.game, gobj, 0, 7) => {
@@ -435,14 +435,14 @@ pub fn proc_kraid(r: &mut Running, gobj: GObjId) {
             let full = p
                 .w(r, KRAID_WAIT_TIME)
                 .wrapping_add(p.w(r, KRAID_WAIT_TIME_ADD)) as i32;
-            r.game.grounds[g.0].u.kraid2().xC = full;
+            r.game.grounds[g.0].u.kraid2().ticks = full;
             jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
             let c = copy(r);
             jobj::set_flags_all(&mut r.game.objs.jobjs, c, jobj::HIDDEN);
             let wait = kraid_wait(r);
             let v = r.game.grounds[g.0].u.kraid2();
-            v.xC = wait;
-            v.x0 = 0;
+            v.ticks = wait;
+            v.state = 0;
         }
         _ => {}
     }
@@ -457,8 +457,8 @@ pub fn place(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj).expect("jobj");
     let v = r.game.grounds[g.0].u.kraid2();
-    let i = if v.x5 != 0 {
-        let last = i32::from(v.x2);
+    let i = if v.turned_rock != 0 {
+        let last = i32::from(v.last_place);
         loop {
             let i = r.game.objs.rng.below(6);
             if last != i {
@@ -466,7 +466,7 @@ pub fn place(r: &mut Running, gobj: GObjId) {
             }
         }
     } else {
-        let (lo, hi) = (v.x3, v.x4);
+        let (lo, hi) = (v.leftmost, v.rightmost);
         if r.game.objs.rng.below(2) != 0 {
             i32::from(lo)
         } else {
@@ -474,8 +474,8 @@ pub fn place(r: &mut Running, gobj: GObjId) {
         }
     };
     let v = r.game.grounds[g.0].u.kraid2();
-    v.x5 = 0;
-    v.x2 = i as i8;
+    v.turned_rock = 0;
+    v.last_place = i as i8;
     let x = param(r.game).pos_x(r, i as usize);
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.x = x);
     let c = map_gobj(r.game, 1).expect("Ground_GetMapGObj(1)");
@@ -489,7 +489,7 @@ pub fn place(r: &mut Running, gobj: GObjId) {
     } else {
         1.0
     };
-    r.game.grounds[g.0].u.kraid2().x8 = mem(side);
+    r.game.grounds[g.0].u.kraid2().swipe_side = mem(side);
 }
 
 /// Starts animation `anim` on Kraid and his copy, `grKraid_801FF068`: each's `x1`, and the
@@ -497,17 +497,17 @@ pub fn place(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "grKraid_801FF068")]
 pub fn set_anim(r: &mut Running, gobj: GObjId, anim: i32) {
     let g = ground_of(r.game, gobj);
-    r.game.grounds[g.0].u.kraid2().x1 = anim as i8;
-    let a = i32::from(r.game.grounds[g.0].u.kraid2().x1);
+    r.game.grounds[g.0].u.kraid2().anim = anim as i8;
+    let a = i32::from(r.game.grounds[g.0].u.kraid2().anim);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, a);
     let c = map_gobj(r.game, 1).expect("Ground_GetMapGObj(1)");
     let cg = ground_of(r.game, c);
-    r.game.grounds[cg.0].u.kraid().x1 = a as i8;
+    r.game.grounds[cg.0].u.kraid().rumbling = a as i8;
     let cm = map_id(r.game, c);
-    let a = i32::from(r.game.grounds[cg.0].u.kraid().x1);
+    let a = i32::from(r.game.grounds[cg.0].u.kraid().rumbling);
     anime::start_map(r.game, r.data, c, cm, a);
-    r.game.grounds[cg.0].u.kraid().x0 = 1;
+    r.game.grounds[cg.0].u.kraid().state = 1;
     r.game.haze_restarted();
 }
 
@@ -517,7 +517,7 @@ pub fn set_anim(r: &mut Running, gobj: GObjId, anim: i32) {
 pub fn swipe_reached(r: &mut Running, gobj: GObjId, left: i32) -> bool {
     let g = ground_of(r.game, gobj);
     let at = if left == 1 { 0x9E } else { 0x82 };
-    let reached = r.game.grounds[g.0].u.kraid2().xC >= at;
+    let reached = r.game.grounds[g.0].u.kraid2().ticks >= at;
     if reached {
         crate::game::ft::ftlib::start_rumble_all(r, 0xC, 0);
     }

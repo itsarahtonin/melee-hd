@@ -183,10 +183,10 @@ pub fn init_fountain(r: &mut Running, gobj: GObjId) {
     r.game.grounds[g.0].x10_flags.b5 = true;
     let (left, right) = (nth_joint(r.game, gobj, 1), nth_joint(r.game, gobj, 2));
     let v = r.game.grounds[g.0].u.izumi();
-    v.xD0 = left;
-    v.xD4 = right;
+    v.platform_jobj = left;
+    v.platform_jobj2 = right;
     let camera = create_reflection(r);
-    r.game.grounds[g.0].u.izumi().xC8 = Some(camera);
+    r.game.grounds[g.0].u.izumi().reflection_camera = Some(camera);
     let image = r.game.gr.izumi.reflection.as_ref().and_then(|v| v.image);
     let tobj = find_tobj(r.game, gobj, image);
     match tobj {
@@ -199,7 +199,7 @@ pub fn init_fountain(r: &mut Running, gobj: GObjId) {
         }
         None => panic!("grizumi.c:387:Warning: not found tobj !"),
     }
-    r.game.grounds[g.0].u.izumi().xC4 = tobj;
+    r.game.grounds[g.0].u.izumi().water_tobj = tobj;
     r.game.world.gobj_mut(gobj).render = Some(CodeRef(RENDER_FOUNTAIN));
     create_stars(r);
     grlib::generator_at(r.game, r.data, 0x7534, 0x1E, Vec3::new(0.0, 0.0, 0.0));
@@ -207,21 +207,21 @@ pub fn init_fountain(r: &mut Running, gobj: GObjId) {
     let m = |v: i32| mem(fp::fmuls(fp::frsp(f64::from(v)), s));
     grlib::generator_at(r.game, r.data, 0x7536, 0x1E, Vec3::new(m(0), m(1), m(-27)));
     let refl = create(r, MAP_REFLECTIONS, REFLECTIONS_FRAME);
-    r.game.grounds[g.0].u.izumi().xCC = refl;
+    r.game.grounds[g.0].u.izumi().reflections = refl;
     let rg = ground_of(r.game, refl.expect("grizumi.c: the reflections"));
     r.game.grounds[rg.0].x18 = Some(camera);
     let p = param(r.game);
     let (h0, h1, home) = (p.f(r, 0), p.f(r, 8), p.f(r, 0xC));
     let (left, right) = {
         let v = r.game.grounds[g.0].u.izumi();
-        (v.xD0, v.xD4)
+        (v.platform_jobj, v.platform_jobj2)
     };
     for (part, height, line, column) in [(4, h0, 0, left), (6, h1, 1, right)] {
         let j = nth_joint(r.game, gobj, part);
         let at = crate::lb::joint::world_position(&mut r.game.objs, r.data, j, None);
         let plat = create_platform(r, height, at, line, column);
         let pg = ground_of(r.game, plat);
-        r.game.grounds[pg.0].u.izumi3().xDC = home;
+        r.game.grounds[pg.0].u.izumi3().home_height = home;
         r.game.grounds[pg.0].x10_flags.b3 = true;
         r.game.grounds[pg.0].x18 = Some(camera);
     }
@@ -293,7 +293,11 @@ pub fn render_stars(r: &mut Running, gobj: GObjId, pass: i32) {
 #[doc(alias = "grIzumi_801CD220")]
 pub fn render_fountain(r: &mut Running, gobj: GObjId, pass: i32) {
     let g = ground_of(r.game, gobj);
-    let tobj = r.game.grounds[g.0].u.izumi().xC4.expect("grizumi.c: tobj");
+    let tobj = r.game.grounds[g.0]
+        .u
+        .izumi()
+        .water_tobj
+        .expect("grizumi.c: tobj");
     let m = r
         .game
         .gr
@@ -312,11 +316,11 @@ pub fn render_fountain(r: &mut Running, gobj: GObjId, pass: i32) {
 pub fn proc_fountain(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.izumi();
-    if let Some(refl) = v.xCC {
-        let (left, right) = (v.xD0, v.xD4);
+    if let Some(refl) = v.reflections {
+        let (left, right) = (v.platform_jobj, v.platform_jobj2);
         let rg = ground_of(r.game, refl);
         let rv = r.game.grounds[rg.0].u.izumi2();
-        let pairs = [(left, rv.xC4), (right, rv.xC8)];
+        let pairs = [(left, rv.reflection), (right, rv.reflection2)];
         for (src, dst) in pairs {
             let Some(src) = src else { continue };
             let pos = r.game.objs.jobjs[src].translate;
@@ -374,17 +378,17 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let p = param(r.game);
     let mut moved = false;
-    match r.game.grounds[g.0].u.izumi3().xC4 {
+    match r.game.grounds[g.0].u.izumi3().state {
         0 => {
-            r.game.grounds[g.0].u.izumi3().xC4 = 1;
+            r.game.grounds[g.0].u.izumi3().state = 1;
             let w = wait_between(r, 0x3C, 0x38);
-            r.game.grounds[g.0].u.izumi3().xC6 = w;
+            r.game.grounds[g.0].u.izumi3().timer = w;
             moved = true;
         }
         1 => {
             let v = r.game.grounds[g.0].u.izumi3();
-            let t = v.xC6;
-            v.xC6 = t.wrapping_sub(1);
+            let t = v.timer;
+            v.timer = t.wrapping_sub(1);
             if t < 0 {
                 let rand = reg(r.game.objs.rng.draw_f32());
                 let (sink, step, keep) = (p.f(r, 0x40), p.f(r, 0x48), p.f(r, 0x44));
@@ -393,17 +397,17 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
                 f = fp::fsubs(f, reg(sink));
                 if f < 0.0 {
                     let v = r.game.grounds[g.0].u.izumi3();
-                    v.xC4 = 2;
-                    v.xD4 = -1.0;
+                    v.state = 2;
+                    v.target_height = -1.0;
                 } else {
                     f = fp::fsubs(f, reg(step));
                     if f < 0.0 {
                         let fff = reg(r.game.objs.rng.draw_f32());
                         let (lo, hi) = (p.f(r, 0x18), p.f(r, 0x1C));
                         let ff = fp::fmadds(fp::fsubs(reg(hi), reg(lo)), fff, reg(lo));
-                        r.game.grounds[g.0].u.izumi3().xC4 = 2;
+                        r.game.grounds[g.0].u.izumi3().state = 2;
                         let v = r.game.grounds[g.0].u.izumi3();
-                        let (h, home) = (reg(v.xD0), reg(v.xDC));
+                        let (h, home) = (reg(v.height), reg(v.home_height));
                         let up = if h < home {
                             !(reg(r.game.objs.rng.draw_f32()) < reg(p.f(r, 0x30)))
                         } else if h > home {
@@ -412,21 +416,21 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
                             reg(r.game.objs.rng.draw_f32()) < 0.5
                         };
                         let v = r.game.grounds[g.0].u.izumi3();
-                        v.xD4 = mem(if up {
-                            fp::fadds(reg(v.xD4), ff)
+                        v.target_height = mem(if up {
+                            fp::fadds(reg(v.target_height), ff)
                         } else {
-                            fp::fsubs(reg(v.xD4), ff)
+                            fp::fsubs(reg(v.target_height), ff)
                         });
                         let (top, bottom) = (p.f(r, 0x20), p.f(r, 0x24));
                         let v = r.game.grounds[g.0].u.izumi3();
-                        if reg(v.xD4) > reg(top) {
-                            v.xD4 = top;
-                        } else if reg(v.xD4) < reg(bottom) {
-                            v.xD4 = bottom;
+                        if reg(v.target_height) > reg(top) {
+                            v.target_height = top;
+                        } else if reg(v.target_height) < reg(bottom) {
+                            v.target_height = bottom;
                         }
                     } else {
                         let w = wait_between(r, 0x3C, 0x38);
-                        r.game.grounds[g.0].u.izumi3().xC6 = w;
+                        r.game.grounds[g.0].u.izumi3().timer = w;
                     }
                 }
             }
@@ -434,45 +438,45 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
         2 => {
             let (rise, fall, bottom) = (p.f(r, 0x28), p.f(r, 0x2C), p.f(r, 0x24));
             let v = r.game.grounds[g.0].u.izumi3();
-            let f = fp::fsubs(reg(v.xD4), reg(v.xD0));
+            let f = fp::fsubs(reg(v.target_height), reg(v.height));
             if f > fp::frsp(0.0) {
                 if f < reg(rise) {
-                    v.xD0 = v.xD4;
-                    v.xC4 = 0;
+                    v.height = v.target_height;
+                    v.state = 0;
                 } else {
-                    v.xD0 = mem(fp::fadds(reg(v.xD0), reg(rise)));
+                    v.height = mem(fp::fadds(reg(v.height), reg(rise)));
                 }
             } else if f < fp::frsp(0.0) {
                 if fp::fneg(f) < reg(fall) {
-                    v.xD0 = v.xD4;
-                    v.xC4 = if reg(v.xD0) < reg(bottom) { 3 } else { 0 };
+                    v.height = v.target_height;
+                    v.state = if reg(v.height) < reg(bottom) { 3 } else { 0 };
                 } else {
-                    v.xD0 = mem(fp::fsubs(reg(v.xD0), reg(fall)));
+                    v.height = mem(fp::fsubs(reg(v.height), reg(fall)));
                 }
             } else {
-                v.xC4 = 0;
+                v.state = 0;
             }
             moved = true;
         }
         3 => {
-            r.game.grounds[g.0].u.izumi3().xC4 = 4;
+            r.game.grounds[g.0].u.izumi3().state = 4;
             let w = wait_between(r, 0x50, 0x4C);
-            r.game.grounds[g.0].u.izumi3().xC6 = w;
+            r.game.grounds[g.0].u.izumi3().timer = w;
             jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
             jobj::remove_anim_all(&mut r.game.objs, j);
             let y = r.game.objs.jobjs[j.expect("grizumi.c: jobj")].translate.y;
             let y = mem(fp::frsp(fp::fadd(reg(y), fp::fneg(1.0))));
-            let column = r.game.grounds[g.0].u.izumi3().xCC;
+            let column = r.game.grounds[g.0].u.izumi3().column;
             let c = column.expect("grizumi.c: a platform's column");
             jobj::set_srt(&mut r.game.objs.jobjs, c, |o| o.translate.y = y);
         }
         4 => {
             let v = r.game.grounds[g.0].u.izumi3();
-            let t = v.xC6;
-            v.xC6 = t.wrapping_sub(1);
+            let t = v.timer;
+            v.timer = t.wrapping_sub(1);
             if t < 0 {
-                v.xC4 = 2;
-                v.xD4 = v.xDC;
+                v.state = 2;
+                v.target_height = v.home_height;
                 jobj::clear_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
                 anime::start(r.game, r.data, gobj, 0, 7, 0, 0.0, 1.0, true);
                 moved = true;
@@ -482,11 +486,11 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
     }
     if moved && let Some(child) = j.and_then(|j| r.game.objs.jobjs[j].child) {
         let v = r.game.grounds[g.0].u.izumi3();
-        let mut f = fp::frsp(fp::fdiv(reg(v.xD0), reg(v.xD8)));
+        let mut f = fp::frsp(fp::fdiv(reg(v.height), reg(v.column_height)));
         if f < f64::from(0.01_f32) {
             f = f64::from(0.01_f32);
         }
-        let (h, column) = (v.xD0, v.xCC);
+        let (h, column) = (v.height, v.column);
         jobj::set_srt(&mut r.game.objs.jobjs, child, |o| {
             o.scale.x = mem(fp::fmadds(0.5, f, 0.5))
         });
@@ -494,7 +498,7 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
         let c = column.expect("grizumi.c: a platform's column");
         jobj::set_srt(&mut r.game.objs.jobjs, c, |o| o.translate.y = h);
     }
-    let line_joint = i32::from(r.game.grounds[g.0].u.izumi3().xC8);
+    let line_joint = i32::from(r.game.grounds[g.0].u.izumi3().coll_joint);
     super::ground::update_coll_joint(r.game, r.data, line_joint);
 }
 
@@ -527,8 +531,8 @@ pub fn init_reflections(r: &mut Running, gobj: GObjId) {
     let b = nth_joint(r.game, gobj, 3);
     jobj::set_flags_all(&mut r.game.objs.jobjs, b, jobj::HIDDEN);
     let v = r.game.grounds[g.0].u.izumi2();
-    v.xC4 = a;
-    v.xC8 = b;
+    v.reflection = a;
+    v.reflection2 = b;
 }
 
 /// Makes a platform at `pos` (map 4), `grIzumi_801CCBDC`: its height, its collision line
@@ -548,14 +552,14 @@ pub fn create_platform(
     let j = jobj_of(r.game, gobj).expect("grizumi.c: oioi...");
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate = pos);
     let v = r.game.grounds[g.0].u.izumi3();
-    v.xD4 = height;
-    v.xD0 = height;
-    v.xC8 = line as i16;
-    v.xCC = column;
+    v.target_height = height;
+    v.height = height;
+    v.coll_joint = line as i16;
+    v.column = column;
     if reg(height) < 0.0 {
-        v.xC4 = 3;
+        v.state = 3;
     } else {
-        v.xC4 = 0;
+        v.state = 0;
         anime::start(r.game, r.data, gobj, 0, 7, 0, 0.0, 1.0, true);
     }
     let full = match nth_joint(r.game, gobj, 2) {
@@ -568,7 +572,7 @@ pub fn create_platform(
         }
         None => 45.0,
     };
-    r.game.grounds[g.0].u.izumi3().xD8 = full;
+    r.game.grounds[g.0].u.izumi3().column_height = full;
     proc_platform(r, gobj);
     gobj
 }

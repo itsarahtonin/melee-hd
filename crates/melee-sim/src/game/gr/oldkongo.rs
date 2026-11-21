@@ -199,20 +199,20 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
     let pos = turn_and_swing(r, gobj, &BARREL);
     let g = ground_of(r.game, gobj);
     let p = param(r.game);
-    let mut state = r.game.grounds[g.0].u.oldkongo().xC6;
+    let mut state = r.game.grounds[g.0].u.oldkongo().hold;
     if state == 1 {
         // With no fighter the state clears, and falls into the shot's start all the same
         // (no `break`); nothing leaves a held state without its fighter.
         let v = r.game.grounds[g.0].u.oldkongo();
         if v.keep.is_none() {
-            v.xC6 = 0;
+            v.hold = 0;
         } else {
-            let left = v.xCA;
-            v.xCA = left.wrapping_sub(1);
+            let left = v.hold_timer;
+            v.hold_timer = left.wrapping_sub(1);
             if left >= 0 {
                 return;
             }
-            v.xC6 = 2;
+            v.hold = 2;
         }
         state = 2;
     }
@@ -221,7 +221,7 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
         material::reset_overlay(r.game, gobj);
         let v = r.game.grounds[g.0].u.oldkongo();
         v.hit_timer = 0;
-        v.xC6 = 3;
+        v.hold = 3;
         state = 3;
     }
     match state {
@@ -237,7 +237,7 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
                     std::array::from_fn(|i| r.data.u32(p.0.at(SHOT_HIT + 4 * i as u32)));
                 let mut a = fp::frsp(fp::fadd(
                     std::f64::consts::FRAC_PI_2,
-                    reg(r.game.grounds[g.0].u.oldkongo().xDC),
+                    reg(r.game.grounds[g.0].u.oldkongo().angle),
                 ));
                 if a < 0.0 {
                     a = fp::frsp(fp::fadd(a, std::f64::consts::TAU));
@@ -248,11 +248,11 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
                 if r.game.world.gobj(keep).p_link == 8 {
                     r.shoot_from_stage_barrel(keep, pos, &super::kongo::shot_hit(words), a);
                 }
-                r.game.grounds[g.0].u.oldkongo().xC6 = 4;
+                r.game.grounds[g.0].u.oldkongo().hold = 4;
                 r.object_sound(Some(g), 0, 0x12A);
             }
         }
-        4 => r.game.grounds[g.0].u.oldkongo().xC6 = 0,
+        4 => r.game.grounds[g.0].u.oldkongo().hold = 0,
         _ => {}
     }
 }
@@ -260,19 +260,19 @@ pub fn proc_barrel(r: &mut Running, gobj: GObjId) {
 fn barrel_vars(game: &mut Game, g: GroundId) -> BarrelView<'_> {
     let v = game.grounds[g.0].u.oldkongo();
     BarrelView {
-        turn: &mut v.xC4,
-        hold: &mut v.xC6,
-        swing: &mut v.xC8,
-        held_for: &mut v.xCA,
-        turn_timer: &mut v.xCC,
-        swing_timer: &mut v.xCE,
+        turn: &mut v.turn,
+        hold: &mut v.hold,
+        swing: &mut v.swing_cycle,
+        held_for: &mut v.hold_timer,
+        turn_timer: &mut v.turn_timer,
+        swing_timer: &mut v.swing_timer,
         keep: &mut v.keep,
-        heading: &mut v.xD8,
-        angle: &mut v.xDC,
-        step: &mut v.xE0,
-        speed: &mut v.xE4,
-        one: &mut v.xE8,
-        rate: &mut v.xEC,
+        heading: &mut v.heading,
+        angle: &mut v.angle,
+        step: &mut v.turn_accel,
+        speed: &mut v.turn_speed,
+        one: &mut v.unread,
+        rate: &mut v.swing_speed,
     }
 }
 
@@ -328,7 +328,7 @@ pub fn init_birds(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     let wait = bird_wait(r);
-    r.game.grounds[g.0].u.oldkongo_birds().xC4 = wait;
+    r.game.grounds[g.0].u.oldkongo_birds().wait = wait;
 }
 
 /// A wait between the parameters' two bounds.
@@ -346,10 +346,10 @@ fn bird_wait(r: &mut Running) -> i32 {
 pub fn proc_birds(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj);
-    let timer = r.game.grounds[g.0].u.oldkongo_birds().xC4;
+    let timer = r.game.grounds[g.0].u.oldkongo_birds().wait;
     if timer > 0 {
         let left = timer.wrapping_sub(1);
-        r.game.grounds[g.0].u.oldkongo_birds().xC4 = left;
+        r.game.grounds[g.0].u.oldkongo_birds().wait = left;
         if left != 0 {
             return;
         }
@@ -387,7 +387,7 @@ pub fn proc_birds(r: &mut Running, gobj: GObjId) {
     } else if anime::finished(r.game, gobj, 0, 7) {
         jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
         let wait = bird_wait(r);
-        r.game.grounds[g.0].u.oldkongo_birds().xC4 = wait;
+        r.game.grounds[g.0].u.oldkongo_birds().wait = wait;
     }
 }
 

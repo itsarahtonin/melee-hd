@@ -568,11 +568,11 @@ pub fn on_init(r: &mut Running) {
     reset_arwings(r);
     let gobj = create(r, 8, INIT_FRAME).expect("grcorneria.c: map 8");
     let gid = ground_of(r.game, gobj);
-    r.game.grounds[gid.0].u.corneria_city8().xC4 = 1;
+    r.game.grounds[gid.0].u.corneria_city8().waiting = 1;
     for map in [9, 4] {
         let gobj = create(r, map, INIT_FRAME).expect("grcorneria.c: the city");
         let gid = ground_of(r.game, gobj);
-        r.game.grounds[gid.0].u.corneria_city().xC4 = 1;
+        r.game.grounds[gid.0].u.corneria_city().waiting = 1;
     }
     create(r, 0xB, INIT_FRAME);
     setup::measure_cam_bounds(r.game, r.data);
@@ -606,7 +606,7 @@ pub fn on_load(r: &mut Running) {
     }
     let gobj = create(r, 8, LOAD_FRAME).expect("grcorneria.c: map 8");
     let gid = ground_of(r.game, gobj);
-    r.game.grounds[gid.0].u.corneria_city8().xC5 = 0;
+    r.game.grounds[gid.0].u.corneria_city8().made_next = 0;
     g(r.game).frozen = false;
     r.stage_sound(0x55737);
 }
@@ -679,21 +679,21 @@ pub fn init_ship(r: &mut Running, gobj: GObjId) {
         v.set_sinking(false);
         v.base_x = 0.0;
         v.base_y = 250.0;
-        v.xD0 = 0.0;
+        v.sink_depth = 0.0;
         v.offset_x = 0.0;
         v.offset_y = 0.0;
-        v.xE4 = Vec3::new(0.0, 0.0, 0.0);
-        v.xF0 = 0.0;
-        v.xF4 = 0.0;
-        v.xF8 = 0.0;
-        v.x104 = 0;
+        v.last_drift = Vec3::new(0.0, 0.0, 0.0);
+        v.drift_speed_y = 0.0;
+        v.drift_accel_x = 0.0;
+        v.drift_accel_y = 0.0;
+        v.drift_ticks = 0;
     }
     r.game.grounds[gid.0].x10_flags.b5 = true;
     anime::start_map(r.game, r.data, gobj, m, 0);
     super::izumi::check_archive(r.game, r.data, 3);
     let copy = create(r, 0, COPY_FRAME);
     let v = r.game.grounds[gid.0].u.corneria();
-    v.x128 = copy;
+    v.copy = copy;
     let t = Vec3::new(
         mem(fp::fadds(reg(v.base_x), reg(v.offset_x))),
         mem(fp::fadds(reg(v.base_y), reg(v.offset_y))),
@@ -705,12 +705,12 @@ pub fn init_ship(r: &mut Running, gobj: GObjId) {
     setup::measure_blast_zones(r.game, r.data);
     {
         let v = r.game.grounds[gid.0].u.corneria();
-        v.x108 = 0;
-        v.x10C = 0;
-        v.x118 = 0;
-        v.x11A = 0;
-        v.x110 = 0;
-        v.x114 = 0.0;
+        v.guns_state = 0;
+        v.guns_wait = 0;
+        v.shots_left = 0;
+        v.shot_side = 0;
+        v.shot_wait = 0;
+        v.guns_damage = 0.0;
     }
     let hurt_a = Vec3::new(4.0, 0.0, 0.0);
     let hurt_b = Vec3::new(16.0, 0.0, 0.0);
@@ -751,12 +751,12 @@ pub fn init_ship(r: &mut Running, gobj: GObjId) {
     let front = zako::new_config(r.game, r.data, FRONT_LINES, 1, CodeRef(SPLASH_FRONT), 0.3);
     let back = zako::new_config(r.game, r.data, BACK_LINES, 2, CodeRef(SPLASH_BACK), 0.3);
     let v = r.game.grounds[gid.0].u.corneria();
-    v.xC8 = front;
-    v.xCC = back;
+    v.splash_config = front;
+    v.splash_config2 = back;
     setup::add_start_hook(r.game, gobj, CodeRef(SHIP_START));
     r.game.grounds[gid.0].x11_flags.b012 = 1;
     let deck = nth_joint(r.game, gobj, 8);
-    r.game.grounds[gid.0].u.corneria().x12C = deck;
+    r.game.grounds[gid.0].u.corneria().deck = deck;
 }
 
 /// The stack address of the copy's scale joint's descriptor: the stage's setup's, less the
@@ -775,10 +775,14 @@ pub fn proc_ship(r: &mut Running, gobj: GObjId) {
         drift(r, gobj);
         sink(r, gobj);
         for front in [true, false] {
-            let depth = reg(r.game.grounds[gid.0].u.corneria().xD0);
+            let depth = reg(r.game.grounds[gid.0].u.corneria().sink_depth);
             let height = mem(fp::fmsubs(-35.0, reg(scale(r.game)), depth));
             let v = r.game.grounds[gid.0].u.corneria();
-            let config = if front { v.xC8 } else { v.xCC };
+            let config = if front {
+                v.splash_config
+            } else {
+                v.splash_config2
+            };
             let part = nth_joint(r.game, gobj, 0);
             zako::run_config(r, config, part, height);
         }
@@ -1016,14 +1020,14 @@ pub fn init_path(r: &mut Running, gobj: GObjId, d: &Arwings) {
     let gid = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj).expect("an Arwing's path's jobj");
     let slot = *(d.slots)(r.game).slot;
-    r.game.grounds[gid.0].u.arwing_path().xC8 = slot;
+    r.game.grounds[gid.0].u.arwing_path().slot = slot;
     (d.slots)(r.game).arwings[slot as usize] = Some(gobj);
     let group = (d.slots)(r.game).groups[slot as usize];
     let arwing = (d.create)(r, d.group_arwings[group as usize], d.arwing_frame);
     if let Some(a) = arwing {
         let ag = ground_of(r.game, a);
         r.game.grounds[ag.0].x10_flags.b2 = false;
-        r.game.grounds[ag.0].u.arwing().xC8 = slot as i32;
+        r.game.grounds[ag.0].u.arwing().slot = slot as i32;
     }
     let s = reg(scale(r.game));
     let k = reg(d.f(r, d.scale));
@@ -1041,8 +1045,8 @@ pub fn init_path(r: &mut Running, gobj: GObjId, d: &Arwings) {
         jobj::set_srt(jobjs, j, |o| o.scale.z = mem(z));
     }
     let v = r.game.grounds[gid.0].u.arwing_path();
-    v.xD4 = 1;
-    v.xD8 = 0;
+    v.anim_pending = 1;
+    v.sound_state = 0;
 }
 
 /// The stack address of an Arwing's scale joint's descriptor: below its path's by the path's
@@ -1056,8 +1060,8 @@ pub fn ship_step(game: &mut Game) -> Vec3 {
     let gid = ground_of(game, gobj);
     let v = game.grounds[gid.0].u.corneria();
     Vec3::new(
-        mem(fp::fsubs(reg(v.offset_x), reg(v.xE4.x))),
-        mem(fp::fsubs(reg(v.offset_y), reg(v.xE4.y))),
+        mem(fp::fsubs(reg(v.offset_x), reg(v.last_drift.x))),
+        mem(fp::fsubs(reg(v.offset_y), reg(v.last_drift.y))),
         0.0,
     )
 }
@@ -1084,7 +1088,7 @@ pub fn path_pos(r: &mut Running, path: Option<GObjId>) -> Vec3 {
         Some(path) => {
             let slot = {
                 let pg = ground_of(r.game, path);
-                r.game.grounds[pg.0].u.arwing_path().xC8
+                r.game.grounds[pg.0].u.arwing_path().slot
             };
             let ship = map_gobj(r.game, 3).expect("grcorneria.c: the Great Fox");
             let sg = ground_of(r.game, ship);
@@ -1115,22 +1119,22 @@ pub fn path_pos(r: &mut Running, path: Option<GObjId>) -> Vec3 {
 pub fn path_sound_near(r: &mut Running, gobj: GObjId, d: &Arwings) {
     let gid = ground_of(r.game, gobj);
     let pos = (d.pos)(r, Some(gobj));
-    let sound = r.game.grounds[gid.0].u.arwing_path().xD8;
+    let sound = r.game.grounds[gid.0].u.arwing_path().sound_state;
     match sound {
         0 => {
             if !outside_blast_zones(r.game, pos) {
                 r.sfx_play(d.fly_in, 0x7F, 0x40);
-                r.game.grounds[gid.0].u.arwing_path().xD8 = 1;
+                r.game.grounds[gid.0].u.arwing_path().sound_state = 1;
             }
         }
         1 => {
             if !near_blast_zones(r.game, pos, d) {
-                r.game.grounds[gid.0].u.arwing_path().xD8 = 2;
+                r.game.grounds[gid.0].u.arwing_path().sound_state = 2;
             }
         }
         2 if near_blast_zones(r.game, pos, d) => {
             r.sfx_play(d.fly_off, 0x7F, 0x40);
-            r.game.grounds[gid.0].u.arwing_path().xD8 = 3;
+            r.game.grounds[gid.0].u.arwing_path().sound_state = 3;
         }
         _ => {}
     }
@@ -1146,16 +1150,16 @@ fn path_sound_far(r: &mut Running, gobj: GObjId) {
     let gid = ground_of(r.game, gobj);
     let pos = path_pos(r, Some(gobj));
     let x = reg(pos.x);
-    match r.game.grounds[gid.0].u.arwing_path().xD8 {
+    match r.game.grounds[gid.0].u.arwing_path().sound_state {
         0 => {
             if reg(ARWING_MIN_X) < x && x < reg(ARWING_MAX_X) {
                 r.sfx_play(0x55731, 0x7F, 0x40);
-                r.game.grounds[gid.0].u.arwing_path().xD8 = 1;
+                r.game.grounds[gid.0].u.arwing_path().sound_state = 1;
             }
         }
         1 if x < reg(ARWING_MIN_X) || reg(ARWING_MAX_X) < x => {
             r.sfx_play(0x55732, 0x7F, 0x40);
-            r.game.grounds[gid.0].u.arwing_path().xD8 = 2;
+            r.game.grounds[gid.0].u.arwing_path().sound_state = 2;
         }
         _ => {}
     }
@@ -1181,13 +1185,13 @@ pub fn proc_path(r: &mut Running, gobj: GObjId, d: &Arwings) {
         let y1 = mem(fp::fsubs(reg(r.game.objs.jobjs[j1].translate.y), 349.0));
         jobj::set_srt(&mut r.game.objs.jobjs, j1, |o| o.translate.y = y1);
     }
-    let slot = r.game.grounds[gid.0].u.arwing_path().xC8 as usize;
+    let slot = r.game.grounds[gid.0].u.arwing_path().slot as usize;
     if (d.slots)(r.game).arwings[slot] != Some(gobj) {
         setup::destroy(r, Some(gobj));
         return;
     }
-    if r.game.grounds[gid.0].u.arwing_path().xD4 == 1 {
-        r.game.grounds[gid.0].u.arwing_path().xD4 = 0;
+    if r.game.grounds[gid.0].u.arwing_path().anim_pending == 1 {
+        r.game.grounds[gid.0].u.arwing_path().anim_pending = 0;
         let anim = d.type_anims[(d.slots)(r.game).types[slot] as usize];
         let m = gp_map(r.game, gobj);
         anime::start_map(r.game, r.data, gobj, m, anim);
@@ -1232,10 +1236,10 @@ pub fn init_wing(r: &mut Running, gobj: GObjId, d: &Arwings) {
     let slot = *(d.slots)(r.game).slot;
     {
         let v = r.game.grounds[gid.0].u.arwing_coll();
-        v.xC8 = slot;
-        v.xD0 = 0;
-        v.xDC = 0.0;
-        v.xE0 = Vec3::new(0.0, 0.0, 0.0);
+        v.slot = slot;
+        v.cleared = 0;
+        v.roll = 0.0;
+        v.pos = Vec3::new(0.0, 0.0, 0.0);
     }
     let group = (d.slots)(r.game).groups[slot as usize];
     r.game
@@ -1253,7 +1257,7 @@ pub fn init_wing(r: &mut Running, gobj: GObjId, d: &Arwings) {
 pub fn proc_wing(r: &mut Running, gobj: GObjId, d: &Arwings) {
     let gid = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj);
-    let slot = r.game.grounds[gid.0].u.arwing_coll().xC8 as usize;
+    let slot = r.game.grounds[gid.0].u.arwing_coll().slot as usize;
     if (d.slots)(r.game).arwings[slot].is_some() {
         update_wing_visibility(r.game, gid, j, d.wing_depth);
         let s = reg(scale(r.game));
@@ -1278,19 +1282,19 @@ pub fn proc_wing(r: &mut Running, gobj: GObjId, d: &Arwings) {
 /// and moves to its place.
 pub fn update_wing_visibility(game: &mut Game, gid: GroundId, j: Option<JObjId>, depth: f64) {
     let v = game.grounds[gid.0].u.arwing_coll();
-    let z = reg(v.xE0.z);
+    let z = reg(v.pos.z);
     let angle = if z < 0.0 { fp::fneg(z) } else { z };
     let hidden = if angle < depth {
-        v.xE0.z = 0.0;
+        v.pos.z = 0.0;
         let pi = std::f64::consts::PI;
         let tau = std::f64::consts::TAU;
-        while reg(v.xDC) < -pi {
-            v.xDC = mem(fp::frsp(fp::fadd(reg(v.xDC), tau)));
+        while reg(v.roll) < -pi {
+            v.roll = mem(fp::frsp(fp::fadd(reg(v.roll), tau)));
         }
-        while reg(v.xDC) > pi {
-            v.xDC = mem(fp::frsp(fp::fsub(reg(v.xDC), tau)));
+        while reg(v.roll) > pi {
+            v.roll = mem(fp::frsp(fp::fsub(reg(v.roll), tau)));
         }
-        let a = reg(v.xDC);
+        let a = reg(v.roll);
         let a = if a < 0.0 { fp::fneg(a) } else { a };
         !(a < reg(std::f32::consts::FRAC_PI_3))
     } else {
@@ -1301,7 +1305,7 @@ pub fn update_wing_visibility(game: &mut Game, gid: GroundId, j: Option<JObjId>,
     } else {
         jobj::clear_flags_all(&mut game.objs.jobjs, j, jobj::HIDDEN);
     }
-    let t = game.grounds[gid.0].u.arwing_coll().xE0;
+    let t = game.grounds[gid.0].u.arwing_coll().pos;
     jobj::set_translate(&mut game.objs.jobjs, j.expect("a wing's jobj"), t);
 }
 
@@ -1316,8 +1320,8 @@ fn init_flying(r: &mut Running, gobj: GObjId, d: &Arwings, with_background: bool
     let slot = *(d.slots)(r.game).slot as i32;
     {
         let v = r.game.grounds[gid.0].u.arwing();
-        v.xC8 = slot;
-        v.xE0 = [None; 4];
+        v.slot = slot;
+        v.articles = [None; 4];
     }
     if with_background {
         anime::start(r.game, r.data, gobj, 7, 7, 0, 0.0, 1.0, true);
@@ -1331,17 +1335,17 @@ fn init_flying(r: &mut Running, gobj: GObjId, d: &Arwings, with_background: bool
     if d.is_close(ty) {
         let group = (d.slots)(r.game).groups[slot as usize];
         let wing = (d.create)(r, d.group_wings[group as usize], d.wing_frame);
-        r.game.grounds[gid.0].u.arwing().xDC = wing;
+        r.game.grounds[gid.0].u.arwing().coll = wing;
         if let Some(w) = wing {
             let wg = ground_of(r.game, w);
-            r.game.grounds[wg.0].u.arwing_coll().xC8 = slot as u32;
+            r.game.grounds[wg.0].u.arwing_coll().slot = slot as u32;
         }
     } else if d.is_far(ty) {
         let path = (d.slots)(r.game).arwings[slot as usize].expect("a far Arwing's path");
         let a = nth_joint(r.game, gobj, 0);
         let b = nth_joint(r.game, path, d.path_joint);
         crate::lb::anim::attach(&mut r.game.objs, a, b);
-        r.game.grounds[gid.0].u.arwing().xDC = None;
+        r.game.grounds[gid.0].u.arwing().coll = None;
     } else {
         r.game.grounds[gid.0].u.arwing().disabled = true;
     }
@@ -1353,11 +1357,11 @@ fn init_flying(r: &mut Running, gobj: GObjId, d: &Arwings, with_background: bool
     let wait = d.i(r, d.roll_wait);
     let v = r.game.grounds[gid.0].u.arwing();
     v.b0 = false;
-    v.xD4 = 0;
-    v.xF0 = 0;
-    v.xF4 = 0;
-    v.xF8 = wait;
-    v.xFC = 0;
+    v.cleared = 0;
+    v.ticks_flown = 0;
+    v.roll_state = 0;
+    v.roll_wait = wait;
+    v.fires = 0;
 }
 
 /// The stack address of a wing's scale joint's descriptor: below its Arwing's by the Arwing's
@@ -1373,7 +1377,7 @@ pub fn init_arwing(r: &mut Running, gobj: GObjId, d: &Arwings) {
     init_flying(r, gobj, d, true);
     let gun = r.game.objs.rng.below(2);
     let gid = ground_of(r.game, gobj);
-    r.game.grounds[gid.0].u.arwing().x100 = Some(gun);
+    r.game.grounds[gid.0].u.arwing().next_gun = Some(gun);
 }
 
 /// The far group's Arwing's setup (Corneria's map 10, Venom's map 6), `grCorneria_801DF8D0`
@@ -1436,7 +1440,7 @@ fn fires(r: &mut Running, gid: GroundId) -> i32 {
             p.word(r.data, p::FIRE_ODDS_DEMO),
         )
     };
-    let flown = r.game.grounds[gid.0].u.arwing().xF0;
+    let flown = r.game.grounds[gid.0].u.arwing().ticks_flown;
     // C's `%`, which truncates.
     if flown.wrapping_rem(period) == 0 && (odds == 0 || r.game.objs.rng.below(odds) == 0) {
         1
@@ -1461,10 +1465,10 @@ pub fn proc_arwing(r: &mut Running, gobj: GObjId, d: &Arwings) {
     }
     let gid = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj).expect("an Arwing's jobj");
-    let slot = r.game.grounds[gid.0].u.arwing().xC8 as usize;
+    let slot = r.game.grounds[gid.0].u.arwing().slot as usize;
     let path = (d.slots)(r.game).arwings[slot];
     if path.is_none() {
-        let articles = r.game.grounds[gid.0].u.arwing().xE0;
+        let articles = r.game.grounds[gid.0].u.arwing().articles;
         for a in articles.into_iter().flatten() {
             setup::destroy(r, Some(a));
         }
@@ -1480,12 +1484,12 @@ pub fn proc_arwing(r: &mut Running, gobj: GObjId, d: &Arwings) {
     let ty = (d.slots)(r.game).types[slot];
     if d.is_close(ty) {
         jobj::set_rotation_y(&mut r.game.objs.jobjs, j, d.close_turn);
-        let roll = r.game.grounds[gid.0].u.arwing().xF4;
+        let roll = r.game.grounds[gid.0].u.arwing().roll_state;
         match roll {
             0 => {
-                if r.game.grounds[gid.0].u.arwing().xF8 <= 0 {
+                if r.game.grounds[gid.0].u.arwing().roll_wait <= 0 {
                     let state = r.game.objs.rng.below(d.rolls).wrapping_add(1);
-                    r.game.grounds[gid.0].u.arwing().xF4 = state;
+                    r.game.grounds[gid.0].u.arwing().roll_state = state;
                     let off = fire_kind(r.game, d, slot);
                     // An offset of -1 (no group) reads the pair before's second entry.
                     let anim = d.roll_anims[(2 * state + off) as usize];
@@ -1495,13 +1499,13 @@ pub fn proc_arwing(r: &mut Running, gobj: GObjId, d: &Arwings) {
                     jobj::set_rotation_z(&mut r.game.objs.jobjs, pj, 0.0);
                 }
                 let v = r.game.grounds[gid.0].u.arwing();
-                v.xF8 = v.xF8.wrapping_sub(1);
+                v.roll_wait = v.roll_wait.wrapping_sub(1);
             }
             1..=4 if anime::finished(r.game, gobj, 0, 7) => {
                 let wait = d.i(r, d.roll_wait);
                 let v = r.game.grounds[gid.0].u.arwing();
-                v.xF4 = 0;
-                v.xF8 = wait;
+                v.roll_state = 0;
+                v.roll_wait = wait;
             }
             _ => {}
         }
@@ -1509,21 +1513,21 @@ pub fn proc_arwing(r: &mut Running, gobj: GObjId, d: &Arwings) {
         jobj::set_translate(&mut r.game.objs.jobjs, j, pos);
         let pj = nth_joint(r.game, gobj, part);
         pos = world_position(&mut r.game.objs, r.data, pj, None);
-        let wing = r.game.grounds[gid.0].u.arwing().xDC;
+        let wing = r.game.grounds[gid.0].u.arwing().coll;
         if let Some(w) = wing {
             let wg = ground_of(r.game, w);
-            r.game.grounds[wg.0].u.arwing_coll().xE0 = pos;
+            r.game.grounds[wg.0].u.arwing_coll().pos = pos;
         }
         let rot_z = r.game.objs.jobjs[pj.expect("an Arwing's jobj")].rotate.z;
         if let Some(w) = wing {
             let wg = ground_of(r.game, w);
-            r.game.grounds[wg.0].u.arwing_coll().xDC = rot_z;
+            r.game.grounds[wg.0].u.arwing_coll().roll = rot_z;
         }
         if let Some(sound) = d.close_fire {
             let f = (d.fires)(r, gid, ty);
-            r.game.grounds[gid.0].u.arwing().xFC = f;
-            if r.game.grounds[gid.0].u.arwing().xFC != 0 {
-                r.game.grounds[gid.0].u.arwing().xFC = 0;
+            r.game.grounds[gid.0].u.arwing().fires = f;
+            if r.game.grounds[gid.0].u.arwing().fires != 0 {
+                r.game.grounds[gid.0].u.arwing().fires = 0;
                 if !outside_blast_zones(r.game, pos) {
                     let mut angle = reg(rot_z);
                     let pi = std::f64::consts::PI;
@@ -1553,10 +1557,10 @@ pub fn proc_arwing(r: &mut Running, gobj: GObjId, d: &Arwings) {
         }
     } else if d.is_far(ty) {
         let f = (d.fires)(r, gid, ty);
-        r.game.grounds[gid.0].u.arwing().xFC = f;
+        r.game.grounds[gid.0].u.arwing().fires = f;
         let pos = (d.pos)(r, path);
-        if (d.far_window)(pos) && r.game.grounds[gid.0].u.arwing().xFC != 0 {
-            r.game.grounds[gid.0].u.arwing().xFC = 0;
+        if (d.far_window)(pos) && r.game.grounds[gid.0].u.arwing().fires != 0 {
+            r.game.grounds[gid.0].u.arwing().fires = 0;
             let mut player = r.game.objs.rng.below(4);
             for tries in 0..4 {
                 player = player.wrapping_add(tries) & 3;
@@ -1578,11 +1582,11 @@ pub fn proc_arwing(r: &mut Running, gobj: GObjId, d: &Arwings) {
                     let gun = r.game.grounds[gid.0]
                         .u
                         .arwing()
-                        .x100
+                        .next_gun
                         .expect("an Arwing's gun read before its setup wrote it");
                     let b = nth_joint(r.game, gobj, if gun != 0 { 5 } else { 6 });
                     arwinglaser::spawn_aimed(r, gobj, b, target, 1, d.aim_joint, k, d.far_sound);
-                    r.game.grounds[gid.0].u.arwing().x100 = Some(gun.wrapping_add(1) & 1);
+                    r.game.grounds[gid.0].u.arwing().next_gun = Some(gun.wrapping_add(1) & 1);
                 }
                 let script = r.data.ptr((d.param)(r.game).at(d.fire_script));
                 material::start_script(r.game, r.data, gobj, script, 0);
@@ -1590,7 +1594,7 @@ pub fn proc_arwing(r: &mut Running, gobj: GObjId, d: &Arwings) {
         }
     }
     let v = r.game.grounds[gid.0].u.arwing();
-    v.xF0 = v.xF0.wrapping_add(1);
+    v.ticks_flown = v.ticks_flown.wrapping_add(1);
 }
 
 /// The far group's Arwing's process (Corneria's map 10, Venom's map 6), `grCorneria_801DFBCC`
@@ -1613,10 +1617,10 @@ pub fn init_map6(r: &mut Running, gobj: GObjId) {
 pub fn init_city_middle(r: &mut Running, gobj: GObjId) {
     let gid = ground_of(r.game, gobj);
     let v = r.game.grounds[gid.0].u.corneria_city8();
-    v.xC6 = 0;
+    v.cleared = 0;
     v.still = false;
-    v.xC8 = [0; 6];
-    v.xC4 = 0;
+    v.cleared_words = [0; 6];
+    v.waiting = 0;
     r.game.grounds[gid.0].x11_flags.b012 = 1;
 }
 
@@ -1633,8 +1637,8 @@ fn proc_city(r: &mut Running, gobj: GObjId, width: f32, next: i32) {
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = y);
     let gid = ground_of(r.game, gobj);
     let state = match r.game.grounds[gid.0].u.vars {
-        super::GroundVars::CorneriaCity8(ref v) => v.xC5,
-        super::GroundVars::CorneriaCity(ref v) => v.xC5,
+        super::GroundVars::CorneriaCity8(ref v) => v.made_next,
+        super::GroundVars::CorneriaCity(ref v) => v.made_next,
         _ => panic!("grcorneria.c: a city part's variables"),
     } as i8;
     let edge = |r: &Running, add: f64| {
@@ -1661,8 +1665,8 @@ fn proc_city(r: &mut Running, gobj: GObjId, width: f32, next: i32) {
 
 fn set_city_state(game: &mut Game, gid: super::super::handles::GroundId, s: u8) {
     match &mut game.grounds[gid.0].u.vars {
-        super::GroundVars::CorneriaCity8(v) => v.xC5 = s,
-        super::GroundVars::CorneriaCity(v) => v.xC5 = s,
+        super::GroundVars::CorneriaCity8(v) => v.made_next = s,
+        super::GroundVars::CorneriaCity(v) => v.made_next = s,
         _ => panic!("grcorneria.c: a city part's variables"),
     }
 }
@@ -1673,7 +1677,7 @@ fn set_city_state(game: &mut Game, gid: super::super::handles::GroundId, s: u8) 
 pub fn proc_city_middle(r: &mut Running, gobj: GObjId) {
     let gid = ground_of(r.game, gobj);
     let v = r.game.grounds[gid.0].u.corneria_city8();
-    if v.xC4 == 0 && !v.still {
+    if v.waiting == 0 && !v.still {
         proc_city(r, gobj, CITY_WIDTH, 9);
     }
 }
@@ -1690,7 +1694,7 @@ fn init_city_end(r: &mut Running, gobj: GObjId) {
     r.game.grounds[gid.0].u.corneria_city().still = false;
     let m = gp_map(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[gid.0].u.corneria_city().xC4 = 0;
+    r.game.grounds[gid.0].u.corneria_city().waiting = 0;
     r.game.grounds[gid.0].x11_flags.b012 = 1;
 }
 
@@ -1700,7 +1704,7 @@ fn init_city_end(r: &mut Running, gobj: GObjId) {
 pub fn proc_city_last(r: &mut Running, gobj: GObjId) {
     let gid = ground_of(r.game, gobj);
     let v = r.game.grounds[gid.0].u.corneria_city();
-    if v.xC4 == 0 && !v.still {
+    if v.waiting == 0 && !v.still {
         proc_city(r, gobj, CITY_WIDTH, 4);
     }
 }
@@ -1717,7 +1721,7 @@ pub fn init_city_first(r: &mut Running, gobj: GObjId) {
 pub fn proc_city_first(r: &mut Running, gobj: GObjId) {
     let gid = ground_of(r.game, gobj);
     let v = r.game.grounds[gid.0].u.corneria_city();
-    if v.xC4 == 0 && !v.still {
+    if v.waiting == 0 && !v.still {
         proc_city(r, gobj, CITY_WIDTH_LAST, 8);
     }
 }
@@ -1912,15 +1916,15 @@ pub fn set_talk(r: &mut Running, gobj: GObjId, val: i32) {
     let gid = ground_of(r.game, gobj);
     let mut val = val;
     let v = r.game.grounds[gid.0].u.starfox_talk();
-    v.xCC = 0;
-    v.xC8 = 0;
+    v.wait = 0;
+    v.next_line = 0;
     if val < 0 {
         val = 0;
     }
     if val as u32 >= 0x14 {
         val = 0x13;
     }
-    v.xC4 = val as u32;
+    v.talk = val as u32;
 }
 
 /// The talk's process (map 12), `grCorneria_801E0F6C` (`Ground_UpdateStarFoxSequence` with the
@@ -1949,12 +1953,12 @@ pub fn update_sequence(r: &mut Running, gobj: GObjId, window: i32, stage: Stage)
     let gid = ground_of(r.game, gobj);
     let (talk, line) = {
         let v = r.game.grounds[gid.0].u.starfox_talk();
-        (v.xC4, v.xC8 as u32)
+        (v.talk, v.next_line as u32)
     };
     if talk_has_line(talk, line) {
         let v = r.game.grounds[gid.0].u.starfox_talk();
-        let wait = v.xCC;
-        v.xCC = wait.wrapping_sub(1);
+        let wait = v.wait;
+        v.wait = wait.wrapping_sub(1);
         if wait < 0 {
             let w = match stage {
                 Stage::Corneria => create(r, window, WINDOW_FRAME),
@@ -1963,13 +1967,13 @@ pub fn update_sequence(r: &mut Running, gobj: GObjId, window: i32, stage: Stage)
             .expect("a talk's window");
             start_talk_line(r, w, talk, line);
             let v = r.game.grounds[gid.0].u.starfox_talk();
-            v.xC8 = v.xC8.wrapping_add(1);
-            v.xCC = 0;
+            v.next_line = v.next_line.wrapping_add(1);
+            v.wait = 0;
         }
     } else {
         let v = r.game.grounds[gid.0].u.starfox_talk();
-        let wait = v.xCC;
-        v.xCC = wait.wrapping_sub(1);
+        let wait = v.wait;
+        v.wait = wait.wrapping_sub(1);
         if wait < 0 {
             setup::destroy(r, Some(gobj));
         }
@@ -2021,10 +2025,10 @@ pub fn gun_dealt(_r: &mut Running, _item: GObjId, _g: super::super::handles::Gro
 pub fn gun_hit(r: &mut Running, gid: super::super::handles::GroundId, damage: f32) {
     let hp = reg(param(r.game).f(r.data, p::GUN_HP));
     let v = r.game.grounds[gid.0].u.corneria();
-    v.x114 = mem(fp::fadds(reg(v.x114), reg(damage)));
+    v.guns_damage = mem(fp::fadds(reg(v.guns_damage), reg(damage)));
     crate::game::code::os_report();
-    if reg(v.x114) >= hp {
-        v.x108 = 4;
+    if reg(v.guns_damage) >= hp {
+        v.guns_state = 4;
         let (l, rt) = (v.left_cannon, v.right_cannon);
         material::item_hurtbox_off(r.game, l.expect("grcorneria.c: the left gun"));
         material::item_hurtbox_off(r.game, rt.expect("grcorneria.c: the right gun"));
@@ -2041,20 +2045,20 @@ pub fn gun_hit(r: &mut Running, gid: super::super::handles::GroundId, damage: f3
 pub fn guns(r: &mut Running, gobj: GObjId) {
     let gid = ground_of(r.game, gobj);
     let p = param(r.game);
-    match r.game.grounds[gid.0].u.corneria().x108 {
+    match r.game.grounds[gid.0].u.corneria().guns_state {
         0 => {
-            if r.game.grounds[gid.0].u.corneria().x110 != 0 {
+            if r.game.grounds[gid.0].u.corneria().shot_wait != 0 {
                 let v = r.game.grounds[gid.0].u.corneria();
-                v.x110 = v.x110.wrapping_sub(1);
+                v.shot_wait = v.shot_wait.wrapping_sub(1);
                 return;
             }
             let chance = reg(p.f(r.data, p::GUN_BIG_CHANCE));
             if reg(r.game.objs.rng.draw_f32()) <= chance {
                 let charge = p.i(r.data, p::GUN_BIG_CHARGE);
                 let v = r.game.grounds[gid.0].u.corneria();
-                v.x119 = 0;
-                v.x118 = 1;
-                v.x10C = charge;
+                v.shot_kind = 0;
+                v.shots_left = 1;
+                v.guns_wait = charge;
                 r.stage_sound(0x55739);
             } else {
                 let lo = p.i(r.data, p::GUN_SHOTS_MIN);
@@ -2062,9 +2066,9 @@ pub fn guns(r: &mut Running, gobj: GObjId) {
                 let shots = grlib::rand_range(&mut r.game.objs.rng, lo, hi);
                 let charge = p.i(r.data, p::GUN_CHARGE);
                 let v = r.game.grounds[gid.0].u.corneria();
-                v.x119 = 1;
-                v.x118 = shots as i8;
-                v.x10C = charge;
+                v.shot_kind = 1;
+                v.shots_left = shots as i8;
+                v.guns_wait = charge;
                 r.stage_sound(0x5573A);
             }
             for part in [2, 3] {
@@ -2081,12 +2085,12 @@ pub fn guns(r: &mut Running, gobj: GObjId) {
             crate::game::it::item::change_state(r, rt, 2, anim);
             material::item_hurtbox_off(r.game, l);
             material::item_hurtbox_off(r.game, rt);
-            r.game.grounds[gid.0].u.corneria().x108 = 1;
+            r.game.grounds[gid.0].u.corneria().guns_state = 1;
         }
         1 => {
-            if r.game.grounds[gid.0].u.corneria().x10C != 0 {
+            if r.game.grounds[gid.0].u.corneria().guns_wait != 0 {
                 let v = r.game.grounds[gid.0].u.corneria();
-                v.x10C = v.x10C.wrapping_sub(1);
+                v.guns_wait = v.guns_wait.wrapping_sub(1);
                 return;
             }
             for part in [2, 3] {
@@ -2108,8 +2112,8 @@ pub fn guns(r: &mut Running, gobj: GObjId) {
             crate::game::it::item::change_state(r, rt, 0, anim);
             let aim = p.i(r.data, p::GUN_AIM);
             let v = r.game.grounds[gid.0].u.corneria();
-            v.x10C = aim;
-            v.x108 = 2;
+            v.guns_wait = aim;
+            v.guns_state = 2;
         }
         2 => {
             let j = nth_joint(r.game, gobj, 2);
@@ -2128,10 +2132,10 @@ pub fn guns(r: &mut Running, gobj: GObjId) {
             }
             let v = r.game.grounds[gid.0].u.corneria();
             if found {
-                v.x10C = 0;
+                v.guns_wait = 0;
             }
-            if v.x10C == 0 {
-                v.x108 = 3;
+            if v.guns_wait == 0 {
+                v.guns_state = 3;
                 let (l, rt) = (
                     v.left_cannon.expect("a gun"),
                     v.right_cannon.expect("a gun"),
@@ -2140,17 +2144,17 @@ pub fn guns(r: &mut Running, gobj: GObjId) {
                 material::item_hurtbox_on(r.game, rt);
                 return;
             }
-            v.x10C = v.x10C.wrapping_sub(1);
+            v.guns_wait = v.guns_wait.wrapping_sub(1);
         }
         3 => {
             let v = r.game.grounds[gid.0].u.corneria();
-            if v.x118 != 0 {
-                if v.x110 != 0 {
-                    v.x110 = v.x110.wrapping_sub(1);
+            if v.shots_left != 0 {
+                if v.shot_wait != 0 {
+                    v.shot_wait = v.shot_wait.wrapping_sub(1);
                     return;
                 }
-                let side = v.x11A;
-                let kind = v.x119 as i8;
+                let side = v.shot_side;
+                let kind = v.shot_kind as i8;
                 let mut off = Vec3::new(
                     mem(fp::fadds(20.0, reg(SHIP_POINTS[1].x))),
                     mem(fp::fadds(2.0, reg(SHIP_POINTS[1].y))),
@@ -2167,9 +2171,9 @@ pub fn guns(r: &mut Running, gobj: GObjId) {
                 greatfoxlaser::spawn(r, gobj, off, i32::from(kind));
                 r.stage_sound(0x55735);
                 let v = r.game.grounds[gid.0].u.corneria();
-                v.x11A ^= 1;
-                v.x110 = 0xA;
-                v.x118 = v.x118.wrapping_sub(1);
+                v.shot_side ^= 1;
+                v.shot_wait = 0xA;
+                v.shots_left = v.shots_left.wrapping_sub(1);
                 return;
             }
             let range = p.i(r.data, p::GUN_REST_ADD);
@@ -2183,9 +2187,9 @@ pub fn guns(r: &mut Running, gobj: GObjId) {
                 fp::frsp(f64::from(add)),
             ));
             let v = r.game.grounds[gid.0].u.corneria();
-            v.x110 = rest;
-            v.x10C = 0;
-            v.x108 = 0;
+            v.shot_wait = rest;
+            v.guns_wait = 0;
+            v.guns_state = 0;
         }
         4 => {
             for part in [2, 3] {
@@ -2200,7 +2204,7 @@ pub fn guns(r: &mut Running, gobj: GObjId) {
             let broken = nth_joint(r.game, gobj, 5);
             jobj::clear_flags(&mut r.game.objs.jobjs, broken, jobj::HIDDEN);
             r.game.geometry_mut().disable_joint(4);
-            r.game.grounds[gid.0].u.corneria().x108 = 5;
+            r.game.grounds[gid.0].u.corneria().guns_state = 5;
         }
         _ => {}
     }
@@ -2215,7 +2219,7 @@ const P_LINK_FIGHTER: u8 = 8;
 pub fn move_copy(r: &mut Running, gobj: GObjId) {
     let gid = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj).expect("grcorneria.c: jobj");
-    let copy = r.game.grounds[gid.0].u.corneria().x128;
+    let copy = r.game.grounds[gid.0].u.corneria().copy;
     let cj = copy
         .and_then(|c| jobj_of(r.game, c))
         .expect("grcorneria.c: the copy's jobj");
@@ -2234,53 +2238,53 @@ pub fn drift(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj).expect("grcorneria.c: jobj");
     let p = param(r.game);
     let accel = reg(p.f(r.data, p::DRIFT_ACCEL));
-    if r.game.grounds[gid.0].u.corneria().x104 <= 0 {
+    if r.game.grounds[gid.0].u.corneria().drift_ticks <= 0 {
         let rand = reg(r.game.objs.rng.draw_f32());
         let lo = reg(p.f(r.data, p::DRIFT_TIME_MIN));
         let a = fp::fsubs(reg(p.f(r.data, p::DRIFT_TIME_MAX)), lo);
         let t = fp::fctiwz(fp::fmadds(a, rand, lo));
-        r.game.grounds[gid.0].u.corneria().x104 = t;
+        r.game.grounds[gid.0].u.corneria().drift_ticks = t;
         let rand = reg(r.game.objs.rng.draw_f32());
         let ax = mem(fp::fmuls(accel, fp::fmuls(2.0, fp::fsubs(rand, 0.5))));
-        r.game.grounds[gid.0].u.corneria().xF4 = ax;
+        r.game.grounds[gid.0].u.corneria().drift_accel_x = ax;
         let rand = reg(r.game.objs.rng.draw_f32());
         let ay = mem(fp::fmuls(accel, fp::fmuls(2.0, fp::fsubs(rand, 0.5))));
-        r.game.grounds[gid.0].u.corneria().xF8 = ay;
+        r.game.grounds[gid.0].u.corneria().drift_accel_y = ay;
     }
     let max = reg(p.f(r.data, p::DRIFT_SPEED));
     let lim_x = reg(p.f(r.data, p::DRIFT_X));
     let lim_y = reg(p.f(r.data, p::DRIFT_Y));
     let v = r.game.grounds[gid.0].u.corneria();
-    v.x104 = v.x104.wrapping_sub(1);
-    v.xE4.z = mem(fp::fadds(reg(v.xE4.z), reg(v.xF4)));
-    v.xF0 = mem(fp::fadds(reg(v.xF0), reg(v.xF8)));
-    let vel = reg(v.xE4.z);
+    v.drift_ticks = v.drift_ticks.wrapping_sub(1);
+    v.last_drift.z = mem(fp::fadds(reg(v.last_drift.z), reg(v.drift_accel_x)));
+    v.drift_speed_y = mem(fp::fadds(reg(v.drift_speed_y), reg(v.drift_accel_y)));
+    let vel = reg(v.last_drift.z);
     if vel > max {
-        v.xE4.z = mem(max);
+        v.last_drift.z = mem(max);
     } else if vel < fp::fneg(max) {
-        v.xE4.z = mem(fp::fneg(max));
+        v.last_drift.z = mem(fp::fneg(max));
     }
-    let vel = reg(v.xF0);
+    let vel = reg(v.drift_speed_y);
     if vel > max {
-        v.xF0 = mem(max);
+        v.drift_speed_y = mem(max);
     } else if vel < fp::fneg(max) {
-        v.xF0 = mem(fp::fneg(max));
+        v.drift_speed_y = mem(fp::fneg(max));
     }
-    v.xE4.x = v.offset_x;
-    v.xE4.y = v.offset_y;
-    v.offset_x = mem(fp::fadds(reg(v.offset_x), reg(v.xE4.z)));
-    v.offset_y = mem(fp::fadds(reg(v.offset_y), reg(v.xF0)));
+    v.last_drift.x = v.offset_x;
+    v.last_drift.y = v.offset_y;
+    v.offset_x = mem(fp::fadds(reg(v.offset_x), reg(v.last_drift.z)));
+    v.offset_y = mem(fp::fadds(reg(v.offset_y), reg(v.drift_speed_y)));
     let o = reg(v.offset_x);
     if o > lim_x {
-        v.xF4 = mem(fp::fneg(accel));
+        v.drift_accel_x = mem(fp::fneg(accel));
     } else if o < fp::fneg(lim_x) {
-        v.xF4 = mem(accel);
+        v.drift_accel_x = mem(accel);
     }
     let o = reg(v.offset_y);
     if o > lim_y {
-        v.xF8 = mem(fp::fneg(accel));
+        v.drift_accel_y = mem(fp::fneg(accel));
     } else if o < fp::fneg(lim_y) {
-        v.xF8 = mem(accel);
+        v.drift_accel_y = mem(accel);
     }
     let pos = Vec3::new(
         mem(fp::fadds(reg(v.base_x), reg(v.offset_x))),
@@ -2347,8 +2351,8 @@ pub fn sink(r: &mut Running, gobj: GObjId) {
             if r.game.objs.rng.below(3) == 0 {
                 let v = r.game.grounds[gid.0].u.corneria();
                 v.set_sinking(true);
-                v.x100 = 0;
-                v.xFC = 0.0;
+                v.sink_ticks = 0;
+                v.sink_speed = 0.0;
             }
             r.game.grounds[gid.0].u.corneria().set_drawn(true);
         }
@@ -2359,44 +2363,44 @@ pub fn sink(r: &mut Running, gobj: GObjId) {
     }
     let s = reg(scale(r.game));
     let v = r.game.grounds[gid.0].u.corneria();
-    let timer = v.x100;
-    v.x100 = timer.wrapping_add(1);
+    let timer = v.sink_ticks;
+    v.sink_ticks = timer.wrapping_add(1);
     let step = reg(0.005);
-    let speed = reg(v.xFC);
+    let speed = reg(v.sink_speed);
     let t = fp::fdivs(speed, step);
     let travel = fp::fmadds(speed, t, fp::fmuls(fp::fmuls(-0.0025, t), t));
     if timer < 0x384 {
         let limit = fp::fmsubs(50.0, s, 250.0);
-        if fp::fsubs(reg(v.xD0), limit) > travel {
-            v.xFC = mem(fp::fadds(reg(v.xFC), step));
-            if reg(v.xFC) > 3.0 {
-                v.xFC = 3.0;
+        if fp::fsubs(reg(v.sink_depth), limit) > travel {
+            v.sink_speed = mem(fp::fadds(reg(v.sink_speed), step));
+            if reg(v.sink_speed) > 3.0 {
+                v.sink_speed = 3.0;
             }
         } else {
-            v.xFC = mem(fp::fsubs(reg(v.xFC), step));
-            if reg(v.xFC) < step {
-                v.xFC = mem(step);
+            v.sink_speed = mem(fp::fsubs(reg(v.sink_speed), step));
+            if reg(v.sink_speed) < step {
+                v.sink_speed = mem(step);
             }
         }
-        v.xD0 = mem(fp::fsubs(reg(v.xD0), reg(v.xFC)));
-        if reg(v.xD0) < limit {
-            v.xD0 = mem(limit);
+        v.sink_depth = mem(fp::fsubs(reg(v.sink_depth), reg(v.sink_speed)));
+        if reg(v.sink_depth) < limit {
+            v.sink_depth = mem(limit);
         }
     } else {
-        if fp::fneg(reg(v.xD0)) > travel {
-            v.xFC = mem(fp::fadds(speed, step));
-            if reg(v.xFC) > 3.0 {
-                v.xFC = 3.0;
+        if fp::fneg(reg(v.sink_depth)) > travel {
+            v.sink_speed = mem(fp::fadds(speed, step));
+            if reg(v.sink_speed) > 3.0 {
+                v.sink_speed = 3.0;
             }
         } else {
-            v.xFC = mem(fp::fsubs(speed, step));
-            if reg(v.xFC) < step {
-                v.xFC = mem(step);
+            v.sink_speed = mem(fp::fsubs(speed, step));
+            if reg(v.sink_speed) < step {
+                v.sink_speed = mem(step);
             }
         }
-        v.xD0 = mem(fp::fadds(reg(v.xD0), reg(v.xFC)));
-        if reg(v.xD0) > 0.0 {
-            v.xD0 = 0.0;
+        v.sink_depth = mem(fp::fadds(reg(v.sink_depth), reg(v.sink_speed)));
+        if reg(v.sink_depth) > 0.0 {
+            v.sink_depth = 0.0;
             v.set_sinking(false);
         }
     }
@@ -2692,7 +2696,7 @@ pub fn sink_depth(game: &mut Game) -> f32 {
     match map_gobj(game, 3) {
         Some(gobj) => {
             let gid = ground_of(game, gobj);
-            game.grounds[gid.0].u.corneria().xD0
+            game.grounds[gid.0].u.corneria().sink_depth
         }
         None => 0.0,
     }
@@ -2711,7 +2715,7 @@ pub fn check_shadow_render(game: &mut Game, data: &Archives, pos: Vec3, j: Optio
     let w = world_position(&mut game.objs, data, j, None);
     if let Some(ship) = map_gobj(game, 3) {
         let gid = ground_of(game, ship);
-        if game.grounds[gid.0].u.corneria().x12C == j {
+        if game.grounds[gid.0].u.corneria().deck == j {
             let a = fp::fmuls(106.0, reg(scale(game)));
             let b = fp::fdivs(fp::fmuls(107.0, reg(scale(game))), a);
             let edge = fp::fmadds(fp::fsubs(reg(pos.y), reg(w.y)), b, reg(w.x));
@@ -2733,7 +2737,7 @@ pub fn camera_floor(game: &Game) -> f64 {
             let super::GroundVars::Corneria(v) = &game.grounds[gid.0].u.vars else {
                 panic!("grcorneria.c: the Great Fox's variables");
             };
-            fp::fadds(5.0, fp::fmsubs(-35.0, reg(scale(game)), reg(v.xD0)))
+            fp::fadds(5.0, fp::fmsubs(-35.0, reg(scale(game)), reg(v.sink_depth)))
         }
         None => fp::fneg(f64::from(f32::MAX)),
     }

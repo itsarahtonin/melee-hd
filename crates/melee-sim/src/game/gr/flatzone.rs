@@ -241,7 +241,7 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "fn_8021706C")]
 pub fn start_controller(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    r.game.grounds[g.0].u.flatzone().xC4 = 0;
+    r.game.grounds[g.0].u.flatzone().waiting = 0;
 }
 
 /// The controller's setup (map 2), `grFlatzone_8021707C`: its collision, the model a unit in
@@ -259,11 +259,11 @@ pub fn init_controller(r: &mut Running, gobj: GObjId) {
     let p = param(r.game);
     let (a, b) = (p.i(r.data, p::WAIT_B), p.i(r.data, p::WAIT_A));
     let v = r.game.grounds[g.0].u.flatzone();
-    v.xC4 = 1;
-    v.xC7 = 1;
-    v.xC6 = 0;
+    v.waiting = 1;
+    v.may_start = 1;
+    v.event_before = 0;
     let wait = grlib::rand_range(&mut r.game.objs.rng, a, b);
-    r.game.grounds[g.0].u.flatzone().xC8 = wait as i16;
+    r.game.grounds[g.0].u.flatzone().timer = wait as i16;
     setup::add_start_hook(r.game, gobj, CodeRef(CONTROLLER_START));
 }
 
@@ -276,9 +276,9 @@ fn start_event(game: &mut Game, map: i32) {
     let g = ground_of(game, gobj);
     let u = &mut game.grounds[g.0].u;
     match map {
-        MAP_OIL => u.flatzone_oil().xC4 = 1,
-        MAP_TOOLS => u.flatzone_tools().xC4 = 1,
-        _ => u.flatzone_event().xC4 = 1,
+        MAP_OIL => u.flatzone_oil().started = 1,
+        MAP_TOOLS => u.flatzone_tools().started = 1,
+        _ => u.flatzone_event().started = 1,
     }
 }
 
@@ -286,7 +286,7 @@ fn start_event(game: &mut Game, map: i32) {
 fn event_over(game: &mut Game) {
     if let Some(gobj) = map_gobj(game, MAP_CONTROLLER) {
         let g = ground_of(game, gobj);
-        game.grounds[g.0].u.flatzone().xC7 = 1;
+        game.grounds[g.0].u.flatzone().may_start = 1;
     }
 }
 
@@ -299,21 +299,21 @@ fn event_over(game: &mut Game) {
 pub fn proc_controller(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.flatzone();
-    if v.xC4 == 0 && v.xC7 != 0 {
-        if v.xC8 != 0 {
-            v.xC8 = v.xC8.wrapping_sub(1);
-            if v.xC8 == 0 {
-                v.xC7 = 0;
-                v.xC6 = v.xC5;
+    if v.waiting == 0 && v.may_start != 0 {
+        if v.timer != 0 {
+            v.timer = v.timer.wrapping_sub(1);
+            if v.timer == 0 {
+                v.may_start = 0;
+                v.event_before = v.last_event;
                 loop {
                     let e = EVENTS[r.game.objs.rng.below(2) as usize];
                     let v = r.game.grounds[g.0].u.flatzone();
-                    v.xC5 = e;
-                    if v.xC6 != v.xC5 {
+                    v.last_event = e;
+                    if v.event_before != v.last_event {
                         break;
                     }
                 }
-                match r.game.grounds[g.0].u.flatzone().xC5 {
+                match r.game.grounds[g.0].u.flatzone().last_event {
                     1 => {
                         start_event(r.game, MAP_EVENT1);
                         hide_platforms(r.game);
@@ -338,7 +338,7 @@ pub fn proc_controller(r: &mut Running, gobj: GObjId) {
             let p = param(r.game);
             let (a, b) = (p.i(r.data, p::WAIT_B), p.i(r.data, p::WAIT_A));
             let wait = grlib::rand_range(&mut r.game.objs.rng, a, b);
-            r.game.grounds[g.0].u.flatzone().xC8 = wait as i16;
+            r.game.grounds[g.0].u.flatzone().timer = wait as i16;
         }
     }
     update_map_coll(r.game, r.data, gobj);
@@ -362,7 +362,7 @@ pub fn init_back(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "fn_80217440")]
 pub fn start_platforms(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    r.game.grounds[g.0].u.flatzone_platforms().xC4 = 0;
+    r.game.grounds[g.0].u.flatzone_platforms().waiting = 0;
 }
 
 /// The platforms' setup (map 5), `grFlatzone_80217450`: their collision, hidden, in the
@@ -376,13 +376,13 @@ pub fn init_platforms(r: &mut Running, gobj: GObjId) {
     setup::init_map_coll(r.game, r.data, j, m);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     let v = r.game.grounds[g.0].u.flatzone_platforms();
-    v.xC7 = HIDDEN_SET;
-    v.xC8 = HIDDEN_SET;
-    v.xC9 = 0;
-    v.xCA = 0;
-    v.xCC = 0;
-    v.xC6 = 0xFF;
-    v.xC4 = 1;
+    v.set = HIDDEN_SET;
+    v.last_set = HIDDEN_SET;
+    v.row = 0;
+    v.last_row = 0;
+    v.timer = 0;
+    v.last_anim = 0xFF;
+    v.waiting = 1;
     setup::add_start_hook(r.game, gobj, CodeRef(PLATFORMS_START));
 }
 
@@ -394,24 +394,24 @@ pub fn init_platforms(r: &mut Running, gobj: GObjId) {
 pub fn proc_platforms(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.flatzone_platforms();
-    if v.xC4 == 0 && v.xC7 != HIDDEN_SET && v.xC9 != 0 {
-        let old = v.xCC;
-        v.xCC = old.wrapping_sub(1);
+    if v.waiting == 0 && v.set != HIDDEN_SET && v.row != 0 {
+        let old = v.timer;
+        v.timer = old.wrapping_sub(1);
         if old < 0 {
-            v.xCA = v.xC9;
+            v.last_row = v.row;
             let row = loop {
                 let next = r.game.objs.rng.below(4) + 1;
                 let v = r.game.grounds[g.0].u.flatzone_platforms();
-                v.xC9 = next as u8;
-                if v.xCA == v.xC9 {
+                v.row = next as u8;
+                if v.last_row == v.row {
                     continue;
                 }
-                let row = SETS[v.xC7 as usize][v.xC9 as usize];
+                let row = SETS[v.set as usize][v.row as usize];
                 if row != -1 {
                     break row;
                 }
             };
-            r.game.grounds[g.0].u.flatzone_platforms().xC5 = row as u8;
+            r.game.grounds[g.0].u.flatzone_platforms().anim = row as u8;
             let m = map_id(r.game, gobj);
             anime::start_map(r.game, r.data, gobj, m, i32::from(row as u8));
             let p = param(r.game);
@@ -420,13 +420,13 @@ pub fn proc_platforms(r: &mut Running, gobj: GObjId) {
                 p.i(r.data, p::PLATFORM_WAIT_A),
             );
             let wait = grlib::rand_range(&mut r.game.objs.rng, a, b);
-            r.game.grounds[g.0].u.flatzone_platforms().xCC = wait as i16;
+            r.game.grounds[g.0].u.flatzone_platforms().timer = wait as i16;
         }
     }
     update_map_coll(r.game, r.data, gobj);
     let v = r.game.grounds[g.0].u.flatzone_platforms();
-    if v.xC6 != v.xC5 {
-        v.xC6 = v.xC5;
+    if v.last_anim != v.anim {
+        v.last_anim = v.anim;
         r.game.geometry_mut().link_all_joints();
     }
 }
@@ -441,10 +441,10 @@ pub fn init_oil(r: &mut Running, gobj: GObjId) {
     setup::init_map_coll(r.game, r.data, j, m);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     let v = r.game.grounds[g.0].u.flatzone_oil();
-    v.xC4 = 0;
-    v.xC8 = 1.0;
-    v.xCC = None;
-    v.xD0 = -1;
+    v.started = 0;
+    v.side = 1.0;
+    v.area = None;
+    v.state = -1;
     v.timer = 0;
 }
 
@@ -470,23 +470,23 @@ pub fn proc_oil(r: &mut Running, gobj: GObjId) {
     let p = param(r.game);
     let mut trigger = false;
     let mut pos = Vec3::new(0.0, 0.0, 0.0);
-    if r.game.grounds[g.0].u.flatzone_oil().xC4 != 0 {
-        if r.game.grounds[g.0].u.flatzone_oil().xD0 == 3 {
+    if r.game.grounds[g.0].u.flatzone_oil().started != 0 {
+        if r.game.grounds[g.0].u.flatzone_oil().state == 3 {
             jobj::set_flags_all(&mut r.game.objs.jobjs, Some(j), jobj::HIDDEN);
             // Melee's bug: the oil's area is freed only when there is none
             // (`grDynamicAttr_801CA1C0` returns at once on null), so it stays until its timer
             // runs out.
-            if r.game.grounds[g.0].u.flatzone_oil().xCC.is_none() {
-                r.game.grounds[g.0].u.flatzone_oil().xCC = None;
+            if r.game.grounds[g.0].u.flatzone_oil().area.is_none() {
+                r.game.grounds[g.0].u.flatzone_oil().area = None;
             }
         }
         let right = r.game.objs.rng.below(2) != 0;
         let v = r.game.grounds[g.0].u.flatzone_oil();
-        v.xC4 = 0;
-        v.xC8 = if right { 1.0 } else { -1.0 };
-        v.xD0 = 0;
+        v.started = 0;
+        v.side = if right { 1.0 } else { -1.0 };
+        v.state = 0;
         v.timer = p.i(r.data, p::OIL_WAIT);
-        if v.xC8 == 1.0 {
+        if v.side == 1.0 {
             pos.x = p.f(r.data, p::OIL_RIGHT_X);
             let v = r.game.grounds[g.0].u.flatzone_oil();
             v.timer = fp::fctiwz(fp::fdivs(fp::frsp(f64::from(v.timer)), 2.0));
@@ -497,7 +497,7 @@ pub fn proc_oil(r: &mut Running, gobj: GObjId) {
         jobj::set_translate(&mut r.game.objs.jobjs, j, pos);
     }
     let side_anim = |r: &mut Running, right: i32, left: i32| {
-        let right_side = r.game.grounds[g.0].u.flatzone_oil().xC8 == 1.0;
+        let right_side = r.game.grounds[g.0].u.flatzone_oil().side == 1.0;
         anime::start_map(
             r.game,
             r.data,
@@ -506,7 +506,7 @@ pub fn proc_oil(r: &mut Running, gobj: GObjId) {
             if right_side { right } else { left },
         );
     };
-    match r.game.grounds[g.0].u.flatzone_oil().xD0 {
+    match r.game.grounds[g.0].u.flatzone_oil().state {
         0 => {
             let wait = p.i(r.data, p::OIL_WAIT);
             if r.game.grounds[g.0].u.flatzone_oil().timer == crate::ppc::divw(wait, 2) {
@@ -516,7 +516,7 @@ pub fn proc_oil(r: &mut Running, gobj: GObjId) {
             let v = r.game.grounds[g.0].u.flatzone_oil();
             v.timer = v.timer.wrapping_sub(1);
             if v.timer <= 0 {
-                v.xD0 = 1;
+                v.state = 1;
                 let (ticks, lo, hi) = (
                     p.i(r.data, p::STEP_TICKS),
                     p.i(r.data, p::STEPS_MIN),
@@ -538,14 +538,14 @@ pub fn proc_oil(r: &mut Running, gobj: GObjId) {
             if rem(r.game.grounds[g.0].u.flatzone_oil().timer, ticks) == 1 {
                 pos = r.game.objs.jobjs[j].translate;
                 let step = p.f(r.data, p::STEP);
-                let side = r.game.grounds[g.0].u.flatzone_oil().xC8;
+                let side = r.game.grounds[g.0].u.flatzone_oil().side;
                 pos.x = mem(fp::fmadds(reg(step), reg(side), reg(pos.x)));
                 jobj::set_translate(&mut r.game.objs.jobjs, j, pos);
             }
             let v = r.game.grounds[g.0].u.flatzone_oil();
             v.timer = v.timer.wrapping_sub(1);
             if v.timer <= 0 {
-                v.xD0 = 2;
+                v.state = 2;
                 v.timer = 0;
                 side_anim(r, 1, 3);
             }
@@ -554,9 +554,9 @@ pub fn proc_oil(r: &mut Running, gobj: GObjId) {
             if anime::finished(r.game, gobj, 0, 1) {
                 let time = p.i(r.data, p::OIL_TIME);
                 let v = r.game.grounds[g.0].u.flatzone_oil();
-                v.xD0 = 3;
+                v.state = 3;
                 v.timer = time;
-                let side = v.xC8;
+                let side = v.side;
                 pos = r.game.objs.jobjs[j].translate;
                 pos.x = mem(fp::fmadds(f64::from(OIL_REACH), reg(side), reg(pos.x)));
                 pos.y = mem(fp::fsubs(reg(pos.y), f64::from(OIL_DROP)));
@@ -576,7 +576,7 @@ pub fn proc_oil(r: &mut Running, gobj: GObjId) {
                         OIL_RADIUS,
                         time,
                     );
-                    r.game.grounds[g.0].u.flatzone_oil().xCC = area;
+                    r.game.grounds[g.0].u.flatzone_oil().area = area;
                 }
                 trigger = true;
             }
@@ -585,7 +585,7 @@ pub fn proc_oil(r: &mut Running, gobj: GObjId) {
             let v = r.game.grounds[g.0].u.flatzone_oil();
             v.timer = v.timer.wrapping_sub(1);
             if v.timer <= 1 {
-                v.xD0 = 4;
+                v.state = 4;
                 v.timer = 0;
             }
         }
@@ -593,14 +593,14 @@ pub fn proc_oil(r: &mut Running, gobj: GObjId) {
             jobj::remove_anim_all(&mut r.game.objs, Some(j));
             jobj::set_flags_all(&mut r.game.objs.jobjs, Some(j), jobj::HIDDEN);
             let v = r.game.grounds[g.0].u.flatzone_oil();
-            v.xCC = None;
-            v.xD0 = -1;
+            v.area = None;
+            v.state = -1;
         }
         _ => {}
     }
     if trigger {
         event_over(r.game);
-        if r.game.grounds[g.0].u.flatzone_oil().xC8 != 1.0 {
+        if r.game.grounds[g.0].u.flatzone_oil().side != 1.0 {
             anim_map(r, MAP_CONTROLLER, 0);
         }
     }
@@ -626,7 +626,7 @@ fn init_event(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    r.game.grounds[g.0].u.flatzone_event().xC4 = 0;
+    r.game.grounds[g.0].u.flatzone_event().started = 0;
 }
 
 /// The first unused event's process, `grFlatzone_80217D30`: started, it ends at once, letting
@@ -634,9 +634,9 @@ fn init_event(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "grFlatzone_80217D30")]
 pub fn proc_event1(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    if r.game.grounds[g.0].u.flatzone_event().xC4 != 0 {
+    if r.game.grounds[g.0].u.flatzone_event().started != 0 {
         event_over(r.game);
-        r.game.grounds[g.0].u.flatzone_event().xC4 = 0;
+        r.game.grounds[g.0].u.flatzone_event().started = 0;
     }
     update_map_coll(r.game, r.data, gobj);
 }
@@ -657,8 +657,8 @@ pub fn init_tools(r: &mut Running, gobj: GObjId) {
     setup::init_map_coll(r.game, r.data, j, m);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     let v = r.game.grounds[g.0].u.flatzone_tools();
-    v.xC4 = 0;
-    v.xC8 = 0;
+    v.started = 0;
+    v.timer = 0;
 }
 
 /// The tools' process, `grFlatzone_80217EF0`. Started by the controller, it counts the
@@ -669,15 +669,15 @@ pub fn init_tools(r: &mut Running, gobj: GObjId) {
 pub fn proc_tools(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let p = param(r.game);
-    if r.game.grounds[g.0].u.flatzone_tools().xC4 != 0 {
+    if r.game.grounds[g.0].u.flatzone_tools().started != 0 {
         let time = p.i(r.data, p::TOOLS_TIME);
         let v = r.game.grounds[g.0].u.flatzone_tools();
-        v.xC8 = time;
-        v.xC4 = 0;
+        v.timer = time;
+        v.started = 0;
     }
-    if r.game.grounds[g.0].u.flatzone_tools().xC8 > 0 {
+    if r.game.grounds[g.0].u.flatzone_tools().timer > 0 {
         let period = p.i(r.data, p::TOOLS_PERIOD);
-        if rem(r.game.grounds[g.0].u.flatzone_tools().xC8, period) == 0 {
+        if rem(r.game.grounds[g.0].u.flatzone_tools().timer, period) == 0 {
             let mut x = reg(r.game.objs.rng.draw_f32());
             let left = p.i(r.data, p::TOOLS_LEFT);
             let right = p.i(r.data, p::TOOLS_RIGHT);
@@ -698,8 +698,8 @@ pub fn proc_tools(r: &mut Running, gobj: GObjId) {
             }
         }
         let v = r.game.grounds[g.0].u.flatzone_tools();
-        v.xC8 = v.xC8.wrapping_sub(1);
-        if v.xC8 <= 0 {
+        v.timer = v.timer.wrapping_sub(1);
+        if v.timer <= 0 {
             event_over(r.game);
         }
     }
@@ -716,16 +716,16 @@ pub fn next_platforms(r: &mut Running, first: bool) {
     let g = ground_of(r.game, gobj);
     if first {
         let v = r.game.grounds[g.0].u.flatzone_platforms();
-        v.xC7 = 2;
-        v.xC9 = 1;
+        v.set = 2;
+        v.row = 1;
     } else {
         loop {
             let set = loop {
                 let s = r.game.objs.rng.below(8) as u8;
                 let v = r.game.grounds[g.0].u.flatzone_platforms();
-                v.xC7 = s;
-                if v.xC7 != v.xC8 {
-                    break v.xC7;
+                v.set = s;
+                if v.set != v.last_set {
+                    break v.set;
                 }
             };
             if SETS[set as usize][1] != -1 {
@@ -735,8 +735,8 @@ pub fn next_platforms(r: &mut Running, first: bool) {
         loop {
             let row = (r.game.objs.rng.below(4) + 1) as u8;
             let v = r.game.grounds[g.0].u.flatzone_platforms();
-            v.xC9 = row;
-            if SETS[v.xC7 as usize][v.xC9 as usize] != -1 {
+            v.row = row;
+            if SETS[v.set as usize][v.row as usize] != -1 {
                 break;
             }
         }
@@ -746,12 +746,12 @@ pub fn next_platforms(r: &mut Running, first: bool) {
         p.i(r.data, p::PLATFORM_WAIT_B),
         p.i(r.data, p::PLATFORM_WAIT_A),
     );
-    r.game.grounds[g.0].u.flatzone_platforms().xCA = 0;
+    r.game.grounds[g.0].u.flatzone_platforms().last_row = 0;
     let wait = grlib::rand_range(&mut r.game.objs.rng, a, b);
     let v = r.game.grounds[g.0].u.flatzone_platforms();
-    v.xCC = wait as i16;
-    v.xC5 = SETS[v.xC7 as usize][v.xC9 as usize] as u8;
-    let anim = i32::from(v.xC5);
+    v.timer = wait as i16;
+    v.anim = SETS[v.set as usize][v.row as usize] as u8;
+    let anim = i32::from(v.anim);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, anim);
 }
@@ -767,17 +767,17 @@ pub fn pose_platforms(r: &mut Running) {
     loop {
         let s = r.game.objs.rng.below(8) as u8;
         let v = r.game.grounds[g.0].u.flatzone_platforms();
-        v.xC7 = s;
-        if v.xC7 != v.xC8 {
+        v.set = s;
+        if v.set != v.last_set {
             break;
         }
     }
     let v = r.game.grounds[g.0].u.flatzone_platforms();
-    v.xC9 = 0;
-    v.xCA = 0;
-    v.xCC = 0;
-    v.xC5 = SETS[v.xC7 as usize][v.xC9 as usize] as u8;
-    let anim = i32::from(v.xC5);
+    v.row = 0;
+    v.last_row = 0;
+    v.timer = 0;
+    v.anim = SETS[v.set as usize][v.row as usize] as u8;
+    let anim = i32::from(v.anim);
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, anim);
 }
@@ -789,7 +789,7 @@ pub fn hide_platforms(game: &mut Game) {
         return;
     };
     let g = ground_of(game, gobj);
-    game.grounds[g.0].u.flatzone_platforms().xC7 = HIDDEN_SET;
+    game.grounds[g.0].u.flatzone_platforms().set = HIDDEN_SET;
     let j = jobj_of(game, gobj);
     if j.is_some() {
         jobj::set_flags_all(&mut game.objs.jobjs, j, jobj::HIDDEN);

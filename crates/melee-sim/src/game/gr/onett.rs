@@ -504,7 +504,7 @@ pub fn init_cars(r: &mut Running, gobj: GObjId) {
     v.curr_car = 4;
     v.state_b = 0;
     v.state_a = 0;
-    r.game.gr.onett_x69c4 = 0;
+    r.game.gr.onett_unread = 0;
     setup::add_start_hook(r.game, gobj, CodeRef(CARS_START));
     r.game.grounds[g.0].u.onett_car().set_waiting(true);
 }
@@ -593,15 +593,15 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
             let wait = p.i(r.data, p::CAR_WAIT);
             let v = r.game.grounds[g.0].u.onett_car();
             v.state_a = 1;
-            v.x108 = wait;
+            v.timer_a = wait;
             super::ground::set_x740(r.game, 0);
         }
         1 => {
-            if v.x108 != 0 {
-                v.x108 = v.x108.wrapping_sub(1);
+            if v.timer_a != 0 {
+                v.timer_a = v.timer_a.wrapping_sub(1);
             } else {
                 let car = v.curr_car;
-                v.x108 = p.i(r.data, p::CAR_DRIVE_WAIT);
+                v.timer_a = p.i(r.data, p::CAR_DRIVE_WAIT);
                 let rand = reg(r.game.objs.rng.draw_f32());
                 let speed = fp::fmadds(
                     reg(p.f(r.data, p::CAR_SPEED_ADD)),
@@ -619,47 +619,47 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
             }
         }
         2 => {
-            if v.x108 != 0 {
+            if v.timer_a != 0 {
                 let all = fighters(r.game);
                 let count = all.len() as i32;
                 let v = r.game.grounds[g.0].u.onett_car();
-                v.x108 = v.x108.wrapping_sub(1);
+                v.timer_a = v.timer_a.wrapping_sub(1);
                 for f in all {
                     if !on_street(r, f) {
                         continue;
                     }
                     let rank = r.fighter_rank(f);
                     if count == 1 || rank == 0 {
-                        r.game.grounds[g.0].u.onett_car().x108 = 0;
+                        r.game.grounds[g.0].u.onett_car().timer_a = 0;
                         jobj::clear_flags_all(&mut r.game.objs.jobjs, car_j, jobj::HIDDEN);
                         r.game.grounds[g.0].u.onett_car().state_a = 5;
                     } else if count == rank.wrapping_add(1) {
                         let wait = p.i(r.data, p::CAR_WAIT_LAST);
                         let v = r.game.grounds[g.0].u.onett_car();
-                        v.x108 = wait;
+                        v.timer_a = wait;
                         v.state_a = 3;
                     } else {
                         let wait = p.i(r.data, p::CAR_WAIT_OTHERS);
                         let v = r.game.grounds[g.0].u.onett_car();
-                        v.x108 = wait;
+                        v.timer_a = wait;
                         v.state_a = 3;
                     }
-                    r.game.grounds[g.0].u.onett_car().x110 = 0;
+                    r.game.grounds[g.0].u.onett_car().sub_state_a = 0;
                 }
             } else {
-                v.x108 = 0;
-                v.x110 = 0;
+                v.timer_a = 0;
+                v.sub_state_a = 0;
                 jobj::clear_flags_all(&mut r.game.objs.jobjs, car_j, jobj::HIDDEN);
                 r.game.grounds[g.0].u.onett_car().state_a = 5;
                 super::ground::set_x740(r.game, 1);
             }
         }
         3 => {
-            if v.x108 != 0 {
-                v.x108 = v.x108.wrapping_sub(1);
+            if v.timer_a != 0 {
+                v.timer_a = v.timer_a.wrapping_sub(1);
             } else {
-                v.x108 = 0;
-                v.x110 = 0;
+                v.timer_a = 0;
+                v.sub_state_a = 0;
                 jobj::clear_flags_all(&mut r.game.objs.jobjs, car_j, jobj::HIDDEN);
                 r.game.grounds[g.0].u.onett_car().state_a = 5;
                 super::ground::set_x740(r.game, 1);
@@ -689,7 +689,7 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
         5 | 6 => {
             let speed = v.car_speed;
             drive(r.game, car_j, speed);
-            let x110 = r.game.grounds[g.0].u.onett_car().x110;
+            let x110 = r.game.grounds[g.0].u.onett_car().sub_state_a;
             if x110 == 1 && r.game.rules.notes_playback() {
                 let horn = p.f(r.data, p::HORN_X);
                 note_other_phase(r, car_j, [center, right], horn);
@@ -702,7 +702,7 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
                         car_sound(r, g, i32::from(car), 5);
                         let t = p.i(r.data, p::SIGN_TIME);
                         r.game.show_hazard(r.data, t);
-                        r.game.grounds[g.0].u.onett_car().x110 = 1;
+                        r.game.grounds[g.0].u.onett_car().sub_state_a = 1;
                     }
                 }
                 1 => {
@@ -712,7 +712,7 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
                             if on_street(r, f) {
                                 r.game.objs.rng.below(3);
                                 scream(r, i32::from(saved));
-                                r.game.grounds[g.0].u.onett_car().x110 = 2;
+                                r.game.grounds[g.0].u.onett_car().sub_state_a = 2;
                                 super::ground::set_x740(r.game, 2);
                                 break;
                             }
@@ -724,7 +724,7 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
                 _ => {}
             }
             if check_center && reg(car_x(r.game, car_j)) <= fp::fadds(100.0, reg(center)) {
-                r.game.grounds[g.0].u.onett_car().x110 = 4;
+                r.game.grounds[g.0].u.onett_car().sub_state_a = 4;
             }
             if reg(car_x(r.game, car_j)) <= reg(LEFT_END) {
                 jobj::set_flags_all(&mut r.game.objs.jobjs, car_j, jobj::HIDDEN);
@@ -868,8 +868,8 @@ pub fn car_hit(r: &mut Running, _item: GObjId, g: GroundId) {
             v.car_speed = 0.5;
         }
         v.state_a = 4;
-        v.x110 = 4;
-        v.x108 = 1;
+        v.sub_state_a = 4;
+        v.timer_a = 1;
         let sfx = if r.game.objs.rng.below(2) != 0 {
             0x5F37C
         } else {

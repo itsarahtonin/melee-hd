@@ -253,7 +253,7 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     anime::start_map(r.game, r.data, gobj, m, 0);
     init_blocks(r, gobj);
     init_lifts(r, gobj);
-    r.game.grounds[g.0].u.inishie1().xC4 &= !0x8000;
+    r.game.grounds[g.0].u.inishie1().flags &= !0x8000;
     let j = nth_joint(r.game, gobj, 0x2D);
     material::set_tree_flags(r.game, j, 0x2000_0000);
 }
@@ -278,9 +278,9 @@ pub fn init_hatena(r: &mut Running, gobj: GObjId) {
     anime::start_map(r.game, r.data, gobj, m, 0);
     let blink = param(r.game).h(r.data, p::HATENA_BLINK);
     let v = r.game.grounds[g.0].u.inishie1_hatena();
-    v.xC4 = None;
-    v.xC8 = i32::from(blink);
-    v.xCC = 0;
+    v.brick_jobj = None;
+    v.blink = i32::from(blink);
+    v.hidden = 0;
 }
 
 /// A ? block's process, `grInishie1_801FAC58`: unless it stays hidden, it blinks in (shown on
@@ -292,16 +292,16 @@ pub fn proc_hatena(r: &mut Running, gobj: GObjId) {
         return;
     };
     let v = r.game.grounds[g.0].u.inishie1_hatena();
-    if v.xCC == 0 && v.xC8 > 0 {
-        let show = v.xC8 & 1 != 0;
-        v.xC8 -= 1;
+    if v.hidden == 0 && v.blink > 0 {
+        let show = v.blink & 1 != 0;
+        v.blink -= 1;
         if show {
             jobj::clear_flags_all(&mut r.game.objs.jobjs, Some(j), jobj::HIDDEN);
         } else {
             jobj::set_flags_all(&mut r.game.objs.jobjs, Some(j), jobj::HIDDEN);
         }
     }
-    let on = r.game.grounds[g.0].u.inishie1_hatena().xC4;
+    let on = r.game.grounds[g.0].u.inishie1_hatena().brick_jobj;
     if on.is_some() {
         let pos = world_position(&mut r.game.objs, r.data, on, None);
         jobj::set_translate(&mut r.game.objs.jobjs, j, pos);
@@ -349,9 +349,9 @@ pub fn init_blocks(r: &mut Running, gobj: GObjId) {
     v.blocks_addr = addr;
     v.blocks = (0..BLOCK_COUNT)
         .map(|i| super::vars::Inishie1Block {
-            x6: half(i, 6),
-            x20: half(i, 0x20),
-            x22: half(i, 0x22),
+            unwritten: half(i, 6),
+            back_wait: half(i, 0x20),
+            blink: half(i, 0x22),
             ..Default::default()
         })
         .collect();
@@ -361,13 +361,13 @@ pub fn init_blocks(r: &mut Running, gobj: GObjId) {
         };
         let y = r.game.objs.jobjs[j].translate.y;
         let b = &mut blocks(r.game, g)[i];
-        b.x2 = 2;
-        b.x4 = 0;
+        b.state = 2;
+        b.count = 0;
         b.jobj2 = Some(j);
         b.hatena_gobj = None;
-        b.x8 = y;
-        b.xC = 0.0;
-        b.x10 = 0.0;
+        b.rest_y = y;
+        b.bump = 0.0;
+        b.bump_speed = 0.0;
         r.game.geometry_mut().set_callback(
             joint,
             Some(CollUser::Ground(g)),
@@ -409,16 +409,16 @@ pub fn init_blocks(r: &mut Running, gobj: GObjId) {
                     .hatena_gobj
                     .expect("a ? block just made");
                 let hg = ground_of(r.game, h);
-                r.game.grounds[hg.0].u.inishie1_hatena().xCC = 1;
+                r.game.grounds[hg.0].u.inishie1_hatena().hidden = 1;
             }
         }
     }
     let v = r.game.grounds[g.0].u.inishie1();
-    v.xC6 = 0;
-    v.xC8 = 0;
-    v.xCA = -1;
-    v.xCC = -1;
-    v.xD8 = 0;
+    v.hatena_wait_a = 0;
+    v.hatena_wait_b = 0;
+    v.last_hatena_a = -1;
+    v.last_hatena_b = -1;
+    v.hatena_cooldown = 0;
 }
 
 /// A block broken gives up what it holds, `grInishie1_801FB0AC`: an item from a ? block's block
@@ -440,11 +440,11 @@ pub fn give_up(r: &mut Running, gobj: GObjId, ix: usize) {
             if status == 1 {
                 let w =
                     grlib::rand_range(rng, p.fi(r.data, p::WAIT1_MIN), p.fi(r.data, p::WAIT1_MAX));
-                r.game.grounds[g.0].u.inishie1().xC6 = w as i16;
+                r.game.grounds[g.0].u.inishie1().hatena_wait_a = w as i16;
             } else if status == 2 {
                 let w =
                     grlib::rand_range(rng, p.fi(r.data, p::WAIT2_MIN), p.fi(r.data, p::WAIT2_MAX));
-                r.game.grounds[g.0].u.inishie1().xC8 = w as i16;
+                r.game.grounds[g.0].u.inishie1().hatena_wait_b = w as i16;
             } else {
                 if !blocks(r.game, g).iter().any(|b| b.status == 3) {
                     let rng = &mut r.game.objs.rng;
@@ -453,16 +453,16 @@ pub fn give_up(r: &mut Running, gobj: GObjId, ix: usize) {
                         p.fi(r.data, p::WAIT1_MIN),
                         p.fi(r.data, p::WAIT1_MAX),
                     );
-                    r.game.grounds[g.0].u.inishie1().xC6 = w1 as i16;
+                    r.game.grounds[g.0].u.inishie1().hatena_wait_a = w1 as i16;
                     let rng = &mut r.game.objs.rng;
                     let w2 = grlib::rand_range(
                         rng,
                         p.fi(r.data, p::WAIT2_MIN),
                         p.fi(r.data, p::WAIT2_MAX),
                     );
-                    r.game.grounds[g.0].u.inishie1().xC8 = w2 as i16;
+                    r.game.grounds[g.0].u.inishie1().hatena_wait_b = w2 as i16;
                 }
-                r.game.grounds[g.0].u.inishie1().xD8 = p.fi(r.data, p::ALL_WAIT);
+                r.game.grounds[g.0].u.inishie1().hatena_cooldown = p.fi(r.data, p::ALL_WAIT);
             }
         }
         _ => {
@@ -479,9 +479,9 @@ pub fn give_up(r: &mut Running, gobj: GObjId, ix: usize) {
 /// holds nothing (the original asserts one is found).
 fn appear(r: &mut Running, gobj: GObjId, g: GroundId, status: i16, line: u32) {
     let last = if status == 1 {
-        r.game.grounds[g.0].u.inishie1().xCA
+        r.game.grounds[g.0].u.inishie1().last_hatena_a
     } else {
-        r.game.grounds[g.0].u.inishie1().xCC
+        r.game.grounds[g.0].u.inishie1().last_hatena_b
     };
     let mut index = 0;
     let mut i = 0;
@@ -499,13 +499,13 @@ fn appear(r: &mut Running, gobj: GObjId, g: GroundId, status: i16, line: u32) {
     );
     let v = r.game.grounds[g.0].u.inishie1();
     if status == 1 {
-        v.xCA = index as i16;
+        v.last_hatena_a = index as i16;
     } else {
-        v.xCC = index as i16;
+        v.last_hatena_b = index as i16;
     }
     blocks(r.game, g)[index as usize].status = status;
     add_hatena(r, gobj, index as usize, PROC_HATENA_FRAME);
-    blocks(r.game, g)[index as usize].x20 = 0;
+    blocks(r.game, g)[index as usize].back_wait = 0;
 }
 
 /// Sets a block's display objects' hidden flag (the inline `grInishie1_UpdateDObjFlags`).
@@ -534,64 +534,66 @@ pub fn update_blocks(r: &mut Running, gobj: GObjId) {
     let p = param(r.game);
     let window = i32::from(p.h(r.data, p::ALL_WINDOW));
     let v = r.game.grounds[g.0].u.inishie1();
-    if v.xD8 > 0 {
-        v.xD8 -= 1;
+    if v.hatena_cooldown > 0 {
+        v.hatena_cooldown -= 1;
     }
-    let (c6, c8) = (i32::from(v.xC6), i32::from(v.xC8));
-    if v.xD8 == 0 && ((c6 == 1 && c8 > 0 && c8 < window) || (c8 == 1 && c6 > 0 && c6 < window)) {
-        v.xC8 = 0;
-        v.xC6 = 0;
+    let (c6, c8) = (i32::from(v.hatena_wait_a), i32::from(v.hatena_wait_b));
+    if v.hatena_cooldown == 0
+        && ((c6 == 1 && c8 > 0 && c8 < window) || (c8 == 1 && c6 > 0 && c6 < window))
+    {
+        v.hatena_wait_b = 0;
+        v.hatena_wait_a = 0;
         for i in 0..BLOCK_COUNT {
             blocks(r.game, g)[i].status = 3;
             add_hatena(r, gobj, i, PROC_HATENA_FRAME);
-            blocks(r.game, g)[i].x20 = 0;
+            blocks(r.game, g)[i].back_wait = 0;
         }
     } else {
         let v = r.game.grounds[g.0].u.inishie1();
-        if v.xC6 > 0 {
-            v.xC6 -= 1;
-            if v.xC6 == 0 {
+        if v.hatena_wait_a > 0 {
+            v.hatena_wait_a -= 1;
+            if v.hatena_wait_a == 0 {
                 appear(r, gobj, g, 1, 0x2D0);
             }
         }
         let v = r.game.grounds[g.0].u.inishie1();
-        if v.xC8 > 0 {
-            v.xC8 -= 1;
-            if v.xC8 == 0 {
+        if v.hatena_wait_b > 0 {
+            v.hatena_wait_b -= 1;
+            if v.hatena_wait_b == 0 {
                 appear(r, gobj, g, 2, 0x2EB);
             }
         }
     }
     for i in 0..BLOCK_COUNT {
-        match blocks(r.game, g)[i].x2 {
+        match blocks(r.game, g)[i].state {
             2 => {
                 let b = &mut blocks(r.game, g)[i];
-                if b.x4 != 0 {
-                    b.x4 -= 1;
+                if b.count != 0 {
+                    b.count -= 1;
                 }
             }
             x2 @ (3 | 4) => {
                 if x2 == 3 {
-                    blocks(r.game, g)[i].x10 = 1.2;
+                    blocks(r.game, g)[i].bump_speed = 1.2;
                     give_up(r, gobj, i);
-                    blocks(r.game, g)[i].x2 = 4;
+                    blocks(r.game, g)[i].state = 4;
                 }
                 let b = &mut blocks(r.game, g)[i];
-                b.xC = mem(fp::fadds(reg(b.xC), reg(b.x10)));
-                if reg(b.xC) > 5.0 {
-                    b.x10 = -1.2;
-                } else if reg(b.xC) < 0.0 {
-                    b.xC = 0.0;
-                    b.x2 = 2;
-                    b.x4 = 10;
+                b.bump = mem(fp::fadds(reg(b.bump), reg(b.bump_speed)));
+                if reg(b.bump) > 5.0 {
+                    b.bump_speed = -1.2;
+                } else if reg(b.bump) < 0.0 {
+                    b.bump = 0.0;
+                    b.state = 2;
+                    b.count = 10;
                 }
-                let (j, y) = (b.jobj2, mem(fp::fadds(reg(b.x8), reg(b.xC))));
+                let (j, y) = (b.jobj2, mem(fp::fadds(reg(b.rest_y), reg(b.bump))));
                 let j = j.expect("a block's joint");
                 jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = y);
             }
             0 => {
-                if blocks(r.game, g)[i].x20 != 0 {
-                    blocks(r.game, g)[i].x20 -= 1;
+                if blocks(r.game, g)[i].back_wait != 0 {
+                    blocks(r.game, g)[i].back_wait -= 1;
                 } else {
                     let j = blocks(r.game, g)[i].jobj2;
                     let pos = world_position(&mut r.game.objs, r.data, j, None);
@@ -602,8 +604,8 @@ pub fn update_blocks(r: &mut Running, gobj: GObjId) {
                         material::item_hurtbox_on(r.game, item.expect("a block's item"));
                         let blink = p.hu(r.data, p::BLOCK_BLINK) as i16;
                         let b = &mut blocks(r.game, g)[i];
-                        b.x2 = 1;
-                        b.x22 = blink;
+                        b.state = 1;
+                        b.blink = blink;
                     }
                 }
                 if let Some(h) = blocks(r.game, g)[i].hatena_gobj {
@@ -616,7 +618,7 @@ pub fn update_blocks(r: &mut Running, gobj: GObjId) {
             }
             1 => {
                 let b = &blocks(r.game, g)[i];
-                let (n, j, h) = (b.x22, b.jobj2, b.hatena_gobj);
+                let (n, j, h) = (b.blink, b.jobj2, b.hatena_gobj);
                 if n > 0 {
                     match h {
                         Some(h) => {
@@ -630,11 +632,11 @@ pub fn update_blocks(r: &mut Running, gobj: GObjId) {
                         }
                         None => block_dobjs(r.game, j, n & 1 == 0),
                     }
-                    blocks(r.game, g)[i].x22 -= 1;
+                    blocks(r.game, g)[i].blink -= 1;
                 } else {
                     let b = &mut blocks(r.game, g)[i];
-                    b.x2 = 2;
-                    b.x4 = 0;
+                    b.state = 2;
+                    b.count = 0;
                 }
             }
             _ => {}
@@ -667,14 +669,14 @@ pub fn add_hatena(r: &mut Running, gobj: GObjId, ix: usize, frame: u32) {
         "grinishie1.c:926: !mapgp->u.map.block[ix].hatena_gobj"
     );
     blocks(r.game, g)[ix].hatena_gobj = Some(hatena);
-    let (j, x2) = (blocks(r.game, g)[ix].jobj2, blocks(r.game, g)[ix].x2);
+    let (j, x2) = (blocks(r.game, g)[ix].jobj2, blocks(r.game, g)[ix].state);
     let pos = world_position(&mut r.game.objs, r.data, j, None);
     let hj = jobj_of(r.game, hatena).expect("a ? block's model");
     jobj::set_translate(&mut r.game.objs.jobjs, hj, pos);
     let v = r.game.grounds[hg.0].u.inishie1_hatena();
-    v.xC4 = j;
+    v.brick_jobj = j;
     if x2 == 0 || x2 == 1 {
-        v.xCC = 1;
+        v.hidden = 1;
     }
     block_dobjs(r.game, j, true);
 }
@@ -698,13 +700,13 @@ pub fn remove_hatena(r: &mut Running, gobj: GObjId, ix: usize) {
 pub fn break_block(r: &mut Running, gobj: GObjId, ix: usize) {
     let g = ground_of(r.game, gobj);
     let p = param(r.game);
-    blocks(r.game, g)[ix].x2 = 0;
+    blocks(r.game, g)[ix].state = 0;
     let (lo, hi) = (
         i32::from(p.h(r.data, p::BACK_MIN)),
         i32::from(p.h(r.data, p::BACK_MAX)),
     );
     let wait = grlib::rand_range(&mut r.game.objs.rng, lo, hi);
-    blocks(r.game, g)[ix].x20 = wait as i16;
+    blocks(r.game, g)[ix].back_wait = wait as i16;
     let b = &blocks(r.game, g)[ix];
     let (j, item, status) = (b.jobj2, b.item_gobj, b.status);
     let d = jobj::get_dobj(&r.game.objs.jobjs, j);
@@ -793,18 +795,18 @@ pub fn init_lifts(r: &mut Running, gobj: GObjId) {
     let child = |r: &Running, j: Option<JObjId>| j.and_then(|j| r.game.objs.jobjs[j].child);
     let (ca, cb) = (child(r, a), child(r, b));
     let v = r.game.grounds[g.0].u.inishie1();
-    v.xEE = 0;
-    v.xE0 = 0.0;
-    v.xE4 = 0.0;
-    v.xE8 = 0;
-    v.xEA = 0;
-    v.xF0 = 0.0;
-    v.xF4 = 0.0;
-    v.x108 = a;
-    v.x10C = b;
-    v.xFC = y;
-    v.x100 = ca;
-    v.x104 = cb;
+    v.lift_state = 0;
+    v.lift_weight_a = 0.0;
+    v.lift_weight_b = 0.0;
+    v.lift_touches_a = 0;
+    v.lift_touches_b = 0;
+    v.lift_offset = 0.0;
+    v.lift_speed = 0.0;
+    v.arm_a = a;
+    v.arm_b = b;
+    v.lift_rest_y = y;
+    v.platform_a = ca;
+    v.platform_b = cb;
     let geo = r.game.geometry_mut();
     for joint in [0x15, 0x14] {
         geo.set_ledge_callback(
@@ -818,9 +820,9 @@ pub fn init_lifts(r: &mut Running, gobj: GObjId) {
 /// Puts the lifts' arms at their offset from rest, one up and one down.
 fn place_arms(game: &mut Game, g: GroundId) {
     let v = game.grounds[g.0].u.inishie1();
-    let (a, b) = (v.x108, v.x10C);
-    let up = mem(fp::fadds(reg(v.xFC), reg(v.xF0)));
-    let down = mem(fp::fsubs(reg(v.xFC), reg(v.xF0)));
+    let (a, b) = (v.arm_a, v.arm_b);
+    let up = mem(fp::fadds(reg(v.lift_rest_y), reg(v.lift_offset)));
+    let down = mem(fp::fsubs(reg(v.lift_rest_y), reg(v.lift_offset)));
     for (j, y) in [(a, up), (b, down)] {
         let j = j.expect("the lift's arm");
         jobj::set_srt(&mut game.objs.jobjs, j, |o| o.translate.y = y);
@@ -846,74 +848,74 @@ pub fn balance(r: &mut Running, gobj: GObjId) {
     );
     let max = pf(p::LIFT_MAX);
     let v = r.game.grounds[g.0].u.inishie1();
-    if reg(v.xE0) > 100000.0 || reg(v.xE4) > 100000.0 {
-        v.xE4 = 100000.0;
-        v.xE0 = 100000.0;
+    if reg(v.lift_weight_a) > 100000.0 || reg(v.lift_weight_b) > 100000.0 {
+        v.lift_weight_b = 100000.0;
+        v.lift_weight_a = 100000.0;
     }
-    let mut lo = fp::fsubs(reg(v.xE0), ignore);
+    let mut lo = fp::fsubs(reg(v.lift_weight_a), ignore);
     if lo < 0.0 {
         lo = 0.0;
     }
-    let mut hi = fp::fsubs(reg(v.xE4), ignore);
+    let mut hi = fp::fsubs(reg(v.lift_weight_b), ignore);
     if hi < 0.0 {
         hi = 0.0;
     }
     if lo == 0.0 && hi == 0.0 {
-        let f0 = reg(v.xF0);
+        let f0 = reg(v.lift_offset);
         let abs = if f0 < 0.0 { fp::fneg(f0) } else { f0 };
         if abs > 0.0 {
             if f0 < 0.0 {
-                v.xF0 = mem(fp::fadds(f0, drift));
-                if reg(v.xF0) > 0.0 {
-                    v.xF0 = 0.0;
+                v.lift_offset = mem(fp::fadds(f0, drift));
+                if reg(v.lift_offset) > 0.0 {
+                    v.lift_offset = 0.0;
                 }
             } else {
-                v.xF0 = mem(fp::fsubs(f0, drift));
-                if reg(v.xF0) < 0.0 {
-                    v.xF0 = 0.0;
+                v.lift_offset = mem(fp::fsubs(f0, drift));
+                if reg(v.lift_offset) < 0.0 {
+                    v.lift_offset = 0.0;
                 }
             }
         }
-        v.xF4 = 0.0;
+        v.lift_speed = 0.0;
     } else {
         let accel = fp::fsubs(hi, lo);
-        v.xF4 = mem(fp::fmadds(accel, rate, reg(v.xF4)));
-        if reg(v.xF4) > speed {
-            v.xF4 = mem(speed);
-        } else if reg(v.xF4) < fp::fneg(speed) {
-            v.xF4 = mem(fp::fneg(speed));
+        v.lift_speed = mem(fp::fmadds(accel, rate, reg(v.lift_speed)));
+        if reg(v.lift_speed) > speed {
+            v.lift_speed = mem(speed);
+        } else if reg(v.lift_speed) < fp::fneg(speed) {
+            v.lift_speed = mem(fp::fneg(speed));
         }
-        if lo != 0.0 && hi != 0.0 && reg(v.xF4) != 0.0 {
-            v.xF4 = mem(fp::fmuls(reg(v.xF4), both));
+        if lo != 0.0 && hi != 0.0 && reg(v.lift_speed) != 0.0 {
+            v.lift_speed = mem(fp::fmuls(reg(v.lift_speed), both));
         } else {
-            v.xF4 = mem(fp::fmuls(reg(v.xF4), one));
-            if reg(v.xF4) > 0.0 {
-                v.xF4 = mem(fp::fsubs(reg(v.xF4), slow));
-                if reg(v.xF4) < 0.0 {
-                    v.xF4 = 0.0;
+            v.lift_speed = mem(fp::fmuls(reg(v.lift_speed), one));
+            if reg(v.lift_speed) > 0.0 {
+                v.lift_speed = mem(fp::fsubs(reg(v.lift_speed), slow));
+                if reg(v.lift_speed) < 0.0 {
+                    v.lift_speed = 0.0;
                 }
-            } else if reg(v.xF4) < 0.0 {
-                v.xF4 = mem(fp::fadds(reg(v.xF4), slow));
-                if reg(v.xF4) > 0.0 {
-                    v.xF4 = 0.0;
+            } else if reg(v.lift_speed) < 0.0 {
+                v.lift_speed = mem(fp::fadds(reg(v.lift_speed), slow));
+                if reg(v.lift_speed) > 0.0 {
+                    v.lift_speed = 0.0;
                 }
             }
         }
-        v.xF0 = mem(fp::fadds(reg(v.xF0), reg(v.xF4)));
+        v.lift_offset = mem(fp::fadds(reg(v.lift_offset), reg(v.lift_speed)));
     }
-    let f0 = reg(v.xF0);
+    let f0 = reg(v.lift_offset);
     let abs = if f0 < 0.0 { fp::fneg(f0) } else { f0 };
     if abs > max {
-        v.xF0 = mem(if f0 < 0.0 { fp::fneg(max) } else { max });
-        v.xEE = 1;
-        v.xF4 = 0.0;
+        v.lift_offset = mem(if f0 < 0.0 { fp::fneg(max) } else { max });
+        v.lift_state = 1;
+        v.lift_speed = 0.0;
     }
     place_arms(r.game, g);
     let v = r.game.grounds[g.0].u.inishie1();
-    v.xE8 = 0;
-    v.xEA = 0;
-    v.xE0 = 0.0;
-    v.xE4 = 0.0;
+    v.lift_touches_a = 0;
+    v.lift_touches_b = 0;
+    v.lift_weight_a = 0.0;
+    v.lift_weight_b = 0.0;
 }
 
 /// The lifts coming back level, `grInishie1_801FC4A0`: their offset shrinks by the return's
@@ -924,25 +926,25 @@ pub fn level_out(r: &mut Running, gobj: GObjId) {
     let back = reg(param(r.game).f(r.data, p::RETURN_SPEED));
     let v = r.game.grounds[g.0].u.inishie1();
     let mut reached = false;
-    if reg(v.xF0) != 0.0 {
-        if reg(v.xF0) < 0.0 {
-            v.xF0 = mem(fp::fadds(reg(v.xF0), back));
-            if reg(v.xF0) >= 0.0 {
+    if reg(v.lift_offset) != 0.0 {
+        if reg(v.lift_offset) < 0.0 {
+            v.lift_offset = mem(fp::fadds(reg(v.lift_offset), back));
+            if reg(v.lift_offset) >= 0.0 {
                 reached = true;
             }
         } else {
-            v.xF0 = mem(fp::fsubs(reg(v.xF0), back));
-            if reg(v.xF0) <= 0.0 {
+            v.lift_offset = mem(fp::fsubs(reg(v.lift_offset), back));
+            if reg(v.lift_offset) <= 0.0 {
                 reached = true;
             }
         }
     }
     if reached {
-        v.xF0 = 0.0;
-        v.xF4 = 0.0;
-        v.xE0 = 0.0;
-        v.xE4 = 0.0;
-        v.xEE = 0;
+        v.lift_offset = 0.0;
+        v.lift_speed = 0.0;
+        v.lift_weight_a = 0.0;
+        v.lift_weight_b = 0.0;
+        v.lift_state = 0;
     }
     place_arms(r.game, g);
 }
@@ -955,7 +957,7 @@ pub fn level_out(r: &mut Running, gobj: GObjId) {
 pub fn update_lifts(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let p = param(r.game);
-    match r.game.grounds[g.0].u.inishie1().xEE {
+    match r.game.grounds[g.0].u.inishie1().lift_state {
         0 => balance(r, gobj),
         1 => {
             let (accel, fastest) = (
@@ -963,11 +965,11 @@ pub fn update_lifts(r: &mut Running, gobj: GObjId) {
                 reg(p.f(r.data, p::FALL_SPEED)),
             );
             let v = r.game.grounds[g.0].u.inishie1();
-            v.xF4 = mem(fp::fadds(reg(v.xF4), accel));
-            if reg(v.xF4) > fastest {
-                v.xF4 = mem(fastest);
+            v.lift_speed = mem(fp::fadds(reg(v.lift_speed), accel));
+            if reg(v.lift_speed) > fastest {
+                v.lift_speed = mem(fastest);
             }
-            let (a, b, down) = (v.x100, v.x104, mem(fp::fneg(reg(v.xF4))));
+            let (a, b, down) = (v.platform_a, v.platform_b, mem(fp::fneg(reg(v.lift_speed))));
             for j in [a, b] {
                 let j = j.expect("a lift's platform");
                 jobj::set_srt(&mut r.game.objs.jobjs, j, |o| {
@@ -980,17 +982,17 @@ pub fn update_lifts(r: &mut Running, gobj: GObjId) {
             if reg(pa.y) < bottom && reg(pb.y) < bottom {
                 let wait = p.fi(r.data, p::FALL_WAIT) as i16;
                 let v = r.game.grounds[g.0].u.inishie1();
-                v.xEE = 2;
-                v.xF4 = 0.0;
-                v.xEC = wait;
+                v.lift_state = 2;
+                v.lift_speed = 0.0;
+                v.lift_wait = wait;
             }
         }
         2 => {
             let v = r.game.grounds[g.0].u.inishie1();
-            v.xEC = v.xEC.wrapping_sub(1);
-            if v.xEC == 0 {
-                v.xEE = 3;
-                let (a, b) = (v.x100, v.x104);
+            v.lift_wait = v.lift_wait.wrapping_sub(1);
+            if v.lift_wait == 0 {
+                v.lift_state = 3;
+                let (a, b) = (v.platform_a, v.platform_b);
                 for j in [a, b] {
                     let j = j.expect("a lift's platform");
                     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = 0.0);
@@ -1035,11 +1037,11 @@ pub fn lift_touched(
         }
     };
     if joint_id == 0x14 {
-        v.xE8 = v.xE8.wrapping_add(1);
-        v.xE0 = add(v.xE0);
+        v.lift_touches_a = v.lift_touches_a.wrapping_add(1);
+        v.lift_weight_a = add(v.lift_weight_a);
     } else if joint_id == 0x15 {
-        v.xEA = v.xEA.wrapping_add(1);
-        v.xE4 = add(v.xE4);
+        v.lift_touches_b = v.lift_touches_b.wrapping_add(1);
+        v.lift_weight_b = add(v.lift_weight_b);
     }
 }
 
@@ -1049,7 +1051,7 @@ pub fn lift_touched(
 #[doc(alias = "grInishie1_801FCB10")]
 pub fn music(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    if r.game.grounds[g.0].u.inishie1().xC4 & 0x8000 != 0 {
+    if r.game.grounds[g.0].u.inishie1().flags & 0x8000 != 0 {
         return;
     }
     match r.game.vs_match_timer() {
@@ -1057,10 +1059,10 @@ pub fn music(r: &mut Running, gobj: GObjId) {
             if left < 20 {
                 let bgm = fast_song(super::ground::x98(r.game)).unwrap_or(-1);
                 r.lb_play_music(bgm);
-                r.game.grounds[g.0].u.inishie1().xC4 |= 0x8000;
+                r.game.grounds[g.0].u.inishie1().flags |= 0x8000;
             }
         }
-        None => r.game.grounds[g.0].u.inishie1().xC4 |= 0x8000,
+        None => r.game.grounds[g.0].u.inishie1().flags |= 0x8000,
     }
 }
 

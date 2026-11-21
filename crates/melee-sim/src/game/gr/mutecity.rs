@@ -93,22 +93,29 @@ fn param(game: &Game) -> Param {
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Car {
     /// How far it has gone (`x0`), never wrapped, which orders the race.
-    pub x0: f32,
+    #[doc(alias("x0"))]
+    pub distance: f32,
     /// Its place on the track's splines (`x4`), 0 to 1.
-    pub x4: f32,
+    #[doc(alias("x4"))]
+    pub spline_pos: f32,
     /// Its speed (`x8`) and its lane (`xC`, 0 the right spline, 1 the left).
-    pub x8: f32,
-    pub xC: f32,
+    #[doc(alias("x8"))]
+    pub speed: f32,
+    #[doc(alias("xC"))]
+    pub lane: f32,
     /// The damage it took (`x10`).
-    pub x10: f32,
+    #[doc(alias("x10"))]
+    pub damage: f32,
     /// Where it is (`pos`).
     pub pos: Vec3,
     /// What the race around it asks this tick (`x20`): 1 a car close behind, 2 slower and 4
     /// faster than a close one, 8 one right beside it, 0x10 among the first five, 0x20 among
     /// the last five.
-    pub x20: u16,
+    #[doc(alias("x20"))]
+    pub race_flags: u16,
     /// `x22_flags`: 0x80 wrecked, 0x40 its pass shook the screen.
-    pub x22: u8,
+    #[doc(alias("x22"))]
+    pub flags: u8,
     /// Its hurtbox item while it passes the stage (`x24`).
     pub item: Option<GObjId>,
     /// `gen`: what `grMuteCity_801F2AB0` returned, which is never the generator. Its last
@@ -120,10 +127,10 @@ pub struct Car {
 
 impl Car {
     fn wrecked(&self) -> bool {
-        self.x22 & 0x80 != 0
+        self.flags & 0x80 != 0
     }
     fn shook(&self) -> bool {
-        self.x22 & 0x40 != 0
+        self.flags & 0x40 != 0
     }
 }
 
@@ -273,14 +280,14 @@ pub fn init_course(r: &mut Running, gobj: GObjId) {
     let right = nth_joint(r.game, gobj, 9);
     {
         let v = r.game.grounds[g.0].u.mute_city();
-        v.xC4 = 0;
-        v.xC6 = 0;
-        v.xD2 = 0;
-        v.xD8 = 0.932775;
-        v.xD4 = 0.932775;
+        v.script_cursor = 0;
+        v.script_wait = 0;
+        v.cleared = 0;
+        v.right_end = 0.932775;
+        v.left_end = 0.932775;
         v.set_track_on(false);
-        v.xDC = left;
-        v.xE0 = right;
+        v.spline_jobj = left;
+        v.spline_jobj2 = right;
     }
     assert!(
         spline_of(r.game, right).is_some(),
@@ -305,16 +312,16 @@ pub fn init_course(r: &mut Running, gobj: GObjId) {
     {
         let v = r.game.grounds[g.0].u.mute_city();
         v.set_ends(2);
-        v.xE4 = Vec3::new(0.0, 0.0, 0.0);
-        v.xF0 = Vec3::new(0.0, 0.0, 0.0);
+        v.track_start = Vec3::new(0.0, 0.0, 0.0);
+        v.track_end = Vec3::new(0.0, 0.0, 0.0);
         v.shadow_jobjs = shadows;
         v.bounds = bounds;
     }
     r.game.grounds[g.0].x10_flags.b5 = true;
     let platform = create(r, 0x1D, COURSE_FRAME);
-    r.game.grounds[g.0].u.mute_city().xC8 = platform;
+    r.game.grounds[g.0].u.mute_city().platform = platform;
     let cars = create(r, 2, COURSE_FRAME);
-    r.game.grounds[g.0].u.mute_city().xCC = cars;
+    r.game.grounds[g.0].u.mute_city().cars = cars;
     move_cars(r, cars.expect("grmutecity.c: the cars"), gobj);
     for k in [0xC, 0xC, 0xD, 0xE, 0xF, 0x10] {
         let j = nth_joint(r.game, gobj, k);
@@ -325,12 +332,12 @@ pub fn init_course(r: &mut Running, gobj: GObjId) {
     let user = Some(super::CollUser::Ground(g));
     geo.set_ledge_callback(TRACK_JOINT, user, Some(CodeRef(TRACK_TOUCHED)));
     let lights = super::ground::light_gobj(r.game);
-    r.game.grounds[g.0].u.mute_city().x110 = None;
+    r.game.grounds[g.0].u.mute_city().light = None;
     if let Some(l) = lights.and_then(|lg| first_light(r.game, lg)) {
         let mut cur = Some(l);
         while let Some(l) = cur {
             if r.game.objs.lobjs[l].flags & lobj::TYPE_MASK == lobj::POINT {
-                r.game.grounds[g.0].u.mute_city().x110 = Some(l);
+                r.game.grounds[g.0].u.mute_city().light = Some(l);
                 lobj::set_flags(&mut r.game.objs.lobjs, Some(l), lobj::HIDDEN.into());
             }
             cur = r.game.objs.lobjs[l].next;
@@ -350,7 +357,7 @@ const LIGHT_DIST_FUNC: i32 = 1;
 #[doc(alias = "grMuteCity_801F0120")]
 pub fn proc_course(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    let light = r.game.grounds[g.0].u.mute_city().x110;
+    let light = r.game.grounds[g.0].u.mute_city().light;
     if light.is_some() {
         lobj::set_dist_attn(
             &mut r.game.objs.lobjs,
@@ -366,7 +373,7 @@ pub fn proc_course(r: &mut Running, gobj: GObjId) {
         follow_track(r, gobj);
     }
     steer_cars(r);
-    let cars = r.game.grounds[g.0].u.mute_city().xCC;
+    let cars = r.game.grounds[g.0].u.mute_city().cars;
     move_cars(r, cars.expect("grmutecity.c: the cars"), gobj);
     update_map_coll(r.game, r.data, gobj);
     let level = r.game.gr.wind_level;
@@ -389,10 +396,10 @@ pub fn init_platform(r: &mut Running, gobj: GObjId) {
     r.game.grounds[g.0].x10_flags.b5 = true;
     let sway = nth_joint(r.game, gobj, 6);
     let v = r.game.grounds[g.0].u.mute_city2();
-    v.xC8 = sway;
-    v.xCC = 0.0;
-    v.xD0 = 0.0;
-    v.xC4 &= !0x80;
+    v.sway_jobj = sway;
+    v.sway_target = 0.0;
+    v.sway_scale = 0.0;
+    v.flags &= !0x80;
 }
 
 /// The platform's process (map 29), `grMuteCity_801F0290`: the sway's scale steps toward its
@@ -402,25 +409,28 @@ pub fn init_platform(r: &mut Running, gobj: GObjId) {
 pub fn proc_platform(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.mute_city2();
-    let target = reg(v.xCC);
-    let current = reg(v.xD0);
+    let target = reg(v.sway_target);
+    let current = reg(v.sway_scale);
     let diff = fp::fsubs(target, current);
     if diff > 0.0 {
         if diff < reg(0.001) {
-            v.xD0 = mem(target);
+            v.sway_scale = mem(target);
         } else {
-            v.xD0 = mem(fp::fadds(reg(v.xD0), reg(0.001)));
+            v.sway_scale = mem(fp::fadds(reg(v.sway_scale), reg(0.001)));
         }
     } else if diff < 0.0 {
         if diff > reg(-0.001) {
-            v.xD0 = mem(target);
+            v.sway_scale = mem(target);
         } else {
-            v.xD0 = mem(fp::fsubs(current, reg(0.001)));
+            v.sway_scale = mem(fp::fsubs(current, reg(0.001)));
         }
     } else {
-        v.xD0 = mem(target);
+        v.sway_scale = mem(target);
     }
-    let (sway, k) = (v.xC8.expect("grmutecity.c: the swaying joint"), v.xD0);
+    let (sway, k) = (
+        v.sway_jobj.expect("grmutecity.c: the swaying joint"),
+        v.sway_scale,
+    );
     let z = r.game.objs.jobjs[sway].rotate.z;
     jobj::set_rotation_z(&mut r.game.objs.jobjs, sway, mem(fp::fmuls(reg(z), reg(k))));
     platform_lights(r, gobj);
@@ -451,7 +461,7 @@ pub fn init_cars(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     super::fzerocar::build(r, gobj, &CAR_MAPS, PILOT_MAP, false);
     place_cars(r.game);
-    r.game.grounds[g.0].u.mute_city_cars().xC4 = 0;
+    r.game.grounds[g.0].u.mute_city_cars().horn_wait = 0;
 }
 
 /// A command of the course's script (`grMc_CmdEntry`): from the frame on (-1 at once after
@@ -627,29 +637,29 @@ pub fn run_script(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let frame = reg(super::ground::anim_frame(r.game, j));
     let v = r.game.grounds[g.0].u.mute_city();
-    if v.xC6 > 0 {
-        v.xC6 -= 1;
+    if v.script_wait > 0 {
+        v.script_wait -= 1;
         return;
     }
     let part = nth_joint(r.game, gobj, 0x1A);
     if crate::lb::anim::any_rewound(&r.game.objs, part) {
-        r.game.grounds[g.0].u.mute_city().xC4 = 0;
-        let platform = r.game.grounds[g.0].u.mute_city().xC8;
+        r.game.grounds[g.0].u.mute_city().script_cursor = 0;
+        let platform = r.game.grounds[g.0].u.mute_city().platform;
         let pj = platform.and_then(|p| jobj_of(r.game, p));
         jobj::req_anim_all(&mut r.game.objs, pj, 1.0);
     }
     loop {
-        let at = r.game.grounds[g.0].u.mute_city().xC4;
+        let at = r.game.grounds[g.0].u.mute_city().script_cursor;
         let e = COURSE_SCRIPT[at as usize];
         if !(frame >= fp::frsp(f64::from(e.frame))) {
             break;
         }
-        let platform = r.game.grounds[g.0].u.mute_city().xC8;
+        let platform = r.game.grounds[g.0].u.mute_city().platform;
         run_command(r, gobj, g, platform, e);
         let v = r.game.grounds[g.0].u.mute_city();
-        v.xC4 += 1;
-        if v.xC4 == SCRIPT_LEN {
-            v.xC4 = 0;
+        v.script_cursor += 1;
+        if v.script_cursor == SCRIPT_LEN {
+            v.script_cursor = 0;
         }
         if e.cmd == 1 {
             break;
@@ -666,7 +676,7 @@ fn run_command(r: &mut Running, gobj: GObjId, g: GroundId, platform: Option<GObj
         nth_joint(r.game, p, k.into())
     };
     match e.cmd {
-        1 => r.game.grounds[g.0].u.mute_city().xC6 = e.param,
+        1 => r.game.grounds[g.0].u.mute_city().script_wait = e.param,
         2 => {
             let p = platform.expect("grmutecity.c: the platform");
             anime::set_rate(r.game, gobj, 0, 1, 0.0, true);
@@ -693,8 +703,8 @@ fn run_command(r: &mut Running, gobj: GObjId, g: GroundId, platform: Option<GObj
             r.game.geometry_mut().enable_joint(TRACK_JOINT);
             let v = r.game.grounds[g.0].u.mute_city();
             v.set_track_on(true);
-            v.xD4 = e.fval;
-            v.xD8 = e.fval;
+            v.left_end = e.fval;
+            v.right_end = e.fval;
         }
         11 => {
             let j = platform_part(r, e.param);
@@ -762,7 +772,7 @@ fn run_command(r: &mut Running, gobj: GObjId, g: GroundId, platform: Option<GObj
         22 => {
             let p = platform.expect("grmutecity.c: the platform");
             let pg = ground_of(r.game, p);
-            r.game.grounds[pg.0].u.mute_city2().xCC = e.fval;
+            r.game.grounds[pg.0].u.mute_city2().sway_target = e.fval;
         }
         23 => r.set_ground_send(if e.param != 0 { 2 } else { 1 }),
         25 => {
@@ -772,7 +782,7 @@ fn run_command(r: &mut Running, gobj: GObjId, g: GroundId, platform: Option<GObj
         }
         24 => {
             if let Some(bg) = super::ground::map_gobj(r.game, 0x1D) {
-                let light = r.game.grounds[g.0].u.mute_city().x110;
+                let light = r.game.grounds[g.0].u.mute_city().light;
                 if e.param != 0 {
                     let script = param(r.game).ptr(r.data, p::LIGHT_SCRIPT);
                     material::start_script(r.game, r.data, bg, script, 0);
@@ -877,16 +887,16 @@ pub fn follow_track(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let (right, xd8) = {
         let v = r.game.grounds[g.0].u.mute_city();
-        (v.xE0, v.xD8)
+        (v.spline_jobj2, v.right_end)
     };
     let (t, a) = find_track_end(r, right, xd8);
-    r.game.grounds[g.0].u.mute_city().xD8 = t;
+    r.game.grounds[g.0].u.mute_city().right_end = t;
     let (left, xd4) = {
         let v = r.game.grounds[g.0].u.mute_city();
-        (v.xDC, v.xD4)
+        (v.spline_jobj, v.left_end)
     };
     let (t, b) = find_track_end(r, left, xd4);
-    r.game.grounds[g.0].u.mute_city().xD4 = t;
+    r.game.grounds[g.0].u.mute_city().left_end = t;
     r.game.geometry_mut().settle_vertices(TRACK_JOINT);
     let mode = r.game.grounds[g.0].u.mute_city().ends();
     let geo = r.game.geometry_mut();
@@ -922,8 +932,8 @@ pub fn follow_track(r: &mut Running, gobj: GObjId) {
     }
     {
         let v = r.game.grounds[g.0].u.mute_city();
-        v.xE4 = a;
-        v.xF0 = b;
+        v.track_start = a;
+        v.track_end = b;
     }
     let d = b - a;
     let lerp = |k: f32, x: f32, o: f64| mem(fp::fmadds(reg(k), reg(x), o));
@@ -985,13 +995,13 @@ pub fn place_cars(game: &mut Game) {
             pos = fp::fadds(pos, 1.0);
         }
         let c = &mut game.gr.mutecity.cars[i];
-        c.x0 = mem(pos);
-        c.x4 = mem(pos);
-        c.xC = lane;
-        c.x8 = 0.0;
-        c.x10 = 0.0;
-        c.x20 = 0;
-        c.x22 &= !0xC0;
+        c.distance = mem(pos);
+        c.spline_pos = mem(pos);
+        c.lane = lane;
+        c.speed = 0.0;
+        c.damage = 0.0;
+        c.race_flags = 0;
+        c.flags &= !0xC0;
         c.item = None;
         c.generator = false;
         game.gr.mutecity.order[i] = i as i32;
@@ -1008,16 +1018,16 @@ pub fn steer_car(game: &mut Game, data: &Archives, i: usize) {
     let p = param(game);
     let rng = &mut game.objs.rng;
     let c = &mut game.gr.mutecity.cars[i];
-    let flags = c.x20;
+    let flags = c.race_flags;
     if c.wrecked() {
-        if reg(c.x4) > reg(0.827) && reg(c.x4) < reg(0.914) {
-            if reg(c.x8) < reg(0.001) {
-                c.x8 = 0.001;
+        if reg(c.spline_pos) > reg(0.827) && reg(c.spline_pos) < reg(0.914) {
+            if reg(c.speed) < reg(0.001) {
+                c.speed = 0.001;
             }
         } else {
-            c.x8 = mem(fp::fmuls(reg(c.x8), reg(0.95)));
-            if reg(c.x8) < reg(0.00001) {
-                c.x8 = 0.0;
+            c.speed = mem(fp::fmuls(reg(c.speed), reg(0.95)));
+            if reg(c.speed) < reg(0.00001) {
+                c.speed = 0.0;
             }
         }
         return;
@@ -1025,20 +1035,20 @@ pub fn steer_car(game: &mut Game, data: &Archives, i: usize) {
     let pf = |off: u32| reg(p.f(data, off));
     if flags & 1 != 0 {
         if flags & 8 != 0 {
-            c.x8 = mem(fp::fsubs(reg(c.x8), pf(p::BRAKE)));
+            c.speed = mem(fp::fsubs(reg(c.speed), pf(p::BRAKE)));
         } else {
             match rng.below(4) {
-                0 => c.x8 = mem(fp::fsubs(reg(c.x8), pf(p::BRAKE))),
+                0 => c.speed = mem(fp::fsubs(reg(c.speed), pf(p::BRAKE))),
                 1 | 2 => {
                     if flags & 4 != 0 {
-                        c.xC = mem(fp::fadds(reg(c.xC), pf(p::SWERVE)));
-                        if reg(c.xC) > 0.9 {
-                            c.xC = 0.9;
+                        c.lane = mem(fp::fadds(reg(c.lane), pf(p::SWERVE)));
+                        if reg(c.lane) > 0.9 {
+                            c.lane = 0.9;
                         }
                     } else {
-                        c.xC = mem(fp::fsubs(reg(c.xC), pf(p::SWERVE)));
-                        if reg(c.xC) < 0.1 {
-                            c.xC = 0.1;
+                        c.lane = mem(fp::fsubs(reg(c.lane), pf(p::SWERVE)));
+                        if reg(c.lane) < 0.1 {
+                            c.lane = 0.1;
                         }
                     }
                 }
@@ -1046,24 +1056,24 @@ pub fn steer_car(game: &mut Game, data: &Archives, i: usize) {
             }
         }
     } else {
-        c.x8 = mem(fp::fadds(reg(c.x8), pf(p::ACCEL)));
+        c.speed = mem(fp::fadds(reg(c.speed), pf(p::ACCEL)));
         let center = pf(p::CENTER);
-        if reg(c.xC) > fp::fadds(reg(0.7), center) {
-            c.xC = mem(fp::fsubs(reg(c.xC), center));
-        } else if reg(c.xC) < fp::fsubs(reg(0.3), center) {
-            c.xC = mem(fp::fadds(reg(c.xC), center));
+        if reg(c.lane) > fp::fadds(reg(0.7), center) {
+            c.lane = mem(fp::fsubs(reg(c.lane), center));
+        } else if reg(c.lane) < fp::fsubs(reg(0.3), center) {
+            c.lane = mem(fp::fadds(reg(c.lane), center));
         }
     }
     if flags & 8 != 0 {
         if flags & 4 != 0 {
-            c.xC = mem(fp::fadds(reg(c.xC), pf(p::SWERVE)));
-            if reg(c.xC) > 1.0 {
-                c.xC = 1.0;
+            c.lane = mem(fp::fadds(reg(c.lane), pf(p::SWERVE)));
+            if reg(c.lane) > 1.0 {
+                c.lane = 1.0;
             }
         } else {
-            c.xC = mem(fp::fsubs(reg(c.xC), pf(p::SWERVE)));
-            if reg(c.xC) < 0.0 {
-                c.xC = 0.0;
+            c.lane = mem(fp::fsubs(reg(c.lane), pf(p::SWERVE)));
+            if reg(c.lane) < 0.0 {
+                c.lane = 0.0;
             }
         }
     }
@@ -1074,12 +1084,12 @@ pub fn steer_car(game: &mut Game, data: &Archives, i: usize) {
     } else {
         pf(p::TOP_SPEED)
     };
-    if reg(c.x8) > top {
-        c.x8 = mem(top);
+    if reg(c.speed) > top {
+        c.speed = mem(top);
         return;
     }
-    if reg(c.x8) < 0.0 {
-        c.x8 = 0.0;
+    if reg(c.speed) < 0.0 {
+        c.speed = 0.0;
     }
 }
 
@@ -1112,8 +1122,8 @@ pub fn steer_cars(r: &mut Running) {
         let mut j = i;
         while j >= 0 {
             let temp = ordered(m, j);
-            let a = m.cars[temp as usize].x0;
-            let b = m.cars[ordered(m, j - 1) as usize].x0;
+            let a = m.cars[temp as usize].distance;
+            let b = m.cars[ordered(m, j - 1) as usize].distance;
             if reg(a) > reg(b) {
                 let prev = ordered(m, j - 1);
                 set_ordered(m, j, prev);
@@ -1126,7 +1136,7 @@ pub fn steer_cars(r: &mut Running) {
     }
     for i in 0..CARS {
         let k = m.order[i] as usize;
-        m.cars[k].x20 = 0;
+        m.cars[k].race_flags = 0;
     }
     for i in 0..CARS {
         let me = m.order[i] as usize;
@@ -1138,8 +1148,8 @@ pub fn steer_cars(r: &mut Running) {
             if m.cars[other].wrecked() {
                 continue;
             }
-            let other_pos = reg(m.cars[other].x4);
-            let my_pos = reg(m.cars[me].x4);
+            let other_pos = reg(m.cars[other].spline_pos);
+            let my_pos = reg(m.cars[me].spline_pos);
             let dist = if my_pos > other_pos {
                 fp::fsubs(my_pos, other_pos)
             } else {
@@ -1148,7 +1158,7 @@ pub fn steer_cars(r: &mut Running) {
             if dist > 0.002 {
                 break;
             }
-            m.cars[other].x20 |= 1;
+            m.cars[other].race_flags |= 1;
             let (a, b) = (m.cars[me].pos, m.cars[other].pos);
             let sq = |x: f32, y: f32| {
                 let d = fp::fsubs(reg(x), reg(y));
@@ -1156,25 +1166,25 @@ pub fn steer_cars(r: &mut Running) {
             };
             let d2 = fp::fadds(sq(a.z, b.z), fp::fadds(sq(a.x, b.x), sq(a.y, b.y)));
             if d2 < 900.0 {
-                m.cars[me].x20 |= 8;
-                m.cars[other].x20 |= 8;
+                m.cars[me].race_flags |= 8;
+                m.cars[other].race_flags |= 8;
             }
-            if reg(m.cars[me].xC) > reg(m.cars[other].xC) {
-                m.cars[me].x20 |= 4;
-                m.cars[other].x20 |= 2;
+            if reg(m.cars[me].lane) > reg(m.cars[other].lane) {
+                m.cars[me].race_flags |= 4;
+                m.cars[other].race_flags |= 2;
             } else {
-                m.cars[me].x20 |= 2;
-                m.cars[other].x20 |= 4;
+                m.cars[me].race_flags |= 2;
+                m.cars[other].race_flags |= 4;
             }
         }
     }
     for i in 0..5 {
         let k = m.order[i] as usize;
-        m.cars[k].x20 |= 0x10;
+        m.cars[k].race_flags |= 0x10;
     }
     for i in 25..CARS {
         let k = m.order[i] as usize;
-        m.cars[k].x20 |= 0x20;
+        m.cars[k].race_flags |= 0x20;
     }
     for i in 0..CARS {
         steer_car(r.game, r.data, i);
@@ -1215,7 +1225,7 @@ pub fn steer_cars(r: &mut Running) {
 #[doc(alias = "grMuteCity_801F19F4")]
 pub fn car_hit(game: &mut Game, car: usize, damage: f32) {
     let c = &mut game.gr.mutecity.cars[car];
-    c.x10 = mem(fp::fadds(reg(c.x10), reg(damage)));
+    c.damage = mem(fp::fadds(reg(c.damage), reg(damage)));
 }
 
 /// Which car a hit callback's address names (`grMc_803E3C6C`), if any.
@@ -1278,7 +1288,7 @@ pub fn move_cars(r: &mut Running, car_gobj: GObjId, gobj: GObjId) {
     let _ = super::ground::scale(r.game);
     let (xd4, xd8, left, right) = {
         let v = r.game.grounds[g.0].u.mute_city();
-        (v.xD4, v.xD8, v.xDC, v.xE0)
+        (v.left_end, v.right_end, v.spline_jobj, v.spline_jobj2)
     };
     let mid = fp::fmuls(reg(0.5), fp::fadds(reg(xd4), reg(xd8)));
     let mid_next = fp::fadds(1.0, mid);
@@ -1286,8 +1296,8 @@ pub fn move_cars(r: &mut Running, car_gobj: GObjId, gobj: GObjId) {
     let mut j = car_root.and_then(|c| r.game.objs.jobjs[c].child);
     {
         let v = r.game.grounds[cg.0].u.mute_city_cars();
-        if v.xC4 != 0 {
-            v.xC4 -= 1;
+        if v.horn_wait != 0 {
+            v.horn_wait -= 1;
         }
     }
     let rspline = spline_of(r.game, right).expect("grmutecity.c: the right spline");
@@ -1296,13 +1306,13 @@ pub fn move_cars(r: &mut Running, car_gobj: GObjId, gobj: GObjId) {
     for i in 0..CARS {
         {
             let c = &mut r.game.gr.mutecity.cars[i];
-            c.x4 = mem(fp::fadds(reg(c.x4), reg(c.x8)));
-            c.x0 = mem(fp::fadds(reg(c.x0), reg(c.x8)));
-            if reg(c.x4) > 1.0 {
-                c.x4 = mem(fp::fsubs(reg(c.x4), 1.0));
+            c.spline_pos = mem(fp::fadds(reg(c.spline_pos), reg(c.speed)));
+            c.distance = mem(fp::fadds(reg(c.distance), reg(c.speed)));
+            if reg(c.spline_pos) > 1.0 {
+                c.spline_pos = mem(fp::fsubs(reg(c.spline_pos), 1.0));
             }
         }
-        let mut t = r.game.gr.mutecity.cars[i].x4;
+        let mut t = r.game.gr.mutecity.cars[i].spline_pos;
         let p = spline_at(r.data, rspline, t, false);
         let rp = crate::lb::joint::world_position(&mut r.game.objs, r.data, right, Some(p));
         let p = spline_at(r.data, lspline, t, false);
@@ -1328,7 +1338,7 @@ pub fn move_cars(r: &mut Running, car_gobj: GObjId, gobj: GObjId) {
         up.normalize();
         along = across.sdk_cross(up);
         along.normalize();
-        let lane = reg(r.game.gr.mutecity.cars[i].xC);
+        let lane = reg(r.game.gr.mutecity.cars[i].lane);
         let place = |rv: f32, lv: f32, u: f32| {
             let on = fp::fmadds(fp::fsubs(reg(lv), reg(rv)), lane, reg(rv));
             mem(fp::frsp(fp::fmadd(3.0, reg(u), on)))
@@ -1345,8 +1355,11 @@ pub fn move_cars(r: &mut Running, car_gobj: GObjId, gobj: GObjId) {
         jobj::set_rotation_x(&mut r.game.objs.jobjs, cj, rot.x);
         jobj::set_rotation_y(&mut r.game.objs.jobjs, cj, rot.y);
         jobj::set_rotation_z(&mut r.game.objs.jobjs, cj, rot.z);
-        let flags = r.game.gr.mutecity.cars[i].x20;
-        if flags & 8 != 0 && flags & 2 != 0 && r.game.grounds[cg.0].u.mute_city_cars().xC4 == 0 {
+        let flags = r.game.gr.mutecity.cars[i].race_flags;
+        if flags & 8 != 0
+            && flags & 2 != 0
+            && r.game.grounds[cg.0].u.mute_city_cars().horn_wait == 0
+        {
             grlib::generator_at(r.game, r.data, 0x11A, 0, pos);
             if sounds < 1 {
                 if reg(pos.z) < 0.0 {
@@ -1374,10 +1387,10 @@ pub fn move_cars(r: &mut Running, car_gobj: GObjId, gobj: GObjId) {
                         sounds += 1;
                     }
                 }
-                r.game.grounds[cg.0].u.mute_city_cars().xC4 = 7;
+                r.game.grounds[cg.0].u.mute_city_cars().horn_wait = 7;
             }
         }
-        let age = reg(r.game.gr.mutecity.cars[i].x10);
+        let age = reg(r.game.gr.mutecity.cars[i].damage);
         let pm = param(r.game);
         if age > reg(pm.f(r.data, p::WRECK_AGE)) {
             if !r.game.gr.mutecity.cars[i].wrecked() {
@@ -1401,7 +1414,7 @@ pub fn move_cars(r: &mut Running, car_gobj: GObjId, gobj: GObjId) {
                 if let Some(item) = r.game.gr.mutecity.cars[i].item.take() {
                     material::destroy_item(r, item);
                 }
-                r.game.gr.mutecity.cars[i].x22 |= 0x80;
+                r.game.gr.mutecity.cars[i].flags |= 0x80;
             }
         } else if age > reg(pm.f(r.data, p::SMOKE_AGE)) && !r.game.gr.mutecity.cars[i].generator {
             let gen_ = car_generator(r, 0x116, j);
@@ -1416,7 +1429,7 @@ pub fn move_cars(r: &mut Running, car_gobj: GObjId, gobj: GObjId) {
                 && reg(pos.z) < reg(50.0)
         };
         if !r.game.gr.mutecity.cars[i].wrecked() {
-            let rel = reg(r.game.gr.mutecity.cars[i].x4);
+            let rel = reg(r.game.gr.mutecity.cars[i].spline_pos);
             let dist = if mid < rel {
                 fp::fsubs(mid_next, rel)
             } else {
@@ -1435,10 +1448,10 @@ pub fn move_cars(r: &mut Running, car_gobj: GObjId, gobj: GObjId) {
                         if let Some(&id) = ids.get(r.game.objs.rng.below(3) as usize) {
                             r.stage_sound(id);
                         }
-                        r.game.gr.mutecity.cars[i].x22 |= 0x40;
+                        r.game.gr.mutecity.cars[i].flags |= 0x40;
                     }
                 } else if r.game.gr.mutecity.cars[i].shook() {
-                    r.game.gr.mutecity.cars[i].x22 &= !0x40;
+                    r.game.gr.mutecity.cars[i].flags &= !0x40;
                 }
             }
             if near(pos, -100.0) {
@@ -1513,7 +1526,7 @@ pub fn platform_lights(r: &mut Running, gobj: GObjId) {
     let first = lg.and_then(|lg| first_light(r.game, lg));
     let diffuse = |game: &Game, l: lobj::LObjId| game.objs.lobjs[l].flags & lobj::DIFFUSE != 0;
     if grlib::overlay_done(r.game, gobj) {
-        if r.game.grounds[g.0].u.mute_city2().xC4 & 0x80 != 0 {
+        if r.game.grounds[g.0].u.mute_city2().flags & 0x80 != 0 {
             if lg.is_some() {
                 let mut cur = first;
                 let mut i = 0;
@@ -1529,7 +1542,7 @@ pub fn platform_lights(r: &mut Running, gobj: GObjId) {
                     cur = r.game.objs.lobjs[l].next;
                 }
             }
-            r.game.grounds[g.0].u.mute_city2().xC4 &= !0x80;
+            r.game.grounds[g.0].u.mute_city2().flags &= !0x80;
         }
         return;
     }
@@ -1540,7 +1553,7 @@ pub fn platform_lights(r: &mut Running, gobj: GObjId) {
         let color = [hex.r, hex.g, hex.b, hex.a];
         while let Some(l) = cur {
             if diffuse(r.game, l) {
-                if r.game.grounds[g.0].u.mute_city2().xC4 & 0x80 == 0 {
+                if r.game.grounds[g.0].u.mute_city2().flags & 0x80 == 0 {
                     let c = lobj::color(&r.game.objs.lobjs, l);
                     r.game.grounds[g.0].u.mute_city2().saved_colors[i] = c;
                 }
@@ -1553,7 +1566,7 @@ pub fn platform_lights(r: &mut Running, gobj: GObjId) {
             cur = r.game.objs.lobjs[l].next;
         }
     }
-    r.game.grounds[g.0].u.mute_city2().xC4 |= 0x80;
+    r.game.grounds[g.0].u.mute_city2().flags |= 0x80;
 }
 
 /// The track's collision joint's callback, `fn_801F2B58`: while the track hurts, an item
@@ -1611,18 +1624,18 @@ pub fn check_shadow_render(game: &mut Game, pos: Vec3, j: Option<JObjId>) -> boo
         return true;
     }
     let x = reg(pos.x);
-    let x_min = reg(v.xE4.x);
+    let x_min = reg(v.track_start.x);
     if x < x_min {
         return false;
     }
-    let x_max = reg(v.xF0.x);
+    let x_max = reg(v.track_end.x);
     if x > x_max {
         return false;
     }
     let slope = fp::fdivs(
-        fp::fsubs(reg(v.xF0.y), reg(v.xE4.y)),
+        fp::fsubs(reg(v.track_end.y), reg(v.track_start.y)),
         fp::fsubs(x_max, x_min),
     );
-    let y = fp::fmadds(slope, fp::fsubs(x, x_min), reg(v.xE4.y));
+    let y = fp::fmadds(slope, fp::fsubs(x, x_min), reg(v.track_start.y));
     reg(pos.y) > fp::fsubs(y, 3.0)
 }

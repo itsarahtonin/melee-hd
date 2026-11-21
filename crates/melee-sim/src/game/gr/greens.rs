@@ -289,18 +289,18 @@ pub fn init_whispy(r: &mut Running, gobj: GObjId) {
     let p = param(r.game);
     let (max, min) = (p.i(r.data, WIND_TIMER_MAX), p.i(r.data, WIND_TIMER_MIN));
     let v = r.game.grounds[g.0].u.greens2();
-    v.x0 = 0;
-    v.x4 = 0;
-    v.x8 = 0;
+    v.cycle = 0;
+    v.state = 0;
+    v.step = 0;
     let wait = randrange(r, max, min);
     let v = r.game.grounds[g.0].u.greens2();
-    v.xC = wait;
-    v.x10 = 1;
-    v.x1C = 0;
+    v.count = wait;
+    v.state_new = 1;
+    v.ticks = 0;
     let side = r.game.objs.rng.below(2);
     let v = r.game.grounds[g.0].u.greens2();
-    v.x14 = side;
-    v.x18 = 0;
+    v.facing = side;
+    v.wind = 0;
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
 }
@@ -319,7 +319,7 @@ pub fn wind_push(r: &mut Running, gobj: GObjId, fighter: GObjId) -> Option<Vec3>
     let pos = r.game.fighter(fighter).cur_pos;
     let p = param(r.game);
     let g = ground_of(r.game, gobj);
-    let blowing = r.game.grounds[g.0].u.greens2().x18;
+    let blowing = r.game.grounds[g.0].u.greens2().wind;
     let d = r.data;
     let neg = |x: f32| mem(fp::fneg(reg(x)));
     let (top, bottom) = (p.f(d, WIND_TOP), p.f(d, WIND_BOTTOM));
@@ -336,9 +336,9 @@ pub fn wind_push(r: &mut Running, gobj: GObjId, fighter: GObjId) -> Option<Vec3>
 fn advance(game: &mut Game, gobj: GObjId) {
     let g = ground_of(game, gobj);
     let v = game.grounds[g.0].u.greens2();
-    v.x0 = v.x0.wrapping_add(1).wrapping_rem(10);
-    v.x4 = CYCLE[v.x0 as usize];
-    v.x10 = 1;
+    v.cycle = v.cycle.wrapping_add(1).wrapping_rem(10);
+    v.state = CYCLE[v.cycle as usize];
+    v.state_new = 1;
 }
 
 /// Starts Whispy's and the background's animations.
@@ -353,7 +353,7 @@ fn animate(r: &mut Running, gobj: GObjId, back: GObjId, anim: i32, back_anim: i3
 fn blow_anims(game: &mut Game, gobj: GObjId) -> (i32, i32) {
     let g = ground_of(game, gobj);
     let v = game.grounds[g.0].u.greens2();
-    let (step, side) = (v.x8 as usize, v.x14 as usize);
+    let (step, side) = (v.step as usize, v.facing as usize);
     (BLOW[step][side], BLOW_BACK[step][side])
 }
 
@@ -368,7 +368,7 @@ fn whispy_dir(r: &mut Running, gobj: GObjId) -> i32 {
 /// A wind source on Whispy's side that sways the fighters' parts.
 fn blow_wind(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    let side = r.game.grounds[g.0].u.greens2().x14;
+    let side = r.game.grounds[g.0].u.greens2().facing;
     let p = param(r.game);
     let d = r.data;
     let neg = |x: f32| mem(fp::fneg(reg(x)));
@@ -404,30 +404,30 @@ fn blow_wind(r: &mut Running, gobj: GObjId) {
 pub fn proc_whispy(r: &mut Running, gobj: GObjId) {
     let back = map_gobj(r.game, MAP_BACK).expect("Ground_GetMapGObj(4)");
     let g = ground_of(r.game, gobj);
-    r.game.grounds[g.0].u.greens2().x18 = 0;
+    r.game.grounds[g.0].u.greens2().wind = 0;
     if r.game.gr.greens.demo != 0 || r.game.gr.greens.waiting != 0 {
         return;
     }
     let p = param(r.game);
     let d = r.data;
     let v = r.game.grounds[g.0].u.greens2();
-    v.x1C = v.x1C.wrapping_add(1);
-    match v.x4 {
+    v.ticks = v.ticks.wrapping_add(1);
+    match v.state {
         0 => {
-            if v.x10 != 0 {
-                v.x10 = 0;
+            if v.state_new != 0 {
+                v.state_new = 0;
                 let idle = r.game.objs.rng.below(8);
-                r.game.grounds[g.0].u.greens2().x8 = idle;
+                r.game.grounds[g.0].u.greens2().step = idle;
                 let wait = randrange(r, p.i(d, WIND_TIMER_MAX), p.i(d, WIND_TIMER_MIN));
-                r.game.grounds[g.0].u.greens2().xC = wait;
+                r.game.grounds[g.0].u.greens2().count = wait;
                 animate(r, gobj, back, IDLE[idle as usize], IDLE_BACK[idle as usize]);
                 return;
             }
-            v.xC = v.xC.wrapping_sub(1);
+            v.count = v.count.wrapping_sub(1);
             if anime::rewound(r.game, gobj, 0, 7) {
-                if r.game.grounds[g.0].u.greens2().xC > 0 {
+                if r.game.grounds[g.0].u.greens2().count > 0 {
                     let idle = r.game.objs.rng.below(8);
-                    r.game.grounds[g.0].u.greens2().x8 = idle;
+                    r.game.grounds[g.0].u.greens2().step = idle;
                     animate(r, gobj, back, IDLE[idle as usize], IDLE_BACK[idle as usize]);
                     return;
                 }
@@ -435,22 +435,22 @@ pub fn proc_whispy(r: &mut Running, gobj: GObjId) {
             }
         }
         1 => {
-            if v.x10 != 0 {
-                v.x10 = 0;
-                v.x8 = 0;
+            if v.state_new != 0 {
+                v.state_new = 0;
+                v.step = 0;
                 let dir = whispy_dir(r, gobj);
                 let v = r.game.grounds[g.0].u.greens2();
-                v.x14 = dir;
-                v.xC = 0;
+                v.facing = dir;
+                v.count = 0;
                 let (a, b) = blow_anims(r.game, gobj);
                 animate(r, gobj, back, a, b);
                 return;
             }
             let next = |r: &mut Running| {
                 let v = r.game.grounds[g.0].u.greens2();
-                v.x8 = v.x8.wrapping_add(1);
+                v.step = v.step.wrapping_add(1);
             };
-            let step = v.x8;
+            let step = v.step;
             match step {
                 0 | 5 => {
                     if anime::finished(r.game, gobj, 0, 7) {
@@ -470,11 +470,11 @@ pub fn proc_whispy(r: &mut Running, gobj: GObjId) {
                 2 => {
                     if anime::rewound(r.game, gobj, 0, 7) {
                         let v = r.game.grounds[g.0].u.greens2();
-                        v.xC = v.xC.wrapping_add(1);
-                        if fp::frsp(f64::from(v.xC)) > reg(p.f(d, BREATH)) {
-                            v.x8 = v.x8.wrapping_add(1);
-                            v.xC = 0;
-                            let side = v.x14;
+                        v.count = v.count.wrapping_add(1);
+                        if fp::frsp(f64::from(v.count)) > reg(p.f(d, BREATH)) {
+                            v.step = v.step.wrapping_add(1);
+                            v.count = 0;
+                            let side = v.facing;
                             let (a, b) = blow_anims(r.game, gobj);
                             animate(r, gobj, back, a, b);
                             r.stage_sound(if side == 0 { 0x68FB0 } else { 0x68FB1 });
@@ -495,18 +495,18 @@ pub fn proc_whispy(r: &mut Running, gobj: GObjId) {
                 4 => {
                     super::super::camera::request_quake(r, super::super::camera::QUAKE_LOOP, None);
                     let v = r.game.grounds[g.0].u.greens2();
-                    v.x18 = v.x14.wrapping_add(1);
+                    v.wind = v.facing.wrapping_add(1);
                     if anime::rewound(r.game, gobj, 0, 7) {
                         let v = r.game.grounds[g.0].u.greens2();
-                        v.xC = v.xC.wrapping_add(1);
-                        let t = fp::frsp(f64::from(v.xC));
-                        let side = v.x14;
+                        v.count = v.count.wrapping_add(1);
+                        let t = fp::frsp(f64::from(v.count));
+                        let side = v.facing;
                         let done = t > reg(p.f(d, BLOW_MAX))
                             || t > reg(p.f(d, BLOW_MIN)) && side != whispy_dir(r, gobj);
                         if done {
                             let v = r.game.grounds[g.0].u.greens2();
-                            v.x8 = v.x8.wrapping_add(1);
-                            v.xC = 0;
+                            v.step = v.step.wrapping_add(1);
+                            v.count = 0;
                             let (a, b) = blow_anims(r.game, gobj);
                             animate(r, gobj, back, a, b);
                             return;
@@ -519,32 +519,32 @@ pub fn proc_whispy(r: &mut Running, gobj: GObjId) {
             }
         }
         2 => {
-            if v.x10 != 0 {
-                v.x10 = 0;
-                v.x8 = 0;
-                v.xC = 0;
+            if v.state_new != 0 {
+                v.state_new = 0;
+                v.step = 0;
+                v.count = 0;
                 animate(r, gobj, back, 7, 7);
                 r.stage_sound(0x68FB2);
                 let max = p.i(d, APPLES_MAX).wrapping_sub(1);
                 let count = randrange(r, p.i(d, APPLES_MIN), max);
-                r.game.grounds[g.0].u.greens2().x20 = count;
+                r.game.grounds[g.0].u.greens2().apples_left = count;
                 let side = r.game.objs.rng.below(2);
-                r.game.grounds[g.0].u.greens2().x24 = side;
+                r.game.grounds[g.0].u.greens2().apple_side = side;
             } else if anime::finished(r.game, gobj, 0, 7) {
-                if r.game.grounds[g.0].u.greens2().x20 < 0 {
+                if r.game.grounds[g.0].u.greens2().apples_left < 0 {
                     advance(r.game, gobj);
                 } else {
                     animate(r, gobj, back, 7, 7);
                 }
-            } else if r.game.grounds[g.0].u.greens2().x20 >= 0 {
+            } else if r.game.grounds[g.0].u.greens2().apples_left >= 0 {
                 let (start, every) = (p.i(d, APPLE_START), p.i(d, APPLE_EVERY));
-                let t = r.game.grounds[g.0].u.greens2().xC;
+                let t = r.game.grounds[g.0].u.greens2().count;
                 if t >= start && t.wrapping_sub(start).wrapping_rem(every) == 0 {
                     drop_apple(r, gobj);
                 }
             }
             let v = r.game.grounds[g.0].u.greens2();
-            v.xC = v.xC.wrapping_add(1);
+            v.count = v.count.wrapping_add(1);
         }
         _ => {}
     }
@@ -557,7 +557,7 @@ fn drop_apple(r: &mut Running, gobj: GObjId) {
     let p = param(r.game);
     let d = r.data;
     let rand = reg(r.game.objs.rng.draw_f32());
-    let sign = if r.game.grounds[g.0].u.greens2().x24 == 0 {
+    let sign = if r.game.grounds[g.0].u.greens2().apple_side == 0 {
         fp::fneg(1.0)
     } else {
         1.0
@@ -571,8 +571,8 @@ fn drop_apple(r: &mut Running, gobj: GObjId) {
     let (keep, heal) = (p.f(d, APPLE_KEEP), p.f(d, APPLE_HEAL));
     super::super::it::kinds::whispyapple::spawn(r, Some(gobj), pos, keep, heal);
     let v = r.game.grounds[g.0].u.greens2();
-    v.x20 = v.x20.wrapping_sub(1);
-    v.x24 = v.x24.wrapping_add(1) & 1;
+    v.apples_left = v.apples_left.wrapping_sub(1);
+    v.apple_side = v.apple_side.wrapping_add(1) & 1;
 }
 
 /// The blocks' start hook, `fn_80214658`: the blocks and Whispy run.
@@ -595,12 +595,12 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     setup::init_map_coll(r.game, r.data, j, m);
     let grid = crate::hsd::heap::mem_alloc((ROWS * COLS * 12) as u32);
     let v = r.game.grounds[g.0].u.greens();
-    v.x4 = grid;
+    v.grid_addr = grid;
     v.grid.clear();
     v.grid.resize(ROWS * COLS, Vec3::ZERO);
     let blocks = crate::hsd::heap::mem_alloc((ROWS * COLS * 0x20) as u32);
     let v = r.game.grounds[g.0].u.greens();
-    v.x8 = blocks;
+    v.blocks_addr = blocks;
     v.blocks.clear();
     v.blocks.resize(ROWS * COLS, GreensBlock::default());
     measure_grid(r, gobj);
@@ -614,7 +614,7 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     let (min, max) = (p.i(r.data, BLOCK_TIMER_MIN), p.i(r.data, BLOCK_TIMER_MAX));
     let wait = randrange(r, min, max);
     let v = r.game.grounds[g.0].u.greens();
-    v.xC = wait;
+    v.wait = wait;
     v.set_running(true);
     r.game.gr.greens.waiting = 1;
 }
@@ -642,7 +642,7 @@ pub fn proc_stage(r: &mut Running, gobj: GObjId) {
 pub fn destroy_stage(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.greens();
-    let (grid, blocks) = (v.x4, v.x8);
+    let (grid, blocks) = (v.grid_addr, v.blocks_addr);
     crate::hsd::heap::mem_free(grid);
     crate::hsd::heap::mem_free(blocks);
 }
@@ -790,7 +790,7 @@ pub fn link_corners(r: &mut Running, gobj: GObjId, col: i32, row: i32) {
     let g = ground_of(r.game, gobj);
     let b = blocks(r.game, g).clone();
     let st = |rr: i32, cc: i32| status_at(&b, rr * COLS as i32 + cc);
-    let joint = |rr: i32, cc: i32| b[at(rr, cc)].x18;
+    let joint = |rr: i32, cc: i32| b[at(rr, cc)].coll_joint;
     let link = |r: &mut Running, a: i32, c: i32| r.game.geometry_mut().link_joints(a, c);
     if row > 0 && col > 0 && st(row - 1, col - 1) == 3 {
         if st(row - 1, col) == 3 {
@@ -828,15 +828,20 @@ pub fn link_corners(r: &mut Running, gobj: GObjId, col: i32, row: i32) {
 /// back out) at the grid's column and `y`.
 fn place(r: &mut Running, b: &GreensBlock, x: f32, y: f32) {
     let mut pos = Vec3::new(x, y, 0.0);
-    let root =
-        b.xC.and_then(|o| jobj_of(r.game, o))
-            .expect("a block's object");
+    let root = b
+        .gobj
+        .and_then(|o| jobj_of(r.game, o))
+        .expect("a block's object");
     jobj::set_translate(&mut r.game.objs.jobjs, root, pos);
     let f = fp::fdivs(1.0, reg(scale(r.game)));
     pos.x = mem(fp::fmuls(reg(pos.x), f));
     pos.y = mem(fp::fmuls(reg(pos.y), f));
     pos.z = mem(fp::fmuls(reg(pos.z), f));
-    jobj::set_translate(&mut r.game.objs.jobjs, b.x14.expect("a block's joint"), pos);
+    jobj::set_translate(
+        &mut r.game.objs.jobjs,
+        b.jobj.expect("a block's joint"),
+        pos,
+    );
 }
 
 /// Adds a block (`kind` 1) or a bomb block (2) at the grid's `col` and `row`,
@@ -909,18 +914,18 @@ pub fn add_block(
     b.set_flag(1, kind == 2);
     b.set_flag(2, false);
     b.set_flag(3, false);
-    b.x8 = if status == 1 { top } else { cell.y };
-    b.x4 = 0.0;
-    b.xC = block_gobj;
-    b.x10 = Some(item);
-    b.x14 = joint;
-    b.x18 = coll;
-    b.x1C = None;
+    b.height = if status == 1 { top } else { cell.y };
+    b.fall_speed = 0.0;
+    b.gobj = block_gobj;
+    b.item = Some(item);
+    b.jobj = joint;
+    b.coll_joint = coll;
+    b.breaker = None;
     b.set_flag(4, false);
     b.set_flag(7, false);
     b.set_flag(5, status == 3);
     let b = b.clone();
-    place(r, &b, cell.x, b.x8);
+    place(r, &b, cell.x, b.height);
     super::ground::update_coll_joint(r.game, r.data, coll);
     r.game.geometry_mut().settle_vertices(coll);
 }
@@ -931,17 +936,17 @@ pub fn add_block(
 #[doc(alias = "grGreens_802159B8")]
 pub fn break_block(r: &mut Running, g: GroundId, col: i32, row: i32, by: Option<GObjId>) {
     let b = blocks(r.game, g)[at(row, col)].clone();
-    let Some(item) = b.x10 else { return };
+    let Some(item) = b.item else { return };
     if b.flag(7) {
         return;
     }
     let blk = &mut blocks(r.game, g)[at(row, col)];
     blk.set_flag(7, true);
     material::item_hurtbox_off(r.game, item);
-    blocks(r.game, g)[at(row, col)].x1C = by;
+    blocks(r.game, g)[at(row, col)].breaker = by;
     let s = reg(scale(r.game));
     if b.flag(1) {
-        let j = b.xC.and_then(|o| jobj_of(r.game, o));
+        let j = b.gobj.and_then(|o| jobj_of(r.game, o));
         jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
         material::item_state(r, item, 1);
         super::super::it::hitbox::let_own_items_hit(r.game, item);
@@ -983,7 +988,7 @@ pub fn block_item_nothing(_r: &mut Running, _item: GObjId, _g: GroundId) {}
 pub fn block_hit(r: &mut Running, item: GObjId, g: GroundId, by: Option<GObjId>) {
     let found = blocks(r.game, g)
         .iter()
-        .position(|b| b.status() != 0 && b.x10 == Some(item));
+        .position(|b| b.status() != 0 && b.item == Some(item));
     let i = found.expect("grgreens.c: 1465: 0") as i32;
     break_block(r, g, i % COLS as i32, i / COLS as i32, by);
 }
@@ -1025,7 +1030,7 @@ pub fn update_block(r: &mut Running, gobj: GObjId, col: i32, row: i32) {
         return;
     }
     if b.flag(2) {
-        let item = b.x10.expect("a block's item");
+        let item = b.item.expect("a block's item");
         if material::item_script_done(r.game, item) {
             blocks(r.game, g)[i].set_flag(3, true);
         }
@@ -1038,7 +1043,7 @@ pub fn update_block(r: &mut Running, gobj: GObjId, col: i32, row: i32) {
     let grid_x = |game: &mut Game, rr: i32| game.grounds[g.0].u.greens().grid[at(rr, col)].x;
     if b.flag(4) {
         let blk = &mut blocks(r.game, g)[i];
-        blk.x4 = 0.0;
+        blk.fall_speed = 0.0;
         blk.set_flag(4, false);
         break_block(r, g, col, row, None);
     } else {
@@ -1053,27 +1058,27 @@ pub fn update_block(r: &mut Running, gobj: GObjId, col: i32, row: i32) {
         };
         let bs = blocks(r.game, g);
         let blk = &mut bs[i];
-        blk.x4 = mem(fp::fadds(reg(blk.x4), reg(accel)));
-        if reg(blk.x4) > reg(max) {
-            blk.x4 = max;
+        blk.fall_speed = mem(fp::fadds(reg(blk.fall_speed), reg(accel)));
+        if reg(blk.fall_speed) > reg(max) {
+            blk.fall_speed = max;
         }
-        blk.x8 = mem(fp::fsubs(reg(blk.x8), reg(blk.x4)));
+        blk.height = mem(fp::fsubs(reg(blk.height), reg(blk.fall_speed)));
         if row > 0 {
             let below = bs[at(row - 1, col)].clone();
             if below.status() == 1 || below.status() == 2 {
                 let spacing = reg(spacing.expect("a row above the first"));
                 let blk = &mut bs[i];
-                if fp::fsubs(reg(blk.x8), reg(below.x8)) < spacing {
+                if fp::fsubs(reg(blk.height), reg(below.height)) < spacing {
                     blk.set_status(2);
-                    blk.x8 = mem(fp::fadds(spacing, reg(below.x8)));
+                    blk.height = mem(fp::fadds(spacing, reg(below.height)));
                 }
             }
         }
     }
     let y = grid_y(r.game, row);
-    if reg(blocks(r.game, g)[i].x8) < reg(y) {
+    if reg(blocks(r.game, g)[i].height) < reg(y) {
         let blk = &mut blocks(r.game, g)[i];
-        blk.x8 = y;
+        blk.height = y;
         blk.set_status(3);
         blk.set_flag(5, true);
         for next in row + 1..5 {
@@ -1083,7 +1088,7 @@ pub fn update_block(r: &mut Running, gobj: GObjId, col: i32, row: i32) {
             }
             let (x, y) = (grid_x(r.game, next), grid_y(r.game, next));
             let blk = &mut blocks(r.game, g)[n];
-            blk.x8 = y;
+            blk.height = y;
             blk.set_status(3);
             blk.set_flag(5, true);
             let blk = blk.clone();
@@ -1097,17 +1102,17 @@ pub fn update_block(r: &mut Running, gobj: GObjId, col: i32, row: i32) {
             }
             let x = grid_x(r.game, next);
             let spacing = fp::fsubs(reg(grid_y(r.game, next)), reg(grid_y(r.game, next - 1)));
-            let below = blocks(r.game, g)[at(next - 1, col)].x8;
+            let below = blocks(r.game, g)[at(next - 1, col)].height;
             let y = mem(fp::fadds(spacing, reg(below)));
             let blk = &mut blocks(r.game, g)[n];
-            blk.x8 = y;
+            blk.height = y;
             let blk = blk.clone();
             place(r, &blk, x, y);
         }
     }
     let x = grid_x(r.game, row);
     let blk = blocks(r.game, g)[i].clone();
-    place(r, &blk, x, blk.x8);
+    place(r, &blk, x, blk.height);
 }
 
 /// The blocks' tick, `grGreens_802166C4`. When the wait for a new block is over, a column is
@@ -1121,8 +1126,8 @@ pub fn proc_blocks(r: &mut Running, gobj: GObjId) {
     let p = param(r.game);
     let d = r.data;
     let v = r.game.grounds[g.0].u.greens();
-    let t = v.xC;
-    v.xC = t.wrapping_sub(1);
+    let t = v.wait;
+    v.wait = t.wrapping_sub(1);
     if t < 0 {
         let row_weights = [
             WEIGHT_ROW0,
@@ -1196,7 +1201,7 @@ pub fn proc_blocks(r: &mut Running, gobj: GObjId) {
         }
         let (min, max) = (p.i(d, BLOCK_TIMER_MIN), p.i(d, BLOCK_TIMER_MAX));
         let wait = randrange(r, min, max);
-        r.game.grounds[g.0].u.greens().xC = wait;
+        r.game.grounds[g.0].u.greens().wait = wait;
     }
     for row in 0..5 {
         for col in 0..6 {
@@ -1212,9 +1217,9 @@ pub fn proc_blocks(r: &mut Running, gobj: GObjId) {
                     blk.set_flag(3, false);
                     blk.set_flag(6, true);
                     blk.set_status(0);
-                    setup::destroy(r, b.xC);
-                    material::destroy_item(r, b.x10.expect("a block's item"));
-                    jobj::set_flags(&mut r.game.objs.jobjs, b.x14, jobj::HIDDEN);
+                    setup::destroy(r, b.gobj);
+                    material::destroy_item(r, b.item.expect("a block's item"));
+                    jobj::set_flags(&mut r.game.objs.jobjs, b.jobj, jobj::HIDDEN);
                     settle_column(r, gobj, col, row);
                     continue 'restart;
                 }
@@ -1234,27 +1239,27 @@ pub fn link_blocks(r: &mut Running, gobj: GObjId) {
             let b = blocks(r.game, g).clone();
             let me = &b[at(row, col)];
             if me.flag(5) {
-                let x18 = me.x18;
+                let x18 = me.coll_joint;
                 let resting = |rr: i32, cc: i32| b[at(rr, cc)].status() == 3;
                 if row > 0 && resting(row - 1, col) {
                     r.game
                         .geometry_mut()
-                        .link_joints(x18, b[at(row - 1, col)].x18);
+                        .link_joints(x18, b[at(row - 1, col)].coll_joint);
                 }
                 if col > 0 && resting(row, col - 1) {
                     r.game
                         .geometry_mut()
-                        .link_joints(x18, b[at(row, col - 1)].x18);
+                        .link_joints(x18, b[at(row, col - 1)].coll_joint);
                 }
                 if row < 4 && resting(row + 1, col) {
                     r.game
                         .geometry_mut()
-                        .link_joints(x18, b[at(row + 1, col)].x18);
+                        .link_joints(x18, b[at(row + 1, col)].coll_joint);
                 }
                 if col < 5 && resting(row, col + 1) {
                     r.game
                         .geometry_mut()
-                        .link_joints(x18, b[at(row, col + 1)].x18);
+                        .link_joints(x18, b[at(row, col + 1)].coll_joint);
                 }
                 blocks(r.game, g)[at(row, col)].set_flag(5, false);
             } else if me.flag(6) {
@@ -1272,7 +1277,7 @@ pub fn block_landed(gp: &mut super::super::structs::Ground, joint_id: i32) {
     let blocks = &mut gp.u.greens().blocks;
     if let Some(b) = blocks
         .iter_mut()
-        .find(|b| b.status() != 0 && b.x18 == joint_id)
+        .find(|b| b.status() != 0 && b.coll_joint == joint_id)
     {
         b.set_flag(4, true);
     }

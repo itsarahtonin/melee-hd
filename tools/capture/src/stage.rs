@@ -437,7 +437,7 @@ impl Importer<'_> {
         self.game.gr.zebes_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRONETT_YAKUMONO);
         self.game.gr.onett_yakumono = self.data_or_unhandled(yaku);
-        self.game.gr.onett_x69c4 = cap.u32(GRONETT_X69C4) as i32;
+        self.game.gr.onett_unread = cap.u32(GRONETT_X69C4) as i32;
         let yaku = cap.u32(GRCORNERIA_YAKUMONO);
         self.game.gr.corneria_yakumono = self.data_or_unhandled(yaku);
         self.import_corneria();
@@ -521,9 +521,9 @@ impl Importer<'_> {
             s.import_handle_gobj(p)
         };
         self.game.gr.devices = gr::FtDevices {
-            x6570: cap.u32(sym("ft_804D6570")) as i32,
+            coll_count: cap.u32(sym("ft_804D6570")) as i32,
             bury_count: cap.u32(sym("ftDevice_BuryThingCount")) as i32,
-            x6578: cap.u32(sym("ft_804D6578")) as i32,
+            wind_count: cap.u32(sym("ft_804D6578")) as i32,
             device: gobj_at(self, sym("ft_80459A68")),
             device_type: cap.u32(sym("ft_80459A68") + 4),
             device_cb: match cap.u32(sym("ft_80459A68") + 8) {
@@ -878,7 +878,7 @@ impl Comparer<'_> {
         // A stage object's dynamics chain (Rainbow Cruise's flag): each link, where both sides
         // have one (the handles compare with the variables).
         if let GroundVars::RCruiseFlag(v) = &self.game.grounds[o.0].u.vars {
-            let mut ours = v.xC4.data;
+            let mut ours = v.chain.data;
             let mut theirs = self.u32(t + 0xC4);
             let mut k = 0;
             while let Some(d) = ours
@@ -1353,7 +1353,7 @@ impl Comparer<'_> {
         self.check(
             "grOt_804D69C4",
             "onett x69c4",
-            game.gr.onett_x69c4,
+            game.gr.onett_unread,
             self.u32(GRONETT_X69C4) as i32,
         );
         let greens = &game.gr.greens;
@@ -1411,7 +1411,7 @@ impl Comparer<'_> {
         self.check(
             "ftdevice",
             "counts",
-            (d.x6570, d.bury_count, d.x6578),
+            (d.coll_count, d.bury_count, d.wind_count),
             (
                 self.u32(sym("ft_804D6570")) as i32,
                 self.u32(sym("ftDevice_BuryThingCount")) as i32,
@@ -2167,14 +2167,14 @@ impl Importer<'_> {
             for i in 0..20u32 {
                 let b = GRZEBES_BUBBLES + 0x24 * i;
                 let e = &mut z.bubbles[i as usize];
-                e.x00 = (mem(b) >> 24) as u8;
-                e.x02 = mem(b) as i16;
-                e.x08 = f32::from_bits(mem(b + 8));
-                e.x0C = f32::from_bits(mem(b + 0xC));
-                e.x10 = f32::from_bits(mem(b + 0x10));
-                e.x14 = f32::from_bits(mem(b + 0x14));
-                e.x18 = f32::from_bits(mem(b + 0x18));
-                e.x1C = f32::from_bits(mem(b + 0x1C));
+                e.state = (mem(b) >> 24) as u8;
+                e.timer = mem(b) as i16;
+                e.x = f32::from_bits(mem(b + 8));
+                e.y = f32::from_bits(mem(b + 0xC));
+                e.vel_x = f32::from_bits(mem(b + 0x10));
+                e.vel_y = f32::from_bits(mem(b + 0x14));
+                e.size = f32::from_bits(mem(b + 0x18));
+                e.target_size = f32::from_bits(mem(b + 0x1C));
             }
             z
         };
@@ -2183,21 +2183,21 @@ impl Importer<'_> {
             let b = GRZEBES_BUBBLES + 0x24 * i;
             // A gone bubble's pop pointer can only be one a bubble that moved up left.
             let j = self.cap.u32(b + 4);
-            let left = self.game.gr.zebes.bubbles[i as usize].x00 == 0 && j != 0;
+            let left = self.game.gr.zebes.bubbles[i as usize].state == 0 && j != 0;
             let pop = if left {
                 None
             } else {
                 self.import_handle_jobj(j)
             };
             let e = &mut self.game.gr.zebes.bubbles[i as usize];
-            e.x04 = pop;
-            e.x04_left = left;
+            e.pop = pop;
+            e.pop_left = left;
             let g = self.cap.u32(b + 0x20);
             if i == 19 && self.cap.u32(sym("stage_info") + 0x88) as i32 == gr::GrKind::MuteCity {
                 // Mute City's race order reaches this word (`Globals::order_before`).
                 continue;
             }
-            self.game.gr.zebes.bubbles[i as usize].x20 = self.import_handle_gobj(g);
+            self.game.gr.zebes.bubbles[i as usize].gobj = self.import_handle_gobj(g);
         }
         let grkind = self.cap.u32(sym("stage_info") + 0x88) as i32;
         let addrs = config_addrs(grkind, &|a| self.cap.u32(a));
@@ -2337,9 +2337,9 @@ impl Comparer<'_> {
         for (i, e) in z.bubbles.iter().enumerate() {
             let b = GRZEBES_BUBBLES + 0x24 * i as u32;
             let ours = (
-                e.x00,
-                e.x02,
-                [e.x08, e.x0C, e.x10, e.x14, e.x18, e.x1C].map(f32::to_bits),
+                e.state,
+                e.timer,
+                [e.x, e.y, e.vel_x, e.vel_y, e.size, e.target_size].map(f32::to_bits),
             );
             let theirs = (
                 (self.u32(b) >> 24) as u8,
@@ -2349,16 +2349,16 @@ impl Comparer<'_> {
             self.check(&format!("grZe_8049F170[{i}]"), "bubble", ours, theirs);
             let jo = self.u32(b + 4);
             let jp = (jo != 0).then(|| self.maps.jobjs.get(&jo).copied());
-            if !e.x04_left {
-                self.check(&format!("grZe_8049F170[{i}]"), "pop", e.x04.map(Some), jp);
-            } else if e.x04.is_some() {
+            if !e.pop_left {
+                self.check(&format!("grZe_8049F170[{i}]"), "pop", e.pop.map(Some), jp);
+            } else if e.pop.is_some() {
                 // The pointer a bubble that moved up left, dangling once its pop goes:
                 // compared as a dangling pointer, by the joint's address.
                 use melee_sim::game::mirror::Cx;
                 self.compare_handle(
                     &format!("grZe_8049F170[{i}] pop (left)"),
                     "JObjId",
-                    e.x04.map(|j| j.0),
+                    e.pop.map(|j| j.0),
                     jo,
                 );
             }
@@ -2371,7 +2371,7 @@ impl Comparer<'_> {
             self.check(
                 &format!("grZe_8049F170[{i}]"),
                 "object",
-                e.x20.map(Some),
+                e.gobj.map(Some),
                 gp,
             );
         }
@@ -2432,14 +2432,14 @@ impl Importer<'_> {
             let b = GRMUTECITY_CARS + 0x2C * i;
             let f = |o: u32| f32::from_bits(self.cap.u32(b + o));
             let c = gr::mutecity::Car {
-                x0: f(0),
-                x4: f(4),
-                x8: f(8),
-                xC: f(0xC),
-                x10: f(0x10),
+                distance: f(0),
+                spline_pos: f(4),
+                speed: f(8),
+                lane: f(0xC),
+                damage: f(0x10),
                 pos: Vec3::new(f(0x14), f(0x18), f(0x1C)),
-                x20: (self.cap.u32(b + 0x20) >> 16) as u16,
-                x22: (self.cap.u32(b + 0x20) >> 8) as u8,
+                race_flags: (self.cap.u32(b + 0x20) >> 16) as u16,
+                flags: (self.cap.u32(b + 0x20) >> 8) as u8,
                 item: None,
                 generator: self.cap.u32(b + 0x28) != 0,
             };
@@ -2476,9 +2476,19 @@ impl Comparer<'_> {
         for (i, c) in m.cars.iter().enumerate() {
             let b = GRMUTECITY_CARS + 0x2C * i as u32;
             let ours = (
-                [c.x0, c.x4, c.x8, c.xC, c.x10, c.pos.x, c.pos.y, c.pos.z].map(f32::to_bits),
-                c.x20,
-                c.x22 & 0xC0,
+                [
+                    c.distance,
+                    c.spline_pos,
+                    c.speed,
+                    c.lane,
+                    c.damage,
+                    c.pos.x,
+                    c.pos.y,
+                    c.pos.z,
+                ]
+                .map(f32::to_bits),
+                c.race_flags,
+                c.flags & 0xC0,
                 if c.generator { param } else { 0 },
             );
             let theirs = (

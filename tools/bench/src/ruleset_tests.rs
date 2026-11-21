@@ -727,14 +727,14 @@ fn slippi_onett_cars_note_the_other_phase() {
     let mut bench = Bench::open_path(disc, path);
     let coming = |g: &Game| {
         g.grounds.iter().any(|(_, gr)| {
-            matches!(&gr.u.vars, GroundVars::OnettCar(v) if matches!(v.state_a, 5 | 6) && v.x110 == 1)
+            matches!(&gr.u.vars, GroundVars::OnettCar(v) if matches!(v.state_a, 5 | 6) && v.sub_state_a == 1)
         })
     };
     let car = |g: &Game| {
         g.grounds
             .iter()
             .find_map(|(_, gr)| match &gr.u.vars {
-                GroundVars::OnettCar(v) => Some((v.state_a, v.x110, v.curr_car)),
+                GroundVars::OnettCar(v) => Some((v.state_a, v.sub_state_a, v.curr_car)),
                 _ => None,
             })
             .map(|c| (c, g.stage_info.x740))
@@ -986,7 +986,7 @@ fn doubled_round_notes(
 fn slippi_onett_cars_note_a_doubled_round() {
     let car = |g: &Game| {
         let cars = g.grounds.iter().find_map(|(_, gr)| match &gr.u.vars {
-            GroundVars::OnettCar(v) => Some((v.state_a, v.x110, v.curr_car)),
+            GroundVars::OnettCar(v) => Some((v.state_a, v.sub_state_a, v.curr_car)),
             _ => None,
         });
         format!("{cars:?} {} {:#x}", g.stage_info.x740, g.objs.rng.seed)
@@ -1189,7 +1189,7 @@ fn slippi_mute_city_wrecks_note_reads_off_course() {
         None,
         &|g, _| {
             for c in &mut g.gr.mutecity.cars {
-                c.x10 = 1000.0;
+                c.damage = 1000.0;
             }
         },
     );

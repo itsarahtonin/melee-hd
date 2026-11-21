@@ -150,7 +150,7 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     anime::start(r.game, r.data, gobj, 23, 7, 3, 0.0, 1.0, true);
     anime::start(r.game, r.data, gobj, 26, 7, 3, 0.0, 1.0, true);
     setup::add_start_hook(r.game, gobj, CodeRef(START_HOOK));
-    r.game.grounds[g.0].u.yorster().xC4 = 1;
+    r.game.grounds[g.0].u.yorster().waiting = 1;
 }
 
 /// The stage's start hook, `grYorster_80202160`: the blocks, the collision moved to the
@@ -161,7 +161,7 @@ pub fn start_blocks(r: &mut Running, gobj: GObjId) {
     init_blocks(r, gobj);
     update_map_coll(r.game, r.data, gobj);
     r.game.geometry_mut().link_all_joints();
-    r.game.grounds[g.0].u.yorster().xC4 = 0;
+    r.game.grounds[g.0].u.yorster().waiting = 0;
 }
 
 /// The stage's process (map 1), `grYorster_80202254`: the blocks once running, then the wind
@@ -169,7 +169,7 @@ pub fn start_blocks(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "grYorster_80202254")]
 pub fn proc_stage(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    if r.game.grounds[g.0].u.yorster().xC4 == 0 {
+    if r.game.grounds[g.0].u.yorster().waiting == 0 {
         proc_blocks(r, gobj);
     }
     let level = r.game.gr.wind_level;
@@ -187,15 +187,15 @@ pub fn init_blocks(r: &mut Running, gobj: GObjId) {
     for (i, &part) in BLOCK_PARTS.iter().enumerate() {
         let joint = nth_joint(r.game, gobj, part);
         let b = &mut r.game.grounds[g.0].u.yorster().blocks[i];
-        b.x00 = i as i8;
-        b.x01 = 0;
-        b.x04 = 0.0;
-        b.x08 = 0.0;
-        b.x14 = part;
-        b.x18 = joint;
+        b.index = i as i8;
+        b.state = 0;
+        b.damage = 0.0;
+        b.landing_speed = 0.0;
+        b.part = part;
+        b.jobj = joint;
         let item =
             super::material::stage_item(r, 0, 0, g, joint, None, Some(CodeRef(BLOCK_HIT)), None);
-        r.game.grounds[g.0].u.yorster().blocks[i].x1C = item;
+        r.game.grounds[g.0].u.yorster().blocks[i].item = item;
         let item = item.expect("gryorster.c: a block's item");
         super::material::item_ground_or_air(r.game, item, 0);
         let coll = setup::coll_joint_id(r.game, r.data, m, part);
@@ -228,8 +228,8 @@ pub fn block_hit(
         r.game.ft_80086a4c(f, lag);
     }
     let blocks = &mut r.game.grounds[g.0].u.yorster().blocks;
-    if let Some(b) = blocks.iter_mut().find(|b| b.x1C == Some(item)) {
-        b.x04 = mem(fp::fadds(reg(b.x04), reg(damage)));
+    if let Some(b) = blocks.iter_mut().find(|b| b.item == Some(item)) {
+        b.damage = mem(fp::fadds(reg(b.damage), reg(damage)));
     }
 }
 
@@ -322,8 +322,8 @@ pub fn block_landed(
     let map = gp.map_id;
     let blocks = &mut gp.u.yorster().blocks;
     for b in blocks.iter_mut() {
-        if joint_id == part_joint(map, b.x14) {
-            b.x08 = mem(fp::fadds(reg(b.x08), reg(dy)));
+        if joint_id == part_joint(map, b.part) {
+            b.landing_speed = mem(fp::fadds(reg(b.landing_speed), reg(dy)));
             break;
         }
     }
@@ -376,32 +376,32 @@ pub fn proc_blocks(r: &mut Running, gobj: GObjId) {
     let data = r.data;
     for i in 0..9 {
         let b = r.game.grounds[g.0].u.yorster().blocks[i].clone();
-        let joint = setup::coll_joint_id(r.game, r.data, m, b.x14);
-        let item = b.x1C.expect("gryorster.c: a block's item");
-        match b.x01 as i8 {
+        let joint = setup::coll_joint_id(r.game, r.data, m, b.part);
+        let item = b.item.expect("gryorster.c: a block's item");
+        match b.state as i8 {
             0 | 1 => {
                 let (hit_min, land_min) = (p.f(data, HIT_MIN), p.f(data, LAND_MIN));
                 let mut flip = None;
-                if reg(b.x04) >= reg(hit_min) {
+                if reg(b.damage) >= reg(hit_min) {
                     super::material::item_hurtbox_off(r.game, item);
                     let full = p.f(data, HIT_FULL);
-                    let x04 = mem(fp::fsubs(reg(b.x04), reg(hit_min)));
+                    let x04 = mem(fp::fsubs(reg(b.damage), reg(hit_min)));
                     let left = if reg(x04) >= reg(full) {
                         0
                     } else {
                         fp::fctiwz(fp::fsubs(reg(full), reg(x04)))
                     };
-                    let end = flip_end(r, p, b.x18);
+                    let end = flip_end(r, p, b.jobj);
                     let x10 = fp::fctiwz(fp::fmuls(
                         fp::frsp(f64::from(left)),
                         fp::fdivs(reg(end), reg(full)),
                     ));
-                    r.game.grounds[g.0].u.yorster().blocks[i].x04 = x04;
+                    r.game.grounds[g.0].u.yorster().blocks[i].damage = x04;
                     flip = Some(x10);
-                } else if reg(b.x08) >= reg(land_min) {
+                } else if reg(b.landing_speed) >= reg(land_min) {
                     super::material::item_hurtbox_off(r.game, item);
                     let full = p.f(data, LAND_FULL);
-                    let mut x08 = mem(fp::fsubs(reg(b.x08), reg(land_min)));
+                    let mut x08 = mem(fp::fsubs(reg(b.landing_speed), reg(land_min)));
                     if reg(x08) <= reg(land_min) {
                         x08 = land_min;
                     }
@@ -410,68 +410,68 @@ pub fn proc_blocks(r: &mut Running, gobj: GObjId) {
                     } else {
                         fp::fctiwz(fp::fmuls(10.0, fp::fsubs(reg(full), reg(x08))))
                     };
-                    let end = flip_end(r, p, b.x18);
+                    let end = flip_end(r, p, b.jobj);
                     let x10 = fp::fctiwz(fp::fmuls(
                         fp::frsp(f64::from(left)),
                         fp::fdivs(reg(end), fp::fmuls(10.0, reg(full))),
                     ));
-                    r.game.grounds[g.0].u.yorster().blocks[i].x08 = 0.0;
+                    r.game.grounds[g.0].u.yorster().blocks[i].landing_speed = 0.0;
                     r.stage_sound(0xE);
                     flip = Some(x10);
                 }
                 if let Some(x10) = flip {
                     let delay = p.i(data, DELAY);
                     let v = &mut r.game.grounds[g.0].u.yorster().blocks[i];
-                    v.x10 = x10;
-                    v.x0C = delay;
-                    v.x01 = 2;
+                    v.flip_start = x10;
+                    v.timer = delay;
+                    v.state = 2;
                 }
             }
             2 => {
-                if b.x0C <= 0 {
-                    let from = fp::frsp(f64::from(b.x10)) as f32;
-                    anime::start(r.game, r.data, gobj, b.x14, 7, 0, from, 1.0, true);
+                if b.timer <= 0 {
+                    let from = fp::frsp(f64::from(b.flip_start)) as f32;
+                    anime::start(r.game, r.data, gobj, b.part, 7, 0, from, 1.0, true);
                     r.game.geometry_mut().disable_joint(joint);
                     let v = &mut r.game.grounds[g.0].u.yorster().blocks[i];
-                    v.x01 = 3;
-                    v.x0C = b.x10;
+                    v.state = 3;
+                    v.timer = b.flip_start;
                 } else {
-                    r.game.grounds[g.0].u.yorster().blocks[i].x0C = b.x0C - 1;
+                    r.game.grounds[g.0].u.yorster().blocks[i].timer = b.timer - 1;
                 }
             }
             3 => {
-                if b.x0C >= 0x143 {
-                    let pos = translation(r.game, b.x18);
+                if b.timer >= 0x143 {
+                    let pos = translation(r.game, b.jobj);
                     let scale = reg(super::ground::scale(r.game));
                     let near = mem(fp::fsubs(fp::fmuls(10.0, scale), 2.0));
                     if grlib::point_near_object(r.game, pos, near) {
-                        anime::start(r.game, r.data, gobj, b.x14, 7, 2, 0.0, 0.3, true);
+                        anime::start(r.game, r.data, gobj, b.part, 7, 2, 0.0, 0.3, true);
                         let v = &mut r.game.grounds[g.0].u.yorster().blocks[i];
-                        v.x0C = 0;
-                        v.x01 = 4;
+                        v.timer = 0;
+                        v.state = 4;
                     } else {
-                        turn_back(r, gobj, g, i, b.x14, joint, item);
+                        turn_back(r, gobj, g, i, b.part, joint, item);
                     }
                 } else {
-                    r.game.grounds[g.0].u.yorster().blocks[i].x0C = b.x0C + 1;
+                    r.game.grounds[g.0].u.yorster().blocks[i].timer = b.timer + 1;
                 }
             }
             4 => {
-                if anime::rewound(r.game, gobj, b.x14, 7) || b.x0C >= 0x19 {
-                    r.game.grounds[g.0].u.yorster().blocks[i].x0C = 0;
-                    let pos = translation(r.game, b.x18);
+                if anime::rewound(r.game, gobj, b.part, 7) || b.timer >= 0x19 {
+                    r.game.grounds[g.0].u.yorster().blocks[i].timer = 0;
+                    let pos = translation(r.game, b.jobj);
                     let scale = reg(super::ground::scale(r.game));
                     let near = mem(fp::fdivs(fp::fmuls(10.0, scale), 2.0));
                     if !grlib::point_near_object(r.game, pos, near) {
-                        turn_back(r, gobj, g, i, b.x14, joint, item);
+                        turn_back(r, gobj, g, i, b.part, joint, item);
                     }
                 } else {
-                    r.game.grounds[g.0].u.yorster().blocks[i].x0C = b.x0C + 1;
+                    r.game.grounds[g.0].u.yorster().blocks[i].timer = b.timer + 1;
                 }
             }
             _ => {}
         }
-        r.game.grounds[g.0].u.yorster().blocks[i].x08 = 0.0;
+        r.game.grounds[g.0].u.yorster().blocks[i].landing_speed = 0.0;
     }
 }
 
@@ -501,9 +501,9 @@ fn turn_back(
     r.game.geometry_mut().enable_joint(joint);
     super::material::item_hurtbox_on(r.game, item);
     let v = &mut r.game.grounds[g.0].u.yorster().blocks[i];
-    v.x04 = 0.0;
-    v.x08 = 0.0;
-    v.x01 = 1;
+    v.damage = 0.0;
+    v.landing_speed = 0.0;
+    v.state = 1;
 }
 
 /// A joint's translation (`HSD_JObjGetTranslation`).

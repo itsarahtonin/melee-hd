@@ -540,20 +540,20 @@ pub fn spawn_due(r: &mut Running, gobj: GObjId) {
         c.set_out(true);
         c.set_roared(false);
         c.set_phase(1);
-        c.x4 = 1.0;
-        c.x8 = road_speed;
-        c.xC = 0.5;
+        c.road_pos = 1.0;
+        c.road_speed = road_speed;
+        c.lane = 0.5;
     }
     let lane = r.game.objs.rng.draw_f32();
     {
         let c = &mut r.game.grounds[g.0].u.bigblueroute_cars().cars[i];
-        c.x10 = lane;
-        c.x14 = 0.0;
-        c.x18 = air_speed;
-        c.x1C = 0.0;
+        c.target_lane = lane;
+        c.air_pos = 0.0;
+        c.air_speed = air_speed;
+        c.roll = 0.0;
     }
     let roll = random_roll(r);
-    r.game.grounds[g.0].u.bigblueroute_cars().cars[i].x20 = roll;
+    r.game.grounds[g.0].u.bigblueroute_cars().cars[i].target_roll = roll;
     if !r.game.grounds[g.0].u.bigblueroute_cars().cars[i].sign() {
         let root = jobj_of(r.game, gobj);
         if let Some(root) = root {
@@ -664,66 +664,66 @@ pub fn drive(r: &mut Running, gobj: GObjId) {
     for i in 0..=CARS {
         if r.game.grounds[g.0].u.bigblueroute_cars().cars[i].out() {
             let c = &mut r.game.grounds[g.0].u.bigblueroute_cars().cars[i];
-            c.x4 = mem(fp::fadds(reg(c.x4), reg(c.x8)));
-            if reg(c.x4) > one {
-                c.x4 = 1.0;
+            c.road_pos = mem(fp::fadds(reg(c.road_pos), reg(c.road_speed)));
+            if reg(c.road_pos) > one {
+                c.road_pos = 1.0;
             }
-            c.x14 = mem(fp::fadds(reg(c.x14), reg(c.x18)));
-            if reg(c.x14) > one {
-                c.x14 = 1.0;
+            c.air_pos = mem(fp::fadds(reg(c.air_pos), reg(c.air_speed)));
+            if reg(c.air_pos) > one {
+                c.air_pos = 1.0;
             }
             let (pos, rot) = match c.phase() {
                 0 => {
-                    if reg(c.xC) < reg(c.x10) {
-                        c.xC = mem(fp::fadds(reg(c.xC), reg(0.01)));
-                        if reg(c.xC) > reg(c.x10) {
-                            c.xC = c.x10;
+                    if reg(c.lane) < reg(c.target_lane) {
+                        c.lane = mem(fp::fadds(reg(c.lane), reg(0.01)));
+                        if reg(c.lane) > reg(c.target_lane) {
+                            c.lane = c.target_lane;
                         }
-                    } else if reg(c.xC) > reg(c.x10) {
-                        c.xC = mem(fp::fsubs(reg(c.xC), reg(0.01)));
-                        if reg(c.xC) < reg(c.x10) {
-                            c.xC = c.x10;
+                    } else if reg(c.lane) > reg(c.target_lane) {
+                        c.lane = mem(fp::fsubs(reg(c.lane), reg(0.01)));
+                        if reg(c.lane) < reg(c.target_lane) {
+                            c.lane = c.target_lane;
                         }
                     }
-                    let (t, frac) = (c.x4, c.xC);
+                    let (t, frac) = (c.road_pos, c.lane);
                     let out = on_road(r, left, right, t, frac);
                     let c = &mut r.game.grounds[g.0].u.bigblueroute_cars().cars[i];
-                    if reg(c.x4) > reg(0.966) {
+                    if reg(c.road_pos) > reg(0.966) {
                         c.set_phase(2);
-                        c.x14 = 0.0;
-                        c.x1C = 0.0;
+                        c.air_pos = 0.0;
+                        c.roll = 0.0;
                         let roll = random_roll(r);
                         let c = &mut r.game.grounds[g.0].u.bigblueroute_cars().cars[i];
-                        c.x20 = roll;
-                        c.x24 = c.x4;
+                        c.target_roll = roll;
+                        c.line_change_start = c.road_pos;
                     }
                     out
                 }
                 1 => {
                     let step = reg(0.017_453_292);
-                    if reg(c.x1C) < reg(c.x20) {
-                        c.x1C = mem(fp::fadds(reg(c.x1C), step));
-                        if reg(c.x1C) > reg(c.x20) {
-                            c.x1C = c.x20;
+                    if reg(c.roll) < reg(c.target_roll) {
+                        c.roll = mem(fp::fadds(reg(c.roll), step));
+                        if reg(c.roll) > reg(c.target_roll) {
+                            c.roll = c.target_roll;
                         }
-                    } else if reg(c.x1C) > reg(c.x20) {
-                        c.x1C = mem(fp::fsubs(reg(c.x1C), step));
-                        if reg(c.x1C) < reg(c.x20) {
-                            c.x1C = c.x20;
+                    } else if reg(c.roll) > reg(c.target_roll) {
+                        c.roll = mem(fp::fsubs(reg(c.roll), step));
+                        if reg(c.roll) < reg(c.target_roll) {
+                            c.roll = c.target_roll;
                         }
                     }
-                    let (t, angle) = (c.x14, c.x1C);
+                    let (t, angle) = (c.air_pos, c.roll);
                     let out = on_air(r, air, t, angle);
                     let c = &mut r.game.grounds[g.0].u.bigblueroute_cars().cars[i];
-                    if reg(c.x14) > reg(0.967) {
+                    if reg(c.air_pos) > reg(0.967) {
                         c.set_phase(3);
-                        c.x4 = 0.0;
-                        c.xC = 0.5;
+                        c.road_pos = 0.0;
+                        c.lane = 0.5;
                         let lane = r.game.objs.rng.draw_f32();
                         let v = r.game.grounds[g.0].u.bigblueroute_cars();
                         let c = &mut v.cars[i];
-                        c.x10 = lane;
-                        c.x24 = c.x14;
+                        c.target_lane = lane;
+                        c.line_change_start = c.air_pos;
                         c.set_roared(false);
                         if c.sign() {
                             v.set_approached(false);
@@ -732,31 +732,37 @@ pub fn drive(r: &mut Running, gobj: GObjId) {
                     out
                 }
                 2 => {
-                    let t = c.x4;
-                    let prog = fp::fdivs(fp::fsubs(reg(t), reg(c.x24)), fp::fsubs(one, reg(c.x24)));
-                    let frac = fp::fmadds(fp::fsubs(one, prog), fp::fsubs(reg(c.xC), 0.5), 0.5);
-                    let (t14, angle) = (c.x14, c.x1C);
+                    let t = c.road_pos;
+                    let prog = fp::fdivs(
+                        fp::fsubs(reg(t), reg(c.line_change_start)),
+                        fp::fsubs(one, reg(c.line_change_start)),
+                    );
+                    let frac = fp::fmadds(fp::fsubs(one, prog), fp::fsubs(reg(c.lane), 0.5), 0.5);
+                    let (t14, angle) = (c.air_pos, c.roll);
                     let (road, road_rot) = on_road(r, left, right, t, mem(frac));
                     let (air_pos, _) = on_air(r, air, t14, angle);
                     let pos = scaled(air_pos - road, prog) + road;
                     let c = &mut r.game.grounds[g.0].u.bigblueroute_cars().cars[i];
-                    if reg(c.x4) == one {
+                    if reg(c.road_pos) == one {
                         c.set_phase(1);
                     }
                     (pos, road_rot)
                 }
                 3 => {
-                    let t = c.x14;
-                    let prog = fp::fdivs(fp::fsubs(reg(t), reg(c.x24)), fp::fsubs(one, reg(c.x24)));
-                    let angle = mem(fp::fmuls(fp::fsubs(one, prog), reg(c.x1C)));
+                    let t = c.air_pos;
+                    let prog = fp::fdivs(
+                        fp::fsubs(reg(t), reg(c.line_change_start)),
+                        fp::fsubs(one, reg(c.line_change_start)),
+                    );
+                    let angle = mem(fp::fmuls(fp::fsubs(one, prog), reg(c.roll)));
                     let (air_pos, air_rot) = on_air(r, air, t, angle);
                     let c = &r.game.grounds[g.0].u.bigblueroute_cars().cars[i];
-                    let (road_t, frac) = (c.x4, c.xC);
+                    let (road_t, frac) = (c.road_pos, c.lane);
                     // The road's heading is computed and thrown away (`atan2f`, pure).
                     let (road, _) = on_road(r, left, right, road_t, frac);
                     let pos = scaled(road - air_pos, prog) + air_pos;
                     let c = &mut r.game.grounds[g.0].u.bigblueroute_cars().cars[i];
-                    if reg(c.x14) == one {
+                    if reg(c.air_pos) == one {
                         c.set_phase(0);
                     }
                     (pos, air_rot)

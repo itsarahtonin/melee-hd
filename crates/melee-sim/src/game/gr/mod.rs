@@ -255,7 +255,8 @@ pub struct Globals {
     /// Onett's `yakumono_param` (`grOnett_StageParam`).
     pub onett_yakumono: Option<DataRef>,
     /// `grOt_804D69C4`, which Onett's cars' setup clears and nothing reads.
-    pub onett_x69c4: i32,
+    #[doc(alias("onett_x69c4"))]
+    pub onett_unread: i32,
     /// The stages' spawn configurations (`grZakoGenerator_801CA394`'s heap blocks).
     pub spawn_configs: Vec<zako::SpawnConfig>,
     /// Rainbow Cruise's `yakumono_param` (`grRCruise_YakumonoParam`).
@@ -336,11 +337,13 @@ pub struct Globals {
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct FtDevices {
     /// `ft_804D6570`.
-    pub x6570: i32,
+    #[doc(alias("x6570"))]
+    pub coll_count: i32,
     /// `ftDevice_BuryThingCount`.
     pub bury_count: i32,
     /// `ft_804D6578.x0`.
-    pub x6578: i32,
+    #[doc(alias("x6578"))]
+    pub wind_count: i32,
     /// `ft_80459A68[0]`: the wind device (`ground`), its type and the callback the fighters'
     /// wind polls (`active_cb`).
     pub device: Option<GObjId>,
@@ -370,7 +373,7 @@ impl FtDevices {
         self.device2 = Some(gobj);
         self.device2_type = kind;
         self.device2_cb = Some(cb);
-        self.x6570 = self.x6570.wrapping_add(1);
+        self.coll_count = self.coll_count.wrapping_add(1);
     }
 }
 

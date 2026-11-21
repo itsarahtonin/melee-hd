@@ -164,7 +164,7 @@ pub fn init_shaft(r: &mut Running, gobj: GObjId) {
         Some(CodeRef(END_TOUCHED)),
     );
     let timer = r.data.u32(param(r.game)) as i16;
-    r.game.grounds[g.0].u.zebes_back().xC4 = timer;
+    r.game.grounds[g.0].u.zebes_back().state = timer;
 }
 
 /// The shaft's process (map 1), `grZebesRoute_8020B42C`: the camera's offset at the shaft's
@@ -183,9 +183,9 @@ pub fn proc_shaft(r: &mut Running, gobj: GObjId) {
         pos.x = 0.0;
         set_cam_offset(r.game, pos.x, pos.y);
     }
-    let timer = i32::from(r.game.grounds[g.0].u.zebes_back().xC4);
+    let timer = i32::from(r.game.grounds[g.0].u.zebes_back().state);
     if timer > 0 {
-        r.game.grounds[g.0].u.zebes_back().xC4 = (timer - 1) as i16;
+        r.game.grounds[g.0].u.zebes_back().state = (timer - 1) as i16;
     } else {
         super::super::camera::request_quake(r, super::super::camera::QUAKE_LOOP, None);
     }

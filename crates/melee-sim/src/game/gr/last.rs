@@ -279,12 +279,12 @@ pub fn advance(r: &mut Running, gobj: GObjId) {
         }
     } else {
         let v = r.game.grounds[g.0].u.map();
-        if reg(v.xC8) > 1800.0 {
+        if reg(v.cycle_timer) > 1800.0 {
             v.b26 = true;
         }
     }
     let v = r.game.grounds[g.0].u.map();
-    v.xC8 = mem(fp::fadds(reg(v.xC8), 1.0));
+    v.cycle_timer = mem(fp::fadds(reg(v.cycle_timer), 1.0));
     let phase = v.phase;
     let lv3 = v.lv_gobj[3];
     let b27 = v.b27;
@@ -293,14 +293,14 @@ pub fn advance(r: &mut Running, gobj: GObjId) {
             let piece = ground_of(r.game, lv3.expect("piece 3"));
             let l = r.game.grounds[piece.0].u.last();
             if phase == 9 {
-                l.xDC = mem(fp::fadds(reg(l.xDC), fp::fdivs(1.0, 180.0)));
-                if reg(l.xDC) > 1.0 {
-                    l.xDC = 1.0;
+                l.fade = mem(fp::fadds(reg(l.fade), fp::fdivs(1.0, 180.0)));
+                if reg(l.fade) > 1.0 {
+                    l.fade = 1.0;
                 }
             } else {
-                l.xDC = mem(fp::fsubs(reg(l.xDC), fp::fdivs(1.0, 58.0)));
-                if reg(l.xDC) < 0.0 {
-                    l.xDC = 0.0;
+                l.fade = mem(fp::fsubs(reg(l.fade), fp::fdivs(1.0, 58.0)));
+                if reg(l.fade) < 0.0 {
+                    l.fade = 0.0;
                 }
                 camera::request_quake(r, camera::QUAKE_LOOP, None);
             }
@@ -424,7 +424,7 @@ fn create_piece(r: &mut Running, gobj: GObjId, i: usize, frame: u32) -> GObjId {
 pub fn set_phase(r: &mut Running, gobj: GObjId, phase: i32, frame: u32) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.map();
-    v.xC8 = 0.0;
+    v.cycle_timer = 0.0;
     v.phase = phase as u16;
     let b26 = match phase {
         1 => {
@@ -465,7 +465,7 @@ pub fn set_phase(r: &mut Running, gobj: GObjId, phase: i32, frame: u32) {
             let at = crate::lb::joint::world_position(&mut r.game.objs, r.data, part, None);
             let gen_ = grlib::generator_at(r.game, r.data, 0x7531, 0x1E, at);
             let sg = ground_of(r.game, sway);
-            r.game.grounds[sg.0].u.last().xE0 = gen_;
+            r.game.grounds[sg.0].u.last().generator = gen_;
             false
         }
         10 => {
@@ -473,9 +473,9 @@ pub fn set_phase(r: &mut Running, gobj: GObjId, phase: i32, frame: u32) {
             let sway = map_gobj(r.game, 7).expect("map 7");
             anime::set_rate(r.game, sway, 5, 7, 0.0, false);
             let sg = ground_of(r.game, sway);
-            let gen_ = r.game.grounds[sg.0].u.last().xE0;
+            let gen_ = r.game.grounds[sg.0].u.last().generator;
             grlib::kill_generator(r.game, r.data, gen_.expect("grLib_801C9834: the generator"));
-            r.game.grounds[sg.0].u.last().xE0 = None;
+            r.game.grounds[sg.0].u.last().generator = None;
             r.game.grounds[g.0].u.map().b26 = true;
             bright_colors(r.game);
             return;
@@ -549,13 +549,13 @@ pub fn blend_to(game: &mut Game, gobj: GObjId, c: _GXColor, frames: f32) {
     let f = |x: u8| mem(fp::frsp(f64::from(x)));
     let g = ground_of(game, gobj);
     let v = game.grounds[g.0].u.map();
-    v.xE4 = f(c.r);
-    v.xE8 = f(c.g);
-    v.xEC = f(c.b);
-    v.xF4 = f(fr);
-    v.xF8 = f(fg);
-    v.xFC = f(fb);
-    v.x104 = frames;
+    v.blend_r = f(c.r);
+    v.blend_g = f(c.g);
+    v.blend_b = f(c.b);
+    v.fog_r = f(fr);
+    v.fog_g = f(fg);
+    v.fog_b = f(fb);
+    v.blend_frames = frames;
     v.b27 = false;
 }
 
@@ -567,22 +567,22 @@ pub fn blend_step(game: &mut Game, gobj: GObjId) {
     if v.b27 {
         return;
     }
-    v.x104 = mem(fp::fsubs(reg(v.x104), 1.0));
+    v.blend_frames = mem(fp::fsubs(reg(v.blend_frames), 1.0));
     let byte = |x: f32| fp::fctiwz(reg(x)) as u8;
-    let c = if reg(v.x104) > 0.0 {
+    let c = if reg(v.blend_frames) > 0.0 {
         let step = |cur: f32, to: f32, n: f32| {
             mem(fp::fadds(
                 reg(cur),
                 fp::fdivs(fp::fsubs(reg(to), reg(cur)), reg(n)),
             ))
         };
-        v.xF4 = step(v.xF4, v.xE4, v.x104);
-        v.xF8 = step(v.xF8, v.xE8, v.x104);
-        v.xFC = step(v.xFC, v.xEC, v.x104);
-        (byte(v.xF4), byte(v.xF8), byte(v.xFC))
+        v.fog_r = step(v.fog_r, v.blend_r, v.blend_frames);
+        v.fog_g = step(v.fog_g, v.blend_g, v.blend_frames);
+        v.fog_b = step(v.fog_b, v.blend_b, v.blend_frames);
+        (byte(v.fog_r), byte(v.fog_g), byte(v.fog_b))
     } else {
         v.b27 = true;
-        (byte(v.xE4), byte(v.xE8), byte(v.xEC))
+        (byte(v.blend_r), byte(v.blend_g), byte(v.blend_b))
     };
     // The color's alpha is whatever the stack held: the low byte of a stack or heap address
     // another function saved there, or 0 (`docs/engine.md`). Only the fog takes it.
@@ -658,14 +658,14 @@ pub fn init_sway(r: &mut Running, gobj: GObjId) {
     let d4 = speed();
     let d8 = speed();
     let l = r.game.grounds[g.0].u.last();
-    l.xC4 = 0.0;
-    l.xC8 = 0.0;
-    l.xCC = 0.0;
-    l.xD0 = 0.0;
-    l.xD4 = d4;
-    l.xD8 = d8;
-    l.xDC = 0.0;
-    l.xE0 = None;
+    l.angle_x = 0.0;
+    l.angle_y = 0.0;
+    l.speed_x = 0.0;
+    l.speed_y = 0.0;
+    l.push_x = d4;
+    l.push_y = d8;
+    l.fade = 0.0;
+    l.generator = None;
     let part = nth_joint(r.game, gobj, 5).expect("HSD_JObjSetScale: jobj");
     jobj::set_srt(&mut r.game.objs.jobjs, part, |o| o.scale = ONES);
     r.game.grounds[g.0].x11_flags.b012 = 2;
@@ -699,37 +699,37 @@ pub fn proc_sway(r: &mut Running, gobj: GObjId) {
             x
         }
     };
-    l.xCC = damp(l.xCC, l.xD4);
-    l.xD0 = damp(l.xD0, l.xD8);
-    l.xC4 = mem(fp::fadds(reg(l.xC4), reg(l.xCC)));
-    if reg(l.xC4) > s.max_x {
-        l.xC4 = mem(s.max_x);
-        l.xCC = mem(fp::fneg(reg(abs(l.xCC))));
+    l.speed_x = damp(l.speed_x, l.push_x);
+    l.speed_y = damp(l.speed_y, l.push_y);
+    l.angle_x = mem(fp::fadds(reg(l.angle_x), reg(l.speed_x)));
+    if reg(l.angle_x) > s.max_x {
+        l.angle_x = mem(s.max_x);
+        l.speed_x = mem(fp::fneg(reg(abs(l.speed_x))));
         let rf = rng.draw_f32();
-        l.xD4 = mem(fp::fmsubs(s.speed_range, fp::fneg(reg(rf)), s.speed_min));
-    } else if reg(l.xC4) < s.min_x {
-        l.xC4 = mem(s.min_x);
-        l.xCC = abs(l.xCC);
-        l.xD4 = mem(fp::fmadds(s.speed_range, reg(rng.draw_f32()), s.speed_min));
+        l.push_x = mem(fp::fmsubs(s.speed_range, fp::fneg(reg(rf)), s.speed_min));
+    } else if reg(l.angle_x) < s.min_x {
+        l.angle_x = mem(s.min_x);
+        l.speed_x = abs(l.speed_x);
+        l.push_x = mem(fp::fmadds(s.speed_range, reg(rng.draw_f32()), s.speed_min));
     }
-    let (rx, fade) = (l.xC4, l.xDC);
+    let (rx, fade) = (l.angle_x, l.fade);
     jobj::set_angle(&mut r.game.objs.jobjs, j, |q| {
         q.x = mem(fp::fmuls(reg(rx), reg(fade)))
     });
     let l = r.game.grounds[g.0].u.last();
-    l.xC8 = mem(fp::fadds(reg(l.xC8), reg(l.xD0)));
+    l.angle_y = mem(fp::fadds(reg(l.angle_y), reg(l.speed_y)));
     let rng = &mut r.game.objs.rng;
-    if reg(l.xC8) > s.max_y {
-        l.xC8 = mem(s.max_y);
-        l.xD0 = mem(fp::fneg(reg(abs(l.xD0))));
+    if reg(l.angle_y) > s.max_y {
+        l.angle_y = mem(s.max_y);
+        l.speed_y = mem(fp::fneg(reg(abs(l.speed_y))));
         let rf = rng.draw_f32();
-        l.xD8 = mem(fp::fmsubs(s.speed_range, fp::fneg(reg(rf)), s.speed_min));
-    } else if reg(l.xC8) < s.min_y {
-        l.xC8 = mem(s.min_y);
-        l.xD0 = abs(l.xD0);
-        l.xD8 = mem(fp::fmadds(s.speed_range, reg(rng.draw_f32()), s.speed_min));
+        l.push_y = mem(fp::fmsubs(s.speed_range, fp::fneg(reg(rf)), s.speed_min));
+    } else if reg(l.angle_y) < s.min_y {
+        l.angle_y = mem(s.min_y);
+        l.speed_y = abs(l.speed_y);
+        l.push_y = mem(fp::fmadds(s.speed_range, reg(rng.draw_f32()), s.speed_min));
     }
-    let (ry, fade, generator) = (l.xC8, l.xDC, l.xE0);
+    let (ry, fade, generator) = (l.angle_y, l.fade, l.generator);
     jobj::set_angle(&mut r.game.objs.jobjs, j, |q| {
         q.y = mem(fp::fmuls(reg(ry), reg(fade)))
     });

@@ -299,14 +299,14 @@ pub fn init_turtle(r: &mut Running, gobj: GObjId) {
         i32::from(p.h(r, p::KAME_WAIT_A)),
     );
     let v = r.game.grounds[g.0].u.greatbay();
-    v.xCC = shell_y;
-    v.xC4 = 0;
+    v.shell_height = shell_y;
+    v.state = 0;
     v.set_dir(0);
     let wait = grlib::rand_range(&mut r.game.objs.rng, b, a) as i16;
     let v = r.game.grounds[g.0].u.greatbay();
-    v.xC6 = wait;
+    v.ticks = wait;
     v.set_item_done(true);
-    v.xC8 = None;
+    v.splash = None;
     let gp = &mut r.game.grounds[g.0];
     gp.x10_flags.b5 = true;
     gp.x11_flags.b012 = 1;
@@ -327,14 +327,14 @@ pub fn proc_turtle(r: &mut Running, gobj: GObjId) {
     let shell = nth_joint(r.game, gobj, 2).expect("grgreatbay.c: trans_jobj");
     let head = nth_joint(r.game, gobj, 3);
     let p = param(r.game);
-    match r.game.grounds[g.0].u.greatbay().xC4 {
+    match r.game.grounds[g.0].u.greatbay().state {
         0 => {
-            if r.game.grounds[g.0].u.greatbay().xC6 < 0 {
+            if r.game.grounds[g.0].u.greatbay().ticks < 0 {
                 if anime::rewound(r.game, gobj, 0, 7) {
                     let v = r.game.grounds[g.0].u.greatbay();
-                    v.xC4 = 1;
+                    v.state = 1;
                     anime::start_map(r.game, r.data, gobj, m, 1);
-                    r.game.grounds[g.0].u.greatbay().xC6 = 0;
+                    r.game.grounds[g.0].u.greatbay().ticks = 0;
                     let geo = r.game.geometry_mut();
                     for k in [2, 3, 4, 1] {
                         geo.forbid_islands(k);
@@ -342,30 +342,30 @@ pub fn proc_turtle(r: &mut Running, gobj: GObjId) {
                 }
             } else {
                 let v = r.game.grounds[g.0].u.greatbay();
-                v.xC6 = v.xC6.wrapping_sub(1);
+                v.ticks = v.ticks.wrapping_sub(1);
             }
         }
         1 => {
             let v = r.game.grounds[g.0].u.greatbay();
-            let t = v.xC6;
-            v.xC6 = t.wrapping_add(1);
+            let t = v.ticks;
+            v.ticks = t.wrapping_add(1);
             if t == 90 {
                 r.stage_sound(0x57E42);
                 let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, Some(j), None);
                 let generator = grlib::generator_at(r.game, r.data, 0x7531, 0x1E, pos);
-                r.game.grounds[g.0].u.greatbay().xC8 = generator;
+                r.game.grounds[g.0].u.greatbay().splash = generator;
             }
             if anime::finished(r.game, gobj, 0, 7) {
-                r.game.grounds[g.0].u.greatbay().xC4 = 3;
+                r.game.grounds[g.0].u.greatbay().state = 3;
                 let (b, a) = (
                     i32::from(p.h(r, p::KAME_REBIRTH_B)),
                     i32::from(p.h(r, p::KAME_REBIRTH_A)),
                 );
                 let wait = grlib::rand_range(&mut r.game.objs.rng, b, a) as i16;
-                r.game.grounds[g.0].u.greatbay().xC6 = wait;
+                r.game.grounds[g.0].u.greatbay().ticks = wait;
                 anime::set_rate(r.game, gobj, 0, 7, 0.0, true);
                 jobj::set_flags_all(&mut r.game.objs.jobjs, Some(j), jobj::HIDDEN);
-                if let Some(generator) = r.game.grounds[g.0].u.greatbay().xC8.take() {
+                if let Some(generator) = r.game.grounds[g.0].u.greatbay().splash.take() {
                     grlib::kill_generator_and_particles(r.game, r.data, generator);
                 }
             }
@@ -373,22 +373,22 @@ pub fn proc_turtle(r: &mut Running, gobj: GObjId) {
         2 => {
             jobj::clear_flags_all(&mut r.game.objs.jobjs, Some(j), jobj::HIDDEN);
             let v = r.game.grounds[g.0].u.greatbay();
-            v.xC6 = v.xC6.wrapping_add(1);
-            let t = v.xC6;
+            v.ticks = v.ticks.wrapping_add(1);
+            let t = v.ticks;
             if t == 60 {
                 r.stage_sound(0x57E41);
                 let pos = crate::lb::joint::world_position(&mut r.game.objs, r.data, Some(j), None);
                 let generator = grlib::generator_at(r.game, r.data, 0x7531, 0x1E, pos);
-                r.game.grounds[g.0].u.greatbay().xC8 = generator;
+                r.game.grounds[g.0].u.greatbay().splash = generator;
             }
-            let t = r.game.grounds[g.0].u.greatbay().xC6;
+            let t = r.game.grounds[g.0].u.greatbay().ticks;
             if t == 60 || t == 120 {
                 let fin = nth_joint(r.game, gobj, 34);
                 if fin.is_some() {
                     grlib::generator_oriented_on(r.game, r.data, 0x7533, 0x1E, fin);
                 }
             }
-            let t = r.game.grounds[g.0].u.greatbay().xC6;
+            let t = r.game.grounds[g.0].u.greatbay().ticks;
             if t == 90 || t == 150 {
                 let fin = nth_joint(r.game, gobj, 38);
                 if fin.is_some() {
@@ -396,32 +396,32 @@ pub fn proc_turtle(r: &mut Running, gobj: GObjId) {
                 }
             }
             if anime::finished(r.game, gobj, 0, 7) {
-                r.game.grounds[g.0].u.greatbay().xC4 = 0;
+                r.game.grounds[g.0].u.greatbay().state = 0;
                 let (b, a) = (
                     i32::from(p.h(r, p::KAME_WAIT_B)),
                     i32::from(p.h(r, p::KAME_WAIT_A)),
                 );
                 let wait = grlib::rand_range(&mut r.game.objs.rng, b, a) as i16;
-                r.game.grounds[g.0].u.greatbay().xC6 = wait;
+                r.game.grounds[g.0].u.greatbay().ticks = wait;
                 anime::start_map(r.game, r.data, gobj, m, 0);
                 let geo = r.game.geometry_mut();
                 for k in [2, 3, 4, 1] {
                     geo.allow_islands(k);
                 }
-                if let Some(generator) = r.game.grounds[g.0].u.greatbay().xC8.take() {
+                if let Some(generator) = r.game.grounds[g.0].u.greatbay().splash.take() {
                     grlib::kill_generator_and_particles(r.game, r.data, generator);
                 }
             }
         }
         3 => {
             let v = r.game.grounds[g.0].u.greatbay();
-            let t = v.xC6;
-            v.xC6 = t.wrapping_sub(1);
+            let t = v.ticks;
+            v.ticks = t.wrapping_sub(1);
             if t < 0 {
-                v.xC4 = 2;
+                v.state = 2;
                 anime::start_map(r.game, r.data, gobj, m, 2);
                 let v = r.game.grounds[g.0].u.greatbay();
-                v.xC6 = 0;
+                v.ticks = 0;
                 v.set_item_done(false);
                 let dir = v.dir();
                 let dir = turtle_dir(r, dir as i32) as u8;
@@ -458,10 +458,10 @@ pub fn proc_turtle(r: &mut Running, gobj: GObjId) {
         _ => {}
     }
     let y = r.game.objs.jobjs[shell].translate.y;
-    if reg(r.game.grounds[g.0].u.greatbay().xCC) != reg(y) {
+    if reg(r.game.grounds[g.0].u.greatbay().shell_height) != reg(y) {
         let y = mem(fp::fmuls(reg(y), reg(p.f(r, p::KAME_UD_SCALE))));
         jobj::set_srt(&mut r.game.objs.jobjs, shell, |o| o.translate.y = y);
-        r.game.grounds[g.0].u.greatbay().xCC = y;
+        r.game.grounds[g.0].u.greatbay().shell_height = y;
     }
     match r.game.grounds[g.0].u.greatbay().dir() {
         1 => {
@@ -480,7 +480,7 @@ pub fn proc_turtle(r: &mut Running, gobj: GObjId) {
     follow_vertices(r, gobj);
     r.game.geometry_mut().update_dynamics_and_islands(2);
     let v = r.game.grounds[g.0].u.greatbay();
-    if v.xC4 == 2 && !v.item_done() {
+    if v.state == 2 && !v.item_done() {
         let done = turtle_item(r, gobj);
         r.game.grounds[g.0].u.greatbay().set_item_done(done);
     }
@@ -512,14 +512,14 @@ pub fn init_tingle(r: &mut Running, gobj: GObjId) {
 /// Tingle's variables after a new balloon.
 fn reset_tingle(r: &mut Running, g: super::super::handles::GroundId, item: Option<GObjId>) {
     let v = r.game.grounds[g.0].u.greatbay4();
-    v.xF0 = item;
-    v.xC4 = 0;
-    v.xC8 = 0;
-    v.xD0 = 0;
-    v.xCC = 0;
-    v.xD8 = 0;
-    v.xDC = 0;
-    v.xE0 = 0.0;
+    v.item = item;
+    v.state = 0;
+    v.last_state = 0;
+    v.splashed = 0;
+    v.popped = 0;
+    v.standing = 0;
+    v.standing_last = 0;
+    v.weight = 0.0;
 }
 
 /// Tingle's process (map 10), `grGreatBay_801F5600`: follows the balloon item's state and place
@@ -530,12 +530,12 @@ fn reset_tingle(r: &mut Running, g: super::super::handles::GroundId, item: Optio
 pub fn proc_tingle(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let j = jobj_of(r.game, gobj).expect("jobj");
-    let item = r.game.grounds[g.0].u.greatbay4().xF0;
+    let item = r.game.grounds[g.0].u.greatbay4().item;
     let item = item.expect("Tingle's balloon");
     let (state, pos) = tincle::state_and_place(r.game, item);
     let v = r.game.grounds[g.0].u.greatbay4();
-    v.xC4 = state;
-    v.xE4 = pos;
+    v.state = state;
+    v.place = pos;
     if reg(pos.y) < fp::fneg(50.0) {
         tincle::destroy(r, item);
         r.game.geometry_mut().settle_vertices(BALLOON_JOINT);
@@ -543,69 +543,69 @@ pub fn proc_tingle(r: &mut Running, gobj: GObjId) {
         reset_tingle(r, g, new);
         return;
     }
-    let weight = r.game.grounds[g.0].u.greatbay4().xE0;
+    let weight = r.game.grounds[g.0].u.greatbay4().weight;
     tincle::set_weight(r.game, item, weight);
     let v = r.game.grounds[g.0].u.greatbay4();
-    match v.xC4 {
+    match v.state {
         1 => {
             r.game.geometry_mut().enable_joint(BALLOON_JOINT);
             update_map_coll(r.game, r.data, gobj);
         }
         2 | 5 => {
-            if v.xD8 != 0 && v.xD4 == 0 {
+            if v.standing != 0 && v.ledge_hang == 0 {
                 tincle::press(r, item);
             }
         }
         4 => {
-            if v.xD8 == 0 {
+            if v.standing == 0 {
                 tincle::release(r, item);
-            } else if v.xDC != v.xD8 {
+            } else if v.standing_last != v.standing {
                 tincle::press(r, item);
             }
         }
         6 | 7 => {
-            let (lit, mut at) = (v.xCC, v.xE4);
+            let (lit, mut at) = (v.popped, v.place);
             if lit == 0 && tincle::timer(r.game, item) == 0 {
                 at.y = mem(fp::fadds(reg(at.y), 10.0));
                 grlib::generator_at(r.game, r.data, 0x7534, 0x1E, at);
                 r.stage_sound(0x57E4A);
-                r.game.grounds[g.0].u.greatbay4().xCC = 1;
+                r.game.grounds[g.0].u.greatbay4().popped = 1;
             }
             r.game.geometry_mut().disable_joint(BALLOON_JOINT);
         }
         8 => {
-            if v.xD0 == 0 && reg(v.xE4.y) <= 0.0 {
-                v.xD0 = 1;
-                let at = v.xE4;
+            if v.splashed == 0 && reg(v.place.y) <= 0.0 {
+                v.splashed = 1;
+                let at = v.place;
                 grlib::generator_at(r.game, r.data, 0x7537, 0x1E, at);
                 r.stage_sound(0x57E48);
             }
         }
         9 => {
-            if v.xC8 != v.xC4 {
+            if v.last_state != v.state {
                 r.stage_sound(0x57E47);
             }
         }
         12 => {
-            if v.xC8 != v.xC4 {
-                v.xCC = 0;
+            if v.last_state != v.state {
+                v.popped = 0;
                 r.game.geometry_mut().enable_joint(BALLOON_JOINT);
             }
-            if r.game.grounds[g.0].u.greatbay4().xD8 != 0 {
+            if r.game.grounds[g.0].u.greatbay4().standing != 0 {
                 tincle::press(r, item);
             }
         }
         _ => {}
     }
     let v = r.game.grounds[g.0].u.greatbay4();
-    v.xC8 = v.xC4;
-    let at = v.xE4;
+    v.last_state = v.state;
+    let at = v.place;
     jobj::set_translate(&mut r.game.objs.jobjs, j, at);
     update_map_coll(r.game, r.data, gobj);
     let v = r.game.grounds[g.0].u.greatbay4();
-    v.xDC = v.xD8;
-    v.xD8 = 0;
-    v.xE0 = 0.0;
+    v.standing_last = v.standing;
+    v.standing = 0;
+    v.weight = 0.0;
     update_map_coll(r.game, r.data, gobj);
 }
 
@@ -621,11 +621,11 @@ pub fn balloon_touched(
     let kind = u32::from(coll.x34_flags.b1234);
     if kind == 1 || kind == 2 || kind == 3 {
         let v = gp.u.greatbay4();
-        v.xD4 =
+        v.ledge_hang =
             coll.env_flags & (crate::mp::coll::LEFT_LEDGE_GRAB | crate::mp::coll::RIGHT_LEDGE_GRAB);
-        v.xD8 = v.xD8.wrapping_add(1);
-        v.xE0 = mem(fp::fadds(
-            reg(v.xE0),
+        v.standing = v.standing.wrapping_add(1);
+        v.weight = mem(fp::fadds(
+            reg(v.weight),
             fp::fdivs(fp::frsp(f64::from(x50)), 100.0),
         ));
     }
@@ -660,7 +660,7 @@ pub fn init_moon(r: &mut Running, gobj: GObjId) {
         i32::from(p.h(r, p::MOON_FALL_WAIT_A)),
     );
     let wait = grlib::rand_range(&mut r.game.objs.rng, b, a) as i16;
-    r.game.grounds[g.0].u.greatbay2().x10 = wait;
+    r.game.grounds[g.0].u.greatbay2().moon_wait = wait;
     r.game.grounds[g.0].x11_flags.b012 = 2;
 }
 
@@ -677,9 +677,9 @@ pub fn proc_moon(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let m = map_id(r.game, gobj);
     let v = r.game.grounds[g.0].u.greatbay2();
-    if v.x10 > 0 {
-        v.x10 -= 1;
-        if v.x10 == 0 {
+    if v.moon_wait > 0 {
+        v.moon_wait -= 1;
+        if v.moon_wait == 0 {
             anime::start_map(r.game, r.data, gobj, m, 0);
             anime::set_rate(r.game, gobj, 0, 7, 1.0, true);
             for k in 0..4 {
@@ -690,14 +690,14 @@ pub fn proc_moon(r: &mut Running, gobj: GObjId) {
                 anime::start_map(r.game, r.data, giant, gm, 0);
                 anime::set_rate(r.game, giant, 0, 7, 1.0, true);
             }
-            r.game.grounds[g.0].u.greatbay2().x12 &= !0xF0;
+            r.game.grounds[g.0].u.greatbay2().moon_flags &= !0xF0;
         }
     } else {
         let frame = super::ground::anim_frame(r.game, j);
         let v = r.game.grounds[g.0].u.greatbay2();
         for bit in [0x80u8, 0x40, 0x20, 0x10] {
-            if v.x12 & bit == 0 && reg(frame) > 0.0 {
-                v.x12 |= bit;
+            if v.moon_flags & bit == 0 && reg(frame) > 0.0 {
+                v.moon_flags |= bit;
             }
         }
         if crate::lb::anim::any_rewound(&r.game.objs, j) {
@@ -713,7 +713,7 @@ pub fn proc_moon(r: &mut Running, gobj: GObjId) {
                 i32::from(p.h(r, p::MOON_FALL_WAIT_A)),
             );
             let wait = grlib::rand_range(&mut r.game.objs.rng, b, a) as i16;
-            r.game.grounds[g.0].u.greatbay2().x10 = wait;
+            r.game.grounds[g.0].u.greatbay2().moon_wait = wait;
         }
     }
 }
@@ -738,11 +738,11 @@ pub fn init_platform(r: &mut Running, gobj: GObjId) {
     v.translation.x = t.x;
     v.translation.y = t.y;
     v.translation.z = 0.0;
-    v.xD0 = 0.0;
-    v.xD4 = 0.0;
-    v.xD8 = 0.0;
-    v.xDC = 0.0;
-    v.xE0 = 0.0;
+    v.slide_push = 0.0;
+    v.sink_push = 0.0;
+    v.tilt = 0.0;
+    v.slide = 0.0;
+    v.sink = 0.0;
 }
 
 /// The floating platform's step, `grGreatBay_801F5E28`: its tilt (`xD8`), slide (`xDC`) and
@@ -757,32 +757,32 @@ pub fn proc_platform(r: &mut Running, gobj: GObjId) {
     };
     let rate = |r: &Running, away: bool, a: u32, b: u32| reg(p.f(r, if away { a } else { b }));
     let v = r.game.grounds[g.0].u.greatbay3();
-    let d = fp::fsubs(reg(v.translation.z), reg(v.xD8));
-    let away = fp::fmuls(fp::fneg(reg(v.xD8)), d) < 0.0;
+    let d = fp::fsubs(reg(v.translation.z), reg(v.tilt));
+    let away = fp::fmuls(fp::fneg(reg(v.tilt)), d) < 0.0;
     let k = rate(r, away, p::SLANT_RATE, p::SLANT_REB_RATE);
     let v = r.game.grounds[g.0].u.greatbay3();
-    v.xD8 = mem(fp::fmadds(d, k, reg(v.xD8)));
-    let d = fp::fsubs(reg(v.xD0), reg(v.xDC));
-    let away = fp::fmuls(fp::fneg(reg(v.xDC)), d) < 0.0;
+    v.tilt = mem(fp::fmadds(d, k, reg(v.tilt)));
+    let d = fp::fsubs(reg(v.slide_push), reg(v.slide));
+    let away = fp::fmuls(fp::fneg(reg(v.slide)), d) < 0.0;
     let k = rate(r, away, p::SLIDE_RATE, p::SLIDE_REB_RATE);
     let v = r.game.grounds[g.0].u.greatbay3();
-    v.xDC = mem(fp::fmadds(d, k, reg(v.xDC)));
-    let d = fp::fsubs(reg(v.xD4), reg(v.xE0));
+    v.slide = mem(fp::fmadds(d, k, reg(v.slide)));
+    let d = fp::fsubs(reg(v.sink_push), reg(v.sink));
     let k = rate(r, d < 0.0, p::DOWN_DOWN_RATE, p::DOWN_UP_RATE);
     let v = r.game.grounds[g.0].u.greatbay3();
-    v.xE0 = mem(fp::fmadds(d, k, reg(v.xE0)));
+    v.sink = mem(fp::fmadds(d, k, reg(v.sink)));
     let (rz, x, y) = (
-        v.xD8,
-        mem(fp::fadds(reg(v.translation.x), reg(v.xDC))),
-        mem(fp::fadds(reg(v.translation.y), reg(v.xE0))),
+        v.tilt,
+        mem(fp::fadds(reg(v.translation.x), reg(v.slide))),
+        mem(fp::fadds(reg(v.translation.y), reg(v.sink))),
     );
     jobj::set_rotation_z(&mut r.game.objs.jobjs, j, rz);
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.x = x);
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = y);
     let v = r.game.grounds[g.0].u.greatbay3();
     v.translation.z = 0.0;
-    v.xD0 = 0.0;
-    v.xD4 = 0.0;
+    v.slide_push = 0.0;
+    v.sink_push = 0.0;
 }
 
 /// The floating platform's collision joint's callback, `grGreatBay_801F60C4`: a fighter or
@@ -838,10 +838,10 @@ pub fn platform_touched(
         if reg(v.translation.z) > max {
             v.translation.z = mem(max);
         }
-        v.xD0 = mem(fp::fadds(reg(v.xD0), disp));
+        v.slide_push = mem(fp::fadds(reg(v.slide_push), disp));
         let max = pf(p::SLIDE_LIMIT);
-        if reg(v.xD0) > max {
-            v.xD0 = mem(max);
+        if reg(v.slide_push) > max {
+            v.slide_push = mem(max);
         }
     } else {
         v.translation.z = mem(fp::fsubs(reg(v.translation.z), rot));
@@ -849,16 +849,16 @@ pub fn platform_touched(
         if reg(v.translation.z) < min {
             v.translation.z = mem(min);
         }
-        v.xD0 = mem(fp::fsubs(reg(v.xD0), disp));
+        v.slide_push = mem(fp::fsubs(reg(v.slide_push), disp));
         let min = fp::fneg(pf(p::SLIDE_LIMIT));
-        if reg(v.xD0) < min {
-            v.xD0 = mem(min);
+        if reg(v.slide_push) < min {
+            v.slide_push = mem(min);
         }
     }
-    v.xD4 = mem(fp::fsubs(reg(v.xD4), down));
+    v.sink_push = mem(fp::fsubs(reg(v.sink_push), down));
     let min = fp::fneg(pf(p::DOWN_LIMIT));
-    if reg(v.xD4) < min {
-        v.xD4 = mem(min);
+    if reg(v.sink_push) < min {
+        v.sink_push = mem(min);
     }
 }
 
@@ -994,7 +994,7 @@ pub fn turtle_out(game: &mut Game) -> bool {
         return false;
     };
     let g = ground_of(game, t);
-    game.grounds[g.0].u.greatbay().xC4 != 0
+    game.grounds[g.0].u.greatbay().state != 0
 }
 
 /// The sea's device callback, `grGreatBay_801F6708`: a fighter not hidden off-screen

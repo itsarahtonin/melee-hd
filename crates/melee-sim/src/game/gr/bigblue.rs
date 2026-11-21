@@ -634,8 +634,8 @@ pub fn init_platforms(r: &mut Running, gobj: GObjId) {
         v.jobjs = parts;
         for (i, d) in v.data.iter_mut().enumerate() {
             d.index = i as u8;
-            d.x1 = 0;
-            d.x50 = None;
+            d.state = 0;
+            d.item = None;
         }
         v.flags = 0;
     }
@@ -713,7 +713,7 @@ pub fn near_platform(
         if exclude == jobjs[i] {
             continue;
         }
-        if data[i].x1 != 3 {
+        if data[i].state != 3 {
             continue;
         }
         let t = translation(game, jobjs[i]);
@@ -724,7 +724,7 @@ pub fn near_platform(
                 return true;
             }
         }
-        if left && data[i].x2 == -1 {
+        if left && data[i].dir == -1 {
             return true;
         }
     }
@@ -827,7 +827,7 @@ pub fn obstacle(
         if exclude == j {
             continue;
         }
-        if data[i].x1 != 3 {
+        if data[i].state != 3 {
             continue;
         }
         let pos = translation(game, j);
@@ -879,7 +879,7 @@ pub fn platform_item(r: &mut Running, idx: usize) {
     let lift = if kind == 4 { 8.0 } else { 5.0 };
     pos.y = mem(fp::fadds(reg(pos.y), lift));
     let item = super::super::it::lib26b1::drop_by_kind(r, kind, pos, true);
-    r.game.grounds[g.0].u.bigblue_manager().data[idx].x50 = item;
+    r.game.grounds[g.0].u.bigblue_manager().data[idx].item = item;
 }
 
 /// `grBb_803B8120`: `It_Kind_Sword`, `It_Kind_S_Scope`, `It_Kind_RabbitC`, `It_Kind_F_Flower`,
@@ -929,7 +929,7 @@ pub fn proc_platforms(r: &mut Running, gobj: GObjId) {
     for i in 0..3 {
         let (idx, x1) = {
             let v = r.game.grounds[g.0].u.bigblue_manager();
-            (v.data[i].index as i8, v.data[i].x1 as i8)
+            (v.data[i].index as i8, v.data[i].state as i8)
         };
         let j = r.game.grounds[g.0].u.bigblue_manager().jobjs[idx as usize];
         match x1 {
@@ -940,19 +940,19 @@ pub fn proc_platforms(r: &mut Running, gobj: GObjId) {
                     let wait = pm.i(r.data, p::PLAT_WAIT).wrapping_add(add);
                     let pos = translation(r.game, j);
                     let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
-                    d.x4 = wait;
-                    d.x38 = pos;
-                    d.x44 = Vec3::ZERO;
-                    d.x18 = Vec3::ZERO;
-                    d.x1 = 1;
+                    d.timer = wait;
+                    d.pos = pos;
+                    d.speed = Vec3::ZERO;
+                    d.swing = Vec3::ZERO;
+                    d.state = 1;
                 }
             }
             1 | 2 => {
                 if x1 == 1 && event(r.game, 0) == 0 {
-                    r.game.grounds[g.0].u.bigblue_manager().data[i].x1 = 0;
+                    r.game.grounds[g.0].u.bigblue_manager().data[i].state = 0;
                     continue;
                 }
-                if r.game.grounds[g.0].u.bigblue_manager().data[i].x4 <= 0 {
+                if r.game.grounds[g.0].u.bigblue_manager().data[i].timer <= 0 {
                     place_platform(r, g, i, j);
                 } else {
                     let v = r.game.grounds[g.0].u.bigblue_manager();
@@ -962,24 +962,25 @@ pub fn proc_platforms(r: &mut Running, gobj: GObjId) {
                         if j == jobjs[k] {
                             continue;
                         }
-                        match data[k].x1 as i8 {
+                        match data[k].state as i8 {
                             3 => {
-                                let x = reg(data[k].x38.x);
-                                if (data[k].x2 == 1 && x < reg(super::stage::cam_right(r.game)))
-                                    || (data[k].x2 == -1 && x > reg(super::stage::cam_left(r.game)))
+                                let x = reg(data[k].pos.x);
+                                if (data[k].dir == 1 && x < reg(super::stage::cam_right(r.game)))
+                                    || (data[k].dir == -1
+                                        && x > reg(super::stage::cam_left(r.game)))
                                 {
                                     active += 1;
                                 }
                             }
-                            1 if data[k].x4 == 0 => active += 1,
+                            1 if data[k].timer == 0 => active += 1,
                             _ => {}
                         }
                     }
                     let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
                     if active <= 1 {
-                        d.x4 = 0;
+                        d.timer = 0;
                     } else {
-                        d.x4 = d.x4.wrapping_sub(1);
+                        d.timer = d.timer.wrapping_sub(1);
                     }
                 }
             }
@@ -1004,14 +1005,14 @@ fn place_platform(r: &mut Running, g: GroundId, i: usize, j: Option<JObjId>) {
     }
     let pm = param(r.game);
     let lo = pm.f(r.data, p::PLAT_HEIGHT);
-    r.game.grounds[g.0].u.bigblue_manager().data[i].x8 = mem(lo);
+    r.game.grounds[g.0].u.bigblue_manager().data[i].height = mem(lo);
     let hr = abs(fp::fsubs(pm.f(r.data, p::PLAT_HEIGHT_MAX), lo));
     let hr = fp::fctiwz(hr);
     let rand = randi(r.game, hr);
     let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
-    d.x8 = mem(fp::fadds(reg(d.x8), to_f(rand)));
-    pos.y = mem(fp::fadds(right_y, reg(d.x8)));
-    neg.y = mem(fp::fadds(left_y, reg(d.x8)));
+    d.height = mem(fp::fadds(reg(d.height), to_f(rand)));
+    pos.y = mem(fp::fadds(right_y, reg(d.height)));
+    neg.y = mem(fp::fadds(left_y, reg(d.height)));
     let dir: i8 = if left_y == none {
         -1
     } else if right_y == none {
@@ -1023,11 +1024,11 @@ fn place_platform(r: &mut Running, g: GroundId, i: usize, j: Option<JObjId>) {
     } else {
         1
     };
-    r.game.grounds[g.0].u.bigblue_manager().data[i].x2 = dir;
+    r.game.grounds[g.0].u.bigblue_manager().data[i].dir = dir;
     if event(r.game, 1) != 0 {
-        r.game.grounds[g.0].u.bigblue_manager().data[i].x2 = 1;
+        r.game.grounds[g.0].u.bigblue_manager().data[i].dir = 1;
         pos.x = mem(fp::fneg(off_side(r.game)));
-    } else if r.game.grounds[g.0].u.bigblue_manager().data[i].x2 == 1 {
+    } else if r.game.grounds[g.0].u.bigblue_manager().data[i].dir == 1 {
         pos = neg;
     }
     let mut retries = 0;
@@ -1061,18 +1062,18 @@ fn place_platform(r: &mut Running, g: GroundId, i: usize, j: Option<JObjId>) {
     let speed = pm.f(r.data, p::PLAT_SPEED);
     {
         let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
-        d.xC.z = pos.y;
-        d.x38 = pos;
-        d.x44.x = mem(fp::fmuls(speed, to_f(i32::from(d.x2))));
-        d.x44.z = 0.0;
-        d.x44.y = 0.0;
-        d.x18 = Vec3::ZERO;
-        d.x34 = 0;
-        d.x2C = 0;
-        d.x1 = 3;
+        d.targets.z = pos.y;
+        d.pos = pos;
+        d.speed.x = mem(fp::fmuls(speed, to_f(i32::from(d.dir))));
+        d.speed.z = 0.0;
+        d.speed.y = 0.0;
+        d.swing = Vec3::ZERO;
+        d.dip_stage = 0;
+        d.landings = 0;
+        d.state = 3;
     }
     jobj::clear_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    r.game.grounds[g.0].u.bigblue_manager().data[i].x50 = None;
+    r.game.grounds[g.0].u.bigblue_manager().data[i].item = None;
     let chance = pm.i(r.data, p::PLAT_ITEM);
     if randi(r.game, chance) == 0 {
         platform_item(r, i);
@@ -1090,7 +1091,7 @@ fn place_platform(r: &mut Running, g: GroundId, i: usize, j: Option<JObjId>) {
     }
     if event(r.game, 1) == 0 {
         let cnt = r.game.grounds[g.0].u.bigblue_manager().flags as i32;
-        let dir = r.game.grounds[g.0].u.bigblue_manager().data[i].x2;
+        let dir = r.game.grounds[g.0].u.bigblue_manager().data[i].dir;
         if cnt >= pm.i(r.data, p::FLYER_COUNT)
             && dir == 1
             && (cnt >= pm.i(r.data, p::FLYER_COUNT_MAX) || r.game.objs.rng.below(2) != 0)
@@ -1116,7 +1117,7 @@ fn fly_platform(r: &mut Running, g: GroundId, i: usize, idx: usize, j: Option<JO
         0.0,
         crate::math::atan2(mem(fp::fneg(reg(normal.x))), normal.y),
     );
-    let x2 = r.game.grounds[g.0].u.bigblue_manager().data[i].x2;
+    let x2 = r.game.grounds[g.0].u.bigblue_manager().data[i].dir;
     let speed = fp::fmuls(to_f(i32::from(x2)), platform_size(r.game, idx));
     let mut fwd = Vec3::new(mem(speed), 0.0, 0.0);
     fwd.rotate_euler(euler);
@@ -1128,71 +1129,81 @@ fn fly_platform(r: &mut Running, g: GroundId, i: usize, idx: usize, j: Option<JO
     let pm = param(r.game);
     let turn = pm.f(r.data, p::PLAT_TURN);
     let d = r.game.grounds[g.0].u.bigblue_manager().data[i].clone();
-    if d.x2C == 0 || d.x34 == 3 {
-        if d.x30 == 0 && d.x2C != 0 {
+    if d.landings == 0 || d.dip_stage == 3 {
+        if d.landings_last == 0 && d.landings != 0 {
             let dip = pm.i(r.data, p::PLAT_DIP);
             let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
-            d.xC.y = pos.y;
-            d.x4 = dip;
-            d.x34 = 1;
+            d.targets.y = pos.y;
+            d.timer = dip;
+            d.dip_stage = 1;
         }
-        r.game.grounds[g.0].u.bigblue_manager().data[i].xC.x = euler.z;
+        r.game.grounds[g.0].u.bigblue_manager().data[i].targets.x = euler.z;
         ease_turn(r.game, j, euler.z, turn);
     } else {
-        if d.x30 == 0 {
+        if d.landings_last == 0 {
             let dip = pm.i(r.data, p::PLAT_DIP);
             let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
-            d.xC.y = pos.y;
-            d.x4 = dip;
-            d.x34 = 1;
+            d.targets.y = pos.y;
+            d.timer = dip;
+            d.dip_stage = 1;
         }
         let d = r.game.grounds[g.0].u.bigblue_manager().data[i].clone();
-        let dir: i32 = if reg(d.x24) < reg(d.x28) { 1 } else { -1 };
-        if reg(d.x18.y) != to_f(dir) {
+        let dir: i32 = if reg(d.push_left) < reg(d.push_right) {
+            1
+        } else {
+            -1
+        };
+        if reg(d.swing.y) != to_f(dir) {
             let dip = pm.i(r.data, p::PLAT_DIP);
             let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
-            d.x4 = dip;
-            d.x34 = 1;
+            d.timer = dip;
+            d.dip_stage = 1;
         }
-        r.game.grounds[g.0].u.bigblue_manager().data[i].x18.y = mem(to_f(dir));
+        r.game.grounds[g.0].u.bigblue_manager().data[i].swing.y = mem(to_f(dir));
         let d = r.game.grounds[g.0].u.bigblue_manager().data[i].clone();
-        if d.x34 == 2 {
-            pos.y = mem(fp::fadds(reg(pos.y), reg(d.x44.y)));
-            r.game.grounds[g.0].u.bigblue_manager().data[i].xC.x = euler.z;
+        if d.dip_stage == 2 {
+            pos.y = mem(fp::fadds(reg(pos.y), reg(d.speed.y)));
+            r.game.grounds[g.0].u.bigblue_manager().data[i].targets.x = euler.z;
             ease_turn(r.game, j, euler.z, turn);
             let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
-            if reg(pos.y) >= reg(d.xC.y) {
-                d.x44.y = 0.0;
-                d.x18.z = 0.0;
-                d.x18.y = 0.0;
-                d.x34 = 3;
+            if reg(pos.y) >= reg(d.targets.y) {
+                d.speed.y = 0.0;
+                d.swing.z = 0.0;
+                d.swing.y = 0.0;
+                d.dip_stage = 3;
             }
-        } else if d.x4 <= 0 {
+        } else if d.timer <= 0 {
             let rise = mem(pm.f(r.data, p::PLAT_RISE));
             let wait = pm.i(r.data, p::PLAT_DIP_WAIT);
             let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
-            d.x44.y = rise;
-            d.x4 = wait;
-            d.x34 = 2;
+            d.speed.y = rise;
+            d.timer = wait;
+            d.dip_stage = 2;
         } else {
             let push = pm.f(r.data, p::PLAT_PUSH);
             let push_max = pm.f(r.data, p::PLAT_PUSH_MAX);
             let sink = pm.f(r.data, p::PLAT_SINK);
             let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
-            if reg(d.x24) < reg(d.x28) {
-                d.x18.z = mem(fp::fmuls(push, fp::fsubs(reg(d.x28), reg(d.x24))));
-                if reg(d.x18.z) >= push_max {
-                    d.x18.z = mem(push_max);
+            if reg(d.push_left) < reg(d.push_right) {
+                d.swing.z = mem(fp::fmuls(
+                    push,
+                    fp::fsubs(reg(d.push_right), reg(d.push_left)),
+                ));
+                if reg(d.swing.z) >= push_max {
+                    d.swing.z = mem(push_max);
                 }
                 pos.y = mem(fp::fsubs(reg(pos.y), sink));
             } else {
-                d.x18.z = mem(fp::fmuls(fp::fneg(push), fp::fsubs(reg(d.x24), reg(d.x28))));
-                if reg(d.x18.z) <= fp::fneg(push_max) {
-                    d.x18.z = mem(fp::fneg(push_max));
+                d.swing.z = mem(fp::fmuls(
+                    fp::fneg(push),
+                    fp::fsubs(reg(d.push_left), reg(d.push_right)),
+                ));
+                if reg(d.swing.z) <= fp::fneg(push_max) {
+                    d.swing.z = mem(fp::fneg(push_max));
                 }
                 pos.y = mem(fp::fadds(reg(pos.y), sink));
             }
-            let delta = fp::fmuls(reg(0.017_453_292), reg(d.x18.z));
+            let delta = fp::fmuls(reg(0.017_453_292), reg(d.swing.z));
             add_rot_z(r.game, j, delta);
             let deg = fp::fmuls(reg(57.295_78), rot_z(r.game, j));
             if reg(pos.y) < fp::fadds(reg(surface), pm.f(r.data, p::PLAT_HEIGHT)) {
@@ -1210,7 +1221,7 @@ fn fly_platform(r: &mut Running, g: GroundId, i: usize, idx: usize, j: Option<JO
                 set_rot_z(r.game, j, -1.134_464);
             }
             let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
-            d.x4 = d.x4.wrapping_sub(1);
+            d.timer = d.timer.wrapping_sub(1);
         }
     }
     let cam_top = super::stage::cam_top(r.game);
@@ -1225,7 +1236,7 @@ fn fly_platform(r: &mut Running, g: GroundId, i: usize, idx: usize, j: Option<JO
     let probe_y = reg(road_height(r.game, pos, 500.0).0);
     let half_x = fp::fadds(10.0, platform_size(r.game, idx));
     let (coll, coll_y) = obstacle(r.game, j, pos, half_x, 16.5);
-    let x8 = reg(r.game.grounds[g.0].u.bigblue_manager().data[i].x8);
+    let x8 = reg(r.game.grounds[g.0].u.bigblue_manager().data[i].height);
     if coll == 0 || (coll == 1 && reg(pos.y) < reg(coll_y)) {
         let z = if target_y <= probe_y {
             if probe_y == reg(NONE_Y) {
@@ -1236,13 +1247,13 @@ fn fly_platform(r: &mut Running, g: GroundId, i: usize, idx: usize, j: Option<JO
         } else {
             mem(fp::fadds(target_y, x8))
         };
-        r.game.grounds[g.0].u.bigblue_manager().data[i].xC.z = z;
+        r.game.grounds[g.0].u.bigblue_manager().data[i].targets.z = z;
     } else if coll == 1 {
         let y = reg(pos.y);
-        r.game.grounds[g.0].u.bigblue_manager().data[i].xC.z =
+        r.game.grounds[g.0].u.bigblue_manager().data[i].targets.z =
             mem(fp::fadds(y, fp::fsubs(y, reg(coll_y))));
     }
-    let z = reg(r.game.grounds[g.0].u.bigblue_manager().data[i].xC.z);
+    let z = reg(r.game.grounds[g.0].u.bigblue_manager().data[i].targets.z);
     let y = reg(pos.y);
     let vy = if abs(fp::fsubs(y, z)) < 0.5 {
         0.0
@@ -1256,35 +1267,35 @@ fn fly_platform(r: &mut Running, g: GroundId, i: usize, idx: usize, j: Option<JO
         if v < min { min } else { v }
     };
     pos.y = mem(fp::fadds(y, vy));
-    let vx = reg(r.game.grounds[g.0].u.bigblue_manager().data[i].x44.x);
+    let vx = reg(r.game.grounds[g.0].u.bigblue_manager().data[i].speed.x);
     add_tx(r.game, j, vx);
     set_ty(r.game, j, pos.y);
     {
         let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
-        d.x38 = pos;
-        d.x30 = d.x2C;
-        d.x2C = 0;
-        d.x28 = 0.0;
-        d.x24 = 0.0;
+        d.pos = pos;
+        d.landings_last = d.landings;
+        d.landings = 0;
+        d.push_right = 0.0;
+        d.push_left = 0.0;
     }
     let tx = reg(translation(r.game, j).x);
     let edge = fp::fsubs(off_side(r.game), 50.0);
-    let vx = reg(r.game.grounds[g.0].u.bigblue_manager().data[i].x44.x);
+    let vx = reg(r.game.grounds[g.0].u.bigblue_manager().data[i].speed.x);
     if (vx < 0.0 && tx < fp::fneg(edge)) || (vx > 0.0 && tx > edge) {
         jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
         set_rot_z(r.game, j, 0.0);
         {
             let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
-            d.x44 = Vec3::ZERO;
-            d.x18 = Vec3::ZERO;
-            d.xC.x = 0.0;
-            d.x34 = 0;
-            d.x2C = 0;
+            d.speed = Vec3::ZERO;
+            d.swing = Vec3::ZERO;
+            d.targets.x = 0.0;
+            d.dip_stage = 0;
+            d.landings = 0;
         }
         let add = randi(r.game, pm.i(r.data, p::PLAT_WAIT_ADD));
         let d = &mut r.game.grounds[g.0].u.bigblue_manager().data[i];
-        d.x4 = pm.i(r.data, p::PLAT_WAIT).wrapping_add(add) / 2;
-        d.x1 = 1;
+        d.timer = pm.i(r.data, p::PLAT_WAIT).wrapping_add(add) / 2;
+        d.state = 1;
     }
 }
 
@@ -1329,11 +1340,11 @@ pub fn platform_touched(
         let w = fp::fdivs(to_f(x50), 1000.0);
         let d = &mut v.data[active];
         if reg(pos.x) < reg(coll.cur_pos.x) {
-            d.x24 = mem(fp::fmadds(dist, w, reg(d.x24)));
+            d.push_left = mem(fp::fmadds(dist, w, reg(d.push_left)));
         } else {
-            d.x28 = mem(fp::fmadds(dist, w, reg(d.x28)));
+            d.push_right = mem(fp::fmadds(dist, w, reg(d.push_right)));
         }
-        d.x2C = d.x2C.wrapping_add(1);
+        d.landings = d.landings.wrapping_add(1);
     }
 }
 
@@ -1407,9 +1418,9 @@ pub fn init_flyer(r: &mut Running, gobj: GObjId) {
     let wait = fp::fctiwz(pm.f(r.data, p::FLYER_WAIT));
     {
         let v = r.game.grounds[g.0].u.bigblue_flyer();
-        v.xD8 = 0.0;
-        v.xC8 = wait;
-        v.xC4 = 2;
+        v.speed = 0.0;
+        v.timer = wait;
+        v.state = 2;
     }
     anime::start_map(r.game, r.data, gobj, m, 0);
     let pos = translation(r.game, j);
@@ -1430,7 +1441,7 @@ pub fn init_flyer(r: &mut Running, gobj: GObjId) {
 fn platforms_out(game: &mut Game) -> i32 {
     let g = map_ground(game, 0x20);
     let v = game.grounds[g.0].u.bigblue_manager();
-    v.data.iter().filter(|d| d.x1 as i8 != 0).count() as i32
+    v.data.iter().filter(|d| d.state as i8 != 0).count() as i32
 }
 
 /// The Falcon Flyer's process (map 35), `grBigBlue_801E93D8`, by its state: waiting off the
@@ -1463,7 +1474,7 @@ pub fn proc_flyer(r: &mut Running, gobj: GObjId) {
     back.rotate_euler(euler);
     let _ = back + pos;
     let pm = param(r.game);
-    let state = r.game.grounds[g.0].u.bigblue_flyer().xC4 as i8;
+    let state = r.game.grounds[g.0].u.bigblue_flyer().state as i8;
     match state {
         0 => {
             let mg = map_ground(r.game, 0x20);
@@ -1491,10 +1502,10 @@ pub fn proc_flyer(r: &mut Running, gobj: GObjId) {
                     set_translate(r.game, j, pos);
                     let speed = mem(pm.f(r.data, p::FLYER_SPEED));
                     let v = r.game.grounds[g.0].u.bigblue_flyer();
-                    v.xD0 = pos.y;
-                    v.xD8 = speed;
+                    v.target_y = pos.y;
+                    v.speed = speed;
                     jobj::clear_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-                    r.game.grounds[g.0].u.bigblue_flyer().xC4 = 1;
+                    r.game.grounds[g.0].u.bigblue_flyer().state = 1;
                 }
             }
         }
@@ -1504,9 +1515,9 @@ pub fn proc_flyer(r: &mut Running, gobj: GObjId) {
                     if reg(pos.x) > 0.0 {
                         let wait = fp::fctiwz(pm.f(r.data, p::FLYER_WAIT));
                         let v = r.game.grounds[g.0].u.bigblue_flyer();
-                        v.xD8 = 0.0;
-                        v.xC8 = wait;
-                        v.xC4 = 2;
+                        v.speed = 0.0;
+                        v.timer = wait;
+                        v.state = 2;
                     } else {
                         let speed = fp::fmuls(140.0, scale(r.game));
                         let range = fp::fmadds(60.0, scale(r.game), 30.0);
@@ -1520,31 +1531,31 @@ pub fn proc_flyer(r: &mut Running, gobj: GObjId) {
                         } else {
                             mem(pm.f(r.data, p::FLYER_SPEED))
                         };
-                        r.game.grounds[g.0].u.bigblue_flyer().xD8 = v;
+                        r.game.grounds[g.0].u.bigblue_flyer().speed = v;
                     }
                 }
                 2 => {
-                    let t = r.game.grounds[g.0].u.bigblue_flyer().xC8;
+                    let t = r.game.grounds[g.0].u.bigblue_flyer().timer;
                     if t <= 0 {
                         let speed = mem(pm.f(r.data, p::FLYER_SPEED));
                         let v = r.game.grounds[g.0].u.bigblue_flyer();
-                        v.xD8 = speed;
-                        v.xC4 = 3;
+                        v.speed = speed;
+                        v.state = 3;
                         let mg = map_ground(r.game, 0x20);
                         let m = r.game.grounds[mg.0].u.bigblue_manager();
-                        if let Some(d) = m.data.iter_mut().find(|d| d.x1 as i8 == 0) {
-                            d.x1 = 2;
-                            d.x4 = 0;
+                        if let Some(d) = m.data.iter_mut().find(|d| d.state as i8 == 0) {
+                            d.state = 2;
+                            d.timer = 0;
                         }
                     } else {
-                        r.game.grounds[g.0].u.bigblue_flyer().xC8 = t.wrapping_sub(1);
+                        r.game.grounds[g.0].u.bigblue_flyer().timer = t.wrapping_sub(1);
                     }
                 }
                 _ => {
                     let edge = fp::fadds(50.0, reg(super::stage::blast_right(r.game)));
                     if reg(pos.x) > edge {
                         jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-                        r.game.grounds[g.0].u.bigblue_flyer().xD8 = 0.0;
+                        r.game.grounds[g.0].u.bigblue_flyer().speed = 0.0;
                         let mg = map_ground(r.game, 0x20);
                         let m = r.game.grounds[mg.0].u.bigblue_manager();
                         m.event[1] = 0;
@@ -1552,13 +1563,13 @@ pub fn proc_flyer(r: &mut Running, gobj: GObjId) {
                             m.event_extra = super::vars::EventExtra::Joint(j);
                         }
                         m.event[0] = 1;
-                        r.game.grounds[g.0].u.bigblue_flyer().xCC = 0.0;
+                        r.game.grounds[g.0].u.bigblue_flyer().target_turn = 0.0;
                         set_rot_z(r.game, j, 0.0);
-                        r.game.grounds[g.0].u.bigblue_flyer().xC4 = 0;
+                        r.game.grounds[g.0].u.bigblue_flyer().state = 0;
                     }
                 }
             }
-            r.game.grounds[g.0].u.bigblue_flyer().xCC = euler.z;
+            r.game.grounds[g.0].u.bigblue_flyer().target_turn = euler.z;
             ease_turn(r.game, j, euler.z, pm.f(r.data, p::FLYER_TURN));
             let (right, left) = (
                 super::stage::cam_right(r.game),
@@ -1580,7 +1591,7 @@ pub fn proc_flyer(r: &mut Running, gobj: GObjId) {
             } else {
                 mem(fp::fadds(bound, height))
             };
-            r.game.grounds[g.0].u.bigblue_flyer().xD0 = target;
+            r.game.grounds[g.0].u.bigblue_flyer().target_y = target;
             let (y, t) = (reg(pos.y), reg(target));
             let vy = if abs(fp::fsubs(y, t)) < 0.5 {
                 0.0
@@ -1594,7 +1605,7 @@ pub fn proc_flyer(r: &mut Running, gobj: GObjId) {
                 if v < min { min } else { v }
             };
             pos.y = mem(fp::fadds(y, vy));
-            let vx = reg(r.game.grounds[g.0].u.bigblue_flyer().xD8);
+            let vx = reg(r.game.grounds[g.0].u.bigblue_flyer().speed);
             add_tx(r.game, j, vx);
             set_ty(r.game, j, pos.y);
         }
@@ -1664,16 +1675,16 @@ pub fn proc_relay(r: &mut Running, gobj: GObjId) {
             let mg = map_ground(r.game, 0x20);
             if r.game.grounds[mg.0].u.bigblue_manager().event[2] != 0 {
                 let v = r.game.grounds[g.0].u.bigblue_relay();
-                v.xC8_timer = 0;
-                v.xD0_timer = 0;
-                v.xCC_timer = 0;
+                v.arrive_timer = 0;
+                v.rise_timer = 0;
+                v.side_timer = 0;
                 v.set_state(1);
             }
         }
         1 => {
-            let t = r.game.grounds[g.0].u.bigblue_relay().xC8_timer;
+            let t = r.game.grounds[g.0].u.bigblue_relay().arrive_timer;
             if t > 0 {
-                r.game.grounds[g.0].u.bigblue_relay().xC8_timer = t.wrapping_sub(1);
+                r.game.grounds[g.0].u.bigblue_relay().arrive_timer = t.wrapping_sub(1);
             } else {
                 place_relay(r, g, j);
             }
@@ -1734,7 +1745,7 @@ fn place_relay(r: &mut Running, g: GroundId, j: Option<JObjId>) {
     set_translate(r.game, j, pos);
     let v = r.game.grounds[g.0].u.bigblue_relay();
     v.target_y = pos.y;
-    v.xEC = 0.0;
+    v.unread = 0.0;
     v.velocity.z = 0.0;
     v.velocity.y = 0.0;
     jobj::clear_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
@@ -1794,27 +1805,27 @@ fn fly_relay(r: &mut Running, g: GroundId, j: Option<JObjId>, pos: &mut Vec3, to
         let d = if d < 0 { d.wrapping_neg() } else { d };
         randi(r.game, d).wrapping_add(pm.i(r.data, p::RELAY_WAIT_MIN))
     };
-    let t = r.game.grounds[g.0].u.bigblue_relay().xCC_timer;
+    let t = r.game.grounds[g.0].u.bigblue_relay().side_timer;
     if t <= 0 {
         let w = wait_range(r);
-        r.game.grounds[g.0].u.bigblue_relay().xCC_timer = w;
+        r.game.grounds[g.0].u.bigblue_relay().side_timer = w;
         let speed = relay_speed(r.game, r.data, p::RELAY_SPEED_MIN, p::RELAY_SPEED_MAX);
         let v = r.game.grounds[g.0].u.bigblue_relay();
         v.velocity.y = mem(fp::fmuls(speed, to_f(i32::from(v.dir()))));
     } else {
-        r.game.grounds[g.0].u.bigblue_relay().xCC_timer = t.wrapping_sub(1);
+        r.game.grounds[g.0].u.bigblue_relay().side_timer = t.wrapping_sub(1);
     }
-    let t = r.game.grounds[g.0].u.bigblue_relay().xD0_timer;
+    let t = r.game.grounds[g.0].u.bigblue_relay().rise_timer;
     if t <= 0 {
         let w = wait_range(r);
-        r.game.grounds[g.0].u.bigblue_relay().xD0_timer = w;
+        r.game.grounds[g.0].u.bigblue_relay().rise_timer = w;
         let mut speed = relay_speed(r.game, r.data, p::RELAY_RISE_MIN, p::RELAY_RISE_MAX);
         if r.game.objs.rng.below(2) != 0 {
             speed = fp::fmuls(speed, -1.0);
         }
         r.game.grounds[g.0].u.bigblue_relay().velocity.z = mem(speed);
     } else {
-        r.game.grounds[g.0].u.bigblue_relay().xD0_timer = t.wrapping_sub(1);
+        r.game.grounds[g.0].u.bigblue_relay().rise_timer = t.wrapping_sub(1);
     }
     let v = r.game.grounds[g.0].u.bigblue_relay().velocity;
     add_tx(r.game, j, reg(v.y));
@@ -1825,7 +1836,7 @@ fn fly_relay(r: &mut Running, g: GroundId, j: Option<JObjId>, pos: &mut Vec3, to
     if (dir == -1 && tx < fp::fneg(edge)) || (dir == 1 && tx > edge) {
         jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
         let v = r.game.grounds[g.0].u.bigblue_relay();
-        v.xEC = 0.0;
+        v.unread = 0.0;
         v.velocity.z = 0.0;
         v.velocity.y = 0.0;
         let mg = map_ground(r.game, 0x20);

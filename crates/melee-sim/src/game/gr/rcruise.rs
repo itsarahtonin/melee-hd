@@ -194,7 +194,7 @@ pub fn on_init(r: &mut Running) {
     r.game.stage_info.unk8C.b5 = false;
     let lead = create(r, 3, INIT_FRAME).expect("grrcruise.c: the course");
     let g = ground_of(r.game, lead);
-    r.game.grounds[g.0].u.scroll().xC4 |= 0x80;
+    r.game.grounds[g.0].u.scroll().flags |= 0x80;
     let j = jobj_of(r.game, lead);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
     let course = create(r, 3, INIT_FRAME).expect("grrcruise.c: the course");
@@ -264,7 +264,7 @@ pub fn on_ship_start(r: &mut Running, gobj: GObjId) {
     for j in PLANK_JOINTS {
         geo.set_ledge_callback(j, Some(CollUser::GObj(gobj)), Some(CodeRef(PLANK_TOUCHED)));
     }
-    r.game.grounds[g.0].u.rcruise().x10 = 0;
+    r.game.grounds[g.0].u.rcruise().waiting = 0;
 }
 
 /// What a block new from the heap at `addr` held, in a session whose heap's image knows it
@@ -287,7 +287,7 @@ pub fn init_ship(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     setup::init_map_coll(r.game, r.data, j, m);
     anime::start_map(r.game, r.data, gobj, m, 0);
-    r.game.grounds[g.0].u.rcruise().x10 = 1;
+    r.game.grounds[g.0].u.rcruise().waiting = 1;
     // The planks' block (`Map_Chikuwa`, 0x198): the fields their setup never writes (`x1`,
     // `x10`) hold the block's leftovers (docs/engine.md, a session's heap leftovers), else zero.
     let addr = crate::hsd::heap::mem_alloc(0x198);
@@ -298,8 +298,13 @@ pub fn init_ship(r: &mut Running, gobj: GObjId) {
         .map(|i| {
             let b = |o: usize| left.as_ref().map_or(0, |b| b[0x18 * i + o]);
             super::vars::RCruisePlank {
-                x1: b(1),
-                x10: f32::from_bits(u32::from_be_bytes([b(0x10), b(0x11), b(0x12), b(0x13)])),
+                flags: b(1),
+                fall_speed: f32::from_bits(u32::from_be_bytes([
+                    b(0x10),
+                    b(0x11),
+                    b(0x12),
+                    b(0x13),
+                ])),
                 ..Default::default()
             }
         })
@@ -324,9 +329,9 @@ pub fn init_ship(r: &mut Running, gobj: GObjId) {
         -10000.0,
     );
     let v = r.game.grounds[g.0].u.rcruise();
-    v.x4 = w;
-    v.x8 = 0.017_453_292;
-    v.xC = 1;
+    v.wind = w;
+    v.steer_step = 0.017_453_292;
+    v.gust = 1;
 }
 
 /// The ship's process, `grRCruise_801FF6D4`: once the match has started, the parts that appear
@@ -335,7 +340,7 @@ pub fn init_ship(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "grRCruise_801FF6D4")]
 pub fn proc_ship(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    if r.game.grounds[g.0].u.rcruise().x10 == 0 {
+    if r.game.grounds[g.0].u.rcruise().waiting == 0 {
         update_vanish(r, gobj);
         tilt(r, gobj);
         update_planks(r, gobj);
@@ -382,7 +387,7 @@ pub fn init_flag(r: &mut Running, gobj: GObjId) {
             let root = nth_joint(r.game, gobj, 23);
             chain(r, root, src, g);
         }
-        None => r.game.grounds[g.0].u.rcruise_flag().xC4.data = None,
+        None => r.game.grounds[g.0].u.rcruise_flag().chain.data = None,
     }
     for k in 0..4 {
         let part = nth_joint(r.game, gobj, 10 + k);
@@ -397,10 +402,10 @@ pub fn init_flag(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "grLib_801C9B20")]
 pub fn chain(r: &mut Running, root: Option<JObjId>, src: DataRef, g: GroundId) {
     let n = r.data.u32(src.at(4));
-    let mut desc = r.game.grounds[g.0].u.rcruise_flag().xC4.clone();
+    let mut desc = r.game.grounds[g.0].u.rcruise_flag().chain.clone();
     r.game.load_dynamics_chain(r.data, root, &mut desc, n);
     r.game.set_dynamics_params(r.data, src, &mut desc);
-    r.game.grounds[g.0].u.rcruise_flag().xC4 = desc;
+    r.game.grounds[g.0].u.rcruise_flag().chain = desc;
 }
 
 /// The flag's process, `grRCruise_801FF8E4`: its chain swings and the collision follows the
@@ -416,7 +421,7 @@ pub fn proc_flag(r: &mut Running, gobj: GObjId) {
 /// nothing to collide with and no floor).
 #[doc(alias = "grLib_801C9B8C")]
 pub fn swing(r: &mut Running, g: GroundId) {
-    let desc = r.game.grounds[g.0].u.rcruise_flag().xC4.clone();
+    let desc = r.game.grounds[g.0].u.rcruise_flag().chain.clone();
     r.game.swing_chain(
         r.data,
         &desc,
@@ -445,15 +450,15 @@ pub fn init_course(r: &mut Running, gobj: GObjId) {
     let ctr = ctr_jobj.expect("grrcruise.c: gp->u.scroll.ctr_jobj");
     let x4 = r.game.objs.jobjs[ctr].translate;
     let v = r.game.grounds[g.0].u.scroll();
-    v.x38 = x38;
-    v.x44 = x44;
+    v.scenery = x38;
+    v.scenery2 = x44;
     v.int_jobj = int_jobj;
     v.cam_jobj = cam_jobj;
     v.ctr_jobj = ctr_jobj;
-    v.x4 = x4;
-    v.x10 = Vec3::ZERO;
-    v.x1C = Vec3::ZERO;
-    v.xC4 &= !0x80;
+    v.center = x4;
+    v.offset = Vec3::ZERO;
+    v.step = Vec3::ZERO;
+    v.flags &= !0x80;
     let m = map_id(r.game, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
     anime::apply(
@@ -474,7 +479,7 @@ pub fn init_course(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "grRCruise_801FFADC")]
 pub fn proc_course(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    if r.game.grounds[g.0].u.scroll().xC4 & 0x80 != 0 {
+    if r.game.grounds[g.0].u.scroll().flags & 0x80 != 0 {
         return;
     }
     let cam_offset = stage::cam_center(r.game);
@@ -496,8 +501,8 @@ pub fn proc_course(r: &mut Running, gobj: GObjId) {
     pos = pos - center;
     pos.y = mem(fp::fadds(reg(pos.y), 10.0));
     let v = r.game.grounds[g.0].u.scroll();
-    v.x1C = v.x10 - pos;
-    v.x10 = pos;
+    v.step = v.offset - pos;
+    v.offset = pos;
     let neg = |c: f32| mem(fp::fmuls(reg(c), -1.0));
     let mut pos = Vec3::new(neg(pos.x), neg(pos.y), neg(pos.z));
     pos = pos + cam_offset;
@@ -530,18 +535,18 @@ pub fn init_blocks(r: &mut Running, gobj: GObjId) {
     for (i, &part) in BLOCKS.iter().enumerate() {
         anime::start(r.game, r.data, gobj, part, 7, 1, 0.0, 0.0, false);
         let joint = setup::coll_joint_id(r.game, r.data, m, part);
-        r.game.grounds[g.0].u.rcruise_blocks().x3C[i].x2 = joint as i16;
+        r.game.grounds[g.0].u.rcruise_blocks().blocks[i].coll_joint = joint as i16;
         r.game.geometry_mut().set_ledge_callback(
             joint as i16 as i32,
             Some(CollUser::GObj(gobj)),
             Some(CodeRef(BLOCK_TOUCHED)),
         );
         let model = nth_joint(r.game, gobj, part);
-        let b = &mut r.game.grounds[g.0].u.rcruise_blocks().x3C[i];
-        b.xC = model;
-        b.x8 = 0;
-        b.x4 = 0;
-        b.x0 = 0;
+        let b = &mut r.game.grounds[g.0].u.rcruise_blocks().blocks[i];
+        b.jobj = model;
+        b.touches = 0;
+        b.ticks = 0;
+        b.state = 0;
     }
 }
 
@@ -567,8 +572,8 @@ fn block_model(jobjs: &JObjs, b: Option<JObjId>) -> Option<JObjId> {
 /// Takes a block's collision out of the search and puts it back as it stands, hidden, its
 /// animation back at its first frame and stopped.
 fn block_reset(r: &mut Running, gobj: GObjId, g: GroundId, i: usize) {
-    let b = &r.game.grounds[g.0].u.rcruise_blocks().x3C[i];
-    let (joint, model) = (i32::from(b.x2), b.xC);
+    let b = &r.game.grounds[g.0].u.rcruise_blocks().blocks[i];
+    let (joint, model) = (i32::from(b.coll_joint), b.jobj);
     r.game.geometry_mut().disable_joint(joint);
     let child = block_model(&r.game.objs.jobjs, model);
     show_dobjs(&mut r.game.objs, child, false);
@@ -576,7 +581,7 @@ fn block_reset(r: &mut Running, gobj: GObjId, g: GroundId, i: usize) {
     anime::set_rate(r.game, gobj, BLOCKS[i], 1, 0.0, false);
     update_coll_joint(r.game, r.data, joint);
     r.game.geometry_mut().settle_vertices(joint);
-    r.game.grounds[g.0].u.rcruise_blocks().x3C[i].x0 = 0;
+    r.game.grounds[g.0].u.rcruise_blocks().blocks[i].state = 0;
 }
 
 /// The blocks' process, `grRCruise_80200154`. A block comes in (state 0: its collision in the
@@ -588,67 +593,67 @@ pub fn proc_blocks(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let p = param(r.game);
     for (i, &part) in BLOCKS.iter().enumerate() {
-        let b = &r.game.grounds[g.0].u.rcruise_blocks().x3C[i];
-        let (state, joint, model) = (b.x0, i32::from(b.x2), b.xC);
+        let b = &r.game.grounds[g.0].u.rcruise_blocks().blocks[i];
+        let (state, joint, model) = (b.state, i32::from(b.coll_joint), b.jobj);
         match state {
             0 => {
                 r.game.geometry_mut().enable_joint(joint);
                 let child = block_model(&r.game.objs.jobjs, model);
                 show_dobjs(&mut r.game.objs, child, true);
-                let b = &mut r.game.grounds[g.0].u.rcruise_blocks().x3C[i];
-                b.x4 = 0;
-                b.x0 = 1;
+                let b = &mut r.game.grounds[g.0].u.rcruise_blocks().blocks[i];
+                b.ticks = 0;
+                b.state = 1;
             }
             2 => {
-                if r.game.grounds[g.0].u.rcruise_blocks().x3C[i].x8 == 0 {
-                    r.game.grounds[g.0].u.rcruise_blocks().x3C[i].x4 = 0;
+                if r.game.grounds[g.0].u.rcruise_blocks().blocks[i].touches == 0 {
+                    r.game.grounds[g.0].u.rcruise_blocks().blocks[i].ticks = 0;
                     anime::set_rate(r.game, gobj, part, 1, 0.0, false);
-                    r.game.grounds[g.0].u.rcruise_blocks().x3C[i].x0 = 3;
+                    r.game.grounds[g.0].u.rcruise_blocks().blocks[i].state = 3;
                 } else if anime::finished(r.game, gobj, part, 7) {
-                    let b = &mut r.game.grounds[g.0].u.rcruise_blocks().x3C[i];
-                    b.x4 = 0;
-                    b.x0 = 5;
+                    let b = &mut r.game.grounds[g.0].u.rcruise_blocks().blocks[i];
+                    b.ticks = 0;
+                    b.state = 5;
                 }
             }
             3 => {
                 let wait = p.i(r.data, p::BLOCK_WAIT);
-                let b = &mut r.game.grounds[g.0].u.rcruise_blocks().x3C[i];
-                if b.x4 >= wait {
-                    b.x4 = 0;
-                    b.x1 &= !0x80;
-                    b.x0 = 4;
+                let b = &mut r.game.grounds[g.0].u.rcruise_blocks().blocks[i];
+                if b.ticks >= wait {
+                    b.ticks = 0;
+                    b.flags &= !0x80;
+                    b.state = 4;
                 }
-                b.x4 = b.x4.wrapping_add(1);
+                b.ticks = b.ticks.wrapping_add(1);
             }
             4 => {
                 let (blink, gone) = (p.i(r.data, p::BLOCK_BLINK), p.i(r.data, p::BLOCK_GONE));
-                let b = &mut r.game.grounds[g.0].u.rcruise_blocks().x3C[i];
-                if b.x4.wrapping_rem(blink) == 0 {
-                    b.x1 ^= 0x80;
-                    let hide = b.x1 & 0x80 != 0;
+                let b = &mut r.game.grounds[g.0].u.rcruise_blocks().blocks[i];
+                if b.ticks.wrapping_rem(blink) == 0 {
+                    b.flags ^= 0x80;
+                    let hide = b.flags & 0x80 != 0;
                     let child = block_model(&r.game.objs.jobjs, model);
                     show_dobjs(&mut r.game.objs, child, !hide);
                 }
-                if r.game.grounds[g.0].u.rcruise_blocks().x3C[i].x4 >= gone {
+                if r.game.grounds[g.0].u.rcruise_blocks().blocks[i].ticks >= gone {
                     block_reset(r, gobj, g, i);
                 }
-                let b = &mut r.game.grounds[g.0].u.rcruise_blocks().x3C[i];
-                b.x4 = b.x4.wrapping_add(1);
+                let b = &mut r.game.grounds[g.0].u.rcruise_blocks().blocks[i];
+                b.ticks = b.ticks.wrapping_add(1);
             }
             5 => {
                 let (blink, back) = (p.i(r.data, p::BLOCK_BACK_BLINK), p.i(r.data, p::BLOCK_BACK));
-                let n = r.game.grounds[g.0].u.rcruise_blocks().x3C[i].x4;
+                let n = r.game.grounds[g.0].u.rcruise_blocks().blocks[i].ticks;
                 let child = block_model(&r.game.objs.jobjs, model);
                 show_dobjs(&mut r.game.objs, child, n.wrapping_rem(blink) != 0);
                 if n >= back {
                     block_reset(r, gobj, g, i);
                 }
-                let b = &mut r.game.grounds[g.0].u.rcruise_blocks().x3C[i];
-                b.x4 = b.x4.wrapping_add(1);
+                let b = &mut r.game.grounds[g.0].u.rcruise_blocks().blocks[i];
+                b.ticks = b.ticks.wrapping_add(1);
             }
             _ => {}
         }
-        r.game.grounds[g.0].u.rcruise_blocks().x3C[i].x8 = 0;
+        r.game.grounds[g.0].u.rcruise_blocks().blocks[i].touches = 0;
     }
     update_map_coll(r.game, r.data, gobj);
 }
@@ -668,20 +673,20 @@ pub fn block_touched(
         return;
     }
     for (i, &part) in BLOCKS.iter().enumerate() {
-        let b = &grounds[g.0].u.rcruise_blocks().x3C[i];
-        if i32::from(b.x2) != joint_id {
+        let b = &grounds[g.0].u.rcruise_blocks().blocks[i];
+        if i32::from(b.coll_joint) != joint_id {
             continue;
         }
-        if matches!(b.x0, 1 | 3 | 4) {
-            let model = b.xC;
-            grounds[g.0].u.rcruise_blocks().x3C[i].x4 = 0;
+        if matches!(b.state, 1 | 3 | 4) {
+            let model = b.jobj;
+            grounds[g.0].u.rcruise_blocks().blocks[i].ticks = 0;
             let child = block_model(&objs.jobjs, model);
             show_dobjs(objs, child, true);
             anime::set_rate_below(objs, root, part, 1, 1.0, false);
-            grounds[g.0].u.rcruise_blocks().x3C[i].x0 = 2;
+            grounds[g.0].u.rcruise_blocks().blocks[i].state = 2;
         }
-        let b = &mut grounds[g.0].u.rcruise_blocks().x3C[i];
-        b.x8 = b.x8.wrapping_add(1);
+        let b = &mut grounds[g.0].u.rcruise_blocks().blocks[i];
+        b.touches = b.touches.wrapping_add(1);
         break;
     }
 }
@@ -691,16 +696,16 @@ pub fn block_touched(
 pub fn reset_tilt(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.rcruise();
-    v.x18 = 0.0;
-    v.x14 = 0.0;
-    v.x1C = 0.0;
-    v.x20 = 0.0;
-    v.x34 = 0;
-    v.x30 = 0;
-    v.x28 = 0.0;
-    v.x24 = 0.0;
-    v.x38 = 0;
-    v.x2C = 0;
+    v.tilt = 0.0;
+    v.unread = 0.0;
+    v.tilt_dir = 0.0;
+    v.tilt_speed = 0.0;
+    v.touches = 0;
+    v.touches_last = 0;
+    v.pull_right = 0.0;
+    v.pull_left = 0.0;
+    v.ease_wait = 0;
+    v.tilt_state = 0;
 }
 
 /// The deck's collision joint touched, `grRCruise_80200578`: something standing on it (kinds
@@ -733,12 +738,12 @@ pub fn deck_touched(
     if dist > 4.0 {
         let w = fp::fdivs(fp::frsp(f64::from(x50)), 1000.0);
         if reg(pos.x) < reg(coll.cur_pos.x) {
-            v.x24 = mem(fp::fmadds(dist, w, reg(v.x24)));
+            v.pull_left = mem(fp::fmadds(dist, w, reg(v.pull_left)));
         } else {
-            v.x28 = mem(fp::fmadds(dist, w, reg(v.x28)));
+            v.pull_right = mem(fp::fmadds(dist, w, reg(v.pull_right)));
         }
     }
-    v.x34 = v.x34.wrapping_add(1);
+    v.touches = v.touches.wrapping_add(1);
 }
 
 /// The deck's tilt, `grRCruise_8020071C`. With nothing on it, it swings back level at the
@@ -759,7 +764,7 @@ pub fn tilt(r: &mut Running, gobj: GObjId) {
         reg(p.f(r.data, p::TILT_BACK)),
     );
     let v = r.game.grounds[g.0].u.rcruise();
-    let rot = reg(v.x18);
+    let rot = reg(v.tilt);
     let abs_rot = if rot < fp::frsp(0.0) {
         fp::fneg(rot)
     } else {
@@ -768,57 +773,67 @@ pub fn tilt(r: &mut Running, gobj: GObjId) {
     let turns = fp::frsp(f64::from(fp::fctiwz(fp::fdivs(abs_rot, 360.0))));
     let wrapped = fp::fnmsubs(360.0, turns, abs_rot);
     let swing_back = |v: &mut super::vars::RCruiseVars| {
-        v.x1C = mem(fp::frsp(if reg(v.x18) < 0.0 { 1.0 } else { -1.0 }));
-        v.x20 = mem(fp::fmuls(back_rate, reg(v.x1C)));
+        v.tilt_dir = mem(fp::frsp(if reg(v.tilt) < 0.0 { 1.0 } else { -1.0 }));
+        v.tilt_speed = mem(fp::fmuls(back_rate, reg(v.tilt_dir)));
         if wrapped <= reg(0.2f32) {
-            v.x20 = 0.0;
-            v.x2C = 0;
+            v.tilt_speed = 0.0;
+            v.tilt_state = 0;
         }
     };
-    match v.x2C {
+    match v.tilt_state {
         0 => {
-            if v.x34 == 0 {
+            if v.touches == 0 {
                 swing_back(v);
-            } else if reg(v.x24) < reg(v.x28) {
-                v.x1C = 1.0;
-                v.x20 = mem(fp::fmuls(rate, fp::fsubs(reg(v.x28), reg(v.x24))));
-                if reg(v.x20) >= max {
-                    v.x20 = mem(max);
+            } else if reg(v.pull_left) < reg(v.pull_right) {
+                v.tilt_dir = 1.0;
+                v.tilt_speed = mem(fp::fmuls(
+                    rate,
+                    fp::fsubs(reg(v.pull_right), reg(v.pull_left)),
+                ));
+                if reg(v.tilt_speed) >= max {
+                    v.tilt_speed = mem(max);
                 }
             } else {
-                v.x1C = -1.0;
-                v.x20 = mem(fp::fmuls(fp::fneg(rate), fp::fsubs(reg(v.x24), reg(v.x28))));
-                if reg(v.x20) <= fp::fneg(max) {
-                    v.x20 = mem(fp::fneg(max));
+                v.tilt_dir = -1.0;
+                v.tilt_speed = mem(fp::fmuls(
+                    fp::fneg(rate),
+                    fp::fsubs(reg(v.pull_left), reg(v.pull_right)),
+                ));
+                if reg(v.tilt_speed) <= fp::fneg(max) {
+                    v.tilt_speed = mem(fp::fneg(max));
                 }
             }
         }
         1 => {
-            if v.x38 == 0 {
-                if v.x34 == 0 {
+            if v.ease_wait == 0 {
+                if v.touches == 0 {
                     swing_back(v);
                 } else {
-                    v.x2C = 0;
+                    v.tilt_state = 0;
                 }
             } else {
-                v.x38 = v.x38.wrapping_sub(1);
-                v.x20 = mem(fp::fmadds(reg(0.008f32), fp::fneg(reg(v.x1C)), reg(v.x20)));
-                let s = reg(v.x20);
+                v.ease_wait = v.ease_wait.wrapping_sub(1);
+                v.tilt_speed = mem(fp::fmadds(
+                    reg(0.008f32),
+                    fp::fneg(reg(v.tilt_dir)),
+                    reg(v.tilt_speed),
+                ));
+                let s = reg(v.tilt_speed);
                 let abs = if s < 0.0 { fp::fneg(s) } else { s };
                 if abs <= reg(0.008f32) {
-                    v.x20 = 0.0;
+                    v.tilt_speed = 0.0;
                 }
             }
         }
         _ => {}
     }
-    v.x18 = mem(fp::fadds(reg(v.x18), reg(v.x20)));
-    let angle = mem(fp::fmuls(reg(0.017_453_292_f32), reg(v.x18)));
-    let x34 = v.x34;
-    v.x30 = x34;
-    v.x34 = 0;
-    v.x28 = 0.0;
-    v.x24 = 0.0;
+    v.tilt = mem(fp::fadds(reg(v.tilt), reg(v.tilt_speed)));
+    let angle = mem(fp::fmuls(reg(0.017_453_292_f32), reg(v.tilt)));
+    let x34 = v.touches;
+    v.touches_last = x34;
+    v.touches = 0;
+    v.pull_right = 0.0;
+    v.pull_left = 0.0;
     for j in [pivot, pivot5] {
         jobj::set_rotation_z(&mut r.game.objs.jobjs, j.expect("the deck's pivot"), angle);
     }
@@ -835,12 +850,12 @@ pub fn init_planks(r: &mut Running, gobj: GObjId) {
         let j = nth_joint(r.game, gobj, part);
         let y = r.game.objs.jobjs[j.expect("a plank's joint")].translate.y;
         let e = &mut r.game.grounds[g.0].u.rcruise().entries[i];
-        e.x2 = joint as i16;
-        e.x14 = j;
-        e.x8 = 0;
-        e.x4 = 0;
-        e.xC = y;
-        e.x0 = 0;
+        e.coll_joint = joint as i16;
+        e.jobj = j;
+        e.touches = 0;
+        e.ticks = 0;
+        e.rest_y = y;
+        e.state = 0;
     }
 }
 
@@ -857,22 +872,22 @@ pub fn update_planks(r: &mut Running, gobj: GObjId) {
     let pf = |off| reg(p.f(r.data, off));
     for i in 0..PLANKS.len() {
         let e = &r.game.grounds[g.0].u.rcruise().entries[i];
-        let (state, joint, j) = (e.x0, i32::from(e.x2), e.x14);
+        let (state, joint, j) = (e.state, i32::from(e.coll_joint), e.jobj);
         match state {
             1 => {
                 let wait = pi(p::PLANK_WAIT);
                 let e = &mut r.game.grounds[g.0].u.rcruise().entries[i];
-                if e.x8 == 0 {
-                    e.x4 = 0;
-                    e.x0 = 0;
-                } else if e.x4 >= wait {
-                    e.x0 = 2;
+                if e.touches == 0 {
+                    e.ticks = 0;
+                    e.state = 0;
+                } else if e.ticks >= wait {
+                    e.state = 2;
                 } else {
-                    e.x4 = e.x4.wrapping_add(1);
+                    e.ticks = e.ticks.wrapping_add(1);
                 }
             }
             2 => {
-                let n = r.game.grounds[g.0].u.rcruise().entries[i].x4;
+                let n = r.game.grounds[g.0].u.rcruise().entries[i].ticks;
                 if n.wrapping_rem(pi(p::PLANK_SHAKE_EVERY)) == 0 {
                     let (lo, hi) = (pf(p::PLANK_SHAKE_MIN), pf(p::PLANK_SHAKE_MAX));
                     let range = fp::fctiwz(fp::fmuls(100.0, fp::fsubs(hi, lo)));
@@ -881,7 +896,7 @@ pub fn update_planks(r: &mut Running, gobj: GObjId) {
                     } else {
                         0
                     };
-                    let rest = reg(r.game.grounds[g.0].u.rcruise().entries[i].xC);
+                    let rest = reg(r.game.grounds[g.0].u.rcruise().entries[i].rest_y);
                     let y = fp::fadds(
                         rest,
                         fp::fadds(lo, fp::fdivs(fp::frsp(f64::from(k)), 100.0)),
@@ -891,41 +906,41 @@ pub fn update_planks(r: &mut Running, gobj: GObjId) {
                 }
                 let shake = pi(p::PLANK_SHAKE);
                 let e = &mut r.game.grounds[g.0].u.rcruise().entries[i];
-                if e.x4 >= shake {
-                    e.x10 = 0.0;
-                    e.x0 = 3;
+                if e.ticks >= shake {
+                    e.fall_speed = 0.0;
+                    e.state = 3;
                 }
-                e.x4 = e.x4.wrapping_add(1);
+                e.ticks = e.ticks.wrapping_add(1);
             }
             3 => {
                 let (gravity, max) = (pf(p::PLANK_GRAVITY), pf(p::PLANK_FALL_MAX));
                 let e = &mut r.game.grounds[g.0].u.rcruise().entries[i];
-                e.x10 = mem(fp::fsubs(reg(e.x10), gravity));
-                let s = reg(e.x10);
+                e.fall_speed = mem(fp::fsubs(reg(e.fall_speed), gravity));
+                let s = reg(e.fall_speed);
                 let abs = if s < 0.0 { fp::fneg(s) } else { s };
                 if abs > max {
-                    e.x10 = mem(fp::fneg(max));
+                    e.fall_speed = mem(fp::fneg(max));
                 }
-                let speed = e.x10;
+                let speed = e.fall_speed;
                 let jj = j.expect("a plank's joint");
                 jobj::set_srt(&mut r.game.objs.jobjs, jj, |o| {
                     o.translate.y = mem(fp::fadds(reg(o.translate.y), reg(speed)))
                 });
                 let bottom = stage::cam_bottom(r.game);
                 if reg(r.game.objs.jobjs[jj].translate.y) <= reg(bottom) {
-                    r.game.grounds[g.0].u.rcruise().entries[i].x10 = 0.0;
+                    r.game.grounds[g.0].u.rcruise().entries[i].fall_speed = 0.0;
                     show_dobjs(&mut r.game.objs, j, false);
                     r.game.geometry_mut().disable_joint(joint);
                     let e = &mut r.game.grounds[g.0].u.rcruise().entries[i];
-                    e.x4 = 0;
-                    e.x0 = 4;
+                    e.ticks = 0;
+                    e.state = 4;
                 }
             }
             4 => {
                 let gone = pi(p::PLANK_GONE);
                 let e = &r.game.grounds[g.0].u.rcruise().entries[i];
-                if e.x4 >= gone {
-                    let rest = e.xC;
+                if e.ticks >= gone {
+                    let rest = e.rest_y;
                     let jj = j.expect("a plank's joint");
                     jobj::set_srt(&mut r.game.objs.jobjs, jj, |o| o.translate.y = rest);
                     update_coll_joint(r.game, r.data, joint);
@@ -933,33 +948,33 @@ pub fn update_planks(r: &mut Running, gobj: GObjId) {
                     show_dobjs(&mut r.game.objs, j, true);
                     r.game.geometry_mut().enable_joint(joint);
                     let e = &mut r.game.grounds[g.0].u.rcruise().entries[i];
-                    e.x4 = 0;
-                    e.x1 &= !0x80;
-                    e.x0 = 5;
+                    e.ticks = 0;
+                    e.flags &= !0x80;
+                    e.state = 5;
                 }
                 let e = &mut r.game.grounds[g.0].u.rcruise().entries[i];
-                e.x4 = e.x4.wrapping_add(1);
+                e.ticks = e.ticks.wrapping_add(1);
             }
             5 => {
                 let (blink, back) = (pi(p::PLANK_BLINK), pi(p::PLANK_BACK));
                 let e = &mut r.game.grounds[g.0].u.rcruise().entries[i];
-                if e.x4.wrapping_rem(blink) == 0 {
-                    e.x1 ^= 0x80;
-                    let hide = e.x1 & 0x80 != 0;
+                if e.ticks.wrapping_rem(blink) == 0 {
+                    e.flags ^= 0x80;
+                    let hide = e.flags & 0x80 != 0;
                     show_dobjs(&mut r.game.objs, j, !hide);
                 }
-                if r.game.grounds[g.0].u.rcruise().entries[i].x4 >= back {
+                if r.game.grounds[g.0].u.rcruise().entries[i].ticks >= back {
                     show_dobjs(&mut r.game.objs, j, true);
                     let e = &mut r.game.grounds[g.0].u.rcruise().entries[i];
-                    e.x4 = 0;
-                    e.x0 = 0;
+                    e.ticks = 0;
+                    e.state = 0;
                 }
                 let e = &mut r.game.grounds[g.0].u.rcruise().entries[i];
-                e.x4 = e.x4.wrapping_add(1);
+                e.ticks = e.ticks.wrapping_add(1);
             }
             _ => {}
         }
-        r.game.grounds[g.0].u.rcruise().entries[i].x8 = 0;
+        r.game.grounds[g.0].u.rcruise().entries[i].touches = 0;
     }
 }
 
@@ -972,12 +987,12 @@ pub fn plank_touched(grounds: &mut Pool<Ground>, g: GroundId, joint_id: i32, kin
     }
     let v = grounds[g.0].u.rcruise();
     for e in v.entries.iter_mut() {
-        if i32::from(e.x2) == joint_id {
-            if e.x0 == 0 {
-                e.x4 = 0;
-                e.x0 = 1;
+        if i32::from(e.coll_joint) == joint_id {
+            if e.state == 0 {
+                e.ticks = 0;
+                e.state = 1;
             }
-            e.x8 = e.x8.wrapping_add(1);
+            e.touches = e.touches.wrapping_add(1);
             break;
         }
     }
@@ -991,7 +1006,10 @@ pub fn plank_touched(grounds: &mut Pool<Ground>, g: GroundId, joint_id: i32, kin
 pub fn steer_wind(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let v = r.game.grounds[g.0].u.rcruise();
-    let (w, step) = (v.x4.expect("the ship's wind source") as usize, v.x8);
+    let (w, step) = (
+        v.wind.expect("the ship's wind source") as usize,
+        v.steer_step,
+    );
     let e = &r.game.gr.winds.entries[w];
     let mut angle = reg(crate::math::atan2(e.pos.z, e.pos.x));
     angle = fp::fadds(angle, reg(step));
@@ -1008,16 +1026,16 @@ pub fn steer_wind(r: &mut Running, gobj: GObjId) {
     let age = e.age;
     if age.wrapping_rem(30) == 0 && reg(r.game.objs.rng.draw_f32()) > 0.5 {
         let v = r.game.grounds[g.0].u.rcruise();
-        v.x8 = mem(fp::fneg(reg(v.x8)));
+        v.steer_step = mem(fp::fneg(reg(v.steer_step)));
     }
     if age.wrapping_rem(300) == 0 {
-        if r.game.grounds[g.0].u.rcruise().xC != 0 {
-            r.game.grounds[g.0].u.rcruise().xC = 0;
+        if r.game.grounds[g.0].u.rcruise().gust != 0 {
+            r.game.grounds[g.0].u.rcruise().gust = 0;
         } else if reg(r.game.objs.rng.draw_f32()) > 0.5 {
-            r.game.grounds[g.0].u.rcruise().xC = 1;
+            r.game.grounds[g.0].u.rcruise().gust = 1;
         }
     }
-    let scale = if r.game.grounds[g.0].u.rcruise().xC != 0 {
+    let scale = if r.game.grounds[g.0].u.rcruise().gust != 0 {
         fp::frsp(fp::fmadd(0.3, reg(r.game.objs.rng.draw_f32()), 0.2))
     } else {
         fp::frsp(fp::fmadd(0.2, reg(r.game.objs.rng.draw_f32()), 0.1))
@@ -1104,7 +1122,7 @@ pub fn init_vanish(r: &mut Running, gobj: GObjId) {
     v.vanish_addr = addr;
     v.vanish = (0..VANISH.len())
         .map(|i| super::vars::VanishEntry {
-            x2: left
+            unwritten: left
                 .as_ref()
                 .map_or(0, |b| i16::from_be_bytes([b[8 * i + 2], b[8 * i + 3]])),
             ..Default::default()
@@ -1115,11 +1133,11 @@ pub fn init_vanish(r: &mut Running, gobj: GObjId) {
         assert!(j.is_some(), "grrcruise.c: gp->u.map.vanish[i].jobj");
         r.game.grounds[g.0].u.rcruise().vanish[i].jobj = j;
         if there {
-            r.game.grounds[g.0].u.rcruise().vanish[i].x0 = 2;
+            r.game.grounds[g.0].u.rcruise().vanish[i].state = 2;
             vanish_appear(r, i);
             r.game.geometry_mut().enable_joint(joint);
         } else {
-            r.game.grounds[g.0].u.rcruise().vanish[i].x0 = 0;
+            r.game.grounds[g.0].u.rcruise().vanish[i].state = 0;
             anime::start(r.game, r.data, gobj, part, 2, 1, 0.0, 1.0, true);
             r.game.geometry_mut().disable_joint(joint);
         }
@@ -1143,12 +1161,12 @@ pub fn update_vanish(r: &mut Running, gobj: GObjId) {
             continue;
         }
         let e = &r.game.grounds[g.0].u.rcruise().vanish[i];
-        let (state, j) = (e.x0, e.jobj);
+        let (state, j) = (e.state, e.jobj);
         match state {
             0 => {
                 let pos = world_position(&mut r.game.objs, r.data, j, None);
                 if camera::in_bounds_by(&r.game.stage_info, pos, -20.0) {
-                    r.game.grounds[g.0].u.rcruise().vanish[i].x0 = 1;
+                    r.game.grounds[g.0].u.rcruise().vanish[i].state = 1;
                     anime::start(r.game, r.data, gobj, part, 2, 2, 0.0, 1.0, true);
                     r.game.geometry_mut().enable_joint(joint);
                     update_coll_joint(r.game, r.data, joint);
@@ -1157,26 +1175,26 @@ pub fn update_vanish(r: &mut Running, gobj: GObjId) {
             }
             1 => {
                 if anime::finished(r.game, gobj, part, 2) {
-                    r.game.grounds[g.0].u.rcruise().vanish[i].x0 = 2;
+                    r.game.grounds[g.0].u.rcruise().vanish[i].state = 2;
                     vanish_appear(r, i);
                 }
             }
             2 => {
                 let pos = world_position(&mut r.game.objs, r.data, j, None);
                 if !camera::in_bounds_by(&r.game.stage_info, pos, -20.0) {
-                    r.game.grounds[g.0].u.rcruise().vanish[i].x0 = 3;
+                    r.game.grounds[g.0].u.rcruise().vanish[i].state = 3;
                     anime::start(r.game, r.data, gobj, part, 2, 3, 0.0, 1.0, true);
                     vanish_go(r, i);
                 }
             }
             3 if anime::finished(r.game, gobj, part, 2) => {
-                r.game.grounds[g.0].u.rcruise().vanish[i].x0 = 0;
+                r.game.grounds[g.0].u.rcruise().vanish[i].state = 0;
                 anime::start(r.game, r.data, gobj, part, 2, 1, 0.0, 1.0, true);
                 let v = r.game.grounds[g.0].u.rcruise();
                 let busy = VANISH
                     .iter()
                     .zip(v.vanish.iter())
-                    .any(|(d, e)| d.1 == joint && e.x0 != 0);
+                    .any(|(d, e)| d.1 == joint && e.state != 0);
                 if !busy {
                     r.game.geometry_mut().disable_joint(joint);
                 }
@@ -1193,7 +1211,7 @@ pub fn wind(game: &Game) -> Vec3 {
         return Vec3::ZERO;
     };
     match &game.grounds[ground_of(game, gobj).0].u.vars {
-        super::GroundVars::Scroll(v) => v.x1C,
+        super::GroundVars::Scroll(v) => v.step,
         other => panic!("Rainbow Cruise's course's variables are {other:?}"),
     }
 }
