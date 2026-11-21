@@ -11,7 +11,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xd00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d3e00)),
         input_cb: None,
         phys_cb: None,
@@ -22,7 +22,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xd00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d3910)),
         input_cb: None,
         phys_cb: None,
@@ -33,7 +33,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xd00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d3b88)),
         input_cb: None,
         phys_cb: None,
@@ -44,7 +44,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xd00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d4078)),
         input_cb: None,
         phys_cb: None,
@@ -55,7 +55,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 29,
         flags: 0xd00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d42e4)),
         input_cb: None,
         phys_cb: None,
@@ -66,7 +66,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xd00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d42e4)),
         input_cb: None,
         phys_cb: None,
@@ -77,7 +77,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 29,
         flags: 0xd00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d4a08)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800d4ce8)),
@@ -88,7 +88,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 0,
         flags: 0xd00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d4a08)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800d4ce8)),
@@ -99,7 +99,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 1,
         flags: 0xd00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d4a08)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800d4ce8)),
@@ -110,7 +110,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xd00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d4a08)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800d4ce8)),
@@ -121,7 +121,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xd00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d4a08)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800d4ce8)),
@@ -132,7 +132,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xd20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bfe6c)),
         input_cb: Some(CodeRef(0x800bfe70)),
         phys_cb: None,
@@ -143,7 +143,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 2,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d52f8)),
         input_cb: Some(CodeRef(0x800d5358)),
         phys_cb: Some(CodeRef(0x800d535c)),
@@ -154,7 +154,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 2,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d56ec)),
         input_cb: Some(CodeRef(0x800d575c)),
         phys_cb: Some(CodeRef(0x800d58f4)),
@@ -165,7 +165,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 2,
         flags: 0x0,
-        x8: 0x1c00000,
+        move_bits: 0x1c00000,
         anim_cb: Some(CodeRef(0x8008a494)),
         input_cb: Some(CodeRef(0x8008a4d4)),
         phys_cb: Some(CodeRef(0x8008a644)),
@@ -176,7 +176,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 7,
         flags: 0x4066,
-        x8: 0x1c00000,
+        move_bits: 0x1c00000,
         anim_cb: Some(CodeRef(0x800c95f4)),
         input_cb: Some(CodeRef(0x800c9614)),
         phys_cb: Some(CodeRef(0x800c9768)),
@@ -187,7 +187,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 8,
         flags: 0x4066,
-        x8: 0x1c00000,
+        move_bits: 0x1c00000,
         anim_cb: Some(CodeRef(0x800c95f4)),
         input_cb: Some(CodeRef(0x800c9614)),
         phys_cb: Some(CodeRef(0x800c9768)),
@@ -198,7 +198,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 9,
         flags: 0x4066,
-        x8: 0x1c00000,
+        move_bits: 0x1c00000,
         anim_cb: Some(CodeRef(0x800c95f4)),
         input_cb: Some(CodeRef(0x800c9614)),
         phys_cb: Some(CodeRef(0x800c9768)),
@@ -209,7 +209,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 10,
         flags: 0x2064,
-        x8: 0x1c00000,
+        move_bits: 0x1c00000,
         anim_cb: Some(CodeRef(0x800c9970)),
         input_cb: Some(CodeRef(0x800c99f8)),
         phys_cb: Some(CodeRef(0x800c9bec)),
@@ -220,7 +220,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 11,
         flags: 0x2064,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800c9e10)),
         input_cb: Some(CodeRef(0x800c9ed8)),
         phys_cb: Some(CodeRef(0x800c9efc)),
@@ -231,7 +231,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 12,
         flags: 0x67,
-        x8: 0x1c00000,
+        move_bits: 0x1c00000,
         anim_cb: Some(CodeRef(0x800ca1f4)),
         input_cb: Some(CodeRef(0x800ca230)),
         phys_cb: Some(CodeRef(0x800ca53c)),
@@ -242,7 +242,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 13,
         flags: 0x68,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800ca77c)),
         input_cb: Some(CodeRef(0x800ca830)),
         phys_cb: Some(CodeRef(0x800ca95c)),
@@ -253,7 +253,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 13,
         flags: 0x68,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800caa4c)),
         input_cb: Some(CodeRef(0x800caa6c)),
         phys_cb: Some(CodeRef(0x800cab84)),
@@ -264,7 +264,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 14,
         flags: 0x0,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800cac9c)),
         input_cb: Some(CodeRef(0x800cadb0)),
         phys_cb: Some(CodeRef(0x800cae18)),
@@ -275,7 +275,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 15,
         flags: 0x0,
-        x8: 0x1c00000,
+        move_bits: 0x1c00000,
         anim_cb: Some(CodeRef(0x800cb528)),
         input_cb: Some(CodeRef(0x800cb5fc)),
         phys_cb: Some(CodeRef(0x800cb6ac)),
@@ -286,7 +286,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 16,
         flags: 0x8069,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800cb2f8)),
         input_cb: Some(CodeRef(0x800cb334)),
         phys_cb: Some(CodeRef(0x800cb474)),
@@ -297,7 +297,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 17,
         flags: 0x8069,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800cb2f8)),
         input_cb: Some(CodeRef(0x800cb334)),
         phys_cb: Some(CodeRef(0x800cb474)),
@@ -308,7 +308,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 18,
         flags: 0x1006a,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800cc388)),
         input_cb: Some(CodeRef(0x800cc4f8)),
         phys_cb: Some(CodeRef(0x800cc634)),
@@ -319,7 +319,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 19,
         flags: 0x1006a,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800cc388)),
         input_cb: Some(CodeRef(0x800cc4f8)),
         phys_cb: Some(CodeRef(0x800cc634)),
@@ -330,7 +330,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 20,
         flags: 0x0,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800cca00)),
         input_cb: Some(CodeRef(0x800ccd34)),
         phys_cb: Some(CodeRef(0x800ccd58)),
@@ -341,7 +341,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x0,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800cca00)),
         input_cb: Some(CodeRef(0x800ccd34)),
         phys_cb: Some(CodeRef(0x800ccd58)),
@@ -352,7 +352,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x0,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800cca00)),
         input_cb: Some(CodeRef(0x800ccd34)),
         phys_cb: Some(CodeRef(0x800ccd58)),
@@ -363,7 +363,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 23,
         flags: 0x0,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800ccdfc)),
         input_cb: Some(CodeRef(0x800cce50)),
         phys_cb: Some(CodeRef(0x800cce74)),
@@ -374,7 +374,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 24,
         flags: 0x0,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800cca00)),
         input_cb: Some(CodeRef(0x800cce50)),
         phys_cb: Some(CodeRef(0x800ccd58)),
@@ -385,7 +385,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 25,
         flags: 0x0,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800cca00)),
         input_cb: Some(CodeRef(0x800cce50)),
         phys_cb: Some(CodeRef(0x800ccd58)),
@@ -396,7 +396,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 26,
         flags: 0x0,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80096aa0)),
         input_cb: Some(CodeRef(0x80096af4)),
         phys_cb: Some(CodeRef(0x80096b44)),
@@ -407,7 +407,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 27,
         flags: 0x0,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80096aa0)),
         input_cb: Some(CodeRef(0x80096af4)),
         phys_cb: Some(CodeRef(0x80096b44)),
@@ -418,7 +418,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 28,
         flags: 0x0,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80096aa0)),
         input_cb: Some(CodeRef(0x80096af4)),
         phys_cb: Some(CodeRef(0x80096b44)),
@@ -429,7 +429,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 29,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80090824)),
         input_cb: Some(CodeRef(0x80090828)),
         phys_cb: Some(CodeRef(0x8009093c)),
@@ -440,7 +440,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 30,
         flags: 0x65,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d607c)),
         input_cb: Some(CodeRef(0x800d60b8)),
         phys_cb: Some(CodeRef(0x800d623c)),
@@ -451,7 +451,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 31,
         flags: 0x65,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x800d6448)),
         input_cb: Some(CodeRef(0x800d6474)),
         phys_cb: Some(CodeRef(0x800d6584)),
@@ -462,7 +462,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 34,
         flags: 0x65,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800d6658)),
         input_cb: Some(CodeRef(0x800d6694)),
         phys_cb: Some(CodeRef(0x800d6784)),
@@ -473,7 +473,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 35,
         flags: 0x0,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x800d5d3c)),
         input_cb: Some(CodeRef(0x800d5d78)),
         phys_cb: Some(CodeRef(0x800d5f18)),
@@ -484,7 +484,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 36,
         flags: 0x0,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x800d5d3c)),
         input_cb: Some(CodeRef(0x800d5d78)),
         phys_cb: Some(CodeRef(0x800d5f18)),
@@ -495,7 +495,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 46,
         flags: 0x2c0201,
-        x8: 0x2800000,
+        move_bits: 0x2800000,
         anim_cb: Some(CodeRef(0x8008ac9c)),
         input_cb: Some(CodeRef(0x8008acd8)),
         phys_cb: Some(CodeRef(0x8008adf0)),
@@ -506,7 +506,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 47,
         flags: 0x2c0202,
-        x8: 0x3800000,
+        move_bits: 0x3800000,
         anim_cb: Some(CodeRef(0x8008b040)),
         input_cb: Some(CodeRef(0x8008b07c)),
         phys_cb: Some(CodeRef(0x8008adf0)),
@@ -517,7 +517,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 48,
         flags: 0x2c0203,
-        x8: 0x4800000,
+        move_bits: 0x4800000,
         anim_cb: Some(CodeRef(0x8008b354)),
         input_cb: Some(CodeRef(0x8008b390)),
         phys_cb: Some(CodeRef(0x8008adf0)),
@@ -528,7 +528,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 49,
         flags: 0x2c0204,
-        x8: 0x5800000,
+        move_bits: 0x5800000,
         anim_cb: Some(CodeRef(0x800d6c0c)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800d6e98)),
@@ -539,7 +539,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 50,
         flags: 0x2c0204,
-        x8: 0x5800000,
+        move_bits: 0x5800000,
         anim_cb: Some(CodeRef(0x800d6d48)),
         input_cb: Some(CodeRef(0x800d6e70)),
         phys_cb: Some(CodeRef(0x800d6eb8)),
@@ -550,7 +550,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 51,
         flags: 0x2c0204,
-        x8: 0x5800000,
+        move_bits: 0x5800000,
         anim_cb: Some(CodeRef(0x800d6e34)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800d6ed8)),
@@ -561,7 +561,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 52,
         flags: 0x240205,
-        x8: 0x6800000,
+        move_bits: 0x6800000,
         anim_cb: Some(CodeRef(0x8008b548)),
         input_cb: Some(CodeRef(0x8008b5ac)),
         phys_cb: Some(CodeRef(0x8008b600)),
@@ -572,7 +572,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 53,
         flags: 0x240206,
-        x8: 0x7800000,
+        move_bits: 0x7800000,
         anim_cb: Some(CodeRef(0x8008b8d4)),
         input_cb: Some(CodeRef(0x8008b910)),
         phys_cb: Some(CodeRef(0x8008b940)),
@@ -583,7 +583,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 54,
         flags: 0x240206,
-        x8: 0x7800000,
+        move_bits: 0x7800000,
         anim_cb: Some(CodeRef(0x8008b8d4)),
         input_cb: Some(CodeRef(0x8008b910)),
         phys_cb: Some(CodeRef(0x8008b940)),
@@ -594,7 +594,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 55,
         flags: 0x240206,
-        x8: 0x7800000,
+        move_bits: 0x7800000,
         anim_cb: Some(CodeRef(0x8008b8d4)),
         input_cb: Some(CodeRef(0x8008b910)),
         phys_cb: Some(CodeRef(0x8008b940)),
@@ -605,7 +605,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 56,
         flags: 0x240206,
-        x8: 0x7800000,
+        move_bits: 0x7800000,
         anim_cb: Some(CodeRef(0x8008b8d4)),
         input_cb: Some(CodeRef(0x8008b910)),
         phys_cb: Some(CodeRef(0x8008b940)),
@@ -616,7 +616,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 57,
         flags: 0x240206,
-        x8: 0x7800000,
+        move_bits: 0x7800000,
         anim_cb: Some(CodeRef(0x8008b8d4)),
         input_cb: Some(CodeRef(0x8008b910)),
         phys_cb: Some(CodeRef(0x8008b940)),
@@ -627,7 +627,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 58,
         flags: 0x240207,
-        x8: 0x8800000,
+        move_bits: 0x8800000,
         anim_cb: Some(CodeRef(0x8008ba98)),
         input_cb: Some(CodeRef(0x8008bad4)),
         phys_cb: Some(CodeRef(0x8008bb04)),
@@ -638,7 +638,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 59,
         flags: 0x240208,
-        x8: 0x9800000,
+        move_bits: 0x9800000,
         anim_cb: Some(CodeRef(0x8008bcfc)),
         input_cb: Some(CodeRef(0x8008bd80)),
         phys_cb: Some(CodeRef(0x8008bf84)),
@@ -649,7 +649,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 60,
         flags: 0x240a09,
-        x8: 0xa800000,
+        move_bits: 0xa800000,
         anim_cb: Some(CodeRef(0x8008c520)),
         input_cb: Some(CodeRef(0x8008c55c)),
         phys_cb: Some(CodeRef(0x8008c7f0)),
@@ -660,7 +660,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 61,
         flags: 0x240a09,
-        x8: 0xa800000,
+        move_bits: 0xa800000,
         anim_cb: Some(CodeRef(0x8008c520)),
         input_cb: Some(CodeRef(0x8008c55c)),
         phys_cb: Some(CodeRef(0x8008c7f0)),
@@ -671,7 +671,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 62,
         flags: 0x240a09,
-        x8: 0xa800000,
+        move_bits: 0xa800000,
         anim_cb: Some(CodeRef(0x8008c520)),
         input_cb: Some(CodeRef(0x8008c55c)),
         phys_cb: Some(CodeRef(0x8008c7f0)),
@@ -682,7 +682,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 63,
         flags: 0x240a09,
-        x8: 0xa800000,
+        move_bits: 0xa800000,
         anim_cb: Some(CodeRef(0x8008c520)),
         input_cb: Some(CodeRef(0x8008c55c)),
         phys_cb: Some(CodeRef(0x8008c7f0)),
@@ -693,7 +693,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 64,
         flags: 0x240a09,
-        x8: 0xa800000,
+        move_bits: 0xa800000,
         anim_cb: Some(CodeRef(0x8008c520)),
         input_cb: Some(CodeRef(0x8008c55c)),
         phys_cb: Some(CodeRef(0x8008c7f0)),
@@ -704,7 +704,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 66,
         flags: 0x240a0a,
-        x8: 0xb800000,
+        move_bits: 0xb800000,
         anim_cb: Some(CodeRef(0x8008ca98)),
         input_cb: Some(CodeRef(0x8008cad4)),
         phys_cb: Some(CodeRef(0x8008cb04)),
@@ -715,7 +715,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 67,
         flags: 0x240a0b,
-        x8: 0xc800000,
+        move_bits: 0xc800000,
         anim_cb: Some(CodeRef(0x8008ccbc)),
         input_cb: Some(CodeRef(0x8008ccf8)),
         phys_cb: Some(CodeRef(0x8008cd28)),
@@ -726,7 +726,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 68,
         flags: 0x24060c,
-        x8: 0xd800000,
+        move_bits: 0xd800000,
         anim_cb: Some(CodeRef(0x8008d010)),
         input_cb: Some(CodeRef(0x8008d08c)),
         phys_cb: Some(CodeRef(0x8008d5b4)),
@@ -737,7 +737,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 69,
         flags: 0x24060d,
-        x8: 0xe800000,
+        move_bits: 0xe800000,
         anim_cb: Some(CodeRef(0x8008d010)),
         input_cb: Some(CodeRef(0x8008d194)),
         phys_cb: Some(CodeRef(0x8008d5b4)),
@@ -748,7 +748,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 70,
         flags: 0x24060e,
-        x8: 0xf800000,
+        move_bits: 0xf800000,
         anim_cb: Some(CodeRef(0x8008d010)),
         input_cb: Some(CodeRef(0x8008d29c)),
         phys_cb: Some(CodeRef(0x8008d5b4)),
@@ -759,7 +759,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 71,
         flags: 0x24060f,
-        x8: 0x10800000,
+        move_bits: 0x10800000,
         anim_cb: Some(CodeRef(0x8008d010)),
         input_cb: Some(CodeRef(0x8008d3a4)),
         phys_cb: Some(CodeRef(0x8008d5b4)),
@@ -770,7 +770,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 72,
         flags: 0x240610,
-        x8: 0x11800000,
+        move_bits: 0x11800000,
         anim_cb: Some(CodeRef(0x8008d010)),
         input_cb: Some(CodeRef(0x8008d4ac)),
         phys_cb: Some(CodeRef(0x8008d5b4)),
@@ -781,7 +781,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 73,
         flags: 0x60c,
-        x8: 0xdc00000,
+        move_bits: 0xdc00000,
         anim_cb: Some(CodeRef(0x8008d78c)),
         input_cb: Some(CodeRef(0x8008d7ac)),
         phys_cb: Some(CodeRef(0x8008d7b0)),
@@ -792,7 +792,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 74,
         flags: 0x60d,
-        x8: 0xec00000,
+        move_bits: 0xec00000,
         anim_cb: Some(CodeRef(0x8008d78c)),
         input_cb: Some(CodeRef(0x8008d7ac)),
         phys_cb: Some(CodeRef(0x8008d7b0)),
@@ -803,7 +803,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 75,
         flags: 0x60e,
-        x8: 0xfc00000,
+        move_bits: 0xfc00000,
         anim_cb: Some(CodeRef(0x8008d78c)),
         input_cb: Some(CodeRef(0x8008d7ac)),
         phys_cb: Some(CodeRef(0x8008d7b0)),
@@ -814,7 +814,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 76,
         flags: 0x60f,
-        x8: 0x10c00000,
+        move_bits: 0x10c00000,
         anim_cb: Some(CodeRef(0x8008d78c)),
         input_cb: Some(CodeRef(0x8008d7ac)),
         phys_cb: Some(CodeRef(0x8008d7b0)),
@@ -825,7 +825,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 77,
         flags: 0x610,
-        x8: 0x11c00000,
+        move_bits: 0x11c00000,
         anim_cb: Some(CodeRef(0x8008d78c)),
         input_cb: Some(CodeRef(0x8008d7ac)),
         phys_cb: Some(CodeRef(0x8008d7b0)),
@@ -836,7 +836,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 165,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008f7f0)),
         input_cb: Some(CodeRef(0x8008fa44)),
         phys_cb: Some(CodeRef(0x8008fb18)),
@@ -847,7 +847,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 166,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008f7f0)),
         input_cb: Some(CodeRef(0x8008fa44)),
         phys_cb: Some(CodeRef(0x8008fb18)),
@@ -858,7 +858,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 167,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008f7f0)),
         input_cb: Some(CodeRef(0x8008fa44)),
         phys_cb: Some(CodeRef(0x8008fb18)),
@@ -869,7 +869,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 168,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008f7f0)),
         input_cb: Some(CodeRef(0x8008fa44)),
         phys_cb: Some(CodeRef(0x8008fb18)),
@@ -880,7 +880,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 169,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008f7f0)),
         input_cb: Some(CodeRef(0x8008fa44)),
         phys_cb: Some(CodeRef(0x8008fb18)),
@@ -891,7 +891,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 170,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008f7f0)),
         input_cb: Some(CodeRef(0x8008fa44)),
         phys_cb: Some(CodeRef(0x8008fb18)),
@@ -902,7 +902,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 171,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008f7f0)),
         input_cb: Some(CodeRef(0x8008fa44)),
         phys_cb: Some(CodeRef(0x8008fb18)),
@@ -913,7 +913,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 172,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008f7f0)),
         input_cb: Some(CodeRef(0x8008fa44)),
         phys_cb: Some(CodeRef(0x8008fb18)),
@@ -924,7 +924,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 173,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008f7f0)),
         input_cb: Some(CodeRef(0x8008fa44)),
         phys_cb: Some(CodeRef(0x8008fb18)),
@@ -935,7 +935,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 174,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008f7f0)),
         input_cb: Some(CodeRef(0x8008fa44)),
         phys_cb: Some(CodeRef(0x8008fb18)),
@@ -946,7 +946,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 175,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008f7f0)),
         input_cb: Some(CodeRef(0x8008fa44)),
         phys_cb: Some(CodeRef(0x8008fb18)),
@@ -957,7 +957,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 176,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008f7f0)),
         input_cb: Some(CodeRef(0x8008fa44)),
         phys_cb: Some(CodeRef(0x8008fb18)),
@@ -968,7 +968,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 177,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008fd98)),
         input_cb: Some(CodeRef(0x8008ff48)),
         phys_cb: Some(CodeRef(0x8008ff84)),
@@ -979,7 +979,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 178,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008fd98)),
         input_cb: Some(CodeRef(0x8008ff48)),
         phys_cb: Some(CodeRef(0x8008ff84)),
@@ -990,7 +990,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 179,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008fd98)),
         input_cb: Some(CodeRef(0x8008ff48)),
         phys_cb: Some(CodeRef(0x8008ff84)),
@@ -1001,7 +1001,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 180,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8008fd98)),
         input_cb: Some(CodeRef(0x8008ff48)),
         phys_cb: Some(CodeRef(0x8008ff84)),
@@ -1012,7 +1012,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 181,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800901d0)),
         input_cb: Some(CodeRef(0x80090324)),
         phys_cb: Some(CodeRef(0x8009035c)),
@@ -1023,7 +1023,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 78,
         flags: 0x400000,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80094a14)),
         input_cb: Some(CodeRef(0x80094b20)),
         phys_cb: Some(CodeRef(0x80094b24)),
@@ -1034,7 +1034,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 89,
         flags: 0x400000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80094a14)),
         input_cb: Some(CodeRef(0x80094b20)),
         phys_cb: Some(CodeRef(0x80094b24)),
@@ -1045,7 +1045,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 79,
         flags: 0x440062,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1056,7 +1056,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 80,
         flags: 0x440062,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1067,7 +1067,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 81,
         flags: 0x440062,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1078,7 +1078,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 82,
         flags: 0x440062,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1089,7 +1089,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 83,
         flags: 0x440062,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096144)),
@@ -1100,7 +1100,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 84,
         flags: 0x440062,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1111,7 +1111,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 85,
         flags: 0x440462,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x800961b0)),
@@ -1122,7 +1122,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 86,
         flags: 0x440462,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x800961b0)),
@@ -1133,7 +1133,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 87,
         flags: 0x440462,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x800961b0)),
@@ -1144,7 +1144,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 88,
         flags: 0x440462,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x800961b0)),
@@ -1155,7 +1155,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 92,
         flags: 0x440062,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1166,7 +1166,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 93,
         flags: 0x440062,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1177,7 +1177,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 94,
         flags: 0x440062,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1188,7 +1188,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 95,
         flags: 0x440062,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1199,7 +1199,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 96,
         flags: 0x440862,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1210,7 +1210,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 97,
         flags: 0x440862,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1221,7 +1221,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 98,
         flags: 0x440862,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1232,7 +1232,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 99,
         flags: 0x440862,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1243,7 +1243,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 100,
         flags: 0x440c62,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x800961b0)),
@@ -1254,7 +1254,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 101,
         flags: 0x440c62,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x800961b0)),
@@ -1265,7 +1265,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 102,
         flags: 0x440c62,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x800961b0)),
@@ -1276,7 +1276,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 103,
         flags: 0x440c62,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x800961b0)),
@@ -1287,7 +1287,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 104,
         flags: 0x440862,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1298,7 +1298,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 105,
         flags: 0x440862,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1309,7 +1309,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 106,
         flags: 0x440862,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1320,7 +1320,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 107,
         flags: 0x440862,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80095e80)),
         input_cb: Some(CodeRef(0x80096120)),
         phys_cb: Some(CodeRef(0x80096124)),
@@ -1331,7 +1331,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 108,
         flags: 0x440040,
-        x8: 0x3f800000,
+        move_bits: 0x3f800000,
         anim_cb: Some(CodeRef(0x800cd390)),
         input_cb: Some(CodeRef(0x800cd3b0)),
         phys_cb: Some(CodeRef(0x800cd3d0)),
@@ -1342,7 +1342,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 109,
         flags: 0x440041,
-        x8: 0x40800000,
+        move_bits: 0x40800000,
         anim_cb: Some(CodeRef(0x800cd390)),
         input_cb: Some(CodeRef(0x800cd3b0)),
         phys_cb: Some(CodeRef(0x800cd3d0)),
@@ -1353,7 +1353,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 110,
         flags: 0x440842,
-        x8: 0x41800000,
+        move_bits: 0x41800000,
         anim_cb: Some(CodeRef(0x800cd390)),
         input_cb: Some(CodeRef(0x800cd3b0)),
         phys_cb: Some(CodeRef(0x800cd3d0)),
@@ -1364,7 +1364,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 111,
         flags: 0x440043,
-        x8: 0x42800000,
+        move_bits: 0x42800000,
         anim_cb: Some(CodeRef(0x800cd390)),
         input_cb: Some(CodeRef(0x800cd3b0)),
         phys_cb: Some(CodeRef(0x800cd3d0)),
@@ -1375,7 +1375,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 112,
         flags: 0x440044,
-        x8: 0x43800000,
+        move_bits: 0x43800000,
         anim_cb: Some(CodeRef(0x800cd458)),
         input_cb: Some(CodeRef(0x800cd478)),
         phys_cb: Some(CodeRef(0x800cd498)),
@@ -1386,7 +1386,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 113,
         flags: 0x440045,
-        x8: 0x44800000,
+        move_bits: 0x44800000,
         anim_cb: Some(CodeRef(0x800cd458)),
         input_cb: Some(CodeRef(0x800cd478)),
         phys_cb: Some(CodeRef(0x800cd498)),
@@ -1397,7 +1397,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 114,
         flags: 0x440846,
-        x8: 0x45800000,
+        move_bits: 0x45800000,
         anim_cb: Some(CodeRef(0x800cd458)),
         input_cb: Some(CodeRef(0x800cd478)),
         phys_cb: Some(CodeRef(0x800cd498)),
@@ -1408,7 +1408,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 115,
         flags: 0x440047,
-        x8: 0x46800000,
+        move_bits: 0x46800000,
         anim_cb: Some(CodeRef(0x800cd458)),
         input_cb: Some(CodeRef(0x800cd478)),
         phys_cb: Some(CodeRef(0x800cd498)),
@@ -1419,7 +1419,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 116,
         flags: 0x440048,
-        x8: 0x47800000,
+        move_bits: 0x47800000,
         anim_cb: Some(CodeRef(0x800cd520)),
         input_cb: Some(CodeRef(0x800cd540)),
         phys_cb: Some(CodeRef(0x800cd560)),
@@ -1430,7 +1430,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 117,
         flags: 0x440049,
-        x8: 0x48800000,
+        move_bits: 0x48800000,
         anim_cb: Some(CodeRef(0x800cd520)),
         input_cb: Some(CodeRef(0x800cd540)),
         phys_cb: Some(CodeRef(0x800cd560)),
@@ -1441,7 +1441,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 118,
         flags: 0x44084a,
-        x8: 0x49800000,
+        move_bits: 0x49800000,
         anim_cb: Some(CodeRef(0x800cd520)),
         input_cb: Some(CodeRef(0x800cd540)),
         phys_cb: Some(CodeRef(0x800cd560)),
@@ -1452,7 +1452,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 119,
         flags: 0x44004b,
-        x8: 0x4a800000,
+        move_bits: 0x4a800000,
         anim_cb: Some(CodeRef(0x800cd520)),
         input_cb: Some(CodeRef(0x800cd540)),
         phys_cb: Some(CodeRef(0x800cd560)),
@@ -1463,7 +1463,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 120,
         flags: 0x44004c,
-        x8: 0x4b800000,
+        move_bits: 0x4b800000,
         anim_cb: Some(CodeRef(0x800cd6a0)),
         input_cb: Some(CodeRef(0x800cd7c4)),
         phys_cb: Some(CodeRef(0x800cd7e4)),
@@ -1474,7 +1474,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 121,
         flags: 0x44004d,
-        x8: 0x4c800000,
+        move_bits: 0x4c800000,
         anim_cb: Some(CodeRef(0x800cd6a0)),
         input_cb: Some(CodeRef(0x800cd7c4)),
         phys_cb: Some(CodeRef(0x800cd7e4)),
@@ -1485,7 +1485,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 122,
         flags: 0x44084e,
-        x8: 0x4d800000,
+        move_bits: 0x4d800000,
         anim_cb: Some(CodeRef(0x800cd6a0)),
         input_cb: Some(CodeRef(0x800cd7c4)),
         phys_cb: Some(CodeRef(0x800cd7e4)),
@@ -1496,7 +1496,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 123,
         flags: 0x44004f,
-        x8: 0x4e800000,
+        move_bits: 0x4e800000,
         anim_cb: Some(CodeRef(0x800cd6a0)),
         input_cb: Some(CodeRef(0x800cd7c4)),
         phys_cb: Some(CodeRef(0x800cd7e4)),
@@ -1507,7 +1507,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 124,
         flags: 0x440050,
-        x8: 0x4f800000,
+        move_bits: 0x4f800000,
         anim_cb: Some(CodeRef(0x800cd88c)),
         input_cb: Some(CodeRef(0x800cd8ac)),
         phys_cb: Some(CodeRef(0x800cd8cc)),
@@ -1518,7 +1518,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 125,
         flags: 0x440051,
-        x8: 0x50800000,
+        move_bits: 0x50800000,
         anim_cb: Some(CodeRef(0x800cd88c)),
         input_cb: Some(CodeRef(0x800cd8ac)),
         phys_cb: Some(CodeRef(0x800cd8cc)),
@@ -1529,7 +1529,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 126,
         flags: 0x440852,
-        x8: 0x51800000,
+        move_bits: 0x51800000,
         anim_cb: Some(CodeRef(0x800cd88c)),
         input_cb: Some(CodeRef(0x800cd8ac)),
         phys_cb: Some(CodeRef(0x800cd8cc)),
@@ -1540,7 +1540,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 127,
         flags: 0x440053,
-        x8: 0x52800000,
+        move_bits: 0x52800000,
         anim_cb: Some(CodeRef(0x800cd88c)),
         input_cb: Some(CodeRef(0x800cd8ac)),
         phys_cb: Some(CodeRef(0x800cd8cc)),
@@ -1551,7 +1551,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 128,
         flags: 0x440054,
-        x8: 0x53800000,
+        move_bits: 0x53800000,
         anim_cb: Some(CodeRef(0x800cdb14)),
         input_cb: Some(CodeRef(0x800cdb34)),
         phys_cb: Some(CodeRef(0x800cdb54)),
@@ -1562,7 +1562,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 129,
         flags: 0x440055,
-        x8: 0x54800000,
+        move_bits: 0x54800000,
         anim_cb: Some(CodeRef(0x800cdb14)),
         input_cb: Some(CodeRef(0x800cdb34)),
         phys_cb: Some(CodeRef(0x800cdb54)),
@@ -1573,7 +1573,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 130,
         flags: 0x440856,
-        x8: 0x55800000,
+        move_bits: 0x55800000,
         anim_cb: Some(CodeRef(0x800cdb14)),
         input_cb: Some(CodeRef(0x800cdb34)),
         phys_cb: Some(CodeRef(0x800cdb54)),
@@ -1584,7 +1584,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 131,
         flags: 0x440057,
-        x8: 0x56800000,
+        move_bits: 0x56800000,
         anim_cb: Some(CodeRef(0x800cdb14)),
         input_cb: Some(CodeRef(0x800cdb34)),
         phys_cb: Some(CodeRef(0x800cdb54)),
@@ -1595,7 +1595,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 134,
         flags: 0x440058,
-        x8: 0x57800000,
+        move_bits: 0x57800000,
         anim_cb: Some(CodeRef(0x800cf0b8)),
         input_cb: Some(CodeRef(0x800cf118)),
         phys_cb: Some(CodeRef(0x800cf1a0)),
@@ -1606,7 +1606,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 135,
         flags: 0x4c0058,
-        x8: 0x57800000,
+        move_bits: 0x57800000,
         anim_cb: Some(CodeRef(0x800cf2b8)),
         input_cb: Some(CodeRef(0x800cf2bc)),
         phys_cb: Some(CodeRef(0x800cf380)),
@@ -1617,7 +1617,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 136,
         flags: 0x4c0058,
-        x8: 0x57800000,
+        move_bits: 0x57800000,
         anim_cb: Some(CodeRef(0x800cf424)),
         input_cb: Some(CodeRef(0x800cf428)),
         phys_cb: Some(CodeRef(0x800cf494)),
@@ -1628,7 +1628,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 137,
         flags: 0x4c0058,
-        x8: 0x57800000,
+        move_bits: 0x57800000,
         anim_cb: Some(CodeRef(0x800cf528)),
         input_cb: Some(CodeRef(0x800cf52c)),
         phys_cb: Some(CodeRef(0x800cf54c)),
@@ -1639,7 +1639,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 138,
         flags: 0x440159,
-        x8: 0x58800000,
+        move_bits: 0x58800000,
         anim_cb: Some(CodeRef(0x800ce308)),
         input_cb: Some(CodeRef(0x800ce348)),
         phys_cb: Some(CodeRef(0x800ce350)),
@@ -1650,7 +1650,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 139,
         flags: 0x440559,
-        x8: 0x58800000,
+        move_bits: 0x58800000,
         anim_cb: Some(CodeRef(0x800ce328)),
         input_cb: Some(CodeRef(0x800ce34c)),
         phys_cb: Some(CodeRef(0x800ce370)),
@@ -1661,7 +1661,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 140,
         flags: 0x440159,
-        x8: 0x58800000,
+        move_bits: 0x58800000,
         anim_cb: Some(CodeRef(0x800ce308)),
         input_cb: Some(CodeRef(0x800ce348)),
         phys_cb: Some(CodeRef(0x800ce350)),
@@ -1672,7 +1672,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 141,
         flags: 0x440559,
-        x8: 0x58800000,
+        move_bits: 0x58800000,
         anim_cb: Some(CodeRef(0x800ce328)),
         input_cb: Some(CodeRef(0x800ce34c)),
         phys_cb: Some(CodeRef(0x800ce370)),
@@ -1683,7 +1683,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 142,
         flags: 0x4c015a,
-        x8: 0x59800000,
+        move_bits: 0x59800000,
         anim_cb: Some(CodeRef(0x800ceaf0)),
         input_cb: Some(CodeRef(0x800cec50)),
         phys_cb: Some(CodeRef(0x800cec58)),
@@ -1694,7 +1694,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 143,
         flags: 0x4c055a,
-        x8: 0x59800000,
+        move_bits: 0x59800000,
         anim_cb: Some(CodeRef(0x800ceba0)),
         input_cb: Some(CodeRef(0x800cec54)),
         phys_cb: Some(CodeRef(0x800cec78)),
@@ -1705,7 +1705,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 144,
         flags: 0x44825b,
-        x8: 0x5a800000,
+        move_bits: 0x5a800000,
         anim_cb: Some(CodeRef(0x800d2dd0)),
         input_cb: Some(CodeRef(0x800d2e0c)),
         phys_cb: Some(CodeRef(0x800d2e2c)),
@@ -1716,7 +1716,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 145,
         flags: 0x45065b,
-        x8: 0x5a800000,
+        move_bits: 0x5a800000,
         anim_cb: Some(CodeRef(0x800d2ef8)),
         input_cb: Some(CodeRef(0x800d2f34)),
         phys_cb: Some(CodeRef(0x800d2f54)),
@@ -1727,7 +1727,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 146,
         flags: 0x528000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d30c0)),
         input_cb: Some(CodeRef(0x800d30fc)),
         phys_cb: Some(CodeRef(0x800d3100)),
@@ -1738,7 +1738,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 147,
         flags: 0x530000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d30c0)),
         input_cb: Some(CodeRef(0x800d30fc)),
         phys_cb: Some(CodeRef(0x800d3100)),
@@ -1749,7 +1749,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 149,
         flags: 0x440000,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800d79ac)),
         input_cb: Some(CodeRef(0x800d7aec)),
         phys_cb: Some(CodeRef(0x800d7b4c)),
@@ -1760,7 +1760,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 150,
         flags: 0x4c015c,
-        x8: 0x5b800000,
+        move_bits: 0x5b800000,
         anim_cb: Some(CodeRef(0x800d7dfc)),
         input_cb: Some(CodeRef(0x800d8024)),
         phys_cb: Some(CodeRef(0x800d8064)),
@@ -1771,7 +1771,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 151,
         flags: 0x44015d,
-        x8: 0x5c800000,
+        move_bits: 0x5c800000,
         anim_cb: Some(CodeRef(0x800d83ac)),
         input_cb: Some(CodeRef(0x800d843c)),
         phys_cb: Some(CodeRef(0x800d8444)),
@@ -1782,7 +1782,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 152,
         flags: 0x440000,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800d88b8)),
         input_cb: Some(CodeRef(0x800d88f8)),
         phys_cb: Some(CodeRef(0x800d8900)),
@@ -1793,7 +1793,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 153,
         flags: 0x440000,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800d79b0)),
         input_cb: Some(CodeRef(0x800d7b1c)),
         phys_cb: Some(CodeRef(0x800d7b6c)),
@@ -1804,7 +1804,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 154,
         flags: 0x4c055c,
-        x8: 0x5b800000,
+        move_bits: 0x5b800000,
         anim_cb: Some(CodeRef(0x800d7f10)),
         input_cb: Some(CodeRef(0x800d8044)),
         phys_cb: Some(CodeRef(0x800d8084)),
@@ -1815,7 +1815,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 155,
         flags: 0x44055d,
-        x8: 0x5c800000,
+        move_bits: 0x5c800000,
         anim_cb: Some(CodeRef(0x800d83f4)),
         input_cb: Some(CodeRef(0x800d8440)),
         phys_cb: Some(CodeRef(0x800d8464)),
@@ -1826,7 +1826,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 156,
         flags: 0x440000,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800d88d8)),
         input_cb: Some(CodeRef(0x800d88fc)),
         phys_cb: Some(CodeRef(0x800d8920)),
@@ -1837,7 +1837,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 157,
         flags: 0x440000,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800d79ac)),
         input_cb: Some(CodeRef(0x800d7aec)),
         phys_cb: Some(CodeRef(0x800d7b4c)),
@@ -1848,7 +1848,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 158,
         flags: 0x4c015c,
-        x8: 0x5b800000,
+        move_bits: 0x5b800000,
         anim_cb: Some(CodeRef(0x800d7dfc)),
         input_cb: Some(CodeRef(0x800d8024)),
         phys_cb: Some(CodeRef(0x800d8064)),
@@ -1859,7 +1859,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 159,
         flags: 0x44015d,
-        x8: 0x5c800000,
+        move_bits: 0x5c800000,
         anim_cb: Some(CodeRef(0x800d83ac)),
         input_cb: Some(CodeRef(0x800d843c)),
         phys_cb: Some(CodeRef(0x800d8444)),
@@ -1870,7 +1870,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 160,
         flags: 0x440000,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800d88b8)),
         input_cb: Some(CodeRef(0x800d88f8)),
         phys_cb: Some(CodeRef(0x800d8900)),
@@ -1881,7 +1881,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 161,
         flags: 0x440000,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800d79b0)),
         input_cb: Some(CodeRef(0x800d7b1c)),
         phys_cb: Some(CodeRef(0x800d7b6c)),
@@ -1892,7 +1892,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 162,
         flags: 0x4c055c,
-        x8: 0x5b800000,
+        move_bits: 0x5b800000,
         anim_cb: Some(CodeRef(0x800d7f10)),
         input_cb: Some(CodeRef(0x800d8044)),
         phys_cb: Some(CodeRef(0x800d8084)),
@@ -1903,7 +1903,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 163,
         flags: 0x44055d,
-        x8: 0x5c800000,
+        move_bits: 0x5c800000,
         anim_cb: Some(CodeRef(0x800d83f4)),
         input_cb: Some(CodeRef(0x800d8440)),
         phys_cb: Some(CodeRef(0x800d8464)),
@@ -1914,7 +1914,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 164,
         flags: 0x440000,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800d88d8)),
         input_cb: Some(CodeRef(0x800d88fc)),
         phys_cb: Some(CodeRef(0x800d8920)),
@@ -1925,7 +1925,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x480000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80096df4)),
         input_cb: Some(CodeRef(0x80096df8)),
         phys_cb: Some(CodeRef(0x80096e48)),
@@ -1936,7 +1936,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 90,
         flags: 0x484066,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80096fd0)),
         input_cb: Some(CodeRef(0x80097074)),
         phys_cb: Some(CodeRef(0x80097098)),
@@ -1947,7 +1947,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 91,
         flags: 0x484066,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80096fd0)),
         input_cb: Some(CodeRef(0x80097074)),
         phys_cb: Some(CodeRef(0x80097098)),
@@ -1958,7 +1958,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x482064,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800971b0)),
         input_cb: Some(CodeRef(0x80097458)),
         phys_cb: Some(CodeRef(0x8009747c)),
@@ -1969,7 +1969,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 37,
         flags: 0x100000,
-        x8: 0x1c00000,
+        move_bits: 0x1c00000,
         anim_cb: Some(CodeRef(0x800926dc)),
         input_cb: Some(CodeRef(0x80092758)),
         phys_cb: Some(CodeRef(0x80092870)),
@@ -1980,7 +1980,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 38,
         flags: 0x180000,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80092a24)),
         input_cb: Some(CodeRef(0x80092a78)),
         phys_cb: Some(CodeRef(0x80092b70)),
@@ -1991,7 +1991,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 39,
         flags: 0x100000,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80092cac)),
         input_cb: Some(CodeRef(0x80092cfc)),
         phys_cb: Some(CodeRef(0x80092e10)),
@@ -2002,7 +2002,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 40,
         flags: 0x100000,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80093354)),
         input_cb: Some(CodeRef(0x80093624)),
         phys_cb: Some(CodeRef(0x80093628)),
@@ -2013,7 +2013,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 37,
         flags: 0x101073,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x80093cd0)),
         input_cb: Some(CodeRef(0x80093ec0)),
         phys_cb: Some(CodeRef(0x8009403c)),
@@ -2024,7 +2024,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 183,
         flags: 0x60006c,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80097dc0)),
         input_cb: Some(CodeRef(0x80097e1c)),
         phys_cb: Some(CodeRef(0x80097e20)),
@@ -2035,7 +2035,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 184,
         flags: 0x60006c,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80097fc0)),
         input_cb: Some(CodeRef(0x8009802c)),
         phys_cb: Some(CodeRef(0x8009807c)),
@@ -2046,7 +2046,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 185,
         flags: 0x62006c,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009f1e0)),
         input_cb: Some(CodeRef(0x8009f2b0)),
         phys_cb: Some(CodeRef(0x8009f2b4)),
@@ -2057,7 +2057,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 186,
         flags: 0x60006c,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098194)),
         input_cb: Some(CodeRef(0x800981d0)),
         phys_cb: Some(CodeRef(0x800981d4)),
@@ -2068,7 +2068,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 187,
         flags: 0x640231,
-        x8: 0x32000000,
+        move_bits: 0x32000000,
         anim_cb: Some(CodeRef(0x800985b4)),
         input_cb: Some(CodeRef(0x800985f0)),
         phys_cb: Some(CodeRef(0x800985f4)),
@@ -2079,7 +2079,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 188,
         flags: 0x60006c,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098380)),
         input_cb: Some(CodeRef(0x800983bc)),
         phys_cb: Some(CodeRef(0x800983c0)),
@@ -2090,7 +2090,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 189,
         flags: 0x60006c,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098380)),
         input_cb: Some(CodeRef(0x800983bc)),
         phys_cb: Some(CodeRef(0x800983c0)),
@@ -2101,7 +2101,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 190,
         flags: 0x60006c,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c8c04)),
         input_cb: Some(CodeRef(0x800c8c40)),
         phys_cb: Some(CodeRef(0x800c8c44)),
@@ -2112,7 +2112,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 191,
         flags: 0x60006d,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80097dc0)),
         input_cb: Some(CodeRef(0x80097e1c)),
         phys_cb: Some(CodeRef(0x80097e20)),
@@ -2123,7 +2123,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 192,
         flags: 0x60006d,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80097fc0)),
         input_cb: Some(CodeRef(0x8009802c)),
         phys_cb: Some(CodeRef(0x8009807c)),
@@ -2134,7 +2134,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 193,
         flags: 0x62006d,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009f1e0)),
         input_cb: Some(CodeRef(0x8009f2b0)),
         phys_cb: Some(CodeRef(0x8009f2b4)),
@@ -2145,7 +2145,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 194,
         flags: 0x60006d,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098194)),
         input_cb: Some(CodeRef(0x800981d0)),
         phys_cb: Some(CodeRef(0x800981d4)),
@@ -2156,7 +2156,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 195,
         flags: 0x640232,
-        x8: 0x33000000,
+        move_bits: 0x33000000,
         anim_cb: Some(CodeRef(0x800985b4)),
         input_cb: Some(CodeRef(0x800985f0)),
         phys_cb: Some(CodeRef(0x800985f4)),
@@ -2167,7 +2167,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 196,
         flags: 0x60006d,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098380)),
         input_cb: Some(CodeRef(0x800983bc)),
         phys_cb: Some(CodeRef(0x800983c0)),
@@ -2178,7 +2178,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 197,
         flags: 0x60006d,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098380)),
         input_cb: Some(CodeRef(0x800983bc)),
         phys_cb: Some(CodeRef(0x800983c0)),
@@ -2189,7 +2189,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 198,
         flags: 0x60006d,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c8c04)),
         input_cb: Some(CodeRef(0x800c8c40)),
         phys_cb: Some(CodeRef(0x800c8c44)),
@@ -2200,7 +2200,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 199,
         flags: 0x70006e,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800988a8)),
         input_cb: Some(CodeRef(0x800988e4)),
         phys_cb: Some(CodeRef(0x800988e8)),
@@ -2211,7 +2211,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 200,
         flags: 0x70006e,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098aa0)),
         input_cb: Some(CodeRef(0x80098adc)),
         phys_cb: Some(CodeRef(0x80098ae0)),
@@ -2222,7 +2222,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 201,
         flags: 0x70006e,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098aa0)),
         input_cb: Some(CodeRef(0x80098adc)),
         phys_cb: Some(CodeRef(0x80098ae0)),
@@ -2233,7 +2233,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 202,
         flags: 0x700000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c2028)),
         input_cb: Some(CodeRef(0x800c2180)),
         phys_cb: Some(CodeRef(0x800c22c0)),
@@ -2244,7 +2244,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 203,
         flags: 0x700000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c2028)),
         input_cb: Some(CodeRef(0x800c2180)),
         phys_cb: Some(CodeRef(0x800c22c0)),
@@ -2255,7 +2255,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 204,
         flags: 0x700000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c252c)),
         input_cb: Some(CodeRef(0x800c25ac)),
         phys_cb: Some(CodeRef(0x800c25b0)),
@@ -2266,7 +2266,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 286,
         flags: 0x500000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098c14)),
         input_cb: Some(CodeRef(0x80098c50)),
         phys_cb: Some(CodeRef(0x80098c54)),
@@ -2277,7 +2277,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 287,
         flags: 0x500000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098dec)),
         input_cb: Some(CodeRef(0x80098df0)),
         phys_cb: Some(CodeRef(0x80098df4)),
@@ -2288,7 +2288,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 288,
         flags: 0x500000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098ebc)),
         input_cb: Some(CodeRef(0x80098ef8)),
         phys_cb: Some(CodeRef(0x80098efc)),
@@ -2299,7 +2299,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 289,
         flags: 0x500000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098ebc)),
         input_cb: Some(CodeRef(0x80098ef8)),
         phys_cb: Some(CodeRef(0x80098efc)),
@@ -2310,7 +2310,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 290,
         flags: 0x500000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098f90)),
         input_cb: Some(CodeRef(0x80098fcc)),
         phys_cb: Some(CodeRef(0x80098fd0)),
@@ -2321,7 +2321,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 291,
         flags: 0x500000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80098f90)),
         input_cb: Some(CodeRef(0x80098fcc)),
         phys_cb: Some(CodeRef(0x80098fd0)),
@@ -2332,7 +2332,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 205,
         flags: 0x500000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800990b8)),
         input_cb: Some(CodeRef(0x80099138)),
         phys_cb: Some(CodeRef(0x8009913c)),
@@ -2343,7 +2343,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 242,
         flags: 0xa00033,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d8cc8)),
         input_cb: Some(CodeRef(0x800d8d80)),
         phys_cb: Some(CodeRef(0x800d8d88)),
@@ -2354,7 +2354,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 242,
         flags: 0xa00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d9e80)),
         input_cb: Some(CodeRef(0x800d9f90)),
         phys_cb: Some(CodeRef(0x800d9f94)),
@@ -2365,7 +2365,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 243,
         flags: 0xa00033,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d8d24)),
         input_cb: Some(CodeRef(0x800d8d84)),
         phys_cb: Some(CodeRef(0x800d8dd0)),
@@ -2376,7 +2376,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 243,
         flags: 0xa00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d9e80)),
         input_cb: Some(CodeRef(0x800d9f90)),
         phys_cb: Some(CodeRef(0x800d9f94)),
@@ -2387,7 +2387,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 244,
         flags: 0xa00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800da318)),
         input_cb: Some(CodeRef(0x800da31c)),
         phys_cb: Some(CodeRef(0x800da3d0)),
@@ -2398,7 +2398,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 245,
         flags: 0xa40034,
-        x8: 0x34000000,
+        move_bits: 0x34000000,
         anim_cb: Some(CodeRef(0x800da568)),
         input_cb: Some(CodeRef(0x800da5a4)),
         phys_cb: Some(CodeRef(0x800da5a8)),
@@ -2409,7 +2409,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 246,
         flags: 0xa00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800da744)),
         input_cb: Some(CodeRef(0x800da780)),
         phys_cb: Some(CodeRef(0x800da784)),
@@ -2420,7 +2420,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 247,
         flags: 0xa40035,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x800dd8c4)),
         input_cb: Some(CodeRef(0x800dd92c)),
         phys_cb: Some(CodeRef(0x800dd930)),
@@ -2431,7 +2431,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 248,
         flags: 0xa40036,
-        x8: 0x36000000,
+        move_bits: 0x36000000,
         anim_cb: Some(CodeRef(0x800dda10)),
         input_cb: Some(CodeRef(0x800dda5c)),
         phys_cb: Some(CodeRef(0x800dda60)),
@@ -2442,7 +2442,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 249,
         flags: 0xa40037,
-        x8: 0x37000000,
+        move_bits: 0x37000000,
         anim_cb: Some(CodeRef(0x800ddb40)),
         input_cb: Some(CodeRef(0x800ddb8c)),
         phys_cb: Some(CodeRef(0x800ddb90)),
@@ -2453,7 +2453,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 250,
         flags: 0xa40038,
-        x8: 0x38000000,
+        move_bits: 0x38000000,
         anim_cb: Some(CodeRef(0x800ddcb4)),
         input_cb: Some(CodeRef(0x800ddd00)),
         phys_cb: Some(CodeRef(0x800ddd04)),
@@ -2464,7 +2464,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 251,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800dac70)),
         input_cb: Some(CodeRef(0x800dac74)),
         phys_cb: Some(CodeRef(0x800dade8)),
@@ -2475,7 +2475,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 252,
         flags: 0xb00000,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x800db908)),
         input_cb: Some(CodeRef(0x800dba4c)),
         phys_cb: Some(CodeRef(0x800dba6c)),
@@ -2486,7 +2486,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 253,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800dc2e4)),
         input_cb: Some(CodeRef(0x800dc328)),
         phys_cb: Some(CodeRef(0x800dc32c)),
@@ -2497,7 +2497,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 254,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800db004)),
         input_cb: Some(CodeRef(0x800db008)),
         phys_cb: Some(CodeRef(0x800db00c)),
@@ -2508,7 +2508,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 255,
         flags: 0xb00000,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x800dbd10)),
         input_cb: Some(CodeRef(0x800dbd30)),
         phys_cb: Some(CodeRef(0x800dbd50)),
@@ -2519,7 +2519,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 256,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800dc468)),
         input_cb: Some(CodeRef(0x800dc4ac)),
         phys_cb: Some(CodeRef(0x800dc4b0)),
@@ -2530,7 +2530,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 257,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800dc7f0)),
         input_cb: Some(CodeRef(0x800dc82c)),
         phys_cb: Some(CodeRef(0x800dc830)),
@@ -2541,7 +2541,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 258,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800dc110)),
         input_cb: Some(CodeRef(0x800dc160)),
         phys_cb: Some(CodeRef(0x800dc224)),
@@ -2552,7 +2552,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 259,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -2563,7 +2563,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 260,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -2574,7 +2574,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 42,
         flags: 0x100000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800994d8)),
         input_cb: Some(CodeRef(0x800996f0)),
         phys_cb: Some(CodeRef(0x80099714)),
@@ -2585,7 +2585,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 43,
         flags: 0x100000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800994d8)),
         input_cb: Some(CodeRef(0x800996f0)),
         phys_cb: Some(CodeRef(0x80099714)),
@@ -2596,7 +2596,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 41,
         flags: 0x100000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800999d8)),
         input_cb: Some(CodeRef(0x80099a14)),
         phys_cb: Some(CodeRef(0x80099a18)),
@@ -2607,7 +2607,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 44,
         flags: 0x100000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80099bd0)),
         input_cb: Some(CodeRef(0x80099c24)),
         phys_cb: Some(CodeRef(0x80099cec)),
@@ -2618,7 +2618,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x100000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80099e24)),
         input_cb: None,
         phys_cb: None,
@@ -2629,7 +2629,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 45,
         flags: 0x100000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80099e80)),
         input_cb: Some(CodeRef(0x80099ebc)),
         phys_cb: Some(CodeRef(0x80099ec0)),
@@ -2640,7 +2640,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 262,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800de69c)),
         input_cb: Some(CodeRef(0x800de6bc)),
         phys_cb: Some(CodeRef(0x800de6c0)),
@@ -2651,7 +2651,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 263,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800de6c8)),
         input_cb: Some(CodeRef(0x800de6e8)),
         phys_cb: Some(CodeRef(0x800de6ec)),
@@ -2662,7 +2662,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 264,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800de6f4)),
         input_cb: Some(CodeRef(0x800de714)),
         phys_cb: Some(CodeRef(0x800de718)),
@@ -2673,7 +2673,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 265,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800de76c)),
         input_cb: Some(CodeRef(0x800de78c)),
         phys_cb: Some(CodeRef(0x800de790)),
@@ -2684,7 +2684,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 266,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800de76c)),
         input_cb: Some(CodeRef(0x800de78c)),
         phys_cb: Some(CodeRef(0x800de790)),
@@ -2695,7 +2695,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 209,
         flags: 0x80006f,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x8009a2a8)),
         input_cb: Some(CodeRef(0x8009a2e4)),
         phys_cb: Some(CodeRef(0x8009a388)),
@@ -2706,7 +2706,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 210,
         flags: 0x800000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009a468)),
         input_cb: Some(CodeRef(0x8009a4a4)),
         phys_cb: Some(CodeRef(0x8009a5f4)),
@@ -2717,7 +2717,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 211,
         flags: 0x880000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009a728)),
         input_cb: Some(CodeRef(0x8009a72c)),
         phys_cb: Some(CodeRef(0x8009a74c)),
@@ -2728,7 +2728,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 212,
         flags: 0x80006b,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c1b2c)),
         input_cb: Some(CodeRef(0x800c1b64)),
         phys_cb: Some(CodeRef(0x800c1b84)),
@@ -2739,7 +2739,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 214,
         flags: 0x800000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c1b2c)),
         input_cb: Some(CodeRef(0x800c1b64)),
         phys_cb: Some(CodeRef(0x800c1b84)),
@@ -2750,7 +2750,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 213,
         flags: 0x80006b,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009ef04)),
         input_cb: Some(CodeRef(0x8009ef40)),
         phys_cb: Some(CodeRef(0x8009ef44)),
@@ -2761,7 +2761,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 214,
         flags: 0x800000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009f048)),
         input_cb: Some(CodeRef(0x8009f0b8)),
         phys_cb: Some(CodeRef(0x8009f0bc)),
@@ -2772,7 +2772,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 215,
         flags: 0x800000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009f400)),
         input_cb: Some(CodeRef(0x8009f43c)),
         phys_cb: Some(CodeRef(0x8009f440)),
@@ -2783,7 +2783,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 216,
         flags: 0x900070,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80081504)),
         input_cb: Some(CodeRef(0x80081540)),
         phys_cb: Some(CodeRef(0x80081544)),
@@ -2794,7 +2794,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 217,
         flags: 0x980000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009a8d8)),
         input_cb: Some(CodeRef(0x8009a8fc)),
         phys_cb: Some(CodeRef(0x8009a96c)),
@@ -2805,7 +2805,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 219,
         flags: 0x900000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009ac68)),
         input_cb: Some(CodeRef(0x8009aca4)),
         phys_cb: Some(CodeRef(0x8009aca8)),
@@ -2816,7 +2816,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 220,
         flags: 0x900000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009ac68)),
         input_cb: Some(CodeRef(0x8009aca4)),
         phys_cb: Some(CodeRef(0x8009aca8)),
@@ -2827,7 +2827,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 221,
         flags: 0x94023e,
-        x8: 0x3d000000,
+        move_bits: 0x3d000000,
         anim_cb: Some(CodeRef(0x8009af70)),
         input_cb: Some(CodeRef(0x8009af90)),
         phys_cb: Some(CodeRef(0x8009af94)),
@@ -2838,7 +2838,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 222,
         flags: 0x24023f,
-        x8: 0x3e000000,
+        move_bits: 0x3e000000,
         anim_cb: Some(CodeRef(0x8009af70)),
         input_cb: Some(CodeRef(0x8009af90)),
         phys_cb: Some(CodeRef(0x8009af94)),
@@ -2849,7 +2849,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 223,
         flags: 0x900000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009b10c)),
         input_cb: Some(CodeRef(0x8009b12c)),
         phys_cb: Some(CodeRef(0x8009b130)),
@@ -2860,7 +2860,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 224,
         flags: 0x900000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009b10c)),
         input_cb: Some(CodeRef(0x8009b12c)),
         phys_cb: Some(CodeRef(0x8009b130)),
@@ -2871,7 +2871,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 225,
         flags: 0x900000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009b278)),
         input_cb: Some(CodeRef(0x8009b2b4)),
         phys_cb: Some(CodeRef(0x8009b2b8)),
@@ -2882,7 +2882,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 226,
         flags: 0x900000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009b424)),
         input_cb: Some(CodeRef(0x8009b460)),
         phys_cb: Some(CodeRef(0x8009b464)),
@@ -2893,7 +2893,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 227,
         flags: 0x900000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009b278)),
         input_cb: Some(CodeRef(0x8009b2b4)),
         phys_cb: Some(CodeRef(0x8009b2b8)),
@@ -2904,7 +2904,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 228,
         flags: 0x900000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009b424)),
         input_cb: Some(CodeRef(0x8009b460)),
         phys_cb: Some(CodeRef(0x8009b464)),
@@ -2915,7 +2915,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 239,
         flags: 0x71,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800decf4)),
         input_cb: Some(CodeRef(0x800ded30)),
         phys_cb: Some(CodeRef(0x800dee44)),
@@ -2926,7 +2926,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 240,
         flags: 0x71,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800decf4)),
         input_cb: Some(CodeRef(0x800ded30)),
         phys_cb: Some(CodeRef(0x800dee44)),
@@ -2937,7 +2937,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 267,
         flags: 0xb80000,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x8009c830)),
         input_cb: Some(CodeRef(0x8009ca00)),
         phys_cb: Some(CodeRef(0x8009ca04)),
@@ -2948,7 +2948,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 268,
         flags: 0xb80000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009c830)),
         input_cb: Some(CodeRef(0x8009ca00)),
         phys_cb: Some(CodeRef(0x8009ca04)),
@@ -2959,7 +2959,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 269,
         flags: 0xb80000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009c830)),
         input_cb: Some(CodeRef(0x8009ca00)),
         phys_cb: Some(CodeRef(0x8009ca04)),
@@ -2970,7 +2970,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 270,
         flags: 0xb80000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009c830)),
         input_cb: Some(CodeRef(0x8009ca00)),
         phys_cb: Some(CodeRef(0x8009ca04)),
@@ -2981,7 +2981,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 271,
         flags: 0xb80000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009c830)),
         input_cb: Some(CodeRef(0x8009ca00)),
         phys_cb: Some(CodeRef(0x8009ca04)),
@@ -2992,7 +2992,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 272,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800de69c)),
         input_cb: Some(CodeRef(0x800de6bc)),
         phys_cb: Some(CodeRef(0x800de6c0)),
@@ -3003,7 +3003,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 273,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800de6c8)),
         input_cb: Some(CodeRef(0x800de6e8)),
         phys_cb: Some(CodeRef(0x800de6ec)),
@@ -3014,7 +3014,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 274,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800de6f4)),
         input_cb: Some(CodeRef(0x800de714)),
         phys_cb: Some(CodeRef(0x800de718)),
@@ -3025,7 +3025,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 275,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800de76c)),
         input_cb: Some(CodeRef(0x800de78c)),
         phys_cb: Some(CodeRef(0x800de790)),
@@ -3036,7 +3036,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 276,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8009cb04)),
         input_cb: Some(CodeRef(0x8009cb08)),
         phys_cb: Some(CodeRef(0x8009cb0c)),
@@ -3047,7 +3047,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 254,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bbc78)),
         input_cb: Some(CodeRef(0x800bbc7c)),
         phys_cb: Some(CodeRef(0x800bbc80)),
@@ -3058,7 +3058,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 277,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bc1b0)),
         input_cb: Some(CodeRef(0x800bc304)),
         phys_cb: Some(CodeRef(0x800bc308)),
@@ -3069,7 +3069,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bc8c4)),
         input_cb: Some(CodeRef(0x800bc8c8)),
         phys_cb: Some(CodeRef(0x800bc8cc)),
@@ -3080,7 +3080,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 278,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bca54)),
         input_cb: Some(CodeRef(0x800bcae8)),
         phys_cb: Some(CodeRef(0x800bcaec)),
@@ -3091,7 +3091,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb00000,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x800bcc7c)),
         input_cb: Some(CodeRef(0x800bccf4)),
         phys_cb: Some(CodeRef(0x800bccf8)),
@@ -3102,7 +3102,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 279,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bced8)),
         input_cb: Some(CodeRef(0x800bcedc)),
         phys_cb: Some(CodeRef(0x800bcee0)),
@@ -3113,7 +3113,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 280,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bcee8)),
         input_cb: Some(CodeRef(0x800bceec)),
         phys_cb: Some(CodeRef(0x800bcef0)),
@@ -3124,7 +3124,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb00400,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bc9b8)),
         input_cb: Some(CodeRef(0x800bc9bc)),
         phys_cb: Some(CodeRef(0x800bc9c0)),
@@ -3135,7 +3135,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 281,
         flags: 0xb20400,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x800bcb80)),
         input_cb: Some(CodeRef(0x800bcc14)),
         phys_cb: Some(CodeRef(0x800bcc18)),
@@ -3146,7 +3146,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb00400,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bcd5c)),
         input_cb: Some(CodeRef(0x800bcdd4)),
         phys_cb: Some(CodeRef(0x800bcdd8)),
@@ -3157,7 +3157,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 282,
         flags: 0xb20400,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bcef8)),
         input_cb: Some(CodeRef(0x800bcefc)),
         phys_cb: Some(CodeRef(0x800bcf00)),
@@ -3168,7 +3168,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 283,
         flags: 0xb20400,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bcf08)),
         input_cb: Some(CodeRef(0x800bcf0c)),
         phys_cb: Some(CodeRef(0x800bcf10)),
@@ -3179,7 +3179,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 29,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bd38c)),
         input_cb: Some(CodeRef(0x800bd390)),
         phys_cb: Some(CodeRef(0x800bd394)),
@@ -3190,7 +3190,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb00000,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x800bd6e8)),
         input_cb: Some(CodeRef(0x800bd7bc)),
         phys_cb: Some(CodeRef(0x800bd9d8)),
@@ -3201,7 +3201,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 285,
         flags: 0xc20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bddc4)),
         input_cb: Some(CodeRef(0x800bddc8)),
         phys_cb: Some(CodeRef(0x800bddcc)),
@@ -3212,7 +3212,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 284,
         flags: 0xc20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800be258)),
         input_cb: Some(CodeRef(0x800be25c)),
         phys_cb: Some(CodeRef(0x800be260)),
@@ -3223,7 +3223,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 29,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800be618)),
         input_cb: Some(CodeRef(0x800be61c)),
         phys_cb: Some(CodeRef(0x800be620)),
@@ -3234,7 +3234,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xc00000,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x8009ec08)),
         input_cb: Some(CodeRef(0x8009ec0c)),
         phys_cb: Some(CodeRef(0x8009ec3c)),
@@ -3245,7 +3245,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c0f34)),
         input_cb: Some(CodeRef(0x800c0fc8)),
         phys_cb: Some(CodeRef(0x800c1194)),
@@ -3256,7 +3256,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c12d8)),
         input_cb: Some(CodeRef(0x800c134c)),
         phys_cb: Some(CodeRef(0x800c1350)),
@@ -3267,7 +3267,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 16,
         flags: 0x0,
-        x8: 0x1800000,
+        move_bits: 0x1800000,
         anim_cb: Some(CodeRef(0x800c1460)),
         input_cb: Some(CodeRef(0x800c14b0)),
         phys_cb: Some(CodeRef(0x800c1574)),
@@ -3278,7 +3278,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 206,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c32ac)),
         input_cb: Some(CodeRef(0x800c334c)),
         phys_cb: Some(CodeRef(0x800c3350)),
@@ -3289,7 +3289,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 207,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c33c8)),
         input_cb: Some(CodeRef(0x800c343c)),
         phys_cb: Some(CodeRef(0x800c3440)),
@@ -3300,7 +3300,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 208,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c34b8)),
         input_cb: Some(CodeRef(0x800c34f4)),
         phys_cb: Some(CodeRef(0x800c34f8)),
@@ -3311,7 +3311,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 205,
         flags: 0x500000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c466c)),
         input_cb: Some(CodeRef(0x800c46e0)),
         phys_cb: Some(CodeRef(0x800c46e4)),
@@ -3322,7 +3322,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3333,7 +3333,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb00400,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3344,7 +3344,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 292,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bd17c)),
         input_cb: Some(CodeRef(0x800bd180)),
         phys_cb: Some(CodeRef(0x800bd184)),
@@ -3355,7 +3355,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 293,
         flags: 0xb20400,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bd18c)),
         input_cb: Some(CodeRef(0x800bd190)),
         phys_cb: Some(CodeRef(0x800bd194)),
@@ -3366,7 +3366,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 30,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c4900)),
         input_cb: Some(CodeRef(0x800c4964)),
         phys_cb: Some(CodeRef(0x800c4968)),
@@ -3377,7 +3377,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 31,
         flags: 0x44005f,
-        x8: 0x5e000000,
+        move_bits: 0x5e000000,
         anim_cb: Some(CodeRef(0x800c4ba4)),
         input_cb: Some(CodeRef(0x800c4ba8)),
         phys_cb: Some(CodeRef(0x800c4bac)),
@@ -3388,7 +3388,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 132,
         flags: 0x44005e,
-        x8: 0x5dc00000,
+        move_bits: 0x5dc00000,
         anim_cb: Some(CodeRef(0x800c4fec)),
         input_cb: Some(CodeRef(0x800c5074)),
         phys_cb: Some(CodeRef(0x800c50d4)),
@@ -3399,7 +3399,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 133,
         flags: 0x44405e,
-        x8: 0x5d800000,
+        move_bits: 0x5d800000,
         anim_cb: Some(CodeRef(0x800c56bc)),
         input_cb: Some(CodeRef(0x800c56dc)),
         phys_cb: Some(CodeRef(0x800c572c)),
@@ -3410,7 +3410,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 133,
         flags: 0x44205e,
-        x8: 0x5d800000,
+        move_bits: 0x5d800000,
         anim_cb: Some(CodeRef(0x800c5848)),
         input_cb: Some(CodeRef(0x800c59ec)),
         phys_cb: Some(CodeRef(0x800c5a10)),
@@ -3421,7 +3421,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 133,
         flags: 0x44005e,
-        x8: 0x5d800000,
+        move_bits: 0x5d800000,
         anim_cb: Some(CodeRef(0x800c5c10)),
         input_cb: Some(CodeRef(0x800c5c74)),
         phys_cb: Some(CodeRef(0x800c5c94)),
@@ -3432,7 +3432,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 133,
         flags: 0x44045e,
-        x8: 0x5d800000,
+        move_bits: 0x5d800000,
         anim_cb: Some(CodeRef(0x800c5dbc)),
         input_cb: Some(CodeRef(0x800c5e94)),
         phys_cb: Some(CodeRef(0x800c5f40)),
@@ -3443,7 +3443,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 133,
         flags: 0x44845e,
-        x8: 0x5d800000,
+        move_bits: 0x5d800000,
         anim_cb: Some(CodeRef(0x800c5b24)),
         input_cb: Some(CodeRef(0x800c5b44)),
         phys_cb: Some(CodeRef(0x800c5b48)),
@@ -3454,7 +3454,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 133,
         flags: 0x44005e,
-        x8: 0x5d400000,
+        move_bits: 0x5d400000,
         anim_cb: Some(CodeRef(0x800c6020)),
         input_cb: Some(CodeRef(0x800c6084)),
         phys_cb: Some(CodeRef(0x800c6088)),
@@ -3465,7 +3465,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x400000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d1868)),
         input_cb: None,
         phys_cb: None,
@@ -3476,7 +3476,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x400000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d1a28)),
         input_cb: None,
         phys_cb: None,
@@ -3487,7 +3487,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x400000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d1cac)),
         input_cb: None,
         phys_cb: None,
@@ -3498,7 +3498,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x400000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d1e1c)),
         input_cb: None,
         phys_cb: None,
@@ -3509,7 +3509,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x400000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d2158)),
         input_cb: None,
         phys_cb: None,
@@ -3520,7 +3520,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x400000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d2318)),
         input_cb: None,
         phys_cb: None,
@@ -3531,7 +3531,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x400000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d259c)),
         input_cb: None,
         phys_cb: None,
@@ -3542,7 +3542,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x400000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d270c)),
         input_cb: None,
         phys_cb: None,
@@ -3553,7 +3553,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c6370)),
         input_cb: Some(CodeRef(0x800c63b4)),
         phys_cb: Some(CodeRef(0x800c63b8)),
@@ -3564,7 +3564,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 238,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c6700)),
         input_cb: Some(CodeRef(0x800c673c)),
         phys_cb: Some(CodeRef(0x800c6740)),
@@ -3575,7 +3575,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c6cc8)),
         input_cb: Some(CodeRef(0x800c6d34)),
         phys_cb: Some(CodeRef(0x800c6d38)),
@@ -3586,7 +3586,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0x520000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800912a8)),
         input_cb: Some(CodeRef(0x800913dc)),
         phys_cb: Some(CodeRef(0x800913e0)),
@@ -3597,7 +3597,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 20,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80091988)),
         input_cb: Some(CodeRef(0x800919d8)),
         phys_cb: Some(CodeRef(0x800919dc)),
@@ -3608,7 +3608,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80155b70)),
         input_cb: Some(CodeRef(0x80155b74)),
         phys_cb: Some(CodeRef(0x80155b78)),
@@ -3619,7 +3619,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80155c20)),
         input_cb: Some(CodeRef(0x80155c88)),
         phys_cb: Some(CodeRef(0x80155c8c)),
@@ -3630,7 +3630,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb00000,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x80155d5c)),
         input_cb: Some(CodeRef(0x80155d60)),
         phys_cb: Some(CodeRef(0x80155d64)),
@@ -3641,7 +3641,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80155e08)),
         input_cb: Some(CodeRef(0x80155e0c)),
         phys_cb: Some(CodeRef(0x80155e10)),
@@ -3652,7 +3652,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 254,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8010aa1c)),
         input_cb: Some(CodeRef(0x8010aa20)),
         phys_cb: Some(CodeRef(0x8010aa24)),
@@ -3663,7 +3663,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 294,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8010af54)),
         input_cb: Some(CodeRef(0x8010b0a0)),
         phys_cb: Some(CodeRef(0x8010b0a4)),
@@ -3674,7 +3674,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c7734)),
         input_cb: Some(CodeRef(0x800c77b0)),
         phys_cb: Some(CodeRef(0x800c77b4)),
@@ -3685,7 +3685,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c7a58)),
         input_cb: Some(CodeRef(0x800c7ad4)),
         phys_cb: Some(CodeRef(0x800c7ad8)),
@@ -3696,7 +3696,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: 212,
         flags: 0x800000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c7fc8)),
         input_cb: Some(CodeRef(0x800c8004)),
         phys_cb: Some(CodeRef(0x800c8008)),
@@ -3707,7 +3707,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015b660)),
         input_cb: Some(CodeRef(0x8015b664)),
         phys_cb: Some(CodeRef(0x8015b668)),
@@ -3718,7 +3718,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015b704)),
         input_cb: Some(CodeRef(0x8015b76c)),
         phys_cb: Some(CodeRef(0x8015b770)),
@@ -3729,7 +3729,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb00000,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x8015b840)),
         input_cb: Some(CodeRef(0x8015b844)),
         phys_cb: Some(CodeRef(0x8015b848)),
@@ -3740,7 +3740,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xb20000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015b8ec)),
         input_cb: Some(CodeRef(0x8015b8f0)),
         phys_cb: Some(CodeRef(0x8015b8f4)),
@@ -3751,7 +3751,7 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     MotionState {
         anim_id: -1,
         flags: 0xc00000,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x800c91c0)),
         input_cb: Some(CodeRef(0x800c9208)),
         phys_cb: Some(CodeRef(0x800c925c)),
@@ -3766,7 +3766,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 0,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bed84)),
         input_cb: None,
         phys_cb: None,
@@ -3777,7 +3777,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 1,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3788,7 +3788,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 2,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800bef00)),
         input_cb: None,
         phys_cb: None,
@@ -3799,7 +3799,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 3,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3810,7 +3810,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 4,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3821,7 +3821,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 5,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800befd0)),
         input_cb: None,
         phys_cb: None,
@@ -3832,7 +3832,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 6,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3843,7 +3843,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 7,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3854,7 +3854,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 8,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3865,7 +3865,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 9,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3876,7 +3876,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 10,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3887,7 +3887,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 11,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3898,7 +3898,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 12,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3909,7 +3909,7 @@ pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
     MotionState {
         anim_id: 13,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3924,7 +3924,7 @@ pub static FT_MR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: -1,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3935,7 +3935,7 @@ pub static FT_MR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: -1,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -3946,7 +3946,7 @@ pub static FT_MR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 295,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e0e18)),
         input_cb: Some(CodeRef(0x800e0e54)),
         phys_cb: Some(CodeRef(0x800e0e84)),
@@ -3957,7 +3957,7 @@ pub static FT_MR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 296,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e10b0)),
         input_cb: Some(CodeRef(0x800e10ec)),
         phys_cb: Some(CodeRef(0x800e111c)),
@@ -3968,7 +3968,7 @@ pub static FT_MR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 297,
         flags: 0x341012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800e1550)),
         input_cb: Some(CodeRef(0x800e15c8)),
         phys_cb: Some(CodeRef(0x800e15d0)),
@@ -3979,7 +3979,7 @@ pub static FT_MR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 298,
         flags: 0x341012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800e158c)),
         input_cb: Some(CodeRef(0x800e15cc)),
         phys_cb: Some(CodeRef(0x800e16e0)),
@@ -3990,7 +3990,7 @@ pub static FT_MR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 299,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e1b24)),
         input_cb: Some(CodeRef(0x800e1be4)),
         phys_cb: Some(CodeRef(0x800e1e74)),
@@ -4001,7 +4001,7 @@ pub static FT_MR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 300,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e1b84)),
         input_cb: Some(CodeRef(0x800e1d2c)),
         phys_cb: Some(CodeRef(0x800e1eac)),
@@ -4012,7 +4012,7 @@ pub static FT_MR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 301,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e22bc)),
         input_cb: Some(CodeRef(0x800e23dc)),
         phys_cb: Some(CodeRef(0x800e23e4)),
@@ -4023,7 +4023,7 @@ pub static FT_MR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 302,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e2308)),
         input_cb: Some(CodeRef(0x800e23e0)),
         phys_cb: Some(CodeRef(0x800e2508)),
@@ -4038,7 +4038,7 @@ pub static FT_MR_INIT_UNK_MOTION_STATES0: [MotionState; 2] = [
     MotionState {
         anim_id: 14,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: Some(CodeRef(0x800c7158)),
@@ -4049,7 +4049,7 @@ pub static FT_MR_INIT_UNK_MOTION_STATES0: [MotionState; 2] = [
     MotionState {
         anim_id: 15,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: Some(CodeRef(0x800c7200)),
@@ -4064,7 +4064,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 295,
         flags: 0x440842,
-        x8: 0x41000000,
+        move_bits: 0x41000000,
         anim_cb: Some(CodeRef(0x800cd390)),
         input_cb: Some(CodeRef(0x800cd3b0)),
         phys_cb: Some(CodeRef(0x800cd3d0)),
@@ -4075,7 +4075,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 296,
         flags: 0x440846,
-        x8: 0x45000000,
+        move_bits: 0x45000000,
         anim_cb: Some(CodeRef(0x800cd458)),
         input_cb: Some(CodeRef(0x800cd478)),
         phys_cb: Some(CodeRef(0x800cd498)),
@@ -4086,7 +4086,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 297,
         flags: 0x44084a,
-        x8: 0x49000000,
+        move_bits: 0x49000000,
         anim_cb: Some(CodeRef(0x800cd520)),
         input_cb: Some(CodeRef(0x800cd540)),
         phys_cb: Some(CodeRef(0x800cd560)),
@@ -4097,7 +4097,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 298,
         flags: 0x44084e,
-        x8: 0x4d000000,
+        move_bits: 0x4d000000,
         anim_cb: Some(CodeRef(0x800cd6a0)),
         input_cb: Some(CodeRef(0x800cd7c4)),
         phys_cb: Some(CodeRef(0x800cd7e4)),
@@ -4108,7 +4108,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 299,
         flags: 0x440852,
-        x8: 0x51000000,
+        move_bits: 0x51000000,
         anim_cb: Some(CodeRef(0x800cd88c)),
         input_cb: Some(CodeRef(0x800cd8ac)),
         phys_cb: Some(CodeRef(0x800cd8cc)),
@@ -4119,7 +4119,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 300,
         flags: 0x440856,
-        x8: 0x55000000,
+        move_bits: 0x55000000,
         anim_cb: Some(CodeRef(0x800cdb14)),
         input_cb: Some(CodeRef(0x800cdb34)),
         phys_cb: Some(CodeRef(0x800cdb54)),
@@ -4130,7 +4130,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 301,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e2c80)),
         input_cb: Some(CodeRef(0x800e2e38)),
         phys_cb: Some(CodeRef(0x800e2f2c)),
@@ -4141,7 +4141,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 302,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e2d5c)),
         input_cb: Some(CodeRef(0x800e2e3c)),
         phys_cb: Some(CodeRef(0x800e3018)),
@@ -4152,7 +4152,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 303,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800e384c)),
         input_cb: Some(CodeRef(0x800e3b0c)),
         phys_cb: Some(CodeRef(0x800e3b1c)),
@@ -4163,7 +4163,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 304,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800e3888)),
         input_cb: Some(CodeRef(0x800e3b10)),
         phys_cb: Some(CodeRef(0x800e3b3c)),
@@ -4174,7 +4174,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 305,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800e3964)),
         input_cb: Some(CodeRef(0x800e3b14)),
         phys_cb: Some(CodeRef(0x800e3b5c)),
@@ -4185,7 +4185,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 306,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800e39f0)),
         input_cb: Some(CodeRef(0x800e3b18)),
         phys_cb: Some(CodeRef(0x800e3bd0)),
@@ -4196,7 +4196,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 307,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e4b00)),
         input_cb: Some(CodeRef(0x800e4b60)),
         phys_cb: Some(CodeRef(0x800e4bf8)),
@@ -4207,7 +4207,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 308,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e4ee8)),
         input_cb: Some(CodeRef(0x800e4f48)),
         phys_cb: Some(CodeRef(0x800e4fdc)),
@@ -4218,7 +4218,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 309,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e51f8)),
         input_cb: Some(CodeRef(0x800e5234)),
         phys_cb: Some(CodeRef(0x800e5238)),
@@ -4229,7 +4229,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 310,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e5310)),
         input_cb: Some(CodeRef(0x800e5384)),
         phys_cb: Some(CodeRef(0x800e5388)),
@@ -4240,7 +4240,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 311,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e415c)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e4408)),
@@ -4251,7 +4251,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 312,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e4268)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e449c)),
@@ -4262,7 +4262,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 313,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e42e0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e45e4)),
@@ -4273,7 +4273,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 314,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e4354)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e4618)),
@@ -4284,7 +4284,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 316,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e4390)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e4678)),
@@ -4295,7 +4295,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 315,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e42a4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e455c)),
@@ -4306,7 +4306,7 @@ pub static FT_CA_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 317,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e43cc)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e4698)),
@@ -4321,7 +4321,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 295,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e62a4)),
         input_cb: Some(CodeRef(0x800e6ab4)),
         phys_cb: Some(CodeRef(0x800e6b5c)),
@@ -4332,7 +4332,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 296,
         flags: 0x3c0111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e6368)),
         input_cb: Some(CodeRef(0x800e6adc)),
         phys_cb: Some(CodeRef(0x800e6b7c)),
@@ -4343,7 +4343,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 297,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e65bc)),
         input_cb: Some(CodeRef(0x800e6b04)),
         phys_cb: Some(CodeRef(0x800e6b9c)),
@@ -4354,7 +4354,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 298,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e667c)),
         input_cb: Some(CodeRef(0x800e6b08)),
         phys_cb: Some(CodeRef(0x800e6bbc)),
@@ -4365,7 +4365,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 299,
         flags: 0x3c0511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e6740)),
         input_cb: Some(CodeRef(0x800e6b30)),
         phys_cb: Some(CodeRef(0x800e6bdc)),
@@ -4376,7 +4376,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 300,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e69bc)),
         input_cb: Some(CodeRef(0x800e6b58)),
         phys_cb: Some(CodeRef(0x800e6bfc)),
@@ -4387,7 +4387,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 301,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ea004)),
         input_cb: Some(CodeRef(0x800ea07c)),
         phys_cb: Some(CodeRef(0x800ea084)),
@@ -4398,7 +4398,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 302,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ea294)),
         input_cb: Some(CodeRef(0x800ea3f4)),
         phys_cb: Some(CodeRef(0x800ea47c)),
@@ -4409,7 +4409,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 303,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ea908)),
         input_cb: Some(CodeRef(0x800ea9a4)),
         phys_cb: Some(CodeRef(0x800ea9ac)),
@@ -4420,7 +4420,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 304,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ea040)),
         input_cb: Some(CodeRef(0x800ea080)),
         phys_cb: Some(CodeRef(0x800ea0bc)),
@@ -4431,7 +4431,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 305,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ea344)),
         input_cb: Some(CodeRef(0x800ea438)),
         phys_cb: Some(CodeRef(0x800ea534)),
@@ -4442,7 +4442,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 306,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ea944)),
         input_cb: Some(CodeRef(0x800ea9a8)),
         phys_cb: Some(CodeRef(0x800eaa8c)),
@@ -4453,7 +4453,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 307,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e7354)),
         input_cb: Some(CodeRef(0x800e7414)),
         phys_cb: Some(CodeRef(0x800e741c)),
@@ -4464,7 +4464,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 308,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e73b4)),
         input_cb: Some(CodeRef(0x800e7418)),
         phys_cb: Some(CodeRef(0x800e743c)),
@@ -4475,7 +4475,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 309,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e7634)),
         input_cb: Some(CodeRef(0x800e76d4)),
         phys_cb: Some(CodeRef(0x800e76dc)),
@@ -4486,7 +4486,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 309,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e7684)),
         input_cb: Some(CodeRef(0x800e76d8)),
         phys_cb: Some(CodeRef(0x800e7758)),
@@ -4497,7 +4497,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 310,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e7e3c)),
         input_cb: Some(CodeRef(0x800e7ed8)),
         phys_cb: Some(CodeRef(0x800e7ee0)),
@@ -4508,7 +4508,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 311,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e7e78)),
         input_cb: Some(CodeRef(0x800e7edc)),
         phys_cb: Some(CodeRef(0x800e7f20)),
@@ -4519,7 +4519,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 312,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e8124)),
         input_cb: Some(CodeRef(0x800e81fc)),
         phys_cb: Some(CodeRef(0x800e8200)),
@@ -4530,7 +4530,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 313,
         flags: 0x341014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e8694)),
         input_cb: Some(CodeRef(0x800e87ac)),
         phys_cb: Some(CodeRef(0x800e8864)),
@@ -4541,7 +4541,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 314,
         flags: 0x3c1014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e8a24)),
         input_cb: Some(CodeRef(0x800e8b14)),
         phys_cb: Some(CodeRef(0x800e8c34)),
@@ -4552,7 +4552,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 315,
         flags: 0x341014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e965c)),
         input_cb: Some(CodeRef(0x800e9844)),
         phys_cb: Some(CodeRef(0x800e984c)),
@@ -4563,7 +4563,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 316,
         flags: 0x341014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e9b40)),
         input_cb: Some(CodeRef(0x800e9bc8)),
         phys_cb: Some(CodeRef(0x800e9bd0)),
@@ -4574,7 +4574,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 314,
         flags: 0x341014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e8fdc)),
         input_cb: Some(CodeRef(0x800e91fc)),
         phys_cb: Some(CodeRef(0x800e9204)),
@@ -4585,7 +4585,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 317,
         flags: 0x341414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e8720)),
         input_cb: Some(CodeRef(0x800e87d0)),
         phys_cb: Some(CodeRef(0x800e8884)),
@@ -4596,7 +4596,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 318,
         flags: 0x3c1414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e8a9c)),
         input_cb: Some(CodeRef(0x800e8b64)),
         phys_cb: Some(CodeRef(0x800e8c68)),
@@ -4607,7 +4607,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 319,
         flags: 0x341414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e97b4)),
         input_cb: Some(CodeRef(0x800e9848)),
         phys_cb: Some(CodeRef(0x800e9880)),
@@ -4618,7 +4618,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 320,
         flags: 0x341414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e9b84)),
         input_cb: Some(CodeRef(0x800e9bcc)),
         phys_cb: Some(CodeRef(0x800e9bf0)),
@@ -4629,7 +4629,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 318,
         flags: 0x341414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e90ec)),
         input_cb: Some(CodeRef(0x800e9200)),
         phys_cb: Some(CodeRef(0x800e9238)),
@@ -4640,7 +4640,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 321,
         flags: 0x72,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800e5b18)),
         input_cb: Some(CodeRef(0x800e5c38)),
         phys_cb: Some(CodeRef(0x800e5c3c)),
@@ -4651,7 +4651,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 322,
         flags: 0x72,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800e5b18)),
         input_cb: Some(CodeRef(0x800e5c38)),
         phys_cb: Some(CodeRef(0x800e5c3c)),
@@ -4662,7 +4662,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 323,
         flags: 0x72,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800e5b18)),
         input_cb: Some(CodeRef(0x800e5c38)),
         phys_cb: Some(CodeRef(0x800e5c3c)),
@@ -4673,7 +4673,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 324,
         flags: 0x72,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800e5b18)),
         input_cb: Some(CodeRef(0x800e5c38)),
         phys_cb: Some(CodeRef(0x800e5c3c)),
@@ -4684,7 +4684,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 325,
         flags: 0x72,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800e5b18)),
         input_cb: Some(CodeRef(0x800e5c38)),
         phys_cb: Some(CodeRef(0x800e5c3c)),
@@ -4695,7 +4695,7 @@ pub static FT_FX_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 326,
         flags: 0x72,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800e5b18)),
         input_cb: Some(CodeRef(0x800e5c38)),
         phys_cb: Some(CodeRef(0x800e5c3c)),
@@ -4710,7 +4710,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 295,
         flags: 0x240009,
-        x8: 0xa000000,
+        move_bits: 0xa000000,
         anim_cb: Some(CodeRef(0x800cede0)),
         input_cb: Some(CodeRef(0x800cee00)),
         phys_cb: Some(CodeRef(0x800cee30)),
@@ -4721,7 +4721,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: -1,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -4732,7 +4732,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: -1,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -4743,7 +4743,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 296,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800ed15c)),
         input_cb: Some(CodeRef(0x800edd88)),
         phys_cb: Some(CodeRef(0x800edfd8)),
@@ -4754,7 +4754,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 297,
         flags: 0x3c0111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800ed480)),
         input_cb: Some(CodeRef(0x800ede30)),
         phys_cb: Some(CodeRef(0x800edff8)),
@@ -4765,7 +4765,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 298,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800ed5b4)),
         input_cb: Some(CodeRef(0x800edeac)),
         phys_cb: Some(CodeRef(0x800ee018)),
@@ -4776,7 +4776,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 299,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800ed72c)),
         input_cb: Some(CodeRef(0x800edeb0)),
         phys_cb: Some(CodeRef(0x800ee038)),
@@ -4787,7 +4787,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 300,
         flags: 0x3c0511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800eda58)),
         input_cb: Some(CodeRef(0x800edf58)),
         phys_cb: Some(CodeRef(0x800ee058)),
@@ -4798,7 +4798,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 301,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800edb8c)),
         input_cb: Some(CodeRef(0x800edfd4)),
         phys_cb: Some(CodeRef(0x800ee078)),
@@ -4809,7 +4809,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 302,
         flags: 0x340112,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ec54c)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800ec88c)),
@@ -4820,7 +4820,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 303,
         flags: 0x340112,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ec588)),
         input_cb: Some(CodeRef(0x800ec71c)),
         phys_cb: Some(CodeRef(0x800ec8ac)),
@@ -4831,7 +4831,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 304,
         flags: 0x340112,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ec5f8)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800ec8cc)),
@@ -4842,7 +4842,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 305,
         flags: 0x340512,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ec634)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800ec8ec)),
@@ -4853,7 +4853,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 306,
         flags: 0x340512,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ec670)),
         input_cb: Some(CodeRef(0x800ec810)),
         phys_cb: Some(CodeRef(0x800ec90c)),
@@ -4864,7 +4864,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 307,
         flags: 0x340512,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ec6e0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800ec92c)),
@@ -4875,7 +4875,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 308,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800ebc10)),
         input_cb: Some(CodeRef(0x800ebcac)),
         phys_cb: Some(CodeRef(0x800ebd30)),
@@ -4886,7 +4886,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 309,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800ebc4c)),
         input_cb: Some(CodeRef(0x800ebcb0)),
         phys_cb: Some(CodeRef(0x800ebcb4)),
@@ -4897,7 +4897,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 310,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800eb8a4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800eb91c)),
@@ -4908,7 +4908,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 311,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800eb8e0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800eb93c)),
@@ -4919,7 +4919,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 312,
         flags: 0x200000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c3d6c)),
         input_cb: Some(CodeRef(0x800c4384)),
         phys_cb: Some(CodeRef(0x800c438c)),
@@ -4930,7 +4930,7 @@ pub static FT_LK_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 313,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c4380)),
         input_cb: Some(CodeRef(0x800c4388)),
         phys_cb: Some(CodeRef(0x800c4438)),
@@ -4945,7 +4945,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 295,
         flags: 0x6a,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -4956,7 +4956,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 296,
         flags: 0x6a,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -4967,7 +4967,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 297,
         flags: 0x6a,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -4978,7 +4978,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 298,
         flags: 0x6a,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -4989,7 +4989,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 299,
         flags: 0x6a,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -5000,7 +5000,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 300,
         flags: 0x6a,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -5011,7 +5011,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 301,
         flags: 0x6a,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -5022,7 +5022,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 302,
         flags: 0x6a,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -5033,7 +5033,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 303,
         flags: 0x6a,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -5044,7 +5044,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 304,
         flags: 0x6a,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -5055,7 +5055,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 52,
         flags: 0x240005,
-        x8: 0x6000000,
+        move_bits: 0x6000000,
         anim_cb: Some(CodeRef(0x800f203c)),
         input_cb: Some(CodeRef(0x800f205c)),
         phys_cb: Some(CodeRef(0x800f207c)),
@@ -5066,7 +5066,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 52,
         flags: 0x240405,
-        x8: 0x6000000,
+        move_bits: 0x6000000,
         anim_cb: Some(CodeRef(0x800f2124)),
         input_cb: Some(CodeRef(0x800f2160)),
         phys_cb: Some(CodeRef(0x800f2164)),
@@ -5077,7 +5077,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 305,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f70a0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8890)),
@@ -5088,7 +5088,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 306,
         flags: 0x3c0011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f72f8)),
         input_cb: Some(CodeRef(0x800f7fa0)),
         phys_cb: Some(CodeRef(0x800f88d0)),
@@ -5099,7 +5099,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 307,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7300)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8910)),
@@ -5110,7 +5110,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 308,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7498)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8970)),
@@ -5121,7 +5121,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 308,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7378)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8950)),
@@ -5132,7 +5132,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 309,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f75f8)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f89d0)),
@@ -5143,7 +5143,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 310,
         flags: 0x340011,
-        x8: 0x12400000,
+        move_bits: 0x12400000,
         anim_cb: Some(CodeRef(0x800f76f8)),
         input_cb: Some(CodeRef(0x800f8060)),
         phys_cb: Some(CodeRef(0x800f8a10)),
@@ -5154,7 +5154,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 311,
         flags: 0x344011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7e78)),
         input_cb: Some(CodeRef(0x800f8770)),
         phys_cb: Some(CodeRef(0x800f8b90)),
@@ -5165,7 +5165,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 312,
         flags: 0x344011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7e78)),
         input_cb: Some(CodeRef(0x800f8770)),
         phys_cb: Some(CodeRef(0x800f8b90)),
@@ -5176,7 +5176,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 313,
         flags: 0x344011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7e78)),
         input_cb: Some(CodeRef(0x800f8770)),
         phys_cb: Some(CodeRef(0x800f8b90)),
@@ -5187,7 +5187,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 317,
         flags: 0x342011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7d58)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8b50)),
@@ -5198,7 +5198,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 314,
         flags: 0x348011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7e98)),
         input_cb: Some(CodeRef(0x800f8870)),
         phys_cb: Some(CodeRef(0x800f8bb0)),
@@ -5209,7 +5209,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 315,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7f20)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8bd0)),
@@ -5220,7 +5220,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 316,
         flags: 0x340011,
-        x8: 0x12400000,
+        move_bits: 0x12400000,
         anim_cb: Some(CodeRef(0x800f7f24)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8bf0)),
@@ -5231,7 +5231,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 318,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7b20)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8af0)),
@@ -5242,7 +5242,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 318,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7a70)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8ad0)),
@@ -5253,7 +5253,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 319,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7808)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8a70)),
@@ -5264,7 +5264,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 319,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7700)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8a50)),
@@ -5275,7 +5275,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 320,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f71cc)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f88b0)),
@@ -5286,7 +5286,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 321,
         flags: 0x3c0411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f72fc)),
         input_cb: Some(CodeRef(0x800f8000)),
         phys_cb: Some(CodeRef(0x800f88f0)),
@@ -5297,7 +5297,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 307,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f733c)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8930)),
@@ -5308,7 +5308,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 308,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f75d8)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f89b0)),
@@ -5319,7 +5319,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 308,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f75b8)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8990)),
@@ -5330,7 +5330,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 309,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7674)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f89f0)),
@@ -5341,7 +5341,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 310,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f76fc)),
         input_cb: Some(CodeRef(0x800f844c)),
         phys_cb: Some(CodeRef(0x800f8a30)),
@@ -5352,7 +5352,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 318,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7c94)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8b30)),
@@ -5363,7 +5363,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 318,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7be4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8b10)),
@@ -5374,7 +5374,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 319,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f79c0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8ab0)),
@@ -5385,7 +5385,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 319,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f78b8)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8a90)),
@@ -5396,7 +5396,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 317,
         flags: 0x342411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800f7de4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f8b70)),
@@ -5407,7 +5407,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 322,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800f5660)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f56d8)),
@@ -5418,7 +5418,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 323,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800f569c)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800f56f8)),
@@ -5429,7 +5429,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 324,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800f2470)),
         input_cb: Some(CodeRef(0x800f2758)),
         phys_cb: Some(CodeRef(0x800f2910)),
@@ -5440,7 +5440,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 325,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800f24f8)),
         input_cb: Some(CodeRef(0x800f2828)),
         phys_cb: Some(CodeRef(0x800f2984)),
@@ -5451,7 +5451,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 326,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800f2578)),
         input_cb: Some(CodeRef(0x800f282c)),
         phys_cb: Some(CodeRef(0x800f29f8)),
@@ -5462,7 +5462,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 327,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800f257c)),
         input_cb: Some(CodeRef(0x800f2830)),
         phys_cb: Some(CodeRef(0x800f2a48)),
@@ -5473,7 +5473,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 328,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800f25ec)),
         input_cb: Some(CodeRef(0x800f2834)),
         phys_cb: Some(CodeRef(0x800f2a68)),
@@ -5484,7 +5484,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 329,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800f266c)),
         input_cb: Some(CodeRef(0x800f2904)),
         phys_cb: Some(CodeRef(0x800f2ae4)),
@@ -5495,7 +5495,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 330,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800f26e4)),
         input_cb: Some(CodeRef(0x800f2908)),
         phys_cb: Some(CodeRef(0x800f2b60)),
@@ -5506,7 +5506,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 331,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800f26e8)),
         input_cb: Some(CodeRef(0x800f290c)),
         phys_cb: Some(CodeRef(0x800f2b9c)),
@@ -5517,7 +5517,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 332,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800f3f80)),
         input_cb: Some(CodeRef(0x800f42d8)),
         phys_cb: Some(CodeRef(0x800f451c)),
@@ -5528,7 +5528,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 333,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800f402c)),
         input_cb: Some(CodeRef(0x800f42dc)),
         phys_cb: Some(CodeRef(0x800f453c)),
@@ -5539,7 +5539,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 334,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800f4074)),
         input_cb: Some(CodeRef(0x800f43fc)),
         phys_cb: Some(CodeRef(0x800f4584)),
@@ -5550,7 +5550,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 335,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800f412c)),
         input_cb: Some(CodeRef(0x800f4400)),
         phys_cb: Some(CodeRef(0x800f45a4)),
@@ -5561,7 +5561,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 336,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800f41d8)),
         input_cb: Some(CodeRef(0x800f4404)),
         phys_cb: Some(CodeRef(0x800f45c4)),
@@ -5572,7 +5572,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 337,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800f4220)),
         input_cb: Some(CodeRef(0x800f4518)),
         phys_cb: Some(CodeRef(0x800f4608)),
@@ -5583,7 +5583,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 338,
         flags: 0x340015,
-        x8: 0x16000000,
+        move_bits: 0x16000000,
         anim_cb: Some(CodeRef(0x800f9198)),
         input_cb: Some(CodeRef(0x800f91d4)),
         phys_cb: Some(CodeRef(0x800f9204)),
@@ -5594,7 +5594,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 339,
         flags: 0x340415,
-        x8: 0x16000000,
+        move_bits: 0x16000000,
         anim_cb: Some(CodeRef(0x800f9454)),
         input_cb: Some(CodeRef(0x800f9490)),
         phys_cb: Some(CodeRef(0x800f94c0)),
@@ -5605,7 +5605,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 340,
         flags: 0x34011a,
-        x8: 0x1b000000,
+        move_bits: 0x1b000000,
         anim_cb: Some(CodeRef(0x800fbbc4)),
         input_cb: Some(CodeRef(0x800fc374)),
         phys_cb: Some(CodeRef(0x800fc70c)),
@@ -5616,7 +5616,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 341,
         flags: 0x3c011a,
-        x8: 0x1b000000,
+        move_bits: 0x1b000000,
         anim_cb: Some(CodeRef(0x800fbdfc)),
         input_cb: Some(CodeRef(0x800fc46c)),
         phys_cb: Some(CodeRef(0x800fc72c)),
@@ -5627,7 +5627,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 342,
         flags: 0x34011a,
-        x8: 0x1b000000,
+        move_bits: 0x1b000000,
         anim_cb: Some(CodeRef(0x800fbed0)),
         input_cb: Some(CodeRef(0x800fc53c)),
         phys_cb: Some(CodeRef(0x800fc74c)),
@@ -5638,7 +5638,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 343,
         flags: 0x34051a,
-        x8: 0x1b000000,
+        move_bits: 0x1b000000,
         anim_cb: Some(CodeRef(0x800fbf34)),
         input_cb: Some(CodeRef(0x800fc540)),
         phys_cb: Some(CodeRef(0x800fc76c)),
@@ -5649,7 +5649,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 344,
         flags: 0x3c051a,
-        x8: 0x1b000000,
+        move_bits: 0x1b000000,
         anim_cb: Some(CodeRef(0x800fc1a0)),
         input_cb: Some(CodeRef(0x800fc638)),
         phys_cb: Some(CodeRef(0x800fc78c)),
@@ -5660,7 +5660,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 345,
         flags: 0x34051a,
-        x8: 0x1b000000,
+        move_bits: 0x1b000000,
         anim_cb: Some(CodeRef(0x800fc274)),
         input_cb: Some(CodeRef(0x800fc708)),
         phys_cb: Some(CodeRef(0x800fc7ac)),
@@ -5671,7 +5671,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 346,
         flags: 0x340120,
-        x8: 0x21000000,
+        move_bits: 0x21000000,
         anim_cb: Some(CodeRef(0x800fd0bc)),
         input_cb: Some(CodeRef(0x800fd688)),
         phys_cb: Some(CodeRef(0x800fd7f0)),
@@ -5682,7 +5682,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 347,
         flags: 0x340120,
-        x8: 0x21000000,
+        move_bits: 0x21000000,
         anim_cb: Some(CodeRef(0x800fd250)),
         input_cb: Some(CodeRef(0x800fd68c)),
         phys_cb: Some(CodeRef(0x800fd810)),
@@ -5693,7 +5693,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 348,
         flags: 0x340120,
-        x8: 0x21000000,
+        move_bits: 0x21000000,
         anim_cb: Some(CodeRef(0x800fd418)),
         input_cb: Some(CodeRef(0x800fd7e0)),
         phys_cb: Some(CodeRef(0x800fd830)),
@@ -5704,7 +5704,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 349,
         flags: 0x340120,
-        x8: 0x21000000,
+        move_bits: 0x21000000,
         anim_cb: Some(CodeRef(0x800fd49c)),
         input_cb: Some(CodeRef(0x800fd7e4)),
         phys_cb: Some(CodeRef(0x800fd850)),
@@ -5715,7 +5715,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 350,
         flags: 0x340520,
-        x8: 0x21000000,
+        move_bits: 0x21000000,
         anim_cb: Some(CodeRef(0x800fd4e0)),
         input_cb: Some(CodeRef(0x800fd7e8)),
         phys_cb: Some(CodeRef(0x800fd870)),
@@ -5726,7 +5726,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 351,
         flags: 0x340520,
-        x8: 0x21000000,
+        move_bits: 0x21000000,
         anim_cb: Some(CodeRef(0x800fd608)),
         input_cb: Some(CodeRef(0x800fd7ec)),
         phys_cb: Some(CodeRef(0x800fd890)),
@@ -5737,7 +5737,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 352,
         flags: 0x340021,
-        x8: 0x22000000,
+        move_bits: 0x22000000,
         anim_cb: Some(CodeRef(0x80109d6c)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8010a5ec)),
@@ -5748,7 +5748,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 353,
         flags: 0x340021,
-        x8: 0x22000000,
+        move_bits: 0x22000000,
         anim_cb: Some(CodeRef(0x80109ee8)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8010a64c)),
@@ -5759,7 +5759,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 353,
         flags: 0x340021,
-        x8: 0x22000000,
+        move_bits: 0x22000000,
         anim_cb: Some(CodeRef(0x80109e04)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8010a62c)),
@@ -5770,7 +5770,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 354,
         flags: 0x340021,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8010a304)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8010a6cc)),
@@ -5781,7 +5781,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 354,
         flags: 0x340021,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8010a1a4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8010a6ac)),
@@ -5792,7 +5792,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 355,
         flags: 0x340421,
-        x8: 0x22000000,
+        move_bits: 0x22000000,
         anim_cb: Some(CodeRef(0x80109db8)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8010a60c)),
@@ -5803,7 +5803,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 356,
         flags: 0x340421,
-        x8: 0x22000000,
+        move_bits: 0x22000000,
         anim_cb: Some(CodeRef(0x8010a0b8)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8010a66c)),
@@ -5814,7 +5814,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 356,
         flags: 0x340421,
-        x8: 0x22000000,
+        move_bits: 0x22000000,
         anim_cb: Some(CodeRef(0x80109fd4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8010a68c)),
@@ -5825,7 +5825,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 357,
         flags: 0x340421,
-        x8: 0x22000000,
+        move_bits: 0x22000000,
         anim_cb: Some(CodeRef(0x8010a528)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8010a70c)),
@@ -5836,7 +5836,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 357,
         flags: 0x340421,
-        x8: 0x22000000,
+        move_bits: 0x22000000,
         anim_cb: Some(CodeRef(0x8010a3c8)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8010a6ec)),
@@ -5847,7 +5847,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 358,
         flags: 0x340116,
-        x8: 0x17000000,
+        move_bits: 0x17000000,
         anim_cb: Some(CodeRef(0x800fe360)),
         input_cb: Some(CodeRef(0x800fea50)),
         phys_cb: Some(CodeRef(0x800feaf8)),
@@ -5858,7 +5858,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 359,
         flags: 0x3c0116,
-        x8: 0x17000000,
+        move_bits: 0x17000000,
         anim_cb: Some(CodeRef(0x800fe450)),
         input_cb: Some(CodeRef(0x800fea78)),
         phys_cb: Some(CodeRef(0x800feb18)),
@@ -5869,7 +5869,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 360,
         flags: 0x340116,
-        x8: 0x17000000,
+        move_bits: 0x17000000,
         anim_cb: Some(CodeRef(0x800fe5c8)),
         input_cb: Some(CodeRef(0x800feaa0)),
         phys_cb: Some(CodeRef(0x800feb38)),
@@ -5880,7 +5880,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 361,
         flags: 0x340516,
-        x8: 0x17000000,
+        move_bits: 0x17000000,
         anim_cb: Some(CodeRef(0x800fe688)),
         input_cb: Some(CodeRef(0x800feaa4)),
         phys_cb: Some(CodeRef(0x800feb58)),
@@ -5891,7 +5891,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 362,
         flags: 0x3c0516,
-        x8: 0x17000000,
+        move_bits: 0x17000000,
         anim_cb: Some(CodeRef(0x800fe778)),
         input_cb: Some(CodeRef(0x800feacc)),
         phys_cb: Some(CodeRef(0x800feb78)),
@@ -5902,7 +5902,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 363,
         flags: 0x340516,
-        x8: 0x17000000,
+        move_bits: 0x17000000,
         anim_cb: Some(CodeRef(0x800fe928)),
         input_cb: Some(CodeRef(0x800feaf4)),
         phys_cb: Some(CodeRef(0x800feb98)),
@@ -5913,7 +5913,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 364,
         flags: 0x34011f,
-        x8: 0x20000000,
+        move_bits: 0x20000000,
         anim_cb: Some(CodeRef(0x800fa0f4)),
         input_cb: Some(CodeRef(0x800fa418)),
         phys_cb: Some(CodeRef(0x800fa420)),
@@ -5924,7 +5924,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 365,
         flags: 0x34051f,
-        x8: 0x20000000,
+        move_bits: 0x20000000,
         anim_cb: Some(CodeRef(0x800fa254)),
         input_cb: Some(CodeRef(0x800fa41c)),
         phys_cb: Some(CodeRef(0x800fa440)),
@@ -5935,7 +5935,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 366,
         flags: 0x340024,
-        x8: 0x25000000,
+        move_bits: 0x25000000,
         anim_cb: Some(CodeRef(0x800f96f4)),
         input_cb: Some(CodeRef(0x800f976c)),
         phys_cb: Some(CodeRef(0x800f97cc)),
@@ -5946,7 +5946,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 367,
         flags: 0x340424,
-        x8: 0x25000000,
+        move_bits: 0x25000000,
         anim_cb: Some(CodeRef(0x800f9730)),
         input_cb: Some(CodeRef(0x800f979c)),
         phys_cb: Some(CodeRef(0x800f97ec)),
@@ -5957,7 +5957,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 368,
         flags: 0x340217,
-        x8: 0x18000000,
+        move_bits: 0x18000000,
         anim_cb: Some(CodeRef(0x800f9aec)),
         input_cb: Some(CodeRef(0x800f9b64)),
         phys_cb: Some(CodeRef(0x800f9c58)),
@@ -5968,7 +5968,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 369,
         flags: 0x340617,
-        x8: 0x18000000,
+        move_bits: 0x18000000,
         anim_cb: Some(CodeRef(0x800f9b28)),
         input_cb: Some(CodeRef(0x800f9b68)),
         phys_cb: Some(CodeRef(0x800f9d40)),
@@ -5979,7 +5979,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 370,
         flags: 0x34011c,
-        x8: 0x1d000000,
+        move_bits: 0x1d000000,
         anim_cb: Some(CodeRef(0x800fee70)),
         input_cb: Some(CodeRef(0x800ff3dc)),
         phys_cb: Some(CodeRef(0x800ff4cc)),
@@ -5990,7 +5990,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 371,
         flags: 0x34011c,
-        x8: 0x1d000000,
+        move_bits: 0x1d000000,
         anim_cb: Some(CodeRef(0x800fef58)),
         input_cb: Some(CodeRef(0x800ff3e0)),
         phys_cb: Some(CodeRef(0x800ff504)),
@@ -6001,7 +6001,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 372,
         flags: 0x34011c,
-        x8: 0x1d000000,
+        move_bits: 0x1d000000,
         anim_cb: Some(CodeRef(0x800fef58)),
         input_cb: Some(CodeRef(0x800ff3e0)),
         phys_cb: Some(CodeRef(0x800ff504)),
@@ -6012,7 +6012,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 373,
         flags: 0x34011c,
-        x8: 0x1d000000,
+        move_bits: 0x1d000000,
         anim_cb: Some(CodeRef(0x800ff08c)),
         input_cb: Some(CodeRef(0x800ff450)),
         phys_cb: Some(CodeRef(0x800ff524)),
@@ -6023,7 +6023,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 374,
         flags: 0x34051c,
-        x8: 0x1d000000,
+        move_bits: 0x1d000000,
         anim_cb: Some(CodeRef(0x800ff10c)),
         input_cb: Some(CodeRef(0x800ff454)),
         phys_cb: Some(CodeRef(0x800ff544)),
@@ -6034,7 +6034,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 375,
         flags: 0x34051c,
-        x8: 0x1d000000,
+        move_bits: 0x1d000000,
         anim_cb: Some(CodeRef(0x800ff1f4)),
         input_cb: Some(CodeRef(0x800ff458)),
         phys_cb: Some(CodeRef(0x800ff5a4)),
@@ -6045,7 +6045,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 376,
         flags: 0x34051c,
-        x8: 0x1d000000,
+        move_bits: 0x1d000000,
         anim_cb: Some(CodeRef(0x800ff1f4)),
         input_cb: Some(CodeRef(0x800ff458)),
         phys_cb: Some(CodeRef(0x800ff5a4)),
@@ -6056,7 +6056,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 377,
         flags: 0x34051c,
-        x8: 0x1d000000,
+        move_bits: 0x1d000000,
         anim_cb: Some(CodeRef(0x800ff328)),
         input_cb: Some(CodeRef(0x800ff4c8)),
         phys_cb: Some(CodeRef(0x800ff604)),
@@ -6067,7 +6067,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 378,
         flags: 0x340019,
-        x8: 0x1a000000,
+        move_bits: 0x1a000000,
         anim_cb: Some(CodeRef(0x800fa9fc)),
         input_cb: Some(CodeRef(0x800facac)),
         phys_cb: Some(CodeRef(0x800faf74)),
@@ -6078,7 +6078,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 379,
         flags: 0x3c0019,
-        x8: 0x1a000000,
+        move_bits: 0x1a000000,
         anim_cb: Some(CodeRef(0x800faa74)),
         input_cb: Some(CodeRef(0x800facb0)),
         phys_cb: Some(CodeRef(0x800faf94)),
@@ -6089,7 +6089,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 380,
         flags: 0x340019,
-        x8: 0x1a000000,
+        move_bits: 0x1a000000,
         anim_cb: Some(CodeRef(0x800fab18)),
         input_cb: Some(CodeRef(0x800fae0c)),
         phys_cb: Some(CodeRef(0x800fafb4)),
@@ -6100,7 +6100,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 381,
         flags: 0x340419,
-        x8: 0x1a000000,
+        move_bits: 0x1a000000,
         anim_cb: Some(CodeRef(0x800fab54)),
         input_cb: Some(CodeRef(0x800fae10)),
         phys_cb: Some(CodeRef(0x800fafd4)),
@@ -6111,7 +6111,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 382,
         flags: 0x3c0419,
-        x8: 0x1a000000,
+        move_bits: 0x1a000000,
         anim_cb: Some(CodeRef(0x800fabcc)),
         input_cb: Some(CodeRef(0x800fae14)),
         phys_cb: Some(CodeRef(0x800faff4)),
@@ -6122,7 +6122,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 383,
         flags: 0x340419,
-        x8: 0x1a000000,
+        move_bits: 0x1a000000,
         anim_cb: Some(CodeRef(0x800fac70)),
         input_cb: Some(CodeRef(0x800faf70)),
         phys_cb: Some(CodeRef(0x800fb014)),
@@ -6133,7 +6133,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 384,
         flags: 0x34001d,
-        x8: 0x1e000000,
+        move_bits: 0x1e000000,
         anim_cb: Some(CodeRef(0x8010c5fc)),
         input_cb: Some(CodeRef(0x8010c774)),
         phys_cb: Some(CodeRef(0x8010c77c)),
@@ -6144,7 +6144,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 385,
         flags: 0x34001d,
-        x8: 0x1e000000,
+        move_bits: 0x1e000000,
         anim_cb: Some(CodeRef(0x8010cab4)),
         input_cb: Some(CodeRef(0x8010cb7c)),
         phys_cb: Some(CodeRef(0x8010cb84)),
@@ -6155,7 +6155,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 386,
         flags: 0x34041d,
-        x8: 0x1e000000,
+        move_bits: 0x1e000000,
         anim_cb: Some(CodeRef(0x8010c6b8)),
         input_cb: Some(CodeRef(0x8010c778)),
         phys_cb: Some(CodeRef(0x8010c7b0)),
@@ -6166,7 +6166,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 387,
         flags: 0x34041d,
-        x8: 0x1e000000,
+        move_bits: 0x1e000000,
         anim_cb: Some(CodeRef(0x8010cb18)),
         input_cb: Some(CodeRef(0x8010cb80)),
         phys_cb: Some(CodeRef(0x8010cba4)),
@@ -6177,7 +6177,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 388,
         flags: 0x34011e,
-        x8: 0x1f000000,
+        move_bits: 0x1f000000,
         anim_cb: Some(CodeRef(0x80108efc)),
         input_cb: Some(CodeRef(0x80108f74)),
         phys_cb: Some(CodeRef(0x80108f7c)),
@@ -6188,7 +6188,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 389,
         flags: 0x34051e,
-        x8: 0x1f000000,
+        move_bits: 0x1f000000,
         anim_cb: Some(CodeRef(0x80108f38)),
         input_cb: Some(CodeRef(0x80108f78)),
         phys_cb: Some(CodeRef(0x80108f9c)),
@@ -6199,7 +6199,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 390,
         flags: 0x340218,
-        x8: 0x19000000,
+        move_bits: 0x19000000,
         anim_cb: Some(CodeRef(0x800ffb24)),
         input_cb: Some(CodeRef(0x801003dc)),
         phys_cb: Some(CodeRef(0x80100660)),
@@ -6210,7 +6210,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 391,
         flags: 0x340218,
-        x8: 0x19000000,
+        move_bits: 0x19000000,
         anim_cb: Some(CodeRef(0x800ffbac)),
         input_cb: Some(CodeRef(0x801003e0)),
         phys_cb: Some(CodeRef(0x80100680)),
@@ -6221,7 +6221,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 392,
         flags: 0x340218,
-        x8: 0x19000000,
+        move_bits: 0x19000000,
         anim_cb: Some(CodeRef(0x800ffc48)),
         input_cb: Some(CodeRef(0x80100518)),
         phys_cb: Some(CodeRef(0x801006a0)),
@@ -6232,7 +6232,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 393,
         flags: 0x340218,
-        x8: 0x19000000,
+        move_bits: 0x19000000,
         anim_cb: Some(CodeRef(0x800ffc94)),
         input_cb: Some(CodeRef(0x8010051c)),
         phys_cb: Some(CodeRef(0x801006c0)),
@@ -6243,7 +6243,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 394,
         flags: 0x340218,
-        x8: 0x19000000,
+        move_bits: 0x19000000,
         anim_cb: Some(CodeRef(0x800ffe6c)),
         input_cb: Some(CodeRef(0x80100520)),
         phys_cb: Some(CodeRef(0x801006e0)),
@@ -6254,7 +6254,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 395,
         flags: 0x340618,
-        x8: 0x19000000,
+        move_bits: 0x19000000,
         anim_cb: Some(CodeRef(0x800fffb8)),
         input_cb: Some(CodeRef(0x80100524)),
         phys_cb: Some(CodeRef(0x80100700)),
@@ -6265,7 +6265,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 396,
         flags: 0x340618,
-        x8: 0x19000000,
+        move_bits: 0x19000000,
         anim_cb: Some(CodeRef(0x80100040)),
         input_cb: Some(CodeRef(0x80100528)),
         phys_cb: Some(CodeRef(0x80100720)),
@@ -6276,7 +6276,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 397,
         flags: 0x340618,
-        x8: 0x19000000,
+        move_bits: 0x19000000,
         anim_cb: Some(CodeRef(0x801000dc)),
         input_cb: Some(CodeRef(0x80100654)),
         phys_cb: Some(CodeRef(0x80100740)),
@@ -6287,7 +6287,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 398,
         flags: 0x340618,
-        x8: 0x19000000,
+        move_bits: 0x19000000,
         anim_cb: Some(CodeRef(0x80100128)),
         input_cb: Some(CodeRef(0x80100658)),
         phys_cb: Some(CodeRef(0x80100760)),
@@ -6298,7 +6298,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 399,
         flags: 0x340618,
-        x8: 0x19000000,
+        move_bits: 0x19000000,
         anim_cb: Some(CodeRef(0x801002c8)),
         input_cb: Some(CodeRef(0x8010065c)),
         phys_cb: Some(CodeRef(0x80100780)),
@@ -6309,7 +6309,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 400,
         flags: 0x340026,
-        x8: 0x27000000,
+        move_bits: 0x27000000,
         anim_cb: Some(CodeRef(0x80105c3c)),
         input_cb: Some(CodeRef(0x80105d64)),
         phys_cb: Some(CodeRef(0x80105d6c)),
@@ -6320,7 +6320,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 401,
         flags: 0x340426,
-        x8: 0x27000000,
+        move_bits: 0x27000000,
         anim_cb: Some(CodeRef(0x80105cd0)),
         input_cb: Some(CodeRef(0x80105d68)),
         phys_cb: Some(CodeRef(0x80105da0)),
@@ -6331,7 +6331,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 402,
         flags: 0x34011b,
-        x8: 0x1c000000,
+        move_bits: 0x1c000000,
         anim_cb: Some(CodeRef(0x8010629c)),
         input_cb: Some(CodeRef(0x8010672c)),
         phys_cb: Some(CodeRef(0x801068fc)),
@@ -6342,7 +6342,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 403,
         flags: 0x3c011b,
-        x8: 0x1c000000,
+        move_bits: 0x1c000000,
         anim_cb: Some(CodeRef(0x80106334)),
         input_cb: Some(CodeRef(0x80106730)),
         phys_cb: Some(CodeRef(0x8010691c)),
@@ -6353,7 +6353,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 404,
         flags: 0x34011b,
-        x8: 0x1c000000,
+        move_bits: 0x1c000000,
         anim_cb: Some(CodeRef(0x801063e0)),
         input_cb: Some(CodeRef(0x8010680c)),
         phys_cb: Some(CodeRef(0x8010693c)),
@@ -6364,7 +6364,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 405,
         flags: 0x34011b,
-        x8: 0x1c000000,
+        move_bits: 0x1c000000,
         anim_cb: Some(CodeRef(0x80106428)),
         input_cb: Some(CodeRef(0x80106810)),
         phys_cb: Some(CodeRef(0x8010695c)),
@@ -6375,7 +6375,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 406,
         flags: 0x34051b,
-        x8: 0x1c000000,
+        move_bits: 0x1c000000,
         anim_cb: Some(CodeRef(0x801064ac)),
         input_cb: Some(CodeRef(0x80106814)),
         phys_cb: Some(CodeRef(0x8010697c)),
@@ -6386,7 +6386,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 407,
         flags: 0x3c051b,
-        x8: 0x1c000000,
+        move_bits: 0x1c000000,
         anim_cb: Some(CodeRef(0x80106544)),
         input_cb: Some(CodeRef(0x80106818)),
         phys_cb: Some(CodeRef(0x8010699c)),
@@ -6397,7 +6397,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 408,
         flags: 0x34051b,
-        x8: 0x1c000000,
+        move_bits: 0x1c000000,
         anim_cb: Some(CodeRef(0x801065f0)),
         input_cb: Some(CodeRef(0x801068f4)),
         phys_cb: Some(CodeRef(0x801069bc)),
@@ -6408,7 +6408,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 409,
         flags: 0x34051b,
-        x8: 0x1c000000,
+        move_bits: 0x1c000000,
         anim_cb: Some(CodeRef(0x80106670)),
         input_cb: Some(CodeRef(0x801068f8)),
         phys_cb: Some(CodeRef(0x801069dc)),
@@ -6419,7 +6419,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 410,
         flags: 0x340222,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x801016cc)),
         input_cb: Some(CodeRef(0x801035c8)),
         phys_cb: Some(CodeRef(0x80103d10)),
@@ -6430,7 +6430,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 411,
         flags: 0x340222,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x801016cc)),
         input_cb: Some(CodeRef(0x801035c8)),
         phys_cb: Some(CodeRef(0x80103d10)),
@@ -6441,7 +6441,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 412,
         flags: 0x3c0222,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x801017b0)),
         input_cb: Some(CodeRef(0x801035cc)),
         phys_cb: Some(CodeRef(0x80103d40)),
@@ -6452,7 +6452,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 413,
         flags: 0x3c0222,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x80101960)),
         input_cb: Some(CodeRef(0x80103734)),
         phys_cb: Some(CodeRef(0x80103d70)),
@@ -6463,7 +6463,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 414,
         flags: 0x340222,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x80101ad0)),
         input_cb: Some(CodeRef(0x8010389c)),
         phys_cb: Some(CodeRef(0x80103da0)),
@@ -6474,7 +6474,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 415,
         flags: 0x340222,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x80101ea0)),
         input_cb: Some(CodeRef(0x80103a24)),
         phys_cb: Some(CodeRef(0x80103fa8)),
@@ -6485,7 +6485,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 416,
         flags: 0x340222,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x80102198)),
         input_cb: Some(CodeRef(0x80103a28)),
         phys_cb: Some(CodeRef(0x801042ac)),
@@ -6496,7 +6496,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 417,
         flags: 0x340222,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x80102198)),
         input_cb: Some(CodeRef(0x80103a28)),
         phys_cb: Some(CodeRef(0x801042ac)),
@@ -6507,7 +6507,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 418,
         flags: 0x340622,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x80102470)),
         input_cb: Some(CodeRef(0x80103a2c)),
         phys_cb: Some(CodeRef(0x801042e8)),
@@ -6518,7 +6518,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 419,
         flags: 0x340622,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x80102470)),
         input_cb: Some(CodeRef(0x80103a2c)),
         phys_cb: Some(CodeRef(0x801042e8)),
@@ -6529,7 +6529,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 420,
         flags: 0x3c0622,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x8010254c)),
         input_cb: Some(CodeRef(0x80103a30)),
         phys_cb: Some(CodeRef(0x80104318)),
@@ -6540,7 +6540,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 421,
         flags: 0x3c0622,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x801026fc)),
         input_cb: Some(CodeRef(0x80103b98)),
         phys_cb: Some(CodeRef(0x80104348)),
@@ -6551,7 +6551,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 422,
         flags: 0x340622,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x8010286c)),
         input_cb: Some(CodeRef(0x80103d00)),
         phys_cb: Some(CodeRef(0x80104378)),
@@ -6562,7 +6562,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 423,
         flags: 0x340222,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x80102dd0)),
         input_cb: Some(CodeRef(0x80103d04)),
         phys_cb: Some(CodeRef(0x801044f8)),
@@ -6573,7 +6573,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 424,
         flags: 0x340622,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x80103088)),
         input_cb: Some(CodeRef(0x80103d08)),
         phys_cb: Some(CodeRef(0x80104610)),
@@ -6584,7 +6584,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 425,
         flags: 0x340622,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x80103088)),
         input_cb: Some(CodeRef(0x80103d08)),
         phys_cb: Some(CodeRef(0x80104610)),
@@ -6595,7 +6595,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 426,
         flags: 0x340622,
-        x8: 0x23000000,
+        move_bits: 0x23000000,
         anim_cb: Some(CodeRef(0x80103374)),
         input_cb: Some(CodeRef(0x80103d0c)),
         phys_cb: Some(CodeRef(0x80104640)),
@@ -6606,7 +6606,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 427,
         flags: 0x340225,
-        x8: 0x26000000,
+        move_bits: 0x26000000,
         anim_cb: Some(CodeRef(0x8010b65c)),
         input_cb: Some(CodeRef(0x8010b72c)),
         phys_cb: Some(CodeRef(0x8010b734)),
@@ -6617,7 +6617,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 428,
         flags: 0x340225,
-        x8: 0x26000000,
+        move_bits: 0x26000000,
         anim_cb: Some(CodeRef(0x8010b958)),
         input_cb: Some(CodeRef(0x8010ba28)),
         phys_cb: Some(CodeRef(0x8010ba98)),
@@ -6628,7 +6628,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 429,
         flags: 0x340225,
-        x8: 0x26000000,
+        move_bits: 0x26000000,
         anim_cb: Some(CodeRef(0x8010bce0)),
         input_cb: Some(CodeRef(0x8010bed0)),
         phys_cb: Some(CodeRef(0x8010bed8)),
@@ -6639,7 +6639,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 430,
         flags: 0x340225,
-        x8: 0x26000000,
+        move_bits: 0x26000000,
         anim_cb: Some(CodeRef(0x8010bce0)),
         input_cb: Some(CodeRef(0x8010bed0)),
         phys_cb: Some(CodeRef(0x8010bed8)),
@@ -6650,7 +6650,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 431,
         flags: 0x340625,
-        x8: 0x26000000,
+        move_bits: 0x26000000,
         anim_cb: Some(CodeRef(0x8010b6c4)),
         input_cb: Some(CodeRef(0x8010b730)),
         phys_cb: Some(CodeRef(0x8010b78c)),
@@ -6661,7 +6661,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 432,
         flags: 0x340625,
-        x8: 0x26000000,
+        move_bits: 0x26000000,
         anim_cb: Some(CodeRef(0x8010b9c0)),
         input_cb: Some(CodeRef(0x8010ba60)),
         phys_cb: Some(CodeRef(0x8010bab8)),
@@ -6672,7 +6672,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 433,
         flags: 0x340625,
-        x8: 0x26000000,
+        move_bits: 0x26000000,
         anim_cb: Some(CodeRef(0x8010bdd8)),
         input_cb: Some(CodeRef(0x8010bed4)),
         phys_cb: Some(CodeRef(0x8010bef8)),
@@ -6683,7 +6683,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 434,
         flags: 0x340625,
-        x8: 0x26000000,
+        move_bits: 0x26000000,
         anim_cb: Some(CodeRef(0x8010bdd8)),
         input_cb: Some(CodeRef(0x8010bed4)),
         phys_cb: Some(CodeRef(0x8010bef8)),
@@ -6694,7 +6694,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 435,
         flags: 0x340123,
-        x8: 0x24000000,
+        move_bits: 0x24000000,
         anim_cb: Some(CodeRef(0x80107700)),
         input_cb: Some(CodeRef(0x80108040)),
         phys_cb: Some(CodeRef(0x80108658)),
@@ -6705,7 +6705,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 436,
         flags: 0x3c0123,
-        x8: 0x24000000,
+        move_bits: 0x24000000,
         anim_cb: Some(CodeRef(0x80107884)),
         input_cb: Some(CodeRef(0x80108044)),
         phys_cb: Some(CodeRef(0x80108678)),
@@ -6716,7 +6716,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 437,
         flags: 0x3c0123,
-        x8: 0x24000000,
+        move_bits: 0x24000000,
         anim_cb: Some(CodeRef(0x80107a84)),
         input_cb: Some(CodeRef(0x801081f8)),
         phys_cb: Some(CodeRef(0x80108698)),
@@ -6727,7 +6727,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 438,
         flags: 0x340123,
-        x8: 0x24000000,
+        move_bits: 0x24000000,
         anim_cb: Some(CodeRef(0x80107ab4)),
         input_cb: Some(CodeRef(0x80108394)),
         phys_cb: Some(CodeRef(0x801086b8)),
@@ -6738,7 +6738,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 439,
         flags: 0x340123,
-        x8: 0x24000000,
+        move_bits: 0x24000000,
         anim_cb: Some(CodeRef(0x80107b38)),
         input_cb: Some(CodeRef(0x80108398)),
         phys_cb: Some(CodeRef(0x801086d8)),
@@ -6749,7 +6749,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 440,
         flags: 0x340523,
-        x8: 0x24000000,
+        move_bits: 0x24000000,
         anim_cb: Some(CodeRef(0x80107b7c)),
         input_cb: Some(CodeRef(0x8010839c)),
         phys_cb: Some(CodeRef(0x801086f8)),
@@ -6760,7 +6760,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 441,
         flags: 0x3c0523,
-        x8: 0x24000000,
+        move_bits: 0x24000000,
         anim_cb: Some(CodeRef(0x80107d0c)),
         input_cb: Some(CodeRef(0x801083a0)),
         phys_cb: Some(CodeRef(0x80108718)),
@@ -6771,7 +6771,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 442,
         flags: 0x3c0523,
-        x8: 0x24000000,
+        move_bits: 0x24000000,
         anim_cb: Some(CodeRef(0x80107f0c)),
         input_cb: Some(CodeRef(0x80108504)),
         phys_cb: Some(CodeRef(0x80108738)),
@@ -6782,7 +6782,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 443,
         flags: 0x340523,
-        x8: 0x24000000,
+        move_bits: 0x24000000,
         anim_cb: Some(CodeRef(0x80107f3c)),
         input_cb: Some(CodeRef(0x80108650)),
         phys_cb: Some(CodeRef(0x80108758)),
@@ -6793,7 +6793,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 444,
         flags: 0x340523,
-        x8: 0x24000000,
+        move_bits: 0x24000000,
         anim_cb: Some(CodeRef(0x80107fc0)),
         input_cb: Some(CodeRef(0x80108654)),
         phys_cb: Some(CodeRef(0x80108778)),
@@ -6804,7 +6804,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 445,
         flags: 0x34012b,
-        x8: 0x2c000000,
+        move_bits: 0x2c000000,
         anim_cb: Some(CodeRef(0x8010d280)),
         input_cb: Some(CodeRef(0x8010d3c0)),
         phys_cb: Some(CodeRef(0x8010d4c8)),
@@ -6815,7 +6815,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 446,
         flags: 0x34052b,
-        x8: 0x2c000000,
+        move_bits: 0x2c000000,
         anim_cb: Some(CodeRef(0x8010d320)),
         input_cb: Some(CodeRef(0x8010d444)),
         phys_cb: Some(CodeRef(0x8010d4e8)),
@@ -6826,7 +6826,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 447,
         flags: 0x340028,
-        x8: 0x29000000,
+        move_bits: 0x29000000,
         anim_cb: Some(CodeRef(0x800f9198)),
         input_cb: Some(CodeRef(0x800f91d4)),
         phys_cb: Some(CodeRef(0x800f9204)),
@@ -6837,7 +6837,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 448,
         flags: 0x340428,
-        x8: 0x29000000,
+        move_bits: 0x29000000,
         anim_cb: Some(CodeRef(0x800f9454)),
         input_cb: Some(CodeRef(0x800f9490)),
         phys_cb: Some(CodeRef(0x800f94c0)),
@@ -6848,7 +6848,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 449,
         flags: 0x340127,
-        x8: 0x28000000,
+        move_bits: 0x28000000,
         anim_cb: Some(CodeRef(0x800fbbc4)),
         input_cb: Some(CodeRef(0x800fc374)),
         phys_cb: Some(CodeRef(0x800fc70c)),
@@ -6859,7 +6859,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 450,
         flags: 0x3c0127,
-        x8: 0x28000000,
+        move_bits: 0x28000000,
         anim_cb: Some(CodeRef(0x800fbdfc)),
         input_cb: Some(CodeRef(0x800fc46c)),
         phys_cb: Some(CodeRef(0x800fc72c)),
@@ -6870,7 +6870,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 451,
         flags: 0x340127,
-        x8: 0x28000000,
+        move_bits: 0x28000000,
         anim_cb: Some(CodeRef(0x800fbed0)),
         input_cb: Some(CodeRef(0x800fc53c)),
         phys_cb: Some(CodeRef(0x800fc74c)),
@@ -6881,7 +6881,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 452,
         flags: 0x340527,
-        x8: 0x28000000,
+        move_bits: 0x28000000,
         anim_cb: Some(CodeRef(0x800fbf34)),
         input_cb: Some(CodeRef(0x800fc540)),
         phys_cb: Some(CodeRef(0x800fc76c)),
@@ -6892,7 +6892,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 453,
         flags: 0x3c0527,
-        x8: 0x28000000,
+        move_bits: 0x28000000,
         anim_cb: Some(CodeRef(0x800fc1a0)),
         input_cb: Some(CodeRef(0x800fc638)),
         phys_cb: Some(CodeRef(0x800fc78c)),
@@ -6903,7 +6903,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 454,
         flags: 0x340527,
-        x8: 0x28000000,
+        move_bits: 0x28000000,
         anim_cb: Some(CodeRef(0x800fc274)),
         input_cb: Some(CodeRef(0x800fc708)),
         phys_cb: Some(CodeRef(0x800fc7ac)),
@@ -6914,7 +6914,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 455,
         flags: 0x340129,
-        x8: 0x2a000000,
+        move_bits: 0x2a000000,
         anim_cb: Some(CodeRef(0x800fe360)),
         input_cb: Some(CodeRef(0x800fea50)),
         phys_cb: Some(CodeRef(0x800feaf8)),
@@ -6925,7 +6925,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 456,
         flags: 0x3c0129,
-        x8: 0x2a000000,
+        move_bits: 0x2a000000,
         anim_cb: Some(CodeRef(0x800fe450)),
         input_cb: Some(CodeRef(0x800fea78)),
         phys_cb: Some(CodeRef(0x800feb18)),
@@ -6936,7 +6936,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 457,
         flags: 0x340129,
-        x8: 0x2a000000,
+        move_bits: 0x2a000000,
         anim_cb: Some(CodeRef(0x800fe5c8)),
         input_cb: Some(CodeRef(0x800feaa0)),
         phys_cb: Some(CodeRef(0x800feb38)),
@@ -6947,7 +6947,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 458,
         flags: 0x340529,
-        x8: 0x2a000000,
+        move_bits: 0x2a000000,
         anim_cb: Some(CodeRef(0x800fe688)),
         input_cb: Some(CodeRef(0x800feaa4)),
         phys_cb: Some(CodeRef(0x800feb58)),
@@ -6958,7 +6958,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 459,
         flags: 0x3c0529,
-        x8: 0x2a000000,
+        move_bits: 0x2a000000,
         anim_cb: Some(CodeRef(0x800fe778)),
         input_cb: Some(CodeRef(0x800feacc)),
         phys_cb: Some(CodeRef(0x800feb78)),
@@ -6969,7 +6969,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 460,
         flags: 0x340529,
-        x8: 0x2a000000,
+        move_bits: 0x2a000000,
         anim_cb: Some(CodeRef(0x800fe928)),
         input_cb: Some(CodeRef(0x800feaf4)),
         phys_cb: Some(CodeRef(0x800feb98)),
@@ -6980,7 +6980,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 461,
         flags: 0x34012a,
-        x8: 0x2b000000,
+        move_bits: 0x2b000000,
         anim_cb: Some(CodeRef(0x800fa0f4)),
         input_cb: Some(CodeRef(0x800fa418)),
         phys_cb: Some(CodeRef(0x800fa420)),
@@ -6991,7 +6991,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 462,
         flags: 0x34052a,
-        x8: 0x2b000000,
+        move_bits: 0x2b000000,
         anim_cb: Some(CodeRef(0x800fa254)),
         input_cb: Some(CodeRef(0x800fa41c)),
         phys_cb: Some(CodeRef(0x800fa440)),
@@ -7002,7 +7002,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 463,
         flags: 0x34022c,
-        x8: 0x2d000000,
+        move_bits: 0x2d000000,
         anim_cb: Some(CodeRef(0x800f9aec)),
         input_cb: Some(CodeRef(0x800f9b64)),
         phys_cb: Some(CodeRef(0x800f9c58)),
@@ -7013,7 +7013,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 464,
         flags: 0x34062c,
-        x8: 0x2d000000,
+        move_bits: 0x2d000000,
         anim_cb: Some(CodeRef(0x800f9b28)),
         input_cb: Some(CodeRef(0x800f9b68)),
         phys_cb: Some(CodeRef(0x800f9d40)),
@@ -7024,7 +7024,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 465,
         flags: 0x34022d,
-        x8: 0x2e000000,
+        move_bits: 0x2e000000,
         anim_cb: Some(CodeRef(0x8010b65c)),
         input_cb: Some(CodeRef(0x8010b72c)),
         phys_cb: Some(CodeRef(0x8010b734)),
@@ -7035,7 +7035,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 466,
         flags: 0x34022d,
-        x8: 0x2e000000,
+        move_bits: 0x2e000000,
         anim_cb: Some(CodeRef(0x8010b958)),
         input_cb: Some(CodeRef(0x8010ba28)),
         phys_cb: Some(CodeRef(0x8010ba98)),
@@ -7046,7 +7046,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 467,
         flags: 0x34022d,
-        x8: 0x2e000000,
+        move_bits: 0x2e000000,
         anim_cb: Some(CodeRef(0x8010bce0)),
         input_cb: Some(CodeRef(0x8010bed0)),
         phys_cb: Some(CodeRef(0x8010bed8)),
@@ -7057,7 +7057,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 468,
         flags: 0x34022d,
-        x8: 0x2e000000,
+        move_bits: 0x2e000000,
         anim_cb: Some(CodeRef(0x8010bce0)),
         input_cb: Some(CodeRef(0x8010bed0)),
         phys_cb: Some(CodeRef(0x8010bed8)),
@@ -7068,7 +7068,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 469,
         flags: 0x34062d,
-        x8: 0x2e000000,
+        move_bits: 0x2e000000,
         anim_cb: Some(CodeRef(0x8010b6c4)),
         input_cb: Some(CodeRef(0x8010b730)),
         phys_cb: Some(CodeRef(0x8010b78c)),
@@ -7079,7 +7079,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 470,
         flags: 0x34062d,
-        x8: 0x2e000000,
+        move_bits: 0x2e000000,
         anim_cb: Some(CodeRef(0x8010b9c0)),
         input_cb: Some(CodeRef(0x8010ba60)),
         phys_cb: Some(CodeRef(0x8010bab8)),
@@ -7090,7 +7090,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 471,
         flags: 0x34062d,
-        x8: 0x2e000000,
+        move_bits: 0x2e000000,
         anim_cb: Some(CodeRef(0x8010bdd8)),
         input_cb: Some(CodeRef(0x8010bed4)),
         phys_cb: Some(CodeRef(0x8010bef8)),
@@ -7101,7 +7101,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 472,
         flags: 0x34062d,
-        x8: 0x2e000000,
+        move_bits: 0x2e000000,
         anim_cb: Some(CodeRef(0x8010bdd8)),
         input_cb: Some(CodeRef(0x8010bed4)),
         phys_cb: Some(CodeRef(0x8010bef8)),
@@ -7112,7 +7112,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 473,
         flags: 0x34002e,
-        x8: 0x2f000000,
+        move_bits: 0x2f000000,
         anim_cb: Some(CodeRef(0x800fa9fc)),
         input_cb: Some(CodeRef(0x800facac)),
         phys_cb: Some(CodeRef(0x800faf74)),
@@ -7123,7 +7123,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 474,
         flags: 0x3c002e,
-        x8: 0x2f000000,
+        move_bits: 0x2f000000,
         anim_cb: Some(CodeRef(0x800faa74)),
         input_cb: Some(CodeRef(0x800facb0)),
         phys_cb: Some(CodeRef(0x800faf94)),
@@ -7134,7 +7134,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 475,
         flags: 0x34002e,
-        x8: 0x2f000000,
+        move_bits: 0x2f000000,
         anim_cb: Some(CodeRef(0x800fab18)),
         input_cb: Some(CodeRef(0x800fae0c)),
         phys_cb: Some(CodeRef(0x800fafb4)),
@@ -7145,7 +7145,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 476,
         flags: 0x34042e,
-        x8: 0x2f000000,
+        move_bits: 0x2f000000,
         anim_cb: Some(CodeRef(0x800fab54)),
         input_cb: Some(CodeRef(0x800fae10)),
         phys_cb: Some(CodeRef(0x800fafd4)),
@@ -7156,7 +7156,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 477,
         flags: 0x3c042e,
-        x8: 0x2f000000,
+        move_bits: 0x2f000000,
         anim_cb: Some(CodeRef(0x800fabcc)),
         input_cb: Some(CodeRef(0x800fae14)),
         phys_cb: Some(CodeRef(0x800faff4)),
@@ -7167,7 +7167,7 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
     MotionState {
         anim_id: 478,
         flags: 0x34042e,
-        x8: 0x2f000000,
+        move_bits: 0x2f000000,
         anim_cb: Some(CodeRef(0x800fac70)),
         input_cb: Some(CodeRef(0x800faf70)),
         phys_cb: Some(CodeRef(0x800fb014)),
@@ -7182,7 +7182,7 @@ pub static FT_KB_INIT_UNK_MOTION_STATES0: [MotionState; 4] = [
     MotionState {
         anim_id: 14,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: Some(CodeRef(0x800c737c)),
@@ -7193,7 +7193,7 @@ pub static FT_KB_INIT_UNK_MOTION_STATES0: [MotionState; 4] = [
     MotionState {
         anim_id: 15,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: Some(CodeRef(0x800c737c)),
@@ -7204,7 +7204,7 @@ pub static FT_KB_INIT_UNK_MOTION_STATES0: [MotionState; 4] = [
     MotionState {
         anim_id: 16,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: Some(CodeRef(0x800c737c)),
@@ -7215,7 +7215,7 @@ pub static FT_KB_INIT_UNK_MOTION_STATES0: [MotionState; 4] = [
     MotionState {
         anim_id: 17,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: Some(CodeRef(0x800c7414)),
@@ -7230,7 +7230,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 295,
         flags: 0x480000,
-        x8: 0x35400000,
+        move_bits: 0x35400000,
         anim_cb: None,
         input_cb: Some(CodeRef(0x800df9f0)),
         phys_cb: Some(CodeRef(0x800dfa50)),
@@ -7241,7 +7241,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 296,
         flags: 0x484066,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x800dfb34)),
         input_cb: Some(CodeRef(0x800dfb54)),
         phys_cb: Some(CodeRef(0x800dfbb8)),
@@ -7252,7 +7252,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 297,
         flags: 0x484066,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x800dfb34)),
         input_cb: Some(CodeRef(0x800dfb54)),
         phys_cb: Some(CodeRef(0x800dfbb8)),
@@ -7263,7 +7263,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 298,
         flags: 0x484066,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x800dfb34)),
         input_cb: Some(CodeRef(0x800dfb54)),
         phys_cb: Some(CodeRef(0x800dfbb8)),
@@ -7274,7 +7274,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 299,
         flags: 0x482064,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x800e01bc)),
         input_cb: Some(CodeRef(0x800e0200)),
         phys_cb: Some(CodeRef(0x800e0254)),
@@ -7285,7 +7285,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 300,
         flags: 0x480000,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x800e0518)),
         input_cb: Some(CodeRef(0x800e0568)),
         phys_cb: Some(CodeRef(0x800e05a4)),
@@ -7296,7 +7296,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 301,
         flags: 0x480000,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: None,
         input_cb: Some(CodeRef(0x800e030c)),
         phys_cb: Some(CodeRef(0x800e0330)),
@@ -7307,7 +7307,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 302,
         flags: 0x488069,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: None,
         input_cb: Some(CodeRef(0x800e0440)),
         phys_cb: Some(CodeRef(0x800e0464)),
@@ -7318,7 +7318,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 303,
         flags: 0x480000,
-        x8: 0x35400000,
+        move_bits: 0x35400000,
         anim_cb: Some(CodeRef(0x800e0648)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e0698)),
@@ -7329,7 +7329,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 304,
         flags: 0x4a0000,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x800e07e4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e0848)),
@@ -7340,7 +7340,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 305,
         flags: 0xa80035,
-        x8: 0x35400000,
+        move_bits: 0x35400000,
         anim_cb: Some(CodeRef(0x8009b5c0)),
         input_cb: Some(CodeRef(0x8009b5c4)),
         phys_cb: Some(CodeRef(0x8009b634)),
@@ -7351,7 +7351,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 306,
         flags: 0xa84035,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x8009b744)),
         input_cb: Some(CodeRef(0x8009b764)),
         phys_cb: Some(CodeRef(0x8009b7d8)),
@@ -7362,7 +7362,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 307,
         flags: 0xa84035,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x8009b744)),
         input_cb: Some(CodeRef(0x8009b764)),
         phys_cb: Some(CodeRef(0x8009b7d8)),
@@ -7373,7 +7373,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 308,
         flags: 0xa84035,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x8009b744)),
         input_cb: Some(CodeRef(0x8009b764)),
         phys_cb: Some(CodeRef(0x8009b7d8)),
@@ -7384,7 +7384,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 309,
         flags: 0xa82035,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x8009b8b4)),
         input_cb: Some(CodeRef(0x8009b948)),
         phys_cb: Some(CodeRef(0x8009b988)),
@@ -7395,7 +7395,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 310,
         flags: 0xa80035,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x8009ba50)),
         input_cb: Some(CodeRef(0x8009baa0)),
         phys_cb: Some(CodeRef(0x8009badc)),
@@ -7406,7 +7406,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 311,
         flags: 0xa80035,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x8009bcdc)),
         input_cb: Some(CodeRef(0x8009bce0)),
         phys_cb: Some(CodeRef(0x8009bd04)),
@@ -7417,7 +7417,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 312,
         flags: 0xa88035,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x8009bbf0)),
         input_cb: Some(CodeRef(0x8009bbf4)),
         phys_cb: Some(CodeRef(0x8009bc18)),
@@ -7428,7 +7428,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 313,
         flags: 0xa80035,
-        x8: 0x35400000,
+        move_bits: 0x35400000,
         anim_cb: Some(CodeRef(0x8009bdc4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8009be14)),
@@ -7439,7 +7439,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 314,
         flags: 0xaa0035,
-        x8: 0x35000000,
+        move_bits: 0x35000000,
         anim_cb: Some(CodeRef(0x8009be54)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8009beb8)),
@@ -7450,7 +7450,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 315,
         flags: 0xa40039,
-        x8: 0x39000000,
+        move_bits: 0x39000000,
         anim_cb: Some(CodeRef(0x8009c0ec)),
         input_cb: Some(CodeRef(0x8009c130)),
         phys_cb: Some(CodeRef(0x8009c150)),
@@ -7461,7 +7461,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 316,
         flags: 0xa4003a,
-        x8: 0x3a000000,
+        move_bits: 0x3a000000,
         anim_cb: Some(CodeRef(0x8009c234)),
         input_cb: Some(CodeRef(0x8009c254)),
         phys_cb: Some(CodeRef(0x8009c274)),
@@ -7472,7 +7472,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 317,
         flags: 0xa4003b,
-        x8: 0x3b000000,
+        move_bits: 0x3b000000,
         anim_cb: Some(CodeRef(0x8009c2bc)),
         input_cb: Some(CodeRef(0x8009c2dc)),
         phys_cb: Some(CodeRef(0x8009c2fc)),
@@ -7483,7 +7483,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 318,
         flags: 0xa4003c,
-        x8: 0x3c000000,
+        move_bits: 0x3c000000,
         anim_cb: Some(CodeRef(0x8009c344)),
         input_cb: Some(CodeRef(0x8009c364)),
         phys_cb: Some(CodeRef(0x8009c384)),
@@ -7494,7 +7494,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 315,
         flags: 0xa40039,
-        x8: 0x39000000,
+        move_bits: 0x39000000,
         anim_cb: Some(CodeRef(0x8009c3cc)),
         input_cb: Some(CodeRef(0x8009c410)),
         phys_cb: Some(CodeRef(0x8009c414)),
@@ -7505,7 +7505,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 316,
         flags: 0xa4003a,
-        x8: 0x3a000000,
+        move_bits: 0x3a000000,
         anim_cb: Some(CodeRef(0x8009c3cc)),
         input_cb: Some(CodeRef(0x8009c410)),
         phys_cb: Some(CodeRef(0x8009c414)),
@@ -7516,7 +7516,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 317,
         flags: 0xa4003b,
-        x8: 0x3b000000,
+        move_bits: 0x3b000000,
         anim_cb: Some(CodeRef(0x8009c3cc)),
         input_cb: Some(CodeRef(0x8009c410)),
         phys_cb: Some(CodeRef(0x8009c414)),
@@ -7527,7 +7527,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 318,
         flags: 0xa4003c,
-        x8: 0x3c000000,
+        move_bits: 0x3c000000,
         anim_cb: Some(CodeRef(0x8009c3cc)),
         input_cb: Some(CodeRef(0x8009c410)),
         phys_cb: Some(CodeRef(0x8009c414)),
@@ -7538,7 +7538,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 319,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8010e7b4)),
         input_cb: Some(CodeRef(0x8010f094)),
         phys_cb: Some(CodeRef(0x8010f328)),
@@ -7549,7 +7549,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 320,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8010e840)),
         input_cb: Some(CodeRef(0x8010f098)),
         phys_cb: Some(CodeRef(0x8010f348)),
@@ -7560,7 +7560,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 321,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8010e8e0)),
         input_cb: Some(CodeRef(0x8010f1d8)),
         phys_cb: Some(CodeRef(0x8010f368)),
@@ -7571,7 +7571,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 322,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8010e930)),
         input_cb: Some(CodeRef(0x8010f1dc)),
         phys_cb: Some(CodeRef(0x8010f388)),
@@ -7582,7 +7582,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 323,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8010eb0c)),
         input_cb: Some(CodeRef(0x8010f1e0)),
         phys_cb: Some(CodeRef(0x8010f3a8)),
@@ -7593,7 +7593,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 324,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8010ec5c)),
         input_cb: Some(CodeRef(0x8010f1e4)),
         phys_cb: Some(CodeRef(0x8010f3c8)),
@@ -7604,7 +7604,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 325,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8010ece8)),
         input_cb: Some(CodeRef(0x8010f1e8)),
         phys_cb: Some(CodeRef(0x8010f3e8)),
@@ -7615,7 +7615,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 326,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8010ed88)),
         input_cb: Some(CodeRef(0x8010f31c)),
         phys_cb: Some(CodeRef(0x8010f408)),
@@ -7626,7 +7626,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 327,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8010edd8)),
         input_cb: Some(CodeRef(0x8010f320)),
         phys_cb: Some(CodeRef(0x8010f428)),
@@ -7637,7 +7637,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 328,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8010ef7c)),
         input_cb: Some(CodeRef(0x8010f324)),
         phys_cb: Some(CodeRef(0x8010f448)),
@@ -7648,7 +7648,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 329,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8010e2bc)),
         input_cb: Some(CodeRef(0x8010e334)),
         phys_cb: Some(CodeRef(0x8010e33c)),
@@ -7659,7 +7659,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 330,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8010e2f8)),
         input_cb: Some(CodeRef(0x8010e338)),
         phys_cb: Some(CodeRef(0x8010e35c)),
@@ -7670,7 +7670,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 331,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8010fcd4)),
         input_cb: Some(CodeRef(0x8010fd9c)),
         phys_cb: Some(CodeRef(0x8010fda4)),
@@ -7681,7 +7681,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 332,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8010fd10)),
         input_cb: Some(CodeRef(0x8010fda0)),
         phys_cb: Some(CodeRef(0x8010fdec)),
@@ -7692,7 +7692,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 333,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8010dcd8)),
         input_cb: Some(CodeRef(0x8010dd14)),
         phys_cb: Some(CodeRef(0x8010dd18)),
@@ -7703,7 +7703,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 334,
         flags: 0x3c0214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8010dd74)),
         input_cb: Some(CodeRef(0x8010dddc)),
         phys_cb: Some(CodeRef(0x8010ddf8)),
@@ -7714,7 +7714,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 335,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8010df5c)),
         input_cb: Some(CodeRef(0x8010df98)),
         phys_cb: Some(CodeRef(0x8010df9c)),
@@ -7725,7 +7725,7 @@ pub static FT_DK_INIT_MOTION_STATE_TABLE: [MotionState; 46] = [
     MotionState {
         anim_id: 336,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8010e030)),
         input_cb: Some(CodeRef(0x8010e06c)),
         phys_cb: Some(CodeRef(0x8010e070)),
@@ -7740,7 +7740,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 295,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80112248)),
         input_cb: Some(CodeRef(0x801126c8)),
         phys_cb: Some(CodeRef(0x80112878)),
@@ -7751,7 +7751,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 296,
         flags: 0x3c0111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x801122d8)),
         input_cb: Some(CodeRef(0x801126cc)),
         phys_cb: Some(CodeRef(0x80112898)),
@@ -7762,7 +7762,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 297,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80112384)),
         input_cb: Some(CodeRef(0x80112798)),
         phys_cb: Some(CodeRef(0x801128b8)),
@@ -7773,7 +7773,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 298,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x801123cc)),
         input_cb: Some(CodeRef(0x8011279c)),
         phys_cb: Some(CodeRef(0x801128d8)),
@@ -7784,7 +7784,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 299,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80112450)),
         input_cb: Some(CodeRef(0x801127a0)),
         phys_cb: Some(CodeRef(0x801128f8)),
@@ -7795,7 +7795,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 300,
         flags: 0x3c0511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x801124e0)),
         input_cb: Some(CodeRef(0x801127a4)),
         phys_cb: Some(CodeRef(0x80112918)),
@@ -7806,7 +7806,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 301,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8011258c)),
         input_cb: Some(CodeRef(0x80112870)),
         phys_cb: Some(CodeRef(0x80112938)),
@@ -7817,7 +7817,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 302,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8011260c)),
         input_cb: Some(CodeRef(0x80112874)),
         phys_cb: Some(CodeRef(0x80112958)),
@@ -7828,7 +7828,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 303,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801112cc)),
         input_cb: Some(CodeRef(0x80111344)),
         phys_cb: Some(CodeRef(0x8011134c)),
@@ -7839,7 +7839,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 305,
         flags: 0x3c0012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80111588)),
         input_cb: Some(CodeRef(0x80111708)),
         phys_cb: Some(CodeRef(0x80111778)),
@@ -7850,7 +7850,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 304,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80111a48)),
         input_cb: Some(CodeRef(0x80111bf0)),
         phys_cb: Some(CodeRef(0x80111bf8)),
@@ -7861,7 +7861,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 306,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80111308)),
         input_cb: Some(CodeRef(0x80111348)),
         phys_cb: Some(CodeRef(0x8011136c)),
@@ -7872,7 +7872,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 308,
         flags: 0x3c0412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80111648)),
         input_cb: Some(CodeRef(0x80111740)),
         phys_cb: Some(CodeRef(0x80111798)),
@@ -7883,7 +7883,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 307,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80111b1c)),
         input_cb: Some(CodeRef(0x80111bf4)),
         phys_cb: Some(CodeRef(0x80111c18)),
@@ -7894,7 +7894,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 309,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80113194)),
         input_cb: Some(CodeRef(0x8011320c)),
         phys_cb: Some(CodeRef(0x80113214)),
@@ -7905,7 +7905,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 309,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801133fc)),
         input_cb: Some(CodeRef(0x80113474)),
         phys_cb: Some(CodeRef(0x8011347c)),
@@ -7916,7 +7916,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 310,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80113c40)),
         input_cb: Some(CodeRef(0x80113cdc)),
         phys_cb: Some(CodeRef(0x80113ce4)),
@@ -7927,7 +7927,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 311,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801131d0)),
         input_cb: Some(CodeRef(0x80113210)),
         phys_cb: Some(CodeRef(0x80113234)),
@@ -7938,7 +7938,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 311,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80113438)),
         input_cb: Some(CodeRef(0x80113478)),
         phys_cb: Some(CodeRef(0x8011349c)),
@@ -7949,7 +7949,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 312,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80113c7c)),
         input_cb: Some(CodeRef(0x80113ce0)),
         phys_cb: Some(CodeRef(0x80113d04)),
@@ -7960,7 +7960,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 313,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x801142e8)),
         input_cb: Some(CodeRef(0x80114368)),
         phys_cb: Some(CodeRef(0x80114370)),
@@ -7971,7 +7971,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 314,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80114524)),
         input_cb: Some(CodeRef(0x8011459c)),
         phys_cb: Some(CodeRef(0x801145a4)),
@@ -7982,7 +7982,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 315,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80114328)),
         input_cb: Some(CodeRef(0x8011436c)),
         phys_cb: Some(CodeRef(0x80114390)),
@@ -7993,7 +7993,7 @@ pub static FT_SK_INIT_MOTION_STATE_TABLE: [MotionState; 24] = [
     MotionState {
         anim_id: 316,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80114560)),
         input_cb: Some(CodeRef(0x801145a0)),
         phys_cb: Some(CodeRef(0x801145c4)),
@@ -8008,7 +8008,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 62,
         flags: 0x241a09,
-        x8: 0xa000000,
+        move_bits: 0xa000000,
         anim_cb: Some(CodeRef(0x80114d50)),
         input_cb: Some(CodeRef(0x80114e04)),
         phys_cb: Some(CodeRef(0x80114e64)),
@@ -8019,7 +8019,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 66,
         flags: 0x240a0a,
-        x8: 0xb800000,
+        move_bits: 0xb800000,
         anim_cb: Some(CodeRef(0x80115c9c)),
         input_cb: Some(CodeRef(0x80115e74)),
         phys_cb: Some(CodeRef(0x80115eb8)),
@@ -8030,7 +8030,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 295,
         flags: 0x24080a,
-        x8: 0xb000000,
+        move_bits: 0xb000000,
         anim_cb: Some(CodeRef(0x80115f88)),
         input_cb: Some(CodeRef(0x801160b4)),
         phys_cb: Some(CodeRef(0x801160e4)),
@@ -8041,7 +8041,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 296,
         flags: 0x24080a,
-        x8: 0xb000000,
+        move_bits: 0xb000000,
         anim_cb: Some(CodeRef(0x8011620c)),
         input_cb: Some(CodeRef(0x801162b0)),
         phys_cb: Some(CodeRef(0x801162e0)),
@@ -8052,7 +8052,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 67,
         flags: 0x240a0b,
-        x8: 0xc800000,
+        move_bits: 0xc800000,
         anim_cb: Some(CodeRef(0x80116638)),
         input_cb: Some(CodeRef(0x801166d4)),
         phys_cb: Some(CodeRef(0x80116718)),
@@ -8063,7 +8063,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 297,
         flags: 0x24080b,
-        x8: 0xc000000,
+        move_bits: 0xc000000,
         anim_cb: Some(CodeRef(0x80116798)),
         input_cb: Some(CodeRef(0x80116828)),
         phys_cb: Some(CodeRef(0x80116858)),
@@ -8074,7 +8074,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 298,
         flags: 0x24080b,
-        x8: 0xc000000,
+        move_bits: 0xc000000,
         anim_cb: Some(CodeRef(0x80116958)),
         input_cb: Some(CodeRef(0x801169bc)),
         phys_cb: Some(CodeRef(0x801169ec)),
@@ -8085,7 +8085,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 299,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x801170dc)),
         input_cb: Some(CodeRef(0x80117648)),
         phys_cb: Some(CodeRef(0x80117750)),
@@ -8096,7 +8096,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 300,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x801171bc)),
         input_cb: Some(CodeRef(0x8011764c)),
         phys_cb: Some(CodeRef(0x80117788)),
@@ -8107,7 +8107,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 301,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x801171bc)),
         input_cb: Some(CodeRef(0x8011764c)),
         phys_cb: Some(CodeRef(0x80117788)),
@@ -8118,7 +8118,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 302,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x801172f0)),
         input_cb: Some(CodeRef(0x801176c8)),
         phys_cb: Some(CodeRef(0x801177a8)),
@@ -8129,7 +8129,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 303,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80117378)),
         input_cb: Some(CodeRef(0x801176cc)),
         phys_cb: Some(CodeRef(0x801177c8)),
@@ -8140,7 +8140,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 304,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80117458)),
         input_cb: Some(CodeRef(0x801176d0)),
         phys_cb: Some(CodeRef(0x80117828)),
@@ -8151,7 +8151,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 305,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80117458)),
         input_cb: Some(CodeRef(0x801176d0)),
         phys_cb: Some(CodeRef(0x80117828)),
@@ -8162,7 +8162,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 306,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8011758c)),
         input_cb: Some(CodeRef(0x8011774c)),
         phys_cb: Some(CodeRef(0x80117888)),
@@ -8173,7 +8173,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 307,
         flags: 0x340112,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80116d74)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80116dec)),
@@ -8184,7 +8184,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 308,
         flags: 0x340512,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80116db0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80116e0c)),
@@ -8195,7 +8195,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 309,
         flags: 0x340113,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801186b0)),
         input_cb: Some(CodeRef(0x80118f80)),
         phys_cb: Some(CodeRef(0x80118fa4)),
@@ -8206,7 +8206,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 310,
         flags: 0x340113,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801187a4)),
         input_cb: Some(CodeRef(0x80118f84)),
         phys_cb: Some(CodeRef(0x80118fdc)),
@@ -8217,7 +8217,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 311,
         flags: 0x340113,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80118900)),
         input_cb: Some(CodeRef(0x80118f88)),
         phys_cb: Some(CodeRef(0x80118ffc)),
@@ -8228,7 +8228,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 312,
         flags: 0x340113,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8011893c)),
         input_cb: Some(CodeRef(0x80118f8c)),
         phys_cb: Some(CodeRef(0x8011901c)),
@@ -8239,7 +8239,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 313,
         flags: 0x340513,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80118a10)),
         input_cb: Some(CodeRef(0x80118f90)),
         phys_cb: Some(CodeRef(0x80119134)),
@@ -8250,7 +8250,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 314,
         flags: 0x340513,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80118b04)),
         input_cb: Some(CodeRef(0x80118f94)),
         phys_cb: Some(CodeRef(0x80119194)),
@@ -8261,7 +8261,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 315,
         flags: 0x340513,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80118d60)),
         input_cb: Some(CodeRef(0x80118f98)),
         phys_cb: Some(CodeRef(0x801191f4)),
@@ -8272,7 +8272,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 316,
         flags: 0x340513,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80118df8)),
         input_cb: Some(CodeRef(0x80118f9c)),
         phys_cb: Some(CodeRef(0x80119254)),
@@ -8283,7 +8283,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 317,
         flags: 0x340113,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80118ef0)),
         input_cb: Some(CodeRef(0x80118fa0)),
         phys_cb: Some(CodeRef(0x80119410)),
@@ -8294,7 +8294,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 318,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80119f20)),
         input_cb: Some(CodeRef(0x8011a0e0)),
         phys_cb: Some(CodeRef(0x8011a0e8)),
@@ -8305,7 +8305,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 319,
         flags: 0x3c0014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8011a2a8)),
         input_cb: Some(CodeRef(0x8011a438)),
         phys_cb: Some(CodeRef(0x8011a440)),
@@ -8316,7 +8316,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 320,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8011abf8)),
         input_cb: Some(CodeRef(0x8011aee0)),
         phys_cb: Some(CodeRef(0x8011aee8)),
@@ -8327,7 +8327,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 321,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8011b25c)),
         input_cb: Some(CodeRef(0x8011b2e4)),
         phys_cb: Some(CodeRef(0x8011b2ec)),
@@ -8338,7 +8338,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 319,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8011a700)),
         input_cb: Some(CodeRef(0x8011a920)),
         phys_cb: Some(CodeRef(0x8011a928)),
@@ -8349,7 +8349,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 322,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8011a000)),
         input_cb: Some(CodeRef(0x8011a0e4)),
         phys_cb: Some(CodeRef(0x8011a108)),
@@ -8360,7 +8360,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 323,
         flags: 0x3c0414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8011a370)),
         input_cb: Some(CodeRef(0x8011a43c)),
         phys_cb: Some(CodeRef(0x8011a474)),
@@ -8371,7 +8371,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 324,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8011adc8)),
         input_cb: Some(CodeRef(0x8011aee4)),
         phys_cb: Some(CodeRef(0x8011af1c)),
@@ -8382,7 +8382,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 325,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8011b2a0)),
         input_cb: Some(CodeRef(0x8011b2e8)),
         phys_cb: Some(CodeRef(0x8011b30c)),
@@ -8393,7 +8393,7 @@ pub static FT_NS_INIT_MOTION_STATE_TABLE: [MotionState; 36] = [
     MotionState {
         anim_id: 323,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8011a810)),
         input_cb: Some(CodeRef(0x8011a924)),
         phys_cb: Some(CodeRef(0x8011a95c)),
@@ -8408,7 +8408,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 295,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8011bc38)),
         input_cb: Some(CodeRef(0x8011bc8c)),
         phys_cb: Some(CodeRef(0x8011bd18)),
@@ -8419,7 +8419,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 296,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8011bdf0)),
         input_cb: Some(CodeRef(0x8011be2c)),
         phys_cb: Some(CodeRef(0x8011be30)),
@@ -8430,7 +8430,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 297,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8011bdf0)),
         input_cb: Some(CodeRef(0x8011be2c)),
         phys_cb: Some(CodeRef(0x8011be30)),
@@ -8441,7 +8441,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 68,
         flags: 0x24040c,
-        x8: 0xd000000,
+        move_bits: 0xd000000,
         anim_cb: Some(CodeRef(0x8011bf88)),
         input_cb: Some(CodeRef(0x8011c044)),
         phys_cb: Some(CodeRef(0x8011c160)),
@@ -8452,7 +8452,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 69,
         flags: 0x24040d,
-        x8: 0xe000000,
+        move_bits: 0xe000000,
         anim_cb: Some(CodeRef(0x8011bf88)),
         input_cb: Some(CodeRef(0x8011c044)),
         phys_cb: Some(CodeRef(0x8011c160)),
@@ -8463,7 +8463,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 70,
         flags: 0x24040e,
-        x8: 0xf000000,
+        move_bits: 0xf000000,
         anim_cb: Some(CodeRef(0x8011bf88)),
         input_cb: Some(CodeRef(0x8011c044)),
         phys_cb: Some(CodeRef(0x8011c160)),
@@ -8474,7 +8474,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 71,
         flags: 0x24040f,
-        x8: 0x10000000,
+        move_bits: 0x10000000,
         anim_cb: Some(CodeRef(0x8011bf88)),
         input_cb: Some(CodeRef(0x8011c044)),
         phys_cb: Some(CodeRef(0x8011c160)),
@@ -8485,7 +8485,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 72,
         flags: 0x240410,
-        x8: 0x11000000,
+        move_bits: 0x11000000,
         anim_cb: Some(CodeRef(0x8011bf88)),
         input_cb: Some(CodeRef(0x8011c044)),
         phys_cb: Some(CodeRef(0x8011c160)),
@@ -8496,7 +8496,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 298,
         flags: 0x240a09,
-        x8: 0xa000000,
+        move_bits: 0xa000000,
         anim_cb: Some(CodeRef(0x8011c248)),
         input_cb: Some(CodeRef(0x8011c284)),
         phys_cb: Some(CodeRef(0x8011c2b4)),
@@ -8507,7 +8507,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 299,
         flags: 0x240a09,
-        x8: 0xa000000,
+        move_bits: 0xa000000,
         anim_cb: Some(CodeRef(0x8011c248)),
         input_cb: Some(CodeRef(0x8011c284)),
         phys_cb: Some(CodeRef(0x8011c2b4)),
@@ -8518,7 +8518,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 300,
         flags: 0x240a09,
-        x8: 0xa000000,
+        move_bits: 0xa000000,
         anim_cb: Some(CodeRef(0x8011c248)),
         input_cb: Some(CodeRef(0x8011c284)),
         phys_cb: Some(CodeRef(0x8011c2b4)),
@@ -8529,7 +8529,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 301,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8011d2ec)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8011d394)),
@@ -8540,7 +8540,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 301,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8011d340)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8011d3b4)),
@@ -8551,7 +8551,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 302,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8011c4f0)),
         input_cb: Some(CodeRef(0x8011c5e8)),
         phys_cb: Some(CodeRef(0x8011c5f0)),
@@ -8562,7 +8562,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 303,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8011ca84)),
         input_cb: Some(CodeRef(0x8011cafc)),
         phys_cb: Some(CodeRef(0x8011cb04)),
@@ -8573,7 +8573,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 304,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -8584,7 +8584,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 305,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8011c588)),
         input_cb: Some(CodeRef(0x8011c5ec)),
         phys_cb: Some(CodeRef(0x8011c644)),
@@ -8595,7 +8595,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 306,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8011cac0)),
         input_cb: Some(CodeRef(0x8011cb00)),
         phys_cb: Some(CodeRef(0x8011cb24)),
@@ -8606,7 +8606,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 307,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8011cac0)),
         input_cb: Some(CodeRef(0x8011cb00)),
         phys_cb: Some(CodeRef(0x8011cb24)),
@@ -8617,7 +8617,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 304,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8011c878)),
         input_cb: Some(CodeRef(0x8011c8c8)),
         phys_cb: Some(CodeRef(0x8011c8cc)),
@@ -8628,7 +8628,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 308,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8011d8d0)),
         input_cb: Some(CodeRef(0x8011da30)),
         phys_cb: Some(CodeRef(0x8011dcc0)),
@@ -8639,7 +8639,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 309,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8011de9c)),
         input_cb: Some(CodeRef(0x8011df5c)),
         phys_cb: Some(CodeRef(0x8011df64)),
@@ -8650,7 +8650,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 310,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8011d980)),
         input_cb: Some(CodeRef(0x8011db78)),
         phys_cb: Some(CodeRef(0x8011dcf8)),
@@ -8661,7 +8661,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 311,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8011defc)),
         input_cb: Some(CodeRef(0x8011df60)),
         phys_cb: Some(CodeRef(0x8011dfd0)),
@@ -8672,7 +8672,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 312,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8011e4f8)),
         input_cb: Some(CodeRef(0x8011e670)),
         phys_cb: Some(CodeRef(0x8011e678)),
@@ -8683,7 +8683,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 313,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8011e9a0)),
         input_cb: Some(CodeRef(0x8011ea68)),
         phys_cb: Some(CodeRef(0x8011ea70)),
@@ -8694,7 +8694,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 314,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8011e5b4)),
         input_cb: Some(CodeRef(0x8011e674)),
         phys_cb: Some(CodeRef(0x8011e6ac)),
@@ -8705,7 +8705,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 315,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8011ea04)),
         input_cb: Some(CodeRef(0x8011ea6c)),
         phys_cb: Some(CodeRef(0x8011ea90)),
@@ -8716,7 +8716,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 316,
         flags: 0x440058,
-        x8: 0x57800000,
+        move_bits: 0x57800000,
         anim_cb: Some(CodeRef(0x800cf0b8)),
         input_cb: Some(CodeRef(0x800cf118)),
         phys_cb: Some(CodeRef(0x800cf1a0)),
@@ -8727,7 +8727,7 @@ pub static FT_PE_INIT_MOTION_STATE_TABLE: [MotionState; 30] = [
     MotionState {
         anim_id: 317,
         flags: 0x4c0058,
-        x8: 0x57800000,
+        move_bits: 0x57800000,
         anim_cb: Some(CodeRef(0x800cf424)),
         input_cb: Some(CodeRef(0x800cf428)),
         phys_cb: Some(CodeRef(0x800cf494)),
@@ -8742,7 +8742,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 295,
         flags: 0x340111,
-        x8: 0x12800000,
+        move_bits: 0x12800000,
         anim_cb: Some(CodeRef(0x8011f318)),
         input_cb: Some(CodeRef(0x8011f390)),
         phys_cb: Some(CodeRef(0x8011f398)),
@@ -8753,7 +8753,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 296,
         flags: 0x340511,
-        x8: 0x12800000,
+        move_bits: 0x12800000,
         anim_cb: Some(CodeRef(0x8011f354)),
         input_cb: Some(CodeRef(0x8011f394)),
         phys_cb: Some(CodeRef(0x8011f3b8)),
@@ -8764,7 +8764,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 297,
         flags: 0x340212,
-        x8: 0x13800000,
+        move_bits: 0x13800000,
         anim_cb: Some(CodeRef(0x8011fc78)),
         input_cb: Some(CodeRef(0x8011ff40)),
         phys_cb: Some(CodeRef(0x80120080)),
@@ -8775,7 +8775,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 298,
         flags: 0x340212,
-        x8: 0x13800000,
+        move_bits: 0x13800000,
         anim_cb: Some(CodeRef(0x8011fcd0)),
         input_cb: Some(CodeRef(0x8011ff90)),
         phys_cb: Some(CodeRef(0x80120230)),
@@ -8786,7 +8786,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 299,
         flags: 0x340612,
-        x8: 0x13800000,
+        move_bits: 0x13800000,
         anim_cb: Some(CodeRef(0x8011fd9c)),
         input_cb: Some(CodeRef(0x8011ffe0)),
         phys_cb: Some(CodeRef(0x801203e0)),
@@ -8797,7 +8797,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 300,
         flags: 0x340612,
-        x8: 0x13800000,
+        move_bits: 0x13800000,
         anim_cb: Some(CodeRef(0x8011fe48)),
         input_cb: Some(CodeRef(0x80120030)),
         phys_cb: Some(CodeRef(0x80120520)),
@@ -8808,7 +8808,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 301,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801212c4)),
         input_cb: Some(CodeRef(0x801214d4)),
         phys_cb: Some(CodeRef(0x801215dc)),
@@ -8819,7 +8819,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 302,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80121944)),
         input_cb: Some(CodeRef(0x80121ac8)),
         phys_cb: Some(CodeRef(0x80121ad0)),
@@ -8830,7 +8830,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 303,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801223b8)),
         input_cb: Some(CodeRef(0x8012248c)),
         phys_cb: Some(CodeRef(0x80122494)),
@@ -8841,7 +8841,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 304,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80121e10)),
         input_cb: Some(CodeRef(0x80121eb0)),
         phys_cb: Some(CodeRef(0x80121eb8)),
@@ -8852,7 +8852,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 305,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80122110)),
         input_cb: Some(CodeRef(0x801221ac)),
         phys_cb: Some(CodeRef(0x801221b4)),
@@ -8863,7 +8863,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 306,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801213cc)),
         input_cb: Some(CodeRef(0x80121558)),
         phys_cb: Some(CodeRef(0x80121680)),
@@ -8874,7 +8874,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 307,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801219f4)),
         input_cb: Some(CodeRef(0x80121acc)),
         phys_cb: Some(CodeRef(0x80121b74)),
@@ -8885,7 +8885,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 308,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80122410)),
         input_cb: Some(CodeRef(0x80122490)),
         phys_cb: Some(CodeRef(0x80122538)),
@@ -8896,7 +8896,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 309,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80121e4c)),
         input_cb: Some(CodeRef(0x80121eb4)),
         phys_cb: Some(CodeRef(0x80121ed8)),
@@ -8907,7 +8907,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 310,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8012214c)),
         input_cb: Some(CodeRef(0x801221b0)),
         phys_cb: Some(CodeRef(0x801221d4)),
@@ -8918,7 +8918,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 311,
         flags: 0x340014,
-        x8: 0x15800000,
+        move_bits: 0x15800000,
         anim_cb: Some(CodeRef(0x80122a0c)),
         input_cb: Some(CodeRef(0x80122b0c)),
         phys_cb: Some(CodeRef(0x80122b14)),
@@ -8929,7 +8929,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 312,
         flags: 0x340414,
-        x8: 0x15800000,
+        move_bits: 0x15800000,
         anim_cb: Some(CodeRef(0x80122a8c)),
         input_cb: Some(CodeRef(0x80122b10)),
         phys_cb: Some(CodeRef(0x80122b34)),
@@ -8940,7 +8940,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 313,
         flags: 0x340212,
-        x8: 0x13800000,
+        move_bits: 0x13800000,
         anim_cb: Some(CodeRef(0x80123ca4)),
         input_cb: Some(CodeRef(0x80123e58)),
         phys_cb: Some(CodeRef(0x80123e60)),
@@ -8951,7 +8951,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 314,
         flags: 0x340612,
-        x8: 0x13800000,
+        move_bits: 0x13800000,
         anim_cb: Some(CodeRef(0x80123d68)),
         input_cb: Some(CodeRef(0x80123e5c)),
         phys_cb: Some(CodeRef(0x80123efc)),
@@ -8962,7 +8962,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 315,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80123348)),
         input_cb: Some(CodeRef(0x80123388)),
         phys_cb: Some(CodeRef(0x80123390)),
@@ -8973,7 +8973,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 316,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80123448)),
         input_cb: Some(CodeRef(0x801234e4)),
         phys_cb: Some(CodeRef(0x801234ec)),
@@ -8984,7 +8984,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 317,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -8995,7 +8995,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 318,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80123384)),
         input_cb: Some(CodeRef(0x8012338c)),
         phys_cb: Some(CodeRef(0x801233ec)),
@@ -9006,7 +9006,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 319,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80123484)),
         input_cb: Some(CodeRef(0x801234e8)),
         phys_cb: Some(CodeRef(0x8012350c)),
@@ -9017,7 +9017,7 @@ pub static FT_PP_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 320,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -9032,7 +9032,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 295,
         flags: 0x340111,
-        x8: 0x12800000,
+        move_bits: 0x12800000,
         anim_cb: Some(CodeRef(0x8011f318)),
         input_cb: Some(CodeRef(0x8011f390)),
         phys_cb: Some(CodeRef(0x8011f398)),
@@ -9043,7 +9043,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 296,
         flags: 0x340511,
-        x8: 0x12800000,
+        move_bits: 0x12800000,
         anim_cb: Some(CodeRef(0x8011f354)),
         input_cb: Some(CodeRef(0x8011f394)),
         phys_cb: Some(CodeRef(0x8011f3b8)),
@@ -9054,7 +9054,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 297,
         flags: 0x340212,
-        x8: 0x13800000,
+        move_bits: 0x13800000,
         anim_cb: Some(CodeRef(0x8011fc78)),
         input_cb: Some(CodeRef(0x8011ff40)),
         phys_cb: Some(CodeRef(0x80120080)),
@@ -9065,7 +9065,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 298,
         flags: 0x340212,
-        x8: 0x13800000,
+        move_bits: 0x13800000,
         anim_cb: Some(CodeRef(0x8011fcd0)),
         input_cb: Some(CodeRef(0x8011ff90)),
         phys_cb: Some(CodeRef(0x80120230)),
@@ -9076,7 +9076,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 299,
         flags: 0x340612,
-        x8: 0x13800000,
+        move_bits: 0x13800000,
         anim_cb: Some(CodeRef(0x8011fd9c)),
         input_cb: Some(CodeRef(0x8011ffe0)),
         phys_cb: Some(CodeRef(0x801203e0)),
@@ -9087,7 +9087,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 300,
         flags: 0x340612,
-        x8: 0x13800000,
+        move_bits: 0x13800000,
         anim_cb: Some(CodeRef(0x8011fe48)),
         input_cb: Some(CodeRef(0x80120030)),
         phys_cb: Some(CodeRef(0x80120520)),
@@ -9098,7 +9098,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 301,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801212c4)),
         input_cb: Some(CodeRef(0x801214d4)),
         phys_cb: Some(CodeRef(0x801215dc)),
@@ -9109,7 +9109,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 302,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80121944)),
         input_cb: Some(CodeRef(0x80121ac8)),
         phys_cb: Some(CodeRef(0x80121ad0)),
@@ -9120,7 +9120,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 303,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801223b8)),
         input_cb: Some(CodeRef(0x8012248c)),
         phys_cb: Some(CodeRef(0x80122494)),
@@ -9131,7 +9131,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 304,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80121e10)),
         input_cb: Some(CodeRef(0x80121eb0)),
         phys_cb: Some(CodeRef(0x80121eb8)),
@@ -9142,7 +9142,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 305,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80122110)),
         input_cb: Some(CodeRef(0x801221ac)),
         phys_cb: Some(CodeRef(0x801221b4)),
@@ -9153,7 +9153,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 306,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801213cc)),
         input_cb: Some(CodeRef(0x80121558)),
         phys_cb: Some(CodeRef(0x80121680)),
@@ -9164,7 +9164,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 307,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801219f4)),
         input_cb: Some(CodeRef(0x80121acc)),
         phys_cb: Some(CodeRef(0x80121b74)),
@@ -9175,7 +9175,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 308,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80122410)),
         input_cb: Some(CodeRef(0x80122490)),
         phys_cb: Some(CodeRef(0x80122538)),
@@ -9186,7 +9186,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 309,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80121e4c)),
         input_cb: Some(CodeRef(0x80121eb4)),
         phys_cb: Some(CodeRef(0x80121ed8)),
@@ -9197,7 +9197,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 310,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8012214c)),
         input_cb: Some(CodeRef(0x801221b0)),
         phys_cb: Some(CodeRef(0x801221d4)),
@@ -9208,7 +9208,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 311,
         flags: 0x340014,
-        x8: 0x15800000,
+        move_bits: 0x15800000,
         anim_cb: Some(CodeRef(0x80122a0c)),
         input_cb: Some(CodeRef(0x80122b0c)),
         phys_cb: Some(CodeRef(0x80122b14)),
@@ -9219,7 +9219,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 312,
         flags: 0x340414,
-        x8: 0x15800000,
+        move_bits: 0x15800000,
         anim_cb: Some(CodeRef(0x80122a8c)),
         input_cb: Some(CodeRef(0x80122b10)),
         phys_cb: Some(CodeRef(0x80122b34)),
@@ -9230,7 +9230,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 313,
         flags: 0x340212,
-        x8: 0x13800000,
+        move_bits: 0x13800000,
         anim_cb: Some(CodeRef(0x80123ca4)),
         input_cb: Some(CodeRef(0x80123e58)),
         phys_cb: Some(CodeRef(0x80123e60)),
@@ -9241,7 +9241,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 314,
         flags: 0x340612,
-        x8: 0x13800000,
+        move_bits: 0x13800000,
         anim_cb: Some(CodeRef(0x80123d68)),
         input_cb: Some(CodeRef(0x80123e5c)),
         phys_cb: Some(CodeRef(0x80123efc)),
@@ -9252,7 +9252,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 315,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80123348)),
         input_cb: Some(CodeRef(0x80123388)),
         phys_cb: Some(CodeRef(0x80123390)),
@@ -9263,7 +9263,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 316,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80123448)),
         input_cb: Some(CodeRef(0x801234e4)),
         phys_cb: Some(CodeRef(0x801234ec)),
@@ -9274,7 +9274,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 317,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -9285,7 +9285,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 318,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80123384)),
         input_cb: Some(CodeRef(0x8012338c)),
         phys_cb: Some(CodeRef(0x801233ec)),
@@ -9296,7 +9296,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 319,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80123484)),
         input_cb: Some(CodeRef(0x801234e8)),
         phys_cb: Some(CodeRef(0x8012350c)),
@@ -9307,7 +9307,7 @@ pub static FT_NN_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 320,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -9322,7 +9322,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 295,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80124908)),
         input_cb: Some(CodeRef(0x80124b6c)),
         phys_cb: Some(CodeRef(0x80124b74)),
@@ -9333,7 +9333,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 296,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80124a20)),
         input_cb: Some(CodeRef(0x80124b70)),
         phys_cb: Some(CodeRef(0x80124b94)),
@@ -9344,7 +9344,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 297,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80124f64)),
         input_cb: Some(CodeRef(0x80124fdc)),
         phys_cb: Some(CodeRef(0x80124fe4)),
@@ -9355,7 +9355,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 298,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801251bc)),
         input_cb: Some(CodeRef(0x801252fc)),
         phys_cb: Some(CodeRef(0x8012535c)),
@@ -9366,7 +9366,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 300,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012590c)),
         input_cb: Some(CodeRef(0x8012594c)),
         phys_cb: Some(CodeRef(0x80125954)),
@@ -9377,7 +9377,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 301,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80125b34)),
         input_cb: Some(CodeRef(0x80125bac)),
         phys_cb: Some(CodeRef(0x80125bb4)),
@@ -9388,7 +9388,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 299,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012557c)),
         input_cb: Some(CodeRef(0x801256b4)),
         phys_cb: Some(CodeRef(0x801256bc)),
@@ -9399,7 +9399,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 302,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80124fa0)),
         input_cb: Some(CodeRef(0x80124fe0)),
         phys_cb: Some(CodeRef(0x80125024)),
@@ -9410,7 +9410,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 303,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012525c)),
         input_cb: Some(CodeRef(0x8012532c)),
         phys_cb: Some(CodeRef(0x8012537c)),
@@ -9421,7 +9421,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 300,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80125910)),
         input_cb: Some(CodeRef(0x80125950)),
         phys_cb: Some(CodeRef(0x80125958)),
@@ -9432,7 +9432,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 305,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80125b70)),
         input_cb: Some(CodeRef(0x80125bb0)),
         phys_cb: Some(CodeRef(0x80125bf4)),
@@ -9443,7 +9443,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 304,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012561c)),
         input_cb: Some(CodeRef(0x801256b8)),
         phys_cb: Some(CodeRef(0x801256dc)),
@@ -9454,7 +9454,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 306,
         flags: 0x340113,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80125ed8)),
         input_cb: Some(CodeRef(0x80125f50)),
         phys_cb: Some(CodeRef(0x80125f58)),
@@ -9465,7 +9465,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 307,
         flags: 0x340113,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80126144)),
         input_cb: Some(CodeRef(0x80126424)),
         phys_cb: Some(CodeRef(0x801265d4)),
@@ -9476,7 +9476,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 308,
         flags: 0x340113,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80127198)),
         input_cb: Some(CodeRef(0x801272d8)),
         phys_cb: Some(CodeRef(0x801272e0)),
@@ -9487,7 +9487,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 309,
         flags: 0x340513,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80125f14)),
         input_cb: Some(CodeRef(0x80125f54)),
         phys_cb: Some(CodeRef(0x80125f78)),
@@ -9498,7 +9498,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 310,
         flags: 0x340513,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801262b4)),
         input_cb: Some(CodeRef(0x80126428)),
         phys_cb: Some(CodeRef(0x801265f4)),
@@ -9509,7 +9509,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 311,
         flags: 0x340513,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80127228)),
         input_cb: Some(CodeRef(0x801272dc)),
         phys_cb: Some(CodeRef(0x80127310)),
@@ -9520,7 +9520,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 312,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80127cdc)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x801280c8)),
@@ -9531,7 +9531,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 313,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80127de4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80128108)),
@@ -9542,7 +9542,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 314,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80127fb0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80128148)),
@@ -9553,7 +9553,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 315,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80128050)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x801281ac)),
@@ -9564,7 +9564,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 316,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80127d60)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x801280e8)),
@@ -9575,7 +9575,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 317,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80127ec0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80128128)),
@@ -9586,7 +9586,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 318,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80128000)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80128168)),
@@ -9597,7 +9597,7 @@ pub static FT_PK_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 319,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8012808c)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x801281cc)),
@@ -9612,7 +9612,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 295,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80128c04)),
         input_cb: Some(CodeRef(0x80128d3c)),
         phys_cb: Some(CodeRef(0x80128e88)),
@@ -9623,7 +9623,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 296,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80128ca0)),
         input_cb: Some(CodeRef(0x80128e68)),
         phys_cb: Some(CodeRef(0x80128ef8)),
@@ -9634,7 +9634,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 297,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80129684)),
         input_cb: Some(CodeRef(0x80129b18)),
         phys_cb: Some(CodeRef(0x80129c88)),
@@ -9645,7 +9645,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 298,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80129774)),
         input_cb: Some(CodeRef(0x80129b1c)),
         phys_cb: Some(CodeRef(0x80129ca8)),
@@ -9656,7 +9656,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 299,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80129940)),
         input_cb: Some(CodeRef(0x80129c78)),
         phys_cb: Some(CodeRef(0x80129cc8)),
@@ -9667,7 +9667,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 300,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x801299d0)),
         input_cb: Some(CodeRef(0x80129c7c)),
         phys_cb: Some(CodeRef(0x80129ce8)),
@@ -9678,7 +9678,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 301,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80129a14)),
         input_cb: Some(CodeRef(0x80129c80)),
         phys_cb: Some(CodeRef(0x80129d08)),
@@ -9689,7 +9689,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 302,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80129a98)),
         input_cb: Some(CodeRef(0x80129c84)),
         phys_cb: Some(CodeRef(0x80129d28)),
@@ -9700,7 +9700,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 303,
         flags: 0x340112,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012a380)),
         input_cb: Some(CodeRef(0x8012a3f8)),
         phys_cb: Some(CodeRef(0x8012a400)),
@@ -9711,7 +9711,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 304,
         flags: 0x340912,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012a4e0)),
         input_cb: Some(CodeRef(0x8012a558)),
         phys_cb: Some(CodeRef(0x8012a560)),
@@ -9722,7 +9722,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 305,
         flags: 0x340512,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012a3bc)),
         input_cb: Some(CodeRef(0x8012a3fc)),
         phys_cb: Some(CodeRef(0x8012a420)),
@@ -9733,7 +9733,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 306,
         flags: 0x340d12,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012a51c)),
         input_cb: Some(CodeRef(0x8012a55c)),
         phys_cb: Some(CodeRef(0x8012a580)),
@@ -9744,7 +9744,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 307,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8012a81c)),
         input_cb: Some(CodeRef(0x8012a96c)),
         phys_cb: Some(CodeRef(0x8012ab0c)),
@@ -9755,7 +9755,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 308,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8012a8c4)),
         input_cb: Some(CodeRef(0x8012aa3c)),
         phys_cb: Some(CodeRef(0x8012abb4)),
@@ -9766,7 +9766,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 309,
         flags: 0x340114,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8012b150)),
         input_cb: Some(CodeRef(0x8012b358)),
         phys_cb: Some(CodeRef(0x8012b3a8)),
@@ -9777,7 +9777,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 310,
         flags: 0x340514,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8012b264)),
         input_cb: Some(CodeRef(0x8012b3a4)),
         phys_cb: Some(CodeRef(0x8012b41c)),
@@ -9788,7 +9788,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 311,
         flags: 0x200000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c3d6c)),
         input_cb: Some(CodeRef(0x800c4384)),
         phys_cb: Some(CodeRef(0x800c438c)),
@@ -9799,7 +9799,7 @@ pub static FT_SS_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 312,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c4380)),
         input_cb: Some(CodeRef(0x800c4388)),
         phys_cb: Some(CodeRef(0x800c4438)),
@@ -9814,7 +9814,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 37,
         flags: 0x100000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8012c030)),
         input_cb: Some(CodeRef(0x8012c114)),
         phys_cb: Some(CodeRef(0x8012c194)),
@@ -9825,7 +9825,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: -1,
         flags: 0x180000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8012c2f4)),
         input_cb: Some(CodeRef(0x8012c3ec)),
         phys_cb: Some(CodeRef(0x8012c45c)),
@@ -9836,7 +9836,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 39,
         flags: 0x100000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8012c54c)),
         input_cb: Some(CodeRef(0x8012c59c)),
         phys_cb: Some(CodeRef(0x8012c5c0)),
@@ -9847,7 +9847,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 40,
         flags: 0x100000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8012c7a4)),
         input_cb: Some(CodeRef(0x8012c80c)),
         phys_cb: Some(CodeRef(0x8012c810)),
@@ -9858,7 +9858,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 37,
         flags: 0x101073,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8012cad0)),
         input_cb: Some(CodeRef(0x8012cbbc)),
         phys_cb: Some(CodeRef(0x8012cbdc)),
@@ -9869,7 +9869,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 295,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8012d550)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012dc30)),
@@ -9880,7 +9880,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 296,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8012d658)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012dc90)),
@@ -9891,7 +9891,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 296,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8012d5c8)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012dc70)),
@@ -9902,7 +9902,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 297,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8012d948)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012dd10)),
@@ -9913,7 +9913,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 297,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8012d7d8)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012dcf0)),
@@ -9924,7 +9924,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 298,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8012d58c)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012dc50)),
@@ -9935,7 +9935,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 299,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8012d760)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012dcd0)),
@@ -9946,7 +9946,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 299,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8012d6d0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012dcb0)),
@@ -9957,7 +9957,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 300,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8012db74)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012dd50)),
@@ -9968,7 +9968,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 300,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8012da04)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012dd30)),
@@ -9979,7 +9979,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 301,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012f654)),
         input_cb: Some(CodeRef(0x80130db8)),
         phys_cb: Some(CodeRef(0x801310c4)),
@@ -9990,7 +9990,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 302,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012f750)),
         input_cb: Some(CodeRef(0x80130dbc)),
         phys_cb: Some(CodeRef(0x801310e8)),
@@ -10001,7 +10001,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 303,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012fac4)),
         input_cb: Some(CodeRef(0x80130f7c)),
         phys_cb: Some(CodeRef(0x801312ec)),
@@ -10012,7 +10012,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 304,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012fff4)),
         input_cb: Some(CodeRef(0x80130fd8)),
         phys_cb: Some(CodeRef(0x80131618)),
@@ -10023,7 +10023,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 305,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80130368)),
         input_cb: Some(CodeRef(0x80130fdc)),
         phys_cb: Some(CodeRef(0x80131654)),
@@ -10034,7 +10034,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 306,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80130428)),
         input_cb: Some(CodeRef(0x80130fec)),
         phys_cb: Some(CodeRef(0x8013168c)),
@@ -10045,7 +10045,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 307,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801306a8)),
         input_cb: Some(CodeRef(0x80131050)),
         phys_cb: Some(CodeRef(0x80131718)),
@@ -10056,7 +10056,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 308,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80130a24)),
         input_cb: Some(CodeRef(0x801310b4)),
         phys_cb: Some(CodeRef(0x801317a4)),
@@ -10067,7 +10067,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 309,
         flags: 0x340113,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8012e4dc)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012e594)),
@@ -10078,7 +10078,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 310,
         flags: 0x340513,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8012e538)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012e5b4)),
@@ -10089,7 +10089,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 311,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8012e814)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012e88c)),
@@ -10100,7 +10100,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 312,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8012ea40)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012ea7c)),
@@ -10111,7 +10111,7 @@ pub static FT_YS_INIT_MOTION_STATE_TABLE: [MotionState; 28] = [
     MotionState {
         anim_id: 313,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8012e850)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8012e8cc)),
@@ -10126,7 +10126,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 295,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80134f48)),
         input_cb: Some(CodeRef(0x801351b0)),
         phys_cb: Some(CodeRef(0x80135438)),
@@ -10137,7 +10137,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 296,
         flags: 0x3c0011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80134f9c)),
         input_cb: Some(CodeRef(0x801351b4)),
         phys_cb: Some(CodeRef(0x80135458)),
@@ -10148,7 +10148,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 297,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80135040)),
         input_cb: Some(CodeRef(0x801352f0)),
         phys_cb: Some(CodeRef(0x80135478)),
@@ -10159,7 +10159,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 298,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013507c)),
         input_cb: Some(CodeRef(0x801352f4)),
         phys_cb: Some(CodeRef(0x80135498)),
@@ -10170,7 +10170,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 299,
         flags: 0x3c0411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x801350d0)),
         input_cb: Some(CodeRef(0x801352f8)),
         phys_cb: Some(CodeRef(0x801354b8)),
@@ -10181,7 +10181,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 300,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80135174)),
         input_cb: Some(CodeRef(0x80135434)),
         phys_cb: Some(CodeRef(0x801354d8)),
@@ -10192,7 +10192,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 301,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80133654)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134224)),
@@ -10203,7 +10203,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 302,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801336cc)),
         input_cb: Some(CodeRef(0x80133bf4)),
         phys_cb: Some(CodeRef(0x80134288)),
@@ -10214,7 +10214,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 303,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801336cc)),
         input_cb: Some(CodeRef(0x80133bf4)),
         phys_cb: Some(CodeRef(0x80134288)),
@@ -10225,7 +10225,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 302,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801339ac)),
         input_cb: Some(CodeRef(0x80133e4c)),
         phys_cb: Some(CodeRef(0x801342c8)),
@@ -10236,7 +10236,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 304,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801339b4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134308)),
@@ -10247,7 +10247,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 305,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80133a90)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134328)),
@@ -10258,7 +10258,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 306,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80133690)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134244)),
@@ -10269,7 +10269,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 307,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8013383c)),
         input_cb: Some(CodeRef(0x80133d20)),
         phys_cb: Some(CodeRef(0x801342a8)),
@@ -10280,7 +10280,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 308,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8013383c)),
         input_cb: Some(CodeRef(0x80133d20)),
         phys_cb: Some(CodeRef(0x801342a8)),
@@ -10291,7 +10291,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 307,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801339b0)),
         input_cb: Some(CodeRef(0x80134038)),
         phys_cb: Some(CodeRef(0x801342e8)),
@@ -10302,7 +10302,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 309,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80133ad4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134348)),
@@ -10313,7 +10313,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 310,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80133bb0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134368)),
@@ -10324,7 +10324,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 311,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80135c08)),
         input_cb: Some(CodeRef(0x80135d78)),
         phys_cb: Some(CodeRef(0x80135d80)),
@@ -10335,7 +10335,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 312,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80135c60)),
         input_cb: Some(CodeRef(0x80135d7c)),
         phys_cb: Some(CodeRef(0x80135de0)),
@@ -10346,7 +10346,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 313,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8013474c)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x801347c4)),
@@ -10357,7 +10357,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 314,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80134788)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134804)),
@@ -10368,7 +10368,7 @@ pub static FT_KP_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 315,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x801349c4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134a00)),
@@ -10383,7 +10383,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 295,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80136844)),
         input_cb: Some(CodeRef(0x80136914)),
         phys_cb: Some(CodeRef(0x8013691c)),
@@ -10394,7 +10394,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 296,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80136adc)),
         input_cb: Some(CodeRef(0x80136c8c)),
         phys_cb: Some(CodeRef(0x80136cfc)),
@@ -10405,7 +10405,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 297,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80136ee4)),
         input_cb: Some(CodeRef(0x8013713c)),
         phys_cb: Some(CodeRef(0x80137144)),
@@ -10416,7 +10416,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 298,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80136ee4)),
         input_cb: Some(CodeRef(0x8013713c)),
         phys_cb: Some(CodeRef(0x80137144)),
@@ -10427,7 +10427,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 299,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x801368ac)),
         input_cb: Some(CodeRef(0x80136918)),
         phys_cb: Some(CodeRef(0x8013695c)),
@@ -10438,7 +10438,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 300,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80136bb4)),
         input_cb: Some(CodeRef(0x80136cc4)),
         phys_cb: Some(CodeRef(0x80136d1c)),
@@ -10449,7 +10449,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 301,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80137010)),
         input_cb: Some(CodeRef(0x80137140)),
         phys_cb: Some(CodeRef(0x80137164)),
@@ -10460,7 +10460,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 302,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80137010)),
         input_cb: Some(CodeRef(0x80137140)),
         phys_cb: Some(CodeRef(0x80137164)),
@@ -10471,7 +10471,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 303,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137558)),
         input_cb: Some(CodeRef(0x801375b8)),
         phys_cb: Some(CodeRef(0x80137618)),
@@ -10482,7 +10482,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 304,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801377b0)),
         input_cb: Some(CodeRef(0x80137810)),
         phys_cb: Some(CodeRef(0x80137870)),
@@ -10493,7 +10493,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 305,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801377b0)),
         input_cb: Some(CodeRef(0x80137810)),
         phys_cb: Some(CodeRef(0x80137870)),
@@ -10504,7 +10504,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 306,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137b34)),
         input_cb: Some(CodeRef(0x80137b94)),
         phys_cb: Some(CodeRef(0x80137bf4)),
@@ -10515,7 +10515,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 307,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137b34)),
         input_cb: Some(CodeRef(0x80137b94)),
         phys_cb: Some(CodeRef(0x80137bf4)),
@@ -10526,7 +10526,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 308,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137b34)),
         input_cb: Some(CodeRef(0x80137b94)),
         phys_cb: Some(CodeRef(0x80137bf4)),
@@ -10537,7 +10537,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 309,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137ecc)),
         input_cb: Some(CodeRef(0x80137f2c)),
         phys_cb: Some(CodeRef(0x80137f30)),
@@ -10548,7 +10548,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 310,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137ecc)),
         input_cb: Some(CodeRef(0x80137f2c)),
         phys_cb: Some(CodeRef(0x80137f30)),
@@ -10559,7 +10559,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 311,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137ecc)),
         input_cb: Some(CodeRef(0x80137f2c)),
         phys_cb: Some(CodeRef(0x80137f30)),
@@ -10570,7 +10570,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 312,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137558)),
         input_cb: Some(CodeRef(0x801375b8)),
         phys_cb: Some(CodeRef(0x80137618)),
@@ -10581,7 +10581,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 313,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801377b0)),
         input_cb: Some(CodeRef(0x80137810)),
         phys_cb: Some(CodeRef(0x80137870)),
@@ -10592,7 +10592,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 314,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801377b0)),
         input_cb: Some(CodeRef(0x80137810)),
         phys_cb: Some(CodeRef(0x80137870)),
@@ -10603,7 +10603,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 315,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137b34)),
         input_cb: Some(CodeRef(0x80137b94)),
         phys_cb: Some(CodeRef(0x80137bf4)),
@@ -10614,7 +10614,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 316,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137b34)),
         input_cb: Some(CodeRef(0x80137b94)),
         phys_cb: Some(CodeRef(0x80137bf4)),
@@ -10625,7 +10625,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 317,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137b34)),
         input_cb: Some(CodeRef(0x80137b94)),
         phys_cb: Some(CodeRef(0x80137bf4)),
@@ -10636,7 +10636,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 318,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137ecc)),
         input_cb: Some(CodeRef(0x80137f2c)),
         phys_cb: Some(CodeRef(0x80137f30)),
@@ -10647,7 +10647,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 319,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137ecc)),
         input_cb: Some(CodeRef(0x80137f2c)),
         phys_cb: Some(CodeRef(0x80137f30)),
@@ -10658,7 +10658,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 320,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137ecc)),
         input_cb: Some(CodeRef(0x80137f2c)),
         phys_cb: Some(CodeRef(0x80137f30)),
@@ -10669,7 +10669,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 321,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801382e8)),
         input_cb: Some(CodeRef(0x801383a8)),
         phys_cb: Some(CodeRef(0x80138638)),
@@ -10680,7 +10680,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 322,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80138348)),
         input_cb: Some(CodeRef(0x801384f0)),
         phys_cb: Some(CodeRef(0x8013873c)),
@@ -10691,7 +10691,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 323,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80138aa8)),
         input_cb: Some(CodeRef(0x80138c20)),
         phys_cb: Some(CodeRef(0x80138c28)),
@@ -10702,7 +10702,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 324,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80138e68)),
         input_cb: Some(CodeRef(0x80138fc0)),
         phys_cb: Some(CodeRef(0x80138fc8)),
@@ -10713,7 +10713,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 325,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80138b64)),
         input_cb: Some(CodeRef(0x80138c24)),
         phys_cb: Some(CodeRef(0x80138c5c)),
@@ -10724,7 +10724,7 @@ pub static FT_MS_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 326,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80138f14)),
         input_cb: Some(CodeRef(0x80138fc4)),
         phys_cb: Some(CodeRef(0x80138fe8)),
@@ -10739,7 +10739,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 295,
         flags: 0x341011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013aa38)),
         input_cb: Some(CodeRef(0x8013ab60)),
         phys_cb: Some(CodeRef(0x8013ab68)),
@@ -10750,7 +10750,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 296,
         flags: 0x341411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013aacc)),
         input_cb: Some(CodeRef(0x8013ab64)),
         phys_cb: Some(CodeRef(0x8013ab9c)),
@@ -10761,7 +10761,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 297,
         flags: 0x340112,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8013b780)),
         input_cb: Some(CodeRef(0x8013bdd0)),
         phys_cb: Some(CodeRef(0x8013bed8)),
@@ -10772,7 +10772,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 298,
         flags: 0x340112,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8013b89c)),
         input_cb: Some(CodeRef(0x8013bdd4)),
         phys_cb: Some(CodeRef(0x8013bf10)),
@@ -10783,7 +10783,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 299,
         flags: 0x340112,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8013ba04)),
         input_cb: Some(CodeRef(0x8013be50)),
         phys_cb: Some(CodeRef(0x8013bf30)),
@@ -10794,7 +10794,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 300,
         flags: 0x340512,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8013ba8c)),
         input_cb: Some(CodeRef(0x8013be54)),
         phys_cb: Some(CodeRef(0x8013bf50)),
@@ -10805,7 +10805,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 301,
         flags: 0x340512,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8013bba8)),
         input_cb: Some(CodeRef(0x8013be58)),
         phys_cb: Some(CodeRef(0x8013bfb0)),
@@ -10816,7 +10816,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 302,
         flags: 0x340512,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8013bd10)),
         input_cb: Some(CodeRef(0x8013bed4)),
         phys_cb: Some(CodeRef(0x8013c010)),
@@ -10827,7 +10827,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 303,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801399b4)),
         input_cb: Some(CodeRef(0x80139a2c)),
         phys_cb: Some(CodeRef(0x80139a34)),
@@ -10838,7 +10838,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 303,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80139c1c)),
         input_cb: Some(CodeRef(0x80139c94)),
         phys_cb: Some(CodeRef(0x80139c9c)),
@@ -10849,7 +10849,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 304,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8013a448)),
         input_cb: Some(CodeRef(0x8013a4e4)),
         phys_cb: Some(CodeRef(0x8013a4ec)),
@@ -10860,7 +10860,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 305,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801399f0)),
         input_cb: Some(CodeRef(0x80139a30)),
         phys_cb: Some(CodeRef(0x80139a54)),
@@ -10871,7 +10871,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 305,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80139c58)),
         input_cb: Some(CodeRef(0x80139c98)),
         phys_cb: Some(CodeRef(0x80139cbc)),
@@ -10882,7 +10882,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 306,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8013a484)),
         input_cb: Some(CodeRef(0x8013a4e8)),
         phys_cb: Some(CodeRef(0x8013a50c)),
@@ -10893,7 +10893,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 307,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8013b068)),
         input_cb: Some(CodeRef(0x8013b0e8)),
         phys_cb: Some(CodeRef(0x8013b0f0)),
@@ -10904,7 +10904,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 308,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8013b2a4)),
         input_cb: Some(CodeRef(0x8013b31c)),
         phys_cb: Some(CodeRef(0x8013b324)),
@@ -10915,7 +10915,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 309,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8013b0a8)),
         input_cb: Some(CodeRef(0x8013b0ec)),
         phys_cb: Some(CodeRef(0x8013b110)),
@@ -10926,7 +10926,7 @@ pub static FT_ZD_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 310,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8013b2e0)),
         input_cb: Some(CodeRef(0x8013b320)),
         phys_cb: Some(CodeRef(0x8013b344)),
@@ -10941,7 +10941,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 295,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -10952,7 +10952,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 296,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -10963,7 +10963,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 297,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -10974,7 +10974,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 298,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -10985,7 +10985,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 299,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800d7590)),
         input_cb: Some(CodeRef(0x800d7614)),
         phys_cb: Some(CodeRef(0x800d7634)),
@@ -10996,7 +10996,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 300,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013e014)),
         input_cb: Some(CodeRef(0x8013ff00)),
         phys_cb: Some(CodeRef(0x80140620)),
@@ -11007,7 +11007,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 301,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013e014)),
         input_cb: Some(CodeRef(0x8013ff00)),
         phys_cb: Some(CodeRef(0x80140620)),
@@ -11018,7 +11018,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 302,
         flags: 0x3c0211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013e0f0)),
         input_cb: Some(CodeRef(0x8013ff04)),
         phys_cb: Some(CodeRef(0x80140650)),
@@ -11029,7 +11029,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 303,
         flags: 0x3c0211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013e2a0)),
         input_cb: Some(CodeRef(0x80140064)),
         phys_cb: Some(CodeRef(0x80140680)),
@@ -11040,7 +11040,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 304,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013e410)),
         input_cb: Some(CodeRef(0x801401c4)),
         phys_cb: Some(CodeRef(0x801406b0)),
@@ -11051,7 +11051,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 305,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013e7e0)),
         input_cb: Some(CodeRef(0x80140344)),
         phys_cb: Some(CodeRef(0x801408b8)),
@@ -11062,7 +11062,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 306,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013ead8)),
         input_cb: Some(CodeRef(0x80140348)),
         phys_cb: Some(CodeRef(0x80140bac)),
@@ -11073,7 +11073,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 307,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013ead8)),
         input_cb: Some(CodeRef(0x80140348)),
         phys_cb: Some(CodeRef(0x80140bac)),
@@ -11084,7 +11084,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 308,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013edb0)),
         input_cb: Some(CodeRef(0x8014034c)),
         phys_cb: Some(CodeRef(0x80140be8)),
@@ -11095,7 +11095,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 309,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013edb0)),
         input_cb: Some(CodeRef(0x8014034c)),
         phys_cb: Some(CodeRef(0x80140be8)),
@@ -11106,7 +11106,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 310,
         flags: 0x3c0611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013ee84)),
         input_cb: Some(CodeRef(0x80140350)),
         phys_cb: Some(CodeRef(0x80140c18)),
@@ -11117,7 +11117,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 311,
         flags: 0x3c0611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013f034)),
         input_cb: Some(CodeRef(0x801404b0)),
         phys_cb: Some(CodeRef(0x80140c48)),
@@ -11128,7 +11128,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 312,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013f1a4)),
         input_cb: Some(CodeRef(0x80140610)),
         phys_cb: Some(CodeRef(0x80140c78)),
@@ -11139,7 +11139,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 313,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013f708)),
         input_cb: Some(CodeRef(0x80140614)),
         phys_cb: Some(CodeRef(0x80140df8)),
@@ -11150,7 +11150,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 314,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013f9c0)),
         input_cb: Some(CodeRef(0x80140618)),
         phys_cb: Some(CodeRef(0x80140f10)),
@@ -11161,7 +11161,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 315,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013f9c0)),
         input_cb: Some(CodeRef(0x80140618)),
         phys_cb: Some(CodeRef(0x80140f10)),
@@ -11172,7 +11172,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 316,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013fcac)),
         input_cb: Some(CodeRef(0x8014061c)),
         phys_cb: Some(CodeRef(0x80140f40)),
@@ -11183,7 +11183,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 317,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8013d30c)),
         input_cb: Some(CodeRef(0x8013d384)),
         phys_cb: Some(CodeRef(0x8013d38c)),
@@ -11194,7 +11194,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 318,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8013d348)),
         input_cb: Some(CodeRef(0x8013d388)),
         phys_cb: Some(CodeRef(0x8013d3ac)),
@@ -11205,7 +11205,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 319,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8013cb68)),
         input_cb: Some(CodeRef(0x8013cc60)),
         phys_cb: Some(CodeRef(0x8013cc68)),
@@ -11216,7 +11216,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 320,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8013cbe4)),
         input_cb: Some(CodeRef(0x8013cc64)),
         phys_cb: Some(CodeRef(0x8013cc88)),
@@ -11227,7 +11227,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 321,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8013cb68)),
         input_cb: Some(CodeRef(0x8013cc60)),
         phys_cb: Some(CodeRef(0x8013cc68)),
@@ -11238,7 +11238,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 322,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8013cbe4)),
         input_cb: Some(CodeRef(0x8013cc64)),
         phys_cb: Some(CodeRef(0x8013cc88)),
@@ -11249,7 +11249,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 323,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8013cfcc)),
         input_cb: Some(CodeRef(0x8013d044)),
         phys_cb: Some(CodeRef(0x8013d04c)),
@@ -11260,7 +11260,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 324,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8013d008)),
         input_cb: Some(CodeRef(0x8013d048)),
         phys_cb: Some(CodeRef(0x8013d06c)),
@@ -11271,7 +11271,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 325,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8013cfcc)),
         input_cb: Some(CodeRef(0x8013d044)),
         phys_cb: Some(CodeRef(0x8013d04c)),
@@ -11282,7 +11282,7 @@ pub static FT_PR_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 326,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8013d008)),
         input_cb: Some(CodeRef(0x8013d048)),
         phys_cb: Some(CodeRef(0x8013d06c)),
@@ -11297,7 +11297,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 295,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8014275c)),
         input_cb: Some(CodeRef(0x801427d4)),
         phys_cb: Some(CodeRef(0x80142834)),
@@ -11308,7 +11308,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 296,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80142798)),
         input_cb: Some(CodeRef(0x80142804)),
         phys_cb: Some(CodeRef(0x80142854)),
@@ -11319,7 +11319,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 297,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80142c40)),
         input_cb: Some(CodeRef(0x80142cb8)),
         phys_cb: Some(CodeRef(0x80142cc0)),
@@ -11330,7 +11330,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 298,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80142e98)),
         input_cb: Some(CodeRef(0x80142fd8)),
         phys_cb: Some(CodeRef(0x80143038)),
@@ -11341,7 +11341,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 301,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80143b18)),
         input_cb: Some(CodeRef(0x80143b58)),
         phys_cb: Some(CodeRef(0x80143b60)),
@@ -11352,7 +11352,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 302,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80143d7c)),
         input_cb: Some(CodeRef(0x80143df4)),
         phys_cb: Some(CodeRef(0x80143dfc)),
@@ -11363,7 +11363,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 299,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80143258)),
         input_cb: Some(CodeRef(0x801433a8)),
         phys_cb: Some(CodeRef(0x801433b0)),
@@ -11374,7 +11374,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 300,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801436d8)),
         input_cb: Some(CodeRef(0x80143828)),
         phys_cb: Some(CodeRef(0x80143830)),
@@ -11385,7 +11385,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 303,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80142c7c)),
         input_cb: Some(CodeRef(0x80142cbc)),
         phys_cb: Some(CodeRef(0x80142d00)),
@@ -11396,7 +11396,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 304,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80142f38)),
         input_cb: Some(CodeRef(0x80143008)),
         phys_cb: Some(CodeRef(0x80143058)),
@@ -11407,7 +11407,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 301,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80143b1c)),
         input_cb: Some(CodeRef(0x80143b5c)),
         phys_cb: Some(CodeRef(0x80143b64)),
@@ -11418,7 +11418,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 307,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80143db8)),
         input_cb: Some(CodeRef(0x80143df8)),
         phys_cb: Some(CodeRef(0x80143e3c)),
@@ -11429,7 +11429,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 305,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80143304)),
         input_cb: Some(CodeRef(0x801433ac)),
         phys_cb: Some(CodeRef(0x801433d0)),
@@ -11440,7 +11440,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 306,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80143784)),
         input_cb: Some(CodeRef(0x8014382c)),
         phys_cb: Some(CodeRef(0x80143850)),
@@ -11451,7 +11451,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 308,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80144098)),
         input_cb: Some(CodeRef(0x80144158)),
         phys_cb: Some(CodeRef(0x801443e8)),
@@ -11462,7 +11462,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 309,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801440f8)),
         input_cb: Some(CodeRef(0x801442a0)),
         phys_cb: Some(CodeRef(0x80144420)),
@@ -11473,7 +11473,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 310,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80144830)),
         input_cb: Some(CodeRef(0x80144950)),
         phys_cb: Some(CodeRef(0x80144958)),
@@ -11484,7 +11484,7 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     MotionState {
         anim_id: 311,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8014487c)),
         input_cb: Some(CodeRef(0x80144954)),
         phys_cb: Some(CodeRef(0x80144a7c)),
@@ -11499,7 +11499,7 @@ pub static FT_LG_INIT_UNK_MOTION_STATES0: [MotionState; 2] = [
     MotionState {
         anim_id: 14,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: Some(CodeRef(0x800c7158)),
@@ -11510,7 +11510,7 @@ pub static FT_LG_INIT_UNK_MOTION_STATES0: [MotionState; 2] = [
     MotionState {
         anim_id: 15,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: Some(CodeRef(0x800c7200)),
@@ -11525,7 +11525,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 295,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x801474c0)),
         input_cb: Some(CodeRef(0x80147e30)),
         phys_cb: Some(CodeRef(0x801484c0)),
@@ -11536,7 +11536,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 296,
         flags: 0x3c0111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8014764c)),
         input_cb: Some(CodeRef(0x80147e34)),
         phys_cb: Some(CodeRef(0x801484e0)),
@@ -11547,7 +11547,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 297,
         flags: 0x3c0111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80147850)),
         input_cb: Some(CodeRef(0x8014800c)),
         phys_cb: Some(CodeRef(0x80148500)),
@@ -11558,7 +11558,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 298,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80147880)),
         input_cb: Some(CodeRef(0x801481cc)),
         phys_cb: Some(CodeRef(0x80148520)),
@@ -11569,7 +11569,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 299,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80147910)),
         input_cb: Some(CodeRef(0x801481d0)),
         phys_cb: Some(CodeRef(0x80148540)),
@@ -11580,7 +11580,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 300,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80147954)),
         input_cb: Some(CodeRef(0x801481d4)),
         phys_cb: Some(CodeRef(0x80148560)),
@@ -11591,7 +11591,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 301,
         flags: 0x3c0511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80147aec)),
         input_cb: Some(CodeRef(0x801481d8)),
         phys_cb: Some(CodeRef(0x80148580)),
@@ -11602,7 +11602,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 302,
         flags: 0x3c0511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80147cf0)),
         input_cb: Some(CodeRef(0x80148354)),
         phys_cb: Some(CodeRef(0x801485a0)),
@@ -11613,7 +11613,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 303,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80147d20)),
         input_cb: Some(CodeRef(0x801484b8)),
         phys_cb: Some(CodeRef(0x801485c0)),
@@ -11624,7 +11624,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 304,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80147db0)),
         input_cb: Some(CodeRef(0x801484bc)),
         phys_cb: Some(CodeRef(0x801485e0)),
@@ -11635,7 +11635,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 305,
         flags: 0x341012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80146858)),
         input_cb: Some(CodeRef(0x80146980)),
         phys_cb: Some(CodeRef(0x80146988)),
@@ -11646,7 +11646,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 306,
         flags: 0x341412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801468ec)),
         input_cb: Some(CodeRef(0x80146984)),
         phys_cb: Some(CodeRef(0x801469bc)),
@@ -11657,7 +11657,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 307,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801452ec)),
         input_cb: Some(CodeRef(0x80145364)),
         phys_cb: Some(CodeRef(0x8014536c)),
@@ -11668,7 +11668,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 309,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80145554)),
         input_cb: Some(CodeRef(0x801455cc)),
         phys_cb: Some(CodeRef(0x801455d4)),
@@ -11679,7 +11679,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 308,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80145db0)),
         input_cb: Some(CodeRef(0x80145e4c)),
         phys_cb: Some(CodeRef(0x80145e54)),
@@ -11690,7 +11690,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 310,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80145328)),
         input_cb: Some(CodeRef(0x80145368)),
         phys_cb: Some(CodeRef(0x8014538c)),
@@ -11701,7 +11701,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 309,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80145590)),
         input_cb: Some(CodeRef(0x801455d0)),
         phys_cb: Some(CodeRef(0x801455f4)),
@@ -11712,7 +11712,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 311,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80145dec)),
         input_cb: Some(CodeRef(0x80145e50)),
         phys_cb: Some(CodeRef(0x80145e74)),
@@ -11723,7 +11723,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 312,
         flags: 0x340114,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x801462dc)),
         input_cb: Some(CodeRef(0x80146394)),
         phys_cb: Some(CodeRef(0x8014639c)),
@@ -11734,7 +11734,7 @@ pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     MotionState {
         anim_id: 313,
         flags: 0x340514,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80146338)),
         input_cb: Some(CodeRef(0x80146398)),
         phys_cb: Some(CodeRef(0x801463bc)),
@@ -11749,7 +11749,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 295,
         flags: 0x240009,
-        x8: 0xa000000,
+        move_bits: 0xa000000,
         anim_cb: Some(CodeRef(0x800cede0)),
         input_cb: Some(CodeRef(0x800cee00)),
         phys_cb: Some(CodeRef(0x800cee30)),
@@ -11760,7 +11760,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 239,
         flags: 0x71,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80149354)),
         input_cb: Some(CodeRef(0x8014943c)),
         phys_cb: Some(CodeRef(0x8014945c)),
@@ -11771,7 +11771,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 240,
         flags: 0x71,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80149354)),
         input_cb: Some(CodeRef(0x8014943c)),
         phys_cb: Some(CodeRef(0x8014945c)),
@@ -11782,7 +11782,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 296,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800ed15c)),
         input_cb: Some(CodeRef(0x800edd88)),
         phys_cb: Some(CodeRef(0x800edfd8)),
@@ -11793,7 +11793,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 297,
         flags: 0x3c0111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800ed480)),
         input_cb: Some(CodeRef(0x800ede30)),
         phys_cb: Some(CodeRef(0x800edff8)),
@@ -11804,7 +11804,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 298,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800ed5b4)),
         input_cb: Some(CodeRef(0x800edeac)),
         phys_cb: Some(CodeRef(0x800ee018)),
@@ -11815,7 +11815,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 299,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800ed72c)),
         input_cb: Some(CodeRef(0x800edeb0)),
         phys_cb: Some(CodeRef(0x800ee038)),
@@ -11826,7 +11826,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 300,
         flags: 0x3c0511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800eda58)),
         input_cb: Some(CodeRef(0x800edf58)),
         phys_cb: Some(CodeRef(0x800ee058)),
@@ -11837,7 +11837,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 301,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800edb8c)),
         input_cb: Some(CodeRef(0x800edfd4)),
         phys_cb: Some(CodeRef(0x800ee078)),
@@ -11848,7 +11848,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 302,
         flags: 0x340112,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ec54c)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800ec88c)),
@@ -11859,7 +11859,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 303,
         flags: 0x340112,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ec588)),
         input_cb: Some(CodeRef(0x800ec71c)),
         phys_cb: Some(CodeRef(0x800ec8ac)),
@@ -11870,7 +11870,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 304,
         flags: 0x340112,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ec5f8)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800ec8cc)),
@@ -11881,7 +11881,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 305,
         flags: 0x340512,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ec634)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800ec8ec)),
@@ -11892,7 +11892,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 306,
         flags: 0x340512,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ec670)),
         input_cb: Some(CodeRef(0x800ec810)),
         phys_cb: Some(CodeRef(0x800ec90c)),
@@ -11903,7 +11903,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 307,
         flags: 0x340512,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ec6e0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800ec92c)),
@@ -11914,7 +11914,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 308,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800ebc10)),
         input_cb: Some(CodeRef(0x800ebcac)),
         phys_cb: Some(CodeRef(0x800ebd30)),
@@ -11925,7 +11925,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 309,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800ebc4c)),
         input_cb: Some(CodeRef(0x800ebcb0)),
         phys_cb: Some(CodeRef(0x800ebcb4)),
@@ -11936,7 +11936,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 310,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800eb8a4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800eb91c)),
@@ -11947,7 +11947,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 311,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800eb8e0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800eb93c)),
@@ -11958,7 +11958,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 312,
         flags: 0x200000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c3d6c)),
         input_cb: Some(CodeRef(0x800c4384)),
         phys_cb: Some(CodeRef(0x800c438c)),
@@ -11969,7 +11969,7 @@ pub static FT_CL_INIT_MOTION_STATE_TABLE: [MotionState; 21] = [
     MotionState {
         anim_id: 313,
         flags: 0xc00000,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800c4380)),
         input_cb: Some(CodeRef(0x800c4388)),
         phys_cb: Some(CodeRef(0x800c4438)),
@@ -11984,7 +11984,7 @@ pub static FT_DR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 239,
         flags: 0x71,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80149954)),
         input_cb: Some(CodeRef(0x80149a6c)),
         phys_cb: Some(CodeRef(0x80149a8c)),
@@ -11995,7 +11995,7 @@ pub static FT_DR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 240,
         flags: 0x71,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80149954)),
         input_cb: Some(CodeRef(0x80149a6c)),
         phys_cb: Some(CodeRef(0x80149a8c)),
@@ -12006,7 +12006,7 @@ pub static FT_DR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 295,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e0e18)),
         input_cb: Some(CodeRef(0x800e0e54)),
         phys_cb: Some(CodeRef(0x800e0e84)),
@@ -12017,7 +12017,7 @@ pub static FT_DR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 296,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e10b0)),
         input_cb: Some(CodeRef(0x800e10ec)),
         phys_cb: Some(CodeRef(0x800e111c)),
@@ -12028,7 +12028,7 @@ pub static FT_DR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 297,
         flags: 0x341012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800e1550)),
         input_cb: Some(CodeRef(0x800e15c8)),
         phys_cb: Some(CodeRef(0x800e15d0)),
@@ -12039,7 +12039,7 @@ pub static FT_DR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 298,
         flags: 0x341012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800e158c)),
         input_cb: Some(CodeRef(0x800e15cc)),
         phys_cb: Some(CodeRef(0x800e16e0)),
@@ -12050,7 +12050,7 @@ pub static FT_DR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 299,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e1b24)),
         input_cb: Some(CodeRef(0x800e1be4)),
         phys_cb: Some(CodeRef(0x800e1e74)),
@@ -12061,7 +12061,7 @@ pub static FT_DR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 300,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e1b84)),
         input_cb: Some(CodeRef(0x800e1d2c)),
         phys_cb: Some(CodeRef(0x800e1eac)),
@@ -12072,7 +12072,7 @@ pub static FT_DR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 301,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e22bc)),
         input_cb: Some(CodeRef(0x800e23dc)),
         phys_cb: Some(CodeRef(0x800e23e4)),
@@ -12083,7 +12083,7 @@ pub static FT_DR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     MotionState {
         anim_id: 302,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e2308)),
         input_cb: Some(CodeRef(0x800e23e0)),
         phys_cb: Some(CodeRef(0x800e2508)),
@@ -12098,7 +12098,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 295,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e62a4)),
         input_cb: Some(CodeRef(0x800e6ab4)),
         phys_cb: Some(CodeRef(0x800e6b5c)),
@@ -12109,7 +12109,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 296,
         flags: 0x3c0111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e6368)),
         input_cb: Some(CodeRef(0x800e6adc)),
         phys_cb: Some(CodeRef(0x800e6b7c)),
@@ -12120,7 +12120,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 297,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e65bc)),
         input_cb: Some(CodeRef(0x800e6b04)),
         phys_cb: Some(CodeRef(0x800e6b9c)),
@@ -12131,7 +12131,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 298,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e667c)),
         input_cb: Some(CodeRef(0x800e6b08)),
         phys_cb: Some(CodeRef(0x800e6bbc)),
@@ -12142,7 +12142,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 299,
         flags: 0x3c0511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e6740)),
         input_cb: Some(CodeRef(0x800e6b30)),
         phys_cb: Some(CodeRef(0x800e6bdc)),
@@ -12153,7 +12153,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 300,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e69bc)),
         input_cb: Some(CodeRef(0x800e6b58)),
         phys_cb: Some(CodeRef(0x800e6bfc)),
@@ -12164,7 +12164,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 301,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ea004)),
         input_cb: Some(CodeRef(0x800ea07c)),
         phys_cb: Some(CodeRef(0x800ea084)),
@@ -12175,7 +12175,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 302,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ea294)),
         input_cb: Some(CodeRef(0x800ea3f4)),
         phys_cb: Some(CodeRef(0x800ea47c)),
@@ -12186,7 +12186,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 303,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ea908)),
         input_cb: Some(CodeRef(0x800ea9a4)),
         phys_cb: Some(CodeRef(0x800ea9ac)),
@@ -12197,7 +12197,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 304,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ea040)),
         input_cb: Some(CodeRef(0x800ea080)),
         phys_cb: Some(CodeRef(0x800ea0bc)),
@@ -12208,7 +12208,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 305,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ea344)),
         input_cb: Some(CodeRef(0x800ea438)),
         phys_cb: Some(CodeRef(0x800ea534)),
@@ -12219,7 +12219,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 306,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800ea944)),
         input_cb: Some(CodeRef(0x800ea9a8)),
         phys_cb: Some(CodeRef(0x800eaa8c)),
@@ -12230,7 +12230,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 307,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e7354)),
         input_cb: Some(CodeRef(0x800e7414)),
         phys_cb: Some(CodeRef(0x800e741c)),
@@ -12241,7 +12241,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 308,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e73b4)),
         input_cb: Some(CodeRef(0x800e7418)),
         phys_cb: Some(CodeRef(0x800e743c)),
@@ -12252,7 +12252,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 309,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e7634)),
         input_cb: Some(CodeRef(0x800e76d4)),
         phys_cb: Some(CodeRef(0x800e76dc)),
@@ -12263,7 +12263,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 309,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e7684)),
         input_cb: Some(CodeRef(0x800e76d8)),
         phys_cb: Some(CodeRef(0x800e7758)),
@@ -12274,7 +12274,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 310,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e7e3c)),
         input_cb: Some(CodeRef(0x800e7ed8)),
         phys_cb: Some(CodeRef(0x800e7ee0)),
@@ -12285,7 +12285,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 311,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e7e78)),
         input_cb: Some(CodeRef(0x800e7edc)),
         phys_cb: Some(CodeRef(0x800e7f20)),
@@ -12296,7 +12296,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 312,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e8124)),
         input_cb: Some(CodeRef(0x800e81fc)),
         phys_cb: Some(CodeRef(0x800e8200)),
@@ -12307,7 +12307,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 313,
         flags: 0x341014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e8694)),
         input_cb: Some(CodeRef(0x800e87ac)),
         phys_cb: Some(CodeRef(0x800e8864)),
@@ -12318,7 +12318,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 314,
         flags: 0x341014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e8a24)),
         input_cb: Some(CodeRef(0x800e8b14)),
         phys_cb: Some(CodeRef(0x800e8c34)),
@@ -12329,7 +12329,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 315,
         flags: 0x341014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e965c)),
         input_cb: Some(CodeRef(0x800e9844)),
         phys_cb: Some(CodeRef(0x800e984c)),
@@ -12340,7 +12340,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 316,
         flags: 0x341014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e9b40)),
         input_cb: Some(CodeRef(0x800e9bc8)),
         phys_cb: Some(CodeRef(0x800e9bd0)),
@@ -12351,7 +12351,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 314,
         flags: 0x341014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e8fdc)),
         input_cb: Some(CodeRef(0x800e91fc)),
         phys_cb: Some(CodeRef(0x800e9204)),
@@ -12362,7 +12362,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 317,
         flags: 0x341414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e8720)),
         input_cb: Some(CodeRef(0x800e87d0)),
         phys_cb: Some(CodeRef(0x800e8884)),
@@ -12373,7 +12373,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 318,
         flags: 0x341414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e8a9c)),
         input_cb: Some(CodeRef(0x800e8b64)),
         phys_cb: Some(CodeRef(0x800e8c68)),
@@ -12384,7 +12384,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 319,
         flags: 0x341414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e97b4)),
         input_cb: Some(CodeRef(0x800e9848)),
         phys_cb: Some(CodeRef(0x800e9880)),
@@ -12395,7 +12395,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 320,
         flags: 0x341414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e9b84)),
         input_cb: Some(CodeRef(0x800e9bcc)),
         phys_cb: Some(CodeRef(0x800e9bf0)),
@@ -12406,7 +12406,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 318,
         flags: 0x341414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e90ec)),
         input_cb: Some(CodeRef(0x800e9200)),
         phys_cb: Some(CodeRef(0x800e9238)),
@@ -12417,7 +12417,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 321,
         flags: 0x72,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800e5b18)),
         input_cb: Some(CodeRef(0x800e5c38)),
         phys_cb: Some(CodeRef(0x800e5c3c)),
@@ -12428,7 +12428,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 322,
         flags: 0x72,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800e5b18)),
         input_cb: Some(CodeRef(0x800e5c38)),
         phys_cb: Some(CodeRef(0x800e5c3c)),
@@ -12439,7 +12439,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 323,
         flags: 0x72,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800e5b18)),
         input_cb: Some(CodeRef(0x800e5c38)),
         phys_cb: Some(CodeRef(0x800e5c3c)),
@@ -12450,7 +12450,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 324,
         flags: 0x72,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800e5b18)),
         input_cb: Some(CodeRef(0x800e5c38)),
         phys_cb: Some(CodeRef(0x800e5c3c)),
@@ -12461,7 +12461,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 325,
         flags: 0x72,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800e5b18)),
         input_cb: Some(CodeRef(0x800e5c38)),
         phys_cb: Some(CodeRef(0x800e5c3c)),
@@ -12472,7 +12472,7 @@ pub static FT_FC_INIT_MOTION_STATE_TABLE: [MotionState; 35] = [
     MotionState {
         anim_id: 326,
         flags: 0x72,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x800e5b18)),
         input_cb: Some(CodeRef(0x800e5c38)),
         phys_cb: Some(CodeRef(0x800e5c3c)),
@@ -12487,7 +12487,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 295,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80124908)),
         input_cb: Some(CodeRef(0x80124b6c)),
         phys_cb: Some(CodeRef(0x80124b74)),
@@ -12498,7 +12498,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 296,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80124a20)),
         input_cb: Some(CodeRef(0x80124b70)),
         phys_cb: Some(CodeRef(0x80124b94)),
@@ -12509,7 +12509,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 297,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80124f64)),
         input_cb: Some(CodeRef(0x80124fdc)),
         phys_cb: Some(CodeRef(0x80124fe4)),
@@ -12520,7 +12520,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 298,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801251bc)),
         input_cb: Some(CodeRef(0x801252fc)),
         phys_cb: Some(CodeRef(0x8012535c)),
@@ -12531,7 +12531,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 300,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012590c)),
         input_cb: Some(CodeRef(0x8012594c)),
         phys_cb: Some(CodeRef(0x80125954)),
@@ -12542,7 +12542,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 301,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80125b34)),
         input_cb: Some(CodeRef(0x80125bac)),
         phys_cb: Some(CodeRef(0x80125bb4)),
@@ -12553,7 +12553,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 299,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012557c)),
         input_cb: Some(CodeRef(0x801256b4)),
         phys_cb: Some(CodeRef(0x801256bc)),
@@ -12564,7 +12564,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 302,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80124fa0)),
         input_cb: Some(CodeRef(0x80124fe0)),
         phys_cb: Some(CodeRef(0x80125024)),
@@ -12575,7 +12575,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 303,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012525c)),
         input_cb: Some(CodeRef(0x8012532c)),
         phys_cb: Some(CodeRef(0x8012537c)),
@@ -12586,7 +12586,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 300,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80125910)),
         input_cb: Some(CodeRef(0x80125950)),
         phys_cb: Some(CodeRef(0x80125958)),
@@ -12597,7 +12597,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 305,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80125b70)),
         input_cb: Some(CodeRef(0x80125bb0)),
         phys_cb: Some(CodeRef(0x80125bf4)),
@@ -12608,7 +12608,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 304,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8012561c)),
         input_cb: Some(CodeRef(0x801256b8)),
         phys_cb: Some(CodeRef(0x801256dc)),
@@ -12619,7 +12619,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 306,
         flags: 0x340113,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80125ed8)),
         input_cb: Some(CodeRef(0x80125f50)),
         phys_cb: Some(CodeRef(0x80125f58)),
@@ -12630,7 +12630,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 307,
         flags: 0x340113,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80126144)),
         input_cb: Some(CodeRef(0x80126424)),
         phys_cb: Some(CodeRef(0x801265d4)),
@@ -12641,7 +12641,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 308,
         flags: 0x340113,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80127198)),
         input_cb: Some(CodeRef(0x801272d8)),
         phys_cb: Some(CodeRef(0x801272e0)),
@@ -12652,7 +12652,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 309,
         flags: 0x340513,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80125f14)),
         input_cb: Some(CodeRef(0x80125f54)),
         phys_cb: Some(CodeRef(0x80125f78)),
@@ -12663,7 +12663,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 310,
         flags: 0x340513,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801262b4)),
         input_cb: Some(CodeRef(0x80126428)),
         phys_cb: Some(CodeRef(0x801265f4)),
@@ -12674,7 +12674,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 311,
         flags: 0x340513,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80127228)),
         input_cb: Some(CodeRef(0x801272dc)),
         phys_cb: Some(CodeRef(0x80127310)),
@@ -12685,7 +12685,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 312,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80127cdc)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x801280c8)),
@@ -12696,7 +12696,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 313,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80127de4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80128108)),
@@ -12707,7 +12707,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 314,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80127fb0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80128148)),
@@ -12718,7 +12718,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 315,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80128050)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x801281ac)),
@@ -12729,7 +12729,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 316,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80127d60)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x801280e8)),
@@ -12740,7 +12740,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 317,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80127ec0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80128128)),
@@ -12751,7 +12751,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 318,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80128000)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80128168)),
@@ -12762,7 +12762,7 @@ pub static FT_PC_INIT_MOTION_STATE_TABLE: [MotionState; 26] = [
     MotionState {
         anim_id: 319,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8012808c)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x801281cc)),
@@ -12777,7 +12777,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 46,
         flags: 0x2c0201,
-        x8: 0x2800000,
+        move_bits: 0x2800000,
         anim_cb: Some(CodeRef(0x8014c138)),
         input_cb: Some(CodeRef(0x8014c174)),
         phys_cb: Some(CodeRef(0x8014c194)),
@@ -12788,7 +12788,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 49,
         flags: 0x2c0204,
-        x8: 0x5800000,
+        move_bits: 0x5800000,
         anim_cb: Some(CodeRef(0x8014c224)),
         input_cb: Some(CodeRef(0x8014c260)),
         phys_cb: Some(CodeRef(0x8014c264)),
@@ -12799,7 +12799,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 50,
         flags: 0x2c0204,
-        x8: 0x5800000,
+        move_bits: 0x5800000,
         anim_cb: Some(CodeRef(0x8014c308)),
         input_cb: Some(CodeRef(0x8014c330)),
         phys_cb: Some(CodeRef(0x8014c350)),
@@ -12810,7 +12810,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 51,
         flags: 0x2c0204,
-        x8: 0x5800000,
+        move_bits: 0x5800000,
         anim_cb: Some(CodeRef(0x8014c3f4)),
         input_cb: Some(CodeRef(0x8014c414)),
         phys_cb: Some(CodeRef(0x8014c418)),
@@ -12821,7 +12821,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 59,
         flags: 0x240208,
-        x8: 0x9800000,
+        move_bits: 0x9800000,
         anim_cb: Some(CodeRef(0x8014ae3c)),
         input_cb: Some(CodeRef(0x8014ae78)),
         phys_cb: Some(CodeRef(0x8014af6c)),
@@ -12832,7 +12832,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 62,
         flags: 0x240a09,
-        x8: 0xa800000,
+        move_bits: 0xa800000,
         anim_cb: Some(CodeRef(0x8014aa88)),
         input_cb: Some(CodeRef(0x8014aac4)),
         phys_cb: Some(CodeRef(0x8014aaf4)),
@@ -12843,7 +12843,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 68,
         flags: 0x24060c,
-        x8: 0xd800000,
+        move_bits: 0xd800000,
         anim_cb: Some(CodeRef(0x8014b720)),
         input_cb: Some(CodeRef(0x8014b740)),
         phys_cb: Some(CodeRef(0x8014b760)),
@@ -12854,7 +12854,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 70,
         flags: 0x24060e,
-        x8: 0xf800000,
+        move_bits: 0xf800000,
         anim_cb: Some(CodeRef(0x8014b87c)),
         input_cb: Some(CodeRef(0x8014b89c)),
         phys_cb: Some(CodeRef(0x8014b8bc)),
@@ -12865,7 +12865,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 71,
         flags: 0x24060f,
-        x8: 0x10800000,
+        move_bits: 0x10800000,
         anim_cb: Some(CodeRef(0x8014b9d8)),
         input_cb: Some(CodeRef(0x8014b9f8)),
         phys_cb: Some(CodeRef(0x8014ba18)),
@@ -12876,7 +12876,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 73,
         flags: 0x60c,
-        x8: 0xdc00000,
+        move_bits: 0xdc00000,
         anim_cb: Some(CodeRef(0x8014bb24)),
         input_cb: Some(CodeRef(0x8014bb70)),
         phys_cb: Some(CodeRef(0x8014bb74)),
@@ -12887,7 +12887,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 75,
         flags: 0x60e,
-        x8: 0xfc00000,
+        move_bits: 0xfc00000,
         anim_cb: Some(CodeRef(0x8014bc0c)),
         input_cb: Some(CodeRef(0x8014bc58)),
         phys_cb: Some(CodeRef(0x8014bc5c)),
@@ -12898,7 +12898,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 76,
         flags: 0x60f,
-        x8: 0x10c00000,
+        move_bits: 0x10c00000,
         anim_cb: Some(CodeRef(0x8014bcf4)),
         input_cb: Some(CodeRef(0x8014bd40)),
         phys_cb: Some(CodeRef(0x8014bd44)),
@@ -12909,7 +12909,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 295,
         flags: 0x340111,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8014e73c)),
         input_cb: Some(CodeRef(0x8014e87c)),
         phys_cb: Some(CodeRef(0x8014e984)),
@@ -12920,7 +12920,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 296,
         flags: 0x340511,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8014e7dc)),
         input_cb: Some(CodeRef(0x8014e900)),
         phys_cb: Some(CodeRef(0x8014e9a4)),
@@ -12931,7 +12931,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 297,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8bc)),
         input_cb: Some(CodeRef(0x8014c934)),
         phys_cb: Some(CodeRef(0x8014c93c)),
@@ -12942,7 +12942,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 298,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8bc)),
         input_cb: Some(CodeRef(0x8014c934)),
         phys_cb: Some(CodeRef(0x8014c93c)),
@@ -12953,7 +12953,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 299,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8bc)),
         input_cb: Some(CodeRef(0x8014c934)),
         phys_cb: Some(CodeRef(0x8014c93c)),
@@ -12964,7 +12964,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 300,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8bc)),
         input_cb: Some(CodeRef(0x8014c934)),
         phys_cb: Some(CodeRef(0x8014c93c)),
@@ -12975,7 +12975,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 301,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8bc)),
         input_cb: Some(CodeRef(0x8014c934)),
         phys_cb: Some(CodeRef(0x8014c93c)),
@@ -12986,7 +12986,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 302,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8bc)),
         input_cb: Some(CodeRef(0x8014c934)),
         phys_cb: Some(CodeRef(0x8014c93c)),
@@ -12997,7 +12997,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 303,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8bc)),
         input_cb: Some(CodeRef(0x8014c934)),
         phys_cb: Some(CodeRef(0x8014c93c)),
@@ -13008,7 +13008,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 304,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8bc)),
         input_cb: Some(CodeRef(0x8014c934)),
         phys_cb: Some(CodeRef(0x8014c93c)),
@@ -13019,7 +13019,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 305,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8bc)),
         input_cb: Some(CodeRef(0x8014c934)),
         phys_cb: Some(CodeRef(0x8014c93c)),
@@ -13030,7 +13030,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 306,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8f8)),
         input_cb: Some(CodeRef(0x8014c938)),
         phys_cb: Some(CodeRef(0x8014c974)),
@@ -13041,7 +13041,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 307,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8f8)),
         input_cb: Some(CodeRef(0x8014c938)),
         phys_cb: Some(CodeRef(0x8014c974)),
@@ -13052,7 +13052,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 308,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8f8)),
         input_cb: Some(CodeRef(0x8014c938)),
         phys_cb: Some(CodeRef(0x8014c974)),
@@ -13063,7 +13063,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 309,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8f8)),
         input_cb: Some(CodeRef(0x8014c938)),
         phys_cb: Some(CodeRef(0x8014c974)),
@@ -13074,7 +13074,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 310,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8f8)),
         input_cb: Some(CodeRef(0x8014c938)),
         phys_cb: Some(CodeRef(0x8014c974)),
@@ -13085,7 +13085,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 311,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8f8)),
         input_cb: Some(CodeRef(0x8014c938)),
         phys_cb: Some(CodeRef(0x8014c974)),
@@ -13096,7 +13096,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 312,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8f8)),
         input_cb: Some(CodeRef(0x8014c938)),
         phys_cb: Some(CodeRef(0x8014c974)),
@@ -13107,7 +13107,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 313,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8f8)),
         input_cb: Some(CodeRef(0x8014c938)),
         phys_cb: Some(CodeRef(0x8014c974)),
@@ -13118,7 +13118,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 314,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8014c8f8)),
         input_cb: Some(CodeRef(0x8014c938)),
         phys_cb: Some(CodeRef(0x8014c974)),
@@ -13129,7 +13129,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 315,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8014e1f8)),
         input_cb: Some(CodeRef(0x8014e290)),
         phys_cb: Some(CodeRef(0x8014e374)),
@@ -13140,7 +13140,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 316,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x8014e218)),
         input_cb: Some(CodeRef(0x8014e2b0)),
         phys_cb: Some(CodeRef(0x8014e394)),
@@ -13151,7 +13151,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 317,
         flags: 0x3c0014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8014d014)),
         input_cb: Some(CodeRef(0x8014d1ac)),
         phys_cb: Some(CodeRef(0x8014d31c)),
@@ -13162,7 +13162,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 318,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8014d6b4)),
         input_cb: Some(CodeRef(0x8014d834)),
         phys_cb: Some(CodeRef(0x8014d83c)),
@@ -13173,7 +13173,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 319,
         flags: 0x340014,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8014da60)),
         input_cb: Some(CodeRef(0x8014db80)),
         phys_cb: Some(CodeRef(0x8014db88)),
@@ -13184,7 +13184,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 320,
         flags: 0x3c0414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8014d0e0)),
         input_cb: Some(CodeRef(0x8014d264)),
         phys_cb: Some(CodeRef(0x8014d350)),
@@ -13195,7 +13195,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 321,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8014d774)),
         input_cb: Some(CodeRef(0x8014d838)),
         phys_cb: Some(CodeRef(0x8014d85c)),
@@ -13206,7 +13206,7 @@ pub static FT_GW_INIT_MOTION_STATE_TABLE: [MotionState; 40] = [
     MotionState {
         anim_id: 322,
         flags: 0x340414,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8014daf0)),
         input_cb: Some(CodeRef(0x8014db84)),
         phys_cb: Some(CodeRef(0x8014dba8)),
@@ -13221,7 +13221,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: -1,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -13232,7 +13232,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: -1,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -13243,7 +13243,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: -1,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -13254,7 +13254,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: -1,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -13265,7 +13265,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: -1,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -13276,7 +13276,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: -1,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: None,
@@ -13287,7 +13287,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 301,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e2c80)),
         input_cb: Some(CodeRef(0x800e2e38)),
         phys_cb: Some(CodeRef(0x800e2f2c)),
@@ -13298,7 +13298,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 302,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x800e2d5c)),
         input_cb: Some(CodeRef(0x800e2e3c)),
         phys_cb: Some(CodeRef(0x800e3018)),
@@ -13309,7 +13309,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 303,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800e384c)),
         input_cb: Some(CodeRef(0x800e3b0c)),
         phys_cb: Some(CodeRef(0x800e3b1c)),
@@ -13320,7 +13320,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 304,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800e3888)),
         input_cb: Some(CodeRef(0x800e3b10)),
         phys_cb: Some(CodeRef(0x800e3b3c)),
@@ -13331,7 +13331,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 305,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800e3964)),
         input_cb: Some(CodeRef(0x800e3b14)),
         phys_cb: Some(CodeRef(0x800e3b5c)),
@@ -13342,7 +13342,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 306,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x800e39f0)),
         input_cb: Some(CodeRef(0x800e3b18)),
         phys_cb: Some(CodeRef(0x800e3bd0)),
@@ -13353,7 +13353,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 307,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e4b00)),
         input_cb: Some(CodeRef(0x800e4b60)),
         phys_cb: Some(CodeRef(0x800e4bf8)),
@@ -13364,7 +13364,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 308,
         flags: 0x340413,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e4ee8)),
         input_cb: Some(CodeRef(0x800e4f48)),
         phys_cb: Some(CodeRef(0x800e4fdc)),
@@ -13375,7 +13375,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 309,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e51f8)),
         input_cb: Some(CodeRef(0x800e5234)),
         phys_cb: Some(CodeRef(0x800e5238)),
@@ -13386,7 +13386,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 310,
         flags: 0x340013,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x800e5310)),
         input_cb: Some(CodeRef(0x800e5384)),
         phys_cb: Some(CodeRef(0x800e5388)),
@@ -13397,7 +13397,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 311,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e415c)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e4408)),
@@ -13408,7 +13408,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 312,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e4268)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e449c)),
@@ -13419,7 +13419,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 313,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e42e0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e45e4)),
@@ -13430,7 +13430,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 314,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e4354)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e4618)),
@@ -13441,7 +13441,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 316,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e4390)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e4678)),
@@ -13452,7 +13452,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 315,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e42a4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e455c)),
@@ -13463,7 +13463,7 @@ pub static FT_GN_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 317,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x800e43cc)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x800e4698)),
@@ -13478,7 +13478,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 295,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80136844)),
         input_cb: Some(CodeRef(0x80136914)),
         phys_cb: Some(CodeRef(0x8013691c)),
@@ -13489,7 +13489,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 296,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80136adc)),
         input_cb: Some(CodeRef(0x80136c8c)),
         phys_cb: Some(CodeRef(0x80136cfc)),
@@ -13500,7 +13500,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 297,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80136ee4)),
         input_cb: Some(CodeRef(0x8013713c)),
         phys_cb: Some(CodeRef(0x80137144)),
@@ -13511,7 +13511,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 298,
         flags: 0x340211,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80136ee4)),
         input_cb: Some(CodeRef(0x8013713c)),
         phys_cb: Some(CodeRef(0x80137144)),
@@ -13522,7 +13522,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 299,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x801368ac)),
         input_cb: Some(CodeRef(0x80136918)),
         phys_cb: Some(CodeRef(0x8013695c)),
@@ -13533,7 +13533,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 300,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80136bb4)),
         input_cb: Some(CodeRef(0x80136cc4)),
         phys_cb: Some(CodeRef(0x80136d1c)),
@@ -13544,7 +13544,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 301,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80137010)),
         input_cb: Some(CodeRef(0x80137140)),
         phys_cb: Some(CodeRef(0x80137164)),
@@ -13555,7 +13555,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 302,
         flags: 0x340611,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80137010)),
         input_cb: Some(CodeRef(0x80137140)),
         phys_cb: Some(CodeRef(0x80137164)),
@@ -13566,7 +13566,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 303,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137558)),
         input_cb: Some(CodeRef(0x801375b8)),
         phys_cb: Some(CodeRef(0x80137618)),
@@ -13577,7 +13577,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 304,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801377b0)),
         input_cb: Some(CodeRef(0x80137810)),
         phys_cb: Some(CodeRef(0x80137870)),
@@ -13588,7 +13588,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 305,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801377b0)),
         input_cb: Some(CodeRef(0x80137810)),
         phys_cb: Some(CodeRef(0x80137870)),
@@ -13599,7 +13599,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 306,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137b34)),
         input_cb: Some(CodeRef(0x80137b94)),
         phys_cb: Some(CodeRef(0x80137bf4)),
@@ -13610,7 +13610,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 307,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137b34)),
         input_cb: Some(CodeRef(0x80137b94)),
         phys_cb: Some(CodeRef(0x80137bf4)),
@@ -13621,7 +13621,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 308,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137b34)),
         input_cb: Some(CodeRef(0x80137b94)),
         phys_cb: Some(CodeRef(0x80137bf4)),
@@ -13632,7 +13632,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 309,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137ecc)),
         input_cb: Some(CodeRef(0x80137f2c)),
         phys_cb: Some(CodeRef(0x80137f30)),
@@ -13643,7 +13643,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 310,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137ecc)),
         input_cb: Some(CodeRef(0x80137f2c)),
         phys_cb: Some(CodeRef(0x80137f30)),
@@ -13654,7 +13654,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 311,
         flags: 0x340212,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137ecc)),
         input_cb: Some(CodeRef(0x80137f2c)),
         phys_cb: Some(CodeRef(0x80137f30)),
@@ -13665,7 +13665,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 312,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137558)),
         input_cb: Some(CodeRef(0x801375b8)),
         phys_cb: Some(CodeRef(0x80137618)),
@@ -13676,7 +13676,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 313,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801377b0)),
         input_cb: Some(CodeRef(0x80137810)),
         phys_cb: Some(CodeRef(0x80137870)),
@@ -13687,7 +13687,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 314,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801377b0)),
         input_cb: Some(CodeRef(0x80137810)),
         phys_cb: Some(CodeRef(0x80137870)),
@@ -13698,7 +13698,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 315,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137b34)),
         input_cb: Some(CodeRef(0x80137b94)),
         phys_cb: Some(CodeRef(0x80137bf4)),
@@ -13709,7 +13709,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 316,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137b34)),
         input_cb: Some(CodeRef(0x80137b94)),
         phys_cb: Some(CodeRef(0x80137bf4)),
@@ -13720,7 +13720,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 317,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137b34)),
         input_cb: Some(CodeRef(0x80137b94)),
         phys_cb: Some(CodeRef(0x80137bf4)),
@@ -13731,7 +13731,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 318,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137ecc)),
         input_cb: Some(CodeRef(0x80137f2c)),
         phys_cb: Some(CodeRef(0x80137f30)),
@@ -13742,7 +13742,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 319,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137ecc)),
         input_cb: Some(CodeRef(0x80137f2c)),
         phys_cb: Some(CodeRef(0x80137f30)),
@@ -13753,7 +13753,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 320,
         flags: 0x340612,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80137ecc)),
         input_cb: Some(CodeRef(0x80137f2c)),
         phys_cb: Some(CodeRef(0x80137f30)),
@@ -13764,7 +13764,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 321,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x801382e8)),
         input_cb: Some(CodeRef(0x801383a8)),
         phys_cb: Some(CodeRef(0x80138638)),
@@ -13775,7 +13775,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 322,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80138348)),
         input_cb: Some(CodeRef(0x801384f0)),
         phys_cb: Some(CodeRef(0x8013873c)),
@@ -13786,7 +13786,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 323,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80138aa8)),
         input_cb: Some(CodeRef(0x80138c20)),
         phys_cb: Some(CodeRef(0x80138c28)),
@@ -13797,7 +13797,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 324,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80138e68)),
         input_cb: Some(CodeRef(0x80138fc0)),
         phys_cb: Some(CodeRef(0x80138fc8)),
@@ -13808,7 +13808,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 325,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80138b64)),
         input_cb: Some(CodeRef(0x80138c24)),
         phys_cb: Some(CodeRef(0x80138c5c)),
@@ -13819,7 +13819,7 @@ pub static FT_FE_INIT_MOTION_STATE_TABLE: [MotionState; 32] = [
     MotionState {
         anim_id: 326,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80138f14)),
         input_cb: Some(CodeRef(0x80138fc4)),
         phys_cb: Some(CodeRef(0x80138fe8)),
@@ -13834,7 +13834,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 295,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80134f48)),
         input_cb: Some(CodeRef(0x801351b0)),
         phys_cb: Some(CodeRef(0x80135438)),
@@ -13845,7 +13845,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 296,
         flags: 0x3c0011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80134f9c)),
         input_cb: Some(CodeRef(0x801351b4)),
         phys_cb: Some(CodeRef(0x80135458)),
@@ -13856,7 +13856,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 297,
         flags: 0x340011,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80135040)),
         input_cb: Some(CodeRef(0x801352f0)),
         phys_cb: Some(CodeRef(0x80135478)),
@@ -13867,7 +13867,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 298,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x8013507c)),
         input_cb: Some(CodeRef(0x801352f4)),
         phys_cb: Some(CodeRef(0x80135498)),
@@ -13878,7 +13878,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 299,
         flags: 0x3c0411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x801350d0)),
         input_cb: Some(CodeRef(0x801352f8)),
         phys_cb: Some(CodeRef(0x801354b8)),
@@ -13889,7 +13889,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 300,
         flags: 0x340411,
-        x8: 0x12000000,
+        move_bits: 0x12000000,
         anim_cb: Some(CodeRef(0x80135174)),
         input_cb: Some(CodeRef(0x80135434)),
         phys_cb: Some(CodeRef(0x801354d8)),
@@ -13900,7 +13900,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 301,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80133654)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134224)),
@@ -13911,7 +13911,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 302,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801336cc)),
         input_cb: Some(CodeRef(0x80133bf4)),
         phys_cb: Some(CodeRef(0x80134288)),
@@ -13922,7 +13922,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 303,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801336cc)),
         input_cb: Some(CodeRef(0x80133bf4)),
         phys_cb: Some(CodeRef(0x80134288)),
@@ -13933,7 +13933,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: -1,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801339ac)),
         input_cb: Some(CodeRef(0x80133e4c)),
         phys_cb: Some(CodeRef(0x801342c8)),
@@ -13944,7 +13944,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 304,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801339b4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134308)),
@@ -13955,7 +13955,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 305,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80133a90)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134328)),
@@ -13966,7 +13966,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 306,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80133690)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134244)),
@@ -13977,7 +13977,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 307,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8013383c)),
         input_cb: Some(CodeRef(0x80133d20)),
         phys_cb: Some(CodeRef(0x801342a8)),
@@ -13988,7 +13988,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 308,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x8013383c)),
         input_cb: Some(CodeRef(0x80133d20)),
         phys_cb: Some(CodeRef(0x801342a8)),
@@ -13999,7 +13999,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: -1,
         flags: 0x340012,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x801339b0)),
         input_cb: Some(CodeRef(0x80134038)),
         phys_cb: Some(CodeRef(0x801342e8)),
@@ -14010,7 +14010,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 309,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80133ad4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134348)),
@@ -14021,7 +14021,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 310,
         flags: 0x340412,
-        x8: 0x13000000,
+        move_bits: 0x13000000,
         anim_cb: Some(CodeRef(0x80133bb0)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134368)),
@@ -14032,7 +14032,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 311,
         flags: 0x340213,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80135c08)),
         input_cb: Some(CodeRef(0x80135d78)),
         phys_cb: Some(CodeRef(0x80135d80)),
@@ -14043,7 +14043,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 312,
         flags: 0x340613,
-        x8: 0x14000000,
+        move_bits: 0x14000000,
         anim_cb: Some(CodeRef(0x80135c60)),
         input_cb: Some(CodeRef(0x80135d7c)),
         phys_cb: Some(CodeRef(0x80135de0)),
@@ -14054,7 +14054,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 313,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x8013474c)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x801347c4)),
@@ -14065,7 +14065,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 314,
         flags: 0x340614,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x80134788)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134804)),
@@ -14076,7 +14076,7 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     MotionState {
         anim_id: 315,
         flags: 0x340214,
-        x8: 0x15000000,
+        move_bits: 0x15000000,
         anim_cb: Some(CodeRef(0x801349c4)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80134a00)),
@@ -14091,7 +14091,7 @@ pub static FT_GK_INIT_UNK_MOTION_STATES0: [MotionState; 1] = [
     MotionState {
         anim_id: 14,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: None,
         input_cb: None,
         phys_cb: Some(CodeRef(0x800c74ac)),
@@ -14106,7 +14106,7 @@ pub static FT_SB_INIT_MOTION_STATE_TABLE: [MotionState; 1] = [
     MotionState {
         anim_id: 295,
         flags: 0x0,
-        x8: 0x1400000,
+        move_bits: 0x1400000,
         anim_cb: Some(CodeRef(0x8014fc20)),
         input_cb: Some(CodeRef(0x8014fc24)),
         phys_cb: Some(CodeRef(0x8014fc28)),
@@ -14121,7 +14121,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 295,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80150230)),
         input_cb: Some(CodeRef(0x8015082c)),
         phys_cb: Some(CodeRef(0x80150870)),
@@ -14132,7 +14132,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 296,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80150230)),
         input_cb: Some(CodeRef(0x8015082c)),
         phys_cb: Some(CodeRef(0x80150870)),
@@ -14143,7 +14143,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 297,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80151168)),
         input_cb: Some(CodeRef(0x801511b0)),
         phys_cb: Some(CodeRef(0x801511f4)),
@@ -14154,7 +14154,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 298,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801515b8)),
         input_cb: Some(CodeRef(0x801517b0)),
         phys_cb: Some(CodeRef(0x801517f4)),
@@ -14165,7 +14165,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 299,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801516b4)),
         input_cb: Some(CodeRef(0x801517b0)),
         phys_cb: Some(CodeRef(0x801517f4)),
@@ -14176,7 +14176,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 300,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80151874)),
         input_cb: Some(CodeRef(0x801518b0)),
         phys_cb: Some(CodeRef(0x801518f4)),
@@ -14187,7 +14187,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 301,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015198c)),
         input_cb: Some(CodeRef(0x80151a44)),
         phys_cb: Some(CodeRef(0x80151a88)),
@@ -14198,7 +14198,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 302,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80151b14)),
         input_cb: Some(CodeRef(0x80151b70)),
         phys_cb: Some(CodeRef(0x80151b50)),
@@ -14209,7 +14209,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 303,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80151c04)),
         input_cb: Some(CodeRef(0x80151c40)),
         phys_cb: Some(CodeRef(0x80151c84)),
@@ -14220,7 +14220,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 304,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80151e10)),
         input_cb: Some(CodeRef(0x80151e4c)),
         phys_cb: Some(CodeRef(0x80151e90)),
@@ -14231,7 +14231,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 305,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80151f00)),
         input_cb: Some(CodeRef(0x8015204c)),
         phys_cb: Some(CodeRef(0x80152090)),
@@ -14242,7 +14242,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 306,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80152138)),
         input_cb: Some(CodeRef(0x80152174)),
         phys_cb: Some(CodeRef(0x801521b8)),
@@ -14253,7 +14253,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 307,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80151d20)),
         input_cb: Some(CodeRef(0x80151d5c)),
         phys_cb: Some(CodeRef(0x80151da0)),
@@ -14264,7 +14264,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 308,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015223c)),
         input_cb: Some(CodeRef(0x80152278)),
         phys_cb: Some(CodeRef(0x801522bc)),
@@ -14275,7 +14275,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 309,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801523bc)),
         input_cb: Some(CodeRef(0x80152414)),
         phys_cb: Some(CodeRef(0x80152458)),
@@ -14286,7 +14286,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 310,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801524c8)),
         input_cb: Some(CodeRef(0x80152544)),
         phys_cb: Some(CodeRef(0x80152588)),
@@ -14297,7 +14297,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 311,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80152634)),
         input_cb: Some(CodeRef(0x80152670)),
         phys_cb: Some(CodeRef(0x801526b4)),
@@ -14308,7 +14308,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 312,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80152738)),
         input_cb: Some(CodeRef(0x80152774)),
         phys_cb: Some(CodeRef(0x801527b8)),
@@ -14319,7 +14319,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 313,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80152928)),
         input_cb: Some(CodeRef(0x80152a0c)),
         phys_cb: Some(CodeRef(0x80152a50)),
@@ -14330,7 +14330,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 314,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801529d0)),
         input_cb: Some(CodeRef(0x80152a0c)),
         phys_cb: Some(CodeRef(0x80152a50)),
@@ -14341,7 +14341,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 315,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80152c34)),
         input_cb: Some(CodeRef(0x80152c70)),
         phys_cb: Some(CodeRef(0x80152cb4)),
@@ -14352,7 +14352,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 316,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80152d44)),
         input_cb: Some(CodeRef(0x80152dc0)),
         phys_cb: Some(CodeRef(0x80152e04)),
@@ -14363,7 +14363,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 317,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80153000)),
         input_cb: Some(CodeRef(0x8015303c)),
         phys_cb: Some(CodeRef(0x80153080)),
@@ -14374,7 +14374,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 318,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80153160)),
         input_cb: Some(CodeRef(0x80153210)),
         phys_cb: Some(CodeRef(0x80153254)),
@@ -14385,7 +14385,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 319,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015346c)),
         input_cb: Some(CodeRef(0x80153548)),
         phys_cb: Some(CodeRef(0x8015358c)),
@@ -14396,7 +14396,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 320,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015377c)),
         input_cb: Some(CodeRef(0x801537b8)),
         phys_cb: Some(CodeRef(0x801537fc)),
@@ -14407,7 +14407,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 321,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015386c)),
         input_cb: Some(CodeRef(0x801538a8)),
         phys_cb: Some(CodeRef(0x801538ec)),
@@ -14418,7 +14418,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 322,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801539a4)),
         input_cb: Some(CodeRef(0x801539ec)),
         phys_cb: Some(CodeRef(0x80153a30)),
@@ -14429,7 +14429,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 323,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80153aec)),
         input_cb: Some(CodeRef(0x80153b28)),
         phys_cb: Some(CodeRef(0x80153b6c)),
@@ -14440,7 +14440,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 324,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80153c48)),
         input_cb: Some(CodeRef(0x80153c90)),
         phys_cb: Some(CodeRef(0x80153cd4)),
@@ -14451,7 +14451,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 325,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80153f8c)),
         input_cb: Some(CodeRef(0x80154114)),
         phys_cb: Some(CodeRef(0x80154158)),
@@ -14462,7 +14462,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 326,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80154230)),
         input_cb: Some(CodeRef(0x80154278)),
         phys_cb: Some(CodeRef(0x801542bc)),
@@ -14473,7 +14473,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 327,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80154360)),
         input_cb: Some(CodeRef(0x801543e8)),
         phys_cb: Some(CodeRef(0x8015442c)),
@@ -14484,7 +14484,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 328,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80154620)),
         input_cb: Some(CodeRef(0x80154670)),
         phys_cb: Some(CodeRef(0x801546b4)),
@@ -14495,7 +14495,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 329,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801548d8)),
         input_cb: Some(CodeRef(0x80154964)),
         phys_cb: Some(CodeRef(0x801549a8)),
@@ -14506,7 +14506,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 330,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80154d78)),
         input_cb: Some(CodeRef(0x80154dd0)),
         phys_cb: Some(CodeRef(0x80154e14)),
@@ -14517,7 +14517,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 331,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80154d78)),
         input_cb: Some(CodeRef(0x80154dd0)),
         phys_cb: Some(CodeRef(0x80154e14)),
@@ -14528,7 +14528,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 332,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80154b2c)),
         input_cb: Some(CodeRef(0x80154bb0)),
         phys_cb: Some(CodeRef(0x80154bf4)),
@@ -14539,7 +14539,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 333,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80154ed8)),
         input_cb: Some(CodeRef(0x80154fac)),
         phys_cb: Some(CodeRef(0x80154ff0)),
@@ -14550,7 +14550,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 334,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80155074)),
         input_cb: Some(CodeRef(0x8015512c)),
         phys_cb: Some(CodeRef(0x80155170)),
@@ -14561,7 +14561,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 335,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80154758)),
         input_cb: Some(CodeRef(0x80154794)),
         phys_cb: Some(CodeRef(0x801547d8)),
@@ -14572,7 +14572,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 336,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015521c)),
         input_cb: Some(CodeRef(0x80155290)),
         phys_cb: Some(CodeRef(0x801552d4)),
@@ -14583,7 +14583,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 337,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80155388)),
         input_cb: Some(CodeRef(0x8015541c)),
         phys_cb: Some(CodeRef(0x80155460)),
@@ -14594,7 +14594,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 338,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015550c)),
         input_cb: Some(CodeRef(0x80155580)),
         phys_cb: Some(CodeRef(0x801555c4)),
@@ -14605,7 +14605,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 339,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801555e8)),
         input_cb: Some(CodeRef(0x8015565c)),
         phys_cb: Some(CodeRef(0x801556a0)),
@@ -14616,7 +14616,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 340,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801556c4)),
         input_cb: Some(CodeRef(0x801557b0)),
         phys_cb: Some(CodeRef(0x801557f4)),
@@ -14627,7 +14627,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 341,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80155864)),
         input_cb: Some(CodeRef(0x801558a0)),
         phys_cb: Some(CodeRef(0x801558e4)),
@@ -14638,7 +14638,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 342,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80155908)),
         input_cb: Some(CodeRef(0x80155990)),
         phys_cb: Some(CodeRef(0x801559d4)),
@@ -14649,7 +14649,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 343,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80150f00)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80150f68)),
@@ -14660,7 +14660,7 @@ pub static FT_MH_INIT_MOTION_STATE_TABLE: [MotionState; 50] = [
     MotionState {
         anim_id: 344,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80150f00)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x80150f68)),
@@ -14675,7 +14675,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 295,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80156404)),
         input_cb: Some(CodeRef(0x80156a70)),
         phys_cb: Some(CodeRef(0x80156ab4)),
@@ -14686,7 +14686,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 296,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80156404)),
         input_cb: Some(CodeRef(0x80156a70)),
         phys_cb: Some(CodeRef(0x80156ab4)),
@@ -14697,7 +14697,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 297,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80156fdc)),
         input_cb: Some(CodeRef(0x80157018)),
         phys_cb: Some(CodeRef(0x8015705c)),
@@ -14708,7 +14708,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 298,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801570cc)),
         input_cb: Some(CodeRef(0x80157108)),
         phys_cb: Some(CodeRef(0x8015714c)),
@@ -14719,7 +14719,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 299,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80157204)),
         input_cb: Some(CodeRef(0x801572d4)),
         phys_cb: Some(CodeRef(0x80157318)),
@@ -14730,7 +14730,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 300,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801573c8)),
         input_cb: Some(CodeRef(0x80157424)),
         phys_cb: Some(CodeRef(0x80157404)),
@@ -14741,7 +14741,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 301,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801574b8)),
         input_cb: Some(CodeRef(0x801574f4)),
         phys_cb: Some(CodeRef(0x80157538)),
@@ -14752,7 +14752,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 302,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801575a8)),
         input_cb: Some(CodeRef(0x801575e4)),
         phys_cb: Some(CodeRef(0x80157628)),
@@ -14763,7 +14763,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 303,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801576b0)),
         input_cb: Some(CodeRef(0x80157724)),
         phys_cb: Some(CodeRef(0x80157768)),
@@ -14774,7 +14774,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 304,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80157844)),
         input_cb: Some(CodeRef(0x80157880)),
         phys_cb: Some(CodeRef(0x801578c4)),
@@ -14785,7 +14785,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 305,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80157934)),
         input_cb: Some(CodeRef(0x8015798c)),
         phys_cb: Some(CodeRef(0x801579d0)),
@@ -14796,7 +14796,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 306,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80157a40)),
         input_cb: Some(CodeRef(0x80157abc)),
         phys_cb: Some(CodeRef(0x80157b00)),
@@ -14807,7 +14807,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 307,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80157bac)),
         input_cb: Some(CodeRef(0x80157be8)),
         phys_cb: Some(CodeRef(0x80157c2c)),
@@ -14818,7 +14818,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 308,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80157cb0)),
         input_cb: Some(CodeRef(0x80157cec)),
         phys_cb: Some(CodeRef(0x80157d30)),
@@ -14829,7 +14829,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 309,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80157ea0)),
         input_cb: Some(CodeRef(0x80157f84)),
         phys_cb: Some(CodeRef(0x80157fc8)),
@@ -14840,7 +14840,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 310,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80157f48)),
         input_cb: Some(CodeRef(0x80157f84)),
         phys_cb: Some(CodeRef(0x80157fc8)),
@@ -14851,7 +14851,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 311,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801581a4)),
         input_cb: Some(CodeRef(0x801581e0)),
         phys_cb: Some(CodeRef(0x80158224)),
@@ -14862,7 +14862,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 312,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80158340)),
         input_cb: Some(CodeRef(0x8015837c)),
         phys_cb: Some(CodeRef(0x801583c0)),
@@ -14873,7 +14873,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 313,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80158450)),
         input_cb: Some(CodeRef(0x801584cc)),
         phys_cb: Some(CodeRef(0x80158510)),
@@ -14884,7 +14884,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 314,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015870c)),
         input_cb: Some(CodeRef(0x80158748)),
         phys_cb: Some(CodeRef(0x8015878c)),
@@ -14895,7 +14895,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 315,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80158814)),
         input_cb: Some(CodeRef(0x80158850)),
         phys_cb: Some(CodeRef(0x80158894)),
@@ -14906,7 +14906,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 316,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80158bbc)),
         input_cb: Some(CodeRef(0x80158c44)),
         phys_cb: Some(CodeRef(0x80158c88)),
@@ -14917,7 +14917,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 317,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80158e7c)),
         input_cb: Some(CodeRef(0x80158ecc)),
         phys_cb: Some(CodeRef(0x80158f10)),
@@ -14928,7 +14928,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 318,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80159134)),
         input_cb: Some(CodeRef(0x801591c0)),
         phys_cb: Some(CodeRef(0x80159204)),
@@ -14939,7 +14939,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 319,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015acd0)),
         input_cb: Some(CodeRef(0x8015ad28)),
         phys_cb: Some(CodeRef(0x8015ad6c)),
@@ -14950,7 +14950,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 320,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015acd0)),
         input_cb: Some(CodeRef(0x8015ad28)),
         phys_cb: Some(CodeRef(0x8015ad6c)),
@@ -14961,7 +14961,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 321,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80159388)),
         input_cb: Some(CodeRef(0x8015940c)),
         phys_cb: Some(CodeRef(0x80159450)),
@@ -14972,7 +14972,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 322,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80159534)),
         input_cb: Some(CodeRef(0x80159608)),
         phys_cb: Some(CodeRef(0x8015964c)),
@@ -14983,7 +14983,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 323,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801596d0)),
         input_cb: Some(CodeRef(0x80159788)),
         phys_cb: Some(CodeRef(0x801597cc)),
@@ -14994,7 +14994,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 324,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80158fb4)),
         input_cb: Some(CodeRef(0x80158ff0)),
         phys_cb: Some(CodeRef(0x80159034)),
@@ -15005,7 +15005,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 325,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80159858)),
         input_cb: Some(CodeRef(0x801598a0)),
         phys_cb: Some(CodeRef(0x801598e4)),
@@ -15016,7 +15016,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 326,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x801599c0)),
         input_cb: Some(CodeRef(0x80159a08)),
         phys_cb: Some(CodeRef(0x80159a4c)),
@@ -15027,7 +15027,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 327,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80159d04)),
         input_cb: Some(CodeRef(0x80159e8c)),
         phys_cb: Some(CodeRef(0x80159ed0)),
@@ -15038,7 +15038,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 328,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x80159f8c)),
         input_cb: Some(CodeRef(0x80159fc8)),
         phys_cb: Some(CodeRef(0x8015a00c)),
@@ -15049,7 +15049,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 329,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015a0c4)),
         input_cb: Some(CodeRef(0x8015a10c)),
         phys_cb: Some(CodeRef(0x8015a150)),
@@ -15060,7 +15060,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 330,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015a20c)),
         input_cb: Some(CodeRef(0x8015a248)),
         phys_cb: Some(CodeRef(0x8015a28c)),
@@ -15071,7 +15071,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 331,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015a318)),
         input_cb: Some(CodeRef(0x8015a38c)),
         phys_cb: Some(CodeRef(0x8015a3d0)),
@@ -15082,7 +15082,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 332,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015a464)),
         input_cb: Some(CodeRef(0x8015a4f8)),
         phys_cb: Some(CodeRef(0x8015a53c)),
@@ -15093,7 +15093,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 333,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015a5d0)),
         input_cb: Some(CodeRef(0x8015a664)),
         phys_cb: Some(CodeRef(0x8015a6a8)),
@@ -15104,7 +15104,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 334,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015a6cc)),
         input_cb: Some(CodeRef(0x8015a750)),
         phys_cb: Some(CodeRef(0x8015a794)),
@@ -15115,7 +15115,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 335,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015a7b8)),
         input_cb: Some(CodeRef(0x8015a820)),
         phys_cb: Some(CodeRef(0x8015a864)),
@@ -15126,7 +15126,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 336,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015a8d4)),
         input_cb: Some(CodeRef(0x8015a910)),
         phys_cb: Some(CodeRef(0x8015a954)),
@@ -15137,7 +15137,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 337,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015a978)),
         input_cb: Some(CodeRef(0x8015aa00)),
         phys_cb: Some(CodeRef(0x8015aa44)),
@@ -15148,7 +15148,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 338,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015ab04)),
         input_cb: Some(CodeRef(0x8015ab84)),
         phys_cb: Some(CodeRef(0x8015abc8)),
@@ -15159,7 +15159,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 339,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015af04)),
         input_cb: Some(CodeRef(0x8015b0fc)),
         phys_cb: Some(CodeRef(0x8015b140)),
@@ -15170,7 +15170,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 340,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015b000)),
         input_cb: Some(CodeRef(0x8015b0fc)),
         phys_cb: Some(CodeRef(0x8015b140)),
@@ -15181,7 +15181,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 341,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015b22c)),
         input_cb: Some(CodeRef(0x8015b274)),
         phys_cb: Some(CodeRef(0x8015b2b8)),
@@ -15192,7 +15192,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 342,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015bb70)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8015bbd8)),
@@ -15203,7 +15203,7 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
     MotionState {
         anim_id: 343,
         flags: 0x0,
-        x8: 0x1000000,
+        move_bits: 0x1000000,
         anim_cb: Some(CodeRef(0x8015bb70)),
         input_cb: None,
         phys_cb: Some(CodeRef(0x8015bbd8)),
