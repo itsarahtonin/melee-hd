@@ -184,3 +184,38 @@ fn the_gpu_transforms_as_the_cpu_does() {
     );
     assert!(c.line_corners <= c.compared / 50, "{c:?}");
 }
+
+/// A mesh stays on the GPU while anything else holds it (the mesh cache, a draw sent), however
+/// long no draw uses it, and goes once nothing does (F5's fourth round: no upload again for a
+/// mesh that comes back).
+#[test]
+fn a_mesh_stays_on_the_gpu_while_the_cache_holds_it() {
+    let Some(mut renderer) = crate::testing::renderer() else {
+        return;
+    };
+    let device = renderer.device.clone();
+    let mut queue = crate::submit::Ordered::new(renderer.queue.raw().clone());
+    queue.start();
+    let meshes = renderer.gpu_meshes();
+    let mut r = Rng(0x9E37_79B9_7F4A_7C15);
+    let mem = Flat((0..8192).map(|_| r.next() as u8).collect());
+    let normals: NormalCache = [[0.0; 3]; 3];
+    let mut held = Vec::new();
+    while held.len() < 2 {
+        let cp = format(&mut r);
+        let list = list(&mut r, &cp);
+        let s = state(&mut r, cp);
+        let m = Arc::new(Mesh::decode(&s.cp, &list, &mem).expect("a mesh"));
+        if !m.is_empty() {
+            meshes.clips(&device, &queue, &s, &m, &normals, 0);
+            held.push(m);
+        }
+    }
+    let uploaded = meshes.uploaded;
+    meshes.end_frame(&device, &queue, 60 * 1000);
+    assert_eq!(meshes.resident_count(), 2, "both kept while held");
+    held.pop();
+    meshes.end_frame(&device, &queue, 60 * 1001);
+    assert_eq!(meshes.resident_count(), 1, "the one nothing holds goes");
+    assert_eq!(meshes.uploaded, uploaded, "nothing uploaded again");
+}

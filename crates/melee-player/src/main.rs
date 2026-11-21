@@ -3416,6 +3416,7 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                 } else {
                     Blend { from: &before, t }
                 };
+                let made = melee_gpu::made::Made::now();
                 let ta = Instant::now();
                 // The fast renderer builds the frame as it runs it: all of it in the run's time.
                 let (images, tb) = if renderer.is_fast() {
@@ -3458,6 +3459,7 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                     submit: submitted - tc,
                     wait: td - submitted,
                     gpu: None,
+                    made: made.since(),
                 });
                 rows.gpu(&gpu.gpu_times(), usize::from(in_flight));
             }

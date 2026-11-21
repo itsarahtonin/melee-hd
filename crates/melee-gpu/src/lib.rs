@@ -22,6 +22,7 @@ mod gpu_mesh;
 #[cfg(test)]
 mod gpu_mesh_tests;
 pub mod gpu_time;
+pub mod made;
 mod material;
 #[cfg(test)]
 mod material_tests;
@@ -35,6 +36,8 @@ pub mod testing;
 mod tev;
 #[cfg(test)]
 mod tev_tests;
+#[cfg(test)]
+mod texture_cache_tests;
 mod thread;
 #[cfg(test)]
 mod vertex_tests;
@@ -307,6 +310,45 @@ struct TexEntry {
     _texture: wgpu::Texture,
     levels: u32,
     last_used: u64,
+    /// Its texels' bytes, for a texture decoded from memory; 0 for a copy from the EFB's.
+    decoded: u64,
+}
+
+/// Bytes of texels decoded from memory kept while nothing samples them: past this, the least
+/// recently used go first ([`to_evict`]). A match's textures take about 15 MB (Fountain of
+/// Dreams with Fox and Marth), so a match keeps every texture it has drawn, and one that comes
+/// back (a joint shown again, an effect used again) isn't decoded again.
+const TEXTURE_BUDGET: u64 = 128 << 20;
+
+/// Frames a copy from the EFB's texture is kept while nothing samples it.
+const COPY_KEPT_FOR: u64 = 120;
+
+/// The textures to drop at frame `frame`, of `entries` (each its slot, the frame it was last
+/// used and its decoded bytes, 0 for a copy's): copies unused for [`COPY_KEPT_FOR`] frames, and
+/// while the decoded ones hold more than `budget` bytes, those not used this frame, least
+/// recently used first.
+fn to_evict(entries: &[(usize, u64, u64)], frame: u64, budget: u64) -> Vec<usize> {
+    let mut gone: Vec<usize> = entries
+        .iter()
+        .filter(|&&(_, used, decoded)| decoded == 0 && used + COPY_KEPT_FOR < frame)
+        .map(|e| e.0)
+        .collect();
+    let mut held: u64 = entries.iter().map(|e| e.2).sum();
+    if held > budget {
+        let mut old: Vec<&(usize, u64, u64)> = entries
+            .iter()
+            .filter(|&&(_, used, decoded)| decoded > 0 && used < frame)
+            .collect();
+        old.sort_by_key(|e| e.1);
+        for &&(slot, _, decoded) in &old {
+            if held <= budget {
+                break;
+            }
+            gone.push(slot);
+            held -= decoded;
+        }
+    }
+    gone
 }
 
 /// A texture as the cache keys it: its image, its palette, and a hash of their bytes.
@@ -1274,6 +1316,7 @@ impl Renderer {
     }
 
     fn add_texture(&mut self, width: u32, height: u32, levels: &[Vec<u8>]) -> u32 {
+        let decoded = levels.iter().map(|l| l.len() as u64).sum::<u64>().max(1);
         let mip_count = levels.len() as u32;
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: None,
@@ -1319,16 +1362,17 @@ impl Renderer {
                 },
             );
         }
-        self.insert_texture(texture, mip_count)
+        self.insert_texture(texture, mip_count, decoded)
     }
 
     /// Gives `texture` an id, reusing a free one.
-    fn insert_texture(&mut self, texture: wgpu::Texture, levels: u32) -> u32 {
+    fn insert_texture(&mut self, texture: wgpu::Texture, levels: u32, decoded: u64) -> u32 {
         let entry = TexEntry {
             view: texture.create_view(&Default::default()),
             _texture: texture,
             levels,
             last_used: self.frame,
+            decoded,
         };
         let free = self
             .textures
@@ -1405,7 +1449,14 @@ impl Renderer {
         let image = sampled_image(state, map);
         let tlut_reg = state.bp[texture::reg(texture::SETTLUT, map)];
         let tlut_offset = ((tlut_reg & 0x3FF) << 9) as usize;
-        let tlut_format = bits(tlut_reg, 10, 2);
+        // The palette's format only for an image that reads one: another's key doesn't hold
+        // what the last palette's texture left in the register (decoding never reads it), so
+        // the texture isn't made again after a palette texture of another format.
+        let tlut_format = if texture::palette_entries(image.format).is_some() {
+            bits(tlut_reg, 10, 2)
+        } else {
+            0
+        };
         let size = image.size();
         // A copy the game has written over since is gone, even within the frame.
         if self.track_copies
@@ -1475,6 +1526,7 @@ impl Renderer {
             entry.last_used = self.frame;
             return (id, entry.levels, per_frame);
         }
+        let made = std::time::Instant::now();
         let read;
         let data = match stable {
             Some(bytes) => bytes,
@@ -1494,6 +1546,7 @@ impl Renderer {
         );
         let id = self.add_texture(image.width, image.height, &levels);
         self.texture_ids.insert(key, id);
+        made::add(made::What::Texture, made);
         (id, image.levels, per_frame)
     }
 
@@ -1501,6 +1554,7 @@ impl Renderer {
         if self.bind_groups.contains_key(&ids) {
             return;
         }
+        let made = std::time::Instant::now();
         let views: Vec<_> = ids
             .iter()
             .map(|&id| {
@@ -1524,6 +1578,7 @@ impl Renderer {
             entries: &entries,
         });
         self.bind_groups.insert(ids, group);
+        made::add(made::What::BindGroup, made);
     }
 
     fn uniforms_of(state: &State, levels: [u32; 8], mode: [u32; 4]) -> Uniforms {
@@ -1731,6 +1786,7 @@ impl Renderer {
         if self.pipelines.contains_key(&key) {
             return;
         }
+        let made = std::time::Instant::now();
         let module = match &self.early_module {
             Some(m) if key.early_z => m,
             _ => &self.module,
@@ -1744,6 +1800,7 @@ impl Renderer {
             module,
         );
         self.pipelines.insert(key, pipeline);
+        made::add(made::What::Pipeline, made);
     }
 
     /// The draw's specialized shader (`tev::UBER` for none), asked for if it hasn't been.
@@ -1969,6 +2026,7 @@ impl Renderer {
                 .as_ref()
                 .is_none_or(|(b, _)| b.size() < vbytes.len() as u64)
         {
+            let made = std::time::Instant::now();
             let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("vertices"),
                 size: (vbytes.len() as u64).max(16).next_power_of_two(),
@@ -1984,12 +2042,14 @@ impl Renderer {
                 }],
             });
             self.vertex_buffer = Some((buffer, group));
+            made::add(made::What::Buffer, made);
         }
         if self
             .uniform_buffer
             .as_ref()
             .is_none_or(|(b, _)| b.size() < self.uniforms.len() as u64)
         {
+            let made = std::time::Instant::now();
             let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("uniforms"),
                 size: (self.uniforms.len().max(UNIFORM_STRIDE) as u64).next_power_of_two(),
@@ -2009,6 +2069,7 @@ impl Renderer {
                 }],
             });
             self.uniform_buffer = Some((buffer, group));
+            made::add(made::What::Buffer, made);
         }
         let ibytes: &[u8] = bytemuck::cast_slice(&self.indices);
         if place.is_none()
@@ -2017,12 +2078,14 @@ impl Renderer {
                 .as_ref()
                 .is_none_or(|b| b.size() < ibytes.len() as u64)
         {
+            let made = std::time::Instant::now();
             self.index_buffer = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("indices"),
                 size: (ibytes.len() as u64).max(16).next_power_of_two(),
                 usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }));
+            made::add(made::What::Buffer, made);
         }
         // The vertex and index buffers, and where the draws' own words and indices are in them.
         let (vgroup, ibuf, (words_at, indices_at)) = match (&self.gpu_meshes, place) {
@@ -2200,6 +2263,7 @@ impl Renderer {
 
     /// A texture a copy from the EFB is made into.
     fn copy_texture(&mut self, width: u32, height: u32) -> u32 {
+        let made = std::time::Instant::now();
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("efb copy"),
             size: wgpu::Extent3d {
@@ -2216,7 +2280,9 @@ impl Renderer {
                 | wgpu::TextureUsages::COPY_SRC,
             view_formats: &[],
         });
-        self.insert_texture(texture, 1)
+        let id = self.insert_texture(texture, 1, 0);
+        made::add(made::What::CopyTexture, made);
+        id
     }
 
     /// Makes a copy from the EFB into a texture of its own, on the GPU: at the game's size,
@@ -2436,17 +2502,20 @@ impl Renderer {
         self.materials.clear();
     }
 
-    /// Drops textures unused for a while.
+    /// Drops textures unused for a while ([`to_evict`]).
     fn evict(&mut self) {
-        let frame = self.frame;
-        let mut dropped = false;
-        for slot in self.textures.iter_mut().skip(1) {
-            if slot.as_ref().is_some_and(|e| e.last_used + 120 < frame) {
-                *slot = None;
-                dropped = true;
-            }
+        let entries: Vec<(usize, u64, u64)> = self
+            .textures
+            .iter()
+            .enumerate()
+            .skip(1)
+            .filter_map(|(i, e)| e.as_ref().map(|e| (i, e.last_used, e.decoded)))
+            .collect();
+        let gone = to_evict(&entries, self.frame, TEXTURE_BUDGET);
+        for &slot in &gone {
+            self.textures[slot] = None;
         }
-        if dropped {
+        if !gone.is_empty() {
             let textures = &self.textures;
             self.gpu_copies.retain(|_, c| {
                 textures[c.id as usize].is_some()

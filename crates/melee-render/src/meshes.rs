@@ -29,8 +29,14 @@ pub type Parts = Arc<[Arc<Mesh>]>;
 /// renderer's threads.
 const PART: usize = 1024;
 
-/// Frames a mesh nobody draws is kept.
-const KEPT_FOR: u32 = 600;
+/// Bytes of meshes kept while nobody draws them: past this, the least recently drawn go first
+/// ([`Meshes::begin_frame`]). A match's meshes take a few MB, so a match keeps every mesh it has
+/// drawn, and one that comes back (a joint shown again, an effect used again) isn't decoded
+/// again.
+const BUDGET: usize = 64 << 20;
+
+/// Frames between checks of the budget.
+const CHECK_EVERY: u32 = 60;
 
 /// What the GPU reads to draw a display list, by place in the archives.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -39,7 +45,8 @@ struct Key {
     size: u32,
     /// The rewrite of the list: the vertex stride and the two indices' offsets.
     patch: Option<(u8, u8, u8)>,
-    /// The vertex descriptor (`VCD_LO`, `VCD_HI`) and format 0 (`VAT_A`, `B`, `C`).
+    /// The vertex descriptor (`VCD_LO`, `VCD_HI`) and format 0 (`VAT_A`, `B`, `C`), as far as
+    /// the descriptor reads it ([`format_key`]).
     format: [u32; 5],
     /// Each indexed attribute's array and stride, by `vertex::ARRAY_POS` on.
     arrays: [Option<(DataRef, u8)>; 12],
@@ -49,6 +56,8 @@ struct Entry {
     /// None for a list a mesh can't stand for, which draws as the stream has it.
     mesh: Option<Parts>,
     used: u32,
+    /// Its parts' bytes.
+    bytes: usize,
 }
 
 /// Counts of what the cache did.
@@ -66,6 +75,10 @@ pub struct Stats {
 #[derive(Default)]
 pub struct Meshes {
     entries: FxHashMap<Key, Entry>,
+    /// The entries' bytes.
+    bytes: usize,
+    /// The budget they're kept to ([`BUDGET`]).
+    budget: usize,
     frame: u32,
     /// Whether a large list is drawn in parts ([`PART`]).
     split: bool,
@@ -87,23 +100,76 @@ fn kinds(cp: &[u32; 256]) -> [u32; 12] {
     })
 }
 
+/// The vertex descriptor and format 0 as a key holds them: the format's fields for the
+/// attributes the descriptor sends, and its two flags (`BYTEDEQUANT`, `NORMALINDEX3`), with every
+/// other field cleared. The game leaves an attribute's format as the last shape that sent it set
+/// it, and the GPU reads only those it sends ([`Mesh::decode`] likewise), so a list drawn after
+/// shapes that left different formats for attributes it doesn't send is the same mesh.
+fn format_key(cp: &[u32; 256]) -> [u32; 5] {
+    let lo = cp[vertex::VCD_LO as usize];
+    let hi = cp[vertex::VCD_HI as usize];
+    let sent = |on: bool, mask: u32| if on { mask } else { 0 };
+    let tex = |n: u32| hi >> (2 * n) & 3 != 0;
+    let a = 0xC000_0000
+        | sent(lo >> 9 & 3 != 0, 0x0000_01FF)
+        | sent(lo >> 11 & 3 != 0, 0x0000_1E00)
+        | sent(lo >> 13 & 3 != 0, 0x0001_E000)
+        | sent(lo >> 15 & 3 != 0, 0x001E_0000)
+        | sent(tex(0), 0x3FE0_0000);
+    let b = 0x8000_0000
+        | sent(tex(1), 0x0000_01FF)
+        | sent(tex(2), 0x0003_FE00)
+        | sent(tex(3), 0x07FC_0000)
+        | sent(tex(4), 0x7800_0000);
+    let c = sent(tex(4), 0x0000_001F)
+        | sent(tex(5), 0x0000_3FE0)
+        | sent(tex(6), 0x007F_C000)
+        | sent(tex(7), 0xFF80_0000);
+    [
+        lo,
+        hi,
+        cp[vertex::VAT_A as usize] & a,
+        cp[vertex::VAT_B as usize] & b,
+        cp[vertex::VAT_C as usize] & c,
+    ]
+}
+
 impl Meshes {
     /// A cache whose large lists are drawn in parts, with `split`.
     pub fn new(split: bool) -> Meshes {
         Meshes {
             split,
+            budget: BUDGET,
             ..Meshes::default()
         }
     }
 
-    /// Starts a frame: meshes no frame drew for a while go.
+    /// Starts a frame: while the meshes kept hold more than the budget, those drawn longest
+    /// ago go.
     pub fn begin_frame(&mut self) {
         self.frame = self.frame.wrapping_add(1);
-        if self.frame.is_multiple_of(KEPT_FOR) {
-            let frame = self.frame;
-            self.entries
-                .retain(|_, e| frame.wrapping_sub(e.used) < KEPT_FOR);
+        if !self.frame.is_multiple_of(CHECK_EVERY) || self.bytes <= self.budget {
+            return;
         }
+        let frame = self.frame;
+        let mut by_age: Vec<(u32, usize)> = self
+            .entries
+            .values()
+            .map(|e| (frame.wrapping_sub(e.used), e.bytes))
+            .collect();
+        by_age.sort_unstable_by_key(|e| std::cmp::Reverse(e.0));
+        // Drop the oldest until what's left fits: those at least `age` frames old.
+        let mut held = self.bytes;
+        let mut age = u32::MAX;
+        for &(a, b) in &by_age {
+            if held <= self.budget || a == 0 {
+                break;
+            }
+            held -= b;
+            age = a;
+        }
+        self.entries.retain(|_, e| frame.wrapping_sub(e.used) < age);
+        self.bytes = self.entries.values().map(|e| e.bytes).sum();
     }
 
     /// Meshes kept, and their bytes.
@@ -137,6 +203,7 @@ impl Meshes {
                 (e.mesh.clone(), false)
             }
             None => {
+                let made = std::time::Instant::now();
                 let mut list = vec![0; size as usize];
                 match space.view(data, phys, size as usize) {
                     Some(bytes) => list.copy_from_slice(bytes),
@@ -146,11 +213,18 @@ impl Meshes {
                 let part = if self.split { PART } else { usize::MAX };
                 let mesh = Mesh::decode(&state.cp, &list, mem)
                     .map(|m| m.split(part).into_iter().map(Arc::new).collect::<Parts>());
+                melee_gpu::made::add(melee_gpu::made::What::Mesh, made);
+                let bytes = mesh
+                    .as_ref()
+                    .map_or(0, |p| p.iter().map(|m| m.bytes()).sum())
+                    + size as usize;
+                self.bytes += bytes;
                 self.entries.insert(
                     key,
                     Entry {
                         mesh: mesh.clone(),
                         used: frame,
+                        bytes,
                     },
                 );
                 (mesh, true)
@@ -193,13 +267,7 @@ impl Meshes {
             list,
             size,
             patch: space.patch(list).map(|p| (p.stride, p.pos, p.tex)),
-            format: [
-                cp[vertex::VCD_LO as usize],
-                cp[vertex::VCD_HI as usize],
-                cp[vertex::VAT_A as usize],
-                cp[vertex::VAT_B as usize],
-                cp[vertex::VAT_C as usize],
-            ],
+            format: format_key(cp),
             arrays,
         })
     }
@@ -357,6 +425,67 @@ mod tests {
             .expect("a mesh")[0]
             .clone();
         assert!(Arc::ptr_eq(&first, &third));
+    }
+
+    /// A mesh nobody draws for a long while is kept while the cache is within its budget, so a
+    /// shape shown again isn't decoded again; past the budget, the least recently drawn goes.
+    #[test]
+    fn meshes_are_kept_within_the_budget_and_the_oldest_go_past_it() {
+        let mut data = Archives::default();
+        let a = data.add(shape(1.0));
+        let b = data.add(shape(2.0));
+        let space = Space::default();
+        let mut meshes = Meshes::new(false);
+        let first = mesh(&mut meshes, &space, &data, a);
+        for _ in 0..10_000 {
+            meshes.begin_frame();
+        }
+        assert!(Arc::ptr_eq(&first, &mesh(&mut meshes, &space, &data, a)));
+        assert_eq!(meshes.stats.decoded, 1, "kept, not decoded again");
+        // Room for one: B drawn every frame and A not, A goes and B stays.
+        let second = mesh(&mut meshes, &space, &data, b);
+        meshes.budget = meshes.bytes - 1;
+        for _ in 0..CHECK_EVERY {
+            meshes.begin_frame();
+            mesh(&mut meshes, &space, &data, b);
+        }
+        assert_eq!(meshes.entries.len(), 1);
+        assert!(Arc::ptr_eq(&second, &mesh(&mut meshes, &space, &data, b)));
+        assert!(
+            !Arc::ptr_eq(&first, &mesh(&mut meshes, &space, &data, a)),
+            "A decoded again"
+        );
+    }
+
+    /// A list drawn after shapes that left other formats for attributes it doesn't send is the
+    /// same mesh; another format for one it sends is a new one.
+    #[test]
+    fn formats_of_attributes_not_sent_leave_the_mesh_as_it_is() {
+        let mut data = Archives::default();
+        let a = data.add(shape(1.0));
+        let space = Space::default();
+        let mut meshes = Meshes::default();
+        let first = mesh(&mut meshes, &space, &data, a);
+        let list = space.addr(&data, at(a, 0));
+        let mem = Host {
+            space: &space,
+            data: &data,
+        };
+        let mut s = state(&space, &data, a);
+        // Color 0's format, texture coordinate 1's and 5's: none of them sent.
+        s.cp[vertex::VAT_A as usize] |= 5 << 14;
+        s.cp[vertex::VAT_B as usize] |= 0x1F0;
+        s.cp[vertex::VAT_C as usize] |= 0x3E0;
+        let again = meshes
+            .get(&space, &data, &s, list, 32, &mem)
+            .expect("a mesh");
+        assert!(Arc::ptr_eq(&first, &again[0]), "the same mesh");
+        // The positions' fraction: sent.
+        s.cp[vertex::VAT_A as usize] |= 1 << 4;
+        let other = meshes
+            .get(&space, &data, &s, list, 32, &mem)
+            .expect("a mesh");
+        assert!(!Arc::ptr_eq(&first, &other[0]), "a new mesh");
     }
 
     /// A copy from the EFB written over a mesh's array: the list draws as the stream has it.

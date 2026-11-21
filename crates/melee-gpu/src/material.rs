@@ -345,6 +345,7 @@ impl Renderer {
             return at;
         }
         self.materials.stats.made += 1;
+        let made = std::time::Instant::now();
         let mut base = Self::pipeline_key(state);
         base.early_z = self.early_module.is_some() && Self::depth_follows_raster(state);
         let mut notes: Vec<&'static str> = Vec::new();
@@ -429,6 +430,7 @@ impl Renderer {
             }
         };
         m.ids.insert(*key, at);
+        crate::made::add(crate::made::What::Material, made);
         at
     }
 
