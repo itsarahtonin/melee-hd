@@ -255,7 +255,9 @@ impl Settings {
     /// replay's `StartMeleeData` with its callbacks cleared (the codes zero 0x40 to 0x5C) and
     /// the empty nametags of its human players dropped, its seed, and the rules its code list
     /// makes; Slippi's unlocks, or the ones a melee-hd recording of a Vanilla match carries. The replay's UCF toggles, PAL and Pokémon Stadium flags and player names go to
-    /// places only codes these rules don't include read, and the HUD.
+    /// places only codes these rules don't include read, and the HUD. A replay of a modified
+    /// game, whose character or stage kinds are past the retail game's, is refused by name
+    /// ([`CodeError::ModdedCharacter`], [`CodeError::ModdedStage`]) before anything reads them.
     pub fn from_replay(r: &ReplayStart) -> Result<Settings, CodeError> {
         let mut info = r.info.clone();
         info[0x40..0x5C].fill(0);
@@ -267,6 +269,7 @@ impl Settings {
         }
         let codes = slippi::parse_codes(&r.codes);
         let mut s = Settings::from_game_info(&info, r.seed);
+        retail_kinds(&s.start)?;
         // Playback boots into the debug VS mode, whose scene runs the match.
         s.game_mode = gm::GM_DEBUG_VS;
         s.rules = Rules::from_codes(&codes)?;
@@ -384,6 +387,30 @@ impl Settings {
             follow_playback_camera: false,
         }
     }
+}
+
+/// A replay's character and stage kinds, refused when they are past the retail game's: a
+/// replay recorded on a modified build (an extended roster or stages), which Slippi Dolphin
+/// plays only on that build. Playback's start reads them unchecked (the playback scene's
+/// bank of each slot's character, `lb::audio::character_slot`; the stage's ground kind,
+/// `lb::audio::ground_kind`), as the match after it does; on the retail game the tables they
+/// index end before them. Every slot is checked, as the playback scene reads every slot's
+/// kind but the none (33), which only an empty slot (slot type 3) holds.
+fn retail_kinds(start: &StartMeleeData) -> Result<(), CodeError> {
+    for (slot, p) in start.players.iter().enumerate() {
+        let kind = p.ckind as u8;
+        if kind > CharacterKind::NONE || (kind == CharacterKind::NONE && p.slot_type != 3) {
+            return Err(CodeError::ModdedCharacter {
+                slot: slot as u8,
+                kind,
+            });
+        }
+    }
+    let stage = start.rules.stkind;
+    if usize::from(stage) >= crate::lb::audio::STAGE_KINDS {
+        return Err(CodeError::ModdedStage { kind: stage });
+    }
+    Ok(())
 }
 
 /// The rules hold no pointers that a replay can carry; any there are dropped.
@@ -1422,7 +1449,7 @@ pub fn load_results_files(
 
 #[cfg(test)]
 mod tests {
-    use super::{Player, Settings};
+    use super::{CharacterKind, CodeError, Player, Settings};
 
     fn player(character: u8, port: u8) -> Player {
         Player {
@@ -1492,6 +1519,72 @@ mod tests {
             let (r, _) = crate::game::record::live_start(&g, &start);
             assert_eq!(Settings::live(&r).expect("the ruleset's codes").heap, want);
         }
+    }
+
+    /// A replay recorded on a modified build, with a character or stage kind past the retail
+    /// game's (Sarah's 31 of 2026-09-15 and 16: characters 34 to 57, stages 293 to 370), is
+    /// refused by name before the boot, where playback's start would index its tables with
+    /// them (`lb::audio::character_slot`: "the len is 33 but the index is 49").
+    #[test]
+    fn a_modified_games_replay_is_refused_by_name() {
+        let mut g = crate::game::state::Game {
+            rules: crate::game::state::Rules::slippi_online(),
+            ..Default::default()
+        };
+        g.machine.routing.curr_mode = 2;
+        let start = Settings::vs(32, &[player(2, 0), player(9, 1)], 4, 8).start;
+        let (retail, _) = crate::game::record::live_start(&g, &start);
+        assert!(Settings::from_replay(&retail).is_ok());
+        let with = |at: usize, byte: u8| {
+            let mut r = retail.clone();
+            r.info[at] = byte;
+            Settings::from_replay(&r).err()
+        };
+        // A slot's character kind is its first byte (0x60 on, 0x24 apart), its slot type the
+        // next; slot 3 is empty (type 3).
+        let ckind = |slot: usize| 0x60 + 0x24 * slot;
+        assert_eq!(
+            with(ckind(0), 49),
+            Some(CodeError::ModdedCharacter { slot: 0, kind: 49 })
+        );
+        assert_eq!(
+            with(ckind(1), 34),
+            Some(CodeError::ModdedCharacter { slot: 1, kind: 34 })
+        );
+        assert_eq!(
+            with(ckind(3), 53),
+            Some(CodeError::ModdedCharacter { slot: 3, kind: 53 })
+        );
+        assert_eq!(
+            with(ckind(5), 0xFF),
+            Some(CodeError::ModdedCharacter {
+                slot: 5,
+                kind: 0xFF
+            })
+        );
+        // The none only in an empty slot.
+        assert_eq!(retail.info[ckind(2) + 1], 3);
+        assert_eq!(with(ckind(2), CharacterKind::NONE), None);
+        assert_eq!(
+            with(ckind(0), CharacterKind::NONE),
+            Some(CodeError::ModdedCharacter { slot: 0, kind: 33 })
+        );
+        // The last retail character, Sandbag.
+        assert_eq!(with(ckind(0), 32), None);
+        // The stage kind is the half at 0xE: 305, as `Game_20260915T235145`'s; 285 is the
+        // game's last.
+        let stage = |kind: u16| {
+            let mut r = retail.clone();
+            r.info[0xE..0x10].copy_from_slice(&kind.to_be_bytes());
+            Settings::from_replay(&r).err()
+        };
+        assert_eq!(stage(305), Some(CodeError::ModdedStage { kind: 305 }));
+        assert_eq!(stage(286), Some(CodeError::ModdedStage { kind: 286 }));
+        assert_eq!(stage(285), None);
+        assert_eq!(
+            CodeError::ModdedCharacter { slot: 0, kind: 49 }.to_string(),
+            "recorded on a modified Melee: port 1's character (kind 49) isn't one of the game's"
+        );
     }
 
     #[test]

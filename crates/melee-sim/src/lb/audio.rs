@@ -1330,6 +1330,9 @@ pub fn character_banks(ckind: i32) -> u64 {
         .unwrap_or(0)
 }
 
+/// How many stage kinds `stage_id_map` has: a stage kind from 0 to one less is the game's.
+pub const STAGE_KINDS: usize = STAGE_GROUND.len();
+
 /// `Stage_8022519C`: a stage kind's ground kind.
 #[doc(alias = "Stage_8022519C")]
 pub fn ground_kind(stkind: i32) -> usize {
