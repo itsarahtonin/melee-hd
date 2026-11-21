@@ -11,12 +11,57 @@ use super::super::super::state::Running;
 use super::{addr, attr, ms, u};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::ft::registry::Hook;
 use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
 /// `HitElement_Cape`.
 const ELEMENT_CAPE: u32 = 10;
+
+/// What Kirby's copy of a character runs, its entry's (`Character::kirby_copy`): the original's
+/// switches on the copied fighter kind (`u` `HAT_KIND`) and its tables by kind
+/// (`ftKb_Init_803C9CC8`'s hats, `ftKb_Init_803C9DD0` and `_803C9E54`'s specials). A new
+/// character's copy fills its entry's.
+#[derive(Clone, Copy)]
+pub struct KirbyCopy {
+    /// His neutral special with the copy, on the ground (`ftKb_SpecialN_Enter`) and in the air
+    /// (`ftKb_SpecialAirN_Enter`); Inhale for the kinds without one.
+    pub special_n: Hook,
+    pub special_air_n: Hook,
+    /// The copy's hat put on and taken off (`ftKb_Init_803C9CC8`'s pair for the kind, which
+    /// `ftKb_SpecialN_800EEEC4` takes off); none for the kinds without a hat.
+    pub hat_on: Option<Hook>,
+    pub hat_off: Option<Hook>,
+    /// The copy's own cleanup when he's KO'd (`ftKb_SpecialN_800F19AC`) and when he's hit
+    /// (`ftKb_SpecialN_800F1A8C`).
+    pub cleanup: Option<Hook>,
+    pub hit_cleanup: Option<Hook>,
+    /// The copy data's item entries (its `KirbyHatStruct`'s from `+0xC`) and their item kinds,
+    /// which taking the copy registers (`ftKb_SpecialN_800F16D0`).
+    pub items: &'static [(u32, ItKind)],
+    /// Whether the copy's hat takes his jumps' other states (`ftKb_SpecialN_800F1CD8`).
+    pub hat_jumps: bool,
+}
+
+/// The copy of a kind with none of its own (Kirby himself, Nana, the hands, the wireframes,
+/// the Sandbag): Inhale, no hat, no cleanups or items.
+pub const NO_COPY: KirbyCopy = KirbyCopy {
+    special_n: |r, g| r.kb_n_enter(g),
+    special_air_n: |r, g| r.kb_n_air_enter(g),
+    hat_on: None,
+    hat_off: None,
+    cleanup: None,
+    hit_cleanup: None,
+    items: &[],
+    hat_jumps: false,
+};
+
+/// Kirby's copy of fighter kind `kind`, its character's entry's; none for a number that's no
+/// fighter kind.
+pub fn copy_of(kind: i32) -> Option<&'static KirbyCopy> {
+    FighterKind::from_id(kind).map(|k| &k.character().kirby_copy)
+}
 
 /// Where a neutral special shared with Kirby's copy of it finds the kind it runs as: the
 /// fighter's own (Mario's or Dr. Mario's in Mario's code), or the kind Kirby copied (`u`
@@ -41,10 +86,7 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F1CD8")]
     #[doc(alias = "fn_800F1CA0")]
     pub fn kb_copy_has_hat_jumps(&self, gobj: GObjId) -> bool {
-        matches!(
-            self.game.fighter(gobj).u_i32(u::HAT_KIND),
-            2 | 7 | 10 | 11 | 13
-        )
+        copy_of(self.game.fighter(gobj).u_i32(u::HAT_KIND)).is_some_and(|c| c.hat_jumps)
     }
 
     /// Kirby takes a copy of `kind`, `ftKb_SpecialN_800F1BAC`: a new copy's variables, hat and
@@ -71,34 +113,13 @@ impl Running<'_> {
 
     /// The copy's hat put on, `ftKb_Init_803C9CC8`'s first of the kind's pair.
     pub fn kb_add_hat(&mut self, gobj: GObjId, kind: i32) {
-        match kind {
-            4 | 11 | 27..=30 | 32 => {}
-            13 => self.kb_samus_hat_on(gobj),
-            22 => self.kb_falco_hat_on(gobj),
-            0 => self.kb_mario_hat_on(gobj),
-            2 => self.kb_captain_hat_on(gobj),
-            17 => self.kb_luigi_hat_on(gobj),
-            12 => self.kb_pikachu_hat_on(gobj),
-            7 => self.kb_seak_hat_on(gobj),
-            8 => self.kb_ness_hat_on(gobj),
-            9 => self.kb_peach_hat_on(gobj),
-            19 => self.kb_zelda_hat_on(gobj),
-            24 => self.kb_gamewatch_hat_on(gobj),
-            1 => self.kb_fox_hat_on(gobj),
-            3 => self.kb_donkey_hat_on(gobj),
-            5 | 31 => self.kb_koopa_hat_on(gobj),
-            6 => self.kb_link_hat_on(gobj),
-            14 => self.kb_yoshi_hat_on(gobj),
-            20 => self.kb_clink_hat_on(gobj),
-            10 => self.kb_popo_hat_on(gobj),
-            15 => self.kb_purin_hat_on(gobj),
-            16 => self.kb_mewtwo_hat_on(gobj),
-            18 => self.kb_mars_hat_on(gobj),
-            21 => self.kb_drmario_hat_on(gobj),
-            23 => self.kb_pichu_hat_on(gobj),
-            25 => self.kb_ganon_hat_on(gobj),
-            26 => self.kb_emblem_hat_on(gobj),
-            _ => unported_call(&format!("the hat of copy kind {kind}")),
+        match copy_of(kind) {
+            Some(c) => {
+                if let Some(on) = c.hat_on {
+                    on(self, gobj);
+                }
+            }
+            None => unported_call(&format!("the hat of copy kind {kind}")),
         }
     }
 
@@ -106,58 +127,8 @@ impl Running<'_> {
     /// `KirbyHatStruct`'s entries from `+0xC`).
     #[doc(alias = "ftKb_SpecialN_800F16D0")]
     pub fn kb_register_copy_items(&mut self, kind: i32) {
-        // The copy data's entries and their item kinds, by copied kind.
-        let items: &[(u32, i32)] = match kind {
-            0 => &[(0, ItKind::KirbyMarioFireball.id())],
-            17 => &[(0, ItKind::KirbyLuigiFireball.id())],
-            10 => &[(0, ItKind::KirbyIceClimbersIceShot.id())],
-            9 => &[
-                (0, ItKind::KirbyPeachToad.id()),
-                (1, ItKind::KirbyPeachToadSpore.id()),
-            ],
-            1 => &[
-                (0, ItKind::KirbyFoxLaser.id()),
-                (1, ItKind::KirbyFoxBlaster.id()),
-            ],
-            22 => &[
-                (3, ItKind::KirbyFalcoLaser.id()),
-                (4, ItKind::KirbyFalcoBlaster.id()),
-            ],
-            6 => &[
-                (0, ItKind::KirbyLinkArrow.id()),
-                (1, ItKind::KirbyLinkBow.id()),
-            ],
-            20 => &[
-                (0, ItKind::KirbyYoungLinkFireArrow.id()),
-                (1, ItKind::KirbyYoungLinkBow.id()),
-            ],
-            16 => &[(3, ItKind::KirbyMewtwoShadowBall.id())],
-            8 => &[
-                (0, ItKind::KirbyNessPKFlash.id()),
-                (1, ItKind::KirbyNessPKFlashExplosion.id()),
-            ],
-            12 => &[
-                (0, ItKind::KirbyPikachuThunderJoltGround.id()),
-                (1, ItKind::KirbyPikachuThunderJoltAir.id()),
-            ],
-            23 => &[
-                (0, ItKind::KirbyPichuThunderJoltGround.id()),
-                (1, ItKind::KirbyPichuThunderJoltAir.id()),
-            ],
-            13 => &[(0, ItKind::KirbySamusChargeShot.id())],
-            5 | 31 => &[(0, ItKind::KirbyBowserFlame.id())],
-            7 => &[
-                (0, ItKind::KirbySheikNeedleThrown.id()),
-                (1, ItKind::KirbySheikNeedleHeld.id()),
-            ],
-            21 => &[(0, ItKind::KirbyDrMarioMegavitamin.id())],
-            24 => &[
-                (5, ItKind::KirbyGameAndWatchSausage.id()),
-                (6, ItKind::KirbyGameAndWatchPan.id()),
-            ],
-            14 => &[(5, ItKind::KirbyYoshiEggLay.id())],
-            _ => &[],
-        };
+        // The copy data's entries and their item kinds, the copied kind's.
+        let items = copy_of(kind).map_or(&[][..], |c| c.items);
         if items.is_empty() {
             return;
         }
@@ -171,7 +142,7 @@ impl Running<'_> {
         };
         for &(i, item) in items {
             let article = self.data.ptr(copy.at(0xC + 4 * i));
-            super::super::super::it::item::set_char_article(self.game, article, item);
+            super::super::super::it::item::set_char_article(self.game, article, item.id());
         }
     }
 
@@ -217,38 +188,16 @@ impl Running<'_> {
     /// His copy's own cleanup when KO'd, `ftKb_SpecialN_800F19AC`.
     #[doc(alias = "ftKb_SpecialN_800F19AC")]
     pub fn kb_copy_cleanup(&mut self, gobj: GObjId) {
-        match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
-            13 => self.samus_drop_charge(gobj, &super::special_samus::KIRBY),
-            1 | 22 => self.kb_fx_remove_blaster(gobj),
-            8 => self.ness_pkflash_set_null(gobj, &super::special_ness::KIRBY),
-            9 => self.peach_toad_on_death2(gobj, &super::special_peach::KIRBY),
-            7 => self.seak_drop_needles(gobj, &super::special_seak::KIRBY),
-            24 => self.kb_gw_cleanup(gobj),
-            3 => self.dk_special_n_destroy_effects_plus(gobj, &super::special_donkey::KIRBY),
-            6 | 20 => self.kb_lk_cleanup(gobj),
-            14 => self.kb_ys_cleanup(gobj),
-            10 => self.popo_remove_ice(gobj, &super::special_iceclimber::KIRBY),
-            16 => self.mt_n_lose_ball(gobj, &super::special_mewtwo::KIRBY),
-            _ => {}
+        if let Some(f) = copy_of(self.game.fighter(gobj).u_i32(u::HAT_KIND)).and_then(|c| c.cleanup) {
+            f(self, gobj);
         }
     }
 
     /// His copy's own cleanup when hit, `ftKb_SpecialN_800F1A8C`.
     #[doc(alias = "ftKb_SpecialN_800F1A8C")]
     pub fn kb_copy_hit_cleanup(&mut self, gobj: GObjId) {
-        match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
-            13 => self.samus_drop_charge(gobj, &super::special_samus::KIRBY),
-            1 | 22 => self.kb_fx_remove_blaster(gobj),
-            8 => self.ness_pkflash_set_null(gobj, &super::special_ness::KIRBY),
-            9 => self.peach_toad_on_death2(gobj, &super::special_peach::KIRBY),
-            7 => self.seak_drop_needles(gobj, &super::special_seak::KIRBY),
-            24 => self.kb_gw_cleanup(gobj),
-            3 => self.dk_special_n_destroy_effects_plus(gobj, &super::special_donkey::KIRBY),
-            6 | 20 => self.kb_lk_cleanup(gobj),
-            14 => self.kb_ys_cleanup(gobj),
-            10 => self.popo_remove_ice(gobj, &super::special_iceclimber::KIRBY),
-            16 => self.mt_n_drop_ball(gobj, &super::special_mewtwo::KIRBY),
-            _ => {}
+        if let Some(f) = copy_of(self.game.fighter(gobj).u_i32(u::HAT_KIND)).and_then(|c| c.hit_cleanup) {
+            f(self, gobj);
         }
     }
 
@@ -256,17 +205,13 @@ impl Running<'_> {
     /// the kind's pair).
     #[doc(alias = "ftKb_SpecialN_800EEEC4")]
     pub fn kb_remove_hat(&mut self, gobj: GObjId, kind: i32) {
-        match kind {
-            4 | 11 | 27..=30 | 32 => {}
-            13 => self.kb_samus_hat_off(gobj),
-            22 => self.kb_falco_hat_off(gobj),
-            0 | 1 | 2 | 17 | 8 | 9 | 14 | 10 | 21 | 25 => self.kb_head_hat_off(gobj),
-            12 | 7 | 19 | 5 | 6 | 20 | 18 | 23 | 26 | 31 => self.kb_pikachu_hat_off(gobj),
-            24 => self.kb_gamewatch_hat_off(gobj),
-            3 => self.kb_donkey_hat_off(gobj),
-            15 => self.kb_purin_hat_off(gobj),
-            16 => self.kb_mewtwo_hat_off(gobj),
-            _ => unported_call(&format!("the hat removal of copy kind {kind}")),
+        match copy_of(kind) {
+            Some(c) => {
+                if let Some(off) = c.hat_off {
+                    off(self, gobj);
+                }
+            }
+            None => unported_call(&format!("the hat removal of copy kind {kind}")),
         }
     }
 

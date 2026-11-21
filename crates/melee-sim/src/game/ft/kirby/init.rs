@@ -137,56 +137,20 @@ impl Running<'_> {
     /// (`ftKb_Init_803C9DD0`), else Inhale.
     #[doc(alias = "ftKb_SpecialN_Enter")]
     pub fn kb_special_n_enter(&mut self, gobj: GObjId) {
-        match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
-            4 | 11 | 27..=30 | 32 => self.kb_n_enter(gobj),
-            13 => self.samus_special_n_enter(gobj, &super::special_samus::KIRBY),
-            1 | 22 => self.kb_fx_enter(gobj),
-            0 | 21 => self.mr_special_n_enter(gobj, &super::special_mario::KIRBY),
-            17 => self.lg_special_n_enter(gobj, &super::special_luigi::KIRBY),
-            2 | 25 => self.ca_special_n_enter(gobj, &super::special_captain::KIRBY),
-            12 | 23 => self.pk_special_n_enter(gobj, &super::special_pikachu::KIRBY),
-            8 => self.ness_special_n_start_enter(gobj, &super::special_ness::KIRBY),
-            9 => self.peach_special_n_enter(gobj, &super::special_peach::KIRBY),
-            19 => self.zelda_special_n_enter(gobj, &super::special_zelda::KIRBY),
-            7 => self.seak_special_n_enter(gobj, &super::special_seak::KIRBY),
-            24 => self.gw_special_n_enter(gobj, &super::special_gamewatch::KIRBY, false),
-            3 => self.dk_special_n_enter(gobj, &super::special_donkey::KIRBY),
-            5 | 31 => self.kp_special_n_enter(gobj, &super::special_koopa::KIRBY),
-            6 | 20 => self.link_special_n_enter(gobj, &super::special_link::KIRBY, false),
-            14 => self.kb_ys_enter(gobj),
-            10 => self.popo_special_n_enter(gobj, &super::special_iceclimber::KIRBY),
-            15 => self.rollout_enter(gobj, &super::special_purin::KIRBY),
-            16 => self.mt_special_n_enter(gobj, &super::special_mewtwo::KIRBY),
-            18 | 26 => self.mars_special_n_enter(gobj, &super::special_mars::KIRBY),
-            k => unported_call(&format!("the neutral special of copy kind {k}")),
+        let kind = self.game.fighter(gobj).u_i32(u::HAT_KIND);
+        match super::copy::copy_of(kind) {
+            Some(c) => (c.special_n)(self, gobj),
+            None => unported_call(&format!("the neutral special of copy kind {kind}")),
         }
     }
 
     /// In the air, `ftKb_SpecialAirN_Enter` (`ftKb_Init_803C9E54`).
     #[doc(alias = "ftKb_SpecialAirN_Enter")]
     pub fn kb_special_air_n_enter(&mut self, gobj: GObjId) {
-        match self.game.fighter(gobj).u_i32(u::HAT_KIND) {
-            4 | 11 | 27..=30 | 32 => self.kb_n_air_enter(gobj),
-            13 => self.samus_special_air_n_enter(gobj, &super::special_samus::KIRBY),
-            1 | 22 => self.kb_fx_air_enter(gobj),
-            0 | 21 => self.mr_special_air_n_enter(gobj, &super::special_mario::KIRBY),
-            17 => self.lg_special_air_n_enter(gobj, &super::special_luigi::KIRBY),
-            2 | 25 => self.ca_special_air_n_enter(gobj, &super::special_captain::KIRBY),
-            12 | 23 => self.pk_special_air_n_enter(gobj, &super::special_pikachu::KIRBY),
-            8 => self.ness_special_air_n_start_enter(gobj, &super::special_ness::KIRBY),
-            9 => self.peach_special_air_n_enter(gobj, &super::special_peach::KIRBY),
-            19 => self.zelda_special_air_n_enter(gobj, &super::special_zelda::KIRBY),
-            7 => self.seak_special_air_n_enter(gobj, &super::special_seak::KIRBY),
-            24 => self.gw_special_n_enter(gobj, &super::special_gamewatch::KIRBY, true),
-            3 => self.dk_special_air_n_enter(gobj, &super::special_donkey::KIRBY),
-            5 | 31 => self.kp_special_air_n_enter(gobj, &super::special_koopa::KIRBY),
-            6 | 20 => self.link_special_n_enter(gobj, &super::special_link::KIRBY, true),
-            14 => self.kb_ys_air_enter(gobj),
-            10 => self.popo_special_air_n_enter(gobj, &super::special_iceclimber::KIRBY),
-            15 => self.rollout_air_enter(gobj, &super::special_purin::KIRBY),
-            16 => self.mt_special_air_n_enter(gobj, &super::special_mewtwo::KIRBY),
-            18 | 26 => self.mars_special_air_n_enter(gobj, &super::special_mars::KIRBY),
-            k => unported_call(&format!("the aerial neutral special of copy kind {k}")),
+        let kind = self.game.fighter(gobj).u_i32(u::HAT_KIND);
+        match super::copy::copy_of(kind) {
+            Some(c) => (c.special_air_n)(self, gobj),
+            None => unported_call(&format!("the aerial neutral special of copy kind {kind}")),
         }
     }
 
@@ -348,12 +312,13 @@ impl Running<'_> {
         let full_f = |word: usize, at: usize| {
             fp::frsp(f64::from(fp.u_i32(word))) == reg(self.kb_attr_f32(f, at))
         };
-        let colanim = match fp.u_i32(u::HAT_KIND) {
-            3 => (fp.u_i32(u::DK_SWINGS) == self.kb_attr_i32(f, attr::DK_SWINGS_TO_FULL))
-                .then_some(58),
-            13 => full_f(u::SS_CHARGE, attr::SS_CHARGE_TIME).then_some(54),
-            16 => full_f(u::MT_CHARGE, attr::MT_CHARGE_TIME).then_some(93),
-            7 => (fp.u_i32(u::SK_NEEDLES) == 6).then_some(87),
+        let colanim = match FighterKind::from_id(fp.u_i32(u::HAT_KIND)) {
+            Some(FighterKind::Donkey) => (fp.u_i32(u::DK_SWINGS)
+                == self.kb_attr_i32(f, attr::DK_SWINGS_TO_FULL))
+            .then_some(58),
+            Some(FighterKind::Samus) => full_f(u::SS_CHARGE, attr::SS_CHARGE_TIME).then_some(54),
+            Some(FighterKind::Mewtwo) => full_f(u::MT_CHARGE, attr::MT_CHARGE_TIME).then_some(93),
+            Some(FighterKind::Seak) => (fp.u_i32(u::SK_NEEDLES) == 6).then_some(87),
             _ => None,
         };
         if let Some(id) = colanim {
@@ -365,7 +330,10 @@ impl Running<'_> {
     /// Bowser's copied breath refills.
     #[doc(alias = "ftKb_Init_UnkMotionStates3")]
     pub fn kb_unk_motion_states3(&mut self, gobj: GObjId) {
-        if matches!(self.game.fighter(gobj).u_i32(u::HAT_KIND), 5 | 31) {
+        if matches!(
+            FighterKind::from_id(self.game.fighter(gobj).u_i32(u::HAT_KIND)),
+            Some(FighterKind::Koopa | FighterKind::GKoopa)
+        ) {
             self.kp_refuel(gobj, &super::special_koopa::KIRBY);
         }
     }

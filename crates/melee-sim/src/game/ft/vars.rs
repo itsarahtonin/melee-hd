@@ -14,6 +14,7 @@ use std::ops::{Index, IndexMut, Range, RangeFrom, RangeFull, RangeTo};
 
 use melee_data::archive::DataRef;
 
+use crate::game::ft::FighterKind;
 use crate::game::handles::DObjListId;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::hsd::gobj::GObjId;
@@ -39,7 +40,10 @@ pub const FOX_BLASTER: usize = 0;
 /// Whether a fighter of `kind` keeps that blaster in `u`: Fox and Falco (`Ft_Kind_Fox`,
 /// `Ft_Kind_Falco`).
 pub fn holds_blaster(kind: i32) -> bool {
-    matches!(kind, 1 | 22)
+    matches!(
+        FighterKind::from_id(kind),
+        Some(FighterKind::Fox | FighterKind::Falco)
+    )
 }
 
 /// Where Sheik's held needles (`ftSeak_FighterVars::x4`) and chain (`x8`) are in `u`.
@@ -81,30 +85,10 @@ pub const KIRBY_ITEMS: [usize; 12] = [
     0x0, 0x74, 0x78, 0x7C, 0x98, 0xA0, 0xA4, 0xB0, 0xB8, 0xC0, 0xD0, 0xDC,
 ];
 
-/// The words of `u` a fighter of `kind` keeps GObjs in, which the importer types: Fox's and
-/// Falco's blaster, Sheik's held needles and chain (`Ft_Kind_Seak`), Zelda's Din's Fire
-/// (`Ft_Kind_Zelda`), Ness's items (`Ft_Kind_Ness`), Samus's (`Ft_Kind_Samus`), Mario's and
-/// Dr. Mario's cape (`Ft_Kind_Mario`, `Ft_Kind_DrMario`), the Ice Climbers' items
-/// (`Ft_Kind_Popo`, `Ft_Kind_Nana`), Peach's (`Ft_Kind_Peach`), Link's and Young Link's
-/// (`Ft_Kind_Link`, `Ft_Kind_CLink`), Yoshi's egg (`Ft_Kind_Yoshi`), Mewtwo's items (`Ft_Kind_Mewtwo`),
-/// Mr. Game & Watch's items (`Ft_Kind_GameWatch`).
+/// The words of `u` a fighter of `kind` keeps GObjs in, which the importer types: its
+/// character's entry's `item_words` (none for a number that's no fighter kind).
 pub fn gobj_words(kind: i32) -> &'static [usize] {
-    match kind {
-        _ if holds_blaster(kind) => &[FOX_BLASTER],
-        7 => &[SEAK_NEEDLES, SEAK_CHAIN],
-        19 => &[ZELDA_DIN_FIRE],
-        8 => &NESS_ITEMS,
-        13 => &SAMUS_ITEMS,
-        4 => &KIRBY_ITEMS,
-        0 | 21 => &[MARIO_CAPE, MARIO_X2240],
-        10 | 11 => &ICE_CLIMBER_ITEMS,
-        9 => &PEACH_ITEMS,
-        6 | 20 => &LINK_ITEMS,
-        14 => &[YOSHI_EGG],
-        16 => &MEWTWO_ITEMS,
-        24 => &super::gamewatch::u::ITEMS,
-        _ => &[],
-    }
+    FighterKind::from_id(kind).map_or(&[], |k| k.character().item_words)
 }
 
 /// `Fighter_FighterVars`.

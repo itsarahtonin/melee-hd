@@ -71,7 +71,7 @@ pub const KIRBY: Bow = Bow {
 
 impl Running<'_> {
     /// The copy's cleanup when hit or KO'd: the arrow and the bow taken away.
-    pub(super) fn kb_lk_cleanup(&mut self, gobj: GObjId) {
+    pub(crate) fn kb_lk_cleanup(&mut self, gobj: GObjId) {
         self.link_process_arrow(gobj, &KIRBY);
         self.link_process_bow(gobj, &KIRBY);
     }
