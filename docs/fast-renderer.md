@@ -2,7 +2,7 @@
 
 The fast renderer is a track of its own beside the refactor ([the refactor](refactor.md#the-fast-renderer)): a GPU-driven renderer for low-end PCs that becomes the default, with the exact renderer (melee-render's GX stream drawn by melee-gpu, [the player](player.md#rendering)) kept as the reference, the frames tests' oracle and an "accurate" option. It may differ from the exact renderer in vertex float maths, the rasterizer's 1/16 snap, depth precision and later enhancements; not in what's drawn, the order, materials, blending or effects (Sarah, 2026-10-19). Its own work needs no full verify: it is checked against the exact renderer (Sarah, 2026-11-14), by the harness below.
 
-This document is F1, the comparison harness and the measurement setup, [F2](#f2-the-mesh-cache), the renderer's first part: the mesh cache, and [F3](#f3-transforms-skinning-and-lighting-on-the-gpu), the transforms, skinning and lighting on the GPU, and [F4](#f4-materials-as-records), materials as records, and [F5](#f5-the-whole-scene-first-round)'s first round: the frame run as it's built, and the player's choice of renderer. F5's second round and F6 add the rest.
+This document is F1, the comparison harness and the measurement setup, [F2](#f2-the-mesh-cache), the renderer's first part: the mesh cache, and [F3](#f3-transforms-skinning-and-lighting-on-the-gpu), the transforms, skinning and lighting on the GPU, and [F4](#f4-materials-as-records), materials as records, and [F5](#f5-the-whole-scene-first-round)'s first round: the frame run as it's built, and the player's choice of renderer, and its [second round](#f5-the-whole-scene-second-round): the flushes submitted and the stream run on threads of their own. F6 and the records from the `Draw` list add the rest.
 
 ## The comparison harness
 
@@ -655,3 +655,119 @@ melee-hd --disc "$SSBM_DISC" --replay R.slp --bench 1980 --size 2560x1440 --rend
 ```
 
 **Indicative, on the busy PC** (2026-11-20, the machine at 100% with other agents' work; these decide nothing): Fountain of Dreams at 1x threaded, three alternating pairs of F4 and F5, 6.17 / 4.83, 4.77 / 4.71 and 5.63 / 4.98 ms; the player's `--bench 1200` on `fox-marth-fd` at 2x, p50 of a frame's ticks and drawing 2.39 and 2.59 ms fast against 3.74 exact.
+
+## F5: the whole scene (second round)
+
+The second round took F5's first round's leftovers in its handoff's order, measuring each step on the worker's exclusive runner before the next and keeping it only where it paid there. What it changed:
+
+**The flushes encoded and submitted on a thread of their own** (`melee_gpu::submit::Ordered`). wgpu 30 records a pass's commands as they're made and does the work (validation, the resources' tracking and barriers, the driver's commands) when the encoder is finished and submitted: most of the render thread's 1.3 ms of flushes on Fountain of Dreams. The threaded renderer now sends each recorded encoder, and every write to a buffer, to a submission thread that makes them in the order sent; the render thread records the next flush meanwhile. Order is all that matters: a buffer written each flush (the vertices, indices, uniforms, records, XF sections) must take each write after the submission before it, which a write made on the render thread while an earlier flush waits wouldn't (`Queue::write_buffer` lands before the next submission, whichever thread makes it), so every write to a buffer goes through the thread too, the buffers handed over whole (about 1.4 MB a frame on Fountain of Dreams) and handed back to be built into again. A texture is written only as it's made, before anything reads it, so those stay on the render thread. Whatever reads the GPU back (readbacks, the harness's clips) and the frame's hand-over wait for everything sent (`Ordered::drain`). Checked by `submit::tests::each_submission_reads_the_write_before_it` (200 writes to one buffer, each read by the submission after it; making the writes on the caller's thread fails it) and the transforms' test, now through the thread. `GX_PROFILE` reports the thread's writes, finishing and submitting, and the frame's wait for it at its end. `MELEE_GPU_SUBMIT` 1 or 0 forces it on or off.
+
+**A streamed frame's pieces run on a thread of their own** (`Frames::frame_piped`, `Gpu::run_streamed`). With the flushes off the render thread, the game thread was the critical path, and a profile of it on the worker (`perf` with frame pointers, Fountain of Dreams) put running the stream's pieces (melee-gx's parsing and registers, the threaded renderer's state changes, packets and texture hashing, the mesh cache's lookups) at about half its frame: 16% of the process's samples against 30% for the whole build. So the game thread now hands each piece to a stream thread that runs it while the next is built; the address space is shared meanwhile (`mem::Space`'s ranges and overlay behind locks; what a piece reads of it the build wrote before handing the piece on). Nothing is drawn differently: the same stream runs in the same order. The harness observes piped frames (its recorder is `Sync`), and `the_fast_renderer_threaded::*` runs every documented frame on the renderer's threads. `MELEE_RENDER_PIPE` 1 or 0 forces it.
+
+**Both threads only where the processor runs four threads or more.** On two cores (`MELEE_GPU_WORKERS=1`, `taskset -c 0,1`, two rounds on the worker) they cost more than they saved: Fountain of Dreams ran 231 to 238 frames a second with both on, 254 to 255 with the stream thread off, and 261 to 271 with neither; the other replays alike (`fox-marth-ps` 332 to 349, 350 to 365 and 364 to 376). So each starts where `available_parallelism` is 4 or more (on Linux it counts the affinity mask).
+
+**Not done, and why:**
+
+- **Fewer uniform rebinds** (an index into a storage array of uniforms in place of a dynamic offset per call, in `gx.wgsl` and the specialized shaders, so both renderers). The rebinds are now encoded on the submission thread, off the frame's critical path: its whole encoding is about 0.8 ms a frame on Fountain of Dreams, and what reaches the frame is only the wait at its end for the last flush and the XFB copy (0.30 to 0.36 ms on the worker), of which the rebinds are a part. Not worth changing both renderers' shaders and their fragment cost for.
+- **GX registers written straight into melee-gx's state.** Parsing is about a quarter of running the stream (`State::run`'s own time, 4% of the samples against the pieces' 16%); the stream thread took all of the running off the game thread instead, for every `Draw` kind at once.
+- **Records from the `Draw` list in place of the stream**: still the way to shorten the stream thread, now the critical path (below).
+
+**The bench's split** (`melee-render-check bench`): a streamed frame's "build" is now the game thread's time until it hands the frame over and "submit" the wait for the renderer's threads after it (their sum, the CPU frame, as before), with "running the stream" the stream's own time, beside the build.
+
+### Speed on the worker (2026-11-20), the deciding numbers
+
+`feat/fast-f5` at round 2's working tree (the stream thread and both threads' gates; the worker's snapshot of 17:13), release with line tables, the GTX 1080 Ti through Vulkan, one exclusive reservation after its quietness check (processor and GPU idle between scales). As in the first round: warm lists first, then frames 600 to 1800 threaded in two rounds (exact, F4, F5, then the order turned round), no measured call drawn with the uber shader. F4 here has the submission thread too (it's the threaded renderer's), so "F5 against F4" is now the stream thread's and the streamed frame's share; against the first round's F5 (above) the CPU frame at 1x is 14 to 23% lower (Fountain of Dreams 2.74 / 2.85 to 2.23 / 2.27 ms).
+
+| Replay | Scale | Exact | F4 | F5 | F5 against F4 | GPU after, F5 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fox-marth-fd` | 1x | 278/277; 3.30 / 3.31 (3.99/4.03) | 511/506; 1.69 / 1.73 (1.98/2.21) | 596/580; 1.47 / 1.53 (1.91/2.06) | -12% | 0.20 |
+| `fox-marth-bf` | 1x | 290/283; 3.28 / 3.32 (3.77/3.80) | 501/504; 1.81 / 1.80 (2.13/2.05) | 541/550; 1.70 / 1.67 (2.21/2.14) | -7% | 0.15 |
+| `fox-marth-ps` | 1x | 256/262; 3.68 / 3.64 (4.53/4.38) | 415/408; 2.23 / 2.27 (2.62/2.84) | 519/515; 1.78 / 1.82 (2.36/2.50) | -20% | 0.14 |
+| `ics-peach-ps` | 1x | 250/258; 3.68 / 3.67 (4.92/4.94) | 413/411; 2.24 / 2.23 (2.90/2.98) | 492/493; 1.89 / 1.87 (2.89/2.95) | -16% | 0.15 |
+| Fountain of Dreams | 1x | 104/105; 8.30 / 8.32 (9.96/9.72) | 320/338; 2.71 / 2.68 (3.27/3.36) | 429/417; 2.23 / 2.27 (2.91/3.27) | -17% | 0.12 |
+| `fox-marth-fd` | 2x | 270/268; 3.28 / 3.30 (4.19/4.35) | 419/423; 1.82 / 1.81 (2.36/2.36) | 462/469; 1.65 / 1.60 (2.44/2.41) | -10% | 0.52 |
+| `fox-marth-bf` | 2x | 279/279; 3.19 / 3.19 (3.40/3.58) | 411/418; 1.90 / 1.87 (2.56/2.80) | 434/462; 1.76 / 1.68 (2.55/2.40) | -9% | 0.52 |
+| `fox-marth-ps` | 2x | 248/241; 3.67 / 3.81 (4.66/5.12) | 338/331; 2.27 / 2.34 (3.15/3.11) | 402/401; 1.94 / 1.95 (3.13/3.23) | -16% | 0.55 |
+| `ics-peach-ps` | 2x | 250/257; 3.64 / 3.49 (4.90/4.75) | 334/326; 2.36 / 2.40 (3.59/3.63) | 379/391; 2.12 / 2.01 (3.85/3.51) | -13% | 0.54 |
+| Fountain of Dreams | 2x | 111/108; 7.61 / 7.72 (8.63/9.07) | 309/300; 2.76 / 2.74 (3.56/3.71) | 362/367; 2.40 / 2.31 (3.73/3.55) | -14% | 0.39 |
+| `fox-marth-fd` | 3x | 230/243; 3.40 / 3.30 (4.44/4.23) | 356/366; 1.84 / 1.79 (2.58/2.28) | 383/383; 1.70 / 1.71 (2.49/2.51) | -6% | 0.91 |
+| `fox-marth-bf` | 3x | 222/223; 3.42 / 3.38 (4.42/4.17) | 338/364; 2.06 / 1.86 (2.99/2.45) | 390/389; 1.71 / 1.72 (2.50/2.47) | -13% | 0.85 |
+| `fox-marth-ps` | 3x | 244/236; 3.58 / 3.71 (4.64/4.74) | 299/294; 2.29 / 2.37 (3.34/3.56) | 329/329; 2.08 / 2.08 (3.46/3.57) | -11% | 0.95 |
+| `ics-peach-ps` | 3x | 223/243; 3.72 / 3.38 (4.89/4.55) | 291/286; 2.39 / 2.47 (3.73/3.85) | 322/326; 2.16 / 2.11 (4.10/3.82) | -12% | 0.95 |
+| Fountain of Dreams | 3x | 134/129; 7.13 / 7.00 (8.40/8.10) | 284/269; 2.72 / 2.94 (3.47/3.92) | 317/325; 2.46 / 2.35 (3.96/3.75) | -15% | 0.71 |
+| `fox-marth-fd` | 5x | 183/181; 3.23 / 3.29 (3.75/3.96) | 219/219; 1.89 / 1.94 (2.80/2.89) | 235/238; 1.91 / 1.87 (2.69/2.71) | -1% | 2.33 |
+| `fox-marth-bf` | 5x | 182/180; 3.32 / 3.36 (3.93/4.10) | 219/218; 1.92 / 1.93 (2.67/2.60) | 238/236; 1.93 / 1.98 (2.71/2.78) | +2% | 2.26 |
+| `fox-marth-ps` | 5x | 161/163; 3.74 / 3.65 (4.83/4.69) | 165/166; 2.59 / 2.48 (3.86/3.63) | 180/180; 2.45 / 2.49 (4.21/4.24) | -3% | 3.08 |
+| `ics-peach-ps` | 5x | 155/154; 3.61 / 3.62 (5.07/4.92) | 153/153; 2.54 / 2.57 (3.81/3.95) | 164/164; 2.70 / 2.73 (4.43/4.46) | +6% | 3.38 |
+| Fountain of Dreams | 5x | 114/114; 7.10 / 7.10 (8.54/8.54) | 181/181; 2.94 / 2.97 (4.02/4.21) | 203/203; 2.67 / 2.68 (4.17/4.22) | -9% | 2.25 |
+
+At 5x the GPU's wait after the submit (2.3 to 3.4 ms) is as long as the CPU's frame, and the CPU's frame gains little: the threads' work races the GPU's.
+
+The step-by-step runs, F5 only, 1x, three rounds each, the order turned round each round: the submission thread on against off, Fountain of Dreams 2.64 to 2.85 ms against 2.90 to 2.92, `fox-marth-ps` 2.21 to 2.23 against 2.38 to 2.39, `fox-marth-fd` 1.78 to 1.81 against 1.76 to 1.81 (`GX_PROFILE` on Fountain of Dreams: the render thread's flushes 1.3 to 1.5 ms to 0.3; the submission thread's writes 0.36 to 0.58 ms, finishing 0.80, submitting 0.30; the frame's wait for it at its end 0.30 to 0.36); the stream thread on against off (both with the submission thread), Fountain of Dreams 2.27 to 2.39 against 2.67 to 2.73, `fox-marth-ps` 1.86 to 1.91 against 2.19 to 2.20, `fox-marth-fd` 1.58 to 1.61 against 1.72 to 1.74.
+
+The low-end runs, one round (`--one-thread` draws on the game thread, as before; `MELEE_GPU_WORKERS=1` keeps every core, so both threads run; two cores start neither):
+
+| Replay | Setting | Exact | F4 | F5 | F5 against F4 | GPU after, F5 |
+| --- | --- | --- | --- | --- | --- | --- |
+| `fox-marth-fd` | `--one-thread` | 142; 6.88 (7.52) | 449; 2.02 (2.28) | 451; 2.05 (2.33) | +1% | 0.17 |
+| `fox-marth-fd` | `MELEE_GPU_WORKERS=1` | 152; 6.51 (6.98) | 516; 1.68 (1.99) | 586; 1.52 (2.02) | -10% | 0.19 |
+| `fox-marth-ps` | `--one-thread` | 89; 9.30 (10.21) | 302; 3.14 (3.81) | 317; 3.07 (3.52) | -2% | 0.09 |
+| `fox-marth-ps` | `MELEE_GPU_WORKERS=1` | 113; 7.87 (8.44) | 419; 2.19 (2.81) | 516; 1.84 (2.98) | -16% | 0.09 |
+| `ics-peach-ps` | `--one-thread` | 115; 8.58 (9.41) | 273; 3.38 (4.02) | 280; 3.29 (3.97) | -3% | 0.28 |
+| `ics-peach-ps` | `MELEE_GPU_WORKERS=1` | 124; 7.57 (8.23) | 395; 2.26 (3.59) | 479; 1.95 (3.30) | -14% | 0.14 |
+| Fountain of Dreams | `--one-thread` | 47; 18.11 (19.11) | 199; 4.08 (4.85) | 201; 4.05 (4.82) | -1% | 0.91 |
+| Fountain of Dreams | `MELEE_GPU_WORKERS=1` | 59; 15.56 (17.27) | 302; 2.89 (3.80) | 413; 2.29 (3.64) | -21% | 0.13 |
+
+The two-core rows of that run were taken before the gates (both threads on): Fountain of Dreams 3.59 ms (F4) and 3.67 (F5), `fox-marth-ps` 2.87 and 2.90, `ics-peach-ps` 3.11 and 2.93, `fox-marth-fd` 1.95 and 1.98; with the gates (the two-core comparison above) F5 there runs with neither thread, as the first round's did.
+
+**The player at 1440p** (as in the first round, `--bench 1980 --size 2560x1440`, two runs each): the fast renderer's ticks and drawing at p99 5.67 / 5.77 ms on `fox-marth-ps` and 6.34 / 6.78 on Fountain of Dreams (the first round's 5.66 to 7.74), with presenting 10.26 / 10.37 and 13.36 / 13.78; the exact renderer's 7.22 / 7.26 and 13.45 / 13.46, with presenting 8.68 / 9.32 and 16.86 / 17.05.
+
+**The target**, Sarah's of 2026-11-20 in place of the 1440p placeholder: the player at 3840x2160 and 144 fps on the worker's GTX 1080 Ti, every displayed frame within 6.94 ms at the 99th percentile with the present and the GPU's wait, High refresh drawing the frames between ticks. Its measurement is [below](#the-player-at-4k-and-144-fps).
+
+### The player at 4K and 144 fps
+
+Sarah's target (2026-11-20): the player at 3840x2160 and 144 fps on the worker's GTX 1080 Ti, every displayed frame within 6.94 ms at the 99th percentile with the present and the GPU's wait, High refresh drawing the frames between ticks. Measured with the player's paced bench (`melee-hd --replay R --bench 1980 --size 3840x2160 --renderer fast|exact --high-refresh interpolate|extrapolate --frames-per-tick N`, headless: after each tick it draws N frames between ticks, each presented to an offscreen 4K target and waited for, so the GPU's time is in the frame's), internal 5x (an EFB of 2920 by 2400), on the worker's exclusive runner, two rounds (both shown), at 3 frames a tick (180 Hz, above 144's 2.4) and 2 (120 Hz). A frame's drawing is the CPU's (the fast renderer's stream and its threads; the exact renderer's stream, then the renderer); presenting adds the GPU's wait and the present. The tick (the simulation, and keeping its transforms or predicting the next) comes between frames, outside both.
+
+| Replay | Mode | Renderer, frames a tick | A frame's drawing: p50, p99 (ms) | With presenting: p50, p99 | Mean a frame: stream, renderer, presenting | A tick: simulation, keeping or predicting |
+| --- | --- | --- | --- | --- | --- | --- |
+| Fountain of Dreams | Interpolate | fast, 3 | 2.49 / 2.48, 4.84 / 4.95 | 4.89 / 4.92, 22.3 / 22.3 | 0, 2.75, 2.53 | 1.47, 0.04 |
+| Fountain of Dreams | Interpolate | fast, 2 | 2.42 / 2.41, 4.91 / 5.11 | 4.84 / 4.86, 26.1 / 26.3 | 0, 2.71, 2.66 | 1.43, 0.04 |
+| Fountain of Dreams | Interpolate | exact, 3 | 7.64 / 7.67, 11.5 / 11.7 | 9.50 / 9.53, 18.2 / 17.2 | 1.45, 6.36, 1.97 | 1.60, 0.05 |
+| Fountain of Dreams | Interpolate | exact, 2 | 7.53 / 7.50, 12.1 / 11.9 | 9.37 / 9.24, 23.7 / 23.9 | 1.34, 6.39, 1.96 | 1.59, 0.05 |
+| Fountain of Dreams | Extrapolate | fast, 3 | 2.53 / 2.67, 4.99 / 5.10 | 4.96 / 4.99, 22.2 / 19.7 | 0, 2.90, 2.48 | 1.41, 1.12 |
+| Fountain of Dreams | Extrapolate | fast, 2 | 2.53 / 2.54, 5.19 / 5.08 | 4.92 / 4.93, 26.3 / 26.2 | 0, 2.85, 2.61 | 1.39, 1.07 |
+| Fountain of Dreams | Extrapolate | exact, 3 | 7.63 / 7.64, 11.7 / 12.0 | 9.64 / 9.65, 16.8 / 17.4 | 1.42, 6.37, 2.09 | 1.53, 1.30 |
+| Fountain of Dreams | Extrapolate | exact, 2 | 7.50 / 7.51, 12.2 / 11.1 | 9.46 / 9.53, 23.5 / 24.4 | 1.32, 6.39, 2.13 | 1.53, 1.29 |
+| `fox-marth-ps` | Interpolate | fast, 3 | 2.25 / 2.22, 4.65 / 4.69 | 4.96 / 4.96, 19.5 / 19.7 | 0, 2.45, 3.00 | 1.41, 0.04 |
+| `fox-marth-ps` | Interpolate | fast, 2 | 2.15 / 2.16, 4.64 / 4.67 | 4.93 / 4.91, 21.8 / 21.8 | 0, 2.39, 3.15 | 1.39, 0.04 |
+| `fox-marth-ps` | Interpolate | exact, 3 | 3.89 / 3.86, 6.75 / 6.37 | 5.98 / 5.98, 11.5 / 11.6 | 1.10, 2.86, 2.34 | 1.43, 0.04 |
+| `fox-marth-ps` | Interpolate | exact, 2 | 3.76 / 3.80, 6.20 / 6.29 | 5.97 / 5.99, 12.6 / 12.5 | 1.02, 2.86, 2.40 | 1.41, 0.04 |
+| `fox-marth-ps` | Extrapolate | fast, 3 | 2.26 / 2.27, 4.72 / 4.76 | 4.98 / 4.98, 18.6 / 18.7 | 0, 2.48, 3.00 | 1.36, 0.98 |
+| `fox-marth-ps` | Extrapolate | fast, 2 | 2.25 / 2.22, 4.69 / 4.67 | 5.03 / 5.02, 21.8 / 21.9 | 0, 2.47, 3.11 | 1.33, 0.94 |
+| `fox-marth-ps` | Extrapolate | exact, 3 | 3.87 / 3.89, 6.27 / 6.33 | 6.00 / 6.01, 11.7 / 11.6 | 1.10, 2.87, 2.35 | 1.36, 1.07 |
+| `fox-marth-ps` | Extrapolate | exact, 2 | 3.79 / 3.81, 6.85 / 6.67 | 5.95 / 6.00, 12.6 / 12.4 | 1.01, 2.92, 2.39 | 1.33, 1.01 |
+
+**Against the target: not met, and the CPU isn't what misses it.** The fast renderer's CPU side fits: a frame's drawing is 2.2 to 2.7 ms at p50 and 4.6 to 5.2 at p99 on both matches, either mode, and with the GPU's wait and the present the median frame is 4.8 to 5.0 ms, inside 6.94. Its 99th percentile with presenting is 18.6 to 26.3 ms: the tail is all in the present step (the GPU's wait and the present; the drawing's own p99 is 5 ms), and it's worse at 2 frames a tick than at 3, as if one frame a tick (or a few ticks in a hundred) waits on the GPU far longer than the rest. The exact renderer's CPU side doesn't fit on Fountain of Dreams (drawing p50 7.5 to 7.7 ms) and its tail with presenting is 11.5 to 24.4 ms. The GPU's mean wait at 4K is 2.5 to 3.1 ms a frame with the fast renderer (2.0 to 2.4 with the exact one, whose longer CPU frame gives the GPU more time to finish before the wait). So on the 1080 Ti 4K144 is bound by the GPU side's tail, not by the CPU: what to find next is the frames whose present takes 15 to 25 ms (the GPU's passes timed per frame, `GpuTimer`, in this bench, which doesn't time them yet). Two further notes: the tick's own CPU time (the simulation, 1.3 to 1.5 ms, and Extrapolate's prediction, 0.9 to 1.1) lands in one frame's interval of each tick, which at 144 Hz holds a frame and a tick in 6.94 ms only if the tick overlaps the GPU's work (this bench runs them one after the other); and this headless bench presents to an offscreen target, not a 144 Hz swap chain.
+
+**Indicative, on this PC** (the RTX 5070 Ti, other agents' builds running; these decide nothing): the same runs, one round: the fast renderer's frame with presenting p50 2.8 to 4.1 ms, its GPU wait 0.4 to 1.6 ms a frame; the exact renderer's p50 3.5 to 8.2 ms. On that card the GPU's time at 4K is small; the busy machine's p99s (8 to 18 ms) say nothing.
+
+### What's left toward 1 ms (after F5's second round)
+
+First, for Sarah's target, the 4K frames whose present takes 15 to 25 ms on the worker ([above](#the-player-at-4k-and-144-fps)): the GPU's passes timed per frame in the paced bench, then whatever those frames hold. The CPU frame below matters to the target only after that.
+
+On Fountain of Dreams at 1x (2.23 to 2.27 ms on the worker) the game thread hands the frame over at about 1.75 ms and the renderer's threads finish 0.5 ms after. The stream thread is now the longest: running the stream is 1.55 ms a frame there (`fox-marth-ps` 1.29, `fox-marth-fd` 0.74), more than the game thread's building of it, so the game thread ends waiting for it. What it runs is the threaded renderer's per-draw work as much as melee-gx's (the frame-pointer profile: the threaded renderer's draws 6% of the samples, its state changes 3.5% and the wake-ups of its threads 2.5%, beside `State::run`'s 4%), and records built from the `Draw` list are what remove it. Then the frame's end: the render thread's last packets, and the wait for the submission thread's last flush and XFB copy (0.3 ms).
+
+The commands (the worker's scripts, as in the first round, in `fast-f5/w2`):
+
+```sh
+# The step-by-step runs.
+for x in 1 0; do MELEE_GPU_SUBMIT=$x GX_PROFILE=1 bench fod --renderer fast; done
+for p in 1 0; do MELEE_RENDER_PIPE=$p GX_PROFILE=1 bench fod --renderer fast; done
+# Two cores.
+MELEE_GPU_WORKERS=1 taskset -c 0,1 bench fod --renderer fast
+MELEE_GPU_WORKERS=1 MELEE_RENDER_PIPE=1 taskset -c 0,1 bench fod --renderer fast
+MELEE_GPU_WORKERS=1 MELEE_GPU_SUBMIT=0 taskset -c 0,1 bench fod --renderer fast
+# The grid, the low-end runs and the player at 1440p: the first round's commands.
+```
+
+**Indicative, on the busy PC** (2026-11-20, other agents' work running; these decide nothing): Fountain of Dreams at 1x with the submission thread, 4.19 to 4.86 ms against 4.31 to 5.43 without, the render thread's flushes 1.6 to 2.0 ms to 0.27 to 0.37; the stream thread there didn't show a gain (2.55 and 2.91 ms with it, 2.43 and 2.62 without), the busy machine starving its extra thread.
