@@ -2,7 +2,7 @@
 //! item the stage sends in on its platform (`gr::inishie2`'s map 15). She walks in from her
 //! side (state 0) to her mark, waits (1), backs off (2) to her far mark, waits (3) and walks in
 //! again (4); at her mark she stands (6) for a random while, spitting eggs
-//! (`it::kinds::kyasarinegg`) now and then (7), until she turns away (5) and walks off. Hit,
+//! (`it::kinds::birdo_egg`) now and then (7), until she turns away (5) and walks off. Hit,
 //! she flinches (8) and goes on; hit harder, she turns away; hit enough, she falls off the
 //! stage, toward the screen (9) or bouncing away (10).
 //!
@@ -562,7 +562,7 @@ pub fn anim7(r: &mut Running, gobj: GObjId) -> bool {
         pos.x = mem(fp::fmadds(dx, reg(facing), reg(pos.x)));
         pos.y = mem(fp::fadds(reg(pos.y), dy));
         pos.z = 0.0;
-        super::kyasarinegg::spawn(r, Some(gobj), pos, facing);
+        super::birdo_egg::spawn(r, Some(gobj), pos, facing);
         let v = vars(r.game, gobj);
         let left = v.eggs_left.get().wrapping_sub(1);
         v.eggs_left.set(left);

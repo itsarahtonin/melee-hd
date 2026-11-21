@@ -331,7 +331,7 @@ pub fn coll8(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Knocked out of a Paratroopa, `it_802DCE00`: in the air, a 10-frame countdown, blinking, the
-/// kept knockback (the Paratroopa's, [`super::patapata::spawn_koopa`]), state 8.
+/// kept knockback (the Paratroopa's, [`super::koopa_paratroopa::spawn_koopa`]), state 8.
 #[doc(alias = "it_802DCE00")]
 pub fn knock_back_kept(r: &mut Running, gobj: GObjId) {
     maplib::enter_air(item_mut(r.game, gobj));

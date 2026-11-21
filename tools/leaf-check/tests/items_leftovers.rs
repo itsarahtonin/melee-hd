@@ -45,7 +45,7 @@ use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::gr;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::ItKind;
-use melee_sim::game::it::kinds::{bombhei, crate_box, foods, heiho, msbomb};
+use melee_sim::game::it::kinds::{bombhei, crate_box, foods, msbomb, shy_guy};
 use melee_sim::game::it::{self, CLASS_ITEM};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -196,8 +196,8 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_8028FAF4" => {
             foods::spawn(g, Some(gobj), vec_at(r(4)));
         }
-        "it_802D96B0" => heiho::carry(g, gobj),
-        "it_802D9714" => heiho::blast_zones(g, gobj),
+        "it_802D96B0" => shy_guy::carry(g, gobj),
+        "it_802D9714" => shy_guy::blast_zones(g, gobj),
         "it_80280B60" => bombhei::explode(g, gobj),
         "it_8027429C" => it::release::let_go(g, gobj, vec_at(r(4))),
         "it_8026C368" => it::lib26b1::check_burst(g, gobj),

@@ -605,7 +605,7 @@ pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
 
 /// The Koopa knocked out of it, `it_802E15B0`: a small quake; a Koopa Troopa of its kind where
 /// its model is, moving as it moved, facing its way, with its knockback and the spawner slot,
-/// knocked back as hit ([`super::nokonoko::knock_back_kept`]).
+/// knocked back as hit ([`super::koopa_troopa::knock_back_kept`]).
 #[doc(alias = "it_802E15B0")]
 pub fn spawn_koopa(r: &mut Running, gobj: GObjId) {
     let j = super::super::jobj_of(r.game, gobj);
@@ -615,18 +615,18 @@ pub fn spawn_koopa(r: &mut Running, gobj: GObjId) {
     let kind = get(r, gobj, off::KIND);
     let ip = item(r.game, gobj);
     let (vel, facing) = (ip.x40_vel, fp::fctiwz(reg(ip.facing_dir)));
-    let koopa = super::nokonoko::spawn(r, kind, pos, Some(vel), facing)
+    let koopa = super::koopa_troopa::spawn(r, kind, pos, Some(vel), facing)
         .expect("it_802E15B0: no Koopa Troopa spawned");
     let ip = item(r.game, gobj);
     let (kb, angle, dir) = (ip.xCC8_knockback, ip.xCAC_angle, ip.xCCC_incDamageDirection);
     let slot = get(r, gobj, off::SLOT);
     let v = zako::bytes(r.game, koopa);
-    v.set_f32(super::nokonoko::off::KB, kb);
-    v.set_i32(super::nokonoko::off::KB_ANGLE, angle);
-    v.set_f32(super::nokonoko::off::KB_DIR, dir);
-    v.set_i32(super::nokonoko::off::SLOT, slot);
+    v.set_f32(super::koopa_troopa::off::KB, kb);
+    v.set_i32(super::koopa_troopa::off::KB_ANGLE, angle);
+    v.set_f32(super::koopa_troopa::off::KB_DIR, dir);
+    v.set_i32(super::koopa_troopa::off::SLOT, slot);
     set(r, gobj, off::SLOT, -1);
-    super::nokonoko::knock_back_kept(r, koopa);
+    super::koopa_troopa::knock_back_kept(r, koopa);
 }
 
 /// Enters a state it can be landed on in ([`zako::enter_stompable`]), its jumped-on callback
