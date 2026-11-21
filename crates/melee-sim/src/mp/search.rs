@@ -1309,6 +1309,9 @@ impl<K: Kinds> Geometry<K> {
 mod tests {
     use super::*;
 
+    /// A test line's two vertices.
+    type TestLine = ((f32, f32), (f32, f32));
+
     #[derive(Clone, Debug)]
     struct Plain;
 
@@ -1320,7 +1323,7 @@ mod tests {
 
     /// One joint holding `lines` (vertex pairs) as floors and ceilings, each continuing into
     /// the one before or after it as `links` says (`prev`, `next`), its bounds wide open.
-    fn geometry(lines: &[((f32, f32), (f32, f32))], links: &[(i16, i16)]) -> Geometry<Plain> {
+    fn geometry(lines: &[TestLine], links: &[(i16, i16)]) -> Geometry<Plain> {
         use super::super::{JOINT_ENABLED, Joint, JointDesc, Line, LineRange, Vec2, Vertex};
         let v = |x: f32, y: f32| Vertex {
             base: Vec2 { x, y },
