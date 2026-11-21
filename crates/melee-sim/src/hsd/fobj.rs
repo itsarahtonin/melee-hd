@@ -745,7 +745,7 @@ mod tests {
     /// opcodes, pack counts, waits and numbers in random formats, so seeks take every path.
     fn fobj(rng: &mut Bits, at: u32, len: u32) -> FObj {
         let fracs = [0, 0x60, 0x80, 0x20, 0x40];
-        let frac = |r: u32| fracs[(r % 5) as usize] | (r >> 8) as u8 % 8;
+        let frac = |r: u32| fracs[(r % 5) as usize] | ((r >> 8) as u8 % 8);
         let mut o = FObj {
             ad_head: at,
             length: len,
