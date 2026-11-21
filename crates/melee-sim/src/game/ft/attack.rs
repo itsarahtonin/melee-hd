@@ -2677,10 +2677,14 @@ impl Running<'_> {
         dmg: u32,
         kb: f64,
     ) {
+        // The effects it treats apart: the normal hit's spark, sized by the knockback, and
+        // the one that faces the attacker's way.
+        const HIT_SPARK: i32 = 1000;
+        const HIT_FACING: i32 = 1005;
         match effect {
-            1000 => self.hit_spark(me, pos, severity, mem(fp::frsp(f64::from(dmg))), kb),
+            HIT_SPARK => self.hit_spark(me, pos, severity, mem(fp::frsp(f64::from(dmg))), kb),
             1001 | 1002 | 1004 | 1046 | 1145 | 1255 => self.spawn_effect(effect, pos, None),
-            1005 => {
+            HIT_FACING => {
                 let dir = self.game.fighters[me.0].facing_dir;
                 self.spawn_effect(effect, pos, Some(dir));
             }

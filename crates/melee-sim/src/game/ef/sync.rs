@@ -106,13 +106,18 @@ pub fn spawn(r: &mut Running, gfx_id: i32, gobj: Option<GObjId>, args: &[Arg]) -
     spawn_with(r, gfx_id, gobj, &mut Args::new(args))
 }
 
+/// The effect that needs Mario's effect file (efAlt's first), and the common generator
+/// [`spawn_with`] makes in its place while that file isn't loaded.
+const NEEDS_MARIO_FILE: i32 = 0x479;
+const WITHOUT_MARIO_FILE: i32 = 0x506;
+
 /// [`spawn`] with arguments from wherever `va` reads them.
 pub fn spawn_with(r: &mut Running, gfx_id: i32, gobj: Option<GObjId>, va: &mut Args) -> Spawned {
     r.game.ef.load_kind = 0;
     r.game.ef.anim_count = 0;
     let mut gfx_id = gfx_id;
-    if gfx_id == 0x479 && r.game.ef.tables[1].is_none() {
-        gfx_id = 0x506;
+    if gfx_id == NEEDS_MARIO_FILE && r.game.ef.tables[1].is_none() {
+        gfx_id = WITHOUT_MARIO_FILE;
     }
     if gfx_id < 0x250 || gfx_id / 1000 == 0x1E {
         let pos = va.vec();
