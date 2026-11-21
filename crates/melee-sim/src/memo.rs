@@ -183,6 +183,54 @@ mod tests {
         }
     }
 
+    /// The camera's routines a frame asks again and again (`Mtx34::look_at`,
+    /// `Mtx44::perspective`, the up vector of a roll): many more inputs than slots, each asked
+    /// again soon after and much later, in both float modes, every answer the uncached one's.
+    #[test]
+    fn camera_routines_match_uncached() {
+        use crate::hsd::cobj::{up_of_roll, up_of_roll_uncached};
+        use crate::mtx::Mtx44;
+        let v = |v: Vec3| [v.x, v.y, v.z].map(f32::to_bits);
+        let m44 = |m: &Mtx44| m.m.map(|row| row.map(f32::to_bits));
+        for mode in MODES {
+            set_fp_mode(mode);
+            let mut rng = Bits(0xD1B5_4A32_D192_ED03);
+            let cases: Vec<_> = (0..5_000)
+                .map(|_| {
+                    let fov = 1.0 + (rng.next() % 1700) as f32 / 10.0;
+                    let near = 0.1 + (rng.next() % 1000) as f32;
+                    let persp = (fov, rng.float(), near, near + 1.0 + rng.float().abs());
+                    (rng.vec(), rng.vec(), rng.vec(), rng.float(), persp)
+                })
+                .collect();
+            for pass in 0..2 {
+                for (i, &(eye, up, target, roll, (fov, aspect, n, f))) in cases.iter().enumerate() {
+                    for (eye, up, target, roll, (fov, aspect, n, f)) in
+                        [(eye, up, target, roll, (fov, aspect, n, f)), cases[i / 2]]
+                    {
+                        let what = format!("{mode:?} {pass} {i}");
+                        assert_eq!(
+                            bits(&Mtx34::look_at(eye, up, target)),
+                            bits(&Mtx34::look_at_uncached(eye, up, target)),
+                            "look_at {what}"
+                        );
+                        assert_eq!(
+                            m44(&Mtx44::perspective(fov, aspect, n, f)),
+                            m44(&Mtx44::perspective_uncached(fov, aspect, n, f)),
+                            "perspective {what}"
+                        );
+                        assert_eq!(
+                            v(up_of_roll(eye, roll)),
+                            v(up_of_roll_uncached(eye, roll)),
+                            "up {what}"
+                        );
+                    }
+                }
+            }
+        }
+        set_fp_mode(FpMode::Hardware);
+    }
+
     fn bits(m: &Mtx34) -> [[u32; 4]; 3] {
         m.m.map(|row| row.map(f32::to_bits))
     }
