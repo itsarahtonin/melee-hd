@@ -285,7 +285,9 @@ impl Settings {
         }
         s.ucf = ucf::Pads::from_codes(&codes).unwrap_or_default();
         s.playback = true;
-        s.heap = Some(crate::hsd::heap::Layout::slippi_playback());
+        // The allocator model as the rules choose (`docs/refactor.md`, task 6).
+        s.heap = Settings::playback_needs_model(&s.rules, &s.start)
+            .then(crate::hsd::heap::Layout::slippi_playback);
         s.playback_heap = Some(playback::CodeListHeap::of(&r.codes));
         s.playback_response = r.response.clone();
         if let Some(u) = r.unlocks {
@@ -302,33 +304,45 @@ impl Settings {
     /// ([`Match::step_live_tick`]). The disc reads at Slippi's fast speed unless `disc` says
     /// otherwise (a session's match reads at the session's pace).
     ///
-    /// The allocator model is off (design call 8 of `docs/slippi-ruleset.md`): under Slippi's
-    /// rules nothing in a match reads a heap address but the Super Scope's one-shot charge,
-    /// which takes its stand-in (`sscope::ADDRESS_STAND_IN`), Samus's grapple swing, and a read
-    /// the rules don't cover, which stops by name. A match with Samus in it runs with the
-    /// model, laid out as playback's heap ([`Settings::live_needs_model`]); the oracle, which
-    /// compares the match's addresses with the console's, sets `heap` back to playback's
-    /// layout in every live match (`session::Session::live_model`).
+    /// The allocator model is off, as in a replay's playback under the same rules (design call
+    /// 8 of `docs/slippi-ruleset.md`, [`Settings::playback_needs_model`]): under Slippi's rules
+    /// nothing in a match reads a heap address but the Super Scope's one-shot charge, which
+    /// takes its stand-in (`sscope::ADDRESS_STAND_IN`), and Samus's grapple swing, whose match
+    /// runs with the model, laid out as playback's heap; anything else that reaches the model
+    /// stops by name (`hsd::heap::with`). The oracle, which compares the match's addresses
+    /// with the console's, turns it on in every live match ([`Settings::keep_model`],
+    /// `session::Session::live_model`).
     pub fn live(r: &ReplayStart) -> Result<Settings, CodeError> {
         let mut s = Settings::from_replay(r)?;
         s.live = true;
-        if !Settings::live_needs_model(&s.start) {
-            s.heap = None;
-        }
         Ok(s)
     }
 
-    /// Whether a live match from start data `d` runs with the allocator model (Sarah,
-    /// 2026-11-18: "Yes, model on"): when any of its players, human or computer, is Samus.
-    /// Her grapple beam's swing takes its grabbed-victim-only bit from her `ThrowN` joint's
-    /// address (`samusgrapple::SwingSlot::SavedR31`), which only the model gives, laid out as
+    /// Whether a match built as Slippi's playback builds one (a replay's, a live match) with
+    /// start data `d` runs with the allocator model, laid out as playback's heap: as `rules`
+    /// choose ([`Rules::playback_runs_model`]). Under Vanilla's modelling (Vanilla's rules,
+    /// 3.16's and 3.14's) always. Under Slippi 3.19's only when any of its players, human or
+    /// computer, is Samus (Sarah, 2026-11-18: "Yes, model on"): her grapple beam's swing takes
+    /// its grabbed-victim-only bit from her `ThrowN` joint's address
+    /// (`samusgrapple::SwingSlot::SavedR31`), which only the model gives, laid out as
     /// playback's heap is, as Slippi Dolphin's playback and live play have it; without the
     /// model the read stops by name (`SwingSlot::Unmodeled`).
-    pub fn live_needs_model(d: &StartMeleeData) -> bool {
-        d.players.iter().any(|p| {
-            p.slot_type != 3
-                && super::pl::player::ckind_ftkind(i32::from(p.ckind), 0) == FighterKind::Samus
-        })
+    pub fn playback_needs_model(rules: &Rules, d: &StartMeleeData) -> bool {
+        rules.playback_runs_model(
+            d.players
+                .iter()
+                .any(|p| p.slot_type != 3 && p.ckind == CharacterKind::Samus),
+        )
+    }
+
+    /// The allocator model on, laid out as playback's heap, in a match built as Slippi's
+    /// playback builds one, whatever its rules choose: for the tools that compare the match's
+    /// addresses and the heap with the original's (the oracle's `diff`, `record` and
+    /// `session`), where an address the model gives is compared, not read by gameplay.
+    pub fn keep_model(&mut self) {
+        if self.playback {
+            self.heap = Some(crate::hsd::heap::Layout::slippi_playback());
+        }
     }
 
     /// The settings a Slippi replay's game start records: its game info block (the match's
@@ -643,7 +657,9 @@ impl Match {
         if let Some(c) = &settings.counters {
             c.put(&mut m.game);
         }
-        let lent = crate::hsd::heap::Lent::take(&mut m.game.objs.heap);
+        // The match models memory where its settings start the model, or its rules model it.
+        let models = settings.heap.is_some() || m.game.models_memory();
+        let lent = crate::hsd::heap::Lent::take(&mut m.game.objs.heap, models);
         let mut r = m.running();
         // The boot's last scene ends (its tick's end is where the boot state was taken), then
         // the VS mode's step before the match's scene (`gmVsMelee_EnterVs`, which a replay's
@@ -662,7 +678,7 @@ impl Match {
         }
         // `preloadState`: the scene's text arena (0x4800 bytes for a match).
         r.game.sis.init(0x4800);
-        crate::hsd::heap::with(|h| h.mem_alloc(0x4800));
+        crate::hsd::heap::mem_alloc(0x4800);
         init_scene(&mut r);
         r.game.gm.on_frame = Some(CodeRef(vs::ON_FRAME));
         r.vs_on_enter(&settings.start, files);
@@ -761,7 +777,7 @@ impl Match {
     /// [`Match::step_replay`] up to the frame's display pass, where ssbm-rs's state traces
     /// sample the original: whether the pass is due, which [`Match::render`] runs.
     pub fn step_replay_tick(&mut self, source: &mut dyn playback::Source) -> (Frame, bool) {
-        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let lent = self.game.lend_model();
         let out = self.step_replay_tick_lent(source);
         lent.give_back(&mut self.game.objs.heap);
         out
@@ -791,7 +807,7 @@ impl Match {
 
     /// The frame's display pass after [`Match::step_replay_tick`]: its draw commands.
     pub fn render(&mut self) -> Vec<crate::hsd::display::Draw> {
-        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let lent = self.game.lend_model();
         scene::render_screen(&mut self.running());
         lent.give_back(&mut self.game.objs.heap);
         std::mem::take(&mut self.game.objs.display.draws)
@@ -816,7 +832,7 @@ impl Match {
     /// next read from `reads` (the loop's own, when it finds none queued, too). Whether the
     /// pass is due, which [`Match::render`] runs.
     pub fn step_live_tick(&mut self, reads: &mut dyn FnMut() -> PadData) -> (Frame, bool) {
-        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let lent = self.game.lend_model();
         let (t, render) = scene::step_session_tick(&mut self.running(), reads, false);
         lent.give_back(&mut self.game.objs.heap);
         let out = Frame {
@@ -832,7 +848,7 @@ impl Match {
     /// original: the tick's frame without draws, and whether the pass is due, which
     /// [`Match::render`] runs.
     pub fn step_tick(&mut self, pads: PadData) -> (Frame, bool) {
-        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let lent = self.game.lend_model();
         let (t, render) = scene::step_tick(&mut self.running(), pads, false);
         lent.give_back(&mut self.game.objs.heap);
         let out = Frame {
@@ -846,7 +862,7 @@ impl Match {
 
     /// One frame: the controllers' poll queued, then one engine tick.
     pub fn step(&mut self, pads: PadData) -> Frame {
-        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let lent = self.game.lend_model();
         let t = scene::step(&mut self.running(), pads, false);
         lent.give_back(&mut self.game.objs.heap);
         Frame {
@@ -875,7 +891,7 @@ pub fn init_scene(r: &mut Running) {
     // `HSD_GObjInit`'s lists: the process links' heads and tails, the render links' heads and
     // tails, the process priorities' heads, the processes by link and priority, and the
     // functions' table.
-    crate::hsd::heap::with(|h| {
+    crate::hsd::heap::mirror(|h| {
         for size in [0x100, 0x100, 0x104, 0x104, 0x64, 0x1900, 0x14] {
             h.mem_alloc(size);
         }
@@ -889,7 +905,7 @@ pub fn init_scene(r: &mut Running) {
     // Slippi's `Common/AllocSceneBuffer.asm` (at `gm_801A4BD4+0xE0`, in its playback set):
     // a buffer for the scene, the last scene's freed with that scene's heap.
     if g.runs_playback_codes() {
-        crate::hsd::heap::with(|h| h.mem_alloc(0x80));
+        crate::hsd::heap::mem_alloc(0x80);
     }
     g.lb_reset_sound_objects();
 }
@@ -1482,9 +1498,27 @@ mod tests {
         let start = Settings::vs(32, &[player(2, 0), player(14, 1)], 4, 8).start;
         let (r, _) = crate::game::record::live_start(&g, &start);
         assert_eq!(Settings::live(&r).expect("the ruleset's codes").heap, None);
+        // Its replay's playback runs without the model too, the same rules choosing
+        // (`docs/refactor.md`, task 6), unless a tool keeps it to compare addresses.
+        let mut played = Settings::from_replay(&r).expect("its codes");
+        assert_eq!(played.heap, None);
+        played.keep_model();
         assert_eq!(
-            Settings::from_replay(&r).expect("its codes").heap,
+            played.heap,
             Some(crate::hsd::heap::Layout::slippi_playback())
         );
+        // Under 3.16's codes, whose NanaDeterminism leaves r5, playback keeps Vanilla's
+        // modelling.
+        let rules = crate::game::state::Rules::slippi_online()
+            .with_fixes(Some(crate::game::slippi::CodeSet::V3_16));
+        assert!(Settings::playback_needs_model(&rules, &start));
+        assert!(Settings::playback_needs_model(
+            &crate::game::state::Rules::VANILLA,
+            &start
+        ));
+        assert!(!Settings::playback_needs_model(
+            &crate::game::state::Rules::slippi_online(),
+            &start
+        ));
     }
 }

@@ -335,7 +335,7 @@ pub fn birdo_sweep(args: &[&str]) -> ExitCode {
                             if birdo(&s.game).is_none() {
                                 break;
                             }
-                            let lent = melee_sim::hsd::heap::Lent::take(&mut s.game.objs.heap);
+                            let lent = s.game.lend_model();
                             {
                                 let mut r = Running {
                                     game: &mut s.game,

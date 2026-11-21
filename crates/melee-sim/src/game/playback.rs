@@ -604,7 +604,7 @@ impl Running<'_> {
         let codes = g.playback.as_ref().and_then(|p| p.code_list_heap);
         // The game info's buffer, the device transfer's and the codes' state block, then the
         // replay's code list and the backup of what its codes replace.
-        heap::with(|h| {
+        heap::mirror(|h| {
             for size in [0x7AC, 0x221, 0x40] {
                 h.mem_alloc(size);
             }
@@ -629,7 +629,7 @@ impl Running<'_> {
             if i == 1 {
                 // `Recording/SendGameInfo.asm`'s buffers: two it keeps, and the message it
                 // sends and frees.
-                heap::with(|h| {
+                heap::mirror(|h| {
                     h.mem_alloc(5);
                     h.mem_alloc(0x794);
                     let message = h.mem_alloc(0x205);

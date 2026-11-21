@@ -445,9 +445,13 @@ impl Running<'_> {
 
     /// A fighter's two animation buffers (`HSD_ObjAlloc` on `fighter_x59C_alloc_data`): a
     /// block the pool gives again keeps what its last fighter's loads left; a new one holds
-    /// a fresh heap's zeros, or after the menus an earlier scene's bytes.
+    /// a fresh heap's zeros, or after the menus an earlier scene's bytes. A match that models
+    /// no memory is the Slippi ruleset's own, from playback's fresh heap, as the model's would
+    /// be.
     pub(super) fn alloc_anim_buffers(&mut self, f: FighterId) {
-        let fill = if crate::hsd::heap::with(|h| h.fresh).unwrap_or(false) {
+        let fill = if crate::hsd::heap::ruled_out()
+            || crate::hsd::heap::with(|h| h.fresh).unwrap_or(false)
+        {
             Fill::Zero
         } else {
             Fill::Unknown
@@ -524,7 +528,7 @@ impl Running<'_> {
         id: Option<melee_data::archive::ArchiveId>,
     ) -> u32 {
         // Neither timed nor modeled (a state imported from a single call): nothing to do.
-        if self.game.audio.clock.is_none() && crate::hsd::heap::with(|_| ()).is_none() {
+        if self.game.audio.clock.is_none() && !crate::hsd::heap::modelled() {
             return 0;
         }
         // A file the preload cache holds: neither read nor in the scene's heap; its archive
@@ -561,7 +565,7 @@ impl Running<'_> {
         }
         // `lbArchive`'s loads into the scene's heap: the file's bytes, then its archive.
         let (file, archive) = if dest == MAIN_MEMORY {
-            crate::hsd::heap::with(|h| h.archive_alloc(len)).unwrap_or((0, 0))
+            crate::hsd::heap::mirror(|h| h.archive_alloc(len)).unwrap_or((0, 0))
         } else {
             (0, 0)
         };

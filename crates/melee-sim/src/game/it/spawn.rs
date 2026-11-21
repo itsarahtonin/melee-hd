@@ -248,7 +248,7 @@ pub fn build(table: &mut PickTable, counts: &[i32; 35], mask: u64, first: i32, w
     // The kinds' and the weights' arrays, 4 bytes an entry (`HSD_MemAlloc` of nothing
     // allocates nothing), laid out below.
     let arrays = if n > 0 {
-        crate::hsd::heap::with(|h| {
+        crate::hsd::heap::mirror(|h| {
             (
                 h.mem_alloc_unclaimed(4 * n as u32),
                 h.mem_alloc_unclaimed(4 * n as u32),
@@ -283,9 +283,9 @@ pub fn build(table: &mut PickTable, counts: &[i32; 35], mask: u64, first: i32, w
 /// and a halfword a weight, the arrays' rest (4 bytes an entry) keeping what the blocks held.
 fn lay_arrays((kinds_at, weights_at): (u32, u32), kinds: &[u8], weights: &[u16]) {
     let w: Vec<u8> = weights.iter().flat_map(|w| w.to_be_bytes()).collect();
-    crate::hsd::heap::with(|h| {
-        h.image.put(kinds_at, kinds);
-        h.image.put(weights_at, &w);
+    crate::hsd::heap::image(|i| {
+        i.put(kinds_at, kinds);
+        i.put(weights_at, &w);
     });
 }
 
@@ -303,7 +303,7 @@ pub fn build_monsters(game: &mut Game, data: &Archives) {
     t.size = 4;
     // The kinds' and the weights' arrays, laid out below.
     let arrays =
-        crate::hsd::heap::with(|h| (h.mem_alloc_unclaimed(4 * 4), h.mem_alloc_unclaimed(4 * 4)));
+        crate::hsd::heap::mirror(|h| (h.mem_alloc_unclaimed(4 * 4), h.mem_alloc_unclaimed(4 * 4)));
     let mut cumulative = 0u32;
     let mut weights = Vec::with_capacity(4);
     for &x in &w {

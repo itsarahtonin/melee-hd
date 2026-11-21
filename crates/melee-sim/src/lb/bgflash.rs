@@ -319,9 +319,9 @@ impl Running<'_> {
         // Nothing writes the three bytes after the alpha or the three after the overlay's
         // flags: they keep what the block held, a later object's leftovers (the challenger's
         // fighter after a won 100-Man Melee).
-        crate::hsd::heap::with(|h| {
-            h.image.unclaim(addr + 1, addr + 4);
-            h.image.unclaim(addr + 0x81, addr + 0x84);
+        crate::hsd::heap::image(|i| {
+            i.unclaim(addr + 1, addr + 4);
+            i.unclaim(addr + 0x81, addr + 0x84);
         });
         // The block holds what the heap's last owner left there, but its alpha.
         let fresh = crate::game::leftovers::pool_grew();

@@ -367,7 +367,7 @@ impl<K: Kinds> World<K> {
             "p_link {p_link} past the maximum"
         );
         // `GObj_Create` writes all but its last word, the remove function null.
-        super::heap::with(|h| h.image.claim_next(&[(0, 0x30)]));
+        super::heap::image(|i| i.claim_next(&[(0, 0x30)]));
         let g = GObjId(self.gobjs.alloc(GObj {
             classifier,
             p_link,
@@ -387,7 +387,7 @@ impl<K: Kinds> World<K> {
             user_data: None,
         }));
         let at = self.gobjs.addr(g.0);
-        super::heap::with(|h| h.image.word(at + 0x30, 0));
+        super::heap::image(|i| i.word(at + 0x30, 0));
         self.place(g, place);
         g
     }
@@ -520,7 +520,7 @@ impl<K: Kinds> World<K> {
             "process priority {priority} past the maximum"
         );
         // Its flags' bitfields leave the byte's low bits, and the padding after it.
-        super::heap::with(|h| h.image.claim_next(&[(0, 0xD), (0x10, 0x18)]));
+        super::heap::image(|i| i.claim_next(&[(0, 0xD), (0x10, 0x18)]));
         let p = ProcId(self.procs.alloc(Proc {
             child: None,
             next: None,
@@ -777,11 +777,9 @@ impl<K: Kinds> World<K> {
         // image knows the ones `Kinds::user_data_remover` gives.
         let at = self.gobjs.addr(g.0);
         let remover = K::user_data_remover(&data);
-        super::heap::with(|h| match remover {
-            Some(r) => h.image.word(at + 0x30, r),
-            None => h
-                .image
-                .claim(at + 0x30, at + 0x34, "a GObj's user data remover"),
+        super::heap::image(|i| match remover {
+            Some(r) => i.word(at + 0x30, r),
+            None => i.claim(at + 0x30, at + 0x34, "a GObj's user data remover"),
         });
     }
 

@@ -236,9 +236,9 @@ impl Running<'_> {
     ) -> R {
         let at = buf.map_or(0, |b| self.game.fighter_anim_bufs.addr(b.0));
         let hint = (at != 0).then_some(at + ARCHIVE_HEADER);
-        crate::hsd::heap::with(|h| h.image.set_copy_hint(hint));
+        crate::hsd::heap::image(|i| i.set_copy_hint(hint));
         let r = f(self);
-        crate::hsd::heap::with(|h| h.image.set_copy_hint(None));
+        crate::hsd::heap::image(|i| i.set_copy_hint(None));
         r
     }
 

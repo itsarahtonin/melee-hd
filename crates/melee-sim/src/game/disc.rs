@@ -390,7 +390,7 @@ impl Running<'_> {
         name: &str,
     ) -> (melee_data::archive::ArchiveId, u32, u32) {
         let (entrynum, len) = self.game.ft.data.files.entry(name);
-        let (file, archive) = crate::hsd::heap::with(|h| h.archive_alloc(len)).unwrap_or((0, 0));
+        let (file, archive) = crate::hsd::heap::mirror(|h| h.archive_alloc(len)).unwrap_or((0, 0));
         let id = self.game.ft.data.files.archive_id(name);
         if let Some(id) = id {
             self.game.it.file_read(self.data, id);
@@ -411,7 +411,7 @@ impl Running<'_> {
     /// (`lbHeap_80015CA8`), its bytes first.
     #[doc(alias = "lbArchive_80016EFC")]
     pub fn free_archive_blocks(&mut self, file: u32, archive: u32) {
-        crate::hsd::heap::with(|h| {
+        crate::hsd::heap::mirror(|h| {
             h.mem_free(file);
             h.mem_free(archive);
         });

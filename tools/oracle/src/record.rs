@@ -99,7 +99,11 @@ pub fn record(args: &[&str]) -> ExitCode {
     if slippi_rules {
         settings.rules = melee_sim::game::state::Rules::slippi_online();
     }
-    if !heap {
+    // The recording's heap addresses (the post-frame state word, items' misc bytes) compare
+    // with the replay's, under every ruleset, unless `--heap off`.
+    if heap {
+        settings.keep_model();
+    } else {
         settings.heap = None;
         settings.playback_heap = None;
     }

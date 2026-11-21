@@ -28,6 +28,13 @@
 //! ([`Lent`]): [`with`] reaches it from anywhere in the simulation, and the step puts it back
 //! in the state before it returns. Between steps nothing is lent, and outside a step (a check
 //! calling one game function) nothing is modelled: allocations get address 0.
+//!
+//! A step whose match models no memory (`game::ruleset`'s `Game::models_memory`: a match of
+//! the Slippi ruleset's own without the model) lends nothing: the allocators' hooks
+//! ([`class_alloc`], [`obj_alloc`], [`mem_alloc`] and the rest) give address 0 without
+//! touching the model, [`image_on`] and [`modelled`] answer false, and anything else that
+//! reaches the model ([`with`], [`start_scene_lent`]) stops by name, the tripwire for a path
+//! that would read what Vanilla's modelling gives (`docs/refactor.md`, task 6).
 
 use std::cell::{Cell, RefCell};
 
@@ -1375,6 +1382,7 @@ thread_local! {
     static DEPTH: Cell<u32> = const { Cell::new(0) };
     static LOG: RefCell<Option<Vec<String>>> = const { RefCell::new(None) };
     static IMAGE_ON: Cell<bool> = const { Cell::new(false) };
+    static RULED_OUT: Cell<bool> = const { Cell::new(false) };
 }
 
 /// Whether the lent-out model keeps a heap image (a session from power-on): the cheap test
@@ -1383,13 +1391,65 @@ pub fn image_on() -> bool {
     IMAGE_ON.with(Cell::get)
 }
 
+/// Whether the running step's match models no memory ([`Lent::take`]): a match of the Slippi
+/// ruleset's own, which starts from playback's fresh heap.
+pub fn ruled_out() -> bool {
+    RULED_OUT.with(Cell::get)
+}
+
+/// Whether the step's model is lent out and its scene has started: the test a hook makes
+/// where the model's being on decides, not its image. False in a step whose match models no
+/// memory.
+pub fn modelled() -> bool {
+    !RULED_OUT.with(Cell::get) && hook(|_| ()).is_some()
+}
+
 /// The lent-out model, if a step has lent one and its scene has started: what `f` makes of
-/// it. `None` outside a step, where nothing is modelled.
+/// it. `None` outside a step, where nothing is modelled. In a step whose match models no
+/// memory it stops by name, with the caller's place ([`Lent::take`]).
+#[track_caller]
 pub fn with<R>(f: impl FnOnce(&mut Heap) -> R) -> Option<R> {
+    if RULED_OUT.with(Cell::get) {
+        stop_ruled_out();
+    }
+    hook(f)
+}
+
+/// The lent-out model for what mirrors the original's allocations and frees (the pools', the
+/// heap's blocks, an archive's), which every match runs: as [`with`], but `None` without
+/// stopping in a step whose match models no memory, where no model is lent. The addresses it
+/// gives become state, and a reader of one has its own stop or stand-in.
+#[inline]
+pub fn mirror<R>(f: impl FnOnce(&mut Heap) -> R) -> Option<R> {
+    hook(f)
+}
+
+/// The lent-out model's heap image (`hsd::image`), its bookkeeping of what the game writes
+/// and the leftovers it reads: as [`with`], but `None` without stopping in a step whose
+/// match models no memory, which starts from playback's fresh heap and keeps no image (as a
+/// replay's match with the model keeps none: its image is off, and every read gives what a
+/// fresh heap holds).
+#[inline]
+pub fn image<R>(f: impl FnOnce(&mut super::image::Image) -> R) -> Option<R> {
+    hook(|h| f(&mut h.image))
+}
+
+#[inline]
+fn hook<R>(f: impl FnOnce(&mut Heap) -> R) -> Option<R> {
     LENT.with(|l| match l.borrow_mut().as_mut() {
         Some(h) if h.active => Some(f(h)),
         _ => None,
     })
+}
+
+/// The tripwire: the model reached in a step whose match models no memory.
+#[cold]
+#[track_caller]
+fn stop_ruled_out() -> ! {
+    panic!(
+        "the allocator model reached at {} in a match whose ruleset models no memory (game::ruleset's Game::models_memory: a Slippi-ruleset match without the model)",
+        std::panic::Location::caller()
+    )
 }
 
 /// How many bytes a texture's image takes, `GXGetTexBufferSize` without mipmaps: the format's
@@ -1414,23 +1474,23 @@ pub fn tex_buffer_size(width: u32, height: u32, format: u32) -> u32 {
 /// A class's new object from the lent-out model (`hsdNew`'s allocation): its address, or 0
 /// outside a step.
 pub fn class_alloc(class: Class) -> u32 {
-    with(|h| h.class_new(class)).unwrap_or(0)
+    hook(|h| h.class_new(class)).unwrap_or(0)
 }
 
 /// A class's object back to the lent-out model (`_hsdClassDestroy`).
 pub fn class_free(class: Class, addr: u32) {
-    with(|h| h.class_free(class, addr));
+    hook(|h| h.class_free(class, addr));
 }
 
 /// A new object of `kind`'s pool from the lent-out model (`HSD_ObjAlloc`): its address, or 0
 /// outside a step.
 pub fn obj_alloc(kind: Kind) -> u32 {
-    with(|h| h.obj_alloc(kind)).unwrap_or(0)
+    hook(|h| h.obj_alloc(kind)).unwrap_or(0)
 }
 
 /// An object of `kind`'s pool back to the lent-out model (`HSD_ObjFree`).
 pub fn obj_free(kind: Kind, addr: u32) {
-    with(|h| h.obj_free(kind, addr));
+    hook(|h| h.obj_free(kind, addr));
 }
 
 /// `HSD_ObjAllocInit` for pools a scene's setup inits (the match's, [`Kind::from_boot`]):
@@ -1438,7 +1498,7 @@ pub fn obj_free(kind: Kind, addr: u32) {
 /// left it ([`Heap::carry`]), takes its init's size and alignment. A pool the scene's
 /// start already set up is as the init leaves it, empty, and stays so.
 pub fn init_pools(kinds: &[Kind]) {
-    with(|h| {
+    hook(|h| {
         for &k in kinds {
             let a = &mut h.allocs[k as usize];
             if a.size == 0 || h.carried[k as usize] {
@@ -1454,7 +1514,7 @@ pub fn init_pools(kinds: &[Kind]) {
 /// aligned to `align` (the fighters' animation buffers, which the match and the results
 /// screen size differently).
 pub fn init_pool(kind: Kind, size: u32, align: u32) {
-    with(|h| {
+    hook(|h| {
         h.allocs[kind as usize] = ObjAlloc::init(size, align);
         h.carried[kind as usize] = false;
     });
@@ -1462,14 +1522,14 @@ pub fn init_pool(kind: Kind, size: u32, align: u32) {
 
 /// A memory piece from the lent-out model (`hsdAllocMemPiece`): its address, or 0.
 pub fn piece_alloc(size: u32) -> u32 {
-    with(|h| h.piece_alloc(size)).unwrap_or(0)
+    hook(|h| h.piece_alloc(size)).unwrap_or(0)
 }
 
 /// A memory piece from the lent-out model whose owner writes only `parts` of it (offsets:
 /// `HSD_TECnst`'s leaves its last byte, a TEV stage's its clamps' padding): the rest keeps what
 /// it held.
 pub fn piece_alloc_partly(size: u32, parts: &[(u32, u32)]) -> u32 {
-    with(|h| {
+    hook(|h| {
         h.image.claim_next(parts);
         h.piece_alloc(size)
     })
@@ -1478,39 +1538,43 @@ pub fn piece_alloc_partly(size: u32, parts: &[(u32, u32)]) -> u32 {
 
 /// A memory piece back to the lent-out model (`hsdFreeMemPiece`).
 pub fn piece_free(addr: u32, size: u32) {
-    with(|h| h.piece_free(addr, size));
+    hook(|h| h.piece_free(addr, size));
 }
 
 /// A block of the lent-out model's heap (`HSD_MemAlloc`): its address, or 0.
 pub fn mem_alloc(size: u32) -> u32 {
-    with(|h| h.mem_alloc(size)).unwrap_or(0)
+    hook(|h| h.mem_alloc(size)).unwrap_or(0)
 }
 
 /// A block of the lent-out model's heap (`HSD_MemAlloc`) for an `owner` the heap's image
 /// names: its address, or 0.
 pub fn mem_alloc_as(size: u32, owner: &'static str) -> u32 {
-    with(|h| h.mem_alloc_as(size, owner)).unwrap_or(0)
+    hook(|h| h.mem_alloc_as(size, owner)).unwrap_or(0)
 }
 
 /// A block of the lent-out model's heap whose owner says what it writes there (the movie
 /// player's): the image doesn't take it as written whole.
 pub fn mem_alloc_unclaimed(size: u32) -> u32 {
-    with(|h| h.mem_alloc_unclaimed(size)).unwrap_or(0)
+    hook(|h| h.mem_alloc_unclaimed(size)).unwrap_or(0)
 }
 
 /// A block back to the lent-out model's heap (`HSD_Free`).
 pub fn mem_free(addr: u32) {
-    with(|h| h.mem_free(addr));
+    hook(|h| h.mem_free(addr));
 }
 
 /// `hsdChangeClass` in the lent-out model.
 pub fn change_class(from: Class, to: Class) {
-    with(|h| h.change_class(from, to));
+    hook(|h| h.change_class(from, to));
 }
 
 /// Starts the lent-out model's scene: the scene's heap made anew from `layout`
 /// ([`Heap::start_scene`]).
+#[track_caller]
 pub fn start_scene_lent(layout: &Layout) {
+    if RULED_OUT.with(Cell::get) {
+        stop_ruled_out();
+    }
     LENT.with(|l| {
         if let Some(h) = l.borrow_mut().as_mut() {
             let mut image = std::mem::take(&mut h.image);
@@ -1531,23 +1595,33 @@ pub fn start_scene_lent(layout: &Layout) {
 #[must_use]
 pub struct Lent {
     outer: bool,
+    lent: bool,
 }
 
 impl Lent {
-    pub fn take(heap: &mut Heap) -> Lent {
+    /// The loan for a step, `models` whether its match models memory (`game::ruleset`'s
+    /// `Game::models_memory`, the one test): when it doesn't, nothing is lent and the state's
+    /// model stays where it is, and reaching the model stops by name ([`with`]).
+    pub fn take(heap: &mut Heap, models: bool) -> Lent {
         let outer = DEPTH.with(|d| {
             d.set(d.get() + 1);
             d.get() == 1
         });
         if outer {
-            IMAGE_ON.with(|o| o.set(heap.image.on));
-            LENT.with(|l| *l.borrow_mut() = Some(std::mem::take(heap)));
+            RULED_OUT.with(|o| o.set(!models));
+            if models {
+                IMAGE_ON.with(|o| o.set(heap.image.on));
+                LENT.with(|l| *l.borrow_mut() = Some(std::mem::take(heap)));
+            }
         }
-        Lent { outer }
+        Lent {
+            outer,
+            lent: outer && models,
+        }
     }
 
     pub fn give_back(self, heap: &mut Heap) {
-        if self.outer {
+        if self.lent {
             IMAGE_ON.with(|o| o.set(false));
             *heap = LENT.with(|l| l.borrow_mut().take()).unwrap_or_default();
         }
@@ -1559,6 +1633,7 @@ impl Drop for Lent {
         DEPTH.with(|d| d.set(d.get() - 1));
         if self.outer {
             IMAGE_ON.with(|o| o.set(false));
+            RULED_OUT.with(|o| o.set(false));
             LENT.with(|l| l.borrow_mut().take());
         }
     }
@@ -1618,5 +1693,36 @@ mod tests {
         let p = Heap::start_scene(&Layout::slippi_playback());
         assert_eq!(p.classes[fog].obj_size, 0);
         assert_eq!((v.os.index, p.os.index), (1, 2));
+    }
+
+    /// A step whose match models no memory lends nothing: the hooks give address 0 and leave
+    /// the state's model alone, the tests answer false, and reaching the model stops by name;
+    /// the next step that models memory lends the model as before.
+    #[test]
+    fn a_step_that_models_no_memory_stops_where_the_model_is_reached() {
+        let mut heap = Heap::start_scene(&Layout::slippi_playback());
+        let lent = Lent::take(&mut heap, false);
+        assert!(heap.active, "the state's model stays where it is");
+        assert_eq!(class_alloc(Class::JObj), 0);
+        assert_eq!(obj_alloc(Kind::ALL[0]), 0);
+        assert_eq!(mem_alloc(0x40), 0);
+        mem_free(0x8100_0000);
+        assert!(!image_on() && !modelled());
+        let stop = std::panic::catch_unwind(|| with(|h| h.os.size)).expect_err("a stop");
+        let text = stop.downcast_ref::<String>().expect("a message");
+        assert!(
+            text.contains("models no memory") && text.contains("heap.rs"),
+            "{text}"
+        );
+        lent.give_back(&mut heap);
+        assert!(heap.active);
+        let lent = Lent::take(&mut heap, true);
+        assert!(modelled());
+        assert_ne!(mem_alloc(0x40), 0);
+        assert!(with(|h| h.os.allocated.len()).is_some_and(|n| n == 1));
+        lent.give_back(&mut heap);
+        assert_eq!(heap.os.allocated.len(), 1);
+        // Outside a step nothing is modelled and nothing stops.
+        assert!(with(|_| ()).is_none());
     }
 }
