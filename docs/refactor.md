@@ -853,6 +853,21 @@ The brief named the third family "Mushroom Kingdom II's routes"; the survey's fa
 | Other | `ticks_and_restores_dont_allocate` at one thread, melee-sim's unit tests (171, the callback table, the registry and the single-player audit among them), `fmt` and `clippy -D warnings` pass |
 | Speed | not measured: the hands' code runs only in the single-player modes and debug matches, and the callback table holds the same entries |
 
+### Task 20, Pokémon Stadium's allocations and rollback's worst state: done (2026-11-21, `perf/stadium-allocs` from `7871ac5b`)
+
+The second survey's task 20: Pokémon Stadium's ticks allocated (8 to 11 a tick, and one a restore), the one exception to `ticks_and_restores_dont_allocate`, and its tick 12,500 sat at the 4 ms line for restore and 8 ticks on the worker. [Performance](performance.md#pokémon-stadiums-allocations-and-its-worst-state-2026-11-21) has the details and numbers.
+
+- **Allocations:** the text system's maps flat (`flat_map::FlatMap`) and restored in place, its static string buffers a struct, the materials' marks refilled on a restore (`#[clone_from(refill)]`), each text laid out into a kept draw's storage (`Display::spare_texts`, from the frames the frontend gives back). No tick, display pass or restore of any benchmark match allocates; the test has no exception left and counts the display passes too.
+- **The worst state:** no single cause, several small ones (the water transformation's collision lines, each fighter's screen mark, particles, the screen's text). The camera's look-at, perspective and up vector are memo tables now, and the floor and ceiling searches pass over lines that can't reach the segment, working out the last line's r5 after the loop. On the worker every state of the benchmark matches and Sarah's replay is under 4 ms, at most 3.76; tick 12,500 went from 3.93 to 4.02 ms to 3.63 to 3.65.
+- **Tools:** `melee-bench rollback-split [--at TICK | --every TICKS]`, a state's window taken apart (restore, each tick's engine part and display pass) over many runs, steadier than `snapshot-match`'s five.
+
+Checks:
+
+- **The whole state, tick by tick:** the base's oracle ran the full diff of 94 of the verify list's replays, each clean, writing a per-tick golden: Pokémon Stadium's 36, the benchmark's five (with `fox-fox-fd --heap`), every `stage-*` diff (23), and the Ice Climbers' replays beyond Stadium's three (27, Nana's DI reading the searches' r5) with three player-code replays of Ice Climbers games. The branch's oracle checked each golden, at the allocation commit for the first 41 and at the head for all 94: **1,080,373 ticks, every tick's state hash the same.** The goldens' coverage line was set to the branch's, since the comparer's sources changed only by `state_eq`'s map helpers and the derive's new option.
+- `sync-test --rollback 7`: `fox-marth-ps` (`--fp hardware`, 13,579 ticks checked), Sarah's 3.19 Pokémon Stadium replay `Game_20260129T214824` (`--fp slippi`, 14,140) and `ics-marth-ps` (3.16, frozen Stadium, `--fp slippi`, 17,227): no difference.
+- `ticks_and_restores_dont_allocate` at one thread with no exception, mutation-tested three ways; melee-player's prediction tests (every tick's draws compared between two runs that both give their frames back), state-only tests and `drawing_offscreen_fighters_changes_no_gameplay`; the memo and search unit tests, mutation-tested; melee-sim's unit tests (179, 2 ignored), the ledger's `--check` (19,827 of 19,827; only `docs/port-ledger.csv`'s line numbers moved), `fmt` and `clippy -D warnings`.
+- The draws keep their shape (`Draw::SisText`, a `TextDraw` laid out as before into reused storage), so the renderers' frames weren't rerun.
+
 ### The fast renderer
 
 Its own crates (melee-render, melee-gpu, melee-player); the `feat/linux-011` branch works in melee-gpu and melee-player now, so F2 onward should start from its merge or keep to new files.
