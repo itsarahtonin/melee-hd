@@ -1497,6 +1497,65 @@ fn a_ruleset_match_ignores_the_disc_pace() {
     });
 }
 
+/// A replay plays as Slippi Dolphin's playback reads the disc, at its fast speed: the Pokémon
+/// Stadium benchmark replay, opened as the player opens one (`--replay` at the default
+/// settings, which the Recordings tab's Play takes too), plays to its last frame. At a drive's
+/// pace its first transformation's file lands six ticks late, the seed parts at tick 4114 and
+/// the match ends at tick 8,924 of 13,699 (docs/player.md, "the player reads the disc at a
+/// drive's pace"). A developer's match keeps a drive's pace, which its music needs.
+#[test]
+fn a_stadium_replay_plays_to_its_end_at_the_default_settings() {
+    crate::on_game_stack(|| {
+        let Ok(disc) = std::env::var("SSBM_DISC") else {
+            eprintln!("skipped: SSBM_DISC names no disc");
+            return;
+        };
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../../data/bench/fox-marth-ps.slp"
+        );
+        let replay =
+            Replay::parse(&std::fs::read(path).expect("the benchmark replay")).expect("it parses");
+        let opened = |line: &[&str]| {
+            let mut args = crate::parse_args_from(line.iter().map(|&a| a.to_owned()).collect())
+                .expect("the command line");
+            args.disc = disc.clone();
+            args.mute = true;
+            args.bench = Some(0);
+            Session::open(&args).expect("the match")
+        };
+        let mut s = opened(&["--replay", path]);
+        let pace = s.game().audio.disc;
+        let none = [PadStatus::default(); 4];
+        let mut ticks = 0u32;
+        loop {
+            let f = s.tick(none);
+            ticks += 1;
+            let ended = f.ended;
+            s.recycle(f);
+            if ended || ticks > 20_000 {
+                break;
+            }
+        }
+        // The replay's frames run from -123 to the game's end, its last; the scene goes on 115
+        // ticks more (the end's announcement and fade) before the match ends.
+        const AFTER_THE_GAMES_END: i32 = 115;
+        let last = *replay.frames.keys().last().expect("frames");
+        assert_eq!(
+            ticks,
+            u32::try_from(last + 123 + AFTER_THE_GAMES_END).unwrap(),
+            "the replay at {pace:?} ended at tick {ticks}, its last frame is {last}"
+        );
+        let s = opened(&["--p1", "fox", "--p2", "marth", "--stage", "fd"]);
+        assert_eq!(
+            s.game().audio.disc,
+            melee_sim::audio::clock::DiscSpeed::Drive,
+            "a developer's match's pace"
+        );
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+    });
+}
+
 /// A live match takes the console's counters no scene resets at the handoff (`live::Counters`:
 /// the collision joints' stamp, the collision update counter, the particles' family ids, display
 /// frame and links' sort frames), as Slippi Dolphin's live play carries them on, where melee-hd's

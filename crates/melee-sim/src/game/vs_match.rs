@@ -350,7 +350,8 @@ impl Settings {
     /// say how its sound played; this takes the sample-accurate model, as Slippi Dolphin
     /// recorded it and ssbm-rs plays replays unless told `AX=0`, so the two compare.
     /// [`DspModel::Silent`] stays available by setting `dsp`. The disc reads at Slippi's fast
-    /// disc speed, as ssbm-rs's traces of replays do; a drive's pace is `disc`.
+    /// disc speed, as ssbm-rs's traces of replays and Slippi Dolphin's playback do (its
+    /// `GALE01r2.ini`'s `FastDiscSpeed`); a drive's pace is `disc`.
     pub fn from_game_info(info: &[u8], seed: u32) -> Settings {
         assert_eq!(
             info.len(),
