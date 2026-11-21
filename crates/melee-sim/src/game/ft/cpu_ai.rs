@@ -14,6 +14,7 @@ use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::gr::GrKind;
 use crate::hsd::gobj::GObjId;
 use crate::math;
 
@@ -358,7 +359,7 @@ impl Running<'_> {
     #[doc(alias = "grCorneria_801E2E50")]
     pub(super) fn corneria_ceiling_floor(&self, line: i32) -> bool {
         // Gr_Kind_Corneria.
-        self.game.stage_info.grkind == 14
+        self.game.stage_info.grkind == GrKind::Corneria
             && line != -1
             && self
                 .game

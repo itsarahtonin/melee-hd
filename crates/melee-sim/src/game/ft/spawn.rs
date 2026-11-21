@@ -9,6 +9,7 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::super::structs::{Fighter, ftCollisionBox};
 use crate::fpu::{copy, mem, reg};
+use crate::game::gr::GrKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::mp::coll::Coll;
@@ -442,7 +443,16 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.bury_grkind = grkind;
         fp.bury_timer_1 = 0;
-        if matches!(grkind, 30 | 4 | 32 | 39 | 8) {
+        if matches!(
+            GrKind::from_id(grkind),
+            Some(
+                GrKind::OldKongo
+                    | GrKind::Kongo
+                    | GrKind::ShrineRoute
+                    | GrKind::Pushon
+                    | GrKind::Zebes
+            )
+        ) {
             fp.bury_timer_2 = 0;
         }
     }

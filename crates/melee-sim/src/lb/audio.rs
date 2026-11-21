@@ -12,6 +12,7 @@ mod boot;
 mod sound_test;
 
 use crate::game::ft::CharacterKind;
+use crate::game::gr::StKind;
 pub use boot::{AUX_DELAY, AUX_REVERB_STD, SavedSound, SoundBank, balance_fx, balance_voice};
 pub use sound_test::{character_song, song_flag};
 
@@ -1579,10 +1580,10 @@ impl crate::game::state::Running<'_> {
             }
         }
         let stkind = crate::game::gr::stage::stkind(self.game);
-        if stkind == 0xD9 || stkind == 0xE5 {
+        if stkind == StKind::Corneria217 || stkind == StKind::Greens229 {
             result |= 0x2_0000_4000;
         }
-        if stkind == 0x46 || stkind == 0x47 {
+        if stkind == StKind::AdventureCorneria || stkind == StKind::AdventureCorneria2 {
             result |= 0xC00;
         }
         self.game.audio.lb.send = i32::from(GROUND_SEND[ground_kind(stkind)]);

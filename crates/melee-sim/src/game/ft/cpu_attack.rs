@@ -13,6 +13,7 @@ use super::common::GA_AIR;
 use crate::fpu::{mem, reg};
 use crate::game::ft::CpuKind;
 use crate::game::ft::FighterKind;
+use crate::game::gr::GrKind;
 use crate::game::it::ItKind;
 use crate::lb::{collision, hitcapsule};
 use crate::math;
@@ -564,7 +565,9 @@ impl Running<'_> {
     fn cpu_air_attack_ok(&self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
         // Gr_Kind_Kongo.
-        if self.game.stage_info.grkind == 4 && (fpp.cur_pos.x > 25.0 || fpp.cur_pos.x < -25.0) {
+        if self.game.stage_info.grkind == GrKind::Kongo
+            && (fpp.cur_pos.x > 25.0 || fpp.cur_pos.x < -25.0)
+        {
             return false;
         }
         let target = fpp.cpu.x44.expect("ftCo_800B89CC without a target");

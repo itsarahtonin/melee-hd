@@ -392,14 +392,49 @@ pub enum StKind {
     Battle = 31,
     /// `St_Kind_Last`.
     Last = 32,
+    /// Adventure's Mushroom Kingdom route (`stage_id_map`: `Gr_Kind_KinokoRoute`).
+    AdventureKinokoRoute = 59,
+    /// Adventure's Kongo Jungle.
+    AdventureKongo = 61,
+    /// Adventure's Jungle Japes.
+    AdventureGarden = 62,
+    /// Adventure's Underground Maze (`Gr_Kind_ShrineRoute`).
+    AdventureShrineRoute = 63,
+    /// Adventure's escape from Brinstar (`Gr_Kind_ZebesRoute`).
+    AdventureZebesRoute = 66,
+    /// Adventure's Green Greens.
+    AdventureGreens = 68,
+    /// Adventure's Corneria, its first and second matches.
+    AdventureCorneria = 70,
+    AdventureCorneria2 = 71,
+    /// Adventure's Pokémon Stadium.
+    AdventurePStadium = 72,
     /// `St_Kind_BigBlueRoute`.
     BigBlueRoute = 73,
+    /// Adventure's Icicle Mountain.
+    AdventureIcemt = 76,
+    /// Adventure's Battlefield, the Wire Frames'.
+    AdventureBattle = 78,
     /// `St_Kind_Unk84`: the Home-Run Contest's.
     HomeRun = 84,
     /// `St_Kind_Heal`.
     Heal = 85,
+    /// Classic's final match, Final Destination with Master Hand (`CLASSIC_FINAL`).
+    ClassicLast = 176,
+    /// The single-player modes' and events' variants the code tells apart, named by their
+    /// ground kind (`stage_id_map`) and number.
+    Icemt212 = 212,
+    Corneria217 = 217,
+    Venom228 = 228,
+    Greens229 = 229,
+    Corneria233 = 233,
+    PStadium240 = 240,
+    Battle245 = 245,
     /// Event 50's (Final Destination, with both hands).
     Event50 = 251,
+    Battle273 = 273,
+    /// Multi-Man Melee's Battlefield.
+    MultiMan = 285,
     /// `St_Kind_Unk328`: none: the game cache names no stage.
     Unk328 = 328,
 }

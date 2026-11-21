@@ -455,7 +455,7 @@ fn check_far(r: &mut Running, pos: &mut Vec3) -> i32 {
 /// twice running, the far group 4; then another wait. In the demo up to three at once.
 #[doc(alias = "grCorneria_801DCE1C")]
 pub fn spawn_arwings(r: &mut Running) {
-    if stage::stkind(r.game) == 0x46 {
+    if stage::stkind(r.game) == super::StKind::AdventureCorneria {
         g(r.game).arwings = [None; 3];
         return;
     }

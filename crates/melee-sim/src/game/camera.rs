@@ -20,6 +20,7 @@ use super::handles::{CameraBoxId, CodeRef, FighterId};
 use super::state::{Game, Obj, Running, UserData};
 use super::structs::{Camera, CameraDebugMode, CameraTransformState, CmSubject, StageInfo};
 use crate::fpu::{copy, mem, reg};
+use crate::game::gr::GrKind;
 use crate::hsd::cobj::{self, CObjId};
 use crate::hsd::gobj::GObjId;
 use crate::lb::screen::world_to_screen;
@@ -602,13 +603,13 @@ fn fighter_dead(game: &Game, gobj: GObjId) -> bool {
 /// The stage's floor for the eye in the stages that have one (`get_stage_floor_height`).
 fn eye_floor(game: &Game) -> f64 {
     let s = &game.stage_info;
-    match s.grkind {
-        2 => reg(super::gr::castle::camera_floor(game)),
-        14 => super::gr::corneria::camera_floor(game),
-        8 => reg(super::gr::zebes::camera_floor(s)),
-        5 => reg(super::gr::garden::camera_floor()),
-        31 => reg(super::gr::kinokoroute::camera_floor()),
-        67 => super::gr::homerun::camera_floor(game),
+    match GrKind::from_id(s.grkind) {
+        Some(GrKind::Castle) => reg(super::gr::castle::camera_floor(game)),
+        Some(GrKind::Corneria) => super::gr::corneria::camera_floor(game),
+        Some(GrKind::Zebes) => reg(super::gr::zebes::camera_floor(s)),
+        Some(GrKind::Garden) => reg(super::gr::garden::camera_floor()),
+        Some(GrKind::KinokoRoute) => reg(super::gr::kinokoroute::camera_floor()),
+        Some(GrKind::Homerun) => super::gr::homerun::camera_floor(game),
         _ => fp::fneg(f64::from(f32::MAX)),
     }
 }

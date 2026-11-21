@@ -2,6 +2,7 @@
 //! surface flags) selects a friction multiplier and three sets of sound effects.
 
 use crate::fpu::copy;
+use crate::game::gr::GrKind;
 
 /// One set of a terrain's sound effects: four sounds, then three more numbers the fighter
 /// code reads with them.
@@ -175,13 +176,13 @@ const SHRINE_ROUTE: [TerrainSounds; 20] = with(10, WATER_SHRINE_ROUTE);
 /// A stage's table: Fountain of Dreams, Pokémon Stadium, Icicle Mountain and the Underground
 /// Maze have their own water or snow.
 fn table(grkind: i32) -> &'static [TerrainSounds; 20] {
-    match grkind {
-        12 => &IZUMI,
-        16 => &PSTADIUM,
-        22 => &ICEMT,
-        32 => &SHRINE_ROUTE,
-        0..0x47 => &BASE,
-        _ => panic!("mplib.c: no terrain table for stage kind {grkind}"),
+    match GrKind::from_id(grkind) {
+        Some(GrKind::Izumi) => &IZUMI,
+        Some(GrKind::PStadium) => &PSTADIUM,
+        Some(GrKind::Icemt) => &ICEMT,
+        Some(GrKind::ShrineRoute) => &SHRINE_ROUTE,
+        Some(_) => &BASE,
+        None => panic!("mplib.c: no terrain table for stage kind {grkind}"),
     }
 }
 

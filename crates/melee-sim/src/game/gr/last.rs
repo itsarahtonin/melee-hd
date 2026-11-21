@@ -258,7 +258,7 @@ pub fn boss_health(game: &crate::game::state::Game) -> f64 {
 pub fn advance(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let stkind = r.game.gr.stkind;
-    if stkind == 0xB0 || stkind == 0xFB {
+    if stkind == super::StKind::ClassicLast || stkind == super::StKind::Event50 {
         // The boss stages (Classic's Master Hand, Event 50): the next phase as the hands'
         // health falls past each phase's mark.
         let health = boss_health(r.game);

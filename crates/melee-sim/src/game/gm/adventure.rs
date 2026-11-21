@@ -5,6 +5,7 @@ use super::super::handles::CodeRef;
 use super::super::state::Running;
 use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
+use crate::game::gr::StKind;
 
 /// `ChKind_None`, `CKind_Kirby`, `CKind_Mario`, `CKind_Luigi`.
 const NONE: u8 = 0x21;
@@ -967,10 +968,10 @@ fn vs_count(id: u8) -> u8 {
 pub fn match_start_kinds(game: &super::super::state::Game, stkind: u16) -> [i8; 3] {
     let mut k = [FT_NONE; 3];
     match stkind {
-        0x3B => k[0] = FT_YOSHI,
-        0x3F => k[0] = FT_LINK,
-        0x44 => k[0] = FT_KIRBY,
-        0x48 => {
+        s if s == StKind::AdventureKinokoRoute => k[0] = FT_YOSHI,
+        s if s == StKind::AdventureShrineRoute => k[0] = FT_LINK,
+        s if s == StKind::AdventureGreens => k[0] = FT_KIRBY,
+        s if s == StKind::AdventurePStadium => {
             k[0] = FT_PIKACHU;
             if game.gm.unlocks.ckind_unlocked(CharacterKind::Pichu as u8) {
                 k[1] = FT_PICHU;
@@ -979,8 +980,8 @@ pub fn match_start_kinds(game: &super::super::state::Game, stkind: u16) -> [i8; 
                 k[2] = FT_PURIN;
             }
         }
-        0x4C => k[..2].copy_from_slice(&[FT_POPO, FT_NANA]),
-        0x4E => k[..2].copy_from_slice(&[FT_BOY, FT_GIRL]),
+        s if s == StKind::AdventureIcemt => k[..2].copy_from_slice(&[FT_POPO, FT_NANA]),
+        s if s == StKind::AdventureBattle => k[..2].copy_from_slice(&[FT_BOY, FT_GIRL]),
         _ => {}
     }
     k
@@ -1444,7 +1445,7 @@ impl Running<'_> {
     #[doc(alias = "gm_8017C838")]
     pub fn adventure_match_start(&mut self) {
         let stkind = self.game.vs.start.stkind;
-        if stkind == 0x44 {
+        if stkind == StKind::AdventureGreens {
             let p = self.game.one_player.adventure.base.player;
             let costume = u8::from(p.ckind as u8 == CharacterKind::Kirby && p.color == 0);
             self.load_kirby_hats(costume);

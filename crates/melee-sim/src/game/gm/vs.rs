@@ -21,6 +21,7 @@ use super::{GM_ADVENTURE, GM_ALLSTAR, GM_CHALLENGER_APPROACH, GM_CLASSIC, GM_VS}
 use crate::fpu::{mem, reg};
 use crate::game::ft::CharacterKind;
 use crate::game::ft::FighterKind;
+use crate::game::gr::StKind;
 use crate::hsd::Objects;
 use crate::hsd::jobj::{self, JObjId};
 use crate::vec::Vec3;
@@ -1310,7 +1311,7 @@ impl Running<'_> {
             let point = i32::from(self.game.stage_info.x6DC);
             let pos = super::super::gr::stage::entry_point(self.game, self.data, point)
                 .unwrap_or_else(|| panic!("entry point {point} reads a stale vector"));
-            if stkind != 0x4C && sub == 0 {
+            if stkind != StKind::AdventureIcemt && sub == 0 {
                 let c = &mut self.game.stage_info.cam_info;
                 c.cam_x_offset = pos.x;
                 c.cam_y_offset = pos.y;

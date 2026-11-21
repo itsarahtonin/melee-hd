@@ -11,6 +11,7 @@ use super::super::structs::Fighter;
 use super::data::{FIGHTER_ATTRS_SIZE, figatree_frames, kind_tables};
 use crate::fpu::{mem, reg};
 use crate::game::ft::FighterKind;
+use crate::game::gr::GrKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::hsd::pobj::{self, PObjClass};
@@ -452,7 +453,7 @@ impl Running<'_> {
     #[doc(alias = "Fighter_80068E64")]
     pub(super) fn set_depth_scale(&mut self, f: FighterId) {
         // `Gr_Kind_Flatzone`.
-        let z = if self.game.stage_info.grkind == 27 {
+        let z = if self.game.stage_info.grkind == GrKind::Flatzone {
             self.common().f32(0x7E4)
         } else {
             1.0
