@@ -679,8 +679,12 @@ pub fn rollback_split(args: &[String]) {
         let mut ctl = PerfCtl::open();
         // Per run: the restore, then each tick's engine part and display pass.
         let mut restore = Vec::with_capacity(runs);
-        let mut ticks = vec![Vec::with_capacity(runs); ROLLBACK_TICKS];
-        let mut passes = vec![Vec::with_capacity(runs); ROLLBACK_TICKS];
+        let mut ticks: Vec<Vec<f64>> = (0..ROLLBACK_TICKS)
+            .map(|_| Vec::with_capacity(runs))
+            .collect();
+        let mut passes: Vec<Vec<f64>> = (0..ROLLBACK_TICKS)
+            .map(|_| Vec::with_capacity(runs))
+            .collect();
         let mut total = Vec::with_capacity(runs);
         let mut frames = [0i32; ROLLBACK_TICKS];
         for run in 0..runs + 2 {
