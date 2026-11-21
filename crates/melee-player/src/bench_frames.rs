@@ -246,7 +246,11 @@ mod tests {
         let ms = Duration::from_millis;
         for tick in 0..4 {
             for k in 0..2 {
-                let wait = if k == 0 && tick % 2 == 1 { ms(20) } else { ms(1) };
+                let wait = if k == 0 && tick % 2 == 1 {
+                    ms(20)
+                } else {
+                    ms(1)
+                };
                 f.push(Row {
                     tick,
                     k,

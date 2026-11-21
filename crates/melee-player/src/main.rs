@@ -3326,6 +3326,16 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
     let scale = scale_for(args.scale, args.size, args.aspect);
     let mut r = pipelines::renderer(&gpu, scale, args.msaa, args.aspect);
     r.xfb_readback = args.shot.is_some();
+    // The player's menus' renderer makes the saved list's specialized pipelines during the boot
+    // and the menus, and the match's takes them (`present::Gpu::specialized`): so does the
+    // match's here, this renderer standing for the menus'.
+    let warm = Instant::now();
+    r.finish_specialized();
+    println!(
+        "the saved specialized pipelines: {} made in {:.0} ms before the match, as the menus would",
+        gpu.specialized.len(),
+        warm.elapsed().as_secs_f64() * 1000.0
+    );
     let mut renderer = gpu_for(r, args.one_thread, args.fast);
     let mut handoff = handoff::Handoff::default();
     let mut frames = Frames::new();

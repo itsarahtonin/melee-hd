@@ -43,7 +43,7 @@ mod written_over_tests;
 mod xfb;
 
 pub use gpu_time::GpuTimer;
-pub use tev::{TevMode, TevStats};
+pub use tev::{SharedSpecialized, TevMode, TevStats};
 pub use thread::Threaded;
 
 use std::collections::HashMap;
@@ -1217,6 +1217,13 @@ impl Renderer {
             let start = range.0 & PHYS_MASK;
             self.materials.forget(start, start + range.1);
         }
+    }
+
+    /// Takes the specialized pipelines `shared` holds as this renderer asks for them, and puts
+    /// those it makes there ([`SharedSpecialized`]; every renderer sharing one is on this
+    /// device). Set it before [`Renderer::warm_specialized`], which then takes what's there.
+    pub fn share_specialized(&mut self, shared: Option<SharedSpecialized>) {
+        self.tev.shared = shared;
     }
 
     /// Waits for every specialized pipeline asked for to be made, and counts the draw calls

@@ -204,6 +204,10 @@ pub struct Gpu {
     /// Times every render pass by stage, where the device has timestamp queries (unless
     /// `MELEE_GPU_TIMING=0`): the renderer's, the blit's and the overlay's.
     pub timer: Option<melee_gpu::GpuTimer>,
+    /// The specialized pipelines every renderer made on it has made: the menus' renderer makes
+    /// the saved list's during the boot and the menus, and each match's renderer, made at its
+    /// start, takes them instead of drawing with the uber shader while making them again.
+    pub specialized: melee_gpu::SharedSpecialized,
 }
 
 impl Gpu {
@@ -248,6 +252,7 @@ impl Gpu {
             device,
             queue,
             timer,
+            specialized: melee_gpu::SharedSpecialized::default(),
         }
     }
 
@@ -265,6 +270,7 @@ impl Gpu {
         r.xfb_on_gpu = true;
         r.xfb_readback = false;
         r.set_timer(self.timer.clone());
+        r.share_specialized(Some(self.specialized.clone()));
         r
     }
 
