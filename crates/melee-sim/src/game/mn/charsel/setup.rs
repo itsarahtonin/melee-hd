@@ -36,7 +36,7 @@ impl Running<'_> {
             let text = self.create_text_buffer(0, ctx);
             let s = &mut self.game.sis;
             let t = s.text_mut(text);
-            t.x4c = 1;
+            t.depth_test = 1;
             t.default_fitting = 1;
             t.default_alignment = 1;
             t.font_size = [0.058, 0.055];
@@ -92,7 +92,7 @@ impl Running<'_> {
                 p.z,
             );
             t.font_size = [0.065, 0.065];
-            t.x4e = 1;
+            t.clips = 1;
             t.hidden = 1;
             s.add_string(list, 0.0, 0.0, Some(DOTS11));
             s.set_color(self.data, list, 0, YELLOW);

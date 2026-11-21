@@ -139,16 +139,16 @@ impl Running<'_> {
         for i in 0..ROWS {
             let t = self.create_text(0, 1, Vec3::new(-14.0, y(6.35, i), 17.0), 8.9, 1.25);
             let x = self.game.sis.text_mut(t);
-            x.x34 = [0.034, 0.034];
+            x.default_scale = [0.034, 0.034];
             x.default_alignment = 2;
             self.game.data_menus.bonus.names[i] = Some(t);
             let t = self.create_text(0, 1, Vec3::new(-14.0, y(5.0, i), 17.0), 8.9, 1.25);
             let x = self.game.sis.text_mut(t);
-            x.x34 = [0.034, 0.034];
+            x.default_scale = [0.034, 0.034];
             x.default_alignment = 2;
             self.game.data_menus.bonus.points[i] = Some(t);
             let t = self.create_text(0, 1, Vec3::new(-4.750_000_5, y(6.25, i), 17.0), 18.5, 2.5);
-            self.game.sis.text_mut(t).x34 = [0.034, 0.034];
+            self.game.sis.text_mut(t).default_scale = [0.034, 0.034];
             self.game.data_menus.bonus.descriptions[i] = Some(t);
             if i == 4 {
                 self.bonus_rows();

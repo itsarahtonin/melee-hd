@@ -106,50 +106,78 @@ pub struct Canvas {
 
 /// `HSD_Text`. The fields `HSD_SisLib_803A5ACC` leaves hold what its block held
 /// ([`SisLib::text_leftovers`]), `None` where the heap's image doesn't know it
-/// (`HSD_SisLib_803A6368` writes all but `x88` and `x9F`).
+/// (`HSD_SisLib_803A6368` writes all but `line_scale`, `x88`, and `unused_tail`, `x9F`).
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Text {
     pub pos: Vec3,
     pub box_size: [f32; 2],
-    pub x14: [f32; 4],
+    /// `x14`: the clip box's margins inside the text's box (top, bottom, left, right), with `clips`.
+    #[doc(alias("x14"))]
+    pub clip_margins: [f32; 4],
     pub font_size: [f32; 2],
     pub bg_color: [u8; 4],
     pub text_color: [u8; 4],
-    pub x34: [f32; 2],
-    pub x3c: [f32; 2],
-    pub x44: u16,
-    pub x46: u16,
+    /// `x34`, `x3C`, `x44`, `x46`: what a reset sets `scale`, `spacing`, `line_delay` and `char_delay` to.
+    #[doc(alias("x34"))]
+    pub default_scale: [f32; 2],
+    #[doc(alias("x3c"))]
+    pub default_spacing: [f32; 2],
+    #[doc(alias("x44"))]
+    pub default_line_delay: u16,
+    #[doc(alias("x46"))]
+    pub default_char_delay: u16,
     pub default_fitting: u8,
     pub default_kerning: u8,
     pub default_alignment: u8,
-    pub x4b: Option<u8>,
-    pub x4c: u8,
+    /// `x4B`: the typing has stopped at `typing_cursor` (no delay given: the text waits).
+    #[doc(alias("x4b"))]
+    pub typing_stop: Option<u8>,
+    /// `x4C`: the text is drawn with the depth test on.
+    #[doc(alias("x4c"))]
+    pub depth_test: u8,
     pub hidden: u8,
-    pub x4e: u8,
+    /// `x4E`: the text is clipped to its box less `clip_margins`.
+    #[doc(alias("x4e"))]
+    pub clips: u8,
     pub font: u8,
     pub next: Option<TextId>,
     pub entity: Option<crate::hsd::gobj::GObjId>,
     pub render_callback: Option<u32>,
     pub sis_buffer: Option<SisPtr>,
-    pub x60: Option<Option<SisPtr>>,
+    /// `x60`: where the typing has reached (none: not started).
+    #[doc(alias("x60"))]
+    pub typing_cursor: Option<Option<SisPtr>>,
     pub alloc_data: Option<u32>,
     pub state_stack: Option<u32>,
     pub state_stack_used: u16,
     pub state_stack_capacity: u16,
     pub current_width: Option<f32>,
     pub current_height: Option<f32>,
-    pub x78: Option<[f32; 2]>,
-    pub x80: Option<[f32; 2]>,
-    pub x88: Option<f32>,
+    /// `x78`, `x80`: the glyphs' spacing and scale as the string's commands leave them.
+    #[doc(alias("x78"))]
+    pub spacing: Option<[f32; 2]>,
+    #[doc(alias("x80"))]
+    pub scale: Option<[f32; 2]>,
+    /// `x88`: the current line's horizontal scale, which fitting shrinks a line to its box by.
+    #[doc(alias("x88"))]
+    pub line_scale: Option<f32>,
     pub active_color: Option<[u8; 4]>,
-    pub x90: Option<u16>,
-    pub x92: Option<u16>,
-    pub x94: Option<u32>,
-    pub x98: Option<u32>,
+    /// `x90`, `x92`: the typing's delays after a line and after a glyph.
+    #[doc(alias("x90"))]
+    pub line_delay: Option<u16>,
+    #[doc(alias("x92"))]
+    pub char_delay: Option<u16>,
+    /// `x94`: ticks left before the typing goes on; `x98`: the glyphs and lines typed.
+    #[doc(alias("x94"))]
+    pub typing_delay: Option<u32>,
+    #[doc(alias("x98"))]
+    pub typed_count: Option<u32>,
     pub fitting: Option<u8>,
     pub kerning: Option<u8>,
     pub alignment: Option<u8>,
-    pub x9f: Option<u8>,
+    /// `x9F`: no code writes or reads it.
+    #[doc(alias("x9f"))]
+    pub unused_tail: Option<u8>,
 }
 
 /// Where melee-sim knows them, a GObj's address and a place in loaded data's, for the words a
@@ -358,8 +386,8 @@ impl SisLib {
     fn write_text(&mut self, at: u32, t: &Text, addrs: &Addrs) {
         let f = |v: f32| Some(v.to_bits());
         let f2 = |v: Option<[f32; 2]>| [v.map(|v| v[0].to_bits()), v.map(|v| v[1].to_bits())];
-        let [x78a, x78b] = f2(t.x78);
-        let [x80a, x80b] = f2(t.x80);
+        let [spacing_x, spacing_y] = f2(t.spacing);
+        let [scale_x, scale_y] = f2(t.scale);
         let half = |a: u16, b: u16| Some(u32::from(a) << 16 | u32::from(b));
         let words: [(u32, Option<u32>); 31] = [
             (0, f(t.pos.x)),
@@ -367,42 +395,42 @@ impl SisLib {
             (8, f(t.pos.z)),
             (0xC, f(t.box_size[0])),
             (0x10, f(t.box_size[1])),
-            (0x14, f(t.x14[0])),
-            (0x18, f(t.x14[1])),
-            (0x1C, f(t.x14[2])),
-            (0x20, f(t.x14[3])),
+            (0x14, f(t.clip_margins[0])),
+            (0x18, f(t.clip_margins[1])),
+            (0x1C, f(t.clip_margins[2])),
+            (0x20, f(t.clip_margins[3])),
             (0x24, f(t.font_size[0])),
             (0x28, f(t.font_size[1])),
             (0x2C, Some(u32::from_be_bytes(t.bg_color))),
             (0x30, Some(u32::from_be_bytes(t.text_color))),
-            (0x34, f(t.x34[0])),
-            (0x38, f(t.x34[1])),
-            (0x3C, f(t.x3c[0])),
-            (0x40, f(t.x3c[1])),
-            (0x44, half(t.x44, t.x46)),
+            (0x34, f(t.default_scale[0])),
+            (0x38, f(t.default_scale[1])),
+            (0x3C, f(t.default_spacing[0])),
+            (0x40, f(t.default_spacing[1])),
+            (0x44, half(t.default_line_delay, t.default_char_delay)),
             (0x50, self.addr_of(t.next.map(|n| n.0))),
             (0x54, t.entity.map_or(Some(0), addrs.gobj)),
             (0x58, Some(t.render_callback.unwrap_or(0))),
             (0x5C, self.ptr_word(t.sis_buffer, addrs)),
-            (0x60, t.x60.and_then(|p| self.ptr_word(p, addrs))),
+            (0x60, t.typing_cursor.and_then(|p| self.ptr_word(p, addrs))),
             (0x64, self.addr_of(t.alloc_data)),
             (0x68, self.addr_of(t.state_stack)),
             (0x6C, half(t.state_stack_used, t.state_stack_capacity)),
             (0x70, t.current_width.map(f32::to_bits)),
             (0x74, t.current_height.map(f32::to_bits)),
-            (0x78, x78a),
-            (0x7C, x78b),
-            (0x80, x80a),
+            (0x78, spacing_x),
+            (0x7C, spacing_y),
+            (0x80, scale_x),
         ];
         for (o, w) in words {
             self.put_word(at + o, w);
         }
         for (o, w) in [
-            (0x84, x80b),
-            (0x88, t.x88.map(f32::to_bits)),
+            (0x84, scale_y),
+            (0x88, t.line_scale.map(f32::to_bits)),
             (0x8C, t.active_color.map(u32::from_be_bytes)),
-            (0x94, t.x94),
-            (0x98, t.x98),
+            (0x94, t.typing_delay),
+            (0x98, t.typed_count),
         ] {
             self.put_word(at + o, w);
         }
@@ -410,19 +438,19 @@ impl SisLib {
             (0x48, Some(t.default_fitting)),
             (0x49, Some(t.default_kerning)),
             (0x4A, Some(t.default_alignment)),
-            (0x4B, t.x4b),
-            (0x4C, Some(t.x4c)),
+            (0x4B, t.typing_stop),
+            (0x4C, Some(t.depth_test)),
             (0x4D, Some(t.hidden)),
-            (0x4E, Some(t.x4e)),
+            (0x4E, Some(t.clips)),
             (0x4F, Some(t.font)),
-            (0x90, t.x90.map(|v| (v >> 8) as u8)),
-            (0x91, t.x90.map(|v| v as u8)),
-            (0x92, t.x92.map(|v| (v >> 8) as u8)),
-            (0x93, t.x92.map(|v| v as u8)),
+            (0x90, t.line_delay.map(|v| (v >> 8) as u8)),
+            (0x91, t.line_delay.map(|v| v as u8)),
+            (0x92, t.char_delay.map(|v| (v >> 8) as u8)),
+            (0x93, t.char_delay.map(|v| v as u8)),
             (0x9C, t.fitting),
             (0x9D, t.kerning),
             (0x9E, t.alignment),
-            (0x9F, t.x9f),
+            (0x9F, t.unused_tail),
         ] {
             self.put_byte(at + o, v);
         }
@@ -465,11 +493,11 @@ impl SisLib {
         let w = |o: u32| self.known_bytes::<4>(at + o).map(u32::from_be_bytes);
         let f = |o: u32| w(o).map(f32::from_bits);
         let f2 = |o: u32| Some([f(o)?, f(o + 4)?]);
-        t.x4b = b(0x4B);
+        t.typing_stop = b(0x4B);
         // A string pointer's word: null, into the arena, a static buffer or a font's strings
         // loaded now (unknown elsewhere: a freed file's place names no data; a layout reading
         // it stops by name).
-        t.x60 = w(0x60).and_then(|p| match p {
+        t.typing_cursor = w(0x60).and_then(|p| match p {
             0 => Some(None),
             p if self.arena_block != 0 && p.wrapping_sub(self.arena_block) < self.size => {
                 Some(Some(SisPtr::Arena(p - self.arena_block)))
@@ -486,18 +514,18 @@ impl SisLib {
         });
         t.current_width = f(0x70);
         t.current_height = f(0x74);
-        t.x78 = f2(0x78);
-        t.x80 = f2(0x80);
-        t.x88 = f(0x88);
+        t.spacing = f2(0x78);
+        t.scale = f2(0x80);
+        t.line_scale = f(0x88);
         t.active_color = w(0x8C).map(u32::to_be_bytes);
-        t.x90 = h(0x90);
-        t.x92 = h(0x92);
-        t.x94 = w(0x94);
-        t.x98 = w(0x98);
+        t.line_delay = h(0x90);
+        t.char_delay = h(0x92);
+        t.typing_delay = w(0x94);
+        t.typed_count = w(0x98);
         t.fitting = b(0x9C);
         t.kerning = b(0x9D);
         t.alignment = b(0x9E);
-        t.x9f = b(0x9F);
+        t.unused_tail = b(0x9F);
     }
 
     /// The scene's heap gives the arena its block (`HSD_SisLib_803A6048`'s `HSD_MemAlloc`):
@@ -990,21 +1018,21 @@ impl SisLib {
             self.text_mut(t).sis_buffer = e;
         }
         let tx = self.text_mut(t);
-        tx.x60 = Some(None);
+        tx.typing_cursor = Some(None);
         tx.current_height = Some(0.0);
         tx.current_width = Some(0.0);
         tx.active_color = Some(tx.text_color);
-        tx.x80 = Some(tx.x34);
-        tx.x78 = Some(tx.x3c);
-        tx.x90 = Some(tx.x44);
-        tx.x92 = Some(tx.x46);
+        tx.scale = Some(tx.default_scale);
+        tx.spacing = Some(tx.default_spacing);
+        tx.line_delay = Some(tx.default_line_delay);
+        tx.char_delay = Some(tx.default_char_delay);
         tx.alignment = Some(tx.default_alignment);
         tx.kerning = Some(tx.default_kerning);
         tx.fitting = Some(tx.default_fitting);
         tx.state_stack_used = 0;
-        tx.x98 = Some(0);
-        tx.x94 = Some(0);
-        tx.x4b = Some(0);
+        tx.typed_count = Some(0);
+        tx.typing_delay = Some(0);
+        tx.typing_stop = Some(0);
         if let Some(s) = tx.state_stack {
             self.free(s);
         }
@@ -1137,10 +1165,10 @@ impl SisLib {
             tx.text_color[1],
             tx.text_color[2],
             14,
-            gekko_fp::fctiwz(lfs(tx.x34[0])) as u8,
-            gekko_fp::fctiwz(gekko_fp::fmuls(256.0, lfs(tx.x34[0]))) as u8,
-            gekko_fp::fctiwz(lfs(tx.x34[1])) as u8,
-            gekko_fp::fctiwz(gekko_fp::fmuls(256.0, lfs(tx.x34[1]))) as u8,
+            gekko_fp::fctiwz(lfs(tx.default_scale[0])) as u8,
+            gekko_fp::fctiwz(gekko_fp::fmuls(256.0, lfs(tx.default_scale[0]))) as u8,
+            gekko_fp::fctiwz(lfs(tx.default_scale[1])) as u8,
+            gekko_fp::fctiwz(gekko_fp::fmuls(256.0, lfs(tx.default_scale[1]))) as u8,
         ];
         let mut b = self.buffers[&a];
         for &v in head.iter().chain(&encoded[..len]).chain(&[0xF, 0xD]) {
@@ -2196,67 +2224,67 @@ mod arena_tests {
         Text {
             pos: Vec3::new(1.0, 2.0, 0.0),
             box_size: [100.0, 20.0],
-            x14: [0.0; 4],
+            clip_margins: [0.0; 4],
             font_size: [1.0, 1.0],
             bg_color: [0; 4],
             text_color: [0xFF; 4],
-            x34: [1.0, 1.0],
-            x3c: [0.0, 0.0],
-            x44: 0,
-            x46: 0,
+            default_scale: [1.0, 1.0],
+            default_spacing: [0.0, 0.0],
+            default_line_delay: 0,
+            default_char_delay: 0,
             default_fitting: 0,
             default_kerning: 0,
             default_alignment: 0,
-            x4b: None,
-            x4c: 0,
+            typing_stop: None,
+            depth_test: 0,
             hidden: 0,
-            x4e: 0,
+            clips: 0,
             font: 0,
             next: None,
             entity: None,
             render_callback: None,
             sis_buffer: None,
-            x60: None,
+            typing_cursor: None,
             alloc_data: None,
             state_stack: None,
             state_stack_used: 0,
             state_stack_capacity: 0,
             current_width: None,
             current_height: None,
-            x78: None,
-            x80: None,
-            x88: None,
+            spacing: None,
+            scale: None,
+            line_scale: None,
             active_color: None,
-            x90: None,
-            x92: None,
-            x94: None,
-            x98: None,
+            line_delay: None,
+            char_delay: None,
+            typing_delay: None,
+            typed_count: None,
             fitting: None,
             kerning: None,
             alignment: None,
-            x9f: None,
+            unused_tail: None,
         }
     }
 
     /// A text the display pass laid out: what its block keeps once it's freed.
     fn laid_out() -> Text {
         Text {
-            x4b: Some(0),
-            x60: Some(Some(SisPtr::Arena(0x123))),
+            typing_stop: Some(0),
+            typing_cursor: Some(Some(SisPtr::Arena(0x123))),
             current_width: Some(3.5),
             current_height: Some(0.0),
-            x78: Some([0.0, 0.0]),
-            x80: Some([0.56, 0.6]),
-            x88: Some(0.75),
+            spacing: Some([0.0, 0.0]),
+            scale: Some([0.56, 0.6]),
+            line_scale: Some(0.75),
             active_color: Some([1, 2, 3, 4]),
-            x90: Some(5),
-            x92: Some(6),
-            x94: Some(0),
-            x98: Some(8),
+            line_delay: Some(5),
+            char_delay: Some(6),
+            typing_delay: Some(0),
+            typed_count: Some(8),
             fitting: Some(1),
             kerning: Some(1),
             alignment: Some(2),
-            x9f: Some(9),
+            unused_tail: Some(9),
             ..made()
         }
     }
@@ -2274,18 +2302,25 @@ mod arena_tests {
         s.text_leftovers(t, &mut n);
         let old = laid_out();
         assert_eq!(
-            (n.x60, n.x88, n.x9f, n.x80, n.current_width, n.active_color),
             (
-                old.x60,
-                old.x88,
-                old.x9f,
-                old.x80,
+                n.typing_cursor,
+                n.line_scale,
+                n.unused_tail,
+                n.scale,
+                n.current_width,
+                n.active_color
+            ),
+            (
+                old.typing_cursor,
+                old.line_scale,
+                old.unused_tail,
+                old.scale,
                 old.current_width,
                 old.active_color
             )
         );
         assert_eq!(
-            (n.x90, n.x92, n.x98, n.alignment),
+            (n.line_delay, n.char_delay, n.typed_count, n.alignment),
             (Some(5), Some(6), Some(8), Some(2))
         );
     }

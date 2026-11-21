@@ -682,7 +682,7 @@ impl Running<'_> {
             if !hidden && name.win[0].is_none() && shows {
                 let w0 = self.create_text(0, 0, Vec3::new(0.0, -3.3, 0.0), 0.0, 100.0);
                 let tx = self.game.sis.text_mut(w0);
-                tx.x4c = 1;
+                tx.depth_test = 1;
                 tx.default_alignment = 1;
                 tx.default_kerning = 1;
                 tx.font_size = if jp && i < 0xB7 && i != 0xB0 {
@@ -703,7 +703,7 @@ impl Running<'_> {
                 self.game.sis.reset_text(self.data, w0, page);
                 let w1 = self.create_text(0, 0, Vec3::new(0.0, -7.8, 0.0), 0.0, 100.0);
                 let tx = self.game.sis.text_mut(w1);
-                tx.x4c = 1;
+                tx.depth_test = 1;
                 tx.default_alignment = 1;
                 tx.default_kerning = 1;
                 tx.font_size = [0.1, 0.1];

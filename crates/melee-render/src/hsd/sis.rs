@@ -27,7 +27,7 @@ impl Ctx<'_> {
             self.hsd.note("a text drawn after it was freed".into());
             return;
         };
-        if text.x4c != 0 {
+        if text.depth_test != 0 {
             self.hsd.state.set_z_mode(self.gx, true, GX_LEQUAL, false);
         } else {
             self.hsd.state.set_z_mode(self.gx, false, GX_NEVER, false);

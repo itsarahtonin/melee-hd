@@ -812,7 +812,7 @@ impl Running<'_> {
         let tx = self.game.sis.text_mut(t);
         tx.font_size = size;
         if let Some(s) = x34 {
-            tx.x34 = s;
+            tx.default_scale = s;
         }
         t
     }
@@ -831,10 +831,10 @@ impl Running<'_> {
             tx.text_color = [0xFF, 0xBA, 0x00, 0xFF];
             tx.font_size = [0.044, 0.103];
             if jp {
-                tx.x34 = [2.0, 1.0];
+                tx.default_scale = [2.0, 1.0];
             } else {
                 tx.default_kerning = 1;
-                tx.x34 = [1.75, 1.0];
+                tx.default_scale = [1.75, 1.0];
             }
             self.gal().texts[0] = Some(t);
         }
@@ -879,7 +879,7 @@ impl Running<'_> {
                 tx.default_kerning = 1;
             }
             for t in [a, b] {
-                self.game.sis.text_mut(t).x34 = [1.0, 1.0];
+                self.game.sis.text_mut(t).default_scale = [1.0, 1.0];
             }
             for t in [a, b] {
                 self.game.sis.text_mut(t).default_fitting = 1;

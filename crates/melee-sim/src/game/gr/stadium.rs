@@ -1455,7 +1455,7 @@ pub fn text_count(r: &mut Running, _gobj: GObjId) {
     let jp = r.game.gm.unlocks.is_jp();
     let t = r.game.sis.text_mut(dy);
     t.default_kerning = 0;
-    t.x34 = [1.5, 1.5];
+    t.default_scale = [1.5, 1.5];
     t.text_color = [0xC0, 0xC0, 0xFF, 0xFF];
     if jp {
         t.default_alignment = 1;
@@ -1510,7 +1510,7 @@ pub fn text_names(r: &mut Running, _gobj: GObjId) {
     let jp = r.game.gm.unlocks.is_jp();
     let t = r.game.sis.text_mut(dy);
     t.default_kerning = 0;
-    t.x34 = if jp { [0.3125, 0.625] } else { [0.26, 0.625] };
+    t.default_scale = if jp { [0.3125, 0.625] } else { [0.26, 0.625] };
     t.text_color = [0xC0, 0xC0, 0xFF, 0xFF];
     t.default_alignment = 1;
     let mut names: [&'static [u8]; 4] = [&[]; 4];
@@ -1538,7 +1538,7 @@ pub fn text_names(r: &mut Running, _gobj: GObjId) {
     }
     let t = r.game.sis.text_mut(dy);
     t.default_fitting = 0;
-    t.x34 = [0.625, 0.625];
+    t.default_scale = [0.625, 0.625];
     let start = &r.game.vs.start;
     if start.time_limit == 0 || !start.timer_enabled {
         print(r, dy, 125.0, 120.0, b"00:00 00", &[]);
@@ -1575,7 +1575,7 @@ pub fn text_ko(r: &mut Running, gobj: GObjId) {
     t.text_color = [0xC0, 0xC0, 0xFF, 0xFF];
     t.default_alignment = 1;
     if i32::from(slot_type) == crate::game::pl::player::PKIND_HUMAN {
-        t.x34 = [0.625, 1.5];
+        t.default_scale = [0.625, 1.5];
         print(
             r,
             dy,
@@ -1585,7 +1585,7 @@ pub fn text_ko(r: &mut Running, gobj: GObjId) {
             &[FmtArg::Int(i32::from(player) + 1)],
         );
     } else {
-        t.x34 = [0.42, 1.2];
+        t.default_scale = [0.42, 1.2];
         print(r, dy, 125.0, 56.0, b"Computer Player Defeated", &[]);
     }
 }
@@ -1644,9 +1644,9 @@ pub fn text_results(r: &mut Running, _gobj: GObjId) {
     t.default_alignment = 1;
     t.default_fitting = 1;
     if jp {
-        t.x34 = [1.0, 1.0];
+        t.default_scale = [1.0, 1.0];
     } else {
-        t.x34 = [0.8, 1.0];
+        t.default_scale = [0.8, 1.0];
         t.default_kerning = 1;
     }
     let top = RESULT_TOPS[n - 1] as i32;

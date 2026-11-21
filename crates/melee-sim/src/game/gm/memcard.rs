@@ -624,7 +624,7 @@ impl Running<'_> {
         let t = self.create_text(FONT, canvas, pos, 30.8, 4.6);
         let s = &mut self.game.sis;
         let tx = s.text_mut(t);
-        tx.x34 = [0.079, 0.079];
+        tx.default_scale = [0.079, 0.079];
         tx.default_alignment = 0;
         tx.default_fitting = 0;
         self.game.sis.reset_text(self.data, t, msg);
@@ -668,7 +668,7 @@ impl Running<'_> {
             let canvas = self.game.memcard.canvas;
             let t = self.create_text(FONT, canvas, pos, 2.0, 2.0);
             let tx = self.game.sis.text_mut(t);
-            tx.x34 = [0.1, 0.1];
+            tx.default_scale = [0.1, 0.1];
             tx.default_alignment = 1;
             tx.default_fitting = 0;
             self.game.sis.reset_text(self.data, t, msg);
