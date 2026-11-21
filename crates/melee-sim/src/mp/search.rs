@@ -1309,6 +1309,196 @@ impl<K: Kinds> Geometry<K> {
 mod tests {
     use super::*;
 
+    #[derive(Clone, Debug)]
+    struct Plain;
+
+    impl Kinds for Plain {
+        type JObj = u32;
+        type Callback = u32;
+        type UserData = u32;
+    }
+
+    /// One joint holding `lines` (vertex pairs) as floors and ceilings, each continuing into
+    /// the one before or after it as `links` says (`prev`, `next`), its bounds wide open.
+    fn geometry(lines: &[((f32, f32), (f32, f32))], links: &[(i16, i16)]) -> Geometry<Plain> {
+        use super::super::{JOINT_ENABLED, Joint, JointDesc, Line, LineRange, Vec2, Vertex};
+        let v = |x: f32, y: f32| Vertex {
+            base: Vec2 { x, y },
+            pos: Vec2 { x, y },
+            prev: Vec2 { x, y },
+        };
+        let n = lines.len();
+        let vertices = lines
+            .iter()
+            .flat_map(|&(a, b)| [v(a.0, a.1), v(b.0, b.1)])
+            .collect();
+        let lines = (0..n)
+            .map(|i| Line {
+                v0: 2 * i as u16,
+                v1: 2 * i as u16 + 1,
+                prev: links[i].0,
+                next: links[i].1,
+                prev_link: -1,
+                next_link: -1,
+                hi_flags: 0,
+                lo_flags: i as u16,
+                flags: FLOOR | CEILING | LINE_ENABLED,
+            })
+            .collect();
+        let mut ranges = [LineRange::default(); 5];
+        ranges[GROUP_FLOOR] = LineRange {
+            start: 0,
+            count: n as i16,
+        };
+        ranges[GROUP_CEILING] = ranges[GROUP_FLOOR];
+        let joint = Joint {
+            next: None,
+            desc: JointDesc {
+                ranges,
+                ..JointDesc::default()
+            },
+            flags: JOINT_ENABLED,
+            stamp: 0,
+            dirty: false,
+            bounding_min: Vec2 { x: -1e6, y: -1e6 },
+            bounding_max: Vec2 { x: 1e6, y: 1e6 },
+            jobj: None,
+            ledge_callback: None,
+            ledge_user_data: None,
+            callback: None,
+            user_data: None,
+        };
+        Geometry {
+            vertices,
+            lines,
+            joints: vec![joint],
+            ranges,
+            list_start: Some(0),
+            list_end: Some(0),
+            checked_bounding: false,
+            bounds: Default::default(),
+            generation: 0,
+            islands: Default::default(),
+            joints_addr: 0,
+            vertices_addr: 0,
+            lines_addr: 0,
+            lines_data: None,
+            render_stamps: Vec::new(),
+            debug_rom: false,
+        }
+    }
+
+    /// The search as the original runs it, every line's ends extended and tested.
+    fn search_every_line(
+        g: &Geometry<Plain>,
+        surface: Surface,
+        (ax, ay, bx, by): (f32, f32, f32, f32),
+        y_offset: f32,
+    ) -> (Option<Hit>, FloorR5) {
+        let (ax, ay, bx, by) = (reg(ax), reg(ay), reg(bx), reg(by));
+        let (mut r5, mut best, mut min_dist2) = (FloorR5::Entry, None, f64::from(f32::MAX));
+        for l in 0..g.lines.len() {
+            let (x0, y0, x1, y1) = g.tested_ends(surface, l as i32, y_offset);
+            let (crossed, flag) = surface.cross_r5(x0, y0, x1, y1, ax, ay, bx, by);
+            r5 = flag.map_or(FloorR5::OwnSlot, FloorR5::Flag);
+            let Some((ix, iy, sloped)) = crossed else {
+                continue;
+            };
+            let (dx, dy) = (fp::fsubs(reg(ix), ax), fp::fsubs(reg(iy), ay));
+            let dist2 = fp::fadds(fp::fmuls(dx, dx), fp::fmuls(dy, dy));
+            if min_dist2 > dist2 {
+                min_dist2 = dist2;
+                best = Some(Hit {
+                    pos: Vec3::new(copy(ix), copy(iy), 0.0),
+                    line: l as i32,
+                    flags: u32::from(g.lines[l].lo_flags),
+                    normal: if sloped {
+                        Geometry::<Plain>::normal(x0, y0, x1, y1)
+                    } else {
+                        surface.flat_normal()
+                    },
+                });
+            }
+        }
+        (best, r5)
+    }
+
+    /// The floor and ceiling searches, passing over the lines whose box misses the segment's,
+    /// find what testing every line finds, and leave the same r5 (the last line's, passed over
+    /// or not): random chains of lines, long and short, level and sloped, near the segment and
+    /// far from it.
+    #[test]
+    fn passing_over_lines_finds_what_testing_every_line_does() {
+        let mut x = 0x9E37_79B9_7F4A_7C15u64;
+        let mut next = move || {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            x
+        };
+        let (mut hits, mut passed_sloped, mut passed_level) = (0, 0, 0);
+        for i in 0..40_000 {
+            let mut coord = |scale: f32| (next() % 2_000_001) as f32 / 1_000_000.0 * scale - scale;
+            let scale = [6.0, 20.0, 80.0][i % 3];
+            let n = 1 + i % 9;
+            let lines: Vec<_> = (0..n)
+                .map(|k| {
+                    let a = (coord(scale), coord(scale));
+                    let b = match k % 4 {
+                        0 => (coord(scale), a.1),
+                        1 => (a.0 + coord(0.5), a.1 + coord(0.5)),
+                        _ => (coord(scale), coord(scale)),
+                    };
+                    (a, b)
+                })
+                .collect();
+            let links: Vec<(i16, i16)> = (0..n)
+                .map(|k| {
+                    let (k, n) = (k as i16, n as i16);
+                    let r = (coord(2.0) + 2.0) as u64;
+                    (
+                        if r & 1 != 0 && k > 0 { k - 1 } else { -1 },
+                        if r & 2 != 0 && k + 1 < n { k + 1 } else { -1 },
+                    )
+                })
+                .collect();
+            let mut g = geometry(&lines, &links);
+            let seg = (coord(scale), coord(scale), coord(scale), coord(scale));
+            let y_offset = [0.0, 1.5, -3.0][i % 7 % 3];
+            for surface in [Surface::Floor, Surface::Ceiling] {
+                let want = search_every_line(&g, surface, seg, y_offset);
+                let got = g.search_r5(surface, seg, y_offset, -1, -1, -1, None);
+                assert_eq!(
+                    got, want,
+                    "{surface:?} {lines:?} {links:?} {seg:?} {y_offset}"
+                );
+                let (sx0, sy0, sx1, sy1) = seg;
+                let bx = [sx0.min(sx1), sx0.max(sx1), sy0.min(sy1), sy0.max(sy1)].map(f64::from);
+                let ((a, b), yo) = (
+                    lines[n - 1],
+                    if surface == Surface::Floor {
+                        y_offset
+                    } else {
+                        0.0
+                    },
+                );
+                hits += usize::from(want.0.is_some());
+                if misses_box(a.0, a.1, b.0, b.1, yo, bx) {
+                    match want.1 {
+                        FloorR5::Flag(_) => passed_sloped += 1,
+                        _ => passed_level += 1,
+                    }
+                }
+            }
+        }
+        // Hits are common, and so is a last line passed over, sloped (r5 its cleared flag)
+        // and level (r5 its own slot), the r5 worked out after the loop.
+        assert!(
+            hits > 5_000 && passed_sloped > 5_000 && passed_level > 2_000,
+            "{hits} {passed_sloped} {passed_level}"
+        );
+    }
+
     /// [`misses_box`] is safe: a floor or ceiling it passes over is one the full test, its
     /// ends extended (and a floor's raised), finds no crossing on. Random lines and segments
     /// near each other (within a few units, where the margin matters) and far apart, every
