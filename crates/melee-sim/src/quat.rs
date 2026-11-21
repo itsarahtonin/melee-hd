@@ -1,11 +1,13 @@
 //! Quaternions, with HAL's quaternion library (`sysdolphin/baselib/quatlib.c`).
 
+use std::cell::RefCell;
 use std::ops::Mul;
 
 use gekko_fp as fp;
 
 use crate::fpu::{copy, mem, reg};
 use crate::math;
+use crate::memo::{self, Memo};
 use crate::mtx::Mtx34;
 use crate::vec::Vec3;
 
@@ -113,9 +115,28 @@ impl Quat {
         })
     }
 
-    /// The rotation by Euler angles about x, then y, then z, `EulerToQuat`.
+    /// The rotation by Euler angles about x, then y, then z, `EulerToQuat`. Its result
+    /// depends only on the angles' bits and the float mode, so it is kept for angles that come
+    /// again (`memo`): a joint whose animation holds its rotation still, or a blend's pose held
+    /// over its frames.
     #[doc(alias = "EulerToQuat")]
     pub fn from_euler(angles: Vec3) -> Quat {
+        thread_local! {
+            static EULER: RefCell<Memo<[u32; 4], Quat, 12>> = const { RefCell::new(Memo::new()) };
+        }
+        let key = [
+            angles.x.to_bits(),
+            angles.y.to_bits(),
+            angles.z.to_bits(),
+            memo::mode(),
+        ];
+        Memo::get(&EULER, key, memo::hash(&key), || {
+            Quat::from_euler_uncached(angles)
+        })
+    }
+
+    /// [`Quat::from_euler`] without its memo.
+    pub(crate) fn from_euler_uncached(angles: Vec3) -> Quat {
         let half = |a: f32| mem(fp::fmuls(0.5, reg(a)));
         let (hx, hy, hz) = (half(angles.x), half(angles.y), half(angles.z));
         let (cx, cy, cz) = (reg(math::cos(hx)), reg(math::cos(hy)), reg(math::cos(hz)));
@@ -236,5 +257,91 @@ impl Mtx34 {
                 0.0,
             )
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use gekko_fp::{FpMode, set_fp_mode};
+
+    use super::*;
+
+    struct Bits(u64);
+
+    impl Bits {
+        fn next(&mut self) -> u32 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            (self.0 >> 32) as u32
+        }
+
+        /// Any single, or an angle in the game's ranges (2^-8 to 2^4, either sign) half the time.
+        fn float(&mut self) -> f32 {
+            let b = self.next();
+            if b & 1 == 0 {
+                f32::from_bits(b)
+            } else {
+                f32::from_bits((b & 0x807F_FFFF) | ((119 + (b >> 24) % 12) << 23))
+            }
+        }
+    }
+
+    fn bits(q: Quat) -> [u32; 4] {
+        [q.x, q.y, q.z, q.w].map(f32::to_bits)
+    }
+
+    /// Many more angles than slots, each asked for again soon after (a hit) and again much
+    /// later (usually replaced by then), and right after angles differing in one of the three
+    /// alone, in both float modes: every answer the uncached one's.
+    #[test]
+    fn from_euler_matches_uncached() {
+        for mode in [FpMode::Hardware, FpMode::Slippi] {
+            set_fp_mode(mode);
+            let mut rng = Bits(0x9E37_79B9_7F4A_7C15);
+            let cases: Vec<(Vec3, f32)> = (0..20_000)
+                .map(|_| {
+                    (
+                        Vec3::new(rng.float(), rng.float(), rng.float()),
+                        rng.float(),
+                    )
+                })
+                .collect();
+            for pass in 0..2 {
+                for (i, &(a, o)) in cases.iter().enumerate() {
+                    let one = [
+                        Vec3::new(o, a.y, a.z),
+                        Vec3::new(a.x, o, a.z),
+                        Vec3::new(a.x, a.y, o),
+                    ];
+                    for a in [a, one[0], a, one[1], a, one[2], cases[i / 2].0] {
+                        let want = bits(Quat::from_euler_uncached(a));
+                        assert_eq!(bits(Quat::from_euler(a)), want, "{a:?} {mode:?} {pass}");
+                    }
+                }
+            }
+        }
+        set_fp_mode(FpMode::Hardware);
+    }
+
+    /// The same angles in the other float mode aren't a hit.
+    #[test]
+    fn from_euler_keys_the_mode() {
+        let mut rng = Bits(7);
+        let a = (0..100_000)
+            .map(|_| Vec3::new(rng.float(), rng.float(), rng.float()))
+            .find(|&a| {
+                set_fp_mode(FpMode::Slippi);
+                let slippi = bits(Quat::from_euler_uncached(a));
+                set_fp_mode(FpMode::Hardware);
+                slippi != bits(Quat::from_euler_uncached(a))
+            })
+            .expect("angles whose quaternion differs between the modes");
+        for mode in [FpMode::Hardware, FpMode::Slippi, FpMode::Hardware] {
+            set_fp_mode(mode);
+            let want = bits(Quat::from_euler_uncached(a));
+            assert_eq!(bits(Quat::from_euler(a)), want, "{mode:?}");
+        }
+        set_fp_mode(FpMode::Hardware);
     }
 }
