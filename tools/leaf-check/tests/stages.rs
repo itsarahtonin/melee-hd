@@ -32,7 +32,9 @@ use melee_sim::game::gr::{
     yorster,
 };
 use melee_sim::game::handles::CodeRef;
+use melee_sim::game::it::item::change;
 use melee_sim::game::it::kinds::{kyasarin, kyasarinegg};
+use melee_sim::game::it::zako as itzako;
 use melee_sim::game::state::Running;
 use melee_sim::game::structs::HitCapsule;
 use melee_sim::vec::Vec3;
@@ -4503,7 +4505,7 @@ fn klap() {
             "itKlap_UnkMotion2_Phys",
             1,
             &move |c, _| c.addr = t,
-            &pred(klap::answers_false),
+            &pred(itzako::answers_false),
         );
     }
     let t = leaf_check::sym("itKlap_UnkMotion3_Phys");
@@ -4512,7 +4514,7 @@ fn klap() {
         "itKlap_UnkMotion2_Phys",
         1,
         &move |c, _| c.addr = t,
-        &item(klap::phys3),
+        &item(itzako::still),
     );
 }
 
@@ -7669,11 +7671,13 @@ fn kyasarin_states() {
     for (name, port) in [
         (
             "itKyasarin_UnkMotion9_Anim",
-            kyasarin::anim9 as fn(&mut Running, _) -> bool,
+            (|r, g| itzako::looped(r, g, 9, change::ANIM_UPDATE)) as fn(&mut Running, _) -> bool,
         ),
-        ("itKyasarin_UnkMotion10_Anim", kyasarin::anim10),
-        ("itKyasarin_UnkMotion9_Coll", kyasarin::coll9),
-        ("itKyasarin_UnkMotion10_Coll", kyasarin::coll10),
+        ("itKyasarin_UnkMotion10_Anim", |r, g| {
+            itzako::looped(r, g, 10, change::ANIM_UPDATE)
+        }),
+        ("itKyasarin_UnkMotion9_Coll", itzako::answers_false),
+        ("itKyasarin_UnkMotion10_Coll", itzako::bounce),
     ] {
         let t = leaf_check::sym(name);
         check_calls_with(
@@ -7687,9 +7691,9 @@ fn kyasarin_states() {
     for (name, port) in [
         (
             "itKyasarin_UnkMotion9_Phys",
-            kyasarin::phys9 as fn(&mut Running, _),
+            itzako::flight_physics as fn(&mut Running, _),
         ),
-        ("itKyasarin_UnkMotion10_Phys", kyasarin::phys10),
+        ("itKyasarin_UnkMotion10_Phys", itzako::still),
     ] {
         let t = leaf_check::sym(name);
         check_calls_with(

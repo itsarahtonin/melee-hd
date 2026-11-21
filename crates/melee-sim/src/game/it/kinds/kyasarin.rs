@@ -14,8 +14,8 @@
 
 use gekko_fp as fp;
 
-use super::super::item::{article, attr_of, change, change_state};
-use super::super::{data, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, zako};
+use super::super::item::{article, change, change_state};
+use super::super::{hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, zako};
 use crate::fpu::{mem, reg};
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::state::{Game, Running};
@@ -259,10 +259,10 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         ANIM7 => anim7(r, gobj),
         ANIM5 => anim5(r, gobj),
         ANIM8 => anim8(r, gobj),
-        ANIM9 => anim9(r, gobj),
-        COLL9 => coll9(r, gobj),
-        ANIM10 => anim10(r, gobj),
-        COLL10 => coll10(r, gobj),
+        ANIM9 => zako::looped(r, gobj, 9, change::ANIM_UPDATE),
+        COLL9 => zako::answers_false(r, gobj),
+        ANIM10 => zako::looped(r, gobj, 10, change::ANIM_UPDATE),
+        COLL10 => zako::bounce(r, gobj),
         DMG_RECEIVED => damaged(r, gobj),
         _ => return None,
     })
@@ -274,8 +274,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),
         DESTROYED => destroyed(r, gobj),
-        PHYS9 => phys9(r, gobj),
-        PHYS10 => phys10(r, gobj),
+        PHYS9 => zako::flight_physics(r, gobj),
+        PHYS10 => zako::still(r, gobj),
         _ => return false,
     }
     true
@@ -628,51 +628,6 @@ pub fn anim8(r: &mut Running, gobj: GObjId) -> bool {
     }
     false
 }
-
-/// Falling toward the screen's animation, `itKyasarin_UnkMotion9_Anim`: looped.
-#[doc(alias = "itKyasarin_UnkMotion9_Anim")]
-pub fn anim9(r: &mut Running, gobj: GObjId) -> bool {
-    if !lib2725::is_animating(r.game, gobj) {
-        change_state(r, gobj, 9, change::ANIM_UPDATE);
-    }
-    false
-}
-
-/// Falling toward the screen's physics, `itKyasarin_UnkMotion9_Phys`: her fall speed off her
-/// vertical speed.
-#[doc(alias = "itKyasarin_UnkMotion9_Phys")]
-pub fn phys9(r: &mut Running, gobj: GObjId) {
-    let fall = attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED);
-    let ip = item_mut(r.game, gobj);
-    ip.x40_vel.y = mem(fp::fsubs(reg(ip.x40_vel.y), reg(fall)));
-}
-
-/// Falling toward the screen's collision, `itKyasarin_UnkMotion9_Coll`: nothing
-/// (`it_8027C794`).
-#[doc(alias = "itKyasarin_UnkMotion9_Coll")]
-pub fn coll9(r: &mut Running, gobj: GObjId) -> bool {
-    zako::answers_false(r, gobj)
-}
-
-/// Bouncing away's collision, `itKyasarin_UnkMotion10_Coll`: she bounces off what she meets
-/// (`it_8027C79C`).
-#[doc(alias = "itKyasarin_UnkMotion10_Coll")]
-pub fn coll10(r: &mut Running, gobj: GObjId) -> bool {
-    zako::bounce(r, gobj)
-}
-
-/// Bouncing away's animation, `itKyasarin_UnkMotion10_Anim`: looped.
-#[doc(alias = "itKyasarin_UnkMotion10_Anim")]
-pub fn anim10(r: &mut Running, gobj: GObjId) -> bool {
-    if !lib2725::is_animating(r.game, gobj) {
-        change_state(r, gobj, 10, change::ANIM_UPDATE);
-    }
-    false
-}
-
-/// Bouncing away's physics, `itKyasarin_UnkMotion10_Phys`: none.
-#[doc(alias = "itKyasarin_UnkMotion10_Phys")]
-pub fn phys10(_r: &mut Running, _gobj: GObjId) {}
 
 /// Knocked off (the inline `itKyasarin_FlipAndFall`): upside down, in the air where she is,
 /// her collision brought along to there (`it_80276100`), her hurtbox blinking.

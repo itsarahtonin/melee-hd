@@ -576,6 +576,26 @@ pub fn face(r: &mut Running, gobj: GObjId, y_rot: f32) {
 #[doc(alias = "itNokonoko_UnkMotion4_Anim")]
 // Ports itNokonoko_UnkMotion6_Anim; aliased once a check reaches it.
 #[doc(alias = "itPatapata_UnkMotion1_Anim")]
+#[doc(alias = "itHeiho_UnkMotion0_Anim")]
+#[doc(alias = "itHeiho_UnkMotion0_Coll")]
+#[doc(alias = "itHeiho_UnkMotion2_Anim")]
+#[doc(alias = "itHeiho_UnkMotion2_Coll")]
+#[doc(alias = "itHeiho_UnkMotion3_Anim")]
+#[doc(alias = "itTincle_UnkMotion0_Anim")]
+#[doc(alias = "itTincle_UnkMotion1_Anim")]
+#[doc(alias = "itTincle_UnkMotion3_Anim")]
+#[doc(alias = "itTincle_UnkMotion4_Anim")]
+#[doc(alias = "itTincle_UnkMotion5_Anim")]
+#[doc(alias = "itTincle_UnkMotion8_Anim")]
+#[doc(alias = "itTincle_UnkMotion12_Anim")]
+#[doc(alias = "itKlap_UnkMotion1_Anim")]
+#[doc(alias = "itKlap_UnkMotion2_Anim")]
+#[doc(alias = "itKlap_UnkMotion3_Anim")]
+#[doc(alias = "itKlap_UnkMotion4_Anim")]
+#[doc(alias = "itKlap_UnkMotion2_Coll")]
+#[doc(alias = "itKlap_UnkMotion3_Coll")]
+#[doc(alias = "itKlap_UnkMotion4_Coll")]
+#[doc(alias = "itKyasarin_UnkMotion9_Coll")]
 pub fn answers_false(_: &mut Running, _: GObjId) -> bool {
     false
 }
@@ -590,6 +610,7 @@ pub fn answers_false(_: &mut Running, _: GObjId) -> bool {
 #[doc(alias = "itOldkuri_UnkMotion10_Coll")]
 #[doc(alias = "itLikelike_UnkMotion20_Coll")]
 #[doc(alias = "itLeadead_UnkMotion15_Coll")]
+#[doc(alias = "itKyasarin_UnkMotion10_Coll")]
 pub fn bounce(r: &mut Running, gobj: GObjId) -> bool {
     if super::ground::air_touches(r, gobj) & 0xF != 0 {
         hurt_sound(r, gobj);
@@ -1008,6 +1029,9 @@ pub enum Knock {
     Airborne,
     /// Not floored: the Koopa Troopa knocked out of its shell (`it_802DCFBC`).
     Plain,
+    /// Not floored, in the air if it points off the floor and else left as it is: the Shy Guy
+    /// (`it_802D8EC8`).
+    Lift,
 }
 
 /// The enemy's special attributes (its article's), `off` bytes in.
@@ -1224,6 +1248,12 @@ pub fn knock_back(r: &mut Running, gobj: GObjId, knock: Knock) {
         maplib::enter_air(ip);
         return;
     }
+    if let Knock::Lift = knock {
+        if up {
+            maplib::enter_air(ip);
+        }
+        return;
+    }
     if up {
         match knock {
             Knock::AtLeast(min) => {
@@ -1239,7 +1269,7 @@ pub fn knock_back(r: &mut Running, gobj: GObjId, knock: Knock) {
                     ip.x40_vel.y = mem(fp::fmuls(reg(ip.x40_vel.y), fp::frsp(0.2)));
                 }
             }
-            Knock::Free | Knock::Plain | Knock::Airborne => {}
+            Knock::Free | Knock::Plain | Knock::Airborne | Knock::Lift => {}
         }
         maplib::enter_air(ip);
     } else {
@@ -1277,6 +1307,8 @@ pub fn knock_back(r: &mut Running, gobj: GObjId, knock: Knock) {
 // Ports itNokonoko_UnkMotion10_Anim; aliased once a check reaches it.
 // Ports itPatapata_UnkMotion5_Anim; aliased once a check reaches it.
 // Ports itPatapata_UnkMotion6_Anim; aliased once a check reaches it.
+#[doc(alias = "itKyasarin_UnkMotion9_Anim")]
+#[doc(alias = "itKyasarin_UnkMotion10_Anim")]
 pub fn looped(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) -> bool {
     if !lib2725::is_animating(r.game, gobj) {
         change_state(r, gobj, msid, flags);
@@ -1332,6 +1364,7 @@ pub fn knocked_coll(r: &mut Running, gobj: GObjId, landed: Event, fell: Event) -
 #[doc(alias = "itNokonoko_UnkMotion4_Phys")]
 // Ports itNokonoko_UnkMotion10_Phys; aliased once a check reaches it.
 // Ports itPatapata_UnkMotion6_Phys; aliased once a check reaches it.
+#[doc(alias = "itTincle_UnkMotion8_Phys")]
 pub fn fall_physics(r: &mut Running, gobj: GObjId) {
     let a = attr_of(item(r.game, gobj));
     let accel = a.f32(r.data, data::attr::FALL_SPEED);
@@ -1347,6 +1380,7 @@ pub fn fall_physics(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itLikelike_UnkMotion21_Phys")]
 #[doc(alias = "itLeadead_UnkMotion16_Phys")]
 #[doc(alias = "itLeadead_UnkMotion17_Phys")]
+#[doc(alias = "itKyasarin_UnkMotion9_Phys")]
 pub fn flight_physics(r: &mut Running, gobj: GObjId) {
     let accel = reg(attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED));
     let ip = item_mut(r.game, gobj);
@@ -1424,6 +1458,12 @@ pub fn turning(r: &mut Running, gobj: GObjId, timer: usize) -> bool {
 // Ports itNokonoko_UnkMotion9_Phys; aliased once a check reaches it.
 // Ports itPatapata_UnkMotion5_Phys; aliased once a check reaches it.
 // Ports itPatapata_UnkMotion7_Phys; aliased once a check reaches it.
+#[doc(alias = "itTincle_UnkMotion7_Phys")]
+#[doc(alias = "itTincle_UnkMotion9_Phys")]
+#[doc(alias = "itTincle_UnkMotion10_Phys")]
+#[doc(alias = "itTincle_UnkMotion11_Phys")]
+#[doc(alias = "itKlap_UnkMotion3_Phys")]
+#[doc(alias = "itKyasarin_UnkMotion10_Phys")]
 pub fn still(_: &mut Running, _: GObjId) {}
 
 /// Enters a state it can be landed on in: stompable, its jumped-on callback `stomped` (the
