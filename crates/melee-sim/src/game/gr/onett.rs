@@ -689,13 +689,13 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
         5 | 6 => {
             let speed = v.car_speed;
             drive(r.game, car_j, speed);
-            let x110 = r.game.grounds[g.0].u.onett_car().sub_state_a;
-            if x110 == 1 && r.game.rules.notes_playback() {
+            let sub_state = r.game.grounds[g.0].u.onett_car().sub_state_a;
+            if sub_state == 1 && r.game.rules.notes_playback() {
                 let horn = p.f(r.data, p::HORN_X);
                 note_other_phase(r, car_j, [center, right], horn);
             }
             let mut check_center = false;
-            match x110 {
+            match sub_state {
                 0 => {
                     if reg(car_x(r.game, car_j)) <= reg(RIGHT_HORN) {
                         let car = r.game.grounds[g.0].u.onett_car().curr_car;

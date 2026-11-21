@@ -448,14 +448,14 @@ pub fn init_course(r: &mut Running, gobj: GObjId) {
     assert!(cam_jobj.is_some(), "grrcruise.c: gp->u.scroll.cam_jobj");
     let ctr_jobj = part(r, 1);
     let ctr = ctr_jobj.expect("grrcruise.c: gp->u.scroll.ctr_jobj");
-    let x4 = r.game.objs.jobjs[ctr].translate;
+    let center = r.game.objs.jobjs[ctr].translate;
     let v = r.game.grounds[g.0].u.scroll();
     v.scenery = x38;
     v.scenery2 = x44;
     v.int_jobj = int_jobj;
     v.cam_jobj = cam_jobj;
     v.ctr_jobj = ctr_jobj;
-    v.center = x4;
+    v.center = center;
     v.offset = Vec3::ZERO;
     v.step = Vec3::ZERO;
     v.flags &= !0x80;
@@ -829,8 +829,8 @@ pub fn tilt(r: &mut Running, gobj: GObjId) {
     }
     v.tilt = mem(fp::fadds(reg(v.tilt), reg(v.tilt_speed)));
     let angle = mem(fp::fmuls(reg(0.017_453_292_f32), reg(v.tilt)));
-    let x34 = v.touches;
-    v.touches_last = x34;
+    let touches = v.touches;
+    v.touches_last = touches;
     v.touches = 0;
     v.pull_right = 0.0;
     v.pull_left = 0.0;

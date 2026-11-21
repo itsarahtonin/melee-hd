@@ -1239,27 +1239,27 @@ pub fn link_blocks(r: &mut Running, gobj: GObjId) {
             let b = blocks(r.game, g).clone();
             let me = &b[at(row, col)];
             if me.flag(5) {
-                let x18 = me.coll_joint;
+                let coll_joint = me.coll_joint;
                 let resting = |rr: i32, cc: i32| b[at(rr, cc)].status() == 3;
                 if row > 0 && resting(row - 1, col) {
                     r.game
                         .geometry_mut()
-                        .link_joints(x18, b[at(row - 1, col)].coll_joint);
+                        .link_joints(coll_joint, b[at(row - 1, col)].coll_joint);
                 }
                 if col > 0 && resting(row, col - 1) {
                     r.game
                         .geometry_mut()
-                        .link_joints(x18, b[at(row, col - 1)].coll_joint);
+                        .link_joints(coll_joint, b[at(row, col - 1)].coll_joint);
                 }
                 if row < 4 && resting(row + 1, col) {
                     r.game
                         .geometry_mut()
-                        .link_joints(x18, b[at(row + 1, col)].coll_joint);
+                        .link_joints(coll_joint, b[at(row + 1, col)].coll_joint);
                 }
                 if col < 5 && resting(row, col + 1) {
                     r.game
                         .geometry_mut()
-                        .link_joints(x18, b[at(row, col + 1)].coll_joint);
+                        .link_joints(coll_joint, b[at(row, col + 1)].coll_joint);
                 }
                 blocks(r.game, g)[at(row, col)].set_flag(5, false);
             } else if me.flag(6) {

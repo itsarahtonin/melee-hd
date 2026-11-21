@@ -7317,12 +7317,12 @@ impl Mirror for GroundVars {
                     cx.mismatch(&path, format!("{ours:?}"), format!("{theirs:?}"));
                 }
                 // Padding no code names: a stage object's block keeps the heap's bytes there.
-                let xca = m.u16(at + 6) as i16;
-                if v.unwritten != xca {
+                let unwritten = m.u16(at + 6) as i16;
+                if v.unwritten != unwritten {
                     cx.mismatch(
                         &format!("{path}.xCA"),
                         format!("{}", v.unwritten),
-                        format!("{xca}"),
+                        format!("{unwritten}"),
                     );
                 }
                 cx.compare_handle(
@@ -9272,13 +9272,14 @@ impl Mirror for GroundVars {
                 }
                 let ours = (v.platform_state, v.last_state, v.bubble_wait);
                 let theirs = (h(0), m.u32(at + 0x28), h(0x30));
-                let xfc = m.u32(at + 0x38);
-                let addr_ok = v.spawn_config == xfc || v.spawn_config == 0 && xfc != 0;
+                let spawn_config = m.u32(at + 0x38);
+                let addr_ok =
+                    v.spawn_config == spawn_config || v.spawn_config == 0 && spawn_config != 0;
                 if ours != theirs || !addr_ok {
                     cx.mismatch(
                         &format!("{path}.zebes5"),
                         format!("{:x?}", (ours, v.spawn_config)),
-                        format!("{:x?}", (theirs, xfc)),
+                        format!("{:x?}", (theirs, spawn_config)),
                     );
                 }
                 for (name, g, a) in [

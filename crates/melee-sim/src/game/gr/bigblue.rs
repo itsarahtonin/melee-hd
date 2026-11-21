@@ -1117,12 +1117,12 @@ fn fly_platform(r: &mut Running, g: GroundId, i: usize, idx: usize, j: Option<JO
         0.0,
         crate::math::atan2(mem(fp::fneg(reg(normal.x))), normal.y),
     );
-    let x2 = r.game.grounds[g.0].u.bigblue_manager().data[i].dir;
-    let speed = fp::fmuls(to_f(i32::from(x2)), platform_size(r.game, idx));
+    let side = r.game.grounds[g.0].u.bigblue_manager().data[i].dir;
+    let speed = fp::fmuls(to_f(i32::from(side)), platform_size(r.game, idx));
     let mut fwd = Vec3::new(mem(speed), 0.0, 0.0);
     fwd.rotate_euler(euler);
     let fwd = fwd + pos;
-    let speed = fp::fmuls(to_f(-i32::from(x2)), platform_size(r.game, idx));
+    let speed = fp::fmuls(to_f(-i32::from(side)), platform_size(r.game, idx));
     let mut back = Vec3::new(mem(speed), 0.0, 0.0);
     back.rotate_euler(euler);
     let _ = back + pos;
@@ -1236,16 +1236,16 @@ fn fly_platform(r: &mut Running, g: GroundId, i: usize, idx: usize, j: Option<JO
     let probe_y = reg(road_height(r.game, pos, 500.0).0);
     let half_x = fp::fadds(10.0, platform_size(r.game, idx));
     let (coll, coll_y) = obstacle(r.game, j, pos, half_x, 16.5);
-    let x8 = reg(r.game.grounds[g.0].u.bigblue_manager().data[i].height);
+    let height = reg(r.game.grounds[g.0].u.bigblue_manager().data[i].height);
     if coll == 0 || (coll == 1 && reg(pos.y) < reg(coll_y)) {
         let z = if target_y <= probe_y {
             if probe_y == reg(NONE_Y) {
                 fwd.y
             } else {
-                mem(fp::fadds(probe_y, x8))
+                mem(fp::fadds(probe_y, height))
             }
         } else {
-            mem(fp::fadds(target_y, x8))
+            mem(fp::fadds(target_y, height))
         };
         r.game.grounds[g.0].u.bigblue_manager().data[i].targets.z = z;
     } else if coll == 1 {

@@ -385,39 +385,39 @@ pub fn proc_blocks(r: &mut Running, gobj: GObjId) {
                 if reg(b.damage) >= reg(hit_min) {
                     super::material::item_hurtbox_off(r.game, item);
                     let full = p.f(data, HIT_FULL);
-                    let x04 = mem(fp::fsubs(reg(b.damage), reg(hit_min)));
-                    let left = if reg(x04) >= reg(full) {
+                    let damage = mem(fp::fsubs(reg(b.damage), reg(hit_min)));
+                    let left = if reg(damage) >= reg(full) {
                         0
                     } else {
-                        fp::fctiwz(fp::fsubs(reg(full), reg(x04)))
+                        fp::fctiwz(fp::fsubs(reg(full), reg(damage)))
                     };
                     let end = flip_end(r, p, b.jobj);
-                    let x10 = fp::fctiwz(fp::fmuls(
+                    let flip_at = fp::fctiwz(fp::fmuls(
                         fp::frsp(f64::from(left)),
                         fp::fdivs(reg(end), reg(full)),
                     ));
-                    r.game.grounds[g.0].u.yorster().blocks[i].damage = x04;
-                    flip = Some(x10);
+                    r.game.grounds[g.0].u.yorster().blocks[i].damage = damage;
+                    flip = Some(flip_at);
                 } else if reg(b.landing_speed) >= reg(land_min) {
                     super::material::item_hurtbox_off(r.game, item);
                     let full = p.f(data, LAND_FULL);
-                    let mut x08 = mem(fp::fsubs(reg(b.landing_speed), reg(land_min)));
-                    if reg(x08) <= reg(land_min) {
-                        x08 = land_min;
+                    let mut landing = mem(fp::fsubs(reg(b.landing_speed), reg(land_min)));
+                    if reg(landing) <= reg(land_min) {
+                        landing = land_min;
                     }
-                    let left = if reg(x08) >= reg(full) {
+                    let left = if reg(landing) >= reg(full) {
                         0
                     } else {
-                        fp::fctiwz(fp::fmuls(10.0, fp::fsubs(reg(full), reg(x08))))
+                        fp::fctiwz(fp::fmuls(10.0, fp::fsubs(reg(full), reg(landing))))
                     };
                     let end = flip_end(r, p, b.jobj);
-                    let x10 = fp::fctiwz(fp::fmuls(
+                    let flip_at = fp::fctiwz(fp::fmuls(
                         fp::frsp(f64::from(left)),
                         fp::fdivs(reg(end), fp::fmuls(10.0, reg(full))),
                     ));
                     r.game.grounds[g.0].u.yorster().blocks[i].landing_speed = 0.0;
                     r.stage_sound(0xE);
-                    flip = Some(x10);
+                    flip = Some(flip_at);
                 }
                 if let Some(x10) = flip {
                     let delay = p.i(data, DELAY);

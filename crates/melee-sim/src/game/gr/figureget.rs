@@ -211,7 +211,7 @@ pub fn proc_stand(r: &mut Running, gobj: GObjId) {
     if v.coins_out < total {
         if v.coin_wait == 0 {
             v.coins_out += 1;
-            let x4 = v.coins_out;
+            let coins_out = v.coins_out;
             let (xc, x10, x14) = (
                 r.data.f32(p.at(0xC)),
                 r.data.f32(p.at(0x10)),
@@ -229,15 +229,15 @@ pub fn proc_stand(r: &mut Running, gobj: GObjId) {
                 x = mem(fp::fmuls(reg(x), fp::fneg(1.0)));
             }
             let y = mem(fp::fadds(reg(x14), reg(stage::cam_top(r.game))));
-            let trophy = r.game.grounds[g.0].u.figureget().coin_trophies[(x4 - 1) as usize];
+            let trophy = r.game.grounds[g.0].u.figureget().coin_trophies[(coins_out - 1) as usize];
             let coin = super::super::it::kinds::trophycoin::spawn(
                 r,
                 Some(gobj),
                 Vec3::new(x, y, 0.0),
                 trophy,
-                x4,
+                coins_out,
             );
-            r.game.grounds[g.0].u.figureget().coins[(x4 - 1) as usize] = coin;
+            r.game.grounds[g.0].u.figureget().coins[(coins_out - 1) as usize] = coin;
             if let Some(c) = coin {
                 super::super::it::kinds::trophycoin::set_joint_only(r, c, 0);
             } else {

@@ -1458,8 +1458,8 @@ pub fn init_bg(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "stageGObj8_GObjProc")]
 pub fn proc_bg(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
-    let x0 = r.game.grounds[g.0].u.icemt_bg().speed;
-    let mul = fp::fmuls(0.300_000_011_920_929, reg(x0));
+    let speed = r.game.grounds[g.0].u.icemt_bg().speed;
+    let mul = fp::fmuls(0.300_000_011_920_929, reg(speed));
     let j = nth_joint(r.game, gobj, 8);
     assert!(j.is_some(), "gricemt.c: 1935: jobj");
     let j = j.unwrap();
