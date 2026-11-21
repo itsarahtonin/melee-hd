@@ -3321,6 +3321,9 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
             .unwrap_or_else(|e| eprintln!("{path}: {e}"));
     }
     pipelines::save(&renderer.into_renderer());
+    if let Some(r) = handoff.into_menus() {
+        pipelines::save(&r.into_renderer());
+    }
     let ms = |d: Duration| d.as_secs_f64() * 1000.0 / f64::from(n.max(1));
     println!(
         "a frame: GX stream {:.3} ms, renderer {:.3} ms, presenting (with the GPU's wait) {:.3} ms",
@@ -3582,6 +3585,9 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
             .unwrap_or_else(|e| eprintln!("{path}: {e}"));
     }
     pipelines::save(&renderer.into_renderer());
+    if let Some(r) = handoff.into_menus() {
+        pipelines::save(&r.into_renderer());
+    }
     ExitCode::SUCCESS
 }
 

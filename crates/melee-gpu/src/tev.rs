@@ -816,14 +816,11 @@ impl Specializer {
         if self.uber.get(&key).is_some_and(|u| u.pipeline.is_some()) {
             return;
         }
-        if !self.uber.contains_key(&key) {
-            self.uber.insert(
-                key,
-                Uber {
-                    pipeline: None,
-                    needed: true,
-                },
-            );
+        if let std::collections::hash_map::Entry::Vacant(e) = self.uber.entry(key) {
+            e.insert(Uber {
+                pipeline: None,
+                needed: true,
+            });
             self.uber_pending += 1;
         }
         let start = Instant::now();
