@@ -150,7 +150,7 @@ impl Running<'_> {
                 return;
             }
         }
-        self.game.ft.data.slot_words[x61c as usize].x6 &= !0x80;
+        self.game.ft.data.slot_words[x61c as usize].flags &= !0x80;
     }
 
     /// The unload's `HSD_ObjFree`s: the two animation buffers, the parts table, the DObj
