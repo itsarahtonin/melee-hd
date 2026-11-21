@@ -889,6 +889,7 @@ Link's and Young Link's hookshot and Samus's grapple beam are one tether in two 
 | Sync | `sync-test --rollback 7`, no difference: Link `ics-link-bf-2a40237f-rf` (14,199 ticks), Young Link `ylink-fox-dl` (10,969), Samus `own-samus-fd` (1,918) and `dk-samus-bf-9da5c633` (11,849) |
 | Leaf-check | `link`, `young_link`, `samus`, `samus_swing`, `ftcommon`, `common_stops`: all pass |
 | Speed (indicative, this PC with other agents' oracle runs on it) | `melee-bench native --runs 5`, three alternating rounds of the base (`510e5139`) and final builds, median of the 15: `grapple-samus-bf` 4,199 frames/s before, 4,189 after (runs 4,017–4,594 and 4,083–4,609); `cpu-l1-puff-l5-link-fod` 2,089 before, 2,065 after (2,047–2,139 and 2,026–2,100; its runs differ from the replay before and after alike). Within the spread. For the worker: `melee-bench native --dir DIR --runs 5 grapple-samus-bf cpu-l1-puff-l5-link-fod`, the two copied from `local/bench/oracle-m4-grapple/` and `local/bench/oracle-m4/` |
+| After main's batch 10 (merged at `65e04cb3`: wave 3's `forget` and item-kind names) | the comparer's coverage had moved, so `65e04cb3`'s build wrote fresh goldens of the 72 (full diffs, 732,664 ticks, no difference) and the merged build matched all 72 every tick; `sync-test --rollback 7` clean on `ics-link-bf-2a40237f-rf`, `ylink-fox-dl` and `dk-samus-bf-9da5c633`; leaf-check `link`, `young_link`, `samus`, `samus_swing` pass |
 
 ### The fast renderer
 
