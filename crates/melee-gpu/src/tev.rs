@@ -325,7 +325,10 @@ impl Drop for Workers {
 /// samples a pixel; every renderer's bind group layouts are the same (wgpu dedups equal
 /// layouts), so one renderer's pipeline draws with another's bind groups.
 #[derive(Clone, Default)]
-pub struct SharedSpecialized(Arc<Mutex<FxHashMap<(PipelineKey, Uid, u32), wgpu::RenderPipeline>>>);
+pub struct SharedSpecialized(Arc<Mutex<SharedPipelines>>);
+
+/// The shared pipelines, by what each is made for, its TEV configuration and its samples a pixel.
+type SharedPipelines = FxHashMap<(PipelineKey, Uid, u32), wgpu::RenderPipeline>;
 
 impl SharedSpecialized {
     fn get(&self, key: PipelineKey, uid: Uid, samples: u32) -> Option<wgpu::RenderPipeline> {
