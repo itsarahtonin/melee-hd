@@ -769,8 +769,8 @@ pub fn trophy_roll(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
         return None;
     }
     use crate::game::gr::grlib;
-    if grlib::x708(r.game) == 0 {
-        let mut id = crate::game::gr::ground::x6e4_drawn(r.game);
+    if grlib::trophy_coin_wait(r.game) == 0 {
+        let mut id = crate::game::gr::ground::drawn_trophy(r.game);
         if id == -1 {
             return None;
         }
@@ -791,15 +791,15 @@ pub fn trophy_roll(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
         ip.x40_vel.x = mem(vx);
         ip.x40_vel.y = vy;
         ip.x40_vel.z = 0.0;
-        grlib::set_x708(r.game, 1);
+        grlib::set_trophy_coin_wait(r.game, 1);
         return Some(coin);
     }
     let top = reg(r.data.f32(zako.at(0x18)));
-    let x = grlib::x708(r.game);
+    let x = grlib::trophy_coin_wait(r.game);
     if fp::frsp(f64::from(x)) >= top {
-        grlib::set_x708(r.game, 0);
+        grlib::set_trophy_coin_wait(r.game, 0);
     } else {
-        grlib::set_x708(r.game, x.wrapping_add(1) as i16);
+        grlib::set_trophy_coin_wait(r.game, x.wrapping_add(1) as i16);
     }
     None
 }

@@ -153,7 +153,7 @@ pub fn init_stand(r: &mut Running, gobj: GObjId) {
     let t = r.toy_draw(0, 0x63, 0, 65.0);
     r.game.grounds[g.0].u.figureget().coin_trophies[i0] = t;
     let i1 = if i0 + 1 >= 3 { 0 } else { i0 + 1 };
-    let shown = super::ground::x6e4_drawn(r.game);
+    let shown = super::ground::drawn_trophy(r.game);
     r.game.grounds[g.0].u.figureget().coin_trophies[i1] = shown;
     let mut kin = [0; 1];
     let third = if r.display_kin(shown, &mut kin, 1, 2) == 0 {

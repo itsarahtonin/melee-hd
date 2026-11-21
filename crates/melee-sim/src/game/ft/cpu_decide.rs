@@ -930,7 +930,7 @@ impl Running<'_> {
             }
             // `checkOnettY`: either end at the street's height while a car is coming.
             GrKind::Onett => {
-                let car = |y: f32| reg(y) <= 5.0 && ground::x740(self.game) != 0;
+                let car = |y: f32| reg(y) <= 5.0 && ground::cars_state(self.game) != 0;
                 car(isl.right.y) || car(isl.left.y)
             }
             _ => false,
@@ -944,7 +944,7 @@ impl Running<'_> {
         if self.game.stage_info.grkind != GrKind::Zebes {
             return false;
         }
-        let (level, step) = ground::x724_and_step(self.game);
+        let (level, step) = ground::acid_level_and_step(self.game);
         let y = reg(y);
         y < reg(level) || y < fp::fmadds(reg(step), fp::frsp(f64::from(frames)), reg(level))
     }

@@ -437,7 +437,7 @@ pub fn on_load(r: &mut Running) {
         if val == 0 {
             // The point is drawn before the trophy, as the call's arguments are evaluated.
             let point = super::ground::trophy_point(r.game, r.data);
-            let trophy = super::ground::x6e4_drawn(r.game);
+            let trophy = super::ground::drawn_trophy(r.game);
             zako::set_trophy_slot(r.game, trophy, point);
         }
         zako::scan_anywhere(r);
@@ -1359,11 +1359,11 @@ pub fn proc_climb10(r: &mut Running, gobj: GObjId) {
         };
         if done && at_end {
             climb10(r.game, g).flags |= IceMtClimbVars::B3;
-            super::ground::clear_x6d8(r.game);
+            super::ground::clear_route_event(r.game);
             r.start_stage_event(14, 2, 2, 0, CodeRef(END_EVENT));
             zako::clear_enemies(r);
         }
-    } else if super::ground::x6d8(r.game) == 1 {
+    } else if super::ground::route_event(r.game) == 1 {
         super::ground::set_flags(r.game, 0x10);
     }
     climb10(r.game, g).flags &= !IceMtClimbVars::B4;
@@ -1374,7 +1374,7 @@ pub fn proc_climb10(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "fn_801FA4CC")]
 pub fn end_event(game: &mut Game, num: i32) -> i32 {
     if num == 1 {
-        super::ground::set_x6d8(game, num);
+        super::ground::set_route_event(game, num);
         1
     } else {
         0

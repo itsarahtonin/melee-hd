@@ -351,7 +351,7 @@ impl Running<'_> {
     /// metres (at most 99999); a tick for each new metre.
     #[doc(alias = "fn_80180C60")]
     pub fn homerun_counter_proc(&mut self, gobj: GObjId) {
-        let x = super::super::gr::ground::x6e0(self.game, 0);
+        let x = super::super::gr::ground::home_run_distance(self.game, 0);
         let mut dist = fp::fctiwz(fp::fmuls(0.100_000_001_490_116_12, reg(x)));
         let j = self.homerun_jobj(gobj);
         if dist < 0 {

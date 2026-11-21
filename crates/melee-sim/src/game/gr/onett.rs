@@ -285,7 +285,7 @@ pub fn proc_street(r: &mut Running, gobj: GObjId) {
     swing_awnings(r, gobj);
     smoke(r, gobj);
     if let Some(b) = r.game.grounds[g.0].u.onett().subject {
-        let state = if super::ground::x740(r.game) != 0 {
+        let state = if super::ground::cars_state(r.game) != 0 {
             camera::ACTIVE
         } else {
             camera::INACTIVE
@@ -594,7 +594,7 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
             let v = r.game.grounds[g.0].u.onett_car();
             v.state_a = 1;
             v.timer_a = wait;
-            super::ground::set_x740(r.game, 0);
+            super::ground::set_cars_state(r.game, 0);
         }
         1 => {
             if v.timer_a != 0 {
@@ -651,7 +651,7 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
                 v.sub_state_a = 0;
                 jobj::clear_flags_all(&mut r.game.objs.jobjs, car_j, jobj::HIDDEN);
                 r.game.grounds[g.0].u.onett_car().state_a = 5;
-                super::ground::set_x740(r.game, 1);
+                super::ground::set_cars_state(r.game, 1);
             }
         }
         3 => {
@@ -662,7 +662,7 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
                 v.sub_state_a = 0;
                 jobj::clear_flags_all(&mut r.game.objs.jobjs, car_j, jobj::HIDDEN);
                 r.game.grounds[g.0].u.onett_car().state_a = 5;
-                super::ground::set_x740(r.game, 1);
+                super::ground::set_cars_state(r.game, 1);
             }
         }
         4 => {
@@ -713,7 +713,7 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
                                 r.game.objs.rng.below(3);
                                 scream(r, i32::from(saved));
                                 r.game.grounds[g.0].u.onett_car().sub_state_a = 2;
-                                super::ground::set_x740(r.game, 2);
+                                super::ground::set_cars_state(r.game, 2);
                                 break;
                             }
                         }

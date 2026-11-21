@@ -147,7 +147,7 @@ impl Running<'_> {
                 }
             }
             GrKind::Zebes => {
-                let (acid, _) = ground::x724_and_step(self.game);
+                let (acid, _) = ground::acid_level_and_step(self.game);
                 let bottom = reg(stage::blast_bottom(self.game));
                 if reg(acid) > bottom {
                     let right = reg(stage::blast_right(self.game));

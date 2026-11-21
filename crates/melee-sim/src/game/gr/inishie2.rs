@@ -237,7 +237,7 @@ pub fn music(r: &mut Running, gobj: GObjId) {
     match r.game.vs_match_timer() {
         Some(left) => {
             if left < 20 {
-                let bgm = super::inishie1::fast_song(super::ground::x98(r.game)).unwrap_or(-1);
+                let bgm = super::inishie1::fast_song(super::ground::bgm(r.game)).unwrap_or(-1);
                 r.lb_play_music(bgm);
                 r.game.grounds[g.0].u.inishie2().flags |= MUSIC;
             }

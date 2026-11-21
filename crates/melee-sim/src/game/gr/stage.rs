@@ -33,13 +33,15 @@ pub fn cam_zoom_rate(game: &Game) -> f32 {
 
 /// The camera's `x20`, `Stage_GetCamInfoX20`.
 #[doc(alias = "Stage_GetCamInfoX20")]
-pub fn cam_x20(game: &Game) -> f32 {
+#[doc(alias("cam_x20"))]
+pub fn cam_pan_rate(game: &Game) -> f32 {
     game.stage_info.cam_info.x20
 }
 
 /// The camera's `x24`, `Stage_GetCamInfoX24`.
 #[doc(alias = "Stage_GetCamInfoX24")]
-pub fn cam_x24(game: &Game) -> f32 {
+#[doc(alias("cam_x24"))]
+pub fn cam_tilt_rate(game: &Game) -> f32 {
     game.stage_info.cam_info.x24
 }
 

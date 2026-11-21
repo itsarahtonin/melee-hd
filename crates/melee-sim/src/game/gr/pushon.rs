@@ -126,7 +126,7 @@ pub fn on_start(r: &mut Running) {
     if val == 0 {
         // The point is drawn before the trophy, as the call's arguments are evaluated.
         let point = super::ground::trophy_point(r.game, r.data);
-        let trophy = super::ground::x6e4_drawn(r.game);
+        let trophy = super::ground::drawn_trophy(r.game);
         zako::set_trophy_slot(r.game, trophy, point);
     }
 }

@@ -289,13 +289,15 @@ pub fn quake_proc(r: &mut Running, gobj: GObjId, looping: bool) {
 
 /// `stage_info.x708`, `grLib_801C9E40`.
 #[doc(alias = "grLib_801C9E40")]
-pub fn x708(game: &Game) -> i32 {
+#[doc(alias("x708"))]
+pub fn trophy_coin_wait(game: &Game) -> i32 {
     i32::from(game.stage_info.x708)
 }
 
 /// Sets `stage_info.x708`, `grLib_801C9E50`.
 #[doc(alias = "grLib_801C9E50")]
-pub fn set_x708(game: &mut Game, v: i16) {
+#[doc(alias("set_x708"))]
+pub fn set_trophy_coin_wait(game: &mut Game, v: i16) {
     game.stage_info.x708 = v;
 }
 

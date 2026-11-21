@@ -153,7 +153,7 @@ pub fn on_start(r: &mut Running) {
     if val == 0 {
         // The point is drawn before the trophy, as the call's arguments are evaluated.
         let point = super::ground::trophy_point(r.game, r.data);
-        let trophy = super::ground::x6e4_drawn(r.game);
+        let trophy = super::ground::drawn_trophy(r.game);
         zako::set_trophy_slot(r.game, trophy, point);
     }
     zako::scan_anywhere(r);
@@ -374,7 +374,7 @@ pub fn proc_route(r: &mut Running, gobj: GObjId) {
                 let v = r.game.grounds[g.0].u.kinokoroute2();
                 v.phase = 2;
                 v.cam_timer = 0x3C;
-                super::ground::clear_x6d8(r.game);
+                super::ground::clear_route_event(r.game);
                 r.start_stage_event(0x11, 0xA, 3, 0xB3_u8 as i8, CodeRef(ARENA_EVENT));
                 r.game.grounds[g.0].u.kinokoroute2().zone_idx = 2;
                 rebuild(r, [0, 2], PROC_FRAME);
@@ -409,7 +409,7 @@ pub fn proc_route(r: &mut Running, gobj: GObjId) {
         if r.game.grounds[g.0].u.kinokoroute2().cam_timer == 0 {
             shut(r, gobj, false);
         }
-        if super::ground::x6d8(r.game) == 1 {
+        if super::ground::route_event(r.game) == 1 {
             let v = r.game.grounds[g.0].u.kinokoroute2();
             v.phase = 3;
             v.cam_timer = 0x3C;
@@ -519,7 +519,7 @@ pub fn shut(r: &mut Running, gobj: GObjId, on: bool) {
 #[doc(alias = "grKinokoRoute_80208480")]
 pub fn arena_event(game: &mut Game, arg: i32) -> bool {
     if arg == 1 {
-        super::ground::set_x6d8(game, arg);
+        super::ground::set_route_event(game, arg);
         return true;
     }
     false

@@ -850,7 +850,7 @@ impl Running<'_> {
                 self.clear_mut().x118 = 1;
                 if self.game.vs.state.match_result == OUTCOME_1P_BONUS_STAGE_END {
                     // The goal reached (`Ground_801C1DD4`): its special score and coins.
-                    let point = crate::game::gr::ground::x6d0(self.game);
+                    let point = crate::game::gr::ground::goal_point(self.game);
                     let (score, n) =
                         crate::game::gr::pushon::goal_score(self.game, self.data, point);
                     special = score;

@@ -167,7 +167,7 @@ pub fn on_start(r: &mut Running) {
     if val == 0 {
         // The point is drawn before the trophy, as the call's arguments are evaluated.
         let point = super::ground::trophy_point(r.game, r.data);
-        let trophy = super::ground::x6e4_drawn(r.game);
+        let trophy = super::ground::drawn_trophy(r.game);
         zako::set_trophy_slot(r.game, trophy, point);
     }
 }
@@ -419,7 +419,7 @@ pub fn proc_maze(r: &mut Running, gobj: GObjId) {
             }
             if portal.is_none_or(|p| grlib::overlay_done(r.game, p)) {
                 r.game.grounds[g.0].u.shrineroute().state = 3;
-                super::ground::clear_x6d8(r.game);
+                super::ground::clear_route_event(r.game);
                 let point = i32::from(r.game.grounds[g.0].u.shrineroute().point);
                 r.start_stage_event(6, 1, 1, point.wrapping_sub(0xA) as i8, CodeRef(ARENA_EVENT));
                 r.players_enable_input();
@@ -430,7 +430,7 @@ pub fn proc_maze(r: &mut Running, gobj: GObjId) {
             track_plat = true;
             let v = r.game.grounds[g.0].u.shrineroute();
             let (touched, both) = (v.touched, v.both_touched);
-            if super::ground::x6d8(r.game) == 1 && touched != 0 && both != 0 {
+            if super::ground::route_event(r.game) == 1 && touched != 0 && both != 0 {
                 leave_arena(r, gobj);
             }
         }
@@ -941,7 +941,7 @@ const SECOND: AddedLight = AddedLight {
 #[doc(alias = "grShrineRoute_8020AD24")]
 pub fn arena_event(game: &mut Game, arg: i32) -> bool {
     if arg == 1 {
-        super::ground::set_x6d8(game, arg);
+        super::ground::set_route_event(game, arg);
         return true;
     }
     false

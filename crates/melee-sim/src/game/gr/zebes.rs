@@ -20,7 +20,7 @@ use melee_data::archive::{Archives, DataRef};
 use super::super::handles::{CodeRef, GroundId};
 use super::super::state::{Game, Running};
 use super::data::{StageCallbacks, ZEBES_CALLBACKS};
-use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, set_x724, x724_and_step};
+use super::ground::{acid_level_and_step, ground_of, jobj_of, map_gobj, nth_joint, set_acid_level};
 use super::vars::AcidState;
 use super::{anime, grlib, material, setup, zako};
 use crate::fpu::{mem, reg};
@@ -556,7 +556,7 @@ pub fn proc_stage(r: &mut Running, gobj: GObjId) {
     } else {
         r.game.geometry_mut().disable_joint(0);
     }
-    let (level, _) = x724_and_step(r.game);
+    let (level, _) = acid_level_and_step(r.game);
     let config = r.game.grounds[g.0].u.zebes_stage().spawn_config;
     let j = nth_joint(r.game, gobj, 0xE);
     zako::run_config(r, config, j, level);
@@ -856,7 +856,7 @@ pub fn proc_island(r: &mut Running, gobj: GObjId) {
         r.game.gr.zebes.anchors[1] = world(r, j, RIGHT_ANCHOR);
         r.game.gr.zebes.bounds[1] = world(r, j, RIGHT_BOUND);
     }
-    let (level, _) = x724_and_step(r.game);
+    let (level, _) = acid_level_and_step(r.game);
     let config = r.game.grounds[g.0].u.zebes_island().spawn_config;
     let j = nth_joint(r.game, gobj, 1);
     zako::run_config(r, config, j, level);
@@ -874,7 +874,7 @@ pub fn init_splash(r: &mut Running, gobj: GObjId) {
 /// ends.
 #[doc(alias = "grZebes_801D9410")]
 pub fn proc_splash(r: &mut Running, gobj: GObjId) {
-    let (level, _) = x724_and_step(r.game);
+    let (level, _) = acid_level_and_step(r.game);
     let j = jobj_of(r.game, gobj).expect("a splash's model");
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = level);
     if anime::finished(r.game, gobj, 0, 7) {
@@ -1007,8 +1007,8 @@ pub fn init_lava(r: &mut Running, gobj: GObjId) {
     if let Some(j) = nth_joint(r.game, gobj, 0) {
         jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = y);
         let s = mem(fp::fadds(fp::fneg(55.0), reg(y)));
-        set_x724(r.game, s);
-        set_x724(r.game, s);
+        set_acid_level(r.game, s);
+        set_acid_level(r.game, s);
     }
     setup::add_start_hook(r.game, gobj, CodeRef(LAVA_START));
 }
@@ -1126,7 +1126,7 @@ pub fn proc_lava(r: &mut Running, gobj: GObjId) {
     if let Some(j) = nth_joint(r.game, gobj, 0) {
         jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = level);
         let s = mem(fp::fadds(fp::fneg(55.0), reg(level)));
-        set_x724(r.game, s);
+        set_acid_level(r.game, s);
     }
 }
 
@@ -1158,7 +1158,7 @@ pub fn proc_back(r: &mut Running, gobj: GObjId) {
     let state = r.game.grounds[g.0].u.zebes_back().state;
     match state {
         0 => {
-            let (level, _) = x724_and_step(r.game);
+            let (level, _) = acid_level_and_step(r.game);
             let anim = if reg(level) > 5.0 {
                 2
             } else if reg(level) > fp::fneg(20.0) {
@@ -1959,7 +1959,7 @@ pub fn lava_bubble(r: &mut Running, cb: u32, pos: Vec3, line: i32) {
 /// (the parameters' word at 0x2C); one that just fell in splashes, with two sounds.
 #[doc(alias = "grZebes_801DCBFC")]
 pub fn lava_device(r: &mut Running, fighter: GObjId) -> Option<DataRef> {
-    let (level, step) = x724_and_step(r.game);
+    let (level, step) = acid_level_and_step(r.game);
     let fp_ = r.game.fighter(fighter);
     let pos = fp_.cur_pos;
     let prev_y = mem(fp::fadds(reg(fp_.prev_pos.y), reg(step)));

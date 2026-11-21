@@ -1820,7 +1820,7 @@ fn ground_settings_and_queries() {
     q!(
         "Ground_801C1DD4",
         |c: &Ctx| fns::Ground_801C1DD4(c) as u32,
-        |r: &mut Running, _: &Maps| g::x6d0(r.game) as u32
+        |r: &mut Running, _: &Maps| g::goal_point(r.game) as u32
     );
     q!(
         "Ground_801C1E18",
@@ -1957,7 +1957,7 @@ fn ground_settings_and_queries() {
     set!(
         "Ground_801C438C",
         |c: &Ctx, _: &Maps| fns::Ground_801C438C(c, f(12.5)),
-        |r: &mut Running, _: &Maps| g::set_x724(r.game, 12.5)
+        |r: &mut Running, _: &Maps| g::set_acid_level(r.game, 12.5)
     );
     q!(
         "Ground_801C4368",
@@ -1966,7 +1966,7 @@ fn ground_settings_and_queries() {
             c.read_u32(at) ^ c.read_u32(at + 4).rotate_left(16)
         },
         |r: &mut Running, _: &Maps| {
-            let (s, i) = g::x724_and_step(r.game);
+            let (s, i) = g::acid_level_and_step(r.game);
             s.to_bits() ^ i.to_bits().rotate_left(16)
         }
     );
@@ -2027,32 +2027,32 @@ fn ground_settings_and_queries() {
     set!(
         "Ground_801C5740",
         |c: &Ctx, _: &Maps| fns::Ground_801C5740(c, 9),
-        |r: &mut Running, _: &Maps| g::set_x6d8(r.game, 9)
+        |r: &mut Running, _: &Maps| g::set_route_event(r.game, 9)
     );
     q!(
         "Ground_801C5764",
         |c: &Ctx| fns::Ground_801C5764(c) as u32,
-        |r: &mut Running, _: &Maps| g::x6d8(r.game) as u32
+        |r: &mut Running, _: &Maps| g::route_event(r.game) as u32
     );
     set!(
         "Ground_801C5750",
         |c: &Ctx, _: &Maps| fns::Ground_801C5750(c),
-        |r: &mut Running, _: &Maps| g::clear_x6d8(r.game)
+        |r: &mut Running, _: &Maps| g::clear_route_event(r.game)
     );
     q!(
         "Ground_801C5774",
         |c: &Ctx| fns::Ground_801C5774(c) as u32,
-        |r: &mut Running, _: &Maps| g::x6dc(r.game) as u32
+        |r: &mut Running, _: &Maps| g::route_zone(r.game) as u32
     );
     set!(
         "Ground_801C5784",
         |c: &Ctx, _: &Maps| fns::Ground_801C5784(c, 3),
-        |r: &mut Running, _: &Maps| g::set_x740(r.game, 3)
+        |r: &mut Running, _: &Maps| g::set_cars_state(r.game, 3)
     );
     q!(
         "Ground_801C5794",
         |c: &Ctx| fns::Ground_801C5794(c) as u32,
-        |r: &mut Running, _: &Maps| g::x740(r.game) as u32
+        |r: &mut Running, _: &Maps| g::cars_state(r.game) as u32
     );
     q!(
         "Ground_GetP1Fighter",
@@ -2081,22 +2081,22 @@ fn ground_settings_and_queries() {
     q!(
         "Ground_801C57F0",
         |c: &Ctx| b(fns::Ground_801C57F0(c, 2)),
-        |r: &mut Running, _: &Maps| g::x6e0(r.game, 2).to_bits()
+        |r: &mut Running, _: &Maps| g::home_run_distance(r.game, 2).to_bits()
     );
     q!(
         "Ground_801C5840",
         |c: &Ctx| fns::Ground_801C5840(c) as u32,
-        |r: &mut Running, _: &Maps| g::x6e4_drawn(r.game) as u32
+        |r: &mut Running, _: &Maps| g::drawn_trophy(r.game) as u32
     );
     set!(
         "Ground_801C5A84",
         |c: &Ctx, _: &Maps| fns::Ground_801C5A84(c, 5),
-        |r: &mut Running, _: &Maps| g::set_x98(r.game, 5)
+        |r: &mut Running, _: &Maps| g::set_bgm(r.game, 5)
     );
     q!(
         "Ground_801C5A94",
         |c: &Ctx| fns::Ground_801C5A94(c) as u32,
-        |r: &mut Running, _: &Maps| g::x98(r.game) as u32
+        |r: &mut Running, _: &Maps| g::bgm(r.game) as u32
     );
     set!(
         "Ground_801C5AA4",
@@ -2153,12 +2153,12 @@ fn ground_settings_and_queries() {
     q!(
         "Stage_GetCamInfoX20",
         |c: &Ctx| b(fns::Stage_GetCamInfoX20(c)),
-        |r: &mut Running, _: &Maps| stage::cam_x20(r.game).to_bits()
+        |r: &mut Running, _: &Maps| stage::cam_pan_rate(r.game).to_bits()
     );
     q!(
         "Stage_GetCamInfoX24",
         |c: &Ctx| b(fns::Stage_GetCamInfoX24(c)),
-        |r: &mut Running, _: &Maps| stage::cam_x24(r.game).to_bits()
+        |r: &mut Running, _: &Maps| stage::cam_tilt_rate(r.game).to_bits()
     );
     q!(
         "Stage_GetCamFixedZoom",
@@ -2242,12 +2242,12 @@ fn ground_settings_and_queries() {
     set!(
         "grLib_801C9E50",
         |c: &Ctx, _: &Maps| fns::grLib_801C9E50(c, -7),
-        |r: &mut Running, _: &Maps| grlib::set_x708(r.game, -7)
+        |r: &mut Running, _: &Maps| grlib::set_trophy_coin_wait(r.game, -7)
     );
     q!(
         "grLib_801C9E40",
         |c: &Ctx| fns::grLib_801C9E40(c) as u32,
-        |r: &mut Running, _: &Maps| grlib::x708(r.game) as u32
+        |r: &mut Running, _: &Maps| grlib::trophy_coin_wait(r.game) as u32
     );
     // Points near each fighter's feet and center and between them, at offsets either side of
     // touching.

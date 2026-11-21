@@ -229,7 +229,7 @@ pub fn init_stand(r: &mut Running, gobj: GObjId) {
         // The coin at stage point 220 (else 40 up), holding the stage's trophy.
         let pos = super::ground::point(r.game, r.data, 220)
             .unwrap_or(crate::vec::Vec3::new(0.0, 40.0, 0.0));
-        let trophy = super::ground::x6e4_drawn(r.game);
+        let trophy = super::ground::drawn_trophy(r.game);
         if trophy != -1 {
             let _ = super::super::it::kinds::trophycoin::spawn(r, None, pos, trophy, 0);
             r.toy_unmark(trophy);

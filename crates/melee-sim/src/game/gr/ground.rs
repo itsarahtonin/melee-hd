@@ -742,7 +742,8 @@ pub fn flags(game: &Game, mask: u32) -> u32 {
 
 /// `stage_info.x6D0`, `Ground_801C1DD4`.
 #[doc(alias = "Ground_801C1DD4")]
-pub fn x6d0(game: &Game) -> i32 {
+#[doc(alias("x6d0"))]
+pub fn goal_point(game: &Game) -> i32 {
     i32::from(game.stage_info.x6D0)
 }
 
@@ -937,14 +938,16 @@ pub fn target_broken(game: &mut Game) {
 
 /// `x724` and how far it moved last (`x724 - x728`), `Ground_801C4368`.
 #[doc(alias = "Ground_801C4368")]
-pub fn x724_and_step(game: &Game) -> (f32, f32) {
+#[doc(alias("x724_and_step"))]
+pub fn acid_level_and_step(game: &Game) -> (f32, f32) {
     let i = &game.stage_info;
     (i.x724, mem(fp::fsubs(reg(i.x724), reg(i.x728))))
 }
 
 /// Sets `x724`, keeping its last value in `x728`, `Ground_801C438C`.
 #[doc(alias = "Ground_801C438C")]
-pub fn set_x724(game: &mut Game, v: f32) {
+#[doc(alias("set_x724"))]
+pub fn set_acid_level(game: &mut Game, v: f32) {
     game.stage_info.x728 = game.stage_info.x724;
     game.stage_info.x724 = v;
 }
@@ -1051,37 +1054,43 @@ pub fn spline_pose(data: &Archives, spline: DataRef, u: f32) -> (Option<Vec3>, V
 
 /// Sets `x6D8`, `Ground_801C5740`.
 #[doc(alias = "Ground_801C5740")]
-pub fn set_x6d8(game: &mut Game, v: i32) {
+#[doc(alias("set_x6d8"))]
+pub fn set_route_event(game: &mut Game, v: i32) {
     game.stage_info.x6D8 = v;
 }
 
 /// Clears `x6D8`, `Ground_801C5750`.
 #[doc(alias = "Ground_801C5750")]
-pub fn clear_x6d8(game: &mut Game) {
+#[doc(alias("clear_x6d8"))]
+pub fn clear_route_event(game: &mut Game) {
     game.stage_info.x6D8 = 0;
 }
 
 /// `x6D8`, `Ground_801C5764`.
 #[doc(alias = "Ground_801C5764")]
-pub fn x6d8(game: &Game) -> i32 {
+#[doc(alias("x6d8"))]
+pub fn route_event(game: &Game) -> i32 {
     game.stage_info.x6D8
 }
 
 /// `x6DC`, `Ground_801C5774`.
 #[doc(alias = "Ground_801C5774")]
-pub fn x6dc(game: &Game) -> i32 {
+#[doc(alias("x6dc"))]
+pub fn route_zone(game: &Game) -> i32 {
     i32::from(game.stage_info.x6DC)
 }
 
 /// Sets Onett's car warning (`x740`), which the CPU reads, `Ground_801C5784`.
 #[doc(alias = "Ground_801C5784")]
-pub fn set_x740(game: &mut Game, v: i32) {
+#[doc(alias("set_x740"))]
+pub fn set_cars_state(game: &mut Game, v: i32) {
     game.stage_info.x740 = v;
 }
 
 /// Onett's car warning, `Ground_801C5794`.
 #[doc(alias = "Ground_801C5794")]
-pub fn x740(game: &Game) -> i32 {
+#[doc(alias("x740"))]
+pub fn cars_state(game: &Game) -> i32 {
     game.stage_info.x740
 }
 
@@ -1099,14 +1108,16 @@ pub fn p1_fighter2(game: &Game) -> Option<GObjId> {
 
 /// `x6E0`, `Ground_801C57F0` (its argument unused).
 #[doc(alias = "Ground_801C57F0")]
-pub fn x6e0(game: &Game, _arg: i32) -> f32 {
+#[doc(alias("x6e0"))]
+pub fn home_run_distance(game: &Game, _arg: i32) -> f32 {
     game.stage_info.x6E0
 }
 
 /// One of `x6E4`'s two entries drawn at random, `Ground_801C5840`: `HSD_Randi(1)`, so always
 /// the first, the draw still taken.
 #[doc(alias = "Ground_801C5840")]
-pub fn x6e4_drawn(game: &mut Game) -> i32 {
+#[doc(alias("x6e4_drawn"))]
+pub fn drawn_trophy(game: &mut Game) -> i32 {
     let i = game.objs.rng.below(1);
     game.stage_info.x6E4[i as usize]
 }
@@ -1142,13 +1153,15 @@ pub fn trophy_point(game: &mut Game, data: &Archives) -> i32 {
 
 /// Sets `x98`, `Ground_801C5A84`.
 #[doc(alias = "Ground_801C5A84")]
-pub fn set_x98(game: &mut Game, v: i32) {
+#[doc(alias("set_x98"))]
+pub fn set_bgm(game: &mut Game, v: i32) {
     game.stage_info.x98 = v;
 }
 
 /// `x98`, `Ground_801C5A94`.
 #[doc(alias = "Ground_801C5A94")]
-pub fn x98(game: &Game) -> i32 {
+#[doc(alias("x98"))]
+pub fn bgm(game: &Game) -> i32 {
     game.stage_info.x98
 }
 
