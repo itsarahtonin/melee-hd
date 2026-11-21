@@ -974,7 +974,7 @@ impl Running<'_> {
             let info = AllocInfo {
                 kind: i32::from(kind),
                 slot: slot as u8,
-                x5: -1,
+                slot_word: -1,
                 sub,
                 transformation: transformation & 1 != 0,
             };
@@ -984,7 +984,7 @@ impl Running<'_> {
                 &[
                     Val::Int(info.kind),
                     Val::Int(slot),
-                    Val::Int(i32::from(info.x5)),
+                    Val::Int(i32::from(info.slot_word)),
                     Val::Int(i32::from(info.sub)),
                     Val::Int(i32::from(info.transformation)),
                 ],

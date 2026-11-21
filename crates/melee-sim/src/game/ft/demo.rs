@@ -344,7 +344,7 @@ impl Running<'_> {
             AllocInfo {
                 kind: a.kind,
                 slot: a.slot,
-                x5: 0,
+                slot_word: 0,
                 sub: a.transformation,
                 transformation: false,
             },

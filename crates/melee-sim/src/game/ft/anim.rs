@@ -730,7 +730,7 @@ impl Running<'_> {
             .or_else(|| self.data.ptr(table));
         let (list, count) = (fp.dobj_list.data, fp.dobj_list.count);
         self.game.fighters[f.0].tobj_list.n_costume_tobjs = n;
-        self.game.fighters[f.0].tobj_list.x5D0 = indices;
+        self.game.fighters[f.0].tobj_list.tobj_indices = indices;
         for i in 0..n {
             let indices = indices.expect("texture animations without their list");
             let index = i32::from(self.data.u16(indices.at(2 * i)));

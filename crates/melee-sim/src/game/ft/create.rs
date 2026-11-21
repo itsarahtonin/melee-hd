@@ -42,12 +42,14 @@ const PROCS: [(u32, u8); 15] = [
 ];
 
 /// What `Fighter_Create` is asked to make (`plAllocInfo`): the fighter kind, its player slot,
-/// `x5`, and whether it is the slot's second fighter and a transformation.
+/// its slot word, and whether it is the slot's second fighter and a transformation.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct AllocInfo {
     pub kind: i32,
     pub slot: u8,
-    pub x5: i8,
+    /// +0x5: which of `ft_8045993C`'s words the fighter shares (its `x61C`), -1 for none.
+    #[doc(alias("x5"))]
+    pub slot_word: i8,
     pub sub: bool,
     pub transformation: bool,
 }
@@ -299,7 +301,7 @@ impl Running<'_> {
         fp.player_idx = info.slot;
         fp.is_sub_fighter = info.sub;
         fp.x34_scale.x = scale;
-        fp.x61C = info.x5;
+        fp.x61C = info.slot_word;
         fp.pad_port = port;
         fp.sub_color = sub_color;
         fp.is_always_metal = always_metal;
