@@ -641,6 +641,8 @@ pub fn alloc_sites(args: &[String]) {
 /// apart, and prints their medians. With `--every`, the states every `TICKS` ticks as far as
 /// the match runs, a line each. With `PERF_CTL_FIFO` and `PERF_ACK_FIFO` set (Linux: `perf
 /// record --control fifo:CTL,ACK -D -1`), a profile covers only the timed windows.
+/// `MELEE_BENCH_ROLLBACK_DRAWS=last` or `none` makes the passes before the last, or all of them,
+/// state-only ([`RollbackDraws`]).
 pub fn rollback_split(args: &[String]) {
     let mut at = 12_500u64;
     let mut rest = Vec::new();
@@ -687,8 +689,10 @@ pub fn rollback_split(args: &[String]) {
                 break;
             }
         }
+        let draws = RollbackDraws::from_env();
         println!(
-            "{name}: {runs} restores and {ROLLBACK_TICKS} ticks a state, the display passes building their draws as snapshot-match's do"
+            "{name}: {runs} restores and {ROLLBACK_TICKS} ticks a state, {}",
+            draws.describe()
         );
         if every.is_some() {
             println!(
@@ -698,7 +702,7 @@ pub fn rollback_split(args: &[String]) {
         }
         let mut ctl = PerfCtl::open();
         for (tick, f, state) in &kept {
-            let w = measure_windows(&mut m, state, &mut device, runs, &mut ctl);
+            let w = measure_windows(&mut m, state, &mut device, runs, &mut ctl, draws);
             if every.is_some() {
                 println!(
                     "| {tick} ({f}) | {:.1} µs | {:.1} µs | {:.1} µs | {:.2} ms |",
@@ -749,6 +753,7 @@ fn measure_windows(
     device: &mut Device<'_>,
     runs: usize,
     ctl: &mut Option<PerfCtl>,
+    draws: RollbackDraws,
 ) -> Windows {
     let mut restore = Vec::with_capacity(runs);
     let mut ticks: Vec<Vec<f64>> = (0..ROLLBACK_TICKS)
@@ -763,7 +768,7 @@ fn measure_windows(
         if let Some(c) = ctl.as_mut() {
             c.send("enable");
         }
-        let (r, split, all) = rollback_window(m, state, device, &mut frames);
+        let (r, split, all) = rollback_window(m, state, device, &mut frames, draws);
         if let Some(c) = ctl.as_mut() {
             c.send("disable");
         }
@@ -790,6 +795,49 @@ fn measure_windows(
     }
 }
 
+/// Which of a rollback window's display passes build their draws (`MELEE_BENCH_ROLLBACK_DRAWS`):
+/// every one (`all`, the default, as `snapshot-match`'s do), only the last (`last`: a rollback
+/// shows only the frame it ends on, the passes before it [`Display::state_only`]), or none
+/// (`none`). For comparing what the draws cost; the targets are measured with `all`.
+///
+/// [`Display::state_only`]: melee_sim::hsd::display::Display::state_only
+#[derive(Clone, Copy, PartialEq)]
+enum RollbackDraws {
+    All,
+    Last,
+    None,
+}
+
+impl RollbackDraws {
+    fn from_env() -> RollbackDraws {
+        match std::env::var("MELEE_BENCH_ROLLBACK_DRAWS").as_deref() {
+            Ok("last") => RollbackDraws::Last,
+            Ok("none") => RollbackDraws::None,
+            Ok("all") | Err(_) => RollbackDraws::All,
+            Ok(v) => panic!("MELEE_BENCH_ROLLBACK_DRAWS={v}: all, last or none"),
+        }
+    }
+
+    fn describe(self) -> &'static str {
+        match self {
+            RollbackDraws::All => "the display passes building their draws as snapshot-match's do",
+            RollbackDraws::Last => {
+                "the last display pass building its draws, the others state-only"
+            }
+            RollbackDraws::None => "every display pass state-only",
+        }
+    }
+
+    /// Whether pass `i` of a window builds its draws.
+    fn builds(self, i: usize) -> bool {
+        match self {
+            RollbackDraws::All => true,
+            RollbackDraws::Last => i + 1 == ROLLBACK_TICKS,
+            RollbackDraws::None => false,
+        }
+    }
+}
+
 /// One rollback window: `kept` restored into `m`, then [`ROLLBACK_TICKS`] ticks with their display
 /// passes; the restore's time, each tick's engine part's and display pass's, and the whole's, in
 /// seconds. A function of its own, so a sampled profile can keep the windows' samples alone.
@@ -799,16 +847,18 @@ fn rollback_window(
     kept: &Game,
     device: &mut Device<'_>,
     frames: &mut [i32; ROLLBACK_TICKS],
+    draws: RollbackDraws,
 ) -> (f64, [(f64, f64); ROLLBACK_TICKS], f64) {
     let t0 = Instant::now();
     (*m.game).clone_from(kept);
     let r = t0.elapsed().as_secs_f64();
     let mut split = [(0.0, 0.0); ROLLBACK_TICKS];
-    for (s, fr) in split.iter_mut().zip(frames) {
+    for (i, (s, fr)) in split.iter_mut().zip(frames).enumerate() {
         let a = Instant::now();
         let (mut f, render) = m.step_replay_tick(device);
         let b = Instant::now();
         if render {
+            m.game.objs.display.state_only = !draws.builds(i);
             f.draws = m.render();
         }
         let c = Instant::now();
