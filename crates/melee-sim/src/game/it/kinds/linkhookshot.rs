@@ -552,7 +552,7 @@ fn link_coll(r: &mut Running, l: ItemLinkId, width: f32, clink: Option<i32>) -> 
 fn island_ends(r: &Running, floor: i32) -> Option<((f32, f32), (f32, f32))> {
     let g = r.game.geometry.as_ref()?;
     let i = g.island_of_line(floor)?;
-    let island = g.islands.get(i);
+    let island = g.island(i);
     Some((
         (island.left.x, island.left.y),
         (island.right.x, island.right.y),

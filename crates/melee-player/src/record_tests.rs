@@ -1588,8 +1588,9 @@ fn playback_counters(g: &mut melee_sim::game::state::Game, play: &melee_sim::gam
     g.gr.coll_stamp = play.gr.coll_stamp;
     g.gr.coll_generation = play.gr.coll_generation;
     if let (Some(a), Some(b)) = (g.geometry.as_mut(), play.geometry.as_ref()) {
-        a.generation = b.generation;
-        for (j, k) in a.joints.iter_mut().zip(&b.joints) {
+        let (a, b) = (a.raw_parts_mut(), b.raw_parts());
+        *a.generation = b.generation;
+        for (j, k) in a.joints.iter_mut().zip(b.joints) {
             j.stamp = k.stamp;
         }
     }

@@ -741,25 +741,26 @@ impl Importer<'_> {
             }
         });
         let islands = self.islands();
-        Some(gr::Geometry {
-            // An import starts from the capture's stamps, none left over the GPU's pixels.
-            render_stamps: Vec::new(),
-            debug_rom: r32(sym("DbLevel")) as i32 >= melee_sim::game::gm::DB_DEBUG_ROM,
-            vertices,
-            lines,
-            joints: out,
-            ranges: std::array::from_fn(|g| range(self, coll + 0x10 + 4 * g as u32)),
-            list_start: joint_index(r32(sym("jointListStart"))),
-            list_end: joint_index(r32(sym("jointListEnd"))),
-            checked_bounding: r32(sym("didCheckBounding")) != 0,
-            bounds,
-            generation: r32(sym("mpColl_804D64AC")) as i32,
-            islands,
-            joints_addr: joints,
-            vertices_addr: vtx,
-            lines_addr,
-            lines_data: None,
-        })
+        let mut g = gr::Geometry::blank();
+        let p = g.raw_parts_mut();
+        // An import starts from the capture's stamps, none left over the GPU's pixels.
+        *p.render_stamps = Vec::new();
+        *p.debug_rom = r32(sym("DbLevel")) as i32 >= melee_sim::game::gm::DB_DEBUG_ROM;
+        *p.vertices = vertices;
+        *p.lines = lines;
+        *p.joints = out;
+        *p.ranges = std::array::from_fn(|g| range(self, coll + 0x10 + 4 * g as u32));
+        *p.list_start = joint_index(r32(sym("jointListStart")));
+        *p.list_end = joint_index(r32(sym("jointListEnd")));
+        *p.checked_bounding = r32(sym("didCheckBounding")) != 0;
+        *p.bounds = bounds;
+        *p.generation = r32(sym("mpColl_804D64AC")) as i32;
+        *p.islands = islands;
+        *p.joints_addr = joints;
+        *p.vertices_addr = vtx;
+        *p.lines_addr = lines_addr;
+        *p.lines_data = None;
+        Some(g)
     }
 
     /// Every island on the lists, in list order.
@@ -1057,7 +1058,7 @@ impl Comparer<'_> {
         let ours = game
             .geometry
             .as_ref()
-            .map_or(game.gr.coll_generation, |g| g.generation);
+            .map_or(game.gr.coll_generation, |g| g.generation());
         self.check("mpColl_804D64AC", "update counter", ours, generation);
         self.check(
             "grAnime_804D6958",
@@ -1772,6 +1773,7 @@ impl Comparer<'_> {
 
     /// The collision geometry, as `tools/leaf-check/tests/mplib/state.rs` compares it.
     fn geometry(&mut self, g: &gr::Geometry) {
+        let g = g.raw_parts();
         let coll = coll_data(self.u32(sym("stage_info") + 0x6AC));
         let vtx = self.u32(sym("groundCollVtx"));
         let lines = self.u32(sym("groundCollLine"));

@@ -82,9 +82,9 @@ impl Writer<'_> {
 /// Never one on a closed run of its kind, whose walks never end in the original.
 pub fn line_of(w: &mut World, kind: u32) -> Option<i32> {
     let g = &w.st.g;
-    let ok: Vec<i32> = (0..g.lines.len())
+    let ok: Vec<i32> = (0..g.raw_parts().lines.len())
         .filter(|&l| {
-            let f = g.lines[l].flags;
+            let f = g.raw_parts().lines[l].flags;
             (kind == 0 || f & kind != 0)
                 && f & LINE_ENABLED != 0
                 && f & LINE_HIDDEN == 0
@@ -94,9 +94,9 @@ pub fn line_of(w: &mut World, kind: u32) -> Option<i32> {
         .collect();
     if ok.is_empty() {
         // Any line of the kind, live or not.
-        let any: Vec<i32> = (0..g.lines.len())
+        let any: Vec<i32> = (0..g.raw_parts().lines.len())
             .filter(|&l| {
-                (kind == 0 || g.lines[l].flags & kind != 0)
+                (kind == 0 || g.raw_parts().lines[l].flags & kind != 0)
                     && !super::queries::walk_loops(g, l as i32)
             })
             .map(|l| l as i32)
@@ -198,7 +198,7 @@ fn surface(w: &mut World, at: u32, kind: u32, none_one_in: u64) {
             let g = &w.st.g;
             let n = g.line_normal(l);
             wr.i32(at, l);
-            wr.u32(at + 4, u32::from(g.lines[l as usize].lo_flags));
+            wr.u32(at + 4, u32::from(g.raw_parts().lines[l as usize].lo_flags));
             wr.fs(at + 8, &[n.x, n.y, n.z]);
         }
     }
@@ -216,11 +216,14 @@ pub fn place(w: &mut World, base: u32) {
     let anchor = line_of(w, 0).unwrap();
     let (a, b) = {
         let g = &w.st.g;
-        let l = g.lines[anchor as usize];
-        (g.vertices[l.v0 as usize].pos, g.vertices[l.v1 as usize].pos)
+        let l = g.raw_parts().lines[anchor as usize];
+        (
+            g.raw_parts().vertices[l.v0 as usize].pos,
+            g.raw_parts().vertices[l.v1 as usize].pos,
+        )
     };
     let t = w.st.rng.range(-0.1, 1.1);
-    let kind = w.st.g.lines[anchor as usize].flags & 0xF;
+    let kind = w.st.g.raw_parts().lines[anchor as usize].flags & 0xF;
     let e = ecb(w);
     // Beside the line on its open side, a little into it, or on it.
     let (mut x, mut y) = (a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);
@@ -313,7 +316,7 @@ pub fn place(w: &mut World, base: u32) {
     }
     wr.u32(off::ENV, env);
     // Joint filters, mostly off.
-    let joints = w.st.g.joints.len() as u64;
+    let joints = w.st.g.raw_parts().joints.len() as u64;
     let r = &mut w.st.rng;
     let skip = if r.chance(8) {
         r.below(joints) as i32
@@ -344,7 +347,9 @@ pub fn place(w: &mut World, base: u32) {
     let skip = match w.st.rng.below(4) {
         0 if floor != -1 => floor,
         1 => line_of(w, FLOOR)
-            .filter(|&l| u32::from(w.st.g.lines[l as usize].lo_flags) & LINE_PLATFORM != 0)
+            .filter(|&l| {
+                u32::from(w.st.g.raw_parts().lines[l as usize].lo_flags) & LINE_PLATFORM != 0
+            })
             .unwrap_or(-1),
         _ => -1,
     };
@@ -385,9 +390,9 @@ pub fn box_source(w: &mut World, base: u32) {
 /// floor's left end (grabbed by the ECB's right side) or the right of its right end.
 pub fn beside_ledge(w: &mut World, right_end: bool) {
     let g = &w.st.g;
-    let ledges: Vec<i32> = (0..g.lines.len() as i32)
+    let ledges: Vec<i32> = (0..g.raw_parts().lines.len() as i32)
         .filter(|&l| {
-            let line = g.lines[l as usize];
+            let line = g.raw_parts().lines[l as usize];
             line.flags & FLOOR != 0
                 && u32::from(line.lo_flags) & melee_sim::mp::LINE_LEDGE != 0
                 && line.flags & LINE_ENABLED != 0
@@ -435,9 +440,9 @@ pub fn at_wall_end(w: &mut World, right_wall: bool) {
     };
     let v = {
         let g = &w.st.g;
-        let line = g.lines[l as usize];
+        let line = g.raw_parts().lines[l as usize];
         let v = if w.st.rng.chance(2) { line.v0 } else { line.v1 };
-        g.vertices[v as usize].pos
+        g.raw_parts().vertices[v as usize].pos
     };
     let mut e = ecb(w);
     let ctx = w.ctx();

@@ -289,22 +289,21 @@ pub fn statics_theirs(ctx: &Ctx) -> CollStatics {
     let walls = sym("mpColl_80458810");
     let f = |a: u32| f32::from_bits(ctx.read_u32(a));
     let code = |a: u32| (a != 0).then_some(CodeRef(a));
-    CollStatics {
-        right_walls: std::array::from_fn(|i| ctx.read_u32(walls + 4 * i as u32) as i32),
-        right_count: r("mpColl_804D6488") as i32,
-        left_walls: std::array::from_fn(|i| ctx.read_u32(walls + 0x24 + 4 * i as u32) as i32),
-        left_count: r("mpColl_804D648C") as i32,
-        max_x: f(sym("mpColl_804D6490_max_x")),
-        line_id: r("mpColl_804D6494_line_id") as i32,
-        flags: r("mpColl_804D6498_flags"),
-        normal: Vec3::new(f(walls + 0x48), f(walls + 0x4C), f(walls + 0x50)),
-        ecb_tiny: r("mpColl_IsEcbTiny") != 0,
-        floor_filter: code(r("mpColl_804D64A0")),
-        floor_filter_gobj: (r("mpColl_804D64A4") != 0).then(|| GObjId(r("mpColl_804D64A4"))),
-        unused_filter: code(r("mpColl_804D64A8")),
-        stale_reads: 0,
-        watchdog: None,
-    }
+    let mut s = CollStatics::default();
+    let p = s.raw_parts_mut();
+    *p.right_walls = std::array::from_fn(|i| ctx.read_u32(walls + 4 * i as u32) as i32);
+    *p.right_count = r("mpColl_804D6488") as i32;
+    *p.left_walls = std::array::from_fn(|i| ctx.read_u32(walls + 0x24 + 4 * i as u32) as i32);
+    *p.left_count = r("mpColl_804D648C") as i32;
+    *p.max_x = f(sym("mpColl_804D6490_max_x"));
+    *p.line_id = r("mpColl_804D6494_line_id") as i32;
+    *p.flags = r("mpColl_804D6498_flags");
+    *p.normal = Vec3::new(f(walls + 0x48), f(walls + 0x4C), f(walls + 0x50));
+    *p.ecb_tiny = r("mpColl_IsEcbTiny") != 0;
+    *p.floor_filter = code(r("mpColl_804D64A0"));
+    *p.floor_filter_gobj = (r("mpColl_804D64A4") != 0).then(|| GObjId(r("mpColl_804D64A4")));
+    *p.unused_filter = code(r("mpColl_804D64A8"));
+    s
 }
 
 /// The statics as bits, so floats compare exactly.
@@ -312,18 +311,18 @@ fn statics_key(s: &CollStatics) -> String {
     let v = |v: Vec3| [v.x.to_bits(), v.y.to_bits(), v.z.to_bits()];
     format!(
         "right {:?}/{} left {:?}/{} max_x {:#x} line {} flags {:#x} normal {:x?} tiny {} filter {:?} {:?} {:?}",
-        s.right_walls,
-        s.right_count,
-        s.left_walls,
-        s.left_count,
-        s.max_x.to_bits(),
-        s.line_id,
-        s.flags,
-        v(s.normal),
-        s.ecb_tiny,
-        s.floor_filter,
-        s.floor_filter_gobj,
-        s.unused_filter
+        s.raw_parts().right_walls,
+        s.raw_parts().right_count,
+        s.raw_parts().left_walls,
+        s.raw_parts().left_count,
+        s.raw_parts().max_x.to_bits(),
+        s.raw_parts().line_id,
+        s.raw_parts().flags,
+        v(s.raw_parts().normal),
+        s.raw_parts().ecb_tiny,
+        s.raw_parts().floor_filter,
+        s.raw_parts().floor_filter_gobj,
+        s.raw_parts().unused_filter
     )
 }
 
@@ -380,7 +379,7 @@ impl<'c> World<'_, 'c> {
             self.handles.what
         );
         let joints = ctx.read_u32(sym("groundCollJoint"));
-        for (j, joint) in self.st.g.joints.iter().enumerate() {
+        for (j, joint) in self.st.g.raw_parts().joints.iter().enumerate() {
             let flags = ctx.read_u32(joints + 0x34 * j as u32 + 8);
             assert_eq!(
                 joint.flags & JOINT_TOO_FAR,
@@ -390,13 +389,13 @@ impl<'c> World<'_, 'c> {
             );
         }
         assert_eq!(
-            self.st.g.checked_bounding,
+            self.st.g.raw_parts().checked_bounding,
             ctx.read_u32(sym("didCheckBounding")) != 0,
             "{}: bounding checked",
             self.handles.what
         );
         assert_eq!(
-            self.st.g.generation,
+            self.st.g.raw_parts().generation,
             ctx.read_u32(sym("mpColl_804D64AC")) as i32
         );
         let theirs_calls = take_theirs();
@@ -554,7 +553,7 @@ fn check_all() {
             reset_boxes(&mut stage);
             // The stage's first update gives dynamic lines their kinds; before it, Pokémon
             // Stadium's form closed runs of one kind, which the original's walks never leave.
-            for j in 0..stage.g.joints.len() as i32 {
+            for j in 0..stage.g.raw_parts().joints.len() as i32 {
                 if mutations::dynamics_safe(&stage, j as usize) {
                     fns::mpJointUpdateDynamics(ctx, j);
                     stage.g.update_dynamics(j);
@@ -563,9 +562,10 @@ fn check_all() {
             let mut w = World {
                 st: &mut stage,
                 // A loop running this long the original would run for ages (or for ever).
-                statics: CollStatics {
-                    watchdog: Some(WATCHDOG),
-                    ..statics_theirs(ctx)
+                statics: {
+                    let mut s = statics_theirs(ctx);
+                    *s.raw_parts_mut().watchdog = Some(WATCHDOG);
+                    s
                 },
                 objs: Objects::default(),
                 archives,

@@ -274,8 +274,8 @@ impl Running<'_> {
                 geo.joint_from_line(line),
                 0 | 1 | 2 | 5
             ))),
-            GrKind::Inishie1 | GrKind::Venom if geo.joints_addr != 0 => {
-                super::cpu_ai::Leftover::Word(geo.joints_addr)
+            GrKind::Inishie1 | GrKind::Venom if geo.joints_addr() != 0 => {
+                super::cpu_ai::Leftover::Word(geo.joints_addr())
             }
             _ => super::cpu_ai::Leftover::Unknown("ftCo_800A1B38 (a stage's excluded floors)"),
         }

@@ -5,6 +5,8 @@
 //! `mirror` is that comparison.
 
 pub mod boot;
+#[cfg(test)]
+mod boundary_tests;
 pub mod camera;
 pub mod code;
 pub mod cpu_audit;

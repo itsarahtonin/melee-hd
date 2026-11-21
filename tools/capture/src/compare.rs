@@ -662,6 +662,7 @@ impl<'a> Comparer<'a> {
             .compare(&mem, sym("ifMagnify_804A1DE0"), "magnify", self);
         let (theirs, filter_gobj) = crate::read_coll_statics(self.mem);
         let key = |s: &melee_sim::mp::coll::CollStatics| {
+            let s = s.raw_parts();
             let v = |v: melee_sim::vec::Vec3| [v.x.to_bits(), v.y.to_bits(), v.z.to_bits()];
             format!(
                 "{:?}/{} {:?}/{} {:#x} {} {:#x} {:x?} {} {:?} {:?}",
@@ -682,7 +683,7 @@ impl<'a> Comparer<'a> {
         self.compare_handle(
             "mp collision floor filter fighter",
             "GObjId",
-            game.coll.floor_filter_gobj.map(|g| g.0),
+            game.coll.raw_parts().floor_filter_gobj.map(|g| g.0),
             filter_gobj,
         );
         self.fighter_data_globals();

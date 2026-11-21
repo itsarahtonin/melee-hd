@@ -376,32 +376,32 @@ impl crate::game::mirror::LayOut for EcbSource {
 pub struct CollStatics {
     /// The right walls (solid on their left, met by an ECB's left side) the last right-wall
     /// check collected (`mpColl_80458810.right`, counted by `mpColl_804D6488`).
-    pub right_walls: [i32; WALLS_MAX],
-    pub right_count: i32,
+    pub(in crate::mp) right_walls: [i32; WALLS_MAX],
+    pub(in crate::mp) right_count: i32,
     /// Left walls likewise (`mpColl_80458810.left`, `mpColl_804D648C`).
-    pub left_walls: [i32; WALLS_MAX],
-    pub left_count: i32,
+    pub(in crate::mp) left_walls: [i32; WALLS_MAX],
+    pub(in crate::mp) left_count: i32,
     /// The best wall correction so far: x, line, flags and normal (`mpColl_804D6490_max_x`,
     /// `mpColl_804D6494_line_id`, `mpColl_804D6498_flags`, `mpColl_80458810.normal`).
-    pub max_x: f32,
-    pub line_id: i32,
-    pub flags: u32,
-    pub normal: Vec3,
+    pub(in crate::mp) max_x: f32,
+    pub(in crate::mp) line_id: i32,
+    pub(in crate::mp) flags: u32,
+    pub(in crate::mp) normal: Vec3,
     /// Whether the ECB is too small for the sweeps (`mpColl_IsEcbTiny`).
-    pub ecb_tiny: bool,
+    pub(in crate::mp) ecb_tiny: bool,
     /// The floor filter and its fighter for a pass that asked for one (`mpColl_804D64A0`,
     /// `mpColl_804D64A4`).
-    pub floor_filter: Option<CodeRef>,
-    pub floor_filter_gobj: Option<GObjId>,
+    pub(in crate::mp) floor_filter: Option<CodeRef>,
+    pub(in crate::mp) floor_filter_gobj: Option<GObjId>,
     /// `mpColl_804D64A8`, cleared with them and never read.
     #[doc(alias("x64a8"))]
-    pub unused_filter: Option<CodeRef>,
+    pub(in crate::mp) unused_filter: Option<CodeRef>,
     /// Reads of values the original never set (see `docs/engine.md`), which the oracle
     /// reports.
-    pub stale_reads: u32,
+    pub(in crate::mp) stale_reads: u32,
     /// A bound on `mpColl_80046904`'s loop for checks, which halt there; the simulation leaves
     /// it off, running as long as the original (see `docs/engine.md`, "Hangs").
-    pub watchdog: Option<u32>,
+    pub(in crate::mp) watchdog: Option<u32>,
 }
 
 impl CollStatics {
@@ -412,6 +412,98 @@ impl CollStatics {
         self.floor_filter_gobj = None;
         self.unused_filter = None;
     }
+
+    /// Reads of values the original never set that a pass met, which the oracle reports.
+    #[inline]
+    pub fn stale_reads(&self) -> u32 {
+        self.stale_reads
+    }
+
+    /// Takes `from`'s statics, as a live match takes what the console's last wall check left
+    /// (`live::Carried`): the pass's floor filter's GObj (none between passes), the stale-read
+    /// count and the watchdog stay this one's.
+    pub fn carry_from(&mut self, from: &CollStatics) {
+        let (gobj, stale, watchdog) = (self.floor_filter_gobj, self.stale_reads, self.watchdog);
+        self.clone_from(from);
+        (self.floor_filter_gobj, self.stale_reads, self.watchdog) = (gobj, stale, watchdog);
+    }
+
+    /// The statics laid open whole, for the oracle's comparer and leaf-check, which compare
+    /// them with ssbm-rs's ([`crate::mp::Geometry::raw_parts`] has the rule).
+    pub fn raw_parts(&self) -> StaticsParts<'_> {
+        StaticsParts {
+            right_walls: &self.right_walls,
+            right_count: self.right_count,
+            left_walls: &self.left_walls,
+            left_count: self.left_count,
+            max_x: self.max_x,
+            line_id: self.line_id,
+            flags: self.flags,
+            normal: self.normal,
+            ecb_tiny: self.ecb_tiny,
+            floor_filter: self.floor_filter,
+            floor_filter_gobj: self.floor_filter_gobj,
+            unused_filter: self.unused_filter,
+            stale_reads: self.stale_reads,
+            watchdog: self.watchdog,
+        }
+    }
+
+    /// The statics laid open to write, for the oracle's importer and leaf-check's setups.
+    pub fn raw_parts_mut(&mut self) -> StaticsPartsMut<'_> {
+        StaticsPartsMut {
+            right_walls: &mut self.right_walls,
+            right_count: &mut self.right_count,
+            left_walls: &mut self.left_walls,
+            left_count: &mut self.left_count,
+            max_x: &mut self.max_x,
+            line_id: &mut self.line_id,
+            flags: &mut self.flags,
+            normal: &mut self.normal,
+            ecb_tiny: &mut self.ecb_tiny,
+            floor_filter: &mut self.floor_filter,
+            floor_filter_gobj: &mut self.floor_filter_gobj,
+            unused_filter: &mut self.unused_filter,
+            stale_reads: &mut self.stale_reads,
+            watchdog: &mut self.watchdog,
+        }
+    }
+}
+
+/// [`CollStatics::raw_parts`]: each field as [`CollStatics`] documents it.
+pub struct StaticsParts<'a> {
+    pub right_walls: &'a [i32; WALLS_MAX],
+    pub right_count: i32,
+    pub left_walls: &'a [i32; WALLS_MAX],
+    pub left_count: i32,
+    pub max_x: f32,
+    pub line_id: i32,
+    pub flags: u32,
+    pub normal: Vec3,
+    pub ecb_tiny: bool,
+    pub floor_filter: Option<CodeRef>,
+    pub floor_filter_gobj: Option<GObjId>,
+    pub unused_filter: Option<CodeRef>,
+    pub stale_reads: u32,
+    pub watchdog: Option<u32>,
+}
+
+/// [`CollStatics::raw_parts_mut`].
+pub struct StaticsPartsMut<'a> {
+    pub right_walls: &'a mut [i32; WALLS_MAX],
+    pub right_count: &'a mut i32,
+    pub left_walls: &'a mut [i32; WALLS_MAX],
+    pub left_count: &'a mut i32,
+    pub max_x: &'a mut f32,
+    pub line_id: &'a mut i32,
+    pub flags: &'a mut u32,
+    pub normal: &'a mut Vec3,
+    pub ecb_tiny: &'a mut bool,
+    pub floor_filter: &'a mut Option<CodeRef>,
+    pub floor_filter_gobj: &'a mut Option<GObjId>,
+    pub unused_filter: &'a mut Option<CodeRef>,
+    pub stale_reads: &'a mut u32,
+    pub watchdog: &'a mut Option<u32>,
 }
 
 /// What collision needs from outside mpcoll.

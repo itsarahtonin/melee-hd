@@ -1330,8 +1330,7 @@ impl Running<'_> {
             .geometry
             .as_ref()
             .expect("no collision geometry")
-            .islands
-            .get(island);
+            .island(island);
         self.cpu_cmd1(f, c::SET_LSTICK_Y, 0);
         if abs(fp::fsubs(reg(isl.right.x), reg(pos.x))) < 10.0 {
             self.cpu_cmd1(f, c::SET_LSTICK_X, 0x81);
@@ -1791,7 +1790,7 @@ impl Running<'_> {
         let Some(island) = geo.island_of_line(fpp.coll_data.floor.index) else {
             return false;
         };
-        let isl = geo.islands.get(island);
+        let isl = geo.island(island);
         let x = reg(fpp.cur_pos.x);
         let right = abs(fp::fsubs(reg(isl.right.x), x));
         let left = abs(fp::fsubs(reg(isl.left.x), x));

@@ -93,7 +93,7 @@ impl Running<'_> {
         // What the scene's heap held, for the next scenes' leftovers.
         let (game, data) = (&*self.game, self.data);
         // The collision joints are this scene's when its heap holds their array's block.
-        let joints = game.geometry.as_ref().map_or(0, |g| g.joints_addr);
+        let joints = game.geometry.as_ref().map_or(0, |g| g.joints_addr());
         let geometry_live = joints != 0
             && crate::hsd::heap::with(|h| {
                 h.os.allocated

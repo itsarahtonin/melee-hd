@@ -537,7 +537,7 @@ impl Running<'_> {
         platforms.clear();
         if filtered {
             platforms.extend(
-                (0..geometry.lines.len() as i32)
+                (0..geometry.line_count() as i32)
                     .map(|l| geometry.line_surface(l) & LINE_PLATFORM != 0),
             );
         }

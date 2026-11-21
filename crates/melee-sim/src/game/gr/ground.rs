@@ -61,7 +61,7 @@ pub fn yakumono_param(game: &Game) -> Option<DataRef> {
 /// too.
 pub fn bump_generation(game: &mut Game) {
     match &mut game.geometry {
-        Some(g) => g.generation = g.generation.wrapping_add(1),
+        Some(g) => g.bump_generation(),
         None => game.gr.coll_generation = game.gr.coll_generation.wrapping_add(1),
     }
 }
@@ -69,7 +69,7 @@ pub fn bump_generation(game: &mut Game) {
 /// The collision geometry's update counter, `mpColl_804D64AC`.
 pub fn generation(game: &Game) -> i32 {
     match &game.geometry {
-        Some(g) => g.generation,
+        Some(g) => g.generation(),
         None => game.gr.coll_generation,
     }
 }
@@ -374,24 +374,7 @@ pub fn update_map_coll(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
         // A stamp the load left over the GPU's pixels: what the console compares here is a
         // rendered texture's bytes (docs/melee-bugs.md). Where the copies don't reach memory
         // (Slippi's Dolphin), it is what memory held before them.
-        if g.render_stamps.contains(&(j.x as u16)) && !copies_reach_memory {
-            let at = g.joints_addr + 0x34 * u32::from(j.x as u16) + 0xC;
-            let (b, known) = crate::hsd::heap::with(|h| h.image.pre_copy_bytes(data, at, 2))
-                .unwrap_or_else(|| (vec![0; 2], vec![false; 2]));
-            assert!(
-                known.iter().all(|&k| k),
-                "Ground_UpdateMapColl reads joint {}'s stamp, the bytes before the GPU's copy unknown",
-                j.x
-            );
-            g.joints[j.x as usize].stamp = i16::from_be_bytes([b[0], b[1]]);
-            g.render_stamps.retain(|&k| k != j.x as u16);
-        }
-        assert!(
-            !g.render_stamps.contains(&(j.x as u16)),
-            "Ground_UpdateMapColl reads joint {}'s stamp, which the GPU's pixels left",
-            j.x
-        );
-        if stamp != g.joints[j.x as usize].stamp {
+        if stamp != g.joint_stamp(data, j.x as u16, copies_reach_memory) {
             update_coll_joint(game, data, j.x.into());
             set_stamp(game, j.x as u16, stamp);
             moved = true;
@@ -402,9 +385,10 @@ pub fn update_map_coll(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
 
 /// Stamps a collision joint with this update's value.
 fn set_stamp(game: &mut Game, joint: u16, stamp: i16) {
-    let g = game.geometry.as_mut().unwrap();
-    g.joints[joint as usize].stamp = stamp;
-    g.render_stamps.retain(|&j| j != joint);
+    game.geometry
+        .as_mut()
+        .unwrap()
+        .set_joint_stamp(joint, stamp);
 }
 
 /// A stage object's first process (priority 1), `Ground_801C1CD0`: animates its model and

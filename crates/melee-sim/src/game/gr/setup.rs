@@ -1243,15 +1243,15 @@ pub fn load_collision(game: &mut Game, data: &Archives) {
     let generation = game
         .geometry
         .as_ref()
-        .map_or(game.gr.coll_generation, |g| g.generation);
+        .map_or(game.gr.coll_generation, |g| g.generation());
     let mut g = super::Geometry::load(
         data,
         game.stage_info.coll_data,
         scale(game),
         game.stage_info.grkind,
     );
-    g.generation = generation;
-    g.debug_rom = game.gm.db_level >= crate::game::gm::DB_DEBUG_ROM;
+    g.set_generation(generation);
+    g.set_debug_rom(game.gm.db_level >= crate::game::gm::DB_DEBUG_ROM);
     game.geometry = Some(g);
     // The new joints hold no joint yet: the last stage's freed ones are its own.
     game.gr.freed_coll_jobjs.clear();
@@ -1399,19 +1399,16 @@ pub fn destroy(r: &mut Running, gobj: Option<GObjId>) {
     }
     if let Some(root) = jobj {
         let objs = &r.game.objs;
+        let freed = &mut r.game.gr.freed_coll_jobjs;
         let geo = r.game.geometry.as_mut().expect("no collision geometry");
-        for (id, joint) in geo.joints.iter_mut().enumerate() {
-            if let Some(j) = joint.jobj
-                && super::anime::root_of(objs, j) == root
-            {
-                r.game.gr.freed_coll_jobjs.retain(|&(k, _)| k != id as i32);
-                r.game
-                    .gr
-                    .freed_coll_jobjs
-                    .push((id as i32, objs.jobjs.pool.addr(j.0)));
-                joint.jobj = None;
+        geo.unbind_jobjs(|id, j| {
+            let unbind = super::anime::root_of(objs, j) == root;
+            if unbind {
+                freed.retain(|&(k, _)| k != id);
+                freed.push((id, objs.jobjs.pool.addr(j.0)));
             }
-        }
+            unbind
+        });
     }
     crate::hsd::gobj::free(r, gobj);
 }

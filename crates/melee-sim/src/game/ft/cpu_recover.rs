@@ -102,11 +102,10 @@ impl Running<'_> {
             .geometry
             .as_ref()
             .expect("no collision geometry")
-            .islands
-            .floors;
+            .first_floor_island();
         while let Some(id) = island {
             let geo = self.game.geometry.as_ref().expect("no collision geometry");
-            let isl = *geo.islands.get(id);
+            let isl = *geo.island(id);
             island = isl.next;
             let end = match edge {
                 Edge::Left => isl.left,

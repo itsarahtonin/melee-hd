@@ -249,7 +249,7 @@ impl Running<'_> {
                 && l.flags & crate::mp::LINE_HIDDEN == 0
                 && value == u32::from(l.lo_flags) & mask
         };
-        let lines: Vec<_> = g.lines.iter().filter(|l| shown(l)).copied().collect();
+        let lines: Vec<_> = g.lines().iter().filter(|l| shown(l)).copied().collect();
         if lines.is_empty() {
             return;
         }
@@ -296,9 +296,8 @@ impl Running<'_> {
         ];
         for (group, kind, color) in groups {
             let g = self.game.geometry.as_ref().expect("the stage's geometry");
-            let r = g.ranges[group];
-            let start = r.start.max(0) as usize;
-            let lines: Vec<_> = g.lines[start..start + r.count.max(0) as usize]
+            let lines: Vec<_> = g
+                .group_lines(group)
                 .iter()
                 .filter(|l| {
                     l.flags & crate::mp::LINE_ENABLED != 0
@@ -459,7 +458,7 @@ impl Running<'_> {
 fn quads(g: &super::gr::Geometry, lines: &[crate::mp::Line]) -> Vec<Vec3> {
     let mut v = Vec::with_capacity(lines.len() * 4);
     for l in lines {
-        let (a, b) = (g.vertices[l.v0 as usize].pos, g.vertices[l.v1 as usize].pos);
+        let (a, b) = (g.vertex(l.v0.into()).pos, g.vertex(l.v1.into()).pos);
         v.extend([
             Vec3::new(a.x, a.y, 25.0),
             Vec3::new(b.x, b.y, 25.0),

@@ -378,10 +378,10 @@ impl Running<'_> {
         dir.normalize();
         let mut best = reg(-1.0);
         let mut found = None;
-        let mut island = geo.islands.floors;
+        let mut island = geo.first_floor_island();
         while let Some(id) = island {
             let geo = self.game.geometry.as_ref().expect("no collision geometry");
-            let isl = *geo.islands.get(id);
+            let isl = *geo.island(id);
             island = isl.next;
             if own == Some(id) {
                 continue;
@@ -443,10 +443,10 @@ impl Running<'_> {
         let mut best = reg(-1.0);
         let mut found = None;
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
-        let mut island = geo.islands.floors;
+        let mut island = geo.first_floor_island();
         while let Some(id) = island {
             let geo = self.game.geometry.as_ref().expect("no collision geometry");
-            let isl = *geo.islands.get(id);
+            let isl = *geo.island(id);
             island = isl.next;
             if self.cpu_island_unsafe(Some(id)) {
                 continue;
@@ -485,10 +485,10 @@ impl Running<'_> {
         let own = geo.island_of_line(self.game.fighters[f.0].coll_data.floor.index);
         let mut best = reg(-1.0);
         let mut found = None;
-        let mut island = geo.islands.floors;
+        let mut island = geo.first_floor_island();
         while let Some(id) = island {
             let geo = self.game.geometry.as_ref().expect("no collision geometry");
-            let isl = *geo.islands.get(id);
+            let isl = *geo.island(id);
             island = isl.next;
             if self.cpu_island_unsafe(Some(id)) || own == Some(id) {
                 continue;
@@ -729,8 +729,7 @@ impl Running<'_> {
                 .geometry
                 .as_ref()
                 .expect("no collision geometry")
-                .islands
-                .get(island);
+                .island(island);
             let dx = reg(self.game.fighters[f.0].cpu.x54.x);
             let mut d = fp::fsubs(reg(isl.right.x), dx);
             if d < 0.0 {
@@ -771,7 +770,7 @@ impl Running<'_> {
         let Some(island) = geo.island_of_line(p.coll_data.floor.index) else {
             return;
         };
-        let isl = *geo.islands.get(island);
+        let isl = *geo.island(island);
         let c = &me.cpu;
         if fp::fsubs(reg(c.x54.y), reg(me.cur_pos.y)) <= 0.0 {
             return;
@@ -830,7 +829,7 @@ impl Running<'_> {
         if same_island || below {
             return;
         }
-        let isl = *geo.islands.get(island);
+        let isl = *geo.island(island);
         if fp::fsubs(reg(me.cpu.x54.x), reg(me.cur_pos.x)) > 0.0 {
             if me.cur_pos.x < isl.left.x {
                 let x = mem(fp::frsp(fp::fadd(5.0, reg(isl.left.x))));
@@ -853,9 +852,9 @@ impl Running<'_> {
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
         let mut best = reg(-1.0);
         let mut found = None;
-        let mut island = geo.islands.floors;
+        let mut island = geo.first_floor_island();
         while let Some(id) = island {
-            let isl = *geo.islands.get(id);
+            let isl = *geo.island(id);
             island = isl.next;
             let right = isl.right;
             let in_reach = !self.cpu_out_of_bounds(f, right.x, right.y);

@@ -389,7 +389,7 @@ pub(crate) struct StaleReads {
 impl StaleReads {
     /// Notes the stale reads the state shows after tick `at`.
     pub(crate) fn note(&mut self, at: u32, game: &Game, fields: Vec<String>) {
-        let counts = (game.objs.stale_reads, game.coll.stale_reads);
+        let counts = (game.objs.stale_reads, game.coll.stale_reads());
         if counts.0 > self.counts.0 {
             self.seen
                 .push((at, "HSD's objects (`Objects::stale_reads`)".into()));
@@ -927,7 +927,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
     // Where archives the match let go of were.
     let gone = GoneArchives::default();
     let mut stale = StaleReads {
-        counts: (m.game.objs.stale_reads, m.game.coll.stale_reads),
+        counts: (m.game.objs.stale_reads, m.game.coll.stale_reads()),
         ..Default::default()
     };
     // A state taken up at a tick's end has that frame's display pass still to run; a started

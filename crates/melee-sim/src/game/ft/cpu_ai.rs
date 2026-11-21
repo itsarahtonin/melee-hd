@@ -443,8 +443,8 @@ impl Running<'_> {
         let floor = self.game.fighters[f.0].coll_data.floor.index;
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
         let cur = geo.island_of_line(floor);
-        let first = geo.islands.floors;
-        let island = |r: &Self, id| *r.game.geometry.as_ref().expect("geometry").islands.get(id);
+        let first = geo.first_floor_island();
+        let island = |r: &Self, id| *r.game.geometry.as_ref().expect("geometry").island(id);
         let inside = |r: &Self, isl: &crate::mp::Island| {
             !r.cpu_out_of_bounds(f, isl.right.x, isl.right.y)
                 && !r.cpu_out_of_bounds(f, isl.left.x, isl.left.y)

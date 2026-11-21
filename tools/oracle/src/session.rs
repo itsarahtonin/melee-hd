@@ -1275,7 +1275,7 @@ impl Run<'_> {
         let mut compared = 0;
         let mut gone = GoneArchives::default();
         let mut stale = StaleReads {
-            counts: (s.game.objs.stale_reads, s.game.coll.stale_reads),
+            counts: (s.game.objs.stale_reads, s.game.coll.stale_reads()),
             ..Default::default()
         };
         // A state taken up at a tick's end has that frame's display pass still to run.

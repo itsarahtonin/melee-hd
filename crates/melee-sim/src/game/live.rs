@@ -205,7 +205,7 @@ impl Counters {
     pub fn put(&self, g: &mut Game) {
         g.gr.coll_stamp = self.coll_stamp;
         match &mut g.geometry {
-            Some(geo) => geo.generation = self.coll_generation,
+            Some(geo) => geo.set_generation(self.coll_generation),
             None => g.gr.coll_generation = self.coll_generation,
         }
         g.objs.generators.idnum = self.idnum;
@@ -271,11 +271,7 @@ impl Carried {
         }
         g.gr.start_points = self.start_points;
         g.it.ft_track.clone_from(&self.ft_track);
-        // The pass's floor filter's GObj (none between passes) stays the game's own.
-        let c = &mut g.coll;
-        let (gobj, stale, watchdog) = (c.floor_filter_gobj, c.stale_reads, c.watchdog);
-        c.clone_from(&self.coll);
-        (c.floor_filter_gobj, c.stale_reads, c.watchdog) = (gobj, stale, watchdog);
+        g.coll.carry_from(&self.coll);
     }
 }
 

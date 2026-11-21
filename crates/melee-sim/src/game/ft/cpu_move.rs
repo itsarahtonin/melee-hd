@@ -591,7 +591,7 @@ impl Running<'_> {
         let Some(island) = geo.island_of_line(fpp.coll_data.floor.index) else {
             return false;
         };
-        let isl = geo.islands.get(island);
+        let isl = geo.island(island);
         let edge = if f64::from(fpp.facing_dir) > 0.0 {
             isl.right.x
         } else {
@@ -612,7 +612,7 @@ impl Running<'_> {
         let Some(island) = geo.island_of_line(fpp.coll_data.floor.index) else {
             return fp::fneg(1.0);
         };
-        let isl = geo.islands.get(island);
+        let isl = geo.island(island);
         let end = if left { isl.left } else { isl.right };
         let x = fp::fsubs(reg(end.x), reg(fpp.cur_pos.x));
         let y = fp::fsubs(reg(end.y), reg(fpp.cur_pos.y));
@@ -892,12 +892,12 @@ impl Running<'_> {
             return false;
         }
         let geo = self.game.geometry.as_mut().expect("no collision geometry");
-        let islands: Vec<_> = geo.islands.iter(geo.islands.floors).collect();
+        let islands: Vec<_> = geo.floor_islands().collect();
         for island in islands {
             let fpp = &self.game.fighters[f.0];
             let (pos, right) = (fpp.cur_pos, fpp.facing_dir > 0.0);
             let geo = self.game.geometry.as_mut().expect("no collision geometry");
-            let isl = *geo.islands.get(island);
+            let isl = *geo.island(island);
             // Facing right, an island's left end ahead; facing left, its right end.
             let (end, dx, dy) = if right {
                 let e = isl.left;
@@ -1272,10 +1272,10 @@ impl Running<'_> {
         let mut best = reg(-1.0);
         let mut found = None;
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
-        let mut island = geo.islands.floors;
+        let mut island = geo.first_floor_island();
         while let Some(id) = island {
             let geo = self.game.geometry.as_ref().expect("no collision geometry");
-            let isl = *geo.islands.get(id);
+            let isl = *geo.island(id);
             island = isl.next;
             if self.cpu_island_unsafe(Some(id)) {
                 continue;

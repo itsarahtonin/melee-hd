@@ -272,7 +272,7 @@ impl Running<'_> {
                 .geometry
                 .as_ref()
                 .expect("no collision geometry")
-                .bounds[1]
+                .floor_bounds()
                 .bottom),
         );
         let mut followed = false;
@@ -555,7 +555,7 @@ impl Running<'_> {
             .geometry
             .as_ref()
             .expect("no collision geometry")
-            .bounds[1]
+            .floor_bounds()
             .bottom);
         if y >= bottom || y < fp::fadds(self.cfg_f32(cfg::RECOVERY_LOW), bottom) {
             return 0;
