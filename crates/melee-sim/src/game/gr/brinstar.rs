@@ -397,7 +397,7 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
         swing_speed: 0.0,
         damage: 0.0,
         jobj: child,
-        jobj2: jobj2,
+        jobj2,
         item: Some(item),
         anim_part: 0x1C,
     };
@@ -817,7 +817,7 @@ pub fn init_island(r: &mut Running, gobj: GObjId) {
         swing_speed: 0.0,
         damage: 0.0,
         jobj: child,
-        jobj2: jobj2,
+        jobj2,
         item: Some(item),
         anim_part: 0xD,
     };
