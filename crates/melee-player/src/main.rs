@@ -3778,13 +3778,21 @@ fn run(args: Args) -> ExitCode {
     if app.front.is_some() {
         app.power_on();
     }
-    // The pipelines the last runs needed, made before the first tick.
+    // The pipelines the last runs needed, made before the first tick. A replay or a match from
+    // the command line has no menus to make the saved specialized pipelines during, so it waits
+    // for them before its window opens, a few seconds at most (a cold driver cache can take a
+    // minute); the rest are made while the match draws with the uber shader.
     if app.session.is_some() {
-        app.renderer = Some(gpu_for(
-            pipelines::renderer(&app.gpu, app.scale, app.msaa, app.aspect),
-            app.one_thread,
-            app.fast,
-        ));
+        let mut r = pipelines::renderer(&app.gpu, app.scale, app.msaa, app.aspect);
+        let start = Instant::now();
+        let (made, of) = r.finish_specialized_within(pipelines::SAVED_LIST_WAIT);
+        if of > 0 {
+            eprintln!(
+                "specialized pipelines: {made} of {of} made in {:.0} ms before the first frame",
+                start.elapsed().as_secs_f64() * 1000.0
+            );
+        }
+        app.renderer = Some(gpu_for(r, app.one_thread, app.fast));
     }
     let r = event_loop.run_app(&mut app);
     app.inputs.close();

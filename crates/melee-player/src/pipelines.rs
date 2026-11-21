@@ -12,6 +12,11 @@ use std::path::PathBuf;
 use crate::channel::Channel;
 use crate::present::{Aspect, Gpu};
 
+/// The longest a replay or a match started from the command line waits for the saved specialized
+/// pipelines before its first frame: the 1080 Ti makes the 700 of a few matches' list in about a
+/// second with its driver's cache warm.
+pub const SAVED_LIST_WAIT: std::time::Duration = std::time::Duration::from_secs(3);
+
 /// Where the player keeps its caches: `%LOCALAPPDATA%\melee-hd` on Windows,
 /// `$XDG_CACHE_HOME/melee-hd` or `~/.cache/melee-hd` elsewhere (`melee-hd-dev` for a dev build,
 /// [`crate::channel`]).

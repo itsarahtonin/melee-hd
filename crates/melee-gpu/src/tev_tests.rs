@@ -379,3 +379,34 @@ fn a_renderer_draws_with_the_specialized_pipelines_another_made() {
     assert_eq!(a.tev.stats.made as usize, shared.len());
     assert!(shared.len() > configs / 2);
 }
+
+/// The saved list keeps the order the pipelines were first asked for (so the next run makes
+/// first what it's likely to need first), through a renderer warmed from it; a bounded wait for
+/// them returns with what's made, and the rest are made after.
+#[test]
+fn the_saved_list_keeps_the_order_first_asked_for() {
+    let Some(mut a) = renderer() else {
+        eprintln!("skipped: no hardware GPU adapter");
+        return;
+    };
+    let mut rng = Rng(0x5DEE_CE66);
+    let mut asked = Vec::new();
+    for _ in 0..8 {
+        let s = state(&mut rng);
+        let key = Renderer::pipeline_key(&s);
+        a.tev.request(key, tev::Uid::of(&s.bp, MODE_DRAW), false);
+        let mut words = key.pack().to_vec();
+        words.extend_from_slice(&tev::Uid::of(&s.bp, MODE_DRAW).0);
+        if !asked.contains(&words) {
+            asked.push(words);
+        }
+    }
+    asked.reverse();
+    let mut b = Renderer::with_device(a.device.clone(), a.queue().clone());
+    b.warm_specialized(&asked);
+    assert_eq!(b.specialized_keys(), asked, "in the order asked for");
+    let (made, of) = b.finish_specialized_within(std::time::Duration::ZERO);
+    assert!(made <= of && of == asked.len());
+    b.finish_specialized();
+    assert_eq!(b.tev.made_of(), (asked.len(), asked.len()));
+}

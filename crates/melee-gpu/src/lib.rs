@@ -1274,6 +1274,14 @@ impl Renderer {
         self.tev.finish();
     }
 
+    /// [`Renderer::finish_specialized`], waiting at most `limit`; returns how many of the
+    /// specialized pipelines asked for are made, and how many were asked for. The rest go on
+    /// being made in the order asked.
+    pub fn finish_specialized_within(&mut self, limit: std::time::Duration) -> (usize, usize) {
+        self.tev.finish_within(Some(limit));
+        self.tev.made_of()
+    }
+
     /// How draws get their specialized shaders from now on.
     pub fn set_tev_mode(&mut self, mode: TevMode) {
         self.tev.mode = mode;
@@ -2125,6 +2133,7 @@ impl Renderer {
                     None => {
                         if c.tev != tev::UBER {
                             self.tev.stats.uber_calls += 1;
+                            made::count(made::What::UberDraw);
                         }
                         tev::UBER
                     }

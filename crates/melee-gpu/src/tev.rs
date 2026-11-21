@@ -397,6 +397,9 @@ pub(crate) struct Specializer {
     uids: Vec<Uid>,
     /// Each pipeline asked for, once made.
     pipelines: FxHashMap<(PipelineKey, u32), Option<wgpu::RenderPipeline>>,
+    /// The pipelines in the order they were first asked for: a saved list keeps it, so the
+    /// next run makes first what it's likely to need first ([`Specializer::keys`]).
+    order: Vec<(PipelineKey, u32)>,
     workers: Option<Workers>,
     modules: Modules,
     /// Pipelines other renderers on the device made, and this one's for them.
@@ -451,8 +454,21 @@ impl Drop for Specializer {
 /// The id of a draw that has no specialized shader: the uber shader always draws it.
 pub(crate) const UBER: u32 = u32::MAX;
 
-/// Threads making pipelines: they wait on the driver's compiler.
-const THREADS: usize = 2;
+/// Threads making pipelines, which mostly wait on the driver's compiler: half the processor's
+/// threads, 2 to 6 (`MELEE_TEV_THREADS` sets it). A cold driver cache takes the 1080 Ti's
+/// driver 175 ms a pipeline, so the saved list's 700 take a minute on two.
+fn threads() -> usize {
+    static N: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
+    *N.get_or_init(|| {
+        std::env::var("MELEE_TEV_THREADS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .filter(|&n| n > 0)
+            .unwrap_or_else(|| {
+                std::thread::available_parallelism().map_or(2, |n| (n.get() / 2).clamp(2, 6))
+            })
+    })
+}
 
 impl Specializer {
     pub(crate) fn new(mode: TevMode, maker: Maker) -> Specializer {
@@ -462,6 +478,7 @@ impl Specializer {
             ids: FxHashMap::default(),
             uids: Vec::new(),
             pipelines: FxHashMap::default(),
+            order: Vec::new(),
             workers: None,
             modules: Arc::default(),
             shared: None,
@@ -474,8 +491,9 @@ impl Specializer {
         self.workers.get_or_insert_with(|| {
             let queue = Arc::new(Queue::default());
             let (tx, made) = mpsc::channel();
-            let mut threads = Vec::with_capacity(THREADS);
-            for i in 0..THREADS {
+            let n = threads();
+            let mut threads = Vec::with_capacity(n);
+            for i in 0..n {
                 let (queue, tx, maker, modules) = (
                     queue.clone(),
                     tx.clone(),
@@ -556,9 +574,11 @@ impl Specializer {
         {
             self.stats.shared += 1;
             self.pipelines.insert((key, id), Some(p));
+            self.order.push((key, id));
             return id;
         }
         self.pipelines.insert((key, id), None);
+        self.order.push((key, id));
         let job = Job { key, id, uid };
         if self.mode == TevMode::Sync {
             let made = make(&self.maker, &self.modules, &job);
@@ -590,15 +610,44 @@ impl Specializer {
     /// end of a warm-up, after which no draw waits for its specialized shader unless its
     /// configuration is new.
     pub(crate) fn finish(&mut self) {
+        self.finish_within(None);
+    }
+
+    /// [`Specializer::finish`], waiting at most `limit`: whether every pipeline was made. Those
+    /// left go on being made in the order asked.
+    pub(crate) fn finish_within(&mut self, limit: Option<std::time::Duration>) -> bool {
+        let end = limit.map(|l| std::time::Instant::now() + l);
+        let mut done = true;
         while self.pipelines.values().any(Option::is_none) {
             let Some(w) = &self.workers else { break };
-            match w.made.recv() {
-                Ok(m) => self.note(m),
-                Err(_) => break,
+            let made = match end {
+                None => w.made.recv().ok(),
+                Some(end) => {
+                    let left = end.saturating_duration_since(std::time::Instant::now());
+                    match w.made.recv_timeout(left) {
+                        Ok(m) => Some(m),
+                        Err(mpsc::RecvTimeoutError::Timeout) => {
+                            done = false;
+                            break;
+                        }
+                        Err(mpsc::RecvTimeoutError::Disconnected) => None,
+                    }
+                }
+            };
+            match made {
+                Some(m) => self.note(m),
+                None => break,
             }
         }
         self.stats.specialized_calls = 0;
         self.stats.uber_calls = 0;
+        done
+    }
+
+    /// How many pipelines were asked for, and how many of them are made.
+    pub(crate) fn made_of(&self) -> (usize, usize) {
+        let made = self.pipelines.values().filter(|p| p.is_some()).count();
+        (made, self.pipelines.len())
     }
 
     /// The pipeline for a draw's specialized shader, once made.
@@ -609,19 +658,17 @@ impl Specializer {
         self.pipelines.get(&(key, id))?.as_ref()
     }
 
-    /// Every pipeline asked for: what it's made for (`PipelineKey::pack`), then its uid.
+    /// Every pipeline asked for, in the order first asked for: what it's made for
+    /// (`PipelineKey::pack`), then its uid.
     pub(crate) fn keys(&self) -> Vec<Vec<u32>> {
-        let mut keys: Vec<Vec<u32>> = self
-            .pipelines
-            .keys()
+        self.order
+            .iter()
             .map(|(k, id)| {
                 let mut v = k.pack().to_vec();
                 v.extend_from_slice(&self.uids[*id as usize].0);
                 v
             })
-            .collect();
-        keys.sort_unstable();
-        keys
+            .collect()
     }
 
     pub(crate) fn stats(&self) -> TevStats {

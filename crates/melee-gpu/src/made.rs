@@ -28,10 +28,12 @@ pub enum What {
     CopyTexture,
     /// A material's record made (F4).
     Material,
+    /// A draw call drawn with the uber shader while its specialized pipeline is made (no time).
+    UberDraw,
 }
 
 impl What {
-    pub const ALL: [What; 9] = [
+    pub const ALL: [What; 10] = [
         What::Texture,
         What::Mesh,
         What::Upload,
@@ -41,6 +43,7 @@ impl What {
         What::Pipeline,
         What::CopyTexture,
         What::Material,
+        What::UberDraw,
     ];
 
     pub fn name(self) -> &'static str {
@@ -54,6 +57,7 @@ impl What {
             What::Pipeline => "pipelines",
             What::CopyTexture => "copy_textures",
             What::Material => "materials",
+            What::UberDraw => "uber_draws",
         }
     }
 }
@@ -67,6 +71,11 @@ static NANOS: [AtomicU64; N] = [const { AtomicU64::new(0) }; N];
 pub fn add(what: What, start: Instant) {
     COUNTS[what as usize].fetch_add(1, Relaxed);
     NANOS[what as usize].fetch_add(start.elapsed().as_nanos() as u64, Relaxed);
+}
+
+/// Counts one of `what`, untimed.
+pub fn count(what: What) {
+    COUNTS[what as usize].fetch_add(1, Relaxed);
 }
 
 /// Counts and times, of everything made so far or over a span.
