@@ -223,7 +223,9 @@ pub fn on_init(r: &mut Running) {
     setup::measure_blast_zones(r.game, r.data);
     r.game.geometry_mut().disable_joint(0);
     r.game.geometry_mut().disable_joint(1);
-    if super::stage::stkind(r.game) != super::StKind::AdventureKongo && r.game.vs_sudden_death() == 0 {
+    if super::stage::stkind(r.game) != super::StKind::AdventureKongo
+        && r.game.vs_sudden_death() == 0
+    {
         r.stage_sound(0x5_A551);
     }
 }

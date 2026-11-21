@@ -604,12 +604,12 @@ fn fighter_dead(game: &Game, gobj: GObjId) -> bool {
 fn eye_floor(game: &Game) -> f64 {
     let s = &game.stage_info;
     match GrKind::from_id(s.grkind) {
-        Some(GrKind::Castle) => reg(super::gr::castle::camera_floor(game)),
+        Some(GrKind::Castle) => reg(super::gr::peachs_castle::camera_floor(game)),
         Some(GrKind::Corneria) => super::gr::corneria::camera_floor(game),
-        Some(GrKind::Zebes) => reg(super::gr::zebes::camera_floor(s)),
-        Some(GrKind::Garden) => reg(super::gr::garden::camera_floor()),
-        Some(GrKind::KinokoRoute) => reg(super::gr::kinokoroute::camera_floor()),
-        Some(GrKind::Homerun) => super::gr::homerun::camera_floor(game),
+        Some(GrKind::Zebes) => reg(super::gr::brinstar::camera_floor(s)),
+        Some(GrKind::Garden) => reg(super::gr::jungle_japes::camera_floor()),
+        Some(GrKind::KinokoRoute) => reg(super::gr::mushroom_kingdom_route::camera_floor()),
+        Some(GrKind::Homerun) => super::gr::home_run_contest::camera_floor(game),
         _ => fp::fneg(f64::from(f32::MAX)),
     }
 }
