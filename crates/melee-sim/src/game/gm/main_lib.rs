@@ -24,8 +24,11 @@ pub struct MainLib {
     pub skip_intro: bool,
     pub resetting: bool,
     pub progressive: bool,
+    /// `xC`: the movies (the opening, the endings', the how-to, the gallery's) end at once and
+    /// the scene with them; cleared at the start, set by nothing ported.
     #[doc(alias("xc"))]
     pub movie_skip: bool,
+    /// `x10`: the clock [`MainLib::take_power_time`] noted last.
     #[doc(alias("x10"))]
     pub power_clock: u32,
     /// The video mode the game last set (`HSD_VISetConfigure`): progressive, and with the
