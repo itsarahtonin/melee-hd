@@ -28,9 +28,8 @@ use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::ft::link::special_n::LINK;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
-use melee_sim::game::it::kinds::{
-    clinkmilk, linkarrow, linkbomb, linkboomerang, linkbow, linkhookshot,
-};
+use melee_sim::game::it::kinds::linkhookshot::HOOKSHOT;
+use melee_sim::game::it::kinds::{clinkmilk, linkarrow, linkbomb, linkboomerang, linkbow, tether};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::capture::Call;
@@ -337,9 +336,9 @@ fn run_link(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     match name.as_str() {
         "ftCo_800CECE8" => return b(g.smash_combo_check(gobj)),
         "ftCo_800CED30" => g.link_attack_s42_enter(gobj),
-        "fn_800D8EC8" => return b(g.link_catch_tether(gobj, false)),
-        "fn_800D9228" => return b(g.link_catch_tether(gobj, true)),
-        "fn_800D949C" => g.link_catch_off_ground(gobj),
+        "fn_800D8EC8" => return b(g.catch_tether(gobj, false)),
+        "fn_800D9228" => return b(g.catch_tether(gobj, true)),
+        "fn_800D949C" => g.tether_off_ground(gobj),
         "ftCo_800D94D8" => g.link_hookshot_put_away(gobj),
         "ftLk_Init_BoomerangExists" => return b(g.link_boomerang_exists(gobj)),
         "ftLk_800EAF38" => g.link_remove_boomerang_cb(gobj),
@@ -407,19 +406,19 @@ fn run_link(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         }
         "it_802A2B10" => {
             item();
-            linkhookshot::put_away(g, gobj);
+            tether::put_away(g, gobj, &HOOKSHOT);
         }
         "it_802A77DC" => {
             item();
-            linkhookshot::to_retract(g, gobj);
+            tether::to_retract(g, gobj);
         }
         "it_802A7840" => {
             item();
-            linkhookshot::to_retract_caught(g, gobj);
+            tether::to_retract_caught(g, gobj, &HOOKSHOT);
         }
-        "it_802A7AAC" => linkhookshot::ft_death(g, gobj),
-        "it_802A7AF0" => linkhookshot::ft_frame(g, gobj),
-        "it_802A7B34" => linkhookshot::ft_line_up(g, gobj),
+        "it_802A7AAC" => tether::ft_death(g, gobj, &HOOKSHOT),
+        "it_802A7AF0" => tether::ft_frame(g, gobj, &HOOKSHOT),
+        "it_802A7B34" => tether::ft_line_up(g, gobj, &HOOKSHOT),
         "it_802A8A7C" => {
             item();
             linkarrow::remove(g, gobj);
@@ -442,7 +441,7 @@ fn run_link(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         }
         "it_802A7D40" => {
             item();
-            linkhookshot::forget(g, gobj, other());
+            tether::forget(g, gobj, other(), &HOOKSHOT);
         }
         "itLinkArrow_Logic98_EvtUnk" => {
             item();

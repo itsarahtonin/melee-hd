@@ -10,7 +10,7 @@ use gekko_fp as fp;
 use super::super::super::code::{run_fighter_cb, unported_call};
 use super::super::super::ef;
 use super::super::super::handles::CodeRef;
-use super::super::super::it::kinds::{linkhookshot, samusgrapple};
+use super::super::super::it::kinds::{linkhookshot, samusgrapple, tether};
 use super::super::super::state::Running;
 use super::super::common::{GA_AIR, GA_GROUND};
 use super::super::motion::flags::UPDATE_CMD;
@@ -88,7 +88,7 @@ impl Running<'_> {
                     .u
                     .gobj_at(0xC)
                     .expect("the hookshot");
-                linkhookshot::to_retract_caught(self, hs);
+                tether::to_retract_caught(self, hs, &linkhookshot::HOOKSHOT);
                 super::super::super::it::item_mut(self.game, hs)
                     .xDD4_itemVar
                     .link_hookshot()
@@ -103,7 +103,7 @@ impl Running<'_> {
                     .u
                     .gobj_at(0x10)
                     .expect("the grapple beam");
-                samusgrapple::to_retract_fast(self, beam);
+                tether::to_retract_caught(self, beam, &samusgrapple::GRAPPLE);
                 super::super::super::it::item_mut(self.game, beam)
                     .xDD4_itemVar
                     .samus_grapple()
@@ -306,10 +306,10 @@ impl Running<'_> {
                 Some(FighterKind::Link | FighterKind::Clink)
             )
         {
-            linkhookshot::ft_death(self, gobj);
+            tether::ft_death(self, gobj, &linkhookshot::HOOKSHOT);
         }
         if acted && kind == FighterKind::Samus {
-            samusgrapple::ft_death(self, gobj);
+            tether::ft_death(self, gobj, &samusgrapple::GRAPPLE);
         }
     }
 
@@ -952,12 +952,12 @@ impl Running<'_> {
             FighterKind::Yoshi => self.attach_to_thrower(grabber, gobj),
             FighterKind::Link | FighterKind::Clink => {
                 if let Some(hs) = self.game.fighter(grabber).u.gobj_at(0xC) {
-                    linkhookshot::to_retract_caught(self, hs);
+                    tether::to_retract_caught(self, hs, &linkhookshot::HOOKSHOT);
                 }
             }
             FighterKind::Samus => {
                 if let Some(beam) = self.game.fighter(grabber).u.gobj_at(0x10) {
-                    samusgrapple::to_retract_fast(self, beam);
+                    tether::to_retract_caught(self, beam, &samusgrapple::GRAPPLE);
                 }
             }
             _ => {}
