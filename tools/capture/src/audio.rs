@@ -304,7 +304,7 @@ pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
         v.volume = m.u8(at + 0x1B);
         v.stream_pan = m.u8(at + 0x1C);
         v.pan = m.u8(at + 0x1D);
-        v.x1e = m.u8(at + 0x1E);
+        v.stream_span = m.u8(at + 0x1E);
         v.pitch = m.u16(at + 0x20) as i16;
         v.game_pitch = m.u16(at + 0x22) as i16;
         v.sends = [m.u8(at + 0x24), m.u8(at + 0x25)];
@@ -613,8 +613,8 @@ fn lb_fields(lb: &mut melee_sim::lb::audio::LbAudio) -> Vec<(&'static str, u32, 
     let mut v = vec![
         ("lbl_804D640C", 0x804D_640C, I(&mut lb.held)),
         ("paused", 0x804D_6410, I(&mut lb.paused)),
-        ("lbl_804D6414", 0x804D_6414, I(&mut lb.x6414)),
-        ("lbl_804D6418", 0x804D_6418, I(&mut lb.x6418)),
+        ("lbl_804D6414", 0x804D_6414, I(&mut lb.unused_cleared)),
+        ("lbl_804D6418", 0x804D_6418, I(&mut lb.unused_music)),
         ("lbl_804D641C", 0x804D_641C, I(&mut lb.flush_queue)),
         ("lbl_804D387C", 0x804D_387C, I(&mut lb.music)),
         ("synth_volume", 0x804D_3880, F(&mut lb.stream_volume)),
@@ -1290,7 +1290,7 @@ pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
         img.u8(r, at + 0x1B, v.volume);
         img.u8(r, at + 0x1C, v.stream_pan);
         img.u8(r, at + 0x1D, v.pan);
-        img.u8(r, at + 0x1E, v.x1e);
+        img.u8(r, at + 0x1E, v.stream_span);
         img.u16(r, at + 0x20, v.pitch as u16);
         img.u16(r, at + 0x22, v.game_pitch as u16);
         img.u8(r, at + 0x24, v.sends[0]);

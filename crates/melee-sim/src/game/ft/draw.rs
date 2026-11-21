@@ -150,9 +150,9 @@ impl Running<'_> {
             },
             translucent: fp.x61D != 0xFF,
             flags: FighterFlags {
-                x2223_b2: fp.x2223_b2,
-                x2223_b3: fp.x2223_b3,
-                x2228_b0: fp.x2228_b0,
+                outline: fp.x2223_b2,
+                silhouette: fp.x2223_b3,
+                low_models: fp.x2228_b0,
             },
             overlay_light: o.x7C_flag2 && o.x7C_light_enable,
             light: fp.x588,

@@ -44,7 +44,8 @@ pub struct AppSrt {
     pub view_scale: [f32; 2],
     pub idnum: u16,
     /// Set for a generator's own transform, which the display pass draws unrotated (`xA2`).
-    pub xa2: u8,
+    #[doc(alias("xa2"))]
+    pub unrotated: u8,
 }
 
 /// The app-SRT pool (`HSD_PSAppSrt_804D10B0`) and its counts.

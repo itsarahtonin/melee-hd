@@ -191,11 +191,11 @@ impl Audio {
         let lb = &mut self.lb;
         lb.queue = [SFX_NONE; 16];
         lb.queue_timer = [0; 16];
-        lb.x6414 = 0;
+        lb.unused_cleared = 0;
         lb.duck = 1.0;
         lb.voice_duck = 1.0;
         lb.crowd_duck = 1.0;
-        lb.x6418 = 0;
+        lb.unused_music = 0;
         lb.held = 0;
         lb.crowd = [0; 2];
         lb.crowd_volume = [0; 2];
@@ -289,8 +289,8 @@ impl Audio {
         lb.duck = 1.0;
         lb.voice_duck = 1.0;
         lb.crowd_duck = 1.0;
-        lb.x6414 = 0;
-        lb.x6418 = 0;
+        lb.unused_cleared = 0;
+        lb.unused_music = 0;
         lb.crowd = [0; 2];
         lb.crowd_volume = [0; 2];
         lb.crowd_handle = [-1; 2];

@@ -255,7 +255,7 @@ impl Running<'_> {
                 gc.entries[i].char_id = i32::from(c);
                 gc.entries[i].color = ev.x50[i];
                 if ev.x45 != 0 && i > 0 && c == 4 {
-                    gc.entries[i].x5 = 0;
+                    gc.entries[i].copies_from_cache = 0;
                 }
             }
         }

@@ -76,8 +76,10 @@ pub const WALLS_MAX: usize = 9;
 pub enum EcbShape {
     /// A fighter's joints (`ECBSource_x4_x0`): the root and the six the ECB is fitted around.
     Joints {
-        x108_joint: Option<JObjId>,
-        x10C_joint: [Option<JObjId>; 6],
+        #[doc(alias("x108_joint"))]
+        root: Option<JObjId>,
+        #[doc(alias("x10C_joint"))]
+        bones: [Option<JObjId>; 6],
     },
     /// An item's fixed box (`ECBSource_x4_x0_1`), and its rotation.
     Box {
@@ -189,13 +191,17 @@ pub struct EcbSource {
     /// +0x0
     pub kind: i32,
     /// +0x4
-    pub x4: EcbShape,
+    #[doc(alias("x4"))]
+    pub shape: EcbShape,
     /// +0x20: added to the desired ECB's side points' height.
-    pub x124: f32,
+    #[doc(alias("x124"))]
+    pub side_lift: f32,
     /// +0x24: the smallest height fitted around joints.
-    pub x128: f32,
+    #[doc(alias("x128"))]
+    pub min_height: f32,
     /// +0x28: the smallest width fitted around joints.
-    pub x12C: f32,
+    #[doc(alias("x12C"))]
+    pub min_width: f32,
     /// Whether the joint member's last two words (+0x18) hold the zeros the collision's reset
     /// left (`mpColl_80041EE4`'s `memzero`), which a box source never writes over: else, since
     /// a joint source or a block's leftovers, the mirror doesn't keep them. For the heap's
@@ -210,16 +216,16 @@ impl Default for EcbSource {
     fn default() -> Self {
         EcbSource {
             kind: 0,
-            x4: EcbShape::Box {
+            shape: EcbShape::Box {
                 up: 0.0,
                 down: 0.0,
                 front: 0.0,
                 back: 0.0,
                 angle: 0.0,
             },
-            x124: 0.0,
-            x128: 0.0,
-            x12C: 0.0,
+            side_lift: 0.0,
+            min_height: 0.0,
+            min_width: 0.0,
             tail_zeroed: true,
         }
     }
@@ -231,11 +237,11 @@ impl Mirror for EcbSource {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let f = |o: u32| f32::from_bits(m.u32(at + o));
         let kind = m.u32(at) as i32;
-        let x4 = if kind == ECB_SOURCE_JOBJ {
+        let shape = if kind == ECB_SOURCE_JOBJ {
             let mut j = |o: u32| cx.import_handle("JObjId", m.u32(at + o)).map(JObjId);
             EcbShape::Joints {
-                x108_joint: j(4),
-                x10C_joint: std::array::from_fn(|i| j(8 + 4 * i as u32)),
+                root: j(4),
+                bones: std::array::from_fn(|i| j(8 + 4 * i as u32)),
             }
         } else {
             EcbShape::Box {
@@ -248,10 +254,10 @@ impl Mirror for EcbSource {
         };
         EcbSource {
             kind,
-            x4,
-            x124: f(0x20),
-            x128: f(0x24),
-            x12C: f(0x28),
+            shape,
+            side_lift: f(0x20),
+            min_height: f(0x24),
+            min_width: f(0x28),
             tail_zeroed: false,
         }
     }
@@ -267,10 +273,10 @@ impl Mirror for EcbSource {
             }
         };
         word(0, "kind", self.kind as u32);
-        word(0x20, "x124", self.x124.to_bits());
-        word(0x24, "x128", self.x128.to_bits());
-        word(0x28, "x12C", self.x12C.to_bits());
-        match &self.x4 {
+        word(0x20, "x124", self.side_lift.to_bits());
+        word(0x24, "x128", self.min_height.to_bits());
+        word(0x28, "x12C", self.min_width.to_bits());
+        match &self.shape {
             EcbShape::Box {
                 up,
                 down,
@@ -285,11 +291,8 @@ impl Mirror for EcbSource {
                 // an item made in a reused block keeps the old object's bytes there (setting the
                 // box writes its five words), which nothing reads while the source is a box.
             }
-            EcbShape::Joints {
-                x108_joint,
-                x10C_joint,
-            } => {
-                let joints = std::iter::once(x108_joint).chain(x10C_joint.iter());
+            EcbShape::Joints { root, bones } => {
+                let joints = std::iter::once(root).chain(bones.iter());
                 for (i, j) in joints.enumerate() {
                     cx.compare_handle(
                         &format!("{path}.x4.x0[{i}]"),
@@ -333,7 +336,7 @@ impl crate::game::mirror::LayOut for X35Flags {
 impl crate::game::mirror::LayOut for EcbSource {
     fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
         l.put_u32(at, self.kind as u32);
-        match &self.x4 {
+        match &self.shape {
             // A box's five words; the joint member's last two the reset's zeros, or else what
             // the block held, which the mirror doesn't keep (nothing compares them): unknown.
             EcbShape::Box {
@@ -352,19 +355,16 @@ impl crate::game::mirror::LayOut for EcbSource {
                     l.forget(at + 0x18, 8);
                 }
             }
-            EcbShape::Joints {
-                x108_joint,
-                x10C_joint,
-            } => {
-                let joints = std::iter::once(x108_joint).chain(x10C_joint.iter());
+            EcbShape::Joints { root, bones } => {
+                let joints = std::iter::once(root).chain(bones.iter());
                 for (i, j) in joints.enumerate() {
                     l.put_word(at + 4 + 4 * i as u32, cx.handle("JObjId", j.map(|h| h.0)));
                 }
             }
         }
-        l.put_u32(at + 0x20, self.x124.to_bits());
-        l.put_u32(at + 0x24, self.x128.to_bits());
-        l.put_u32(at + 0x28, self.x12C.to_bits());
+        l.put_u32(at + 0x20, self.side_lift.to_bits());
+        l.put_u32(at + 0x24, self.min_height.to_bits());
+        l.put_u32(at + 0x28, self.min_width.to_bits());
     }
 }
 
@@ -392,7 +392,8 @@ pub struct CollStatics {
     pub floor_filter: Option<CodeRef>,
     pub floor_filter_gobj: Option<GObjId>,
     /// `mpColl_804D64A8`, cleared with them and never read.
-    pub x64a8: Option<CodeRef>,
+    #[doc(alias("x64a8"))]
+    pub unused_filter: Option<CodeRef>,
     /// Reads of values the original never set (see `docs/engine.md`), which the oracle
     /// reports.
     pub stale_reads: u32,
@@ -407,7 +408,7 @@ impl CollStatics {
     pub fn reset(&mut self) {
         self.floor_filter = None;
         self.floor_filter_gobj = None;
-        self.x64a8 = None;
+        self.unused_filter = None;
     }
 }
 
@@ -526,7 +527,7 @@ fn coll_bits(cd: &CollData) -> Vec<u32> {
         f(x);
     }
     let src = &cd.ecb_source;
-    for x in [src.x124, src.x128, src.x12C] {
+    for x in [src.side_lift, src.min_height, src.min_width] {
         f(x);
     }
     let flags = |e: &X34Flags| {
@@ -553,12 +554,9 @@ fn coll_bits(cd: &CollData) -> Vec<u32> {
         cd.prev_env_flags as u32,
         cd.x13C as u32,
     ]);
-    match &src.x4 {
-        EcbShape::Joints {
-            x108_joint,
-            x10C_joint,
-        } => {
-            for j in std::iter::once(x108_joint).chain(x10C_joint) {
+    match &src.shape {
+        EcbShape::Joints { root, bones } => {
+            for j in std::iter::once(root).chain(bones) {
                 v.push(j.map_or(u32::MAX, |j| j.0));
             }
         }
@@ -635,26 +633,23 @@ fn zero_ecb(e: &mut _ftECB) {
 }
 
 impl CollData {
-    /// Sets the ECB to come from a fighter's joints, `mpColl_SetECBSource_JObj`: `x108_joint`
-    /// and the six joints it's fitted around, raised by `x124`.
+    /// Sets the ECB to come from a fighter's joints, `mpColl_SetECBSource_JObj`: `root`
+    /// and the six joints it's fitted around (`bones`), raised by `side_lift`.
     #[doc(alias = "mpColl_SetECBSource_JObj")]
     #[allow(clippy::too_many_arguments)]
     pub fn set_ecb_source_joints(
         &mut self,
         gobj: Option<GObjId>,
-        x108_joint: Option<JObjId>,
-        x10C_joint: [Option<JObjId>; 6],
-        x124: f32,
+        root: Option<JObjId>,
+        bones: [Option<JObjId>; 6],
+        side_lift: f32,
     ) {
         self.x0_gobj = gobj;
         self.ecb_source.kind = ECB_SOURCE_JOBJ;
-        self.ecb_source.x4 = EcbShape::Joints {
-            x108_joint,
-            x10C_joint,
-        };
-        self.ecb_source.x124 = x124;
-        self.ecb_source.x128 = 10.0;
-        self.ecb_source.x12C = 10.0;
+        self.ecb_source.shape = EcbShape::Joints { root, bones };
+        self.ecb_source.side_lift = side_lift;
+        self.ecb_source.min_height = 10.0;
+        self.ecb_source.min_width = 10.0;
         self.ecb_source.tail_zeroed = false;
         if self.x34_flags.b0 {
             self.ecb = default_ecb();
@@ -679,7 +674,7 @@ impl CollData {
     ) {
         self.x0_gobj = gobj;
         self.ecb_source.kind = ECB_SOURCE_FIXED;
-        self.ecb_source.x4 = EcbShape::Box {
+        self.ecb_source.shape = EcbShape::Box {
             up,
             down,
             front,
@@ -765,7 +760,7 @@ impl CollData {
             front,
             back,
             angle,
-        } = self.ecb_source.x4
+        } = self.ecb_source.shape
         else {
             unreachable!("a box ECB source holds joints")
         };
@@ -924,7 +919,7 @@ impl CollData {
         } else if a < -tau {
             a = fp::frsp(fp::fadd(a, tau));
         }
-        if let EcbShape::Box { angle, .. } = &mut self.ecb_source.x4 {
+        if let EcbShape::Box { angle, .. } = &mut self.ecb_source.shape {
             *angle = mem(a);
         } else {
             unreachable!("a box ECB source holds joints");
@@ -1156,12 +1151,12 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
     /// (no margin), 8 (1 wide), 1 (bottom on the position), 0x10 (2 high).
     #[doc(alias = "mpColl_LoadECB_JObj")]
     pub fn load_ecb_joints(&mut self, cd: &mut CollData, flags: u32) {
-        let EcbShape::Joints { x10C_joint, .. } = cd.ecb_source.x4 else {
+        let EcbShape::Joints { bones, .. } = cd.ecb_source.shape else {
             unreachable!("a joint ECB source holds a box")
         };
         cd.begin_load();
         let (px, py) = (reg(cd.cur_pos.x), reg(cd.cur_pos.y));
-        let v = self.hooks.joint_position(x10C_joint[0]);
+        let v = self.hooks.joint_position(bones[0]);
         let mut left_x = mem(fp::fsubs(reg(v.x), px));
         let mut right_x = left_x;
         let mut bottom_y = mem(fp::fsubs(reg(v.y), py));
@@ -1174,7 +1169,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
                 *max = mem(v);
             }
         };
-        for &j in &x10C_joint[1..] {
+        for &j in &bones[1..] {
             let v = self.hooks.joint_position(j);
             let dx = fp::fsubs(reg(v.x), px);
             let dy = fp::fsubs(reg(v.y), py);
@@ -1188,13 +1183,13 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
             top_y = mem(fp::fadds(reg(top_y), 2.0));
         }
         let at_least_4 = |v: f32| if 4.0 > reg(v) { 4.0 } else { reg(v) };
-        let min = at_least_4(cd.ecb_source.x12C);
+        let min = at_least_4(cd.ecb_source.min_width);
         let width = abs(fp::fsubs(reg(right_x), reg(left_x)));
         if width < min {
             right_x = mem(fp::fmuls(0.5, width));
             left_x = mem(fp::fneg(reg(right_x)));
         }
-        let min = at_least_4(cd.ecb_source.x128);
+        let min = at_least_4(cd.ecb_source.min_height);
         let height = abs(fp::fsubs(reg(top_y), reg(bottom_y)));
         if height < min {
             let half = fp::fmuls(0.5, height);
@@ -1234,7 +1229,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         }
         let side_y = || {
             mem(fp::fadds(
-                reg(cd.ecb_source.x124),
+                reg(cd.ecb_source.side_lift),
                 fp::fmuls(0.5, add(bottom_y, top_y)),
             ))
         };

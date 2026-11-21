@@ -1247,7 +1247,7 @@ pub fn car_generator(r: &mut Running, idx: i32, j: Option<JObjId>) -> bool {
             None => return false,
         },
     };
-    r.game.objs.app_srts[s].xa2 = 0;
+    r.game.objs.app_srts[s].unrotated = 0;
     let k = super::ground::scale(r.game);
     let srt = &mut r.game.objs.app_srts[s];
     srt.scale.z = k;

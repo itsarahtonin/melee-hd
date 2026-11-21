@@ -1830,7 +1830,7 @@ fn detach_app_srt(objs: &mut Objects, data: &Archives, pp: ParticleId) {
     let Some(srt) = objs.particles[pp].appsrt else {
         return;
     };
-    if objs.app_srts[srt].xa2 != 0 {
+    if objs.app_srts[srt].unrotated != 0 {
         return;
     }
     generator::follow_joint_unless_paused(objs, data, objs.app_srts[srt].gp);

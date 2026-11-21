@@ -1664,6 +1664,6 @@ pub fn app_srt(objs: &Objects, img: &mut Image, s: super::appsrt::AppSrtId) {
     m(&mut l, 0x64, &o.view);
     l.f32s(0x94, &o.view_scale);
     l.u16(0xA0, o.idnum);
-    l.u8(0xA2, o.xa2);
+    l.u8(0xA2, o.unrotated);
     l.put(img);
 }

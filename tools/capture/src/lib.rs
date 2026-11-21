@@ -1078,7 +1078,7 @@ pub fn read_coll_statics(mem1: &[u8]) -> (melee_sim::mp::coll::CollStatics, u32)
         ecb_tiny: r("mpColl_IsEcbTiny") != 0,
         floor_filter: code(r("mpColl_804D64A0")),
         floor_filter_gobj: None,
-        x64a8: code(r("mpColl_804D64A8")),
+        unused_filter: code(r("mpColl_804D64A8")),
         stale_reads: 0,
         watchdog: None,
     };

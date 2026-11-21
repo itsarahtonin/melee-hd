@@ -289,11 +289,14 @@ pub enum Draw {
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct FighterFlags {
     /// An outline or silhouette tree (`x2223_b2`): its color, no depth update.
-    pub x2223_b2: bool,
+    #[doc(alias("x2223_b2"))]
+    pub outline: bool,
     /// The silhouette (`x2223_b3`): no tint, its own pixel-engine mode.
-    pub x2223_b3: bool,
+    #[doc(alias("x2223_b3"))]
+    pub silhouette: bool,
     /// The low models (`x2228_b0`): the shared material only with `x2224_b0` clear.
-    pub x2228_b0: bool,
+    #[doc(alias("x2228_b0"))]
+    pub low_models: bool,
 }
 
 /// A quad of [`Draw::Quad`]: two corners and its color.
@@ -827,7 +830,7 @@ fn fighter_material(objs: &mut Objects, data: &Archives, m: MObjId) {
     super::export::tlut_names(objs, data);
     texture_matrices(objs, data, m);
     let rendermode = objs.mobjs[m].rendermode | if fm.translucent { RENDER_XLU } else { 0 };
-    let texp = fm.overlay_light && rendermode & RENDER_XLU == 0 && !fm.flags.x2223_b2;
+    let texp = fm.overlay_light && rendermode & RENDER_XLU == 0 && !fm.flags.outline;
     if texp || !fm.overlay_light {
         setup_channel_mode(objs, m);
         return;

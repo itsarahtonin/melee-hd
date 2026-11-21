@@ -29,7 +29,7 @@ fn put(ctx: &ssbm_rt::Ctx, o: &SoundObj) {
         (0x38, o.end_frame as u32),
         (0x3C, o.direction.to_bits()),
         (0x40, o.track as u32),
-        (0x44, u32::from(o.x44)),
+        (0x44, u32::from(o.pan_set)),
     ];
     for (off, w) in words {
         ctx.write_u32(UD + off, w);
@@ -63,7 +63,7 @@ fn random(r: &mut Rand) -> SoundObj {
         current_frame: frame(r),
         end_frame: frame(r),
         direction: [1.0, -1.0, 0.5][r.below(3) as usize],
-        x44: r.below(2) == 0,
+        pan_set: r.below(2) == 0,
         ..SoundObj::default()
     }
 }
@@ -88,7 +88,7 @@ fn sound_object_behaviors_match() {
             let mut ours = o.clone();
             assert!(behavior_alone(&mut ours, addr));
             assert_eq!(
-                (ours.vol, ours.pan, ours.x44),
+                (ours.vol, ours.pan, ours.pan_set),
                 got(&ctx),
                 "{addr:#x} on object {n}: {o:?}"
             );

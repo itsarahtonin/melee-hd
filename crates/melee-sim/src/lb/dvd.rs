@@ -68,16 +68,23 @@ impl Default for PreloadEntry {
 pub struct CacheFighter {
     pub char_id: i32,
     pub color: u8,
-    pub x5: u8,
+    /// `x5`: for Kirby, 0 (an event's choice) preloads every character's copy, else only the
+    /// copies of the cache's characters.
+    #[doc(alias("x5"))]
+    pub copies_from_cache: u8,
 }
 
 /// `GameCache`: a mode's characters and stage the cache preloads (`lbDvdPreload_3`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct GameCache {
     pub mode_kind: u8,
-    pub x1: u8,
-    pub x2: u8,
-    pub x3: u8,
+    /// `x1` to `x3`: the bytes before `stkind`, which no code reads.
+    #[doc(alias("x1"))]
+    pub pad_a: u8,
+    #[doc(alias("x2"))]
+    pub pad_b: u8,
+    #[doc(alias("x3"))]
+    pub pad_c: u8,
     pub stkind: i32,
     pub entries: [CacheFighter; 8],
 }
@@ -96,14 +103,14 @@ pub const SCENE_DEFAULT: SceneCache = SceneCache {
     is_heap_persistent: [false; 2],
     game_cache: GameCache {
         mode_kind: crate::game::gm::machine::GM_COUNT,
-        x1: 0,
-        x2: 0,
-        x3: 0,
+        pad_a: 0,
+        pad_b: 0,
+        pad_c: 0,
         stkind: StKind::Unk328.id() as i32,
         entries: [CacheFighter {
             char_id: CharacterKind::NONE as i32,
             color: 0,
-            x5: 1,
+            copies_from_cache: 1,
         }; 8],
     },
     mode_scene_changes: 0,
@@ -464,7 +471,7 @@ impl Dvd {
                 self.want_character(e.char_id, e.color, false);
             }
             if e.char_id == KIRBY {
-                if e.x5 == 0 {
+                if e.copies_from_cache == 0 {
                     for kind in 0..NONE {
                         self.want_character(kind, e.color, true);
                     }
@@ -474,7 +481,7 @@ impl Dvd {
                         if o.char_id == NONE {
                             continue;
                         }
-                        if o.char_id == KIRBY && o.x5 == 0 {
+                        if o.char_id == KIRBY && o.copies_from_cache == 0 {
                             for kind in 0..NONE {
                                 self.want_character(kind, e.color, true);
                             }

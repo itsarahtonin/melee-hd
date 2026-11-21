@@ -110,7 +110,7 @@ pub fn generator_at(
     let g = generator::spawn(objs, data, &mut hooks, 0, bank, idx)?;
     let s = match objs.generators[g].appsrt {
         Some(s) => {
-            objs.app_srts[s].xa2 = 0;
+            objs.app_srts[s].unrotated = 0;
             s
         }
         None => match crate::hsd::appsrt::add_to_generator(objs, g, 1) {

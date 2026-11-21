@@ -638,7 +638,7 @@ impl Sides<'_> {
             ours.extend(s.mmtx.m.as_flattened().iter().map(|v| v.to_bits()));
             ours.extend(s.view.m.as_flattened().iter().map(|v| v.to_bits()));
             ours.extend(s.view_scale.map(f32::to_bits));
-            ours.extend([0, u32::from(s.idnum), u32::from(s.xa2)]);
+            ours.extend([0, u32::from(s.idnum), u32::from(s.unrotated)]);
             assert_eq!(theirs, ours, "{what}: app-SRT {i}");
         }
         // Counts.

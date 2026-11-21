@@ -59,7 +59,10 @@ pub struct Voice {
     /// `x1C`: the stream's pan.
     pub stream_pan: u8,
     pub pan: u8,
-    pub x1e: u8,
+    /// `x1E`: the commands 10 and 11 set it (flag 0x10, whose update does nothing): the
+    /// stream's third setting beside its volume and pan, presumably the surround pan.
+    #[doc(alias("x1e"))]
+    pub stream_span: u8,
     /// `x20`, `fadetime`: the stream's pitch and the game's, in cents.
     pub pitch: i16,
     pub game_pitch: i16,
@@ -486,11 +489,11 @@ impl Audio {
                 }
                 10 => {
                     voice.flags |= 0x10;
-                    voice.x1e = word as u8;
+                    voice.stream_span = word as u8;
                 }
                 11 => {
                     voice.flags |= 0x10;
-                    voice.x1e = (i32::from(voice.x1e) + byte).clamp(0, 0xFF) as u8;
+                    voice.stream_span = (i32::from(voice.stream_span) + byte).clamp(0, 0xFF) as u8;
                 }
                 12 => {
                     voice.flags |= 0x20;

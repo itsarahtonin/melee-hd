@@ -293,13 +293,13 @@ impl Running<'_> {
         let cd = &mut self.game.fighters[f.0].coll_data;
         let joints = cd.ecb_source.kind == ECB_SOURCE_JOBJ;
         if joints {
-            cd.ecb_source.x124 = x124;
+            cd.ecb_source.side_lift = x124;
             cd.set_ledge_snap(sx, sy, sh);
         }
         cd.x50 = weight;
         if joints {
-            cd.ecb_source.x128 = ten;
-            cd.ecb_source.x12C = ten;
+            cd.ecb_source.min_height = ten;
+            cd.ecb_source.min_width = ten;
         }
     }
 }

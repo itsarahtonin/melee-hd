@@ -69,15 +69,30 @@ pub struct Component {
     pub dc_selector: u8,
     pub ac_selector: u8,
     pub pred_dc: i16,
-    pub x08: u32,
-    pub x0c: u32,
-    pub x10: u32,
-    pub x14: i32,
-    pub x18: i32,
-    pub x1c: i32,
-    pub x20: i32,
-    pub x24: i32,
-    pub x28: i32,
+    /// `x08`, `x0C`: the frame's size times the component's sampling over the largest
+    /// sampling, rounded up.
+    #[doc(alias("x08"))]
+    pub width_in_blocks: u32,
+    #[doc(alias("x0c"))]
+    pub height_in_blocks: u32,
+    /// `x10`: where the component's rows start in the work area.
+    #[doc(alias("x10"))]
+    pub work_at: u32,
+    /// `x14` to `x20`: the component's blocks across and down an MCU, their count, and the
+    /// MCU's width in samples.
+    #[doc(alias("x14"))]
+    pub mcu_width: i32,
+    #[doc(alias("x18"))]
+    pub mcu_height: i32,
+    #[doc(alias("x1c"))]
+    pub mcu_blocks: i32,
+    #[doc(alias("x20"))]
+    pub mcu_sample_width: i32,
+    /// `x24`, `x28`: the frame's size in the component's samples, in MCUs, rounded up.
+    #[doc(alias("x24"))]
+    pub downsampled_height: i32,
+    #[doc(alias("x28"))]
+    pub downsampled_width: i32,
 }
 
 /// The decode work area's header (`THPFileInfo`).
@@ -95,27 +110,45 @@ pub struct FileInfo {
     pub scan_start: u32,
     pub x_pixel_size: u16,
     pub y_pixel_size: u16,
-    pub x74: u16,
+    /// `x74`: the width decoded, as `decompressed_y` the height (both the frame's size).
+    #[doc(alias("x74"))]
+    pub decompressed_x: u16,
     pub decompressed_y: u16,
     pub valid_huffman_tabs: u8,
     pub valid_quant_tabs: u8,
     pub sampling_h_max: u8,
     pub sampling_v_max: u8,
     pub n_components: u8,
-    pub x7d: u8,
+    /// `x7D`, `x8D2`, `x8E8`, `x8EC`: no code writes or reads them.
+    #[doc(alias("x7d"))]
+    pub unused_a: u8,
     pub huffman_tabs: [HuffTab; 4],
     pub quant_tabs: QuantTabs,
     pub components: [Component; 3],
-    pub x8bc: [u8; 16],
+    /// `x8BC`: the component of each of an MCU's blocks.
+    #[doc(alias("x8bc"))]
+    pub mcu_membership: [u8; 16],
     pub mcus_per_row: u16,
-    pub x8ce: u16,
-    pub x8d0: u16,
-    pub x8d2: u16,
-    pub x8d4: u16,
-    pub x8e8: u16,
-    pub x8ea: u16,
-    pub x8ec: u16,
-    pub x8ee: u16,
+    /// `x8CE`: an MCU's blocks.
+    #[doc(alias("x8ce"))]
+    pub blocks_in_mcu: u16,
+    /// `x8D0`: the MCU rows down the frame.
+    #[doc(alias("x8d0"))]
+    pub mcus_per_column: u16,
+    #[doc(alias("x8d2"))]
+    pub unused_b: u16,
+    /// `x8D4`: the rows one MCU row decodes, which `rows_done` steps by.
+    #[doc(alias("x8d4"))]
+    pub rows_per_mcu: u16,
+    #[doc(alias("x8e8"))]
+    pub unused_c: u16,
+    /// `x8EA`: the row the decode starts from (nothing writes it: 0); `x8EE`: the rows decoded.
+    #[doc(alias("x8ea"))]
+    pub first_row: u16,
+    #[doc(alias("x8ec"))]
+    pub unused_d: u16,
+    #[doc(alias("x8ee"))]
+    pub rows_done: u16,
     /// Where the next MCU row goes in each plane.
     pub tile: [u32; 3],
     pub n_mcu: u16,
@@ -319,17 +352,17 @@ fn read_frame_header(info: &mut FileInfo, data: &[u8]) -> Result<(), u8> {
         info.sampling_v_max = info.sampling_v_max.max(c.sampling_v);
     }
     let y = i32::from(info.y_pixel_size);
-    info.x8d4 = round_up(y, round_up(y, i32::from(info.sampling_v_max) * 8)) as u16;
+    info.rows_per_mcu = round_up(y, round_up(y, i32::from(info.sampling_v_max) * 8)) as u16;
     for k in 0..usize::from(info.n_components) {
         let (h, v) = (
             i32::from(info.components[k].sampling_h),
             i32::from(info.components[k].sampling_v),
         );
-        info.components[k].x08 = round_up(
+        info.components[k].width_in_blocks = round_up(
             i32::from(info.x_pixel_size) * h,
             i32::from(info.sampling_h_max),
         ) as u32;
-        info.components[k].x0c = round_up(
+        info.components[k].height_in_blocks = round_up(
             i32::from(info.y_pixel_size) * v,
             i32::from(info.sampling_v_max),
         ) as u32;
@@ -478,17 +511,17 @@ fn read_scan_header(info: &mut FileInfo, data: &[u8]) -> Result<(), u8> {
         if u32::from(info.valid_huffman_tabs) & (1 << ((s & 0xF) + 1)) == 0 {
             return Err(15);
         }
-        info.x74 = info.x_size;
+        info.decompressed_x = info.x_size;
         info.decompressed_y = info.y_size;
-        let per_row = info.components[i].x08 as u16;
+        let per_row = info.components[i].width_in_blocks as u16;
         let d = i32::from(info.decompressed_y);
-        let m = i32::from(info.x8d4);
+        let m = i32::from(info.rows_per_mcu);
         let mut rows = round_up(d, m) as u16;
         rows = rows.wrapping_add(if d % m == 0 { 0 } else { 1 });
-        rows = rows.wrapping_mul(info.x8d4);
+        rows = rows.wrapping_mul(info.rows_per_mcu);
         let shift = i32::from(info.sampling_v_max) - i32::from(info.components[i].sampling_v);
         let rows = (i32::from(rows) >> shift) as u32;
-        info.components[i].x10 = info.scratch;
+        info.components[i].work_at = info.scratch;
         info.scratch = info
             .scratch
             .wrapping_add(u32::from(per_row).wrapping_mul(rows));
@@ -503,26 +536,26 @@ fn mcu_layout(info: &mut FileInfo) -> Result<(), u8> {
     let hm = i32::from(info.sampling_h_max) * 8;
     let vm = i32::from(info.sampling_v_max) * 8;
     info.mcus_per_row = round_up(i32::from(info.x_pixel_size), hm) as u16;
-    info.x8d0 = round_up(i32::from(info.y_pixel_size), vm) as u16;
-    info.x8ce = 0;
+    info.mcus_per_column = round_up(i32::from(info.y_pixel_size), vm) as u16;
+    info.blocks_in_mcu = 0;
     for i in 0..usize::from(info.n_components) {
         let c = &mut info.components[i];
-        c.x28 = round_up(i32::from(info.x_pixel_size) * i32::from(c.sampling_h), hm);
-        c.x24 = round_up(i32::from(info.y_pixel_size) * i32::from(c.sampling_v), vm);
-        c.x14 = i32::from(c.sampling_h);
-        c.x18 = i32::from(c.sampling_v);
-        c.x1c = c.x14 * c.x18;
-        c.x20 = c.x14 * 8;
-        let mut j = c.x1c;
-        if i32::from(info.x8ce) + c.x1c > 0x10 {
+        c.downsampled_width = round_up(i32::from(info.x_pixel_size) * i32::from(c.sampling_h), hm);
+        c.downsampled_height = round_up(i32::from(info.y_pixel_size) * i32::from(c.sampling_v), vm);
+        c.mcu_width = i32::from(c.sampling_h);
+        c.mcu_height = i32::from(c.sampling_v);
+        c.mcu_blocks = c.mcu_width * c.mcu_height;
+        c.mcu_sample_width = c.mcu_width * 8;
+        let mut j = c.mcu_blocks;
+        if i32::from(info.blocks_in_mcu) + c.mcu_blocks > 0x10 {
             return Err(0x11);
         }
         while j > 0 {
             j -= 1;
-            info.x8bc[usize::from(info.x8ce)] = i as u8;
-            info.x8ce += 1;
+            info.mcu_membership[usize::from(info.blocks_in_mcu)] = i as u8;
+            info.blocks_in_mcu += 1;
         }
-        if info.x8ce > 6 {
+        if info.blocks_in_mcu > 6 {
             // "THP does not support anything other than 4:2:0!"
             return Ok(());
         }
@@ -933,7 +966,7 @@ pub fn decompress(
     let mut row_v = vec![0u8; 0xA00.max(c_len as usize)];
     let mut blocks = [[0i16; 64]; 6];
     let mut any = false;
-    while u32::from(info.x8ee) < u32::from(info.x8ea) + u32::from(info.decompressed_y) {
+    while u32::from(info.rows_done) < u32::from(info.first_row) + u32::from(info.decompressed_y) {
         for cl in 0..u32::from(info.mcus_per_row) {
             any = true;
             {
@@ -985,7 +1018,7 @@ pub fn decompress(
             plane[t..t + len].copy_from_slice(&row[..len]);
             info.tile[at] += len as u32;
         }
-        info.x8ee = info.x8ee.wrapping_add(info.x8d4);
+        info.rows_done = info.rows_done.wrapping_add(info.rows_per_mcu);
     }
     any.then_some(blocks)
 }
@@ -1094,14 +1127,14 @@ pub fn work_area_runs(d: &Decoded, at: Places) -> Vec<(u32, Vec<u8>)> {
     w32(&mut h, 0x6C, rec(info.scan_start));
     w16(&mut h, 0x70, info.x_pixel_size);
     w16(&mut h, 0x72, info.y_pixel_size);
-    w16(&mut h, 0x74, info.x74);
+    w16(&mut h, 0x74, info.decompressed_x);
     w16(&mut h, 0x76, info.decompressed_y);
     h[0x78] = info.valid_huffman_tabs;
     h[0x79] = info.valid_quant_tabs;
     h[0x7A] = info.sampling_h_max;
     h[0x7B] = info.sampling_v_max;
     h[0x7C] = info.n_components;
-    h[0x7D] = info.x7d;
+    h[0x7D] = info.unused_a;
     let mut tables = Vec::new();
     for (t, tab) in info.huffman_tabs.iter().enumerate() {
         // A table the frame never defines stays as the clear left it.
@@ -1142,29 +1175,29 @@ pub fn work_area_runs(d: &Decoded, at: Places) -> Vec<(u32, Vec<u8>)> {
         h[o + 4] = c.dc_selector;
         h[o + 5] = c.ac_selector;
         w16(&mut h, o + 6, c.pred_dc as u16);
-        w32(&mut h, o + 8, c.x08);
-        w32(&mut h, o + 0xC, c.x0c);
+        w32(&mut h, o + 8, c.width_in_blocks);
+        w32(&mut h, o + 0xC, c.height_in_blocks);
         // The scan header sets a component's rows' place only for the frame's components.
         if i < usize::from(info.n_components) {
-            w32(&mut h, o + 0x10, work(c.x10));
+            w32(&mut h, o + 0x10, work(c.work_at));
         }
-        w32(&mut h, o + 0x14, c.x14 as u32);
-        w32(&mut h, o + 0x18, c.x18 as u32);
-        w32(&mut h, o + 0x1C, c.x1c as u32);
-        w32(&mut h, o + 0x20, c.x20 as u32);
-        w32(&mut h, o + 0x24, c.x24 as u32);
-        w32(&mut h, o + 0x28, c.x28 as u32);
+        w32(&mut h, o + 0x14, c.mcu_width as u32);
+        w32(&mut h, o + 0x18, c.mcu_height as u32);
+        w32(&mut h, o + 0x1C, c.mcu_blocks as u32);
+        w32(&mut h, o + 0x20, c.mcu_sample_width as u32);
+        w32(&mut h, o + 0x24, c.downsampled_height as u32);
+        w32(&mut h, o + 0x28, c.downsampled_width as u32);
     }
-    h[0x8BC..0x8CC].copy_from_slice(&info.x8bc);
+    h[0x8BC..0x8CC].copy_from_slice(&info.mcu_membership);
     w16(&mut h, 0x8CC, info.mcus_per_row);
-    w16(&mut h, 0x8CE, info.x8ce);
-    w16(&mut h, 0x8D0, info.x8d0);
-    w16(&mut h, 0x8D2, info.x8d2);
-    w16(&mut h, 0x8D4, info.x8d4);
-    w16(&mut h, 0x8E8, info.x8e8);
-    w16(&mut h, 0x8EA, info.x8ea);
-    w16(&mut h, 0x8EC, info.x8ec);
-    w16(&mut h, 0x8EE, info.x8ee);
+    w16(&mut h, 0x8CE, info.blocks_in_mcu);
+    w16(&mut h, 0x8D0, info.mcus_per_column);
+    w16(&mut h, 0x8D2, info.unused_b);
+    w16(&mut h, 0x8D4, info.rows_per_mcu);
+    w16(&mut h, 0x8E8, info.unused_c);
+    w16(&mut h, 0x8EA, info.first_row);
+    w16(&mut h, 0x8EC, info.unused_d);
+    w16(&mut h, 0x8EE, info.rows_done);
     for k in 0..3 {
         w32(
             &mut h,

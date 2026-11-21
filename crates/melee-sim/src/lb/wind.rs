@@ -14,15 +14,22 @@ pub struct Wind {
     pub kind: u8,
     /// Which source a new one may replace when none is free: the highest.
     pub priority: u8,
-    pub x2: i8,
-    pub x3: i8,
+    /// `x2`, `x3`: no source sets them; a source added over an old one keeps the old one's.
+    #[doc(alias("x2"))]
+    pub pad_a: i8,
+    #[doc(alias("x3"))]
+    pub pad_b: i8,
     /// The push (a box's) or the blast's center.
     pub pos: Vec3,
     /// A box's left, top, right and bottom.
-    pub x10: f32,
-    pub x14: f32,
-    pub x18: f32,
-    pub x1c: f32,
+    #[doc(alias("x10"))]
+    pub left: f32,
+    #[doc(alias("x14"))]
+    pub top: f32,
+    #[doc(alias("x18"))]
+    pub right: f32,
+    #[doc(alias("x1c"))]
+    pub bottom: f32,
     /// The strength, which fades by `decay` a frame.
     pub scale: f32,
     pub decay: f32,
@@ -88,10 +95,10 @@ pub fn add(w: &mut Winds, src: &Wind) -> Option<u8> {
     };
     w.written |= 1 << i;
     let e = &mut w.entries[i as usize];
-    let (x2, x3) = (e.x2, e.x3);
+    let (pad_a, pad_b) = (e.pad_a, e.pad_b);
     *e = Wind {
-        x2,
-        x3,
+        pad_a,
+        pad_b,
         age: 0,
         ..*src
     };
@@ -109,10 +116,10 @@ pub fn blast(w: &mut Winds, pos: Vec3, frames: i32, scale: f32, decay: f32, angl
         decay,
         frames,
         angle_step,
-        x10: -10000.0,
-        x14: 10000.0,
-        x18: 10000.0,
-        x1c: -10000.0,
+        left: -10000.0,
+        top: 10000.0,
+        right: 10000.0,
+        bottom: -10000.0,
         ..Wind::default()
     };
     add(w, &src);
@@ -181,10 +188,10 @@ pub fn push(
     scale: f32,
     decay: f32,
     angle_step: f32,
-    x10: f32,
-    x14: f32,
-    x18: f32,
-    x1c: f32,
+    left: f32,
+    top: f32,
+    right: f32,
+    bottom: f32,
 ) -> Option<u8> {
     let src = Wind {
         kind: 1,
@@ -194,10 +201,10 @@ pub fn push(
         decay,
         frames,
         angle_step,
-        x10,
-        x14,
-        x18,
-        x1c,
+        left,
+        top,
+        right,
+        bottom,
         ..Wind::default()
     };
     add(w, &src)
@@ -217,10 +224,10 @@ pub fn force_at(w: &Winds, at: Vec3) -> (Vec3, f32) {
         let wave = fp::fadd(1.0, reg(crate::math::cos(mem(phase))));
         let k = fp::frsp(fp::fmul(fp::fmul(0.5, reg(s.scale)), wave));
         if s.kind == 1 {
-            if reg(at.x) > reg(s.x10)
-                && reg(at.x) < reg(s.x18)
-                && reg(at.y) < reg(s.x14)
-                && reg(at.y) > reg(s.x1c)
+            if reg(at.x) > reg(s.left)
+                && reg(at.x) < reg(s.right)
+                && reg(at.y) < reg(s.top)
+                && reg(at.y) > reg(s.bottom)
             {
                 out.x = mem(fp::fmadds(reg(s.pos.x), k, reg(out.x)));
                 out.y = mem(fp::fmadds(reg(s.pos.y), k, reg(out.y)));

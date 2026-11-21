@@ -35,12 +35,14 @@ pub struct CardGame {
     /// Whether a card was in slot A at the pad alarm's last probe (`CARDProbe(0)`).
     pub probe_status: bool,
     /// The probe changed, or a task list cleared it (`unk_status`, the lists' `status_out`).
-    pub unk_status: bool,
+    #[doc(alias("unk_status"))]
+    pub card_swapped: bool,
     pub card_status: i32,
     /// The save changed and waits to be written.
     pub dirty: bool,
     /// The writer's state: 0 idle, 1 a write running.
-    pub x10: i32,
+    #[doc(alias("x10"))]
+    pub write_state: i32,
     pub failed: bool,
     pub enable: bool,
     /// The save's comment as last made (`lb_8001C658`).
@@ -59,10 +61,10 @@ impl Default for CardGame {
     fn default() -> Self {
         CardGame {
             probe_status: false,
-            unk_status: false,
+            card_swapped: false,
             card_status: STATUS_OK,
             dirty: false,
-            x10: 0,
+            write_state: 0,
             failed: false,
             enable: false,
             comment: [0; 0x40],
@@ -86,7 +88,7 @@ impl CardGame {
         self.scene_data = None;
         self.enable = false;
         self.dirty = false;
-        self.x10 = 0;
+        self.write_state = 0;
         self.failed = false;
     }
 
@@ -96,7 +98,7 @@ impl CardGame {
     #[doc(alias = "lbCardGame_Init")]
     pub fn init(&mut self, card_in: bool) {
         self.probe_status = card_in;
-        self.unk_status = false;
+        self.card_swapped = false;
         self.card_status = STATUS_OK;
         self.reset();
         self.manifest_set = true;
@@ -128,7 +130,7 @@ impl Running<'_> {
     #[doc(alias = "updateCardStatus")]
     pub fn update_card_status(&mut self) -> i32 {
         self.card_alarm_probes();
-        let swapped = std::mem::take(&mut self.game.card_game.unk_status);
+        let swapped = std::mem::take(&mut self.game.card_game.card_swapped);
         let status = self.game.card_game.card_status;
         let next = match status {
             STATUS_OK if swapped => STATUS_SWAPPED,
@@ -244,7 +246,7 @@ impl Running<'_> {
     /// `gobj0_RenderFunc`, the indicator's camera: it draws while the save writes.
     #[doc(alias = "gobj0_RenderFunc")]
     pub fn card_indicator_render(&mut self, gobj: crate::hsd::gobj::GObjId) {
-        if self.game.card_game.x10 == 1 {
+        if self.game.card_game.write_state == 1 {
             self.render_camera(gobj);
         }
     }
@@ -257,7 +259,7 @@ impl Running<'_> {
             self.card_writer_take();
             self.card_writer_kick_due();
             let c = &self.game.card_game;
-            if !c.dirty && c.x10 == 0 {
+            if !c.dirty && c.write_state == 0 {
                 return;
             }
             let now = self.game.audio.clock.as_ref().map_or(0, |c| c.now);
@@ -283,7 +285,7 @@ impl Running<'_> {
     #[doc(alias = "getCurrentIcon")]
     fn card_writer_kick(&mut self) {
         let c = &mut self.game.card_game;
-        if c.x10 != 0 || !c.dirty {
+        if c.write_state != 0 || !c.dirty {
             return;
         }
         c.dirty = false;
@@ -313,7 +315,7 @@ impl Running<'_> {
             icons: bytes(3, 0x600),
         };
         self.game.audio.card_writer.start = Some(req);
-        self.game.card_game.x10 = 1;
+        self.game.card_game.write_state = 1;
     }
 
     /// What the save's writer did at the waits since the game last looked: the comment its
@@ -337,13 +339,13 @@ impl Running<'_> {
         self.game.card_tasks.file_errors = w.file_errors;
         let c = &mut self.game.card_game;
         if card_in {
-            c.unk_status = false;
+            c.card_swapped = false;
         }
         if r != 0 {
             c.failed = true;
             c.card_status = STATUS_FAILED;
         }
-        c.x10 = 0;
+        c.write_state = 0;
         // The save written: its file for the frontend (a replayed tick's events are dropped).
         if r == 0
             && let Some(gci) = super::save::lent_save_gci()
@@ -366,7 +368,7 @@ impl Running<'_> {
     /// process saved, or the scene's end (`lb_8001CDB4`).
     pub fn card_writer_kick_due(&mut self) {
         let c = &self.game.card_game;
-        if c.dirty && c.x10 == 0 {
+        if c.dirty && c.write_state == 0 {
             self.card_writer_kick();
         }
     }

@@ -675,7 +675,7 @@ impl<'a> Comparer<'a> {
                 v(s.normal),
                 s.ecb_tiny,
                 s.floor_filter,
-                s.x64a8
+                s.unused_filter
             )
         };
         self.check("mp", "collision statics", key(&game.coll), key(&theirs));

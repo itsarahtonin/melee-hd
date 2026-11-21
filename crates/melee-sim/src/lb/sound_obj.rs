@@ -5,7 +5,7 @@
 //!
 //! The fighter script's positional sound command (`ftAction_80072320`) makes them. The user
 //! data's first word (`x0`) is never written or read; a block from `HSD_ObjAlloc` keeps what
-//! it held ([`SoundObj::x0`]).
+//! it held ([`SoundObj::leftover`]).
 
 use gekko_fp as fp;
 
@@ -51,7 +51,8 @@ pub struct SoundObj {
     /// `x0`, which no sound code writes or reads: what the block held, the heap's image's for a
     /// block new from the heap; none for a block the pool hands out again, whose first word
     /// the pool's free list wrote, or where melee-sim doesn't know it.
-    pub x0: Option<u32>,
+    #[doc(alias("x0"))]
+    pub leftover: Option<u32>,
     pub gobj: Option<GObjId>,
     pub owner: Option<GObjId>,
     /// `xC`: the behavior, which picks `update`.
@@ -72,7 +73,8 @@ pub struct SoundObj {
     pub direction: f32,
     pub track: i32,
     /// `x44`: whether a behavior that sets the pan once has set it.
-    pub x44: bool,
+    #[doc(alias("x44"))]
+    pub pan_set: bool,
 }
 
 /// The sound objects' pool (`lbl_80433710`, the allocator model's
@@ -85,7 +87,7 @@ impl Mirror for SoundObj {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let i = |o: u32| m.u32(at + o) as i32;
         SoundObj {
-            x0: Some(m.u32(at)),
+            leftover: Some(m.u32(at)),
             gobj: cx.import_handle("GObjId", m.u32(at + 4)).map(GObjId),
             owner: cx.import_handle("GObjId", m.u32(at + 8)).map(GObjId),
             behavior: i(0xC),
@@ -102,12 +104,12 @@ impl Mirror for SoundObj {
             end_frame: i(0x38),
             direction: f32::from_bits(m.u32(at + 0x3C)),
             track: i(0x40),
-            x44: m.u32(at + 0x44) != 0,
+            pan_set: m.u32(at + 0x44) != 0,
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        if let Some(x0) = self.x0
+        if let Some(x0) = self.leftover
             && x0 != m.u32(at)
         {
             cx.mismatch(
@@ -143,7 +145,7 @@ impl Mirror for SoundObj {
             ("end_frame", 0x38, self.end_frame as u32),
             ("direction", 0x3C, self.direction.to_bits()),
             ("track", 0x40, self.track as u32),
-            ("x44", 0x44, u32::from(self.x44)),
+            ("x44", 0x44, u32::from(self.pan_set)),
         ];
         for (name, off, ours) in words {
             let theirs = m.u32(at + off);
@@ -259,7 +261,7 @@ impl Running<'_> {
         // pool doesn't keep: unknown.
         let grew = crate::game::leftovers::pool_grew();
         let at = self.game.sound_objs.addr(s.0);
-        self.game.sound_objs[s.0].x0 = if grew {
+        self.game.sound_objs[s.0].leftover = if grew {
             crate::game::leftovers::bytes_known(self.data, at, 4)
                 .filter(|(_, k)| k.iter().all(|&k| k))
                 .map(|(b, _)| u32::from_be_bytes([b[0], b[1], b[2], b[3]]))
@@ -292,7 +294,7 @@ impl Running<'_> {
             .unwrap_or_else(|| panic!("sound object behavior {} past the table", p.behavior));
         let o = &mut self.game.sound_objs[s.0];
         *o = SoundObj {
-            x0: o.x0,
+            leftover: o.leftover,
             gobj: Some(g),
             owner: Some(p.owner),
             behavior: p.behavior,
@@ -309,7 +311,7 @@ impl Running<'_> {
             end_frame: p.end_frame,
             direction,
             track: p.track,
-            x44: false,
+            pan_set: false,
         };
         if o.start_vol == o.end_vol {
             o.vol = o.start_vol;
@@ -360,8 +362,8 @@ impl Running<'_> {
             0x8002_51EC => return self.sound_pan_on_screen(g),
             0x8002_59A0 => {
                 let o = sound(self.game, g);
-                if !o.x44 {
-                    o.x44 = true;
+                if !o.pan_set {
+                    o.pan_set = true;
                     self.sound_pan_on_screen(g);
                 }
             }
@@ -474,8 +476,8 @@ pub fn behavior_alone(o: &mut SoundObj, update: u32) -> bool {
     match update {
         0x8002_53D8 | 0x8002_56BC => sound_sweep_directed(o),
         0x8002_59EC | 0x8002_5A98 => {
-            if !o.x44 {
-                o.x44 = true;
+            if !o.pan_set {
+                o.pan_set = true;
                 sound_sweep_directed(o);
             }
         }
