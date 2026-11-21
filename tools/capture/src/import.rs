@@ -991,7 +991,9 @@ impl Importer<'_> {
         // the model has, `ftParts_80075650`) and its variants' lookups. Before her hat loads,
         // the block's words are whatever it held, which stay bytes.
         let hat = self.u32(a + 0x222C + 0x10);
-        let hat_dobjs = (f.kind == 15).then(|| self.count_tree_dobjs(hat)).flatten();
+        let hat_dobjs = (f.kind == FighterKind::Purin)
+            .then(|| self.count_tree_dobjs(hat))
+            .flatten();
         if let Some(n) = hat_dobjs {
             let u = a + 0x222C;
             f.u.import_jobj(0x10, &mem, u, self);
@@ -1014,7 +1016,7 @@ impl Importer<'_> {
         // Kirby's copy's hat (`ftKb_FighterVars` `hat`): a hat model and its DObj list (as many
         // DObjs as the model has), or a hat of parts on his own bones and its two lists (as
         // many as their counts say), and its variants' lookups, which stay once it's off.
-        if f.kind == 4 {
+        if f.kind == FighterKind::Kirby {
             let u = a + 0x222C;
             let hat = self.u32(u + 0x10);
             let lists = if hat != 0 {
@@ -1069,7 +1071,9 @@ impl Importer<'_> {
         }
         // Pikachu's and Pichu's Thunder bolt (0) in their down special
         // (`ft::pikachu::special_lw`).
-        if matches!(f.kind, 12 | 23) && (359..=366).contains(&f.motion_id) {
+        if matches!(f.fighter_kind(), FighterKind::Pikachu | FighterKind::Pichu)
+            && (359..=366).contains(&f.motion_id)
+        {
             f.mv.import_gobj(0x0, &mem, mv, self);
         }
         // The ReDead holding the fighter (`ft::co::capture_leadead`).

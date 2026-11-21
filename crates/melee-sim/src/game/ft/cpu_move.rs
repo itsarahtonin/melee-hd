@@ -221,7 +221,7 @@ impl Running<'_> {
         }
         let fpp = &self.game.fighters[f.0];
         // Ft_Kind_Zelda, Ft_Kind_Seak; `ftCo_MS_RebirthWait`.
-        if matches!(fpp.kind, 19 | 7) && fpp.cpu.xF8_b5 {
+        if matches!(fpp.fighter_kind(), FighterKind::Zelda | FighterKind::Seak) && fpp.cpu.xF8_b5 {
             self.cpu_data_script(f, 38);
             self.game.fighters[f.0].cpu.xF8_b5 = false;
         } else if self.cpu_entering_enemy(f).is_none() && self.game.fighters[f.0].motion_id == 13 {
@@ -249,7 +249,7 @@ impl Running<'_> {
             return false;
         }
         // Ft_Kind_Yoshi.
-        if fpp.kind == 14 && fpp.x34_scale.y > 1.0 && c.x7C < 0x384 {
+        if fpp.kind == FighterKind::Yoshi && fpp.x34_scale.y > 1.0 && c.x7C < 0x384 {
             return false;
         }
         let dy = fp::fsubs(reg(c.x54.y), reg(fpp.cur_pos.y));
@@ -289,11 +289,11 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800A963C")]
     pub(super) fn cpu_recover(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
-        match fpp.kind {
+        match fpp.fighter_kind() {
             // Ft_Kind_Pikachu, Ft_Kind_Pichu.
-            12 | 23 => self.cpu_recover_pikachu(f),
+            FighterKind::Pikachu | FighterKind::Pichu => self.cpu_recover_pikachu(f),
             // Ft_Kind_Fox, Ft_Kind_Falco.
-            1 | 22 => {
+            FighterKind::Fox | FighterKind::Falco => {
                 self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 88);
                 self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, 88);
                 self.cpu_cmd1(f, cmd::PRESS_B_FOR, 1);
@@ -302,9 +302,9 @@ impl Running<'_> {
                 self.cpu_cmd(f, cmd::DONE);
             }
             // Ft_Kind_Yoshi.
-            14 => self.cpu_cmd(f, cmd::DONE),
+            FighterKind::Yoshi => self.cpu_cmd(f, cmd::DONE),
             // Ft_Kind_Ness.
-            8 => {
+            FighterKind::Ness => {
                 let above = fp::fsub(reg(fpp.cpu.x54.y), 10.0);
                 if reg(fpp.cur_pos.y) > above {
                     self.cpu_cmd(f, cmd::DONE);
@@ -313,7 +313,7 @@ impl Running<'_> {
                 }
             }
             // Ft_Kind_Luigi.
-            17 => {
+            FighterKind::Luigi => {
                 self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
                 self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, 127);
                 self.cpu_cmd1(f, cmd::PRESS_B_FOR, 1);
@@ -322,7 +322,7 @@ impl Running<'_> {
                 self.cpu_cmd(f, cmd::DONE);
             }
             // Ft_Kind_Zelda.
-            19 => self.cpu_recover_zelda(f),
+            FighterKind::Zelda => self.cpu_recover_zelda(f),
             // Ft_Kind_Samus, `ftCo_800A963C`, then the default's own commands.
             _ => {
                 // `ftCo_CpuRecoverDiagonally`.
@@ -461,7 +461,7 @@ impl Running<'_> {
                     self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
                     self.cpu_cmd(f, cmd::RELEASE_Y);
                     self.cpu_cmd(f, cmd::DONE);
-                } else if fpp.kind == 14
+                } else if fpp.kind == FighterKind::Yoshi
                     && fpp.x34_scale.y < 1.0
                     && abs(fp::fsubs(reg(c.x54.x), reg(fpp.cur_pos.x))) < 20.0
                 {
@@ -1404,7 +1404,7 @@ impl Running<'_> {
             return;
         }
         let fpp = &self.game.fighters[f.0];
-        if matches!(fpp.kind, 19 | 7) && fpp.cpu.xF8_b5 {
+        if matches!(fpp.fighter_kind(), FighterKind::Zelda | FighterKind::Seak) && fpp.cpu.xF8_b5 {
             self.cpu_data_script(f, 38);
             self.game.fighters[f.0].cpu.xF8_b5 = false;
             return;

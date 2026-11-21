@@ -12,6 +12,7 @@ use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use crate::fpu::{mem, reg};
 use crate::game::ft::CpuKind;
+use crate::game::ft::FighterKind;
 use crate::game::it::ItKind;
 use crate::math;
 use crate::mp::FloorR5;
@@ -623,7 +624,7 @@ impl Running<'_> {
         if fpp.cpu.x18 == behavior::DI {
             return (true, r5);
         }
-        let switch = if fpp.kind == 0x1F
+        let switch = if fpp.kind == FighterKind::GKoopa
             || fpp.cpu.kind == CpuKind::NoAct
             || fpp.cpu.kind == CpuKind::Stay
             || !fpp.x221A_b3
@@ -1134,13 +1135,14 @@ impl Running<'_> {
             return true;
         }
         let ms = fp.motion_id;
-        match fp.kind {
+        match fp.fighter_kind() {
             // Ft_Kind_Donkey: `ftDk_MS_ThrowFWait0` to `_ThrowFKneebend`, carrying a fighter.
-            3 => (350..=355).contains(&ms),
+            FighterKind::Donkey => (350..=355).contains(&ms),
             // Ft_Kind_Koopa, Ft_Kind_GKoops: `ftKp_MS_SpecialSHit0_1`.
-            5 | 31 => ms == super::koopa::ms::SPECIAL_S_HIT0_1,
+            FighterKind::Koopa | FighterKind::GKoopa => ms == super::koopa::ms::SPECIAL_S_HIT0_1,
             // Ft_Kind_Kirby: `ftKb_MS_SpecialNCapture0` to `_EatTurnAir`.
-            4 => (super::kirby::ms::SPECIAL_N_CAPTURE0..=super::kirby::ms::EAT_TURN_AIR)
+            FighterKind::Kirby => (super::kirby::ms::SPECIAL_N_CAPTURE0
+                ..=super::kirby::ms::EAT_TURN_AIR)
                 .contains(&ms),
             _ => false,
         }

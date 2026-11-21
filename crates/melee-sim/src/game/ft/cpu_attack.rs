@@ -576,7 +576,7 @@ impl Running<'_> {
             return false;
         }
         // Ft_Kind_Koopa.
-        if !c.xFA_b5 && fpp.kind == 5 {
+        if !c.xFA_b5 && fpp.kind == FighterKind::Koopa {
             return false;
         }
         c.level >= 4
@@ -620,7 +620,7 @@ impl Running<'_> {
             self.cpu_rule_out(f, cmd::DOWN_SMASH);
             self.cpu_rule_out(f, cmd::DOWN_SMASH_2);
             // Ft_Kind_Kirby.
-            if self.game.fighters[f.0].kind == 4 {
+            if self.game.fighters[f.0].kind == FighterKind::Kirby {
                 self.cpu_rule_out(f, 17);
             }
         }
@@ -1722,7 +1722,7 @@ impl Running<'_> {
         }
         // A threat of 3 (an absorbable hitbox to Ness) would run `ftCo_800BA080`, but
         // [`Running::cpu_item_coming`] never finds one.
-        let blaster = matches!(fpp.kind, 1 | 22);
+        let blaster = matches!(fpp.fighter_kind(), FighterKind::Fox | FighterKind::Falco);
         if fpp.ground_or_air == GA_AIR {
             if blaster && threat == 2 {
                 self.cpu_fire_blaster(f);
@@ -2047,7 +2047,7 @@ impl Running<'_> {
             return;
         };
         let fpp = &self.game.fighters[f.0];
-        let (kind, ms) = (fpp.kind, fpp.motion_id);
+        let (kind, ms) = (fpp.fighter_kind(), fpp.motion_id);
         let mut klaw = false;
         let chance = |g: &mut Self, f: FighterId| -> bool {
             let level = g.game.fighters[f.0].cpu.level;
@@ -2055,7 +2055,7 @@ impl Running<'_> {
         };
         match kind {
             // Ft_Kind_Donkey's cargo states.
-            3 if (0x15F..=0x164).contains(&ms) => {
+            FighterKind::Donkey if (0x15F..=0x164).contains(&ms) => {
                 let pos = self.game.fighters[f.0].cur_pos;
                 let geo = self.game.geometry.as_mut().expect("no collision geometry");
                 let Some(island) = geo.island_below(pos, -10.0) else {
@@ -2093,10 +2093,10 @@ impl Running<'_> {
                 return;
             }
             // Ft_Kind_Koopa, Ft_Kind_GKoops in the koopa klaw.
-            5 | 31 if ms == 0x15E => klaw = true,
+            FighterKind::Koopa | FighterKind::GKoopa if ms == 0x15E => klaw = true,
             // Ft_Kind_Kirby with a swallowed fighter.
-            4 if (0x164..=0x17E).contains(&ms) => {
-                if self.game.fighter(victim).kind == 4 {
+            FighterKind::Kirby if (0x164..=0x17E).contains(&ms) => {
+                if self.game.fighter(victim).kind == FighterKind::Kirby {
                     self.cpu_cmd1(f, c::SET_LSTICK_Y, 0);
                     self.cpu_cmd1(f, c::SET_LSTICK_X, 0);
                     self.cpu_cmd1(f, c::WAIT_FOR, 1);
@@ -2115,12 +2115,12 @@ impl Running<'_> {
                 return;
             }
             // Ft_Kind_Popo, Ft_Kind_Fox, Ft_Kind_Captain above level 4.
-            10 | 1 | 2 => {
+            FighterKind::Popo | FighterKind::Fox | FighterKind::Captain => {
                 let cpu = &self.game.fighters[f.0].cpu;
                 if cpu.x94 == 0 && cpu.level > 4 && chance(self, f) {
                     let script = match kind {
-                        10 => 0x3B,
-                        1 => 0x3D,
+                        FighterKind::Popo => 0x3B,
+                        FighterKind::Fox => 0x3D,
                         _ if reg(self.game.fighter(victim).dmg.x1830_percent) < 100.0 => 0x39,
                         _ => 0x3A,
                     };
@@ -2129,7 +2129,7 @@ impl Running<'_> {
                 }
             }
             // Ft_Kind_Mario below level 5.
-            0 => {
+            FighterKind::Mario => {
                 let cpu = &self.game.fighters[f.0].cpu;
                 if cpu.x94 == 0 && cpu.level < 5 && chance(self, f) {
                     self.cpu_data_script(f, 0x35);

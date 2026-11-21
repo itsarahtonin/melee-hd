@@ -199,10 +199,10 @@ impl Running<'_> {
         c.x570 = 1.0;
         self.cpu_attack_timer(f);
         let fp = &mut self.game.fighters[f.0];
-        fp.cpu.x56C = match fp.kind {
-            3 | 5 => 8.5,
-            31 => 17.0,
-            11 => 1.0,
+        fp.cpu.x56C = match fp.fighter_kind() {
+            FighterKind::Donkey | FighterKind::Koopa => 8.5,
+            FighterKind::GKoopa => 17.0,
+            FighterKind::Nana => 1.0,
             _ => 3.5,
         };
     }

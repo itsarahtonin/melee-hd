@@ -40,21 +40,21 @@ const DEMO_STATES: i32 = 14;
 /// Each fighter kind's demo states of its own (`ftData_UnkMotionStates0`): Mario's,
 /// Kirby's, Luigi's and Giga Bowser's.
 fn demo_kind_states(kind: i32) -> u32 {
-    match kind {
-        0 => 0x803C_7260,
-        4 => 0x803C_A04C,
-        0x11 => 0x803D_0868,
-        0x1F => 0x803D_38C8,
+    match FighterKind::from_id(kind) {
+        Some(FighterKind::Mario) => 0x803C_7260,
+        Some(FighterKind::Kirby) => 0x803C_A04C,
+        Some(FighterKind::Luigi) => 0x803D_0868,
+        Some(FighterKind::GKoopa) => 0x803D_38C8,
         _ => 0,
     }
 }
 
 /// `ftData_UnkIntPairs[kind].count`: each kind's demo animations.
 pub fn demo_anim_count(kind: i32) -> u32 {
-    match kind {
-        0 | 0x11 => 16,
-        4 => 18,
-        0x1F => 15,
+    match FighterKind::from_id(kind) {
+        Some(FighterKind::Mario | FighterKind::Luigi) => 16,
+        Some(FighterKind::Kirby) => 18,
+        Some(FighterKind::GKoopa) => 15,
         _ => 14,
     }
 }
@@ -502,23 +502,23 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.x2219_b2 = true;
         fp.x2219_b1 = true;
-        let kind = fp.kind;
+        let kind = fp.fighter_kind();
         let f = self.game.fighter_id(gobj);
         match kind {
-            1 => {
+            FighterKind::Fox => {
                 let fp = &self.game.fighters[f.0];
                 let part = self.bone_index(fp, PART_R_THUMB_NB);
                 let kind = self.fox_attr_i32(f, super::fox::attr::BLASTER_GUN_ITKIND);
                 let item = super::super::it::kinds::foxblaster::spawn_demo(self, gobj, part, kind);
                 self.game.fighters[f.0].item_gobj = item;
             }
-            8 => {
+            FighterKind::Ness => {
                 let fp = &self.game.fighters[f.0];
                 let part = self.bone_index(fp, PART_R_THUMB_NB);
                 let item = super::super::it::kinds::nessbat::spawn_demo(self, gobj, part);
                 self.game.fighters[f.0].item_gobj = item;
             }
-            0x15 if msid == super::co::ids::ms::SLEEP => {
+            FighterKind::DrMario if msid == super::co::ids::ms::SLEEP => {
                 let fp = &self.game.fighters[f.0];
                 let part = self.bone_index(fp, PART_R_THUMB_NB);
                 let color = self.mr_special_n_vitamin_random(gobj, &super::mario::special_n::MARIO);

@@ -77,6 +77,7 @@ use leaf_check::calls::{
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
+use melee_sim::game::ft::FighterKind;
 use melee_sim::game::ft::kirby::special_iceclimber::KIRBY as IC_KIRBY;
 use melee_sim::game::ft::kirby::special_koopa::KIRBY as KP_KIRBY;
 use melee_sim::game::ft::kirby::special_link::KIRBY as LK_KIRBY;
@@ -424,7 +425,11 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     if !fighter_unit(u) && !is_item {
         panic!("{SKIP}{name} takes an item");
     }
-    if fighter_unit(u) && g.game.fighter(gobj).kind != 4 && u >= 2 && u != YOSHI_VICTIM_UNIT {
+    if fighter_unit(u)
+        && g.game.fighter(gobj).kind != FighterKind::Kirby
+        && u >= 2
+        && u != YOSHI_VICTIM_UNIT
+    {
         panic!("{SKIP}{name} takes Kirby, not another fighter");
     }
     // Yoshi's copy's victims' callbacks run in its capture and egg states (the egg's shrink

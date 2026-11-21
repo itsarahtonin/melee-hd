@@ -13,6 +13,7 @@ use super::colanim::Overlay;
 use super::common::{FIGHTER_P_LINK, GA_AIR};
 use super::sound::Track;
 use crate::fpu::{mem, reg};
+use crate::game::ft::FighterKind;
 use crate::game::it::ItKind;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::{aobj, tobj};
@@ -1087,7 +1088,8 @@ impl Running<'_> {
         self.cmd_skip(f, 4);
         let fp = &self.game.fighters[f.0];
         let slot = i32::from(fp.player_idx) + i32::from(fp.is_sub_fighter);
-        let voice_ok = !fp.x2225_b6 || fp.kind == 0x18 || fp.kind == 0x0D;
+        let voice_ok =
+            !fp.x2225_b6 || fp.kind == FighterKind::GameWatch || fp.kind == FighterKind::Samus;
         let base = match kind {
             0 => 0,
             1 => 0x36,
@@ -1314,7 +1316,7 @@ impl Running<'_> {
         let objs = &mut self.game.objs;
         aobj::req_anim(&mut objs.aobjs, &mut objs.fobjs, a, frame);
         tobj::anim(objs, self.data, Some(t));
-        if self.game.fighters[f.0].kind == 4 {
+        if self.game.fighters[f.0].kind == FighterKind::Kirby {
             self.kb_hat_texture_anim(gobj, i, frame);
         }
         self.game.fighters[f.0].x221E_b7 = true;
