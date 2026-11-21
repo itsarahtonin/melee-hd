@@ -426,7 +426,7 @@ impl CameraState {
     /// The camera's state laid open whole, for what reads the state as the original's memory
     /// or compares it with ssbm-rs's: the oracle's comparer, leaf-check, the heap's image
     /// (`export`, `disc`). Game code reaches the camera through its functions and methods
-    /// instead; `the_camera_is_reached_through_its_module` holds that.
+    /// instead; `game::boundary_tests` holds that.
     pub fn raw_parts(&self) -> Parts<'_> {
         Parts {
             cam: &self.cam,
@@ -4107,71 +4107,5 @@ mod playback_camera_tests {
         v.camera.cam.quake_frames_left[QUAKE_LOOP as usize] = 1;
         assert_eq!(tick(&mut v, PAUSE, 0), (false, false, 0));
         assert_eq!(tick(&mut v, STANDARD, 1), (false, false, 0));
-    }
-}
-
-#[cfg(test)]
-mod boundary_tests {
-    /// The files outside this module that may lay the camera's state open
-    /// ([`super::CameraState::raw_parts`]): the heap's image of the camera's boxes and the
-    /// disc's check of whose heap holds them. The oracle's tools and test code may too.
-    const RAW_PARTS_READERS: [&str; 2] =
-        ["melee-sim/src/game/export.rs", "melee-sim/src/game/disc.rs"];
-
-    /// Every `.rs` file under `dir`.
-    fn sources(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
-        for e in std::fs::read_dir(dir).unwrap().flatten() {
-            let p = e.path();
-            if p.is_dir() {
-                sources(&p, out);
-            } else if p.extension().is_some_and(|x| x == "rs") {
-                out.push(p);
-            }
-        }
-    }
-
-    /// The camera's state is reached through its module (`docs/refactor.md`, task 13): its
-    /// fields are private, so only the raw parts lay it open, and no game, presentation or
-    /// player code outside the camera reads them but the heap's image ([`RAW_PARTS_READERS`]).
-    /// Test modules (from a file's first `#[cfg(test)]`, and `*tests.rs` files) may, as the
-    /// oracle's tools do.
-    #[test]
-    fn the_camera_is_reached_through_its_module() {
-        let crates = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("..");
-        let mut files = Vec::new();
-        for c in ["melee-sim", "melee-render", "melee-player"] {
-            sources(&crates.join(c).join("src"), &mut files);
-        }
-        assert!(
-            files.len() > 400,
-            "the crates' sources: {} files",
-            files.len()
-        );
-        let mut found = Vec::new();
-        for p in files {
-            let rel = p
-                .strip_prefix(&crates)
-                .unwrap()
-                .to_string_lossy()
-                .replace('\\', "/");
-            if rel == "melee-sim/src/game/camera.rs"
-                || rel.ends_with("tests.rs")
-                || RAW_PARTS_READERS.contains(&rel.as_str())
-            {
-                continue;
-            }
-            let text = std::fs::read_to_string(&p).unwrap();
-            let code = text.split("\n#[cfg(test)]").next().unwrap();
-            for (i, l) in code.lines().enumerate() {
-                if l.contains("raw_parts") && !l.trim_start().starts_with("//") {
-                    found.push(format!("{rel}:{}: {}", i + 1, l.trim()));
-                }
-            }
-        }
-        assert!(
-            found.is_empty(),
-            "the camera's raw parts read outside it:\n{}",
-            found.join("\n")
-        );
     }
 }

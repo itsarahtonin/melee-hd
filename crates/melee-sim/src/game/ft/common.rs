@@ -436,7 +436,7 @@ impl Running<'_> {
             .geometry
             .as_ref()
             .expect("no collision geometry")
-            .bounds[1];
+            .floor_bounds();
         reg(x) < fp::fadds(margin, reg(b.left)) || reg(x) > fp::fsubs(reg(b.right), margin)
     }
 

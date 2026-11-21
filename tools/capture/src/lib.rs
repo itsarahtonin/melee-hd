@@ -1066,22 +1066,19 @@ pub fn read_coll_statics(mem1: &[u8]) -> (melee_sim::mp::coll::CollStatics, u32)
     let walls = import::sym("mpColl_80458810");
     let f = |a: u32| f32::from_bits(at(a));
     let code = |a: u32| (a != 0).then_some(CodeRef(a));
-    let s = melee_sim::mp::coll::CollStatics {
-        right_walls: std::array::from_fn(|i| at(walls + 4 * i as u32) as i32),
-        right_count: r("mpColl_804D6488") as i32,
-        left_walls: std::array::from_fn(|i| at(walls + 0x24 + 4 * i as u32) as i32),
-        left_count: r("mpColl_804D648C") as i32,
-        max_x: f(import::sym("mpColl_804D6490_max_x")),
-        line_id: r("mpColl_804D6494_line_id") as i32,
-        flags: r("mpColl_804D6498_flags"),
-        normal: Vec3::new(f(walls + 0x48), f(walls + 0x4C), f(walls + 0x50)),
-        ecb_tiny: r("mpColl_IsEcbTiny") != 0,
-        floor_filter: code(r("mpColl_804D64A0")),
-        floor_filter_gobj: None,
-        unused_filter: code(r("mpColl_804D64A8")),
-        stale_reads: 0,
-        watchdog: None,
-    };
+    let mut s = melee_sim::mp::coll::CollStatics::default();
+    let p = s.raw_parts_mut();
+    *p.right_walls = std::array::from_fn(|i| at(walls + 4 * i as u32) as i32);
+    *p.right_count = r("mpColl_804D6488") as i32;
+    *p.left_walls = std::array::from_fn(|i| at(walls + 0x24 + 4 * i as u32) as i32);
+    *p.left_count = r("mpColl_804D648C") as i32;
+    *p.max_x = f(import::sym("mpColl_804D6490_max_x"));
+    *p.line_id = r("mpColl_804D6494_line_id") as i32;
+    *p.flags = r("mpColl_804D6498_flags");
+    *p.normal = Vec3::new(f(walls + 0x48), f(walls + 0x4C), f(walls + 0x50));
+    *p.ecb_tiny = r("mpColl_IsEcbTiny") != 0;
+    *p.floor_filter = code(r("mpColl_804D64A0"));
+    *p.unused_filter = code(r("mpColl_804D64A8"));
     (s, r("mpColl_804D64A4"))
 }
 

@@ -931,7 +931,7 @@ impl Running<'_> {
                 return true;
             }
         }
-        let isl = *geo.islands.get(island);
+        let isl = *geo.island(island);
         match self.game.stage_info.ground_kind() {
             GrKind::Story => geo.island_moving(island),
             // `checkZebesIsland`: either end under the acid, or under where it rises to in 90
@@ -999,8 +999,7 @@ impl Running<'_> {
                 .geometry
                 .as_ref()
                 .expect("no collision geometry")
-                .islands
-                .get(island);
+                .island(island);
             let dx = reg(self.game.fighters[f.0].cpu.x54.x);
             let mut d = fp::fsubs(reg(isl.right.x), dx);
             if d < 0.0 {
@@ -1045,7 +1044,7 @@ impl Running<'_> {
         let Some(island) = geo.island_of_line(p.coll_data.floor.index) else {
             return;
         };
-        let isl = *geo.islands.get(island);
+        let isl = *geo.island(island);
         let c = &me.cpu;
         if fp::fsubs(reg(c.x54.y), reg(me.cur_pos.y)) <= 0.0 {
             return;

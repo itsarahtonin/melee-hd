@@ -180,45 +180,85 @@ pub struct Bounds {
 /// The loaded geometry: everything `mplib.c` and `mpisland.c` keep in their globals.
 #[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
 pub struct Geometry<K: Kinds> {
-    pub vertices: Vec<Vertex>,
-    pub lines: Vec<Line>,
-    pub joints: Vec<Joint<K>>,
+    pub(in crate::mp) vertices: Vec<Vertex>,
+    pub(in crate::mp) lines: Vec<Line>,
+    pub(in crate::mp) joints: Vec<Joint<K>>,
     /// The data's line groups (`MapCollData::ranges`).
-    pub ranges: [LineRange; 5],
+    pub(in crate::mp) ranges: [LineRange; 5],
     /// The joint list the searches walk, in order (`jointListStart`, `jointListEnd`).
-    pub list_start: Option<u16>,
-    pub list_end: Option<u16>,
+    pub(in crate::mp) list_start: Option<u16>,
+    pub(in crate::mp) list_end: Option<u16>,
     /// Whether a caller has already marked the joints too far from its area
     /// (`didCheckBounding`).
-    pub checked_bounding: bool,
+    pub(in crate::mp) checked_bounding: bool,
     /// The stage's vertex bounds at load, then the debug camera's box, and the bounds of the
     /// enabled floors (`mpLib_80458868`).
-    pub bounds: [Bounds; 2],
+    pub(in crate::mp) bounds: [Bounds; 2],
     /// Counts joint updates, so cached collision results can tell the stage moved
     /// (`mpColl_804D64AC`, which `mpcoll.c` defines and the stage code also bumps).
-    pub generation: i32,
-    pub islands: Islands,
+    pub(in crate::mp) generation: i32,
+    pub(in crate::mp) islands: Islands,
     /// The joints' array's address in the scene's heap (`groundCollJoint`), from the allocator
     /// model (0 without), which `mpJointFromLine` leaves in r5 for the computer player's DI.
-    pub joints_addr: u32,
+    pub(in crate::mp) joints_addr: u32,
     /// The vertices' and lines' arrays' addresses (`groundCollVtx`, `groundCollLine`), as
     /// `joints_addr` (0 without).
-    pub vertices_addr: u32,
-    pub lines_addr: u32,
+    pub(in crate::mp) vertices_addr: u32,
+    pub(in crate::mp) lines_addr: u32,
     /// The stage data's line descriptors (`MapCollData::lines`), which the load's pruning and
     /// the joints' linking edit in place: the heap's image takes each edit
     /// ([`Geometry::image_lines`]). Where the stage's data is, which its `coll_data` names, not
     /// state of its own: a captured state has none to compare.
     #[state_eq(skip)]
-    pub lines_data: Option<DataRef>,
+    pub(in crate::mp) lines_data: Option<DataRef>,
     /// The joints whose stamp the load left where the array's block held the GPU's pixels (a
     /// render target's, `hsd::image::Src::RenderTarget`), until the stage code stamps them:
     /// the comparer leaves such a stamp out, and reading one stops (docs/engine.md,
     /// "Uninitialized values").
-    pub render_stamps: Vec<u16>,
+    pub(in crate::mp) render_stamps: Vec<u16>,
     /// Whether `DbLevel` is at the debug ROM's or above, as at the load, where `mpGetSpeed`
     /// checks the speeds it gives (a session's developer setting; retail's never is).
+    pub(in crate::mp) debug_rom: bool,
+}
+
+/// [`Geometry::raw_parts`]: each field as [`Geometry`] documents it.
+pub struct Parts<'a, K: Kinds> {
+    pub vertices: &'a [Vertex],
+    pub lines: &'a [Line],
+    pub joints: &'a [Joint<K>],
+    pub ranges: &'a [LineRange; 5],
+    pub list_start: Option<u16>,
+    pub list_end: Option<u16>,
+    pub checked_bounding: bool,
+    pub bounds: &'a [Bounds; 2],
+    pub generation: i32,
+    pub islands: &'a Islands,
+    pub joints_addr: u32,
+    pub vertices_addr: u32,
+    pub lines_addr: u32,
+    pub lines_data: Option<DataRef>,
+    pub render_stamps: &'a [u16],
     pub debug_rom: bool,
+}
+
+/// [`Geometry::raw_parts_mut`].
+pub struct PartsMut<'a, K: Kinds> {
+    pub vertices: &'a mut Vec<Vertex>,
+    pub lines: &'a mut Vec<Line>,
+    pub joints: &'a mut Vec<Joint<K>>,
+    pub ranges: &'a mut [LineRange; 5],
+    pub list_start: &'a mut Option<u16>,
+    pub list_end: &'a mut Option<u16>,
+    pub checked_bounding: &'a mut bool,
+    pub bounds: &'a mut [Bounds; 2],
+    pub generation: &'a mut i32,
+    pub islands: &'a mut Islands,
+    pub joints_addr: &'a mut u32,
+    pub vertices_addr: &'a mut u32,
+    pub lines_addr: &'a mut u32,
+    pub lines_data: &'a mut Option<DataRef>,
+    pub render_stamps: &'a mut Vec<u16>,
+    pub debug_rom: &'a mut bool,
 }
 
 /// The geometry a stage without collision data gets (`mpLib_803BF760`): one floor below the
@@ -568,6 +608,199 @@ impl<K: Kinds> Geometry<K> {
     /// The joints in search-list order.
     pub fn joint_list(&self) -> impl Iterator<Item = usize> + '_ {
         std::iter::successors(self.list_start, |&j| self.joints[j as usize].next).map(usize::from)
+    }
+
+    /// How many lines the stage has (`groundCollLine`'s used entries).
+    #[inline]
+    pub fn line_count(&self) -> usize {
+        self.lines.len()
+    }
+
+    /// Every line, in id order, to read (the debug drawing's walks, `mpLib_DrawMatchingLines`).
+    #[inline]
+    pub fn lines(&self) -> &[Line] {
+        &self.lines
+    }
+
+    /// The lines of one of the data's groups (`GROUP_FLOOR` to `GROUP_DYNAMIC`), to read.
+    #[inline]
+    pub fn group_lines(&self, group: usize) -> &[Line] {
+        let r = self.ranges[group];
+        let start = r.start.max(0) as usize;
+        &self.lines[start..start + r.count.max(0) as usize]
+    }
+
+    /// The bounds of the enabled floors, as [`Geometry::measure_floors`] last measured them
+    /// (`mpLib_80458868`'s second box).
+    #[inline]
+    pub fn floor_bounds(&self) -> Bounds {
+        self.bounds[1]
+    }
+
+    /// The update counter (`mpColl_804D64AC`), which cached collision results compare.
+    #[inline]
+    pub fn generation(&self) -> i32 {
+        self.generation
+    }
+
+    /// `mpColl_804D64AC += 1`, as the stage code bumps it.
+    #[inline]
+    pub fn bump_generation(&mut self) {
+        self.generation = self.generation.wrapping_add(1);
+    }
+
+    /// Sets the update counter: a new load carries the last stage's on, and a live match
+    /// takes playback's.
+    #[inline]
+    pub fn set_generation(&mut self, generation: i32) {
+        self.generation = generation;
+    }
+
+    /// Whether `mpGetSpeed` checks the speeds it gives, `DbLevel` at the debug ROM's or above
+    /// as at the load.
+    #[inline]
+    pub fn set_debug_rom(&mut self, debug_rom: bool) {
+        self.debug_rom = debug_rom;
+    }
+
+    /// The joints' array's address in the scene's heap (`groundCollJoint`), from the allocator
+    /// model, or 0 without: what `mpJointFromLine` leaves in r5 for the computer player's DI.
+    #[inline]
+    pub fn joints_addr(&self) -> u32 {
+        self.joints_addr
+    }
+
+    /// Island `id`, to read (`mp_UnkStruct0`): its ends, lines and joint, and the next in its
+    /// list.
+    #[inline]
+    pub fn island(&self, id: IslandId) -> &Island {
+        self.islands.get(id)
+    }
+
+    /// The first of the live floors' islands (`mpIsland_80458E88`'s list head), whose `next`
+    /// links the rest.
+    #[inline]
+    pub fn first_floor_island(&self) -> Option<IslandId> {
+        self.islands.floors
+    }
+
+    /// The live floors' islands in list order.
+    pub fn floor_islands(&self) -> impl Iterator<Item = IslandId> + '_ {
+        self.islands.iter(self.islands.floors)
+    }
+
+    /// Joint `joint`'s stamp, the value the stage code last stamped it with
+    /// (`Ground_UpdateMapColl` compares it). A stamp the load left where the array's block held
+    /// the GPU's pixels is resolved first: with `copies_reach_memory` off (Slippi's Dolphin)
+    /// it is what memory held before the copies, from the heap's image; otherwise, or with
+    /// those bytes unknown, reading it stops (docs/melee-bugs.md, docs/engine.md
+    /// "Uninitialized values").
+    pub fn joint_stamp(&mut self, data: &Archives, joint: u16, copies_reach_memory: bool) -> i16 {
+        if self.render_stamps.contains(&joint) && !copies_reach_memory {
+            let at = self.joints_addr + 0x34 * u32::from(joint) + 0xC;
+            let (b, known) = crate::hsd::heap::with(|h| h.image.pre_copy_bytes(data, at, 2))
+                .unwrap_or_else(|| (vec![0; 2], vec![false; 2]));
+            assert!(
+                known.iter().all(|&k| k),
+                "Ground_UpdateMapColl reads joint {joint}'s stamp, the bytes before the GPU's copy unknown",
+            );
+            self.joints[joint as usize].stamp = i16::from_be_bytes([b[0], b[1]]);
+            self.render_stamps.retain(|&k| k != joint);
+        }
+        assert!(
+            !self.render_stamps.contains(&joint),
+            "Ground_UpdateMapColl reads joint {joint}'s stamp, which the GPU's pixels left",
+        );
+        self.joints[joint as usize].stamp
+    }
+
+    /// Stamps joint `joint` with this update's value (`Ground_UpdateMapColl`).
+    pub fn set_joint_stamp(&mut self, joint: u16, stamp: i16) {
+        self.joints[joint as usize].stamp = stamp;
+        self.render_stamps.retain(|&j| j != joint);
+    }
+
+    /// Unbinds every joint whose model joint `unbind` picks (a stage object's model freed),
+    /// telling it the joint's id.
+    pub fn unbind_jobjs(&mut self, mut unbind: impl FnMut(i32, K::JObj) -> bool) {
+        for (id, joint) in self.joints.iter_mut().enumerate() {
+            if let Some(j) = joint.jobj
+                && unbind(id as i32, j)
+            {
+                joint.jobj = None;
+            }
+        }
+    }
+
+    /// An empty geometry, for the oracle's importer to fill through
+    /// [`Geometry::raw_parts_mut`] from a captured state; a stage's is [`Geometry::load`]'s.
+    pub fn blank() -> Self {
+        Geometry {
+            vertices: Vec::new(),
+            lines: Vec::new(),
+            joints: Vec::new(),
+            ranges: [LineRange::default(); 5],
+            list_start: None,
+            list_end: None,
+            checked_bounding: false,
+            bounds: [Bounds::default(); 2],
+            generation: 0,
+            islands: Islands::default(),
+            joints_addr: 0,
+            vertices_addr: 0,
+            lines_addr: 0,
+            lines_data: None,
+            render_stamps: Vec::new(),
+            debug_rom: false,
+        }
+    }
+
+    /// The geometry laid open whole, for what reads the state as the original's memory or
+    /// compares it with ssbm-rs's: the oracle's comparer, leaf-check, the heap's image
+    /// (`export`). Game code reaches the geometry through this module's functions and methods
+    /// instead; `game::boundary_tests` holds that.
+    pub fn raw_parts(&self) -> Parts<'_, K> {
+        Parts {
+            vertices: &self.vertices,
+            lines: &self.lines,
+            joints: &self.joints,
+            ranges: &self.ranges,
+            list_start: self.list_start,
+            list_end: self.list_end,
+            checked_bounding: self.checked_bounding,
+            bounds: &self.bounds,
+            generation: self.generation,
+            islands: &self.islands,
+            joints_addr: self.joints_addr,
+            vertices_addr: self.vertices_addr,
+            lines_addr: self.lines_addr,
+            lines_data: self.lines_data,
+            render_stamps: &self.render_stamps,
+            debug_rom: self.debug_rom,
+        }
+    }
+
+    /// The geometry laid open to write, for the oracle's importer and the checks that set it up
+    /// or move it ([`Geometry::raw_parts`]).
+    pub fn raw_parts_mut(&mut self) -> PartsMut<'_, K> {
+        PartsMut {
+            vertices: &mut self.vertices,
+            lines: &mut self.lines,
+            joints: &mut self.joints,
+            ranges: &mut self.ranges,
+            list_start: &mut self.list_start,
+            list_end: &mut self.list_end,
+            checked_bounding: &mut self.checked_bounding,
+            bounds: &mut self.bounds,
+            generation: &mut self.generation,
+            islands: &mut self.islands,
+            joints_addr: &mut self.joints_addr,
+            vertices_addr: &mut self.vertices_addr,
+            lines_addr: &mut self.lines_addr,
+            lines_data: &mut self.lines_data,
+            render_stamps: &mut self.render_stamps,
+            debug_rom: &mut self.debug_rom,
+        }
     }
 
     /// Asserts a line id is valid, as `mplib.c`'s `LINEID_CHECK` does.

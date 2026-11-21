@@ -19,21 +19,21 @@ pub fn check_load(s: &Stage, archive: &Archive, coll_off: u32) {
     let coll = s.coll;
     let what = s.what();
     assert_eq!(
-        s.g.vertices.len() as u32,
+        s.g.raw_parts().vertices.len() as u32,
         r32(coll + 4),
         "{what}: vertex count"
     );
     assert_eq!(
-        s.g.lines.len() as u32,
+        s.g.raw_parts().lines.len() as u32,
         r32(coll + 0xC),
         "{what}: line count"
     );
     assert_eq!(
-        s.g.joints.len() as u32,
+        s.g.raw_parts().joints.len() as u32,
         r32(coll + 0x28),
         "{what}: joint count"
     );
-    for (g, r) in s.g.ranges.iter().enumerate() {
+    for (g, r) in s.g.raw_parts().ranges.iter().enumerate() {
         let at = coll + 0x10 + 4 * g as u32;
         assert_eq!(
             (r.start as u16, r.count as u16),
@@ -42,7 +42,7 @@ pub fn check_load(s: &Stage, archive: &Archive, coll_off: u32) {
         );
     }
     let descs = r32(coll + 0x24);
-    for (j, joint) in s.g.joints.iter().enumerate() {
+    for (j, joint) in s.g.raw_parts().joints.iter().enumerate() {
         let at = descs + 0x28 * j as u32;
         let d = &joint.desc;
         for (g, r) in d.ranges.iter().enumerate() {
@@ -71,8 +71,8 @@ pub fn check_load(s: &Stage, archive: &Archive, coll_off: u32) {
     }
     // Every line belongs to a group: the original leaves a line outside them without flags
     // (uninitialized heap), so the comparison relies on the groups covering the lines.
-    let mut covered = vec![false; s.g.lines.len()];
-    for r in s.g.ranges {
+    let mut covered = vec![false; s.g.raw_parts().lines.len()];
+    for r in s.g.raw_parts().ranges {
         for c in covered
             .iter_mut()
             .skip(r.start as usize)
@@ -88,7 +88,7 @@ pub fn check_load(s: &Stage, archive: &Archive, coll_off: u32) {
     // Facts the port relies on for inputs the game produces: no line is both a floor and a
     // wall (`mpLib_80056C54` would read its uninitialized wall length), and every terrain has
     // an entry in the terrain tables.
-    for (i, l) in s.g.lines.iter().enumerate() {
+    for (i, l) in s.g.raw_parts().lines.iter().enumerate() {
         assert!(
             !(l.hi_flags & 1 != 0 && l.hi_flags & 0xC != 0),
             "{what}: line {i} is a floor and a wall"
@@ -148,14 +148,14 @@ pub fn check(s: &mut Stage, step: &str) {
     let lines = r32(sym("groundCollLine"));
     let joints = r32(sym("groundCollJoint"));
     let g = &s.g;
-    for (i, v) in g.vertices.iter().enumerate() {
+    for (i, v) in g.raw_parts().vertices.iter().enumerate() {
         let a = vtx + 0x18 * i as u32;
         let theirs: [u32; 6] = std::array::from_fn(|k| r32(a + 4 * k as u32));
         let ours = [v.base.x, v.base.y, v.pos.x, v.pos.y, v.prev.x, v.prev.y].map(f32::to_bits);
         assert_eq!(ours, theirs, "{what}: vertex {i}");
     }
     let maplines = r32(coll + 8);
-    for (i, l) in g.lines.iter().enumerate() {
+    for (i, l) in g.raw_parts().lines.iter().enumerate() {
         let cl = lines + 8 * i as u32;
         let ml = r32(cl);
         assert_eq!(ml, maplines + 0x10 * i as u32, "{what}: line {i}'s record");
@@ -174,7 +174,7 @@ pub fn check(s: &mut Stage, step: &str) {
         assert_eq!(l.flags, r32(cl + 4), "{what}: line {i} flags");
     }
     let descs = r32(coll + 0x24);
-    for (j, joint) in g.joints.iter().enumerate() {
+    for (j, joint) in g.raw_parts().joints.iter().enumerate() {
         let a = joints + 0x34 * j as u32;
         assert_eq!(
             joint.next,
@@ -218,7 +218,7 @@ pub fn check(s: &mut Stage, step: &str) {
         assert_eq!(ours, theirs, "{what}: joint {j} links");
     }
     assert_eq!(
-        (g.list_start, g.list_end),
+        (g.raw_parts().list_start, g.raw_parts().list_end),
         (
             joint_index(joints, r32(sym("jointListStart"))),
             joint_index(joints, r32(sym("jointListEnd")))
@@ -226,12 +226,13 @@ pub fn check(s: &mut Stage, step: &str) {
         "{what}: joint list"
     );
     assert_eq!(
-        g.checked_bounding,
+        g.raw_parts().checked_bounding,
         r32(sym("didCheckBounding")) != 0,
         "{what}: bounding flag"
     );
     let boxes = sym("mpLib_80458868");
     let ours: Vec<u32> = g
+        .raw_parts()
         .bounds
         .iter()
         .flat_map(|b| [b.top, b.bottom, b.left, b.right])
@@ -240,13 +241,13 @@ pub fn check(s: &mut Stage, step: &str) {
     let theirs: Vec<u32> = (0..8).map(|k| r32(boxes + 4 * k)).collect();
     assert_eq!(ours, theirs, "{what}: boxes");
     assert_eq!(
-        g.generation,
+        g.raw_parts().generation,
         (r32(sym("mpColl_804D64AC")) as i32).wrapping_sub(s.gen0),
         "{what}: update counter"
     );
     // The island lists, walked side by side.
     let heads = sym("mpIsland_80458E88");
-    let isl = &g.islands;
+    let isl = &g.raw_parts().islands;
     let ours_heads = [
         isl.floors,
         isl.ceilings,

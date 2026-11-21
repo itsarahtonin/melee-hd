@@ -4,7 +4,7 @@ use leaf_check::{arg, bits, handle, sym};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::structs::{CollData, Vec2, ftCollisionBox};
 use melee_sim::hsd::gobj::GObjId;
-use melee_sim::mp::coll::{Coll, CollStatics, Pass};
+use melee_sim::mp::coll::{Coll, Pass};
 use melee_sim::mp::{CEILING, FLOOR, LEFT_WALL, RIGHT_WALL};
 use melee_sim::vec::Vec3;
 use mpstage::T;
@@ -49,7 +49,7 @@ pub fn case(
     let mut ours_cd = import(ctx, COLL, &mut wd.handles);
     take_theirs();
     let what = format!("{}: {name}", wd.st.what());
-    let stale = wd.statics.stale_reads;
+    let stale = wd.statics.raw_parts().stale_reads;
     let result = both(
         ctx,
         &what,
@@ -59,7 +59,7 @@ pub fn case(
     match result {
         Some((rt, (ro, calls))) => {
             assert_eq!(ro, rt, "{what}: result");
-            if wd.statics.stale_reads != stale {
+            if wd.statics.raw_parts().stale_reads != stale {
                 // A floor or ceiling that didn't reach its own end: the original took the
                 // flags and normal on its stack, which ours counted as a stale read. Any
                 // value matches them.
@@ -91,11 +91,10 @@ pub fn case(
             wd.hangs += 1;
             fns::mpUncheckBounding(ctx);
             wd.st.g.uncheck_bounding();
-            wd.statics = CollStatics {
-                stale_reads: wd.statics.stale_reads,
-                watchdog: wd.statics.watchdog,
-                ..super::statics_theirs(ctx)
-            };
+            let (stale, watchdog) = (wd.statics.stale_reads(), wd.statics.raw_parts().watchdog);
+            wd.statics = super::statics_theirs(ctx);
+            let p = wd.statics.raw_parts_mut();
+            (*p.stale_reads, *p.watchdog) = (stale, watchdog);
             take_theirs();
             None
         }
@@ -104,11 +103,10 @@ pub fn case(
             wd.halts += 1;
             fns::mpUncheckBounding(ctx);
             wd.st.g.uncheck_bounding();
-            wd.statics = CollStatics {
-                stale_reads: wd.statics.stale_reads,
-                watchdog: wd.statics.watchdog,
-                ..super::statics_theirs(ctx)
-            };
+            let (stale, watchdog) = (wd.statics.stale_reads(), wd.statics.raw_parts().watchdog);
+            wd.statics = super::statics_theirs(ctx);
+            let p = wd.statics.raw_parts_mut();
+            (*p.stale_reads, *p.watchdog) = (stale, watchdog);
             take_theirs();
             None
         }
@@ -118,7 +116,7 @@ pub fn case(
 /// Sets both sides' statics field by field.
 fn set_tiny(wd: &mut World, tiny: bool) {
     wd.ctx().write_u32(sym("mpColl_IsEcbTiny"), u32::from(tiny));
-    wd.statics.ecb_tiny = tiny;
+    *wd.statics.raw_parts_mut().ecb_tiny = tiny;
 }
 
 fn set_filter(wd: &mut World, on: bool, gobj: u32) {
@@ -128,14 +126,14 @@ fn set_filter(wd: &mut World, on: bool, gobj: u32) {
         if on { super::FLOOR_FILTER } else { 0 },
     );
     ctx.write_u32(sym("mpColl_804D64A4"), gobj);
-    wd.statics.floor_filter = on.then_some(CodeRef(super::FLOOR_FILTER));
-    wd.statics.floor_filter_gobj = (gobj != 0).then_some(GObjId(gobj));
+    *wd.statics.raw_parts_mut().floor_filter = on.then_some(CodeRef(super::FLOOR_FILTER));
+    *wd.statics.raw_parts_mut().floor_filter_gobj = (gobj != 0).then_some(GObjId(gobj));
 }
 
 /// Gives the joints random callbacks on both sides, each told apart by its user data.
 pub fn set_callbacks(wd: &mut World) {
     let ctx = wd.ctx();
-    for j in 0..wd.st.g.joints.len() as i32 {
+    for j in 0..wd.st.g.raw_parts().joints.len() as i32 {
         for second in [false, true] {
             let cb = if wd.st.rng.chance(3) {
                 0
@@ -174,7 +172,10 @@ fn need(wd: &mut World, at: u32, kind: u32) -> bool {
     };
     let wr = w(wd);
     wr.i32(at, l);
-    wr.u32(at + 4, u32::from(wd.st.g.lines[l as usize].lo_flags));
+    wr.u32(
+        at + 4,
+        u32::from(wd.st.g.raw_parts().lines[l as usize].lo_flags),
+    );
     true
 }
 
@@ -428,7 +429,7 @@ pub fn round(wd: &mut World, tree: Option<&Tree>) {
     }
     // The mutations between rounds expect only their own callbacks.
     let ctx = wd.ctx();
-    for j in 0..wd.st.g.joints.len() as i32 {
+    for j in 0..wd.st.g.raw_parts().joints.len() as i32 {
         let none = || (handle::<Addr>(ctx, 0), handle::<FnPtr>(ctx, 0));
         let (u, c) = none();
         fns::mpJointSetCb1(ctx, j, u, c);
@@ -445,9 +446,9 @@ pub fn round(wd: &mut World, tree: Option<&Tree>) {
 fn hide_loops(wd: &mut World) {
     let ctx = wd.ctx();
     let g = &wd.st.g;
-    let mut joints: Vec<i32> = (0..g.lines.len() as i32)
+    let mut joints: Vec<i32> = (0..g.raw_parts().lines.len() as i32)
         .filter(|&l| {
-            let f = g.lines[l as usize].flags;
+            let f = g.raw_parts().lines[l as usize].flags;
             f & melee_sim::mp::LINE_ENABLED != 0
                 && f & melee_sim::mp::LINE_HIDDEN == 0
                 && super::queries::walk_loops(g, l)
@@ -1277,8 +1278,11 @@ fn passes(wd: &mut World) {
     let line = line_of(wd, 0).unwrap();
     let p = {
         let g = &wd.st.g;
-        let l = g.lines[line as usize];
-        let (a, bb) = (g.vertices[l.v0 as usize].pos, g.vertices[l.v1 as usize].pos);
+        let l = g.raw_parts().lines[line as usize];
+        let (a, bb) = (
+            g.raw_parts().vertices[l.v0 as usize].pos,
+            g.raw_parts().vertices[l.v1 as usize].pos,
+        );
         let t = wd.st.rng.range(0.0, 1.0);
         Vec3::new(a.x + (bb.x - a.x) * t, a.y + (bb.y - a.y) * t, 0.0)
     };

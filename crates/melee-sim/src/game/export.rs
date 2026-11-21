@@ -589,7 +589,9 @@ pub fn debug_menu(game: &Game, data: &Archives, img: &mut Image, slot: u32, text
 /// place before; each line in the data's groups its data's line and flags; the rest of each
 /// block (past the stage's, and a line no group holds) what it held.
 fn coll_arrays(game: &Game, data: &Archives, img: &mut Image) {
-    let Some(g) = &game.geometry else { return };
+    let Some(g) = game.geometry.as_ref().map(|g| g.raw_parts()) else {
+        return;
+    };
     if g.vertices_addr != 0 {
         let at = g.vertices_addr;
         let mut l = Lay::leftover(img, data, at, 2048 * 0x18);
@@ -611,7 +613,7 @@ fn coll_arrays(game: &Game, data: &Archives, img: &mut Image) {
             Some(c) => data.ptr(c.at(8)).and_then(|d| img.data_addr(d)),
         };
         let mut l = Lay::leftover(img, data, at, 1536 * 8);
-        for r in &g.ranges {
+        for r in g.ranges {
             for id in r.start as i32..r.start as i32 + r.count as i32 {
                 let Some(line) = g.lines.get(id as usize) else {
                     continue;
@@ -1804,7 +1806,9 @@ const DEFAULT_MAP_LINES: u32 = 0x803B_F728;
 /// bounds, model joint and callbacks; the rest of the dirty bit's byte and the byte after it
 /// keep what the block held.
 pub fn coll_joints(game: &Game, data: &Archives, img: &mut Image) {
-    let Some(g) = &game.geometry else { return };
+    let Some(g) = game.geometry.as_ref().map(|g| g.raw_parts()) else {
+        return;
+    };
     let at = g.joints_addr;
     if at == 0 || g.joints.is_empty() {
         return;

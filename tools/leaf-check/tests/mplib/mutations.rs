@@ -159,12 +159,12 @@ fn pose(ctx: &Ctx, j: u32) -> JointPose {
 /// Whether reclassifying a joint's dynamic lines is safe: the original asserts on a dynamic
 /// line without length, so the game never moves one onto its other end.
 pub fn dynamics_safe(s: &Stage, joint: usize) -> bool {
-    let r = s.g.joints[joint].desc.ranges[GROUP_DYNAMIC];
+    let r = s.g.raw_parts().joints[joint].desc.ranges[GROUP_DYNAMIC];
     (r.start as usize..(r.start + r.count.max(0)) as usize).all(|l| {
-        let line = s.g.lines[l];
+        let line = s.g.raw_parts().lines[l];
         let (a, b) = (
-            s.g.vertices[line.v0 as usize],
-            s.g.vertices[line.v1 as usize],
+            s.g.raw_parts().vertices[line.v0 as usize],
+            s.g.raw_parts().vertices[line.v1 as usize],
         );
         let ok = |p: melee_sim::mp::Vec2, q: melee_sim::mp::Vec2| {
             let (dx, dy) = (q.x - p.x, q.y - p.y);
@@ -182,11 +182,11 @@ fn joint_handle(ctx: &Ctx, j: usize) -> CollJoint<'_> {
 /// One random mutation on both sides; returns its name.
 fn mutate(s: &mut Stage) -> &'static str {
     let ctx = s.ctx;
-    let joints = s.g.joints.len() as u64;
+    let joints = s.g.raw_parts().joints.len() as u64;
     let j = s.rng.below(joints) as usize;
     let ji = j as i32;
-    let line = s.rng.below(s.g.lines.len() as u64) as i32;
-    let vtx = s.rng.below(s.g.vertices.len() as u64) as i32;
+    let line = s.rng.below(s.g.raw_parts().lines.len() as u64) as i32;
+    let vtx = s.rng.below(s.g.raw_parts().vertices.len() as u64) as i32;
     match s.rng.below(32) {
         0 => {
             fns::mpJointHide(ctx, ji);
@@ -254,10 +254,10 @@ fn mutate(s: &mut Stage) -> &'static str {
             "mpVtxSetPos"
         }
         12 => {
-            let l = s.g.lines[line as usize];
+            let l = s.g.raw_parts().lines[line as usize];
             let (a, b) = (
-                s.g.vertices[l.v0 as usize].pos,
-                s.g.vertices[l.v1 as usize].pos,
+                s.g.raw_parts().vertices[l.v0 as usize].pos,
+                s.g.raw_parts().vertices[l.v1 as usize].pos,
             );
             let d: Vec<f32> = (0..4).map(|_| s.rng.range(-2.0, 2.0)).collect();
             let p = [a.x + d[0], a.y + d[1], b.x + d[2], b.y + d[3]];
@@ -304,7 +304,7 @@ fn mutate(s: &mut Stage) -> &'static str {
         }
         19..=22 => {
             // Move the joint's model joint, then the joint with it.
-            if let Some(jo) = s.g.joints[j].jobj {
+            if let Some(jo) = s.g.raw_parts().joints[j].jobj {
                 let m = random_matrix(s);
                 write_matrix(ctx, jo, &m);
                 let flags = ctx.read_u32(jo + 0x14);
@@ -404,22 +404,22 @@ fn mutate(s: &mut Stage) -> &'static str {
         30 => {
             // Puts a line's end exactly 2 from the start of the line it links to, where the
             // link stops counting (a squared gap of 4).
-            let linked: Vec<usize> = (0..s.g.lines.len())
-                .filter(|&l| s.g.lines[l].next_link != -1)
+            let linked: Vec<usize> = (0..s.g.raw_parts().lines.len())
+                .filter(|&l| s.g.raw_parts().lines[l].next_link != -1)
                 .collect();
             if linked.is_empty() {
                 return "skipped";
             }
             let l = linked[s.rng.below(linked.len() as u64) as usize];
-            let target = s.g.lines[s.g.lines[l].next_link as usize].v0;
-            let p = s.g.vertices[target as usize].pos;
+            let target = s.g.raw_parts().lines[s.g.raw_parts().lines[l].next_link as usize].v0;
+            let p = s.g.raw_parts().vertices[target as usize].pos;
             let d = [2.0, -2.0, 1.999_999_9, 2.000_000_2][s.rng.below(4) as usize];
             let (x, y) = if s.rng.chance(2) {
                 (p.x + d, p.y)
             } else {
                 (p.x, p.y + d)
             };
-            let v = i32::from(s.g.lines[l].v1);
+            let v = i32::from(s.g.raw_parts().lines[l].v1);
             fns::mpVtxSetPos(ctx, v, arg(x), arg(y));
             s.g.set_vertex_pos(v, x, y);
             "mpVtxSetPos"
@@ -428,13 +428,16 @@ fn mutate(s: &mut Stage) -> &'static str {
             // Puts a vertex of one joint exactly 2 from one of another's, where linking stops,
             // then links the two.
             let other = ((j as u64 + 1 + s.rng.below(joints - 1)) % joints) as usize;
-            let (a, b) = (s.g.joints[j].desc, s.g.joints[other].desc);
+            let (a, b) = (
+                s.g.raw_parts().joints[j].desc,
+                s.g.raw_parts().joints[other].desc,
+            );
             if a.vtx_count <= 0 || b.vtx_count <= 0 {
                 return "skipped";
             }
             let va = i32::from(a.vtx_start) + s.rng.below(a.vtx_count as u64) as i32;
             let vb = i32::from(b.vtx_start) + s.rng.below(b.vtx_count as u64) as i32;
-            let p = s.g.vertices[vb as usize].pos;
+            let p = s.g.raw_parts().vertices[vb as usize].pos;
             let d = [2.0, -2.0, 1.999_999_9, 0.0][s.rng.below(4) as usize];
             let e = s.rng.range(-1.5, 1.5);
             let (x, y) = if s.rng.chance(2) {

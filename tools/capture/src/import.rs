@@ -803,7 +803,8 @@ impl Importer<'_> {
         self.game.objs.robjs.arg_buf = (arg_buf != 0).then_some(arg_buf);
         let (coll, filter_gobj) = crate::read_coll_statics(&cap.call.mem1);
         self.game.coll = coll;
-        self.game.coll.floor_filter_gobj = self.import_handle("GObjId", filter_gobj).map(GObjId);
+        *self.game.coll.raw_parts_mut().floor_filter_gobj =
+            self.import_handle("GObjId", filter_gobj).map(GObjId);
         self.game.vs = VsSceneController::import(&mem, VS_CONTROLLER, self);
         self.gm_and_pads();
         self.one_player_trophies();

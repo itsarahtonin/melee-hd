@@ -99,7 +99,7 @@ pub fn cvec(ctx: &Ctx, a: u32) -> CVec<'_> {
 /// The stage's extent, from the vertices.
 fn extent(s: &Stage) -> (f32, f32, f32, f32) {
     let mut e = (f32::MAX, f32::MAX, -f32::MAX, -f32::MAX);
-    for v in &s.g.vertices {
+    for v in s.g.raw_parts().vertices {
         e.0 = e.0.min(v.pos.x);
         e.1 = e.1.min(v.pos.y);
         e.2 = e.2.max(v.pos.x);
@@ -120,10 +120,11 @@ pub fn point(s: &mut Stage) -> (f32, f32) {
             rng.range(b - pad_y, t + pad_y),
         ),
         1 | 2 => {
-            let line = s.g.lines[rng.below(s.g.lines.len() as u64) as usize];
+            let line =
+                s.g.raw_parts().lines[rng.below(s.g.raw_parts().lines.len() as u64) as usize];
             let (a, c) = (
-                s.g.vertices[line.v0 as usize].pos,
-                s.g.vertices[line.v1 as usize].pos,
+                s.g.raw_parts().vertices[line.v0 as usize].pos,
+                s.g.raw_parts().vertices[line.v1 as usize].pos,
             );
             let k = rng.range(-0.15, 1.15);
             let j = if rng.chance(3) { 0.0 } else { 4.0 };
@@ -133,11 +134,15 @@ pub fn point(s: &mut Stage) -> (f32, f32) {
             )
         }
         3 => {
-            let v = s.g.vertices[rng.below(s.g.vertices.len() as u64) as usize].pos;
+            let v = s.g.raw_parts().vertices
+                [rng.below(s.g.raw_parts().vertices.len() as u64) as usize]
+                .pos;
             (v.x, v.y)
         }
         _ => {
-            let v = s.g.vertices[rng.below(s.g.vertices.len() as u64) as usize].pos;
+            let v = s.g.raw_parts().vertices
+                [rng.below(s.g.raw_parts().vertices.len() as u64) as usize]
+                .pos;
             (v.x + rng.range(-0.6, 0.6), v.y + rng.range(-0.6, 0.6))
         }
     }
@@ -169,14 +174,14 @@ pub fn segment(s: &mut Stage) -> (f32, f32, f32, f32) {
 }
 
 fn some_line(s: &mut Stage) -> i32 {
-    s.rng.below(s.g.lines.len() as u64) as i32
+    s.rng.below(s.g.raw_parts().lines.len() as u64) as i32
 }
 
 fn line_of(s: &mut Stage, kind: u32) -> Option<i32> {
-    let n = s.g.lines.len() as u64;
+    let n = s.g.raw_parts().lines.len() as u64;
     for _ in 0..16 {
         let l = s.rng.below(n) as usize;
-        if s.g.lines[l].flags & kind != 0 {
+        if s.g.raw_parts().lines[l].flags & kind != 0 {
             return Some(l as i32);
         }
     }
@@ -186,7 +191,7 @@ fn line_of(s: &mut Stage, kind: u32) -> Option<i32> {
 /// A joint id for the skip/only arguments: usually none, sometimes a real one.
 fn joint_arg(s: &mut Stage) -> i32 {
     if s.rng.chance(4) {
-        s.rng.below(s.g.joints.len() as u64) as i32
+        s.rng.below(s.g.raw_parts().joints.len() as u64) as i32
     } else {
         -1
     }
@@ -528,18 +533,18 @@ fn line_queries(s: &mut Stage, n: &mut Counts) {
 /// are first updated), and the original's walks never end on those, so the game never walks
 /// one. Either direction, following links or the data's neighbours.
 pub fn walk_loops(g: &mp::Geometry<super::T>, line: i32) -> bool {
-    let kind = g.lines[line as usize].flags & 0xF;
+    let kind = g.raw_parts().lines[line as usize].flags & 0xF;
     let step = |id: i32, k: u8| match k {
         0 => g.line_next(id),
         1 => g.line_prev(id),
-        2 => i32::from(g.lines[id as usize].next),
-        _ => i32::from(g.lines[id as usize].prev),
+        2 => i32::from(g.raw_parts().lines[id as usize].next),
+        _ => i32::from(g.raw_parts().lines[id as usize].prev),
     };
     (0..4).any(|k| {
         let mut id = line;
-        for _ in 0..=g.lines.len() {
+        for _ in 0..=g.raw_parts().lines.len() {
             id = step(id, k);
-            if id == -1 || g.lines[id as usize].flags & kind == 0 {
+            if id == -1 || g.raw_parts().lines[id as usize].flags & kind == 0 {
                 return false;
             }
         }
@@ -1232,7 +1237,9 @@ pub fn island_queries(s: &mut Stage, n: &mut Counts) {
         );
         n.add("mpIsland_8005AC8C");
         // With both ends wanted it walks the floors that end the island (see `walk_loops`).
-        let r = s.g.joints[s.g.islands.get(id).joint as usize].desc.ranges[0];
+        let r = s.g.raw_parts().joints[s.g.raw_parts().islands.get(id).joint as usize]
+            .desc
+            .ranges[0];
         let loops = (r.start..r.start + r.count.max(0)).any(|l| walk_loops(&s.g, i32::from(l)));
         for (want_l, want_r) in [(true, true), (true, false), (false, true), (false, false)] {
             if want_l && want_r && loops {
