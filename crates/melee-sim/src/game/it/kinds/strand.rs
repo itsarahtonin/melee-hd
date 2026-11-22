@@ -138,6 +138,7 @@ fn model_of(r: &Running, l: ItemLinkId) -> JObjId {
 /// (`set_up`), its links from his hand, held there.
 #[doc(alias = "itSeakChain_Spawn")]
 #[doc(alias = "it_802C27D4")]
+#[doc(alias = "it_802BE9D8")]
 pub fn spawn(
     r: &mut Running,
     owner: GObjId,
@@ -179,6 +180,7 @@ pub fn spawn(
 /// drop; the string and the yo-yo keep it, [`Vars::tip_model`].)
 #[doc(alias = "it_802BAF2C")]
 #[doc(alias = "it_802C248C")]
+#[doc(alias = "it_802BE65C")]
 pub fn make_links(r: &mut Running, gobj: GObjId, hand_joint: Option<JObjId>, s: &Strand) {
     let a = attrs(r, gobj);
     let n = r.data.u32(a.at(s.count)) as i32;
@@ -267,6 +269,7 @@ fn release(r: &mut Running, gobj: GObjId, s: &Strand) {
 /// The item and its links gone.
 #[doc(alias = "it_802BB20C")]
 #[doc(alias = "it_802C2750")]
+#[doc(alias = "it_802BE958")]
 pub fn remove(r: &mut Running, gobj: GObjId, s: &Strand) {
     release(r, gobj, s);
     super::super::item::destroy(r, gobj);
@@ -395,6 +398,7 @@ pub fn walk_out(
 /// `min` and `max` from the one before (and goes in once it's back at the target), and the next
 /// goes out once the target is `max` away. Returns 0 when a link stays in, else 2.
 #[doc(alias = "it_802C2EC4")]
+#[doc(alias = "it_802BF28C")]
 pub fn pay_out(
     r: &mut Running,
     l: ItemLinkId,
@@ -462,6 +466,7 @@ pub fn trail(
 /// [`Strand::copies`]). Whether a link was out.
 #[doc(alias = "it_802BCB88")]
 #[doc(alias = "it_802C3520")]
+#[doc(alias = "it_802BFAFC")]
 pub fn line_up(r: &mut Running, gobj: GObjId, at: Vec3, s: &Strand) -> bool {
     let mut l = vars(r, gobj, s).hand.get();
     while let Some(k) = l {
