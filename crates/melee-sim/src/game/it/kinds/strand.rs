@@ -55,6 +55,10 @@ pub struct Vars<'v> {
     pub tip_model: Option<&'v mut Var<Option<JObjId>>>,
 }
 
+/// A hook as each link's model is placed in the line-up: the item, the link, its position and
+/// how many links came before it.
+pub type OnLink = fn(&mut Running, GObjId, ItemLinkId, Vec3, i32);
+
 /// One item's strand: its own parts and the settings the shared code reads.
 pub struct Strand {
     /// Its variables' shared fields.
@@ -94,7 +98,7 @@ pub struct Strand {
     pub tip_folds_in: bool,
     /// After each link's model is placed in the line-up, with its position and how many came
     /// before it (the chain's hitboxes along it, the yo-yo's at the tip).
-    pub on_link: Option<fn(&mut Running, GObjId, ItemLinkId, Vec3, i32)>,
+    pub on_link: Option<OnLink>,
     /// The tip's model faces the item's way (the yo-yo).
     pub tip_faces: bool,
 }
