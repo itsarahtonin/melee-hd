@@ -261,10 +261,10 @@ impl Running<'_> {
         let args = [
             Val::Int(fp.spawn_num),
             Val::Float(reg(fp.cur_pos.x)),
-            Val::Float(reg(fp.dmg.x18A4_knockbackMagnitude)),
+            Val::Float(reg(fp.dmg.kb_magnitude)),
         ];
         if code::call(self, UN_CROWD_SIDE_BLAST, &args).int() != 0 {
-            self.game.fighter_mut(gobj).dmg.x18A4_knockbackMagnitude = 0.0;
+            self.game.fighter_mut(gobj).dmg.kb_magnitude = 0.0;
         }
     }
 

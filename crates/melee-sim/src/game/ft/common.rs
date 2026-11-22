@@ -141,7 +141,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C37A0")]
     pub fn turn_around_tick(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
-        if self.game.fighters[f.0].dmg.x18F4 == 0 {
+        if self.game.fighters[f.0].dmg.cape_turn_frames == 0 {
             return;
         }
         let part = self.bone_index(&self.game.fighters[f.0], TRANS_N);
@@ -152,15 +152,18 @@ impl Running<'_> {
         let total = self.common().i32(0x648);
         let fp = &mut self.game.fighters[f.0];
         let rot_y = fp::frsp(fp::fdiv(
-            fp::fmul(PI, fp::frsp(f64::from(total.wrapping_sub(fp.dmg.x18F4)))),
+            fp::fmul(
+                PI,
+                fp::frsp(f64::from(total.wrapping_sub(fp.dmg.cape_turn_frames))),
+            ),
             fp::frsp(f64::from(total)),
         ));
-        fp.dmg.x18F4 = fp.dmg.x18F4.wrapping_sub(1);
+        fp.dmg.cape_turn_frames = fp.dmg.cape_turn_frames.wrapping_sub(1);
         let rot_y = mem(rot_y);
         self.game.part_set_rot_y(f, part, rot_y);
         jobj::set_rotation_y(&mut self.game.objs.jobjs, jobj, rot_y);
         let fp = &mut self.game.fighters[f.0];
-        if fp.dmg.x18F4 == 0 {
+        if fp.dmg.cape_turn_frames == 0 {
             fp.turn_spin = false;
             fp.facing_dir = mem(fp::fneg(reg(fp.facing_dir)));
             let top = mem(fp::frsp(fp::fmul(fp::fdiv(PI, 2.0), reg(fp.facing_dir))));
@@ -181,9 +184,9 @@ impl Running<'_> {
         let pos = fp.coll_data.cur_pos;
         let lx = reg(fp.coll_data.ecb.left.x);
         let rx = reg(fp.coll_data.ecb.right.x);
-        fp.dmg.x1930.x0.x = mem(fp::fadds(lx, reg(pos.x)));
-        fp.dmg.x1930.x0.y = mem(fp::fadds(rx, reg(pos.x)));
-        fp.dmg.x1930.x0.z = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.x17C)));
+        fp.dmg.item_pickup_bounds.x0.x = mem(fp::fadds(lx, reg(pos.x)));
+        fp.dmg.item_pickup_bounds.x0.y = mem(fp::fadds(rx, reg(pos.x)));
+        fp.dmg.item_pickup_bounds.x0.z = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.x17C)));
     }
 
     /// Whether the magnifier shows the player off screen, `ifMagnify_802FC998`.
@@ -203,7 +206,7 @@ impl Running<'_> {
         if fp.cloak && !fp.takes_damage_cloaked {
             return;
         }
-        fp.dmg.x1830_percent = mem(fp::fadds(reg(fp.dmg.x1830_percent), amount));
+        fp.dmg.percent = mem(fp::fadds(reg(fp.dmg.percent), amount));
         if fp.metal_timer != 0 {
             fp.metal_health = fp::fctiwz(fp::fsubs(fp::frsp(f64::from(fp.metal_health)), amount));
         }
@@ -211,13 +214,13 @@ impl Running<'_> {
             fp.alt_metal_health =
                 fp::fctiwz(fp::fsubs(fp::frsp(f64::from(fp.alt_metal_health)), amount));
         }
-        if reg(fp.dmg.x1830_percent) > 999.0 {
-            fp.dmg.x1830_percent = 999.0;
+        if reg(fp.dmg.percent) > 999.0 {
+            fp.dmg.percent = 999.0;
         }
         let (slot, sub, percent) = (
             i32::from(fp.player_idx),
             i32::from(fp.is_sub_fighter),
-            fp.dmg.x1830_percent,
+            fp.dmg.percent,
         );
         self.game
             .set_player_damage_at(slot, sub, fp::fctiwz(reg(percent)));
@@ -239,8 +242,8 @@ impl Running<'_> {
     pub fn forget_attacker_grounded(&mut self, f: FighterId) {
         let fp = &mut self.game.fighters[f.0];
         if fp.ground_or_air == GA_GROUND {
-            fp.dmg.x18c4_source_ply = 6;
-            fp.dmg.x18C8 = -1;
+            fp.dmg.source_player = 6;
+            fp.dmg.source_attack = -1;
         }
     }
 
@@ -275,7 +278,7 @@ impl Running<'_> {
                     fp::frsp(fp::fsub(pi, a))
                 };
             }
-            let c = fp.dmg.x1854_collpos;
+            let c = fp.dmg.coll_pos;
             pos = Vec3::new(c.x, c.y, 0.0);
             angle = a;
             speed = kb;
@@ -289,7 +292,7 @@ impl Running<'_> {
             .expect("a fighter without its GObj");
         let worth =
             super::super::it::kinds::coin::drop_from(self, gobj, pos, n, 1, mem(angle), mem(speed));
-        let src = self.game.fighters[f.0].dmg.x18c4_source_ply;
+        let src = self.game.fighters[f.0].dmg.source_player;
         if src != 6 {
             let v = worth.wrapping_add(self.game.player_coins_knocked(src));
             self.game.set_player_coins_knocked(src, v);

@@ -673,7 +673,7 @@ impl Running<'_> {
         };
         self.nana_record_input(popo, f);
         let r5;
-        let level = fp::fdivs(reg(self.game.fighters[popo.0].dmg.x1830_percent), 20.0);
+        let level = fp::fdivs(reg(self.game.fighters[popo.0].dmg.percent), 20.0);
         let level = if fp::fctiwz(level) > 9 {
             9
         } else {

@@ -413,7 +413,7 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.giant = true;
         fp.mushroom_frames = frames;
-        let mut percent = reg(fp.dmg.x1830_percent);
+        let mut percent = reg(fp.dmg.percent);
         if percent > from {
             percent = fp::fsubs(percent, from);
             if percent >= max {

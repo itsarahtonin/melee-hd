@@ -1257,211 +1257,272 @@ impl Default for lb_80014638_arg0_t {
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct dmg {
     /// +0x0
-    pub x182c_behavior: f32,
+    #[doc(alias("x182c_behavior"))]
+    pub damage_scale: f32,
     /// +0x4
-    pub x1830_percent: f32,
+    #[doc(alias("x1830_percent"))]
+    pub percent: f32,
     /// +0x8
-    pub x1834: f32,
+    #[doc(alias("x1834"))]
+    pub armor_hp: f32,
     /// +0xc
-    pub x1838_percentTemp: f32,
+    #[doc(alias("x1838_percentTemp"))]
+    pub pending_damage: f32,
     /// +0x10
-    pub x183C_applied: i32,
+    #[doc(alias("x183C_applied"))]
+    pub damage_applied: i32,
     /// +0x14
-    pub x1840: i32,
+    #[doc(alias("x1840"))]
+    pub max_tip_damage: i32,
     /// +0x18
     pub facing_dir_1: f32,
     /// +0x1c
-    pub x1848_kb_angle: i32,
+    #[doc(alias("x1848_kb_angle"))]
+    pub kb_angle: i32,
     /// +0x20
-    pub x184c_damaged_hurtbox: i32,
+    #[doc(alias("x184c_damaged_hurtbox"))]
+    pub damaged_hurtbox: i32,
     /// +0x24
     pub kb_applied: f32,
     /// +0x28
-    pub x1854_collpos: Vec3,
+    #[doc(alias("x1854_collpos"))]
+    pub coll_pos: Vec3,
     /// +0x34
-    pub x1860_element: u32,
+    #[doc(alias("x1860_element"))]
+    pub element: u32,
     /// +0x38
-    pub x1864: i32,
+    #[doc(alias("x1864"))]
+    pub unread_1864: i32,
     /// +0x3c
-    pub x1868_source: Option<GObjId>,
+    #[doc(alias("x1868_source"))]
+    pub source: Option<GObjId>,
     /// +0x40
-    pub x186c: i32,
+    #[doc(alias("x186c"))]
+    pub unread_186c: i32,
     /// +0x44
-    pub x1870: RawPtr,
+    #[doc(alias("x1870"))]
+    pub unread_1870: RawPtr,
     /// +0x48
-    pub x1874: i32,
+    #[doc(alias("x1874"))]
+    pub unread_1874: i32,
     /// +0x4c
-    pub x1878: i32,
+    #[doc(alias("x1878"))]
+    pub unread_1878: i32,
     /// +0x50
-    pub x187c: f32,
+    #[doc(alias("x187c"))]
+    pub tip_kb: f32,
     /// +0x54
-    pub x1880: Vec3,
+    #[doc(alias("x1880"))]
+    pub tip_pos: Vec3,
     /// +0x60
-    pub x188c: i32,
+    #[doc(alias("x188c"))]
+    pub tip_element: i32,
     /// +0x64
-    pub x1890: i32,
+    #[doc(alias("x1890"))]
+    pub tip_severity: i32,
     /// +0x68
-    pub x1894: Option<GObjId>,
+    #[doc(alias("x1894"))]
+    pub tip_source: Option<GObjId>,
     /// +0x6c
-    pub x1898: f32,
+    #[doc(alias("x1898"))]
+    pub tip_damage: f32,
     /// +0x70
-    pub x189C_unk_num_frames: f32,
+    #[doc(alias("x189C_unk_num_frames"))]
+    pub hit_frames: f32,
     /// +0x74
-    pub x18a0: f32,
+    #[doc(alias("x18a0"))]
+    pub tip_kb_applied: f32,
     /// +0x78
-    pub x18A4_knockbackMagnitude: f32,
+    #[doc(alias("x18A4_knockbackMagnitude"))]
+    pub kb_magnitude: f32,
     /// +0x7c
-    pub x18A8: f32,
+    #[doc(alias("x18A8"))]
+    pub hit_kb: f32,
     /// +0x80
-    pub x18ac_time_since_hit: i32,
+    #[doc(alias("x18ac_time_since_hit"))]
+    pub time_since_hit: i32,
     /// +0x84
     pub armor0: f32,
     /// +0x88
     pub armor1: f32,
     /// +0x8c
-    pub x18B8: f32,
+    #[doc(alias("x18B8"))]
+    pub shake_x: f32,
     /// +0x90
-    pub x18BC: f32,
+    #[doc(alias("x18BC"))]
+    pub shake_y: f32,
     /// +0x94
-    pub x18C0: i32,
+    #[doc(alias("x18C0"))]
+    pub source_spawn: i32,
     /// +0x98
-    pub x18c4_source_ply: i32,
+    #[doc(alias("x18c4_source_ply"))]
+    pub source_player: i32,
     /// +0x9c
-    pub x18C8: i32,
+    #[doc(alias("x18C8"))]
+    pub source_attack: i32,
     /// +0xa0
-    pub x18CC: i32,
+    #[doc(alias("x18CC"))]
+    pub source_class: i32,
     /// +0xa4
-    pub x18D0: i32,
+    #[doc(alias("x18D0"))]
+    pub source_kind: i32,
     /// +0xa8
-    pub x18d4: [u8; 4],
+    #[doc(alias("x18d4"))]
+    pub attack_record: [u8; 4],
     /// +0xac
-    pub x18d8: ft_800898B4_t,
+    #[doc(alias("x18d8"))]
+    pub hit_records: ft_800898B4_t,
     /// +0xc0
-    pub x18ec_instancehitby: u16,
+    #[doc(alias("x18ec_instancehitby"))]
+    pub instance_hit_by: u16,
     /// +0xc4
-    pub x18F0: i32,
+    #[doc(alias("x18F0"))]
+    pub healing: i32,
     /// +0xc8
-    pub x18F4: i32,
+    #[doc(alias("x18F4"))]
+    pub cape_turn_frames: i32,
     /// +0xcc
-    pub x18F8: u8,
+    #[doc(alias("x18F8"))]
+    pub shake_kind: u8,
     /// +0xcd
-    pub x18f9: u8,
+    #[doc(alias("x18f9"))]
+    pub unused_18f9: u8,
     /// +0xce
-    pub x18fa_model_shift_frames: u16,
+    #[doc(alias("x18fa_model_shift_frames"))]
+    pub model_shift_frames: u16,
     /// +0xd0
-    pub x18FC: u8,
+    #[doc(alias("x18FC"))]
+    pub shake_step: u8,
     /// +0xd1
-    pub x18FD: u8,
+    #[doc(alias("x18FD"))]
+    pub shake_len: u8,
     /// +0xd4
-    pub x1900: f32,
+    #[doc(alias("x1900"))]
+    pub shake_normal_x: f32,
     /// +0xd8
-    pub x1904: f32,
+    #[doc(alias("x1904"))]
+    pub shake_normal_y: f32,
     /// +0xdc
-    pub x1908: i32,
+    #[doc(alias("x1908"))]
+    pub queued_sfx: i32,
     /// +0xe0
-    pub x190C: Option<DataRef>,
+    #[doc(alias("x190C"))]
+    pub queued_sfx_table: Option<DataRef>,
     /// +0xe4
-    pub x1910: i32,
+    #[doc(alias("x1910"))]
+    pub dot_frames: i32,
     /// +0xe8
-    pub x1914: i32,
+    #[doc(alias("x1914"))]
+    pub item_hit_damage: i32,
     /// +0xec
     pub int_value: i32,
     /// +0xf0
-    pub x191C: f32,
+    #[doc(alias("x191C"))]
+    pub clank_damage: f32,
     /// +0xf4
     pub facing_dir: f32,
     /// +0xf8
-    pub x1924: i32,
+    #[doc(alias("x1924"))]
+    pub max_shield_damage: i32,
     /// +0xfc
-    pub x1928: f32,
+    #[doc(alias("x1928"))]
+    pub shield_push: f32,
     /// +0x100
-    pub x192c: f32,
+    #[doc(alias("x192c"))]
+    pub shield_push_dir: f32,
     /// +0x104
-    pub x1930: lb_80014638_arg0_t,
+    #[doc(alias("x1930"))]
+    pub item_pickup_bounds: lb_80014638_arg0_t,
     /// +0x11c
-    pub x1948: i32,
+    #[doc(alias("x1948"))]
+    pub bounce_frames: i32,
     /// +0x120
-    pub x194C: i32,
+    #[doc(alias("x194C"))]
+    pub bounce_frames_left: i32,
     /// +0x124
-    pub x1950: i32,
+    #[doc(alias("x1950"))]
+    pub stepped_on_item: i32,
     /// +0x128
-    pub x1954: f32,
+    #[doc(alias("x1954"))]
+    pub hold_frames: f32,
     /// +0x12c
-    pub x1958: f32,
+    #[doc(alias("x1958"))]
+    pub pending_hitlag_frames: f32,
     /// +0x130
-    pub x195c_hitlag_frames: f32,
+    #[doc(alias("x195c_hitlag_frames"))]
+    pub hitlag_frames: f32,
 }
 
 impl Default for dmg {
     fn default() -> Self {
         dmg {
-            x182c_behavior: 0.0,
-            x1830_percent: 0.0,
-            x1834: 0.0,
-            x1838_percentTemp: 0.0,
-            x183C_applied: 0,
-            x1840: 0,
+            damage_scale: 0.0,
+            percent: 0.0,
+            armor_hp: 0.0,
+            pending_damage: 0.0,
+            damage_applied: 0,
+            max_tip_damage: 0,
             facing_dir_1: 0.0,
-            x1848_kb_angle: 0,
-            x184c_damaged_hurtbox: 0,
+            kb_angle: 0,
+            damaged_hurtbox: 0,
             kb_applied: 0.0,
-            x1854_collpos: Default::default(),
-            x1860_element: 0,
-            x1864: 0,
-            x1868_source: None,
-            x186c: 0,
-            x1870: Default::default(),
-            x1874: 0,
-            x1878: 0,
-            x187c: 0.0,
-            x1880: Default::default(),
-            x188c: 0,
-            x1890: 0,
-            x1894: None,
-            x1898: 0.0,
-            x189C_unk_num_frames: 0.0,
-            x18a0: 0.0,
-            x18A4_knockbackMagnitude: 0.0,
-            x18A8: 0.0,
-            x18ac_time_since_hit: 0,
+            coll_pos: Default::default(),
+            element: 0,
+            unread_1864: 0,
+            source: None,
+            unread_186c: 0,
+            unread_1870: Default::default(),
+            unread_1874: 0,
+            unread_1878: 0,
+            tip_kb: 0.0,
+            tip_pos: Default::default(),
+            tip_element: 0,
+            tip_severity: 0,
+            tip_source: None,
+            tip_damage: 0.0,
+            hit_frames: 0.0,
+            tip_kb_applied: 0.0,
+            kb_magnitude: 0.0,
+            hit_kb: 0.0,
+            time_since_hit: 0,
             armor0: 0.0,
             armor1: 0.0,
-            x18B8: 0.0,
-            x18BC: 0.0,
-            x18C0: 0,
-            x18c4_source_ply: 0,
-            x18C8: 0,
-            x18CC: 0,
-            x18D0: 0,
-            x18d4: [0; 4],
-            x18d8: Default::default(),
-            x18ec_instancehitby: 0,
-            x18F0: 0,
-            x18F4: 0,
-            x18F8: 0,
-            x18f9: 0,
-            x18fa_model_shift_frames: 0,
-            x18FC: 0,
-            x18FD: 0,
-            x1900: 0.0,
-            x1904: 0.0,
-            x1908: 0,
-            x190C: None,
-            x1910: 0,
-            x1914: 0,
+            shake_x: 0.0,
+            shake_y: 0.0,
+            source_spawn: 0,
+            source_player: 0,
+            source_attack: 0,
+            source_class: 0,
+            source_kind: 0,
+            attack_record: [0; 4],
+            hit_records: Default::default(),
+            instance_hit_by: 0,
+            healing: 0,
+            cape_turn_frames: 0,
+            shake_kind: 0,
+            unused_18f9: 0,
+            model_shift_frames: 0,
+            shake_step: 0,
+            shake_len: 0,
+            shake_normal_x: 0.0,
+            shake_normal_y: 0.0,
+            queued_sfx: 0,
+            queued_sfx_table: None,
+            dot_frames: 0,
+            item_hit_damage: 0,
             int_value: 0,
-            x191C: 0.0,
+            clank_damage: 0.0,
             facing_dir: 0.0,
-            x1924: 0,
-            x1928: 0.0,
-            x192c: 0.0,
-            x1930: Default::default(),
-            x1948: 0,
-            x194C: 0,
-            x1950: 0,
-            x1954: 0.0,
-            x1958: 0.0,
-            x195c_hitlag_frames: 0.0,
+            max_shield_damage: 0,
+            shield_push: 0.0,
+            shield_push_dir: 0.0,
+            item_pickup_bounds: Default::default(),
+            bounce_frames: 0,
+            bounce_frames_left: 0,
+            stepped_on_item: 0,
+            hold_frames: 0.0,
+            pending_hitlag_frames: 0.0,
+            hitlag_frames: 0.0,
         }
     }
 }

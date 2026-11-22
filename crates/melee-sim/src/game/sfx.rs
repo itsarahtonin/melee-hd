@@ -379,7 +379,7 @@ impl Running<'_> {
         if self.game.player_kind(slot, sub) == 1 {
             return false;
         }
-        let percent = fp::fctiwz(reg(self.game.fighter(g).dmg.x1830_percent));
+        let percent = fp::fctiwz(reg(self.game.fighter(g).dmg.percent));
         if percent < self.cfg_i32(cfg::MIN_PERCENT)
             || self.game.crowd.cheer < self.cfg_i32(cfg::CHEER_LIMIT)
             || self.game.crowd.focus == spawn
@@ -508,12 +508,12 @@ impl Running<'_> {
         let a = self
             .fighter_by_spawn(attacker)
             .expect("ftLib_GetCrowdKnockback of no fighter");
-        let kb = reg(self.game.fighter(a).dmg.x18A4_knockbackMagnitude);
+        let kb = reg(self.game.fighter(a).dmg.kb_magnitude);
         let cat = self.crowd_kb_category(kb);
         if cat == 0 {
             return;
         }
-        let victim_kb = g.map(|g| reg(self.game.fighter(g).dmg.x18A4_knockbackMagnitude));
+        let victim_kb = g.map(|g| reg(self.game.fighter(g).dmg.kb_magnitude));
         if victim_kb.is_some_and(|k| k >= 3.0) {
             self.crowd_flying(victim, kb);
         } else if self.game.crowd.last_spawn == victim

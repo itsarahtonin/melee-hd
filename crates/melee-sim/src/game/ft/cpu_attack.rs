@@ -2128,7 +2128,7 @@ impl Running<'_> {
                     let script = match kind {
                         FighterKind::Popo => 0x3B,
                         FighterKind::Fox => 0x3D,
-                        _ if reg(self.game.fighter(victim).dmg.x1830_percent) < 100.0 => 0x39,
+                        _ if reg(self.game.fighter(victim).dmg.percent) < 100.0 => 0x39,
                         _ => 0x3A,
                     };
                     self.cpu_data_script(f, script);

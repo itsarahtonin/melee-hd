@@ -328,11 +328,7 @@ impl Running<'_> {
         fp.grab_immune = 0x1FF;
         fp.hanging = true;
         fp.set_mv_i32(CLIFF_X8, 0);
-        let x4 = if reg(fp.dmg.x1830_percent) < pct {
-            low
-        } else {
-            high
-        };
+        let x4 = if reg(fp.dmg.percent) < pct { low } else { high };
         fp.set_mv_f32(CLIFF_X4, reg(x4));
         self.set_intangible(gobj, intangible);
         self.game.fighter_mut(gobj).grab_immune = 0x1FF;

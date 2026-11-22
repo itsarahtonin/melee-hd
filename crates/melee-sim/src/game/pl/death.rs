@@ -110,10 +110,10 @@ impl Running<'_> {
             .expect("a slot without its fighter");
         let fp = self.game.fighter(gobj);
         let msid = fp.motion_id;
-        let (source_type, source_kind) = (fp.dmg.x18CC, fp.dmg.x18D0);
-        let attack_bits = fp.dmg.x18d4;
-        let instance = fp.dmg.x18ec_instancehitby;
-        let hit = fp.dmg.x18d8.clone();
+        let (source_type, source_kind) = (fp.dmg.source_class, fp.dmg.source_kind);
+        let attack_bits = fp.dmg.attack_record;
+        let instance = fp.dmg.instance_hit_by;
+        let hit = fp.dmg.hit_records.clone();
         let last = self.game.ft_last_attacker(gobj);
         let last_sub = fp.last_hit_by_sub;
         // `ft_80087858`, `ft_80087878`.
@@ -327,8 +327,11 @@ impl Running<'_> {
             return;
         }
         let fp = self.game.fighter(gobj);
-        let (kb, special_fall, jumps) =
-            (fp.dmg.x18d8.kb_applied1, fp.special_air_used, fp.jumps_used);
+        let (kb, special_fall, jumps) = (
+            fp.dmg.hit_records.kb_applied1,
+            fp.special_air_used,
+            fp.jumps_used,
+        );
         if reg(kb) >= reg(self.bonus_param_f32(0x98)) {
             let t = &mut self.game.player_mut(slot).stale_moves;
             t.xCE8 = t.xCE8.wrapping_add(1);

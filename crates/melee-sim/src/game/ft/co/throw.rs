@@ -252,9 +252,9 @@ impl Running<'_> {
         let count = super::super::attack::whole_damage(dmg);
         let vf = &mut self.game.fighters[v.0];
         if vf.armor {
-            vf.dmg.x1834 = mem(fp::fsubs(reg(vf.dmg.x1834), dmg));
-            if vf.dmg.x1834 < 0.0 {
-                dmg = fp::fneg(reg(vf.dmg.x1834));
+            vf.dmg.armor_hp = mem(fp::fsubs(reg(vf.dmg.armor_hp), dmg));
+            if vf.dmg.armor_hp < 0.0 {
+                dmg = fp::fneg(reg(vf.dmg.armor_hp));
                 vf.armor = false;
             }
         }
@@ -264,9 +264,9 @@ impl Running<'_> {
                 dmg.partial_cmp(&500.0) != Some(std::cmp::Ordering::Greater),
                 "attack power over 500!! {dmg}"
             );
-            vf.dmg.x1838_percentTemp = mem(fp::fadds(reg(vf.dmg.x1838_percentTemp), dmg));
-            if count > vf.dmg.x183C_applied {
-                vf.dmg.x183C_applied = count;
+            vf.dmg.pending_damage = mem(fp::fadds(reg(vf.dmg.pending_damage), dmg));
+            if count > vf.dmg.damage_applied {
+                vf.dmg.damage_applied = count;
             }
         }
         let (aslot, vslot) = (
@@ -293,11 +293,11 @@ impl Running<'_> {
         let facing = self.game.fighter(gobj).facing_dir;
         let vf = &mut self.game.fighters[v.0];
         vf.dmg.kb_applied = mem(kb);
-        vf.dmg.x1848_kb_angle = hit.kb_angle;
+        vf.dmg.kb_angle = hit.kb_angle;
         vf.dmg.facing_dir_1 = mem(fp::fneg(reg(facing)));
-        vf.dmg.x184c_damaged_hurtbox = 1;
-        vf.dmg.x1854_collpos = pos;
-        vf.dmg.x1860_element = hit.element;
+        vf.dmg.damaged_hurtbox = 1;
+        vf.dmg.coll_pos = pos;
+        vf.dmg.element = hit.element;
         // `ftColl_80078710`: the attack's record, the facing word as the keep flag.
         let af = self.game.fighter(gobj);
         let (akind, x2070, instance) = (
@@ -541,7 +541,7 @@ impl Running<'_> {
             fp.mv.set_gobj_at(THROW_VICTIM, Some(t));
         }
         let fp = self.game.fighter(gobj);
-        let angle = fp.dmg.x1848_kb_angle;
+        let angle = fp.dmg.kb_angle;
         let facing = if angle > 90 && angle < 270 {
             mem(fp::fneg(reg(fp.dmg.facing_dir_1)))
         } else {

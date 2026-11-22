@@ -61,7 +61,7 @@ impl Running<'_> {
     fn reset_main_overlay(&mut self, gobj: GObjId) {
         clear(self.overlay(gobj, Overlay::Main));
         let fp = self.game.fighter(gobj);
-        let (dead, healing, b6) = (fp.stamina_dead, fp.dmg.x18F0 != 0, fp.starman);
+        let (dead, healing, b6) = (fp.stamina_dead, fp.dmg.healing != 0, fp.starman);
         let x9 = fp.invincible_frames != 0 || fp.intangible_frames != 0 || fp.warp_star_intangible;
         if dead {
             self.start_color_anim(gobj, 0x7A, 0);

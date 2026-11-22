@@ -341,7 +341,7 @@ impl Running<'_> {
         if self.game.vs_is_stock() && self.game.player_stocks(slot) <= 0 {
             self.game.update_player_match_frame_count(slot, which);
         }
-        let source = self.game.fighter(gobj).dmg.x18c4_source_ply;
+        let source = self.game.fighter(gobj).dmg.source_player;
         if source != NO_SLOT {
             self.player_count_ko(source, sub, slot);
         } else {

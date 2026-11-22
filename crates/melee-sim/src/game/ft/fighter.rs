@@ -26,10 +26,10 @@ pub fn proc_hitlag(g: &mut Running, gobj: GObjId) {
         return;
     }
     let fp = &mut g.game.fighters[f.0];
-    if fp.dmg.x1954 > 0.0 {
-        fp.dmg.x1954 = mem(fp::fsubs(reg(fp.dmg.x1954), 1.0));
-        if fp.dmg.x1954 <= 0.0 {
-            fp.dmg.x1954 = 0.0;
+    if fp.dmg.hold_frames > 0.0 {
+        fp.dmg.hold_frames = mem(fp::fsubs(reg(fp.dmg.hold_frames), 1.0));
+        if fp.dmg.hold_frames <= 0.0 {
+            fp.dmg.hold_frames = 0.0;
             if !fp.allow_sdi && !fp.hitlag_held {
                 end_hitlag(g, gobj);
             }
@@ -40,16 +40,16 @@ pub fn proc_hitlag(g: &mut Running, gobj: GObjId) {
         g.game.fighters[f.0].thaw_size = false;
     }
     let fp = &mut g.game.fighters[f.0];
-    if fp.dmg.x195c_hitlag_frames > 0.0 {
-        fp.dmg.x195c_hitlag_frames = mem(fp::fsubs(reg(fp.dmg.x195c_hitlag_frames), 1.0));
-        if fp.dmg.x195c_hitlag_frames <= 0.0 {
-            fp.dmg.x195c_hitlag_frames = 0.0;
+    if fp.dmg.hitlag_frames > 0.0 {
+        fp.dmg.hitlag_frames = mem(fp::fsubs(reg(fp.dmg.hitlag_frames), 1.0));
+        if fp.dmg.hitlag_frames <= 0.0 {
+            fp.dmg.hitlag_frames = 0.0;
             if fp.in_hitstun_sdi {
                 g.queued_sounds(f);
                 g.game.fighters[f.0].in_hitstun_sdi = false;
             }
             let fp = &mut g.game.fighters[f.0];
-            if fp.dmg.x1954 == 0.0 && !fp.hitlag_held {
+            if fp.dmg.hold_frames == 0.0 && !fp.hitlag_held {
                 end_hitlag(g, gobj);
             }
             g.game.fighters[f.0].allow_sdi = false;
@@ -86,7 +86,7 @@ pub fn end_hitlag(g: &mut Running, gobj: GObjId) {
         let o = g.game.fighter_id(other);
         if g.game.fighters[o.0].hitlag_held {
             let ofp = &g.game.fighters[o.0];
-            if !ofp.allow_sdi && ofp.dmg.x1954 == 0.0 {
+            if !ofp.allow_sdi && ofp.dmg.hold_frames == 0.0 {
                 if let Some(cb) = ofp.post_hitlag_cb {
                     run_fighter_cb(g, other, cb);
                 }
@@ -110,7 +110,7 @@ pub fn end_hitlag_if_held(g: &mut Running, gobj: GObjId) {
     let f = g.game.fighter_id(gobj);
     let fp = &g.game.fighters[f.0];
     if fp.hitlag_held {
-        if !fp.allow_sdi && fp.dmg.x1954 == 0.0 {
+        if !fp.allow_sdi && fp.dmg.hold_frames == 0.0 {
             end_hitlag(g, gobj);
         }
         g.game.fighters[f.0].hitlag_held = false;
@@ -131,12 +131,12 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
     fp.pos_delta.y = mem(fp::fsubs(reg(fp.cur_pos.y), reg(fp.prev_pos.y)));
     fp.pos_delta.z = mem(fp::fsubs(reg(fp.cur_pos.z), reg(fp.prev_pos.z)));
     fp.prev_pos = fp.cur_pos;
-    if fp.dmg.x18C8 != -1 && fp.dmg.x18C8 > 0 {
-        fp.dmg.x18C8 -= 1;
-        if fp.dmg.x18C8 == 0 {
-            fp.dmg.x18c4_source_ply = 6;
-            fp.dmg.x18C8 = -1;
-            fp.dmg.x18D0 = -10;
+    if fp.dmg.source_attack != -1 && fp.dmg.source_attack > 0 {
+        fp.dmg.source_attack -= 1;
+        if fp.dmg.source_attack == 0 {
+            fp.dmg.source_player = 6;
+            fp.dmg.source_attack = -1;
+            fp.dmg.source_kind = -10;
         }
     }
     if fp.intangible_frames != 0 {
@@ -269,7 +269,7 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         let c = g.common();
         let (limit, frames, damage) = (c.i32(0x7B0), c.i32(0x7AC), c.i32(0x7B4));
         let fp = &g.game.fighters[f.0];
-        if fp.dmg.x1830_percent < mem(fp::frsp(f64::from(limit))) {
+        if fp.dmg.percent < mem(fp::frsp(f64::from(limit))) {
             let slot = i32::from(fp.player_idx);
             let off = if g.game.rules.offscreen_damage_from_limits() {
                 g.game.offscreen_limits(f)
@@ -278,27 +278,27 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
             } && g.game.player_more_flags_bit3(slot);
             let fp = &mut g.game.fighters[f.0];
             if off {
-                fp.dmg.x1910 = fp.dmg.x1910.wrapping_add(1);
+                fp.dmg.dot_frames = fp.dmg.dot_frames.wrapping_add(1);
             } else {
-                fp.dmg.x1910 = 0;
+                fp.dmg.dot_frames = 0;
             }
-            if fp.dmg.x1910 >= frames {
+            if fp.dmg.dot_frames >= frames {
                 g.take_damage(f, fp::frsp(f64::from(damage)));
-                g.game.fighters[f.0].dmg.x1910 = 0;
+                g.game.fighters[f.0].dmg.dot_frames = 0;
             }
         }
     }
     let fp = &mut g.game.fighters[f.0];
-    if fp.dmg.x18F0 != 0 {
-        fp.dmg.x18F0 -= 1;
-        if fp.dmg.x1830_percent > 0.0 {
+    if fp.dmg.healing != 0 {
+        fp.dmg.healing -= 1;
+        if fp.dmg.percent > 0.0 {
             // A heal's point a frame: the percent down one, the tick of its sound
             // (`ft_80088640`), the player's display and the healed count.
-            fp.dmg.x1830_percent = mem(fp::fsubs(reg(fp.dmg.x1830_percent), 1.0));
+            fp.dmg.percent = mem(fp::fsubs(reg(fp.dmg.percent), 1.0));
             let (slot, sub, percent) = (
                 i32::from(fp.player_idx),
                 i32::from(fp.is_sub_fighter),
-                fp.dmg.x1830_percent,
+                fp.dmg.percent,
             );
             g.fighter_play_track(f, super::sound::Track::Effect4, 0x7D, 0x7F, 0x40);
             g.game
@@ -306,11 +306,11 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
             g.game.add_healed(slot, sub, 1);
         }
         let fp = &mut g.game.fighters[f.0];
-        if fp.dmg.x1830_percent <= 0.0 {
-            fp.dmg.x1830_percent = 0.0;
-            fp.dmg.x18F0 = 0;
+        if fp.dmg.percent <= 0.0 {
+            fp.dmg.percent = 0.0;
+            fp.dmg.healing = 0;
         }
-        if fp.dmg.x18F0 == 0 {
+        if fp.dmg.healing == 0 {
             if g.color_anim_id(gobj) == 8 {
                 g.end_color_anim(gobj, 8);
             }
@@ -321,11 +321,11 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
         g.hammer_tick(gobj);
     }
     let fp = &mut g.game.fighters[f.0];
-    if fp.dmg.x18fa_model_shift_frames != 0 {
-        fp.dmg.x18fa_model_shift_frames = fp.dmg.x18fa_model_shift_frames.wrapping_sub(1);
-        fp.dmg.x18FC = fp.dmg.x18FC.wrapping_add(1);
-        if fp.dmg.x18FC >= fp.dmg.x18FD {
-            fp.dmg.x18FC = 0;
+    if fp.dmg.model_shift_frames != 0 {
+        fp.dmg.model_shift_frames = fp.dmg.model_shift_frames.wrapping_sub(1);
+        fp.dmg.shake_step = fp.dmg.shake_step.wrapping_add(1);
+        if fp.dmg.shake_step >= fp.dmg.shake_len {
+            fp.dmg.shake_step = 0;
         }
     }
     // `ftData_UnkMotionStates3`: Kirby's, Bowser's (his flame's refill) and Giga Bowser's.
@@ -351,8 +351,8 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
             fp.smash_attrs.x2138_smashSinceHitbox =
                 mem(fp::fadds(reg(fp.smash_attrs.x2138_smashSinceHitbox), 1.0));
         }
-        if fp.dmg.x18ac_time_since_hit != -1 {
-            fp.dmg.x18ac_time_since_hit = fp.dmg.x18ac_time_since_hit.wrapping_add(1);
+        if fp.dmg.time_since_hit != -1 {
+            fp.dmg.time_since_hit = fp.dmg.time_since_hit.wrapping_add(1);
         }
         g.anim_update(gobj);
         g.item_pickup_tick(gobj);
@@ -486,20 +486,20 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
         fp.self_vel = fp.self_vel.sdk_add(fp.anim_vel);
         fp.anim_vel = Vec3::default();
         let mut self_vel = fp.self_vel;
-        if fp.dmg.x1948 != 0 {
+        if fp.dmg.bounce_frames != 0 {
             let c2 = fp::fsubs(
                 1.0,
                 fp::fdivs(
-                    fp::frsp(f64::from(fp.dmg.x194C)),
-                    fp::frsp(f64::from(fp.dmg.x1948)),
+                    fp::frsp(f64::from(fp.dmg.bounce_frames_left)),
+                    fp::frsp(f64::from(fp.dmg.bounce_frames)),
                 ),
             );
             let lerp = |v: f32, u: f32| mem(fp::fmadds(c2, fp::fsubs(reg(v), reg(u)), reg(u)));
             self_vel.x = lerp(fp.self_vel.x, fp.item_bounce_vel.x);
             self_vel.y = lerp(fp.self_vel.y, fp.item_bounce_vel.y);
-            fp.dmg.x194C = fp.dmg.x194C.wrapping_sub(1);
-            if fp.dmg.x194C == 0 {
-                fp.dmg.x1948 = 0;
+            fp.dmg.bounce_frames_left = fp.dmg.bounce_frames_left.wrapping_sub(1);
+            if fp.dmg.bounce_frames_left == 0 {
+                fp.dmg.bounce_frames = 0;
             }
         }
         fp.cur_pos.x = mem(fp::fadds(reg(fp.cur_pos.x), reg(fp.nudge_vel.x)));
@@ -573,10 +573,10 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
         }
     }
     let fp = &mut g.game.fighters[f.0];
-    if fp.dmg.x18A4_knockbackMagnitude != 0.0 && !fp.in_hitstun {
+    if fp.dmg.kb_magnitude != 0.0 && !fp.in_hitstun {
         let x = fp.cur_pos.x;
         if !g.near_side_blast_zone(x) {
-            g.game.fighters[f.0].dmg.x18A4_knockbackMagnitude = 0.0;
+            g.game.fighters[f.0].dmg.kb_magnitude = 0.0;
         }
     }
     g.hurt_capsules_follow(gobj);

@@ -436,7 +436,7 @@ pub fn lowest_percent_opponent(game: &Game, gobj: Option<GObjId>) -> Option<GObj
         {
             continue;
         }
-        let percent = reg(other.dmg.x1830_percent);
+        let percent = reg(other.dmg.percent);
         if percent < fp::frsp(f64::from(lowest)) {
             lowest = fp::fctiwz(percent);
             result = Some(g);

@@ -598,7 +598,7 @@ impl Running<'_> {
         let c = self.common();
         let (per, base) = (reg(c.f32(0x4A0)), reg(c.f32(0x4A4)));
         let fp = self.game.fighter_mut(gobj);
-        let timer = fp::fctiwz(fp::fmadds(reg(fp.dmg.x1830_percent), per, base));
+        let timer = fp::fctiwz(fp::fmadds(reg(fp.dmg.percent), per, base));
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = mem(fp::frsp(f64::from(timer)));
         fp.mash_stick_y = 0;
@@ -652,11 +652,11 @@ impl Running<'_> {
         let kb = self.shouldered_knockback(m, a, &hit);
         let fp = &mut self.game.fighters[m.0];
         fp.dmg.kb_applied = mem(kb);
-        fp.dmg.x1848_kb_angle = hit.kb_angle;
+        fp.dmg.kb_angle = hit.kb_angle;
         fp.dmg.facing_dir_1 = facing;
-        fp.dmg.x184c_damaged_hurtbox = 1;
-        fp.dmg.x1854_collpos = pos;
-        fp.dmg.x1860_element = hit.element;
+        fp.dmg.damaged_hurtbox = 1;
+        fp.dmg.coll_pos = pos;
+        fp.dmg.element = hit.element;
         // `ftColl_80078710(holder, held, &facing_dir_1)`.
         let af = self.game.fighter(holder);
         let (akind, x2070, instance) = (

@@ -360,8 +360,8 @@ impl Running<'_> {
             false,
         );
         let vf = self.game.fighter_mut(victim);
-        vf.dmg.x18c4_source_ply = 6;
-        vf.dmg.x18C8 = -1;
+        vf.dmg.source_player = 6;
+        vf.dmg.source_attack = -1;
     }
 
     /// Runs a grab's victim callback (`Fighter::grabbed_cb`, taking the victim and the

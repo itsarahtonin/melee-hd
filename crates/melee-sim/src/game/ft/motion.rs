@@ -516,7 +516,7 @@ impl Running<'_> {
         r.x207C.y = 6;
         r.x10[0] = 0;
         r.x10[1] &= 0x07;
-        r.x2074_vec.x = fp::fctiwz(reg(fp.dmg.x1830_percent));
+        r.x2074_vec.x = fp::fctiwz(reg(fp.dmg.percent));
         let bits = [
             (0x40, fp.is_metal),
             (0x20, fp.bunny_hood.is_some()),
@@ -683,8 +683,8 @@ impl Running<'_> {
             let fp = &mut self.game.fighters[f.0];
             // `ftCommon_8007E2F4`.
             fp.grab_immune = 0;
-            if fp.dmg.x18F4 != 0 {
-                fp.dmg.x18F4 = 0;
+            if fp.dmg.cape_turn_frames != 0 {
+                fp.dmg.cape_turn_frames = 0;
                 fp.turn_spin = false;
             }
             if flags & UNK_19 == 0 {
@@ -703,11 +703,11 @@ impl Running<'_> {
             fp.is_sleeping = false;
             fp.out_of_play = false;
             fp.blast_immune_state = false;
-            fp.dmg.x182c_behavior = 1.0;
+            fp.dmg.damage_scale = 1.0;
             fp.dmg.kb_applied = 0.0;
-            fp.dmg.x18A8 = 0.0;
+            fp.dmg.hit_kb = 0.0;
             fp.dmg.armor1 = 0.0;
-            fp.dmg.x18a0 = 0.0;
+            fp.dmg.tip_kb_applied = 0.0;
             fp.shield_was_hit = false;
             fp.state_flags.x221B_b0 = false;
             fp.powershield_early = false;
@@ -833,10 +833,10 @@ impl Running<'_> {
         if self.game.fighters[f.0].ground_or_air == GA_GROUND
             && flags & SKIP_HIT_STUN_START == 0
             && ms.move_bits & 0x0040_0000 != 0
-            && self.game.fighters[f.0].dmg.x18C8 == -1
+            && self.game.fighters[f.0].dmg.source_attack == -1
         {
             let x814 = self.common().i32(0x814);
-            self.game.fighters[f.0].dmg.x18C8 = if x814 > 0 { x814 } else { 1 };
+            self.game.fighters[f.0].dmg.source_attack = if x814 > 0 { x814 } else { 1 };
         }
         let prev_attack = self.game.fighters[f.0].attack_flags;
         self.set_attack_id(f, ms.move_bits >> 24);

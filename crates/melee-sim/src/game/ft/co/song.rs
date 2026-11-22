@@ -35,7 +35,7 @@ impl Running<'_> {
         s = fp::fmadds(reg(c.f32(0x628)), s, reg(c.f32(0x624)));
         s = fp::fadds(s, by_rank);
         let fp = self.game.fighter_mut(gobj);
-        let mut timer = fp::fmadds(reg(fp.dmg.x1830_percent), reg(c.f32(0x638)), s);
+        let mut timer = fp::fmadds(reg(fp.dmg.percent), reg(c.f32(0x638)), s);
         if sleep {
             timer = fp::fmuls(timer, reg(c.f32(0x644)));
         }

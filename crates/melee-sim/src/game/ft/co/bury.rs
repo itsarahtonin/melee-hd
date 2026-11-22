@@ -91,7 +91,7 @@ impl Running<'_> {
         );
         let frames = c.i32(0x5F4);
         let fp = &mut self.game.fighters[f.0];
-        let timer = fp::fmadds(reg(fp.dmg.x1830_percent), reg(c.f32(0x60C)), base);
+        let timer = fp::fmadds(reg(fp.dmg.percent), reg(c.f32(0x60C)), base);
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = mem(timer);
         fp.mash_stick_y = 0;

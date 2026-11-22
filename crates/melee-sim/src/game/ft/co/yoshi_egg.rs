@@ -296,7 +296,7 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         fp.self_vel = vel;
         fp.facing_dir = facing;
-        fp.dmg.x182c_behavior = behavior;
+        fp.dmg.damage_scale = behavior;
         // `mv.ca.specialhi.vel.y`, the same word as the mash timer.
         fp.set_mv_f32(EGG_MASH_TIMER, 0.0);
         fp.mv.set_gobj_at(EGG_YOSHI, Some(yoshi));
@@ -496,11 +496,11 @@ impl Running<'_> {
         let per = reg(per);
         let fp = self.game.fighter_mut(gobj);
         fp.grab_timer = mem(fp::fnmsubs(
-            reg(fp.dmg.x1838_percentTemp),
+            reg(fp.dmg.pending_damage),
             per,
             reg(fp.grab_timer),
         ));
-        if fp.dmg.x18CC == 3 && bury_holds(fp.dmg.x18D0) {
+        if fp.dmg.source_class == 3 && bury_holds(fp.dmg.source_kind) {
             fp.grab_timer = 0.0;
         }
         fp.hit_reaction = 4;

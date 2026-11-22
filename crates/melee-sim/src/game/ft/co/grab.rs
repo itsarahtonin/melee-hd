@@ -626,7 +626,7 @@ impl Running<'_> {
         s3 = fp::fmadds(reg(c.f32(0x358)), s3, reg(c.f32(0x354)));
         s3 = fp::fadds(s3, v);
         let fp = self.game.fighter(gobj);
-        fp::fmadds(reg(fp.dmg.x1830_percent), reg(c.f32(0x368)), s3)
+        fp::fmadds(reg(fp.dmg.percent), reg(c.f32(0x368)), s3)
     }
 
     /// The victim moved to the hold point, `fn_800DAD18`: whether it was pulled up off the

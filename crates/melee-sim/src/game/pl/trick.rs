@@ -201,9 +201,9 @@ impl Running<'_> {
         }
         let rec = self.attack_record(record);
         let vf = self.game.fighter_mut(victim);
-        if instance == 0 || vf.dmg.x18ec_instancehitby != instance {
-            vf.dmg.x18d4 = ev;
-            vf.dmg.x18ec_instancehitby = instance;
+        if instance == 0 || vf.dmg.instance_hit_by != instance {
+            vf.dmg.attack_record = ev;
+            vf.dmg.instance_hit_by = instance;
             let vteam = vf.team;
             if let Some((aslot, asub, ateam)) = a
                 && id != 0
@@ -214,7 +214,7 @@ impl Running<'_> {
                     t.xCB0 = t.xCB0.wrapping_add(1);
                 }
                 if id < 100 {
-                    let percent = self.game.fighter(victim).dmg.x1830_percent;
+                    let percent = self.game.fighter(victim).dmg.percent;
                     self.count_hit_stats(aslot, asub, vslot, vsub, percent, ev, &rec, behind);
                 }
             }
@@ -229,15 +229,15 @@ impl Running<'_> {
         let slot = i32::from(self.game.fighter(victim).player_idx);
         let edge = self.magnify_edge(slot);
         let fp = self.game.fighter_mut(victim);
-        fp.dmg.x18d4 = [0; 4];
-        fp.dmg.x18ec_instancehitby = 0;
+        fp.dmg.attack_record = [0; 4];
+        fp.dmg.instance_hit_by = 0;
         let prev_kb = if fp.in_hitstun {
-            reg(fp.dmg.x18d8.kb_applied1)
+            reg(fp.dmg.hit_records.kb_applied1)
         } else {
             0.0
         };
         let _ = prev_kb;
-        let d = &mut fp.dmg.x18d8;
+        let d = &mut fp.dmg.hit_records;
         d.x0 = 0;
         d.x4 = 0;
         d.kb_applied1 = 0.0;
@@ -255,13 +255,13 @@ impl Running<'_> {
         d.x11_b1 = false;
         d.x11_b2 = false;
         d.x11_b4 = false;
-        d.x4 = fp::fctiwz(reg(fp.dmg.x1830_percent));
-        fp.dmg.x18d8.x11_b0 = false;
+        d.x4 = fp::fctiwz(reg(fp.dmg.percent));
+        fp.dmg.hit_records.x11_b0 = false;
         if edge != 0 {
-            fp.dmg.x18d8.x11_b1 = true;
+            fp.dmg.hit_records.x11_b1 = true;
         }
         if fp.motion_id == MS_X11_B2 {
-            fp.dmg.x18d8.x11_b2 = true;
+            fp.dmg.hit_records.x11_b2 = true;
         }
         // No strong-hit mark: the record's x10_b0 was just cleared.
         let _ = prev_source;
@@ -530,33 +530,33 @@ impl Running<'_> {
         let edge = self.magnify_edge(slot);
         let fp = self.game.fighter_mut(victim);
         let prev_kb = if fp.in_hitstun {
-            reg(fp.dmg.x18d8.kb_applied1)
+            reg(fp.dmg.hit_records.kb_applied1)
         } else {
             0.0
         };
-        let d = &mut fp.dmg.x18d8;
+        let d = &mut fp.dmg.hit_records;
         *d = rec;
-        d.x4 = fp::fctiwz(reg(fp.dmg.x1830_percent));
+        d.x4 = fp::fctiwz(reg(fp.dmg.percent));
         // The copy is the record's whole 0x14 bytes, its padding too.
         let pad = self.attack_record_pad(record);
         let f = self.game.fighter_id(victim);
         self.game.ft.hit_record_pad.insert(f.0, pad);
         let fp = self.game.fighter_mut(victim);
-        fp.dmg.x18d8.x11_b0 = behind;
+        fp.dmg.hit_records.x11_b0 = behind;
         if edge != 0 {
-            fp.dmg.x18d8.x11_b1 = true;
+            fp.dmg.hit_records.x11_b1 = true;
         }
         if fp.motion_id == MS_X11_B2 {
-            fp.dmg.x18d8.x11_b2 = true;
+            fp.dmg.hit_records.x11_b2 = true;
         }
-        if fp.dmg.x18c4_source_ply != prev_source && fp.dmg.x18d8.x10_b0 && prev_kb >= strong {
-            fp.dmg.x18d8.x11_b3 = true;
+        if fp.dmg.source_player != prev_source && fp.dmg.hit_records.x10_b0 && prev_kb >= strong {
+            fp.dmg.hit_records.x11_b3 = true;
         }
         if let Some(a) = attacker {
-            let msid = i32::from(fp.dmg.x18d4[3]);
+            let msid = i32::from(fp.dmg.attack_record[3]);
             let grabbed_by = fp.victim_gobj;
             if self.forward_attack(a, msid) && grabbed_by != Some(a) {
-                self.game.fighter_mut(victim).dmg.x18d8.x11_b4 = true;
+                self.game.fighter_mut(victim).dmg.hit_records.x11_b4 = true;
             }
             self.mark_record_landed(record);
         }

@@ -137,7 +137,7 @@ pub(crate) fn fighters(g: &Game) -> [Option<Fighter>; 8] {
             x: fp.cur_pos.x.to_bits(),
             y: fp.cur_pos.y.to_bits(),
             facing: fp.facing_dir.to_bits(),
-            percent: fp.dmg.x1830_percent.to_bits(),
+            percent: fp.dmg.percent.to_bits(),
             stocks: g.player_stocks(slot) as u8,
         });
     }

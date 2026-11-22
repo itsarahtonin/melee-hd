@@ -107,13 +107,13 @@ impl Running<'_> {
     #[doc(alias = "ftDrawCommon_8008051C")]
     fn shake_view(&self, f: FighterId) -> Option<Mtx34> {
         let d = &self.game.fighters[f.0].dmg;
-        if d.x18B8 == 0.0 && d.x18BC == 0.0 {
+        if d.shake_x == 0.0 && d.shake_y == 0.0 {
             return None;
         }
         let c = self.game.objs.cobjs.current.expect("a current camera");
         let mut t = Mtx34::IDENTITY;
-        t.m[0][3] = mem(fp::fadds(reg(d.x18B8), 0.0));
-        t.m[1][3] = mem(fp::fadds(reg(d.x18BC), 0.0));
+        t.m[0][3] = mem(fp::fadds(reg(d.shake_x), 0.0));
+        t.m[1][3] = mem(fp::fadds(reg(d.shake_y), 0.0));
         t.m[2][3] = mem(fp::fadds(0.0, 0.0));
         Some(self.game.objs.cobjs[c].view_mtx.concat(&t))
     }
@@ -350,7 +350,11 @@ impl Running<'_> {
         let objs = &mut game.objs;
         if flags & 0x08 != 0
             && fp.stepped_on_item
-            && coll_draw::damage(objs, [fp.dmg.x1930.x0, fp.dmg.x1930.xC], pass)
+            && coll_draw::damage(
+                objs,
+                [fp.dmg.item_pickup_bounds.x0, fp.dmg.item_pickup_bounds.xC],
+                pass,
+            )
         {
             drew = true;
         }

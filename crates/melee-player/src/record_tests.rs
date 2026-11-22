@@ -1447,7 +1447,7 @@ fn gameplay(g: &melee_sim::game::state::Game) -> (u32, Vec<(u32, u32, i32, u32)>
                 f.cur_pos.x.to_bits(),
                 f.cur_pos.y.to_bits(),
                 f.motion_id,
-                f.dmg.x1830_percent.to_bits(),
+                f.dmg.percent.to_bits(),
             )
         })
         .collect();

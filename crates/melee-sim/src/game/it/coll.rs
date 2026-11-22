@@ -406,7 +406,7 @@ fn fighter_hits_item(r: &mut Running, fg: GObjId, hi: usize, me: GObjId) {
     let hit = &r.game.fighters[f.0].hitboxes[hi];
     let dmg = fp::fctiwz(reg(hit.damage));
     let (sfx_kind, sfx_severity) = (hit.sfx_kind, hit.sfx_severity);
-    r.game.fighters[f.0].dmg.x1914 = dmg;
+    r.game.fighters[f.0].dmg.item_hit_damage = dmg;
     let v = item_mut(r.game, me);
     v.hit_damage = v.hit_damage.wrapping_add(dmg);
     if dmg > v.max_hit_damage {

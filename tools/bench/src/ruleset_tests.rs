@@ -146,8 +146,8 @@ fn digest(g: &Game) -> Digest {
                     f.motion_id,
                     f.cur_pos.x.to_bits(),
                     f.cur_pos.y.to_bits(),
-                    f.dmg.x1830_percent.to_bits(),
-                    f.dmg.x1910,
+                    f.dmg.percent.to_bits(),
+                    f.dmg.dot_frames,
                     g.player_stocks(i32::from(f.player_idx)),
                 )
             })
@@ -276,7 +276,7 @@ fn slippi_off_screen_damage_ignores_the_display_pass() {
             }
         },
         // A tick a fighter counts off screen by the stage's limits.
-        &|g| g.fighters.iter().any(|(_, f)| f.dmg.x1910 > 0),
+        &|g| g.fighters.iter().any(|(_, f)| f.dmg.dot_frames > 0),
     );
 }
 

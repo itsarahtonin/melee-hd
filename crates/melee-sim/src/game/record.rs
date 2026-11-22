@@ -537,7 +537,7 @@ impl Recorder {
             .get(q as usize)
             .map_or(Default::default(), |d| d[slot & 3]);
         w.u8(raw.stick_x as u8);
-        w.f32(fp.dmg.x1830_percent);
+        w.f32(fp.dmg.percent);
         w.u8(raw.stick_y as u8);
         w.u8(raw.substick_x as u8);
         w.u8(raw.substick_y as u8);
@@ -562,11 +562,11 @@ impl Recorder {
         w.f32(fp.cur_pos.x);
         w.f32(fp.cur_pos.y);
         w.f32(fp.facing_dir);
-        w.f32(fp.dmg.x1830_percent);
+        w.f32(fp.dmg.percent);
         w.f32(fp.shield_health);
         w.u8(fp.combo_attack_id as u8);
         w.u8(fp.combo_count as u8);
-        w.u8(fp.dmg.x18c4_source_ply as u8);
+        w.u8(fp.dmg.source_player as u8);
         w.u8(g.player_stocks(i32::from(fp.player_idx)) as u8);
         w.f32(fp.cur_anim_frame);
         for b in flag_bytes(fp) {
@@ -588,9 +588,9 @@ impl Recorder {
         w.f32(fp.kb_vel.x);
         w.f32(fp.kb_vel.y);
         w.f32(fp.gr_vel);
-        w.f32(fp.dmg.x195c_hitlag_frames);
+        w.f32(fp.dmg.hitlag_frames);
         w.u32(fp.anim_id as u32);
-        w.u16(fp.dmg.x18ec_instancehitby);
+        w.u16(fp.dmg.instance_hit_by);
         w.u16(fp.attack_record.x2088);
         self.frame_buf = w.0;
         self.last_frame = Some(self.frame);

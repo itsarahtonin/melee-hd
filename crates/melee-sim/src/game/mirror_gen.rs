@@ -2463,117 +2463,117 @@ impl Mirror for dmg {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let _ = (&m, at, &cx);
         dmg {
-            x182c_behavior: f32::from_bits(m.u32(at + 0x0)),
-            x1830_percent: f32::from_bits(m.u32(at + 0x4)),
-            x1834: f32::from_bits(m.u32(at + 0x8)),
-            x1838_percentTemp: f32::from_bits(m.u32(at + 0xc)),
-            x183C_applied: m.u32(at + 0x10) as i32,
-            x1840: m.u32(at + 0x14) as i32,
+            damage_scale: f32::from_bits(m.u32(at + 0x0)),
+            percent: f32::from_bits(m.u32(at + 0x4)),
+            armor_hp: f32::from_bits(m.u32(at + 0x8)),
+            pending_damage: f32::from_bits(m.u32(at + 0xc)),
+            damage_applied: m.u32(at + 0x10) as i32,
+            max_tip_damage: m.u32(at + 0x14) as i32,
             facing_dir_1: f32::from_bits(m.u32(at + 0x18)),
-            x1848_kb_angle: m.u32(at + 0x1c) as i32,
-            x184c_damaged_hurtbox: m.u32(at + 0x20) as i32,
+            kb_angle: m.u32(at + 0x1c) as i32,
+            damaged_hurtbox: m.u32(at + 0x20) as i32,
             kb_applied: f32::from_bits(m.u32(at + 0x24)),
-            x1854_collpos: Vec3::import(m, at + 0x28, cx),
-            x1860_element: m.u32(at + 0x34),
-            x1864: m.u32(at + 0x38) as i32,
-            x1868_source: cx.import_handle("GObjId", m.u32(at + 0x3c)).map(GObjId),
-            x186c: m.u32(at + 0x40) as i32,
-            x1870: RawPtr(m.u32(at + 0x44)),
-            x1874: m.u32(at + 0x48) as i32,
-            x1878: m.u32(at + 0x4c) as i32,
-            x187c: f32::from_bits(m.u32(at + 0x50)),
-            x1880: Vec3::import(m, at + 0x54, cx),
-            x188c: m.u32(at + 0x60) as i32,
-            x1890: m.u32(at + 0x64) as i32,
-            x1894: cx.import_handle("GObjId", m.u32(at + 0x68)).map(GObjId),
-            x1898: f32::from_bits(m.u32(at + 0x6c)),
-            x189C_unk_num_frames: f32::from_bits(m.u32(at + 0x70)),
-            x18a0: f32::from_bits(m.u32(at + 0x74)),
-            x18A4_knockbackMagnitude: f32::from_bits(m.u32(at + 0x78)),
-            x18A8: f32::from_bits(m.u32(at + 0x7c)),
-            x18ac_time_since_hit: m.u32(at + 0x80) as i32,
+            coll_pos: Vec3::import(m, at + 0x28, cx),
+            element: m.u32(at + 0x34),
+            unread_1864: m.u32(at + 0x38) as i32,
+            source: cx.import_handle("GObjId", m.u32(at + 0x3c)).map(GObjId),
+            unread_186c: m.u32(at + 0x40) as i32,
+            unread_1870: RawPtr(m.u32(at + 0x44)),
+            unread_1874: m.u32(at + 0x48) as i32,
+            unread_1878: m.u32(at + 0x4c) as i32,
+            tip_kb: f32::from_bits(m.u32(at + 0x50)),
+            tip_pos: Vec3::import(m, at + 0x54, cx),
+            tip_element: m.u32(at + 0x60) as i32,
+            tip_severity: m.u32(at + 0x64) as i32,
+            tip_source: cx.import_handle("GObjId", m.u32(at + 0x68)).map(GObjId),
+            tip_damage: f32::from_bits(m.u32(at + 0x6c)),
+            hit_frames: f32::from_bits(m.u32(at + 0x70)),
+            tip_kb_applied: f32::from_bits(m.u32(at + 0x74)),
+            kb_magnitude: f32::from_bits(m.u32(at + 0x78)),
+            hit_kb: f32::from_bits(m.u32(at + 0x7c)),
+            time_since_hit: m.u32(at + 0x80) as i32,
             armor0: f32::from_bits(m.u32(at + 0x84)),
             armor1: f32::from_bits(m.u32(at + 0x88)),
-            x18B8: f32::from_bits(m.u32(at + 0x8c)),
-            x18BC: f32::from_bits(m.u32(at + 0x90)),
-            x18C0: m.u32(at + 0x94) as i32,
-            x18c4_source_ply: m.u32(at + 0x98) as i32,
-            x18C8: m.u32(at + 0x9c) as i32,
-            x18CC: m.u32(at + 0xa0) as i32,
-            x18D0: m.u32(at + 0xa4) as i32,
-            x18d4: m.bytes(at + 0xa8),
-            x18d8: ft_800898B4_t::import(m, at + 0xac, cx),
-            x18ec_instancehitby: m.u16(at + 0xc0),
-            x18F0: m.u32(at + 0xc4) as i32,
-            x18F4: m.u32(at + 0xc8) as i32,
-            x18F8: m.u8(at + 0xcc),
-            x18f9: m.u8(at + 0xcd),
-            x18fa_model_shift_frames: m.u16(at + 0xce),
-            x18FC: m.u8(at + 0xd0),
-            x18FD: m.u8(at + 0xd1),
-            x1900: f32::from_bits(m.u32(at + 0xd4)),
-            x1904: f32::from_bits(m.u32(at + 0xd8)),
-            x1908: m.u32(at + 0xdc) as i32,
-            x190C: cx.import_data(m.u32(at + 0xe0)),
-            x1910: m.u32(at + 0xe4) as i32,
-            x1914: m.u32(at + 0xe8) as i32,
+            shake_x: f32::from_bits(m.u32(at + 0x8c)),
+            shake_y: f32::from_bits(m.u32(at + 0x90)),
+            source_spawn: m.u32(at + 0x94) as i32,
+            source_player: m.u32(at + 0x98) as i32,
+            source_attack: m.u32(at + 0x9c) as i32,
+            source_class: m.u32(at + 0xa0) as i32,
+            source_kind: m.u32(at + 0xa4) as i32,
+            attack_record: m.bytes(at + 0xa8),
+            hit_records: ft_800898B4_t::import(m, at + 0xac, cx),
+            instance_hit_by: m.u16(at + 0xc0),
+            healing: m.u32(at + 0xc4) as i32,
+            cape_turn_frames: m.u32(at + 0xc8) as i32,
+            shake_kind: m.u8(at + 0xcc),
+            unused_18f9: m.u8(at + 0xcd),
+            model_shift_frames: m.u16(at + 0xce),
+            shake_step: m.u8(at + 0xd0),
+            shake_len: m.u8(at + 0xd1),
+            shake_normal_x: f32::from_bits(m.u32(at + 0xd4)),
+            shake_normal_y: f32::from_bits(m.u32(at + 0xd8)),
+            queued_sfx: m.u32(at + 0xdc) as i32,
+            queued_sfx_table: cx.import_data(m.u32(at + 0xe0)),
+            dot_frames: m.u32(at + 0xe4) as i32,
+            item_hit_damage: m.u32(at + 0xe8) as i32,
             int_value: m.u32(at + 0xec) as i32,
-            x191C: f32::from_bits(m.u32(at + 0xf0)),
+            clank_damage: f32::from_bits(m.u32(at + 0xf0)),
             facing_dir: f32::from_bits(m.u32(at + 0xf4)),
-            x1924: m.u32(at + 0xf8) as i32,
-            x1928: f32::from_bits(m.u32(at + 0xfc)),
-            x192c: f32::from_bits(m.u32(at + 0x100)),
-            x1930: lb_80014638_arg0_t::import(m, at + 0x104, cx),
-            x1948: m.u32(at + 0x11c) as i32,
-            x194C: m.u32(at + 0x120) as i32,
-            x1950: m.u32(at + 0x124) as i32,
-            x1954: f32::from_bits(m.u32(at + 0x128)),
-            x1958: f32::from_bits(m.u32(at + 0x12c)),
-            x195c_hitlag_frames: f32::from_bits(m.u32(at + 0x130)),
+            max_shield_damage: m.u32(at + 0xf8) as i32,
+            shield_push: f32::from_bits(m.u32(at + 0xfc)),
+            shield_push_dir: f32::from_bits(m.u32(at + 0x100)),
+            item_pickup_bounds: lb_80014638_arg0_t::import(m, at + 0x104, cx),
+            bounce_frames: m.u32(at + 0x11c) as i32,
+            bounce_frames_left: m.u32(at + 0x120) as i32,
+            stepped_on_item: m.u32(at + 0x124) as i32,
+            hold_frames: f32::from_bits(m.u32(at + 0x128)),
+            pending_hitlag_frames: f32::from_bits(m.u32(at + 0x12c)),
+            hitlag_frames: f32::from_bits(m.u32(at + 0x130)),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let _ = (&m, at, path, &cx);
-        if self.x182c_behavior.to_bits() != m.u32(at + 0x0) {
+        if self.damage_scale.to_bits() != m.u32(at + 0x0) {
             cx.mismatch(
-                &format!("{path}.x182c_behavior"),
-                format!("{:?}", self.x182c_behavior),
+                &format!("{path}.damage_scale (x182c_behavior)"),
+                format!("{:?}", self.damage_scale),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x0))),
             );
         }
-        if self.x1830_percent.to_bits() != m.u32(at + 0x4) {
+        if self.percent.to_bits() != m.u32(at + 0x4) {
             cx.mismatch(
-                &format!("{path}.x1830_percent"),
-                format!("{:?}", self.x1830_percent),
+                &format!("{path}.percent (x1830_percent)"),
+                format!("{:?}", self.percent),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x4))),
             );
         }
-        if self.x1834.to_bits() != m.u32(at + 0x8) {
+        if self.armor_hp.to_bits() != m.u32(at + 0x8) {
             cx.mismatch(
-                &format!("{path}.x1834"),
-                format!("{:?}", self.x1834),
+                &format!("{path}.armor_hp (x1834)"),
+                format!("{:?}", self.armor_hp),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x8))),
             );
         }
-        if self.x1838_percentTemp.to_bits() != m.u32(at + 0xc) {
+        if self.pending_damage.to_bits() != m.u32(at + 0xc) {
             cx.mismatch(
-                &format!("{path}.x1838_percentTemp"),
-                format!("{:?}", self.x1838_percentTemp),
+                &format!("{path}.pending_damage (x1838_percentTemp)"),
+                format!("{:?}", self.pending_damage),
                 format!("{:?}", f32::from_bits(m.u32(at + 0xc))),
             );
         }
-        if self.x183C_applied != m.u32(at + 0x10) as i32 {
+        if self.damage_applied != m.u32(at + 0x10) as i32 {
             cx.mismatch(
-                &format!("{path}.x183C_applied"),
-                format!("{:?}", self.x183C_applied),
+                &format!("{path}.damage_applied (x183C_applied)"),
+                format!("{:?}", self.damage_applied),
                 format!("{:?}", m.u32(at + 0x10) as i32),
             );
         }
-        if self.x1840 != m.u32(at + 0x14) as i32 {
+        if self.max_tip_damage != m.u32(at + 0x14) as i32 {
             cx.mismatch(
-                &format!("{path}.x1840"),
-                format!("{:?}", self.x1840),
+                &format!("{path}.max_tip_damage (x1840)"),
+                format!("{:?}", self.max_tip_damage),
                 format!("{:?}", m.u32(at + 0x14) as i32),
             );
         }
@@ -2584,17 +2584,17 @@ impl Mirror for dmg {
                 format!("{:?}", f32::from_bits(m.u32(at + 0x18))),
             );
         }
-        if self.x1848_kb_angle != m.u32(at + 0x1c) as i32 {
+        if self.kb_angle != m.u32(at + 0x1c) as i32 {
             cx.mismatch(
-                &format!("{path}.x1848_kb_angle"),
-                format!("{:?}", self.x1848_kb_angle),
+                &format!("{path}.kb_angle (x1848_kb_angle)"),
+                format!("{:?}", self.kb_angle),
                 format!("{:?}", m.u32(at + 0x1c) as i32),
             );
         }
-        if self.x184c_damaged_hurtbox != m.u32(at + 0x20) as i32 {
+        if self.damaged_hurtbox != m.u32(at + 0x20) as i32 {
             cx.mismatch(
-                &format!("{path}.x184c_damaged_hurtbox"),
-                format!("{:?}", self.x184c_damaged_hurtbox),
+                &format!("{path}.damaged_hurtbox (x184c_damaged_hurtbox)"),
+                format!("{:?}", self.damaged_hurtbox),
                 format!("{:?}", m.u32(at + 0x20) as i32),
             );
         }
@@ -2605,124 +2605,128 @@ impl Mirror for dmg {
                 format!("{:?}", f32::from_bits(m.u32(at + 0x24))),
             );
         }
-        self.x1854_collpos
-            .compare(m, at + 0x28, &format!("{path}.x1854_collpos"), cx);
-        if self.x1860_element != m.u32(at + 0x34) {
+        self.coll_pos.compare(
+            m,
+            at + 0x28,
+            &format!("{path}.coll_pos (x1854_collpos)"),
+            cx,
+        );
+        if self.element != m.u32(at + 0x34) {
             cx.mismatch(
-                &format!("{path}.x1860_element"),
-                format!("{:?}", self.x1860_element),
+                &format!("{path}.element (x1860_element)"),
+                format!("{:?}", self.element),
                 format!("{:?}", m.u32(at + 0x34)),
             );
         }
-        if self.x1864 != m.u32(at + 0x38) as i32 {
+        if self.unread_1864 != m.u32(at + 0x38) as i32 {
             cx.mismatch(
-                &format!("{path}.x1864"),
-                format!("{:?}", self.x1864),
+                &format!("{path}.unread_1864 (x1864)"),
+                format!("{:?}", self.unread_1864),
                 format!("{:?}", m.u32(at + 0x38) as i32),
             );
         }
         cx.compare_handle(
-            &format!("{path}.x1868_source"),
+            &format!("{path}.source (x1868_source)"),
             "GObjId",
-            self.x1868_source.map(|h| h.0),
+            self.source.map(|h| h.0),
             m.u32(at + 0x3c),
         );
-        if self.x186c != m.u32(at + 0x40) as i32 {
+        if self.unread_186c != m.u32(at + 0x40) as i32 {
             cx.mismatch(
-                &format!("{path}.x186c"),
-                format!("{:?}", self.x186c),
+                &format!("{path}.unread_186c (x186c)"),
+                format!("{:?}", self.unread_186c),
                 format!("{:?}", m.u32(at + 0x40) as i32),
             );
         }
-        if self.x1870.0 != m.u32(at + 0x44) {
+        if self.unread_1870.0 != m.u32(at + 0x44) {
             cx.mismatch(
-                &format!("{path}.x1870"),
-                format!("{:#x}", self.x1870.0),
+                &format!("{path}.unread_1870 (x1870)"),
+                format!("{:#x}", self.unread_1870.0),
                 format!("{:#x}", m.u32(at + 0x44)),
             );
         }
-        if self.x1874 != m.u32(at + 0x48) as i32 {
+        if self.unread_1874 != m.u32(at + 0x48) as i32 {
             cx.mismatch(
-                &format!("{path}.x1874"),
-                format!("{:?}", self.x1874),
+                &format!("{path}.unread_1874 (x1874)"),
+                format!("{:?}", self.unread_1874),
                 format!("{:?}", m.u32(at + 0x48) as i32),
             );
         }
-        if self.x1878 != m.u32(at + 0x4c) as i32 {
+        if self.unread_1878 != m.u32(at + 0x4c) as i32 {
             cx.mismatch(
-                &format!("{path}.x1878"),
-                format!("{:?}", self.x1878),
+                &format!("{path}.unread_1878 (x1878)"),
+                format!("{:?}", self.unread_1878),
                 format!("{:?}", m.u32(at + 0x4c) as i32),
             );
         }
-        if self.x187c.to_bits() != m.u32(at + 0x50) {
+        if self.tip_kb.to_bits() != m.u32(at + 0x50) {
             cx.mismatch(
-                &format!("{path}.x187c"),
-                format!("{:?}", self.x187c),
+                &format!("{path}.tip_kb (x187c)"),
+                format!("{:?}", self.tip_kb),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x50))),
             );
         }
-        self.x1880
-            .compare(m, at + 0x54, &format!("{path}.x1880"), cx);
-        if self.x188c != m.u32(at + 0x60) as i32 {
+        self.tip_pos
+            .compare(m, at + 0x54, &format!("{path}.tip_pos (x1880)"), cx);
+        if self.tip_element != m.u32(at + 0x60) as i32 {
             cx.mismatch(
-                &format!("{path}.x188c"),
-                format!("{:?}", self.x188c),
+                &format!("{path}.tip_element (x188c)"),
+                format!("{:?}", self.tip_element),
                 format!("{:?}", m.u32(at + 0x60) as i32),
             );
         }
-        if self.x1890 != m.u32(at + 0x64) as i32 {
+        if self.tip_severity != m.u32(at + 0x64) as i32 {
             cx.mismatch(
-                &format!("{path}.x1890"),
-                format!("{:?}", self.x1890),
+                &format!("{path}.tip_severity (x1890)"),
+                format!("{:?}", self.tip_severity),
                 format!("{:?}", m.u32(at + 0x64) as i32),
             );
         }
         cx.compare_handle(
-            &format!("{path}.x1894"),
+            &format!("{path}.tip_source (x1894)"),
             "GObjId",
-            self.x1894.map(|h| h.0),
+            self.tip_source.map(|h| h.0),
             m.u32(at + 0x68),
         );
-        if self.x1898.to_bits() != m.u32(at + 0x6c) {
+        if self.tip_damage.to_bits() != m.u32(at + 0x6c) {
             cx.mismatch(
-                &format!("{path}.x1898"),
-                format!("{:?}", self.x1898),
+                &format!("{path}.tip_damage (x1898)"),
+                format!("{:?}", self.tip_damage),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x6c))),
             );
         }
-        if self.x189C_unk_num_frames.to_bits() != m.u32(at + 0x70) {
+        if self.hit_frames.to_bits() != m.u32(at + 0x70) {
             cx.mismatch(
-                &format!("{path}.x189C_unk_num_frames"),
-                format!("{:?}", self.x189C_unk_num_frames),
+                &format!("{path}.hit_frames (x189C_unk_num_frames)"),
+                format!("{:?}", self.hit_frames),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x70))),
             );
         }
-        if self.x18a0.to_bits() != m.u32(at + 0x74) {
+        if self.tip_kb_applied.to_bits() != m.u32(at + 0x74) {
             cx.mismatch(
-                &format!("{path}.x18a0"),
-                format!("{:?}", self.x18a0),
+                &format!("{path}.tip_kb_applied (x18a0)"),
+                format!("{:?}", self.tip_kb_applied),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x74))),
             );
         }
-        if self.x18A4_knockbackMagnitude.to_bits() != m.u32(at + 0x78) {
+        if self.kb_magnitude.to_bits() != m.u32(at + 0x78) {
             cx.mismatch(
-                &format!("{path}.x18A4_knockbackMagnitude"),
-                format!("{:?}", self.x18A4_knockbackMagnitude),
+                &format!("{path}.kb_magnitude (x18A4_knockbackMagnitude)"),
+                format!("{:?}", self.kb_magnitude),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x78))),
             );
         }
-        if self.x18A8.to_bits() != m.u32(at + 0x7c) {
+        if self.hit_kb.to_bits() != m.u32(at + 0x7c) {
             cx.mismatch(
-                &format!("{path}.x18A8"),
-                format!("{:?}", self.x18A8),
+                &format!("{path}.hit_kb (x18A8)"),
+                format!("{:?}", self.hit_kb),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x7c))),
             );
         }
-        if self.x18ac_time_since_hit != m.u32(at + 0x80) as i32 {
+        if self.time_since_hit != m.u32(at + 0x80) as i32 {
             cx.mismatch(
-                &format!("{path}.x18ac_time_since_hit"),
-                format!("{:?}", self.x18ac_time_since_hit),
+                &format!("{path}.time_since_hit (x18ac_time_since_hit)"),
+                format!("{:?}", self.time_since_hit),
                 format!("{:?}", m.u32(at + 0x80) as i32),
             );
         }
@@ -2740,153 +2744,157 @@ impl Mirror for dmg {
                 format!("{:?}", f32::from_bits(m.u32(at + 0x88))),
             );
         }
-        if self.x18B8.to_bits() != m.u32(at + 0x8c) {
+        if self.shake_x.to_bits() != m.u32(at + 0x8c) {
             cx.mismatch(
-                &format!("{path}.x18B8"),
-                format!("{:?}", self.x18B8),
+                &format!("{path}.shake_x (x18B8)"),
+                format!("{:?}", self.shake_x),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x8c))),
             );
         }
-        if self.x18BC.to_bits() != m.u32(at + 0x90) {
+        if self.shake_y.to_bits() != m.u32(at + 0x90) {
             cx.mismatch(
-                &format!("{path}.x18BC"),
-                format!("{:?}", self.x18BC),
+                &format!("{path}.shake_y (x18BC)"),
+                format!("{:?}", self.shake_y),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x90))),
             );
         }
-        if self.x18C0 != m.u32(at + 0x94) as i32 {
+        if self.source_spawn != m.u32(at + 0x94) as i32 {
             cx.mismatch(
-                &format!("{path}.x18C0"),
-                format!("{:?}", self.x18C0),
+                &format!("{path}.source_spawn (x18C0)"),
+                format!("{:?}", self.source_spawn),
                 format!("{:?}", m.u32(at + 0x94) as i32),
             );
         }
-        if self.x18c4_source_ply != m.u32(at + 0x98) as i32 {
+        if self.source_player != m.u32(at + 0x98) as i32 {
             cx.mismatch(
-                &format!("{path}.x18c4_source_ply"),
-                format!("{:?}", self.x18c4_source_ply),
+                &format!("{path}.source_player (x18c4_source_ply)"),
+                format!("{:?}", self.source_player),
                 format!("{:?}", m.u32(at + 0x98) as i32),
             );
         }
-        if self.x18C8 != m.u32(at + 0x9c) as i32 {
+        if self.source_attack != m.u32(at + 0x9c) as i32 {
             cx.mismatch(
-                &format!("{path}.x18C8"),
-                format!("{:?}", self.x18C8),
+                &format!("{path}.source_attack (x18C8)"),
+                format!("{:?}", self.source_attack),
                 format!("{:?}", m.u32(at + 0x9c) as i32),
             );
         }
-        if self.x18CC != m.u32(at + 0xa0) as i32 {
+        if self.source_class != m.u32(at + 0xa0) as i32 {
             cx.mismatch(
-                &format!("{path}.x18CC"),
-                format!("{:?}", self.x18CC),
+                &format!("{path}.source_class (x18CC)"),
+                format!("{:?}", self.source_class),
                 format!("{:?}", m.u32(at + 0xa0) as i32),
             );
         }
-        if self.x18D0 != m.u32(at + 0xa4) as i32 {
+        if self.source_kind != m.u32(at + 0xa4) as i32 {
             cx.mismatch(
-                &format!("{path}.x18D0"),
-                format!("{:?}", self.x18D0),
+                &format!("{path}.source_kind (x18D0)"),
+                format!("{:?}", self.source_kind),
                 format!("{:?}", m.u32(at + 0xa4) as i32),
             );
         }
-        if self.x18d4 != m.bytes::<4>(at + 0xa8) {
+        if self.attack_record != m.bytes::<4>(at + 0xa8) {
             cx.mismatch(
-                &format!("{path}.x18d4"),
-                format!("{:02x?}", self.x18d4),
+                &format!("{path}.attack_record (x18d4)"),
+                format!("{:02x?}", self.attack_record),
                 format!("{:02x?}", m.bytes::<4>(at + 0xa8)),
             );
         }
-        self.x18d8
-            .compare(m, at + 0xac, &format!("{path}.x18d8"), cx);
-        if self.x18ec_instancehitby != m.u16(at + 0xc0) {
+        self.hit_records
+            .compare(m, at + 0xac, &format!("{path}.hit_records (x18d8)"), cx);
+        if self.instance_hit_by != m.u16(at + 0xc0) {
             cx.mismatch(
-                &format!("{path}.x18ec_instancehitby"),
-                format!("{:?}", self.x18ec_instancehitby),
+                &format!("{path}.instance_hit_by (x18ec_instancehitby)"),
+                format!("{:?}", self.instance_hit_by),
                 format!("{:?}", m.u16(at + 0xc0)),
             );
         }
-        if self.x18F0 != m.u32(at + 0xc4) as i32 {
+        if self.healing != m.u32(at + 0xc4) as i32 {
             cx.mismatch(
-                &format!("{path}.x18F0"),
-                format!("{:?}", self.x18F0),
+                &format!("{path}.healing (x18F0)"),
+                format!("{:?}", self.healing),
                 format!("{:?}", m.u32(at + 0xc4) as i32),
             );
         }
-        if self.x18F4 != m.u32(at + 0xc8) as i32 {
+        if self.cape_turn_frames != m.u32(at + 0xc8) as i32 {
             cx.mismatch(
-                &format!("{path}.x18F4"),
-                format!("{:?}", self.x18F4),
+                &format!("{path}.cape_turn_frames (x18F4)"),
+                format!("{:?}", self.cape_turn_frames),
                 format!("{:?}", m.u32(at + 0xc8) as i32),
             );
         }
-        if self.x18F8 != m.u8(at + 0xcc) {
+        if self.shake_kind != m.u8(at + 0xcc) {
             cx.mismatch(
-                &format!("{path}.x18F8"),
-                format!("{:?}", self.x18F8),
+                &format!("{path}.shake_kind (x18F8)"),
+                format!("{:?}", self.shake_kind),
                 format!("{:?}", m.u8(at + 0xcc)),
             );
         }
-        if self.x18f9 != m.u8(at + 0xcd) {
+        if self.unused_18f9 != m.u8(at + 0xcd) {
             cx.mismatch(
-                &format!("{path}.x18f9"),
-                format!("{:?}", self.x18f9),
+                &format!("{path}.unused_18f9 (x18f9)"),
+                format!("{:?}", self.unused_18f9),
                 format!("{:?}", m.u8(at + 0xcd)),
             );
         }
-        if self.x18fa_model_shift_frames != m.u16(at + 0xce) {
+        if self.model_shift_frames != m.u16(at + 0xce) {
             cx.mismatch(
-                &format!("{path}.x18fa_model_shift_frames"),
-                format!("{:?}", self.x18fa_model_shift_frames),
+                &format!("{path}.model_shift_frames (x18fa_model_shift_frames)"),
+                format!("{:?}", self.model_shift_frames),
                 format!("{:?}", m.u16(at + 0xce)),
             );
         }
-        if self.x18FC != m.u8(at + 0xd0) {
+        if self.shake_step != m.u8(at + 0xd0) {
             cx.mismatch(
-                &format!("{path}.x18FC"),
-                format!("{:?}", self.x18FC),
+                &format!("{path}.shake_step (x18FC)"),
+                format!("{:?}", self.shake_step),
                 format!("{:?}", m.u8(at + 0xd0)),
             );
         }
-        if self.x18FD != m.u8(at + 0xd1) {
+        if self.shake_len != m.u8(at + 0xd1) {
             cx.mismatch(
-                &format!("{path}.x18FD"),
-                format!("{:?}", self.x18FD),
+                &format!("{path}.shake_len (x18FD)"),
+                format!("{:?}", self.shake_len),
                 format!("{:?}", m.u8(at + 0xd1)),
             );
         }
-        if self.x1900.to_bits() != m.u32(at + 0xd4) {
+        if self.shake_normal_x.to_bits() != m.u32(at + 0xd4) {
             cx.mismatch(
-                &format!("{path}.x1900"),
-                format!("{:?}", self.x1900),
+                &format!("{path}.shake_normal_x (x1900)"),
+                format!("{:?}", self.shake_normal_x),
                 format!("{:?}", f32::from_bits(m.u32(at + 0xd4))),
             );
         }
-        if self.x1904.to_bits() != m.u32(at + 0xd8) {
+        if self.shake_normal_y.to_bits() != m.u32(at + 0xd8) {
             cx.mismatch(
-                &format!("{path}.x1904"),
-                format!("{:?}", self.x1904),
+                &format!("{path}.shake_normal_y (x1904)"),
+                format!("{:?}", self.shake_normal_y),
                 format!("{:?}", f32::from_bits(m.u32(at + 0xd8))),
             );
         }
-        if self.x1908 != m.u32(at + 0xdc) as i32 {
+        if self.queued_sfx != m.u32(at + 0xdc) as i32 {
             cx.mismatch(
-                &format!("{path}.x1908"),
-                format!("{:?}", self.x1908),
+                &format!("{path}.queued_sfx (x1908)"),
+                format!("{:?}", self.queued_sfx),
                 format!("{:?}", m.u32(at + 0xdc) as i32),
             );
         }
-        cx.compare_data(&format!("{path}.x190C"), self.x190C, m.u32(at + 0xe0));
-        if self.x1910 != m.u32(at + 0xe4) as i32 {
+        cx.compare_data(
+            &format!("{path}.queued_sfx_table (x190C)"),
+            self.queued_sfx_table,
+            m.u32(at + 0xe0),
+        );
+        if self.dot_frames != m.u32(at + 0xe4) as i32 {
             cx.mismatch(
-                &format!("{path}.x1910"),
-                format!("{:?}", self.x1910),
+                &format!("{path}.dot_frames (x1910)"),
+                format!("{:?}", self.dot_frames),
                 format!("{:?}", m.u32(at + 0xe4) as i32),
             );
         }
-        if self.x1914 != m.u32(at + 0xe8) as i32 {
+        if self.item_hit_damage != m.u32(at + 0xe8) as i32 {
             cx.mismatch(
-                &format!("{path}.x1914"),
-                format!("{:?}", self.x1914),
+                &format!("{path}.item_hit_damage (x1914)"),
+                format!("{:?}", self.item_hit_damage),
                 format!("{:?}", m.u32(at + 0xe8) as i32),
             );
         }
@@ -2897,10 +2905,10 @@ impl Mirror for dmg {
                 format!("{:?}", m.u32(at + 0xec) as i32),
             );
         }
-        if self.x191C.to_bits() != m.u32(at + 0xf0) {
+        if self.clank_damage.to_bits() != m.u32(at + 0xf0) {
             cx.mismatch(
-                &format!("{path}.x191C"),
-                format!("{:?}", self.x191C),
+                &format!("{path}.clank_damage (x191C)"),
+                format!("{:?}", self.clank_damage),
                 format!("{:?}", f32::from_bits(m.u32(at + 0xf0))),
             );
         }
@@ -2911,68 +2919,72 @@ impl Mirror for dmg {
                 format!("{:?}", f32::from_bits(m.u32(at + 0xf4))),
             );
         }
-        if self.x1924 != m.u32(at + 0xf8) as i32 {
+        if self.max_shield_damage != m.u32(at + 0xf8) as i32 {
             cx.mismatch(
-                &format!("{path}.x1924"),
-                format!("{:?}", self.x1924),
+                &format!("{path}.max_shield_damage (x1924)"),
+                format!("{:?}", self.max_shield_damage),
                 format!("{:?}", m.u32(at + 0xf8) as i32),
             );
         }
-        if self.x1928.to_bits() != m.u32(at + 0xfc) {
+        if self.shield_push.to_bits() != m.u32(at + 0xfc) {
             cx.mismatch(
-                &format!("{path}.x1928"),
-                format!("{:?}", self.x1928),
+                &format!("{path}.shield_push (x1928)"),
+                format!("{:?}", self.shield_push),
                 format!("{:?}", f32::from_bits(m.u32(at + 0xfc))),
             );
         }
-        if self.x192c.to_bits() != m.u32(at + 0x100) {
+        if self.shield_push_dir.to_bits() != m.u32(at + 0x100) {
             cx.mismatch(
-                &format!("{path}.x192c"),
-                format!("{:?}", self.x192c),
+                &format!("{path}.shield_push_dir (x192c)"),
+                format!("{:?}", self.shield_push_dir),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x100))),
             );
         }
-        self.x1930
-            .compare(m, at + 0x104, &format!("{path}.x1930"), cx);
-        if self.x1948 != m.u32(at + 0x11c) as i32 {
+        self.item_pickup_bounds.compare(
+            m,
+            at + 0x104,
+            &format!("{path}.item_pickup_bounds (x1930)"),
+            cx,
+        );
+        if self.bounce_frames != m.u32(at + 0x11c) as i32 {
             cx.mismatch(
-                &format!("{path}.x1948"),
-                format!("{:?}", self.x1948),
+                &format!("{path}.bounce_frames (x1948)"),
+                format!("{:?}", self.bounce_frames),
                 format!("{:?}", m.u32(at + 0x11c) as i32),
             );
         }
-        if self.x194C != m.u32(at + 0x120) as i32 {
+        if self.bounce_frames_left != m.u32(at + 0x120) as i32 {
             cx.mismatch(
-                &format!("{path}.x194C"),
-                format!("{:?}", self.x194C),
+                &format!("{path}.bounce_frames_left (x194C)"),
+                format!("{:?}", self.bounce_frames_left),
                 format!("{:?}", m.u32(at + 0x120) as i32),
             );
         }
-        if self.x1950 != m.u32(at + 0x124) as i32 {
+        if self.stepped_on_item != m.u32(at + 0x124) as i32 {
             cx.mismatch(
-                &format!("{path}.x1950"),
-                format!("{:?}", self.x1950),
+                &format!("{path}.stepped_on_item (x1950)"),
+                format!("{:?}", self.stepped_on_item),
                 format!("{:?}", m.u32(at + 0x124) as i32),
             );
         }
-        if self.x1954.to_bits() != m.u32(at + 0x128) {
+        if self.hold_frames.to_bits() != m.u32(at + 0x128) {
             cx.mismatch(
-                &format!("{path}.x1954"),
-                format!("{:?}", self.x1954),
+                &format!("{path}.hold_frames (x1954)"),
+                format!("{:?}", self.hold_frames),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x128))),
             );
         }
-        if self.x1958.to_bits() != m.u32(at + 0x12c) {
+        if self.pending_hitlag_frames.to_bits() != m.u32(at + 0x12c) {
             cx.mismatch(
-                &format!("{path}.x1958"),
-                format!("{:?}", self.x1958),
+                &format!("{path}.pending_hitlag_frames (x1958)"),
+                format!("{:?}", self.pending_hitlag_frames),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x12c))),
             );
         }
-        if self.x195c_hitlag_frames.to_bits() != m.u32(at + 0x130) {
+        if self.hitlag_frames.to_bits() != m.u32(at + 0x130) {
             cx.mismatch(
-                &format!("{path}.x195c_hitlag_frames"),
-                format!("{:?}", self.x195c_hitlag_frames),
+                &format!("{path}.hitlag_frames (x195c_hitlag_frames)"),
+                format!("{:?}", self.hitlag_frames),
                 format!("{:?}", f32::from_bits(m.u32(at + 0x130))),
             );
         }
@@ -27759,76 +27771,73 @@ impl LayOut for lb_80014638_arg0_t {
 impl LayOut for dmg {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         let _ = (&l, at, &cx);
-        l.put_u32(at + 0x0, self.x182c_behavior.to_bits());
-        l.put_u32(at + 0x4, self.x1830_percent.to_bits());
-        l.put_u32(at + 0x8, self.x1834.to_bits());
-        l.put_u32(at + 0xc, self.x1838_percentTemp.to_bits());
-        l.put_u32(at + 0x10, self.x183C_applied as u32);
-        l.put_u32(at + 0x14, self.x1840 as u32);
+        l.put_u32(at + 0x0, self.damage_scale.to_bits());
+        l.put_u32(at + 0x4, self.percent.to_bits());
+        l.put_u32(at + 0x8, self.armor_hp.to_bits());
+        l.put_u32(at + 0xc, self.pending_damage.to_bits());
+        l.put_u32(at + 0x10, self.damage_applied as u32);
+        l.put_u32(at + 0x14, self.max_tip_damage as u32);
         l.put_u32(at + 0x18, self.facing_dir_1.to_bits());
-        l.put_u32(at + 0x1c, self.x1848_kb_angle as u32);
-        l.put_u32(at + 0x20, self.x184c_damaged_hurtbox as u32);
+        l.put_u32(at + 0x1c, self.kb_angle as u32);
+        l.put_u32(at + 0x20, self.damaged_hurtbox as u32);
         l.put_u32(at + 0x24, self.kb_applied.to_bits());
-        self.x1854_collpos.lay(l, at + 0x28, cx);
-        l.put_u32(at + 0x34, self.x1860_element as u32);
-        l.put_u32(at + 0x38, self.x1864 as u32);
-        l.put_word(
-            at + 0x3c,
-            cx.handle("GObjId", self.x1868_source.map(|h| h.0)),
-        );
-        l.put_u32(at + 0x40, self.x186c as u32);
-        l.put_u32(at + 0x44, self.x1870.0);
-        l.put_u32(at + 0x48, self.x1874 as u32);
-        l.put_u32(at + 0x4c, self.x1878 as u32);
-        l.put_u32(at + 0x50, self.x187c.to_bits());
-        self.x1880.lay(l, at + 0x54, cx);
-        l.put_u32(at + 0x60, self.x188c as u32);
-        l.put_u32(at + 0x64, self.x1890 as u32);
-        l.put_word(at + 0x68, cx.handle("GObjId", self.x1894.map(|h| h.0)));
-        l.put_u32(at + 0x6c, self.x1898.to_bits());
-        l.put_u32(at + 0x70, self.x189C_unk_num_frames.to_bits());
-        l.put_u32(at + 0x74, self.x18a0.to_bits());
-        l.put_u32(at + 0x78, self.x18A4_knockbackMagnitude.to_bits());
-        l.put_u32(at + 0x7c, self.x18A8.to_bits());
-        l.put_u32(at + 0x80, self.x18ac_time_since_hit as u32);
+        self.coll_pos.lay(l, at + 0x28, cx);
+        l.put_u32(at + 0x34, self.element as u32);
+        l.put_u32(at + 0x38, self.unread_1864 as u32);
+        l.put_word(at + 0x3c, cx.handle("GObjId", self.source.map(|h| h.0)));
+        l.put_u32(at + 0x40, self.unread_186c as u32);
+        l.put_u32(at + 0x44, self.unread_1870.0);
+        l.put_u32(at + 0x48, self.unread_1874 as u32);
+        l.put_u32(at + 0x4c, self.unread_1878 as u32);
+        l.put_u32(at + 0x50, self.tip_kb.to_bits());
+        self.tip_pos.lay(l, at + 0x54, cx);
+        l.put_u32(at + 0x60, self.tip_element as u32);
+        l.put_u32(at + 0x64, self.tip_severity as u32);
+        l.put_word(at + 0x68, cx.handle("GObjId", self.tip_source.map(|h| h.0)));
+        l.put_u32(at + 0x6c, self.tip_damage.to_bits());
+        l.put_u32(at + 0x70, self.hit_frames.to_bits());
+        l.put_u32(at + 0x74, self.tip_kb_applied.to_bits());
+        l.put_u32(at + 0x78, self.kb_magnitude.to_bits());
+        l.put_u32(at + 0x7c, self.hit_kb.to_bits());
+        l.put_u32(at + 0x80, self.time_since_hit as u32);
         l.put_u32(at + 0x84, self.armor0.to_bits());
         l.put_u32(at + 0x88, self.armor1.to_bits());
-        l.put_u32(at + 0x8c, self.x18B8.to_bits());
-        l.put_u32(at + 0x90, self.x18BC.to_bits());
-        l.put_u32(at + 0x94, self.x18C0 as u32);
-        l.put_u32(at + 0x98, self.x18c4_source_ply as u32);
-        l.put_u32(at + 0x9c, self.x18C8 as u32);
-        l.put_u32(at + 0xa0, self.x18CC as u32);
-        l.put_u32(at + 0xa4, self.x18D0 as u32);
-        l.put_bytes(at + 0xa8, &self.x18d4);
-        self.x18d8.lay(l, at + 0xac, cx);
-        l.put_u16(at + 0xc0, self.x18ec_instancehitby as u16);
-        l.put_u32(at + 0xc4, self.x18F0 as u32);
-        l.put_u32(at + 0xc8, self.x18F4 as u32);
-        l.put_u8(at + 0xcc, self.x18F8 as u8);
-        l.put_u8(at + 0xcd, self.x18f9 as u8);
-        l.put_u16(at + 0xce, self.x18fa_model_shift_frames as u16);
-        l.put_u8(at + 0xd0, self.x18FC as u8);
-        l.put_u8(at + 0xd1, self.x18FD as u8);
-        l.put_u32(at + 0xd4, self.x1900.to_bits());
-        l.put_u32(at + 0xd8, self.x1904.to_bits());
-        l.put_u32(at + 0xdc, self.x1908 as u32);
-        l.put_word(at + 0xe0, cx.data(self.x190C));
-        l.put_u32(at + 0xe4, self.x1910 as u32);
-        l.put_u32(at + 0xe8, self.x1914 as u32);
+        l.put_u32(at + 0x8c, self.shake_x.to_bits());
+        l.put_u32(at + 0x90, self.shake_y.to_bits());
+        l.put_u32(at + 0x94, self.source_spawn as u32);
+        l.put_u32(at + 0x98, self.source_player as u32);
+        l.put_u32(at + 0x9c, self.source_attack as u32);
+        l.put_u32(at + 0xa0, self.source_class as u32);
+        l.put_u32(at + 0xa4, self.source_kind as u32);
+        l.put_bytes(at + 0xa8, &self.attack_record);
+        self.hit_records.lay(l, at + 0xac, cx);
+        l.put_u16(at + 0xc0, self.instance_hit_by as u16);
+        l.put_u32(at + 0xc4, self.healing as u32);
+        l.put_u32(at + 0xc8, self.cape_turn_frames as u32);
+        l.put_u8(at + 0xcc, self.shake_kind as u8);
+        l.put_u8(at + 0xcd, self.unused_18f9 as u8);
+        l.put_u16(at + 0xce, self.model_shift_frames as u16);
+        l.put_u8(at + 0xd0, self.shake_step as u8);
+        l.put_u8(at + 0xd1, self.shake_len as u8);
+        l.put_u32(at + 0xd4, self.shake_normal_x.to_bits());
+        l.put_u32(at + 0xd8, self.shake_normal_y.to_bits());
+        l.put_u32(at + 0xdc, self.queued_sfx as u32);
+        l.put_word(at + 0xe0, cx.data(self.queued_sfx_table));
+        l.put_u32(at + 0xe4, self.dot_frames as u32);
+        l.put_u32(at + 0xe8, self.item_hit_damage as u32);
         l.put_u32(at + 0xec, self.int_value as u32);
-        l.put_u32(at + 0xf0, self.x191C.to_bits());
+        l.put_u32(at + 0xf0, self.clank_damage.to_bits());
         l.put_u32(at + 0xf4, self.facing_dir.to_bits());
-        l.put_u32(at + 0xf8, self.x1924 as u32);
-        l.put_u32(at + 0xfc, self.x1928.to_bits());
-        l.put_u32(at + 0x100, self.x192c.to_bits());
-        self.x1930.lay(l, at + 0x104, cx);
-        l.put_u32(at + 0x11c, self.x1948 as u32);
-        l.put_u32(at + 0x120, self.x194C as u32);
-        l.put_u32(at + 0x124, self.x1950 as u32);
-        l.put_u32(at + 0x128, self.x1954.to_bits());
-        l.put_u32(at + 0x12c, self.x1958.to_bits());
-        l.put_u32(at + 0x130, self.x195c_hitlag_frames.to_bits());
+        l.put_u32(at + 0xf8, self.max_shield_damage as u32);
+        l.put_u32(at + 0xfc, self.shield_push.to_bits());
+        l.put_u32(at + 0x100, self.shield_push_dir.to_bits());
+        self.item_pickup_bounds.lay(l, at + 0x104, cx);
+        l.put_u32(at + 0x11c, self.bounce_frames as u32);
+        l.put_u32(at + 0x120, self.bounce_frames_left as u32);
+        l.put_u32(at + 0x124, self.stepped_on_item as u32);
+        l.put_u32(at + 0x128, self.hold_frames.to_bits());
+        l.put_u32(at + 0x12c, self.pending_hitlag_frames.to_bits());
+        l.put_u32(at + 0x130, self.hitlag_frames.to_bits());
     }
 }
 

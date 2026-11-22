@@ -15,7 +15,7 @@ impl Running<'_> {
         let fp = self.game.fighter(gobj);
         if !fp.stamina_dead
             && fp.is_stamina
-            && fp.dmg.x18F0 == 0
+            && fp.dmg.healing == 0
             && self
                 .game
                 .player_remaining_hp_at(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter))

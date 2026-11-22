@@ -500,7 +500,7 @@ impl Running<'_> {
         if dmg > fp.dmg.int_value {
             fp.dmg.int_value = dmg;
             if fp.hitboxes[i].rebounds && fp.ground_or_air == GA_GROUND {
-                fp.dmg.x191C = mem(fp::fmadds(fp::frsp(f64::from(dmg)), reg(mul), reg(add)));
+                fp.dmg.clank_damage = mem(fp::fmadds(fp::frsp(f64::from(dmg)), reg(mul), reg(add)));
                 // Toward the other (the original compares either way round, which agrees
                 // for NaN too).
                 let toward = reg(fp.cur_pos.x) < reg(other_x);
@@ -736,11 +736,11 @@ impl Running<'_> {
             (vf.gobj, vf.player_idx, vf.is_sub_fighter)
         };
         let vf = &mut self.game.fighters[v.0];
-        if dmg > vf.dmg.x1924 {
-            vf.dmg.x1924 = dmg;
+        if dmg > vf.dmg.max_shield_damage {
+            vf.dmg.max_shield_damage = dmg;
             if vf.ground_or_air == GA_GROUND {
-                vf.dmg.x1928 = mem(fp::fmuls(reg(light), fp::frsp(f64::from(dmg))));
-                vf.dmg.x192c = if reg(my_x) > reg(vf.cur_pos.x) {
+                vf.dmg.shield_push = mem(fp::fmuls(reg(light), fp::frsp(f64::from(dmg))));
+                vf.dmg.shield_push_dir = if reg(my_x) > reg(vf.cur_pos.x) {
                     1.0
                 } else {
                     -1.0
@@ -796,7 +796,7 @@ impl Running<'_> {
         if mf.motion_id == MS_DAMAGE_ICE {
             d = fp::fmuls(d, reg(c.f32(0x714)));
         }
-        fp::fmuls(d, reg(mf.dmg.x182c_behavior))
+        fp::fmuls(d, reg(mf.dmg.damage_scale))
     }
 
     /// The fighter whose attack a fighter's box is: its thrower's for a thrown fighter.
@@ -820,7 +820,7 @@ impl Running<'_> {
         let h0 = &self.game.fighters[v.0].hitboxes[j];
         if reg(h0.coll_distance) < reg(tip) {
             let mf = &self.game.fighters[me.0];
-            if !self.game.ft.hit_logs.hits.is_empty() || mf.dmg.x189C_unk_num_frames != 0.0 {
+            if !self.game.ft.hit_logs.hits.is_empty() || mf.dmg.hit_frames != 0.0 {
                 return false;
             }
             if hitcapsule::has_victim2(h0, victim(me)) {
@@ -846,8 +846,8 @@ impl Running<'_> {
                 let whole = fp::fctiwz(half);
                 let pos = h0.hurt_coll_pos;
                 let mf = &mut self.game.fighters[me.0];
-                if whole > mf.dmg.x1840 {
-                    mf.dmg.x1840 = whole;
+                if whole > mf.dmg.max_tip_damage {
+                    mf.dmg.max_tip_damage = whole;
                 }
                 let a = self.attacker(v);
                 let af = &self.game.fighters[a.0];
@@ -881,8 +881,8 @@ impl Running<'_> {
             }
         }
         let vf = &mut self.game.fighters[v.0];
-        if whole > vf.dmg.x1914 {
-            vf.dmg.x1914 = whole;
+        if whole > vf.dmg.item_hit_damage {
+            vf.dmg.item_hit_damage = whole;
         }
         let mf = &self.game.fighters[me.0];
         if mf.hit_status == 0
@@ -893,17 +893,17 @@ impl Running<'_> {
             let count = whole_damage(dmg);
             let mf = &mut self.game.fighters[me.0];
             if mf.armor {
-                mf.dmg.x1834 = mem(fp::fsubs(reg(mf.dmg.x1834), dmg));
-                if mf.dmg.x1834 < 0.0 {
-                    dmg = fp::fneg(reg(mf.dmg.x1834));
+                mf.dmg.armor_hp = mem(fp::fsubs(reg(mf.dmg.armor_hp), dmg));
+                if mf.dmg.armor_hp < 0.0 {
+                    dmg = fp::fneg(reg(mf.dmg.armor_hp));
                     mf.armor = false;
                 }
             }
             if !mf.armor {
                 assert!(!(dmg > 500.0), "attack power over 500!! {dmg}");
-                mf.dmg.x1838_percentTemp = mem(fp::fadds(reg(mf.dmg.x1838_percentTemp), dmg));
-                if count > mf.dmg.x183C_applied {
-                    mf.dmg.x183C_applied = count;
+                mf.dmg.pending_damage = mem(fp::fadds(reg(mf.dmg.pending_damage), dmg));
+                if count > mf.dmg.damage_applied {
+                    mf.dmg.damage_applied = count;
                 }
                 let a = self.attacker(v);
                 let af = &self.game.fighters[a.0];
@@ -1824,13 +1824,13 @@ impl Running<'_> {
         if mf.motion_id == MS_DAMAGE_ICE {
             f3 = fp::fmuls(f3, reg(self.common().f32(0x714)));
         }
-        let mut dmg = fp::fmuls(f3, reg(self.game.fighters[me.0].dmg.x182c_behavior));
+        let mut dmg = fp::fmuls(f3, reg(self.game.fighters[me.0].dmg.damage_scale));
         let tip = self.common().f32(0x7A8);
         let h = &it::item(self.game, g).hitboxes[j].hit;
         if reg(h.coll_distance) < reg(tip) {
             let mf = &self.game.fighters[me.0];
             if !self.game.ft.hit_logs.hits.is_empty()
-                || mf.dmg.x189C_unk_num_frames != 0.0
+                || mf.dmg.hit_frames != 0.0
                 || hitcapsule::has_victim2(h, victim(me))
             {
                 return false;
@@ -1859,8 +1859,8 @@ impl Running<'_> {
                     half_raw
                 };
                 let mf = &mut self.game.fighters[me.0];
-                if fp::fctiwz(half) > mf.dmg.x1840 {
-                    mf.dmg.x1840 = fp::fctiwz(half);
+                if fp::fctiwz(half) > mf.dmg.max_tip_damage {
+                    mf.dmg.max_tip_damage = fp::fctiwz(half);
                 }
                 let ip = it::item(self.game, g);
                 let entry = LogEntry {
@@ -1911,17 +1911,17 @@ impl Running<'_> {
             let count = whole_damage(dmg);
             let mf = &mut self.game.fighters[me.0];
             if mf.armor {
-                mf.dmg.x1834 = mem(fp::fsubs(reg(mf.dmg.x1834), dmg));
-                if mf.dmg.x1834 < 0.0 {
-                    dmg = fp::fneg(reg(mf.dmg.x1834));
+                mf.dmg.armor_hp = mem(fp::fsubs(reg(mf.dmg.armor_hp), dmg));
+                if mf.dmg.armor_hp < 0.0 {
+                    dmg = fp::fneg(reg(mf.dmg.armor_hp));
                     mf.armor = false;
                 }
             }
             if !mf.armor {
                 assert!(!(dmg > 500.0), "attack power over 500!! {dmg}");
-                mf.dmg.x1838_percentTemp = mem(fp::fadds(reg(mf.dmg.x1838_percentTemp), dmg));
-                if count > mf.dmg.x183C_applied {
-                    mf.dmg.x183C_applied = count;
+                mf.dmg.pending_damage = mem(fp::fadds(reg(mf.dmg.pending_damage), dmg));
+                if count > mf.dmg.damage_applied {
+                    mf.dmg.damage_applied = count;
                 }
                 let ip = it::item(self.game, g);
                 let h = &ip.hitboxes[j].hit;
@@ -2084,7 +2084,7 @@ impl Running<'_> {
         if fp.motion_id == MS_DAMAGE_ICE {
             d = fp::fmuls(d, reg(c.f32(0x714)));
         }
-        let mut f = mem(fp::fmuls(d, reg(fp.dmg.x182c_behavior)));
+        let mut f = mem(fp::fmuls(d, reg(fp.dmg.damage_scale)));
         match kind {
             1 => self.game.fighters[me.0].bury_timer_1 = c.u32(0x5DC),
             3 => self.game.fighters[me.0].bury_timer_2 = c.u32(0x5E4),
@@ -2206,7 +2206,7 @@ impl Running<'_> {
         let holder = if fp.victim_gobj.is_some() {
             fp.victim_gobj
         } else if fp.in_hitstun {
-            fp.dmg.x1868_source
+            fp.dmg.source
         } else {
             None
         };
@@ -2227,7 +2227,7 @@ impl Running<'_> {
                 || !of.thrown_hitbox_live
                 || self.hit_status(o) == 2
                 || of.is_sub_fighter
-                || (of.in_hitstun && of.dmg.x1868_source == Some(gobj))
+                || (of.in_hitstun && of.dmg.source == Some(gobj))
             {
                 continue;
             }
@@ -2317,7 +2317,7 @@ impl Running<'_> {
     /// knockback, 0 without tips.
     #[doc(alias = "ftColl_8007AB80")]
     pub fn take_tip_hits(&mut self, gobj: GObjId) {
-        self.game.fighter_mut(gobj).dmg.x187c = 0.0;
+        self.game.fighter_mut(gobj).dmg.tip_kb = 0.0;
         let log = std::mem::take(&mut self.game.ft.hit_logs.tips);
         self.weigh_hits(gobj, &log, true);
         assert!(
@@ -2326,7 +2326,7 @@ impl Running<'_> {
         );
         self.game.ft.hit_logs.tips = log;
         let fp = self.game.fighter_mut(gobj);
-        fp.dmg.x18a0 = fp.dmg.x187c;
+        fp.dmg.tip_kb_applied = fp.dmg.tip_kb;
     }
 
     /// The knockback a fighter's hitbox deals this fighter, `ftColl_80079C70`.
@@ -2398,9 +2398,9 @@ impl Running<'_> {
                     c.i32(0x6D4)
                 }
             } else {
-                fp::fctiwz(reg(fp.dmg.x1830_percent))
+                fp::fctiwz(reg(fp.dmg.percent))
             };
-            let total = fp::fadds(fp::frsp(f64::from(damage)), reg(fp.dmg.x1838_percentTemp));
+            let total = fp::fadds(fp::frsp(f64::from(damage)), reg(fp.dmg.pending_damage));
             fp::fmadds(
                 f(0x110),
                 total,
@@ -2540,26 +2540,26 @@ impl Running<'_> {
         let angle = fp::fctiwz(angle);
         if tips {
             // The tip result's direction: a float where the layout has a pointer.
-            d.x1870 = super::super::handles::RawPtr(dir.to_bits());
-            d.x1874 = angle;
-            d.x1878 = height;
-            d.x187c = mem(best);
-            d.x1880 = e.pos;
-            d.x188c = element as i32;
-            d.x1890 = severity;
-            d.x1894 = e.gobj;
-            d.x1898 = e.damage;
+            d.unread_1870 = super::super::handles::RawPtr(dir.to_bits());
+            d.unread_1874 = angle;
+            d.unread_1878 = height;
+            d.tip_kb = mem(best);
+            d.tip_pos = e.pos;
+            d.tip_element = element as i32;
+            d.tip_severity = severity;
+            d.tip_source = e.gobj;
+            d.tip_damage = e.damage;
         } else {
             d.facing_dir_1 = dir;
-            d.x1848_kb_angle = angle;
-            d.x184c_damaged_hurtbox = height;
+            d.kb_angle = angle;
+            d.damaged_hurtbox = height;
             d.kb_applied = mem(best);
-            d.x1854_collpos = e.pos;
-            d.x1860_element = element;
-            d.x1864 = severity;
-            d.x1868_source = e.gobj;
+            d.coll_pos = e.pos;
+            d.element = element;
+            d.unread_1864 = severity;
+            d.source = e.gobj;
             // The hit result's damage: a float where the layout has an integer.
-            d.x186c = e.damage.to_bits() as i32;
+            d.unread_186c = e.damage.to_bits() as i32;
         }
         let grounded = height == 0;
         match e.hit {
@@ -2590,11 +2590,11 @@ impl Running<'_> {
             LoggedHit::Item { item, .. } => self.item_attack_landed(item, gobj, grounded),
             LoggedHit::Device { .. } => {
                 let fp = &mut self.game.fighters[me.0];
-                let prev = fp.dmg.x18c4_source_ply;
-                fp.dmg.x18C0 = 0;
-                fp.dmg.x18C8 = -1;
-                fp.dmg.x18CC = 3;
-                fp.dmg.x18D0 = e.kind;
+                let prev = fp.dmg.source_player;
+                fp.dmg.source_spawn = 0;
+                fp.dmg.source_attack = -1;
+                fp.dmg.source_class = 3;
+                fp.dmg.source_kind = e.kind;
                 self.record_no_attack(gobj, prev);
             }
         }
@@ -2610,15 +2610,15 @@ impl Running<'_> {
     #[doc(alias = "ftColl_8007BE3C")]
     pub(crate) fn delayed_tip_damage(&mut self, gobj: GObjId) {
         let me = self.game.fighter_id(gobj);
-        let mut dmg = self.game.fighters[me.0].dmg.x1898;
+        let mut dmg = self.game.fighters[me.0].dmg.tip_damage;
         let taken = self.take_damage_or_armor(me, &mut dmg);
-        self.game.fighters[me.0].dmg.x1898 = dmg;
+        self.game.fighters[me.0].dmg.tip_damage = dmg;
         if !taken {
             return;
         }
         let source = self.game.fighters[me.0]
             .dmg
-            .x1894
+            .tip_source
             .expect("a tip without its source");
         // A source freed since the hit (a pill that vanished as it hit) keeps the free list's
         // link in its first word, so its classifier reads as the link's high half (0x80xx, or 0
@@ -2634,7 +2634,7 @@ impl Running<'_> {
             _ => {}
         }
         let d = &self.game.fighters[me.0].dmg;
-        let (element, pos, severity, kb) = (d.x188c, d.x1880, d.x1890, d.x187c);
+        let (element, pos, severity, kb) = (d.tip_element, d.tip_pos, d.tip_severity, d.tip_kb);
         let effect = HIT_EFFECTS[element as usize];
         let whole = cvt_fp2unsigned(reg(dmg));
         self.hit_effect(me, effect, pos, severity as u32, whole, reg(kb));
@@ -2647,9 +2647,9 @@ impl Running<'_> {
         let count = whole_damage(reg(*dmg));
         let fp = &mut self.game.fighters[f.0];
         if fp.armor {
-            fp.dmg.x1834 = mem(fp::fsubs(reg(fp.dmg.x1834), reg(*dmg)));
-            if fp.dmg.x1834 < 0.0 {
-                *dmg = mem(fp::fneg(reg(fp.dmg.x1834)));
+            fp.dmg.armor_hp = mem(fp::fsubs(reg(fp.dmg.armor_hp), reg(*dmg)));
+            if fp.dmg.armor_hp < 0.0 {
+                *dmg = mem(fp::fneg(reg(fp.dmg.armor_hp)));
                 fp.armor = false;
             }
         }
@@ -2661,9 +2661,9 @@ impl Running<'_> {
             reg(*dmg).partial_cmp(&500.0) != Some(std::cmp::Ordering::Greater),
             "attack power over 500!! {dmg}"
         );
-        fp.dmg.x1838_percentTemp = mem(fp::fadds(reg(fp.dmg.x1838_percentTemp), reg(*dmg)));
-        if count > fp.dmg.x183C_applied {
-            fp.dmg.x183C_applied = count;
+        fp.dmg.pending_damage = mem(fp::fadds(reg(fp.dmg.pending_damage), reg(*dmg)));
+        if count > fp.dmg.damage_applied {
+            fp.dmg.damage_applied = count;
         }
         true
     }
@@ -2741,29 +2741,29 @@ impl Running<'_> {
     ) {
         let a = attacker.map(|g| self.game.fighter_id(g));
         let me = self.game.fighter_id(gobj);
-        let prev = self.game.fighters[me.0].dmg.x18c4_source_ply;
+        let prev = self.game.fighters[me.0].dmg.source_player;
         match a {
             Some(a) => {
                 let af = &self.game.fighters[a.0];
                 let (spawn, player, sub) = (af.spawn_num, af.player_idx, af.is_sub_fighter);
                 let fp = &mut self.game.fighters[me.0];
-                fp.dmg.x18C0 = if a == me { 0 } else { spawn };
-                fp.dmg.x18c4_source_ply = i32::from(player);
-                fp.dmg.x18C8 = -1;
+                fp.dmg.source_spawn = if a == me { 0 } else { spawn };
+                fp.dmg.source_player = i32::from(player);
+                fp.dmg.source_attack = -1;
                 fp.last_hit_by_sub = sub;
             }
             None => {
                 let fp = &mut self.game.fighters[me.0];
-                fp.dmg.x18C0 = 0;
-                fp.dmg.x18C8 = -1;
+                fp.dmg.source_spawn = 0;
+                fp.dmg.source_attack = -1;
                 if !keep_source {
-                    fp.dmg.x18c4_source_ply = 6;
+                    fp.dmg.source_player = 6;
                 }
             }
         }
         let fp = &mut self.game.fighters[me.0];
-        fp.dmg.x18CC = kind;
-        fp.dmg.x18D0 = akind;
+        fp.dmg.source_class = kind;
+        fp.dmg.source_kind = akind;
         let _ = grounded;
         self.record_attack(attacker, gobj, x2070, record, instance, prev);
     }
@@ -2810,12 +2810,12 @@ impl Running<'_> {
     pub(crate) fn clear_attacker(&mut self, gobj: GObjId) {
         let me = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[me.0];
-        let prev = fp.dmg.x18c4_source_ply;
-        fp.dmg.x18C0 = 0;
-        fp.dmg.x18C8 = -1;
-        fp.dmg.x18c4_source_ply = 6;
-        fp.dmg.x18CC = 0;
-        fp.dmg.x18D0 = -10;
+        let prev = fp.dmg.source_player;
+        fp.dmg.source_spawn = 0;
+        fp.dmg.source_attack = -1;
+        fp.dmg.source_player = 6;
+        fp.dmg.source_class = 0;
+        fp.dmg.source_kind = -10;
         self.record_no_attack(gobj, prev);
     }
 

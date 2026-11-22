@@ -179,8 +179,8 @@ impl Running<'_> {
             set_flag(&mut item_mut(self.game, gobj).draw_flags, 7, false);
             if let Some(o) = fighter_owner {
                 let d = &self.game.fighter(o).dmg;
-                if d.x18B8 != 0.0 || d.x18BC != 0.0 {
-                    pos = Vec3::new(d.x18B8, d.x18BC, 0.0);
+                if d.shake_x != 0.0 || d.shake_y != 0.0 {
+                    pos = Vec3::new(d.shake_x, d.shake_y, 0.0);
                     set_flag(&mut item_mut(self.game, gobj).draw_flags, 7, true);
                 }
             }

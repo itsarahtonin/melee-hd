@@ -340,14 +340,14 @@ impl Running<'_> {
         let fp = &mut self.game.fighters[f.0];
         let taken = fp::frsp(f64::from(fp.absorb.x1A44_damageTaken));
         let mut heal = fp::frsp(f64::from(fp::fctiwz(fp::fmuls(taken, heal_mul))));
-        fp.dmg.x1830_percent = mem(fp::fsubs(reg(fp.dmg.x1830_percent), heal));
-        let cur = reg(fp.dmg.x1830_percent);
+        fp.dmg.percent = mem(fp::fsubs(reg(fp.dmg.percent), heal));
+        let cur = reg(fp.dmg.percent);
         if cur < 0.0 {
             heal = fp::fadds(cur, heal);
-            fp.dmg.x1830_percent = 0.0;
+            fp.dmg.percent = 0.0;
         }
         let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
-        let percent = fp::fctiwz(reg(fp.dmg.x1830_percent));
+        let percent = fp::fctiwz(reg(fp.dmg.percent));
         self.game.set_player_damage_at(slot, sub, percent);
         self.game.add_healed(slot, sub, fp::fctiwz(heal));
         let fp = &mut self.game.fighters[f.0];

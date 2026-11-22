@@ -77,7 +77,7 @@ impl Running<'_> {
         let hand = fp::fsubs(x748, fp::frsp(f64::from(handicap)));
         let t = fp::fadds(fp::fmadds(x744, hand, x740), place);
         let fp = &mut self.game.fighters[f.0];
-        let timer = fp::fmadds(reg(fp.dmg.x1830_percent), x754, t);
+        let timer = fp::fmadds(reg(fp.dmg.percent), x754, t);
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = mem(timer);
         fp.mash_stick_y = 0;
@@ -167,11 +167,11 @@ impl Running<'_> {
         let kb = self.knockback_of(f, &hit, hit.whole_damage, 1.0, 1.0, 1.0, weight);
         let fp = &mut self.game.fighters[f.0];
         fp.dmg.kb_applied = mem(kb);
-        fp.dmg.x1848_kb_angle = fp::fctiwz(angle);
+        fp.dmg.kb_angle = fp::fctiwz(angle);
         fp.dmg.facing_dir_1 = fp.facing_dir;
-        fp.dmg.x184c_damaged_hurtbox = 0;
-        fp.dmg.x1854_collpos = fp.cur_pos;
-        fp.dmg.x1860_element = hit.element;
+        fp.dmg.damaged_hurtbox = 0;
+        fp.dmg.coll_pos = fp.cur_pos;
+        fp.dmg.element = hit.element;
         self.take_damage_coins(f, reg(hit.damage));
         self.calc_knockback(f);
         self.damage_reaction(gobj, 0.0);

@@ -81,7 +81,7 @@ impl Game {
     /// The fighter's percent, truncated, `ftLib_GetPercent`.
     #[doc(alias = "ftLib_GetPercent")]
     pub fn ft_percent(&self, gobj: GObjId) -> i32 {
-        gekko_fp::fctiwz(crate::fpu::reg(self.fighter(gobj).dmg.x1830_percent))
+        gekko_fp::fctiwz(crate::fpu::reg(self.fighter(gobj).dmg.percent))
     }
 
     /// The grounded fighter's floor's slope in radians, `ftLib_GetGroundSlopeAngle`.
@@ -181,7 +181,7 @@ impl Game {
     /// The slot of whoever last hit the fighter, `ftLib_GetLastAttackerSlot`.
     #[doc(alias = "ftLib_GetLastAttackerSlot")]
     pub fn ft_last_attacker(&self, gobj: GObjId) -> i32 {
-        self.fighter(gobj).dmg.x18c4_source_ply
+        self.fighter(gobj).dmg.source_player
     }
 
     /// Whether the fighter asks for its name tag, `ftLib_80086F4C`: not cloaked (`x221F_b2`),
@@ -196,7 +196,7 @@ impl Game {
     /// `ftLib_SetPercent`: the integer converted to the fighter's float percent (`frsp`).
     #[doc(alias = "ftLib_SetPercent")]
     pub fn ft_set_percent(&mut self, gobj: GObjId, percent: i32) {
-        self.fighter_mut(gobj).dmg.x1830_percent = crate::fpu::mem(f64::from(percent));
+        self.fighter_mut(gobj).dmg.percent = crate::fpu::mem(f64::from(percent));
     }
 
     #[doc(alias = "ftLib_EnableInput")]
@@ -241,7 +241,7 @@ impl Game {
     #[doc(alias = "ftLib_80086A4C")]
     #[doc(alias("ft_80086a4c"))]
     pub fn ft_set_pending_hitlag(&mut self, gobj: GObjId, v: f32) {
-        self.fighter_mut(gobj).dmg.x1958 = v;
+        self.fighter_mut(gobj).dmg.pending_hitlag_frames = v;
     }
 
     /// `ft_80087AC0`: the fighter turns invisible when the argument is zero.

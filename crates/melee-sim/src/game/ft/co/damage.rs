@@ -33,7 +33,7 @@ impl Running<'_> {
     /// `LbBf.dat` animation (fire 3, electric 4, ice 5, darkness 6, any other 2).
     #[doc(alias = "ftCo_8008DB10")]
     pub fn heavy_hit_flash(&mut self, gobj: GObjId, element: i32, kb: f32) {
-        if self.game.fighter(gobj).dmg.x1838_percentTemp == 0.0 {
+        if self.game.fighter(gobj).dmg.pending_damage == 0.0 {
             return;
         }
         let (threshold, anim) = match element {

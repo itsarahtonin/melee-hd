@@ -628,14 +628,14 @@ impl Running<'_> {
         fp.stepped_on_item = true;
         let p = fp.coll_data.cur_pos;
         let (lx, rx) = (reg(fp.coll_data.ecb.left.x), reg(fp.coll_data.ecb.right.x));
-        fp.dmg.x1930.xC.x = mem(fp::fadds(lx, reg(p.x)));
-        fp.dmg.x1930.xC.y = mem(fp::fadds(rx, reg(p.x)));
-        fp.dmg.x1930.xC.z = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.x17C)));
+        fp.dmg.item_pickup_bounds.xC.x = mem(fp::fadds(lx, reg(p.x)));
+        fp.dmg.item_pickup_bounds.xC.y = mem(fp::fadds(rx, reg(p.x)));
+        fp.dmg.item_pickup_bounds.xC.z = mem(fp::fadds(reg(fp.cur_pos.y), reg(fp.co_attrs.x17C)));
         let mut cur = self.game.world.first_in(ITEM_P_LINK);
         while let Some(item) = cur {
             cur = self.game.world.gobjs[item.0].next;
             if crate::game::it::lib26b1::is_stomp(self.game, item) {
-                let feet = self.game.fighter(gobj).dmg.x1930.clone();
+                let feet = self.game.fighter(gobj).dmg.item_pickup_bounds.clone();
                 let i = crate::game::it::item_of(self.game, item);
                 self.game.it.last_pos_known(i.0, "ft_80081A00");
                 if crate::lb::stomp::stepped_on(&feet, &self.game.items[i.0].stomp_box) {
@@ -647,14 +647,14 @@ impl Running<'_> {
                     ip.stomp_dir = if ip.pos.x > fx { -1.0 } else { 1.0 };
                     ip.stomper = Some(gobj);
                     ip.source_player = slot;
-                    self.game.fighter_mut(gobj).dmg.x1950 = 1;
+                    self.game.fighter_mut(gobj).dmg.stepped_on_item = 1;
                 }
             }
         }
         let fp = self.game.fighter_mut(gobj);
-        if fp.dmg.x1950 != 0 {
+        if fp.dmg.stepped_on_item != 0 {
             self.bounce_off_item(gobj);
-            self.game.fighter_mut(gobj).dmg.x1950 = 0;
+            self.game.fighter_mut(gobj).dmg.stepped_on_item = 0;
             return true;
         }
         false
@@ -669,8 +669,8 @@ impl Running<'_> {
         fp.item_bounce_vel.x = fp.self_vel.x;
         fp.item_bounce_vel.y = y;
         fp.item_bounce_vel.z = 0.0;
-        fp.dmg.x194C = frames;
-        fp.dmg.x1948 = frames;
+        fp.dmg.bounce_frames_left = frames;
+        fp.dmg.bounce_frames = frames;
     }
 
     /// One fighter's collision state copied to another's, `ft_800849EC` (`mpCopyCollData`
