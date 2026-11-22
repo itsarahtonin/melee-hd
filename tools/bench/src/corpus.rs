@@ -1,5 +1,5 @@
 //! `melee-bench corpus [--rules slippi|own] [--heap rules|off|on] [--fp slippi|hardware|own]
-//! [--jobs N] [--list FILE]... [PATH...]`: plays every replay named (a `.slp` file, or every
+//! [--jobs N] [--ticks N] [--list FILE]... [PATH...]`: plays every replay named (a `.slp` file, or every
 //! `.slp` under a directory; `--list` files name one path a line, `#` starting a comment) from
 //! its start through `vs_match`'s replay path with the display pass, as `native` does, and
 //! reports how each run went: to the replay's end, the match's own end, or a stop (code no port
@@ -16,6 +16,8 @@
 //! nothing stops. `--rules own` plays each under its own codes' rules instead, `--heap on`
 //! with the model laid out as playback's heap, `--heap off` without it whatever the rules, and `--fp own` in the console's floating point for a
 //! replay with no Slippi codes (the benchmark matches), Slippi's for the rest.
+//! `--ticks N` stops each replay after N engine ticks (a start check: the boot, the playback
+//! scene and the match's first frames), reported as `ran N ticks to frame F`.
 //!
 //! One line per replay, tab-separated, as each finishes: the path, its own rules, its last
 //! frame, how far it ran, the first frame out of sync (or `-`), whether its own rules are
@@ -56,6 +58,8 @@ struct Options {
     heap: Option<bool>,
     fp: Fp,
     jobs: usize,
+    /// Engine ticks each replay runs before it stops (a start check); none: to its end.
+    ticks: Option<u64>,
     paths: Vec<PathBuf>,
 }
 
@@ -65,6 +69,7 @@ fn parse(args: &[String]) -> Options {
         heap: None,
         fp: Fp::Slippi,
         jobs: 1,
+        ticks: None,
         paths: Vec::new(),
     };
     let mut it = args.iter();
@@ -95,6 +100,7 @@ fn parse(args: &[String]) -> Options {
                 }
             }
             "--jobs" => o.jobs = value().parse().expect("--jobs N"),
+            "--ticks" => o.ticks = Some(value().parse().expect("--ticks N")),
             "--list" => {
                 let file = value();
                 let text = std::fs::read_to_string(file).unwrap_or_else(|e| panic!("{file}: {e}"));
@@ -301,6 +307,9 @@ fn play(o: &Options, files: &mut Files, path: &Path) -> Outcome {
                 if ended {
                     break (format!("match end at frame {now}"), None);
                 }
+                if o.ticks.is_some_and(|t| ticks >= t) {
+                    break (format!("ran {ticks} ticks to frame {now}"), None);
+                }
                 if ticks > cap {
                     let why = format!("ran {ticks} ticks without reaching frame {last}");
                     break (format!("stop at frame {now}: {why}"), Some(why));
@@ -401,7 +410,9 @@ pub fn main(args: &[String]) {
     let results = results.into_inner().unwrap();
     let ended = results
         .iter()
-        .filter(|(_, r)| r.result == "end" || r.result.starts_with("match end"))
+        .filter(|(_, r)| {
+            r.result == "end" || r.result.starts_with("match end") || r.result.starts_with("ran ")
+        })
         .count();
     let in_sync = results
         .iter()

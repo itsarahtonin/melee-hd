@@ -483,7 +483,8 @@ pub fn parse_codes(raw: &[u8]) -> Vec<Code> {
     out
 }
 
-/// What [`Rules::from_codes`] can't play.
+/// What [`Rules::from_codes`] can't play, or a replay's start that needs a build melee-hd
+/// doesn't play (`vs_match::Settings::from_replay`).
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub enum CodeError {
     /// A code no rule covers.
@@ -494,6 +495,13 @@ pub enum CodeError {
     Partial { rule: &'static str },
     /// Codes of different versions of the set, or of UCF.
     Mixed,
+    /// A replay of a modified game: a slot's character kind past the retail game's
+    /// (`CharacterKind`, or its none in a slot that plays), which playback's start would
+    /// index its tables with (`lb::audio::character_slot`). `slot` counts from 0.
+    ModdedCharacter { slot: u8, kind: u8 },
+    /// A replay of a modified game: a stage kind past `stage_id_map`'s
+    /// (`lb::audio::ground_kind`).
+    ModdedStage { kind: u16 },
 }
 
 impl std::fmt::Display for CodeError {
@@ -510,6 +518,15 @@ impl std::fmt::Display for CodeError {
             }
             CodeError::Partial { rule } => write!(f, "only some of {rule}'s codes"),
             CodeError::Mixed => write!(f, "codes of different Slippi versions"),
+            CodeError::ModdedCharacter { slot, kind } => write!(
+                f,
+                "recorded on a modified Melee: port {}'s character (kind {kind}) isn't one of the game's",
+                slot + 1
+            ),
+            CodeError::ModdedStage { kind } => write!(
+                f,
+                "recorded on a modified Melee: its stage (kind {kind}) isn't one of the game's"
+            ),
         }
     }
 }
