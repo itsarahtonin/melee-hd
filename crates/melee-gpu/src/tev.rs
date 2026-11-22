@@ -582,7 +582,7 @@ pub(crate) fn clear_uid() -> Uid {
 /// Threads making pipelines, which mostly wait on the driver's compiler: half the processor's
 /// threads, 2 to 6 (`MELEE_TEV_THREADS` sets it). A cold driver cache takes the 1080 Ti's
 /// driver 175 ms a pipeline, so the saved list's 700 take a minute on two.
-fn threads() -> usize {
+pub(crate) fn threads() -> usize {
     static N: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
     *N.get_or_init(|| {
         std::env::var("MELEE_TEV_THREADS")
@@ -959,6 +959,14 @@ impl Specializer {
         }
         self.stats.waited += start.elapsed();
         crate::made::add_n(crate::made::What::OnTheSpot, n as u64, start);
+    }
+
+    /// How many uber pipelines the threads are making (tests).
+    #[cfg(test)]
+    pub(crate) fn making_uber(&self) -> usize {
+        self.workers
+            .as_ref()
+            .map_or(0, |w| w.queue.jobs.lock().unwrap().making_uber)
     }
 
     /// Pauses or resumes the threads (tests: what a flush makes itself).

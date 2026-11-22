@@ -670,3 +670,51 @@ fn a_replay_s_wait_is_for_the_player_s_own_pipelines() {
     r.finish_specialized();
     assert!(r.tev.uber(c).is_some());
 }
+
+/// The uber pipelines take no more than a third of the shader threads at once, so a flush's
+/// specialized pipelines made on the spot find threads free.
+#[test]
+fn uber_pipelines_take_a_third_of_the_threads_at_most() {
+    let Some(mut r) = renderer() else {
+        eprintln!("skipped: no hardware GPU adapter");
+        return;
+    };
+    r.tev.mode = TevMode::Async;
+    r.tev.pause(true);
+    let mut keys = Vec::new();
+    for cull in 0..3u8 {
+        for front_cw in [false, true] {
+            for write_alpha in [false, true] {
+                let key = PipelineKey {
+                    blend: Some((4, 5, false)),
+                    const_alpha: false,
+                    write_color: true,
+                    write_alpha,
+                    depth_compare: Some(3),
+                    depth_write: true,
+                    early_z: false,
+                    vertices: crate::Vertices {
+                        mesh: true,
+                        cull,
+                        front_cw,
+                    },
+                };
+                r.tev.ask_uber(key, true);
+                keys.push(key);
+            }
+        }
+    }
+    let most = (tev::threads() / 3).max(1);
+    r.tev.pause(false);
+    let mut seen = 0;
+    while keys.iter().any(|&k| r.tev.uber(k).is_none()) {
+        seen = seen.max(r.tev.making_uber());
+        r.tev.collect();
+        std::thread::sleep(std::time::Duration::from_micros(200));
+    }
+    assert!(seen >= 1, "no uber pipeline seen being made");
+    assert!(
+        seen <= most,
+        "{seen} uber pipelines made at once, past {most}"
+    );
+}

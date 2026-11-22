@@ -578,6 +578,9 @@ impl Digest {
 pub type Unsupported = HashMap<&'static str, u64>;
 
 pub struct Renderer {
+    /// The transforms being made ahead on a thread ([`Renderer::make_ahead`]): first, so a
+    /// renderer let go joins that thread before anything else of it drops.
+    making: Making,
     device: wgpu::Device,
     /// The queue, its writes to buffers and its submissions in order (on a thread of their
     /// own on the render thread: `submit`).
@@ -698,7 +701,6 @@ pub struct Renderer {
     /// The meshes on the GPU and the transforms, made at the first mesh drawn, or ahead on a
     /// thread of their own ([`Renderer::make_ahead`]).
     gpu_meshes: Option<gpu_mesh::GpuMeshes>,
-    making: Making,
     mesh_runs: Vec<(mesh::Kind, std::ops::Range<u32>)>,
     mesh_geometry: Vec<Geometry>,
     checks: wgpu::ShaderRuntimeChecks,
