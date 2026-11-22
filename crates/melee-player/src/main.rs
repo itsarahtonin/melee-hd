@@ -30,8 +30,9 @@
 //! over Melee, or quits a match the command line named.
 //!
 //! The disc reads at a drive's pace, as ssbm-rs's window reads it, which the music needs
-//! (`melee_sim::audio::clock::DiscSpeed`); `--disc-speed fast` reads at Slippi's fast disc
-//! speed, as the oracle's traces and the replay checks do.
+//! (`melee_sim::audio::clock::DiscSpeed`), but in a replay's match, which reads at Slippi's
+//! fast disc speed as Slippi Dolphin's playback and the replay checks do; `--disc-speed`
+//! sets either for any match.
 //!
 //! Frames are shown at the game's 73:60, pillarboxed; `--widescreen` (16:9) or `--aspect W:H`
 //! widens the drawn cameras to a wider aspect, and `--aspect 4:3` stretches the picture to 4:3
@@ -219,8 +220,10 @@ struct Args {
     settings_tab: front::Tab,
     /// Borderless fullscreen on the window's monitor.
     fullscreen: bool,
-    /// How fast the disc reads: a drive's pace unless `--disc-speed fast`.
-    disc_speed: DiscSpeed,
+    /// How fast the disc reads, when `--disc-speed` says: else a replay's match reads at
+    /// Slippi's fast disc speed and any other match at a drive's pace (each match's settings'
+    /// own, `Settings::disc`).
+    disc_speed: Option<DiscSpeed>,
     /// The settings the command line gave, which win over the kept ones.
     given: front::Given,
     /// Scans presented frames for one-frame dropouts and captures them.
@@ -343,7 +346,7 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
         settings_shot: None,
         settings_tab: front::Tab::Settings,
         fullscreen: false,
-        disc_speed: DiscSpeed::Drive,
+        disc_speed: None,
         given: front::Given::default(),
         flicker_scan: false,
         perf_report: None,
@@ -485,7 +488,7 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                 a.given.fullscreen = true;
             }
             "--disc-speed" => {
-                a.disc_speed = DiscSpeed::parse(&value()?).ok_or("--disc-speed drive|fast")?
+                a.disc_speed = Some(DiscSpeed::parse(&value()?).ok_or("--disc-speed drive|fast")?)
             }
             "--widescreen" => {
                 a.aspect = present::Aspect::wide(16.0 / 9.0);
@@ -1029,9 +1032,12 @@ impl Session {
             }
         };
         // A developer's match plays Vanilla's rules, so it saves no replay ([`saves_replays`]).
-        // The replay's match too reads at the player's pace, as ssbm-rs's window plays one.
+        // Each match reads at its settings' pace unless `--disc-speed` says: a developer's at a
+        // drive's, which its music needs, and a replay's at Slippi's fast disc speed, as Slippi
+        // Dolphin's playback reads (its `GALE01r2.ini`'s `FastDiscSpeed`), since the pace
+        // reaches a replay's play (docs/player.md, "the player reads the disc at a drive's pace").
         let settings = Settings {
-            disc: a.disc_speed,
+            disc: a.disc_speed.unwrap_or(settings.disc),
             ..settings
         };
         let mut s = Session::begin(&disc, &settings, replay, a.bench.is_none() && !a.mute)?;

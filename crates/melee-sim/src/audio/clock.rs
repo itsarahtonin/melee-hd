@@ -159,7 +159,8 @@ pub enum DiscSpeed {
     Fast,
     /// A drive's pace, as ssbm-rs's window reads (`Hw::set_disc_rate`, and `DISC_RATE=3000000`
     /// in any run): reads also move their bytes at [`DRIVE_RATE`], after the latency. What the
-    /// player reads at.
+    /// player's own matches read at (a replay in the player reads at [`DiscSpeed::Fast`], as
+    /// Slippi Dolphin's playback does).
     Drive,
 }
 
