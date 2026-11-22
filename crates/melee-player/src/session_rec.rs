@@ -69,7 +69,9 @@ pub fn header(setup: &Setup, card: bool) -> Vec<u8> {
     h.extend_from_slice(&2u32.to_le_bytes());
     let rate = match setup.disc {
         DiscSpeed::Drive => u64::from(DRIVE_RATE),
-        _ => 0,
+        DiscSpeed::Fast => 0,
+        // ssbm-rs's file names a rate or its fast speed, and a session reads at a drive's pace.
+        DiscSpeed::DolphinFast => panic!("a session recorded at Dolphin's fast disc speed"),
     };
     h.extend_from_slice(&rate.to_le_bytes());
     let sound = if setup.dsp == DspModel::Samples {
