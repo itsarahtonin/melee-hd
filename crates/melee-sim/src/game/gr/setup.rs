@@ -48,10 +48,10 @@ pub fn reset(game: &mut Game) {
     i.bits.own_entry_points = false;
     i.bits.keeps_spawn_point = false;
     i.bits.watches_point = false;
-    i.watched_point = -1;
+    i.watch.point = -1;
     i.watch_callback = None;
     i.bits.watches_point_2 = false;
-    i.watched_point_2 = -1;
+    i.watch_2.point = -1;
     i.watch_callback_2 = None;
     i.map_gobjs = [None; 64];
     i.points = [None; 261];

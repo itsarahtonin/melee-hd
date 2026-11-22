@@ -78,9 +78,6 @@ CM_SUBJECT = {"x54": "unread_54", "x60": "unread_60"}
 
 CAMERA_DEBUG_MODE = {"_58": "unused_58"}
 
-# The stage's camera settings (`StageCameraInfo`).
-STAGE_CAMERA_INFO = {"x20": "cam_pan_rate", "x24": "cam_tilt_rate", "x3C": "unread_3c"}
-
 # An item's flag bytes the decomp types as other structs': `xDCD` (`CameraBoxFlags`, the item's
 # `hit_flags`) and `xDCC` (`Item_xDCC_flag`, its `state_flags`).
 CAMERA_BOX_FLAGS = {"x0": "bits"}
@@ -106,159 +103,6 @@ ITEM_XDCC_FLAG = {
     "b2": "keeps_pokeball_reflected",
     # It checks the blast zones.
     "b3": "checks_blast_zones",
-}
-
-# The stage's state (`StageInfo`, `game.stage_info`): the names wave 2 gave its readers
-# (`watch_points`, `route_event`, `cars_state`, `bgm`, `trophy_coin_wait`, `acid_level`).
-STAGE_INFO = {
-    "unk8C": "bits",
-    # The stage's checks of a watched point (the race's), each a callback, the point's box
-    # (half its width and height) and the point found.
-    "x90": "watch_callback",
-    "x94": "watch_callback_2",
-    "x98": "bgm",
-    # The frame the watch last ran.
-    "x9C": "watch_frame",
-    # The item frequencies' table (`Ground_801C28CC`), its first word and the rest.
-    "xA0": "item_frequencies",
-    "xA4_pad": "item_frequencies_rest",
-    "x12C": "fog",
-    # The guide points (`Ground_801C4E70`) the fog's distances are measured between: the front
-    # pair, and the left and the right pairs by the eye's side.
-    "x130": "guide_front_near",
-    "x13C": "guide_front_far",
-    "x148": "guide_left_near",
-    "x154": "guide_left_far",
-    "x160": "guide_right_near",
-    "x16C": "guide_right_far",
-    # The stage's points' joints, by point.
-    "x280": "points",
-    "x694": "cameras",
-    "x6A4": "start_hooks",
-    # Only the stage's file load clears it.
-    "x6C8": "unread_6c8",
-    "x6D0": "goal_point",
-    # A target stage's targets, and those left.
-    "x6D2": "target_count",
-    "x6D4": "targets_left",
-    "x6D6": "unused_6d6",
-    "x6D8": "route_event",
-    "x6DC": "route_zone",
-    "x6DE": "unused_6de",
-    "x6E0": "home_run_distance",
-    "x6E4": "drawn_trophies",
-    "x6EC_pad": "pad_6ec",
-    "x708": "trophy_coin_wait",
-    "x70C": "watch_half_width",
-    "x710": "watch_half_height",
-    "x714": "watched_point",
-    "x718": "watch_half_width_2",
-    "x71C": "watch_half_height_2",
-    "x720": "watched_point_2",
-    "x724": "acid_level",
-    "x728": "prev_acid_level",
-    # The barrel a stage throws (Jungle Japes'), its place and its value.
-    "x72C": "barrel",
-    "x730": "barrel_pos",
-    "x73C": "barrel_value",
-    "x740": "cars_state",
-    "x744_pad": "pad_744",
-}
-
-STAGE_INFO_FLAGS = {
-    # The song picked is the stage's other one (`Ground_801C24F8`), and the one playing.
-    "b0": "picked_alt_song",
-    "b1": "playing_alt_song",
-    "b2": "fog_enabled",
-    "b3": "has_guide_points",
-    # The players enter at their own entry points (else all at point 0), and a respawn keeps
-    # the spawn point it had.
-    "b4": "own_entry_points",
-    "b5": "keeps_spawn_point",
-    "b6": "watches_point",
-    "b7": "watches_point_2",
-}
-
-# The stage's parameters in its file (`GroundParam`): the camera's settings `Ground_801C0498`
-# copies into `StageCameraInfo`, under that struct's names.
-GROUND_PARAM = {
-    # The fighters' shadows' intensity (128 without a stage).
-    "x4": "shadow_intensity",
-    "x6_pad": "pad_6",
-    "x8": "cam_vertical_tilt",
-    "xA": "unused_a",
-    "xC": "cam_zoom_rate",
-    "x10": "cam_max_depth",
-    "x14": "cam_pan_degrees",
-    "x18": "cam_tilt_rate",
-    "x1C": "cam_pan_rate",
-    "x20": "cam_track_ratio",
-    "x24": "cam_fixed_zoom",
-    "x28": "cam_track_smooth",
-    "x2C_pad": "pad_2c",
-    # Copied to `StageCameraInfo::unread_3c`, which nothing reads.
-    "x2E": "pausecam_unread",
-    "x30": "pausecam_zpos_min",
-    "x34": "pausecam_zpos_init",
-    "x38": "pausecam_zpos_max",
-    "x3C": "cam_angle_up",
-    "x40": "cam_angle_down",
-    "x44": "cam_angle_left",
-    "x48": "cam_angle_right",
-    "x4C_fixed_cam": "fixed_cam",
-    "x50": "fixed_cam_x",
-    "x54": "fixed_cam_y",
-    "x58": "fixed_cam_z",
-    "x5C": "fixed_cam_fov",
-    "x60": "fixed_cam_vert_angle",
-    "x64": "fixed_cam_horz_angle",
-    # The items' frequency, in percent (`Ground_801C2AE8`).
-    "x68": "item_freq_pct",
-    "x6A": "unused_6a",
-    # The magnifier bubble's nine colors, a grid over the stage's sides, row by row.
-    "xB8": "bubble_color_0",
-    "xBC": "bubble_color_1",
-    "xC0": "bubble_color_2",
-    "xC4": "bubble_color_3",
-    "xC8": "bubble_color_4",
-    "xCC": "bubble_color_5",
-    "xD0": "bubble_color_6",
-    "xD4": "bubble_color_7",
-    "xD8": "bubble_color_8",
-}
-
-# A stage object (`Ground`, `game.grounds`).
-GROUND = {
-    # Laid out for the heap's image; nothing writes or reads it.
-    "x0": "unread_0",
-    # Cleared by every object's setup, read by nothing.
-    "x8_callback": "unread_8",
-    "xC_callback": "unread_c",
-    "x10_flags": "flags",
-    # Its pass (`b012`) and the bits past it (`GroundX11Flags`).
-    "x11_flags": "pass_flags",
-    # The camera object it's drawn with (`flags.follows_camera`).
-    "x18": "camera",
-    # The stage callbacks' `callback3`.
-    "x1C_callback": "callback3",
-    # The sounds the object plays (`Ground_801C5440`).
-    "x20": "sounds",
-    # Its material's alpha constant (`fn_801C8EF8`).
-    "xC0": "material_alpha",
-}
-
-GROUND_FLAGS = {
-    # Only the object's setup clears them.
-    "b0": "unread_b0",
-    "b1": "unread_b1",
-    "b2": "keeps_fog",
-    "b3": "follows_camera",
-    "b4": "overlay_done",
-    "b5": "shadowed",
-    # Its material takes the color overlay's color.
-    "b6": "tinted",
-    # Peach's Castle draws its flags' chains as lines (`fn_801D0924`); the debug menu sets it.
-    "b7": "debug_lines",
 }
 
 # A fighter's damage state (`dmg`, `Fighter::dmg`, the fighter's `x182C` to `x1960`).
@@ -553,17 +397,9 @@ GROUPS = [
     {
         "CmSubject": CM_SUBJECT,
         "CameraDebugMode": CAMERA_DEBUG_MODE,
-        "StageCameraInfo": STAGE_CAMERA_INFO,
         "CameraBoxFlags": CAMERA_BOX_FLAGS,
         "CameraBoxFlags_x0": CAMERA_BOX_FLAGS_X0,
         "Item_xDCC_flag": ITEM_XDCC_FLAG,
-    },
-    {
-        "StageInfo": STAGE_INFO,
-        "StageInfo_unk8C": STAGE_INFO_FLAGS,
-        "GroundParam": GROUND_PARAM,
-        "Ground": GROUND,
-        "Ground_x10_flags": GROUND_FLAGS,
     },
     {"dmg": DMG},
     {"StartMeleeRules": START_MELEE_RULES, "MatchPlayerData": MATCH_PLAYER_DATA},

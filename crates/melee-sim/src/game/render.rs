@@ -203,11 +203,11 @@ impl Running<'_> {
         let eye = cobj::eye_vector(&mut self.game.objs, self.data, Some(c))
             .unwrap_or(cobj::NO_EYE_VECTOR);
         let i = &self.game.stage_info;
-        let (mut front_near, mut front_far) = (i.guide_front_near, i.guide_front_far);
+        let (mut front_near, mut front_far) = (i.guides.front_near, i.guides.front_far);
         let (mut near, mut far) = if reg(eye.x) < 0.0 {
-            (i.guide_left_near, i.guide_left_far)
+            (i.guides.left_near, i.guides.left_far)
         } else {
-            (i.guide_right_near, i.guide_right_far)
+            (i.guides.right_near, i.guides.right_far)
         };
         let (near, far) = if reg(eye.z) < 0.0 {
             let len = crate::math::sqrt_reg(fp::fmadds(

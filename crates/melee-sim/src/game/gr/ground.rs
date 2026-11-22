@@ -434,23 +434,23 @@ pub fn proc_watch(r: &mut Running, _gobj: GObjId) {
         if r.game.stage_info.bits.watches_point {
             let (w, h, cb) = {
                 let i = &r.game.stage_info;
-                (i.watch_half_width, i.watch_half_height, i.watch_callback)
+                (i.watch.half_width, i.watch.half_height, i.watch_callback)
             };
             let found = search_points(r, pos, 0x99..0xB3, w, h, cb);
-            r.game.stage_info.watched_point = found;
+            r.game.stage_info.watch.point = found;
             r.game.stage_info.bits.watches_point = false;
         }
         if r.game.stage_info.bits.watches_point_2 {
             let (w, h, cb) = {
                 let i = &r.game.stage_info;
                 (
-                    i.watch_half_width_2,
-                    i.watch_half_height_2,
+                    i.watch_2.half_width,
+                    i.watch_2.half_height,
                     i.watch_callback_2,
                 )
             };
             let found = search_points(r, pos, 0xBD..0xC7, w, h, cb);
-            r.game.stage_info.watched_point_2 = found;
+            r.game.stage_info.watch_2.point = found;
             r.game.stage_info.bits.watches_point_2 = false;
         }
     }
@@ -901,16 +901,16 @@ pub fn set_blast_right(game: &mut Game, v: f32) {
 pub fn watch_points(game: &mut Game, cb: Option<CodeRef>, w: f32, h: f32) -> i32 {
     let i = &mut game.stage_info;
     i.bits.watches_point = true;
-    i.watch_half_width = mem(fp::fmuls(0.5, reg(w)));
-    i.watch_half_height = mem(fp::fmuls(0.5, reg(h)));
+    i.watch.half_width = mem(fp::fmuls(0.5, reg(w)));
+    i.watch.half_height = mem(fp::fmuls(0.5, reg(h)));
     i.watch_callback = cb;
-    if i.watched_point != -1 {
+    if i.watch.point != -1 {
         i.flags |= 0x10;
-        i.goal_point = i.watched_point as i16;
+        i.goal_point = i.watch.point as i16;
     } else {
         i.flags &= !0x10;
     }
-    i.watched_point
+    i.watch.point
 }
 
 /// The second such search (`unk8C.b7`), `Ground_801C3DB4`.
@@ -918,15 +918,15 @@ pub fn watch_points(game: &mut Game, cb: Option<CodeRef>, w: f32, h: f32) -> i32
 pub fn watch_points2(game: &mut Game, cb: Option<CodeRef>, w: f32, h: f32) -> i32 {
     let i = &mut game.stage_info;
     i.bits.watches_point_2 = true;
-    i.watch_half_width_2 = mem(fp::fmuls(0.5, reg(w)));
-    i.watch_half_height_2 = mem(fp::fmuls(0.5, reg(h)));
+    i.watch_2.half_width = mem(fp::fmuls(0.5, reg(w)));
+    i.watch_2.half_height = mem(fp::fmuls(0.5, reg(h)));
     i.watch_callback_2 = cb;
-    if i.watched_point_2 != -1 {
+    if i.watch_2.point != -1 {
         i.flags |= 0x40;
     } else {
         i.flags &= !0x40;
     }
-    i.watched_point_2
+    i.watch_2.point
 }
 
 /// The first animation in a joint tree, depth first, `Ground_801C3E18`.
@@ -1014,12 +1014,12 @@ pub fn set_guide_points(game: &mut Game, data: &Archives, joints: [Option<JObjId
         let v = crate::lb::joint::world_position(&mut game.objs, data, j, None);
         let i = &mut game.stage_info;
         let slot = match k {
-            0 => &mut i.guide_front_near,
-            1 => &mut i.guide_front_far,
-            2 => &mut i.guide_left_near,
-            3 => &mut i.guide_left_far,
-            4 => &mut i.guide_right_near,
-            _ => &mut i.guide_right_far,
+            0 => &mut i.guides.front_near,
+            1 => &mut i.guides.front_far,
+            2 => &mut i.guides.left_near,
+            3 => &mut i.guides.left_far,
+            4 => &mut i.guides.right_near,
+            _ => &mut i.guides.right_far,
         };
         *slot = v;
     }

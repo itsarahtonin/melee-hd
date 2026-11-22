@@ -4301,9 +4301,9 @@ fn kongo_path() {
         let (at, rot) =
             melee_sim::game::gr::ground::spline_pose(r.data, spline, call.regs.fpr[1].ps0 as f32);
         if let Some(at) = at {
-            r.game.stage_info.guide_front_near = at;
+            r.game.stage_info.guides.front_near = at;
         }
-        r.game.stage_info.guide_front_far = rot;
+        r.game.stage_info.guides.front_far = rot;
         Ret::Nothing
     };
     let si = leaf_check::sym("stage_info");
@@ -4322,7 +4322,7 @@ fn kongo_path() {
         if let Some(v) =
             melee_sim::hsd::spline::tangent(r.data, spline, call.regs.fpr[1].ps0 as f32)
         {
-            r.game.stage_info.guide_front_near = v;
+            r.game.stage_info.guides.front_near = v;
         }
         Ret::Nothing
     };

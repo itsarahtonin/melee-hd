@@ -30,6 +30,9 @@ struct CRecord {
 /// The hand-written structs, by their layouts. Each is on structgen's `OWNED` list.
 fn owned() -> Vec<Layout> {
     use crate::game::camera::types::{Camera, CameraQuake, CameraTransformState, OrbitLimits};
+    use crate::game::gr::types::{
+        Ground, GroundFlags, GroundParam, StageBits, StageBlastZone, StageCameraInfo, StageInfo,
+    };
     use crate::mp::coll::{CollData, Ecb, Surface};
     [
         CollData::layout(),
@@ -39,6 +42,13 @@ fn owned() -> Vec<Layout> {
         CameraTransformState::layout(),
         CameraQuake::layout(),
         OrbitLimits::layout(),
+        StageInfo::layout(),
+        StageCameraInfo::layout(),
+        StageBlastZone::layout(),
+        StageBits::layout(),
+        GroundParam::layout(),
+        Ground::layout(),
+        GroundFlags::layout(),
     ]
     .into_iter()
     .map(|l| l.expect("a derived layout"))

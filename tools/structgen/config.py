@@ -392,6 +392,13 @@ OWNED = {
     "CameraTransformState": ("CameraTransformState", "crate::game::camera::types::CameraTransformState"),
     "CameraQuake": ("CameraQuake", "crate::game::camera::types::CameraQuake"),
     "Camera_x2D0": ("OrbitLimits", "crate::game::camera::types::OrbitLimits"),
+    "StageInfo": ("StageInfo", "crate::game::gr::types::StageInfo"),
+    "StageCameraInfo": ("StageCameraInfo", "crate::game::gr::types::StageCameraInfo"),
+    "StageBlastZone": ("StageBlastZone", "crate::game::gr::types::StageBlastZone"),
+    "StageInfo_unk8C": ("StageBits", "crate::game::gr::types::StageBits"),
+    "GroundParam": ("GroundParam", "crate::game::gr::types::GroundParam"),
+    "Ground": ("Ground", "crate::game::gr::types::Ground"),
+    "Ground_x10_flags": ("GroundFlags", "crate::game::gr::types::GroundFlags"),
 }
 
 # Pointee types that live in loaded game data: pointers to them become DataRef.

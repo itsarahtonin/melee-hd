@@ -695,10 +695,14 @@ mod label_tests {
         assert_eq!(
             labels_after::<StageInfo>("stage_info", |s| {
                 s.bits.fog_enabled = true;
+                s.guides.front_far.y = 1.0;
+                s.watch_2.point = 1;
                 s.acid_level = 1.0;
             }),
             [
                 "stage_info.bits (unk8C).fog_enabled (b2)",
+                "stage_info.guides.front_far (x13C)",
+                "stage_info.watch_2 (x718).point",
                 "stage_info.acid_level (x724)"
             ]
         );
