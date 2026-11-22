@@ -6,7 +6,7 @@
 use super::kinds::{
     climbersstring, fflower, flipper, foxlaser, hassam, hitodeman, linkbomb, linkboomerang,
     linkhookshot, marumine, mewtwodisable, msbomb, peachturnip, samusgrapple, seakchain, spycloak,
-    star, tether,
+    star, strand, tether,
 };
 use super::{item, item_mut, lib26b1};
 use crate::game::handles::CodeRef;
@@ -54,7 +54,7 @@ pub fn run(r: &mut Running, gobj: GObjId, other: Option<GObjId>, f: CodeRef) {
         0x802B_54E4 => samus_bomb(r, gobj, other),
         0x802B_7104 => samus_missile(r, gobj, other),
         0x802B_AEA0 => tether::forget(r, gobj, other, &samusgrapple::GRAPPLE),
-        0x802B_D10C => seakchain::forget(r, gobj, other),
+        0x802B_D10C => strand::forget(r, gobj, other, &seakchain::CHAIN),
         0x802B_DA08 => peachturnip::forget(r, gobj, other),
         0x802C_210C => climbers_ice(r, gobj, other),
         0x802C_3AA4 => climbersstring::forget(r, gobj, other),

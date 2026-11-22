@@ -1084,45 +1084,9 @@ pub fn wind_in(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, speed: 
 /// (`Item_RetractChain`, then [`chase`]); true once all are in.
 #[doc(alias = "it_802BA2D8")]
 pub fn wind_in_chain(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, speed: f64) -> bool {
-    let (next, cur, rest) = retract_chain(r, l, *pos, speed, a.f(r, attr::LINK));
+    let (next, cur, rest) = link::retract_chain(r, l, *pos, speed, a.f(r, attr::LINK));
     chase(r, cur, *pos, a, rest);
     next.is_none()
-}
-
-/// `Item_RetractChain`: from the first link out, those within `speed` of `pos` go in; what's
-/// left of a link length past the last.
-fn retract_chain(
-    r: &mut Running,
-    l: ItemLinkId,
-    pos: Vec3,
-    speed: f64,
-    max: f64,
-) -> (Option<ItemLinkId>, ItemLinkId, f64) {
-    let mut cur = l;
-    let mut next = lk(r.game, l).prev;
-    while let Some(n) = next {
-        if lk(r.game, cur).x2C_b0 {
-            break;
-        }
-        cur = n;
-        next = lk(r.game, n).prev;
-    }
-    let mut dir = Vec3::default();
-    let mut d = direction(lk(r.game, cur).pos, pos, &mut dir);
-    while let Some(n) = next {
-        if !(speed > d) {
-            break;
-        }
-        link_mut(r.game, cur).x2C_b0 = false;
-        d = direction(lk(r.game, n).pos, pos, &mut dir);
-        cur = n;
-        next = lk(r.game, n).prev;
-    }
-    let mut rest = fp::fsubs(d, speed);
-    if rest > max {
-        rest = max;
-    }
-    (next, cur, rest)
 }
 
 /// Climbing the beam, `it_802BA3BC`: the tip rides its line; from the hand's first link out,

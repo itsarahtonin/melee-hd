@@ -1,31 +1,28 @@
-//! Sheik's chain, `melee/it/kinds/itseakchain.c`: a string of links (`ItemLink`, see
-//! [`super::super::link`]) hanging from her hand. Thrown out (state 1), the links leave one by
-//! one, each held to the link length from the one before; bouncing off the stage (state 2) or
-//! all out (state 3), it swings with the stick; pulled in (state 4), it winds back to the hand
-//! and hangs (state 0). Each frame its links' models line up between their neighbours and its
-//! hitboxes (Sheik's) follow points along it.
+//! Sheik's chain, `melee/it/kinds/itseakchain.c`: a strand of links ([`super::strand`], its
+//! [`CHAIN`]) hanging from her hand. Thrown out (state 1), the links leave one by one, each held
+//! to the link length from the one before; bouncing off the stage (state 2) or all out (state
+//! 3), it swings with the stick; pulled in (state 4), it winds back to the hand and hangs (state
+//! 0). Each frame its links' models line up between their neighbours and its hitboxes (Sheik's)
+//! follow points along it.
 //!
-//! The chain's variables (`itSeakChain_ItemVars`) keep its tip (`x0`, the last link made) and
-//! the link at the hand (`x4`); the links point toward the tip through `prev` and toward the
-//! hand through `next`.
+//! The chain's own: its links' collision with the stage and their clank, how its links fall as
+//! they're thrown and bounce, and the swing.
 
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use gekko_fp as fp;
 
-use super::super::item::{article, change, change_state, pick_up, spawn_air};
-use super::super::link::{self, apply_vel, direction, link as lk, link_mut, move_coll, place_coll};
+use super::super::item::{change, change_state};
+use super::super::link::{self, apply_vel, direction, link as lk, link_mut, move_coll};
 use super::super::maplib::with_stage_coll;
-use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
+use super::super::{item, item_mut, jobj_of, lib2725};
+use super::strand::{self, Strand};
 use crate::fpu::{mem, reg};
 use crate::game::handles::{CodeRef, ItemLinkId};
 use crate::game::it::ItKind;
-use crate::game::state::{Obj, Running, UserData};
-use crate::game::structs::SpawnItem;
-use crate::hsd::gobj::{self as gobjs, GObjId};
-use crate::hsd::jobj::{self, JObjId};
-use crate::mtx::Mtx34;
+use crate::game::state::Running;
+use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 use melee_data::archive::DataRef;
 
@@ -77,19 +74,52 @@ mod attr {
 /// `FtPart_L3rdNa`, the hand.
 const PART_L3RD_NA: i32 = 26;
 
-/// The links' process link and the clank of a link meeting the stage.
-const LINK_P_LINK: u8 = 0xA;
+/// The clank of a link meeting the stage.
 const SFX_CLANK: i32 = 0x41F45;
 
 /// `Collide_FloorMask` and the walls' and ceiling's masks.
 const FLOOR_MASK: i32 = 0x18000;
 const WALLS_CEILING_MASK: i32 = 0xFFF;
 
+/// Sheik's chain.
+pub static CHAIN: Strand = Strand {
+    vars: |v| {
+        let v = v.seak_chain();
+        strand::Vars {
+            tip: &mut v.x0,
+            hand: &mut v.x4,
+            fighter: &mut v.parent_gobj,
+            tip_model: None,
+        }
+    },
+    kind: ItKind::SheikChain,
+    part: PART_L3RD_NA,
+    flagged: true,
+    count: attr::COUNT,
+    link_joint: attr::LINK_JOINT,
+    tip_joint: attr::TIP_JOINT,
+    at_item: false,
+    tip_starts_out: false,
+    coll: Some(|_, _, _| 1.0),
+    ahead: 0.1,
+    states: (
+        crate::game::ft::seak::ms::SPECIAL_S_START,
+        crate::game::ft::seak::ms::SPECIAL_AIR_S_END,
+    ),
+    let_go: |r, owner| r.seak_special_s_chain_gone(owner),
+    forgets_fighter: true,
+    length: |r, gobj, _| Attrs::of(r, gobj).f(r, attr::LENGTH),
+    copies: false,
+    tip_folds_in: false,
+    on_link: Some(hitboxes_along),
+    tip_faces: false,
+};
+
 /// Runs one of the chain's predicates, if `addr` is one.
 #[melee_callbacks::callbacks(Pred)]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
-        ANIM => animate(r, gobj),
+        ANIM => strand::let_go_if_left(r, gobj, &CHAIN),
         _ => return None,
     })
 }
@@ -121,11 +151,7 @@ struct Attrs(DataRef);
 
 impl Attrs {
     fn of(r: &Running, gobj: GObjId) -> Attrs {
-        Attrs(
-            article(item(r.game, gobj))
-                .special(r.data)
-                .expect("a chain without attributes"),
-        )
+        Attrs(strand::attrs(r, gobj))
     }
 
     fn f(self, r: &Running, off: u32) -> f64 {
@@ -135,27 +161,11 @@ impl Attrs {
     fn count(self, r: &Running) -> i32 {
         r.data.u32(self.0.at(attr::COUNT)) as i32
     }
-
-    fn joint(self, r: &Running, off: u32) -> Option<DataRef> {
-        r.data.ptr(self.0.at(off))
-    }
 }
 
-/// The chain's tip, its link at the hand, and its fighter.
-fn tip(r: &mut Running, gobj: GObjId) -> Option<ItemLinkId> {
-    item_mut(r.game, gobj).xDD4_itemVar.seak_chain().x0.get()
-}
-
-fn hand(r: &mut Running, gobj: GObjId) -> Option<ItemLinkId> {
-    item_mut(r.game, gobj).xDD4_itemVar.seak_chain().x4.get()
-}
-
+/// The chain's fighter.
 fn parent(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .seak_chain()
-        .parent_gobj
-        .get()
+    strand::vars(r, gobj, &CHAIN).fighter.get()
 }
 
 /// The chain pauses in hitlag, `it_802BAEEC` (`it_8026B724`).
@@ -178,151 +188,48 @@ pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
     }
 }
 
-/// Makes the chain's links, `it_802BAF2C`: `x0` of them, each a GObj with its model (the
-/// tip's its own), all hanging from the joint `hand_joint`. (The original returns the tip's
-/// model, unset for a chain of one link; its caller drops it.)
-#[doc(alias = "it_802BAF2C")]
-pub fn make_links(r: &mut Running, gobj: GObjId, hand_joint: Option<JObjId>) {
-    let a = Attrs::of(r, gobj);
-    let n = a.count(r);
-    let mut prev_link: Option<ItemLinkId> = None;
-    let (mut head, mut tail) = (None, None);
-    for i in 0..n {
-        let g = r.game.world.create(link::CLASS, LINK_P_LINK, 0);
-        let l = link::alloc(r.game, r.data);
-        link::reset(r.game, g, l);
-        r.game
-            .world
-            .init_user_data(g, link::USER_DATA_KIND, UserData::ItemLink(l));
-        let (joint, render) = if i == 0 {
-            link_mut(r.game, l).next = None;
-            head = Some(l);
-            (attr::LINK_JOINT, link::RENDER)
-        } else if i == n - 1 {
-            link_mut(r.game, prev_link.unwrap()).prev = Some(l);
-            link_mut(r.game, l).prev = None;
-            tail = Some(l);
-            link_mut(r.game, l).next = prev_link;
-            (attr::TIP_JOINT, crate::game::render::JOBJ_CALLBACK)
-        } else {
-            link_mut(r.game, prev_link.unwrap()).prev = Some(l);
-            link_mut(r.game, l).next = prev_link;
-            (attr::LINK_JOINT, link::RENDER)
-        };
-        let k = link_mut(r.game, l);
-        k.jobj = hand_joint;
-        k.gobj = Some(g);
-        k.vel = Vec3::new(0.0, 0.0, 0.0);
-        k.pos = Vec3::new(0.0, 0.0, 0.0);
-        k.x2C_b0 = false;
-        link::init_coll(r, l, 1.0);
-        let desc = a.joint(r, joint);
-        let model = jobj::load_joint(&mut r.game.objs, r.data, desc);
-        let kind = super::super::item::jobj_kind(r.game);
-        r.game
-            .world
-            .set_obj(g, kind, Obj::JObj(model.expect("a link's model")));
-        r.game.world.setup_gx_link(g, CodeRef(render), 6, 0);
-        prev_link = Some(l);
-    }
-    let v = item_mut(r.game, gobj).xDD4_itemVar.seak_chain();
-    v.x0.set(tail);
-    v.x4.set(head);
-}
-
-/// `inlineA0`: the chain lets its owner go (`ftSk_SpecialS_80110E4C`) and its links go.
-fn release(r: &mut Running, gobj: GObjId) {
-    if let Some(owner) = item(r.game, gobj).owner {
-        r.seak_special_s_chain_gone(owner);
-    }
-    item_mut(r.game, gobj).owner = None;
-    item_mut(r.game, gobj)
-        .xDD4_itemVar
-        .seak_chain()
-        .parent_gobj
-        .set(None);
-    let mut cur = tip(r, gobj);
-    while let Some(l) = cur {
-        let g = lk(r.game, l).gobj.expect("a link without its GObj");
-        cur = lk(r.game, l).next;
-        gobjs::free(r, g);
-    }
-}
-
-/// Destroys the chain and its links, `it_802BB20C`.
-#[doc(alias = "it_802BB20C")]
+/// The chain and its links gone.
 pub fn destroy(r: &mut Running, gobj: GObjId) {
-    release(r, gobj);
-    super::super::item::destroy(r, gobj);
+    strand::remove(r, gobj, &CHAIN);
 }
 
-/// Makes the chain at Sheik's hand, `itSeakChain_Spawn`.
-#[doc(alias = "itSeakChain_Spawn")]
+/// Makes the chain at Sheik's hand: its stick history cleared, its own model hidden.
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
-    let mut spawn = SpawnItem {
-        kind: ItKind::SheikChain.id(),
-        ..Default::default()
-    };
-    // `Item_InitSpawnPosition`, off the plane.
-    spawn.prev_pos = pos;
-    spawn.pos = spawn.prev_pos;
-    // `Item_InitSpawnCommonFields`, with a first collision.
-    spawn.facing_dir = facing_dir;
-    spawn.x3C_damage = 0;
-    spawn.vel = Vec3::new(0.0, 0.0, 0.0);
-    spawn.x0_parent_gobj = Some(parent);
-    spawn.x4_parent_gobj2 = Some(parent);
-    spawn.x44_flag[0] |= 0x80;
-    spawn.x40 = 0;
-    let gobj = spawn_air(r, &mut spawn)?;
-    let v = item_mut(r.game, gobj).xDD4_itemVar.seak_chain();
-    v.parent_gobj.set(Some(parent));
-    v.x10.set(0);
-    v.x14.set(0);
-    for h in &mut v.history {
-        h.set(Vec3::new(0.0, 0.0, 0.0));
-    }
-    let j = jobj_of(r.game, gobj);
-    lib2725::hide_tree(r.game, j);
-    let hand_joint = r.bone_joint(parent, PART_L3RD_NA);
-    make_links(r, gobj, hand_joint);
-    pick_up(r, gobj, parent, PART_L3RD_NA);
-    Some(gobj)
-}
-
-/// `Item_InitLinkMtx(m, 0.1)` after the hand's matrix (`PSMTXConcat`): a point a tenth along
-/// the hand's z axis, as a matrix.
-fn hand_mtx(r: &mut Running, l: ItemLinkId) -> Mtx34 {
-    let j = lk(r.game, l).jobj;
-    jobj::setup_matrix(&mut r.game.objs, r.data, j);
-    let j = j.expect("a link without its hand's joint");
-    let m = Mtx34::translation(0.0, 0.0, 0.1);
-    r.game.objs.jobjs[j].mtx.concat(&m)
-}
-
-fn hand_point(r: &mut Running, l: ItemLinkId) -> Vec3 {
-    let m = hand_mtx(r, l);
-    Vec3::new(m.m[0][3], m.m[1][3], m.m[2][3])
+    strand::spawn(r, parent, pos, facing_dir, &CHAIN, |r, gobj| {
+        let v = item_mut(r.game, gobj).xDD4_itemVar.seak_chain();
+        v.x10.set(0);
+        v.x14.set(0);
+        for h in &mut v.history {
+            h.set(Vec3::new(0.0, 0.0, 0.0));
+        }
+        let j = jobj_of(r.game, gobj);
+        lib2725::hide_tree(r.game, j);
+    })
 }
 
 /// Hanging, `fn_802BB428`: the tip at the hand.
 #[doc(alias = "fn_802BB428")]
 pub fn hang(r: &mut Running, gobj: GObjId) {
-    tip_to_hand(r, gobj);
+    strand::tip_to_hand(r, gobj, &CHAIN);
+}
+
+/// The tip's speed across turned back by the attributes' `x58`.
+fn bounce_back(r: &mut Running, l: ItemLinkId, a: Attrs) {
+    let x58 = a.f(r, attr::X58);
+    let k = link_mut(r.game, l);
+    k.vel.x = mem(fp::fmuls(reg(k.vel.x), fp::fneg(x58)));
 }
 
 /// Thrown, `fn_802BB44C`: the links follow the tip out; it bounces back off a wall
 /// (state 2), or swings once all are out (state 3).
 #[doc(alias = "fn_802BB44C")]
 pub fn thrown(r: &mut Running, gobj: GObjId) {
-    let l = tip(r, gobj).expect("a chain without links");
+    let l = strand::tip(r, gobj, &CHAIN);
     let a = Attrs::of(r, gobj);
-    let v = hand_point(r, l);
+    let v = strand::point(r, l, &CHAIN);
     match extend(r, l, v, a) {
         1 => {
-            let x58 = a.f(r, attr::X58);
-            let k = link_mut(r.game, l);
-            k.vel.x = mem(fp::fmuls(reg(k.vel.x), fp::fneg(x58)));
+            bounce_back(r, l, a);
             to_bounced(r, gobj);
         }
         2 => to_swing(r, gobj),
@@ -335,14 +242,10 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "fn_802BB574")]
 pub fn bounced(r: &mut Running, gobj: GObjId) {
     let a = Attrs::of(r, gobj);
-    let l = tip(r, gobj).expect("a chain without links");
-    let v = hand_point(r, l);
+    let l = strand::tip(r, gobj, &CHAIN);
+    let v = strand::point(r, l, &CHAIN);
     match extend_falling(r, l, v, a) {
-        1 => {
-            let x58 = a.f(r, attr::X58);
-            let k = link_mut(r.game, l);
-            k.vel.x = mem(fp::fmuls(reg(k.vel.x), fp::fneg(x58)));
-        }
+        1 => bounce_back(r, l, a),
         2 => to_swing(r, gobj),
         _ => {}
     }
@@ -352,8 +255,8 @@ pub fn bounced(r: &mut Running, gobj: GObjId) {
 /// Swinging, `fn_802BB694`.
 #[doc(alias = "fn_802BB694")]
 pub fn swing(r: &mut Running, gobj: GObjId) {
-    let l = hand(r, gobj).expect("a chain without links");
-    let v = hand_point(r, l);
+    let l = strand::hand(r, gobj, &CHAIN);
+    let v = strand::point(r, l, &CHAIN);
     swing_links(r, gobj, l, v);
     line_up(r, gobj, v);
 }
@@ -362,35 +265,13 @@ pub fn swing(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "fn_802BB784")]
 pub fn retract(r: &mut Running, gobj: GObjId) {
     let a = Attrs::of(r, gobj);
-    let l = hand(r, gobj).expect("a chain without links");
-    let v = hand_point(r, l);
+    let l = strand::hand(r, gobj, &CHAIN);
+    let v = strand::point(r, l, &CHAIN);
     let speed = a.f(r, attr::X54);
     if wind_in(r, l, v, a, speed) {
         picked_up(r, gobj);
     }
     line_up(r, gobj, v);
-}
-
-/// `itSeakchain_UnkMotion4_Anim` (every state's): the chain goes once its owner leaves the
-/// side special.
-#[doc(alias = "itSeakchain_UnkMotion4_Anim")]
-pub fn animate(r: &mut Running, gobj: GObjId) -> bool {
-    let owner = item(r.game, gobj).owner;
-    // `notInSpecialS`.
-    let gone = match owner {
-        Some(o) => {
-            let msid = r.game.fighter(o).motion_id;
-            !(crate::game::ft::seak::ms::SPECIAL_S_START
-                ..=crate::game::ft::seak::ms::SPECIAL_AIR_S_END)
-                .contains(&msid)
-        }
-        None => true,
-    };
-    if gone {
-        release(r, gobj);
-        return true;
-    }
-    false
 }
 
 /// One link's collision, `it_802BB938`: from the link toward it (or from where it was) to
@@ -454,46 +335,30 @@ pub fn link_coll_call(r: &mut Running, l: ItemLinkId, clank: bool, rise: f64) ->
     link_coll(r, l, clank, rise)
 }
 
-/// Pulls `l` to `scale` from `at`, then lets the links past it fall, each held within the
-/// link length of the one before, `it_802BBB0C` (and `it_802BBC38`, the same).
+/// Pulls `l` to `scale` from `at`, then lets the links past it fall, each meeting the stage and
+/// held within the link length of the one before, `it_802BBB0C` (and `it_802BBC38`, the same).
 #[doc(alias = "it_802BBB0C")]
 #[doc(alias = "it_802BBC38")]
 fn pull_and_drop(r: &mut Running, l: ItemLinkId, at: Vec3, a: Attrs, scale: f64) {
     let len = a.f(r, attr::LENGTH);
     let g = a.f(r, attr::GRAVITY);
-    let mut d = Vec3::default();
-    let mut link_ = l;
-    direction(lk(r.game, link_).pos, at, &mut d);
-    let k = link_mut(r.game, link_);
-    k.pos.x = mem(fp::fmadds(reg(d.x), scale, reg(at.x)));
-    k.pos.y = mem(fp::fmadds(reg(d.y), scale, reg(at.y)));
-    k.pos.z = mem(fp::fmadds(reg(d.z), scale, reg(at.z)));
-    let mut prev = lk(r.game, link_).prev;
-    while let Some(p) = prev {
+    strand::trail(r, l, at, scale, len, |r, p| {
         let k = link_mut(r.game, p);
         k.vel.y = mem(fp::fsubs(reg(k.vel.y), g));
         apply_vel(r.game, p);
         move_coll(r.game, p);
         link_coll(r, p, false, len);
-        let to = lk(r.game, link_).pos;
-        if direction(lk(r.game, p).pos, to, &mut d) > len {
-            let k = link_mut(r.game, p);
-            k.pos.x = mem(fp::fmadds(reg(d.x), len, reg(to.x)));
-            k.pos.y = mem(fp::fmadds(reg(d.y), len, reg(to.y)));
-            k.pos.z = mem(fp::fmadds(reg(d.z), len, reg(to.z)));
-        }
-        link_ = p;
-        prev = lk(r.game, p).prev;
-    }
+        true
+    });
 }
 
-/// Holds `p` within the link length of `cur` (the direction already in `d`).
-fn hold_to(r: &mut Running, p: ItemLinkId, cur: ItemLinkId, d: Vec3, len: f64) {
-    let to = lk(r.game, cur).pos;
-    let k = link_mut(r.game, p);
-    k.pos.x = mem(fp::fmadds(reg(d.x), len, reg(to.x)));
-    k.pos.y = mem(fp::fmadds(reg(d.y), len, reg(to.y)));
-    k.pos.z = mem(fp::fmadds(reg(d.z), len, reg(to.z)));
+/// A link out held within the link length of `cur`.
+fn follow(r: &mut Running, p: ItemLinkId, cur: ItemLinkId, len: f64) {
+    let mut d = Vec3::default();
+    let from = lk(r.game, cur).pos;
+    if direction(lk(r.game, p).pos, from, &mut d) > len {
+        strand::hold(r, p, from, d, len);
+    }
 }
 
 /// The throw's frame, `it_802BBD64`: the tip flies on, the links follow it out of the hand
@@ -502,73 +367,42 @@ fn hold_to(r: &mut Running, p: ItemLinkId, cur: ItemLinkId, d: Vec3, len: f64) {
 #[doc(alias = "it_802BBD64")]
 fn extend(r: &mut Running, l: ItemLinkId, at: Vec3, a: Attrs) -> i32 {
     let len = a.f(r, attr::LENGTH);
-    let mut d = Vec3::default();
     apply_vel(r.game, l);
     let hit = link_coll(r, l, true, len) & WALLS_CEILING_MASK;
-    let mut cur = l;
-    let mut prev = lk(r.game, l).next;
-    while let Some(p) = prev {
-        if lk(r.game, p).x2C_b0 {
-            let from = lk(r.game, cur).pos;
-            if direction(lk(r.game, p).pos, from, &mut d) > len {
-                hold_to(r, p, cur, d, len);
-            }
-            move_coll(r.game, p);
-        } else {
-            let from = lk(r.game, cur).pos;
-            if direction(at, from, &mut d) > len {
-                hold_to(r, p, cur, d, len);
-                link_mut(r.game, p).x2C_b0 = true;
-                place_coll(r.game, p);
-            } else {
-                return i32::from(hit != 0);
-            }
-        }
-        cur = p;
-        prev = lk(r.game, p).next;
-    }
+    let out = strand::walk_out(r, l, at, len, None, true, |r, p, cur| {
+        follow(r, p, cur, len);
+        move_coll(r.game, p);
+    });
+    let Some(cur) = out else {
+        return i32::from(hit != 0);
+    };
     pull_and_drop(r, cur, at, a, len);
     2
 }
 
-/// The bounce's frame, `it_802BBED0`: as the throw's, the tip and the links out falling.
+/// The bounce's frame, `it_802BBED0`: as the throw's, the tip and the links out falling, each
+/// further down the chain by less.
 #[doc(alias = "it_802BBED0")]
 fn extend_falling(r: &mut Running, l: ItemLinkId, at: Vec3, a: Attrs) -> i32 {
     let len = a.f(r, attr::LENGTH);
     let g = a.f(r, attr::GRAVITY);
     let x34 = a.f(r, attr::X34);
-    let mut d = Vec3::default();
     let k = link_mut(r.game, l);
     k.vel.y = mem(fp::fsubs(reg(k.vel.y), g));
     apply_vel(r.game, l);
     let hit = link_coll(r, l, true, len) & WALLS_CEILING_MASK;
     let mut fall = 1.0;
-    let mut cur = l;
-    let mut prev = lk(r.game, l).next;
-    while let Some(p) = prev {
-        if lk(r.game, p).x2C_b0 {
-            let k = link_mut(r.game, p);
-            k.vel.y = mem(fp::fnmsubs(g, fall, reg(k.vel.y)));
-            fall = fp::fmuls(fall, x34);
-            apply_vel(r.game, p);
-            let from = lk(r.game, cur).pos;
-            if direction(lk(r.game, p).pos, from, &mut d) > len {
-                hold_to(r, p, cur, d, len);
-            }
-            move_coll(r.game, p);
-        } else {
-            let from = lk(r.game, cur).pos;
-            if direction(at, from, &mut d) > len {
-                hold_to(r, p, cur, d, len);
-                link_mut(r.game, p).x2C_b0 = true;
-                place_coll(r.game, p);
-            } else {
-                return i32::from(hit != 0);
-            }
-        }
-        cur = p;
-        prev = lk(r.game, p).next;
-    }
+    let out = strand::walk_out(r, l, at, len, None, true, |r, p, cur| {
+        let k = link_mut(r.game, p);
+        k.vel.y = mem(fp::fnmsubs(g, fall, reg(k.vel.y)));
+        fall = fp::fmuls(fall, x34);
+        apply_vel(r.game, p);
+        follow(r, p, cur, len);
+        move_coll(r.game, p);
+    });
+    let Some(cur) = out else {
+        return i32::from(hit != 0);
+    };
     pull_and_drop(r, cur, at, a, len);
     2
 }
@@ -791,7 +625,7 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
         }
         let from = lk(r.game, cur).pos;
         if direction(lk(r.game, i).pos, from, &mut d) > len {
-            hold_to(r, i, cur, d, len);
+            strand::hold(r, i, lk(r.game, cur).pos, d, len);
         }
         cur = i;
         iter = lk(r.game, i).prev;
@@ -814,101 +648,39 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
 #[doc(alias = "it_802BC94C")]
 fn wind_in(r: &mut Running, l: ItemLinkId, at: Vec3, a: Attrs, speed: f64) -> bool {
     let max = a.f(r, attr::LENGTH);
-    let mut d = Vec3::default();
-    let mut cur = l;
-    let mut next = lk(r.game, l).prev;
-    while let Some(n) = next {
-        if lk(r.game, cur).x2C_b0 {
-            break;
-        }
-        cur = n;
-        next = lk(r.game, n).prev;
-    }
-    let mut distance = direction(lk(r.game, cur).pos, at, &mut d);
-    while let Some(n) = next {
-        if !(speed > distance) {
-            break;
-        }
-        link_mut(r.game, cur).x2C_b0 = false;
-        distance = direction(lk(r.game, n).pos, at, &mut d);
-        cur = n;
-        next = lk(r.game, n).prev;
-    }
-    let mut remaining = fp::fsubs(distance, speed);
-    if remaining > max {
-        remaining = max;
-    }
-    pull_and_drop(r, cur, at, a, remaining);
+    let (next, cur, rest) = link::retract_chain(r, l, at, speed, max);
+    pull_and_drop(r, cur, at, a, rest);
     next.is_none()
 }
 
-/// The tip's model at the hand, `it_802BCA30`.
-#[doc(alias = "it_802BCA30")]
+/// The tip's model at the hand.
 pub fn tip_to_hand(r: &mut Running, gobj: GObjId) {
-    let l = tip(r, gobj).expect("a chain without links");
-    let g = lk(r.game, l).gobj.expect("a link without its GObj");
-    let model = jobj_of(r.game, g).expect("a link without its model");
-    let m = hand_mtx(r, l);
-    let jobjs = &mut r.game.objs.jobjs;
-    jobjs[model].mtx = m;
-    jobjs[model].flags |= jobj::USER_DEF_MTX | jobj::MTX_INDEP_PARENT | jobj::MTX_INDEP_SRT;
-    jobj::set_mtx_dirty(jobjs, Some(model));
+    strand::tip_to_hand(r, gobj, &CHAIN);
 }
 
-/// The links' models lined up between their neighbours, scaled to the link length, and the
-/// hitboxes put at every third of the chain and its tip, `it_802BCB88`.
-#[doc(alias = "it_802BCB88")]
-pub fn line_up(r: &mut Running, gobj: GObjId, at: Vec3) {
-    let a = Attrs::of(r, gobj);
-    let len = a.f(r, attr::LENGTH);
-    let stride = a.count(r) / 3;
+/// Sheik's hitboxes at every third of the chain and its tip, as its links line up.
+fn hitboxes_along(r: &mut Running, gobj: GObjId, l: ItemLinkId, at: Vec3, count: i32) {
+    let stride = Attrs::of(r, gobj).count(r) / 3;
     let parent_gobj = parent(r, gobj);
-    let mut l = hand(r, gobj).expect("a chain without links");
-    while !lk(r.game, l).x2C_b0 {
-        l = lk(r.game, l).prev.expect("a chain with no link out");
+    if count % stride == 0 {
+        let mut i = 3;
+        while i > count / stride {
+            r.seak_special_s_update_hitbox(parent_gobj, at, i - 1);
+            i -= 1;
+        }
     }
-    let mut count = 0;
-    let mut cur = Some(l);
-    while let Some(l) = cur {
-        let k = lk(r.game, l);
-        let pos0 = match k.next {
-            Some(n) if lk(r.game, n).x2C_b0 => lk(r.game, n).pos,
-            _ => at,
-        };
-        let pos1 = match k.prev {
-            Some(p) => lk(r.game, p).pos,
-            None => k.pos,
-        };
-        let g = k.gobj.expect("a link without its GObj");
-        let j = jobj_of(r.game, g).expect("jobj (a link without its model)");
-        let translate = lk(r.game, l).pos;
-        jobj::set_translate(&mut r.game.objs.jobjs, j, translate);
-        if count % stride == 0 {
-            let mut i = 3;
-            while i > count / stride {
-                r.seak_special_s_update_hitbox(parent_gobj, translate, i - 1);
-                i -= 1;
-            }
-        }
-        if lk(r.game, l).prev.is_none() {
-            r.seak_special_s_update_hitbox(parent_gobj, translate, 3);
-        }
-        count += 1;
-        let mut dir = Vec3::new(
-            mem(fp::fsubs(reg(pos1.x), reg(pos0.x))),
-            mem(fp::fsubs(reg(pos1.y), reg(pos0.y))),
-            mem(fp::fsubs(reg(pos1.z), reg(pos0.z))),
-        );
-        dir.normalize();
-        link::orient(r.game, j, translate, &mut dir);
-        let m = &mut r.game.objs.jobjs[j].mtx.m;
-        for row in m.iter_mut() {
-            for c in row.iter_mut().take(3) {
-                *c = mem(fp::fmuls(reg(*c), len));
-            }
-        }
-        cur = lk(r.game, l).prev;
+    if lk(r.game, l).prev.is_none() {
+        r.seak_special_s_update_hitbox(parent_gobj, at, 3);
     }
+}
+
+/// The links' models lined up between their neighbours, scaled to the link length, and Sheik's
+/// hitboxes along it.
+pub fn line_up(r: &mut Running, gobj: GObjId, at: Vec3) {
+    assert!(
+        strand::line_up(r, gobj, at, &CHAIN),
+        "a chain with no link out"
+    );
 }
 
 /// Hanging at the hand, `it_2725_Logic54_PickedUp` (and the pull's end).
@@ -943,29 +715,17 @@ pub fn to_retract(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).on_accessory = Some(CodeRef(RETRACT));
 }
 
-/// Thrown out at `vel`, `it_802BCFC4`: the tip leaves the hand from Sheik's middle.
+/// Thrown out at `vel`, `it_802BCFC4`: the tip leaves the hand, its collision from Sheik's
+/// middle.
 #[doc(alias = "it_802BCFC4")]
 pub fn throw(r: &mut Running, gobj: GObjId, vel: Vec3) {
-    let l = tip(r, gobj).expect("a chain without links");
-    let pos = hand_point(r, l);
-    link_mut(r.game, l).pos = pos;
+    let l = strand::tip_out(r, gobj, &CHAIN);
     let p = parent(r, gobj).expect("a chain without its fighter");
     let center = super::super::owner::ecb_center(r.game, p);
     let k = link_mut(r.game, l);
     k.coll_data.cur_pos = center;
     k.coll_data.last_pos = k.coll_data.cur_pos;
-    k.x2C_b0 = true;
     k.vel = vel;
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     item_mut(r.game, gobj).on_accessory = Some(CodeRef(THROWN));
-}
-
-/// Forgets a GObj the chain points to, its fighter among them, `itSeakChain_Logic54_EvtUnk`.
-#[doc(alias = "itSeakChain_Logic54_EvtUnk")]
-pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    lib26b1::forget(r.game, gobj, other);
-    let v = item_mut(r.game, gobj).xDD4_itemVar.seak_chain();
-    if v.parent_gobj.get() == other {
-        v.parent_gobj.set(None);
-    }
 }
