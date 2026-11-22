@@ -322,6 +322,7 @@ pub fn derive(input: DeriveInput) -> syn::Result<Tokens> {
 
         #lay
 
+        #[allow(clippy::int_plus_one)]
         const _: () = {
             #(#checks)*
         };

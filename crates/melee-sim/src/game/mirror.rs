@@ -253,8 +253,9 @@ pub trait Handle: Copy {
     fn id(self) -> u32;
 }
 
+/// The kind is the type's own name (`"GObjId"`), as the generated mirrors pass it.
 macro_rules! handles {
-    ($($t:ty),* $(,)?) => {$(
+    ($($t:ident),* $(,)?) => {$(
         impl Handle for $t {
             const KIND: &'static str = stringify!($t);
             fn from_id(id: u32) -> Self {
@@ -267,11 +268,11 @@ macro_rules! handles {
     )*};
 }
 
-handles!(
-    crate::hsd::gobj::GObjId,
-    crate::hsd::jobj::JObjId,
-    super::handles::StartHookId,
-);
+use super::handles::StartHookId;
+use crate::hsd::gobj::GObjId;
+use crate::hsd::jobj::JObjId;
+
+handles!(GObjId, JObjId, StartHookId);
 
 impl<H: Handle> Mirror for Option<H> {
     const SIZE: u32 = 4;

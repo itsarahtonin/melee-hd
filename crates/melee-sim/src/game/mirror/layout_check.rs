@@ -594,6 +594,19 @@ mod proof {
         );
     }
 
+    /// A handle's kind is its type's own name, as the generated mirrors and every `Cx` take it
+    /// (leaf-check's collision `Cx` stops on any other).
+    #[test]
+    fn handles_name_their_kind_as_the_generated_mirrors_do() {
+        use crate::game::mirror::Handle;
+        assert_eq!(<crate::hsd::gobj::GObjId as Handle>::KIND, "GObjId");
+        assert_eq!(<crate::hsd::jobj::JObjId as Handle>::KIND, "JObjId");
+        assert_eq!(
+            <crate::game::handles::StartHookId as Handle>::KIND,
+            "StartHookId"
+        );
+    }
+
     /// Collects the comparer's labels.
     #[derive(Default)]
     struct Labels(Vec<String>);
@@ -616,8 +629,9 @@ mod proof {
         }
     }
 
-    /// A known image: a = 7, b = 1.5, c = -2, d = 1, e = 2, f = 5.
-    const IMAGE: [u8; 12] = [0, 0, 0, 7, 0x3F, 0xC0, 0, 0, 0xFF, 0xFE, 0b1_10_00101, 0xEE];
+    /// A known image: a = 7, b = 1.5, c = -2, and the flag byte 0xC5 (0b1_10_00101: d = 1, e = 2,
+    /// f = 5).
+    const IMAGE: [u8; 12] = [0, 0, 0, 7, 0x3F, 0xC0, 0, 0, 0xFF, 0xFE, 0xC5, 0xEE];
 
     #[test]
     fn a_field_read_at_the_wrong_address_fails_the_compare() {
