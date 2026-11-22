@@ -15,7 +15,7 @@ Measured with `tools/bench` (`melee-bench`), release builds, other applications 
 | Ticks | no allocations (counting-allocator test); lock-free scaling over cores |
 | Player | p99 simulation and rendering < 8 ms at 1440p |
 
-**Which machine (Sarah, 2026-11-19).** The targets in milliseconds are met on [the worker](#machine), the slower reference (a 2017 processor running the simulation at about half this machine's speed), since the aim is a game that runs on low-end PCs; the ratios (to Dolphin, a branch against its base) hold on any machine but are taken there too. The worker's numbers, 2026-11-19: the snapshot, its clone and restore are well inside their targets; restore and 8 ticks, 4.07 to 4.57 ms on the worst states at `c6e274d5`, is 2.1 to 3.9 ms at main `160ae506` (after task 1's callback table) on every state but one, Fox–Marth on Pokémon Stadium at tick 12,500, which is at the line (3.96 to 4.09 ms, one run of three over; [below](#baselines-on-the-worker-2026-11-19)). Since the refactor's task 20 (2026-11-21) every state of the benchmark matches and Sarah's replay is under it, at most 3.76 ms, and no tick, display pass or restore allocates ([below](#pokémon-stadiums-allocations-and-its-worst-state-2026-11-21)). The player's p99 is to be measured there in the fast renderer's F5 round.
+**Which machine (Sarah, 2026-11-19).** The targets in milliseconds are met on [the worker](#machine), the slower reference (a 2017 processor running the simulation at about half this machine's speed), since the aim is a game that runs on low-end PCs; the ratios (to Dolphin, a branch against its base) hold on any machine but are taken there too. The worker's numbers, 2026-11-19: the snapshot, its clone and restore are well inside their targets; restore and 8 ticks, 4.07 to 4.57 ms on the worst states at `c6e274d5`, is 2.1 to 3.9 ms at main `160ae506` (after task 1's callback table) on every state but one, Fox–Marth on Pokémon Stadium at tick 12,500, which is at the line (3.96 to 4.09 ms, one run of three over; [below](#baselines-on-the-worker-2026-11-19)). Since the refactor's task 20 (2026-11-21) every state of the benchmark matches and Sarah's replay is under it, at most 3.76 ms, and no tick, display pass or restore allocates ([below](#pokémon-stadiums-allocations-and-its-worst-state-2026-11-21)). The player's p99 is to be measured there in the fast renderer's F5 round. `ics-peach-ps`, measured since 2026-11-21, is over on four of its five states (4.2 to 5.9 ms), most of it Peach's dress; after `perf/rollback-ics` and `perf/stadium-allocs` two states are left over, 4.68 and 5.00 ms ([below](#the-ice-climbers-rollback-windows-2026-11-21)).
 
 ## Machine
 
@@ -547,6 +547,81 @@ melee-bench native --runs 5 fox-fox-fd fox-marth-bf fox-marth-fd fox-marth-ps ga
 MELEE_BENCH_FP=slippi melee-bench native --runs 5 --dir "$SLIPPI_REPLAYS/2026-01" Game_20260129T130802
 melee-bench rollback-split --every 2500 --runs 100 MATCH   # perf/stadium-allocs' tool; 200 runs for ics-peach-ps
 ```
+
+## The Ice Climbers' rollback windows (2026-11-21)
+
+[The refactor's](refactor.md#where-a-ticks-time-goes-now) rollback task for `ics-peach-ps`, `perf/rollback-ics` from batch 12 at `b32a5ae3`. The measurements are `melee-bench rollback-split` (`perf/stadium-allocs`' tool, cherry-picked: it plays the match to a state, keeps it, and times 200 restores with 8 ticks each, the restore, each tick's engine part and display pass apart; `--every 2500` takes every state as far as the match runs), on [the worker](#machine) in exclusive reservations, release with line tables (`CARGO_PROFILE_RELEASE_DEBUG=line-tables-only`), the builds alternating, the processor idle before and after each round, every run in sync.
+
+**The split before (`b32a5ae3`).** `ics-peach-ps`'s five states, restore and 8 ticks: 4.27 to 4.39 ms at 2,500, 5.01 to 5.13 at 5,000, 4.13 to 4.26 at 7,500, 3.82 to 4.15 at 10,000 and 5.77 to 5.92 at 12,500 (nine runs in four reservations). At 12,500 the window is a 0.19 ms restore, 4.65 ms of engine ticks and 0.92 ms of display passes; its ticks take 520 to 800 µs each against 330 at 10,000. A call-graph profile of the windows alone (`perf record -g -F 2000` with frame pointers, `--control` around 1,500 windows, `rollback_window`'s samples), inclusive shares of the window:
+
+| | 12,500 | 7,500 | 12,500 with `perf/stadium-allocs` merged | 5,000 with it merged |
+| --- | --- | --- | --- | --- |
+| The swing chains (`swing_chains`): Peach's dress, the stage's floor searched under every link | 31.1% | 23.1% | 25.9% | 19.1% |
+| of which the chains' floor searches (`search_r5` under `swing_chain`) | 8.6% | | 1.8% | |
+| of which Slippi's DynamicsFix's dirty matrices (`setup_dirty_matrices`) | 5.4% | 5.6% | 5.8% | 5.0% |
+| The fighters' animation (`proc_anim`) | 11.6% | 9.7% | 12.9% | 22.2% |
+| Their collision (`proc_map`, `mp::coll`) | 11.1% | 7.7% | 12.4% | 8.7% |
+| The display passes | 16.2% | 25.9% | 16.5% | 20.7% |
+| The restore (`Game::clone_from`) | 2.4% | 3.6% | 2.8% | 3.0% |
+| Nana's computer player (`cpu_frame`) and the hurtbox extents computer players read (`cpu_hurt_bounds`) | 6.2% | 6.3% | 5.3% | 4.7% |
+| The HUD's stock icons (`stock_icons_proc`) | 2.4% | 3.3% | 2.8% | 3.3% |
+| The channels' interpreter (`fobj::interpret`, everywhere) | 8.7% | 10.2% | 9.5% | 10.8% |
+
+The swing chains are [task 19's](refactor.md#proposed-tasks) (`perf/joint-matrices`), and their floor searches the line pass-over `perf/stadium-allocs` makes; collision is `refactor/collision-boundary`'s. The rest is spread thin. One pattern stood out in the interpreter: of its steps in a window, 55% (14,415 of 26,047 at 12,500) were channels just restarted (`HSD_FObjReqAnim`) seeking from their first key to their time again, 914 seeks a window, none handing over more than one value. The HUD's stock icons restart every channel every frame (a counted build of the interpreter, not committed).
+
+**The changes.** Doing less of the same work, the same bits:
+
+- A restarted channel's seek is replayed from a memo (`hsd::fobj::interpret`): what a seek does depends only on the channel's fields, the rate, its archive's bytes (an archive's serial, new in `melee-data`, stands for them), the float mode and whether there is an update function, so the memo keeps the fields as the seek left them and the one value it handed over, and hands it over again. A seek handing over more than one value, or whose update function changed the channel, isn't kept. `seeks_match_uncached` holds it against the uncached interpreter on random keyframe data (12,000 channels, two archives at the same offsets with different bytes, both float modes, rates 0 to 2, with and without an update function, hits and replaced slots), and `seeks_key_everything_they_read` on seeks differing in one thing alone. Mutation-tested: without the time, the rate, the update function's presence or the archive's serial in the key, without the state 5 that follows, without the guard against a changed channel or keeping a seek that handed over more than one value, one of them fails. Without the float mode it passes: no seek differs between the modes (single precision throughout), and the key keeps it all the same, as `sinf`'s does.
+- `EulerToQuat` (`Quat::from_euler`) is kept in a memo like `Mtx34::srt`: a blend asks for its held pose's angles frame after frame, and joints an animation holds still give the same angles. `from_euler_matches_uncached` and `from_euler_keys_the_mode`; each of the key's four words dropped fails one.
+
+**`ics-peach-ps`, restore and 8 ticks per state** (`rollback-split --every 2500 --runs 200`; the median of three rounds, their range): the base, the seek memo, both changes, and the base and both changes with `perf/stadium-allocs` (`c39daa13`) merged:
+
+| State | `b32a5ae3` | + the seek memo | + `EulerToQuat`'s memo | `b32a5ae3` + `perf/stadium-allocs` | both branches |
+| --- | --- | --- | --- | --- | --- |
+| 2,500 | 4.38 (4.37 to 4.39) | 4.18 (4.06 to 4.18) | 4.11 (4.10 to 4.11) | 4.16 (4.14 to 4.26) | **3.90** (3.88 to 4.00) |
+| 5,000 | 5.12 (5.01 to 5.13) | 4.94 (4.85 to 4.95) | 4.85 (4.84 to 4.87) | 4.86 (4.84 to 4.86) | **4.68** (4.59 to 4.69) |
+| 7,500 | 4.24 (4.13 to 4.24) | 4.06 (3.95 to 4.07) | 4.04 (4.04 to 4.05) | 4.02 (4.02 to 4.07) | **3.93** (3.83 to 3.93) |
+| 10,000 | 3.92 (3.82 to 3.92) | 3.75 (3.63 to 3.75) | 3.71 (3.70 to 3.72) | 3.71 (3.70 to 3.72) | **3.62** (3.52 to 3.62) |
+| 12,500 | 5.88 (5.77 to 5.88) | 5.67 (5.57 to 5.68) | 5.57 (5.54 to 5.70) | 5.24 (5.21 to 5.24) | **5.00** (4.90 to 5.02) |
+
+The seek memo takes 0.17 to 0.21 ms off every state, `EulerToQuat`'s 0.02 to 0.10 more. With both branches, 2,500 and 7,500 come under the line and **5,000 and 12,500 stay over, by 0.68 and 1.00 ms**. The swing chains there are about 0.93 and 1.36 ms (their shares with `perf/stadium-allocs` merged, above, which these changes barely touch), so the overshoot is about three quarters of the chains' time at both: task 19 would have to cut the chains by three quarters for the target alone, or the chains less and the rest (collision 0.4 to 0.6 ms, animation 0.6 to 1.1, the display passes 0.8 to 1.0) more. `snapshot-match`'s windows are the same with draws built in every display pass; a rollback shows only the frame it ends on, and `MELEE_BENCH_ROLLBACK_DRAWS=last` makes the passes before the last state-only: it moves a state by under 0.1 ms, within the rounds' spread (both branches, one round: 3.94, 4.61, 3.86, 3.55, 4.94 ms), so the draws aren't what the display passes cost: the state they write is.
+
+**Every benchmark state, before and after** (`b32a5ae3` against the branch at `893fa2b2`, three rounds alternating, the median of each state's three; Sarah's 3.19 replay with `MELEE_BENCH_FP=slippi`): the worst state of each match and the range over its states:
+
+| Match | `b32a5ae3`: worst, every state | Branch: worst, every state |
+| --- | --- | --- |
+| `fox-fox-fd` | 5,000: 3.91 ms; 2.87 to 3.91 | 5,000: 3.70 ms; 2.69 to 3.70 |
+| `fox-marth-bf` | 15,000: 3.60; 2.17 to 3.60 | 15,000: 3.38; 2.07 to 3.38 |
+| `fox-marth-fd` | 2,500 and 15,000: 3.39; 2.80 to 3.39 | 2,500 and 15,000: 3.31; 2.71 to 3.31 |
+| `fox-marth-ps` | 12,500: 4.13; 3.37 to 4.13 | 12,500: 3.98; 3.25 to 3.98 |
+| `ics-peach-ps` | 12,500: 5.91; 3.93 to 5.91 | 12,500: 5.56; 3.61 to 5.56 |
+| `ganon-captain-fd` | 7,500: 3.39; 3.15 to 3.39 | 7,500: 3.15; 2.92 to 3.15 |
+| Sarah's 3.19 replay | 7,500: 3.89; 2.54 to 3.89 | 7,500: 3.40; 2.11 to 3.40 |
+
+Every state is faster, by 0.06 to 0.52 ms; Sarah's replay most (12 to 17%: under Slippi's rules its HUD restarts more channels each frame). `fox-marth-ps`'s 12,500 is at the line on this branch alone (3.98, one round of three over at 4.10); `perf/stadium-allocs` alone took it to 3.63 to 3.65.
+
+**Simulation speed** (`melee-bench native --runs 5`, the same reservation, the median of the 15 runs, their range and the three rounds' medians; every run in sync):
+
+| Match | `b32a5ae3` | Branch | |
+| --- | --- | --- | --- |
+| `fox-fox-fd` | 2,629 (2,541 to 2,644; 2,582, 2,635, 2,639) | 2,733 (2,721 to 2,790; 2,726, 2,785, 2,732) | +4.0% |
+| `fox-marth-bf` | 2,539 (2,506 to 2,581) | 2,628 (2,605 to 2,680) | +3.5% |
+| `fox-marth-fd` | 2,431 (2,387 to 2,456) | 2,498 (2,474 to 2,532) | +2.8% |
+| `fox-marth-ps` | 2,197 (2,143 to 2,211) | 2,236 (2,219 to 2,276) | +1.8% |
+| `ics-peach-ps` | 1,702 (1,671 to 1,709) | 1,776 (1,745 to 1,792) | +4.3% |
+| `ganon-captain-fd` | 2,438 (2,406 to 2,474) | 2,571 (2,517 to 2,584) | +5.5% |
+| Sarah's 3.19 replay | 2,786 (2,760 to 2,834; 2,830, 2,785, 2,769) | 3,307 (3,237 to 3,342; 3,315, 3,326, 3,252) | +18.7% |
+
+```sh
+melee-bench rollback-split --every 2500 --runs 200 MATCH   # the six matches, three rounds
+MELEE_BENCH_FP=slippi melee-bench rollback-split --every 2500 --runs 200 --dir "$SLIPPI_REPLAYS/2026-01" Game_20260129T130802
+MELEE_BENCH_ROLLBACK_DRAWS=last melee-bench rollback-split --every 2500 --runs 200 ics-peach-ps
+melee-bench native --runs 5 fox-fox-fd fox-marth-bf fox-marth-fd fox-marth-ps ics-peach-ps ganon-captain-fd
+# the profile: a build with RUSTFLAGS="-C force-frame-pointers=yes", then
+PERF_CTL_FIFO=ctl PERF_ACK_FIFO=ack perf record -g -F 2000 -D -1 --control fifo:ctl,ack -- melee-bench rollback-split --at 12500 --runs 1500 ics-peach-ps
+```
+
+On this PC, with other agents' work running (indicative only): `rollback-split --every 2500 --runs 100 ics-peach-ps`, three rounds alternating, moved by up to 0.8 ms from round to round of one build (12,500: 5.03 to 5.83 ms on the base), more than the change, so it shows nothing either way.
 
 ## Benchmark matches
 

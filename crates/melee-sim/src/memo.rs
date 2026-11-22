@@ -26,22 +26,33 @@ impl<K: Copy + Eq, V: Copy, const BITS: u32> Memo<K, V, BITS> {
         hash: u64,
         f: impl FnOnce() -> V,
     ) -> V {
-        let i = (hash >> (64 - BITS)) as usize;
-        let hit = table.with_borrow(|t| match t.slots.get(i) {
-            Some(Some((k, v))) if *k == key => Some(*v),
-            _ => None,
-        });
-        if let Some(v) = hit {
+        if let Some(v) = Self::lookup(table, &key, hash) {
             return v;
         }
         let v = f();
+        Self::insert(table, key, hash, v);
+        v
+    }
+
+    /// The value held for `key`, if its slot holds it.
+    #[inline]
+    pub(crate) fn lookup(table: &'static LocalKey<RefCell<Self>>, key: &K, hash: u64) -> Option<V> {
+        let i = (hash >> (64 - BITS)) as usize;
+        table.with_borrow(|t| match t.slots.get(i) {
+            Some(Some((k, v))) if k == key => Some(*v),
+            _ => None,
+        })
+    }
+
+    /// Holds `v` for `key` in its slot, replacing what the slot held.
+    pub(crate) fn insert(table: &'static LocalKey<RefCell<Self>>, key: K, hash: u64, v: V) {
+        let i = (hash >> (64 - BITS)) as usize;
         table.with_borrow_mut(|t| {
             if t.slots.is_empty() {
                 t.slots = vec![None; 1 << BITS];
             }
             t.slots[i] = Some((key, v));
         });
-        v
     }
 }
 

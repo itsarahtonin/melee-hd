@@ -124,6 +124,16 @@ pub struct Archive {
     publics: Box<[(String, u32)]>,
     /// Extern symbols: their names and the first slot of each chain that refers to them.
     externs: Box<[(String, u32)]>,
+    /// A number no other archive made in this process has (its clones share it, as they
+    /// share its bytes): what tells two archives' data apart where an [`ArchiveId`] can't, as
+    /// in memo tables that outlive a match.
+    serial: u64,
+}
+
+/// The next [`Archive::serial`].
+fn next_serial() -> u64 {
+    static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(1);
+    NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
 }
 
 /// A bit per aligned word of a `len`-byte data block, set for the words `relocs` names.
@@ -200,6 +210,7 @@ impl Archive {
             relocs: relocs.into(),
             publics: publics.iter().map(|&(off, sym)| (name(sym), off)).collect(),
             externs: externs.iter().map(|&(off, sym)| (name(sym), off)).collect(),
+            serial: next_serial(),
         })
     }
 
@@ -214,12 +225,18 @@ impl Archive {
             pointer_words: Box::default(),
             publics: Box::default(),
             externs: Box::default(),
+            serial: next_serial(),
         }
     }
 
     /// The data block.
     pub fn data(&self) -> &[u8] {
         &self.data
+    }
+
+    /// A number this archive (and its clones) alone has among those made in this process.
+    pub fn serial(&self) -> u64 {
+        self.serial
     }
 
     /// The byte at `offset` of the file as it was read, header first, before relocation:

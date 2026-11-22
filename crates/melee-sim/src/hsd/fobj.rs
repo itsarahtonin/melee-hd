@@ -5,12 +5,15 @@
 use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, Archives, DataRef};
 
+use std::cell::RefCell;
+
 use super::Objects;
 use super::pool::Pool;
 use super::spline;
 use crate::fpu::{copy, mem, reg};
 use crate::hsd::heap::Kind;
 use crate::hsd::pool::kind as pool_kind;
+use crate::memo::{self, Memo};
 use crate::ppc::slw_i;
 use crate::vec::Vec3;
 
@@ -367,18 +370,17 @@ fn load_data(data: &Archives, o: &mut FObj) -> u32 {
     }
 }
 
-/// Computes the current value and hands it to `update` with the channel type,
-/// `FObjUpdateAnim`.
+/// The current value of `FObjUpdateAnim` (which [`interpret_with`] hands over): the FObj's
+/// changes and the value with its channel type, or none.
 #[doc(alias = "FObjUpdateAnim")]
-fn update_anim(objs: &mut Objects, f: FObjId, update: &mut Update) {
-    let Some(update) = update else { return };
+fn anim_value(objs: &mut Objects, f: FObjId) -> Option<(u8, Value)> {
     let o = &mut objs.fobjs[f.0];
     let ty = o.obj_type;
     let fterm = || f64::from(o.fterm);
     let value = match o.op_intrp {
         OP_KEY => {
             if o.flags & 0x80 == 0 {
-                return;
+                return None;
             }
             let v = o.p0;
             o.flags &= 0x7F;
@@ -416,22 +418,198 @@ fn update_anim(objs: &mut Objects, f: FObjId, update: &mut Update) {
             }
         }
         // See `Value::Stale`.
-        _ => return update(objs, ty, Value::Stale),
+        _ => return Some((ty, Value::Stale)),
     };
-    update(objs, ty, Value::Float(copy(value)));
+    Some((ty, Value::Float(copy(value))))
+}
+
+/// The fields interpretation writes: an FObj's cursor and interpreter.
+#[derive(Clone, Copy)]
+struct Cursor {
+    ad: u32,
+    flags: u8,
+    op: u8,
+    op_intrp: u8,
+    nb_pack: u16,
+    fterm: u16,
+    time: f32,
+    p0: f32,
+    p1: f32,
+    d0: f32,
+    d1: f32,
+}
+
+impl Cursor {
+    fn of(o: &FObj) -> Cursor {
+        Cursor {
+            ad: o.ad,
+            flags: o.flags,
+            op: o.op,
+            op_intrp: o.op_intrp,
+            nb_pack: o.nb_pack,
+            fterm: o.fterm,
+            time: o.time,
+            p0: o.p0,
+            p1: o.p1,
+            d0: o.d0,
+            d1: o.d1,
+        }
+    }
+
+    /// Its fields' bits, floats by bit pattern.
+    fn bits(&self) -> [u32; 8] {
+        [
+            self.ad,
+            u32::from_le_bytes([self.flags, self.op, self.op_intrp, 0]),
+            u32::from(self.nb_pack) | u32::from(self.fterm) << 16,
+            self.time.to_bits(),
+            self.p0.to_bits(),
+            self.p1.to_bits(),
+            self.d0.to_bits(),
+            self.d1.to_bits(),
+        ]
+    }
+
+    fn put(self, o: &mut FObj) {
+        o.ad = self.ad;
+        o.flags = self.flags;
+        o.op = self.op;
+        o.op_intrp = self.op_intrp;
+        o.nb_pack = self.nb_pack;
+        o.fterm = self.fterm;
+        o.time = self.time;
+        o.p0 = self.p0;
+        o.p1 = self.p1;
+        o.d0 = self.d0;
+        o.d1 = self.d1;
+    }
+}
+
+/// What a fresh interpretation did ([`interpret`]'s memo): the FObj as it handed its one value
+/// over (or as it ended, with none), the value, and whether it then went on to state 5.
+#[derive(Clone, Copy)]
+struct Seek {
+    cursor: Cursor,
+    call: Option<(u8, Value)>,
+    then_wait: bool,
+}
+
+/// An interpretation's record for the memo: the value handed over last and the FObj as it was
+/// handed, whether state 5 followed, and whether more than that one value went out (the
+/// memo then keeps nothing).
+#[derive(Default)]
+struct Record {
+    last: Option<(Cursor, u8, Value)>,
+    then_wait: bool,
+    more: bool,
 }
 
 /// Advances one FObj by `rate` frames, calling `update` with each value it reaches,
 /// `HSD_FObjInterpretAnim`.
+///
+/// An FObj just restarted (`HSD_FObjReqAnim` leaves it in state 1) seeks from its first key to
+/// its time, which the HUD's icons and digits and every newly started animation do each time;
+/// what that does depends on nothing but the FObj's fields (the ones read here), the rate,
+/// its archive's bytes, the float mode and whether there is an update function, so a memo
+/// keyed by those replays it: the FObj's fields as the seek left them and the one value it
+/// handed over, handed over again. A seek handing over more than one value isn't kept (none
+/// in the benchmark matches does).
 #[doc(alias = "HSD_FObjInterpretAnim")]
 pub fn interpret(
     objs: &mut Objects,
     data: &Archives,
     f: Option<FObjId>,
     rate: f32,
-    mut update: Update,
+    update: Update,
 ) {
     let Some(f) = f else { return };
+    if objs.fobjs[f.0].state() != 1 {
+        interpret_with(objs, data, f, rate, update, None);
+        return;
+    }
+    thread_local! {
+        static SEEKS: RefCell<Memo<[u32; 16], Seek, 12>> = const { RefCell::new(Memo::new()) };
+    }
+    let key = seek_key(&objs.fobjs[f.0], data, rate, update.is_some());
+    let hash = memo::hash(&key);
+    if let Some(seek) = Memo::lookup(&SEEKS, &key, hash) {
+        seek.cursor.put(&mut objs.fobjs[f.0]);
+        if let (Some((ty, value)), Some(update)) = (seek.call, update) {
+            update(objs, ty, value);
+        }
+        if seek.then_wait {
+            objs.fobjs[f.0].set_state(5);
+        }
+        return;
+    }
+    let mut record = Record::default();
+    interpret_with(objs, data, f, rate, update, Some(&mut record));
+    if record.more {
+        return;
+    }
+    let end = Cursor::of(&objs.fobjs[f.0]);
+    let seek = match record.last {
+        Some((cursor, ty, value)) => Seek {
+            cursor,
+            call: Some((ty, value)),
+            then_wait: record.then_wait,
+        },
+        None => Seek {
+            cursor: end,
+            call: None,
+            then_wait: false,
+        },
+    };
+    // Kept only if replaying it leaves the FObj as the run did (the update function didn't
+    // change the FObj it was handed a value from).
+    let mut replayed = seek.cursor;
+    if seek.then_wait {
+        replayed.flags = (replayed.flags & 0xF0) | 5;
+    }
+    if replayed.bits() == end.bits() {
+        Memo::insert(&SEEKS, key, hash, seek);
+    }
+}
+
+/// [`interpret`]'s memo key: everything a seek reads but the archive's bytes, which its
+/// archive's serial stands for.
+fn seek_key(o: &FObj, data: &Archives, rate: f32, has_update: bool) -> [u32; 16] {
+    let serial = data.get(o.archive).serial();
+    [
+        serial as u32,
+        (serial >> 32) as u32,
+        o.ad,
+        o.ad_head,
+        o.length,
+        u32::from_le_bytes([o.flags, o.op, o.op_intrp, o.obj_type]),
+        u32::from_le_bytes([o.frac_value, o.frac_slope, 0, 0]) | u32::from(o.nb_pack) << 16,
+        u32::from(o.fterm),
+        o.time.to_bits(),
+        o.p0.to_bits(),
+        o.p1.to_bits(),
+        o.d0.to_bits(),
+        o.d1.to_bits(),
+        rate.to_bits(),
+        memo::mode(),
+        u32::from(has_update),
+    ]
+}
+
+/// [`interpret`] without its memo.
+#[cfg(test)]
+fn interpret_uncached(objs: &mut Objects, data: &Archives, f: FObjId, rate: f32, update: Update) {
+    interpret_with(objs, data, f, rate, update, None);
+}
+
+/// `HSD_FObjInterpretAnim` itself, keeping `record` of the values it hands over.
+fn interpret_with(
+    objs: &mut Objects,
+    data: &Archives,
+    f: FObjId,
+    rate: f32,
+    mut update: Update,
+    mut record: Option<&mut Record>,
+) {
     let o = &mut objs.fobjs[f.0];
     let mut state = o.state();
     if state == 0 {
@@ -442,19 +620,33 @@ pub fn interpret(
         return;
     }
     let mut fterm = 0.0;
+    // `FObjUpdateAnim`: hands the value over, noting it and the FObj as it was handed.
+    let mut hand = |objs: &mut Objects, record: &mut Option<&mut Record>| {
+        let Some(update) = update.as_mut() else {
+            return;
+        };
+        let Some((ty, value)) = anim_value(objs, f) else {
+            return;
+        };
+        if let Some(r) = record.as_deref_mut() {
+            r.more |= r.last.is_some();
+            r.last = Some((Cursor::of(&objs.fobjs[f.0]), ty, value));
+        }
+        update(objs, ty, value);
+    };
     loop {
         let o = &mut objs.fobjs[f.0];
         match state {
             6 => {
                 o.time = mem(fp::fadds(reg(o.time), fterm));
                 launch_key(o);
-                update_anim(objs, f, &mut update);
+                hand(objs, &mut record);
                 return;
             }
             1 | 2 => state = load_data(data, o),
             3 => {
                 if o.flags & 0x80 != 0 {
-                    update_anim(objs, f, &mut update);
+                    hand(objs, &mut record);
                 }
                 state = load_wait(data, &mut objs.fobjs[f.0]);
             }
@@ -466,8 +658,11 @@ pub fn interpret(
                     o.time = mem(fp::fsubs(reg(o.time), term));
                     o.set_state(state);
                 } else {
-                    update_anim(objs, f, &mut update);
+                    hand(objs, &mut record);
                     objs.fobjs[f.0].set_state(5);
+                    if let Some(r) = record.as_deref_mut() {
+                        r.then_wait = true;
+                    }
                     return;
                 }
             }
@@ -525,5 +720,181 @@ pub fn stop_anim_all(
     while let Some(f) = cur {
         stop_anim(objs, data, Some(f), rate, again(&mut update));
         cur = objs.fobjs[f.0].next;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use gekko_fp::{FpMode, set_fp_mode};
+    use melee_data::archive::Archive;
+
+    use super::*;
+
+    struct Bits(u64);
+
+    impl Bits {
+        fn next(&mut self) -> u32 {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            (self.0 >> 32) as u32
+        }
+    }
+
+    /// A restarted FObj over `len` bytes of keyframe data from `at` in archive 0: random
+    /// opcodes, pack counts, waits and numbers in random formats, so seeks take every path.
+    fn fobj(rng: &mut Bits, at: u32, len: u32) -> FObj {
+        let fracs = [0, 0x60, 0x80, 0x20, 0x40];
+        let frac = |r: u32| fracs[(r % 5) as usize] | ((r >> 8) as u8 % 8);
+        let mut o = FObj {
+            ad_head: at,
+            length: len,
+            obj_type: (rng.next() % 30) as u8,
+            frac_value: frac(rng.next()),
+            frac_slope: frac(rng.next()),
+            startframe: (rng.next() % 5) as i16,
+            ..FObj::default()
+        };
+        let mut fobjs = FObjs::default();
+        let id = fobjs.alloc(FObj::default());
+        fobjs[id] = std::mem::take(&mut o);
+        req_anim_all(&mut fobjs, Some(FObjId(id)), (rng.next() % 60) as f32 * 0.5);
+        std::mem::take(&mut fobjs[id])
+    }
+
+    /// Keyframe data: opcodes 1 to 6 with pack counts, numbers and waits of a byte or two.
+    fn keyframes(rng: &mut Bits, n: usize) -> Vec<u8> {
+        let mut b = Vec::new();
+        for _ in 0..n {
+            let op = 1 + rng.next() % 6;
+            b.push((op | (rng.next() % 4) << 4) as u8);
+            for _ in 0..(rng.next() % 9) {
+                b.push(rng.next() as u8);
+            }
+            b.push((rng.next() % 12) as u8);
+        }
+        b
+    }
+
+    type Calls = Vec<(u8, Option<u32>)>;
+
+    /// Interprets `o` (memoized or not) at `rate`, with an update function that notes what
+    /// it's handed (or none): the calls and the FObj left.
+    fn run(o: &FObj, data: &Archives, rate: f32, with_update: bool, cached: bool) -> (Calls, FObj) {
+        let mut objs = Objects::default();
+        let id = FObjId(objs.fobjs.alloc(FObj::default()));
+        Cursor::of(o).put(&mut objs.fobjs[id.0]);
+        let f = &mut objs.fobjs[id.0];
+        (f.archive, f.ad_head, f.length, f.obj_type) = (o.archive, o.ad_head, o.length, o.obj_type);
+        (f.frac_value, f.frac_slope, f.startframe) = (o.frac_value, o.frac_slope, o.startframe);
+        let mut calls = Vec::new();
+        let mut note = |_: &mut Objects, ty: u8, v: Value| {
+            calls.push((
+                ty,
+                matches!(v, Value::Float(_)).then(|| v.or_address().to_bits()),
+            ));
+        };
+        let update: Update = if with_update { Some(&mut note) } else { None };
+        if cached {
+            interpret(&mut objs, data, Some(id), rate, update);
+        } else {
+            interpret_uncached(&mut objs, data, id, rate, update);
+        }
+        let o = std::mem::take(&mut objs.fobjs[id.0]);
+        (calls, o)
+    }
+
+    fn same(a: &FObj, b: &FObj) -> bool {
+        Cursor::of(a).bits() == Cursor::of(b).bits()
+    }
+
+    /// Many restarted FObjs, more than the memo's slots, each interpreted again at once (a hit)
+    /// and much later (usually replaced), with and without an update function, at rates of 0
+    /// to 2, in both float modes, over two archives at the same offsets with different bytes:
+    /// every seek hands over the uncached seek's values and leaves its FObj.
+    #[test]
+    fn seeks_match_uncached() {
+        for mode in [FpMode::Hardware, FpMode::Slippi] {
+            set_fp_mode(mode);
+            let mut rng = Bits(0x2545_F491_4F6C_DD1D ^ mode as u64);
+            let mut datas = Vec::new();
+            for _ in 0..2 {
+                let mut a = Archives::default();
+                a.add(Archive::raw(&keyframes(&mut rng, 8000)));
+                datas.push(a);
+            }
+            let cases: Vec<_> = (0..12_000)
+                .map(|i| {
+                    let at = rng.next() % 30_000;
+                    let len = 1 + rng.next() % 40;
+                    let o = fobj(&mut rng, at, len);
+                    let rate = [0.0, 1.0, 0.5, 2.0][(rng.next() % 4) as usize];
+                    (o, rate, i % 3 != 0, (rng.next() % 2) as usize)
+                })
+                .collect();
+            for pass in 0..2 {
+                for (i, (o, rate, upd, d)) in cases.iter().enumerate() {
+                    for (o, rate, upd, d) in [(o, rate, upd, d), (o, rate, upd, &(1 - d))] {
+                        let want = run(o, &datas[*d], *rate, *upd, false);
+                        for _ in 0..2 {
+                            let got = run(o, &datas[*d], *rate, *upd, true);
+                            assert_eq!(got.0, want.0, "case {i} pass {pass} {mode:?}");
+                            assert!(same(&got.1, &want.1), "case {i} pass {pass} {mode:?}");
+                        }
+                    }
+                    let (o2, rate2, upd2, d2) = &cases[i / 2];
+                    let want = run(o2, &datas[*d2], *rate2, *upd2, false);
+                    let got = run(o2, &datas[*d2], *rate2, *upd2, true);
+                    assert_eq!(got.0, want.0, "case {} again {mode:?}", i / 2);
+                    assert!(same(&got.1, &want.1), "case {} again {mode:?}", i / 2);
+                }
+            }
+        }
+        set_fp_mode(FpMode::Hardware);
+    }
+
+    /// A seek differing from the one before it in one thing alone (its time, the rate, whether
+    /// there is an update function, the float mode) isn't a hit: each variant, interpreted
+    /// right after the one before, hands over what the uncached seek does, and some variants of
+    /// each kind but the mode hand over something else than the one before. (No seek here
+    /// differs between the modes, its arithmetic being single precision throughout; the memo
+    /// is keyed by the mode all the same, as the sine's is.)
+    #[test]
+    fn seeks_key_everything_they_read() {
+        let mut rng = Bits(0xD1B5_4A32_D192_ED03);
+        let mut data = Archives::default();
+        data.add(Archive::raw(&keyframes(&mut rng, 8000)));
+        let mut differed = [0; 4];
+        for i in 0..4000 {
+            let at = rng.next() % 30_000;
+            let len = 1 + rng.next() % 40;
+            let o = fobj(&mut rng, at, len);
+            let mut later = o.clone();
+            later.time = mem(fp::fadds(reg(o.time), 1.5));
+            let variants: [(usize, &FObj, f32, bool, FpMode); 5] = [
+                (4, &o, 1.0, true, FpMode::Hardware),
+                (0, &later, 1.0, true, FpMode::Hardware),
+                (1, &later, 0.5, true, FpMode::Hardware),
+                (2, &later, 0.5, false, FpMode::Hardware),
+                (3, &later, 0.5, false, FpMode::Slippi),
+            ];
+            let mut before = None;
+            for (kind, o, rate, upd, mode) in variants {
+                set_fp_mode(mode);
+                let want = run(o, &data, rate, upd, false);
+                let got = run(o, &data, rate, upd, true);
+                assert_eq!(got.0, want.0, "case {i} variant {kind}");
+                assert!(same(&got.1, &want.1), "case {i} variant {kind}");
+                if let Some((calls, left)) = &before
+                    && kind < 4
+                    && (calls != &want.0 || !same(left, &want.1))
+                {
+                    differed[kind] += 1;
+                }
+                before = Some(want);
+            }
+        }
+        set_fp_mode(FpMode::Hardware);
+        assert!(differed.iter().take(3).all(|&n| n > 0), "{differed:?}");
     }
 }
